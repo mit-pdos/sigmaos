@@ -9,24 +9,23 @@ import (
 
 type Controler struct {
 	srv *ControlerSrv
-	l   net.Listener
 }
 
 func MakeControler() *Controler {
 	c := &Controler{}
-	c.srv = &ControlerSrv{}
+	c.srv = mkControlerSrv()
 	l, err := net.Listen("tcp", ":1234")
 	if err != nil {
 		log.Fatal("Listen error:", err)
 	}
 	rpc.Register(c.srv)
-	c.l = l
+	go c.RunSrv(l)
 	return c
 }
 
-func (c *Controler) Run() {
+func (c *Controler) RunSrv(l net.Listener) {
 	for {
-		conn, err := c.l.Accept()
+		conn, err := l.Accept()
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}

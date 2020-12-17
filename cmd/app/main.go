@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
+	// "os"
 
 	"ulambda/lambda"
 )
@@ -36,7 +36,7 @@ func ServeConn(l *lambda.Lambda, conn net.Conn) {
 	n := binary.BigEndian.Uint32(hdr[:])
 	args := Args{n}
 	var reply Reply
-	child := l.Fork(shortLambda, args, &reply)
+	child := l.Fork("shortLambda", args, &reply)
 
 	err = child.Join()
 	if err != nil {
@@ -54,7 +54,7 @@ func ServeConn(l *lambda.Lambda, conn net.Conn) {
 
 func longLambda(l *lambda.Lambda) error {
 	fmt.Printf("run longLambda\n")
-	s, err := net.Listen("tcp", ":1235")
+	s, err := net.Listen("tcp", ":1111")
 	if err != nil {
 		log.Fatal("Listen error:", err)
 	}
@@ -70,8 +70,8 @@ func longLambda(l *lambda.Lambda) error {
 
 func main() {
 	controler := lambda.ConnectToControler()
-	controler.RegisterLambda("longLambda", longLambda)
-	controler.RegisterLambda("shortLamabda", shortLambda)
-	l := controler.Fork(longLambda, nil, nil)
+	controler.RegisterLambda("longLambda", longLambda, "")
+	controler.RegisterLambda("shortLamabda", shortLambda, Args{})
+	l := controler.Fork("longLambda", "x", nil)
 	l.Join()
 }

@@ -6,54 +6,68 @@ import (
 	"io"
 	"log"
 	"net"
-	// "os"
+	"os"
 
 	"ulambda/lambda"
 )
 
-type Args struct {
-	n uint32
+type ReqArgs struct {
+	N uint32
 }
 
-type Reply struct {
-	n uint32
+type ReqReply struct {
+	N uint32
 }
 
-func shortLambda(l *lambda.Lambda) error {
-	a := l.Args.(Args)
-	r := l.Reply.(*Reply)
-	r.n = a.n
-	fmt.Printf("run short lambda: res %v\n", r.n)
+type ReqLambda struct {
+	c *lambda.Controler
+}
+
+func (*ReqLambda) Lambda(args ReqArgs, reply *ReqReply) error {
+	reply.N = args.N
+	fmt.Printf("reply.N %v\n", reply.N)
 	return nil
 }
 
-func ServeConn(l *lambda.Lambda, conn net.Conn) {
+type ConnLambda struct {
+	c *lambda.Controler
+}
+
+func (l *ConnLambda) ServeConn(conn net.Conn) {
 	var hdr [4]byte
 	_, err := io.ReadFull(conn, hdr[:])
 	if err != nil {
 		log.Fatal("Read error: ", err)
 	}
 	n := binary.BigEndian.Uint32(hdr[:])
-	args := Args{n}
-	var reply Reply
-	child := l.Fork("shortLambda", args, &reply)
+	args := ReqArgs{n}
+	child := l.c.Fork("ReqLambda.Lambda", args)
 
-	err = child.Join()
+	var reply ReqReply
+	err = child.Join(&reply)
 	if err != nil {
 		log.Fatal("Join error: ", err)
 	}
-	r := child.Reply.(*Reply)
+	fmt.Printf("Join -> %v\n", reply.N)
+
 	var rhdr [4]byte
-	binary.BigEndian.PutUint32(rhdr[:], r.n)
+	binary.BigEndian.PutUint32(rhdr[:], reply.N)
 	_, err = conn.Write(rhdr[:])
 	if err != nil {
 		log.Fatal("Write error: ", err)
 	}
-	// os.Exit(0)
+	os.Exit(0)
 }
 
-func longLambda(l *lambda.Lambda) error {
-	fmt.Printf("run longLambda\n")
+type ConnArgs struct {
+	N uint32
+}
+
+type ConnReply struct {
+	N uint32
+}
+
+func (l *ConnLambda) Lambda(args ConnArgs, reply *ConnReply) error {
 	s, err := net.Listen("tcp", ":1111")
 	if err != nil {
 		log.Fatal("Listen error:", err)
@@ -63,15 +77,17 @@ func longLambda(l *lambda.Lambda) error {
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}
-		go ServeConn(l, conn)
+		go l.ServeConn(conn)
 	}
 	return nil
 }
 
 func main() {
-	controler := lambda.ConnectToControler()
-	controler.RegisterLambda("longLambda", longLambda, "")
-	controler.RegisterLambda("shortLamabda", shortLambda, Args{})
-	l := controler.Fork("longLambda", "x", nil)
-	l.Join()
+	c := lambda.ConnectToControler()
+	ll := &ConnLambda{c}
+	c.RegisterLambda(ll)
+	sl := &ReqLambda{c}
+	c.RegisterLambda(sl)
+	l := c.Fork("ConnLambda.Lambda", ConnArgs{})
+	l.Join(&ConnReply{})
 }

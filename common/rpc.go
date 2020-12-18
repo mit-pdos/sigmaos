@@ -1,7 +1,11 @@
 package common
 
-// Network representation of lambda
-type LambdaNet struct {
+type LambdaReq struct {
 	Name string
 	Arg  []byte
+	Id   int64
+}
+
+type LambdaReply struct {
+	Reply []byte
 }

@@ -1,10 +1,10 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"log"
 	"os"
-	//"os/exec"
+	"os/exec"
 
 	"ulambda/controler"
 )
@@ -14,11 +14,11 @@ func main() {
 		log.Fatal("missing argument")
 	}
 	c := controler.MakeControler()
-	//out, err := exec.Command(os.Args[1]).CombinedOutput()
-	//fmt.Printf("exec: %s\n", out)
-	//if err != nil {
-	//	log.Fatal("Wait error: ", err)
-	//}
+	out, err := exec.Command(os.Args[1]).CombinedOutput()
+	fmt.Printf("exec: %s\n", out)
+	if err != nil {
+		log.Fatal("Wait error: ", err)
+	}
 	for {
 	}
 	c.Stop()

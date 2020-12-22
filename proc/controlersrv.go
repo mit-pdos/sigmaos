@@ -1,4 +1,4 @@
-package controler
+package proc
 
 import (
 	"container/list"

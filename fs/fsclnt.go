@@ -5,64 +5,77 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"path/filepath"
 	"strings"
 
 	"ulambda/fsrpc"
 )
 
-type Client struct {
-	Fd       *fsrpc.Fd
-	FdClient *rpc.Client
-}
-
-func (c *Client) connect() error {
-	var err error
-	c.FdClient, err = rpc.Dial("tcp", c.Fd.Addr)
-	if err != nil {
-		log.Fatal("dialing:", err)
-	}
-	return err
-}
-
-func (c *Client) makeCall(method string, req interface{}, reply interface{}) error {
-	if c.FdClient == nil {
-		err := c.connect()
-		if err != nil {
-			return err
-		}
-	}
-	return c.FdClient.Call(method, req, reply)
-}
-
 type FsClient struct {
-	root  *Client
-	fds   map[int]*Client
-	names map[string]*fsrpc.Fd
+	root  *fsrpc.Ufd
+	fds   map[int]*fsrpc.Ufd
+	names map[string]*fsrpc.Ufd
+	clnts map[string]*rpc.Client
 	first int
 }
 
-func MakeFsRoot() *fsrpc.Fd {
+func MakeFsRoot() *fsrpc.Ufd {
 	tcpaddr, err := net.ResolveTCPAddr("tcp", "localhost"+":1111")
 	if err != nil {
 		log.Fatal("MakeFsRoot error", err)
 	}
-	return &fsrpc.Fd{tcpaddr.String()}
+	return &fsrpc.Ufd{tcpaddr.String(), 0}
 }
 
-func MakeFsClient(root *fsrpc.Fd) *FsClient {
+func MakeFsClient(root *fsrpc.Ufd) *FsClient {
 	fsc := &FsClient{
-		&Client{root, nil},
-		make(map[int]*Client),
-		make(map[string]*fsrpc.Fd),
+		root,
+		make(map[int]*fsrpc.Ufd),
+		make(map[string]*fsrpc.Ufd),
+		make(map[string]*rpc.Client),
 		0}
 	return fsc
 }
 
-func (fsc *FsClient) findfd(Fd *fsrpc.Fd) int {
+func InitFsClient(root *fsrpc.Ufd, fds []string) *FsClient {
+	fsc := MakeFsClient(root)
+	for _, fd := range fds {
+		fsc.findfd(&fsrpc.Ufd{fd, 0})
+	}
+	return fsc
+}
+
+func (fsc *FsClient) makeCall(ufd *fsrpc.Ufd, method string, req interface{},
+	reply interface{}) error {
+	log.Printf("makeCall %s at %v\n", method, ufd.Addr)
+	clnt, ok := fsc.clnts[ufd.Addr]
+	if !ok {
+		var err error
+		clnt, err = rpc.Dial("tcp", ufd.Addr)
+		if err != nil {
+			return err
+		}
+		fsc.clnts[ufd.Addr] = clnt
+	}
+	return clnt.Call(method, req, reply)
+}
+
+func (fsc *FsClient) findfd(ufd *fsrpc.Ufd) int {
 	fd := fsc.first
-	fsc.fds[fd] = &Client{Fd, nil}
+	fsc.fds[fd] = ufd
 	fsc.first += 1
 	return fd
+}
+
+func (fsc *FsClient) Lsof() []string {
+	var fds []string
+	for _, fd := range fsc.fds {
+		if fd != nil {
+			fds = append(fds, fd.Addr)
+		}
+	}
+	return fds
+
 }
 
 func (fsc *FsClient) MkNod(path string, fs Fs) error {
@@ -71,18 +84,44 @@ func (fsc *FsClient) MkNod(path string, fs Fs) error {
 	return nil
 }
 
-func (fsc *FsClient) Open(path string) (int, error) {
+func (fsc *FsClient) Walk(start *fsrpc.Ufd, path string) (*fsrpc.Ufd, error) {
+	args := fsrpc.WalkReq{path}
+	var reply fsrpc.WalkReply
+	err := fsc.makeCall(start, "FsSrv.Walk", args, &reply)
+	return &reply.Ufd, err
+}
+
+func (fsc *FsClient) Create(path string) (int, error) {
 	if strings.HasPrefix(path, "/") { // remote lookup?
-		args := fsrpc.OpenReq{path}
-		var reply fsrpc.OpenReply
-		err := fsc.root.makeCall("FsSrv.Open", args, &reply)
+		ufd, err := fsc.Walk(fsc.root, filepath.Dir(path))
+		args := fsrpc.CreateReq{filepath.Base(path)}
+		var reply fsrpc.CreateReply
+		err = fsc.makeCall(ufd, "FsSrv.Create", args, &reply)
 		if err == nil {
-			fd := fsc.findfd(&reply.Fd)
+			nufd := &fsrpc.Ufd{ufd.Addr, reply.Fd}
+			fd := fsc.findfd(nufd)
 			return fd, err
 		} else {
 			return -1, err
 		}
-	} else { // internal lookup
+	}
+	return -1, errors.New("Create: not supported")
+}
+
+func (fsc *FsClient) Open(path string) (int, error) {
+	if strings.HasPrefix(path, "/") { // remote lookup?
+		ufd, err := fsc.Walk(fsc.root, filepath.Dir(path))
+		args := fsrpc.OpenReq{path}
+		var reply fsrpc.OpenReply
+		err = fsc.makeCall(ufd, "FsSrv.Open", args, &reply)
+		if err == nil {
+			nufd := &fsrpc.Ufd{ufd.Addr, reply.Fd}
+			fd := fsc.findfd(nufd)
+			return fd, err
+		} else {
+			return -1, err
+		}
+	} else { // internal lookup XXX should call server, locally
 		if Fd, ok := fsc.names[path]; ok {
 			fd := fsc.findfd(Fd)
 			return fd, nil
@@ -93,41 +132,32 @@ func (fsc *FsClient) Open(path string) (int, error) {
 }
 
 func (fsc *FsClient) Mount(fd int, path string) error {
-	log.Printf("mount: %d %v\n", fd, path)
 	// XXX should check if path starts with /
-	if clnt, ok := fsc.fds[fd]; ok {
-		args := fsrpc.MountReq{*clnt.Fd, path}
+	if Fd, ok := fsc.fds[fd]; ok {
+		args := fsrpc.MountReq{*Fd, path}
 		var reply fsrpc.MountReply
-		err := fsc.root.makeCall("FsSrv.Mount", args, &reply)
+		err := fsc.makeCall(fsc.root, "FsSrv.Mount", args, &reply)
 		return err
-	} else {
-		log.Printf("Mount: lookup error")
 	}
 	return errors.New("Mount: unknown fd")
 }
 
 func (fsc *FsClient) Write(fd int, buf []byte) (int, error) {
-	if clnt, ok := fsc.fds[fd]; ok {
-		log.Printf("Write at %v: %d\n", clnt.Fd, len(buf))
-		args := fsrpc.WriteReq{buf}
+	if Fd, ok := fsc.fds[fd]; ok {
+		args := fsrpc.WriteReq{Fd.Fd, buf}
 		var reply fsrpc.WriteReply
-		err := clnt.makeCall("FsSrv.Write", args, &reply)
+		err := fsc.makeCall(Fd, "FsSrv.Write", args, &reply)
 		return reply.N, err
-	} else {
-		log.Printf("Write: lookup error %v", ok)
 	}
 	return -1, errors.New("Write: unknown fd")
 }
 
 func (fsc *FsClient) Read(fd int, n int) ([]byte, error) {
-	if clnt, ok := fsc.fds[fd]; ok {
-		log.Printf("Read at %v: %d\n", clnt.Fd, n)
-		args := fsrpc.ReadReq{n}
+	if Fd, ok := fsc.fds[fd]; ok {
+		args := fsrpc.ReadReq{Fd.Fd, n}
 		var reply fsrpc.ReadReply
-		err := clnt.makeCall("FsSrv.Read", args, &reply)
+		err := fsc.makeCall(Fd, "FsSrv.Read", args, &reply)
 		return reply.Buf, err
-	} else {
-		log.Printf("Read: lookup error %v", ok)
 	}
 	return nil, errors.New("Read: unknown fd")
 }

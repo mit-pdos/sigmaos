@@ -1,7 +1,26 @@
 package fsrpc
 
-type Fd struct {
+type Fd int
+
+type Ufd struct {
 	Addr string
+	Fd   Fd
+}
+
+type WalkReq struct {
+	Name string
+}
+
+type WalkReply struct {
+	Ufd Ufd
+}
+
+type CreateReq struct {
+	Name string
+}
+
+type CreateReply struct {
+	Fd Fd
 }
 
 type OpenReq struct {
@@ -13,7 +32,7 @@ type OpenReply struct {
 }
 
 type MountReq struct {
-	Fd   Fd
+	Ufd  Ufd
 	Name string
 }
 
@@ -22,6 +41,7 @@ type MountReply struct {
 }
 
 type WriteReq struct {
+	Fd  Fd
 	Buf []byte
 }
 
@@ -30,7 +50,8 @@ type WriteReply struct {
 }
 
 type ReadReq struct {
-	N int
+	Fd Fd
+	N  int
 }
 
 type ReadReply struct {

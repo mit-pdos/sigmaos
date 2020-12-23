@@ -3,4 +3,4 @@ all:
 	go build -o bin/consoled cmd/consoled/main.go
 	go build -o bin/procd cmd/procd/main.go
 	# go build -o login cmd/login/main.go
-	go build -o bin/sh cmd/sh/main.go
+	go build -o bin/gsh cmd/sh/main.go

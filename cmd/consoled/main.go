@@ -14,23 +14,31 @@ type Consoled struct {
 	done   chan bool
 }
 
-func (cons *Consoled) Open(path string) (*fsrpc.Fd, error) {
+func (cons *Consoled) Walk(path string) (*fsrpc.Ufd, error) {
 	return nil, nil
 }
 
-func (cons *Consoled) Write(buf []byte) (int, error) {
+func (cons *Consoled) Open(path string) (fsrpc.Fd, error) {
+	log.Printf("Open: %v\n", path)
+	return 0, nil
+}
+
+func (cons *Consoled) Create(path string) (fsrpc.Fd, error) {
+	return 0, nil
+}
+
+func (cons *Consoled) Write(fd fsrpc.Fd, buf []byte) (int, error) {
 	n, err := cons.stdout.Write(buf)
 	cons.stdout.Flush()
 	return n, err
 }
 
-func (cons *Consoled) Read(n int) ([]byte, error) {
+func (cons *Consoled) Read(fd fsrpc.Fd, n int) ([]byte, error) {
 	b, err := cons.stdin.ReadBytes('\n')
-	log.Printf("Read %v\n", b)
 	return b, err
 }
 
-func (cons *Consoled) Mount(fd *fsrpc.Fd, path string) error {
+func (cons *Consoled) Mount(fd *fsrpc.Ufd, path string) error {
 	return nil
 }
 

@@ -2,19 +2,21 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"ulambda/fs"
 )
 
 func main() {
-	clnt := fs.InitFsClient(os.Args)
+	log.Printf("Running: %v\n", os.Args[0])
+	clnt := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
 	for {
-		b := []byte("$\n")
-		_, err := clnt.Write(1, b)
+		b := []byte("λ ")
+		_, err := clnt.Write(2, b) // XXX
 		if err != nil {
 			log.Fatal("Write error:", err)
 		}
-		b, err = clnt.Read(0, 1024)
+		b, err = clnt.Read(1, 1024) // XXX
 		if err != nil {
 			log.Fatal("Read error:", err)
 		}

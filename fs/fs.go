@@ -8,10 +8,12 @@ import (
 )
 
 type Fs interface {
-	Open(string) (*fsrpc.Fd, error)
-	Write([]byte) (int, error)
-	Read(int) ([]byte, error)
-	Mount(*fsrpc.Fd, string) error
+	Walk(string) (*fsrpc.Ufd, error)
+	Open(string) (fsrpc.Fd, error)
+	Create(string) (fsrpc.Fd, error)
+	Write(fsrpc.Fd, []byte) (int, error)
+	Read(fsrpc.Fd, int) ([]byte, error)
+	Mount(*fsrpc.Ufd, string) error
 }
 
 func runsrv(l net.Listener) {
@@ -24,7 +26,7 @@ func runsrv(l net.Listener) {
 	}
 }
 
-func register(fs Fs, root bool) *fsrpc.Fd {
+func register(fs Fs, root bool) *fsrpc.Ufd {
 	s := &FsSrv{fs}
 	var l net.Listener
 	var err error
@@ -38,7 +40,7 @@ func register(fs Fs, root bool) *fsrpc.Fd {
 	}
 	addr := l.Addr()
 	log.Printf("addr %v\n", addr)
-	fd := &fsrpc.Fd{addr.String()}
+	fd := &fsrpc.Ufd{addr.String(), 0}
 	rpc.Register(s)
 	go runsrv(l)
 	return fd

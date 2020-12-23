@@ -78,6 +78,7 @@ func (fsc *FsClient) Lsof() []string {
 
 }
 
+// XXX register empty interface and in fssvr check if method exists
 func (fsc *FsClient) MkNod(path string, fs Fs) error {
 	fd := register(fs, path == "/")
 	fsc.names[path] = fd
@@ -111,6 +112,9 @@ func (fsc *FsClient) Create(path string) (int, error) {
 func (fsc *FsClient) Open(path string) (int, error) {
 	if strings.HasPrefix(path, "/") { // remote lookup?
 		ufd, err := fsc.Walk(fsc.root, filepath.Dir(path))
+		if err != nil {
+			return -1, err
+		}
 		args := fsrpc.OpenReq{path}
 		var reply fsrpc.OpenReply
 		err = fsc.makeCall(ufd, "FsSrv.Open", args, &reply)

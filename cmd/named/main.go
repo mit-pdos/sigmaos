@@ -1,34 +1,33 @@
 package main
 
 import (
-	"errors"
 	"log"
-	"strings"
 	"sync"
 
 	"ulambda/fs"
 	"ulambda/fsrpc"
+	"ulambda/name"
 )
 
 type Named struct {
-	mu    sync.Mutex
-	names map[string]*fsrpc.Ufd
-	done  chan bool
+	mu   sync.Mutex
+	done chan bool
+	root *name.Root
+}
+
+func makeNamed(root *fsrpc.Ufd) *Named {
+	nd := &Named{}
+	nd.root = name.MakeRoot(root)
+	nd.done = make(chan bool)
+	return nd
 }
 
 func (nd *Named) Walk(path string) (*fsrpc.Ufd, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
-
-	log.Printf("Walk: %v\n", path)
-	if path == "/" {
-		// XXX my root
-		return fs.MakeFsRoot(), nil
-	}
-	if fd, ok := nd.names[path]; ok {
-		return fd, nil
-	}
-	return nil, errors.New("Read: unknown name")
+	ufd, err := nd.root.Walk(path)
+	log.Printf("Walk %v -> %v\n", path, ufd)
+	return ufd, err
 }
 
 func (nd *Named) Open(path string) (fsrpc.Fd, error) {
@@ -48,11 +47,11 @@ func (nd *Named) Read(fd fsrpc.Fd, n int) ([]byte, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	names := make([]string, 0, len(nd.names))
-	for k, _ := range nd.names {
-		names = append(names, k)
+	ls, err := nd.root.Ls(fd, n)
+	if err != nil {
+		return nil, err
 	}
-	b := []byte(strings.Join(names, " ") + "/n")
+	b := []byte(ls)
 	return b, nil
 }
 
@@ -60,21 +59,13 @@ func (nd *Named) Mount(fd *fsrpc.Ufd, path string) error {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	log.Printf("Mount: %v\n", path)
-	nd.names[path] = fd
-	return nil
-}
-
-func makeNamed() *Named {
-	nd := &Named{}
-	nd.names = make(map[string]*fsrpc.Ufd)
-	nd.done = make(chan bool)
-	return nd
+	return nd.root.Mount(fd, path)
 }
 
 func main() {
-	nd := makeNamed()
-	clnt := fs.MakeFsClient(fs.MakeFsRoot())
+	root := fs.MakeFsRoot()
+	nd := makeNamed(root)
+	clnt := fs.MakeFsClient(root)
 	err := clnt.MkNod("/", nd)
 	if err != nil {
 		log.Fatal("Mknod error", err)

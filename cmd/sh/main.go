@@ -3,8 +3,10 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"ulambda/fs"
+	"ulambda/proc"
 )
 
 func main() {
@@ -12,7 +14,7 @@ func main() {
 	clnt := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
 	for {
 		b := []byte("λ ")
-		_, err := clnt.Write(2, b) // XXX
+		_, err := clnt.Write(1, b)
 		if err != nil {
 			log.Fatal("Write error:", err)
 		}
@@ -20,6 +22,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Read error:", err)
 		}
-		log.Printf("read %v\n", b)
+		cmd := strings.TrimSuffix(string(b), "\n")
+		proc.Spawn(cmd, clnt)
 	}
 }

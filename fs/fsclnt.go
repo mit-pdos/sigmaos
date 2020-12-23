@@ -47,7 +47,7 @@ func InitFsClient(root *fsrpc.Ufd, fds []string) *FsClient {
 
 func (fsc *FsClient) makeCall(ufd *fsrpc.Ufd, method string, req interface{},
 	reply interface{}) error {
-	log.Printf("makeCall %s at %v\n", method, ufd.Addr)
+	log.Printf("makeCall %s at %v %v\n", method, ufd.Addr, req)
 	clnt, ok := fsc.clnts[ufd.Addr]
 	if !ok {
 		var err error

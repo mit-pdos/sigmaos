@@ -40,7 +40,7 @@ func (p *Procd) Create(path string) (fsrpc.Fd, error) {
 		p.procs[p.nextpid] = &Proc{""}
 		return fsrpc.Fd(p.nextpid), nil
 	} else {
-		return fsrpc.Fd(-1), errors.New("Cannot create")
+		return fsrpc.Fd(0), errors.New("Cannot create")
 	}
 }
 
@@ -78,10 +78,10 @@ func mkProc(program string) *Proc {
 // XXX fd0 points to proc; what should close() mean?
 func pinit(clnt *fs.FsClient, program string) {
 	if _, err := clnt.Open("/console/stdin"); err != nil {
-		log.Fatal("Open error:", err)
+		log.Fatal("Open error stdin: ", err)
 	}
 	if _, err := clnt.Open("/console/stdout"); err != nil {
-		log.Fatal("Open error:", err)
+		log.Fatal("Open error stdout: ", err)
 	}
 	p, err := proc.Spawn(program, clnt)
 	if err != nil {
@@ -108,7 +108,7 @@ func main() {
 			log.Fatal("Mount error:", err)
 		}
 	} else {
-		log.Fatal("Open error:", err)
+		log.Fatalf("Open error proc: ", err)
 	}
 	pinit(clnt, os.Args[1])
 	<-p.done

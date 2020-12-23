@@ -1,10 +1,14 @@
 package fsrpc
 
-type Fd int
+type Fd uint64
 
 type Ufd struct {
 	Addr string
 	Fd   Fd
+}
+
+func MakeUfd(addr string, fd Fd) *Ufd {
+	return &Ufd{addr, fd}
 }
 
 type WalkReq struct {

@@ -9,7 +9,11 @@ import (
 
 func main() {
 	log.Printf("Running: %v\n", os.Args[0])
-	clnt := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	clnt, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	if err != nil {
+		log.Fatal("InitFsClient error:", err)
+	}
+
 	fd, err := clnt.Open("/")
 	if err != nil {
 		log.Fatal("Open error:", err)

@@ -10,26 +10,27 @@ import (
 )
 
 type InodeType int
+type InodeNumber uint64
 
 const (
+	RootInum InodeNumber = 1
+
 	FileT  InodeType = 1
 	DirT   InodeType = 2
 	DevT   InodeType = 3
 	MountT InodeType = 4
 )
 
-type InodeNumber uint64
-
 type Inode struct {
 	Type InodeType
-	Ino  InodeNumber
+	Inum InodeNumber
 	Data interface{}
 }
 
 func makeInode(t InodeType, inum InodeNumber, data interface{}) *Inode {
 	i := Inode{}
 	i.Type = t
-	i.Ino = inum
+	i.Inum = inum
 	i.Data = data
 	return &i
 }
@@ -42,7 +43,7 @@ type Root struct {
 	root   *fsrpc.Ufd
 	dir    *Dir
 	inodes map[InodeNumber]*Inode
-	ino    InodeNumber
+	inum   InodeNumber
 }
 
 func MakeDir() *Dir {
@@ -56,8 +57,8 @@ func MakeRoot(root *fsrpc.Ufd) *Root {
 	d.dir = MakeDir()
 	d.root = root
 	d.inodes = make(map[InodeNumber]*Inode)
-	d.ino = 1
-	d.inodes[0] = makeInode(DirT, 0, d.dir)
+	d.inum = RootInum
+	d.inodes[RootInum] = makeInode(DirT, RootInum, d.dir)
 	return &d
 }
 
@@ -70,22 +71,25 @@ func (dir *Dir) Lookup(name string) (*Inode, error) {
 	}
 }
 
-func (dir *Dir) Namei(path []string) (*Inode, error) {
+func (dir *Dir) Namei(path []string) (*Inode, []string, error) {
 	var inode *Inode
 	var err error
-	log.Printf("Namei %v", path)
 	inode, err = dir.Lookup(path[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if len(path) == 1 {
-		return inode, nil
+	if len(path) == 1 { // done?
+		log.Printf("Namei %v %v -> %v", path, dir, inode)
+		return inode, nil, nil
 	}
 	if inode.Type == DirT {
 		d := inode.Data.(*Dir)
 		return d.Namei(path[1:])
+	} else if inode.Type == MountT {
+		log.Printf("Namei %v %v -> %v %v", path, dir, inode, path[1:])
+		return inode, path[1:], nil
 	} else {
-		return nil, errors.New("Not a directory")
+		return nil, path[1:], errors.New("Not a directory")
 	}
 }
 
@@ -106,52 +110,64 @@ func (dir *Dir) mount(inode *Inode, name string) error {
 	return nil
 }
 
-func (root *Root) makeUfd(ino InodeNumber) *fsrpc.Ufd {
+func (dir *Dir) create(inode *Inode, name string) error {
+	_, ok := dir.entries[name]
+	if ok {
+		return errors.New("Name exists")
+	}
+	dir.entries[name] = inode
+	return nil
+}
+
+func (root *Root) Myroot() *fsrpc.Ufd {
+	return root.root
+}
+
+func (root *Root) makeUfd(inum InodeNumber) *fsrpc.Ufd {
 	ufd := *root.root
-	ufd.Fd = fsrpc.Fd(ino)
+	ufd.Fd = fsrpc.Fd(inum)
 	return &ufd
 }
 
-// XXX walk may run into an intermediate mount
-func (root *Root) Walk(path string) (*fsrpc.Ufd, error) {
+func (root *Root) Namei(path []string) (*Inode, []string, error) {
+	if path[0] == "." {
+		return root.inodes[RootInum], path[1:], nil
+	}
+	return root.dir.Namei(path)
+}
+
+func (root *Root) Walk(path string) (*fsrpc.Ufd, string, error) {
+	log.Printf("Walk %v\n", path)
 	if path == "/" || path == "." {
-		return root.makeUfd(0), nil
+		return root.makeUfd(RootInum), "", nil
 	}
 	path = strings.TrimLeft(path, "/")
-	inode, err := root.dir.Namei(strings.Split(path, "/"))
-	if err != nil {
-		return nil, err
-	}
-	if inode.Type == MountT {
-		return inode.Data.(*fsrpc.Ufd), nil
+	inode, rest, err := root.Namei(strings.Split(path, "/"))
+	if err == nil {
+		if inode.Type == MountT {
+			ufd := inode.Data.(*fsrpc.Ufd)
+			return ufd, strings.Join(rest, "/"), err
+		} else {
+			return root.makeUfd(inode.Inum), strings.Join(rest, "/"), err
+		}
 	} else {
-		return root.makeUfd(inode.Ino), nil
+		return nil, "", err
 	}
 }
 
-func (root *Root) allocIno() InodeNumber {
-	i := root.ino
-	root.ino += 1
-	return i
-}
-
-func (root *Root) Mount(fd *fsrpc.Ufd, path string) error {
-	log.Printf("Mount: %v\n", path)
+func (root *Root) Mount(ufd *fsrpc.Ufd, path string) error {
 	if path == "/" {
 		return errors.New("Cannot mount on root")
 	}
 	path = strings.TrimLeft(path, "/")
 	dirp := filepath.Dir(path)
 	base := filepath.Base(path)
-	inum := root.allocIno()
-	inode := makeInode(MountT, inum, fd)
-	if dirp == "." {
-		return root.dir.mount(inode, base)
-	}
-	if inode, err := root.dir.Namei(strings.Split(dirp, "/")); err == nil {
+	log.Printf("Mount %v at (%v,%v)\n", ufd, dirp, base)
+	i := makeInode(MountT, 0, ufd)
+	if inode, _, err := root.Namei(strings.Split(dirp, "/")); err == nil {
 		if inode.Type == DirT {
 			d := inode.Data.(*Dir)
-			d.mount(inode, base)
+			d.mount(i, base)
 			return nil
 		} else {
 			return errors.New("Base not a directory")
@@ -162,7 +178,6 @@ func (root *Root) Mount(fd *fsrpc.Ufd, path string) error {
 }
 
 func (root *Root) Ls(fd fsrpc.Fd, n int) (string, error) {
-	log.Printf("ls %v\n", fd)
 	if inode, ok := root.inodes[InodeNumber(fd)]; ok {
 		if inode.Type == DirT {
 			d := inode.Data.(*Dir)
@@ -173,4 +188,40 @@ func (root *Root) Ls(fd fsrpc.Fd, n int) (string, error) {
 	} else {
 		return "", errors.New("Unknown inode number")
 	}
+}
+
+func (root *Root) Create(path string, inum InodeNumber, inodeData interface{}) error {
+	dirp := filepath.Dir(path)
+	base := filepath.Base(path)
+	log.Printf("Create %v(%v,%v) %v\n", path, dirp, base, inum)
+	if path == "/" || path == "." {
+		return errors.New("Cannot create root and .")
+	}
+	path = strings.TrimLeft(path, "/")
+	i := makeInode(FileT, inum, inodeData)
+	if inode, _, err := root.Namei(strings.Split(dirp, "/")); err == nil {
+		log.Printf("inode %v", inode)
+		if inode.Type == DirT {
+			d := inode.Data.(*Dir)
+			d.create(i, base)
+			root.inodes[inum] = i
+			return nil
+		} else {
+			return errors.New("Base not a directory")
+		}
+	} else {
+		return err
+	}
+}
+
+func (root *Root) Fd2Inode(fd fsrpc.Fd) (*Inode, error) {
+	if inode, ok := root.inodes[InodeNumber(fd)]; ok {
+		return inode, nil
+	} else {
+		return nil, errors.New("Unknown fd")
+	}
+}
+
+func (root *Root) Open(ufd *fsrpc.Ufd) (*Inode, error) {
+	return root.Fd2Inode(ufd.Fd)
 }

@@ -7,20 +7,18 @@ import (
 	"ulambda/fs"
 )
 
-func Spawn(path string, clnt *fs.FsClient) (int, error) {
-	fds := clnt.Lsof()
-	log.Printf("fds %v\n", fds)
+func Spawn(clnt *fs.FsClient, path string, fds []string) error {
 	fd, err := clnt.Create("/proc/spawn")
 	if err != nil {
-		log.Fatal("Open error:", err)
-		return -1, err
+		log.Fatal("Open error: ", err)
+		return err
 	}
 	_, err = clnt.Write(fd, []byte(path+" "+strings.Join(fds, " ")))
 	if err != nil {
 		log.Fatal("Write error: ", err)
-		return -1, err
+		return err
 	}
-	return 0, nil
+	return nil
 }
 
 func Getpid() int {

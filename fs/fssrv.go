@@ -9,8 +9,9 @@ type FsSrv struct {
 }
 
 func (s *FsSrv) Walk(req fsrpc.WalkReq, reply *fsrpc.WalkReply) error {
-	ufd, err := s.fs.Walk(req.Name)
+	ufd, rest, err := s.fs.Walk(req.Name)
 	if err == nil {
+		reply.Path = rest
 		reply.Ufd = *ufd
 	}
 	return err
@@ -25,7 +26,7 @@ func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.CreateReply) error {
 }
 
 func (s *FsSrv) Open(req fsrpc.OpenReq, reply *fsrpc.OpenReply) error {
-	fd, err := s.fs.Open(req.Name)
+	fd, err := s.fs.Open(&req.Ufd)
 	if err == nil {
 		reply.Fd = fd
 	}

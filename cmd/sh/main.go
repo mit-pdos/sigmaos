@@ -11,18 +11,25 @@ import (
 
 func main() {
 	log.Printf("Running: %v\n", os.Args[0])
-	clnt := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	clnt, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	if err != nil {
+		log.Fatal("InitFsClient error:", err)
+	}
 	for {
 		b := []byte("λ ")
 		_, err := clnt.Write(1, b)
 		if err != nil {
 			log.Fatal("Write error:", err)
 		}
-		b, err = clnt.Read(1, 1024) // XXX
+		b, err = clnt.Read(0, 1024)
 		if err != nil {
 			log.Fatal("Read error:", err)
 		}
 		cmd := strings.TrimSuffix(string(b), "\n")
-		proc.Spawn(cmd, clnt)
+		err = proc.Spawn(clnt, cmd, clnt.Lsof())
+		if err != nil {
+			log.Fatal("Spawn error:", err)
+		}
+
 	}
 }

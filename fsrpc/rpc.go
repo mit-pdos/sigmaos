@@ -16,7 +16,8 @@ type WalkReq struct {
 }
 
 type WalkReply struct {
-	Ufd Ufd
+	Path string
+	Ufd  Ufd
 }
 
 type CreateReq struct {
@@ -28,7 +29,7 @@ type CreateReply struct {
 }
 
 type OpenReq struct {
-	Name string
+	Ufd Ufd
 }
 
 type OpenReply struct {

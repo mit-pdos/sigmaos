@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"sync"
 
@@ -12,34 +13,38 @@ import (
 type Named struct {
 	mu   sync.Mutex
 	done chan bool
-	root *name.Root
+	clnt *fs.FsClient
+	srv  *name.Root
 }
 
-func makeNamed(root *fsrpc.Ufd) *Named {
+func makeNamed() *Named {
 	nd := &Named{}
-	nd.root = name.MakeRoot(root)
 	nd.done = make(chan bool)
 	return nd
 }
 
-func (nd *Named) Walk(path string) (*fsrpc.Ufd, error) {
+func (nd *Named) Walk(path string) (*fsrpc.Ufd, string, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
-	ufd, err := nd.root.Walk(path)
-	log.Printf("Walk %v -> %v\n", path, ufd)
-	return ufd, err
+	ufd, rest, err := nd.srv.Walk(path)
+	return ufd, rest, err
 }
 
-func (nd *Named) Open(path string) (fsrpc.Fd, error) {
-	return 0, nil
+func (nd *Named) Open(ufd *fsrpc.Ufd) (fsrpc.Fd, error) {
+	nd.mu.Lock()
+	defer nd.mu.Unlock()
+
+	inode, err := nd.srv.Open(ufd)
+	fd := fsrpc.Fd(inode.Inum)
+	return fd, err
 }
 
 func (nd *Named) Create(path string) (fsrpc.Fd, error) {
-	return 0, nil
+	return 0, errors.New("Unsupported")
 }
 
 func (nd *Named) Write(fd fsrpc.Fd, buf []byte) (int, error) {
-	return 0, nil
+	return 0, errors.New("Unsupported")
 }
 
 // XXX n
@@ -47,7 +52,8 @@ func (nd *Named) Read(fd fsrpc.Fd, n int) ([]byte, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	ls, err := nd.root.Ls(fd, n)
+	ls, err := nd.srv.Ls(fd, n)
+	log.Printf("ls %v\n", ls)
 	if err != nil {
 		return nil, err
 	}
@@ -59,16 +65,11 @@ func (nd *Named) Mount(fd *fsrpc.Ufd, path string) error {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	return nd.root.Mount(fd, path)
+	return nd.srv.Mount(fd, path)
 }
 
 func main() {
-	root := fs.MakeFsRoot()
-	nd := makeNamed(root)
-	clnt := fs.MakeFsClient(root)
-	err := clnt.MkNod("/", nd)
-	if err != nil {
-		log.Fatal("Mknod error", err)
-	}
+	nd := makeNamed()
+	nd.clnt, nd.srv = fs.MakeFs(nd, true)
 	<-nd.done
 }

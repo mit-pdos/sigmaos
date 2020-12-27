@@ -111,12 +111,33 @@ func (root *Root) Ls(fid fsrpc.Fid, n int) (string, error) {
 	return dir.ls(n), nil
 }
 
-func (root *Root) Open(start fsrpc.Fid, path string) (*Inode, error) {
-	dirp := filepath.Dir(path)
-	base := filepath.Base(path)
-	log.Printf("Open %v %v(%v,%v)\n", start, path, dirp, base)
-	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
-		inode, err = inode.lookup(base)
+func (root *Root) open(inode *Inode, base string, i interface{}) (*Inode, error) {
+	return inode.lookup(base)
+}
+
+func (root *Root) create(inode *Inode, base string, i interface{}) (*Inode, error) {
+	return inode.create(root, FileT, base, i)
+}
+
+func (root *Root) mkdir(inode *Inode, base string, i interface{}) (*Inode, error) {
+	return inode.create(root, DirT, base, i)
+}
+
+func (root *Root) mount(inode *Inode, base string, i interface{}) (*Inode, error) {
+	return inode.create(root, MountT, base, i)
+}
+
+func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error) {
+	return inode.create(root, DevT, base, i)
+}
+
+func (root *Root) Op(opn string, start fsrpc.Fid, path string,
+	op func(*Inode, string, interface{}) (*Inode, error),
+	i interface{}) (*Inode, error) {
+	log.Printf("%v %v %v\n", opn, start, path)
+	if inode, _, err := root.Namei(start,
+		strings.Split(filepath.Dir(path), "/")); err == nil {
+		inode, err = op(inode, filepath.Base(path), i)
 		if err != nil {
 			return inode, err
 		}
@@ -125,70 +146,28 @@ func (root *Root) Open(start fsrpc.Fid, path string) (*Inode, error) {
 	} else {
 		return nil, err
 	}
+}
+
+func (root *Root) Open(start fsrpc.Fid, path string) (*Inode, error) {
+	return root.Op("Open", start, path, root.open, nil)
 }
 
 func (root *Root) Create(start fsrpc.Fid, path string) (*Inode, error) {
-	dirp := filepath.Dir(path)
-	base := filepath.Base(path)
-	log.Printf("Create %v %v(%v,%v)\n", path, start, dirp, base)
-	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
-		inode, err = inode.create(root, FileT, base, []byte{})
-		if err != nil {
-			return inode, err
-		}
-		root.inodes[inode.Fid] = inode
-		return inode, nil
-	} else {
-		return nil, err
-	}
+	return root.Op("Create", start, path, root.create, []byte{})
 }
 
 func (root *Root) MkDir(start fsrpc.Fid, path string) (*Inode, error) {
-	dirp := filepath.Dir(path)
-	base := filepath.Base(path)
-	log.Printf("Mkdir %v %v(%v,%v)\n", path, start, dirp, base)
-	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
-		inode, err = inode.create(root, DirT, base, makeDir())
-		if err != nil {
-			return inode, err
-		}
-		root.inodes[inode.Fid] = inode
-		return inode, nil
-	} else {
-		return nil, err
-	}
+	return root.Op("MkDir", start, path, root.mkdir, makeDir())
 }
 
 func (root *Root) Mount(ufid *fsrpc.Ufid, start fsrpc.Fid, path string) error {
-	dirp := filepath.Dir(path)
-	base := filepath.Base(path)
-	log.Printf("Mount %v at (%v, %v,%v)\n", ufid, start, dirp, base)
-	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
-		inode, err = inode.create(root, MountT, base, ufid)
-		if err != nil {
-			return err
-		}
-		root.inodes[inode.Fid] = inode
-		return nil
-	} else {
-		return err
-	}
+	_, err := root.Op("Mount", start, path, root.mount, ufid)
+	return err
 }
 
 func (root *Root) MkNod(start fsrpc.Fid, path string, rw Dev) error {
-	dirp := filepath.Dir(path)
-	base := filepath.Base(path)
-	log.Printf("Mknod %v %v(%v,%v)\n", path, start, dirp, base)
-	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
-		inode, err = inode.create(root, DevT, base, rw)
-		if err != nil {
-			return err
-		}
-		root.inodes[inode.Fid] = inode
-		return nil
-	} else {
-		return err
-	}
+	_, err := root.Op("Mknod", start, path, root.mknod, rw)
+	return err
 }
 
 func (root *Root) Pipe(fid fsrpc.Fid, path string) error {

@@ -22,7 +22,6 @@ type FsClient struct {
 	root  *fsrpc.Ufid
 	clnts map[string]*rpc.Client
 	srv   *name.Root
-	first int
 	Proc  string
 }
 
@@ -105,11 +104,24 @@ func (fsc *FsClient) makeCall(addr string, method string, req interface{},
 	return clnt.Call(method, req, reply)
 }
 
-func (fsc *FsClient) findfd(ufd *fsrpc.Ufid) int {
-	fd := fsc.first
-	fsc.fds = append(fsc.fds, ufd)
-	fsc.first += 1
-	return fd
+func (fsc *FsClient) findfd(nufd *fsrpc.Ufid) int {
+	for fd, ufd := range fsc.fds {
+		if ufd == nil {
+			fsc.fds[fd] = nufd
+			return fd
+		}
+	}
+	// no free one
+	fsc.fds = append(fsc.fds, nufd)
+	return len(fsc.fds) - 1
+}
+
+func (fsc *FsClient) Close(fd int) error {
+	if fsc.fds[fd] == nil {
+		return errors.New("Close: fd isn't open")
+	}
+	fsc.fds[fd] = nil
+	return nil
 }
 
 func (fsc *FsClient) Lsof() []string {
@@ -177,15 +189,10 @@ func (fsc *FsClient) Create(path string) (int, error) {
 	}
 }
 
-func (fsc *FsClient) Open(path string) (int, error) {
-	ufid, err := fsc.Walk(filepath.Dir(path))
-	if err != nil {
-		return -1, err
-	}
-	args := fsrpc.OpenReq{ufid.Fid, filepath.Base(path)}
+func (fsc *FsClient) openat(ufid *fsrpc.Ufid, path string) (int, error) {
+	args := fsrpc.OpenReq{ufid.Fid, path}
 	var reply fsrpc.OpenReply
-	log.Printf("base %v\n", filepath.Base(path))
-	err = fsc.makeCall(ufid.Addr, "FsSrv.Open", args, &reply)
+	err := fsc.makeCall(ufid.Addr, "FsSrv.Open", args, &reply)
 	if err == nil {
 		nufd := &fsrpc.Ufid{ufid.Addr, reply.Fid}
 		fd := fsc.findfd(nufd)
@@ -193,6 +200,19 @@ func (fsc *FsClient) Open(path string) (int, error) {
 	} else {
 		return -1, err
 	}
+}
+
+func (fsc *FsClient) OpenAt(fd int, path string) (int, error) {
+	ufid := fsc.fds[fd]
+	return fsc.openat(ufid, filepath.Base(path))
+}
+
+func (fsc *FsClient) Open(path string) (int, error) {
+	ufid, err := fsc.Walk(filepath.Dir(path))
+	if err != nil {
+		return -1, err
+	}
+	return fsc.openat(ufid, filepath.Base(path))
 }
 
 func (fsc *FsClient) Mount(fd int, path string) error {
@@ -211,11 +231,11 @@ func (fsc *FsClient) Mount(fd int, path string) error {
 }
 
 func (fsc *FsClient) Write(fd int, buf []byte) (int, error) {
-	Fid := fsc.fds[fd]
-	if Fid != nil {
-		args := fsrpc.WriteReq{Fid.Fid, buf}
+	ufid := fsc.fds[fd]
+	if ufid != nil {
+		args := fsrpc.WriteReq{ufid.Fid, buf}
 		var reply fsrpc.WriteReply
-		err := fsc.makeCall(Fid.Addr, "FsSrv.Write", args, &reply)
+		err := fsc.makeCall(ufid.Addr, "FsSrv.Write", args, &reply)
 		return reply.N, err
 	}
 	return -1, errors.New("Write: unknown fd")

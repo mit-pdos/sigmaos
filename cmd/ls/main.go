@@ -19,6 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Open error:", err)
 	}
+	defer clnt.Close(fd)
 	if buf, err := clnt.Read(fd, 1024); err == nil {
 		_, err := clnt.Write(1, buf)
 		if err != nil {

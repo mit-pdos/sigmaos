@@ -16,6 +16,8 @@ import (
 	"ulambda/proc"
 )
 
+// XXX maybe one per machine, all mounting on /proc. implement union mount
+
 type Proc struct {
 	procd *Procd
 	start fsrpc.Fid

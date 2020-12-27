@@ -23,7 +23,7 @@ type FsClient struct {
 	clnts map[string]*rpc.Client
 	srv   *name.Root
 	first int
-	proc  string
+	Proc  string
 }
 
 func MakeFsRoot() *fsrpc.Ufid {
@@ -77,8 +77,9 @@ func MakeFs(fs Fs, root bool) (*FsClient, *name.Root) {
 // XXX use gob?
 func InitFsClient(root *fsrpc.Ufid, fids []string) (*FsClient, error) {
 	fsc := MakeFsClient(root)
-	// fsc.proc = proc
-	for _, fid := range fids {
+	fsc.Proc = fids[0]
+	log.Printf("InitFsClient %v\n", fsc.Proc)
+	for _, fid := range fids[1:] {
 		var ufid fsrpc.Ufid
 		err := json.Unmarshal([]byte(fid), &ufid)
 		if err != nil {

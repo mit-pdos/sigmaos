@@ -89,7 +89,7 @@ func (root *Root) Namei(start fsrpc.Fid, path []string) (*Inode, []string, error
 }
 
 func (root *Root) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) {
-	log.Printf("Walk %v\n", path)
+	log.Printf("name.Walk %v\n", path)
 	inode, rest, err := root.Namei(start, strings.Split(path, "/"))
 	if err == nil {
 		if inode.Type == MountT {
@@ -134,7 +134,7 @@ func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error
 func (root *Root) Op(opn string, start fsrpc.Fid, path string,
 	op func(*Inode, string, interface{}) (*Inode, error),
 	i interface{}) (*Inode, error) {
-	log.Printf("%v %v %v\n", opn, start, path)
+	log.Printf("name.%v %v %v\n", opn, start, path)
 	if inode, _, err := root.Namei(start,
 		strings.Split(filepath.Dir(path), "/")); err == nil {
 		inode, err = op(inode, filepath.Base(path), i)
@@ -175,7 +175,7 @@ func (root *Root) Pipe(fid fsrpc.Fid, path string) error {
 }
 
 func (root *Root) Write(fid fsrpc.Fid, data []byte) (int, error) {
-	log.Printf("Write %v\n", fid, data)
+	log.Printf("name.Write %v\n", fid)
 	inode, err := root.Fid2Inode(fid)
 	if err != nil {
 		return 0, err
@@ -190,7 +190,7 @@ func (root *Root) Write(fid fsrpc.Fid, data []byte) (int, error) {
 }
 
 func (root *Root) Read(fid fsrpc.Fid, n int) ([]byte, error) {
-	log.Printf("Read %v\n", fid)
+	log.Printf("name.Read %v\n", fid)
 	inode, err := root.Fid2Inode(fid)
 	if err != nil {
 		return nil, err

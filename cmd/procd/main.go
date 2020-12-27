@@ -20,11 +20,12 @@ type Proc struct {
 	procd *Procd
 	start fsrpc.Fid
 	pid   string
+	cmd   *exec.Cmd
 }
 
 func makeProc(p *Procd, start fsrpc.Fid, pid string) *Proc {
 	log.Printf("makeProc: start %v pid %v\n", pid)
-	return &Proc{p, start, pid}
+	return &Proc{p, start, pid, nil}
 }
 
 func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
@@ -43,10 +44,10 @@ func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
 			return 0, errors.New("Bad fids")
 		}
 		log.Printf("command %v %v\n", string(program), fids)
-		cmd := exec.Command(string(program), fids...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Start()
+		p.cmd = exec.Command(string(program), fids...)
+		p.cmd.Stdout = os.Stdout
+		p.cmd.Stderr = os.Stderr
+		err = p.cmd.Start()
 		if err != nil {
 			return -1, fmt.Errorf("Exec failure %v", err)
 		}
@@ -91,6 +92,9 @@ func (p *Procd) Open(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
 
 	log.Printf("Procd open %v %v\n", fid, path)
 	inode, err := p.srv.Open(fid, path)
+	if err != nil {
+		return fsrpc.NullFid(), err
+	}
 	return inode.Fid, err
 }
 

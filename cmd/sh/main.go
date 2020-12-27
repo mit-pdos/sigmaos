@@ -26,13 +26,15 @@ func main() {
 			log.Fatal("Read error:", err)
 		}
 		cmd := strings.TrimSuffix(string(b), "\n")
-		fd, err := proc.Spawn(clnt, cmd, clnt.Lsof())
+		child, err := proc.Spawn(clnt, cmd, clnt.Lsof())
 		if err != nil {
 			log.Fatal("Spawn error:", err)
 		}
-		err = proc.Wait(clnt, fd)
+		status, err := proc.Wait(clnt, child)
 		if err != nil {
 			log.Fatal("Wait error:", err)
 		}
+		log.Printf("Wait: %v\n", string(status))
 	}
+	proc.Exit(clnt)
 }

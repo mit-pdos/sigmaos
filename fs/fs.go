@@ -7,6 +7,7 @@ import (
 	"ulambda/fsrpc"
 )
 
+// XXX -at version too?
 type Fs interface {
 	Walk(fsrpc.Fid, string) (*fsrpc.Ufid, string, error)
 	Open(fsrpc.Fid, string) (fsrpc.Fid, error)

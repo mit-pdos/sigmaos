@@ -1,43 +1,67 @@
 package fsrpc
 
-type Fd uint64
+const (
+	NullId uint64 = 0
+	RootId uint64 = 1
+)
 
-type Ufd struct {
-	Addr string
-	Fd   Fd
+type Fid struct {
+	Version uint64
+	Id      uint64
 }
 
-func MakeUfd(addr string, fd Fd) *Ufd {
-	return &Ufd{addr, fd}
+func MakeFid(v uint64, id uint64) Fid {
+	return Fid{v, id}
+}
+
+func NullFid() Fid {
+	return MakeFid(0, NullId)
+}
+
+func RootFid() Fid {
+	return MakeFid(0, RootId)
+}
+
+type Ufid struct {
+	Addr string
+	Fid  Fid
+}
+
+func MakeUfid(addr string, fid Fid) *Ufid {
+	return &Ufid{addr, fid}
 }
 
 type WalkReq struct {
+	Fid  Fid
 	Name string
 }
 
 type WalkReply struct {
 	Path string
-	Ufd  Ufd
+	Ufid Ufid
 }
 
 type CreateReq struct {
+	Fid  Fid
 	Name string
 }
 
 type CreateReply struct {
-	Fd Fd
+	Fid Fid
 }
 
 type OpenReq struct {
-	Ufd Ufd
+	Fid  Fid
+	Name string
 }
 
 type OpenReply struct {
-	Fd Fd
+	Fid Fid
 }
 
 type MountReq struct {
-	Ufd  Ufd
+	Ufid Ufid
+	Fid  Fid
 	Name string
 }
 
@@ -46,7 +70,7 @@ type MountReply struct {
 }
 
 type WriteReq struct {
-	Fd  Fd
+	Fid Fid
 	Buf []byte
 }
 
@@ -55,8 +79,8 @@ type WriteReply struct {
 }
 
 type ReadReq struct {
-	Fd Fd
-	N  int
+	Fid Fid
+	N   int
 }
 
 type ReadReply struct {

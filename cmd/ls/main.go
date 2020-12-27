@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"ulambda/fs"
+	"ulambda/proc"
 )
 
 func main() {
@@ -26,4 +27,5 @@ func main() {
 	} else {
 		log.Fatal("Read error:", err)
 	}
+	proc.Exit(clnt)
 }

@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -17,85 +17,125 @@ import (
 )
 
 type Proc struct {
-	program string
+	procd *Procd
+	start fsrpc.Fid
+	pid   string
+}
+
+func makeProc(p *Procd, start fsrpc.Fid, pid string) *Proc {
+	log.Printf("makeProc: start %v pid %v\n", pid)
+	return &Proc{p, start, pid}
+}
+
+func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
+	if string(data) == "start" {
+		program, err := p.procd.getAttr(p.start, p.pid, "/program")
+		if err != nil {
+			return 0, err
+		}
+		b, err := p.procd.getAttr(p.start, p.pid, "/fds")
+		if err != nil {
+			return 0, err
+		}
+		var fids []string
+		err = json.Unmarshal(b, &fids)
+		if err != nil {
+			return 0, errors.New("Bad fids")
+		}
+		log.Printf("command %v %v\n", string(program), fids)
+		cmd := exec.Command(string(program), fids...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Start()
+		if err != nil {
+			return -1, fmt.Errorf("Exec failure %v", err)
+		}
+		return 0, nil
+	} else {
+		return 0, errors.New("Unknown command")
+	}
+}
+
+func (p *Proc) Read(fid fsrpc.Fid, n int) ([]byte, error) {
+	return nil, nil
 }
 
 type Procd struct {
-	mu      sync.Mutex
-	nextpid int
-	procs   map[int]*Proc
-	clnt    *fs.FsClient
-	srv     *name.Root
-	done    chan bool
+	mu   sync.Mutex
+	clnt *fs.FsClient
+	srv  *name.Root
+	done chan bool
 }
 
-func (p *Procd) Walk(path string) (*fsrpc.Ufd, string, error) {
+// XXX close
+func (p *Procd) getAttr(fid fsrpc.Fid, pid string, key string) ([]byte, error) {
+	inode, err := p.srv.Open(fid, pid+"/"+key)
+	if err != nil {
+		return nil, err
+	}
+	b, err := p.srv.Read(inode.Fid, 1024)
+	return b, err
+}
+
+func (p *Procd) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	ufd, rest, err := p.srv.Walk(path)
+	ufd, rest, err := p.srv.Walk(start, path)
 	return ufd, rest, err
 }
 
-func (p *Procd) Open(ufd *fsrpc.Ufd) (fsrpc.Fd, error) {
+func (p *Procd) Open(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	inode, err := p.srv.Open(ufd)
-	fd := fsrpc.Fd(inode.Inum)
-	return fd, err
+	log.Printf("Procd open %v %v\n", fid, path)
+	inode, err := p.srv.Open(fid, path)
+	return inode.Fid, err
 }
 
-func (p *Procd) Create(path string) (fsrpc.Fd, error) {
+func (p *Procd) Create(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.nextpid += 1
-	log.Printf("Create %v %d\n", path, p.nextpid)
-	if path == "spawn" {
-		err := p.srv.Create(strconv.Itoa(p.nextpid),
-			name.InodeNumber(p.nextpid), &Proc{""})
-		if err == nil {
-			return fsrpc.Fd(p.nextpid), nil
-		} else {
-			return fsrpc.Fd(0), err
-		}
-	} else {
-		return fsrpc.Fd(0), errors.New("Unsupported")
-	}
-}
-
-func (p *Procd) Write(fd fsrpc.Fd, buf []byte) (int, error) {
-	args := strings.Split(string(buf), " ")
-	log.Printf("Write %v %v\n", fd, args)
-	if len(args) == 0 {
-		return -1, errors.New("No program")
-	}
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Start()
+	log.Printf("Procd create %v\n", path)
+	diri, err := p.srv.MkDir(fid, path)
 	if err != nil {
-		return -1, fmt.Errorf("Exec failure %v", err)
+		return fsrpc.NullFid(), err
 	}
-	i, err := p.srv.Fd2Inode(fd)
-	proc := i.Data.(*Proc)
-	proc.program = args[0]
-	return 0, nil
+	_, err = p.srv.Create(fid, path+"/program")
+	if err != nil {
+		return fsrpc.NullFid(), err
+	}
+	_, err = p.srv.Create(fid, path+"/fds")
+	if err != nil {
+		return fsrpc.NullFid(), err
+	}
+	err = p.srv.Pipe(fid, path+"/exit")
+	if err != nil {
+		return fsrpc.NullFid(), err
+	}
+	proc := makeProc(p, fid, path)
+	err = p.srv.MkNod(fid, path+"/ctl", proc)
+	if err != nil {
+		return fsrpc.NullFid(), err
+	}
+	return diri.Fid, nil
+}
+
+func (p *Procd) Write(fid fsrpc.Fid, buf []byte) (int, error) {
+	args := strings.Split(string(buf), " ")
+	log.Printf("Write %v %v\n", fid, args)
+	return p.srv.Write(fid, buf)
 }
 
 // XXX return pid if dir?
-func (p *Procd) Read(fd fsrpc.Fd, n int) ([]byte, error) {
+func (p *Procd) Read(fd fsrpc.Fid, n int) ([]byte, error) {
 	return nil, errors.New("Unsupported")
 }
 
-func (p *Procd) Mount(fd *fsrpc.Ufd, path string) error {
+func (p *Procd) Mount(fd *fsrpc.Ufid, start fsrpc.Fid, path string) error {
 	return errors.New("Unsupported")
-}
-
-func mkProc(program string) *Proc {
-	p := &Proc{program}
-	return p
 }
 
 // XXX what should close() mean?
@@ -107,7 +147,7 @@ func pinit(clnt *fs.FsClient, program string) {
 		log.Fatal("Open error stdout: ", err)
 	}
 	fds := clnt.Lsof()
-	err := proc.Spawn(clnt, program, fds[1:])
+	_, err := proc.Spawn(clnt, program, fds[1:])
 	if err != nil {
 		log.Fatal("Spawn error: ", err)
 	}
@@ -118,8 +158,7 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatal("missing argument")
 	}
-	p := &Procd{sync.Mutex{}, int(name.RootInum), make(map[int]*Proc), nil, nil,
-		make(chan bool)}
+	p := &Procd{sync.Mutex{}, nil, nil, make(chan bool)}
 	p.clnt, p.srv = fs.MakeFs(p, false)
 	if fd, err := p.clnt.Open("."); err == nil {
 		log.Printf("opened proc")

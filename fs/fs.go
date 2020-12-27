@@ -8,12 +8,12 @@ import (
 )
 
 type Fs interface {
-	Walk(string) (*fsrpc.Ufd, string, error)
-	Open(*fsrpc.Ufd) (fsrpc.Fd, error)
-	Create(string) (fsrpc.Fd, error)
-	Write(fsrpc.Fd, []byte) (int, error)
-	Read(fsrpc.Fd, int) ([]byte, error)
-	Mount(*fsrpc.Ufd, string) error
+	Walk(fsrpc.Fid, string) (*fsrpc.Ufid, string, error)
+	Open(fsrpc.Fid, string) (fsrpc.Fid, error)
+	Create(fsrpc.Fid, string) (fsrpc.Fid, error)
+	Write(fsrpc.Fid, []byte) (int, error)
+	Read(fsrpc.Fid, int) ([]byte, error)
+	Mount(*fsrpc.Ufid, fsrpc.Fid, string) error
 }
 
 func runsrv(l net.Listener) {

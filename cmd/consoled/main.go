@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	Stdin  fsrpc.Fd = fsrpc.Fd(name.RootInum) + 1
-	Stdout fsrpc.Fd = fsrpc.Fd(name.RootInum) + 2
+	Stdin  = fsrpc.RootId + 1
+	Stdout = fsrpc.RootId + 2
 )
 
 type Consoled struct {
@@ -34,32 +34,31 @@ func makeConsoled() *Consoled {
 	return cons
 }
 
-func (cons *Consoled) Walk(path string) (*fsrpc.Ufd, string, error) {
+func (cons *Consoled) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) {
 	cons.mu.Lock()
 	defer cons.mu.Unlock()
 
-	ufd, rest, err := cons.srv.Walk(path)
+	ufd, rest, err := cons.srv.Walk(start, path)
 	return ufd, rest, err
 }
 
-func (cons *Consoled) Open(ufd *fsrpc.Ufd) (fsrpc.Fd, error) {
+func (cons *Consoled) Open(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
 	cons.mu.Lock()
 	defer cons.mu.Unlock()
 
-	inode, err := cons.srv.Open(ufd)
+	inode, err := cons.srv.Open(fid, path)
 	if err != nil {
-		return fsrpc.Fd(0), err
+		return fsrpc.NullFid(), err
 	}
-	fd := fsrpc.Fd(inode.Inum)
-	return fd, err
+	return inode.Fid, err
 }
 
-func (cons *Consoled) Create(path string) (fsrpc.Fd, error) {
-	return 0, errors.New("Unsupported")
+func (cons *Consoled) Create(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
+	return fsrpc.NullFid(), errors.New("Unsupported")
 }
 
-func (cons *Consoled) Write(fd fsrpc.Fd, buf []byte) (int, error) {
-	if fd != Stdout {
+func (cons *Consoled) Write(fid fsrpc.Fid, buf []byte) (int, error) {
+	if fid.Id != Stdout {
 		return 0, errors.New("Cannot write to this fd")
 	}
 
@@ -68,8 +67,8 @@ func (cons *Consoled) Write(fd fsrpc.Fd, buf []byte) (int, error) {
 	return n, err
 }
 
-func (cons *Consoled) Read(fd fsrpc.Fd, n int) ([]byte, error) {
-	if fd != Stdin {
+func (cons *Consoled) Read(fid fsrpc.Fid, n int) ([]byte, error) {
+	if fid.Id != Stdin {
 		return nil, errors.New("Cannot read from this fd")
 	}
 
@@ -77,16 +76,17 @@ func (cons *Consoled) Read(fd fsrpc.Fd, n int) ([]byte, error) {
 	return b, err
 }
 
-func (cons *Consoled) Mount(fd *fsrpc.Ufd, path string) error {
+func (cons *Consoled) Mount(fd *fsrpc.Ufid, start fsrpc.Fid, path string) error {
 	return errors.New("Unsupported")
 }
 
 func (cons *Consoled) FsInit() {
-	err := cons.srv.Create("stdin", name.InodeNumber(Stdin), nil)
+	rfid := cons.srv.RootFid()
+	_, err := cons.srv.Create(rfid, "stdin")
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	err = cons.srv.Create("stdout", name.InodeNumber(Stdout), nil)
+	_, err = cons.srv.Create(rfid, "stdout")
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
@@ -99,7 +99,7 @@ func main() {
 	if fd, err := cons.clnt.Open("."); err == nil {
 		err := cons.clnt.Mount(fd, "/console")
 		if err != nil {
-			log.Fatal("Mount error:", err)
+			log.Fatal("Mount error: ", err)
 		}
 	} else {
 		log.Fatal("Open error:", err)

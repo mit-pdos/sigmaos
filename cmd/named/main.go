@@ -23,32 +23,36 @@ func makeNamed() *Named {
 	return nd
 }
 
-func (nd *Named) Walk(path string) (*fsrpc.Ufd, string, error) {
+func (nd *Named) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
-	ufd, rest, err := nd.srv.Walk(path)
+
+	ufd, rest, err := nd.srv.Walk(start, path)
 	return ufd, rest, err
 }
 
-func (nd *Named) Open(ufd *fsrpc.Ufd) (fsrpc.Fd, error) {
+func (nd *Named) Open(fid fsrpc.Fid, name string) (fsrpc.Fid, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	inode, err := nd.srv.Open(ufd)
-	fd := fsrpc.Fd(inode.Inum)
+	inode, err := nd.srv.Open(fid, name)
+	if err != nil {
+		return fsrpc.NullFid(), err
+	}
+	fd := fsrpc.Fid(inode.Fid)
 	return fd, err
 }
 
-func (nd *Named) Create(path string) (fsrpc.Fd, error) {
-	return 0, errors.New("Unsupported")
+func (nd *Named) Create(fid fsrpc.Fid, name string) (fsrpc.Fid, error) {
+	return fsrpc.NullFid(), errors.New("Unsupported")
 }
 
-func (nd *Named) Write(fd fsrpc.Fd, buf []byte) (int, error) {
+func (nd *Named) Write(fd fsrpc.Fid, buf []byte) (int, error) {
 	return 0, errors.New("Unsupported")
 }
 
 // XXX n
-func (nd *Named) Read(fd fsrpc.Fd, n int) ([]byte, error) {
+func (nd *Named) Read(fd fsrpc.Fid, n int) ([]byte, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
@@ -61,11 +65,11 @@ func (nd *Named) Read(fd fsrpc.Fd, n int) ([]byte, error) {
 	return b, nil
 }
 
-func (nd *Named) Mount(fd *fsrpc.Ufd, path string) error {
+func (nd *Named) Mount(fd *fsrpc.Ufid, fid fsrpc.Fid, path string) error {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	return nd.srv.Mount(fd, path)
+	return nd.srv.Mount(fd, fid, path)
 }
 
 func main() {

@@ -9,8 +9,8 @@ import (
 	"ulambda/fsrpc"
 )
 
-// Base("/") is "/", so check for "/" too
-// Base(".") is "." and Dir is "." too
+// Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
+// "." too
 func IsCurrentDir(name string) bool {
 	return name == "." || name == "/" || name == ""
 }
@@ -39,6 +39,7 @@ func (root *Root) Myroot() *fsrpc.Ufid {
 }
 
 // XXX bump version # if allocating same inode #
+// XXX a better inum allocation plan
 func (root *Root) allocInum() fsrpc.Fid {
 	fid := root.nextFid
 	root.nextFid.Id += 1
@@ -102,27 +103,6 @@ func (root *Root) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error
 	}
 }
 
-func (root *Root) Mount(ufid *fsrpc.Ufid, start fsrpc.Fid, path string) error {
-	if path == "/" {
-		return errors.New("Cannot mount on root")
-	}
-	dirp := filepath.Dir(path)
-	base := filepath.Base(path)
-	log.Printf("Mount %v at (%v, %v,%v)\n", ufid, start, dirp, base)
-	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
-		if inode.Type == DirT {
-			d := inode.Data.(*Dir)
-			i := makeInode(MountT, start, ufid)
-			d.mount(i, base)
-			return nil
-		} else {
-			return errors.New("Base not a directory")
-		}
-	} else {
-		return err
-	}
-}
-
 func (root *Root) Ls(fid fsrpc.Fid, n int) (string, error) {
 	dir, err := root.fid2Dir(fid)
 	if err != nil {
@@ -176,6 +156,22 @@ func (root *Root) MkDir(start fsrpc.Fid, path string) (*Inode, error) {
 		return inode, nil
 	} else {
 		return nil, err
+	}
+}
+
+func (root *Root) Mount(ufid *fsrpc.Ufid, start fsrpc.Fid, path string) error {
+	dirp := filepath.Dir(path)
+	base := filepath.Base(path)
+	log.Printf("Mount %v at (%v, %v,%v)\n", ufid, start, dirp, base)
+	if inode, _, err := root.Namei(start, strings.Split(dirp, "/")); err == nil {
+		inode, err = inode.create(root, MountT, base, ufid)
+		if err != nil {
+			return err
+		}
+		root.inodes[inode.Fid] = inode
+		return nil
+	} else {
+		return err
 	}
 }
 

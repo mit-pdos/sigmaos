@@ -131,6 +131,10 @@ func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error
 	return inode.create(root, DevT, base, i)
 }
 
+func (root *Root) pipe(inode *Inode, base string, i interface{}) (*Inode, error) {
+	return inode.create(root, PipeT, base, i)
+}
+
 func (root *Root) Op(opn string, start fsrpc.Fid, path string,
 	op func(*Inode, string, interface{}) (*Inode, error),
 	i interface{}) (*Inode, error) {
@@ -170,8 +174,9 @@ func (root *Root) MkNod(start fsrpc.Fid, path string, rw Dev) error {
 	return err
 }
 
-func (root *Root) Pipe(fid fsrpc.Fid, path string) error {
-	return nil
+func (root *Root) Pipe(start fsrpc.Fid, path string) error {
+	_, err := root.Op("Pipe", start, path, root.pipe, makePipe())
+	return err
 }
 
 func (root *Root) Write(fid fsrpc.Fid, data []byte) (int, error) {
@@ -180,9 +185,13 @@ func (root *Root) Write(fid fsrpc.Fid, data []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// XXX no distinction between DevT and pipeT?
 	if inode.Type == DevT {
 		dev := inode.Data.(Dev)
 		return dev.Write(fid, data)
+	} else if inode.Type == PipeT {
+		pipe := inode.Data.(*Pipe)
+		return pipe.Write(fid, data)
 	} else {
 		inode.Data = data
 		return len(data), nil
@@ -198,6 +207,9 @@ func (root *Root) Read(fid fsrpc.Fid, n int) ([]byte, error) {
 	if inode.Type == DevT {
 		dev := inode.Data.(Dev)
 		return dev.Read(fid, n)
+	} else if inode.Type == PipeT {
+		pipe := inode.Data.(*Pipe)
+		return pipe.Read(fid, n)
 	} else {
 		log.Printf("-> %v\n", inode.Data.([]byte))
 		return inode.Data.([]byte), nil

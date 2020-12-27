@@ -58,7 +58,7 @@ func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
 }
 
 func (p *Proc) Read(fid fsrpc.Fid, n int) ([]byte, error) {
-	return nil, nil
+	return nil, errors.New("Unsupported")
 }
 
 type Procd struct {
@@ -128,14 +128,13 @@ func (p *Procd) Create(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
 }
 
 func (p *Procd) Write(fid fsrpc.Fid, buf []byte) (int, error) {
-	args := strings.Split(string(buf), " ")
-	log.Printf("Write %v %v\n", fid, args)
+	log.Printf("Write %v %v\n", fid, strings.Split(string(buf), " "))
 	return p.srv.Write(fid, buf)
 }
 
-// XXX return pid if dir?
-func (p *Procd) Read(fd fsrpc.Fid, n int) ([]byte, error) {
-	return nil, errors.New("Unsupported")
+func (p *Procd) Read(fid fsrpc.Fid, n int) ([]byte, error) {
+	log.Printf("Read %v %v\n", fid, n)
+	return p.srv.Read(fid, n)
 }
 
 func (p *Procd) Mount(fd *fsrpc.Ufid, start fsrpc.Fid, path string) error {

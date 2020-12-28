@@ -17,11 +17,11 @@ func main() {
 	}
 	for {
 		b := []byte("λ ")
-		_, err := clnt.Write(1, b)
+		_, err := clnt.Write(fs.Stdout, b)
 		if err != nil {
 			log.Fatal("Write error:", err)
 		}
-		b, err = clnt.Read(0, 1024)
+		b, err = clnt.Read(fs.Stdin, 1024)
 		if err != nil {
 			log.Fatal("Read error:", err)
 		}

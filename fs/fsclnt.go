@@ -15,6 +15,12 @@ import (
 	"ulambda/name"
 )
 
+const (
+	Stdin  = 0
+	Stdout = 1
+	// Stderr = 2
+)
+
 const MAXFD = 20
 
 type FsClient struct {

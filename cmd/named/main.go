@@ -2,11 +2,10 @@ package main
 
 import (
 	"errors"
-	"log"
 	"sync"
 
+	"ulambda/fid"
 	"ulambda/fs"
-	"ulambda/fsrpc"
 	"ulambda/name"
 )
 
@@ -23,7 +22,7 @@ func makeNamed() *Named {
 	return nd
 }
 
-func (nd *Named) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) {
+func (nd *Named) Walk(start fid.Fid, path string) (*fid.Ufid, string, error) {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
@@ -31,45 +30,39 @@ func (nd *Named) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error)
 	return ufd, rest, err
 }
 
-func (nd *Named) Open(fid fsrpc.Fid, name string) (fsrpc.Fid, error) {
+func (nd *Named) Open(f fid.Fid) error {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	inode, err := nd.srv.Open(fid, name)
-	if err != nil {
-		return fsrpc.NullFid(), err
-	}
-	fd := fsrpc.Fid(inode.Fid)
-	return fd, err
+	_, err := nd.srv.OpenFid(f)
+	return err
 }
 
-func (nd *Named) Create(fid fsrpc.Fid, name string) (fsrpc.Fid, error) {
-	return fsrpc.NullFid(), errors.New("Unsupported")
+func (nd *Named) Symlink(f fid.Fid, src string, start *fid.Ufid, dst string) error {
+	return errors.New("Unsupported")
 }
 
-func (nd *Named) Write(fd fsrpc.Fid, buf []byte) (int, error) {
+func (nd *Named) Pipe(f fid.Fid, name string) error {
+	return errors.New("Unsupported")
+}
+
+func (nd *Named) Create(f fid.Fid, t fid.IType, name string) (fid.Fid, error) {
+	return fid.NullFid(), errors.New("Unsupported")
+}
+
+func (nd *Named) Write(f fid.Fid, buf []byte) (int, error) {
 	return 0, errors.New("Unsupported")
 }
 
-// XXX n
-func (nd *Named) Read(fd fsrpc.Fid, n int) ([]byte, error) {
-	nd.mu.Lock()
-	defer nd.mu.Unlock()
-
-	ls, err := nd.srv.Ls(fd, n)
-	log.Printf("ls %v\n", ls)
-	if err != nil {
-		return nil, err
-	}
-	b := []byte(ls)
-	return b, nil
+func (nd *Named) Read(f fid.Fid, n int) ([]byte, error) {
+	return nd.srv.Read(f, n)
 }
 
-func (nd *Named) Mount(fd *fsrpc.Ufid, fid fsrpc.Fid, path string) error {
+func (nd *Named) Mount(uf *fid.Ufid, f fid.Fid, path string) error {
 	nd.mu.Lock()
 	defer nd.mu.Unlock()
 
-	return nd.srv.Mount(fd, fid, path)
+	return nd.srv.Mount(uf, f, path)
 }
 
 func main() {

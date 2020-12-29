@@ -8,9 +8,11 @@ import (
 	"net"
 	"net/rpc"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"ulambda/fid"
 	"ulambda/fsrpc"
 	"ulambda/name"
 )
@@ -24,25 +26,25 @@ const (
 const MAXFD = 20
 
 type FsClient struct {
-	fds   []*fsrpc.Ufid
-	root  *fsrpc.Ufid
+	fds   []*fid.Ufid
+	root  *fid.Ufid
 	clnts map[string]*rpc.Client
 	srv   *name.Root
 	Proc  string
 }
 
-func MakeFsRoot() *fsrpc.Ufid {
+func MakeFsRoot() *fid.Ufid {
 	tcpaddr, err := net.ResolveTCPAddr("tcp", "localhost"+":1111")
 	if err != nil {
 		log.Fatal("MakeFsRoot error", err)
 	}
-	return &fsrpc.Ufid{tcpaddr.String(), fsrpc.RootFid()}
+	return &fid.Ufid{tcpaddr.String(), fid.RootFid()}
 }
 
 func listenFsRoot() {
 }
 
-func MakeMyRoot(fs Fs, root bool) *fsrpc.Ufid {
+func MakeMyRoot(fs Fs, root bool) *fid.Ufid {
 	var l net.Listener
 	var err error
 	if root {
@@ -56,12 +58,12 @@ func MakeMyRoot(fs Fs, root bool) *fsrpc.Ufid {
 	addr := l.Addr()
 	log.Printf("myaddr %v\n", addr)
 	register(l, fs)
-	return &fsrpc.Ufid{addr.String(), fsrpc.RootFid()}
+	return &fid.Ufid{addr.String(), fid.RootFid()}
 }
 
-func MakeFsClient(root *fsrpc.Ufid) *FsClient {
+func MakeFsClient(root *fid.Ufid) *FsClient {
 	fsc := &FsClient{}
-	fsc.fds = make([]*fsrpc.Ufid, 0, MAXFD)
+	fsc.fds = make([]*fid.Ufid, 0, MAXFD)
 	fsc.root = MakeFsRoot()
 	fsc.clnts = make(map[string]*rpc.Client)
 	rand.Seed(time.Now().UnixNano())
@@ -80,19 +82,32 @@ func MakeFs(fs Fs, root bool) (*FsClient, *name.Root) {
 }
 
 // XXX use gob?
-func InitFsClient(root *fsrpc.Ufid, fids []string) (*FsClient, error) {
-	fsc := MakeFsClient(root)
-	fsc.Proc = fids[0]
-	log.Printf("InitFsClient %v\n", fsc.Proc)
-	for _, fid := range fids[1:] {
-		var ufid fsrpc.Ufid
-		err := json.Unmarshal([]byte(fid), &ufid)
-		if err != nil {
-			return nil, errors.New("Bad fid")
-		}
-		fsc.findfd(&ufid)
+func InitFsClient(root *fid.Ufid, args []string) (*FsClient, []string, error) {
+	log.Printf("InitFsClient: %v\n", args)
+	if len(args) < 2 {
+		return nil, nil, errors.New("Missing len and program")
 	}
-	return fsc, nil
+	n, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, nil, errors.New("Bad arg len")
+	}
+	if n < 1 {
+		return nil, nil, errors.New("Missing program")
+	}
+	a := args[1 : n+1] // skip len and +1 for program name
+	fids := args[n+1:]
+	fsc := MakeFsClient(root)
+	fsc.Proc = a[0]
+	log.Printf("Args %v fids %v\n", a, fids)
+	for _, f := range fids {
+		var uf fid.Ufid
+		err := json.Unmarshal([]byte(f), &uf)
+		if err != nil {
+			return nil, nil, errors.New("Bad fid")
+		}
+		fsc.findfd(&uf)
+	}
+	return fsc, a, nil
 }
 
 func (fsc *FsClient) makeCall(addr string, method string, req interface{},
@@ -110,7 +125,7 @@ func (fsc *FsClient) makeCall(addr string, method string, req interface{},
 	return clnt.Call(method, req, reply)
 }
 
-func (fsc *FsClient) findfd(nufd *fsrpc.Ufid) int {
+func (fsc *FsClient) findfd(nufd *fid.Ufid) int {
 	for fd, ufd := range fsc.fds {
 		if ufd == nil {
 			fsc.fds[fd] = nufd
@@ -144,29 +159,20 @@ func (fsc *FsClient) Lsof() []string {
 	return fids
 }
 
-func (fsc *FsClient) walkOne(start *fsrpc.Ufid, path string) (*fsrpc.Ufid, string, error) {
+func (fsc *FsClient) walkOne(start *fid.Ufid, path string) (*fid.Ufid, string, error) {
 	args := fsrpc.WalkReq{start.Fid, path}
 	var reply fsrpc.WalkReply
 	err := fsc.makeCall(start.Addr, "FsSrv.Walk", args, &reply)
 	return &reply.Ufid, reply.Path, err
 }
 
-func (fsc *FsClient) Walk(path string) (*fsrpc.Ufid, error) {
-	var start *fsrpc.Ufid
+func (fsc *FsClient) walkAt(ufid *fid.Ufid, path string) (*fid.Ufid, error) {
 	var err error
 	var rest string
-	var ufid *fsrpc.Ufid
-
-	if strings.HasPrefix(path, "/") { // remote lookup?
-		start = fsc.root
-		path = strings.TrimLeft(path, "/")
-	} else if fsc.srv != nil {
-		start = fsc.srv.Myroot()
-	} else {
-		return nil, errors.New("Non-existing name")
-	}
+	start := ufid
 	p := path
 	for {
+
 		ufid, rest, err = fsc.walkOne(start, p)
 		log.Printf("WalkOne %v -> %v rest %v %v\n", p, ufid, rest, err)
 		if rest == "" || err != nil {
@@ -178,16 +184,22 @@ func (fsc *FsClient) Walk(path string) (*fsrpc.Ufid, error) {
 	return ufid, err
 }
 
-func (fsc *FsClient) Create(path string) (int, error) {
-	ufid, err := fsc.Walk(filepath.Dir(path))
-	if err != nil {
-		return -1, err
+func (fsc *FsClient) Walk(path string) (*fid.Ufid, error) {
+	if strings.HasPrefix(path, "/") { // remote lookup?
+		return fsc.walkAt(fsc.root, strings.TrimLeft(path, "/"))
+	} else if fsc.srv != nil {
+		return fsc.walkAt(fsc.srv.Myroot(), path)
+	} else {
+		return nil, errors.New("Non-existing name")
 	}
-	args := fsrpc.CreateReq{ufid.Fid, filepath.Base(path)}
+}
+
+func (fsc *FsClient) createat(uf *fid.Ufid, path string, t fid.IType) (int, error) {
+	args := fsrpc.CreateReq{uf.Fid, filepath.Base(path), t}
 	var reply fsrpc.CreateReply
-	err = fsc.makeCall(ufid.Addr, "FsSrv.Create", args, &reply)
+	err := fsc.makeCall(uf.Addr, "FsSrv.Create", args, &reply)
 	if err == nil {
-		nufd := &fsrpc.Ufid{ufid.Addr, reply.Fid}
+		nufd := &fid.Ufid{uf.Addr, reply.Fid}
 		fd := fsc.findfd(nufd)
 		return fd, err
 	} else {
@@ -195,13 +207,35 @@ func (fsc *FsClient) Create(path string) (int, error) {
 	}
 }
 
-func (fsc *FsClient) openat(ufid *fsrpc.Ufid, path string) (int, error) {
-	args := fsrpc.OpenReq{ufid.Fid, path}
+// XXX use walkAt to resolve path?
+func (fsc *FsClient) CreateAt(fd int, path string) (int, error) {
+	ufid := fsc.fds[fd]
+	return fsc.createat(ufid, filepath.Base(path), fid.FileT)
+}
+
+func (fsc *FsClient) Create(path string) (int, error) {
+	ufid, err := fsc.Walk(filepath.Dir(path))
+	if err != nil {
+		return -1, err
+	}
+	return fsc.createat(ufid, filepath.Base(path), fid.FileT)
+}
+
+func (fsc *FsClient) MkDir(path string) (int, error) {
+	ufid, err := fsc.Walk(filepath.Dir(path))
+	if err != nil {
+		return -1, err
+	}
+	fd, err := fsc.createat(ufid, filepath.Base(path), fid.DirT)
+	return fd, err
+}
+
+func (fsc *FsClient) open(ufid *fid.Ufid) (int, error) {
+	args := fsrpc.OpenReq{ufid.Fid}
 	var reply fsrpc.OpenReply
 	err := fsc.makeCall(ufid.Addr, "FsSrv.Open", args, &reply)
 	if err == nil {
-		nufd := &fsrpc.Ufid{ufid.Addr, reply.Fid}
-		fd := fsc.findfd(nufd)
+		fd := fsc.findfd(ufid)
 		return fd, err
 	} else {
 		return -1, err
@@ -209,16 +243,58 @@ func (fsc *FsClient) openat(ufid *fsrpc.Ufid, path string) (int, error) {
 }
 
 func (fsc *FsClient) OpenAt(fd int, path string) (int, error) {
-	ufid := fsc.fds[fd]
-	return fsc.openat(ufid, filepath.Base(path))
-}
-
-func (fsc *FsClient) Open(path string) (int, error) {
-	ufid, err := fsc.Walk(filepath.Dir(path))
+	ufid, err := fsc.walkAt(fsc.fds[fd], path)
 	if err != nil {
 		return -1, err
 	}
-	return fsc.openat(ufid, filepath.Base(path))
+	return fsc.open(ufid)
+}
+
+func (fsc *FsClient) Open(path string) (int, error) {
+	ufid, err := fsc.Walk(path)
+	if err != nil {
+		return -1, err
+	}
+	return fsc.open(ufid)
+}
+
+func (fsc *FsClient) symlink(ufid *fid.Ufid, src string, dst string) error {
+	var start *fid.Ufid
+	if strings.HasPrefix(dst, "/") { // remote lookup?
+		start = fsc.root
+		dst = strings.TrimLeft(dst, "/")
+	} else if fsc.srv != nil {
+		start = fsc.srv.Myroot()
+	} else {
+		return errors.New("Non-existing dst name")
+	}
+	args := fsrpc.SymlinkReq{ufid.Fid, filepath.Base(src), *start, dst}
+	var reply fsrpc.SymlinkReply
+	return fsc.makeCall(ufid.Addr, "FsSrv.Symlink", args, &reply)
+}
+
+func (fsc *FsClient) SymlinkAt(fd int, src string, dst string) error {
+	ufid := fsc.fds[fd]
+	return fsc.symlink(ufid, filepath.Base(src), dst)
+}
+
+func (fsc *FsClient) Symlink(src string, dst string) error {
+	ufid, err := fsc.Walk(filepath.Dir(src))
+	if err != nil {
+		return err
+	}
+	return fsc.symlink(ufid, filepath.Base(src), dst)
+}
+
+func (fsc *FsClient) Pipe(path string) error {
+	ufid, err := fsc.Walk(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	args := fsrpc.PipeReq{ufid.Fid, filepath.Base(path)}
+	var reply fsrpc.PipeReply
+	err = fsc.makeCall(ufid.Addr, "FsSrv.Pipe", args, &reply)
+	return err
 }
 
 func (fsc *FsClient) Mount(fd int, path string) error {

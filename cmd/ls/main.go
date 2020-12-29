@@ -9,13 +9,17 @@ import (
 )
 
 func main() {
-	log.Printf("Running: %v\n", os.Args[0])
-	clnt, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	clnt, args, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	log.Printf("Running: %v\n", args)
 	if err != nil {
 		log.Fatal("InitFsClient error:", err)
 	}
-
-	fd, err := clnt.Open("/")
+	var fd int
+	if len(args) == 1 {
+		fd, err = clnt.Open("/")
+	} else {
+		fd, err = clnt.Open(args[1])
+	}
 	if err != nil {
 		log.Fatal("Open error:", err)
 	}

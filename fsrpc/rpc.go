@@ -1,67 +1,60 @@
 package fsrpc
 
-const (
-	NullId uint64 = 0
-	RootId uint64 = 1
+import (
+	"ulambda/fid"
 )
 
-type Fid struct {
-	Version uint64
-	Id      uint64
-}
-
-func MakeFid(v uint64, id uint64) Fid {
-	return Fid{v, id}
-}
-
-func NullFid() Fid {
-	return MakeFid(0, NullId)
-}
-
-func RootFid() Fid {
-	return MakeFid(0, RootId)
-}
-
-type Ufid struct {
-	Addr string
-	Fid  Fid
-}
-
-func MakeUfid(addr string, fid Fid) *Ufid {
-	return &Ufid{addr, fid}
-}
-
 type WalkReq struct {
-	Fid  Fid
+	Fid  fid.Fid
 	Name string
 }
 
 type WalkReply struct {
 	Path string
-	Ufid Ufid
+	Ufid fid.Ufid
 }
 
 type CreateReq struct {
-	Fid  Fid
+	Fid  fid.Fid
 	Name string
+	Type fid.IType
 }
 
 type CreateReply struct {
-	Fid Fid
+	Fid fid.Fid
 }
 
 type OpenReq struct {
-	Fid  Fid
-	Name string
+	Fid fid.Fid
 }
 
 type OpenReply struct {
-	Fid Fid
+	Err error
+}
+
+type SymlinkReq struct {
+	Fid   fid.Fid
+	Src   string
+	Start fid.Ufid
+	Dst   string
+}
+
+type SymlinkReply struct {
+	Err error
+}
+
+type PipeReq struct {
+	Fid  fid.Fid
+	Name string
+}
+
+type PipeReply struct {
+	Err error
 }
 
 type MountReq struct {
-	Ufid Ufid
-	Fid  Fid
+	Ufid fid.Ufid
+	Fid  fid.Fid
 	Name string
 }
 
@@ -70,7 +63,7 @@ type MountReply struct {
 }
 
 type WriteReq struct {
-	Fid Fid
+	Fid fid.Fid
 	Buf []byte
 }
 
@@ -79,7 +72,7 @@ type WriteReply struct {
 }
 
 type ReadReq struct {
-	Fid Fid
+	Fid fid.Fid
 	N   int
 }
 

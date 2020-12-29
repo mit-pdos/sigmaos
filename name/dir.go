@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"ulambda/fid"
 )
 
 type Dir struct {
@@ -33,21 +35,20 @@ func (dir *Dir) Namei(path []string) (*Inode, []string, error) {
 
 	inode, err = dir.Lookup(path[0])
 	if err != nil {
-		log.Printf("Namei %v non existing", path)
+		log.Printf("dir.Namei %v non existing", path)
 		return nil, nil, err
 	}
-	if len(path) == 1 { // done?
-		log.Printf("Namei %v %v -> %v", path, dir, inode)
-		return inode, nil, nil
-	}
-	if inode.Type == DirT {
+	switch inode.Type {
+	case fid.DirT:
+		if len(path) == 1 { // done?
+			log.Printf("Namei %v %v -> %v", path, dir, inode)
+			return inode, nil, nil
+		}
 		d := inode.Data.(*Dir)
 		return d.Namei(path[1:])
-	} else if inode.Type == MountT {
-		log.Printf("Namei %v %v -> %v %v", path, dir, inode, path[1:])
+	default:
+		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inode, path[1:])
 		return inode, path[1:], nil
-	} else {
-		return nil, path[1:], errors.New("Not a directory")
 	}
 }
 

@@ -4,17 +4,18 @@ import (
 	"log"
 	"net"
 	"net/rpc"
-	"ulambda/fsrpc"
+	"ulambda/fid"
 )
 
-// XXX -at version too?
 type Fs interface {
-	Walk(fsrpc.Fid, string) (*fsrpc.Ufid, string, error)
-	Open(fsrpc.Fid, string) (fsrpc.Fid, error)
-	Create(fsrpc.Fid, string) (fsrpc.Fid, error)
-	Write(fsrpc.Fid, []byte) (int, error)
-	Read(fsrpc.Fid, int) ([]byte, error)
-	Mount(*fsrpc.Ufid, fsrpc.Fid, string) error
+	Walk(fid.Fid, string) (*fid.Ufid, string, error)
+	Open(fid.Fid) error
+	Create(fid.Fid, fid.IType, string) (fid.Fid, error)
+	Symlink(fid.Fid, string, *fid.Ufid, string) error
+	Pipe(fid.Fid, string) error
+	Mount(*fid.Ufid, fid.Fid, string) error
+	Write(fid.Fid, []byte) (int, error)
+	Read(fid.Fid, int) ([]byte, error)
 }
 
 func runsrv(l net.Listener) {

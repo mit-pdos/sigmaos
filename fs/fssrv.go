@@ -18,7 +18,7 @@ func (s *FsSrv) Walk(req fsrpc.WalkReq, reply *fsrpc.WalkReply) error {
 }
 
 func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.CreateReply) error {
-	fid, err := s.fs.Create(req.Fid, req.Name)
+	fid, err := s.fs.Create(req.Fid, req.Type, req.Name)
 	if err == nil {
 		reply.Fid = fid
 	}
@@ -26,10 +26,20 @@ func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.CreateReply) error {
 }
 
 func (s *FsSrv) Open(req fsrpc.OpenReq, reply *fsrpc.OpenReply) error {
-	fd, err := s.fs.Open(req.Fid, req.Name)
-	if err == nil {
-		reply.Fid = fd
-	}
+	err := s.fs.Open(req.Fid)
+	reply.Err = err
+	return err
+}
+
+func (s *FsSrv) Symlink(req fsrpc.SymlinkReq, reply *fsrpc.SymlinkReply) error {
+	err := s.fs.Symlink(req.Fid, req.Src, &req.Start, req.Dst)
+	reply.Err = err
+	return err
+}
+
+func (s *FsSrv) Pipe(req fsrpc.PipeReq, reply *fsrpc.PipeReply) error {
+	err := s.fs.Pipe(req.Fid, req.Name)
+	reply.Err = err
 	return err
 }
 

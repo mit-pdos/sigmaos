@@ -5,7 +5,7 @@ import (
 	// "errors"
 	// "log"
 
-	"ulambda/fsrpc"
+	"ulambda/fid"
 )
 
 type Pipe struct {
@@ -22,7 +22,7 @@ func makePipe() *Pipe {
 }
 
 // XXX if full block writer
-func (pipe *Pipe) Write(fid fsrpc.Fid, d []byte) (int, error) {
+func (pipe *Pipe) Write(fid fid.Fid, d []byte) (int, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -32,7 +32,7 @@ func (pipe *Pipe) Write(fid fsrpc.Fid, d []byte) (int, error) {
 }
 
 // XXX read no more than n
-func (pipe *Pipe) Read(fid fsrpc.Fid, n int) ([]byte, error) {
+func (pipe *Pipe) Read(fid fid.Fid, n int) ([]byte, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

@@ -7,11 +7,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 
+	"ulambda/fid"
 	"ulambda/fs"
-	"ulambda/fsrpc"
 	"ulambda/name"
 	"ulambda/proc"
 )
@@ -20,23 +21,33 @@ import (
 
 type Proc struct {
 	procd *Procd
-	start fsrpc.Fid
+	start fid.Fid
 	pid   string
 	cmd   *exec.Cmd
 }
 
-func makeProc(p *Procd, start fsrpc.Fid, pid string) *Proc {
-	log.Printf("makeProc: start %v pid %v\n", pid)
+func makeProc(p *Procd, start fid.Fid, pid string) *Proc {
+	log.Printf("makeProc: start %v pid %v\n", start, pid)
 	return &Proc{p, start, pid, nil}
 }
 
-func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
+func (p *Proc) Write(fid fid.Fid, data []byte) (int, error) {
 	if string(data) == "start" {
-		program, err := p.procd.getAttr(p.start, p.pid, "/program")
+		program, err := p.procd.getAttr(p.start, p.pid, "program")
 		if err != nil {
 			return 0, err
 		}
-		b, err := p.procd.getAttr(p.start, p.pid, "/fds")
+		b, err := p.procd.getAttr(p.start, p.pid, "args")
+		if err != nil {
+			return 0, err
+		}
+		var args []string
+		err = json.Unmarshal(b, &args)
+		if err != nil {
+			return 0, errors.New("Bad args")
+		}
+		log.Printf("args %v\n", args)
+		b, err = p.procd.getAttr(p.start, p.pid, "fds")
 		if err != nil {
 			return 0, err
 		}
@@ -45,8 +56,15 @@ func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
 		if err != nil {
 			return 0, errors.New("Bad fids")
 		}
-		log.Printf("command %v %v\n", string(program), fids)
-		p.cmd = exec.Command(string(program), fids...)
+		log.Printf("fids %v\n", fids)
+
+		l := strconv.Itoa(len(args))
+		a := append([]string{l}, args...)
+		a = append(a, fids...)
+
+		log.Printf("command %v %v\n", string(program), a)
+
+		p.cmd = exec.Command(string(program), a...)
 		p.cmd.Stdout = os.Stdout
 		p.cmd.Stderr = os.Stderr
 		err = p.cmd.Start()
@@ -59,7 +77,7 @@ func (p *Proc) Write(fid fsrpc.Fid, data []byte) (int, error) {
 	}
 }
 
-func (p *Proc) Read(fid fsrpc.Fid, n int) ([]byte, error) {
+func (p *Proc) Read(fid fid.Fid, n int) ([]byte, error) {
 	return nil, errors.New("Unsupported")
 }
 
@@ -71,16 +89,15 @@ type Procd struct {
 }
 
 // XXX close
-func (p *Procd) getAttr(fid fsrpc.Fid, pid string, key string) ([]byte, error) {
-	inode, err := p.srv.Open(fid, pid+"/"+key)
+func (p *Procd) getAttr(fid fid.Fid, pid string, key string) ([]byte, error) {
+	inode, err := p.srv.WalkOpenFid(fid, pid+"/"+key)
 	if err != nil {
 		return nil, err
 	}
-	b, err := p.srv.Read(inode.Fid, 1024)
-	return b, err
+	return p.srv.Read(inode.Fid, 1024)
 }
 
-func (p *Procd) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) {
+func (p *Procd) Walk(start fid.Fid, path string) (*fid.Ufid, string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -88,58 +105,66 @@ func (p *Procd) Walk(start fsrpc.Fid, path string) (*fsrpc.Ufid, string, error) 
 	return ufd, rest, err
 }
 
-func (p *Procd) Open(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
+func (p *Procd) Open(fid fid.Fid) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	log.Printf("Procd open %v %v\n", fid, path)
-	inode, err := p.srv.Open(fid, path)
-	if err != nil {
-		return fsrpc.NullFid(), err
-	}
-	return inode.Fid, err
+	log.Printf("Procd open %v\n", fid)
+	_, err := p.srv.OpenFid(fid)
+	return err
 }
 
-func (p *Procd) Create(fid fsrpc.Fid, path string) (fsrpc.Fid, error) {
+func (p *Procd) Create(f fid.Fid, t fid.IType, path string) (fid.Fid, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	log.Printf("Procd create %v\n", path)
-	diri, err := p.srv.MkDir(fid, path)
-	if err != nil {
-		return fsrpc.NullFid(), err
+	log.Printf("Procd create %v %v\n", path, t)
+	if t == fid.DirT {
+		i, err := p.srv.MkDir(f, path)
+		if err != nil {
+			return fid.NullFid(), err
+		}
+		proc := makeProc(p, f, path)
+		err = p.srv.MkNod(f, path+"/ctl", proc)
+		if err != nil {
+			return fid.NullFid(), err
+		}
+		return i.Fid, nil
+	} else {
+		i, err := p.srv.Create(f, path)
+		if err != nil {
+			return fid.NullFid(), err
+		}
+		return i.Fid, nil
 	}
-	_, err = p.srv.Create(fid, path+"/program")
-	if err != nil {
-		return fsrpc.NullFid(), err
-	}
-	_, err = p.srv.Create(fid, path+"/fds")
-	if err != nil {
-		return fsrpc.NullFid(), err
-	}
-	err = p.srv.Pipe(fid, path+"/exit")
-	if err != nil {
-		return fsrpc.NullFid(), err
-	}
-	proc := makeProc(p, fid, path)
-	err = p.srv.MkNod(fid, path+"/ctl", proc)
-	if err != nil {
-		return fsrpc.NullFid(), err
-	}
-	return diri.Fid, nil
 }
 
-func (p *Procd) Write(fid fsrpc.Fid, buf []byte) (int, error) {
-	log.Printf("Write %v %v\n", fid, strings.Split(string(buf), " "))
-	return p.srv.Write(fid, buf)
+func (p *Procd) Symlink(f fid.Fid, src string, start *fid.Ufid, dst string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	_, err := p.srv.Symlink(f, src, start, dst)
+	return err
 }
 
-func (p *Procd) Read(fid fsrpc.Fid, n int) ([]byte, error) {
-	log.Printf("Read %v %v\n", fid, n)
-	return p.srv.Read(fid, n)
+func (p *Procd) Pipe(f fid.Fid, name string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	return p.srv.Pipe(f, name)
 }
 
-func (p *Procd) Mount(fd *fsrpc.Ufid, start fsrpc.Fid, path string) error {
+func (p *Procd) Write(f fid.Fid, buf []byte) (int, error) {
+	log.Printf("Write %v %v\n", f, strings.Split(string(buf), " "))
+	return p.srv.Write(f, buf)
+}
+
+func (p *Procd) Read(f fid.Fid, n int) ([]byte, error) {
+	log.Printf("Read %v %v\n", f, n)
+	return p.srv.Read(f, n)
+}
+
+func (p *Procd) Mount(uf *fid.Ufid, start fid.Fid, path string) error {
 	return errors.New("Unsupported")
 }
 
@@ -152,7 +177,7 @@ func pinit(clnt *fs.FsClient, program string) {
 		log.Fatal("Open error stdout: ", err)
 	}
 	fds := clnt.Lsof()
-	_, err := proc.Spawn(clnt, program, fds[1:])
+	_, err := proc.Spawn(clnt, program, []string{}, fds[1:])
 	if err != nil {
 		log.Fatal("Spawn error: ", err)
 	}

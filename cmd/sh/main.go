@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	log.Printf("Running: %v\n", os.Args[0])
-	clnt, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	log.Printf("Running: %v\n", os.Args)
+	clnt, _, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
 	if err != nil {
 		log.Fatal("InitFsClient error:", err)
 	}
@@ -25,8 +25,9 @@ func main() {
 		if err != nil {
 			log.Fatal("Read error:", err)
 		}
-		cmd := strings.TrimSuffix(string(b), "\n")
-		child, err := proc.Spawn(clnt, cmd, clnt.Lsof())
+		line := strings.TrimSuffix(string(b), "\n")
+		cmd := strings.Split(line, " ")
+		child, err := proc.Spawn(clnt, cmd[0], cmd[1:], clnt.Lsof())
 		if err != nil {
 			log.Fatal("Spawn error:", err)
 		}

@@ -4,31 +4,21 @@ import (
 	"errors"
 	// "log"
 
-	"ulambda/fsrpc"
-)
-
-type IType int
-
-const (
-	FileT  IType = 1
-	DirT   IType = 2
-	DevT   IType = 3
-	MountT IType = 4
-	PipeT  IType = 5
+	"ulambda/fid"
 )
 
 type Dev interface {
-	Write(fsrpc.Fid, []byte) (int, error)
-	Read(fsrpc.Fid, int) ([]byte, error)
+	Write(fid.Fid, []byte) (int, error)
+	Read(fid.Fid, int) ([]byte, error)
 }
 
 type Inode struct {
-	Type IType
-	Fid  fsrpc.Fid
+	Type fid.IType
+	Fid  fid.Fid
 	Data interface{}
 }
 
-func makeInode(t IType, fid fsrpc.Fid, data interface{}) *Inode {
+func makeInode(t fid.IType, fid fid.Fid, data interface{}) *Inode {
 	i := Inode{}
 	i.Type = t
 	i.Fid = fid
@@ -40,7 +30,7 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return inode, nil
 	}
-	if inode.Type == DirT {
+	if inode.Type == fid.DirT {
 		d := inode.Data.(*Dir)
 		return d.Lookup(name)
 	} else {
@@ -48,11 +38,11 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	}
 }
 
-func (inode *Inode) create(root *Root, t IType, name string, data interface{}) (*Inode, error) {
+func (inode *Inode) create(root *Root, t fid.IType, name string, data interface{}) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
-	if inode.Type == DirT {
+	if inode.Type == fid.DirT {
 		d := inode.Data.(*Dir)
 		i := makeInode(t, root.allocInum(), data)
 		return d.create(i, name)

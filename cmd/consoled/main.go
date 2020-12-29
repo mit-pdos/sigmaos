@@ -54,6 +54,10 @@ func (cons *Consoled) Create(f fid.Fid, t fid.IType, path string) (fid.Fid, erro
 	return fid.NullFid(), errors.New("Unsupported")
 }
 
+func (cons *Consoled) Remove(f fid.Fid, name string) error {
+	return errors.New("Unsupported")
+}
+
 func (cons *Consoled) Symlink(fid fid.Fid, src string, start *fid.Ufid, dst string) error {
 	return errors.New("Unsupported")
 }

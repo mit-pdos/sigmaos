@@ -11,6 +11,7 @@ type Fs interface {
 	Walk(fid.Fid, string) (*fid.Ufid, string, error)
 	Open(fid.Fid) error
 	Create(fid.Fid, fid.IType, string) (fid.Fid, error)
+	Remove(fid.Fid, string) error
 	Symlink(fid.Fid, string, *fid.Ufid, string) error
 	Pipe(fid.Fid, string) error
 	Mount(*fid.Ufid, fid.Fid, string) error

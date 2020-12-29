@@ -97,7 +97,7 @@ func Spawn(clnt *fs.FsClient, program string, args []string, fids []string) (str
 	return pname, nil
 }
 
-func Exit(clnt *fs.FsClient) error {
+func Exit(clnt *fs.FsClient, status string) error {
 	pid := filepath.Base(clnt.Proc)
 	fd, err := clnt.Open(clnt.Proc + "/parent/exit" + pid)
 	if err != nil {
@@ -105,11 +105,12 @@ func Exit(clnt *fs.FsClient) error {
 		return err
 	}
 	defer clnt.Close(fd)
-	_, err = clnt.Write(fd, []byte("OK"))
+	_, err = clnt.Write(fd, []byte(status))
 	if err != nil {
 		log.Fatal("Exit: write error: ", err)
 		return err
 	}
+	clnt.RmDir(clnt.Proc)
 	return nil
 }
 

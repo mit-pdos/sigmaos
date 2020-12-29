@@ -25,6 +25,10 @@ func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.CreateReply) error {
 	return err
 }
 
+func (s *FsSrv) Remove(req fsrpc.RemoveReq, reply *fsrpc.RemoveReply) error {
+	return s.fs.Remove(req.Fid, req.Name)
+}
+
 func (s *FsSrv) Open(req fsrpc.OpenReq, reply *fsrpc.OpenReply) error {
 	err := s.fs.Open(req.Fid)
 	reply.Err = err

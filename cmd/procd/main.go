@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 
 	"ulambda/fid"
 	"ulambda/fs"
@@ -82,7 +81,6 @@ func (p *Proc) Read(fid fid.Fid, n int) ([]byte, error) {
 }
 
 type Procd struct {
-	mu   sync.Mutex
 	clnt *fs.FsClient
 	srv  *name.Root
 	done chan bool
@@ -98,26 +96,17 @@ func (p *Procd) getAttr(fid fid.Fid, pid string, key string) ([]byte, error) {
 }
 
 func (p *Procd) Walk(start fid.Fid, path string) (*fid.Ufid, string, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	ufd, rest, err := p.srv.Walk(start, path)
 	return ufd, rest, err
 }
 
 func (p *Procd) Open(fid fid.Fid) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	log.Printf("Procd open %v\n", fid)
 	_, err := p.srv.OpenFid(fid)
 	return err
 }
 
 func (p *Procd) Create(f fid.Fid, t fid.IType, path string) (fid.Fid, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	log.Printf("Procd create %v %v\n", path, t)
 	if t == fid.DirT {
 		i, err := p.srv.MkDir(f, path)
@@ -139,18 +128,16 @@ func (p *Procd) Create(f fid.Fid, t fid.IType, path string) (fid.Fid, error) {
 	}
 }
 
-func (p *Procd) Symlink(f fid.Fid, src string, start *fid.Ufid, dst string) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (p *Procd) Remove(f fid.Fid, name string) error {
+	return p.srv.Remove(f, name)
+}
 
+func (p *Procd) Symlink(f fid.Fid, src string, start *fid.Ufid, dst string) error {
 	_, err := p.srv.Symlink(f, src, start, dst)
 	return err
 }
 
 func (p *Procd) Pipe(f fid.Fid, name string) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	return p.srv.Pipe(f, name)
 }
 
@@ -188,7 +175,7 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatal("missing argument")
 	}
-	p := &Procd{sync.Mutex{}, nil, nil, make(chan bool)}
+	p := &Procd{nil, nil, make(chan bool)}
 	p.clnt, p.srv = fs.MakeFs(p, false)
 	if fd, err := p.clnt.Open("."); err == nil {
 		log.Printf("opened proc")

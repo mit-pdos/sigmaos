@@ -45,7 +45,7 @@ func (inode *Inode) create(root *Root, t fid.IType, name string, data interface{
 	if inode.Type == fid.DirT {
 		d := inode.Data.(*Dir)
 		i := makeInode(t, root.allocInum(), data)
-		return d.create(i, name)
+		return i, d.create(i, name)
 	} else {
 		return nil, errors.New("Base not a directory")
 	}

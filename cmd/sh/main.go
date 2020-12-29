@@ -37,5 +37,5 @@ func main() {
 		}
 		log.Printf("Wait: %v\n", string(status))
 	}
-	proc.Exit(clnt)
+	proc.Exit(clnt, "OK")
 }

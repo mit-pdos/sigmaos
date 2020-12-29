@@ -50,6 +50,10 @@ func (nd *Named) Create(f fid.Fid, t fid.IType, name string) (fid.Fid, error) {
 	return fid.NullFid(), errors.New("Unsupported")
 }
 
+func (nd *Named) Remove(f fid.Fid, name string) error {
+	return errors.New("Unsupported")
+}
+
 func (nd *Named) Write(f fid.Fid, buf []byte) (int, error) {
 	return 0, errors.New("Unsupported")
 }

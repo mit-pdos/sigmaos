@@ -221,6 +221,19 @@ func (fsc *FsClient) Create(path string) (int, error) {
 	return fsc.createat(ufid, filepath.Base(path), fid.FileT)
 }
 
+func (fsc *FsClient) remove(uf *fid.Ufid, name string) error {
+	args := fsrpc.RemoveReq{uf.Fid, name}
+	return fsc.makeCall(uf.Addr, "FsSrv.Remove", args, nil)
+}
+
+func (fsc *FsClient) Remove(path string) error {
+	ufid, err := fsc.Walk(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	return fsc.remove(ufid, filepath.Base(path))
+}
+
 func (fsc *FsClient) MkDir(path string) (int, error) {
 	ufid, err := fsc.Walk(filepath.Dir(path))
 	if err != nil {
@@ -228,6 +241,14 @@ func (fsc *FsClient) MkDir(path string) (int, error) {
 	}
 	fd, err := fsc.createat(ufid, filepath.Base(path), fid.DirT)
 	return fd, err
+}
+
+func (fsc *FsClient) RmDir(path string) error {
+	ufid, err := fsc.Walk(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	return fsc.remove(ufid, filepath.Base(path))
 }
 
 func (fsc *FsClient) open(ufid *fid.Ufid) (int, error) {

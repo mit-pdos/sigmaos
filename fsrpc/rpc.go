@@ -24,6 +24,14 @@ type CreateReply struct {
 	Fid fid.Fid
 }
 
+type RemoveReq struct {
+	Fid  fid.Fid
+	Name string
+}
+
+type RemoveReply struct {
+}
+
 type OpenReq struct {
 	Fid fid.Fid
 }

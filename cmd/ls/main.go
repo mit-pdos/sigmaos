@@ -32,5 +32,5 @@ func main() {
 	} else {
 		log.Fatal("Read error:", err)
 	}
-	proc.Exit(clnt)
+	proc.Exit(clnt, "OK")
 }

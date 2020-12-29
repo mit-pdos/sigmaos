@@ -69,11 +69,31 @@ func (dir *Dir) mount(inode *Inode, name string) error {
 	return nil
 }
 
-func (dir *Dir) create(inode *Inode, name string) (*Inode, error) {
+func (dir *Dir) create(inode *Inode, name string) error {
 	_, ok := dir.entries[name]
 	if ok {
-		return nil, errors.New("Name exists")
+		return errors.New("Name exists")
 	}
 	dir.entries[name] = inode
-	return inode, nil
+	return nil
+}
+
+func (dir *Dir) removeDir(root *Root) {
+	for n, _ := range dir.entries {
+		dir.remove(root, n)
+	}
+}
+
+func (dir *Dir) remove(root *Root, name string) error {
+	inode, ok := dir.entries[name]
+	if ok {
+		if inode.Type == fid.DirT {
+			d := inode.Data.(*Dir)
+			d.removeDir(root)
+		}
+	}
+
+	root.freeInum(inode.Fid)
+	delete(dir.entries, name)
+	return nil
 }

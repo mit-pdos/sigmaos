@@ -15,6 +15,7 @@ func IsCurrentDir(name string) bool {
 	return name == "." || name == "/" || name == ""
 }
 
+// XXX need mutex
 type Root struct {
 	root    *fid.Ufid
 	dir     *Dir
@@ -44,6 +45,10 @@ func (root *Root) allocInum() fid.Fid {
 	fid := root.nextFid
 	root.nextFid.Id += 1
 	return fid
+}
+
+func (root *Root) freeInum(fid fid.Fid) {
+	delete(root.inodes, fid)
 }
 
 func (root *Root) makeUfid(fid fid.Fid) *fid.Ufid {
@@ -198,6 +203,21 @@ func (root *Root) MkNod(start fid.Fid, path string, rw Dev) error {
 func (root *Root) Pipe(start fid.Fid, path string) error {
 	_, err := root.Op("Pipe", start, path, root.pipe, makePipe())
 	return err
+}
+
+func (root *Root) Remove(f fid.Fid, name string) error {
+	log.Printf("name.Remove %v %v\n", f, name)
+	dir, err := root.fid2Inode(f)
+	if err != nil {
+		return err
+	}
+	if dir.Type == fid.DirT {
+		dir := dir.Data.(*Dir)
+		dir.remove(root, name)
+	} else {
+		errors.New("Base is not a directory")
+	}
+	return nil
 }
 
 func (root *Root) Write(f fid.Fid, data []byte) (int, error) {

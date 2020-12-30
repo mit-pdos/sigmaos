@@ -122,8 +122,8 @@ func Wait(clnt *fs.FsClient, child string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer clnt.Close(fd)
 	defer clnt.Remove(clnt.Proc + "/exit" + pid)
+	defer clnt.Close(fd)
 	b, err := clnt.Read(fd, 1024)
 	if err != nil {
 		return nil, err

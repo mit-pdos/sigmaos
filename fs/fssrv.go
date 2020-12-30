@@ -8,7 +8,7 @@ type FsSrv struct {
 	fs Fs
 }
 
-func (s *FsSrv) Walk(req fsrpc.WalkReq, reply *fsrpc.WalkReply) error {
+func (s *FsSrv) Walk(req fsrpc.NameReq, reply *fsrpc.WalkReply) error {
 	ufd, rest, err := s.fs.Walk(req.Fid, req.Name)
 	if err == nil {
 		reply.Path = rest
@@ -17,7 +17,7 @@ func (s *FsSrv) Walk(req fsrpc.WalkReq, reply *fsrpc.WalkReply) error {
 	return err
 }
 
-func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.CreateReply) error {
+func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.FidReply) error {
 	fid, err := s.fs.Create(req.Fid, req.Type, req.Name)
 	if err == nil {
 		reply.Fid = fid
@@ -25,14 +25,12 @@ func (s *FsSrv) Create(req fsrpc.CreateReq, reply *fsrpc.CreateReply) error {
 	return err
 }
 
-func (s *FsSrv) Remove(req fsrpc.RemoveReq, reply *fsrpc.RemoveReply) error {
+func (s *FsSrv) Remove(req fsrpc.NameReq, reply *fsrpc.EmptyReply) error {
 	return s.fs.Remove(req.Fid, req.Name)
 }
 
-func (s *FsSrv) Open(req fsrpc.OpenReq, reply *fsrpc.OpenReply) error {
-	err := s.fs.Open(req.Fid)
-	reply.Err = err
-	return err
+func (s *FsSrv) Open(req fsrpc.FidReq, reply *fsrpc.EmptyReply) error {
+	return s.fs.Open(req.Fid)
 }
 
 func (s *FsSrv) Symlink(req fsrpc.SymlinkReq, reply *fsrpc.SymlinkReply) error {
@@ -41,16 +39,12 @@ func (s *FsSrv) Symlink(req fsrpc.SymlinkReq, reply *fsrpc.SymlinkReply) error {
 	return err
 }
 
-func (s *FsSrv) Pipe(req fsrpc.PipeReq, reply *fsrpc.PipeReply) error {
-	err := s.fs.Pipe(req.Fid, req.Name)
-	reply.Err = err
-	return err
+func (s *FsSrv) Pipe(req fsrpc.NameReq, reply *fsrpc.EmptyReply) error {
+	return s.fs.Pipe(req.Fid, req.Name)
 }
 
-func (s *FsSrv) Mount(req fsrpc.MountReq, reply *fsrpc.MountReply) error {
-	err := s.fs.Mount(&req.Ufid, req.Fid, req.Name)
-	reply.Err = err
-	return err
+func (s *FsSrv) Mount(req fsrpc.MountReq, reply *fsrpc.EmptyReply) error {
+	return s.fs.Mount(&req.Ufid, req.Fid, req.Name)
 }
 
 func (s *FsSrv) Write(req fsrpc.WriteReq, reply *fsrpc.WriteReply) error {

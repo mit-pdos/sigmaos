@@ -4,7 +4,7 @@ import (
 	"ulambda/fid"
 )
 
-type WalkReq struct {
+type NameReq struct {
 	Fid  fid.Fid
 	Name string
 }
@@ -20,24 +20,15 @@ type CreateReq struct {
 	Type fid.IType
 }
 
-type CreateReply struct {
+type FidReq struct {
 	Fid fid.Fid
 }
 
-type RemoveReq struct {
-	Fid  fid.Fid
-	Name string
-}
-
-type RemoveReply struct {
-}
-
-type OpenReq struct {
+type FidReply struct {
 	Fid fid.Fid
 }
 
-type OpenReply struct {
-	Err error
+type EmptyReply struct {
 }
 
 type SymlinkReq struct {
@@ -51,23 +42,10 @@ type SymlinkReply struct {
 	Err error
 }
 
-type PipeReq struct {
-	Fid  fid.Fid
-	Name string
-}
-
-type PipeReply struct {
-	Err error
-}
-
 type MountReq struct {
 	Ufid fid.Ufid
 	Fid  fid.Fid
 	Name string
-}
-
-type MountReply struct {
-	Err error
 }
 
 type WriteReq struct {

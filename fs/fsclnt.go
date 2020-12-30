@@ -160,7 +160,7 @@ func (fsc *FsClient) Lsof() []string {
 }
 
 func (fsc *FsClient) walkOne(start *fid.Ufid, path string) (*fid.Ufid, string, error) {
-	args := fsrpc.WalkReq{start.Fid, path}
+	args := fsrpc.NameReq{start.Fid, path}
 	var reply fsrpc.WalkReply
 	err := fsc.makeCall(start.Addr, "FsSrv.Walk", args, &reply)
 	return &reply.Ufid, reply.Path, err
@@ -196,7 +196,7 @@ func (fsc *FsClient) Walk(path string) (*fid.Ufid, error) {
 
 func (fsc *FsClient) createat(uf *fid.Ufid, path string, t fid.IType) (int, error) {
 	args := fsrpc.CreateReq{uf.Fid, filepath.Base(path), t}
-	var reply fsrpc.CreateReply
+	var reply fsrpc.FidReply
 	err := fsc.makeCall(uf.Addr, "FsSrv.Create", args, &reply)
 	if err == nil {
 		nufd := &fid.Ufid{uf.Addr, reply.Fid}
@@ -222,7 +222,7 @@ func (fsc *FsClient) Create(path string) (int, error) {
 }
 
 func (fsc *FsClient) remove(uf *fid.Ufid, name string) error {
-	args := fsrpc.RemoveReq{uf.Fid, name}
+	args := fsrpc.NameReq{uf.Fid, name}
 	return fsc.makeCall(uf.Addr, "FsSrv.Remove", args, nil)
 }
 
@@ -252,8 +252,8 @@ func (fsc *FsClient) RmDir(path string) error {
 }
 
 func (fsc *FsClient) open(ufid *fid.Ufid) (int, error) {
-	args := fsrpc.OpenReq{ufid.Fid}
-	var reply fsrpc.OpenReply
+	args := fsrpc.FidReq{ufid.Fid}
+	var reply fsrpc.EmptyReply
 	err := fsc.makeCall(ufid.Addr, "FsSrv.Open", args, &reply)
 	if err == nil {
 		fd := fsc.findfd(ufid)
@@ -312,10 +312,9 @@ func (fsc *FsClient) Pipe(path string) error {
 	if err != nil {
 		return err
 	}
-	args := fsrpc.PipeReq{ufid.Fid, filepath.Base(path)}
-	var reply fsrpc.PipeReply
-	err = fsc.makeCall(ufid.Addr, "FsSrv.Pipe", args, &reply)
-	return err
+	args := fsrpc.NameReq{ufid.Fid, filepath.Base(path)}
+	var reply fsrpc.EmptyReply
+	return fsc.makeCall(ufid.Addr, "FsSrv.Pipe", args, &reply)
 }
 
 func (fsc *FsClient) Mount(fd int, path string) error {
@@ -326,9 +325,8 @@ func (fsc *FsClient) Mount(fd int, path string) error {
 	Fid := fsc.fds[fd]
 	if Fid != nil {
 		args := fsrpc.MountReq{*Fid, ufid.Fid, filepath.Base(path)}
-		var reply fsrpc.MountReply
-		err := fsc.makeCall(ufid.Addr, "FsSrv.Mount", args, &reply)
-		return err
+		var reply fsrpc.EmptyReply
+		return fsc.makeCall(ufid.Addr, "FsSrv.Mount", args, &reply)
 	}
 	return errors.New("Mount: unknown fd")
 }

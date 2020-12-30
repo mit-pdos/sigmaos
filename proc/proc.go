@@ -2,8 +2,9 @@ package proc
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -18,26 +19,20 @@ func randPid(clnt *fs.FsClient) string {
 func makeAttr(clnt *fs.FsClient, fddir int, key string, value []byte) error {
 	fd, err := clnt.CreateAt(fddir, key)
 	if err != nil {
-		log.Fatal("OpenAt error: ", err)
+		return err
 	}
 	defer clnt.Close(fd)
 	_, err = clnt.Write(fd, []byte(value))
-	if err != nil {
-		log.Fatal("Write error: ", err)
-	}
 	return err
 }
 
 func setAttr(clnt *fs.FsClient, fddir int, key string, value []byte) error {
 	fd, err := clnt.OpenAt(fddir, key)
 	if err != nil {
-		log.Fatal("OpenAt error: ", err)
+		return err
 	}
 	defer clnt.Close(fd)
 	_, err = clnt.Write(fd, []byte(value))
-	if err != nil {
-		log.Fatal("Write error: ", err)
-	}
 	return err
 }
 
@@ -48,69 +43,76 @@ func Spawn(clnt *fs.FsClient, program string, args []string, fids []string) (str
 	pname := "/proc/" + pid
 	fd, err := clnt.MkDir(pname)
 	if err != nil {
-		log.Fatal("Spawn: mkdir error: ", err)
 		return "", err
 	}
 	defer clnt.Close(fd)
 	err = makeAttr(clnt, fd, "program", []byte(program))
 	if err != nil {
-		log.Fatal("Spawn: setAttr error: ", err)
+		clnt.RmDir(pname)
 		return "", err
 	}
 
 	args = append([]string{pname}, args...)
 	b, err := json.Marshal(args)
 	if err != nil {
-		log.Fatal("Spawn: marshall error: ", err)
+		clnt.RmDir(pname)
+		return "", err
 	}
 	err = makeAttr(clnt, fd, "args", b)
 	if err != nil {
-		log.Fatal("Spawn: setAttr error: ", err)
+		clnt.RmDir(pname)
 		return "", err
 	}
 
 	b, err = json.Marshal(fids)
 	if err != nil {
-		log.Fatal("Spawn: marshall error: ", err)
+		clnt.RmDir(pname)
+		return "", err
 	}
 	err = makeAttr(clnt, fd, "fds", b)
 	if err != nil {
-		log.Fatal("Spawn: setAttr error: ", err)
+		clnt.RmDir(pname)
 		return "", err
 	}
-
-	log.Printf("clnt.Proc %v\n", clnt.Proc)
 	if clnt.Proc != "" {
 		err = clnt.Pipe(clnt.Proc + "/" + "exit" + pid)
 		if err != nil {
+			clnt.RmDir(pname)
 			return "", err
 		}
 		err := clnt.SymlinkAt(fd, "parent", clnt.Proc)
 		if err != nil {
-			log.Fatal("Spawn: Symlink error: ", err)
+			clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
+			clnt.RmDir(pname)
+			return "", err
 		}
 	}
 
 	// Start process
 	err = setAttr(clnt, fd, "ctl", []byte("start"))
-
-	return pname, nil
+	if err != nil {
+		clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
+		clnt.RmDir(pname)
+		return "", err
+	}
+	return pname, err
 }
 
-func Exit(clnt *fs.FsClient, status string) error {
+func Exit(clnt *fs.FsClient, v ...interface{}) error {
 	pid := filepath.Base(clnt.Proc)
+	defer func() {
+		clnt.RmDir(clnt.Proc)
+		os.Exit(0)
+	}()
 	fd, err := clnt.Open(clnt.Proc + "/parent/exit" + pid)
 	if err != nil {
-		log.Fatal("Exit: open error: ", err)
 		return err
 	}
 	defer clnt.Close(fd)
-	_, err = clnt.Write(fd, []byte(status))
+	_, err = clnt.Write(fd, []byte(fmt.Sprint(v...)))
 	if err != nil {
-		log.Fatal("Exit: write error: ", err)
 		return err
 	}
-	clnt.RmDir(clnt.Proc)
 	return nil
 }
 
@@ -118,13 +120,12 @@ func Wait(clnt *fs.FsClient, child string) ([]byte, error) {
 	pid := filepath.Base(child)
 	fd, err := clnt.Open(clnt.Proc + "/exit" + pid)
 	if err != nil {
-		log.Fatal("Wait: open error: ", err)
 		return nil, err
 	}
 	defer clnt.Close(fd)
+	defer clnt.Remove(clnt.Proc + "/exit" + pid)
 	b, err := clnt.Read(fd, 1024)
 	if err != nil {
-		log.Fatal("Wait: read error: ", err)
 		return nil, err
 	}
 	return b, err

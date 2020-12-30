@@ -28,14 +28,13 @@ func main() {
 		line := strings.TrimSuffix(string(b), "\n")
 		cmd := strings.Split(line, " ")
 		child, err := proc.Spawn(clnt, cmd[0], cmd[1:], clnt.Lsof())
-		if err != nil {
-			log.Fatal("Spawn error:", err)
+		if err == nil {
+			status, err := proc.Wait(clnt, child)
+			if err != nil {
+				log.Fatal("Wait error:", err)
+			}
+			log.Printf("Wait: %v\n", string(status))
 		}
-		status, err := proc.Wait(clnt, child)
-		if err != nil {
-			log.Fatal("Wait error:", err)
-		}
-		log.Printf("Wait: %v\n", string(status))
 	}
 	proc.Exit(clnt, "OK")
 }

@@ -10,9 +10,10 @@ import (
 
 func main() {
 	clnt, args, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+
 	log.Printf("Running: %v\n", args)
 	if err != nil {
-		log.Fatal("InitFsClient error:", err)
+		proc.Exit(clnt, "InitFsClient error:", err)
 	}
 	var fd int
 	if len(args) == 1 {
@@ -21,16 +22,16 @@ func main() {
 		fd, err = clnt.Open(args[1])
 	}
 	if err != nil {
-		log.Fatal("Open error:", err)
+		proc.Exit(clnt, "Open error", err)
 	}
 	defer clnt.Close(fd)
 	if buf, err := clnt.Read(fd, 1024); err == nil {
 		_, err := clnt.Write(fs.Stdout, buf)
 		if err != nil {
-			log.Fatal("Write error:", err)
+			proc.Exit(clnt, "Write error: ", err)
 		}
 	} else {
-		log.Fatal("Read error:", err)
+		proc.Exit(clnt, "Read error: ", err)
 	}
 	proc.Exit(clnt, "OK")
 }

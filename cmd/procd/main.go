@@ -63,7 +63,7 @@ func (p *Proc) Write(fid fid.Fid, data []byte) (int, error) {
 
 		log.Printf("command %v %v\n", string(program), a)
 
-		p.cmd = exec.Command(string(program), a...)
+		p.cmd = exec.Command("./bin/"+string(program), a...)
 		p.cmd.Stdout = os.Stdout
 		p.cmd.Stderr = os.Stderr
 		err = p.cmd.Start()

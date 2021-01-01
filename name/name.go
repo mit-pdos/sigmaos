@@ -3,10 +3,6 @@ package name
 import (
 	"errors"
 	"log"
-	"path/filepath"
-	"strings"
-
-	"ulambda/fid"
 )
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
@@ -17,201 +13,136 @@ func IsCurrentDir(name string) bool {
 
 // XXX need mutex
 type Root struct {
-	root    *fid.Ufid
-	dir     *Dir
-	inodes  map[fid.Fid]*Inode
-	rFid    fid.Fid
-	nextFid fid.Fid
+	inode    *Inode
+	nextInum Tinum
 }
 
-func MakeRoot(root *fid.Ufid) *Root {
+func MakeRoot() *Root {
 	r := Root{}
-	r.dir = makeDir()
-	r.root = root
-	r.inodes = make(map[fid.Fid]*Inode)
-	r.rFid = fid.RootFid()
-	r.nextFid = fid.MakeFid(0, r.rFid.Id+1)
-	r.inodes[r.rFid] = makeInode(fid.DirT, r.rFid, r.dir)
+	r.inode = makeInode(DirT, RootInum, makeDir(RootInum))
+	r.nextInum = RootInum + 1
 	return &r
 }
 
-func (root *Root) Myroot() *fid.Ufid {
-	return root.root
+func (root *Root) RootInode() *Inode {
+	return root.inode
 }
 
 // XXX bump version # if allocating same inode #
 // XXX a better inum allocation plan
-func (root *Root) allocInum() fid.Fid {
-	fid := root.nextFid
-	root.nextFid.Id += 1
-	return fid
+func (root *Root) allocInum() Tinum {
+	inum := root.nextInum
+	root.nextInum += 1
+	return inum
 }
 
-func (root *Root) freeInum(fid fid.Fid) {
-	delete(root.inodes, fid)
+func (root *Root) freeInum(inum Tinum) {
 }
 
-func (root *Root) makeUfid(fid fid.Fid) *fid.Ufid {
-	ufid := *root.root
-	ufid.Fid = fid
-	return &ufid
-}
-
-func (root *Root) RootFid() fid.Fid {
-	return root.rFid
-}
-
-func (root *Root) fid2Inode(f fid.Fid) (*Inode, error) {
-	if inode, ok := root.inodes[f]; ok {
-		return inode, nil
-	} else {
-		return nil, errors.New("Unknown fid")
+func (root *Root) Namei(dir *Dir, path []string) (*Inode, []string, error) {
+	if len(path) == 0 {
+		i, err := dir.Lookup(".")
+		return i, nil, err
 	}
-}
-
-func (root *Root) fid2Dir(f fid.Fid) (*Dir, error) {
-	inode, err := root.fid2Inode(f)
-	if err != nil {
-		return nil, err
-	}
-	if inode.Type == fid.DirT {
-		return inode.Data.(*Dir), nil
-	} else {
-		return nil, errors.New("Not a directory")
-	}
-}
-
-func (root *Root) Namei(start fid.Fid, path []string) (*Inode, []string, error) {
 	if IsCurrentDir(path[0]) {
-		i, err := root.fid2Inode(start)
+		i, err := dir.Lookup(".")
 		return i, path[1:], err
-	}
-	dir, err := root.fid2Dir(start)
-	if err != nil {
-		return nil, nil, err
 	}
 	return dir.Namei(path)
 }
 
-func (root *Root) Walk(start fid.Fid, path string) (*fid.Ufid, string, error) {
+func (root *Root) Walk(dir *Dir, path []string) (*Inode, []string, error) {
 	log.Printf("name.Walk %v\n", path)
-	inode, rest, err := root.Namei(start, strings.Split(path, "/"))
+	inode, rest, err := root.Namei(dir, path)
 	if err == nil {
 		switch inode.Type {
-		case fid.MountT:
-			uf := inode.Data.(*fid.Ufid)
-			return uf, strings.Join(rest, "/"), err
-		case fid.SymT:
-			s := inode.Data.(*Symlink)
-			return s.start, s.dst + "/" + strings.Join(rest, "/"), err
+		case MountT:
+			// uf := inode.Data.(*fid.Ufid)
+			return nil, rest, err
+		case SymT:
+			// s := inode.Data.(*Symlink)
+			return nil, rest, err
 		default:
-			return root.makeUfid(inode.Fid), strings.Join(rest, "/"), err
+			return inode, rest, err
 		}
 	} else {
-		return nil, "", err
+		return nil, nil, err
 	}
-}
-
-func (root *Root) OpenFid(f fid.Fid) (*Inode, error) {
-	return root.fid2Inode(f)
-}
-
-func (root *Root) WalkOpenFid(start fid.Fid, path string) (*Inode, error) {
-	ufid, rest, err := root.Walk(start, path)
-	if err != nil {
-		return nil, err
-	}
-	if rest != "" {
-		return nil, errors.New("Unknow file")
-
-	}
-	return root.fid2Inode(ufid.Fid)
-}
-
-func (root *Root) Ls(f fid.Fid, n int) (string, error) {
-	dir, err := root.fid2Dir(f)
-	if err != nil {
-		return "", err
-	}
-	return dir.ls(n), nil
 }
 
 func (root *Root) create(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, fid.FileT, base, i)
+	return inode.create(root, FileT, base, i)
 }
 
 func (root *Root) mkdir(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, fid.DirT, base, i)
+	return inode.create(root, DirT, base, i)
 }
 
 func (root *Root) symlink(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, fid.SymT, base, i)
+	return inode.create(root, SymT, base, i)
 }
 
 func (root *Root) mount(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, fid.MountT, base, i)
+	return inode.create(root, MountT, base, i)
 }
 
 func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, fid.DevT, base, i)
+	return inode.create(root, DevT, base, i)
 }
 
 func (root *Root) pipe(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, fid.PipeT, base, i)
+	return inode.create(root, PipeT, base, i)
 }
 
-func (root *Root) Op(opn string, start fid.Fid, path string,
+func (root *Root) Op(opn string, dir *Inode, path []string,
 	op func(*Inode, string, interface{}) (*Inode, error),
 	i interface{}) (*Inode, error) {
-	log.Printf("name.%v %v %v %v\n", opn, start, path, i)
-	if inode, _, err := root.Namei(start,
-		strings.Split(filepath.Dir(path), "/")); err == nil {
-		inode, err = op(inode, filepath.Base(path), i)
+	log.Printf("name.%v %v %v\n", opn, dir, path)
+	// XXX check error
+	d := dir.Data.(*Dir)
+	if inode, _, err := root.Namei(d, path[:len(path)-1]); err == nil {
+		inode, err = op(inode, path[len(path)-1], i)
 		if err != nil {
 			return inode, err
 		}
-		log.Printf("name.%v %v %v %v -> %v\n", opn, start, path, i, inode)
-		root.inodes[inode.Fid] = inode
+		log.Printf("name.%v %v %v %v -> %v\n", opn, dir, path, i, inode)
 		return inode, nil
 	} else {
 		return nil, err
 	}
 }
 
-func (root *Root) Create(start fid.Fid, path string) (*Inode, error) {
-	return root.Op("Create", start, path, root.create, []byte{})
+func (root *Root) Create(dir *Inode, path []string) (*Inode, error) {
+	return root.Op("Create", dir, path, root.create, []byte{})
 }
 
-func (root *Root) MkDir(start fid.Fid, path string) (*Inode, error) {
-	return root.Op("MkDir", start, path, root.mkdir, makeDir())
+func (root *Root) MkDir(dir *Inode, path []string) (*Inode, error) {
+	inum := root.allocInum()
+	return root.Op("MkDir", dir, path, root.mkdir, makeDir(inum))
 }
 
-func (root *Root) Symlink(start fid.Fid, src string, dstart *fid.Ufid, dst string) (*Inode, error) {
-	return root.Op("Symlink", start, src, root.symlink, makeSym(dstart, dst))
-}
+// func (root *Root) Symlink(dir *Inode, src string, ddir *fid.Ufid, dst string) (*Inode, error) {
+// 	return root.Op("Symlink", dir, src, root.symlink, makeSym(ddir, dst))
+// }
 
-func (root *Root) Mount(uf *fid.Ufid, start fid.Fid, path string) error {
-	_, err := root.Op("Mount", start, path, root.mount, uf)
+// func (root *Root) Mount(uf *fid.Ufid, dir *Inode, path string) error {
+// 	_, err := root.Op("Mount", dir, path, root.mount, uf)
+// 	return err
+// }
+
+func (root *Root) MkNod(dir *Inode, path []string, rw Dev) error {
+	_, err := root.Op("Mknod", dir, path, root.mknod, rw)
 	return err
 }
 
-func (root *Root) MkNod(start fid.Fid, path string, rw Dev) error {
-	_, err := root.Op("Mknod", start, path, root.mknod, rw)
+func (root *Root) Pipe(dir *Inode, path []string) error {
+	_, err := root.Op("Pipe", dir, path, root.pipe, makePipe())
 	return err
 }
 
-func (root *Root) Pipe(start fid.Fid, path string) error {
-	_, err := root.Op("Pipe", start, path, root.pipe, makePipe())
-	return err
-}
-
-func (root *Root) Remove(f fid.Fid, name string) error {
-	log.Printf("name.Remove %v %v\n", f, name)
-	dir, err := root.fid2Inode(f)
-	if err != nil {
-		return err
-	}
-	if dir.Type == fid.DirT {
+func (root *Root) Remove(dir *Inode, name string) error {
+	log.Printf("name.Remove %v %v\n", dir, name)
+	if dir.Type == DirT {
 		dir := dir.Data.(*Dir)
 		dir.remove(root, name)
 	} else {
@@ -220,42 +151,34 @@ func (root *Root) Remove(f fid.Fid, name string) error {
 	return nil
 }
 
-func (root *Root) Write(f fid.Fid, data []byte) (int, error) {
-	log.Printf("name.Write %v\n", f)
-	inode, err := root.fid2Inode(f)
-	if err != nil {
-		return 0, err
-	}
+func (root *Root) Write(i *Inode, data []byte) (int, error) {
+	log.Printf("name.Write %v\n", i)
 	// XXX no distinction between DevT and pipeT?
-	if inode.Type == fid.DevT {
-		dev := inode.Data.(Dev)
-		return dev.Write(f, data)
-	} else if inode.Type == fid.PipeT {
-		pipe := inode.Data.(*Pipe)
-		return pipe.Write(f, data)
+	if i.Type == DevT {
+		dev := i.Data.(Dev)
+		return dev.Write(i, data)
+	} else if i.Type == PipeT {
+		pipe := i.Data.(*Pipe)
+		return pipe.Write(i, data)
 	} else {
-		inode.Data = data
+		i.Data = data
 		return len(data), nil
 	}
 }
 
-func (root *Root) Read(f fid.Fid, n int) ([]byte, error) {
-	log.Printf("name.Read %v\n", f)
-	inode, err := root.fid2Inode(f)
-	if err != nil {
-		return nil, err
-	}
-	switch inode.Type {
-	case fid.DevT:
-		dev := inode.Data.(Dev)
-		return dev.Read(f, n)
-	case fid.PipeT:
-		pipe := inode.Data.(*Pipe)
-		return pipe.Read(f, n)
-	case fid.FileT:
-		return inode.Data.([]byte), nil
-	case fid.DirT:
-		dir := inode.Data.(*Dir)
+func (root *Root) Read(i *Inode, n int) ([]byte, error) {
+	log.Printf("name.Read %v\n", i)
+	switch i.Type {
+	case DevT:
+		dev := i.Data.(Dev)
+		return dev.Read(i, n)
+	case PipeT:
+		pipe := i.Data.(*Pipe)
+		return pipe.Read(i, n)
+	case FileT:
+		return i.Data.([]byte), nil
+	case DirT:
+		dir := i.Data.(*Dir)
 		return []byte(dir.ls(n)), nil
 	default:
 		return nil, errors.New("Unreadable fid")

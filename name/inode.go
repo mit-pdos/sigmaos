@@ -2,26 +2,42 @@ package name
 
 import (
 	"errors"
-	// "log"
+)
 
-	"ulambda/fid"
+type IType int
+type Tinum uint64
+type Tversion uint32
+
+const (
+	NullInum Tinum = 0
+	RootInum Tinum = 1
+)
+
+const (
+	FileT  IType = 1
+	DirT   IType = 2
+	DevT   IType = 3
+	MountT IType = 4
+	PipeT  IType = 5
+	SymT   IType = 6
 )
 
 type Dev interface {
-	Write(fid.Fid, []byte) (int, error)
-	Read(fid.Fid, int) ([]byte, error)
+	Write(*Inode, []byte) (int, error)
+	Read(*Inode, int) ([]byte, error)
 }
 
 type Inode struct {
-	Type fid.IType
-	Fid  fid.Fid
-	Data interface{}
+	Type    IType
+	Inum    Tinum
+	Version Tversion
+	Data    interface{}
 }
 
-func makeInode(t fid.IType, fid fid.Fid, data interface{}) *Inode {
+func makeInode(t IType, inum Tinum, data interface{}) *Inode {
 	i := Inode{}
 	i.Type = t
-	i.Fid = fid
+	i.Inum = inum
 	i.Data = data
 	return &i
 }
@@ -30,7 +46,7 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return inode, nil
 	}
-	if inode.Type == fid.DirT {
+	if inode.Type == DirT {
 		d := inode.Data.(*Dir)
 		return d.Lookup(name)
 	} else {
@@ -38,11 +54,11 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	}
 }
 
-func (inode *Inode) create(root *Root, t fid.IType, name string, data interface{}) (*Inode, error) {
+func (inode *Inode) create(root *Root, t IType, name string, data interface{}) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
-	if inode.Type == fid.DirT {
+	if inode.Type == DirT {
 		d := inode.Data.(*Dir)
 		i := makeInode(t, root.allocInum(), data)
 		return i, d.create(i, name)

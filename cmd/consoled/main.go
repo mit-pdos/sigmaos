@@ -7,16 +7,16 @@ import (
 	"os"
 	"sync"
 
+	"ulambda/fs"
 	"ulambda/fsclnt"
 	"ulambda/fssrv"
-	"ulambda/name"
 
 	np "ulambda/ninep"
 )
 
 const (
-	Stdin  = name.RootInum + 1
-	Stdout = name.RootInum + 2
+	Stdin  = fs.RootInum + 1
+	Stdout = fs.RootInum + 2
 )
 
 type Consoled struct {
@@ -25,7 +25,7 @@ type Consoled struct {
 	stdout *bufio.Writer
 	clnt   *fsclnt.FsClient
 	srv    *fssrv.FsServer
-	name   *name.Root
+	fs     *fs.Root
 	done   chan bool
 }
 
@@ -35,7 +35,7 @@ func makeConsoled() *Consoled {
 	cons.stdout = bufio.NewWriter(os.Stdout)
 	cons.clnt = fsclnt.MakeFsClient()
 	cons.srv = fssrv.MakeFsServer(cons, ":0")
-	cons.name = name.MakeRoot()
+	cons.fs = fs.MakeRoot()
 	cons.done = make(chan bool)
 	return cons
 }
@@ -60,12 +60,12 @@ func makeConsoled() *Consoled {
 // }
 
 func (cons *Consoled) FsInit() {
-	root := cons.name.RootInode()
-	_, err := cons.name.Create(root, "stdin", np.DMAPPEND)
+	root := cons.fs.RootInode()
+	_, err := cons.fs.Create(root, "stdin", np.DMAPPEND)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	_, err = cons.name.Create(root, "stdout", np.DMAPPEND)
+	_, err = cons.fs.Create(root, "stdout", np.DMAPPEND)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}

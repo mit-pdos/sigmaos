@@ -4,34 +4,34 @@ import (
 	"errors"
 	// "log"
 
+	"ulambda/fs"
 	"ulambda/fssrv"
-	"ulambda/name"
 	np "ulambda/ninep"
 )
 
 type Named struct {
 	done chan bool
-	name *name.Root
+	fs   *fs.Root
 	srv  *fssrv.FsServer
 }
 
 func makeNamed() *Named {
 	nd := &Named{}
 	nd.srv = fssrv.MakeFsServer(nd, ":1111")
-	nd.name = name.MakeRoot()
+	nd.fs = fs.MakeRoot()
 	nd.done = make(chan bool)
 	return nd
 }
 
 func (nd *Named) Attach(conn *fssrv.FsConn, args np.Tattach, reply *np.Rattach) error {
-	root := nd.name.RootInode()
+	root := nd.fs.RootInode()
 	conn.Fids[args.Fid] = root
 	reply.Tag = args.Tag
 	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(root.Version), np.Tpath(root.Inum))
 	return nil
 }
 
-func makeQids(inodes []*name.Inode) []np.Tqid {
+func makeQids(inodes []*fs.Inode) []np.Tqid {
 	var qids []np.Tqid
 	for _, i := range inodes {
 		qid := *np.MakeQid(np.QTDIR, np.TQversion(i.Version), np.Tpath(i.Inum))
@@ -45,8 +45,8 @@ func (nd *Named) Walk(conn *fssrv.FsConn, args np.Twalk, reply *np.Rwalk) error 
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	start := obj.(*name.Inode)
-	inodes, _, err := nd.name.Walk(start.Data.(*name.Dir), args.Path)
+	start := obj.(*fs.Inode)
+	inodes, _, err := nd.fs.Walk(start.Data.(*fs.Dir), args.Path)
 	if err != nil {
 		return err
 	}
@@ -61,8 +61,8 @@ func (nd *Named) Create(conn *fssrv.FsConn, args np.Tcreate, reply *np.Rcreate) 
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	start := obj.(*name.Inode)
-	inode, err := nd.name.Create(start, args.Name, args.Perm)
+	start := obj.(*fs.Inode)
+	inode, err := nd.fs.Create(start, args.Name, args.Perm)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (nd *Named) Open(conn *fssrv.FsConn, args np.Topen, reply *np.Ropen) error 
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	inode := obj.(*name.Inode)
+	inode := obj.(*fs.Inode)
 	reply.Tag = args.Tag
 	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(inode.Version), np.Tpath(inode.Inum))
 	return nil
@@ -96,8 +96,8 @@ func (nd *Named) Read(conn *fssrv.FsConn, args np.Tread, reply *np.Rread) error 
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	inode := obj.(*name.Inode)
-	data, err := nd.name.Read(inode, args.Count)
+	inode := obj.(*fs.Inode)
+	data, err := nd.fs.Read(inode, args.Count)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func (nd *Named) Write(conn *fssrv.FsConn, args np.Twrite, reply *np.Rwrite) err
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	inode := obj.(*name.Inode)
-	n, err := nd.name.Write(inode, args.Data)
+	inode := obj.(*fs.Inode)
+	n, err := nd.fs.Write(inode, args.Data)
 	if err != nil {
 		return err
 	}

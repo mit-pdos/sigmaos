@@ -1,4 +1,4 @@
-package name
+package fs
 
 import (
 	"ulambda/fid"

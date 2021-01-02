@@ -79,7 +79,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Mount error: ", err)
 		}
-		_, err = cons.clnt.Create("name/x")
+		_, err = cons.clnt.Create("name/x", 0, np.OWRITE)
 		if err != nil {
 			log.Fatal("Create error: ", err)
 		}

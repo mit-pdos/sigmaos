@@ -6,7 +6,6 @@ import (
 	np "ulambda/ninep"
 )
 
-type IType int
 type Tinum uint64
 type Tversion uint32
 
@@ -15,40 +14,35 @@ const (
 	RootInum Tinum = 1
 )
 
-const (
-	FileT  IType = 1
-	DirT   IType = 2
-	DevT   IType = 3
-	MountT IType = 4
-	PipeT  IType = 5
-	SymT   IType = 6
-)
-
 type Dev interface {
 	Write(*Inode, []byte) (int, error)
 	Read(*Inode, int) ([]byte, error)
 }
 
 type Inode struct {
-	Type    IType
+	PermT   np.Tperm
 	Inum    Tinum
 	Version Tversion
 	Data    interface{}
 }
 
-func makeInode(t IType, inum Tinum, data interface{}) *Inode {
+func makeInode(t np.Tperm, inum Tinum, data interface{}) *Inode {
 	i := Inode{}
-	i.Type = t
+	i.PermT = t
 	i.Inum = inum
 	i.Data = data
 	return &i
+}
+
+func (inode *Inode) isDir() bool {
+	return inode.PermT&np.DMDIR == np.DMDIR
 }
 
 func (inode *Inode) lookup(name string) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return inode, nil
 	}
-	if inode.Type == DirT {
+	if inode.isDir() {
 		d := inode.Data.(*Dir)
 		return d.Lookup(name)
 	} else {
@@ -56,11 +50,11 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	}
 }
 
-func (inode *Inode) create(root *Root, t IType, name string, data interface{}, perm np.Tperm) (*Inode, error) {
+func (inode *Inode) create(root *Root, t np.Tperm, name string, data interface{}) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
-	if inode.Type == DirT {
+	if inode.isDir() {
 		d := inode.Data.(*Dir)
 		i := makeInode(t, root.allocInum(), data)
 		return i, d.create(i, name)

@@ -27,6 +27,13 @@ func (fsc *FsClient) create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmo
 	return &reply, err
 }
 
+func (fsc *FsClient) open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
+	args := np.Topen{np.NoTag, fid, mode}
+	var reply np.Ropen
+	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Open", args, &reply)
+	return &reply, err
+}
+
 func (fsc *FsClient) clunk(fid np.Tfid) error {
 	args := np.Tclunk{np.NoTag, fid}
 	var reply np.Rclunk

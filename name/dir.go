@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	np "ulambda/ninep"
 )
 
 type Dir struct {
@@ -14,7 +16,7 @@ type Dir struct {
 func makeDir(inum Tinum) *Dir {
 	d := &Dir{}
 	d.entries = make(map[string]*Inode)
-	d.entries["."] = makeInode(DirT, inum, d)
+	d.entries["."] = makeInode(np.DMDIR, inum, d)
 	return d
 }
 
@@ -38,15 +40,14 @@ func (dir *Dir) Namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
-	switch inode.Type {
-	case DirT:
+	if inode.isDir() {
 		if len(path) == 1 { // done?
 			log.Printf("Namei %v %v -> %v", path, dir, inodes)
 			return inodes, nil, nil
 		}
 		d := inode.Data.(*Dir)
 		return d.Namei(path[1:], inodes)
-	default:
+	} else {
 		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inodes, path[1:])
 		return inodes, path[1:], nil
 	}
@@ -87,7 +88,7 @@ func (dir *Dir) removeDir(root *Root) {
 func (dir *Dir) remove(root *Root, name string) error {
 	inode, ok := dir.entries[name]
 	if ok {
-		if inode.Type == DirT {
+		if inode.isDir() {
 			d := inode.Data.(*Dir)
 			d.removeDir(root)
 		}

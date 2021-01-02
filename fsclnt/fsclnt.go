@@ -137,22 +137,18 @@ func (fsc *FsClient) Attach(server string, path string) (int, error) {
 	return fd, nil
 }
 
-func (fsc *FsClient) Create(path string) (int, error) {
-	log.Printf("Create %v\n", path)
-
-	p := strings.Split(path, "/")
-	dir := p[0 : len(p)-1]
-	base := p[len(p)-1]
-	fid, rest := fsc.mount.resolve(dir)
+func (fsc *FsClient) nameFid(path []string) (np.Tfid, error) {
+	fid, rest := fsc.mount.resolve(path)
 	if fid == np.NoFid {
-		return -1, errors.New("Unknown file")
+		return np.NoFid, errors.New("Unknown file")
 
 	}
 
+	// clone fid into fid1
 	fid1 := fsc.allocFid()
-	_, err := fsc.walk(fid, fid1, nil) // clone fid into fid1
+	_, err := fsc.walk(fid, fid1, nil)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	fsc.fids[fid1] = fsc.fids[fid].copyChannel()
 
@@ -162,25 +158,52 @@ func (fsc *FsClient) Create(path string) (int, error) {
 			log.Printf("Create clunk failed %v\n", err)
 		}
 		delete(fsc.fids, fid1)
-		log.Printf("fsc %v\n", fsc)
-
 	}()
 
 	fid2 := fsc.allocFid()
 	reply, err := fsc.walk(fid1, fid2, rest)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	fsc.fids[fid2] = fsc.fids[fid1].copyChannel()
 	fsc.fids[fid2].addn(rest, reply.Qids)
+	return fid2, nil
+}
 
-	creply, err := fsc.create(fid2, base, np.DMAPPEND|np.DMWRITE, np.OWRITE)
+func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
+	fid, err := fsc.nameFid(strings.Split(path, "/"))
+	if err != nil {
+		return -1, err
+	}
+	_, err = fsc.open(fid, mode)
+	if err != nil {
+		return -1, err
+	}
+	// XXX check reply.Qid?
+	fd := fsc.findfd(fid)
+	return fd, nil
+
+}
+
+func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
+	log.Printf("Create %v\n", path)
+
+	p := strings.Split(path, "/")
+	dir := p[0 : len(p)-1]
+	base := p[len(p)-1]
+	fid, err := fsc.nameFid(dir)
+	if err != nil {
+		return -1, err
+	}
+	reply, err := fsc.create(fid, base, perm, mode)
 	if err != nil {
 		return -1, err
 	}
 
-	fsc.fids[fid2].add(base, creply.Qid)
-	fd := fsc.findfd(fid2)
+	fsc.fids[fid].add(base, reply.Qid)
+	fd := fsc.findfd(fid)
+
+	log.Printf("fsc %v\n", fsc)
 
 	return fd, nil
 }

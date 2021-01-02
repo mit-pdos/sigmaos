@@ -21,7 +21,7 @@ type Root struct {
 
 func MakeRoot() *Root {
 	r := Root{}
-	r.inode = makeInode(DirT, RootInum, makeDir(RootInum))
+	r.inode = makeInode(np.DMDIR, RootInum, makeDir(RootInum))
 	r.nextInum = RootInum + 1
 	return &r
 }
@@ -59,16 +59,15 @@ func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
 	var inodes []*Inode
 	inodes, rest, err := root.Namei(dir, path, inodes)
 	if err == nil {
-		switch inodes[len(inodes)-1].Type {
-		case MountT:
-			// uf := inode.Data.(*fid.Ufid)
-			return nil, rest, err
-		case SymT:
-			// s := inode.Data.(*Symlink)
-			return nil, rest, err
-		default:
-			return inodes, rest, err
-		}
+		return inodes, rest, err
+		// switch inodes[len(inodes)-1].PermT {
+		// case MountT:
+		// 	// uf := inode.Data.(*fid.Ufid)
+		// 	return nil, rest, err
+		// case SymT:
+		// 	// s := inode.Data.(*Symlink)
+		// 	return nil, rest, err
+		// default:
 	} else {
 		return nil, nil, err
 	}
@@ -90,8 +89,8 @@ func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
 // 	return inode.create(root, PipeT, base, i)
 // }
 
-func (root *Root) Create(dir *Inode, name string, perm np.Tperm) (*Inode, error) {
-	return dir.create(root, FileT, name, []byte{}, perm)
+func (root *Root) Create(inode *Inode, name string, perm np.Tperm) (*Inode, error) {
+	return inode.create(root, perm, name, []byte{})
 }
 
 // func (root *Root) Symlink(dir *Inode, src string, ddir *fid.Ufid, dst string) (*Inode, error) {
@@ -115,7 +114,7 @@ func (root *Root) Create(dir *Inode, name string, perm np.Tperm) (*Inode, error)
 
 func (root *Root) Remove(dir *Inode, name string) error {
 	log.Printf("name.Remove %v %v\n", dir, name)
-	if dir.Type == DirT {
+	if dir.isDir() {
 		dir := dir.Data.(*Dir)
 		dir.remove(root, name)
 	} else {
@@ -126,34 +125,11 @@ func (root *Root) Remove(dir *Inode, name string) error {
 
 func (root *Root) Write(i *Inode, data []byte) (int, error) {
 	log.Printf("name.Write %v\n", i)
-	// XXX no distinction between DevT and pipeT?
-	if i.Type == DevT {
-		dev := i.Data.(Dev)
-		return dev.Write(i, data)
-	} else if i.Type == PipeT {
-		pipe := i.Data.(*Pipe)
-		return pipe.Write(i, data)
-	} else {
-		i.Data = data
-		return len(data), nil
-	}
+	i.Data = data
+	return len(data), nil
 }
 
 func (root *Root) Read(i *Inode, n int) ([]byte, error) {
 	log.Printf("name.Read %v\n", i)
-	switch i.Type {
-	case DevT:
-		dev := i.Data.(Dev)
-		return dev.Read(i, n)
-	case PipeT:
-		pipe := i.Data.(*Pipe)
-		return pipe.Read(i, n)
-	case FileT:
-		return i.Data.([]byte), nil
-	case DirT:
-		dir := i.Data.(*Dir)
-		return []byte(dir.ls(n)), nil
-	default:
-		return nil, errors.New("Unreadable fid")
-	}
+	return i.Data.([]byte), nil
 }

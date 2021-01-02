@@ -208,6 +208,24 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
+func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, error) {
+	fid, err := fsc.lookup(fd)
+	if err != nil {
+		return nil, err
+	}
+	reply, err := fsc.read(fid, offset, cnt)
+	return reply.Data, err
+}
+
+func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, error) {
+	fid, err := fsc.lookup(fd)
+	if err != nil {
+		return 0, err
+	}
+	reply, err := fsc.write(fid, offset, data)
+	return reply.Count, err
+}
+
 func (fsc *FsClient) Lsof() []string {
 	var fids []string
 	for _, fid := range fsc.fds {

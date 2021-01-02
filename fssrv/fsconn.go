@@ -70,6 +70,16 @@ func (conn *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
 	}
 }
 
+func (conn *FsConn) Open(args np.Topen, reply *np.Ropen) error {
+	log.Printf("Open %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.fs.(OpenFs)
+	if ok {
+		return v.Open(conn, args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
 func (conn *FsConn) Clunk(args np.Tclunk, reply *np.Rclunk) error {
 	log.Printf("Clunk %v\n", args)
 	v, ok := conn.fs.(ClunkFs)
@@ -85,6 +95,26 @@ func (conn *FsConn) Flush(args np.Tflush, reply *np.Rflush) error {
 	v, ok := conn.fs.(FlushFs)
 	if ok {
 		return v.Flush(conn, args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
+func (conn *FsConn) Read(args np.Tread, reply *np.Rread) error {
+	log.Printf("Read %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.fs.(ReadFs)
+	if ok {
+		return v.Read(conn, args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
+func (conn *FsConn) Write(args np.Twrite, reply *np.Rwrite) error {
+	log.Printf("Write %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.fs.(WriteFs)
+	if ok {
+		return v.Write(conn, args, reply)
 	} else {
 		return errors.New("Not supported")
 	}

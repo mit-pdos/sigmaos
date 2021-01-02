@@ -71,6 +71,17 @@ func (nd *Named) Create(conn *fssrv.FsConn, args np.Tcreate, reply *np.Rcreate) 
 	return nil
 }
 
+func (nd *Named) Open(conn *fssrv.FsConn, args np.Topen, reply *np.Ropen) error {
+	obj, ok := conn.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	inode := obj.(*name.Inode)
+	reply.Tag = args.Tag
+	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(inode.Version), np.Tpath(inode.Inum))
+	return nil
+}
+
 func (nd *Named) Clunk(conn *fssrv.FsConn, args np.Tclunk, reply *np.Rclunk) error {
 	_, ok := conn.Fids[args.Fid]
 	if !ok {
@@ -80,32 +91,33 @@ func (nd *Named) Clunk(conn *fssrv.FsConn, args np.Tclunk, reply *np.Rclunk) err
 	return nil
 }
 
-// func (nd *Named) Symlink(f fid.Fid, src string, start *fid.Ufid, dst string) error {
-// 	return errors.New("Unsupported")
-// }
+func (nd *Named) Read(conn *fssrv.FsConn, args np.Tread, reply *np.Rread) error {
+	obj, ok := conn.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	inode := obj.(*name.Inode)
+	data, err := nd.name.Read(inode, args.Count)
+	if err != nil {
+		return err
+	}
+	reply.Data = data
+	return nil
+}
 
-// func (nd *Named) Pipe(f fid.Fid, name string) error {
-// 	return errors.New("Unsupported")
-// }
-
-//func (nd *Named) Remove(f fid.Fid, name string// ) error {
-// 	return errors.New("Unsupported")
-// }
-
-// func (nd *Named) Write(f fid.Fid, buf []byte) (int, error) {
-// 	return 0, errors.New("Unsupported")
-// }
-
-// func (nd *Named) Read(f fid.Fid, n int) ([]byte, error) {
-// 	return nd.srv.Read(f, n)
-// }
-
-// func (nd *Named) Mount(uf *fid.Ufid, f fid.Fid, path string) error {
-// 	nd.mu.Lock()
-// 	defer nd.mu.Unlock()
-
-// 	return nd.srv.Mount(uf, f, path)
-// }
+func (nd *Named) Write(conn *fssrv.FsConn, args np.Twrite, reply *np.Rwrite) error {
+	obj, ok := conn.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	inode := obj.(*name.Inode)
+	n, err := nd.name.Write(inode, args.Data)
+	if err != nil {
+		return err
+	}
+	reply.Count = n
+	return nil
+}
 
 func main() {
 	nd := makeNamed()

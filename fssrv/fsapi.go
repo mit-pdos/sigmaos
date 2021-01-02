@@ -28,6 +28,18 @@ type CreateFs interface {
 	Create(*FsConn, np.Tcreate, *np.Rcreate) error
 }
 
+type OpenFs interface {
+	Open(*FsConn, np.Topen, *np.Ropen) error
+}
+
 type ClunkFs interface {
 	Clunk(*FsConn, np.Tclunk, *np.Rclunk) error
+}
+
+type ReadFs interface {
+	Read(*FsConn, np.Tread, *np.Rread) error
+}
+
+type WriteFs interface {
+	Write(*FsConn, np.Twrite, *np.Rwrite) error
 }

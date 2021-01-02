@@ -40,3 +40,17 @@ func (fsc *FsClient) clunk(fid np.Tfid) error {
 	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Clunk", args, &reply)
 	return err
 }
+
+func (fsc *FsClient) read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rread, error) {
+	args := np.Tread{np.NoTag, fid, offset, cnt}
+	var reply np.Rread
+	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Read", args, &reply)
+	return &reply, err
+}
+
+func (fsc *FsClient) write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwrite, error) {
+	args := np.Twrite{np.NoTag, fid, offset, data}
+	var reply np.Rwrite
+	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Write", args, &reply)
+	return &reply, err
+}

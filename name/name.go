@@ -73,45 +73,11 @@ func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
 	}
 }
 
-// func (root *Root) symlink(inode *Inode, base string, i interface{}) (*Inode, error) {
-// 	return inode.create(root, SymT, base, i)
-// }
-
-// func (root *Root) mount(inode *Inode, base string, i interface{}) (*Inode, error) {
-// 	return inode.create(root, MountT, base, i)
-// }
-
-// func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error) {
-// 	return inode.create(root, DevT, base, i)
-// }
-
-// func (root *Root) pipe(inode *Inode, base string, i interface{}) (*Inode, error) {
-// 	return inode.create(root, PipeT, base, i)
-// }
-
 func (root *Root) Create(inode *Inode, name string, perm np.Tperm) (*Inode, error) {
 	return inode.create(root, perm, name, []byte{})
 }
 
-// func (root *Root) Symlink(dir *Inode, src string, ddir *fid.Ufid, dst string) (*Inode, error) {
-// 	return root.Op("Symlink", dir, src, root.symlink, makeSym(ddir, dst))
-// }
-
-// func (root *Root) Mount(uf *fid.Ufid, dir *Inode, path string) error {
-// 	_, err := root.Op("Mount", dir, path, root.mount, uf)
-// 	return err
-// }
-
-// func (root *Root) MkNod(dir *Inode, name string, rw Dev) error {
-// 	_, err := root.Op("Mknod", dir, name, root.mknod, rw)
-// 	return err
-// }
-
-// func (root *Root) Pipe(dir *Inode, name string) error {
-// 	_, err := root.Op("Pipe", dir, name, root.pipe, makePipe())
-// 	return err
-// }
-
+// If directory recursively remove XXX maybe not
 func (root *Root) Remove(dir *Inode, name string) error {
 	log.Printf("name.Remove %v %v\n", dir, name)
 	if dir.isDir() {
@@ -123,13 +89,13 @@ func (root *Root) Remove(dir *Inode, name string) error {
 	return nil
 }
 
-func (root *Root) Write(i *Inode, data []byte) (int, error) {
+func (root *Root) Write(i *Inode, data []byte) (np.Tsize, error) {
 	log.Printf("name.Write %v\n", i)
 	i.Data = data
-	return len(data), nil
+	return np.Tsize(len(data)), nil
 }
 
-func (root *Root) Read(i *Inode, n int) ([]byte, error) {
+func (root *Root) Read(i *Inode, n np.Tsize) ([]byte, error) {
 	log.Printf("name.Read %v\n", i)
 	return i.Data.([]byte), nil
 }

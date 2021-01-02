@@ -1,8 +1,9 @@
 package ninep
 
 //
-// Go structures for 9P based on the wire format in Linux's 9p
-// net/9p, include/net/9p, and styx
+// Go structures for 9P based on the wire format in Linux's 9p net/9p,
+// include/net/9p, styx, and
+// https://github.com/chaos/diod/blob/master/protocol.md
 //
 
 type Tsize uint32
@@ -11,6 +12,7 @@ type Tfid uint32
 type Tiounit uint32
 type Tperm uint32
 type Toffset uint64
+type Tgid uint32
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = 0
@@ -236,5 +238,53 @@ type Dirent struct {
 	Qid    Tqid
 	Offset Toffset
 	Type   Tperm
-	Name   [256]byte
+	Name   string
+}
+
+type Tmkdir struct {
+	Tag  Ttag
+	Dfid Tfid
+	Name string
+	Mode Tmode
+	Gid  Tgid
+}
+
+type Rmkdir struct {
+	Tag Ttag
+	Qid Tqid
+}
+
+type Treaddir struct {
+	Tag    Ttag
+	Fid    Tfid
+	Offset Toffset
+	Count  Tsize
+}
+
+type Rreaddir struct {
+	Tag  Ttag
+	Data []byte
+}
+
+type Tsymlink struct {
+	Tag    Ttag
+	Fid    Tfid
+	Name   string
+	Symtgt string
+	Gid    Tgid
+}
+
+type Rsymlink struct {
+	Tag Ttag
+	Qid Tqid
+}
+
+type Treadlink struct {
+	Tag Ttag
+	Fid Tfid
+}
+
+type Rreadlink struct {
+	Tag    Ttag
+	Target string
 }

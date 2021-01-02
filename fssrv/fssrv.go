@@ -6,14 +6,18 @@ import (
 	"net/rpc"
 )
 
-type Fs interface{}
+type FsClient interface{}
 
-type FsServer struct {
-	fs Fs
+type Fsd interface {
+	Connect(net.Conn) FsClient
 }
 
-func MakeFsServer(fs Fs, server string) *FsServer {
-	srv := &FsServer{fs}
+type FsServer struct {
+	fsd Fsd
+}
+
+func MakeFsServer(fsd Fsd, server string) *FsServer {
+	srv := &FsServer{fsd}
 	var l net.Listener
 	l, err := net.Listen("tcp", server)
 	if err != nil {
@@ -31,7 +35,7 @@ func (srv *FsServer) runsrv(l net.Listener) {
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}
-		clnt := MakeFsConn(srv.fs, conn)
+		clnt := MakeFsConn(srv.fsd, conn)
 		rpc.Register(clnt)
 		go rpc.ServeConn(clnt.conn)
 	}

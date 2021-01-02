@@ -10,21 +10,23 @@ import (
 )
 
 type FsConn struct {
-	fs   Fs
+	fsd  Fsd
 	conn net.Conn
-	Fids map[np.Tfid]interface{}
+	clnt FsClient
 }
 
-func MakeFsConn(fs Fs, conn net.Conn) *FsConn {
-	c := &FsConn{fs, conn, make(map[np.Tfid]interface{})}
+func MakeFsConn(fsd Fsd, conn net.Conn) *FsConn {
+	clnt := fsd.Connect(conn)
+	log.Printf("clnt %v\n", clnt)
+	c := &FsConn{fsd, conn, clnt}
 	return c
 }
 
 func (conn *FsConn) Version(args np.Tversion, reply *np.Rversion) error {
 	log.Printf("Version %v\n", args)
-	v, ok := conn.fs.(VersionFs)
+	v, ok := conn.clnt.(VersionFs)
 	if ok {
-		return v.Version(conn, args, reply)
+		return v.Version(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -32,9 +34,9 @@ func (conn *FsConn) Version(args np.Tversion, reply *np.Rversion) error {
 
 func (conn *FsConn) Auth(args np.Tauth, reply *np.Rauth) error {
 	log.Printf("Auth %v\n", args)
-	v, ok := conn.fs.(AuthFs)
+	v, ok := conn.clnt.(AuthFs)
 	if ok {
-		return v.Auth(conn, args, reply)
+		return v.Auth(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -42,9 +44,9 @@ func (conn *FsConn) Auth(args np.Tauth, reply *np.Rauth) error {
 
 func (conn *FsConn) Attach(args np.Tattach, reply *np.Rattach) error {
 	log.Printf("Attach %v from %v\n", args, conn.conn.RemoteAddr())
-	v, ok := conn.fs.(AttachFs)
+	v, ok := conn.clnt.(AttachFs)
 	if ok {
-		return v.Attach(conn, args, reply)
+		return v.Attach(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -52,9 +54,9 @@ func (conn *FsConn) Attach(args np.Tattach, reply *np.Rattach) error {
 
 func (conn *FsConn) Walk(args np.Twalk, reply *np.Rwalk) error {
 	log.Printf("Walk %v from %v\n", args, conn.conn.RemoteAddr())
-	v, ok := conn.fs.(WalkFs)
+	v, ok := conn.clnt.(WalkFs)
 	if ok {
-		return v.Walk(conn, args, reply)
+		return v.Walk(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -62,9 +64,9 @@ func (conn *FsConn) Walk(args np.Twalk, reply *np.Rwalk) error {
 
 func (conn *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
 	log.Printf("Create %v from %v\n", args, conn.conn.RemoteAddr())
-	v, ok := conn.fs.(CreateFs)
+	v, ok := conn.clnt.(CreateFs)
 	if ok {
-		return v.Create(conn, args, reply)
+		return v.Create(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -72,9 +74,9 @@ func (conn *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
 
 func (conn *FsConn) Open(args np.Topen, reply *np.Ropen) error {
 	log.Printf("Open %v from %v\n", args, conn.conn.RemoteAddr())
-	v, ok := conn.fs.(OpenFs)
+	v, ok := conn.clnt.(OpenFs)
 	if ok {
-		return v.Open(conn, args, reply)
+		return v.Open(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -82,9 +84,9 @@ func (conn *FsConn) Open(args np.Topen, reply *np.Ropen) error {
 
 func (conn *FsConn) Clunk(args np.Tclunk, reply *np.Rclunk) error {
 	log.Printf("Clunk %v\n", args)
-	v, ok := conn.fs.(ClunkFs)
+	v, ok := conn.clnt.(ClunkFs)
 	if ok {
-		return v.Clunk(conn, args, reply)
+		return v.Clunk(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -92,9 +94,9 @@ func (conn *FsConn) Clunk(args np.Tclunk, reply *np.Rclunk) error {
 
 func (conn *FsConn) Flush(args np.Tflush, reply *np.Rflush) error {
 	log.Printf("Flush %v\n", args)
-	v, ok := conn.fs.(FlushFs)
+	v, ok := conn.clnt.(FlushFs)
 	if ok {
-		return v.Flush(conn, args, reply)
+		return v.Flush(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -102,9 +104,9 @@ func (conn *FsConn) Flush(args np.Tflush, reply *np.Rflush) error {
 
 func (conn *FsConn) Read(args np.Tread, reply *np.Rread) error {
 	log.Printf("Read %v from %v\n", args, conn.conn.RemoteAddr())
-	v, ok := conn.fs.(ReadFs)
+	v, ok := conn.clnt.(ReadFs)
 	if ok {
-		return v.Read(conn, args, reply)
+		return v.Read(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}
@@ -112,9 +114,9 @@ func (conn *FsConn) Read(args np.Tread, reply *np.Rread) error {
 
 func (conn *FsConn) Write(args np.Twrite, reply *np.Rwrite) error {
 	log.Printf("Write %v from %v\n", args, conn.conn.RemoteAddr())
-	v, ok := conn.fs.(WriteFs)
+	v, ok := conn.clnt.(WriteFs)
 	if ok {
-		return v.Write(conn, args, reply)
+		return v.Write(args, reply)
 	} else {
 		return errors.New("Not supported")
 	}

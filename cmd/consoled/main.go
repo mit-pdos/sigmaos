@@ -4,6 +4,7 @@ import (
 	"bufio"
 	//"errors"
 	"log"
+	"net"
 	"os"
 	"sync"
 
@@ -37,6 +38,10 @@ func makeConsoled() *Consoled {
 	cons.srv = fssrv.MakeFsServer(cons, ":0")
 	cons.fs = fs.MakeRoot()
 	cons.done = make(chan bool)
+	return cons
+}
+
+func (cons *Consoled) Connect(conn net.Conn) fssrv.FsClient {
 	return cons
 }
 
@@ -84,7 +89,7 @@ func main() {
 			log.Fatal("Create error: ", err)
 		}
 	} else {
-		log.Fatal("Open error:", err)
+		log.Fatal("Open error: ", err)
 	}
 	<-cons.done
 	// cons.clnt.Close(fd)

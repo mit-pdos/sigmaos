@@ -236,5 +236,5 @@ type Dirent struct {
 	Qid    Tqid
 	Offset Toffset
 	Type   Tperm
-	Name   string
+	Name   [256]byte
 }

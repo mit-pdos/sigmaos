@@ -1,6 +1,9 @@
 package ninep
 
-// Go structures for 9P based on the wire format in fcall.h and styx
+//
+// Go structures for 9P based on the wire format in Linux's 9p
+// net/9p, include/net/9p, and styx
+//
 
 type Tsize uint32
 type Ttag uint16
@@ -25,13 +28,14 @@ type TQversion uint32
 // represented as a bit vector corresponding to the high 8 bits of the
 // file's mode word.
 const (
-	QTDIR    Qtype = 0x80 // directories
-	QTAPPEND Qtype = 0x40 // append only files
-	QTEXCL   Qtype = 0x20 // exclusive use files
-	QTMOUNT  Qtype = 0x10 // mounted channel
-	QTAUTH   Qtype = 0x08 // authentication file (afid)
-	QTTMP    Qtype = 0x04 // non-backed-up file
-	QTFILE   Qtype = 0x00
+	QTDIR     Qtype = 0x80 // directories
+	QTAPPEND  Qtype = 0x40 // append only files
+	QTEXCL    Qtype = 0x20 // exclusive use files
+	QTMOUNT   Qtype = 0x10 // mounted channel
+	QTAUTH    Qtype = 0x08 // authentication file (afid)
+	QTTMP     Qtype = 0x04 // non-backed-up file
+	QTSYMLINK Qtype = 0x02
+	QTFILE    Qtype = 0x00
 )
 
 // A Qid is the server's unique identification for the file being
@@ -51,16 +55,18 @@ type Tmode uint16
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
-	OREAD   Tmode = 0  // open read-only
-	OWRITE  Tmode = 1  // open write-only
-	ORDWR   Tmode = 2  // open read-write
-	OEXEC   Tmode = 3  // execute (== read but check execute permission)
-	OTRUNC  Tmode = 16 // or'ed in (except for exec), truncate file first
-	OCEXEC  Tmode = 32 // or'ed in, close on exec
-	ORCLOSE Tmode = 64 // or'ed in, remove on close
+	OREAD   Tmode = 0    // open read-only
+	OWRITE  Tmode = 0x01 // open write-only
+	ORDWR   Tmode = 0x02 // open read-write
+	OEXEC   Tmode = 0x03 // execute (== read but check execute permission)
+	OTRUNC  Tmode = 0x10 // or'ed in (except for exec), truncate file first
+	OREXEC  Tmode = 0x20 // or'ed in, close on exec
+	ORCLOSE Tmode = 0x40 // or'ed in, remove on close
+	OAPPEND Tmode = 0x80
+	OEXCL   Tmode = 0x1000
 )
 
-// File modes
+// Permissions
 const (
 	DMDIR    Tperm = 0x80000000 // mode bit for directories
 	DMAPPEND Tperm = 0x40000000 // mode bit for append only files
@@ -68,15 +74,16 @@ const (
 	DMMOUNT  Tperm = 0x10000000 // mode bit for mounted channel
 	DMAUTH   Tperm = 0x08000000 // mode bit for authentication file
 	DMTMP    Tperm = 0x04000000 // mode bit for non-backed-up file
-	DMREAD   Tperm = 0x4        // mode bit for read permission
-	DMWRITE  Tperm = 0x2        // mode bit for write permission
-	DMEXEC   Tperm = 0x1        // mode bit for execute permission
 
-	// Mask for the type bits
-	DMTYPE = DMDIR | DMAPPEND | DMEXCL | DMMOUNT | DMTMP
-
-	// Mask for the permissions bits
-	DMPERM = DMREAD | DMWRITE | DMEXEC
+	// 9P2000.u extensions
+	DMSYMLINK   Tperm = 0x02000000
+	DMLINK      Tperm = 0x01000000
+	DMDEVICE    Tperm = 0x00800000
+	DMNAMEDPIPE Tperm = 0x00200000
+	DMSOCKET    Tperm = 0x00100000
+	DMSETUID    Tperm = 0x00080000
+	DMSETGID    Tperm = 0x00040000
+	DMSETVTX    Tperm = 0x00010000
 )
 
 type Tversion struct {
@@ -223,4 +230,11 @@ type Twstat struct {
 
 type Rwstat struct {
 	Tag Ttag
+}
+
+type Dirent struct {
+	Qid    Tqid
+	Offset Toffset
+	Type   Tperm
+	Name   string
 }

@@ -3,6 +3,8 @@ package name
 import (
 	"errors"
 	"log"
+
+	np "ulambda/ninep"
 )
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
@@ -39,23 +41,25 @@ func (root *Root) allocInum() Tinum {
 func (root *Root) freeInum(inum Tinum) {
 }
 
-func (root *Root) Namei(dir *Dir, path []string) (*Inode, []string, error) {
+func (root *Root) Namei(dir *Dir, path []string,
+	inodes []*Inode) ([]*Inode, []string, error) {
 	if len(path) == 0 {
 		i, err := dir.Lookup(".")
-		return i, nil, err
+		return append(inodes, i), nil, err
 	}
 	if IsCurrentDir(path[0]) {
 		i, err := dir.Lookup(".")
-		return i, path[1:], err
+		return append(inodes, i), path[1:], err
 	}
-	return dir.Namei(path)
+	return dir.Namei(path, inodes)
 }
 
-func (root *Root) Walk(dir *Dir, path []string) (*Inode, []string, error) {
+func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
 	log.Printf("name.Walk %v\n", path)
-	inode, rest, err := root.Namei(dir, path)
+	var inodes []*Inode
+	inodes, rest, err := root.Namei(dir, path, inodes)
 	if err == nil {
-		switch inode.Type {
+		switch inodes[len(inodes)-1].Type {
 		case MountT:
 			// uf := inode.Data.(*fid.Ufid)
 			return nil, rest, err
@@ -63,62 +67,31 @@ func (root *Root) Walk(dir *Dir, path []string) (*Inode, []string, error) {
 			// s := inode.Data.(*Symlink)
 			return nil, rest, err
 		default:
-			return inode, rest, err
+			return inodes, rest, err
 		}
 	} else {
 		return nil, nil, err
 	}
 }
 
-func (root *Root) create(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, FileT, base, i)
-}
+// func (root *Root) symlink(inode *Inode, base string, i interface{}) (*Inode, error) {
+// 	return inode.create(root, SymT, base, i)
+// }
 
-func (root *Root) mkdir(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, DirT, base, i)
-}
+// func (root *Root) mount(inode *Inode, base string, i interface{}) (*Inode, error) {
+// 	return inode.create(root, MountT, base, i)
+// }
 
-func (root *Root) symlink(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, SymT, base, i)
-}
+// func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error) {
+// 	return inode.create(root, DevT, base, i)
+// }
 
-func (root *Root) mount(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, MountT, base, i)
-}
+// func (root *Root) pipe(inode *Inode, base string, i interface{}) (*Inode, error) {
+// 	return inode.create(root, PipeT, base, i)
+// }
 
-func (root *Root) mknod(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, DevT, base, i)
-}
-
-func (root *Root) pipe(inode *Inode, base string, i interface{}) (*Inode, error) {
-	return inode.create(root, PipeT, base, i)
-}
-
-func (root *Root) Op(opn string, dir *Inode, path []string,
-	op func(*Inode, string, interface{}) (*Inode, error),
-	i interface{}) (*Inode, error) {
-	log.Printf("name.%v %v %v\n", opn, dir, path)
-	// XXX check error
-	d := dir.Data.(*Dir)
-	if inode, _, err := root.Namei(d, path[:len(path)-1]); err == nil {
-		inode, err = op(inode, path[len(path)-1], i)
-		if err != nil {
-			return inode, err
-		}
-		log.Printf("name.%v %v %v %v -> %v\n", opn, dir, path, i, inode)
-		return inode, nil
-	} else {
-		return nil, err
-	}
-}
-
-func (root *Root) Create(dir *Inode, path []string) (*Inode, error) {
-	return root.Op("Create", dir, path, root.create, []byte{})
-}
-
-func (root *Root) MkDir(dir *Inode, path []string) (*Inode, error) {
-	inum := root.allocInum()
-	return root.Op("MkDir", dir, path, root.mkdir, makeDir(inum))
+func (root *Root) Create(dir *Inode, name string, perm np.Tperm) (*Inode, error) {
+	return dir.create(root, FileT, name, []byte{}, perm)
 }
 
 // func (root *Root) Symlink(dir *Inode, src string, ddir *fid.Ufid, dst string) (*Inode, error) {
@@ -130,15 +103,15 @@ func (root *Root) MkDir(dir *Inode, path []string) (*Inode, error) {
 // 	return err
 // }
 
-func (root *Root) MkNod(dir *Inode, path []string, rw Dev) error {
-	_, err := root.Op("Mknod", dir, path, root.mknod, rw)
-	return err
-}
+// func (root *Root) MkNod(dir *Inode, name string, rw Dev) error {
+// 	_, err := root.Op("Mknod", dir, name, root.mknod, rw)
+// 	return err
+// }
 
-func (root *Root) Pipe(dir *Inode, path []string) error {
-	_, err := root.Op("Pipe", dir, path, root.pipe, makePipe())
-	return err
-}
+// func (root *Root) Pipe(dir *Inode, name string) error {
+// 	_, err := root.Op("Pipe", dir, name, root.pipe, makePipe())
+// 	return err
+// }
 
 func (root *Root) Remove(dir *Inode, name string) error {
 	log.Printf("name.Remove %v %v\n", dir, name)

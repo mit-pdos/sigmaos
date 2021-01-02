@@ -10,6 +10,8 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fssrv"
 	"ulambda/name"
+
+	np "ulambda/ninep"
 )
 
 const (
@@ -59,11 +61,11 @@ func makeConsoled() *Consoled {
 
 func (cons *Consoled) FsInit() {
 	root := cons.name.RootInode()
-	_, err := cons.name.Create(root, []string{"stdin"})
+	_, err := cons.name.Create(root, "stdin", np.DMAPPEND)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	_, err = cons.name.Create(root, []string{"stdout"})
+	_, err = cons.name.Create(root, "stdout", np.DMAPPEND)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}

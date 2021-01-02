@@ -2,7 +2,8 @@ package fsclnt
 
 import (
 	"errors"
-	// "log"
+	"fmt"
+	"log"
 	"math/rand"
 	//"strconv"
 	"strings"
@@ -20,37 +21,32 @@ const (
 const MAXFD = 20
 
 type FsClient struct {
-	fds    []np.Tfid
-	fids   map[np.Tfid]*Channel
-	mounts map[string]np.Tfid
-	cm     *ChanMgr
-	Proc   string
-	next   np.Tfid
-}
-
-type Channel struct {
-	server string
-	cname  []string
-	qids   []np.Tqid
-}
-
-func makeChannel(s string, n []string, qs []np.Tqid) *Channel {
-	c := &Channel{}
-	c.server = s
-	c.cname = n
-	c.qids = qs
-	return c
+	fds   []np.Tfid
+	fids  map[np.Tfid]*Channel
+	mount *Mount
+	cm    *ChanMgr
+	Proc  string
+	next  np.Tfid
 }
 
 func MakeFsClient() *FsClient {
 	fsc := &FsClient{}
 	fsc.fds = make([]np.Tfid, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Channel)
+	fsc.mount = makeMount()
 	fsc.cm = makeChanMgr()
 	fsc.next = np.NoFid + 1
-	fsc.mounts = make(map[string]np.Tfid)
 	rand.Seed(time.Now().UnixNano())
 	return fsc
+}
+
+func (fsc *FsClient) String() string {
+	str := fmt.Sprintf("Fsclnt table:\n")
+	str += fmt.Sprintf("fds %v\n", fsc.fds)
+	for k, v := range fsc.fids {
+		str += fmt.Sprintf("fid %v chan %v", k, v)
+	}
+	return str
 }
 
 // // XXX use gob?
@@ -100,16 +96,93 @@ func (fsc *FsClient) allocFid() np.Tfid {
 	return fid
 }
 
-func (fsc *FsClient) Close(fd int) error {
+func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 	if fsc.fds[fd] == np.NoFid {
-		return errors.New("Close: fd isn't open")
+		return np.NoFid, errors.New("Non-existing")
 	}
-	fid := fsc.fds[fd]
-	args := np.Tclunk{np.NoTag, fid}
-	var reply np.Rclunk
-	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Clunk", args, &reply)
-	fsc.fds[fd] = np.NoFid
+	return fsc.fds[fd], nil
+}
+
+func (fsc *FsClient) Mount(fd int, path string) error {
+	fid, err := fsc.lookup(fd)
+	if err != nil {
+		return err
+	}
+	fsc.mount.add(strings.Split(path, "/"), fid)
+	return nil
+}
+
+func (fsc *FsClient) Close(fd int) error {
+	fid, err := fsc.lookup(fd)
+	if err != nil {
+		return err
+	}
+	err = fsc.clunk(fid)
+	if err == nil {
+		fsc.fds[fd] = np.NoFid
+	}
 	return err
+}
+
+func (fsc *FsClient) Attach(server string, path string) (int, error) {
+	fid := fsc.allocFid()
+	p := strings.Split(path, "/")
+	reply, err := fsc.attach(server, fid, p)
+	if err != nil {
+		return -1, err
+	}
+	fsc.fids[fid] = makeChannel(server, p, []np.Tqid{reply.Qid})
+	fd := fsc.findfd(fid)
+	log.Printf("Attach -> fd %v fid %v %v\n", fd, fid, fsc.fids[fid])
+	return fd, nil
+}
+
+func (fsc *FsClient) Create(path string) (int, error) {
+	log.Printf("Create %v\n", path)
+
+	p := strings.Split(path, "/")
+	dir := p[0 : len(p)-1]
+	base := p[len(p)-1]
+	fid, rest := fsc.mount.resolve(dir)
+	if fid == np.NoFid {
+		return -1, errors.New("Unknown file")
+
+	}
+
+	fid1 := fsc.allocFid()
+	_, err := fsc.walk(fid, fid1, nil) // clone fid into fid1
+	if err != nil {
+		return -1, err
+	}
+	fsc.fids[fid1] = fsc.fids[fid].copyChannel()
+
+	defer func() {
+		err := fsc.clunk(fid1)
+		if err != nil {
+			log.Printf("Create clunk failed %v\n", err)
+		}
+		delete(fsc.fids, fid1)
+		log.Printf("fsc %v\n", fsc)
+
+	}()
+
+	fid2 := fsc.allocFid()
+	reply, err := fsc.walk(fid1, fid2, rest)
+	if err != nil {
+		return -1, err
+	}
+	fsc.fids[fid2] = fsc.fids[fid1].copyChannel()
+	fsc.fids[fid2].addn(rest, reply.Qids)
+
+	creply, err := fsc.create(fid2, base, np.DMAPPEND|np.DMWRITE, np.OWRITE)
+	if err != nil {
+		return -1, err
+	}
+
+	fsc.fids[fid2].add(base, creply.Qid)
+	fd := fsc.findfd(fid2)
+
+	return fd, nil
 }
 
 func (fsc *FsClient) Lsof() []string {
@@ -125,66 +198,4 @@ func (fsc *FsClient) Lsof() []string {
 		}
 	}
 	return fids
-}
-
-func (fsc *FsClient) Attach(server string, path string) (int, error) {
-	fid := fsc.allocFid()
-	p := strings.Split(path, "/")
-	args := np.Tattach{np.NoTag, fid, np.NoFid, "fk", ""}
-	var reply np.Rattach
-	err := fsc.cm.makeCall(server, "FsConn.Attach", args, &reply)
-	if err != nil {
-		return -1, err
-	}
-	fsc.fids[fid] = makeChannel(server, p, []np.Tqid{reply.Qid})
-	fd := fsc.findfd(fid)
-	return fd, nil
-}
-
-func (fsc *FsClient) Mount(fd int, path string) error {
-	fsc.mounts[path] = fsc.fds[fd]
-	return nil
-}
-
-func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
-	c := fsc.fids[fid]
-	fid1 := fsc.allocFid()
-	var qids []np.Tqid
-	copy(c.qids, qids)
-	fsc.fids[fid1] = makeChannel(c.server, c.cname, qids)
-	return fid1, nil
-}
-
-func (fsc *FsClient) mount2fid(path []string) (np.Tfid, []string, error) {
-	return np.NoFid, nil, nil
-}
-
-func (fsc *FsClient) walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk, error) {
-	args := np.Twalk{np.NoTag, fid, nfid, nil}
-	var reply np.Rwalk
-	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Twalk", args, &reply)
-	return &reply, err
-}
-
-func (fsc *FsClient) create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmode) (*np.Rcreate, error) {
-	args := np.Tcreate{np.NoTag, fid, name, perm, mode}
-	var reply np.Rcreate
-	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Tcreate", args, &reply)
-	return &reply, err
-}
-
-func (fsc *FsClient) Create(path string) (int, error) {
-	p := strings.Split(path, "/")
-	fid, rest, err := fsc.mount2fid(p)
-	fid1 := fsc.allocFid()
-	_, err = fsc.walk(fid, fid1, nil)
-	if err != nil {
-		return -1, err
-	}
-	fid2 := fsc.allocFid()
-	_, err = fsc.walk(fid1, fid2, rest)
-	if err != nil {
-		return -1, err
-	}
-	return 0, nil
 }

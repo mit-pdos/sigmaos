@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	// "log"
 
 	"ulambda/fssrv"
@@ -30,21 +31,54 @@ func (nd *Named) Attach(conn *fssrv.FsConn, args np.Tattach, reply *np.Rattach) 
 	return nil
 }
 
-// func (nd *Named) Walk(start fid.Fid, path string) (*fid.Ufid, string, error) {
-// 	nd.mu.Lock()
-// 	defer nd.mu.Unlock()
+func makeQids(inodes []*name.Inode) []np.Tqid {
+	var qids []np.Tqid
+	for _, i := range inodes {
+		qid := *np.MakeQid(np.QTDIR, np.TQversion(i.Version), np.Tpath(i.Inum))
+		qids = append(qids, qid)
+	}
+	return qids
+}
 
-// 	ufd, rest, err := nd.srv.Walk(start, path)
-// 	return ufd, rest, err
-// }
+func (nd *Named) Walk(conn *fssrv.FsConn, args np.Twalk, reply *np.Rwalk) error {
+	obj, ok := conn.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	start := obj.(*name.Inode)
+	inodes, _, err := nd.name.Walk(start.Data.(*name.Dir), args.Path)
+	if err != nil {
+		return err
+	}
+	reply.Tag = args.Tag
+	reply.Qids = makeQids(inodes)
+	conn.Fids[args.NewFid] = inodes[len(inodes)-1]
+	return nil
+}
 
-// func (nd *Named) Open(f fid.Fid) error {
-// 	nd.mu.Lock()
-// 	defer nd.mu.Unlock()
+func (nd *Named) Create(conn *fssrv.FsConn, args np.Tcreate, reply *np.Rcreate) error {
+	obj, ok := conn.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	start := obj.(*name.Inode)
+	inode, err := nd.name.Create(start, args.Name, args.Perm)
+	if err != nil {
+		return err
+	}
+	reply.Tag = args.Tag
+	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(inode.Version), np.Tpath(inode.Inum))
+	return nil
+}
 
-// 	_, err := nd.srv.OpenFid(f)
-// 	return err
-// }
+func (nd *Named) Clunk(conn *fssrv.FsConn, args np.Tclunk, reply *np.Rclunk) error {
+	_, ok := conn.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	delete(conn.Fids, args.Fid)
+	return nil
+}
 
 // func (nd *Named) Symlink(f fid.Fid, src string, start *fid.Ufid, dst string) error {
 // 	return errors.New("Unsupported")
@@ -54,10 +88,6 @@ func (nd *Named) Attach(conn *fssrv.FsConn, args np.Tattach, reply *np.Rattach) 
 // 	return errors.New("Unsupported")
 // }
 
-// func (nd *Named) Create(f fid.Fid, t fid.IType, name string) (fid.Fid, error) {
-// 	return fid.NullFid(), errors.New("Unsupported")
-// }
-//
 //func (nd *Named) Remove(f fid.Fid, name string// ) error {
 // 	return errors.New("Unsupported")
 // }

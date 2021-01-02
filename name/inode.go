@@ -2,6 +2,8 @@ package name
 
 import (
 	"errors"
+
+	np "ulambda/ninep"
 )
 
 type IType int
@@ -54,7 +56,7 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	}
 }
 
-func (inode *Inode) create(root *Root, t IType, name string, data interface{}) (*Inode, error) {
+func (inode *Inode) create(root *Root, t IType, name string, data interface{}, perm np.Tperm) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}

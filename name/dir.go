@@ -28,7 +28,7 @@ func (dir *Dir) Lookup(name string) (*Inode, error) {
 	}
 }
 
-func (dir *Dir) Namei(path []string) (*Inode, []string, error) {
+func (dir *Dir) Namei(path []string, inodes []*Inode) ([]*Inode, []string, error) {
 	var inode *Inode
 	var err error
 
@@ -37,17 +37,18 @@ func (dir *Dir) Namei(path []string) (*Inode, []string, error) {
 		log.Printf("dir.Namei %v non existing", path)
 		return nil, nil, err
 	}
+	inodes = append(inodes, inode)
 	switch inode.Type {
 	case DirT:
 		if len(path) == 1 { // done?
-			log.Printf("Namei %v %v -> %v", path, dir, inode)
-			return inode, nil, nil
+			log.Printf("Namei %v %v -> %v", path, dir, inodes)
+			return inodes, nil, nil
 		}
 		d := inode.Data.(*Dir)
-		return d.Namei(path[1:])
+		return d.Namei(path[1:], inodes)
 	default:
-		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inode, path[1:])
-		return inode, path[1:], nil
+		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inodes, path[1:])
+		return inodes, path[1:], nil
 	}
 }
 

@@ -19,3 +19,15 @@ type FlushFs interface {
 type AttachFs interface {
 	Attach(*FsConn, np.Tattach, *np.Rattach) error
 }
+
+type WalkFs interface {
+	Walk(*FsConn, np.Twalk, *np.Rwalk) error
+}
+
+type CreateFs interface {
+	Create(*FsConn, np.Tcreate, *np.Rcreate) error
+}
+
+type ClunkFs interface {
+	Clunk(*FsConn, np.Tclunk, *np.Rclunk) error
+}

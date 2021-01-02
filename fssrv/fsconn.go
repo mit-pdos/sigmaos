@@ -50,8 +50,38 @@ func (conn *FsConn) Attach(args np.Tattach, reply *np.Rattach) error {
 	}
 }
 
+func (conn *FsConn) Walk(args np.Twalk, reply *np.Rwalk) error {
+	log.Printf("Walk %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.fs.(WalkFs)
+	if ok {
+		return v.Walk(conn, args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
+func (conn *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
+	log.Printf("Create %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.fs.(CreateFs)
+	if ok {
+		return v.Create(conn, args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
+func (conn *FsConn) Clunk(args np.Tclunk, reply *np.Rclunk) error {
+	log.Printf("Clunk %v\n", args)
+	v, ok := conn.fs.(ClunkFs)
+	if ok {
+		return v.Clunk(conn, args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
 func (conn *FsConn) Flush(args np.Tflush, reply *np.Rflush) error {
-	log.Printf("Attach %v\n", args)
+	log.Printf("Flush %v\n", args)
 	v, ok := conn.fs.(FlushFs)
 	if ok {
 		return v.Flush(conn, args, reply)

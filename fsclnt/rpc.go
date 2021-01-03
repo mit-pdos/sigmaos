@@ -25,10 +25,24 @@ func (fsc *FsClient) create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmo
 	return &reply, err
 }
 
+func (fsc *FsClient) mkdir(dfid np.Tfid, name string, mode np.Tmode) (*np.Rmkdir, error) {
+	args := np.Tmkdir{np.NoTag, dfid, name, mode, 0}
+	var reply np.Rmkdir
+	err := fsc.cm.makeCall(fsc.fids[dfid].server, "FsConn.Mkdir", args, &reply)
+	return &reply, err
+}
+
 func (fsc *FsClient) symlink(fid np.Tfid, name string, target string) (*np.Rsymlink, error) {
 	args := np.Tsymlink{np.NoTag, fid, name, target, 0}
 	var reply np.Rsymlink
 	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Symlink", args, &reply)
+	return &reply, err
+}
+
+func (fsc *FsClient) mkpipe(fid np.Tfid, name string, mode np.Tmode) (*np.Rpipe, error) {
+	args := np.Tpipe{np.NoTag, fid, name, mode, 0}
+	var reply np.Rpipe
+	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Pipe", args, &reply)
 	return &reply, err
 }
 

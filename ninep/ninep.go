@@ -287,3 +287,20 @@ type Rreadlink struct {
 	Tag    Ttag
 	Target string
 }
+
+//
+// New transactions
+//
+
+type Tpipe struct {
+	Tag  Ttag
+	Dfid Tfid
+	Name string
+	Mode Tmode
+	Gid  Tgid
+}
+
+type Rpipe struct {
+	Tag Ttag
+	Qid Tqid
+}

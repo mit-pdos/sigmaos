@@ -13,11 +13,15 @@ type Dir struct {
 	entries map[string]*Inode
 }
 
-func makeDir(inum Tinum) *Dir {
+func makeDir() *Dir {
 	d := &Dir{}
 	d.entries = make(map[string]*Inode)
-	d.entries["."] = makeInode(np.DMDIR, inum, d)
+
 	return d
+}
+
+func (dir *Dir) init(inum Tinum) {
+	dir.entries["."] = makeInode(np.DMDIR, inum, dir)
 }
 
 func (dir *Dir) Lookup(name string) (*Inode, error) {

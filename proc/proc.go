@@ -8,129 +8,137 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"ulambda/fs"
+	"ulambda/fsclnt"
+	np "ulambda/ninep"
 )
 
-func randPid(clnt *fs.FsClient) string {
+func randPid(clnt *fsclnt.FsClient) string {
 	pid := rand.Int()
 	return strconv.Itoa(pid)
 }
 
-func makeAttr(clnt *fs.FsClient, fddir int, key string, value []byte) error {
-	fd, err := clnt.CreateAt(fddir, key)
+func makeAttr(clnt *fsclnt.FsClient, fddir int, key string, value []byte) error {
+	fd, err := clnt.CreateAt(fddir, key, 0, np.OWRITE)
 	if err != nil {
 		return err
 	}
 	defer clnt.Close(fd)
-	_, err = clnt.Write(fd, []byte(value))
+	_, err = clnt.Write(fd, 0, []byte(value))
 	return err
 }
 
-func setAttr(clnt *fs.FsClient, fddir int, key string, value []byte) error {
-	fd, err := clnt.OpenAt(fddir, key)
+func setAttr(clnt *fsclnt.FsClient, fddir int, key string, value []byte) error {
+	fd, err := clnt.OpenAt(fddir, key, np.OWRITE)
 	if err != nil {
 		return err
 	}
 	defer clnt.Close(fd)
-	_, err = clnt.Write(fd, []byte(value))
+	_, err = clnt.Write(fd, 0, []byte(value))
 	return err
 }
 
 // XXX clean up on failure
 // XXX maybe one RPC?
-func Spawn(clnt *fs.FsClient, program string, args []string, fids []string) (string, error) {
+func Spawn(clnt *fsclnt.FsClient, program string, args []string, fids []string) (string, error) {
 	pid := randPid(clnt)
-	pname := "/proc/" + pid
-	fd, err := clnt.MkDir(pname)
+	pname := "name/procd/" + pid
+
+	fd, err := clnt.Mkdir(pname, np.ORDWR)
 	if err != nil {
 		return "", err
 	}
 	defer clnt.Close(fd)
 	err = makeAttr(clnt, fd, "program", []byte(program))
 	if err != nil {
-		clnt.RmDir(pname)
+		//clnt.RmDir(pname)
 		return "", err
 	}
 
 	args = append([]string{pname}, args...)
 	b, err := json.Marshal(args)
 	if err != nil {
-		clnt.RmDir(pname)
+		//clnt.RmDir(pname)
 		return "", err
 	}
 	err = makeAttr(clnt, fd, "args", b)
 	if err != nil {
-		clnt.RmDir(pname)
+		//clnt.RmDir(pname)
 		return "", err
 	}
 
 	b, err = json.Marshal(fids)
 	if err != nil {
-		clnt.RmDir(pname)
+		//clnt.RmDir(pname)
 		return "", err
 	}
 	err = makeAttr(clnt, fd, "fds", b)
 	if err != nil {
-		clnt.RmDir(pname)
+		//clnt.RmDir(pname)
 		return "", err
 	}
 	if clnt.Proc != "" {
-		err = clnt.Pipe(clnt.Proc + "/" + "exit" + pid)
+		err = clnt.Pipe(clnt.Proc+"/"+"exit"+pid, np.ORDWR)
 		if err != nil {
-			clnt.RmDir(pname)
+			//clnt.RmDir(pname)
 			return "", err
 		}
 		err := clnt.SymlinkAt(fd, "parent", clnt.Proc)
 		if err != nil {
-			clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
-			clnt.RmDir(pname)
+			//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
+			//clnt.RmDir(pname)
 			return "", err
 		}
 	}
 
+	//fd, err := cons.clnt.Open("name/procd/makeproc", np.OWRITE)
+	//if err != nil {
+	//	log.Fatal("Open error: ", err)
+	//}
+	//_, err = cons.clnt.Write(fd1, 0, []byte("Hello world\n"))
+
 	// Start process
 	err = setAttr(clnt, fd, "ctl", []byte("start"))
 	if err != nil {
-		clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
-		clnt.RmDir(pname)
+		//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
+		//clnt.RmDir(pname)
 		return "", err
 	}
 	return pname, err
 }
 
-func Exit(clnt *fs.FsClient, v ...interface{}) error {
+func Exit(clnt *fsclnt.FsClient, v ...interface{}) error {
 	pid := filepath.Base(clnt.Proc)
 	defer func() {
-		clnt.RmDir(clnt.Proc)
+		//clnt.RmDir(clnt.Proc)
 		os.Exit(0)
 	}()
-	fd, err := clnt.Open(clnt.Proc + "/parent/exit" + pid)
+	fd, err := clnt.Open(clnt.Proc+"/parent/exit"+pid, np.OWRITE)
 	if err != nil {
 		return err
 	}
 	defer clnt.Close(fd)
-	_, err = clnt.Write(fd, []byte(fmt.Sprint(v...)))
+	_, err = clnt.Write(fd, 0, []byte(fmt.Sprint(v...)))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Wait(clnt *fs.FsClient, child string) ([]byte, error) {
+func Wait(clnt *fsclnt.FsClient, child string) ([]byte, error) {
 	pid := filepath.Base(child)
-	fd, err := clnt.Open(clnt.Proc + "/exit" + pid)
+	fd, err := clnt.Open(clnt.Proc+"/exit"+pid, np.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	defer clnt.Remove(clnt.Proc + "/exit" + pid)
+	// defer clnt.Remove(clnt.Proc + "/exit" + pid)
 	defer clnt.Close(fd)
-	b, err := clnt.Read(fd, 1024)
+	b, err := clnt.Read(fd, 0, 1024)
 	if err != nil {
 		return nil, err
 	}
 	return b, err
 }
 
-func Getpid(clnt *fs.FsClient) (string, error) {
+func Getpid(clnt *fsclnt.FsClient) (string, error) {
 	return clnt.Proc, nil
 }

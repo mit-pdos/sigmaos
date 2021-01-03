@@ -5,23 +5,24 @@ import (
 	"os"
 	"strings"
 
-	"ulambda/fs"
+	"ulambda/fsclnt"
 	"ulambda/proc"
 )
 
 func main() {
 	log.Printf("Running: %v\n", os.Args)
-	clnt, _, err := fs.InitFsClient(fs.MakeFsRoot(), os.Args[1:])
+	// clnt, _, err := fsclnt.InitFsClient(fsclnt.MakeFsRoot(), os.Args[1:])
+	clnt, _, err := fsclnt.InitFsClient(os.Args[1:])
 	if err != nil {
 		log.Fatal("InitFsClient error:", err)
 	}
 	for {
 		b := []byte("λ ")
-		_, err := clnt.Write(fs.Stdout, b)
+		_, err := clnt.Write(fsclnt.Stdout, 0, b)
 		if err != nil {
 			log.Fatal("Write error:", err)
 		}
-		b, err = clnt.Read(fs.Stdin, 1024)
+		b, err = clnt.Read(fsclnt.Stdin, 0, 1024)
 		if err != nil {
 			log.Fatal("Read error:", err)
 		}

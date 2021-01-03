@@ -99,6 +99,21 @@ func (fsc *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
 	return nil
 }
 
+func (fsc *FsConn) Mkdir(args np.Tmkdir, reply *np.Rmkdir) error {
+	log.Printf("Mkdir %v from %v\n", args, fsc.conn.RemoteAddr())
+	start, ok := fsc.Fids[args.Dfid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	inode, err := fsc.fs.Mkdir(start, args.Name)
+	if err != nil {
+		return err
+	}
+	reply.Tag = args.Tag
+	reply.Qid = inode.Qid()
+	return nil
+}
+
 func (fsc *FsConn) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
 	log.Printf("Symlink %v from %v\n", args, fsc.conn.RemoteAddr())
 	start, ok := fsc.Fids[args.Fid]

@@ -33,10 +33,6 @@ func makeConsoled() *Consoled {
 	return cons
 }
 
-//func (cons *Consoled) Connect(conn net.Conn) fssrv.FsClient {
-//	return cons
-//}
-
 type Console struct {
 	stdin  *bufio.Reader
 	stdout *bufio.Writer
@@ -96,7 +92,7 @@ func main() {
 			log.Fatal("Close error: ", err)
 		}
 	} else {
-		log.Fatal("Open error: ", err)
+		log.Fatal("Attach error: ", err)
 	}
 	<-cons.done
 	// cons.clnt.Close(fd)

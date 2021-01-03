@@ -21,8 +21,10 @@ type Root struct {
 
 func MakeRoot() *Root {
 	r := Root{}
-	r.inode = makeInode(np.DMDIR, RootInum, makeDir(RootInum))
+	r.inode = makeInode(np.DMDIR, RootInum, makeDir())
 	r.nextInum = RootInum + 1
+	dir := r.inode.Data.(*Dir)
+	dir.init(r.inode.Inum)
 	return &r
 }
 
@@ -77,9 +79,18 @@ func (root *Root) Create(inode *Inode, name string, perm np.Tperm) (*Inode, erro
 	return inode.create(root, perm, name, []byte{})
 }
 
+func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
+	inode, err := inode.create(root, np.DMDIR, name, makeDir())
+	if err != nil {
+		return nil, err
+	}
+	dir := inode.Data.(*Dir)
+	dir.init(inode.Inum)
+	return inode, nil
+}
+
 func (root *Root) Symlink(inode *Inode, name string, target string) (*Inode, error) {
-	s := makeSym(target)
-	return inode.create(root, np.DMSYMLINK, name, s)
+	return inode.create(root, np.DMSYMLINK, name, makeSym(target))
 }
 
 func (root *Root) MkNod(inode *Inode, name string, i interface{}) (*Inode, error) {

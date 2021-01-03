@@ -6,12 +6,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"sync"
 
 	"ulambda/fs"
 	"ulambda/fsclnt"
+	"ulambda/fsd"
 	"ulambda/fssrv"
-
 	np "ulambda/ninep"
 )
 
@@ -21,22 +20,17 @@ const (
 )
 
 type Consoled struct {
-	mu     sync.Mutex
-	stdin  *bufio.Reader
-	stdout *bufio.Writer
-	clnt   *fsclnt.FsClient
-	srv    *fssrv.FsServer
-	fs     *fs.Root
-	done   chan bool
+	clnt *fsclnt.FsClient
+	srv  *fssrv.FsServer
+	fsd  *fsd.Fsd
+	done chan bool
 }
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	cons.stdin = bufio.NewReader(os.Stdin)
-	cons.stdout = bufio.NewWriter(os.Stdout)
 	cons.clnt = fsclnt.MakeFsClient()
-	cons.srv = fssrv.MakeFsServer(cons, ":0")
-	cons.fs = fs.MakeRoot()
+	cons.fsd = fsd.MakeFsd()
+	cons.srv = fssrv.MakeFsServer(cons.fsd, ":0")
 	cons.done = make(chan bool)
 	return cons
 }
@@ -45,32 +39,33 @@ func (cons *Consoled) Connect(conn net.Conn) fssrv.FsClient {
 	return cons
 }
 
-// func (cons *Consoled) Write(args np.Twrite, reply *np.Rwrite) error {
-// 	if fid.Id != Stdout {
-// 		return 0, errors.New("Cannot write to this fd")
-// 	}
+type Console struct {
+	stdin  *bufio.Reader
+	stdout *bufio.Writer
+}
 
-// 	n, err := cons.stdout.Write(buf)
-// 	cons.stdout.Flush()
-// 	return n, err
-// }
+func makeConsole() *Console {
+	cons := &Console{}
+	cons.stdin = bufio.NewReader(os.Stdin)
+	cons.stdout = bufio.NewWriter(os.Stdout)
+	return cons
 
-// func (cons *Consoled) Read(args np.Tread, reply *np.Rread) error {
-// 	if fid.Id != Stdin {
-// 		return nil, errors.New("Cannot read from this fd")
-// 	}
+}
 
-// 	b, err := cons.stdin.ReadBytes('\n')
-// 	return b, err
-// }
+func (cons *Console) Write(data []byte) (np.Tsize, error) {
+	n, err := cons.stdout.Write(data)
+	cons.stdout.Flush()
+	return np.Tsize(n), err
+}
+
+func (cons *Console) Read(n np.Tsize) ([]byte, error) {
+	b, err := cons.stdin.ReadBytes('\n')
+	return b, err
+}
 
 func (cons *Consoled) FsInit() {
-	root := cons.fs.RootInode()
-	_, err := cons.fs.Create(root, "stdin", np.DMAPPEND)
-	if err != nil {
-		log.Fatal("Create error: ", err)
-	}
-	_, err = cons.fs.Create(root, "stdout", np.DMAPPEND)
+	fs := cons.fsd.Root()
+	_, err := fs.MkNod(fs.RootInode(), "console", makeConsole())
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
@@ -84,9 +79,23 @@ func main() {
 		if err != nil {
 			log.Fatal("Mount error: ", err)
 		}
-		_, err = cons.clnt.Create("name/x", 0, np.OWRITE)
+		name := cons.srv.MyAddr()
+		err = cons.clnt.Symlink(name+":pubkey:console", "name/consoled")
 		if err != nil {
-			log.Fatal("Create error: ", err)
+			log.Fatal("Symlink error: ", err)
+		}
+		// XXX for testing...
+		fd1, err := cons.clnt.Open("name/consoled/console", np.OWRITE)
+		if err != nil {
+			log.Fatal("Open error: ", err)
+		}
+		_, err = cons.clnt.Write(fd1, 0, []byte("Hello world\n"))
+		if err != nil {
+			log.Fatal("Write error: ", err)
+		}
+		err = cons.clnt.Close(fd1)
+		if err != nil {
+			log.Fatal("Close error: ", err)
 		}
 	} else {
 		log.Fatal("Open error: ", err)

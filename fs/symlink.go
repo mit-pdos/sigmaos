@@ -1,15 +1,10 @@
 package fs
 
-import (
-	"ulambda/fid"
-)
-
 type Symlink struct {
-	start *fid.Ufid
-	dst   string
+	target string
 }
 
-func makeSym(start *fid.Ufid, dst string) *Symlink {
-	s := Symlink{start, dst}
+func makeSym(target string) *Symlink {
+	s := Symlink{target}
 	return &s
 }

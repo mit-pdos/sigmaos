@@ -28,6 +28,14 @@ type CreateFs interface {
 	Create(np.Tcreate, *np.Rcreate) error
 }
 
+type SymlinkFs interface {
+	Symlink(np.Tsymlink, *np.Rsymlink) error
+}
+
+type ReadlinkFs interface {
+	Readlink(np.Treadlink, *np.Rreadlink) error
+}
+
 type OpenFs interface {
 	Open(np.Topen, *np.Ropen) error
 }

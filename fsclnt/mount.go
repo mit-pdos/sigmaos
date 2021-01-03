@@ -1,6 +1,7 @@
 package fsclnt
 
 import (
+	"fmt"
 	"log"
 	np "ulambda/ninep"
 )
@@ -8,6 +9,10 @@ import (
 type Point struct {
 	path []string
 	fid  np.Tfid
+}
+
+func (p *Point) String() string {
+	return fmt.Sprintf("{%v, %v}", p.path, p.fid)
 }
 
 type Mount struct {
@@ -18,8 +23,17 @@ func makeMount() *Mount {
 	return &Mount{make([]*Point, 0)}
 }
 
-func (m *Mount) add(path []string, tid np.Tfid) {
-	m.mounts = append(m.mounts, &Point{path, tid})
+// add path, in order of longest path first
+func (mnt *Mount) add(path []string, tid np.Tfid) {
+	point := &Point{path, tid}
+	for i, p := range mnt.mounts {
+		if len(path) > len(p.path) {
+			mnts := append([]*Point{point}, mnt.mounts[i:]...)
+			mnt.mounts = append(mnt.mounts[:i], mnts...)
+			return
+		}
+	}
+	mnt.mounts = append(mnt.mounts, point)
 }
 
 func match(mp []string, path []string) (bool, []string) {
@@ -37,11 +51,10 @@ func match(mp []string, path []string) (bool, []string) {
 	return true, rest
 }
 
-func (m *Mount) resolve(path []string) (np.Tfid, []string) {
-	for _, p := range m.mounts {
-		log.Printf("mount %v %v\n", p.path, path)
+func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
+	log.Printf("resolve: mounts %v path %v\n", mnt.mounts, path)
+	for _, p := range mnt.mounts {
 		ok, rest := match(p.path, path)
-		log.Printf("ok %v %v\n", ok, rest)
 		if ok {
 			return p.fid, rest
 		}

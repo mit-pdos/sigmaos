@@ -2,6 +2,7 @@ package fs
 
 import (
 	"errors"
+	"log"
 
 	np "ulambda/ninep"
 )
@@ -15,8 +16,8 @@ const (
 )
 
 type Dev interface {
-	Write(*Inode, []byte) (int, error)
-	Read(*Inode, int) ([]byte, error)
+	Write([]byte) (np.Tsize, error)
+	Read(np.Tsize) ([]byte, error)
 }
 
 type Inode struct {
@@ -34,8 +35,20 @@ func makeInode(t np.Tperm, inum Tinum, data interface{}) *Inode {
 	return &i
 }
 
+func (inode *Inode) Qid() np.Tqid {
+	return np.MakeQid(np.Qtype(inode.PermT>>24), np.TQversion(inode.Version), np.Tpath(inode.Inum))
+}
+
 func (inode *Inode) isDir() bool {
 	return inode.PermT&np.DMDIR == np.DMDIR
+}
+
+func (inode *Inode) isSymlink() bool {
+	return inode.PermT&np.DMSYMLINK == np.DMSYMLINK
+}
+
+func (inode *Inode) isDevice() bool {
+	return inode.PermT&np.DMDEVICE == np.DMDEVICE
 }
 
 func (inode *Inode) lookup(name string) (*Inode, error) {
@@ -46,7 +59,7 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 		d := inode.Data.(*Dir)
 		return d.Lookup(name)
 	} else {
-		return nil, errors.New("Base not a directory")
+		return nil, errors.New("Not a directory")
 	}
 }
 
@@ -59,6 +72,37 @@ func (inode *Inode) create(root *Root, t np.Tperm, name string, data interface{}
 		i := makeInode(t, root.allocInum(), data)
 		return i, d.create(i, name)
 	} else {
-		return nil, errors.New("Base not a directory")
+		return nil, errors.New("Not a directory")
+	}
+}
+
+func (inode *Inode) Readlink() (string, error) {
+	if inode.isSymlink() {
+		s := inode.Data.(*Symlink)
+		return s.target, nil
+	} else {
+		return "", errors.New("Not a symlink")
+	}
+}
+
+func (inode *Inode) Write(data []byte) (np.Tsize, error) {
+	log.Printf("Writei %v\n", inode)
+	if inode.isDevice() {
+		d := inode.Data.(Dev)
+		return d.Write(data)
+	} else {
+		inode.Data = data
+		return np.Tsize(len(data)), nil
+	}
+}
+
+func (inode *Inode) Read(n np.Tsize) ([]byte, error) {
+	log.Printf("Readi %v\n", inode)
+	if inode.isDevice() {
+		d := inode.Data.(Dev)
+		return d.Read(n)
+	} else {
+		d := inode.Data.([]byte)
+		return d, nil
 	}
 }

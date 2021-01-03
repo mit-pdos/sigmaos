@@ -14,7 +14,7 @@ func (fsc *FsClient) attach(server string, fid np.Tfid, path []string) (*np.Ratt
 }
 
 func (fsc *FsClient) walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk, error) {
-	args := np.Twalk{np.NoTag, fid, nfid, nil}
+	args := np.Twalk{np.NoTag, fid, nfid, path}
 	var reply np.Rwalk
 	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Walk", args, &reply)
 	return &reply, err
@@ -24,6 +24,20 @@ func (fsc *FsClient) create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmo
 	args := np.Tcreate{np.NoTag, fid, name, perm, mode}
 	var reply np.Rcreate
 	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Create", args, &reply)
+	return &reply, err
+}
+
+func (fsc *FsClient) symlink(fid np.Tfid, name string, target string) (*np.Rsymlink, error) {
+	args := np.Tsymlink{np.NoTag, fid, name, target, 0}
+	var reply np.Rsymlink
+	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Symlink", args, &reply)
+	return &reply, err
+}
+
+func (fsc *FsClient) readlink(fid np.Tfid) (*np.Rreadlink, error) {
+	args := np.Treadlink{np.NoTag, fid}
+	var reply np.Rreadlink
+	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Readlink", args, &reply)
 	return &reply, err
 }
 

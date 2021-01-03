@@ -55,7 +55,7 @@ func (root *Root) Namei(dir *Dir, path []string,
 }
 
 func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
-	log.Printf("name.Walk %v\n", path)
+	log.Printf("name.Walk %v at %v\n", path, dir)
 	var inodes []*Inode
 	inodes, rest, err := root.Namei(dir, path, inodes)
 	if err == nil {
@@ -77,6 +77,15 @@ func (root *Root) Create(inode *Inode, name string, perm np.Tperm) (*Inode, erro
 	return inode.create(root, perm, name, []byte{})
 }
 
+func (root *Root) Symlink(inode *Inode, name string, target string) (*Inode, error) {
+	s := makeSym(target)
+	return inode.create(root, np.DMSYMLINK, name, s)
+}
+
+func (root *Root) MkNod(inode *Inode, name string, i interface{}) (*Inode, error) {
+	return inode.create(root, np.DMDEVICE, name, i)
+}
+
 // If directory recursively remove XXX maybe not
 func (root *Root) Remove(dir *Inode, name string) error {
 	log.Printf("name.Remove %v %v\n", dir, name)
@@ -90,12 +99,9 @@ func (root *Root) Remove(dir *Inode, name string) error {
 }
 
 func (root *Root) Write(i *Inode, data []byte) (np.Tsize, error) {
-	log.Printf("name.Write %v\n", i)
-	i.Data = data
-	return np.Tsize(len(data)), nil
+	return i.Write(data)
 }
 
 func (root *Root) Read(i *Inode, n np.Tsize) ([]byte, error) {
-	log.Printf("name.Read %v\n", i)
-	return i.Data.([]byte), nil
+	return i.Read(n)
 }

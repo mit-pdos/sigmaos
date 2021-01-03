@@ -21,8 +21,8 @@ func makeChannel(s string, n []string, qs []np.Tqid) *Channel {
 }
 
 func (c *Channel) String() string {
-	str := fmt.Sprintf("Names %v ", c.cname)
-	str += fmt.Sprintf("Qids %v\n", c.qids)
+	str := fmt.Sprintf("{ Names %v ", c.cname)
+	str += fmt.Sprintf("Qids %v }", c.qids)
 	return str
 }
 
@@ -37,8 +37,16 @@ func (c *Channel) add(name string, q np.Tqid) {
 	c.qids = append(c.qids, q)
 }
 
-func (c *Channel) addn(path []string, qs []np.Tqid) {
-	for i, s := range path {
-		c.add(s, qs[i])
+// empty path = ""
+func (c *Channel) addn(qs []np.Tqid, path []string) {
+	if len(path) == 0 {
+		path = append(path, "")
 	}
+	for i, q := range qs {
+		c.add(path[i], q)
+	}
+}
+
+func (c *Channel) lastqid() np.Tqid {
+	return c.qids[len(c.qids)-1]
 }

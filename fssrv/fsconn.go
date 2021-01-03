@@ -72,6 +72,26 @@ func (conn *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
 	}
 }
 
+func (conn *FsConn) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
+	log.Printf("Symlink %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.clnt.(SymlinkFs)
+	if ok {
+		return v.Symlink(args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
+func (conn *FsConn) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
+	log.Printf("Readlink %v from %v\n", args, conn.conn.RemoteAddr())
+	v, ok := conn.clnt.(ReadlinkFs)
+	if ok {
+		return v.Readlink(args, reply)
+	} else {
+		return errors.New("Not supported")
+	}
+}
+
 func (conn *FsConn) Open(args np.Topen, reply *np.Ropen) error {
 	log.Printf("Open %v from %v\n", args, conn.conn.RemoteAddr())
 	v, ok := conn.clnt.(OpenFs)

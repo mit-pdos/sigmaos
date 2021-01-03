@@ -30,6 +30,10 @@ func MakeFsd() *Fsd {
 	return fsd
 }
 
+func (fsd *Fsd) Root() *fs.Root {
+	return fsd.fs
+}
+
 func (fsd *Fsd) Connect(conn net.Conn) fssrv.FsClient {
 	clnt := makeClient(fsd.fs)
 	return clnt
@@ -39,14 +43,14 @@ func (clnt *Client) Attach(args np.Tattach, reply *np.Rattach) error {
 	root := clnt.fs.RootInode()
 	clnt.Fids[args.Fid] = root
 	reply.Tag = args.Tag
-	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(root.Version), np.Tpath(root.Inum))
+	reply.Qid = np.MakeQid(np.QTDIR, np.TQversion(root.Version), np.Tpath(root.Inum))
 	return nil
 }
 
 func makeQids(inodes []*fs.Inode) []np.Tqid {
 	var qids []np.Tqid
 	for _, i := range inodes {
-		qid := *np.MakeQid(np.QTDIR, np.TQversion(i.Version), np.Tpath(i.Inum))
+		qid := i.Qid()
 		qids = append(qids, qid)
 	}
 	return qids
@@ -77,7 +81,35 @@ func (clnt *Client) Create(args np.Tcreate, reply *np.Rcreate) error {
 		return err
 	}
 	reply.Tag = args.Tag
-	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(inode.Version), np.Tpath(inode.Inum))
+	reply.Qid = inode.Qid()
+	return nil
+}
+
+func (clnt *Client) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
+	start, ok := clnt.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	inode, err := clnt.fs.Symlink(start, args.Name, args.Symtgt)
+	if err != nil {
+		return err
+	}
+	reply.Tag = args.Tag
+	reply.Qid = inode.Qid()
+	return nil
+}
+
+func (clnt *Client) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
+	inode, ok := clnt.Fids[args.Fid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	target, err := inode.Readlink()
+	if err != nil {
+		return err
+	}
+	reply.Tag = args.Tag
+	reply.Target = target
 	return nil
 }
 
@@ -87,7 +119,7 @@ func (clnt *Client) Open(args np.Topen, reply *np.Ropen) error {
 		return errors.New("Unknown fid")
 	}
 	reply.Tag = args.Tag
-	reply.Qid = *np.MakeQid(np.QTDIR, np.TQversion(inode.Version), np.Tpath(inode.Inum))
+	reply.Qid = inode.Qid()
 	return nil
 }
 

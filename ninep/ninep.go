@@ -26,9 +26,8 @@ type Tpath uint64
 type Qtype uint8
 type TQversion uint32
 
-// A Qid's type field represents the type of a file (directory, etc.),
-// represented as a bit vector corresponding to the high 8 bits of the
-// file's mode word.
+// A Qid's type field represents the type of a file, the high 8 bits of
+// the file's permission.
 const (
 	QTDIR     Qtype = 0x80 // directories
 	QTAPPEND  Qtype = 0x40 // append only files
@@ -49,33 +48,33 @@ type Tqid struct {
 	Path    Tpath
 }
 
-func MakeQid(t Qtype, v TQversion, p Tpath) *Tqid {
-	return &Tqid{t, v, p}
+func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
+	return Tqid{t, v, p}
 }
 
 type Tmode uint16
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
-	OREAD   Tmode = 0    // open read-only
-	OWRITE  Tmode = 0x01 // open write-only
-	ORDWR   Tmode = 0x02 // open read-write
-	OEXEC   Tmode = 0x03 // execute (== read but check execute permission)
-	OTRUNC  Tmode = 0x10 // or'ed in (except for exec), truncate file first
-	OREXEC  Tmode = 0x20 // or'ed in, close on exec
-	ORCLOSE Tmode = 0x40 // or'ed in, remove on close
-	OAPPEND Tmode = 0x80
+	OREAD   Tmode = 0    // read-only
+	OWRITE  Tmode = 0x01 // write-only
+	ORDWR   Tmode = 0x02 // read-write
+	OEXEC   Tmode = 0x03 // execute (implies OREAD)
+	OTRUNC  Tmode = 0x10 // truncate file first
+	OREXEC  Tmode = 0x20 // close on exec
+	ORCLOSE Tmode = 0x40 // remove on close
+	OAPPEND Tmode = 0x80 // append
 	OEXCL   Tmode = 0x1000
 )
 
 // Permissions
 const (
-	DMDIR    Tperm = 0x80000000 // mode bit for directories
-	DMAPPEND Tperm = 0x40000000 // mode bit for append only files
-	DMEXCL   Tperm = 0x20000000 // mode bit for exclusive use files
-	DMMOUNT  Tperm = 0x10000000 // mode bit for mounted channel
-	DMAUTH   Tperm = 0x08000000 // mode bit for authentication file
-	DMTMP    Tperm = 0x04000000 // mode bit for non-backed-up file
+	DMDIR    Tperm = 0x80000000 // directory
+	DMAPPEND Tperm = 0x40000000 // append only file
+	DMEXCL   Tperm = 0x20000000 // exclusive use file
+	DMMOUNT  Tperm = 0x10000000 // mounted channel
+	DMAUTH   Tperm = 0x08000000 // authentication file
+	DMTMP    Tperm = 0x04000000 // non-backed-up file
 
 	// 9P2000.u extensions
 	DMSYMLINK   Tperm = 0x02000000

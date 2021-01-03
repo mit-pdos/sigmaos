@@ -46,7 +46,7 @@ func (fsc *FsClient) String() string {
 	str := fmt.Sprintf("Fsclnt table:\n")
 	str += fmt.Sprintf("fds %v\n", fsc.fds)
 	for k, v := range fsc.fids {
-		str += fmt.Sprintf("fid %v chan %v", k, v)
+		str += fmt.Sprintf("fid %v chan %v\n", k, v)
 	}
 	return str
 }
@@ -162,6 +162,7 @@ func (fsc *FsClient) Attach(server string, path string) (int, error) {
 // clone fid into fid1
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	fid1 := fsc.allocFid()
+	log.Printf("clone fid %v -> fid1 %v\n", fid, fid1)
 	_, err := fsc.walk(fid, fid1, nil)
 	if err != nil {
 		// XXX free fid
@@ -189,10 +190,10 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	if err != nil {
 		return np.NoFid, 0, err
 	}
-	fsc.fids[fid1] = fsc.fids[fid].copyChannel()
 	defer fsc.closeFid(fid1)
 
 	fid2 := fsc.allocFid()
+	log.Printf("walk fid1 %v fid2 %v\n", fid1, fid2)
 	reply, err := fsc.walk(fid1, fid2, rest)
 	if err != nil {
 		return np.NoFid, 0, err
@@ -257,7 +258,6 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	if err != nil {
 		return -1, err
 	}
-
 	fsc.fids[fid].add(base, reply.Qid)
 	fd := fsc.findfd(fid)
 
@@ -265,7 +265,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 }
 
 func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
-	log.Printf("Create %v at %v\n", name, dfd)
+	log.Printf("CreateAt %v at %v\n", name, dfd)
 	fid, err := fsc.lookup(dfd)
 	if err != nil {
 		return -1, err
@@ -276,7 +276,7 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 		return -1, err
 	}
 
-	reply, err := fsc.create(fid, name, perm, mode)
+	reply, err := fsc.create(fid1, name, perm, mode)
 	if err != nil {
 		return -1, err
 	}
@@ -315,6 +315,8 @@ func (fsc *FsClient) SymlinkAt(dfd int, target string, linkn string) error {
 
 func (fsc *FsClient) Mkdir(path string, mode np.Tmode) (int, error) {
 	log.Printf("Mkdir %v\n", path)
+
+	log.Printf("fsc %v\n", fsc)
 	p := split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
@@ -323,10 +325,12 @@ func (fsc *FsClient) Mkdir(path string, mode np.Tmode) (int, error) {
 		return -1, err
 	}
 	reply, err := fsc.mkdir(fid, base, mode)
-
+	if err != nil {
+		return -1, err
+	}
 	fsc.fids[fid].add(base, reply.Qid)
 	fd := fsc.findfd(fid)
-
+	log.Printf("fsc mkdir done %v\n", fsc)
 	return fd, err
 }
 
@@ -339,10 +343,7 @@ func (fsc *FsClient) Pipe(path string, mode np.Tmode) error {
 	if err != nil {
 		return err
 	}
-	reply, err := fsc.mkpipe(fid, base, mode)
-
-	// XXX maybe add no necessary
-	fsc.fids[fid].add(base, reply.Qid)
+	_, err = fsc.mkpipe(fid, base, mode)
 	return err
 }
 

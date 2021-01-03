@@ -47,7 +47,7 @@ func (inode *Inode) isSymlink() bool {
 	return inode.PermT&np.DMSYMLINK == np.DMSYMLINK
 }
 
-func (inode *Inode) isDevice() bool {
+func (inode *Inode) isDev() bool {
 	return inode.PermT&np.DMDEVICE == np.DMDEVICE
 }
 
@@ -86,10 +86,12 @@ func (inode *Inode) Readlink() (string, error) {
 }
 
 func (inode *Inode) Write(data []byte) (np.Tsize, error) {
-	log.Printf("Writei %v\n", inode)
-	if inode.isDevice() {
+	log.Printf("fs.Writei %v\n", inode)
+	if inode.isDev() {
 		d := inode.Data.(Dev)
 		return d.Write(data)
+	} else if inode.isDir() {
+		return 0, errors.New("Not a file")
 	} else {
 		inode.Data = data
 		return np.Tsize(len(data)), nil
@@ -97,10 +99,12 @@ func (inode *Inode) Write(data []byte) (np.Tsize, error) {
 }
 
 func (inode *Inode) Read(n np.Tsize) ([]byte, error) {
-	log.Printf("Readi %v\n", inode)
-	if inode.isDevice() {
+	log.Printf("fs.Readi %v\n", inode)
+	if inode.isDev() {
 		d := inode.Data.(Dev)
 		return d.Read(n)
+	} else if inode.isDir() {
+		return nil, errors.New("Not a file")
 	} else {
 		d := inode.Data.([]byte)
 		return d, nil

@@ -90,14 +90,14 @@ func Spawn(clnt *fsclnt.FsClient, program string, args []string, fids []string) 
 		}
 	}
 
-	//fd, err := cons.clnt.Open("name/procd/makeproc", np.OWRITE)
-	//if err != nil {
-	//	log.Fatal("Open error: ", err)
-	//}
-	//_, err = cons.clnt.Write(fd1, 0, []byte("Hello world\n"))
-
-	// Start process
-	err = setAttr(clnt, fd, "ctl", []byte("start"))
+	fd1, err := clnt.Open("name/procd/makeproc", np.OWRITE)
+	if err != nil {
+		//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
+		//clnt.RmDir(pname)
+		return "", err
+	}
+	defer clnt.Close(fd1)
+	_, err = clnt.Write(fd1, 0, []byte("Start "+pid))
 	if err != nil {
 		//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
 		//clnt.RmDir(pname)

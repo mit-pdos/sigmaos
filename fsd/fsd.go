@@ -69,12 +69,17 @@ func makeQids(inodes []*fs.Inode) []np.Tqid {
 }
 
 func (fsc *FsConn) Walk(args np.Twalk, reply *np.Rwalk) error {
-	log.Printf("Walk %v from %v\n", args, fsc.conn.RemoteAddr())
 	start, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	inodes, _, err := fsc.fs.Walk(start.Data.(*fs.Dir), args.Path)
+	dir, ok := start.Data.(*fs.Dir)
+	if !ok {
+		log.Printf("start %v\n", start)
+		return errors.New("Not a directory")
+	}
+	log.Printf("fsd.Walk %v from %v: dir %v %v\n", args, fsc.conn.RemoteAddr(), start, dir)
+	inodes, _, err := fsc.fs.Walk(dir, args.Path)
 	if err != nil {
 		return err
 	}
@@ -85,37 +90,39 @@ func (fsc *FsConn) Walk(args np.Twalk, reply *np.Rwalk) error {
 }
 
 func (fsc *FsConn) Create(args np.Tcreate, reply *np.Rcreate) error {
-	log.Printf("Create %v from %v\n", args, fsc.conn.RemoteAddr())
 	start, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
 	}
+	log.Printf("fsd.Create %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), start)
 	inode, err := fsc.fs.Create(start, args.Name, args.Perm)
 	if err != nil {
 		return err
 	}
+	fsc.Fids[args.Fid] = inode
 	reply.Tag = args.Tag
 	reply.Qid = inode.Qid()
 	return nil
 }
 
 func (fsc *FsConn) Mkdir(args np.Tmkdir, reply *np.Rmkdir) error {
-	log.Printf("Mkdir %v from %v\n", args, fsc.conn.RemoteAddr())
 	start, ok := fsc.Fids[args.Dfid]
 	if !ok {
 		return errors.New("Unknown fid")
 	}
+	log.Printf("fsd.Mkdir %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), start)
 	inode, err := fsc.fs.Mkdir(start, args.Name)
 	if err != nil {
 		return err
 	}
+	fsc.Fids[args.Dfid] = inode
 	reply.Tag = args.Tag
 	reply.Qid = inode.Qid()
 	return nil
 }
 
 func (fsc *FsConn) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
-	log.Printf("Symlink %v from %v\n", args, fsc.conn.RemoteAddr())
+	log.Printf("fsd.Symlink %v from %v\n", args, fsc.conn.RemoteAddr())
 	start, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -130,7 +137,7 @@ func (fsc *FsConn) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
 }
 
 func (fsc *FsConn) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
-	log.Printf("Readlink %v from %v\n", args, fsc.conn.RemoteAddr())
+	log.Printf("fsd.Readlink %v from %v\n", args, fsc.conn.RemoteAddr())
 	inode, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -145,7 +152,7 @@ func (fsc *FsConn) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
 }
 
 func (fsc *FsConn) Open(args np.Topen, reply *np.Ropen) error {
-	log.Printf("Open %v from %v\n", args, fsc.conn.RemoteAddr())
+	log.Printf("fsd.Open %v from %v\n", args, fsc.conn.RemoteAddr())
 	inode, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -156,7 +163,7 @@ func (fsc *FsConn) Open(args np.Topen, reply *np.Ropen) error {
 }
 
 func (fsc *FsConn) Clunk(args np.Tclunk, reply *np.Rclunk) error {
-	log.Printf("Clunk %v\n", args)
+	log.Printf("fsd.Clunk %v\n", args)
 	_, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -166,12 +173,12 @@ func (fsc *FsConn) Clunk(args np.Tclunk, reply *np.Rclunk) error {
 }
 
 func (fsc *FsConn) Flush(args np.Tflush, reply *np.Rflush) error {
-	log.Printf("Flush %v\n", args)
+	log.Printf("fsd.Flush %v\n", args)
 	return errors.New("Not supported")
 }
 
 func (fsc *FsConn) Read(args np.Tread, reply *np.Rread) error {
-	log.Printf("Read %v from %v\n", args, fsc.conn.RemoteAddr())
+	log.Printf("fsd.Read %v from %v\n", args, fsc.conn.RemoteAddr())
 	inode, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -185,7 +192,7 @@ func (fsc *FsConn) Read(args np.Tread, reply *np.Rread) error {
 }
 
 func (fsc *FsConn) Write(args np.Twrite, reply *np.Rwrite) error {
-	log.Printf("Write %v from %v\n", args, fsc.conn.RemoteAddr())
+	log.Printf("fsd.Write %v from %v\n", args, fsc.conn.RemoteAddr())
 	inode, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")

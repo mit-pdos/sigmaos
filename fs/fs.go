@@ -76,10 +76,12 @@ func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
 }
 
 func (root *Root) Create(inode *Inode, name string, perm np.Tperm) (*Inode, error) {
+	log.Printf("fs.Create %v %v\n", inode, name)
 	return inode.create(root, perm, name, []byte{})
 }
 
 func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
+	log.Printf("fs.Mkdir %v %v\n", inode, name)
 	inode, err := inode.create(root, np.DMDIR, name, makeDir())
 	if err != nil {
 		return nil, err

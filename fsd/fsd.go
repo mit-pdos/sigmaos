@@ -2,8 +2,8 @@ package fsd
 
 import (
 	"errors"
+	"log"
 	"net"
-	// "log"
 
 	"ulambda/fs"
 	"ulambda/fssrv"
@@ -12,11 +12,12 @@ import (
 
 type Client struct {
 	fs   *fs.Root
+	conn net.Conn
 	Fids map[np.Tfid]*fs.Inode
 }
 
-func makeClient(root *fs.Root) *Client {
-	clnt := &Client{root, make(map[np.Tfid]*fs.Inode)}
+func makeClient(root *fs.Root, conn net.Conn) *Client {
+	clnt := &Client{root, conn, make(map[np.Tfid]*fs.Inode)}
 	return clnt
 }
 
@@ -35,11 +36,22 @@ func (fsd *Fsd) Root() *fs.Root {
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) fssrv.FsClient {
-	clnt := makeClient(fsd.fs)
+	clnt := makeClient(fsd.fs, conn)
 	return clnt
 }
 
+func (clnt *Client) Version(args np.Tversion, reply *np.Rversion) error {
+	log.Printf("Version %v\n", args)
+	return errors.New("Not supported")
+}
+
+func (clnt *Client) Auth(args np.Tauth, reply *np.Rauth) error {
+	log.Printf("Auth %v\n", args)
+	return errors.New("Not supported")
+}
+
 func (clnt *Client) Attach(args np.Tattach, reply *np.Rattach) error {
+	log.Printf("Attach %v from %v\n", args, clnt.conn.RemoteAddr())
 	root := clnt.fs.RootInode()
 	clnt.Fids[args.Fid] = root
 	reply.Tag = args.Tag
@@ -57,6 +69,7 @@ func makeQids(inodes []*fs.Inode) []np.Tqid {
 }
 
 func (clnt *Client) Walk(args np.Twalk, reply *np.Rwalk) error {
+	log.Printf("Walk %v from %v\n", args, clnt.conn.RemoteAddr())
 	start, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -72,6 +85,7 @@ func (clnt *Client) Walk(args np.Twalk, reply *np.Rwalk) error {
 }
 
 func (clnt *Client) Create(args np.Tcreate, reply *np.Rcreate) error {
+	log.Printf("Create %v from %v\n", args, clnt.conn.RemoteAddr())
 	start, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -86,6 +100,7 @@ func (clnt *Client) Create(args np.Tcreate, reply *np.Rcreate) error {
 }
 
 func (clnt *Client) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
+	log.Printf("Symlink %v from %v\n", args, clnt.conn.RemoteAddr())
 	start, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -100,6 +115,7 @@ func (clnt *Client) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
 }
 
 func (clnt *Client) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
+	log.Printf("Readlink %v from %v\n", args, clnt.conn.RemoteAddr())
 	inode, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -114,6 +130,7 @@ func (clnt *Client) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
 }
 
 func (clnt *Client) Open(args np.Topen, reply *np.Ropen) error {
+	log.Printf("Open %v from %v\n", args, clnt.conn.RemoteAddr())
 	inode, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -124,6 +141,7 @@ func (clnt *Client) Open(args np.Topen, reply *np.Ropen) error {
 }
 
 func (clnt *Client) Clunk(args np.Tclunk, reply *np.Rclunk) error {
+	log.Printf("Clunk %v\n", args)
 	_, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -132,7 +150,13 @@ func (clnt *Client) Clunk(args np.Tclunk, reply *np.Rclunk) error {
 	return nil
 }
 
+func (clnt *Client) Flush(args np.Tflush, reply *np.Rflush) error {
+	log.Printf("Flush %v\n", args)
+	return errors.New("Not supported")
+}
+
 func (clnt *Client) Read(args np.Tread, reply *np.Rread) error {
+	log.Printf("Read %v from %v\n", args, clnt.conn.RemoteAddr())
 	inode, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")
@@ -146,6 +170,7 @@ func (clnt *Client) Read(args np.Tread, reply *np.Rread) error {
 }
 
 func (clnt *Client) Write(args np.Twrite, reply *np.Rwrite) error {
+	log.Printf("Write %v from %v\n", args, clnt.conn.RemoteAddr())
 	inode, ok := clnt.Fids[args.Fid]
 	if !ok {
 		return errors.New("Unknown fid")

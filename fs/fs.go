@@ -55,7 +55,7 @@ func (root *Root) Namei(dir *Dir, path []string,
 }
 
 func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
-	log.Printf("name.Walk %v at %v\n", path, dir)
+	log.Printf("fs.Walk %v at %v\n", path, dir)
 	var inodes []*Inode
 	inodes, rest, err := root.Namei(dir, path, inodes)
 	if err == nil {
@@ -88,7 +88,7 @@ func (root *Root) MkNod(inode *Inode, name string, i interface{}) (*Inode, error
 
 // If directory recursively remove XXX maybe not
 func (root *Root) Remove(dir *Inode, name string) error {
-	log.Printf("name.Remove %v %v\n", dir, name)
+	log.Printf("fs.Remove %v %v\n", dir, name)
 	if dir.isDir() {
 		dir := dir.Data.(*Dir)
 		dir.remove(root, name)

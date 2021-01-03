@@ -2,9 +2,7 @@ package main
 
 import (
 	"bufio"
-	//"errors"
 	"log"
-	"net"
 	"os"
 
 	"ulambda/fs"
@@ -35,9 +33,9 @@ func makeConsoled() *Consoled {
 	return cons
 }
 
-func (cons *Consoled) Connect(conn net.Conn) fssrv.FsClient {
-	return cons
-}
+//func (cons *Consoled) Connect(conn net.Conn) fssrv.FsClient {
+//	return cons
+//}
 
 type Console struct {
 	stdin  *bufio.Reader

@@ -4,7 +4,7 @@ import (
 	np "ulambda/ninep"
 )
 
-type FsClient interface {
+type FsConn interface {
 	Version(np.Tversion, *np.Rversion) error
 	Auth(np.Tauth, *np.Rauth) error
 	Flush(np.Tflush, *np.Rflush) error

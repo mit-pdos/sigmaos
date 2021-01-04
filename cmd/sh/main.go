@@ -11,8 +11,7 @@ import (
 
 func main() {
 	log.Printf("Running: %v\n", os.Args)
-	// clnt, _, err := fsclnt.InitFsClient(fsclnt.MakeFsRoot(), os.Args[1:])
-	clnt, _, err := fsclnt.InitFsClient(os.Args[1:])
+	clnt, err := fsclnt.InitFsClient(os.Args[1:])
 	if err != nil {
 		log.Fatal("InitFsClient error:", err)
 	}

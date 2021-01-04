@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	Stdin  = 0
-	Stdout = 1
+	// zero channel to named
+	Stdin  = 1
+	Stdout = 2
 	// Stderr = 2
 )
 
@@ -52,23 +53,38 @@ func (fsc *FsClient) String() string {
 }
 
 // // XXX use gob?
-func InitFsClient(args []string) (*FsClient, []string, error) {
+func InitFsClient(args []string) (*FsClient, error) {
 	log.Printf("InitFsClient: %v\n", args)
 	if len(args) < 2 {
-		return nil, nil, errors.New("Missing len and program")
+		return nil, errors.New("Missing len and program")
 	}
 	n, err := strconv.Atoi(args[0])
 	if err != nil {
-		return nil, nil, errors.New("Bad arg len")
+		return nil, errors.New("Bad arg len")
 	}
 	if n < 1 {
-		return nil, nil, errors.New("Missing program")
+		return nil, errors.New("Missing program")
 	}
-	// a := args[1 : n+1] // skip len and +1 for program name
-	// fids := args[n+1:]
-	// fsc := MakeFsClient(root)
-	// fsc.Proc = a[0]
-	// log.Printf("Args %v fids %v\n", a, fids)
+	a := args[1 : n+1] // skip len and +1 for program name
+	fids := args[n+1:]
+	fsc := MakeFsClient()
+	fsc.Proc = a[0]
+	log.Printf("Args %v fids %v\n", a, fids)
+	if fd, err := fsc.Attach(":1111", ""); err == nil {
+		err := fsc.Mount(fd, "name")
+		if err != nil {
+			return nil, errors.New("Mount error")
+		}
+		_, err = fsc.Open("name/consoled/console", np.OREAD)
+		if err != nil {
+			return nil, errors.New("Open error")
+		}
+		_, err = fsc.Open("name/consoled/console", np.OWRITE)
+		if err != nil {
+			return nil, errors.New("Open error")
+		}
+	}
+
 	// for _, f := range fids {
 	// 	var uf fid.Ufid
 	// 	err := json.Unmarshal([]byte(f), &uf)
@@ -77,7 +93,8 @@ func InitFsClient(args []string) (*FsClient, []string, error) {
 	// 	}
 	// 	fsc.findfd(&uf)
 	// }
-	return nil, nil, errors.New("Unsupported")
+
+	return fsc, nil
 }
 
 func (fsc *FsClient) findfd(nfid np.Tfid) int {

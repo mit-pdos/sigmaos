@@ -26,7 +26,7 @@ type Consoled struct {
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	cons.clnt = fsclnt.MakeFsClient()
+	cons.clnt = fsclnt.MakeFsClient("consoled")
 	cons.fsd = fsd.MakeFsd()
 	cons.srv = fssrv.MakeFsServer(cons.fsd, ":0")
 	cons.done = make(chan bool)

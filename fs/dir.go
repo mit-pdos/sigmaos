@@ -40,7 +40,7 @@ func (dir *Dir) Namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 
 	inode, err = dir.Lookup(path[0])
 	if err != nil {
-		log.Printf("dir.Namei %v non existing", path)
+		log.Printf("dir.Namei %v unknown %v", dir, path)
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)

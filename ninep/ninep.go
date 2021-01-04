@@ -87,6 +87,11 @@ const (
 	DMSETVTX    Tperm = 0x00010000
 )
 
+const (
+	QTYPESHIFT = 24
+	TYPESHIFT  = 16
+)
+
 type Tversion struct {
 	Tag     Ttag
 	Msize   Tsize
@@ -292,7 +297,7 @@ type Rreadlink struct {
 // New transactions
 //
 
-type Tpipe struct {
+type Tmkpipe struct {
 	Tag  Ttag
 	Dfid Tfid
 	Name string
@@ -300,7 +305,7 @@ type Tpipe struct {
 	Gid  Tgid
 }
 
-type Rpipe struct {
+type Rmkpipe struct {
 	Tag Ttag
 	Qid Tqid
 }

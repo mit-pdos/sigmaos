@@ -3,6 +3,7 @@ package proc
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -76,18 +77,16 @@ func Spawn(clnt *fsclnt.FsClient, program string, args []string, fids []string) 
 		//clnt.RmDir(pname)
 		return "", err
 	}
-	if clnt.Proc != "" {
-		err = clnt.Pipe(clnt.Proc+"/"+"exit"+pid, np.ORDWR)
-		if err != nil {
-			//clnt.RmDir(pname)
-			return "", err
-		}
-		err := clnt.SymlinkAt(fd, "parent", clnt.Proc)
-		if err != nil {
-			//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
-			//clnt.RmDir(pname)
-			return "", err
-		}
+	err = clnt.Pipe(clnt.Proc+"/"+"exit"+pid, np.ORDWR)
+	if err != nil {
+		//clnt.RmDir(pname)
+		return "", err
+	}
+	err = clnt.SymlinkAt(fd, clnt.Proc, "parent")
+	if err != nil {
+		//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
+		//clnt.RmDir(pname)
+		return "", err
 	}
 
 	fd1, err := clnt.Open("name/procd/makeproc", np.OWRITE)
@@ -107,6 +106,7 @@ func Spawn(clnt *fsclnt.FsClient, program string, args []string, fids []string) 
 }
 
 func Exit(clnt *fsclnt.FsClient, v ...interface{}) error {
+	log.Printf("Exit %v\n", clnt.Proc)
 	pid := filepath.Base(clnt.Proc)
 	defer func() {
 		//clnt.RmDir(clnt.Proc)
@@ -118,13 +118,11 @@ func Exit(clnt *fsclnt.FsClient, v ...interface{}) error {
 	}
 	defer clnt.Close(fd)
 	_, err = clnt.Write(fd, 0, []byte(fmt.Sprint(v...)))
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func Wait(clnt *fsclnt.FsClient, child string) ([]byte, error) {
+	log.Printf("Wait %v\n", child)
 	pid := filepath.Base(child)
 	fd, err := clnt.Open(clnt.Proc+"/exit"+pid, np.OREAD)
 	if err != nil {
@@ -133,12 +131,9 @@ func Wait(clnt *fsclnt.FsClient, child string) ([]byte, error) {
 	// defer clnt.Remove(clnt.Proc + "/exit" + pid)
 	defer clnt.Close(fd)
 	b, err := clnt.Read(fd, 0, 1024)
-	if err != nil {
-		return nil, err
-	}
 	return b, err
 }
 
 func Getpid(clnt *fsclnt.FsClient) (string, error) {
-	return clnt.Proc, nil
+	return "name/procd/" + clnt.Proc, nil
 }

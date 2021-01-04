@@ -3,7 +3,8 @@ package fs
 import (
 	"sync"
 	// "errors"
-	// "log"
+
+	np "ulambda/ninep"
 )
 
 type Pipe struct {
@@ -20,17 +21,17 @@ func makePipe() *Pipe {
 }
 
 // XXX if full block writer
-func (pipe *Pipe) Write(p *Inode, d []byte) (int, error) {
+func (pipe *Pipe) Write(d []byte) (np.Tsize, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	pipe.buf = append(pipe.buf, d...)
 	pipe.cond.Signal()
-	return len(d), nil
+	return np.Tsize(len(d)), nil
 }
 
 // XXX read no more than n
-func (pipe *Pipe) Read(i *Inode, n int) ([]byte, error) {
+func (pipe *Pipe) Read(n np.Tsize) ([]byte, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

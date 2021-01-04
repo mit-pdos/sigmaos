@@ -14,8 +14,8 @@ import (
 
 const (
 	// zero channel to named
-	Stdin  = 1
-	Stdout = 2
+	Stdin  = 0
+	Stdout = 1
 	// Stderr = 2
 )
 
@@ -32,13 +32,14 @@ type FsClient struct {
 	next  np.Tfid
 }
 
-func MakeFsClient() *FsClient {
+func MakeFsClient(proc string) *FsClient {
 	fsc := &FsClient{}
 	fsc.fds = make([]np.Tfid, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Channel)
 	fsc.mount = makeMount()
 	fsc.cm = makeChanMgr()
 	fsc.next = np.NoFid + 1
+	fsc.Proc = proc
 	rand.Seed(time.Now().UnixNano())
 	return fsc
 }
@@ -67,11 +68,10 @@ func InitFsClient(args []string) (*FsClient, error) {
 	}
 	a := args[1 : n+1] // skip len and +1 for program name
 	fids := args[n+1:]
-	fsc := MakeFsClient()
-	fsc.Proc = a[0]
+	fsc := MakeFsClient(a[0])
 	log.Printf("Args %v fids %v\n", a, fids)
-	if fd, err := fsc.Attach(":1111", ""); err == nil {
-		err := fsc.Mount(fd, "name")
+	if fid, err := fsc.Attach(":1111", ""); err == nil {
+		err := fsc.Mount(fid, "name")
 		if err != nil {
 			return nil, errors.New("Mount error")
 		}
@@ -83,6 +83,8 @@ func InitFsClient(args []string) (*FsClient, error) {
 		if err != nil {
 			return nil, errors.New("Open error")
 		}
+
+		log.Printf("fsc %v\n", fsc)
 	}
 
 	// for _, f := range fids {
@@ -132,10 +134,10 @@ func join(path []string) string {
 	return p
 }
 
-func (fsc *FsClient) Mount(fd int, path string) error {
-	fid, err := fsc.lookup(fd)
-	if err != nil {
-		return err
+func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
+	_, ok := fsc.fids[fid]
+	if !ok {
+		return errors.New("Unknown fid")
 	}
 	log.Printf("Mount %v at %v\n", fid, path)
 	fsc.mount.add(split(path), fid)
@@ -162,24 +164,21 @@ func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Cha
 	return makeChannel(server, p, []np.Tqid{reply.Qid}), nil
 }
 
-func (fsc *FsClient) Attach(server string, path string) (int, error) {
+func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 	log.Printf("Attach %v %v\n", server, path)
 	p := split(path)
 	fid := fsc.allocFid()
 	ch, err := fsc.AttachChannel(fid, server, p)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	fsc.fids[fid] = ch
-	fd := fsc.findfd(fid)
-	log.Printf("Attach -> fd %v fid %v %v\n", fd, fid, fsc.fids[fid])
-	return fd, nil
+	log.Printf("Attach -> fid %v %v\n", fid, fsc.fids[fid])
+	return fid, nil
 }
 
-// clone fid into fid1
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	fid1 := fsc.allocFid()
-	log.Printf("clone fid %v -> fid1 %v\n", fid, fid1)
 	_, err := fsc.walk(fid, fid1, nil)
 	if err != nil {
 		// XXX free fid
@@ -210,7 +209,6 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	defer fsc.closeFid(fid1)
 
 	fid2 := fsc.allocFid()
-	log.Printf("walk fid1 %v fid2 %v\n", fid1, fid2)
 	reply, err := fsc.walk(fid1, fid2, rest)
 	if err != nil {
 		return np.NoFid, 0, err
@@ -223,6 +221,10 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	return fid2, todo, nil
 }
 
+func isRemoteTarget(target string) bool {
+	return strings.Contains(target, ":")
+}
+
 // XXX more robust impl
 func splitTarget(target string) (string, string) {
 	parts := strings.Split(target, ":")
@@ -230,10 +232,19 @@ func splitTarget(target string) (string, string) {
 	return server, parts[len(parts)-1]
 }
 
+func (fsc *FsClient) autoMount(target string, path []string) error {
+	log.Printf("automount %v to %v\n", target, path)
+	server, _ := splitTarget(target)
+	fid, err := fsc.Attach(server, "")
+	if err != nil {
+		log.Fatal("Attach error: ", err)
+	}
+	return fsc.Mount(fid, join(path))
+}
+
 func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
-	start := path
 	for i := 0; i < MAXSYMLINK; i++ {
-		fid, todo, err := fsc.walkOne(start)
+		fid, todo, err := fsc.walkOne(path)
 		if err != nil {
 			return fid, err
 		}
@@ -243,17 +254,18 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 			if err != nil {
 				return np.NoFid, err
 			}
-			server, _ := splitTarget(reply.Target)
-			fd, err := fsc.Attach(server, "")
-			if err != nil {
-				log.Fatal("Attach error: ", err)
-			}
 			i := len(path) - todo
-			err = fsc.Mount(fd, join(path[:i]))
-			if err != nil {
-				log.Fatal("Mount error: ", err)
+			rest := path[i:]
+			if isRemoteTarget(reply.Target) {
+				err = fsc.autoMount(reply.Target, path[:i])
+				if err != nil {
+					return np.NoFid, err
+				}
+				path = append(path, rest...)
+			} else {
+				path = append(split(reply.Target), rest...)
+
 			}
-			start = path
 		} else {
 			return fid, err
 

@@ -11,17 +11,12 @@ import (
 
 func main() {
 	log.Printf("Running: %v\n", os.Args)
-	args := os.Args[2:]
+	// args := os.Args[2:]
 	clnt, err := fsclnt.InitFsClient(os.Args[1:])
 	if err != nil {
 		proc.Exit(clnt, "InitFsClient error:", err)
 	}
-	var fd int
-	if len(args) == 1 {
-		fd, err = clnt.Open("name", np.OREAD)
-	} else {
-		fd, err = clnt.Open(args[1], np.OREAD)
-	}
+	fd, err := clnt.Open("name", np.OREAD)
 	if err != nil {
 		proc.Exit(clnt, "Open error", err)
 	}

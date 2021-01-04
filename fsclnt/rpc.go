@@ -39,9 +39,9 @@ func (fsc *FsClient) symlink(fid np.Tfid, name string, target string) (*np.Rsyml
 	return &reply, err
 }
 
-func (fsc *FsClient) mkpipe(fid np.Tfid, name string, mode np.Tmode) (*np.Rpipe, error) {
-	args := np.Tpipe{np.NoTag, fid, name, mode, 0}
-	var reply np.Rpipe
+func (fsc *FsClient) mkpipe(fid np.Tfid, name string, mode np.Tmode) (*np.Rmkpipe, error) {
+	args := np.Tmkpipe{np.NoTag, fid, name, mode, 0}
+	var reply np.Rmkpipe
 	err := fsc.cm.makeCall(fsc.fids[fid].server, "FsConn.Pipe", args, &reply)
 	return &reply, err
 }

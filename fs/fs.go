@@ -95,6 +95,10 @@ func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
 	return inode, nil
 }
 
+func (root *Root) Mkpipe(inode *Inode, name string) (*Inode, error) {
+	return inode.create(root, np.DMNAMEDPIPE, name, makePipe())
+}
+
 func (root *Root) Symlink(inode *Inode, name string, target string) (*Inode, error) {
 	return inode.create(root, np.DMSYMLINK, name, makeSym(target))
 }

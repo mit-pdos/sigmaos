@@ -131,6 +131,21 @@ func (fsc *FsConn) Symlink(args np.Tsymlink, reply *np.Rsymlink) error {
 	return nil
 }
 
+func (fsc *FsConn) Pipe(args np.Tmkpipe, reply *np.Rmkpipe) error {
+	log.Printf("fsd.Mkpipe %v from %v\n", args, fsc.conn.RemoteAddr())
+	start, ok := fsc.Fids[args.Dfid]
+	if !ok {
+		return errors.New("Unknown fid")
+	}
+	inode, err := fsc.fs.Mkpipe(start, args.Name)
+	if err != nil {
+		return err
+	}
+	reply.Tag = args.Tag
+	reply.Qid = inode.Qid()
+	return nil
+}
+
 func (fsc *FsConn) Readlink(args np.Treadlink, reply *np.Rreadlink) error {
 	log.Printf("fsd.Readlink %v from %v\n", args, fsc.conn.RemoteAddr())
 	inode, ok := fsc.Fids[args.Fid]

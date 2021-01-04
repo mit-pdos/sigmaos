@@ -2,6 +2,7 @@ package fs
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	np "ulambda/ninep"
@@ -35,8 +36,14 @@ func makeInode(t np.Tperm, inum Tinum, data interface{}) *Inode {
 	return &i
 }
 
+func (inode *Inode) String() string {
+	str := fmt.Sprintf("Inode %v t 0x%x data %v {}", inode.Inum, inode.PermT>>np.TYPESHIFT,
+		inode.Data)
+	return str
+}
+
 func (inode *Inode) Qid() np.Tqid {
-	return np.MakeQid(np.Qtype(inode.PermT>>24), np.TQversion(inode.Version), np.Tpath(inode.Inum))
+	return np.MakeQid(np.Qtype(inode.PermT>>np.QTYPESHIFT), np.TQversion(inode.Version), np.Tpath(inode.Inum))
 }
 
 func (inode *Inode) isDir() bool {
@@ -49,6 +56,10 @@ func (inode *Inode) isSymlink() bool {
 
 func (inode *Inode) isDev() bool {
 	return inode.PermT&np.DMDEVICE == np.DMDEVICE
+}
+
+func (inode *Inode) isPipe() bool {
+	return inode.PermT&np.DMNAMEDPIPE == np.DMNAMEDPIPE
 }
 
 func (inode *Inode) lookup(name string) (*Inode, error) {
@@ -70,6 +81,7 @@ func (inode *Inode) create(root *Root, t np.Tperm, name string, data interface{}
 	if inode.isDir() {
 		d := inode.Data.(*Dir)
 		i := makeInode(t, root.allocInum(), data)
+		log.Printf("create %v -> %v\n", name, i)
 		return i, d.create(i, name)
 	} else {
 		return nil, errors.New("Not a directory")
@@ -91,7 +103,12 @@ func (inode *Inode) Write(data []byte) (np.Tsize, error) {
 		d := inode.Data.(Dev)
 		return d.Write(data)
 	} else if inode.isDir() {
-		return 0, errors.New("Not a file")
+		return 0, errors.New("Cannot write directory")
+	} else if inode.isSymlink() {
+		return 0, errors.New("Cannot write symlink")
+	} else if inode.isPipe() {
+		p := inode.Data.(*Pipe)
+		return p.Write(data)
 	} else {
 		inode.Data = data
 		return np.Tsize(len(data)), nil
@@ -104,7 +121,12 @@ func (inode *Inode) Read(n np.Tsize) ([]byte, error) {
 		d := inode.Data.(Dev)
 		return d.Read(n)
 	} else if inode.isDir() {
-		return nil, errors.New("Not a file")
+		return nil, errors.New("Cannot read directory")
+	} else if inode.isSymlink() {
+		return nil, errors.New("Cannot read symlink")
+	} else if inode.isPipe() {
+		p := inode.Data.(*Pipe)
+		return p.Read(n)
 	} else {
 		d := inode.Data.([]byte)
 		return d, nil

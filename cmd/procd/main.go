@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -85,6 +86,10 @@ func (proc *Proc) Write(data []byte) (np.Tsize, error) {
 		if err != nil {
 			return 0, fmt.Errorf("Exec failure %v", err)
 		}
+		go func() {
+			cmd.Wait()
+			log.Printf("command %v exited\n", program)
+		}()
 		return np.Tsize(len(data)), nil
 	} else {
 		return 0, errors.New("Unknown command")
@@ -104,7 +109,7 @@ type Procd struct {
 
 func makeProcd() *Procd {
 	p := &Procd{}
-	p.clnt = fsclnt.MakeFsClient()
+	p.clnt = fsclnt.MakeFsClient("name/procd/init")
 	p.fsd = fsd.MakeFsd()
 	p.srv = fssrv.MakeFsServer(p.fsd, ":0")
 	p.done = make(chan bool)
@@ -116,6 +121,11 @@ func (p *Procd) FsInit() {
 	_, err := fs.MkNod(fs.RootInode(), "makeproc", makeProc(fs))
 	if err != nil {
 		log.Fatal("FsInit mknod error: ", err)
+	}
+	pid := filepath.Base(p.clnt.Proc)
+	_, err = fs.Mkdir(fs.RootInode(), pid)
+	if err != nil {
+		log.Fatal("FsInit mkdir error: ", err)
 	}
 }
 

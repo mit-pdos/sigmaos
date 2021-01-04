@@ -33,7 +33,7 @@ func main() {
 			if err != nil {
 				log.Fatal("Wait error:", err)
 			}
-			log.Printf("Wait: %v\n", string(status))
+			log.Printf("Child's exit status: %v\n", string(status))
 		}
 	}
 	proc.Exit(clnt, "OK")

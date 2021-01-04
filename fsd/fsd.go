@@ -73,13 +73,8 @@ func (fsc *FsConn) Walk(args np.Twalk, reply *np.Rwalk) error {
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	dir, ok := start.Data.(*fs.Dir)
-	if !ok {
-		log.Printf("start %v\n", start)
-		return errors.New("Not a directory")
-	}
-	log.Printf("fsd.Walk %v from %v: dir %v %v\n", args, fsc.conn.RemoteAddr(), start, dir)
-	inodes, _, err := fsc.fs.Walk(dir, args.Path)
+	log.Printf("fsd.Walk %v from %v: dir %v\n", args, fsc.conn.RemoteAddr(), start)
+	inodes, _, err := fsc.fs.Walk(start, args.Path)
 	if err != nil {
 		return err
 	}

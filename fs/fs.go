@@ -56,8 +56,12 @@ func (root *Root) Namei(dir *Dir, path []string,
 	return dir.Namei(path, inodes)
 }
 
-func (root *Root) Walk(dir *Dir, path []string) ([]*Inode, []string, error) {
-	log.Printf("fs.Walk %v at %v\n", path, dir)
+func (root *Root) Walk(inode *Inode, path []string) ([]*Inode, []string, error) {
+	log.Printf("fs.Walk %v at %v\n", path, inode)
+	dir, ok := inode.Data.(*Dir)
+	if !ok {
+		return nil, nil, errors.New("Not a directory")
+	}
 	var inodes []*Inode
 	inodes, rest, err := root.Namei(dir, path, inodes)
 	if err == nil {

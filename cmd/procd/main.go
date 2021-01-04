@@ -1,15 +1,16 @@
 package main
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"errors"
-	//"fmt"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	//"strconv"
-	//"strings"
+	"strconv"
+	"strings"
 
+	"ulambda/fs"
 	"ulambda/fsclnt"
 	"ulambda/fsd"
 	"ulambda/fssrv"
@@ -20,60 +21,78 @@ import (
 // XXX maybe one per machine, all mounting on /proc. implement union mount
 
 type Proc struct {
-	procd *Procd
-	pid   string
-	cmd   *exec.Cmd
+	fs *fs.Root
 }
 
-func makeProc(p *Procd) *Proc {
+func makeProc(fs *fs.Root) *Proc {
 	log.Printf("makeProc: pid %v\n", "")
-	return &Proc{p, "", nil}
+	return &Proc{fs}
 }
 
-func (p *Proc) Write(data []byte) (int, error) {
-	if string(data) == "start" {
-		// program, err := p.procd.getAttr(start, p.pid, "program")
-		// if err != nil {
-		// 	return 0, err
-		// }
-		// b, err := p.procd.getAttr(start, p.pid, "args")
-		// if err != nil {
-		// 	return 0, err
-		// }
-		// var args []string
-		// err = json.Unmarshal(b, &args)
-		// if err != nil {
-		// 	return 0, errors.New("Bad args")
-		// }
-		// log.Printf("args %v\n", args)
-		// b, err = p.procd.getAttr(start, p.pid, "fds")
-		// if err != nil {
-		// 	return 0, err
-		// }
-		// var fids []string
-		// err = json.Unmarshal(b, &fids)
-		// if err != nil {
-		// 	return 0, errors.New("Bad fids")
-		// }
-		// log.Printf("fids %v\n", fids)
+func (proc *Proc) getAttr(path string) ([]byte, error) {
+	p := strings.Split(path, "/")
+	inodes, _, err := proc.fs.Walk(proc.fs.RootInode(), p)
+	if err != nil {
+		return nil, err
+	}
+	i := inodes[len(inodes)-1]
+	b := i.Data.([]byte)
+	return b, nil
+}
 
-		// l := strconv.Itoa(len(args))
-		// a := append([]string{l}, args...)
-		// a = append(a, fids...)
+func (proc *Proc) Write(data []byte) (np.Tsize, error) {
+	instr := strings.Split(string(data), " ")
+	log.Printf("Proc: %v\n", instr)
+	if instr[0] == "Start" {
+		pid := instr[1]
+		programb, err := proc.getAttr(pid + "/program")
+		program := string(programb)
+		log.Printf("program %v\n", program)
+		if err != nil {
+			return 0, err
+		}
+		b, err := proc.getAttr(pid + "/args")
+		if err != nil {
+			return 0, err
+		}
+		var args []string
+		err = json.Unmarshal(b, &args)
+		if err != nil {
+			return 0, errors.New("Bad args")
+		}
+		log.Printf("args %v\n", args)
+		b, err = proc.getAttr(pid + "/fds")
+		if err != nil {
+			return 0, err
+		}
+		var fids []string
+		err = json.Unmarshal(b, &fids)
+		if err != nil {
+			return 0, errors.New("Bad fids")
+		}
+		log.Printf("fids %v\n", fids)
 
-		// log.Printf("command %v %v\n", string(program), a)
+		l := strconv.Itoa(len(args))
+		a := append([]string{l}, args...)
+		a = append(a, fids...)
 
-		// p.cmd = exec.Command("./bin/"+string(program), a...)
-		// p.cmd.Stdout = os.Stdout
-		// p.cmd.Stderr = os.Stderr
-		// err = p.cmd.Start()
-		// if err != nil {
-		// 	return -1, fmt.Errorf("Exec failure %v", err)
-		// }
-		return 0, nil
+		log.Printf("command %v %v\n", program, a)
+
+		cmd := exec.Command("./bin/"+program, a...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Start()
+		if err != nil {
+			return 0, fmt.Errorf("Exec failure %v", err)
+		}
+		return np.Tsize(len(data)), nil
 	} else {
 		return 0, errors.New("Unknown command")
 	}
+}
+
+func (p *Proc) Read(n np.Tsize) ([]byte, error) {
+	return nil, errors.New("Not readable")
 }
 
 type Procd struct {
@@ -94,7 +113,7 @@ func makeProcd() *Procd {
 
 func (p *Procd) FsInit() {
 	fs := p.fsd.Root()
-	_, err := fs.MkNod(fs.RootInode(), "makeproc", makeProc(p))
+	_, err := fs.MkNod(fs.RootInode(), "makeproc", makeProc(fs))
 	if err != nil {
 		log.Fatal("FsInit mknod error: ", err)
 	}

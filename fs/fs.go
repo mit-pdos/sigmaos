@@ -43,21 +43,23 @@ func (root *Root) allocInum() Tinum {
 func (root *Root) freeInum(inum Tinum) {
 }
 
-func (root *Root) Namei(dir *Dir, path []string,
-	inodes []*Inode) ([]*Inode, []string, error) {
-	if len(path) == 0 {
-		i, err := dir.Lookup(".")
-		return append(inodes, i), nil, err
+func (root *Root) Namei(dir *Dir, path []string, inodes []*Inode) ([]*Inode, []string, error) {
+	i, err := dir.Lookup(path[0])
+	if err != nil {
+		return inodes, path, err
 	}
-	if IsCurrentDir(path[0]) {
-		i, err := dir.Lookup(".")
-		return append(inodes, i), path[1:], err
+	inodes = append(inodes, i)
+	if len(path) == 1 {
+		return inodes, nil, err
 	}
-	return dir.Namei(path, inodes)
+	return dir.Namei(path[1:], inodes)
 }
 
 func (root *Root) Walk(inode *Inode, path []string) ([]*Inode, []string, error) {
 	log.Printf("fs.Walk %v at %v\n", path, inode)
+	if len(path) == 0 {
+		return nil, nil, nil
+	}
 	dir, ok := inode.Data.(*Dir)
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
@@ -114,15 +116,7 @@ func (root *Root) Remove(dir *Inode, name string) error {
 		dir := dir.Data.(*Dir)
 		dir.remove(root, name)
 	} else {
-		errors.New("Base is not a directory")
+
 	}
 	return nil
-}
-
-func (root *Root) Write(i *Inode, data []byte) (np.Tsize, error) {
-	return i.Write(data)
-}
-
-func (root *Root) Read(i *Inode, n np.Tsize) ([]byte, error) {
-	return i.Read(n)
 }

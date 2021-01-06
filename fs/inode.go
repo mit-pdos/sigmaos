@@ -17,8 +17,8 @@ const (
 )
 
 type Dev interface {
-	Write([]byte) (np.Tsize, error)
-	Read(np.Tsize) ([]byte, error)
+	Write(np.Toffset, []byte) (np.Tsize, error)
+	Read(np.Toffset, np.Tsize) ([]byte, error)
 }
 
 type Inode struct {
@@ -43,7 +43,10 @@ func (inode *Inode) String() string {
 }
 
 func (inode *Inode) Qid() np.Tqid {
-	return np.MakeQid(np.Qtype(inode.PermT>>np.QTYPESHIFT), np.TQversion(inode.Version), np.Tpath(inode.Inum))
+	return np.MakeQid(
+		np.Qtype(inode.PermT>>np.QTYPESHIFT),
+		np.TQversion(inode.Version),
+		np.Tpath(inode.Inum))
 }
 
 func (inode *Inode) isDir() bool {
@@ -88,6 +91,29 @@ func (inode *Inode) create(root *Root, t np.Tperm, name string, data interface{}
 	}
 }
 
+func (inode *Inode) Mode() np.Tperm {
+	perm := np.Tperm(0777)
+	if inode.isDir() {
+		perm |= np.DMDIR
+	}
+	return perm
+}
+
+func (inode *Inode) Stat() *np.Stat {
+	stat := &np.Stat{}
+	stat.Type = 0 // XXX
+	stat.Qid = inode.Qid()
+	stat.Mode = inode.Mode()
+	stat.Mtime = 0
+	stat.Atime = 0
+	stat.Length = 4096 // XXX
+	stat.Name = ""
+	stat.Uid = "kaashoek"
+	stat.Gid = "kaashoek"
+	stat.Muid = ""
+	return stat
+}
+
 func (inode *Inode) Readlink() (string, error) {
 	if inode.isSymlink() {
 		s := inode.Data.(*Symlink)
@@ -97,11 +123,11 @@ func (inode *Inode) Readlink() (string, error) {
 	}
 }
 
-func (inode *Inode) Write(data []byte) (np.Tsize, error) {
+func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	log.Printf("fs.Writei %v\n", inode)
 	if inode.isDev() {
 		d := inode.Data.(Dev)
-		return d.Write(data)
+		return d.Write(offset, data)
 	} else if inode.isDir() {
 		return 0, errors.New("Cannot write directory")
 	} else if inode.isSymlink() {
@@ -109,25 +135,26 @@ func (inode *Inode) Write(data []byte) (np.Tsize, error) {
 	} else if inode.isPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Write(data)
-	} else {
+	} else { // XXX offset n
 		inode.Data = data
 		return np.Tsize(len(data)), nil
 	}
 }
 
-func (inode *Inode) Read(n np.Tsize) ([]byte, error) {
+func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	log.Printf("fs.Readi %v\n", inode)
 	if inode.isDev() {
 		d := inode.Data.(Dev)
-		return d.Read(n)
+		return d.Read(offset, n)
 	} else if inode.isDir() {
-		return nil, errors.New("Cannot read directory")
+		d := inode.Data.(*Dir)
+		return d.Read(offset, n)
 	} else if inode.isSymlink() {
 		return nil, errors.New("Cannot read symlink")
 	} else if inode.isPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Read(n)
-	} else {
+	} else { // XXX offset n
 		d := inode.Data.([]byte)
 		return d, nil
 	}

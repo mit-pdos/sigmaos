@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	np "ulambda/ninep"
+	"ulambda/npcodec"
 )
 
 type Dir struct {
@@ -57,21 +57,20 @@ func (dir *Dir) Namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 	}
 }
 
-func (dir *Dir) ls(n int) string {
-	names := make([]string, 0, len(dir.entries))
-	for k, _ := range dir.entries {
-		names = append(names, k)
+func (dir *Dir) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+	buf := []byte{}
+	if offset == 0 {
+		for n, i := range dir.entries {
+			st := *i.Stat()
+			st.Name = n
+			b, err := npcodec.Marshal(st)
+			if err != nil {
+				return nil, err
+			}
+			buf = append(buf, b...)
+		}
 	}
-	return strings.Join(names, " ") + "\n"
-}
-
-func (dir *Dir) mount(inode *Inode, name string) error {
-	_, ok := dir.entries[name]
-	if ok {
-		return errors.New("Name exists")
-	}
-	dir.entries[name] = inode
-	return nil
+	return buf, nil
 }
 
 func (dir *Dir) create(inode *Inode, name string) error {

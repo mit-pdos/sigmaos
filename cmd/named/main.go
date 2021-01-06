@@ -2,20 +2,20 @@ package main
 
 import (
 	"ulambda/fsd"
-	"ulambda/fssrv"
+	"ulambda/npsrv"
 )
 
 type Named struct {
 	done chan bool
 	fsd  *fsd.Fsd
-	srv  *fssrv.FsServer
+	srv  *npsrv.NpServer
 }
 
 func makeNamed() *Named {
 	nd := &Named{}
 	nd.done = make(chan bool)
 	nd.fsd = fsd.MakeFsd()
-	nd.srv = fssrv.MakeFsServer(nd.fsd, ":1111")
+	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111")
 	return nd
 }
 

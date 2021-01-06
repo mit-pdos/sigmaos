@@ -22,6 +22,15 @@ func (f *File) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	return np.Tsize(len(data)), nil
 }
 
-func (f *File) Read(np.Toffset, np.Tsize) ([]byte, error) {
-	return f.data, nil
+func (f *File) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+	if offset >= np.Toffset(len(f.data)) {
+		return nil, nil
+	} else {
+		end := offset + np.Toffset(n)
+		if end >= np.Toffset(len(f.data)) {
+			end = np.Toffset(len(f.data))
+		}
+		return f.data[offset:end], nil
+	}
+
 }

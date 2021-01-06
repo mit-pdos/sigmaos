@@ -13,7 +13,7 @@ type Pipe struct {
 	buf  []byte
 }
 
-func makePipe() *Pipe {
+func MakePipe() *Pipe {
 	pipe := &Pipe{}
 	pipe.cond = sync.NewCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, 1024)

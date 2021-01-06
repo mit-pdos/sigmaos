@@ -4,7 +4,7 @@ type Symlink struct {
 	target string
 }
 
-func makeSym(target string) *Symlink {
+func MakeSym(target string) *Symlink {
 	s := Symlink{target}
 	return &s
 }

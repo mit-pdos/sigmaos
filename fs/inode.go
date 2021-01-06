@@ -77,7 +77,7 @@ func (inode *Inode) lookup(name string) (*Inode, error) {
 	}
 }
 
-func (inode *Inode) create(root *Root, t np.Tperm, name string, data interface{}) (*Inode, error) {
+func (inode *Inode) Create(root *Root, t np.Tperm, name string, data interface{}) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
@@ -112,6 +112,32 @@ func (inode *Inode) Stat() *np.Stat {
 	stat.Gid = "kaashoek"
 	stat.Muid = ""
 	return stat
+}
+
+func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
+	log.Printf("Walk %v at %v\n", path, inode)
+	if len(path) == 0 {
+		return nil, nil, nil
+	}
+	dir, ok := inode.Data.(*Dir)
+	if !ok {
+		return nil, nil, errors.New("Not a directory")
+	}
+	var inodes []*Inode
+	inodes, rest, err := dir.Namei(path, inodes)
+	if err == nil {
+		return inodes, rest, err
+		// switch inodes[len(inodes)-1].PermT {
+		// case MountT:
+		// 	// uf := inode.Data.(*fid.Ufid)
+		// 	return nil, rest, err
+		// case SymT:
+		// 	// s := inode.Data.(*Symlink)
+		// 	return nil, rest, err
+		// default:
+	} else {
+		return nil, nil, err
+	}
 }
 
 func (inode *Inode) Readlink() (string, error) {

@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"errors"
 	"log"
 
 	np "ulambda/ninep"
@@ -43,52 +42,9 @@ func (root *Root) allocInum() Tinum {
 func (root *Root) freeInum(inum Tinum) {
 }
 
-func (root *Root) Namei(dir *Dir, path []string, inodes []*Inode) ([]*Inode, []string, error) {
-	i, err := dir.Lookup(path[0])
-	if err != nil {
-		return inodes, path, err
-	}
-	inodes = append(inodes, i)
-	if len(path) == 1 {
-		return inodes, nil, err
-	}
-	return dir.Namei(path[1:], inodes)
-}
-
-func (root *Root) Walk(inode *Inode, path []string) ([]*Inode, []string, error) {
-	log.Printf("fs.Walk %v at %v\n", path, inode)
-	if len(path) == 0 {
-		return nil, nil, nil
-	}
-	dir, ok := inode.Data.(*Dir)
-	if !ok {
-		return nil, nil, errors.New("Not a directory")
-	}
-	var inodes []*Inode
-	inodes, rest, err := root.Namei(dir, path, inodes)
-	if err == nil {
-		return inodes, rest, err
-		// switch inodes[len(inodes)-1].PermT {
-		// case MountT:
-		// 	// uf := inode.Data.(*fid.Ufid)
-		// 	return nil, rest, err
-		// case SymT:
-		// 	// s := inode.Data.(*Symlink)
-		// 	return nil, rest, err
-		// default:
-	} else {
-		return nil, nil, err
-	}
-}
-
-func (root *Root) Create(inode *Inode, name string, perm np.Tperm) (*Inode, error) {
-	log.Printf("fs.Create %v %v\n", inode, name)
-	return inode.create(root, perm, name, []byte{})
-}
-
 func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
 	log.Printf("fs.Mkdir %v %v\n", inode, name)
-	inode, err := inode.create(root, np.DMDIR, name, makeDir())
+	inode, err := inode.Create(root, np.DMDIR, name, makeDir())
 	if err != nil {
 		return nil, err
 	}
@@ -97,16 +53,8 @@ func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
 	return inode, nil
 }
 
-func (root *Root) Mkpipe(inode *Inode, name string) (*Inode, error) {
-	return inode.create(root, np.DMNAMEDPIPE, name, makePipe())
-}
-
-func (root *Root) Symlink(inode *Inode, name string, target string) (*Inode, error) {
-	return inode.create(root, np.DMSYMLINK, name, makeSym(target))
-}
-
 func (root *Root) MkNod(inode *Inode, name string, i interface{}) (*Inode, error) {
-	return inode.create(root, np.DMDEVICE, name, i)
+	return inode.Create(root, np.DMDEVICE, name, i)
 }
 
 // If directory recursively remove XXX maybe not

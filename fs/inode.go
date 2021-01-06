@@ -65,18 +65,6 @@ func (inode *Inode) isPipe() bool {
 	return inode.PermT&np.DMNAMEDPIPE == np.DMNAMEDPIPE
 }
 
-func (inode *Inode) lookup(name string) (*Inode, error) {
-	if IsCurrentDir(name) {
-		return inode, nil
-	}
-	if inode.isDir() {
-		d := inode.Data.(*Dir)
-		return d.Lookup(name)
-	} else {
-		return nil, errors.New("Not a directory")
-	}
-}
-
 func (inode *Inode) Create(root *Root, t np.Tperm, name string, data interface{}) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")

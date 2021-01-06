@@ -9,6 +9,12 @@ import (
 	"ulambda/npcodec"
 )
 
+// Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
+// "." too
+func IsCurrentDir(name string) bool {
+	return name == "." || name == "/" || name == ""
+}
+
 type Dir struct {
 	entries map[string]*Inode
 }

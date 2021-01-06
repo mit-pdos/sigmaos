@@ -6,12 +6,6 @@ import (
 	np "ulambda/ninep"
 )
 
-// Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
-// "." too
-func IsCurrentDir(name string) bool {
-	return name == "." || name == "/" || name == ""
-}
-
 // XXX need mutex
 type Root struct {
 	inode    *Inode

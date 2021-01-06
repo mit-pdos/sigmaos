@@ -17,10 +17,12 @@ func IsCurrentDir(name string) bool {
 
 type Dir struct {
 	entries map[string]*Inode
+	entrysz uint32
 }
 
 func makeDir() *Dir {
 	d := &Dir{}
+	d.entrysz = npcodec.SizeNp(np.Stat{})
 	d.entries = make(map[string]*Inode)
 
 	return d
@@ -28,6 +30,18 @@ func makeDir() *Dir {
 
 func (dir *Dir) init(inum Tinum) {
 	dir.entries["."] = makeInode(np.DMDIR, inum, dir)
+}
+
+func (dir *Dir) Len() np.Tlength {
+	sz := uint32(0)
+	for n, i := range dir.entries {
+		if n != "." {
+			st := *i.Stat()
+			st.Name = n
+			sz += npcodec.SizeNp(st)
+		}
+	}
+	return np.Tlength(sz)
 }
 
 func (dir *Dir) Lookup(name string) (*Inode, error) {

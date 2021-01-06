@@ -16,6 +16,7 @@ type Tfid uint32
 type Tiounit uint32
 type Tperm uint32
 type Toffset uint64
+type Tlength uint64
 type Tgid uint32
 
 // NoTag is the tag for Tversion and Rversion requests.
@@ -339,16 +340,16 @@ type Tstat struct {
 
 type Stat struct {
 	Type   uint16
-	Dhev   uint32
+	Dev    uint32
 	Qid    Tqid
 	Mode   Tperm
-	Atime  uint32 // last access time in seconds
-	Mtime  uint32 // last modified time in seconds
-	Length uint64 // file length in bytes
-	Name   string // file name
-	Uid    string // owner name
-	Gid    string // group name
-	Muid   string // name of the last user that modified the file
+	Atime  uint32  // last access time in seconds
+	Mtime  uint32  // last modified time in seconds
+	Length Tlength // file length in bytes
+	Name   string  // file name
+	Uid    string  // owner name
+	Gid    string  // group name
+	Muid   string  // name of the last user that modified the file
 
 }
 

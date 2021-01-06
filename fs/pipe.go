@@ -20,6 +20,10 @@ func MakePipe() *Pipe {
 	return pipe
 }
 
+func (p *Pipe) Len() np.Tlength {
+	return np.Tlength(len(p.buf))
+}
+
 // XXX if full block writer
 func (pipe *Pipe) Write(d []byte) (np.Tsize, error) {
 	pipe.mu.Lock()

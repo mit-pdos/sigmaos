@@ -16,6 +16,10 @@ const (
 	RootInum Tinum = 1
 )
 
+type DataLen interface {
+	Len() np.Tlength
+}
+
 type Dev interface {
 	Write(np.Toffset, []byte) (np.Tsize, error)
 	Read(np.Toffset, np.Tsize) ([]byte, error)
@@ -25,10 +29,10 @@ type Inode struct {
 	PermT   np.Tperm
 	Inum    Tinum
 	Version Tversion
-	Data    interface{}
+	Data    DataLen
 }
 
-func makeInode(t np.Tperm, inum Tinum, data interface{}) *Inode {
+func makeInode(t np.Tperm, inum Tinum, data DataLen) *Inode {
 	i := Inode{}
 	i.PermT = t
 	i.Inum = inum
@@ -65,7 +69,7 @@ func (inode *Inode) isPipe() bool {
 	return inode.PermT&np.DMNAMEDPIPE == np.DMNAMEDPIPE
 }
 
-func (inode *Inode) Create(root *Root, t np.Tperm, name string, data interface{}) (*Inode, error) {
+func (inode *Inode) Create(root *Root, t np.Tperm, name string, data DataLen) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
@@ -94,7 +98,7 @@ func (inode *Inode) Stat() *np.Stat {
 	stat.Mode = inode.Mode()
 	stat.Mtime = 0
 	stat.Atime = 0
-	stat.Length = 4096 // XXX
+	stat.Length = inode.Data.Len()
 	stat.Name = ""
 	stat.Uid = "kaashoek"
 	stat.Gid = "kaashoek"
@@ -149,9 +153,9 @@ func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	} else if inode.isPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Write(data)
-	} else { // XXX offset n
-		inode.Data = data
-		return np.Tsize(len(data)), nil
+	} else {
+		f := inode.Data.(*File)
+		return f.Write(offset, data)
 	}
 }
 
@@ -169,7 +173,7 @@ func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 		p := inode.Data.(*Pipe)
 		return p.Read(n)
 	} else { // XXX offset n
-		d := inode.Data.([]byte)
-		return d, nil
+		f := inode.Data.(*File)
+		return f.Read(offset, n)
 	}
 }

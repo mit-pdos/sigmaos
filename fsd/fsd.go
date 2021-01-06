@@ -90,7 +90,7 @@ func (fsc *FsConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	log.Printf("fsd.Create %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), start)
-	inode, err := start.Create(fsc.fs, args.Perm, args.Name, []byte{})
+	inode, err := start.Create(fsc.fs, args.Perm, args.Name, fs.MakeFile())
 	if err != nil {
 		return np.ErrCreatenondir
 	}

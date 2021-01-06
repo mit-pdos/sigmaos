@@ -36,8 +36,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case uint8, uint16, uint32, uint64, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset,
-			*uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset:
+		case uint8, uint16, uint32, uint64, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength,
+			*uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -120,7 +120,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			sz := uint16(size9p(elements...)) // Stat sz
+			sz := uint16(SizeNp(elements...)) // Stat sz
 			if err := e.encode(sz); err != nil {
 				return err
 			}
@@ -162,7 +162,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 			switch v.(type) {
 			case np.Rstat, *np.Rstat:
 				// Prepend stat[n].
-				sz := uint16(size9p(elements...))
+				sz := uint16(SizeNp(elements...))
 				if err := e.encode(sz); err != nil {
 					return err
 				}
@@ -186,7 +186,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset:
+		case *uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -309,11 +309,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 	return nil
 }
 
-// size9p calculates the projected size of the values in vs when encoded into
+// SizeNp calculates the projected size of the values in vs when encoded into
 // 9p binary protocol. If an element or elements are not valid for 9p encoded,
 // the value 0 will be used for the size. The error will be detected when
 // encoding.
-func size9p(vs ...interface{}) uint32 {
+func SizeNp(vs ...interface{}) uint32 {
 	var s uint32
 	for _, v := range vs {
 		if v == nil {
@@ -321,62 +321,62 @@ func size9p(vs ...interface{}) uint32 {
 		}
 
 		switch v := v.(type) {
-		case uint8, uint16, uint32, uint64, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset,
-			*uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset:
+		case uint8, uint16, uint32, uint64, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength,
+			*uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength:
 			s += uint32(binary.Size(v))
 		case []byte:
 			s += uint32(binary.Size(uint32(0)) + len(v))
 		case *[]byte:
-			s += size9p(uint32(0), *v)
+			s += SizeNp(uint32(0), *v)
 		case string:
 			s += uint32(binary.Size(uint16(0)) + len(v))
 		case *string:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case []string:
-			s += size9p(uint16(0))
+			s += SizeNp(uint16(0))
 
 			for _, sv := range v {
-				s += size9p(sv)
+				s += SizeNp(sv)
 			}
 		case *[]string:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case np.Tqid:
-			s += size9p(v.Type, v.Version, v.Path)
+			s += SizeNp(v.Type, v.Version, v.Path)
 		case *np.Tqid:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case []np.Tqid:
-			s += size9p(uint16(0))
+			s += SizeNp(uint16(0))
 			elements := make([]interface{}, len(v))
 			for i := range elements {
 				elements[i] = &v[i]
 			}
-			s += size9p(elements...)
+			s += SizeNp(elements...)
 		case *[]np.Tqid:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case np.Stat:
 			elements, err := fields9p(v)
 			if err != nil {
 				log.Fatal("Stat ", err)
 			}
-			s += size9p(elements...) + size9p(uint16(0))
+			s += SizeNp(elements...) + SizeNp(uint16(0))
 		case *np.Stat:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case []np.Stat:
 			elements := make([]interface{}, len(v))
 			for i := range elements {
 				elements[i] = &v[i]
 			}
-			s += size9p(elements...)
+			s += SizeNp(elements...)
 		case *[]np.Stat:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case np.Fcall:
-			s += size9p(v.Type, v.Tag, v.Msg)
+			s += SizeNp(v.Type, v.Tag, v.Msg)
 		case *np.Fcall:
-			s += size9p(*v)
+			s += SizeNp(*v)
 		case np.Tmsg:
 			switch v.(type) {
 			case *np.Rstat, np.Rstat:
-				s += size9p(uint16(0)) // Stat sz
+				s += SizeNp(uint16(0)) // Stat sz
 			}
 
 			// walk the fields of the message to get the total size. we just
@@ -387,7 +387,7 @@ func size9p(vs ...interface{}) uint32 {
 				log.Fatal("Tmsg ", err)
 			}
 
-			s += size9p(elements...)
+			s += SizeNp(elements...)
 		default:
 			log.Fatal("Unknown type")
 		}

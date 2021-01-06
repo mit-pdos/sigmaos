@@ -47,7 +47,7 @@ func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
 	return inode, nil
 }
 
-func (root *Root) MkNod(inode *Inode, name string, i interface{}) (*Inode, error) {
+func (root *Root) MkNod(inode *Inode, name string, i DataLen) (*Inode, error) {
 	return inode.Create(root, np.DMDEVICE, name, i)
 }
 

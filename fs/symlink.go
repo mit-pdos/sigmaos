@@ -1,5 +1,9 @@
 package fs
 
+import (
+	np "ulambda/ninep"
+)
+
 type Symlink struct {
 	target string
 }
@@ -7,4 +11,8 @@ type Symlink struct {
 func MakeSym(target string) *Symlink {
 	s := Symlink{target}
 	return &s
+}
+
+func (s *Symlink) Len() np.Tlength {
+	return np.Tlength(len(s.target))
 }

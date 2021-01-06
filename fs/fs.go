@@ -36,19 +36,13 @@ func (root *Root) allocInum() Tinum {
 func (root *Root) freeInum(inum Tinum) {
 }
 
-func (root *Root) Mkdir(inode *Inode, name string) (*Inode, error) {
-	log.Printf("fs.Mkdir %v %v\n", inode, name)
-	inode, err := inode.Create(root, np.DMDIR, name, makeDir())
+func (root *Root) MkNod(inode *Inode, name string, d DataLen) (*Inode, error) {
+	inode, err := inode.Create(root, np.DMDEVICE, name)
 	if err != nil {
 		return nil, err
 	}
-	dir := inode.Data.(*Dir)
-	dir.init(inode.Inum)
+	inode.Data = d
 	return inode, nil
-}
-
-func (root *Root) MkNod(inode *Inode, name string, i DataLen) (*Inode, error) {
-	return inode.Create(root, np.DMDEVICE, name, i)
 }
 
 // If directory recursively remove XXX maybe not

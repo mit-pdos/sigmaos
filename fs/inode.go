@@ -23,6 +23,7 @@ type DataLen interface {
 type Dev interface {
 	Write(np.Toffset, []byte) (np.Tsize, error)
 	Read(np.Toffset, np.Tsize) ([]byte, error)
+	Len() np.Tlength
 }
 
 type Inode struct {
@@ -54,28 +55,51 @@ func (inode *Inode) Qid() np.Tqid {
 }
 
 func (inode *Inode) isDir() bool {
-	return inode.PermT&np.DMDIR == np.DMDIR
+	return np.IsDir(inode.PermT)
 }
 
 func (inode *Inode) isSymlink() bool {
-	return inode.PermT&np.DMSYMLINK == np.DMSYMLINK
+	return np.IsSymlink(inode.PermT)
 }
 
 func (inode *Inode) isDev() bool {
-	return inode.PermT&np.DMDEVICE == np.DMDEVICE
+	return np.IsDevice(inode.PermT)
 }
 
 func (inode *Inode) isPipe() bool {
-	return inode.PermT&np.DMNAMEDPIPE == np.DMNAMEDPIPE
+	return np.IsPipe(inode.PermT)
 }
 
-func (inode *Inode) Create(root *Root, t np.Tperm, name string, data DataLen) (*Inode, error) {
+// XXX device
+func permToDataLen(t np.Tperm) (DataLen, error) {
+	if np.IsDir(t) {
+		return makeDir(), nil
+	} else if np.IsSymlink(t) {
+		return MakeSym(), nil
+	} else if np.IsPipe(t) {
+		return MakePipe(), nil
+	} else if np.IsFile(t) {
+		return MakeFile(), nil
+	} else {
+		return nil, errors.New("Unknown type")
+	}
+}
+
+func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) {
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
 	if inode.isDir() {
 		d := inode.Data.(*Dir)
-		i := makeInode(t, root.allocInum(), data)
+		dl, err := permToDataLen(t)
+		if err != nil {
+			return nil, err
+		}
+		i := makeInode(t, root.allocInum(), dl)
+		if i.IsDir() {
+			dir := inode.Data.(*Dir)
+			dir.init(i.Inum)
+		}
 		log.Printf("create %v -> %v\n", name, i)
 		return i, d.create(i, name)
 	} else {

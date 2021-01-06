@@ -90,7 +90,7 @@ func (fsc *FsConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	log.Printf("fsd.Create %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), start)
-	inode, err := start.Create(fsc.fs, args.Perm, args.Name, fs.MakeFile())
+	inode, err := start.Create(fsc.fs, args.Perm, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}
@@ -120,7 +120,7 @@ func (fsc *FsConn) Symlink(args np.Tsymlink, rets *np.Rsymlink) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	inode, err := start.Create(fsc.fs, np.DMSYMLINK, args.Name, fs.MakeSym(args.Symtgt))
+	inode, err := start.Create(fsc.fs, np.DMSYMLINK, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}
@@ -133,7 +133,7 @@ func (fsc *FsConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	inode, err := start.Create(fsc.fs, np.DMNAMEDPIPE, args.Name, fs.MakePipe())
+	inode, err := start.Create(fsc.fs, np.DMNAMEDPIPE, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}

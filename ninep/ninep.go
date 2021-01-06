@@ -120,6 +120,12 @@ const (
 	TYPESHIFT  = 16
 )
 
+func IsDir(t Tperm) bool     { return t&DMDIR == DMDIR }
+func IsSymlink(t Tperm) bool { return t&DMSYMLINK == DMSYMLINK }
+func IsDevice(t Tperm) bool  { return t&DMDEVICE == DMDEVICE }
+func IsPipe(t Tperm) bool    { return t&DMNAMEDPIPE == DMNAMEDPIPE }
+func IsFile(t Tperm) bool    { return (t >> TYPESHIFT) == 0 }
+
 type Tfcall uint8
 
 const (
@@ -370,6 +376,39 @@ type Twstat struct {
 type Rwstat struct {
 }
 
+func (Tversion) Type() Tfcall { return TTversion }
+func (Rversion) Type() Tfcall { return TRversion }
+func (Tauth) Type() Tfcall    { return TTauth }
+func (Rauth) Type() Tfcall    { return TRauth }
+func (Tflush) Type() Tfcall   { return TTflush }
+func (Rflush) Type() Tfcall   { return TRflush }
+func (Tattach) Type() Tfcall  { return TTattach }
+func (Rattach) Type() Tfcall  { return TRattach }
+func (Rerror) Type() Tfcall   { return TRerror }
+func (Twalk) Type() Tfcall    { return TTwalk }
+func (Rwalk) Type() Tfcall    { return TRwalk }
+func (Topen) Type() Tfcall    { return TTopen }
+func (Ropen) Type() Tfcall    { return TRopen }
+func (Tcreate) Type() Tfcall  { return TTcreate }
+func (Rcreate) Type() Tfcall  { return TRcreate }
+func (Tread) Type() Tfcall    { return TTread }
+func (Rread) Type() Tfcall    { return TRread }
+func (Twrite) Type() Tfcall   { return TTwrite }
+func (Rwrite) Type() Tfcall   { return TRwrite }
+func (Tclunk) Type() Tfcall   { return TTclunk }
+func (Rclunk) Type() Tfcall   { return TRclunk }
+func (Tremove) Type() Tfcall  { return TTremove }
+func (Rremove) Type() Tfcall  { return TRremove }
+func (Tstat) Type() Tfcall    { return TTstat }
+func (Rstat) Type() Tfcall    { return TRstat }
+
+//func (Twstat) Type() Tfcall { return TTwstat }
+//func (Rwstat) Type() Tfcall { return TRwstat }
+
+//
+// Extensions or new transactions
+//
+
 type Dirent struct {
 	Qid    Tqid
 	Offset Toffset
@@ -417,39 +456,6 @@ type Treadlink struct {
 type Rreadlink struct {
 	Target string
 }
-
-func (Tversion) Type() Tfcall { return TTversion }
-func (Rversion) Type() Tfcall { return TRversion }
-func (Tauth) Type() Tfcall    { return TTauth }
-func (Rauth) Type() Tfcall    { return TRauth }
-func (Tflush) Type() Tfcall   { return TTflush }
-func (Rflush) Type() Tfcall   { return TRflush }
-func (Tattach) Type() Tfcall  { return TTattach }
-func (Rattach) Type() Tfcall  { return TRattach }
-func (Rerror) Type() Tfcall   { return TRerror }
-func (Twalk) Type() Tfcall    { return TTwalk }
-func (Rwalk) Type() Tfcall    { return TRwalk }
-func (Topen) Type() Tfcall    { return TTopen }
-func (Ropen) Type() Tfcall    { return TRopen }
-func (Tcreate) Type() Tfcall  { return TTcreate }
-func (Rcreate) Type() Tfcall  { return TRcreate }
-func (Tread) Type() Tfcall    { return TTread }
-func (Rread) Type() Tfcall    { return TRread }
-func (Twrite) Type() Tfcall   { return TTwrite }
-func (Rwrite) Type() Tfcall   { return TRwrite }
-func (Tclunk) Type() Tfcall   { return TTclunk }
-func (Rclunk) Type() Tfcall   { return TRclunk }
-func (Tremove) Type() Tfcall  { return TTremove }
-func (Rremove) Type() Tfcall  { return TRremove }
-func (Tstat) Type() Tfcall    { return TTstat }
-func (Rstat) Type() Tfcall    { return TRstat }
-
-//func (Twstat) Type() Tfcall { return TTwstat }
-//func (Rwstat) Type() Tfcall { return TRwstat }
-
-//
-// New transactions
-//
 
 type Tmkpipe struct {
 	Tag  Ttag

@@ -8,8 +8,8 @@ type Symlink struct {
 	target string
 }
 
-func MakeSym(target string) *Symlink {
-	s := Symlink{target}
+func MakeSym() *Symlink {
+	s := Symlink{}
 	return &s
 }
 

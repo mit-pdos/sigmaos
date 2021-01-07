@@ -44,7 +44,7 @@ func Spawn(clnt *fsclnt.FsClient, program string, args []string, fids []string) 
 	pid := randPid(clnt)
 	pname := "name/procd/" + pid
 
-	fd, err := clnt.Mkdir(pname, np.ORDWR)
+	fd, err := clnt.Mkdir(pname, 0777, np.ORDWR)
 	if err != nil {
 		return "", err
 	}
@@ -77,12 +77,12 @@ func Spawn(clnt *fsclnt.FsClient, program string, args []string, fids []string) 
 		//clnt.RmDir(pname)
 		return "", err
 	}
-	err = clnt.Pipe(clnt.Proc+"/"+"exit"+pid, np.ORDWR)
+	err = clnt.Pipe(clnt.Proc+"/"+"exit"+pid, 0777)
 	if err != nil {
 		//clnt.RmDir(pname)
 		return "", err
 	}
-	err = clnt.SymlinkAt(fd, clnt.Proc, "parent")
+	err = clnt.SymlinkAt(fd, clnt.Proc, "parent", 0777)
 	if err != nil {
 		//clnt.RmDir(clnt.Proc + "/" + "exit" + pid)
 		//clnt.RmDir(pname)

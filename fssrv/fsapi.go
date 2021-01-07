@@ -11,8 +11,6 @@ type FsConn interface {
 	Attach(np.Tattach, *np.Rattach) error
 	Walk(np.Twalk, *np.Rwalk) error
 	Create(np.Tcreate, *np.Rcreate) error
-	Symlink(np.Tsymlink, *np.Rsymlink) error
-	Readlink(np.Treadlink, *np.Rreadlink) error
 	Open(np.Topen, *np.Ropen) error
 	Clunk(np.Tclunk, *np.Rclunk) error
 	Read(np.Tread, *np.Rread) error

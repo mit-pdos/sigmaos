@@ -11,34 +11,38 @@ import (
 	"strconv"
 	"strings"
 
-	"ulambda/fs"
 	"ulambda/fsclnt"
-	"ulambda/fsd"
-	"ulambda/fssrv"
+	"ulambda/memfs"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/npsrv"
 	"ulambda/proc"
 )
 
 // XXX maybe one per machine, all mounting on /proc. implement union mount
 
 type Proc struct {
-	fs *fs.Root
+	fs *memfs.Root
 }
 
-func makeProc(fs *fs.Root) *Proc {
+func (proc *Proc) Len() np.Tlength {
+	return 0
+}
+
+func makeProc(fs *memfs.Root) *Proc {
 	log.Printf("makeProc: pid %v\n", "")
 	return &Proc{fs}
 }
 
 func (proc *Proc) getAttr(path string) ([]byte, error) {
 	p := strings.Split(path, "/")
-	inodes, _, err := proc.fs.Walk(proc.fs.RootInode(), p)
+	root := proc.fs.RootInode()
+	inodes, _, err := root.Walk(p)
 	if err != nil {
 		return nil, err
 	}
 	i := inodes[len(inodes)-1]
-	b := i.Data.([]byte)
-	return b, nil
+	return i.Read(0, 1024)
 }
 
 func (proc *Proc) Write(data []byte) (np.Tsize, error) {
@@ -102,28 +106,29 @@ func (p *Proc) Read(n np.Tsize) ([]byte, error) {
 
 type Procd struct {
 	clnt *fsclnt.FsClient
-	srv  *fssrv.FsServer
-	fsd  *fsd.Fsd
+	srv  *npsrv.NpServer
+	fsd  *memfsd.Fsd
 	done chan bool
 }
 
 func makeProcd() *Procd {
 	p := &Procd{}
 	p.clnt = fsclnt.MakeFsClient("name/procd/init")
-	p.fsd = fsd.MakeFsd()
-	p.srv = fssrv.MakeFsServer(p.fsd, ":0")
+	p.fsd = memfsd.MakeFsd()
+	p.srv = npsrv.MakeNpServer(p.fsd, ":0")
 	p.done = make(chan bool)
 	return p
 }
 
 func (p *Procd) FsInit() {
 	fs := p.fsd.Root()
-	_, err := fs.MkNod(fs.RootInode(), "makeproc", makeProc(fs))
+	rooti := fs.RootInode()
+	_, err := fs.MkNod(rooti, "makeproc", makeProc(fs))
 	if err != nil {
 		log.Fatal("FsInit mknod error: ", err)
 	}
 	pid := filepath.Base(p.clnt.Proc)
-	_, err = fs.Mkdir(fs.RootInode(), pid)
+	_, err = rooti.Create(fs, np.DMDIR|0777, pid)
 	if err != nil {
 		log.Fatal("FsInit mkdir error: ", err)
 	}
@@ -154,7 +159,7 @@ func main() {
 			log.Fatal("Mount error: ", err)
 		}
 		name := proc.srv.MyAddr()
-		err = proc.clnt.Symlink(name+":pubkey:proc", "name/procd")
+		err = proc.clnt.Symlink(name+":pubkey:proc", "name/procd", 0700)
 		if err != nil {
 			log.Fatal("Symlink error: ", err)
 		}

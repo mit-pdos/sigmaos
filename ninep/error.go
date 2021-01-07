@@ -30,3 +30,16 @@ var (
 	ErrWalkLimit     = &Rerror{"too many wnames in walk"}
 	ErrClosed        = &Rerror{"closed"}
 )
+
+// func toError(err error) *Error {
+// 	var ecode uint32
+
+// 	ename := err.Error()
+// 	if e, ok := err.(syscall.Errno); ok {
+// 		ecode = uint32(e)
+// 	} else {
+// 		ecode = EIO
+// 	}
+
+// 	return &Error{ename, ecode}
+// }

@@ -9,14 +9,23 @@ import (
 	"ulambda/npsrv"
 )
 
+type Fid struct {
+	path []string
+	ino  *fs.Inode
+}
+
+func makeFid(p []string, i *fs.Inode) *Fid {
+	return &Fid{p, i}
+}
+
 type FsConn struct {
 	fs   *fs.Root
 	conn net.Conn
-	Fids map[np.Tfid]*fs.Inode
+	Fids map[np.Tfid]*Fid
 }
 
 func makeFsConn(root *fs.Root, conn net.Conn) *FsConn {
-	clnt := &FsConn{root, conn, make(map[np.Tfid]*fs.Inode)}
+	clnt := &FsConn{root, conn, make(map[np.Tfid]*Fid)}
 	return clnt
 }
 
@@ -51,8 +60,8 @@ func (fsc *FsConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 
 func (fsc *FsConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root := fsc.fs.RootInode()
-	fsc.Fids[args.Fid] = root
-	rets.Qid = np.MakeQid(np.QTDIR, np.TQversion(root.Version), np.Tpath(root.Inum))
+	fsc.Fids[args.Fid] = makeFid([]string{}, root)
+	rets.Qid = root.Qid()
 	return nil
 }
 
@@ -66,99 +75,46 @@ func makeQids(inodes []*fs.Inode) []np.Tqid {
 }
 
 func (fsc *FsConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	start, ok := fsc.Fids[args.Fid]
+	fid, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	log.Printf("fsd.Walk %v from %v: dir %v\n", args, fsc.conn.RemoteAddr(), start)
-	inodes, _, err := start.Walk(args.Wnames)
+	log.Printf("fsd.Walk %v from %v: dir %v\n", args, fsc.conn.RemoteAddr(), fid)
+	inodes, rest, err := fid.ino.Walk(args.Wnames)
 	if err != nil {
 		return np.ErrNotfound
 	}
 	if len(inodes) == 0 { // clone args.Fid
-		fsc.Fids[args.NewFid] = start
+		fsc.Fids[args.NewFid] = makeFid(fid.path, fid.ino)
 	} else {
+		n := len(args.Wnames) - len(rest)
+		p := append(fid.path, args.Wnames[:n]...)
 		rets.Qids = makeQids(inodes)
-		fsc.Fids[args.NewFid] = inodes[len(inodes)-1]
+		fsc.Fids[args.NewFid] = makeFid(p, inodes[len(inodes)-1])
 	}
-	return nil
-}
-
-func (fsc *FsConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	start, ok := fsc.Fids[args.Fid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	log.Printf("fsd.Create %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), start)
-	inode, err := start.Create(fsc.fs, args.Perm, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	fsc.Fids[args.Fid] = inode
-	rets.Qid = inode.Qid()
-	return nil
-}
-
-func (fsc *FsConn) Mkdir(args np.Tmkdir, rets *np.Rmkdir) *np.Rerror {
-	start, ok := fsc.Fids[args.Dfid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	log.Printf("fsd.Mkdir %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), start)
-	inode, err := fsc.fs.Mkdir(start, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	fsc.Fids[args.Dfid] = inode
-	rets.Qid = inode.Qid()
-	return nil
-}
-
-func (fsc *FsConn) Symlink(args np.Tsymlink, rets *np.Rsymlink) *np.Rerror {
-	log.Printf("fsd.Symlink %v from %v\n", args, fsc.conn.RemoteAddr())
-	start, ok := fsc.Fids[args.Fid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	inode, err := start.Create(fsc.fs, np.DMSYMLINK, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	rets.Qid = inode.Qid()
-	return nil
-}
-
-func (fsc *FsConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
-	start, ok := fsc.Fids[args.Dfid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	inode, err := start.Create(fsc.fs, np.DMNAMEDPIPE, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	rets.Qid = inode.Qid()
-	return nil
-}
-
-func (fsc *FsConn) Readlink(args np.Treadlink, rets *np.Rreadlink) *np.Rerror {
-	inode, ok := fsc.Fids[args.Fid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	target, err := inode.Readlink()
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	rets.Target = target
 	return nil
 }
 
 func (fsc *FsConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	inode, ok := fsc.Fids[args.Fid]
+	fid, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return np.ErrUnknownfid
 	}
+	rets.Qid = fid.ino.Qid()
+	return nil
+}
+
+func (fsc *FsConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+	fid, ok := fsc.Fids[args.Fid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	log.Printf("fsd.Create %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), fid)
+	inode, err := fid.ino.Create(fsc.fs, args.Perm, args.Name)
+	if err != nil {
+		return np.ErrCreatenondir
+	}
+	fsc.Fids[args.Fid] = makeFid(append(fid.path, args.Name), inode)
 	rets.Qid = inode.Qid()
 	return nil
 }
@@ -177,11 +133,11 @@ func (fsc *FsConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 }
 
 func (fsc *FsConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	inode, ok := fsc.Fids[args.Fid]
+	fid, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	data, err := inode.Read(args.Offset, args.Count)
+	data, err := fid.ino.Read(args.Offset, args.Count)
 	if err != nil {
 		return np.ErrBadcount
 	}
@@ -190,11 +146,11 @@ func (fsc *FsConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (fsc *FsConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	inode, ok := fsc.Fids[args.Fid]
+	fid, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	n, err := inode.Write(args.Offset, args.Data)
+	n, err := fid.ino.Write(args.Offset, args.Data)
 	if err != nil {
 		return np.ErrBadcount
 	}
@@ -202,11 +158,83 @@ func (fsc *FsConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (fsc *FsConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
-	inode, ok := fsc.Fids[args.Fid]
+func (fsc *FsConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
+	fid, ok := fsc.Fids[args.Fid]
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	rets.Stat = *inode.Stat()
+	err := fid.ino.Remove(fsc.fs, fid.path)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	delete(fsc.Fids, args.Fid)
+	return nil
+}
+
+func (fsc *FsConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
+	fid, ok := fsc.Fids[args.Fid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	rets.Stat = *fid.ino.Stat()
+	return nil
+}
+
+//
+// XXX not supported by Linux when using 9P2000
+//
+
+func (fsc *FsConn) Mkdir(args np.Tmkdir, rets *np.Rmkdir) *np.Rerror {
+	fid, ok := fsc.Fids[args.Dfid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	log.Printf("fsd.Mkdir %v from %v dir %v\n", args, fsc.conn.RemoteAddr(), fid)
+	inode, err := fid.ino.Create(fsc.fs, np.DMDIR, args.Name)
+	if err != nil {
+		return np.ErrCreatenondir
+	}
+	fsc.Fids[args.Dfid] = makeFid(append(fid.path, args.Name), inode)
+	rets.Qid = inode.Qid()
+	return nil
+}
+
+func (fsc *FsConn) Symlink(args np.Tsymlink, rets *np.Rsymlink) *np.Rerror {
+	log.Printf("fsd.Symlink %v from %v\n", args, fsc.conn.RemoteAddr())
+	fid, ok := fsc.Fids[args.Fid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	inode, err := fid.ino.Create(fsc.fs, np.DMSYMLINK, args.Name)
+	if err != nil {
+		return np.ErrCreatenondir
+	}
+	rets.Qid = inode.Qid()
+	return nil
+}
+
+func (fsc *FsConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
+	fid, ok := fsc.Fids[args.Dfid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	inode, err := fid.ino.Create(fsc.fs, np.DMNAMEDPIPE, args.Name)
+	if err != nil {
+		return np.ErrCreatenondir
+	}
+	rets.Qid = inode.Qid()
+	return nil
+}
+
+func (fsc *FsConn) Readlink(args np.Treadlink, rets *np.Rreadlink) *np.Rerror {
+	fid, ok := fsc.Fids[args.Fid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	target, err := fid.ino.Readlink()
+	if err != nil {
+		return np.ErrCreatenondir
+	}
+	rets.Target = target
 	return nil
 }

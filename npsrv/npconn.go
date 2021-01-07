@@ -73,14 +73,14 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rclunk{}
 		err := c.fsc.Clunk(req, reply)
 		return *reply, err
+	case np.Tremove:
+		reply := &np.Rremove{}
+		err := c.fsc.Remove(req, reply)
+		return *reply, err
 	case np.Tstat:
 		reply := &np.Rstat{}
 		err := c.fsc.Stat(req, reply)
 		return *reply, err
-	// case np.Tremove:
-	// 	reply := &np.Rremove{}
-	// 	err := c.fsc.Remove(req, reply)
-	// 	return *reply, err
 	// case np.Twstat:
 	// 	reply := &np.Rwstat{}
 	// 	err := c.fsc.Wstat(req, reply)

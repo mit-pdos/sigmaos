@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"log"
-
 	np "ulambda/ninep"
 )
 
@@ -43,16 +41,4 @@ func (root *Root) MkNod(inode *Inode, name string, d DataLen) (*Inode, error) {
 	}
 	inode.Data = d
 	return inode, nil
-}
-
-// If directory recursively remove XXX maybe not
-func (root *Root) Remove(dir *Inode, name string) error {
-	log.Printf("fs.Remove %v %v\n", dir, name)
-	if dir.isDir() {
-		dir := dir.Data.(*Dir)
-		dir.remove(root, name)
-	} else {
-
-	}
-	return nil
 }

@@ -64,7 +64,7 @@ func (dir *Dir) Namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
-	if inode.isDir() {
+	if inode.IsDir() {
 		if len(path) == 1 { // done?
 			log.Printf("Namei %v %v -> %v", path, dir, inodes)
 			return inodes, nil, nil
@@ -102,22 +102,11 @@ func (dir *Dir) create(inode *Inode, name string) error {
 	return nil
 }
 
-func (dir *Dir) removeDir(root *Root) {
-	for n, _ := range dir.entries {
-		dir.remove(root, n)
-	}
-}
-
-func (dir *Dir) remove(root *Root, name string) error {
-	inode, ok := dir.entries[name]
+func (dir *Dir) Remove(name string) error {
+	_, ok := dir.entries[name]
 	if ok {
-		if inode.isDir() {
-			d := inode.Data.(*Dir)
-			d.removeDir(root)
-		}
+		delete(dir.entries, name)
+		return nil
 	}
-
-	root.freeInum(inode.Inum)
-	delete(dir.entries, name)
-	return nil
+	return errors.New("Name not found")
 }

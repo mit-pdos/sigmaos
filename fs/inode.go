@@ -54,19 +54,19 @@ func (inode *Inode) Qid() np.Tqid {
 		np.Tpath(inode.Inum))
 }
 
-func (inode *Inode) isDir() bool {
+func (inode *Inode) IsDir() bool {
 	return np.IsDir(inode.PermT)
 }
 
-func (inode *Inode) isSymlink() bool {
+func (inode *Inode) IsSymlink() bool {
 	return np.IsSymlink(inode.PermT)
 }
 
-func (inode *Inode) isDev() bool {
+func (inode *Inode) IsDev() bool {
 	return np.IsDevice(inode.PermT)
 }
 
-func (inode *Inode) isPipe() bool {
+func (inode *Inode) IsPipe() bool {
 	return np.IsPipe(inode.PermT)
 }
 
@@ -89,7 +89,7 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
-	if inode.isDir() {
+	if inode.IsDir() {
 		d := inode.Data.(*Dir)
 		dl, err := permToDataLen(t)
 		if err != nil {
@@ -109,7 +109,7 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 
 func (inode *Inode) Mode() np.Tperm {
 	perm := np.Tperm(0777)
-	if inode.isDir() {
+	if inode.IsDir() {
 		perm |= np.DMDIR
 	}
 	return perm
@@ -156,8 +156,35 @@ func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 	}
 }
 
+func (inode *Inode) Remove(root *Root, path []string) error {
+	start := root.RootInode()
+	inodes, rest, err := start.Walk(path)
+	if err != nil {
+		return err
+	}
+	if len(rest) != 0 {
+		return errors.New("File not found")
+	}
+	last := len(inodes) - 1
+	if inodes[last] != inode {
+		log.Fatal("Inode mismatch", inodes, inode)
+	}
+	parent := start
+	if len(inodes) > 1 {
+		parent = inodes[last-1]
+
+	}
+	dir := parent.Data.(*Dir)
+	err = dir.Remove(path[last])
+	root.freeInum(inode.Inum)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (inode *Inode) Readlink() (string, error) {
-	if inode.isSymlink() {
+	if inode.IsSymlink() {
 		s := inode.Data.(*Symlink)
 		return s.target, nil
 	} else {
@@ -167,14 +194,14 @@ func (inode *Inode) Readlink() (string, error) {
 
 func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	log.Printf("fs.Writei %v\n", inode)
-	if inode.isDev() {
+	if inode.IsDev() {
 		d := inode.Data.(Dev)
 		return d.Write(offset, data)
-	} else if inode.isDir() {
+	} else if inode.IsDir() {
 		return 0, errors.New("Cannot write directory")
-	} else if inode.isSymlink() {
+	} else if inode.IsSymlink() {
 		return 0, errors.New("Cannot write symlink")
-	} else if inode.isPipe() {
+	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Write(data)
 	} else {
@@ -185,15 +212,15 @@ func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 
 func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	log.Printf("fs.Readi %v\n", inode)
-	if inode.isDev() {
+	if inode.IsDev() {
 		d := inode.Data.(Dev)
 		return d.Read(offset, n)
-	} else if inode.isDir() {
+	} else if inode.IsDir() {
 		d := inode.Data.(*Dir)
 		return d.Read(offset, n)
-	} else if inode.isSymlink() {
+	} else if inode.IsSymlink() {
 		return nil, errors.New("Cannot read symlink")
-	} else if inode.isPipe() {
+	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Read(n)
 	} else { // XXX offset n

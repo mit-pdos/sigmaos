@@ -70,7 +70,10 @@ func (inode *Inode) IsPipe() bool {
 	return np.IsPipe(inode.PermT)
 }
 
-// XXX device
+func (inode *Inode) IsDevice() bool {
+	return np.IsDevice(inode.PermT)
+}
+
 func permToDataLen(t np.Tperm) (DataLen, error) {
 	if np.IsDir(t) {
 		return makeDir(), nil
@@ -78,6 +81,8 @@ func permToDataLen(t np.Tperm) (DataLen, error) {
 		return MakeSym(), nil
 	} else if np.IsPipe(t) {
 		return MakePipe(), nil
+	} else if np.IsDevice(t) {
+		return nil, nil
 	} else if np.IsFile(t) {
 		return MakeFile(), nil
 	} else {
@@ -183,24 +188,16 @@ func (inode *Inode) Remove(root *Root, path []string) error {
 	return nil
 }
 
-func (inode *Inode) Readlink() (string, error) {
-	if inode.IsSymlink() {
-		s := inode.Data.(*Symlink)
-		return s.target, nil
-	} else {
-		return "", errors.New("Not a symlink")
-	}
-}
-
 func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
-	log.Printf("fs.Writei %v\n", inode)
-	if inode.IsDev() {
+	log.Print("fs.Writei ", inode)
+	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		return d.Write(offset, data)
 	} else if inode.IsDir() {
 		return 0, errors.New("Cannot write directory")
 	} else if inode.IsSymlink() {
-		return 0, errors.New("Cannot write symlink")
+		s := inode.Data.(*Symlink)
+		return s.Write(data)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Write(data)
@@ -211,19 +208,20 @@ func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 }
 
 func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
-	log.Printf("fs.Readi %v\n", inode)
-	if inode.IsDev() {
+	log.Print("fs.Readi ", inode)
+	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		return d.Read(offset, n)
 	} else if inode.IsDir() {
 		d := inode.Data.(*Dir)
 		return d.Read(offset, n)
 	} else if inode.IsSymlink() {
-		return nil, errors.New("Cannot read symlink")
+		s := inode.Data.(*Symlink)
+		return s.Read(n)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.Read(n)
-	} else { // XXX offset n
+	} else {
 		f := inode.Data.(*File)
 		return f.Read(offset, n)
 	}

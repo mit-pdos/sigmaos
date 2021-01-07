@@ -58,6 +58,8 @@ func (qt Qtype) String() string {
 		return "auth"
 	case QTTMP:
 		return "tmp"
+	case QTSYMLINK:
+		return "s"
 	case QTFILE:
 		return "f"
 	}
@@ -157,6 +159,9 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
+	// ulambda specific
+	TTmkpipe
+	TRmkpipe
 )
 
 func (fct Tfcall) String() string {
@@ -217,6 +222,10 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
+	case TTmkpipe:
+		return "Tmkpipe"
+	case TRmkpipe:
+		return "Rmkpipe"
 	default:
 		return "Tunknown"
 	}
@@ -404,62 +413,17 @@ func (Rstat) Type() Tfcall    { return TRstat }
 
 //func (Twstat) Type() Tfcall { return TTwstat }
 //func (Rwstat) Type() Tfcall { return TRwstat }
+func (Tmkpipe) Type() Tfcall { return TTmkpipe }
+func (Rmkpipe) Type() Tfcall { return TRmkpipe }
 
 //
 // Extensions or new transactions
 //
 
-type Dirent struct {
-	Qid    Tqid
-	Offset Toffset
-	Type   Tperm
-	Name   string
-}
-
-type Tmkdir struct {
-	Dfid Tfid
-	Name string
-	Mode Tmode
-	Gid  Tgid
-}
-
-type Rmkdir struct {
-	Qid Tqid
-}
-
-type Treaddir struct {
-	Fid    Tfid
-	Offset Toffset
-	Count  Tsize
-}
-
-type Rreaddir struct {
-	Data []byte
-}
-
-type Tsymlink struct {
-	Fid    Tfid
-	Name   string
-	Symtgt string
-	Gid    Tgid
-}
-
-type Rsymlink struct {
-	Qid Tqid
-}
-
-type Treadlink struct {
-	Fid Tfid
-}
-
-type Rreadlink struct {
-	Target string
-}
-
 type Tmkpipe struct {
 	Dfid Tfid
 	Name string
-	Mode Tmode
+	Perm Tperm
 	Gid  Tgid
 }
 

@@ -60,6 +60,10 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Tstat{}, nil
 	case np.TRstat:
 		return np.Rstat{}, nil
+	case np.TTmkpipe:
+		return np.Tmkpipe{}, nil
+	case np.TRmkpipe:
+		return np.Rmkpipe{}, nil
 	}
 
 	return nil, fmt.Errorf("unknown message type")

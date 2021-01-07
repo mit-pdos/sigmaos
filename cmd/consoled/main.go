@@ -46,13 +46,13 @@ func makeConsole() *Console {
 
 }
 
-func (cons *Console) Write(data []byte) (np.Tsize, error) {
+func (cons *Console) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	n, err := cons.stdout.Write(data)
 	cons.stdout.Flush()
 	return np.Tsize(n), err
 }
 
-func (cons *Console) Read(n np.Tsize) ([]byte, error) {
+func (cons *Console) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
 	b, err := cons.stdin.ReadBytes('\n')
 	return b, err
 }
@@ -76,7 +76,7 @@ func main() {
 			log.Fatal("Mount error: ", err)
 		}
 		name := cons.srv.MyAddr()
-		err = cons.clnt.Symlink(name+":pubkey:console", "name/consoled")
+		err = cons.clnt.Symlink(name+":pubkey:console", "name/consoled", 0777)
 		if err != nil {
 			log.Fatal("Symlink error: ", err)
 		}

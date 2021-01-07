@@ -19,6 +19,7 @@ func MakeRoot() *Root {
 	return &r
 }
 
+// separate out allocator?
 func (root *Root) RootInode() *Inode {
 	return root.inode
 }
@@ -33,6 +34,8 @@ func (root *Root) allocInum() Tinum {
 
 func (root *Root) freeInum(inum Tinum) {
 }
+
+// functions called only locally (i.e., not of 9p session, no fid)
 
 func (root *Root) MkNod(inode *Inode, name string, d DataLen) (*Inode, error) {
 	inode, err := inode.Create(root, np.DMDEVICE, name)

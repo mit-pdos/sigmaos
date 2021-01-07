@@ -85,6 +85,11 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	// 	reply := &np.Rwstat{}
 	// 	err := c.np.Wstat(req, reply)
 	// 	return *reply, err
+	case np.Tmkpipe:
+		reply := &np.Rmkpipe{}
+		err := c.np.Pipe(req, reply)
+		return *reply, err
+
 	default:
 		return np.ErrUnknownMsg, nil
 	}

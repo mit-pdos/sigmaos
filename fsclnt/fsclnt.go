@@ -242,6 +242,20 @@ func (fsc *FsClient) autoMount(target string, path []string) error {
 	return fsc.Mount(fid, join(path))
 }
 
+// XXX clone fid?
+func (fsc *FsClient) readlink(fid np.Tfid) (string, error) {
+	_, err := fsc.open(fid, np.OREAD)
+	if err != nil {
+		return "", err
+	}
+	reply, err := fsc.read(fid, 0, 1024)
+	if err != nil {
+		return "", err
+	}
+	// XXX close fid
+	return string(reply.Data), nil
+}
+
 func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, todo, err := fsc.walkOne(path)
@@ -249,21 +263,22 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 			return fid, err
 		}
 		qid := fsc.fids[fid].lastqid()
+		log.Print("last qid ", qid)
 		if qid.Type == np.QTSYMLINK {
-			reply, err := fsc.readlink(fid)
+			target, err := fsc.readlink(fid)
 			if err != nil {
 				return np.NoFid, err
 			}
 			i := len(path) - todo
 			rest := path[i:]
-			if isRemoteTarget(reply.Target) {
-				err = fsc.autoMount(reply.Target, path[:i])
+			if isRemoteTarget(target) {
+				err = fsc.autoMount(target, path[:i])
 				if err != nil {
 					return np.NoFid, err
 				}
-				path = append(path, rest...)
+				path = append(path[:i], rest...)
 			} else {
-				path = append(split(reply.Target), rest...)
+				path = append(split(target), rest...)
 
 			}
 		} else {
@@ -289,8 +304,13 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	}
 	fsc.fids[fid].add(base, reply.Qid)
 	fd := fsc.findfd(fid)
-
 	return fd, nil
+}
+
+func (fsc *FsClient) Mkdir(path string, perm np.Tperm, mode np.Tmode) (int, error) {
+	log.Printf("Mkdir %v\n", path)
+	perm = perm | np.DMDIR
+	return fsc.Create(path, perm, mode)
 }
 
 func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
@@ -299,12 +319,10 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	if err != nil {
 		return -1, err
 	}
-
 	fid1, err := fsc.clone(fid)
 	if err != nil {
 		return -1, err
 	}
-
 	reply, err := fsc.create(fid1, name, perm, mode)
 	if err != nil {
 		return -1, err
@@ -314,56 +332,32 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	return fd, nil
 }
 
-func (fsc *FsClient) Symlink(target string, link string) error {
+func (fsc *FsClient) Symlink(target string, link string, lperm np.Tperm) error {
 	log.Printf("Symlink %v %v\n", target, link)
-	p := split(link)
-	dir := p[0 : len(p)-1]
-	base := p[len(p)-1]
-	fid, err := fsc.walkMany(dir)
+	lperm = lperm | np.DMSYMLINK
+	fd, err := fsc.Create(link, lperm, np.OWRITE)
 	if err != nil {
 		return err
 	}
-	// XXX maybe do something with returned qid
-	_, err = fsc.symlink(fid, base, target)
-	return err
-}
-
-func (fsc *FsClient) SymlinkAt(dfd int, target string, linkn string) error {
-	log.Printf("SymlinkAt %v %v\n", target, linkn)
-	fid, err := fsc.lookup(dfd)
+	_, err = fsc.Write(fd, 0, []byte(target))
 	if err != nil {
 		return err
 	}
-	// XXX maybe do something with returned qid
-	_, err = fsc.symlink(fid, linkn, target)
-	if err != nil {
-		return nil
-	}
-	return err
+	return fsc.Close(fd)
 }
 
-func (fsc *FsClient) Mkdir(path string, mode np.Tmode) (int, error) {
-	log.Printf("Mkdir %v\n", path)
-
-	log.Printf("fsc %v\n", fsc)
-	p := split(path)
-	dir := p[0 : len(p)-1]
-	base := p[len(p)-1]
-	fid, err := fsc.walkMany(dir)
+func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tperm) error {
+	log.Printf("SymlinkAt %v %v\n", target, link)
+	lperm = lperm | np.DMSYMLINK
+	fd, err := fsc.CreateAt(dfd, link, lperm, np.OWRITE)
+	_, err = fsc.Write(fd, 0, []byte(target))
 	if err != nil {
-		return -1, err
+		return err
 	}
-	reply, err := fsc.mkdir(fid, base, mode)
-	if err != nil {
-		return -1, err
-	}
-	fsc.fids[fid].add(base, reply.Qid)
-	fd := fsc.findfd(fid)
-	log.Printf("fsc mkdir done %v\n", fsc)
-	return fd, err
+	return fsc.Close(fd)
 }
 
-func (fsc *FsClient) Pipe(path string, mode np.Tmode) error {
+func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	log.Printf("Mkpipe %v\n", path)
 	p := split(path)
 	dir := p[0 : len(p)-1]
@@ -372,7 +366,7 @@ func (fsc *FsClient) Pipe(path string, mode np.Tmode) error {
 	if err != nil {
 		return err
 	}
-	_, err = fsc.mkpipe(fid, base, mode)
+	_, err = fsc.mkpipe(fid, base, perm)
 	return err
 }
 
@@ -428,6 +422,9 @@ func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, erro
 		return nil, err
 	}
 	reply, err := fsc.read(fid, offset, cnt)
+	if err != nil {
+		return nil, err
+	}
 	return reply.Data, err
 }
 
@@ -437,6 +434,9 @@ func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, er
 		return 0, err
 	}
 	reply, err := fsc.write(fid, offset, data)
+	if err != nil {
+		return 0, err
+	}
 	return reply.Count, err
 }
 

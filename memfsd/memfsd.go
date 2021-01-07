@@ -82,7 +82,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	log.Printf("fsd.Walk %v from %v: dir %v\n", args, npc.conn.RemoteAddr(), fid)
 	inodes, rest, err := fid.ino.Walk(args.Wnames)
 	if err != nil {
-		return np.ErrNotfound
+		return &np.Rerror{err.Error()}
 	}
 	if len(inodes) == 0 { // clone args.Fid
 		npc.Fids[args.NewFid] = makeFid(fid.path, fid.ino)
@@ -112,7 +112,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	log.Printf("fsd.Create %v from %v dir %v\n", args, npc.conn.RemoteAddr(), fid)
 	inode, err := fid.ino.Create(npc.memfs, args.Perm, args.Name)
 	if err != nil {
-		return np.ErrCreatenondir
+		return &np.Rerror{err.Error()}
 	}
 	npc.Fids[args.Fid] = makeFid(append(fid.path, args.Name), inode)
 	rets.Qid = inode.Qid()
@@ -139,7 +139,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	}
 	data, err := fid.ino.Read(args.Offset, args.Count)
 	if err != nil {
-		return np.ErrBadcount
+		return &np.Rerror{err.Error()}
 	}
 	rets.Data = data
 	return nil
@@ -152,7 +152,7 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	}
 	n, err := fid.ino.Write(args.Offset, args.Data)
 	if err != nil {
-		return np.ErrBadcount
+		return &np.Rerror{err.Error()}
 	}
 	rets.Count = n
 	return nil
@@ -181,37 +181,8 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 //
-// XXX not supported by Linux when using 9P2000
+// Extension for ulambda
 //
-
-func (npc *NpConn) Mkdir(args np.Tmkdir, rets *np.Rmkdir) *np.Rerror {
-	fid, ok := npc.Fids[args.Dfid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	log.Printf("fsd.Mkdir %v from %v dir %v\n", args, npc.conn.RemoteAddr(), fid)
-	inode, err := fid.ino.Create(npc.memfs, np.DMDIR, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	npc.Fids[args.Dfid] = makeFid(append(fid.path, args.Name), inode)
-	rets.Qid = inode.Qid()
-	return nil
-}
-
-func (npc *NpConn) Symlink(args np.Tsymlink, rets *np.Rsymlink) *np.Rerror {
-	log.Printf("fsd.Symlink %v from %v\n", args, npc.conn.RemoteAddr())
-	fid, ok := npc.Fids[args.Fid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	inode, err := fid.ino.Create(npc.memfs, np.DMSYMLINK, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	rets.Qid = inode.Qid()
-	return nil
-}
 
 func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 	fid, ok := npc.Fids[args.Dfid]
@@ -223,18 +194,5 @@ func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 		return np.ErrCreatenondir
 	}
 	rets.Qid = inode.Qid()
-	return nil
-}
-
-func (npc *NpConn) Readlink(args np.Treadlink, rets *np.Rreadlink) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	target, err := fid.ino.Readlink()
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	rets.Target = target
 	return nil
 }

@@ -5,30 +5,30 @@ import (
 	"log"
 	"os"
 
-	"ulambda/fs"
 	"ulambda/fsclnt"
-	"ulambda/fsd"
-	"ulambda/fssrv"
+	"ulambda/memfs"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/npsrv"
 )
 
 const (
-	Stdin  = fs.RootInum + 1
-	Stdout = fs.RootInum + 2
+	Stdin  = memfs.RootInum + 1
+	Stdout = memfs.RootInum + 2
 )
 
 type Consoled struct {
-	clnt *fsclnt.FsClient
-	srv  *fssrv.FsServer
-	fsd  *fsd.Fsd
-	done chan bool
+	clnt   *fsclnt.FsClient
+	srv    *npsrv.NpServer
+	memfsd *memfsd.Fsd
+	done   chan bool
 }
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
 	cons.clnt = fsclnt.MakeFsClient("consoled")
-	cons.fsd = fsd.MakeFsd()
-	cons.srv = fssrv.MakeFsServer(cons.fsd, ":0")
+	cons.memfsd = memfsd.MakeFsd()
+	cons.srv = npsrv.MakeNpServer(cons.memfsd, ":0")
 	cons.done = make(chan bool)
 	return cons
 }
@@ -57,8 +57,10 @@ func (cons *Console) Read(n np.Tsize) ([]byte, error) {
 	return b, err
 }
 
+func (cons *Console) Len() np.Tlength { return 0 }
+
 func (cons *Consoled) FsInit() {
-	fs := cons.fsd.Root()
+	fs := cons.memfsd.Root()
 	_, err := fs.MkNod(fs.RootInode(), "console", makeConsole())
 	if err != nil {
 		log.Fatal("Create error: ", err)

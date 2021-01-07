@@ -38,7 +38,7 @@ func MakeFsClient(proc string) *FsClient {
 	fsc.fids = make(map[np.Tfid]*Channel)
 	fsc.mount = makeMount()
 	fsc.cm = makeChanMgr()
-	fsc.next = np.NoFid + 1
+	fsc.next = 1
 	fsc.Proc = proc
 	rand.Seed(time.Now().UnixNano())
 	return fsc

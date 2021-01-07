@@ -434,7 +434,6 @@ type Treaddir struct {
 }
 
 type Rreaddir struct {
-	Tag  Ttag
 	Data []byte
 }
 
@@ -458,7 +457,6 @@ type Rreadlink struct {
 }
 
 type Tmkpipe struct {
-	Tag  Ttag
 	Dfid Tfid
 	Name string
 	Mode Tmode
@@ -466,6 +464,5 @@ type Tmkpipe struct {
 }
 
 type Rmkpipe struct {
-	Tag Ttag
 	Qid Tqid
 }

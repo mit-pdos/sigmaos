@@ -1,45 +1,45 @@
-package fsd
+package memfsd
 
 import (
 	"log"
 	"net"
 
-	"ulambda/fs"
+	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
 )
 
 type Fid struct {
 	path []string
-	ino  *fs.Inode
+	ino  *memfs.Inode
 }
 
-func makeFid(p []string, i *fs.Inode) *Fid {
+func makeFid(p []string, i *memfs.Inode) *Fid {
 	return &Fid{p, i}
 }
 
 type NpConn struct {
-	fs   *fs.Root
-	conn net.Conn
-	Fids map[np.Tfid]*Fid
+	memfs *memfs.Root
+	conn  net.Conn
+	Fids  map[np.Tfid]*Fid
 }
 
-func makeNpConn(root *fs.Root, conn net.Conn) *NpConn {
+func makeNpConn(root *memfs.Root, conn net.Conn) *NpConn {
 	npc := &NpConn{root, conn, make(map[np.Tfid]*Fid)}
 	return npc
 }
 
 type Fsd struct {
-	fs *fs.Root
+	fs *memfs.Root
 }
 
 func MakeFsd() *Fsd {
 	fsd := &Fsd{}
-	fsd.fs = fs.MakeRoot()
+	fsd.fs = memfs.MakeRoot()
 	return fsd
 }
 
-func (fsd *Fsd) Root() *fs.Root {
+func (fsd *Fsd) Root() *memfs.Root {
 	return fsd.fs
 }
 
@@ -59,13 +59,13 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	root := npc.fs.RootInode()
+	root := npc.memfs.RootInode()
 	npc.Fids[args.Fid] = makeFid([]string{}, root)
 	rets.Qid = root.Qid()
 	return nil
 }
 
-func makeQids(inodes []*fs.Inode) []np.Tqid {
+func makeQids(inodes []*memfs.Inode) []np.Tqid {
 	var qids []np.Tqid
 	for _, i := range inodes {
 		qid := i.Qid()
@@ -110,7 +110,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	log.Printf("fsd.Create %v from %v dir %v\n", args, npc.conn.RemoteAddr(), fid)
-	inode, err := fid.ino.Create(npc.fs, args.Perm, args.Name)
+	inode, err := fid.ino.Create(npc.memfs, args.Perm, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}
@@ -163,7 +163,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	err := fid.ino.Remove(npc.fs, fid.path)
+	err := fid.ino.Remove(npc.memfs, fid.path)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -190,7 +190,7 @@ func (npc *NpConn) Mkdir(args np.Tmkdir, rets *np.Rmkdir) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	log.Printf("fsd.Mkdir %v from %v dir %v\n", args, npc.conn.RemoteAddr(), fid)
-	inode, err := fid.ino.Create(npc.fs, np.DMDIR, args.Name)
+	inode, err := fid.ino.Create(npc.memfs, np.DMDIR, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}
@@ -205,7 +205,7 @@ func (npc *NpConn) Symlink(args np.Tsymlink, rets *np.Rsymlink) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	inode, err := fid.ino.Create(npc.fs, np.DMSYMLINK, args.Name)
+	inode, err := fid.ino.Create(npc.memfs, np.DMSYMLINK, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}
@@ -218,7 +218,7 @@ func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	inode, err := fid.ino.Create(npc.fs, np.DMNAMEDPIPE, args.Name)
+	inode, err := fid.ino.Create(npc.memfs, np.DMNAMEDPIPE, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}

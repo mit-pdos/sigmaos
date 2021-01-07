@@ -1,4 +1,4 @@
-package fs
+package memfs
 
 import (
 	np "ulambda/ninep"

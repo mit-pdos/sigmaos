@@ -27,8 +27,8 @@ const MAXSYMLINK = 4
 type FsClient struct {
 	fds   []np.Tfid
 	fids  map[np.Tfid]*Channel
+	npc   *npclnt.NpClnt
 	mount *Mount
-	cm    *ChanMgr
 	Proc  string
 	next  np.Tfid
 }
@@ -38,7 +38,7 @@ func MakeFsClient(proc string) *FsClient {
 	fsc.fds = make([]np.Tfid, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Channel)
 	fsc.mount = makeMount()
-	fsc.cm = makeChanMgr()
+	fsc.npc = npclnt.MakeNpClnt()
 	fsc.next = 1
 	fsc.Proc = proc
 	rand.Seed(time.Now().UnixNano())
@@ -52,6 +52,10 @@ func (fsc *FsClient) String() string {
 		str += fmt.Sprintf("fid %v chan %v\n", k, v)
 	}
 	return str
+}
+
+func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
+	return fsc.fids[fid].npch
 }
 
 // // XXX use gob?
@@ -140,7 +144,7 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	log.Printf("Mount %v at %v\n", fid, path)
+	log.Printf("Mount %v at %v %v\n", fid, path, fsc.npch(fid))
 	fsc.mount.add(split(path), fid)
 	return nil
 }
@@ -150,7 +154,7 @@ func (fsc *FsClient) Close(fd int) error {
 	if err != nil {
 		return err
 	}
-	err = fsc.clunk(fid)
+	err = fsc.npch(fid).Clunk(fid)
 	if err == nil {
 		fsc.fds[fd] = np.NoFid
 	}
@@ -158,11 +162,12 @@ func (fsc *FsClient) Close(fd int) error {
 }
 
 func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Channel, error) {
-	reply, err := fsc.attach(server, fid, p)
+	reply, err := fsc.npc.Attach(server, fid, p)
 	if err != nil {
 		return nil, err
 	}
-	return makeChannel(server, p, []np.Tqid{reply.Qid}), nil
+	ch := fsc.npc.MakeNpChan(server)
+	return makeChannel(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
 func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
@@ -174,13 +179,13 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 		return np.NoFid, err
 	}
 	fsc.fids[fid] = ch
-	log.Printf("Attach -> fid %v %v\n", fid, fsc.fids[fid])
+	log.Printf("Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
 	return fid, nil
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	fid1 := fsc.allocFid()
-	_, err := fsc.walk(fid, fid1, nil)
+	_, err := fsc.npch(fid).Walk(fid, fid1, nil)
 	if err != nil {
 		// XXX free fid
 		return np.NoFid, err
@@ -190,7 +195,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) closeFid(fid np.Tfid) {
-	err := fsc.clunk(fid)
+	err := fsc.npch(fid).Clunk(fid)
 	if err != nil {
 		log.Printf("closeFid clunk failed %v\n", err)
 	}
@@ -203,14 +208,16 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 		return np.NoFid, 0, errors.New("Unknown file")
 
 	}
+	log.Print("walkOne ", fsc.npch(fid))
 	fid1, err := fsc.clone(fid)
+	log.Print("Clone ", fsc.npch(fid1))
 	if err != nil {
 		return np.NoFid, 0, err
 	}
 	defer fsc.closeFid(fid1)
 
 	fid2 := fsc.allocFid()
-	reply, err := fsc.walk(fid1, fid2, rest)
+	reply, err := fsc.npch(fid1).Walk(fid1, fid2, rest)
 	if err != nil {
 		return np.NoFid, 0, err
 	}
@@ -252,7 +259,7 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 		qid := fsc.fids[fid].lastqid()
 		log.Print("last qid ", qid)
 		if qid.Type == np.QTSYMLINK {
-			target, err := fsc.readlink(fid)
+			target, err := fsc.Readlink(fid)
 			if err != nil {
 				return np.NoFid, err
 			}
@@ -285,7 +292,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	if err != nil {
 		return -1, err
 	}
-	reply, err := fsc.create(fid, base, perm, mode)
+	reply, err := fsc.npch(fid).Create(fid, base, perm, mode)
 	if err != nil {
 		return -1, err
 	}
@@ -310,7 +317,7 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	if err != nil {
 		return -1, err
 	}
-	reply, err := fsc.create(fid1, name, perm, mode)
+	reply, err := fsc.npch(fid1).Create(fid1, name, perm, mode)
 	if err != nil {
 		return -1, err
 	}
@@ -353,7 +360,7 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	if err != nil {
 		return err
 	}
-	_, err = fsc.mkpipe(fid, base, perm)
+	_, err = fsc.npch(fid).Mkpipe(fid, base, perm)
 	return err
 }
 
@@ -362,11 +369,11 @@ func (fsc *FsClient) Mv(old string, new string) error {
 	log.Printf("Mv %v %v\n", old, new)
 	fid, err := fsc.walkMany(split(old))
 	if err != nil {
-		return -1, err
+		return err
 	}
-	st = Stat{}
+	st := &np.Stat{}
 	st.Name = new
-	_, err = fsc.wstat(fid, st)
+	_, err = fsc.npch(fid).Wstat(fid, st)
 	return err
 }
 
@@ -376,7 +383,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	_, err = fsc.open(fid, mode)
+	_, err = fsc.npch(fid).Open(fid, mode)
 	if err != nil {
 		return -1, err
 	}
@@ -400,13 +407,13 @@ func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
 	}
 
 	n := []string{name}
-	reply, err := fsc.walk(fid, fid1, n)
+	reply, err := fsc.npch(fid).Walk(fid, fid1, n)
 	if err != nil {
 		return -1, err
 	}
 	fsc.fids[fid1].addn(reply.Qids, n)
 
-	_, err = fsc.open(fid1, mode)
+	_, err = fsc.npch(fid1).Open(fid1, mode)
 	if err != nil {
 		return -1, err
 	}
@@ -421,7 +428,7 @@ func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	reply, err := fsc.read(fid, offset, cnt)
+	reply, err := fsc.npch(fid).Read(fid, offset, cnt)
 	if err != nil {
 		return nil, err
 	}
@@ -433,7 +440,7 @@ func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, er
 	if err != nil {
 		return 0, err
 	}
-	reply, err := fsc.write(fid, offset, data)
+	reply, err := fsc.npch(fid).Write(fid, offset, data)
 	if err != nil {
 		return 0, err
 	}
@@ -442,11 +449,11 @@ func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, er
 
 // XXX clone fid?
 func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
-	_, err := fsc.open(fid, np.OREAD)
+	_, err := fsc.npch(fid).Open(fid, np.OREAD)
 	if err != nil {
 		return "", err
 	}
-	reply, err := fsc.read(fid, 0, 1024)
+	reply, err := fsc.npch(fid).Read(fid, 0, 1024)
 	if err != nil {
 		return "", err
 	}

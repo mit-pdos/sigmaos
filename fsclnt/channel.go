@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	np "ulambda/ninep"
+	"ulambda/npclnt"
 )
 
 type Channel struct {
-	server string
-	cname  []string
-	qids   []np.Tqid
+	npch  *npclnt.NpChan
+	cname []string
+	qids  []np.Tqid
 }
 
-func makeChannel(s string, n []string, qs []np.Tqid) *Channel {
+func makeChannel(npc *npclnt.NpChan, n []string, qs []np.Tqid) *Channel {
 	c := &Channel{}
-	c.server = s
+	c.npch = npc
 	c.cname = n
 	c.qids = qs
 	return c
@@ -29,7 +30,7 @@ func (c *Channel) String() string {
 func (c *Channel) copyChannel() *Channel {
 	qids := make([]np.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return makeChannel(c.server, c.cname, qids)
+	return makeChannel(c.npch, c.cname, qids)
 }
 
 func (c *Channel) add(name string, q np.Tqid) {

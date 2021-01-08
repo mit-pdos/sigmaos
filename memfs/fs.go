@@ -43,6 +43,7 @@ func (root *Root) MkNod(inode *Inode, name string, d DataLen) (*Inode, error) {
 	if err != nil {
 		return nil, err
 	}
+	inode.Data = d
 	return inode, nil
 }
 

@@ -2,8 +2,7 @@ package ninep
 
 //
 // Go structures for 9P based on the wire format in Linux's 9p net/9p,
-// include/net/9p, and
-// https://github.com/chaos/diod/blob/master/protocol.md
+// include/net/9p, and various Go 9p implementations.
 //
 
 import (
@@ -374,16 +373,17 @@ func (s Stat) String() string {
 }
 
 type Rstat struct {
+	Size uint16 // extra Size, see stat(5)
 	Stat Stat
 }
 
 type Twstat struct {
 	Fid  Tfid
-	Stat []byte
+	Size uint16 // extra Size, see stat(5)
+	Stat Stat
 }
 
-type Rwstat struct {
-}
+type Rwstat struct{}
 
 func (Tversion) Type() Tfcall { return TTversion }
 func (Rversion) Type() Tfcall { return TRversion }
@@ -410,11 +410,10 @@ func (Tremove) Type() Tfcall  { return TTremove }
 func (Rremove) Type() Tfcall  { return TRremove }
 func (Tstat) Type() Tfcall    { return TTstat }
 func (Rstat) Type() Tfcall    { return TRstat }
-
-//func (Twstat) Type() Tfcall { return TTwstat }
-//func (Rwstat) Type() Tfcall { return TRwstat }
-func (Tmkpipe) Type() Tfcall { return TTmkpipe }
-func (Rmkpipe) Type() Tfcall { return TRmkpipe }
+func (Twstat) Type() Tfcall   { return TTwstat }
+func (Rwstat) Type() Tfcall   { return TRwstat }
+func (Tmkpipe) Type() Tfcall  { return TTmkpipe }
+func (Rmkpipe) Type() Tfcall  { return TRmkpipe }
 
 //
 // Extensions or new transactions

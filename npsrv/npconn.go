@@ -81,15 +81,14 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rstat{}
 		err := c.np.Stat(req, reply)
 		return *reply, err
-	// case np.Twstat:
-	// 	reply := &np.Rwstat{}
-	// 	err := c.np.Wstat(req, reply)
-	// 	return *reply, err
+	case np.Twstat:
+		reply := &np.Rwstat{}
+		err := c.np.Wstat(req, reply)
+		return *reply, err
 	case np.Tmkpipe:
 		reply := &np.Rmkpipe{}
 		err := c.np.Pipe(req, reply)
 		return *reply, err
-
 	default:
 		return np.ErrUnknownMsg, nil
 	}
@@ -103,7 +102,7 @@ func (c *Channel) Serve() {
 			log.Fatal("Server readMsg error: ", err)
 		}
 		fcall := &np.Fcall{}
-		// log.Print("Tframe ", len(frame), frame)
+		log.Print("Tframe ", len(frame), frame)
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Fatal("Server unmarshal error: ", err)
 		}

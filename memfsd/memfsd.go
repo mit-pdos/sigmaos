@@ -3,6 +3,7 @@ package memfsd
 import (
 	"log"
 	"net"
+	"strings"
 
 	"ulambda/memfs"
 	np "ulambda/ninep"
@@ -82,14 +83,14 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	log.Printf("fsd.Walk %v from %v: dir %v\n", args, npc.conn.RemoteAddr(), fid)
 	inodes, rest, err := fid.ino.Walk(args.Wnames)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return np.ErrNotfound
 	}
-	if len(inodes) == 0 { // clone args.Fid
+	if len(inodes) == 1 { // clone args.Fid
 		npc.Fids[args.NewFid] = makeFid(fid.path, fid.ino)
 	} else {
 		n := len(args.Wnames) - len(rest)
 		p := append(fid.path, args.Wnames[:n]...)
-		rets.Qids = makeQids(inodes)
+		rets.Qids = makeQids(inodes[1:])
 		npc.Fids[args.NewFid] = makeFid(p, inodes[len(inodes)-1])
 	}
 	return nil
@@ -158,12 +159,14 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
+// XXX cwd lookups
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
+	root := npc.memfs.RootInode()
 	fid, ok := npc.Fids[args.Fid]
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	err := fid.ino.Remove(npc.memfs, fid.path)
+	err := root.Remove(npc.memfs, fid.path)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -177,6 +180,33 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	rets.Stat = *fid.ino.Stat()
+	return nil
+}
+
+func split(path string) []string {
+	p := strings.Split(path, "/")
+	return p
+}
+
+func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
+	fid, ok := npc.Fids[args.Fid]
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	if args.Stat.Name != "" {
+		// XXX No rename across 9p servers
+		if args.Stat.Name[0] == '/' {
+			return np.ErrUnknownMsg
+		}
+		// XXX cwd
+		dst := split(args.Stat.Name)
+		dst = append(fid.path[1:], dst...)
+		err := npc.memfs.Rename(fid.path, dst)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		fid.path = dst
+	}
 	return nil
 }
 

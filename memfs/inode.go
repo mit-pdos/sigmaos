@@ -106,7 +106,7 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 			dir.init(i.Inum)
 		}
 		log.Printf("create %v -> %v\n", name, i)
-		return i, d.create(i, name)
+		return i, d.Create(i, name)
 	} else {
 		return nil, errors.New("Not a directory")
 	}
@@ -137,14 +137,14 @@ func (inode *Inode) Stat() *np.Stat {
 
 func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 	log.Printf("Walk %v at %v\n", path, inode)
+	inodes := []*Inode{inode}
 	if len(path) == 0 {
-		return nil, nil, nil
+		return inodes, nil, nil
 	}
 	dir, ok := inode.Data.(*Dir)
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
-	var inodes []*Inode
 	inodes, rest, err := dir.Namei(path, inodes)
 	if err == nil {
 		return inodes, rest, err
@@ -161,30 +161,40 @@ func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 	}
 }
 
-func (inode *Inode) Remove(root *Root, path []string) error {
-	start := root.RootInode()
-	inodes, rest, err := start.Walk(path)
+// Lookup a directory or file. If file, return parent dir and inode
+// for file.  If directory, return it
+func (inode *Inode) LookupPath(path []string) (*Dir, *Inode, error) {
+	inodes, rest, err := inode.Walk(path)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if len(rest) != 0 {
-		return errors.New("File not found")
+		return nil, nil, errors.New("Unknown name")
 	}
-	last := len(inodes) - 1
-	if inodes[last] != inode {
-		log.Fatal("Inode mismatch", inodes, inode)
+	i := inodes[len(inodes)-1]
+	if i.IsDir() {
+		return i.Data.(*Dir), nil, nil
+	} else {
+		// there must be a parent
+		di := inodes[len(inodes)-2]
+		dir, ok := di.Data.(*Dir)
+		if !ok {
+			log.Fatal("Lookup: cast error")
+		}
+		return dir, inodes[len(inodes)-1], nil
 	}
-	parent := start
-	if len(inodes) > 1 {
-		parent = inodes[last-1]
+}
 
-	}
-	dir := parent.Data.(*Dir)
-	err = dir.Remove(path[last])
-	root.freeInum(inode.Inum)
+func (inode *Inode) Remove(root *Root, path []string) error {
+	dir, ino, err := inode.LookupPath(path)
 	if err != nil {
 		return err
 	}
+	err = dir.Remove(path[len(path)-1])
+	if err != nil {
+		log.Fatal("Remove error ", err)
+	}
+	root.freeInum(ino.Inum)
 	return nil
 }
 

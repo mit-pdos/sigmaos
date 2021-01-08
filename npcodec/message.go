@@ -60,6 +60,10 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Tstat{}, nil
 	case np.TRstat:
 		return np.Rstat{}, nil
+	case np.TTwstat:
+		return np.Twstat{}, nil
+	case np.TRwstat:
+		return np.Rwstat{}, nil
 	case np.TTmkpipe:
 		return np.Tmkpipe{}, nil
 	case np.TRmkpipe:

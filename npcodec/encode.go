@@ -158,16 +158,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-
-			switch v.(type) {
-			case np.Rstat, *np.Rstat:
-				// Prepend stat[n].
-				sz := uint16(SizeNp(elements...))
-				if err := e.encode(sz); err != nil {
-					return err
-				}
-			}
-
 			if err := e.encode(elements...); err != nil {
 				return err
 			}
@@ -266,10 +256,35 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(elements...); err != nil {
 				return err
 			}
+		case *np.Stat:
+			log.Print("*np.Stat ", v)
+			var l uint16
+
+			if err := d.decode(&l); err != nil {
+				return err
+			}
+
+			b := make([]byte, l)
+			if _, err := io.ReadFull(d.rd, b); err != nil {
+				return err
+			}
+
+			elements, err := fields9p(v)
+			if err != nil {
+				return err
+			}
+
+			dec := &decoder{bytes.NewReader(b)}
+
+			if err := dec.decode(elements...); err != nil {
+				return err
+			}
+
 		case *np.Fcall:
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err
 			}
+			log.Print("fcall ", v.Type)
 			msg, err := newMsg(v.Type)
 			if err != nil {
 				return err
@@ -288,21 +303,13 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-
-			switch v.(type) {
-			case *np.Rstat, np.Rstat:
-				// consume stat[n]
-				var l uint16
-				if err := d.decode(&l); err != nil {
-					return err
-				}
-			}
+			log.Print("Tmsg ", v, v.Type())
 
 			if err := d.decode(elements...); err != nil {
 				return err
 			}
 		default:
-			log.Fatal("Unknown type")
+			log.Fatal("Decode: unknown type")
 		}
 	}
 
@@ -374,11 +381,6 @@ func SizeNp(vs ...interface{}) uint32 {
 		case *np.Fcall:
 			s += SizeNp(*v)
 		case np.Tmsg:
-			switch v.(type) {
-			case *np.Rstat, np.Rstat:
-				s += SizeNp(uint16(0)) // Stat sz
-			}
-
 			// walk the fields of the message to get the total size. we just
 			// use the field order from the message struct. We may add tag
 			// ignoring if needed.

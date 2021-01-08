@@ -93,7 +93,7 @@ func (dir *Dir) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	return buf, nil
 }
 
-func (dir *Dir) create(inode *Inode, name string) error {
+func (dir *Dir) Create(inode *Inode, name string) error {
 	_, ok := dir.entries[name]
 	if ok {
 		return errors.New("Name exists")

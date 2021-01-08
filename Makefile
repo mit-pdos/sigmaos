@@ -1,4 +1,4 @@
-all: named mr # consoled procd
+all: named # mr # consoled procd
 	@echo "build done"
 
 %:

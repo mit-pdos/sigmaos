@@ -10,6 +10,7 @@ import (
 	"time"
 
 	np "ulambda/ninep"
+	"ulambda/npclnt"
 )
 
 const (
@@ -242,20 +243,6 @@ func (fsc *FsClient) autoMount(target string, path []string) error {
 	return fsc.Mount(fid, join(path))
 }
 
-// XXX clone fid?
-func (fsc *FsClient) readlink(fid np.Tfid) (string, error) {
-	_, err := fsc.open(fid, np.OREAD)
-	if err != nil {
-		return "", err
-	}
-	reply, err := fsc.read(fid, 0, 1024)
-	if err != nil {
-		return "", err
-	}
-	// XXX close fid
-	return string(reply.Data), nil
-}
-
 func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, todo, err := fsc.walkOne(path)
@@ -370,6 +357,19 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	return err
 }
 
+// XXX update pathname associated with fid in Channel
+func (fsc *FsClient) Mv(old string, new string) error {
+	log.Printf("Mv %v %v\n", old, new)
+	fid, err := fsc.walkMany(split(old))
+	if err != nil {
+		return -1, err
+	}
+	st = Stat{}
+	st.Name = new
+	_, err = fsc.wstat(fid, st)
+	return err
+}
+
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	log.Printf("Open %v %v\n", path, mode)
 	fid, err := fsc.walkMany(split(path))
@@ -438,6 +438,20 @@ func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, er
 		return 0, err
 	}
 	return reply.Count, err
+}
+
+// XXX clone fid?
+func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
+	_, err := fsc.open(fid, np.OREAD)
+	if err != nil {
+		return "", err
+	}
+	reply, err := fsc.read(fid, 0, 1024)
+	if err != nil {
+		return "", err
+	}
+	// XXX close fid
+	return string(reply.Data), nil
 }
 
 func (fsc *FsClient) Lsof() []string {

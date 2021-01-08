@@ -16,7 +16,6 @@ import (
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
-	"ulambda/proc"
 )
 
 // XXX maybe one per machine, all mounting on /proc. implement union mount
@@ -134,23 +133,7 @@ func (p *Procd) FsInit() {
 	}
 }
 
-// XXX what should close() mean?
-func pinit(clnt *fsclnt.FsClient, program string) {
-	if _, err := clnt.Open("name/consoled/console", np.ORDWR); err != nil {
-		log.Fatal("Open error console: ", err)
-	}
-	fds := clnt.Lsof()
-	_, err := proc.Spawn(clnt, program, []string{}, fds)
-	if err != nil {
-		log.Fatal("Spawn error: ", err)
-	}
-	log.Printf("start %v\n", program)
-}
-
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("missing argument")
-	}
 	proc := makeProcd()
 	proc.FsInit()
 	if fd, err := proc.clnt.Attach(":1111", ""); err == nil {
@@ -166,7 +149,6 @@ func main() {
 	} else {
 		log.Fatal("Attach error proc: ", err)
 	}
-	pinit(proc.clnt, os.Args[1])
 	<-proc.done
 	log.Printf("Procd: finished %v\n")
 }

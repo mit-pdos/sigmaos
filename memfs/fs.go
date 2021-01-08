@@ -38,7 +38,7 @@ func (root *Root) allocInum() Tinum {
 func (root *Root) freeInum(inum Tinum) {
 }
 
-func (root *Root) MkNod(inode *Inode, name string, d DataLen) (*Inode, error) {
+func (root *Root) MkNod(inode *Inode, name string, d Data) (*Inode, error) {
 	inode, err := inode.Create(root, np.DMDEVICE, name)
 	if err != nil {
 		return nil, err
@@ -67,12 +67,12 @@ func (root *Root) Rename(old []string, new []string) error {
 	if i != nil {
 		return errors.New("Dst is not a directory")
 	}
-	err = olddir.Remove(oldname)
+	err = olddir.remove(oldname)
 	if err != nil {
 		log.Fatal("Remove error ", err)
 	}
 
-	err = newdir.Create(ino, newname)
+	err = newdir.create(ino, newname)
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}

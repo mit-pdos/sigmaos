@@ -21,7 +21,7 @@ func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
-func (f *File) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
+func (f *File) write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	cnt := np.Tsize(len(data))
 	sz := np.Toffset(len(data))
 	if offset > f.LenOff() { // passed end of file?
@@ -41,7 +41,7 @@ func (f *File) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	return cnt, nil
 }
 
-func (f *File) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+func (f *File) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {

@@ -5,3 +5,5 @@ all: named consoled # mr procd
 	go build -o bin/$@ cmd/$@/main.go
 
 run:
+
+

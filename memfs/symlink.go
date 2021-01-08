@@ -17,11 +17,11 @@ func (s *Symlink) Len() np.Tlength {
 	return np.Tlength(len(s.target))
 }
 
-func (s *Symlink) Write(d []byte) (np.Tsize, error) {
+func (s *Symlink) write(d []byte) (np.Tsize, error) {
 	s.target = d
 	return np.Tsize(len(d)), nil
 }
 
-func (s *Symlink) Read(n np.Tsize) ([]byte, error) {
+func (s *Symlink) read(n np.Tsize) ([]byte, error) {
 	return s.target, nil
 }

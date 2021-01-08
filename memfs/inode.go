@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	np "ulambda/ninep"
 )
@@ -16,7 +17,7 @@ const (
 	RootInum Tinum = 1
 )
 
-type DataLen interface {
+type Data interface {
 	Len() np.Tlength
 }
 
@@ -30,13 +31,15 @@ type Inode struct {
 	PermT   np.Tperm
 	Inum    Tinum
 	Version Tversion
-	Data    DataLen
+	Mtime   int64
+	Data    Data
 }
 
-func makeInode(t np.Tperm, inum Tinum, data DataLen) *Inode {
+func makeInode(t np.Tperm, inum Tinum, data Data) *Inode {
 	i := Inode{}
 	i.PermT = t
 	i.Inum = inum
+	i.Mtime = time.Now().Unix()
 	i.Data = data
 	return &i
 }
@@ -74,7 +77,7 @@ func (inode *Inode) IsDevice() bool {
 	return np.IsDevice(inode.PermT)
 }
 
-func permToDataLen(t np.Tperm) (DataLen, error) {
+func permToData(t np.Tperm) (Data, error) {
 	if np.IsDir(t) {
 		return makeDir(), nil
 	} else if np.IsSymlink(t) {
@@ -96,7 +99,7 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 	}
 	if inode.IsDir() {
 		d := inode.Data.(*Dir)
-		dl, err := permToDataLen(t)
+		dl, err := permToData(t)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +109,8 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 			dir.init(i.Inum)
 		}
 		log.Printf("create %v -> %v\n", name, i)
-		return i, d.Create(i, name)
+		inode.Mtime = time.Now().Unix()
+		return i, d.create(i, name)
 	} else {
 		return nil, errors.New("Not a directory")
 	}
@@ -125,7 +129,7 @@ func (inode *Inode) Stat() *np.Stat {
 	stat.Type = 0 // XXX
 	stat.Qid = inode.Qid()
 	stat.Mode = inode.Mode()
-	stat.Mtime = 0
+	stat.Mtime = uint32(inode.Mtime)
 	stat.Atime = 0
 	stat.Length = inode.Data.Len()
 	stat.Name = ""
@@ -145,7 +149,7 @@ func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
-	inodes, rest, err := dir.Namei(path, inodes)
+	inodes, rest, err := dir.namei(path, inodes)
 	if err == nil {
 		return inodes, rest, err
 		// switch inodes[len(inodes)-1].PermT {
@@ -190,7 +194,7 @@ func (inode *Inode) Remove(root *Root, path []string) error {
 	if err != nil {
 		return err
 	}
-	err = dir.Remove(path[len(path)-1])
+	err = dir.remove(path[len(path)-1])
 	if err != nil {
 		log.Fatal("Remove error ", err)
 	}
@@ -200,21 +204,27 @@ func (inode *Inode) Remove(root *Root, path []string) error {
 
 func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	log.Print("fs.Writei ", inode)
+	var sz np.Tsize
+	var err error
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
-		return d.Write(offset, data)
+		sz, err = d.Write(offset, data)
 	} else if inode.IsDir() {
 		return 0, errors.New("Cannot write directory")
 	} else if inode.IsSymlink() {
 		s := inode.Data.(*Symlink)
-		return s.Write(data)
+		sz, err = s.write(data)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
-		return p.Write(data)
+		sz, err = p.write(data)
 	} else {
 		f := inode.Data.(*File)
-		return f.Write(offset, data)
+		sz, err = f.write(offset, data)
 	}
+	if err != nil {
+		inode.Mtime = time.Now().Unix()
+	}
+	return sz, err
 }
 
 func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
@@ -224,15 +234,15 @@ func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 		return d.Read(offset, n)
 	} else if inode.IsDir() {
 		d := inode.Data.(*Dir)
-		return d.Read(offset, n)
+		return d.read(offset, n)
 	} else if inode.IsSymlink() {
 		s := inode.Data.(*Symlink)
-		return s.Read(n)
+		return s.read(n)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
-		return p.Read(n)
+		return p.read(n)
 	} else {
 		f := inode.Data.(*File)
-		return f.Read(offset, n)
+		return f.read(offset, n)
 	}
 }

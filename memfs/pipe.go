@@ -25,7 +25,7 @@ func (p *Pipe) Len() np.Tlength {
 }
 
 // XXX if full block writer
-func (pipe *Pipe) Write(d []byte) (np.Tsize, error) {
+func (pipe *Pipe) write(d []byte) (np.Tsize, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -35,7 +35,7 @@ func (pipe *Pipe) Write(d []byte) (np.Tsize, error) {
 }
 
 // XXX read no more than n
-func (pipe *Pipe) Read(n np.Tsize) ([]byte, error) {
+func (pipe *Pipe) read(n np.Tsize) ([]byte, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

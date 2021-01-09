@@ -99,12 +99,14 @@ func (c *Channel) Serve() {
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			log.Fatal("Server readMsg error: ", err)
+			log.Print("Serve: readFrame error: ", err)
+			return
 		}
 		fcall := &np.Fcall{}
 		// log.Print("Tframe ", len(frame), frame)
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
-			log.Fatal("Server unmarshal error: ", err)
+			log.Print("Serve: unmarshal error: ", err)
+			return
 		}
 		log.Print(fcall)
 		// XXX start go routine
@@ -117,10 +119,15 @@ func (c *Channel) Serve() {
 		log.Print(fcall)
 		frame, err = npcodec.Marshal(fcall)
 		if err != nil {
-			log.Fatal("Server marshal error: ", err)
+			log.Print("Serve: marshal error: ", err)
+			return
 		}
 		// log.Print("Rframe ", len(frame), frame)
-		npcodec.WriteFrame(c.bw, frame)
+		err = npcodec.WriteFrame(c.bw, frame)
+		if err != nil {
+			log.Print("Serve: WriteFrame error ", err)
+			return
+		}
 		c.bw.Flush()
 	}
 }

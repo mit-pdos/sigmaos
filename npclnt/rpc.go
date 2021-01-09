@@ -104,17 +104,17 @@ func (npch *NpChan) Mkpipe(fid np.Tfid, name string, perm np.Tperm) (*np.Rmkpipe
 	return &msg, err
 }
 
-func (npch *NpChan) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
-	args := np.Topen{fid, mode}
+func (npch *NpChan) Remove(fid np.Tfid) error {
+	args := np.Tremove{fid}
 	reply, err := npch.call(args)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	msg, ok := reply.(np.Ropen)
+	_, ok := reply.(np.Rremove)
 	if !ok {
-		return nil, errors.New("Not correct reply msg")
+		return errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return err
 }
 
 func (npch *NpChan) Clunk(fid np.Tfid) error {
@@ -128,6 +128,19 @@ func (npch *NpChan) Clunk(fid np.Tfid) error {
 		return errors.New("Not correct reply msg")
 	}
 	return err
+}
+
+func (npch *NpChan) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
+	args := np.Topen{fid, mode}
+	reply, err := npch.call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Ropen)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
 }
 
 func (npch *NpChan) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rread, error) {

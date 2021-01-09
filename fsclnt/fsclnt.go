@@ -11,6 +11,7 @@ import (
 
 	np "ulambda/ninep"
 	"ulambda/npclnt"
+	"ulambda/npcodec"
 )
 
 const (
@@ -377,6 +378,30 @@ func (fsc *FsClient) Mv(old string, new string) error {
 	return err
 }
 
+func (fsc *FsClient) Remove(name string) error {
+	log.Print("Remove ", name)
+	fid, err := fsc.walkMany(split(name))
+	if err != nil {
+		return err
+	}
+	err = fsc.npch(fid).Remove(fid)
+	return err
+}
+
+// XXX clone fid?
+func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
+	_, err := fsc.npch(fid).Open(fid, np.OREAD)
+	if err != nil {
+		return "", err
+	}
+	reply, err := fsc.npch(fid).Read(fid, 0, 1024)
+	if err != nil {
+		return "", err
+	}
+	// XXX close fid
+	return string(reply.Data), nil
+}
+
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	log.Printf("Open %v %v\n", path, mode)
 	fid, err := fsc.walkMany(split(path))
@@ -423,6 +448,11 @@ func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
 
 }
 
+func (fsc *FsClient) Opendir(path string) (int, error) {
+	log.Print("Opendir %v", path)
+	return fsc.Open(path, np.OREAD)
+}
+
 func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 	fid, err := fsc.lookup(fd)
 	if err != nil {
@@ -435,6 +465,16 @@ func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, erro
 	return reply.Data, err
 }
 
+func (fsc *FsClient) Readdir(fd int, offset np.Toffset, n np.Tsize) ([]np.Stat, error) {
+	data, err := fsc.Read(fd, offset, n)
+	if err != nil {
+		return nil, err
+	}
+	var dirents []np.Stat
+	err = npcodec.Unmarshal(data, &dirents)
+	return dirents, err
+}
+
 func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, error) {
 	fid, err := fsc.lookup(fd)
 	if err != nil {
@@ -445,20 +485,6 @@ func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, er
 		return 0, err
 	}
 	return reply.Count, err
-}
-
-// XXX clone fid?
-func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
-	_, err := fsc.npch(fid).Open(fid, np.OREAD)
-	if err != nil {
-		return "", err
-	}
-	reply, err := fsc.npch(fid).Read(fid, 0, 1024)
-	if err != nil {
-		return "", err
-	}
-	// XXX close fid
-	return string(reply.Data), nil
 }
 
 func (fsc *FsClient) Lsof() []string {

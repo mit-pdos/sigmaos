@@ -17,12 +17,10 @@ func IsCurrentDir(name string) bool {
 
 type Dir struct {
 	entries map[string]*Inode
-	entrysz uint32
 }
 
 func makeDir() *Dir {
 	d := &Dir{}
-	d.entrysz = npcodec.SizeNp(np.Stat{})
 	d.entries = make(map[string]*Inode)
 
 	return d
@@ -50,7 +48,6 @@ func (dir *Dir) lookup(name string) (*Inode, error) {
 		return inode, nil
 	} else {
 		return nil, fmt.Errorf("Unknown name %v", name)
-
 	}
 }
 
@@ -77,18 +74,32 @@ func (dir *Dir) namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 	}
 }
 
-func (dir *Dir) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+// for ulambda, cnt is number of directories entries
+func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 	buf := []byte{}
-	if offset == 0 {
-		for n, i := range dir.entries {
-			st := *i.Stat()
-			st.Name = n
+	if offset >= np.Toffset(dir.Len()) { // passed end of directory
+		return buf, nil
+	}
+	off := np.Toffset(0)
+	for n, i := range dir.entries {
+		if n == "." {
+			continue
+		}
+		st := *i.Stat()
+		st.Name = n
+		sz := np.Tsize(npcodec.SizeNp(st))
+		if cnt < sz {
+			break
+		}
+		cnt -= sz
+		if off >= offset {
 			b, err := npcodec.Marshal(st)
 			if err != nil {
 				return nil, err
 			}
 			buf = append(buf, b...)
 		}
+		off += np.Toffset(sz)
 	}
 	return buf, nil
 }

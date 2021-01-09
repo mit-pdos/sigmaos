@@ -200,7 +200,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		}
 		// XXX cwd
 		dst := split(args.Stat.Name)
-		dst = append(fid.path[1:], dst...)
+		log.Print("dst path ", dst, fid.path)
 		err := npc.memfs.Rename(fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}

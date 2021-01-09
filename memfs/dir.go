@@ -76,7 +76,7 @@ func (dir *Dir) namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 
 // for ulambda, cnt is number of directories entries
 func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
-	buf := []byte{}
+	var buf []byte
 	if offset >= np.Toffset(dir.Len()) { // passed end of directory
 		return buf, nil
 	}
@@ -93,6 +93,7 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 		}
 		cnt -= sz
 		if off >= offset {
+			log.Print(st)
 			b, err := npcodec.Marshal(st)
 			if err != nil {
 				return nil, err

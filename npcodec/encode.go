@@ -257,7 +257,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		case *np.Stat:
-			log.Print("*np.Stat ", v)
 			var l uint16
 
 			if err := d.decode(&l); err != nil {
@@ -284,7 +283,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err
 			}
-			log.Print("fcall ", v.Type)
 			msg, err := newMsg(v.Type)
 			if err != nil {
 				return err
@@ -303,7 +301,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err != nil {
 				return err
 			}
-			log.Print("Tmsg ", v, v.Type())
 
 			if err := d.decode(elements...); err != nil {
 				return err

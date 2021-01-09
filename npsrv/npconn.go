@@ -102,7 +102,7 @@ func (c *Channel) Serve() {
 			log.Fatal("Server readMsg error: ", err)
 		}
 		fcall := &np.Fcall{}
-		log.Print("Tframe ", len(frame), frame)
+		// log.Print("Tframe ", len(frame), frame)
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Fatal("Server unmarshal error: ", err)
 		}

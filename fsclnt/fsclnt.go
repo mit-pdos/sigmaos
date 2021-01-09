@@ -366,14 +366,21 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 }
 
 // XXX update pathname associated with fid in Channel
-func (fsc *FsClient) Mv(old string, new string) error {
-	log.Printf("Mv %v %v\n", old, new)
+func (fsc *FsClient) Rename(old string, new string) error {
+	log.Printf("Rename %v %v\n", old, new)
 	fid, err := fsc.walkMany(split(old))
 	if err != nil {
 		return err
 	}
+	fid1, rest := fsc.mount.resolve(split(new))
+	if fid1 == np.NoFid {
+		return errors.New("Bad destination")
+
+	}
+	// XXX check fid is at same server?
+	// XXX deal with symbolic names on rest
 	st := &np.Stat{}
-	st.Name = new
+	st.Name = strings.Join(rest, "/")
 	_, err = fsc.npch(fid).Wstat(fid, st)
 	return err
 }
@@ -470,9 +477,11 @@ func (fsc *FsClient) Readdir(fd int, offset np.Toffset, n np.Tsize) ([]np.Stat, 
 	if err != nil {
 		return nil, err
 	}
-	var dirents []np.Stat
-	err = npcodec.Unmarshal(data, &dirents)
-	return dirents, err
+	var st np.Stat
+	if len(data) > 0 {
+		err = npcodec.Unmarshal(data, &st)
+	}
+	return []np.Stat{st}, err
 }
 
 func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, error) {

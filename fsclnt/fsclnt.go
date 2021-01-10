@@ -3,6 +3,7 @@ package fsclnt
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"strconv"
@@ -456,7 +457,7 @@ func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
 }
 
 func (fsc *FsClient) Opendir(path string) (int, error) {
-	log.Print("Opendir %v", path)
+	log.Print("Opendir ", path)
 	return fsc.Open(path, np.OREAD)
 }
 
@@ -480,8 +481,9 @@ func (fsc *FsClient) Readdir(fd int, offset np.Toffset, n np.Tsize) ([]np.Stat, 
 	var st np.Stat
 	if len(data) > 0 {
 		err = npcodec.Unmarshal(data, &st)
+		return []np.Stat{st}, err
 	}
-	return []np.Stat{st}, err
+	return nil, io.EOF
 }
 
 func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, error) {

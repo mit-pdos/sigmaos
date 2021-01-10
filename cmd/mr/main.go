@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"hash/fnv"
+	"io"
 	"log"
 	"path/filepath"
 	"strconv"
@@ -79,7 +80,7 @@ func (w *Worker) doMap(name string) {
 	offs := []np.Toffset{}
 	for r := 0; r < NReduce; r++ {
 		oname := "mr-" + base + "-" + strconv.Itoa(r)
-		fd, err := w.clnt.Create("name/reduce/"+oname, 0700, np.OWRITE)
+		fd, err := w.clnt.Create("name/mr/reduce/"+oname, 0700, np.OWRITE)
 		if err != nil {
 			log.Fatal("doMap create error ", err)
 		}
@@ -104,7 +105,7 @@ func (w *Worker) doMap(name string) {
 	for _, fd := range fds {
 		w.clnt.Close(fd)
 	}
-	err := w.clnt.Remove("name/started/" + base)
+	err := w.clnt.Remove("name/mr/started/" + base)
 	if err != nil {
 		log.Fatal("domap Remove error ", err)
 	}
@@ -114,41 +115,36 @@ func pickOne(dirents []np.Stat) string {
 	return dirents[0].Name
 }
 
-func pickOld(dirents []np.Stat) (string, bool) {
-	// look at time
-	return dirents[0].Name, true
-}
-
 func (w *Worker) mPhase() {
 	done := false
 	for !done {
-		fd, err := w.clnt.Opendir("name/todo")
+		fd, err := w.clnt.Opendir("name/mr/todo")
 		if err != nil {
 			log.Fatal("Opendir error ", err)
 		}
 		dirents, err := w.clnt.Readdir(fd, 0, 256)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			log.Fatal("Readdir error ", err)
 		}
+		log.Print("dirents ", dirents)
 		w.clnt.Close(fd)
-		if len(dirents) == 0 { // are we done?
-			fd, err := w.clnt.Opendir("name/started")
-			dirents, err := w.clnt.Readdir(fd, 0, 1024)
-			if err != nil {
+		if err == io.EOF { // are we done?
+			fd, err := w.clnt.Opendir("name/mr/started")
+			_, err = w.clnt.Readdir(fd, 0, 1024)
+			if err != nil && err != io.EOF {
 				log.Fatal("Readdir error ", err)
 			}
-			if len(dirents) == 0 {
+			if err == io.EOF {
 				done = true
 			}
 			w.clnt.Close(fd)
 		} else {
 			log.Print("pickone ", dirents)
 			name := pickOne(dirents)
-			err = w.clnt.Rename("name/todo/"+name, "name/started/"+name)
+			err = w.clnt.Rename("name/mr/todo/"+name, "name/mr/started/"+name)
 			if err == nil {
-				w.doMap("name/started/" + name)
+				w.doMap("name/mr/started/" + name)
 			}
-			done = true
 		}
 	}
 	w.done <- true

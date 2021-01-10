@@ -105,10 +105,6 @@ func (w *Worker) doMap(name string) {
 	for _, fd := range fds {
 		w.clnt.Close(fd)
 	}
-	err := w.clnt.Remove("name/mr/started/" + base)
-	if err != nil {
-		log.Fatal("domap Remove error ", err)
-	}
 }
 
 func pickOne(dirents []np.Stat) string {
@@ -145,6 +141,10 @@ func (w *Worker) mPhase() {
 			err = w.clnt.Rename("name/mr/todo/"+name, "name/mr/started/"+name)
 			if err == nil {
 				w.doMap("name/mr/started/" + name)
+				err := w.clnt.Remove("name/mr/started/" + name)
+				if err != nil {
+					log.Fatal("domap Remove error ", err)
+				}
 			}
 		}
 	}

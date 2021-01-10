@@ -35,17 +35,17 @@ func TestRoot(t *testing.T) {
 
 func (ts *TestState) initfs() {
 	const N = 1000
-	_, err := ts.rooti.Create(ts.fs, np.DMDIR|07000, "todo")
+	_, err := ts.rooti.Create(0, ts.fs, np.DMDIR|07000, "todo")
 	assert.Nil(ts.t, err, "Create todo")
 	is, _, err := ts.rooti.Walk(0, []string{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
 	for i := 0; i < N; i++ {
-		_, err = is[1].Create(ts.fs, 07000, "job"+strconv.Itoa(i))
+		_, err = is[1].Create(0, ts.fs, 07000, "job"+strconv.Itoa(i))
 		assert.Nil(ts.t, err, "Create job")
 	}
-	_, err = ts.rooti.Create(ts.fs, np.DMDIR|07000, "started")
+	_, err = ts.rooti.Create(0, ts.fs, np.DMDIR|07000, "started")
 	assert.Nil(ts.t, err, "Create started")
-	_, err = ts.rooti.Create(ts.fs, np.DMDIR|07000, "reduce")
+	_, err = ts.rooti.Create(0, ts.fs, np.DMDIR|07000, "reduce")
 	assert.Nil(ts.t, err, "Create reduce")
 }
 
@@ -73,6 +73,8 @@ func (ts *TestState) testRename(t int) {
 				assert.Contains(ts.t, err.Error(), "Unknown name")
 			} else {
 				assert.Equal(ts.t, err, nil, "Rename todo")
+				err = ts.rooti.Remove(t, ts.fs, split("started/"+name))
+				assert.Nil(ts.t, err, "Remove started")
 			}
 		}
 	}

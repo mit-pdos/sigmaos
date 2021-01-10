@@ -72,7 +72,7 @@ func unlockOrdered(tid int, olddir *Dir, newdir *Dir) {
 }
 
 func (root *Root) Rename(tid int, old []string, new []string) error {
-	log.Printf("%d: Rename %s to %s\n", tid, old, new)
+	DPrintf("%d: Rename %s to %s\n", tid, old, new)
 
 	rootino := root.inode
 	if len(old) == 0 || len(new) == 0 {

@@ -96,14 +96,14 @@ func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []stri
 	}
 	inode, err = dir.lookup(path[0])
 	if err != nil {
-		log.Printf("namei %v unknown %v", dir, path)
+		DPrintf("namei %v unknown %v", dir, path)
 		dir.mu.Unlock()
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
 	if inode.IsDir() {
 		if len(path) == 1 { // done?
-			log.Printf("namei %v %v -> %v", path, dir, inodes)
+			DPrintf("namei %v %v -> %v", path, dir, inodes)
 			dir.mu.Unlock()
 			return inodes, nil, nil
 		}
@@ -111,7 +111,7 @@ func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []stri
 		dir.mu.Unlock() // for "."
 		return d.namei(tid, path[1:], inodes)
 	} else {
-		log.Printf("namei %v %v -> %v %v", path, dir, inodes, path[1:])
+		DPrintf("namei %v %v -> %v %v", path, dir, inodes, path[1:])
 		dir.mu.Unlock()
 		return inodes, path[1:], nil
 	}

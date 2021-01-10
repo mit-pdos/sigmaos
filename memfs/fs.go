@@ -59,7 +59,7 @@ func lockOrdered(olddir *Dir, newdir *Dir) {
 	}
 }
 
-func unlockOrdered(olddir *Dir, newdir *Dir) {
+func unlockOrdered(tid int, olddir *Dir, newdir *Dir) {
 	if olddir.inum == newdir.inum {
 		olddir.mu.Unlock()
 	} else if olddir.inum < newdir.inum {
@@ -71,19 +71,20 @@ func unlockOrdered(olddir *Dir, newdir *Dir) {
 	}
 }
 
-func (root *Root) Rename(old []string, new []string) error {
-	log.Printf("Rename %s to %s\n", old, new)
+func (root *Root) Rename(tid int, old []string, new []string) error {
+	log.Printf("%d: Rename %s to %s\n", tid, old, new)
+
 	rootino := root.inode
 	if len(old) == 0 || len(new) == 0 {
 		return errors.New("Cannot rename directory")
 	}
 	oldname := old[len(old)-1]
 	newname := new[len(new)-1]
-	olddir, ino, err := rootino.LookupPath(old)
+	olddir, ino, err := rootino.LookupPath(tid, old)
 	if err != nil {
 		return err
 	}
-	newdir, i, err := rootino.LookupPath(new[:len(new)-1])
+	newdir, i, err := rootino.LookupPath(tid, new[:len(new)-1])
 	if err != nil {
 		return err
 	}
@@ -92,13 +93,13 @@ func (root *Root) Rename(old []string, new []string) error {
 	}
 
 	lockOrdered(olddir, newdir)
-	defer unlockOrdered(olddir, newdir)
+	defer unlockOrdered(tid, olddir, newdir)
 
 	// XXX should check if oldname still exists, newname doesn't exist, etc.
 
 	err = olddir.removeLocked(oldname)
 	if err != nil {
-		return errors.New("Old doesn't exist")
+		return err
 	}
 
 	err = newdir.createLocked(ino, newname)

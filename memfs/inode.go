@@ -126,26 +126,27 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 		return nil, errors.New("Cannot create name")
 	}
 	if inode.IsDir() {
-		d := inode.Data.(*Dir)
+		dir := inode.Data.(*Dir)
 		dl, err := permToData(t)
 		if err != nil {
 			return nil, err
 		}
-		i := makeInode(t, root.allocInum(), dl)
-		if i.IsDir() {
-			dir := inode.Data.(*Dir)
-			dir.init(i)
+		newi := makeInode(t, root.allocInum(), dl)
+		if newi.IsDir() {
+			dn := newi.Data.(*Dir)
+			dn.init(newi)
+
 		}
-		log.Printf("create %v -> %v\n", name, i)
+		log.Printf("create %v in %v (%v) -> %v\n", name, inode, dir, newi)
 		inode.Mtime = time.Now().Unix()
-		return i, d.create(i, name)
+		return newi, dir.create(newi, name)
 	} else {
 		return nil, errors.New("Not a directory")
 	}
 }
 
-func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
-	log.Printf("Walk %v at %v\n", path, inode)
+func (inode *Inode) Walk(tid int, path []string) ([]*Inode, []string, error) {
+	log.Printf("%d: Walk %v at %v\n", tid, path, inode)
 	inodes := []*Inode{inode}
 	if len(path) == 0 {
 		return inodes, nil, nil
@@ -154,7 +155,7 @@ func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
-	inodes, rest, err := dir.namei(path, inodes)
+	inodes, rest, err := dir.namei(tid, path, inodes)
 	if err == nil {
 		return inodes, rest, err
 		// switch inodes[len(inodes)-1].PermT {
@@ -172,8 +173,8 @@ func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 
 // Lookup a directory or file. If file, return parent dir and inode
 // for file.  If directory, return it
-func (inode *Inode) LookupPath(path []string) (*Dir, *Inode, error) {
-	inodes, rest, err := inode.Walk(path)
+func (inode *Inode) LookupPath(tid int, path []string) (*Dir, *Inode, error) {
+	inodes, rest, err := inode.Walk(tid, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -194,8 +195,8 @@ func (inode *Inode) LookupPath(path []string) (*Dir, *Inode, error) {
 	}
 }
 
-func (inode *Inode) Remove(root *Root, path []string) error {
-	dir, ino, err := inode.LookupPath(path)
+func (inode *Inode) Remove(tid int, root *Root, path []string) error {
+	dir, ino, err := inode.LookupPath(tid, path)
 	if err != nil {
 		return err
 	}
@@ -208,7 +209,7 @@ func (inode *Inode) Remove(root *Root, path []string) error {
 }
 
 func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
-	log.Print("fs.Writei ", inode)
+	log.Print("inode.Write ", inode)
 	var sz np.Tsize
 	var err error
 	if inode.IsDevice() {
@@ -233,7 +234,7 @@ func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 }
 
 func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
-	log.Print("fs.Readi ", inode)
+	log.Print("inode.Read ", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		return d.Read(offset, n)

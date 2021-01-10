@@ -23,7 +23,7 @@ type Dir struct {
 }
 
 func (dir *Dir) String() string {
-	str := fmt.Sprintf("Dir %v entries %v", dir.inum, dir.entries)
+	str := fmt.Sprintf("Dir{%v entries %v}", dir.inum, dir.entries)
 	return str
 }
 
@@ -57,7 +57,7 @@ func (dir *Dir) removeLocked(name string) error {
 		delete(dir.entries, name)
 		return nil
 	}
-	return errors.New("Name not found")
+	return fmt.Errorf("Unknown name %v", name)
 }
 
 func (dir *Dir) createLocked(ino *Inode, name string) error {
@@ -86,29 +86,32 @@ func (dir *Dir) Len() np.Tlength {
 	return dir.lenLocked()
 }
 
-func (dir *Dir) namei(path []string, inodes []*Inode) ([]*Inode, []string, error) {
+func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []string, error) {
 	var inode *Inode
 	var err error
 
 	dir.mu.Lock()
+	if dir.inum == 0 {
+		log.Fatal("namei ", dir)
+	}
 	inode, err = dir.lookup(path[0])
 	if err != nil {
-		log.Printf("dir.Namei %v unknown %v", dir, path)
+		log.Printf("namei %v unknown %v", dir, path)
 		dir.mu.Unlock()
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
 	if inode.IsDir() {
 		if len(path) == 1 { // done?
-			log.Printf("Namei %v %v -> %v", path, dir, inodes)
+			log.Printf("namei %v %v -> %v", path, dir, inodes)
 			dir.mu.Unlock()
 			return inodes, nil, nil
 		}
 		d := inode.Data.(*Dir)
 		dir.mu.Unlock() // for "."
-		return d.namei(path[1:], inodes)
+		return d.namei(tid, path[1:], inodes)
 	} else {
-		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inodes, path[1:])
+		log.Printf("namei %v %v -> %v %v", path, dir, inodes, path[1:])
 		dir.mu.Unlock()
 		return inodes, path[1:], nil
 	}
@@ -136,7 +139,6 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 		}
 		cnt -= sz
 		if off >= offset {
-			log.Print(st)
 			b, err := npcodec.Marshal(st)
 			if err != nil {
 				return nil, err

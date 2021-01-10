@@ -24,6 +24,7 @@ type NpConn struct {
 	mu    sync.Mutex // for Fids
 	memfs *memfs.Root
 	conn  net.Conn
+	id    int
 	Fids  map[np.Tfid]*Fid
 }
 
@@ -34,16 +35,18 @@ func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 	return f, ok
 }
 
-func makeNpConn(root *memfs.Root, conn net.Conn) *NpConn {
+func makeNpConn(root *memfs.Root, conn net.Conn, id int) *NpConn {
 	npc := &NpConn{}
 	npc.memfs = root
 	npc.conn = conn
+	npc.id = id
 	npc.Fids = make(map[np.Tfid]*Fid)
 	return npc
 }
 
 type Fsd struct {
-	fs *memfs.Root
+	fs     *memfs.Root
+	nextId int
 }
 
 func MakeFsd() *Fsd {
@@ -57,7 +60,8 @@ func (fsd *Fsd) Root() *memfs.Root {
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := makeNpConn(fsd.fs, conn)
+	fsd.nextId += 1
+	clnt := makeNpConn(fsd.fs, conn, fsd.nextId)
 	return clnt
 }
 
@@ -95,7 +99,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	log.Printf("fsd.Walk %v from %v: dir %v\n", args, npc.conn.RemoteAddr(), fid)
-	inodes, rest, err := fid.ino.Walk(args.Wnames)
+	inodes, rest, err := fid.ino.Walk(npc.id, args.Wnames)
 	if err != nil {
 		return np.ErrNotfound
 	}
@@ -182,7 +186,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	err := root.Remove(npc.memfs, fid.path)
+	err := root.Remove(npc.id, npc.memfs, fid.path)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -217,7 +221,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		// XXX cwd
 		dst := split(args.Stat.Name)
 		log.Print("dst path ", dst, fid.path)
-		err := npc.memfs.Rename(fid.path, dst)
+		err := npc.memfs.Rename(npc.id, fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

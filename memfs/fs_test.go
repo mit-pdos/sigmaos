@@ -3,7 +3,6 @@ package memfs
 // Run go test ulambda/memfs
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,13 +29,12 @@ func newTest(t *testing.T) *TestState {
 }
 
 func TestRoot(t *testing.T) {
-	fmt.Printf("TestGetRoot\n")
 	ts := newTest(t)
 	assert.Equal(t, ts.fs.inode.Inum, RootInum)
 }
 
 func (ts *TestState) initfs() {
-	const N = 2
+	const N = 1000
 	_, err := ts.rooti.Create(ts.fs, np.DMDIR|07000, "todo")
 	assert.Nil(ts.t, err, "Create todo")
 	is, _, err := ts.rooti.Walk(0, []string{"todo"})
@@ -81,7 +79,7 @@ func (ts *TestState) testRename(t int) {
 }
 
 func TestConcurRename(t *testing.T) {
-	const N = 2
+	const N = 10
 	ts := newTest(t)
 	ts.initfs()
 

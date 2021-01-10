@@ -68,7 +68,7 @@ func (cr *Cntlr) initfs() {
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}
-	is, _, err := rooti.Walk([]string{"todo"})
+	is, _, err := rooti.Walk(0, []string{"todo"})
 	if err != nil {
 		log.Fatal("Walk error ", err)
 	}

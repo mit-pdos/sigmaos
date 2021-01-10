@@ -71,7 +71,6 @@ func unlockOrdered(olddir *Dir, newdir *Dir) {
 	}
 }
 
-// XXX locking
 func (root *Root) Rename(old []string, new []string) error {
 	log.Printf("Rename %s to %s\n", old, new)
 	rootino := root.inode

@@ -22,6 +22,11 @@ type Dir struct {
 	entries map[string]*Inode
 }
 
+func (dir *Dir) String() string {
+	str := fmt.Sprintf("Dir %v entries %v", dir.inum, dir.entries)
+	return str
+}
+
 func makeDir() *Dir {
 	d := &Dir{}
 	d.entries = make(map[string]*Inode)
@@ -100,7 +105,7 @@ func (dir *Dir) namei(path []string, inodes []*Inode) ([]*Inode, []string, error
 			return inodes, nil, nil
 		}
 		d := inode.Data.(*Dir)
-		dir.mu.Unlock() // for ".."
+		dir.mu.Unlock() // for "."
 		return d.namei(path[1:], inodes)
 	} else {
 		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inodes, path[1:])

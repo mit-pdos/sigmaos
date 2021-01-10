@@ -119,6 +119,9 @@ func (inode *Inode) Stat() *np.Stat {
 }
 
 func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}

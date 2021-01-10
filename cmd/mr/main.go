@@ -137,6 +137,7 @@ func (w *Worker) mPhase() {
 			if err == io.EOF {
 				done = true
 			}
+			log.Print("SPIN")
 			w.clnt.Close(fd)
 		} else {
 			log.Print("pickone ", dirents)

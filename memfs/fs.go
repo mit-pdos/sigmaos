@@ -98,7 +98,7 @@ func (root *Root) Rename(old []string, new []string) error {
 
 	err = olddir.removeLocked(oldname)
 	if err != nil {
-		log.Fatal("Remove error ", err)
+		return errors.New("Old doesn't exist")
 	}
 
 	err = newdir.createLocked(ino, newname)

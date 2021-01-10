@@ -128,8 +128,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	log.Printf("fsd.Create %v from %v dir %v\n", args, npc.conn.RemoteAddr(), fid)
-	inode, err := fid.ino.Create(npc.memfs, args.Perm, args.Name)
+	inode, err := fid.ino.Create(npc.id, npc.memfs, args.Perm, args.Name)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -239,7 +238,7 @@ func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	inode, err := fid.ino.Create(npc.memfs, np.DMNAMEDPIPE, args.Name)
+	inode, err := fid.ino.Create(npc.id, npc.memfs, np.DMNAMEDPIPE, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}

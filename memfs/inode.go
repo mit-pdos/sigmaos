@@ -118,7 +118,7 @@ func (inode *Inode) Stat() *np.Stat {
 	return stat
 }
 
-func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) {
+func (inode *Inode) Create(tid int, root *Root, t np.Tperm, name string) (*Inode, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
@@ -137,7 +137,7 @@ func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) 
 			dn.init(newi)
 
 		}
-		log.Printf("create %v in %v (%v) -> %v\n", name, inode, dir, newi)
+		log.Printf("%d: create %v in %v -> %v\n", tid, name, inode, newi)
 		inode.Mtime = time.Now().Unix()
 		return newi, dir.create(newi, name)
 	} else {

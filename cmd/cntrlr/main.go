@@ -64,7 +64,7 @@ func (cr *Cntlr) Monitor() {
 func (cr *Cntlr) initfs() {
 	fs := cr.fsd.Root()
 	rooti := fs.RootInode()
-	_, err := rooti.Create(fs, np.DMDIR|07000, "todo")
+	_, err := rooti.Create(0, fs, np.DMDIR|07000, "todo")
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}
@@ -73,16 +73,16 @@ func (cr *Cntlr) initfs() {
 		log.Fatal("Walk error ", err)
 	}
 	for i := 0; i < 100; i++ {
-		_, err = is[1].Create(fs, 07000, "job"+strconv.Itoa(i))
+		_, err = is[1].Create(0, fs, 07000, "job"+strconv.Itoa(i))
 		if err != nil {
 			log.Fatal("Create error ", err)
 		}
 	}
-	_, err = rooti.Create(fs, np.DMDIR|07000, "started")
+	_, err = rooti.Create(0, fs, np.DMDIR|07000, "started")
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}
-	_, err = rooti.Create(fs, np.DMDIR|07000, "reduce")
+	_, err = rooti.Create(0, fs, np.DMDIR|07000, "reduce")
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}

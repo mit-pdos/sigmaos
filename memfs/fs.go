@@ -39,7 +39,7 @@ func (root *Root) freeInum(inum Tinum) {
 }
 
 func (root *Root) MkNod(inode *Inode, name string, d Data) (*Inode, error) {
-	inode, err := inode.Create(root, np.DMDEVICE, name)
+	inode, err := inode.Create(0, root, np.DMDEVICE, name)
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,7 @@ func MakeRoot() *Root {
 	r.inode = makeInode(np.DMDIR, RootInum, makeDir())
 	r.nextInum = RootInum + 1
 	dir := r.inode.Data.(*Dir)
-	dir.init(r.inode.Inum)
+	dir.init(r.inode)
 	return &r
 }
 
@@ -47,6 +47,30 @@ func (root *Root) MkNod(inode *Inode, name string, d Data) (*Inode, error) {
 	return inode, nil
 }
 
+func lockOrdered(olddir *Dir, newdir *Dir) {
+	if olddir.inum == newdir.inum {
+		olddir.mu.Lock()
+	} else if olddir.inum < newdir.inum {
+		olddir.mu.Lock()
+		newdir.mu.Lock()
+	} else {
+		newdir.mu.Lock()
+		olddir.mu.Lock()
+	}
+}
+
+func unlockOrdered(olddir *Dir, newdir *Dir) {
+	if olddir.inum == newdir.inum {
+		olddir.mu.Unlock()
+	} else if olddir.inum < newdir.inum {
+		olddir.mu.Unlock()
+		newdir.mu.Unlock()
+	} else {
+		newdir.mu.Unlock()
+		olddir.mu.Unlock()
+	}
+}
+
 // XXX locking
 func (root *Root) Rename(old []string, new []string) error {
 	log.Printf("Rename %s to %s\n", old, new)
@@ -67,12 +91,18 @@ func (root *Root) Rename(old []string, new []string) error {
 	if i != nil {
 		return errors.New("Dst is not a directory")
 	}
-	err = olddir.remove(oldname)
+
+	lockOrdered(olddir, newdir)
+	defer unlockOrdered(olddir, newdir)
+
+	// XXX should check if oldname still exists, newname doesn't exist, etc.
+
+	err = olddir.removeLocked(oldname)
 	if err != nil {
 		log.Fatal("Remove error ", err)
 	}
 
-	err = newdir.create(ino, newname)
+	err = newdir.createLocked(ino, newname)
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}

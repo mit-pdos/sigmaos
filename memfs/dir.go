@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	np "ulambda/ninep"
 	"ulambda/npcodec"
@@ -16,6 +17,8 @@ func IsCurrentDir(name string) bool {
 }
 
 type Dir struct {
+	mu      sync.Mutex
+	inum    Tinum // for acquiring locks in rename()
 	entries map[string]*Inode
 }
 
@@ -26,11 +29,12 @@ func makeDir() *Dir {
 	return d
 }
 
-func (dir *Dir) init(inum Tinum) {
-	dir.entries["."] = makeInode(np.DMDIR, inum, dir)
+func (dir *Dir) init(inodot *Inode) {
+	dir.inum = inodot.Inum
+	dir.entries["."] = inodot
 }
 
-func (dir *Dir) Len() np.Tlength {
+func (dir *Dir) lenLocked() np.Tlength {
 	sz := uint32(0)
 	for n, i := range dir.entries {
 		if n != "." {
@@ -42,6 +46,25 @@ func (dir *Dir) Len() np.Tlength {
 	return np.Tlength(sz)
 }
 
+func (dir *Dir) removeLocked(name string) error {
+	_, ok := dir.entries[name]
+	if ok {
+		delete(dir.entries, name)
+		return nil
+	}
+	return errors.New("Name not found")
+}
+
+func (dir *Dir) createLocked(ino *Inode, name string) error {
+	_, ok := dir.entries[name]
+	if ok {
+		return errors.New("Name exists")
+	}
+	dir.entries[name] = ino
+	return nil
+
+}
+
 func (dir *Dir) lookup(name string) (*Inode, error) {
 	inode, ok := dir.entries[name]
 	if ok {
@@ -51,33 +74,48 @@ func (dir *Dir) lookup(name string) (*Inode, error) {
 	}
 }
 
+// Caller must acquire lock?
+func (dir *Dir) Len() np.Tlength {
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+	return dir.lenLocked()
+}
+
 func (dir *Dir) namei(path []string, inodes []*Inode) ([]*Inode, []string, error) {
 	var inode *Inode
 	var err error
 
+	dir.mu.Lock()
 	inode, err = dir.lookup(path[0])
 	if err != nil {
 		log.Printf("dir.Namei %v unknown %v", dir, path)
+		dir.mu.Unlock()
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
 	if inode.IsDir() {
 		if len(path) == 1 { // done?
 			log.Printf("Namei %v %v -> %v", path, dir, inodes)
+			dir.mu.Unlock()
 			return inodes, nil, nil
 		}
 		d := inode.Data.(*Dir)
+		dir.mu.Unlock() // for ".."
 		return d.namei(path[1:], inodes)
 	} else {
 		log.Printf("dir.Namei %v %v -> %v %v", path, dir, inodes, path[1:])
+		dir.mu.Unlock()
 		return inodes, path[1:], nil
 	}
 }
 
 // for ulambda, cnt is number of directories entries
 func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
 	var buf []byte
-	if offset >= np.Toffset(dir.Len()) { // passed end of directory
+	if offset >= np.Toffset(dir.lenLocked()) { // passed end of directory
 		return buf, nil
 	}
 	off := np.Toffset(0)
@@ -106,19 +144,14 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 }
 
 func (dir *Dir) create(inode *Inode, name string) error {
-	_, ok := dir.entries[name]
-	if ok {
-		return errors.New("Name exists")
-	}
-	dir.entries[name] = inode
-	return nil
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	return dir.createLocked(inode, name)
 }
 
 func (dir *Dir) remove(name string) error {
-	_, ok := dir.entries[name]
-	if ok {
-		delete(dir.entries, name)
-		return nil
-	}
-	return errors.New("Name not found")
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+	return dir.removeLocked(name)
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	np "ulambda/ninep"
@@ -28,6 +29,7 @@ type Dev interface {
 }
 
 type Inode struct {
+	mu      sync.Mutex
 	PermT   np.Tperm
 	Inum    Tinum
 	Version Tversion
@@ -45,8 +47,8 @@ func makeInode(t np.Tperm, inum Tinum, data Data) *Inode {
 }
 
 func (inode *Inode) String() string {
-	str := fmt.Sprintf("Inode %v t 0x%x data %v {}", inode.Inum, inode.PermT>>np.TYPESHIFT,
-		inode.Data)
+	str := fmt.Sprintf("Inode %v t 0x%x", inode.Inum,
+		inode.PermT>>np.TYPESHIFT)
 	return str
 }
 
@@ -93,29 +95,6 @@ func permToData(t np.Tperm) (Data, error) {
 	}
 }
 
-func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) {
-	if IsCurrentDir(name) {
-		return nil, errors.New("Cannot create name")
-	}
-	if inode.IsDir() {
-		d := inode.Data.(*Dir)
-		dl, err := permToData(t)
-		if err != nil {
-			return nil, err
-		}
-		i := makeInode(t, root.allocInum(), dl)
-		if i.IsDir() {
-			dir := inode.Data.(*Dir)
-			dir.init(i.Inum)
-		}
-		log.Printf("create %v -> %v\n", name, i)
-		inode.Mtime = time.Now().Unix()
-		return i, d.create(i, name)
-	} else {
-		return nil, errors.New("Not a directory")
-	}
-}
-
 func (inode *Inode) Mode() np.Tperm {
 	perm := np.Tperm(0777)
 	if inode.IsDir() {
@@ -139,13 +118,36 @@ func (inode *Inode) Stat() *np.Stat {
 	return stat
 }
 
+func (inode *Inode) Create(root *Root, t np.Tperm, name string) (*Inode, error) {
+	if IsCurrentDir(name) {
+		return nil, errors.New("Cannot create name")
+	}
+	if inode.IsDir() {
+		d := inode.Data.(*Dir)
+		dl, err := permToData(t)
+		if err != nil {
+			return nil, err
+		}
+		i := makeInode(t, root.allocInum(), dl)
+		if i.IsDir() {
+			dir := inode.Data.(*Dir)
+			dir.init(i)
+		}
+		log.Printf("create %v -> %v\n", name, i)
+		inode.Mtime = time.Now().Unix()
+		return i, d.create(i, name)
+	} else {
+		return nil, errors.New("Not a directory")
+	}
+}
+
 func (inode *Inode) Walk(path []string) ([]*Inode, []string, error) {
 	log.Printf("Walk %v at %v\n", path, inode)
 	inodes := []*Inode{inode}
 	if len(path) == 0 {
 		return inodes, nil, nil
 	}
-	dir, ok := inode.Data.(*Dir)
+	dir, ok := inode.Data.(*Dir) // XXX lock
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}

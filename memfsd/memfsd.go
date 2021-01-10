@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 
 	"ulambda/memfs"
 	np "ulambda/ninep"
@@ -20,13 +21,24 @@ func makeFid(p []string, i *memfs.Inode) *Fid {
 }
 
 type NpConn struct {
+	mu    sync.Mutex // for Fids
 	memfs *memfs.Root
 	conn  net.Conn
 	Fids  map[np.Tfid]*Fid
 }
 
+func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
+	npc.mu.Lock()
+	defer npc.mu.Unlock()
+	f, ok := npc.Fids[fid]
+	return f, ok
+}
+
 func makeNpConn(root *memfs.Root, conn net.Conn) *NpConn {
-	npc := &NpConn{root, conn, make(map[np.Tfid]*Fid)}
+	npc := &NpConn{}
+	npc.memfs = root
+	npc.conn = conn
+	npc.Fids = make(map[np.Tfid]*Fid)
 	return npc
 }
 
@@ -61,7 +73,9 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root := npc.memfs.RootInode()
+	npc.mu.Lock()
 	npc.Fids[args.Fid] = makeFid([]string{}, root)
+	npc.mu.Unlock()
 	rets.Qid = root.Qid()
 	return nil
 }
@@ -76,7 +90,7 @@ func makeQids(inodes []*memfs.Inode) []np.Tqid {
 }
 
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -97,7 +111,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 }
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -106,7 +120,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -121,11 +135,13 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 }
 
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	_, ok := npc.Fids[args.Fid]
+	_, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
+	npc.mu.Lock()
 	delete(npc.Fids, args.Fid)
+	npc.mu.Unlock()
 	return nil
 }
 
@@ -134,7 +150,7 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 }
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -147,7 +163,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -162,7 +178,7 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 // XXX cwd lookups
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	root := npc.memfs.RootInode()
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -175,7 +191,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 }
 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -189,7 +205,7 @@ func split(path string) []string {
 }
 
 func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	fid, ok := npc.Fids[args.Fid]
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -215,7 +231,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 //
 
 func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
-	fid, ok := npc.Fids[args.Dfid]
+	fid, ok := npc.lookup(args.Dfid)
 	if !ok {
 		return np.ErrUnknownfid
 	}

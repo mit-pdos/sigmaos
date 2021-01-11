@@ -24,9 +24,9 @@ type Cntlr struct {
 
 func makeCntlr() *Cntlr {
 	cr := &Cntlr{}
-	cr.clnt = fsclnt.MakeFsClient("cntlr")
+	cr.clnt = fsclnt.MakeFsClient("cntlr", false)
 	cr.fsd = memfsd.MakeFsd()
-	cr.srv = npsrv.MakeNpServer(cr.fsd, ":0")
+	cr.srv = npsrv.MakeNpServer(cr.fsd, ":0", false)
 	cr.done = make(chan bool)
 	return cr
 }

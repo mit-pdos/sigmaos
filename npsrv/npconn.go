@@ -14,20 +14,23 @@ const (
 )
 
 type Channel struct {
-	npc  NpConn
-	conn net.Conn
-	np   NpAPI
-	br   *bufio.Reader
-	bw   *bufio.Writer
+	npc   NpConn
+	conn  net.Conn
+	np    NpAPI
+	br    *bufio.Reader
+	bw    *bufio.Writer
+	debug bool
 }
 
-func MakeChannel(npc NpConn, conn net.Conn) *Channel {
+func MakeChannel(npc NpConn, conn net.Conn, debug bool) *Channel {
 	np := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
 		np,
 		bufio.NewReaderSize(conn, Msglen),
-		bufio.NewWriterSize(conn, Msglen)}
+		bufio.NewWriterSize(conn, Msglen),
+		debug,
+	}
 	return c
 }
 
@@ -108,7 +111,9 @@ func (c *Channel) Serve() {
 			log.Print("Serve: unmarshal error: ", err)
 			return
 		}
-		log.Print(fcall)
+		if c.debug {
+			log.Print(fcall)
+		}
 		// XXX start go routine
 		reply, rerror := c.dispatch(fcall.Msg)
 		if rerror != nil {
@@ -116,7 +121,9 @@ func (c *Channel) Serve() {
 		}
 		fcall.Type = reply.Type()
 		fcall.Msg = reply
-		log.Print(fcall)
+		if c.debug {
+			log.Print(fcall)
+		}
 		frame, err = npcodec.Marshal(fcall)
 		if err != nil {
 			log.Print("Serve: marshal error: ", err)

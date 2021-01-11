@@ -10,12 +10,13 @@ type NpConn interface {
 }
 
 type NpServer struct {
-	npc  NpConn
-	addr string
+	npc   NpConn
+	addr  string
+	debug bool
 }
 
-func MakeNpServer(npc NpConn, server string) *NpServer {
-	srv := &NpServer{npc, ""}
+func MakeNpServer(npc NpConn, server string, debug bool) *NpServer {
+	srv := &NpServer{npc, "", debug}
 	var l net.Listener
 	l, err := net.Listen("tcp", server)
 	if err != nil {
@@ -38,7 +39,7 @@ func (srv *NpServer) runsrv(l net.Listener) {
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}
-		fsconn := MakeChannel(srv.npc, conn)
+		fsconn := MakeChannel(srv.npc, conn, srv.debug)
 		go fsconn.Serve()
 	}
 }

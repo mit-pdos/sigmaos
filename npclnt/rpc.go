@@ -10,9 +10,9 @@ type NpClnt struct {
 	cm *ChanMgr
 }
 
-func MakeNpClnt() *NpClnt {
+func MakeNpClnt(debug bool) *NpClnt {
 	npc := &NpClnt{}
-	npc.cm = makeChanMgr()
+	npc.cm = makeChanMgr(debug)
 	return npc
 }
 

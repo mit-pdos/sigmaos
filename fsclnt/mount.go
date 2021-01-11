@@ -2,7 +2,6 @@ package fsclnt
 
 import (
 	"fmt"
-	"log"
 	np "ulambda/ninep"
 )
 
@@ -52,7 +51,6 @@ func match(mp []string, path []string) (bool, []string) {
 }
 
 func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
-	log.Printf("resolve: mounts %v path %v\n", mnt.mounts, path)
 	for _, p := range mnt.mounts {
 		ok, rest := match(p.path, path)
 		if ok {

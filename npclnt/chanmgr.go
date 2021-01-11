@@ -22,11 +22,13 @@ type NpConn struct {
 
 type ChanMgr struct {
 	conns map[string]*NpConn
+	debug bool
 }
 
-func makeChanMgr() *ChanMgr {
+func makeChanMgr(debug bool) *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*NpConn)
+	cm.debug = false
 	return cm
 }
 
@@ -47,7 +49,9 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	fcall := &np.Fcall{}
 	fcall.Type = req.Type()
 	fcall.Msg = req
-	log.Print(fcall)
+	if cm.debug {
+		log.Print(fcall)
+	}
 	frame, err := npcodec.Marshal(fcall)
 	if err != nil {
 		log.Fatal("makeCall marshal error: ", err)
@@ -63,7 +67,9 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	if err := npcodec.Unmarshal(frame, fcall); err != nil {
 		log.Fatal("Server unmarshal error: ", err)
 	}
-	log.Print(fcall)
+	if cm.debug {
+		log.Print(fcall)
+	}
 	return fcall.Msg, nil
 
 }

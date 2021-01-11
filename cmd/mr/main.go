@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	// "ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
-	"ulambda/npsrv"
 )
 
 const (
@@ -23,16 +23,14 @@ const (
 
 type Worker struct {
 	clnt   *fsclnt.FsClient
-	srv    *npsrv.NpServer
 	memfsd *memfsd.Fsd
 	done   chan bool
 }
 
 func makeWorker() *Worker {
 	work := &Worker{}
-	work.clnt = fsclnt.MakeFsClient("worker")
+	work.clnt = fsclnt.MakeFsClient("worker", false)
 	work.memfsd = memfsd.MakeFsd()
-	work.srv = npsrv.MakeNpServer(work.memfsd, ":0")
 	work.done = make(chan bool)
 	return work
 }
@@ -75,7 +73,7 @@ func Map(filename string) []KeyValue {
 func (w *Worker) doMap(name string) {
 	kvs := Map(name)
 	base := filepath.Base(name)
-	log.Print("doMap", name, " ", base)
+	log.Print(os.Getpid(), " : ", " doMap", name)
 	fds := []int{}
 	offs := []np.Toffset{}
 	for r := 0; r < NReduce; r++ {
@@ -122,7 +120,6 @@ func (w *Worker) mPhase() {
 		if err != nil && err != io.EOF {
 			log.Fatal("Readdir error ", err)
 		}
-		log.Print("dirents ", dirents)
 		w.clnt.Close(fd)
 		if err == io.EOF { // are we done?
 			fd, err := w.clnt.Opendir("name/mr/started")
@@ -136,7 +133,6 @@ func (w *Worker) mPhase() {
 			log.Print("SPIN")
 			w.clnt.Close(fd)
 		} else {
-			log.Print("pickone ", dirents)
 			name := pickOne(dirents)
 			err = w.clnt.Rename("name/mr/todo/"+name, "name/mr/started/"+name)
 			if err == nil {

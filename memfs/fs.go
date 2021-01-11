@@ -22,7 +22,7 @@ func MakeRoot() *Root {
 	return &r
 }
 
-// separate out allocator?
+// XXX separate out allocator?
 func (root *Root) RootInode() *Inode {
 	return root.inode
 }

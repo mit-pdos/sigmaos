@@ -1,7 +1,6 @@
 package memfsd
 
 import (
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -98,7 +97,6 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	log.Printf("fsd.Walk %v from %v: dir %v\n", args, npc.conn.RemoteAddr(), fid)
 	inodes, rest, err := fid.ino.Walk(npc.id, args.Wnames)
 	if err != nil {
 		return np.ErrNotfound
@@ -219,7 +217,6 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		}
 		// XXX cwd
 		dst := split(args.Stat.Name)
-		log.Print("dst path ", dst, fid.path)
 		err := npc.memfs.Rename(npc.id, fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}

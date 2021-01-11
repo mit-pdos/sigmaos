@@ -31,18 +31,20 @@ type FsClient struct {
 	fids  map[np.Tfid]*Channel
 	npc   *npclnt.NpClnt
 	mount *Mount
-	Proc  string
 	next  np.Tfid
+	Proc  string
+	debug bool
 }
 
-func MakeFsClient(proc string) *FsClient {
+func MakeFsClient(proc string, debug bool) *FsClient {
 	fsc := &FsClient{}
 	fsc.fds = make([]np.Tfid, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Channel)
 	fsc.mount = makeMount()
-	fsc.npc = npclnt.MakeNpClnt()
+	fsc.npc = npclnt.MakeNpClnt(debug)
 	fsc.next = 1
 	fsc.Proc = proc
+	fsc.debug = debug
 	rand.Seed(time.Now().UnixNano())
 	return fsc
 }
@@ -54,6 +56,12 @@ func (fsc *FsClient) String() string {
 		str += fmt.Sprintf("fid %v chan %v\n", k, v)
 	}
 	return str
+}
+
+func (fsc *FsClient) DPrintf(format string, a ...interface{}) {
+	if fsc.debug {
+		log.Printf(format, a...)
+	}
 }
 
 func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
@@ -75,7 +83,7 @@ func InitFsClient(args []string) (*FsClient, error) {
 	}
 	a := args[1 : n+1] // skip len and +1 for program name
 	fids := args[n+1:]
-	fsc := MakeFsClient(a[0])
+	fsc := MakeFsClient(a[0], false)
 	log.Printf("Args %v fids %v\n", a, fids)
 	if fid, err := fsc.Attach(":1111", ""); err == nil {
 		err := fsc.Mount(fid, "name")
@@ -146,7 +154,7 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	log.Printf("Mount %v at %v %v\n", fid, path, fsc.npch(fid))
+	fsc.DPrintf("Mount %v at %v %v\n", fid, path, fsc.npch(fid))
 	fsc.mount.add(split(path), fid)
 	return nil
 }
@@ -173,7 +181,6 @@ func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Cha
 }
 
 func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
-	log.Printf("Attach %v %v\n", server, path)
 	p := split(path)
 	fid := fsc.allocFid()
 	ch, err := fsc.AttachChannel(fid, server, p)
@@ -181,7 +188,7 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 		return np.NoFid, err
 	}
 	fsc.fids[fid] = ch
-	log.Printf("Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
+	fsc.DPrintf("Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
 	return fid, nil
 }
 
@@ -210,9 +217,7 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 		return np.NoFid, 0, errors.New("Unknown file")
 
 	}
-	log.Print("walkOne ", fsc.npch(fid))
 	fid1, err := fsc.clone(fid)
-	log.Print("Clone ", fsc.npch(fid1))
 	if err != nil {
 		return np.NoFid, 0, err
 	}
@@ -224,7 +229,7 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 		return np.NoFid, 0, err
 	}
 	todo := len(rest) - len(reply.Qids)
-	log.Printf("walkOne rest %v -> %v %v", rest, reply.Qids, todo)
+	fsc.DPrintf("walkOne rest %v -> %v %v", rest, reply.Qids, todo)
 
 	fsc.fids[fid2] = fsc.fids[fid1].copyChannel()
 	fsc.fids[fid2].addn(reply.Qids, rest)
@@ -243,7 +248,7 @@ func splitTarget(target string) (string, string) {
 }
 
 func (fsc *FsClient) autoMount(target string, path []string) error {
-	log.Printf("automount %v to %v\n", target, path)
+	fsc.DPrintf("automount %v to %v\n", target, path)
 	server, _ := splitTarget(target)
 	fid, err := fsc.Attach(server, "")
 	if err != nil {
@@ -259,7 +264,6 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 			return fid, err
 		}
 		qid := fsc.fids[fid].lastqid()
-		log.Print("last qid ", qid)
 		if qid.Type == np.QTSYMLINK {
 			target, err := fsc.Readlink(fid)
 			if err != nil {
@@ -286,7 +290,7 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
-	log.Printf("Create %v\n", path)
+	fsc.DPrintf("Create %v\n", path)
 	p := split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
@@ -304,13 +308,12 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 }
 
 func (fsc *FsClient) Mkdir(path string, perm np.Tperm, mode np.Tmode) (int, error) {
-	log.Printf("Mkdir %v\n", path)
 	perm = perm | np.DMDIR
 	return fsc.Create(path, perm, mode)
 }
 
 func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
-	log.Printf("CreateAt %v at %v\n", name, dfd)
+	fsc.DPrintf("CreateAt %v at %v\n", name, dfd)
 	fid, err := fsc.lookup(dfd)
 	if err != nil {
 		return -1, err
@@ -329,7 +332,6 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 }
 
 func (fsc *FsClient) Symlink(target string, link string, lperm np.Tperm) error {
-	log.Printf("Symlink %v %v\n", target, link)
 	lperm = lperm | np.DMSYMLINK
 	fd, err := fsc.Create(link, lperm, np.OWRITE)
 	if err != nil {
@@ -343,7 +345,6 @@ func (fsc *FsClient) Symlink(target string, link string, lperm np.Tperm) error {
 }
 
 func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tperm) error {
-	log.Printf("SymlinkAt %v %v\n", target, link)
 	lperm = lperm | np.DMSYMLINK
 	fd, err := fsc.CreateAt(dfd, link, lperm, np.OWRITE)
 	_, err = fsc.Write(fd, 0, []byte(target))
@@ -354,7 +355,7 @@ func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tpe
 }
 
 func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
-	log.Printf("Mkpipe %v\n", path)
+	fsc.DPrintf("Mkpipe %v\n", path)
 	p := split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
@@ -368,7 +369,7 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
-	log.Printf("Rename %v %v\n", old, new)
+	fsc.DPrintf("Rename %v %v\n", old, new)
 	fid, err := fsc.walkMany(split(old))
 	if err != nil {
 		return err
@@ -387,7 +388,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 }
 
 func (fsc *FsClient) Remove(name string) error {
-	log.Print("Remove ", name)
+	fsc.DPrintf("Remove %v\n", name)
 	fid, err := fsc.walkMany(split(name))
 	if err != nil {
 		return err
@@ -411,7 +412,7 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 }
 
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
-	log.Printf("Open %v %v\n", path, mode)
+	fsc.DPrintf("Open %v %v\n", path, mode)
 	fid, err := fsc.walkMany(split(path))
 	if err != nil {
 		return -1, err
@@ -427,7 +428,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 }
 
 func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
-	log.Printf("OpenAt %v %v %v\n", dfd, name, mode)
+	fsc.DPrintf("OpenAt %v %v %v\n", dfd, name, mode)
 
 	fid, err := fsc.lookup(dfd)
 	if err != nil {
@@ -457,7 +458,7 @@ func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
 }
 
 func (fsc *FsClient) Opendir(path string) (int, error) {
-	log.Print("Opendir ", path)
+	fsc.DPrintf("Opendir %v", path)
 	return fsc.Open(path, np.OREAD)
 }
 
@@ -473,6 +474,7 @@ func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, erro
 	return reply.Data, err
 }
 
+// XXX only 1 entry
 func (fsc *FsClient) Readdir(fd int, offset np.Toffset, n np.Tsize) ([]np.Stat, error) {
 	data, err := fsc.Read(fd, offset, n)
 	if err != nil {

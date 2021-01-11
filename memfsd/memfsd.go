@@ -2,7 +2,6 @@ package memfsd
 
 import (
 	"net"
-	"strings"
 	"sync"
 
 	"ulambda/memfs"
@@ -200,11 +199,6 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	return nil
 }
 
-func split(path string) []string {
-	p := strings.Split(path, "/")
-	return p
-}
-
 func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fid, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -216,7 +210,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return np.ErrUnknownMsg
 		}
 		// XXX cwd
-		dst := split(args.Stat.Name)
+		dst := np.Split(args.Stat.Name)
 		err := npc.memfs.Rename(npc.id, fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}

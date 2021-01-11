@@ -139,23 +139,13 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 	return fsc.fds[fd], nil
 }
 
-func split(path string) []string {
-	p := strings.Split(path, "/")
-	return p
-}
-
-func join(path []string) string {
-	p := strings.Join(path, "/")
-	return p
-}
-
 func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	_, ok := fsc.fids[fid]
 	if !ok {
 		return errors.New("Unknown fid")
 	}
 	fsc.DPrintf("Mount %v at %v %v\n", fid, path, fsc.npch(fid))
-	fsc.mount.add(split(path), fid)
+	fsc.mount.add(np.Split(path), fid)
 	return nil
 }
 
@@ -181,7 +171,7 @@ func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Cha
 }
 
 func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
-	p := split(path)
+	p := np.Split(path)
 	fid := fsc.allocFid()
 	ch, err := fsc.AttachChannel(fid, server, p)
 	if err != nil {
@@ -254,7 +244,7 @@ func (fsc *FsClient) autoMount(target string, path []string) error {
 	if err != nil {
 		log.Fatal("Attach error: ", err)
 	}
-	return fsc.Mount(fid, join(path))
+	return fsc.Mount(fid, np.Join(path))
 }
 
 func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
@@ -278,7 +268,7 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 				}
 				path = append(path[:i], rest...)
 			} else {
-				path = append(split(target), rest...)
+				path = append(np.Split(target), rest...)
 
 			}
 		} else {
@@ -291,7 +281,7 @@ func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
 
 func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	fsc.DPrintf("Create %v\n", path)
-	p := split(path)
+	p := np.Split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
 	fid, err := fsc.walkMany(dir)
@@ -356,7 +346,7 @@ func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tpe
 
 func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	fsc.DPrintf("Mkpipe %v\n", path)
-	p := split(path)
+	p := np.Split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
 	fid, err := fsc.walkMany(dir)
@@ -370,11 +360,11 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
 	fsc.DPrintf("Rename %v %v\n", old, new)
-	fid, err := fsc.walkMany(split(old))
+	fid, err := fsc.walkMany(np.Split(old))
 	if err != nil {
 		return err
 	}
-	fid1, rest := fsc.mount.resolve(split(new))
+	fid1, rest := fsc.mount.resolve(np.Split(new))
 	if fid1 == np.NoFid {
 		return errors.New("Bad destination")
 
@@ -389,7 +379,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 
 func (fsc *FsClient) Remove(name string) error {
 	fsc.DPrintf("Remove %v\n", name)
-	fid, err := fsc.walkMany(split(name))
+	fid, err := fsc.walkMany(np.Split(name))
 	if err != nil {
 		return err
 	}
@@ -413,7 +403,7 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	fsc.DPrintf("Open %v %v\n", path, mode)
-	fid, err := fsc.walkMany(split(path))
+	fid, err := fsc.walkMany(np.Split(path))
 	if err != nil {
 		return -1, err
 	}

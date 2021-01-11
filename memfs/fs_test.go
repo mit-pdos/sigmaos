@@ -4,7 +4,6 @@ package memfs
 
 import (
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 
@@ -49,10 +48,6 @@ func (ts *TestState) initfs() {
 	assert.Nil(ts.t, err, "Create reduce")
 }
 
-func split(path string) []string {
-	p := strings.Split(path, "/")
-	return p
-}
 func (ts *TestState) testRename(t int) {
 	done := false
 	for !done {
@@ -68,12 +63,12 @@ func (ts *TestState) testRename(t int) {
 			err = npcodec.Unmarshal(b, &st)
 			assert.Nil(ts.t, err, "Unmarshal todo")
 			name := st.Name
-			err = ts.fs.Rename(t, split("todo/"+name), split("started/"+name))
+			err = ts.fs.Rename(t, np.Split("todo/"+name), np.Split("started/"+name))
 			if err != nil {
 				assert.Contains(ts.t, err.Error(), "Unknown name")
 			} else {
 				assert.Equal(ts.t, err, nil, "Rename todo")
-				err = ts.rooti.Remove(t, ts.fs, split("started/"+name))
+				err = ts.rooti.Remove(t, ts.fs, np.Split("started/"+name))
 				assert.Nil(ts.t, err, "Remove started")
 			}
 		}

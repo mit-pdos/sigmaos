@@ -75,6 +75,10 @@ func main() {
 		if err != nil {
 			log.Fatal("Mount error: ", err)
 		}
+		err = cons.clnt.Remove("name/consoled")
+		if err != nil {
+			log.Print("name/consoled didn't exist")
+		}
 		name := cons.srv.MyAddr()
 		err = cons.clnt.Symlink(name+":pubkey:console", "name/consoled", 0777)
 		if err != nil {

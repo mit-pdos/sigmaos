@@ -247,14 +247,17 @@ func (fsc *FsClient) autoMount(target string, path []string) error {
 	return fsc.Mount(fid, np.Join(path))
 }
 
-func (fsc *FsClient) walkMany(path []string) (np.Tfid, error) {
+func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, todo, err := fsc.walkOne(path)
 		if err != nil {
 			return fid, err
 		}
 		qid := fsc.fids[fid].lastqid()
-		if qid.Type == np.QTSYMLINK {
+
+		// if todo == 0 and !resolve, don't resolve symlinks, so
+		// that the client remove a symlink
+		if qid.Type == np.QTSYMLINK && (todo > 0 || (todo == 0 && resolve)) {
 			target, err := fsc.Readlink(fid)
 			if err != nil {
 				return np.NoFid, err
@@ -284,7 +287,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	p := np.Split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
-	fid, err := fsc.walkMany(dir)
+	fid, err := fsc.walkMany(dir, true)
 	if err != nil {
 		return -1, err
 	}
@@ -349,7 +352,7 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	p := np.Split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
-	fid, err := fsc.walkMany(dir)
+	fid, err := fsc.walkMany(dir, true)
 	if err != nil {
 		return err
 	}
@@ -360,7 +363,7 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
 	fsc.DPrintf("Rename %v %v\n", old, new)
-	fid, err := fsc.walkMany(np.Split(old))
+	fid, err := fsc.walkMany(np.Split(old), true)
 	if err != nil {
 		return err
 	}
@@ -379,7 +382,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 
 func (fsc *FsClient) Remove(name string) error {
 	fsc.DPrintf("Remove %v\n", name)
-	fid, err := fsc.walkMany(np.Split(name))
+	fid, err := fsc.walkMany(np.Split(name), false)
 	if err != nil {
 		return err
 	}
@@ -403,7 +406,7 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	fsc.DPrintf("Open %v %v\n", path, mode)
-	fid, err := fsc.walkMany(np.Split(path))
+	fid, err := fsc.walkMany(np.Split(path), true)
 	if err != nil {
 		return -1, err
 	}

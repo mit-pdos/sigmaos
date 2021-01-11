@@ -112,7 +112,7 @@ func (c *Channel) Serve() {
 			return
 		}
 		if c.debug {
-			log.Print(fcall)
+			log.Print("Srv: ", fcall)
 		}
 		// XXX start go routine
 		reply, rerror := c.dispatch(fcall.Msg)
@@ -122,14 +122,14 @@ func (c *Channel) Serve() {
 		fcall.Type = reply.Type()
 		fcall.Msg = reply
 		if c.debug {
-			log.Print(fcall)
+			log.Print("Srv: ", fcall)
 		}
 		frame, err = npcodec.Marshal(fcall)
 		if err != nil {
 			log.Print("Serve: marshal error: ", err)
 			return
 		}
-		// log.Print("Rframe ", len(frame), frame)
+		// log.Print("Srv: Rframe ", len(frame), frame)
 		err = npcodec.WriteFrame(c.bw, frame)
 		if err != nil {
 			log.Print("Serve: WriteFrame error ", err)

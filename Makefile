@@ -1,4 +1,4 @@
-all: named consoled mr cntrlr # procd
+all: named consoled mr cntrlr proxyd # procd
 	@echo "build done"
 
 test:
@@ -8,5 +8,3 @@ test:
 	go build -race -o bin/$@ cmd/$@/main.go
 
 run:
-
-

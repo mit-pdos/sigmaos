@@ -28,7 +28,7 @@ type ChanMgr struct {
 func makeChanMgr(debug bool) *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*NpConn)
-	cm.debug = false
+	cm.debug = debug
 	return cm
 }
 
@@ -50,7 +50,7 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	fcall.Type = req.Type()
 	fcall.Msg = req
 	if cm.debug {
-		log.Print(fcall)
+		log.Print("clnt: ", fcall)
 	}
 	frame, err := npcodec.Marshal(fcall)
 	if err != nil {
@@ -68,7 +68,7 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 		log.Fatal("Server unmarshal error: ", err)
 	}
 	if cm.debug {
-		log.Print(fcall)
+		log.Print("clnt: ", fcall)
 	}
 	return fcall.Msg, nil
 

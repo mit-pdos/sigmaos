@@ -65,6 +65,19 @@ func (npch *NpChan) call(args np.Tmsg) (np.Tmsg, error) {
 	return reply, nil
 }
 
+func (npch *NpChan) Flush(tag np.Ttag) error {
+	args := np.Tflush{tag}
+	reply, err := npch.call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Rflush)
+	if !ok {
+		return errors.New("Not correct reply msg")
+	}
+	return err
+}
+
 func (npch *NpChan) Walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk, error) {
 	args := np.Twalk{fid, nfid, path}
 	reply, err := npch.call(args)
@@ -85,19 +98,6 @@ func (npch *NpChan) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmod
 		return nil, err
 	}
 	msg, ok := reply.(np.Rcreate)
-	if !ok {
-		return nil, errors.New("Not correct reply msg")
-	}
-	return &msg, err
-}
-
-func (npch *NpChan) Mkpipe(fid np.Tfid, name string, perm np.Tperm) (*np.Rmkpipe, error) {
-	args := np.Tmkpipe{fid, name, perm, 0}
-	reply, err := npch.call(args)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.(np.Rmkpipe)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
@@ -169,6 +169,19 @@ func (npch *NpChan) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwri
 	return &msg, err
 }
 
+func (npch *NpChan) Stat(fid np.Tfid) (*np.Rstat, error) {
+	args := np.Tstat{fid}
+	reply, err := npch.call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rstat)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
 func (npch *NpChan) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 	args := np.Twstat{fid, 0, *st}
 	reply, err := npch.call(args)
@@ -176,6 +189,19 @@ func (npch *NpChan) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 		return nil, err
 	}
 	msg, ok := reply.(np.Rwstat)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (npch *NpChan) Mkpipe(fid np.Tfid, name string, perm np.Tperm) (*np.Rmkpipe, error) {
+	args := np.Tmkpipe{fid, name, perm, 0}
+	reply, err := npch.call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rmkpipe)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}

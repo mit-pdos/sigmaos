@@ -3,6 +3,7 @@ package proxy
 import (
 	"log"
 	"net"
+	"strings"
 
 	np "ulambda/ninep"
 	"ulambda/npclnt"
@@ -68,9 +69,50 @@ func (npc *NpConn) npch(fid np.Tfid) *npclnt.NpChan {
 	return ch
 }
 
+// XXX avoid duplication with fsclnt
+func isRemoteTarget(target string) bool {
+	return strings.Contains(target, ":")
+}
+
+// XXX avoid duplication with fsclnt
+func splitTarget(target string) (string, string) {
+	parts := strings.Split(target, ":")
+	server := parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
+	return server, parts[len(parts)-1]
+}
+
+// XXX avoid duplication with fsclnt
+func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
+	log.Printf("automount %v to %v\n", target, path)
+	server, _ := splitTarget(target)
+	reply, err := npc.clnt.Attach(server, newfid, path)
+	if err != nil {
+		return np.Tqid{}, err
+	}
+	npc.fids[newfid] = npc.clnt.MakeNpChan(server)
+	return reply.Qid, nil
+}
+
+// XXX avoid duplication with fsclnt
+func (npc *NpConn) readLink(fid np.Tfid) (string, error) {
+	_, err := npc.npch(fid).Open(fid, np.OREAD)
+	if err != nil {
+		return "", err
+	}
+	reply, err := npc.npch(fid).Read(fid, 0, 1024)
+	if err != nil {
+		return "", err
+	}
+	// XXX clunk fid
+	delete(npc.fids, fid)
+	return string(reply.Data), nil
+}
+
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
+	path := args.Wnames
+	// XXX accumulate qids
 	for i := 0; i < MAXSYMLINK; i++ {
-		reply, err := npc.npch(args.Fid).Walk(args.Fid, args.NewFid, args.Wnames)
+		reply, err := npc.npch(args.Fid).Walk(args.Fid, args.NewFid, path)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
@@ -81,8 +123,31 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		}
 		qid := reply.Qids[len(reply.Qids)-1]
 		if qid.Type == np.QTSYMLINK {
-			log.Print("symlink")
-			return nil
+			todo := len(path) - len(reply.Qids)
+			log.Print("symlink ", todo, path)
+
+			// args.Newfid is fid for symlink
+			npc.fids[args.NewFid] = npc.npch(args.Fid)
+
+			target, err := npc.readLink(args.NewFid)
+			if err != nil {
+				return np.ErrUnknownfid
+			}
+			// XXX assumes symlink is final component of walk
+			if isRemoteTarget(target) {
+				qid, err = npc.autoMount(args.NewFid, target, path[todo:])
+				if err != nil {
+					return np.ErrUnknownfid
+				}
+				reply.Qids[len(reply.Qids)-1] = qid
+				path = path[todo:]
+				log.Printf("automounted: %v -> %v, %v\n", args.NewFid,
+					target, path)
+				*rets = *reply
+				break
+			} else {
+				log.Fatal("don't handle")
+			}
 		} else { // newFid is at same server as args.Fid
 			npc.fids[args.NewFid] = npc.npch(args.Fid)
 			*rets = *reply

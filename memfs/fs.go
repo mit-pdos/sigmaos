@@ -7,7 +7,7 @@ import (
 	np "ulambda/ninep"
 )
 
-// XXX need mutex
+// XXX need mutex for nextInum
 type Root struct {
 	inode    *Inode
 	nextInum Tinum

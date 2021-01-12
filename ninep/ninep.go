@@ -330,6 +330,11 @@ type Twrite struct {
 	Data   []byte
 }
 
+func (tw Twrite) String() string {
+	return fmt.Sprintf("Twrite(%v off %v cnt %v data %v",
+		tw.Fid, tw.Offset, len(tw.Data))
+}
+
 type Rwrite struct {
 	Count Tsize
 }

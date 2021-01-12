@@ -492,10 +492,10 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 func (fsc *FsClient) Readdir(fd int, n np.Tsize) ([]np.Stat, error) {
 	data, err := fsc.Read(fd, n)
 	if err != nil {
-		if err.Error() == "EOF" {
-			return nil, io.EOF
-		}
 		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, io.EOF
 	}
 	dirents := []np.Stat{}
 	for len(data) > 0 {

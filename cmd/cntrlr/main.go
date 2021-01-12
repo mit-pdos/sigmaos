@@ -38,7 +38,8 @@ func pickOld(dirents []np.Stat) (string, bool) {
 }
 
 func (cr *Cntlr) check() bool {
-	fd, err := cr.clnt.Opendir("name/mr/todo")
+	log.Print("check")
+	fd, err := cr.clnt.Opendir("name/mr/started")
 	if err != nil {
 		log.Fatal("Opendir error ", err)
 	}
@@ -54,16 +55,14 @@ func (cr *Cntlr) check() bool {
 		for _, st := range dirents {
 			mtime := time.Unix(int64(st.Mtime), 0)
 			log.Printf("st Name %v mtime %v sz %v\n", st.Name, mtime)
+			mtime.Add(time.Duration(5 * time.Second))
+			if mtime.After(time.Now()) {
+				log.Print("redo")
+				// mov from started to todo
+			}
 		}
 	}
 	cr.clnt.Close(fd)
-
-	// name, ok := pickOld(dirents)
-	//if ok {
-	// XXX move back to started
-	//}
-	// spin until done
-	// XXX maybe read from a named pipe
 	return done
 }
 

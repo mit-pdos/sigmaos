@@ -278,7 +278,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
-
 		case *np.Fcall:
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
 				return err

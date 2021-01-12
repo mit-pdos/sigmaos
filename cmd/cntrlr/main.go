@@ -1,11 +1,12 @@
 package main
 
 import (
+	"io"
 	"log"
 	"strconv"
+	"time"
 
 	"ulambda/fsclnt"
-	// "ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
@@ -36,28 +37,41 @@ func pickOld(dirents []np.Stat) (string, bool) {
 	return dirents[0].Name, true
 }
 
-func (cr *Cntlr) Monitor() {
+func (cr *Cntlr) check() bool {
+	fd, err := cr.clnt.Opendir("name/mr/todo")
+	if err != nil {
+		log.Fatal("Opendir error ", err)
+	}
+	done := false
+	for {
+		dirents, err := cr.clnt.Readdir(fd, 1024)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Readdir %v\n", err)
+		}
+		for _, st := range dirents {
+			mtime := time.Unix(int64(st.Mtime), 0)
+			log.Printf("st Name %v mtime %v sz %v\n", st.Name, mtime)
+		}
+	}
+	cr.clnt.Close(fd)
+
+	// name, ok := pickOld(dirents)
+	//if ok {
+	// XXX move back to started
+	//}
+	// spin until done
+	// XXX maybe read from a named pipe
+	return done
+}
+
+func (cr *Cntlr) monitor() {
 	done := false
 	for !done {
-		fd, err := cr.clnt.Opendir("name/todo")
-		if err != nil {
-			log.Fatal("Opendir error ", err)
-		}
-		dirents, err := cr.clnt.Readdir(fd, 0, 256)
-		if err != nil {
-			log.Fatal("Readdir error ", err)
-		}
-		cr.clnt.Close(fd)
-		if len(dirents) == 0 {
-			done = true
-		} else {
-			// name, ok := pickOld(dirents)
-			//if ok {
-			// XXX move back to started
-			//}
-			// spin until done
-			// XXX maybe read from a named pipe
-		}
+		time.Sleep(time.Duration(1000) * time.Millisecond)
+		done = cr.check()
 	}
 }
 
@@ -72,7 +86,7 @@ func (cr *Cntlr) initfs() {
 	if err != nil {
 		log.Fatal("Walk error ", err)
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 5; i++ {
 		_, err = is[1].Create(0, fs, 07000, "job"+strconv.Itoa(i))
 		if err != nil {
 			log.Fatal("Create error ", err)
@@ -106,6 +120,7 @@ func main() {
 			log.Fatal("Symlink error: ", err)
 		}
 	}
+	cr.monitor()
 	<-cr.done
 	// cr.clnt.Close(fd)
 	log.Printf("Cntlr: finished\n")

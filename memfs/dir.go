@@ -3,6 +3,7 @@ package memfs
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"sync"
 
@@ -124,7 +125,7 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 
 	var buf []byte
 	if offset >= np.Toffset(dir.lenLocked()) { // passed end of directory
-		return buf, nil
+		return buf, io.EOF
 	}
 	off := np.Toffset(0)
 	for n, i := range dir.entries {

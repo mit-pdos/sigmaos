@@ -1,14 +1,17 @@
 package main
 
 import (
+	crand "crypto/rand"
 	"encoding/json"
 	"hash/fnv"
 	"io"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"ulambda/fsclnt"
@@ -36,6 +39,25 @@ func makeWorker() *Worker {
 }
 
 //
+// Crash testing
+//
+
+func maybeCrash() {
+	max := big.NewInt(1000)
+	rr, _ := crand.Int(crand.Reader, max)
+	if rr.Int64() < 330 {
+		// crash!
+		log.Printf("Crash %v\n", os.Getpid())
+		os.Exit(1)
+	} else if rr.Int64() < 660 {
+		// delay for a while.
+		maxms := big.NewInt(10 * 1000)
+		ms, _ := crand.Int(crand.Reader, maxms)
+		time.Sleep(time.Duration(ms.Int64()) * time.Millisecond)
+	}
+}
+
+//
 // Map functions return a slice of KeyValue.
 //
 type KeyValue struct {
@@ -54,6 +76,8 @@ func ihash(key string) int {
 }
 
 func Map(filename string) []KeyValue {
+	maybeCrash()
+
 	// XXX read file
 	contents := ""
 	// function to detect word separators.
@@ -75,7 +99,6 @@ func (w *Worker) doMap(name string) {
 	base := filepath.Base(name)
 	log.Print(os.Getpid(), " : ", " doMap", name)
 	fds := []int{}
-	offs := []np.Toffset{}
 	for r := 0; r < NReduce; r++ {
 		oname := "mr-" + base + "-" + strconv.Itoa(r)
 		fd, err := w.clnt.Create("name/mr/reduce/"+oname, 0700, np.OWRITE)
@@ -83,7 +106,6 @@ func (w *Worker) doMap(name string) {
 			log.Fatal("doMap create error ", err)
 		}
 		fds = append(fds, fd)
-		offs = append(offs, 0)
 	}
 
 	for _, kv := range kvs {
@@ -93,11 +115,10 @@ func (w *Worker) doMap(name string) {
 		if err != nil {
 			log.Fatal("doMap marshal error", err)
 		}
-		_, err = w.clnt.Write(fds[r], offs[r], b)
+		_, err = w.clnt.Write(fds[r], b)
 		if err != nil {
 			log.Fatal("doMap write error ", err)
 		}
-		offs[r] += 1 // XXX len of kv
 	}
 
 	for _, fd := range fds {
@@ -116,14 +137,14 @@ func (w *Worker) mPhase() {
 		if err != nil {
 			log.Fatal("Opendir error ", err)
 		}
-		dirents, err := w.clnt.Readdir(fd, 0, 256)
+		dirents, err := w.clnt.Readdir(fd, 256)
 		if err != nil && err != io.EOF {
 			log.Fatal("Readdir error ", err)
 		}
 		w.clnt.Close(fd)
 		if err == io.EOF { // are we done?
 			fd, err := w.clnt.Opendir("name/mr/started")
-			_, err = w.clnt.Readdir(fd, 0, 1024)
+			_, err = w.clnt.Readdir(fd, 1024)
 			if err != nil && err != io.EOF {
 				log.Fatal("Readdir error ", err)
 			}

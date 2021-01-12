@@ -26,8 +26,13 @@ const MAXFD = 20
 
 const MAXSYMLINK = 4
 
+type FdState struct {
+	offset np.Toffset
+	fid    np.Tfid
+}
+
 type FsClient struct {
-	fds   []np.Tfid
+	fds   []FdState
 	fids  map[np.Tfid]*Channel
 	npc   *npclnt.NpClnt
 	mount *Mount
@@ -38,7 +43,7 @@ type FsClient struct {
 
 func MakeFsClient(proc string, debug bool) *FsClient {
 	fsc := &FsClient{}
-	fsc.fds = make([]np.Tfid, 0, MAXFD)
+	fsc.fds = make([]FdState, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Channel)
 	fsc.mount = makeMount()
 	fsc.npc = npclnt.MakeNpClnt(debug)
@@ -115,14 +120,15 @@ func InitFsClient(args []string) (*FsClient, error) {
 }
 
 func (fsc *FsClient) findfd(nfid np.Tfid) int {
-	for fd, fid := range fsc.fds {
-		if fid == np.NoFid {
-			fsc.fds[fd] = nfid
+	for fd, fdst := range fsc.fds {
+		if fdst.fid == np.NoFid {
+			fsc.fds[fd].offset = 0
+			fsc.fds[fd].fid = nfid
 			return fd
 		}
 	}
 	// no free one
-	fsc.fds = append(fsc.fds, nfid)
+	fsc.fds = append(fsc.fds, FdState{0, nfid})
 	return len(fsc.fds) - 1
 }
 
@@ -133,10 +139,17 @@ func (fsc *FsClient) allocFid() np.Tfid {
 }
 
 func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
-	if fsc.fds[fd] == np.NoFid {
+	if fsc.fds[fd].fid == np.NoFid {
 		return np.NoFid, errors.New("Non-existing")
 	}
-	return fsc.fds[fd], nil
+	return fsc.fds[fd].fid, nil
+}
+
+func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
+	if fsc.fds[fd].fid == np.NoFid {
+		return nil, errors.New("Non-existing")
+	}
+	return &fsc.fds[fd], nil
 }
 
 func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
@@ -156,7 +169,7 @@ func (fsc *FsClient) Close(fd int) error {
 	}
 	err = fsc.npch(fid).Clunk(fid)
 	if err == nil {
-		fsc.fds[fd] = np.NoFid
+		fsc.fds[fd].fid = np.NoFid
 	}
 	return err
 }
@@ -331,7 +344,7 @@ func (fsc *FsClient) Symlink(target string, link string, lperm np.Tperm) error {
 	if err != nil {
 		return err
 	}
-	_, err = fsc.Write(fd, 0, []byte(target))
+	_, err = fsc.Write(fd, []byte(target))
 	if err != nil {
 		return err
 	}
@@ -341,7 +354,7 @@ func (fsc *FsClient) Symlink(target string, link string, lperm np.Tperm) error {
 func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tperm) error {
 	lperm = lperm | np.DMSYMLINK
 	fd, err := fsc.CreateAt(dfd, link, lperm, np.OWRITE)
-	_, err = fsc.Write(fd, 0, []byte(target))
+	_, err = fsc.Write(fd, []byte(target))
 	if err != nil {
 		return err
 	}
@@ -456,48 +469,58 @@ func (fsc *FsClient) Opendir(path string) (int, error) {
 	return fsc.Open(path, np.OREAD)
 }
 
-func (fsc *FsClient) Read(fd int, offset np.Toffset, cnt np.Tsize) ([]byte, error) {
-	fid, err := fsc.lookup(fd)
+func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
+	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
 		return nil, err
 	}
-	reply, err := fsc.npch(fid).Read(fid, offset, cnt)
+	reply, err := fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
 	if err != nil {
 		return nil, err
 	}
+	fdst.offset += np.Toffset(len(reply.Data))
 	return reply.Data, err
 }
 
-// XXX only 1 entry
-func (fsc *FsClient) Readdir(fd int, offset np.Toffset, n np.Tsize) ([]np.Stat, error) {
-	data, err := fsc.Read(fd, offset, n)
+func (fsc *FsClient) Readdir(fd int, n np.Tsize) ([]np.Stat, error) {
+	data, err := fsc.Read(fd, n)
 	if err != nil {
+		if err.Error() == "EOF" {
+			return nil, io.EOF
+		}
 		return nil, err
 	}
-	var st np.Stat
-	if len(data) > 0 {
+	dirents := []np.Stat{}
+	for len(data) > 0 {
+		st := np.Stat{}
 		err = npcodec.Unmarshal(data, &st)
-		return []np.Stat{st}, err
+		if err != nil {
+			return dirents, err
+		}
+		dirents = append(dirents, st)
+		sz := np.Tsize(npcodec.SizeNp(st))
+		data = data[sz:]
 	}
-	return nil, io.EOF
+	return dirents, err
 }
 
-func (fsc *FsClient) Write(fd int, offset np.Toffset, data []byte) (np.Tsize, error) {
-	fid, err := fsc.lookup(fd)
+func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
+	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
 		return 0, err
 	}
-	reply, err := fsc.npch(fid).Write(fid, offset, data)
+	reply, err := fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
 	if err != nil {
 		return 0, err
 	}
+	fdst.offset += np.Toffset(reply.Count)
 	return reply.Count, err
 }
 
 func (fsc *FsClient) Lsof() []string {
 	var fids []string
-	for _, fid := range fsc.fds {
-		if fid != np.NoFid {
+	for _, fdst := range fsc.fds {
+		if fdst.fid != np.NoFid {
 			// collect info about fid...
 			//b, err := json.Marshal(fid)
 			//if err != nil {

@@ -89,7 +89,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Open error: ", err)
 		}
-		_, err = cons.clnt.Write(fd1, 0, []byte("Hello world\n"))
+		_, err = cons.clnt.Write(fd1, []byte("Hello world\n"))
 		if err != nil {
 			log.Fatal("Write error: ", err)
 		}

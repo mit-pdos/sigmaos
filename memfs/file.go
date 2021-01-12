@@ -1,6 +1,8 @@
 package memfs
 
 import (
+	"io"
+
 	np "ulambda/ninep"
 )
 
@@ -43,7 +45,7 @@ func (f *File) write(offset np.Toffset, data []byte) (np.Tsize, error) {
 
 func (f *File) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	if offset >= f.LenOff() {
-		return nil, nil
+		return nil, io.EOF
 	} else {
 		end := offset + np.Toffset(n)
 		if end >= f.LenOff() {

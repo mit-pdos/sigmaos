@@ -96,6 +96,10 @@ func main() {
 		if err != nil {
 			log.Fatal("Mount error: ", err)
 		}
+		err = cr.clnt.Remove("name/mr")
+		if err != nil {
+			log.Print("remove name/mr failed")
+		}
 		name := cr.srv.MyAddr()
 		err = cr.clnt.Symlink(name+":pubkey:", "name/mr", 0777)
 		if err != nil {

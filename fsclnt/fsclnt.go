@@ -203,6 +203,7 @@ func (fsc *FsClient) closeFid(fid np.Tfid) {
 
 func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	fid, rest := fsc.mount.resolve(path)
+	fsc.DPrintf("walkOne: mount -> %v %v\n", fid, rest)
 	if fid == np.NoFid {
 		return np.NoFid, 0, errors.New("Unknown file")
 

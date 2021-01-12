@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 
 	np "ulambda/ninep"
 	"ulambda/npclnt"
@@ -14,6 +15,7 @@ const MAXSYMLINK = 20
 
 // The connection from the kernel/client
 type NpConn struct {
+	mu   sync.Mutex
 	conn net.Conn
 	clnt *npclnt.NpClnt
 	fids map[np.Tfid]*npclnt.NpChan // The outgoing channels to servers proxied
@@ -26,6 +28,28 @@ func makeNpConn(conn net.Conn) *NpConn {
 	npc.clnt = npclnt.MakeNpClnt(true)
 	npc.fids = make(map[np.Tfid]*npclnt.NpChan)
 	return npc
+}
+
+func (npc *NpConn) npch(fid np.Tfid) *npclnt.NpChan {
+	npc.mu.Lock()
+	defer npc.mu.Unlock()
+	ch, ok := npc.fids[fid]
+	if !ok {
+		log.Fatal("npch: unknown fid ", fid)
+	}
+	return ch
+}
+
+func (npc *NpConn) addch(fid np.Tfid, ch *npclnt.NpChan) {
+	npc.mu.Lock()
+	defer npc.mu.Unlock()
+	npc.fids[fid] = ch
+}
+
+func (npc *NpConn) delch(fid np.Tfid) {
+	npc.mu.Lock()
+	defer npc.mu.Unlock()
+	delete(npc.fids, fid)
 }
 
 type Npd struct {
@@ -56,17 +80,9 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.fids[args.Fid] = npc.clnt.MakeNpChan(":1111")
+	npc.addch(args.Fid, npc.clnt.MakeNpChan(":1111"))
 	rets.Qid = reply.Qid
 	return nil
-}
-
-func (npc *NpConn) npch(fid np.Tfid) *npclnt.NpChan {
-	ch, ok := npc.fids[fid]
-	if !ok {
-		log.Fatal("npch: unknown fid ", fid)
-	}
-	return ch
 }
 
 // XXX avoid duplication with fsclnt
@@ -89,7 +105,7 @@ func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.T
 	if err != nil {
 		return np.Tqid{}, err
 	}
-	npc.fids[newfid] = npc.clnt.MakeNpChan(server)
+	npc.addch(newfid, npc.clnt.MakeNpChan(server))
 	return reply.Qid, nil
 }
 
@@ -104,7 +120,7 @@ func (npc *NpConn) readLink(fid np.Tfid) (string, error) {
 		return "", err
 	}
 	// XXX clunk fid
-	delete(npc.fids, fid)
+	npc.delch(fid)
 	return string(reply.Data), nil
 }
 
@@ -117,7 +133,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		if len(reply.Qids) == 0 { // clone args.Fid?
-			npc.fids[args.NewFid] = npc.npch(args.Fid)
+			npc.addch(args.NewFid, npc.npch(args.Fid))
 			*rets = *reply
 			break
 		}
@@ -127,7 +143,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 			log.Print("symlink ", todo, path)
 
 			// args.Newfid is fid for symlink
-			npc.fids[args.NewFid] = npc.npch(args.Fid)
+			npc.addch(args.NewFid, npc.npch(args.Fid))
 
 			target, err := npc.readLink(args.NewFid)
 			if err != nil {
@@ -149,7 +165,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				log.Fatal("don't handle")
 			}
 		} else { // newFid is at same server as args.Fid
-			npc.fids[args.NewFid] = npc.npch(args.Fid)
+			npc.addch(args.NewFid, npc.npch(args.Fid))
 			*rets = *reply
 			break
 		}
@@ -180,7 +196,7 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	delete(npc.fids, args.Fid)
+	npc.delch(args.Fid)
 	return nil
 }
 

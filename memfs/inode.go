@@ -197,8 +197,12 @@ func (inode *Inode) LookupPath(tid int, path []string) (*Dir, *Inode, error) {
 
 func (inode *Inode) Remove(tid int, root *Root, path []string) error {
 	dir, ino, err := inode.LookupPath(tid, path)
+	DPrintf("Remove %v dir %v %v %v\n", path, dir, ino, err)
 	if err != nil {
 		return err
+	}
+	if len(path) == 0 {
+		log.Fatalf("Remove %v dir %v %v %v\n", path, dir, ino, err)
 	}
 	err = dir.remove(path[len(path)-1])
 	if err != nil {

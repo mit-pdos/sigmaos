@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -22,13 +23,12 @@ type NpConn struct {
 
 type ChanMgr struct {
 	conns map[string]*NpConn
-	debug bool
 }
 
 func makeChanMgr(debug bool) *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*NpConn)
-	cm.debug = debug
+	db.Debug = debug
 	return cm
 }
 
@@ -49,9 +49,7 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	fcall := &np.Fcall{}
 	fcall.Type = req.Type()
 	fcall.Msg = req
-	if cm.debug {
-		log.Print("clnt: ", fcall)
-	}
+	db.DPrintf("clnt: %v\n", fcall)
 	frame, err := npcodec.Marshal(fcall)
 	if err != nil {
 		log.Fatal("makeCall marshal error: ", err)
@@ -67,9 +65,7 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	if err := npcodec.Unmarshal(frame, fcall); err != nil {
 		log.Fatal("Server unmarshal error: ", err)
 	}
-	if cm.debug {
-		log.Print("clnt: ", fcall)
-	}
+	db.DPrintf("clnt: %v\n", fcall)
 	return fcall.Msg, nil
 
 }

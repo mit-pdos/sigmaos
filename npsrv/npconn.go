@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -14,22 +15,20 @@ const (
 )
 
 type Channel struct {
-	npc   NpConn
-	conn  net.Conn
-	np    NpAPI
-	br    *bufio.Reader
-	bw    *bufio.Writer
-	debug bool
+	npc  NpConn
+	conn net.Conn
+	np   NpAPI
+	br   *bufio.Reader
+	bw   *bufio.Writer
 }
 
-func MakeChannel(npc NpConn, conn net.Conn, debug bool) *Channel {
+func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	np := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
 		np,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
-		debug,
 	}
 	return c
 }
@@ -111,9 +110,7 @@ func (c *Channel) Serve() {
 			log.Print("Serve: unmarshal error: ", err)
 			return
 		}
-		if c.debug {
-			log.Print("Srv: ", fcall)
-		}
+		db.DPrintf("Srv: %v\n", fcall)
 		// XXX start go routine
 		reply, rerror := c.dispatch(fcall.Msg)
 		if rerror != nil {
@@ -121,9 +118,7 @@ func (c *Channel) Serve() {
 		}
 		fcall.Type = reply.Type()
 		fcall.Msg = reply
-		if c.debug {
-			log.Print("Srv: ", fcall)
-		}
+		db.DPrintf("Srv: %v\n", fcall)
 		frame, err = npcodec.Marshal(fcall)
 		if err != nil {
 			log.Print("Serve: marshal error: ", err)

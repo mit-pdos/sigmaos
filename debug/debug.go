@@ -1,13 +1,13 @@
-package memfs
+package debug
 
 import (
 	"log"
 )
 
-var debug = false
+var Debug = false
 
 func DPrintf(format string, a ...interface{}) {
-	if debug {
+	if Debug {
 		log.Printf(format, a...)
 	}
 }

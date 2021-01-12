@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -137,7 +138,7 @@ func (inode *Inode) Create(tid int, root *Root, t np.Tperm, name string) (*Inode
 			dn.init(newi)
 
 		}
-		DPrintf("%d: create %v in %v -> %v\n", tid, name, inode, newi)
+		db.DPrintf("%d: create %v in %v -> %v\n", tid, name, inode, newi)
 		inode.Mtime = time.Now().Unix()
 		return newi, dir.create(newi, name)
 	} else {
@@ -146,7 +147,7 @@ func (inode *Inode) Create(tid int, root *Root, t np.Tperm, name string) (*Inode
 }
 
 func (inode *Inode) Walk(tid int, path []string) ([]*Inode, []string, error) {
-	DPrintf("%d: Walk %v at %v\n", tid, path, inode)
+	db.DPrintf("%d: Walk %v at %v\n", tid, path, inode)
 	inodes := []*Inode{inode}
 	if len(path) == 0 {
 		return inodes, nil, nil
@@ -197,7 +198,7 @@ func (inode *Inode) LookupPath(tid int, path []string) (*Dir, *Inode, error) {
 
 func (inode *Inode) Remove(tid int, root *Root, path []string) error {
 	dir, ino, err := inode.LookupPath(tid, path)
-	DPrintf("Remove %v dir %v %v %v\n", path, dir, ino, err)
+	db.DPrintf("Remove %v dir %v %v %v\n", path, dir, ino, err)
 	if err != nil {
 		return err
 	}
@@ -213,7 +214,7 @@ func (inode *Inode) Remove(tid int, root *Root, path []string) error {
 }
 
 func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
-	DPrintf("inode.Write %v", inode)
+	db.DPrintf("inode.Write %v", inode)
 	var sz np.Tsize
 	var err error
 	if inode.IsDevice() {
@@ -238,7 +239,7 @@ func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 }
 
 func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
-	DPrintf("inode.Read %v", inode)
+	db.DPrintf("inode.Read %v", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		return d.Read(offset, n)

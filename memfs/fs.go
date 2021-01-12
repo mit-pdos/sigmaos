@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -19,7 +20,7 @@ func MakeRoot(d bool) *Root {
 	r.nextInum = RootInum + 1
 	dir := r.inode.Data.(*Dir)
 	dir.init(r.inode)
-	debug = d
+	db.Debug = d
 	return &r
 }
 
@@ -73,7 +74,7 @@ func unlockOrdered(tid int, olddir *Dir, newdir *Dir) {
 }
 
 func (root *Root) Rename(tid int, old []string, new []string) error {
-	DPrintf("%d: Rename %s to %s\n", tid, old, new)
+	db.DPrintf("%d: Rename %s to %s\n", tid, old, new)
 
 	rootino := root.inode
 	if len(old) == 0 || len(new) == 0 {

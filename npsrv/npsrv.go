@@ -3,6 +3,8 @@ package npsrv
 import (
 	"log"
 	"net"
+
+	db "ulambda/debug"
 )
 
 type NpConn interface {
@@ -10,13 +12,13 @@ type NpConn interface {
 }
 
 type NpServer struct {
-	npc   NpConn
-	addr  string
-	debug bool
+	npc  NpConn
+	addr string
 }
 
 func MakeNpServer(npc NpConn, server string, debug bool) *NpServer {
-	srv := &NpServer{npc, "", debug}
+	db.Debug = debug
+	srv := &NpServer{npc, ""}
 	var l net.Listener
 	l, err := net.Listen("tcp", server)
 	if err != nil {
@@ -39,7 +41,7 @@ func (srv *NpServer) runsrv(l net.Listener) {
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}
-		fsconn := MakeChannel(srv.npc, conn, srv.debug)
+		fsconn := MakeChannel(srv.npc, conn)
 		go fsconn.Serve()
 	}
 }

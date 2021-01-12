@@ -33,7 +33,7 @@ type Worker struct {
 func makeWorker() *Worker {
 	work := &Worker{}
 	work.clnt = fsclnt.MakeFsClient("worker", false)
-	work.memfsd = memfsd.MakeFsd()
+	work.memfsd = memfsd.MakeFsd(false)
 	work.done = make(chan bool)
 	return work
 }
@@ -103,7 +103,10 @@ func (w *Worker) doMap(name string) {
 		oname := "mr-" + base + "-" + strconv.Itoa(r)
 		fd, err := w.clnt.Create("name/mr/reduce/"+oname, 0700, np.OWRITE)
 		if err != nil {
-			log.Fatal("doMap create error ", err)
+			// maybe another worker finished earlier
+			// XXX handle partial writing of intermediate files
+			log.Printf("doMap create error %v %v\n", oname, err)
+			return
 		}
 		fds = append(fds, fd)
 	}
@@ -126,8 +129,25 @@ func (w *Worker) doMap(name string) {
 	}
 }
 
-func pickOne(dirents []np.Stat) string {
-	return dirents[0].Name
+func (w *Worker) isEmpty(name string) bool {
+	st, err := w.clnt.Stat(name)
+	if err != nil {
+		log.Fatalf("Stat %v error %v\n", name, err)
+	}
+	return st.Length == 0
+}
+
+func (w *Worker) doJob(name string) {
+	err := w.clnt.Rename("name/mr/todo/"+name, "name/mr/started/"+name)
+	if err == nil {
+		w.doMap("name/mr/started/" + name)
+		err := w.clnt.Remove("name/mr/started/" + name)
+		if err != nil {
+			// controler may have reclaimed the job
+			// or another worked may have finished it earlier
+			log.Printf("domap Remove %v error %v\n", name, err)
+		}
+	}
 }
 
 func (w *Worker) mPhase() {
@@ -143,26 +163,13 @@ func (w *Worker) mPhase() {
 		}
 		w.clnt.Close(fd)
 		if err == io.EOF { // are we done?
-			fd, err := w.clnt.Opendir("name/mr/started")
-			_, err = w.clnt.Readdir(fd, 1024)
-			if err != nil && err != io.EOF {
-				log.Fatal("Readdir error ", err)
-			}
-			if err == io.EOF {
+			if w.isEmpty("name/mr/started") {
 				done = true
+			} else {
+				log.Print("SPIN")
 			}
-			log.Print("SPIN")
-			w.clnt.Close(fd)
 		} else {
-			name := pickOne(dirents)
-			err = w.clnt.Rename("name/mr/todo/"+name, "name/mr/started/"+name)
-			if err == nil {
-				w.doMap("name/mr/started/" + name)
-				err := w.clnt.Remove("name/mr/started/" + name)
-				if err != nil {
-					log.Fatal("domap Remove error ", err)
-				}
-			}
+			w.doJob(dirents[0].Name)
 		}
 	}
 	w.done <- true

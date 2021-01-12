@@ -47,9 +47,9 @@ type Fsd struct {
 	nextId int
 }
 
-func MakeFsd() *Fsd {
+func MakeFsd(debug bool) *Fsd {
 	fsd := &Fsd{}
-	fsd.fs = memfs.MakeRoot()
+	fsd.fs = memfs.MakeRoot(debug)
 	return fsd
 }
 

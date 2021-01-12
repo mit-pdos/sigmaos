@@ -4,10 +4,10 @@ import (
 	"log"
 )
 
-var Debug = false
+var debug = false
 
 func DPrintf(format string, a ...interface{}) {
-	if Debug {
+	if debug {
 		log.Printf(format, a...)
 	}
 }

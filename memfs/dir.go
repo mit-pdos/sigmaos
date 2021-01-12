@@ -71,7 +71,7 @@ func (dir *Dir) createLocked(ino *Inode, name string) error {
 
 }
 
-func (dir *Dir) lookup(name string) (*Inode, error) {
+func (dir *Dir) lookupLocked(name string) (*Inode, error) {
 	inode, ok := dir.entries[name]
 	if ok {
 		return inode, nil
@@ -95,7 +95,7 @@ func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []stri
 	if dir.inum == 0 {
 		log.Fatal("namei ", dir)
 	}
-	inode, err = dir.lookup(path[0])
+	inode, err = dir.lookupLocked(path[0])
 	if err != nil {
 		DPrintf("namei %v unknown %v", dir, path)
 		dir.mu.Unlock()

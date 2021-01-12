@@ -404,6 +404,19 @@ func (fsc *FsClient) Remove(name string) error {
 	return err
 }
 
+func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
+	fsc.DPrintf("Stat %v\n", name)
+	fid, err := fsc.walkMany(np.Split(name), true)
+	if err != nil {
+		return nil, err
+	}
+	reply, err := fsc.npch(fid).Stat(fid)
+	if err != nil {
+		return nil, err
+	}
+	return &reply.Stat, nil
+}
+
 // XXX clone fid?
 func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 	_, err := fsc.npch(fid).Open(fid, np.OREAD)

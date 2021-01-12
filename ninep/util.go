@@ -5,6 +5,7 @@ import (
 )
 
 func Split(path string) []string {
+	path = strings.TrimRight(path, "/")
 	p := strings.Split(path, "/")
 	return p
 }

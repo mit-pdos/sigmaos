@@ -11,15 +11,15 @@ type Named struct {
 	srv  *npsrv.NpServer
 }
 
-func makeNamed() *Named {
+func makeNamed(debug bool) *Named {
 	nd := &Named{}
 	nd.done = make(chan bool)
-	nd.fsd = memfsd.MakeFsd()
+	nd.fsd = memfsd.MakeFsd(debug)
 	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111", true)
 	return nd
 }
 
 func main() {
-	nd := makeNamed()
+	nd := makeNamed(false)
 	<-nd.done
 }

@@ -20,30 +20,30 @@ type Cntlr struct {
 	clnt *fsclnt.FsClient
 	srv  *npsrv.NpServer
 	fsd  *memfsd.Fsd
-	done chan bool
 }
 
 func makeCntlr() *Cntlr {
 	cr := &Cntlr{}
 	cr.clnt = fsclnt.MakeFsClient("cntlr", false)
-	cr.fsd = memfsd.MakeFsd()
+	cr.fsd = memfsd.MakeFsd(false)
 	cr.srv = npsrv.MakeNpServer(cr.fsd, ":0", false)
-	cr.done = make(chan bool)
 	return cr
 }
 
-func pickOld(dirents []np.Stat) (string, bool) {
-	// look at time
-	return dirents[0].Name, true
+func (cr *Cntlr) isEmpty(name string) bool {
+	st, err := cr.clnt.Stat(name)
+	if err != nil {
+		log.Fatalf("Stat %v error %v\n", name, err)
+	}
+	return st.Length == 0
 }
 
-func (cr *Cntlr) check() bool {
+func (cr *Cntlr) check() {
 	log.Print("check")
 	fd, err := cr.clnt.Opendir("name/mr/started")
 	if err != nil {
 		log.Fatal("Opendir error ", err)
 	}
-	done := false
 	for {
 		dirents, err := cr.clnt.Readdir(fd, 1024)
 		if err == io.EOF {
@@ -53,24 +53,22 @@ func (cr *Cntlr) check() bool {
 			log.Fatalf("Readdir %v\n", err)
 		}
 		for _, st := range dirents {
-			mtime := time.Unix(int64(st.Mtime), 0)
-			log.Printf("st Name %v mtime %v sz %v\n", st.Name, mtime)
-			mtime.Add(time.Duration(5 * time.Second))
-			if mtime.After(time.Now()) {
-				log.Print("redo")
-				// mov from started to todo
+			log.Printf("in progress: %v\n", st.Name)
+			timeout := int64(st.Mtime) + 5
+			if timeout < time.Now().Unix() {
+				log.Print("REDO ", st.Name)
+				err = cr.clnt.Rename("name/mr/started/"+st.Name,
+					"name/mr/todo/"+st.Name)
 			}
 		}
 	}
 	cr.clnt.Close(fd)
-	return done
 }
 
 func (cr *Cntlr) monitor() {
-	done := false
-	for !done {
+	for !cr.isEmpty("name/mr/todo/") || !cr.isEmpty("name/mr/started/") {
 		time.Sleep(time.Duration(1000) * time.Millisecond)
-		done = cr.check()
+		cr.check()
 	}
 }
 
@@ -120,7 +118,5 @@ func main() {
 		}
 	}
 	cr.monitor()
-	<-cr.done
-	// cr.clnt.Close(fd)
 	log.Printf("Cntlr: finished\n")
 }

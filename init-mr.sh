@@ -2,12 +2,6 @@
 
 # XXX cd /mnt/9p/name?
 
-# setup mr
-mkdir -p /mnt/9p/mr
-mkdir -p /mnt/9p/mr/todo
-mkdir -p /mnt/9p/mr/started
-mkdir -p /mnt/9p/mr/reduce
-
 # setup inputs
 i=0
 echo "/mnt/9p/fs/mrwc" > "/mnt/9p/mr/program"

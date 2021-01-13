@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"ulambda/fsclnt"
-	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
 
@@ -22,17 +21,13 @@ type ReduceT func(string, []string) string
 
 type Worker struct {
 	clnt    *fsclnt.FsClient
-	memfsd  *memfsd.Fsd
 	mapf    MapT
 	reducef ReduceT
-	Done    chan bool
 }
 
 func MakeWorker(mapf MapT, reducef ReduceT) *Worker {
 	w := &Worker{}
 	w.clnt = fsclnt.MakeFsClient("worker", false)
-	w.memfsd = memfsd.MakeFsd(false)
-	w.Done = make(chan bool)
 	w.mapf = mapf
 	w.reducef = reducef
 
@@ -151,5 +146,4 @@ func (w *Worker) mPhase() {
 
 func (w *Worker) Work() {
 	w.mPhase()
-	w.Done <- true
 }

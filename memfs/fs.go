@@ -20,7 +20,7 @@ func MakeRoot(d bool) *Root {
 	r.nextInum = RootInum + 1
 	dir := r.inode.Data.(*Dir)
 	dir.init(r.inode)
-	db.Debug = d
+	db.SetDebug(d)
 	return &r
 }
 

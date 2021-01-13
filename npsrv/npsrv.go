@@ -17,7 +17,7 @@ type NpServer struct {
 }
 
 func MakeNpServer(npc NpConn, server string, debug bool) *NpServer {
-	db.Debug = debug
+	db.SetDebug(debug)
 	srv := &NpServer{npc, ""}
 	var l net.Listener
 	l, err := net.Listen("tcp", server)

@@ -28,7 +28,7 @@ type ChanMgr struct {
 func makeChanMgr(debug bool) *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*NpConn)
-	db.Debug = debug
+	db.SetDebug(debug)
 	return cm
 }
 

@@ -49,7 +49,7 @@ func MakeFsClient(proc string, debug bool) *FsClient {
 	fsc.npc = npclnt.MakeNpClnt(debug)
 	fsc.next = 1
 	fsc.Proc = proc
-	db.Debug = debug
+	db.SetDebug(debug)
 	rand.Seed(time.Now().UnixNano())
 	return fsc
 }

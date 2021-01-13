@@ -25,7 +25,7 @@ type NpConn struct {
 func makeNpConn(conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
-	npc.clnt = npclnt.MakeNpClnt(true)
+	npc.clnt = npclnt.MakeNpClnt(false)
 	npc.fids = make(map[np.Tfid]*npclnt.NpChan)
 	return npc
 }

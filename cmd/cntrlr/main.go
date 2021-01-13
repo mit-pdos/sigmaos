@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"log"
-	"strconv"
 	"time"
 
 	"ulambda/fsclnt"
@@ -79,16 +78,19 @@ func (cr *Cntlr) initfs() {
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}
-	is, _, err := rooti.Walk(0, []string{"todo"})
-	if err != nil {
-		log.Fatal("Walk error ", err)
-	}
-	for i := 0; i < 5; i++ {
-		_, err = is[1].Create(0, fs, 07000, "job"+strconv.Itoa(i))
-		if err != nil {
-			log.Fatal("Create error ", err)
-		}
-	}
+	//is, _, err := rooti.Walk(0, []string{"todo"})
+	//if err != nil {
+	//	log.Fatal("Walk error ", err)
+	//}
+
+	// input directory
+
+	// for i := 0; i < 5; i++ {
+	// 	_, err = is[1].Create(0, fs, 07000, "job"+strconv.Itoa(i))
+	// 	if err != nil {
+	// 		log.Fatal("Create error ", err)
+	// 	}
+	// }
 	_, err = rooti.Create(0, fs, np.DMDIR|07000, "started")
 	if err != nil {
 		log.Fatal("Create error ", err)
@@ -117,6 +119,8 @@ func main() {
 			log.Fatal("Symlink error: ", err)
 		}
 	}
-	cr.monitor()
+	for {
+		cr.monitor()
+	}
 	log.Printf("Cntlr: finished\n")
 }

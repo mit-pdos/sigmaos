@@ -86,27 +86,35 @@ func (root *Root) Rename(tid int, old []string, new []string) error {
 	if err != nil {
 		return err
 	}
-	newdir, i, err := rootino.LookupPath(tid, new[:len(new)-1])
+	db.DPrintf("Lookup old %v %v %v\n", olddir, ino, err)
+	_, i, err := rootino.LookupPath(tid, new[:len(new)-1])
 	if err != nil {
 		return err
 	}
-	if i != nil {
+	db.DPrintf("Lookup new %v %v\n", i, err)
+	if !i.IsDir() {
 		return errors.New("Dst is not a directory")
 	}
+	newdir := i.Data.(*Dir)
 
 	lockOrdered(olddir, newdir)
 	defer unlockOrdered(tid, olddir, newdir)
 
 	// XXX should check if oldname still exists, newname doesn't exist, etc.
 
+	db.DPrintf("remove %v from %v\n", oldname, olddir)
 	err = olddir.removeLocked(oldname)
 	if err != nil {
 		return err
 	}
 
+	db.DPrintf("remove succeeded\n")
+
 	err = newdir.createLocked(ino, newname)
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}
+
+	db.DPrintf("rename succeeded %v\n", newdir)
 	return nil
 }

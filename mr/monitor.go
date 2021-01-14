@@ -3,6 +3,7 @@ package mr
 import (
 	"io"
 	"log"
+	"strconv"
 	"time"
 
 	"ulambda/fsclnt"
@@ -17,11 +18,11 @@ type Mond struct {
 	fsd  *memfsd.Fsd
 }
 
-// XXX really should be shell script
+// XXX could be a shell script
 func (md *Mond) initfs() {
 	fs := md.fsd.Root()
 	rooti := fs.RootInode()
-	_, err := rooti.Create(0, fs, np.DMDIR|07000, "todo")
+	_, err := rooti.Create(0, fs, np.DMDIR|07000, "map")
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}
@@ -32,6 +33,17 @@ func (md *Mond) initfs() {
 	_, err = rooti.Create(0, fs, np.DMDIR|07000, "reduce")
 	if err != nil {
 		log.Fatal("Create error ", err)
+	}
+	// XXX have a create in memfs that combines walk and Create?
+	is, _, err := rooti.Walk(0, []string{"reduce"})
+	if err != nil {
+		log.Fatal("Walk error ", err)
+	}
+	for r := 0; r < NReduce; r++ {
+		_, err = is[1].Create(0, fs, np.DMDIR|07000, strconv.Itoa(r))
+		if err != nil {
+			log.Fatal("Create error ", err)
+		}
 	}
 }
 
@@ -98,8 +110,10 @@ func (md *Mond) check() {
 }
 
 func (md *Mond) Monitor() {
+
 	time.Sleep(time.Duration(1000) * time.Millisecond)
-	for !md.isEmpty("name/mr/started/") {
-		md.check()
-	}
+	//for !md.isEmpty("name/mr/started/") {
+	// XXX check could be a lambda?
+	// md.check()
+	//}
 }

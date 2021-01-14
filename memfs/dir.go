@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 
 	db "ulambda/debug"
@@ -128,7 +129,13 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 		return buf, nil
 	}
 	off := np.Toffset(0)
-	for n, i := range dir.entries {
+	keys := make([]string, 0, len(dir.entries))
+	for k := range dir.entries {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, n := range keys {
+		i := dir.entries[n]
 		if n == "." {
 			continue
 		}
@@ -138,13 +145,14 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 		if cnt < sz {
 			break
 		}
-		cnt -= sz
 		if off >= offset {
 			b, err := npcodec.Marshal(st)
 			if err != nil {
 				return nil, err
 			}
 			buf = append(buf, b...)
+			cnt -= sz
+
 		}
 		off += np.Toffset(sz)
 	}

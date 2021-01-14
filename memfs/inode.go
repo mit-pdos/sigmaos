@@ -105,6 +105,9 @@ func (inode *Inode) Mode() np.Tperm {
 }
 
 func (inode *Inode) Stat() *np.Stat {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	stat := &np.Stat{}
 	stat.Type = 0 // XXX
 	stat.Qid = inode.Qid()
@@ -168,23 +171,24 @@ func (inode *Inode) Walk(tid int, path []string) ([]*Inode, []string, error) {
 		// 	return nil, rest, err
 		// default:
 	} else {
-		return nil, nil, err
+		return nil, rest, err // XXX was nil?
 	}
 }
 
-// Lookup a directory or file. If file, return parent dir and inode
-// for file.  If directory, return it
+// Lookup a file/directory.  Return parent and inode for file/directory.
+// If no parent, return.
 func (inode *Inode) LookupPath(tid int, path []string) (*Dir, *Inode, error) {
 	inodes, rest, err := inode.Walk(tid, path)
 	if err != nil {
 		return nil, nil, err
 	}
+	db.DPrintf("%d: Walk -> %v rest %v err %v\n", tid, inodes, rest, err)
 	if len(rest) != 0 {
 		return nil, nil, errors.New("Unknown name")
 	}
 	i := inodes[len(inodes)-1]
-	if i.IsDir() {
-		return i.Data.(*Dir), nil, nil
+	if len(inodes) == 1 {
+		return nil, i, nil
 	} else {
 		// there must be a parent
 		di := inodes[len(inodes)-2]

@@ -99,7 +99,7 @@ func (w *Worker) doMap(name string) {
 		log.Fatalf("readContents %v %v", name, err)
 	}
 	kvs := w.mapf(name, string(contents))
-	log.Printf("%v: kvs = %v %v\n", name, len(kvs))
+	log.Printf("%v: kvs = %v\n", name, len(kvs))
 	base := filepath.Base(name)
 	log.Print(os.Getpid(), " : ", " doMap ", name)
 
@@ -203,7 +203,8 @@ func (w *Worker) isEmpty(name string) bool {
 func (w *Worker) doTask(path, name string) {
 	err := w.clnt.Rename(path+"/"+name, INPROGRESS+"/"+name)
 	if err != nil {
-		log.Fatal("Rename failed ", path+"/"+name, " ", err)
+		// another worker may have grabbed this task
+		log.Print("Rename failed ", path+"/"+name, " ", err)
 	} else {
 		log.Printf("renamed to %v\n", INPROGRESS+"/"+name)
 		if path == "name/mr/map" {
@@ -215,7 +216,7 @@ func (w *Worker) doTask(path, name string) {
 		if err != nil {
 			// monitor may have reclaimed the task or
 			// another worked may have finished it earlier
-			log.Fatalf("domap Remove %v error %v\n", name, err)
+			log.Printf("domap Remove %v error %v\n", name, err)
 		}
 	}
 }
@@ -232,7 +233,7 @@ func (w *Worker) Phase(path string) {
 			if w.isEmpty(INPROGRESS) {
 				done = true
 			} else {
-				log.Print("SPIN")
+				fmt.Printf(".")
 			}
 		} else {
 			if err != nil {
@@ -247,6 +248,5 @@ func (w *Worker) Phase(path string) {
 
 func (w *Worker) Work() {
 	w.Phase("name/mr/map")
-	log.Print("REDUCE")
 	w.Phase("name/mr/reduce")
 }

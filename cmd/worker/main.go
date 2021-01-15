@@ -3,13 +3,11 @@ package main
 import (
 	"log"
 
-	"ulambda/mr"
+	"ulambda/worker"
 )
 
 func main() {
-	cr := mr.MakeMond()
-	for {
-		cr.Monitor()
-	}
+	wr := MakeWorker()
+	wr.Run()
 	log.Printf("Mond: finished\n")
 }

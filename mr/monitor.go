@@ -49,7 +49,7 @@ func (md *Mond) initfs() {
 
 func MakeMond() *Mond {
 	md := &Mond{}
-	md.clnt = fsclnt.MakeFsClient("cntlr", false)
+	md.clnt = fsclnt.MakeFsClient(false)
 	md.fsd = memfsd.MakeFsd(false)
 	md.srv = npsrv.MakeNpServer(md.fsd, ":0", false)
 	if fd, err := md.clnt.Attach(":1111", ""); err == nil {

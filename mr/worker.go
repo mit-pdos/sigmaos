@@ -20,7 +20,6 @@ const (
 	INPROGRESS = "name/mr/started"
 )
 
-type MapT func(string, string) []KeyValue
 type ReduceT func(string, []string) string
 
 type Worker struct {
@@ -31,7 +30,7 @@ type Worker struct {
 
 func MakeWorker(mapf MapT, reducef ReduceT) *Worker {
 	w := &Worker{}
-	w.clnt = fsclnt.MakeFsClient("worker", false)
+	w.clnt = fsclnt.MakeFsClient(false)
 	w.mapf = mapf
 	w.reducef = reducef
 

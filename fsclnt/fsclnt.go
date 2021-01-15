@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"strconv"
 	"strings"
 	"time"
 
@@ -38,17 +37,15 @@ type FsClient struct {
 	npc   *npclnt.NpClnt
 	mount *Mount
 	next  np.Tfid
-	Proc  string
 }
 
-func MakeFsClient(proc string, debug bool) *FsClient {
+func MakeFsClient(debug bool) *FsClient {
 	fsc := &FsClient{}
 	fsc.fds = make([]FdState, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Channel)
 	fsc.mount = makeMount()
 	fsc.npc = npclnt.MakeNpClnt(debug)
 	fsc.next = 1
-	fsc.Proc = proc
 	db.SetDebug(debug)
 	rand.Seed(time.Now().UnixNano())
 	return fsc
@@ -65,52 +62,6 @@ func (fsc *FsClient) String() string {
 
 func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
 	return fsc.fids[fid].npch
-}
-
-// // XXX use gob?
-func InitFsClient(args []string) (*FsClient, error) {
-	log.Printf("InitFsClient: %v\n", args)
-	if len(args) < 2 {
-		return nil, errors.New("Missing len and program")
-	}
-	n, err := strconv.Atoi(args[0])
-	if err != nil {
-		return nil, errors.New("Bad arg len")
-	}
-	if n < 1 {
-		return nil, errors.New("Missing program")
-	}
-	a := args[1 : n+1] // skip len and +1 for program name
-	fids := args[n+1:]
-	fsc := MakeFsClient(a[0], false)
-	log.Printf("Args %v fids %v\n", a, fids)
-	if fid, err := fsc.Attach(":1111", ""); err == nil {
-		err := fsc.Mount(fid, "name")
-		if err != nil {
-			return nil, errors.New("Mount error")
-		}
-		_, err = fsc.Open("name/consoled/console", np.OREAD)
-		if err != nil {
-			return nil, errors.New("Open error")
-		}
-		_, err = fsc.Open("name/consoled/console", np.OWRITE)
-		if err != nil {
-			return nil, errors.New("Open error")
-		}
-
-		log.Printf("fsc %v\n", fsc)
-	}
-
-	// for _, f := range fids {
-	// 	var uf fid.Ufid
-	// 	err := json.Unmarshal([]byte(f), &uf)
-	// 	if err != nil {
-	// 		return nil, nil, errors.New("Bad fid")
-	// 	}
-	// 	fsc.findfd(&uf)
-	// }
-
-	return fsc, nil
 }
 
 func (fsc *FsClient) findfd(nfid np.Tfid) int {

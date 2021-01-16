@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"os"
 	"strconv"
 
 	"ulambda/fslib"
@@ -27,6 +26,7 @@ func MakeMapper(mapf MapT, inputs []string) (*Mapper, error) {
 	if len(inputs) != 2 {
 		return nil, errors.New("MakeMapper: too few arguments")
 	}
+	log.Printf("MakeMapper %v\n", inputs)
 	m.input = inputs[0]
 	m.output = inputs[1]
 	return m, nil

@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"log"
+
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
 )
@@ -57,4 +58,12 @@ func (fl *FsLib) MakeFile(fname string, data []byte) error {
 		return err
 	}
 	return fl.Close(fd)
+}
+
+func (fl *FsLib) isEmpty(name string) bool {
+	st, err := fl.Stat(name)
+	if err != nil {
+		log.Fatalf("Stat %v error %v\n", name, err)
+	}
+	return st.Length == 0
 }

@@ -259,6 +259,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
+// XXX move to fslib
 func (fsc *FsClient) Mkdir(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	perm = perm | np.DMDIR
 	return fsc.Create(path, perm, mode)
@@ -306,6 +307,7 @@ func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tpe
 	return fsc.Close(fd)
 }
 
+// XXX move to fslib
 func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	db.DPrintf("Mkpipe %v\n", path)
 	p := np.Split(path)
@@ -422,6 +424,7 @@ func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
 
 }
 
+// XXX move to fslib
 func (fsc *FsClient) Opendir(path string) (int, error) {
 	db.DPrintf("Opendir %v", path)
 	return fsc.Open(path, np.OREAD)
@@ -440,7 +443,8 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	return reply.Data, err
 }
 
-func (fsc *FsClient) Readdir(fd int, n np.Tsize) ([]np.Stat, error) {
+// XXX move to fslib
+func (fsc *FsClient) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 	data, err := fsc.Read(fd, n)
 	if err != nil {
 		return nil, err
@@ -448,14 +452,14 @@ func (fsc *FsClient) Readdir(fd int, n np.Tsize) ([]np.Stat, error) {
 	if len(data) == 0 {
 		return nil, io.EOF
 	}
-	dirents := []np.Stat{}
+	dirents := []*np.Stat{}
 	for len(data) > 0 {
 		st := np.Stat{}
 		err = npcodec.Unmarshal(data, &st)
 		if err != nil {
 			return dirents, err
 		}
-		dirents = append(dirents, st)
+		dirents = append(dirents, &st)
 		sz := np.Tsize(npcodec.SizeNp(st))
 		data = data[sz:]
 	}

@@ -14,11 +14,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v input...\n", os.Args[0])
 		os.Exit(1)
 	}
-	m, err := mr.MakeMapper(wc.Map, os.Args[1:])
+	m, err := mr.MakeReducer(wc.Reduce, os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
 	m.Work()
-	log.Printf("Mapper: finished\n")
+	log.Printf("Reducer: finished\n")
 }

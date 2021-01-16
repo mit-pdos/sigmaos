@@ -1,4 +1,4 @@
-all: named proxyd consoled mr-m-wc mrwc # procd
+all: named proxyd consoled mr-m-wc mr-r-wc ulamd
 	@echo "build done"
 
 .PHONY: test

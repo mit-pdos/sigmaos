@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"io"
 	"log"
 	"strconv"
 	"time"
@@ -74,40 +73,13 @@ func MakeMond() *Mond {
 	return md
 }
 
-func (md *Mond) isEmpty(name string) bool {
-	st, err := md.clnt.Stat(name)
-	if err != nil {
-		log.Fatalf("Stat %v error %v\n", name, err)
-	}
-	return st.Length == 0
-}
-
-func (md *Mond) check() {
-	log.Print("check")
-	fd, err := md.clnt.Opendir("name/mr/started")
-	if err != nil {
-		log.Fatal("Opendir error ", err)
-	}
-	for {
-		dirents, err := md.clnt.Readdir(fd, 1024)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("Readdir %v\n", err)
-		}
-		for _, st := range dirents {
-			log.Printf("in progress: %v\n", st.Name)
-			timeout := int64(st.Mtime) + 5
-			if timeout < time.Now().Unix() {
-				log.Print("REDO ", st.Name)
-				err = md.clnt.Rename("name/mr/started/"+st.Name,
-					"name/mr/todo/"+st.Name)
-			}
-		}
-	}
-	md.clnt.Close(fd)
-}
+// log.Printf("in progress: %v\n", st.Name)
+// timeout := int64(st.Mtime) + 5
+// if timeout < time.Now().Unix() {
+// 	log.Print("REDO ", st.Name)
+// 	err = md.clnt.Rename("name/mr/started/"+st.Name,
+// 		"name/mr/todo/"+st.Name)
+// }
 
 func (md *Mond) Monitor() {
 

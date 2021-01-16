@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"ulambda/mr"
-	"ulambda/ulambd"
+	"ulambda/ulamblib"
 	"ulambda/wc"
 )
 
@@ -22,5 +22,5 @@ func main() {
 	}
 	m.Work()
 	log.Printf("Reducer: finished\n")
-	ulambd.Exit(os.Args[1])
+	ulamblib.Exit(os.Args[1])
 }

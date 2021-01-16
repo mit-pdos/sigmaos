@@ -4,19 +4,31 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 )
 
-var debug bool
+type Debug struct {
+	mu    sync.Mutex
+	debug bool
+}
+
+var db Debug
 
 func SetDebug(d bool) {
-	if !debug {
-		debug = d
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if !db.debug {
+		db.debug = d
 	}
 
 }
 
 func DPrintf(format string, v ...interface{}) {
-	if debug {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if db.debug {
 		log.Printf("%v: %v", os.Args[0], fmt.Sprintf(format, v...))
 	}
 }

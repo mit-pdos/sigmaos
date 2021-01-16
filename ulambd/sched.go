@@ -3,6 +3,7 @@ package ulambd
 import (
 	"encoding/json"
 	"log"
+	"time"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -12,11 +13,13 @@ const LDIR = "name/ulambda/"
 
 type Lambd struct {
 	clnt *fslib.FsLib
+	load int
 }
 
 func MakeLambd() *Lambd {
 	ld := &Lambd{}
 	ld.clnt = fslib.MakeFsLib(false)
+	ld.load = 0
 	return ld
 }
 
@@ -54,25 +57,37 @@ func (ld *Lambd) Getpids() map[string]bool {
 	return pids
 }
 
+// XXX process every lambda
 func (ld *Lambd) RunLambda(st *np.Stat) bool {
 	l, err := ld.ReadLambda(LDIR + st.Name)
 	if err != nil {
 		log.Fatalf("ReadLambda st.Name %v error %v ", err)
 		return false
 	}
-	log.Printf("%v: l = %v\n", st.Name, l)
+	log.Printf("Sched %v: %v\n", ld.load, l)
 	for {
 		if l.status == "Runnable" {
-			err = l.Run()
-			if err != nil {
-				log.Printf("Run: Error %v\n", err)
+			if ld.load <= 3 {
+				err = l.run()
+				if err != nil {
+					log.Printf("Run: Error %v\n", err)
+				}
+				ld.load += 1
+				return true
 			}
-			return true
+			return false
 		} else if l.status == "Waiting" {
 			if !l.isRunnable(ld.Getpids()) {
 				return false
 			}
 			// run l
+		} else if l.status == "Running" {
+			// XXX monitor progress?
+			return false
+		} else if l.status == "Exit" {
+			ld.load -= 1
+			l.exit()
+			return false
 		} else {
 			log.Fatalf("Unknown status %v\n", l.status)
 		}
@@ -90,5 +105,6 @@ func (ld *Lambd) Run() {
 			log.Print("Run done")
 			return
 		}
+		time.Sleep(time.Duration(1000) * time.Millisecond)
 	}
 }

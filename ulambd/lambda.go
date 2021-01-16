@@ -22,6 +22,12 @@ type Lambda struct {
 	attr   Attr
 }
 
+func (l *Lambda) String() string {
+	str := fmt.Sprintf("λ pid %v st %v args %v dep %v", l.pid, l.status,
+		l.attr.Args, l.attr.Dependencies)
+	return str
+}
+
 func (l *Lambda) changeStatus(new string) error {
 	err := l.clnt.Rename(l.pid+"/"+l.status, l.pid+"/"+new)
 	if err != nil {
@@ -32,7 +38,7 @@ func (l *Lambda) changeStatus(new string) error {
 	return nil
 }
 
-func (l *Lambda) Run() error {
+func (l *Lambda) run() error {
 	err := l.changeStatus("Running")
 	if err != nil {
 		return err
@@ -41,15 +47,15 @@ func (l *Lambda) Run() error {
 	cmd := exec.Command(l.attr.Program, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
+	err = cmd.Start()
 	if err != nil {
 		return err
 	}
-	err = l.changeStatus("Done")
-	if err != nil {
-		return err
-	}
-	err = l.clnt.Remove(l.pid)
+	return nil
+}
+
+func (l *Lambda) exit() error {
+	err := l.clnt.Remove(l.pid)
 	if err != nil {
 		return fmt.Errorf("Remove %v error %v\n", l.pid, err)
 	}

@@ -1,13 +1,15 @@
-package ulambd
+package ulamblib
 
 import (
 	"log"
 	"os"
+
+	"ulambda/fslib"
 )
 
 func Exit(pid string) {
-	ld := MakeLambd()
-	err := ld.clnt.Rename(LDIR+"/"+pid+"/Running", LDIR+"/"+pid+"/Exit")
+	clnt := fslib.MakeFsLib(false)
+	err := clnt.Rename(pid+"/Running", pid+"/Exit")
 	if err != nil {
 		log.Printf("Exit %v to %v error %v\n",
 			pid+"/Running", pid+"/Exit", err)

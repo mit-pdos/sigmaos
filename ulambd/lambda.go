@@ -37,7 +37,8 @@ func (l *Lambda) Run() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(l.attr.Program, l.attr.Args...)
+	args := append([]string{l.pid}, l.attr.Args...)
+	cmd := exec.Command(l.attr.Program, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
@@ -54,6 +55,8 @@ func (l *Lambda) Run() error {
 	}
 	return nil
 }
+
+// XXX move stuff from run into exit
 
 func (l *Lambda) isRunnable(pids map[string]bool) bool {
 	log.Printf("isRunnable deps %v pids %v\n", l.attr.Dependencies, pids)

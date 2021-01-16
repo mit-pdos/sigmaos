@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Create ulambdas
+# Create ulambdas for wc mapreduce
 
 L="/mnt/9p/ulambda/"
 mappers=( )

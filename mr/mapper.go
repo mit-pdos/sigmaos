@@ -52,6 +52,7 @@ func (m *Mapper) doMap() {
 		if err != nil {
 			log.Fatal("doMap marshal error", err)
 		}
+		// XXX put this in make-lambda.sh
 		oname := "name/fs/mr-wc/" + strconv.Itoa(r) + "/mr-" + m.output
 		err = m.clnt.MakeFile(oname, b)
 		if err != nil {

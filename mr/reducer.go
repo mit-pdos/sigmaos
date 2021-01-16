@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"sort"
 
@@ -41,37 +40,24 @@ func (r *Reducer) doReduce() {
 	kva := []KeyValue{}
 
 	log.Printf("doReduce %v\n", r.input)
-	fd, err := r.clnt.Opendir(r.input)
-	if err != nil {
-		log.Fatal("Opendir error ", err)
-	}
-	for {
-		dirents, err := r.clnt.Readdir(fd, 256)
-		if err == io.EOF {
-			break
-		}
+	r.clnt.ProcessDir(r.input, func(st *np.Stat) bool {
+		data, err := r.clnt.ReadFile(r.input + "/" + st.Name)
 		if err != nil {
-			log.Fatal("Readdir error ", err)
+			log.Fatal("readFile error ", err)
 		}
-		for _, st := range dirents {
-			data, err := r.clnt.ReadFile(r.input + "/" + st.Name)
-			if err != nil {
-				log.Fatal("readFile error ", err)
-			}
-			kvs := []KeyValue{}
-			err = json.Unmarshal(data, &kvs)
-			if err != nil {
-				log.Fatal("Unmarshal error ", err)
-			}
-			log.Printf("reduce %v: kva %v\n", st.Name, len(kvs))
-			kva = append(kva, kvs...)
+		kvs := []KeyValue{}
+		err = json.Unmarshal(data, &kvs)
+		if err != nil {
+			log.Fatal("Unmarshal error ", err)
 		}
-	}
-	r.clnt.Close(fd)
+		log.Printf("reduce %v: kva %v\n", st.Name, len(kvs))
+		kva = append(kva, kvs...)
+		return false
+	})
 
 	sort.Sort(ByKey(kva))
 
-	fd, err = r.clnt.Create(r.output, 0777, np.OWRITE)
+	fd, err := r.clnt.Create(r.output, 0777, np.OWRITE)
 	if err != nil {
 		log.Fatal("Create error ", err)
 	}

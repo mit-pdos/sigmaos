@@ -35,7 +35,6 @@ func MakeReducer(reducef ReduceT, inputs []string) (*Reducer, error) {
 	return m, nil
 }
 
-// XXX use directory reading library function
 func (r *Reducer) doReduce() {
 	kva := []KeyValue{}
 
@@ -73,10 +72,7 @@ func (r *Reducer) doReduce() {
 			values = append(values, kva[k].Value)
 		}
 		output := r.reducef(kva[i].Key, values)
-
-		// output is an array of strings.
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
-
 		_, err = r.clnt.Write(fd, []byte(b))
 		if err != nil {
 			log.Fatal("Write error ", err)

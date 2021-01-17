@@ -14,11 +14,10 @@ import (
 )
 
 // XXX monitor, boost
-// device file to kick it into action
 
 const (
-	LDIR    = "name/ulambd/pids/" // XXX use local name, no client
-	MAXLOAD = 7
+	LDIR    = "name/ulambd/pids/"
+	MAXLOAD = 3
 )
 
 type LambdDev struct {
@@ -71,6 +70,7 @@ func MakeLambd() *Lambd {
 	return ld
 }
 
+// xxx have identical interfaces for a local and remote, but efficient?
 func (ld *Lambd) ReadLambda(dir string) (*Lambda, error) {
 	dirents, err := ld.clnt.ReadDir(dir)
 	if err != nil {
@@ -105,55 +105,54 @@ func (ld *Lambd) Getpids() map[string]bool {
 	return pids
 }
 
-// XXX process every lambda
-func (ld *Lambd) RunLambda(st *np.Stat) bool {
+func (ld *Lambd) runLambda(l *Lambda) {
+	if ld.load <= MAXLOAD {
+		err := l.run()
+		if err != nil {
+			log.Printf("Run: Error %v\n", err)
+		} else {
+			ld.load += 1
+		}
+	}
+}
+
+// Process a lambda, skipping Waiting and Running ones
+func (ld *Lambd) processLambda(st *np.Stat) bool {
 	l, err := ld.ReadLambda(LDIR + st.Name)
 	if err != nil {
 		log.Fatalf("ReadLambda st.Name %v error %v ", st.Name, err)
-		return false
 	}
 	log.Printf("Sched %v: %v\n", ld.load, l)
-	for {
-		if l.status == "Runnable" {
-			if ld.load <= MAXLOAD {
-				err = l.run()
-				if err != nil {
-					log.Printf("Run: Error %v\n", err)
-				}
-				ld.load += 1
-				return false
-			}
-			return false
-		} else if l.status == "Waiting" {
-			if !l.isRunnable(ld.Getpids()) {
-				return false
-			}
-			// run l
-		} else if l.status == "Running" {
-			// XXX monitor progress?
-			return false
-		} else if l.status == "Exit" {
-			ld.load -= 1
-			l.exit()
-			return false
+	if l.status == "Runnable" {
+		ld.runLambda(l)
+	} else if l.status == "Waiting" {
+		if l.isRunnable(ld.Getpids()) {
+			ld.runLambda(l)
 		} else {
-			log.Fatalf("Unknown status %v\n", l.status)
+			return false
 		}
+	} else if l.status == "Running" {
+		return false
+	} else if l.status == "Exit" {
+		ld.load -= 1
+		l.exit()
+	} else {
+		log.Fatalf("Unknown status %v\n", l.status)
 	}
 	return true
 }
 
-func (ld *Lambd) Run() {
+func (ld *Lambd) Scheduler() {
 	ld.mu.Lock()
-	for {
-		empty, err := ld.clnt.ProcessDir(LDIR, ld.RunLambda)
+	for { /// l.load
+		stopped, err := ld.clnt.ProcessDir(LDIR, ld.processLambda)
 		if err != nil {
-			log.Fatalf("Run: error %v\n", err)
+			log.Fatalf("ProcessDir: error %v\n", err)
 		}
-		if empty {
+		if !stopped || ld.load >= MAXLOAD {
 			log.Print("Nothing to do")
+			ld.cond.Wait()
 		}
 		// time.Sleep(time.Duration(1) * time.Millisecond)
-		ld.cond.Wait()
 	}
 }

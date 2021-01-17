@@ -7,8 +7,9 @@ import (
 	np "ulambda/ninep"
 )
 
+// Too stop early, f must return true.  Returns true if stopped early.
 func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) bool) (bool, error) {
-	isEmpty := true
+	stopped := false
 	fd, err := fl.Opendir(dir)
 	if err != nil {
 		log.Fatal("Opendir error ", err)
@@ -21,15 +22,15 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) bool) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		isEmpty = false
 		for _, st := range dirents {
-			if f(st) {
+			stopped = f(st)
+			if stopped {
 				break
 			}
 		}
 	}
 	fl.Close(fd)
-	return isEmpty, nil
+	return stopped, nil
 }
 
 func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {

@@ -8,6 +8,6 @@ import (
 
 func main() {
 	ld := ulambd.MakeLambd()
-	ld.Run()
+	ld.Scheduler()
 	log.Printf("lambd: finished\n")
 }

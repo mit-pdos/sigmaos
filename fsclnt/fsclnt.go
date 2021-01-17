@@ -25,16 +25,17 @@ type FdState struct {
 
 type FsClient struct {
 	fds   []FdState
-	fids  map[np.Tfid]*Channel
+	fids  map[np.Tfid]*Path
 	npc   *npclnt.NpClnt
 	mount *Mount
 	next  np.Tfid
 }
 
+// XXX need mutex for several threads share FsClient
 func MakeFsClient(debug bool) *FsClient {
 	fsc := &FsClient{}
 	fsc.fds = make([]FdState, 0, MAXFD)
-	fsc.fids = make(map[np.Tfid]*Channel)
+	fsc.fids = make(map[np.Tfid]*Path)
 	fsc.mount = makeMount()
 	fsc.npc = npclnt.MakeNpClnt(debug)
 	fsc.next = 1
@@ -111,13 +112,13 @@ func (fsc *FsClient) Close(fd int) error {
 	return err
 }
 
-func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Channel, error) {
+func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
 	reply, err := fsc.npc.Attach(server, fid, p)
 	if err != nil {
 		return nil, err
 	}
 	ch := fsc.npc.MakeNpChan(server)
-	return makeChannel(ch, p, []np.Tqid{reply.Qid}), nil
+	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
 func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
@@ -139,7 +140,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 		// XXX free fid
 		return np.NoFid, err
 	}
-	fsc.fids[fid1] = fsc.fids[fid].copyChannel()
+	fsc.fids[fid1] = fsc.fids[fid].copyPath()
 	return fid1, err
 }
 
@@ -172,7 +173,7 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	todo := len(rest) - len(reply.Qids)
 	db.DPrintf("walkOne rest %v -> %v %v", rest, reply.Qids, todo)
 
-	fsc.fids[fid2] = fsc.fids[fid1].copyChannel()
+	fsc.fids[fid2] = fsc.fids[fid1].copyPath()
 	fsc.fids[fid2].addn(reply.Qids, rest)
 	return fid2, todo, nil
 }
@@ -207,7 +208,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 		qid := fsc.fids[fid].lastqid()
 
 		// if todo == 0 and !resolve, don't resolve symlinks, so
-		// that the client remove a symlink
+		// that the client can remove a symlink
 		if qid.Type == np.QTSYMLINK && (todo > 0 || (todo == 0 && resolve)) {
 			target, err := fsc.Readlink(fid)
 			if err != nil {
@@ -251,6 +252,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
+// XXX reduce duplicattion with Create
 func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
 	db.DPrintf("CreateAt %v at %v\n", name, dfd)
 	fid, err := fsc.lookup(dfd)

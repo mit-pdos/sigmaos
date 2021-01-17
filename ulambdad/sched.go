@@ -70,6 +70,16 @@ func MakeLambd() *Lambd {
 		log.Fatal("Create error: ", err)
 	}
 
+	// XXX this sets up TCP connection with the server in this
+	// process; it would be nice to be more efficient.  We
+	// shouldn't peak inside memfsd's data structures directly,
+	// perhaps it is not memfs, but persistent, or replicated etc.
+	// FsClnt could call memfsd's 9p conn directly (i.e., have two
+	// implementations for 9pclnt), but fsclnt would need to know
+	// about memfsd.  We would stil pay then for marshalling of
+	// directory entries when reading a directory.  Perhaps we
+	// should pay the overhead of the TCP connection, and not have
+	// a local memfsd at all (e.g., just use named).
 	err = ld.clnt.Mkdir("name/ulambd/pids", 0777)
 	if err != nil {
 		log.Fatal("Mkdir error: ", err)
@@ -78,7 +88,6 @@ func MakeLambd() *Lambd {
 	return ld
 }
 
-// xxx have identical interfaces for a local and remote, but efficient?
 func (ld *Lambd) ReadLambda(dir string) (*Lambda, error) {
 	dirents, err := ld.clnt.ReadDir(dir)
 	if err != nil {

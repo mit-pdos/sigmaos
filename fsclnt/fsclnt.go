@@ -112,6 +112,8 @@ func (fsc *FsClient) Close(fd int) error {
 	return err
 }
 
+// XXX if server lives in this process, do something special?  FsClient doesn't
+// know about the server currently.
 func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
 	reply, err := fsc.npc.Attach(server, fid, p)
 	if err != nil {

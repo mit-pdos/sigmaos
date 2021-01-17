@@ -80,6 +80,9 @@ func MakeLambd() *Lambd {
 	// directory entries when reading a directory.  Perhaps we
 	// should pay the overhead of the TCP connection, and not have
 	// a local memfsd at all (e.g., just use named).
+	// Alternatively, ulambd is itself its own 9p service, not
+	// using memfsd, but perhaps just memfs, then we can
+	// specialize and make it performant in any way we want.
 	err = ld.clnt.Mkdir("name/ulambd/pids", 0777)
 	if err != nil {
 		log.Fatal("Mkdir error: ", err)

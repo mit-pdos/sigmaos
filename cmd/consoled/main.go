@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"ulambda/fsclnt"
+	"ulambda/fslib"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
@@ -18,7 +18,7 @@ const (
 )
 
 type Consoled struct {
-	clnt   *fsclnt.FsClient
+	clnt   *fslib.FsLib
 	srv    *npsrv.NpServer
 	memfsd *memfsd.Fsd
 	done   chan bool
@@ -26,7 +26,7 @@ type Consoled struct {
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	cons.clnt = fsclnt.MakeFsClient(false)
+	cons.clnt = fslib.MakeFsLib(false)
 	cons.memfsd = memfsd.MakeFsd(false)
 	cons.srv = npsrv.MakeNpServer(cons.memfsd, ":0", false)
 	cons.done = make(chan bool)

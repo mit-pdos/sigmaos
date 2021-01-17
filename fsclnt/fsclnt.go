@@ -3,7 +3,6 @@ package fsclnt
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"strings"
@@ -12,19 +11,12 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
-	"ulambda/npcodec"
 )
 
 const (
-	// zero channel to named
-	Stdin  = 0
-	Stdout = 1
-	// Stderr = 2
+	MAXFD      = 20
+	MAXSYMLINK = 4
 )
-
-const MAXFD = 20
-
-const MAXSYMLINK = 4
 
 type FdState struct {
 	offset np.Toffset
@@ -259,12 +251,6 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-// XXX move to fslib
-func (fsc *FsClient) Mkdir(path string, perm np.Tperm, mode np.Tmode) (int, error) {
-	perm = perm | np.DMDIR
-	return fsc.Create(path, perm, mode)
-}
-
 func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
 	db.DPrintf("CreateAt %v at %v\n", name, dfd)
 	fid, err := fsc.lookup(dfd)
@@ -284,30 +270,7 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	return fd, nil
 }
 
-func (fsc *FsClient) Symlink(target string, link string, lperm np.Tperm) error {
-	lperm = lperm | np.DMSYMLINK
-	fd, err := fsc.Create(link, lperm, np.OWRITE)
-	if err != nil {
-		return err
-	}
-	_, err = fsc.Write(fd, []byte(target))
-	if err != nil {
-		return err
-	}
-	return fsc.Close(fd)
-}
-
-func (fsc *FsClient) SymlinkAt(dfd int, target string, link string, lperm np.Tperm) error {
-	lperm = lperm | np.DMSYMLINK
-	fd, err := fsc.CreateAt(dfd, link, lperm, np.OWRITE)
-	_, err = fsc.Write(fd, []byte(target))
-	if err != nil {
-		return err
-	}
-	return fsc.Close(fd)
-}
-
-// XXX move to fslib
+// XXX move to fslib, perhaps implement as a device, or part of 9P?
 func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 	db.DPrintf("Mkpipe %v\n", path)
 	p := np.Split(path)
@@ -424,12 +387,6 @@ func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
 
 }
 
-// XXX move to fslib
-func (fsc *FsClient) Opendir(path string) (int, error) {
-	db.DPrintf("Opendir %v", path)
-	return fsc.Open(path, np.OREAD)
-}
-
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
@@ -443,29 +400,6 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	return reply.Data, err
 }
 
-// XXX move to fslib
-func (fsc *FsClient) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
-	data, err := fsc.Read(fd, n)
-	if err != nil {
-		return nil, err
-	}
-	if len(data) == 0 {
-		return nil, io.EOF
-	}
-	dirents := []*np.Stat{}
-	for len(data) > 0 {
-		st := np.Stat{}
-		err = npcodec.Unmarshal(data, &st)
-		if err != nil {
-			return dirents, err
-		}
-		dirents = append(dirents, &st)
-		sz := np.Tsize(npcodec.SizeNp(st))
-		data = data[sz:]
-	}
-	return dirents, err
-}
-
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
@@ -477,19 +411,4 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	}
 	fdst.offset += np.Toffset(reply.Count)
 	return reply.Count, err
-}
-
-func (fsc *FsClient) Lsof() []string {
-	var fids []string
-	for _, fdst := range fsc.fds {
-		if fdst.fid != np.NoFid {
-			// collect info about fid...
-			//b, err := json.Marshal(fid)
-			//if err != nil {
-			//	log.Fatal("Marshall error:", err)
-			//}
-			//fids = append(fids, string(b))
-		}
-	}
-	return fids
 }

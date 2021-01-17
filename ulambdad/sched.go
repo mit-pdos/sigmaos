@@ -25,7 +25,7 @@ type LambdDev struct {
 }
 
 func (ldev *LambdDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
-	log.Printf("write %v\n", data)
+	log.Printf("LambdDev.write %v\n", data)
 	ldev.ld.cond.Signal()
 	return np.Tsize(len(data)), nil
 }
@@ -52,21 +52,29 @@ func MakeLambd() *Lambd {
 	ld.memfsd = memfsd.MakeFsd(false)
 	ld.srv = npsrv.MakeNpServer(ld.memfsd, ":0", false)
 	ld.load = 0
+
+	err := ld.clnt.Remove("name/ulambd")
+	if err != nil {
+		log.Print("name/ulambd didn't exist")
+	}
 	name := ld.srv.MyAddr()
-	err := ld.clnt.Symlink(name+":pubkey:console", "name/ulambd", 0777)
+	err = ld.clnt.Symlink(name+":pubkey:console", "name/ulambd", 0777)
 	if err != nil {
 		log.Fatal("Symlink error: ", err)
 	}
+
+	// XXX use local interface for MkNod
 	fs := ld.memfsd.Root()
 	_, err = fs.MkNod(fs.RootInode(), "ulambd", &LambdDev{ld})
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	rooti := fs.RootInode()
-	_, err = rooti.Create(0, fs, np.DMDIR|07000, "pids")
+
+	err = ld.clnt.Mkdir("name/ulambd/pids", 0777)
 	if err != nil {
-		log.Fatal("Create error: ", err)
+		log.Fatal("Mkdir error: ", err)
 	}
+
 	return ld
 }
 
@@ -156,3 +164,11 @@ func (ld *Lambd) Scheduler() {
 		// time.Sleep(time.Duration(1) * time.Millisecond)
 	}
 }
+
+// log.Printf("in progress: %v\n", st.Name)
+// timeout := int64(st.Mtime) + 5
+// if timeout < time.Now().Unix() {
+// 	log.Print("REDO ", st.Name)
+// 	err = md.clnt.Rename("name/mr/started/"+st.Name,
+// 		"name/mr/todo/"+st.Name)
+// }

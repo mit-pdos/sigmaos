@@ -38,6 +38,9 @@ func (l *Lambda) changeStatus(new string) error {
 	return nil
 }
 
+// XXX if had remote machines, this would be run on the remote machine
+// maybe we should have machines register with ulambd; have a
+// directory with machines?
 func (l *Lambda) run() error {
 	err := l.changeStatus("Running")
 	if err != nil {

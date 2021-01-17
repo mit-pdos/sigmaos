@@ -15,6 +15,9 @@ import (
 
 // XXX monitor, boost
 
+// convert named/fs to be lambda, perhaps marked as long running, so
+// it can be scaled with increasing/decreasing load.
+
 const (
 	LDIR    = "name/ulambd/pids/"
 	MAXLOAD = 3
@@ -82,7 +85,9 @@ func MakeLambd() *Lambd {
 	// a local memfsd at all (e.g., just use named).
 	// Alternatively, ulambd is itself its own 9p service, not
 	// using memfsd, but perhaps just memfs, then we can
-	// specialize and make it performant in any way we want.
+	// specialize and make it performant in any way we want.  The
+	// main reason it is in-server process server is because of
+	// the ulambd device; maybe use a named pipe/socket.
 	err = ld.clnt.Mkdir("name/ulambd/pids", 0777)
 	if err != nil {
 		log.Fatal("Mkdir error: ", err)

@@ -14,5 +14,9 @@ func Exit(pid string) {
 		log.Printf("Exit %v to %v error %v\n",
 			pid+"/Running", pid+"/Exit", err)
 	}
+	err = clnt.WriteFile("name/ulambd/ulambd", []byte("hello"))
+	if err != nil {
+		log.Printf("Write ulambd dev failed %v\n", err)
+	}
 	os.Exit(0)
 }

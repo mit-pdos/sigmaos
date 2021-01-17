@@ -3,9 +3,8 @@
 ./bin/named &
 ./bin/proxyd &
 sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p
+./bin/ulambd &
 
-# make proc dir
-mkdir -p /mnt/9p/ulambda
 
 # make file system
 mkdir -p /mnt/9p/fs

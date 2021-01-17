@@ -84,19 +84,6 @@ func main() {
 		if err != nil {
 			log.Fatal("Symlink error: ", err)
 		}
-		// XXX for testing...
-		fd1, err := cons.clnt.Open("name/consoled/console", np.OWRITE)
-		if err != nil {
-			log.Fatal("Open error: ", err)
-		}
-		_, err = cons.clnt.Write(fd1, []byte("Hello world\n"))
-		if err != nil {
-			log.Fatal("Write error: ", err)
-		}
-		err = cons.clnt.Close(fd1)
-		if err != nil {
-			log.Fatal("Close error: ", err)
-		}
 	} else {
 		log.Fatal("Attach error: ", err)
 	}

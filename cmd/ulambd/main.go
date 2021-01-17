@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"ulambda/ulambd"
+	"ulambda/ulambdad"
 )
 
 func main() {

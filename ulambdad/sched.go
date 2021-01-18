@@ -2,7 +2,7 @@ package ulambd
 
 import (
 	"encoding/json"
-	"errors"
+	//"errors"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -49,10 +49,16 @@ func (ldev *LambdDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 }
 
 func (ldev *LambdDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
-	return nil, errors.New("Unsupported")
+	if off == 0 {
+		s := ldev.ld.String()
+		return []byte(s), nil
+	}
+	return nil, nil
 }
 
-func (ldev *LambdDev) Len() np.Tlength { return 0 }
+func (ldev *LambdDev) Len() np.Tlength {
+	return np.Tlength(len(ldev.ld.String()))
+}
 
 type Lambd struct {
 	mu     sync.Mutex
@@ -96,6 +102,15 @@ func MakeLambd() *Lambd {
 	}
 
 	return ld
+}
+
+func (ld *Lambd) String() string {
+	s := ""
+	for _, l := range ld.ls {
+		s += fmt.Sprintf("%v\n", l)
+
+	}
+	return s
 }
 
 func (ld *Lambd) ReadLambda(pid string) (*Lambda, error) {
@@ -143,7 +158,6 @@ func (ld *Lambd) getLambdas() {
 		}
 		_, ok := ld.ls[st.Name]
 		if !ok {
-			log.Printf("New %v\n", l)
 			ld.ls[st.Name] = l
 		}
 		return false
@@ -213,11 +227,12 @@ func (ld *Lambd) Scheduler() {
 	ld.mu.Lock()
 	ld.getLambdas()
 	for {
+		log.Printf("ls %v\n", ld)
 		l := ld.findRunnable()
 		if l != nil {
 			ld.runLambda(l)
 		}
-		if len(ld.ls) == 0 || ld.load >= MAXLOAD {
+		if l == nil || ld.load >= MAXLOAD {
 			log.Printf("Nothing to do or busy %v", ld.load)
 			ld.cond.Wait()
 		}

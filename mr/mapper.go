@@ -46,7 +46,6 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)
 		}
-		log.Printf("fds %v\n", m.fds)
 	}
 	return m, nil
 }
@@ -59,10 +58,11 @@ func (m *Mapper) doMap() {
 			log.Fatalf("Read %v %v", m.input, err)
 		}
 		if len(b) == 0 {
+			log.Printf("Mapper: reading done\n")
 			break
 		}
 		kvs := m.mapf(m.input, string(b))
-		log.Printf("Map %v: kvs = %v\n", m.input, len(kvs))
+		// log.Printf("Map %v: kvs = %v\n", m.input, len(kvs))
 
 		// split
 		skvs := make([][]KeyValue, NReduce)

@@ -19,30 +19,39 @@ json_array() {
 
 # Create a json struct matching ulamd.Attr
 makeLambda () {
-    echo "makeDir" $1 $2 $3 $4
+    echo "makeDir" $1 $2 $3 $4 $5
 
     PID=$((1 + $RANDOM % 1000000))
     mkdir "${L}${PID}"
-    echo "{ \"Program\": \"$1\", \"Args\": "$2", \"Dependencies\": "$3" }" > "${L}${PID}/attr"
-    touch "${L}${PID}/$4"
+    echo "{ \"Program\": \"$1\", \"Args\": "$2", \"AfterStart\": "$3", \"AfterExit\": "$4" }" > "${L}${PID}/attr"
+    touch "${L}${PID}/$5"
 }
 
 O="/mnt/9p/fs/mr-wc"
 mkdir -p ${O}
 
-# setup mappers
+# setup mappers and readers
 mappers=()
 i=0
-for f in /mnt/9p/fs/pg*.txt
+for f in ~/classes/6824-2021/6.824-golabs-staff/mygo/src/main/pg-*.txt
 do
-    args=("name/fs/`basename $f`"  "$i")
+    args=("$f"  "$i")
     args=`json_array "${args[@]}"`
-    makeLambda "./bin/mr-m-wc" "$args" "[]" "Runnable"
+    makeLambda "./bin/fsreader" "$args" "[]" "[]" "Runnable"
+    rpid=${PID}
+
+    args=("$i/pipe"  "$i")
+    args=`json_array "${args[@]}"`
+    afterstart=(${rpid})
+    afterstart=`json_array "${before[@]}"`
+    makeLambda "./bin/mr-m-wc" "$args" "$afterstart" "[]" "Waiting"
     mappers+=( ${PID} )
+
     i=$((i+1))
 done
 
-deps=`json_array "${mappers[@]}"`
+# reducers don't run until all mappers completed
+afterexit=`json_array "${mappers[@]}"`
 
 # setup reducers
 i=0
@@ -51,7 +60,7 @@ do
     mkdir -p  "${O}/$i"
     args=("name/fs/mr-wc/$i" "name/fs/mr-wc/mr-out" )
     args=`json_array "${args[@]}"`
-    makeLambda "./bin/mr-r-wc" "$args" "$deps" "Waiting"
+    makeLambda "./bin/mr-r-wc" "$args" "[]" "$afterexit" "Waiting"
     i=$((i+1))
 done
 

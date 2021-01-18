@@ -49,6 +49,14 @@ func (root *Root) MkNod(inode *Inode, name string, d Data) (*Inode, error) {
 	return inode, nil
 }
 
+func (root *Root) MkPipe(inode *Inode, name string) (*Inode, error) {
+	inode, err := inode.Create(0, root, np.DMNAMEDPIPE, name)
+	if err != nil {
+		return nil, err
+	}
+	return inode, nil
+}
+
 func lockOrdered(olddir *Dir, newdir *Dir) {
 	if olddir.inum == newdir.inum {
 		olddir.mu.Lock()

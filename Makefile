@@ -1,4 +1,4 @@
-all: named proxyd consoled mr-m-wc mr-r-wc ulambd
+all: named proxyd consoled mr-m-wc mr-r-wc ulambd fsreader
 	@echo "build done"
 
 .PHONY: test

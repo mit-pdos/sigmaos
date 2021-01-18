@@ -3,11 +3,12 @@ package mr
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 
 	"ulambda/fslib"
-	// np "ulambda/ninep"
+	np "ulambda/ninep"
 )
 
 type MapT func(string, string) []KeyValue
@@ -17,53 +18,83 @@ type Mapper struct {
 	mapf   MapT
 	input  string
 	output string
+	fd     int
+	fds    []int
 }
 
-func MakeMapper(mapf MapT, inputs []string) (*Mapper, error) {
+func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m := &Mapper{}
 	m.clnt = fslib.MakeFsLib(false)
 	m.mapf = mapf
-	if len(inputs) != 2 {
+	if len(args) != 2 {
 		return nil, errors.New("MakeMapper: too few arguments")
 	}
-	log.Printf("MakeMapper %v\n", inputs)
-	m.input = inputs[0]
-	m.output = inputs[1]
+	log.Printf("MakeMapper %v\n", args)
+	m.input = args[0]
+	m.output = args[1]
+	m.fds = make([]int, NReduce)
+	var err error
+	m.fd, err = m.clnt.Open(m.input, np.OREAD)
+	if err != nil {
+		return nil, fmt.Errorf("Makemapper: unknown %v\n", m.input)
+	}
+	for r := 0; r < NReduce; r++ {
+		oname := "name/fs/mr-wc/" + strconv.Itoa(r) + "/mr-" + m.output
+		m.fds[r], err = m.clnt.CreateFile(oname, np.OWRITE)
+		if err != nil {
+			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)
+		}
+		log.Printf("fds %v\n", m.fds)
+	}
 	return m, nil
 }
 
 func (m *Mapper) doMap() {
-	contents, err := m.clnt.ReadFile(m.input)
+	// XXX 8192 not a word boundary
+	for {
+		b, err := m.clnt.Read(m.fd, 8192)
+		if err != nil {
+			log.Fatalf("Read %v %v", m.input, err)
+		}
+		if len(b) == 0 {
+			break
+		}
+		kvs := m.mapf(m.input, string(b))
+		log.Printf("Map %v: kvs = %v\n", m.input, len(kvs))
+
+		// split
+		skvs := make([][]KeyValue, NReduce)
+		for _, kv := range kvs {
+			r := Khash(kv.Key) % NReduce
+			skvs[r] = append(skvs[r], kv)
+		}
+
+		for r := 0; r < NReduce; r++ {
+			b, err := json.Marshal(skvs[r])
+			if err != nil {
+				log.Fatal("doMap marshal error", err)
+			}
+			// XXX put this in make-lambda.sh
+			_, err = m.clnt.Write(m.fds[r], b)
+			if err != nil {
+				// maybe another worker finished earlier
+				// XXX handle partial writing of intermediate files
+				log.Printf("doMap write error %v %v\n", r, err)
+				return
+			}
+		}
+
+	}
+	err := m.clnt.Close(m.fd)
 	if err != nil {
-		log.Fatalf("readContents %v %v", m.input, err)
+		log.Printf("Close failed %v %v\n", m.fd, err)
 	}
-	kvs := m.mapf(m.input, string(contents))
-	log.Printf("Map %v: kvs = %v\n", m.input, len(kvs))
-
-	// split
-	skvs := make([][]KeyValue, NReduce)
-	for _, kv := range kvs {
-		r := Khash(kv.Key) % NReduce
-		skvs[r] = append(skvs[r], kv)
-	}
-
 	for r := 0; r < NReduce; r++ {
-		b, err := json.Marshal(skvs[r])
+		err = m.clnt.Close(m.fds[r])
 		if err != nil {
-			log.Fatal("doMap marshal error", err)
+			log.Printf("Close failed %v %v\n", m.fd, err)
 		}
-		// XXX put this in make-lambda.sh
-		oname := "name/fs/mr-wc/" + strconv.Itoa(r) + "/mr-" + m.output
-		err = m.clnt.MakeFile(oname, b)
-		if err != nil {
-			// maybe another worker finished earlier
-			// XXX handle partial writing of intermediate files
-			log.Printf("doMap create error %v %v\n", oname, err)
-			return
-		}
-		log.Printf("new reduce task %v %v\n", oname, len(skvs[r]))
 	}
-
 }
 
 func (m *Mapper) Work() {

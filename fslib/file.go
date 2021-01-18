@@ -77,6 +77,15 @@ func (fl *FsLib) MakeFile(fname string, data []byte) error {
 	return fl.Close(fd)
 }
 
+func (fl *FsLib) CreateFile(fname string, mode np.Tmode) (int, error) {
+	fd, err := fl.Create(fname, 0700, mode)
+	log.Printf("CreateFile %v %v\n", fname, err)
+	if err != nil {
+		return -1, err
+	}
+	return fd, nil
+}
+
 func (fl *FsLib) isEmpty(name string) bool {
 	st, err := fl.Stat(name)
 	if err != nil {

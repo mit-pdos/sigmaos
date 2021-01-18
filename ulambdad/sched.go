@@ -20,7 +20,7 @@ import (
 
 const (
 	LDIR    = "name/ulambd/pids/"
-	MAXLOAD = 3
+	MAXLOAD = 1
 )
 
 type LambdDev struct {
@@ -131,7 +131,7 @@ func (ld *Lambd) Getpids() map[string]bool {
 }
 
 func (ld *Lambd) runLambda(l *Lambda) {
-	if ld.load <= MAXLOAD {
+	if ld.load < MAXLOAD {
 		err := l.run()
 		if err != nil {
 			log.Printf("Run: Error %v\n", err)
@@ -169,7 +169,7 @@ func (ld *Lambd) processLambda(st *np.Stat) bool {
 
 func (ld *Lambd) Scheduler() {
 	ld.mu.Lock()
-	for { /// l.load
+	for {
 		stopped, err := ld.clnt.ProcessDir(LDIR, ld.processLambda)
 		if err != nil {
 			log.Fatalf("ProcessDir: error %v\n", err)

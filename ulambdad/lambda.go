@@ -10,9 +10,10 @@ import (
 )
 
 type Attr struct {
-	Program      string
-	Args         []string
-	Dependencies []string
+	Program    string
+	Args       []string
+	AfterStart []string
+	AfterExit  []string
 }
 
 type Lambda struct {
@@ -23,8 +24,8 @@ type Lambda struct {
 }
 
 func (l *Lambda) String() string {
-	str := fmt.Sprintf("λ pid %v st %v args %v dep %v", l.pid, l.status,
-		l.attr.Args, l.attr.Dependencies)
+	str := fmt.Sprintf("λ pid %v st %v args %v start %v exit %v", l.pid, l.status,
+		l.attr.Args, l.attr.AfterStart, l.attr.AfterExit)
 	return str
 }
 
@@ -65,11 +66,20 @@ func (l *Lambda) exit() error {
 	return nil
 }
 
-// XXX move stuff from run into exit
-
 func (l *Lambda) isRunnable(pids map[string]bool) bool {
-	log.Printf("isRunnable deps %v pids %v\n", l.attr.Dependencies, pids)
-	for _, pid := range l.attr.Dependencies {
+	log.Printf("isRunnable start %v exit %v pids %v\n", l.attr.AfterStart,
+		l.attr.AfterExit, pids)
+
+	for _, pid := range l.attr.AfterStart {
+		_, ok := pids[pid]
+		if !ok {
+			return false
+		}
+	}
+
+	// all start dependencies have started
+
+	for _, pid := range l.attr.AfterExit {
 		_, ok := pids[pid]
 		if ok {
 			return false

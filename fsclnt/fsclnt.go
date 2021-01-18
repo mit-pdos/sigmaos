@@ -84,8 +84,11 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
+	if fd < 0 || fd >= len(fsc.fds) {
+		return nil, fmt.Errorf("Too big fd %v", fd)
+	}
 	if fsc.fds[fd].fid == np.NoFid {
-		return nil, errors.New("Non-existing")
+		return nil, fmt.Errorf("Non-existing fd %v", fd)
 	}
 	return &fsc.fds[fd], nil
 }
@@ -251,6 +254,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	}
 	fsc.fids[fid].add(base, reply.Qid)
 	fd := fsc.findfd(fid)
+	log.Printf("Create %v -> %v\n", path, fd)
 	return fd, nil
 }
 

@@ -41,6 +41,15 @@ func (l *Lambda) changeStatus(new string) error {
 	return nil
 }
 
+// XXX if remote, keep-alive?
+func (l *Lambda) wait(cmd *exec.Cmd) {
+	err := cmd.Wait()
+	if err != nil {
+		log.Printf("Lambda %v finished with error: %v", l, err)
+	}
+	l.ld.exit(l)
+}
+
 // XXX if had remote machines, this would be run on the remote machine
 // maybe we should have machines register with ulambd; have a
 // directory with machines?
@@ -58,6 +67,7 @@ func (l *Lambda) run() error {
 	if err != nil {
 		return err
 	}
+	go l.wait(cmd)
 	return nil
 }
 

@@ -85,5 +85,4 @@ func (r *Reducer) doReduce() {
 
 func (r *Reducer) Work() {
 	r.doReduce()
-	r.clnt.Exit(r.pid)
 }

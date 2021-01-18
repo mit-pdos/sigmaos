@@ -87,5 +87,4 @@ func (r *Reader) Work() {
 			log.Fatal(err)
 		}
 	}
-	r.clnt.Exit(r.pid)
 }

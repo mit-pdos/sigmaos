@@ -101,5 +101,4 @@ func (m *Mapper) doMap() {
 
 func (m *Mapper) Work() {
 	m.doMap()
-	m.clnt.Exit(m.pid)
 }

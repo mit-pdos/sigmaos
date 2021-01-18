@@ -33,10 +33,7 @@ func (ldev *LambdDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 
 	t := string(data)
 	log.Printf("LambdDev.write %v\n", t)
-	if strings.HasPrefix(t, "Exit ") {
-		pid := strings.TrimLeft(t, "Exit ")
-		ldev.ld.exit(pid)
-	} else if strings.HasPrefix(t, "Started") {
+	if strings.HasPrefix(t, "Started") {
 		pid := strings.TrimLeft(t, "Started ")
 		ldev.ld.started(pid)
 	} else if strings.HasPrefix(t, "Start") {
@@ -205,18 +202,24 @@ func (ld *Lambd) findRunnable() *Lambda {
 	return nil
 }
 
-func (ld *Lambd) exit(pid string) error {
-	log.Printf("exit %v\n", pid)
-	err := ld.clnt.Remove(pid)
+func (ld *Lambd) exit(l *Lambda) error {
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+
+	log.Printf("exit %v\n", l.path)
+	err := ld.clnt.Remove(l.path)
 	if err != nil {
-		log.Fatalf("Remove %v error %v\n", pid, err)
+		log.Fatalf("Remove %v error %v\n", l.path, err)
 	}
-	pid = filepath.Base(pid)
-	delete(ld.ls, pid)
+	l, ok := ld.ls[l.pid]
+	if !ok {
+		log.Fatalf("exit: unknown %v\n", l.pid)
+	}
+	delete(ld.ls, l.pid)
 	ld.load -= 1
-	for _, l := range ld.ls {
-		if l.afterExit[pid] {
-			delete(l.afterExit, pid)
+	for _, m := range ld.ls {
+		if m.afterExit[l.pid] {
+			delete(m.afterExit, l.pid)
 		}
 	}
 	ld.cond.Signal()

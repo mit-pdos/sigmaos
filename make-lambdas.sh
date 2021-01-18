@@ -40,10 +40,10 @@ do
     makeLambda "./bin/fsreader" "$args" "[]" "[]" "Runnable"
     rpid=${PID}
 
-    args=("$i/pipe"  "$i")
+    args=("name/$i/pipe"  "$i")
     args=`json_array "${args[@]}"`
     afterstart=(${rpid})
-    afterstart=`json_array "${before[@]}"`
+    afterstart=`json_array "${afterstart[@]}"`
     makeLambda "./bin/mr-m-wc" "$args" "$afterstart" "[]" "Waiting"
     mappers+=( ${PID} )
 

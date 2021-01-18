@@ -18,20 +18,22 @@ const NReduce = 1
 type Reducer struct {
 	clnt    *fslib.FsLib
 	reducef ReduceT
+	pid     string
 	input   string
 	output  string
 }
 
-func MakeReducer(reducef ReduceT, inputs []string) (*Reducer, error) {
+func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	m := &Reducer{}
 	m.clnt = fslib.MakeFsLib(false)
 	m.reducef = reducef
-	if len(inputs) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
-	log.Printf("MakeReducer %v\n", inputs)
-	m.input = inputs[0]
-	m.output = inputs[1]
+	log.Printf("MakeReducer %v\n", args)
+	m.pid = args[0]
+	m.input = args[1]
+	m.output = args[2]
 	return m, nil
 }
 
@@ -83,4 +85,5 @@ func (r *Reducer) doReduce() {
 
 func (r *Reducer) Work() {
 	r.doReduce()
+	r.clnt.Exit(r.pid)
 }

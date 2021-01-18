@@ -2,7 +2,7 @@ package fslambda
 
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 	"io"
 	"log"
 	"os"
@@ -18,6 +18,7 @@ type Reader struct {
 	clnt   *fslib.FsLib
 	srv    *npsrv.NpServer
 	memfsd *memfsd.Fsd
+	pid    string
 	input  string
 	output string
 	pipe   *memfs.Inode
@@ -28,12 +29,13 @@ func MakeReader(args []string) (*Reader, error) {
 	r.clnt = fslib.MakeFsLib(false)
 	r.memfsd = memfsd.MakeFsd(false)
 	r.srv = npsrv.MakeNpServer(r.memfsd, ":0", false)
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeReader: %v\n", args)
-	r.input = args[0]
-	r.output = args[1]
+	r.pid = args[0]
+	r.input = args[1]
+	r.output = args[2]
 
 	if fd, err := r.clnt.Attach(":1111", ""); err == nil {
 		err := r.clnt.Mount(fd, "name")
@@ -57,7 +59,7 @@ func MakeReader(args []string) (*Reader, error) {
 		if err != nil {
 			log.Fatal("Symlink error: ", err)
 		}
-
+		r.clnt.Started(r.pid)
 	} else {
 		log.Fatal("Attach error: ", err)
 	}
@@ -79,10 +81,11 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("read %d bytes\n", count)
+		// fmt.Printf("read %d bytes\n", count)
 		_, err = r.pipe.Write(0, data[:count])
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	r.clnt.Exit(r.pid)
 }

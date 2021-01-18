@@ -16,6 +16,7 @@ type MapT func(string, string) []KeyValue
 type Mapper struct {
 	clnt   *fslib.FsLib
 	mapf   MapT
+	pid    string
 	input  string
 	output string
 	fd     int
@@ -26,12 +27,13 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m := &Mapper{}
 	m.clnt = fslib.MakeFsLib(false)
 	m.mapf = mapf
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeMapper: too few arguments")
 	}
 	log.Printf("MakeMapper %v\n", args)
-	m.input = args[0]
-	m.output = args[1]
+	m.pid = args[0]
+	m.input = args[1]
+	m.output = args[2]
 	m.fds = make([]int, NReduce)
 	var err error
 	m.fd, err = m.clnt.Open(m.input, np.OREAD)
@@ -99,4 +101,5 @@ func (m *Mapper) doMap() {
 
 func (m *Mapper) Work() {
 	m.doMap()
+	m.clnt.Exit(m.pid)
 }

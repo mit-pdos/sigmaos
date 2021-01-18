@@ -3,7 +3,10 @@ package ulambd
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
+	"path/filepath"
+	"strings"
 	"sync"
 	// "time"
 
@@ -15,9 +18,6 @@ import (
 
 // XXX monitor, boost
 
-// convert named/fs to be lambda, perhaps marked as long running, so
-// it can be scaled with increasing/decreasing load.
-
 const (
 	LDIR    = "name/ulambd/pids/"
 	MAXLOAD = 1
@@ -28,8 +28,23 @@ type LambdDev struct {
 }
 
 func (ldev *LambdDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
-	log.Printf("LambdDev.write %v\n", data)
-	ldev.ld.cond.Signal()
+	ldev.ld.mu.Lock()
+	defer ldev.ld.mu.Unlock()
+
+	t := string(data)
+	log.Printf("LambdDev.write %v\n", t)
+	if strings.HasPrefix(t, "Exit ") {
+		pid := strings.TrimLeft(t, "Exit ")
+		ldev.ld.exit(pid)
+	} else if strings.HasPrefix(t, "Started") {
+		pid := strings.TrimLeft(t, "Started ")
+		ldev.ld.started(pid)
+	} else if strings.HasPrefix(t, "Start") {
+		ldev.ld.getLambdas()
+		ldev.ld.cond.Signal()
+	} else {
+		return 0, fmt.Errorf("Write: unknown command %v\n", t)
+	}
 	return np.Tsize(len(data)), nil
 }
 
@@ -46,6 +61,7 @@ type Lambd struct {
 	memfsd *memfsd.Fsd
 	srv    *npsrv.NpServer
 	load   int
+	ls     map[string]*Lambda
 }
 
 func MakeLambd() *Lambd {
@@ -55,6 +71,7 @@ func MakeLambd() *Lambd {
 	ld.memfsd = memfsd.MakeFsd(false)
 	ld.srv = npsrv.MakeNpServer(ld.memfsd, ":0", false)
 	ld.load = 0
+	ld.ls = make(map[string]*Lambda)
 
 	err := ld.clnt.Remove("name/ulambd")
 	if err != nil {
@@ -73,21 +90,6 @@ func MakeLambd() *Lambd {
 		log.Fatal("Create error: ", err)
 	}
 
-	// XXX this sets up TCP connection with the server in this
-	// process; it would be nice to be more efficient.  We
-	// shouldn't peak inside memfsd's data structures directly,
-	// perhaps it is not memfs, but persistent, or replicated etc.
-	// FsClnt could call memfsd's 9p conn directly (i.e., have two
-	// implementations for 9pclnt), but fsclnt would need to know
-	// about memfsd.  We would stil pay then for marshalling of
-	// directory entries when reading a directory.  Perhaps we
-	// should pay the overhead of the TCP connection, and not have
-	// a local memfsd at all (e.g., just use named).
-	// Alternatively, ulambd is itself its own 9p service, not
-	// using memfsd, but perhaps just memfs, then we can
-	// specialize and make it performant in any way we want.  The
-	// main reason it is in-server process server is because of
-	// the ulambd device; maybe use a named pipe/socket.
 	err = ld.clnt.Mkdir("name/ulambd/pids", 0777)
 	if err != nil {
 		log.Fatal("Mkdir error: ", err)
@@ -96,23 +98,35 @@ func MakeLambd() *Lambd {
 	return ld
 }
 
-func (ld *Lambd) ReadLambda(dir string) (*Lambda, error) {
-	dirents, err := ld.clnt.ReadDir(dir)
+func (ld *Lambd) ReadLambda(pid string) (*Lambda, error) {
+	l := &Lambda{}
+	l.path = LDIR + pid
+	l.pid = pid
+	l.ld = ld
+	dirents, err := ld.clnt.ReadDir(l.path)
 	if err != nil {
 		return nil, err
 	}
-	l := &Lambda{}
-	l.pid = dir
-	l.clnt = ld.clnt
+	l.afterStart = make(map[string]bool)
+	l.afterExit = make(map[string]bool)
 	for _, d := range dirents {
 		if d.Name == "attr" {
-			b, err := ld.clnt.ReadFile(dir + "/attr")
+			b, err := ld.clnt.ReadFile(l.path + "/attr")
 			if err != nil {
 				return nil, err
 			}
-			err = json.Unmarshal(b, &l.attr)
+			var attr Attr
+			err = json.Unmarshal(b, &attr)
 			if err != nil {
 				log.Fatal("Unmarshal error ", err)
+			}
+			l.program = attr.Program
+			l.args = attr.Args
+			for _, p := range attr.AfterStart {
+				l.afterStart[p] = true
+			}
+			for _, p := range attr.AfterExit {
+				l.afterExit[p] = true
 			}
 		} else {
 			l.status = d.Name
@@ -121,13 +135,32 @@ func (ld *Lambd) ReadLambda(dir string) (*Lambda, error) {
 	return l, nil
 }
 
-func (ld *Lambd) Getpids() map[string]bool {
-	pids := map[string]bool{}
+func (ld *Lambd) getLambdas() {
 	ld.clnt.ProcessDir(LDIR, func(st *np.Stat) bool {
-		pids[st.Name] = true
+		l, err := ld.ReadLambda(st.Name)
+		if err != nil {
+			log.Fatalf("ReadLambda st.Name %v error %v ", st.Name, err)
+		}
+		_, ok := ld.ls[st.Name]
+		if !ok {
+			log.Printf("New %v\n", l)
+			ld.ls[st.Name] = l
+		}
 		return false
 	})
-	return pids
+}
+
+func (ld *Lambd) started(path string) {
+	log.Printf("started %v\n", path)
+	pid := filepath.Base(path)
+	for _, l := range ld.ls {
+		if l.afterStart[pid] {
+			delete(l.afterStart, pid)
+			if l.runnable() {
+				l.run() // XXX run consumer, irrespective of load
+			}
+		}
+	}
 }
 
 func (ld *Lambd) runLambda(l *Lambda) {
@@ -141,41 +174,51 @@ func (ld *Lambd) runLambda(l *Lambda) {
 	}
 }
 
-// Process a lambda, skipping Waiting and Running ones
-func (ld *Lambd) processLambda(st *np.Stat) bool {
-	l, err := ld.ReadLambda(LDIR + st.Name)
-	if err != nil {
-		log.Fatalf("ReadLambda st.Name %v error %v ", st.Name, err)
-	}
-	log.Printf("Sched %v: %v\n", ld.load, l)
-	if l.status == "Runnable" {
-		ld.runLambda(l)
-	} else if l.status == "Waiting" {
-		if l.isRunnable(ld.Getpids()) {
-			ld.runLambda(l)
-		} else {
-			return false
+func (ld *Lambd) findRunnable() *Lambda {
+	// first look for a waiting one whose start predecessor has started
+	// and has no exit dependencies.
+	for _, l := range ld.ls {
+		if l.status == "Waiting" && l.runnable() {
+			return l
 		}
-	} else if l.status == "Running" {
-		return false
-	} else if l.status == "Exit" {
-		ld.load -= 1
-		l.exit()
-	} else {
-		log.Fatalf("Unknown status %v\n", l.status)
 	}
-	return true
+	// look for a runnable one
+	for _, l := range ld.ls {
+		if l.status == "Runnable" {
+			return l
+		}
+	}
+	return nil
+}
+
+func (ld *Lambd) exit(pid string) error {
+	log.Printf("exit %v\n", pid)
+	err := ld.clnt.Remove(pid)
+	if err != nil {
+		log.Fatalf("Remove %v error %v\n", pid, err)
+	}
+	pid = filepath.Base(pid)
+	delete(ld.ls, pid)
+	ld.load -= 1
+	for _, l := range ld.ls {
+		if l.afterExit[pid] {
+			delete(l.afterExit, pid)
+		}
+	}
+	ld.cond.Signal()
+	return nil
 }
 
 func (ld *Lambd) Scheduler() {
 	ld.mu.Lock()
+	ld.getLambdas()
 	for {
-		stopped, err := ld.clnt.ProcessDir(LDIR, ld.processLambda)
-		if err != nil {
-			log.Fatalf("ProcessDir: error %v\n", err)
+		l := ld.findRunnable()
+		if l != nil {
+			ld.runLambda(l)
 		}
-		if !stopped || ld.load >= MAXLOAD {
-			log.Print("Nothing to do")
+		if len(ld.ls) == 0 || ld.load >= MAXLOAD {
+			log.Printf("Nothing to do or busy %v", ld.load)
 			ld.cond.Wait()
 		}
 		// time.Sleep(time.Duration(1) * time.Millisecond)

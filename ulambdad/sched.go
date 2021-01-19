@@ -169,6 +169,7 @@ func (ld *Lambd) started(path string) {
 			delete(l.afterStart, pid)
 			if l.runnable() {
 				l.run() // XXX run consumer, irrespective of load
+				ld.load += 1
 			}
 		}
 	}

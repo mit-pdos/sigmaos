@@ -1,6 +1,8 @@
 package mr
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,22 +39,57 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	return m, nil
 }
 
-func (r *Reducer) doReduce() {
+func (r *Reducer) processFile(file string) []KeyValue {
 	kva := []KeyValue{}
 
-	log.Printf("doReduce %v\n", r.input)
-	r.clnt.ProcessDir(r.input, func(st *np.Stat) bool {
-		data, err := r.clnt.ReadFile(r.input + "/" + st.Name)
+	fd, err := r.clnt.Open(r.input+"/"+file, np.OREAD)
+	if err != nil {
+		log.Fatal("Open error ", err)
+	}
+	data, err := r.clnt.Read(fd, binary.MaxVarintLen64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rdr := bytes.NewReader(data)
+	l, err := binary.ReadVarint(rdr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for l > 0 {
+		data, err = r.clnt.Read(fd, np.Tsize(l))
 		if err != nil {
-			log.Fatal("readFile error ", err)
+			log.Fatal(err)
 		}
 		kvs := []KeyValue{}
 		err = json.Unmarshal(data, &kvs)
 		if err != nil {
 			log.Fatal("Unmarshal error ", err)
 		}
-		log.Printf("reduce %v: kva %v\n", st.Name, len(kvs))
+		// log.Printf("reduce %v: kva %v\n", file, len(kvs))
 		kva = append(kva, kvs...)
+
+		data, err = r.clnt.Read(fd, binary.MaxVarintLen64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(data) == 0 {
+			break
+		}
+		rdr = bytes.NewReader(data)
+		l, err = binary.ReadVarint(rdr)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return kva
+}
+
+func (r *Reducer) doReduce() {
+	kva := []KeyValue{}
+
+	log.Printf("doReduce %v\n", r.input)
+	r.clnt.ProcessDir(r.input, func(st *np.Stat) bool {
+		kva = append(kva, r.processFile(st.Name)...)
 		return false
 	})
 

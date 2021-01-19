@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,11 +77,17 @@ func (m *Mapper) doMap() {
 			if err != nil {
 				log.Fatal("doMap marshal error", err)
 			}
-			// XXX put this in make-lambda.sh
-			_, err = m.clnt.Write(m.fds[r], b)
+			lbuf := make([]byte, binary.MaxVarintLen64)
+			binary.PutVarint(lbuf, int64(len(b)))
+			_, err = m.clnt.Write(m.fds[r], lbuf)
 			if err != nil {
 				// maybe another worker finished earlier
 				// XXX handle partial writing of intermediate files
+				log.Printf("doMap write error %v %v\n", r, err)
+				return
+			}
+			_, err = m.clnt.Write(m.fds[r], b)
+			if err != nil {
 				log.Printf("doMap write error %v %v\n", r, err)
 				return
 			}

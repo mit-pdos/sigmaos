@@ -32,13 +32,15 @@ func (ldev *LambdDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	defer ldev.ld.mu.Unlock()
 
 	t := string(data)
-	log.Printf("LambdDev.write %v\n", t)
-	if strings.HasPrefix(t, "Started") {
+	// log.Printf("LambdDev.write %v\n", t)
+	if strings.HasPrefix(t, "Spawn") {
+		l := strings.TrimLeft(t, "Spawn ")
+		ldev.ld.spawn(l)
+		ldev.ld.cond.Signal()
+	} else if strings.HasPrefix(t, "Started") {
 		pid := strings.TrimLeft(t, "Started ")
 		ldev.ld.started(pid)
-	} else if strings.HasPrefix(t, "Start") {
-		ldev.ld.getLambdas()
-		ldev.ld.cond.Signal()
+		// ldev.ld.cond.Signal()
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
@@ -110,55 +112,38 @@ func (ld *Lambd) String() string {
 	return s
 }
 
-func (ld *Lambd) ReadLambda(pid string) (*Lambda, error) {
+func (ld *Lambd) spawn(ls string) {
 	l := &Lambda{}
-	l.path = LDIR + pid
-	l.pid = pid
+	splits := strings.SplitN(ls, " ", 2)
+	l.pid = splits[0]
 	l.ld = ld
-	dirents, err := ld.clnt.ReadDir(l.path)
-	if err != nil {
-		return nil, err
-	}
 	l.afterStart = make(map[string]bool)
 	l.afterExit = make(map[string]bool)
-	for _, d := range dirents {
-		if d.Name == "attr" {
-			b, err := ld.clnt.ReadFile(l.path + "/attr")
-			if err != nil {
-				return nil, err
-			}
-			var attr Attr
-			err = json.Unmarshal(b, &attr)
-			if err != nil {
-				log.Fatal("Unmarshal error ", err)
-			}
-			l.program = attr.Program
-			l.args = attr.Args
-			for _, p := range attr.AfterStart {
-				l.afterStart[p] = true
-			}
-			for _, p := range attr.AfterExit {
-				l.afterExit[p] = true
-			}
-		} else {
-			l.status = d.Name
-		}
+	var attr Attr
+	err := json.Unmarshal([]byte(splits[1]), &attr)
+	if err != nil {
+		log.Fatal("Unmarshal error ", err)
 	}
-	return l, nil
-}
-
-func (ld *Lambd) getLambdas() {
-	ld.clnt.ProcessDir(LDIR, func(st *np.Stat) bool {
-		l, err := ld.ReadLambda(st.Name)
-		if err != nil {
-			log.Fatalf("ReadLambda st.Name %v error %v ", st.Name, err)
-		}
-		_, ok := ld.ls[st.Name]
-		if !ok {
-			ld.ls[st.Name] = l
-		}
-		return false
-	})
+	l.program = attr.Program
+	l.args = attr.Args
+	for _, p := range attr.AfterStart {
+		l.afterStart[p] = true
+	}
+	for _, p := range attr.AfterExit {
+		l.afterExit[p] = true
+	}
+	_, ok := ld.ls[l.pid]
+	if !ok {
+		ld.ls[l.pid] = l
+	} else {
+		log.Fatalf("Spawn %v already exists\n", l.pid)
+	}
+	if l.runnable() {
+		l.status = "Runnable"
+	} else {
+		l.status = "Waiting"
+	}
+	log.Printf("Spawn %v\n", l)
 }
 
 func (ld *Lambd) started(path string) {
@@ -207,11 +192,7 @@ func (ld *Lambd) exit(l *Lambda) error {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
-	log.Printf("exit %v\n", l.path)
-	err := ld.clnt.Remove(l.path)
-	if err != nil {
-		log.Fatalf("Remove %v error %v\n", l.path, err)
-	}
+	log.Printf("exit %v\n", l.pid)
 	l, ok := ld.ls[l.pid]
 	if !ok {
 		log.Fatalf("exit: unknown %v\n", l.pid)
@@ -229,7 +210,6 @@ func (ld *Lambd) exit(l *Lambda) error {
 
 func (ld *Lambd) Scheduler() {
 	ld.mu.Lock()
-	ld.getLambdas()
 	for {
 		log.Printf("ls %v\n", ld)
 		l := ld.findRunnable()

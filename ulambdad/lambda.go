@@ -17,7 +17,6 @@ type Attr struct {
 type Lambda struct {
 	ld         *Lambd
 	pid        string
-	path       string
 	status     string
 	program    string
 	args       []string
@@ -32,11 +31,6 @@ func (l *Lambda) String() string {
 }
 
 func (l *Lambda) changeStatus(new string) error {
-	err := l.ld.clnt.Rename(l.path+"/"+l.status, l.path+"/"+new)
-	if err != nil {
-		return fmt.Errorf("changeStatus %v to %v error %v\n",
-			l.path+"/"+l.status, l.path+"/"+new, err)
-	}
 	l.status = new
 	return nil
 }
@@ -59,7 +53,7 @@ func (l *Lambda) run() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{l.path}, l.args...)
+	args := append([]string{l.pid}, l.args...)
 	cmd := exec.Command(l.program, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

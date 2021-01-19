@@ -2,8 +2,20 @@
 
 # Create ulambdas for wc mapreduce
 
-L="/mnt/9p/ulambd/pids/"
-mappers=( )
+L="/mnt/9p/ulambd/ulambd"
+O="/mnt/9p/fs/mr-wc"
+N=1
+
+mkdir -p ${O}
+
+# set up output dir
+i=0
+while [  $i -lt $N ]; 
+do
+    mkdir -p  "${O}/$i"
+    i=$((i+1))
+done
+
 
 # from stackoverflow
 json_array() {
@@ -18,17 +30,12 @@ json_array() {
 }
 
 # Create a json struct matching ulamd.Attr
-makeLambda () {
-    echo "makeDir" $1 $2 $3 $4 $5
+spawnLambda () {
+    echo "spawnLambda" $1 $2 $3 $4
 
     PID=$((1 + $RANDOM % 1000000))
-    mkdir "${L}${PID}"
-    echo "{ \"Program\": \"$1\", \"Args\": "$2", \"AfterStart\": "$3", \"AfterExit\": "$4" }" > "${L}${PID}/attr"
-    touch "${L}${PID}/$5"
+    echo "Spawn ${PID} { \"Program\": \"$1\", \"Args\": "$2", \"AfterStart\": "$3", \"AfterExit\": "$4" }" >> ${L}
 }
-
-O="/mnt/9p/fs/mr-wc"
-mkdir -p ${O}
 
 # setup mappers and readers
 mappers=()
@@ -37,14 +44,14 @@ for f in ~/classes/6824-2021/6.824-golabs-staff/mygo/src/main/pg-*.txt
 do
     args=("$f"  "$i")
     args=`json_array "${args[@]}"`
-    makeLambda "./bin/fsreader" "$args" "[]" "[]" "Runnable"
+    spawnLambda "./bin/fsreader" "$args" "[]" "[]"
     rpid=${PID}
 
     args=("name/$i/pipe"  "$i")
     args=`json_array "${args[@]}"`
     afterstart=(${rpid})
     afterstart=`json_array "${afterstart[@]}"`
-    makeLambda "./bin/mr-m-wc" "$args" "$afterstart" "[]" "Waiting"
+    spawnLambda "./bin/mr-m-wc" "$args" "$afterstart" "[]"
     mappers+=( ${PID} )
 
     i=$((i+1))
@@ -55,12 +62,11 @@ afterexit=`json_array "${mappers[@]}"`
 
 # setup reducers
 i=0
-while [  $i -lt 1 ]; 
+while [  $i -lt $N ]; 
 do
-    mkdir -p  "${O}/$i"
     args=("name/fs/mr-wc/$i" "name/fs/mr-wc/mr-out" )
     args=`json_array "${args[@]}"`
-    makeLambda "./bin/mr-r-wc" "$args" "[]" "$afterexit" "Waiting"
+    spawnLambda "./bin/mr-r-wc" "$args" "[]" "$afterexit"
     i=$((i+1))
 done
 

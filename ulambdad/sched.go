@@ -84,7 +84,7 @@ func MakeLambd(debug bool) *Lambd {
 
 	err := ld.clnt.Remove("name/ulambd")
 	if err != nil {
-		log.Print("name/ulambd didn't exist")
+		db.DPrintf("name/ulambd didn't exist")
 	}
 	name := ld.srv.MyAddr()
 	err = ld.clnt.Symlink(name+":pubkey:console", "name/ulambd", 0777)

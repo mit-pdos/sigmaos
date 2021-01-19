@@ -254,7 +254,6 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	}
 	fsc.fids[fid].add(base, reply.Qid)
 	fd := fsc.findfd(fid)
-	log.Printf("Create %v -> %v\n", path, fd)
 	return fd, nil
 }
 

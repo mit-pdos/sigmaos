@@ -52,8 +52,8 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 }
 
 func (m *Mapper) doMap() {
-	// XXX 8192 not a word boundary
 	for {
+		// XXX read a bit more if in the middle of word
 		b, err := m.clnt.Read(m.fd, 8192)
 		if err != nil {
 			log.Fatalf("Read %v %v", m.input, err)

@@ -73,6 +73,7 @@ func (r *Reader) Work() {
 		log.Fatal(err)
 	}
 	for {
+		// XXXX 8192 make break word boundary
 		data := make([]byte, 8192)
 		count, err := file.Read(data)
 		if err == io.EOF {

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -41,6 +42,7 @@ func MakeReader(args []string) (*Reader, error) {
 		if err != nil {
 			log.Fatal("Mount error: ", err)
 		}
+
 		err = r.clnt.Remove("name/" + r.output)
 		if err != nil {
 			db.DPrintf("Remove failed %v\n", err)
@@ -72,8 +74,7 @@ func (r *Reader) Work() {
 		log.Fatal(err)
 	}
 	for {
-		// XXXX 8192 make break word boundary
-		data := make([]byte, 8192)
+		data := make([]byte, memfs.PIPESZ)
 		count, err := file.Read(data)
 		if err == io.EOF {
 			break
@@ -86,4 +87,7 @@ func (r *Reader) Work() {
 			log.Fatal(err)
 		}
 	}
+	// XXX hack to make sure mapper gets all data before reader exists
+	p := r.pipe.Data.(*memfs.Pipe)
+	p.WaitEmpty()
 }

@@ -60,6 +60,8 @@ func (ldev *LambdDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
 }
 
 func (ldev *LambdDev) Len() np.Tlength {
+	ldev.ld.mu.Lock()
+	defer ldev.ld.mu.Unlock()
 	return np.Tlength(len(ldev.ld.String()))
 }
 

@@ -1,27 +1,37 @@
 package memfs
 
 import (
+	"sync"
+
 	np "ulambda/ninep"
 )
 
 type File struct {
+	mu   sync.Mutex
 	data []byte
 }
 
 func MakeFile() *File {
-	f := &File{make([]byte, 0)}
+	f := &File{}
+	f.data = make([]byte, 0)
 	return f
 }
 
 func (f *File) Len() np.Tlength {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return np.Tlength(len(f.data))
 }
 
+// Caller must hold lock
 func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
 func (f *File) write(offset np.Toffset, data []byte) (np.Tsize, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	cnt := np.Tsize(len(data))
 	sz := np.Toffset(len(data))
 	if offset > f.LenOff() { // passed end of file?
@@ -42,6 +52,9 @@ func (f *File) write(offset np.Toffset, data []byte) (np.Tsize, error) {
 }
 
 func (f *File) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {

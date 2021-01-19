@@ -10,6 +10,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfs"
 	np "ulambda/ninep"
 )
 
@@ -26,6 +27,7 @@ type Mapper struct {
 }
 
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
+	db.SetDebug(false)
 	m := &Mapper{}
 	m.clnt = fslib.MakeFsLib(false)
 	m.mapf = mapf
@@ -52,49 +54,67 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	return m, nil
 }
 
-func (m *Mapper) doMap() {
-	for {
-		// XXX read a bit more if in the middle of word
-		b, err := m.clnt.Read(m.fd, 8192)
+func (m *Mapper) Map(txt string) {
+	kvs := m.mapf(m.input, txt)
+	// log.Printf("Map %v: kvs = %v\n", m.input, kvs)
+
+	for _, kv := range kvs {
+		if kv.Key == "ACTUAL" {
+			log.Printf("v %v\n", kv.Value)
+		}
+	}
+
+	// split
+	skvs := make([][]KeyValue, NReduce)
+	for _, kv := range kvs {
+		r := Khash(kv.Key) % NReduce
+		skvs[r] = append(skvs[r], kv)
+	}
+
+	for r := 0; r < NReduce; r++ {
+		b, err := json.Marshal(skvs[r])
 		if err != nil {
+			log.Fatal("doMap marshal error", err)
+		}
+		lbuf := make([]byte, binary.MaxVarintLen64)
+		binary.PutVarint(lbuf, int64(len(b)))
+		_, err = m.clnt.Write(m.fds[r], lbuf)
+		if err != nil {
+			// maybe another worker finished earlier
+			// XXX handle partial writing of intermediate files
+			log.Printf("doMap write error %v %v\n", r, err)
+			return
+		}
+		_, err = m.clnt.Write(m.fds[r], b)
+		if err != nil {
+			log.Printf("doMap write error %v %v\n", r, err)
+			return
+		}
+	}
+}
+
+func (m *Mapper) doMap() {
+	rest := ""
+	for {
+		b, err := m.clnt.Read(m.fd, memfs.PIPESZ)
+		if err != nil || len(b) == 0 {
 			db.DPrintf("Read %v %v", m.input, err)
+			m.Map(rest)
 			break
 		}
-		if len(b) == 0 {
-			db.DPrintf("Mapper: reading done\n")
-			break
-		}
-		kvs := m.mapf(m.input, string(b))
-		// log.Printf("Map %v: kvs = %v\n", m.input, len(kvs))
 
-		// split
-		skvs := make([][]KeyValue, NReduce)
-		for _, kv := range kvs {
-			r := Khash(kv.Key) % NReduce
-			skvs[r] = append(skvs[r], kv)
-		}
-
-		for r := 0; r < NReduce; r++ {
-			b, err := json.Marshal(skvs[r])
-			if err != nil {
-				log.Fatal("doMap marshal error", err)
-			}
-			lbuf := make([]byte, binary.MaxVarintLen64)
-			binary.PutVarint(lbuf, int64(len(b)))
-			_, err = m.clnt.Write(m.fds[r], lbuf)
-			if err != nil {
-				// maybe another worker finished earlier
-				// XXX handle partial writing of intermediate files
-				log.Printf("doMap write error %v %v\n", r, err)
-				return
-			}
-			_, err = m.clnt.Write(m.fds[r], b)
-			if err != nil {
-				log.Printf("doMap write error %v %v\n", r, err)
-				return
+		// backup up if in the middle of word
+		txt := string(b)
+		for i := len(txt) - 1; i >= 0; i-- {
+			if txt[i] == ' ' {
+				t := rest
+				rest = txt[i+1:]
+				txt = t + txt[0:i]
+				break
 			}
 		}
 
+		m.Map(txt)
 	}
 	err := m.clnt.Close(m.fd)
 	if err != nil {

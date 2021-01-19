@@ -40,7 +40,7 @@ spawnLambda () {
 # setup mappers and readers
 mappers=()
 i=0
-for f in ~/classes/6824-2021/6.824-golabs-staff/mygo/src/main/pg-*.txt
+for f in ~/classes/6824-2021/golabs-staff/mygo/src/main/pg-*.txt
 do
     args=("$f"  "$i")
     args=`json_array "${args[@]}"`

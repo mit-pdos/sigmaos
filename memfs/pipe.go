@@ -64,3 +64,13 @@ func (pipe *Pipe) read(n np.Tsize) ([]byte, error) {
 	pipe.condw.Signal()
 	return d, nil
 }
+
+func (pipe *Pipe) WaitEmpty() error {
+	pipe.mu.Lock()
+	defer pipe.mu.Unlock()
+
+	for len(pipe.buf) != 0 {
+		pipe.condw.Wait()
+	}
+	return nil
+}

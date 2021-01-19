@@ -70,6 +70,4 @@ do
     i=$((i+1))
 done
 
-# echo "Start" > /mnt/9p/ulambd/ulambd
-
 # cat ~/classes/6824-2021/6.824-golabs-staff/mygo/src/main/pg-*.txt | tr -s '[[:punct:][:space:]]' '\n' | sort | less

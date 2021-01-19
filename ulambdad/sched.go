@@ -10,6 +10,7 @@ import (
 	"sync"
 	// "time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
@@ -32,7 +33,7 @@ func (ldev *LambdDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	defer ldev.ld.mu.Unlock()
 
 	t := string(data)
-	// log.Printf("LambdDev.write %v\n", t)
+	db.DPrintf("LambdDev.write %v\n", t)
 	if strings.HasPrefix(t, "Spawn") {
 		l := strings.TrimLeft(t, "Spawn ")
 		ldev.ld.spawn(l)
@@ -65,11 +66,11 @@ type Lambd struct {
 	clnt   *fslib.FsLib
 	memfsd *memfsd.Fsd
 	srv    *npsrv.NpServer
-	load   int
+	load   int // XXX bogus
 	ls     map[string]*Lambda
 }
 
-func MakeLambd() *Lambd {
+func MakeLambd(debug bool) *Lambd {
 	ld := &Lambd{}
 	ld.cond = sync.NewCond(&ld.mu)
 	ld.clnt = fslib.MakeFsLib(false)
@@ -88,7 +89,6 @@ func MakeLambd() *Lambd {
 		log.Fatal("Symlink error: ", err)
 	}
 
-	// XXX use local interface for MkNod
 	fs := ld.memfsd.Root()
 	_, err = fs.MkNod(fs.RootInode(), "ulambd", &LambdDev{ld})
 	if err != nil {
@@ -99,7 +99,7 @@ func MakeLambd() *Lambd {
 	if err != nil {
 		log.Fatal("Mkdir error: ", err)
 	}
-
+	db.SetDebug(debug)
 	return ld
 }
 
@@ -143,11 +143,11 @@ func (ld *Lambd) spawn(ls string) {
 	} else {
 		l.status = "Waiting"
 	}
-	log.Printf("Spawn %v\n", l)
+	db.DPrintf("Spawn %v\n", l)
 }
 
 func (ld *Lambd) started(path string) {
-	log.Printf("started %v\n", path)
+	db.DPrintf("started %v\n", path)
 	pid := filepath.Base(path)
 	for _, l := range ld.ls {
 		if l.afterStart[pid] {
@@ -192,7 +192,7 @@ func (ld *Lambd) exit(l *Lambda) error {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
-	log.Printf("exit %v\n", l.pid)
+	db.DPrintf("exit %v\n", l.pid)
 	l, ok := ld.ls[l.pid]
 	if !ok {
 		log.Fatalf("exit: unknown %v\n", l.pid)
@@ -211,13 +211,11 @@ func (ld *Lambd) exit(l *Lambda) error {
 func (ld *Lambd) Scheduler() {
 	ld.mu.Lock()
 	for {
-		log.Printf("ls %v\n", ld)
 		l := ld.findRunnable()
 		if l != nil {
 			ld.runLambda(l)
 		}
 		if l == nil || ld.load >= MAXLOAD {
-			log.Printf("Nothing to do or busy %v", ld.load)
 			ld.cond.Wait()
 		}
 		// time.Sleep(time.Duration(1) * time.Millisecond)

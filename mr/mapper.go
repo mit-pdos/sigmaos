@@ -8,6 +8,7 @@ import (
 	"log"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -56,10 +57,11 @@ func (m *Mapper) doMap() {
 		// XXX read a bit more if in the middle of word
 		b, err := m.clnt.Read(m.fd, 8192)
 		if err != nil {
-			log.Fatalf("Read %v %v", m.input, err)
+			db.DPrintf("Read %v %v", m.input, err)
+			break
 		}
 		if len(b) == 0 {
-			log.Printf("Mapper: reading done\n")
+			db.DPrintf("Mapper: reading done\n")
 			break
 		}
 		kvs := m.mapf(m.input, string(b))
@@ -101,7 +103,7 @@ func (m *Mapper) doMap() {
 	for r := 0; r < NReduce; r++ {
 		err = m.clnt.Close(m.fds[r])
 		if err != nil {
-			log.Printf("Close failed %v %v\n", m.fd, err)
+			db.DPrintf("Close failed %v %v\n", m.fd, err)
 		}
 	}
 }

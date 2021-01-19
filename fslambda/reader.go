@@ -2,15 +2,14 @@ package fslambda
 
 import (
 	"errors"
-	// "fmt"
 	"io"
 	"log"
 	"os"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfs"
 	"ulambda/memfsd"
-	// np "ulambda/ninep"
 	"ulambda/npsrv"
 )
 
@@ -44,7 +43,7 @@ func MakeReader(args []string) (*Reader, error) {
 		}
 		err = r.clnt.Remove("name/" + r.output)
 		if err != nil {
-			log.Printf("Remove failed %v\n", err)
+			db.DPrintf("Remove failed %v\n", err)
 		}
 
 		// XXX use local interface for MkPipe
@@ -82,7 +81,6 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		// fmt.Printf("read %d bytes\n", count)
 		_, err = r.pipe.Write(0, data[:count])
 		if err != nil {
 			log.Fatal(err)

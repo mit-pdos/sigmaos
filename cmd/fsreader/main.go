@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"ulambda/fslambda"
@@ -19,5 +18,4 @@ func main() {
 		os.Exit(1)
 	}
 	m.Work()
-	log.Printf("fsreader: finished\n")
 }

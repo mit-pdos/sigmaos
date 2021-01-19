@@ -25,7 +25,7 @@ func MakeNpServer(npc NpConn, server string, debug bool) *NpServer {
 		log.Fatal("Listen error:", err)
 	}
 	srv.addr = l.Addr().String()
-	log.Printf("myaddr %v\n", srv.addr)
+	db.DPrintf("myaddr %v\n", srv.addr)
 	go srv.runsrv(l)
 	return srv
 }

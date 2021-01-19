@@ -2,6 +2,7 @@ package npsrv
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"net"
 
@@ -97,11 +98,13 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 }
 
 func (c *Channel) Serve() {
-	log.Printf("Server conn %v\n", c.conn.RemoteAddr())
+	db.DPrintf("Server conn %v\n", c.conn.RemoteAddr())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			log.Print("Serve: readFrame error: ", err)
+			if err != io.EOF {
+				log.Print("Serve: readFrame error: ", err)
+			}
 			return
 		}
 		fcall := &np.Fcall{}

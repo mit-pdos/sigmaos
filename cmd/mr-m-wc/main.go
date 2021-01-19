@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"ulambda/mr"
@@ -20,5 +19,4 @@ func main() {
 		os.Exit(1)
 	}
 	m.Work()
-	log.Printf("Mapper: finished\n")
 }

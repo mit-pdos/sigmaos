@@ -2,7 +2,6 @@ package npclnt
 
 import (
 	"bufio"
-	"log"
 	"net"
 
 	db "ulambda/debug"
@@ -52,18 +51,18 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	db.DPrintf("clnt: %v\n", fcall)
 	frame, err := npcodec.Marshal(fcall)
 	if err != nil {
-		log.Fatal("makeCall marshal error: ", err)
+		return nil, err
 	}
 	npcodec.WriteFrame(conn.bw, frame)
 	conn.bw.Flush()
 
 	frame, err = npcodec.ReadFrame(conn.br)
 	if err != nil {
-		log.Fatal("makeCall readMsg error: ", err)
+		return nil, err
 	}
 	fcall = &np.Fcall{}
 	if err := npcodec.Unmarshal(frame, fcall); err != nil {
-		log.Fatal("Server unmarshal error: ", err)
+		return nil, err
 	}
 	db.DPrintf("clnt: %v\n", fcall)
 	return fcall.Msg, nil

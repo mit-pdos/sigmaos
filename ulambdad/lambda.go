@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	db "ulambda/debug"
 )
 
 type Attr struct {
@@ -48,7 +50,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 // maybe we should have machines register with ulambd; have a
 // directory with machines?
 func (l *Lambda) run() error {
-	log.Printf("Run %v\n", l)
+	db.DPrintf("Run %v\n", l)
 	err := l.changeStatus("Running")
 	if err != nil {
 		return err

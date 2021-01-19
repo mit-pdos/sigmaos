@@ -98,7 +98,7 @@ func (m *Mapper) doMap() {
 	}
 	err := m.clnt.Close(m.fd)
 	if err != nil {
-		log.Printf("Close failed %v %v\n", m.fd, err)
+		db.DPrintf("Close failed %v %v\n", m.fd, err)
 	}
 	for r := 0; r < NReduce; r++ {
 		err = m.clnt.Close(m.fds[r])

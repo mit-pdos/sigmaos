@@ -58,12 +58,6 @@ func (m *Mapper) Map(txt string) {
 	kvs := m.mapf(m.input, txt)
 	// log.Printf("Map %v: kvs = %v\n", m.input, kvs)
 
-	for _, kv := range kvs {
-		if kv.Key == "ACTUAL" {
-			log.Printf("v %v\n", kv.Value)
-		}
-	}
-
 	// split
 	skvs := make([][]KeyValue, NReduce)
 	for _, kv := range kvs {

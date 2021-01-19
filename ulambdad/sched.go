@@ -21,7 +21,7 @@ import (
 
 const (
 	LDIR    = "name/ulambd/pids/"
-	MAXLOAD = 1 // XXX bogus controls parallelism
+	MAXLOAD = 4 // XXX bogus, controls parallelism
 )
 
 type LambdDev struct {
@@ -53,7 +53,8 @@ func (ldev *LambdDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
 	defer ldev.ld.mu.Unlock()
 
 	if off == 0 {
-		s := ldev.ld.String()
+		s := fmt.Sprintf("Load %v\n", ldev.ld.load)
+		s += ldev.ld.String()
 		return []byte(s), nil
 	}
 	return nil, nil

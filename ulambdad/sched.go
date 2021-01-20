@@ -100,11 +100,6 @@ func MakeLambd(debug bool) *Lambd {
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-
-	err = ld.clnt.Mkdir("name/ulambd/pids", 0777)
-	if err != nil {
-		log.Fatal("Mkdir error: ", err)
-	}
 	db.SetDebug(debug)
 	return ld
 }

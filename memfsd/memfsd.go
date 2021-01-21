@@ -12,10 +12,11 @@ import (
 type Fid struct {
 	path []string
 	ino  *memfs.Inode
+	mode np.Tmode
 }
 
 func makeFid(p []string, i *memfs.Inode) *Fid {
-	return &Fid{p, i}
+	return &Fid{p, i, 0}
 }
 
 type NpConn struct {
@@ -116,6 +117,11 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
+	err := fid.ino.Open(args.Mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	fid.mode = args.Mode
 	rets.Qid = fid.ino.Qid()
 	return nil
 }
@@ -135,9 +141,13 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 }
 
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	_, ok := npc.lookup(args.Fid)
+	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
+	}
+	err := fid.ino.Close(fid.mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
 	}
 	npc.mu.Lock()
 	delete(npc.Fids, args.Fid)

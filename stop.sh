@@ -2,5 +2,5 @@
 
 killall named
 killall proxyd
-killall ulambd
+killall schedd
 sudo umount /mnt/9p

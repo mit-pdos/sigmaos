@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ulambda/ulambdad"
+	"ulambda/lschedd"
 )
 
 func main() {
-	ld := ulambd.MakeLambd(false)
+	ld := lschedd.MakeSchedd(false)
 	ld.Scheduler()
 }

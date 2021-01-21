@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/memfs"
 	"ulambda/memfsd"
+	np "ulambda/ninep"
 	"ulambda/npsrv"
 )
 
@@ -54,7 +55,6 @@ func MakeReader(args []string) (*Reader, error) {
 		if err != nil {
 			log.Fatal("Create error: ", err)
 		}
-
 		name := r.srv.MyAddr()
 		err = r.clnt.Symlink(name+":pubkey:pipe", "name/"+r.output, 0777)
 		if err != nil {
@@ -69,6 +69,10 @@ func MakeReader(args []string) (*Reader, error) {
 }
 
 func (r *Reader) Work() {
+	err := r.pipe.Open(np.OWRITE)
+	if err != nil {
+		log.Fatal("Open error: ", err)
+	}
 	file, err := os.Open(r.input)
 	if err != nil {
 		log.Fatal(err)
@@ -87,7 +91,6 @@ func (r *Reader) Work() {
 			log.Fatal(err)
 		}
 	}
-	// XXX hack to make sure mapper gets all data before reader exists
-	p := r.pipe.Data.(*memfs.Pipe)
-	p.WaitEmpty()
+	r.pipe.Close(np.OWRITE)
+	r.clnt.Exiting(r.pid)
 }

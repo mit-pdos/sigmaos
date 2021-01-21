@@ -217,6 +217,32 @@ func (inode *Inode) Remove(tid int, root *Root, path []string) error {
 	return nil
 }
 
+// XXX open for other types than pipe
+func (inode *Inode) Open(mode np.Tmode) error {
+	db.DPrintf("inode.Open %v", inode)
+	if inode.IsDevice() {
+	} else if inode.IsDir() {
+	} else if inode.IsSymlink() {
+	} else if inode.IsPipe() {
+		p := inode.Data.(*Pipe)
+		return p.open(mode)
+	}
+	return nil
+}
+
+// XXX open for other types than pipe
+func (inode *Inode) Close(mode np.Tmode) error {
+	db.DPrintf("inode.Open %v", inode)
+	if inode.IsDevice() {
+	} else if inode.IsDir() {
+	} else if inode.IsSymlink() {
+	} else if inode.IsPipe() {
+		p := inode.Data.(*Pipe)
+		return p.close(mode)
+	}
+	return nil
+}
+
 func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("inode.Write %v", inode)
 	var sz np.Tsize

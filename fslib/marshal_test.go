@@ -1,4 +1,4 @@
-package ulambd
+package fslib
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	a := Attr{".yyyy", []string{"xxxx", "xxx2"}, []string{"zzz"}, []string{"zzz"}}
+	a := Attr{"pid", ".yyyy", []string{"xxxx", "xxx2"}, []PDep{PDep{"zzz", "ZZZ"}}, []string{"zzz"}}
 
 	b, err := json.Marshal(a)
 	if err != nil {

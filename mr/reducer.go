@@ -46,6 +46,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 	if err != nil {
 		log.Fatal("Open error ", err)
 	}
+	defer r.clnt.Close(fd)
 	data, err := r.clnt.Read(fd, binary.MaxVarintLen64)
 	if err != nil {
 		log.Fatal(err)
@@ -122,4 +123,5 @@ func (r *Reducer) doReduce() {
 
 func (r *Reducer) Work() {
 	r.doReduce()
+	r.clnt.Exiting(r.pid)
 }

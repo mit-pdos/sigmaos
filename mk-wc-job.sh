@@ -1,6 +1,7 @@
 #!/bin/sh
 
-# Create a wc mapreduce job
+# Create a wc mapreduce job:
+# $ ./mk-wc-job.sh | ./bin/submit
 
 L="/mnt/9p/ulambd/dev"
 O="/mnt/9p/fs/mr-wc"

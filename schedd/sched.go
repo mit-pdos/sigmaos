@@ -1,4 +1,4 @@
-package lschedd
+package schedd
 
 import (
 	"encoding/json"

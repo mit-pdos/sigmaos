@@ -1,4 +1,4 @@
-all: named proxyd schedd submit mr-m-wc mr-r-wc fsreader
+all: bin/named bin/proxyd bin/schedd bin/submit bin/mr-m-wc bin/mr-r-wc bin/fsreader
 	@echo "build done"
 
 .PHONY: test
@@ -6,6 +6,8 @@ test:
 	(cd memfs; go test -race)
 
 %:
-	go build -race -o bin/$@ cmd/$@/main.go
+	go build -race -o bin/$(notdir $@) cmd/$(notdir $@)/main.go
 
-run:
+.PHONY: clean
+clean:
+	rm bin/*

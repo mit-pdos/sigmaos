@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid input...\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v pid args...\n", os.Args[0])
 		os.Exit(1)
 	}
 	m, err := fslambda.MakeReader(os.Args[1:])

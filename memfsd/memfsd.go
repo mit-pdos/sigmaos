@@ -230,6 +230,15 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) Fchmod(args np.Tfchmod, rets *np.Rfchmod) *np.Rerror {
+	fid, ok := npc.lookup(args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+  fid.mode = args.Mode
+	return nil
+}
+
 //
 // Extension for ulambda
 //

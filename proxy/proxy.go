@@ -248,6 +248,15 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) Fchmod(args np.Tfchmod, rets *np.Rfchmod) *np.Rerror {
+	reply, err := npc.npch(args.Fid).Fchmod(args.Fid, args.Mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	*rets = *reply
+	return nil
+}
+
 func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 	return &np.Rerror{"Not supported"}
 }

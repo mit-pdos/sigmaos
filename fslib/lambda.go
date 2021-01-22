@@ -19,7 +19,7 @@ type Attr struct {
 
 const (
 	SCHED    = "name/schedd"
-	SDEV     = "schedd"
+	SDEV     = "dev"
 	SCHEDDEV = SCHED + "/" + SDEV
 )
 

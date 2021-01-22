@@ -1,4 +1,4 @@
-package lschedd
+package schedd
 
 import (
 	"encoding/json"
@@ -77,7 +77,7 @@ func MakeSchedd(debug bool) *Sched {
 
 	err := sd.clnt.Remove(fslib.SCHED)
 	if err != nil {
-		db.DPrintf("name/uschedd didn't exist")
+		db.DPrintf("%v didn't exist", fslib.SCHED)
 	}
 	name := sd.srv.MyAddr()
 	err = sd.clnt.Symlink(name+":pubkey:schedd", fslib.SCHED, 0777)
@@ -86,7 +86,7 @@ func MakeSchedd(debug bool) *Sched {
 	}
 
 	fs := sd.memfsd.Root()
-	_, err = fs.MkNod(fs.RootInode(), "schedd", &SchedDev{sd})
+	_, err = fs.MkNod(fs.RootInode(), fslib.SDEV, &SchedDev{sd})
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}

@@ -15,7 +15,7 @@ func makeNamed(debug bool) *Named {
 	nd := &Named{}
 	nd.done = make(chan bool)
 	nd.fsd = memfsd.MakeFsd(debug)
-	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111", false)
+	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111", debug)
 	return nd
 }
 

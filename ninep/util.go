@@ -14,3 +14,7 @@ func Join(path []string) string {
 	p := strings.Join(path, "/")
 	return p
 }
+
+func EndSlash(path string) bool {
+	return path[len(path)-1] == '/'
+}

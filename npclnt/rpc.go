@@ -2,8 +2,6 @@ package npclnt
 
 import (
 	"errors"
-  "fmt"
-  "os"
 
 	np "ulambda/ninep"
 )
@@ -191,19 +189,6 @@ func (npch *NpChan) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 		return nil, err
 	}
 	msg, ok := reply.(np.Rwstat)
-	if !ok {
-		return nil, errors.New("Not correct reply msg")
-	}
-	return &msg, err
-}
-
-func (npch *NpChan) Fchmod(fid np.Tfid, mode np.Tmode) (*np.Rfchmod, error) {
-	args := np.Tfchmod{fid, mode}
-	reply, err := npch.call(args)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.(np.Rfchmod)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}

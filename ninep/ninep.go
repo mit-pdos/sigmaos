@@ -158,8 +158,6 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
-  TTfchmod
-  TRfchmod
 	// ulambda specific
 	TTmkpipe
 	TRmkpipe
@@ -223,10 +221,6 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
-  case TTfchmod:
-    return "Tfchmod"
-  case TRfchmod:
-    return "Rfchmod"
 	case TTmkpipe:
 		return "Tmkpipe"
 	case TRmkpipe:
@@ -393,14 +387,6 @@ type Twstat struct {
 	Stat Stat
 }
 
-type Tfchmod struct {
-  Fid  Tfid
-  Mode Tmode
-}
-
-type Rfchmod struct {
-}
-
 type Rwstat struct{}
 
 func (Tversion) Type() Tfcall { return TTversion }
@@ -430,8 +416,6 @@ func (Tstat) Type() Tfcall    { return TTstat }
 func (Rstat) Type() Tfcall    { return TRstat }
 func (Twstat) Type() Tfcall   { return TTwstat }
 func (Rwstat) Type() Tfcall   { return TRwstat }
-func (Tfchmod) Type() Tfcall   { return TTfchmod }
-func (Rfchmod) Type() Tfcall   { return TRfchmod }
 func (Tmkpipe) Type() Tfcall  { return TTmkpipe }
 func (Rmkpipe) Type() Tfcall  { return TRmkpipe }
 

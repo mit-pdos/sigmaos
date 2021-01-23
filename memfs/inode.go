@@ -116,8 +116,8 @@ func (inode *Inode) Stat() *np.Stat {
 	stat.Atime = 0
 	stat.Length = inode.Data.Len()
 	stat.Name = ""
-	stat.Uid = "ariel"
-	stat.Gid = "ariel"
+	stat.Uid = "kaashoek"
+	stat.Gid = "kaashoek"
 	stat.Muid = ""
 	return stat
 }

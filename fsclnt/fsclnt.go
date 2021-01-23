@@ -294,7 +294,7 @@ func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DPrintf("Rename %v %v\n", old, new)
-	fid, err := fsc.walkMany(np.Split(old), true)
+	fid, err := fsc.walkMany(np.Split(old), np.EndSlash(old))
 	if err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 
 func (fsc *FsClient) Remove(name string) error {
 	db.DPrintf("Remove %v\n", name)
-	fid, err := fsc.walkMany(np.Split(name), false)
+	fid, err := fsc.walkMany(np.Split(name), np.EndSlash(name))
 	if err != nil {
 		return err
 	}

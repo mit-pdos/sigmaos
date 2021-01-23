@@ -19,7 +19,7 @@ import (
 // XXX monitor, boost
 
 const (
-	MAXLOAD = 1 // XXX bogus, controls parallelism
+	MAXLOAD = 8 // XXX bogus, controls parallelism
 )
 
 type SchedDev struct {
@@ -97,8 +97,10 @@ func MakeSchedd(debug bool) *Sched {
 func (sd *Sched) String() string {
 	s := ""
 	for _, l := range sd.ls {
-		s += fmt.Sprintf("%v\n", l)
-
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		s += l.String()
+		s += "\n"
 	}
 	return s
 }
@@ -132,7 +134,12 @@ func (sd *Sched) spawn(ls string) {
 	l.args = attr.Args
 	for _, p := range attr.PairDep {
 		if l.pid != p.Producer {
-			l.prodDep[p.Producer] = false
+			c, ok := sd.ls[p.Producer]
+			if ok {
+				l.prodDep[p.Producer] = c.isRunnning()
+			} else {
+				l.prodDep[p.Producer] = false
+			}
 		}
 		if l.pid != p.Consumer {
 			l.consDep[p.Consumer] = false
@@ -147,6 +154,7 @@ func (sd *Sched) spawn(ls string) {
 	} else {
 		log.Fatalf("Spawn %v already exists\n", l.pid)
 	}
+
 	l.setStatus()
 	db.DPrintf("Spawn %v\n", l)
 	sd.cond.Signal()
@@ -180,6 +188,7 @@ func (sd *Sched) decLoad() {
 
 func (sd *Sched) started(pid string) {
 	l := sd.findLambda(pid)
+	l.changeStatus("Running")
 	l.startConsDep()
 	sd.runScheduler()
 }
@@ -228,8 +237,9 @@ func (sd *Sched) Scheduler() {
 	for {
 		l := sd.findRunnableWaitingConsumer()
 		if l != nil {
-			// XX don't count a consumer against load
+			// XXX don't count starting a consumer against load
 			l.run()
+			sd.load += 1
 		} else {
 			if sd.load < MAXLOAD {
 				l = sd.findRunnable()

@@ -30,6 +30,9 @@ func (l *Lambda) String() string {
 }
 
 func (l *Lambda) changeStatus(new string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	l.status = new
 	return nil
 }
@@ -46,6 +49,8 @@ func (l *Lambda) setStatus() {
 func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
+		l.mu.Lock()
+		defer l.mu.Unlock()
 		log.Printf("Lambda %v finished with error: %v", l, err)
 	}
 }
@@ -55,7 +60,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 // directory with machines?
 func (l *Lambda) run() error {
 	db.DPrintf("Run %v\n", l)
-	err := l.changeStatus("Running")
+	err := l.changeStatus("Started")
 	if err != nil {
 		return err
 	}
@@ -169,4 +174,10 @@ func (l *Lambda) isRunnable() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.status == "Runnable"
+}
+
+func (l *Lambda) isRunnning() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.status == "Running"
 }

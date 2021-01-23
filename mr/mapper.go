@@ -51,6 +51,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)
 		}
 	}
+	m.clnt.Started(m.pid)
 	return m, nil
 }
 

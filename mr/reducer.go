@@ -26,17 +26,18 @@ type Reducer struct {
 }
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	m := &Reducer{}
-	m.clnt = fslib.MakeFsLib(false)
-	m.reducef = reducef
+	r := &Reducer{}
+	r.clnt = fslib.MakeFsLib(false)
+	r.reducef = reducef
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	log.Printf("MakeReducer %v\n", args)
-	m.pid = args[0]
-	m.input = args[1]
-	m.output = args[2]
-	return m, nil
+	r.pid = args[0]
+	r.input = args[1]
+	r.output = args[2]
+	r.clnt.Started(r.pid)
+	return r, nil
 }
 
 func (r *Reducer) processFile(file string) []KeyValue {

@@ -219,9 +219,11 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		if args.Stat.Name[0] == '/' {
 			return np.ErrUnknownMsg
 		}
-		// XXX cwd
-		dst := np.Split(args.Stat.Name)
-		err := npc.memfs.Rename(npc.id, fid.path, dst)
+    // XXX renames within same dir
+    dst := make([]string, len(fid.path))
+    copy(dst, fid.path)
+    dst = append(dst[:len(dst) - 1], np.Split(args.Stat.Name)...)
+    err := npc.memfs.Rename(npc.id, fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

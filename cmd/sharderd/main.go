@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/kvlambda"
+	"ulambda/kv"
 )
 
 func main() {
@@ -12,7 +12,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	sh, err := kvlambda.MakeSharder(os.Args[1:])
+	sh, err := kv.MakeSharder(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

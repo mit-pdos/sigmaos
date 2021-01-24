@@ -1,13 +1,14 @@
-package kvlambda
+package kv
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfs"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
 
@@ -42,7 +43,7 @@ func (kvdev *KvDev) Len() np.Tlength {
 type Kv struct {
 	mu   sync.Mutex
 	cond *sync.Cond
-	fls  *fslib.FsLibSrv
+	*fslib.FsLibSrv
 	pid  string
 	me   string
 	conf Config
@@ -57,42 +58,61 @@ func MakeKv(args []string) (*Kv, error) {
 	log.Printf("Kv: %v\n", args)
 	kv.pid = args[0]
 	kv.me = KV + "/" + args[1]
-	fls, err := fslib.InitFs(kv.me, &KvDev{kv})
+
+	fs := memfs.MakeRoot(false)
+	fsd := memfsd.MakeFsd(false, fs, kv, kv)
+	fsl, err := fslib.InitFsMemFsD(kv.me, fs, fsd, &KvDev{kv})
 	if err != nil {
 		return nil, err
 	}
-	kv.fls = fls
+	kv.FsLibSrv = fsl
 	db.SetDebug(false)
-	kv.fls.Started(kv.pid)
+	kv.Started(kv.pid)
 	kv.register()
 	return kv, nil
 }
 
 // XXX move keys
 func (kv *Kv) register() {
-	pdev := KV + "/sharder/" + DEV
-	log.Printf("register %v %v\n", kv.me, pdev)
-	err := kv.fls.WriteFile(pdev, []byte("Add "+kv.me))
+	sh := KV + "/sharder/" + DEV
+	log.Printf("register %v %v\n", kv.me, sh)
+	err := kv.WriteFile(sh, []byte("Add "+kv.me))
 	if err != nil {
-		log.Printf("WriteFile: %v %v\n", pdev, err)
+		log.Printf("WriteFile: %v %v\n", sh, err)
 	}
-	kv.readConfig()
+	err = kv.ReadFileJson(KVCONFIG, &kv.conf)
+	if err != nil {
+		log.Printf("ReadFileJson: %v\n", err)
+	}
+
 }
 
-func (kv *Kv) readConfig() {
-	b, err := kv.fls.ReadFile(KV + "/sharder/config")
-	if err != nil {
-		log.Fatal("Read config error ", err)
+func (kv *Kv) Open(path string, mode np.Tmode) error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	log.Printf("Open %v\n", path)
+	shard := key2shard(path)
+	if kv.conf.Shards[shard] != kv.me {
+		return ErrWrongKv
 	}
-	err = json.Unmarshal(b, &kv.conf)
-	if err != nil {
-		log.Fatal("Unmarshal error ", err)
+	return nil
+}
+
+func (kv *Kv) Create(path string, perm np.Tperm, mode np.Tmode) error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	log.Printf("Create %v\n", path)
+	shard := key2shard(path)
+	if kv.conf.Shards[shard] != kv.me {
+		return ErrWrongKv
 	}
-	log.Printf("conf = %v\n", kv.conf)
+	return nil
 }
 
 func (kv *Kv) Exit() {
-	kv.fls.Exiting(kv.pid)
+	kv.Exiting(kv.pid)
 }
 
 func (kv *Kv) Work() {

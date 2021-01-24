@@ -11,9 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfsd"
 	np "ulambda/ninep"
-	"ulambda/npsrv"
 )
 
 // XXX monitor, boost
@@ -57,39 +55,24 @@ func (sdev *SchedDev) Len() np.Tlength {
 }
 
 type Sched struct {
-	mu     sync.Mutex
-	cond   *sync.Cond
-	clnt   *fslib.FsLib
-	memfsd *memfsd.Fsd
-	srv    *npsrv.NpServer
-	load   int // XXX bogus
-	ls     map[string]*Lambda
+	mu   sync.Mutex
+	cond *sync.Cond
+	*fslib.FsLibSrv
+	load int // XXX bogus
+	ls   map[string]*Lambda
 }
 
 func MakeSchedd(debug bool) *Sched {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
-	sd.clnt = fslib.MakeFsLib(false)
-	sd.memfsd = memfsd.MakeFsd(false)
-	sd.srv = npsrv.MakeNpServer(sd.memfsd, ":0", false)
+	fsl, err := fslib.InitFs(fslib.SCHED, &SchedDev{sd})
+	if err != nil {
+		log.Fatalf("InitFs: %v\n", err)
+
+	}
+	sd.FsLibSrv = fsl
 	sd.load = 0
 	sd.ls = make(map[string]*Lambda)
-
-	err := sd.clnt.Remove(fslib.SCHED)
-	if err != nil {
-		db.DPrintf("%v didn't exist", fslib.SCHED)
-	}
-	name := sd.srv.MyAddr()
-	err = sd.clnt.Symlink(name+":pubkey:schedd", fslib.SCHED, 0777)
-	if err != nil {
-		log.Fatal("Symlink error: ", err)
-	}
-
-	fs := sd.memfsd.Root()
-	_, err = fs.MkNod(fs.RootInode(), fslib.SDEV, &SchedDev{sd})
-	if err != nil {
-		log.Fatal("Create error: ", err)
-	}
 	db.SetDebug(debug)
 	return sd
 }

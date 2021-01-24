@@ -1,7 +1,8 @@
-package kvlambda
+package kv
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -13,8 +14,11 @@ import (
 )
 
 const (
-	NSHARDS = 100
+	NSHARDS  = 100
+	KVCONFIG = KV + "/sharder/config"
 )
+
+var ErrWrongKv = errors.New("ErrWrongKv")
 
 type SharderDev struct {
 	sh *Sharder
@@ -108,11 +112,12 @@ func (sh *Sharder) add(shard string) {
 
 	sh.kvs = append(sh.kvs, shard)
 	sh.balance()
+	// XXX fslib?
 	b, err := json.Marshal(sh.conf)
 	if err != nil {
 		log.Fatal("add marshal error", err)
 	}
-	err = sh.fls.WriteFile(KV+"/sharder/config", b)
+	err = sh.fls.WriteFile(KVCONFIG, b)
 	if err != nil {
 		log.Printf("add write error %v\n", err)
 		return

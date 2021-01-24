@@ -18,7 +18,7 @@ const (
 )
 
 type Consoled struct {
-	clnt   *fslib.FsLib
+	*fslib.FsLibSrv
 	srv    *npsrv.NpServer
 	memfsd *memfsd.Fsd
 	done   chan bool
@@ -26,9 +26,11 @@ type Consoled struct {
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	cons.clnt = fslib.MakeFsLib(false)
-	cons.memfsd = memfsd.MakeFsd(false)
-	cons.srv = npsrv.MakeNpServer(cons.memfsd, ":0", false)
+	fsl, err := fslib.InitFs("name/consoled", makeConsole())
+	if err != nil {
+		log.Fatalf("InitFs: err %v\n", err)
+	}
+	cons.FsLibSrv = fsl
 	cons.done = make(chan bool)
 	return cons
 }
@@ -69,25 +71,7 @@ func (cons *Consoled) FsInit() {
 
 func main() {
 	cons := makeConsoled()
-	cons.FsInit()
-	if fd, err := cons.clnt.Attach(":1111", ""); err == nil {
-		err := cons.clnt.Mount(fd, "name")
-		if err != nil {
-			log.Fatal("Mount error: ", err)
-		}
-		err = cons.clnt.Remove("name/consoled")
-		if err != nil {
-			log.Print("name/consoled didn't exist")
-		}
-		name := cons.srv.MyAddr()
-		err = cons.clnt.Symlink(name+":pubkey:console", "name/consoled", 0777)
-		if err != nil {
-			log.Fatal("Symlink error: ", err)
-		}
-	} else {
-		log.Fatal("Attach error: ", err)
-	}
 	<-cons.done
-	// cons.clnt.Close(fd)
+	// cons.Close(fd)
 	log.Printf("Consoled: finished\n")
 }

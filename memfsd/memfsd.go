@@ -9,6 +9,14 @@ import (
 	"ulambda/npsrv"
 )
 
+type Opener interface {
+	Open(string, np.Tmode) error
+}
+
+type Creator interface {
+	Create(string, np.Tperm, np.Tmode) error
+}
+
 type Fid struct {
 	path []string
 	ino  *memfs.Inode
@@ -20,11 +28,13 @@ func makeFid(p []string, i *memfs.Inode) *Fid {
 }
 
 type NpConn struct {
-	mu    sync.Mutex // for Fids
-	memfs *memfs.Root
-	conn  net.Conn
-	id    int
-	Fids  map[np.Tfid]*Fid
+	mu     sync.Mutex // for Fids
+	memfs  *memfs.Root
+	conn   net.Conn
+	id     int
+	Fids   map[np.Tfid]*Fid
+	open   Opener
+	create Creator
 }
 
 func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
@@ -34,23 +44,30 @@ func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 	return f, ok
 }
 
-func makeNpConn(root *memfs.Root, conn net.Conn, id int) *NpConn {
+// XXX better plan for overload open/create/..??
+func makeNpConn(root *memfs.Root, conn net.Conn, id int, op Opener, cr Creator) *NpConn {
 	npc := &NpConn{}
 	npc.memfs = root
 	npc.conn = conn
 	npc.id = id
 	npc.Fids = make(map[np.Tfid]*Fid)
+	npc.open = op
+	npc.create = cr
 	return npc
 }
 
 type Fsd struct {
 	fs     *memfs.Root
+	op     Opener
+	cr     Creator
 	nextId int
 }
 
-func MakeFsd(debug bool) *Fsd {
+func MakeFsd(debug bool, fs *memfs.Root, op Opener, cr Creator) *Fsd {
 	fsd := &Fsd{}
-	fsd.fs = memfs.MakeRoot(debug)
+	fsd.fs = fs
+	fsd.op = op
+	fsd.cr = cr
 	return fsd
 }
 
@@ -60,7 +77,7 @@ func (fsd *Fsd) Root() *memfs.Root {
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
 	fsd.nextId += 1
-	clnt := makeNpConn(fsd.fs, conn, fsd.nextId)
+	clnt := makeNpConn(fsd.fs, conn, fsd.nextId, fsd.op, fsd.cr)
 	return clnt
 }
 
@@ -117,6 +134,12 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
+	if npc.open != nil {
+		err := npc.open.Open(np.Join(fid.path), args.Mode)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+	}
 	err := fid.ino.Open(args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -130,6 +153,12 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
+	}
+	if npc.create != nil {
+		err := npc.create.Create(np.Join(fid.path)+args.Name, args.Perm, args.Mode)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
 	}
 	inode, err := fid.ino.Create(npc.id, npc.memfs, args.Perm, args.Name)
 	if err != nil {

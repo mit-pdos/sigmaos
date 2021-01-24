@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	"encoding/json"
 	"log"
 
 	"ulambda/fsclnt"
@@ -88,4 +89,12 @@ func (fl *FsLib) isEmpty(name string) bool {
 		log.Fatalf("Stat %v error %v\n", name, err)
 	}
 	return st.Length == 0
+}
+
+func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
+	b, err := fl.ReadFile(name)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, i)
 }

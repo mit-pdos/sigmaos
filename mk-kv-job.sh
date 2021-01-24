@@ -5,9 +5,13 @@
 L="/mnt/9p/ulambd/dev"
 N=1
 
-for i in {0..$N}
+SPID=$((1 + $RANDOM % 1000000))
+PID=$((1 + $RANDOM % 1000000))
+pairs=("(${SPID};${PID})")
+echo $SPID,"./bin/sharderd","","[${pairs[@]}]",""
+
+for i in {0..0}
 do
-    PID=$((1 + $RANDOM % 1000000))
-    args=( "0-100" "" )
-    echo $PID,"./bin/kvd","[${args[@]}]","",""
+    pairs=("(${SPID};${PID})")
+    echo $PID,"./bin/kvd","[$i]","[${pairs[@]}]",""
 done

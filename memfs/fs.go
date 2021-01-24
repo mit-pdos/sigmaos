@@ -120,7 +120,7 @@ func (root *Root) Rename(tid int, old []string, new []string) error {
 
 	err = newdir.createLocked(ino, newname)
 	if err != nil {
-		log.Fatal("Create error ", err)
+		log.Print("Rename createLocked: ", err)
 	}
 
 	db.DPrintf("rename succeeded %v\n", newdir)

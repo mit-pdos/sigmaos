@@ -48,7 +48,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) bool) (bool, error) {
 		log.Fatal("Opendir error ", err)
 	}
 	for {
-		dirents, err := fl.Readdir(fd, 1024)
+		dirents, err := fl.Readdir(fd, CHUNKSZ)
 		if err == io.EOF {
 			break
 		}
@@ -73,7 +73,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
 	}
 	dirents := []*np.Stat{}
 	for {
-		dents, err := fl.Readdir(fd, 1024)
+		dents, err := fl.Readdir(fd, CHUNKSZ)
 		if err == io.EOF {
 			break
 		}

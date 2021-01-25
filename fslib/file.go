@@ -9,6 +9,8 @@ import (
 	np "ulambda/ninep"
 )
 
+const CHUNKSZ = 8192
+
 type FsLib struct {
 	*fsclnt.FsClient
 }
@@ -25,14 +27,13 @@ func MakeFsLib(uname string) *FsLib {
 }
 
 func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
-	const CNT = 8192
 	fd, err := fl.Open(fname, np.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	c := []byte{}
 	for {
-		b, err := fl.Read(fd, CNT)
+		b, err := fl.Read(fd, CHUNKSZ)
 		if err != nil {
 			return nil, err
 		}
@@ -48,6 +49,7 @@ func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
 	return c, nil
 }
 
+// XXX chunk
 func (fl *FsLib) WriteFile(fname string, data []byte) error {
 	fd, err := fl.Open(fname, np.OWRITE)
 	if err != nil {
@@ -64,6 +66,7 @@ func (fl *FsLib) WriteFile(fname string, data []byte) error {
 	return nil
 }
 
+// XXX chunk
 func (fl *FsLib) MakeFile(fname string, data []byte) error {
 	fd, err := fl.Create(fname, 0700, np.OWRITE)
 	if err != nil {
@@ -105,33 +108,13 @@ func (fl *FsLib) MakeFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error", err)
 	}
-	fd, err := fl.Create(fname, 0700, np.OWRITE)
-	if err != nil {
-		return err
-	}
-	_, err = fl.Write(fd, data)
-	if err != nil {
-		return err
-	}
-	return fl.Close(fd)
+	return fl.MakeFile(fname, data)
 }
 
 func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
-	fd, err := fl.Open(fname, np.OWRITE)
-	if err != nil {
-		return err
-	}
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error", err)
 	}
-	_, err = fl.Write(fd, data)
-	if err != nil {
-		return err
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return fl.WriteFile(fname, data)
 }

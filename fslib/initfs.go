@@ -12,13 +12,13 @@ import (
 
 type FsLibSrv struct {
 	*FsLib
-	memfsd *memfsd.Fsd
-	srv    *npsrv.NpServer
+	*memfsd.Fsd
+	srv *npsrv.NpServer
 }
 
 func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
 	srv := npsrv.MakeNpServer(memfsd, ":0", false)
-	fls := &FsLibSrv{MakeFsLib(false), memfsd, srv}
+	fls := &FsLibSrv{MakeFsLib(name), memfsd, srv}
 	err := fls.Remove(name)
 	if err != nil {
 		db.DPrintf("Remove failed %v %v\n", name, err)
@@ -31,6 +31,7 @@ func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.
 		}
 	}
 	srvname := fls.srv.MyAddr()
+	log.Printf("srvname %v\n", srvname)
 	err = fls.Symlink(srvname+":pubkey:"+name, name, 0777)
 	if err != nil {
 		return nil, fmt.Errorf("Symlink %v error: %v\n", name, err)
@@ -39,12 +40,12 @@ func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.
 }
 
 func InitFsMemFs(name string, memfs *memfs.Root, dev memfs.Dev) (*FsLibSrv, error) {
-	memfsd := memfsd.MakeFsd(false, memfs, nil, nil)
+	memfsd := memfsd.MakeFsd(false, memfs, nil)
 	return InitFsMemFsD(name, memfs, memfsd, dev)
 }
 
 func InitFs(name string, dev memfs.Dev) (*FsLibSrv, error) {
 	fs := memfs.MakeRoot(false)
-	fsd := memfsd.MakeFsd(false, fs, nil, nil)
+	fsd := memfsd.MakeFsd(false, fs, nil)
 	return InitFsMemFsD(name, fs, fsd, dev)
 }

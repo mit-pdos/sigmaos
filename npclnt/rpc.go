@@ -30,8 +30,8 @@ func (npc *NpClnt) callServer(server string, args np.Tmsg) (np.Tmsg, error) {
 
 // XXX copying msg once too many?
 
-func (npc *NpClnt) Attach(server string, fid np.Tfid, path []string) (*np.Rattach, error) {
-	args := np.Tattach{fid, np.NoFid, "fk", ""}
+func (npc *NpClnt) Attach(server string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
+	args := np.Tattach{fid, np.NoFid, uname, ""}
 	reply, err := npc.callServer(server, args)
 	if err != nil {
 		return nil, err

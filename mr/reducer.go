@@ -27,7 +27,7 @@ type Reducer struct {
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r := &Reducer{}
-	r.clnt = fslib.MakeFsLib(false)
+	r.clnt = fslib.MakeFsLib("reducer")
 	r.reducef = reducef
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")

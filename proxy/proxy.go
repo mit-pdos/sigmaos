@@ -3,6 +3,7 @@ package proxy
 import (
 	"log"
 	"net"
+	"os/user"
 	"strings"
 	"sync"
 
@@ -15,10 +16,11 @@ const MAXSYMLINK = 20
 
 // The connection from the kernel/client
 type NpConn struct {
-	mu   sync.Mutex
-	conn net.Conn
-	clnt *npclnt.NpClnt
-	fids map[np.Tfid]*npclnt.NpChan // The outgoing channels to servers proxied
+	mu    sync.Mutex
+	conn  net.Conn
+	clnt  *npclnt.NpClnt
+	uname string
+	fids  map[np.Tfid]*npclnt.NpChan // The outgoing channels to servers proxied
 
 }
 
@@ -76,7 +78,13 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	reply, err := npc.clnt.Attach(":1111", args.Fid, np.Split(args.Aname))
+	// XXX get unix user id
+	u, err := user.Current()
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	npc.uname = u.Uid
+	reply, err := npc.clnt.Attach(":1111", npc.uname, args.Fid, np.Split(args.Aname))
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -101,7 +109,7 @@ func splitTarget(target string) (string, string) {
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	log.Printf("automount %v to %v\n", target, path)
 	server, _ := splitTarget(target)
-	reply, err := npc.clnt.Attach(server, newfid, path)
+	reply, err := npc.clnt.Attach(server, npc.uname, newfid, path)
 	if err != nil {
 		return np.Tqid{}, err
 	}

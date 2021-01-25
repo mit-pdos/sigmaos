@@ -59,7 +59,7 @@ func readLambda(line string) (*fslib.Attr, error) {
 }
 
 func main() {
-	clnt := fslib.MakeFsLib(false)
+	clnt := fslib.MakeFsLib("submit")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		a, err := readLambda(scanner.Text())

@@ -9,12 +9,9 @@ import (
 	"ulambda/npsrv"
 )
 
-type Opener interface {
-	Open(string, np.Tmode) error
-}
-
-type Creator interface {
-	Create(string, np.Tperm, np.Tmode) error
+// XXX maybe overload func (npc *Npconn) Open ..
+type Walker interface {
+	Walk(string, []string) error
 }
 
 type Fid struct {
@@ -28,13 +25,13 @@ func makeFid(p []string, i *memfs.Inode) *Fid {
 }
 
 type NpConn struct {
-	mu     sync.Mutex // for Fids
-	memfs  *memfs.Root
-	conn   net.Conn
-	id     int
-	Fids   map[np.Tfid]*Fid
-	open   Opener
-	create Creator
+	mu    sync.Mutex // for Fids
+	memfs *memfs.Root
+	conn  net.Conn
+	id    int
+	Fids  map[np.Tfid]*Fid
+	uname string
+	walk  Walker
 }
 
 func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
@@ -45,29 +42,26 @@ func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 }
 
 // XXX better plan for overload open/create/..??
-func makeNpConn(root *memfs.Root, conn net.Conn, id int, op Opener, cr Creator) *NpConn {
+func makeNpConn(root *memfs.Root, conn net.Conn, id int, w Walker) *NpConn {
 	npc := &NpConn{}
 	npc.memfs = root
 	npc.conn = conn
 	npc.id = id
 	npc.Fids = make(map[np.Tfid]*Fid)
-	npc.open = op
-	npc.create = cr
+	npc.walk = w
 	return npc
 }
 
 type Fsd struct {
 	fs     *memfs.Root
-	op     Opener
-	cr     Creator
+	walk   Walker
 	nextId int
 }
 
-func MakeFsd(debug bool, fs *memfs.Root, op Opener, cr Creator) *Fsd {
+func MakeFsd(debug bool, fs *memfs.Root, w Walker) *Fsd {
 	fsd := &Fsd{}
 	fsd.fs = fs
-	fsd.op = op
-	fsd.cr = cr
+	fsd.walk = w
 	return fsd
 }
 
@@ -77,7 +71,7 @@ func (fsd *Fsd) Root() *memfs.Root {
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
 	fsd.nextId += 1
-	clnt := makeNpConn(fsd.fs, conn, fsd.nextId, fsd.op, fsd.cr)
+	clnt := makeNpConn(fsd.fs, conn, fsd.nextId, fsd.walk)
 	return clnt
 }
 
@@ -94,6 +88,7 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root := npc.memfs.RootInode()
 	npc.mu.Lock()
+	npc.uname = args.Uname
 	npc.Fids[args.Fid] = makeFid([]string{}, root)
 	npc.mu.Unlock()
 	rets.Qid = root.Qid()
@@ -113,6 +108,12 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fid, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
+	}
+	if npc.walk != nil {
+		err := npc.walk.Walk(npc.uname, args.Wnames)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
 	}
 	inodes, rest, err := fid.ino.Walk(npc.id, args.Wnames)
 	if err != nil {
@@ -134,12 +135,6 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if npc.open != nil {
-		err := npc.open.Open(np.Join(fid.path), args.Mode)
-		if err != nil {
-			return &np.Rerror{err.Error()}
-		}
-	}
 	err := fid.ino.Open(args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -154,13 +149,14 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if npc.create != nil {
-		err := npc.create.Create(np.Join(fid.path)+args.Name, args.Perm, args.Mode)
+	names := []string{args.Name}
+	if npc.walk != nil {
+		err := npc.walk.Walk(npc.uname, names)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
 	}
-	inode, err := fid.ino.Create(npc.id, npc.memfs, args.Perm, args.Name)
+	inode, err := fid.ino.Create(npc.id, npc.memfs, args.Perm, names[0])
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -248,11 +244,11 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		if args.Stat.Name[0] == '/' {
 			return np.ErrUnknownMsg
 		}
-    // XXX renames within same dir
-    dst := make([]string, len(fid.path))
-    copy(dst, fid.path)
-    dst = append(dst[:len(dst) - 1], np.Split(args.Stat.Name)...)
-    err := npc.memfs.Rename(npc.id, fid.path, dst)
+		// XXX renames within same dir
+		dst := make([]string, len(fid.path))
+		copy(dst, fid.path)
+		dst = append(dst[:len(dst)-1], np.Split(args.Stat.Name)...)
+		err := npc.memfs.Rename(npc.id, fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

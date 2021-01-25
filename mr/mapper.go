@@ -29,7 +29,7 @@ type Mapper struct {
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	db.SetDebug(false)
 	m := &Mapper{}
-	m.clnt = fslib.MakeFsLib(false)
+	m.clnt = fslib.MakeFsLib("mapper")
 	m.mapf = mapf
 	if len(args) != 3 {
 		return nil, errors.New("MakeMapper: too few arguments")

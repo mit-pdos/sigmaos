@@ -29,17 +29,19 @@ type FsClient struct {
 	npc   *npclnt.NpClnt
 	mount *Mount
 	next  np.Tfid
+	uname string
 }
 
 // XXX need mutex for several threads share FsClient
-func MakeFsClient(debug bool) *FsClient {
+func MakeFsClient(uname string) *FsClient {
 	fsc := &FsClient{}
 	fsc.fds = make([]FdState, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Path)
 	fsc.mount = makeMount()
-	fsc.npc = npclnt.MakeNpClnt(debug)
+	fsc.npc = npclnt.MakeNpClnt(false)
 	fsc.next = 1
-	db.SetDebug(debug)
+	fsc.uname = uname
+	db.SetDebug(false)
 	rand.Seed(time.Now().UnixNano())
 	return fsc
 }
@@ -118,7 +120,7 @@ func (fsc *FsClient) Close(fd int) error {
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
 func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
-	reply, err := fsc.npc.Attach(server, fid, p)
+	reply, err := fsc.npc.Attach(server, fsc.uname, fid, p)
 	if err != nil {
 		return nil, err
 	}

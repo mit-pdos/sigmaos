@@ -1,16 +1,13 @@
 package kv
 
-// XXX assumes a running named, schedd, sharder and kvd
+// XXX assumes a running named, schedd, sharder
 
 import (
-	"math/rand"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"ulambda/fslib"
 )
 
 func TestBasic(t *testing.T) {
@@ -22,14 +19,7 @@ func TestBasic(t *testing.T) {
 		assert.Nil(t, err, "Put")
 	}
 
-	a := fslib.Attr{}
-	a.Pid = strconv.Itoa(rand.Intn(100000))
-	a.Program = "./bin/kvd"
-	a.Args = []string{"1"}
-	a.PairDep = nil
-	a.ExitDep = nil
-
-	err = kc.Spawn(&a)
+	err = kc.WriteFile(SHARDER+"/dev", []byte("Add"))
 	assert.Nil(t, err, "Spawn")
 
 	time.Sleep(1000 * time.Millisecond)

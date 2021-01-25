@@ -2,6 +2,8 @@ package fslib
 
 import (
 	"encoding/json"
+	"math/rand"
+	"strconv"
 )
 
 type PDep struct {
@@ -13,16 +15,19 @@ type Attr struct {
 	Pid     string
 	Program string
 	Args    []string
-  Env     []string
+	Env     []string
 	PairDep []PDep
 	ExitDep []string
 }
 
 const (
 	SCHED    = "name/schedd"
-	SDEV     = "dev"
-	SCHEDDEV = SCHED + "/" + SDEV
+	SCHEDDEV = SCHED + "/" + "dev"
 )
+
+func GenPid() string {
+	return strconv.Itoa(rand.Intn(100000))
+}
 
 func (fl *FsLib) Spawn(a *Attr) error {
 	b, err := json.Marshal(a)

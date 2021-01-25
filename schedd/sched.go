@@ -28,14 +28,11 @@ func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	db.DPrintf("SchedDev.write %v\n", t)
 	if strings.HasPrefix(t, "Spawn") {
-		l := strings.TrimLeft(t, "Spawn ")
-		sdev.sd.spawn(l)
+		sdev.sd.spawn(t[len("Spawn "):])
 	} else if strings.HasPrefix(t, "Started") {
-		pid := strings.TrimLeft(t, "Started ")
-		sdev.sd.started(pid)
+		sdev.sd.started(t[len("Started "):])
 	} else if strings.HasPrefix(t, "Exiting") {
-		pid := strings.TrimSpace(strings.TrimLeft(t, "Exiting "))
-		sdev.sd.exiting(pid)
+		sdev.sd.exiting(t[len("Exiting "):])
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
@@ -115,7 +112,7 @@ func (sd *Sched) spawn(ls string) {
 	l.pid = attr.Pid
 	l.program = attr.Program
 	l.args = attr.Args
-  l.env = attr.Env
+	l.env = attr.Env
 	for _, p := range attr.PairDep {
 		if l.pid != p.Producer {
 			c, ok := sd.ls[p.Producer]

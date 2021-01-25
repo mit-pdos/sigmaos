@@ -14,7 +14,7 @@ import (
 
 const (
 	NSHARDS  = 5
-	KVCONFIG = KV + "/sharder/config"
+	KVCONFIG = SHARDER + "/config"
 )
 
 var ErrWrongKv = errors.New("ErrWrongKv")
@@ -27,12 +27,14 @@ type SharderDev struct {
 func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	log.Printf("SharderDev.write %v\n", t)
-	if strings.HasPrefix(t, "Add") {
-		kvd := strings.TrimLeft(t, "Add ")
-		shdev.sh.add(kvd)
+	if strings.HasPrefix(t, "Join") {
+		shdev.sh.join(t[len("Join "):])
+	} else if strings.HasPrefix(t, "Leave") {
+		shdev.sh.leave(t[len("Leave"):])
+	} else if strings.HasPrefix(t, "Add") {
+		shdev.sh.add()
 	} else if strings.HasPrefix(t, "Resume") {
-		kvd := strings.TrimLeft(t, "Resume ")
-		shdev.sh.resume(kvd)
+		shdev.sh.resume(t[len("Resume "):])
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
@@ -84,12 +86,12 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.conf = makeConfig()
 	sh.kvs = make([]string, 0)
 	sh.pid = args[0]
-	fls, err := fslib.InitFs(KV+"/sharder", &SharderDev{sh})
+	fls, err := fslib.InitFs(SHARDER, &SharderDev{sh})
 	if err != nil {
 		return nil, err
 	}
 
-	err = fls.MakeFileJson(KV+"/sharder/config", *sh.conf)
+	err = fls.MakeFileJson(KVCONFIG, *sh.conf)
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +101,29 @@ func MakeSharder(args []string) (*Sharder, error) {
 	return sh, nil
 }
 
-func (sh *Sharder) add(kvd string) {
+func (sh *Sharder) add() {
+	sh.spawnKv()
+}
+
+func (sh *Sharder) join(kvd string) {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
+	log.Printf("join:%v\n", kvd)
 	sh.kvs = append(sh.kvs, kvd)
+	sh.cond.Signal()
+}
+
+func (sh *Sharder) leave(kvd string) {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for i, v := range sh.kvs {
+		if v == kvd {
+			sh.kvs = append(sh.kvs[:i], sh.kvs[i+1:]...)
+			break
+		}
+	}
 	sh.cond.Signal()
 }
 
@@ -117,10 +137,10 @@ func (sh *Sharder) resume(kvd string) {
 	}
 }
 
-// Tell kv to refresh
+// Tell kv to reconfigure
 func (sh *Sharder) refresh(kv string) {
 	dev := kv + "/dev"
-	err := sh.WriteFile(dev, []byte("Refresh"))
+	err := sh.WriteFile(dev, []byte("Reconfigure"))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", dev, err)
 	}
@@ -132,6 +152,7 @@ func (sh *Sharder) refresh(kv string) {
 func (sh *Sharder) balance() {
 	j := 0
 	sh.conf.N = sh.conf.N + 1
+	log.Printf("shards %v kvs %v\n", sh.conf.Shards, sh.kvs)
 	for i, _ := range sh.conf.Shards {
 		sh.conf.Shards[i] = sh.kvs[j]
 		j = (j + 1) % len(sh.kvs)
@@ -142,8 +163,23 @@ func (sh *Sharder) Exit() {
 	sh.Exiting(sh.pid)
 }
 
+func (sh *Sharder) spawnKv() error {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = "./bin/kvd"
+	a.Args = []string{}
+	a.PairDep = []fslib.PDep{fslib.PDep{sh.pid, a.Pid}}
+	a.ExitDep = nil
+	return sh.Spawn(&a)
+}
+
+// XXX Support shrinking
+// XXX Add/shrink dynamically
+// XXX setup pairdeps between kvs so that scheduler can gang schedule them?
+// XXX Handle failed kvs
 func (sh *Sharder) Work() {
 	sh.mu.Lock()
+	sh.spawnKv()
 	for {
 		sh.cond.Wait()
 		if sh.nkvd == 0 {

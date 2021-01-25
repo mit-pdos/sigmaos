@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	KV = "name/kv"
+	KV      = "name/kv"
+	SHARDER = "name/kv/sharder"
 )
 
 type KvDev struct {
@@ -25,7 +26,7 @@ type KvDev struct {
 func (kvdev *KvDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	log.Printf("KvDev.write %v\n", t)
-	if strings.HasPrefix(t, "Refresh") {
+	if strings.HasPrefix(t, "Reconfigure") {
 		kvdev.kv.cond.Signal()
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
@@ -59,12 +60,12 @@ type Kv struct {
 func MakeKv(args []string) (*Kv, error) {
 	kv := &Kv{}
 	kv.cond = sync.NewCond(&kv.mu)
-	if len(args) != 2 {
+	if len(args) != 1 {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
 	log.Printf("Kv: %v\n", args)
 	kv.pid = args[0]
-	kv.me = KV + "/" + args[1]
+	kv.me = KV + "/" + kv.pid
 
 	fs := memfs.MakeRoot(false)
 	fsd := memfsd.MakeFsd(false, fs, kv)
@@ -79,15 +80,16 @@ func MakeKv(args []string) (*Kv, error) {
 	return kv, nil
 }
 
-func (kv *Kv) register() {
-	sh := KV + "/sharder/dev"
-	log.Printf("register %v %v\n", kv.me, sh)
-	err := kv.WriteFile(sh, []byte("Add "+kv.me))
+func (kv *Kv) join() {
+	sh := SHARDER + "/dev"
+	log.Printf("Join %v\n", kv.me)
+	err := kv.WriteFile(sh, []byte("Join "+kv.me))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
 	}
 }
 
+// Interposes on memfsd's walk
 func (kv *Kv) Walk(src string, names []string) error {
 	// log.Printf("%v: Walk %v %v\n", kv.me, src, names)
 	kv.mu.Lock()
@@ -158,8 +160,12 @@ func (kv *Kv) copyShard(shard int, kvd string) {
 
 }
 
+// XXX maybe wait until all keys have been copied or don't accept
+// another refresh until copier is done (which is not the case because
+// the sharder won't initiate another refresh until every KVs is done
+// refreshing).
 func (kv *Kv) resume() {
-	sh := KV + "/sharder/dev"
+	sh := SHARDER + "/dev"
 	log.Printf("Resume %v %v\n", kv.me, sh)
 	kv.inRebalance = false
 	err := kv.WriteFile(sh, []byte("Resume "+kv.me))
@@ -169,7 +175,7 @@ func (kv *Kv) resume() {
 }
 
 // Caller hold lock
-func (kv *Kv) rebalance() {
+func (kv *Kv) reconfigure() {
 	kv.inRebalance = true
 	conf := kv.readConfig()
 	log.Printf("%v: New config: %v\n", kv.me, conf)
@@ -187,9 +193,9 @@ func (kv *Kv) rebalance() {
 
 func (kv *Kv) Work() {
 	kv.mu.Lock()
-	kv.register()
+	kv.join()
 	for {
 		kv.cond.Wait()
-		kv.rebalance()
+		kv.reconfigure()
 	}
 }

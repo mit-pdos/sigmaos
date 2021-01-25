@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	db "ulambda/debug"
@@ -24,6 +25,7 @@ type FdState struct {
 }
 
 type FsClient struct {
+	mu    sync.Mutex
 	fds   []FdState
 	fids  map[np.Tfid]*Path
 	npc   *npclnt.NpClnt
@@ -56,10 +58,16 @@ func (fsc *FsClient) String() string {
 }
 
 func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
 	return fsc.fids[fid].npch
 }
 
 func (fsc *FsClient) findfd(nfid np.Tfid) int {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
 	for fd, fdst := range fsc.fds {
 		if fdst.fid == np.NoFid {
 			fsc.fds[fd].offset = 0
@@ -72,13 +80,26 @@ func (fsc *FsClient) findfd(nfid np.Tfid) int {
 	return len(fsc.fds) - 1
 }
 
+func (fsc *FsClient) closefd(fd int) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
+	fsc.fds[fd].fid = np.NoFid
+}
+
 func (fsc *FsClient) allocFid() np.Tfid {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
 	fid := fsc.next
 	fsc.next += 1
 	return fid
 }
 
 func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
 	if fsc.fds[fd].fid == np.NoFid {
 		return np.NoFid, errors.New("Non-existing")
 	}
@@ -86,6 +107,9 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
 	if fd < 0 || fd >= len(fsc.fds) {
 		return nil, fmt.Errorf("Too big fd %v", fd)
 	}
@@ -112,7 +136,7 @@ func (fsc *FsClient) Close(fd int) error {
 	}
 	err = fsc.npch(fid).Clunk(fid)
 	if err == nil {
-		fsc.fds[fd].fid = np.NoFid
+		fsc.closefd(fd)
 	}
 	return err
 }

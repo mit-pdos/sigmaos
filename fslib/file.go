@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"ulambda/fsclnt"
@@ -12,8 +13,8 @@ type FsLib struct {
 	*fsclnt.FsClient
 }
 
-func MakeFsLib(d bool) *FsLib {
-	fl := &FsLib{fsclnt.MakeFsClient(d)}
+func MakeFsLib(uname string) *FsLib {
+	fl := &FsLib{fsclnt.MakeFsClient(uname)}
 	if fd, err := fl.Attach(":1111", ""); err == nil {
 		err := fl.Mount(fd, "name")
 		if err != nil {
@@ -97,4 +98,40 @@ func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
 		return err
 	}
 	return json.Unmarshal(b, i)
+}
+
+func (fl *FsLib) MakeFileJson(fname string, i interface{}) error {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error", err)
+	}
+	fd, err := fl.Create(fname, 0700, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	_, err = fl.Write(fd, data)
+	if err != nil {
+		return err
+	}
+	return fl.Close(fd)
+}
+
+func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
+	fd, err := fl.Open(fname, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error", err)
+	}
+	_, err = fl.Write(fd, data)
+	if err != nil {
+		return err
+	}
+	err = fl.Close(fd)
+	if err != nil {
+		return err
+	}
+	return nil
 }

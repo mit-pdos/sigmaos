@@ -102,6 +102,12 @@ func MakeSharder(args []string) (*Sharder, error) {
 }
 
 func (sh *Sharder) add() {
+	sh.mu.Lock()
+	if sh.nkvd > 0 {
+		log.Printf("In reconfiguration %v\n", sh.nkvd)
+		return
+	}
+	sh.mu.Unlock()
 	sh.spawnKv()
 }
 
@@ -109,7 +115,7 @@ func (sh *Sharder) join(kvd string) {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	log.Printf("join:%v\n", kvd)
+	log.Printf("Join: %v\n", kvd)
 	sh.kvs = append(sh.kvs, kvd)
 	sh.cond.Signal()
 }
@@ -130,6 +136,8 @@ func (sh *Sharder) leave(kvd string) {
 func (sh *Sharder) resume(kvd string) {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
+
+	log.Printf("Resume: %v\n", kvd)
 
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {

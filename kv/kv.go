@@ -137,11 +137,12 @@ func (kv *Kv) copyShard(shard int, kvd string) {
 	kv.ProcessDir(kvd, func(st *np.Stat) bool {
 		s := key2shard(st.Name)
 		if s == shard {
-			log.Printf("copy key %v from %v\n", st.Name, kvd)
+			log.Printf("%v: copy key %v (s %v) from %v\n", kv.me,
+				st.Name, s, kvd)
 			n := kvd + "/" + st.Name
 			b, err := kv.ReadFile(n)
 			if err != nil {
-				log.Fatalf("Readfile %v err %v\n", n, err)
+				log.Fatalf("%v: Readfile %v err %v\n", kv.me, n, err)
 			}
 			root := kv.Root()
 			rooti := root.RootInode()
@@ -153,7 +154,10 @@ func (kv *Kv) copyShard(shard int, kvd string) {
 			if err != nil {
 				log.Fatalf("Write %v err %v\n", st.Name, err)
 			}
-			kv.Remove(n)
+			err = kv.Remove(n)
+			if err != nil {
+				log.Fatalf("Remove %v err %v\n", st.Name, err)
+			}
 		}
 		return false
 	})
@@ -182,7 +186,10 @@ func (kv *Kv) reconfigure() {
 	if conf.N > 1 {
 		for i, v := range conf.Shards {
 			if v == kv.me && kv.conf.Shards[i] != kv.me {
+				kv.mu.Unlock()
 				kv.copyShard(i, kv.conf.Shards[i])
+				kv.mu.Lock()
+
 			}
 		}
 	}

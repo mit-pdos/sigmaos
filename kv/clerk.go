@@ -78,7 +78,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 		if err == nil {
 			return string(b), err
 		}
-		log.Printf("Get: ReadFile: %v %v\n", n, err)
+		log.Printf("Get: ReadFile: %v (s %v) %v\n", n, shard, err)
 		if err.Error() == ErrWrongKv.Error() {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {

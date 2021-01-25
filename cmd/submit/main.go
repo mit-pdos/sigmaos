@@ -44,15 +44,16 @@ func splitPairs(s string) []fslib.PDep {
 
 func readLambda(line string) (*fslib.Attr, error) {
 	l := strings.Split(line, ",")
-	if len(l) != 5 {
+	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
 	a := &fslib.Attr{}
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])
-	a.PairDep = splitPairs(l[3])
-	a.ExitDep = split(l[4])
+  a.Env = split(l[3])
+	a.PairDep = splitPairs(l[4])
+	a.ExitDep = split(l[5])
 	fmt.Println("a ", a)
 	return a, nil
 }

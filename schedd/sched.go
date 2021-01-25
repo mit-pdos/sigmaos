@@ -115,6 +115,7 @@ func (sd *Sched) spawn(ls string) {
 	l.pid = attr.Pid
 	l.program = attr.Program
 	l.args = attr.Args
+  l.env = attr.Env
 	for _, p := range attr.PairDep {
 		if l.pid != p.Producer {
 			c, ok := sd.ls[p.Producer]

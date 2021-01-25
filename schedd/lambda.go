@@ -18,14 +18,15 @@ type Lambda struct {
 	status  string
 	program string
 	args    []string
+	env     []string
 	consDep map[string]bool // if true, consumer has finished
 	prodDep map[string]bool // if true, producer is running
 	exitDep map[string]bool
 }
 
 func (l *Lambda) String() string {
-	str := fmt.Sprintf("λ pid %v st %v args %v cons %v prod %v exit %v", l.pid,
-		l.status, l.args, l.consDep, l.prodDep, l.exitDep)
+	str := fmt.Sprintf("λ pid %v st %v args %v env %v cons %v prod %v exit %v", l.pid,
+		l.status, l.args, l.env, l.consDep, l.prodDep, l.exitDep)
 	return str
 }
 
@@ -65,7 +66,9 @@ func (l *Lambda) run() error {
 		return err
 	}
 	args := append([]string{l.pid}, l.args...)
+  env := append(os.Environ(), l.env...)
 	cmd := exec.Command(l.program, args...)
+  cmd.Env = env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()

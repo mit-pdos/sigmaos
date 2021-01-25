@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Create a wc mapreduce job:
 # $ ./mk-wc-job.sh | ./bin/submit
@@ -27,10 +27,10 @@ do
     
     args=("$f"  "$i")
     pairs=("(${RPID};${MPID})")
-    echo "$RPID","./bin/fsreader","[${args[@]}]","[${pairs[@]}]","[]"
+    echo "$RPID","./bin/fsreader","[${args[@]}]","[]","[${pairs[@]}]","[]"
 
     args=("name/$i/pipe"  "$i")
-    echo "$MPID","./bin/mr-m-wc","[${args[@]}]","[${pairs[@]}]","[]"
+    echo "$MPID","./bin/mr-m-wc","[${args[@]}]","[]","[${pairs[@]}]","[]"
     mappers+=( ${MPID} )
 
     i=$((i+1))
@@ -42,7 +42,7 @@ while [  $i -lt $N ];
 do
     PID=$((1 + $RANDOM % 1000000))
     args=("name/fs/mr-wc/$i" "name/fs/mr-wc/mr-out" )
-    echo $PID,"./bin/mr-r-wc","[${args[@]}]","[]","[${mappers[@]}]"
+    echo $PID,"./bin/mr-r-wc","[${args[@]}]","[]","[]","[${mappers[@]}]"
     i=$((i+1))
 done
 

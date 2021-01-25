@@ -13,6 +13,7 @@ type Attr struct {
 	Pid     string
 	Program string
 	Args    []string
+  Env     []string
 	PairDep []PDep
 	ExitDep []string
 }

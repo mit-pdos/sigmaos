@@ -78,7 +78,6 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	// XXX get unix user id
 	u, err := user.Current()
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -107,7 +106,7 @@ func splitTarget(target string) (string, string) {
 
 // XXX avoid duplication with fsclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
-	log.Printf("automount %v to %v\n", target, path)
+	// log.Printf("automount %v to %v\n", target, path)
 	server, _ := splitTarget(target)
 	reply, err := npc.clnt.Attach(server, npc.uname, newfid, path)
 	if err != nil {
@@ -127,7 +126,6 @@ func (npc *NpConn) readLink(fid np.Tfid) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// XXX clunk fid
 	npc.delch(fid)
 	return string(reply.Data), nil
 }
@@ -165,8 +163,8 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				}
 				reply.Qids[len(reply.Qids)-1] = qid
 				path = path[todo:]
-				log.Printf("automounted: %v -> %v, %v\n", args.NewFid,
-					target, path)
+				//log.Printf("automounted: %v -> %v, %v\n", args.NewFid,
+				//	target, path)
 				*rets = *reply
 				break
 			} else {

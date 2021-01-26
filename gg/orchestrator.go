@@ -2,9 +2,11 @@ package gg
 
 import (
 //  "errors"
-//  "strings"
 //  "fmt"
+  "strings"
   "log"
+  "path"
+  "io/ioutil"
 
   "ulambda/fslib"
   np "ulambda/ninep"
@@ -15,10 +17,11 @@ const (
   GG_TOP_DIR = "name/gg"
 // XXX eventually make GG dirs configurable, both here & in GG
   GG_DIR = "name/fs/.gg"
-  GG_BLOB_DIR = GG_DIR + "/blobs"
+  GG_BLOB_DIR = GG_DIR +  "/blobs"
 //  GG_DIR = GG_TOP_DIR + ".gg"
-  ORCHESTRATOR = GG_TOP_DIR + "/orchestrator"
+  ORCHESTRATOR = GG_TOP_DIR +  "/orchestrator"
   UPLOAD_SUFFIX = ".upload"
+  SHEBANG_DIRECTIVE = "#!/usr/bin/env gg-force-and-run"
 )
 
 type OrchestratorDev struct {
@@ -55,9 +58,10 @@ func (orcdev *OrchestratorDev) Len() np.Tlength {
 }
 
 type Orchestrator struct {
-  pid     string
-  cwd     string
-  targets []string
+  pid          string
+  cwd          string
+  targets      []string
+  targetHashes []string
   *fslib.FsLibSrv
 }
 
@@ -85,12 +89,28 @@ func (orc *Orchestrator) Exit() {
 func (orc *Orchestrator) Work() {
   orc.setUpDirs()
   for _, target := range orc.targets {
+    // XXX handle non-thunk targets
     db.DPrintf("Spawning upload worker [%v]\n", target);
-    err := orc.spawnUploader(target)
-    if err != nil {
-      db.DPrintf("Error spawning upload worker [%v]: %v\n", target, err);
-    }
+    targetHash := orc.getHash(target)
+    orc.targetHashes = append(orc.targetHashes, targetHash)
+    orc.spawnUploader(targetHash)
+//    upPid := orc.spawnUploader(targetHash)
   }
+}
+
+func (orc *Orchestrator) getHash(target string) string {
+  // XXX support non-placeholders
+  f, err := ioutil.ReadFile(path.Join(orc.cwd, target))
+  contents := string(f)
+  if err != nil {
+    log.Fatalf("Error reading target [%v]: %v\n", target, err)
+  }
+  shebang := strings.Split(contents, "\n")[0]
+  if shebang != SHEBANG_DIRECTIVE {
+    log.Fatalf("Error: not a placeholder")
+  }
+  hash := strings.Split(contents, "\n")[1]
+  return hash
 }
 
 func (orc *Orchestrator) mkdirOpt(path string) {
@@ -102,6 +122,8 @@ func (orc *Orchestrator) mkdirOpt(path string) {
     if err != nil {
       log.Fatalf("Couldn't mkdir %v", GG_DIR)
     }
+  } else {
+    db.DPrintf("Already exists [%v]\n", path)
   }
 }
 
@@ -110,12 +132,19 @@ func (orc *Orchestrator) setUpDirs() {
   orc.mkdirOpt(GG_BLOB_DIR)
 }
 
-func (orc *Orchestrator) spawnUploader(target string) error {
+func (orc *Orchestrator) spawnUploader(targetHash string) string {
   a := fslib.Attr{}
-  a.Pid = target + UPLOAD_SUFFIX
+  a.Pid = targetHash + UPLOAD_SUFFIX
   a.Program = "./bin/fsuploader"
-  a.Args = []string{orc.cwd + "/" + target, GG_BLOB_DIR + "/" + target}
+  a.Args = []string{
+    path.Join(orc.cwd, ".gg", "blobs", targetHash),
+    path.Join(GG_BLOB_DIR, targetHash),
+  }
   a.PairDep = []fslib.PDep{}
   a.ExitDep = nil
-  return orc.Spawn(&a)
+  err := orc.Spawn(&a)
+  if err != nil {
+    log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err);
+  }
+  return a.Pid
 }

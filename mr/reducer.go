@@ -90,9 +90,9 @@ func (r *Reducer) doReduce() {
 	kva := []KeyValue{}
 
 	log.Printf("doReduce %v\n", r.input)
-	r.clnt.ProcessDir(r.input, func(st *np.Stat) bool {
+	r.clnt.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		kva = append(kva, r.processFile(st.Name)...)
-		return false
+		return false, nil
 	})
 
 	sort.Sort(ByKey(kva))

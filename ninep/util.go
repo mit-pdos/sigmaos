@@ -18,3 +18,15 @@ func Join(path []string) string {
 func EndSlash(path string) bool {
 	return path[len(path)-1] == '/'
 }
+
+func IsPathEq(p1, p2 []string) bool {
+	if len(p1) != len(p2) {
+		return false
+	}
+	for i := range p1 {
+		if p1[i] != p2[i] {
+			return false
+		}
+	}
+	return true
+}

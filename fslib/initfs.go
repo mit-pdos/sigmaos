@@ -49,3 +49,11 @@ func InitFs(name string, dev memfs.Dev) (*FsLibSrv, error) {
 	fsd := memfsd.MakeFsd(fs, nil)
 	return InitFsMemFsD(name, fs, fsd, dev)
 }
+
+func (fsl *FsLib) ExitFs(name string) {
+	log.Printf("exitfs %v\n", name)
+	err := fsl.Remove(name)
+	if err != nil {
+		db.DPrintf("Remove failed %v %v\n", name, err)
+	}
+}

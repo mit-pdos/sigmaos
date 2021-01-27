@@ -76,7 +76,6 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, err
 	}
 	kv.FsLibSrv = fsl
-	db.SetDebug(false)
 	kv.Started(kv.pid)
 	kv.conf = kv.readConfig(KVCONFIG)
 	return kv, nil
@@ -121,10 +120,6 @@ func (kv *Kv) Walk(src string, names []string) error {
 		}
 	}
 	return nil
-}
-
-func (kv *Kv) Exit() {
-	kv.Exiting(kv.pid)
 }
 
 func (kv *Kv) readConfig(conffile string) *Config {
@@ -217,24 +212,41 @@ func (kv *Kv) prepare() {
 }
 
 // Caller holds lock
-func (kv *Kv) commit() {
+func (kv *Kv) commit() bool {
 	log.Printf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
 
 	kv.removeShards()
 
 	kv.conf = kv.nextConf
 	kv.nextConf = nil
+
+	for _, kvd := range kv.conf.Shards {
+		if kvd == kv.me {
+			return true
+		}
+	}
+
+	log.Printf("%v: exit\n", kv.me)
+	return false
 }
 
 func (kv *Kv) Work() {
 	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
 	kv.join()
-	for {
+	cont := true
+	for cont {
 		kv.cond.Wait()
 		if kv.nextConf == nil {
 			kv.prepare()
 		} else {
-			kv.commit()
+			cont = kv.commit()
 		}
 	}
+}
+
+func (kv *Kv) Exit() {
+	kv.ExitFs(kv.me)
+	kv.Exiting(kv.pid)
 }

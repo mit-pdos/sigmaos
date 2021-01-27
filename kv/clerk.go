@@ -15,7 +15,7 @@ func key2shard(key string) int {
 	if len(key) > 0 {
 		shard = int(key[0])
 	}
-	shard %= NSHARDS
+	shard %= NSHARD
 	return shard
 }
 
@@ -83,7 +83,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 			return string(b), err
 		}
 		log.Printf("Get: ReadFile: %v (s %v) %v\n", n, shard, err)
-		if err.Error() == ErrWrongKv.Error() {
+		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {
 			time.Sleep(100 * time.Millisecond)

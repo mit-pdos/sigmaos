@@ -43,7 +43,6 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.npc = npclnt.MakeNpClnt(false)
 	fsc.next = 1
 	fsc.uname = uname
-	db.SetDebug(false)
 	rand.Seed(time.Now().UnixNano())
 	return fsc
 }
@@ -68,6 +67,21 @@ func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
 	return fsc.fids[fid].npch
 }
 
+// XXX maybe close channel?
+func (fsc *FsClient) freeFidUnlocked(fid np.Tfid) {
+	_, ok := fsc.fids[fid]
+	if !ok {
+		log.Fatalf("%v: freeFid: fid %v unknown\n", fsc.uname, fid)
+	}
+	delete(fsc.fids, fid)
+}
+
+func (fsc *FsClient) freeFid(fid np.Tfid) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+	fsc.freeFidUnlocked(fid)
+}
+
 func (fsc *FsClient) findfd(nfid np.Tfid) int {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
@@ -88,6 +102,7 @@ func (fsc *FsClient) closefd(fd int) {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
 
+	fsc.freeFidUnlocked(fsc.fds[fd].fid)
 	fsc.fds[fd].fid = np.NoFid
 }
 
@@ -179,12 +194,12 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	return fid1, err
 }
 
-func (fsc *FsClient) closeFid(fid np.Tfid) {
+func (fsc *FsClient) clunkFid(fid np.Tfid) {
 	err := fsc.npch(fid).Clunk(fid)
 	if err != nil {
-		log.Printf("closeFid clunk failed %v\n", err)
+		log.Printf("clunkFid clunk failed %v\n", err)
 	}
-	delete(fsc.fids, fid)
+	fsc.freeFid(fid)
 }
 
 func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
@@ -198,7 +213,7 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	if err != nil {
 		return np.NoFid, 0, err
 	}
-	defer fsc.closeFid(fid1)
+	defer fsc.clunkFid(fid1)
 
 	fid2 := fsc.allocFid()
 	reply, err := fsc.npch(fid1).Walk(fid1, fid2, rest)
@@ -341,14 +356,50 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	return err
 }
 
-func (fsc *FsClient) Remove(name string) error {
-	db.DPrintf("%v: Remove %v\n", fsc.uname, name)
-	fid, err := fsc.walkMany(np.Split(name), np.EndSlash(name))
+// Unmount an automount point and remove slink
+func (fsc *FsClient) umount(path []string) error {
+	db.DPrintf("%v: umount %v\n", fsc.uname, path)
+	if len(path) < 1 {
+		return fmt.Errorf("unmount bad path %v\n", path)
+	}
+	prefix := make([]string, len(path)-1)
+	last := path[len(path)-1:]
+	copy(prefix, path[:len(path)-1])
+	fid, err := fsc.walkMany(prefix, true)
+	if err != nil {
+		return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
+	}
+	fid1 := fsc.allocFid()
+	_, err = fsc.npch(fid).Walk(fid, fid1, last)
 	if err != nil {
 		return err
 	}
-	err = fsc.npch(fid).Remove(fid)
-	return err
+	err = fsc.npch(fid).Remove(fid1)
+	if err != nil {
+		return err
+	}
+	fid2, err := fsc.mount.del(path)
+	if err != nil {
+		log.Fatalf("del failed\n")
+	}
+	fsc.freeFid(fid2)
+	return nil
+}
+
+// XXX free fid?
+func (fsc *FsClient) Remove(name string) error {
+	db.DPrintf("%v: Remove %v\n", fsc.uname, name)
+	path := np.Split(name)
+	_, rest := fsc.mount.resolve(path)
+	if len(rest) == 0 {
+		return fsc.umount(path)
+	} else {
+		fid, err := fsc.walkMany(path, np.EndSlash(name))
+		if err != nil {
+			return err
+		}
+		return fsc.npch(fid).Remove(fid)
+	}
 }
 
 func (fsc *FsClient) Stat(name string) (*np.Stat, error) {

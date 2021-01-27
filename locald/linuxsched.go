@@ -5,14 +5,15 @@ import (
 	"unsafe"
 )
 
+// NCPU is the maximum number of cores supported.
 const NCPU int = 1024
 
-// CPUMask is a mask of cores passed to the Linux scheduler
+// CPUMask is a mask of cores passed to the Linux scheduler.
 type CPUMask struct {
 	mask [(NCPU + 7) / 8]byte
 }
 
-// Returns true if the core is set in the mask.
+// Test returns true if the core is set in the mask.
 func (m *CPUMask) Test(core int) bool {
 	if core > NCPU {
 		panic("core too high")
@@ -22,7 +23,7 @@ func (m *CPUMask) Test(core int) bool {
 	return m.mask[idx] & (1 << bit) != 0
 }
 
-// Sets a core in the mask.
+// Set sets a core in the mask.
 func (m *CPUMask) Set(core int) {
 	if core > NCPU {
 		panic("core too high")
@@ -32,7 +33,7 @@ func (m *CPUMask) Set(core int) {
 	m.mask[idx] |= (1 << bit)
 }
 
-// Clears a core in the mask.
+// Clear clears a core in the mask.
 func (m *CPUMask) Clear(core int) {
 	if core > NCPU {
 		panic("core too high")
@@ -42,7 +43,7 @@ func (m *CPUMask) Clear(core int) {
 	m.mask[idx] &= ^(1 << bit)
 }
 
-// Clears all cores in the mask.
+// ClearAll clears all cores in the mask.
 func (m *CPUMask) ClearAll() {
 	for i := range m.mask {
 		m.mask[i] = 0

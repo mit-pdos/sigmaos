@@ -166,6 +166,8 @@ func (dir *Dir) create(inode *Inode, name string) error {
 	return dir.createLocked(inode, name)
 }
 
+// XXX doesn't check if directory is empty; should make
+// the caller responsible for that?
 func (dir *Dir) remove(name string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()

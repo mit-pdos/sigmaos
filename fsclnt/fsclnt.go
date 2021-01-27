@@ -57,6 +57,10 @@ func (fsc *FsClient) String() string {
 	return str
 }
 
+func (fsc *FsClient) Uname() string {
+	return fsc.uname
+}
+
 func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
@@ -144,7 +148,7 @@ func (fsc *FsClient) Close(fd int) error {
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
 func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
-	reply, err := fsc.npc.Attach(server, fsc.uname, fid, p)
+	reply, err := fsc.npc.Attach(server, fsc.Uname(), fid, p)
 	if err != nil {
 		return nil, err
 	}

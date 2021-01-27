@@ -94,12 +94,12 @@ func (root *Root) Rename(tid int, old []string, new []string) error {
 	if err != nil {
 		return err
 	}
-	db.DPrintf("Lookup old %v %v %v\n", olddir, ino, err)
+	db.DPrintf("%v: Lookup old %v %v %v\n", tid, olddir, ino, err)
 	_, i, err := rootino.LookupPath(tid, new[:len(new)-1])
 	if err != nil {
 		return err
 	}
-	db.DPrintf("Lookup new %v %v\n", i, err)
+	db.DPrintf("%v: Lookup new %v %v\n", tid, i, err)
 	if !i.IsDir() {
 		return errors.New("Dst is not a directory")
 	}
@@ -108,21 +108,29 @@ func (root *Root) Rename(tid int, old []string, new []string) error {
 	lockOrdered(olddir, newdir)
 	defer unlockOrdered(tid, olddir, newdir)
 
-	// XXX should check if oldname still exists, newname doesn't exist, etc.
+	// XXX should check if oldname still exists, etc.
 
-	db.DPrintf("remove %v from %v\n", oldname, olddir)
+	// XXX maybe use inode.Remove()
+	db.DPrintf("%v: remove %v from %v\n", tid, oldname, olddir)
 	err = olddir.removeLocked(oldname)
 	if err != nil {
-		return err
+		log.Fatalf("%v: remove locked %v\n", tid, newname)
 	}
-
-	db.DPrintf("remove succeeded\n")
+	i, err = newdir.lookupLocked(newname)
+	if err == nil {
+		err = newdir.removeLocked(newname)
+		if err != nil {
+			log.Fatalf("%v: remove locked %v\n", tid, newname)
+		}
+		root.freeInum(i.Inum)
+	}
 
 	err = newdir.createLocked(ino, newname)
 	if err != nil {
-		log.Print("Rename createLocked: ", err)
+		log.Fatalf("%v: Rename createLocked: %v\n", tid, err)
+		return err
 	}
 
-	db.DPrintf("rename succeeded %v\n", newdir)
+	db.DPrintf("%v: Rename succeeded %v\n", tid, newdir)
 	return nil
 }

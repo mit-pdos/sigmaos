@@ -61,14 +61,6 @@ func (cons *Console) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
 
 func (cons *Console) Len() np.Tlength { return 0 }
 
-func (cons *Consoled) FsInit() {
-	fs := cons.memfsd.Root()
-	_, err := fs.MkNod(cons.Uname(), fs.RootInode(), "console", makeConsole())
-	if err != nil {
-		log.Fatal("Create error: ", err)
-	}
-}
-
 func main() {
 	cons := makeConsoled()
 	<-cons.done

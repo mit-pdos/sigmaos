@@ -13,11 +13,11 @@ type Named struct {
 }
 
 func makeNamed(debug bool) *Named {
-	memfs := memfs.MakeRoot(false)
+	memfs := memfs.MakeRoot()
 	nd := &Named{}
 	nd.done = make(chan bool)
-	nd.fsd = memfsd.MakeFsd(debug, memfs, nil)
-	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111", debug)
+	nd.fsd = memfsd.MakeFsd(memfs, nil)
+	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111")
 	return nd
 }
 

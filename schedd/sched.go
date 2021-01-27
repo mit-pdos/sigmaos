@@ -59,7 +59,7 @@ type Sched struct {
 	ls   map[string]*Lambda
 }
 
-func MakeSchedd(debug bool) *Sched {
+func MakeSchedd() *Sched {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
 	fsl, err := fslib.InitFs(fslib.SCHED, &SchedDev{sd})
@@ -70,7 +70,6 @@ func MakeSchedd(debug bool) *Sched {
 	sd.FsLibSrv = fsl
 	sd.load = 0
 	sd.ls = make(map[string]*Lambda)
-	db.SetDebug(debug)
 	return sd
 }
 

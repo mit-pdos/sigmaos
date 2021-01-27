@@ -12,7 +12,7 @@ type NpClnt struct {
 
 func MakeNpClnt(debug bool) *NpClnt {
 	npc := &NpClnt{}
-	npc.cm = makeChanMgr(debug)
+	npc.cm = makeChanMgr()
 	return npc
 }
 

@@ -58,7 +58,7 @@ type Fsd struct {
 	nextId int
 }
 
-func MakeFsd(debug bool, fs *memfs.Root, w Walker) *Fsd {
+func MakeFsd(fs *memfs.Root, w Walker) *Fsd {
 	fsd := &Fsd{}
 	fsd.fs = fs
 	fsd.walk = w

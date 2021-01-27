@@ -27,7 +27,7 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader: %v\n", args)
 
-	fs := memfs.MakeRoot(false)
+	fs := memfs.MakeRoot()
 	pipe, err := fs.MkPipe(fs.RootInode(), "pipe")
 	if err != nil {
 		log.Fatal("Create error: ", err)

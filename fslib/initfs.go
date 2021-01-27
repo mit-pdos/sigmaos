@@ -17,7 +17,7 @@ type FsLibSrv struct {
 }
 
 func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
-	srv := npsrv.MakeNpServer(memfsd, ":0", false)
+	srv := npsrv.MakeNpServer(memfsd, ":0")
 	fls := &FsLibSrv{MakeFsLib(name), memfsd, srv}
 	err := fls.Remove(name)
 	if err != nil {
@@ -40,12 +40,12 @@ func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.
 }
 
 func InitFsMemFs(name string, memfs *memfs.Root, dev memfs.Dev) (*FsLibSrv, error) {
-	memfsd := memfsd.MakeFsd(false, memfs, nil)
+	memfsd := memfsd.MakeFsd(memfs, nil)
 	return InitFsMemFsD(name, memfs, memfsd, dev)
 }
 
 func InitFs(name string, dev memfs.Dev) (*FsLibSrv, error) {
-	fs := memfs.MakeRoot(false)
-	fsd := memfsd.MakeFsd(false, fs, nil)
+	fs := memfs.MakeRoot()
+	fsd := memfsd.MakeFsd(fs, nil)
 	return InitFsMemFsD(name, fs, fsd, dev)
 }

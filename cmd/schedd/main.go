@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	ld := schedd.MakeSchedd(false)
+	ld := schedd.MakeSchedd()
 	ld.Scheduler()
 }

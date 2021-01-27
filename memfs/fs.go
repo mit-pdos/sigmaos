@@ -14,13 +14,12 @@ type Root struct {
 	nextInum Tinum
 }
 
-func MakeRoot(d bool) *Root {
+func MakeRoot() *Root {
 	r := Root{}
 	r.inode = makeInode(np.DMDIR, RootInum, makeDir())
 	r.nextInum = RootInum + 1
 	dir := r.inode.Data.(*Dir)
 	dir.init(r.inode)
-	db.SetDebug(d)
 	return &r
 }
 

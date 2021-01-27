@@ -69,8 +69,8 @@ func MakeKv(args []string) (*Kv, error) {
 	kv.pid = args[0]
 	kv.me = KV + "/" + kv.pid
 
-	fs := memfs.MakeRoot(false)
-	fsd := memfsd.MakeFsd(false, fs, kv)
+	fs := memfs.MakeRoot()
+	fsd := memfsd.MakeFsd(fs, kv)
 	fsl, err := fslib.InitFsMemFsD(kv.me, fs, fsd, &KvDev{kv})
 	if err != nil {
 		return nil, err

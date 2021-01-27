@@ -5,4 +5,4 @@
 targets=$@
 
 SPID=$((1 + $RANDOM % 1000000))
-echo $SPID,"./bin/gg","[$(pwd) ${targets}]","[]","[]",""
+echo $SPID,"./bin/gg-orchestrator","[$(pwd) ${targets}]","[]","[]",""

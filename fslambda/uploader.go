@@ -22,7 +22,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
   up.src = args[1]
   up.dest = args[2]
   // XXX Should I use a more descriptive uname?
-  fls := fslib.MakeFsLib("upload-worker")
+  fls := fslib.MakeFsLib("uploader")
   up.FsLib = fls
   db.SetDebug(debug)
   up.Started(up.pid)
@@ -30,7 +30,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
 }
 
 func (up *Uploader) Work() {
-  db.DPrintf("Uploading %v to %v\n", up.src, up.dest);
+  db.DPrintf("Uploading [%v] to [%v]\n", up.src, up.dest);
   contents, err := ioutil.ReadFile(up.src)
   if err != nil {
     log.Fatalf("Read file [%v] error: %v\n", up.src, err)

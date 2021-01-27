@@ -32,7 +32,7 @@ func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	} else if strings.HasPrefix(t, "Started") {
 		sdev.sd.started(t[len("Started "):])
 	} else if strings.HasPrefix(t, "Exiting") {
-		sdev.sd.exiting(t[len("Exiting "):])
+		sdev.sd.exiting(strings.TrimSpace(t[len("Exiting "):]))
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}

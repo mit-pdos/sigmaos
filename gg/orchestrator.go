@@ -21,6 +21,7 @@ const (
 //  GG_DIR = GG_TOP_DIR + ".gg"
   ORCHESTRATOR = GG_TOP_DIR +  "/orchestrator"
   UPLOAD_SUFFIX = ".upload"
+  EXECUTOR_SUFFIX = ".executor"
   SHEBANG_DIRECTIVE = "#!/usr/bin/env gg-force-and-run"
 )
 
@@ -88,17 +89,38 @@ func (orc *Orchestrator) Exit() {
 
 func (orc *Orchestrator) Work() {
   orc.setUpDirs()
+  executables := orc.getExecutableDependencies()
+  exUpPids := orc.uploadExecutableDependencies(executables)
   for _, target := range orc.targets {
     // XXX handle non-thunk targets
     db.DPrintf("Spawning upload worker [%v]\n", target);
-    targetHash := orc.getHash(target)
+    targetHash := orc.getTargetHash(target)
     orc.targetHashes = append(orc.targetHashes, targetHash)
-    orc.spawnUploader(targetHash)
-//    upPid := orc.spawnUploader(targetHash)
+    upPids := []string{orc.spawnUploader(targetHash)}
+    upPids = append(upPids, exUpPids...)
+    orc.spawnExecutor(targetHash, upPids)
   }
 }
 
-func (orc *Orchestrator) getHash(target string) string {
+func (orc *Orchestrator) uploadExecutableDependencies(execs []string) []string {
+  pids := []string{}
+  for _, exec := range execs {
+    pids = append(pids, orc.spawnUploader(exec))
+  }
+  return pids
+}
+
+func (orc *Orchestrator) getExecutableDependencies() []string {
+  execsPath := path.Join(orc.cwd, ".gg", "blobs", "executables.txt")
+  f, err := ioutil.ReadFile(execsPath)
+  if err != nil {
+    log.Fatalf("Error reading exec dependencies: %v\n", err)
+  }
+  trimmed_f := strings.TrimRight(string(f), "\n")
+  return strings.Split(trimmed_f, "\n")
+}
+
+func (orc *Orchestrator) getTargetHash(target string) string {
   // XXX support non-placeholders
   f, err := ioutil.ReadFile(path.Join(orc.cwd, target))
   contents := string(f)
@@ -140,6 +162,7 @@ func (orc *Orchestrator) spawnUploader(targetHash string) string {
     path.Join(orc.cwd, ".gg", "blobs", targetHash),
     path.Join(GG_BLOB_DIR, targetHash),
   }
+  a.Env = []string{}
   a.PairDep = []fslib.PDep{}
   a.ExitDep = nil
   err := orc.Spawn(&a)
@@ -148,3 +171,28 @@ func (orc *Orchestrator) spawnUploader(targetHash string) string {
   }
   return a.Pid
 }
+
+func (orc *Orchestrator) spawnExecutor(targetHash string, upPids []string) string {
+  a := fslib.Attr{}
+  a.Pid = targetHash + EXECUTOR_SUFFIX
+  a.Program = "gg-execute" // XXX
+  a.Args = []string{
+    "--timelog",
+    "--ninep",
+    targetHash,
+  }
+  a.Env = []string{
+    "GG_STORAGE_URI=9p://mnt/9p/fs GG_DIR=/mnt/9p/fs/.gg",
+    "GG_DIR=/mnt/9p/fs/.gg", // XXX Make this configurable
+    "GG_VERBOSE=1",
+  }
+  a.PairDep = []fslib.PDep{}
+  a.ExitDep = upPids
+  err := orc.Spawn(&a)
+  if err != nil {
+    log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err);
+  }
+  return a.Pid
+}
+
+//echo $SPID,"gg-execute","[--timelog --ninep ${hashes[@]}]","[GG_STORAGE_URI=9p://mnt/9p/fs GG_DIR=/mnt/9p/fs/.gg]","",""

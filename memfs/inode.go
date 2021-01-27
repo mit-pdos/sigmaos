@@ -122,7 +122,7 @@ func (inode *Inode) Stat() *np.Stat {
 	return stat
 }
 
-func (inode *Inode) Create(tid int, root *Root, t np.Tperm, name string) (*Inode, error) {
+func (inode *Inode) Create(uname string, root *Root, t np.Tperm, name string) (*Inode, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
@@ -141,7 +141,7 @@ func (inode *Inode) Create(tid int, root *Root, t np.Tperm, name string) (*Inode
 			dn.init(newi)
 
 		}
-		db.DPrintf("%d: create %v in %v -> %v\n", tid, name, inode, newi)
+		db.DPrintf("%d: create %v in %v -> %v\n", uname, name, inode, newi)
 		inode.Mtime = time.Now().Unix()
 		return newi, dir.create(newi, name)
 	} else {
@@ -149,8 +149,8 @@ func (inode *Inode) Create(tid int, root *Root, t np.Tperm, name string) (*Inode
 	}
 }
 
-func (inode *Inode) Walk(tid int, path []string) ([]*Inode, []string, error) {
-	db.DPrintf("%d: Walk %v at %v\n", tid, path, inode)
+func (inode *Inode) Walk(uname string, path []string) ([]*Inode, []string, error) {
+	db.DPrintf("%d: Walk %v at %v\n", uname, path, inode)
 	inodes := []*Inode{inode}
 	if len(path) == 0 {
 		return inodes, nil, nil
@@ -159,7 +159,7 @@ func (inode *Inode) Walk(tid int, path []string) ([]*Inode, []string, error) {
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
-	inodes, rest, err := dir.namei(tid, path, inodes)
+	inodes, rest, err := dir.namei(uname, path, inodes)
 	if err == nil {
 		return inodes, rest, err
 		// switch inodes[len(inodes)-1].PermT {
@@ -177,12 +177,12 @@ func (inode *Inode) Walk(tid int, path []string) ([]*Inode, []string, error) {
 
 // Lookup a file/directory.  Return parent and inode for file/directory.
 // If no parent, return.
-func (inode *Inode) LookupPath(tid int, path []string) (*Dir, *Inode, error) {
-	inodes, rest, err := inode.Walk(tid, path)
+func (inode *Inode) LookupPath(uname string, path []string) (*Dir, *Inode, error) {
+	inodes, rest, err := inode.Walk(uname, path)
 	if err != nil {
 		return nil, nil, err
 	}
-	db.DPrintf("%d: Walk -> %v rest %v err %v\n", tid, inodes, rest, err)
+	db.DPrintf("%d: Walk -> %v rest %v err %v\n", uname, inodes, rest, err)
 	if len(rest) != 0 {
 		return nil, nil, errors.New("Unknown name")
 	}
@@ -200,8 +200,8 @@ func (inode *Inode) LookupPath(tid int, path []string) (*Dir, *Inode, error) {
 	}
 }
 
-func (inode *Inode) Remove(tid int, root *Root, path []string) error {
-	dir, ino, err := inode.LookupPath(tid, path)
+func (inode *Inode) Remove(uname string, root *Root, path []string) error {
+	dir, ino, err := inode.LookupPath(uname, path)
 	db.DPrintf("Remove %v dir %v %v %v\n", path, dir, ino, err)
 	if err != nil {
 		return err

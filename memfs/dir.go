@@ -88,7 +88,7 @@ func (dir *Dir) Len() np.Tlength {
 	return dir.lenLocked()
 }
 
-func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []string, error) {
+func (dir *Dir) namei(uname string, path []string, inodes []*Inode) ([]*Inode, []string, error) {
 	var inode *Inode
 	var err error
 
@@ -98,7 +98,7 @@ func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []stri
 	}
 	inode, err = dir.lookupLocked(path[0])
 	if err != nil {
-		db.DPrintf("namei %v unknown %v", dir, path)
+		db.DPrintf("%v: namei %v unknown %v", uname, dir, path)
 		dir.mu.Unlock()
 		return nil, nil, err
 	}
@@ -111,7 +111,7 @@ func (dir *Dir) namei(tid int, path []string, inodes []*Inode) ([]*Inode, []stri
 		}
 		d := inode.Data.(*Dir)
 		dir.mu.Unlock() // for "."
-		return d.namei(tid, path[1:], inodes)
+		return d.namei(uname, path[1:], inodes)
 	} else {
 		db.DPrintf("namei %v %v -> %v %v", path, dir, inodes, path[1:])
 		dir.mu.Unlock()

@@ -28,12 +28,13 @@ func MakeReader(args []string) (*Reader, error) {
 	log.Printf("MakeReader: %v\n", args)
 
 	fs := memfs.MakeRoot()
-	pipe, err := fs.MkPipe(fs.RootInode(), "pipe")
+	n := "name/" + args[2]
+	pipe, err := fs.MkPipe(n, fs.RootInode(), "pipe")
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
 
-	fsl, err := fslib.InitFsMemFs("name/"+args[2], fs, nil)
+	fsl, err := fslib.InitFsMemFs(n, fs, nil)
 	if err != nil {
 		return nil, err
 	}

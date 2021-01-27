@@ -28,7 +28,6 @@ type NpConn struct {
 	mu    sync.Mutex // for Fids
 	memfs *memfs.Root
 	conn  net.Conn
-	id    int
 	Fids  map[np.Tfid]*Fid
 	uname string
 	walk  Walker
@@ -42,20 +41,18 @@ func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 }
 
 // XXX better plan for overload open/create/..??
-func makeNpConn(root *memfs.Root, conn net.Conn, id int, w Walker) *NpConn {
+func makeNpConn(root *memfs.Root, conn net.Conn, w Walker) *NpConn {
 	npc := &NpConn{}
 	npc.memfs = root
 	npc.conn = conn
-	npc.id = id
 	npc.Fids = make(map[np.Tfid]*Fid)
 	npc.walk = w
 	return npc
 }
 
 type Fsd struct {
-	fs     *memfs.Root
-	walk   Walker
-	nextId int
+	fs   *memfs.Root
+	walk Walker
 }
 
 func MakeFsd(fs *memfs.Root, w Walker) *Fsd {
@@ -70,8 +67,7 @@ func (fsd *Fsd) Root() *memfs.Root {
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	fsd.nextId += 1
-	clnt := makeNpConn(fsd.fs, conn, fsd.nextId, fsd.walk)
+	clnt := makeNpConn(fsd.fs, conn, fsd.walk)
 	return clnt
 }
 
@@ -115,7 +111,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 	}
-	inodes, rest, err := fid.ino.Walk(npc.id, args.Wnames)
+	inodes, rest, err := fid.ino.Walk(npc.uname, args.Wnames)
 	if err != nil {
 		return np.ErrNotfound
 	}
@@ -156,7 +152,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 	}
-	inode, err := fid.ino.Create(npc.id, npc.memfs, args.Perm, names[0])
+	inode, err := fid.ino.Create(npc.uname, npc.memfs, args.Perm, names[0])
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -217,7 +213,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	err := root.Remove(npc.id, npc.memfs, fid.path)
+	err := root.Remove(npc.uname, npc.memfs, fid.path)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -248,7 +244,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		dst := make([]string, len(fid.path))
 		copy(dst, fid.path)
 		dst = append(dst[:len(dst)-1], np.Split(args.Stat.Name)...)
-		err := npc.memfs.Rename(npc.id, fid.path, dst)
+		err := npc.memfs.Rename(npc.uname, fid.path, dst)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
@@ -266,7 +262,7 @@ func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	inode, err := fid.ino.Create(npc.id, npc.memfs, np.DMNAMEDPIPE, args.Name)
+	inode, err := fid.ino.Create(npc.uname, npc.memfs, np.DMNAMEDPIPE, args.Name)
 	if err != nil {
 		return np.ErrCreatenondir
 	}

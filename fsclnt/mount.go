@@ -23,8 +23,8 @@ func makeMount() *Mount {
 }
 
 // add path, in order of longest path first
-func (mnt *Mount) add(path []string, tid np.Tfid) {
-	point := &Point{path, tid}
+func (mnt *Mount) add(path []string, fid np.Tfid) {
+	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)

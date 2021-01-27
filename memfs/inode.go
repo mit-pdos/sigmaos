@@ -141,7 +141,7 @@ func (inode *Inode) Create(uname string, root *Root, t np.Tperm, name string) (*
 			dn.init(newi)
 
 		}
-		db.DPrintf("%d: create %v in %v -> %v\n", uname, name, inode, newi)
+		db.DPrintf("%v: create %v in %v -> %v\n", uname, name, inode, newi)
 		inode.Mtime = time.Now().Unix()
 		return newi, dir.create(newi, name)
 	} else {
@@ -150,7 +150,7 @@ func (inode *Inode) Create(uname string, root *Root, t np.Tperm, name string) (*
 }
 
 func (inode *Inode) Walk(uname string, path []string) ([]*Inode, []string, error) {
-	db.DPrintf("%d: Walk %v at %v\n", uname, path, inode)
+	db.DPrintf("%v: Walk %v at %v\n", uname, path, inode)
 	inodes := []*Inode{inode}
 	if len(path) == 0 {
 		return inodes, nil, nil
@@ -182,7 +182,7 @@ func (inode *Inode) LookupPath(uname string, path []string) (*Dir, *Inode, error
 	if err != nil {
 		return nil, nil, err
 	}
-	db.DPrintf("%d: Walk -> %v rest %v err %v\n", uname, inodes, rest, err)
+	db.DPrintf("%v: Walk -> %v rest %v err %v\n", uname, inodes, rest, err)
 	if len(rest) != 0 {
 		return nil, nil, errors.New("Unknown name")
 	}

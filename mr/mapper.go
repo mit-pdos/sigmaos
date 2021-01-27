@@ -27,7 +27,6 @@ type Mapper struct {
 }
 
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
-	db.SetDebug(false)
 	m := &Mapper{}
 	m.clnt = fslib.MakeFsLib("mapper")
 	m.mapf = mapf

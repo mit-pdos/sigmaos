@@ -41,8 +41,9 @@ func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.
-func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) bool) (bool, error) {
+func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, error) {
 	stopped := false
+	var err error
 	fd, err := fl.Open(dir, np.OREAD)
 	if err != nil {
 		log.Fatal("Opendir error ", err)
@@ -53,17 +54,17 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) bool) (bool, error) {
 			break
 		}
 		if err != nil {
-			return false, err
+			break
 		}
 		for _, st := range dirents {
-			stopped = f(st)
+			stopped, err = f(st)
 			if stopped {
 				break
 			}
 		}
 	}
 	fl.Close(fd)
-	return stopped, nil
+	return stopped, err
 }
 
 func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
@@ -84,4 +85,21 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
 	}
 	fl.Close(fd)
 	return dirents, nil
+}
+
+func (fl *FsLib) CopyDir(src, dst string) error {
+	fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
+		s := src + "/" + st.Name
+		d := dst + "/" + st.Name
+		b, err := fl.ReadFile(s)
+		if err != nil {
+			return true, err
+		}
+		err = fl.MakeFile(d, b)
+		if err != nil {
+			return true, err
+		}
+		return false, nil
+	})
+	return nil
 }

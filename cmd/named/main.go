@@ -12,7 +12,7 @@ type Named struct {
 	srv  *npsrv.NpServer
 }
 
-func makeNamed(debug bool) *Named {
+func makeNamed() *Named {
 	memfs := memfs.MakeRoot()
 	nd := &Named{}
 	nd.done = make(chan bool)
@@ -22,6 +22,6 @@ func makeNamed(debug bool) *Named {
 }
 
 func main() {
-	nd := makeNamed(false)
+	nd := makeNamed()
 	<-nd.done
 }

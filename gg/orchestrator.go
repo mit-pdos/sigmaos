@@ -1,8 +1,6 @@
 package gg
 
 import (
-//  "errors"
-//  "fmt"
   "strings"
   "log"
   "path"
@@ -22,8 +20,14 @@ const (
   ORCHESTRATOR = GG_TOP_DIR +  "/orchestrator"
   UPLOAD_SUFFIX = ".upload"
   EXECUTOR_SUFFIX = ".executor"
+  OUTPUT_HANDLER_SUFFIX = ".output-handler"
+  THUNK_OUTPUTS_SUFFIX = ".thunk-outputs"
   SHEBANG_DIRECTIVE = "#!/usr/bin/env gg-force-and-run"
 )
+
+type ExecutorLauncher interface {
+  Spawn(*fslib.Attr) error
+}
 
 type OrchestratorDev struct {
   orc *Orchestrator
@@ -98,7 +102,8 @@ func (orc *Orchestrator) Work() {
     orc.targetHashes = append(orc.targetHashes, targetHash)
     upPids := []string{orc.spawnUploader(targetHash)}
     upPids = append(upPids, exUpPids...)
-    orc.spawnExecutor(targetHash, upPids)
+    exPid := spawnExecutor(orc, targetHash, upPids)
+    spawnThunkOutputHandler(orc, exPid, targetHash)
   }
 }
 
@@ -116,7 +121,7 @@ func (orc *Orchestrator) getExecutableDependencies() []string {
   if err != nil {
     log.Fatalf("Error reading exec dependencies: %v\n", err)
   }
-  trimmed_f := strings.TrimRight(string(f), "\n")
+  trimmed_f := strings.TrimSpace(string(f))
   return strings.Split(trimmed_f, "\n")
 }
 
@@ -172,12 +177,11 @@ func (orc *Orchestrator) spawnUploader(targetHash string) string {
   return a.Pid
 }
 
-func (orc *Orchestrator) spawnExecutor(targetHash string, upPids []string) string {
+func spawnExecutor(launch ExecutorLauncher, targetHash string, upPids []string) string {
   a := fslib.Attr{}
   a.Pid = targetHash + EXECUTOR_SUFFIX
-  a.Program = "gg-execute" // XXX
+  a.Program = "gg-execute"
   a.Args = []string{
-    "--timelog",
     "--ninep",
     targetHash,
   }
@@ -188,11 +192,28 @@ func (orc *Orchestrator) spawnExecutor(targetHash string, upPids []string) strin
   }
   a.PairDep = []fslib.PDep{}
   a.ExitDep = upPids
-  err := orc.Spawn(&a)
+  err := launch.Spawn(&a)
   if err != nil {
-    log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err);
+    log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err);
   }
   return a.Pid
 }
 
-//echo $SPID,"gg-execute","[--timelog --ninep ${hashes[@]}]","[GG_STORAGE_URI=9p://mnt/9p/fs GG_DIR=/mnt/9p/fs/.gg]","",""
+func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash string) string {
+  a := fslib.Attr{}
+  a.Pid = thunkHash + OUTPUT_HANDLER_SUFFIX
+  a.Program = "./bin/gg-thunk-output-handler"
+  a.Args = []string{
+    thunkHash,
+  }
+  a.Env = []string{}
+  a.PairDep = []fslib.PDep{}
+  a.ExitDep = []string{
+    exPid,
+  }
+  err := launch.Spawn(&a)
+  if err != nil {
+    log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err);
+  }
+  return a.Pid
+}

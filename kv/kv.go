@@ -96,12 +96,7 @@ func (kv *Kv) Walk(src string, names []string) error {
 	db.DPrintf("%v: Walk %v %v\n", kv.me, src, names)
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
-	if len(names) == 0 { // so that ls in root directory works
-		return nil
-	}
-	if names[0] == "dev" {
-		return nil
-	}
+
 	if strings.HasPrefix(src, "clerk/") &&
 		strings.Contains(names[len(names)-1], "-") {
 		if kv.nextConf != nil {

@@ -26,7 +26,9 @@ type KvDev struct {
 func (kvdev *KvDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	log.Printf("KvDev.write %v\n", t)
-	if strings.HasPrefix(t, "Reconfigure") {
+	if strings.HasPrefix(t, "Prepare") {
+		kvdev.kv.cond.Signal()
+	} else if strings.HasPrefix(t, "Commit") {
 		kvdev.kv.cond.Signal()
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
@@ -51,10 +53,10 @@ type Kv struct {
 	mu   sync.Mutex
 	cond *sync.Cond
 	*fslib.FsLibSrv
-	pid         string
-	me          string
-	conf        *Config
-	inRebalance bool
+	pid      string
+	me       string
+	conf     *Config
+	nextConf *Config
 }
 
 func MakeKv(args []string) (*Kv, error) {
@@ -76,36 +78,37 @@ func MakeKv(args []string) (*Kv, error) {
 	kv.FsLibSrv = fsl
 	db.SetDebug(false)
 	kv.Started(kv.pid)
-	kv.conf = kv.readConfig()
+	kv.conf = kv.readConfig(KVCONFIG)
 	return kv, nil
 }
 
-func (kv *Kv) join() {
+func (kv *Kv) join() error {
 	sh := SHARDER + "/dev"
 	log.Printf("Join %v\n", kv.me)
 	err := kv.WriteFile(sh, []byte("Join "+kv.me))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
 	}
+	return err
 }
 
-// Interposes on memfsd's walk
+// Interposes on memfsd's walk to check that clerk and I run in same config
 func (kv *Kv) Walk(src string, names []string) error {
-	// log.Printf("%v: Walk %v %v\n", kv.me, src, names)
+	db.DPrintf("%v: Walk %v %v\n", kv.me, src, names)
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
-
 	if len(names) == 0 { // so that ls in root directory works
 		return nil
 	}
 	if names[0] == "dev" {
 		return nil
 	}
-	if strings.HasPrefix(src, "clerk/") {
-		if kv.inRebalance {
+	if strings.HasPrefix(src, "clerk/") &&
+		strings.Contains(names[len(names)-1], "-") {
+		if kv.nextConf != nil {
 			return ErrRetry
 		} else {
-			p := strings.Split(names[0], "-")
+			p := strings.Split(names[len(names)-1], "-")
 			if p[0] != strconv.Itoa(kv.conf.N) {
 				return ErrWrongKv
 			}
@@ -113,7 +116,7 @@ func (kv *Kv) Walk(src string, names []string) error {
 			if kv.conf.Shards[shard] != kv.me {
 				return ErrWrongKv
 			}
-			names[0] = p[1]
+			names[len(names)-1] = p[1]
 			return nil
 		}
 	}
@@ -124,78 +127,103 @@ func (kv *Kv) Exit() {
 	kv.Exiting(kv.pid)
 }
 
-func (kv *Kv) readConfig() *Config {
+func (kv *Kv) readConfig(conffile string) *Config {
 	conf := Config{}
-	err := kv.ReadFileJson(KVCONFIG, &conf)
+	err := kv.ReadFileJson(conffile, &conf)
 	if err != nil {
 		log.Fatalf("ReadFileJson: %v\n", err)
 	}
 	return &conf
 }
 
-func (kv *Kv) copyShard(shard int, kvd string) {
-	kv.ProcessDir(kvd, func(st *np.Stat) bool {
-		s := key2shard(st.Name)
-		if s == shard {
-			log.Printf("%v: copy key %v (s %v) from %v\n", kv.me,
-				st.Name, s, kvd)
-			n := kvd + "/" + st.Name
-			b, err := kv.ReadFile(n)
-			if err != nil {
-				log.Fatalf("%v: Readfile %v err %v\n", kv.me, n, err)
-			}
-			root := kv.Root()
-			rooti := root.RootInode()
-			newi, err := rooti.Create(0, root, 0700, st.Name)
-			if err != nil {
-				log.Fatalf("Create %v err %v\n", st.Name, err)
-			}
-			_, err = newi.Write(0, b)
-			if err != nil {
-				log.Fatalf("Write %v err %v\n", st.Name, err)
-			}
-			err = kv.Remove(n)
-			if err != nil {
-				log.Fatalf("Remove %v err %v\n", st.Name, err)
-			}
-		}
-		return false
-	})
-
+func shardPath(kvd string, shard int) string {
+	return kvd + "/" + strconv.Itoa(shard)
 }
 
-// XXX maybe wait until all keys have been copied or don't accept
-// another refresh until copier is done (which is not the case because
-// the sharder won't initiate another refresh until every KVs is done
-// refreshing).
-func (kv *Kv) resume() {
+func keyPath(kvd string, shard int, k string) string {
+	d := shardPath(kvd, shard)
+	return d + "/" + k
+}
+
+// make directories for new shards i should hold. cannot hold lock on
+// kv, since Walk() must take it.
+func (kv *Kv) makeShardDirs() {
+	for s, kvd := range kv.nextConf.Shards {
+		if kvd == kv.me && kv.conf.Shards[s] != kv.me {
+			d := shardPath(kv.me, s)
+			err := kv.Mkdir(d, 0777)
+			if err != nil {
+				log.Fatalf("%v: moveShards: mkdir %v err %v\n",
+					kv.me, d, err)
+			}
+		}
+	}
+}
+
+// copy new shards to me.
+func (kv *Kv) moveShards() {
+	for s, kvd := range kv.conf.Shards {
+		if kvd != kv.me && kv.nextConf.Shards[s] == kv.me {
+			src := shardPath(kvd, s)
+			dst := shardPath(kv.me, s)
+			err := kv.CopyDir(src, dst)
+			if err != nil {
+				log.Fatalf("copyDir: %v %v err %v\n", src, dst, err)
+			}
+		}
+	}
+}
+
+func (kv *Kv) removeShards() {
+	kv.mu.Unlock()
+	defer kv.mu.Lock()
+
+	for s, kvd := range kv.nextConf.Shards {
+		if kvd != kv.me && kv.conf.Shards[s] == kv.me {
+			d := shardPath(kv.me, s)
+			err := kv.Remove(d)
+			if err != nil {
+				log.Fatalf("%v: moveShards: remove %v err %v\n",
+					kv.me, d, err)
+			}
+		}
+	}
+}
+
+// Tell sharder we are prepared to commit new config
+func (kv *Kv) prepared() {
 	sh := SHARDER + "/dev"
-	log.Printf("Resume %v %v\n", kv.me, sh)
-	kv.inRebalance = false
-	err := kv.WriteFile(sh, []byte("Resume "+kv.me))
+	log.Printf("%v: prepared %v\n", kv.me, sh)
+	err := kv.WriteFile(sh, []byte("Prepared "+kv.me))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
 	}
 }
 
 // Caller hold lock
-func (kv *Kv) reconfigure() {
-	kv.inRebalance = true
-	conf := kv.readConfig()
-	log.Printf("%v: New config: %v\n", kv.me, conf)
-	if conf.N > 1 {
-		for i, v := range conf.Shards {
-			if v == kv.me && kv.conf.Shards[i] != kv.me {
-				kv.mu.Unlock()
-				kv.copyShard(i, kv.conf.Shards[i])
-				kv.mu.Lock()
+func (kv *Kv) prepare() {
+	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-			}
-		}
+	log.Printf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
+
+	kv.mu.Unlock()
+	defer kv.mu.Lock()
+
+	kv.makeShardDirs()
+	if kv.nextConf.N > 1 {
+		kv.moveShards()
 	}
-	kv.conf = conf
-	log.Printf("%v: New config installed\n", kv.me)
-	kv.resume()
+	kv.prepared()
+}
+
+// Caller holds lock
+func (kv *Kv) commit() {
+	log.Printf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
+
+	kv.removeShards()
+
+	kv.conf = kv.nextConf
+	kv.nextConf = nil
 }
 
 func (kv *Kv) Work() {
@@ -203,6 +231,10 @@ func (kv *Kv) Work() {
 	kv.join()
 	for {
 		kv.cond.Wait()
-		kv.reconfigure()
+		if kv.nextConf == nil {
+			kv.prepare()
+		} else {
+			kv.commit()
+		}
 	}
 }

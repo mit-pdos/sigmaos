@@ -49,11 +49,16 @@ func (kc *KvClerk) readConfig() error {
 	return err
 }
 
+func (kc *KvClerk) keyPath(shard int, k string) string {
+	kvd := kc.conf.Shards[shard]
+	return shardPath(kvd, shard) + "/" + strconv.Itoa(kc.conf.N) + "-" + k
+
+}
+
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
-		kvd := kc.conf.Shards[shard]
-		n := kvd + "/" + strconv.Itoa(kc.conf.N) + "-" + k
+		n := kc.keyPath(shard, k)
 		err := kc.MakeFile(n, []byte(v))
 		if err == nil {
 			return err
@@ -72,8 +77,7 @@ func (kc *KvClerk) Put(k, v string) error {
 func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
-		kvd := kc.conf.Shards[shard]
-		n := kvd + "/" + strconv.Itoa(kc.conf.N) + "-" + k
+		n := kc.keyPath(shard, k)
 		b, err := kc.ReadFile(n)
 		if err == nil {
 			return string(b), err

@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	NSHARDS  = 5
-	KVCONFIG = SHARDER + "/config"
+	NSHARDS      = 5
+	KVCONFIG     = SHARDER + "/config"
+	KVNEXTCONFIG = SHARDER + "/nextconfig"
 )
 
 var ErrWrongKv = errors.New("ErrWrongKv")
@@ -26,19 +27,20 @@ type SharderDev struct {
 
 func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
+	var err error
 	log.Printf("SharderDev.write %v\n", t)
 	if strings.HasPrefix(t, "Join") {
-		shdev.sh.join(t[len("Join "):])
+		err = shdev.sh.join(t[len("Join "):])
 	} else if strings.HasPrefix(t, "Leave") {
-		shdev.sh.leave(t[len("Leave"):])
+		err = shdev.sh.leave(t[len("Leave"):])
 	} else if strings.HasPrefix(t, "Add") {
 		shdev.sh.add()
-	} else if strings.HasPrefix(t, "Resume") {
-		shdev.sh.resume(t[len("Resume "):])
+	} else if strings.HasPrefix(t, "Prepared") {
+		err = shdev.sh.prepared(t[len("Prepared "):])
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
-	return np.Tsize(len(data)), nil
+	return np.Tsize(len(data)), err
 }
 
 func (shdev *SharderDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
@@ -58,8 +60,8 @@ type Config struct {
 	Shards []string // maps shard # to server
 }
 
-func makeConfig() *Config {
-	cf := &Config{0, make([]string, NSHARDS)}
+func makeConfig(n int) *Config {
+	cf := &Config{n, make([]string, NSHARDS)}
 	for i := 0; i < NSHARDS; i++ {
 		cf.Shards = append(cf.Shards, "")
 	}
@@ -70,10 +72,12 @@ type Sharder struct {
 	mu   sync.Mutex
 	cond *sync.Cond
 	*fslib.FsLibSrv
-	pid  string
-	kvs  []string // the available kv servers
-	conf *Config
-	nkvd int // # KVs in reconfiguration
+	pid               string
+	kvs               []string // the available kv servers
+	conf              *Config
+	nextConf          *Config
+	nkvd              int // # KVs in reconfiguration
+	inReconfiguration bool
 }
 
 func MakeSharder(args []string) (*Sharder, error) {
@@ -83,14 +87,13 @@ func MakeSharder(args []string) (*Sharder, error) {
 	log.Printf("Sharder: %v\n", args)
 	sh := &Sharder{}
 	sh.cond = sync.NewCond(&sh.mu)
-	sh.conf = makeConfig()
+	sh.conf = makeConfig(0)
 	sh.kvs = make([]string, 0)
 	sh.pid = args[0]
 	fls, err := fslib.InitFs(SHARDER, &SharderDev{sh})
 	if err != nil {
 		return nil, err
 	}
-
 	err = fls.MakeFileJson(KVCONFIG, *sh.conf)
 	if err != nil {
 		return nil, err
@@ -102,28 +105,27 @@ func MakeSharder(args []string) (*Sharder, error) {
 }
 
 func (sh *Sharder) add() {
-	sh.mu.Lock()
-	if sh.nkvd > 0 {
-		log.Printf("In reconfiguration %v\n", sh.nkvd)
-		return
-	}
-	sh.mu.Unlock()
 	sh.spawnKv()
 }
 
-func (sh *Sharder) join(kvd string) {
+func (sh *Sharder) join(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
 	log.Printf("Join: %v\n", kvd)
+	if sh.nextConf != nil {
+		return fmt.Errorf("In reconfiguration %v\n", sh.nkvd)
+	}
 	sh.kvs = append(sh.kvs, kvd)
 	sh.cond.Signal()
+	return nil
 }
 
-func (sh *Sharder) leave(kvd string) {
+func (sh *Sharder) leave(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
+	log.Printf("Leave: %v\n", kvd)
 	for i, v := range sh.kvs {
 		if v == kvd {
 			sh.kvs = append(sh.kvs[:i], sh.kvs[i+1:]...)
@@ -131,24 +133,37 @@ func (sh *Sharder) leave(kvd string) {
 		}
 	}
 	sh.cond.Signal()
+	return nil
 }
 
-func (sh *Sharder) resume(kvd string) {
+func (sh *Sharder) prepared(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	log.Printf("Resume: %v\n", kvd)
-
+	log.Printf("Prepared: %v\n", kvd)
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {
-		log.Printf("All KVs resumed\n")
+		log.Printf("All KVs prepared\n")
+		sh.cond.Signal()
+
 	}
+	return nil
 }
 
-// Tell kv to reconfigure
-func (sh *Sharder) refresh(kv string) {
+// Tell kv prepare to reconfigure
+func (sh *Sharder) prepare(kv string) {
 	dev := kv + "/dev"
-	err := sh.WriteFile(dev, []byte("Reconfigure"))
+	err := sh.WriteFile(dev, []byte("Prepare"))
+	if err != nil {
+		log.Printf("WriteFile: %v %v\n", dev, err)
+	}
+
+}
+
+// Tell kv commit to reconfigure
+func (sh *Sharder) commit(kv string) {
+	dev := kv + "/dev"
+	err := sh.WriteFile(dev, []byte("Commit"))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", dev, err)
 	}
@@ -157,14 +172,15 @@ func (sh *Sharder) refresh(kv string) {
 
 // Caller holds lock
 // XXX minimize movement
-func (sh *Sharder) balance() {
+func (sh *Sharder) balance() *Config {
 	j := 0
-	sh.conf.N = sh.conf.N + 1
+	conf := makeConfig(sh.conf.N + 1)
 	log.Printf("shards %v kvs %v\n", sh.conf.Shards, sh.kvs)
 	for i, _ := range sh.conf.Shards {
-		sh.conf.Shards[i] = sh.kvs[j]
+		conf.Shards[i] = sh.kvs[j]
 		j = (j + 1) % len(sh.kvs)
 	}
+	return conf
 }
 
 func (sh *Sharder) Exit() {
@@ -181,29 +197,41 @@ func (sh *Sharder) spawnKv() error {
 	return sh.Spawn(&a)
 }
 
-// XXX Support shrinking
-// XXX Add/shrink dynamically
-// XXX setup pairdeps between kvs so that scheduler can gang schedule them?
 // XXX Handle failed kvs
 func (sh *Sharder) Work() {
 	sh.mu.Lock()
 	sh.spawnKv()
 	for {
 		sh.cond.Wait()
-		if sh.nkvd == 0 {
-			sh.balance()
-			log.Printf("sharder conf: %v\n", sh.conf)
-			err := sh.WriteFileJson(KVCONFIG, *sh.conf)
+		if sh.nextConf == nil {
+			sh.nextConf = sh.balance()
+			log.Printf("Sharder next conf: %v\n", sh.nextConf)
+			err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 			if err != nil {
-				log.Printf("add write error %v\n", err)
+				log.Printf("Work: %v error %v\n", KVNEXTCONFIG, err)
 				return
 			}
 			sh.nkvd = len(sh.kvs)
 			for _, kv := range sh.kvs {
-				sh.refresh(kv)
+				sh.prepare(kv)
 			}
 		} else {
-			log.Printf("sharder: rebalancing nkvd %v\n", sh.nkvd)
+			if sh.nkvd == 0 { // all kvs are prepared?
+				log.Printf("Commit to %v\n", sh.nextConf)
+				// commit to new config
+				err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
+				if err != nil {
+					log.Printf("Work: rename error %v\n", err)
+				}
+				for _, kv := range sh.kvs {
+					sh.commit(kv)
+				}
+				sh.conf = sh.nextConf
+				sh.nextConf = nil
+			} else {
+				log.Printf("Sharder: reconfig in progress  %v\n", sh.nkvd)
+			}
+
 		}
 	}
 }

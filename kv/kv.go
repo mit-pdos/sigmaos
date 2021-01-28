@@ -25,7 +25,6 @@ type KvDev struct {
 
 func (kvdev *KvDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
-	log.Printf("KvDev.write %v\n", t)
 	if strings.HasPrefix(t, "Prepare") {
 		kvdev.kv.cond.Signal()
 	} else if strings.HasPrefix(t, "Commit") {
@@ -65,7 +64,6 @@ func MakeKv(args []string) (*Kv, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
-	log.Printf("Kv: %v\n", args)
 	kv.pid = args[0]
 	kv.me = KV + "/" + kv.pid
 
@@ -83,7 +81,7 @@ func MakeKv(args []string) (*Kv, error) {
 
 func (kv *Kv) join() error {
 	sh := SHARDER + "/dev"
-	log.Printf("Join %v\n", kv.me)
+	log.Printf("%v: Join\n", kv.me)
 	err := kv.WriteFile(sh, []byte("Join "+kv.me))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
@@ -187,7 +185,7 @@ func (kv *Kv) removeShards() {
 // Tell sharder we are prepared to commit new config
 func (kv *Kv) prepared() {
 	sh := SHARDER + "/dev"
-	log.Printf("%v: prepared %v\n", kv.me, sh)
+	db.DPrintf("%v: prepared %v\n", kv.me, sh)
 	err := kv.WriteFile(sh, []byte("Prepared "+kv.me))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
@@ -198,7 +196,7 @@ func (kv *Kv) prepared() {
 func (kv *Kv) prepare() {
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	log.Printf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
+	db.DPrintf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()
@@ -212,7 +210,7 @@ func (kv *Kv) prepare() {
 
 // Caller holds lock
 func (kv *Kv) commit() bool {
-	log.Printf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
+	db.DPrintf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
 
 	kv.removeShards()
 

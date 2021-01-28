@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	// db "ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -28,7 +28,6 @@ type SharderDev struct {
 func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	var err error
-	log.Printf("SharderDev.write %v\n", t)
 	if strings.HasPrefix(t, "Join") {
 		err = shdev.sh.join(t[len("Join "):])
 	} else if strings.HasPrefix(t, "Add") {
@@ -112,7 +111,7 @@ func (sh *Sharder) del() error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	log.Printf("Del: %v\n", sh.kvs[0])
+	db.DPrintf("Del: %v\n", sh.kvs[0])
 	sh.nextKvs = sh.kvs[1:]
 	sh.cond.Signal()
 	return nil
@@ -122,9 +121,10 @@ func (sh *Sharder) join(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	log.Printf("Join: %v\n", kvd)
+	db.DPrintf("Join: %v\n", kvd)
 	if sh.nextConf != nil {
-		return fmt.Errorf("In reconfiguration %v\n", sh.nkvd)
+		return fmt.Errorf("In reconfiguration %v -> %v\n",
+			sh.conf.N, sh.nextConf.N)
 	}
 	sh.nextKvs = append(sh.kvs, kvd)
 	sh.kvs = append(sh.kvs, kvd)
@@ -136,10 +136,9 @@ func (sh *Sharder) prepared(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	log.Printf("Prepared: %v\n", kvd)
+	db.DPrintf("Prepared: %v\n", kvd)
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {
-		log.Printf("All KVs prepared\n")
 		sh.cond.Signal()
 
 	}
@@ -151,7 +150,7 @@ func (sh *Sharder) prepare(kv string) {
 	dev := kv + "/dev"
 	err := sh.WriteFile(dev, []byte("Prepare"))
 	if err != nil {
-		log.Printf("WriteFile: %v %v\n", dev, err)
+		db.DPrintf("WriteFile: %v %v\n", dev, err)
 	}
 
 }
@@ -171,7 +170,7 @@ func (sh *Sharder) commit(kv string) {
 func (sh *Sharder) balance() *Config {
 	j := 0
 	conf := makeConfig(sh.conf.N + 1)
-	log.Printf("shards %v (len %v) kvs %v\n", sh.conf.Shards,
+	db.DPrintf("shards %v (len %v) kvs %v\n", sh.conf.Shards,
 		len(sh.conf.Shards), sh.nextKvs)
 	for i, _ := range sh.conf.Shards {
 		conf.Shards[i] = sh.nextKvs[j]
@@ -203,7 +202,7 @@ func (sh *Sharder) Work() {
 		sh.cond.Wait()
 		if sh.nextConf == nil {
 			sh.nextConf = sh.balance()
-			log.Printf("Sharder next conf: %v\n", sh.nextConf)
+			db.DPrintf("Sharder next conf: %v\n", sh.nextConf)
 			err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 			if err != nil {
 				log.Printf("Work: %v error %v\n", KVNEXTCONFIG, err)
@@ -215,7 +214,7 @@ func (sh *Sharder) Work() {
 			}
 		} else {
 			if sh.nkvd == 0 { // all kvs are prepared?
-				log.Printf("Commit to %v\n", sh.nextConf)
+				db.DPrintf("Commit to %v\n", sh.nextConf)
 				// commit to new config
 				err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
 				if err != nil {
@@ -228,7 +227,8 @@ func (sh *Sharder) Work() {
 				sh.kvs = sh.nextKvs
 				sh.nextConf = nil
 			} else {
-				log.Printf("Sharder: reconfig in progress  %v\n", sh.nkvd)
+				log.Printf("Sharder: reconfig in progress  %v -> %v\n",
+					sh.conf.N, sh.nextConf.N)
 			}
 
 		}

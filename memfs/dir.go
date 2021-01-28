@@ -119,7 +119,6 @@ func (dir *Dir) namei(uname string, path []string, inodes []*Inode) ([]*Inode, [
 	}
 }
 
-// for ulambda, cnt is number of directories entries
 func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
@@ -166,8 +165,6 @@ func (dir *Dir) create(inode *Inode, name string) error {
 	return dir.createLocked(inode, name)
 }
 
-// XXX doesn't check if directory is empty; should make
-// the caller responsible for that?
 func (dir *Dir) remove(name string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()

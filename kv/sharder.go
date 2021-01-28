@@ -36,6 +36,8 @@ func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 		shdev.sh.del()
 	} else if strings.HasPrefix(t, "Prepared") {
 		err = shdev.sh.prepared(t[len("Prepared "):])
+	} else if strings.HasPrefix(t, "Exit") {
+		shdev.sh.exit()
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
@@ -69,24 +71,26 @@ type Sharder struct {
 	cond *sync.Cond
 	*fslib.FsLibSrv
 	pid      string
+	bin      string
 	kvs      []string // the kv servers in this configuration
 	nextKvs  []string // the available kvs for the next config
 	conf     *Config
 	nextConf *Config
 	nkvd     int // # KVs in reconfiguration
+	done     bool
 }
 
 func MakeSharder(args []string) (*Sharder, error) {
-	if len(args) != 1 {
+	if len(args) != 2 {
 		return nil, fmt.Errorf("MakeSharder: too few arguments %v\n", args)
 	}
 	log.Printf("Sharder: %v\n", args)
 	sh := &Sharder{}
 	sh.cond = sync.NewCond(&sh.mu)
 	sh.conf = makeConfig(0)
-	// sh.nextConf = nil
 	sh.kvs = make([]string, 0)
 	sh.pid = args[0]
+	sh.bin = args[1]
 	fls, err := fslib.InitFs(SHARDER, &SharderDev{sh})
 	if err != nil {
 		return nil, err
@@ -98,6 +102,17 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 	return sh, nil
+}
+
+func (sh *Sharder) exit() error {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	db.DPrintf("Exit %v\n", sh.pid)
+	sh.done = true
+	sh.nextKvs = make([]string, 0)
+	sh.cond.Signal()
+	return nil
 }
 
 // Add a new KV, which will invoke join once
@@ -170,8 +185,13 @@ func (sh *Sharder) commit(kv string) {
 func (sh *Sharder) balance() *Config {
 	j := 0
 	conf := makeConfig(sh.conf.N + 1)
+
 	db.DPrintf("shards %v (len %v) kvs %v\n", sh.conf.Shards,
 		len(sh.conf.Shards), sh.nextKvs)
+
+	if len(sh.nextKvs) == 0 {
+		return conf
+	}
 	for i, _ := range sh.conf.Shards {
 		conf.Shards[i] = sh.nextKvs[j]
 		j = (j + 1) % len(sh.nextKvs)
@@ -180,14 +200,14 @@ func (sh *Sharder) balance() *Config {
 }
 
 func (sh *Sharder) Exit() {
-
+	sh.ExitFs(SHARDER)
 	sh.Exiting(sh.pid)
 }
 
 func (sh *Sharder) spawnKv() error {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "./bin/kvd"
+	a.Program = sh.bin + "/kvd"
 	a.Args = []string{}
 	a.PairDep = []fslib.PDep{fslib.PDep{sh.pid, a.Pid}}
 	a.ExitDep = nil
@@ -197,12 +217,17 @@ func (sh *Sharder) spawnKv() error {
 // XXX Handle failed kvs
 func (sh *Sharder) Work() {
 	sh.mu.Lock()
-	sh.spawnKv()
-	for {
+	err := sh.spawnKv()
+	if err != nil {
+		log.Fatalf("spawnKv: error %v\n", err)
+	}
+	for !(sh.done && sh.nextConf == nil) {
+
 		sh.cond.Wait()
+
 		if sh.nextConf == nil {
 			sh.nextConf = sh.balance()
-			db.DPrintf("Sharder next conf: %v\n", sh.nextConf)
+			db.DPrintf("Sharder next conf: %v %v\n", sh.nextConf, sh.kvs)
 			err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 			if err != nil {
 				log.Printf("Work: %v error %v\n", KVNEXTCONFIG, err)

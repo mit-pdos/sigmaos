@@ -196,7 +196,7 @@ func (kv *Kv) prepared() {
 func (kv *Kv) prepare() {
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	db.DPrintf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
+	log.Printf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()
@@ -210,7 +210,7 @@ func (kv *Kv) prepare() {
 
 // Caller holds lock
 func (kv *Kv) commit() bool {
-	db.DPrintf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
+	log.Printf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
 
 	kv.removeShards()
 

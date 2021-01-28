@@ -38,6 +38,14 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	return fl.WriteFile(SCHEDDEV, b)
 }
 
+func (fl *FsLib) SpawnProgram(name string, args []string) error {
+	a := &Attr{}
+	a.Pid = GenPid()
+	a.Program = name
+	a.Args = args
+	return fl.Spawn(a)
+}
+
 func (fl *FsLib) Started(pid string) error {
 	return fl.WriteFile(SCHEDDEV, []byte("Started "+pid))
 }

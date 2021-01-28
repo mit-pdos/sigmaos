@@ -29,7 +29,7 @@ func TestBasic(t *testing.T) {
 		assert.Nil(t, err, "Put")
 	}
 
-	for r := 0; r < 1; r++ {
+	for r := 0; r < NSHARD-1; r++ {
 		spawnKv(t, kc)
 
 		time.Sleep(100 * time.Millisecond)
@@ -43,7 +43,7 @@ func TestBasic(t *testing.T) {
 
 	}
 
-	for r := 1; r > 0; r-- {
+	for r := NSHARD - 1; r > 0; r-- {
 		delKv(t, kc)
 
 		time.Sleep(100 * time.Millisecond)

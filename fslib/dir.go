@@ -103,3 +103,14 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	})
 	return nil
 }
+
+func (fl *FsLib) RmDir(dir string) error {
+	fl.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+		err := fl.Remove(dir + "/" + st.Name)
+		if err != nil {
+			return true, err
+		}
+		return false, nil
+	})
+	return nil
+}

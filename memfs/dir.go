@@ -171,5 +171,17 @@ func (dir *Dir) create(inode *Inode, name string) error {
 func (dir *Dir) remove(name string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
+
+	inode, err := dir.lookupLocked(name)
+	if err != nil {
+		db.DPrintf("%v: remove %v unknown %v", dir, name)
+		return err
+	}
+	if inode.IsDir() {
+		d := inode.Data.(*Dir)
+		if len(d.entries) <= 1 {
+			fmt.Errorf("remove %v: not empty\n", name)
+		}
+	}
 	return dir.removeLocked(name)
 }

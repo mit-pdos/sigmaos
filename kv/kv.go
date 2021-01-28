@@ -97,6 +97,10 @@ func (kv *Kv) Walk(src string, names []string) error {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
+	if len(names) == 0 { // so that ls in root directory works
+		return nil
+	}
+
 	if strings.HasPrefix(src, "clerk/") &&
 		strings.Contains(names[len(names)-1], "-") {
 		if kv.nextConf != nil {
@@ -171,7 +175,7 @@ func (kv *Kv) removeShards() {
 	for s, kvd := range kv.nextConf.Shards {
 		if kvd != kv.me && kv.conf.Shards[s] == kv.me {
 			d := shardPath(kv.me, s)
-			err := kv.Remove(d)
+			err := kv.RmDir(d)
 			if err != nil {
 				log.Fatalf("%v: moveShards: remove %v err %v\n",
 					kv.me, d, err)
@@ -190,7 +194,7 @@ func (kv *Kv) prepared() {
 	}
 }
 
-// Caller hold lock
+// Caller holds lock
 func (kv *Kv) prepare() {
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 

@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid\n", os.Args[0])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %v pid bin\n", os.Args[0])
 		os.Exit(1)
 	}
 	sh, err := kv.MakeSharder(os.Args[1:])

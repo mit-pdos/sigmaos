@@ -82,7 +82,9 @@ func (l *Lambda) run() error {
 func (l *Lambda) startConsDep() {
 	for p, _ := range l.consDep {
 		c := l.sd.findLambda(p)
-		c.markProducer(l.pid)
+		if c != nil {
+			c.markProducer(l.pid)
+		}
 	}
 }
 
@@ -105,7 +107,9 @@ func (l *Lambda) startExitDep(pid string) {
 func (l *Lambda) stopProducers() {
 	for p, _ := range l.prodDep {
 		c := l.sd.findLambda(p)
-		c.markConsumer(l.pid)
+		if c != nil {
+			c.markConsumer(l.pid)
+		}
 	}
 }
 

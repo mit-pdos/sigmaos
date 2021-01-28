@@ -1,10 +1,8 @@
 #!/bin/sh
 
 ./bin/named &
-./bin/proxyd &
-sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p
 ./bin/schedd &
-
+./mount.sh
 # make fake file system
 mkdir -p /mnt/9p/fs
 mkdir -p /mnt/9p/kv

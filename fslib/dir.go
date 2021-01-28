@@ -112,5 +112,6 @@ func (fl *FsLib) RmDir(dir string) error {
 		}
 		return false, nil
 	})
+	fl.Remove(dir)
 	return nil
 }

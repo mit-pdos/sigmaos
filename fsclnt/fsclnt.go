@@ -67,6 +67,18 @@ func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
 	return fsc.fids[fid].npch
 }
 
+func (fsc *FsClient) path(fid np.Tfid) *Path {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+	return fsc.fids[fid]
+}
+
+func (fsc *FsClient) addFid(fid np.Tfid, path *Path) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+	fsc.fids[fid] = path
+}
+
 // XXX maybe close channel?
 func (fsc *FsClient) freeFidUnlocked(fid np.Tfid) {
 	_, ok := fsc.fids[fid]
@@ -178,7 +190,7 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 	if err != nil {
 		return np.NoFid, err
 	}
-	fsc.fids[fid] = ch
+	fsc.addFid(fid, ch)
 	db.DPrintf("%v: Attach -> fid %v %v %v\n", fsc.uname, fid, fsc.fids[fid], fsc.fids[fid].npch)
 	return fid, nil
 }
@@ -190,7 +202,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 		// XXX free fid
 		return np.NoFid, err
 	}
-	fsc.fids[fid1] = fsc.fids[fid].copyPath()
+	fsc.addFid(fid1, fsc.path(fid).copyPath())
 	return fid1, err
 }
 
@@ -223,8 +235,8 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	todo := len(rest) - len(reply.Qids)
 	db.DPrintf("%v: walkOne rest %v -> %v %v", fsc.uname, rest, reply.Qids, todo)
 
-	fsc.fids[fid2] = fsc.fids[fid1].copyPath()
-	fsc.fids[fid2].addn(reply.Qids, rest)
+	fsc.addFid(fid2, fsc.path(fid1).copyPath())
+	fsc.path(fid2).addn(reply.Qids, rest)
 	return fid2, todo, nil
 }
 
@@ -297,7 +309,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	if err != nil {
 		return -1, err
 	}
-	fsc.fids[fid].add(base, reply.Qid)
+	fsc.path(fid).add(base, reply.Qid)
 	fd := fsc.findfd(fid)
 	return fd, nil
 }
@@ -317,7 +329,7 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	if err != nil {
 		return -1, err
 	}
-	fsc.fids[fid1].add(name, reply.Qid)
+	fsc.path(fid1).add(name, reply.Qid)
 	fd := fsc.findfd(fid1)
 	return fd, nil
 }

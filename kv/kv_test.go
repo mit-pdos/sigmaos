@@ -1,17 +1,64 @@
 package kv
 
-// XXX assumes a running named, schedd, sharder
-
 import (
+	"log"
+	"os"
+	"os/exec"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"ulambda/fslib"
 )
+
+type System struct {
+	named  *exec.Cmd
+	schedd *exec.Cmd
+}
+
+func run(name string) (*exec.Cmd, error) {
+	cmd := exec.Command(name)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd, cmd.Start()
+}
+
+func Boot(bin string) (*System, error) {
+	s := &System{}
+
+	cmd, err := run(bin + "/named")
+	if err != nil {
+		return nil, err
+	}
+	s.named = cmd
+	s.schedd, err = run(bin + "/schedd")
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	return s, nil
+}
+
+func (s *System) Shutdown(clnt *fslib.FsLib) {
+	err := clnt.WriteFile(fslib.SCHEDDEV, []byte("Exit"))
+	if err != nil {
+		log.Fatalf("Schedd shutdown %v\n", err)
+	}
+	err = clnt.WriteFile(fslib.NAMEDEV, []byte("Exit"))
+	if err != nil {
+		log.Fatalf("Named shutdown %v\n", err)
+	}
+	s.schedd.Wait()
+	s.named.Wait()
+}
 
 type Tstate struct {
 	t *testing.T
+	s *System
 	*KvClerk
 	ch chan bool
 }
@@ -19,13 +66,45 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
+	ts.ch = make(chan bool)
+	bin := "../bin"
+
+	s, err := Boot(bin)
+	if err != nil {
+		t.Fatalf("Boot %v\n", err)
+	}
+	ts.s = s
+
+	fsl := fslib.MakeFsLib("boot")
+
+	err = fsl.Mkdir("name/kv", 0777)
+	if err != nil {
+		t.Fatalf("Mkdir %v\n", err)
+	}
+
+	err = fsl.SpawnProgram(bin+"/sharderd", []string{bin})
+	if err != nil {
+		t.Fatalf("Spawn %v\n", err)
+
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
 	kc, err := MakeClerk()
 	if err != nil {
 		t.Fatalf("Make clerk %v\n", err)
 	}
 	ts.KvClerk = kc
-	ts.ch = make(chan bool)
+
 	return ts
+}
+
+func (ts *Tstate) cleanup() {
+	err := ts.WriteFile(SHARDER+"/dev", []byte("Exit"))
+	if err != nil {
+		ts.t.Fatalf("Sharder shutdown %v\n", err)
+	}
+	ts.s.Shutdown(ts.KvClerk.FsLib)
 }
 
 func (ts *Tstate) spawnKv() {
@@ -111,4 +190,6 @@ func TestConcur(t *testing.T) {
 	}
 
 	ts.ch <- true
+
+	ts.cleanup()
 }

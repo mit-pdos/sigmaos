@@ -45,11 +45,7 @@ func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 }
 
 func (shdev *SharderDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
-	//	if off == 0 {
-	//	s := shdev.sd.ps()
-	//return []byte(s), nil
-	//}
-	return nil, nil
+	return nil, errors.New("Not support")
 }
 
 func (shdev *SharderDev) Len() np.Tlength {

@@ -196,7 +196,7 @@ func (kv *Kv) prepared() {
 func (kv *Kv) prepare() {
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	log.Printf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
+	db.DPrintf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()

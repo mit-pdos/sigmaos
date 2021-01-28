@@ -2,7 +2,6 @@ package schedd
 
 import (
 	"encoding/json"
-	//"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -33,6 +32,8 @@ func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 		sdev.sd.started(t[len("Started "):])
 	} else if strings.HasPrefix(t, "Exiting") {
 		sdev.sd.exiting(strings.TrimSpace(t[len("Exiting "):]))
+	} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
+		sdev.sd.exit()
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
@@ -57,6 +58,7 @@ type Sched struct {
 	*fslib.FsLibSrv
 	load int // XXX bogus
 	ls   map[string]*Lambda
+	done bool
 }
 
 func MakeSchedd() *Sched {
@@ -91,6 +93,14 @@ func (sd *Sched) ps() string {
 	s := fmt.Sprintf("Load %v\n", sd.load)
 	s += sd.String()
 	return s
+}
+
+func (sd *Sched) exit() {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	sd.done = true
+	sd.cond.Signal()
 }
 
 func (sd *Sched) spawn(ls string) {
@@ -214,7 +224,7 @@ func (sd *Sched) findRunnableWaitingConsumer() *Lambda {
 
 func (sd *Sched) Scheduler() {
 	sd.mu.Lock()
-	for {
+	for !sd.done {
 		l := sd.findRunnableWaitingConsumer()
 		if l != nil {
 			// XXX don't count starting a consumer against load
@@ -236,10 +246,5 @@ func (sd *Sched) Scheduler() {
 	}
 }
 
-// log.Printf("in progress: %v\n", st.Name)
 // timeout := int64(st.Mtime) + 5
 // if timeout < time.Now().Unix() {
-// 	log.Print("REDO ", st.Name)
-// 	err = md.clnt.Rename("name/mr/started/"+st.Name,
-// 		"name/mr/todo/"+st.Name)
-// }

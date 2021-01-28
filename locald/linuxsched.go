@@ -2,6 +2,8 @@ package locald
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"math/bits"
 	"os"
 	"strconv"
@@ -9,6 +11,8 @@ import (
 	"syscall"
 	"unsafe"
 )
+
+var ErrInvalid = errors.New("invalid")
 
 // NCPU is the maximum number of cores supported.
 const NCPU uint = 1024
@@ -77,7 +81,7 @@ func SchedSetAffinity(pid int, m *CPUMask) error {
 
 //const SYSFS_CPU_TOPOLOGY_PATH string = "/sys/devices/system/cpu/cpu%d/topology"
 
-func sysfsParseVal(path string) (int, error) {
+func fsReadVal(path string) (int, error) {
 	// open the file
 	f, err := os.Open(path)
 	if err != nil {
@@ -100,4 +104,81 @@ func sysfsParseVal(path string) (int, error) {
 	}
 
 	return v, nil
+}
+
+func fsWriteVal(path string, val int) error {
+	// open the file for writing
+	f, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// convert value to string
+	s := strconv.Itoa(val)
+
+	// write the string to the file
+	if _, err := f.Write([]byte(s)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fsReadBitlist(path string) (*CPUMask, error) {
+	// open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// read the first line
+	rd := bufio.NewReader(f)
+	line, err := rd.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	// convert line to mask
+	mask := new(CPUMask)
+	line = strings.TrimSuffix(line, "\n")
+	sarr := strings.Split(line, ",")
+	for _, s := range sarr {
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return nil, err
+		}
+		if v < 0 {
+			return nil, fmt.Errorf("%v: %w", line, ErrInvalid)
+		}
+		mask.Set(uint(v))
+	}
+
+	return mask, nil
+}
+
+func fsWriteBitlist(path string, mask *CPUMask) error {
+	// open the file for writing
+	f, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// convert mask to string
+	var sb strings.Builder
+	for i := uint(0); i < NCPU; i++ {
+		if mask.Test(i) {
+			sb.WriteString(strconv.Itoa(int(i)) + ",")
+		}
+	}
+	s := strings.TrimSuffix(sb.String(), ",")
+
+	// write the string to the file
+	if _, err := f.Write([]byte(s)); err != nil {
+		return err
+	}
+
+	return nil
 }

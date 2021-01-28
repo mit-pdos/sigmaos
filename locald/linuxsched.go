@@ -1,46 +1,61 @@
 package locald
 
 import (
+	"bufio"
+	"math/bits"
+	"os"
+	"strconv"
+	"strings"
 	"syscall"
 	"unsafe"
 )
 
 // NCPU is the maximum number of cores supported.
-const NCPU int = 1024
+const NCPU uint = 1024
+const bitsPerWord uint = uint(unsafe.Sizeof(uint(0)) * 8)
 
 // CPUMask is a mask of cores passed to the Linux scheduler.
 type CPUMask struct {
-	mask [(NCPU + 7) / 8]byte
+	mask [(NCPU + 7) / bitsPerWord]uint
 }
 
 // Test returns true if the core is set in the mask.
-func (m *CPUMask) Test(core int) bool {
-	if core > NCPU {
+func (m *CPUMask) Test(core uint) bool {
+	if core >= NCPU {
 		panic("core too high")
 	}
-	idx := core / 8
-	bit := core % 8
-	return m.mask[idx] & (1 << bit) != 0
+	idx := core / bitsPerWord
+	bit := core % bitsPerWord
+	return m.mask[idx]&(1<<bit) != 0
 }
 
 // Set sets a core in the mask.
-func (m *CPUMask) Set(core int) {
-	if core > NCPU {
+func (m *CPUMask) Set(core uint) {
+	if core >= NCPU {
 		panic("core too high")
 	}
-	idx := core / 8
-	bit := core % 8
+	idx := core / bitsPerWord
+	bit := core % bitsPerWord
 	m.mask[idx] |= (1 << bit)
 }
 
 // Clear clears a core in the mask.
-func (m *CPUMask) Clear(core int) {
-	if core > NCPU {
+func (m *CPUMask) Clear(core uint) {
+	if core >= NCPU {
 		panic("core too high")
 	}
-	idx := core / 8
-	bit := core % 8
+	idx := core / bitsPerWord
+	bit := core % bitsPerWord
 	m.mask[idx] &= ^(1 << bit)
+}
+
+// OnesCount returns the number of one bits.
+func (m *CPUMask) OnesCount() int {
+	cnt := 0
+	for i := range m.mask {
+		cnt += bits.OnesCount(m.mask[i])
+	}
+	return cnt
 }
 
 // ClearAll clears all cores in the mask.
@@ -58,4 +73,31 @@ func SchedSetAffinity(pid int, m *CPUMask) error {
 		return errno
 	}
 	return nil
+}
+
+//const SYSFS_CPU_TOPOLOGY_PATH string = "/sys/devices/system/cpu/cpu%d/topology"
+
+func sysfsParseVal(path string) (int, error) {
+	// open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	// read the first line
+	rd := bufio.NewReader(f)
+	line, err := rd.ReadString('\n')
+	if err != nil {
+		return 0, err
+	}
+
+	// convert line to value
+	line = strings.TrimSuffix(line, "\n")
+	v, err := strconv.Atoi(line)
+	if err != nil {
+		return 0, err
+	}
+
+	return v, nil
 }

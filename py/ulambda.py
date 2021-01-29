@@ -3,7 +3,7 @@
 #
 
 import secrets
-import marshal
+import dill
 import os
 import sys
 import time
@@ -37,38 +37,42 @@ class Job:
         # XXX all these files should be in 9P or S3.
         picklefile = "/tmp/fn-" + str(self.id)
         f = open(picklefile, "wb")
-        marshal.dump([ fn.__code__, nargs ], f);
+        dill.dump([ fn, nargs ], f, recurse=True)
         f.close()
 
         self.outfile = "/tmp/out-" + str(self.id)
+        self.donefile = "/tmp/done-" + str(self.id)
         
         # Python script that runs the pickled function
         # and pickles its return value into a file where
         # dependent lambdas can find it.
         cmdfile = "/tmp/cmd-" + str(self.id)
         f = open(cmdfile, "w")
-        f.write("#!/usr/bin/env python3\n\n")
-        f.write("import marshal\n")
+        # f.write("#!/usr/bin/env python3\n\n")
+        f.write("#!/opt/local/bin/python3.8\n\n")
+        f.write("import dill\n")
         f.write("import sys\n")
         f.write("import os\n")
         f.write("import types\n")
         f.write("sys.stderr.write('this is %s\\n')\n" % (self.id))
         f.write("f = open('%s', 'rb')\n" % (picklefile))
-        f.write("g = marshal.load(f)\n")
+        f.write("g = dill.load(f)\n")
         f.write("f.close()\n")
-        f.write("fn = types.FunctionType(g[0], {}, 'fff')\n")
+        f.write("fn = g[0]\n")
         f.write("# read arguments from finished jobs we depend on\n")
         f.write("args = []\n")
         f.write("for a in g[1]:\n")
         f.write("  if isinstance(a, str) and 'XYZZY-' in a:\n")
         f.write("    with open('/tmp/out-' + a[6:], 'rb') as f:\n")
-        f.write("      args.append(marshal.load(f))\n")
+        f.write("      args.append(dill.load(f))\n")
         f.write("  else:\n")
         f.write("    args.append(a)\n")
         f.write("x = fn(*args)\n")
         f.write("# write output where dependent jobs can find it\n")
         f.write("with open('%s', 'wb') as f:\n" % (self.outfile))
-        f.write("  marshal.dump(x, f)\n")
+        f.write("  dill.dump(x, f)\n")
+        f.write("# tell job.wait() we're done\n")
+        f.write("open('%s', 'w').close()\n" % (self.donefile))
         f.write("# tell schedd we're done\n")
         f.write("os.system('bin/util exit %s')\n" % (self.id))
         f.close()
@@ -85,11 +89,11 @@ class Job:
         # XXX is there a way to ask the scheduler whether
         # a lambda has finished?
         while True:
-            if os.access(self.outfile, os.R_OK) == True:
+            if os.access(self.donefile, os.R_OK) == True:
                 break
             time.sleep(1)
         with open(self.outfile, "rb") as f:
-            return marshal.load(f)
+            return dill.load(f)
             
 
 def run(fn, args):

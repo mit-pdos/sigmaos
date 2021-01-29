@@ -69,6 +69,13 @@ func (m *CPUMask) ClearAll() {
 	}
 }
 
+// CreateCPUMaskOfOne creates a mask of one core.
+func CreateCPUMaskOfOne(core uint) *CPUMask {
+	mask := new(CPUMask)
+	mask.Set(core)
+	return mask
+}
+
 // SchedSetAffinity pins a task to a mask of cores.
 func SchedSetAffinity(pid int, m *CPUMask) error {
 	_, _, errno := syscall.Syscall(syscall.SYS_SCHED_SETAFFINITY,
@@ -78,8 +85,6 @@ func SchedSetAffinity(pid int, m *CPUMask) error {
 	}
 	return nil
 }
-
-//const SYSFS_CPU_TOPOLOGY_PATH string = "/sys/devices/system/cpu/cpu%d/topology"
 
 func fsReadInt(path string) (int, error) {
 	// open the file
@@ -129,7 +134,7 @@ func fsReadString(path string) (string, error) {
 	// open the file
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer f.Close()
 
@@ -137,7 +142,7 @@ func fsReadString(path string) (string, error) {
 	rd := bufio.NewReader(f)
 	line, err := rd.ReadString('\n')
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// convert line to string
@@ -216,4 +221,18 @@ func irqGetAffinity(irq int) (*CPUMask, error) {
 func irqGetActions(irq int) (string, error) {
 	path := "/sys/kernel/irq/" + strconv.Itoa(irq) + "/actions"
 	return fsReadString(path)
+}
+
+func topologyPath(core int) string {
+	return "/sys/devices/system/cpu/cpu" + strconv.Itoa(core) + "/topology"
+}
+
+func coreGetCoreSiblings(core int) (*CPUMask, error) {
+	path := topologyPath(core) + "/core_siblings_list"
+	return fsReadBitlist(path)
+}
+
+func coreGetThreadSiblings(core int) (*CPUMask, error) {
+	path := topologyPath(core) + "/thread_siblings_list"
+	return fsReadBitlist(path)
 }

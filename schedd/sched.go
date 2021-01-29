@@ -188,11 +188,13 @@ func (sd *Sched) started(pid string) {
 
 func (sd *Sched) exiting(pid string) {
 	l := sd.findLambda(pid)
-	sd.decLoad()
-	l.stopProducers()
-	l.waitExit()
-	sd.wakeupExit(pid)
-	sd.delLambda(pid)
+	if l != nil {
+		sd.decLoad()
+		l.stopProducers()
+		l.waitExit()
+		sd.wakeupExit(pid)
+		sd.delLambda(pid)
+	}
 }
 
 func (sd *Sched) wakeupExit(pid string) {

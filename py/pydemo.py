@@ -4,13 +4,13 @@ import ulambda
 # a function to be run by the ulambda scheduler.
 #
 def f1(x):
-    return 1000
+    return 1000 + x
 
 #
 # another.
 #
-def f2(x):
-    return 2000
+def f2(y):
+    return 2000 + y
 
 #
 # ask ulambda to run f1(11). don't wait (yet) for

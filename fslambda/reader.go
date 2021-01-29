@@ -75,5 +75,7 @@ func (r *Reader) Work() {
 		}
 	}
 	r.pipe.Close(np.OWRITE)
+
+	r.ExitFs("name/" + r.output)
 	r.Exiting(r.pid)
 }

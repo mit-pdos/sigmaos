@@ -6,6 +6,7 @@ import secrets
 import marshal
 import os
 import sys
+import time
 
 #
 # a scheduled computation.
@@ -39,7 +40,7 @@ class Job:
         marshal.dump([ fn.__code__, nargs ], f);
         f.close()
 
-        outfile = "/tmp/out-" + str(self.id)
+        self.outfile = "/tmp/out-" + str(self.id)
         
         # Python script that runs the pickled function
         # and pickles its return value into a file where
@@ -66,7 +67,7 @@ class Job:
         f.write("    args.append(a)\n")
         f.write("x = fn(*args)\n")
         f.write("# write output where dependent jobs can find it\n")
-        f.write("with open('%s', 'wb') as f:\n" % (outfile))
+        f.write("with open('%s', 'wb') as f:\n" % (self.outfile))
         f.write("  marshal.dump(x, f)\n")
         f.write("# tell schedd we're done\n")
         f.write("os.system('bin/util exit %s')\n" % (self.id))
@@ -76,6 +77,20 @@ class Job:
         cmd = "echo '%s,%s,,[],[],%s' | ../bin/submit" % (self.id, cmdfile, wait_ids)
         sys.stderr.write("cmd: %s\n" % (cmd))
         os.system(cmd)
+
+    #
+    # wait for completion, return result.
+    #
+    def wait(self):
+        # XXX is there a way to ask the scheduler whether
+        # a lambda has finished?
+        while True:
+            if os.access(self.outfile, os.R_OK) == True:
+                break
+            time.sleep(1)
+        with open(self.outfile, "rb") as f:
+            return marshal.load(f)
+            
 
 def run(fn, args):
     th = Job(fn, args)

@@ -11,22 +11,24 @@ import (
 )
 
 type Lambda struct {
-	mu      sync.Mutex
-	cond    *sync.Cond
-	sd      *Sched
-	pid     string
-	status  string
-	program string
-	args    []string
-	env     []string
-	consDep map[string]bool // if true, consumer has finished
-	prodDep map[string]bool // if true, producer is running
-	exitDep map[string]bool
+	mu       sync.Mutex
+	cond     *sync.Cond
+	condWait *sync.Cond
+	sd       *Sched
+	pid      string
+	status   string
+	program  string
+	args     []string
+	env      []string
+	consDep  map[string]bool // if true, consumer has finished
+	prodDep  map[string]bool // if true, producer is running
+	exitDep  map[string]bool
 }
 
 func (l *Lambda) String() string {
-	str := fmt.Sprintf("λ pid %v st %v %v args %v env %v cons %v prod %v exit %v", l.pid,
-		l.status, l.program, l.args, l.env, l.consDep, l.prodDep, l.exitDep)
+	str := fmt.Sprintf("λ pid %v st %v %v args %v env %v cons %v prod %v exit %v",
+		l.pid, l.status, l.program, l.args, l.env, l.consDep, l.prodDep,
+		l.exitDep)
 	return str
 }
 
@@ -156,11 +158,11 @@ func (l *Lambda) runnableWaitingConsumer() bool {
 	return l.runnableConsumer()
 }
 
+// Wait for consumers that depend on me to exit too.
 func (l *Lambda) waitExit() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.status = "Exiting"
 	for !l.exitable() {
 		l.cond.Wait()
 	}
@@ -187,4 +189,24 @@ func (l *Lambda) isRunnning() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.status == "Running"
+}
+
+// A caller wants to Wait for l to exit
+func (l *Lambda) waitFor() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	log.Printf("Wait for %v\n", l)
+	if l.status != "Exiting" {
+		l.condWait.Wait()
+	}
+}
+
+// l is exiting; wakeup waiters who are waiting for me to exit
+func (l *Lambda) wakeupWaiter() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	log.Printf("Wakeup waiters for %v\n", l)
+	l.condWait.Broadcast()
 }

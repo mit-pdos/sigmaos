@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"math/rand"
 	"strconv"
+
+	np "ulambda/ninep"
 )
 
 type PDep struct {
@@ -52,4 +54,9 @@ func (fl *FsLib) Started(pid string) error {
 
 func (fl *FsLib) Exiting(pid string) error {
 	return fl.WriteFile(SCHEDDEV, []byte("Exiting "+pid))
+}
+
+// The open blocks until pid exits (and then returns error, which is ignored)
+func (fl *FsLib) Wait(pid string) {
+	fl.Open(SCHED+"/Wait-"+pid, np.OREAD)
 }

@@ -3,13 +3,14 @@ package schedd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfs"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
 
@@ -65,11 +66,19 @@ type Sched struct {
 func MakeSchedd() *Sched {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
-	fsl, err := fslib.InitFs(fslib.SCHED, &SchedDev{sd})
-	if err != nil {
-		log.Fatalf("InitFs: %v\n", err)
 
+	fs := memfs.MakeRoot()
+	fsd := memfsd.MakeFsd(fs, sd)
+	fsl, err := fslib.InitFsMemFsD(fslib.SCHED, fs, fsd, &SchedDev{sd})
+	if err != nil {
+		return nil
 	}
+
+	//fsl, err := fslib.InitFs(fslib.SCHED, &SchedDev{sd})
+	//if err != nil {
+	//	log.Fatalf("InitFs: %v\n", err)
+	//}
+
 	sd.FsLibSrv = fsl
 	sd.load = 0
 	sd.ls = make(map[string]*Lambda)
@@ -85,6 +94,24 @@ func (sd *Sched) String() string {
 		s += "\n"
 	}
 	return s
+}
+
+// Interposes on memfsd's walk to see if a client is looking for a wait status
+// If so, block this request until to the pid in the names exits.  XXX hack?
+func (sd *Sched) Walk(src string, names []string) error {
+	if len(names) == 0 { // so that ls in root directory works
+		return nil
+	}
+	name := names[len(names)-1]
+	if strings.HasPrefix(name, "Wait") {
+		pid := strings.Split(name, "-")[1]
+		l := sd.findLambda(pid)
+		if l == nil {
+			return nil
+		}
+		l.waitFor()
+	}
+	return nil
 }
 
 func (sd *Sched) ps() string {
@@ -111,6 +138,7 @@ func (sd *Sched) spawn(ls string) error {
 	l := &Lambda{}
 	l.sd = sd
 	l.cond = sync.NewCond(&l.mu)
+	l.condWait = sync.NewCond(&l.mu)
 	l.consDep = make(map[string]bool)
 	l.prodDep = make(map[string]bool)
 	l.exitDep = make(map[string]bool)
@@ -190,7 +218,9 @@ func (sd *Sched) exiting(pid string) {
 	l := sd.findLambda(pid)
 	if l != nil {
 		sd.decLoad()
+		l.changeStatus("Exiting")
 		l.stopProducers()
+		l.wakeupWaiter()
 		l.waitExit()
 		sd.wakeupExit(pid)
 		sd.delLambda(pid)

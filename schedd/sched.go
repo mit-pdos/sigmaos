@@ -24,10 +24,11 @@ type SchedDev struct {
 }
 
 func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
+	var err error
 	t := string(data)
-	db.DPrintf("SchedDev.write %v\n", t)
+	log.Printf("SchedDev.write %v\n", t)
 	if strings.HasPrefix(t, "Spawn") {
-		sdev.sd.spawn(t[len("Spawn "):])
+		err = sdev.sd.spawn(t[len("Spawn "):])
 	} else if strings.HasPrefix(t, "Started") {
 		sdev.sd.started(t[len("Started "):])
 	} else if strings.HasPrefix(t, "Exiting") {
@@ -37,7 +38,7 @@ func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	} else {
 		return 0, fmt.Errorf("Write: unknown command %v\n", t)
 	}
-	return np.Tsize(len(data)), nil
+	return np.Tsize(len(data)), err
 }
 
 func (sdev *SchedDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
@@ -103,7 +104,7 @@ func (sd *Sched) exit() {
 	sd.cond.Signal()
 }
 
-func (sd *Sched) spawn(ls string) {
+func (sd *Sched) spawn(ls string) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
@@ -116,7 +117,7 @@ func (sd *Sched) spawn(ls string) {
 	var attr fslib.Attr
 	err := json.Unmarshal([]byte(ls), &attr)
 	if err != nil {
-		log.Fatal("Unmarshal error ", err)
+		return err
 	}
 	l.pid = attr.Pid
 	l.program = attr.Program
@@ -142,12 +143,14 @@ func (sd *Sched) spawn(ls string) {
 	if !ok {
 		sd.ls[l.pid] = l
 	} else {
-		log.Fatalf("Spawn %v already exists\n", l.pid)
+		return fmt.Errorf("Spawn %v already exists\n", l.pid)
+
 	}
 
 	l.setStatus()
 	db.DPrintf("Spawn %v\n", l)
 	sd.cond.Signal()
+	return nil
 }
 
 func (sd *Sched) findLambda(pid string) *Lambda {

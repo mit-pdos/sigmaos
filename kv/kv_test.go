@@ -1,9 +1,6 @@
 package kv
 
 import (
-	"log"
-	"os"
-	"os/exec"
 	"strconv"
 	"testing"
 	"time"
@@ -13,52 +10,9 @@ import (
 	"ulambda/fslib"
 )
 
-type System struct {
-	named  *exec.Cmd
-	schedd *exec.Cmd
-}
-
-func run(name string) (*exec.Cmd, error) {
-	cmd := exec.Command(name)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd, cmd.Start()
-}
-
-func Boot(bin string) (*System, error) {
-	s := &System{}
-
-	cmd, err := run(bin + "/named")
-	if err != nil {
-		return nil, err
-	}
-	s.named = cmd
-	s.schedd, err = run(bin + "/schedd")
-	if err != nil {
-		return nil, err
-	}
-
-	time.Sleep(1000 * time.Millisecond)
-
-	return s, nil
-}
-
-func (s *System) Shutdown(clnt *fslib.FsLib) {
-	err := clnt.WriteFile(fslib.SCHEDDEV, []byte("Exit"))
-	if err != nil {
-		log.Fatalf("Schedd shutdown %v\n", err)
-	}
-	err = clnt.WriteFile(fslib.NAMEDEV, []byte("Exit"))
-	if err != nil {
-		log.Fatalf("Named shutdown %v\n", err)
-	}
-	s.schedd.Wait()
-	s.named.Wait()
-}
-
 type Tstate struct {
 	t *testing.T
-	s *System
+	s *fslib.System
 	*KvClerk
 	ch chan bool
 }
@@ -69,7 +23,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.ch = make(chan bool)
 	bin := "../bin"
 
-	s, err := Boot(bin)
+	s, err := fslib.Boot(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}

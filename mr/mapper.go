@@ -44,7 +44,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 		return nil, fmt.Errorf("Makemapper: unknown %v\n", m.input)
 	}
 	for r := 0; r < NReduce; r++ {
-		oname := "name/fs/mr-wc/" + strconv.Itoa(r) + "/mr-" + m.output
+		oname := "name/fs/" + strconv.Itoa(r) + "/mr-" + m.output
 		m.fds[r], err = m.clnt.CreateFile(oname, np.OWRITE)
 		if err != nil {
 			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)

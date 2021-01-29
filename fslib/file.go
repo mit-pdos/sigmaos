@@ -106,7 +106,7 @@ func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
 func (fl *FsLib) MakeFileJson(fname string, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
-		return fmt.Errorf("Marshal error", err)
+		return fmt.Errorf("Marshal error %v", err)
 	}
 	return fl.MakeFile(fname, data)
 }
@@ -114,7 +114,7 @@ func (fl *FsLib) MakeFileJson(fname string, i interface{}) error {
 func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
-		return fmt.Errorf("Marshal error", err)
+		return fmt.Errorf("Marshal error %v", err)
 	}
 	return fl.WriteFile(fname, data)
 }

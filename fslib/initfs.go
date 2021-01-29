@@ -10,8 +10,6 @@ import (
 	"ulambda/npsrv"
 )
 
-const NAMEDEV = "name/dev"
-
 type FsLibSrv struct {
 	*FsLib
 	*memfsd.Fsd

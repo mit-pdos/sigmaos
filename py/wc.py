@@ -19,7 +19,7 @@ def map(filename):
     with open(filename, "r") as f:
         v = f.read().split()
         for w in v:
-            h = hash(w)
+            h = sum([ ord(x) for x in w ]) # hash
             out[h % nreduce].append(w)
     # XXX should write each hash bucket to a separate
     #     9P / S3 file, and return the file names.

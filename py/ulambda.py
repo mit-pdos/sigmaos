@@ -78,8 +78,7 @@ class Job:
         f.close()
         os.system("chmod ogu+x %s" % (cmdfile))
 
-        cmd = "echo '%s,%s,,[],[],%s' | ../bin/submit" % (self.id, cmdfile, wait_ids)
-        sys.stderr.write("cmd: %s\n" % (cmd))
+        cmd = "echo '%s,%s,,[],[],%s' | ../bin/submit > /dev/null" % (self.id, cmdfile, wait_ids)
         os.system(cmd)
 
     #

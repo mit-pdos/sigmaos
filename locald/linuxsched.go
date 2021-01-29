@@ -20,7 +20,7 @@ const bitsPerWord uint = uint(unsafe.Sizeof(uint(0)) * 8)
 
 // CPUMask is a mask of cores passed to the Linux scheduler.
 type CPUMask struct {
-	mask [(NCPU + 7) / bitsPerWord]uint
+	mask [(NCPU + bitsPerWord - 1) / bitsPerWord]uint
 }
 
 // Test returns true if the core is set in the mask.
@@ -81,7 +81,7 @@ func SchedSetAffinity(pid int, m *CPUMask) error {
 
 //const SYSFS_CPU_TOPOLOGY_PATH string = "/sys/devices/system/cpu/cpu%d/topology"
 
-func fsReadVal(path string) (int, error) {
+func fsReadInt(path string) (int, error) {
 	// open the file
 	f, err := os.Open(path)
 	if err != nil {
@@ -106,7 +106,7 @@ func fsReadVal(path string) (int, error) {
 	return v, nil
 }
 
-func fsWriteVal(path string, val int) error {
+func fsWriteInt(path string, val int) error {
 	// open the file for writing
 	f, err := os.OpenFile(path, os.O_RDWR, 0644)
 	if err != nil {
@@ -123,6 +123,26 @@ func fsWriteVal(path string, val int) error {
 	}
 
 	return nil
+}
+
+func fsReadString(path string) (string, error) {
+	// open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	// read the first line
+	rd := bufio.NewReader(f)
+	line, err := rd.ReadString('\n')
+	if err != nil {
+		return 0, err
+	}
+
+	// convert line to string
+	line = strings.TrimSuffix(line, "\n")
+	return line, nil
 }
 
 func fsReadBitlist(path string) (*CPUMask, error) {
@@ -181,4 +201,19 @@ func fsWriteBitlist(path string, mask *CPUMask) error {
 	}
 
 	return nil
+}
+
+func irqSetAffinity(irq int, mask *CPUMask) error {
+	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity_list"
+	return fsWriteBitlist(path, mask)
+}
+
+func irqGetAffinity(irq int) (*CPUMask, error) {
+	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity_list"
+	return fsReadBitlist(path)
+}
+
+func irqGetActions(irq int) (string, error) {
+	path := "/sys/kernel/irq/" + strconv.Itoa(irq) + "/actions"
+	return fsReadString(path)
 }

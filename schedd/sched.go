@@ -26,7 +26,7 @@ type SchedDev struct {
 func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	var err error
 	t := string(data)
-	log.Printf("SchedDev.write %v\n", t)
+	db.DPrintf("SchedDev.write %v\n", t)
 	if strings.HasPrefix(t, "Spawn") {
 		err = sdev.sd.spawn(t[len("Spawn "):])
 	} else if strings.HasPrefix(t, "Started") {

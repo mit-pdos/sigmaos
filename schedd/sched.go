@@ -141,7 +141,6 @@ func (sd *Sched) spawn(attr string) error {
 		return fmt.Errorf("Spawn %v already exists\n", l.pid)
 
 	}
-	l.setStatus()
 	db.DPrintf("Spawn %v\n", l)
 	sd.cond.Signal()
 	return nil

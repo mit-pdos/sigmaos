@@ -60,7 +60,11 @@ func makeLambda(sd *Sched, a string) (*Lambda, error) {
 	for _, p := range attr.ExitDep {
 		l.exitDep[p] = false
 	}
-
+	if l.runnableConsumer() {
+		l.status = "Runnable"
+	} else {
+		l.status = "Waiting"
+	}
 	return l, nil
 }
 
@@ -77,14 +81,6 @@ func (l *Lambda) changeStatus(new string) error {
 
 	l.status = new
 	return nil
-}
-
-func (l *Lambda) setStatus() {
-	if l.runnableConsumer() {
-		l.status = "Runnable"
-	} else {
-		l.status = "Waiting"
-	}
 }
 
 // XXX if remote, keep-alive?

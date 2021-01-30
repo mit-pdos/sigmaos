@@ -1,7 +1,6 @@
 package schedd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -73,12 +72,6 @@ func MakeSchedd() *Sched {
 	if err != nil {
 		return nil
 	}
-
-	//fsl, err := fslib.InitFs(fslib.SCHED, &SchedDev{sd})
-	//if err != nil {
-	//	log.Fatalf("InitFs: %v\n", err)
-	//}
-
 	sd.FsLibSrv = fsl
 	sd.load = 0
 	sd.ls = make(map[string]*Lambda)
@@ -123,6 +116,7 @@ func (sd *Sched) ps() string {
 	return s
 }
 
+// Exit the scheduler
 func (sd *Sched) exit() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -131,41 +125,14 @@ func (sd *Sched) exit() {
 	sd.cond.Signal()
 }
 
-func (sd *Sched) spawn(ls string) error {
+// Spawn a new lambda
+func (sd *Sched) spawn(attr string) error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	l := &Lambda{}
-	l.sd = sd
-	l.cond = sync.NewCond(&l.mu)
-	l.condWait = sync.NewCond(&l.mu)
-	l.consDep = make(map[string]bool)
-	l.prodDep = make(map[string]bool)
-	l.exitDep = make(map[string]bool)
-	var attr fslib.Attr
-	err := json.Unmarshal([]byte(ls), &attr)
+	l, err := makeLambda(sd, attr)
 	if err != nil {
 		return err
-	}
-	l.pid = attr.Pid
-	l.program = attr.Program
-	l.args = attr.Args
-	l.env = attr.Env
-	for _, p := range attr.PairDep {
-		if l.pid != p.Producer {
-			c, ok := sd.ls[p.Producer]
-			if ok {
-				l.prodDep[p.Producer] = c.isRunnning()
-			} else {
-				l.prodDep[p.Producer] = false
-			}
-		}
-		if l.pid != p.Consumer {
-			l.consDep[p.Consumer] = false
-		}
-	}
-	for _, p := range attr.ExitDep {
-		l.exitDep[p] = false
 	}
 	_, ok := sd.ls[l.pid]
 	if !ok {
@@ -174,7 +141,6 @@ func (sd *Sched) spawn(ls string) error {
 		return fmt.Errorf("Spawn %v already exists\n", l.pid)
 
 	}
-
 	l.setStatus()
 	db.DPrintf("Spawn %v\n", l)
 	sd.cond.Signal()
@@ -207,6 +173,7 @@ func (sd *Sched) decLoad() {
 	sd.cond.Signal()
 }
 
+// pid has started; make its consumers runnable
 func (sd *Sched) started(pid string) {
 	l := sd.findLambda(pid)
 	l.changeStatus("Running")
@@ -214,6 +181,7 @@ func (sd *Sched) started(pid string) {
 	sd.runScheduler()
 }
 
+// pid has exited; wait until its consumers also exited
 func (sd *Sched) exiting(pid string) {
 	l := sd.findLambda(pid)
 	if l != nil {
@@ -227,6 +195,7 @@ func (sd *Sched) exiting(pid string) {
 	}
 }
 
+// wakeup lambdas that have pid as an exit dependency
 func (sd *Sched) wakeupExit(pid string) {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -277,7 +246,6 @@ func (sd *Sched) Scheduler() {
 				sd.cond.Wait()
 			}
 		}
-		// time.Sleep(time.Duration(1) * time.Millisecond)
 	}
 }
 

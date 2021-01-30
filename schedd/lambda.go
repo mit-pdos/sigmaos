@@ -1,6 +1,7 @@
 package schedd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fslib"
 )
 
 type Lambda struct {
@@ -23,6 +25,43 @@ type Lambda struct {
 	consDep  map[string]bool // if true, consumer has finished
 	prodDep  map[string]bool // if true, producer is running
 	exitDep  map[string]bool
+}
+
+func makeLambda(sd *Sched, a string) (*Lambda, error) {
+	l := &Lambda{}
+	l.sd = sd
+	l.cond = sync.NewCond(&l.mu)
+	l.condWait = sync.NewCond(&l.mu)
+	l.consDep = make(map[string]bool)
+	l.prodDep = make(map[string]bool)
+	l.exitDep = make(map[string]bool)
+	var attr fslib.Attr
+	err := json.Unmarshal([]byte(a), &attr)
+	if err != nil {
+		return nil, err
+	}
+	l.pid = attr.Pid
+	l.program = attr.Program
+	l.args = attr.Args
+	l.env = attr.Env
+	for _, p := range attr.PairDep {
+		if l.pid != p.Producer {
+			c, ok := sd.ls[p.Producer]
+			if ok {
+				l.prodDep[p.Producer] = c.isRunnning()
+			} else {
+				l.prodDep[p.Producer] = false
+			}
+		}
+		if l.pid != p.Consumer {
+			l.consDep[p.Consumer] = false
+		}
+	}
+	for _, p := range attr.ExitDep {
+		l.exitDep[p] = false
+	}
+
+	return l, nil
 }
 
 func (l *Lambda) String() string {
@@ -196,7 +235,7 @@ func (l *Lambda) waitFor() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	log.Printf("Wait for %v\n", l)
+	db.DPrintf("Wait for %v\n", l)
 	if l.status != "Exiting" {
 		l.condWait.Wait()
 	}
@@ -207,6 +246,6 @@ func (l *Lambda) wakeupWaiter() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	log.Printf("Wakeup waiters for %v\n", l)
+	db.DPrintf("Wakeup waiters for %v\n", l)
 	l.condWait.Broadcast()
 }

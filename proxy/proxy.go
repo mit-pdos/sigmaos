@@ -253,7 +253,3 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	*rets = *reply
 	return nil
 }
-
-func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
-	return &np.Rerror{"Not supported"}
-}

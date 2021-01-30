@@ -416,20 +416,3 @@ func (Tstat) Type() Tfcall    { return TTstat }
 func (Rstat) Type() Tfcall    { return TRstat }
 func (Twstat) Type() Tfcall   { return TTwstat }
 func (Rwstat) Type() Tfcall   { return TRwstat }
-func (Tmkpipe) Type() Tfcall  { return TTmkpipe }
-func (Rmkpipe) Type() Tfcall  { return TRmkpipe }
-
-//
-// Extensions or new transactions
-//
-
-type Tmkpipe struct {
-	Dfid Tfid
-	Name string
-	Perm Tperm
-	Gid  Tgid
-}
-
-type Rmkpipe struct {
-	Qid Tqid
-}

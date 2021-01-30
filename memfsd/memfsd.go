@@ -252,20 +252,3 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	}
 	return nil
 }
-
-//
-// Extension for ulambda
-//
-
-func (npc *NpConn) Pipe(args np.Tmkpipe, rets *np.Rmkpipe) *np.Rerror {
-	fid, ok := npc.lookup(args.Dfid)
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	inode, err := fid.ino.Create(npc.uname, npc.memfs, np.DMNAMEDPIPE, args.Name)
-	if err != nil {
-		return np.ErrCreatenondir
-	}
-	rets.Qid = inode.Qid()
-	return nil
-}

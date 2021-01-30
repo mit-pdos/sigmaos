@@ -334,20 +334,6 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	return fd, nil
 }
 
-// XXX move to fslib, perhaps implement as a device, or part of 9P?
-func (fsc *FsClient) Pipe(path string, perm np.Tperm) error {
-	db.DPrintf("%v: Mkpipe %v\n", fsc.uname, path)
-	p := np.Split(path)
-	dir := p[0 : len(p)-1]
-	base := p[len(p)-1]
-	fid, err := fsc.walkMany(dir, true)
-	if err != nil {
-		return err
-	}
-	_, err = fsc.npch(fid).Mkpipe(fid, base, perm)
-	return err
-}
-
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DPrintf("%v: Rename %v %v\n", fsc.uname, old, new)

@@ -18,5 +18,4 @@ type NpAPI interface {
 	Remove(np.Tremove, *np.Rremove) *np.Rerror
 	Stat(np.Tstat, *np.Rstat) *np.Rerror
 	Wstat(np.Twstat, *np.Rwstat) *np.Rerror
-	Pipe(np.Tmkpipe, *np.Rmkpipe) *np.Rerror
 }

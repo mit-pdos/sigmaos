@@ -1,12 +1,13 @@
 package mr
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"testing"
 
-	//"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
 )
@@ -66,12 +67,25 @@ func TestWc(t *testing.T) {
 		pids = append(pids, pid2)
 	}
 	// only one reducer
-	a := &fslib.Attr{fslib.GenPid(), "../bin/mr-r-wc",
+	pid := fslib.GenPid()
+	a := &fslib.Attr{pid, "../bin/mr-r-wc",
 		[]string{"name/fs/0", "name/fs/mr-out"}, nil,
 		nil, pids}
 	ts.Spawn(a)
 
-	<-ts.done
+	ts.Wait(pid)
 
-	// ts.s.Shutdown(ts.FsLib)
+	b, err := ts.ReadFile("name/fs/mr-out")
+	assert.Nil(t, err, "Readfile")
+
+	b1, err := ioutil.ReadFile("seq-mr.out")
+	assert.Nil(t, err, "Readfile seq")
+
+	assert.Equal(t, len(b), len(b1), "Output len")
+
+	for i, v := range b {
+		assert.Equal(t, v, b1[i], fmt.Sprintf("Buf %v diff %v %v\n", i, v, b1[i]))
+	}
+
+	ts.s.Shutdown(ts.FsLib)
 }

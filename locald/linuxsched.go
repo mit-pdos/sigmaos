@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/bits"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -227,8 +228,8 @@ func topologyPath(core int) string {
 	return "/sys/devices/system/cpu/cpu" + strconv.Itoa(core) + "/topology"
 }
 
-func coreGetCoreSiblings(core int) (*CPUMask, error) {
-	path := topologyPath(core) + "/core_siblings_list"
+func coreGetPackageSiblings(core int) (*CPUMask, error) {
+	path := topologyPath(core) + "/package_cpus_list"
 	return fsReadBitlist(path)
 }
 
@@ -236,3 +237,82 @@ func coreGetThreadSiblings(core int) (*CPUMask, error) {
 	path := topologyPath(core) + "/thread_siblings_list"
 	return fsReadBitlist(path)
 }
+
+func coreGetPackageId(core int) (int, error) {
+	path := topologyPath(core) + "/physical_package_id"
+	return fsReadInt(path)
+}
+
+type PackageInfo struct {
+	Node int
+	ThreadSiblings []*CPUMask
+	PackageSiblings *CPUMask
+}
+
+type TopologyInfo struct {
+	Packages map[int]*PackageInfo
+}
+
+func scanTopologyOne(core int, ti *TopologyInfo) error {
+	node, err := coreGetPackageId(core)
+	if err != nil {
+		return err
+	}
+
+	si := ti.Packages[node]
+	if si == nil {
+		si = new(PackageInfo)
+		ti.Packages[node] = si
+		si.Node = node
+		si.PackageSiblings, err = coreGetPackageSiblings(core)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, v := range si.ThreadSiblings {
+		if v.Test(uint(core)) {
+			return nil
+		}
+	}
+
+	threadSiblings, err := coreGetThreadSiblings(core)
+	if err != nil {
+		return err
+	}
+	si.ThreadSiblings = append(si.ThreadSiblings, threadSiblings)
+	return nil
+}
+
+func ScanTopology() (*TopologyInfo, error) {
+	// open the sysfs cpu directory
+	files, err := ioutil.ReadDir("/sys/devices/system/cpu/")
+	if err != nil {
+		return nil, err
+	}
+
+	// create topology info structure
+	ti := new(TopologyInfo)
+	ti.Packages = make(map[int]*PackageInfo)
+
+	// scan each core in sysfs
+	for _, f := range files {
+		s := f.Name()
+		if !strings.HasPrefix(s, "cpu") {
+			continue
+		}
+		v, err := strconv.Atoi(strings.TrimPrefix(s, "cpu"))
+		if err != nil {
+			continue
+		}
+
+		err = scanTopologyOne(v, ti)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ti, nil
+}
+
+

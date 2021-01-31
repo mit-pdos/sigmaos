@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"math/bits"
 	"io/ioutil"
+	"math/bits"
 	"os"
 	"strconv"
 	"strings"
@@ -238,23 +238,25 @@ func coreGetThreadSiblings(core int) (*CPUMask, error) {
 	return fsReadBitlist(path)
 }
 
-func coreGetPackageId(core int) (int, error) {
+func coreGetPackageID(core int) (int, error) {
 	path := topologyPath(core) + "/physical_package_id"
 	return fsReadInt(path)
 }
 
+// PackageInfo is information about one physical package.
 type PackageInfo struct {
-	Node int
-	ThreadSiblings []*CPUMask
+	Node            int
+	ThreadSiblings  []*CPUMask
 	PackageSiblings *CPUMask
 }
 
+// TopologyInfo is information about CPU topology (packages, threads, etc.).
 type TopologyInfo struct {
 	Packages map[int]*PackageInfo
 }
 
 func scanTopologyOne(core int, ti *TopologyInfo) error {
-	node, err := coreGetPackageId(core)
+	node, err := coreGetPackageID(core)
 	if err != nil {
 		return err
 	}
@@ -284,6 +286,7 @@ func scanTopologyOne(core int, ti *TopologyInfo) error {
 	return nil
 }
 
+// ScanTopology reports the topology of the machine (packages, threads, etc.)
 func ScanTopology() (*TopologyInfo, error) {
 	// open the sysfs cpu directory
 	files, err := ioutil.ReadDir("/sys/devices/system/cpu/")
@@ -314,5 +317,3 @@ func ScanTopology() (*TopologyInfo, error) {
 
 	return ti, nil
 }
-
-

@@ -16,7 +16,7 @@ import (
 var ErrInvalid = errors.New("invalid")
 
 // NCPU is the maximum number of cores supported.
-const NCPU uint = 1024
+const NCPU uint = 256
 const bitsPerWord uint = uint(unsafe.Sizeof(uint(0)) * 8)
 
 // CPUMask is a mask of cores passed to the Linux scheduler.
@@ -61,6 +61,22 @@ func (m *CPUMask) OnesCount() int {
 		cnt += bits.OnesCount(m.mask[i])
 	}
 	return cnt
+}
+
+// FindNextSet gets the index of the next set bit from a starting position.
+func (m *CPUMask) FindNextSet(pos uint) uint {
+	mask := ^uint((1 << (pos % bitsPerWord)) - 1)
+
+	for idx := pos & ^uint(bitsPerWord-1); idx < NCPU; idx += bitsPerWord {
+		val := m.mask[idx/bitsPerWord]
+		val &= mask
+		if val != 0 {
+			return idx + uint(bits.TrailingZeros(val))
+		}
+		mask = 0
+	}
+
+	return NCPU
 }
 
 // ClearAll clears all cores in the mask.
@@ -151,7 +167,7 @@ func fsReadString(path string) (string, error) {
 	return line, nil
 }
 
-func fsReadBitlist(path string) (*CPUMask, error) {
+func fsReadCPUMask(path string) (*CPUMask, error) {
 	// open the file
 	f, err := os.Open(path)
 	if err != nil {
@@ -169,16 +185,17 @@ func fsReadBitlist(path string) (*CPUMask, error) {
 	// convert line to mask
 	mask := new(CPUMask)
 	line = strings.TrimSuffix(line, "\n")
-	sarr := strings.Split(line, ",")
-	for _, s := range sarr {
-		v, err := strconv.Atoi(s)
+	groups := strings.Split(line, ",")
+	for i, group := range groups {
+		v, err := strconv.ParseUint(group, 16, 32)
 		if err != nil {
 			return nil, err
 		}
-		if v < 0 {
-			return nil, fmt.Errorf("%v: %w", line, ErrInvalid)
+		for j := 0; j < 32; j++ {
+			if uint(v)&uint(1<<j) != 0 {
+				mask.Set(uint(j + i*32))
+			}
 		}
-		mask.Set(uint(v))
 	}
 
 	return mask, nil
@@ -216,7 +233,7 @@ func irqSetAffinity(irq int, mask *CPUMask) error {
 
 func irqGetAffinity(irq int) (*CPUMask, error) {
 	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity_list"
-	return fsReadBitlist(path)
+	return fsReadCPUMask(path)
 }
 
 func irqGetActions(irq int) (string, error) {
@@ -229,13 +246,13 @@ func topologyPath(core int) string {
 }
 
 func coreGetPackageSiblings(core int) (*CPUMask, error) {
-	path := topologyPath(core) + "/package_cpus_list"
-	return fsReadBitlist(path)
+	path := topologyPath(core) + "/package_cpus"
+	return fsReadCPUMask(path)
 }
 
 func coreGetThreadSiblings(core int) (*CPUMask, error) {
-	path := topologyPath(core) + "/thread_siblings_list"
-	return fsReadBitlist(path)
+	path := topologyPath(core) + "/thread_siblings"
+	return fsReadCPUMask(path)
 }
 
 func coreGetPackageID(core int) (int, error) {
@@ -316,4 +333,26 @@ func ScanTopology() (*TopologyInfo, error) {
 	}
 
 	return ti, nil
+}
+
+// PrintTopology prints the topology of the machine to stdout.
+func PrintTopology(ti *TopologyInfo) {
+	for i, v := range ti.Packages {
+		s := "node" + strconv.Itoa(i) + ": "
+		for _, sibs := range v.ThreadSiblings {
+			pos := uint(0)
+			s += "["
+			for {
+				pos = sibs.FindNextSet(pos)
+				if pos >= NCPU {
+					break
+				}
+				s += strconv.Itoa(int(pos)) + ","
+				pos += 1
+			}
+			s = strings.TrimSuffix(s, ",")
+			s += "]"
+		}
+		fmt.Println(s)
+	}
 }

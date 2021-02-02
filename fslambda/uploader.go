@@ -16,7 +16,7 @@ type Uploader struct {
 }
 
 func MakeUploader(args []string, debug bool) (*Uploader, error) {
-  log.Printf("Uploader: %v\n", args)
+  db.DPrintf("Uploader: %v\n", args)
   up := &Uploader{}
   up.pid = args[0]
   up.src = args[1]

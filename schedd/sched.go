@@ -97,9 +97,10 @@ func (sd *Sched) Walk(src string, names []string) error {
 	}
 	name := names[len(names)-1]
 	if strings.HasPrefix(name, "Wait") {
-		pid := strings.Split(name, "-")[1]
+    pid := strings.Replace(name, "Wait-", "", 1)
 		l := sd.findLambda(pid)
 		if l == nil {
+      db.DPrintf("Tried to wait on a nil lambda\n")
 			return nil
 		}
 		l.waitFor()
@@ -139,7 +140,6 @@ func (sd *Sched) spawn(attr string) error {
 		sd.ls[l.pid] = l
 	} else {
 		return fmt.Errorf("Spawn %v already exists\n", l.pid)
-
 	}
 	db.DPrintf("Spawn %v\n", l)
 	sd.cond.Signal()

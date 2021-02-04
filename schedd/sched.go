@@ -16,7 +16,7 @@ import (
 // XXX monitor, boost
 
 const (
-	MAXLOAD = 8 // XXX bogus, controls parallelism
+	MAXLOAD = 100 // XXX bogus, controls parallelism
 )
 
 type SchedDev struct {

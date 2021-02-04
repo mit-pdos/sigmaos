@@ -88,7 +88,6 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
     tag := result[0]
     // Get output thunk's hash
     hash := strings.Split(result[1], " ")[0]
-    // XXX remove this sanity check
     if _, ok := outputFiles[hash]; ok {
       log.Fatalf("output file was already in map when parsing thunk output")
     }
@@ -101,7 +100,6 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
   return outputFiles
 }
 
-// TODO: make this more readable
 func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) map[string][]string {
   // Maps of new thunks to their dependencies
   newThunks := make(map[string][]string)

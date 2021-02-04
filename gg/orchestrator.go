@@ -113,13 +113,12 @@ func (orc *Orchestrator) Work() {
     log.Printf("Final output will be pointed to by: %v\n", strings.ReplaceAll(finalOutput, "name", "/mnt/9p"))
     children = append(children, child)
   }
-// XXX Seems to cause problems, so leaving it out for now
-//  db.DPrintf("About to wait for children\n")
-//  for _, c := range children {
-//    db.DPrintf("Orchestrator waiting for child [%v]\n", c)
-//    orc.Wait(c)
-//  }
-//  orc.writeTargets()
+  db.DPrintf("About to wait for children\n")
+  for _, c := range children {
+    db.DPrintf("Orchestrator waiting for child [%v]\n", c)
+    orc.Wait(c)
+  }
+  orc.writeTargets()
 }
 
 func (orc *Orchestrator) writeTargets() {

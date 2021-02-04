@@ -15,7 +15,8 @@ const (
   GG_TOP_DIR = "name/gg"
 // XXX eventually make GG dirs configurable, both here & in GG
   GG_DIR = "name/fs/.gg"
-  GG_BLOB_DIR = GG_DIR +  "/blobs"
+  GG_BLOB_DIR = GG_DIR + "/blobs"
+  GG_REDUCTION_DIR = GG_DIR + "/reductions"
 //  GG_DIR = GG_TOP_DIR + ".gg"
   ORCHESTRATOR = GG_TOP_DIR +  "/orchestrator"
   UPLOAD_SUFFIX = ".upload"
@@ -82,7 +83,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
     return nil, err
   }
   orc.FsLibSrv = fls
-  db.SetDebug(debug)
+  db.SetDebug(true)
   orc.Started(orc.pid)
   return orc, nil
 }
@@ -95,6 +96,7 @@ func (orc *Orchestrator) Work() {
   orc.setUpDirs()
   executables := orc.getExecutableDependencies()
   exUpPids := orc.uploadExecutableDependencies(executables)
+  children := []string{}
   for _, target := range orc.targets {
     // XXX handle non-thunk targets
     db.DPrintf("Spawning upload worker [%v]\n", target);
@@ -103,7 +105,47 @@ func (orc *Orchestrator) Work() {
     upPids := []string{orc.spawnUploader(targetHash)}
     upPids = append(upPids, exUpPids...)
     exPid := spawnExecutor(orc, targetHash, upPids)
-    spawnThunkOutputHandler(orc, exPid, targetHash)
+    child := spawnThunkOutputHandler(orc, exPid, targetHash, []string{targetHash})
+    finalOutput := path.Join(
+      GG_REDUCTION_DIR,
+      targetHash,
+    )
+    log.Printf("Final output will be pointed to by: %v\n", strings.ReplaceAll(finalOutput, "name", "/mnt/9p"))
+    children = append(children, child)
+  }
+// XXX Seems to cause problems, so leaving it out for now
+//  db.DPrintf("About to wait for children\n")
+//  for _, c := range children {
+//    db.DPrintf("Orchestrator waiting for child [%v]\n", c)
+//    orc.Wait(c)
+//  }
+//  orc.writeTargets()
+}
+
+func (orc *Orchestrator) writeTargets() {
+  for i, target := range orc.targets {
+    targetReduction := path.Join(
+      GG_REDUCTION_DIR,
+      orc.targetHashes[i],
+    )
+    f, err := orc.ReadFile(targetReduction)
+    if err != nil {
+      log.Fatalf("Error reading target reduction: %v\n", err)
+    }
+    outputHash := strings.TrimSpace(string(f))
+    outputPath := path.Join(
+      GG_BLOB_DIR,
+      outputHash,
+    )
+    outputValue, err := orc.ReadFile(outputPath)
+    if err != nil {
+      log.Fatalf("Error reading value path: %v\n", err)
+    }
+    err = ioutil.WriteFile(target, outputValue, 0777)
+    if err != nil {
+      log.Fatalf("Error writing output file: %v\n", err)
+    }
+    db.DPrintf("Wrote output file [%v]\n", target)
   }
 }
 
@@ -177,7 +219,7 @@ func (orc *Orchestrator) spawnUploader(targetHash string) string {
   return a.Pid
 }
 
-func spawnExecutor(launch ExecutorLauncher, targetHash string, upPids []string) string {
+func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
   a := fslib.Attr{}
   a.Pid = targetHash + EXECUTOR_SUFFIX
   a.Program = "gg-execute"
@@ -186,26 +228,29 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, upPids []string) 
     targetHash,
   }
   a.Env = []string{
-    "GG_STORAGE_URI=9p://mnt/9p/fs GG_DIR=/mnt/9p/fs/.gg",
+    "GG_STORAGE_URI=9p://mnt/9p/fs",
     "GG_DIR=/mnt/9p/fs/.gg", // XXX Make this configurable
+    "GG_NINEP=true",
     "GG_VERBOSE=1",
   }
   a.PairDep = []fslib.PDep{}
-  a.ExitDep = upPids
+  a.ExitDep = depPids
   err := launch.Spawn(&a)
   if err != nil {
-    log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err);
+// XXX Clean this up better with caching
+//    log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err);
   }
   return a.Pid
 }
 
-func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash string) string {
+func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash string, outputFiles []string) string {
   a := fslib.Attr{}
   a.Pid = thunkHash + OUTPUT_HANDLER_SUFFIX
   a.Program = "./bin/gg-thunk-output-handler"
   a.Args = []string{
     thunkHash,
   }
+  a.Args = append(a.Args, outputFiles...)
   a.Env = []string{}
   a.PairDep = []fslib.PDep{}
   a.ExitDep = []string{
@@ -213,7 +258,8 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash st
   }
   err := launch.Spawn(&a)
   if err != nil {
-    log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err);
+// XXX Clean this up better with caching
+//    log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err);
   }
   return a.Pid
 }

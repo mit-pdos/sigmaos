@@ -75,6 +75,7 @@ func TestWc(t *testing.T) {
 
 	ts.Wait(pid)
 
+	// XXX run as a lambda?
 	b, err := ts.ReadFile("name/fs/mr-out")
 	assert.Nil(t, err, "Readfile")
 

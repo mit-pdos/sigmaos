@@ -33,6 +33,13 @@ func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 		sdev.sd.started(t[len("Started "):])
 	} else if strings.HasPrefix(t, "Exiting") {
 		sdev.sd.exiting(strings.TrimSpace(t[len("Exiting "):]))
+  } else if strings.HasPrefix(t, "SwapExitDependencies") {
+		sdev.sd.swapExitDependencies(
+      strings.Split(
+        strings.TrimSpace(t[len("SwapExitDependencies "):]),
+        " ",
+      ),
+    )
 	} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
 		sdev.sd.exit()
 	} else {
@@ -124,6 +131,26 @@ func (sd *Sched) exit() {
 
 	sd.done = true
 	sd.cond.Signal()
+}
+
+func (sd *Sched) swapExitDependencies(pids []string) error {
+  sd.mu.Lock()
+  defer sd.mu.Unlock()
+
+  if len(pids) % 2 != 0 {
+    return fmt.Errorf("Swapping an odd number of exit deps [%v]\n", pids)
+  }
+  depSwaps := make(map[string]string)
+  for i := 0; i < len(pids); i += 2 {
+    from := pids[i]
+    to := pids[i + 1]
+    depSwaps[from] = to
+    db.DPrintf("Swapping exit dep [%v] -> [%v]\n", from, to)
+  }
+  for _, l := range sd.ls {
+    l.swapExitDependency(depSwaps)
+  }
+  return nil
 }
 
 // Spawn a new lambda

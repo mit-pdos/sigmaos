@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"strconv"
+  "strings"
 
 	np "ulambda/ninep"
 )
@@ -29,6 +30,11 @@ const (
 
 func GenPid() string {
 	return strconv.Itoa(rand.Intn(100000))
+}
+
+func (fl *FsLib) SwapExitDependencies(pids []string) error {
+  b := strings.Join(pids, " ")
+  return fl.WriteFile(SCHEDDEV, []byte("SwapExitDependencies " + b))
 }
 
 func (fl *FsLib) Spawn(a *Attr) error {

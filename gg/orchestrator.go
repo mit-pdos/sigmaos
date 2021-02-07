@@ -19,8 +19,10 @@ const (
   GG_REDUCTION_DIR = GG_DIR + "/reductions"
 //  GG_DIR = GG_TOP_DIR + ".gg"
   ORCHESTRATOR = GG_TOP_DIR +  "/orchestrator"
-  UPLOAD_SUFFIX = ".upload"
+  UPLOADER_SUFFIX = ".uploader"
+  DOWNLOADER_SUFFIX = ".downloader"
   EXECUTOR_SUFFIX = ".executor"
+  TARGET_WRITER_SUFFIX = ".target-writer"
   OUTPUT_HANDLER_SUFFIX = ".output-handler"
   THUNK_OUTPUTS_SUFFIX = ".thunk-outputs"
   SHEBANG_DIRECTIVE = "#!/usr/bin/env gg-force-and-run"
@@ -83,7 +85,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
     return nil, err
   }
   orc.FsLibSrv = fls
-  db.SetDebug(true)
+//  db.SetDebug(true)
   orc.Started(orc.pid)
   return orc, nil
 }
@@ -112,13 +114,8 @@ func (orc *Orchestrator) Work() {
     )
     log.Printf("Final output will be pointed to by: %v\n", strings.ReplaceAll(finalOutput, "name", "/mnt/9p"))
     children = append(children, child)
+    orc.spawnTargetWriter(target, targetHash)
   }
-  db.DPrintf("About to wait for children\n")
-  for _, c := range children {
-    db.DPrintf("Orchestrator waiting for child [%v]\n", c)
-    orc.Wait(c)
-  }
-  orc.writeTargets()
 }
 
 func (orc *Orchestrator) writeTargets() {
@@ -202,7 +199,7 @@ func (orc *Orchestrator) setUpDirs() {
 
 func (orc *Orchestrator) spawnUploader(targetHash string) string {
   a := fslib.Attr{}
-  a.Pid = targetHash + UPLOAD_SUFFIX
+  a.Pid = targetHash + UPLOADER_SUFFIX
   a.Program = "./bin/fsuploader"
   a.Args = []string{
     path.Join(orc.cwd, ".gg", "blobs", targetHash),
@@ -216,6 +213,26 @@ func (orc *Orchestrator) spawnUploader(targetHash string) string {
     log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err);
   }
   return a.Pid
+}
+
+func (orc *Orchestrator) spawnTargetWriter(target string, targetReduction string) {
+  a := fslib.Attr{}
+  a.Pid = target + TARGET_WRITER_SUFFIX
+  a.Program = "./bin/gg-target-writer"
+  a.Args = []string{
+    orc.cwd,
+    target,
+    targetReduction,
+  }
+  a.Env = []string{}
+  a.PairDep = []fslib.PDep{}
+  a.ExitDep = []string{
+    targetReduction + OUTPUT_HANDLER_SUFFIX,
+  }
+  err := orc.Spawn(&a)
+  if err != nil {
+    log.Fatalf("Error spawning target writer [%v]: %v\n", target, err);
+  }
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {

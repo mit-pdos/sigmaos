@@ -1,21 +1,19 @@
 package gg
 
 import (
-//  "errors"
-//  "fmt"
   "strings"
   "log"
   "path"
 
   "ulambda/fslib"
-//  np "ulambda/ninep"
   db "ulambda/debug"
 )
 
 type ThunkOutputHandler struct {
-  pid          string
-  thunkHash    string
-  outputFiles  []string
+  pid                string
+  thunkHash          string
+  primaryOutputThunk string
+  outputFiles        []string
   *fslib.FsLib
 }
 
@@ -48,11 +46,16 @@ func (toh *ThunkOutputHandler) Work() {
     // depend on us.
     toh.propagateResultUpstream()
   } else {
-    downstreamThunks := toh.spawnDownstreamThunks(newThunks, outputFiles)
-    for _, t := range downstreamThunks {
-      toh.Wait(t)
+    toh.spawnDownstreamThunks(newThunks, outputFiles)
+    exitDepSwaps := []string{
+      toh.pid,
+      toh.primaryOutputThunk,
     }
-    db.DPrintf("Handler [%v] done waiting\n", toh.pid)
+    db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
+    err := toh.SwapExitDependencies(exitDepSwaps)
+    if err != nil {
+      log.Fatal("Couldn't swap exit dependencies\n")
+    }
   }
 }
 
@@ -103,6 +106,7 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
 func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) map[string][]string {
   // Maps of new thunks to their dependencies
   newThunks := make(map[string][]string)
+  first := true
   for _, line := range thunkOutput {
     thunkLine := strings.Split(strings.TrimSpace(line), "=")[1]
     // Compute new thunk's dependencies
@@ -114,6 +118,10 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) map[string][]s
       }
     }
     newThunks[hashes[0]] = hashes[1:]
+    if first {
+      toh.primaryOutputThunk = hashes[0] + OUTPUT_HANDLER_SUFFIX
+      first = false
+    }
   }
   return newThunks
 }

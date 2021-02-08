@@ -344,7 +344,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	opath := np.Split(old)
 	npath := np.Split(new)
 
-	if len(opath) != len(new) {
+	if len(opath) != len(npath) {
 		return errors.New("Rename must be within same directory")
 	}
 	for i, n := range opath[:len(opath)-1] {

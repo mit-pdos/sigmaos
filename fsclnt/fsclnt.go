@@ -334,22 +334,30 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 	return fd, nil
 }
 
+// XXX The unix 9p client seems to split a rename across directories
+// into a create and remove, and only does renames within the same
+// directory. For now forget about splitting.
+//
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DPrintf("%v: Rename %v %v\n", fsc.uname, old, new)
-	fid, err := fsc.walkMany(np.Split(old), np.EndSlash(old))
+	opath := np.Split(old)
+	npath := np.Split(new)
+
+	if len(opath) != len(new) {
+		return errors.New("Rename must be within same directory")
+	}
+	for i, n := range opath[:len(opath)-1] {
+		if npath[i] != n {
+			return errors.New("Rename must be within same directory")
+		}
+	}
+	fid, err := fsc.walkMany(opath, np.EndSlash(old))
 	if err != nil {
 		return err
 	}
-	fid1, rest := fsc.mount.resolve(np.Split(new))
-	if fid1 == np.NoFid {
-		return errors.New("Bad destination")
-
-	}
-	// XXX check fid is at same server?
-	// XXX deal with symbolic names on rest
 	st := &np.Stat{}
-	st.Name = strings.Join(rest, "/")
+	st.Name = npath[len(npath)-1]
 	_, err = fsc.npch(fid).Wstat(fid, st)
 	return err
 }

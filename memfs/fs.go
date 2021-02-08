@@ -2,6 +2,7 @@ package memfs
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	db "ulambda/debug"
@@ -20,6 +21,7 @@ func MakeRoot() *Root {
 	r.nextInum = RootInum + 1
 	dir := r.inode.Data.(*Dir)
 	dir.init(r.inode)
+	// db.SetDebug(true)
 	return &r
 }
 
@@ -56,80 +58,50 @@ func (root *Root) MkPipe(uname string, inode *Inode, name string) (*Inode, error
 	return inode, nil
 }
 
-func lockOrdered(olddir *Dir, newdir *Dir) {
-	if olddir.inum == newdir.inum {
-		olddir.mu.Lock()
-	} else if olddir.inum < newdir.inum {
-		olddir.mu.Lock()
-		newdir.mu.Lock()
-	} else {
-		newdir.mu.Lock()
-		olddir.mu.Lock()
-	}
-}
-
-func unlockOrdered(olddir *Dir, newdir *Dir) {
-	if olddir.inum == newdir.inum {
-		olddir.mu.Unlock()
-	} else if olddir.inum < newdir.inum {
-		olddir.mu.Unlock()
-		newdir.mu.Unlock()
-	} else {
-		newdir.mu.Unlock()
-		olddir.mu.Unlock()
-	}
-}
-
 func (root *Root) Rename(uname string, old []string, new []string) error {
 	db.DPrintf("%v: Rename %s to %s\n", uname, old, new)
-
 	rootino := root.inode
 	if len(old) == 0 || len(new) == 0 {
 		return errors.New("Cannot rename directory")
 	}
 	oldname := old[len(old)-1]
 	newname := new[len(new)-1]
-	olddir, ino, err := rootino.LookupPath(uname, old)
+	dir, err := rootino.LookupPath(uname, old)
 	if err != nil {
 		return err
 	}
-	db.DPrintf("%v: Lookup old %v %v %v\n", uname, olddir, ino, err)
-	_, i, err := rootino.LookupPath(uname, new[:len(new)-1])
+	if dir == nil {
+		log.Fatalf("No parent directory %v", old)
+	}
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	db.DPrintf("%v: rename %v from %v\n", uname, oldname, dir)
+	ino, err := dir.lookupLocked(oldname)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unknown name %v", oldname)
 	}
-	db.DPrintf("%v: Lookup new %v %v\n", uname, i, err)
-	if !i.IsDir() {
-		return errors.New("Dst is not a directory")
-	}
-	newdir := i.Data.(*Dir)
-
-	lockOrdered(olddir, newdir)
-	defer unlockOrdered(olddir, newdir)
-
-	// XXX should check if oldname still exists, etc.
-
-	// XXX maybe use inode.Remove()
-	db.DPrintf("%v: remove %v from %v\n", uname, oldname, olddir)
-	err = olddir.removeLocked(oldname)
+	err = dir.removeLocked(oldname)
 	if err != nil {
 		log.Fatalf("%v: remove locked %v\n", uname, newname)
 	}
-	i, err = newdir.lookupLocked(newname)
-	if err == nil {
-		err = newdir.removeLocked(newname)
+	i, err := dir.lookupLocked(newname)
+	if err == nil { // i is valid
+		// XXX 9p: it is an error to change the name to that
+		// of an existing file.
+		err = dir.removeLocked(newname)
 		if err != nil {
 			log.Fatalf("%v: remove locked %v\n", uname, newname)
 		}
 		root.freeInum(i.Inum)
 	}
 
-	err = newdir.createLocked(ino, newname)
+	err = dir.createLocked(ino, newname)
 	if err != nil {
 		log.Fatalf("%v: Rename createLocked: %v\n", uname, err)
 		return err
 	}
 
-	db.DPrintf("%v: Rename succeeded %v\n", uname, newdir)
+	db.DPrintf("%v: Rename succeeded %v %v\n", uname, old, new)
 	return nil
 }

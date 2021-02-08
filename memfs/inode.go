@@ -162,33 +162,23 @@ func (inode *Inode) Walk(uname string, path []string) ([]*Inode, []string, error
 	inodes, rest, err := dir.namei(uname, path, inodes)
 	if err == nil {
 		return inodes, rest, err
-		// switch inodes[len(inodes)-1].PermT {
-		// case MountT:
-		// 	// uf := inode.Data.(*fid.Ufid)
-		// 	return nil, rest, err
-		// case SymT:
-		// 	// s := inode.Data.(*Symlink)
-		// 	return nil, rest, err
-		// default:
 	} else {
 		return nil, rest, err // XXX was nil?
 	}
 }
 
-// Lookup a file/directory.  Return parent and inode for file/directory.
-// If no parent, return.
-func (inode *Inode) LookupPath(uname string, path []string) (*Dir, *Inode, error) {
+// Lookup a file/directory.  Return parent directory.
+func (inode *Inode) LookupPath(uname string, path []string) (*Dir, error) {
 	inodes, rest, err := inode.Walk(uname, path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	db.DPrintf("%v: Walk -> %v rest %v err %v\n", uname, inodes, rest, err)
 	if len(rest) != 0 {
-		return nil, nil, errors.New("Unknown name")
+		return nil, errors.New("Unknown name")
 	}
-	i := inodes[len(inodes)-1]
 	if len(inodes) == 1 {
-		return nil, i, nil
+		return nil, errors.New("No parent directory")
 	} else {
 		// there must be a parent
 		di := inodes[len(inodes)-2]
@@ -196,22 +186,30 @@ func (inode *Inode) LookupPath(uname string, path []string) (*Dir, *Inode, error
 		if !ok {
 			log.Fatal("Lookup: cast error")
 		}
-		return dir, inodes[len(inodes)-1], nil
+		return dir, nil
 	}
 }
 
 func (inode *Inode) Remove(uname string, root *Root, path []string) error {
-	dir, ino, err := inode.LookupPath(uname, path)
-	db.DPrintf("Remove %v dir %v %v %v\n", path, dir, ino, err)
+	if len(path) == 0 {
+		return errors.New("Cannot remove root directory")
+	}
+	dir, err := inode.LookupPath(uname, path)
+	db.DPrintf("Remove %v dir %v %v\n", path, dir, err)
 	if err != nil {
 		return err
 	}
-	if len(path) == 0 {
-		log.Fatalf("Remove %v dir %v %v %v\n", path, dir, ino, err)
-	}
-	err = dir.remove(path[len(path)-1])
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	n := path[len(path)-1]
+	ino, err := dir.lookupLocked(n)
 	if err != nil {
-		log.Fatal("Remove error ", err)
+		return fmt.Errorf("Unknown name %v", n)
+	}
+	err = dir.removeLocked(n)
+	if err != nil {
+		log.Fatalf("Remove: missing %v\n", n)
 	}
 	root.freeInum(ino.Inum)
 	return nil

@@ -26,6 +26,7 @@ type Mapper struct {
 	fds    []int
 }
 
+// XXX create in a temporary file and then rename
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m := &Mapper{}
 	m.clnt = fslib.MakeFsLib("mapper")

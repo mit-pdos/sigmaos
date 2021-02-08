@@ -20,7 +20,7 @@ func IsCurrentDir(name string) bool {
 
 type Dir struct {
 	mu      sync.Mutex
-	inum    Tinum // for acquiring locks in rename()
+	inum    Tinum
 	entries map[string]*Inode
 }
 
@@ -171,7 +171,7 @@ func (dir *Dir) remove(name string) error {
 
 	inode, err := dir.lookupLocked(name)
 	if err != nil {
-		db.DPrintf("%v: remove %v unknown %v", dir, name)
+		db.DPrintf("remove %v unknown %v", dir, name)
 		return err
 	}
 	if inode.IsDir() {

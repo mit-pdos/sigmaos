@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	KV      = "name/kv"
-	SHARDER = "name/kv/sharder"
+	KV = "name/kv"
 )
 
 type KvDev struct {
@@ -65,7 +64,7 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
 	kv.pid = args[0]
-	kv.me = KV + "/" + kv.pid
+	kv.me = KV + "/kv-" + kv.pid
 
 	fs := memfs.MakeRoot()
 	fsd := memfsd.MakeFsd(fs, kv)
@@ -74,19 +73,9 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, err
 	}
 	kv.FsLibSrv = fsl
+	kv.conf = kv.readConfig(KVNEXTCONFIG)
 	kv.Started(kv.pid)
-	kv.conf = kv.readConfig(KVCONFIG)
 	return kv, nil
-}
-
-func (kv *Kv) join() error {
-	sh := SHARDER + "/dev"
-	log.Printf("%v: Join\n", kv.me)
-	err := kv.WriteFile(sh, []byte("Join "+kv.me))
-	if err != nil {
-		log.Printf("WriteFile: %v %v\n", sh, err)
-	}
-	return err
 }
 
 // Interposes on memfsd's walk to check that clerk and I run in same config
@@ -123,7 +112,7 @@ func (kv *Kv) readConfig(conffile string) *Config {
 	conf := Config{}
 	err := kv.ReadFileJson(conffile, &conf)
 	if err != nil {
-		log.Fatalf("ReadFileJson: %v\n", err)
+		return nil
 	}
 	return &conf
 }
@@ -231,7 +220,7 @@ func (kv *Kv) Work() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	kv.join()
+	log.Printf("%v: KV work\n", kv.me)
 	cont := true
 	for cont {
 		kv.cond.Wait()

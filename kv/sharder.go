@@ -14,8 +14,10 @@ import (
 
 const (
 	NSHARD       = 10
-	KVCONFIG     = SHARDER + "/config"
-	KVNEXTCONFIG = SHARDER + "/nextconfig"
+	KVDIR        = "name/kv"
+	SHARDER      = KVDIR + "/sharder"
+	KVCONFIG     = KVDIR + "/config"
+	KVNEXTCONFIG = KVDIR + "/nextconfig"
 )
 
 var ErrWrongKv = errors.New("ErrWrongKv")
@@ -28,13 +30,7 @@ type SharderDev struct {
 func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	var err error
-	if strings.HasPrefix(t, "Join") {
-		err = shdev.sh.join(t[len("Join "):])
-	} else if strings.HasPrefix(t, "Add") {
-		shdev.sh.add()
-	} else if strings.HasPrefix(t, "Del") {
-		shdev.sh.del()
-	} else if strings.HasPrefix(t, "Prepared") {
+	if strings.HasPrefix(t, "Prepared") {
 		err = shdev.sh.prepared(t[len("Prepared "):])
 	} else if strings.HasPrefix(t, "Exit") {
 		shdev.sh.exit()
@@ -83,20 +79,17 @@ func MakeSharder(args []string) (*Sharder, error) {
 	log.Printf("Sharder: %v\n", args)
 	sh := &Sharder{}
 	sh.cond = sync.NewCond(&sh.mu)
-	sh.conf = makeConfig(0)
-	sh.kvs = make([]string, 0)
 	sh.pid = args[0]
 	sh.bin = args[1]
 	fls, err := fslib.InitFs(SHARDER, &SharderDev{sh})
 	if err != nil {
 		return nil, err
 	}
-	err = fls.MakeFileJson(KVCONFIG, *sh.conf)
-	if err != nil {
-		return nil, err
-	}
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
+
+	db.SetDebug(true)
+
 	return sh, nil
 }
 
@@ -111,43 +104,11 @@ func (sh *Sharder) exit() error {
 	return nil
 }
 
-// Add a new KV, which will invoke join once
-// it is running.
-func (sh *Sharder) add() {
-	sh.spawnKv()
-}
-
-// Remove one KV
-func (sh *Sharder) del() error {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-
-	db.DPrintf("Del: %v\n", sh.kvs[0])
-	sh.nextKvs = sh.kvs[1:]
-	sh.cond.Signal()
-	return nil
-}
-
-func (sh *Sharder) join(kvd string) error {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-
-	db.DPrintf("Join: %v\n", kvd)
-	if sh.nextConf != nil {
-		return fmt.Errorf("In reconfiguration %v -> %v\n",
-			sh.conf.N, sh.nextConf.N)
-	}
-	sh.nextKvs = append(sh.kvs, kvd)
-	sh.kvs = append(sh.kvs, kvd)
-	sh.cond.Signal()
-	return nil
-}
-
 func (sh *Sharder) prepared(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	db.DPrintf("Prepared: %v\n", kvd)
+	log.Printf("Prepared: %v\n", kvd)
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {
 		sh.cond.Signal()
@@ -200,58 +161,86 @@ func (sh *Sharder) Exit() {
 	sh.Exiting(sh.pid)
 }
 
-func (sh *Sharder) spawnKv() error {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = sh.bin + "/kvd"
-	a.Args = []string{}
-	a.PairDep = []fslib.PDep{fslib.PDep{sh.pid, a.Pid}}
-	a.ExitDep = nil
-	return sh.Spawn(&a)
+func (sh *Sharder) readConfig(conffile string) *Config {
+	conf := Config{}
+	err := sh.ReadFileJson(conffile, &conf)
+	if err != nil {
+		return nil
+	}
+	sh.kvs = make([]string, 0)
+	for _, kv := range conf.Shards {
+		present := false
+		if kv == "" {
+			continue
+		}
+		for _, k := range sh.kvs {
+			if k == kv {
+				present = true
+				break
+			}
+		}
+		if !present {
+			sh.kvs = append(sh.kvs, kv)
+		}
+	}
+	return &conf
 }
 
-// XXX Handle failed kvs
+func (sh *Sharder) Init() {
+	sh.conf = makeConfig(0)
+	err := sh.MakeFileJson(KVCONFIG, *sh.conf)
+	if err != nil {
+		log.Fatalf("Sharder: cannot make file  %v %v\n", KVCONFIG, err)
+	}
+}
+
 func (sh *Sharder) Work() {
 	sh.mu.Lock()
-	err := sh.spawnKv()
-	if err != nil {
-		log.Fatalf("spawnKv: error %v\n", err)
-	}
-	for !(sh.done && sh.nextConf == nil) {
+	defer sh.mu.Unlock()
 
+	sh.conf = sh.readConfig(KVCONFIG)
+	if sh.conf == nil {
+		sh.Init()
+		return
+	}
+	log.Printf("Sharder work %v\n", sh.conf)
+	sh.nextKvs = make([]string, 0)
+	sh.ProcessDir(KVDIR, func(st *np.Stat) (bool, error) {
+		if strings.HasPrefix(st.Name, "kv-") {
+			sh.nextKvs = append(sh.nextKvs, st.Name)
+		}
+		return false, nil
+	})
+
+	log.Printf("kv.conf %v nextKvs %v\n", sh.conf, sh.nextKvs)
+
+	sh.nextConf = sh.balance()
+	log.Printf("Sharder next conf: %v %v\n", sh.nextConf, sh.kvs)
+	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
+	if err != nil {
+		log.Printf("Sharder: %v error %v\n", KVNEXTCONFIG, err)
+		return
+	}
+
+	sh.nkvd = len(sh.kvs)
+	log.Printf("nkvd %v\n", sh.nkvd)
+	for _, kv := range sh.kvs {
+		sh.prepare(kv)
+	}
+
+	// XXX handle crashed KVs
+	for sh.nkvd > 0 {
 		sh.cond.Wait()
 
-		if sh.nextConf == nil {
-			sh.nextConf = sh.balance()
-			db.DPrintf("Sharder next conf: %v %v\n", sh.nextConf, sh.kvs)
-			err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
-			if err != nil {
-				log.Printf("Work: %v error %v\n", KVNEXTCONFIG, err)
-				return
-			}
-			sh.nkvd = len(sh.kvs)
-			for _, kv := range sh.kvs {
-				sh.prepare(kv)
-			}
-		} else {
-			if sh.nkvd == 0 { // all kvs are prepared?
-				db.DPrintf("Commit to %v\n", sh.nextConf)
-				// commit to new config
-				err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
-				if err != nil {
-					log.Printf("Work: rename error %v\n", err)
-				}
-				for _, kv := range sh.kvs {
-					sh.commit(kv)
-				}
-				sh.conf = sh.nextConf
-				sh.kvs = sh.nextKvs
-				sh.nextConf = nil
-			} else {
-				log.Printf("Sharder: reconfig in progress  %v -> %v\n",
-					sh.conf.N, sh.nextConf.N)
-			}
+	}
 
-		}
+	log.Printf("Commit to %v\n", sh.nextConf)
+	// commit to new config
+	err = sh.Rename(KVNEXTCONFIG, KVCONFIG)
+	if err != nil {
+		log.Printf("Work: rename %v -> %v: %v\n", KVNEXTCONFIG, KVCONFIG, err)
+	}
+	for _, kv := range sh.kvs {
+		sh.commit(kv)
 	}
 }

@@ -4,6 +4,7 @@ package memfs
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -34,21 +35,17 @@ func TestRoot(t *testing.T) {
 
 func (ts *TestState) initfs() {
 	const N = 1000
-	_, err := ts.rooti.Create(0, ts.fs, np.DMDIR|07000, "todo")
+	_, err := ts.rooti.Create("", ts.fs, np.DMDIR|07000, "todo")
 	assert.Nil(ts.t, err, "Create todo")
-	is, _, err := ts.rooti.Walk(0, []string{"todo"})
+	is, _, err := ts.rooti.Walk("", []string{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
 	for i := 0; i < N; i++ {
-		_, err = is[1].Create(0, ts.fs, 07000, "job"+strconv.Itoa(i))
+		_, err = is[1].Create("", ts.fs, 07000, "job"+strconv.Itoa(i))
 		assert.Nil(ts.t, err, "Create job")
 	}
-	_, err = ts.rooti.Create(0, ts.fs, np.DMDIR|07000, "started")
-	assert.Nil(ts.t, err, "Create started")
-	_, err = ts.rooti.Create(0, ts.fs, np.DMDIR|07000, "reduce")
-	assert.Nil(ts.t, err, "Create reduce")
 }
 
-func (ts *TestState) testRename(t int) {
+func (ts *TestState) testRename(t string) {
 	done := false
 	for !done {
 		is, _, err := ts.rooti.Walk(t, []string{"todo"})
@@ -63,13 +60,15 @@ func (ts *TestState) testRename(t int) {
 			err = npcodec.Unmarshal(b, &st)
 			assert.Nil(ts.t, err, "Unmarshal todo")
 			name := st.Name
-			err = ts.fs.Rename(t, np.Split("todo/"+name), np.Split("started/"+name))
-			if err != nil {
-				assert.Contains(ts.t, err.Error(), "Unknown name")
+			if strings.HasPrefix(name, "job") {
+				err = ts.fs.Rename(t, np.Split("todo/"+name),
+					np.Split("todo/done-"+name))
+				if err != nil {
+					assert.Contains(ts.t, err.Error(), "Unknown name")
+				}
 			} else {
 				assert.Equal(ts.t, err, nil, "Rename todo")
-				err = ts.rooti.Remove(t, ts.fs, np.Split("started/"+name))
-				assert.Nil(ts.t, err, "Remove started")
+				_ = ts.rooti.Remove(t, ts.fs, np.Split("todo/"+name))
 			}
 		}
 	}
@@ -84,7 +83,7 @@ func TestConcurRename(t *testing.T) {
 	for i := 0; i < N; i++ {
 		wg.Add(1)
 		go func(t int) {
-			ts.testRename(t)
+			ts.testRename(strconv.Itoa(t))
 			wg.Done()
 		}(i)
 	}

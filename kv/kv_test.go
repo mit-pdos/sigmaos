@@ -10,9 +10,12 @@ import (
 	"ulambda/fslib"
 )
 
+const BIN = "../bin"
+
 type Tstate struct {
-	t *testing.T
-	s *fslib.System
+	t   *testing.T
+	s   *fslib.System
+	fsl *fslib.FsLib
 	*KvClerk
 	ch chan bool
 }
@@ -21,26 +24,28 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.ch = make(chan bool)
-	bin := "../bin"
 
-	s, err := fslib.Boot(bin)
+	s, err := fslib.Boot(BIN)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
+	ts.fsl = fslib.MakeFsLib("tester")
 
-	fsl := fslib.MakeFsLib("boot")
-
-	err = fsl.Mkdir("name/kv", 0777)
+	err = ts.fsl.Mkdir("name/kv", 0777)
 	if err != nil {
 		t.Fatalf("Mkdir %v\n", err)
 	}
 
-	err = fsl.SpawnProgram(bin+"/sharderd", []string{bin})
-	if err != nil {
-		t.Fatalf("Spawn %v\n", err)
+	ts.spawnSharder()
 
-	}
+	time.Sleep(100 * time.Millisecond)
+
+	ts.spawnKv()
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.spawnSharder()
 
 	time.Sleep(1000 * time.Millisecond)
 
@@ -53,22 +58,24 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) cleanup() {
-	err := ts.WriteFile(SHARDER+"/dev", []byte("Exit"))
-	if err != nil {
-		ts.t.Fatalf("Sharder shutdown %v\n", err)
-	}
-	ts.s.Shutdown(ts.KvClerk.FsLib)
+func (ts *Tstate) spawnKv() {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = BIN + "/kvd"
+	a.Args = []string{}
+	a.PairDep = nil
+	a.ExitDep = nil
+	ts.fsl.Spawn(&a)
 }
 
-func (ts *Tstate) spawnKv() {
-	for {
-		err := ts.WriteFile(SHARDER+"/dev", []byte("Add"))
-		if err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
+func (ts *Tstate) spawnSharder() {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = BIN + "/sharderd"
+	a.Args = []string{BIN}
+	a.PairDep = nil
+	a.ExitDep = nil
+	ts.fsl.Spawn(&a)
 }
 
 func (ts *Tstate) delKv() {
@@ -126,6 +133,10 @@ func (ts *Tstate) clerk() {
 func TestConcur(t *testing.T) {
 	ts := makeTstate(t)
 
+	for true {
+		time.Sleep(1000 * time.Millisecond)
+	}
+
 	for i := 0; i < 100; i++ {
 		err := ts.Put(strconv.Itoa(i), strconv.Itoa(i))
 		assert.Nil(t, err, "Put")
@@ -144,6 +155,4 @@ func TestConcur(t *testing.T) {
 	}
 
 	ts.ch <- true
-
-	ts.cleanup()
 }

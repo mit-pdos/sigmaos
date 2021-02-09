@@ -1,5 +1,10 @@
 package kv
 
+//
+// Shard coordinator: assigns shards to KVs.  Assumes no KV failures
+// This is a short-lived daemon: it rebalances shards and then exists.
+//
+
 import (
 	"errors"
 	"fmt"
@@ -64,16 +69,17 @@ type Sharder struct {
 	*fslib.FsLibSrv
 	pid      string
 	bin      string
+	args     []string
 	kvs      []string // the kv servers in this configuration
 	nextKvs  []string // the available kvs for the next config
+	nkvd     int      // # KVs in reconfiguration
 	conf     *Config
 	nextConf *Config
-	nkvd     int // # KVs in reconfiguration
 	done     bool
 }
 
 func MakeSharder(args []string) (*Sharder, error) {
-	if len(args) != 2 {
+	if len(args) < 4 {
 		return nil, fmt.Errorf("MakeSharder: too few arguments %v\n", args)
 	}
 	log.Printf("Sharder: %v\n", args)
@@ -81,6 +87,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.cond = sync.NewCond(&sh.mu)
 	sh.pid = args[0]
 	sh.bin = args[1]
+	sh.args = args[2:]
 	fls, err := fslib.InitFs(SHARDER, &SharderDev{sh})
 	if err != nil {
 		return nil, err
@@ -88,7 +95,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
-	db.SetDebug(true)
+	// db.SetDebug(true)
 
 	return sh, nil
 }
@@ -119,17 +126,23 @@ func (sh *Sharder) prepared(kvd string) error {
 
 // Tell kv prepare to reconfigure
 func (sh *Sharder) prepare(kv string) {
-	dev := kv + "/dev"
+	sh.mu.Unlock()
+	defer sh.mu.Lock()
+
+	dev := KVDIR + "/" + kv + "/dev"
 	err := sh.WriteFile(dev, []byte("Prepare"))
 	if err != nil {
-		db.DPrintf("WriteFile: %v %v\n", dev, err)
+		log.Printf("WriteFile: %v %v\n", dev, err)
 	}
 
 }
 
 // Tell kv commit to reconfigure
 func (sh *Sharder) commit(kv string) {
-	dev := kv + "/dev"
+	sh.mu.Unlock()
+	defer sh.mu.Lock()
+
+	dev := KVDIR + "/" + kv + "/dev"
 	err := sh.WriteFile(dev, []byte("Commit"))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", dev, err)
@@ -201,30 +214,37 @@ func (sh *Sharder) Work() {
 	sh.conf = sh.readConfig(KVCONFIG)
 	if sh.conf == nil {
 		sh.Init()
-		return
 	}
-	log.Printf("Sharder work %v\n", sh.conf)
-	sh.nextKvs = make([]string, 0)
-	sh.ProcessDir(KVDIR, func(st *np.Stat) (bool, error) {
-		if strings.HasPrefix(st.Name, "kv-") {
-			sh.nextKvs = append(sh.nextKvs, st.Name)
+
+	log.Printf("Sharder work %v %v\n", sh.conf, sh.args)
+	if sh.args[0] == "add" {
+		sh.nextKvs = append(sh.kvs, sh.args[1:]...)
+	} else {
+		sh.nextKvs = make([]string, len(sh.kvs))
+		copy(sh.nextKvs, sh.kvs)
+		for _, del := range sh.args[1:] {
+			for i, kv := range sh.nextKvs {
+				if del == kv {
+					sh.nextKvs = append(sh.nextKvs[:i],
+						sh.nextKvs[i+1:]...)
+				}
+			}
 		}
-		return false, nil
-	})
+	}
 
 	log.Printf("kv.conf %v nextKvs %v\n", sh.conf, sh.nextKvs)
 
 	sh.nextConf = sh.balance()
-	log.Printf("Sharder next conf: %v %v\n", sh.nextConf, sh.kvs)
+	log.Printf("Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 	if err != nil {
 		log.Printf("Sharder: %v error %v\n", KVNEXTCONFIG, err)
 		return
 	}
 
-	sh.nkvd = len(sh.kvs)
-	log.Printf("nkvd %v\n", sh.nkvd)
-	for _, kv := range sh.kvs {
+	sh.nkvd = len(sh.nextKvs)
+	for _, kv := range sh.nextKvs {
+		log.Printf("prepare %v\n", kv)
 		sh.prepare(kv)
 	}
 
@@ -240,7 +260,7 @@ func (sh *Sharder) Work() {
 	if err != nil {
 		log.Printf("Work: rename %v -> %v: %v\n", KVNEXTCONFIG, KVCONFIG, err)
 	}
-	for _, kv := range sh.kvs {
+	for _, kv := range sh.nextKvs {
 		sh.commit(kv)
 	}
 }

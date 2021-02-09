@@ -25,6 +25,7 @@ type KvDev struct {
 func (kvdev *KvDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	if strings.HasPrefix(t, "Prepare") {
+		log.Printf("prepare\n")
 		kvdev.kv.cond.Signal()
 	} else if strings.HasPrefix(t, "Commit") {
 		kvdev.kv.cond.Signal()
@@ -64,7 +65,7 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
 	kv.pid = args[0]
-	kv.me = KV + "/kv-" + kv.pid
+	kv.me = KV + "/" + kv.pid
 
 	fs := memfs.MakeRoot()
 	fsd := memfsd.MakeFsd(fs, kv)
@@ -73,7 +74,6 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, err
 	}
 	kv.FsLibSrv = fsl
-	kv.conf = kv.readConfig(KVNEXTCONFIG)
 	kv.Started(kv.pid)
 	return kv, nil
 }
@@ -98,7 +98,7 @@ func (kv *Kv) Walk(src string, names []string) error {
 				return ErrWrongKv
 			}
 			shard := key2shard(p[1])
-			if kv.conf.Shards[shard] != kv.me {
+			if kv.conf.Shards[shard] != kv.pid {
 				return ErrWrongKv
 			}
 			names[len(names)-1] = p[1]
@@ -118,7 +118,7 @@ func (kv *Kv) readConfig(conffile string) *Config {
 }
 
 func shardPath(kvd string, shard int) string {
-	return kvd + "/" + strconv.Itoa(shard)
+	return KVDIR + "/" + kvd + "/" + strconv.Itoa(shard)
 }
 
 func keyPath(kvd string, shard int, k string) string {
@@ -130,8 +130,8 @@ func keyPath(kvd string, shard int, k string) string {
 // kv, since Walk() must take it.
 func (kv *Kv) makeShardDirs() {
 	for s, kvd := range kv.nextConf.Shards {
-		if kvd == kv.me && kv.conf.Shards[s] != kv.me {
-			d := shardPath(kv.me, s)
+		if kvd == kv.pid && kv.conf.Shards[s] != kv.pid {
+			d := shardPath(kv.pid, s)
 			err := kv.Mkdir(d, 0777)
 			if err != nil {
 				log.Fatalf("%v: moveShards: mkdir %v err %v\n",
@@ -144,9 +144,9 @@ func (kv *Kv) makeShardDirs() {
 // copy new shards to me.
 func (kv *Kv) moveShards() {
 	for s, kvd := range kv.conf.Shards {
-		if kvd != kv.me && kv.nextConf.Shards[s] == kv.me {
+		if kvd != kv.pid && kv.nextConf.Shards[s] == kv.pid {
 			src := shardPath(kvd, s)
-			dst := shardPath(kv.me, s)
+			dst := shardPath(kv.pid, s)
 			err := kv.CopyDir(src, dst)
 			if err != nil {
 				log.Fatalf("copyDir: %v %v err %v\n", src, dst, err)
@@ -160,7 +160,7 @@ func (kv *Kv) removeShards() {
 	defer kv.mu.Lock()
 
 	for s, kvd := range kv.nextConf.Shards {
-		if kvd != kv.me && kv.conf.Shards[s] == kv.me {
+		if kvd != kv.pid && kv.conf.Shards[s] == kv.pid {
 			d := shardPath(kv.me, s)
 			err := kv.RmDir(d)
 			if err != nil {
@@ -183,9 +183,10 @@ func (kv *Kv) prepared() {
 
 // Caller holds lock
 func (kv *Kv) prepare() {
+	kv.conf = kv.readConfig(KVCONFIG)
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	db.DPrintf("%v: prepare for new config: %v\n", kv.me, kv.nextConf)
+	log.Printf("%v: prepare for new config: %v %v\n", kv.me, kv.conf, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()
@@ -207,7 +208,7 @@ func (kv *Kv) commit() bool {
 	kv.nextConf = nil
 
 	for _, kvd := range kv.conf.Shards {
-		if kvd == kv.me {
+		if kvd == kv.pid {
 			return true
 		}
 	}

@@ -25,7 +25,6 @@ type KvDev struct {
 func (kvdev *KvDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 	t := string(data)
 	if strings.HasPrefix(t, "Prepare") {
-		log.Printf("prepare\n")
 		kvdev.kv.cond.Signal()
 	} else if strings.HasPrefix(t, "Commit") {
 		kvdev.kv.cond.Signal()
@@ -75,6 +74,7 @@ func MakeKv(args []string) (*Kv, error) {
 	}
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
+	// db.SetDebug(true)
 	return kv, nil
 }
 
@@ -161,7 +161,7 @@ func (kv *Kv) removeShards() {
 
 	for s, kvd := range kv.nextConf.Shards {
 		if kvd != kv.pid && kv.conf.Shards[s] == kv.pid {
-			d := shardPath(kv.me, s)
+			d := shardPath(kv.pid, s)
 			err := kv.RmDir(d)
 			if err != nil {
 				log.Fatalf("%v: moveShards: remove %v err %v\n",
@@ -186,7 +186,7 @@ func (kv *Kv) prepare() {
 	kv.conf = kv.readConfig(KVCONFIG)
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	log.Printf("%v: prepare for new config: %v %v\n", kv.me, kv.conf, kv.nextConf)
+	db.DPrintf("%v: prepare for new config: %v %v\n", kv.me, kv.conf, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()
@@ -200,7 +200,7 @@ func (kv *Kv) prepare() {
 
 // Caller holds lock
 func (kv *Kv) commit() bool {
-	log.Printf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
+	db.DPrintf("%v: commit to new config: %v\n", kv.me, kv.nextConf)
 
 	kv.removeShards()
 
@@ -221,7 +221,7 @@ func (kv *Kv) Work() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	log.Printf("%v: KV work\n", kv.me)
+	db.DPrintf("%v: KV work\n", kv.me)
 	cont := true
 	for cont {
 		kv.cond.Wait()

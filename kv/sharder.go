@@ -115,7 +115,7 @@ func (sh *Sharder) prepared(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	log.Printf("Prepared: %v\n", kvd)
+	db.DPrintf("Prepared: %v\n", kvd)
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {
 		sh.cond.Signal()
@@ -232,14 +232,16 @@ func (sh *Sharder) Work() {
 		}
 	}
 
-	log.Printf("kv.conf %v nextKvs %v\n", sh.conf, sh.nextKvs)
-
 	sh.nextConf = sh.balance()
-	log.Printf("Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
+	db.DPrintf("Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 	if err != nil {
 		log.Printf("Sharder: %v error %v\n", KVNEXTCONFIG, err)
 		return
+	}
+
+	if sh.args[0] == "del" {
+		sh.nextKvs = append(sh.nextKvs, sh.args[1:]...)
 	}
 
 	sh.nkvd = len(sh.nextKvs)

@@ -11,7 +11,7 @@ import (
 )
 
 const BIN = "../bin"
-const NKEYS = 10
+const NKEYS = 100
 
 type Tstate struct {
 	t   *testing.T
@@ -116,15 +116,18 @@ func TestConcur(t *testing.T) {
 
 	go ts.clerk()
 
-	// for r := 0; r < NSHARD-1; r++ {
-	// 	ts.spawnKv()
-	// 	time.Sleep(1000 * time.Millisecond)
-	// }
+	pids := make([]string, 0)
+	for r := 0; r < NSHARD-1; r++ {
+		pid := ts.spawnKv()
+		ts.spawnSharder("add", pid)
+		time.Sleep(200 * time.Millisecond)
+		pids = append(pids, pid)
+	}
 
-	// for r := NSHARD - 1; r > 0; r-- {
-	// 	ts.delKv()
-	// 	time.Sleep(1000 * time.Millisecond)
-	// }
+	for _, pid := range pids[1:] {
+		ts.spawnSharder("del", pid)
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	ts.ch <- true
 }

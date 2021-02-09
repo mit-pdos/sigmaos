@@ -66,7 +66,7 @@ func (ts *Tstate) spawnKv() string {
 	return a.Pid
 }
 
-func (ts *Tstate) spawnSharder(opcode, pid string) {
+func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = BIN + "/sharderd"
@@ -74,16 +74,7 @@ func (ts *Tstate) spawnSharder(opcode, pid string) {
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
-}
-
-func (ts *Tstate) delKv() {
-	for {
-		err := ts.WriteFile(SHARDER+"/dev", []byte("Del"))
-		if err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
+	return a.Pid
 }
 
 func (ts *Tstate) getKeys() {
@@ -119,13 +110,15 @@ func TestConcur(t *testing.T) {
 	pids := make([]string, 0)
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
-		ts.spawnSharder("add", pid)
+		pid1 := ts.spawnSharder("add", pid)
+		ts.Wait(pid1)
 		time.Sleep(200 * time.Millisecond)
 		pids = append(pids, pid)
 	}
 
 	for _, pid := range pids[1:] {
-		ts.spawnSharder("del", pid)
+		pid1 := ts.spawnSharder("del", pid)
+		ts.Wait(pid1)
 		time.Sleep(200 * time.Millisecond)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"net"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -21,8 +22,8 @@ type NpConn struct {
 	bw   *bufio.Writer
 }
 
-// XXX need mutex
 type ChanMgr struct {
+	mu    sync.Mutex
 	conns map[string]*NpConn
 }
 
@@ -32,7 +33,24 @@ func makeChanMgr() *ChanMgr {
 	return cm
 }
 
+func (cm *ChanMgr) lookup(addr string) (*NpConn, bool) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	conn, ok := cm.conns[addr]
+	return conn, ok
+}
+
+func (cm *ChanMgr) add(addr string, conn *NpConn) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	cm.conns[addr] = conn
+}
+
 func (cm *ChanMgr) Close(addr string) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	conn, ok := cm.conns[addr]
 	if ok {
 		log.Printf("Close connection with %v\n", addr)
@@ -42,7 +60,7 @@ func (cm *ChanMgr) Close(addr string) {
 }
 
 func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
-	conn, ok := cm.conns[addr]
+	conn, ok := cm.lookup(addr)
 	if !ok {
 		var err error
 		c, err := net.Dial("tcp", addr)
@@ -52,7 +70,7 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 		conn = &NpConn{c,
 			bufio.NewReaderSize(c, Msglen),
 			bufio.NewWriterSize(c, Msglen)}
-		cm.conns[addr] = conn
+		cm.add(addr, conn)
 
 	}
 	fcall := &np.Fcall{}

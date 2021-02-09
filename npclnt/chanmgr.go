@@ -2,6 +2,7 @@ package npclnt
 
 import (
 	"bufio"
+	"log"
 	"net"
 
 	db "ulambda/debug"
@@ -20,6 +21,7 @@ type NpConn struct {
 	bw   *bufio.Writer
 }
 
+// XXX need mutex
 type ChanMgr struct {
 	conns map[string]*NpConn
 }
@@ -28,6 +30,15 @@ func makeChanMgr() *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*NpConn)
 	return cm
+}
+
+func (cm *ChanMgr) Close(addr string) {
+	conn, ok := cm.conns[addr]
+	if ok {
+		log.Printf("Close connection with %v\n", addr)
+		conn.conn.Close()
+		delete(cm.conns, addr)
+	}
 }
 
 func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
@@ -65,5 +76,4 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	}
 	db.DPrintf("clnt: %v\n", fcall)
 	return fcall.Msg, nil
-
 }

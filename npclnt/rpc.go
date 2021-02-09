@@ -53,6 +53,10 @@ func (npc *NpClnt) MakeNpChan(server string) *NpChan {
 	return npchan
 }
 
+func (npc *NpChan) Close() {
+	npc.cm.Close(npc.server)
+}
+
 func (npch *NpChan) call(args np.Tmsg) (np.Tmsg, error) {
 	reply, err := npch.cm.makeCall(npch.server, args)
 	if err != nil {

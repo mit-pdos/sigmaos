@@ -36,16 +36,6 @@ func (mnt *Mount) add(path []string, fid np.Tfid) {
 	mnt.mounts = append(mnt.mounts, point)
 }
 
-func (mnt *Mount) del(path []string) (np.Tfid, error) {
-	for i, p := range mnt.mounts {
-		if np.IsPathEq(p.path, path) {
-			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			return p.fid, nil
-		}
-	}
-	return np.NoFid, fmt.Errorf("del: unknown mount %v\n", path)
-}
-
 func match(mp []string, path []string) (bool, []string) {
 	rest := path
 	for _, s := range mp {
@@ -69,4 +59,15 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 		}
 	}
 	return np.NoFid, path
+}
+
+func (mnt *Mount) umount(path []string) (np.Tfid, error) {
+	for i, p := range mnt.mounts {
+		ok, _ := match(p.path, path)
+		if ok {
+			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
+			return p.fid, nil
+		}
+	}
+	return np.NoFid, fmt.Errorf("umount: unknown mount %v\n", path)
 }

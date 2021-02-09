@@ -3,6 +3,7 @@ package fsclnt
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"strings"
@@ -174,7 +175,7 @@ func (fsc *FsClient) Close(fd int) error {
 
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
-func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
+func (fsc *FsClient) attachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
 	reply, err := fsc.npc.Attach(server, fsc.Uname(), fid, p)
 	if err != nil {
 		return nil, err
@@ -183,10 +184,15 @@ func (fsc *FsClient) AttachChannel(fid np.Tfid, server string, p []string) (*Pat
 	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
+func (fsc *FsClient) detachChannel(fid np.Tfid) {
+	fsc.npch(fid).Close()
+	fsc.freeFid(fid)
+}
+
 func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 	p := np.Split(path)
 	fid := fsc.allocFid()
-	ch, err := fsc.AttachChannel(fid, server, p)
+	ch, err := fsc.attachChannel(fid, server, p)
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -362,7 +368,6 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	return err
 }
 
-// Unmount an automount point and remove slink
 func (fsc *FsClient) umount(path []string) error {
 	db.DPrintf("%v: umount %v\n", fsc.uname, path)
 	if len(path) < 1 {
@@ -384,11 +389,11 @@ func (fsc *FsClient) umount(path []string) error {
 	if err != nil {
 		return err
 	}
-	fid2, err := fsc.mount.del(path)
+	fid2, err := fsc.mount.umount(path)
 	if err != nil {
 		log.Fatalf("del failed\n")
 	}
-	fsc.freeFid(fid2)
+	fsc.detachChannel(fid2)
 	return nil
 }
 
@@ -437,11 +442,26 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	db.DPrintf("%v: Open %v %v\n", fsc.uname, path, mode)
-	fid, err := fsc.walkMany(np.Split(path), true)
-	if err != nil {
-		return -1, err
+	var fid np.Tfid
+	for {
+		p := np.Split(path)
+		f, err := fsc.walkMany(p, true)
+		if err == io.EOF {
+			log.Printf("%v: Open retry %v %v\n", fsc.uname, p, err)
+			fid2, e := fsc.mount.umount(p)
+			if e != nil {
+				return -1, err
+			}
+			fsc.detachChannel(fid2)
+			continue
+		}
+		if err != nil {
+			return -1, err
+		}
+		fid = f
+		break
 	}
-	_, err = fsc.npch(fid).Open(fid, mode)
+	_, err := fsc.npch(fid).Open(fid, mode)
 	if err != nil {
 		return -1, err
 	}

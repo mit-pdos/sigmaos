@@ -33,7 +33,7 @@ func (up *Uploader) Work() {
   db.DPrintf("Uploading [%v] to [%v]\n", up.src, up.dest);
   contents, err := ioutil.ReadFile(up.src)
   if err != nil {
-    log.Fatalf("Read file [%v] error: %v\n", up.src, err)
+    log.Fatalf("Read file error: %v\n", err)
   }
   err = up.FsLib.MakeFile(up.dest, contents)
   if err != nil {

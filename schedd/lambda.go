@@ -13,18 +13,19 @@ import (
 )
 
 type Lambda struct {
-	mu       sync.Mutex
-	cond     *sync.Cond
-	condWait *sync.Cond
-	sd       *Sched
-	pid      string
-	status   string
-	program  string
-	args     []string
-	env      []string
-	consDep  map[string]bool // if true, consumer has finished
-	prodDep  map[string]bool // if true, producer is running
-	exitDep  map[string]bool
+	mu         sync.Mutex
+	cond       *sync.Cond
+	condWait   *sync.Cond
+	sd         *Sched
+	pid        string
+	status     string
+	exitStatus string
+	program    string
+	args       []string
+	env        []string
+	consDep    map[string]bool // if true, consumer has finished
+	prodDep    map[string]bool // if true, producer is running
+	exitDep    map[string]bool
 }
 
 func makeLambda(sd *Sched, a string) (*Lambda, error) {
@@ -84,15 +85,15 @@ func (l *Lambda) changeStatus(new string) error {
 }
 
 // XXX Might want to optimize this.
-func (l *Lambda) swapExitDependency(depSwaps map[string]string ) {
-  // Assuming len(depSwaps) << len(l.exitDeps)
-  for from, to := range depSwaps {
-    // Check if present & false (hasn't exited yet)
-    if val, ok := l.exitDep[from]; ok && !val {
-      l.exitDep[to] = false
-      l.exitDep[from] = true
-    }
-  }
+func (l *Lambda) swapExitDependency(depSwaps map[string]string) {
+	// Assuming len(depSwaps) << len(l.exitDeps)
+	for from, to := range depSwaps {
+		// Check if present & false (hasn't exited yet)
+		if val, ok := l.exitDep[from]; ok && !val {
+			l.exitDep[to] = false
+			l.exitDep[from] = true
+		}
+	}
 }
 
 // XXX if remote, keep-alive?
@@ -239,7 +240,7 @@ func (l *Lambda) isRunnning() bool {
 }
 
 // A caller wants to Wait for l to exit
-func (l *Lambda) waitFor() {
+func (l *Lambda) waitFor() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -247,13 +248,15 @@ func (l *Lambda) waitFor() {
 	if l.status != "Exiting" {
 		l.condWait.Wait()
 	}
+	return l.exitStatus
 }
 
 // l is exiting; wakeup waiters who are waiting for me to exit
-func (l *Lambda) wakeupWaiter() {
+func (l *Lambda) wakeupWaiter(exitStatus string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	l.exitStatus = exitStatus
 	db.DPrintf("Wakeup waiters for %v\n", l)
 	l.condWait.Broadcast()
 }

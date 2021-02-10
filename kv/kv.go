@@ -235,5 +235,5 @@ func (kv *Kv) Work() {
 
 func (kv *Kv) Exit() {
 	kv.ExitFs(kv.me)
-	kv.Exiting(kv.pid)
+	kv.Exiting(kv.pid, "OK")
 }

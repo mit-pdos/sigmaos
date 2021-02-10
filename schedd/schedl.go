@@ -40,5 +40,5 @@ func (s *Schedl) Work() {
 		log.Printf("Makefile error %v\n", err)
 	}
 
-	s.Exiting(s.pid)
+	s.Exiting(s.pid, "OK")
 }

@@ -33,13 +33,13 @@ func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
 		sdev.sd.started(t[len("Started "):])
 	} else if strings.HasPrefix(t, "Exiting") {
 		sdev.sd.exiting(strings.TrimSpace(t[len("Exiting "):]))
-  } else if strings.HasPrefix(t, "SwapExitDependencies") {
+	} else if strings.HasPrefix(t, "SwapExitDependencies") {
 		sdev.sd.swapExitDependencies(
-      strings.Split(
-        strings.TrimSpace(t[len("SwapExitDependencies "):]),
-        " ",
-      ),
-    )
+			strings.Split(
+				strings.TrimSpace(t[len("SwapExitDependencies "):]),
+				" ",
+			),
+		)
 	} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
 		sdev.sd.exit()
 	} else {
@@ -104,10 +104,10 @@ func (sd *Sched) Walk(src string, names []string) error {
 	}
 	name := names[len(names)-1]
 	if strings.HasPrefix(name, "Wait") {
-    pid := strings.Replace(name, "Wait-", "", 1)
+		pid := strings.Replace(name, "Wait-", "", 1)
 		l := sd.findLambda(pid)
 		if l == nil {
-      db.DPrintf("Tried to wait on a nil lambda\n")
+			db.DPrintf("Tried to wait on a nil lambda\n")
 			return nil
 		}
 		l.waitFor()
@@ -134,23 +134,23 @@ func (sd *Sched) exit() {
 }
 
 func (sd *Sched) swapExitDependencies(pids []string) error {
-  sd.mu.Lock()
-  defer sd.mu.Unlock()
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
 
-  if len(pids) % 2 != 0 {
-    return fmt.Errorf("Swapping an odd number of exit deps [%v]\n", pids)
-  }
-  depSwaps := make(map[string]string)
-  for i := 0; i < len(pids); i += 2 {
-    from := pids[i]
-    to := pids[i + 1]
-    depSwaps[from] = to
-    db.DPrintf("Swapping exit dep [%v] -> [%v]\n", from, to)
-  }
-  for _, l := range sd.ls {
-    l.swapExitDependency(depSwaps)
-  }
-  return nil
+	if len(pids)%2 != 0 {
+		return fmt.Errorf("Swapping an odd number of exit deps [%v]\n", pids)
+	}
+	depSwaps := make(map[string]string)
+	for i := 0; i < len(pids); i += 2 {
+		from := pids[i]
+		to := pids[i+1]
+		depSwaps[from] = to
+		db.DPrintf("Swapping exit dep [%v] -> [%v]\n", from, to)
+	}
+	for _, l := range sd.ls {
+		l.swapExitDependency(depSwaps)
+	}
+	return nil
 }
 
 // Spawn a new lambda
@@ -208,13 +208,16 @@ func (sd *Sched) started(pid string) {
 }
 
 // pid has exited; wait until its consumers also exited
-func (sd *Sched) exiting(pid string) {
+func (sd *Sched) exiting(pidst string) {
+	p := strings.Split(pidst, " ")
+	pid := p[0]
+	st := p[1]
 	l := sd.findLambda(pid)
 	if l != nil {
 		sd.decLoad()
 		l.changeStatus("Exiting")
 		l.stopProducers()
-		l.wakeupWaiter()
+		l.wakeupWaiter(st)
 		l.waitExit()
 		sd.wakeupExit(pid)
 		sd.delLambda(pid)

@@ -171,7 +171,7 @@ func (sh *Sharder) balance() *Config {
 
 func (sh *Sharder) Exit() {
 	sh.ExitFs(SHARDER)
-	sh.Exiting(sh.pid)
+	sh.Exiting(sh.pid, "OK")
 }
 
 func (sh *Sharder) readConfig(conffile string) *Config {

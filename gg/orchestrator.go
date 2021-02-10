@@ -25,6 +25,7 @@ const (
   TARGET_WRITER_SUFFIX = ".target-writer"
   OUTPUT_HANDLER_SUFFIX = ".output-handler"
   THUNK_OUTPUTS_SUFFIX = ".thunk-outputs"
+  INPUT_DEPENDENCIES_SUFFIX = ".input-dependencies"
   SHEBANG_DIRECTIVE = "#!/usr/bin/env gg-force-and-run"
 )
 
@@ -103,10 +104,12 @@ func (orc *Orchestrator) Work() {
     // XXX handle non-thunk targets
     db.DPrintf("Spawning upload worker [%v]\n", target);
     targetHash := orc.getTargetHash(target)
+    targetInputDependencies := orc.getTargetInputDependencies(targetHash)
     orc.targetHashes = append(orc.targetHashes, targetHash)
     upPids := []string{orc.spawnUploader(targetHash)}
     upPids = append(upPids, exUpPids...)
-    exPid := spawnExecutor(orc, targetHash, upPids)
+    targetInputDependencies = append(targetInputDependencies, upPids...)
+    exPid := spawnExecutor(orc, targetHash, targetInputDependencies)
     child := spawnThunkOutputHandler(orc, exPid, targetHash, []string{targetHash})
     finalOutput := path.Join(
       GG_REDUCTION_DIR,
@@ -116,6 +119,29 @@ func (orc *Orchestrator) Work() {
     children = append(children, child)
     orc.spawnTargetWriter(target, targetHash)
   }
+}
+
+func (orc *Orchestrator) getTargetInputDependencies(targetHash string) []string {
+  dependencies := []string{}
+  dependenciesFilePath := path.Join(
+    orc.cwd,
+    ".gg",
+    "blobs",
+    targetHash + INPUT_DEPENDENCIES_SUFFIX,
+  )
+  f, err := ioutil.ReadFile(dependenciesFilePath)
+  if err != nil {
+    db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
+    return dependencies
+  }
+  f_trimmed := strings.TrimSpace(string(f))
+  if len(f_trimmed) > 0 {
+    for _, d := range strings.Split(f_trimmed, "\n") {
+      dependencies = append(dependencies, d + OUTPUT_HANDLER_SUFFIX)
+    }
+  }
+  db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
+  return dependencies
 }
 
 func (orc *Orchestrator) writeTargets() {
@@ -165,14 +191,15 @@ func (orc *Orchestrator) getExecutableDependencies() []string {
 
 func (orc *Orchestrator) getTargetHash(target string) string {
   // XXX support non-placeholders
-  f, err := ioutil.ReadFile(path.Join(orc.cwd, target))
+  targetPath := path.Join(orc.cwd, target)
+  f, err := ioutil.ReadFile(targetPath)
   contents := string(f)
   if err != nil {
     log.Fatalf("Error reading target [%v]: %v\n", target, err)
   }
   shebang := strings.Split(contents, "\n")[0]
   if shebang != SHEBANG_DIRECTIVE {
-    log.Fatalf("Error: not a placeholder")
+    log.Fatalf("Error: [%v] is not a placeholder [%v]", targetPath, shebang)
   }
   hash := strings.Split(contents, "\n")[1]
   return hash

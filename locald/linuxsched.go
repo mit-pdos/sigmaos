@@ -271,12 +271,12 @@ func fsReadContiguousBitlist(path string) (int, error) {
 }
 
 func irqSetAffinity(irq int, mask *CPUMask) error {
-	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity_list"
+	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity"
 	return fsWriteCPUMask(path, mask)
 }
 
 func irqGetAffinity(irq int) (*CPUMask, error) {
-	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity_list"
+	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity"
 	return fsReadCPUMask(path)
 }
 

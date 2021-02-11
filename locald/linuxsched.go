@@ -15,18 +15,23 @@ import (
 
 var ErrInvalid = errors.New("invalid")
 
-// NCPU is the maximum number of cores supported.
-const NCPU uint = 256
+// MaxCores is the maximum number of cores supported.
+const MaxCores uint = 256
+
+// NCores is the actual number of cores in the machine.
+var NCores uint
+
 const bitsPerWord uint = uint(unsafe.Sizeof(uint(0)) * 8)
+const bitsPerUint32 uint = 32
 
 // CPUMask is a mask of cores passed to the Linux scheduler.
 type CPUMask struct {
-	mask [(NCPU + bitsPerWord - 1) / bitsPerWord]uint
+	mask [(MaxCores + bitsPerWord - 1) / bitsPerWord]uint
 }
 
 // Test returns true if the core is set in the mask.
 func (m *CPUMask) Test(core uint) bool {
-	if core >= NCPU {
+	if core >= NCores {
 		panic("core too high")
 	}
 	idx := core / bitsPerWord
@@ -36,7 +41,7 @@ func (m *CPUMask) Test(core uint) bool {
 
 // Set sets a core in the mask.
 func (m *CPUMask) Set(core uint) {
-	if core >= NCPU {
+	if core >= NCores {
 		panic("core too high")
 	}
 	idx := core / bitsPerWord
@@ -46,7 +51,7 @@ func (m *CPUMask) Set(core uint) {
 
 // Clear clears a core in the mask.
 func (m *CPUMask) Clear(core uint) {
-	if core >= NCPU {
+	if core >= NCores {
 		panic("core too high")
 	}
 	idx := core / bitsPerWord
@@ -67,7 +72,7 @@ func (m *CPUMask) OnesCount() int {
 func (m *CPUMask) FindNextSet(pos uint) uint {
 	mask := ^uint((1 << (pos % bitsPerWord)) - 1)
 
-	for idx := pos & ^uint(bitsPerWord-1); idx < NCPU; idx += bitsPerWord {
+	for idx := pos & ^uint(bitsPerWord-1); idx < NCores; idx += bitsPerWord {
 		val := m.mask[idx/bitsPerWord]
 		val &= mask
 		if val != 0 {
@@ -76,7 +81,7 @@ func (m *CPUMask) FindNextSet(pos uint) uint {
 		mask = 0
 	}
 
-	return NCPU
+	return NCores
 }
 
 // ClearAll clears all cores in the mask.
@@ -84,6 +89,19 @@ func (m *CPUMask) ClearAll() {
 	for i := range m.mask {
 		m.mask[i] = 0
 	}
+}
+
+func (m *CPUMask) getUInt32(idx int) uint32 {
+	shift := uint(idx) * bitsPerUint32 % bitsPerWord
+	val := m.mask[uint(idx)*bitsPerUint32/bitsPerWord]
+	return uint32((val >> shift) & 0xFFFFFFFF)
+}
+
+func (m *CPUMask) setUInt32(idx int, val uint32) {
+	shift := uint(idx) * bitsPerUint32 % bitsPerWord
+	uidx := uint(idx) * bitsPerUint32 / bitsPerWord
+	m.mask[uidx] &= ^(0xFFFFFFFF << shift)
+	m.mask[uidx] |= uint(val) << shift
 }
 
 // CreateCPUMaskOfOne creates a mask of one core.
@@ -96,7 +114,7 @@ func CreateCPUMaskOfOne(core uint) *CPUMask {
 // SchedSetAffinity pins a task to a mask of cores.
 func SchedSetAffinity(pid int, m *CPUMask) error {
 	_, _, errno := syscall.Syscall(syscall.SYS_SCHED_SETAFFINITY,
-		uintptr(pid), uintptr(NCPU), uintptr(unsafe.Pointer(&m.mask)))
+		uintptr(pid), uintptr(NCores), uintptr(unsafe.Pointer(&m.mask)))
 	if errno != 0 {
 		return errno
 	}
@@ -191,17 +209,13 @@ func fsReadCPUMask(path string) (*CPUMask, error) {
 		if err != nil {
 			return nil, err
 		}
-		for j := 0; j < 32; j++ {
-			if uint(v)&uint(1<<j) != 0 {
-				mask.Set(uint(j + i*32))
-			}
-		}
+		mask.setUInt32(len(groups)-i-1, uint32(v))
 	}
 
 	return mask, nil
 }
 
-func fsWriteBitlist(path string, mask *CPUMask) error {
+func fsWriteCPUMask(path string, mask *CPUMask) error {
 	// open the file for writing
 	f, err := os.OpenFile(path, os.O_RDWR, 0644)
 	if err != nil {
@@ -211,10 +225,9 @@ func fsWriteBitlist(path string, mask *CPUMask) error {
 
 	// convert mask to string
 	var sb strings.Builder
-	for i := uint(0); i < NCPU; i++ {
-		if mask.Test(i) {
-			sb.WriteString(strconv.Itoa(int(i)) + ",")
-		}
+	for i := int(NCores / 32); i >= 0; i-- {
+		v := mask.getUInt32(i)
+		sb.WriteString(fmt.Sprintf("%08x,", v))
 	}
 	s := strings.TrimSuffix(sb.String(), ",")
 
@@ -224,11 +237,42 @@ func fsWriteBitlist(path string, mask *CPUMask) error {
 	}
 
 	return nil
+
+}
+
+func fsReadContiguousBitlist(path string) (int, error) {
+	// open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	// read the first line
+	rd := bufio.NewReader(f)
+	line, err := rd.ReadString('\n')
+	if err != nil {
+		return 0, err
+	}
+
+	// convert to range and validate
+	line = strings.TrimSuffix(line, "\n")
+	groups := strings.Split(line, "-")
+	if len(groups) != 2 {
+		return 0, ErrInvalid
+	}
+	start, err1 := strconv.Atoi(groups[0])
+	end, err2 := strconv.Atoi(groups[1])
+	if err1 != nil || err2 != nil || start != 0 {
+		return 0, ErrInvalid
+	}
+
+	return end + 1, nil
 }
 
 func irqSetAffinity(irq int, mask *CPUMask) error {
 	path := "/proc/irq/" + strconv.Itoa(irq) + "/smp_affinity_list"
-	return fsWriteBitlist(path, mask)
+	return fsWriteCPUMask(path, mask)
 }
 
 func irqGetAffinity(irq int) (*CPUMask, error) {
@@ -272,7 +316,7 @@ type TopologyInfo struct {
 	Packages map[int]*PackageInfo
 }
 
-func scanTopologyOne(core int, ti *TopologyInfo) error {
+func scanCore(core int, ti *TopologyInfo) error {
 	node, err := coreGetPackageID(core)
 	if err != nil {
 		return err
@@ -305,6 +349,14 @@ func scanTopologyOne(core int, ti *TopologyInfo) error {
 
 // ScanTopology reports the topology of the machine (packages, threads, etc.)
 func ScanTopology() (*TopologyInfo, error) {
+	// read the number of online cores
+	n, err := fsReadContiguousBitlist("/sys/devices/system/cpu/online")
+	if err != nil {
+		return nil, err
+	}
+	NCores = uint(n)
+	fmt.Println("Detected", NCores, "cores.")
+
 	// open the sysfs cpu directory
 	files, err := ioutil.ReadDir("/sys/devices/system/cpu/")
 	if err != nil {
@@ -325,8 +377,7 @@ func ScanTopology() (*TopologyInfo, error) {
 		if err != nil {
 			continue
 		}
-
-		err = scanTopologyOne(v, ti)
+		err = scanCore(v, ti)
 		if err != nil {
 			return nil, err
 		}
@@ -344,11 +395,11 @@ func PrintTopology(ti *TopologyInfo) {
 			s += "["
 			for {
 				pos = sibs.FindNextSet(pos)
-				if pos >= NCPU {
+				if pos >= NCores {
 					break
 				}
 				s += strconv.Itoa(int(pos)) + ","
-				pos += 1
+				pos++
 			}
 			s = strings.TrimSuffix(s, ",")
 			s += "]"

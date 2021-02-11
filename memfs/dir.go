@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sort"
 	"sync"
 
 	db "ulambda/debug"
@@ -41,18 +40,6 @@ func (dir *Dir) init(inodot *Inode) {
 	dir.entries["."] = inodot
 }
 
-func (dir *Dir) lenLocked() np.Tlength {
-	sz := uint32(0)
-	for n, i := range dir.entries {
-		if n != "." {
-			st := *i.Stat()
-			st.Name = n
-			sz += npcodec.SizeNp(st)
-		}
-	}
-	return np.Tlength(sz)
-}
-
 func (dir *Dir) removeLocked(name string) error {
 	_, ok := dir.entries[name]
 	if ok {
@@ -81,11 +68,10 @@ func (dir *Dir) lookupLocked(name string) (*Inode, error) {
 	}
 }
 
-// Caller must acquire lock?
 func (dir *Dir) Len() np.Tlength {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return dir.lenLocked()
+	return npcodec.DirSize(dir.lsL())
 }
 
 func (dir *Dir) namei(uname string, path []string, inodes []*Inode) ([]*Inode, []string, error) {
@@ -119,43 +105,25 @@ func (dir *Dir) namei(uname string, path []string, inodes []*Inode) ([]*Inode, [
 	}
 }
 
+func (dir *Dir) lsL() []*np.Stat {
+	entries := []*np.Stat{}
+	for k, v := range dir.entries {
+		if k == "." {
+			continue
+		}
+		st := v.Stat()
+		st.Name = k
+		entries = append(entries, st)
+	}
+	return entries
+}
+
 func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	var buf []byte
-	if offset >= np.Toffset(dir.lenLocked()) { // passed end of directory
-		return buf, nil
-	}
-	off := np.Toffset(0)
-	keys := make([]string, 0, len(dir.entries))
-	for k := range dir.entries {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, n := range keys {
-		i := dir.entries[n]
-		if n == "." {
-			continue
-		}
-		st := *i.Stat()
-		st.Name = n
-		sz := np.Tsize(npcodec.SizeNp(st))
-		if cnt < sz {
-			break
-		}
-		if off >= offset {
-			b, err := npcodec.Marshal(st)
-			if err != nil {
-				return nil, err
-			}
-			buf = append(buf, b...)
-			cnt -= sz
-
-		}
-		off += np.Toffset(sz)
-	}
-	return buf, nil
+	entries := dir.lsL()
+	return npcodec.Dir2Buf(offset, cnt, entries)
 }
 
 func (dir *Dir) create(inode *Inode, name string) error {

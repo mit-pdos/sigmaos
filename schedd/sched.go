@@ -2,15 +2,15 @@ package schedd
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfs"
-	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/npsrv"
 )
 
 // XXX monitor, boost
@@ -19,70 +19,36 @@ const (
 	MAXLOAD = 100 // XXX bogus, controls parallelism
 )
 
-type SchedDev struct {
-	sd *Sched
-}
-
-func (sdev *SchedDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
-	var err error
-	t := string(data)
-	db.DPrintf("SchedDev.write %v\n", t)
-	if strings.HasPrefix(t, "Spawn") {
-		err = sdev.sd.spawn(t[len("Spawn "):])
-	} else if strings.HasPrefix(t, "Started") {
-		sdev.sd.started(t[len("Started "):])
-	} else if strings.HasPrefix(t, "Exiting") {
-		sdev.sd.exiting(strings.TrimSpace(t[len("Exiting "):]))
-	} else if strings.HasPrefix(t, "SwapExitDependencies") {
-		sdev.sd.swapExitDependencies(
-			strings.Split(
-				strings.TrimSpace(t[len("SwapExitDependencies "):]),
-				" ",
-			),
-		)
-	} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
-		sdev.sd.exit()
-	} else {
-		return 0, fmt.Errorf("Write: unknown command %v\n", t)
-	}
-	return np.Tsize(len(data)), err
-}
-
-func (sdev *SchedDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
-	if off == 0 {
-		s := sdev.sd.ps()
-		return []byte(s), nil
-	}
-	return nil, nil
-}
-
-func (sdev *SchedDev) Len() np.Tlength {
-	return np.Tlength(len(sdev.sd.ps()))
-}
-
 type Sched struct {
 	mu   sync.Mutex
 	cond *sync.Cond
-	*fslib.FsLibSrv
 	load int // XXX bogus
+	nid  uint64
 	ls   map[string]*Lambda
 	done bool
+	srv  *npsrv.NpServer
 }
 
-func MakeSchedd() *Sched {
+func MakeSchedd() (*Sched, error) {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
-
-	fs := memfs.MakeRoot()
-	fsd := memfsd.MakeFsd(fs, sd)
-	fsl, err := fslib.InitFsMemFsD(fslib.SCHED, fs, fsd, &SchedDev{sd})
-	if err != nil {
-		return nil
-	}
-	sd.FsLibSrv = fsl
 	sd.load = 0
+	sd.nid = 1 // 1 reserved for dev
 	sd.ls = make(map[string]*Lambda)
-	return sd
+	db.SetDebug(true)
+	sd.srv = npsrv.MakeNpServer(sd, ":0")
+	srvname := sd.srv.MyAddr()
+	log.Printf("srvname %v\n", srvname)
+	fsl := fslib.MakeFsLib("sched")
+	err := fsl.Remove(fslib.SCHED)
+	if err != nil {
+		db.DPrintf("Remove failed %v %v\n", fslib.SCHED, err)
+	}
+	err = fsl.Symlink(srvname+":pubkey:"+fslib.SCHED, fslib.SCHED, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("Symlink %v error: %v\n", fslib.SCHED, err)
+	}
+	return sd, nil
 }
 
 func (sd *Sched) String() string {
@@ -96,32 +62,29 @@ func (sd *Sched) String() string {
 	return s
 }
 
-// Interposes on memfsd's walk to see if a client is looking for a wait status
-// If so, block this request until to the pid in the names exits.  XXX hack?
-func (sd *Sched) Walk(src string, names []string) error {
-	if len(names) == 0 { // so that ls in root directory works
-		return nil
-	}
-	name := names[len(names)-1]
-	if strings.HasPrefix(name, "Wait") {
-		pid := strings.Replace(name, "Wait-", "", 1)
-		l := sd.findLambda(pid)
-		if l == nil {
-			db.DPrintf("Tried to wait on a nil lambda\n")
-			return nil
-		}
-		l.waitFor()
-	}
-	return nil
+func (sd *Sched) uid() uint64 {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	sd.nid += 1
+	return sd.nid
 }
 
-func (sd *Sched) ps() string {
+func (sd *Sched) ps() []*np.Stat {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	dir := []*np.Stat{}
+	for _, l := range sd.ls {
+		dir = append(dir, l.stat())
+	}
+	return dir
+}
+
+func (sd *Sched) spawn(l *Lambda) {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	s := fmt.Sprintf("Load %v\n", sd.load)
-	s += sd.String()
-	return s
+	sd.ls[l.pid] = l
+	sd.cond.Signal()
 }
 
 // Exit the scheduler
@@ -153,26 +116,6 @@ func (sd *Sched) swapExitDependencies(pids []string) error {
 	return nil
 }
 
-// Spawn a new lambda
-func (sd *Sched) spawn(attr string) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	l, err := makeLambda(sd, attr)
-	if err != nil {
-		return err
-	}
-	_, ok := sd.ls[l.pid]
-	if !ok {
-		sd.ls[l.pid] = l
-	} else {
-		return fmt.Errorf("Spawn %v already exists\n", l.pid)
-	}
-	db.DPrintf("Spawn %v\n", l)
-	sd.cond.Signal()
-	return nil
-}
-
 func (sd *Sched) findLambda(pid string) *Lambda {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
@@ -201,6 +144,7 @@ func (sd *Sched) decLoad() {
 
 // pid has started; make its consumers runnable
 func (sd *Sched) started(pid string) {
+	db.DPrintf("started %v\n", pid)
 	l := sd.findLambda(pid)
 	l.changeStatus("Running")
 	l.startConsDep()
@@ -209,6 +153,7 @@ func (sd *Sched) started(pid string) {
 
 // pid has exited; wait until its consumers also exited
 func (sd *Sched) exiting(pidst string) {
+	db.DPrintf("started %v\n", pidst)
 	p := strings.Split(pidst, " ")
 	pid := p[0]
 	st := p[1]

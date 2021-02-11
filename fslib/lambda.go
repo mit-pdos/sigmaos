@@ -5,8 +5,6 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-
-	np "ulambda/ninep"
 )
 
 type PDep struct {
@@ -42,8 +40,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	if err != nil {
 		return err
 	}
-	b = append([]byte("Spawn "), b...)
-	return fl.WriteFile(SCHEDDEV, b)
+	return fl.MakeFile(SCHED+"/"+a.Pid, b)
 }
 
 func (fl *FsLib) SpawnProgram(name string, args []string) error {
@@ -63,6 +60,6 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 }
 
 // The open blocks until pid exits (and then returns error, which is ignored)
-func (fl *FsLib) Wait(pid string) {
-	fl.Open(SCHED+"/Wait-"+pid, np.OREAD)
+func (fl *FsLib) Wait(pid string) ([]byte, error) {
+	return fl.ReadFile(SCHED + "/" + pid)
 }

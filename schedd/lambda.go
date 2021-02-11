@@ -10,6 +10,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 type Lambda struct {
@@ -18,6 +19,7 @@ type Lambda struct {
 	condWait   *sync.Cond
 	sd         *Sched
 	pid        string
+	uid        uint64
 	status     string
 	exitStatus string
 	program    string
@@ -28,7 +30,7 @@ type Lambda struct {
 	exitDep    map[string]bool
 }
 
-func makeLambda(sd *Sched, a string) (*Lambda, error) {
+func makeLambda(sd *Sched, a string) *Lambda {
 	l := &Lambda{}
 	l.sd = sd
 	l.cond = sync.NewCond(&l.mu)
@@ -36,10 +38,18 @@ func makeLambda(sd *Sched, a string) (*Lambda, error) {
 	l.consDep = make(map[string]bool)
 	l.prodDep = make(map[string]bool)
 	l.exitDep = make(map[string]bool)
+	l.pid = a
+	l.uid = sd.uid()
+	l.status = "Init"
+	return l
+}
+
+func (l *Lambda) initLambda(a []byte) error {
 	var attr fslib.Attr
-	err := json.Unmarshal([]byte(a), &attr)
+
+	err := json.Unmarshal(a, &attr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	l.pid = attr.Pid
 	l.program = attr.Program
@@ -47,7 +57,7 @@ func makeLambda(sd *Sched, a string) (*Lambda, error) {
 	l.env = attr.Env
 	for _, p := range attr.PairDep {
 		if l.pid != p.Producer {
-			c, ok := sd.ls[p.Producer]
+			c, ok := l.sd.ls[p.Producer]
 			if ok {
 				l.prodDep[p.Producer] = c.isRunnning()
 			} else {
@@ -66,7 +76,7 @@ func makeLambda(sd *Sched, a string) (*Lambda, error) {
 	} else {
 		l.status = "Waiting"
 	}
-	return l, nil
+	return nil
 }
 
 func (l *Lambda) String() string {
@@ -74,6 +84,18 @@ func (l *Lambda) String() string {
 		l.pid, l.status, l.program, l.args, l.env, l.consDep, l.prodDep,
 		l.exitDep)
 	return str
+}
+
+func (l *Lambda) qid() np.Tqid {
+	return np.MakeQid(np.Qtype(np.DMDEVICE>>np.QTYPESHIFT), np.TQversion(0),
+		np.Tpath(l.uid))
+}
+
+func (l *Lambda) stat() *np.Stat {
+	st := &np.Stat{}
+	st.Qid = l.qid()
+	st.Name = l.pid
+	return st
 }
 
 func (l *Lambda) changeStatus(new string) error {

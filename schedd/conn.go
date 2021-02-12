@@ -107,8 +107,12 @@ func (sc *SchedConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 func (sc *SchedConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("Walk %v\n", args)
-	if len(args.Wnames) == 0 {
-		sc.add(args.NewFid, rootO)
+	if len(args.Wnames) == 0 { // clone args.Fid?
+		o, ok := sc.lookup(args.Fid)
+		if !ok {
+			return np.ErrUnknownfid
+		}
+		sc.add(args.NewFid, o)
 	} else if args.Wnames[0] == "dev" {
 		sc.add(args.NewFid, devO)
 		rets.Qids = []np.Tqid{devO.qid()}

@@ -29,7 +29,7 @@ type Sched struct {
 	srv  *npsrv.NpServer
 }
 
-func MakeSchedd() (*Sched, error) {
+func MakeSchedd() *Sched {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.load = 0
@@ -37,18 +37,12 @@ func MakeSchedd() (*Sched, error) {
 	sd.ls = make(map[string]*Lambda)
 	// db.SetDebug(true)
 	sd.srv = npsrv.MakeNpServer(sd, ":0")
-	srvname := sd.srv.MyAddr()
-	log.Printf("srvname %v\n", srvname)
 	fsl := fslib.MakeFsLib("sched")
-	err := fsl.Remove(fslib.SCHED)
+	err := fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
 	if err != nil {
-		db.DPrintf("Remove failed %v %v\n", fslib.SCHED, err)
+		log.Fatalf("PostService failed %v %v\n", fslib.SCHED, err)
 	}
-	err = fsl.Symlink(srvname+":pubkey:"+fslib.SCHED, fslib.SCHED, 0777)
-	if err != nil {
-		return nil, fmt.Errorf("Symlink %v error: %v\n", fslib.SCHED, err)
-	}
-	return sd, nil
+	return sd
 }
 
 func (sd *Sched) String() string {

@@ -262,5 +262,10 @@ func (sc *SchedConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 func (sc *SchedConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	return np.ErrNotSupported
+	_, ok := sc.lookup(args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	// XXX ignore Wstat for now
+	return nil
 }

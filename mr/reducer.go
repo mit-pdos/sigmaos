@@ -124,5 +124,5 @@ func (r *Reducer) doReduce() {
 
 func (r *Reducer) Work() {
 	r.doReduce()
-	r.clnt.Exiting(r.pid)
+	r.clnt.Exiting(r.pid, "OK")
 }

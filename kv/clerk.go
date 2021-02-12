@@ -63,7 +63,7 @@ func (kc *KvClerk) Put(k, v string) error {
 		if err == nil {
 			return err
 		}
-		log.Printf("%v: Put: MakeFile: %v %v\n", kc.uname, n, err)
+		// log.Printf("%v: Put: MakeFile: %v %v\n", kc.uname, n, err)
 		if err.Error() == ErrWrongKv.Error() {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {
@@ -82,7 +82,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 		if err == nil {
 			return string(b), err
 		}
-		log.Printf("%v: Get: ReadFile: %v (s %v) %v\n", kc.uname, n, shard, err)
+		// log.Printf("%v: Get: ReadFile: %v (s %v) %v\n", kc.uname, n, shard, err)
 		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {

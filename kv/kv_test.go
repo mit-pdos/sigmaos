@@ -14,11 +14,11 @@ const BIN = "../bin"
 const NKEYS = 100
 
 type Tstate struct {
-	t   *testing.T
-	s   *fslib.System
-	fsl *fslib.FsLib
-	*KvClerk
-	ch chan bool
+	t    *testing.T
+	s    *fslib.System
+	fsl  *fslib.FsLib
+	clrk *KvClerk
+	ch   chan bool
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -42,15 +42,16 @@ func makeTstate(t *testing.T) *Tstate {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	ts.spawnSharder("add", pid)
-
-	time.Sleep(1000 * time.Millisecond)
+	pid1 := ts.spawnSharder("add", pid)
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(ts.t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
 
 	kc, err := MakeClerk()
 	if err != nil {
 		t.Fatalf("Make clerk %v\n", err)
 	}
-	ts.KvClerk = kc
+	ts.clrk = kc
 
 	return ts
 }
@@ -80,7 +81,7 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 func (ts *Tstate) getKeys() {
 	for i := 0; i < NKEYS; i++ {
 		k := strconv.Itoa(i)
-		v, err := ts.Get(k)
+		v, err := ts.clrk.Get(k)
 		assert.Nil(ts.t, err, "Get "+k)
 		assert.Equal(ts.t, v, k, "Get")
 	}
@@ -101,7 +102,7 @@ func TestConcur(t *testing.T) {
 	ts := makeTstate(t)
 
 	for i := 0; i < NKEYS; i++ {
-		err := ts.Put(strconv.Itoa(i), strconv.Itoa(i))
+		err := ts.clrk.Put(strconv.Itoa(i), strconv.Itoa(i))
 		assert.Nil(t, err, "Put")
 	}
 
@@ -111,16 +112,22 @@ func TestConcur(t *testing.T) {
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
 		pid1 := ts.spawnSharder("add", pid)
-		ts.Wait(pid1)
+		ok, err := ts.fsl.Wait(pid1)
+		assert.Nil(t, err, "Wait")
+		assert.Equal(t, string(ok), "OK")
 		time.Sleep(200 * time.Millisecond)
 		pids = append(pids, pid)
 	}
 
 	for _, pid := range pids[1:] {
 		pid1 := ts.spawnSharder("del", pid)
-		ts.Wait(pid1)
+		ok, err := ts.fsl.Wait(pid1)
+		assert.Nil(t, err, "Wait")
+		assert.Equal(t, string(ok), "OK")
 		time.Sleep(200 * time.Millisecond)
 	}
 
 	ts.ch <- true
+	time.Sleep(200 * time.Millisecond)
+	ts.s.Shutdown(ts.fsl)
 }

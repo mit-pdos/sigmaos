@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"strconv"
-  "strings"
-
-	np "ulambda/ninep"
+	"strings"
 )
 
 type PDep struct {
@@ -33,8 +31,8 @@ func GenPid() string {
 }
 
 func (fl *FsLib) SwapExitDependencies(pids []string) error {
-  b := strings.Join(pids, " ")
-  return fl.WriteFile(SCHEDDEV, []byte("SwapExitDependencies " + b))
+	b := strings.Join(pids, " ")
+	return fl.WriteFile(SCHEDDEV, []byte("SwapExitDependencies "+b))
 }
 
 func (fl *FsLib) Spawn(a *Attr) error {
@@ -42,8 +40,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	if err != nil {
 		return err
 	}
-	b = append([]byte("Spawn "), b...)
-	return fl.WriteFile(SCHEDDEV, b)
+	return fl.MakeFile(SCHED+"/"+a.Pid, b)
 }
 
 func (fl *FsLib) SpawnProgram(name string, args []string) error {
@@ -58,11 +55,11 @@ func (fl *FsLib) Started(pid string) error {
 	return fl.WriteFile(SCHEDDEV, []byte("Started "+pid))
 }
 
-func (fl *FsLib) Exiting(pid string) error {
-	return fl.WriteFile(SCHEDDEV, []byte("Exiting "+pid))
+func (fl *FsLib) Exiting(pid string, status string) error {
+	return fl.WriteFile(SCHEDDEV, []byte("Exiting "+pid+" "+status))
 }
 
 // The open blocks until pid exits (and then returns error, which is ignored)
-func (fl *FsLib) Wait(pid string) {
-	fl.Open(SCHED+"/Wait-"+pid, np.OREAD)
+func (fl *FsLib) Wait(pid string) ([]byte, error) {
+	return fl.ReadFile(SCHED + "/" + pid)
 }

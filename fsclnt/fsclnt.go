@@ -447,7 +447,6 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 		p := np.Split(path)
 		f, err := fsc.walkMany(p, true)
 		if err == io.EOF {
-			log.Printf("%v: Open retry %v %v\n", fsc.uname, p, err)
 			fid2, e := fsc.mount.umount(p)
 			if e != nil {
 				return -1, err

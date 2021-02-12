@@ -31,7 +31,6 @@ func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.
 		}
 	}
 	srvname := fsl.srv.MyAddr()
-	log.Printf("srvname %v\n", srvname)
 	err = fsl.Symlink(srvname+":pubkey:"+name, name, 0777)
 	if err != nil {
 		return nil, fmt.Errorf("Symlink %v error: %v\n", name, err)
@@ -51,7 +50,6 @@ func InitFs(name string, dev memfs.Dev) (*FsLibSrv, error) {
 }
 
 func (fsl *FsLib) ExitFs(name string) {
-	log.Printf("exitfs %v\n", name)
 	err := fsl.Remove(name)
 	if err != nil {
 		db.DPrintf("Remove failed %v %v\n", name, err)

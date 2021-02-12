@@ -171,7 +171,7 @@ func (sh *Sharder) balance() *Config {
 
 func (sh *Sharder) Exit() {
 	sh.ExitFs(SHARDER)
-	sh.Exiting(sh.pid)
+	sh.Exiting(sh.pid, "OK")
 }
 
 func (sh *Sharder) readConfig(conffile string) *Config {
@@ -216,7 +216,7 @@ func (sh *Sharder) Work() {
 		sh.Init()
 	}
 
-	log.Printf("Sharder work %v %v\n", sh.conf, sh.args)
+	// log.Printf("Sharder: %v %v\n", sh.conf, sh.args)
 	if sh.args[0] == "add" {
 		sh.nextKvs = append(sh.kvs, sh.args[1:]...)
 	} else {
@@ -246,7 +246,6 @@ func (sh *Sharder) Work() {
 
 	sh.nkvd = len(sh.nextKvs)
 	for _, kv := range sh.nextKvs {
-		log.Printf("prepare %v\n", kv)
 		sh.prepare(kv)
 	}
 
@@ -260,7 +259,8 @@ func (sh *Sharder) Work() {
 	// commit to new config
 	err = sh.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
-		log.Printf("Work: rename %v -> %v: %v\n", KVNEXTCONFIG, KVCONFIG, err)
+		log.Fatalf("Sharder: rename %v -> %v: error %v\n",
+			KVNEXTCONFIG, KVCONFIG, err)
 	}
 	for _, kv := range sh.nextKvs {
 		sh.commit(kv)

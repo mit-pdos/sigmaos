@@ -21,25 +21,7 @@ var (
 	ErrBaddir       = &Rerror{"bad directory in wstat"}
 	ErrWalknodir    = &Rerror{"walk in non-directory"}
 
-	// extra errors not part of the normal protocol
-
-	ErrTimeout       = &Rerror{"fcall timeout"}
-	ErrUnknownTag    = &Rerror{"unknown tag"}
-	ErrUnknownMsg    = &Rerror{"unknown message"}
-	ErrUnexpectedMsg = &Rerror{"unexpected message"}
-	ErrWalkLimit     = &Rerror{"too many wnames in walk"}
-	ErrClosed        = &Rerror{"closed"}
+	// ulambda
+	ErrNotSupported = &Rerror{"not supported"}
+	ErrUnknownMsg   = &Rerror{"unknown message"}
 )
-
-// func toError(err error) *Error {
-// 	var ecode uint32
-
-// 	ename := err.Error()
-// 	if e, ok := err.(syscall.Errno); ok {
-// 		ecode = uint32(e)
-// 	} else {
-// 		ecode = EIO
-// 	}
-
-// 	return &Error{ename, ecode}
-// }

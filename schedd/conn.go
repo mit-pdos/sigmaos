@@ -197,6 +197,27 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
+func (sc *SchedConn) devWrite(t string) *np.Rerror {
+	db.DPrintf("Write dev %v\n", t)
+	if strings.HasPrefix(t, "Started") {
+		sc.sched.started(t[len("Started "):])
+	} else if strings.HasPrefix(t, "Exiting") {
+		sc.sched.exiting(strings.TrimSpace(t[len("Exiting "):]))
+	} else if strings.HasPrefix(t, "SwapExitDependencies") {
+		sc.sched.swapExitDependencies(
+			strings.Split(
+				strings.TrimSpace(t[len("SwapExitDependencies "):]),
+				" ",
+			),
+		)
+	} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
+		sc.sched.exit()
+	} else {
+		return np.ErrNotSupported
+	}
+	return nil
+}
+
 func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DPrintf("Write %v\n", args)
 	o, ok := sc.lookup(args.Fid)
@@ -207,23 +228,9 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if o.t == np.DMDIR {
 		return np.ErrNowrite
 	} else if o.t == np.DMDEVICE {
-		t := string(args.Data)
-		db.DPrintf("Write dev %v\n", t)
-		if strings.HasPrefix(t, "Started") {
-			sc.sched.started(t[len("Started "):])
-		} else if strings.HasPrefix(t, "Exiting") {
-			sc.sched.exiting(strings.TrimSpace(t[len("Exiting "):]))
-		} else if strings.HasPrefix(t, "SwapExitDependencies") {
-			sc.sched.swapExitDependencies(
-				strings.Split(
-					strings.TrimSpace(t[len("SwapExitDependencies "):]),
-					" ",
-				),
-			)
-		} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
-			sc.sched.exit()
-		} else {
-			return np.ErrNotSupported
+		r := sc.devWrite(string(args.Data))
+		if r != nil {
+			return r
 		}
 		n = np.Tsize(len(args.Data))
 	} else {

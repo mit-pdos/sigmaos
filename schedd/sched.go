@@ -35,7 +35,7 @@ func MakeSchedd() (*Sched, error) {
 	sd.load = 0
 	sd.nid = 1 // 1 reserved for dev
 	sd.ls = make(map[string]*Lambda)
-	db.SetDebug(true)
+	// db.SetDebug(true)
 	sd.srv = npsrv.MakeNpServer(sd, ":0")
 	srvname := sd.srv.MyAddr()
 	log.Printf("srvname %v\n", srvname)

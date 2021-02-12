@@ -2,7 +2,6 @@ package npclnt
 
 import (
 	"bufio"
-	"log"
 	"net"
 	"sync"
 
@@ -53,7 +52,6 @@ func (cm *ChanMgr) Close(addr string) {
 
 	conn, ok := cm.conns[addr]
 	if ok {
-		log.Printf("Close connection with %v\n", addr)
 		conn.conn.Close()
 		delete(cm.conns, addr)
 	}

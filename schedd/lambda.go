@@ -181,10 +181,26 @@ func (l *Lambda) writeExitStatus(status string) {
 	l.sd.delLambda(l.Pid)
 }
 
+func (l *Lambda) writeStatus(status string) error {
+	l.mu.Lock()
+	if l.Status != "Started" {
+		return fmt.Errorf("Cannot write to status %v", l.Status)
+	}
+	l.Status = "Running"
+	db.DPrintf("Running %v\n", l.Pid)
+	l.mu.Unlock()
+
+	l.startConsDep()
+	l.sd.cond.Signal()
+	return nil
+}
+
 func (l *Lambda) writeField(f string, data []byte) error {
 	switch f {
 	case "ExitStatus":
 		l.writeExitStatus(string(data))
+	case "Status":
+		l.writeStatus(string(data))
 	default:
 		return fmt.Errorf("Unwritable field %v", f)
 	}

@@ -52,7 +52,7 @@ func (fl *FsLib) SpawnProgram(name string, args []string) error {
 }
 
 func (fl *FsLib) Started(pid string) error {
-	return fl.WriteFile(SCHEDDEV, []byte("Started "+pid))
+	return fl.WriteFile(SCHED+"/"+pid+"/Status", []byte{})
 }
 
 func (fl *FsLib) Exiting(pid string, status string) error {

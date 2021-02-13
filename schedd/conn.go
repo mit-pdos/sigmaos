@@ -281,9 +281,7 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 
 func (sc *SchedConn) devWrite(t string) *np.Rerror {
 	db.DPrintf("Write dev %v\n", t)
-	if strings.HasPrefix(t, "Started") {
-		sc.sched.started(t[len("Started "):])
-	} else if strings.HasPrefix(t, "SwapExitDependencies") {
+	if strings.HasPrefix(t, "SwapExitDependencies") {
 		sc.sched.swapExitDependencies(
 			strings.Split(
 				strings.TrimSpace(t[len("SwapExitDependencies "):]),

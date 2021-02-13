@@ -122,26 +122,11 @@ func (sd *Sched) delLambda(pid string) {
 	delete(sd.ls, pid)
 }
 
-func (sd *Sched) runScheduler() {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-	sd.cond.Signal()
-}
-
 func (sd *Sched) decLoad() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 	sd.load -= 1
 	sd.cond.Signal()
-}
-
-// pid has started; make its consumers runnable
-func (sd *Sched) started(pid string) {
-	db.DPrintf("started %v\n", pid)
-	l := sd.findLambda(pid)
-	l.changeStatus("Running")
-	l.startConsDep()
-	sd.runScheduler()
 }
 
 // wakeup lambdas that have pid as an exit dependency

@@ -315,7 +315,7 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 			return r
 		}
 		n = np.Tsize(len(args.Data))
-	} else {
+	} else if o.t == LAMBDA {
 		err := o.l.initLambda(args.Data)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -323,6 +323,9 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		sc.sched.spawn(o.l)
 		n = np.Tsize(len(args.Data))
 		db.DPrintf("initl %v\n", o.l)
+	} else {
+		// XXX allow writing to certain fields (e.g., exchange deps)
+		return np.ErrNotSupported
 	}
 	rets.Count = n
 	return nil

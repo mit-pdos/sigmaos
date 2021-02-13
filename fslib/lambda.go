@@ -61,5 +61,5 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 
 // The open blocks until pid exits (and then returns error, which is ignored)
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
-	return fl.ReadFile(SCHED + "/" + pid)
+	return fl.ReadFile(SCHED + "/" + pid + "/ExitStatus")
 }

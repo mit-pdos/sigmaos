@@ -33,7 +33,7 @@ func MakeSchedl(args []string) (*Schedl, error) {
 
 func (s *Schedl) Work() {
 
-	time.Sleep(5000 * time.Millisecond)
+	time.Sleep(10000 * time.Millisecond)
 
 	err := s.MakeFile(s.output, []byte("hello"))
 	if err != nil {

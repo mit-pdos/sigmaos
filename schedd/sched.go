@@ -68,7 +68,7 @@ func (sd *Sched) ps() []*np.Stat {
 	defer sd.mu.Unlock()
 	dir := []*np.Stat{}
 	for _, l := range sd.ls {
-		dir = append(dir, l.stat())
+		dir = append(dir, l.stat("lambda"))
 	}
 	return dir
 }
@@ -77,7 +77,7 @@ func (sd *Sched) spawn(l *Lambda) {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
-	sd.ls[l.pid] = l
+	sd.ls[l.Pid] = l
 	sd.cond.Signal()
 }
 

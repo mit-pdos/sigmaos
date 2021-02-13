@@ -6,7 +6,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"sync"
+	"time"
+	"unicode"
+	"unicode/utf8"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -18,16 +22,17 @@ type Lambda struct {
 	cond       *sync.Cond
 	condWait   *sync.Cond
 	sd         *Sched
-	pid        string
+	Pid        string
 	uid        uint64
-	status     string
-	exitStatus string
-	program    string
-	args       []string
-	env        []string
-	consDep    map[string]bool // if true, consumer has finished
-	prodDep    map[string]bool // if true, producer is running
-	exitDep    map[string]bool
+	time       int64
+	Status     string
+	ExitStatus string
+	Program    string
+	Args       []string
+	Env        []string
+	ConsDep    map[string]bool // if true, consumer has finished
+	ProdDep    map[string]bool // if true, producer is running
+	ExitDep    map[string]bool
 }
 
 func makeLambda(sd *Sched, a string) *Lambda {
@@ -35,12 +40,13 @@ func makeLambda(sd *Sched, a string) *Lambda {
 	l.sd = sd
 	l.cond = sync.NewCond(&l.mu)
 	l.condWait = sync.NewCond(&l.mu)
-	l.consDep = make(map[string]bool)
-	l.prodDep = make(map[string]bool)
-	l.exitDep = make(map[string]bool)
-	l.pid = a
+	l.ConsDep = make(map[string]bool)
+	l.ProdDep = make(map[string]bool)
+	l.ExitDep = make(map[string]bool)
+	l.Pid = a
+	l.time = time.Now().Unix()
 	l.uid = sd.uid()
-	l.status = "Init"
+	l.Status = "Init"
 	return l
 }
 
@@ -51,50 +57,80 @@ func (l *Lambda) initLambda(a []byte) error {
 	if err != nil {
 		return err
 	}
-	l.pid = attr.Pid
-	l.program = attr.Program
-	l.args = attr.Args
-	l.env = attr.Env
+	l.Pid = attr.Pid
+	l.Program = attr.Program
+	l.Args = attr.Args
+	l.Env = attr.Env
 	for _, p := range attr.PairDep {
-		if l.pid != p.Producer {
+		if l.Pid != p.Producer {
 			c, ok := l.sd.ls[p.Producer]
 			if ok {
-				l.prodDep[p.Producer] = c.isRunnning()
+				l.ProdDep[p.Producer] = c.isRunnning()
 			} else {
-				l.prodDep[p.Producer] = false
+				l.ProdDep[p.Producer] = false
 			}
 		}
-		if l.pid != p.Consumer {
-			l.consDep[p.Consumer] = false
+		if l.Pid != p.Consumer {
+			l.ConsDep[p.Consumer] = false
 		}
 	}
 	for _, p := range attr.ExitDep {
-		l.exitDep[p] = false
+		l.ExitDep[p] = false
 	}
 	if l.runnableConsumer() {
-		l.status = "Runnable"
+		l.Status = "Runnable"
 	} else {
-		l.status = "Waiting"
+		l.Status = "Waiting"
 	}
 	return nil
 }
 
 func (l *Lambda) String() string {
 	str := fmt.Sprintf("λ pid %v st %v %v args %v env %v cons %v prod %v exit %v",
-		l.pid, l.status, l.program, l.args, l.env, l.consDep, l.prodDep,
-		l.exitDep)
+		l.Pid, l.Status, l.Program, l.Args, l.Env, l.ConsDep, l.ProdDep,
+		l.ExitDep)
 	return str
 }
 
-func (l *Lambda) qid() np.Tqid {
-	return np.MakeQid(np.Qtype(np.DMDEVICE>>np.QTYPESHIFT), np.TQversion(0),
-		np.Tpath(l.uid))
+func (l *Lambda) qid(isL bool) np.Tqid {
+	if isL {
+		return np.MakeQid(np.Qtype(np.DMDIR>>np.QTYPESHIFT),
+			np.TQversion(0), np.Tpath(l.uid))
+	} else {
+		return np.MakeQid(np.Qtype(np.DMDEVICE>>np.QTYPESHIFT),
+			np.TQversion(0), np.Tpath(l.uid))
+	}
 }
 
-func (l *Lambda) stat() *np.Stat {
+func (l *Lambda) stat(name string) *np.Stat {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	st := &np.Stat{}
-	st.Qid = l.qid()
-	st.Name = l.pid
+	if name == "lambda" {
+		st.Mode = np.Tperm(0777) | LAMBDA.mode()
+		st.Qid = l.qid(true)
+		st.Name = l.Pid
+	} else {
+		st.Mode = np.Tperm(0777) | ATTR.mode()
+		st.Qid = l.qid(false)
+		st.Name = name
+	}
+	st.Mtime = uint32(l.time)
+	return st
+}
+
+func (l *Lambda) ls() []*np.Stat {
+	st := []*np.Stat{}
+
+	v := reflect.ValueOf(Lambda{})
+	for i := 0; i < v.NumField(); i++ {
+		n := v.Type().Field(i).Name
+		r, _ := utf8.DecodeRuneInString(n)
+		if unicode.IsUpper(r) {
+			st = append(st, l.stat(n))
+		}
+	}
 	return st
 }
 
@@ -102,7 +138,7 @@ func (l *Lambda) changeStatus(new string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.status = new
+	l.Status = new
 	return nil
 }
 
@@ -111,9 +147,9 @@ func (l *Lambda) swapExitDependency(depSwaps map[string]string) {
 	// Assuming len(depSwaps) << len(l.exitDeps)
 	for from, to := range depSwaps {
 		// Check if present & false (hasn't exited yet)
-		if val, ok := l.exitDep[from]; ok && !val {
-			l.exitDep[to] = false
-			l.exitDep[from] = true
+		if val, ok := l.ExitDep[from]; ok && !val {
+			l.ExitDep[to] = false
+			l.ExitDep[from] = true
 		}
 	}
 }
@@ -137,9 +173,9 @@ func (l *Lambda) run() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{l.pid}, l.args...)
-	env := append(os.Environ(), l.env...)
-	cmd := exec.Command(l.program, args...)
+	args := append([]string{l.Pid}, l.Args...)
+	env := append(os.Environ(), l.Env...)
+	cmd := exec.Command(l.Program, args...)
 	cmd.Env = env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -152,10 +188,10 @@ func (l *Lambda) run() error {
 }
 
 func (l *Lambda) startConsDep() {
-	for p, _ := range l.consDep {
+	for p, _ := range l.ConsDep {
 		c := l.sd.findLambda(p)
 		if c != nil {
-			c.markProducer(l.pid)
+			c.markProducer(l.Pid)
 		}
 	}
 }
@@ -164,23 +200,23 @@ func (l *Lambda) startExitDep(pid string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	_, ok := l.exitDep[pid]
+	_, ok := l.ExitDep[pid]
 	if ok {
-		l.exitDep[pid] = true
-		for _, b := range l.exitDep {
+		l.ExitDep[pid] = true
+		for _, b := range l.ExitDep {
 			if !b {
 				return
 			}
 		}
-		l.status = "Runnable"
+		l.Status = "Runnable"
 	}
 }
 
 func (l *Lambda) stopProducers() {
-	for p, _ := range l.prodDep {
+	for p, _ := range l.ProdDep {
 		c := l.sd.findLambda(p)
 		if c != nil {
-			c.markConsumer(l.pid)
+			c.markConsumer(l.Pid)
 		}
 	}
 }
@@ -188,29 +224,29 @@ func (l *Lambda) stopProducers() {
 func (l *Lambda) markProducer(pid string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.prodDep[pid] = true
+	l.ProdDep[pid] = true
 }
 
 func (l *Lambda) markExit(pid string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.exitDep[pid] = true
+	l.ExitDep[pid] = true
 }
 
 func (l *Lambda) markConsumer(pid string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.consDep[pid] = true
+	l.ConsDep[pid] = true
 	l.cond.Signal()
 }
 
 // caller holds lock
 func (l *Lambda) runnableConsumer() bool {
-	if len(l.exitDep) != 0 {
+	if len(l.ExitDep) != 0 {
 		return false
 	}
 	run := true
-	for _, b := range l.prodDep {
+	for _, b := range l.ProdDep {
 		if !b {
 			return false
 		}
@@ -222,7 +258,7 @@ func (l *Lambda) runnableWaitingConsumer() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if l.status != "Waiting" {
+	if l.Status != "Waiting" {
 		return false
 	}
 	return l.runnableConsumer()
@@ -241,7 +277,7 @@ func (l *Lambda) waitExit() {
 // Caller hold locks
 func (l *Lambda) exitable() bool {
 	exit := true
-	for _, b := range l.consDep {
+	for _, b := range l.ConsDep {
 		if !b {
 			return false
 		}
@@ -252,25 +288,23 @@ func (l *Lambda) exitable() bool {
 func (l *Lambda) isRunnable() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.status == "Runnable"
+	return l.Status == "Runnable"
 }
 
 func (l *Lambda) isRunnning() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.status == "Running"
+	return l.Status == "Running"
 }
 
-// A caller wants to Wait for l to exit
+// A caller wants to Wait for l to exit.
+// Caller must have l locked
 func (l *Lambda) waitFor() string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	db.DPrintf("Wait for %v\n", l)
-	if l.status != "Exiting" {
+	if l.Status != "Exiting" {
 		l.condWait.Wait()
 	}
-	return l.exitStatus
+	return l.ExitStatus
 }
 
 // l is exiting; wakeup waiters who are waiting for me to exit
@@ -278,7 +312,7 @@ func (l *Lambda) wakeupWaiter(exitStatus string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.exitStatus = exitStatus
+	l.ExitStatus = exitStatus
 	db.DPrintf("Wakeup waiters for %v\n", l)
 	l.condWait.Broadcast()
 }

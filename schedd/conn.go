@@ -1,11 +1,15 @@
 package schedd
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -13,23 +17,53 @@ import (
 	"ulambda/npsrv"
 )
 
-type Obj struct {
-	t np.Tperm
-	l *Lambda
+type objT uint16
+
+const (
+	ROOT   objT = 0
+	DEV    objT = 1
+	LAMBDA objT = 2
+	ATTR   objT = 3
+)
+
+func (t objT) mode() np.Tperm {
+	switch t {
+	case ROOT:
+		return np.DMDIR
+	case DEV:
+		return np.DMDEVICE
+	case LAMBDA:
+		return np.DMDIR
+	default:
+		return np.Tperm(0)
+	}
 }
 
-var rootO = &Obj{np.DMDIR, nil}
-var devO = &Obj{np.DMDEVICE, nil}
+type Obj struct {
+	t objT
+	l *Lambda
+	f string
+}
+
+func (o *Obj) String() string {
+	return fmt.Sprintf("t %v l %v f %v", o.t, o.l, o.f)
+}
+
+var rootO = &Obj{ROOT, nil, ""}
+var devO = &Obj{DEV, nil, ""}
 
 func (o *Obj) qid() np.Tqid {
-	if o.t == np.DMDIR {
-		return np.MakeQid(np.Qtype(np.DMDIR>>np.QTYPESHIFT), np.TQversion(0),
-			np.Tpath(0))
-	} else if o.t == np.DMDEVICE {
-		return np.MakeQid(np.Qtype(np.DMDEVICE>>np.QTYPESHIFT), np.TQversion(0),
-			np.Tpath(1))
-	} else {
-		return o.l.qid()
+	switch o.t {
+	case ROOT:
+		return np.MakeQid(np.Qtype(np.DMDIR>>np.QTYPESHIFT),
+			np.TQversion(0), np.Tpath(0))
+	case DEV:
+		return np.MakeQid(np.Qtype(np.DMDEVICE>>np.QTYPESHIFT),
+			np.TQversion(0), np.Tpath(1))
+	case LAMBDA:
+		return o.l.qid(true)
+	default:
+		return o.l.qid(false)
 	}
 }
 
@@ -37,15 +71,19 @@ func (o *Obj) stat() *np.Stat {
 	st := &np.Stat{}
 	st.Uid = "sched"
 	st.Gid = "sched"
-	st.Mode = np.Tperm(0777) | o.t
+	// XXX not every field of attr should 0777
+	st.Mode = np.Tperm(0777) | o.t.mode()
 	st.Mtime = uint32(time.Now().Unix())
-	if o.t == np.DMDIR {
+	switch o.t {
+	case ROOT:
 		st.Qid = rootO.qid()
-	} else if o.t == np.DMDEVICE {
+	case DEV:
 		st.Qid = devO.qid()
 		st.Name = "dev"
-	} else {
-		st = o.l.stat()
+	case LAMBDA:
+		st = o.l.stat("lambda")
+	case ATTR:
+		st = o.l.stat(o.f)
 	}
 	return st
 }
@@ -100,13 +138,35 @@ func (sc *SchedConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 	db.DPrintf("Attach %v\n", args)
 	sc.uname = args.Uname
-	sc.Fids[args.Fid] = &Obj{np.DMDIR, nil}
+	sc.Fids[args.Fid] = &Obj{ROOT, nil, ""}
 	rets.Qid = rootO.qid()
+	return nil
+}
+
+func (sc *SchedConn) walkAttr(l *Lambda, args np.Twalk, rets *np.Rwalk) *np.Rerror {
+	name := args.Wnames[0]
+	r, _ := utf8.DecodeRuneInString(name)
+	if !unicode.IsUpper(r) {
+		return &np.Rerror{fmt.Sprintf("Lower-case field %v", name)}
+	}
+	v := reflect.ValueOf(Lambda{})
+	t := v.Type()
+	_, ok := t.FieldByName(name)
+	if !ok {
+		return &np.Rerror{fmt.Sprintf("Unknown field %v", name)}
+	}
+	o1 := &Obj{ATTR, l, name}
+	sc.add(args.NewFid, o1)
+	rets.Qids = append(rets.Qids, o1.qid())
 	return nil
 }
 
 func (sc *SchedConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("Walk %v\n", args)
+	o, ok := sc.lookup(args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		o, ok := sc.lookup(args.Fid)
 		if !ok {
@@ -116,14 +176,20 @@ func (sc *SchedConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else if args.Wnames[0] == "dev" {
 		sc.add(args.NewFid, devO)
 		rets.Qids = []np.Tqid{devO.qid()}
+	} else if o.t == LAMBDA {
+		return sc.walkAttr(o.l, args, rets)
 	} else {
-		var qids []np.Tqid
 		l := sc.sched.findLambda(args.Wnames[0])
 		if l == nil {
-			return &np.Rerror{fmt.Sprintf("Unknown name %v", args.Wnames[0])}
+			return &np.Rerror{fmt.Sprintf("Unknown lambda %v", args.Wnames[0])}
 		}
-		sc.add(args.NewFid, &Obj{0, l})
-		rets.Qids = append(qids, l.qid())
+		o1 := &Obj{LAMBDA, l, ""}
+		sc.add(args.NewFid, o1)
+		rets.Qids = []np.Tqid{o1.qid()}
+		if len(args.Wnames) > 1 {
+			args.Wnames = args.Wnames[1:]
+			return sc.walkAttr(l, args, rets)
+		}
 	}
 	return nil
 }
@@ -157,8 +223,8 @@ func (sc *SchedConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	l := makeLambda(sc.sched, args.Name)
-	sc.add(args.Fid, &Obj{0, l})
-	rets.Qid = l.qid()
+	sc.add(args.Fid, &Obj{LAMBDA, l, ""})
+	rets.Qid = l.qid(true)
 	return nil
 }
 
@@ -173,26 +239,75 @@ func (sc *SchedConn) ls() []*np.Stat {
 	return dir
 }
 
+// XXX reflection also requires a switch but just on kind, perhaps better
+func (sc *SchedConn) readAttr(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
+	o.l.mu.Lock()
+	defer o.l.mu.Unlock()
+
+	if args.Offset != 0 {
+		return nil
+	}
+
+	var err error
+	switch o.f {
+	case "ExitStatus":
+		o.l.waitFor()
+		rets.Data = []byte(o.l.ExitStatus)
+		return nil
+	case "Status":
+		rets.Data = []byte(o.l.Status)
+		return nil
+	case "Program":
+		rets.Data = []byte(o.l.Program)
+		return nil
+	case "Pid":
+		rets.Data = []byte(o.l.Pid)
+		return nil
+	case "Args":
+		rets.Data, err = json.Marshal(o.l.Args)
+	case "Env":
+		rets.Data, err = json.Marshal(o.l.Env)
+	case "ConsDep":
+		rets.Data, err = json.Marshal(o.l.ConsDep)
+	case "ProdDep":
+		rets.Data, err = json.Marshal(o.l.ProdDep)
+	case "ExitDep":
+		rets.Data, err = json.Marshal(o.l.ExitDep)
+	default:
+		return &np.Rerror{fmt.Sprintf("Unreadable field %v", o.f)}
+	}
+	if err != nil {
+		return &np.Rerror{fmt.Sprintf("Cannot marshal field %v %v",
+			o.f, err)}
+	}
+	return nil
+}
+
 func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DPrintf("Read %v\n", args)
 	o, ok := sc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if o.t == np.DMDIR { // root directory
+	db.DPrintf("ReadObj %v %v\n", args, o)
+	if o.t == ROOT {
 		dir := sc.ls()
 		b, err := npcodec.Dir2Buf(args.Offset, args.Count, dir)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
 		rets.Data = b
-	} else if o.t == np.DMDEVICE { // dev
+	} else if o.t == DEV {
 		return np.ErrNotSupported
-	} else {
-		if args.Offset == 0 {
-			o.l.waitFor()
-			rets.Data = []byte(o.l.exitStatus)
+	} else if o.t == LAMBDA {
+		dir := o.l.ls()
+		b, err := npcodec.Dir2Buf(args.Offset, args.Count, dir)
+		if err != nil {
+			return &np.Rerror{err.Error()}
 		}
+		rets.Data = b
+	} else if o.t == ATTR {
+		return sc.readAttr(o, args, rets)
 	}
 	return nil
 }
@@ -225,9 +340,9 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	n := np.Tsize(0)
-	if o.t == np.DMDIR {
+	if o.t == ROOT {
 		return np.ErrNowrite
-	} else if o.t == np.DMDEVICE {
+	} else if o.t == DEV {
 		r := sc.devWrite(string(args.Data))
 		if r != nil {
 			return r
@@ -262,7 +377,7 @@ func (sc *SchedConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	rets.Stat = *o.stat()
-	if o.t == np.DMDIR {
+	if o.t == ROOT {
 		rets.Stat.Length = npcodec.DirSize(sc.ls())
 	}
 	return nil

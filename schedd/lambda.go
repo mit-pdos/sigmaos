@@ -46,7 +46,7 @@ func makeLambda(sd *Sched, a string) *Lambda {
 	l.Pid = a
 	l.time = time.Now().Unix()
 	l.uid = sd.uid()
-	l.Status = "Init"
+	l.Status = "init"
 	return l
 }
 

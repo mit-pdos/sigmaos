@@ -316,13 +316,17 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		}
 		n = np.Tsize(len(args.Data))
 	} else if o.t == LAMBDA {
-		err := o.l.initLambda(args.Data)
-		if err != nil {
-			return &np.Rerror{err.Error()}
+		if o.l.Status == "init" {
+			err := o.l.initLambda(args.Data)
+			if err != nil {
+				return &np.Rerror{err.Error()}
+			}
+			sc.sched.spawn(o.l)
+			n = np.Tsize(len(args.Data))
+			db.DPrintf("initl %v\n", o.l)
+		} else {
+			return &np.Rerror{fmt.Sprintf("Lambda already running")}
 		}
-		sc.sched.spawn(o.l)
-		n = np.Tsize(len(args.Data))
-		db.DPrintf("initl %v\n", o.l)
 	} else {
 		// XXX allow writing to certain fields (e.g., exchange deps)
 		return np.ErrNotSupported

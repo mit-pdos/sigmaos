@@ -123,7 +123,7 @@ func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
 	defer dir.mu.Unlock()
 
 	entries := dir.lsL()
-	return npcodec.Dir2Buf(offset, cnt, entries)
+	return npcodec.Dir2Byte(offset, cnt, entries)
 }
 
 func (dir *Dir) create(inode *Inode, name string) error {

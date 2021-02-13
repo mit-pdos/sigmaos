@@ -259,7 +259,7 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DPrintf("ReadObj %v %v\n", args, o)
 	if o.t == ROOT {
 		dir := sc.ls()
-		b, err := npcodec.Dir2Buf(args.Offset, args.Count, dir)
+		b, err := npcodec.Dir2Byte(args.Offset, args.Count, dir)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
@@ -268,7 +268,7 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 		return np.ErrNotSupported
 	} else if o.t == LAMBDA {
 		dir := o.l.ls()
-		b, err := npcodec.Dir2Buf(args.Offset, args.Count, dir)
+		b, err := npcodec.Dir2Byte(args.Offset, args.Count, dir)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

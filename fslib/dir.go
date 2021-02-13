@@ -26,18 +26,7 @@ func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 	if len(data) == 0 {
 		return nil, io.EOF
 	}
-	dirents := []*np.Stat{}
-	for len(data) > 0 {
-		st := np.Stat{}
-		err = npcodec.Unmarshal(data, &st)
-		if err != nil {
-			return dirents, err
-		}
-		dirents = append(dirents, &st)
-		sz := np.Tsize(npcodec.SizeNp(st))
-		data = data[sz:]
-	}
-	return dirents, err
+	return npcodec.Byte2Dir(data)
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.

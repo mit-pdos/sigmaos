@@ -337,8 +337,7 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 			return &np.Rerror{fmt.Sprintf("Lambda already running")}
 		}
 	default:
-		sc.writeField(o, args, rets)
-		return np.ErrNotSupported
+		return sc.writeField(o, args, rets)
 	}
 	rets.Count = n
 	return nil

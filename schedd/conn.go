@@ -1,7 +1,6 @@
 package schedd
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -23,7 +22,7 @@ const (
 	ROOT   objT = 0
 	DEV    objT = 1
 	LAMBDA objT = 2
-	ATTR   objT = 3
+	FIELD  objT = 3
 )
 
 func (t objT) mode() np.Tperm {
@@ -82,7 +81,7 @@ func (o *Obj) stat() *np.Stat {
 		st.Name = "dev"
 	case LAMBDA:
 		st = o.l.stat("lambda")
-	case ATTR:
+	case FIELD:
 		st = o.l.stat(o.f)
 	}
 	return st
@@ -143,7 +142,7 @@ func (sc *SchedConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
-func (sc *SchedConn) walkAttr(l *Lambda, args np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (sc *SchedConn) walkField(l *Lambda, args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	name := args.Wnames[0]
 	r, _ := utf8.DecodeRuneInString(name)
 	if !unicode.IsUpper(r) {
@@ -155,7 +154,7 @@ func (sc *SchedConn) walkAttr(l *Lambda, args np.Twalk, rets *np.Rwalk) *np.Rerr
 	if !ok {
 		return &np.Rerror{fmt.Sprintf("Unknown field %v", name)}
 	}
-	o1 := &Obj{ATTR, l, name}
+	o1 := &Obj{FIELD, l, name}
 	sc.add(args.NewFid, o1)
 	rets.Qids = append(rets.Qids, o1.qid())
 	return nil
@@ -177,7 +176,7 @@ func (sc *SchedConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		sc.add(args.NewFid, devO)
 		rets.Qids = []np.Tqid{devO.qid()}
 	} else if o.t == LAMBDA {
-		return sc.walkAttr(o.l, args, rets)
+		return sc.walkField(o.l, args, rets)
 	} else {
 		l := sc.sched.findLambda(args.Wnames[0])
 		if l == nil {
@@ -188,7 +187,7 @@ func (sc *SchedConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		rets.Qids = []np.Tqid{o1.qid()}
 		if len(args.Wnames) > 1 {
 			args.Wnames = args.Wnames[1:]
-			return sc.walkAttr(l, args, rets)
+			return sc.walkField(l, args, rets)
 		}
 	}
 	return nil
@@ -239,47 +238,15 @@ func (sc *SchedConn) ls() []*np.Stat {
 	return dir
 }
 
-// XXX reflection also requires a switch but just on kind, perhaps better
-func (sc *SchedConn) readAttr(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
-	o.l.mu.Lock()
-	defer o.l.mu.Unlock()
-
+func (sc *SchedConn) readField(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
 	if args.Offset != 0 {
 		return nil
 	}
-
-	var err error
-	switch o.f {
-	case "ExitStatus":
-		o.l.waitFor()
-		rets.Data = []byte(o.l.ExitStatus)
-		return nil
-	case "Status":
-		rets.Data = []byte(o.l.Status)
-		return nil
-	case "Program":
-		rets.Data = []byte(o.l.Program)
-		return nil
-	case "Pid":
-		rets.Data = []byte(o.l.Pid)
-		return nil
-	case "Args":
-		rets.Data, err = json.Marshal(o.l.Args)
-	case "Env":
-		rets.Data, err = json.Marshal(o.l.Env)
-	case "ConsDep":
-		rets.Data, err = json.Marshal(o.l.ConsDep)
-	case "ProdDep":
-		rets.Data, err = json.Marshal(o.l.ProdDep)
-	case "ExitDep":
-		rets.Data, err = json.Marshal(o.l.ExitDep)
-	default:
-		return &np.Rerror{fmt.Sprintf("Unreadable field %v", o.f)}
-	}
+	b, err := o.l.readField(o.f)
 	if err != nil {
-		return &np.Rerror{fmt.Sprintf("Cannot marshal field %v %v",
-			o.f, err)}
+		return &np.Rerror{fmt.Sprintf("Read field %v error %v", o.f, err)}
 	}
+	rets.Data = b
 	return nil
 }
 
@@ -306,8 +273,8 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		rets.Data = b
-	} else if o.t == ATTR {
-		return sc.readAttr(o, args, rets)
+	} else if o.t == FIELD {
+		return sc.readField(o, args, rets)
 	}
 	return nil
 }

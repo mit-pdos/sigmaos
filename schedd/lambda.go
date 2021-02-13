@@ -112,7 +112,7 @@ func (l *Lambda) stat(name string) *np.Stat {
 		st.Qid = l.qid(true)
 		st.Name = l.Pid
 	} else {
-		st.Mode = np.Tperm(0777) | ATTR.mode()
+		st.Mode = np.Tperm(0777) | FIELD.mode()
 		st.Qid = l.qid(false)
 		st.Name = name
 	}
@@ -132,6 +132,38 @@ func (l *Lambda) ls() []*np.Stat {
 		}
 	}
 	return st
+}
+
+// XXX reflection also requires a switch but just on kind, perhaps better
+func (l *Lambda) readField(f string) ([]byte, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	var b []byte
+	switch f {
+	case "ExitStatus":
+		l.waitFor()
+		b = []byte(l.ExitStatus)
+	case "Status":
+		b = []byte(l.Status)
+	case "Program":
+		b = []byte(l.Program)
+	case "Pid":
+		b = []byte(l.Pid)
+	case "Args":
+		return json.Marshal(l.Args)
+	case "Env":
+		return json.Marshal(l.Env)
+	case "ConsDep":
+		return json.Marshal(l.ConsDep)
+	case "ProdDep":
+		return json.Marshal(l.ProdDep)
+	case "ExitDep":
+		return json.Marshal(l.ExitDep)
+	default:
+		return nil, fmt.Errorf("Unreadable field %v", f)
+	}
+	return b, nil
 }
 
 func (l *Lambda) changeStatus(new string) error {

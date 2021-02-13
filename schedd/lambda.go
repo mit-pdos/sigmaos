@@ -166,6 +166,31 @@ func (l *Lambda) readField(f string) ([]byte, error) {
 	return b, nil
 }
 
+func (l *Lambda) writeExitStatus(status string) {
+	l.mu.Lock()
+
+	l.ExitStatus = status
+	db.DPrintf("Exit %v; Wakeup waiters for %v\n", l.Pid, l)
+	l.condWait.Broadcast()
+	l.stopProducers()
+	l.waitExit()
+
+	l.mu.Unlock()
+
+	l.sd.wakeupExit(l.Pid)
+	l.sd.delLambda(l.Pid)
+}
+
+func (l *Lambda) writeField(f string, data []byte) error {
+	switch f {
+	case "ExitStatus":
+		l.writeExitStatus(string(data))
+	default:
+		return fmt.Errorf("Unwritable field %v", f)
+	}
+	return nil
+}
+
 func (l *Lambda) changeStatus(new string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -298,9 +323,6 @@ func (l *Lambda) runnableWaitingConsumer() bool {
 
 // Wait for consumers that depend on me to exit too.
 func (l *Lambda) waitExit() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	for !l.exitable() {
 		l.cond.Wait()
 	}
@@ -337,14 +359,4 @@ func (l *Lambda) waitFor() string {
 		l.condWait.Wait()
 	}
 	return l.ExitStatus
-}
-
-// l is exiting; wakeup waiters who are waiting for me to exit
-func (l *Lambda) wakeupWaiter(exitStatus string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	l.ExitStatus = exitStatus
-	db.DPrintf("Wakeup waiters for %v\n", l)
-	l.condWait.Broadcast()
 }

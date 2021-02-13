@@ -283,8 +283,6 @@ func (sc *SchedConn) devWrite(t string) *np.Rerror {
 	db.DPrintf("Write dev %v\n", t)
 	if strings.HasPrefix(t, "Started") {
 		sc.sched.started(t[len("Started "):])
-	} else if strings.HasPrefix(t, "Exiting") {
-		sc.sched.exiting(strings.TrimSpace(t[len("Exiting "):]))
 	} else if strings.HasPrefix(t, "SwapExitDependencies") {
 		sc.sched.swapExitDependencies(
 			strings.Split(
@@ -300,6 +298,18 @@ func (sc *SchedConn) devWrite(t string) *np.Rerror {
 	return nil
 }
 
+func (sc *SchedConn) writeField(o *Obj, args np.Twrite, rets *np.Rwrite) *np.Rerror {
+	if args.Offset != 0 {
+		return nil
+	}
+	err := o.l.writeField(o.f, args.Data)
+	if err != nil {
+		return &np.Rerror{fmt.Sprintf("Write field %v error %v", o.f, err)}
+	}
+	rets.Count = np.Tsize(len(args.Data))
+	return nil
+}
+
 func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DPrintf("Write %v\n", args)
 	o, ok := sc.lookup(args.Fid)
@@ -307,15 +317,16 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	n := np.Tsize(0)
-	if o.t == ROOT {
+	switch o.t {
+	case ROOT:
 		return np.ErrNowrite
-	} else if o.t == DEV {
+	case DEV:
 		r := sc.devWrite(string(args.Data))
 		if r != nil {
 			return r
 		}
 		n = np.Tsize(len(args.Data))
-	} else if o.t == LAMBDA {
+	case LAMBDA:
 		if o.l.Status == "init" {
 			err := o.l.initLambda(args.Data)
 			if err != nil {
@@ -327,8 +338,8 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		} else {
 			return &np.Rerror{fmt.Sprintf("Lambda already running")}
 		}
-	} else {
-		// XXX allow writing to certain fields (e.g., exchange deps)
+	default:
+		sc.writeField(o, args, rets)
 		return np.ErrNotSupported
 	}
 	rets.Count = n

@@ -56,7 +56,7 @@ func (fl *FsLib) Started(pid string) error {
 }
 
 func (fl *FsLib) Exiting(pid string, status string) error {
-	return fl.WriteFile(SCHEDDEV, []byte("Exiting "+pid+" "+status))
+	return fl.WriteFile(SCHED+"/"+pid+"/ExitStatus", []byte(status))
 }
 
 // The open blocks until pid exits (and then returns error, which is ignored)

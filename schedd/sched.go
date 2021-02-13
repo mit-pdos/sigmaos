@@ -3,7 +3,6 @@ package schedd
 import (
 	"fmt"
 	"log"
-	"strings"
 	"sync"
 	// "time"
 
@@ -143,24 +142,6 @@ func (sd *Sched) started(pid string) {
 	l.changeStatus("Running")
 	l.startConsDep()
 	sd.runScheduler()
-}
-
-// pid has exited; wait until its consumers also exited
-func (sd *Sched) exiting(pidst string) {
-	db.DPrintf("started %v\n", pidst)
-	p := strings.Split(pidst, " ")
-	pid := p[0]
-	st := p[1]
-	l := sd.findLambda(pid)
-	if l != nil {
-		sd.decLoad()
-		l.changeStatus("Exiting")
-		l.stopProducers()
-		l.wakeupWaiter(st)
-		l.waitExit()
-		sd.wakeupExit(pid)
-		sd.delLambda(pid)
-	}
 }
 
 // wakeup lambdas that have pid as an exit dependency

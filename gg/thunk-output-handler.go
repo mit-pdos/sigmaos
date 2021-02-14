@@ -49,7 +49,7 @@ func (toh *ThunkOutputHandler) Work() {
 	outputFiles := toh.getOutputFiles(thunkOutput)
 	// Upload results from local execution dir
 	/*uploaders :=*/
-	toh.spawnUploaders()
+	toh.spawnResultUploaders()
 	if len(newThunks) == 0 {
 		// We have produced a value, and need to propagate it upstream to functions
 		// which depend on us.
@@ -68,7 +68,7 @@ func (toh *ThunkOutputHandler) Work() {
 	}
 }
 
-func (toh *ThunkOutputHandler) spawnUploaders() []string {
+func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 	uploaders := []string{}
 	subDirs, err := ioutil.ReadDir(path.Join(toh.cwd, ".gg"))
 	if err != nil {

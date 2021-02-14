@@ -121,7 +121,7 @@ func (orc *Orchestrator) Work() {
 		)
 		log.Printf("Final output will be pointed to by: %v\n", strings.ReplaceAll(finalOutput, "name", "/mnt/9p"))
 		children = append(children, child)
-		orc.spawnReductionWriter(target, targetHash, []string{})
+		spawnReductionWriter(orc, target, targetHash, []string{})
 	}
 }
 
@@ -252,6 +252,24 @@ func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
 	return envPath
 }
 
+func spawnDownloader(launch ExecutorLauncher, targetHash string, subDir string) string {
+	a := fslib.Attr{}
+	a.Pid = targetHash + DOWNLOADER_SUFFIX
+	a.Program = "./bin/fsdownloader"
+	a.Args = []string{
+		path.Join(GG_DIR, subDir, targetHash),
+		path.Join(launch.getCwd(), ".gg", subDir, targetHash),
+	}
+	a.Env = []string{}
+	a.PairDep = []fslib.PDep{}
+	a.ExitDep = nil
+	err := launch.Spawn(&a)
+	if err != nil {
+		log.Fatalf("Error spawning download worker [%v]: %v\n", targetHash, err)
+	}
+	return a.Pid
+}
+
 func spawnUploader(launch ExecutorLauncher, targetHash string, subDir string) string {
 	a := fslib.Attr{}
 	a.Pid = targetHash + UPLOADER_SUFFIX
@@ -270,12 +288,12 @@ func spawnUploader(launch ExecutorLauncher, targetHash string, subDir string) st
 	return a.Pid
 }
 
-func (orc *Orchestrator) spawnReductionWriter(target string, targetReduction string, deps []string) {
+func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, deps []string) {
 	a := fslib.Attr{}
 	a.Pid = target + TARGET_WRITER_SUFFIX
 	a.Program = "./bin/gg-target-writer"
 	a.Args = []string{
-		orc.cwd,
+		launch.getCwd(),
 		target,
 		targetReduction,
 	}
@@ -284,7 +302,7 @@ func (orc *Orchestrator) spawnReductionWriter(target string, targetReduction str
 	reductionPid := targetReduction + OUTPUT_HANDLER_SUFFIX
 	deps = append(deps, reductionPid)
 	a.ExitDep = deps
-	err := orc.Spawn(&a)
+	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
 	}

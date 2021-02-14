@@ -41,7 +41,7 @@ func Boot(bin string) (*System, error) {
 }
 
 func (s *System) Shutdown(clnt *FsLib) {
-	err := clnt.WriteFile(SCHEDDEV, []byte("Exit"))
+	err := clnt.Remove(SCHED + "/")
 	if err != nil {
 		log.Fatalf("Schedd shutdown %v\n", err)
 	}

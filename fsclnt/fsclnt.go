@@ -402,7 +402,7 @@ func (fsc *FsClient) Remove(name string) error {
 	db.DPrintf("%v: Remove %v\n", fsc.uname, name)
 	path := np.Split(name)
 	_, rest := fsc.mount.resolve(path)
-	if len(rest) == 0 {
+	if len(rest) == 0 && !np.EndSlash(name) {
 		return fsc.umount(path)
 	} else {
 		fid, err := fsc.walkMany(path, np.EndSlash(name))

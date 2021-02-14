@@ -288,8 +288,6 @@ func (sc *SchedConn) devWrite(t string) *np.Rerror {
 				" ",
 			),
 		)
-	} else if strings.HasPrefix(t, "Exit") { // must go after Exiting
-		sc.sched.exit()
 	} else {
 		return np.ErrNotSupported
 	}
@@ -345,11 +343,15 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 
 // like kill?
 func (sc *SchedConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	_, ok := sc.lookup(args.Fid)
+	o, ok := sc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	return np.ErrNotSupported
+	if o.t == ROOT {
+		sc.sched.exit()
+	} else {
+		return np.ErrNotSupported
+	}
 	return nil
 }
 

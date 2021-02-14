@@ -1,6 +1,7 @@
 package gg
 
 import (
+	"io/ioutil"
 	"log"
 	"path"
 	"strings"
@@ -14,6 +15,7 @@ type ThunkOutputHandler struct {
 	thunkHash          string
 	primaryOutputThunk string
 	outputFiles        []string
+	cwd                string
 	*fslib.FsLib
 }
 
@@ -24,6 +26,10 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 	toh.pid = args[0]
 	toh.thunkHash = args[1]
 	toh.outputFiles = args[2:]
+	toh.cwd = path.Join(
+		GG_LOCAL_ENV_BASE,
+		toh.thunkHash,
+	)
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
 	toh.FsLib = fls
 	db.SetDebug(debug)
@@ -41,9 +47,12 @@ func (toh *ThunkOutputHandler) Work() {
 	thunkOutput := toh.readThunkOutput()
 	newThunks := toh.getNewThunks(thunkOutput)
 	outputFiles := toh.getOutputFiles(thunkOutput)
+	// Upload results from local execution dir
+	/*uploaders :=*/
+	toh.spawnUploaders()
 	if len(newThunks) == 0 {
-		// We have produced a value, and need to propagate it down to functions which
-		// depend on us.
+		// We have produced a value, and need to propagate it upstream to functions
+		// which depend on us.
 		toh.propagateResultUpstream()
 	} else {
 		toh.spawnDownstreamThunks(newThunks, outputFiles)
@@ -57,6 +66,28 @@ func (toh *ThunkOutputHandler) Work() {
 			log.Fatal("Couldn't swap exit dependencies\n")
 		}
 	}
+}
+
+func (toh *ThunkOutputHandler) spawnUploaders() []string {
+	uploaders := []string{}
+	subDirs, err := ioutil.ReadDir(path.Join(toh.cwd, ".gg"))
+	if err != nil {
+		log.Fatalf("Couldn't read local dir [%v] contents: %v\n", toh.cwd, err)
+	}
+
+	// Upload contents of each subdir (blobs, reductions, hash_cache) to 9P remote
+	// server
+	for _, subDir := range subDirs {
+		files, err := ioutil.ReadDir(toh.cwd)
+		if err != nil {
+			subdirPath := path.Join(toh.cwd, ".gg", subDir.Name())
+			log.Fatalf("Couldn't read subdir [%v] contents: %v\n", subdirPath, err)
+		}
+		for _, f := range files {
+			uploaders = append(uploaders, spawnUploader(toh, f.Name(), subDir.Name()))
+		}
+	}
+	return uploaders
 }
 
 func (toh *ThunkOutputHandler) spawnDownstreamThunks(newThunks map[string][]string, outputFiles map[string][]string) []string {
@@ -166,4 +197,8 @@ func (toh *ThunkOutputHandler) getReduction() string {
 		log.Fatalf("Error reading thunk outputs [%v]: %v\n", toh.thunkHash, err)
 	}
 	return strings.TrimSpace(string(valueFile))
+}
+
+func (toh *ThunkOutputHandler) getCwd() string {
+	return toh.cwd
 }

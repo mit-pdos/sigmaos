@@ -3,6 +3,7 @@ package gg
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"strings"
 
@@ -11,26 +12,27 @@ import (
 	np "ulambda/ninep"
 )
 
+// XXX eventually make GG dirs configurable, both here & in GG
 const (
-	GG_TOP_DIR = "name/gg"
-	// XXX eventually make GG dirs configurable, both here & in GG
-	GG_DIR           = "name/fs/.gg"
-	GG_BLOB_DIR      = GG_DIR + "/blobs"
-	GG_REDUCTION_DIR = GG_DIR + "/reductions"
-	//  GG_DIR = GG_TOP_DIR + ".gg"
-	ORCHESTRATOR              = GG_TOP_DIR + "/orchestrator"
-	UPLOADER_SUFFIX           = ".uploader"
-	DOWNLOADER_SUFFIX         = ".downloader"
-	EXECUTOR_SUFFIX           = ".executor"
-	TARGET_WRITER_SUFFIX      = ".target-writer"
-	OUTPUT_HANDLER_SUFFIX     = ".output-handler"
-	THUNK_OUTPUTS_SUFFIX      = ".thunk-outputs"
-	INPUT_DEPENDENCIES_SUFFIX = ".input-dependencies"
-	SHEBANG_DIRECTIVE         = "#!/usr/bin/env gg-force-and-run"
+	GG_TOP_DIR               = "name/gg"
+	GG_DIR                   = "name/fs/.gg"
+	GG_BLOB_DIR              = GG_DIR + "/blobs"
+	GG_REDUCTION_DIR         = GG_DIR + "/reductions"
+	GG_LOCAL_ENV_BASE        = "/tmp/ulambda"
+	ORCHESTRATOR             = GG_TOP_DIR + "/orchestrator"
+	UPLOADER_SUFFIX          = ".uploader"
+	DOWNLOADER_SUFFIX        = ".downloader"
+	EXECUTOR_SUFFIX          = ".executor"
+	TARGET_WRITER_SUFFIX     = ".target-writer"
+	OUTPUT_HANDLER_SUFFIX    = ".output-handler"
+	THUNK_OUTPUTS_SUFFIX     = ".thunk-outputs"
+	EXIT_DEPENDENCIES_SUFFIX = ".exit-dependencies"
+	SHEBANG_DIRECTIVE        = "#!/usr/bin/env gg-force-and-run"
 )
 
 type ExecutorLauncher interface {
 	Spawn(*fslib.Attr) error
+	getCwd() string
 }
 
 type OrchestratorDev struct {
@@ -104,12 +106,14 @@ func (orc *Orchestrator) Work() {
 		// XXX handle non-thunk targets
 		db.DPrintf("Spawning upload worker [%v]\n", target)
 		targetHash := orc.getTargetHash(target)
-		targetInputDependencies := orc.getTargetInputDependencies(targetHash)
+		targetExitDependencies := orc.getTargetExitDependencies(targetHash)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
-		upPids := []string{orc.spawnUploader(targetHash)}
+		upPids := []string{
+			spawnUploader(orc, targetHash, "blobs"),
+		}
 		upPids = append(upPids, exUpPids...)
-		targetInputDependencies = append(targetInputDependencies, upPids...)
-		exPid := spawnExecutor(orc, targetHash, targetInputDependencies)
+		targetExitDependencies = append(targetExitDependencies, upPids...)
+		exPid := spawnExecutor(orc, targetHash, targetExitDependencies)
 		child := spawnThunkOutputHandler(orc, exPid, targetHash, []string{targetHash})
 		finalOutput := path.Join(
 			GG_REDUCTION_DIR,
@@ -117,21 +121,21 @@ func (orc *Orchestrator) Work() {
 		)
 		log.Printf("Final output will be pointed to by: %v\n", strings.ReplaceAll(finalOutput, "name", "/mnt/9p"))
 		children = append(children, child)
-		orc.spawnTargetWriter(target, targetHash)
+		orc.spawnReductionWriter(target, targetHash, []string{})
 	}
 }
 
-func (orc *Orchestrator) getTargetInputDependencies(targetHash string) []string {
+func (orc *Orchestrator) getTargetExitDependencies(targetHash string) []string {
 	dependencies := []string{}
 	dependenciesFilePath := path.Join(
 		orc.cwd,
 		".gg",
 		"blobs",
-		targetHash+INPUT_DEPENDENCIES_SUFFIX,
+		targetHash+EXIT_DEPENDENCIES_SUFFIX,
 	)
 	f, err := ioutil.ReadFile(dependenciesFilePath)
 	if err != nil {
-		db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
+		db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
 		return dependencies
 	}
 	f_trimmed := strings.TrimSpace(string(f))
@@ -140,7 +144,7 @@ func (orc *Orchestrator) getTargetInputDependencies(targetHash string) []string 
 			dependencies = append(dependencies, d+OUTPUT_HANDLER_SUFFIX)
 		}
 	}
-	db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
+	db.DPrintf("Got exit dependencies for [%v]: %v\n", targetHash, dependencies)
 	return dependencies
 }
 
@@ -174,7 +178,7 @@ func (orc *Orchestrator) writeTargets() {
 func (orc *Orchestrator) uploadExecutableDependencies(execs []string) []string {
 	pids := []string{}
 	for _, exec := range execs {
-		pids = append(pids, orc.spawnUploader(exec))
+		pids = append(pids, spawnUploader(orc, exec, "blobs"))
 	}
 	return pids
 }
@@ -205,6 +209,10 @@ func (orc *Orchestrator) getTargetHash(target string) string {
 	return hash
 }
 
+func (orc *Orchestrator) getCwd() string {
+	return orc.cwd
+}
+
 func (orc *Orchestrator) mkdirOpt(path string) {
 	_, err := orc.FsLib.Stat(path)
 	if err != nil {
@@ -224,25 +232,45 @@ func (orc *Orchestrator) setUpDirs() {
 	orc.mkdirOpt(GG_BLOB_DIR)
 }
 
-func (orc *Orchestrator) spawnUploader(targetHash string) string {
+func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
+	envPath := path.Join(
+		GG_LOCAL_ENV_BASE,
+		targetHash,
+		".gg",
+	)
+	subDirs := []string{
+		envPath + "blobs",
+		envPath + "reductions",
+		envPath + "hash_cache",
+	}
+	for _, d := range subDirs {
+		err := os.MkdirAll(d, 0777)
+		if err != nil {
+			log.Fatalf("Error making execution env dir [%v]: %v\n", envPath, err)
+		}
+	}
+	return envPath
+}
+
+func spawnUploader(launch ExecutorLauncher, targetHash string, subDir string) string {
 	a := fslib.Attr{}
 	a.Pid = targetHash + UPLOADER_SUFFIX
 	a.Program = "./bin/fsuploader"
 	a.Args = []string{
-		path.Join(orc.cwd, ".gg", "blobs", targetHash),
-		path.Join(GG_BLOB_DIR, targetHash),
+		path.Join(launch.getCwd(), ".gg", subDir, targetHash),
+		path.Join(GG_DIR, subDir, targetHash),
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
 	a.ExitDep = nil
-	err := orc.Spawn(&a)
+	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err)
 	}
 	return a.Pid
 }
 
-func (orc *Orchestrator) spawnTargetWriter(target string, targetReduction string) {
+func (orc *Orchestrator) spawnReductionWriter(target string, targetReduction string, deps []string) {
 	a := fslib.Attr{}
 	a.Pid = target + TARGET_WRITER_SUFFIX
 	a.Program = "./bin/gg-target-writer"
@@ -253,9 +281,9 @@ func (orc *Orchestrator) spawnTargetWriter(target string, targetReduction string
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = []string{
-		targetReduction + OUTPUT_HANDLER_SUFFIX,
-	}
+	reductionPid := targetReduction + OUTPUT_HANDLER_SUFFIX
+	deps = append(deps, reductionPid)
+	a.ExitDep = deps
 	err := orc.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
@@ -263,6 +291,8 @@ func (orc *Orchestrator) spawnTargetWriter(target string, targetReduction string
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
+	setupLocalExecutionEnv(launch, targetHash)
+	//	envPath := setupLocalExecutionEnv(targetHash)
 	a := fslib.Attr{}
 	a.Pid = targetHash + EXECUTOR_SUFFIX
 	a.Program = "gg-execute"

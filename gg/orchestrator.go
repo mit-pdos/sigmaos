@@ -109,7 +109,7 @@ func (orc *Orchestrator) Work() {
 		targetHash := orc.getTargetHash(target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
 		exitDependencies := orc.getExitDependencies(targetHash)
-		inputDependencies := orc.getInputDependencies(targetHash)
+		inputDependencies := getInputDependencies(orc, targetHash)
 		inputDownloaderPids := spawnInputDownloaders(orc, targetHash, inputDependencies, exUpPids)
 		uploaderPids := []string{
 			spawnUploader(orc, targetHash, "blobs"),
@@ -236,10 +236,10 @@ func (orc *Orchestrator) setUpRemoteDirs() {
 	orc.mkdirOpt(GG_BLOB_DIR)
 }
 
-func (orc *Orchestrator) getInputDependencies(targetHash string) []string {
+func getInputDependencies(launch ExecutorLauncher, targetHash string) []string {
 	dependencies := []string{}
 	dependenciesFilePath := path.Join(
-		orc.cwd,
+		launch.getCwd(),
 		".gg",
 		"blobs",
 		targetHash+INPUT_DEPENDENCIES_SUFFIX,
@@ -266,9 +266,9 @@ func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
 		".gg",
 	)
 	subDirs := []string{
-		envPath + "blobs",
-		envPath + "reductions",
-		envPath + "hash_cache",
+		path.Join(envPath, "blobs"),
+		path.Join(envPath, "reductions"),
+		path.Join(envPath, "hash_cache"),
 	}
 	for _, d := range subDirs {
 		err := os.MkdirAll(d, 0777)

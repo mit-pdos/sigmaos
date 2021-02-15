@@ -41,7 +41,7 @@ func (toh *ThunkOutputHandler) Exit() {
 	toh.Exiting(toh.pid, "OK")
 }
 
-// XXX Check cache
+// XXX Memoize to avoid redundant work
 func (toh *ThunkOutputHandler) Work() {
 	// Read the thunk output file
 	thunkOutput := toh.readThunkOutput()
@@ -55,10 +55,13 @@ func (toh *ThunkOutputHandler) Work() {
 		toh.propagateResultUpstream()
 	} else {
 		for newThunk, thunkDeps := range newThunks {
-			// TODO: get input dependencies and start input downloaders
+			inputDependencies := getInputDependencies(toh, newThunk)
+			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
+			downloaders := spawnInputDownloaders(toh, newThunk, inputDependencies, uploaders)
 			exitDeps := []string{}
 			exitDeps = append(exitDeps, thunkDeps...)
 			exitDeps = append(exitDeps, uploaders...)
+			exitDeps = append(exitDeps, downloaders...)
 			toh.spawnDownstreamThunk(newThunk, exitDeps, outputFiles)
 		}
 		exitDepSwaps := []string{
@@ -83,9 +86,9 @@ func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 	// Upload contents of each subdir (blobs, reductions, hash_cache) to 9P remote
 	// server
 	for _, subDir := range subDirs {
-		files, err := ioutil.ReadDir(toh.cwd)
+		subdirPath := path.Join(toh.cwd, ".gg", subDir.Name())
+		files, err := ioutil.ReadDir(subdirPath)
 		if err != nil {
-			subdirPath := path.Join(toh.cwd, ".gg", subDir.Name())
 			log.Fatalf("Couldn't read subdir [%v] contents: %v\n", subdirPath, err)
 		}
 		for _, f := range files {

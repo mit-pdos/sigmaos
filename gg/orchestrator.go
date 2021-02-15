@@ -18,6 +18,7 @@ const (
 	GG_DIR                    = "name/fs/.gg"
 	GG_BLOB_DIR               = GG_DIR + "/blobs"
 	GG_REDUCTION_DIR          = GG_DIR + "/reductions"
+	GG_HASH_CACHE_DIR         = GG_DIR + "/hash_cache"
 	GG_LOCAL_ENV_BASE         = "/tmp/ulambda"
 	ORCHESTRATOR              = GG_TOP_DIR + "/orchestrator"
 	UPLOADER_SUFFIX           = ".uploader"
@@ -110,11 +111,16 @@ func (orc *Orchestrator) Work() {
 		orc.targetHashes = append(orc.targetHashes, targetHash)
 		exitDependencies := orc.getExitDependencies(targetHash)
 		inputDependencies := getInputDependencies(orc, targetHash)
-		inputDownloaderPids := spawnInputDownloaders(orc, targetHash, inputDependencies, exUpPids)
 		uploaderPids := []string{
 			spawnUploader(orc, targetHash, "blobs"),
 		}
 		uploaderPids = append(uploaderPids, exUpPids...)
+		// XXX A dirty hack... I should do something more principled
+		oldCwd := orc.cwd
+		orc.cwd = path.Join(GG_LOCAL_ENV_BASE, targetHash)
+		inputDownloaderPids := spawnInputDownloaders(orc, targetHash, inputDependencies, uploaderPids)
+		orc.cwd = oldCwd
+		log.Printf("Input downloader pids: %v\n", inputDownloaderPids)
 		exitDependencies = append(exitDependencies, uploaderPids...)
 		exitDependencies = append(exitDependencies, inputDownloaderPids...)
 		exPid := spawnExecutor(orc, targetHash, exitDependencies)
@@ -234,6 +240,8 @@ func (orc *Orchestrator) mkdirOpt(path string) {
 func (orc *Orchestrator) setUpRemoteDirs() {
 	orc.mkdirOpt(GG_DIR)
 	orc.mkdirOpt(GG_BLOB_DIR)
+	orc.mkdirOpt(GG_REDUCTION_DIR)
+	orc.mkdirOpt(GG_HASH_CACHE_DIR)
 }
 
 func getInputDependencies(launch ExecutorLauncher, targetHash string) []string {
@@ -281,6 +289,7 @@ func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
 
 func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, inputs []string, exitDeps []string) []string {
 	downloaders := []string{}
+	// XXX A dirty hack... I should do something more principled
 
 	// Make sure to download target thunk file as well
 	downloaders = append(downloaders, spawnDownloader(launch, targetHash, "blobs", exitDeps))
@@ -368,7 +377,8 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 	}
 	a.Env = []string{
 		"GG_STORAGE_URI=9p://mnt/9p/fs",
-		"GG_DIR=/mnt/9p/fs/.gg", // XXX Make this configurable
+		//		"GG_DIR=/mnt/9p/fs/.gg", // XXX Make this configurable
+		"GG_DIR=" + path.Join(GG_LOCAL_ENV_BASE, targetHash, ".gg"), // XXX Make this configurable
 		"GG_NINEP=true",
 		"GG_VERBOSE=1",
 	}

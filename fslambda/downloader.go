@@ -2,6 +2,8 @@ package fslambda
 
 import (
 	"io/ioutil"
+	"log"
+	"os"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -31,11 +33,16 @@ func (down *Downloader) Work() {
 	db.DPrintf("Downloading [%v] to [%v]\n", down.src, down.dest)
 	contents, err := down.ReadFile(down.src)
 	if err != nil {
-		db.DPrintf("Read download file error [%v]: %v\n", down.src, err)
+		log.Printf("Read download file error [%v]: %v\n", down.src, err)
 	}
-	err = ioutil.WriteFile(down.dest, contents, 0666)
+	err = ioutil.WriteFile(down.dest, contents, 0777)
 	if err != nil {
-		db.DPrintf("Couldn't download file [%v]: %v\n", down.dest, err)
+		log.Printf("Couldn't download file [%v]: %v\n", down.dest, err)
+	}
+	// Override umask
+	err = os.Chmod(down.dest, 0777)
+	if err != nil {
+		log.Printf("Couldn't chmod newly downloaded file")
 	}
 }
 

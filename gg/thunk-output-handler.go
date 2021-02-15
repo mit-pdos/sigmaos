@@ -162,13 +162,15 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) map[string][]s
 
 func (toh *ThunkOutputHandler) readThunkOutput() []string {
 	outputThunksPath := path.Join(
-		GG_BLOB_DIR,
+		toh.cwd,
+		".gg",
+		"blobs",
 		toh.thunkHash+THUNK_OUTPUTS_SUFFIX,
 	)
-	contents, err := toh.ReadFile(outputThunksPath)
+	contents, err := ioutil.ReadFile(outputThunksPath)
 	if err != nil {
 		// XXX switch to db
-		log.Fatalf("Error reading thunk outputs [%v]: %v\n", toh.thunkHash, err)
+		log.Fatalf("Error reading thunk outputs [%v]: %v\n", outputThunksPath, err)
 	}
 	trimmedContents := strings.TrimSpace(string(contents))
 	if len(trimmedContents) > 0 {

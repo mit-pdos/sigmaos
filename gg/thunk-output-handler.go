@@ -48,14 +48,19 @@ func (toh *ThunkOutputHandler) Work() {
 	newThunks := toh.getNewThunks(thunkOutput)
 	outputFiles := toh.getOutputFiles(thunkOutput)
 	// Upload results from local execution dir
-	/*uploaders :=*/
-	toh.spawnResultUploaders()
+	uploaders := toh.spawnResultUploaders()
 	if len(newThunks) == 0 {
 		// We have produced a value, and need to propagate it upstream to functions
 		// which depend on us.
 		toh.propagateResultUpstream()
 	} else {
-		toh.spawnDownstreamThunks(newThunks, outputFiles)
+		for newThunk, thunkDeps := range newThunks {
+			// TODO: get input dependencies and start input downloaders
+			exitDeps := []string{}
+			exitDeps = append(exitDeps, thunkDeps...)
+			exitDeps = append(exitDeps, uploaders...)
+			toh.spawnDownstreamThunk(newThunk, exitDeps, outputFiles)
+		}
 		exitDepSwaps := []string{
 			toh.pid,
 			toh.primaryOutputThunk,
@@ -90,15 +95,10 @@ func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 	return uploaders
 }
 
-func (toh *ThunkOutputHandler) spawnDownstreamThunks(newThunks map[string][]string, outputFiles map[string][]string) []string {
-	children := []string{}
-	for thunkHash, deps := range newThunks {
-		db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
-		exPid := spawnExecutor(toh, thunkHash, deps)
-		child := spawnThunkOutputHandler(toh, exPid, thunkHash, outputFiles[thunkHash])
-		children = append(children, child)
-	}
-	return children
+func (toh *ThunkOutputHandler) spawnDownstreamThunk(thunkHash string, deps []string, outputFiles map[string][]string) string {
+	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
+	exPid := spawnExecutor(toh, thunkHash, deps)
+	return spawnThunkOutputHandler(toh, exPid, thunkHash, outputFiles[thunkHash])
 }
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {

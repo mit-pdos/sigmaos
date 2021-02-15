@@ -14,20 +14,21 @@ import (
 
 // XXX eventually make GG dirs configurable, both here & in GG
 const (
-	GG_TOP_DIR               = "name/gg"
-	GG_DIR                   = "name/fs/.gg"
-	GG_BLOB_DIR              = GG_DIR + "/blobs"
-	GG_REDUCTION_DIR         = GG_DIR + "/reductions"
-	GG_LOCAL_ENV_BASE        = "/tmp/ulambda"
-	ORCHESTRATOR             = GG_TOP_DIR + "/orchestrator"
-	UPLOADER_SUFFIX          = ".uploader"
-	DOWNLOADER_SUFFIX        = ".downloader"
-	EXECUTOR_SUFFIX          = ".executor"
-	TARGET_WRITER_SUFFIX     = ".target-writer"
-	OUTPUT_HANDLER_SUFFIX    = ".output-handler"
-	THUNK_OUTPUTS_SUFFIX     = ".thunk-outputs"
-	EXIT_DEPENDENCIES_SUFFIX = ".exit-dependencies"
-	SHEBANG_DIRECTIVE        = "#!/usr/bin/env gg-force-and-run"
+	GG_TOP_DIR                = "name/gg"
+	GG_DIR                    = "name/fs/.gg"
+	GG_BLOB_DIR               = GG_DIR + "/blobs"
+	GG_REDUCTION_DIR          = GG_DIR + "/reductions"
+	GG_LOCAL_ENV_BASE         = "/tmp/ulambda"
+	ORCHESTRATOR              = GG_TOP_DIR + "/orchestrator"
+	UPLOADER_SUFFIX           = ".uploader"
+	DOWNLOADER_SUFFIX         = ".downloader"
+	EXECUTOR_SUFFIX           = ".executor"
+	TARGET_WRITER_SUFFIX      = ".target-writer"
+	OUTPUT_HANDLER_SUFFIX     = ".output-handler"
+	THUNK_OUTPUTS_SUFFIX      = ".thunk-outputs"
+	EXIT_DEPENDENCIES_SUFFIX  = ".exit-dependencies"
+	INPUT_DEPENDENCIES_SUFFIX = ".input-dependencies"
+	SHEBANG_DIRECTIVE         = "#!/usr/bin/env gg-force-and-run"
 )
 
 type ExecutorLauncher interface {
@@ -98,7 +99,7 @@ func (orc *Orchestrator) Exit() {
 }
 
 func (orc *Orchestrator) Work() {
-	orc.setUpDirs()
+	orc.setUpRemoteDirs()
 	executables := orc.getExecutableDependencies()
 	exUpPids := orc.uploadExecutableDependencies(executables)
 	children := []string{}
@@ -106,14 +107,17 @@ func (orc *Orchestrator) Work() {
 		// XXX handle non-thunk targets
 		db.DPrintf("Spawning upload worker [%v]\n", target)
 		targetHash := orc.getTargetHash(target)
-		targetExitDependencies := orc.getTargetExitDependencies(targetHash)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
-		upPids := []string{
+		exitDependencies := orc.getExitDependencies(targetHash)
+		inputDependencies := orc.getInputDependencies(targetHash)
+		inputDownloaderPids := spawnInputDownloaders(orc, targetHash, inputDependencies, exUpPids)
+		uploaderPids := []string{
 			spawnUploader(orc, targetHash, "blobs"),
 		}
-		upPids = append(upPids, exUpPids...)
-		targetExitDependencies = append(targetExitDependencies, upPids...)
-		exPid := spawnExecutor(orc, targetHash, targetExitDependencies)
+		uploaderPids = append(uploaderPids, exUpPids...)
+		exitDependencies = append(exitDependencies, uploaderPids...)
+		exitDependencies = append(exitDependencies, inputDownloaderPids...)
+		exPid := spawnExecutor(orc, targetHash, exitDependencies)
 		child := spawnThunkOutputHandler(orc, exPid, targetHash, []string{targetHash})
 		finalOutput := path.Join(
 			GG_REDUCTION_DIR,
@@ -121,11 +125,11 @@ func (orc *Orchestrator) Work() {
 		)
 		log.Printf("Final output will be pointed to by: %v\n", strings.ReplaceAll(finalOutput, "name", "/mnt/9p"))
 		children = append(children, child)
-		spawnReductionWriter(orc, target, targetHash, []string{})
+		spawnReductionWriter(orc, target, targetHash, "", []string{})
 	}
 }
 
-func (orc *Orchestrator) getTargetExitDependencies(targetHash string) []string {
+func (orc *Orchestrator) getExitDependencies(targetHash string) []string {
 	dependencies := []string{}
 	dependenciesFilePath := path.Join(
 		orc.cwd,
@@ -227,9 +231,32 @@ func (orc *Orchestrator) mkdirOpt(path string) {
 	}
 }
 
-func (orc *Orchestrator) setUpDirs() {
+func (orc *Orchestrator) setUpRemoteDirs() {
 	orc.mkdirOpt(GG_DIR)
 	orc.mkdirOpt(GG_BLOB_DIR)
+}
+
+func (orc *Orchestrator) getInputDependencies(targetHash string) []string {
+	dependencies := []string{}
+	dependenciesFilePath := path.Join(
+		orc.cwd,
+		".gg",
+		"blobs",
+		targetHash+INPUT_DEPENDENCIES_SUFFIX,
+	)
+	f, err := ioutil.ReadFile(dependenciesFilePath)
+	if err != nil {
+		db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
+		return dependencies
+	}
+	f_trimmed := strings.TrimSpace(string(f))
+	if len(f_trimmed) > 0 {
+		for _, d := range strings.Split(f_trimmed, "\n") {
+			dependencies = append(dependencies, d)
+		}
+	}
+	db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
+	return dependencies
 }
 
 func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
@@ -252,7 +279,28 @@ func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
 	return envPath
 }
 
-func spawnDownloader(launch ExecutorLauncher, targetHash string, subDir string) string {
+func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, inputs []string, exitDeps []string) []string {
+	downloaders := []string{}
+
+	// Make sure to download target thunk file as well
+	downloaders = append(downloaders, spawnDownloader(launch, targetHash, "blobs", exitDeps))
+	for _, input := range inputs {
+		if isThunk(input) {
+
+			// Download the thunk reduction file as well as the value it points to
+			reductionDownloader := spawnDownloader(launch, input, "reductions", exitDeps)
+
+			// set target == targetReduction to preserve target name
+			reductionWriter := spawnReductionWriter(launch, input, input, path.Join(".gg", "reductions"), exitDeps)
+			downloaders = append(downloaders, reductionDownloader, reductionWriter)
+		} else {
+			downloaders = append(downloaders, spawnDownloader(launch, input, "blobs", exitDeps))
+		}
+	}
+	return downloaders
+}
+
+func spawnDownloader(launch ExecutorLauncher, targetHash string, subDir string, exitDeps []string) string {
 	a := fslib.Attr{}
 	a.Pid = targetHash + DOWNLOADER_SUFFIX
 	a.Program = "./bin/fsdownloader"
@@ -262,7 +310,7 @@ func spawnDownloader(launch ExecutorLauncher, targetHash string, subDir string) 
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = nil
+	a.ExitDep = exitDeps
 	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning download worker [%v]: %v\n", targetHash, err)
@@ -288,12 +336,12 @@ func spawnUploader(launch ExecutorLauncher, targetHash string, subDir string) st
 	return a.Pid
 }
 
-func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, deps []string) {
+func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, subDir string, deps []string) string {
 	a := fslib.Attr{}
 	a.Pid = target + TARGET_WRITER_SUFFIX
 	a.Program = "./bin/gg-target-writer"
 	a.Args = []string{
-		launch.getCwd(),
+		path.Join(launch.getCwd(), subDir),
 		target,
 		targetReduction,
 	}
@@ -306,11 +354,11 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	if err != nil {
 		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
 	}
+	return a.Pid
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
-	setupLocalExecutionEnv(launch, targetHash)
-	//	envPath := setupLocalExecutionEnv(targetHash)
+	/* envPath := */ setupLocalExecutionEnv(launch, targetHash)
 	a := fslib.Attr{}
 	a.Pid = targetHash + EXECUTOR_SUFFIX
 	a.Program = "gg-execute"

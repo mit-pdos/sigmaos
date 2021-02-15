@@ -80,7 +80,6 @@ func (sd *Sched) spawn(l *Lambda) {
 
 	sd.ls[l.Pid] = l
 	delete(sd.terminated, l.Pid)
-	l.updateTerminated()
 	sd.cond.Signal()
 }
 

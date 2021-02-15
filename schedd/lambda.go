@@ -285,10 +285,26 @@ func (l *Lambda) startExitDep(pid string) {
 	}
 }
 
+// XXX Causes some kind of deadlock
 func (l *Lambda) updateTerminated() {
+	//	l.mu.Lock()
+	//	defer l.mu.Unlock()
+
 	for t, _ := range l.sd.terminated {
-		l.startExitDep(t)
+		log.Printf("Marking %v as terminated for %v\n", t, l.Pid)
+		_, ok := l.ExitDep[t]
+		if ok {
+			l.ExitDep[t] = true
+		}
 	}
+
+	for _, b := range l.ExitDep {
+		log.Printf("Checking if is terminated\n")
+		if !b {
+			return
+		}
+	}
+	l.Status = "Runnable"
 }
 
 func (l *Lambda) stopProducers() {

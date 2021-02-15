@@ -170,7 +170,7 @@ func (l *Lambda) writeExitStatus(status string) {
 	l.mu.Lock()
 
 	l.ExitStatus = status
-	db.DPrintf("Exit %v; Wakeup waiters for %v\n", l.Pid, l)
+	db.DPrintf("Exit %v status %v; Wakeup waiters for %v\n", l.Pid, status, l)
 	l.condWait.Broadcast()
 	l.stopProducers()
 	l.waitExit()
@@ -282,6 +282,12 @@ func (l *Lambda) startExitDep(pid string) {
 			}
 		}
 		l.Status = "Runnable"
+	}
+}
+
+func (l *Lambda) updateTerminated() {
+	for t, _ := range l.sd.terminated {
+		l.startExitDep(t)
 	}
 }
 

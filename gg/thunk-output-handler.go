@@ -56,8 +56,13 @@ func (toh *ThunkOutputHandler) Work() {
 	} else {
 		for newThunk, thunkDeps := range newThunks {
 			inputDependencies := getInputDependencies(toh, newThunk)
+			log.Printf("Got input dependencies %v for [%v]\n", inputDependencies, newThunk)
+			// XXX A dirty hack.. should definitely do something more principled
+			oldCwd := toh.cwd
+			toh.cwd = path.Join(GG_LOCAL_ENV_BASE, newThunk)
 			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
 			downloaders := spawnInputDownloaders(toh, newThunk, inputDependencies, uploaders)
+			toh.cwd = oldCwd
 			exitDeps := []string{}
 			exitDeps = append(exitDeps, thunkDeps...)
 			exitDeps = append(exitDeps, uploaders...)

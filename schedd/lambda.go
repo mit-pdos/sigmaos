@@ -50,18 +50,8 @@ func makeLambda(sd *Sched, a string) *Lambda {
 	return l
 }
 
-func (l *Lambda) init(a []byte) error {
-	var attr fslib.Attr
-
-	err := json.Unmarshal(a, &attr)
-	if err != nil {
-		return err
-	}
-	l.Pid = attr.Pid
-	l.Program = attr.Program
-	l.Args = attr.Args
-	l.Env = attr.Env
-	for _, p := range attr.PairDep {
+func (l *Lambda) pairDep(pairdep []fslib.PDep) {
+	for _, p := range pairdep {
 		if l.Pid != p.Producer {
 			c, ok := l.sd.ls[p.Producer]
 			if ok {
@@ -74,6 +64,20 @@ func (l *Lambda) init(a []byte) error {
 			l.ConsDep[p.Consumer] = false
 		}
 	}
+}
+
+func (l *Lambda) init(a []byte) error {
+	var attr fslib.Attr
+
+	err := json.Unmarshal(a, &attr)
+	if err != nil {
+		return err
+	}
+	l.Pid = attr.Pid
+	l.Program = attr.Program
+	l.Args = attr.Args
+	l.Env = attr.Env
+	l.pairDep(attr.PairDep)
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}
@@ -98,7 +102,7 @@ func (l *Lambda) continueing(a []byte) error {
 	l.Program = attr.Program
 	l.Args = attr.Args
 	l.Env = attr.Env
-	// XXX consumer/producer relation
+	l.pairDep(attr.PairDep)
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}

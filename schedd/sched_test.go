@@ -32,13 +32,28 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func TestContinue(t *testing.T) {
+	ts := makeTstate(t)
+
+	pid := fslib.GenPid()
+	a := &fslib.Attr{pid, "../bin/schedl", []string{"1", "name/out", ""}, nil, nil, nil}
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+
+	log.Printf("Spawn %v\n", a)
+
+	ts.Wait(pid)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
 	// debug.SetDebug(true)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/schedl", []string{"name/out"}, nil, nil, nil}
+	a := &fslib.Attr{pid, "../bin/schedl", []string{"0", "name/out", ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 

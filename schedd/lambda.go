@@ -46,11 +46,11 @@ func makeLambda(sd *Sched, a string) *Lambda {
 	l.Pid = a
 	l.time = time.Now().Unix()
 	l.uid = sd.uid()
-	l.Status = "init"
+	l.Status = "Init"
 	return l
 }
 
-func (l *Lambda) initLambda(a []byte) error {
+func (l *Lambda) init(a []byte) error {
 	var attr fslib.Attr
 
 	err := json.Unmarshal(a, &attr)
@@ -74,6 +74,31 @@ func (l *Lambda) initLambda(a []byte) error {
 			l.ConsDep[p.Consumer] = false
 		}
 	}
+	for _, p := range attr.ExitDep {
+		l.ExitDep[p] = false
+	}
+	if l.runnableConsumer() {
+		l.Status = "Runnable"
+	} else {
+		l.Status = "Waiting"
+	}
+	return nil
+}
+
+func (l *Lambda) continueing(a []byte) error {
+	var attr fslib.Attr
+
+	err := json.Unmarshal(a, &attr)
+	if err != nil {
+		return err
+	}
+	if l.Pid != attr.Pid {
+		return fmt.Errorf("continueLambda: pids don't match %v\n", attr.Pid)
+	}
+	l.Program = attr.Program
+	l.Args = attr.Args
+	l.Env = attr.Env
+	// XXX consumer/producer relation
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}

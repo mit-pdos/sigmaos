@@ -35,12 +35,22 @@ func (fl *FsLib) SwapExitDependencies(pids []string) error {
 	return fl.WriteFile(SCHEDDEV, []byte("SwapExitDependencies "+b))
 }
 
+// Spawn a new  lambda
 func (fl *FsLib) Spawn(a *Attr) error {
 	b, err := json.Marshal(a)
 	if err != nil {
 		return err
 	}
 	return fl.MakeFile(SCHED+"/"+a.Pid, b)
+}
+
+// Continuate a.pid later
+func (fl *FsLib) Continue(a *Attr) error {
+	b, err := json.Marshal(a)
+	if err != nil {
+		return err
+	}
+	return fl.WriteFile(SCHED+"/"+a.Pid, b)
 }
 
 func (fl *FsLib) SpawnProgram(name string, args []string) error {
@@ -59,7 +69,7 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 	return fl.WriteFile(SCHED+"/"+pid+"/ExitStatus", []byte(status))
 }
 
-// The open blocks until pid exits (and then returns error, which is ignored)
+// The open blocks until pid exits and then reads ExitStatus
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
 	return fl.ReadFile(SCHED + "/" + pid + "/ExitStatus")
 }

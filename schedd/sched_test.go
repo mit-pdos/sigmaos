@@ -44,6 +44,10 @@ func TestContinue(t *testing.T) {
 
 	ts.Wait(pid)
 
+	b, err := ts.ReadFile("name/out")
+	assert.Nil(t, err, "ReadFile")
+	assert.Equal(t, string(b), "hello again", "Output")
+
 	ts.s.Shutdown(ts.FsLib)
 }
 

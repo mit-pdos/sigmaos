@@ -19,14 +19,13 @@ const (
 )
 
 type Sched struct {
-	mu         sync.Mutex
-	cond       *sync.Cond
-	load       int // XXX bogus
-	nid        uint64
-	ls         map[string]*Lambda
-	terminated map[string]bool
-	done       bool
-	srv        *npsrv.NpServer
+	mu   sync.Mutex
+	cond *sync.Cond
+	load int // XXX bogus
+	nid  uint64
+	ls   map[string]*Lambda
+	done bool
+	srv  *npsrv.NpServer
 }
 
 func MakeSchedd() *Sched {
@@ -35,7 +34,6 @@ func MakeSchedd() *Sched {
 	sd.load = 0
 	sd.nid = 1 // 1 reserved for dev
 	sd.ls = make(map[string]*Lambda)
-	sd.terminated = make(map[string]bool)
 	// db.SetDebug(true)
 	sd.srv = npsrv.MakeNpServer(sd, ":0")
 	fsl := fslib.MakeFsLib("sched")
@@ -79,7 +77,6 @@ func (sd *Sched) spawn(l *Lambda) {
 	defer sd.mu.Unlock()
 
 	sd.ls[l.Pid] = l
-	delete(sd.terminated, l.Pid)
 	sd.cond.Signal()
 }
 
@@ -123,7 +120,6 @@ func (sd *Sched) delLambda(pid string) {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 	delete(sd.ls, pid)
-	sd.terminated[pid] = true
 }
 
 func (sd *Sched) decLoad() {

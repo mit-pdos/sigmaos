@@ -323,6 +323,16 @@ func (l *Lambda) stopProducers() {
 	}
 }
 
+// Caller holds sched lock
+func (l *Lambda) pruneExitDep() {
+	for dep, done := range l.ExitDep {
+		// If schedd knows nothing about the exit dep, ignore it
+		if _, ok := l.sd.ls[dep]; !ok && !done {
+			delete(l.ExitDep, dep)
+		}
+	}
+}
+
 func (l *Lambda) markProducer(pid string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

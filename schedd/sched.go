@@ -76,6 +76,7 @@ func (sd *Sched) spawn(l *Lambda) {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
+	l.pruneExitDep()
 	sd.ls[l.Pid] = l
 	sd.cond.Signal()
 }

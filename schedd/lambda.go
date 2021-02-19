@@ -201,10 +201,12 @@ func (l *Lambda) writeExitStatus(status string) {
 	l.ExitStatus = status
 	db.DPrintf("Exit %v status %v; Wakeup waiters for %v\n", l.Pid, status, l)
 	l.condWait.Broadcast()
-	l.stopProducers()
-	l.waitExit()
 
 	l.mu.Unlock()
+
+	// XXX Does this need to be in the above lock? It causes a deadlock
+	l.stopProducers()
+	l.waitExit()
 
 	l.sd.wakeupExit(l.Pid)
 	l.sd.delLambda(l.Pid)
@@ -213,6 +215,7 @@ func (l *Lambda) writeExitStatus(status string) {
 func (l *Lambda) writeStatus(status string) error {
 	l.mu.Lock()
 	if l.Status != "Started" {
+		l.mu.Unlock()
 		return fmt.Errorf("Cannot write to status %v", l.Status)
 	}
 	l.Status = "Running"
@@ -325,6 +328,8 @@ func (l *Lambda) stopProducers() {
 
 // Caller holds sched lock
 func (l *Lambda) pruneExitDep() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	for dep, done := range l.ExitDep {
 		// If schedd knows nothing about the exit dep, ignore it
 		if _, ok := l.sd.ls[dep]; !ok && !done {

@@ -2,6 +2,7 @@
 
 ./bin/named &
 ./bin/schedd &
+# ./bin/nps3d &
 ./mount.sh
 # make fake file system
 mkdir -p /mnt/9p/fs

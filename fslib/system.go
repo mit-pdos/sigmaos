@@ -34,9 +34,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	time.Sleep(100 * time.Millisecond)
-
 	return s, nil
 }
 

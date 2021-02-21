@@ -76,7 +76,7 @@ func (s *Schedl) Work() {
 		s.n -= 1
 		n := strconv.Itoa(s.n)
 		pid := fslib.GenPid()
-		a := &fslib.Attr{pid, "../bin/schedl", []string{n, s.output, ""},
+		a := &fslib.Attr{pid, "../bin/schedl", "", []string{n, s.output, ""},
 			nil, nil, nil}
 		err := s.Spawn(a)
 		if err != nil {
@@ -86,7 +86,7 @@ func (s *Schedl) Work() {
 		log.Printf("schedl %v: spawned %v\n", s.pid, a)
 
 		// make continuation, dependent on pid
-		a = &fslib.Attr{s.pid, "../bin/schedl", []string{n, s.output, "cont"},
+		a = &fslib.Attr{s.pid, "../bin/schedl", "", []string{n, s.output, "cont"},
 			nil, nil, []string{pid}}
 		err = s.Continue(a)
 	}

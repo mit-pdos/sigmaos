@@ -28,6 +28,7 @@ type Lambda struct {
 	Status     string
 	ExitStatus string
 	Program    string
+	Dir        string
 	Args       []string
 	Env        []string
 	ConsDep    map[string]bool // if true, consumer has finished
@@ -77,10 +78,12 @@ func (l *Lambda) init(a []byte) error {
 	l.Program = attr.Program
 	l.Args = attr.Args
 	l.Env = attr.Env
+	l.Dir = attr.Dir
 	l.pairDep(attr.PairDep)
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}
+	l.pruneExitDep()
 	if l.runnableConsumer() {
 		l.Status = "Runnable"
 	} else {
@@ -102,6 +105,7 @@ func (l *Lambda) continueing(a []byte) error {
 	l.Program = attr.Program
 	l.Args = attr.Args
 	l.Env = attr.Env
+	l.Dir = attr.Dir
 	l.pairDep(attr.PairDep)
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
@@ -115,8 +119,8 @@ func (l *Lambda) continueing(a []byte) error {
 }
 
 func (l *Lambda) String() string {
-	str := fmt.Sprintf("λ pid %v st %v %v args %v env %v cons %v prod %v exit %v",
-		l.Pid, l.Status, l.Program, l.Args, l.Env, l.ConsDep, l.ProdDep,
+	str := fmt.Sprintf("λ pid %v st %v %v args %v env %v dir %v cons %v prod %v exit %v",
+		l.Pid, l.Status, l.Program, l.Args, l.Env, l.Dir, l.ConsDep, l.ProdDep,
 		l.ExitDep)
 	return str
 }
@@ -179,6 +183,8 @@ func (l *Lambda) readField(f string) ([]byte, error) {
 		b = []byte(l.Program)
 	case "Pid":
 		b = []byte(l.Pid)
+	case "Dir":
+		b = []byte(l.Dir)
 	case "Args":
 		return json.Marshal(l.Args)
 	case "Env":
@@ -208,8 +214,9 @@ func (l *Lambda) writeExitStatus(status string) {
 	l.stopProducers()
 	l.waitExit()
 
-	l.sd.wakeupExit(l.Pid)
 	l.sd.delLambda(l.Pid)
+	l.sd.decLoad()
+	l.sd.wakeupExit(l.Pid)
 }
 
 func (l *Lambda) writeStatus(status string) error {
@@ -282,6 +289,7 @@ func (l *Lambda) run() error {
 	env := append(os.Environ(), l.Env...)
 	cmd := exec.Command(l.Program, args...)
 	cmd.Env = env
+	cmd.Dir = l.Dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
@@ -328,8 +336,10 @@ func (l *Lambda) stopProducers() {
 
 // Caller holds sched lock
 func (l *Lambda) pruneExitDep() {
+	l.sd.mu.Lock()
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	defer l.sd.mu.Unlock()
 	for dep, done := range l.ExitDep {
 		// If schedd knows nothing about the exit dep, ignore it
 		if _, ok := l.sd.ls[dep]; !ok && !done {

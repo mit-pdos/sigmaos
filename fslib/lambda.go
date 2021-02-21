@@ -15,6 +15,7 @@ type PDep struct {
 type Attr struct {
 	Pid     string
 	Program string
+	Dir     string
 	Args    []string
 	Env     []string
 	PairDep []PDep

@@ -303,7 +303,6 @@ func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, inputs []
 			reductionWriter := spawnReductionWriter(launch, input, input, path.Join(".gg", "blobs"), exitDeps)
 			downloaders = append(downloaders, reductionDownloader, reductionWriter)
 		} else {
-			log.Printf("Spawn downloader for input %v on target hash %v\n", input, targetHash)
 			downloaders = append(downloaders, spawnDownloader(launch, input, "blobs", exitDeps))
 		}
 	}

@@ -1,7 +1,6 @@
 package schedd
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -33,7 +32,7 @@ func MakeSchedd() *Sched {
 	sd.load = 0
 	sd.nid = 1 // 1 reserved for dev
 	sd.ls = make(map[string]*Lambda)
-	// db.SetDebug(true)
+	db.SetDebug(false)
 	sd.srv = npsrv.MakeNpServer(sd, ":0")
 	fsl := fslib.MakeFsLib("sched")
 	err := fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
@@ -86,26 +85,6 @@ func (sd *Sched) exit() {
 
 	sd.done = true
 	sd.cond.Signal()
-}
-
-func (sd *Sched) swapExitDependencies(pids []string) error {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	if len(pids)%2 != 0 {
-		return fmt.Errorf("Swapping an odd number of exit deps [%v]\n", pids)
-	}
-	depSwaps := make(map[string]string)
-	for i := 0; i < len(pids); i += 2 {
-		from := pids[i]
-		to := pids[i+1]
-		depSwaps[from] = to
-		db.DPrintf("Swapping exit dep [%v] -> [%v]\n", from, to)
-	}
-	for _, l := range sd.ls {
-		l.swapExitDependency(depSwaps)
-	}
-	return nil
 }
 
 func (sd *Sched) findLambda(pid string) *Lambda {

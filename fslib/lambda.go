@@ -31,9 +31,18 @@ func GenPid() string {
 	return strconv.Itoa(rand.Intn(100000))
 }
 
-func (fl *FsLib) SwapExitDependencies(pids []string) error {
+// XXX Do we have to worry about lack of atomicity between read and write?
+func (fl *FsLib) SwapExitDependency(pids []string) error {
 	b := strings.Join(pids, " ")
-	return fl.WriteFile(SCHEDDEV, []byte("SwapExitDependencies "+b))
+	ls, _ := fl.ReadDir(SCHED)
+	for _, l := range ls {
+		err := fl.WriteFile(SCHED+"/"+l.Name+"/ExitDep", []byte(b))
+		if err != nil {
+			// XXX ignore for now... lambda may have exited, in which case we get an
+			// error
+		}
+	}
+	return nil
 }
 
 // Spawn a new  lambda

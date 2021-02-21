@@ -61,7 +61,6 @@ func (toh *ThunkOutputHandler) Work() {
 			oldCwd := toh.cwd
 			toh.cwd = path.Join(GG_LOCAL_ENV_BASE, thunk.hash)
 			depPids := outputHandlerPids(thunk.deps)
-			log.Printf("Got input deps %v for %v\n", inputDependencies, thunk.hash)
 			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
 			downloaders := spawnInputDownloaders(toh, thunk.hash, inputDependencies, append(depPids, uploaders...))
 			toh.cwd = oldCwd
@@ -74,9 +73,9 @@ func (toh *ThunkOutputHandler) Work() {
 			toh.primaryOutputThunk,
 		}
 		db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
-		err := toh.SwapExitDependencies(exitDepSwaps)
+		err := toh.SwapExitDependency(exitDepSwaps)
 		if err != nil {
-			log.Fatal("Couldn't swap exit dependencies\n")
+			log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
 		}
 	}
 }

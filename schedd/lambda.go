@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -240,6 +241,8 @@ func (l *Lambda) writeField(f string, data []byte) error {
 		l.writeExitStatus(string(data))
 	case "Status":
 		l.writeStatus(string(data))
+	case "ExitDep":
+		l.swapExitDependency(string(data))
 	default:
 		return fmt.Errorf("Unwritable field %v", f)
 	}
@@ -254,15 +257,18 @@ func (l *Lambda) changeStatus(new string) error {
 	return nil
 }
 
-// XXX Might want to optimize this.
-func (l *Lambda) swapExitDependency(depSwaps map[string]string) {
-	// Assuming len(depSwaps) << len(l.exitDeps)
-	for from, to := range depSwaps {
-		// Check if present & false (hasn't exited yet)
-		if val, ok := l.ExitDep[from]; ok && !val {
-			l.ExitDep[to] = false
-			l.ExitDep[from] = true
-		}
+func (l *Lambda) swapExitDependency(swap string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	s := strings.Split(strings.TrimSpace(swap), " ")
+	from := s[0]
+	to := s[1]
+	log.Printf("Swapping %v to %v for %v\n", from, to, l.Pid)
+
+	// Check if present & false (hasn't exited yet)
+	if val, ok := l.ExitDep[from]; ok && !val {
+		l.ExitDep[to] = false
+		l.ExitDep[from] = true
 	}
 }
 

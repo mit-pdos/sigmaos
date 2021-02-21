@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -281,17 +280,7 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 
 func (sc *SchedConn) devWrite(t string) *np.Rerror {
 	db.DPrintf("Write dev %v\n", t)
-	if strings.HasPrefix(t, "SwapExitDependencies") {
-		sc.sched.swapExitDependencies(
-			strings.Split(
-				strings.TrimSpace(t[len("SwapExitDependencies "):]),
-				" ",
-			),
-		)
-	} else {
-		return np.ErrNotSupported
-	}
-	return nil
+	return np.ErrNotSupported
 }
 
 func (sc *SchedConn) writeField(o *Obj, args np.Twrite, rets *np.Rwrite) *np.Rerror {

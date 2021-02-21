@@ -1,7 +1,7 @@
 package nps3
 
 import (
-	"log"
+	"fmt"
 	"net"
 	"sync"
 
@@ -46,6 +46,12 @@ func (npc *NpConn) add(fid np.Tfid, o *Obj) {
 	npc.fids[fid] = o
 }
 
+func (npc *NpConn) del(fid np.Tfid) {
+	npc.mu.Lock()
+	defer npc.mu.Unlock()
+	delete(npc.fids, fid)
+}
+
 func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
 	clnt := makeNpConn(nps3, conn)
 	return clnt
@@ -70,6 +76,8 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
+// XXX quite expensive: each time walk the files in a directory, we
+// lookup the directory again.
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("Walk %v\n", args)
 	o, ok := npc.lookup(args.Fid)
@@ -93,7 +101,6 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		} else {
 			key = np.Join(args.Wnames)
 		}
-		log.Printf("key: %v\n", key)
 		o1, ok := npc.nps3.lookupKey(key)
 		if !ok {
 			return np.ErrNotfound
@@ -128,6 +135,8 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
+// XXX directories don't work: there is a fake directory, when trying
+// to read it we get an error.
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DPrintf("Create %v\n", args)
 	o, ok := npc.lookup(args.Fid)
@@ -135,6 +144,21 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("o %v\n", o)
+	if o.t != np.DMDIR {
+		return &np.Rerror{fmt.Sprintf("Not a directory")}
+	}
+	if args.Perm&np.DMDIR == np.DMDIR { // fake a directory?
+		o1 := o.nps3.makeObj(append(o.key, args.Name), np.DMDIR)
+		npc.add(args.Fid, o1)
+		rets.Qid = o1.qid()
+		return nil
+	}
+	o1, err := o.Create(args.Name, args.Perm, args.Mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	npc.add(args.Fid, o1)
+	rets.Qid = o1.qid()
 	return nil
 }
 
@@ -166,39 +190,57 @@ func (npc *NpConn) readFile(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DPrintf("Read %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	o, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("ReadFid %v %v\n", args, f)
-	if f.t == np.DMDIR {
-		return npc.readDir(f, args, rets)
-	} else if f.t == 0 {
-		return npc.readFile(f, args, rets)
-	} else {
+	db.DPrintf("ReadFid %v %v\n", args, o)
+	switch o.t {
+	case np.DMDIR:
+		return npc.readDir(o, args, rets)
+	case 0:
+		return npc.readFile(o, args, rets)
+	default:
 		return np.ErrNotSupported
 	}
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DPrintf("Write %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	o, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Write f %v\n", f)
-	n := np.Tsize(0)
-	rets.Count = n
+	db.DPrintf("Write o %v\n", o)
+	switch o.t {
+	case np.DMDIR:
+		// sub directories will be implicitly created; fake write
+		rets.Count = np.Tsize(len(args.Data))
+		return nil
+	case 0:
+		cnt, err := o.writeFile(int(args.Offset), args.Data)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		rets.Count = np.Tsize(cnt)
+	default:
+		return np.ErrNotSupported
+	}
 	return nil
 }
 
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	f, ok := npc.lookup(args.Fid)
+	o, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Remove %v\n", f)
-	return np.ErrNotSupported
+	db.DPrintf("Remove %v\n", o)
+	err := o.Remove()
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	npc.del(args.Fid)
+	return nil
 }
 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {

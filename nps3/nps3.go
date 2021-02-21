@@ -1,9 +1,11 @@
 package nps3
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
@@ -61,6 +63,43 @@ func (nps3 *Nps3) Serve() {
 	<-nps3.ch
 }
 
+func mode(key string) np.Tperm {
+	m := np.Tperm(0)
+	if key == "" || strings.HasSuffix(key, "/") {
+		m = np.DMDIR
+	}
+	return m
+}
+
+func (nps3 *Nps3) addKey(key string) *Obj {
+	nps3.mu.Lock()
+	defer nps3.mu.Unlock()
+	k := strings.TrimRight(key, "/")
+	o, ok := nps3.keys[k]
+	if ok {
+		return o
+	}
+	o = nps3.makeObjL(np.Split(k), mode(key))
+	nps3.keys[k] = o
+	return o
+}
+
+func (nps3 *Nps3) lookupKey(key string) (*Obj, bool) {
+	nps3.mu.Lock()
+	defer nps3.mu.Unlock()
+	o, ok := nps3.keys[key]
+	if !ok {
+		return nil, false
+	}
+	return o, true
+}
+
+func (nps3 *Nps3) delKey(key string) {
+	nps3.mu.Lock()
+	defer nps3.mu.Unlock()
+	delete(nps3.keys, key)
+}
+
 func (nps3 *Nps3) makeObjL(key []string, t np.Tperm) *Obj {
 	id := nps3.nextId
 	nps3.nextId += 1
@@ -86,6 +125,11 @@ type Obj struct {
 	id    np.Tpath
 	sz    np.Tlength
 	mtime time.Time
+}
+
+func (o *Obj) String() string {
+	s := fmt.Sprintf("%v %v %v %v %v", o.key, o.t, o.id, o.sz, o.mtime)
+	return s
 }
 
 func (o *Obj) qid() np.Tqid {
@@ -147,16 +191,15 @@ func (o *Obj) readHead() error {
 	return nil
 }
 
-func (o *Obj) readFile(off, cnt int) ([]byte, error) {
+// Read object from s3. If off == -1, read whole object; otherwise,
+// read a region.
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 	key := np.Join(o.key)
-	n := off + cnt
-	region := "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
+	region := ""
+	if off != -1 {
+		n := off + cnt
+		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
 
-	db.DPrintf("readFile: %v %v\n", key, region)
-
-	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
-	if np.Tlength(off) >= o.sz {
-		return nil, nil
 	}
 	input := &s3.GetObjectInput{
 		Bucket: &bucket,
@@ -178,10 +221,24 @@ func (o *Obj) readFile(off, cnt int) ([]byte, error) {
 			}
 		}
 	}
+	return result.Body, nil
+}
+
+func (o *Obj) readFile(off, cnt int) ([]byte, error) {
+	db.DPrintf("readFile: %v %v %v\n", o.key, off, cnt)
+
+	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
+	if np.Tlength(off) >= o.sz {
+		return nil, nil
+	}
+	r, err := o.s3Read(off, cnt)
+	if err != nil {
+		return nil, err
+	}
 	var b []byte
 	for cnt > 0 {
 		p := make([]byte, CHUNKSZ)
-		n, err := result.Body.Read(p)
+		n, err := r.Read(p)
 		if n > 0 {
 			// in case s3 returns more than we asked for
 			if n > cnt {
@@ -240,33 +297,69 @@ func (o *Obj) readDir() ([]*np.Stat, error) {
 	return dirents, nil
 }
 
-func mode(key string) np.Tperm {
-	m := np.Tperm(0)
-	if key == "" || strings.HasSuffix(key, "/") {
-		m = np.DMDIR
+func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (*Obj, error) {
+	key := np.Join(append(o.key, name))
+	input := &s3.PutObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
 	}
-	return m
+	_, err := o.nps3.client.PutObject(context.TODO(), input)
+	if err != nil {
+		return nil, err
+	}
+	// XXX ignored perm, only files not directories
+	o1 := o.nps3.makeObj(np.Split(key), 0)
+	return o1, nil
 }
 
-func (nps3 *Nps3) addKey(key string) *Obj {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	k := strings.TrimRight(key, "/")
-	o, ok := nps3.keys[k]
-	if ok {
-		return o
+func (o *Obj) Remove() error {
+	key := np.Join(o.key)
+	input := &s3.DeleteObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
 	}
-	o = nps3.makeObjL(np.Split(k), mode(key))
-	nps3.keys[k] = o
-	return o
+	_, err := o.nps3.client.DeleteObject(context.TODO(), input)
+	if err != nil {
+		return err
+	}
+	o.nps3.delKey(key)
+	return nil
 }
 
-func (nps3 *Nps3) lookupKey(key string) (*Obj, bool) {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	o, ok := nps3.keys[key]
-	if !ok {
-		return nil, false
+// XXX maybe represent a file as several objects to avoid
+// reading the whole file to update it.
+func (o *Obj) writeFile(off int, b []byte) (int, error) {
+	db.DPrintf("writeFile %v %v sz %v\n", off, len(b), o.sz)
+	key := np.Join(o.key)
+	r, err := o.s3Read(-1, 0)
+	if err != nil {
+		return 0, err
 	}
-	return o, true
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return 0, err
+	}
+	if off < len(data) { // prefix of data?
+		b1 := append(data[:off], b...)
+		if off+len(b) < len(data) { // suffix of data?
+			b = append(b1, data[off+len(b):]...)
+		}
+	} else if off == len(data) { // append?
+		b = append(data, b...)
+	} else { // off > len(data), a hole
+		hole := make([]byte, off-len(data))
+		b1 := append(data, hole...)
+		b = append(b1, b...)
+	}
+	r1 := bytes.NewReader(b)
+	input := &s3.PutObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+		Body:   r1,
+	}
+	_, err = o.nps3.client.PutObject(context.TODO(), input)
+	if err != nil {
+		return 0, err
+	}
+	return len(b), nil
 }

@@ -101,6 +101,7 @@ func (orc *Orchestrator) Exit() {
 
 func (orc *Orchestrator) Work() {
 	orc.setUpRemoteDirs()
+	// XXX  need to change how we intake the initial graph
 	executables := orc.getExecutableDependencies()
 	exUpPids := orc.uploadExecutableDependencies(executables)
 	children := []string{}
@@ -295,23 +296,24 @@ func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, inputs []
 	downloaders = append(downloaders, spawnDownloader(launch, targetHash, "blobs", exitDeps))
 	for _, input := range inputs {
 		if isThunk(input) {
-
 			// Download the thunk reduction file as well as the value it points to
 			reductionDownloader := spawnDownloader(launch, input, "reductions", exitDeps)
 
 			// set target == targetReduction to preserve target name
-			reductionWriter := spawnReductionWriter(launch, input, input, path.Join(".gg", "reductions"), exitDeps)
+			reductionWriter := spawnReductionWriter(launch, input, input, path.Join(".gg", "blobs"), exitDeps)
 			downloaders = append(downloaders, reductionDownloader, reductionWriter)
 		} else {
+			log.Printf("Spawn downloader for input %v on target hash %v\n", input, targetHash)
 			downloaders = append(downloaders, spawnDownloader(launch, input, "blobs", exitDeps))
 		}
 	}
 	return downloaders
 }
 
+// XXX Clean up naming conventions, include subdir
 func spawnDownloader(launch ExecutorLauncher, targetHash string, subDir string, exitDeps []string) string {
 	a := fslib.Attr{}
-	a.Pid = targetHash + DOWNLOADER_SUFFIX
+	a.Pid = "[" + path.Base(launch.getCwd()) + "." + subDir + "]" + targetHash + DOWNLOADER_SUFFIX
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
 		path.Join(GG_DIR, subDir, targetHash),
@@ -347,7 +349,7 @@ func spawnUploader(launch ExecutorLauncher, targetHash string, subDir string) st
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, subDir string, deps []string) string {
 	a := fslib.Attr{}
-	a.Pid = target + TARGET_WRITER_SUFFIX
+	a.Pid = "[" + path.Base(launch.getCwd()) + "." + path.Base(subDir) + "]" + target + TARGET_WRITER_SUFFIX
 	a.Program = "./bin/gg-target-writer"
 	a.Args = []string{
 		path.Join(launch.getCwd(), subDir),
@@ -375,8 +377,9 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 		"--ninep",
 		targetHash,
 	}
+	a.Dir = path.Join(GG_LOCAL_ENV_BASE, targetHash, ".gg")
 	a.Env = []string{
-		"GG_STORAGE_URI=9p://mnt/9p/fs",
+		//		"GG_STORAGE_URI=9p://mnt/9p/fs",
 		//		"GG_DIR=/mnt/9p/fs/.gg", // XXX Make this configurable
 		"GG_DIR=" + path.Join(GG_LOCAL_ENV_BASE, targetHash, ".gg"), // XXX Make this configurable
 		"GG_NINEP=true",

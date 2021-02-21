@@ -1,6 +1,7 @@
 package gg
 
 import (
+	"log"
 	"path"
 	"strings"
 
@@ -55,14 +56,15 @@ func (tw *TargetWriter) readTargetHash() string {
 	)
 	f, err := tw.ReadFile(reductionPath)
 	if err != nil {
-		db.DPrintf("Couldn't read target reduction [%v]: %v\n", reductionPath, err)
+		log.Fatalf("Couldn't read target reduction [%v]: %v\n", reductionPath, err)
 	}
 	return strings.TrimSpace(string(f))
 }
 
 func (tw *TargetWriter) spawnDownloader(targetHash string) {
 	a := fslib.Attr{}
-	a.Pid = tw.target + DOWNLOADER_SUFFIX
+	subDir := path.Base(path.Dir(tw.cwd))
+	a.Pid = "[" + targetHash + "." + subDir + "]" + tw.target + ".reduction" + DOWNLOADER_SUFFIX
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
 		path.Join(GG_BLOB_DIR, targetHash),

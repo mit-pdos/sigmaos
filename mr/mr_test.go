@@ -55,10 +55,10 @@ func TestWc(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Mkdir %v\n", err)
 		}
-		a1 := &fslib.Attr{pid1, "../bin/fsreader",
+		a1 := &fslib.Attr{pid1, "../bin/fsreader", "",
 			[]string{"../input/" + f.Name(), s}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
-		a2 := &fslib.Attr{pid2, "../bin/mr-m-wc",
+		a2 := &fslib.Attr{pid2, "../bin/mr-m-wc", "",
 			[]string{"name/" + s + "/pipe", s}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
 		ts.Spawn(a1)
@@ -68,7 +68,7 @@ func TestWc(t *testing.T) {
 	}
 	// only one reducer
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/mr-r-wc",
+	a := &fslib.Attr{pid, "../bin/mr-r-wc", "",
 		[]string{"name/fs/0", "name/fs/mr-out"}, nil,
 		nil, pids}
 	ts.Spawn(a)

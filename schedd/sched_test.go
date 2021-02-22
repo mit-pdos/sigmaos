@@ -36,7 +36,7 @@ func TestContinue(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/schedl", []string{"1", "name/out", ""}, nil, nil, nil}
+	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"1", "name/out", ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
@@ -57,7 +57,7 @@ func TestWait(t *testing.T) {
 	// debug.SetDebug(true)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/schedl", []string{"0", "name/out", ""}, nil, nil, nil}
+	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"0", "name/out", ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 

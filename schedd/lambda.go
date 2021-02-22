@@ -3,6 +3,7 @@ package schedd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sasha-s/go-deadlock"
 	"log"
 	"os"
 	"os/exec"
@@ -19,7 +20,7 @@ import (
 )
 
 type Lambda struct {
-	mu         sync.Mutex
+	mu         deadlock.Mutex
 	cond       *sync.Cond
 	condWait   *sync.Cond
 	sd         *Sched
@@ -57,7 +58,7 @@ func (l *Lambda) pairDep(pairdep []fslib.PDep) {
 		if l.Pid != p.Producer {
 			c, ok := l.sd.ls[p.Producer]
 			if ok {
-				l.ProdDep[p.Producer] = c.isRunnning()
+				l.ProdDep[p.Producer] = c.isRunnningL()
 			} else {
 				l.ProdDep[p.Producer] = false
 			}
@@ -69,6 +70,11 @@ func (l *Lambda) pairDep(pairdep []fslib.PDep) {
 }
 
 func (l *Lambda) init(a []byte) error {
+	l.sd.mu.Lock()
+	defer l.sd.mu.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	var attr fslib.Attr
 
 	err := json.Unmarshal(a, &attr)
@@ -84,8 +90,8 @@ func (l *Lambda) init(a []byte) error {
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}
-	l.pruneExitDep()
-	if l.runnableConsumer() {
+	l.pruneExitDepLS()
+	if l.runnableConsumerL() {
 		l.Status = "Runnable"
 	} else {
 		l.Status = "Waiting"
@@ -94,6 +100,9 @@ func (l *Lambda) init(a []byte) error {
 }
 
 func (l *Lambda) continueing(a []byte) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	var attr fslib.Attr
 
 	err := json.Unmarshal(a, &attr)
@@ -111,7 +120,8 @@ func (l *Lambda) continueing(a []byte) error {
 	for _, p := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}
-	if l.runnableConsumer() {
+
+	if l.runnableConsumerL() {
 		l.Status = "Runnable"
 	} else {
 		l.Status = "Waiting"
@@ -127,6 +137,12 @@ func (l *Lambda) String() string {
 }
 
 func (l *Lambda) qid(isL bool) np.Tqid {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.qidL(isL)
+}
+
+func (l *Lambda) qidL(isL bool) np.Tqid {
 	if isL {
 		return np.MakeQid(np.Qtype(np.DMDIR>>np.QTYPESHIFT),
 			np.TQversion(0), np.Tpath(l.uid))
@@ -143,11 +159,11 @@ func (l *Lambda) stat(name string) *np.Stat {
 	st := &np.Stat{}
 	if name == "lambda" {
 		st.Mode = np.Tperm(0777) | LAMBDA.mode()
-		st.Qid = l.qid(true)
+		st.Qid = l.qidL(true)
 		st.Name = l.Pid
 	} else {
 		st.Mode = np.Tperm(0777) | FIELD.mode()
-		st.Qid = l.qid(false)
+		st.Qid = l.qidL(false)
 		st.Name = name
 	}
 	st.Mtime = uint32(l.time)
@@ -176,7 +192,7 @@ func (l *Lambda) readField(f string) ([]byte, error) {
 	var b []byte
 	switch f {
 	case "ExitStatus":
-		l.waitFor()
+		l.waitForL()
 		b = []byte(l.ExitStatus)
 	case "Status":
 		b = []byte(l.Status)
@@ -202,18 +218,22 @@ func (l *Lambda) readField(f string) ([]byte, error) {
 	return b, nil
 }
 
+// XXX might want to clean up the locking here
 func (l *Lambda) writeExitStatus(status string) {
+	// Always take the sd lock before the l lock
+	l.sd.mu.Lock()
 	l.mu.Lock()
 
 	l.ExitStatus = status
 	db.DPrintf("Exit %v status %v; Wakeup waiters for %v\n", l.Pid, status, l)
 	l.condWait.Broadcast()
+	l.stopProducersLS()
+
+	l.sd.mu.Unlock()
+
+	l.waitExitL()
 
 	l.mu.Unlock()
-
-	// XXX Does this need to be in the above lock? It causes a deadlock
-	l.stopProducers()
-	l.waitExit()
 
 	l.sd.delLambda(l.Pid)
 	l.sd.decLoad()
@@ -260,10 +280,10 @@ func (l *Lambda) changeStatus(new string) error {
 func (l *Lambda) swapExitDependency(swap string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
 	s := strings.Split(strings.TrimSpace(swap), " ")
 	from := s[0]
 	to := s[1]
-	log.Printf("Swapping %v to %v for %v\n", from, to, l.Pid)
 
 	// Check if present & false (hasn't exited yet)
 	if val, ok := l.ExitDep[from]; ok && !val {
@@ -282,6 +302,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	}
 }
 
+// XXX Should we lock l's fields here?
 // XXX if had remote machines, this would be run on the remote machine
 // maybe we should have machines register with ulambd; have a
 // directory with machines?
@@ -307,9 +328,14 @@ func (l *Lambda) run() error {
 }
 
 func (l *Lambda) startConsDep() {
+	l.sd.mu.Lock()
+	defer l.sd.mu.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	for p, _ := range l.ConsDep {
-		c := l.sd.findLambda(p)
-		if c != nil {
+		c := l.sd.findLambdaS(p)
+		if c != nil && l.Pid != c.Pid {
 			c.markProducer(l.Pid)
 		}
 	}
@@ -331,21 +357,16 @@ func (l *Lambda) startExitDep(pid string) {
 	}
 }
 
-func (l *Lambda) stopProducers() {
+func (l *Lambda) stopProducersLS() {
 	for p, _ := range l.ProdDep {
-		c := l.sd.findLambda(p)
-		if c != nil {
-			c.markConsumer(l.Pid)
+		c := l.sd.findLambdaS(p)
+		if c != nil && l.Pid != c.Pid {
+			c.markConsumerS(l.Pid)
 		}
 	}
 }
 
-// Caller holds sched lock
-func (l *Lambda) pruneExitDep() {
-	l.sd.mu.Lock()
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	defer l.sd.mu.Unlock()
+func (l *Lambda) pruneExitDepLS() {
 	for dep, done := range l.ExitDep {
 		// If schedd knows nothing about the exit dep, ignore it
 		if _, ok := l.sd.ls[dep]; !ok && !done {
@@ -366,15 +387,12 @@ func (l *Lambda) markExit(pid string) {
 	l.ExitDep[pid] = true
 }
 
-func (l *Lambda) markConsumer(pid string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+func (l *Lambda) markConsumerS(pid string) {
 	l.ConsDep[pid] = true
 	l.cond.Signal()
 }
 
-// caller holds lock
-func (l *Lambda) runnableConsumer() bool {
+func (l *Lambda) runnableConsumerL() bool {
 	if len(l.ExitDep) != 0 {
 		return false
 	}
@@ -394,18 +412,17 @@ func (l *Lambda) runnableWaitingConsumer() bool {
 	if l.Status != "Waiting" {
 		return false
 	}
-	return l.runnableConsumer()
+	return l.runnableConsumerL()
 }
 
 // Wait for consumers that depend on me to exit too.
-func (l *Lambda) waitExit() {
-	for !l.exitable() {
+func (l *Lambda) waitExitL() {
+	for !l.exitableL() {
 		l.cond.Wait()
 	}
 }
 
-// Caller hold locks
-func (l *Lambda) exitable() bool {
+func (l *Lambda) exitableL() bool {
 	exit := true
 	for _, b := range l.ConsDep {
 		if !b {
@@ -421,15 +438,12 @@ func (l *Lambda) isRunnable() bool {
 	return l.Status == "Runnable"
 }
 
-func (l *Lambda) isRunnning() bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+func (l *Lambda) isRunnningL() bool {
 	return l.Status == "Running"
 }
 
 // A caller wants to Wait for l to exit.
-// Caller must have l locked
-func (l *Lambda) waitFor() string {
+func (l *Lambda) waitForL() string {
 	db.DPrintf("Wait for %v\n", l)
 	if l.Status != "Exiting" {
 		l.condWait.Wait()

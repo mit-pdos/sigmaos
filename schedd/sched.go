@@ -1,6 +1,7 @@
 package schedd
 
 import (
+	"github.com/sasha-s/go-deadlock"
 	"log"
 	"sync"
 
@@ -17,7 +18,7 @@ const (
 )
 
 type Sched struct {
-	mu   sync.Mutex
+	mu   deadlock.Mutex
 	cond *sync.Cond
 	load int // XXX bogus
 	nid  uint64
@@ -87,9 +88,14 @@ func (sd *Sched) exit() {
 	sd.cond.Signal()
 }
 
+// Lock & find lambda
 func (sd *Sched) findLambda(pid string) *Lambda {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
+	return sd.findLambdaS(pid)
+}
+
+func (sd *Sched) findLambdaS(pid string) *Lambda {
 	l, _ := sd.ls[pid]
 	return l
 }

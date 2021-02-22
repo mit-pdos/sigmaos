@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -12,6 +13,7 @@ import (
 // XXX need mutex for nextInum
 type Root struct {
 	inode    *Inode
+	mu       sync.Mutex
 	nextInum Tinum
 }
 
@@ -33,6 +35,9 @@ func (root *Root) RootInode() *Inode {
 // XXX bump version # if allocating same inode #
 // XXX a better inum allocation plan
 func (root *Root) allocInum() Tinum {
+	root.mu.Lock()
+	defer root.mu.Unlock()
+
 	inum := root.nextInum
 	root.nextInum += 1
 	return inum

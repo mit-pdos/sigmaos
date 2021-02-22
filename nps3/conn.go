@@ -77,7 +77,10 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 }
 
 // XXX quite expensive: each time walk the files in a directory, we
-// lookup the directory again.
+// lookup the directory again.  furthermore, each time we read
+// directory: once to return results, once to determine that the read
+// offset is beyond the end of diretory (which we seem to receive two
+// of from the kernel).
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DPrintf("Walk %v\n", args)
 	o, ok := npc.lookup(args.Fid)
@@ -136,7 +139,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 // XXX directories don't work: there is a fake directory, when trying
-// to read it we get an error.
+// to read it we get an error.  Maybe create . or .. in the directory.
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DPrintf("Create %v\n", args)
 	o, ok := npc.lookup(args.Fid)
@@ -167,9 +170,13 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 }
 
 func (npc *NpConn) readDir(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
-	dirents, err := o.readDir()
-	if err != nil {
-		return &np.Rerror{err.Error()}
+	var dirents []*np.Stat
+	var err error
+	if o.sz > 0 && np.Tlength(args.Offset) >= o.sz {
+		dirents = []*np.Stat{}
+	} else {
+		dirents, err = o.readDir()
+
 	}
 	b, err := npcodec.Dir2Byte(args.Offset, args.Count, dirents)
 	if err != nil {

@@ -18,6 +18,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/npcodec"
 	"ulambda/npsrv"
 )
 
@@ -294,6 +295,7 @@ func (o *Obj) readDir() ([]*np.Stat, error) {
 			}
 		}
 	}
+	o.sz = npcodec.DirSize(dirents)
 	return dirents, nil
 }
 

@@ -70,24 +70,18 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DPrintf("Attach %v\n", args)
 	npc.uname = args.Uname
-	o := npc.nps3.makeObj([]string{}, np.DMDIR)
+	o := npc.nps3.makeObj([]string{}, np.DMDIR, nil)
 	npc.add(args.Fid, o)
 	rets.Qid = o.qid()
 	return nil
 }
 
-// XXX quite expensive: each time walk the files in a directory, we
-// lookup the directory again.  furthermore, each time we read
-// directory: once to return results, once to determine that the read
-// offset is beyond the end of diretory (which we seem to receive two
-// of from the kernel).
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	db.DPrintf("Walk %v\n", args)
 	o, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Walk o %v\n", o)
+	db.DPrintf("Walk o %v args %v\n", o, args)
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		npc.add(args.NewFid, o)
 	} else {
@@ -98,15 +92,9 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		var key string
-		if len(o.key) > 0 {
-			key = np.Join(o.key) + "/" + np.Join(args.Wnames)
-		} else {
-			key = np.Join(args.Wnames)
-		}
-		o1, ok := npc.nps3.lookupKey(key)
-		if !ok {
-			return np.ErrNotfound
+		o1, err := o.lookup(args.Wnames)
+		if err != nil {
+			return &np.Rerror{err.Error()}
 		}
 		npc.add(args.NewFid, o1)
 		rets.Qids = []np.Tqid{o1.qid()}
@@ -139,7 +127,8 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 // XXX directories don't work: there is a fake directory, when trying
-// to read it we get an error.  Maybe create . or .. in the directory.
+// to read it we get an error.  Maybe create . or .. in the directory
+// args.Name, to force the directory into existence
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DPrintf("Create %v\n", args)
 	o, ok := npc.lookup(args.Fid)
@@ -151,7 +140,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	if args.Perm&np.DMDIR == np.DMDIR { // fake a directory?
-		o1 := o.nps3.makeObj(append(o.key, args.Name), np.DMDIR)
+		o1 := o.nps3.makeObj(append(o.key, args.Name), np.DMDIR, o)
 		npc.add(args.Fid, o1)
 		rets.Qid = o1.qid()
 		return nil
@@ -256,6 +245,19 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("Stat %v\n", o)
+	var err error
+	switch o.t {
+	case np.DMDIR:
+		_, err = o.readDir()
+	case 0:
+		err = o.readHead()
+	default:
+		return np.ErrNotSupported
+	}
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+
 	rets.Stat = *o.stat()
 	return nil
 }

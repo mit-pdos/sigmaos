@@ -31,14 +31,12 @@ type Nps3 struct {
 	srv    *npsrv.NpServer
 	client *s3.Client
 	nextId np.Tpath
-	keys   map[string]*Obj
 	ch     chan bool
 }
 
 func MakeNps3() *Nps3 {
 	nps3 := &Nps3{}
 	db.SetDebug(true)
-	nps3.keys = make(map[string]*Obj)
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit-apply"))
 	if err != nil {
@@ -72,36 +70,7 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (nps3 *Nps3) addKey(key string) *Obj {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	k := strings.TrimRight(key, "/")
-	o, ok := nps3.keys[k]
-	if ok {
-		return o
-	}
-	o = nps3.makeObjL(np.Split(k), mode(key))
-	nps3.keys[k] = o
-	return o
-}
-
-func (nps3 *Nps3) lookupKey(key string) (*Obj, bool) {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	o, ok := nps3.keys[key]
-	if !ok {
-		return nil, false
-	}
-	return o, true
-}
-
-func (nps3 *Nps3) delKey(key string) {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	delete(nps3.keys, key)
-}
-
-func (nps3 *Nps3) makeObjL(key []string, t np.Tperm) *Obj {
+func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p *Obj) *Obj {
 	id := nps3.nextId
 	nps3.nextId += 1
 
@@ -110,22 +79,26 @@ func (nps3 *Nps3) makeObjL(key []string, t np.Tperm) *Obj {
 	o.key = key
 	o.t = t
 	o.id = id
+	o.dirents = make(map[string]*Obj)
+	o.parent = p
 	return o
 }
 
-func (nps3 *Nps3) makeObj(key []string, t np.Tperm) *Obj {
+func (nps3 *Nps3) makeObj(key []string, t np.Tperm, p *Obj) *Obj {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
-	return nps3.makeObjL(key, t)
+	return nps3.makeObjL(key, t, p)
 }
 
 type Obj struct {
-	nps3  *Nps3
-	key   []string
-	t     np.Tperm
-	id    np.Tpath
-	sz    np.Tlength
-	mtime time.Time
+	nps3    *Nps3
+	key     []string
+	t       np.Tperm
+	id      np.Tpath
+	sz      np.Tlength
+	mtime   time.Time
+	dirents map[string]*Obj
+	parent  *Obj
 }
 
 func (o *Obj) String() string {
@@ -259,12 +232,9 @@ func (o *Obj) readFile(off, cnt int) ([]byte, error) {
 	return b, nil
 }
 
-// XXX if we already read this directory don't read it again?
-func (o *Obj) readDir() ([]*np.Stat, error) {
-	var dirents []*np.Stat
-	maxKeys := 0
+func (o *Obj) s3ReadDir() error {
 	key := np.Join(o.key)
-	db.DPrintf("readDir: %v\n", key)
+	maxKeys := 0
 	params := &s3.ListObjectsV2Input{
 		Bucket: &bucket,
 		Prefix: &key,
@@ -278,22 +248,43 @@ func (o *Obj) readDir() ([]*np.Stat, error) {
 	for p.HasMorePages() {
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			return nil, fmt.Errorf("bad offset")
+			return fmt.Errorf("bad offset")
 		}
 		for _, obj := range page.Contents {
 			db.DPrintf("Key: %v\n", *obj.Key)
 			if n, ok := o.includeName(*obj.Key); ok {
 				db.DPrintf("incl %v\n", n)
-				o1 := o.nps3.addKey(*obj.Key)
-				if o1.t != np.DMDIR {
-					err := o1.readHead()
-					if err != nil {
-						return nil, err
-					}
-				}
-				dirents = append(dirents, o1.stat())
+				o1 := o.nps3.makeObj(append(o.key, n), mode(*obj.Key), o)
+				o.dirents[n] = o1
 			}
 		}
+	}
+	return nil
+}
+
+func (o *Obj) lookup(p []string) (*Obj, error) {
+	if o.t != np.DMDIR {
+		return nil, fmt.Errorf("Not a directory")
+	}
+	if len(p) > 1 {
+		return nil, fmt.Errorf("Not supported XXX")
+	}
+	o1, ok := o.dirents[p[0]]
+	if !ok {
+		return nil, fmt.Errorf("file not found")
+	}
+	return o1, nil
+}
+
+func (o *Obj) readDir() ([]*np.Stat, error) {
+	var dirents []*np.Stat
+	db.DPrintf("readDir: %v\n", o)
+	if len(o.dirents) == 0 {
+		o.s3ReadDir()
+
+	}
+	for _, o1 := range o.dirents {
+		dirents = append(dirents, o1.stat())
 	}
 	o.sz = npcodec.DirSize(dirents)
 	return dirents, nil
@@ -310,7 +301,8 @@ func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (*Obj, error) {
 		return nil, err
 	}
 	// XXX ignored perm, only files not directories
-	o1 := o.nps3.makeObj(np.Split(key), 0)
+	o1 := o.nps3.makeObj(np.Split(key), 0, o)
+	o.dirents[name] = o1
 	return o1, nil
 }
 
@@ -324,12 +316,13 @@ func (o *Obj) Remove() error {
 	if err != nil {
 		return err
 	}
-	o.nps3.delKey(key)
+	delete(o.parent.dirents, o.key[len(o.key)-1])
 	return nil
 }
 
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
+// XXX maybe buffer all writes before writing to S3 (on clunk?)
 func (o *Obj) writeFile(off int, b []byte) (int, error) {
 	db.DPrintf("writeFile %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)

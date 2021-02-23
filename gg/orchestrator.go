@@ -15,23 +15,7 @@ import (
 
 // XXX eventually make GG dirs configurable, both here & in GG
 const (
-	GG_TOP_DIR                = "name/gg"
-	GG_DIR                    = "name/fs/.gg"
-	GG_DIR_TMP                = ".gg"
-	GG_BLOB_DIR               = GG_DIR + "/blobs"
-	GG_BLOBS                  = ".gg/blobs"
-	GG_REDUCTION_DIR          = GG_DIR + "/reductions"
-	GG_REDUCTIONS             = ".gg/reductions"
-	GG_HASH_CACHE_DIR         = GG_DIR + "/hash_cache"
-	GG_HASH_CACHE             = ".gg/hash_cache"
-	GG_LOCAL_DIR              = "/tmp/ulambda"
-	GG_REMOTE_DIR             = "name/fs"
-	ORCHESTRATOR              = GG_TOP_DIR + "/orchestrator"
-	UPLOADER_SUFFIX           = ".uploader"
-	DOWNLOADER_SUFFIX         = ".downloader"
-	EXECUTOR_SUFFIX           = ".executor"
-	TARGET_WRITER_SUFFIX      = ".target-writer"
-	OUTPUT_HANDLER_SUFFIX     = ".output-handler"
+	ORCHESTRATOR              = "name/gg/orchestrator"
 	THUNK_OUTPUTS_SUFFIX      = ".thunk-outputs"
 	EXIT_DEPENDENCIES_SUFFIX  = ".exit-dependencies"
 	INPUT_DEPENDENCIES_SUFFIX = ".input-dependencies"
@@ -139,15 +123,15 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 	for _, thunk := range thunks {
 		// XXX handle non-thunk targets
 		exitDeps := outputHandlerPids(thunk.deps)
-		inputDependencies := getInputDependencies(orc, thunk.hash)
+		inputDependencies := getInputDependencies(orc, thunk.hash, ggOrigBlobs(orc.cwd, ""))
 		uploaderPids := []string{
 			spawnUploader(orc, thunk.hash, orc.cwd, "blobs"),
 		}
 		uploaderPids = append(uploaderPids, uploadDeps...)
 		oldCwd := orc.cwd
-		orc.cwd = path.Join(GG_LOCAL_DIR, thunk.hash)
+		orc.cwd = path.Join(GG_LOCAL, thunk.hash)
 		// XXX A dirty hack... I should do something more principled
-		inputDownloaderPids := spawnInputDownloaders(orc, thunk.hash, path.Join(GG_LOCAL_DIR, thunk.hash), inputDependencies, uploaderPids)
+		inputDownloaderPids := spawnInputDownloaders(orc, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, uploaderPids)
 		orc.cwd = oldCwd
 		exitDeps = append(exitDeps, uploaderPids...)
 		exitDeps = append(exitDeps, inputDownloaderPids...)
@@ -158,10 +142,8 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 
 func (orc *Orchestrator) getExitDependencies(targetHash string) []string {
 	dependencies := []string{}
-	dependenciesFilePath := path.Join(
+	dependenciesFilePath := ggOrigBlobs(
 		orc.cwd,
-		".gg",
-		"blobs",
 		targetHash+EXIT_DEPENDENCIES_SUFFIX,
 	)
 	f, err := ioutil.ReadFile(dependenciesFilePath)
@@ -181,19 +163,13 @@ func (orc *Orchestrator) getExitDependencies(targetHash string) []string {
 
 func (orc *Orchestrator) writeTargets() {
 	for i, target := range orc.targets {
-		targetReduction := path.Join(
-			GG_REDUCTION_DIR,
-			orc.targetHashes[i],
-		)
+		targetReduction := ggRemoteReductions(orc.targetHashes[i])
 		f, err := orc.ReadFile(targetReduction)
 		if err != nil {
 			log.Fatalf("Error reading target reduction: %v\n", err)
 		}
 		outputHash := strings.TrimSpace(string(f))
-		outputPath := path.Join(
-			GG_BLOB_DIR,
-			outputHash,
-		)
+		outputPath := ggRemoteBlobs(outputHash)
 		outputValue, err := orc.ReadFile(outputPath)
 		if err != nil {
 			log.Fatalf("Error reading value path: %v\n", err)
@@ -215,7 +191,7 @@ func (orc *Orchestrator) uploadExecutableDependencies(execs []string) []string {
 }
 
 func (orc *Orchestrator) getExecutableDependencies() []string {
-	execsPath := path.Join(orc.cwd, ".gg", "blobs", "executables.txt")
+	execsPath := ggOrigBlobs(orc.cwd, "executables.txt")
 	f, err := ioutil.ReadFile(execsPath)
 	if err != nil {
 		log.Fatalf("Error reading exec dependencies: %v\n", err)
@@ -251,7 +227,7 @@ func (orc *Orchestrator) mkdirOpt(path string) {
 		// XXX Perms?
 		err = orc.FsLib.Mkdir(path, np.DMDIR)
 		if err != nil {
-			log.Fatalf("Couldn't mkdir %v: %v", GG_DIR, err)
+			log.Fatalf("Couldn't mkdir %v: %v", path, err)
 		}
 	} else {
 		db.DPrintf("Already exists [%v]\n", path)
@@ -259,18 +235,16 @@ func (orc *Orchestrator) mkdirOpt(path string) {
 }
 
 func (orc *Orchestrator) setUpRemoteDirs() {
-	orc.mkdirOpt(ggRemote(GG_DIR_TMP, ""))
+	orc.mkdirOpt(ggRemote("", ""))
 	orc.mkdirOpt(ggRemoteBlobs(""))
 	orc.mkdirOpt(ggRemoteReductions(""))
 	orc.mkdirOpt(ggRemoteHashCache(""))
 }
 
-func getInputDependencies(launch ExecutorLauncher, targetHash string) []string {
+func getInputDependencies(launch ExecutorLauncher, targetHash string, srcDir string) []string {
 	dependencies := []string{}
 	dependenciesFilePath := path.Join(
-		launch.getCwd(),
-		".gg",
-		"blobs",
+		srcDir,
 		targetHash+INPUT_DEPENDENCIES_SUFFIX,
 	)
 	f, err := ioutil.ReadFile(dependenciesFilePath)
@@ -288,24 +262,18 @@ func getInputDependencies(launch ExecutorLauncher, targetHash string) []string {
 	return dependencies
 }
 
-func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) string {
-	envPath := path.Join(
-		GG_LOCAL_DIR,
-		targetHash,
-		".gg",
-	)
+func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) {
 	subDirs := []string{
-		path.Join(envPath, "blobs"),
-		path.Join(envPath, "reductions"),
-		path.Join(envPath, "hash_cache"),
+		ggLocalBlobs(targetHash, ""),
+		ggLocalReductions(targetHash, ""),
+		ggLocalHashCache(targetHash, ""),
 	}
 	for _, d := range subDirs {
 		err := os.MkdirAll(d, 0777)
 		if err != nil {
-			log.Fatalf("Error making execution env dir [%v]: %v\n", envPath, err)
+			log.Fatalf("Error making execution env dir [%v]: %v\n", d, err)
 		}
 	}
-	return envPath
 }
 
 func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, dstDir string, inputs []string, exitDeps []string) []string {
@@ -340,12 +308,12 @@ func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, dstDir st
 // XXX Clean up naming conventions, include subdir
 func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, subDir string, exitDeps []string) string {
 	a := fslib.Attr{}
-	a.Pid = "[" + path.Base(dstDir) + "." + subDir + "]" + targetHash + DOWNLOADER_SUFFIX
+	a.Pid = uploaderPid(dstDir, subDir, targetHash)
 	//	log.Printf("Spawning d %v deps %v", a.Pid, exitDeps)
 	//	debug.PrintStack()
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
-		path.Join(GG_DIR, subDir, targetHash),
+		ggRemote(subDir, targetHash),
 		path.Join(dstDir, ".gg", subDir, targetHash),
 	}
 	a.Env = []string{}
@@ -360,12 +328,12 @@ func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, 
 
 func spawnUploader(launch ExecutorLauncher, targetHash string, srcDir string, subDir string) string {
 	a := fslib.Attr{}
-	a.Pid = "[" + path.Base(srcDir) + "." + subDir + "]" + targetHash + UPLOADER_SUFFIX
+	a.Pid = uploaderPid(srcDir, subDir, targetHash)
 	//	log.Printf("Spawned uploader %v\n", a.Pid)
 	a.Program = "./bin/fsuploader"
 	a.Args = []string{
 		path.Join(srcDir, ".gg", subDir, targetHash),
-		path.Join(GG_DIR, subDir, targetHash),
+		ggRemote(subDir, targetHash),
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
@@ -379,7 +347,7 @@ func spawnUploader(launch ExecutorLauncher, targetHash string, srcDir string, su
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
 	a := fslib.Attr{}
-	a.Pid = "[" + path.Base(dstDir) + "." + path.Base(subDir) + "]" + target + TARGET_WRITER_SUFFIX
+	a.Pid = reductionWriterPid(dstDir, subDir, target)
 	a.Program = "./bin/gg-target-writer"
 	a.Args = []string{
 		path.Join(dstDir, subDir),
@@ -388,7 +356,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	reductionPid := targetReduction + OUTPUT_HANDLER_SUFFIX
+	reductionPid := outputHandlerPid(targetReduction)
 	deps = append(deps, reductionPid)
 	a.ExitDep = deps
 	err := launch.Spawn(&a)
@@ -399,19 +367,17 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
-	/* envPath := */ setupLocalExecutionEnv(launch, targetHash)
+	setupLocalExecutionEnv(launch, targetHash)
 	a := fslib.Attr{}
-	a.Pid = targetHash + EXECUTOR_SUFFIX
+	a.Pid = executorPid(targetHash)
 	a.Program = "gg-execute"
 	a.Args = []string{
 		"--ninep",
 		targetHash,
 	}
-	a.Dir = path.Join(GG_LOCAL_DIR, targetHash, ".gg")
+	a.Dir = ggLocal(targetHash, "", "")
 	a.Env = []string{
-		//		"GG_STORAGE_URI=9p://mnt/9p/fs",
-		//		"GG_DIR=/mnt/9p/fs/.gg", // XXX Make this configurable
-		"GG_DIR=" + path.Join(GG_LOCAL_DIR, targetHash, ".gg"), // XXX Make this configurable
+		"GG_DIR=" + a.Dir,
 		"GG_NINEP=true",
 		"GG_VERBOSE=1",
 	}
@@ -427,7 +393,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 
 func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash string, outputFiles []string) string {
 	a := fslib.Attr{}
-	a.Pid = thunkHash + OUTPUT_HANDLER_SUFFIX
+	a.Pid = outputHandlerPid(thunkHash)
 	a.Program = "./bin/gg-thunk-output-handler"
 	a.Args = []string{
 		thunkHash,

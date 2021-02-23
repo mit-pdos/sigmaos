@@ -50,10 +50,7 @@ func (tw *TargetWriter) Work() {
 }
 
 func (tw *TargetWriter) readTargetHash() string {
-	reductionPath := path.Join(
-		GG_REDUCTION_DIR,
-		tw.targetReduction,
-	)
+	reductionPath := ggRemoteReductions(tw.targetReduction)
 	f, err := tw.ReadFile(reductionPath)
 	if err != nil {
 		log.Fatalf("Couldn't read target reduction [%v]: %v\n", reductionPath, err)
@@ -61,13 +58,14 @@ func (tw *TargetWriter) readTargetHash() string {
 	return strings.TrimSpace(string(f))
 }
 
+// XXX Should get rid of this
 func (tw *TargetWriter) spawnDownloader(targetHash string) {
 	a := fslib.Attr{}
 	subDir := path.Base(path.Dir(tw.cwd))
 	a.Pid = "[" + targetHash + "." + subDir + "]" + tw.target + ".reduction" + DOWNLOADER_SUFFIX
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
-		path.Join(GG_BLOB_DIR, targetHash),
+		ggRemoteBlobs(targetHash),
 		path.Join(tw.cwd, tw.target),
 	}
 	a.Env = []string{}

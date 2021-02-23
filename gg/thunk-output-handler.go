@@ -27,7 +27,7 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 	toh.thunkHash = args[1]
 	toh.outputFiles = args[2:]
 	toh.cwd = path.Join(
-		GG_LOCAL_DIR,
+		GG_LOCAL,
 		toh.thunkHash,
 	)
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
@@ -56,13 +56,13 @@ func (toh *ThunkOutputHandler) Work() {
 	} else {
 		_ = outputFiles
 		for _, thunk := range newThunks {
-			inputDependencies := getInputDependencies(toh, thunk.hash)
+			inputDependencies := getInputDependencies(toh, thunk.hash, ggLocalBlobs(toh.thunkHash, ""))
 			// XXX A dirty hack.. should definitely do something more principled
 			oldCwd := toh.cwd
-			toh.cwd = path.Join(GG_LOCAL_DIR, thunk.hash)
+			toh.cwd = path.Join(GG_LOCAL, thunk.hash)
 			depPids := outputHandlerPids(thunk.deps)
 			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
-			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL_DIR, thunk.hash), inputDependencies, append(depPids, uploaders...))
+			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, append(depPids, uploaders...))
 			toh.cwd = oldCwd
 			exitDeps := []string{}
 			exitDeps = append(exitDeps, downloaders...)
@@ -96,7 +96,7 @@ func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 			log.Fatalf("Couldn't read subdir [%v] contents: %v\n", subdirPath, err)
 		}
 		for _, f := range files {
-			uploaders = append(uploaders, spawnUploader(toh, f.Name(), toh.getCwd(), subDir.Name()))
+			uploaders = append(uploaders, spawnUploader(toh, f.Name(), toh.cwd, subDir.Name()))
 		}
 	}
 	return uploaders
@@ -112,10 +112,7 @@ func (toh *ThunkOutputHandler) propagateResultUpstream() {
 	reduction := toh.getReduction()
 	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {
-		outputPath := path.Join(
-			GG_REDUCTION_DIR,
-			outputFile,
-		)
+		outputPath := ggRemoteReductions(outputFile)
 		toh.WriteFile(outputPath, []byte(reduction))
 	}
 }
@@ -151,7 +148,7 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
 		hashes := strings.Split(thunkLine, " ")
 		g.AddThunk(hashes[0], hashes[1:])
 		if first {
-			toh.primaryOutputThunk = hashes[0] + OUTPUT_HANDLER_SUFFIX
+			toh.primaryOutputThunk = outputHandlerPid(hashes[0])
 			first = false
 		}
 	}
@@ -178,10 +175,7 @@ func (toh *ThunkOutputHandler) readThunkOutput() []string {
 }
 
 func (toh *ThunkOutputHandler) getValue() string {
-	filePath := path.Join(
-		GG_BLOB_DIR,
-		toh.getReduction(),
-	)
+	filePath := ggRemoteBlobs(toh.getReduction())
 	contents, err := toh.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("Error reading value file[%v]: %v\n", filePath, err)
@@ -210,7 +204,7 @@ func (toh *ThunkOutputHandler) getCwd() string {
 func outputHandlerPids(deps map[string]bool) []string {
 	out := []string{}
 	for d, _ := range deps {
-		out = append(out, d+OUTPUT_HANDLER_SUFFIX)
+		out = append(out, outputHandlerPid(d))
 	}
 	return out
 }

@@ -57,13 +57,9 @@ func (toh *ThunkOutputHandler) Work() {
 		_ = outputFiles
 		for _, thunk := range newThunks {
 			inputDependencies := getInputDependencies(toh, thunk.hash, ggLocalBlobs(toh.thunkHash, ""))
-			// XXX A dirty hack.. should definitely do something more principled
-			oldCwd := toh.cwd
-			toh.cwd = path.Join(GG_LOCAL, thunk.hash)
 			depPids := outputHandlerPids(thunk.deps)
 			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
 			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, append(depPids, uploaders...))
-			toh.cwd = oldCwd
 			exitDeps := []string{}
 			exitDeps = append(exitDeps, downloaders...)
 			toh.spawnDownstreamThunk(thunk.hash, exitDeps, outputFiles)
@@ -82,7 +78,7 @@ func (toh *ThunkOutputHandler) Work() {
 
 func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 	uploaders := []string{}
-	subDirs, err := ioutil.ReadDir(path.Join(toh.cwd, ".gg"))
+	subDirs, err := ioutil.ReadDir(ggLocal(toh.thunkHash, "", ""))
 	if err != nil {
 		log.Fatalf("Couldn't read local dir [%v] contents: %v\n", toh.cwd, err)
 	}
@@ -90,7 +86,7 @@ func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 	// Upload contents of each subdir (blobs, reductions, hash_cache) to 9P remote
 	// server
 	for _, subDir := range subDirs {
-		subdirPath := path.Join(toh.cwd, ".gg", subDir.Name())
+		subdirPath := path.Join(ggLocal(toh.thunkHash, subDir.Name(), ""))
 		files, err := ioutil.ReadDir(subdirPath)
 		if err != nil {
 			log.Fatalf("Couldn't read subdir [%v] contents: %v\n", subdirPath, err)
@@ -156,12 +152,7 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
 }
 
 func (toh *ThunkOutputHandler) readThunkOutput() []string {
-	outputThunksPath := path.Join(
-		toh.cwd,
-		".gg",
-		"blobs",
-		toh.thunkHash+THUNK_OUTPUTS_SUFFIX,
-	)
+	outputThunksPath := ggLocalBlobs(toh.thunkHash, toh.thunkHash+THUNK_OUTPUTS_SUFFIX)
 	contents, err := ioutil.ReadFile(outputThunksPath)
 	if err != nil {
 		log.Fatalf("Error reading thunk outputs [%v]: %v\n", outputThunksPath, err)
@@ -184,12 +175,7 @@ func (toh *ThunkOutputHandler) getValue() string {
 }
 
 func (toh *ThunkOutputHandler) getReduction() string {
-	thunkOutputPath := path.Join(
-		toh.cwd,
-		".gg",
-		"reductions",
-		toh.thunkHash,
-	)
+	thunkOutputPath := ggLocalReductions(toh.thunkHash, toh.thunkHash)
 	valueFile, err := ioutil.ReadFile(thunkOutputPath)
 	if err != nil {
 		log.Fatalf("Error reading reduction in TOH [%v]: %v\n", thunkOutputPath, err)

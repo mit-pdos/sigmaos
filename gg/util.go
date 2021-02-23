@@ -4,15 +4,6 @@ import (
 	"path"
 )
 
-// PID constants
-const (
-	UPLOADER_SUFFIX       = ".uploader"
-	DOWNLOADER_SUFFIX     = ".downloader"
-	EXECUTOR_SUFFIX       = ".executor"
-	TARGET_WRITER_SUFFIX  = ".target-writer"
-	OUTPUT_HANDLER_SUFFIX = ".output-handler"
-)
-
 // Path constants
 const (
 	GG_DIR        = ".gg"
@@ -21,6 +12,15 @@ const (
 	GG_HASH_CACHE = "hash_cache"
 	GG_LOCAL      = "/tmp/ulambda"
 	GG_REMOTE     = "name/fs"
+)
+
+// PID constants
+const (
+	UPLOADER_SUFFIX       = ".uploader"
+	DOWNLOADER_SUFFIX     = ".downloader"
+	EXECUTOR_SUFFIX       = ".executor"
+	TARGET_WRITER_SUFFIX  = ".target-writer"
+	OUTPUT_HANDLER_SUFFIX = ".output-handler"
 )
 
 func isThunk(hash string) bool {

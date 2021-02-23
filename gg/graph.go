@@ -15,14 +15,18 @@ type Graph struct {
 	forced map[string]bool
 }
 
-func MakeGraph() (*Graph, error) {
+func MakeGraph() *Graph {
 	g := &Graph{}
 	g.thunks = map[string]Thunk{}
 	g.forced = map[string]bool{}
-	return g, nil
+	return g
 }
 
 func (g *Graph) AddThunk(hash string, deps []string) {
+	// Ignore thunks which have already been added
+	if _, ok := g.thunks[hash]; ok {
+		return
+	}
 	t := Thunk{}
 	t.hash = hash
 	t.graph = g

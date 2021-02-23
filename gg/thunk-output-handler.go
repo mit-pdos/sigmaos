@@ -27,7 +27,7 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 	toh.thunkHash = args[1]
 	toh.outputFiles = args[2:]
 	toh.cwd = path.Join(
-		GG_LOCAL_ENV_BASE,
+		GG_LOCAL_DIR,
 		toh.thunkHash,
 	)
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
@@ -59,10 +59,10 @@ func (toh *ThunkOutputHandler) Work() {
 			inputDependencies := getInputDependencies(toh, thunk.hash)
 			// XXX A dirty hack.. should definitely do something more principled
 			oldCwd := toh.cwd
-			toh.cwd = path.Join(GG_LOCAL_ENV_BASE, thunk.hash)
+			toh.cwd = path.Join(GG_LOCAL_DIR, thunk.hash)
 			depPids := outputHandlerPids(thunk.deps)
 			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
-			downloaders := spawnInputDownloaders(toh, thunk.hash, inputDependencies, append(depPids, uploaders...))
+			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL_DIR, thunk.hash), inputDependencies, append(depPids, uploaders...))
 			toh.cwd = oldCwd
 			exitDeps := []string{}
 			exitDeps = append(exitDeps, downloaders...)
@@ -96,7 +96,7 @@ func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
 			log.Fatalf("Couldn't read subdir [%v] contents: %v\n", subdirPath, err)
 		}
 		for _, f := range files {
-			uploaders = append(uploaders, spawnUploader(toh, f.Name(), subDir.Name()))
+			uploaders = append(uploaders, spawnUploader(toh, f.Name(), toh.getCwd(), subDir.Name()))
 		}
 	}
 	return uploaders
@@ -143,10 +143,7 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
 
 func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
 	// Maps of new thunks to their dependencies
-	g, err := MakeGraph()
-	if err != nil {
-		log.Fatalf("Couldn't make graph\n")
-	}
+	g := MakeGraph()
 	first := true
 	for _, line := range thunkOutput {
 		thunkLine := strings.Split(strings.TrimSpace(line), "=")[1]

@@ -62,8 +62,7 @@ func (tw *TargetWriter) readTargetHash() string {
 func (tw *TargetWriter) spawnDownloader(targetHash string) {
 	a := fslib.Attr{}
 	subDir := path.Base(path.Dir(tw.cwd))
-	// XXX do properly
-	a.Pid = "[" + targetHash + "." + subDir + "]" + tw.target + ".reduction" + DOWNLOADER_SUFFIX
+	a.Pid = reductionDownloaderPid(targetHash, subDir, tw.target)
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
 		ggRemoteBlobs(targetHash),

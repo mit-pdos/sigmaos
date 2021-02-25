@@ -22,6 +22,7 @@ const (
 	EXECUTOR_SUFFIX       = ".executor"
 	TARGET_WRITER_SUFFIX  = ".target-writer"
 	OUTPUT_HANDLER_SUFFIX = ".output-handler"
+	REDUCTION_SUFFIX      = ".reduction"
 )
 
 func isThunk(hash string) bool {
@@ -40,6 +41,10 @@ func outputHandlerPid(hash string) string {
 
 func reductionWriterPid(dir string, subDir string, hash string) string {
 	return ggPid(path.Base(dir), path.Base(subDir), hash, TARGET_WRITER_SUFFIX)
+}
+
+func reductionDownloaderPid(reductionHash string, subDir string, target string) string {
+	return ggPid(reductionHash, subDir, target, REDUCTION_SUFFIX+DOWNLOADER_SUFFIX)
 }
 
 func dirUploaderPid(hash string, subDir string) string {

@@ -58,10 +58,11 @@ func (tw *TargetWriter) readTargetHash() string {
 	return strings.TrimSpace(string(f))
 }
 
-// XXX Should get rid of this
+// XXX Should get rid of this, and/or blend it into the spawners file
 func (tw *TargetWriter) spawnDownloader(targetHash string) {
 	a := fslib.Attr{}
 	subDir := path.Base(path.Dir(tw.cwd))
+	// XXX do properly
 	a.Pid = "[" + targetHash + "." + subDir + "]" + tw.target + ".reduction" + DOWNLOADER_SUFFIX
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
@@ -70,7 +71,7 @@ func (tw *TargetWriter) spawnDownloader(targetHash string) {
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = nil
+	a.ExitDep = []string{uploaderPid(tw.targetReduction, GG_BLOBS, tw.target)}
 	err := tw.Spawn(&a)
 	if err != nil {
 		db.DPrintf("Error spawning download worker [%v]: %v\n", tw.target, err)

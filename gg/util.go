@@ -17,6 +17,7 @@ const (
 // PID constants
 const (
 	UPLOADER_SUFFIX       = ".uploader"
+	DIR_UPLOADER_SUFFIX   = ".dir-uploader"
 	DOWNLOADER_SUFFIX     = ".downloader"
 	EXECUTOR_SUFFIX       = ".executor"
 	TARGET_WRITER_SUFFIX  = ".target-writer"
@@ -39,6 +40,10 @@ func outputHandlerPid(hash string) string {
 
 func reductionWriterPid(dir string, subDir string, hash string) string {
 	return ggPid(path.Base(dir), path.Base(subDir), hash, TARGET_WRITER_SUFFIX)
+}
+
+func dirUploaderPid(hash string, subDir string) string {
+	return ggPid(hash, subDir, "", DIR_UPLOADER_SUFFIX)
 }
 
 func uploaderPid(dir string, subDir string, hash string) string {

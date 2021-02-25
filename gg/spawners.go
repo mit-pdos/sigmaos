@@ -10,24 +10,19 @@ import (
 
 func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, dstDir string, inputs []string, exitDeps []string) []string {
 	downloaders := []string{}
-	// XXX A dirty hack... I should do something more principled
-	// Make sure to download target thunk file as well
-	// XXX Should get the right exitDeps from the fn call...
-	// XXX Should not manually calc uploader PID here
-	//	uploaderPid := "[" + targetHash + ".blobs]" + targetHash + UPLOADER_SUFFIX
-	//	downloaders = append(downloaders, spawnDownloader(launch, targetHash, dstDir, "blobs", append(exitDeps, uploaderPid)))
+	// Make sure to download target thunk file
 	downloaders = append(downloaders, spawnDownloader(launch, targetHash, dstDir, "blobs", exitDeps))
 	for _, input := range inputs {
 		if isThunk(input) {
-			//			inputPidReduction := "[" + input + ".reductions]" + input + UPLOADER_SUFFIX
 			// Download the thunk reduction file as well as the value it points to
-			//		reductionDownloader := spawnDownloader(launch, input, dstDir, "reductions", append(exitDeps, inputPidReduction))
 			reductionDownloader := spawnDownloader(launch, input, dstDir, "reductions", exitDeps)
 
+			// XXX clean up
+			reductionPid := dirUploaderPid(input, GG_REDUCTIONS)
+			reductionPid2 := dirUploaderPid(input, GG_BLOBS)
+			tohPid := outputHandlerPid(input)
 			// set target == targetReduction to preserve target name
-			// XXX waiting for reductionDownloader is a hack, and needs to be replaced
-			//		reductionWriter := spawnReductionWriter(launch, input, input, dstDir, path.Join(".gg", "blobs"), append(exitDeps, reductionDownloader))
-			reductionWriter := spawnReductionWriter(launch, input, input, dstDir, path.Join(".gg", "blobs"), exitDeps)
+			reductionWriter := spawnReductionWriter(launch, input, input, dstDir, path.Join(".gg", "blobs"), append(exitDeps, reductionPid, reductionPid2, tohPid))
 			downloaders = append(downloaders, reductionDownloader, reductionWriter)
 		} else {
 			downloaders = append(downloaders, spawnDownloader(launch, input, dstDir, "blobs", exitDeps))
@@ -38,7 +33,7 @@ func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, dstDir st
 
 func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, subDir string, exitDeps []string) string {
 	a := fslib.Attr{}
-	a.Pid = uploaderPid(dstDir, subDir, targetHash)
+	a.Pid = downloaderPid(dstDir, subDir, targetHash)
 	//	log.Printf("Spawning d %v deps %v", a.Pid, exitDeps)
 	//	debug.PrintStack()
 	a.Program = "./bin/fsdownloader"
@@ -56,10 +51,28 @@ func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, 
 	return a.Pid
 }
 
+func spawnDirUploader(launch ExecutorLauncher, targetHash string, subDir string) string {
+	a := fslib.Attr{}
+	a.Pid = dirUploaderPid(targetHash, subDir)
+	a.Program = "./bin/fsdiruploader"
+	a.Args = []string{
+		ggLocal(targetHash, subDir, ""),
+		ggRemote(subDir, ""),
+		targetHash,
+	}
+	a.Env = []string{}
+	a.PairDep = []fslib.PDep{}
+	a.ExitDep = []string{executorPid(targetHash)}
+	err := launch.Spawn(&a)
+	if err != nil {
+		log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err)
+	}
+	return a.Pid
+}
+
 func spawnUploader(launch ExecutorLauncher, targetHash string, srcDir string, subDir string) string {
 	a := fslib.Attr{}
 	a.Pid = uploaderPid(srcDir, subDir, targetHash)
-	//	log.Printf("Spawned uploader %v\n", a.Pid)
 	a.Program = "./bin/fsuploader"
 	a.Args = []string{
 		path.Join(srcDir, ".gg", subDir, targetHash),
@@ -73,6 +86,18 @@ func spawnUploader(launch ExecutorLauncher, targetHash string, srcDir string, su
 		log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err)
 	}
 	return a.Pid
+}
+
+func spawnThunkResultUploaders(launch ExecutorLauncher, hash string) []string {
+	uploaders := []string{}
+	subDirs := []string{GG_BLOBS, GG_REDUCTIONS, GG_HASH_CACHE}
+
+	// Upload contents of each subdir (blobs, reductions, hash_cache) to 9P remote
+	// server
+	for _, subDir := range subDirs {
+		uploaders = append(uploaders, spawnDirUploader(launch, hash, subDir))
+	}
+	return uploaders
 }
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
@@ -121,7 +146,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 	return a.Pid
 }
 
-func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash string, outputFiles []string) string {
+func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
 	a := fslib.Attr{}
 	a.Pid = outputHandlerPid(thunkHash)
 	a.Program = "./bin/gg-thunk-output-handler"
@@ -131,9 +156,7 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, exPid string, thunkHash st
 	a.Args = append(a.Args, outputFiles...)
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = []string{
-		exPid,
-	}
+	a.ExitDep = deps
 	err := launch.Spawn(&a)
 	if err != nil {
 		// XXX Clean this up better with caching

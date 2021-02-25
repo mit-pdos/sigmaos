@@ -113,7 +113,8 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 		exitDeps = append(exitDeps, uploaderPids...)
 		exitDeps = append(exitDeps, inputDownloaderPids...)
 		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
-		spawnThunkOutputHandler(orc, exPid, thunk.hash, []string{thunk.hash})
+		resUploaders := spawnThunkResultUploaders(orc, thunk.hash)
+		spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
 	}
 }
 

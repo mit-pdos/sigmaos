@@ -47,19 +47,15 @@ func (toh *ThunkOutputHandler) Work() {
 	thunkOutput := toh.readThunkOutput()
 	newThunks := toh.getNewThunks(thunkOutput)
 	outputFiles := toh.getOutputFiles(thunkOutput)
-	// Upload results from local execution dir
-	uploaders := toh.spawnResultUploaders()
 	if len(newThunks) == 0 {
 		// We have produced a value, and need to propagate it upstream to functions
 		// which depend on us.
 		toh.propagateResultUpstream()
 	} else {
-		_ = outputFiles
 		for _, thunk := range newThunks {
 			inputDependencies := getInputDependencies(toh, thunk.hash, ggLocalBlobs(toh.thunkHash, ""))
 			depPids := outputHandlerPids(thunk.deps)
-			// XXX Waiting for all uploaders is overly conservative... perhaps not necessary
-			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, append(depPids, uploaders...))
+			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, depPids)
 			exitDeps := []string{}
 			exitDeps = append(exitDeps, downloaders...)
 			toh.spawnDownstreamThunk(thunk.hash, exitDeps, outputFiles)
@@ -76,32 +72,11 @@ func (toh *ThunkOutputHandler) Work() {
 	}
 }
 
-func (toh *ThunkOutputHandler) spawnResultUploaders() []string {
-	uploaders := []string{}
-	subDirs, err := ioutil.ReadDir(ggLocal(toh.thunkHash, "", ""))
-	if err != nil {
-		log.Fatalf("Couldn't read local dir [%v] contents: %v\n", toh.cwd, err)
-	}
-
-	// Upload contents of each subdir (blobs, reductions, hash_cache) to 9P remote
-	// server
-	for _, subDir := range subDirs {
-		subdirPath := path.Join(ggLocal(toh.thunkHash, subDir.Name(), ""))
-		files, err := ioutil.ReadDir(subdirPath)
-		if err != nil {
-			log.Fatalf("Couldn't read subdir [%v] contents: %v\n", subdirPath, err)
-		}
-		for _, f := range files {
-			uploaders = append(uploaders, spawnUploader(toh, f.Name(), toh.cwd, subDir.Name()))
-		}
-	}
-	return uploaders
-}
-
 func (toh *ThunkOutputHandler) spawnDownstreamThunk(thunkHash string, deps []string, outputFiles map[string][]string) string {
 	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
 	exPid := spawnExecutor(toh, thunkHash, deps)
-	return spawnThunkOutputHandler(toh, exPid, thunkHash, outputFiles[thunkHash])
+	resUploaders := spawnThunkResultUploaders(toh, thunkHash)
+	return spawnThunkOutputHandler(toh, append(resUploaders, exPid), thunkHash, outputFiles[thunkHash])
 }
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {

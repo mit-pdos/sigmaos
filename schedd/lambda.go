@@ -3,7 +3,7 @@ package schedd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 	"log"
 	"os"
 	"os/exec"
@@ -20,7 +20,8 @@ import (
 )
 
 type Lambda struct {
-	mu         deadlock.Mutex
+	//	mu         deadlock.Mutex
+	mu         sync.Mutex
 	cond       *sync.Cond
 	condWait   *sync.Cond
 	sd         *Sched
@@ -278,17 +279,26 @@ func (l *Lambda) changeStatus(new string) error {
 }
 
 func (l *Lambda) swapExitDependency(swap string) {
+	l.sd.mu.Lock()
+	defer l.sd.mu.Unlock()
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	db.DPrintf("Swapping exit dep %v for lambda %v\n", swap, l.Pid)
 
 	s := strings.Split(strings.TrimSpace(swap), " ")
 	from := s[0]
 	to := s[1]
 
-	// Check if present & false (hasn't exited yet)
-	if val, ok := l.ExitDep[from]; ok && !val {
-		l.ExitDep[to] = false
-		l.ExitDep[from] = true
+	// Check that the lambda we're swapping to still exists, else ignore
+	if _, ok := l.sd.ls[to]; ok {
+		// Check if present & false (hasn't exited yet)
+		if val, ok := l.ExitDep[from]; ok && !val {
+			db.DPrintf("Swapping exit dep %v for lambda %v\n", swap, l.Pid)
+			l.ExitDep[to] = false
+			l.ExitDep[from] = true
+		}
+	} else {
+		db.DPrintf("Tried to swap exit dep %v for lambda %v, but it didn't exist\n", swap, l.Pid)
 	}
 }
 

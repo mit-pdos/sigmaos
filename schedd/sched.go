@@ -1,7 +1,7 @@
 package schedd
 
 import (
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 	"log"
 	"sync"
 
@@ -18,7 +18,8 @@ const (
 )
 
 type Sched struct {
-	mu   deadlock.Mutex
+	//	mu   deadlock.Mutex
+	mu   sync.Mutex
 	cond *sync.Cond
 	load int // XXX bogus
 	nid  uint64

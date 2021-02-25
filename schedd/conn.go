@@ -287,6 +287,7 @@ func (sc *SchedConn) writeField(o *Obj, args np.Twrite, rets *np.Rwrite) *np.Rer
 	if args.Offset != 0 {
 		return nil
 	}
+	db.DPrintf("Write field %v: %v\n", o.f, args.Data)
 	err := o.l.writeField(o.f, args.Data)
 	if err != nil {
 		return &np.Rerror{fmt.Sprintf("Write field %v error %v", o.f, err)}

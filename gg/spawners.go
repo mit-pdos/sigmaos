@@ -14,15 +14,15 @@ func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, dstDir st
 	downloaders = append(downloaders, spawnDownloader(launch, targetHash, dstDir, "blobs", exitDeps))
 	for _, input := range inputs {
 		if isThunk(input) {
+			uploaderDeps := []string{
+				dirUploaderPid(input, GG_REDUCTIONS),
+				dirUploaderPid(input, GG_BLOBS),
+				outputHandlerPid(input),
+			}
 			// Download the thunk reduction file as well as the value it points to
-			reductionDownloader := spawnDownloader(launch, input, dstDir, "reductions", exitDeps)
-
-			// XXX clean up
-			reductionPid := dirUploaderPid(input, GG_REDUCTIONS)
-			reductionPid2 := dirUploaderPid(input, GG_BLOBS)
-			tohPid := outputHandlerPid(input)
+			reductionDownloader := spawnDownloader(launch, input, dstDir, "reductions", append(exitDeps, uploaderDeps...))
 			// set target == targetReduction to preserve target name
-			reductionWriter := spawnReductionWriter(launch, input, input, dstDir, path.Join(".gg", "blobs"), append(exitDeps, reductionPid, reductionPid2, tohPid))
+			reductionWriter := spawnReductionWriter(launch, input, input, dstDir, path.Join(".gg", "blobs"), append(exitDeps, uploaderDeps...))
 			downloaders = append(downloaders, reductionDownloader, reductionWriter)
 		} else {
 			downloaders = append(downloaders, spawnDownloader(launch, input, dstDir, "blobs", exitDeps))

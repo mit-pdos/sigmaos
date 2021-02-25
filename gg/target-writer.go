@@ -46,7 +46,16 @@ func (tw *TargetWriter) Work() {
 	}
 
 	// Download to target location
-	tw.spawnDownloader(targetHash)
+	downPid := tw.spawnDownloader(targetHash)
+	exitDepSwaps := []string{
+		tw.pid,
+		downPid,
+	}
+	db.DPrintf("Updating exit dependencies for [%v]\n", tw.pid)
+	err := tw.SwapExitDependency(exitDepSwaps)
+	if err != nil {
+		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
+	}
 }
 
 func (tw *TargetWriter) readTargetHash() string {
@@ -59,7 +68,7 @@ func (tw *TargetWriter) readTargetHash() string {
 }
 
 // XXX Should get rid of this, and/or blend it into the spawners file
-func (tw *TargetWriter) spawnDownloader(targetHash string) {
+func (tw *TargetWriter) spawnDownloader(targetHash string) string {
 	a := fslib.Attr{}
 	subDir := path.Base(path.Dir(tw.cwd))
 	a.Pid = reductionDownloaderPid(targetHash, subDir, tw.target)
@@ -75,4 +84,5 @@ func (tw *TargetWriter) spawnDownloader(targetHash string) {
 	if err != nil {
 		db.DPrintf("Error spawning download worker [%v]: %v\n", tw.target, err)
 	}
+	return a.Pid
 }

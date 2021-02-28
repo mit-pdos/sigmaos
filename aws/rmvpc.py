@@ -77,7 +77,6 @@ def main():
         print("VPC CIDR:", vpc.cidr_block)
         rm_instances(vpc, ec2)
         if args['vm'] == None:
-            rm_db(vpc)
             rm_net(vpc, ec2client)
             rm_sec(vpc)
             ec2client.delete_vpc(VpcId=vpc.id)

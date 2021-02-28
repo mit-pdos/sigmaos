@@ -40,6 +40,9 @@ done
 echo "done rebooting"
 
 ssh -n -i $1 ubuntu@$2 sudo snap install --classic go
+ssh -n -i $1 ubuntu@$2 sudo snap install --classic emacs
+ssh -n -i $1 ubuntu@$2 sudo apt install net-tools
+ssh -n -i $1 ubuntu@$2 sudo mkdir /mnt/9p
 
 ssh -i $1 ubuntu@$2 <<ENDSSH
 cat <<EOF > ~/.ssh/config

@@ -31,31 +31,21 @@ def setup_net(ec2, vpc):
     route = rt.create_route(DestinationCidrBlock='0.0.0.0/0', GatewayId=ig.id)
 
     # create subnet and associate it with route table
-    sn = ec2.create_subnet(CidrBlock='10.0.1.0/24', VpcId=vpc.id,AvailabilityZone='us-east-1c')
+    sn = ec2.create_subnet(CidrBlock='10.0.0.0/16', VpcId=vpc.id,AvailabilityZone='us-east-1c')
     rt.associate_with_subnet(SubnetId=sn.id)
     return sn
 
-# Create a security group and allow HTTP/SSH inbound rule through the VPC
+# Create a security group and allow SSH inbound rule through the VPC
 def setup_sec_public(ec2, vpc, name):
     sg = ec2.create_security_group(GroupName=name, Description='Allow inbound traffic', VpcId=vpc.id)
-    
-    # sg.authorize_ingress(CidrIp='10.0.0.0/0', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='18.26.0.0/16', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='128.52.0.0/16', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='173.76.110.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='66.92.71.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='75.100.81.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
-    # sg.authorize_ingress(CidrIp='10.0.0.0/0', IpProtocol='tcp', FromPort=80, ToPort=80,)
-    sg.authorize_ingress(CidrIp='10.0.0.0/0', IpProtocol='tcp', FromPort=443, ToPort=443,)
+    sg.authorize_ingress(CidrIp='10.0.0.0/16', IpProtocol='tcp', FromPort=0, ToPort=65535,)
     return sg
     
-def setup_sec(ec2, vpc):
-    sg = setup_sec_public(ec2, vpc, 'public2')
-    # Create a security group for the DB instance
-    sg_priv = ec2.create_security_group(GroupName='private', Description='Only traffic from public', VpcId=vpc.id)
-    sg_priv.authorize_ingress(CidrIp='10.0.1.0/24', IpProtocol='tcp', FromPort=5432, ToPort=5432)
-    return (sg, sg_priv)
-
 def kpname(vpc):
     return  'key-%s' % vpc.id
 
@@ -107,7 +97,7 @@ def setup_instance(ec2, vpc, sg, sn, kpn):
 
 def find_sn(vpc):
     for sn in vpc.subnets.all():
-        if sn.cidr_block == "10.0.1.0/24":
+        if sn.cidr_block == "10.0.0.0/16":
             return sn
     return None
 
@@ -126,7 +116,7 @@ def main():
         print(vpc.id)
         vpc.create_tags(Tags=[{"Key": "Name", "Value": "%s" % args['name']}])
         sn = setup_net(ec2, vpc)
-        (sg, sg_priv) = setup_sec(ec2, vpc)
+        sg = setup_sec_public(ec2, vpc, "public2")
         kpn = setup_keypair(vpc, ec2)
         setup_instance(ec2, vpc, sg, sn, kpn)
     else:

@@ -30,7 +30,7 @@ type Nps3 struct {
 	mu     sync.Mutex
 	srv    *npsrv.NpServer
 	client *s3.Client
-	nextId np.Tpath
+	nextId np.Tpath // XXX delete?
 	ch     chan bool
 }
 
@@ -38,7 +38,7 @@ func MakeNps3() *Nps3 {
 	nps3 := &Nps3{}
 	db.SetDebug(true)
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithSharedConfigProfile("me-mit-apply"))
+		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
 		log.Fatalf("Failed to load SDK configuration %v", err)
 	}

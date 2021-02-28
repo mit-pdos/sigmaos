@@ -1,5 +1,15 @@
 #!/bin/sh
 
+N=":1111"
+if [ $# -eq 1 ]
+then
+    N=$1
+fi
+
+if [[ -z "${NAMED}" ]]; then
+  export NAMED=$N
+fi
+
 ./bin/named &
 ./bin/schedd &
 ./bin/nps3d &

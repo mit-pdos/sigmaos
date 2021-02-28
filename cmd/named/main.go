@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"ulambda/fslib"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
@@ -48,7 +49,7 @@ func makeNamed() *Named {
 		log.Fatal("Create error: dev: ", err)
 	}
 	nd.fsd = memfsd.MakeFsd(memfs, nil)
-	nd.srv = npsrv.MakeNpServer(nd.fsd, ":1111")
+	nd.srv = npsrv.MakeNpServer(nd.fsd, fslib.Named())
 	return nd
 }
 

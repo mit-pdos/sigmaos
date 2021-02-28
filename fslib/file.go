@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
@@ -15,9 +16,17 @@ type FsLib struct {
 	*fsclnt.FsClient
 }
 
+func Named() string {
+	named := os.Getenv("NAMED")
+	if named == "" {
+		log.Fatal("Getenv error: missing NAMED")
+	}
+	return named
+}
+
 func MakeFsLib(uname string) *FsLib {
 	fl := &FsLib{fsclnt.MakeFsClient(uname)}
-	if fd, err := fl.Attach(":1111", ""); err == nil {
+	if fd, err := fl.Attach(Named(), ""); err == nil {
 		err := fl.Mount(fd, "name")
 		if err != nil {
 			log.Fatal("Mount error: ", err)

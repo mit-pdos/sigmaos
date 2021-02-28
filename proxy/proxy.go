@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
 	"ulambda/npsrv"
@@ -21,14 +22,15 @@ type NpConn struct {
 	clnt  *npclnt.NpClnt
 	uname string
 	fids  map[np.Tfid]*npclnt.NpChan // The outgoing channels to servers proxied
-
+	named string
 }
 
-func makeNpConn(conn net.Conn) *NpConn {
+func makeNpConn(conn net.Conn, named string) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.clnt = npclnt.MakeNpClnt(false)
 	npc.fids = make(map[np.Tfid]*npclnt.NpChan)
+	npc.named = named
 	return npc
 }
 
@@ -55,15 +57,16 @@ func (npc *NpConn) delch(fid np.Tfid) {
 }
 
 type Npd struct {
+	named string
 }
 
 func MakeNpd() *Npd {
-	return &Npd{}
+	return &Npd{fslib.Named()}
 }
 
 // XXX should/is happen only once for the one mount for :1110
 func (npd *Npd) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := makeNpConn(conn)
+	clnt := makeNpConn(conn, npd.named)
 	return clnt
 }
 
@@ -83,11 +86,11 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 		return &np.Rerror{err.Error()}
 	}
 	npc.uname = u.Uid
-	reply, err := npc.clnt.Attach(":1111", npc.uname, args.Fid, np.Split(args.Aname))
+	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, np.Split(args.Aname))
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.addch(args.Fid, npc.clnt.MakeNpChan(":1111"))
+	npc.addch(args.Fid, npc.clnt.MakeNpChan(npc.named))
 	rets.Qid = reply.Qid
 	return nil
 }

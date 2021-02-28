@@ -37,13 +37,10 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 	b := strings.Join(pids, " ")
 	ls, _ := fl.ReadDir(SCHED)
 	for _, l := range ls {
-		// Don't write to SCHEDDEV
-		if l.Name != "dev" {
-			err := fl.WriteFile(SCHED+"/"+l.Name+"/ExitDep", []byte(b))
-			if err != nil {
-				// XXX ignore for now... lambda may have exited, in which case we get an
-				// error
-			}
+		err := fl.WriteFile(SCHED+"/"+l.Name+"/ExitDep", []byte(b))
+		if err != nil {
+			// XXX ignore for now... lambda may have exited, in which case we get an
+			// error
 		}
 	}
 	return nil

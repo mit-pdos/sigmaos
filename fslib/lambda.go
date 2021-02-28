@@ -23,8 +23,9 @@ type Attr struct {
 }
 
 const (
-	SCHED    = "name/schedd"
-	SCHEDDEV = SCHED + "/" + "dev"
+	SCHED        = "name/schedd"
+	SCHEDDEV     = SCHED + "/" + "dev"
+	NO_OP_LAMBDA = "no-op-lambda"
 )
 
 func GenPid() string {
@@ -48,7 +49,7 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 	return nil
 }
 
-// Spawn a new  lambda
+// Spawn a new lambda
 func (fl *FsLib) Spawn(a *Attr) error {
 	b, err := json.Marshal(a)
 	if err != nil {
@@ -71,6 +72,15 @@ func (fl *FsLib) SpawnProgram(name string, args []string) error {
 	a.Pid = GenPid()
 	a.Program = name
 	a.Args = args
+	return fl.Spawn(a)
+}
+
+// Spawn a no-op lambda
+func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
+	a := &Attr{}
+	a.Pid = pid
+	a.Program = NO_OP_LAMBDA
+	a.ExitDep = exitDep
 	return fl.Spawn(a)
 }
 

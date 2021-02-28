@@ -11,11 +11,11 @@ import (
 )
 
 type ThunkOutputHandler struct {
-	pid                string
-	thunkHash          string
-	primaryOutputThunk string
-	outputFiles        []string
-	cwd                string
+	pid                   string
+	thunkHash             string
+	primaryOutputThunkPid string
+	outputFiles           []string
+	cwd                   string
 	*fslib.FsLib
 }
 
@@ -62,7 +62,7 @@ func (toh *ThunkOutputHandler) Work() {
 		}
 		exitDepSwaps := []string{
 			toh.pid,
-			toh.primaryOutputThunk,
+			toh.primaryOutputThunkPid,
 		}
 		db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
 		err := toh.SwapExitDependency(exitDepSwaps)
@@ -76,7 +76,8 @@ func (toh *ThunkOutputHandler) spawnDownstreamThunk(thunkHash string, deps []str
 	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
 	exPid := spawnExecutor(toh, thunkHash, deps)
 	resUploaders := spawnThunkResultUploaders(toh, thunkHash)
-	return spawnThunkOutputHandler(toh, append(resUploaders, exPid), thunkHash, outputFiles[thunkHash])
+	outputHandlerPid := spawnThunkOutputHandler(toh, append(resUploaders, exPid), thunkHash, outputFiles[thunkHash])
+	return spawnNoOp(toh, outputHandlerPid)
 }
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {
@@ -119,7 +120,11 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
 		hashes := strings.Split(thunkLine, " ")
 		g.AddThunk(hashes[0], hashes[1:])
 		if first {
-			toh.primaryOutputThunk = outputHandlerPid(hashes[0])
+			// XXX I'm actually not sure if I should just wait on the output handler
+			// here, but for consistency, I'll wait on the no-op
+			outputHandlerPid := outputHandlerPid(hashes[0])
+			noOpPid := noOpPid(outputHandlerPid)
+			toh.primaryOutputThunkPid = noOpPid
 			first = false
 		}
 	}
@@ -165,7 +170,9 @@ func (toh *ThunkOutputHandler) getCwd() string {
 func outputHandlerPids(deps map[string]bool) []string {
 	out := []string{}
 	for d, _ := range deps {
-		out = append(out, outputHandlerPid(d))
+		pid := outputHandlerPid(d)
+		noOpPid := noOpPid(pid)
+		out = append(out, noOpPid)
 	}
 	return out
 }

@@ -31,6 +31,17 @@ func spawnInputDownloaders(launch ExecutorLauncher, targetHash string, dstDir st
 	return downloaders
 }
 
+// Given a PID, create a no-op which waits on that Pid
+func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
+	noOpPid := noOpPid(waitPid)
+	exitDep := []string{waitPid}
+	err := launch.SpawnNoOp(noOpPid, exitDep)
+	if err != nil {
+		log.Fatalf("Error spawning noop [%v]: %v\n", noOpPid, err)
+	}
+	return noOpPid
+}
+
 func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, subDir string, exitDeps []string) string {
 	a := fslib.Attr{}
 	a.Pid = downloaderPid(dstDir, subDir, targetHash)

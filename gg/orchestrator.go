@@ -23,6 +23,7 @@ const (
 
 type ExecutorLauncher interface {
 	Spawn(*fslib.Attr) error
+	SpawnNoOp(string, []string) error
 	getCwd() string
 }
 
@@ -102,7 +103,6 @@ func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {
 func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {
-		// XXX handle non-thunk targets
 		exitDeps := outputHandlerPids(thunk.deps)
 		inputDependencies := getInputDependencies(orc, thunk.hash, ggOrigBlobs(orc.cwd, ""))
 		uploaderPids := []string{
@@ -114,7 +114,8 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 		exitDeps = append(exitDeps, inputDownloaderPids...)
 		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
 		resUploaders := spawnThunkResultUploaders(orc, thunk.hash)
-		spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
+		outputHandlerPid := spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
+		spawnNoOp(orc, outputHandlerPid)
 	}
 }
 

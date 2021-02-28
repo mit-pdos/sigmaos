@@ -23,6 +23,7 @@ const (
 	TARGET_WRITER_SUFFIX  = ".target-writer"
 	OUTPUT_HANDLER_SUFFIX = ".output-handler"
 	REDUCTION_SUFFIX      = ".reduction"
+	NO_OP_SUFFIX          = ".no-op-waiter"
 )
 
 func isThunk(hash string) bool {
@@ -30,6 +31,10 @@ func isThunk(hash string) bool {
 }
 
 // ========== Pids ==========
+
+func noOpPid(pid string) string {
+	return ggPid("", "", pid, NO_OP_SUFFIX)
+}
 
 func executorPid(hash string) string {
 	return ggPid("", "", hash, EXECUTOR_SUFFIX)

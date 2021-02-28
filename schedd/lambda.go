@@ -304,11 +304,15 @@ func (l *Lambda) swapExitDependency(swap string) {
 
 // XXX if remote, keep-alive?
 func (l *Lambda) wait(cmd *exec.Cmd) {
-	err := cmd.Wait()
-	if err != nil {
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		log.Printf("Lambda %v finished with error: %v", l, err)
+	if cmd.Path != NO_OP_LAMBDA {
+		err := cmd.Wait()
+		if err != nil {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			log.Printf("Lambda %v finished with error: %v", l, err)
+		}
+	} else {
+		l.writeExitStatus("OK")
 	}
 }
 
@@ -329,9 +333,12 @@ func (l *Lambda) run() error {
 	cmd.Dir = l.Dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Start()
-	if err != nil {
-		return err
+	// Check if this lambda is a no-op
+	if cmd.Path != NO_OP_LAMBDA {
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
 	}
 	go l.wait(cmd)
 	return nil

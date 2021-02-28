@@ -14,7 +14,8 @@ import (
 // XXX monitor, boost
 
 const (
-	MAXLOAD = 100 // XXX bogus, controls parallelism
+	MAXLOAD      = 100 // XXX bogus, controls parallelism
+	NO_OP_LAMBDA = "no-op-lambda"
 )
 
 type Sched struct {

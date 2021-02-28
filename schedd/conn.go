@@ -48,7 +48,6 @@ func (o *Obj) String() string {
 }
 
 var rootO = &Obj{ROOT, nil, ""}
-var devO = &Obj{DEV, nil, ""}
 
 func (o *Obj) qid() np.Tqid {
 	switch o.t {
@@ -75,9 +74,6 @@ func (o *Obj) stat() *np.Stat {
 	switch o.t {
 	case ROOT:
 		st.Qid = rootO.qid()
-	case DEV:
-		st.Qid = devO.qid()
-		st.Name = "dev"
 	case LAMBDA:
 		st = o.l.stat("lambda")
 	case FIELD:
@@ -171,9 +167,6 @@ func (sc *SchedConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 			return np.ErrUnknownfid
 		}
 		sc.add(args.NewFid, o)
-	} else if args.Wnames[0] == "dev" {
-		sc.add(args.NewFid, devO)
-		rets.Qids = []np.Tqid{devO.qid()}
 	} else if o.t == LAMBDA {
 		return sc.walkField(o.l, args, rets)
 	} else {
@@ -232,7 +225,6 @@ func (sc *SchedConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 
 func (sc *SchedConn) ls() []*np.Stat {
 	dir := sc.sched.ps()
-	dir = append([]*np.Stat{devO.stat()}, dir...)
 	db.DPrintf("ls: %v\n", dir)
 	return dir
 }
@@ -278,11 +270,6 @@ func (sc *SchedConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (sc *SchedConn) devWrite(t string) *np.Rerror {
-	db.DPrintf("Write dev %v\n", t)
-	return np.ErrNotSupported
-}
-
 func (sc *SchedConn) writeField(o *Obj, args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if args.Offset != 0 {
 		return nil
@@ -307,11 +294,7 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	case ROOT:
 		return np.ErrNowrite
 	case DEV:
-		r := sc.devWrite(string(args.Data))
-		if r != nil {
-			return r
-		}
-		n = np.Tsize(len(args.Data))
+		return np.ErrNotSupported
 	case LAMBDA:
 		if o.l.Status == "Init" {
 			err := o.l.init(args.Data)

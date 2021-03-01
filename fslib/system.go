@@ -19,6 +19,7 @@ func run(name string) (*exec.Cmd, error) {
 	cmd := exec.Command(name)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ())
 	return cmd, cmd.Start()
 }
 

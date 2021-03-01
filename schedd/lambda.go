@@ -228,13 +228,14 @@ func (l *Lambda) writeExitStatus(status string) {
 	l.ExitStatus = status
 	db.DPrintf("Exit %v status %v; Wakeup waiters for %v\n", l.Pid, status, l)
 	l.condWait.Broadcast()
-	l.stopProducersLS()
+
+	l.mu.Unlock()
+
+	l.stopProducersS()
 
 	l.sd.mu.Unlock()
 
-	l.waitExitL()
-
-	l.mu.Unlock()
+	l.waitExit()
 
 	l.sd.delLambda(l.Pid)
 	l.sd.decLoad()
@@ -374,8 +375,18 @@ func (l *Lambda) startExitDep(pid string) {
 	}
 }
 
-func (l *Lambda) stopProducersLS() {
-	for p, _ := range l.ProdDep {
+// XXX This function isn't entirely atomic. I don't think this is an issue for
+// now, but it seems like a reasonably performant way of avoiding a deadlock.
+func (l *Lambda) stopProducersS() {
+	// XXX a dirty hack to avoid holding locks & deadlocking...
+	l.mu.Lock()
+	pDep := map[string]bool{}
+	for k, v := range l.ProdDep {
+		pDep[k] = v
+	}
+	l.mu.Unlock()
+
+	for p, _ := range pDep {
 		c := l.sd.findLambdaS(p)
 		if c != nil && l.Pid != c.Pid {
 			c.markConsumerS(l.Pid)
@@ -405,6 +416,8 @@ func (l *Lambda) markExit(pid string) {
 }
 
 func (l *Lambda) markConsumerS(pid string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.ConsDep[pid] = true
 	l.cond.Signal()
 }
@@ -433,7 +446,9 @@ func (l *Lambda) runnableWaitingConsumer() bool {
 }
 
 // Wait for consumers that depend on me to exit too.
-func (l *Lambda) waitExitL() {
+func (l *Lambda) waitExit() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	for !l.exitableL() {
 		l.cond.Wait()
 	}

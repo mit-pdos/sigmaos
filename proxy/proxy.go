@@ -4,9 +4,10 @@ import (
 	"log"
 	"net"
 	"os/user"
-	"strings"
 	"sync"
 
+	db "ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
@@ -96,21 +97,9 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 }
 
 // XXX avoid duplication with fsclnt
-func isRemoteTarget(target string) bool {
-	return strings.Contains(target, ":")
-}
-
-// XXX avoid duplication with fsclnt
-func splitTarget(target string) (string, string) {
-	parts := strings.Split(target, ":")
-	server := parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
-	return server, parts[len(parts)-1]
-}
-
-// XXX avoid duplication with fsclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
-	// log.Printf("automount %v to %v\n", target, path)
-	server, _ := splitTarget(target)
+	db.DPrintf("automount %v to %v\n", target, path)
+	server := fsclnt.SplitTarget(target)
 	reply, err := npc.clnt.Attach(server, npc.uname, newfid, path)
 	if err != nil {
 		return np.Tqid{}, err
@@ -149,7 +138,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		qid := reply.Qids[len(reply.Qids)-1]
 		if qid.Type == np.QTSYMLINK {
 			todo := len(path) - len(reply.Qids)
-			// log.Print("symlink ", todo, path)
+			db.DPrintf("symlink ", todo, path)
 
 			// args.Newfid is fid for symlink
 			npc.addch(args.NewFid, npc.npch(args.Fid))
@@ -159,15 +148,15 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				return np.ErrUnknownfid
 			}
 			// XXX assumes symlink is final component of walk
-			if isRemoteTarget(target) {
+			if fsclnt.IsRemoteTarget(target) {
 				qid, err = npc.autoMount(args.NewFid, target, path[todo:])
 				if err != nil {
 					return np.ErrUnknownfid
 				}
 				reply.Qids[len(reply.Qids)-1] = qid
 				path = path[todo:]
-				//log.Printf("automounted: %v -> %v, %v\n", args.NewFid,
-				//	target, path)
+				db.DPrintf("automounted: %v -> %v, %v\n", args.NewFid,
+					target, path)
 				*rets = *reply
 				break
 			} else {

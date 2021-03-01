@@ -36,9 +36,13 @@ func MakeSchedd() *Sched {
 	sd.nid = 1 // 1 reserved for dev
 	sd.ls = make(map[string]*Lambda)
 	db.SetDebug(false)
-	sd.srv = npsrv.MakeNpServer(sd, ":0")
+	ip, err := fslib.LocalIP()
+	if err != nil {
+		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
+	}
+	sd.srv = npsrv.MakeNpServer(sd, ip+":0")
 	fsl := fslib.MakeFsLib("sched")
-	err := fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
+	err = fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
 	if err != nil {
 		log.Fatalf("PostService failed %v %v\n", fslib.SCHED, err)
 	}

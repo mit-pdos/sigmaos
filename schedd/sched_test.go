@@ -46,7 +46,7 @@ func TestContinue(t *testing.T) {
 
 	b, err := ts.ReadFile("name/out")
 	assert.Nil(t, err, "ReadFile")
-	assert.Equal(t, string(b), "hello again", "Output")
+	assert.Equal(t, "hello again", string(b), "Output")
 
 	ts.s.Shutdown(ts.FsLib)
 }

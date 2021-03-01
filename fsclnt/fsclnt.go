@@ -246,20 +246,24 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	return fid2, todo, nil
 }
 
-func isRemoteTarget(target string) bool {
+func IsRemoteTarget(target string) bool {
 	return strings.Contains(target, ":")
 }
 
-// XXX more robust impl
-func splitTarget(target string) (string, string) {
+func SplitTarget(target string) string {
 	parts := strings.Split(target, ":")
-	server := parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
-	return server, parts[len(parts)-1]
+	var server string
+	if len(parts) == 4 { // ip:port:pubkey:name
+		server = parts[0] + ":" + parts[1]
+	} else { // localhost: [::]:port:pubkey:name
+		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
+	}
+	return server
 }
 
 func (fsc *FsClient) autoMount(target string, path []string) error {
 	db.DPrintf("%v: automount %v to %v\n", fsc.uname, target, path)
-	server, _ := splitTarget(target)
+	server := SplitTarget(target)
 	fid, err := fsc.Attach(server, "")
 	if err != nil {
 		log.Fatal("Attach error: ", err)
@@ -284,7 +288,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 			}
 			i := len(path) - todo
 			rest := path[i:]
-			if isRemoteTarget(target) {
+			if IsRemoteTarget(target) {
 				err = fsc.autoMount(target, path[:i])
 				if err != nil {
 					return np.NoFid, err

@@ -100,36 +100,6 @@ func (l *Lambda) init(a []byte) error {
 	return nil
 }
 
-func (l *Lambda) continueing(a []byte) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	var attr fslib.Attr
-
-	err := json.Unmarshal(a, &attr)
-	if err != nil {
-		return err
-	}
-	if l.Pid != attr.Pid {
-		return fmt.Errorf("continueLambda: pids don't match %v\n", attr.Pid)
-	}
-	l.Program = attr.Program
-	l.Args = attr.Args
-	l.Env = attr.Env
-	l.Dir = attr.Dir
-	l.pairDep(attr.PairDep)
-	for _, p := range attr.ExitDep {
-		l.ExitDep[p] = false
-	}
-
-	if l.runnableConsumerL() {
-		l.Status = "Runnable"
-	} else {
-		l.Status = "Waiting"
-	}
-	return nil
-}
-
 func (l *Lambda) String() string {
 	str := fmt.Sprintf("λ pid %v st %v %v args %v env %v dir %v cons %v prod %v exit %v",
 		l.Pid, l.Status, l.Program, l.Args, l.Env, l.Dir, l.ConsDep, l.ProdDep,

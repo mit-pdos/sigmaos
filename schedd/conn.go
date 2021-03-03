@@ -304,13 +304,6 @@ func (sc *SchedConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 			sc.sched.spawn(o.l)
 			n = np.Tsize(len(args.Data))
 			db.DPrintf("initl %v\n", o.l)
-		} else if o.l.Status == "Running" { // a continuation
-			err := o.l.continueing(args.Data)
-			if err != nil {
-				return &np.Rerror{err.Error()}
-			}
-			n = np.Tsize(len(args.Data))
-			db.DPrintf("conitnuel %v\n", o.l)
 		} else {
 			return &np.Rerror{fmt.Sprintf("Lambda already running")}
 		}

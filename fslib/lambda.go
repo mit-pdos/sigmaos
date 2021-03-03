@@ -55,15 +55,6 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	return fl.MakeFile(SCHED+"/"+a.Pid, b)
 }
 
-// Continuate a.pid later
-func (fl *FsLib) Continue(a *Attr) error {
-	b, err := json.Marshal(a)
-	if err != nil {
-		return err
-	}
-	return fl.WriteFile(SCHED+"/"+a.Pid, b)
-}
-
 func (fl *FsLib) SpawnProgram(name string, args []string) error {
 	a := &Attr{}
 	a.Pid = GenPid()

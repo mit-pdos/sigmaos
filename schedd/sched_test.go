@@ -32,25 +32,6 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestContinue(t *testing.T) {
-	ts := makeTstate(t)
-
-	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"1", "name/out", ""}, nil, nil, nil}
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-
-	log.Printf("Spawn %v\n", a)
-
-	ts.Wait(pid)
-
-	b, err := ts.ReadFile("name/out")
-	assert.Nil(t, err, "ReadFile")
-	assert.Equal(t, "hello again", string(b), "Output")
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 

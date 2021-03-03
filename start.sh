@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 N=":1111"
 if [ $# -eq 1 ]
@@ -13,6 +13,7 @@ fi
 ./bin/named &
 ./bin/schedd &
 ./bin/nps3d &
+sleep 2
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system
 mkdir -p /mnt/9p/kv

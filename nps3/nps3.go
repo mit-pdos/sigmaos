@@ -36,7 +36,7 @@ type Nps3 struct {
 
 func MakeNps3() *Nps3 {
 	nps3 := &Nps3{}
-	db.SetDebug(true)
+	db.SetDebug(false)
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -47,7 +47,11 @@ func MakeNps3() *Nps3 {
 		o.UsePathStyle = true
 	})
 
-	nps3.srv = npsrv.MakeNpServer(nps3, ":0")
+	ip, err := fslib.LocalIP()
+	if err != nil {
+		log.Fatalf("LocalIP %v %v\n", S3, err)
+	}
+	nps3.srv = npsrv.MakeNpServer(nps3, ip+":0")
 	fsl := fslib.MakeFsLib("s3")
 	err = fsl.PostService(nps3.srv.MyAddr(), S3)
 	if err != nil {

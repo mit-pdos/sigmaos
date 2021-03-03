@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ "$#" -ne 2 ]
 then
@@ -96,6 +96,16 @@ then
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull)'
 else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda'
+fi
+
+if [ -d "gg" ] 
+then
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd gg; git pull; make -j2)'
+else
+   ssh-agent bash -c 'yes | sudo apt install make gcc-7 gcc g++-7 g++ protobuf-compiler libprotobuf-dev libcrypto++-dev python3 libcap-dev libncurses5-dev libboost-dev libssl-dev autopoint help2man texinfo automake libtool pkg-config libhiredis-dev python3-boto3'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@github.com:ArielSzekely/gg.git'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; git clone git@github.com:excamera/excamera-static-bins.git excamera_bin_dir'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; make -j2; sudo make install'
 fi
 ENDSSH
 

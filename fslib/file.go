@@ -96,12 +96,13 @@ func (fl *FsLib) CreateFile(fname string, mode np.Tmode) (int, error) {
 	return fd, nil
 }
 
-func (fl *FsLib) isEmpty(name string) bool {
+func (fl *FsLib) IsDir(name string) (bool, error) {
 	st, err := fl.Stat(name)
 	if err != nil {
-		log.Fatalf("Stat %v error %v\n", name, err)
+		return false, err
 	}
-	return st.Length == 0
+	log.Printf("stat %v\n", st)
+	return np.IsDir(st.Mode), nil
 }
 
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {

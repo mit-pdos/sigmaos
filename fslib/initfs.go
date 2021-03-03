@@ -56,6 +56,27 @@ func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	return err
 }
 
+func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
+	p := srvname + "/" + server
+	dir, err := fsl.IsDir(srvname)
+	if err != nil {
+		err := fsl.Mkdir(srvname, 0777)
+		if err != nil {
+			return err
+		}
+		dir = true
+	}
+	if !dir {
+		return fmt.Errorf("Not a directory")
+	}
+	err = fsl.Remove(p)
+	if err != nil {
+		db.DPrintf("Remove failed %v %v\n", p, err)
+	}
+	err = fsl.Symlink(srvaddr+":pubkey:"+server, p, 0777)
+	return err
+}
+
 func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
 	srv := npsrv.MakeNpServer(memfsd, ":0")
 	fsl := &FsLibSrv{MakeFsLib(name), memfsd, srv}

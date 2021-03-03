@@ -253,10 +253,11 @@ func IsRemoteTarget(target string) bool {
 func SplitTarget(target string) string {
 	parts := strings.Split(target, ":")
 	var server string
-	if len(parts) == 4 { // ip:port:pubkey:name
-		server = parts[0] + ":" + parts[1]
-	} else { // localhost: [::]:port:pubkey:name
+
+	if strings.HasPrefix(parts[0], "[") { // IPv6: [::]:port:pubkey:name
 		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
+	} else { // IPv4
+		server = parts[0] + ":" + parts[1]
 	}
 	return server
 }

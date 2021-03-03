@@ -139,7 +139,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		qid := reply.Qids[len(reply.Qids)-1]
 		if qid.Type == np.QTSYMLINK {
 			todo := len(path) - len(reply.Qids)
-			db.DPrintf("symlink ", todo, path)
+			db.DPrintf("symlink %v %v\n", todo, path)
 
 			// args.Newfid is fid for symlink
 			npc.addch(args.NewFid, npc.npch(args.Fid))

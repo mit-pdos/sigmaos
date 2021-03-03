@@ -53,9 +53,9 @@ func MakeNps3() *Nps3 {
 	}
 	nps3.srv = npsrv.MakeNpServer(nps3, ip+":0")
 	fsl := fslib.MakeFsLib("s3")
-	err = fsl.PostService(nps3.srv.MyAddr(), S3)
+	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), S3, nps3.srv.MyAddr())
 	if err != nil {
-		log.Fatalf("PostService failed %v %v\n", S3, err)
+		log.Fatalf("PostServiceUnion failed %v %v\n", nps3.srv.MyAddr(), err)
 	}
 
 	nps3.ch = make(chan bool)

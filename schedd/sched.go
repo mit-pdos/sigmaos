@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
@@ -36,7 +37,7 @@ func MakeSchedd() *Sched {
 	sd.nid = 1 // 1 reserved for dev
 	sd.ls = make(map[string]*Lambda)
 	db.SetDebug(false)
-	ip, err := fslib.LocalIP()
+	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
 	}

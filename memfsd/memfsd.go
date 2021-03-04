@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 
+	db "ulambda/debug"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
@@ -59,6 +60,7 @@ func MakeFsd(fs *memfs.Root, w Walker) *Fsd {
 	fsd := &Fsd{}
 	fsd.fs = fs
 	fsd.walk = w
+	db.SetDebug(false)
 	return fsd
 }
 

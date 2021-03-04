@@ -73,10 +73,29 @@ func spawnDirUploader(launch ExecutorLauncher, targetHash string, subDir string)
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = []string{executorPid(targetHash)}
+	a.ExitDep = []string{executorPid(targetHash)} // XXX make this dep explicit
 	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning upload worker [%v]: %v\n", targetHash, err)
+	}
+	return a.Pid
+}
+
+func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
+	a := fslib.Attr{}
+	a.Pid = origDirUploaderPid(subDir)
+	a.Program = "./bin/fsdiruploader"
+	a.Args = []string{
+		ggOrig(dir, subDir, ""),
+		ggRemote(subDir, ""),
+		"",
+	}
+	a.Env = []string{}
+	a.PairDep = []fslib.PDep{}
+	a.ExitDep = []string{}
+	err := launch.Spawn(&a)
+	if err != nil {
+		log.Fatalf("Error spawning orig dir upload worker [%v/%v]: %v\n", dir, subDir, err)
 	}
 	return a.Pid
 }

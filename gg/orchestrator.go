@@ -74,13 +74,12 @@ func (orc *Orchestrator) Exit() {
 
 func (orc *Orchestrator) Work() {
 	orc.setUpRemoteDirs()
-	executables := orc.getExecutableDependencies()
-	exUpPids := orc.uploadExecutableDependencies(executables)
+	origDirUploaders := []string{spawnOrigDirUploader(orc, orc.cwd, GG_BLOBS)}
 	for i, target := range orc.targets {
 		targetHash := orc.getTargetHash(target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
 		g := orc.ingestStaticGraph(targetHash)
-		orc.executeStaticGraph(g, exUpPids)
+		orc.executeStaticGraph(g, origDirUploaders)
 		spawnReductionWriter(orc, orc.targets[i], targetHash, orc.cwd, "", []string{})
 	}
 }
@@ -159,24 +158,6 @@ func (orc *Orchestrator) writeTargets() {
 		}
 		db.DPrintf("Wrote output file [%v]\n", target)
 	}
-}
-
-func (orc *Orchestrator) uploadExecutableDependencies(execs []string) []string {
-	pids := []string{}
-	for _, exec := range execs {
-		pids = append(pids, spawnUploader(orc, exec, orc.cwd, GG_BLOBS))
-	}
-	return pids
-}
-
-func (orc *Orchestrator) getExecutableDependencies() []string {
-	execsPath := ggOrigBlobs(orc.cwd, "executables.txt")
-	f, err := ioutil.ReadFile(execsPath)
-	if err != nil {
-		log.Fatalf("Error reading exec dependencies: %v\n", err)
-	}
-	trimmed_f := strings.TrimSpace(string(f))
-	return strings.Split(trimmed_f, "\n")
 }
 
 func (orc *Orchestrator) getTargetHash(target string) string {

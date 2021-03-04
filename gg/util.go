@@ -12,6 +12,7 @@ const (
 	GG_HASH_CACHE = "hash_cache"
 	GG_LOCAL      = "/tmp/ulambda"
 	GG_REMOTE     = "name/fs"
+	GG_ORIG       = "orig"
 )
 
 // PID constants
@@ -50,6 +51,10 @@ func reductionWriterPid(dir string, subDir string, hash string) string {
 
 func reductionDownloaderPid(reductionHash string, subDir string, target string) string {
 	return ggPid(reductionHash, subDir, target, REDUCTION_SUFFIX+DOWNLOADER_SUFFIX)
+}
+
+func origDirUploaderPid(subDir string) string {
+	return ggPid(GG_ORIG, subDir, "", DIR_UPLOADER_SUFFIX)
 }
 
 func dirUploaderPid(hash string, subDir string) string {

@@ -16,14 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 	"ulambda/npsrv"
-)
-
-const (
-	S3 = "name/s3"
 )
 
 type Nps3 struct {
@@ -36,6 +33,7 @@ type Nps3 struct {
 
 func MakeNps3() *Nps3 {
 	nps3 := &Nps3{}
+	nps3.ch = make(chan bool)
 	db.SetDebug(false)
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
@@ -47,23 +45,26 @@ func MakeNps3() *Nps3 {
 		o.UsePathStyle = true
 	})
 
-	ip, err := fslib.LocalIP()
+	ip, err := fsclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", S3, err)
+		log.Fatalf("LocalIP %v %v\n", fslib.S3, err)
 	}
 	nps3.srv = npsrv.MakeNpServer(nps3, ip+":0")
 	fsl := fslib.MakeFsLib("s3")
-	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), S3, nps3.srv.MyAddr())
+	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), fslib.S3, nps3.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", nps3.srv.MyAddr(), err)
 	}
 
-	nps3.ch = make(chan bool)
 	return nps3
 }
 
 func (nps3 *Nps3) Serve() {
 	<-nps3.ch
+}
+
+func (nps3 *Nps3) done() {
+	nps3.ch <- true
 }
 
 func mode(key string) np.Tperm {
@@ -115,25 +116,30 @@ func (o *Obj) qid() np.Tqid {
 		np.TQversion(0), np.Tpath(o.id))
 }
 
-func (o *Obj) includeName(key string) (string, bool) {
+// if o.key is prefix of key, include next component of key (unless
+// we already seen it
+func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
-	db.DPrintf("s %v len %v\n", s, len(o.key))
-	if len(o.key) >= len(s) || len(s) > len(o.key)+1 {
-		return "", false
-	}
-	m := 0
+	m := np.Tperm(0)
+	db.DPrintf("s %v o.key %v dirents %v\n", s, o.key, o.dirents)
 	for i, c := range o.key {
 		if c != s[i] {
-			break
+			return "", m, false
 		}
-		m = i + 1
-
 	}
-	if m < len(o.key) {
-		return "", false
+	if len(s) == len(o.key) {
+		return "", m, false
+	}
+	name := s[len(o.key)]
+	_, ok := o.dirents[name]
+	if ok {
+		m = o.t
 	} else {
-		return s[m], true
+		if len(s) > len(o.key)+1 {
+			m = np.DMDIR
+		}
 	}
+	return name, m, !ok
 }
 
 func (o *Obj) stat() *np.Stat {
@@ -206,6 +212,9 @@ func (o *Obj) readFile(off, cnt int) ([]byte, error) {
 	db.DPrintf("readFile: %v %v %v\n", o.key, off, cnt)
 
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
+	if o.sz == 0 {
+		o.readHead()
+	}
 	if np.Tlength(off) >= o.sz {
 		return nil, nil
 	}
@@ -256,9 +265,9 @@ func (o *Obj) s3ReadDir() error {
 		}
 		for _, obj := range page.Contents {
 			db.DPrintf("Key: %v\n", *obj.Key)
-			if n, ok := o.includeName(*obj.Key); ok {
+			if n, m, ok := o.includeName(*obj.Key); ok {
 				db.DPrintf("incl %v\n", n)
-				o1 := o.nps3.makeObj(append(o.key, n), mode(*obj.Key), o)
+				o1 := o.nps3.makeObj(append(o.key, n), m, o)
 				o.dirents[n] = o1
 			}
 		}
@@ -267,17 +276,23 @@ func (o *Obj) s3ReadDir() error {
 }
 
 func (o *Obj) lookup(p []string) (*Obj, error) {
+	db.DPrintf("%v: lookup %v\n", o, p)
 	if o.t != np.DMDIR {
 		return nil, fmt.Errorf("Not a directory")
 	}
-	if len(p) > 1 {
-		return nil, fmt.Errorf("Not supported XXX")
+	_, err := o.readDir()
+	if err != nil {
+		return nil, err
 	}
 	o1, ok := o.dirents[p[0]]
 	if !ok {
 		return nil, fmt.Errorf("file not found")
 	}
-	return o1, nil
+	if len(p) == 1 {
+		return o1, nil
+	} else {
+		return o1.lookup(p[1:])
+	}
 }
 
 func (o *Obj) readDir() ([]*np.Stat, error) {

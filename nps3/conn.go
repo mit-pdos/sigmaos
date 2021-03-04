@@ -230,7 +230,11 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Remove %v\n", o)
+	if len(o.key) == 0 { // exit?
+		o.nps3.done()
+		return nil
+	}
+	db.DPrintf("Remove o %v\n", o)
 	err := o.Remove()
 	if err != nil {
 		return &np.Rerror{err.Error()}

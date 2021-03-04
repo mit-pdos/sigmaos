@@ -2,9 +2,7 @@ package fslambda
 
 import (
 	"errors"
-	"io"
 	"log"
-	"os"
 	// "time"
 
 	// db "ulambda/debug"
@@ -56,24 +54,24 @@ func (r *Reader) Work() {
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}
-	file, err := os.Open(r.input)
+	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for {
-		data := make([]byte, memfs.PIPESZ)
-		count, err := file.Read(data)
-		if err == io.EOF {
+		data, err := r.Read(fd, memfs.PIPESZ)
+		if len(data) == 0 {
 			break
 		}
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.Write(0, data[:count])
+		_, err = r.pipe.Write(0, data)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	r.Close(fd)
 	r.pipe.Close(np.OWRITE)
 
 	r.ExitFs("name/" + r.output)

@@ -56,7 +56,7 @@ func TestWc(t *testing.T) {
 			t.Fatalf("Mkdir %v\n", err)
 		}
 		a1 := &fslib.Attr{pid1, "../bin/fsreader", "",
-			[]string{"../input/" + f.Name(), s}, nil,
+			[]string{"name/s3/~ip/input/" + f.Name(), s}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
 		a2 := &fslib.Attr{pid2, "../bin/mr-m-wc", "",
 			[]string{"name/" + s + "/pipe", s}, nil,

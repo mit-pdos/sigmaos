@@ -9,10 +9,12 @@ import (
 )
 
 const NAMEDEV = "name/dev"
+const S3 = "name/s3"
 
 type System struct {
 	named  *exec.Cmd
 	schedd *exec.Cmd
+	nps3d  *exec.Cmd
 }
 
 func run(name string) (*exec.Cmd, error) {
@@ -36,6 +38,11 @@ func Boot(bin string) (*System, error) {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
+	s.nps3d, err = run(bin + "/nps3d")
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(100 * time.Millisecond)
 	return s, nil
 }
 
@@ -44,10 +51,30 @@ func (s *System) Shutdown(clnt *FsLib) {
 	if err != nil {
 		log.Fatalf("Schedd shutdown %v\n", err)
 	}
+
+	// Remove pool of s3 servers
+	dirents, err := clnt.ReadDir("name/s3")
+	if err != nil {
+		log.Fatalf("Nps3d shutdown %v\n", err)
+	}
+	for _, st := range dirents {
+		err = clnt.Remove(S3 + "/" + st.Name + "/")
+		if err != nil {
+			log.Fatalf("S3 shutdown %v\n", err)
+		}
+		err = clnt.Remove(S3 + "/" + st.Name)
+		if err != nil {
+			log.Fatalf("S3 shutdown %v\n", err)
+		}
+	}
+
+	// Shutdown named last
 	err = clnt.WriteFile(NAMEDEV, []byte("Exit"))
 	if err != nil {
-		log.Fatalf("Named shutdown %v\n", err)
+		log.Fatalf("Schedd shutdown %v\n", err)
 	}
+
 	s.schedd.Wait()
 	s.named.Wait()
+	s.nps3d.Wait()
 }

@@ -102,7 +102,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 		return false, err
 	}
 	log.Printf("stat %v\n", st)
-	return np.IsDir(st.Mode), nil
+	return st.Mode.IsDir(), nil
 }
 
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {

@@ -139,7 +139,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if o.t != np.DMDIR {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
-	if args.Perm&np.DMDIR == np.DMDIR { // fake a directory?
+	if args.Perm.IsDir() { // fake a directory?
 		o1 := o.nps3.makeObj(append(o.key, args.Name), np.DMDIR, o)
 		npc.add(args.Fid, o1)
 		rets.Qid = o1.qid()

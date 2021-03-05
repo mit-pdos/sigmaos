@@ -61,35 +61,31 @@ func (inode *Inode) Qid() np.Tqid {
 }
 
 func (inode *Inode) IsDir() bool {
-	return np.IsDir(inode.PermT)
+	return inode.PermT.IsDir()
 }
 
 func (inode *Inode) IsSymlink() bool {
-	return np.IsSymlink(inode.PermT)
-}
-
-func (inode *Inode) IsDev() bool {
-	return np.IsDevice(inode.PermT)
+	return inode.PermT.IsSymlink()
 }
 
 func (inode *Inode) IsPipe() bool {
-	return np.IsPipe(inode.PermT)
+	return inode.PermT.IsPipe()
 }
 
 func (inode *Inode) IsDevice() bool {
-	return np.IsDevice(inode.PermT)
+	return inode.PermT.IsDevice()
 }
 
 func permToData(t np.Tperm) (Data, error) {
-	if np.IsDir(t) {
+	if t.IsDir() {
 		return makeDir(), nil
-	} else if np.IsSymlink(t) {
+	} else if t.IsSymlink() {
 		return MakeSym(), nil
-	} else if np.IsPipe(t) {
+	} else if t.IsPipe() {
 		return MakePipe(), nil
-	} else if np.IsDevice(t) {
+	} else if t.IsDevice() {
 		return nil, nil
-	} else if np.IsFile(t) {
+	} else if t.IsFile() {
 		return MakeFile(), nil
 	} else {
 		return nil, errors.New("Unknown type")

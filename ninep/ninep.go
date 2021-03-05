@@ -121,11 +121,11 @@ const (
 	TYPESHIFT  = 16
 )
 
-func IsDir(t Tperm) bool     { return t&DMDIR == DMDIR }
-func IsSymlink(t Tperm) bool { return t&DMSYMLINK == DMSYMLINK }
-func IsDevice(t Tperm) bool  { return t&DMDEVICE == DMDEVICE }
-func IsPipe(t Tperm) bool    { return t&DMNAMEDPIPE == DMNAMEDPIPE }
-func IsFile(t Tperm) bool    { return (t >> TYPESHIFT) == 0 }
+func (t Tperm) IsDir() bool     { return t&DMDIR == DMDIR }
+func (t Tperm) IsSymlink() bool { return t&DMSYMLINK == DMSYMLINK }
+func (t Tperm) IsDevice() bool  { return t&DMDEVICE == DMDEVICE }
+func (t Tperm) IsPipe() bool    { return t&DMNAMEDPIPE == DMNAMEDPIPE }
+func (t Tperm) IsFile() bool    { return (t >> TYPESHIFT) == 0 }
 
 type Tfcall uint8
 

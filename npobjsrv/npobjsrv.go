@@ -1,4 +1,4 @@
-package nps3
+package npobjsrv
 
 import (
 	"fmt"
@@ -8,39 +8,53 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/npsrv"
 )
 
-var bucket = "9ps3"
+type NpObjSrv interface {
+	MakeObj([]string, np.Tperm, NpObj) NpObj
+	Root() NpObj
+	Done()
+}
 
-const (
-	CHUNKSZ = 8192
-)
+type NpObj interface {
+	Lookup([]string) (NpObj, error)
+	ReadDir() ([]*np.Stat, error)
+	Qid() np.Tqid
+	Perm() np.Tperm
+	Size() np.Tlength
+	Path() []string
+	Create(string, np.Tperm, np.Tmode) (NpObj, error)
+	ReadFile(np.Toffset, np.Tsize) ([]byte, error)
+	WriteFile(np.Toffset, []byte) (np.Tsize, error)
+	Remove() error
+	Stat() (*np.Stat, error)
+	Wstat(*np.Stat) error
+}
 
 type NpConn struct {
 	mu    sync.Mutex // for Fids
 	conn  net.Conn
-	fids  map[np.Tfid]*Obj
+	fids  map[np.Tfid]NpObj
 	uname string
-	nps3  *Nps3
+	osrv  NpObjSrv
 }
 
-func makeNpConn(nps3 *Nps3, conn net.Conn) *NpConn {
+func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
-	npc.nps3 = nps3
-	npc.fids = make(map[np.Tfid]*Obj)
+	npc.osrv = osrv
+	npc.fids = make(map[np.Tfid]NpObj)
 	return npc
 }
 
-func (npc *NpConn) lookup(fid np.Tfid) (*Obj, bool) {
+func (npc *NpConn) lookup(fid np.Tfid) (NpObj, bool) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	o, ok := npc.fids[fid]
 	return o, ok
 }
 
-func (npc *NpConn) add(fid np.Tfid, o *Obj) {
+func (npc *NpConn) add(fid np.Tfid, o NpObj) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	npc.fids[fid] = o
@@ -50,11 +64,6 @@ func (npc *NpConn) del(fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	delete(npc.fids, fid)
-}
-
-func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := makeNpConn(nps3, conn)
-	return clnt
 }
 
 func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -70,9 +79,9 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DPrintf("Attach %v\n", args)
 	npc.uname = args.Uname
-	o := npc.nps3.makeObj([]string{}, np.DMDIR, nil)
-	npc.add(args.Fid, o)
-	rets.Qid = o.qid()
+	root := npc.osrv.Root()
+	npc.add(args.Fid, root)
+	rets.Qid = root.Qid()
 	return nil
 }
 
@@ -85,19 +94,19 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		npc.add(args.NewFid, o)
 	} else {
-		if o.t != np.DMDIR {
+		if o.Perm() != np.DMDIR {
 			return np.ErrNotfound
 		}
-		_, err := o.readDir()
+		_, err := o.ReadDir()
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		o1, err := o.lookup(args.Wnames)
+		o1, err := o.Lookup(args.Wnames)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
 		npc.add(args.NewFid, o1)
-		rets.Qids = []np.Tqid{o1.qid()}
+		rets.Qids = []np.Tqid{o1.Qid()}
 	}
 
 	return nil
@@ -122,7 +131,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("o %v\n", o)
-	rets.Qid = o.qid()
+	rets.Qid = o.Qid()
 	return nil
 }
 
@@ -136,13 +145,13 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("o %v\n", o)
-	if o.t != np.DMDIR {
+	if o.Perm() != np.DMDIR {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	if args.Perm.IsDir() { // fake a directory?
-		o1 := o.nps3.makeObj(append(o.key, args.Name), np.DMDIR, o)
+		o1 := npc.osrv.MakeObj(append(o.Path(), args.Name), np.DMDIR, o)
 		npc.add(args.Fid, o1)
-		rets.Qid = o1.qid()
+		rets.Qid = o1.Qid()
 		return nil
 	}
 	o1, err := o.Create(args.Name, args.Perm, args.Mode)
@@ -150,7 +159,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return &np.Rerror{err.Error()}
 	}
 	npc.add(args.Fid, o1)
-	rets.Qid = o1.qid()
+	rets.Qid = o1.Qid()
 	return nil
 }
 
@@ -158,13 +167,13 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) readDir(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 	var dirents []*np.Stat
 	var err error
-	if o.sz > 0 && np.Tlength(args.Offset) >= o.sz {
+	if o.Size() > 0 && args.Offset >= np.Toffset(o.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		dirents, err = o.readDir()
+		dirents, err = o.ReadDir()
 
 	}
 	b, err := npcodec.Dir2Byte(args.Offset, args.Count, dirents)
@@ -175,8 +184,8 @@ func (npc *NpConn) readDir(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) readFile(o *Obj, args np.Tread, rets *np.Rread) *np.Rerror {
-	b, err := o.readFile(int(args.Offset), int(args.Count))
+func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
+	b, err := o.ReadFile(args.Offset, args.Count)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -191,7 +200,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("ReadFid %v %v\n", args, o)
-	switch o.t {
+	switch o.Perm() {
 	case np.DMDIR:
 		return npc.readDir(o, args, rets)
 	case 0:
@@ -208,13 +217,13 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("Write o %v\n", o)
-	switch o.t {
+	switch o.Perm() {
 	case np.DMDIR:
 		// sub directories will be implicitly created; fake write
 		rets.Count = np.Tsize(len(args.Data))
 		return nil
 	case 0:
-		cnt, err := o.writeFile(int(args.Offset), args.Data)
+		cnt, err := o.WriteFile(args.Offset, args.Data)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
@@ -230,8 +239,8 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if len(o.key) == 0 { // exit?
-		o.nps3.done()
+	if len(o.Path()) == 0 { // exit?
+		npc.osrv.Done()
 		return nil
 	}
 	db.DPrintf("Remove o %v\n", o)
@@ -249,20 +258,11 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("Stat %v\n", o)
-	var err error
-	switch o.t {
-	case np.DMDIR:
-		_, err = o.readDir()
-	case 0:
-		err = o.readHead()
-	default:
-		return np.ErrNotSupported
-	}
+	st, err := o.Stat()
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-
-	rets.Stat = *o.stat()
+	rets.Stat = *st
 	return nil
 }
 

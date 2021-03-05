@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +21,14 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/npobjsrv"
 	"ulambda/npsrv"
+)
+
+var bucket = "9ps3"
+
+const (
+	CHUNKSZ = 8192
 )
 
 type Nps3 struct {
@@ -29,11 +37,14 @@ type Nps3 struct {
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
+	root   npobjsrv.NpObj
 }
 
 func MakeNps3() *Nps3 {
 	nps3 := &Nps3{}
 	nps3.ch = make(chan bool)
+	nps3.root = nps3.MakeObj([]string{}, np.DMDIR, nil)
+
 	db.SetDebug(false)
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
@@ -59,11 +70,20 @@ func MakeNps3() *Nps3 {
 	return nps3
 }
 
+func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
+	clnt := npobjsrv.MakeNpConn(nps3, conn)
+	return clnt
+}
+
+func (nps3 *Nps3) Root() npobjsrv.NpObj {
+	return nps3.root
+}
+
 func (nps3 *Nps3) Serve() {
 	<-nps3.ch
 }
 
-func (nps3 *Nps3) done() {
+func (nps3 *Nps3) Done() {
 	nps3.ch <- true
 }
 
@@ -75,7 +95,7 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p *Obj) *Obj {
+func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.NpObj {
 	id := nps3.nextId
 	nps3.nextId += 1
 
@@ -89,13 +109,14 @@ func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p *Obj) *Obj {
 	return o
 }
 
-func (nps3 *Nps3) makeObj(key []string, t np.Tperm, p *Obj) *Obj {
+func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.NpObj {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
 	return nps3.makeObjL(key, t, p)
 }
 
 type Obj struct {
+	mu      sync.Mutex
 	nps3    *Nps3
 	key     []string
 	t       np.Tperm
@@ -103,7 +124,8 @@ type Obj struct {
 	sz      np.Tlength
 	mtime   time.Time
 	dirents map[string]*Obj
-	parent  *Obj
+	parent  npobjsrv.NpObj
+	isRead  bool
 }
 
 func (o *Obj) String() string {
@@ -111,9 +133,53 @@ func (o *Obj) String() string {
 	return s
 }
 
-func (o *Obj) qid() np.Tqid {
+func (o *Obj) Qid() np.Tqid {
 	return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 		np.TQversion(0), np.Tpath(o.id))
+}
+
+func (o *Obj) Perm() np.Tperm {
+	return o.t
+}
+
+func (o *Obj) Path() []string {
+	return o.key
+}
+
+func (o *Obj) Size() np.Tlength {
+	return o.sz
+}
+
+func (o *Obj) stat() *np.Stat {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	st := &np.Stat{}
+	if len(o.key) > 0 {
+		st.Name = o.key[len(o.key)-1]
+	} else {
+		st.Name = "" // root
+	}
+	st.Mode = o.t | np.Tperm(0777)
+	st.Qid = o.Qid()
+	st.Uid = ""
+	st.Gid = ""
+	st.Length = o.sz
+	st.Mtime = uint32(o.mtime.Unix())
+	return st
+}
+
+func (o *Obj) addDirent(name string, n *Obj) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.dirents[name] = n
+}
+
+func (o *Obj) lookupDirent(name string) (*Obj, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	n, ok := o.dirents[name]
+	return n, ok
 }
 
 // if o.key is prefix of key, include next component of key (unless
@@ -131,7 +197,7 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 		return "", m, false
 	}
 	name := s[len(o.key)]
-	_, ok := o.dirents[name]
+	_, ok := o.lookupDirent(name)
 	if ok {
 		m = o.t
 	} else {
@@ -142,20 +208,23 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 	return name, m, !ok
 }
 
-func (o *Obj) stat() *np.Stat {
-	st := &np.Stat{}
-	if len(o.key) > 0 {
-		st.Name = o.key[len(o.key)-1]
-	} else {
-		st.Name = "" // root
+func (o *Obj) Stat() (*np.Stat, error) {
+	var err error
+	if !o.isRead {
+		switch o.Perm() {
+		case np.DMDIR:
+			_, err = o.ReadDir()
+		case 0:
+			err = o.readHead()
+		default:
+			return nil, fmt.Errorf("not supported")
+		}
 	}
-	st.Mode = o.t | np.Tperm(0777)
-	st.Qid = o.qid()
-	st.Uid = ""
-	st.Gid = ""
-	st.Length = o.sz
-	st.Mtime = uint32(o.mtime.Unix())
-	return st
+	return o.stat(), err
+}
+
+func (o *Obj) Wstat(st *np.Stat) error {
+	return nil
 }
 
 func (o *Obj) readHead() error {
@@ -168,6 +237,8 @@ func (o *Obj) readHead() error {
 	if err != nil {
 		return err
 	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
 	o.sz = np.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = *result.LastModified
@@ -208,17 +279,17 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 	return result.Body, nil
 }
 
-func (o *Obj) readFile(off, cnt int) ([]byte, error) {
+func (o *Obj) ReadFile(off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DPrintf("readFile: %v %v %v\n", o.key, off, cnt)
 
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
-	if o.sz == 0 {
+	if !o.isRead {
 		o.readHead()
 	}
 	if np.Tlength(off) >= o.sz {
 		return nil, nil
 	}
-	r, err := o.s3Read(off, cnt)
+	r, err := o.s3Read(int(off), int(cnt))
 	if err != nil {
 		return nil, err
 	}
@@ -228,12 +299,12 @@ func (o *Obj) readFile(off, cnt int) ([]byte, error) {
 		n, err := r.Read(p)
 		if n > 0 {
 			// in case s3 returns more than we asked for
-			if n > cnt {
-				n = cnt
+			if n > int(cnt) {
+				n = int(cnt)
 			}
 			b = append(b, p[:n]...)
-			off += n
-			cnt -= n
+			off += np.Toffset(n)
+			cnt -= np.Tsize(n)
 		}
 		if err == io.EOF {
 			break
@@ -267,41 +338,42 @@ func (o *Obj) s3ReadDir() error {
 			db.DPrintf("Key: %v\n", *obj.Key)
 			if n, m, ok := o.includeName(*obj.Key); ok {
 				db.DPrintf("incl %v\n", n)
-				o1 := o.nps3.makeObj(append(o.key, n), m, o)
-				o.dirents[n] = o1
+				o1 := o.nps3.MakeObj(append(o.key, n), m, o)
+				o.addDirent(n, o1.(*Obj))
 			}
 		}
 	}
 	return nil
 }
 
-func (o *Obj) lookup(p []string) (*Obj, error) {
+func (o *Obj) Lookup(p []string) (npobjsrv.NpObj, error) {
 	db.DPrintf("%v: lookup %v\n", o, p)
 	if o.t != np.DMDIR {
 		return nil, fmt.Errorf("Not a directory")
 	}
-	_, err := o.readDir()
+	_, err := o.ReadDir()
 	if err != nil {
 		return nil, err
 	}
-	o1, ok := o.dirents[p[0]]
+	o1, ok := o.lookupDirent(p[0])
 	if !ok {
 		return nil, fmt.Errorf("file not found")
 	}
 	if len(p) == 1 {
 		return o1, nil
 	} else {
-		return o1.lookup(p[1:])
+		return o1.Lookup(p[1:])
 	}
 }
 
-func (o *Obj) readDir() ([]*np.Stat, error) {
+func (o *Obj) ReadDir() ([]*np.Stat, error) {
 	var dirents []*np.Stat
 	db.DPrintf("readDir: %v\n", o)
-	if len(o.dirents) == 0 {
+	if !o.isRead {
 		o.s3ReadDir()
-
 	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
 	for _, o1 := range o.dirents {
 		dirents = append(dirents, o1.stat())
 	}
@@ -309,7 +381,7 @@ func (o *Obj) readDir() ([]*np.Stat, error) {
 	return dirents, nil
 }
 
-func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (*Obj, error) {
+func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
 	key := np.Join(append(o.key, name))
 	input := &s3.PutObjectInput{
 		Bucket: &bucket,
@@ -320,8 +392,8 @@ func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (*Obj, error) {
 		return nil, err
 	}
 	// XXX ignored perm, only files not directories
-	o1 := o.nps3.makeObj(np.Split(key), 0, o)
-	o.dirents[name] = o1
+	o1 := o.nps3.MakeObj(np.Split(key), 0, o)
+	o.addDirent(name, o1.(*Obj))
 	return o1, nil
 }
 
@@ -335,14 +407,16 @@ func (o *Obj) Remove() error {
 	if err != nil {
 		return err
 	}
-	delete(o.parent.dirents, o.key[len(o.key)-1])
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	delete(o.dirents, o.key[len(o.key)-1])
 	return nil
 }
 
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
-func (o *Obj) writeFile(off int, b []byte) (int, error) {
+func (o *Obj) WriteFile(off np.Toffset, b []byte) (np.Tsize, error) {
 	db.DPrintf("writeFile %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
@@ -353,15 +427,15 @@ func (o *Obj) writeFile(off int, b []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if off < len(data) { // prefix of data?
+	if int(off) < len(data) { // prefix of data?
 		b1 := append(data[:off], b...)
-		if off+len(b) < len(data) { // suffix of data?
-			b = append(b1, data[off+len(b):]...)
+		if int(off)+len(b) < len(data) { // suffix of data?
+			b = append(b1, data[int(off)+len(b):]...)
 		}
-	} else if off == len(data) { // append?
+	} else if int(off) == len(data) { // append?
 		b = append(data, b...)
 	} else { // off > len(data), a hole
-		hole := make([]byte, off-len(data))
+		hole := make([]byte, int(off)-len(data))
 		b1 := append(data, hole...)
 		b = append(b1, b...)
 	}
@@ -375,5 +449,5 @@ func (o *Obj) writeFile(off int, b []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return len(b), nil
+	return np.Tsize(len(b)), nil
 }

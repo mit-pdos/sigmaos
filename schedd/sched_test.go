@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	// "ulambda/debug"
+	"ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -35,10 +35,10 @@ func makeTstate(t *testing.T) *Tstate {
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
-	// debug.SetDebug(true)
+	debug.SetDebug(false)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"0", "name/out", ""}, nil, nil, nil}
+	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"name/out", ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 

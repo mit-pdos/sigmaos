@@ -3,12 +3,14 @@ package schedd
 import (
 	//	"github.com/sasha-s/go-deadlock"
 	"log"
+	"net"
 	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/npobjsrv"
 	"ulambda/npsrv"
 )
 
@@ -26,6 +28,7 @@ type Sched struct {
 	load int // XXX bogus
 	nid  uint64
 	ls   map[string]*Lambda
+	root npobjsrv.NpObj
 	done bool
 	srv  *npsrv.NpServer
 }
@@ -34,8 +37,9 @@ func MakeSchedd() *Sched {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.load = 0
-	sd.nid = 1 // 1 reserved for dev
+	sd.nid = 0
 	sd.ls = make(map[string]*Lambda)
+	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil)
 	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
@@ -48,6 +52,22 @@ func MakeSchedd() *Sched {
 		log.Fatalf("PostService failed %v %v\n", fslib.SCHED, err)
 	}
 	return sd
+}
+
+func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
+	return npobjsrv.MakeNpConn(sd, conn)
+}
+
+func (sd *Sched) Done() {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	sd.done = true
+	sd.cond.Signal()
+}
+
+func (sd *Sched) Root() npobjsrv.NpObj {
+	return sd.root
 }
 
 func (sd *Sched) String() string {
@@ -68,30 +88,11 @@ func (sd *Sched) uid() uint64 {
 	return sd.nid
 }
 
-func (sd *Sched) ps() []*np.Stat {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-	dir := []*np.Stat{}
-	for _, l := range sd.ls {
-		dir = append(dir, l.stat("lambda"))
-	}
-	return dir
-}
-
 func (sd *Sched) spawn(l *Lambda) {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 
 	sd.ls[l.Pid] = l
-	sd.cond.Signal()
-}
-
-// Exit the scheduler
-func (sd *Sched) exit() {
-	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
-	sd.done = true
 	sd.cond.Signal()
 }
 

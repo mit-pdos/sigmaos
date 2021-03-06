@@ -26,6 +26,7 @@ type NpObj interface {
 	Create(string, np.Tperm, np.Tmode) (NpObj, error)
 	ReadFile(np.Toffset, np.Tsize) ([]byte, error)
 	WriteFile(np.Toffset, []byte) (np.Tsize, error)
+	WriteDir(np.Toffset, []byte) (np.Tsize, error)
 	Remove() error
 	Stat() (*np.Stat, error)
 	Wstat(*np.Stat) error
@@ -94,12 +95,8 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		npc.add(args.NewFid, o)
 	} else {
-		if o.Perm() != np.DMDIR {
+		if !o.Perm().IsDir() {
 			return np.ErrNotfound
-		}
-		_, err := o.ReadDir()
-		if err != nil {
-			return &np.Rerror{err.Error()}
 		}
 		o1, err := o.Lookup(args.Wnames)
 		if err != nil {
@@ -145,7 +142,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("o %v\n", o)
-	if o.Perm() != np.DMDIR {
+	if !o.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	if args.Perm.IsDir() { // fake a directory?
@@ -200,13 +197,10 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("ReadFid %v %v\n", args, o)
-	switch o.Perm() {
-	case np.DMDIR:
+	if o.Perm().IsDir() {
 		return npc.readDir(o, args, rets)
-	case 0:
+	} else {
 		return npc.readFile(o, args, rets)
-	default:
-		return np.ErrNotSupported
 	}
 }
 
@@ -217,19 +211,16 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("Write o %v\n", o)
-	switch o.Perm() {
-	case np.DMDIR:
-		// sub directories will be implicitly created; fake write
-		rets.Count = np.Tsize(len(args.Data))
-		return nil
-	case 0:
-		cnt, err := o.WriteFile(args.Offset, args.Data)
-		if err != nil {
-			return &np.Rerror{err.Error()}
-		}
-		rets.Count = np.Tsize(cnt)
-	default:
-		return np.ErrNotSupported
+	var err error
+	cnt := np.Tsize(0)
+	if o.Perm().IsDir() {
+		cnt, err = o.WriteDir(args.Offset, args.Data)
+	} else {
+		cnt, err = o.WriteFile(args.Offset, args.Data)
+	}
+	rets.Count = np.Tsize(cnt)
+	if err != nil {
+		return &np.Rerror{err.Error()}
 	}
 	return nil
 }

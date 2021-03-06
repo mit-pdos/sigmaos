@@ -7,16 +7,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
-	"unicode"
-	"unicode/utf8"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	np "ulambda/ninep"
 )
 
 type Lambda struct {
@@ -37,9 +33,10 @@ type Lambda struct {
 	ConsDep    map[string]bool // if true, consumer has finished
 	ProdDep    map[string]bool // if true, producer is running
 	ExitDep    map[string]bool
+	obj        *Obj
 }
 
-func makeLambda(sd *Sched, a string) *Lambda {
+func makeLambda(sd *Sched, a string, o *Obj) *Lambda {
 	l := &Lambda{}
 	l.sd = sd
 	l.cond = sync.NewCond(&l.mu)
@@ -51,6 +48,7 @@ func makeLambda(sd *Sched, a string) *Lambda {
 	l.time = time.Now().Unix()
 	l.uid = sd.uid()
 	l.Status = "Init"
+	l.obj = o
 	return l
 }
 
@@ -107,88 +105,6 @@ func (l *Lambda) String() string {
 	return str
 }
 
-func (l *Lambda) qid(isL bool) np.Tqid {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.qidL(isL)
-}
-
-func (l *Lambda) qidL(isL bool) np.Tqid {
-	if isL {
-		return np.MakeQid(np.Qtype(np.DMDIR>>np.QTYPESHIFT),
-			np.TQversion(0), np.Tpath(l.uid))
-	} else {
-		return np.MakeQid(np.Qtype(np.DMDEVICE>>np.QTYPESHIFT),
-			np.TQversion(0), np.Tpath(l.uid))
-	}
-}
-
-func (l *Lambda) stat(name string) *np.Stat {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	st := &np.Stat{}
-	if name == "lambda" {
-		st.Mode = np.Tperm(0777) | LAMBDA.mode()
-		st.Qid = l.qidL(true)
-		st.Name = l.Pid
-	} else {
-		st.Mode = np.Tperm(0777) | FIELD.mode()
-		st.Qid = l.qidL(false)
-		st.Name = name
-	}
-	st.Mtime = uint32(l.time)
-	return st
-}
-
-func (l *Lambda) ls() []*np.Stat {
-	st := []*np.Stat{}
-
-	v := reflect.ValueOf(Lambda{})
-	for i := 0; i < v.NumField(); i++ {
-		n := v.Type().Field(i).Name
-		r, _ := utf8.DecodeRuneInString(n)
-		if unicode.IsUpper(r) {
-			st = append(st, l.stat(n))
-		}
-	}
-	return st
-}
-
-// XXX reflection also requires a switch but just on kind, perhaps better
-func (l *Lambda) readField(f string) ([]byte, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	var b []byte
-	switch f {
-	case "ExitStatus":
-		l.waitForL()
-		b = []byte(l.ExitStatus)
-	case "Status":
-		b = []byte(l.Status)
-	case "Program":
-		b = []byte(l.Program)
-	case "Pid":
-		b = []byte(l.Pid)
-	case "Dir":
-		b = []byte(l.Dir)
-	case "Args":
-		return json.Marshal(l.Args)
-	case "Env":
-		return json.Marshal(l.Env)
-	case "ConsDep":
-		return json.Marshal(l.ConsDep)
-	case "ProdDep":
-		return json.Marshal(l.ProdDep)
-	case "ExitDep":
-		return json.Marshal(l.ExitDep)
-	default:
-		return nil, fmt.Errorf("Unreadable field %v", f)
-	}
-	return b, nil
-}
-
 // XXX might want to clean up the locking here
 func (l *Lambda) writeExitStatus(status string) {
 	// Always take the sd lock before the l lock
@@ -224,20 +140,6 @@ func (l *Lambda) writeStatus(status string) error {
 
 	l.startConsDep()
 	l.sd.cond.Signal()
-	return nil
-}
-
-func (l *Lambda) writeField(f string, data []byte) error {
-	switch f {
-	case "ExitStatus":
-		l.writeExitStatus(string(data))
-	case "Status":
-		l.writeStatus(string(data))
-	case "ExitDep":
-		l.swapExitDependency(string(data))
-	default:
-		return fmt.Errorf("Unwritable field %v", f)
-	}
 	return nil
 }
 

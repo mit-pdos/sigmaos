@@ -348,7 +348,7 @@ func (o *Obj) s3ReadDir() error {
 
 func (o *Obj) Lookup(p []string) (npobjsrv.NpObj, error) {
 	db.DPrintf("%v: lookup %v\n", o, p)
-	if o.t != np.DMDIR {
+	if !o.t.IsDir() {
 		return nil, fmt.Errorf("Not a directory")
 	}
 	_, err := o.ReadDir()
@@ -449,5 +449,10 @@ func (o *Obj) WriteFile(off np.Toffset, b []byte) (np.Tsize, error) {
 	if err != nil {
 		return 0, err
 	}
+	return np.Tsize(len(b)), nil
+}
+
+// sub directories will be implicitly created; fake write
+func (o *Obj) WriteDir(off np.Toffset, b []byte) (np.Tsize, error) {
 	return np.Tsize(len(b)), nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -23,10 +24,11 @@ type Obj struct {
 	parent npobjsrv.NpObj
 	sd     *Sched
 	l      *Lambda
+	time   int64
 }
 
 func (sd *Sched) MakeObj(path []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.NpObj {
-	o := &Obj{path, t, p, sd, nil}
+	o := &Obj{path, t, p, sd, nil, int64(0)}
 	return o
 }
 
@@ -43,14 +45,17 @@ func (o *Obj) Size() np.Tlength {
 }
 
 func (o *Obj) Qid() np.Tqid {
-	if len(o.name) == 0 {
+	switch len(o.name) {
+	case 0:
 		return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 			np.TQversion(0), np.Tpath(0))
-
-	} else {
+	case 1, 2:
 		return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 			np.TQversion(0), np.Tpath(o.l.uid))
+	default:
+		log.Fatalf("Qid %v\n", o)
 	}
+	return np.Tqid{}
 }
 
 func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
@@ -60,6 +65,7 @@ func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, er
 	}
 	// Creating a lambda is always a directory
 	o1 := o.sd.MakeObj(append(o.name, name), perm|np.DMDIR, o).(*Obj)
+	o1.time = time.Now().Unix()
 	o1.l = makeLambda(o.sd, name, o1)
 	return o1, nil
 }
@@ -69,33 +75,44 @@ func (o *Obj) Lookup(p []string) (npobjsrv.NpObj, error) {
 	if !o.t.IsDir() {
 		return nil, fmt.Errorf("Not a directory")
 	}
-	if len(p) == 2 { // pid/field
+	var o1 *Obj
+	switch len(o.name) {
+	case 0:
 		l := o.sd.findLambda(p[0])
 		if l == nil {
 			return nil, fmt.Errorf("not found")
 		}
-		db.DPrintf("%v: Lookup %v\n", o, p[1])
-		o = l.obj
-		p = p[1:]
-	}
-	if len(p) != 1 {
+		o1 = l.obj
+		if len(p) > 1 {
+			o1 = o1.sd.MakeObj(append(o1.name, p[1]), 0, o1).(*Obj)
+			o1.time = o.time
+			o1.l = l
+		}
+	case 1:
+		o1 = o.sd.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
+		o1.time = o.time
+		o1.l = o.l
+	default:
 		log.Fatalf("%v: Lookup: %v\n", o, p)
 	}
-	o1 := o.sd.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
-	o1.l = o.l
 	return o1, nil
 }
 
-func (o Obj) stat(name string) *np.Stat {
+func (o Obj) stat() *np.Stat {
 	st := &np.Stat{}
-	if name == "" {
-		st.Name = o.l.Pid
-	} else {
-		st.Name = name
+	switch len(o.name) {
+	case 0:
+		st.Name = ""
+	case 1:
+		st.Name = o.name[0]
+	case 2:
+		st.Name = o.name[1]
+	default:
+		log.Fatalf("stat: name %v\n", o.name)
 	}
 	st.Mode = np.Tperm(0777) | o.t
+	st.Mtime = uint32(o.time)
 	st.Qid = o.Qid()
-	st.Mtime = uint32(o.l.time)
 	return st
 }
 
@@ -108,7 +125,10 @@ func (o *Obj) readLambda() ([]*np.Stat, error) {
 		n := v.Type().Field(i).Name
 		r, _ := utf8.DecodeRuneInString(n)
 		if unicode.IsUpper(r) {
-			st = append(st, o.stat(n))
+			o1 := o.sd.MakeObj(append(o.name, n), 0, o).(*Obj)
+			o1.time = o.time
+			o1.l = o.l
+			st = append(st, o1.stat())
 		}
 	}
 	return st, nil
@@ -119,18 +139,22 @@ func (sd *Sched) ps() []*np.Stat {
 	defer sd.mu.Unlock()
 	dir := []*np.Stat{}
 	for _, l := range sd.ls {
-		dir = append(dir, l.obj.stat(""))
+		dir = append(dir, l.obj.stat())
 	}
 	return dir
 }
 
 func (o *Obj) ReadDir() ([]*np.Stat, error) {
 	db.DPrintf("readDir: %v\n", o)
-	if len(o.name) == 0 { // root
+	switch len(o.name) {
+	case 0:
 		return o.sd.ps(), nil
-	} else {
+	case 1:
 		return o.readLambda()
+	default:
+		log.Fatalf("ReadDir: name %v\n", o)
 	}
+	return nil, nil
 }
 
 func (o *Obj) ReadFile(off np.Toffset, cnt np.Tsize) ([]byte, error) {
@@ -179,11 +203,7 @@ func (o *Obj) Remove() error {
 }
 
 func (o *Obj) Stat() (*np.Stat, error) {
-	if o.t.IsDir() {
-		return o.stat(""), nil
-	} else {
-		return o.stat(o.name[0]), nil
-	}
+	return o.stat(), nil
 }
 
 func (o *Obj) WriteFile(off np.Toffset, data []byte) (np.Tsize, error) {
@@ -206,16 +226,24 @@ func (o *Obj) WriteFile(off np.Toffset, data []byte) (np.Tsize, error) {
 
 func (o *Obj) WriteDir(off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("%v: writeDir %v %v\n", o, off, len(data))
-	if o.l.Status == "Init" {
-		err := o.l.init(data)
-		if err != nil {
-			return 0, nil
+	switch len(o.name) {
+	case 0:
+		return 0, fmt.Errorf("Root is not writable %v", o)
+	case 1:
+		if o.l.Status == "Init" {
+			err := o.l.init(data)
+			if err != nil {
+				return 0, nil
+			}
+			o.sd.spawn(o.l)
+			return np.Tsize(len(data)), nil
+		} else {
+			return 0, fmt.Errorf("Lambda already running")
 		}
-		o.sd.spawn(o.l)
-		return np.Tsize(len(data)), nil
-	} else {
-		return 0, fmt.Errorf("Lambda already running")
+	default:
+		log.Fatalf("ReadDir: name %v\n", o)
 	}
+	return 0, nil
 }
 
 func (o *Obj) Wstat(st *np.Stat) error {

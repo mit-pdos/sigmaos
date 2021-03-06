@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -23,7 +22,6 @@ type Lambda struct {
 	sd         *Sched
 	Pid        string
 	uid        uint64
-	time       int64
 	Status     string
 	ExitStatus string
 	Program    string
@@ -45,7 +43,6 @@ func makeLambda(sd *Sched, a string, o *Obj) *Lambda {
 	l.ProdDep = make(map[string]bool)
 	l.ExitDep = make(map[string]bool)
 	l.Pid = a
-	l.time = time.Now().Unix()
 	l.uid = sd.uid()
 	l.Status = "Init"
 	l.obj = o

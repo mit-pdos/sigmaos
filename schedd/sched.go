@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
@@ -28,7 +29,7 @@ type Sched struct {
 	load int // XXX bogus
 	nid  uint64
 	ls   map[string]*Lambda
-	root npobjsrv.NpObj
+	root *Obj
 	done bool
 	srv  *npsrv.NpServer
 }
@@ -39,7 +40,8 @@ func MakeSchedd() *Sched {
 	sd.load = 0
 	sd.nid = 0
 	sd.ls = make(map[string]*Lambda)
-	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil)
+	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
+	sd.root.time = time.Now().Unix()
 	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {

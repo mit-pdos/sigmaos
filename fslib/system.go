@@ -10,6 +10,7 @@ import (
 
 const NAMED = "name"
 const S3 = "name/s3"
+const UX = "name/ux"
 
 type System struct {
 	named  *exec.Cmd

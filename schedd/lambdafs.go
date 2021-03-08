@@ -36,10 +36,6 @@ func (o *Obj) Perm() np.Tperm {
 	return o.t
 }
 
-func (o *Obj) Path() []string {
-	return o.name
-}
-
 func (o *Obj) Size() np.Tlength {
 	return 0
 }

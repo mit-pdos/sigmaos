@@ -72,6 +72,7 @@ type Obj struct {
 	sz     np.Tlength
 	parent npo.NpObj
 	file   *os.File
+	init   bool
 }
 
 func (npux *NpUx) makeObjL(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
@@ -95,15 +96,24 @@ func (o *Obj) String() string {
 }
 
 func (o *Obj) Qid() np.Tqid {
+	if !o.init {
+		o.stat()
+	}
 	return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 		np.TQversion(0), np.Tpath(o.ino))
 }
 
 func (o *Obj) Perm() np.Tperm {
+	if !o.init {
+		o.stat()
+	}
 	return o.t
 }
 
 func (o *Obj) Size() np.Tlength {
+	if !o.init {
+		o.stat()
+	}
 	return o.sz
 }
 
@@ -147,6 +157,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 	}
 	o.ino = ustat.Ino
 	o.sz = np.Tlength(ustat.Size)
+	o.init = true
 
 	st := &np.Stat{}
 	if len(o.path) > 0 {
@@ -161,6 +172,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 	st.Length = o.sz
 	s, _ := ustat.Mtim.Unix()
 	st.Mtime = uint32(s)
+
 	return st, nil
 }
 

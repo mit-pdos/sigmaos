@@ -212,12 +212,12 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 	return name, m, !ok
 }
 
-func (o *Obj) Stat() (*np.Stat, error) {
+func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 	var err error
 	if !o.isRead {
 		switch o.Perm() {
 		case np.DMDIR:
-			_, err = o.ReadDir(0, 0)
+			_, err = o.ReadDir(ctx, 0, 0)
 		case 0:
 			err = o.readHead()
 		default:
@@ -227,7 +227,7 @@ func (o *Obj) Stat() (*np.Stat, error) {
 	return o.stat(), err
 }
 
-func (o *Obj) Wstat(st *np.Stat) error {
+func (o *Obj) Wstat(ctx *npo.Ctx, st *np.Stat) error {
 	return nil
 }
 
@@ -283,7 +283,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 	return result.Body, nil
 }
 
-func (o *Obj) ReadFile(off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DPrintf("readFile: %v %v %v\n", o.key, off, cnt)
 
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
@@ -355,7 +355,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
-	_, err := o.ReadDir(0, 0)
+	_, err := o.ReadDir(ctx, 0, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -370,7 +370,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 	}
 }
 
-func (o *Obj) ReadDir(off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	var dirents []*np.Stat
 	db.DPrintf("readDir: %v\n", o)
 	if !o.isRead {
@@ -409,11 +409,11 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(m np.Tmode) error {
+func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Remove(name string) error {
+func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
 	key := np.Join(o.key)
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
@@ -429,14 +429,14 @@ func (o *Obj) Remove(name string) error {
 	return nil
 }
 
-func (o *Obj) Rename(from, to string) error {
+func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
-func (o *Obj) WriteFile(off np.Toffset, b []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
 	db.DPrintf("writeFile %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
@@ -473,6 +473,6 @@ func (o *Obj) WriteFile(off np.Toffset, b []byte) (np.Tsize, error) {
 }
 
 // sub directories will be implicitly created; fake write
-func (o *Obj) WriteDir(off np.Toffset, b []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
 	return np.Tsize(len(b)), nil
 }

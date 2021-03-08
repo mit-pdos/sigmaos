@@ -8,7 +8,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/npobjsrv"
+	npo "ulambda/npobjsrv"
 )
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
@@ -71,7 +71,7 @@ func (dir *Dir) Len() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
-func (dir *Dir) namei(path []string, inodes []npobjsrv.NpObj) ([]npobjsrv.NpObj, []string, error) {
+func (dir *Dir) namei(path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
 	var inode *Inode
 	var err error
 
@@ -105,7 +105,7 @@ func (dir *Dir) lsL() []*np.Stat {
 		if k == "." {
 			continue
 		}
-		st, _ := v.Stat()
+		st, _ := v.stat()
 		st.Name = k
 		entries = append(entries, st)
 	}

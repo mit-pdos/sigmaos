@@ -71,7 +71,7 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 }
 
 // check permissions etc.
-func (o *Obj) Open(m np.Tmode) error {
+func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
 	return nil
 }
 
@@ -152,7 +152,7 @@ func (sd *Sched) ps() []*np.Stat {
 	return dir
 }
 
-func (o *Obj) ReadDir(off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	db.DPrintf("readDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
@@ -165,7 +165,7 @@ func (o *Obj) ReadDir(off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	return nil, nil
 }
 
-func (o *Obj) ReadFile(off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DPrintf("%v: ReadFile: %v %v\n", o, off, cnt)
 	if len(o.name) != 2 {
 		log.Fatalf("ReadFile: name != 2 %v\n", o)
@@ -206,19 +206,19 @@ func (o *Obj) ReadFile(off np.Toffset, cnt np.Tsize) ([]byte, error) {
 }
 
 // kill?
-func (o *Obj) Remove(name string) error {
+func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Rename(from, to string) error {
+func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Stat() (*np.Stat, error) {
+func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 	return o.stat(), nil
 }
 
-func (o *Obj) WriteFile(off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("%v: writeFile %v %v\n", o, off, len(data))
 	if len(o.name) != 2 {
 		log.Fatalf("WriteFile: name != 2 %v\n", o)
@@ -236,7 +236,7 @@ func (o *Obj) WriteFile(off np.Toffset, data []byte) (np.Tsize, error) {
 	return np.Tsize(len(data)), nil
 }
 
-func (o *Obj) WriteDir(off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("%v: writeDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:
@@ -258,6 +258,6 @@ func (o *Obj) WriteDir(off np.Toffset, data []byte) (np.Tsize, error) {
 	return 0, nil
 }
 
-func (o *Obj) Wstat(st *np.Stat) error {
+func (o *Obj) Wstat(ctx *npo.Ctx, st *np.Stat) error {
 	return nil
 }

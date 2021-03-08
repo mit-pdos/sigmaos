@@ -117,10 +117,7 @@ func (inode *Inode) Mode() np.Tperm {
 	return perm
 }
 
-func (inode *Inode) Stat() (*np.Stat, error) {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-
+func (inode *Inode) stat() (*np.Stat, error) {
 	stat := &np.Stat{}
 	stat.Type = 0 // XXX
 	stat.Qid = inode.Qid()
@@ -133,6 +130,12 @@ func (inode *Inode) Stat() (*np.Stat, error) {
 	stat.Gid = inode.owner
 	stat.Muid = ""
 	return stat, nil
+}
+
+func (inode *Inode) Stat(Ctx *npo.Ctx) (*np.Stat, error) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+	return inode.stat()
 }
 
 func (inode *Inode) Create(ctx *npo.Ctx, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
@@ -181,7 +184,7 @@ func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, 
 	}
 }
 
-func (inode *Inode) Remove(n string) error {
+func (inode *Inode) Remove(ctx *npo.Ctx, n string) error {
 	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}
@@ -204,7 +207,7 @@ func (inode *Inode) Remove(n string) error {
 }
 
 // XXX open for other types than pipe
-func (inode *Inode) Open(mode np.Tmode) error {
+func (inode *Inode) Open(ctx *npo.Ctx, mode np.Tmode) error {
 	db.DPrintf("inode.Open %v", inode)
 	if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
@@ -226,7 +229,7 @@ func (inode *Inode) Close(mode np.Tmode) error {
 	return nil
 }
 
-func (inode *Inode) WriteFile(offset np.Toffset, data []byte) (np.Tsize, error) {
+func (inode *Inode) WriteFile(ctx *npo.Ctx, offset np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("inode.Write %v", inode)
 	var sz np.Tsize
 	var err error
@@ -249,16 +252,16 @@ func (inode *Inode) WriteFile(offset np.Toffset, data []byte) (np.Tsize, error) 
 	return sz, err
 }
 
-func (inode *Inode) ReadDir(offset np.Toffset, n np.Tsize) ([]*np.Stat, error) {
+func (inode *Inode) ReadDir(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]*np.Stat, error) {
 	d := inode.Data.(*Dir)
 	return d.read(offset, n)
 }
 
-func (inode *Inode) WriteDir(offset np.Toffset, b []byte) (np.Tsize, error) {
+func (inode *Inode) WriteDir(ctx *npo.Ctx, offset np.Toffset, b []byte) (np.Tsize, error) {
 	return 0, errors.New("Cannot write directory")
 }
 
-func (inode *Inode) ReadFile(offset np.Toffset, n np.Tsize) ([]byte, error) {
+func (inode *Inode) ReadFile(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]byte, error) {
 	db.DPrintf("inode.Read %v", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
@@ -275,8 +278,7 @@ func (inode *Inode) ReadFile(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	}
 }
 
-// XXX current name
-func (inode *Inode) Rename(from, to string) error {
+func (inode *Inode) Rename(ctx *npo.Ctx, from, to string) error {
 	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}

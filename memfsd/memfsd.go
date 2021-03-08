@@ -45,6 +45,10 @@ func (fsd *Fsd) Addr() string {
 	return fsd.srv.MyAddr()
 }
 
+func (fsd *Fsd) Ctx() *npo.Ctx {
+	return fsd.ctx
+}
+
 func (fsd *Fsd) Root() npo.NpObj {
 	return fsd.root
 }

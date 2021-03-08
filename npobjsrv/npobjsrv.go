@@ -20,9 +20,6 @@ type Resolver interface {
 	Resolve(*Ctx, []string) error
 }
 
-// XXX Probably should be passed to open, create, remove, stat,
-// rename, ..  Maybe also contain other context: pathname, so that
-// users of NpObj API don't have to maintain it.
 type Ctx struct {
 	uname string
 	r     Resolver
@@ -43,14 +40,14 @@ type NpObj interface {
 	Perm() np.Tperm
 	Size() np.Tlength
 	Create(*Ctx, string, np.Tperm, np.Tmode) (NpObj, error)
-	Open(np.Tmode) error
-	ReadFile(np.Toffset, np.Tsize) ([]byte, error)
-	WriteFile(np.Toffset, []byte) (np.Tsize, error)
-	ReadDir(np.Toffset, np.Tsize) ([]*np.Stat, error)
-	WriteDir(np.Toffset, []byte) (np.Tsize, error)
-	Remove(string) error
-	Stat() (*np.Stat, error)
-	Rename(string, string) error
+	Open(*Ctx, np.Tmode) error
+	ReadFile(*Ctx, np.Toffset, np.Tsize) ([]byte, error)
+	WriteFile(*Ctx, np.Toffset, []byte) (np.Tsize, error)
+	ReadDir(*Ctx, np.Toffset, np.Tsize) ([]*np.Stat, error)
+	WriteDir(*Ctx, np.Toffset, []byte) (np.Tsize, error)
+	Remove(*Ctx, string) error
+	Stat(*Ctx) (*np.Stat, error)
+	Rename(*Ctx, string, string) error
 }
 
 type Fid struct {
@@ -139,7 +136,6 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				return &np.Rerror{err.Error()}
 			}
 		}
-
 		os, rest, err := f.obj.Lookup(npc.ctx, args.Wnames)
 		if err != nil {
 			return np.ErrNotfound
@@ -173,7 +169,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("f %v\n", f)
-	err := f.obj.Open(args.Mode)
+	err := f.obj.Open(npc.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -196,7 +192,6 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 	}
-
 	if !f.obj.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
@@ -220,7 +215,7 @@ func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 	if o.Size() > 0 && args.Offset >= np.Toffset(o.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		dirents, err = o.ReadDir(args.Offset, args.Count)
+		dirents, err = o.ReadDir(npc.ctx, args.Offset, args.Count)
 
 	}
 	b, err := npcodec.Dir2Byte(args.Offset, args.Count, dirents)
@@ -233,7 +228,7 @@ func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 
 // XXX check for offset > len here?
 func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
-	b, err := o.ReadFile(args.Offset, args.Count)
+	b, err := o.ReadFile(npc.ctx, args.Offset, args.Count)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -265,9 +260,9 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	var err error
 	cnt := np.Tsize(0)
 	if f.obj.Perm().IsDir() {
-		cnt, err = f.obj.WriteDir(args.Offset, args.Data)
+		cnt, err = f.obj.WriteDir(npc.ctx, args.Offset, args.Data)
 	} else {
-		cnt, err = f.obj.WriteFile(args.Offset, args.Data)
+		cnt, err = f.obj.WriteFile(npc.ctx, args.Offset, args.Data)
 	}
 	rets.Count = np.Tsize(cnt)
 	if err != nil {
@@ -286,7 +281,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		return nil
 	}
 	db.DPrintf("Remove f %v\n", f)
-	err := f.obj.Remove(f.path[len(f.path)-1])
+	err := f.obj.Remove(npc.ctx, f.path[len(f.path)-1])
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -300,7 +295,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("Stat %v\n", f)
-	st, err := f.obj.Stat()
+	st, err := f.obj.Stat(npc.ctx)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -315,7 +310,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	}
 	db.DPrintf("Wstat %v %v\n", f, args)
 	if args.Stat.Name != "" {
-		err := f.obj.Rename(f.path[len(f.path)-1], args.Stat.Name)
+		err := f.obj.Rename(npc.ctx, f.path[len(f.path)-1], args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

@@ -18,16 +18,17 @@ import (
 )
 
 type NpUx struct {
-	mu   sync.Mutex
-	srv  *npsrv.NpServer
-	ch   chan bool
-	root npo.NpObj
+	mu    sync.Mutex
+	srv   *npsrv.NpServer
+	ch    chan bool
+	root  npo.NpObj
+	mount string
 }
 
-func MakeNpUx() *NpUx {
+func MakeNpUx(mount string) *NpUx {
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
-	npux.root = npux.MakeObj([]string{}, np.DMDIR, nil)
+	npux.root = npux.MakeObj([]string{mount}, np.DMDIR, nil)
 	db.SetDebug(true)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
@@ -266,8 +267,8 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 
 // XXX close
 func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
-	db.DPrintf("%v: Create %v %v %v\n", ctx, o, name, perm)
 	p := np.Join(append(o.path, name))
+	db.DPrintf("%v: Create %v %v %v\n", ctx, o, name, p, perm)
 	var err error
 	var file *os.File
 	if perm.IsDir() {
@@ -281,7 +282,8 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 	if file != nil {
 		o.file = file
 	}
-	return nil, fmt.Errorf("not supported")
+	o1 := o.npux.MakeObj(append(o.path, name), 0, o)
+	return o1, nil
 }
 
 // XXX close

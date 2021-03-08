@@ -12,15 +12,37 @@ import (
 
 type NpObjSrv interface {
 	Root() NpObj
+	Resolver() Resolver
 	Done()
 }
 
+type Resolver interface {
+	Resolve(*Ctx, []string) error
+}
+
+// XXX Probably should be passed to open, create, remove, stat,
+// rename, ..  Maybe also contain other context: pathname, so that
+// users of NpObj API don't have to maintain it.
+type Ctx struct {
+	uname string
+	r     Resolver
+}
+
+func MkCtx(uname string, r Resolver) *Ctx {
+	ctx := &Ctx{uname, r}
+	return ctx
+}
+
+func (ctx *Ctx) Uname() string {
+	return ctx.uname
+}
+
 type NpObj interface {
-	Lookup([]string) ([]NpObj, []string, error)
+	Lookup(*Ctx, []string) ([]NpObj, []string, error)
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Size() np.Tlength
-	Create(string, np.Tperm, np.Tmode) (NpObj, error)
+	Create(*Ctx, string, np.Tperm, np.Tmode) (NpObj, error)
 	Open(np.Tmode) error
 	ReadFile(np.Toffset, np.Tsize) ([]byte, error)
 	WriteFile(np.Toffset, []byte) (np.Tsize, error)
@@ -37,11 +59,11 @@ type Fid struct {
 }
 
 type NpConn struct {
-	mu    sync.Mutex // for Fids
-	conn  net.Conn
-	fids  map[np.Tfid]*Fid
-	uname string
-	osrv  NpObjSrv
+	mu   sync.Mutex // for Fids
+	conn net.Conn
+	fids map[np.Tfid]*Fid
+	ctx  *Ctx
+	osrv NpObjSrv
 }
 
 func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
@@ -49,6 +71,7 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc.conn = conn
 	npc.osrv = osrv
 	npc.fids = make(map[np.Tfid]*Fid)
+
 	return npc
 }
 
@@ -83,7 +106,7 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DPrintf("Attach %v\n", args)
-	npc.uname = args.Uname
+	npc.ctx = &Ctx{args.Uname, npc.osrv.Resolver()}
 	root := npc.osrv.Root()
 	npc.add(args.Fid, &Fid{[]string{}, root})
 	rets.Qid = root.Qid()
@@ -110,7 +133,14 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if !f.obj.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		os, rest, err := f.obj.Lookup(args.Wnames)
+		if npc.ctx.r != nil {
+			err := npc.ctx.r.Resolve(npc.ctx, args.Wnames)
+			if err != nil {
+				return &np.Rerror{err.Error()}
+			}
+		}
+
+		os, rest, err := f.obj.Lookup(npc.ctx, args.Wnames)
 		if err != nil {
 			return np.ErrNotfound
 		}
@@ -158,15 +188,24 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DPrintf("f %v\n", f)
+
+	names := []string{args.Name}
+	if npc.ctx.r != nil {
+		err := npc.ctx.r.Resolve(npc.ctx, names)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+	}
+
 	if !f.obj.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
-	o1, err := f.obj.Create(args.Name, args.Perm, args.Mode)
+	o1, err := f.obj.Create(npc.ctx, names[0], args.Perm, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
 
-	npc.add(args.Fid, &Fid{append(f.path, args.Name), o1})
+	npc.add(args.Fid, &Fid{append(f.path, names[0]), o1})
 	rets.Qid = o1.Qid()
 	return nil
 }

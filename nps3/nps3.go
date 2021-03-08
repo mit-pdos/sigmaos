@@ -21,7 +21,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/npobjsrv"
+	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 )
 
@@ -37,7 +37,7 @@ type Nps3 struct {
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
-	root   npobjsrv.NpObj
+	root   npo.NpObj
 }
 
 func MakeNps3() *Nps3 {
@@ -71,12 +71,16 @@ func MakeNps3() *Nps3 {
 }
 
 func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npobjsrv.MakeNpConn(nps3, conn)
+	clnt := npo.MakeNpConn(nps3, conn)
 	return clnt
 }
 
-func (nps3 *Nps3) Root() npobjsrv.NpObj {
+func (nps3 *Nps3) Root() npo.NpObj {
 	return nps3.root
+}
+
+func (nps3 *Nps3) Resolver() npo.Resolver {
+	return nil
 }
 
 func (nps3 *Nps3) Serve() {
@@ -95,7 +99,7 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.NpObj {
+func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p npo.NpObj) npo.NpObj {
 	id := nps3.nextId
 	nps3.nextId += 1
 
@@ -109,7 +113,7 @@ func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.
 	return o
 }
 
-func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.NpObj {
+func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, p npo.NpObj) npo.NpObj {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
 	return nps3.makeObjL(key, t, p)
@@ -124,7 +128,7 @@ type Obj struct {
 	sz      np.Tlength
 	mtime   time.Time
 	dirents map[string]*Obj
-	parent  npobjsrv.NpObj
+	parent  npo.NpObj
 	isRead  bool
 }
 
@@ -346,8 +350,8 @@ func (o *Obj) s3ReadDir() error {
 	return nil
 }
 
-func (o *Obj) Lookup(p []string) ([]npobjsrv.NpObj, []string, error) {
-	db.DPrintf("%v: lookup %v\n", o, p)
+func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
+	db.DPrintf("%v: lookup %v %v\n", ctx, o, p)
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
@@ -360,9 +364,9 @@ func (o *Obj) Lookup(p []string) ([]npobjsrv.NpObj, []string, error) {
 		return nil, nil, fmt.Errorf("file not found")
 	}
 	if len(p) == 1 {
-		return []npobjsrv.NpObj{o1}, nil, nil
+		return []npo.NpObj{o1}, nil, nil
 	} else {
-		return o1.Lookup(p[1:])
+		return o1.Lookup(ctx, p[1:])
 	}
 }
 
@@ -384,7 +388,7 @@ func (o *Obj) ReadDir(off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 // XXX directories don't fully work: there is a fake directory, when
 // trying to read it we get an error.  Maybe create . or .. in the
 // directory args.Name, to force the directory into existence
-func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
+func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	if perm.IsDir() {
 		o1 := o.nps3.MakeObj(append(o.key, name), np.DMDIR, o)
 		return o1, nil

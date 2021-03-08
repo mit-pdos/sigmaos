@@ -94,7 +94,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)
 	}
-	fsd := memfsd.MakeFsd(ip+":0", nil)
+	fsd := memfsd.MakeFsd("sharder", ip+":0", nil)
 	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
-	db.SetDebug(true)
+	db.SetDebug(false)
 
 	return sh, nil
 }

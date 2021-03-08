@@ -12,6 +12,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/npobjsrv"
 )
 
 const (
@@ -69,7 +70,7 @@ func MakeKv(args []string) (*Kv, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
 	}
-	fsd := memfsd.MakeFsd(ip+":0", kv)
+	fsd := memfsd.MakeFsd(kv.me, ip+":0", kv)
 	fsl, err := fslib.InitFs(kv.me, fsd, &KvDev{kv})
 	if err != nil {
 		return nil, err
@@ -80,9 +81,10 @@ func MakeKv(args []string) (*Kv, error) {
 	return kv, nil
 }
 
-// Interposes on memfsd's walk to check that clerk and I run in same config
-func (kv *Kv) Walk(src string, names []string) error {
-	db.DPrintf("%v: Walk %v %v\n", kv.me, src, names)
+// Interposes on memfsd's name resolution to check that clerk and I
+// run in same config, and modify the name to strip off config #.
+func (kv *Kv) Resolve(ctx *npobjsrv.Ctx, names []string) error {
+	db.DPrintf("%v: %v: Resolve %v\n", kv.me, ctx, names)
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
@@ -90,7 +92,7 @@ func (kv *Kv) Walk(src string, names []string) error {
 		return nil
 	}
 
-	if strings.HasPrefix(src, "clerk/") &&
+	if strings.HasPrefix(ctx.Uname(), "clerk/") &&
 		strings.Contains(names[len(names)-1], "-") {
 		if kv.nextConf != nil {
 			return ErrRetry

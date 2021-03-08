@@ -33,9 +33,9 @@ func MakeReader(args []string) (*Reader, error) {
 	if err != nil {
 		return nil, errors.New("MakeReader: No IP")
 	}
-	memfsd := memfsd.MakeFsd(ip+":0", nil)
 	n := "name/" + args[2]
-	pipe, err := memfsd.MkPipe(n, "pipe")
+	memfsd := memfsd.MakeFsd(n, ip+":0", nil)
+	pipe, err := memfsd.MkPipe("pipe")
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}

@@ -2,40 +2,29 @@ package memfsd
 
 import (
 	"net"
-	"sync"
 
 	db "ulambda/debug"
 	"ulambda/memfs"
 	np "ulambda/ninep"
-	"ulambda/npobjsrv"
+	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 )
-
-// XXX maybe overload func (npc *Npconn) Open ..
-type Walker interface {
-	Walk(string, []string) error
-}
-
-type NpConn struct {
-	mu    sync.Mutex // for Fids
-	conn  net.Conn
-	uname string
-	walk  Walker
-}
 
 type Fsd struct {
 	root *memfs.Inode
 	srv  *npsrv.NpServer
-	walk Walker
 	ch   chan bool
 	addr string
+	ctx  *npo.Ctx
+	r    npo.Resolver
 }
 
-func MakeFsd(addr string, w Walker) *Fsd {
+func MakeFsd(uname, addr string, r npo.Resolver) *Fsd {
 	fsd := &Fsd{}
-	fsd.root = memfs.RootInode()
-	fsd.walk = w
+	fsd.ctx = npo.MkCtx(uname, r)
+	fsd.root = memfs.MkRootInode(fsd.ctx)
 	fsd.addr = addr
+	fsd.r = r
 	fsd.srv = npsrv.MakeNpServer(fsd, addr)
 	fsd.ch = make(chan bool)
 	db.SetDebug(false)
@@ -56,16 +45,20 @@ func (fsd *Fsd) Addr() string {
 	return fsd.srv.MyAddr()
 }
 
-func (fsd *Fsd) Root() npobjsrv.NpObj {
+func (fsd *Fsd) Root() npo.NpObj {
 	return fsd.root
 }
 
+func (fsd *Fsd) Resolver() npo.Resolver {
+	return fsd.r
+}
+
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npobjsrv.MakeNpConn(fsd, conn)
+	return npo.MakeNpConn(fsd, conn)
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
-	obj, err := fsd.root.Create(name, np.DMDEVICE, 0)
+	obj, err := fsd.root.Create(fsd.ctx, name, np.DMDEVICE, 0)
 	if err != nil {
 		return err
 	}
@@ -73,8 +66,8 @@ func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
 	return nil
 }
 
-func (fsd *Fsd) MkPipe(uname string, name string) (*memfs.Inode, error) {
-	obj, err := fsd.root.Create(name, np.DMNAMEDPIPE, 0)
+func (fsd *Fsd) MkPipe(name string) (*memfs.Inode, error) {
+	obj, err := fsd.root.Create(fsd.ctx, name, np.DMNAMEDPIPE, 0)
 	if err != nil {
 		return nil, err
 	}

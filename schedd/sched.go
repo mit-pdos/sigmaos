@@ -11,7 +11,7 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/npobjsrv"
+	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 )
 
@@ -57,7 +57,7 @@ func MakeSchedd() *Sched {
 }
 
 func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
-	return npobjsrv.MakeNpConn(sd, conn)
+	return npo.MakeNpConn(sd, conn)
 }
 
 func (sd *Sched) Done() {
@@ -68,8 +68,12 @@ func (sd *Sched) Done() {
 	sd.cond.Signal()
 }
 
-func (sd *Sched) Root() npobjsrv.NpObj {
+func (sd *Sched) Root() npo.NpObj {
 	return sd.root
+}
+
+func (sd *Sched) Resolver() npo.Resolver {
+	return nil
 }
 
 func (sd *Sched) String() string {

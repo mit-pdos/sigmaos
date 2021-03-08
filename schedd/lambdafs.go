@@ -11,7 +11,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npobjsrv"
+	npo "ulambda/npobjsrv"
 )
 
 //
@@ -21,13 +21,13 @@ import (
 type Obj struct {
 	name   []string
 	t      np.Tperm
-	parent npobjsrv.NpObj
+	parent npo.NpObj
 	sd     *Sched
 	l      *Lambda
 	time   int64
 }
 
-func (sd *Sched) MakeObj(path []string, t np.Tperm, p npobjsrv.NpObj) npobjsrv.NpObj {
+func (sd *Sched) MakeObj(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
 	o := &Obj{path, t, p, sd, nil, int64(0)}
 	return o
 }
@@ -58,7 +58,7 @@ func (o *Obj) Qid() np.Tqid {
 	return np.Tqid{}
 }
 
-func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
+func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	db.DPrintf("%v: Create %v\n", o, name)
 	if !o.t.IsDir() {
 		return nil, fmt.Errorf("not supported")
@@ -75,13 +75,13 @@ func (o *Obj) Open(m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Lookup(p []string) ([]npobjsrv.NpObj, []string, error) {
-	db.DPrintf("%v: lookup %v\n", o, p)
+func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
+	db.DPrintf("%v: lookup %v %v\n", ctx, o, p)
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
 	// XXX maybe include root dir
-	var os []npobjsrv.NpObj
+	var os []npo.NpObj
 	switch len(o.name) {
 	case 0:
 		l := o.sd.findLambda(p[0])
@@ -94,12 +94,12 @@ func (o *Obj) Lookup(p []string) ([]npobjsrv.NpObj, []string, error) {
 			o1.time = o.time
 			o1.l = l
 		}
-		os = []npobjsrv.NpObj{o1}
+		os = []npo.NpObj{o1}
 	case 1:
 		o1 := o.sd.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
 		o1.time = o.time
 		o1.l = o.l
-		os = []npobjsrv.NpObj{o1}
+		os = []npo.NpObj{o1}
 	default:
 		log.Fatalf("%v: Lookup: %v\n", o, p)
 	}

@@ -10,7 +10,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npobjsrv"
+	npo "ulambda/npobjsrv"
 )
 
 type Tinum uint64
@@ -33,19 +33,21 @@ type Inode struct {
 	Mtime   int64
 	Data    Data
 	parent  *Inode
+	owner   string
 }
 
-func makeInode(t np.Tperm, data Data, p *Inode) *Inode {
+func makeInode(ctx *npo.Ctx, t np.Tperm, data Data, p *Inode) *Inode {
 	i := Inode{}
 	i.PermT = t
 	i.Mtime = time.Now().Unix()
 	i.Data = data
 	i.parent = p
+	i.owner = ctx.Uname()
 	return &i
 }
 
-func RootInode() *Inode {
-	return makeInode(np.DMDIR, makeDir(), nil)
+func MkRootInode(ctx *npo.Ctx) *Inode {
+	return makeInode(ctx, np.DMDIR, makeDir(), nil)
 }
 
 func (inode *Inode) String() string {
@@ -127,13 +129,13 @@ func (inode *Inode) Stat() (*np.Stat, error) {
 	stat.Atime = 0
 	stat.Length = inode.Data.Len()
 	stat.Name = ""
-	stat.Uid = "kaashoek"
-	stat.Gid = "kaashoek"
+	stat.Uid = inode.owner
+	stat.Gid = inode.owner
 	stat.Muid = ""
 	return stat, nil
 }
 
-func (inode *Inode) Create(name string, t np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
+func (inode *Inode) Create(ctx *npo.Ctx, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
@@ -146,7 +148,7 @@ func (inode *Inode) Create(name string, t np.Tperm, m np.Tmode) (npobjsrv.NpObj,
 		if err != nil {
 			return nil, err
 		}
-		newi := makeInode(t, dl, inode)
+		newi := makeInode(ctx, t, dl, inode)
 		if newi.IsDir() {
 			dn := newi.Data.(*Dir)
 			dn.init(newi)
@@ -160,9 +162,9 @@ func (inode *Inode) Create(name string, t np.Tperm, m np.Tmode) (npobjsrv.NpObj,
 	}
 }
 
-func (inode *Inode) Lookup(path []string) ([]npobjsrv.NpObj, []string, error) {
-	db.DPrintf("%v: Walk %v\n", inode, path)
-	inodes := []npobjsrv.NpObj{}
+func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, error) {
+	db.DPrintf("%v: Walk %v %v\n", ctx, inode, path)
+	inodes := []npo.NpObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
 	}
@@ -170,6 +172,7 @@ func (inode *Inode) Lookup(path []string) ([]npobjsrv.NpObj, []string, error) {
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
+	db.DPrintf("lookup: %v\n", path)
 	inodes, rest, err := dir.namei(path, inodes)
 	if err == nil {
 		return inodes, rest, err

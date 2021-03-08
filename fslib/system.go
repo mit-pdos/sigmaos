@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const NAMEDEV = "name/dev"
+const NAMED = "name"
 const S3 = "name/s3"
 
 type System struct {
@@ -69,9 +69,9 @@ func (s *System) Shutdown(clnt *FsLib) {
 	}
 
 	// Shutdown named last
-	err = clnt.WriteFile(NAMEDEV, []byte("Exit"))
+	err = clnt.Remove(NAMED + "/")
 	if err != nil {
-		log.Fatalf("Schedd shutdown %v\n", err)
+		log.Fatalf("Named shutdown %v\n", err)
 	}
 
 	s.schedd.Wait()

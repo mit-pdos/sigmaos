@@ -5,9 +5,11 @@ import (
 	"log"
 	// "time"
 
-	// db "ulambda/debug"
+	db "ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/memfs"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
 
@@ -25,14 +27,20 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader: %v\n", args)
 
-	fs := memfs.MakeRoot()
+	db.SetDebug(false)
+
+	ip, err := fsclnt.LocalIP()
+	if err != nil {
+		return nil, errors.New("MakeReader: No IP")
+	}
+	memfsd := memfsd.MakeFsd(ip+":0", nil)
 	n := "name/" + args[2]
-	pipe, err := fs.MkPipe(n, fs.RootInode(), "pipe")
+	pipe, err := memfsd.MkPipe(n, "pipe")
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
 
-	fsl, err := fslib.InitFsMemFs(n, fs, nil)
+	fsl, err := fslib.InitFs(n, memfsd, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -50,10 +58,12 @@ func MakeReader(args []string) (*Reader, error) {
 }
 
 func (r *Reader) Work() {
+	db.DPrintf("Reader: work\n")
 	err := r.pipe.Open(np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}
+	db.DPrintf("Reader: open %v\n", r.input)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
 		log.Fatal(err)
@@ -66,7 +76,7 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.Write(0, data)
+		_, err = r.pipe.WriteFile(0, data)
 		if err != nil {
 			log.Fatal(err)
 		}

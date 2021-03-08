@@ -6,15 +6,9 @@ import (
 	"os"
 
 	"ulambda/fslib"
-	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
-)
-
-const (
-	Stdin  = memfs.RootInum + 1
-	Stdout = memfs.RootInum + 2
 )
 
 type Consoled struct {
@@ -26,7 +20,8 @@ type Consoled struct {
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	fsl, err := fslib.InitFs("name/consoled", makeConsole())
+	fsd := memfsd.MakeFsd(":0", nil)
+	fsl, err := fslib.InitFs("name/consoled", fsd, makeConsole())
 	if err != nil {
 		log.Fatalf("InitFs: err %v\n", err)
 	}

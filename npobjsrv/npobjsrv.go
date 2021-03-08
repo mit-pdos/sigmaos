@@ -11,31 +11,35 @@ import (
 )
 
 type NpObjSrv interface {
-	MakeObj([]string, np.Tperm, NpObj) NpObj
 	Root() NpObj
 	Done()
 }
 
 type NpObj interface {
-	Lookup([]string) (NpObj, error)
-	ReadDir() ([]*np.Stat, error)
+	Lookup([]string) ([]NpObj, []string, error)
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Size() np.Tlength
-	Path() []string
 	Create(string, np.Tperm, np.Tmode) (NpObj, error)
+	Open(np.Tmode) error
 	ReadFile(np.Toffset, np.Tsize) ([]byte, error)
 	WriteFile(np.Toffset, []byte) (np.Tsize, error)
+	ReadDir(np.Toffset, np.Tsize) ([]*np.Stat, error)
 	WriteDir(np.Toffset, []byte) (np.Tsize, error)
-	Remove() error
+	Remove(string) error
 	Stat() (*np.Stat, error)
-	Wstat(*np.Stat) error
+	Rename(string, string) error
+}
+
+type Fid struct {
+	path []string
+	obj  NpObj
 }
 
 type NpConn struct {
 	mu    sync.Mutex // for Fids
 	conn  net.Conn
-	fids  map[np.Tfid]NpObj
+	fids  map[np.Tfid]*Fid
 	uname string
 	osrv  NpObjSrv
 }
@@ -44,21 +48,21 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.osrv = osrv
-	npc.fids = make(map[np.Tfid]NpObj)
+	npc.fids = make(map[np.Tfid]*Fid)
 	return npc
 }
 
-func (npc *NpConn) lookup(fid np.Tfid) (NpObj, bool) {
+func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
-	o, ok := npc.fids[fid]
-	return o, ok
+	f, ok := npc.fids[fid]
+	return f, ok
 }
 
-func (npc *NpConn) add(fid np.Tfid, o NpObj) {
+func (npc *NpConn) add(fid np.Tfid, f *Fid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
-	npc.fids[fid] = o
+	npc.fids[fid] = f
 }
 
 func (npc *NpConn) del(fid np.Tfid) {
@@ -81,34 +85,45 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DPrintf("Attach %v\n", args)
 	npc.uname = args.Uname
 	root := npc.osrv.Root()
-	npc.add(args.Fid, root)
+	npc.add(args.Fid, &Fid{[]string{}, root})
 	rets.Qid = root.Qid()
 	return nil
 }
 
+func makeQids(os []NpObj) []np.Tqid {
+	var qids []np.Tqid
+	for _, o := range os {
+		qids = append(qids, o.Qid())
+	}
+	return qids
+}
+
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	o, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Walk o %v args %v\n", o, args)
+	db.DPrintf("Walk o %v args %v\n", f, args)
 	if len(args.Wnames) == 0 { // clone args.Fid?
-		npc.add(args.NewFid, o)
+		npc.add(args.NewFid, &Fid{f.path, f.obj})
 	} else {
-		if !o.Perm().IsDir() {
+		if !f.obj.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		o1, err := o.Lookup(args.Wnames)
+		os, rest, err := f.obj.Lookup(args.Wnames)
 		if err != nil {
-			return &np.Rerror{err.Error()}
+			return np.ErrNotfound
 		}
-		npc.add(args.NewFid, o1)
-		rets.Qids = []np.Tqid{o1.Qid()}
+		// XXX should o be included?
+		n := len(args.Wnames) - len(rest)
+		p := append(f.path, args.Wnames[:n]...)
+		npc.add(args.NewFid, &Fid{p, os[len(os)-1]})
+		rets.Qids = makeQids(os)
 	}
-
 	return nil
 }
 
+// XXX call close? keep refcnt per obj?
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DPrintf("Clunk %v\n", args)
 	_, ok := npc.lookup(args.Fid)
@@ -123,39 +138,35 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	db.DPrintf("Open %v\n", args)
-	o, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("o %v\n", o)
-	rets.Qid = o.Qid()
-	return nil
-}
-
-// XXX directories don't work: there is a fake directory, when trying
-// to read it we get an error.  Maybe create . or .. in the directory
-// args.Name, to force the directory into existence
-func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	db.DPrintf("Create %v\n", args)
-	o, ok := npc.lookup(args.Fid)
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	db.DPrintf("o %v\n", o)
-	if !o.Perm().IsDir() {
-		return &np.Rerror{fmt.Sprintf("Not a directory")}
-	}
-	if args.Perm.IsDir() { // fake a directory?
-		o1 := npc.osrv.MakeObj(append(o.Path(), args.Name), np.DMDIR, o)
-		npc.add(args.Fid, o1)
-		rets.Qid = o1.Qid()
-		return nil
-	}
-	o1, err := o.Create(args.Name, args.Perm, args.Mode)
+	db.DPrintf("f %v\n", f)
+	err := f.obj.Open(args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.add(args.Fid, o1)
+	rets.Qid = f.obj.Qid()
+	return nil
+}
+
+func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+	db.DPrintf("Create %v\n", args)
+	f, ok := npc.lookup(args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DPrintf("f %v\n", f)
+	if !f.obj.Perm().IsDir() {
+		return &np.Rerror{fmt.Sprintf("Not a directory")}
+	}
+	o1, err := f.obj.Create(args.Name, args.Perm, args.Mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+
+	npc.add(args.Fid, &Fid{append(f.path, args.Name), o1})
 	rets.Qid = o1.Qid()
 	return nil
 }
@@ -170,7 +181,7 @@ func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 	if o.Size() > 0 && args.Offset >= np.Toffset(o.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		dirents, err = o.ReadDir()
+		dirents, err = o.ReadDir(args.Offset, args.Count)
 
 	}
 	b, err := npcodec.Dir2Byte(args.Offset, args.Count, dirents)
@@ -181,6 +192,7 @@ func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
+// XXX check for offset > len here?
 func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 	b, err := o.ReadFile(args.Offset, args.Count)
 	if err != nil {
@@ -192,31 +204,31 @@ func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DPrintf("Read %v\n", args)
-	o, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("ReadFid %v %v\n", args, o)
-	if o.Perm().IsDir() {
-		return npc.readDir(o, args, rets)
+	db.DPrintf("ReadFid %v %v\n", args, f)
+	if f.obj.Perm().IsDir() {
+		return npc.readDir(f.obj, args, rets)
 	} else {
-		return npc.readFile(o, args, rets)
+		return npc.readFile(f.obj, args, rets)
 	}
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DPrintf("Write %v\n", args)
-	o, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Write o %v\n", o)
+	db.DPrintf("Write f %v\n", f)
 	var err error
 	cnt := np.Tsize(0)
-	if o.Perm().IsDir() {
-		cnt, err = o.WriteDir(args.Offset, args.Data)
+	if f.obj.Perm().IsDir() {
+		cnt, err = f.obj.WriteDir(args.Offset, args.Data)
 	} else {
-		cnt, err = o.WriteFile(args.Offset, args.Data)
+		cnt, err = f.obj.WriteFile(args.Offset, args.Data)
 	}
 	rets.Count = np.Tsize(cnt)
 	if err != nil {
@@ -226,16 +238,16 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 }
 
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	o, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if len(o.Path()) == 0 { // exit?
+	if len(f.path) == 0 { // exit?
 		npc.osrv.Done()
 		return nil
 	}
-	db.DPrintf("Remove o %v\n", o)
-	err := o.Remove()
+	db.DPrintf("Remove f %v\n", f)
+	err := f.obj.Remove(f.path[len(f.path)-1])
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -244,12 +256,12 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 }
 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
-	o, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Stat %v\n", o)
-	st, err := o.Stat()
+	db.DPrintf("Stat %v\n", f)
+	st, err := f.obj.Stat()
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -262,7 +274,14 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Wstat %v\n", f)
-	// XXX ignore Wstat for now
+	db.DPrintf("Wstat %v %v\n", f, args)
+	if args.Stat.Name != "" {
+		err := f.obj.Rename(f.path[len(f.path)-1], args.Stat.Name)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		f.path = append(f.path[:len(f.path)-1], np.Split(args.Stat.Name)...)
+	}
+	// XXX ignore other Wstat for now
 	return nil
 }

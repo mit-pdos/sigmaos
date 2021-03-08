@@ -213,7 +213,7 @@ func (o *Obj) Stat() (*np.Stat, error) {
 	if !o.isRead {
 		switch o.Perm() {
 		case np.DMDIR:
-			_, err = o.ReadDir()
+			_, err = o.ReadDir(0, 0)
 		case 0:
 			err = o.readHead()
 		default:
@@ -346,27 +346,27 @@ func (o *Obj) s3ReadDir() error {
 	return nil
 }
 
-func (o *Obj) Lookup(p []string) (npobjsrv.NpObj, error) {
+func (o *Obj) Lookup(p []string) ([]npobjsrv.NpObj, []string, error) {
 	db.DPrintf("%v: lookup %v\n", o, p)
 	if !o.t.IsDir() {
-		return nil, fmt.Errorf("Not a directory")
+		return nil, nil, fmt.Errorf("Not a directory")
 	}
-	_, err := o.ReadDir()
+	_, err := o.ReadDir(0, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	o1, ok := o.lookupDirent(p[0])
 	if !ok {
-		return nil, fmt.Errorf("file not found")
+		return nil, nil, fmt.Errorf("file not found")
 	}
 	if len(p) == 1 {
-		return o1, nil
+		return []npobjsrv.NpObj{o1}, nil, nil
 	} else {
 		return o1.Lookup(p[1:])
 	}
 }
 
-func (o *Obj) ReadDir() ([]*np.Stat, error) {
+func (o *Obj) ReadDir(off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	var dirents []*np.Stat
 	db.DPrintf("readDir: %v\n", o)
 	if !o.isRead {
@@ -381,7 +381,14 @@ func (o *Obj) ReadDir() ([]*np.Stat, error) {
 	return dirents, nil
 }
 
+// XXX directories don't fully work: there is a fake directory, when
+// trying to read it we get an error.  Maybe create . or .. in the
+// directory args.Name, to force the directory into existence
 func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
+	if perm.IsDir() {
+		o1 := o.nps3.MakeObj(append(o.key, name), np.DMDIR, o)
+		return o1, nil
+	}
 	key := np.Join(append(o.key, name))
 	input := &s3.PutObjectInput{
 		Bucket: &bucket,
@@ -397,7 +404,12 @@ func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, er
 	return o1, nil
 }
 
-func (o *Obj) Remove() error {
+// XXX Check permissions?
+func (o *Obj) Open(m np.Tmode) error {
+	return nil
+}
+
+func (o *Obj) Remove(name string) error {
 	key := np.Join(o.key)
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
@@ -411,6 +423,10 @@ func (o *Obj) Remove() error {
 	defer o.mu.Unlock()
 	delete(o.dirents, o.key[len(o.key)-1])
 	return nil
+}
+
+func (o *Obj) Rename(from, to string) error {
+	return fmt.Errorf("not supported")
 }
 
 // XXX maybe represent a file as several objects to avoid

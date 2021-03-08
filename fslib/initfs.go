@@ -7,13 +7,11 @@ import (
 	db "ulambda/debug"
 	"ulambda/memfs"
 	"ulambda/memfsd"
-	"ulambda/npsrv"
 )
 
 type FsLibSrv struct {
 	*FsLib
 	*memfsd.Fsd
-	srv *npsrv.NpServer
 }
 
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
@@ -46,33 +44,19 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	return err
 }
 
-func InitFsMemFsD(name string, memfs *memfs.Root, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
-	srv := npsrv.MakeNpServer(memfsd, ":0")
-	fsl := &FsLibSrv{MakeFsLib(name), memfsd, srv}
-	fs := memfsd.Root()
+func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
+	fsl := &FsLibSrv{MakeFsLib(name), memfsd}
 	if dev != nil {
-		_, err := fs.MkNod(fsl.Uname(), fs.RootInode(),
-			"dev", dev)
+		err := memfsd.MkNod("dev", dev)
 		if err != nil {
 			log.Fatal("Create error: dev: ", err)
 		}
 	}
-	err := fsl.PostService(fsl.srv.MyAddr(), name)
+	err := fsl.PostService(memfsd.Addr(), name)
 	if err != nil {
 		return nil, fmt.Errorf("PostService %v error: %v\n", name, err)
 	}
 	return fsl, nil
-}
-
-func InitFsMemFs(name string, memfs *memfs.Root, dev memfs.Dev) (*FsLibSrv, error) {
-	memfsd := memfsd.MakeFsd(memfs, nil)
-	return InitFsMemFsD(name, memfs, memfsd, dev)
-}
-
-func InitFs(name string, dev memfs.Dev) (*FsLibSrv, error) {
-	fs := memfs.MakeRoot()
-	fsd := memfsd.MakeFsd(fs, nil)
-	return InitFsMemFsD(name, fs, fsd, dev)
 }
 
 func (fsl *FsLib) ExitFs(name string) {

@@ -13,7 +13,9 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
 
@@ -88,14 +90,19 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.pid = args[0]
 	sh.bin = args[1]
 	sh.args = args[2:]
-	fls, err := fslib.InitFs(SHARDER, &SharderDev{sh})
+	ip, err := fsclnt.LocalIP()
+	if err != nil {
+		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)
+	}
+	fsd := memfsd.MakeFsd(ip+":0", nil)
+	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
 	if err != nil {
 		return nil, err
 	}
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
-	// db.SetDebug(true)
+	db.SetDebug(true)
 
 	return sh, nil
 }

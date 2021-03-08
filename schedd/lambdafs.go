@@ -70,32 +70,40 @@ func (o *Obj) Create(name string, perm np.Tperm, m np.Tmode) (npobjsrv.NpObj, er
 	return o1, nil
 }
 
-func (o *Obj) Lookup(p []string) (npobjsrv.NpObj, error) {
+// check permissions etc.
+func (o *Obj) Open(m np.Tmode) error {
+	return nil
+}
+
+func (o *Obj) Lookup(p []string) ([]npobjsrv.NpObj, []string, error) {
 	db.DPrintf("%v: lookup %v\n", o, p)
 	if !o.t.IsDir() {
-		return nil, fmt.Errorf("Not a directory")
+		return nil, nil, fmt.Errorf("Not a directory")
 	}
-	var o1 *Obj
+	// XXX maybe include root dir
+	var os []npobjsrv.NpObj
 	switch len(o.name) {
 	case 0:
 		l := o.sd.findLambda(p[0])
 		if l == nil {
-			return nil, fmt.Errorf("not found")
+			return nil, nil, fmt.Errorf("not found")
 		}
-		o1 = l.obj
+		o1 := l.obj
 		if len(p) > 1 {
 			o1 = o1.sd.MakeObj(append(o1.name, p[1]), 0, o1).(*Obj)
 			o1.time = o.time
 			o1.l = l
 		}
+		os = []npobjsrv.NpObj{o1}
 	case 1:
-		o1 = o.sd.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
+		o1 := o.sd.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
 		o1.time = o.time
 		o1.l = o.l
+		os = []npobjsrv.NpObj{o1}
 	default:
 		log.Fatalf("%v: Lookup: %v\n", o, p)
 	}
-	return o1, nil
+	return os, nil, nil
 }
 
 func (o Obj) stat() *np.Stat {
@@ -144,7 +152,7 @@ func (sd *Sched) ps() []*np.Stat {
 	return dir
 }
 
-func (o *Obj) ReadDir() ([]*np.Stat, error) {
+func (o *Obj) ReadDir(off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	db.DPrintf("readDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
@@ -198,7 +206,11 @@ func (o *Obj) ReadFile(off np.Toffset, cnt np.Tsize) ([]byte, error) {
 }
 
 // kill?
-func (o *Obj) Remove() error {
+func (o *Obj) Remove(name string) error {
+	return fmt.Errorf("not supported")
+}
+
+func (o *Obj) Rename(from, to string) error {
 	return fmt.Errorf("not supported")
 }
 

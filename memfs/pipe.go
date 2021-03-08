@@ -5,6 +5,7 @@ import (
 	"sync"
 	// "errors"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -45,6 +46,7 @@ func (pipe *Pipe) open(mode np.Tmode) error {
 		pipe.nwriter += 1
 		pipe.condr.Signal()
 		for pipe.nreader == 0 {
+			db.DPrintf("Wait for reader\n")
 			pipe.condw.Wait()
 		}
 	} else {

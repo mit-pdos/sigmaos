@@ -3,12 +3,12 @@ package memfs
 import (
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/npobjsrv"
 )
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
@@ -19,24 +19,21 @@ func IsCurrentDir(name string) bool {
 
 type Dir struct {
 	mu      sync.Mutex
-	inum    Tinum
 	entries map[string]*Inode
 }
 
 func (dir *Dir) String() string {
-	str := fmt.Sprintf("Dir{%v entries %v}", dir.inum, dir.entries)
+	str := fmt.Sprintf("Dir{entries %v}", dir.entries)
 	return str
 }
 
 func makeDir() *Dir {
 	d := &Dir{}
 	d.entries = make(map[string]*Inode)
-
 	return d
 }
 
 func (dir *Dir) init(inodot *Inode) {
-	dir.inum = inodot.Inum
 	dir.entries["."] = inodot
 }
 
@@ -74,17 +71,14 @@ func (dir *Dir) Len() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
-func (dir *Dir) namei(uname string, path []string, inodes []*Inode) ([]*Inode, []string, error) {
+func (dir *Dir) namei(path []string, inodes []npobjsrv.NpObj) ([]npobjsrv.NpObj, []string, error) {
 	var inode *Inode
 	var err error
 
 	dir.mu.Lock()
-	if dir.inum == 0 {
-		log.Fatal("namei ", dir)
-	}
 	inode, err = dir.lookupLocked(path[0])
 	if err != nil {
-		db.DPrintf("%v: namei %v unknown %v", uname, dir, path)
+		db.DPrintf("namei %v unknown %v", dir, path)
 		dir.mu.Unlock()
 		return nil, nil, err
 	}
@@ -97,7 +91,7 @@ func (dir *Dir) namei(uname string, path []string, inodes []*Inode) ([]*Inode, [
 		}
 		d := inode.Data.(*Dir)
 		dir.mu.Unlock() // for "."
-		return d.namei(uname, path[1:], inodes)
+		return d.namei(path[1:], inodes)
 	} else {
 		db.DPrintf("namei %v %v -> %v %v", path, dir, inodes, path[1:])
 		dir.mu.Unlock()
@@ -111,19 +105,18 @@ func (dir *Dir) lsL() []*np.Stat {
 		if k == "." {
 			continue
 		}
-		st := v.Stat()
+		st, _ := v.Stat()
 		st.Name = k
 		entries = append(entries, st)
 	}
 	return entries
 }
 
-func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (dir *Dir) read(offset np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	entries := dir.lsL()
-	return npcodec.Dir2Byte(offset, cnt, entries)
+	return dir.lsL(), nil
 }
 
 func (dir *Dir) create(inode *Inode, name string) error {

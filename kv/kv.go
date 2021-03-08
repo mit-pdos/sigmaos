@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
-	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
@@ -65,16 +65,18 @@ func MakeKv(args []string) (*Kv, error) {
 	}
 	kv.pid = args[0]
 	kv.me = KV + "/" + kv.pid
-
-	fs := memfs.MakeRoot()
-	fsd := memfsd.MakeFsd(fs, kv)
-	fsl, err := fslib.InitFsMemFsD(kv.me, fs, fsd, &KvDev{kv})
+	ip, err := fsclnt.LocalIP()
+	if err != nil {
+		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
+	}
+	fsd := memfsd.MakeFsd(ip+":0", kv)
+	fsl, err := fslib.InitFs(kv.me, fsd, &KvDev{kv})
 	if err != nil {
 		return nil, err
 	}
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
-	// db.SetDebug(true)
+	db.SetDebug(false)
 	return kv, nil
 }
 

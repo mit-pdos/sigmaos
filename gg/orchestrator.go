@@ -10,6 +10,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
 
@@ -58,7 +59,8 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.pid = args[0]
 	orc.cwd = args[1]
 	orc.targets = args[2:]
-	fls, err := fslib.InitFs(ORCHESTRATOR, &OrchestratorDev{orc})
+	memfsd := memfsd.MakeFsd(":0", nil)
+	fls, err := fslib.InitFs(ORCHESTRATOR, memfsd, &OrchestratorDev{orc})
 	if err != nil {
 		return nil, err
 	}

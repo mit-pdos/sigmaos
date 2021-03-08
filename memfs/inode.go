@@ -6,18 +6,15 @@ import (
 	"log"
 	"sync"
 	"time"
+	"unsafe"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/npobjsrv"
 )
 
 type Tinum uint64
 type Tversion uint32
-
-const (
-	NullInum Tinum = 0
-	RootInum Tinum = 1
-)
 
 type Data interface {
 	Len() np.Tlength
@@ -32,32 +29,50 @@ type Dev interface {
 type Inode struct {
 	mu      sync.Mutex
 	PermT   np.Tperm
-	Inum    Tinum
 	Version Tversion
 	Mtime   int64
 	Data    Data
+	parent  *Inode
 }
 
-func makeInode(t np.Tperm, inum Tinum, data Data) *Inode {
+func makeInode(t np.Tperm, data Data, p *Inode) *Inode {
 	i := Inode{}
 	i.PermT = t
-	i.Inum = inum
 	i.Mtime = time.Now().Unix()
 	i.Data = data
+	i.parent = p
 	return &i
 }
 
+func RootInode() *Inode {
+	return makeInode(np.DMDIR, makeDir(), nil)
+}
+
 func (inode *Inode) String() string {
-	str := fmt.Sprintf("Inode %v t 0x%x", inode.Inum,
+	str := fmt.Sprintf("Inode %p t 0x%x", inode,
 		inode.PermT>>np.TYPESHIFT)
 	return str
 }
 
 func (inode *Inode) Qid() np.Tqid {
+	p := (*uint64)(unsafe.Pointer(inode))
+
 	return np.MakeQid(
 		np.Qtype(inode.PermT>>np.QTYPESHIFT),
 		np.TQversion(inode.Version),
-		np.Tpath(inode.Inum))
+		np.Tpath(*p))
+}
+
+func (inode *Inode) Perm() np.Tperm {
+	return inode.PermT
+}
+
+func (inode *Inode) Size() np.Tlength {
+	if inode.IsDir() {
+		d := inode.Data.(*Dir)
+		return d.Len()
+	}
+	return inode.Data.Len()
 }
 
 func (inode *Inode) IsDir() bool {
@@ -100,7 +115,7 @@ func (inode *Inode) Mode() np.Tperm {
 	return perm
 }
 
-func (inode *Inode) Stat() *np.Stat {
+func (inode *Inode) Stat() (*np.Stat, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
@@ -115,10 +130,10 @@ func (inode *Inode) Stat() *np.Stat {
 	stat.Uid = "kaashoek"
 	stat.Gid = "kaashoek"
 	stat.Muid = ""
-	return stat
+	return stat, nil
 }
 
-func (inode *Inode) Create(uname string, root *Root, t np.Tperm, name string) (*Inode, error) {
+func (inode *Inode) Create(name string, t np.Tperm, m np.Tmode) (npobjsrv.NpObj, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
@@ -131,13 +146,13 @@ func (inode *Inode) Create(uname string, root *Root, t np.Tperm, name string) (*
 		if err != nil {
 			return nil, err
 		}
-		newi := makeInode(t, root.allocInum(), dl)
+		newi := makeInode(t, dl, inode)
 		if newi.IsDir() {
 			dn := newi.Data.(*Dir)
 			dn.init(newi)
 
 		}
-		db.DPrintf("%v: create %v in %v -> %v\n", uname, name, inode, newi)
+		db.DPrintf("Create %v in %v -> %v\n", name, inode, newi)
 		inode.Mtime = time.Now().Unix()
 		return newi, dir.create(newi, name)
 	} else {
@@ -145,17 +160,17 @@ func (inode *Inode) Create(uname string, root *Root, t np.Tperm, name string) (*
 	}
 }
 
-func (inode *Inode) Walk(uname string, path []string) ([]*Inode, []string, error) {
-	db.DPrintf("%v: Walk %v at %v\n", uname, path, inode)
-	inodes := []*Inode{inode}
+func (inode *Inode) Lookup(path []string) ([]npobjsrv.NpObj, []string, error) {
+	db.DPrintf("%v: Walk %v\n", inode, path)
+	inodes := []npobjsrv.NpObj{}
 	if len(path) == 0 {
-		return inodes, nil, nil
+		return nil, nil, nil
 	}
 	dir, ok := inode.Data.(*Dir) // XXX lock
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
-	inodes, rest, err := dir.namei(uname, path, inodes)
+	inodes, rest, err := dir.namei(path, inodes)
 	if err == nil {
 		return inodes, rest, err
 	} else {
@@ -163,61 +178,32 @@ func (inode *Inode) Walk(uname string, path []string) ([]*Inode, []string, error
 	}
 }
 
-// Lookup a file/directory.  Return parent directory.
-func (inode *Inode) LookupPath(uname string, path []string) (*Dir, error) {
-	inodes, rest, err := inode.Walk(uname, path)
-	if err != nil {
-		return nil, err
-	}
-	db.DPrintf("%v: Walk -> %v rest %v err %v\n", uname, inodes, rest, err)
-	if len(rest) != 0 {
-		return nil, errors.New("Unknown name")
-	}
-	if len(inodes) == 1 {
-		return nil, errors.New("No parent directory")
-	} else {
-		// there must be a parent
-		di := inodes[len(inodes)-2]
-		dir, ok := di.Data.(*Dir)
-		if !ok {
-			log.Fatal("Lookup: cast error")
-		}
-		return dir, nil
-	}
-}
-
-func (inode *Inode) Remove(uname string, root *Root, path []string) error {
-	if len(path) == 0 {
+func (inode *Inode) Remove(n string) error {
+	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}
-	dir, err := inode.LookupPath(uname, path)
-	db.DPrintf("Remove %v dir %v %v\n", path, dir, err)
-	if err != nil {
-		return err
+	if !inode.parent.IsDir() {
+		return errors.New("Parent not a directory")
 	}
+	dir := inode.parent.Data.(*Dir)
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	n := path[len(path)-1]
-	ino, err := dir.lookupLocked(n)
+	_, err := dir.lookupLocked(n)
 	if err != nil {
 		return fmt.Errorf("Unknown name %v", n)
 	}
 	err = dir.removeLocked(n)
 	if err != nil {
-		log.Fatalf("Remove: missing %v\n", n)
+		log.Fatalf("Remove: error %v\n", n)
 	}
-	root.freeInum(ino.Inum)
 	return nil
 }
 
 // XXX open for other types than pipe
 func (inode *Inode) Open(mode np.Tmode) error {
 	db.DPrintf("inode.Open %v", inode)
-	if inode.IsDevice() {
-	} else if inode.IsDir() {
-	} else if inode.IsSymlink() {
-	} else if inode.IsPipe() {
+	if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.open(mode)
 	}
@@ -237,15 +223,13 @@ func (inode *Inode) Close(mode np.Tmode) error {
 	return nil
 }
 
-func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
+func (inode *Inode) WriteFile(offset np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("inode.Write %v", inode)
 	var sz np.Tsize
 	var err error
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		sz, err = d.Write(offset, data)
-	} else if inode.IsDir() {
-		return 0, errors.New("Cannot write directory")
 	} else if inode.IsSymlink() {
 		s := inode.Data.(*Symlink)
 		sz, err = s.write(data)
@@ -262,14 +246,20 @@ func (inode *Inode) Write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	return sz, err
 }
 
-func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+func (inode *Inode) ReadDir(offset np.Toffset, n np.Tsize) ([]*np.Stat, error) {
+	d := inode.Data.(*Dir)
+	return d.read(offset, n)
+}
+
+func (inode *Inode) WriteDir(offset np.Toffset, b []byte) (np.Tsize, error) {
+	return 0, errors.New("Cannot write directory")
+}
+
+func (inode *Inode) ReadFile(offset np.Toffset, n np.Tsize) ([]byte, error) {
 	db.DPrintf("inode.Read %v", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		return d.Read(offset, n)
-	} else if inode.IsDir() {
-		d := inode.Data.(*Dir)
-		return d.read(offset, n)
 	} else if inode.IsSymlink() {
 		s := inode.Data.(*Symlink)
 		return s.read(n)
@@ -280,4 +270,43 @@ func (inode *Inode) Read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 		f := inode.Data.(*File)
 		return f.read(offset, n)
 	}
+}
+
+// XXX current name
+func (inode *Inode) Rename(from, to string) error {
+	if inode.parent == nil {
+		return errors.New("Cannot remove root directory")
+	}
+	if !inode.parent.IsDir() {
+		return errors.New("Parent not a directory")
+	}
+	dir := inode.parent.Data.(*Dir)
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	db.DPrintf("%v: Rename %v -> %v\n", dir, from, to)
+	ino, err := dir.lookupLocked(from)
+	if err != nil {
+		return fmt.Errorf("Unknown name %v", from)
+	}
+	err = dir.removeLocked(from)
+	if err != nil {
+		log.Fatalf("Rename: remove failed %v %v\n", from, err)
+	}
+	_, err = dir.lookupLocked(to)
+	if err == nil { // i is valid
+		// XXX 9p: it is an error to change the name to that
+		// of an existing file.
+		err = dir.removeLocked(to)
+		if err != nil {
+			log.Fatalf("Rename remove failed %v %v\n", to, err)
+		}
+	}
+	err = dir.createLocked(ino, to)
+	if err != nil {
+		log.Fatalf("Rename create %v failed %v\n", to, err)
+		return err
+	}
+
+	return nil
 }

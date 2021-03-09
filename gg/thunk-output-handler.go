@@ -1,7 +1,6 @@
 package gg
 
 import (
-	"io/ioutil"
 	"log"
 	"path"
 	"strings"
@@ -53,7 +52,7 @@ func (toh *ThunkOutputHandler) Work() {
 		toh.propagateResultUpstream()
 	} else {
 		for _, thunk := range newThunks {
-			inputDependencies := getInputDependencies(toh, thunk.hash, ggLocalBlobs(toh.thunkHash, ""))
+			inputDependencies := getInputDependencies(toh, thunk.hash, ggRemoteBlobs(""))
 			depPids := outputHandlerPids(thunk.deps)
 			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, depPids)
 			exitDeps := []string{}
@@ -132,8 +131,8 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
 }
 
 func (toh *ThunkOutputHandler) readThunkOutput() []string {
-	outputThunksPath := ggLocalBlobs(toh.thunkHash, toh.thunkHash+THUNK_OUTPUTS_SUFFIX)
-	contents, err := ioutil.ReadFile(outputThunksPath)
+	outputThunksPath := ggRemoteBlobs(toh.thunkHash + THUNK_OUTPUTS_SUFFIX)
+	contents, err := toh.ReadFile(outputThunksPath)
 	if err != nil {
 		log.Fatalf("Error reading thunk outputs [%v]: %v\n", outputThunksPath, err)
 	}
@@ -155,8 +154,8 @@ func (toh *ThunkOutputHandler) getValue() string {
 }
 
 func (toh *ThunkOutputHandler) getReduction() string {
-	thunkOutputPath := ggLocalReductions(toh.thunkHash, toh.thunkHash)
-	valueFile, err := ioutil.ReadFile(thunkOutputPath)
+	thunkOutputPath := ggRemoteReductions(toh.thunkHash)
+	valueFile, err := toh.ReadFile(thunkOutputPath)
 	if err != nil {
 		log.Fatalf("Error reading reduction in TOH [%v]: %v\n", thunkOutputPath, err)
 	}

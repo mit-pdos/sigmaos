@@ -25,6 +25,7 @@ const (
 type ExecutorLauncher interface {
 	Spawn(*fslib.Attr) error
 	SpawnNoOp(string, []string) error
+	ReadFile(string) ([]byte, error)
 	getCwd() string
 }
 
@@ -77,6 +78,7 @@ func (orc *Orchestrator) Exit() {
 func (orc *Orchestrator) Work() {
 	orc.setUpRemoteDirs()
 	origDirUploaders := []string{spawnOrigDirUploader(orc, orc.cwd, GG_BLOBS)}
+	orc.waitPids(origDirUploaders)
 	for i, target := range orc.targets {
 		targetHash := orc.getTargetHash(target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
@@ -105,7 +107,7 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {
 		exitDeps := outputHandlerPids(thunk.deps)
-		inputDependencies := getInputDependencies(orc, thunk.hash, ggOrigBlobs(orc.cwd, ""))
+		inputDependencies := getInputDependencies(orc, thunk.hash, ggRemoteBlobs(""))
 		uploaderPids := []string{
 			spawnUploader(orc, thunk.hash, orc.cwd, GG_BLOBS),
 		}
@@ -117,6 +119,12 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 		resUploaders := spawnThunkResultUploaders(orc, thunk.hash)
 		outputHandlerPid := spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)
+	}
+}
+
+func (orc *Orchestrator) waitPids(pids []string) {
+	for _, p := range pids {
+		orc.Wait(p)
 	}
 }
 
@@ -209,7 +217,14 @@ func getInputDependencies(launch ExecutorLauncher, targetHash string, srcDir str
 		srcDir,
 		targetHash+INPUT_DEPENDENCIES_SUFFIX,
 	)
-	f, err := ioutil.ReadFile(dependenciesFilePath)
+	// Read either from local or remote storage
+	var f []byte
+	var err error
+	if isRemote(srcDir) {
+		f, err = launch.ReadFile(dependenciesFilePath)
+	} else {
+		f, err = ioutil.ReadFile(dependenciesFilePath)
+	}
 	if err != nil {
 		db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
 		return dependencies

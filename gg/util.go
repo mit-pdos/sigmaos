@@ -2,6 +2,7 @@ package gg
 
 import (
 	"path"
+	"strings"
 )
 
 // Path constants
@@ -74,6 +75,10 @@ func ggPid(dir string, subDir string, hash string, suffix string) string {
 }
 
 // ========== Paths ==========
+
+func isRemote(dir string) bool {
+	return strings.Contains(dir, GG_REMOTE)
+}
 
 func ggOrigBlobs(dir string, file string) string {
 	return ggOrig(dir, GG_BLOBS, file)

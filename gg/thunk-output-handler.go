@@ -52,11 +52,16 @@ func (toh *ThunkOutputHandler) Work() {
 		toh.propagateResultUpstream()
 	} else {
 		for _, thunk := range newThunks {
-			inputDependencies := getInputDependencies(toh, thunk.hash, ggRemoteBlobs(""))
-			depPids := outputHandlerPids(thunk.deps)
-			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, depPids)
-			exitDeps := []string{}
-			exitDeps = append(exitDeps, downloaders...)
+			//			inputDependencies := getInputDependencies(toh, thunk.hash, ggRemoteBlobs(""))
+			//			depPids := outputHandlerPids(thunk.deps)
+			//			downloaders := spawnInputDownloaders(toh, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, depPids)
+			//			exitDeps := []string{}
+			//			exitDeps = append(exitDeps, downloaders...)
+			// Avoid doing redundant work
+			if doneExecuting(toh, thunk.hash) || currentlyExecuting(toh, thunk.hash) {
+				continue
+			}
+			exitDeps := outputHandlerPids(thunk.deps)
 			toh.spawnDownstreamThunk(thunk.hash, exitDeps, outputFiles)
 		}
 		exitDepSwaps := []string{
@@ -73,9 +78,11 @@ func (toh *ThunkOutputHandler) Work() {
 
 func (toh *ThunkOutputHandler) spawnDownstreamThunk(thunkHash string, deps []string, outputFiles map[string][]string) string {
 	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
+	//	exPid := spawnExecutor(toh, thunkHash, deps)
+	//	resUploaders := spawnThunkResultUploaders(toh, thunkHash)
+	//	outputHandlerPid := spawnThunkOutputHandler(toh, append(resUploaders, exPid), thunkHash, outputFiles[thunkHash])
 	exPid := spawnExecutor(toh, thunkHash, deps)
-	resUploaders := spawnThunkResultUploaders(toh, thunkHash)
-	outputHandlerPid := spawnThunkOutputHandler(toh, append(resUploaders, exPid), thunkHash, outputFiles[thunkHash])
+	outputHandlerPid := spawnThunkOutputHandler(toh, []string{exPid}, thunkHash, outputFiles[thunkHash])
 	return spawnNoOp(toh, outputHandlerPid)
 }
 

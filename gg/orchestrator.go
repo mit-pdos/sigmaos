@@ -25,6 +25,7 @@ const (
 type ExecutorLauncher interface {
 	Spawn(*fslib.Attr) error
 	SpawnNoOp(string, []string) error
+	Started(string) error
 	ReadFile(string) ([]byte, error)
 	getCwd() string
 }
@@ -107,17 +108,19 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {
 		exitDeps := outputHandlerPids(thunk.deps)
-		inputDependencies := getInputDependencies(orc, thunk.hash, ggRemoteBlobs(""))
-		uploaderPids := []string{
-			spawnUploader(orc, thunk.hash, orc.cwd, GG_BLOBS),
-		}
-		uploaderPids = append(uploaderPids, uploadDeps...)
-		inputDownloaderPids := spawnInputDownloaders(orc, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, uploaderPids)
-		exitDeps = append(exitDeps, uploaderPids...)
-		exitDeps = append(exitDeps, inputDownloaderPids...)
+		//		inputDependencies := getInputDependencies(orc, thunk.hash, ggRemoteBlobs(""))
+		//		uploaderPids := []string{
+		//			spawnUploader(orc, thunk.hash, orc.cwd, GG_BLOBS),
+		//		}
+		//		uploaderPids = append(uploaderPids, uploadDeps...)
+		//		inputDownloaderPids := spawnInputDownloaders(orc, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, uploaderPids)
+		//		exitDeps = append(exitDeps, uploaderPids...)
+		//		exitDeps = append(exitDeps, inputDownloaderPids...)
+		//		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
+		//		resUploaders := spawnThunkResultUploaders(orc, thunk.hash)
+		//		outputHandlerPid := spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
 		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
-		resUploaders := spawnThunkResultUploaders(orc, thunk.hash)
-		outputHandlerPid := spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
+		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid}, thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)
 	}
 }
@@ -130,11 +133,8 @@ func (orc *Orchestrator) waitPids(pids []string) {
 
 func (orc *Orchestrator) getExitDependencies(targetHash string) []string {
 	dependencies := []string{}
-	dependenciesFilePath := ggOrigBlobs(
-		orc.cwd,
-		targetHash+EXIT_DEPENDENCIES_SUFFIX,
-	)
-	f, err := ioutil.ReadFile(dependenciesFilePath)
+	dependenciesFilePath := ggRemoteBlobs(targetHash + EXIT_DEPENDENCIES_SUFFIX)
+	f, err := orc.ReadFile(dependenciesFilePath)
 	if err != nil {
 		db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
 		return dependencies
@@ -237,6 +237,27 @@ func getInputDependencies(launch ExecutorLauncher, targetHash string, srcDir str
 	}
 	db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
 	return dependencies
+}
+
+// Check if the output reduction exists in the global dir
+func doneExecuting(launch ExecutorLauncher, thunkHash string) bool {
+	outputPath := ggRemoteReductions(thunkHash)
+	// XXX would be nice to have a "stat" equivalent
+	_, err := launch.ReadFile(outputPath)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+// XXX Should really check if it's in the queue as well (not just if it's
+//  actively running. Also, there may be a slight race
+func currentlyExecuting(launch ExecutorLauncher, thunkHash string) bool {
+	err := launch.Started(executorPid(thunkHash))
+	if err == nil {
+		return true
+	}
+	return false
 }
 
 func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) {

@@ -152,27 +152,41 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
-	setupLocalExecutionEnv(launch, targetHash)
 	a := fslib.Attr{}
 	a.Pid = executorPid(targetHash)
-	a.Program = "gg-execute"
+	a.Program = "./bin/gg-executor"
 	a.Args = []string{
-		"--ninep",
 		targetHash,
 	}
-	a.Dir = ggLocal(targetHash, "", "")
-	a.Env = []string{
-		"GG_DIR=" + a.Dir,
-		"GG_NINEP=true",
-		"GG_VERBOSE=1",
-	}
+	a.Dir = ""
 	a.PairDep = []fslib.PDep{}
 	a.ExitDep = depPids
 	err := launch.Spawn(&a)
 	if err != nil {
 		// XXX Clean this up better with caching
-		//    log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err);
+		log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err)
 	}
+	//	setupLocalExecutionEnv(launch, targetHash)
+	//	a := fslib.Attr{}
+	//	a.Pid = executorPid(targetHash)
+	//	a.Program = "gg-execute"
+	//	a.Args = []string{
+	//		"--ninep",
+	//		targetHash,
+	//	}
+	//	a.Dir = ggLocal(targetHash, "", "")
+	//	a.Env = []string{
+	//		"GG_DIR=" + a.Dir,
+	//		"GG_NINEP=true",
+	//		"GG_VERBOSE=1",
+	//	}
+	//	a.PairDep = []fslib.PDep{}
+	//	a.ExitDep = depPids
+	//	err := launch.Spawn(&a)
+	//	if err != nil {
+	//		// XXX Clean this up better with caching
+	//		//    log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err);
+	//	}
 	return a.Pid
 }
 

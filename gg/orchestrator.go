@@ -108,17 +108,6 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {
 		exitDeps := outputHandlerPids(thunk.deps)
-		//		inputDependencies := getInputDependencies(orc, thunk.hash, ggRemoteBlobs(""))
-		//		uploaderPids := []string{
-		//			spawnUploader(orc, thunk.hash, orc.cwd, GG_BLOBS),
-		//		}
-		//		uploaderPids = append(uploaderPids, uploadDeps...)
-		//		inputDownloaderPids := spawnInputDownloaders(orc, thunk.hash, path.Join(GG_LOCAL, thunk.hash), inputDependencies, uploaderPids)
-		//		exitDeps = append(exitDeps, uploaderPids...)
-		//		exitDeps = append(exitDeps, inputDownloaderPids...)
-		//		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
-		//		resUploaders := spawnThunkResultUploaders(orc, thunk.hash)
-		//		outputHandlerPid := spawnThunkOutputHandler(orc, append(resUploaders, exPid), thunk.hash, []string{thunk.hash})
 		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
 		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid}, thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)

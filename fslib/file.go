@@ -101,7 +101,6 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Printf("stat %v\n", st)
 	return st.Mode.IsDir(), nil
 }
 

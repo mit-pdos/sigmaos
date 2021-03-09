@@ -330,15 +330,24 @@ func (fsc *FsClient) Remove(name string) error {
 
 func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 	db.DPrintf("%v: Stat %v\n", fsc.uname, name)
-	fid, err := fsc.walkMany(np.Split(name), true)
-	if err != nil {
-		return nil, err
+	path := np.Split(name)
+	target, rest := fsc.mount.resolve(path)
+	if len(rest) == 0 && !np.EndSlash(name) {
+		st := &np.Stat{}
+		st.Name = fsc.npch(target).Server()
+		return st, nil
+	} else {
+
+		fid, err := fsc.walkMany(np.Split(name), np.EndSlash(name))
+		if err != nil {
+			return nil, err
+		}
+		reply, err := fsc.npch(fid).Stat(fid)
+		if err != nil {
+			return nil, err
+		}
+		return &reply.Stat, nil
 	}
-	reply, err := fsc.npch(fid).Stat(fid)
-	if err != nil {
-		return nil, err
-	}
-	return &reply.Stat, nil
 }
 
 // XXX clone fid?

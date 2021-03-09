@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -17,6 +19,29 @@ type Tstate struct {
 	t    *testing.T
 	s    *fslib.System
 	done chan bool
+}
+
+func RmDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	err = os.RemoveAll(dir)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -36,6 +61,13 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Mkdir %v\n", err)
 	}
+	for r := 0; r < NReduce; r++ {
+		s := strconv.Itoa(r)
+		err = ts.Mkdir("name/fs/"+s, 0777)
+		if err != nil {
+			t.Fatalf("Mkdir %v\n", err)
+		}
+	}
 	return ts
 }
 
@@ -51,10 +83,6 @@ func TestWc(t *testing.T) {
 		pid1 := fslib.GenPid()
 		pid2 := fslib.GenPid()
 		s := strconv.Itoa(n)
-		err = ts.Mkdir("name/fs/"+s, 0777)
-		if err != nil {
-			t.Fatalf("Mkdir %v\n", err)
-		}
 		a1 := &fslib.Attr{pid1, "../bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), s}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
@@ -86,6 +114,11 @@ func TestWc(t *testing.T) {
 
 	for i, v := range b {
 		assert.Equal(t, v, b1[i], fmt.Sprintf("Buf %v diff %v %v\n", i, v, b1[i]))
+	}
+
+	for i := 0; i < n; i++ {
+		err := RmDir("/tmp/m-" + strconv.Itoa(i))
+		assert.Nil(t, err, "RmDir")
 	}
 
 	ts.s.Shutdown(ts.FsLib)

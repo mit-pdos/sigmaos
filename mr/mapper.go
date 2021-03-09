@@ -17,7 +17,7 @@ import (
 type MapT func(string, string) []KeyValue
 
 type Mapper struct {
-	clnt   *fslib.FsLib
+	*fslib.FsLib
 	mapf   MapT
 	pid    string
 	input  string
@@ -29,7 +29,7 @@ type Mapper struct {
 // XXX create in a temporary file and then rename
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m := &Mapper{}
-	m.clnt = fslib.MakeFsLib("mapper")
+	m.FsLib = fslib.MakeFsLib("mapper")
 	m.mapf = mapf
 	if len(args) != 3 {
 		return nil, errors.New("MakeMapper: too few arguments")
@@ -39,19 +39,25 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.input = args[1]
 	m.output = args[2]
 	m.fds = make([]int, NReduce)
-	var err error
-	m.fd, err = m.clnt.Open(m.input, np.OREAD)
+
+	db.SetDebug(false)
+
+	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("Makemapper: cannot create %v\n", m.output)
+	}
+	m.fd, err = m.Open(m.input, np.OREAD)
 	if err != nil {
 		return nil, fmt.Errorf("Makemapper: unknown %v\n", m.input)
 	}
 	for r := 0; r < NReduce; r++ {
-		oname := "name/fs/" + strconv.Itoa(r) + "/mr-" + m.output
-		m.fds[r], err = m.clnt.CreateFile(oname, np.OWRITE)
+		oname := "name/ux/~ip/m-" + m.output + "/r-" + strconv.Itoa(r)
+		m.fds[r], err = m.CreateFile(oname, np.OWRITE)
 		if err != nil {
 			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)
 		}
 	}
-	m.clnt.Started(m.pid)
+	m.Started(m.pid)
 	return m, nil
 }
 
@@ -73,14 +79,14 @@ func (m *Mapper) Map(txt string) {
 		}
 		lbuf := make([]byte, binary.MaxVarintLen64)
 		binary.PutVarint(lbuf, int64(len(b)))
-		_, err = m.clnt.Write(m.fds[r], lbuf)
+		_, err = m.Write(m.fds[r], lbuf)
 		if err != nil {
 			// maybe another worker finished earlier
 			// XXX handle partial writing of intermediate files
 			log.Printf("doMap write error %v %v\n", r, err)
 			return
 		}
-		_, err = m.clnt.Write(m.fds[r], b)
+		_, err = m.Write(m.fds[r], b)
 		if err != nil {
 			log.Printf("doMap write error %v %v\n", r, err)
 			return
@@ -91,7 +97,7 @@ func (m *Mapper) Map(txt string) {
 func (m *Mapper) doMap() {
 	rest := ""
 	for {
-		b, err := m.clnt.Read(m.fd, memfs.PIPESZ)
+		b, err := m.Read(m.fd, memfs.PIPESZ)
 		if err != nil || len(b) == 0 {
 			db.DPrintf("Read %v %v", m.input, err)
 			m.Map(rest)
@@ -111,20 +117,36 @@ func (m *Mapper) doMap() {
 
 		m.Map(txt)
 	}
-	err := m.clnt.Close(m.fd)
+	err := m.Close(m.fd)
 	if err != nil {
 		db.DPrintf("Close failed %v %v\n", m.fd, err)
+		return
 	}
+
+	// Inform reducer where to find map output
+	st, err := m.Stat("name/ux/~ip")
+	if err != nil {
+		db.DPrintf("Makemapper: cannot stat ~ip\n")
+		return
+	}
+
 	for r := 0; r < NReduce; r++ {
-		err = m.clnt.Close(m.fds[r])
+		err = m.Close(m.fds[r])
 		if err != nil {
 			db.DPrintf("Close failed %v %v\n", m.fd, err)
+			return
+		}
+		name := "name/fs/" + strconv.Itoa(r) + "/m-" + m.output
+		target := st.Name + ":pubkey:m-" + m.output + "/r-" + strconv.Itoa(r)
+		err = m.Symlink(target, name, 0777)
+		if err != nil {
+			db.DPrintf("Mapper: cannot create symlink %v %v\n", name, err)
 		}
 	}
 }
 
 func (m *Mapper) Work() {
 	m.doMap()
-	m.clnt.Close(m.fd)
-	m.clnt.Exiting(m.pid, "OK")
+	m.Close(m.fd)
+	m.Exiting(m.pid, "OK")
 }

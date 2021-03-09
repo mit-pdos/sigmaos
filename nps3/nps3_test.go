@@ -2,12 +2,14 @@ package nps3
 
 import (
 	"log"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/debug"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -50,7 +52,6 @@ func TestOne(t *testing.T) {
 
 	assert.Equal(t, 1, len(dirents))
 
-	log.Printf("shutdown\n")
 	ts.s.Shutdown(ts.FsLib)
 }
 
@@ -65,11 +66,9 @@ func TestTwo(t *testing.T) {
 
 	dirents, err := ts.ReadDir("name/s3")
 	assert.Nil(t, err, "ReadDir")
-	log.Printf("dirents: %v\n", dirents)
 
 	assert.Equal(t, 2, len(dirents))
 
-	log.Printf("shutdown\n")
 	ts.s.Shutdown(ts.FsLib)
 }
 
@@ -83,10 +82,8 @@ func TestUnion(t *testing.T) {
 	dirents, err := ts.ReadDir("name/s3/~ip")
 	assert.Nil(t, err, "ReadDir")
 
-	log.Printf("dirents: %v\n", dirents)
 	assert.Equal(t, 4, len(dirents))
 
-	log.Printf("shutdown\n")
 	ts.s.Shutdown(ts.FsLib)
 }
 
@@ -100,10 +97,8 @@ func TestUnionDir(t *testing.T) {
 	dirents, err := ts.ReadDir("name/s3/~ip/input")
 	assert.Nil(t, err, "ReadDir")
 
-	log.Printf("dirents: %v\n", dirents)
 	assert.Equal(t, 8, len(dirents))
 
-	log.Printf("shutdown\n")
 	ts.s.Shutdown(ts.FsLib)
 }
 
@@ -117,8 +112,6 @@ func TestUnionFile(t *testing.T) {
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
-
-	log.Printf("st %v\n", st)
 
 	fd, err := ts.Open(name, np.OREAD)
 	if err != nil {
@@ -137,6 +130,22 @@ func TestUnionFile(t *testing.T) {
 	}
 	assert.Equal(ts.t, int(st.Length), n)
 
-	log.Printf("shutdown\n")
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestStat(t *testing.T) {
+	ts := makeTstate(t)
+
+	name := "name/s3/~ip/input/pg-being_ernest.txt"
+	st, err := ts.Stat(name)
+	assert.Nil(t, err, "Stat")
+
+	addr, err := fsclnt.LocalIP()
+	assert.Nil(t, err, "LocalIP")
+	st, err = ts.Stat("name/s3/~ip")
+	assert.Nil(t, err, "Stat~")
+	a := strings.Split(st.Name, ":")[0]
+	assert.Equal(t, addr, a)
+
 	ts.s.Shutdown(ts.FsLib)
 }

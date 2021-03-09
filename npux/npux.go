@@ -29,7 +29,7 @@ func MakeNpUx(mount string) *NpUx {
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
 	npux.root = npux.MakeObj([]string{mount}, np.DMDIR, nil)
-	db.SetDebug(true)
+	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.UX, err)
@@ -203,6 +203,7 @@ func (o *Obj) uxRead(off int64, cnt int) ([]byte, error) {
 }
 
 func (o *Obj) uxWrite(off int64, b []byte) (np.Tsize, error) {
+	db.DPrintf("%v: WriteFile: off %v cnt %v %v\n", o, off, len(b), o.file)
 	_, err := o.file.Seek(off, 0)
 	if err != nil {
 		return 0, err
@@ -268,7 +269,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 // XXX close
 func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	p := np.Join(append(o.path, name))
-	db.DPrintf("%v: Create %v %v %v\n", ctx, o, name, p, perm)
+	db.DPrintf("%v: Create %v %v %v %v\n", ctx, o, name, p, perm)
 	var err error
 	var file *os.File
 	if perm.IsDir() {
@@ -279,10 +280,10 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 	if err != nil {
 		return nil, err
 	}
-	if file != nil {
-		o.file = file
-	}
 	o1 := o.npux.MakeObj(append(o.path, name), 0, o)
+	if file != nil {
+		o1.(*Obj).file = file
+	}
 	return o1, nil
 }
 

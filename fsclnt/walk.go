@@ -82,41 +82,60 @@ func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string
 	i := len(path) - todo
 	rest := path[i:]
 	if IsRemoteTarget(target) {
-		err = fsc.autoMount(target, path[:i])
+		trest, err := fsc.autoMount(target, path[:i])
 		if err != nil {
 			return nil, err
 		}
-		path = append(path[:i], rest...)
+		db.DPrintf("rest = %v trest %v (%v)\n", rest, trest, len(trest))
+		path = append(path[:i], append(trest, rest...)...)
 	} else {
 		path = append(np.Split(target), rest...)
 	}
 	return path, nil
 }
 
+// IPv6: [::]:port:pubkey:name
+// IPv4: host:port:pubkey[:path]
 func IsRemoteTarget(target string) bool {
-	return strings.Contains(target, ":")
-}
-
-func SplitTarget(target string) string {
-	parts := strings.Split(target, ":")
-	var server string
-
-	if strings.HasPrefix(parts[0], "[") { // IPv6: [::]:port:pubkey:name
-		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
+	if strings.HasPrefix(target, "[") {
+		parts := strings.SplitN(target, ":", 6)
+		return len(parts) >= 5
 	} else { // IPv4
-		server = parts[0] + ":" + parts[1]
+		parts := strings.SplitN(target, ":", 4)
+		return len(parts) >= 3
 	}
-	return server
 }
 
-func (fsc *FsClient) autoMount(target string, path []string) error {
+// XXX pubkey is unused
+func SplitTarget(target string) (string, []string) {
+	var server string
+	var rest []string
+
+	if strings.HasPrefix(target, "[") { // IPv6: [::]:port:pubkey:name
+		parts := strings.SplitN(target, ":", 5)
+		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
+		if len(parts[4:]) > 0 && parts[4] != "" {
+			rest = np.Split(parts[4])
+		}
+	} else { // IPv4
+		parts := strings.SplitN(target, ":", 4)
+		server = parts[0] + ":" + parts[1]
+		if len(parts[3:]) > 0 && parts[3] != "" {
+			rest = np.Split(parts[3])
+		}
+	}
+	db.DPrintf("splittarget: %v: %v %v\n", target, server, rest)
+	return server, rest
+}
+
+func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	db.DPrintf("%v: automount %v to %v\n", fsc.uname, target, path)
-	server := SplitTarget(target)
+	server, rest := SplitTarget(target)
 	fid, err := fsc.Attach(server, "")
 	if err != nil {
 		log.Fatal("Attach error: ", err)
 	}
-	return fsc.Mount(fid, np.Join(path))
+	return rest, fsc.Mount(fid, np.Join(path))
 }
 
 func IsUnion(path []string) ([]string, bool) {

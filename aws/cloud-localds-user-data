@@ -9,3 +9,24 @@ package_upgrade: true
 
 packages:
   - gcc
+  - make
+  - gcc-7
+  - gcc
+  - g++-7
+  - g++
+  - protobuf-compiler
+  - libprotobuf-dev
+  - libcrypto++-dev
+  - python3
+  - libcap-dev
+  - libncurses5-dev
+  - libboost-dev
+  - libssl-dev
+  - autopoint
+  - help2man
+  - texinfo
+  - automake
+  - libtool
+  - pkg-config
+  - libhiredis-dev
+  - python3-boto3

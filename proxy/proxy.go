@@ -100,7 +100,7 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 // XXX avoid duplication with fsclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)
-	server := fsclnt.SplitTarget(target)
+	server, _ := fsclnt.SplitTarget(target)
 	reply, err := npc.clnt.Attach(server, npc.uname, newfid, path)
 	if err != nil {
 		return np.Tqid{}, err

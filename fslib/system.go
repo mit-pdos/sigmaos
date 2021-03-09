@@ -16,6 +16,7 @@ type System struct {
 	named  *exec.Cmd
 	schedd *exec.Cmd
 	nps3d  *exec.Cmd
+	npuxd  *exec.Cmd
 }
 
 func run(name string) (*exec.Cmd, error) {
@@ -44,7 +45,30 @@ func Boot(bin string) (*System, error) {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
+	s.npuxd, err = run(bin + "/npuxd")
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(100 * time.Millisecond)
 	return s, nil
+}
+
+func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
+	dirents, err := clnt.ReadDir(mdir)
+	if err != nil {
+		return err
+	}
+	for _, st := range dirents {
+		err = clnt.Remove(mdir + "/" + st.Name + "/")
+		if err != nil {
+			return err
+		}
+		err = clnt.Remove(mdir + "/" + st.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *System) Shutdown(clnt *FsLib) {
@@ -53,20 +77,14 @@ func (s *System) Shutdown(clnt *FsLib) {
 		log.Fatalf("Schedd shutdown %v\n", err)
 	}
 
-	// Remove pool of s3 servers
-	dirents, err := clnt.ReadDir("name/s3")
+	err = s.RmUnionDir(clnt, "name/s3")
 	if err != nil {
-		log.Fatalf("Nps3d shutdown %v\n", err)
+		log.Fatalf("S3 shutdown %v\n", err)
 	}
-	for _, st := range dirents {
-		err = clnt.Remove(S3 + "/" + st.Name + "/")
-		if err != nil {
-			log.Fatalf("S3 shutdown %v\n", err)
-		}
-		err = clnt.Remove(S3 + "/" + st.Name)
-		if err != nil {
-			log.Fatalf("S3 shutdown %v\n", err)
-		}
+
+	err = s.RmUnionDir(clnt, "name/ux")
+	if err != nil {
+		log.Fatalf("Ux shutdown %v\n", err)
 	}
 
 	// Shutdown named last
@@ -78,4 +96,5 @@ func (s *System) Shutdown(clnt *FsLib) {
 	s.schedd.Wait()
 	s.named.Wait()
 	s.nps3d.Wait()
+	s.npuxd.Wait()
 }

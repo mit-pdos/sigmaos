@@ -6,3 +6,5 @@ killall schedd
 killall kvd
 killall sharderd
 killall nps3d
+killall npuxd
+

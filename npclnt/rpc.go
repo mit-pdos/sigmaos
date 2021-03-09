@@ -53,6 +53,10 @@ func (npc *NpClnt) MakeNpChan(server string) *NpChan {
 	return npchan
 }
 
+func (npc *NpChan) Server() string {
+	return npc.server
+}
+
 func (npc *NpChan) Close() {
 	npc.cm.Close(npc.server)
 }

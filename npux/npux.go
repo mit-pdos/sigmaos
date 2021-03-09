@@ -18,17 +18,18 @@ import (
 )
 
 type NpUx struct {
-	mu   sync.Mutex
-	srv  *npsrv.NpServer
-	ch   chan bool
-	root npo.NpObj
+	mu    sync.Mutex
+	srv   *npsrv.NpServer
+	ch    chan bool
+	root  npo.NpObj
+	mount string
 }
 
-func MakeNpUx() *NpUx {
+func MakeNpUx(mount string) *NpUx {
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
-	npux.root = npux.MakeObj([]string{}, np.DMDIR, nil)
-	db.SetDebug(true)
+	npux.root = npux.MakeObj([]string{mount}, np.DMDIR, nil)
+	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.UX, err)
@@ -72,6 +73,7 @@ type Obj struct {
 	sz     np.Tlength
 	parent npo.NpObj
 	file   *os.File
+	init   bool
 }
 
 func (npux *NpUx) makeObjL(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
@@ -95,15 +97,24 @@ func (o *Obj) String() string {
 }
 
 func (o *Obj) Qid() np.Tqid {
+	if !o.init {
+		o.stat()
+	}
 	return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 		np.TQversion(0), np.Tpath(o.ino))
 }
 
 func (o *Obj) Perm() np.Tperm {
+	if !o.init {
+		o.stat()
+	}
 	return o.t
 }
 
 func (o *Obj) Size() np.Tlength {
+	if !o.init {
+		o.stat()
+	}
 	return o.sz
 }
 
@@ -147,6 +158,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 	}
 	o.ino = ustat.Ino
 	o.sz = np.Tlength(ustat.Size)
+	o.init = true
 
 	st := &np.Stat{}
 	if len(o.path) > 0 {
@@ -161,6 +173,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 	st.Length = o.sz
 	s, _ := ustat.Mtim.Unix()
 	st.Mtime = uint32(s)
+
 	return st, nil
 }
 
@@ -190,6 +203,7 @@ func (o *Obj) uxRead(off int64, cnt int) ([]byte, error) {
 }
 
 func (o *Obj) uxWrite(off int64, b []byte) (np.Tsize, error) {
+	db.DPrintf("%v: WriteFile: off %v cnt %v %v\n", o, off, len(b), o.file)
 	_, err := o.file.Seek(off, 0)
 	if err != nil {
 		return 0, err
@@ -254,8 +268,8 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 
 // XXX close
 func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
-	db.DPrintf("%v: Create %v %v %v\n", ctx, o, name, perm)
 	p := np.Join(append(o.path, name))
+	db.DPrintf("%v: Create %v %v %v %v\n", ctx, o, name, p, perm)
 	var err error
 	var file *os.File
 	if perm.IsDir() {
@@ -266,10 +280,11 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 	if err != nil {
 		return nil, err
 	}
+	o1 := o.npux.MakeObj(append(o.path, name), 0, o)
 	if file != nil {
-		o.file = file
+		o1.(*Obj).file = file
 	}
-	return nil, fmt.Errorf("not supported")
+	return o1, nil
 }
 
 // XXX close

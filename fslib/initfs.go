@@ -19,7 +19,7 @@ func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	if err != nil {
 		db.DPrintf("Remove failed %v %v\n", srvname, err)
 	}
-	err = fsl.Symlink(srvaddr+":pubkey:"+srvname, srvname, 0777)
+	err = fsl.Symlink(srvaddr+":pubkey", srvname, 0777)
 	return err
 }
 
@@ -40,7 +40,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	if err != nil {
 		db.DPrintf("Remove failed %v %v\n", p, err)
 	}
-	err = fsl.Symlink(srvaddr+":pubkey:"+server, p, 0777)
+	err = fsl.Symlink(srvaddr+":pubkey", p, 0777)
 	return err
 }
 

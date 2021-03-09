@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	npux := npux.MakeNpUx()
+	npux := npux.MakeNpUx("/tmp")
 	npux.Serve()
 }

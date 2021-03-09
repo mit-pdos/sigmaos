@@ -72,7 +72,7 @@ func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
 }
 
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DPrintf("%v: lookup %v %v\n", ctx, o, p)
+	db.DPrintf("%v: lookup %v %v %v\n", ctx, o, p, len(p))
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}

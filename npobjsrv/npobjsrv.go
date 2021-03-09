@@ -123,7 +123,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Walk o %v args %v\n", f, args)
+	db.DPrintf("Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		npc.add(args.NewFid, &Fid{f.path, f.obj})
 	} else {

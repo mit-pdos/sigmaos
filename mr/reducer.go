@@ -16,7 +16,7 @@ import (
 
 type ReduceT func(string, []string) string
 
-const NReduce = 1
+const NReduce = 2
 
 type Reducer struct {
 	*fslib.FsLib
@@ -45,6 +45,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 func (r *Reducer) processFile(file string) []KeyValue {
 	kva := []KeyValue{}
 
+	log.Printf("reduce %v\n", r.input+"/"+file)
 	fd, err := r.Open(r.input+"/"+file, np.OREAD)
 	if err != nil {
 		log.Fatal("Open error ", err)
@@ -69,7 +70,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 		if err != nil {
 			log.Fatal("Unmarshal error ", err)
 		}
-		// log.Printf("reduce %v: kva %v\n", file, len(kvs))
+		db.DPrintf("reduce %v: kva %v\n", file, len(kvs))
 		kva = append(kva, kvs...)
 
 		data, err = r.Read(fd, binary.MaxVarintLen64)

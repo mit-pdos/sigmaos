@@ -57,12 +57,12 @@ func (inode *Inode) String() string {
 }
 
 func (inode *Inode) Qid() np.Tqid {
-	p := (*uint64)(unsafe.Pointer(inode))
+	id := uintptr(unsafe.Pointer(inode))
 
 	return np.MakeQid(
 		np.Qtype(inode.PermT>>np.QTYPESHIFT),
 		np.TQversion(inode.Version),
-		np.Tpath(*p))
+		np.Tpath(uint64(id)))
 }
 
 func (inode *Inode) Perm() np.Tperm {

@@ -1,10 +1,12 @@
 package mr
 
 import (
-	// "fmt"
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -111,22 +113,20 @@ func TestWc(t *testing.T) {
 	ts.SpawnNoOp(pid, reducers)
 	ts.Wait(pid)
 
-	var b []byte
+	file, err := os.OpenFile("par-mr.out", os.O_WRONLY|os.O_CREATE, 0644)
+	assert.Nil(t, err, "OpenFile")
+
+	defer file.Close()
 	for i := 0; i < NReduce; i++ {
 		// XXX run as a lambda?
-		data, err := ts.ReadFile("name/fs/mr-out-" + strconv.Itoa(i))
+		r := strconv.Itoa(i)
+		data, err := ts.ReadFile("name/fs/mr-out-" + r)
 		assert.Nil(t, err, "Readfile")
-		b = append(b, data...)
+		_, err = file.Write(data)
+		assert.Nil(t, err, "Write")
 	}
 
-	b1, err := ioutil.ReadFile("seq-mr.out")
-	assert.Nil(t, err, "Readfile seq")
-
-	assert.Equal(t, len(b), len(b1), "Output len")
-
-	//for i, v := range b {
-	//	assert.Equal(t, v, b1[i], fmt.Sprintf("Buf %v diff %v %v\n", i, v, b1[i]))
-	//}
+	Compare(t)
 
 	// Delete intermediate files
 	for i := 0; i < n; i++ {
@@ -135,4 +135,28 @@ func TestWc(t *testing.T) {
 	}
 
 	ts.s.Shutdown(ts.FsLib)
+}
+
+func Compare(t *testing.T) {
+	cmd := exec.Command("sort", "seq-mr.out")
+	var out1 bytes.Buffer
+	cmd.Stdout = &out1
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("err %v\n", err)
+	}
+	cmd = exec.Command("sort", "par-mr.out")
+	var out2 bytes.Buffer
+	cmd.Stdout = &out2
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("err %v\n", err)
+	}
+	b1 := out1.Bytes()
+	b2 := out2.Bytes()
+	assert.Equal(t, len(b1), len(b2), "Output len")
+	for i, v := range b1 {
+		assert.Equal(t, v, b2[i], fmt.Sprintf("Buf %v diff %v %v\n", i, v, b2[i]))
+	}
+
 }

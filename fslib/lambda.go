@@ -24,6 +24,7 @@ type Attr struct {
 
 const (
 	SCHED        = "name/schedd"
+	LOCALD_ROOT  = "name/localds"
 	SCHEDDEV     = SCHED + "/" + "dev"
 	NO_OP_LAMBDA = "no-op-lambda"
 )

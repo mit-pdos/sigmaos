@@ -5,8 +5,10 @@ import (
 )
 
 func main() {
-	ti, err := locald.ScanTopology()
-	if err == nil {
-		locald.PrintTopology(ti)
-	}
+	//	ti, err := locald.ScanTopology()
+	//	if err == nil {
+	//		locald.PrintTopology(ti)
+	//	}
+	ld := locald.MakeLocalD()
+	ld.Work()
 }

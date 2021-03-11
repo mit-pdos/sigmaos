@@ -3,6 +3,7 @@ package schedd
 import (
 	//	"github.com/sasha-s/go-deadlock"
 	"log"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -32,6 +33,7 @@ type Sched struct {
 	root *Obj
 	done bool
 	srv  *npsrv.NpServer
+	*fslib.FsLib
 }
 
 func MakeSchedd() *Sched {
@@ -49,6 +51,7 @@ func MakeSchedd() *Sched {
 	}
 	sd.srv = npsrv.MakeNpServer(sd, ip+":0")
 	fsl := fslib.MakeFsLib("sched")
+	sd.FsLib = fsl
 	err = fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
 	if err != nil {
 		log.Fatalf("PostService failed %v %v\n", fslib.SCHED, err)
@@ -156,6 +159,17 @@ func (sd *Sched) findRunnableWaitingConsumer() *Lambda {
 		}
 	}
 	return nil
+}
+
+// Select a random locald instance to run on
+func (sd *Sched) selectLocaldIp() (string, error) {
+	ips, err := sd.ReadDir(fslib.LOCALD_ROOT)
+	if err != nil {
+		log.Printf("Schedd error reading localds dir\n: %v", err)
+		return "", err
+	}
+	n := rand.Int() % len(ips)
+	return ips[n].Name, nil
 }
 
 func (sd *Sched) Scheduler() {

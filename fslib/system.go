@@ -17,6 +17,7 @@ type System struct {
 	schedd *exec.Cmd
 	nps3d  *exec.Cmd
 	npuxd  *exec.Cmd
+	locald *exec.Cmd
 }
 
 func run(name string) (*exec.Cmd, error) {
@@ -46,6 +47,11 @@ func Boot(bin string) (*System, error) {
 	}
 	time.Sleep(100 * time.Millisecond)
 	s.npuxd, err = run(bin + "/npuxd")
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(100 * time.Millisecond)
+	s.locald, err = run(bin + "/locald")
 	if err != nil {
 		return nil, err
 	}

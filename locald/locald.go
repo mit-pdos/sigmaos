@@ -2,8 +2,11 @@ package locald
 
 import (
 	//	"github.com/sasha-s/go-deadlock"
+	"encoding/json"
 	"log"
 	"net"
+	"os"
+	"os/exec"
 	"path"
 	"sync"
 	"time"
@@ -14,6 +17,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	"ulambda/schedd"
 )
 
 type LocalD struct {
@@ -23,7 +27,9 @@ type LocalD struct {
 	root *Obj
 	ip   string
 	done bool
+	ls   map[string]*schedd.Lambda
 	srv  *npsrv.NpServer
+	*fslib.FsLib
 }
 
 func MakeLocalD() *LocalD {
@@ -40,11 +46,53 @@ func MakeLocalD() *LocalD {
 	}
 	ld.srv = npsrv.MakeNpServer(ld, ld.ip+":0")
 	fsl := fslib.MakeFsLib("locald")
+	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
+	ld.FsLib = fsl
 	err = fsl.PostService(ld.srv.MyAddr(), path.Join(fslib.LOCALD_ROOT, ld.ip)) //"~"+ld.ip))
 	if err != nil {
 		log.Fatalf("PostService failed %v %v\n", fslib.LOCALD_ROOT, err)
 	}
 	return ld
+}
+
+func (ld *LocalD) wait(attr fslib.Attr, cmd *exec.Cmd) {
+	err := cmd.Wait()
+	if err != nil {
+		log.Printf("Lambda %v finished with error: %v", attr, err)
+		// XXX Need to think about how to return errors
+		//		return err
+	}
+	// Notify schedd that the process exited
+	// XXX race conditions for some reason?
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+
+	ld.Exiting(attr.Pid, "OK")
+}
+
+func (ld *LocalD) spawn(a []byte) error {
+	var attr fslib.Attr
+	err := json.Unmarshal(a, &attr)
+	if err != nil {
+		log.Printf("Locald unmarshalling error\n: %v", err)
+		return err
+	}
+	db.DPrintf("Locald spawn: %v\n", attr)
+	args := append([]string{attr.Pid}, attr.Args...)
+	env := append(os.Environ(), attr.Env...)
+	cmd := exec.Command(attr.Program, args...)
+	cmd.Env = env
+	cmd.Dir = attr.Dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
+	if err != nil {
+		log.Printf("Locald run error: %v, %v\n", attr, err)
+		return err
+	}
+
+	go ld.wait(attr, cmd)
+	return nil
 }
 
 func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {

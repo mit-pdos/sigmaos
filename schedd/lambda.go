@@ -5,8 +5,8 @@ import (
 	"fmt"
 	//	"github.com/sasha-s/go-deadlock"
 	"log"
-	"os"
-	"os/exec"
+	//	"os"
+	//	"os/exec"
 	"strings"
 	"sync"
 
@@ -173,18 +173,18 @@ func (l *Lambda) swapExitDependency(swap string) {
 }
 
 // XXX if remote, keep-alive?
-func (l *Lambda) wait(cmd *exec.Cmd) {
-	if cmd.Path != NO_OP_LAMBDA {
-		err := cmd.Wait()
-		if err != nil {
-			l.mu.Lock()
-			defer l.mu.Unlock()
-			log.Printf("Lambda %v finished with error: %v", l, err)
-		}
-	} else {
-		l.writeExitStatus("OK")
-	}
-}
+//func (l *Lambda) wait(cmd *exec.Cmd) {
+//	if cmd.Path != NO_OP_LAMBDA {
+//		err := cmd.Wait()
+//		if err != nil {
+//			l.mu.Lock()
+//			defer l.mu.Unlock()
+//			log.Printf("Lambda %v finished with error: %v", l, err)
+//		}
+//	} else {
+//		l.writeExitStatus("OK")
+//	}
+//}
 
 // XXX Should we lock l's fields here?
 // XXX if had remote machines, this would be run on the remote machine
@@ -196,21 +196,44 @@ func (l *Lambda) run() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{l.Pid}, l.Args...)
-	env := append(os.Environ(), l.Env...)
-	cmd := exec.Command(l.Program, args...)
-	cmd.Env = env
-	cmd.Dir = l.Dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	// Check if this lambda is a no-op
-	if cmd.Path != NO_OP_LAMBDA {
-		err = cmd.Start()
-		if err != nil {
-			return err
-		}
+
+	// If this was a no-op, exit immediately
+	if l.Program == NO_OP_LAMBDA {
+		go l.writeExitStatus("OK")
+		return nil
 	}
-	go l.wait(cmd)
+
+	attr := &fslib.Attr{}
+	attr.Pid = l.Pid
+	attr.Program = l.Program
+	attr.Args = l.Args
+	attr.Env = l.Env
+	attr.Dir = l.Dir
+	// XXX Store local ip in schedd
+	ip, err := l.sd.selectLocaldIp()
+	if err != nil {
+		log.Printf("Schedd failed to select local ip to run lambda\n")
+	}
+	err = l.sd.RunLocal(ip, attr)
+	if err != nil {
+		log.Printf("Schedd failed to run local lambda: %v, %v\n", l, err)
+	}
+
+	//	args := append([]string{l.Pid}, l.Args...)
+	//	env := append(os.Environ(), l.Env...)
+	//	cmd := exec.Command(l.Program, args...)
+	//	cmd.Env = env
+	//	cmd.Dir = l.Dir
+	//	cmd.Stdout = os.Stdout
+	//	cmd.Stderr = os.Stderr
+	//	// Check if this lambda is a no-op
+	//	if cmd.Path != NO_OP_LAMBDA {
+	//		err = cmd.Start()
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//	go l.wait(cmd)
 	return nil
 }
 

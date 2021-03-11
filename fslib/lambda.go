@@ -3,6 +3,7 @@ package fslib
 import (
 	"encoding/json"
 	"math/rand"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -54,6 +55,15 @@ func (fl *FsLib) Spawn(a *Attr) error {
 		return err
 	}
 	return fl.MakeFile(SCHED+"/"+a.Pid, b)
+}
+
+// XXX Rename
+func (fl *FsLib) RunLocal(ip string, a *Attr) error {
+	b, err := json.Marshal(a)
+	if err != nil {
+		return err
+	}
+	return fl.MakeFile(path.Join(LOCALD_ROOT, ip, a.Pid), b)
 }
 
 func (fl *FsLib) SpawnProgram(name string, args []string) error {

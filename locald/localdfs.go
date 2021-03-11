@@ -38,40 +38,43 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 	o1 := o.ld.MakeObj(append(o.name, name), perm|np.DMDIR, o).(*Obj)
 	o1.time = time.Now().Unix()
 	// TODO: create something
-	//	o1.l = makeLambda(o.sd, name, o1)
+	//	o1.l = makeLambda(o.ld, name, o1)
 	return o1, nil
 }
 
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DPrintf("%v: lookup %v %v %v\n", ctx, o, p, len(p))
+	db.DPrintf("%v: Lookup %v %v %v\n", ctx, o, p, len(p))
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
-	return nil, nil, fmt.Errorf("not supported")
 	// XXX maybe include root dir
-	//	var os []npo.NpObj
-	//	switch len(o.name) {
-	//	case 0:
-	//		l := o.sd.findLambda(p[0])
-	//		if l == nil {
-	//			return nil, nil, fmt.Errorf("not found")
-	//		}
-	//		o1 := l.obj
-	//		if len(p) > 1 {
-	//			o1 = o1.sd.MakeObj(append(o1.name, p[1]), 0, o1).(*Obj)
-	//			o1.time = o.time
-	//			o1.l = l
-	//		}
-	//		os = []npo.NpObj{o1}
-	//	case 1:
-	//		o1 := o.sd.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
-	//		o1.time = o.time
-	//		o1.l = o.l
-	//		os = []npo.NpObj{o1}
-	//	default:
-	//		log.Fatalf("%v: Lookup: %v\n", o, p)
-	//	}
-	//	return os, nil, nil
+	var os []npo.NpObj
+	switch len(o.name) {
+	case 0:
+		log.Printf("IN LOOKUP CASE 0\n")
+		// XXX Lookup always succeeds for now
+		//		l := nil //o.sd.findLambda(p[0])
+		//		if l == nil {
+		//			return nil, nil, fmt.Errorf("not found")
+		//		}
+		//		o1 := l.obj
+		var o1 *Obj
+		if len(p) > 1 {
+			o1 := o1.ld.MakeObj(append(o1.name, p[1]), 0, o1).(*Obj)
+			o1.time = o.time
+		}
+		os = []npo.NpObj{o1}
+		log.Printf("SURVIVED LOOKUP CASE 0\n")
+	case 1:
+		log.Printf("IN LOOKUP CASE 1\n")
+		o1 := o.ld.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
+		o1.time = o.time
+		o1.uid = o.uid
+		os = []npo.NpObj{o1}
+	default:
+		log.Fatalf("%v: Lookup: %v\n", o, p)
+	}
+	return os, nil, nil
 }
 
 // check permissions etc.
@@ -170,7 +173,7 @@ func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 }
 
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
-	db.DPrintf("%v: writeFile %v %v\n", o, off, len(data))
+	db.DPrintf("%v: WriteFile %v %v\n", o, off, len(data))
 	//	if len(o.name) != 2 {
 	//		log.Fatalf("WriteFile: name != 2 %v\n", o)
 	//	}
@@ -188,24 +191,24 @@ func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, er
 }
 
 func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
-	db.DPrintf("%v: writeDir %v %v\n", o, off, len(data))
-	//	switch len(o.name) {
-	//	case 0:
-	//		return 0, fmt.Errorf("Root is not writable %v", o)
-	//	case 1:
-	//		if o.l.Status == "Init" {
-	//			err := o.l.init(data)
-	//			if err != nil {
-	//				return 0, nil
-	//			}
-	//			o.sd.spawn(o.l)
-	//			return np.Tsize(len(data)), nil
-	//		} else {
-	//			return 0, fmt.Errorf("Lambda already running")
-	//		}
-	//	default:
-	//		log.Fatalf("ReadDir: name %v\n", o)
-	//	}
+	db.DPrintf("%v: WriteDir %v %v\n", o, off, len(data))
+	switch len(o.name) {
+	case 0:
+		return 0, fmt.Errorf("Root is not writable %v", o)
+	case 1:
+		//		if o.l.Status == "Init" {
+		//		err := o.l.init(data)
+		//		if err != nil {
+		//			return 0, nil
+		//		}
+		o.ld.spawn(data)
+		return np.Tsize(len(data)), nil
+		//		} else {
+		return 0, fmt.Errorf("Lambda already running")
+		//		}
+	default:
+		log.Fatalf("WriteDir: name %v\n", o)
+	}
 	return 0, fmt.Errorf("not suported")
 }
 

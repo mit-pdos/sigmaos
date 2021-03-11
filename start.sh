@@ -14,9 +14,9 @@ fi
 ./bin/schedd &
 ./bin/nps3d &
 ./bin/npuxd &
+./bin/locald &
 sleep 1
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system
 mkdir -p /mnt/9p/kv
 mkdir -p /mnt/9p/gg
-

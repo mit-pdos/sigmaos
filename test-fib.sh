@@ -21,8 +21,11 @@ rm -rf $HOME/.cache/gg
 
 cd $fib_dir
 
+echo "1. Init gg..."
+gg init
+
 # Create initial fib thunk(s) to run
-echo 'Generating input thunks...'
+echo "2. Generating input thunks..."
 GG_DIR=$fib_dir/.gg
 ./create-thunk.sh $N ./fib ./add
 

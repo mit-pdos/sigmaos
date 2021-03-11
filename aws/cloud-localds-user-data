@@ -30,3 +30,4 @@ packages:
   - pkg-config
   - libhiredis-dev
   - python3-boto3
+  - ffmpeg

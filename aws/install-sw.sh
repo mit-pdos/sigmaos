@@ -93,22 +93,21 @@ EOF
 chmod 600 ~/.ssh/aws-ulambda
 if [ -d "ulambda" ] 
 then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./make.sh)'
 else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda'
 fi
 
 if [ -d "gg" ] 
 then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd gg; git pull; make -j2)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd gg; git pull; make -j2 install)'
 else
    ssh-agent bash -c 'sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 10'
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@github.com:ArielSzekely/gg.git'
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; git clone git@github.com:excamera/excamera-static-bins.git excamera_bin_dir'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure;'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; sudo make -j2 install'
 fi
 ENDSSH
-#   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; make -j2; sudo make install'
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
 echo "ssh -i $1 ubuntu@$2"

@@ -67,7 +67,7 @@ def main():
        ls_nets(vpc)
        ls_sg(vpc)
        ls_instances(vpc)
-       ls_db(vpc)
+       # ls_db(vpc)
 
    except Exception as e:
        print("error", e)

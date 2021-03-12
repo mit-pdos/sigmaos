@@ -3,6 +3,7 @@ package npux
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -223,7 +224,7 @@ func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, erro
 
 func (o *Obj) uxReadDir() ([]*np.Stat, error) {
 	var sts []*np.Stat
-	dirents, err := os.ReadDir(o.Path())
+	dirents, err := ioutil.ReadDir(o.Path())
 	if err != nil {
 		return nil, err
 	}

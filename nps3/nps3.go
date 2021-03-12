@@ -133,7 +133,7 @@ type Obj struct {
 }
 
 func (o *Obj) String() string {
-	s := fmt.Sprintf("%v %v %v %v %v", o.key, o.t, o.id, o.sz, o.mtime)
+	s := fmt.Sprintf("%v t %v id %v sz %v %v", o.key, o.t, o.id, o.sz, o.mtime)
 	return s
 }
 
@@ -186,7 +186,7 @@ func (o *Obj) lookupDirent(name string) (*Obj, bool) {
 // we already seen it
 func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
-	m := np.Tperm(0)
+	m := mode(key)
 	db.DPrintf("s %v o.key %v dirents %v\n", s, o.key, o.dirents)
 	for i, c := range o.key {
 		if c != s[i] {
@@ -209,6 +209,7 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 }
 
 func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
+	db.DPrintf("Stat: %v\n", o)
 	var err error
 	if !o.isRead {
 		switch o.Perm() {
@@ -337,7 +338,7 @@ func (o *Obj) s3ReadDir() error {
 		for _, obj := range page.Contents {
 			db.DPrintf("Key: %v\n", *obj.Key)
 			if n, m, ok := o.includeName(*obj.Key); ok {
-				db.DPrintf("incl %v\n", n)
+				db.DPrintf("incl %v %v\n", n, m)
 				o1 := o.nps3.MakeObj(append(o.key, n), m, o)
 				o.addDirent(n, o1.(*Obj))
 			}

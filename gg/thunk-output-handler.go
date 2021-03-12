@@ -161,10 +161,6 @@ func (toh *ThunkOutputHandler) getReduction() string {
 	return strings.TrimSpace(string(valueFile))
 }
 
-func (toh *ThunkOutputHandler) getCwd() string {
-	return toh.cwd
-}
-
 func outputHandlerPids(deps map[string]bool) []string {
 	out := []string{}
 	for d, _ := range deps {

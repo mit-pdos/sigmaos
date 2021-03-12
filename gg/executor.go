@@ -171,10 +171,3 @@ func (ex *Executor) uploadDir(subDir string) {
 func (ex *Executor) Exit() {
 	ex.Exiting(ex.pid, "OK")
 }
-
-// XXX Unsure if we really need this
-func (ex *Executor) getCwd() string {
-	return "DIDN'T IMPLEMENT EXECUTOR GETCWD"
-}
-
-//echo $SPID,"gg-execute","[--timelog --ninep ${thunkHashes[@]}]","[GG_STORAGE_URI=9p://mnt/9p/fs GG_DIR=/mnt/9p/fs/.gg]","",""

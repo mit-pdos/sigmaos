@@ -194,6 +194,3 @@ func (sd *Sched) Scheduler() {
 		}
 	}
 }
-
-// timeout := int64(st.Mtime) + 5
-// if timeout < time.Now().Unix() {

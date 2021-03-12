@@ -27,7 +27,6 @@ type ExecutorLauncher interface {
 	SpawnNoOp(string, []string) error
 	Started(string) error
 	ReadFile(string) ([]byte, error)
-	getCwd() string
 }
 
 type OrchestratorDev struct {
@@ -175,10 +174,6 @@ func (orc *Orchestrator) getTargetHash(target string) string {
 	return hash
 }
 
-func (orc *Orchestrator) getCwd() string {
-	return orc.cwd
-}
-
 func (orc *Orchestrator) mkdirOpt(path string) {
 	_, err := orc.FsLib.Stat(path)
 	if err != nil {
@@ -231,7 +226,7 @@ func getInputDependencies(launch ExecutorLauncher, targetHash string, srcDir str
 // Check if the output reduction exists in the global dir
 func doneExecuting(launch ExecutorLauncher, thunkHash string) bool {
 	outputPath := ggRemoteReductions(thunkHash)
-	// XXX would be nice to have a "stat" equivalent
+	// XXX would be nice to have a "stat" equivalent -- wstat?
 	_, err := launch.ReadFile(outputPath)
 	if err == nil {
 		return true

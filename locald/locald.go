@@ -62,11 +62,12 @@ func (ld *LocalD) wait(attr fslib.Attr, cmd *exec.Cmd) {
 		// XXX Need to think about how to return errors
 		//		return err
 	}
-	// Notify schedd that the process exited
-	// XXX race conditions for some reason?
+
+	// XXX Race condition in fslib requires this to be locked
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
+	// Notify schedd that the process exited
 	ld.Exiting(attr.Pid, "OK")
 }
 

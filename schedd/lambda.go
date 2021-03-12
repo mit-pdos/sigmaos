@@ -102,7 +102,6 @@ func (l *Lambda) String() string {
 	return str
 }
 
-// XXX might want to clean up the locking here
 func (l *Lambda) writeExitStatus(status string) {
 	// Always take the sd lock before the l lock
 	l.sd.mu.Lock()
@@ -172,24 +171,6 @@ func (l *Lambda) swapExitDependency(swap string) {
 	}
 }
 
-// XXX if remote, keep-alive?
-//func (l *Lambda) wait(cmd *exec.Cmd) {
-//	if cmd.Path != NO_OP_LAMBDA {
-//		err := cmd.Wait()
-//		if err != nil {
-//			l.mu.Lock()
-//			defer l.mu.Unlock()
-//			log.Printf("Lambda %v finished with error: %v", l, err)
-//		}
-//	} else {
-//		l.writeExitStatus("OK")
-//	}
-//}
-
-// XXX Should we lock l's fields here?
-// XXX if had remote machines, this would be run on the remote machine
-// maybe we should have machines register with ulambd; have a
-// directory with machines?
 func (l *Lambda) run() error {
 	db.DPrintf("Run %v\n", l)
 	err := l.changeStatus("Started")
@@ -209,7 +190,6 @@ func (l *Lambda) run() error {
 	attr.Args = l.Args
 	attr.Env = l.Env
 	attr.Dir = l.Dir
-	// XXX Store local ip in schedd
 	ip, err := l.sd.selectLocaldIp()
 	if err != nil {
 		log.Printf("Schedd failed to select local ip to run lambda\n")
@@ -218,22 +198,6 @@ func (l *Lambda) run() error {
 	if err != nil {
 		log.Printf("Schedd failed to run local lambda: %v, %v\n", l, err)
 	}
-
-	//	args := append([]string{l.Pid}, l.Args...)
-	//	env := append(os.Environ(), l.Env...)
-	//	cmd := exec.Command(l.Program, args...)
-	//	cmd.Env = env
-	//	cmd.Dir = l.Dir
-	//	cmd.Stdout = os.Stdout
-	//	cmd.Stderr = os.Stderr
-	//	// Check if this lambda is a no-op
-	//	if cmd.Path != NO_OP_LAMBDA {
-	//		err = cmd.Start()
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//	go l.wait(cmd)
 	return nil
 }
 
@@ -270,7 +234,7 @@ func (l *Lambda) startExitDep(pid string) {
 // XXX This function isn't entirely atomic. I don't think this is an issue for
 // now, but it seems like a reasonably performant way of avoiding a deadlock.
 func (l *Lambda) stopProducersS() {
-	// XXX a dirty hack to avoid holding locks & deadlocking...
+	// XXX a hack to avoid holding locks & deadlocking...
 	l.mu.Lock()
 	pDep := map[string]bool{}
 	for k, v := range l.ProdDep {

@@ -37,8 +37,6 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 	// Creating a lambda is always a directory
 	o1 := o.ld.MakeObj(append(o.name, name), perm|np.DMDIR, o).(*Obj)
 	o1.time = time.Now().Unix()
-	// TODO: create something
-	//	o1.l = makeLambda(o.ld, name, o1)
 	return o1, nil
 }
 
@@ -51,22 +49,14 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 	var os []npo.NpObj
 	switch len(o.name) {
 	case 0:
-		log.Printf("IN LOOKUP CASE 0\n")
 		// XXX Lookup always succeeds for now
-		//		l := nil //o.sd.findLambda(p[0])
-		//		if l == nil {
-		//			return nil, nil, fmt.Errorf("not found")
-		//		}
-		//		o1 := l.obj
 		var o1 *Obj
 		if len(p) > 1 {
 			o1 := o1.ld.MakeObj(append(o1.name, p[1]), 0, o1).(*Obj)
 			o1.time = o.time
 		}
 		os = []npo.NpObj{o1}
-		log.Printf("SURVIVED LOOKUP CASE 0\n")
 	case 1:
-		log.Printf("IN LOOKUP CASE 1\n")
 		o1 := o.ld.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
 		o1.time = o.time
 		o1.uid = o.uid
@@ -121,43 +111,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DPrintf("%v: ReadFile: %v %v\n", o, off, cnt)
-	//	if len(o.name) != 2 {
-	//		log.Fatalf("ReadFile: name != 2 %v\n", o)
-	//	}
-	//	if off != 0 {
-	//		return nil, nil
-	//	}
-	//	o.l.mu.Lock()
-	//	defer o.l.mu.Unlock()
-	//
-	//	var b []byte
-	//	switch o.name[1] {
-	//	case "ExitStatus":
-	//		o.l.waitForL()
-	//		b = []byte(o.l.ExitStatus)
-	//	case "Status":
-	//		b = []byte(o.l.Status)
-	//	case "Program":
-	//		b = []byte(o.l.Program)
-	//	case "Pid":
-	//		b = []byte(o.l.Pid)
-	//	case "Dir":
-	//		b = []byte(o.l.Dir)
-	//	case "Args":
-	//		return json.Marshal(o.l.Args)
-	//	case "Env":
-	//		return json.Marshal(o.l.Env)
-	//	case "ConsDep":
-	//		return json.Marshal(o.l.ConsDep)
-	//	case "ProdDep":
-	//		return json.Marshal(o.l.ProdDep)
-	//	case "ExitDep":
-	//		return json.Marshal(o.l.ExitDep)
-	//	default:
-	//		return nil, fmt.Errorf("Unreadable field %v", o.name[0])
-	//	}
-	var b []byte
-	return b, fmt.Errorf("not suported")
+	return []byte{}, fmt.Errorf("not suported")
 }
 
 func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
@@ -174,19 +128,6 @@ func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DPrintf("%v: WriteFile %v %v\n", o, off, len(data))
-	//	if len(o.name) != 2 {
-	//		log.Fatalf("WriteFile: name != 2 %v\n", o)
-	//	}
-	//	switch o.name[1] {
-	//	case "ExitStatus":
-	//		o.l.writeExitStatus(string(data))
-	//	case "Status":
-	//		o.l.writeStatus(string(data))
-	//	case "ExitDep":
-	//		o.l.swapExitDependency(string(data))
-	//	default:
-	//		return 0, fmt.Errorf("Unwritable field %v", o.name[0])
-	//	}
 	return np.Tsize(len(data)), fmt.Errorf("not suported")
 }
 
@@ -196,16 +137,8 @@ func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, err
 	case 0:
 		return 0, fmt.Errorf("Root is not writable %v", o)
 	case 1:
-		//		if o.l.Status == "Init" {
-		//		err := o.l.init(data)
-		//		if err != nil {
-		//			return 0, nil
-		//		}
 		o.ld.spawn(data)
 		return np.Tsize(len(data)), nil
-		//		} else {
-		return 0, fmt.Errorf("Lambda already running")
-		//		}
 	default:
 		log.Fatalf("WriteDir: name %v\n", o)
 	}

@@ -45,8 +45,6 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, subDir string, exitDeps []string) string {
 	a := fslib.Attr{}
 	a.Pid = downloaderPid(dstDir, subDir, targetHash)
-	//	log.Printf("Spawning d %v deps %v", a.Pid, exitDeps)
-	//	debug.PrintStack()
 	a.Program = "./bin/fsdownloader"
 	a.Args = []string{
 		ggRemote(subDir, targetHash),

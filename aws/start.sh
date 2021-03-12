@@ -23,14 +23,19 @@ do
     (cd ulambda; ./make.sh)
     if [ "${vm}" = "${NAME}" ]; then 
        echo "START NAMED"
-#       ./ulambda/bin/named &
+       nohup ./ulambda/bin/named > named.out 2>&1 < /dev/null &
     fi
     echo "NAMED: " ${NAMED}
     export NAMED="${NAMED}"
-    ./ulambda/bin/nps3d &
+    nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
     # ./ulambda/bin/npuxd &
 ENDSSH
 done
+
+#
+# open up TCP port to NAMED machine to make mount work
+#
+
 #../umount.sh
 #echo "start proxy: $NAMED"
 #../bin/proxyd &

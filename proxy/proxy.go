@@ -88,6 +88,9 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 		return &np.Rerror{err.Error()}
 	}
 	npc.uname = u.Uid
+
+	log.Printf("attach %v\n", args)
+
 	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, np.Split(args.Aname))
 	if err != nil {
 		return &np.Rerror{err.Error()}

@@ -12,7 +12,6 @@ vma=($vms)
 NAME="${vma[0]}"
 NAMED="${vma[0]}:1111"
 export NAMED="${NAMED}"
-echo "NAME": $NAME
 
 for vm in $vms
 do
@@ -28,7 +27,7 @@ do
     echo "NAMED: " ${NAMED}
     export NAMED="${NAMED}"
     nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
-    # ./ulambda/bin/npuxd &
+    # nohup ./ulambda/bin/npuxd > npsd3.out 2>&1 < /dev/null &
 ENDSSH
 done
 

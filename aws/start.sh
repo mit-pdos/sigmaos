@@ -32,5 +32,9 @@ ENDSSH
 done
 
 # HACK
-ssh -i key-vpc-0017a5baece20dc34.pem -L 1110:localhost:1110 ubuntu@${MAIN} sleep 999999999
+ssh -i key-$1.pem -L 1110:localhost:1110 ubuntu@${MAIN} sleep 999999999
+
+#
+# Run in another window:
+#
 # sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 ${IP} /mnt/9p

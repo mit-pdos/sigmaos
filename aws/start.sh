@@ -9,7 +9,7 @@ fi
 vms=`./lsvpc.py $1 | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
-NAME="${vma[0]}"
+MAIN="${vma[0]}"
 NAMED="${vma[0]}:1111"
 export NAMED="${NAMED}"
 
@@ -17,26 +17,22 @@ for vm in $vms
 do
     echo "START: $vm"
     ssh -i key-$1.pem ubuntu@$vm <<ENDSSH
+    export NAMED="${NAMED}"
     ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull)'
     ./ulambda/stop.sh
     (cd ulambda; ./make.sh)
-    if [ "${vm}" = "${NAME}" ]; then 
+    if [ "${vm}" = "${MAIN}" ]; then 
        echo "START NAMED"
        nohup ./ulambda/bin/named > named.out 2>&1 < /dev/null &
+       nohup ./ulambda/bin/proxyd > proxyd.out 2>&1 < /dev/null &
     fi
-    echo "NAMED: " ${NAMED}
-    export NAMED="${NAMED}"
     nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
     # nohup ./ulambda/bin/npuxd > npsd3.out 2>&1 < /dev/null &
 ENDSSH
 done
 
 #
-# open up TCP port to NAMED machine to make mount work
+# open up TCP to port 1110 on NAME machine to make mount work
 #
-
-#../umount.sh
-#echo "start proxy: $NAMED"
-#../bin/proxyd &
-#sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p
-#ls /mnt/9p
+IP=`echo ${MAIN} | sed -e 's/-/./g' -e 's/ec2.//g' -e 's/.compute.1.amazonaws.com//g'`
+sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 ${IP} /mnt/9p

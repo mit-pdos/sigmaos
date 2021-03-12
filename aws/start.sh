@@ -31,8 +31,10 @@ do
 ENDSSH
 done
 
+# HACK
+ssh -i key-$1.pem -L 1110:localhost:1110 ubuntu@${MAIN} sleep 999999999
+
 #
-# open up TCP to port 1110 on NAME machine to make mount work
+# Run in another window:
 #
-IP=`echo ${MAIN} | sed -e 's/-/./g' -e 's/ec2.//g' -e 's/.compute.1.amazonaws.com//g'`
-sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 ${IP} /mnt/9p
+# sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 ${IP} /mnt/9p

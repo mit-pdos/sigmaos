@@ -1,5 +1,17 @@
 #!/bin/bash
 
+memfs_dir=/mnt/9p/fs/gg
+
+if [ ! -d "/mnt/9p/fs" ]
+then
+  echo "9p not mounted!"
+  exit 1
+fi
+
+echo "1. Set up memfs dirs..."
+mkdir -p $memfs_dir
+mkdir -p $memfs_dir/results
+
 exc_dir=$HOME/gg/examples/excamera
 ulambda_dir=$HOME/ulambda
 
@@ -16,18 +28,18 @@ rm -rf $HOME/.cache/gg
 cd $exc_dir
 
 # Set up the thunks for GG
-echo "1. Generate Makefile"
+echo "2. Generate Makefile"
 ./gen_makefile.py 1 2 16 63 > Makefile
 
-echo "2. Clean excamera directory"
+echo "3. Clean excamera directory"
 make clean
 rm -f output.avi
 
-echo "3. Initialize gg"
+echo "4. Initialize gg"
 rm -rf .gg
 gg init
 
-echo "4. Execute 'make' to create thunks"
+echo "5. Execute 'make' to create thunks"
 gg-infer make -j$(nproc)
 
 # Refresh the executables file
@@ -40,7 +52,12 @@ done
 
 # Get targets
 ivfs=`ls *.ivf`
-states=00000001-0.state #`ls *.state`
+states=00000001-0.state    #`ls *.state`
+targets="${ivfs} ${states}"
 
-echo '5. Running...'
-$ulambda_dir/mk-gg-ulambda-job.sh $ivfs $states | $ulambda_dir/bin/submit
+echo '6. Copying to memfs...'
+cp -r ./.gg $memfs_dir
+cp ./$targets $memfs_dir
+
+echo '7. Running...'
+$ulambda_dir/mk-gg-ulambda-job.sh $targets | $ulambda_dir/bin/submit

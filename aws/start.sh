@@ -24,17 +24,12 @@ do
     if [ "${vm}" = "${MAIN}" ]; then 
        echo "START NAMED"
        nohup ./ulambda/bin/named > named.out 2>&1 < /dev/null &
+       sleep 1
        nohup ./ulambda/bin/proxyd > proxyd.out 2>&1 < /dev/null &
+       nohup ./ulambda/bin/schedd > schedd.out 2>&1 < /dev/null &
     fi
     nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
-    # nohup ./ulambda/bin/npuxd > nnpuxd.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/npuxd > nnpuxd.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/locald > locald.out 2>&1 < /dev/null &
 ENDSSH
 done
-
-# HACK
-ssh -i key-$1.pem -L 1110:localhost:1110 ubuntu@${MAIN} sleep 999999999
-
-#
-# Run in another window:
-#
-# sudo mount -t 9p -o tcp,name=`whoami`,uname=`whoami`,port=1110 ${IP} /mnt/9p

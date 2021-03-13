@@ -47,7 +47,7 @@ func spawnDownloader(launch ExecutorLauncher, targetHash string, dstDir string, 
 	a.Pid = downloaderPid(dstDir, subDir, targetHash)
 	//	log.Printf("Spawning d %v deps %v", a.Pid, exitDeps)
 	//	debug.PrintStack()
-	a.Program = "./bin/fsdownloader"
+	a.Program = "bin/fsdownloader"
 	a.Args = []string{
 		ggRemote(subDir, targetHash),
 		path.Join(dstDir, ".gg", subDir, targetHash),
@@ -84,7 +84,7 @@ func spawnDirUploader(launch ExecutorLauncher, targetHash string, subDir string)
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
 	a := fslib.Attr{}
 	a.Pid = origDirUploaderPid(subDir)
-	a.Program = "./bin/fsdiruploader"
+	a.Program = "bin/fsdiruploader"
 	a.Args = []string{
 		ggOrig(dir, subDir, ""),
 		ggRemote(subDir, ""),
@@ -133,7 +133,7 @@ func spawnThunkResultUploaders(launch ExecutorLauncher, hash string) []string {
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
 	a := fslib.Attr{}
 	a.Pid = reductionWriterPid(dstDir, subDir, target)
-	a.Program = "./bin/gg-target-writer"
+	a.Program = "bin/gg-target-writer"
 	a.Args = []string{
 		path.Join(dstDir, subDir),
 		target,
@@ -172,7 +172,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
 	a := fslib.Attr{}
 	a.Pid = outputHandlerPid(thunkHash)
-	a.Program = "./bin/gg-thunk-output-handler"
+	a.Program = "bin/gg-thunk-output-handler"
 	a.Args = []string{
 		thunkHash,
 	}

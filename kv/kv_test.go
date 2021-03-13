@@ -10,7 +10,6 @@ import (
 	"ulambda/fslib"
 )
 
-const BIN = "../bin"
 const NKEYS = 100
 
 type Tstate struct {
@@ -26,7 +25,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.t = t
 	ts.ch = make(chan bool)
 
-	s, err := fslib.Boot(BIN)
+	s, err := fslib.Boot("..")
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -59,7 +58,7 @@ func makeTstate(t *testing.T) *Tstate {
 func (ts *Tstate) spawnKv() string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = BIN + "/kvd"
+	a.Program = "bin/kvd"
 	a.Args = []string{}
 	a.PairDep = nil
 	a.ExitDep = nil
@@ -70,8 +69,8 @@ func (ts *Tstate) spawnKv() string {
 func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = BIN + "/sharderd"
-	a.Args = []string{BIN, opcode, pid}
+	a.Program = "bin/sharderd"
+	a.Args = []string{opcode, pid}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)

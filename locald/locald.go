@@ -23,6 +23,7 @@ import (
 type LocalD struct {
 	mu   sync.Mutex
 	load int // XXX bogus
+	bin  string
 	nid  uint64
 	root *Obj
 	ip   string
@@ -32,10 +33,11 @@ type LocalD struct {
 	*fslib.FsLib
 }
 
-func MakeLocalD() *LocalD {
+func MakeLocalD(bin string) *LocalD {
 	ld := &LocalD{}
 	ld.load = 0
 	ld.nid = 0
+	ld.bin = bin
 	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	ld.root.time = time.Now().Unix()
 	db.SetDebug(false)
@@ -77,10 +79,10 @@ func (ld *LocalD) spawn(a []byte) error {
 		log.Printf("Locald unmarshalling error\n: %v", err)
 		return err
 	}
-	db.DPrintf("Locald spawn: %v\n", attr)
+	log.Printf("Locald spawn: %v\n", attr)
 	args := append([]string{attr.Pid}, attr.Args...)
 	env := append(os.Environ(), attr.Env...)
-	cmd := exec.Command(attr.Program, args...)
+	cmd := exec.Command(ld.bin+"/"+attr.Program, args...)
 	cmd.Env = env
 	cmd.Dir = attr.Dir
 	cmd.Stdout = os.Stdout

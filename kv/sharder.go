@@ -70,7 +70,6 @@ type Sharder struct {
 	cond *sync.Cond
 	*fslib.FsLibSrv
 	pid      string
-	bin      string
 	args     []string
 	kvs      []string // the kv servers in this configuration
 	nextKvs  []string // the available kvs for the next config
@@ -81,15 +80,14 @@ type Sharder struct {
 }
 
 func MakeSharder(args []string) (*Sharder, error) {
-	if len(args) < 4 {
+	if len(args) < 3 {
 		return nil, fmt.Errorf("MakeSharder: too few arguments %v\n", args)
 	}
 	log.Printf("Sharder: %v\n", args)
 	sh := &Sharder{}
 	sh.cond = sync.NewCond(&sh.mu)
 	sh.pid = args[0]
-	sh.bin = args[1]
-	sh.args = args[2:]
+	sh.args = args[1:]
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)

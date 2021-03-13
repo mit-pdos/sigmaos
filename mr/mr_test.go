@@ -51,8 +51,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.t = t
 	ts.done = make(chan bool)
 
-	bin := "../bin"
-	s, err := fslib.Boot(bin)
+	s, err := fslib.Boot("..")
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -85,10 +84,10 @@ func TestWc(t *testing.T) {
 		pid1 := fslib.GenPid()
 		pid2 := fslib.GenPid()
 		m := strconv.Itoa(n)
-		a1 := &fslib.Attr{pid1, "../bin/fsreader", "",
+		a1 := &fslib.Attr{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
-		a2 := &fslib.Attr{pid2, "../bin/mr-m-wc", "",
+		a2 := &fslib.Attr{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
 		ts.Spawn(a1)
@@ -101,7 +100,7 @@ func TestWc(t *testing.T) {
 	for i := 0; i < NReduce; i++ {
 		pid := fslib.GenPid()
 		r := strconv.Itoa(i)
-		a := &fslib.Attr{pid, "../bin/mr-r-wc", "",
+		a := &fslib.Attr{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
 			nil, mappers}
 		reducers = append(reducers, pid)

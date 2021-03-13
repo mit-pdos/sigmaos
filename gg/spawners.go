@@ -140,7 +140,8 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
 	reductionPid := outputHandlerPid(targetReduction)
-	deps = append(deps, reductionPid)
+	noOpReductionPid := noOpPid(reductionPid)
+	deps = append(deps, noOpReductionPid)
 	a.ExitDep = deps
 	err := launch.Spawn(&a)
 	if err != nil {

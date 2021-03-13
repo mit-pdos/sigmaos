@@ -1,7 +1,6 @@
 package gg
 
 import (
-	"log"
 	"path"
 
 	db "ulambda/debug"
@@ -45,36 +44,7 @@ func (tw *TargetWriter) Work() {
 	}
 
 	// Download to target location
-	downPid := tw.spawnDownloader(targetHash)
-	exitDepSwaps := []string{
-		tw.pid,
-		downPid,
-	}
-	db.DPrintf("Updating exit dependencies for [%v]\n", tw.pid)
-	err := tw.SwapExitDependency(exitDepSwaps)
-	if err != nil {
-		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
-	}
-}
-
-// XXX Should get rid of this, and/or blend it into the spawners file
-func (tw *TargetWriter) spawnDownloader(targetHash string) string {
-	a := fslib.Attr{}
-	subDir := path.Base(path.Dir(tw.cwd))
-	a.Pid = reductionDownloaderPid(targetHash, subDir, tw.target)
-	a.Program = "./bin/fsdownloader"
-	a.Args = []string{
-		ggRemoteBlobs(targetHash),
-		path.Join(tw.cwd, tw.target),
-	}
-	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
-	a.ExitDep = []string{uploaderPid(tw.targetReduction, GG_BLOBS, tw.target)}
-	err := tw.Spawn(&a)
-	if err != nil {
-		db.DPrintf("Error spawning download worker [%v]: %v\n", tw.target, err)
-	}
-	return a.Pid
+	downloadFile(tw, ggRemoteBlobs(targetHash), path.Join(tw.cwd, tw.target))
 }
 
 func (tw *TargetWriter) Name() string {

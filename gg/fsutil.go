@@ -111,6 +111,23 @@ func setupLocalExecutionEnv(hash string) {
 	}
 }
 
+func downloadFile(fslambda FsLambda, src string, dest string) {
+	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
+	contents, err := fslambda.ReadFile(src)
+	if err != nil {
+		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
+	}
+	err = ioutil.WriteFile(dest, contents, 0777)
+	if err != nil {
+		log.Printf("%v Couldn't write download file [%v]: %v\n", fslambda.Name(), dest, err)
+	}
+	// Override umask
+	err = os.Chmod(dest, 0777)
+	if err != nil {
+		log.Printf("%v Couldn't chmod newly downloaded file [%v]: %v\n", fslambda.Name(), dest, err)
+	}
+}
+
 func uploadDir(fslambda FsLambda, dir string, subDir string) {
 	src := ggLocal(dir, subDir, "")
 	dest := ggRemote(subDir, "")

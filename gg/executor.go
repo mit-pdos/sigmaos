@@ -1,11 +1,9 @@
 package gg
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -38,17 +36,17 @@ func (ex *Executor) Work() {
 
 func (ex *Executor) downloadInputFiles() {
 	// Download the thunk itself
-	ex.downloadFile(GG_BLOBS, ex.thunkHash)
+	downloadFile(ex, ggRemoteBlobs(ex.thunkHash), ggLocalBlobs(ex.thunkHash, ex.thunkHash))
 	inputDeps := getInputDependencies(ex, ex.thunkHash, ggRemoteBlobs(""))
 	for _, dep := range inputDeps {
 		if isThunk(dep) {
 			// If it's a thunk, download the reduction file
-			ex.downloadFile(GG_REDUCTIONS, dep)
+			downloadFile(ex, ggRemoteReductions(dep), ggLocalReductions(ex.thunkHash, dep))
 			// And download the reduction itself
-			reduction := ex.readReduction(dep)
-			ex.downloadFile(GG_BLOBS, reduction)
+			reduction := getReductionResult(ex, dep)
+			downloadFile(ex, ggRemoteBlobs(reduction), ggLocalBlobs(ex.thunkHash, reduction))
 		} else {
-			ex.downloadFile(GG_BLOBS, dep)
+			downloadFile(ex, ggRemoteBlobs(dep), ggLocalBlobs(ex.thunkHash, dep))
 		}
 	}
 }
@@ -89,34 +87,6 @@ func (ex *Executor) uploadOutputFiles() {
 	for _, subDir := range subDirs {
 		uploadDir(ex, ex.thunkHash, subDir)
 	}
-}
-
-func (ex *Executor) downloadFile(subDir string, file string) {
-	src := ggRemote(subDir, file)
-	dest := ggLocal(ex.thunkHash, subDir, file)
-	db.DPrintf("Executor downloading [%v] to [%v]\n", src, dest)
-	contents, err := ex.ReadFile(src)
-	if err != nil {
-		log.Printf("Read download file error [%v]: %v\n", src, err)
-	}
-	err = ioutil.WriteFile(dest, contents, 0777)
-	if err != nil {
-		log.Printf("Executor couldn't write download file [%v]: %v\n", dest, err)
-	}
-	// Override umask
-	err = os.Chmod(dest, 0777)
-	if err != nil {
-		log.Printf("Executor couldn't chmod newly downloaded file")
-	}
-}
-
-func (ex *Executor) readReduction(reductionHash string) string {
-	reductionPath := ggRemoteReductions(reductionHash)
-	f, err := ex.ReadFile(reductionPath)
-	if err != nil {
-		log.Fatalf("Executor couldn't read target reduction [%v]: %v\n", reductionPath, err)
-	}
-	return strings.TrimSpace(string(f))
 }
 
 func (ex *Executor) Name() string {

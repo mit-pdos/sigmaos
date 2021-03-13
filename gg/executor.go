@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 
 	db "ulambda/debug"
@@ -31,7 +30,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 }
 
 func (ex *Executor) Work() {
-	setupLocalExecutionEnv(ex, ex.thunkHash)
+	setupLocalExecutionEnv(ex.thunkHash)
 	ex.downloadInputFiles()
 	ex.exec()
 	ex.uploadOutputFiles()
@@ -88,7 +87,7 @@ func (ex *Executor) uploadOutputFiles() {
 	// Upload contents of each subdir (blobs, reductions, hash_cache) to 9P remote
 	// server
 	for _, subDir := range subDirs {
-		ex.uploadDir(subDir)
+		uploadDir(ex, ex.thunkHash, subDir)
 	}
 }
 
@@ -120,52 +119,8 @@ func (ex *Executor) readReduction(reductionHash string) string {
 	return strings.TrimSpace(string(f))
 }
 
-func (ex *Executor) uploadDir(subDir string) {
-	src := ggLocal(ex.thunkHash, subDir, "")
-	dest := ggRemote(subDir, "")
-	db.DPrintf("Executor uploading dir [%v] to [%v]\n", src, dest)
-	files, err := ioutil.ReadDir(src)
-	if err != nil {
-		log.Fatalf("Executor read upload dir error: %v\n", err)
-	}
-	for _, f := range files {
-		// Don't overwrite other thunks' reductions
-		if subDir != "reductions" || strings.Contains(f.Name(), ex.thunkHash) {
-			srcPath := path.Join(src, f.Name())
-			dstPath := path.Join(dest, f.Name())
-			contents, err := ioutil.ReadFile(srcPath)
-			if err != nil {
-				log.Fatalf("Executor read upload dir file error[%v]: %v\n", srcPath, err)
-			}
-			// Try and make a new file if one doesn't exist, else overwrite
-			_, err = ex.Stat(dstPath)
-			if err != nil {
-				db.DPrintf("Executor mkfile dir uploader [%v]\n", dstPath)
-				// XXX Perms?
-				err = ex.MakeFile(dstPath, contents)
-				if err != nil {
-					// XXX This only occurs if someone else has written the file since we
-					// last checked if it existed. Since it isn't a reduction (by the
-					// check in the big if statement), this is ok. The contents will be
-					// identical. Should change this to an atomic rename operation at some
-					// point, though.
-					log.Printf("Executor couldn't make upload dir file %v: %v", dstPath, err)
-				}
-			} else {
-				db.DPrintf("Executor file already exists [%v]\n", dstPath)
-				err = ex.WriteFile(dstPath, contents)
-				if err != nil {
-					// XXX This only occurs if someone else has written the file since we
-					// last checked if it existed. Since it isn't a reduction (by the
-					// check in the big if statement), this is ok. The contents will be
-					// identical. Should change this to an atomic rename operation at some
-					// point, though.
-					log.Printf("Executor couldn't write uplaod dir file [%v]: %v\n", dstPath, err)
-				}
-			}
-		}
-	}
-
+func (ex *Executor) Name() string {
+	return "Executor"
 }
 
 func (ex *Executor) Exit() {

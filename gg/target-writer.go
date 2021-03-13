@@ -3,7 +3,6 @@ package gg
 import (
 	"log"
 	"path"
-	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -38,7 +37,7 @@ func (tw *TargetWriter) Exit() {
 
 func (tw *TargetWriter) Work() {
 	// Read the final output's hash from the reducton file
-	targetHash := tw.readTargetHash()
+	targetHash := getReductionResult(tw, tw.targetReduction)
 
 	// Preserve the target name if target == reduction
 	if tw.target == tw.targetReduction {
@@ -56,15 +55,6 @@ func (tw *TargetWriter) Work() {
 	if err != nil {
 		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
 	}
-}
-
-func (tw *TargetWriter) readTargetHash() string {
-	reductionPath := ggRemoteReductions(tw.targetReduction)
-	f, err := tw.ReadFile(reductionPath)
-	if err != nil {
-		log.Fatalf("Couldn't read target reduction [%v]: %v\n", reductionPath, err)
-	}
-	return strings.TrimSpace(string(f))
 }
 
 // XXX Should get rid of this, and/or blend it into the spawners file
@@ -85,4 +75,8 @@ func (tw *TargetWriter) spawnDownloader(targetHash string) string {
 		db.DPrintf("Error spawning download worker [%v]: %v\n", tw.target, err)
 	}
 	return a.Pid
+}
+
+func (tw *TargetWriter) Name() string {
+	return "TargetWriter"
 }

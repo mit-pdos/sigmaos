@@ -2,7 +2,6 @@ package gg
 
 import (
 	"log"
-	"path"
 	"strings"
 
 	db "ulambda/debug"
@@ -14,7 +13,6 @@ type ThunkOutputHandler struct {
 	thunkHash             string
 	primaryOutputThunkPid string
 	outputFiles           []string
-	cwd                   string
 	*fslib.FsLib
 }
 
@@ -25,10 +23,6 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 	toh.pid = args[0]
 	toh.thunkHash = args[1]
 	toh.outputFiles = args[2:]
-	toh.cwd = path.Join(
-		GG_LOCAL,
-		toh.thunkHash,
-	)
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
 	toh.FsLib = fls
 	db.SetDebug(debug)
@@ -53,7 +47,7 @@ func (toh *ThunkOutputHandler) Work() {
 	} else {
 		for _, thunk := range newThunks {
 			// Avoid doing redundant work
-			if doneExecuting(toh, thunk.hash) || currentlyExecuting(toh, thunk.hash) {
+			if reductionExists(toh, thunk.hash) || currentlyExecuting(toh, thunk.hash) {
 				continue
 			}
 			exitDeps := outputHandlerPids(thunk.deps)
@@ -79,7 +73,7 @@ func (toh *ThunkOutputHandler) spawnDownstreamThunk(thunkHash string, deps []str
 }
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {
-	reduction := toh.getReduction()
+	reduction := getReductionResult(toh, toh.thunkHash)
 	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {
 		outputPath := ggRemoteReductions(outputFile)
@@ -143,30 +137,6 @@ func (toh *ThunkOutputHandler) readThunkOutput() []string {
 	}
 }
 
-func (toh *ThunkOutputHandler) getValue() string {
-	filePath := ggRemoteBlobs(toh.getReduction())
-	contents, err := toh.ReadFile(filePath)
-	if err != nil {
-		log.Fatalf("Error reading value file[%v]: %v\n", filePath, err)
-	}
-	return strings.TrimSpace(string(contents))
-}
-
-func (toh *ThunkOutputHandler) getReduction() string {
-	thunkOutputPath := ggRemoteReductions(toh.thunkHash)
-	valueFile, err := toh.ReadFile(thunkOutputPath)
-	if err != nil {
-		log.Fatalf("Error reading reduction in TOH [%v]: %v\n", thunkOutputPath, err)
-	}
-	return strings.TrimSpace(string(valueFile))
-}
-
-func outputHandlerPids(deps map[string]bool) []string {
-	out := []string{}
-	for d, _ := range deps {
-		pid := outputHandlerPid(d)
-		noOpPid := noOpPid(pid)
-		out = append(out, noOpPid)
-	}
-	return out
+func (toh *ThunkOutputHandler) Name() string {
+	return "ThunkOutputHandler"
 }

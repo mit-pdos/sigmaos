@@ -3,7 +3,6 @@ package gg
 import (
 	"io/ioutil"
 	"log"
-	"os"
 	"path"
 	//	"runtime/debug"
 	"strings"
@@ -23,10 +22,10 @@ const (
 )
 
 type ExecutorLauncher interface {
+	FsLambda
 	Spawn(*fslib.Attr) error
 	SpawnNoOp(string, []string) error
 	Started(string) error
-	ReadFile(string) ([]byte, error)
 }
 
 type OrchestratorDev struct {
@@ -223,17 +222,7 @@ func getInputDependencies(launch ExecutorLauncher, targetHash string, srcDir str
 	return dependencies
 }
 
-// Check if the output reduction exists in the global dir
-func doneExecuting(launch ExecutorLauncher, thunkHash string) bool {
-	outputPath := ggRemoteReductions(thunkHash)
-	// XXX would be nice to have a "stat" equivalent -- wstat?
-	_, err := launch.ReadFile(outputPath)
-	if err == nil {
-		return true
-	}
-	return false
-}
-
+// XXX This doesn't actually do what I think it does :P
 // XXX Should really check if it's in the queue as well (not just if it's
 //  actively running. Also, there may be a slight race
 func currentlyExecuting(launch ExecutorLauncher, thunkHash string) bool {
@@ -244,16 +233,6 @@ func currentlyExecuting(launch ExecutorLauncher, thunkHash string) bool {
 	return false
 }
 
-func setupLocalExecutionEnv(launch ExecutorLauncher, targetHash string) {
-	subDirs := []string{
-		ggLocalBlobs(targetHash, ""),
-		ggLocalReductions(targetHash, ""),
-		ggLocalHashCache(targetHash, ""),
-	}
-	for _, d := range subDirs {
-		err := os.MkdirAll(d, 0777)
-		if err != nil {
-			log.Fatalf("Error making execution env dir [%v]: %v\n", d, err)
-		}
-	}
+func (orc *Orchestrator) Name() string {
+	return "Orchestrator"
 }

@@ -63,7 +63,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
 	a := fslib.Attr{}
 	a.Pid = executorPid(targetHash)
-	a.Program = "./bin/gg-executor"
+	a.Program = "bin/gg-executor"
 	a.Args = []string{
 		targetHash,
 	}

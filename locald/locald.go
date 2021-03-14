@@ -80,7 +80,7 @@ func (ld *LocalD) spawn(a []byte) error {
 		log.Printf("Locald unmarshalling error\n: %v", err)
 		return err
 	}
-	log.Printf("Locald spawn: %v\n", attr)
+	db.DPrintf("Locald spawn: %v\n", attr)
 	args := append([]string{attr.Pid}, attr.Args...)
 	env := append(os.Environ(), attr.Env...)
 	cmd := exec.Command(ld.bin+"/"+attr.Program, args...)

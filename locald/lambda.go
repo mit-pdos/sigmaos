@@ -1,8 +1,8 @@
 package locald
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
 	"encoding/json"
+	//	"github.com/sasha-s/go-deadlock"
 	"log"
 	"os"
 	"os/exec"
@@ -13,6 +13,7 @@ import (
 )
 
 type Lambda struct {
+	//	mu deadlock.Mutex
 	mu      sync.Mutex
 	Program string
 	Pid     string

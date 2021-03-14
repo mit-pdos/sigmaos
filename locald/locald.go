@@ -17,6 +17,7 @@ import (
 )
 
 type LocalD struct {
+	//	mu deadlock.Mutex
 	mu   sync.Mutex
 	load int // XXX bogus
 	bin  string

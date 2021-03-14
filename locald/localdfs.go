@@ -137,7 +137,7 @@ func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, err
 	case 0:
 		return 0, fmt.Errorf("Root is not writable %v", o)
 	case 1:
-		o.ld.spawn(data)
+		go o.ld.spawn(data)
 		return np.Tsize(len(data)), nil
 	default:
 		log.Fatalf("WriteDir: name %v\n", o)

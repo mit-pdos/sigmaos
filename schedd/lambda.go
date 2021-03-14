@@ -3,7 +3,7 @@ package schedd
 import (
 	"encoding/json"
 	"fmt"
-	//	"github.com/sasha-s/go-deadlock"
+	// "github.com/sasha-s/go-deadlock"
 	"log"
 	//	"os"
 	//	"os/exec"
@@ -15,7 +15,7 @@ import (
 )
 
 type Lambda struct {
-	//	mu         deadlock.Mutex
+	//	mu deadlock.Mutex
 	mu             sync.Mutex
 	cond           *sync.Cond
 	condWait       *sync.Cond

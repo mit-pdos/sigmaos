@@ -25,7 +25,7 @@ const (
 )
 
 type Sched struct {
-	//	mu   deadlock.Mutex
+	//	mu deadlock.Mutex
 	mu   sync.Mutex
 	cond *sync.Cond
 	load int // XXX bogus
@@ -45,7 +45,7 @@ func MakeSchedd() *Sched {
 	sd.ls = make(map[string]*Lambda)
 	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	sd.root.time = time.Now().Unix()
-	db.SetDebug(false)
+	db.SetDebug(true)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)

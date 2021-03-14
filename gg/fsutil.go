@@ -13,6 +13,7 @@ import (
 
 // Interfaces
 type FsLambda interface {
+	Mkdir(path string, perm np.Tperm) error
 	MakeFile(string, []byte) error
 	ReadFile(string) ([]byte, error)
 	WriteFile(string, []byte) error
@@ -111,6 +112,27 @@ func setupLocalExecutionEnv(hash string) {
 	}
 }
 
+func mkdirOpt(fslambda FsLambda, path string) {
+	_, err := fslambda.Stat(path)
+	if err != nil {
+		db.DPrintf("Mkdir [%v]\n", path)
+		// XXX Perms?
+		err = fslambda.Mkdir(path, np.DMDIR)
+		if err != nil {
+			log.Fatalf("Couldn't mkdir %v: %v", path, err)
+		}
+	} else {
+		db.DPrintf("Already exists [%v]\n", path)
+	}
+}
+
+func setUpRemoteDirs(fslambda FsLambda) {
+	mkdirOpt(fslambda, ggRemote("", ""))
+	mkdirOpt(fslambda, ggRemoteBlobs(""))
+	mkdirOpt(fslambda, ggRemoteReductions(""))
+	mkdirOpt(fslambda, ggRemoteHashCache(""))
+}
+
 func downloadFile(fslambda FsLambda, src string, dest string) {
 	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
 	contents, err := fslambda.ReadFile(src)
@@ -175,6 +197,52 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 	}
 }
 
+func getInputDependencies(fslambda FsLambda, targetHash string, srcDir string) []string {
+	dependencies := []string{}
+	dependenciesFilePath := path.Join(
+		srcDir,
+		targetHash+INPUT_DEPENDENCIES_SUFFIX,
+	)
+	// Read either from local or remote storage
+	var f []byte
+	var err error
+	if isRemote(srcDir) {
+		f, err = fslambda.ReadFile(dependenciesFilePath)
+	} else {
+		f, err = ioutil.ReadFile(dependenciesFilePath)
+	}
+	if err != nil {
+		db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
+		return dependencies
+	}
+	f_trimmed := strings.TrimSpace(string(f))
+	if len(f_trimmed) > 0 {
+		for _, d := range strings.Split(f_trimmed, "\n") {
+			dependencies = append(dependencies, d)
+		}
+	}
+	db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
+	return dependencies
+}
+
+func getExitDependencies(fslambda FsLambda, targetHash string) []string {
+	dependencies := []string{}
+	dependenciesFilePath := ggRemoteBlobs(targetHash + EXIT_DEPENDENCIES_SUFFIX)
+	f, err := fslambda.ReadFile(dependenciesFilePath)
+	if err != nil {
+		db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
+		return dependencies
+	}
+	f_trimmed := strings.TrimSpace(string(f))
+	if len(f_trimmed) > 0 {
+		for _, d := range strings.Split(f_trimmed, "\n") {
+			dependencies = append(dependencies, d)
+		}
+	}
+	db.DPrintf("Got exit dependencies for [%v]: %v\n", targetHash, dependencies)
+	return dependencies
+}
+
 func getReductionResult(fslambda FsLambda, hash string) string {
 	resultPath := ggRemoteReductions(hash)
 	result, err := fslambda.ReadFile(resultPath)
@@ -184,10 +252,25 @@ func getReductionResult(fslambda FsLambda, hash string) string {
 	return strings.TrimSpace(string(result))
 }
 
+func getTargetHash(fslambda FsLambda, dir string, target string) string {
+	// XXX support non-placeholders
+	targetPath := path.Join(dir, target)
+	f, err := ioutil.ReadFile(targetPath)
+	contents := string(f)
+	if err != nil {
+		log.Fatalf("Error reading target [%v]: %v\n", target, err)
+	}
+	shebang := strings.Split(contents, "\n")[0]
+	if shebang != SHEBANG_DIRECTIVE {
+		log.Fatalf("Error: [%v] is not a placeholder [%v]", targetPath, shebang)
+	}
+	hash := strings.Split(contents, "\n")[1]
+	return hash
+}
+
 // Check if the output reduction exists in the global dir
 func reductionExists(fslambda FsLambda, hash string) bool {
 	outputPath := ggRemoteReductions(hash)
-	// XXX would be nice to have a "stat" equivalent -- wstat?
 	_, err := fslambda.Stat(outputPath)
 	if err == nil {
 		return true

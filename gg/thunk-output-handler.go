@@ -34,10 +34,9 @@ func (toh *ThunkOutputHandler) Exit() {
 	toh.Exiting(toh.pid, "OK")
 }
 
-// XXX Memoize to avoid redundant work
 func (toh *ThunkOutputHandler) Work() {
 	// Read the thunk output file
-	thunkOutput := toh.readThunkOutput()
+	thunkOutput := toh.readThunkOutputs()
 	newThunks := toh.getNewThunks(thunkOutput)
 	outputFiles := toh.getOutputFiles(thunkOutput)
 	if len(newThunks) == 0 {
@@ -51,21 +50,13 @@ func (toh *ThunkOutputHandler) Work() {
 				continue
 			}
 			exitDeps := outputHandlerPids(thunk.deps)
-			toh.spawnDownstreamThunk(thunk.hash, exitDeps, outputFiles)
+			toh.initDownstreamThunk(thunk.hash, exitDeps, outputFiles)
 		}
-		exitDepSwaps := []string{
-			toh.pid,
-			toh.primaryOutputThunkPid,
-		}
-		db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
-		err := toh.SwapExitDependency(exitDepSwaps)
-		if err != nil {
-			log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
-		}
+		toh.adjustExitDependencies()
 	}
 }
 
-func (toh *ThunkOutputHandler) spawnDownstreamThunk(thunkHash string, deps []string, outputFiles map[string][]string) string {
+func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []string, outputFiles map[string][]string) string {
 	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
 	exPid := spawnExecutor(toh, thunkHash, deps)
 	outputHandlerPid := spawnThunkOutputHandler(toh, []string{exPid}, thunkHash, outputFiles[thunkHash])
@@ -78,6 +69,18 @@ func (toh *ThunkOutputHandler) propagateResultUpstream() {
 	for _, outputFile := range toh.outputFiles {
 		outputPath := ggRemoteReductions(outputFile)
 		toh.WriteFile(outputPath, []byte(reduction))
+	}
+}
+
+func (toh *ThunkOutputHandler) adjustExitDependencies() {
+	exitDepSwaps := []string{
+		toh.pid,
+		toh.primaryOutputThunkPid,
+	}
+	db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
+	err := toh.SwapExitDependency(exitDepSwaps)
+	if err != nil {
+		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
 	}
 }
 
@@ -123,7 +126,7 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
 	return g.GetThunks()
 }
 
-func (toh *ThunkOutputHandler) readThunkOutput() []string {
+func (toh *ThunkOutputHandler) readThunkOutputs() []string {
 	outputThunksPath := ggRemoteBlobs(toh.thunkHash + THUNK_OUTPUTS_SUFFIX)
 	contents, err := toh.ReadFile(outputThunksPath)
 	if err != nil {

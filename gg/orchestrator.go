@@ -1,11 +1,7 @@
 package gg
 
 import (
-	"io/ioutil"
 	"log"
-	"path"
-	//	"runtime/debug"
-	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -65,7 +61,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 		return nil, err
 	}
 	orc.FsLibSrv = fls
-	//  db.SetDebug(true)
+	db.SetDebug(false)
 	orc.Started(orc.pid)
 	return orc, nil
 }
@@ -75,11 +71,11 @@ func (orc *Orchestrator) Exit() {
 }
 
 func (orc *Orchestrator) Work() {
-	orc.setUpRemoteDirs()
+	setUpRemoteDirs(orc)
 	origDirUploaders := []string{spawnOrigDirUploader(orc, orc.cwd, GG_BLOBS)}
 	orc.waitPids(origDirUploaders)
 	for i, target := range orc.targets {
-		targetHash := orc.getTargetHash(target)
+		targetHash := getTargetHash(orc, orc.cwd, target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
 		g := orc.ingestStaticGraph(targetHash)
 		orc.executeStaticGraph(g, origDirUploaders)
@@ -95,7 +91,7 @@ func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {
 	// Will loop inifinitely if the graph is circular
 	for len(queue) > 0 {
 		current, queue = queue[0], queue[1:]
-		exitDeps := orc.getExitDependencies(current)
+		exitDeps := getExitDependencies(orc, current)
 		g.AddThunk(current, exitDeps)
 		queue = append(queue, exitDeps...)
 	}
@@ -116,110 +112,6 @@ func (orc *Orchestrator) waitPids(pids []string) {
 	for _, p := range pids {
 		orc.Wait(p)
 	}
-}
-
-func (orc *Orchestrator) getExitDependencies(targetHash string) []string {
-	dependencies := []string{}
-	dependenciesFilePath := ggRemoteBlobs(targetHash + EXIT_DEPENDENCIES_SUFFIX)
-	f, err := orc.ReadFile(dependenciesFilePath)
-	if err != nil {
-		db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
-		return dependencies
-	}
-	f_trimmed := strings.TrimSpace(string(f))
-	if len(f_trimmed) > 0 {
-		for _, d := range strings.Split(f_trimmed, "\n") {
-			dependencies = append(dependencies, d)
-		}
-	}
-	db.DPrintf("Got exit dependencies for [%v]: %v\n", targetHash, dependencies)
-	return dependencies
-}
-
-func (orc *Orchestrator) writeTargets() {
-	for i, target := range orc.targets {
-		targetReduction := ggRemoteReductions(orc.targetHashes[i])
-		f, err := orc.ReadFile(targetReduction)
-		if err != nil {
-			log.Fatalf("Error reading target reduction: %v\n", err)
-		}
-		outputHash := strings.TrimSpace(string(f))
-		outputPath := ggRemoteBlobs(outputHash)
-		outputValue, err := orc.ReadFile(outputPath)
-		if err != nil {
-			log.Fatalf("Error reading value path: %v\n", err)
-		}
-		err = ioutil.WriteFile(target, outputValue, 0777)
-		if err != nil {
-			log.Fatalf("Error writing output file: %v\n", err)
-		}
-		db.DPrintf("Wrote output file [%v]\n", target)
-	}
-}
-
-func (orc *Orchestrator) getTargetHash(target string) string {
-	// XXX support non-placeholders
-	targetPath := path.Join(orc.cwd, target)
-	f, err := ioutil.ReadFile(targetPath)
-	contents := string(f)
-	if err != nil {
-		log.Fatalf("Error reading target [%v]: %v\n", target, err)
-	}
-	shebang := strings.Split(contents, "\n")[0]
-	if shebang != SHEBANG_DIRECTIVE {
-		log.Fatalf("Error: [%v] is not a placeholder [%v]", targetPath, shebang)
-	}
-	hash := strings.Split(contents, "\n")[1]
-	return hash
-}
-
-func (orc *Orchestrator) mkdirOpt(path string) {
-	_, err := orc.FsLib.Stat(path)
-	if err != nil {
-		db.DPrintf("Mkdir [%v]\n", path)
-		// XXX Perms?
-		err = orc.FsLib.Mkdir(path, np.DMDIR)
-		if err != nil {
-			log.Fatalf("Couldn't mkdir %v: %v", path, err)
-		}
-	} else {
-		db.DPrintf("Already exists [%v]\n", path)
-	}
-}
-
-func (orc *Orchestrator) setUpRemoteDirs() {
-	orc.mkdirOpt(ggRemote("", ""))
-	orc.mkdirOpt(ggRemoteBlobs(""))
-	orc.mkdirOpt(ggRemoteReductions(""))
-	orc.mkdirOpt(ggRemoteHashCache(""))
-}
-
-func getInputDependencies(launch ExecutorLauncher, targetHash string, srcDir string) []string {
-	dependencies := []string{}
-	dependenciesFilePath := path.Join(
-		srcDir,
-		targetHash+INPUT_DEPENDENCIES_SUFFIX,
-	)
-	// Read either from local or remote storage
-	var f []byte
-	var err error
-	if isRemote(srcDir) {
-		f, err = launch.ReadFile(dependenciesFilePath)
-	} else {
-		f, err = ioutil.ReadFile(dependenciesFilePath)
-	}
-	if err != nil {
-		db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
-		return dependencies
-	}
-	f_trimmed := strings.TrimSpace(string(f))
-	if len(f_trimmed) > 0 {
-		for _, d := range strings.Split(f_trimmed, "\n") {
-			dependencies = append(dependencies, d)
-		}
-	}
-	db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
-	return dependencies
 }
 
 // XXX This doesn't actually do what I think it does :P

@@ -2,6 +2,7 @@ package npclnt
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -17,14 +18,14 @@ type Reply struct {
 }
 
 type RpcT struct {
-	req   *np.Fcall
-	reply chan *Reply
+	req     *np.Fcall
+	replych chan *Reply
 }
 
 func mkRpcT(fc *np.Fcall) *RpcT {
 	rpc := &RpcT{}
 	rpc.req = fc
-	rpc.reply = make(chan *Reply)
+	rpc.replych = make(chan *Reply)
 	return rpc
 }
 
@@ -56,8 +57,11 @@ func mkChan(addr string) (*Chan, error) {
 }
 
 func (ch *Chan) Close() {
-	db.DPrintf("Close chan: %v\n", ch.conn)
-
+	log.Printf("Close chan to: %v\n", ch.conn.RemoteAddr())
+	for _, rpc := range ch.outstanding {
+		close(rpc.replych)
+	}
+	close(ch.requests)
 	ch.conn.Close()
 }
 
@@ -82,19 +86,25 @@ func (ch *Chan) lookupDel(t np.Ttag) (*RpcT, bool) {
 func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	rpc := mkRpcT(fc)
 	ch.requests <- rpc
-	reply := <-rpc.reply
+	reply, ok := <-rpc.replych
+	if !ok {
+		return nil, fmt.Errorf("Channel closed")
+	}
 	return reply.fc, reply.err
 }
 
 func (ch *Chan) writer() {
 	for {
-		rpc := <-ch.requests
+		rpc, ok := <-ch.requests
+		if !ok {
+			return
+		}
 		t := ch.allocate(rpc)
 		rpc.req.Tag = t
 		db.DPrintf("Writer: %v\n", rpc.req)
 		frame, err := npcodec.Marshal(rpc.req)
 		if err != nil {
-			rpc.reply <- &Reply{nil, err}
+			rpc.replych <- &Reply{nil, err}
 		} else {
 			err := npcodec.WriteFrame(ch.bw, frame)
 			if err != nil {
@@ -114,18 +124,18 @@ func (ch *Chan) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(ch.br)
 		if err != nil {
-			log.Printf("ReadFrame error %v\n", err)
+			log.Printf("reader: ReadFrame error %v\n", err)
 			return
 		}
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
-			log.Printf("Unmarshal error %v\n", err)
+			log.Printf("reader: Unmarshal error %v\n", err)
 			return
 		}
 		rpc, ok := ch.lookupDel(fcall.Tag)
 		if ok {
 			db.DPrintf("reader: %v\n", fcall)
-			rpc.reply <- &Reply{fcall, nil}
+			rpc.replych <- &Reply{fcall, nil}
 		}
 	}
 }

@@ -109,7 +109,7 @@ func (c *Channel) Serve() {
 			log.Print("Serve: unmarshal error: ", err)
 			return
 		}
-		db.DPrintf("Srv: %v\n", fcall)
+		db.DPrintf("Srv req: %v\n", fcall)
 		// XXX start go routine
 		reply, rerror := c.dispatch(fcall.Msg)
 		if rerror != nil {
@@ -117,7 +117,7 @@ func (c *Channel) Serve() {
 		}
 		fcall.Type = reply.Type()
 		fcall.Msg = reply
-		db.DPrintf("Srv: %v\n", fcall)
+		db.DPrintf("Srv rep: %v\n", fcall)
 		frame, err = npcodec.Marshal(fcall)
 		if err != nil {
 			log.Print("Serve: marshal error: ", err)

@@ -3,9 +3,8 @@ package npclnt
 import (
 	"sync"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npcodec"
 )
 
 // XXX duplicate
@@ -53,7 +52,7 @@ func (cm *ChanMgr) Close(addr string) {
 
 	conn, ok := cm.conns[addr]
 	if ok {
-		conn.conn.Close()
+		conn.Close()
 		delete(cm.conns, addr)
 	}
 }
@@ -63,25 +62,12 @@ func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
 	if err != nil {
 		return nil, err
 	}
-	fcall := &np.Fcall{}
-	fcall.Type = req.Type()
-	fcall.Msg = req
-	db.DPrintf("clnt: %v\n", fcall)
-	frame, err := npcodec.Marshal(fcall)
+	reqfc := &np.Fcall{}
+	reqfc.Type = req.Type()
+	reqfc.Msg = req
+	repfc, err := conn.RPC(reqfc)
 	if err != nil {
 		return nil, err
 	}
-	npcodec.WriteFrame(conn.bw, frame)
-	conn.bw.Flush()
-
-	frame, err = npcodec.ReadFrame(conn.br)
-	if err != nil {
-		return nil, err
-	}
-	fcall = &np.Fcall{}
-	if err := npcodec.Unmarshal(frame, fcall); err != nil {
-		return nil, err
-	}
-	db.DPrintf("clnt: %v\n", fcall)
-	return fcall.Msg, nil
+	return repfc.Msg, nil
 }

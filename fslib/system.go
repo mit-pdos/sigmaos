@@ -20,8 +20,8 @@ type System struct {
 	locald *exec.Cmd
 }
 
-func run(name string) (*exec.Cmd, error) {
-	cmd := exec.Command(name)
+func run(bin string, name string, args []string) (*exec.Cmd, error) {
+	cmd := exec.Command(bin+"/"+name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ())
@@ -31,27 +31,27 @@ func run(name string) (*exec.Cmd, error) {
 func Boot(bin string) (*System, error) {
 	s := &System{}
 
-	cmd, err := run(bin + "/named")
+	cmd, err := run(bin, "/bin/named", nil)
 	if err != nil {
 		return nil, err
 	}
 	s.named = cmd
-	s.schedd, err = run(bin + "/schedd")
+	s.schedd, err = run(bin, "/bin/schedd", nil)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
-	s.nps3d, err = run(bin + "/nps3d")
+	s.nps3d, err = run(bin, "/bin/nps3d", nil)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
-	s.npuxd, err = run(bin + "/npuxd")
+	s.npuxd, err = run(bin, "/bin/npuxd", nil)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
-	s.locald, err = run(bin + "/locald")
+	s.locald, err = run(bin, "/bin/locald", []string{bin})
 	if err != nil {
 		return nil, err
 	}

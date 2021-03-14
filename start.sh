@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Run from directory thas has "bin"
+#
+
 N=":1111"
 if [ $# -eq 1 ]
 then
@@ -14,7 +18,7 @@ fi
 ./bin/schedd &
 ./bin/nps3d &
 ./bin/npuxd &
-./bin/locald &
+./bin/locald ./ &
 sleep 1
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system

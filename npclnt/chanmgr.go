@@ -1,8 +1,6 @@
 package npclnt
 
 import (
-	"bufio"
-	"net"
 	"sync"
 
 	db "ulambda/debug"
@@ -15,24 +13,18 @@ const (
 	Msglen = 64 * 1024
 )
 
-type NpConn struct {
-	conn net.Conn
-	br   *bufio.Reader
-	bw   *bufio.Writer
-}
-
 type ChanMgr struct {
 	mu    sync.Mutex
-	conns map[string]*NpConn
+	conns map[string]*Chan
 }
 
 func makeChanMgr() *ChanMgr {
 	cm := &ChanMgr{}
-	cm.conns = make(map[string]*NpConn)
+	cm.conns = make(map[string]*Chan)
 	return cm
 }
 
-func (cm *ChanMgr) lookup(addr string) (*NpConn, bool) {
+func (cm *ChanMgr) lookup(addr string) (*Chan, bool) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -40,10 +32,19 @@ func (cm *ChanMgr) lookup(addr string) (*NpConn, bool) {
 	return conn, ok
 }
 
-func (cm *ChanMgr) add(addr string, conn *NpConn) {
+func (cm *ChanMgr) allocChan(addr string) (*Chan, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
-	cm.conns[addr] = conn
+
+	var err error
+	conn, ok := cm.conns[addr]
+	if !ok {
+		conn, err = mkChan(addr)
+		if err == nil {
+			cm.conns[addr] = conn
+		}
+	}
+	return conn, err
 }
 
 func (cm *ChanMgr) Close(addr string) {
@@ -58,18 +59,9 @@ func (cm *ChanMgr) Close(addr string) {
 }
 
 func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
-	conn, ok := cm.lookup(addr)
-	if !ok {
-		var err error
-		c, err := net.Dial("tcp", addr)
-		if err != nil {
-			return nil, err
-		}
-		conn = &NpConn{c,
-			bufio.NewReaderSize(c, Msglen),
-			bufio.NewWriterSize(c, Msglen)}
-		cm.add(addr, conn)
-
+	conn, err := cm.allocChan(addr)
+	if err != nil {
+		return nil, err
 	}
 	fcall := &np.Fcall{}
 	fcall.Type = req.Type()

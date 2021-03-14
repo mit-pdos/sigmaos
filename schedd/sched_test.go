@@ -19,7 +19,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
-	bin := "../bin"
+	bin := ".."
 	s, err := fslib.Boot(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
@@ -38,7 +38,7 @@ func TestWait(t *testing.T) {
 	debug.SetDebug(false)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"name/out", ""}, nil, nil, nil}
+	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out", ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 

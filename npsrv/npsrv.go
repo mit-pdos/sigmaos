@@ -40,7 +40,6 @@ func (srv *NpServer) runsrv(l net.Listener) {
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}
-		fsconn := MakeChannel(srv.npc, conn)
-		go fsconn.Serve()
+		MakeChannel(srv.npc, conn)
 	}
 }

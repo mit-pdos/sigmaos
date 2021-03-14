@@ -16,21 +16,25 @@ const (
 )
 
 type Channel struct {
-	npc  NpConn
-	conn net.Conn
-	np   NpAPI
-	br   *bufio.Reader
-	bw   *bufio.Writer
+	npc     NpConn
+	conn    net.Conn
+	np      NpAPI
+	br      *bufio.Reader
+	bw      *bufio.Writer
+	replies chan *np.Fcall
 }
 
 func MakeChannel(npc NpConn, conn net.Conn) *Channel {
-	np := npc.Connect(conn)
+	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
-		np,
+		npapi,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
+		make(chan *np.Fcall),
 	}
+	go c.writer()
+	go c.reader()
 	return c
 }
 
@@ -93,8 +97,8 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	}
 }
 
-func (c *Channel) Serve() {
-	db.DPrintf("Server conn %v\n", c.conn.RemoteAddr())
+func (c *Channel) reader() {
+	db.DPrintf("Reader conn %v\n", c.conn.RemoteAddr())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
@@ -109,26 +113,43 @@ func (c *Channel) Serve() {
 			log.Print("Serve: unmarshal error: ", err)
 			return
 		}
-		db.DPrintf("Srv req: %v\n", fcall)
-		// XXX start go routine
-		reply, rerror := c.dispatch(fcall.Msg)
-		if rerror != nil {
-			reply = *rerror
-		}
-		fcall.Type = reply.Type()
-		fcall.Msg = reply
-		db.DPrintf("Srv rep: %v\n", fcall)
-		frame, err = npcodec.Marshal(fcall)
+		db.DPrintf("reader sv req: %v\n", fcall)
+		go c.serve(fcall)
+	}
+}
+
+func (c *Channel) serve(fc *np.Fcall) {
+	t := fc.Tag
+	reply, rerror := c.dispatch(fc.Msg)
+	if rerror != nil {
+		reply = *rerror
+	}
+	fcall := &np.Fcall{}
+	fcall.Type = reply.Type()
+	fcall.Msg = reply
+	fcall.Tag = t
+	c.replies <- fcall
+}
+
+func (c *Channel) writer() {
+	for {
+		fcall := <-c.replies
+		db.DPrintf("Writer rep: %v\n", fcall)
+		frame, err := npcodec.Marshal(fcall)
 		if err != nil {
-			log.Print("Serve: marshal error: ", err)
-			return
+			log.Print("Writer: marshal error: ", err)
+		} else {
+			// log.Print("Srv: Rframe ", len(frame), frame)
+			err = npcodec.WriteFrame(c.bw, frame)
+			if err != nil {
+				log.Print("Writer: WriteFrame error ", err)
+				return
+			}
+			err = c.bw.Flush()
+			if err != nil {
+				log.Print("Writer: Flush error ", err)
+				return
+			}
 		}
-		// log.Print("Srv: Rframe ", len(frame), frame)
-		err = npcodec.WriteFrame(c.bw, frame)
-		if err != nil {
-			log.Print("Serve: WriteFrame error ", err)
-			return
-		}
-		c.bw.Flush()
 	}
 }

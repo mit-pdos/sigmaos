@@ -19,8 +19,9 @@ import (
 // XXX monitor, boost
 
 const (
-	MAXLOAD      = 100 // XXX bogus, controls parallelism
-	NO_OP_LAMBDA = "no-op-lambda"
+	MAXLOAD           = 100 // XXX bogus, controls parallelism
+	NO_OP_LAMBDA      = "no-op-lambda"
+	LOCALD_UNASSIGNED = "locald-unassigned"
 )
 
 type Sched struct {

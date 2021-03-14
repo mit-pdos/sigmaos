@@ -16,22 +16,24 @@ import (
 
 type Lambda struct {
 	//	mu         deadlock.Mutex
-	mu         sync.Mutex
-	cond       *sync.Cond
-	condWait   *sync.Cond
-	sd         *Sched
-	Pid        string
-	uid        uint64
-	Status     string
-	ExitStatus string
-	Program    string
-	Dir        string
-	Args       []string
-	Env        []string
-	ConsDep    map[string]bool // if true, consumer has finished
-	ProdDep    map[string]bool // if true, producer is running
-	ExitDep    map[string]bool
-	obj        *Obj
+	mu             sync.Mutex
+	cond           *sync.Cond
+	condWait       *sync.Cond
+	sd             *Sched
+	Pid            string
+	uid            uint64
+	LocaldInstance string
+	Status         string
+	ExitStatus     string
+	Program        string
+	Dir            string
+	Args           []string
+	Env            []string
+	ConsDep        map[string]bool // if true, consumer has finished
+	ProdDep        map[string]bool // if true, producer is running
+	ExitDep        map[string]bool
+	obj            *Obj
+	attr           *fslib.Attr
 }
 
 func makeLambda(sd *Sched, a string, o *Obj) *Lambda {
@@ -77,7 +79,9 @@ func (l *Lambda) init(a []byte) error {
 	if err != nil {
 		return err
 	}
+	l.attr = &attr
 	l.Pid = attr.Pid
+	l.LocaldInstance = LOCALD_UNASSIGNED
 	l.Program = attr.Program
 	l.Args = attr.Args
 	l.Env = attr.Env
@@ -184,17 +188,12 @@ func (l *Lambda) run() error {
 		return nil
 	}
 
-	attr := &fslib.Attr{}
-	attr.Pid = l.Pid
-	attr.Program = l.Program
-	attr.Args = l.Args
-	attr.Env = l.Env
-	attr.Dir = l.Dir
 	ip, err := l.sd.selectLocaldIp()
 	if err != nil {
 		log.Printf("Schedd failed to select local ip to run lambda\n")
 	}
-	err = l.sd.RunLocal(ip, attr)
+	l.LocaldInstance = ip
+	err = l.sd.RunLocal(ip, l.attr)
 	if err != nil {
 		log.Printf("Schedd failed to run local lambda: %v, %v\n", l, err)
 	}

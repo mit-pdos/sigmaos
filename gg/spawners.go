@@ -72,7 +72,6 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 	a.ExitDep = depPids
 	err := launch.Spawn(&a)
 	if err != nil {
-		// XXX Clean this up better with caching
 		log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err)
 	}
 	return a.Pid
@@ -91,8 +90,7 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	a.ExitDep = deps
 	err := launch.Spawn(&a)
 	if err != nil {
-		// XXX Clean this up better with caching
-		//    log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err);
+		log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err)
 	}
 	return a.Pid
 }

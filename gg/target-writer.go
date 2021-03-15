@@ -43,8 +43,8 @@ func (tw *TargetWriter) Work() {
 		tw.target = targetHash
 	}
 
-	// Download to target location
-	downloadFile(tw, ggRemoteBlobs(targetHash), path.Join(tw.cwd, tw.target))
+	// Copy to target location
+	copyRemoteFile(tw, ggRemoteBlobs(targetHash), path.Join(tw.cwd, tw.target))
 }
 
 func (tw *TargetWriter) Name() string {

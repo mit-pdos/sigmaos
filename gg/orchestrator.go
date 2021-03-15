@@ -2,6 +2,7 @@ package gg
 
 import (
 	"log"
+	"path"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -72,14 +73,13 @@ func (orc *Orchestrator) Exit() {
 
 func (orc *Orchestrator) Work() {
 	setUpRemoteDirs(orc)
-	origDirUploaders := []string{spawnOrigDirUploader(orc, orc.cwd, GG_BLOBS)}
-	orc.waitPids(origDirUploaders)
+	copyRemoteDirTree(orc, path.Join(orc.cwd, ".gg"), ggRemote("", ""))
 	for i, target := range orc.targets {
 		targetHash := getTargetHash(orc, orc.cwd, target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
 		g := orc.ingestStaticGraph(targetHash)
-		orc.executeStaticGraph(g, origDirUploaders)
-		spawnReductionWriter(orc, orc.targets[i], targetHash, orc.cwd, "", []string{})
+		orc.executeStaticGraph(g, []string{})
+		spawnReductionWriter(orc, orc.targets[i], targetHash, path.Join(orc.cwd, "results"), "", []string{})
 	}
 }
 
@@ -102,6 +102,9 @@ func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {
 		exitDeps := outputHandlerPids(thunk.deps)
+		if reductionExists(orc, thunk.hash) || currentlyExecuting(orc, thunk.hash) {
+			continue
+		}
 		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
 		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid}, thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)

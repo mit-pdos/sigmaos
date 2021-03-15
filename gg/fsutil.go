@@ -15,6 +15,8 @@ import (
 // Interfaces
 type FsLambda interface {
 	Mkdir(path string, perm np.Tperm) error
+	ReadDir(dir string) ([]*np.Stat, error)
+	IsDir(name string) (bool, error)
 	MakeFile(string, []byte) error
 	ReadFile(string) ([]byte, error)
 	WriteFile(string, []byte) error
@@ -151,6 +153,40 @@ func downloadFile(fslambda FsLambda, src string, dest string) {
 	}
 }
 
+// Recursively copy a remote directory tree
+func copyRemoteDirTree(fslambda FsLambda, src string, dest string) {
+	mkdirOpt(fslambda, dest)
+	entries, err := fslambda.ReadDir(src)
+	if err != nil {
+		log.Printf("%v Error reading dir %v: %v\n", fslambda.Name(), src, err)
+	}
+	for _, e := range entries {
+		srcEntryPath := path.Join(src, e.Name)
+		destEntryPath := path.Join(dest, e.Name)
+		isDir, err := fslambda.IsDir(srcEntryPath)
+		if err != nil {
+			log.Printf("%v Error checking if %v isDir: %v\n", fslambda.Name(), srcEntryPath, err)
+		}
+		if isDir {
+			copyRemoteDirTree(fslambda, srcEntryPath, destEntryPath)
+		} else {
+			copyRemoteFile(fslambda, srcEntryPath, destEntryPath)
+		}
+	}
+}
+
+func copyRemoteFile(fslambda FsLambda, src string, dest string) {
+	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
+	contents, err := fslambda.ReadFile(src)
+	if err != nil {
+		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
+	}
+	err = fslambda.MakeFile(dest, contents)
+	if err != nil {
+		log.Printf("%v Couldn't write remote file [%v]: %v\n", fslambda.Name(), dest, err)
+	}
+}
+
 func uploadDir(fslambda FsLambda, dir string, subDir string) {
 	src := ggLocal(dir, subDir, "")
 	dest := ggRemote(subDir, "")
@@ -256,7 +292,7 @@ func getReductionResult(fslambda FsLambda, hash string) string {
 func getTargetHash(fslambda FsLambda, dir string, target string) string {
 	// XXX support non-placeholders
 	targetPath := path.Join(dir, target)
-	f, err := ioutil.ReadFile(targetPath)
+	f, err := fslambda.ReadFile(targetPath)
 	contents := string(f)
 	if err != nil {
 		log.Fatalf("Error reading target [%v]: %v\n", target, err)

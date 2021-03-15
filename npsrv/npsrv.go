@@ -3,7 +3,6 @@ package npsrv
 import (
 	"log"
 	"net"
-
 	db "ulambda/debug"
 )
 
@@ -24,7 +23,7 @@ func MakeNpServer(npc NpConn, server string) *NpServer {
 		log.Fatal("Listen error:", err)
 	}
 	srv.addr = l.Addr().String()
-	db.DPrintf("myaddr %v\n", srv.addr)
+	db.DPrintf("%v: myaddr %v\n", server, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }

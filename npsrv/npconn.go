@@ -22,6 +22,7 @@ type Channel struct {
 	br      *bufio.Reader
 	bw      *bufio.Writer
 	replies chan *np.Fcall
+	closed  bool
 }
 
 func MakeChannel(npc NpConn, conn net.Conn) *Channel {
@@ -32,6 +33,7 @@ func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
+		false,
 	}
 	go c.writer()
 	go c.reader()
@@ -98,12 +100,12 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 }
 
 func (c *Channel) reader() {
-	db.DPrintf("Reader conn %v\n", c.conn.RemoteAddr())
+	db.DPrintf("Reader conn %v->%v\n", c.conn.LocalAddr(), c.conn.RemoteAddr())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			if err != io.EOF {
-				log.Print("Serve: readFrame error: ", err)
+			if err == io.EOF {
+				c.close()
 			}
 			return
 		}
@@ -111,11 +113,17 @@ func (c *Channel) reader() {
 		// log.Print("Tframe ", len(frame), frame)
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
-			return
+		} else {
+			db.DPrintf("reader sv req: %v\n", fcall)
+			go c.serve(fcall)
 		}
-		db.DPrintf("reader sv req: %v\n", fcall)
-		go c.serve(fcall)
 	}
+}
+
+func (c *Channel) close() {
+	db.DPrintf("Close: %v -> %v", c.conn.LocalAddr(), c.conn.RemoteAddr())
+	c.closed = true
+	close(c.replies)
 }
 
 func (c *Channel) serve(fc *np.Fcall) {
@@ -128,12 +136,17 @@ func (c *Channel) serve(fc *np.Fcall) {
 	fcall.Type = reply.Type()
 	fcall.Msg = reply
 	fcall.Tag = t
-	c.replies <- fcall
+	if !c.closed {
+		c.replies <- fcall
+	}
 }
 
 func (c *Channel) writer() {
 	for {
-		fcall := <-c.replies
+		fcall, ok := <-c.replies
+		if !ok {
+			return
+		}
 		db.DPrintf("Writer rep: %v\n", fcall)
 		frame, err := npcodec.Marshal(fcall)
 		if err != nil {

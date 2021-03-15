@@ -3,6 +3,7 @@ package npclnt
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -32,6 +33,7 @@ func mkRpcT(fc *np.Fcall) *RpcT {
 type Chan struct {
 	mu          sync.Mutex
 	conn        net.Conn
+	closed      bool
 	br          *bufio.Reader
 	bw          *bufio.Writer
 	requests    chan *RpcT
@@ -41,6 +43,7 @@ type Chan struct {
 
 func mkChan(addr string) (*Chan, error) {
 	var err error
+	db.DPrintf("mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -53,15 +56,17 @@ func mkChan(addr string) (*Chan, error) {
 	ch.outstanding = make(map[np.Ttag]*RpcT)
 	go ch.writer()
 	go ch.reader()
+
 	return ch, nil
 }
 
 func (ch *Chan) Close() {
-	log.Printf("Close chan to: %v\n", ch.conn.RemoteAddr())
+	db.DPrintf("Close chan: %v->%v\n", ch.conn.LocalAddr(), ch.conn.RemoteAddr())
 	for _, rpc := range ch.outstanding {
 		close(rpc.replych)
 	}
 	close(ch.requests)
+	ch.closed = true
 	ch.conn.Close()
 }
 
@@ -84,6 +89,10 @@ func (ch *Chan) lookupDel(t np.Ttag) (*RpcT, bool) {
 }
 
 func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
+	db.DPrintf("RPC on ch: %v->%v\n", ch.conn.LocalAddr(), ch.conn.RemoteAddr())
+	if ch.closed {
+		log.Fatalf("ch closed: %v %v\n", ch.conn.LocalAddr(), ch.conn.RemoteAddr())
+	}
 	rpc := mkRpcT(fc)
 	ch.requests <- rpc
 	reply, ok := <-rpc.replych
@@ -107,6 +116,10 @@ func (ch *Chan) writer() {
 			rpc.replych <- &Reply{nil, err}
 		} else {
 			err := npcodec.WriteFrame(ch.bw, frame)
+			if err == io.EOF {
+				ch.Close()
+				return
+			}
 			if err != nil {
 				log.Fatalf("WriteFrame error %v\n", err)
 				return
@@ -123,6 +136,10 @@ func (ch *Chan) writer() {
 func (ch *Chan) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(ch.br)
+		if err == io.EOF {
+			ch.Close()
+			return
+		}
 		if err != nil {
 			log.Printf("reader: ReadFrame error %v\n", err)
 			return
@@ -130,12 +147,12 @@ func (ch *Chan) reader() {
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Printf("reader: Unmarshal error %v\n", err)
-			return
-		}
-		rpc, ok := ch.lookupDel(fcall.Tag)
-		if ok {
-			db.DPrintf("reader: %v\n", fcall)
-			rpc.replych <- &Reply{fcall, nil}
+		} else {
+			rpc, ok := ch.lookupDel(fcall.Tag)
+			if ok {
+				db.DPrintf("reader: %v\n", fcall)
+				rpc.replych <- &Reply{fcall, nil}
+			}
 		}
 	}
 }

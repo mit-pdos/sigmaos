@@ -2,7 +2,6 @@ package npclnt
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -66,7 +65,9 @@ func (ch *Chan) Close() {
 		close(rpc.replych)
 	}
 	close(ch.requests)
+	ch.mu.Lock()
 	ch.closed = true
+	ch.mu.Unlock()
 	ch.conn.Close()
 }
 
@@ -90,14 +91,18 @@ func (ch *Chan) lookupDel(t np.Ttag) (*RpcT, bool) {
 
 func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	db.DPrintf("RPC on ch: %v->%v\n", ch.conn.LocalAddr(), ch.conn.RemoteAddr())
-	if ch.closed {
-		log.Fatalf("ch closed: %v %v\n", ch.conn.LocalAddr(), ch.conn.RemoteAddr())
+	ch.mu.Lock()
+	closed := ch.closed
+	ch.mu.Unlock()
+	if closed {
+		db.DPrintf("Error ch closed: %v %v\n", ch.conn.LocalAddr(), ch.conn.RemoteAddr())
+		return nil, io.EOF
 	}
 	rpc := mkRpcT(fc)
 	ch.requests <- rpc
 	reply, ok := <-rpc.replych
 	if !ok {
-		return nil, fmt.Errorf("Channel closed")
+		return nil, io.EOF
 	}
 	return reply.fc, reply.err
 }

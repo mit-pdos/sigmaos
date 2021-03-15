@@ -141,5 +141,5 @@ func (toh *ThunkOutputHandler) readThunkOutputs() []string {
 }
 
 func (toh *ThunkOutputHandler) Name() string {
-	return "ThunkOutputHandler"
+	return "ThunkOutputHandler " + toh.pid + " "
 }

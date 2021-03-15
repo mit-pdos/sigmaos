@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	db "ulambda/debug"
+	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
@@ -273,6 +274,24 @@ func reductionExists(fslambda FsLambda, hash string) bool {
 	outputPath := ggRemoteReductions(hash)
 	_, err := fslambda.Stat(outputPath)
 	if err == nil {
+		return true
+	}
+	return false
+}
+
+// Check if either the thunk executor or the output handler are running
+func currentlyExecuting(fslambda FsLambda, thunkHash string) bool {
+	executorPath := path.Join(
+		fslib.SCHED,
+		executorPid(thunkHash),
+	)
+	outputHandlerPath := path.Join(
+		fslib.SCHED,
+		outputHandlerPid(thunkHash),
+	)
+	_, err1 := fslambda.Stat(executorPath)
+	_, err2 := fslambda.Stat(outputHandlerPath)
+	if err1 == nil || err2 == nil {
 		return true
 	}
 	return false

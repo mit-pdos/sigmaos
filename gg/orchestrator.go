@@ -114,17 +114,6 @@ func (orc *Orchestrator) waitPids(pids []string) {
 	}
 }
 
-// XXX This doesn't actually do what I think it does :P
-// XXX Should really check if it's in the queue as well (not just if it's
-//  actively running. Also, there may be a slight race
-func currentlyExecuting(launch ExecutorLauncher, thunkHash string) bool {
-	err := launch.Started(executorPid(thunkHash))
-	if err == nil {
-		return true
-	}
-	return false
-}
-
 func (orc *Orchestrator) Name() string {
 	return "Orchestrator"
 }

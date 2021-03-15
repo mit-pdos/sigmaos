@@ -48,5 +48,5 @@ func (tw *TargetWriter) Work() {
 }
 
 func (tw *TargetWriter) Name() string {
-	return "TargetWriter"
+	return "TargetWriter " + tw.pid + " "
 }

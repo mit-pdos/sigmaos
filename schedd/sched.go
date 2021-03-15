@@ -45,7 +45,7 @@ func MakeSchedd() *Sched {
 	sd.ls = make(map[string]*Lambda)
 	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	sd.root.time = time.Now().Unix()
-	db.SetDebug(true)
+	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)

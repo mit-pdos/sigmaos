@@ -22,6 +22,9 @@ func (s *Symlink) write(d []byte) (np.Tsize, error) {
 	return np.Tsize(len(d)), nil
 }
 
-func (s *Symlink) read(n np.Tsize) ([]byte, error) {
+func (s *Symlink) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+	if offset >= np.Toffset(len(s.target)) {
+		return nil, nil
+	}
 	return s.target, nil
 }

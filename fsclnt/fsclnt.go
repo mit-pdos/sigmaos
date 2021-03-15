@@ -337,7 +337,6 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 		st.Name = fsc.npch(target).Server()
 		return st, nil
 	} else {
-
 		fid, err := fsc.walkMany(np.Split(name), np.EndSlash(name))
 		if err != nil {
 			return nil, err
@@ -369,7 +368,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	var fid np.Tfid
 	for {
 		p := np.Split(path)
-		f, err := fsc.walkMany(p, true)
+		f, err := fsc.walkMany(p, np.EndSlash(path))
 		if err == io.EOF {
 			fid2, e := fsc.mount.umount(p)
 			if e != nil {
@@ -390,36 +389,6 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	}
 	// XXX check reply.Qid?
 	fd := fsc.findfd(fid)
-	return fd, nil
-
-}
-
-func (fsc *FsClient) OpenAt(dfd int, name string, mode np.Tmode) (int, error) {
-	db.DPrintf("%v: OpenAt %v %v %v\n", fsc.uname, dfd, name, mode)
-
-	fid, err := fsc.lookup(dfd)
-	if err != nil {
-		return -1, err
-	}
-
-	fid1, err := fsc.clone(fid)
-	if err != nil {
-		return -1, err
-	}
-
-	n := []string{name}
-	reply, err := fsc.npch(fid).Walk(fid, fid1, n)
-	if err != nil {
-		return -1, err
-	}
-	fsc.fids[fid1].addn(reply.Qids, n)
-
-	_, err = fsc.npch(fid1).Open(fid1, mode)
-	if err != nil {
-		return -1, err
-	}
-	// XXX check reply.Qid?
-	fd := fsc.findfd(fid1)
 	return fd, nil
 
 }

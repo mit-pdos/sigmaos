@@ -268,7 +268,7 @@ func (inode *Inode) ReadFile(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]byt
 		return d.Read(offset, n)
 	} else if inode.IsSymlink() {
 		s := inode.Data.(*Symlink)
-		return s.read(n)
+		return s.read(offset, n)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.read(n)

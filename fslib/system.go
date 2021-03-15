@@ -28,15 +28,23 @@ func run(bin string, name string, args []string) (*exec.Cmd, error) {
 	return cmd, cmd.Start()
 }
 
-func Boot(bin string) (*System, error) {
+func BootMin(bin string) (*System, error) {
 	s := &System{}
-
 	cmd, err := run(bin, "/bin/named", nil)
 	if err != nil {
 		return nil, err
 	}
 	s.named = cmd
-	s.schedd, err = run(bin, "/bin/schedd", nil)
+	time.Sleep(100 * time.Millisecond)
+	return s, nil
+}
+
+func Boot(bin string) (*System, error) {
+	s, err := BootMin(bin)
+	if err != nil {
+		return nil, err
+	}
+	s.npuxd, err = run(bin, "/bin/npuxd", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -46,11 +54,12 @@ func Boot(bin string) (*System, error) {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
-	s.npuxd, err = run(bin, "/bin/npuxd", nil)
+	s.schedd, err = run(bin, "/bin/schedd", nil)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
+
 	s.locald, err = run(bin, "/bin/locald", []string{bin})
 	if err != nil {
 		return nil, err
@@ -78,29 +87,33 @@ func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 }
 
 func (s *System) Shutdown(clnt *FsLib) {
-	err := clnt.Remove(SCHED + "/")
-	if err != nil {
-		log.Fatalf("Schedd shutdown %v\n", err)
+	if s.schedd != nil {
+		err := clnt.Remove(SCHED + "/")
+		if err != nil {
+			log.Fatalf("Schedd shutdown %v\n", err)
+		}
+		s.schedd.Wait()
 	}
+	if s.nps3d != nil {
+		err := s.RmUnionDir(clnt, "name/s3")
+		if err != nil {
+			log.Fatalf("S3 shutdown %v\n", err)
+		}
+		s.nps3d.Wait()
 
-	err = s.RmUnionDir(clnt, "name/s3")
-	if err != nil {
-		log.Fatalf("S3 shutdown %v\n", err)
 	}
-
-	err = s.RmUnionDir(clnt, "name/ux")
-	if err != nil {
-		log.Fatalf("Ux shutdown %v\n", err)
+	if s.npuxd != nil {
+		err := s.RmUnionDir(clnt, "name/ux")
+		if err != nil {
+			log.Fatalf("Ux shutdown %v\n", err)
+		}
+		s.npuxd.Wait()
 	}
 
 	// Shutdown named last
-	err = clnt.Remove(NAMED + "/")
+	err := clnt.Remove(NAMED + "/")
 	if err != nil {
 		log.Fatalf("Named shutdown %v\n", err)
 	}
-
-	s.schedd.Wait()
 	s.named.Wait()
-	s.nps3d.Wait()
-	s.npuxd.Wait()
 }

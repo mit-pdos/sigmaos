@@ -182,7 +182,6 @@ func (fsc *FsClient) attachChannel(fid np.Tfid, server string, p []string) (*Pat
 }
 
 func (fsc *FsClient) detachChannel(fid np.Tfid) {
-	fsc.npch(fid).Close()
 	fsc.freeFid(fid)
 }
 

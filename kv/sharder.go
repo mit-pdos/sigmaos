@@ -93,6 +93,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)
 	}
 	fsd := memfsd.MakeFsd("sharder", ip+":0", nil)
+	log.Printf("Sharder: %v\n", fsd.Addr())
 	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
-	db.SetDebug(false)
+	db.SetLevel(db.SERVICE)
 
 	return sh, nil
 }
@@ -109,7 +110,7 @@ func (sh *Sharder) exit() error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	db.DPrintf("Exit %v\n", sh.pid)
+	db.DLPrintf(db.SERVICE, "Sharder exit %v\n", sh.pid)
 	sh.done = true
 	sh.nextKvs = make([]string, 0)
 	sh.cond.Signal()
@@ -120,7 +121,7 @@ func (sh *Sharder) prepared(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	db.DPrintf("Prepared: %v\n", kvd)
+	db.DLPrintf(db.SERVICE, "Prepared: %v %v\n", kvd, sh.nkvd)
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {
 		sh.cond.Signal()
@@ -161,7 +162,7 @@ func (sh *Sharder) balance() *Config {
 	j := 0
 	conf := makeConfig(sh.conf.N + 1)
 
-	db.DPrintf("shards %v (len %v) kvs %v\n", sh.conf.Shards,
+	db.DLPrintf(db.SERVICE, "shards %v (len %v) kvs %v\n", sh.conf.Shards,
 		len(sh.conf.Shards), sh.nextKvs)
 
 	if len(sh.nextKvs) == 0 {
@@ -238,7 +239,7 @@ func (sh *Sharder) Work() {
 	}
 
 	sh.nextConf = sh.balance()
-	db.DPrintf("Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
+	db.DLPrintf(db.SERVICE, "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 	if err != nil {
 		log.Printf("Sharder: %v error %v\n", KVNEXTCONFIG, err)

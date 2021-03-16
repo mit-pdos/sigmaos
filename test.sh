@@ -6,6 +6,6 @@ go test ulambda/memfs
 go test ulambda/fsclnt
 go test ulambda/fslib
 go test ulambda/schedd
-(cd nps3d; go test)
+(cd nps3; go test)
 (cd mr; go test)
 (cd kv; go test)

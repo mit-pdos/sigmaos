@@ -37,7 +37,7 @@ func MakeSchedl(args []string) (*Schedl, error) {
 }
 
 func (s *Schedl) Work() {
-	time.Sleep(15000 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 	err := s.MakeFile(s.output, []byte("hello"))
 	if err != nil {
 		log.Printf("Makefile error %v\n", err)

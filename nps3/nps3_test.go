@@ -28,7 +28,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	debug.SetDebug(false)
 
-	bin := "../bin"
+	bin := ".."
 	s, err := fslib.Boot(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
@@ -79,7 +79,7 @@ func TestUnion(t *testing.T) {
 	ts.nps3 = MakeNps3()
 	go ts.nps3.Serve()
 
-	dirents, err := ts.ReadDir("name/s3/~ip")
+	dirents, err := ts.ReadDir("name/s3/~ip/")
 	assert.Nil(t, err, "ReadDir")
 
 	assert.Equal(t, 4, len(dirents))

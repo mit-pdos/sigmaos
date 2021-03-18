@@ -34,6 +34,14 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func makeTstateNoBoot(t *testing.T, s *fslib.System, pid string) *Tstate {
+	ts := &Tstate{}
+	ts.FsLib = fslib.MakeFsLib("schedl_" + pid)
+	ts.t = t
+	ts.s = s
+	return ts
+}
+
 func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
 	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil}
 	err := ts.Spawn(a)
@@ -195,30 +203,48 @@ func TestConcurrentLambdas(t *testing.T) {
 
 	debug.SetDebug(false)
 
-	nLambdas := 5
+	nLambdas := 10
 	pids := []string{}
 
-	var start sync.WaitGroup
-	start.Add(nLambdas)
+	// Make a bunch of fslibs to avoid concurrency issues
+	tses := []*Tstate{}
+
+	for j := 0; j < nLambdas; j++ {
+	}
+
+	var barrier sync.WaitGroup
+	barrier.Add(nLambdas)
+	var started sync.WaitGroup
+	started.Add(nLambdas)
 	var done sync.WaitGroup
 	done.Add(nLambdas)
 
 	for i := 0; i < nLambdas; i++ {
 		pid := fslib.GenPid()
 		pids = append(pids, pid)
-		go func(pid string, start *sync.WaitGroup) {
-			start.Done()
-			start.Wait()
-			spawnSchedlWithPid(t, ts, pid)
-		}(pid, &start)
+		newts := makeTstateNoBoot(t, ts.s, pid)
+		tses = append(tses, newts)
+		go func(pid string, started *sync.WaitGroup, i int) {
+			barrier.Done()
+			barrier.Wait()
+			spawnSchedlWithPid(t, tses[i], pid)
+			log.Printf("Starting with pid %v\n", pid)
+			started.Done()
+		}(pid, &started, i)
 	}
 
-	for _, pid := range pids {
-		go func(pid string, done *sync.WaitGroup) {
+	started.Wait()
+
+	//	time.Sleep(2 * time.Second)
+
+	for i, pid := range pids {
+		_ = i
+		go func(pid string, done *sync.WaitGroup, i int) {
 			defer done.Done()
+			log.Printf("Going to wait for and check %v\n", pid)
 			ts.Wait(pid)
-			checkSchedlResult(t, ts, pid)
-		}(pid, &done)
+			checkSchedlResult(t, tses[i], pid)
+		}(pid, &done, i)
 	}
 
 	done.Wait()

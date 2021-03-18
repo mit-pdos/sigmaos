@@ -19,6 +19,7 @@ import (
 type LocalD struct {
 	//	mu deadlock.Mutex
 	mu   sync.Mutex
+	cond *sync.Cond
 	load int // XXX bogus
 	bin  string
 	nid  uint64
@@ -32,6 +33,7 @@ type LocalD struct {
 
 func MakeLocalD(bin string) *LocalD {
 	ld := &LocalD{}
+	ld.cond = sync.NewCond(&ld.mu)
 	ld.load = 0
 	ld.nid = 0
 	ld.bin = bin
@@ -78,6 +80,7 @@ func (ld *LocalD) Done() {
 	defer ld.mu.Unlock()
 
 	ld.done = true
+	ld.cond.Signal()
 }
 
 func (ld *LocalD) Root() npo.NpObj {
@@ -89,6 +92,7 @@ func (ld *LocalD) Resolver() npo.Resolver {
 }
 
 func (ld *LocalD) Work() {
-	for {
+	for !ld.done {
+		ld.cond.Wait()
 	}
 }

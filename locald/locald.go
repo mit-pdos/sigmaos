@@ -92,6 +92,7 @@ func (ld *LocalD) Resolver() npo.Resolver {
 }
 
 func (ld *LocalD) Work() {
+	ld.mu.Lock()
 	for !ld.done {
 		ld.cond.Wait()
 	}

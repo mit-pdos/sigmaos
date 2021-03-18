@@ -38,7 +38,6 @@ func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
 	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-
 	log.Printf("Spawn %v\n", a)
 }
 

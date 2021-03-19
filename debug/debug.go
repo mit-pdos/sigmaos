@@ -7,10 +7,6 @@ import (
 	"sync"
 )
 
-const (
-	SERVICE = 10
-)
-
 type Debug struct {
 	mu    sync.Mutex
 	debug bool
@@ -28,13 +24,6 @@ func SetDebug(d bool) {
 	}
 }
 
-// higher l, less debug output
-func SetLevel(l int) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.level = l
-}
-
 func DPrintf(format string, v ...interface{}) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -44,11 +33,11 @@ func DPrintf(format string, v ...interface{}) {
 	}
 }
 
-func DLPrintf(level int, format string, v ...interface{}) {
+func DLPrintf(src, label string, format string, v ...interface{}) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if level <= db.level {
-		log.Printf("%v: %v", os.Args[0], fmt.Sprintf(format, v...))
+	if db.debug {
+		log.Printf("%v [%v]: %v", src, label, fmt.Sprintf(format, v...))
 	}
 }

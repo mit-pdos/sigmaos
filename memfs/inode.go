@@ -138,7 +138,8 @@ func (inode *Inode) Stat(Ctx *npo.Ctx) (*np.Stat, error) {
 	return inode.stat()
 }
 
-func (inode *Inode) Create(ctx *npo.Ctx, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (inode *Inode) Create(ctx *npo.
+	Ctx, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
@@ -157,7 +158,7 @@ func (inode *Inode) Create(ctx *npo.Ctx, name string, t np.Tperm, m np.Tmode) (n
 			dn.init(newi)
 
 		}
-		db.DPrintf("Create %v in %v -> %v\n", name, inode, newi)
+		db.DLPrintf(ctx.Uname(), "MEMFS", "Create %v in %v -> %v\n", name, inode, newi)
 		inode.Mtime = time.Now().Unix()
 		return newi, dir.create(newi, name)
 	} else {
@@ -166,7 +167,7 @@ func (inode *Inode) Create(ctx *npo.Ctx, name string, t np.Tperm, m np.Tmode) (n
 }
 
 func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, error) {
-	db.DPrintf("%v: Walk %v %v\n", ctx, inode, path)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "%v: Walk %v %v\n", ctx, inode, path)
 	inodes := []npo.NpObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
@@ -175,8 +176,8 @@ func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, 
 	if !ok {
 		return nil, nil, errors.New("Not a directory")
 	}
-	db.DPrintf("lookup: %v\n", path)
-	inodes, rest, err := dir.namei(path, inodes)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "lookup: %v\n", path)
+	inodes, rest, err := dir.namei(ctx, path, inodes)
 	if err == nil {
 		return inodes, rest, err
 	} else {
@@ -208,7 +209,7 @@ func (inode *Inode) Remove(ctx *npo.Ctx, n string) error {
 
 // XXX open for other types than pipe
 func (inode *Inode) Open(ctx *npo.Ctx, mode np.Tmode) error {
-	db.DPrintf("inode.Open %v", inode)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "inode.Open %v", inode)
 	if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
 		return p.open(mode)
@@ -217,8 +218,8 @@ func (inode *Inode) Open(ctx *npo.Ctx, mode np.Tmode) error {
 }
 
 // XXX open for other types than pipe
-func (inode *Inode) Close(mode np.Tmode) error {
-	db.DPrintf("inode.Open %v", inode)
+func (inode *Inode) Close(ctx *npo.Ctx, mode np.Tmode) error {
+	db.DLPrintf(ctx.Uname(), "MEMFS", "inode.Open %v", inode)
 	if inode.IsDevice() {
 	} else if inode.IsDir() {
 	} else if inode.IsSymlink() {
@@ -230,7 +231,7 @@ func (inode *Inode) Close(mode np.Tmode) error {
 }
 
 func (inode *Inode) WriteFile(ctx *npo.Ctx, offset np.Toffset, data []byte) (np.Tsize, error) {
-	db.DPrintf("inode.Write %v", inode)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "inode.Write %v", inode)
 	var sz np.Tsize
 	var err error
 	if inode.IsDevice() {
@@ -262,7 +263,7 @@ func (inode *Inode) WriteDir(ctx *npo.Ctx, offset np.Toffset, b []byte) (np.Tsiz
 }
 
 func (inode *Inode) ReadFile(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]byte, error) {
-	db.DPrintf("inode.Read %v", inode)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "inode.Read %v", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		return d.Read(offset, n)
@@ -289,7 +290,7 @@ func (inode *Inode) Rename(ctx *npo.Ctx, from, to string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DPrintf("%v: Rename %v -> %v\n", dir, from, to)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
 	ino, err := dir.lookupLocked(from)
 	if err != nil {
 		return fmt.Errorf("Unknown name %v", from)

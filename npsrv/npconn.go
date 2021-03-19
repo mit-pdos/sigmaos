@@ -40,6 +40,14 @@ func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	return c
 }
 
+func (c *Channel) Src() string {
+	return c.conn.RemoteAddr().String()
+}
+
+func (c *Channel) Dst() string {
+	return c.conn.LocalAddr().String()
+}
+
 func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tversion:
@@ -100,7 +108,7 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 }
 
 func (c *Channel) reader() {
-	db.DPrintf("Reader conn %v->%v\n", c.conn.LocalAddr(), c.conn.RemoteAddr())
+	db.DLPrintf(c.Dst(), "9PCHAN", "Reader conn from %v\n", c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
@@ -114,14 +122,14 @@ func (c *Channel) reader() {
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
-			db.DPrintf("reader sv req: %v\n", fcall)
+			db.DLPrintf(c.Dst(), "9PCHAN", "reader sv req: %v\n", fcall)
 			go c.serve(fcall)
 		}
 	}
 }
 
 func (c *Channel) close() {
-	db.DPrintf("Close: %v -> %v", c.conn.LocalAddr(), c.conn.RemoteAddr())
+	db.DLPrintf(c.Dst(), "9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.closed = true
 	close(c.replies)
 }
@@ -147,7 +155,7 @@ func (c *Channel) writer() {
 		if !ok {
 			return
 		}
-		db.DPrintf("Writer rep: %v\n", fcall)
+		db.DLPrintf(c.Src(), "9PCHAN", "Writer rep: %v\n", fcall)
 		frame, err := npcodec.Marshal(fcall)
 		if err != nil {
 			log.Print("Writer: marshal error: ", err)

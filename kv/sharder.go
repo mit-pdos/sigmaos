@@ -83,7 +83,6 @@ func MakeSharder(args []string) (*Sharder, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("MakeSharder: too few arguments %v\n", args)
 	}
-	log.Printf("Sharder: %v\n", args)
 	sh := &Sharder{}
 	sh.cond = sync.NewCond(&sh.mu)
 	sh.pid = args[0]
@@ -93,7 +92,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)
 	}
 	fsd := memfsd.MakeFsd("sharder", ip+":0", nil)
-	log.Printf("Sharder: %v\n", fsd.Addr())
+	db.DLPrintf(fsd.Addr(), "SHARDER", "New sharder %v", args)
 	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
 	if err != nil {
 		return nil, err
@@ -101,7 +100,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
-	db.SetLevel(0)
+	db.SetDebug(true)
 
 	return sh, nil
 }
@@ -110,7 +109,7 @@ func (sh *Sharder) exit() error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	db.DLPrintf(db.SERVICE, "Sharder exit %v\n", sh.pid)
+	db.DLPrintf(sh.Addr(), "SHARDER", "Sharder exit %v\n", sh.pid)
 	sh.done = true
 	sh.nextKvs = make([]string, 0)
 	sh.cond.Signal()
@@ -121,7 +120,7 @@ func (sh *Sharder) prepared(kvd string) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	db.DLPrintf(db.SERVICE, "Prepared: %v %v\n", kvd, sh.nkvd)
+	db.DLPrintf(sh.Addr(), "SHARDER", "Prepared: %v %v\n", kvd, sh.nkvd)
 	sh.nkvd -= 1
 	if sh.nkvd <= 0 {
 		sh.cond.Signal()
@@ -162,7 +161,7 @@ func (sh *Sharder) balance() *Config {
 	j := 0
 	conf := makeConfig(sh.conf.N + 1)
 
-	db.DLPrintf(db.SERVICE, "shards %v (len %v) kvs %v\n", sh.conf.Shards,
+	db.DLPrintf(sh.Addr(), "SHARDER", "shards %v (len %v) kvs %v\n", sh.conf.Shards,
 		len(sh.conf.Shards), sh.nextKvs)
 
 	if len(sh.nextKvs) == 0 {
@@ -239,7 +238,7 @@ func (sh *Sharder) Work() {
 	}
 
 	sh.nextConf = sh.balance()
-	db.DLPrintf(db.SERVICE, "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
+	db.DLPrintf(sh.Addr(), "SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 	if err != nil {
 		log.Printf("Sharder: %v error %v\n", KVNEXTCONFIG, err)

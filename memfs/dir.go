@@ -71,29 +71,29 @@ func (dir *Dir) Len() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
-func (dir *Dir) namei(path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
+func (dir *Dir) namei(ctx *npo.Ctx, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
 	var inode *Inode
 	var err error
 
 	dir.mu.Lock()
 	inode, err = dir.lookupLocked(path[0])
 	if err != nil {
-		db.DPrintf("namei %v unknown %v", dir, path)
+		db.DLPrintf(ctx.Uname(), "MEMFS", "namei %v unknown %v", dir, path)
 		dir.mu.Unlock()
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
 	if inode.IsDir() {
 		if len(path) == 1 { // done?
-			db.DPrintf("namei %v %v -> %v", path, dir, inodes)
+			db.DLPrintf(ctx.Uname(), "MEMFS", "namei %v %v -> %v", path, dir, inodes)
 			dir.mu.Unlock()
 			return inodes, nil, nil
 		}
 		d := inode.Data.(*Dir)
 		dir.mu.Unlock() // for "."
-		return d.namei(path[1:], inodes)
+		return d.namei(ctx, path[1:], inodes)
 	} else {
-		db.DPrintf("namei %v %v -> %v %v", path, dir, inodes, path[1:])
+		db.DLPrintf(ctx.Uname(), "MEMFS", "namei %v %v -> %v %v", path, dir, inodes, path[1:])
 		dir.mu.Unlock()
 		return inodes, path[1:], nil
 	}
@@ -126,13 +126,13 @@ func (dir *Dir) create(inode *Inode, name string) error {
 	return dir.createLocked(inode, name)
 }
 
-func (dir *Dir) remove(name string) error {
+func (dir *Dir) remove(ctx *npo.Ctx, name string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
 	inode, err := dir.lookupLocked(name)
 	if err != nil {
-		db.DPrintf("remove %v unknown %v", dir, name)
+		db.DLPrintf(ctx.Uname(), "MEMFS", "remove %v unknown %v", dir, name)
 		return err
 	}
 	if inode.IsDir() {

@@ -41,7 +41,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 
 func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	fid, rest := fsc.mount.resolve(path)
-	db.DPrintf("%v: walkOne: mount -> %v %v\n", fsc.uname, fid, rest)
+	db.DLPrintf(fsc.uname, "FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	if fid == np.NoFid {
 		return np.NoFid, 0, errors.New("Unknown file")
 
@@ -66,7 +66,7 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 			return np.NoFid, 0, err
 		}
 		todo = len(rest) - len(reply.Qids)
-		db.DPrintf("%v: walkOne rest %v -> %v %v", fsc.uname, rest,
+		db.DLPrintf(fsc.uname, "FSCLNT", "walkOne rest %v -> %v %v", rest,
 			reply.Qids, todo)
 	}
 	fsc.addFid(fid2, fsc.path(fid1).copyPath())
@@ -86,7 +86,7 @@ func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string
 		if err != nil {
 			return nil, err
 		}
-		db.DPrintf("rest = %v trest %v (%v)\n", rest, trest, len(trest))
+		db.DLPrintf(fsc.uname, "FSCLNT", "rest = %v trest %v (%v)\n", rest, trest, len(trest))
 		path = append(path[:i], append(trest, rest...)...)
 	} else {
 		path = append(np.Split(target), rest...)
@@ -124,12 +124,11 @@ func SplitTarget(target string) (string, []string) {
 			rest = np.Split(parts[3])
 		}
 	}
-	db.DPrintf("splittarget: %v: %v %v\n", target, server, rest)
 	return server, rest
 }
 
 func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
-	db.DPrintf("%v: automount %v to %v\n", fsc.uname, target, path)
+	db.DLPrintf(fsc.uname, "FSCLNT", "automount %v to %v\n", target, path)
 	server, rest := SplitTarget(target)
 	fid, err := fsc.Attach(server, "")
 	if err != nil {
@@ -148,7 +147,7 @@ func IsUnion(path []string) ([]string, bool) {
 }
 
 func (fsc *FsClient) walkUnion(ch *npclnt.NpChan, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, error) {
-	db.DPrintf("Walk union: %v %v\n", dir, q)
+	db.DLPrintf(fsc.uname, "FSCLNT", "Walk union: %v %v\n", dir, q)
 	fid3 := fsc.allocFid()
 	reply, err := ch.Walk(fid, fid3, dir)
 	if err != nil {
@@ -158,12 +157,12 @@ func (fsc *FsClient) walkUnion(ch *npclnt.NpChan, fid, fid2 np.Tfid, dir []strin
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf("%v: unionLookup -> %v %v", fsc.uname, fid2, reply.Qids)
+	db.DLPrintf(fsc.uname, "FSCLNT", "unionLookup -> %v %v", fid2, reply.Qids)
 	return reply, nil
 }
 
 func (fsc *FsClient) unionMatch(q, name string) bool {
-	db.DPrintf("unionMatch %v %v\n", q, name)
+	db.DLPrintf(fsc.uname, "FSCLNT", "unionMatch %v %v\n", q, name)
 	switch q {
 	case "~any":
 		return true
@@ -174,7 +173,6 @@ func (fsc *FsClient) unionMatch(q, name string) bool {
 		}
 		parts := strings.Split(ip, ":")
 		if parts[0] == ip {
-			db.DPrintf("match %v\n", parts[0])
 			return true
 		}
 		return false
@@ -185,7 +183,7 @@ func (fsc *FsClient) unionMatch(q, name string) bool {
 }
 
 func (fsc *FsClient) unionScan(ch *npclnt.NpChan, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, error) {
-	db.DPrintf("unionScan: %v %v\n", dirents, q)
+	db.DLPrintf(fsc.uname, "FSCLNT", "unionScan: %v %v\n", dirents, q)
 	for _, de := range dirents {
 		if fsc.unionMatch(q, de.Name) {
 			reply, err := ch.Walk(fid, fid2, []string{de.Name})
@@ -199,7 +197,7 @@ func (fsc *FsClient) unionScan(ch *npclnt.NpChan, fid, fid2 np.Tfid, dirents []*
 }
 
 func (fsc *FsClient) unionLookup(ch *npclnt.NpChan, fid, fid2 np.Tfid, q string) (*np.Rwalk, error) {
-	db.DPrintf("%v: unionLookup: %v %v %v\n", fsc.uname, fid, fid2, q)
+	db.DLPrintf(fsc.uname, "FSCLNT", "unionLookup: %v %v %v\n", fid, fid2, q)
 	_, err := ch.Open(fid, np.OREAD)
 	if err != nil {
 		return nil, err

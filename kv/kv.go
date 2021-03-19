@@ -77,15 +77,14 @@ func MakeKv(args []string) (*Kv, error) {
 	}
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
-	db.SetDebug(false)
-	db.SetLevel(0)
+	db.SetDebug(true)
 	return kv, nil
 }
 
 // Interposes on memfsd's name resolution to check that clerk and I
 // run in same config, and modify the name to strip off config #.
 func (kv *Kv) Resolve(ctx *npobjsrv.Ctx, names []string) error {
-	db.DLPrintf(db.SERVICE, "%v: %v: Resolve %v\n", kv.me, ctx, names)
+	db.DLPrintf(kv.Addr(), "KV", "%v: Resolve %v\n", ctx, names)
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
@@ -140,7 +139,7 @@ func (kv *Kv) makeShardDirs() {
 			err := kv.Mkdir(d, 0777)
 			if err != nil {
 				log.Fatalf("%v: moveShards: mkdir %v err %v\n",
-					kv.me, d, err)
+					kv.Addr(), d, err)
 			}
 		}
 	}
@@ -170,7 +169,7 @@ func (kv *Kv) removeShards() {
 			err := kv.RmDir(d)
 			if err != nil {
 				log.Fatalf("%v: moveShards: remove %v err %v\n",
-					kv.me, d, err)
+					kv.Addr(), d, err)
 			}
 		}
 	}
@@ -179,8 +178,8 @@ func (kv *Kv) removeShards() {
 // Tell sharder we are prepared to commit new config
 func (kv *Kv) prepared() {
 	sh := SHARDER + "/dev"
-	db.DLPrintf(db.SERVICE, "%v: prepared %v\n", kv.me, sh)
-	err := kv.WriteFile(sh, []byte("Prepared "+kv.me))
+	db.DLPrintf(kv.Addr(), "KV", "prepared %v\n", sh)
+	err := kv.WriteFile(sh, []byte("Prepared "+kv.Addr()))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
 	}
@@ -191,7 +190,7 @@ func (kv *Kv) prepare() {
 	kv.conf = kv.readConfig(KVCONFIG)
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	db.DLPrintf(db.SERVICE, "%v: prepare for new config: %v %v\n", kv.me, kv.conf, kv.nextConf)
+	db.DLPrintf(kv.Addr(), "KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()
@@ -205,7 +204,7 @@ func (kv *Kv) prepare() {
 
 // Caller holds lock
 func (kv *Kv) commit() bool {
-	db.DLPrintf(db.SERVICE, "%v: commit to new config: %v\n", kv.me, kv.nextConf)
+	db.DLPrintf(kv.Addr(), "KV", "commit to new config: %v\n", kv.nextConf)
 
 	kv.removeShards()
 
@@ -218,7 +217,7 @@ func (kv *Kv) commit() bool {
 		}
 	}
 
-	log.Printf("%v: exit\n", kv.me)
+	log.Printf("%v: exit\n", kv.Addr())
 	return false
 }
 
@@ -226,7 +225,7 @@ func (kv *Kv) Work() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	db.DLPrintf(db.SERVICE, "%v: KV work\n", kv.me)
+	db.DLPrintf(kv.Addr(), "KV", "Work\n")
 	cont := true
 	for cont {
 		kv.cond.Wait()
@@ -239,6 +238,6 @@ func (kv *Kv) Work() {
 }
 
 func (kv *Kv) Exit() {
-	kv.ExitFs(kv.me)
+	kv.ExitFs(kv.Addr())
 	kv.Exiting(kv.pid, "OK")
 }

@@ -72,6 +72,10 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	return npc
 }
 
+func (npc *NpConn) Addr() string {
+	return npc.conn.LocalAddr().String()
+}
+
 func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
@@ -126,7 +130,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
+	db.DLPrintf(npc.Addr(), "9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		npc.add(args.NewFid, &Fid{f.path, f.obj})
 	} else {
@@ -154,7 +158,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 // XXX call close? keep refcnt per obj?
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	db.DPrintf("Clunk %v\n", args)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Clunk %v\n", args)
 	_, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -166,12 +170,12 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 }
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	db.DPrintf("Open %v\n", args)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Open %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("f %v\n", f)
+	db.DLPrintf(npc.Addr(), "9POBJ", "f %v\n", f)
 	err := f.obj.Open(npc.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -181,12 +185,12 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	db.DPrintf("Create %v\n", args)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Create %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("f %v\n", f)
+	db.DLPrintf(npc.Addr(), "9POBJ", "f %v\n", f)
 
 	names := []string{args.Name}
 	if npc.ctx.r != nil {
@@ -240,12 +244,12 @@ func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	db.DPrintf("Read %v\n", args)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Read %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("ReadFid %v %v\n", args, f)
+	db.DLPrintf(npc.Addr(), "9POBJ", "ReadFid %v %v\n", args, f)
 	if f.obj.Perm().IsDir() {
 		return npc.readDir(f.obj, args, rets)
 	} else {
@@ -254,12 +258,12 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	db.DPrintf("Write %v\n", args)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Write %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Write f %v\n", f)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Write f %v\n", f)
 	var err error
 	cnt := np.Tsize(0)
 	if f.obj.Perm().IsDir() {
@@ -283,7 +287,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		npc.osrv.Done()
 		return nil
 	}
-	db.DPrintf("Remove f %v\n", f)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Remove f %v\n", f)
 	err := f.obj.Remove(npc.ctx, f.path[len(f.path)-1])
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -297,7 +301,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Stat %v\n", f)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Stat %v\n", f)
 	st, err := f.obj.Stat(npc.ctx)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -311,7 +315,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DPrintf("Wstat %v %v\n", f, args)
+	db.DLPrintf(npc.Addr(), "9POBJ", "Wstat %v %v\n", f, args)
 	if args.Stat.Name != "" {
 		err := f.obj.Rename(npc.ctx, f.path[len(f.path)-1], args.Stat.Name)
 		if err != nil {

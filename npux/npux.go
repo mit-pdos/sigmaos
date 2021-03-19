@@ -35,7 +35,7 @@ func MakeNpUx(mount string) *NpUx {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.UX, err)
 	}
-	npux.srv = npsrv.MakeNpServer(npux, ip+":0")
+	npux.srv = npsrv.MakeNpServer(npux, "npuxd", ip+":0")
 	fsl := fslib.MakeFsLib("ux")
 	err = fsl.PostServiceUnion(npux.srv.MyAddr(), fslib.UX, npux.srv.MyAddr())
 	if err != nil {
@@ -45,7 +45,7 @@ func MakeNpUx(mount string) *NpUx {
 }
 
 func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npo.MakeNpConn(npux, conn)
+	clnt := npo.MakeNpConn(npux, conn, "npuxd")
 	return clnt
 }
 

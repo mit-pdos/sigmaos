@@ -167,7 +167,7 @@ func (inode *Inode) Create(ctx *npo.
 }
 
 func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, error) {
-	db.DLPrintf(ctx.Uname(), "MEMFS", "%v: Walk %v %v\n", ctx, inode, path)
+	db.DLPrintf(ctx.Uname(), "MEMFS", "%v: Lookup %v %v\n", ctx, inode, path)
 	inodes := []npo.NpObj{}
 	if len(path) == 0 {
 		return nil, nil, nil

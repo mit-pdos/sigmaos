@@ -46,7 +46,7 @@ func MakeLocalD(bin string) *LocalD {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
 	}
-	ld.srv = npsrv.MakeNpServer(ld, ld.ip+":0")
+	ld.srv = npsrv.MakeNpServer(ld, "locald", ld.ip+":0")
 	fsl := fslib.MakeFsLib("locald")
 	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
 	ld.FsLib = fsl
@@ -72,7 +72,7 @@ func (ld *LocalD) spawn(a []byte) error {
 }
 
 func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(ld, conn)
+	return npo.MakeNpConn(ld, conn, "locald")
 }
 
 func (ld *LocalD) Done() {

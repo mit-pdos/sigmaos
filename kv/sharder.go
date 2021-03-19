@@ -260,7 +260,7 @@ func (sh *Sharder) Work() {
 
 	}
 
-	log.Printf("Commit to %v\n", sh.nextConf)
+	db.DLPrintf(sh.Addr(), "SHARDER", "Commit to %v\n", sh.nextConf)
 	// commit to new config
 	err = sh.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {

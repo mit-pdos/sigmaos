@@ -38,7 +38,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.fds = make([]FdState, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Path)
 	fsc.mount = makeMount()
-	fsc.npc = npclnt.MakeNpClnt(false)
+	fsc.npc = npclnt.MakeNpClnt(uname)
 	fsc.next = 1
 	fsc.uname = uname
 	rand.Seed(time.Now().UnixNano())
@@ -173,11 +173,11 @@ func (fsc *FsClient) Close(fd int) error {
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
 func (fsc *FsClient) attachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
-	reply, err := fsc.npc.Attach(server, fsc.Uname(), fid, p)
+	reply, err := fsc.npc.Attach(fsc.Uname(), server, fsc.Uname(), fid, p)
 	if err != nil {
 		return nil, err
 	}
-	ch := fsc.npc.MakeNpChan(server)
+	ch := fsc.npc.MakeNpChan(fsc.Uname(), server)
 	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
@@ -217,7 +217,7 @@ func (fsc *FsClient) clunkFid(fid np.Tfid) {
 }
 
 func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Create %v\n", path)
+	db.DLPrintf(fsc.uname, "FSCLNT", "Create %v perm %v\n", path, perm)
 	p := np.Split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]

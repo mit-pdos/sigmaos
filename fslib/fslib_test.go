@@ -22,7 +22,7 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.FsLib = MakeFsLib("fslib")
+	ts.FsLib = MakeFsLib("fslibtest")
 	ts.s = s
 	ts.t = t
 	return ts

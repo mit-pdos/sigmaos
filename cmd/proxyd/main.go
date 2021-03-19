@@ -15,7 +15,7 @@ func makeProxyd() *Proxyd {
 	pd := &Proxyd{}
 	pd.done = make(chan bool)
 	pd.fsd = proxy.MakeNpd()
-	pd.srv = npsrv.MakeNpServer(pd.fsd, ":1110")
+	pd.srv = npsrv.MakeNpServer(pd.fsd, "proxyd", ":1110")
 	return pd
 }
 

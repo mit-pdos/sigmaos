@@ -60,7 +60,7 @@ func MakeNps3() *Nps3 {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.S3, err)
 	}
-	nps3.srv = npsrv.MakeNpServer(nps3, ip+":0")
+	nps3.srv = npsrv.MakeNpServer(nps3, "nps3d", ip+":0")
 	fsl := fslib.MakeFsLib("s3")
 	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), fslib.S3, nps3.srv.MyAddr())
 	if err != nil {
@@ -71,7 +71,7 @@ func MakeNps3() *Nps3 {
 }
 
 func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npo.MakeNpConn(nps3, conn)
+	clnt := npo.MakeNpConn(nps3, conn, "nps3d")
 	return clnt
 }
 

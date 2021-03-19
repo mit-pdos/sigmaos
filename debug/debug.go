@@ -38,6 +38,6 @@ func DLPrintf(src, label string, format string, v ...interface{}) {
 	defer db.mu.Unlock()
 
 	if db.debug {
-		log.Printf("%v [%v]: %v", src, label, fmt.Sprintf(format, v...))
+		log.Printf("%v %v %v", src, label, fmt.Sprintf(format, v...))
 	}
 }

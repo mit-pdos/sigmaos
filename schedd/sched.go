@@ -45,13 +45,13 @@ func MakeSchedd() *Sched {
 	sd.ls = make(map[string]*Lambda)
 	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	sd.root.time = time.Now().Unix()
-	db.SetDebug(false)
+	db.SetDebug(true)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
 	}
-	sd.srv = npsrv.MakeNpServer(sd, ip+":0")
-	fsl := fslib.MakeFsLib("sched")
+	sd.srv = npsrv.MakeNpServer(sd, "schedd", ip+":0")
+	fsl := fslib.MakeFsLib("schedd")
 	sd.FsLib = fsl
 	err = fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
 	if err != nil {
@@ -61,7 +61,7 @@ func MakeSchedd() *Sched {
 }
 
 func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(sd, conn)
+	return npo.MakeNpConn(sd, conn, "schedd")
 }
 
 func (sd *Sched) Done() {

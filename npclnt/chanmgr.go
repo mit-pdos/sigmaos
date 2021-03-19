@@ -14,12 +14,14 @@ const (
 
 type ChanMgr struct {
 	mu    sync.Mutex
+	name  string
 	conns map[string]*Chan
 }
 
-func makeChanMgr() *ChanMgr {
+func makeChanMgr(name string) *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*Chan)
+	cm.name = name
 	return cm
 }
 
@@ -38,7 +40,7 @@ func (cm *ChanMgr) allocChan(addr string) (*Chan, error) {
 	var err error
 	conn, ok := cm.conns[addr]
 	if !ok {
-		conn, err = mkChan(addr)
+		conn, err = mkChan(cm.name, addr)
 		if err == nil {
 			cm.conns[addr] = conn
 		}
@@ -57,15 +59,15 @@ func (cm *ChanMgr) Close(addr string) {
 	}
 }
 
-func (cm *ChanMgr) makeCall(addr string, req np.Tmsg) (np.Tmsg, error) {
-	conn, err := cm.allocChan(addr)
+func (cm *ChanMgr) makeCall(src, dst string, req np.Tmsg) (np.Tmsg, error) {
+	conn, err := cm.allocChan(dst)
 	if err != nil {
 		return nil, err
 	}
 	reqfc := &np.Fcall{}
 	reqfc.Type = req.Type()
 	reqfc.Msg = req
-	repfc, err := conn.RPC(reqfc)
+	repfc, err := conn.RPC(src, reqfc)
 	if err != nil {
 		return nil, err
 	}

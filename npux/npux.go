@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"syscall"
 
@@ -24,19 +25,21 @@ type NpUx struct {
 	ch    chan bool
 	root  npo.NpObj
 	mount string
+	name  string
 }
 
 func MakeNpUx(mount string) *NpUx {
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
 	npux.root = npux.MakeObj([]string{mount}, np.DMDIR, nil)
+	npux.name = "npuxd:" + strconv.Itoa(os.Getpid())
 	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.UX, err)
 	}
-	npux.srv = npsrv.MakeNpServer(npux, "npuxd", ip+":0")
-	fsl := fslib.MakeFsLib("ux")
+	npux.srv = npsrv.MakeNpServer(npux, npux.name, ip+":0")
+	fsl := fslib.MakeFsLib(npux.name)
 	err = fsl.PostServiceUnion(npux.srv.MyAddr(), fslib.UX, npux.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", npux.srv.MyAddr(), err)
@@ -45,7 +48,7 @@ func MakeNpUx(mount string) *NpUx {
 }
 
 func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npo.MakeNpConn(npux, conn, "npuxd")
+	clnt := npo.MakeNpConn(npux, conn, npux.name)
 	return clnt
 }
 
@@ -179,7 +182,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 }
 
 func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
-	db.DPrintf("%v: Stat %v\n", ctx, o)
+	db.DLPrintf(o.npux.name, "UXD", "%v: Stat %v\n", ctx, o)
 	return o.stat()
 }
 
@@ -204,7 +207,7 @@ func (o *Obj) uxRead(off int64, cnt int) ([]byte, error) {
 }
 
 func (o *Obj) uxWrite(off int64, b []byte) (np.Tsize, error) {
-	db.DPrintf("%v: WriteFile: off %v cnt %v %v\n", o, off, len(b), o.file)
+	db.DLPrintf(o.npux.name, "UXD", "%v: WriteFile: off %v cnt %v %v\n", o, off, len(b), o.file)
 	_, err := o.file.Seek(off, 0)
 	if err != nil {
 		return 0, err
@@ -214,7 +217,7 @@ func (o *Obj) uxWrite(off int64, b []byte) (np.Tsize, error) {
 }
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DPrintf("%v: ReadFile: %v off %v cnt %v\n", ctx, o, off, cnt)
+	db.DLPrintf(o.npux.name, "UXD", "%v: ReadFile: %v off %v cnt %v\n", ctx, o, off, cnt)
 	b, err := o.uxRead(int64(off), int(cnt))
 	if err != nil {
 		return nil, err
@@ -239,13 +242,13 @@ func (o *Obj) uxReadDir() ([]*np.Stat, error) {
 		st.Mode = st.Mode | np.Tperm(0777)
 		sts = append(sts, st)
 	}
-	db.DPrintf("%v: uxReadDir %v\n", o, sts)
+	db.DLPrintf(o.npux.name, "UXD", "%v: uxReadDir %v\n", o, sts)
 	return sts, nil
 }
 
 // XXX intermediate dirs?
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DPrintf("%v: Lookup %v %v\n", ctx, o, p)
+	db.DLPrintf(o.npux.name, "UXD", "%v: Lookup %v %v\n", ctx, o, p)
 	fi, err := os.Stat(np.Join(append(o.path, p...)))
 	if err != nil {
 		return nil, nil, err
@@ -259,7 +262,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 }
 
 func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
-	db.DPrintf("%v: ReadDir %v %v %v\n", ctx, o, off, cnt)
+	db.DLPrintf(o.npux.name, "UXD", "%v: ReadDir %v %v %v\n", ctx, o, off, cnt)
 	dirents, err := o.uxReadDir()
 	if err != nil {
 		return nil, err
@@ -270,7 +273,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 // XXX close
 func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	p := np.Join(append(o.path, name))
-	db.DPrintf("%v: Create %v %v %v %v\n", ctx, o, name, p, perm)
+	db.DLPrintf(o.npux.name, "UXD", "%v: Create %v %v %v %v\n", ctx, o, name, p, perm)
 	var err error
 	var file *os.File
 	if perm.IsDir() {
@@ -290,7 +293,7 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 
 // XXX close
 func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
-	db.DPrintf("%v: Open %v %v\n", ctx, o, m)
+	db.DLPrintf(o.npux.name, "UXD", "%v: Open %v %v\n", ctx, o, m)
 	file, err := os.OpenFile(o.Path(), uxFlags(m), 0)
 	if err != nil {
 		return err
@@ -300,7 +303,7 @@ func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
 }
 
 func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
-	db.DPrintf("%v: Remove %v %v\n", ctx, o, name)
+	db.DLPrintf(o.npux.name, "UXD", "%v: Remove %v %v\n", ctx, o, name)
 	err := os.Remove(o.Path())
 	return err
 }
@@ -308,7 +311,7 @@ func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
 func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
 	p := o.path[:len(o.path)-1]
 	d := append(p, to)
-	db.DPrintf("%v: Rename %v %v %v %v\n", ctx, o, from, to, d)
+	db.DLPrintf(o.npux.name, "UXD", "%v: Rename %v %v %v %v\n", ctx, o, from, to, d)
 	err := syscall.Rename(o.Path(), np.Join(d))
 	if err != nil {
 		return err
@@ -318,7 +321,7 @@ func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
 }
 
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
-	db.DPrintf("%v: WriteFile %v off %v sz %v\n", ctx, o, off, len(b))
+	db.DLPrintf(o.npux.name, "UXD", "%v: WriteFile %v off %v sz %v\n", ctx, o, off, len(b))
 	return o.uxWrite(int64(off), b)
 }
 

@@ -102,10 +102,13 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	db.DPrintf("Attach %v\n", args)
-	npc.ctx = &Ctx{args.Uname, npc.osrv.Resolver()}
 	root := npc.osrv.Root()
-	npc.add(args.Fid, &Fid{[]string{}, root})
+	npc.mu.Lock()
+	if npc.ctx == nil {
+		npc.ctx = &Ctx{args.Uname, npc.osrv.Resolver()}
+		npc.fids[args.Fid] = &Fid{[]string{}, root}
+	}
+	npc.mu.Unlock()
 	rets.Qid = root.Qid()
 	return nil
 }

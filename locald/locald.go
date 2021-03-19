@@ -4,7 +4,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"log"
 	"net"
-	"path"
 	"sync"
 	"time"
 
@@ -25,10 +24,10 @@ type LocalD struct {
 	nid  uint64
 	root *Obj
 	ip   string
-	done bool
 	ls   map[string]*Lambda
 	srv  *npsrv.NpServer
 	*fslib.FsLib
+	ch chan bool
 }
 
 func MakeLocalD(bin string) *LocalD {
@@ -40,6 +39,7 @@ func MakeLocalD(bin string) *LocalD {
 	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
+	ld.ch = make(chan bool)
 	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
@@ -50,9 +50,9 @@ func MakeLocalD(bin string) *LocalD {
 	fsl := fslib.MakeFsLib("locald")
 	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
 	ld.FsLib = fsl
-	err = fsl.PostService(ld.srv.MyAddr(), path.Join(fslib.LOCALD_ROOT, ld.ip)) //"~"+ld.ip))
+	err = fsl.PostServiceUnion(ld.srv.MyAddr(), fslib.LOCALD_ROOT, ld.srv.MyAddr())
 	if err != nil {
-		log.Fatalf("PostService failed %v %v\n", fslib.LOCALD_ROOT, err)
+		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
 	return ld
 }
@@ -76,11 +76,7 @@ func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (ld *LocalD) Done() {
-	ld.mu.Lock()
-	defer ld.mu.Unlock()
-
-	ld.done = true
-	ld.cond.Signal()
+	ld.ch <- true
 }
 
 func (ld *LocalD) Root() npo.NpObj {
@@ -92,8 +88,5 @@ func (ld *LocalD) Resolver() npo.Resolver {
 }
 
 func (ld *LocalD) Work() {
-	ld.mu.Lock()
-	for !ld.done {
-		ld.cond.Wait()
-	}
+	<-ld.ch
 }

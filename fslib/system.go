@@ -109,6 +109,13 @@ func (s *System) Shutdown(clnt *FsLib) {
 		}
 		s.npuxd.Wait()
 	}
+	if s.locald != nil {
+		err := s.RmUnionDir(clnt, LOCALD_ROOT)
+		if err != nil {
+			log.Fatalf("Localds shutdown %v\n", err)
+		}
+		s.locald.Wait()
+	}
 
 	// Shutdown named last
 	err := clnt.Remove(NAMED + "/")

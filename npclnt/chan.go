@@ -96,7 +96,7 @@ func (ch *Chan) lookupDel(t np.Ttag) (*RpcT, bool) {
 }
 
 func (ch *Chan) RPC(src string, fc *np.Fcall) (*np.Fcall, error) {
-	db.DLPrintf(src, "9PCHAN", "RPC to %v\n", ch.Dst())
+	db.DLPrintf(src, "9PCHAN", "RPC %v to %v\n", fc, ch.Dst())
 	ch.mu.Lock()
 	closed := ch.closed
 	ch.mu.Unlock()
@@ -152,16 +152,16 @@ func (ch *Chan) reader() {
 			return
 		}
 		if err != nil {
-			log.Printf("reader: ReadFrame error %v\n", err)
+			db.DLPrintf(ch.name, "9PCHAN", "Reader: ReadFrame error %v\n", err)
 			return
 		}
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
-			log.Printf("reader: Unmarshal error %v\n", err)
+			db.DLPrintf(ch.name, "9PCHAN", "Reader: Unmarshal error %v\n", err)
 		} else {
 			rpc, ok := ch.lookupDel(fcall.Tag)
 			if ok {
-				db.DLPrintf(ch.name, "9PCHAN", "reader: from %v %v\n", ch.Dst(), fcall)
+				db.DLPrintf(ch.name, "9PCHAN", "Reader: from %v %v\n", ch.Dst(), fcall)
 				rpc.replych <- &Reply{fcall, nil}
 			}
 		}

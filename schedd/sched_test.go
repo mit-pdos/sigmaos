@@ -1,14 +1,13 @@
 package schedd
 
 import (
-	"log"
 	//	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -46,7 +45,7 @@ func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
 	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	log.Printf("Spawn %v\n", a)
+	db.DLPrintf("sched_test", "SCHEDD", "Spawn %v\n", a)
 }
 
 func spawnSchedl(t *testing.T, ts *Tstate) string {
@@ -66,14 +65,14 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 	err := ts.SpawnNoOp(pid, deps)
 	assert.Nil(t, err, "SpawnNoOp")
 
-	log.Printf("SpawnNoOp %v\n", pid)
+	db.DLPrintf("sched_test", "SCHEDD", "SpawnNoOp %v\n", pid)
 	return pid
 }
 
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
-	debug.SetDebug(false)
+	db.SetDebug(false)
 
 	pid := spawnSchedl(t, ts)
 	ts.Wait(pid)
@@ -87,7 +86,7 @@ func TestWait(t *testing.T) {
 func TestWaitNonexistentLambda(t *testing.T) {
 	ts := makeTstate(t)
 
-	debug.SetDebug(false)
+	db.SetDebug(false)
 
 	ch := make(chan bool)
 
@@ -107,7 +106,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 		}
 	}
 
-	log.Printf("Wait on nonexistent lambda\n")
+	db.DLPrintf("sched_test", "SCHEDD", "Wait on nonexistent lambda\n")
 
 	close(ch)
 
@@ -154,7 +153,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 func TestExitDep(t *testing.T) {
 	ts := makeTstate(t)
 
-	debug.SetDebug(false)
+	db.SetDebug(false)
 
 	pid := spawnSchedl(t, ts)
 
@@ -175,7 +174,7 @@ func TestExitDep(t *testing.T) {
 func TestSwapExitDeps(t *testing.T) {
 	ts := makeTstate(t)
 
-	debug.SetDebug(false)
+	db.SetDebug(false)
 
 	pid := spawnSchedl(t, ts)
 
@@ -191,7 +190,7 @@ func TestSwapExitDeps(t *testing.T) {
 
 	// Wait on the new schedl lambda instead of the old one
 	swaps := []string{pid, pid3}
-	log.Printf("Swapping %v\n", swaps)
+	db.DLPrintf("sched_test", "SCHEDD", "Swapping %v\n", swaps)
 	ts.SwapExitDependency(swaps)
 
 	ts.Wait(pid2)
@@ -211,7 +210,7 @@ func TestSwapExitDeps(t *testing.T) {
 //func TestConcurrentLambdas(t *testing.T) {
 //	ts := makeTstate(t)
 //
-//	debug.SetDebug(false)
+//	db.SetDebug(false)
 //
 //	nLambdas := 27
 //	pids := map[string]int{}

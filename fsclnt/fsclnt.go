@@ -211,7 +211,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 func (fsc *FsClient) clunkFid(fid np.Tfid) {
 	err := fsc.npch(fid).Clunk(fid)
 	if err != nil {
-		log.Printf("clunkFid clunk failed %v\n", err)
+		db.DLPrintf(fsc.uname, "FSCLNT", "clunkFid clunk failed %v\n", err)
 	}
 	fsc.freeFid(fid)
 }

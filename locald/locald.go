@@ -4,6 +4,8 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"log"
 	"net"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,7 +29,8 @@ type LocalD struct {
 	ls   map[string]*Lambda
 	srv  *npsrv.NpServer
 	*fslib.FsLib
-	ch chan bool
+	ch   chan bool
+	name string
 }
 
 func MakeLocalD(bin string) *LocalD {
@@ -40,14 +43,15 @@ func MakeLocalD(bin string) *LocalD {
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
 	ld.ch = make(chan bool)
+	ld.name = "locald:" + strconv.Itoa(os.Getpid())
 	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
 	}
-	ld.srv = npsrv.MakeNpServer(ld, "locald", ld.ip+":0")
-	fsl := fslib.MakeFsLib("locald")
+	ld.srv = npsrv.MakeNpServer(ld, ld.name, ld.ip+":0")
+	fsl := fslib.MakeFsLib(ld.name)
 	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
 	ld.FsLib = fsl
 	err = fsl.PostServiceUnion(ld.srv.MyAddr(), fslib.LOCALD_ROOT, ld.srv.MyAddr())
@@ -72,7 +76,7 @@ func (ld *LocalD) spawn(a []byte) error {
 }
 
 func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(ld, conn, "locald")
+	return npo.MakeNpConn(ld, conn, ld.name)
 }
 
 func (ld *LocalD) Done() {

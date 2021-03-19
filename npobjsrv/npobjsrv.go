@@ -106,9 +106,9 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	npc.mu.Lock()
 	if npc.ctx == nil {
 		npc.ctx = &Ctx{args.Uname, npc.osrv.Resolver()}
-		npc.fids[args.Fid] = &Fid{[]string{}, root}
 	}
 	npc.mu.Unlock()
+	npc.add(args.Fid, &Fid{[]string{}, root})
 	rets.Qid = root.Qid()
 	return nil
 }

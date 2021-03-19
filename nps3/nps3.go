@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,11 +39,13 @@ type Nps3 struct {
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
 	root   npo.NpObj
+	name   string
 }
 
 func MakeNps3() *Nps3 {
 	nps3 := &Nps3{}
 	nps3.ch = make(chan bool)
+	nps3.name = "nps3d:" + strconv.Itoa(os.Getpid())
 	nps3.root = nps3.MakeObj([]string{}, np.DMDIR, nil)
 
 	db.SetDebug(false)
@@ -60,8 +63,8 @@ func MakeNps3() *Nps3 {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.S3, err)
 	}
-	nps3.srv = npsrv.MakeNpServer(nps3, "nps3d", ip+":0")
-	fsl := fslib.MakeFsLib("s3")
+	nps3.srv = npsrv.MakeNpServer(nps3, nps3.name, ip+":0")
+	fsl := fslib.MakeFsLib(nps3.name)
 	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), fslib.S3, nps3.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", nps3.srv.MyAddr(), err)
@@ -71,7 +74,7 @@ func MakeNps3() *Nps3 {
 }
 
 func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npo.MakeNpConn(nps3, conn, "nps3d")
+	clnt := npo.MakeNpConn(nps3, conn, nps3.name)
 	return clnt
 }
 
@@ -187,7 +190,7 @@ func (o *Obj) lookupDirent(name string) (*Obj, bool) {
 func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
 	m := mode(key)
-	db.DPrintf("s %v o.key %v dirents %v\n", s, o.key, o.dirents)
+	db.DLPrintf(o.nps3.name, "LOCALD", "s %v o.key %v dirents %v\n", s, o.key, o.dirents)
 	for i, c := range o.key {
 		if c != s[i] {
 			return "", m, false
@@ -209,7 +212,7 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 }
 
 func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
-	db.DPrintf("Stat: %v\n", o)
+	db.DLPrintf(o.nps3.name, "LOCALD", "Stat: %v\n", o)
 	var err error
 	if !o.isRead {
 		switch o.Perm() {
@@ -281,7 +284,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 }
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DPrintf("readFile: %v %v %v\n", o.key, off, cnt)
+	db.DLPrintf(o.nps3.name, "LOCALD", "readFile: %v %v %v\n", o.key, off, cnt)
 
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
@@ -336,9 +339,9 @@ func (o *Obj) s3ReadDir() error {
 			return fmt.Errorf("bad offset")
 		}
 		for _, obj := range page.Contents {
-			db.DPrintf("Key: %v\n", *obj.Key)
+			db.DLPrintf(o.nps3.name, "LOCALD", "Key: %v\n", *obj.Key)
 			if n, m, ok := o.includeName(*obj.Key); ok {
-				db.DPrintf("incl %v %v\n", n, m)
+				db.DLPrintf(o.nps3.name, "LOCALD", "incl %v %v\n", n, m)
 				o1 := o.nps3.MakeObj(append(o.key, n), m, o)
 				o.addDirent(n, o1.(*Obj))
 			}
@@ -348,7 +351,7 @@ func (o *Obj) s3ReadDir() error {
 }
 
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DPrintf("%v: lookup %v %v\n", ctx, o, p)
+	db.DLPrintf(o.nps3.name, "LOCALD", "%v: lookup %v %v\n", ctx, o, p)
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
@@ -369,7 +372,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 
 func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	var dirents []*np.Stat
-	db.DPrintf("readDir: %v\n", o)
+	db.DLPrintf(o.nps3.name, "LOCALD", "readDir: %v\n", o)
 	if !o.isRead {
 		o.s3ReadDir()
 	}
@@ -434,7 +437,7 @@ func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
-	db.DPrintf("writeFile %v %v sz %v\n", off, len(b), o.sz)
+	db.DLPrintf(o.nps3.name, "LOCALD", "writeFile %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
 	if err != nil {

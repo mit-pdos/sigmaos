@@ -35,7 +35,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.s = s
 
-	ts.FsLib = fslib.MakeFsLib("nps3c")
+	ts.FsLib = fslib.MakeFsLib("nps3c_test")
 
 	return ts
 }

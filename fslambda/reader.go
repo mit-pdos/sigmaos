@@ -61,12 +61,11 @@ func MakeReader(args []string) (*Reader, error) {
 }
 
 func (r *Reader) Work() {
-	db.DPrintf("Reader: work\n")
+	db.DLPrintf(r.ctx.Uname(), "Reader", "Reader: work\n")
 	err := r.pipe.Open(r.ctx, np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}
-	db.DPrintf("Reader: open %v\n", r.input)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
 		log.Fatal(err)

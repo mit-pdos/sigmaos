@@ -212,7 +212,7 @@ func (inode *Inode) Open(ctx *npo.Ctx, mode np.Tmode) error {
 	db.DLPrintf(ctx.Uname(), "MEMFS", "inode.Open %v", inode)
 	if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
-		return p.open(mode)
+		return p.open(ctx, mode)
 	}
 	return nil
 }
@@ -225,7 +225,7 @@ func (inode *Inode) Close(ctx *npo.Ctx, mode np.Tmode) error {
 	} else if inode.IsSymlink() {
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
-		return p.close(mode)
+		return p.close(ctx, mode)
 	}
 	return nil
 }
@@ -242,7 +242,7 @@ func (inode *Inode) WriteFile(ctx *npo.Ctx, offset np.Toffset, data []byte) (np.
 		sz, err = s.write(data)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
-		sz, err = p.write(data)
+		sz, err = p.write(ctx, data)
 	} else {
 		f := inode.Data.(*File)
 		sz, err = f.write(offset, data)
@@ -272,7 +272,7 @@ func (inode *Inode) ReadFile(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]byt
 		return s.read(offset, n)
 	} else if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
-		return p.read(n)
+		return p.read(ctx, n)
 	} else {
 		f := inode.Data.(*File)
 		return f.read(offset, n)

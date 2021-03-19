@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sort"
+	"strconv"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -24,19 +26,21 @@ type Reducer struct {
 	pid     string
 	input   string
 	output  string
+	name    string
 }
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	r := &Reducer{}
-	r.FsLib = fslib.MakeFsLib("reducer")
-	r.reducef = reducef
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
-	log.Printf("MakeReducer %v\n", args)
+	r := &Reducer{}
+	r.name = "reducer:" + strconv.Itoa(os.Getpid())
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]
+	r.reducef = reducef
+	r.FsLib = fslib.MakeFsLib(r.name)
+	log.Printf("MakeReducer %v\n", args)
 	db.SetDebug(false)
 	r.Started(r.pid)
 	return r, nil
@@ -45,7 +49,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 func (r *Reducer) processFile(file string) []KeyValue {
 	kva := []KeyValue{}
 
-	log.Printf("reduce %v\n", r.input+"/"+file)
+	db.DLPrintf(r.name, "REDUCE", "reduce %v\n", r.input+"/"+file)
 	fd, err := r.Open(r.input+"/"+file, np.OREAD)
 	if err != nil {
 		log.Fatal("Open error ", err)
@@ -70,7 +74,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 		if err != nil {
 			log.Fatal("Unmarshal error ", err)
 		}
-		db.DPrintf("reduce %v: kva %v\n", file, len(kvs))
+		db.DLPrintf(r.name, "REDUCE", "reduce %v: kva %v\n", file, len(kvs))
 		kva = append(kva, kvs...)
 
 		data, err = r.Read(fd, binary.MaxVarintLen64)
@@ -92,7 +96,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 func (r *Reducer) doReduce() {
 	kva := []KeyValue{}
 
-	log.Printf("doReduce %v\n", r.input)
+	db.DLPrintf(r.name, "REDUCE", "doReduce %v\n", r.input)
 	r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		kva = append(kva, r.processFile(st.Name)...)
 		return false, nil

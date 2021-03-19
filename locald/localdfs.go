@@ -30,7 +30,7 @@ func (ld *LocalD) MakeObj(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
 }
 
 func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
-	db.DPrintf("%v: Create %v\n", o, name)
+	db.DLPrintf(o.ld.name, "LOCALD", "%v: Create %v\n", o, name)
 	if !o.t.IsDir() {
 		return nil, fmt.Errorf("not supported")
 	}
@@ -41,7 +41,7 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 }
 
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DPrintf("%v: Lookup %v %v %v\n", ctx, o, p, len(p))
+	db.DLPrintf(o.ld.name, "LOCALD", "%v: Lookup %v %v %v\n", ctx, o, p, len(p))
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
@@ -81,7 +81,7 @@ func (o *Obj) Size() np.Tlength {
 }
 
 func (o *Obj) Qid() np.Tqid {
-	db.DPrintf("Qid %v\n", o)
+	db.DLPrintf(o.ld.name, "LOCALD", "Qid %v\n", o)
 	switch len(o.name) {
 	case 0:
 		return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
@@ -96,7 +96,7 @@ func (o *Obj) Qid() np.Tqid {
 }
 
 func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
-	db.DPrintf("ReadDir: %v\n", o)
+	db.DLPrintf(o.ld.name, "LOCALD", "ReadDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
 		return []*np.Stat{}, nil
@@ -110,7 +110,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 }
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DPrintf("%v: ReadFile: %v %v\n", o, off, cnt)
+	db.DLPrintf(o.ld.name, "LOCALD", "%v: ReadFile: %v %v\n", o, off, cnt)
 	return []byte{}, fmt.Errorf("not suported")
 }
 
@@ -127,12 +127,12 @@ func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 }
 
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
-	db.DPrintf("%v: WriteFile %v %v\n", o, off, len(data))
+	db.DLPrintf(o.ld.name, "LOCALD", "%v: WriteFile %v %v\n", o, off, len(data))
 	return np.Tsize(len(data)), fmt.Errorf("not suported")
 }
 
 func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
-	db.DPrintf("%v: WriteDir %v %v\n", o, off, len(data))
+	db.DLPrintf(o.ld.name, "LOCALD", "%v: WriteDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:
 		return 0, fmt.Errorf("Root is not writable %v", o)

@@ -39,11 +39,11 @@ func MakeLocalD(bin string) *LocalD {
 	ld.load = 0
 	ld.nid = 0
 	ld.bin = bin
+	ld.name = "locald:" + strconv.Itoa(os.Getpid())
 	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
 	ld.ch = make(chan bool)
-	ld.name = "locald:" + strconv.Itoa(os.Getpid())
 	db.SetDebug(false)
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
@@ -65,11 +65,11 @@ func (ld *LocalD) spawn(a []byte) error {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 	l := &Lambda{}
+	l.ld = ld
 	err := l.init(a)
 	if err != nil {
 		return err
 	}
-	l.ld = ld
 	ld.ls[l.Pid] = l
 	l.run()
 	return nil

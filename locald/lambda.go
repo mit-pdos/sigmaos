@@ -40,7 +40,7 @@ func (l *Lambda) init(a []byte) error {
 	l.Env = attr.Env
 	l.Dir = attr.Dir
 	l.attr = &attr
-	db.DPrintf("Locald init: %v\n", attr)
+	db.DLPrintf(l.ld.name, "LOCALD", "Locald init: %v\n", attr)
 	return nil
 }
 
@@ -61,7 +61,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 }
 
 func (l *Lambda) run() error {
-	db.DPrintf("Locald run: %v\n", l.attr)
+	db.DLPrintf(l.ld.name, "LOCALD", "Locald run: %v\n", l.attr)
 	args := append([]string{l.Pid}, l.Args...)
 	env := append(os.Environ(), l.Env...)
 	cmd := exec.Command(l.ld.bin+"/"+l.Program, args...)

@@ -62,6 +62,6 @@ func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
 func (fsl *FsLib) ExitFs(name string) {
 	err := fsl.Remove(name)
 	if err != nil {
-		db.DPrintf("Remove failed %v %v\n", name, err)
+		db.DLPrintf(fsl.Uname(), "FSCLNT", "Remove failed %v %v\n", name, err)
 	}
 }

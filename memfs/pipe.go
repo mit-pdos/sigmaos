@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 const PIPESZ = 8192
@@ -32,7 +33,7 @@ func (p *Pipe) Len() np.Tlength {
 	return np.Tlength(len(p.buf))
 }
 
-func (pipe *Pipe) open(mode np.Tmode) error {
+func (pipe *Pipe) open(ctx *npo.Ctx, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -46,7 +47,7 @@ func (pipe *Pipe) open(mode np.Tmode) error {
 		pipe.nwriter += 1
 		pipe.condr.Signal()
 		for pipe.nreader == 0 {
-			db.DPrintf("Wait for reader\n")
+			db.DLPrintf(ctx.Uname(), "MEMFS", "Wait for reader\n")
 			pipe.condw.Wait()
 		}
 	} else {
@@ -55,7 +56,7 @@ func (pipe *Pipe) open(mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) close(mode np.Tmode) error {
+func (pipe *Pipe) close(ctx *npo.Ctx, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -77,7 +78,7 @@ func (pipe *Pipe) close(mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) write(d []byte) (np.Tsize, error) {
+func (pipe *Pipe) write(ctx *npo.Ctx, d []byte) (np.Tsize, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -100,7 +101,7 @@ func (pipe *Pipe) write(d []byte) (np.Tsize, error) {
 	return np.Tsize(n), nil
 }
 
-func (pipe *Pipe) read(n np.Tsize) ([]byte, error) {
+func (pipe *Pipe) read(ctx *npo.Ctx, n np.Tsize) ([]byte, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

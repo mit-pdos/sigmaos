@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 
 	db "ulambda/debug"
@@ -34,7 +33,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 		return nil, errors.New("MakeMapper: too few arguments")
 	}
 	m := &Mapper{}
-	m.name = "mapper:" + strconv.Itoa(os.Getpid())
+	m.name = db.Name("mapper")
 	m.mapf = mapf
 	m.pid = args[0]
 	m.input = args[1]
@@ -43,8 +42,6 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	m.FsLib = fslib.MakeFsLib(m.name)
 	db.DLPrintf(m.name, "MAPPER", "MakeMapper %v\n", args)
-
-	db.SetDebug()
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {

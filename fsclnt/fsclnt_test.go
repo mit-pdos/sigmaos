@@ -4,13 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	db "ulambda/debug"
 )
 
 func TestTarget(t *testing.T) {
-	db.SetDebug()
-
 	assert.Equal(t, true, IsRemoteTarget("192.168.2.114:40043:pubkey"))
 	assert.Equal(t, true, IsRemoteTarget("192.168.2.114:40043:pubkey:"))
 	assert.Equal(t, true, IsRemoteTarget("192.168.2.114:40043:pubkey:xxx"))

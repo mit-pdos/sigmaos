@@ -67,8 +67,6 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 func TestSpinners(t *testing.T) {
 	ts := makeTstate(t)
 
-	debug.SetDebug(false)
-
 	// Test params
 	spinMsecs := 2000
 	nSpinners := 100

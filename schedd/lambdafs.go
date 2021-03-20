@@ -55,7 +55,7 @@ func (o *Obj) Qid() np.Tqid {
 }
 
 func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
-	db.DLPrintf("schedd", "SCHEDD", "%v: Create %v\n", o, name)
+	db.DLPrintf(o.sd.name, "SCHEDD", "%v: Create %v\n", o, name)
 	if !o.t.IsDir() {
 		return nil, fmt.Errorf("not supported")
 	}
@@ -72,7 +72,7 @@ func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
 }
 
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DLPrintf("schedd", "SCHEDD", "%v: lookup %v %v %v\n", ctx, o, p, len(p))
+	db.DLPrintf(o.sd.name, "SCHEDD", "%v: lookup %v %v %v\n", ctx, o, p, len(p))
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
@@ -121,7 +121,7 @@ func (o Obj) stat() *np.Stat {
 }
 
 func (o *Obj) readLambda() ([]*np.Stat, error) {
-	db.DLPrintf("schedd", "SCHEDD", "readLambda: %v\n", o)
+	db.DLPrintf(o.sd.name, "SCHEDD", "readLambda: %v\n", o)
 	st := []*np.Stat{}
 
 	v := reflect.ValueOf(Lambda{})
@@ -149,7 +149,7 @@ func (sd *Sched) ps() []*np.Stat {
 }
 
 func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
-	db.DLPrintf("schedd", "SCHEDD", "readDir: %v\n", o)
+	db.DLPrintf(o.sd.name, "SCHEDD", "readDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
 		return o.sd.ps(), nil
@@ -162,7 +162,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 }
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DLPrintf("schedd", "SCHEDD", "%v: ReadFile: %v %v\n", o, off, cnt)
+	db.DLPrintf(o.sd.name, "SCHEDD", "%v: ReadFile: %v %v\n", o, off, cnt)
 	if len(o.name) != 2 {
 		log.Fatalf("ReadFile: name != 2 %v\n", o)
 	}
@@ -215,7 +215,7 @@ func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 }
 
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
-	db.DLPrintf("schedd", "SCHEDD", "%v: writeFile %v %v\n", o, off, len(data))
+	db.DLPrintf(o.sd.name, "SCHEDD", "%v: writeFile %v %v\n", o, off, len(data))
 	if len(o.name) != 2 {
 		log.Fatalf("WriteFile: name != 2 %v\n", o)
 	}
@@ -233,7 +233,7 @@ func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, er
 }
 
 func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
-	db.DLPrintf("schedd", "SCHEDD", "%v: writeDir %v %v\n", o, off, len(data))
+	db.DLPrintf(o.sd.name, "SCHEDD", "%v: writeDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:
 		return 0, fmt.Errorf("Root is not writable %v", o)

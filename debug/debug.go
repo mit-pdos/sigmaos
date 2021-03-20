@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -15,7 +16,7 @@ type Debug struct {
 
 var db Debug
 
-func SetDebug() {
+func Name(n string) string {
 	uldebug := os.Getenv("ULDEBUG")
 
 	db.mu.Lock()
@@ -24,6 +25,7 @@ func SetDebug() {
 	if uldebug != "" {
 		db.debug = true
 	}
+	return n + ":" + strconv.Itoa(os.Getpid())
 }
 
 func DPrintf(format string, v ...interface{}) {

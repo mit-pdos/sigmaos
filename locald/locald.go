@@ -4,8 +4,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 	"log"
 	"net"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -39,12 +37,11 @@ func MakeLocalD(bin string) *LocalD {
 	ld.load = 0
 	ld.nid = 0
 	ld.bin = bin
-	ld.name = "locald:" + strconv.Itoa(os.Getpid())
+	ld.name = db.Name("locald")
 	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
 	ld.ch = make(chan bool)
-	db.SetDebug()
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
 	if err != nil {

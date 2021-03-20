@@ -30,7 +30,7 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
-	ts.fsl = fslib.MakeFsLib("tester")
+	ts.fsl = fslib.MakeFsLib("kv_test")
 
 	err = ts.fsl.Mkdir("name/kv", 0777)
 	if err != nil {

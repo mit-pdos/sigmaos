@@ -124,7 +124,7 @@ func (c *Channel) reader() {
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
-			db.DLPrintf(c.name, "9PCHAN", "reader sv req: %v\n", fcall)
+			db.DLPrintf(c.name, "9PCHAN", "Reader sv req: %v\n", fcall)
 			go c.serve(fcall)
 		}
 	}

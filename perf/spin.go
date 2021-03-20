@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -29,8 +29,6 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	if err != nil {
 		log.Fatalf("Invalid sleep duration: %v, %v\n", args[1], err)
 	}
-
-	db.SetDebug()
 
 	err = s.Started(s.pid)
 	if err != nil {

@@ -29,8 +29,6 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader: %v\n", args)
 
-	db.SetDebug()
-
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		return nil, errors.New("MakeReader: No IP")

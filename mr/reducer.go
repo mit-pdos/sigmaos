@@ -7,9 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"sort"
-	"strconv"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -34,14 +32,13 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
-	r.name = "reducer:" + strconv.Itoa(os.Getpid())
+	r.name = db.Name("reducer")
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
 	log.Printf("MakeReducer %v\n", args)
-	db.SetDebug()
 	r.Started(r.pid)
 	return r, nil
 }

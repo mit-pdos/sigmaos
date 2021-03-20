@@ -17,7 +17,6 @@ type Fsd struct {
 	addr string
 	ctx  *npo.Ctx
 	r    npo.Resolver
-	name string
 }
 
 func MakeFsd(name, addr string, r npo.Resolver) *Fsd {
@@ -25,21 +24,19 @@ func MakeFsd(name, addr string, r npo.Resolver) *Fsd {
 	fsd.ctx = npo.MkCtx(name, r)
 	fsd.root = memfs.MkRootInode(fsd.ctx)
 	fsd.addr = addr
-	fsd.name = name
 	fsd.r = r
-	fsd.srv = npsrv.MakeNpServer(fsd, name, addr)
 	fsd.ch = make(chan bool)
-	db.SetDebug()
+	fsd.srv = npsrv.MakeNpServer(fsd, name, addr)
 	return fsd
 }
 
 func (fsd *Fsd) Serve() {
 	<-fsd.ch
-	db.DLPrintf(fsd.name, "NAMED", "Exit\n")
+	db.DLPrintf(fsd.ctx.Uname(), "NAMED", "Exit\n")
 }
 
 func (fsd *Fsd) Done() {
-	db.DLPrintf(fsd.name, "NAMED", "Done\n")
+	db.DLPrintf(fsd.ctx.Uname(), "NAMED", "Done\n")
 	fsd.ch <- true
 }
 

@@ -22,7 +22,6 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	db.SetDebug()
 	ex.Started(ex.pid)
 	return ex, nil
 }

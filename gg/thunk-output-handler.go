@@ -25,7 +25,6 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 	toh.outputFiles = args[2:]
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
 	toh.FsLib = fls
-	db.SetDebug()
 	toh.Started(toh.pid)
 	return toh, nil
 }

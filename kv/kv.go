@@ -77,7 +77,6 @@ func MakeKv(args []string) (*Kv, error) {
 	}
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
-	db.SetDebug()
 	return kv, nil
 }
 

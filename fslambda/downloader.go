@@ -24,7 +24,6 @@ func MakeDownloader(args []string, debug bool) (*Downloader, error) {
 	down.dest = args[2]
 	fls := fslib.MakeFsLib("downloader")
 	down.FsLib = fls
-	db.SetDebug()
 	down.Started(down.pid)
 	return down, nil
 }

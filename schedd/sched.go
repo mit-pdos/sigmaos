@@ -35,6 +35,7 @@ type Sched struct {
 	done bool
 	srv  *npsrv.NpServer
 	*fslib.FsLib
+	name string
 }
 
 func MakeSchedd() *Sched {
@@ -45,13 +46,14 @@ func MakeSchedd() *Sched {
 	sd.ls = make(map[string]*Lambda)
 	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	sd.root.time = time.Now().Unix()
-	db.SetDebug()
+	sd.name = db.Name("schedd")
+
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
 	}
-	sd.srv = npsrv.MakeNpServer(sd, "schedd", ip+":0")
-	fsl := fslib.MakeFsLib("schedd")
+	sd.srv = npsrv.MakeNpServer(sd, sd.name, ip+":0")
+	fsl := fslib.MakeFsLib(sd.name)
 	sd.FsLib = fsl
 	err = fsl.PostService(sd.srv.MyAddr(), fslib.SCHED)
 	if err != nil {
@@ -61,7 +63,7 @@ func MakeSchedd() *Sched {
 }
 
 func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(sd, conn, "schedd")
+	return npo.MakeNpConn(sd, conn, sd.name)
 }
 
 func (sd *Sched) Done() {

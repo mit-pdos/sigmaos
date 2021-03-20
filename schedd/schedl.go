@@ -3,8 +3,6 @@ package schedd
 import (
 	"errors"
 	"log"
-	"os"
-	"strconv"
 	"time"
 
 	db "ulambda/debug"
@@ -23,13 +21,12 @@ func MakeSchedl(args []string) (*Schedl, error) {
 		return nil, errors.New("MakeSchedl: too few arguments")
 	}
 	s := &Schedl{}
-	s.FsLib = fslib.MakeFsLib("schedl")
+	s.name = db.Name("schedl")
+	s.FsLib = fslib.MakeFsLib(s.name)
 	s.pid = args[0]
 	s.output = args[1]
-	s.name = "schedl" + strconv.Itoa(os.Getpid())
 
 	db.DLPrintf(s.name, "SCHEDL", "MakeSchedl: %v\n", args)
-	db.SetDebug()
 
 	err := s.Started(s.pid)
 	if err != nil {

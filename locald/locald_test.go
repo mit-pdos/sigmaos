@@ -36,8 +36,6 @@ func makeTstate(t *testing.T) *Tstate {
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
-	debug.SetDebug(false)
-
 	pid := fslib.GenPid()
 	//	a := &fslib.Attr{pid, "../bin/schedl", "", []string{"name/out", ""}, nil, nil, nil}
 	ip, err := fsclnt.LocalIP()

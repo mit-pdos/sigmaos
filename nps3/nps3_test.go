@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -25,8 +24,6 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	ts.t = t
-
-	debug.SetDebug()
 
 	bin := ".."
 	s, err := fslib.Boot(bin)

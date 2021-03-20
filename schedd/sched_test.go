@@ -13,8 +13,9 @@ import (
 
 type Tstate struct {
 	*fslib.FsLib
-	t *testing.T
-	s *fslib.System
+	t    *testing.T
+	s    *fslib.System
+	name string
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -26,18 +27,19 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
+	ts.name = db.Name("sched_test")
 
-	ts.FsLib = fslib.MakeFsLib("schedl")
+	ts.FsLib = fslib.MakeFsLib(ts.name)
 	ts.t = t
-	db.SetDebug()
 	return ts
 }
 
-func makeTstateNoBoot(t *testing.T, s *fslib.System, pid string) *Tstate {
+func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	ts := &Tstate{}
-	ts.FsLib = fslib.MakeFsLib("schedl_" + pid)
 	ts.t = t
 	ts.s = s
+	ts.name = db.Name("sched_test")
+	ts.FsLib = fslib.MakeFsLib(ts.name)
 	return ts
 }
 
@@ -45,7 +47,7 @@ func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
 	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	db.DLPrintf("sched_test", "SCHEDD", "Spawn %v\n", a)
+	db.DLPrintf(ts.name, "SCHEDD", "Spawn %v\n", a)
 }
 
 func spawnSchedl(t *testing.T, ts *Tstate) string {
@@ -65,7 +67,7 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 	err := ts.SpawnNoOp(pid, deps)
 	assert.Nil(t, err, "SpawnNoOp")
 
-	db.DLPrintf("sched_test", "SCHEDD", "SpawnNoOp %v\n", pid)
+	db.DLPrintf(ts.name, "SCHEDD", "SpawnNoOp %v\n", pid)
 	return pid
 }
 
@@ -102,7 +104,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 		}
 	}
 
-	db.DLPrintf("sched_test", "SCHEDD", "Wait on nonexistent lambda\n")
+	db.DLPrintf(ts.name, "SCHEDD", "Wait on nonexistent lambda\n")
 
 	close(ch)
 
@@ -113,8 +115,6 @@ func TestWaitNonexistentLambda(t *testing.T) {
 // Should exit immediately
 //func TestNoOpLambdaImmediateExit(t *testing.T) {
 //	ts := makeTstate(t)
-//
-//	debug.SetDebug()
 //
 //	pid := spawnNoOp(t, ts, []string{})
 //
@@ -182,7 +182,7 @@ func TestSwapExitDeps(t *testing.T) {
 
 	// Wait on the new schedl lambda instead of the old one
 	swaps := []string{pid, pid3}
-	db.DLPrintf("sched_test", "SCHEDD", "Swapping %v\n", swaps)
+	db.DLPrintf(ts.name, "SCHEDD", "Swapping %v\n", swaps)
 	ts.SwapExitDependency(swaps)
 
 	ts.Wait(pid2)
@@ -227,7 +227,7 @@ func TestSwapExitDeps(t *testing.T) {
 //			_, alreadySpawned = pids[pid]
 //		}
 //		pids[pid] = i
-//		newts := makeTstateNoBoot(t, ts.s, pid)
+//		newts := makeTstateNoBoot(t, ts.s)
 //		tses = append(tses, newts)
 //		go func(pid string, started *sync.WaitGroup, i int) {
 //			barrier.Done()

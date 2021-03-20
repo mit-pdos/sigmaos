@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	db "ulambda/debug"
 	"ulambda/fsclnt"
 )
 
@@ -35,8 +34,6 @@ func TestSymlink(t *testing.T) {
 	ts.s.schedd, err = run("..", "/bin/schedd", nil)
 	assert.Nil(t, err, "bin/schedd")
 	time.Sleep(100 * time.Millisecond)
-
-	db.SetDebug()
 
 	b, err := ts.ReadFile(SCHED)
 	assert.Nil(t, err, SCHED)

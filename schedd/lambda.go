@@ -112,7 +112,7 @@ func (l *Lambda) writeExitStatus(status string) {
 	l.mu.Lock()
 
 	l.ExitStatus = status
-	db.DLPrintf("schedd", "SCHEDD", "Exit %v status %v; Wakeup waiters for %v\n", l.Pid, status, l)
+	db.DLPrintf(l.sd.name, "SCHEDD", "Exit %v status %v; Wakeup waiters for %v\n", l.Pid, status, l)
 	l.condWait.Broadcast()
 
 	l.mu.Unlock()
@@ -135,7 +135,7 @@ func (l *Lambda) writeStatus(status string) error {
 		return fmt.Errorf("Cannot write to status %v", l.Status)
 	}
 	l.Status = "Running"
-	db.DLPrintf("schedd", "SCHEDD", "Running %v\n", l.Pid)
+	db.DLPrintf(l.sd.name, "SCHEDD", "Running %v\n", l.Pid)
 	l.mu.Unlock()
 
 	l.startConsDep()
@@ -156,7 +156,7 @@ func (l *Lambda) swapExitDependency(swap string) {
 	defer l.sd.mu.Unlock()
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	db.DLPrintf("schedd", "SCHEDD", "Swapping exit dep %v for lambda %v\n", swap, l.Pid)
+	db.DLPrintf(l.sd.name, "SCHEDD", "Swapping exit dep %v for lambda %v\n", swap, l.Pid)
 
 	s := strings.Split(strings.TrimSpace(swap), " ")
 	from := s[0]
@@ -166,17 +166,17 @@ func (l *Lambda) swapExitDependency(swap string) {
 	if _, ok := l.sd.ls[to]; ok {
 		// Check if present & false (hasn't exited yet)
 		if val, ok := l.ExitDep[from]; ok && !val {
-			db.DLPrintf("schedd", "SCHEDD", "Swapping exit dep %v for lambda %v\n", swap, l.Pid)
+			db.DLPrintf(l.sd.name, "SCHEDD", "Swapping exit dep %v for lambda %v\n", swap, l.Pid)
 			l.ExitDep[to] = false
 			l.ExitDep[from] = true
 		}
 	} else {
-		db.DLPrintf("schedd", "SCHEDD", "Tried to swap exit dep %v for lambda %v, but it didn't exist\n", swap, l.Pid)
+		db.DLPrintf(l.sd.name, "SCHEDD", "Tried to swap exit dep %v for lambda %v, but it didn't exist\n", swap, l.Pid)
 	}
 }
 
 func (l *Lambda) run() error {
-	db.DLPrintf("schedd", "SCHEDD", "Run %v\n", l)
+	db.DLPrintf(l.sd.name, "SCHEDD", "Run %v\n", l)
 	err := l.changeStatus("Started")
 	if err != nil {
 		return err
@@ -331,7 +331,7 @@ func (l *Lambda) isRunnningL() bool {
 
 // A caller wants to Wait for l to exit.
 func (l *Lambda) waitForL() string {
-	db.DLPrintf("schedd", "SCHEDD", "Wait for %v\n", l)
+	db.DLPrintf(l.sd.name, "SCHEDD", "Wait for %v\n", l)
 	if l.Status != "Exiting" {
 		l.condWait.Wait()
 	}

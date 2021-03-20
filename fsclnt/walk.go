@@ -131,7 +131,7 @@ func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	server, rest := SplitTarget(target)
 	fid, err := fsc.Attach(server, "")
 	if err != nil {
-		db.DLPrintf(fsc.uname, "FSCLNT", "Attach error: ", err)
+		db.DLPrintf(fsc.uname, "FSCLNT", "Attach error: %v", err)
 		return nil, err
 	}
 	return rest, fsc.Mount(fid, np.Join(path))

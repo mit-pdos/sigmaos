@@ -30,7 +30,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		log.Fatalf("Invalid sleep duration: %v, %v\n", args[1], err)
 	}
 
-	db.SetDebug(false)
+	db.SetDebug()
 
 	err = s.Started(s.pid)
 	if err != nil {

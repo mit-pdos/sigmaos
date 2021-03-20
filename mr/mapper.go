@@ -44,7 +44,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.FsLib = fslib.MakeFsLib(m.name)
 	db.DLPrintf(m.name, "MAPPER", "MakeMapper %v\n", args)
 
-	db.SetDebug(false)
+	db.SetDebug()
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {

@@ -29,7 +29,7 @@ func MakeFsd(name, addr string, r npo.Resolver) *Fsd {
 	fsd.r = r
 	fsd.srv = npsrv.MakeNpServer(fsd, name, addr)
 	fsd.ch = make(chan bool)
-	db.SetDebug(true)
+	db.SetDebug()
 	return fsd
 }
 

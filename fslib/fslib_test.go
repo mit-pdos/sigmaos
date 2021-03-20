@@ -36,7 +36,7 @@ func TestSymlink(t *testing.T) {
 	assert.Nil(t, err, "bin/schedd")
 	time.Sleep(100 * time.Millisecond)
 
-	db.SetDebug(false)
+	db.SetDebug()
 
 	b, err := ts.ReadFile(SCHED)
 	assert.Nil(t, err, SCHED)

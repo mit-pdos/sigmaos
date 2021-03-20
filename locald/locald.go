@@ -44,7 +44,7 @@ func MakeLocalD(bin string) *LocalD {
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
 	ld.ch = make(chan bool)
-	db.SetDebug(false)
+	db.SetDebug()
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
 	if err != nil {

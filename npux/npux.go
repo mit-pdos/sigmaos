@@ -33,7 +33,7 @@ func MakeNpUx(mount string) *NpUx {
 	npux.ch = make(chan bool)
 	npux.root = npux.MakeObj([]string{mount}, np.DMDIR, nil)
 	npux.name = "npuxd:" + strconv.Itoa(os.Getpid())
-	db.SetDebug(false)
+	db.SetDebug()
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.UX, err)

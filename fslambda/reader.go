@@ -29,7 +29,7 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader: %v\n", args)
 
-	db.SetDebug(false)
+	db.SetDebug()
 
 	ip, err := fsclnt.LocalIP()
 	if err != nil {

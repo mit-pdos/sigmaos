@@ -100,7 +100,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
-	db.SetDebug(true)
+	db.SetDebug()
 
 	return sh, nil
 }

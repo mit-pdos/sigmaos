@@ -29,7 +29,7 @@ func MakeSchedl(args []string) (*Schedl, error) {
 	s.name = "schedl" + strconv.Itoa(os.Getpid())
 
 	db.DLPrintf(s.name, "SCHEDL", "MakeSchedl: %v\n", args)
-	db.SetDebug(false)
+	db.SetDebug()
 
 	err := s.Started(s.pid)
 	if err != nil {

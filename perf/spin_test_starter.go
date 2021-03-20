@@ -34,7 +34,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 		return nil, errors.New("MakeSpinTestStarter: too few arguments")
 	}
 	log.Printf("MakeSpinTestStarter: %v\n", args)
-	db.SetDebug(false)
+	db.SetDebug()
 
 	s := &SpinTestStarter{}
 	s.FsLib = fslib.MakeFsLib("spin-test-starter")
@@ -44,7 +44,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 		log.Fatalf("Invalid number of spinners: %v, %v\n", args[0], err)
 	}
 
-	db.SetDebug(false)
+	db.SetDebug()
 
 	return s, nil
 }

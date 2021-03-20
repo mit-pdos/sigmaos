@@ -62,7 +62,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 		return nil, err
 	}
 	orc.FsLibSrv = fls
-	db.SetDebug(false)
+	db.SetDebug()
 	orc.Started(orc.pid)
 	return orc, nil
 }

@@ -62,7 +62,7 @@ type Npd struct {
 }
 
 func MakeNpd() *Npd {
-	db.SetDebug(false)
+	db.SetDebug()
 	return &Npd{fslib.Named()}
 }
 

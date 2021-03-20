@@ -48,7 +48,7 @@ func MakeNps3() *Nps3 {
 	nps3.name = "nps3d:" + strconv.Itoa(os.Getpid())
 	nps3.root = nps3.MakeObj([]string{}, np.DMDIR, nil)
 
-	db.SetDebug(false)
+	db.SetDebug()
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {

@@ -15,12 +15,14 @@ type Debug struct {
 
 var db Debug
 
-func SetDebug(d bool) {
+func SetDebug() {
+	uldebug := os.Getenv("ULDEBUG")
+
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if !db.debug {
-		db.debug = d
+	if uldebug != "" {
+		db.debug = true
 	}
 }
 

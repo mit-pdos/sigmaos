@@ -29,7 +29,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.FsLib = fslib.MakeFsLib("schedl")
 	ts.t = t
-
+	db.SetDebug()
 	return ts
 }
 
@@ -72,8 +72,6 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
-	db.SetDebug(false)
-
 	pid := spawnSchedl(t, ts)
 	ts.Wait(pid)
 
@@ -85,8 +83,6 @@ func TestWait(t *testing.T) {
 // Should exit immediately
 func TestWaitNonexistentLambda(t *testing.T) {
 	ts := makeTstate(t)
-
-	db.SetDebug(false)
 
 	ch := make(chan bool)
 
@@ -118,7 +114,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 //func TestNoOpLambdaImmediateExit(t *testing.T) {
 //	ts := makeTstate(t)
 //
-//	debug.SetDebug(false)
+//	debug.SetDebug()
 //
 //	pid := spawnNoOp(t, ts, []string{})
 //
@@ -153,8 +149,6 @@ func TestWaitNonexistentLambda(t *testing.T) {
 func TestExitDep(t *testing.T) {
 	ts := makeTstate(t)
 
-	db.SetDebug(false)
-
 	pid := spawnSchedl(t, ts)
 
 	pid2 := spawnNoOp(t, ts, []string{pid})
@@ -173,8 +167,6 @@ func TestExitDep(t *testing.T) {
 
 func TestSwapExitDeps(t *testing.T) {
 	ts := makeTstate(t)
-
-	db.SetDebug(false)
 
 	pid := spawnSchedl(t, ts)
 
@@ -210,7 +202,6 @@ func TestSwapExitDeps(t *testing.T) {
 //func TestConcurrentLambdas(t *testing.T) {
 //	ts := makeTstate(t)
 //
-//	db.SetDebug(false)
 //
 //	nLambdas := 27
 //	pids := map[string]int{}

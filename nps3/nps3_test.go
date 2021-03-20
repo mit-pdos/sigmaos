@@ -26,7 +26,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.t = t
 
-	debug.SetDebug(false)
+	debug.SetDebug()
 
 	bin := ".."
 	s, err := fslib.Boot(bin)

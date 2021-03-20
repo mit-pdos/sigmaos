@@ -41,7 +41,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
 	log.Printf("MakeReducer %v\n", args)
-	db.SetDebug(false)
+	db.SetDebug()
 	r.Started(r.pid)
 	return r, nil
 }

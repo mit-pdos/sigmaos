@@ -285,6 +285,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	if len(f.path) == 0 { // exit?
+		db.DLPrintf(npc.name, "9POBJ", "Done\n")
 		npc.osrv.Done()
 		return nil
 	}

@@ -34,26 +34,39 @@ def list_labels(value: Optional[str]):
             raise typer.BadParameter(f"label {label} not recognized")
     return labels
 
+
+def exiting(label, msg):
+    return label == "9POBJ" and msg[0] == "Done"
+
 def mkCols(f):
     cols = {}
     col = 0
+    freelist = []
     input_ = f if f else sys.stdin
     for line in input_:
         try:
             date, time, src, label, *msg = line.strip().split(" ")
+            if exiting(label, msg):
+                freelist = freelist + [cols[src]]
             if not src in cols:
-                cols[src] = col
-                col += 1
-        except:
+                c = col
+                if len(freelist) > 0:
+                    c = freelist.pop(0)
+                else:
+                    col += 1
+                cols[src] = c
+        except ValueError:
             continue
     f.seek(0)
-    return cols
+    return (cols, col)
 
-def header(columns, width):
-    n = len(columns)
-    cols = [k for k in columns.keys()]
+def header(running, columns, n, width):
+    cols = []
+    for k in running.keys():
+        cols = cols + [k]
     col_width = int(width / n)
     cols = Columns(cols, width=col_width - 1, equal=True, expand=True)
+    print("-" * width)
     rich.print(cols)
     
 def main(
@@ -63,8 +76,7 @@ def main(
     just: Optional[str] = typer.Option(None, "--just", "-j", callback=list_labels),
 ):
     labels = list(LABELS)
-    columns = mkCols(file)
-    n_columns = len(columns)
+    columns, n_columns = mkCols(file)
 
     # We can take input from a stdin (pipes) or from a file
     input_ = file if file else sys.stdin
@@ -78,19 +90,27 @@ def main(
     console = Console()
     width = console.size.width
 
-    header(columns, width)
-    
     panic = False
+    running = {}
     for line in input_:
         try:
             date, time, src, label, *msg = line.strip().split(" ")
-            
+
+            if not src  in running:
+                running[src] = True
+                header(running, columns, n_columns, width)
+            if exiting(label, msg):
+                running[src] = False
+                header(running, columns, n_columns, width)
+
             # To ignore some labels
             if label not in labels:
                 continue
 
             # msg = label + " " + " ".join(msg)
             msg = " ".join(msg)
+
+            # otherwise, rich doesn't print string slices like "[schedd]"
             msg = msg.replace("[", "\[")
 
             # Colorize output by using rich syntax when needed
@@ -110,8 +130,7 @@ def main(
                 col_width = int(width / n_columns)
                 cols = Columns(cols, width=col_width - 1, equal=True, expand=True)
                 rich.print(cols)
-        except Exception as e :
-            print(e, traceback.format_exc())
+        except  ValueError:
             # Code from tests or panics does not follow format
             # so we print it as is
             if line.startswith("panic"):

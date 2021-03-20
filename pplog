@@ -63,7 +63,8 @@ def mkCols(f):
 def header(running, columns, n, width):
     cols = []
     for k in running.keys():
-        cols = cols + [k]
+        if running[k]:
+            cols = cols + [k]
     col_width = int(width / n)
     cols = Columns(cols, width=col_width - 1, equal=True, expand=True)
     print("-" * width)

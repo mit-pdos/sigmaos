@@ -2,6 +2,7 @@ package gg
 
 import (
 	"path"
+	"strings"
 )
 
 // PID constants
@@ -16,8 +17,30 @@ const (
 	NO_OP_SUFFIX          = ".no-op-waiter"
 )
 
+// ========== Thunk naming ==========
+
 func isThunk(hash string) bool {
 	return hash[0] == 'T'
+}
+
+func isReduction(hash string) bool {
+	return hash[0] == 'T' && strings.Contains(hash, "#")
+}
+
+func thunkHashFromReduction(reduction string) string {
+	return reduction[:strings.Index(reduction, "#")]
+}
+
+func thunkHashesFromReductions(reductions []string) []string {
+	hashes := []string{}
+	for _, r := range reductions {
+		if isReduction(r) {
+			hashes = append(hashes, thunkHashFromReduction(r))
+		} else {
+			hashes = append(hashes, r)
+		}
+	}
+	return hashes
 }
 
 // ========== Pids ==========

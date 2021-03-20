@@ -29,7 +29,7 @@ cd $exc_dir
 
 # Set up the thunks for GG
 echo "2. Generate Makefile"
-./gen_makefile.py 1 2 16 63 > Makefile
+./gen_makefile.py 1 6 16 63 > Makefile
 
 echo "3. Clean excamera directory"
 make clean
@@ -52,7 +52,7 @@ done
 
 # Get targets
 ivfs=`ls *.ivf`
-states=00000001-0.state    #`ls *.state`
+states=`ls *.state`
 targets="${ivfs} ${states}"
 
 echo '6. Copying to memfs...'

@@ -77,8 +77,12 @@ func (orc *Orchestrator) Work() {
 		targetHash := getTargetHash(orc, orc.cwd, target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
 		g := orc.ingestStaticGraph(targetHash)
-		orc.executeStaticGraph(g, []string{})
-		spawnReductionWriter(orc, orc.targets[i], targetHash, path.Join(orc.cwd, "results"), "", []string{})
+		// Ignore reductions, which aren't actually executable
+		if !isReduction(targetHash) {
+			orc.executeStaticGraph(targetHash, g)
+			// TODO: How do I make sure the reduction writer properly waits in the other case?
+			spawnReductionWriter(orc, orc.targets[i], targetHash, path.Join(orc.cwd, "results"), "", []string{})
+		}
 	}
 }
 
@@ -90,18 +94,23 @@ func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {
 	// Will loop inifinitely if the graph is circular
 	for len(queue) > 0 {
 		current, queue = queue[0], queue[1:]
+		if isReduction(current) {
+			current = thunkHashFromReduction(current)
+		}
 		exitDeps := getExitDependencies(orc, current)
+		exitDeps = thunkHashesFromReductions(exitDeps)
 		g.AddThunk(current, exitDeps)
 		queue = append(queue, exitDeps...)
 	}
 	return g
 }
 
-func (orc *Orchestrator) executeStaticGraph(g *Graph, uploadDeps []string) {
+// XXX If it is a reduction, we should make sure to wait on the right thing...
+func (orc *Orchestrator) executeStaticGraph(targetHash string, g *Graph) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {
 		exitDeps := outputHandlerPids(thunk.deps)
-		if reductionExists(orc, thunk.hash) || currentlyExecuting(orc, thunk.hash) {
+		if reductionExists(orc, thunk.hash) || currentlyExecuting(orc, thunk.hash) || isReduction(thunk.hash) {
 			continue
 		}
 		exPid := spawnExecutor(orc, thunk.hash, exitDeps)

@@ -89,7 +89,7 @@ func (ex *Executor) uploadOutputFiles() {
 }
 
 func (ex *Executor) Name() string {
-	return "Executor"
+	return "Executor " + ex.pid + " "
 }
 
 func (ex *Executor) Exit() {

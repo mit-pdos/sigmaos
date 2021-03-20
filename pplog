@@ -30,43 +30,42 @@ def list_labels(value: Optional[str]):
         return value
     labels = value.split(",")
     for label in labels:
-        if label not in LABELS:
+        if label not in LABnELS:
             raise typer.BadParameter(f"label {label} not recognized")
     return labels
 
-
-def exiting(label, msg):
-    return label == "9POBJ" and msg[0] == "Done"
-
-def mkCols(f):
-    cols = {}
-    col = 0
-    freelist = []
+def preprocess(f):
+    started = {}
+    exited = {}
     input_ = f if f else sys.stdin
+    n = 0
     for line in input_:
         try:
             date, time, src, label, *msg = line.strip().split(" ")
-            if exiting(label, msg):
-                freelist = freelist + [cols[src]]
-            if not src in cols:
-                c = col
-                if len(freelist) > 0:
-                    c = freelist.pop(0)
-                else:
-                    col += 1
-                cols[src] = c
+            if not src in started:
+                started[src] = n
+                exited[src] = n
+            exited[src] = n
+            n += 1
         except ValueError:
             continue
     f.seek(0)
-    return (cols, col)
 
-def header(running, columns, n, width):
-    cols = []
-    for k in running.keys():
-        if running[k]:
-            cols = cols + [k]
-    col_width = int(width / n)
-    cols = Columns(cols, width=col_width - 1, equal=True, expand=True)
+    starts = sorted(started.values())
+    exits = sorted(exited.values())
+
+    j = 0
+    n = 0
+    for t in starts:
+        if t < exits[j]:
+            n += 1
+        else:
+            j += 1
+    return exited, n
+
+def header(columns, n_columns, width):
+    col_width = int(width / n_columns)
+    cols = Columns(columns, width=col_width - 1, equal=True, expand=True)
     print("-" * width)
     rich.print(cols)
     
@@ -77,10 +76,12 @@ def main(
     just: Optional[str] = typer.Option(None, "--just", "-j", callback=list_labels),
 ):
     labels = list(LABELS)
-    columns, n_columns = mkCols(file)
+
+    (exited, n_columns) = preprocess(file)
 
     # We can take input from a stdin (pipes) or from a file
     input_ = file if file else sys.stdin
+    
     # Print just some labels or exclude some labels (good for avoiding verbose ones)
     if just:
         labels = just
@@ -93,16 +94,33 @@ def main(
 
     panic = False
     running = {}
+    n = 0
+    col = 0
+    freelist = []
+    columns = {}
     for line in input_:
         try:
             date, time, src, label, *msg = line.strip().split(" ")
 
-            if not src  in running:
-                running[src] = True
-                header(running, columns, n_columns, width)
-            if exiting(label, msg):
-                running[src] = False
-                header(running, columns, n_columns, width)
+            if not src in columns:
+                c = col
+                if len(freelist) > 0:
+                    c = freelist.pop(0)
+                else:
+                    col += 1
+                columns[src] = c
+                header(columns, n_columns, width)
+
+            if exited[src] == n:
+                freelist = freelist + [columns[src]]
+                del columns[src]
+                if len(columns) == 0:
+                    break
+                header(columns, n_columns, width)
+                n += 1
+                continue
+            else:
+                n += 1
 
             # To ignore some labels
             if label not in labels:
@@ -119,18 +137,14 @@ def main(
                 color = LABELS[label]
                 msg = f"[{color}]{msg}[/{color}]"
                 
-            if n_columns is None:
-                rich.print(time, msg)
-                
             # Multi column printing, timing is dropped to maximize horizontal
             # space. Heavylifting is done through rich.column.Columns object
-            else:
-                cols = ["" for _ in range(n_columns)]
-                msg = "" + msg
-                cols[columns[src]] = msg
-                col_width = int(width / n_columns)
-                cols = Columns(cols, width=col_width - 1, equal=True, expand=True)
-                rich.print(cols)
+            cols = ["" for _ in range(n_columns)]
+            msg = "" + msg
+            cols[columns[src]] = msg
+            col_width = int(width / n_columns)
+            cols = Columns(cols, width=col_width - 1, equal=True, expand=True)
+            rich.print(cols)
         except  ValueError:
             # Code from tests or panics does not follow format
             # so we print it as is

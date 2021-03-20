@@ -26,7 +26,7 @@ func MakeFsd(name, addr string, r npo.Resolver) *Fsd {
 	fsd.addr = addr
 	fsd.r = r
 	fsd.ch = make(chan bool)
-	fsd.srv = npsrv.MakeNpServer(fsd, name, addr)
+	fsd.srv = npsrv.MakeNpServer(fsd, addr)
 	return fsd
 }
 
@@ -57,7 +57,7 @@ func (fsd *Fsd) Resolver() npo.Resolver {
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(fsd, conn, fsd.ctx.Uname())
+	return npo.MakeNpConn(fsd, conn)
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Data) error {

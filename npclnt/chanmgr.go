@@ -18,10 +18,9 @@ type ChanMgr struct {
 	conns map[string]*Chan
 }
 
-func makeChanMgr(name string) *ChanMgr {
+func makeChanMgr() *ChanMgr {
 	cm := &ChanMgr{}
 	cm.conns = make(map[string]*Chan)
-	cm.name = name
 	return cm
 }
 
@@ -40,7 +39,7 @@ func (cm *ChanMgr) allocChan(addr string) (*Chan, error) {
 	var err error
 	conn, ok := cm.conns[addr]
 	if !ok {
-		conn, err = mkChan(cm.name, addr)
+		conn, err = mkChan(addr)
 		if err == nil {
 			cm.conns[addr] = conn
 		}
@@ -59,7 +58,7 @@ func (cm *ChanMgr) Close(addr string) {
 	}
 }
 
-func (cm *ChanMgr) makeCall(src, dst string, req np.Tmsg) (np.Tmsg, error) {
+func (cm *ChanMgr) makeCall(dst string, req np.Tmsg) (np.Tmsg, error) {
 	conn, err := cm.allocChan(dst)
 	if err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func (cm *ChanMgr) makeCall(src, dst string, req np.Tmsg) (np.Tmsg, error) {
 	reqfc := &np.Fcall{}
 	reqfc.Type = req.Type()
 	reqfc.Msg = req
-	repfc, err := conn.RPC(src, reqfc)
+	repfc, err := conn.RPC(reqfc)
 	if err != nil {
 		return nil, err
 	}

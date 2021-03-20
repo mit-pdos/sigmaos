@@ -47,7 +47,7 @@ func (pipe *Pipe) open(ctx *npo.Ctx, mode np.Tmode) error {
 		pipe.nwriter += 1
 		pipe.condr.Signal()
 		for pipe.nreader == 0 {
-			db.DLPrintf(ctx.Uname(), "MEMFS", "Wait for reader\n")
+			db.DLPrintf("MEMFS", "Wait for reader\n")
 			pipe.condw.Wait()
 		}
 	} else {

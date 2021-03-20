@@ -13,9 +13,8 @@ import (
 
 type Tstate struct {
 	*fslib.FsLib
-	t    *testing.T
-	s    *fslib.System
-	name string
+	t *testing.T
+	s *fslib.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -27,9 +26,9 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
-	ts.name = db.Name("sched_test")
+	db.Name("sched_test")
 
-	ts.FsLib = fslib.MakeFsLib(ts.name)
+	ts.FsLib = fslib.MakeFsLib("sched_test")
 	ts.t = t
 	return ts
 }
@@ -38,8 +37,8 @@ func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.s = s
-	ts.name = db.Name("sched_test")
-	ts.FsLib = fslib.MakeFsLib(ts.name)
+	db.Name("sched_test")
+	ts.FsLib = fslib.MakeFsLib("sched_test")
 	return ts
 }
 
@@ -47,7 +46,7 @@ func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
 	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	db.DLPrintf(ts.name, "SCHEDD", "Spawn %v\n", a)
+	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
 func spawnSchedl(t *testing.T, ts *Tstate) string {
@@ -67,7 +66,7 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 	err := ts.SpawnNoOp(pid, deps)
 	assert.Nil(t, err, "SpawnNoOp")
 
-	db.DLPrintf(ts.name, "SCHEDD", "SpawnNoOp %v\n", pid)
+	db.DLPrintf("SCHEDD", "SpawnNoOp %v\n", pid)
 	return pid
 }
 
@@ -104,7 +103,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 		}
 	}
 
-	db.DLPrintf(ts.name, "SCHEDD", "Wait on nonexistent lambda\n")
+	db.DLPrintf("SCHEDD", "Wait on nonexistent lambda\n")
 
 	close(ch)
 
@@ -182,7 +181,7 @@ func TestSwapExitDeps(t *testing.T) {
 
 	// Wait on the new schedl lambda instead of the old one
 	swaps := []string{pid, pid3}
-	db.DLPrintf(ts.name, "SCHEDD", "Swapping %v\n", swaps)
+	db.DLPrintf("SCHEDD", "Swapping %v\n", swaps)
 	ts.SwapExitDependency(swaps)
 
 	ts.Wait(pid2)

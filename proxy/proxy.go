@@ -29,7 +29,7 @@ type NpConn struct {
 func makeNpConn(conn net.Conn, named string) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
-	npc.clnt = npclnt.MakeNpClnt("proxyd")
+	npc.clnt = npclnt.MakeNpClnt()
 	npc.fids = make(map[np.Tfid]*npclnt.NpChan)
 	npc.named = named
 	return npc
@@ -90,11 +90,11 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 	log.Printf("attach %v\n", args)
 
-	reply, err := npc.clnt.Attach(npc.uname, npc.named, npc.uname, args.Fid, np.Split(args.Aname))
+	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, np.Split(args.Aname))
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.addch(args.Fid, npc.clnt.MakeNpChan(npc.uname, npc.named))
+	npc.addch(args.Fid, npc.clnt.MakeNpChan(npc.named))
 	rets.Qid = reply.Qid
 	return nil
 }
@@ -103,11 +103,11 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)
 	server, _ := fsclnt.SplitTarget(target)
-	reply, err := npc.clnt.Attach(npc.uname, server, npc.uname, newfid, path)
+	reply, err := npc.clnt.Attach(server, npc.uname, newfid, path)
 	if err != nil {
 		return np.Tqid{}, err
 	}
-	npc.addch(newfid, npc.clnt.MakeNpChan(npc.uname, server))
+	npc.addch(newfid, npc.clnt.MakeNpChan(server))
 	return reply.Qid, nil
 }
 

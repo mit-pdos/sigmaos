@@ -24,7 +24,6 @@ type Mapper struct {
 	output string
 	fd     int
 	fds    []int
-	name   string
 }
 
 // XXX create in a temporary file and then rename
@@ -33,15 +32,15 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 		return nil, errors.New("MakeMapper: too few arguments")
 	}
 	m := &Mapper{}
-	m.name = db.Name("mapper")
+	db.Name("mapper")
 	m.mapf = mapf
 	m.pid = args[0]
 	m.input = args[1]
 	m.output = args[2]
 	m.fds = make([]int, NReduce)
 
-	m.FsLib = fslib.MakeFsLib(m.name)
-	db.DLPrintf(m.name, "MAPPER", "MakeMapper %v\n", args)
+	m.FsLib = fslib.MakeFsLib("mapper")
+	db.DLPrintf("MAPPER", "MakeMapper %v\n", args)
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {
@@ -100,7 +99,7 @@ func (m *Mapper) doMap() {
 	for {
 		b, err := m.Read(m.fd, memfs.PIPESZ)
 		if err != nil || len(b) == 0 {
-			db.DLPrintf(m.name, "MAPPER", "Read %v %v", m.input, err)
+			db.DLPrintf("MAPPER", "Read %v %v", m.input, err)
 			m.Map(rest)
 			break
 		}
@@ -120,28 +119,28 @@ func (m *Mapper) doMap() {
 	}
 	err := m.Close(m.fd)
 	if err != nil {
-		db.DLPrintf(m.name, "MAPPER", "Close failed %v %v\n", m.fd, err)
+		db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fd, err)
 		return
 	}
 
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")
 	if err != nil {
-		db.DLPrintf(m.name, "MAPPER", "Makemapper: cannot stat ~ip\n")
+		db.DLPrintf("MAPPER", "Makemapper: cannot stat ~ip\n")
 		return
 	}
 
 	for r := 0; r < NReduce; r++ {
 		err = m.Close(m.fds[r])
 		if err != nil {
-			db.DLPrintf(m.name, "MAPPER", "Close failed %v %v\n", m.fd, err)
+			db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fd, err)
 			return
 		}
 		name := "name/fs/" + strconv.Itoa(r) + "/m-" + m.output
 		target := st.Name + ":pubkey:m-" + m.output + "/r-" + strconv.Itoa(r)
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
-			db.DLPrintf(m.name, "MAPPER", "Mapper: cannot create symlink %v %v\n", name, err)
+			db.DLPrintf("MAPPER", "Mapper: cannot create symlink %v %v\n", name, err)
 		}
 	}
 }

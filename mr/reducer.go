@@ -32,7 +32,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
-	r.name = db.Name("reducer")
+	db.Name("reducer")
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]
@@ -46,7 +46,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 func (r *Reducer) processFile(file string) []KeyValue {
 	kva := []KeyValue{}
 
-	db.DLPrintf(r.name, "REDUCE", "reduce %v\n", r.input+"/"+file)
+	db.DLPrintf("REDUCE", "reduce %v\n", r.input+"/"+file)
 	fd, err := r.Open(r.input+"/"+file, np.OREAD)
 	if err != nil {
 		log.Fatal("Open error ", err)
@@ -71,7 +71,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 		if err != nil {
 			log.Fatal("Unmarshal error ", err)
 		}
-		db.DLPrintf(r.name, "REDUCE", "reduce %v: kva %v\n", file, len(kvs))
+		db.DLPrintf("REDUCE", "reduce %v: kva %v\n", file, len(kvs))
 		kva = append(kva, kvs...)
 
 		data, err = r.Read(fd, binary.MaxVarintLen64)
@@ -93,7 +93,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 func (r *Reducer) doReduce() {
 	kva := []KeyValue{}
 
-	db.DLPrintf(r.name, "REDUCE", "doReduce %v\n", r.input)
+	db.DLPrintf("REDUCE", "doReduce %v\n", r.input)
 	r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		kva = append(kva, r.processFile(st.Name)...)
 		return false, nil

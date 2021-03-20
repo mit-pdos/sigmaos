@@ -38,7 +38,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.fds = make([]FdState, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Path)
 	fsc.mount = makeMount()
-	fsc.npc = npclnt.MakeNpClnt(uname)
+	fsc.npc = npclnt.MakeNpClnt()
 	fsc.next = 1
 	fsc.uname = uname
 	rand.Seed(time.Now().UnixNano())
@@ -153,7 +153,7 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	if !ok {
 		return errors.New("Unknown fid")
 	}
-	db.DLPrintf(fsc.uname, "FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.npch(fid))
+	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.npch(fid))
 	fsc.mount.add(np.Split(path), fid)
 	return nil
 }
@@ -173,11 +173,11 @@ func (fsc *FsClient) Close(fd int) error {
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
 func (fsc *FsClient) attachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
-	reply, err := fsc.npc.Attach(fsc.Uname(), server, fsc.Uname(), fid, p)
+	reply, err := fsc.npc.Attach(server, fsc.Uname(), fid, p)
 	if err != nil {
 		return nil, err
 	}
-	ch := fsc.npc.MakeNpChan(fsc.Uname(), server)
+	ch := fsc.npc.MakeNpChan(server)
 	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
@@ -193,7 +193,7 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 		return np.NoFid, err
 	}
 	fsc.addFid(fid, ch)
-	db.DLPrintf(fsc.uname, "FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
+	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
 	return fid, nil
 }
 
@@ -211,13 +211,13 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 func (fsc *FsClient) clunkFid(fid np.Tfid) {
 	err := fsc.npch(fid).Clunk(fid)
 	if err != nil {
-		db.DLPrintf(fsc.uname, "FSCLNT", "clunkFid clunk failed %v\n", err)
+		db.DLPrintf("FSCLNT", "clunkFid clunk failed %v\n", err)
 	}
 	fsc.freeFid(fid)
 }
 
 func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Create %v perm %v\n", path, perm)
+	db.DLPrintf("FSCLNT", "Create %v perm %v\n", path, perm)
 	p := np.Split(path)
 	dir := p[0 : len(p)-1]
 	base := p[len(p)-1]
@@ -236,7 +236,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 
 // XXX reduce duplicattion with Create
 func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
-	db.DLPrintf(fsc.uname, "FSCLNT", "CreateAt %v at %v\n", name, dfd)
+	db.DLPrintf("FSCLNT", "CreateAt %v at %v\n", name, dfd)
 	fid, err := fsc.lookup(dfd)
 	if err != nil {
 		return -1, err
@@ -260,7 +260,7 @@ func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode
 //
 // XXX update pathname associated with fid in Channel
 func (fsc *FsClient) Rename(old string, new string) error {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Rename %v %v\n", old, new)
+	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
 
@@ -283,7 +283,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 }
 
 func (fsc *FsClient) umount(path []string) error {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Umount %v\n", path)
+	db.DLPrintf("FSCLNT", "Umount %v\n", path)
 	if len(path) < 1 {
 		return fmt.Errorf("unmount bad path %v\n", path)
 	}
@@ -313,7 +313,7 @@ func (fsc *FsClient) umount(path []string) error {
 
 // XXX free fid?
 func (fsc *FsClient) Remove(name string) error {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Remove %v\n", name)
+	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
 	_, rest := fsc.mount.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) {
@@ -328,7 +328,7 @@ func (fsc *FsClient) Remove(name string) error {
 }
 
 func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Stat %v\n", name)
+	db.DLPrintf("FSCLNT", "Stat %v\n", name)
 	path := np.Split(name)
 	target, rest := fsc.mount.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) {
@@ -363,7 +363,7 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 }
 
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
-	db.DLPrintf(fsc.uname, "FSCLNT", "Open %v %v\n", path, mode)
+	db.DLPrintf("FSCLNT", "Open %v %v\n", path, mode)
 	var fid np.Tfid
 	for {
 		p := np.Split(path)

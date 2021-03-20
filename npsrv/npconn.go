@@ -23,10 +23,9 @@ type Channel struct {
 	bw      *bufio.Writer
 	replies chan *np.Fcall
 	closed  bool
-	name    string
 }
 
-func MakeChannel(npc NpConn, conn net.Conn, name string) *Channel {
+func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -35,7 +34,6 @@ func MakeChannel(npc NpConn, conn net.Conn, name string) *Channel {
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
 		false,
-		name,
 	}
 	go c.writer()
 	go c.reader()
@@ -110,7 +108,7 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 }
 
 func (c *Channel) reader() {
-	db.DLPrintf(c.name, "9PCHAN", "Reader conn from %v\n", c.Src())
+	db.DLPrintf("9PCHAN", "Reader conn from %v\n", c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
@@ -124,14 +122,14 @@ func (c *Channel) reader() {
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
-			db.DLPrintf(c.name, "9PCHAN", "Reader sv req: %v\n", fcall)
+			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			go c.serve(fcall)
 		}
 	}
 }
 
 func (c *Channel) close() {
-	db.DLPrintf(c.name, "9PCHAN", "Close: %v", c.conn.RemoteAddr())
+	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.closed = true
 	close(c.replies)
 }
@@ -157,7 +155,7 @@ func (c *Channel) writer() {
 		if !ok {
 			return
 		}
-		db.DLPrintf(c.name, "9PCHAN", "Writer rep: %v\n", fcall)
+		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
 		frame, err := npcodec.Marshal(fcall)
 		if err != nil {
 			log.Print("Writer: marshal error: ", err)

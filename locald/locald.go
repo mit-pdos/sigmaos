@@ -27,8 +27,7 @@ type LocalD struct {
 	ls   map[string]*Lambda
 	srv  *npsrv.NpServer
 	*fslib.FsLib
-	ch   chan bool
-	name string
+	ch chan bool
 }
 
 func MakeLocalD(bin string) *LocalD {
@@ -37,7 +36,7 @@ func MakeLocalD(bin string) *LocalD {
 	ld.load = 0
 	ld.nid = 0
 	ld.bin = bin
-	ld.name = db.Name("locald")
+	db.Name("locald")
 	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
@@ -47,8 +46,8 @@ func MakeLocalD(bin string) *LocalD {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
 	}
-	ld.srv = npsrv.MakeNpServer(ld, ld.name, ld.ip+":0")
-	fsl := fslib.MakeFsLib(ld.name)
+	ld.srv = npsrv.MakeNpServer(ld, ld.ip+":0")
+	fsl := fslib.MakeFsLib("locald")
 	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
 	ld.FsLib = fsl
 	err = fsl.PostServiceUnion(ld.srv.MyAddr(), fslib.LOCALD_ROOT, ld.srv.MyAddr())
@@ -73,7 +72,7 @@ func (ld *LocalD) spawn(a []byte) error {
 }
 
 func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(ld, conn, ld.name)
+	return npo.MakeNpConn(ld, conn)
 }
 
 func (ld *LocalD) Done() {

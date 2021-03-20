@@ -17,7 +17,7 @@ type FsLibSrv struct {
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	err := fsl.Remove(srvname)
 	if err != nil {
-		db.DLPrintf(fsl.Uname(), "FSCLNT", "Remove failed %v %v\n", srvname, err)
+		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", srvname, err)
 	}
 	err = fsl.Symlink(srvaddr+":pubkey", srvname, 0777)
 	return err
@@ -38,7 +38,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	}
 	err = fsl.Remove(p)
 	if err != nil {
-		db.DLPrintf(fsl.Uname(), "FSCLNT", "Remove failed %v %v\n", p, err)
+		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", p, err)
 	}
 	err = fsl.Symlink(srvaddr+":pubkey", p, 0777)
 	return err
@@ -62,6 +62,6 @@ func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
 func (fsl *FsLib) ExitFs(name string) {
 	err := fsl.Remove(name)
 	if err != nil {
-		db.DLPrintf(fsl.Uname(), "FSCLNT", "Remove failed %v %v\n", name, err)
+		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", name, err)
 	}
 }

@@ -13,7 +13,6 @@ type Schedl struct {
 	*fslib.FsLib
 	pid    string
 	output string
-	name   string
 }
 
 func MakeSchedl(args []string) (*Schedl, error) {
@@ -21,12 +20,12 @@ func MakeSchedl(args []string) (*Schedl, error) {
 		return nil, errors.New("MakeSchedl: too few arguments")
 	}
 	s := &Schedl{}
-	s.name = db.Name("schedl")
-	s.FsLib = fslib.MakeFsLib(s.name)
+	db.Name("schedl")
+	s.FsLib = fslib.MakeFsLib("schedl")
 	s.pid = args[0]
 	s.output = args[1]
 
-	db.DLPrintf(s.name, "SCHEDL", "MakeSchedl: %v\n", args)
+	db.DLPrintf("SCHEDL", "MakeSchedl: %v\n", args)
 
 	err := s.Started(s.pid)
 	if err != nil {

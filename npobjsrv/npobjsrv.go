@@ -60,15 +60,13 @@ type NpConn struct {
 	conn net.Conn
 	fids map[np.Tfid]*Fid
 	ctx  *Ctx
-	name string
 	osrv NpObjSrv
 }
 
-func MakeNpConn(osrv NpObjSrv, conn net.Conn, name string) *NpConn {
+func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.osrv = osrv
-	npc.name = name
 	npc.fids = make(map[np.Tfid]*Fid)
 	return npc
 }
@@ -131,7 +129,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
+	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		npc.add(args.NewFid, &Fid{f.path, f.obj})
 	} else {
@@ -159,7 +157,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 // XXX call close? keep refcnt per obj?
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	db.DLPrintf(npc.name, "9POBJ", "Clunk %v\n", args)
+	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	_, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -171,12 +169,12 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 }
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	db.DLPrintf(npc.name, "9POBJ", "Open %v\n", args)
+	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "f %v\n", f)
+	db.DLPrintf("9POBJ", "f %v\n", f)
 	err := f.obj.Open(npc.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -186,12 +184,12 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	db.DLPrintf(npc.name, "9POBJ", "Create %v\n", args)
+	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "f %v\n", f)
+	db.DLPrintf("9POBJ", "f %v\n", f)
 
 	names := []string{args.Name}
 	if npc.ctx.r != nil {
@@ -245,12 +243,12 @@ func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	db.DLPrintf(npc.name, "9POBJ", "Read %v\n", args)
+	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "ReadFid %v %v\n", args, f)
+	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
 	if f.obj.Perm().IsDir() {
 		return npc.readDir(f.obj, args, rets)
 	} else {
@@ -259,12 +257,12 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	db.DLPrintf(npc.name, "9POBJ", "Write %v\n", args)
+	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "Write f %v\n", f)
+	db.DLPrintf("9POBJ", "Write f %v\n", f)
 	var err error
 	cnt := np.Tsize(0)
 	if f.obj.Perm().IsDir() {
@@ -285,11 +283,11 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	if len(f.path) == 0 { // exit?
-		db.DLPrintf(npc.name, "9POBJ", "Done\n")
+		db.DLPrintf("9POBJ", "Done\n")
 		npc.osrv.Done()
 		return nil
 	}
-	db.DLPrintf(npc.name, "9POBJ", "Remove f %v\n", f)
+	db.DLPrintf("9POBJ", "Remove f %v\n", f)
 	err := f.obj.Remove(npc.ctx, f.path[len(f.path)-1])
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -303,7 +301,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "Stat %v\n", f)
+	db.DLPrintf("9POBJ", "Stat %v\n", f)
 	st, err := f.obj.Stat(npc.ctx)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -317,7 +315,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	db.DLPrintf(npc.name, "9POBJ", "Wstat %v %v\n", f, args)
+	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
 	if args.Stat.Name != "" {
 		err := f.obj.Rename(npc.ctx, f.path[len(f.path)-1], args.Stat.Name)
 		if err != nil {

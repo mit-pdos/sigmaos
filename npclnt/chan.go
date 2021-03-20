@@ -18,14 +18,12 @@ type Reply struct {
 }
 
 type RpcT struct {
-	src     string
 	req     *np.Fcall
 	replych chan *Reply
 }
 
-func mkRpcT(src string, fc *np.Fcall) *RpcT {
+func mkRpcT(fc *np.Fcall) *RpcT {
 	rpc := &RpcT{}
-	rpc.src = src
 	rpc.req = fc
 	rpc.replych = make(chan *Reply)
 	return rpc
@@ -40,18 +38,16 @@ type Chan struct {
 	requests    chan *RpcT
 	nextTag     np.Ttag
 	outstanding map[np.Ttag]*RpcT
-	name        string
 }
 
-func mkChan(name string, addr string) (*Chan, error) {
+func mkChan(addr string) (*Chan, error) {
 	var err error
-	db.DLPrintf(name, "9PCHAN", "mkChan to %v\n", addr)
+	db.DLPrintf("9PCHAN", "mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 	ch := &Chan{}
-	ch.name = name
 	ch.conn = c
 	ch.br = bufio.NewReaderSize(c, Msglen)
 	ch.bw = bufio.NewWriterSize(c, Msglen)
@@ -66,7 +62,7 @@ func mkChan(name string, addr string) (*Chan, error) {
 func (ch *Chan) Dst() string { return ch.conn.RemoteAddr().String() }
 
 func (ch *Chan) Close() {
-	db.DLPrintf(ch.name, "9PCHAN", "Close chan to %v\n", ch.Dst())
+	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.Dst())
 	for _, rpc := range ch.outstanding {
 		close(rpc.replych)
 	}
@@ -95,16 +91,16 @@ func (ch *Chan) lookupDel(t np.Ttag) (*RpcT, bool) {
 	return rpc, ok
 }
 
-func (ch *Chan) RPC(src string, fc *np.Fcall) (*np.Fcall, error) {
-	db.DLPrintf(src, "9PCHAN", "RPC %v to %v\n", fc, ch.Dst())
+func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
+	db.DLPrintf("9PCHAN", "RPC %v to %v\n", fc, ch.Dst())
 	ch.mu.Lock()
 	closed := ch.closed
 	ch.mu.Unlock()
 	if closed {
-		db.DLPrintf(src, "9PCHAN", "Error ch to %v closed\n", ch.Dst())
+		db.DLPrintf("9PCHAN", "Error ch to %v closed\n", ch.Dst())
 		return nil, io.EOF
 	}
-	rpc := mkRpcT(src, fc)
+	rpc := mkRpcT(fc)
 	ch.requests <- rpc
 	reply, ok := <-rpc.replych
 	if !ok {
@@ -121,7 +117,7 @@ func (ch *Chan) writer() {
 		}
 		t := ch.allocate(rpc)
 		rpc.req.Tag = t
-		db.DLPrintf(ch.name, "9PCHAN", "Writer: to %v %v\n", ch.Dst(), rpc.req)
+		db.DLPrintf("9PCHAN", "Writer: to %v %v\n", ch.Dst(), rpc.req)
 		frame, err := npcodec.Marshal(rpc.req)
 		if err != nil {
 			rpc.replych <- &Reply{nil, err}
@@ -152,16 +148,16 @@ func (ch *Chan) reader() {
 			return
 		}
 		if err != nil {
-			db.DLPrintf(ch.name, "9PCHAN", "Reader: ReadFrame error %v\n", err)
+			db.DLPrintf("9PCHAN", "Reader: ReadFrame error %v\n", err)
 			return
 		}
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
-			db.DLPrintf(ch.name, "9PCHAN", "Reader: Unmarshal error %v\n", err)
+			db.DLPrintf("9PCHAN", "Reader: Unmarshal error %v\n", err)
 		} else {
 			rpc, ok := ch.lookupDel(fcall.Tag)
 			if ok {
-				db.DLPrintf(ch.name, "9PCHAN", "Reader: from %v %v\n", ch.Dst(), fcall)
+				db.DLPrintf("9PCHAN", "Reader: from %v %v\n", ch.Dst(), fcall)
 				rpc.replych <- &Reply{fcall, nil}
 			}
 		}

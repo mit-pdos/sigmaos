@@ -11,21 +11,20 @@ import (
 type Debug struct {
 	mu    sync.Mutex
 	debug bool
-	level int
+	name  string
 }
 
 var db Debug
 
-func Name(n string) string {
+func Name(n string) {
 	uldebug := os.Getenv("ULDEBUG")
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
-
 	if uldebug != "" {
 		db.debug = true
 	}
-	return n + ":" + strconv.Itoa(os.Getpid())
+	db.name = n + ":" + strconv.Itoa(os.Getpid())
 }
 
 func DPrintf(format string, v ...interface{}) {
@@ -37,11 +36,11 @@ func DPrintf(format string, v ...interface{}) {
 	}
 }
 
-func DLPrintf(src, label string, format string, v ...interface{}) {
+func DLPrintf(label string, format string, v ...interface{}) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
 	if db.debug {
-		log.Printf("%v %v %v", src, label, fmt.Sprintf(format, v...))
+		log.Printf("%v %v %v", db.name, label, fmt.Sprintf(format, v...))
 	}
 }

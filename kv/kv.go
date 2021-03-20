@@ -83,7 +83,7 @@ func MakeKv(args []string) (*Kv, error) {
 // Interposes on memfsd's name resolution to check that clerk and I
 // run in same config, and modify the name to strip off config #.
 func (kv *Kv) Resolve(ctx *npobjsrv.Ctx, names []string) error {
-	db.DLPrintf(kv.me, "KV", "%v: Resolve %v\n", ctx, names)
+	db.DLPrintf("KV", "%v: Resolve %v\n", ctx, names)
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
@@ -177,7 +177,7 @@ func (kv *Kv) removeShards() {
 // Tell sharder we are prepared to commit new config
 func (kv *Kv) prepared() {
 	sh := SHARDER + "/dev"
-	db.DLPrintf(kv.me, "KV", "prepared %v\n", sh)
+	db.DLPrintf("KV", "prepared %v\n", sh)
 	err := kv.WriteFile(sh, []byte("Prepared "+kv.Addr()))
 	if err != nil {
 		log.Printf("WriteFile: %v %v\n", sh, err)
@@ -189,7 +189,7 @@ func (kv *Kv) prepare() {
 	kv.conf = kv.readConfig(KVCONFIG)
 	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
 
-	db.DLPrintf(kv.me, "KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
+	db.DLPrintf("KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
 
 	kv.mu.Unlock()
 	defer kv.mu.Lock()
@@ -203,7 +203,7 @@ func (kv *Kv) prepare() {
 
 // Caller holds lock
 func (kv *Kv) commit() bool {
-	db.DLPrintf(kv.me, "KV", "commit to new config: %v\n", kv.nextConf)
+	db.DLPrintf("KV", "commit to new config: %v\n", kv.nextConf)
 
 	kv.removeShards()
 
@@ -224,7 +224,7 @@ func (kv *Kv) Work() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	db.DLPrintf(kv.me, "KV", "Work\n")
+	db.DLPrintf("KV", "Work\n")
 	cont := true
 	for cont {
 		kv.cond.Wait()

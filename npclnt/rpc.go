@@ -10,14 +10,14 @@ type NpClnt struct {
 	cm *ChanMgr
 }
 
-func MakeNpClnt(name string) *NpClnt {
+func MakeNpClnt() *NpClnt {
 	npc := &NpClnt{}
-	npc.cm = makeChanMgr(name)
+	npc.cm = makeChanMgr()
 	return npc
 }
 
-func (npc *NpClnt) callServer(src, server string, args np.Tmsg) (np.Tmsg, error) {
-	reply, err := npc.cm.makeCall(src, server, args)
+func (npc *NpClnt) callServer(server string, args np.Tmsg) (np.Tmsg, error) {
+	reply, err := npc.cm.makeCall(server, args)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +30,9 @@ func (npc *NpClnt) callServer(src, server string, args np.Tmsg) (np.Tmsg, error)
 
 // XXX copying msg once too many?
 
-func (npc *NpClnt) Attach(src, server string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
+func (npc *NpClnt) Attach(server string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
 	args := np.Tattach{fid, np.NoFid, uname, ""}
-	reply, err := npc.callServer(src, server, args)
+	reply, err := npc.callServer(server, args)
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +44,12 @@ func (npc *NpClnt) Attach(src, server string, uname string, fid np.Tfid, path []
 }
 
 type NpChan struct {
-	src    string
 	server string
 	cm     *ChanMgr
 }
 
-func (npc *NpClnt) MakeNpChan(src string, server string) *NpChan {
-	npchan := &NpChan{src, server, npc.cm}
+func (npc *NpClnt) MakeNpChan(server string) *NpChan {
+	npchan := &NpChan{server, npc.cm}
 	return npchan
 }
 
@@ -63,7 +62,7 @@ func (npc *NpChan) Close() {
 }
 
 func (npch *NpChan) call(args np.Tmsg) (np.Tmsg, error) {
-	reply, err := npch.cm.makeCall(npch.src, npch.server, args)
+	reply, err := npch.cm.makeCall(npch.server, args)
 	if err != nil {
 		return nil, err
 	}

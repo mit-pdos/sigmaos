@@ -335,7 +335,7 @@ func (o *Obj) s3ReadDir() error {
 			db.DLPrintf("NPS3", "Key: %v\n", *obj.Key)
 			if n, m, ok := o.includeNameL(*obj.Key); ok {
 				db.DLPrintf("NPS3", "incl %v %v\n", n, m)
-				o1 := o.nps3.makeObjL(append(o.key), m, o)
+				o1 := o.nps3.makeObjL(append(o.key, n), m, o)
 				o.dirents[n] = o1.(*Obj)
 			}
 		}
@@ -374,6 +374,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 	for _, o1 := range o.dirents {
 		dirents = append(dirents, o1.stat())
 	}
+
 	o.sz = npcodec.DirSize(dirents)
 	return dirents, nil
 }

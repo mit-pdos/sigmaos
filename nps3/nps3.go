@@ -267,6 +267,8 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 		if len(r) > 1 {
 			l, err := strconv.Atoi(r[1])
 			if err == nil {
+				o.mu.Lock()
+				defer o.mu.Unlock()
 				o.sz = np.Tlength(l)
 			}
 		}

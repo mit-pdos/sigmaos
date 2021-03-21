@@ -185,9 +185,11 @@ func (o *Obj) lookupDirent(name string) (*Obj, bool) {
 // if o.key is prefix of key, include next component of key (unless
 // we already seen it
 func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
+	//o.mu.Lock()
+	//defer o.mu.Unlock()
 	s := np.Split(key)
 	m := mode(key)
-	db.DLPrintf("LOCALD", "s %v o.key %v dirents %v\n", s, o.key, o.dirents)
+	db.DLPrintf("NPS3", "s %v o.key %v dirents %v\n", s, o.key, o.dirents)
 	for i, c := range o.key {
 		if c != s[i] {
 			return "", m, false
@@ -209,7 +211,7 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 }
 
 func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
-	db.DLPrintf("LOCALD", "Stat: %v\n", o)
+	db.DLPrintf("NPS3", "Stat: %v\n", o)
 	var err error
 	if !o.isRead {
 		switch o.Perm() {
@@ -281,7 +283,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 }
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DLPrintf("LOCALD", "readFile: %v %v %v\n", o.key, off, cnt)
+	db.DLPrintf("NPS3", "readFile: %v %v %v\n", o.key, off, cnt)
 
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
@@ -336,9 +338,9 @@ func (o *Obj) s3ReadDir() error {
 			return fmt.Errorf("bad offset")
 		}
 		for _, obj := range page.Contents {
-			db.DLPrintf("LOCALD", "Key: %v\n", *obj.Key)
+			db.DLPrintf("NPS3", "Key: %v\n", *obj.Key)
 			if n, m, ok := o.includeName(*obj.Key); ok {
-				db.DLPrintf("LOCALD", "incl %v %v\n", n, m)
+				db.DLPrintf("NPS3", "incl %v %v\n", n, m)
 				o1 := o.nps3.MakeObj(append(o.key, n), m, o)
 				o.addDirent(n, o1.(*Obj))
 			}
@@ -348,7 +350,7 @@ func (o *Obj) s3ReadDir() error {
 }
 
 func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
-	db.DLPrintf("LOCALD", "%v: lookup %v %v\n", ctx, o, p)
+	db.DLPrintf("NPS3", "%v: lookup %v %v\n", ctx, o, p)
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
@@ -369,7 +371,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 
 func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	var dirents []*np.Stat
-	db.DLPrintf("LOCALD", "readDir: %v\n", o)
+	db.DLPrintf("NPS3", "readDir: %v\n", o)
 	if !o.isRead {
 		o.s3ReadDir()
 	}
@@ -434,7 +436,7 @@ func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
 func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
-	db.DLPrintf("LOCALD", "writeFile %v %v sz %v\n", off, len(b), o.sz)
+	db.DLPrintf("NPS3", "writeFile %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
 	if err != nil {

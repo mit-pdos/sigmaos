@@ -205,7 +205,10 @@ func (o *Obj) includeNameL(key string) (string, np.Tperm, bool) {
 func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 	db.DLPrintf("NPS3", "Stat: %v\n", o)
 	var err error
-	if !o.isRead {
+	o.mu.Lock()
+	read := o.isRead
+	o.mu.Unlock()
+	if !read {
 		switch o.Perm() {
 		case np.DMDIR:
 			_, err = o.ReadDir(ctx, 0, 0)
@@ -278,7 +281,6 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 
 func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("NPS3", "readFile: %v %v %v\n", o.key, off, cnt)
-
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
 		o.readHead()
@@ -313,15 +315,13 @@ func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, erro
 	return b, nil
 }
 
-func (o *Obj) s3ReadDir() error {
+func (o *Obj) s3ReadDirL() error {
 	key := np.Join(o.key)
 	maxKeys := 0
 	params := &s3.ListObjectsV2Input{
 		Bucket: &bucket,
 		Prefix: &key,
 	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
 	p := s3.NewListObjectsV2Paginator(o.nps3.client, params,
 		func(o *s3.ListObjectsV2PaginatorOptions) {
 			if v := int32(maxKeys); v != 0 {
@@ -342,6 +342,7 @@ func (o *Obj) s3ReadDir() error {
 			}
 		}
 	}
+	o.isRead = true
 	return nil
 }
 
@@ -368,11 +369,11 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	var dirents []*np.Stat
 	db.DLPrintf("NPS3", "readDir: %v\n", o)
-	if !o.isRead {
-		o.s3ReadDir()
-	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	if !o.isRead {
+		o.s3ReadDirL()
+	}
 	for _, o1 := range o.dirents {
 		dirents = append(dirents, o1.stat())
 	}

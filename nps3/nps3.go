@@ -169,12 +169,6 @@ func (o *Obj) stat() *np.Stat {
 	return st
 }
 
-func (o *Obj) addDirent(name string, n *Obj) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.dirents[name] = n
-}
-
 func (o *Obj) lookupDirent(name string) (*Obj, bool) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -184,9 +178,7 @@ func (o *Obj) lookupDirent(name string) (*Obj, bool) {
 
 // if o.key is prefix of key, include next component of key (unless
 // we already seen it
-func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
-	//o.mu.Lock()
-	//defer o.mu.Unlock()
+func (o *Obj) includeNameL(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
 	m := mode(key)
 	db.DLPrintf("NPS3", "s %v o.key %v dirents %v\n", s, o.key, o.dirents)
@@ -199,7 +191,7 @@ func (o *Obj) includeName(key string) (string, np.Tperm, bool) {
 		return "", m, false
 	}
 	name := s[len(o.key)]
-	_, ok := o.lookupDirent(name)
+	_, ok := o.dirents[name]
 	if ok {
 		m = o.t
 	} else {
@@ -326,6 +318,8 @@ func (o *Obj) s3ReadDir() error {
 		Bucket: &bucket,
 		Prefix: &key,
 	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
 	p := s3.NewListObjectsV2Paginator(o.nps3.client, params,
 		func(o *s3.ListObjectsV2PaginatorOptions) {
 			if v := int32(maxKeys); v != 0 {
@@ -339,10 +333,10 @@ func (o *Obj) s3ReadDir() error {
 		}
 		for _, obj := range page.Contents {
 			db.DLPrintf("NPS3", "Key: %v\n", *obj.Key)
-			if n, m, ok := o.includeName(*obj.Key); ok {
+			if n, m, ok := o.includeNameL(*obj.Key); ok {
 				db.DLPrintf("NPS3", "incl %v %v\n", n, m)
-				o1 := o.nps3.MakeObj(append(o.key, n), m, o)
-				o.addDirent(n, o1.(*Obj))
+				o1 := o.nps3.makeObjL(append(o.key), m, o)
+				o.dirents[n] = o1.(*Obj)
 			}
 		}
 	}
@@ -402,8 +396,14 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 		return nil, err
 	}
 	// XXX ignored perm, only files not directories
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	_, ok := o.dirents[name]
+	if ok {
+		return nil, fmt.Errorf("Name exists")
+	}
 	o1 := o.nps3.MakeObj(np.Split(key), 0, o)
-	o.addDirent(name, o1.(*Obj))
+	o.dirents[name] = o1.(*Obj)
 	return o1, nil
 }
 

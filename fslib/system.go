@@ -49,11 +49,10 @@ func Boot(bin string) (*System, error) {
 		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
-	s.nps3d, err = run(bin, "/bin/nps3d", nil)
+	err = s.BootNps3d(bin)
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(100 * time.Millisecond)
 	s.schedd, err = run(bin, "/bin/schedd", nil)
 	if err != nil {
 		return nil, err
@@ -66,6 +65,16 @@ func Boot(bin string) (*System, error) {
 	}
 	time.Sleep(100 * time.Millisecond)
 	return s, nil
+}
+
+func (s *System) BootNps3d(bin string) error {
+	var err error
+	s.nps3d, err = run(bin, "/bin/nps3d", nil)
+	if err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
 }
 
 func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {

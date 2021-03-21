@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -26,25 +27,21 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.t = t
 
 	bin := ".."
-	s, err := fslib.Boot(bin)
+	s, err := fslib.BootMin(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
+	s.BootNps3d(bin)
 	ts.s = s
-
-	ts.FsLib = fslib.MakeFsLib("nps3c_test")
-
+	ts.FsLib = fslib.MakeFsLib("nps3_test")
+	db.Name("nps3_test")
 	return ts
 }
 
 func TestOne(t *testing.T) {
 	ts := makeTstate(t)
 
-	// Boot makes one nps3d
-
-	time.Sleep(100 * time.Millisecond)
-
-	dirents, err := ts.ReadDir("name/s3")
+	dirents, err := ts.ReadDir("name/s3/")
 	assert.Nil(t, err, "ReadDir")
 
 	assert.Equal(t, 1, len(dirents))
@@ -69,7 +66,7 @@ func TestTwo(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestUnion(t *testing.T) {
+func TestUnionSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one

@@ -18,6 +18,7 @@ type Tstate struct {
 	fsl  *fslib.FsLib
 	clrk *KvClerk
 	ch   chan bool
+	pid  string
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -37,11 +38,11 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("Mkdir %v\n", err)
 	}
 
-	pid := ts.spawnKv()
+	ts.pid = ts.spawnKv()
 
 	time.Sleep(1000 * time.Millisecond)
 
-	pid1 := ts.spawnSharder("add", pid)
+	pid1 := ts.spawnSharder("add", ts.pid)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
@@ -118,13 +119,20 @@ func TestConcur(t *testing.T) {
 		pids = append(pids, pid)
 	}
 
-	for _, pid := range pids[1:] {
+	for _, pid := range pids {
 		pid1 := ts.spawnSharder("del", pid)
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(t, err, "Wait")
 		assert.Equal(t, string(ok), "OK")
 		time.Sleep(200 * time.Millisecond)
 	}
+
+	// delete first KV
+	pid1 := ts.spawnSharder("del", ts.pid)
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+	time.Sleep(200 * time.Millisecond)
 
 	ts.ch <- true
 	time.Sleep(200 * time.Millisecond)

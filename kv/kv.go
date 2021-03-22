@@ -66,6 +66,7 @@ func MakeKv(args []string) (*Kv, error) {
 	}
 	kv.pid = args[0]
 	kv.me = KV + "/" + kv.pid
+	db.Name(kv.me)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
@@ -216,7 +217,7 @@ func (kv *Kv) commit() bool {
 		}
 	}
 
-	log.Printf("%v: exit\n", kv.me)
+	db.DLPrintf("KV", "commit exit %v\n", kv.me)
 	return false
 }
 

@@ -30,7 +30,7 @@ def list_labels(value: Optional[str]):
         return value
     labels = value.split(",")
     for label in labels:
-        if label not in LABnELS:
+        if label not in LABELS:
             raise typer.BadParameter(f"label {label} not recognized")
     return labels
 

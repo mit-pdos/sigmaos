@@ -25,6 +25,7 @@ type Attr struct {
 
 const (
 	SCHED        = "name/schedd"
+	RUNQ         = "runq"
 	LOCALD_ROOT  = "name/localds"
 	SCHEDDEV     = SCHED + "/" + "dev"
 	NO_OP_LAMBDA = "no-op-lambda"
@@ -94,4 +95,8 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 // The open blocks until pid exits and then reads ExitStatus
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
 	return fl.ReadFile(SCHED + "/" + pid + "/ExitStatus")
+}
+
+func (fl *FsLib) GetLambda() ([]byte, error) {
+	return fl.ReadFile(SCHED + "/" + RUNQ)
 }

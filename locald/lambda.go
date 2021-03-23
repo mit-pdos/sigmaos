@@ -1,15 +1,17 @@
 package locald
 
 import (
-	"encoding/json"
 	//	"github.com/sasha-s/go-deadlock"
+	"encoding/json"
 	"log"
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 type Lambda struct {
@@ -41,6 +43,8 @@ func (l *Lambda) init(a []byte) error {
 	l.Dir = attr.Dir
 	l.attr = &attr
 	db.DLPrintf("LOCALD", "Locald init: %v\n", attr)
+	o1 := l.ld.MakeObj([]string{attr.Pid}, np.DMDIR, l.ld.root).(*Obj)
+	o1.time = time.Now().Unix()
 	return nil
 }
 
@@ -77,6 +81,7 @@ func (l *Lambda) run() error {
 
 	l.SysPid = cmd.Process.Pid
 
-	go l.wait(cmd)
+	l.wait(cmd)
+	db.DLPrintf("LOCALD", "Locald ran: %v\n", l.attr)
 	return nil
 }

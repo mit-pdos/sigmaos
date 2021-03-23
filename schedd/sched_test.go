@@ -1,6 +1,7 @@
 package schedd
 
 import (
+	"log"
 	"sync"
 	"testing"
 	"time"
@@ -75,6 +76,7 @@ func TestWait(t *testing.T) {
 
 	pid := spawnSchedl(t, ts)
 	ts.Wait(pid)
+	log.Printf("Done waiting!")
 
 	checkSchedlResult(t, ts, pid)
 

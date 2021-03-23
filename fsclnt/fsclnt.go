@@ -212,6 +212,10 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 		return np.NoFid, err
 	}
 	fsc.addFid(fid, ch)
+
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
 	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
 	return fid, nil
 }

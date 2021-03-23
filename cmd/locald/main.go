@@ -15,6 +15,7 @@ import (
 //
 
 func main() {
+	locald.ScanTopology()
 	//	ti, err := locald.ScanTopology()
 	//	if err == nil {
 	//		locald.PrintTopology(ti)

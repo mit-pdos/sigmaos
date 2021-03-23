@@ -148,6 +148,25 @@ func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
 	return &fsc.fds[fd], nil
 }
 
+// Wrote this in the CAS style, unsure if it's overkill
+func (fsc *FsClient) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (bool, error) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
+	if fd < 0 || fd >= len(fsc.fds) {
+		return false, fmt.Errorf("Too big fd %v", fd)
+	}
+	if fsc.fds[fd].fid == np.NoFid {
+		return false, fmt.Errorf("Non-existing fd %v", fd)
+	}
+	fdst := &fsc.fds[fd]
+	if fdst.offset == oldOff {
+		fdst.offset = newOff
+		return true, nil
+	}
+	return false, nil
+}
+
 func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	_, ok := fsc.fids[fid]
 	if !ok {
@@ -401,7 +420,17 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fdst.offset += np.Toffset(len(reply.Data))
+
+	// Can't reuse the fdst without looking it up again, since the fdst may
+	// have changed and now point to the wrong location. So instead, try and CAS
+	// the new offset
+	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(len(reply.Data))); !ok; {
+		if err != nil {
+			return nil, err
+		}
+		fdst, _ = fsc.lookupSt(fd)
+	}
+
 	return reply.Data, err
 }
 
@@ -415,5 +444,16 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 		return 0, err
 	}
 	fdst.offset += np.Toffset(reply.Count)
+
+	// Can't reuse the fdst without looking it up again, since the fdst may
+	// have changed and now point to the wrong location. So instead, try and CAS
+	// the new offset
+	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(reply.Count)); !ok; {
+		if err != nil {
+			return 0, err
+		}
+		fdst, _ = fsc.lookupSt(fd)
+	}
+
 	return reply.Count, err
 }

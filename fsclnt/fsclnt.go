@@ -443,7 +443,6 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	if err != nil {
 		return 0, err
 	}
-	fdst.offset += np.Toffset(reply.Count)
 
 	// Can't reuse the fdst without looking it up again, since the fdst may
 	// have changed and now point to the wrong location. So instead, try and CAS

@@ -12,45 +12,56 @@ import (
 
 type SpinTestStarter struct {
 	nSpinners int
+	dim       string
+	its       string
 	*fslib.FsLib
 }
 
-func (s *SpinTestStarter) spawnSpinnerWithPid(pid string, msecs string) {
-	a := &fslib.Attr{pid, "bin/spinner", "", []string{msecs}, nil, nil, nil}
+func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
+	a := &fslib.Attr{pid, "bin/perf-spinner", "", []string{s.dim, s.its}, nil, nil, nil}
 	err := s.Spawn(a)
 	if err != nil {
 		log.Fatalf("couldn't spawn %v: %v\n", pid, err)
 	}
 }
 
-func (s *SpinTestStarter) spawnSpinner(msecs string) string {
+func (s *SpinTestStarter) spawnSpinner() string {
 	pid := fslib.GenPid()
-	s.spawnSpinnerWithPid(pid, msecs)
+	s.spawnSpinnerWithPid(pid)
 	return pid
 }
 
 func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
-	if len(args) != 1 {
+	if len(args) < 3 {
 		return nil, errors.New("MakeSpinTestStarter: too few arguments")
 	}
 	log.Printf("MakeSpinTestStarter: %v\n", args)
 
 	s := &SpinTestStarter{}
 	s.FsLib = fslib.MakeFsLib("spin-test-starter")
+
 	nSpinners, err := strconv.Atoi(args[0])
 	s.nSpinners = nSpinners
 	if err != nil {
-		log.Fatalf("Invalid number of spinners: %v, %v\n", args[0], err)
+		log.Fatalf("Invalid dimension: %v, %v\n", args[0], err)
+	}
+
+	_, err = strconv.Atoi(args[1])
+	s.dim = args[1]
+	if err != nil {
+		log.Fatalf("Invalid dimension: %v, %v\n", args[1], err)
+	}
+
+	_, err = strconv.Atoi(args[2])
+	s.its = args[2]
+	if err != nil {
+		log.Fatalf("Invalid num interations: %v, %v\n", args[2], err)
 	}
 
 	return s, nil
 }
 
 func (s *SpinTestStarter) Work() {
-	// Test params
-	spinMsecs := 2000
-
-	msecs := strconv.Itoa(spinMsecs)
 	pids := map[string]int{}
 
 	// Gen pids
@@ -67,7 +78,7 @@ func (s *SpinTestStarter) Work() {
 	start := time.Now()
 	// Start some lambdas
 	for pid, _ := range pids {
-		s.spawnSpinnerWithPid(pid, msecs)
+		s.spawnSpinnerWithPid(pid)
 	}
 
 	// Wait for them all

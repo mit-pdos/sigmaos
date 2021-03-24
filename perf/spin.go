@@ -4,30 +4,36 @@ import (
 	"errors"
 	"log"
 	"strconv"
-	"time"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
 )
 
 type Spinner struct {
-	pid  string
-	msec int
+	pid string
+	dim int
+	its int
 	*fslib.FsLib
 }
 
 func MakeSpinner(args []string) (*Spinner, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 
 	s := &Spinner{}
 	s.FsLib = fslib.MakeFsLib("spinner")
 	s.pid = args[0]
-	msec, err := strconv.Atoi(args[1])
-	s.msec = msec
+	dim, err := strconv.Atoi(args[1])
+	s.dim = dim
 	if err != nil {
-		log.Fatalf("Invalid sleep duration: %v, %v\n", args[1], err)
+		log.Fatalf("Invalid dimension: %v, %v\n", args[1], err)
+	}
+
+	its, err := strconv.Atoi(args[2])
+	s.its = its
+	if err != nil {
+		log.Fatalf("Invalid num interations: %v, %v\n", args[2], err)
 	}
 
 	err = s.Started(s.pid)
@@ -39,12 +45,32 @@ func MakeSpinner(args []string) (*Spinner, error) {
 }
 
 func (s *Spinner) Work() {
-	start := time.Now()
-	for {
-		if time.Since(start).Milliseconds() >= int64(s.msec) {
-			break
+
+	// Create and fill matrices
+	A := MakeMatrix(s.dim, s.dim)
+	B := MakeMatrix(s.dim, s.dim)
+	C := MakeMatrix(s.dim, s.dim)
+	A.FillRandomNonZero()
+	B.FillRandomNonZero()
+	C.Fill(0.0)
+
+	//	compStart := time.Now()
+	for i := 0; i < s.its; i++ {
+		err := Mult(A, B, C)
+		if err != nil {
+			log.Fatalf("Error in matrix multiply: %v", err)
 		}
 	}
+	//	compEnd := time.Now()
+	//	e2eEnd := time.Now()
+
+	// Calculate elapsed time
+	//	compElapsed := compEnd.Sub(compStart)
+	//	e2eElapsed := e2eEnd.Sub(e2eStart)
+	//	log.Printf("Total elapsed computation time: %v msec(s)\n", compElapsed.Milliseconds())
+	//	log.Printf("Average computation time: %v msec(s)\n", compElapsed.Milliseconds()/int64(s.its))
+	//	log.Printf("Total elapsed setup time: %v msec(s)\n", e2eElapsed.Milliseconds()-compElapsed.Milliseconds())
+
 	err := s.Exiting(s.pid, "OK")
 	if err != nil {
 		log.Fatalf("Exit: error %v\n", err)

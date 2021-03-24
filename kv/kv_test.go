@@ -78,23 +78,25 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	return a.Pid
 }
 
-func (ts *Tstate) getKeys() {
+func (ts *Tstate) getKeys() bool {
 	for i := 0; i < NKEYS; i++ {
 		k := strconv.Itoa(i)
 		v, err := ts.clrk.Get(k)
-		assert.Nil(ts.t, err, "Get "+k)
-		assert.Equal(ts.t, v, k, "Get")
+		select {
+		case <-ts.ch:
+			return true
+		default:
+			assert.Nil(ts.t, err, "Get "+k)
+			assert.Equal(ts.t, k, v, "Get")
+		}
 	}
+	return false
 }
 
 func (ts *Tstate) clerk() {
-	for {
-		select {
-		case <-ts.ch:
-			break
-		default:
-			ts.getKeys()
-		}
+	done := false
+	for !done {
+		done = ts.getKeys()
 	}
 }
 
@@ -127,6 +129,9 @@ func TestConcur(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	}
 
+	// stop clerk
+	ts.ch <- true
+
 	// delete first KV
 	pid1 := ts.spawnSharder("del", ts.pid)
 	ok, err := ts.fsl.Wait(pid1)
@@ -134,7 +139,5 @@ func TestConcur(t *testing.T) {
 	assert.Equal(t, string(ok), "OK")
 	time.Sleep(200 * time.Millisecond)
 
-	ts.ch <- true
-	time.Sleep(200 * time.Millisecond)
 	ts.s.Shutdown(ts.fsl)
 }

@@ -82,7 +82,9 @@ func (kc *KvClerk) Get(k string) (string, error) {
 		if err == nil {
 			return string(b), err
 		}
-		// log.Printf("%v: Get: ReadFile: %v (s %v) %v\n", kc.uname, n, shard, err)
+		if err.Error() == "file not found" {
+			log.Printf("%v: Get: ReadFile: %v (s %v) %v\n", kc.uname, n, shard, err)
+		}
 		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {

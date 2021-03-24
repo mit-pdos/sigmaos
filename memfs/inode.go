@@ -28,31 +28,31 @@ type Dev interface {
 
 type Inode struct {
 	mu      sync.Mutex
-	PermT   np.Tperm
-	Version Tversion
+	permT   np.Tperm
+	version np.TQversion
 	Mtime   int64
 	Data    Data
 	parent  *Inode
 	owner   string
 }
 
-func makeInode(ctx *npo.Ctx, t np.Tperm, data Data, p *Inode) *Inode {
+func makeInode(owner string, t np.Tperm, data Data, p *Inode) *Inode {
 	i := Inode{}
-	i.PermT = t
+	i.permT = t
 	i.Mtime = time.Now().Unix()
 	i.Data = data
 	i.parent = p
-	i.owner = ctx.Uname()
+	i.owner = owner
 	return &i
 }
 
-func MkRootInode(ctx *npo.Ctx) *Inode {
-	return makeInode(ctx, np.DMDIR, makeDir(), nil)
+func MkRootInode() *Inode {
+	return makeInode("", np.DMDIR, makeDir(), nil)
 }
 
 func (inode *Inode) String() string {
 	str := fmt.Sprintf("Inode %p t 0x%x", inode,
-		inode.PermT>>np.TYPESHIFT)
+		inode.permT>>np.TYPESHIFT)
 	return str
 }
 
@@ -60,13 +60,17 @@ func (inode *Inode) Qid() np.Tqid {
 	id := uintptr(unsafe.Pointer(inode))
 
 	return np.MakeQid(
-		np.Qtype(inode.PermT>>np.QTYPESHIFT),
-		np.TQversion(inode.Version),
+		np.Qtype(inode.permT>>np.QTYPESHIFT),
+		np.TQversion(inode.version),
 		np.Tpath(uint64(id)))
 }
 
 func (inode *Inode) Perm() np.Tperm {
-	return inode.PermT
+	return inode.permT
+}
+
+func (inode *Inode) Version() np.TQversion {
+	return inode.version
 }
 
 func (inode *Inode) Size() np.Tlength {
@@ -78,19 +82,19 @@ func (inode *Inode) Size() np.Tlength {
 }
 
 func (inode *Inode) IsDir() bool {
-	return inode.PermT.IsDir()
+	return inode.permT.IsDir()
 }
 
 func (inode *Inode) IsSymlink() bool {
-	return inode.PermT.IsSymlink()
+	return inode.permT.IsSymlink()
 }
 
 func (inode *Inode) IsPipe() bool {
-	return inode.PermT.IsPipe()
+	return inode.permT.IsPipe()
 }
 
 func (inode *Inode) IsDevice() bool {
-	return inode.PermT.IsDevice()
+	return inode.permT.IsDevice()
 }
 
 func permToData(t np.Tperm) (Data, error) {
@@ -152,7 +156,7 @@ func (inode *Inode) Create(ctx *npo.
 		if err != nil {
 			return nil, err
 		}
-		newi := makeInode(ctx, t, dl, inode)
+		newi := makeInode(ctx.Uname(), t, dl, inode)
 		if newi.IsDir() {
 			dn := newi.Data.(*Dir)
 			dn.init(newi)
@@ -196,10 +200,11 @@ func (inode *Inode) Remove(ctx *npo.Ctx, n string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	_, err := dir.lookupLocked(n)
+	i1, err := dir.lookupLocked(n)
 	if err != nil {
 		return fmt.Errorf("Unknown name %v", n)
 	}
+	i1.version += 1
 	err = dir.removeLocked(n)
 	if err != nil {
 		log.Fatalf("Remove: error %v\n", n)

@@ -12,7 +12,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
-	"ulambda/npobjsrv"
 )
 
 const (
@@ -71,7 +70,7 @@ func MakeKv(args []string) (*Kv, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
 	}
-	fsd := memfsd.MakeFsd(kv.me, ip+":0", kv)
+	fsd := memfsd.MakeFsd(ip + ":0")
 	fsl, err := fslib.InitFs(kv.me, fsd, &KvDev{kv})
 	if err != nil {
 		return nil, err
@@ -79,37 +78,6 @@ func MakeKv(args []string) (*Kv, error) {
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
 	return kv, nil
-}
-
-// Interposes on memfsd's name resolution to check that clerk and I
-// run in same config, and modify the name to strip off config #.
-func (kv *Kv) Resolve(ctx *npobjsrv.Ctx, names []string) error {
-	db.DLPrintf("KV", "%v: Resolve %v\n", ctx, names)
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
-
-	if len(names) == 0 { // so that ls in root directory works
-		return nil
-	}
-
-	if strings.HasPrefix(ctx.Uname(), "clerk/") &&
-		strings.Contains(names[len(names)-1], "-") {
-		if kv.nextConf != nil {
-			return ErrRetry
-		} else {
-			p := strings.Split(names[len(names)-1], "-")
-			if p[0] != strconv.Itoa(kv.conf.N) {
-				return ErrWrongKv
-			}
-			shard := key2shard(p[1])
-			if kv.conf.Shards[shard] != kv.pid {
-				return ErrWrongKv
-			}
-			names[len(names)-1] = p[1]
-			return nil
-		}
-	}
-	return nil
 }
 
 func (kv *Kv) readConfig(conffile string) *Config {
@@ -122,7 +90,7 @@ func (kv *Kv) readConfig(conffile string) *Config {
 }
 
 func shardPath(kvd string, shard int) string {
-	return KVDIR + "/" + kvd + "/" + strconv.Itoa(shard)
+	return KVDIR + "/" + kvd + "/shard" + strconv.Itoa(shard)
 }
 
 func keyPath(kvd string, shard int, k string) string {
@@ -235,6 +203,7 @@ func (kv *Kv) Work() {
 			cont = kv.commit()
 		}
 	}
+	log.Printf("%v: exit %v\n", kv.me, kv.conf)
 }
 
 func (kv *Kv) Exit() {

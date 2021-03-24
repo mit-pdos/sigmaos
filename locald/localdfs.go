@@ -80,6 +80,10 @@ func (o *Obj) Size() np.Tlength {
 	return 0
 }
 
+func (o *Obj) Version() np.TQversion {
+	return 0
+}
+
 func (o *Obj) Qid() np.Tqid {
 	db.DLPrintf("LOCALD", "Qid %v\n", o)
 	switch len(o.name) {

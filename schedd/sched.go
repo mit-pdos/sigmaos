@@ -77,10 +77,6 @@ func (sd *Sched) Root() npo.NpObj {
 	return sd.root
 }
 
-func (sd *Sched) Resolver() npo.Resolver {
-	return nil
-}
-
 func (sd *Sched) String() string {
 	s := ""
 	for _, l := range sd.ls {

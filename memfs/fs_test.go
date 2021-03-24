@@ -58,7 +58,7 @@ func (ts *TestState) testRename(t int) {
 		if strings.HasPrefix(st.Name, "job") {
 			err = ino2.Rename(ts.ctx, st.Name, "done-"+st.Name)
 			if err != nil {
-				assert.Contains(ts.t, err.Error(), "Unknown name")
+				assert.Contains(ts.t, err.Error(), "file not found")
 			}
 		}
 	}

@@ -238,7 +238,7 @@ func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
 
 	i1, err := dir.lookupLocked(n)
 	if err != nil {
-		return fmt.Errorf("Unknown name %v", n)
+		return err
 	}
 	i1.version += 1
 	err = dir.removeLocked(n)
@@ -334,7 +334,7 @@ func (inode *Inode) Rename(ctx npo.CtxI, from, to string) error {
 	db.DLPrintf("MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
 	ino, err := dir.lookupLocked(from)
 	if err != nil {
-		return fmt.Errorf("Unknown name %v", from)
+		return err
 	}
 	err = dir.removeLocked(from)
 	if err != nil {

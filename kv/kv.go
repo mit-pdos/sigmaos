@@ -238,7 +238,7 @@ func (kv *Kv) Work() {
 			cont = kv.commit()
 		}
 	}
-	log.Printf("%v: exit %v\n", kv.me, kv.conf)
+	// log.Printf("%v: exit %v\n", kv.me, kv.conf)
 }
 
 func (kv *Kv) Exit() {

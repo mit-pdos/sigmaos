@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"ulambda/fslib"
@@ -55,6 +56,15 @@ func (kc *KvClerk) keyPath(shard int, k string) string {
 
 }
 
+func error2kv(error string) string {
+	kv := ""
+	if strings.HasPrefix(error, "file not found") {
+		i := strings.LastIndex(error, " ")
+		kv = error[i+1:]
+	}
+	return kv
+}
+
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
@@ -64,7 +74,9 @@ func (kc *KvClerk) Put(k, v string) error {
 			return err
 		}
 		// log.Printf("%v: Put: MakeFile: %v %v\n", kc.uname, n, err)
-		if err.Error() == ErrWrongKv.Error() {
+		kv := error2kv(err.Error())
+		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" ||
+			kv == kc.conf.Shards[shard] {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {
 			time.Sleep(100 * time.Millisecond)
@@ -82,10 +94,10 @@ func (kc *KvClerk) Get(k string) (string, error) {
 		if err == nil {
 			return string(b), err
 		}
-		if err.Error() == "file not found" {
-			log.Printf("%v: Get: ReadFile: %v (s %v) %v\n", kc.uname, n, shard, err)
-		}
-		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" {
+		kv := error2kv(err.Error())
+		// XXX als check for Fid version mismatch
+		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" ||
+			kv == kc.conf.Shards[shard] {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {
 			time.Sleep(100 * time.Millisecond)

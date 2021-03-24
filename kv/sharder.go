@@ -92,7 +92,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)
 	}
-	fsd := memfsd.MakeFsd(ip + ":0")
+	fsd := memfsd.MakeFsd(ip+":0", nil)
 	db.DLPrintf("SHARDER", "New sharder %v", args)
 	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
 	if err != nil {

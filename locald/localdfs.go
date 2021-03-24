@@ -29,7 +29,7 @@ func (ld *LocalD) MakeObj(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
 	return o
 }
 
-func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (o *Obj) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	db.DLPrintf("LOCALD", "%v: Create %v\n", o, name)
 	if !o.t.IsDir() {
 		return nil, fmt.Errorf("not supported")
@@ -40,7 +40,7 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 	return o1, nil
 }
 
-func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
+func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 	db.DLPrintf("LOCALD", "%v: Lookup %v %v %v\n", ctx, o, p, len(p))
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
@@ -68,7 +68,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 }
 
 // check permissions etc.
-func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
+func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (o *Obj) Qid() np.Tqid {
 	return np.Tqid{}
 }
 
-func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	db.DLPrintf("LOCALD", "ReadDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
@@ -113,29 +113,29 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 	return nil, nil
 }
 
-func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("LOCALD", "%v: ReadFile: %v %v\n", o, off, cnt)
 	return []byte{}, fmt.Errorf("not suported")
 }
 
-func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
+func (o *Obj) Remove(ctx npo.CtxI, name string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
+func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
+func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return o.stat(), nil
 }
 
-func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DLPrintf("LOCALD", "%v: WriteFile %v %v\n", o, off, len(data))
 	return np.Tsize(len(data)), fmt.Errorf("not suported")
 }
 
-func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DLPrintf("LOCALD", "%v: WriteDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:
@@ -149,7 +149,7 @@ func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, err
 	return 0, fmt.Errorf("not suported")
 }
 
-func (o *Obj) Wstat(ctx *npo.Ctx, st *np.Stat) error {
+func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {
 	return nil
 }
 

@@ -75,8 +75,8 @@ func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
 	return clnt
 }
 
-func (nps3 *Nps3) Root() npo.NpObj {
-	return nps3.root
+func (nps3 *Nps3) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
+	return nps3.root, nil
 }
 
 func (nps3 *Nps3) Serve() {
@@ -202,7 +202,7 @@ func (o *Obj) includeNameL(key string) (string, np.Tperm, bool) {
 	return name, m, !ok
 }
 
-func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
+func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	db.DLPrintf("NPS3", "Stat: %v\n", o)
 	var err error
 	o.mu.Lock()
@@ -221,7 +221,7 @@ func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
 	return o.stat(), err
 }
 
-func (o *Obj) Wstat(ctx *npo.Ctx, st *np.Stat) error {
+func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {
 	return nil
 }
 
@@ -279,7 +279,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 	return result.Body, nil
 }
 
-func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("NPS3", "readFile: %v %v %v\n", o.key, off, cnt)
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
@@ -346,7 +346,7 @@ func (o *Obj) s3ReadDirL() error {
 	return nil
 }
 
-func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
+func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 	db.DLPrintf("NPS3", "%v: lookup %v %v\n", ctx, o, p)
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
@@ -366,7 +366,7 @@ func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
 	}
 }
 
-func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	var dirents []*np.Stat
 	db.DLPrintf("NPS3", "readDir: %v\n", o)
 	o.mu.Lock()
@@ -385,7 +385,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 // XXX directories don't fully work: there is a fake directory, when
 // trying to read it we get an error.  Maybe create . or .. in the
 // directory args.Name, to force the directory into existence
-func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (o *Obj) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	if perm.IsDir() {
 		o1 := o.nps3.MakeObj(append(o.key, name), np.DMDIR, o)
 		return o1, nil
@@ -412,11 +412,11 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
+func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
+func (o *Obj) Remove(ctx npo.CtxI, name string) error {
 	key := np.Join(o.key)
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
@@ -432,14 +432,14 @@ func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
 	return nil
 }
 
-func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
+func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
-func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, b []byte) (np.Tsize, error) {
 	db.DLPrintf("NPS3", "writeFile %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
@@ -476,6 +476,6 @@ func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error
 }
 
 // sub directories will be implicitly created; fake write
-func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, b []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte) (np.Tsize, error) {
 	return np.Tsize(len(b)), nil
 }

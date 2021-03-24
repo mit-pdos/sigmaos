@@ -71,7 +71,7 @@ func (dir *Dir) Len() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
-func (dir *Dir) namei(ctx *npo.Ctx, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
+func (dir *Dir) namei(ctx npo.CtxI, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
 	var inode *Inode
 	var err error
 
@@ -126,7 +126,7 @@ func (dir *Dir) create(inode *Inode, name string) error {
 	return dir.createLocked(inode, name)
 }
 
-func (dir *Dir) remove(ctx *npo.Ctx, name string) error {
+func (dir *Dir) remove(ctx npo.CtxI, name string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

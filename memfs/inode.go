@@ -26,6 +26,27 @@ type Dev interface {
 	Len() np.Tlength
 }
 
+type ParseNameI interface {
+	ParsePath(*Ctx, []string) error
+}
+
+type Ctx struct {
+	uname string
+	pn    ParseNameI
+}
+
+func MkCtx(uname string, pn ParseNameI) *Ctx {
+	return &Ctx{uname, pn}
+}
+
+func (ctx *Ctx) Uname() string {
+	return ctx.uname
+}
+
+func DefMkCtx(uname string) npo.CtxI {
+	return &Ctx{uname, nil}
+}
+
 type Inode struct {
 	mu      sync.Mutex
 	permT   np.Tperm
@@ -136,17 +157,25 @@ func (inode *Inode) stat() (*np.Stat, error) {
 	return stat, nil
 }
 
-func (inode *Inode) Stat(Ctx *npo.Ctx) (*np.Stat, error) {
+func (inode *Inode) Stat(Ctx npo.CtxI) (*np.Stat, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 	return inode.stat()
 }
 
-func (inode *Inode) Create(ctx *npo.
-	Ctx, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (inode *Inode) Create(ctx npo.CtxI, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 
+	c := ctx.(*Ctx)
+	if c.pn != nil {
+		p := []string{name}
+		err := c.pn.ParsePath(c, p)
+		if err != nil {
+			return nil, err
+		}
+		name = p[0]
+	}
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
@@ -170,8 +199,15 @@ func (inode *Inode) Create(ctx *npo.
 	}
 }
 
-func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, error) {
+func (inode *Inode) Lookup(ctx npo.CtxI, path []string) ([]npo.NpObj, []string, error) {
 	db.DLPrintf("MEMFS", "%v: Lookup %v %v\n", ctx, inode, path)
+	c := ctx.(*Ctx)
+	if c.pn != nil {
+		err := c.pn.ParsePath(c, path)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 	inodes := []npo.NpObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
@@ -189,7 +225,7 @@ func (inode *Inode) Lookup(ctx *npo.Ctx, path []string) ([]npo.NpObj, []string, 
 	}
 }
 
-func (inode *Inode) Remove(ctx *npo.Ctx, n string) error {
+func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
 	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}
@@ -213,7 +249,7 @@ func (inode *Inode) Remove(ctx *npo.Ctx, n string) error {
 }
 
 // XXX open for other types than pipe
-func (inode *Inode) Open(ctx *npo.Ctx, mode np.Tmode) error {
+func (inode *Inode) Open(ctx npo.CtxI, mode np.Tmode) error {
 	db.DLPrintf("MEMFS", "inode.Open %v", inode)
 	if inode.IsPipe() {
 		p := inode.Data.(*Pipe)
@@ -223,7 +259,7 @@ func (inode *Inode) Open(ctx *npo.Ctx, mode np.Tmode) error {
 }
 
 // XXX open for other types than pipe
-func (inode *Inode) Close(ctx *npo.Ctx, mode np.Tmode) error {
+func (inode *Inode) Close(ctx npo.CtxI, mode np.Tmode) error {
 	db.DLPrintf("MEMFS", "inode.Open %v", inode)
 	if inode.IsDevice() {
 	} else if inode.IsDir() {
@@ -235,7 +271,7 @@ func (inode *Inode) Close(ctx *npo.Ctx, mode np.Tmode) error {
 	return nil
 }
 
-func (inode *Inode) WriteFile(ctx *npo.Ctx, offset np.Toffset, data []byte) (np.Tsize, error) {
+func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte) (np.Tsize, error) {
 	db.DLPrintf("MEMFS", "inode.Write %v", inode)
 	var sz np.Tsize
 	var err error
@@ -258,16 +294,16 @@ func (inode *Inode) WriteFile(ctx *npo.Ctx, offset np.Toffset, data []byte) (np.
 	return sz, err
 }
 
-func (inode *Inode) ReadDir(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]*np.Stat, error) {
+func (inode *Inode) ReadDir(ctx npo.CtxI, offset np.Toffset, n np.Tsize) ([]*np.Stat, error) {
 	d := inode.Data.(*Dir)
 	return d.read(offset, n)
 }
 
-func (inode *Inode) WriteDir(ctx *npo.Ctx, offset np.Toffset, b []byte) (np.Tsize, error) {
+func (inode *Inode) WriteDir(ctx npo.CtxI, offset np.Toffset, b []byte) (np.Tsize, error) {
 	return 0, errors.New("Cannot write directory")
 }
 
-func (inode *Inode) ReadFile(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]byte, error) {
+func (inode *Inode) ReadFile(ctx npo.CtxI, offset np.Toffset, n np.Tsize) ([]byte, error) {
 	db.DLPrintf("MEMFS", "inode.Read %v", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
@@ -284,7 +320,7 @@ func (inode *Inode) ReadFile(ctx *npo.Ctx, offset np.Toffset, n np.Tsize) ([]byt
 	}
 }
 
-func (inode *Inode) Rename(ctx *npo.Ctx, from, to string) error {
+func (inode *Inode) Rename(ctx npo.CtxI, from, to string) error {
 	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}

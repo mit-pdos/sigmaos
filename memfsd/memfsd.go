@@ -11,16 +11,22 @@ import (
 )
 
 type Fsd struct {
-	root *memfs.Inode
-	srv  *npsrv.NpServer
-	ch   chan bool
-	addr string
+	root  *memfs.Inode
+	srv   *npsrv.NpServer
+	ch    chan bool
+	addr  string
+	mkctx func(string) npo.CtxI
 }
 
-func MakeFsd(addr string) *Fsd {
+func MakeFsd(addr string, mkctx func(string) npo.CtxI) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.addr = addr
+	if mkctx == nil {
+		fsd.mkctx = memfs.DefMkCtx
+	} else {
+		fsd.mkctx = mkctx
+	}
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeNpServer(fsd, addr)
 	return fsd
@@ -40,8 +46,8 @@ func (fsd *Fsd) Addr() string {
 	return fsd.srv.MyAddr()
 }
 
-func (fsd *Fsd) Root() npo.NpObj {
-	return fsd.root
+func (fsd *Fsd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
+	return fsd.root, fsd.mkctx(uname)
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
@@ -49,7 +55,7 @@ func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
-	obj, err := fsd.root.Create(npo.MkCtx(""), name, np.DMDEVICE, 0)
+	obj, err := fsd.root.Create(fsd.mkctx(""), name, np.DMDEVICE, 0)
 	if err != nil {
 		return err
 	}
@@ -58,7 +64,7 @@ func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
 }
 
 func (fsd *Fsd) MkPipe(name string) (*memfs.Inode, error) {
-	obj, err := fsd.root.Create(npo.MkCtx(""), name, np.DMNAMEDPIPE, 0)
+	obj, err := fsd.root.Create(fsd.mkctx(""), name, np.DMNAMEDPIPE, 0)
 	if err != nil {
 		return nil, err
 	}

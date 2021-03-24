@@ -16,15 +16,15 @@ import (
 
 type TestState struct {
 	t     *testing.T
-	ctx   *npo.Ctx
 	rooti *Inode
+	ctx   npo.CtxI
 }
 
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.ctx = npo.MkCtx("")
 	ts.rooti = MkRootInode()
+	ts.ctx = DefMkCtx("")
 	return ts
 }
 

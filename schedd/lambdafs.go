@@ -58,7 +58,7 @@ func (o *Obj) Qid() np.Tqid {
 	return np.Tqid{}
 }
 
-func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (o *Obj) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
 	db.DLPrintf("SCHEDD", "%v: Create %v\n", o, name)
 	if !o.t.IsDir() {
 		return nil, fmt.Errorf("not supported")
@@ -71,11 +71,11 @@ func (o *Obj) Create(ctx *npo.Ctx, name string, perm np.Tperm, m np.Tmode) (npo.
 }
 
 // check permissions etc.
-func (o *Obj) Open(ctx *npo.Ctx, m np.Tmode) error {
+func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Lookup(ctx *npo.Ctx, p []string) ([]npo.NpObj, []string, error) {
+func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 	db.DLPrintf("SCHEDD", "%v: lookup %v %v %v\n", ctx, o, p, len(p))
 	if !o.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
@@ -152,7 +152,7 @@ func (sd *Sched) ps() []*np.Stat {
 	return dir
 }
 
-func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
 	db.DLPrintf("SCHEDD", "readDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
@@ -165,7 +165,7 @@ func (o *Obj) ReadDir(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 	return nil, nil
 }
 
-func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("SCHEDD", "%v: ReadFile: %v %v\n", o, off, cnt)
 	if len(o.name) != 2 {
 		log.Fatalf("ReadFile: name != 2 %v\n", o)
@@ -206,19 +206,19 @@ func (o *Obj) ReadFile(ctx *npo.Ctx, off np.Toffset, cnt np.Tsize) ([]byte, erro
 }
 
 // kill?
-func (o *Obj) Remove(ctx *npo.Ctx, name string) error {
+func (o *Obj) Remove(ctx npo.CtxI, name string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Rename(ctx *npo.Ctx, from, to string) error {
+func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Stat(ctx *npo.Ctx) (*np.Stat, error) {
+func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return o.stat(), nil
 }
 
-func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DLPrintf("SCHEDD", "%v: writeFile %v %v\n", o, off, len(data))
 	if len(o.name) != 2 {
 		log.Fatalf("WriteFile: name != 2 %v\n", o)
@@ -236,7 +236,7 @@ func (o *Obj) WriteFile(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, er
 	return np.Tsize(len(data)), nil
 }
 
-func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
 	db.DLPrintf("SCHEDD", "%v: writeDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:
@@ -258,6 +258,6 @@ func (o *Obj) WriteDir(ctx *npo.Ctx, off np.Toffset, data []byte) (np.Tsize, err
 	return 0, nil
 }
 
-func (o *Obj) Wstat(ctx *npo.Ctx, st *np.Stat) error {
+func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {
 	return nil
 }

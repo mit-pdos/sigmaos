@@ -16,15 +16,15 @@ import (
 
 type TestState struct {
 	t     *testing.T
-	ctx   *npo.Ctx
 	rooti *Inode
+	ctx   npo.CtxI
 }
 
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.ctx = npo.MkCtx("")
 	ts.rooti = MkRootInode()
+	ts.ctx = DefMkCtx("")
 	return ts
 }
 
@@ -58,7 +58,7 @@ func (ts *TestState) testRename(t int) {
 		if strings.HasPrefix(st.Name, "job") {
 			err = ino2.Rename(ts.ctx, st.Name, "done-"+st.Name)
 			if err != nil {
-				assert.Contains(ts.t, err.Error(), "Unknown name")
+				assert.Contains(ts.t, err.Error(), "file not found")
 			}
 		}
 	}

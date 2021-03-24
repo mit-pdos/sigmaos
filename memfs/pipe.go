@@ -33,7 +33,7 @@ func (p *Pipe) Len() np.Tlength {
 	return np.Tlength(len(p.buf))
 }
 
-func (pipe *Pipe) open(ctx *npo.Ctx, mode np.Tmode) error {
+func (pipe *Pipe) open(ctx npo.CtxI, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -56,7 +56,7 @@ func (pipe *Pipe) open(ctx *npo.Ctx, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) close(ctx *npo.Ctx, mode np.Tmode) error {
+func (pipe *Pipe) close(ctx npo.CtxI, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -78,7 +78,7 @@ func (pipe *Pipe) close(ctx *npo.Ctx, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) write(ctx *npo.Ctx, d []byte) (np.Tsize, error) {
+func (pipe *Pipe) write(ctx npo.CtxI, d []byte) (np.Tsize, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -101,7 +101,7 @@ func (pipe *Pipe) write(ctx *npo.Ctx, d []byte) (np.Tsize, error) {
 	return np.Tsize(n), nil
 }
 
-func (pipe *Pipe) read(ctx *npo.Ctx, n np.Tsize) ([]byte, error) {
+func (pipe *Pipe) read(ctx npo.CtxI, n np.Tsize) ([]byte, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

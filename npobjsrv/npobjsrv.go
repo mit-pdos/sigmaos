@@ -12,45 +12,37 @@ import (
 )
 
 type NpObjSrv interface {
-	Root() NpObj
+	// Maybe pass uname to RootAttach()
+	RootAttach(string) (NpObj, CtxI)
 	Done()
 }
 
-type Ctx struct {
-	uname string
-}
-
-func MkCtx(uname string) *Ctx {
-	ctx := &Ctx{uname}
-	return ctx
-}
-
-func (ctx *Ctx) Uname() string {
-	return ctx.uname
+type CtxI interface {
+	Uname() string
 }
 
 type NpObj interface {
-	Lookup(*Ctx, []string) ([]NpObj, []string, error)
+	Lookup(CtxI, []string) ([]NpObj, []string, error)
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Version() np.TQversion
 	Size() np.Tlength
-	Create(*Ctx, string, np.Tperm, np.Tmode) (NpObj, error)
-	Open(*Ctx, np.Tmode) error
-	ReadFile(*Ctx, np.Toffset, np.Tsize) ([]byte, error)
-	WriteFile(*Ctx, np.Toffset, []byte) (np.Tsize, error)
-	ReadDir(*Ctx, np.Toffset, np.Tsize) ([]*np.Stat, error)
-	WriteDir(*Ctx, np.Toffset, []byte) (np.Tsize, error)
-	Remove(*Ctx, string) error
-	Stat(*Ctx) (*np.Stat, error)
-	Rename(*Ctx, string, string) error
+	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
+	Open(CtxI, np.Tmode) error
+	ReadFile(CtxI, np.Toffset, np.Tsize) ([]byte, error)
+	WriteFile(CtxI, np.Toffset, []byte) (np.Tsize, error)
+	ReadDir(CtxI, np.Toffset, np.Tsize) ([]*np.Stat, error)
+	WriteDir(CtxI, np.Toffset, []byte) (np.Tsize, error)
+	Remove(CtxI, string) error
+	Stat(CtxI) (*np.Stat, error)
+	Rename(CtxI, string, string) error
 }
 
 type Fid struct {
 	path []string
 	obj  NpObj
 	vers np.TQversion
-	ctx  *Ctx
+	ctx  CtxI
 }
 
 type NpConn struct {
@@ -102,8 +94,8 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	root := npc.osrv.Root()
-	npc.add(args.Fid, &Fid{[]string{}, root, 0, MkCtx(args.Uname)})
+	root, ctx := npc.osrv.RootAttach(args.Uname)
+	npc.add(args.Fid, &Fid{[]string{}, root, 0, ctx})
 	rets.Qid = root.Qid()
 	return nil
 }
@@ -130,7 +122,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		}
 		os, rest, err := f.obj.Lookup(f.ctx, args.Wnames)
 		if err != nil {
-			return np.ErrNotfound
+			return &np.Rerror{err.Error()}
 		}
 		// XXX should o be included?
 		n := len(args.Wnames) - len(rest)

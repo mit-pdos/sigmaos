@@ -111,6 +111,7 @@ func TestConcur(t *testing.T) {
 	go ts.clerk()
 
 	pids := make([]string, 0)
+	// for r := 0; r < 1; r++ {
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
 		pid1 := ts.spawnSharder("add", pid)

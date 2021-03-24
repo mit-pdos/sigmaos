@@ -79,8 +79,8 @@ func (ld *LocalD) Done() {
 	ld.ch <- true
 }
 
-func (ld *LocalD) Root() npo.NpObj {
-	return ld.root
+func (ld *LocalD) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
+	return ld.root, nil
 }
 
 func (ld *LocalD) Work() {

@@ -73,8 +73,8 @@ func (sd *Sched) Done() {
 	sd.cond.Signal()
 }
 
-func (sd *Sched) Root() npo.NpObj {
-	return sd.root
+func (sd *Sched) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
+	return sd.root, nil
 }
 
 func (sd *Sched) String() string {

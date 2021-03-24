@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	db.Name("sharder")
-	fsd := memfsd.MakeFsd(":1111")
+	db.Name("named")
+	fsd := memfsd.MakeFsd(":1111", nil)
 	fsd.Serve()
 }

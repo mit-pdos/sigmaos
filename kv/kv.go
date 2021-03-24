@@ -10,8 +10,10 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 const (
@@ -70,7 +72,9 @@ func MakeKv(args []string) (*Kv, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
 	}
-	fsd := memfsd.MakeFsd(ip + ":0")
+	fsd := memfsd.MakeFsd(ip+":0", func(uname string) npo.CtxI {
+		return memfs.MkCtx(uname, kv)
+	})
 	fsl, err := fslib.InitFs(kv.me, fsd, &KvDev{kv})
 	if err != nil {
 		return nil, err
@@ -78,6 +82,37 @@ func MakeKv(args []string) (*Kv, error) {
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
 	return kv, nil
+}
+
+func (kv *Kv) ParsePath(ctx *memfs.Ctx, path []string) error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	if len(path) == 0 { // so that ls in root directory works
+		return nil
+	}
+
+	if strings.HasPrefix(ctx.Uname(), "clerk/") &&
+		strings.Contains(path[len(path)-1], "-") {
+		if kv.nextConf != nil {
+			db.DLPrintf("KV", "ParsePath: %v %v retry\n", ctx, path)
+			return ErrRetry
+		} else {
+			p := strings.Split(path[len(path)-1], "-")
+			if p[0] != strconv.Itoa(kv.conf.N) {
+				db.DLPrintf("KV", "ParsePath: %v %v redirect\n", ctx, path)
+				return ErrWrongKv
+			}
+			shard := key2shard(p[1])
+			if kv.conf.Shards[shard] != kv.pid {
+				db.DLPrintf("KV", "ParsePath: %v %v redirect1\n", ctx, path)
+				return ErrWrongKv
+			}
+			path[len(path)-1] = p[1]
+			return nil
+		}
+	}
+	return nil
 }
 
 func (kv *Kv) readConfig(conffile string) *Config {
@@ -203,7 +238,7 @@ func (kv *Kv) Work() {
 			cont = kv.commit()
 		}
 	}
-	log.Printf("%v: exit %v\n", kv.me, kv.conf)
+	// log.Printf("%v: exit %v\n", kv.me, kv.conf)
 }
 
 func (kv *Kv) Exit() {

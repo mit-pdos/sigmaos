@@ -8,4 +8,4 @@ go test $1 ulambda/fslib
 (cd nps3; go test $1)
 go test $1 ulambda/schedd
 (cd mr; go test $1)
-# (cd kv; go test $1)
+(cd kv; go test $1)

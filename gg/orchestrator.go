@@ -56,7 +56,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.pid = args[0]
 	orc.cwd = args[1]
 	orc.targets = args[2:]
-	memfsd := memfsd.MakeFsd(":0")
+	memfsd := memfsd.MakeFsd(":0", nil)
 	fls, err := fslib.InitFs(ORCHESTRATOR, memfsd, &OrchestratorDev{orc})
 	if err != nil {
 		return nil, err

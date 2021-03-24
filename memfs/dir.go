@@ -43,7 +43,7 @@ func (dir *Dir) removeLocked(name string) error {
 		delete(dir.entries, name)
 		return nil
 	}
-	return fmt.Errorf("Unknown name %v", name)
+	return fmt.Errorf("file not found %v", name)
 }
 
 func (dir *Dir) createLocked(ino *Inode, name string) error {
@@ -61,7 +61,7 @@ func (dir *Dir) lookupLocked(name string) (*Inode, error) {
 	if ok {
 		return inode, nil
 	} else {
-		return nil, fmt.Errorf("Unknown name %v", name)
+		return nil, fmt.Errorf("file not found %v", name)
 	}
 }
 
@@ -71,14 +71,14 @@ func (dir *Dir) Len() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
-func (dir *Dir) namei(ctx *npo.Ctx, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
+func (dir *Dir) namei(ctx npo.CtxI, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
 	var inode *Inode
 	var err error
 
 	dir.mu.Lock()
 	inode, err = dir.lookupLocked(path[0])
 	if err != nil {
-		db.DLPrintf("MEMFS", "namei %v unknown %v", dir, path)
+		db.DLPrintf("MEMFS", "dir %v: file not found %v", dir, path[0])
 		dir.mu.Unlock()
 		return nil, nil, err
 	}
@@ -126,13 +126,13 @@ func (dir *Dir) create(inode *Inode, name string) error {
 	return dir.createLocked(inode, name)
 }
 
-func (dir *Dir) remove(ctx *npo.Ctx, name string) error {
+func (dir *Dir) remove(ctx npo.CtxI, name string) error {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
 	inode, err := dir.lookupLocked(name)
 	if err != nil {
-		db.DLPrintf("MEMFS", "remove %v unknown %v", dir, name)
+		db.DLPrintf("MEMFS", "remove %v file not found %v", dir, name)
 		return err
 	}
 	if inode.IsDir() {

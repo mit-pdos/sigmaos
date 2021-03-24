@@ -11,7 +11,6 @@ import (
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Reader struct {
@@ -20,7 +19,6 @@ type Reader struct {
 	input  string
 	output string
 	pipe   *memfs.Inode
-	ctx    *npo.Ctx
 }
 
 func MakeReader(args []string) (*Reader, error) {
@@ -34,7 +32,7 @@ func MakeReader(args []string) (*Reader, error) {
 		return nil, errors.New("MakeReader: No IP")
 	}
 	n := "name/" + args[2]
-	memfsd := memfsd.MakeFsd(ip + ":0")
+	memfsd := memfsd.MakeFsd(ip+":0", nil)
 	pipe, err := memfsd.MkPipe("pipe")
 	if err != nil {
 		log.Fatal("Create error: ", err)
@@ -51,7 +49,6 @@ func MakeReader(args []string) (*Reader, error) {
 	r.input = args[1]
 	r.output = args[2]
 	r.pipe = pipe
-	r.ctx = npo.MkCtx("")
 	r.Started(r.pid)
 
 	return r, nil
@@ -59,7 +56,7 @@ func MakeReader(args []string) (*Reader, error) {
 
 func (r *Reader) Work() {
 	db.DLPrintf("Reader", "Reader: work\n")
-	err := r.pipe.Open(r.ctx, np.OWRITE)
+	err := r.pipe.Open(nil, np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}
@@ -75,13 +72,13 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.WriteFile(r.ctx, 0, data)
+		_, err = r.pipe.WriteFile(nil, 0, data)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 	r.Close(fd)
-	r.pipe.Close(r.ctx, np.OWRITE)
+	r.pipe.Close(nil, np.OWRITE)
 
 	r.ExitFs("name/" + r.output)
 	r.Exiting(r.pid, "OK")

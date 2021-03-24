@@ -15,16 +15,12 @@ type Fsd struct {
 	srv  *npsrv.NpServer
 	ch   chan bool
 	addr string
-	ctx  *npo.Ctx
-	r    npo.Resolver
 }
 
-func MakeFsd(name, addr string, r npo.Resolver) *Fsd {
+func MakeFsd(addr string) *Fsd {
 	fsd := &Fsd{}
-	fsd.ctx = npo.MkCtx(name, r)
-	fsd.root = memfs.MkRootInode(fsd.ctx)
+	fsd.root = memfs.MkRootInode()
 	fsd.addr = addr
-	fsd.r = r
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeNpServer(fsd, addr)
 	return fsd
@@ -32,11 +28,11 @@ func MakeFsd(name, addr string, r npo.Resolver) *Fsd {
 
 func (fsd *Fsd) Serve() {
 	<-fsd.ch
-	db.DLPrintf(fsd.ctx.Uname(), "NAMED", "Exit\n")
+	db.DLPrintf("NAMED", "Exit\n")
 }
 
 func (fsd *Fsd) Done() {
-	db.DLPrintf(fsd.ctx.Uname(), "NAMED", "Done\n")
+	db.DLPrintf("NAMED", "Done\n")
 	fsd.ch <- true
 }
 
@@ -44,16 +40,8 @@ func (fsd *Fsd) Addr() string {
 	return fsd.srv.MyAddr()
 }
 
-func (fsd *Fsd) Ctx() *npo.Ctx {
-	return fsd.ctx
-}
-
 func (fsd *Fsd) Root() npo.NpObj {
 	return fsd.root
-}
-
-func (fsd *Fsd) Resolver() npo.Resolver {
-	return fsd.r
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
@@ -61,7 +49,7 @@ func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
-	obj, err := fsd.root.Create(fsd.ctx, name, np.DMDEVICE, 0)
+	obj, err := fsd.root.Create(npo.MkCtx(""), name, np.DMDEVICE, 0)
 	if err != nil {
 		return err
 	}
@@ -70,7 +58,7 @@ func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
 }
 
 func (fsd *Fsd) MkPipe(name string) (*memfs.Inode, error) {
-	obj, err := fsd.root.Create(fsd.ctx, name, np.DMNAMEDPIPE, 0)
+	obj, err := fsd.root.Create(npo.MkCtx(""), name, np.DMNAMEDPIPE, 0)
 	if err != nil {
 		return nil, err
 	}

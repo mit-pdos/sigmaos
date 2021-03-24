@@ -34,7 +34,7 @@ func MakeReader(args []string) (*Reader, error) {
 		return nil, errors.New("MakeReader: No IP")
 	}
 	n := "name/" + args[2]
-	memfsd := memfsd.MakeFsd(n, ip+":0", nil)
+	memfsd := memfsd.MakeFsd(ip + ":0")
 	pipe, err := memfsd.MkPipe("pipe")
 	if err != nil {
 		log.Fatal("Create error: ", err)
@@ -51,15 +51,14 @@ func MakeReader(args []string) (*Reader, error) {
 	r.input = args[1]
 	r.output = args[2]
 	r.pipe = pipe
-	r.ctx = memfsd.Ctx()
-
+	r.ctx = npo.MkCtx("")
 	r.Started(r.pid)
 
 	return r, nil
 }
 
 func (r *Reader) Work() {
-	db.DLPrintf(r.ctx.Uname(), "Reader", "Reader: work\n")
+	db.DLPrintf("Reader", "Reader: work\n")
 	err := r.pipe.Open(r.ctx, np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)

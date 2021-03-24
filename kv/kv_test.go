@@ -87,7 +87,7 @@ func (ts *Tstate) getKeys() bool {
 			return true
 		default:
 			assert.Nil(ts.t, err, "Get "+k)
-			assert.Equal(ts.t, v, k, "Get")
+			assert.Equal(ts.t, k, v, "Get")
 		}
 	}
 	return false

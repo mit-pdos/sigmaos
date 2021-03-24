@@ -79,10 +79,6 @@ func (nps3 *Nps3) Root() npo.NpObj {
 	return nps3.root
 }
 
-func (nps3 *Nps3) Resolver() npo.Resolver {
-	return nil
-}
-
 func (nps3 *Nps3) Serve() {
 	<-nps3.ch
 }
@@ -148,6 +144,10 @@ func (o *Obj) Perm() np.Tperm {
 
 func (o *Obj) Size() np.Tlength {
 	return o.sz
+}
+
+func (o *Obj) Version() np.TQversion {
+	return 0
 }
 
 func (o *Obj) stat() *np.Stat {

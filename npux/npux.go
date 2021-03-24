@@ -53,10 +53,6 @@ func (npux *NpUx) Root() npo.NpObj {
 	return npux.root
 }
 
-func (npux *NpUx) Resolver() npo.Resolver {
-	return nil
-}
-
 func (npux *NpUx) Serve() {
 	<-npux.ch
 }
@@ -117,6 +113,10 @@ func (o *Obj) Size() np.Tlength {
 		o.stat()
 	}
 	return o.sz
+}
+
+func (o *Obj) Version() np.TQversion {
+	return 0
 }
 
 func (o *Obj) Path() string {

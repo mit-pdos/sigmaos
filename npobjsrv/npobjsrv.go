@@ -2,6 +2,7 @@ package npobjsrv
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -12,21 +13,15 @@ import (
 
 type NpObjSrv interface {
 	Root() NpObj
-	Resolver() Resolver
 	Done()
-}
-
-type Resolver interface {
-	Resolve(*Ctx, []string) error
 }
 
 type Ctx struct {
 	uname string
-	r     Resolver
 }
 
-func MkCtx(uname string, r Resolver) *Ctx {
-	ctx := &Ctx{uname, r}
+func MkCtx(uname string) *Ctx {
+	ctx := &Ctx{uname}
 	return ctx
 }
 
@@ -38,6 +33,7 @@ type NpObj interface {
 	Lookup(*Ctx, []string) ([]NpObj, []string, error)
 	Qid() np.Tqid
 	Perm() np.Tperm
+	Version() np.TQversion
 	Size() np.Tlength
 	Create(*Ctx, string, np.Tperm, np.Tmode) (NpObj, error)
 	Open(*Ctx, np.Tmode) error
@@ -53,13 +49,14 @@ type NpObj interface {
 type Fid struct {
 	path []string
 	obj  NpObj
+	vers np.TQversion
+	ctx  *Ctx
 }
 
 type NpConn struct {
 	mu   sync.Mutex // for Fids
 	conn net.Conn
 	fids map[np.Tfid]*Fid
-	ctx  *Ctx
 	osrv NpObjSrv
 }
 
@@ -106,12 +103,7 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root := npc.osrv.Root()
-	npc.mu.Lock()
-	if npc.ctx == nil {
-		npc.ctx = &Ctx{args.Uname, npc.osrv.Resolver()}
-	}
-	npc.mu.Unlock()
-	npc.add(args.Fid, &Fid{[]string{}, root})
+	npc.add(args.Fid, &Fid{[]string{}, root, 0, MkCtx(args.Uname)})
 	rets.Qid = root.Qid()
 	return nil
 }
@@ -131,25 +123,20 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
-		npc.add(args.NewFid, &Fid{f.path, f.obj})
+		npc.add(args.NewFid, &Fid{f.path, f.obj, f.obj.Version(), f.ctx})
 	} else {
 		if !f.obj.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		if npc.ctx.r != nil {
-			err := npc.ctx.r.Resolve(npc.ctx, args.Wnames)
-			if err != nil {
-				return &np.Rerror{err.Error()}
-			}
-		}
-		os, rest, err := f.obj.Lookup(npc.ctx, args.Wnames)
+		os, rest, err := f.obj.Lookup(f.ctx, args.Wnames)
 		if err != nil {
 			return np.ErrNotfound
 		}
 		// XXX should o be included?
 		n := len(args.Wnames) - len(rest)
 		p := append(f.path, args.Wnames[:n]...)
-		npc.add(args.NewFid, &Fid{p, os[len(os)-1]})
+		lo := os[len(os)-1]
+		npc.add(args.NewFid, &Fid{p, lo, lo.Version(), f.ctx})
 		rets.Qids = makeQids(os)
 	}
 	return nil
@@ -175,7 +162,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
-	err := f.obj.Open(npc.ctx, args.Mode)
+	err := f.obj.Open(f.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -192,21 +179,15 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DLPrintf("9POBJ", "f %v\n", f)
 
 	names := []string{args.Name}
-	if npc.ctx.r != nil {
-		err := npc.ctx.r.Resolve(npc.ctx, names)
-		if err != nil {
-			return &np.Rerror{err.Error()}
-		}
-	}
 	if !f.obj.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
-	o1, err := f.obj.Create(npc.ctx, names[0], args.Perm, args.Mode)
+	o1, err := f.obj.Create(f.ctx, names[0], args.Perm, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
 
-	npc.add(args.Fid, &Fid{append(f.path, names[0]), o1})
+	npc.add(args.Fid, &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx})
 	rets.Qid = o1.Qid()
 	return nil
 }
@@ -215,13 +196,13 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) readDir(f *Fid, args np.Tread, rets *np.Rread) *np.Rerror {
 	var dirents []*np.Stat
 	var err error
-	if o.Size() > 0 && args.Offset >= np.Toffset(o.Size()) {
+	if f.obj.Size() > 0 && args.Offset >= np.Toffset(f.obj.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		dirents, err = o.ReadDir(npc.ctx, args.Offset, args.Count)
+		dirents, err = f.obj.ReadDir(f.ctx, args.Offset, args.Count)
 
 	}
 	b, err := npcodec.Dir2Byte(args.Offset, args.Count, dirents)
@@ -233,8 +214,8 @@ func (npc *NpConn) readDir(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 // XXX check for offset > len here?
-func (npc *NpConn) readFile(o NpObj, args np.Tread, rets *np.Rread) *np.Rerror {
-	b, err := o.ReadFile(npc.ctx, args.Offset, args.Count)
+func (npc *NpConn) readFile(f *Fid, args np.Tread, rets *np.Rread) *np.Rerror {
+	b, err := f.obj.ReadFile(f.ctx, args.Offset, args.Count)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -248,11 +229,14 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
+	if f.vers != f.obj.Version() {
+		log.Printf("Version changed %d\n", args, f)
+	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
 	if f.obj.Perm().IsDir() {
-		return npc.readDir(f.obj, args, rets)
+		return npc.readDir(f, args, rets)
 	} else {
-		return npc.readFile(f.obj, args, rets)
+		return npc.readFile(f, args, rets)
 	}
 }
 
@@ -266,9 +250,9 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	var err error
 	cnt := np.Tsize(0)
 	if f.obj.Perm().IsDir() {
-		cnt, err = f.obj.WriteDir(npc.ctx, args.Offset, args.Data)
+		cnt, err = f.obj.WriteDir(f.ctx, args.Offset, args.Data)
 	} else {
-		cnt, err = f.obj.WriteFile(npc.ctx, args.Offset, args.Data)
+		cnt, err = f.obj.WriteFile(f.ctx, args.Offset, args.Data)
 	}
 	rets.Count = np.Tsize(cnt)
 	if err != nil {
@@ -288,7 +272,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		return nil
 	}
 	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	err := f.obj.Remove(npc.ctx, f.path[len(f.path)-1])
+	err := f.obj.Remove(f.ctx, f.path[len(f.path)-1])
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -302,7 +286,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "Stat %v\n", f)
-	st, err := f.obj.Stat(npc.ctx)
+	st, err := f.obj.Stat(f.ctx)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -317,7 +301,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
 	if args.Stat.Name != "" {
-		err := f.obj.Rename(npc.ctx, f.path[len(f.path)-1], args.Stat.Name)
+		err := f.obj.Rename(f.ctx, f.path[len(f.path)-1], args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

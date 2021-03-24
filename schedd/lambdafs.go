@@ -40,6 +40,10 @@ func (o *Obj) Size() np.Tlength {
 	return 0
 }
 
+func (o *Obj) Version() np.TQversion {
+	return 0
+}
+
 func (o *Obj) Qid() np.Tqid {
 	switch len(o.name) {
 	case 0:

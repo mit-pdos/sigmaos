@@ -83,10 +83,6 @@ func (ld *LocalD) Root() npo.NpObj {
 	return ld.root
 }
 
-func (ld *LocalD) Resolver() npo.Resolver {
-	return nil
-}
-
 func (ld *LocalD) Work() {
 	<-ld.ch
 }

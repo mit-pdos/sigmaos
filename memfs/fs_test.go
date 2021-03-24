@@ -23,8 +23,8 @@ type TestState struct {
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.ctx = npo.MkCtx("", nil)
-	ts.rooti = MkRootInode(ts.ctx)
+	ts.ctx = npo.MkCtx("")
+	ts.rooti = MkRootInode()
 	return ts
 }
 

@@ -74,11 +74,13 @@ def plot(baseline, overhead):
   baseline_y = np.ones(len(x))
   overhead_y = [ overhead[it] for it in sorted(overhead.keys()) ]
   print(overhead)
-  plt.plot(x, baseline_y)
-  plt.plot(x, overhead_y)
+  plt.plot(x, baseline_y, label="Baseline")
+  plt.plot(x, overhead_y, label="uLambda")
 
   plt.xlabel("Amount of work per invocation (msec)")
   plt.ylabel("Normalized execution time")
+  plt.legend()
+  plt.title("Normalized execution time varying work per invocation")
   plt.savefig("perf/overhead.pdf")
 
 if __name__ == "__main__":

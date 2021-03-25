@@ -17,3 +17,4 @@ cp -r /mnt/9p/fs/gg/results/* .
 
 ls *-vpxenc.ivf | while read each; do echo "file '$each'" >> mylist.txt; done
 ffmpeg -f concat -i mylist.txt -codec copy output.avi
+file output.avi

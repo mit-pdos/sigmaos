@@ -5,8 +5,6 @@ import (
 	"fmt"
 	// "github.com/sasha-s/go-deadlock"
 	"log"
-	//	"os"
-	//	"os/exec"
 	"strings"
 	"sync"
 

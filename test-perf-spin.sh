@@ -21,6 +21,11 @@ echo "Collecting baseline..."
 echo $dim $baseline_its 1 > $baseline
 ./bin/perf-matrix-multiply-baseline $dim $baseline_its >> $baseline 2>&1
 
+echo "Starting 9p infrastructure..."
+./stop.sh
+./start.sh
+sleep 1
+ 
 for i in `seq 1 $max_its`
 do
   for j in `seq 1 $n_trials`
@@ -32,12 +37,7 @@ do
     if [ -f "$outfile" ]; then
       continue
     fi
-
-    echo "Restarting 9p infrastructure..."
-    ./stop.sh
-    ./start.sh
-    sleep 1
-    
+   
     echo "Starting spin test, spinners=$N, iterations=$its"
     echo $dim $its $N > $outfile
     ./bin/perf-spin-test-starter $N $dim $its >> $outfile 2>&1

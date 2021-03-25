@@ -48,7 +48,7 @@ func main() {
 	// Calculate elapsed time
 	compElapsed := compEnd.Sub(compStart)
 	e2eElapsed := e2eEnd.Sub(e2eStart)
-	log.Printf("Total elapsed computation time: %v msec(s)\n", compElapsed.Milliseconds())
-	log.Printf("Average computation time: %v msec(s)\n", compElapsed.Milliseconds()/int64(its))
-	log.Printf("Total elapsed setup time: %v msec(s)\n", e2eElapsed.Milliseconds()-compElapsed.Milliseconds())
+	log.Printf("Total elapsed computation time: %f usec(s)\n", float64(compElapsed.Microseconds()))
+	log.Printf("Average computation time: %f usec(s)\n", float64(compElapsed.Microseconds())/float64(its))
+	log.Printf("Total elapsed setup time: %f usec(s)\n", float64(e2eElapsed.Microseconds())-float64(compElapsed.Microseconds()))
 }

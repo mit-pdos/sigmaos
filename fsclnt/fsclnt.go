@@ -253,26 +253,6 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-// XXX reduce duplicattion with Create
-func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
-	db.DLPrintf("FSCLNT", "CreateAt %v at %v\n", name, dfd)
-	fid, err := fsc.lookup(dfd)
-	if err != nil {
-		return -1, err
-	}
-	fid1, err := fsc.clone(fid)
-	if err != nil {
-		return -1, err
-	}
-	reply, err := fsc.npch(fid1).Create(fid1, name, perm, mode)
-	if err != nil {
-		return -1, err
-	}
-	fsc.path(fid1).add(name, reply.Qid)
-	fd := fsc.findfd(fid1)
-	return fd, nil
-}
-
 // XXX The unix 9p client seems to split a rename across directories
 // into a create and remove, and only does renames within the same
 // directory. For now forget about splitting.

@@ -103,7 +103,8 @@ def plot_runtime(baseline, runtime):
   x = [ float(it) * avg_baseline_comp_time / 1000.0 for it in  sorted(runtime.keys()) ]
   baseline_y = [ float(it) * avg_baseline_comp_time for it in sorted(runtime.keys()) ]
   runtime_y = [ runtime[it] for it in sorted(runtime.keys()) ]
-  runtime_y = np.array(runtime_y)
+  baseline_y = np.array(baseline_y) / 1000.0
+  runtime_y = np.array(runtime_y) / 1000.0
   print(runtime)
 
   fig, ax = plt.subplots(1)

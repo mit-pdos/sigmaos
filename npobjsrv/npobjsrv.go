@@ -238,6 +238,9 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
+	if f.vers != f.obj.Version() {
+		log.Printf("Version changed %d\n", args.Fid, f)
+	}
 	db.DLPrintf("9POBJ", "Write f %v\n", f)
 	var err error
 	cnt := np.Tsize(0)

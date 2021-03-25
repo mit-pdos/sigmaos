@@ -1,12 +1,13 @@
 package fslib
 
 import (
-	// "log"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"ulambda/fsclnt"
+	np "ulambda/ninep"
 )
 
 type Tstate struct {
@@ -58,6 +59,22 @@ func TestSymlink(t *testing.T) {
 	assert.Nil(t, err, SCHED)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 	assert.NotEqual(t, b, b1)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestVersion(t *testing.T) {
+	ts := makeTstate(t)
+
+	fd, err := ts.CreateFile("name/xxx", np.OWRITE)
+	assert.Nil(t, err, "CreateFile")
+	buf := make([]byte, 1000)
+	off, err := ts.Write(fd, buf)
+	assert.Equal(t, np.Tsize(1000), off)
+	err = ts.Remove("name/xxx")
+	assert.Nil(t, err, "Remove")
+	off, err = ts.Write(fd, buf)
+	assert.Equal(t, np.Tsize(1000), off)
 
 	ts.s.Shutdown(ts.FsLib)
 }

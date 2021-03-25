@@ -89,5 +89,5 @@ func (s *SpinTestStarter) Work() {
 
 	// Calculate elapsed time
 	elapsed := end.Sub(start)
-	log.Printf("Elapsed time: %f usec(s)\n", elapsed.Microseconds())
+	log.Printf("Elapsed time: %f usec(s)\n", float64(elapsed.Microseconds()))
 }

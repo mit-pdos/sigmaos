@@ -1,7 +1,6 @@
 package fslib
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -69,12 +68,15 @@ func TestVersion(t *testing.T) {
 	fd, err := ts.CreateFile("name/xxx", np.OWRITE)
 	assert.Nil(t, err, "CreateFile")
 	buf := make([]byte, 1000)
-	off, err := ts.Write(fd, buf)
+	off, err := ts.WriteV(fd, buf)
+	assert.Nil(t, err, "Vwrite0")
 	assert.Equal(t, np.Tsize(1000), off)
 	err = ts.Remove("name/xxx")
 	assert.Nil(t, err, "Remove")
-	off, err = ts.Write(fd, buf)
-	assert.Equal(t, np.Tsize(1000), off)
+	off, err = ts.WriteV(fd, buf)
+	assert.Equal(t, err.Error(), "Version mismatch")
+	_, err = ts.ReadV(fd, np.Tsize(1000))
+	assert.Equal(t, err.Error(), "Version mismatch")
 
 	ts.s.Shutdown(ts.FsLib)
 }

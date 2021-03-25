@@ -90,6 +90,7 @@ const (
 	OCEXEC  Tmode = 0x20 // or close on exec
 	ORCLOSE Tmode = 0x40 // remove on close
 	OAPPEND Tmode = 0x80 // append
+	OATOMIC Tmode = 0x83 // ulambda extension hack (overloads OAPPEND|OEXEC)
 )
 
 // Permissions
@@ -158,9 +159,8 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
-	// ulambda specific
-	TTmkpipe
-	TRmkpipe
+	TTreadv
+	TTwritev
 )
 
 func (fct Tfcall) String() string {
@@ -221,10 +221,10 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
-	case TTmkpipe:
-		return "Tmkpipe"
-	case TRmkpipe:
-		return "Rmkpipe"
+	case TTreadv:
+		return "Treadv"
+	case TTwritev:
+		return "Twritev"
 	default:
 		return "Tunknown"
 	}
@@ -320,6 +320,13 @@ type Tread struct {
 	Count  Tsize
 }
 
+type Treadv struct {
+	Fid     Tfid
+	Offset  Toffset
+	Count   Tsize
+	Version TQversion
+}
+
 type Rread struct {
 	Data []byte
 }
@@ -328,6 +335,13 @@ type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
 	Data   []byte
+}
+
+type Twritev struct {
+	Fid     Tfid
+	Offset  Toffset
+	Data    []byte
+	Version TQversion
 }
 
 func (tw Twrite) String() string {
@@ -405,8 +419,10 @@ func (Ropen) Type() Tfcall    { return TRopen }
 func (Tcreate) Type() Tfcall  { return TTcreate }
 func (Rcreate) Type() Tfcall  { return TRcreate }
 func (Tread) Type() Tfcall    { return TTread }
+func (Treadv) Type() Tfcall   { return TTreadv }
 func (Rread) Type() Tfcall    { return TRread }
 func (Twrite) Type() Tfcall   { return TTwrite }
+func (Twritev) Type() Tfcall  { return TTwritev }
 func (Rwrite) Type() Tfcall   { return TRwrite }
 func (Tclunk) Type() Tfcall   { return TTclunk }
 func (Rclunk) Type() Tfcall   { return TRclunk }

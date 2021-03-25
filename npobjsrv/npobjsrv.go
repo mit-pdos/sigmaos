@@ -2,7 +2,6 @@ package npobjsrv
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 
@@ -43,6 +42,49 @@ type Fid struct {
 	obj  NpObj
 	vers np.TQversion
 	ctx  CtxI
+}
+
+func (f *Fid) Write(off np.Toffset, b []byte) (np.Tsize, error) {
+	if f.obj.Perm().IsDir() {
+		return f.obj.WriteDir(f.ctx, off, b)
+	} else {
+		return f.obj.WriteFile(f.ctx, off, b)
+	}
+}
+
+func (f *Fid) readDir(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
+	var dirents []*np.Stat
+	var err error
+	if f.obj.Size() > 0 && off >= np.Toffset(f.obj.Size()) {
+		dirents = []*np.Stat{}
+	} else {
+		dirents, err = f.obj.ReadDir(f.ctx, off, count)
+
+	}
+	b, err := npcodec.Dir2Byte(off, count, dirents)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	rets.Data = b
+	return nil
+}
+
+// XXX check for offset > len here?
+func (f *Fid) readFile(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
+	b, err := f.obj.ReadFile(f.ctx, off, count)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	rets.Data = b
+	return nil
+}
+
+func (f *Fid) Read(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
+	if f.obj.Perm().IsDir() {
+		return f.readDir(off, count, rets)
+	} else {
+		return f.readFile(off, count, rets)
+	}
 }
 
 type NpConn struct {
@@ -188,48 +230,26 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) readDir(f *Fid, args np.Tread, rets *np.Rread) *np.Rerror {
-	var dirents []*np.Stat
-	var err error
-	if f.obj.Size() > 0 && args.Offset >= np.Toffset(f.obj.Size()) {
-		dirents = []*np.Stat{}
-	} else {
-		dirents, err = f.obj.ReadDir(f.ctx, args.Offset, args.Count)
-
-	}
-	b, err := npcodec.Dir2Byte(args.Offset, args.Count, dirents)
-	if err != nil {
-		return &np.Rerror{err.Error()}
-	}
-	rets.Data = b
-	return nil
-}
-
-// XXX check for offset > len here?
-func (npc *NpConn) readFile(f *Fid, args np.Tread, rets *np.Rread) *np.Rerror {
-	b, err := f.obj.ReadFile(f.ctx, args.Offset, args.Count)
-	if err != nil {
-		return &np.Rerror{err.Error()}
-	}
-	rets.Data = b
-	return nil
-}
-
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if f.vers != f.obj.Version() {
-		log.Printf("Version changed %d\n", args, f)
-	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
-	if f.obj.Perm().IsDir() {
-		return npc.readDir(f, args, rets)
-	} else {
-		return npc.readFile(f, args, rets)
+	return f.Read(args.Offset, args.Count, rets)
+}
+
+func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
+	db.DLPrintf("9POBJ", "ReadV %v\n", args)
+	f, ok := npc.lookup(args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
 	}
+	if f.vers != f.obj.Version() {
+		return &np.Rerror{"Version mismatch"}
+	}
+	return f.Read(args.Offset, args.Count, rets)
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
@@ -238,18 +258,25 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if f.vers != f.obj.Version() {
-		log.Printf("Version changed %d\n", args.Fid, f)
-	}
-	db.DLPrintf("9POBJ", "Write f %v\n", f)
 	var err error
-	cnt := np.Tsize(0)
-	if f.obj.Perm().IsDir() {
-		cnt, err = f.obj.WriteDir(f.ctx, args.Offset, args.Data)
-	} else {
-		cnt, err = f.obj.WriteFile(f.ctx, args.Offset, args.Data)
+	rets.Count, err = f.Write(args.Offset, args.Data)
+	if err != nil {
+		return &np.Rerror{err.Error()}
 	}
-	rets.Count = np.Tsize(cnt)
+	return nil
+}
+
+func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
+	db.DLPrintf("9POBJ", "WriteV %v\n", args)
+	f, ok := npc.lookup(args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	if f.vers != f.obj.Version() {
+		return &np.Rerror{"Version mismatch"}
+	}
+	var err error
+	rets.Count, err = f.Write(args.Offset, args.Data)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}

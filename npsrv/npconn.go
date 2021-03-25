@@ -82,9 +82,17 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rread{}
 		err := c.np.Read(req, reply)
 		return *reply, err
+	case np.Treadv:
+		reply := &np.Rread{}
+		err := c.np.ReadV(req, reply)
+		return *reply, err
 	case np.Twrite:
 		reply := &np.Rwrite{}
 		err := c.np.Write(req, reply)
+		return *reply, err
+	case np.Twritev:
+		reply := &np.Rwrite{}
+		err := c.np.WriteV(req, reply)
 		return *reply, err
 	case np.Tclunk:
 		reply := &np.Rclunk{}

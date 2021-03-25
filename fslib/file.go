@@ -76,6 +76,23 @@ func (fl *FsLib) WriteFile(fname string, data []byte) error {
 }
 
 // XXX chunk
+func (fl *FsLib) WriteFileAtomic(fname string, data []byte) error {
+	fd, err := fl.Open(fname, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	_, err = fl.Write(fd, data)
+	if err != nil {
+		return err
+	}
+	err = fl.Close(fd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// XXX chunk
 func (fl *FsLib) MakeFile(fname string, data []byte) error {
 	fd, err := fl.Create(fname, 0700, np.OWRITE)
 	if err != nil {

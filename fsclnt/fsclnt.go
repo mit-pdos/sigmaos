@@ -135,9 +135,7 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 	return fsc.fds[fd].fid, nil
 }
 
-func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+func (fsc *FsClient) lookupStL(fd int) (*FdState, error) {
 
 	if fd < 0 || fd >= len(fsc.fds) {
 		return nil, fmt.Errorf("Too big fd %v", fd)
@@ -146,6 +144,12 @@ func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
 		return nil, fmt.Errorf("Non-existing fd %v", fd)
 	}
 	return &fsc.fds[fd], nil
+}
+
+func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+	return fsc.lookupStL(fd)
 }
 
 // Wrote this in the CAS style, unsure if it's overkill
@@ -414,12 +418,69 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	return reply.Data, err
 }
 
+func (fsc *FsClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
+	fsc.mu.Lock()
+	fdst, err := fsc.lookupStL(fd)
+	if err != nil {
+		fsc.mu.Unlock()
+		return nil, err
+	}
+	p := fsc.fids[fdst.fid]
+	version := p.lastqid().Version
+	fsc.mu.Unlock()
+	reply, err := fsc.npch(fdst.fid).ReadV(fdst.fid, fdst.offset, cnt, version)
+	if err != nil {
+		return nil, err
+	}
+
+	// Can't reuse the fdst without looking it up again, since the fdst may
+	// have changed and now point to the wrong location. So instead, try and CAS
+	// the new offset
+	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(len(reply.Data))); !ok; {
+		if err != nil {
+			return nil, err
+		}
+		fdst, _ = fsc.lookupSt(fd)
+	}
+
+	return reply.Data, err
+}
+
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
 		return 0, err
 	}
 	reply, err := fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
+	if err != nil {
+		return 0, err
+	}
+
+	// Can't reuse the fdst without looking it up again, since the fdst may
+	// have changed and now point to the wrong location. So instead, try and CAS
+	// the new offset
+	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(reply.Count)); !ok; {
+		if err != nil {
+			return 0, err
+		}
+		fdst, _ = fsc.lookupSt(fd)
+	}
+
+	return reply.Count, err
+}
+
+func (fsc *FsClient) WriteV(fd int, data []byte) (np.Tsize, error) {
+	fsc.mu.Lock()
+	fdst, err := fsc.lookupStL(fd)
+	if err != nil {
+		fsc.mu.Unlock()
+		return 0, err
+	}
+	p := fsc.fids[fdst.fid]
+	version := p.lastqid().Version
+	fsc.mu.Unlock()
+
+	reply, err := fsc.npch(fdst.fid).WriteV(fdst.fid, fdst.offset, data, version)
 	if err != nil {
 		return 0, err
 	}

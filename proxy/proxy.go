@@ -214,12 +214,20 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
+	return nil
+}
+
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Write(args.Fid, args.Offset, args.Data)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
 	*rets = *reply
+	return nil
+}
+
+func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 

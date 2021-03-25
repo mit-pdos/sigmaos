@@ -65,7 +65,17 @@ def overhead(baseline, data):
     overhead[k] = (float(np.mean(v)) - setup_time) / (avg_baseline_comp_time * float(k))
   return overhead
 
-def plot(baseline, overhead):
+def runtime(baseline, data):
+  runtime = {}
+  total_baseline_comp_time = float(baseline[3])
+  baseline_its = float(baseline[1])
+  setup_time = float(baseline[4]) # Ignore memalloc costs
+  avg_baseline_comp_time = (total_baseline_comp_time - setup_time) / baseline_its
+  for k, v in data.items():
+    runtime[k] = float(np.mean(v)) - setup_time
+  return runtime
+
+def plot_overhead(baseline, overhead):
   total_baseline_comp_time = float(baseline[3])
   baseline_its = float(baseline[1])
   setup_time = float(baseline[4]) # Ignore memalloc costs
@@ -74,14 +84,37 @@ def plot(baseline, overhead):
   baseline_y = np.ones(len(x))
   overhead_y = [ overhead[it] for it in sorted(overhead.keys()) ]
   print(overhead)
-  plt.plot(x, baseline_y, label="Baseline")
-  plt.plot(x, overhead_y, label="uLambda")
 
-  plt.xlabel("Amount of work per invocation (msec)")
-  plt.ylabel("Normalized execution time")
-  plt.legend()
-  plt.title("Normalized execution time varying work per invocation")
+  fig, ax = plt.subplots(1)
+  ax.plot(x, overhead_y, label="uLambda")
+  ax.plot(x, baseline_y, label="Baseline")
+
+  ax.set_xlabel("Work per invocation (msec)")
+  ax.set_ylabel("Normalized runtime")
+  ax.legend()
+  ax.set_title("Normalized runtime varying work per invocation")
   plt.savefig("perf/overhead.pdf")
+
+def plot_runtime(baseline, runtime):
+  total_baseline_comp_time = float(baseline[3])
+  baseline_its = float(baseline[1])
+  setup_time = float(baseline[4]) # Ignore memalloc costs
+  avg_baseline_comp_time = (total_baseline_comp_time - setup_time) / baseline_its
+  x = [ float(it) * avg_baseline_comp_time / 1000.0 for it in  sorted(runtime.keys()) ]
+  baseline_y = [ float(it) * avg_baseline_comp_time for it in sorted(runtime.keys()) ]
+  runtime_y = [ runtime[it] for it in sorted(runtime.keys()) ]
+  runtime_y = np.array(runtime_y)
+  print(runtime)
+
+  fig, ax = plt.subplots(1)
+  ax.plot(x, runtime_y, label="uLambda")
+  ax.plot(x, baseline_y, label="Baseline")
+
+  ax.set_xlabel("Work per invocation (msec)")
+  ax.set_ylabel("Runtime (msec)")
+  ax.legend()
+  ax.set_title("Runtime varying work per invocation")
+  plt.savefig("perf/runtime.pdf")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -92,4 +125,6 @@ if __name__ == "__main__":
   print("baseline:", baseline)
   data = read_data(paths)
   overhead = overhead(baseline, data)
-  plot(baseline, overhead)
+  runtime = runtime(baseline, data)
+  plot_overhead(baseline, overhead)
+  plot_runtime(baseline, runtime)

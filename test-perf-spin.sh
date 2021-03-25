@@ -3,7 +3,7 @@
 # Params
 dim=15
 max_its=100 # Step size = 5
-n_trials=25
+n_trials=50
 baseline_its=10000
 N=1
 
@@ -38,7 +38,7 @@ do
       continue
     fi
    
-    echo "Starting spin test, spinners=$N, iterations=$its"
+    echo "Starting spin test, spinners=$N, iterations=$its, trial=$j"
     echo $dim $its $N > $outfile
     ./bin/perf-spin-test-starter $N $dim $its >> $outfile 2>&1
   done

@@ -14,6 +14,10 @@ import (
 	"ulambda/npsrv"
 )
 
+//
+// XXX convert to use npobjsrv
+//
+
 const MAXSYMLINK = 20
 
 // The connection from the kernel/client

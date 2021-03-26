@@ -139,7 +139,7 @@ func (kv *Kv) makeShardDirs() {
 	for s, kvd := range kv.nextConf.Shards {
 		if kvd == kv.pid && kv.conf.Shards[s] != kv.pid {
 			d := shardPath(kv.pid, s)
-			err := kv.Mkdir(d, 07)
+			err := kv.Mkdir(d, 0777)
 			if err != nil {
 				log.Fatalf("%v: moveShards: mkdir %v err %v\n",
 					kv.me, d, err)

@@ -99,6 +99,10 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) Detach() {
+	db.DLPrintf("9POBJ", "Detach\n")
+}
+
 // XXX avoid duplication with fsclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)

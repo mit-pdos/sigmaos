@@ -41,7 +41,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", p, err)
 	}
-	err = fsl.Symlink(srvaddr+":pubkey", p, 0777)
+	err = fsl.Symlink(srvaddr+":pubkey", p, 0777|np.DMTMP)
 	return err
 }
 

@@ -71,17 +71,17 @@ func TestSymlink(t *testing.T) {
 func TestVersion(t *testing.T) {
 	ts := makeTstate(t)
 
-	fd, err := ts.CreateFile("name/xxx", np.OWRITE)
+	fd, err := ts.CreateFile("name/xxx", np.OWRITE|np.OVERSION)
 	assert.Nil(t, err, "CreateFile")
 	buf := make([]byte, 1000)
-	off, err := ts.WriteV(fd, buf)
+	off, err := ts.Write(fd, buf)
 	assert.Nil(t, err, "Vwrite0")
 	assert.Equal(t, np.Tsize(1000), off)
 	err = ts.Remove("name/xxx")
 	assert.Nil(t, err, "Remove")
-	off, err = ts.WriteV(fd, buf)
+	off, err = ts.Write(fd, buf)
 	assert.Equal(t, err.Error(), "Version mismatch")
-	_, err = ts.ReadV(fd, np.Tsize(1000))
+	_, err = ts.Read(fd, np.Tsize(1000))
 	assert.Equal(t, err.Error(), "Version mismatch")
 
 	ts.s.Shutdown(ts.FsLib)

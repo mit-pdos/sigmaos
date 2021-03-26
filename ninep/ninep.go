@@ -89,14 +89,16 @@ type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
-	OREAD   Tmode = 0    // read-only
-	OWRITE  Tmode = 0x01 // write-only
-	ORDWR   Tmode = 0x02 // read-write
-	OEXEC   Tmode = 0x03 // execute (implies OREAD)
-	OTRUNC  Tmode = 0x10 // or truncate file first
-	OCEXEC  Tmode = 0x20 // or close on exec
-	ORCLOSE Tmode = 0x40 // remove on close
-	OAPPEND Tmode = 0x80 // append
+	OREAD    Tmode = 0    // read-only
+	OWRITE   Tmode = 0x01 // write-only
+	ORDWR    Tmode = 0x02 // read-write
+	OEXEC    Tmode = 0x03 // execute (implies OREAD)
+	OTRUNC   Tmode = 0x10 // or truncate file first
+	OCEXEC   Tmode = 0x20 // or close on exec
+	ORCLOSE  Tmode = 0x40 // remove on close
+	OAPPEND  Tmode = 0x80 // append
+	OVERSION Tmode = 0x83 // ulambda extension hack (overloads OAPPEND|OEXEC)
+
 )
 
 func (m Tmode) String() string {

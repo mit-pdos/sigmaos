@@ -21,6 +21,7 @@ const (
 type FdState struct {
 	offset np.Toffset
 	fid    np.Tfid
+	mode   np.Tmode
 }
 
 type FsClient struct {
@@ -92,7 +93,7 @@ func (fsc *FsClient) freeFid(fid np.Tfid) {
 	fsc.freeFidUnlocked(fid)
 }
 
-func (fsc *FsClient) findfd(nfid np.Tfid) int {
+func (fsc *FsClient) findfd(nfid np.Tfid, m np.Tmode) int {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
 
@@ -100,11 +101,12 @@ func (fsc *FsClient) findfd(nfid np.Tfid) int {
 		if fdst.fid == np.NoFid {
 			fsc.fds[fd].offset = 0
 			fsc.fds[fd].fid = nfid
+			fsc.fds[fd].mode = m
 			return fd
 		}
 	}
 	// no free one
-	fsc.fds = append(fsc.fds, FdState{0, nfid})
+	fsc.fds = append(fsc.fds, FdState{0, nfid, m})
 	return len(fsc.fds) - 1
 }
 
@@ -253,7 +255,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 		return -1, err
 	}
 	fsc.path(fid).add(base, reply.Qid)
-	fd := fsc.findfd(fid)
+	fd := fsc.findfd(fid, mode)
 	return fd, nil
 }
 
@@ -392,18 +394,29 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 		return -1, err
 	}
 	// XXX check reply.Qid?
-	fd := fsc.findfd(fid)
+	fd := fsc.findfd(fid, mode)
 	return fd, nil
 
 }
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
-	fdst, err := fsc.lookupSt(fd)
+	fsc.mu.Lock()
+	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
+		fsc.mu.Unlock()
 		return nil, err
 	}
-	reply, err := fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
+	p := fsc.fids[fdst.fid]
+	version := p.lastqid().Version
+	v := fdst.mode&np.OVERSION == np.OVERSION
+	fsc.mu.Unlock()
+	var reply *np.Rread
+	if v {
+		reply, err = fsc.npch(fdst.fid).ReadV(fdst.fid, fdst.offset, cnt, version)
+	} else {
+		reply, err = fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -421,61 +434,8 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	return reply.Data, err
 }
 
-func (fsc *FsClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
-	db.DLPrintf("FSCLNT", "ReadV %v %v\n", fd, cnt)
-	fsc.mu.Lock()
-	fdst, err := fsc.lookupStL(fd)
-	if err != nil {
-		fsc.mu.Unlock()
-		return nil, err
-	}
-	p := fsc.fids[fdst.fid]
-	version := p.lastqid().Version
-	fsc.mu.Unlock()
-	reply, err := fsc.npch(fdst.fid).ReadV(fdst.fid, fdst.offset, cnt, version)
-	if err != nil {
-		return nil, err
-	}
-
-	// Can't reuse the fdst without looking it up again, since the fdst may
-	// have changed and now point to the wrong location. So instead, try and CAS
-	// the new offset
-	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(len(reply.Data))); !ok; {
-		if err != nil {
-			return nil, err
-		}
-		fdst, _ = fsc.lookupSt(fd)
-	}
-
-	return reply.Data, err
-}
-
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
-	fdst, err := fsc.lookupSt(fd)
-	if err != nil {
-		return 0, err
-	}
-	reply, err := fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
-	if err != nil {
-		return 0, err
-	}
-
-	// Can't reuse the fdst without looking it up again, since the fdst may
-	// have changed and now point to the wrong location. So instead, try and CAS
-	// the new offset
-	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(reply.Count)); !ok; {
-		if err != nil {
-			return 0, err
-		}
-		fdst, _ = fsc.lookupSt(fd)
-	}
-
-	return reply.Count, err
-}
-
-func (fsc *FsClient) WriteV(fd int, data []byte) (np.Tsize, error) {
-	db.DLPrintf("FSCLNT", "WriteV %v %v\n", fd, len(data))
 	fsc.mu.Lock()
 	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
@@ -484,9 +444,15 @@ func (fsc *FsClient) WriteV(fd int, data []byte) (np.Tsize, error) {
 	}
 	p := fsc.fids[fdst.fid]
 	version := p.lastqid().Version
+	v := fdst.mode&np.OVERSION == np.OVERSION
 	fsc.mu.Unlock()
+	var reply *np.Rwrite
+	if v {
+		reply, err = fsc.npch(fdst.fid).WriteV(fdst.fid, fdst.offset, data, version)
+	} else {
+		reply, err = fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
+	}
 
-	reply, err := fsc.npch(fdst.fid).WriteV(fdst.fid, fdst.offset, data, version)
 	if err != nil {
 		return 0, err
 	}

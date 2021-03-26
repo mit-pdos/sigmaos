@@ -35,14 +35,14 @@ func MakeFsLib(uname string) *FsLib {
 	return fl
 }
 
-func (fl *FsLib) readFile(fname string, read func(int, np.Tsize) ([]byte, error)) ([]byte, error) {
-	fd, err := fl.Open(fname, np.OREAD)
+func (fl *FsLib) readFile(fname string, m np.Tmode) ([]byte, error) {
+	fd, err := fl.Open(fname, np.OREAD|m)
 	if err != nil {
 		return nil, err
 	}
 	c := []byte{}
 	for {
-		b, err := read(fd, CHUNKSZ)
+		b, err := fl.Read(fd, CHUNKSZ)
 		if err != nil {
 			return nil, err
 		}
@@ -59,11 +59,11 @@ func (fl *FsLib) readFile(fname string, read func(int, np.Tsize) ([]byte, error)
 }
 
 func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
-	return fl.readFile(fname, fl.Read)
+	return fl.readFile(fname, 0x0)
 }
 
 func (fl *FsLib) Get(fname string) ([]byte, error) {
-	return fl.readFile(fname, fl.ReadV)
+	return fl.readFile(fname, np.OVERSION)
 }
 
 // XXX chunk

@@ -469,3 +469,16 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 
 	return reply.Count, err
 }
+
+// Reuse Tcreate/np.OCEXEC for implementing Exists()
+func (fsc *FsClient) Exists(path string) error {
+	p := np.Split(path)
+	dir := p[0 : len(p)-1]
+	base := p[len(p)-1]
+	fid, err := fsc.walkMany(dir, true)
+	if err != nil {
+		return err
+	}
+	_, err = fsc.npch(fid).Create(fid, base, 0, np.OCEXEC)
+	return err
+}

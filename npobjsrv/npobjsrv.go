@@ -87,12 +87,21 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
 	}
 }
 
+type Watch struct {
+	ch chan bool
+}
+
+func mkWatch() *Watch {
+	return &Watch{make(chan bool)}
+}
+
 type NpConn struct {
 	mu        sync.Mutex // for Fids
 	conn      net.Conn
 	fids      map[np.Tfid]*Fid
 	osrv      NpObjSrv
 	ephemeral map[NpObj]*Fid
+	watches   map[string]*Watch
 }
 
 func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
@@ -101,6 +110,7 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc.osrv = osrv
 	npc.fids = make(map[np.Tfid]*Fid)
 	npc.ephemeral = make(map[NpObj]*Fid)
+	npc.watches = make(map[string]*Watch)
 	return npc
 }
 
@@ -127,6 +137,29 @@ func (npc *NpConn) del(fid np.Tfid) {
 	o := npc.fids[fid].obj
 	delete(npc.fids, fid)
 	delete(npc.ephemeral, o)
+}
+
+func (npc *NpConn) Watch(path []string) {
+	p := np.Join(path)
+	w := mkWatch()
+	npc.mu.Lock()
+	npc.watches[p] = w
+	npc.mu.Unlock()
+	db.DLPrintf("9POBJ", "Watch %v\n", p)
+	<-w.ch
+}
+
+func (npc *NpConn) wakeupWatch(path []string) {
+	p := np.Join(path)
+
+	npc.mu.Lock()
+	w, ok := npc.watches[p]
+	npc.mu.Unlock()
+	if !ok {
+		return
+	}
+	db.DLPrintf("9POBJ", "wakeupWatch %v\n", p)
+	w.ch <- true
 }
 
 func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -226,17 +259,31 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if !f.obj.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
-	o1, err := f.obj.Create(f.ctx, names[0], args.Perm, args.Mode)
-	if err != nil {
-		return &np.Rerror{err.Error()}
+	if args.Mode&np.OCEXEC == np.OCEXEC { // exists?
+		os, _, err := f.obj.Lookup(f.ctx, names)
+		if err != nil {
+			npc.Watch(append(f.path, names[0]))
+		}
+		os, _, err = f.obj.Lookup(f.ctx, names)
+		if err != nil {
+			// XXX maybe removed between wakeup and now
+			db.DLPrintf("9POBJ", "Watch err %v\n", err)
+		}
+		lo := os[len(os)-1]
+		rets.Qid = lo.Qid()
+	} else {
+		o1, err := f.obj.Create(f.ctx, names[0], args.Perm, args.Mode)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		nf := &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx}
+		if args.Perm.IsEphemeral() {
+			npc.ephemeral[o1] = nf
+		}
+		npc.add(args.Fid, nf)
+		rets.Qid = o1.Qid()
+		npc.wakeupWatch(append(f.path, names[0]))
 	}
-	nf := &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx}
-	if args.Perm.IsEphemeral() {
-		npc.ephemeral[o1] = nf
-	}
-
-	npc.add(args.Fid, nf)
-	rets.Qid = o1.Qid()
 	return nil
 }
 

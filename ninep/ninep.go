@@ -98,7 +98,6 @@ const (
 	ORCLOSE  Tmode = 0x40 // remove on close
 	OAPPEND  Tmode = 0x80 // append
 	OVERSION Tmode = 0x83 // ulambda extension hack (overloads OAPPEND|OEXEC)
-
 )
 
 func (m Tmode) String() string {

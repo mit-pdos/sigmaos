@@ -121,6 +121,8 @@ func TestEphemeral(t *testing.T) {
 }
 
 func TestWatch(t *testing.T) {
+	const N = 2
+
 	ts := makeTstate(t)
 	ch := make(chan bool)
 	go func() {
@@ -131,10 +133,24 @@ func TestWatch(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	_, err := ts.CreateFile("name/xxx", np.OWRITE|np.OVERSION)
-	assert.Nil(t, err, "CreateFile")
+	assert.Nil(t, err, "CreateFile xxxx")
 
 	done := <-ch
 	assert.Equal(t, true, done)
 
+	for i := 0; i < N; i++ {
+		go func() {
+			err := ts.Exists("name/yyy")
+			ch <- err == nil
+		}()
+	}
+
+	_, err = ts.CreateFile("name/yyy", np.OWRITE|np.OVERSION)
+	assert.Nil(t, err, "CreateFile yyy")
+
+	for i := 0; i < N; i++ {
+		done := <-ch
+		assert.Equal(t, true, done)
+	}
 	ts.s.Shutdown(ts.FsLib)
 }

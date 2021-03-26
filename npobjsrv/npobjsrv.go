@@ -89,10 +89,11 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
 
 type Watch struct {
 	ch chan bool
+	n  int
 }
 
 func mkWatch() *Watch {
-	return &Watch{make(chan bool)}
+	return &Watch{make(chan bool), 1}
 }
 
 type NpConn struct {
@@ -141,11 +142,16 @@ func (npc *NpConn) del(fid np.Tfid) {
 
 func (npc *NpConn) Watch(path []string) {
 	p := np.Join(path)
-	w := mkWatch()
 	npc.mu.Lock()
-	npc.watches[p] = w
+	w, ok := npc.watches[p]
+	if !ok {
+		w = mkWatch()
+		npc.watches[p] = w
+	} else {
+		w.n += 1
+	}
 	npc.mu.Unlock()
-	db.DLPrintf("9POBJ", "Watch %v\n", p)
+	db.DLPrintf("9POBJ", "Watch %v %v\n", p, w)
 	<-w.ch
 }
 
@@ -159,7 +165,9 @@ func (npc *NpConn) wakeupWatch(path []string) {
 		return
 	}
 	db.DLPrintf("9POBJ", "wakeupWatch %v\n", p)
-	w.ch <- true
+	for i := 0; i < w.n; i++ {
+		w.ch <- true
+	}
 }
 
 func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -180,9 +188,16 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 }
 
 func (npc *NpConn) Detach() {
-	db.DLPrintf("9POBJ", "Detach %v\n", npc.ephemeral)
+	db.DLPrintf("9POBJ", "Detach %v %v\n", npc.ephemeral, npc.watches)
+
+	// Delete ephemeral files created on this connection
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
+	}
+
+	// Cleanup threads waiting for a watch on this connection
+	for p, _ := range npc.watches {
+		npc.wakeupWatch(np.Split(p))
 	}
 }
 
@@ -268,9 +283,11 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		if err != nil {
 			// XXX maybe removed between wakeup and now
 			db.DLPrintf("9POBJ", "Watch err %v\n", err)
+			return &np.Rerror{err.Error()}
+		} else {
+			lo := os[len(os)-1]
+			rets.Qid = lo.Qid()
 		}
-		lo := os[len(os)-1]
-		rets.Qid = lo.Qid()
 	} else {
 		o1, err := f.obj.Create(f.ctx, names[0], args.Perm, args.Mode)
 		if err != nil {

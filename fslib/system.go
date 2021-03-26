@@ -95,6 +95,23 @@ func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 	return nil
 }
 
+func (s *System) Kill(srv string) error {
+	var err error
+	switch srv {
+	case SCHED:
+		if s.schedd != nil {
+			err = s.schedd.Process.Kill()
+			if err == nil {
+				s.schedd = nil
+			} else {
+				log.Fatalf("Schedd kill failed %v\n", err)
+			}
+		}
+	default:
+	}
+	return nil
+}
+
 func (s *System) Shutdown(clnt *FsLib) {
 	if s.schedd != nil {
 		err := clnt.Remove(SCHED + "/")

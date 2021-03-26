@@ -88,10 +88,11 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
 }
 
 type NpConn struct {
-	mu   sync.Mutex // for Fids
-	conn net.Conn
-	fids map[np.Tfid]*Fid
-	osrv NpObjSrv
+	mu        sync.Mutex // for Fids
+	conn      net.Conn
+	fids      map[np.Tfid]*Fid
+	osrv      NpObjSrv
+	ephemeral map[NpObj]*Fid
 }
 
 func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
@@ -99,6 +100,7 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc.conn = conn
 	npc.osrv = osrv
 	npc.fids = make(map[np.Tfid]*Fid)
+	npc.ephemeral = make(map[NpObj]*Fid)
 	return npc
 }
 
@@ -122,7 +124,9 @@ func (npc *NpConn) add(fid np.Tfid, f *Fid) {
 func (npc *NpConn) del(fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
+	o := npc.fids[fid].obj
 	delete(npc.fids, fid)
+	delete(npc.ephemeral, o)
 }
 
 func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -140,6 +144,13 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	npc.add(args.Fid, &Fid{[]string{}, root, 0, ctx})
 	rets.Qid = root.Qid()
 	return nil
+}
+
+func (npc *NpConn) Detach() {
+	db.DLPrintf("9POBJ", "Detach %v\n", npc.ephemeral)
+	for o, f := range npc.ephemeral {
+		o.Remove(f.ctx, f.path[len(f.path)-1])
+	}
 }
 
 func makeQids(os []NpObj) []np.Tqid {
@@ -166,7 +177,6 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		// XXX should o be included?
 		n := len(args.Wnames) - len(rest)
 		p := append(f.path, args.Wnames[:n]...)
 		lo := os[len(os)-1]
@@ -220,8 +230,12 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
+	nf := &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx}
+	if args.Perm.IsEphemeral() {
+		npc.ephemeral[o1] = nf
+	}
 
-	npc.add(args.Fid, &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx})
+	npc.add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
 }

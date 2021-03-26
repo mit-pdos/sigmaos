@@ -44,25 +44,32 @@ const (
 )
 
 func (qt Qtype) String() string {
-	switch qt {
-	case QTDIR:
-		return "d"
-	case QTAPPEND:
-		return "a"
-	case QTEXCL:
-		return "e"
-	case QTMOUNT:
-		return "m"
-	case QTAUTH:
-		return "auth"
-	case QTTMP:
-		return "tmp"
-	case QTSYMLINK:
-		return "s"
-	case QTFILE:
-		return "f"
+	s := ""
+	if qt&QTDIR == QTDIR {
+		s += "d"
 	}
-	return "unknown"
+	if qt&QTAPPEND == QTAPPEND {
+		s += "a"
+	}
+	if qt&QTEXCL == QTEXCL {
+		s += "e"
+	}
+	if qt&QTMOUNT == QTMOUNT {
+		s += "m"
+	}
+	if qt&QTAUTH == QTAUTH {
+		s += "auth"
+	}
+	if qt&QTTMP == QTTMP {
+		s += "t"
+	}
+	if qt&QTSYMLINK == QTSYMLINK {
+		s += "s"
+	}
+	if s == "" {
+		s = "f"
+	}
+	return s
 }
 
 // A Qid is the server's unique identification for the file being
@@ -91,6 +98,10 @@ const (
 	ORCLOSE Tmode = 0x40 // remove on close
 	OAPPEND Tmode = 0x80 // append
 )
+
+func (m Tmode) String() string {
+	return fmt.Sprintf("m %x", uint8(m&0xFF))
+}
 
 // Permissions
 const (
@@ -121,11 +132,17 @@ const (
 	TYPESHIFT  = 16
 )
 
-func (t Tperm) IsDir() bool     { return t&DMDIR == DMDIR }
-func (t Tperm) IsSymlink() bool { return t&DMSYMLINK == DMSYMLINK }
-func (t Tperm) IsDevice() bool  { return t&DMDEVICE == DMDEVICE }
-func (t Tperm) IsPipe() bool    { return t&DMNAMEDPIPE == DMNAMEDPIPE }
-func (t Tperm) IsFile() bool    { return (t >> TYPESHIFT) == 0 }
+func (p Tperm) IsDir() bool       { return p&DMDIR == DMDIR }
+func (p Tperm) IsSymlink() bool   { return p&DMSYMLINK == DMSYMLINK }
+func (p Tperm) IsDevice() bool    { return p&DMDEVICE == DMDEVICE }
+func (p Tperm) IsPipe() bool      { return p&DMNAMEDPIPE == DMNAMEDPIPE }
+func (p Tperm) IsEphemeral() bool { return p&DMTMP == DMTMP }
+func (p Tperm) IsFile() bool      { return (p >> TYPESHIFT) == 0 }
+
+func (p Tperm) String() string {
+	qt := Qtype(p >> QTYPESHIFT)
+	return fmt.Sprintf("qt %v p %x", qt, uint8(p&0xFF))
+}
 
 type Tfcall uint8
 

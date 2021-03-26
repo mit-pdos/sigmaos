@@ -25,7 +25,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 
 		// if todo == 0 and !resolve, don't resolve symlinks, so
 		// that the client can remove a symlink
-		if qid.Type == np.QTSYMLINK && (todo > 0 ||
+		if qid.Type&np.QTSYMLINK == np.QTSYMLINK && (todo > 0 ||
 			(todo == 0 && resolve)) {
 			path, err = fsc.walkSymlink(fid, path, todo)
 			if err != nil {

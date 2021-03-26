@@ -15,10 +15,10 @@ if [[ -z "${NAMED}" ]]; then
 fi
 
 ./bin/named &
-./bin/schedd &
-./bin/nps3d &
+# ./bin/schedd &
+# ./bin/nps3d &
 ./bin/npuxd &
-./bin/locald ./ &
+#   ./bin/locald ./ &
 sleep 1
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system

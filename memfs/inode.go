@@ -72,8 +72,7 @@ func MkRootInode() *Inode {
 }
 
 func (inode *Inode) String() string {
-	str := fmt.Sprintf("Inode %p t 0x%x", inode,
-		inode.permT>>np.TYPESHIFT)
+	str := fmt.Sprintf("Inode %p %v", inode, inode.permT)
 	return str
 }
 
@@ -226,6 +225,7 @@ func (inode *Inode) Lookup(ctx npo.CtxI, path []string) ([]npo.NpObj, []string, 
 }
 
 func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
+	db.DLPrintf("MEMFS", "Remove: %v\n", n)
 	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}

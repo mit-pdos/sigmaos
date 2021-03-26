@@ -1,6 +1,8 @@
 package fslib
 
 import (
+	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -81,6 +83,39 @@ func TestVersion(t *testing.T) {
 	assert.Equal(t, err.Error(), "Version mismatch")
 	_, err = ts.ReadV(fd, np.Tsize(1000))
 	assert.Equal(t, err.Error(), "Version mismatch")
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestEphemeral(t *testing.T) {
+	ts := makeTstate(t)
+
+	var err error
+	ts.s.schedd, err = run("..", "/bin/schedd", nil)
+	assert.Nil(t, err, "bin/schedd")
+	time.Sleep(100 * time.Millisecond)
+
+	b, err := ts.ReadFile(SCHED)
+	assert.Nil(t, err, SCHED)
+	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+
+	sts, err := ts.ReadDir(SCHED + "/")
+	assert.Nil(t, err, SCHED+"/")
+	assert.Equal(t, 0, len(sts))
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.s.Kill(SCHED)
+
+	time.Sleep(100 * time.Millisecond)
+
+	_, err = ts.ReadFile(SCHED)
+	assert.NotEqual(t, nil, err)
+	if err != nil {
+		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+	}
+
+	log.Printf("Shutdown\n")
 
 	ts.s.Shutdown(ts.FsLib)
 }

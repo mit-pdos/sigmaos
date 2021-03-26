@@ -353,6 +353,7 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 
 // XXX clone fid?
 func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
+	db.DLPrintf("FSCLNT", "ReadLink %v\n", fid)
 	_, err := fsc.npch(fid).Open(fid, np.OREAD)
 	if err != nil {
 		return "", err
@@ -371,6 +372,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	for {
 		p := np.Split(path)
 		f, err := fsc.walkMany(p, np.EndSlash(path))
+		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", path, f, err)
 		if err == io.EOF {
 			fid2, e := fsc.mount.umount(p)
 			if e != nil {
@@ -415,7 +417,7 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 		}
 		fdst, _ = fsc.lookupSt(fd)
 	}
-
+	db.DLPrintf("FSCLNT", "Read -> %v %v\n", reply, err)
 	return reply.Data, err
 }
 

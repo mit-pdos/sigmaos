@@ -120,13 +120,13 @@ func (c *Channel) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
+			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", c.Src(), err)
 			if err == io.EOF {
 				c.close()
 			}
 			return
 		}
 		fcall := &np.Fcall{}
-		// log.Print("Tframe ", len(frame), frame)
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
@@ -140,6 +140,7 @@ func (c *Channel) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.closed = true
 	close(c.replies)
+	c.np.Detach()
 }
 
 func (c *Channel) serve(fc *np.Fcall) {

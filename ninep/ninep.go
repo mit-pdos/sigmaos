@@ -90,7 +90,6 @@ const (
 	OCEXEC  Tmode = 0x20 // or close on exec
 	ORCLOSE Tmode = 0x40 // remove on close
 	OAPPEND Tmode = 0x80 // append
-	OATOMIC Tmode = 0x83 // ulambda extension hack (overloads OAPPEND|OEXEC)
 )
 
 // Permissions

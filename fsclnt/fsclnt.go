@@ -396,6 +396,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 }
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
+	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
 	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
 		return nil, err
@@ -419,6 +420,7 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 }
 
 func (fsc *FsClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
+	db.DLPrintf("FSCLNT", "ReadV %v %v\n", fd, cnt)
 	fsc.mu.Lock()
 	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
@@ -447,6 +449,7 @@ func (fsc *FsClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
 }
 
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
+	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
 	fdst, err := fsc.lookupSt(fd)
 	if err != nil {
 		return 0, err
@@ -470,6 +473,7 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 }
 
 func (fsc *FsClient) WriteV(fd int, data []byte) (np.Tsize, error) {
+	db.DLPrintf("FSCLNT", "WriteV %v %v\n", fd, len(data))
 	fsc.mu.Lock()
 	fdst, err := fsc.lookupStL(fd)
 	if err != nil {

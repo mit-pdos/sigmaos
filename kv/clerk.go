@@ -2,12 +2,12 @@ package kv
 
 import (
 	"crypto/rand"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -28,7 +28,7 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	*fslib.FsLib
+	fsl   *fslib.FsLib
 	conf  Config
 	uname string
 }
@@ -36,17 +36,15 @@ type KvClerk struct {
 func MakeClerk() (*KvClerk, error) {
 	kc := &KvClerk{}
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
-	kc.FsLib = fslib.MakeFsLib(kc.uname)
+	db.Name(kc.uname)
+	kc.fsl = fslib.MakeFsLib(kc.uname)
 	err := kc.readConfig()
 	return kc, err
 }
 
 func (kc *KvClerk) readConfig() error {
-	err := kc.ReadFileJson(KVCONFIG, &kc.conf)
-	if err != nil {
-		log.Printf("readConfig error %v\n", err)
-	}
-	log.Printf("%v: read config %v\n", kc.uname, kc.conf)
+	err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
+	db.DLPrintf("CLERK", "Read config %v %v\n", kc.conf, err)
 	return err
 }
 
@@ -69,14 +67,15 @@ func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
 		n := kc.keyPath(shard, k)
-		err := kc.MakeFile(n, []byte(v))
+		err := kc.fsl.MakeFile(n, []byte(v))
 		if err == nil {
 			return err
 		}
-		// log.Printf("%v: Put: MakeFile: %v %v\n", kc.uname, n, err)
+		db.DLPrintf("CLERK", "Put: %v %v\n", n, err)
 		kv := error2kv(err.Error())
 		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" ||
-			kv == kc.conf.Shards[shard] {
+			kv == kc.conf.Shards[shard] ||
+			err.Error() == "Version mismatch" {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {
 			time.Sleep(100 * time.Millisecond)
@@ -90,14 +89,15 @@ func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
 		n := kc.keyPath(shard, k)
-		b, err := kc.ReadFile(n)
+		b, err := kc.fsl.Get(n)
 		if err == nil {
 			return string(b), err
 		}
+		db.DLPrintf("CLERK", "Get: %v %v\n", n, err)
 		kv := error2kv(err.Error())
-		// XXX als check for Fid version mismatch
 		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" ||
-			kv == kc.conf.Shards[shard] {
+			kv == kc.conf.Shards[shard] ||
+			err.Error() == "Version mismatch" {
 			kc.readConfig()
 		} else if err.Error() == ErrRetry.Error() {
 			time.Sleep(100 * time.Millisecond)

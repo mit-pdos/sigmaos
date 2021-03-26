@@ -275,6 +275,7 @@ func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte) (np.
 	db.DLPrintf("MEMFS", "inode.Write %v", inode)
 	var sz np.Tsize
 	var err error
+	inode.version += 1
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
 		sz, err = d.Write(offset, data)

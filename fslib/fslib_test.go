@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	db "ulambda/debug"
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
 )
@@ -21,9 +23,11 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
+	db.Name("fslib_test")
 	ts.FsLib = MakeFsLib("fslibtest")
 	ts.s = s
 	ts.t = t
+
 	return ts
 }
 

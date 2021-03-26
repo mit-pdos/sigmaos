@@ -35,14 +35,14 @@ func MakeFsLib(uname string) *FsLib {
 	return fl
 }
 
-func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
+func (fl *FsLib) readFile(fname string, read func(int, np.Tsize) ([]byte, error)) ([]byte, error) {
 	fd, err := fl.Open(fname, np.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	c := []byte{}
 	for {
-		b, err := fl.Read(fd, CHUNKSZ)
+		b, err := read(fd, CHUNKSZ)
 		if err != nil {
 			return nil, err
 		}
@@ -58,25 +58,16 @@ func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
 	return c, nil
 }
 
-// XXX chunk
-func (fl *FsLib) WriteFile(fname string, data []byte) error {
-	fd, err := fl.Open(fname, np.OWRITE)
-	if err != nil {
-		return err
-	}
-	_, err = fl.Write(fd, data)
-	if err != nil {
-		return err
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		return err
-	}
-	return nil
+func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
+	return fl.readFile(fname, fl.Read)
+}
+
+func (fl *FsLib) Get(fname string) ([]byte, error) {
+	return fl.readFile(fname, fl.ReadV)
 }
 
 // XXX chunk
-func (fl *FsLib) WriteFileAtomic(fname string, data []byte) error {
+func (fl *FsLib) WriteFile(fname string, data []byte) error {
 	fd, err := fl.Open(fname, np.OWRITE)
 	if err != nil {
 		return err

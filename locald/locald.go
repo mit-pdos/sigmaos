@@ -23,11 +23,12 @@ type LocalD struct {
 	bin  string
 	nid  uint64
 	root *Obj
+	done bool
 	ip   string
 	ls   map[string]*Lambda
 	srv  *npsrv.NpServer
 	*fslib.FsLib
-	ch chan bool
+	group sync.WaitGroup
 }
 
 func MakeLocalD(bin string) *LocalD {
@@ -40,7 +41,6 @@ func MakeLocalD(bin string) *LocalD {
 	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
-	ld.ch = make(chan bool)
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
 	if err != nil {
@@ -57,18 +57,17 @@ func MakeLocalD(bin string) *LocalD {
 	return ld
 }
 
-func (ld *LocalD) spawn(a []byte) error {
+func (ld *LocalD) spawn(a []byte) (*Lambda, error) {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 	l := &Lambda{}
 	l.ld = ld
 	err := l.init(a)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	ld.ls[l.Pid] = l
-	l.run()
-	return nil
+	return l, nil
 }
 
 func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
@@ -76,13 +75,50 @@ func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (ld *LocalD) Done() {
-	ld.ch <- true
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+
+	ld.done = true
+}
+
+func (ld *LocalD) readDone() bool {
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+	return ld.done
 }
 
 func (ld *LocalD) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return ld.root, nil
 }
 
+// Worker runs one lambda at a time
+func (ld *LocalD) Worker() {
+	// XXX pin to a core
+	for !ld.readDone() {
+		b, err := ld.GetLambda()
+		if err != nil && (err.Error() == "EOF" || err.Error() == "Unknown file") {
+			db.DLPrintf("LOCALD", "EOF on GetLambda %v\n", b)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Locald GetLambda error %v, %v\n", err, b)
+		}
+		// XXX return err from spawn
+		l, err := ld.spawn(b)
+		if err != nil {
+			log.Fatalf("Locald spawn error %v\n", err)
+		}
+		l.run()
+	}
+	ld.group.Done()
+}
+
 func (ld *LocalD) Work() {
-	<-ld.ch
+	NCores := uint(1)
+	for i := uint(0); i < NCores; i++ {
+		ld.group.Add(1)
+		go ld.Worker()
+	}
+	ld.group.Wait()
+
 }

@@ -2,6 +2,8 @@ package schedd
 
 import (
 	//	"github.com/sasha-s/go-deadlock"
+	"encoding/json"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -19,7 +21,6 @@ import (
 // XXX monitor, boost
 
 const (
-	MAXLOAD           = 100 // XXX bogus, controls parallelism
 	NO_OP_LAMBDA      = "no-op-lambda"
 	LOCALD_UNASSIGNED = "locald-unassigned"
 )
@@ -32,6 +33,8 @@ type Sched struct {
 	nid  uint64
 	ls   map[string]*Lambda
 	root *Obj
+	runq *Obj
+	ch   chan bool
 	done bool
 	srv  *npsrv.NpServer
 	*fslib.FsLib
@@ -41,9 +44,11 @@ func MakeSchedd() *Sched {
 	sd := &Sched{}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.load = 0
-	sd.nid = 0
+	sd.nid = 1 // 1 is runq
 	sd.ls = make(map[string]*Lambda)
 	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
+	sd.runq = sd.MakeObj([]string{"runq"}, 0, sd.root).(*Obj)
+	sd.ch = make(chan bool)
 	sd.root.time = time.Now().Unix()
 	db.Name("schedd")
 
@@ -67,10 +72,14 @@ func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
 
 func (sd *Sched) Done() {
 	sd.mu.Lock()
-	defer sd.mu.Unlock()
-
 	sd.done = true
-	sd.cond.Signal()
+	sd.mu.Unlock()
+	sd.ch <- true
+	sd.cond.Broadcast()
+}
+
+func (sd *Sched) Work() {
+	<-sd.ch
 }
 
 func (sd *Sched) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
@@ -170,25 +179,37 @@ func (sd *Sched) selectLocaldIp() (string, error) {
 	return ips[n].Name, nil
 }
 
-func (sd *Sched) Scheduler() {
+func (sd *Sched) findRunnableLambda() ([]byte, error) {
+	db.DLPrintf("SCHEDD", "findRunnableLambda called\n")
 	sd.mu.Lock()
+	defer sd.mu.Unlock()
 	for !sd.done {
+		db.DLPrintf("SCHEDD", "findRunnableLambda looking for one %v\n", sd)
 		l := sd.findRunnableWaitingConsumer()
 		if l != nil {
-			// XXX don't count starting a consumer against load
-			l.run()
-			sd.load += 1
+			l.changeStatus("Started")
+			if l.Program == NO_OP_LAMBDA {
+				go l.writeExitStatus("OK")
+				continue
+			} else {
+				db.DLPrintf("SCHEDD", "findRunnableLambda marshalling %v\n", l.Attr())
+				return json.Marshal(*l.Attr())
+			}
 		} else {
-			if sd.load < MAXLOAD {
-				l = sd.findRunnable()
-				if l != nil {
-					l.run()
-					sd.load += 1
+			l = sd.findRunnable()
+			if l != nil {
+				l.changeStatus("Started")
+				if l.Program == NO_OP_LAMBDA {
+					go l.writeExitStatus("OK")
+					continue
+				} else {
+					db.DLPrintf("SCHEDD", "findRunnableLambda marshalling %v\n", l.Attr())
+					return json.Marshal(*l.Attr())
 				}
 			}
-			if l == nil || sd.load >= MAXLOAD {
-				sd.cond.Wait()
-			}
+			db.DLPrintf("SCHEDD", "findRunnableLambda going to sleep %v\n", sd)
+			sd.cond.Wait()
 		}
 	}
+	return []byte{}, io.EOF
 }

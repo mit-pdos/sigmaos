@@ -50,6 +50,10 @@ func (o *Obj) Qid() np.Tqid {
 		return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 			np.TQversion(0), np.Tpath(0))
 	case 1, 2:
+		if o.name[0] == "runq" {
+			return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
+				np.TQversion(0), np.Tpath(1))
+		}
 		return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
 			np.TQversion(0), np.Tpath(o.l.uid))
 	default:
@@ -84,6 +88,9 @@ func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 	var os []npo.NpObj
 	switch len(o.name) {
 	case 0:
+		if len(p) == 1 && p[0] == "runq" {
+			return []npo.NpObj{o.sd.runq}, nil, nil
+		}
 		l := o.sd.findLambda(p[0])
 		if l == nil {
 			return nil, nil, fmt.Errorf("not found")
@@ -167,6 +174,14 @@ func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 
 func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("SCHEDD", "%v: ReadFile: %v %v\n", o, off, cnt)
+	if len(o.name) == 1 {
+		if off != 0 {
+			return nil, nil
+		}
+		b, err := o.sd.findRunnableLambda()
+		db.DLPrintf("SCHEDD", "%v: ReadFile runnableLambda: %v %v\n", o, b, err)
+		return b, err
+	}
 	if len(o.name) != 2 {
 		log.Fatalf("ReadFile: name != 2 %v\n", o)
 	}

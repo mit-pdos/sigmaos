@@ -6,5 +6,5 @@ import (
 
 func main() {
 	ld := schedd.MakeSchedd()
-	ld.Scheduler()
+	ld.Work()
 }

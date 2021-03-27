@@ -104,6 +104,10 @@ func (l *Lambda) String() string {
 	return str
 }
 
+func (l *Lambda) Attr() *fslib.Attr {
+	return l.attr
+}
+
 func (l *Lambda) writeExitStatus(status string) {
 	// Always take the sd lock before the l lock
 	l.sd.mu.Lock()

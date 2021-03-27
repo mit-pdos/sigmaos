@@ -14,8 +14,11 @@ type NpAPI interface {
 	Open(np.Topen, *np.Ropen) *np.Rerror
 	Clunk(np.Tclunk, *np.Rclunk) *np.Rerror
 	Read(np.Tread, *np.Rread) *np.Rerror
+	ReadV(np.Treadv, *np.Rread) *np.Rerror
 	Write(np.Twrite, *np.Rwrite) *np.Rerror
+	WriteV(np.Twritev, *np.Rwrite) *np.Rerror
 	Remove(np.Tremove, *np.Rremove) *np.Rerror
 	Stat(np.Tstat, *np.Rstat) *np.Rerror
 	Wstat(np.Twstat, *np.Rwstat) *np.Rerror
+	Detach()
 }

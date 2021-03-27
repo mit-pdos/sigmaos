@@ -45,8 +45,10 @@ func mkChan(addr string) (*Chan, error) {
 	db.DLPrintf("9PCHAN", "mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
+		db.DLPrintf("9PCHAN", "mkChan to %v err %v\n", addr, err)
 		return nil, err
 	}
+	db.DLPrintf("9PCHAN", "mkChan to %v from %v\n", addr, c.LocalAddr())
 	ch := &Chan{}
 	ch.conn = c
 	ch.br = bufio.NewReaderSize(c, Msglen)
@@ -104,8 +106,10 @@ func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	ch.requests <- rpc
 	reply, ok := <-rpc.replych
 	if !ok {
+		db.DLPrintf("9PCHAN", "Error reply ch closed %v\n", ch.Dst())
 		return nil, io.EOF
 	}
+	db.DLPrintf("9PCHAN", "RPC reply %v %v\n", reply.fc, reply.err)
 	return reply.fc, reply.err
 }
 

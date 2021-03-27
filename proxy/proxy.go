@@ -14,6 +14,10 @@ import (
 	"ulambda/npsrv"
 )
 
+//
+// XXX convert to use npobjsrv
+//
+
 const MAXSYMLINK = 20
 
 // The connection from the kernel/client
@@ -99,6 +103,10 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) Detach() {
+	db.DLPrintf("9POBJ", "Detach\n")
+}
+
 // XXX avoid duplication with fsclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)
@@ -131,7 +139,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	for i := 0; i < MAXSYMLINK; i++ {
 		reply, err := npc.npch(args.Fid).Walk(args.Fid, args.NewFid, path)
 		if err != nil {
-			return &np.Rerror{err.Error()}
+			return np.ErrNotfound
 		}
 		if len(reply.Qids) == 0 { // clone args.Fid?
 			npc.addch(args.NewFid, npc.npch(args.Fid))
@@ -139,7 +147,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 			break
 		}
 		qid := reply.Qids[len(reply.Qids)-1]
-		if qid.Type == np.QTSYMLINK {
+		if qid.Type&np.QTSYMLINK == np.QTSYMLINK {
 			todo := len(path) - len(reply.Qids)
 			db.DPrintf("symlink %v %v\n", todo, path)
 
@@ -214,12 +222,20 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
+	return nil
+}
+
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Write(args.Fid, args.Offset, args.Data)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
 	*rets = *reply
+	return nil
+}
+
+func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 

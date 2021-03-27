@@ -95,18 +95,35 @@ func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 	return nil
 }
 
+func (s *System) Kill(srv string) error {
+	var err error
+	switch srv {
+	case SCHED:
+		if s.schedd != nil {
+			err = s.schedd.Process.Kill()
+			if err == nil {
+				s.schedd = nil
+			} else {
+				log.Fatalf("Schedd kill failed %v\n", err)
+			}
+		}
+	default:
+	}
+	return nil
+}
+
 func (s *System) Shutdown(clnt *FsLib) {
 	if s.schedd != nil {
 		err := clnt.Remove(SCHED + "/")
 		if err != nil {
-			log.Fatalf("Schedd shutdown %v\n", err)
+			log.Printf("Schedd shutdown %v\n", err)
 		}
 		s.schedd.Wait()
 	}
 	if s.nps3d != nil {
 		err := s.RmUnionDir(clnt, "name/s3")
 		if err != nil {
-			log.Fatalf("S3 shutdown %v\n", err)
+			log.Printf("S3 shutdown %v\n", err)
 		}
 		s.nps3d.Wait()
 
@@ -114,14 +131,14 @@ func (s *System) Shutdown(clnt *FsLib) {
 	if s.npuxd != nil {
 		err := s.RmUnionDir(clnt, "name/ux")
 		if err != nil {
-			log.Fatalf("Ux shutdown %v\n", err)
+			log.Printf("Ux shutdown %v\n", err)
 		}
 		s.npuxd.Wait()
 	}
 	if s.locald != nil {
 		err := s.RmUnionDir(clnt, LOCALD_ROOT)
 		if err != nil {
-			log.Fatalf("Localds shutdown %v\n", err)
+			log.Printf("Localds shutdown %v\n", err)
 		}
 		s.locald.Wait()
 	}

@@ -44,25 +44,32 @@ const (
 )
 
 func (qt Qtype) String() string {
-	switch qt {
-	case QTDIR:
-		return "d"
-	case QTAPPEND:
-		return "a"
-	case QTEXCL:
-		return "e"
-	case QTMOUNT:
-		return "m"
-	case QTAUTH:
-		return "auth"
-	case QTTMP:
-		return "tmp"
-	case QTSYMLINK:
-		return "s"
-	case QTFILE:
-		return "f"
+	s := ""
+	if qt&QTDIR == QTDIR {
+		s += "d"
 	}
-	return "unknown"
+	if qt&QTAPPEND == QTAPPEND {
+		s += "a"
+	}
+	if qt&QTEXCL == QTEXCL {
+		s += "e"
+	}
+	if qt&QTMOUNT == QTMOUNT {
+		s += "m"
+	}
+	if qt&QTAUTH == QTAUTH {
+		s += "auth"
+	}
+	if qt&QTTMP == QTTMP {
+		s += "t"
+	}
+	if qt&QTSYMLINK == QTSYMLINK {
+		s += "s"
+	}
+	if s == "" {
+		s = "f"
+	}
+	return s
 }
 
 // A Qid is the server's unique identification for the file being
@@ -82,15 +89,20 @@ type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
-	OREAD   Tmode = 0    // read-only
-	OWRITE  Tmode = 0x01 // write-only
-	ORDWR   Tmode = 0x02 // read-write
-	OEXEC   Tmode = 0x03 // execute (implies OREAD)
-	OTRUNC  Tmode = 0x10 // or truncate file first
-	OCEXEC  Tmode = 0x20 // or close on exec
-	ORCLOSE Tmode = 0x40 // remove on close
-	OAPPEND Tmode = 0x80 // append
+	OREAD    Tmode = 0    // read-only
+	OWRITE   Tmode = 0x01 // write-only
+	ORDWR    Tmode = 0x02 // read-write
+	OEXEC    Tmode = 0x03 // execute (implies OREAD)
+	OTRUNC   Tmode = 0x10 // or truncate file first
+	OCEXEC   Tmode = 0x20 // or close on exec
+	ORCLOSE  Tmode = 0x40 // remove on close
+	OAPPEND  Tmode = 0x80 // append
+	OVERSION Tmode = 0x83 // ulambda extension hack (overloads OAPPEND|OEXEC)
 )
+
+func (m Tmode) String() string {
+	return fmt.Sprintf("m %x", uint8(m&0xFF))
+}
 
 // Permissions
 const (
@@ -121,11 +133,17 @@ const (
 	TYPESHIFT  = 16
 )
 
-func (t Tperm) IsDir() bool     { return t&DMDIR == DMDIR }
-func (t Tperm) IsSymlink() bool { return t&DMSYMLINK == DMSYMLINK }
-func (t Tperm) IsDevice() bool  { return t&DMDEVICE == DMDEVICE }
-func (t Tperm) IsPipe() bool    { return t&DMNAMEDPIPE == DMNAMEDPIPE }
-func (t Tperm) IsFile() bool    { return (t >> TYPESHIFT) == 0 }
+func (p Tperm) IsDir() bool       { return p&DMDIR == DMDIR }
+func (p Tperm) IsSymlink() bool   { return p&DMSYMLINK == DMSYMLINK }
+func (p Tperm) IsDevice() bool    { return p&DMDEVICE == DMDEVICE }
+func (p Tperm) IsPipe() bool      { return p&DMNAMEDPIPE == DMNAMEDPIPE }
+func (p Tperm) IsEphemeral() bool { return p&DMTMP == DMTMP }
+func (p Tperm) IsFile() bool      { return (p >> TYPESHIFT) == 0 }
+
+func (p Tperm) String() string {
+	qt := Qtype(p >> QTYPESHIFT)
+	return fmt.Sprintf("qt %v p %x", qt, uint8(p&0xFF))
+}
 
 type Tfcall uint8
 
@@ -158,9 +176,8 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
-	// ulambda specific
-	TTmkpipe
-	TRmkpipe
+	TTreadv
+	TTwritev
 )
 
 func (fct Tfcall) String() string {
@@ -221,10 +238,10 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
-	case TTmkpipe:
-		return "Tmkpipe"
-	case TRmkpipe:
-		return "Rmkpipe"
+	case TTreadv:
+		return "Treadv"
+	case TTwritev:
+		return "Twritev"
 	default:
 		return "Tunknown"
 	}
@@ -320,6 +337,13 @@ type Tread struct {
 	Count  Tsize
 }
 
+type Treadv struct {
+	Fid     Tfid
+	Offset  Toffset
+	Count   Tsize
+	Version TQversion
+}
+
 type Rread struct {
 	Data []byte
 }
@@ -328,6 +352,13 @@ type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
 	Data   []byte
+}
+
+type Twritev struct {
+	Fid     Tfid
+	Offset  Toffset
+	Data    []byte
+	Version TQversion
 }
 
 func (tw Twrite) String() string {
@@ -405,8 +436,10 @@ func (Ropen) Type() Tfcall    { return TRopen }
 func (Tcreate) Type() Tfcall  { return TTcreate }
 func (Rcreate) Type() Tfcall  { return TRcreate }
 func (Tread) Type() Tfcall    { return TTread }
+func (Treadv) Type() Tfcall   { return TTreadv }
 func (Rread) Type() Tfcall    { return TRread }
 func (Twrite) Type() Tfcall   { return TTwrite }
+func (Twritev) Type() Tfcall  { return TTwritev }
 func (Rwrite) Type() Tfcall   { return TRwrite }
 func (Tclunk) Type() Tfcall   { return TTclunk }
 func (Rclunk) Type() Tfcall   { return TRclunk }

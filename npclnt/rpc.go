@@ -164,8 +164,34 @@ func (npch *NpChan) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rrea
 	return &msg, err
 }
 
+func (npch *NpChan) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, version np.TQversion) (*np.Rread, error) {
+	args := np.Treadv{fid, offset, cnt, version}
+	reply, err := npch.call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rread)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
 func (npch *NpChan) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwrite, error) {
 	args := np.Twrite{fid, offset, data}
+	reply, err := npch.call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rwrite)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (npch *NpChan) WriteV(fid np.Tfid, offset np.Toffset, data []byte, version np.TQversion) (*np.Rwrite, error) {
+	args := np.Twritev{fid, offset, data, version}
 	reply, err := npch.call(args)
 	if err != nil {
 		return nil, err

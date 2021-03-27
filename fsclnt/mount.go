@@ -3,6 +3,7 @@ package fsclnt
 import (
 	"fmt"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -62,6 +63,7 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 }
 
 func (mnt *Mount) umount(path []string) (np.Tfid, error) {
+	db.DLPrintf("FSCLNT", "Umount %v\n", path)
 	for i, p := range mnt.mounts {
 		ok, _ := match(p.path, path)
 		if ok {

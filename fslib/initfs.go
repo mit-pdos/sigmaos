@@ -7,6 +7,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/memfs"
 	"ulambda/memfsd"
+	np "ulambda/ninep"
 )
 
 type FsLibSrv struct {
@@ -19,7 +20,7 @@ func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", srvname, err)
 	}
-	err = fsl.Symlink(srvaddr+":pubkey", srvname, 0777)
+	err = fsl.Symlink(srvaddr+":pubkey", srvname, 0777|np.DMTMP)
 	return err
 }
 
@@ -40,7 +41,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", p, err)
 	}
-	err = fsl.Symlink(srvaddr+":pubkey", p, 0777)
+	err = fsl.Symlink(srvaddr+":pubkey", p, 0777|np.DMTMP)
 	return err
 }
 

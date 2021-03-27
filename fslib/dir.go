@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -20,6 +21,7 @@ func (fl *FsLib) Mkdir(path string, perm np.Tperm) error {
 
 func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 	data, err := fl.Read(fd, n)
+	db.DLPrintf("FSLIB", "Readdir: read -> %d %v\n", len(data), err)
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +66,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
 	dirents := []*np.Stat{}
 	for {
 		dents, err := fl.Readdir(fd, CHUNKSZ)
+		db.DLPrintf("FSLIB", "readdir: %v %v\n", dents, err)
 		if err == io.EOF {
 			break
 		}

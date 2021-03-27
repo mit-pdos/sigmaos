@@ -3,7 +3,7 @@ package npclnt
 import (
 	"sync"
 
-	// db "ulambda/debug"
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -53,6 +53,7 @@ func (cm *ChanMgr) Close(addr string) {
 
 	conn, ok := cm.conns[addr]
 	if ok {
+		db.DLPrintf("9PCHAN", "Close connection to %v\n", addr)
 		conn.Close()
 		delete(cm.conns, addr)
 	}

@@ -21,6 +21,7 @@ const (
 type FdState struct {
 	offset np.Toffset
 	fid    np.Tfid
+	mode   np.Tmode
 }
 
 type FsClient struct {
@@ -92,7 +93,7 @@ func (fsc *FsClient) freeFid(fid np.Tfid) {
 	fsc.freeFidUnlocked(fid)
 }
 
-func (fsc *FsClient) findfd(nfid np.Tfid) int {
+func (fsc *FsClient) findfd(nfid np.Tfid, m np.Tmode) int {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
 
@@ -100,11 +101,12 @@ func (fsc *FsClient) findfd(nfid np.Tfid) int {
 		if fdst.fid == np.NoFid {
 			fsc.fds[fd].offset = 0
 			fsc.fds[fd].fid = nfid
+			fsc.fds[fd].mode = m
 			return fd
 		}
 	}
 	// no free one
-	fsc.fds = append(fsc.fds, FdState{0, nfid})
+	fsc.fds = append(fsc.fds, FdState{0, nfid, m})
 	return len(fsc.fds) - 1
 }
 
@@ -135,9 +137,7 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 	return fsc.fds[fd].fid, nil
 }
 
-func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+func (fsc *FsClient) lookupStL(fd int) (*FdState, error) {
 
 	if fd < 0 || fd >= len(fsc.fds) {
 		return nil, fmt.Errorf("Too big fd %v", fd)
@@ -146,6 +146,12 @@ func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
 		return nil, fmt.Errorf("Non-existing fd %v", fd)
 	}
 	return &fsc.fds[fd], nil
+}
+
+func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+	return fsc.lookupStL(fd)
 }
 
 // Wrote this in the CAS style, unsure if it's overkill
@@ -249,27 +255,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 		return -1, err
 	}
 	fsc.path(fid).add(base, reply.Qid)
-	fd := fsc.findfd(fid)
-	return fd, nil
-}
-
-// XXX reduce duplicattion with Create
-func (fsc *FsClient) CreateAt(dfd int, name string, perm np.Tperm, mode np.Tmode) (int, error) {
-	db.DLPrintf("FSCLNT", "CreateAt %v at %v\n", name, dfd)
-	fid, err := fsc.lookup(dfd)
-	if err != nil {
-		return -1, err
-	}
-	fid1, err := fsc.clone(fid)
-	if err != nil {
-		return -1, err
-	}
-	reply, err := fsc.npch(fid1).Create(fid1, name, perm, mode)
-	if err != nil {
-		return -1, err
-	}
-	fsc.path(fid1).add(name, reply.Qid)
-	fd := fsc.findfd(fid1)
+	fd := fsc.findfd(fid, mode)
 	return fd, nil
 }
 
@@ -369,6 +355,7 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 
 // XXX clone fid?
 func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
+	db.DLPrintf("FSCLNT", "ReadLink %v\n", fid)
 	_, err := fsc.npch(fid).Open(fid, np.OREAD)
 	if err != nil {
 		return "", err
@@ -387,6 +374,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	for {
 		p := np.Split(path)
 		f, err := fsc.walkMany(p, np.EndSlash(path))
+		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", path, f, err)
 		if err == io.EOF {
 			fid2, e := fsc.mount.umount(p)
 			if e != nil {
@@ -406,17 +394,29 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 		return -1, err
 	}
 	// XXX check reply.Qid?
-	fd := fsc.findfd(fid)
+	fd := fsc.findfd(fid, mode)
 	return fd, nil
 
 }
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
-	fdst, err := fsc.lookupSt(fd)
+	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
+	fsc.mu.Lock()
+	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
+		fsc.mu.Unlock()
 		return nil, err
 	}
-	reply, err := fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
+	p := fsc.fids[fdst.fid]
+	version := p.lastqid().Version
+	v := fdst.mode&np.OVERSION == np.OVERSION
+	fsc.mu.Unlock()
+	var reply *np.Rread
+	if v {
+		reply, err = fsc.npch(fdst.fid).ReadV(fdst.fid, fdst.offset, cnt, version)
+	} else {
+		reply, err = fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -430,16 +430,29 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 		}
 		fdst, _ = fsc.lookupSt(fd)
 	}
-
+	db.DLPrintf("FSCLNT", "Read -> %v %v\n", reply, err)
 	return reply.Data, err
 }
 
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
-	fdst, err := fsc.lookupSt(fd)
+	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
+	fsc.mu.Lock()
+	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
+		fsc.mu.Unlock()
 		return 0, err
 	}
-	reply, err := fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
+	p := fsc.fids[fdst.fid]
+	version := p.lastqid().Version
+	v := fdst.mode&np.OVERSION == np.OVERSION
+	fsc.mu.Unlock()
+	var reply *np.Rwrite
+	if v {
+		reply, err = fsc.npch(fdst.fid).WriteV(fdst.fid, fdst.offset, data, version)
+	} else {
+		reply, err = fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
+	}
+
 	if err != nil {
 		return 0, err
 	}
@@ -455,4 +468,17 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	}
 
 	return reply.Count, err
+}
+
+// Reuse Tcreate/np.OCEXEC for implementing Exists()
+func (fsc *FsClient) Exists(path string) error {
+	p := np.Split(path)
+	dir := p[0 : len(p)-1]
+	base := p[len(p)-1]
+	fid, err := fsc.walkMany(dir, true)
+	if err != nil {
+		return err
+	}
+	_, err = fsc.npch(fid).Create(fid, base, 0, np.OCEXEC)
+	return err
 }

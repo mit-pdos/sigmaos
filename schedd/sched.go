@@ -186,6 +186,7 @@ func (sd *Sched) selectLocaldIp() (string, error) {
 }
 
 func (sd *Sched) findRunnableLambda() ([]byte, error) {
+	db.DLPrintf("SCHEDD", "findRunnableLambda called\n")
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
 	for !sd.done {

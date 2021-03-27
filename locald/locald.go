@@ -75,6 +75,7 @@ func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (ld *LocalD) Done() {
+	log.Printf("LOCALD DONE CALL\n")
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
@@ -122,6 +123,7 @@ func (ld *LocalD) Worker() {
 }
 
 func (ld *LocalD) Work() {
+	NCores := uint(1)
 	for i := uint(0); i < NCores; i++ {
 		ld.group.Add(1)
 		go ld.Worker()

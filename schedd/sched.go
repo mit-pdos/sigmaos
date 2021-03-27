@@ -3,6 +3,7 @@ package schedd
 import (
 	//	"github.com/sasha-s/go-deadlock"
 	"encoding/json"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -70,18 +71,15 @@ func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (sd *Sched) Done() {
-	log.Printf("DONE BEING CALLED\n")
 	sd.mu.Lock()
 	sd.done = true
 	sd.mu.Unlock()
 	sd.ch <- true
-	log.Printf("DONE BEING CALLED2\n")
 	sd.cond.Broadcast()
 }
 
 func (sd *Sched) Work() {
 	<-sd.ch
-	sd.cond.Broadcast()
 }
 
 func (sd *Sched) Root() npo.NpObj {
@@ -217,6 +215,5 @@ func (sd *Sched) findRunnableLambda() ([]byte, error) {
 			sd.cond.Wait()
 		}
 	}
-	log.Printf("Exiting findRunnableLambda\n")
-	return []byte{}, nil
+	return []byte{}, io.EOF
 }

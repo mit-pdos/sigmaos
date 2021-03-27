@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 
 	db "ulambda/debug"
@@ -142,8 +143,9 @@ func (ch *Chan) writer() {
 
 func (ch *Chan) reader() {
 	for {
+		db.DLPrintf("9PCHAN", "Reader: about to ReadFrame %v\n", ch.Dst())
 		frame, err := npcodec.ReadFrame(ch.br)
-		if err == io.EOF {
+		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
 			ch.Close()
 			return
 		}

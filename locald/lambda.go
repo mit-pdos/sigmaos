@@ -33,7 +33,7 @@ func (l *Lambda) init(a []byte) error {
 	var attr fslib.Attr
 	err := json.Unmarshal(a, &attr)
 	if err != nil {
-		log.Printf("Locald unmarshalling error\n: %v", err)
+		log.Printf("Locald unmarshalling error: %v, %v", err, a)
 		return err
 	}
 	l.Program = attr.Program

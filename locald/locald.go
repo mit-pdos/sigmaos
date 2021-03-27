@@ -75,7 +75,6 @@ func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (ld *LocalD) Done() {
-	log.Printf("LOCALD DONE CALL\n")
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
@@ -100,12 +99,9 @@ func (ld *LocalD) Resolver() npo.Resolver {
 func (ld *LocalD) Worker() {
 	// XXX pin to a core
 	for !ld.readDone() {
-		db.DLPrintf("LOCALD", "Getting lambda\n")
 		b, err := ld.GetLambda()
-		db.DLPrintf("LOCALD", "Got lambda %v\n", b)
-		if err != nil && err.Error() == "EOF" {
-			//			db.DLPrintf("LOCALD", "EOF on GetLambda %v\n", b)
-			log.Printf("EOF on GetLambda %v\n", b)
+		if err != nil && (err.Error() == "EOF" || err.Error() == "Unknown file") {
+			db.DLPrintf("LOCALD", "EOF on GetLambda %v\n", b)
 			continue
 		}
 		if err != nil {
@@ -118,7 +114,6 @@ func (ld *LocalD) Worker() {
 		}
 		l.run()
 	}
-	log.Printf("LOCALD WORKER DONE\n")
 	ld.group.Done()
 }
 

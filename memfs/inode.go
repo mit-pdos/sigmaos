@@ -90,6 +90,8 @@ func (inode *Inode) Perm() np.Tperm {
 }
 
 func (inode *Inode) Version() np.TQversion {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	return inode.version
 }
 

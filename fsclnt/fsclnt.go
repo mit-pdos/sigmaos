@@ -469,3 +469,16 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 
 	return reply.Count, err
 }
+
+func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
+	db.DLPrintf("FSCLNT", "Lseek %v %v\n", fd, off)
+	fsc.mu.Lock()
+	defer fsc.mu.Unlock()
+
+	fdst, err := fsc.lookupStL(fd)
+	if err != nil {
+		return err
+	}
+	fdst.offset = off
+	return nil
+}

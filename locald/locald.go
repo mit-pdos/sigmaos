@@ -96,7 +96,7 @@ func (ld *LocalD) Worker() {
 	// XXX pin to a core
 	for !ld.readDone() {
 		b, err := ld.GetLambda()
-		if err != nil && (err.Error() == "EOF" || err.Error() == "Unknown file") {
+		if err != nil && (err.Error() == "EOF" || err.Error() == "file not found schedd") {
 			db.DLPrintf("LOCALD", "EOF on GetLambda %v\n", b)
 			continue
 		}

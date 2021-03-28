@@ -105,7 +105,7 @@ func (dir *Dir) lsL() []*np.Stat {
 		if k == "." {
 			continue
 		}
-		st, _ := v.stat()
+		st, _ := v.statLocked()
 		st.Name = k
 		entries = append(entries, st)
 	}

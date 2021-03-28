@@ -154,10 +154,14 @@ func (inode *Inode) stat() (*np.Stat, error) {
 	return stat, nil
 }
 
-func (inode *Inode) Stat(Ctx npo.CtxI) (*np.Stat, error) {
+func (inode *Inode) statLocked() (*np.Stat, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 	return inode.stat()
+}
+
+func (inode *Inode) Stat(Ctx npo.CtxI) (*np.Stat, error) {
+	return inode.statLocked()
 }
 
 func (inode *Inode) Create(ctx npo.CtxI, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
@@ -270,6 +274,9 @@ func (inode *Inode) Close(ctx npo.CtxI, mode np.Tmode) error {
 }
 
 func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte) (np.Tsize, error) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	db.DLPrintf("MEMFS", "inode.Write %v", inode)
 	var sz np.Tsize
 	var err error

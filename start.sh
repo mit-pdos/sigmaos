@@ -18,8 +18,14 @@ fi
 ./bin/schedd &
 ./bin/nps3d &
 ./bin/npuxd &
-./bin/locald ./ &
-sleep 1
+
+# start NPROC locald instances
+NPROC=`nproc`
+for ((i = 0 ; i < $NPROC ; i++)); do
+  ./bin/locald ./ &
+done
+
+sleep 2
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system
 mkdir -p /mnt/9p/kv

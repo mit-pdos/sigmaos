@@ -76,13 +76,19 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) Qid() np.Tqid {
+func (inode *Inode) qidL() np.Tqid {
 	id := uintptr(unsafe.Pointer(inode))
 
 	return np.MakeQid(
 		np.Qtype(inode.permT>>np.QTYPESHIFT),
 		np.TQversion(inode.version),
 		np.Tpath(uint64(id)))
+}
+
+func (inode *Inode) Qid() np.Tqid {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+	return inode.qidL()
 }
 
 func (inode *Inode) Perm() np.Tperm {
@@ -141,10 +147,10 @@ func (inode *Inode) Mode() np.Tperm {
 	return perm
 }
 
-func (inode *Inode) stat() (*np.Stat, error) {
+func (inode *Inode) statL() (*np.Stat, error) {
 	stat := &np.Stat{}
 	stat.Type = 0 // XXX
-	stat.Qid = inode.Qid()
+	stat.Qid = inode.qidL()
 	stat.Mode = inode.Mode()
 	stat.Mtime = uint32(inode.Mtime)
 	stat.Atime = 0
@@ -156,14 +162,14 @@ func (inode *Inode) stat() (*np.Stat, error) {
 	return stat, nil
 }
 
-func (inode *Inode) statLocked() (*np.Stat, error) {
+func (inode *Inode) stat() (*np.Stat, error) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
-	return inode.stat()
+	return inode.statL()
 }
 
 func (inode *Inode) Stat(Ctx npo.CtxI) (*np.Stat, error) {
-	return inode.statLocked()
+	return inode.stat()
 }
 
 func (inode *Inode) Create(ctx npo.CtxI, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {

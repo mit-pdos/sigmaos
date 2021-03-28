@@ -128,7 +128,7 @@ func TestCounter(t *testing.T) {
 				ts.Close(fd)
 				break
 			}
-			log.Printf("%d: tries %v\n", i, ntrial)
+			// log.Printf("%d: tries %v\n", i, ntrial)
 			ch <- i
 		}(i)
 	}
@@ -194,7 +194,7 @@ func TestLock(t *testing.T) {
 	}
 	for i := 0; i < N; i++ {
 		j := <-ch
-		log.Printf("%d acquired lock\n", j)
+		// log.Printf("%d acquired lock\n", j)
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}

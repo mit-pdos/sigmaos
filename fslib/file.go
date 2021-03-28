@@ -96,8 +96,8 @@ func (fl *FsLib) MakeFile(fname string, data []byte) error {
 	return fl.Close(fd)
 }
 
-func (fl *FsLib) CreateFile(fname string, mode np.Tmode) (int, error) {
-	fd, err := fl.Create(fname, 0700, mode)
+func (fl *FsLib) CreateFile(fname string, perm np.Tperm, mode np.Tmode) (int, error) {
+	fd, err := fl.Create(fname, perm, mode)
 	if err != nil {
 		return -1, err
 	}

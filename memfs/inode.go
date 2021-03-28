@@ -126,10 +126,8 @@ func permToData(t np.Tperm) (Data, error) {
 		return MakePipe(), nil
 	} else if t.IsDevice() {
 		return nil, nil
-	} else if t.IsFile() {
-		return MakeFile(), nil
 	} else {
-		return nil, errors.New("Unknown type")
+		return MakeFile(), nil
 	}
 }
 

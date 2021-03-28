@@ -71,7 +71,7 @@ func TestSymlink(t *testing.T) {
 func TestVersion(t *testing.T) {
 	ts := makeTstate(t)
 
-	fd, err := ts.CreateFile("name/xxx", np.OWRITE|np.OVERSION)
+	fd, err := ts.CreateFile("name/xxx", 0777, np.OWRITE|np.OVERSION)
 	assert.Nil(t, err, "CreateFile")
 	buf := make([]byte, 1000)
 	off, err := ts.Write(fd, buf)
@@ -120,37 +120,23 @@ func TestEphemeral(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestWatch(t *testing.T) {
-	const N = 2
+func TestLock(t *testing.T) {
+	const N = 10
 
 	ts := makeTstate(t)
-	ch := make(chan bool)
-	go func() {
-		err := ts.Exists("name/xxx")
-		ch <- err == nil
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-
-	_, err := ts.CreateFile("name/xxx", np.OWRITE|np.OVERSION)
-	assert.Nil(t, err, "CreateFile xxxx")
-
-	done := <-ch
-	assert.Equal(t, true, done)
-
+	ch := make(chan int)
 	for i := 0; i < N; i++ {
-		go func() {
-			err := ts.Exists("name/yyy")
-			ch <- err == nil
-		}()
+		go func(i int) {
+			_, err := ts.CreateFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
+			assert.Equal(t, nil, err)
+			ch <- i
+		}(i)
 	}
-
-	_, err = ts.CreateFile("name/yyy", np.OWRITE|np.OVERSION)
-	assert.Nil(t, err, "CreateFile yyy")
-
 	for i := 0; i < N; i++ {
-		done := <-ch
-		assert.Equal(t, true, done)
+		j := <-ch
+		log.Printf("%d acquired lock\n", j)
+		err := ts.Remove("name/lock")
+		assert.Equal(t, nil, err)
 	}
 	ts.s.Shutdown(ts.FsLib)
 }

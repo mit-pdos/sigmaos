@@ -52,7 +52,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	}
 	for r := 0; r < NReduce; r++ {
 		oname := "name/ux/~ip/m-" + m.output + "/r-" + strconv.Itoa(r)
-		m.fds[r], err = m.CreateFile(oname, np.OWRITE)
+		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
 		if err != nil {
 			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)
 		}

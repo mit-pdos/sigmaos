@@ -138,7 +138,6 @@ func (p Tperm) IsSymlink() bool   { return p&DMSYMLINK == DMSYMLINK }
 func (p Tperm) IsDevice() bool    { return p&DMDEVICE == DMDEVICE }
 func (p Tperm) IsPipe() bool      { return p&DMNAMEDPIPE == DMNAMEDPIPE }
 func (p Tperm) IsEphemeral() bool { return p&DMTMP == DMTMP }
-func (p Tperm) IsFile() bool      { return (p >> TYPESHIFT) == 0 }
 
 func (p Tperm) String() string {
 	qt := Qtype(p >> QTYPESHIFT)

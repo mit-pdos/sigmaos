@@ -62,7 +62,10 @@ func (f *File) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
 		if end >= f.LenOff() {
 			end = f.LenOff()
 		}
-		return f.data[offset:end], nil
+		// make a copy because while sending the response
+		// another request may be updating f.data
+		b := make([]byte, end-offset)
+		copy(b, f.data[offset:end])
+		return b, nil
 	}
-
 }

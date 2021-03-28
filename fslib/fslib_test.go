@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"log"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -87,6 +88,65 @@ func TestVersion(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func TestCounter(t *testing.T) {
+	const N = 10
+
+	ts := makeTstate(t)
+	fd, err := ts.CreateFile("name/cnt", 0777|np.DMTMP, np.OWRITE)
+	assert.Equal(t, nil, err)
+	b := []byte(strconv.Itoa(0))
+	_, err = ts.Write(fd, b)
+	assert.Equal(t, nil, err)
+	err = ts.Close(fd)
+	assert.Equal(t, nil, err)
+
+	ch := make(chan int)
+
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			ntrial := 0
+			for {
+				ntrial += 1
+				fd, err := ts.Open("name/cnt", np.ORDWR|np.OVERSION)
+				assert.Equal(t, nil, err)
+				b, err := ts.Read(fd, 100)
+				if err != nil && err.Error() == "Version mismatch" {
+					continue
+				}
+				assert.Equal(t, nil, err)
+				n, err := strconv.Atoi(string(b))
+				assert.Equal(t, nil, err)
+				n += 1
+				b = []byte(strconv.Itoa(n))
+				err = ts.Lseek(fd, 0)
+				assert.Equal(t, nil, err)
+				_, err = ts.Write(fd, b)
+				if err != nil && err.Error() == "Version mismatch" {
+					continue
+				}
+				assert.Equal(t, nil, err)
+				ts.Close(fd)
+				break
+			}
+			// log.Printf("%d: tries %v\n", i, ntrial)
+			ch <- i
+		}(i)
+	}
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+	fd, err = ts.Open("name/cnt", np.ORDWR)
+	assert.Equal(t, nil, err)
+	b, err = ts.Read(fd, 100)
+	assert.Equal(t, nil, err)
+	n, err := strconv.Atoi(string(b))
+	assert.Equal(t, nil, err)
+
+	assert.Equal(t, N, n)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestEphemeral(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -134,7 +194,7 @@ func TestLock(t *testing.T) {
 	}
 	for i := 0; i < N; i++ {
 		j := <-ch
-		log.Printf("%d acquired lock\n", j)
+		// log.Printf("%d acquired lock\n", j)
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}

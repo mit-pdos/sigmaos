@@ -244,7 +244,9 @@ func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
 	if err != nil {
 		return err
 	}
+	i1.mu.Lock()
 	i1.version += 1
+	i1.mu.Unlock()
 	err = dir.removeLocked(n)
 	if err != nil {
 		log.Fatalf("Remove: error %v\n", n)
@@ -277,13 +279,14 @@ func (inode *Inode) Close(ctx npo.CtxI, mode np.Tmode) error {
 
 func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte) (np.Tsize, error) {
 	db.DLPrintf("MEMFS", "inode.Write %v", inode)
+	// XXX maybe not separate locks for inode and its internal object
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	var sz np.Tsize
 	var err error
 
-	// XXX maybe not separate locks for inode and its internal object
-	inode.mu.Lock()
 	inode.version += 1
-	inode.mu.Unlock()
 
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)

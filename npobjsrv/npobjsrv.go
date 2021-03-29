@@ -159,7 +159,7 @@ func (npc *NpConn) Detach() {
 	}
 
 	if npc.wt != nil {
-		npc.wt.DeleteWatch(npc)
+		npc.wt.DeleteConn(npc)
 	}
 }
 

@@ -45,6 +45,7 @@ func (wt *WatchTable) Watch(npc *NpConn, path []string) {
 	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", p, w)
 }
 
+// XXX maybe support wakeupOne?
 func (wt *WatchTable) WakeupWatch(path []string) {
 	p := np.Join(path)
 
@@ -64,7 +65,7 @@ func (wt *WatchTable) WakeupWatch(path []string) {
 }
 
 // Cleanup threads waiting for a watch on this connection
-func (wt *WatchTable) DeleteWatch(npc *NpConn) {
+func (wt *WatchTable) DeleteConn(npc *NpConn) {
 	wt.mu.Lock()
 	defer wt.mu.Unlock()
 

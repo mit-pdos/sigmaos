@@ -99,7 +99,7 @@ func (o *Obj) Qid() np.Tqid {
 	return np.Tqid{}
 }
 
-func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	db.DLPrintf("LOCALD", "ReadDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
@@ -113,7 +113,7 @@ func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 	return nil, nil
 }
 
-func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	db.DLPrintf("LOCALD", "%v: ReadFile: %v %v\n", o, off, cnt)
 	return []byte{}, fmt.Errorf("not suported")
 }
@@ -130,12 +130,12 @@ func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return o.stat(), nil
 }
 
-func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("LOCALD", "%v: WriteFile %v %v\n", o, off, len(data))
 	return np.Tsize(len(data)), fmt.Errorf("not suported")
 }
 
-func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("LOCALD", "%v: WriteDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:

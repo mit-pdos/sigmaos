@@ -213,7 +213,7 @@ func (o *Obj) uxWrite(off int64, b []byte) (np.Tsize, error) {
 	return np.Tsize(n), err
 }
 
-func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	db.DLPrintf("UXD", "%v: ReadFile: %v off %v cnt %v\n", ctx, o, off, cnt)
 	b, err := o.uxRead(int64(off), int(cnt))
 	if err != nil {
@@ -258,7 +258,7 @@ func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 	return []npo.NpObj{o1}, nil, nil
 }
 
-func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, o, off, cnt)
 	dirents, err := o.uxReadDir()
 	if err != nil {
@@ -317,11 +317,11 @@ func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
 	return nil
 }
 
-func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, b []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("UXD", "%v: WriteFile %v off %v sz %v\n", ctx, o, off, len(b))
 	return o.uxWrite(int64(off), b)
 }
 
-func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, fmt.Errorf("not supported")
 }

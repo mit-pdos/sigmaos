@@ -193,7 +193,7 @@ func TestLock(t *testing.T) {
 		}(i)
 	}
 	for i := 0; i < N; i++ {
-		j := <-ch
+		<-ch
 		// log.Printf("%d acquired lock\n", j)
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)

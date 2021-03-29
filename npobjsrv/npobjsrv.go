@@ -28,10 +28,10 @@ type NpObj interface {
 	Size() np.Tlength
 	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
 	Open(CtxI, np.Tmode) error
-	ReadFile(CtxI, np.Toffset, np.Tsize) ([]byte, error)
-	WriteFile(CtxI, np.Toffset, []byte) (np.Tsize, error)
-	ReadDir(CtxI, np.Toffset, np.Tsize) ([]*np.Stat, error)
-	WriteDir(CtxI, np.Toffset, []byte) (np.Tsize, error)
+	ReadFile(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, error)
+	WriteFile(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
+	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
 	Remove(CtxI, string) error
 	Stat(CtxI) (*np.Stat, error)
 	Rename(CtxI, string, string) error
@@ -44,21 +44,21 @@ type Fid struct {
 	ctx  CtxI
 }
 
-func (f *Fid) Write(off np.Toffset, b []byte) (np.Tsize, error) {
+func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	if f.obj.Perm().IsDir() {
-		return f.obj.WriteDir(f.ctx, off, b)
+		return f.obj.WriteDir(f.ctx, off, b, v)
 	} else {
-		return f.obj.WriteFile(f.ctx, off, b)
+		return f.obj.WriteFile(f.ctx, off, b, v)
 	}
 }
 
-func (f *Fid) readDir(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
+func (f *Fid) readDir(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
 	var dirents []*np.Stat
 	var err error
 	if f.obj.Size() > 0 && off >= np.Toffset(f.obj.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		dirents, err = f.obj.ReadDir(f.ctx, off, count)
+		dirents, err = f.obj.ReadDir(f.ctx, off, count, v)
 
 	}
 	b, err := npcodec.Dir2Byte(off, count, dirents)
@@ -70,8 +70,8 @@ func (f *Fid) readDir(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror
 }
 
 // XXX check for offset > len here?
-func (f *Fid) readFile(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
-	b, err := f.obj.ReadFile(f.ctx, off, count)
+func (f *Fid) readFile(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
+	b, err := f.obj.ReadFile(f.ctx, off, count, v)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -79,11 +79,11 @@ func (f *Fid) readFile(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerro
 	return nil
 }
 
-func (f *Fid) Read(off np.Toffset, count np.Tsize, rets *np.Rread) *np.Rerror {
+func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
 	if f.obj.Perm().IsDir() {
-		return f.readDir(off, count, rets)
+		return f.readDir(off, count, v, rets)
 	} else {
-		return f.readFile(off, count, rets)
+		return f.readFile(off, count, v, rets)
 	}
 }
 
@@ -188,7 +188,7 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root, ctx := npc.osrv.RootAttach(args.Uname)
-	npc.add(args.Fid, &Fid{[]string{}, root, 0, ctx})
+	npc.add(args.Fid, &Fid{[]string{}, root, root.Version(), ctx})
 	rets.Qid = root.Qid()
 	return nil
 }
@@ -317,7 +317,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
-	return f.Read(args.Offset, args.Count, rets)
+	return f.Read(args.Offset, args.Count, np.NoV, rets)
 }
 
 func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
@@ -326,10 +326,7 @@ func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if f.vers != f.obj.Version() {
-		return &np.Rerror{"Version mismatch"}
-	}
-	return f.Read(args.Offset, args.Count, rets)
+	return f.Read(args.Offset, args.Count, f.vers, rets)
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
@@ -339,7 +336,7 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	var err error
-	rets.Count, err = f.Write(args.Offset, args.Data)
+	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -352,11 +349,8 @@ func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if f.vers != f.obj.Version() {
-		return &np.Rerror{"Version mismatch"}
-	}
 	var err error
-	rets.Count, err = f.Write(args.Offset, args.Data)
+	rets.Count, err = f.Write(args.Offset, args.Data, f.vers)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}

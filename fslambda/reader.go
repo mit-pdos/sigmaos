@@ -72,7 +72,7 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.WriteFile(nil, 0, data)
+		_, err = r.pipe.WriteFile(nil, 0, data, np.NoV)
 		if err != nil {
 			log.Fatal(err)
 		}

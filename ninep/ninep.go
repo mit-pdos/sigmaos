@@ -30,6 +30,8 @@ type Tpath uint64
 type Qtype uint8
 type TQversion uint32
 
+const NoV TQversion = ^TQversion(0)
+
 // A Qid's type field represents the type of a file, the high 8 bits of
 // the file's permission.
 const (

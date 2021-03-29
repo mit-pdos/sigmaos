@@ -159,7 +159,7 @@ func (sd *Sched) ps() []*np.Stat {
 	return dir
 }
 
-func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, error) {
+func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	db.DLPrintf("SCHEDD", "readDir: %v\n", o)
 	switch len(o.name) {
 	case 0:
@@ -172,7 +172,7 @@ func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]*np.Stat, e
 	return nil, nil
 }
 
-func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	db.DLPrintf("SCHEDD", "%v: ReadFile: %v %v\n", o, off, cnt)
 	if len(o.name) == 1 {
 		if off != 0 {
@@ -233,7 +233,7 @@ func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return o.stat(), nil
 }
 
-func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("SCHEDD", "%v: writeFile %v %v\n", o, off, len(data))
 	if len(o.name) != 2 {
 		log.Fatalf("WriteFile: name != 2 %v\n", o)
@@ -251,7 +251,7 @@ func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, er
 	return np.Tsize(len(data)), nil
 }
 
-func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("SCHEDD", "%v: writeDir %v %v\n", o, off, len(data))
 	switch len(o.name) {
 	case 0:

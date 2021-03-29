@@ -64,6 +64,7 @@ func makeInode(owner string, t np.Tperm, data Data, p *Inode) *Inode {
 	i.Data = data
 	i.parent = p
 	i.owner = owner
+	i.version = np.TQversion(1)
 	return &i
 }
 
@@ -283,11 +284,15 @@ func (inode *Inode) Close(ctx npo.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte) (np.Tsize, error) {
+func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("MEMFS", "inode.Write %v", inode)
 	// XXX maybe not separate locks for inode and its internal object
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
+
+	if v != np.NoV && inode.version != v {
+		return 0, fmt.Errorf("Version mismatch")
+	}
 
 	var sz np.Tsize
 	var err error
@@ -313,16 +318,21 @@ func (inode *Inode) WriteFile(ctx npo.CtxI, offset np.Toffset, data []byte) (np.
 	return sz, err
 }
 
-func (inode *Inode) ReadDir(ctx npo.CtxI, offset np.Toffset, n np.Tsize) ([]*np.Stat, error) {
+func (inode *Inode) ReadDir(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+
+	if v != np.NoV && inode.version != v {
+		return nil, fmt.Errorf("Version mismatch")
+	}
+
 	d := inode.Data.(*Dir)
 	return d.read(offset, n)
 }
 
-func (inode *Inode) WriteDir(ctx npo.CtxI, offset np.Toffset, b []byte) (np.Tsize, error) {
+func (inode *Inode) WriteDir(ctx npo.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, errors.New("Cannot write directory")
 }
 
-func (inode *Inode) ReadFile(ctx npo.CtxI, offset np.Toffset, n np.Tsize) ([]byte, error) {
+func (inode *Inode) ReadFile(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	db.DLPrintf("MEMFS", "inode.Read %v", inode)
 	if inode.IsDevice() {
 		d := inode.Data.(Dev)
@@ -334,6 +344,12 @@ func (inode *Inode) ReadFile(ctx npo.CtxI, offset np.Toffset, n np.Tsize) ([]byt
 		p := inode.Data.(*Pipe)
 		return p.read(ctx, n)
 	} else {
+		inode.mu.Lock()
+		defer inode.mu.Unlock()
+
+		if v != np.NoV && inode.version != v {
+			return nil, fmt.Errorf("Version mismatch")
+		}
 		f := inode.Data.(*File)
 		return f.read(offset, n)
 	}

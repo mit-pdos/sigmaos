@@ -66,14 +66,14 @@ func (ch *Chan) Dst() string { return ch.conn.RemoteAddr().String() }
 
 func (ch *Chan) Close() {
 	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.Dst())
+	ch.mu.Lock()
 	for _, rpc := range ch.outstanding {
 		close(rpc.replych)
 	}
 	close(ch.requests)
-	ch.mu.Lock()
 	ch.closed = true
-	ch.mu.Unlock()
 	ch.conn.Close()
+	ch.mu.Unlock()
 }
 
 func (ch *Chan) allocate(req *RpcT) np.Ttag {

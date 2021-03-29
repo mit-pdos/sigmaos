@@ -87,6 +87,10 @@ func (nps3 *Nps3) Done() {
 	nps3.ch <- true
 }
 
+func (nps3 *Nps3) WatchTable() *npo.WatchTable {
+	return nil
+}
+
 func mode(key string) np.Tperm {
 	m := np.Tperm(0)
 	if key == "" || strings.HasSuffix(key, "/") {

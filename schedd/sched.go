@@ -70,6 +70,10 @@ func (sd *Sched) Connect(conn net.Conn) npsrv.NpAPI {
 	return npo.MakeNpConn(sd, conn)
 }
 
+func (sd *Sched) WatchTable() *npo.WatchTable {
+	return nil
+}
+
 func (sd *Sched) Done() {
 	sd.mu.Lock()
 	sd.done = true

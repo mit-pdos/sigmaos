@@ -61,6 +61,10 @@ func (npux *NpUx) Done() {
 	npux.ch <- true
 }
 
+func (npux *NpUx) WatchTable() *npo.WatchTable {
+	return nil
+}
+
 type Obj struct {
 	mu     sync.Mutex
 	npux   *NpUx

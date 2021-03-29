@@ -45,7 +45,7 @@ func (ts *TestState) testRename(t int) {
 	assert.Nil(ts.t, err, "Lookup todo")
 	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
 	ino := is[0].(*Inode)
-	sts, err := ino.ReadDir(ts.ctx, 0, 100)
+	sts, err := ino.ReadDir(ts.ctx, 0, 100, np.NoV)
 	assert.Nil(ts.t, err, "ReadDir")
 	for _, st := range sts {
 		is, _, err := ino.Lookup(ts.ctx, []string{st.Name})

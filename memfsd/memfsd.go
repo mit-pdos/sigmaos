@@ -16,6 +16,7 @@ type Fsd struct {
 	ch    chan bool
 	addr  string
 	mkctx func(string) npo.CtxI
+	wt    *npo.WatchTable
 }
 
 func MakeFsd(addr string, mkctx func(string) npo.CtxI) *Fsd {
@@ -27,6 +28,7 @@ func MakeFsd(addr string, mkctx func(string) npo.CtxI) *Fsd {
 	} else {
 		fsd.mkctx = mkctx
 	}
+	fsd.wt = npo.MkWatchTable()
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeNpServer(fsd, addr)
 	return fsd
@@ -40,6 +42,10 @@ func (fsd *Fsd) Serve() {
 func (fsd *Fsd) Done() {
 	db.DLPrintf("NAMED", "Done\n")
 	fsd.ch <- true
+}
+
+func (fsd *Fsd) WatchTable() *npo.WatchTable {
+	return fsd.wt
 }
 
 func (fsd *Fsd) Addr() string {

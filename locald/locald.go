@@ -81,6 +81,10 @@ func (ld *LocalD) Done() {
 	ld.done = true
 }
 
+func (ld *LocalD) WatchTable() *npo.WatchTable {
+	return nil
+}
+
 func (ld *LocalD) readDone() bool {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()

@@ -187,7 +187,8 @@ func TestLock(t *testing.T) {
 	ch := make(chan int)
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			_, err := ts.CreateFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
+			fsl := MakeFsLib("fslibtest" + strconv.Itoa(i))
+			_, err := fsl.CreateFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
 			assert.Equal(t, nil, err)
 			ch <- i
 		}(i)

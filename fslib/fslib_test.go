@@ -201,3 +201,26 @@ func TestLock(t *testing.T) {
 	}
 	ts.s.Shutdown(ts.FsLib)
 }
+
+func TestConcur(t *testing.T) {
+	const N = 10
+	ts := makeTstate(t)
+	ch := make(chan int)
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			for j := 0; j < 1000; j++ {
+				fn := "name/f" + strconv.Itoa(i)
+				_, err := ts.CreateFile(fn, 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
+				assert.Equal(t, nil, err)
+				err = ts.Remove(fn)
+				assert.Equal(t, nil, err)
+			}
+			ch <- i
+		}(i)
+	}
+	for i := 0; i < N; i++ {
+		j := <-ch
+		log.Printf("%d done\n", j)
+	}
+	ts.s.Shutdown(ts.FsLib)
+}

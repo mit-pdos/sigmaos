@@ -129,6 +129,14 @@ func permToInode(uname string, p np.Tperm, parent *Dir) (InodeI, error) {
 	}
 }
 
+func (i *Inode) Open(ctx npo.CtxI, mode np.Tmode) error {
+	return nil
+}
+
+func (i *Inode) Close(ctx npo.CtxI, mode np.Tmode) error {
+	return nil
+}
+
 func (inode *Inode) Mode() np.Tperm {
 	perm := np.Tperm(0777)
 	if inode.perm.IsDir() {

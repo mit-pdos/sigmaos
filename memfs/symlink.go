@@ -33,14 +33,6 @@ func (s *Symlink) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (s *Symlink) Open(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
-func (s *Symlink) Close(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
 func (s *Symlink) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	s.Lock()
 	defer s.Unlock()

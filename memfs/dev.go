@@ -37,14 +37,6 @@ func (d *Device) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (d *Device) Open(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
-func (d *Device) Close(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
 func (d *Device) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	if v != np.NoV && d.version != v {
 		return 0, fmt.Errorf("Version mismatch")

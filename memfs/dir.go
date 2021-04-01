@@ -88,14 +88,6 @@ func (dir *Dir) Size() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
-func (d *Dir) Open(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
-func (d *Dir) Close(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
 func (dir *Dir) namei(ctx npo.CtxI, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
 	var inode InodeI
 	var err error

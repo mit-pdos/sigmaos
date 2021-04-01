@@ -35,14 +35,6 @@ func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
-func (f *File) Open(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
-func (f *File) Close(ctx npo.CtxI, mode np.Tmode) error {
-	return nil
-}
-
 func (f *File) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	f.Lock()
 	defer f.Unlock()

@@ -21,25 +21,30 @@ echo "Collecting baseline..."
 echo $dim $baseline_its 1 > $baseline
 ./bin/perf-matrix-multiply-baseline $dim $baseline_its >> $baseline 2>&1
 
-echo "Starting 9p infrastructure..."
-./stop.sh
-./start.sh
-sleep 1
- 
-for i in `seq 1 $max_its`
-do
-  for j in `seq 1 $n_trials`
-  do
-    outfile=$measurements/spin_test_${dim}_${its}_${N}_${j}.txt
-    its=$(($i * 5))
-
-    # Don't redo work
-    if [ -f "$outfile" ]; then
-      continue
-    fi
+for test_type in native 9p ; do
+  ./stop.sh
+  echo "Running $test_type tests..."
+  if [ $test_type == "9p" ]; then
+    echo "Starting 9p infrastructure..."
+    ./start.sh
+    sleep 1
+  fi
    
-    echo "Starting spin test, spinners=$N, iterations=$its, trial=$j"
-    echo $dim $its $N > $outfile
-    ./bin/perf-spin-test-starter $N $dim $its >> $outfile 2>&1
+  for i in `seq 1 $max_its`
+  do
+    for j in `seq 1 $n_trials`
+    do
+      outfile=$measurements/spin_test_${dim}_${its}_${N}_${j}_$test_type.txt
+      its=$(($i * 5))
+  
+      # Don't redo work
+      if [ -f "$outfile" ]; then
+        continue
+      fi
+     
+      echo "Starting spin test, spinners=$N, iterations=$its, trial=$j, type=$test_type"
+      echo $dim $its $N > $outfile
+      ./bin/perf-spin-test-starter $N $dim $its $test_type >> $outfile 2>&1
+    done
   done
 done

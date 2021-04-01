@@ -8,32 +8,32 @@ import os
 def time_from_line(line):
   return line.split(" ")[-2]
 
-def parse_baseline_file(path):
+def parse_profile_file(path):
   with open(path, "r") as f:
     x = f.read()
   lines = x.split("\n")[:-1]
-  params = lines[0].split(" ")
-  dim = int(params[0])
-  its = int(params[1])
-  n = int(params[2])
+  profile = lines[0].split(" ")
+  dim = int(profile[0])
+  its = int(profile[1])
+  n = int(profile[2])
   comp_time = float(time_from_line(lines[1]))
   setup_time = float(time_from_line(lines[-1]))
   return (dim, its, n, comp_time, setup_time)
 
-def read_baseline(paths):
+def read_profile(paths):
   for p in paths:
     if "baseline" in p:
-      dim, iterations, n, comp_time, setup_time = parse_baseline_file(p)
+      dim, iterations, n, comp_time, setup_time = parse_profile_file(p)
       return (dim, iterations, n, comp_time, setup_time)
 
 def read_data_file(path):
   with open(path, "r") as f:
     x = f.read()
   lines = x.split("\n")[:-1]
-  params = lines[0].split(" ")
-  dim = int(params[0])
-  its = int(params[1])
-  n = int(params[2])
+  profile = lines[0].split(" ")
+  dim = int(profile[0])
+  its = int(profile[1])
+  n = int(profile[2])
   try:
     comp_time = float(time_from_line(lines[-1]))
     return (dim, its, n, comp_time)
@@ -41,10 +41,10 @@ def read_data_file(path):
     print("Invalid format:", path)
     return None
 
-def read_data(paths):
+def read_data(paths, test_type):
   data = {}
   for p in paths:
-    if "baseline" in p:
+    if "baseline" in p or test_type not in p:
       continue
     res = read_data_file(p)
     if res is None:
@@ -55,77 +55,68 @@ def read_data(paths):
     data[its].append(comp_time)
   return data
 
-def overhead(baseline, data):
-  overhead = {}
-  total_baseline_comp_time = float(baseline[3])
-  baseline_its = float(baseline[1])
-  setup_time = float(baseline[4]) # Ignore memalloc costs
-  avg_baseline_comp_time = (total_baseline_comp_time - setup_time) / baseline_its
-  for k, v in data.items():
-    overhead[k] = (float(np.mean(v)) - setup_time) / (avg_baseline_comp_time * float(k))
-  return overhead
-
-def runtime(baseline, data):
+def compute_mean(data):
   runtime = {}
-  total_baseline_comp_time = float(baseline[3])
-  baseline_its = float(baseline[1])
-  setup_time = float(baseline[4]) # Ignore memalloc costs
-  avg_baseline_comp_time = (total_baseline_comp_time - setup_time) / baseline_its
   for k, v in data.items():
-    runtime[k] = float(np.mean(v)) - setup_time
+    runtime[k] = float(np.mean(v))
   return runtime
 
-def plot_overhead(baseline, overhead):
-  total_baseline_comp_time = float(baseline[3])
-  baseline_its = float(baseline[1])
-  setup_time = float(baseline[4]) # Ignore memalloc costs
-  avg_baseline_comp_time = (total_baseline_comp_time - setup_time) / baseline_its
-  x = [ float(it) * avg_baseline_comp_time / 1000.0 for it in  sorted(overhead.keys()) ]
-  baseline_y = np.ones(len(x))
-  overhead_y = [ overhead[it] for it in sorted(overhead.keys()) ]
-  print(overhead)
+def get_y_runtime(runtime):
+  y = [ runtime[it] for it in sorted(runtime.keys()) ]
+  y = np.array(y) / 1000.0
+  return y
+
+def get_x(profile, runtime):
+  total_profile_comp_time = float(profile[3])
+  profile_its = float(profile[1])
+  setup_time = float(profile[4]) # Ignore memalloc costs
+  avg_profile_comp_time = (total_profile_comp_time - setup_time) / profile_its
+  x = [ float(it) * avg_profile_comp_time / 1000.0 for it in sorted(runtime.keys()) ]
+  return x
+
+def get_runtime_x_y(profile, runtime):
+  x = get_x(profile, runtime)
+  y = get_y_runtime(runtime)
+  return (x, y)
+
+def get_overhead_x_y(profile, baseline, runtime):
+  x = get_x(profile, runtime)
+  y = [ runtime[it] / baseline[it] for it in sorted(runtime.keys()) ]
+  y = np.array(y)
+  return (x, y)
+
+def plot(title, units, native_x_y, ninep_x_y):
+  native_x, native_y = native_x_y
+  ninep_x, ninep_y = ninep_x_y
 
   fig, ax = plt.subplots(1)
-  ax.plot(x, overhead_y, label="uLambda")
-  ax.plot(x, baseline_y, label="Baseline")
+  ax.plot(native_x, native_y, label="Native (exec)")
+  ax.plot(ninep_x, ninep_y, label="uLambda")
 
   ax.set_xlabel("Work per invocation (msec)")
-  ax.set_ylabel("Normalized runtime")
+  ax.set_ylabel(title + " " + units) 
   ax.legend()
-  ax.set_title("Normalized runtime varying work per invocation")
-  plt.savefig("perf/overhead.pdf")
-
-def plot_runtime(baseline, runtime):
-  total_baseline_comp_time = float(baseline[3])
-  baseline_its = float(baseline[1])
-  setup_time = float(baseline[4]) # Ignore memalloc costs
-  avg_baseline_comp_time = (total_baseline_comp_time - setup_time) / baseline_its
-  x = [ float(it) * avg_baseline_comp_time / 1000.0 for it in  sorted(runtime.keys()) ]
-  baseline_y = [ float(it) * avg_baseline_comp_time for it in sorted(runtime.keys()) ]
-  runtime_y = [ runtime[it] for it in sorted(runtime.keys()) ]
-  baseline_y = np.array(baseline_y) / 1000.0
-  runtime_y = np.array(runtime_y) / 1000.0
-  print(runtime)
-
-  fig, ax = plt.subplots(1)
-  ax.plot(x, runtime_y, label="uLambda")
-  ax.plot(x, baseline_y, label="Baseline")
-
-  ax.set_xlabel("Work per invocation (msec)")
-  ax.set_ylabel("Runtime (msec)")
-  ax.legend()
-  ax.set_title("Runtime varying work per invocation")
-  plt.savefig("perf/runtime.pdf")
+  ax.set_title(title + " varying work per invocation")
+  plt.savefig("perf/" + title.lower() + ".pdf")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
-  baseline = read_baseline(paths)
-  print("baseline:", baseline)
-  data = read_data(paths)
-  overhead = overhead(baseline, data)
-  runtime = runtime(baseline, data)
-  plot_overhead(baseline, overhead)
-  plot_runtime(baseline, runtime)
+  profile = read_profile(paths)
+  print("profile:", profile)
+  # Read data from native run
+  native_data = read_data(paths, "native")
+  native_runtime = compute_mean(native_data)
+  # Read data from 9p run
+  ninep_data = read_data(paths, "9p")
+  ninep_runtime = compute_mean(ninep_data)
+  # Plot runtime
+  native_runtime_x_y = get_runtime_x_y(profile, native_runtime)
+  ninep_runtime_x_y = get_runtime_x_y(profile, ninep_runtime)
+  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y)
+  #Plot overhead
+  native_overhead_x_y = get_overhead_x_y(profile, native_runtime, native_runtime)
+  ninep_overhead_x_y = get_overhead_x_y(profile, native_runtime, ninep_runtime)
+  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y)

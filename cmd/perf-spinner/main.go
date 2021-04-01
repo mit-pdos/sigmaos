@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid dim iterations\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v pid dim iterations <optional-native>\n", os.Args[0])
 		os.Exit(1)
 	}
 	l, err := perf.MakeSpinner(os.Args[1:])

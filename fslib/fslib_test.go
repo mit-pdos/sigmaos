@@ -203,15 +203,19 @@ func TestLock(t *testing.T) {
 }
 
 func TestConcur(t *testing.T) {
-	const N = 10
+	const N = 20
 	ts := makeTstate(t)
 	ch := make(chan int)
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			for j := 0; j < 1000; j++ {
 				fn := "name/f" + strconv.Itoa(i)
-				_, err := ts.CreateFile(fn, 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
+				data := []byte(fn)
+				err := ts.MakeFile(fn, data)
 				assert.Equal(t, nil, err)
+				d, err := ts.ReadFile(fn)
+				assert.Equal(t, nil, err)
+				assert.Equal(t, len(data), len(d))
 				err = ts.Remove(fn)
 				assert.Equal(t, nil, err)
 			}

@@ -21,7 +21,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 		if err != nil {
 			return fid, err
 		}
-		qid := fsc.fids[fid].lastqid()
+		qid := fsc.path(fid).lastqid()
 
 		// if todo == 0 and !resolve, don't resolve symlinks, so
 		// that the client can remove a symlink

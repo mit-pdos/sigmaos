@@ -2,6 +2,7 @@ package npobjsrv
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -21,18 +22,25 @@ type CtxI interface {
 	Uname() string
 }
 
-type NpObj interface {
+type NpObjDir interface {
 	Lookup(CtxI, []string) ([]NpObj, []string, error)
+	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
+	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
+	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+}
+
+type NpObjFile interface {
+	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, error)
+	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+}
+
+type NpObj interface {
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Version() np.TQversion
 	Size() np.Tlength
-	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
 	Open(CtxI, np.Tmode) error
-	ReadFile(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, error)
-	WriteFile(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
-	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
-	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+	Close(CtxI, np.Tmode) error
 	Remove(CtxI, string) error
 	Stat(CtxI) (*np.Stat, error)
 	Rename(CtxI, string, string) error
@@ -46,10 +54,14 @@ type Fid struct {
 }
 
 func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	if f.obj.Perm().IsDir() {
-		return f.obj.WriteDir(f.ctx, off, b, v)
-	} else {
-		return f.obj.WriteFile(f.ctx, off, b, v)
+	switch i := f.obj.(type) {
+	case NpObjFile:
+		return i.Write(f.ctx, off, b, v)
+	case NpObjDir:
+		return i.WriteDir(f.ctx, off, b, v)
+	default:
+		log.Fatalf("Write: unknown obj type %v\n", f.obj)
+		return 0, nil
 	}
 }
 
@@ -59,7 +71,8 @@ func (f *Fid) readDir(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.R
 	if f.obj.Size() > 0 && off >= np.Toffset(f.obj.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		dirents, err = f.obj.ReadDir(f.ctx, off, count, v)
+		d := f.obj.(NpObjDir)
+		dirents, err = d.ReadDir(f.ctx, off, count, v)
 
 	}
 	b, err := npcodec.Dir2Byte(off, count, dirents)
@@ -70,21 +83,20 @@ func (f *Fid) readDir(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.R
 	return nil
 }
 
-// XXX check for offset > len here?
-func (f *Fid) readFile(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
-	b, err := f.obj.ReadFile(f.ctx, off, count, v)
-	if err != nil {
-		return &np.Rerror{err.Error()}
-	}
-	rets.Data = b
-	return nil
-}
-
 func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
-	if f.obj.Perm().IsDir() {
+	switch i := f.obj.(type) {
+	case NpObjDir:
 		return f.readDir(off, count, v, rets)
-	} else {
-		return f.readFile(off, count, v, rets)
+	case NpObjFile:
+		b, err := i.Read(f.ctx, off, count, v)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		rets.Data = b
+		return nil
+	default:
+		log.Fatalf("Read: unknown obj type %v\n", f.obj)
+		return nil
 	}
 }
 
@@ -159,7 +171,7 @@ func (npc *NpConn) Detach() {
 	}
 
 	if npc.wt != nil {
-		npc.wt.DeleteWatch(npc)
+		npc.wt.DeleteConn(npc)
 	}
 }
 
@@ -183,7 +195,8 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if !f.obj.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		os, rest, err := f.obj.Lookup(f.ctx, args.Wnames)
+		d := f.obj.(NpObjDir)
+		os, rest, err := d.Lookup(f.ctx, args.Wnames)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
@@ -237,7 +250,8 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	for {
-		o1, err := f.obj.Create(f.ctx, names[0], args.Perm, args.Mode)
+		d := f.obj.(NpObjDir)
+		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
 			nf := &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx}

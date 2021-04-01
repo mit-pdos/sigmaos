@@ -22,7 +22,7 @@ type LocalD struct {
 	load int // XXX bogus
 	bin  string
 	nid  uint64
-	root *Obj
+	root *Dir
 	done bool
 	ip   string
 	ls   map[string]*Lambda
@@ -38,7 +38,7 @@ func MakeLocalD(bin string) *LocalD {
 	ld.nid = 0
 	ld.bin = bin
 	db.Name("locald")
-	ld.root = ld.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
+	ld.root = ld.makeDir([]string{}, np.DMDIR, nil)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
 	ip, err := fsclnt.LocalIP()

@@ -1,36 +1,50 @@
 package memfs
 
 import (
-	"sync"
+	"fmt"
+	"time"
 
 	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 type File struct {
-	mu   sync.Mutex
+	*Inode
 	data []byte
 }
 
-func MakeFile() *File {
-	f := &File{}
-	f.data = make([]byte, 0)
-	return f
+func MakeFile(i *Inode) *File {
+	return &File{i, make([]byte, 0)}
 }
 
-func (f *File) Len() np.Tlength {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+func (f *File) Size() np.Tlength {
+	f.Lock()
+	defer f.Unlock()
 	return np.Tlength(len(f.data))
 }
 
-// Caller must hold lock
+func (f *File) Stat(ctx npo.CtxI) (*np.Stat, error) {
+	f.Lock()
+	defer f.Unlock()
+	st := f.Inode.stat()
+	st.Length = np.Tlength(len(f.data))
+	return st, nil
+}
+
 func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
-func (f *File) write(offset np.Toffset, data []byte) (np.Tsize, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+func (f *File) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+	f.Lock()
+	defer f.Unlock()
+
+	if v != np.NoV && f.version != v {
+		return 0, fmt.Errorf("Version mismatch")
+	}
+
+	f.version += 1
+	f.Mtime = time.Now().Unix()
 
 	cnt := np.Tsize(len(data))
 	sz := np.Toffset(len(data))
@@ -51,9 +65,13 @@ func (f *File) write(offset np.Toffset, data []byte) (np.Tsize, error) {
 	return cnt, nil
 }
 
-func (f *File) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+func (f *File) Read(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+	f.Lock()
+	defer f.Unlock()
+
+	if v != np.NoV && f.version != v {
+		return nil, fmt.Errorf("Version mismatch")
+	}
 
 	if offset >= f.LenOff() {
 		return nil, nil

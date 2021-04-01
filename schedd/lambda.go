@@ -30,11 +30,11 @@ type Lambda struct {
 	ConsDep        map[string]bool // if true, consumer has finished
 	ProdDep        map[string]bool // if true, producer is running
 	ExitDep        map[string]bool
-	obj            *Obj
+	obj            *Dir
 	attr           *fslib.Attr
 }
 
-func makeLambda(sd *Sched, a string, o *Obj) *Lambda {
+func makeLambda(sd *Sched, a string, o *Dir) *Lambda {
 	l := &Lambda{}
 	l.sd = sd
 	l.cond = sync.NewCond(&l.mu)

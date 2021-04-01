@@ -65,14 +65,15 @@ func mkChan(addr string) (*Chan, error) {
 func (ch *Chan) Dst() string { return ch.conn.RemoteAddr().String() }
 
 func (ch *Chan) Close() {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
 	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.Dst())
 	for _, rpc := range ch.outstanding {
 		close(rpc.replych)
 	}
 	close(ch.requests)
-	ch.mu.Lock()
 	ch.closed = true
-	ch.mu.Unlock()
 	ch.conn.Close()
 }
 

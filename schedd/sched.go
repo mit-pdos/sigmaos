@@ -32,8 +32,8 @@ type Sched struct {
 	load int // XXX bogus
 	nid  uint64
 	ls   map[string]*Lambda
-	root *Obj
-	runq *Obj
+	root *Dir
+	runq *File
 	ch   chan bool
 	done bool
 	srv  *npsrv.NpServer
@@ -46,8 +46,8 @@ func MakeSchedd() *Sched {
 	sd.load = 0
 	sd.nid = 1 // 1 is runq
 	sd.ls = make(map[string]*Lambda)
-	sd.root = sd.MakeObj([]string{}, np.DMDIR, nil).(*Obj)
-	sd.runq = sd.MakeObj([]string{"runq"}, 0, sd.root).(*Obj)
+	sd.root = sd.makeDir([]string{}, np.DMDIR, nil)
+	sd.runq = sd.makeFile([]string{"runq"}, 0, sd.root)
 	sd.ch = make(chan bool)
 	sd.root.time = time.Now().Unix()
 	db.Name("schedd")

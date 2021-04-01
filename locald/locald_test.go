@@ -6,8 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/debug"
-	"ulambda/fsclnt"
+	// "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -38,15 +37,12 @@ func TestSpawn(t *testing.T) {
 
 	pid := fslib.GenPid()
 	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out", ""}, nil, nil, nil}
-	ip, err := fsclnt.LocalIP()
-
-	assert.Nil(t, err, "LocalIP")
 
 	b, err := json.Marshal(a)
 
 	assert.Nil(t, err, "Marshal")
 
-	err = ts.MakeFile(fslib.LOCALD_ROOT+"/"+ip+"/"+pid, b)
+	err = ts.MakeFile(fslib.LOCALD_ROOT+"/~ip/"+pid, b)
 
 	assert.Nil(t, err, "Spawn")
 

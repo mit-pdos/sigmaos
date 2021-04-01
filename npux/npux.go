@@ -2,8 +2,6 @@ package npux
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -22,14 +20,14 @@ type NpUx struct {
 	mu    sync.Mutex
 	srv   *npsrv.NpServer
 	ch    chan bool
-	root  npo.NpObj
+	root  *Dir
 	mount string
 }
 
 func MakeNpUx(mount string) *NpUx {
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
-	npux.root = npux.MakeObj([]string{mount}, np.DMDIR, nil)
+	npux.root = npux.makeDir([]string{mount}, np.DMDIR, nil)
 	db.Name("npuxd")
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
@@ -62,30 +60,29 @@ func (npux *NpUx) Done() {
 }
 
 type Obj struct {
-	mu     sync.Mutex
-	npux   *NpUx
-	path   []string
-	t      np.Tperm
-	ino    uint64
-	sz     np.Tlength
-	parent npo.NpObj
-	file   *os.File
-	init   bool
+	mu   sync.Mutex
+	npux *NpUx
+	path []string
+	t    np.Tperm
+	ino  uint64
+	sz   np.Tlength
+	dir  *Dir
+	init bool
 }
 
-func (npux *NpUx) makeObjL(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
+func (npux *NpUx) makeObjL(path []string, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
 	o.npux = npux
 	o.path = path
 	o.t = t
-	o.parent = p
+	o.dir = d
 	return o
 }
 
-func (npux *NpUx) MakeObj(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
+func (npux *NpUx) MakeObj(path []string, t np.Tperm, d *Dir) npo.NpObj {
 	npux.mu.Lock()
 	defer npux.mu.Unlock()
-	return npux.makeObjL(path, t, p)
+	return npux.makeObjL(path, t, d)
 }
 
 func (o *Obj) String() string {
@@ -187,115 +184,12 @@ func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {
 	return nil
 }
 
-func (o *Obj) uxRead(off int64, cnt int) ([]byte, error) {
-	b := make([]byte, cnt)
-	_, err := o.file.Seek(off, 0)
-	if err != nil {
-		return nil, err
-	}
-	n, err := o.file.Read(b)
-	if err == io.EOF {
-		return b[:n], nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], err
-}
-
-func (o *Obj) uxWrite(off int64, b []byte) (np.Tsize, error) {
-	db.DLPrintf("UXD", "%v: WriteFile: off %v cnt %v %v\n", o, off, len(b), o.file)
-	_, err := o.file.Seek(off, 0)
-	if err != nil {
-		return 0, err
-	}
-	n, err := o.file.Write(b)
-	return np.Tsize(n), err
-}
-
-func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	db.DLPrintf("UXD", "%v: ReadFile: %v off %v cnt %v\n", ctx, o, off, cnt)
-	b, err := o.uxRead(int64(off), int(cnt))
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func (o *Obj) uxReadDir() ([]*np.Stat, error) {
-	var sts []*np.Stat
-	dirents, err := ioutil.ReadDir(o.Path())
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range dirents {
-		st := &np.Stat{}
-		st.Name = e.Name()
-		if e.IsDir() {
-			st.Mode = np.DMDIR
-		} else {
-			st.Mode = 0
-		}
-		st.Mode = st.Mode | np.Tperm(0777)
-		sts = append(sts, st)
-	}
-	db.DLPrintf("UXD", "%v: uxReadDir %v\n", o, sts)
-	return sts, nil
-}
-
-// XXX intermediate dirs?
-func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
-	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, o, p)
-	fi, err := os.Stat(np.Join(append(o.path, p...)))
-	if err != nil {
-		return nil, nil, err
-	}
-	t := np.Tperm(0)
-	if fi.IsDir() {
-		t = np.DMDIR
-	}
-	o1 := o.npux.MakeObj(append(o.path, p...), t, o)
-	return []npo.NpObj{o1}, nil, nil
-}
-
-func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
-	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, o, off, cnt)
-	dirents, err := o.uxReadDir()
-	if err != nil {
-		return nil, err
-	}
-	return dirents, nil
-}
-
-// XXX close
-func (o *Obj) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
-	p := np.Join(append(o.path, name))
-	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, o, name, p, perm)
-	var err error
-	var file *os.File
-	if perm.IsDir() {
-		err = os.Mkdir(p, os.FileMode(perm&0777))
-	} else {
-		file, err = os.OpenFile(p, uxFlags(m)|os.O_CREATE, os.FileMode(perm&0777))
-	}
-	if err != nil {
-		return nil, err
-	}
-	o1 := o.npux.MakeObj(append(o.path, name), 0, o)
-	if file != nil {
-		o1.(*Obj).file = file
-	}
-	return o1, nil
-}
-
-// XXX close
 func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
-	db.DLPrintf("UXD", "%v: Open %v %v\n", ctx, o, m)
-	file, err := os.OpenFile(o.Path(), uxFlags(m), 0)
-	if err != nil {
-		return err
-	}
-	o.file = file
+	return nil
+}
+
+// XXX close
+func (o *Obj) Close(ctx npo.CtxI, m np.Tmode) error {
 	return nil
 }
 
@@ -315,13 +209,4 @@ func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
 	}
 	o.path = d
 	return nil
-}
-
-func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	db.DLPrintf("UXD", "%v: WriteFile %v off %v sz %v\n", ctx, o, off, len(b))
-	return o.uxWrite(int64(off), b)
-}
-
-func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	return 0, fmt.Errorf("not supported")
 }

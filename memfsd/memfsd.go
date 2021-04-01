@@ -11,7 +11,7 @@ import (
 )
 
 type Fsd struct {
-	root  *memfs.Inode
+	root  *memfs.Dir
 	srv   *npsrv.NpServer
 	ch    chan bool
 	addr  string
@@ -54,19 +54,15 @@ func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
 	return npo.MakeNpConn(fsd, conn)
 }
 
-func (fsd *Fsd) MkNod(name string, d memfs.Data) error {
-	obj, err := fsd.root.Create(fsd.mkctx(""), name, np.DMDEVICE, 0)
-	if err != nil {
-		return err
-	}
-	obj.(*memfs.Inode).Data = d
-	return nil
+func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {
+	_, err := fsd.root.CreateDev(fsd.mkctx(""), name, d, np.DMDEVICE, 0)
+	return err
 }
 
-func (fsd *Fsd) MkPipe(name string) (*memfs.Inode, error) {
+func (fsd *Fsd) MkPipe(name string) (npo.NpObj, error) {
 	obj, err := fsd.root.Create(fsd.mkctx(""), name, np.DMNAMEDPIPE, 0)
 	if err != nil {
 		return nil, err
 	}
-	return obj.(*memfs.Inode), nil
+	return obj, nil
 }

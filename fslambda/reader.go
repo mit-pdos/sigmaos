@@ -11,6 +11,7 @@ import (
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 type Reader struct {
@@ -18,7 +19,7 @@ type Reader struct {
 	pid    string
 	input  string
 	output string
-	pipe   *memfs.Inode
+	pipe   npo.NpObj
 }
 
 func MakeReader(args []string) (*Reader, error) {
@@ -72,7 +73,7 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.WriteFile(nil, 0, data, np.NoV)
+		_, err = r.pipe.(npo.NpObjFile).Write(nil, 0, data, np.NoV)
 		if err != nil {
 			log.Fatal(err)
 		}

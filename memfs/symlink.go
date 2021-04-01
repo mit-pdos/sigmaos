@@ -1,28 +1,66 @@
 package memfs
 
 import (
+	"fmt"
+	"time"
+
 	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 type Symlink struct {
+	*Inode
 	target []byte
 }
 
-func MakeSym() *Symlink {
+func MakeSym(i *Inode) *Symlink {
 	s := Symlink{}
+	s.Inode = i
 	return &s
 }
 
-func (s *Symlink) Len() np.Tlength {
+func (s *Symlink) Size() np.Tlength {
+	s.Lock()
+	defer s.Unlock()
 	return np.Tlength(len(s.target))
 }
 
-func (s *Symlink) write(d []byte) (np.Tsize, error) {
-	s.target = d
-	return np.Tsize(len(d)), nil
+func (s *Symlink) Stat(ctx npo.CtxI) (*np.Stat, error) {
+	s.Lock()
+	defer s.Unlock()
+	st := s.Inode.stat()
+	st.Length = np.Tlength(len(s.target))
+	return st, nil
 }
 
-func (s *Symlink) read(offset np.Toffset, n np.Tsize) ([]byte, error) {
+func (s *Symlink) Open(ctx npo.CtxI, mode np.Tmode) error {
+	return nil
+}
+
+func (s *Symlink) Close(ctx npo.CtxI, mode np.Tmode) error {
+	return nil
+}
+
+func (s *Symlink) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	if v != np.NoV && s.version != v {
+		return 0, fmt.Errorf("Version mismatch")
+	}
+	s.target = data
+	s.version += 1
+	s.Mtime = time.Now().Unix()
+	return np.Tsize(len(data)), nil
+}
+
+func (s *Symlink) Read(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	if v != np.NoV && s.version != v {
+		return nil, fmt.Errorf("Version mismatch")
+	}
 	if offset >= np.Toffset(len(s.target)) {
 		return nil, nil
 	}

@@ -13,7 +13,7 @@ import (
 const PIPESZ = 8192
 
 type Pipe struct {
-	mu      sync.Mutex
+	*Inode
 	condr   *sync.Cond
 	condw   *sync.Cond
 	nreader int
@@ -21,21 +21,30 @@ type Pipe struct {
 	buf     []byte
 }
 
-func MakePipe() *Pipe {
+func MakePipe(i *Inode) *Pipe {
 	pipe := &Pipe{}
-	pipe.condr = sync.NewCond(&pipe.mu)
-	pipe.condw = sync.NewCond(&pipe.mu)
+	pipe.Inode = i
+	pipe.condr = sync.NewCond(&i.mu)
+	pipe.condw = sync.NewCond(&i.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
 	return pipe
 }
 
-func (p *Pipe) Len() np.Tlength {
+func (p *Pipe) Size() np.Tlength {
 	return np.Tlength(len(p.buf))
 }
 
-func (pipe *Pipe) open(ctx npo.CtxI, mode np.Tmode) error {
-	pipe.mu.Lock()
-	defer pipe.mu.Unlock()
+func (p *Pipe) Stat(ctx npo.CtxI) (*np.Stat, error) {
+	p.Lock()
+	defer p.Unlock()
+	st := p.Inode.stat()
+	st.Length = np.Tlength(len(p.buf))
+	return st, nil
+}
+
+func (pipe *Pipe) Open(ctx npo.CtxI, mode np.Tmode) error {
+	pipe.Lock()
+	defer pipe.Unlock()
 
 	if mode == np.OREAD {
 		pipe.nreader += 1
@@ -56,9 +65,9 @@ func (pipe *Pipe) open(ctx npo.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) close(ctx npo.CtxI, mode np.Tmode) error {
-	pipe.mu.Lock()
-	defer pipe.mu.Unlock()
+func (pipe *Pipe) Close(ctx npo.CtxI, mode np.Tmode) error {
+	pipe.Lock()
+	defer pipe.Unlock()
 
 	if mode == np.OREAD {
 		if pipe.nreader < 0 {
@@ -78,9 +87,9 @@ func (pipe *Pipe) close(ctx npo.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) write(ctx npo.CtxI, d []byte) (np.Tsize, error) {
-	pipe.mu.Lock()
-	defer pipe.mu.Unlock()
+func (pipe *Pipe) Write(ctx npo.CtxI, d []byte, v np.TQversion) (np.Tsize, error) {
+	pipe.Lock()
+	defer pipe.Unlock()
 
 	n := len(d)
 	for len(d) > 0 {
@@ -101,9 +110,9 @@ func (pipe *Pipe) write(ctx npo.CtxI, d []byte) (np.Tsize, error) {
 	return np.Tsize(n), nil
 }
 
-func (pipe *Pipe) read(ctx npo.CtxI, n np.Tsize) ([]byte, error) {
-	pipe.mu.Lock()
-	defer pipe.mu.Unlock()
+func (pipe *Pipe) Read(ctx npo.CtxI, n np.Tsize, v np.TQversion) ([]byte, error) {
+	pipe.Lock()
+	defer pipe.Unlock()
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {

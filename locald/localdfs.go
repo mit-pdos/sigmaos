@@ -7,7 +7,6 @@ import (
 	//	"unicode/utf8"
 	"fmt"
 	"log"
-	"time"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -16,59 +15,25 @@ import (
 
 // XXX move elsewhere
 type Obj struct {
-	name   []string
-	t      np.Tperm
-	uid    uint64
-	parent npo.NpObj
-	ld     *LocalD
-	time   int64
+	name []string
+	t    np.Tperm
+	uid  uint64
+	dir  *Dir
+	ld   *LocalD
+	time int64
 }
 
-func (ld *LocalD) MakeObj(path []string, t np.Tperm, p npo.NpObj) npo.NpObj {
+func (ld *LocalD) MakeObj(path []string, t np.Tperm, p *Dir) *Obj {
 	o := &Obj{path, t, 0, p, ld, int64(0)}
 	return o
 }
 
-func (o *Obj) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
-	db.DLPrintf("LOCALD", "%v: Create %v\n", o, name)
-	if !o.t.IsDir() {
-		return nil, fmt.Errorf("not supported")
-	}
-	// Creating a lambda is always a directory
-	o1 := o.ld.MakeObj(append(o.name, name), perm|np.DMDIR, o).(*Obj)
-	o1.time = time.Now().Unix()
-	return o1, nil
-}
-
-func (o *Obj) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
-	db.DLPrintf("LOCALD", "%v: Lookup %v %v %v\n", ctx, o, p, len(p))
-	if !o.t.IsDir() {
-		return nil, nil, fmt.Errorf("Not a directory")
-	}
-	// XXX maybe include root dir
-	var os []npo.NpObj
-	switch len(o.name) {
-	case 0:
-		// XXX Lookup always succeeds for now
-		var o1 *Obj
-		if len(p) > 1 {
-			o1 := o1.ld.MakeObj(append(o1.name, p[1]), 0, o1).(*Obj)
-			o1.time = o.time
-		}
-		os = []npo.NpObj{o1}
-	case 1:
-		o1 := o.ld.MakeObj(append(o.name, p[0]), 0, o).(*Obj)
-		o1.time = o.time
-		o1.uid = o.uid
-		os = []npo.NpObj{o1}
-	default:
-		log.Fatalf("%v: Lookup: %v\n", o, p)
-	}
-	return os, nil, nil
-}
-
 // check permissions etc.
 func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
+	return nil
+}
+
+func (o *Obj) Close(ctx npo.CtxI, m np.Tmode) error {
 	return nil
 }
 
@@ -99,25 +64,6 @@ func (o *Obj) Qid() np.Tqid {
 	return np.Tqid{}
 }
 
-func (o *Obj) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
-	db.DLPrintf("LOCALD", "ReadDir: %v\n", o)
-	switch len(o.name) {
-	case 0:
-		return []*np.Stat{}, nil
-	case 1:
-		// XXX
-		return []*np.Stat{}, nil
-	default:
-		log.Fatalf("ReadDir: name %v\n", o)
-	}
-	return nil, nil
-}
-
-func (o *Obj) ReadFile(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	db.DLPrintf("LOCALD", "%v: ReadFile: %v %v\n", o, off, cnt)
-	return []byte{}, fmt.Errorf("not suported")
-}
-
 func (o *Obj) Remove(ctx npo.CtxI, name string) error {
 	return fmt.Errorf("not supported")
 }
@@ -128,25 +74,6 @@ func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
 
 func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return o.stat(), nil
-}
-
-func (o *Obj) WriteFile(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
-	db.DLPrintf("LOCALD", "%v: WriteFile %v %v\n", o, off, len(data))
-	return np.Tsize(len(data)), fmt.Errorf("not suported")
-}
-
-func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
-	db.DLPrintf("LOCALD", "%v: WriteDir %v %v\n", o, off, len(data))
-	switch len(o.name) {
-	case 0:
-		return 0, fmt.Errorf("Root is not writable %v", o)
-	case 1:
-		go o.ld.spawn(data)
-		return np.Tsize(len(data)), nil
-	default:
-		log.Fatalf("WriteDir: name %v\n", o)
-	}
-	return 0, fmt.Errorf("not suported")
 }
 
 func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {

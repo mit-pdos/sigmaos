@@ -43,8 +43,8 @@ func (l *Lambda) init(a []byte) error {
 	l.Dir = attr.Dir
 	l.attr = &attr
 	db.DLPrintf("LOCALD", "Locald init: %v\n", attr)
-	o1 := l.ld.MakeObj([]string{attr.Pid}, np.DMDIR, l.ld.root).(*Obj)
-	o1.time = time.Now().Unix()
+	d1 := l.ld.makeDir([]string{attr.Pid}, np.DMDIR, l.ld.root)
+	d1.time = time.Now().Unix()
 	return nil
 }
 

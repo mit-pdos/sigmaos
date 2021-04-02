@@ -78,10 +78,10 @@ func (s *Spinner) Work() {
 	//	log.Printf("Average computation time: %v msec(s)\n", compElapsed.Milliseconds()/int64(s.its))
 	//	log.Printf("Total elapsed setup time: %v msec(s)\n", e2eElapsed.Milliseconds()-compElapsed.Milliseconds())
 
-	if !s.native {
-		err := s.Exiting(s.pid, "OK")
-		if err != nil {
-			log.Fatalf("Exit: error %v\n", err)
-		}
-	}
+	//	if !s.native {
+	//		err := s.Exiting(s.pid, "OK")
+	//		if err != nil {
+	//			log.Fatalf("Exit: error %v\n", err)
+	//		}
+	//	}
 }

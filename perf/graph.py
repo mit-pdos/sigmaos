@@ -109,6 +109,8 @@ if __name__ == "__main__":
   # Read data from native run
   native_data = read_data(paths, "native")
   native_runtime = compute_mean(native_data)
+  for i in sorted(native_data.keys()):
+    print(i, np.array(native_data[i]) / 1000.0)
   # Read data from 9p run
   ninep_data = read_data(paths, "9p")
   ninep_runtime = compute_mean(ninep_data)

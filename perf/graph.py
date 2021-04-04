@@ -20,9 +20,9 @@ def parse_profile_file(path):
   setup_time = float(time_from_line(lines[-1]))
   return (dim, its, n, comp_time, setup_time)
 
-def read_profile(paths):
+def read_profile(paths, p_type):
   for p in paths:
-    if "baseline" in p:
+    if "baseline" in p and p_type in p:
       dim, iterations, n, comp_time, setup_time = parse_profile_file(p)
       return (dim, iterations, n, comp_time, setup_time)
 
@@ -85,13 +85,15 @@ def get_overhead_x_y(profile, baseline, runtime):
   y = np.array(y)
   return (x, y)
 
-def plot(title, units, native_x_y, ninep_x_y):
+def plot(title, units, native_x_y, ninep_x_y, remote_x_y):
   native_x, native_y = native_x_y
   ninep_x, ninep_y = ninep_x_y
+  remote_x, remote_y = remote_x_y
 
   fig, ax = plt.subplots(1)
   ax.plot(native_x, native_y, label="Native (exec)")
-  ax.plot(ninep_x, ninep_y, label="uLambda")
+  ax.plot(ninep_x, ninep_y, label="9p")
+  ax.plot(remote_x, remote_y, label="Remote (AWS Lambda)")
 
   ax.set_xlabel("Work per invocation (msec)")
   ax.set_ylabel(title + " " + units) 
@@ -104,21 +106,26 @@ if __name__ == "__main__":
   parser.add_argument("--measurement_dir", type=str, required=True)
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
-  profile = read_profile(paths)
-  print("profile:", profile)
+  native_profile = read_profile(paths, "native")
+  remote_profile = read_profile(paths, "remote")
+  print("native profile:", native_profile)
+  print("remote profile:", remote_profile)
   # Read data from native run
   native_data = read_data(paths, "native")
   native_runtime = compute_mean(native_data)
-  for i in sorted(native_data.keys()):
-    print(i, np.array(native_data[i]) / 1000.0)
   # Read data from 9p run
   ninep_data = read_data(paths, "9p")
   ninep_runtime = compute_mean(ninep_data)
+  # Read data from remote run
+  remote_data = read_data(paths, "remote")
+  remote_runtime = compute_mean(remote_data)
   # Plot runtime
-  native_runtime_x_y = get_runtime_x_y(profile, native_runtime)
-  ninep_runtime_x_y = get_runtime_x_y(profile, ninep_runtime)
-  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y)
+  native_runtime_x_y = get_runtime_x_y(native_profile, native_runtime)
+  ninep_runtime_x_y = get_runtime_x_y(native_profile, ninep_runtime)
+  remote_runtime_x_y = get_runtime_x_y(remote_profile, remote_runtime)
+  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y)
   #Plot overhead
-  native_overhead_x_y = get_overhead_x_y(profile, native_runtime, native_runtime)
-  ninep_overhead_x_y = get_overhead_x_y(profile, native_runtime, ninep_runtime)
-  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y)
+  native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)
+  ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
+  remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
+  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y)

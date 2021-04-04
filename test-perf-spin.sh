@@ -2,14 +2,15 @@
 
 # Params
 dim=64
-max_its=100 # Step size = 5
+max_its=50 # Step size = 5
 n_trials=50
 baseline_its=30000
 N=1
 
 # Dirs
 measurements=./measurements
-baseline=$measurements/spin_test_baseline.txt
+native_baseline=$measurements/spin_test_native_baseline.txt
+remote_baseline=$measurements/spin_test_remote_baseline.txt
 
 echo "Spinning perf test, dimension=$dim max iterations per lambda invocation=$max_its"
 if [ ! -d "$measurements" ]
@@ -17,11 +18,16 @@ then
   mkdir $measurements
 fi
 
-echo "Collecting baseline..."
-echo $dim $baseline_its 1 > $baseline
-./bin/perf-spin-test-starter 1 $dim $baseline_its baseline >> $baseline 2>&1
+echo "Collecting native baseline..."
+echo $dim $baseline_its 1 > $native_baseline
+./bin/perf-spin-test-starter 1 $dim $baseline_its baseline >> $native_baseline 2>&1
 
-for test_type in native 9p ; do
+# Just collect native for now
+echo "Collecting remote baseline..."
+echo $dim $baseline_its 1 > $remote_baseline
+./bin/perf-spin-test-starter 1 $dim $baseline_its baseline >> $remote_baseline 2>&1
+
+for test_type in native 9p remote ; do
   ./stop.sh
   echo "Running $test_type tests..."
   if [ $test_type == "9p" ]; then

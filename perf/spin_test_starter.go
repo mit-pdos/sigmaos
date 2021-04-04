@@ -17,11 +17,12 @@ type SpinTestStarter struct {
 	dim       string
 	its       string
 	native    bool
+	baseline  bool
 	*fslib.FsLib
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
-	a := &fslib.Attr{pid, "bin/perf-spinner", "", []string{s.dim, s.its}, nil, nil, nil}
+	a := &fslib.Attr{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil}
 	err := s.Spawn(a)
 	if err != nil {
 		log.Fatalf("couldn't spawn %v: %v\n", pid, err)
@@ -45,6 +46,8 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 		s.native = true
 	} else if args[3] == "9p" {
 		s.native = false
+	} else if args[3] == "baseline" {
+		s.baseline = true
 	} else {
 		return nil, errors.New("MakeSpinTestStarter: invalid test type")
 	}
@@ -118,7 +121,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 		}
 
 		// Set up command struct
-		cmd := exec.Command("./bin/perf-spinner", []string{pid, s.dim, s.its, "native"}...)
+		cmd := exec.Command("./bin/c-spinner", []string{pid, s.dim, s.its, "native"}...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -149,8 +152,31 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 	return elapsed
 }
 
+func (s *SpinTestStarter) TestBaseline() {
+	pid := fslib.GenPid()
+
+	// Set up command struct
+	cmd := exec.Command("./bin/c-spinner", []string{pid, s.dim, s.its, "baseline"}...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Start some lambdas
+	err := cmd.Start()
+	if err != nil {
+		log.Printf("Error starting pid: %v, %v\n", pid, err)
+	}
+
+	// Wait for them all
+	err = cmd.Wait()
+	if err != nil {
+		log.Printf("Error in pid %v exit: %v", pid, err)
+	}
+}
+
 func (s *SpinTestStarter) Work() {
-	if s.native {
+	if s.baseline {
+		s.TestBaseline()
+	} else if s.native {
 		nativeElapsed := s.TestNative()
 		log.Printf("Native elapsed time: %f usec(s)\n", float64(nativeElapsed.Microseconds()))
 	} else {

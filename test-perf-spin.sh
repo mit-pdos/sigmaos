@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Params
-dim=15
+dim=64
 max_its=100 # Step size = 5
 n_trials=50
-baseline_its=10000
+baseline_its=30000
 N=1
 
 # Dirs
@@ -19,7 +19,7 @@ fi
 
 echo "Collecting baseline..."
 echo $dim $baseline_its 1 > $baseline
-./bin/perf-matrix-multiply-baseline $dim $baseline_its >> $baseline 2>&1
+./bin/perf-spin-test-starter 1 $dim $baseline_its baseline >> $baseline 2>&1
 
 for test_type in native 9p ; do
   ./stop.sh

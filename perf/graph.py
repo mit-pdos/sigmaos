@@ -16,7 +16,7 @@ def parse_profile_file(path):
   dim = int(profile[0])
   its = int(profile[1])
   n = int(profile[2])
-  comp_time = float(time_from_line(lines[1]))
+  comp_time = float(time_from_line(lines[2]))
   setup_time = float(time_from_line(lines[-1]))
   return (dim, its, n, comp_time, setup_time)
 

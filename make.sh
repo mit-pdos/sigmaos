@@ -6,3 +6,6 @@ do
     go build -race -o bin/$f cmd/$f/main.go
 done
 
+echo "Build c_spinner"
+cd perf/c-spinner
+make

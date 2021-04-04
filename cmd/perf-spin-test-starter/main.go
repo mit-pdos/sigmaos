@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) < 5 {
-		fmt.Fprintf(os.Stderr, "Usage: %v nSpinners dim iterations <native/9p>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v nSpinners dim iterations <native/9p/baseline>\n", os.Args[0])
 		os.Exit(1)
 	}
 	s, err := perf.MakeSpinTestStarter(os.Args[1:])

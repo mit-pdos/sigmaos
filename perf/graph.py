@@ -117,7 +117,7 @@ if __name__ == "__main__":
   ninep_data = read_data(paths, "9p")
   ninep_runtime = compute_mean(ninep_data)
   # Read data from remote run
-  remote_data = read_data(paths, "remote")
+  remote_data = read_data(paths, "aws")
   remote_runtime = compute_mean(remote_data)
   # Plot runtime
   native_runtime_x_y = get_runtime_x_y(native_profile, native_runtime)

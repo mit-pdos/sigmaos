@@ -85,7 +85,25 @@ def get_overhead_x_y(profile, baseline, runtime):
   y = np.array(y)
   return (x, y)
 
+def cutoff_at(x_y, cutoff):
+  x, y = x_y
+  for i in range(len(x)):
+    if x[i] > cutoff:
+      return x[:i], y[:i]
+  return x_y
+
+def trim(a, b, c):
+  a_x, a_y = a
+  b_x, b_y = b
+  c_x, c_y = c
+  cutoff = min(max(a_x), max(b_x), max(c_x))
+  a = cutoff_at(a, cutoff)
+  b = cutoff_at(b, cutoff)
+  c = cutoff_at(c, cutoff)
+  return a, b, c
+
 def plot(title, units, native_x_y, ninep_x_y, remote_x_y):
+  native_x_y, ninep_x_y, remote_x_y = trim(native_x_y, ninep_x_y, remote_x_y)
   native_x, native_y = native_x_y
   ninep_x, ninep_y = ninep_x_y
   remote_x, remote_y = remote_x_y

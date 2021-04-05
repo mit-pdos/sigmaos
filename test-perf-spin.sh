@@ -20,14 +20,14 @@ fi
 
 echo "Collecting native baseline..."
 echo $dim $baseline_its 1 > $native_baseline
-./bin/perf-spin-test-starter 1 $dim $baseline_its baseline >> $native_baseline 2>&1
+./bin/perf-spin-test-starter 1 $dim $baseline_its baseline local >> $native_baseline 2>&1
 
 # Just collect native for now
 echo "Collecting remote baseline..."
 echo $dim $baseline_its 1 > $remote_baseline
-./bin/perf-spin-test-starter 1 $dim $baseline_its baseline >> $remote_baseline 2>&1
+./bin/perf-spin-test-starter 1 $dim $baseline_its baseline remote >> $remote_baseline 2>&1
 
-for test_type in native 9p remote ; do
+for test_type in aws native 9p aws ; do
   ./stop.sh
   echo "Running $test_type tests..."
   if [ $test_type == "9p" ]; then
@@ -50,7 +50,11 @@ for test_type in native 9p remote ; do
      
       echo "Starting spin test, spinners=$N, iterations=$its, trial=$j, type=$test_type"
       echo $dim $its $N > $outfile
-      ./bin/perf-spin-test-starter $N $dim $its $test_type >> $outfile 2>&1
+      if [ $test_type == "aws" ]; then
+        ./bin/perf-spin-test-starter $N $dim $its $test_type remote >> $outfile 2>&1
+      else
+        ./bin/perf-spin-test-starter $N $dim $its $test_type local >> $outfile 2>&1
+      fi
     done
   done
 done

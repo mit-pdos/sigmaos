@@ -1,8 +1,12 @@
 package perf
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -18,6 +22,8 @@ type SpinTestStarter struct {
 	its       string
 	native    bool
 	baseline  bool
+	aws       bool
+	local     bool
 	*fslib.FsLib
 }
 
@@ -36,7 +42,7 @@ func (s *SpinTestStarter) spawnSpinner() string {
 }
 
 func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
-	if len(args) < 4 {
+	if len(args) < 5 {
 		return nil, errors.New("MakeSpinTestStarter: too few arguments")
 	}
 	log.Printf("MakeSpinTestStarter: %v\n", args)
@@ -46,10 +52,20 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 		s.native = true
 	} else if args[3] == "9p" {
 		s.native = false
+	} else if args[3] == "aws" {
+		s.aws = true
 	} else if args[3] == "baseline" {
 		s.baseline = true
 	} else {
 		return nil, errors.New("MakeSpinTestStarter: invalid test type")
+	}
+
+	if args[4] == "local" {
+		s.local = true
+	}
+
+	if s.local && s.aws {
+		log.Fatalf("Can't run as local & aws\n")
 	}
 
 	if !s.native {
@@ -68,8 +84,13 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 		log.Fatalf("Invalid dimension: %v, %v\n", args[1], err)
 	}
 
-	_, err = strconv.Atoi(args[2])
-	s.its = args[2]
+	i, err := strconv.Atoi(args[2])
+	// Limited by the AWS API Gateway timeout
+	if i > 5000 && s.local == false {
+		s.its = "5000"
+	} else {
+		s.its = args[2]
+	}
 	if err != nil {
 		log.Fatalf("Invalid num interations: %v, %v\n", args[2], err)
 	}
@@ -77,7 +98,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 	return s, nil
 }
 
-func (s *SpinTestStarter) TestUlambda() time.Duration {
+func (s *SpinTestStarter) TestNinep() time.Duration {
 	pids := map[string]int{}
 
 	// Gen pids
@@ -152,7 +173,34 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 	return elapsed
 }
 
-func (s *SpinTestStarter) TestBaseline() {
+func (s *SpinTestStarter) TestAws() time.Duration {
+	vals := map[string]bool{"baseline": true}
+	body, err := json.Marshal(vals)
+
+	if err != nil {
+		log.Fatalf("Error marshalling for lamda baseline: %v", err)
+	}
+
+	url := fmt.Sprintf("https://m5ica91644.execute-api.us-east-1.amazonaws.com/default/cpp-spin?dim=%v&its=%v", s.dim, s.its)
+
+	start := time.Now()
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+	end := time.Now()
+
+	if resp.StatusCode != 200 {
+		log.Fatalf("Bad response code: %v, %v", resp.StatusCode, resp)
+	}
+
+	if err != nil {
+		log.Fatalf("Error in HTTP POST: %v", err)
+	}
+
+	// Calculate elapsed time
+	elapsed := end.Sub(start)
+	return elapsed
+}
+
+func (s *SpinTestStarter) TestLocalBaseline() {
 	pid := fslib.GenPid()
 
 	// Set up command struct
@@ -173,14 +221,52 @@ func (s *SpinTestStarter) TestBaseline() {
 	}
 }
 
+func (s *SpinTestStarter) TestAwsBaseline() {
+	vals := map[string]bool{"baseline": true}
+	body, err := json.Marshal(vals)
+
+	if err != nil {
+		log.Fatalf("Error marshalling for lamda baseline: %v", err)
+	}
+
+	url := fmt.Sprintf("https://m5ica91644.execute-api.us-east-1.amazonaws.com/default/cpp-spin?dim=%v&its=%v", s.dim, s.its)
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+
+	if resp.StatusCode != 200 {
+		log.Fatalf("Bad response code: %v, %v", resp.StatusCode, resp)
+	}
+
+	if err != nil {
+		log.Fatalf("Error in HTTP POST: %v", err)
+	}
+
+	var res map[string]interface{}
+
+	json.NewDecoder(resp.Body).Decode(&res)
+
+	if err != nil {
+		log.Fatalf("Error unmarshalling response body: %v", err)
+	}
+
+	log.Printf("%v", res["message"])
+}
+
 func (s *SpinTestStarter) Work() {
 	if s.baseline {
-		s.TestBaseline()
+		if s.local {
+			s.TestLocalBaseline()
+		} else {
+			s.TestAwsBaseline()
+		}
+	} else if !s.local {
+		awsElapsed := s.TestAws()
+		log.Printf("Aws elapsed time: %f usec(s)\n", float64(awsElapsed.Microseconds()))
 	} else if s.native {
 		nativeElapsed := s.TestNative()
 		log.Printf("Native elapsed time: %f usec(s)\n", float64(nativeElapsed.Microseconds()))
 	} else {
-		ulambdaElapsed := s.TestUlambda()
-		log.Printf("Ulambda elapsed time: %f usec(s)\n", float64(ulambdaElapsed.Microseconds()))
+		ulambdaElapsed := s.TestNinep()
+		log.Printf("Ninep elapsed time: %f usec(s)\n", float64(ulambdaElapsed.Microseconds()))
 	}
 }

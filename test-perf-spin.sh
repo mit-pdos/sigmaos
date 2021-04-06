@@ -2,7 +2,7 @@
 
 # Params
 dim=64
-max_its=50 # Step size = 5
+max_its=30 # Step size = 5
 n_trials=50
 baseline_its=30000
 remote_baseline_its=5000
@@ -23,7 +23,12 @@ echo "Collecting native baseline..."
 echo $dim $baseline_its 1 > $native_baseline
 ./bin/perf-spin-test-starter 1 $dim $baseline_its baseline local >> $native_baseline 2>&1
 
-# Just collect native for now
+echo "Warming up aws lambda..."
+for k in {1..50} ; do
+  echo "Aws warmup round $k..."
+  ./bin/perf-spin-test-starter $N $dim 20 aws remote >> /dev/null 2>&1
+done
+
 echo "Collecting remote baseline..."
 echo $dim $remote_baseline_its 1 > $remote_baseline
 ./bin/perf-spin-test-starter 1 $dim $remote_baseline_its baseline remote >> $remote_baseline 2>&1
@@ -35,6 +40,15 @@ for test_type in native 9p aws ; do
     echo "Starting 9p infrastructure..."
     ./start.sh
     sleep 1
+  fi
+
+  if [ $test_type == "aws" ]; then
+    # Warm up
+    echo "Warming up aws lambda..."
+    for k in {1..50} ; do
+      echo "Aws warmup round $k..."
+      ./bin/perf-spin-test-starter $N $dim 20 $test_type remote >> /dev/null 2>&1
+    done
   fi
    
   for i in `seq 1 $max_its`

@@ -61,6 +61,12 @@ def compute_mean(data):
     runtime[k] = float(np.mean(v))
   return runtime
 
+def compute_tail(data, percentile):
+  runtime = {}
+  for k, v in data.items():
+    runtime[k] = float(np.percentile(v, percentile))
+  return runtime
+
 def get_y_runtime(runtime):
   y = [ runtime[it] for it in sorted(runtime.keys()) ]
   y = np.array(y) / 1000.0
@@ -69,8 +75,7 @@ def get_y_runtime(runtime):
 def get_x(profile, runtime):
   total_profile_comp_time = float(profile[3])
   profile_its = float(profile[1])
-  setup_time = float(profile[4]) # Ignore memalloc costs
-  avg_profile_comp_time = (total_profile_comp_time - setup_time) / profile_its
+  avg_profile_comp_time = total_profile_comp_time / profile_its
   x = [ float(it) * avg_profile_comp_time / 1000.0 for it in sorted(runtime.keys()) ]
   return x
 
@@ -123,6 +128,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--suffix", type=str, default="")
+  parser.add_argument("--percentile", type=int, default=99)
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
   native_profile = read_profile(paths, "native")
@@ -132,12 +138,15 @@ if __name__ == "__main__":
   # Read data from native run
   native_data = read_data(paths, "native")
   native_runtime = compute_mean(native_data)
+  native_tail = compute_tail(native_data, args.percentile)
   # Read data from 9p run
   ninep_data = read_data(paths, "9p")
   ninep_runtime = compute_mean(ninep_data)
+  ninep_tail = compute_tail(ninep_data, args.percentile)
   # Read data from remote run
   remote_data = read_data(paths, "aws")
   remote_runtime = compute_mean(remote_data)
+  remote_tail = compute_tail(remote_data, args.percentile)
   # Plot runtime
   native_runtime_x_y = get_runtime_x_y(native_profile, native_runtime)
   ninep_runtime_x_y = get_runtime_x_y(native_profile, ninep_runtime)
@@ -148,3 +157,8 @@ if __name__ == "__main__":
   ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
   remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
   plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, args.suffix)
+  # Plot runtime
+  native_tail_x_y = get_runtime_x_y(native_profile, native_tail)
+  ninep_tail_x_y = get_runtime_x_y(native_profile, ninep_tail)
+  remote_tail_x_y = get_runtime_x_y(remote_profile, remote_tail)
+  plot("Tail" + str(args.percentile) + "%", "(msec)", native_tail_x_y, ninep_tail_x_y, remote_tail_x_y, args.suffix)

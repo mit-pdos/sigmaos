@@ -102,7 +102,7 @@ def trim(a, b, c):
   c = cutoff_at(c, cutoff)
   return a, b, c
 
-def plot(title, units, native_x_y, ninep_x_y, remote_x_y):
+def plot(title, units, native_x_y, ninep_x_y, remote_x_y, suffix):
   native_x_y, ninep_x_y, remote_x_y = trim(native_x_y, ninep_x_y, remote_x_y)
   native_x, native_y = native_x_y
   ninep_x, ninep_y = ninep_x_y
@@ -117,11 +117,12 @@ def plot(title, units, native_x_y, ninep_x_y, remote_x_y):
   ax.set_ylabel(title + " " + units) 
   ax.legend()
   ax.set_title(title + " varying work per invocation")
-  plt.savefig("perf/" + title.lower() + ".pdf")
+  plt.savefig("perf/" + title.lower() + suffix + ".pdf")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--measurement_dir", type=str, required=True)
+  parser.add_argument("--suffix", type=str, default="")
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
   native_profile = read_profile(paths, "native")
@@ -141,9 +142,9 @@ if __name__ == "__main__":
   native_runtime_x_y = get_runtime_x_y(native_profile, native_runtime)
   ninep_runtime_x_y = get_runtime_x_y(native_profile, ninep_runtime)
   remote_runtime_x_y = get_runtime_x_y(remote_profile, remote_runtime)
-  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y)
+  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, args.suffix)
   #Plot overhead
   native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)
   ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
   remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
-  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y)
+  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, args.suffix)

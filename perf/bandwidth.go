@@ -106,6 +106,8 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 		log.Fatalf("Error getting s3 object: %v", err)
 	}
 	n := 0
+	// Have to include this in timing since GetObjectOutput seems to read in
+	// chunks.
 	for {
 		n1, err := result.Body.Read(buf2[n:])
 		n += n1

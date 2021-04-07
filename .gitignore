@@ -3,3 +3,4 @@ bin/
 *.sw*
 *.pem
 measurements
+ec2_measurements

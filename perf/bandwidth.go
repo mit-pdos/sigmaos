@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -68,9 +69,7 @@ func MakeBandwidthTest(args []string) (*BandwidthTest, error) {
 }
 
 func (t *BandwidthTest) FillBuf(buf []byte) {
-	for i := range buf {
-		buf[i] = byte(i)
-	}
+	rand.Read(buf)
 }
 
 func (t *BandwidthTest) S3Write(buf []byte) time.Duration {
@@ -123,7 +122,7 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 	if n != len(buf) {
 		log.Fatalf("Length of s3 read buffer didn't match: %v, %v", n, len(buf))
 	}
-	for i := range buf2 {
+	for i := range buf {
 		if buf2[i] != buf[i] {
 			log.Fatalf("S3 Read buf didn't match written buf at index %v", i)
 		}
@@ -154,7 +153,7 @@ func (t *BandwidthTest) MemfsRead(buf []byte) time.Duration {
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	for i := range buf2 {
+	for i := range buf {
 		if buf2[i] != buf[i] {
 			log.Fatalf("Memfs Read buf didn't match written buf at index %v", i)
 		}
@@ -182,7 +181,7 @@ func (t *BandwidthTest) Work() {
 	}
 	log.Printf("Bytes: %v", t.mb*MB)
 	log.Printf("Write Time: %v (usec)", elapsedWrite.Microseconds())
-	log.Printf("Write Throughput: %f (MB/sec)", float64(t.mb)/elapsedWrite.Seconds())
+	log.Printf("Write Throughput: %f (Mb/sec)", 8.0*float64(t.mb)/elapsedWrite.Seconds())
 	log.Printf("Read Time: %v (usec)", elapsedRead.Microseconds())
-	log.Printf("Read Throughput: %f (MB/sec)", float64(t.mb)/elapsedRead.Seconds())
+	log.Printf("Read Throughput: %f (Mb/sec)", 8.0*float64(t.mb)/elapsedRead.Seconds())
 }

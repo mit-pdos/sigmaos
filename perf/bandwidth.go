@@ -98,16 +98,14 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 		Key:    &key,
 		Range:  &region,
 	}
+	buf2 := make([]byte, len(buf))
 
 	// timing
 	start := time.Now()
 	result, err := t.client.GetObject(context.TODO(), input)
-	end := time.Now()
-	elapsed := end.Sub(start)
 	if err != nil {
 		log.Fatalf("Error getting s3 object: %v", err)
 	}
-	buf2 := make([]byte, len(buf))
 	n := 0
 	for {
 		n1, err := result.Body.Read(buf2[n:])
@@ -119,6 +117,9 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 			log.Fatalf("Error reading s3 object result: %v", err)
 		}
 	}
+	end := time.Now()
+	elapsed := end.Sub(start)
+
 	if n != len(buf) {
 		log.Fatalf("Length of s3 read buffer didn't match: %v, %v", n, len(buf))
 	}

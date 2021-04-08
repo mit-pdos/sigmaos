@@ -91,15 +91,25 @@ type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages
 const (
-	OREAD    Tmode = 0    // read-only
-	OWRITE   Tmode = 0x01 // write-only
-	ORDWR    Tmode = 0x02 // read-write
-	OEXEC    Tmode = 0x03 // execute (implies OREAD)
-	OTRUNC   Tmode = 0x10 // or truncate file first
-	OCEXEC   Tmode = 0x20 // or close on exec
-	ORCLOSE  Tmode = 0x40 // remove on close
-	OAPPEND  Tmode = 0x80 // append
-	OVERSION Tmode = 0x83 // ulambda extension hack (overloads OAPPEND|OEXEC)
+	OREAD   Tmode = 0    // read-only
+	OWRITE  Tmode = 0x01 // write-only
+	ORDWR   Tmode = 0x02 // read-write
+	OEXEC   Tmode = 0x03 // execute (implies OREAD)
+	OTRUNC  Tmode = 0x10 // or truncate file first
+	OCEXEC  Tmode = 0x20 // or close on exec
+	ORCLOSE Tmode = 0x40 // remove on close
+	OAPPEND Tmode = 0x80 // append
+
+	//
+	// ulambda extensions/hacks:
+	//
+
+	// ulambda uses OVERSION for atomic read-and-write
+	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
+
+	// ulambda uses OWATCH to block a request until fid is
+	// deleted.  OWATCH with Tcreate will retry the create.
+	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
 )
 
 func (m Tmode) String() string {
@@ -113,13 +123,17 @@ const (
 	DMEXCL   Tperm = 0x20000000 // exclusive use file
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
-	DMTMP    Tperm = 0x04000000 // non-backed-up file
+
+	// DMTMP is ephemeral in ulambda
+	DMTMP Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission
 	DMWRITE = 0x2 // mode bit for write permission
 	DMEXEC  = 0x1 // mode bit for execute permission
 
 	// 9P2000.u extensions
+	// A few are used by ulambda, but not supported in driver/proxy,
+	// so ulambda mounts on Linux without these extensions.
 	DMSYMLINK   Tperm = 0x02000000
 	DMLINK      Tperm = 0x01000000
 	DMDEVICE    Tperm = 0x00800000
@@ -179,6 +193,7 @@ const (
 	TRwstat
 	TTreadv
 	TTwritev
+	TTopenv
 )
 
 func (fct Tfcall) String() string {
@@ -243,6 +258,8 @@ func (fct Tfcall) String() string {
 		return "Treadv"
 	case TTwritev:
 		return "Twritev"
+	case TTopenv:
+		return "Topenv"
 	default:
 		return "Tunknown"
 	}
@@ -313,6 +330,12 @@ type Rwalk struct {
 type Topen struct {
 	Fid  Tfid
 	Mode Tmode
+}
+
+type Topenv struct {
+	Fid     Tfid
+	Mode    Tmode
+	Version TQversion
 }
 
 type Ropen struct {
@@ -433,6 +456,7 @@ func (Rerror) Type() Tfcall   { return TRerror }
 func (Twalk) Type() Tfcall    { return TTwalk }
 func (Rwalk) Type() Tfcall    { return TRwalk }
 func (Topen) Type() Tfcall    { return TTopen }
+func (Topenv) Type() Tfcall   { return TTopenv }
 func (Ropen) Type() Tfcall    { return TRopen }
 func (Tcreate) Type() Tfcall  { return TTcreate }
 func (Rcreate) Type() Tfcall  { return TRcreate }

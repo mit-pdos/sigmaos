@@ -2,7 +2,6 @@ package fslib
 
 import (
 	"io"
-	"log"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -37,7 +36,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 	var err error
 	fd, err := fl.Open(dir, np.OREAD)
 	if err != nil {
-		log.Fatal("Opendir error ", err)
+		return false, err
 	}
 	for {
 		dirents, err := fl.Readdir(fd, CHUNKSZ)
@@ -83,6 +82,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
 		s := src + "/" + st.Name
 		d := dst + "/" + st.Name
+		db.DLPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
 		b, err := fl.ReadFile(s)
 		if err != nil {
 			return true, err

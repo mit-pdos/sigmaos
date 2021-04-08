@@ -63,6 +63,10 @@ func (npux *NpUx) WatchTable() *npo.WatchTable {
 	return nil
 }
 
+func (npux *NpUx) ConnTable() *npo.ConnTable {
+	return nil
+}
+
 type Obj struct {
 	mu   sync.Mutex
 	npux *NpUx

@@ -74,6 +74,10 @@ func (sd *Sched) WatchTable() *npo.WatchTable {
 	return nil
 }
 
+func (sd *Sched) ConnTable() *npo.ConnTable {
+	return nil
+}
+
 func (sd *Sched) Done() {
 	sd.mu.Lock()
 	sd.done = true

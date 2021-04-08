@@ -82,3 +82,7 @@ func (nps3 *Nps3) Done() {
 func (nps3 *Nps3) WatchTable() *npo.WatchTable {
 	return nil
 }
+
+func (nps3 *Nps3) ConnTable() *npo.ConnTable {
+	return nil
+}

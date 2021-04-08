@@ -2,6 +2,7 @@ package fsclnt
 
 import (
 	"fmt"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -17,15 +18,21 @@ func (p *Point) String() string {
 }
 
 type Mount struct {
+	mu     sync.Mutex
 	mounts []*Point
 }
 
 func makeMount() *Mount {
-	return &Mount{make([]*Point, 0)}
+	mnt := &Mount{}
+	mnt.mounts = make([]*Point, 0)
+	return mnt
 }
 
 // add path, in order of longest path first
 func (mnt *Mount) add(path []string, fid np.Tfid) {
+	mnt.mu.Lock()
+	defer mnt.mu.Unlock()
+
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if len(path) > len(p.path) {
@@ -37,6 +44,7 @@ func (mnt *Mount) add(path []string, fid np.Tfid) {
 	mnt.mounts = append(mnt.mounts, point)
 }
 
+// prefix match
 func match(mp []string, path []string) (bool, []string) {
 	rest := path
 	for _, s := range mp {
@@ -52,7 +60,22 @@ func match(mp []string, path []string) (bool, []string) {
 	return true, rest
 }
 
+func matchexact(mp []string, path []string) bool {
+	if len(mp) != len(path) {
+		return false
+	}
+	for i, s := range mp {
+		if s != path[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
+	mnt.mu.Lock()
+	defer mnt.mu.Unlock()
+	db.DLPrintf("FSCLNT", "resolve %v %v\n", mnt.mounts, path)
 	for _, p := range mnt.mounts {
 		ok, rest := match(p.path, path)
 		if ok {
@@ -63,11 +86,14 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 }
 
 func (mnt *Mount) umount(path []string) (np.Tfid, error) {
-	db.DLPrintf("FSCLNT", "Umount %v\n", path)
+	mnt.mu.Lock()
+	defer mnt.mu.Unlock()
+	db.DLPrintf("FSCLNT", "umount %v\n", path)
 	for i, p := range mnt.mounts {
-		ok, _ := match(p.path, path)
+		ok := matchexact(p.path, path)
 		if ok {
 			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
+			db.DLPrintf("FSCLNT", "umount -> %v\n", mnt.mounts)
 			return p.fid, nil
 		}
 	}

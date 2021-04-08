@@ -16,27 +16,6 @@ import (
 type Tinum uint64
 type Tversion uint32
 
-type ParseNameI interface {
-	ParsePath(*Ctx, []string) error
-}
-
-type Ctx struct {
-	uname string
-	pn    ParseNameI
-}
-
-func MkCtx(uname string, pn ParseNameI) *Ctx {
-	return &Ctx{uname, pn}
-}
-
-func (ctx *Ctx) Uname() string {
-	return ctx.uname
-}
-
-func DefMkCtx(uname string) npo.CtxI {
-	return &Ctx{uname, nil}
-}
-
 type InodeI interface {
 	Lock()
 	Unlock()

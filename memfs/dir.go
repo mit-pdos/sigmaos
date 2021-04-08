@@ -153,15 +153,6 @@ func (dir *Dir) CreateDev(ctx npo.CtxI, name string, d Dev, t np.Tperm, m np.Tmo
 	dir.Lock()
 	defer dir.Unlock()
 
-	c := ctx.(*Ctx)
-	if c.pn != nil {
-		p := []string{name}
-		err := c.pn.ParsePath(c, p)
-		if err != nil {
-			return nil, err
-		}
-		name = p[0]
-	}
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
@@ -187,13 +178,6 @@ func (dir *Dir) Lookup(ctx npo.CtxI, path []string) ([]npo.NpObj, []string, erro
 	dir.Lock()
 	db.DLPrintf("MEMFS", "%v: Lookup %v %v\n", ctx, dir, path)
 	dir.Unlock()
-	c := ctx.(*Ctx)
-	if c.pn != nil {
-		err := c.pn.ParsePath(c, path)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
 	inodes := []npo.NpObj{}
 	if len(path) == 0 {
 		return nil, nil, nil

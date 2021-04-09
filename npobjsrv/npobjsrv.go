@@ -445,11 +445,17 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		return &np.Rerror{"Closed by server"}
 	}
 	if args.Stat.Name != "" {
+		// XXX if dst exists run watch?
 		err := f.obj.Rename(f.ctx, f.path[len(f.path)-1], args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		f.path = append(f.path[:len(f.path)-1], np.Split(args.Stat.Name)...)
+		dst := append(f.path[:len(f.path)-1], np.Split(args.Stat.Name)...)
+		if npc.wt != nil {
+			npc.wt.WakeupWatch(dst)
+		}
+		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.path[len(f.path)-1], args.Stat.Name)
+		f.path = dst
 	}
 	// XXX ignore other Wstat for now
 	return nil

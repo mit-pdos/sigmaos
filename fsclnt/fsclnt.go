@@ -229,13 +229,16 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
+	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
+	path := fsc.path(fid).copyPath()
 	fid1 := fsc.allocFid()
 	_, err := fsc.npch(fid).Walk(fid, fid1, nil)
 	if err != nil {
 		// XXX free fid
 		return np.NoFid, err
 	}
-	fsc.addFid(fid1, fsc.path(fid).copyPath())
+	db.DLPrintf("FSCLNT", "clone: %v %v -> %v\n", fid, fsc.path(fid), fid1)
+	fsc.addFid(fid1, path)
 	return fid1, err
 }
 

@@ -20,7 +20,7 @@ type Consoled struct {
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	fsd := memfsd.MakeFsd(":0", nil)
+	fsd := memfsd.MakeFsd(":0")
 	fsl, err := fslib.InitFs("name/consoled", fsd, makeConsole())
 	if err != nil {
 		log.Fatalf("InitFs: err %v\n", err)

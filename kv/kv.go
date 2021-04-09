@@ -187,7 +187,8 @@ func (kv *Kv) postShard(i int) {
 	db.DLPrintf("KV", "postShard: %v %v\n", fn, kv.Addr())
 	err := kv.Symlink(kv.Addr()+":pubkey", fn, 0777|np.DMTMP)
 	if err != nil {
-		log.Fatalf("Symlink failed %v\n", err)
+		db.DLPrintf("Symlink %v failed %v\n", fn, err)
+		panic("postShard")
 	}
 }
 
@@ -204,7 +205,6 @@ func (kv *Kv) closeFid(shard string) {
 	kv.ConnTable().IterateFids(func(f *npo.Fid) {
 		p1 := np.Join(f.Path())
 		uname := f.Ctx().Uname()
-		log.Printf("closeFid: shard %v %v %v\n", shard, p1, uname)
 		if strings.HasPrefix(uname, "clerk") && strings.HasPrefix(p1, shard) {
 			db.DLPrintf("KV", "CloseFid: mark closed %v %v\n", uname, p1)
 			f.Close()

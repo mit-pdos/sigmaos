@@ -246,6 +246,7 @@ func (sh *Sharder) Work() {
 
 	if sh.args[0] == "del" {
 		sh.nextKvs = append(sh.nextKvs, sh.args[1:]...)
+
 	}
 
 	sh.nkvd = len(sh.nextKvs)

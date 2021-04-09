@@ -121,11 +121,9 @@ func TestConcur(t *testing.T) {
 		pid := ts.spawnKv()
 		log.Printf("Add %v\n", pid)
 		pid1 := ts.spawnSharder("add", kvname(pid))
-		log.Printf("wait")
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(t, err, "Wait")
 		assert.Equal(t, string(ok), "OK")
-		log.Printf("wait done")
 		time.Sleep(200 * time.Millisecond)
 		pids = append(pids, pid)
 	}
@@ -143,7 +141,7 @@ func TestConcur(t *testing.T) {
 	ts.ch <- true
 
 	// delete first KV
-	pid1 := ts.spawnSharder("del", ts.pid)
+	pid1 := ts.spawnSharder("del", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")

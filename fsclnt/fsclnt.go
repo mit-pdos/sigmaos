@@ -18,6 +18,8 @@ const (
 	MAXFD = 20
 )
 
+type Watch func(string)
+
 type FdState struct {
 	offset np.Toffset
 	fid    np.Tfid
@@ -372,7 +374,7 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 	return string(reply.Data), nil
 }
 
-func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f func(string)) (int, error) {
+func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f Watch) (int, error) {
 	db.DLPrintf("FSCLNT", "Open %v %v\n", path, mode)
 	var fid np.Tfid
 	for {
@@ -380,10 +382,11 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f func(string)) (int,
 		f, err := fsc.walkMany(p, np.EndSlash(path))
 		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", path, f, err)
 		if err == io.EOF {
-			log.Printf("f %v %v\n", f, fsc.fids[f])
-			fid2, e := fsc.mount.umount(fsc.fids[f].cname)
+			p := fsc.path(f)
+			log.Printf("path %v %v\n", p, fsc.mount)
+			fid2, e := fsc.mount.umount(p.cname)
 			if e != nil {
-				return -1, err
+				return -1, e
 			}
 			fsc.detachChannel(fid2)
 			continue

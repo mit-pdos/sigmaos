@@ -40,11 +40,12 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 
 func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	fid, rest := fsc.mount.resolve(path)
-	db.DLPrintf("FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "walkOne: mount -> unknown fid\n")
 		return np.NoFid, 0, errors.New("Unknown file")
 
 	}
+	db.DLPrintf("FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	fid1, err := fsc.clone(fid)
 	if err != nil {
 		return fid, 0, err

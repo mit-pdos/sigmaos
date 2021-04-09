@@ -47,7 +47,7 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 	}
 	fid1, err := fsc.clone(fid)
 	if err != nil {
-		return np.NoFid, 0, err
+		return fid, 0, err
 	}
 	defer fsc.clunkFid(fid1)
 	fid2 := fsc.allocFid()
@@ -129,7 +129,7 @@ func SplitTarget(target string) (string, []string) {
 func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
 	server, rest := SplitTarget(target)
-	fid, err := fsc.Attach(server, "")
+	fid, err := fsc.Attach(server, np.Join(path))
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)
 		return nil, err

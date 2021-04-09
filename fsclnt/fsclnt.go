@@ -291,30 +291,11 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	return err
 }
 
-func (fsc *FsClient) umount(path []string) error {
+func (fsc *FsClient) Umount(path []string) error {
 	db.DLPrintf("FSCLNT", "Umount %v\n", path)
-	if len(path) < 1 {
-		return fmt.Errorf("unmount bad path %v\n", path)
-	}
-	prefix := make([]string, len(path)-1)
-	last := path[len(path)-1:]
-	copy(prefix, path[:len(path)-1])
-	fid, err := fsc.walkMany(prefix, true)
-	if err != nil {
-		return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
-	}
-	fid1 := fsc.allocFid()
-	_, err = fsc.npch(fid).Walk(fid, fid1, last)
-	if err != nil {
-		return err
-	}
-	err = fsc.npch(fid).Remove(fid1)
-	if err != nil {
-		return err
-	}
 	fid2, err := fsc.mount.umount(path)
 	if err != nil {
-		log.Fatalf("del failed\n")
+		log.Fatalf("Umount failed %v %v\n", path, err)
 	}
 	fsc.detachChannel(fid2)
 	return nil
@@ -325,8 +306,27 @@ func (fsc *FsClient) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
 	_, rest := fsc.mount.resolve(path)
-	if len(rest) == 0 && !np.EndSlash(name) {
-		return fsc.umount(path)
+	if len(rest) == 0 && !np.EndSlash(name) { // mount point
+		if len(path) < 1 {
+			return fmt.Errorf("unmount bad path %v\n", path)
+		}
+		prefix := make([]string, len(path)-1)
+		last := path[len(path)-1:]
+		copy(prefix, path[:len(path)-1])
+		fid, err := fsc.walkMany(prefix, true)
+		if err != nil {
+			return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
+		}
+		fid1 := fsc.allocFid()
+		_, err = fsc.npch(fid).Walk(fid, fid1, last)
+		if err != nil {
+			return err
+		}
+		err = fsc.npch(fid).Remove(fid1)
+		if err != nil {
+			return err
+		}
+		return fsc.Umount(path)
 	} else {
 		fid, err := fsc.walkMany(path, np.EndSlash(name))
 		if err != nil {
@@ -372,7 +372,7 @@ func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 	return string(reply.Data), nil
 }
 
-func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
+func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f func(string)) (int, error) {
 	db.DLPrintf("FSCLNT", "Open %v %v\n", path, mode)
 	var fid np.Tfid
 	for {
@@ -380,7 +380,8 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 		f, err := fsc.walkMany(p, np.EndSlash(path))
 		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", path, f, err)
 		if err == io.EOF {
-			fid2, e := fsc.mount.umount(p)
+			log.Printf("f %v %v\n", f, fsc.fids[f])
+			fid2, e := fsc.mount.umount(fsc.fids[f].cname)
 			if e != nil {
 				return -1, err
 			}
@@ -393,14 +394,27 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 		fid = f
 		break
 	}
-	_, err := fsc.npch(fid).Open(fid, mode)
+	reply, err := fsc.npch(fid).Open(fid, mode)
 	if err != nil {
 		return -1, err
 	}
 	// XXX check reply.Qid?
 	fd := fsc.findfd(fid, mode)
+	if f != nil {
+		go func() {
+			err := fsc.npch(fid).Watch(fid, reply.Qid.Version)
+			db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
+			if err == nil {
+				f(path)
+			}
+		}()
+	}
 	return fd, nil
 
+}
+
+func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
+	return fsc.OpenWatch(path, mode, nil)
 }
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {

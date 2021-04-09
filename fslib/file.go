@@ -35,8 +35,8 @@ func MakeFsLib(uname string) *FsLib {
 	return fl
 }
 
-func (fl *FsLib) readFile(fname string, m np.Tmode) ([]byte, error) {
-	fd, err := fl.Open(fname, np.OREAD|m)
+func (fl *FsLib) readFile(fname string, m np.Tmode, f fsclnt.Watch) ([]byte, error) {
+	fd, err := fl.OpenWatch(fname, np.OREAD|m, f)
 	if err != nil {
 		return nil, err
 	}
@@ -59,11 +59,15 @@ func (fl *FsLib) readFile(fname string, m np.Tmode) ([]byte, error) {
 }
 
 func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
-	return fl.readFile(fname, 0x0)
+	return fl.readFile(fname, 0x0, nil)
+}
+
+func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
+	return fl.readFile(fname, 0x0, f)
 }
 
 func (fl *FsLib) Get(fname string) ([]byte, error) {
-	return fl.readFile(fname, np.OVERSION)
+	return fl.readFile(fname, np.OVERSION, nil)
 }
 
 // XXX chunk
@@ -114,6 +118,14 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
 	b, err := fl.ReadFile(name)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, i)
+}
+
+func (fl *FsLib) ReadFileJsonWatch(name string, i interface{}, f fsclnt.Watch) error {
+	b, err := fl.ReadFileWatch(name, f)
 	if err != nil {
 		return err
 	}

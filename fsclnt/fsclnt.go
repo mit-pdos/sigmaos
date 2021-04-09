@@ -386,7 +386,6 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f Watch) (int, error)
 			if p == nil { // schedd triggers this; don't know why
 				return -1, err
 			}
-			log.Printf("path %v %v\n", p, fsc.mount)
 			fid2, e := fsc.mount.umount(p.cname)
 			if e != nil {
 				return -1, e

@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"log"
 	"strconv"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	pid1 := ts.spawnSharder("add", ts.pid)
+	pid1 := ts.spawnSharder("add", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
@@ -78,16 +79,20 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	return a.Pid
 }
 
+func key(k int) string {
+	return "key" + strconv.Itoa(k)
+
+}
+
 func (ts *Tstate) getKeys() bool {
 	for i := 0; i < NKEYS; i++ {
-		k := strconv.Itoa(i)
-		v, err := ts.clrk.Get(k)
+		v, err := ts.clrk.Get(key(i))
 		select {
 		case <-ts.ch:
 			return true
 		default:
-			assert.Nil(ts.t, err, "Get "+k)
-			assert.Equal(ts.t, k, v, "Get")
+			assert.Nil(ts.t, err, "Get "+key(i))
+			assert.Equal(ts.t, key(i), v, "Get")
 		}
 	}
 	return false
@@ -104,7 +109,7 @@ func TestConcur(t *testing.T) {
 	ts := makeTstate(t)
 
 	for i := 0; i < NKEYS; i++ {
-		err := ts.clrk.Put(strconv.Itoa(i), strconv.Itoa(i))
+		err := ts.clrk.Put(key(i), key(i))
 		assert.Nil(t, err, "Put")
 	}
 
@@ -114,16 +119,20 @@ func TestConcur(t *testing.T) {
 	// for r := 0; r < 1; r++ {
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
-		pid1 := ts.spawnSharder("add", pid)
+		log.Printf("Add %v\n", pid)
+		pid1 := ts.spawnSharder("add", kvname(pid))
+		log.Printf("wait")
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(t, err, "Wait")
 		assert.Equal(t, string(ok), "OK")
+		log.Printf("wait done")
 		time.Sleep(200 * time.Millisecond)
 		pids = append(pids, pid)
 	}
 
 	for _, pid := range pids {
-		pid1 := ts.spawnSharder("del", pid)
+		log.Printf("Del %v\n", pid)
+		pid1 := ts.spawnSharder("del", kvname(pid))
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(t, err, "Wait")
 		assert.Equal(t, string(ok), "OK")

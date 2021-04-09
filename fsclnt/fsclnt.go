@@ -383,6 +383,9 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f Watch) (int, error)
 		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", path, f, err)
 		if err == io.EOF {
 			p := fsc.path(f)
+			if p == nil { // schedd triggers this; don't know why
+				return -1, err
+			}
 			log.Printf("path %v %v\n", p, fsc.mount)
 			fid2, e := fsc.mount.umount(p.cname)
 			if e != nil {

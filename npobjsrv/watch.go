@@ -64,7 +64,7 @@ func (wt *WatchTable) WakeupWatch(path []string) {
 	}
 }
 
-// Cleanup threads waiting for a watch on this connection
+// Wakeup threads waiting for a watch on this connection
 func (wt *WatchTable) DeleteConn(npc *NpConn) {
 	wt.mu.Lock()
 	defer wt.mu.Unlock()

@@ -117,11 +117,6 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 	}
 }
 
-// XXX
-// Go through all conns and close Fids from previous gen?
-// except root?
-//
-
 type NpConn struct {
 	mu        sync.Mutex // for Fids
 	conn      net.Conn

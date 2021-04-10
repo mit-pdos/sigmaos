@@ -174,6 +174,7 @@ func (kv *Kv) unpostShard(i int) {
 	}
 }
 
+// XXX unpost only the ones i am not responsible for anymore
 func (kv *Kv) unpostShards() {
 	for i, kvd := range kv.conf.Shards {
 		if kvd == kv.me {
@@ -212,6 +213,8 @@ func (kv *Kv) closeFid(shard string) {
 	})
 }
 
+// Close fids for which i will not be responsible, signaling to
+// clients to failover to another server.
 func (kv *Kv) closeFids() {
 	for s, kvd := range kv.nextConf.Shards {
 		if kvd != kv.me && kv.conf.Shards[s] == kv.me {

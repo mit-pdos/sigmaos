@@ -118,7 +118,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 }
 
 type NpConn struct {
-	mu        sync.Mutex // for Fids
+	mu        sync.Mutex // for Fids and ephemeral
 	conn      net.Conn
 	fids      map[np.Tfid]*Fid
 	osrv      NpObjSrv
@@ -184,10 +184,10 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
+// Delete ephemeral files created on this connection
 func (npc *NpConn) Detach() {
 	db.DLPrintf("9POBJ", "Detach %v\n", npc.ephemeral)
 
-	// Delete ephemeral files created on this connection
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
 	}
@@ -409,6 +409,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if npc.wt != nil {
 		npc.wt.WakeupWatch(f.path)
 	}
+	// XXX delete from ephemeral table, if ephemeral
 	npc.del(args.Fid)
 	return nil
 }

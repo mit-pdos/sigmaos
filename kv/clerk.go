@@ -107,7 +107,8 @@ func (kc *KvClerk) Put(k, v string) error {
 		shard := error2shard(err.Error())
 		db.DLPrintf("CLERK", "Put: %v %v %v\n", n, err, shard)
 		if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
-			strings.HasPrefix(shard, "shardSrv") {
+			strings.HasPrefix(shard, "shardSrv") ||
+			err.Error() == "Closed by server" {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			return err

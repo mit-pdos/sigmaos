@@ -191,9 +191,15 @@ func (d *decoder) decode(vs ...interface{}) error {
 				*v = make([]byte, int(l))
 			}
 
-			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
+			// XXX Switch to Reader.Read() rather than binary.Read() because the
+			// binary package uses reflection, which imposes an extremely high
+			// overhead that scaled with the size of the byte array. It's also much
+			// more powerful than we need, since we're just serializing an array of
+			// bytes, after al.
+			if _, err := d.rd.Read(*v); err != nil && !(err == io.EOF && l == 0) {
 				return err
 			}
+
 		case *string:
 			var l uint16
 

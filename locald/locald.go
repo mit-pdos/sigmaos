@@ -122,8 +122,13 @@ func (ld *LocalD) Worker() {
 }
 
 func (ld *LocalD) Work() {
-	NCores := uint(1)
-	for i := uint(0); i < NCores; i++ {
+	var NWorkers uint
+	if NCores < 20 {
+		NWorkers = 20
+	} else {
+		NWorkers = NCores
+	}
+	for i := uint(0); i < NWorkers; i++ {
 		ld.group.Add(1)
 		go ld.Worker()
 	}

@@ -18,12 +18,7 @@ fi
 ./bin/schedd &
 ./bin/nps3d &
 ./bin/npuxd &
-
-# start NPROC locald instances
-NPROC=`nproc`
-for ((i = 0 ; i < $NPROC ; i++)); do
-  ./bin/locald ./ &
-done
+./bin/locald ./ &
 
 sleep 2
 ./mount.sh

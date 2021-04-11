@@ -59,12 +59,9 @@ func Boot(bin string) (*System, error) {
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	// Run a few locald instances
-	for i := 0; i < 20; i++ {
-		s.locald, err = run(bin, "/bin/locald", []string{bin})
-		if err != nil {
-			return nil, err
-		}
+	s.locald, err = run(bin, "/bin/locald", []string{bin})
+	if err != nil {
+		return nil, err
 	}
 	time.Sleep(100 * time.Millisecond)
 	return s, nil

@@ -20,43 +20,14 @@ const (
 	KV = "name/kv"
 )
 
-type KvDev struct {
-	kv *Kv
-}
-
 func kvname(pid string) string {
 	return "kv" + pid
 }
 
-func (kvdev *KvDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
-	t := string(data)
-	if strings.HasPrefix(t, "Prepare") {
-		kvdev.kv.cond.Signal()
-	} else if strings.HasPrefix(t, "Commit") {
-		kvdev.kv.cond.Signal()
-	} else {
-		return 0, fmt.Errorf("Write: unknown command %v\n", t)
-	}
-
-	return np.Tsize(len(data)), nil
-}
-
-func (kvdev *KvDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
-	//	if off == 0 {
-	//	s := kvdev.sd.ps()
-	//return []byte(s), nil
-	//}
-	return nil, nil
-}
-
-func (kvdev *KvDev) Len() np.Tlength {
-	return 0
-}
-
 type Kv struct {
-	mu   sync.Mutex
-	cond *sync.Cond
+	mu sync.Mutex
 	*fslib.FsLibSrv
+	done     chan bool
 	pid      string
 	me       string
 	conf     *Config
@@ -65,7 +36,7 @@ type Kv struct {
 
 func MakeKv(args []string) (*Kv, error) {
 	kv := &Kv{}
-	kv.cond = sync.NewCond(&kv.mu)
+	kv.done = make(chan bool)
 	if len(args) != 1 {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
@@ -77,22 +48,38 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
 	}
 	fsd := memfsd.MakeFsd(ip + ":0")
-	fsl, err := fslib.InitFs(KV+"/"+kv.me, fsd, &KvDev{kv})
+	fsl, err := fslib.InitFs(KV+"/"+kv.me, fsd, nil)
 	if err != nil {
 		return nil, err
 	}
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
+	kv.conf, err = kv.readConfig(KVCONFIG)
+	if err != nil {
+		db.DLPrintf("KV", "MakeKv cannot read %v err %v\n", KVCONFIG, err)
+	}
+	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+	if err != nil {
+		db.DLPrintf("KV", "MakeKv set watch on %v (err %v)\n", KVNEXTCONFIG, err)
+	}
 	return kv, nil
 }
 
-func (kv *Kv) readConfig(conffile string) *Config {
+func (kv *Kv) watchNextConf(p string) {
+	db.DLPrintf("KV", "Watch fires %v; prepare\n", p)
+	kv.prepare()
+}
+
+func (kv *Kv) readConfig(conffile string) (*Config, error) {
 	conf := Config{}
 	err := kv.ReadFileJson(conffile, &conf)
-	if err != nil {
-		return nil
-	}
-	return &conf
+	return &conf, err
+}
+
+func (kv *Kv) readConfigWatch(conffile string, f fsclnt.Watch) (*Config, error) {
+	conf := Config{}
+	err := kv.ReadFileJsonWatch(conffile, &conf, f)
+	return &conf, err
 }
 
 func shardPath(kvd string, shard int) string {
@@ -139,9 +126,6 @@ func (kv *Kv) moveShards() {
 }
 
 func (kv *Kv) removeShards() {
-	kv.mu.Unlock()
-	defer kv.mu.Lock()
-
 	for s, kvd := range kv.nextConf.Shards {
 		if kvd != kv.me && kv.conf.Shards[s] == kv.me {
 			d := shardPath(kv.me, s)
@@ -157,11 +141,10 @@ func (kv *Kv) removeShards() {
 
 // Tell sharder we are prepared to commit new config
 func (kv *Kv) prepared() {
-	sh := SHARDER + "/dev"
-	db.DLPrintf("KV", "prepared %v\n", sh)
-	err := kv.WriteFile(sh, []byte("Prepared "+kv.Addr()))
+	fn := KVCOMMIT + kv.me
+	err := kv.MakeFile(fn, nil)
 	if err != nil {
-		log.Printf("WriteFile: %v %v\n", sh, err)
+		log.Printf("WriteFile: %v %v\n", fn, err)
 	}
 }
 
@@ -188,7 +171,7 @@ func (kv *Kv) postShard(i int) {
 	db.DLPrintf("KV", "postShard: %v %v\n", fn, kv.Addr())
 	err := kv.Symlink(kv.Addr()+":pubkey", fn, 0777|np.DMTMP)
 	if err != nil {
-		db.DLPrintf("Symlink %v failed %v\n", fn, err)
+		db.DLPrintf("KV", "Symlink %v failed %v\n", fn, err)
 		panic("postShard")
 	}
 }
@@ -223,10 +206,23 @@ func (kv *Kv) closeFids() {
 	}
 }
 
-// Caller holds lock
+func (kv *Kv) watchConf(p string) {
+	db.DLPrintf("KV", "Watch fires %v; commit\n", p)
+	kv.commit()
+}
+
 func (kv *Kv) prepare() {
-	kv.conf = kv.readConfig(KVCONFIG)
-	kv.nextConf = kv.readConfig(KVNEXTCONFIG)
+	kv.mu.Lock()
+
+	var err error
+	kv.conf, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
+	if err != nil {
+		log.Fatalf("prepare cannot read %v err %v\n", KVCONFIG, err)
+	}
+	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)
+	if err != nil {
+		log.Fatalf("prepare cannot read %v err %v\n", KVNEXTCONFIG, err)
+	}
 
 	db.DLPrintf("KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
 
@@ -235,50 +231,46 @@ func (kv *Kv) prepare() {
 	kv.closeFids()
 
 	kv.mu.Unlock()
-	defer kv.mu.Lock()
 
 	kv.makeShardDirs()
+
 	if kv.nextConf.N > 1 {
 		kv.moveShards()
 	}
-	kv.postShards()
 	kv.prepared()
 }
 
-// Caller holds lock
-func (kv *Kv) commit() bool {
+func (kv *Kv) commit() {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
 	db.DLPrintf("KV", "commit to new config: %v\n", kv.nextConf)
+
+	kv.postShards()
 
 	kv.removeShards()
 
 	kv.conf = kv.nextConf
 	kv.nextConf = nil
+	_, err := kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+	if err != nil {
+		db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
+	}
 
 	for _, kvd := range kv.conf.Shards {
 		if kvd == kv.me {
-			return true
+			return
 		}
 	}
 
 	db.DLPrintf("KV", "commit exit %v\n", kv.me)
-	return false
+	kv.done <- true
 }
 
 func (kv *Kv) Work() {
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
-
 	db.DLPrintf("KV", "Work\n")
-	cont := true
-	for cont {
-		kv.cond.Wait()
-		if kv.nextConf == nil {
-			kv.prepare()
-		} else {
-			cont = kv.commit()
-		}
-	}
-	// log.Printf("%v: exit %v\n", kv.me, kv.conf)
+	<-kv.done
+	db.DLPrintf("KV", "exit %v\n", kv.conf)
 }
 
 func (kv *Kv) Exit() {

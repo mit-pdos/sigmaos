@@ -9,14 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/memfsd"
-	np "ulambda/ninep"
 )
 
 const (
@@ -25,35 +23,11 @@ const (
 	SHARDER      = KVDIR + "/sharder"
 	KVCONFIG     = KVDIR + "/config"
 	KVNEXTCONFIG = KVDIR + "/nextconfig"
+	KVCOMMIT     = KVDIR + "/commit/"
 )
 
 var ErrWrongKv = errors.New("ErrWrongKv")
 var ErrRetry = errors.New("ErrRetry")
-
-type SharderDev struct {
-	sh *Sharder
-}
-
-func (shdev *SharderDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
-	t := string(data)
-	var err error
-	if strings.HasPrefix(t, "Prepared") {
-		err = shdev.sh.prepared(t[len("Prepared "):])
-	} else if strings.HasPrefix(t, "Exit") {
-		shdev.sh.exit()
-	} else {
-		return 0, fmt.Errorf("Write: unknown command %v\n", t)
-	}
-	return np.Tsize(len(data)), err
-}
-
-func (shdev *SharderDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
-	return nil, errors.New("Not support")
-}
-
-func (shdev *SharderDev) Len() np.Tlength {
-	return 0
-}
 
 type Config struct {
 	N      int
@@ -66,9 +40,9 @@ func makeConfig(n int) *Config {
 }
 
 type Sharder struct {
-	mu   sync.Mutex
-	cond *sync.Cond
+	mu sync.Mutex
 	*fslib.FsLibSrv
+	ch       chan bool
 	pid      string
 	args     []string
 	kvs      []string // the kv servers in this configuration
@@ -84,7 +58,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 		return nil, fmt.Errorf("MakeSharder: too few arguments %v\n", args)
 	}
 	sh := &Sharder{}
-	sh.cond = sync.NewCond(&sh.mu)
+	sh.ch = make(chan bool)
 	sh.pid = args[0]
 	sh.args = args[1:]
 	db.Name("sharder")
@@ -94,64 +68,19 @@ func MakeSharder(args []string) (*Sharder, error) {
 	}
 	fsd := memfsd.MakeFsd(ip + ":0")
 	db.DLPrintf("SHARDER", "New sharder %v", args)
-	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
+	fls, err := fslib.InitFs(SHARDER, fsd, nil)
 	if err != nil {
 		return nil, err
 	}
 	sh.FsLibSrv = fls
 	sh.Started(sh.pid)
 
+	err = sh.Mkdir(KVCOMMIT, 0777)
+	if err != nil {
+		db.DLPrintf("SHARDER", "MkDir %v failed %v\n", KVCOMMIT, err)
+	}
+
 	return sh, nil
-}
-
-func (sh *Sharder) exit() error {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-
-	db.DLPrintf("SHARDER", "Sharder exit %v\n", sh.pid)
-	sh.done = true
-	sh.nextKvs = make([]string, 0)
-	sh.cond.Signal()
-	return nil
-}
-
-func (sh *Sharder) prepared(kvd string) error {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-
-	db.DLPrintf("SHARDER", "Prepared: %v %v\n", kvd, sh.nkvd)
-	sh.nkvd -= 1
-	if sh.nkvd <= 0 {
-		sh.cond.Signal()
-
-	}
-	return nil
-}
-
-// Tell kv prepare to reconfigure
-func (sh *Sharder) prepare(kv string) {
-	sh.mu.Unlock()
-	defer sh.mu.Lock()
-
-	dev := KVDIR + "/" + kv + "/dev"
-	err := sh.WriteFile(dev, []byte("Prepare"))
-	if err != nil {
-		log.Printf("WriteFile: %v %v\n", dev, err)
-	}
-
-}
-
-// Tell kv commit to reconfigure
-func (sh *Sharder) commit(kv string) {
-	sh.mu.Unlock()
-	defer sh.mu.Lock()
-
-	dev := KVDIR + "/" + kv + "/dev"
-	err := sh.WriteFile(dev, []byte("Commit"))
-	if err != nil {
-		log.Printf("WriteFile: %v %v\n", dev, err)
-	}
-
 }
 
 // Caller holds lock
@@ -211,6 +140,10 @@ func (sh *Sharder) Init() {
 	}
 }
 
+func (sh *Sharder) watchPrepared(p string) {
+	sh.ch <- true
+}
+
 func (sh *Sharder) Work() {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
@@ -238,10 +171,18 @@ func (sh *Sharder) Work() {
 
 	sh.nextConf = sh.balance()
 	db.DLPrintf("SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
-	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
+
+	sts, err := sh.ReadDir(KVCOMMIT)
 	if err != nil {
-		log.Printf("SHARDER: %v error %v\n", KVNEXTCONFIG, err)
-		return
+		log.Fatalf("SHARDER: ReadDir commit error %v\n", err)
+	}
+
+	for _, st := range sts {
+		fn := KVCOMMIT + st.Name
+		err = sh.Remove(fn)
+		if err != nil {
+			db.DLPrintf("SHARDER", "Remove %v failed %v\n", fn, err)
+		}
 	}
 
 	if sh.args[0] == "del" {
@@ -251,13 +192,21 @@ func (sh *Sharder) Work() {
 
 	sh.nkvd = len(sh.nextKvs)
 	for _, kv := range sh.nextKvs {
-		sh.prepare(kv)
+		fn := KVCOMMIT + kv
+		_, err := sh.ReadFileWatch(fn, sh.watchPrepared)
+		if err == nil {
+			log.Fatalf("SHARDER: watch failed %v", err)
+		}
 	}
 
-	// XXX handle crashed KVs
-	for sh.nkvd > 0 {
-		sh.cond.Wait()
+	err = sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
+	if err != nil {
+		log.Printf("SHARDER: %v error %v\n", KVNEXTCONFIG, err)
+		return
+	}
 
+	for i := 0; i < sh.nkvd; i++ {
+		<-sh.ch
 	}
 
 	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
@@ -267,8 +216,5 @@ func (sh *Sharder) Work() {
 		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)
 		return
-	}
-	for _, kv := range sh.nextKvs {
-		sh.commit(kv)
 	}
 }

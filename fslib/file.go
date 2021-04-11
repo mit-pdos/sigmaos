@@ -10,7 +10,9 @@ import (
 	np "ulambda/ninep"
 )
 
-const CHUNKSZ = 8192
+// XXX Picking a small chunk size really kills throughput
+//const CHUNKSZ = 8192
+const CHUNKSZ = 10000000
 
 type FsLib struct {
 	*fsclnt.FsClient

@@ -12,7 +12,7 @@ type NpAPI interface {
 	Walk(np.Twalk, *np.Rwalk) *np.Rerror
 	Create(np.Tcreate, *np.Rcreate) *np.Rerror
 	Open(np.Topen, *np.Ropen) *np.Rerror
-	OpenV(np.Topenv, *np.Ropen) *np.Rerror
+	WatchV(np.Twatchv, *np.Ropen) *np.Rerror
 	Clunk(np.Tclunk, *np.Rclunk) *np.Rerror
 	Read(np.Tread, *np.Rread) *np.Rerror
 	ReadV(np.Treadv, *np.Rread) *np.Rerror

@@ -265,7 +265,9 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) OpenV(args np.Topenv, rets *np.Ropen) *np.Rerror {
+// There might be a racing create; it is the clients job to avoid this
+// race
+func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "Openv %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -277,7 +279,11 @@ func (npc *NpConn) OpenV(args np.Topenv, rets *np.Ropen) *np.Rerror {
 	if args.Version != np.NoV && args.Version != f.obj.Version() {
 		return &np.Rerror{"Version mismatch"}
 	}
-	npc.wt.Watch(npc, f.path)
+	p := np.Copy(f.path)
+	if len(args.Name) > 0 {
+		p = append(p, args.Name)
+	}
+	npc.wt.Watch(npc, p)
 	return nil
 }
 
@@ -302,18 +308,23 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
-			nf := &Fid{append(f.path, names[0]), o1, o1.Version(), f.ctx}
+			p := np.Copy(f.path)
+			nf := &Fid{append(p, names[0]), o1, o1.Version(), f.ctx}
 			if args.Perm.IsEphemeral() {
 				npc.mu.Lock()
 				npc.ephemeral[o1] = nf
 				npc.mu.Unlock()
+			}
+			if npc.wt != nil {
+				npc.wt.WakeupWatch(nf.path)
 			}
 			npc.add(args.Fid, nf)
 			rets.Qid = o1.Qid()
 			break
 		} else {
 			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH { // retry?
-				p := append(f.path, names[0])
+				p := np.Copy(f.path)
+				p = append(p, names[0])
 				db.DLPrintf("9POBJ", "Watch %v\n", p)
 				npc.wt.Watch(npc, p)
 				db.DLPrintf("9POBJ", "Retry create %v\n", p)

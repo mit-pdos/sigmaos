@@ -107,8 +107,11 @@ const (
 	// ulambda uses OVERSION for atomic read-and-write
 	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
 
-	// ulambda uses OWATCH to block a request until fid is
-	// deleted.  OWATCH with Tcreate will retry the create.
+	// ulambda uses OWATCH to block a client until a file is
+	// removed.  OWATCH with Tcreate will retry the create, and
+	// and provides an atomic way to lock a file, with remove()
+	// releasing the lock.  OWATCH with Open() and a closure will
+	// invoke the closure when a client creates or removes the file.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
 )
 
@@ -193,7 +196,7 @@ const (
 	TRwstat
 	TTreadv
 	TTwritev
-	TTopenv
+	TTwatchv
 )
 
 func (fct Tfcall) String() string {
@@ -258,8 +261,8 @@ func (fct Tfcall) String() string {
 		return "Treadv"
 	case TTwritev:
 		return "Twritev"
-	case TTopenv:
-		return "Topenv"
+	case TTwatchv:
+		return "Twatchv"
 	default:
 		return "Tunknown"
 	}
@@ -332,8 +335,9 @@ type Topen struct {
 	Mode Tmode
 }
 
-type Topenv struct {
+type Twatchv struct {
 	Fid     Tfid
+	Name    string
 	Mode    Tmode
 	Version TQversion
 }
@@ -456,7 +460,7 @@ func (Rerror) Type() Tfcall   { return TRerror }
 func (Twalk) Type() Tfcall    { return TTwalk }
 func (Rwalk) Type() Tfcall    { return TRwalk }
 func (Topen) Type() Tfcall    { return TTopen }
-func (Topenv) Type() Tfcall   { return TTopenv }
+func (Twatchv) Type() Tfcall  { return TTwatchv }
 func (Ropen) Type() Tfcall    { return TRopen }
 func (Tcreate) Type() Tfcall  { return TTcreate }
 func (Rcreate) Type() Tfcall  { return TRcreate }

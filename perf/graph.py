@@ -107,22 +107,32 @@ def trim(a, b, c):
   c = cutoff_at(c, cutoff)
   return a, b, c
 
-def plot(title, units, native_x_y, ninep_x_y, remote_x_y, suffix):
+def plot(title, units, native_x_y, ninep_x_y, remote_x_y, native_tail_x_y=None, ninep_tail_x_y=None, remote_tail_x_y=None, suffix="", percent=99):
   native_x_y, ninep_x_y, remote_x_y = trim(native_x_y, ninep_x_y, remote_x_y)
+  if native_tail_x_y is not None:
+    native_tail_x_y, ninep_tail_x_y, remote_tail_x_y = trim(native_tail_x_y, ninep_tail_x_y, remote_tail_x_y)
   native_x, native_y = native_x_y
   ninep_x, ninep_y = ninep_x_y
   remote_x, remote_y = remote_x_y
 
   fig, ax = plt.subplots(1)
-  ax.plot(native_x, native_y, label="Native (exec)")
-  ax.plot(ninep_x, ninep_y, label="9p")
-  ax.plot(remote_x, remote_y, label="Remote (AWS Lambda)")
+  ax.plot(native_x, native_y, label="Native", color="blue")
+  ax.plot(ninep_x, ninep_y, label="9p", color="orange")
+  ax.plot(remote_x, remote_y, label="Remote (AWS Lambda)", color="red")
+
+  if native_tail_x_y is not None:
+    native_tail_x, native_y = native_tail_x_y
+    ninep_tail_x, ninep_y = ninep_tail_x_y
+    remote_tail_x, remote_y = remote_tail_x_y
+    ax.plot(native_tail_x, native_y, label="Native " + str(percent) + "%", color="blue", linestyle="dashed")
+    ax.plot(ninep_tail_x, ninep_y, label="9p " + str(percent) + "%", color="orange", linestyle="dashed")
+    ax.plot(remote_tail_x, remote_y, label="Remote (AWS Lambda) " + str(percent) + "%", color="red", linestyle="dashed")
 
   ax.set_xlabel("Work per invocation (msec)")
   ax.set_ylabel(title + " " + units) 
-  ax.legend()
+  ax.legend(bbox_to_anchor=(1.05,1), loc="upper left")
   ax.set_title(title + " varying work per invocation")
-  plt.savefig("perf/" + title.lower() + suffix + ".pdf")
+  plt.savefig("perf/" + title.lower() + suffix + ".pdf", bbox_inches="tight")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -151,14 +161,13 @@ if __name__ == "__main__":
   native_runtime_x_y = get_runtime_x_y(native_profile, native_runtime)
   ninep_runtime_x_y = get_runtime_x_y(native_profile, ninep_runtime)
   remote_runtime_x_y = get_runtime_x_y(remote_profile, remote_runtime)
-  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, args.suffix)
-  #Plot overhead
-  native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)
-  ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
-  remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
-  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, args.suffix)
   # Plot runtime
   native_tail_x_y = get_runtime_x_y(native_profile, native_tail)
   ninep_tail_x_y = get_runtime_x_y(native_profile, ninep_tail)
   remote_tail_x_y = get_runtime_x_y(remote_profile, remote_tail)
-  plot("Tail" + str(args.percentile) + "%", "(msec)", native_tail_x_y, ninep_tail_x_y, remote_tail_x_y, args.suffix)
+  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, native_tail_x_y=native_tail_x_y, ninep_tail_x_y=ninep_tail_x_y, remote_tail_x_y=remote_tail_x_y, percent=args.percentile, suffix=args.suffix)
+  #Plot overhead
+  native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)
+  ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
+  remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
+  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, suffix=args.suffix)

@@ -337,7 +337,7 @@ type Topen struct {
 
 type Twatchv struct {
 	Fid     Tfid
-	Name    string
+	Path    []string
 	Mode    Tmode
 	Version TQversion
 }

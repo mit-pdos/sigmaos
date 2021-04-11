@@ -268,7 +268,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 // There might be a racing create; it is the clients job to avoid this
 // race
 func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
-	db.DLPrintf("9POBJ", "Openv %v\n", args)
+	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -280,8 +280,8 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 		return &np.Rerror{"Version mismatch"}
 	}
 	p := np.Copy(f.path)
-	if len(args.Name) > 0 {
-		p = append(p, args.Name)
+	if len(args.Path) > 0 {
+		p = append(p, args.Path...)
 	}
 	npc.wt.Watch(npc, p)
 	return nil

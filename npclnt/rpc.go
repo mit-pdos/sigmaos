@@ -151,8 +151,8 @@ func (npch *NpChan) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
 	return &msg, err
 }
 
-func (npch *NpChan) Watch(fid np.Tfid, name string, version np.TQversion) error {
-	args := np.Twatchv{fid, name, np.OWATCH, version}
+func (npch *NpChan) Watch(fid np.Tfid, path []string, version np.TQversion) error {
+	args := np.Twatchv{fid, path, np.OWATCH, version}
 	reply, err := npch.call(args)
 	if err != nil {
 		return err

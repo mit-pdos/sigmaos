@@ -90,10 +90,10 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		todo = len(rest)
 	} else {
 		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
-		if err != nil && f != nil && len(rest) == 1 { // watch rest
+		if err != nil && f != nil { // watch rest
 			db.DLPrintf("FSCLNT", "Watch %v %v\n", path, rest[0])
 			go func() {
-				err := fsc.npch(fid1).Watch(fid, rest[0], np.NoV)
+				err := fsc.npch(fid1).Watch(fid, rest, np.NoV)
 				db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
 				if err == nil {
 					f(np.Join(path)) // XXX maybe supply version?

@@ -49,6 +49,8 @@ func (wt *WatchTable) Watch(npc *NpConn, path []string) {
 func (wt *WatchTable) WakeupWatch(path []string) {
 	p := np.Join(path)
 
+	db.DLPrintf("WATCH", "WakeupWatch check for %v\n", p)
+
 	wt.mu.Lock()
 	ws, ok := wt.watches[p]
 	if ok {

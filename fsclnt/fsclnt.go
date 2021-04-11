@@ -175,7 +175,9 @@ func (fsc *FsClient) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (
 }
 
 func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
+	fsc.mu.Lock()
 	_, ok := fsc.fids[fid]
+	fsc.mu.Unlock()
 	if !ok {
 		return errors.New("Unknown fid")
 	}

@@ -74,6 +74,10 @@ func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Ropen{}
 		err := c.np.Open(req, reply)
 		return *reply, err
+	case np.Twatchv:
+		reply := &np.Ropen{}
+		err := c.np.WatchV(req, reply)
+		return *reply, err
 	case np.Tcreate:
 		reply := &np.Rcreate{}
 		err := c.np.Create(req, reply)

@@ -2,6 +2,7 @@ package memfsd
 
 import (
 	"net"
+	"sync"
 
 	db "ulambda/debug"
 	"ulambda/memfs"
@@ -10,25 +11,34 @@ import (
 	"ulambda/npsrv"
 )
 
-type Fsd struct {
-	root  *memfs.Dir
-	srv   *npsrv.NpServer
-	ch    chan bool
-	addr  string
-	mkctx func(string) npo.CtxI
-	wt    *npo.WatchTable
+type Ctx struct {
+	uname string
 }
 
-func MakeFsd(addr string, mkctx func(string) npo.CtxI) *Fsd {
+func MkCtx(uname string) *Ctx {
+	return &Ctx{uname}
+}
+
+func (ctx *Ctx) Uname() string {
+	return ctx.uname
+}
+
+type Fsd struct {
+	mu   sync.Mutex
+	root *memfs.Dir
+	srv  *npsrv.NpServer
+	ch   chan bool
+	addr string
+	wt   *npo.WatchTable
+	ct   *npo.ConnTable
+}
+
+func MakeFsd(addr string) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.addr = addr
-	if mkctx == nil {
-		fsd.mkctx = memfs.DefMkCtx
-	} else {
-		fsd.mkctx = mkctx
-	}
 	fsd.wt = npo.MkWatchTable()
+	fsd.ct = npo.MkConnTable()
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeNpServer(fsd, addr)
 	return fsd
@@ -48,12 +58,16 @@ func (fsd *Fsd) WatchTable() *npo.WatchTable {
 	return fsd.wt
 }
 
+func (fsd *Fsd) ConnTable() *npo.ConnTable {
+	return fsd.ct
+}
+
 func (fsd *Fsd) Addr() string {
 	return fsd.srv.MyAddr()
 }
 
 func (fsd *Fsd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
-	return fsd.root, fsd.mkctx(uname)
+	return fsd.root, MkCtx(uname)
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
@@ -61,12 +75,12 @@ func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {
-	_, err := fsd.root.CreateDev(fsd.mkctx(""), name, d, np.DMDEVICE, 0)
+	_, err := fsd.root.CreateDev(MkCtx(""), name, d, np.DMDEVICE, 0)
 	return err
 }
 
 func (fsd *Fsd) MkPipe(name string) (npo.NpObj, error) {
-	obj, err := fsd.root.Create(fsd.mkctx(""), name, np.DMNAMEDPIPE, 0)
+	obj, err := fsd.root.Create(MkCtx(""), name, np.DMNAMEDPIPE, 0)
 	if err != nil {
 		return nil, err
 	}

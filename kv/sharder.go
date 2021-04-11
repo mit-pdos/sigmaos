@@ -92,7 +92,7 @@ func MakeSharder(args []string) (*Sharder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MakeSharder: no IP %v\n", err)
 	}
-	fsd := memfsd.MakeFsd(ip+":0", nil)
+	fsd := memfsd.MakeFsd(ip + ":0")
 	db.DLPrintf("SHARDER", "New sharder %v", args)
 	fls, err := fslib.InitFs(SHARDER, fsd, &SharderDev{sh})
 	if err != nil {
@@ -220,7 +220,7 @@ func (sh *Sharder) Work() {
 		sh.Init()
 	}
 
-	// log.Printf("Sharder: %v %v\n", sh.conf, sh.args)
+	db.DLPrintf("SHARDER", "Sharder: %v %v\n", sh.conf, sh.args)
 	if sh.args[0] == "add" {
 		sh.nextKvs = append(sh.kvs, sh.args[1:]...)
 	} else {
@@ -240,12 +240,13 @@ func (sh *Sharder) Work() {
 	db.DLPrintf("SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 	err := sh.MakeFileJson(KVNEXTCONFIG, *sh.nextConf)
 	if err != nil {
-		log.Printf("Sharder: %v error %v\n", KVNEXTCONFIG, err)
+		log.Printf("SHARDER: %v error %v\n", KVNEXTCONFIG, err)
 		return
 	}
 
 	if sh.args[0] == "del" {
 		sh.nextKvs = append(sh.nextKvs, sh.args[1:]...)
+
 	}
 
 	sh.nkvd = len(sh.nextKvs)
@@ -263,8 +264,9 @@ func (sh *Sharder) Work() {
 	// commit to new config
 	err = sh.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
-		log.Fatalf("Sharder: rename %v -> %v: error %v\n",
+		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)
+		return
 	}
 	for _, kv := range sh.nextKvs {
 		sh.commit(kv)

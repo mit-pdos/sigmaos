@@ -151,6 +151,19 @@ func (npch *NpChan) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
 	return &msg, err
 }
 
+func (npch *NpChan) Watch(fid np.Tfid, name string, version np.TQversion) error {
+	args := np.Twatchv{fid, name, np.OWATCH, version}
+	reply, err := npch.call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Ropen)
+	if !ok {
+		return errors.New("Not correct reply msg")
+	}
+	return err
+}
+
 func (npch *NpChan) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rread, error) {
 	args := np.Tread{fid, offset, cnt}
 	reply, err := npch.call(args)

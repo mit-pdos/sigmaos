@@ -2,21 +2,23 @@ package kv
 
 import (
 	"crypto/rand"
+	"hash/fnv"
+	"log"
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 func key2shard(key string) int {
-	shard := 0
-	if len(key) > 0 {
-		shard = int(key[0])
-	}
-	shard %= NSHARD
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	shard := int(h.Sum32() % NSHARD)
 	return shard
 }
 
@@ -28,9 +30,11 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	fsl   *fslib.FsLib
-	conf  Config
-	uname string
+	mu       sync.Mutex
+	fsl      *fslib.FsLib
+	uname    string
+	conf     Config
+	nextConf Config
 }
 
 func MakeClerk() (*KvClerk, error) {
@@ -38,23 +42,52 @@ func MakeClerk() (*KvClerk, error) {
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
 	db.Name(kc.uname)
 	kc.fsl = fslib.MakeFsLib(kc.uname)
-	err := kc.readConfig()
+	err := kc.readConfig(&kc.conf)
 	return kc, err
 }
 
-func (kc *KvClerk) readConfig() error {
-	err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
-	db.DLPrintf("CLERK", "Read config %v %v\n", kc.conf, err)
+func shardSrvName(s int) string {
+	return "shardSrv" + strconv.Itoa(s)
+}
+
+func (kc *KvClerk) watch(path string) {
+	kc.mu.Lock()
+	defer kc.mu.Unlock()
+	db.DLPrintf("CLERK", "watch: Config changed %v\n", path)
+	err := kc.readConfig(&kc.nextConf)
+	if err != nil {
+		log.Printf("watch: readConfig error %v\n", err)
+	}
+	db.DLPrintf("CLERK", "watch: cur conf %v new conf %v\n", kc.conf, kc.nextConf)
+	for i, s := range kc.nextConf.Shards {
+		if kc.conf.Shards[i] != s {
+			p := KVDIR + "/" + shardSrvName(i)
+			p1 := np.Split(p)
+			db.DLPrintf("CLERK", "Umount %v\n", p1)
+			err := kc.fsl.Umount(p1)
+			if err != nil {
+				log.Printf("CLERK: umount %v failed %v\n", p1, err)
+			}
+		}
+	}
+	kc.conf.N = kc.nextConf.N
+	copy(kc.conf.Shards, kc.nextConf.Shards)
+}
+
+func (kc *KvClerk) readConfig(conf *Config) error {
+	err := kc.fsl.ReadFileJsonWatch(KVCONFIG, conf, kc.watch)
+	if err != nil {
+		log.Printf("readConfig error %v\n", err)
+	}
+	db.DLPrintf("CLERK", "readConfig: conf %v\n", conf)
 	return err
 }
 
 func (kc *KvClerk) keyPath(shard int, k string) string {
-	kvd := kc.conf.Shards[shard]
-	return shardPath(kvd, shard) + "/" + strconv.Itoa(kc.conf.N) + "-" + k
-
+	return KVDIR + "/" + shardSrvName(shard) + "/shard" + strconv.Itoa(shard) + "/" + k
 }
 
-func error2kv(error string) string {
+func error2shard(error string) string {
 	kv := ""
 	if strings.HasPrefix(error, "file not found") {
 		i := strings.LastIndex(error, " ")
@@ -71,13 +104,11 @@ func (kc *KvClerk) Put(k, v string) error {
 		if err == nil {
 			return err
 		}
-		db.DLPrintf("CLERK", "Put: %v %v\n", n, err)
-		kv := error2kv(err.Error())
-		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" ||
-			kv == kc.conf.Shards[shard] ||
-			err.Error() == "Version mismatch" {
-			kc.readConfig()
-		} else if err.Error() == ErrRetry.Error() {
+		shard := error2shard(err.Error())
+		db.DLPrintf("CLERK", "Put: %v %v %v\n", n, err, shard)
+		if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
+			strings.HasPrefix(shard, "shardSrv") ||
+			err.Error() == "Closed by server" {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			return err
@@ -90,16 +121,14 @@ func (kc *KvClerk) Get(k string) (string, error) {
 	for {
 		n := kc.keyPath(shard, k)
 		b, err := kc.fsl.Get(n)
+		db.DLPrintf("CLERK", "Get: %v %v\n", n, err)
 		if err == nil {
 			return string(b), err
 		}
-		db.DLPrintf("CLERK", "Get: %v %v\n", n, err)
-		kv := error2kv(err.Error())
-		if err.Error() == ErrWrongKv.Error() || err.Error() == "EOF" ||
-			kv == kc.conf.Shards[shard] ||
-			err.Error() == "Version mismatch" {
-			kc.readConfig()
-		} else if err.Error() == ErrRetry.Error() {
+		shard := error2shard(err.Error())
+		if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
+			strings.HasPrefix(shard, "shardSrv") ||
+			err.Error() == "Closed by server" {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			return string(b), err

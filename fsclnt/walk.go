@@ -3,6 +3,7 @@ package fsclnt
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	db "ulambda/debug"
@@ -15,9 +16,35 @@ const (
 	MAXSYMLINK = 4
 )
 
-func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
+func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, f Watch) (np.Tfid, error) {
+	var fid np.Tfid
+	for {
+		f, err := fsc.walkMany(p, resolve, f)
+		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", p, f, err)
+		if err == io.EOF {
+			p := fsc.path(f)
+			if p == nil { // schedd triggers this; don't know why
+				return np.NoFid, err
+			}
+			fid2, e := fsc.mount.umount(p.cname)
+			if e != nil {
+				return f, e
+			}
+			fsc.detachChannel(fid2)
+			continue
+		}
+		if err != nil {
+			return f, err
+		}
+		fid = f
+		break
+	}
+	return fid, nil
+}
+
+func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, error) {
 	for i := 0; i < MAXSYMLINK; i++ {
-		fid, todo, err := fsc.walkOne(path)
+		fid, todo, err := fsc.walkOne(path, f)
 		if err != nil {
 			return fid, err
 		}
@@ -29,7 +56,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 			(todo == 0 && resolve)) {
 			path, err = fsc.walkSymlink(fid, path, todo)
 			if err != nil {
-				return np.NoFid, err
+				return fid, err
 			}
 		} else {
 			return fid, err
@@ -38,18 +65,20 @@ func (fsc *FsClient) walkMany(path []string, resolve bool) (np.Tfid, error) {
 	return np.NoFid, errors.New("too many iterations")
 }
 
-func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
+func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 	fid, rest := fsc.mount.resolve(path)
-	db.DLPrintf("FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "walkOne: mount -> unknown fid\n")
 		return np.NoFid, 0, errors.New("Unknown file")
 
 	}
+	db.DLPrintf("FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	fid1, err := fsc.clone(fid)
 	if err != nil {
-		return np.NoFid, 0, err
+		return fid, 0, err
 	}
 	defer fsc.clunkFid(fid1)
+
 	fid2 := fsc.allocFid()
 	first, union := IsUnion(rest)
 	var reply *np.Rwalk
@@ -61,12 +90,23 @@ func (fsc *FsClient) walkOne(path []string) (np.Tfid, int, error) {
 		todo = len(rest)
 	} else {
 		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
+		if err != nil && f != nil && len(rest) == 1 { // watch rest
+			db.DLPrintf("FSCLNT", "Watch %v %v\n", path, rest[0])
+			go func() {
+				err := fsc.npch(fid1).Watch(fid, rest[0], np.NoV)
+				db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
+				if err == nil {
+					f(np.Join(path)) // XXX maybe supply version?
+				}
+			}()
+			return np.NoFid, 0, err
+		}
 		if err != nil {
 			return np.NoFid, 0, err
 		}
+		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)
+
 		todo = len(rest) - len(reply.Qids)
-		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest,
-			reply.Qids, todo)
 	}
 	fsc.addFid(fid2, fsc.path(fid1).copyPath())
 	fsc.path(fid2).addn(reply.Qids, rest)
@@ -129,7 +169,7 @@ func SplitTarget(target string) (string, []string) {
 func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
 	server, rest := SplitTarget(target)
-	fid, err := fsc.Attach(server, "")
+	fid, err := fsc.Attach(server, np.Join(path))
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)
 		return nil, err

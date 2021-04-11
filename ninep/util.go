@@ -15,6 +15,12 @@ func Join(path []string) string {
 	return p
 }
 
+func Copy(path []string) []string {
+	p := make([]string, len(path))
+	copy(p, path)
+	return p
+}
+
 func EndSlash(path string) bool {
 	return path[len(path)-1] == '/'
 }

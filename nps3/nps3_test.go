@@ -76,7 +76,7 @@ func TestUnionSimple(t *testing.T) {
 	dirents, err := ts.ReadDir("name/s3/~ip/")
 	assert.Nil(t, err, "ReadDir")
 
-	assert.Equal(t, 4, len(dirents))
+	assert.Equal(t, 5, len(dirents))
 
 	ts.s.Shutdown(ts.FsLib)
 }

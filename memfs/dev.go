@@ -38,6 +38,8 @@ func (d *Device) Stat(ctx npo.CtxI) (*np.Stat, error) {
 }
 
 func (d *Device) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+	d.Lock()
+	defer d.Unlock()
 	if v != np.NoV && d.version != v {
 		return 0, fmt.Errorf("Version mismatch")
 	}
@@ -47,6 +49,9 @@ func (d *Device) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQvers
 }
 
 func (d *Device) Read(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+	d.Lock()
+	defer d.Unlock()
+
 	if v != np.NoV && d.version != v {
 		return nil, fmt.Errorf("Version mismatch")
 	}

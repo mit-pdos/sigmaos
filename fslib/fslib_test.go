@@ -175,8 +175,6 @@ func TestEphemeral(t *testing.T) {
 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
 	}
 
-	log.Printf("Shutdown\n")
-
 	ts.s.Shutdown(ts.FsLib)
 }
 
@@ -199,6 +197,47 @@ func TestLock(t *testing.T) {
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestWatchRemove(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/w"
+	err := ts.MakeFile(fn, nil)
+	assert.Equal(t, nil, err)
+
+	ch := make(chan bool)
+	_, err = ts.ReadFileWatch(fn, func(string) {
+		ch <- true
+	})
+
+	err = ts.Remove(fn)
+	assert.Equal(t, nil, err)
+
+	<-ch
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestWatchCreate(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/w"
+	ch := make(chan bool)
+	_, err := ts.ReadFileWatch(fn, func(string) {
+		ch <- true
+	})
+	assert.NotEqual(t, nil, err)
+	if err != nil {
+		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+	}
+
+	err = ts.MakeFile(fn, nil)
+	assert.Equal(t, nil, err)
+
+	<-ch
+
 	ts.s.Shutdown(ts.FsLib)
 }
 

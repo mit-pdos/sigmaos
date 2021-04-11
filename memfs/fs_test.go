@@ -14,6 +14,18 @@ import (
 	npo "ulambda/npobjsrv"
 )
 
+type Ctx struct {
+	uname string
+}
+
+func MkCtx(uname string) *Ctx {
+	return &Ctx{uname}
+}
+
+func (ctx *Ctx) Uname() string {
+	return ctx.uname
+}
+
 type TestState struct {
 	t     *testing.T
 	rooti *Dir
@@ -24,7 +36,7 @@ func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
 	ts.rooti = MkRootInode()
-	ts.ctx = DefMkCtx("")
+	ts.ctx = MkCtx("")
 	return ts
 }
 

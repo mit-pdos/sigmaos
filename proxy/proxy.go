@@ -191,6 +191,10 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
+	return nil
+}
+
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Create(args.Fid, args.Name, args.Perm, args.Mode)
 	if err != nil {

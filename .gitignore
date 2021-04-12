@@ -4,3 +4,4 @@ bin/
 *.pem
 measurements
 ec2_measurements
+mr/par-mr.out

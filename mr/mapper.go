@@ -44,7 +44,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {
-		return nil, fmt.Errorf("Makemapper: cannot create %v\n", m.output)
+		return nil, fmt.Errorf("Makemapper: cannot create %v: %v\n", m.output, err)
 	}
 	m.fd, err = m.Open(m.input, np.OREAD)
 	if err != nil {
@@ -148,5 +148,4 @@ func (m *Mapper) doMap() {
 func (m *Mapper) Work() {
 	m.doMap()
 	m.Close(m.fd)
-	m.Exiting(m.pid, "OK")
 }

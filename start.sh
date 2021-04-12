@@ -15,7 +15,6 @@ if [[ -z "${NAMED}" ]]; then
 fi
 
 ./bin/named &
-./bin/schedd &
 ./bin/nps3d &
 ./bin/npuxd &
 ./bin/locald ./ &

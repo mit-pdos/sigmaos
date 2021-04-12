@@ -46,6 +46,6 @@ echo "4. Copying targets and thunks into memfs..."
 cp -r ./.gg $memfs_dir
 cp ./$target $memfs_dir
 
-# Submit jobs to schedd
+# Submit jobs to scheduler
 echo "5. Running..."
 $ulambda_dir/mk-gg-ulambda-job.sh $target | $ulambda_dir/bin/submit

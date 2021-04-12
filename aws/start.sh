@@ -26,7 +26,6 @@ do
        nohup ./ulambda/bin/named > named.out 2>&1 < /dev/null &
        sleep 1
        nohup ./ulambda/bin/proxyd > proxyd.out 2>&1 < /dev/null &
-       nohup ./ulambda/bin/schedd > schedd.out 2>&1 < /dev/null &
     fi
     nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
     nohup ./ulambda/bin/npuxd > nnpuxd.out 2>&1 < /dev/null &

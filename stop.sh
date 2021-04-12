@@ -2,7 +2,6 @@
 
 ./umount.sh
 killall named
-killall schedd
 killall locald
 killall schedl
 killall kvd

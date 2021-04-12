@@ -34,35 +34,46 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) localdName(t *testing.T) string {
+	sts, err := ts.ReadDir(LOCALD_ROOT)
+	assert.Nil(t, err, LOCALD_ROOT)
+	assert.Equal(t, 1, len(sts))
+	name := LOCALD_ROOT + "/" + sts[0].Name
+	return name
+}
+
 func TestSymlink(t *testing.T) {
 	ts := makeTstate(t)
 
 	var err error
-	ts.s.schedd, err = run("..", "/bin/schedd", nil)
-	assert.Nil(t, err, "bin/schedd")
+	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
+	assert.Nil(t, err, "bin/locald")
 	time.Sleep(100 * time.Millisecond)
 
-	b, err := ts.ReadFile(SCHED)
-	assert.Nil(t, err, SCHED)
+	name := ts.localdName(t)
+	b, err := ts.ReadFile(name)
+	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
-	sts, err := ts.ReadDir(SCHED + "/")
-	assert.Nil(t, err, SCHED+"/")
+	sts, err := ts.ReadDir(name + "/")
+	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
 
 	// shutdown schedd
-	err = ts.Remove(SCHED + "/")
+	err = ts.Remove(name + "/")
 	assert.Nil(t, err, "Remove")
 
 	time.Sleep(100 * time.Millisecond)
 
 	// start schedd
-	ts.s.schedd, err = run("..", "/bin/schedd", nil)
-	assert.Nil(t, err, "bin/schedd")
+	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
+	assert.Nil(t, err, "bin/locald")
 	time.Sleep(100 * time.Millisecond)
 
-	b1, err := ts.ReadFile(SCHED)
-	assert.Nil(t, err, SCHED)
+	name = ts.localdName(t)
+
+	b1, err := ts.ReadFile(name)
+	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 	assert.NotEqual(t, b, b1)
 
@@ -151,25 +162,26 @@ func TestEphemeral(t *testing.T) {
 	ts := makeTstate(t)
 
 	var err error
-	ts.s.schedd, err = run("..", "/bin/schedd", nil)
-	assert.Nil(t, err, "bin/schedd")
+	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
+	assert.Nil(t, err, "bin/locald")
 	time.Sleep(100 * time.Millisecond)
 
-	b, err := ts.ReadFile(SCHED)
-	assert.Nil(t, err, SCHED)
+	name := ts.localdName(t)
+	b, err := ts.ReadFile(name)
+	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
-	sts, err := ts.ReadDir(SCHED + "/")
-	assert.Nil(t, err, SCHED+"/")
+	sts, err := ts.ReadDir(name + "/")
+	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.s.Kill(SCHED)
+	ts.s.Kill(LOCALD)
 
 	time.Sleep(100 * time.Millisecond)
 
-	_, err = ts.ReadFile(SCHED)
+	_, err = ts.ReadFile(name)
 	assert.NotEqual(t, nil, err)
 	if err != nil {
 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))

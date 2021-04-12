@@ -56,16 +56,19 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 		//		return err
 	}
 
-	// XXX Race condition in fslib requires this to be locked
-	l.ld.mu.Lock()
-	defer l.ld.mu.Unlock()
-
 	// Notify schedd that the process exited
 	l.ld.Exiting(l.attr.Pid, "OK")
 }
 
 func (l *Lambda) run() error {
 	db.DLPrintf("LOCALD", "Locald run: %v\n", l.attr)
+
+	// Don't run anything if this is a no-op
+	if l.Program == NO_OP_LAMBDA {
+		// XXX Should perhaps do this asynchronously, but worried about fsclnt races
+		l.ld.Exiting(l.Pid, "OK")
+		return nil
+	}
 	args := append([]string{l.Pid}, l.Args...)
 	env := append(os.Environ(), l.Env...)
 	cmd := exec.Command(l.ld.bin+"/"+l.Program, args...)

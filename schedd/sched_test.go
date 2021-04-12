@@ -33,6 +33,26 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func makeTstateOneLocald(t *testing.T) *Tstate {
+	ts := &Tstate{}
+
+	bin := ".."
+	s, err := fslib.BootMin(bin)
+	if err != nil {
+		t.Fatalf("BootMin %v\n", err)
+	}
+	ts.s = s
+	db.Name("sched_test")
+	err = ts.s.BootLocald(bin)
+	if err != nil {
+		t.Fatalf("BootLocald %v\n", err)
+	}
+
+	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.t = t
+	return ts
+}
+
 func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
@@ -43,7 +63,19 @@ func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 }
 
 func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil}
+	spawnSchedlWithPidTimer(t, ts, pid, 0)
+}
+
+func spawnMonitor(t *testing.T, ts *Tstate) {
+	pid := "monitor-" + fslib.GenPid()
+	a := &fslib.Attr{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil, 1}
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
+}
+
+func spawnSchedlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint32) {
+	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil, timer}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -52,6 +84,12 @@ func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
 func spawnSchedl(t *testing.T, ts *Tstate) string {
 	pid := fslib.GenPid()
 	spawnSchedlWithPid(t, ts, pid)
+	return pid
+}
+
+func spawnSchedlWithTimer(t *testing.T, ts *Tstate, timer uint32) string {
+	pid := fslib.GenPid()
+	spawnSchedlWithPidTimer(t, ts, pid, timer)
 	return pid
 }
 
@@ -68,6 +106,17 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 
 	db.DLPrintf("SCHEDD", "SpawnNoOp %v\n", pid)
 	return pid
+}
+
+func TestHelloWorld(t *testing.T) {
+	ts := makeTstate(t)
+
+	pid := spawnSchedl(t, ts)
+	time.Sleep(10 * time.Second)
+
+	checkSchedlResult(t, ts, pid)
+
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestWait(t *testing.T) {
@@ -93,7 +142,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 		ch <- true
 	}()
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 50; i++ {
 		select {
 		case done := <-ch:
 			assert.True(t, done, "Nonexistent lambda")
@@ -136,6 +185,59 @@ func TestNoOpLambdaImmediateExit(t *testing.T) {
 
 	close(ch)
 
+	ts.s.Shutdown(ts.FsLib)
+}
+
+// Should start after 5 secs
+func TestTimerLambda(t *testing.T) {
+	ts := makeTstate(t)
+
+	start := time.Now()
+	pid := spawnSchedlWithTimer(t, ts, 5)
+	ts.Wait(pid)
+	end := time.Now()
+	elapsed := end.Sub(start)
+	assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for timer for long enough (%v)", elapsed.Seconds())
+
+	checkSchedlResult(t, ts, pid)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+// Start a locald, crash it, start a new one, and make sure it reruns lambdas.
+func TestCrashLocald(t *testing.T) {
+	ts := makeTstateOneLocald(t)
+
+	ch := make(chan bool)
+	spawnMonitor(t, ts)
+	go func() {
+		start := time.Now()
+		pid := spawnSchedlWithTimer(t, ts, 5)
+		ts.Wait(pid)
+		end := time.Now()
+		elapsed := end.Sub(start)
+		assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for respawn after locald crash (%v)", elapsed.Seconds())
+		checkSchedlResult(t, ts, pid)
+		ch <- true
+	}()
+
+	// Wait for a bit
+	time.Sleep(1 * time.Second)
+
+	// Kill the locald instance
+	ts.s.Kill(fslib.LOCALD)
+
+	// Wait for a bit
+	time.Sleep(10 * time.Second)
+
+	//	ts.SignalNewJob()
+
+	err := ts.s.BootLocald("..")
+	if err != nil {
+		t.Fatalf("BootLocald %v\n", err)
+	}
+
+	<-ch
 	ts.s.Shutdown(ts.FsLib)
 }
 

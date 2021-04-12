@@ -28,7 +28,7 @@ type SpinTestStarter struct {
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
-	a := &fslib.Attr{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil}
+	a := &fslib.Attr{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0}
 	err := s.Spawn(a)
 	if err != nil {
 		log.Fatalf("couldn't spawn %v: %v\n", pid, err)

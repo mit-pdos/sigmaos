@@ -85,7 +85,7 @@ func (l *Lambda) init(a []byte) error {
 	l.Env = attr.Env
 	l.Dir = attr.Dir
 	l.pairDep(attr.PairDep)
-	for _, p := range attr.ExitDep {
+	for p, _ := range attr.ExitDep {
 		l.ExitDep[p] = false
 	}
 	l.pruneExitDepLS()
@@ -195,7 +195,7 @@ func (l *Lambda) run() error {
 		log.Printf("Schedd failed to select local ip to run lambda\n")
 	}
 	l.LocaldInstance = ip
-	err = l.sd.RunLocal(ip, l.attr)
+	//	err = l.sd.RunLocal(ip, l.attr)
 	if err != nil {
 		log.Printf("Schedd failed to run local lambda: %v, %v\n", l, err)
 	}

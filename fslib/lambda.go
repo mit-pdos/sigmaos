@@ -2,10 +2,9 @@ package fslib
 
 import (
 	"encoding/json"
+	"log"
 	"math/rand"
-	"path"
 	"strconv"
-	"strings"
 )
 
 type PDep struct {
@@ -20,51 +19,40 @@ type Attr struct {
 	Args    []string
 	Env     []string
 	PairDep []PDep
-	ExitDep []string
+	ExitDep map[string]bool
+	Timer   uint32
 }
 
 const (
 	SCHED        = "name/schedd"
-	RUNQ         = "runq"
 	LOCALD_ROOT  = "name/localds"
 	SCHEDDEV     = SCHED + "/" + "dev"
 	NO_OP_LAMBDA = "no-op-lambda"
+	WRITING      = "WRITE-IN-PROGRESS."
 )
 
 func GenPid() string {
 	return strconv.Itoa(rand.Intn(100000))
 }
 
-// XXX Do we have to worry about lack of atomicity between read and write?
-func (fl *FsLib) SwapExitDependency(pids []string) error {
-	b := strings.Join(pids, " ")
-	ls, _ := fl.ReadDir(SCHED)
-	for _, l := range ls {
-		err := fl.WriteFile(SCHED+"/"+l.Name+"/ExitDep", []byte(b))
-		if err != nil {
-			// XXX ignore for now... lambda may have exited, in which case we get an
-			// error
-		}
-	}
-	return nil
-}
-
 // Spawn a new lambda
 func (fl *FsLib) Spawn(a *Attr) error {
+	// Create a lock file for waiters to wait on
+	fl.LockFile(WAIT_LOCK + a.Pid)
+	fl.pruneExitDeps(a)
 	b, err := json.Marshal(a)
+	if err != nil {
+		// Unlock the waiter file if unmarshal failed
+		fl.UnlockFile(WAIT_LOCK + a.Pid)
+		return err
+	}
+	err = fl.MakeFileAtomic(SCHEDQ, WAITQ+a.Pid, b)
 	if err != nil {
 		return err
 	}
-	return fl.MakeFile(SCHED+"/"+a.Pid, b)
-}
-
-// XXX Rename
-func (fl *FsLib) RunLocal(ip string, a *Attr) error {
-	b, err := json.Marshal(a)
-	if err != nil {
-		return err
-	}
-	return fl.MakeFile(path.Join(LOCALD_ROOT, ip, a.Pid), b)
+	// Notify localds that a job has become runnable
+	fl.UnlockFile(JOB_SIGNAL)
+	return nil
 }
 
 func (fl *FsLib) SpawnProgram(name string, args []string) error {
@@ -80,23 +68,49 @@ func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
 	a := &Attr{}
 	a.Pid = pid
 	a.Program = NO_OP_LAMBDA
-	a.ExitDep = exitDep
+	exitDepMap := map[string]bool{}
+	for _, dep := range exitDep {
+		exitDepMap[dep] = false
+	}
+	a.ExitDep = exitDepMap
 	return fl.Spawn(a)
 }
 
+func (fl *FsLib) HasBeenSpawned(pid string) bool {
+	_, err := fl.Stat(LOCKS + "/" + LockName(WAIT_LOCK+pid))
+	if err == nil {
+		return true
+	}
+	return false
+}
+
 func (fl *FsLib) Started(pid string) error {
-	return fl.WriteFile(SCHED+"/"+pid+"/Status", []byte{})
+	// TODO: update Status, start consumers, etc.
+	// return fl.WriteFile(SCHED+"/"+pid+"/Status", []byte{})
+	return nil
 }
 
 func (fl *FsLib) Exiting(pid string, status string) error {
-	return fl.WriteFile(SCHED+"/"+pid+"/ExitStatus", []byte(status))
+	fl.WakeupExit(pid)
+	err := fl.Remove(CLAIMED_PATH + pid)
+	if err != nil {
+		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
+	}
+	err = fl.Remove(CLAIMED_EPH_PATH + pid)
+	if err != nil {
+		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
+	}
+	err = fl.UnlockFile(WAIT_LOCK + pid)
+	if err != nil {
+		log.Printf("Error unlocking in Exiting %v: %v", pid, err)
+	}
+	return nil
 }
 
-// The open blocks until pid exits and then reads ExitStatus
+// First check waitq, then runq, then the claimed dir
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
-	return fl.ReadFile(SCHED + "/" + pid + "/ExitStatus")
-}
-
-func (fl *FsLib) GetLambda() ([]byte, error) {
-	return fl.ReadFile(SCHED + "/" + RUNQ)
+	fl.LockFile(WAIT_LOCK + pid)
+	fl.UnlockFile(WAIT_LOCK + pid)
+	// XXX Return an actual exit status
+	return []byte{'O', 'K'}, nil
 }

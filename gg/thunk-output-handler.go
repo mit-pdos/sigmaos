@@ -30,7 +30,7 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 }
 
 func (toh *ThunkOutputHandler) Exit() {
-	toh.Exiting(toh.pid, "OK")
+	//	toh.Exiting(toh.pid, "OK")
 }
 
 func (toh *ThunkOutputHandler) Work() {

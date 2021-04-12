@@ -93,5 +93,5 @@ func (ex *Executor) Name() string {
 }
 
 func (ex *Executor) Exit() {
-	ex.Exiting(ex.pid, "OK")
+	//	ex.Exiting(ex.pid, "OK")
 }

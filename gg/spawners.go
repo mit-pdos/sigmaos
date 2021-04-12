@@ -30,7 +30,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 	}
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = []string{}
+	a.ExitDep = map[string]bool{}
 	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning orig dir upload worker [%v/%v]: %v\n", dir, subDir, err)
@@ -52,7 +52,11 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	reductionPid := outputHandlerPid(targetReduction)
 	noOpReductionPid := noOpPid(reductionPid)
 	deps = append(deps, noOpReductionPid)
-	a.ExitDep = deps
+	exitDepMap := map[string]bool{}
+	for _, dep := range deps {
+		exitDepMap[dep] = false
+	}
+	a.ExitDep = exitDepMap
 	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
@@ -69,7 +73,11 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 	}
 	a.Dir = ""
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = depPids
+	exitDepMap := map[string]bool{}
+	for _, dep := range depPids {
+		exitDepMap[dep] = false
+	}
+	a.ExitDep = exitDepMap
 	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err)
@@ -87,7 +95,11 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	a.Args = append(a.Args, outputFiles...)
 	a.Env = []string{}
 	a.PairDep = []fslib.PDep{}
-	a.ExitDep = deps
+	exitDepMap := map[string]bool{}
+	for _, dep := range deps {
+		exitDepMap[dep] = false
+	}
+	a.ExitDep = exitDepMap
 	err := launch.Spawn(&a)
 	if err != nil {
 		log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err)

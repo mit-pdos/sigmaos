@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	db "ulambda/debug"
-	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
@@ -21,6 +20,7 @@ type FsLambda interface {
 	ReadFile(string) ([]byte, error)
 	WriteFile(string, []byte) error
 	Stat(string) (*np.Stat, error)
+	HasBeenSpawned(pid string) bool
 	Name() string
 }
 
@@ -317,18 +317,5 @@ func reductionExists(fslambda FsLambda, hash string) bool {
 
 // Check if either the thunk executor or the output handler are running
 func currentlyExecuting(fslambda FsLambda, thunkHash string) bool {
-	executorPath := path.Join(
-		fslib.SCHED,
-		executorPid(thunkHash),
-	)
-	outputHandlerPath := path.Join(
-		fslib.SCHED,
-		outputHandlerPid(thunkHash),
-	)
-	_, err1 := fslambda.Stat(executorPath)
-	_, err2 := fslambda.Stat(outputHandlerPath)
-	if err1 == nil || err2 == nil {
-		return true
-	}
-	return false
+	return fslambda.HasBeenSpawned(executorPid(thunkHash)) || fslambda.HasBeenSpawned(outputHandlerPid(thunkHash))
 }

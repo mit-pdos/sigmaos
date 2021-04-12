@@ -26,6 +26,7 @@ func MakeSchedl(args []string) (*Schedl, error) {
 	s.output = args[1]
 
 	db.DLPrintf("SCHEDL", "MakeSchedl: %v\n", args)
+	log.Printf("MakeSchedl: %v\n", args)
 
 	err := s.Started(s.pid)
 	if err != nil {
@@ -41,8 +42,8 @@ func (s *Schedl) Work() {
 	if err != nil {
 		log.Printf("Makefile error %v\n", err)
 	}
-	err = s.Exiting(s.pid, "OK")
-	if err != nil {
-		log.Fatalf("Exit: error %v\n", err)
-	}
+	//	err = s.Exiting(s.pid, "OK")
+	//	if err != nil {
+	//		log.Fatalf("Exit: error %v\n", err)
+	//	}
 }

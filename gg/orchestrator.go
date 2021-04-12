@@ -67,7 +67,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 }
 
 func (orc *Orchestrator) Exit() {
-	orc.Exiting(orc.pid, "OK")
+	//	orc.Exiting(orc.pid, "OK")
 }
 
 func (orc *Orchestrator) Work() {

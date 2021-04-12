@@ -51,9 +51,12 @@ func readLambda(line string) (*fslib.Attr, error) {
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])
-  a.Env = split(l[3])
+	a.Env = split(l[3])
 	a.PairDep = splitPairs(l[4])
-	a.ExitDep = split(l[5])
+	a.ExitDep = map[string]bool{}
+	for _, dep := range split(l[5]) {
+		a.ExitDep[dep] = false
+	}
 	fmt.Println("a ", a)
 	return a, nil
 }

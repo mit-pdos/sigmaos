@@ -8,9 +8,12 @@ import (
 	"time"
 )
 
-const NAMED = "name"
-const S3 = "name/s3"
-const UX = "name/ux"
+const (
+	NAMED  = "name"
+	LOCALD = "name/locald"
+	S3     = "name/s3"
+	UX     = "name/ux"
+)
 
 type System struct {
 	named  *exec.Cmd
@@ -77,6 +80,16 @@ func (s *System) BootNps3d(bin string) error {
 	return nil
 }
 
+func (s *System) BootLocald(bin string) error {
+	var err error
+	s.locald, err = run(bin, "/bin/locald", []string{bin})
+	if err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
+
 func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 	dirents, err := clnt.ReadDir(mdir)
 	if err != nil {
@@ -105,6 +118,15 @@ func (s *System) Kill(srv string) error {
 				s.schedd = nil
 			} else {
 				log.Fatalf("Schedd kill failed %v\n", err)
+			}
+		}
+	case LOCALD:
+		if s.locald != nil {
+			err = s.locald.Process.Kill()
+			if err == nil {
+				s.locald = nil
+			} else {
+				log.Fatalf("Locald kill failed %v\n", err)
 			}
 		}
 	default:

@@ -9,24 +9,24 @@ import (
 	"ulambda/fslib"
 )
 
-type Schedl struct {
+type Sleeperl struct {
 	*fslib.FsLib
 	pid    string
 	output string
 }
 
-func MakeSchedl(args []string) (*Schedl, error) {
+func MakeSleeperl(args []string) (*Sleeperl, error) {
 	if len(args) != 3 {
-		return nil, errors.New("MakeSchedl: too few arguments")
+		return nil, errors.New("MakeSleeperl: too few arguments")
 	}
-	s := &Schedl{}
-	db.Name("schedl")
-	s.FsLib = fslib.MakeFsLib("schedl")
+	s := &Sleeperl{}
+	db.Name("sleeperl")
+	s.FsLib = fslib.MakeFsLib("sleeperl")
 	s.pid = args[0]
 	s.output = args[1]
 
-	db.DLPrintf("SCHEDL", "MakeSchedl: %v\n", args)
-	log.Printf("MakeSchedl: %v\n", args)
+	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)
+	log.Printf("MakeSleeperl: %v\n", args)
 
 	err := s.Started(s.pid)
 	if err != nil {
@@ -36,7 +36,7 @@ func MakeSchedl(args []string) (*Schedl, error) {
 	return s, nil
 }
 
-func (s *Schedl) Work() {
+func (s *Sleeperl) Work() {
 	time.Sleep(5000 * time.Millisecond)
 	err := s.MakeFile(s.output, []byte("hello"))
 	if err != nil {

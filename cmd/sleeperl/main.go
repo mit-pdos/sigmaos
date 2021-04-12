@@ -12,7 +12,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid out\n", os.Args[0])
 		os.Exit(1)
 	}
-	l, err := test_lambdas.MakeSchedl(os.Args[1:])
+	l, err := test_lambdas.MakeSleeperl(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

@@ -3,7 +3,7 @@
 ./umount.sh
 killall named
 killall locald
-killall schedl
+killall sleeperl
 killall kvd
 killall sharderd
 killall nps3d

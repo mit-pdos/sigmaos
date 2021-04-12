@@ -62,8 +62,8 @@ func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	return ts
 }
 
-func spawnSchedlWithPid(t *testing.T, ts *Tstate, pid string) {
-	spawnSchedlWithPidTimer(t, ts, pid, 0)
+func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
+	spawnSleeperlWithPidTimer(t, ts, pid, 0)
 }
 
 func spawnMonitor(t *testing.T, ts *Tstate) {
@@ -74,26 +74,26 @@ func spawnMonitor(t *testing.T, ts *Tstate) {
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
-func spawnSchedlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint32) {
-	a := &fslib.Attr{pid, "bin/schedl", "", []string{"name/out_" + pid, ""}, nil, nil, nil, timer}
+func spawnSleeperlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint32) {
+	a := &fslib.Attr{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, nil, nil, timer}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
-func spawnSchedl(t *testing.T, ts *Tstate) string {
+func spawnSleeperl(t *testing.T, ts *Tstate) string {
 	pid := fslib.GenPid()
-	spawnSchedlWithPid(t, ts, pid)
+	spawnSleeperlWithPid(t, ts, pid)
 	return pid
 }
 
-func spawnSchedlWithTimer(t *testing.T, ts *Tstate, timer uint32) string {
+func spawnSleeperlWithTimer(t *testing.T, ts *Tstate, timer uint32) string {
 	pid := fslib.GenPid()
-	spawnSchedlWithPidTimer(t, ts, pid, timer)
+	spawnSleeperlWithPidTimer(t, ts, pid, timer)
 	return pid
 }
 
-func checkSchedlResult(t *testing.T, ts *Tstate, pid string) {
+func checkSleeperlResult(t *testing.T, ts *Tstate, pid string) {
 	b, err := ts.ReadFile("name/out_" + pid)
 	assert.Nil(t, err, "ReadFile")
 	assert.Equal(t, string(b), "hello", "Output")
@@ -111,10 +111,10 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := spawnSchedl(t, ts)
+	pid := spawnSleeperl(t, ts)
 	time.Sleep(10 * time.Second)
 
-	checkSchedlResult(t, ts, pid)
+	checkSleeperlResult(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -122,10 +122,10 @@ func TestHelloWorld(t *testing.T) {
 func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := spawnSchedl(t, ts)
+	pid := spawnSleeperl(t, ts)
 	ts.Wait(pid)
 
-	checkSchedlResult(t, ts, pid)
+	checkSleeperlResult(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -193,13 +193,13 @@ func TestTimerLambda(t *testing.T) {
 	ts := makeTstate(t)
 
 	start := time.Now()
-	pid := spawnSchedlWithTimer(t, ts, 5)
+	pid := spawnSleeperlWithTimer(t, ts, 5)
 	ts.Wait(pid)
 	end := time.Now()
 	elapsed := end.Sub(start)
 	assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for timer for long enough (%v)", elapsed.Seconds())
 
-	checkSchedlResult(t, ts, pid)
+	checkSleeperlResult(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -212,12 +212,12 @@ func TestCrashLocald(t *testing.T) {
 	spawnMonitor(t, ts)
 	go func() {
 		start := time.Now()
-		pid := spawnSchedlWithTimer(t, ts, 5)
+		pid := spawnSleeperlWithTimer(t, ts, 5)
 		ts.Wait(pid)
 		end := time.Now()
 		elapsed := end.Sub(start)
 		assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for respawn after locald crash (%v)", elapsed.Seconds())
-		checkSchedlResult(t, ts, pid)
+		checkSleeperlResult(t, ts, pid)
 		ch <- true
 	}()
 
@@ -244,18 +244,18 @@ func TestCrashLocald(t *testing.T) {
 func TestExitDep(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := spawnSchedl(t, ts)
+	pid := spawnSleeperl(t, ts)
 
 	pid2 := spawnNoOp(t, ts, []string{pid})
 
-	// Make sure no-op waited for schedl lambda
+	// Make sure no-op waited for sleeperl lambda
 	start := time.Now()
 	ts.Wait(pid2)
 	end := time.Now()
 	elapsed := end.Sub(start)
 	assert.True(t, elapsed.Seconds() > 4.0, "Didn't wait for exit dep for long enough")
 
-	checkSchedlResult(t, ts, pid)
+	checkSleeperlResult(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -263,7 +263,7 @@ func TestExitDep(t *testing.T) {
 func TestSwapExitDeps(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := spawnSchedl(t, ts)
+	pid := spawnSleeperl(t, ts)
 
 	pid2 := spawnNoOp(t, ts, []string{pid})
 
@@ -272,10 +272,10 @@ func TestSwapExitDeps(t *testing.T) {
 	// Sleep a bit
 	time.Sleep(4 * time.Second)
 
-	// Spawn a new schedl lambda
-	pid3 := spawnSchedl(t, ts)
+	// Spawn a new sleeperl lambda
+	pid3 := spawnSleeperl(t, ts)
 
-	// Wait on the new schedl lambda instead of the old one
+	// Wait on the new sleeperl lambda instead of the old one
 	swaps := []string{pid, pid3}
 	db.DLPrintf("SCHEDD", "Swapping %v\n", swaps)
 	ts.SwapExitDependency(swaps)
@@ -285,8 +285,8 @@ func TestSwapExitDeps(t *testing.T) {
 	elapsed := end.Sub(start)
 	assert.True(t, elapsed.Seconds() > 8.0, "Didn't wait for exit dep for long enough (%v)", elapsed.Seconds())
 
-	checkSchedlResult(t, ts, pid)
-	checkSchedlResult(t, ts, pid3)
+	checkSleeperlResult(t, ts, pid)
+	checkSleeperlResult(t, ts, pid3)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -326,7 +326,7 @@ func TestConcurrentLambdas(t *testing.T) {
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()
 			barrier.Wait()
-			spawnSchedlWithPid(t, tses[i], pid)
+			spawnSleeperlWithPid(t, tses[i], pid)
 			started.Done()
 		}(pid, &started, i)
 	}
@@ -338,7 +338,7 @@ func TestConcurrentLambdas(t *testing.T) {
 		go func(pid string, done *sync.WaitGroup, i int) {
 			defer done.Done()
 			ts.Wait(pid)
-			checkSchedlResult(t, tses[i], pid)
+			checkSleeperlResult(t, tses[i], pid)
 		}(pid, &done, i)
 	}
 

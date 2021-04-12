@@ -73,25 +73,35 @@ func (f *Fid) Close() {
 	f.obj = nil
 }
 
+func (f *Fid) Obj() NpObj {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.obj
+}
+
 func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	switch i := f.obj.(type) {
+	o := f.Obj()
+	if o == nil {
+		return 0, fmt.Errorf("Closed by server")
+	}
+	switch i := o.(type) {
 	case NpObjFile:
 		return i.Write(f.ctx, off, b, v)
 	case NpObjDir:
 		return i.WriteDir(f.ctx, off, b, v)
 	default:
-		log.Fatalf("Write: unknown obj type %v\n", f.obj)
+		log.Fatalf("Write: unknown obj type %v\n", o)
 		return 0, nil
 	}
 }
 
-func (f *Fid) readDir(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
+func (f *Fid) readDir(o NpObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
 	var dirents []*np.Stat
 	var err error
-	if f.obj.Size() > 0 && off >= np.Toffset(f.obj.Size()) {
+	if o.Size() > 0 && off >= np.Toffset(o.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		d := f.obj.(NpObjDir)
+		d := o.(NpObjDir)
 		dirents, err = d.ReadDir(f.ctx, off, count, v)
 
 	}
@@ -104,9 +114,13 @@ func (f *Fid) readDir(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.R
 }
 
 func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
-	switch i := f.obj.(type) {
+	o := f.Obj()
+	if o == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	switch i := o.(type) {
 	case NpObjDir:
-		return f.readDir(off, count, v, rets)
+		return f.readDir(o, off, count, v, rets)
 	case NpObjFile:
 		b, err := i.Read(f.ctx, off, count, v)
 		if err != nil {
@@ -115,7 +129,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		log.Fatalf("Read: unknown obj type %v\n", f.obj)
+		log.Fatalf("Read: unknown obj type %v\n", o)
 		return nil
 	}
 }
@@ -218,12 +232,14 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
-		npc.add(args.NewFid, &Fid{sync.Mutex{}, f.path, f.obj, f.obj.Version(), f.ctx})
+		o := f.Obj() // XXX check if closed
+		npc.add(args.NewFid, &Fid{sync.Mutex{}, f.path, o, o.Version(), f.ctx})
 	} else {
-		if !f.obj.Perm().IsDir() {
+		o := f.Obj()
+		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		d := f.obj.(NpObjDir)
+		d := o.(NpObjDir)
 		os, rest, err := d.Lookup(f.ctx, args.Wnames)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -257,14 +273,15 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
-	if f.obj == nil {
+	o := f.Obj()
+	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	err := f.obj.Open(f.ctx, args.Mode)
+	err := o.Open(f.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	rets.Qid = f.obj.Qid()
+	rets.Qid = o.Qid()
 	return nil
 }
 
@@ -276,10 +293,11 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	if f.obj == nil {
+	o := f.Obj()
+	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	if args.Version != np.NoV && args.Version != f.obj.Version() {
+	if args.Version != np.NoV && args.Version != o.Version() {
 		return &np.Rerror{"Version mismatch"}
 	}
 	p := np.Copy(f.path)
@@ -297,17 +315,18 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
-	if f.obj == nil {
+	o := f.Obj()
+	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
 
 	names := []string{args.Name}
-	if !f.obj.Perm().IsDir() {
+	if !o.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	for {
 		// XXX make create and setting watch atomic (hold lock on fid?)
-		d := f.obj.(NpObjDir)
+		d := o.(NpObjDir)
 		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
@@ -350,11 +369,6 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
-		return &np.Rerror{"Closed by server"}
-	}
 	return f.Read(args.Offset, args.Count, np.NoV, rets)
 }
 
@@ -364,11 +378,6 @@ func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
-		return &np.Rerror{"Closed by server"}
-	}
 	return f.Read(args.Offset, args.Count, f.vers, rets)
 }
 
@@ -377,11 +386,6 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
-		return &np.Rerror{"Closed by server"}
 	}
 	var err error
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
@@ -397,11 +401,6 @@ func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
-		return &np.Rerror{"Closed by server"}
-	}
 	var err error
 	rets.Count, err = f.Write(args.Offset, args.Data, f.vers)
 	if err != nil {
@@ -415,9 +414,8 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
+	o := f.Obj()
+	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
 	if len(f.path) == 0 { // exit?
@@ -426,7 +424,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		return nil
 	}
 	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	err := f.obj.Remove(f.ctx, f.path[len(f.path)-1])
+	err := o.Remove(f.ctx, f.path[len(f.path)-1])
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -444,12 +442,11 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "Stat %v\n", f)
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
+	o := f.Obj()
+	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	st, err := f.obj.Stat(f.ctx)
+	st, err := o.Stat(f.ctx)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -463,14 +460,13 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		return np.ErrUnknownfid
 	}
 	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.obj == nil {
+	o := f.Obj()
+	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
 	if args.Stat.Name != "" {
 		// XXX if dst exists run watch?
-		err := f.obj.Rename(f.ctx, f.path[len(f.path)-1], args.Stat.Name)
+		err := o.Rename(f.ctx, f.path[len(f.path)-1], args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

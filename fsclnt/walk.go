@@ -92,13 +92,13 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
 		if err != nil && f != nil { // watch rest
 			db.DLPrintf("FSCLNT", "Watch %v %v\n", path, rest[0])
-			go func() {
-				err := fsc.npch(fid1).Watch(fid, rest, np.NoV)
+			go func(npc *npclnt.NpChan) {
+				err := npc.Watch(fid, rest, np.NoV)
 				db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
 				if err == nil {
 					f(np.Join(path)) // XXX maybe supply version?
 				}
-			}()
+			}(fsc.npch(fid1))
 			return np.NoFid, 0, err
 		}
 		if err != nil {

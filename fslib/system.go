@@ -17,7 +17,6 @@ const (
 
 type System struct {
 	named  *exec.Cmd
-	schedd *exec.Cmd
 	nps3d  *exec.Cmd
 	npuxd  *exec.Cmd
 	locald *exec.Cmd
@@ -56,12 +55,6 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.schedd, err = run(bin, "/bin/schedd", nil)
-	if err != nil {
-		return nil, err
-	}
-	time.Sleep(100 * time.Millisecond)
-
 	s.locald, err = run(bin, "/bin/locald", []string{bin})
 	if err != nil {
 		return nil, err
@@ -111,15 +104,6 @@ func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 func (s *System) Kill(srv string) error {
 	var err error
 	switch srv {
-	case SCHED:
-		if s.schedd != nil {
-			err = s.schedd.Process.Kill()
-			if err == nil {
-				s.schedd = nil
-			} else {
-				log.Fatalf("Schedd kill failed %v\n", err)
-			}
-		}
 	case LOCALD:
 		if s.locald != nil {
 			err = s.locald.Process.Kill()
@@ -135,13 +119,6 @@ func (s *System) Kill(srv string) error {
 }
 
 func (s *System) Shutdown(clnt *FsLib) {
-	if s.schedd != nil {
-		err := clnt.Remove(SCHED + "/")
-		if err != nil {
-			log.Printf("Schedd shutdown %v\n", err)
-		}
-		s.schedd.Wait()
-	}
 	if s.nps3d != nil {
 		err := s.RmUnionDir(clnt, "name/s3")
 		if err != nil {

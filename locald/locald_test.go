@@ -76,7 +76,11 @@ func spawnMonitor(t *testing.T, ts *Tstate) {
 }
 
 func spawnSleeperlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint32) {
-	a := &fslib.Attr{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, nil, nil, timer}
+	spawnSleeperlWithPidTimerPairDep(t, ts, pid, timer, nil)
+}
+
+func spawnSleeperlWithPidTimerPairDep(t *testing.T, ts *Tstate, pid string, timer uint32, pairDep []fslib.PDep) {
+	a := &fslib.Attr{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, pairDep, nil, timer}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -98,6 +102,12 @@ func checkSleeperlResult(t *testing.T, ts *Tstate, pid string) {
 	b, err := ts.ReadFile("name/out_" + pid)
 	assert.Nil(t, err, "ReadFile")
 	assert.Equal(t, string(b), "hello", "Output")
+}
+
+func checkSleeperlResultFalse(t *testing.T, ts *Tstate, pid string) {
+	b, err := ts.ReadFile("name/out_" + pid)
+	assert.NotNil(t, err, "ReadFile")
+	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
 func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
@@ -295,6 +305,74 @@ func TestSwapExitDeps(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 	checkSleeperlResult(t, ts, pid3)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestPairDepProdFirst(t *testing.T) {
+	log.Printf("TestPairDepConsFirst...")
+	ts := makeTstate(t)
+
+	// Generate a consumer & producer pid, make sure they dont' equal each other
+	cons := fslib.GenPid()
+	prod := fslib.GenPid()
+	for cons == prod {
+		prod = fslib.GenPid()
+	}
+	pairDep := []fslib.PDep{fslib.PDep{prod, cons}}
+
+	// Spawn the producer first
+	spawnSleeperlWithPidTimerPairDep(t, ts, prod, 0, pairDep)
+
+	// Wait a bit
+	time.Sleep(6 * time.Second)
+
+	// Make sure the producer hasn't run yet...
+	checkSleeperlResultFalse(t, ts, prod)
+
+	// Spawn the consumer
+	spawnSleeperlWithPidTimerPairDep(t, ts, cons, 0, pairDep)
+
+	// Wait a bit
+	time.Sleep(6 * time.Second)
+
+	// Make sure they both ran
+	checkSleeperlResult(t, ts, prod)
+	checkSleeperlResult(t, ts, cons)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestPairDepConsFirst(t *testing.T) {
+	log.Printf("TestPairDepConsFirst...")
+	ts := makeTstate(t)
+
+	// Generate a consumer & producer pid, make sure they dont' equal each other
+	cons := fslib.GenPid()
+	prod := fslib.GenPid()
+	for cons == prod {
+		prod = fslib.GenPid()
+	}
+	pairDep := []fslib.PDep{fslib.PDep{prod, cons}}
+
+	// Spawn the consumer first
+	spawnSleeperlWithPidTimerPairDep(t, ts, cons, 0, pairDep)
+
+	// Wait a bit
+	time.Sleep(6 * time.Second)
+
+	// Make sure the consumer hasn't run yet...
+	checkSleeperlResultFalse(t, ts, cons)
+
+	// Spawn the producer
+	spawnSleeperlWithPidTimerPairDep(t, ts, prod, 0, pairDep)
+
+	// Wait a bit
+	time.Sleep(6 * time.Second)
+
+	// Make sure they both ran
+	checkSleeperlResult(t, ts, prod)
+	checkSleeperlResult(t, ts, cons)
 
 	ts.s.Shutdown(ts.FsLib)
 }

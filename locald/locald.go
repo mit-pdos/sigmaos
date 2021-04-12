@@ -50,7 +50,7 @@ func MakeLocalD(bin string) *LocalD {
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
 	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", fslib.SCHED, err)
+		log.Fatalf("LocalIP %v\n", err)
 	}
 	ld.srv = npsrv.MakeNpServer(ld, ld.ip+":0")
 	fsl := fslib.MakeFsLib("locald")

@@ -139,17 +139,17 @@ func (inode *Inode) stat() *np.Stat {
 }
 
 func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
-	inode.Lock()
-	defer inode.Unlock()
-
 	db.DLPrintf("MEMFS", "Remove: %v\n", n)
 
-	if inode.parent == nil {
+	dir := inode.parent
+	if dir == nil {
 		return errors.New("Cannot remove root directory")
 	}
-	dir := inode.parent
 	dir.Lock()
 	defer dir.Unlock()
+
+	inode.Lock()
+	defer inode.Unlock()
 
 	_, err := dir.lookupL(n)
 	if err != nil {

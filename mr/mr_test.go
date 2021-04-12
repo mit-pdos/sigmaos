@@ -74,7 +74,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 func TestWc(t *testing.T) {
 	ts := makeTstate(t)
-	mappers := []string{}
+	mappers := map[string]bool{}
 	n := 0
 	files, err := ioutil.ReadDir("../input")
 	if err != nil {
@@ -86,14 +86,14 @@ func TestWc(t *testing.T) {
 		m := strconv.Itoa(n)
 		a1 := &fslib.Attr{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
-			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
+			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0}
 		a2 := &fslib.Attr{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil,
-			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil}
+			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0}
 		ts.Spawn(a1)
 		ts.Spawn(a2)
 		n += 1
-		mappers = append(mappers, pid2)
+		mappers[pid2] = false
 	}
 
 	reducers := []string{}
@@ -102,7 +102,7 @@ func TestWc(t *testing.T) {
 		r := strconv.Itoa(i)
 		a := &fslib.Attr{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
-			nil, mappers}
+			nil, mappers, 0}
 		reducers = append(reducers, pid)
 		ts.Spawn(a)
 	}

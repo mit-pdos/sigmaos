@@ -159,7 +159,6 @@ func TestWaitNonexistentLambda(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// XXX Wait signal gets dropped
 // Should exit immediately
 func TestNoOpLambdaImmediateExit(t *testing.T) {
 	ts := makeTstate(t)
@@ -291,7 +290,6 @@ func TestSwapExitDeps(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// XXX Wait signal gets dropped
 // Spawn a bunch of lambdas concurrently, then wait for all of them & check
 // their result
 func TestConcurrentLambdas(t *testing.T) {

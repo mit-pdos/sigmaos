@@ -140,6 +140,7 @@ func (sh *Sharder) Init() {
 }
 
 func (sh *Sharder) watchPrepared(p string) {
+	db.DLPrintf("SHARDER", "watchPrepared %v\n", p)
 	sh.ch <- true
 }
 

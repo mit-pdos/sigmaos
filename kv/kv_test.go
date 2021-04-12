@@ -119,6 +119,7 @@ func TestConcur(t *testing.T) {
 	// for r := 0; r < 1; r++ {
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
+		ts.fsl.HasBeenSpawned(pid)
 		log.Printf("Add %v\n", pid)
 		pid1 := ts.spawnSharder("add", kvname(pid))
 		ok, err := ts.fsl.Wait(pid1)

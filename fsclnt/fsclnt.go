@@ -305,7 +305,7 @@ func (fsc *FsClient) Umount(path []string) error {
 	db.DLPrintf("FSCLNT", "Umount %v\n", path)
 	fid2, err := fsc.mount.umount(path)
 	if err != nil {
-		log.Fatalf("Umount failed %v %v\n", path, err)
+		return err
 	}
 	fsc.detachChannel(fid2)
 	return nil

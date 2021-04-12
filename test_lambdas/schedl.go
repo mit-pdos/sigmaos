@@ -1,4 +1,4 @@
-package schedd
+package test_lambdas
 
 import (
 	"errors"
@@ -42,8 +42,4 @@ func (s *Schedl) Work() {
 	if err != nil {
 		log.Printf("Makefile error %v\n", err)
 	}
-	//	err = s.Exiting(s.pid, "OK")
-	//	if err != nil {
-	//		log.Fatalf("Exit: error %v\n", err)
-	//	}
 }

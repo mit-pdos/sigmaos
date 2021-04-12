@@ -25,7 +25,7 @@ var key = "write-bandwidth-test"
 var fname = "name/fs/bigfile.txt"
 
 type BandwidthTest struct {
-	mb     int
+	bytes  int
 	memfs  bool
 	client *s3.Client
 	*fslib.FsLib
@@ -40,8 +40,8 @@ func MakeBandwidthTest(args []string) (*BandwidthTest, error) {
 	t := &BandwidthTest{}
 	t.FsLib = fslib.MakeFsLib("write-bandwidth-test")
 
-	mb, err := strconv.Atoi(args[0])
-	t.mb = mb
+	bytes, err := strconv.Atoi(args[0])
+	t.bytes = bytes
 	if err != nil {
 		log.Fatalf("Invalid num MB: %v, %v\n", args[0], err)
 	}
@@ -170,7 +170,7 @@ func (t *BandwidthTest) MemfsRead(buf []byte) time.Duration {
 }
 
 func (t *BandwidthTest) Work() {
-	buf := make([]byte, t.mb*MB)
+	buf := make([]byte, t.bytes)
 	t.FillBuf(buf)
 	var elapsedWrite time.Duration
 	var elapsedRead time.Duration
@@ -181,9 +181,9 @@ func (t *BandwidthTest) Work() {
 		elapsedWrite = t.S3Write(buf)
 		elapsedRead = t.S3Read(buf)
 	}
-	log.Printf("Bytes: %v", t.mb*MB)
+	log.Printf("Bytes: %v", t.bytes)
 	log.Printf("Write Time: %v (usec)", elapsedWrite.Microseconds())
-	log.Printf("Write Throughput: %f (Mb/sec)", 8.0*float64(t.mb)/elapsedWrite.Seconds())
+	log.Printf("Write Throughput: %f (Mb/sec)", 8.0*float64(t.bytes)/float64(MB)/elapsedWrite.Seconds())
 	log.Printf("Read Time: %v (usec)", elapsedRead.Microseconds())
-	log.Printf("Read Throughput: %f (Mb/sec)", 8.0*float64(t.mb)/elapsedRead.Seconds())
+	log.Printf("Read Throughput: %f (Mb/sec)", 8.0*float64(t.bytes)/float64(MB)/elapsedRead.Seconds())
 }

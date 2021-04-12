@@ -60,7 +60,7 @@ func MakeLocalD(bin string) *LocalD {
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
-	// XXX Should probably move this elsewhere eventually
+	// Try to make scheduling directories if they don't already exist
 	fsl.Mkdir(fslib.SCHEDQ, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	return ld

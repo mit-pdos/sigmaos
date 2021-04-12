@@ -59,8 +59,6 @@ func (fl *FsLib) UnlockFile(f string) error {
 	return nil
 }
 
-// XXX Use ephemeral files pre-rename?
-// TODO: need to look at this carefully
 func (fl *FsLib) MakeFileAtomic(dir string, fname string, b []byte) error {
 	err := fl.MakeFile(dir+"/"+WRITING+fname, b)
 	if err != nil {

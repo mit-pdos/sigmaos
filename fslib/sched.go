@@ -253,9 +253,7 @@ func (fl *FsLib) WakeupExit(pid string) error {
 // If we know nothing about an exit dep, ignore it by marking it as exited
 func (fl *FsLib) pruneExitDeps(a *Attr) {
 	for pid, _ := range a.ExitDep {
-		// XXX clean up to use hasbeenspawned
-		_, err := fl.Stat(LOCKS + "/" + LockName(WAIT_LOCK+pid))
-		if err != nil {
+		if fl.HasBeenSpawned(pid) {
 			a.ExitDep[pid] = true
 		}
 	}

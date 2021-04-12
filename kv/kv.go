@@ -121,6 +121,7 @@ func (kv *Kv) moveShards() {
 			if err != nil {
 				log.Fatalf("copyDir: %v %v err %v\n", src, dst, err)
 			}
+			db.DLPrintf("KV", "Copy shard from %v to %v done\n", src, dst)
 		}
 	}
 }

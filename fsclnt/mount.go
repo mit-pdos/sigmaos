@@ -97,5 +97,5 @@ func (mnt *Mount) umount(path []string) (np.Tfid, error) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, fmt.Errorf("umount: unknown mount %v\n", path)
+	return np.NoFid, fmt.Errorf("umount: unknown mount %v", path)
 }

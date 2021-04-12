@@ -305,10 +305,33 @@ func (fsc *FsClient) Umount(path []string) error {
 	db.DLPrintf("FSCLNT", "Umount %v\n", path)
 	fid2, err := fsc.mount.umount(path)
 	if err != nil {
-		log.Fatalf("Umount failed %v %v\n", path, err)
+		return err
 	}
 	fsc.detachChannel(fid2)
 	return nil
+}
+
+func (fsc *FsClient) removeMount(path []string) error {
+	if len(path) < 1 {
+		return fmt.Errorf("unmount bad path %v\n", path)
+	}
+	prefix := make([]string, len(path)-1)
+	last := path[len(path)-1:]
+	copy(prefix, path[:len(path)-1])
+	fid, err := fsc.walkMany(prefix, true, nil)
+	if err != nil {
+		return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
+	}
+	fid1 := fsc.allocFid()
+	_, err = fsc.npch(fid).Walk(fid, fid1, last)
+	if err != nil {
+		return err
+	}
+	err = fsc.npch(fid).Remove(fid1)
+	if err != nil {
+		return err
+	}
+	return fsc.Umount(path)
 }
 
 // XXX free fid?
@@ -317,26 +340,7 @@ func (fsc *FsClient) Remove(name string) error {
 	path := np.Split(name)
 	_, rest := fsc.mount.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) { // mount point
-		if len(path) < 1 {
-			return fmt.Errorf("unmount bad path %v\n", path)
-		}
-		prefix := make([]string, len(path)-1)
-		last := path[len(path)-1:]
-		copy(prefix, path[:len(path)-1])
-		fid, err := fsc.walkMany(prefix, true, nil)
-		if err != nil {
-			return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
-		}
-		fid1 := fsc.allocFid()
-		_, err = fsc.npch(fid).Walk(fid, fid1, last)
-		if err != nil {
-			return err
-		}
-		err = fsc.npch(fid).Remove(fid1)
-		if err != nil {
-			return err
-		}
-		return fsc.Umount(path)
+		return fsc.removeMount(path)
 	} else {
 		fid, err := fsc.walkMany(path, np.EndSlash(name), nil)
 		if err != nil {

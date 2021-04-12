@@ -104,9 +104,9 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		if err != nil {
 			return np.NoFid, 0, err
 		}
-		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)
 
 		todo = len(rest) - len(reply.Qids)
+		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)
 	}
 	fsc.addFid(fid2, fsc.path(fid1).copyPath())
 	fsc.path(fid2).addn(reply.Qids, rest)

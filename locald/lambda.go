@@ -88,3 +88,14 @@ func (l *Lambda) run() error {
 	db.DLPrintf("LOCALD", "Locald ran: %v\n", l.attr)
 	return nil
 }
+
+func (l *Lambda) getConsumers() []string {
+	consumers := []string{}
+	for _, pair := range l.attr.PairDep {
+		if pair.Producer != l.Pid {
+			log.Fatalf("Trying to get consumers from lambda, but isn't producer: %v", l)
+		}
+		consumers = append(consumers, pair.Consumer)
+	}
+	return consumers
+}

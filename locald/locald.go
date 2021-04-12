@@ -120,7 +120,7 @@ func (ld *LocalD) getLambda() ([]byte, error) {
 		return []byte{}, err
 	}
 	for _, j := range jobs {
-		b, claimed := ld.ClaimJob(j.Name)
+		b, claimed := ld.ClaimRunQJob(j.Name)
 		if err != nil {
 			return []byte{}, err
 		}
@@ -150,7 +150,23 @@ func (ld *LocalD) checkWaitingLambdas() {
 	}
 }
 
-// TODO: Handle consumer/producer deps
+/*
+ * 1. Timer-based lambdas are runnable after Mtime + attr.Timer > time.Now()
+ * 2. PairDep-based lambdas are runnable only if they are the producer (whoever
+ *    claims and runs the producer will also start the consumer, so we disallow
+ *    unilaterally claiming the consumer for now), and only once all of their
+ *    consumers have been spawned. For now we assume that
+ *    consumers only have one producer, and the roles of producer and consumer
+ *    are mutually exclusive. We also expect (though not strictly necessary)
+ *    that producers only have one consumer each. If this is no longer the case,
+ *    we should handle oversubscription more carefully.
+ * 3. ExitDep-based lambdas are runnable after all entries in the ExitDep map
+ *    are true, whether that be because the dependencies explicitly exited or
+ *    because they did not exist at spawn time (and were pruned).
+ *
+ * ***For now, we assume the three "types" described above are mutually
+ *    exclusive***
+ */
 func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
 	var attr fslib.Attr
 	err := json.Unmarshal(a, &attr)
@@ -158,14 +174,16 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
 		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
 		return false
 	}
-	// If this job is meant to run on a timer, and the timer has expired
+	// If this is a timer-based lambda
 	if attr.Timer != 0 {
+		// If the timer has expired
 		if uint32(time.Now().Unix()) > j.Mtime+attr.Timer {
 			return true
 		} else {
 			// XXX Factor this out & do it in a monitor lambda
 			// For now, just make sure *some* locald eventually wakes up to mark this
-			// lambda as runnable
+			// lambda as runnable. Otherwise, if there are only timer lambdas, localds
+			// may never wake up to scan them.
 			go func(timer uint32) {
 				dur := time.Duration(uint64(timer) * 1000000000)
 				time.Sleep(dur)
@@ -174,12 +192,69 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
 			return false
 		}
 	}
+
+	// If this is a PairDep-based labmda
+	allConsSpawned := true
+	for _, pair := range attr.PairDep {
+		if attr.Pid == pair.Consumer {
+			return false
+		} else if attr.Pid == pair.Producer {
+			allConsSpawned = allConsSpawned && ld.HasBeenSpawned(pair.Consumer)
+		} else {
+			log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
+		}
+	}
+
+	// Bail out if a consumer hasn't been spawned yet.
+	if !allConsSpawned {
+		return false
+	}
+
+	// If this is an ExitDep-based lambda
 	for _, b := range attr.ExitDep {
 		if !b {
 			return false
 		}
 	}
 	return true
+}
+
+func (ld *LocalD) claimConsumers(consumers []string) [][]byte {
+	bs := [][]byte{}
+	for _, c := range consumers {
+		if b, ok := ld.ClaimWaitQJob(c); ok {
+			bs = append(bs, b)
+		} else {
+			runq, _ := ld.ReadRunQ()
+			waitq, _ := ld.ReadWaitQ()
+			log.Fatalf("Couldn't claim consumer job: %v, runq:%v, waitq:%v", c, runq, waitq)
+		}
+	}
+	return bs
+}
+
+func (ld *LocalD) spawnConsumers(bs [][]byte) []*Lambda {
+	ls := []*Lambda{}
+	for _, b := range bs {
+		l, err := ld.spawn(b)
+		if err != nil {
+			log.Fatalf("Couldn't spawn consumer job: %v", string(b))
+		}
+		ls = append(ls, l)
+	}
+	return ls
+}
+
+func (ld *LocalD) runAll(ls []*Lambda) {
+	var wg sync.WaitGroup
+	for _, l := range ls {
+		wg.Add(1)
+		go func(l *Lambda) {
+			defer wg.Done()
+			l.run()
+		}(l)
+	}
+	wg.Wait()
 }
 
 // Worker runs one lambda at a time
@@ -205,7 +280,13 @@ func (ld *LocalD) Worker() {
 		if err != nil {
 			log.Fatalf("Locald spawn error %v\n", err)
 		}
-		l.run()
+		// Try to claim, spawn, and run consumers if this lamba is a producer
+		consumers := l.getConsumers()
+		bs := ld.claimConsumers(consumers)
+		consumerLs := ld.spawnConsumers(bs)
+		ls := []*Lambda{l}
+		ls = append(ls, consumerLs...)
+		ld.runAll(ls)
 	}
 	ld.SignalNewJob()
 	ld.group.Done()

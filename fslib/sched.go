@@ -105,11 +105,20 @@ func (fl *FsLib) JobCrashed(pid string) bool {
 }
 
 // Claim a job by moving it from the runq to the claimed dir
-func (fl *FsLib) ClaimJob(pid string) ([]byte, bool) {
+func (fl *FsLib) ClaimRunQJob(pid string) ([]byte, bool) {
+	return fl.claimJob(RUNQ_PATH, pid)
+}
+
+// Claim a job by moving it from the runq to the claimed dir
+func (fl *FsLib) ClaimWaitQJob(pid string) ([]byte, bool) {
+	return fl.claimJob(WAITQ_PATH, pid)
+}
+
+func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore
 	// errors in the event we lose the race.
-	fl.WriteFile(RUNQ_PATH+pid, []byte{})
-	err := fl.Rename(RUNQ_PATH+pid, CLAIMED_PATH+pid)
+	fl.WriteFile(queuePath+pid, []byte{})
+	err := fl.Rename(queuePath+pid, CLAIMED_PATH+pid)
 	if err != nil {
 		return []byte{}, false
 	}

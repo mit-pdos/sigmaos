@@ -393,21 +393,12 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f Watch) (int, error)
 	if err != nil {
 		return -1, err
 	}
-	reply, err := fsc.npch(fid).Open(fid, mode)
+	_, err = fsc.npch(fid).Open(fid, mode)
 	if err != nil {
 		return -1, err
 	}
 	// XXX check reply.Qid?
 	fd := fsc.findfd(fid, mode)
-	if f != nil {
-		go func() {
-			err := fsc.npch(fid).Watch(fid, nil, reply.Qid.Version)
-			db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
-			if err == nil {
-				f(path)
-			}
-		}()
-	}
 	return fd, nil
 }
 

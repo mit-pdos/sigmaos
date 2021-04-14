@@ -337,10 +337,10 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 				npc.ephemeral[o1] = nf
 				npc.mu.Unlock()
 			}
+			npc.add(args.Fid, nf)
 			if npc.wt != nil {
 				npc.wt.WakeupWatch(nf.path)
 			}
-			npc.add(args.Fid, nf)
 			rets.Qid = o1.Qid()
 			break
 		} else {
@@ -471,11 +471,11 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		dst := append(f.path[:len(f.path)-1], np.Split(args.Stat.Name)...)
+		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.path[len(f.path)-1], args.Stat.Name)
+		f.path = dst
 		if npc.wt != nil {
 			npc.wt.WakeupWatch(dst)
 		}
-		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.path[len(f.path)-1], args.Stat.Name)
-		f.path = dst
 	}
 	// XXX ignore other Wstat for now
 	return nil

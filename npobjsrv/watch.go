@@ -27,6 +27,8 @@ func MkWatchTable() *WatchTable {
 	return wt
 }
 
+// XXX Normalize paths (e.g., delete extra /) so that matches
+// work for equivalent paths
 func (wt *WatchTable) Watch(npc *NpConn, path []string) {
 	p := np.Join(path)
 	wt.mu.Lock()

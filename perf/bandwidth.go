@@ -7,6 +7,10 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"os"
+	"os/user"
+	"path"
+	"runtime/pprof"
 	"strconv"
 	"time"
 
@@ -17,7 +21,8 @@ import (
 )
 
 const (
-	MB = 1000000
+	MB     = 1000000
+	N_RUNS = 1000
 )
 
 var bucket = "9ps3"
@@ -80,12 +85,14 @@ func (t *BandwidthTest) S3Write(buf []byte) time.Duration {
 		Body:   r1,
 	}
 	start := time.Now()
-	_, err := t.client.PutObject(context.TODO(), input)
+	for i := 0; i < N_RUNS; i++ {
+		_, err := t.client.PutObject(context.TODO(), input)
+		if err != nil {
+			log.Printf("Error putting s3 object: %v", err)
+		}
+	}
 	end := time.Now()
 	elapsed := end.Sub(start)
-	if err != nil {
-		log.Printf("Error putting s3 object: %v", err)
-	}
 	return elapsed
 }
 
@@ -99,23 +106,26 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 	}
 	buf2 := make([]byte, len(buf))
 
+	var n int
 	// timing
 	start := time.Now()
-	result, err := t.client.GetObject(context.TODO(), input)
-	if err != nil {
-		log.Fatalf("Error getting s3 object: %v", err)
-	}
-	n := 0
-	// Have to include this in timing since GetObjectOutput seems to read in
-	// chunks.
-	for {
-		n1, err := result.Body.Read(buf2[n:])
-		n += n1
-		if err == io.EOF {
-			break
-		}
+	for i := 0; i < N_RUNS; i++ {
+		result, err := t.client.GetObject(context.TODO(), input)
 		if err != nil {
-			log.Fatalf("Error reading s3 object result: %v", err)
+			log.Fatalf("Error getting s3 object: %v", err)
+		}
+		n = 0
+		// Have to include this in timing since GetObjectOutput seems to read in
+		// chunks.
+		for {
+			n1, err := result.Body.Read(buf2[n:])
+			n += n1
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Error reading s3 object result: %v", err)
+			}
 		}
 	}
 	end := time.Now()
@@ -141,7 +151,12 @@ func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 
 	// timing
 	start := time.Now()
-	err = t.WriteFile(fname, buf)
+	for i := 0; i < N_RUNS; i++ {
+		err = t.WriteFile(fname, buf)
+		if err != nil {
+			log.Fatalf("Error writefile memfs: %v", err)
+		}
+	}
 	end := time.Now()
 	elapsed := end.Sub(start)
 
@@ -150,8 +165,15 @@ func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 
 func (t *BandwidthTest) MemfsRead(buf []byte) time.Duration {
 	// timing
+	var buf2 []byte
+	var err error
 	start := time.Now()
-	buf2, err := t.ReadFile(fname)
+	for i := 0; i < N_RUNS; i++ {
+		buf2, err = t.ReadFile(fname)
+		if err != nil {
+			log.Fatalf("ReadFile er not nil: %v", err)
+		}
+	}
 	end := time.Now()
 	elapsed := end.Sub(start)
 
@@ -172,6 +194,23 @@ func (t *BandwidthTest) MemfsRead(buf []byte) time.Duration {
 func (t *BandwidthTest) Work() {
 	buf := make([]byte, t.bytes)
 	t.FillBuf(buf)
+
+	// ===== Profiling code =====
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatalf("Error getting current user: %v", err)
+	}
+	f, err := os.Create(path.Join(usr.HomeDir, "client.out"))
+	if err != nil {
+		log.Printf("Couldn't make profile file")
+	}
+	defer f.Close()
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatalf("Couldn't start CPU profile: %v", err)
+	}
+	defer pprof.StopCPUProfile()
+	// ===== Profiling code =====
+
 	var elapsedWrite time.Duration
 	var elapsedRead time.Duration
 	if t.memfs {
@@ -181,9 +220,9 @@ func (t *BandwidthTest) Work() {
 		elapsedWrite = t.S3Write(buf)
 		elapsedRead = t.S3Read(buf)
 	}
-	log.Printf("Bytes: %v", t.bytes)
-	log.Printf("Write Time: %v (usec)", elapsedWrite.Microseconds())
-	log.Printf("Write Throughput: %f (Mb/sec)", 8.0*float64(t.bytes)/float64(MB)/elapsedWrite.Seconds())
-	log.Printf("Read Time: %v (usec)", elapsedRead.Microseconds())
-	log.Printf("Read Throughput: %f (Mb/sec)", 8.0*float64(t.bytes)/float64(MB)/elapsedRead.Seconds())
+	log.Printf("Bytes: %v, Runs: %v", t.bytes, N_RUNS)
+	log.Printf("Avg Write Time: %f (usec)", float64(elapsedWrite.Microseconds())/float64(N_RUNS))
+	log.Printf("Avg Write Throughput: %f (Mb/sec)", 8.0*float64(t.bytes)/float64(MB)/(elapsedWrite.Seconds()/float64(N_RUNS)))
+	log.Printf("Avg Read Time: %f (usec)", float64(elapsedRead.Microseconds())/float64(N_RUNS))
+	log.Printf("Avg Read Throughput: %f (Mb/sec)", 8.0*float64(t.bytes)/float64(MB)/(elapsedRead.Seconds()/float64(N_RUNS)))
 }

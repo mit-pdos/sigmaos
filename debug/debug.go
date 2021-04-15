@@ -27,6 +27,10 @@ func Name(n string) {
 	db.name = n + ":" + strconv.Itoa(os.Getpid())
 }
 
+func GetName() string {
+	return db.name
+}
+
 func DPrintf(format string, v ...interface{}) {
 	db.mu.Lock()
 	defer db.mu.Unlock()

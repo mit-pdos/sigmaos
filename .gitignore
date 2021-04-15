@@ -5,3 +5,4 @@ bin/
 measurements
 ec2_measurements
 mr/par-mr.out
+perf/perf.test

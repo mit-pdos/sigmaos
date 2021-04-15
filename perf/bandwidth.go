@@ -78,15 +78,19 @@ func (t *BandwidthTest) FillBuf(buf []byte) {
 }
 
 func (t *BandwidthTest) S3Write(buf []byte) time.Duration {
-	r1 := bytes.NewReader(buf)
-	input := &s3.PutObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-		Body:   r1,
+	inputs := []*s3.PutObjectInput{}
+	for i := 0; i < N_RUNS; i++ {
+		r1 := bytes.NewReader(buf)
+		input := &s3.PutObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
+			Body:   r1,
+		}
+		inputs = append(inputs, input)
 	}
 	start := time.Now()
 	for i := 0; i < N_RUNS; i++ {
-		_, err := t.client.PutObject(context.TODO(), input)
+		_, err := t.client.PutObject(context.TODO(), inputs[i])
 		if err != nil {
 			log.Printf("Error putting s3 object: %v", err)
 		}

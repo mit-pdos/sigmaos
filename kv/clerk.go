@@ -7,12 +7,9 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	np "ulambda/ninep"
 )
 
 func key2shard(key string) int {
@@ -30,61 +27,51 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	mu       sync.Mutex
 	fsl      *fslib.FsLib
 	uname    string
 	conf     Config
 	nextConf Config
+	ch       chan bool
+	nget     int
 }
 
-func MakeClerk() (*KvClerk, error) {
+func MakeClerk() *KvClerk {
 	kc := &KvClerk{}
+	kc.ch = make(chan bool)
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
 	db.Name(kc.uname)
 	kc.fsl = fslib.MakeFsLib(kc.uname)
-	err := kc.readConfig(&kc.conf)
-	return kc, err
-}
-
-func shardSrvName(s int) string {
-	return "shardSrv" + strconv.Itoa(s)
+	err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
+	if err != nil {
+		// XXX deal with clerk starting during view change
+		log.Fatalf("CLERK: readConfig %v error %v\n", KVCONFIG, err)
+	}
+	return kc
 }
 
 func (kc *KvClerk) watch(path string) {
-	kc.mu.Lock()
-	defer kc.mu.Unlock()
-	db.DLPrintf("CLERK", "watch: Config changed %v\n", path)
-	err := kc.readConfig(&kc.nextConf)
-	if err != nil {
-		log.Printf("watch: readConfig error %v\n", err)
-	}
-	db.DLPrintf("CLERK", "watch: cur conf %v new conf %v\n", kc.conf, kc.nextConf)
-	for i, s := range kc.nextConf.Shards {
-		if kc.conf.Shards[i] != s {
-			p := KVDIR + "/" + shardSrvName(i)
-			p1 := np.Split(p)
-			db.DLPrintf("CLERK", "Umount %v\n", p1)
-			err := kc.fsl.Umount(p1)
-			if err != nil {
-				log.Printf("CLERK: umount %v failed %v\n", p1, err)
+	kc.ch <- true
+}
+
+// XXX atomic read
+func (kc *KvClerk) readConfig() {
+	// set watch for conf, which indicates commit to view change
+	for {
+		err := kc.fsl.ReadFileJsonWatch(KVCONFIG, &kc.nextConf, kc.watch)
+		if err == nil {
+			if kc.nextConf.N == kc.conf.N+1 {
+				kc.conf = kc.nextConf
+				break
 			}
+			log.Fatalf("View mismatch %v %v", kc.conf.N, kc.nextConf.N)
+		} else if strings.HasPrefix(err.Error(), "file not found") {
+			// wait for config
+			db.DLPrintf("CLERK", "Wait for config %v\n", kc.conf.N+1)
+			<-kc.ch
+		} else {
+			log.Fatalf("CLERK: readConfig %v error %v\n", KVCONFIG, err)
 		}
 	}
-	kc.conf.N = kc.nextConf.N
-	copy(kc.conf.Shards, kc.nextConf.Shards)
-}
-
-func (kc *KvClerk) readConfig(conf *Config) error {
-	err := kc.fsl.ReadFileJsonWatch(KVCONFIG, conf, kc.watch)
-	if err != nil {
-		log.Printf("readConfig error %v\n", err)
-	}
-	db.DLPrintf("CLERK", "readConfig: conf %v\n", conf)
-	return err
-}
-
-func (kc *KvClerk) keyPath(shard int, k string) string {
-	return KVDIR + "/" + shardSrvName(shard) + "/shard" + strconv.Itoa(shard) + "/" + k
 }
 
 func error2shard(error string) string {
@@ -96,20 +83,27 @@ func error2shard(error string) string {
 	return kv
 }
 
+func doRetry(err error) bool {
+	shard := error2shard(err.Error())
+	if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
+		strings.HasPrefix(shard, "shard") ||
+		err.Error() == "Closed by server" {
+		return true
+	}
+	return false
+}
+
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
-		n := kc.keyPath(shard, k)
+		n := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
 		err := kc.fsl.MakeFile(n, []byte(v))
 		if err == nil {
 			return err
 		}
-		shard := error2shard(err.Error())
 		db.DLPrintf("CLERK", "Put: %v %v %v\n", n, err, shard)
-		if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
-			strings.HasPrefix(shard, "shardSrv") ||
-			err.Error() == "Closed by server" {
-			time.Sleep(100 * time.Millisecond)
+		if doRetry(err) {
+			kc.readConfig()
 		} else {
 			return err
 		}
@@ -119,17 +113,15 @@ func (kc *KvClerk) Put(k, v string) error {
 func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
-		n := kc.keyPath(shard, k)
+		n := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
 		b, err := kc.fsl.Get(n)
 		db.DLPrintf("CLERK", "Get: %v %v\n", n, err)
 		if err == nil {
+			kc.nget += 1
 			return string(b), err
 		}
-		shard := error2shard(err.Error())
-		if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
-			strings.HasPrefix(shard, "shardSrv") ||
-			err.Error() == "Closed by server" {
-			time.Sleep(100 * time.Millisecond)
+		if doRetry(err) {
+			kc.readConfig()
 		} else {
 			return string(b), err
 		}

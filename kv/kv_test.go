@@ -34,25 +34,32 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("kv_test")
 
+	// Setup KV configuration: name/kv, name/kv/commit/, and
+	// initial name/kv/config
 	err = ts.fsl.Mkdir("name/kv", 07)
 	if err != nil {
-		t.Fatalf("Mkdir %v\n", err)
+		t.Fatalf("Mkdir kv %v\n", err)
+	}
+	err = ts.fsl.Mkdir(KVCOMMIT, 0777)
+	if err != nil {
+		t.Fatalf("MkDir %v failed %v\n", KVCOMMIT, err)
+	}
+	conf := makeConfig(0)
+	err = ts.fsl.MakeFileJson(KVCONFIG, *conf)
+	if err != nil {
+		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
 	}
 
+	// Create first KV
 	ts.pid = ts.spawnKv()
 
-	time.Sleep(1000 * time.Millisecond)
-
+	// Have sharder add it to config
 	pid1 := ts.spawnSharder("add", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 
-	kc, err := MakeClerk()
-	if err != nil {
-		t.Fatalf("Make clerk %v\n", err)
-	}
-	ts.clrk = kc
+	ts.clrk = MakeClerk()
 
 	return ts
 }
@@ -103,6 +110,7 @@ func (ts *Tstate) clerk() {
 	for !done {
 		done = ts.getKeys()
 	}
+	assert.NotEqual(ts.t, 0, ts.clrk.nget)
 }
 
 func TestConcur(t *testing.T) {
@@ -119,7 +127,6 @@ func TestConcur(t *testing.T) {
 	// for r := 0; r < 1; r++ {
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
-		ts.fsl.HasBeenSpawned(pid)
 		log.Printf("Add %v\n", pid)
 		pid1 := ts.spawnSharder("add", kvname(pid))
 		ok, err := ts.fsl.Wait(pid1)

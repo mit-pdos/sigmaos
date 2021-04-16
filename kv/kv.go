@@ -54,19 +54,23 @@ func MakeKv(args []string) (*Kv, error) {
 	}
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
+
 	kv.conf, err = kv.readConfig(KVCONFIG)
 	if err != nil {
-		db.DLPrintf("KV", "MakeKv cannot read %v err %v\n", KVCONFIG, err)
+		log.Fatalf("MakeKv cannot read %v err %v\n", KVCONFIG, err)
 	}
+	// set watch for existence, indicates view change
 	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 	if err != nil {
 		db.DLPrintf("KV", "MakeKv set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
+	kv.prepared()
 	return kv, nil
 }
 
 func (kv *Kv) watchNextConf(p string) {
 	db.DLPrintf("KV", "Watch fires %v; prepare\n", p)
+
 	kv.prepare()
 }
 
@@ -82,46 +86,72 @@ func (kv *Kv) readConfigWatch(conffile string, f fsclnt.Watch) (*Config, error) 
 	return &conf, err
 }
 
-func shardPath(kvd string, shard int) string {
-	return KVDIR + "/" + kvd + "/shard" + strconv.Itoa(shard)
+func shardPath(kvd string, shard, view int) string {
+	return KVDIR + "/" + kvd + "/shard" + strconv.Itoa(shard) + "-v" + strconv.Itoa(view)
 }
 
-func shardPath1(shard int) string {
-	return KVDIR + "/shardSrv" + strconv.Itoa(shard)
-}
-
-func keyPath(kvd string, shard int, k string) string {
-	d := shardPath(kvd, shard)
+func keyPath(kvd string, shard int, view int, k string) string {
+	d := shardPath(kvd, shard, view)
 	return d + "/" + k
 }
 
-// make directories for new shards i should hold. cannot hold lock on
-// kv, since Walk() must take it.
-func (kv *Kv) makeShardDirs() {
-	for s, kvd := range kv.nextConf.Shards {
-		if kvd == kv.me && kv.conf.Shards[s] != kv.me {
-			d := shardPath(kv.me, s)
-			err := kv.Mkdir(d, 0777)
-			if err != nil {
-				log.Fatalf("%v: makeShardDirs: mkdir %v err %v\n",
-					kv.me, d, err)
-			}
+func shardTmp(shardp string) string {
+	return shardp + "#"
+}
+
+// Move shard: either copy to new shard server or rename shard dir
+// for new view.
+func (kv *Kv) moveShard(s int, kvd string) {
+	src := shardPath(kv.me, s, kv.conf.N)
+	src = shardTmp(src)
+	if kvd != kv.me { // Copy
+		dst := shardPath(kvd, s, kv.nextConf.N)
+		err := kv.Mkdir(dst, 0777)
+		if err != nil {
+			log.Fatalf("%v: makeShardDirs: mkdir %v err %v\n",
+				kv.me, dst, err)
+		}
+		db.DLPrintf("KV", "Copy shard from %v to %v\n", src, dst)
+		err = kv.CopyDir(src, dst)
+		if err != nil {
+			log.Fatalf("KV copyDir: %v %v err %v\n", src, dst, err)
+		}
+		db.DLPrintf("KV", "Copy shard from %v to %v done\n", src, dst)
+	} else { // rename
+		dst := shardPath(kvd, s, kv.nextConf.N)
+		err := kv.Rename(src, dst)
+		if err != nil {
+			log.Printf("KV Rename failed %v\n", err)
+		}
+	}
+
+}
+
+func (kv *Kv) moveShards() {
+	if kv.conf == nil {
+		panic("KV kc.conf")
+	}
+	if kv.nextConf == nil {
+		panic("KV next conf")
+	}
+	for s, kvd := range kv.conf.Shards {
+		if kvd == kv.me && kv.nextConf.Shards[s] != "" {
+			kv.moveShard(s, kv.nextConf.Shards[s])
 		}
 	}
 }
 
-// copy new shards to me.
-func (kv *Kv) moveShards() {
-	for s, kvd := range kv.conf.Shards {
-		if kvd != kv.me && kv.nextConf.Shards[s] == kv.me {
-			src := shardPath(kvd, s)
-			dst := shardPath(kv.me, s)
-			db.DLPrintf("KV", "Copy shard from %v to %v\n", src, dst)
-			err := kv.CopyDir(src, dst)
-			if err != nil {
-				log.Fatalf("copyDir: %v %v err %v\n", src, dst, err)
-			}
-			db.DLPrintf("KV", "Copy shard from %v to %v done\n", src, dst)
+// Make intial shard directories
+func (kv *Kv) initShards() {
+	if kv.nextConf == nil {
+		panic("next conf")
+	}
+	for s, kvd := range kv.nextConf.Shards {
+		dst := shardPath(kvd, s, kv.nextConf.N)
+		db.DLPrintf("KV", "Init shard dir %v\n", dst)
+		err := kv.Mkdir(dst, 0777)
+		if err != nil {
+			log.Fatalf("%v: initShards: mkdir %v err %v\n", kv.me, dst, err)
 		}
 	}
 }
@@ -129,7 +159,8 @@ func (kv *Kv) moveShards() {
 func (kv *Kv) removeShards() {
 	for s, kvd := range kv.nextConf.Shards {
 		if kvd != kv.me && kv.conf.Shards[s] == kv.me {
-			d := shardPath(kv.me, s)
+			d := shardPath(kv.me, s, kv.conf.N)
+			d = shardTmp(d)
 			db.DLPrintf("KV", "RmDir shard %v\n", d)
 			err := kv.RmDir(d)
 			if err != nil {
@@ -141,46 +172,29 @@ func (kv *Kv) removeShards() {
 }
 
 // Tell sharder we are prepared to commit new config
+// XXX make this file ephemeral
 func (kv *Kv) prepared() {
-	fn := KVCOMMIT + kv.me
+	fn := commitName(kv.me)
+	db.DLPrintf("KV", "Prepared %v\n", fn)
 	err := kv.MakeFile(fn, nil)
 	if err != nil {
-		log.Printf("WriteFile: %v %v\n", fn, err)
+		db.DLPrintf("KV", "Prepared: make file %v failed %v\n", fn, err)
 	}
 }
 
-func (kv *Kv) unpostShard(i int) {
-	fn := shardPath1(i)
+func (kv *Kv) unpostShard(s, old int) {
+	fn := shardPath(kv.me, s, old)
 	db.DLPrintf("KV", "unpostShard: %v %v\n", fn, kv.Addr())
-	err := kv.Remove(fn)
+	err := kv.Rename(fn, shardTmp(fn))
 	if err != nil {
 		log.Printf("Remove failed %v\n", err)
 	}
 }
 
-// XXX unpost only the ones i am not responsible for anymore
 func (kv *Kv) unpostShards() {
 	for i, kvd := range kv.conf.Shards {
 		if kvd == kv.me {
-			kv.unpostShard(i)
-		}
-	}
-}
-
-func (kv *Kv) postShard(i int) {
-	fn := shardPath1(i)
-	db.DLPrintf("KV", "postShard: %v %v\n", fn, kv.Addr())
-	err := kv.Symlink(kv.Addr()+":pubkey", fn, 0777|np.DMTMP)
-	if err != nil {
-		db.DLPrintf("KV", "Symlink %v failed %v\n", fn, err)
-		panic("postShard")
-	}
-}
-
-func (kv *Kv) postShards() {
-	for i, kvd := range kv.nextConf.Shards {
-		if kvd == kv.me {
-			kv.postShard(i)
+			kv.unpostShard(i, kv.conf.N)
 		}
 	}
 }
@@ -216,16 +230,22 @@ func (kv *Kv) prepare() {
 	kv.mu.Lock()
 
 	var err error
-	kv.conf, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
-	if err != nil {
-		log.Fatalf("prepare cannot read %v err %v\n", KVCONFIG, err)
+
+	// set watch for new config file (indicates commit)
+	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
+	if err == nil {
+		log.Fatalf("KV prepare can read %v err %v\n", KVCONFIG, err)
 	}
 	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)
 	if err != nil {
-		log.Fatalf("prepare cannot read %v err %v\n", KVNEXTCONFIG, err)
+		log.Fatalf("KV prepare cannot read %v err %v\n", KVNEXTCONFIG, err)
 	}
 
 	db.DLPrintf("KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
+
+	if kv.nextConf.N != kv.conf.N+1 {
+		log.Fatalf("KV Skipping to %d from %d", kv.nextConf.N, kv.conf.N)
+	}
 
 	kv.unpostShards()
 
@@ -233,10 +253,10 @@ func (kv *Kv) prepare() {
 
 	kv.mu.Unlock()
 
-	kv.makeShardDirs()
-
 	if kv.nextConf.N > 1 {
 		kv.moveShards()
+	} else {
+		kv.initShards()
 	}
 	kv.prepared()
 }
@@ -247,12 +267,11 @@ func (kv *Kv) commit() {
 
 	db.DLPrintf("KV", "commit to new config: %v\n", kv.nextConf)
 
-	kv.postShards()
-
 	kv.removeShards()
 
 	kv.conf = kv.nextConf
 	kv.nextConf = nil
+	// reset watch for existence of nextconfig, which indicates view change
 	_, err := kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 	if err != nil {
 		db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)

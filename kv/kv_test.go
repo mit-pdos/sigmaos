@@ -12,14 +12,15 @@ import (
 )
 
 const NKEYS = 100
+const NCLERK = 10
 
 type Tstate struct {
-	t    *testing.T
-	s    *fslib.System
-	fsl  *fslib.FsLib
-	clrk *KvClerk
-	ch   chan bool
-	pid  string
+	t     *testing.T
+	s     *fslib.System
+	fsl   *fslib.FsLib
+	clrks []*KvClerk
+	ch    chan bool
+	pid   string
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -59,7 +60,10 @@ func makeTstate(t *testing.T) *Tstate {
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 
-	ts.clrk = MakeClerk()
+	ts.clrks = make([]*KvClerk, NCLERK)
+	for i := 0; i < NCLERK; i++ {
+		ts.clrks[i] = MakeClerk()
+	}
 
 	return ts
 }
@@ -91,9 +95,9 @@ func key(k int) string {
 
 }
 
-func (ts *Tstate) getKeys() bool {
+func (ts *Tstate) getKeys(c int) bool {
 	for i := 0; i < NKEYS; i++ {
-		v, err := ts.clrk.Get(key(i))
+		v, err := ts.clrks[c].Get(key(i))
 		select {
 		case <-ts.ch:
 			return true
@@ -105,23 +109,25 @@ func (ts *Tstate) getKeys() bool {
 	return false
 }
 
-func (ts *Tstate) clerk() {
+func (ts *Tstate) clerk(c int) {
 	done := false
 	for !done {
-		done = ts.getKeys()
+		done = ts.getKeys(c)
 	}
-	assert.NotEqual(ts.t, 0, ts.clrk.nget)
+	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func TestConcur(t *testing.T) {
+func ConcurN(t *testing.T, nclerk int) {
 	ts := makeTstate(t)
 
 	for i := 0; i < NKEYS; i++ {
-		err := ts.clrk.Put(key(i), key(i))
+		err := ts.clrks[0].Put(key(i), key(i))
 		assert.Nil(t, err, "Put")
 	}
 
-	go ts.clerk()
+	for i := 0; i < nclerk; i++ {
+		go ts.clerk(i)
+	}
 
 	pids := make([]string, 0)
 	// for r := 0; r < 1; r++ {
@@ -145,8 +151,9 @@ func TestConcur(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	// stop clerk
-	ts.ch <- true
+	for i := 0; i < nclerk; i++ {
+		ts.ch <- true
+	}
 
 	// delete first KV
 	pid1 := ts.spawnSharder("del", kvname(ts.pid))
@@ -156,4 +163,12 @@ func TestConcur(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	ts.s.Shutdown(ts.fsl)
+}
+
+func TestConcur1(t *testing.T) {
+	ConcurN(t, 1)
+}
+
+func TestConcurN(t *testing.T) {
+	ConcurN(t, NCLERK)
 }

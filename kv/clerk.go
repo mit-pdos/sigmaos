@@ -59,6 +59,7 @@ func (kc *KvClerk) readConfig() {
 	for {
 		err := kc.fsl.ReadFileJsonWatch(KVCONFIG, &kc.nextConf, kc.watch)
 		if err == nil {
+			db.DLPrintf("KV", "readConfig: %v\n", kc.nextConf)
 			if kc.nextConf.N == kc.conf.N+1 {
 				kc.conf = kc.nextConf
 				break

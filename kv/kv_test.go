@@ -130,7 +130,6 @@ func ConcurN(t *testing.T, nclerk int) {
 	}
 
 	pids := make([]string, 0)
-	// for r := 0; r < 1; r++ {
 	for r := 0; r < NSHARD-1; r++ {
 		pid := ts.spawnKv()
 		log.Printf("Add %v\n", pid)
@@ -165,6 +164,10 @@ func ConcurN(t *testing.T, nclerk int) {
 	ts.s.Shutdown(ts.fsl)
 }
 
+func TestConcur0(t *testing.T) {
+	ConcurN(t, 1)
+}
+
 func TestConcur1(t *testing.T) {
 	ConcurN(t, 1)
 }
@@ -172,3 +175,51 @@ func TestConcur1(t *testing.T) {
 func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
 }
+
+func (ts *Tstate) runSharder(t *testing.T) {
+	pid1 := ts.spawnSharder("check", "")
+	log.Printf("sharder spawned %v\n", pid1)
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+	log.Printf("sharder %v done\n", pid1)
+}
+
+func TestConcurSharder(t *testing.T) {
+	const N = 5
+
+	ts := makeTstate(t)
+
+	for r := 0; r < N; r++ {
+		go ts.runSharder(t)
+	}
+	ts.s.Shutdown(ts.fsl)
+}
+
+// func TestCrash(t *testing.T) {
+// 	const N = 5
+// 	ts := makeTstate(t)
+
+// 	pids := make([]string, 0)
+// 	for r := 0; r < N; r++ {
+// 		pid := ts.spawnKv()
+// 		log.Printf("Add %v\n", pid)
+// 		pid1 := ts.spawnSharder("add", kvname(pid))
+// 		ok, err := ts.fsl.Wait(pid1)
+// 		assert.Nil(t, err, "Wait")
+// 		assert.Equal(t, string(ok), "OK")
+// 		time.Sleep(1 * time.Millisecond)
+// 		pids = append(pids, pid)
+// 	}
+// 	time.Sleep(100 * time.Millisecond)
+
+// 	// XXX kill KV (lambda support)
+// 	// do some puts
+
+// 	for i := 0; i < NKEYS; i++ {
+// 		err := ts.clrks[0].Put(key(i), key(i))
+// 		assert.Nil(t, err, "Put")
+// 	}
+
+// 	ts.s.Shutdown(ts.fsl)
+// }

@@ -232,10 +232,16 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
-		o := f.Obj() // XXX check if closed
+		o := f.Obj()
+		if o == nil {
+			return &np.Rerror{"Closed by server"}
+		}
 		npc.add(args.NewFid, &Fid{sync.Mutex{}, f.path, o, o.Version(), f.ctx})
 	} else {
 		o := f.Obj()
+		if o == nil {
+			return &np.Rerror{"Closed by server"}
+		}
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}

@@ -92,7 +92,6 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 
 func key(k int) string {
 	return "key" + strconv.Itoa(k)
-
 }
 
 func (ts *Tstate) getKeys(c int) bool {

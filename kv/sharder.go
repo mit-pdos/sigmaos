@@ -41,6 +41,15 @@ func makeConfig(n int) *Config {
 	return cf
 }
 
+func (cf *Config) present(n string) bool {
+	for _, s := range cf.Shards {
+		if s == n {
+			return true
+		}
+	}
+	return false
+}
+
 type Sharder struct {
 	*fslib.FsLibSrv
 	ch       chan string
@@ -152,7 +161,6 @@ func (sh *Sharder) lock() {
 }
 
 func (sh *Sharder) unlock() {
-	log.Printf("unlock\n")
 	err := sh.Remove(KVLOCK)
 	if err != nil {
 		log.Fatalf("Unlock failed failed %v\n", err)
@@ -160,7 +168,7 @@ func (sh *Sharder) unlock() {
 }
 
 func (sh *Sharder) Work() {
-	log.Printf("SHARDER %v Sharder: %v %v\n", sh.pid, sh.conf, sh.args)
+	// log.Printf("SHARDER %v Sharder: %v %v\n", sh.pid, sh.conf, sh.args)
 
 	sh.lock()
 	defer sh.unlock()

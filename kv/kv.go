@@ -261,6 +261,41 @@ func (kv *Kv) prepare() {
 	kv.prepared()
 }
 
+func (kv *Kv) watchKV(path string) {
+	p := np.Split(path)
+	kvd := p[len(p)-1]
+	log.Printf("KV watch fired %v act? %v\n", kvd, kv.conf.present(kvd))
+}
+
+// if new, set watch on all KVs, except me. otherwise, set watch on
+// new ones (i have already watch on the ones in conf).
+func (kv *Kv) watchKVs() {
+	done := make(map[string]bool)
+	old := kv.conf.present(kv.me)
+	for _, kvd := range kv.nextConf.Shards {
+		if kvd == "" {
+			continue
+		}
+		if kvd == kv.me {
+			continue
+		}
+		if old && kv.conf.present(kvd) {
+			continue
+		}
+		// set watch if haven't set yet
+		_, ok := done[kvd]
+		if !ok {
+			done[kvd] = true
+			fn := KVDIR + "/" + kvd
+			db.DLPrintf("KV", "Set watch on %v\n", fn)
+			err := kv.RemoveWatch(fn, kv.watchKV)
+			if err != nil {
+				log.Fatalf("Remove watch err %v\n", fn)
+			}
+		}
+	}
+}
+
 func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
@@ -269,8 +304,11 @@ func (kv *Kv) commit() {
 
 	kv.removeShards()
 
+	kv.watchKVs()
+
 	kv.conf = kv.nextConf
 	kv.nextConf = nil
+
 	// reset watch for existence of nextconfig, which indicates view change
 	_, err := kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 	if err != nil {

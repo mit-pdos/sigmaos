@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 
@@ -404,6 +405,26 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f Watch) (int, error)
 
 func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	return fsc.OpenWatch(path, mode, nil)
+}
+
+func (fsc *FsClient) RemoveWatch(path string, f Watch) error {
+	p := np.Split(path)
+	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), f)
+	if err != nil {
+		return err
+	}
+	if f == nil {
+		return os.ErrInvalid
+	}
+	go func() {
+		version := fsc.path(fid).lastqid().Version
+		err := fsc.npch(fid).Watch(fid, nil, version)
+		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
+		if err == nil {
+			f(path)
+		}
+	}()
+	return nil
 }
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {

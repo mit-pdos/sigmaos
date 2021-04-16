@@ -220,7 +220,7 @@ func TestWatchRemove(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	_, err = ts.ReadFileWatch(fn, func(string) {
+	err = ts.RemoveWatch(fn, func(string) {
 		ch <- true
 	})
 

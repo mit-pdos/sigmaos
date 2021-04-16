@@ -207,6 +207,9 @@ func (npc *NpConn) Detach() {
 
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
+		if npc.wt != nil {
+			npc.wt.WakeupWatch(f.path)
+		}
 	}
 
 	if npc.wt != nil {

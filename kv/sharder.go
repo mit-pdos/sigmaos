@@ -8,12 +8,12 @@ package kv
 import (
 	"fmt"
 	"log"
-	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	np "ulambda/ninep"
 )
 
 const (
@@ -24,6 +24,7 @@ const (
 	KVNEXTCONFIG    = KVDIR + "/nextconfig"
 	KVNEXTCONFIGTMP = KVDIR + "/nextconfigtmp"
 	KVCOMMIT        = KVDIR + "/commit/"
+	KVLOCK          = KVDIR + "/lock"
 )
 
 func commitName(kv string) string {
@@ -41,7 +42,6 @@ func makeConfig(n int) *Config {
 }
 
 type Sharder struct {
-	mu sync.Mutex
 	*fslib.FsLibSrv
 	ch       chan string
 	pid      string
@@ -144,14 +144,33 @@ func (sh *Sharder) makeNextConfig() {
 	}
 }
 
+func (sh *Sharder) lock() {
+	_, err := sh.CreateFile(KVLOCK, 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
+	if err != nil {
+		log.Fatalf("Lock failed %v\n", err)
+	}
+}
+
+func (sh *Sharder) unlock() {
+	log.Printf("unlock\n")
+	err := sh.Remove(KVLOCK)
+	if err != nil {
+		log.Fatalf("Unlock failed failed %v\n", err)
+	}
+}
+
 func (sh *Sharder) Work() {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
+	log.Printf("SHARDER %v Sharder: %v %v\n", sh.pid, sh.conf, sh.args)
+
+	sh.lock()
+	defer sh.unlock()
 
 	sh.conf = sh.readConfig(KVCONFIG)
 
 	db.DLPrintf("SHARDER", "Sharder: %v %v\n", sh.conf, sh.args)
-	if sh.args[0] == "add" {
+
+	switch sh.args[0] {
+	case "add":
 		sh.nextKvs = append(sh.kvs, sh.args[1:]...)
 		fn := commitName(sh.args[1])
 		// set watch for existence of fn, which indicates is ready to prepare
@@ -162,7 +181,7 @@ func (sh *Sharder) Work() {
 			db.DLPrintf("SHARDER", "Wait for %v", fn)
 			<-sh.ch
 		}
-	} else {
+	case "del":
 		sh.nextKvs = make([]string, len(sh.kvs))
 		copy(sh.nextKvs, sh.kvs)
 		for _, del := range sh.args[1:] {
@@ -173,6 +192,10 @@ func (sh *Sharder) Work() {
 				}
 			}
 		}
+	case "check":
+		return
+	default:
+		log.Fatalf("Unknown command %v\n", sh.args[0])
 	}
 
 	sh.nextConf = sh.balance()

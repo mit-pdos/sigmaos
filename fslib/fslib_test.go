@@ -274,6 +274,27 @@ func TestWatchCreate(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func TestWatchDir(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/d1"
+	err := ts.Mkdir(fn, 0777)
+	assert.Equal(t, nil, err)
+
+	ch := make(chan bool)
+	err = ts.DirWatch(fn, func(string) {
+		ch <- true
+	})
+	assert.Equal(t, nil, err)
+
+	err = ts.MakeFile(fn+"/x", nil)
+	assert.Equal(t, nil, err)
+
+	<-ch
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestConcur(t *testing.T) {
 	const N = 20
 	ts := makeTstate(t)

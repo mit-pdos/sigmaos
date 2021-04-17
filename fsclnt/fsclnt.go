@@ -427,6 +427,25 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	return fsc.OpenWatch(path, mode, nil)
 }
 
+func (fsc *FsClient) DirWatch(path string, f Watch) error {
+	db.DLPrintf("FSCLNT", "DirWatch %v\n", path)
+	p := np.Split(path)
+	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return err
+	}
+	go func() {
+		version := fsc.path(fid).lastqid().Version
+		err := fsc.npch(fid).Watch(fid, nil, version)
+		db.DLPrintf("FSCLNT", "DirWatch: Watch returns %v %v\n", path, err)
+		if err == nil {
+			f(path)
+		}
+	}()
+	return nil
+
+}
+
 func (fsc *FsClient) RemoveWatch(path string, f Watch) error {
 	p := np.Split(path)
 	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), f)
@@ -439,7 +458,7 @@ func (fsc *FsClient) RemoveWatch(path string, f Watch) error {
 	go func() {
 		version := fsc.path(fid).lastqid().Version
 		err := fsc.npch(fid).Watch(fid, nil, version)
-		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
+		db.DLPrintf("FSCLNT", "RemoveWatch: Watch returns %v %v\n", path, err)
 		if err == nil {
 			f(path)
 		}

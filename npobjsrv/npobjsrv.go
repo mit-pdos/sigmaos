@@ -350,6 +350,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 			npc.add(args.Fid, nf)
 			if npc.wt != nil {
 				npc.wt.WakeupWatch(nf.path)
+				npc.wt.WakeupWatch(f.path)
 			}
 			rets.Qid = o1.Qid()
 			break

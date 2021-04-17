@@ -64,6 +64,10 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Twstat{}, nil
 	case np.TRwstat:
 		return np.Rwstat{}, nil
+	case np.TTrenameat:
+		return np.Trenameat{}, nil
+	case np.TRrenameat:
+		return np.Rrenameat{}, nil
 	case np.TTwritev:
 		return np.Twritev{}, nil
 	case np.TTreadv:

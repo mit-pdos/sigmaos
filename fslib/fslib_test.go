@@ -34,6 +34,27 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func TestRenameat(t *testing.T) {
+	ts := makeTstate(t)
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	err = ts.Mkdir("name/d2", 0777)
+	assert.Equal(t, nil, err)
+
+	fn := "name/d1/f"
+	fn1 := "name/d2/g"
+	d := []byte("hello")
+	err = ts.MakeFile(fn, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Renameat(fn, fn1)
+	assert.Equal(t, nil, err)
+
+	d1, err := ts.ReadFile(fn1)
+	assert.Equal(t, "hello", string(d1))
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func (ts *Tstate) localdName(t *testing.T) string {
 	sts, err := ts.ReadDir(LOCALD_ROOT)
 	assert.Nil(t, err, LOCALD_ROOT)
@@ -59,7 +80,7 @@ func TestSymlink(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
 
-	// shutdown schedd
+	// shutdown locald
 	err = ts.Remove(name + "/")
 	assert.Nil(t, err, "Remove")
 

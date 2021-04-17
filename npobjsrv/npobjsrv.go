@@ -28,6 +28,7 @@ type NpObjDir interface {
 	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
 	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+	Renameat(CtxI, string, NpObjDir, string) error
 }
 
 type NpObjFile interface {
@@ -90,7 +91,7 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) 
 	case NpObjDir:
 		return i.WriteDir(f.ctx, off, b, v)
 	default:
-		log.Fatalf("Write: unknown obj type %v\n", o)
+		log.Fatalf("Write: obj type %T isn't NpObjDir or NpObjFile\n", o)
 		return 0, nil
 	}
 }
@@ -129,7 +130,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		log.Fatalf("Read: unknown obj type %v\n", o)
+		log.Fatalf("Read: obj type %T isn't NpObjDir or NpObjFile\n", o)
 		return nil
 	}
 }
@@ -487,5 +488,44 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		}
 	}
 	// XXX ignore other Wstat for now
+	return nil
+}
+
+func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+	oldf, ok := npc.lookup(args.OldFid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	newf, ok := npc.lookup(args.NewFid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DLPrintf("9POBJ", "Renameat %v %v %v\n", oldf, newf, args)
+	oo := oldf.Obj()
+	if oo == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	no := newf.Obj()
+	if oo == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	switch d1 := oo.(type) {
+	case NpObjDir:
+		d2, ok := no.(NpObjDir)
+		if !ok {
+			return np.ErrNotDir
+		}
+		err := d1.Renameat(oldf.ctx, args.OldName, d2, args.NewName)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		if npc.wt != nil {
+			dst := np.Copy(newf.path)
+			dst = append(dst, args.NewName)
+			npc.wt.WakeupWatch(dst)
+		}
+	default:
+		return np.ErrNotDir
+	}
 	return nil
 }

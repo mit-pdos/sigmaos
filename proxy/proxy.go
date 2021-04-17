@@ -268,3 +268,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	*rets = *reply
 	return nil
 }
+
+func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+	return np.ErrNotSupported
+}

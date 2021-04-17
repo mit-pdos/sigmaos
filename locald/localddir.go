@@ -86,3 +86,7 @@ func (d *Dir) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion
 	}
 	return 0, fmt.Errorf("not suported")
 }
+
+func (d *Dir) Renameat(ctx npo.CtxI, from string, od npo.NpObjDir, to string) error {
+	return fmt.Errorf("not supported")
+}

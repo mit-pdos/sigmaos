@@ -174,3 +174,7 @@ func (d *Dir) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.
 	d.dirents[name] = o1.(*Obj)
 	return o1, nil
 }
+
+func (d *Dir) Renameat(ctx npo.CtxI, from string, od npo.NpObjDir, to string) error {
+	return fmt.Errorf("not supported")
+}

@@ -267,7 +267,7 @@ func (kv *Kv) watchKV(path string) {
 	log.Printf("KV watch fired %v act? %v\n", kvd, kv.conf.present(kvd))
 }
 
-// if new, set watch on all KVs, except me. otherwise, set watch on
+// If new, set watch on all KVs, except me. Otherwise, set watch on
 // new ones (i have already watch on the ones in conf).
 func (kv *Kv) watchKVs() {
 	done := make(map[string]bool)

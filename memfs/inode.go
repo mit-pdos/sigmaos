@@ -62,13 +62,16 @@ func (inode *Inode) Unlock() {
 	inode.mu.Unlock()
 }
 
-func (inode *Inode) qidL() np.Tqid {
+func (inode *Inode) Id() uint64 {
 	id := uintptr(unsafe.Pointer(inode))
+	return uint64(id)
+}
 
+func (inode *Inode) qidL() np.Tqid {
 	return np.MakeQid(
 		np.Qtype(inode.perm>>np.QTYPESHIFT),
 		np.TQversion(inode.version),
-		np.Tpath(uint64(id)))
+		np.Tpath(inode.Id()))
 }
 
 func (inode *Inode) Qid() np.Tqid {

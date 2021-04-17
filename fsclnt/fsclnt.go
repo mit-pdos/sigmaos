@@ -274,11 +274,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-// XXX The unix 9p client seems to split a rename across directories
-// into a create and remove, and only does renames within the same
-// directory. For now forget about splitting.
-//
-// XXX update pathname associated with fid in Channel
+// Rename within a single directory using Wstat
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
@@ -299,6 +295,31 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	st := &np.Stat{}
 	st.Name = npath[len(npath)-1]
 	_, err = fsc.npch(fid).Wstat(fid, st)
+	return err
+}
+
+// Rename across directories using Renameat
+// XXX Merge with rename
+func (fsc *FsClient) Renameat(old string, new string) error {
+	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
+	opath := np.Split(old)
+	npath := np.Split(new)
+	o := opath[len(opath)-1]
+	n := npath[len(npath)-1]
+	fid, err := fsc.walkMany(opath[:len(opath)-1], np.EndSlash(old), nil)
+	if err != nil {
+		return err
+	}
+	defer fsc.clunkFid(fid)
+	fid1, err := fsc.walkMany(npath[:len(npath)-1], np.EndSlash(old), nil)
+	if err != nil {
+		return err
+	}
+	defer fsc.clunkFid(fid1)
+	if fsc.npch(fid) != fsc.npch(fid1) {
+		return fmt.Errorf("Renameat: files not at same server")
+	}
+	_, err = fsc.npch(fid).Renameat(fid, o, fid1, n)
 	return err
 }
 

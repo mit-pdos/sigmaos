@@ -34,7 +34,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestRenameat(t *testing.T) {
+func TestRename(t *testing.T) {
 	ts := makeTstate(t)
 	err := ts.Mkdir("name/d1", 0777)
 	assert.Equal(t, nil, err)
@@ -47,7 +47,7 @@ func TestRenameat(t *testing.T) {
 	err = ts.MakeFile(fn, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.Renameat(fn, fn1)
+	err = ts.Rename(fn, fn1)
 	assert.Equal(t, nil, err)
 
 	d1, err := ts.ReadFile(fn1)

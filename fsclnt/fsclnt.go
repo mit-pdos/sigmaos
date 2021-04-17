@@ -281,11 +281,11 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	npath := np.Split(new)
 
 	if len(opath) != len(npath) {
-		return errors.New("Rename must be within same directory")
+		fsc.renameat(old, new)
 	}
 	for i, n := range opath[:len(opath)-1] {
 		if npath[i] != n {
-			return errors.New("Rename must be within same directory")
+			return fsc.renameat(old, new)
 		}
 	}
 	fid, err := fsc.walkMany(opath, np.EndSlash(old), nil)
@@ -299,8 +299,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 }
 
 // Rename across directories using Renameat
-// XXX Merge with rename
-func (fsc *FsClient) Renameat(old string, new string) error {
+func (fsc *FsClient) renameat(old, new string) error {
 	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)

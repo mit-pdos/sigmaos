@@ -300,7 +300,8 @@ func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	db.DLPrintf("KV", "commit to new config: %v\n", kv.nextConf)
+	db.DLPrintf("KV", "commit: to next config %v aborted %v\n", kv.nextConf,
+		kv.nextConf.N == kv.conf.N)
 
 	kv.removeShards()
 

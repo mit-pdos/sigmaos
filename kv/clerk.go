@@ -98,7 +98,7 @@ func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
 		n := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
-		err := kc.fsl.MakeFile(n, []byte(v))
+		err := kc.fsl.MakeFile(n, 0777, []byte(v))
 		if err == nil {
 			return err
 		}

@@ -41,12 +41,12 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.fsl.Mkdir(KVCOMMIT, 0777)
+	err = ts.fsl.Mkdir(KVPREPARED, 0777)
 	if err != nil {
-		t.Fatalf("MkDir %v failed %v\n", KVCOMMIT, err)
+		t.Fatalf("MkDir %v failed %v\n", KVPREPARED, err)
 	}
 	conf := makeConfig(0)
-	err = ts.fsl.MakeFileJson(KVCONFIG, *conf)
+	err = ts.fsl.MakeFileJson(KVCONFIG, 0777, *conf)
 	if err != nil {
 		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
 	}
@@ -176,7 +176,7 @@ func TestConcurN(t *testing.T) {
 }
 
 func (ts *Tstate) runSharder(t *testing.T) {
-	pid1 := ts.spawnSharder("check", "")
+	pid1 := ts.spawnSharder("restart", "")
 	log.Printf("sharder spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
@@ -192,6 +192,42 @@ func TestConcurSharder(t *testing.T) {
 	for r := 0; r < N; r++ {
 		go ts.runSharder(t)
 	}
+	ts.s.Shutdown(ts.fsl)
+}
+
+func TestCrashSharder(t *testing.T) {
+	const N = 5
+	ts := makeTstate(t)
+
+	pids := make([]string, 0)
+	for r := 0; r < N; r++ {
+		pid := ts.spawnKv()
+		log.Printf("Add %v\n", pid)
+		pid1 := ts.spawnSharder("add", kvname(pid))
+		ok, err := ts.fsl.Wait(pid1)
+		assert.Nil(t, err, "Wait")
+		assert.Equal(t, string(ok), "OK")
+		time.Sleep(1 * time.Millisecond)
+		pids = append(pids, pid)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	pid := ts.spawnKv()
+	log.Printf("Add %v\n", pid)
+	pid1 := ts.spawnSharder("crash1", kvname(pid))
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+
+	log.Printf("sharder crashed\n")
+
+	pid1 = ts.spawnSharder("restart", kvname(pid))
+	ok, err = ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+
+	log.Printf("restart done\n")
+
 	ts.s.Shutdown(ts.fsl)
 }
 

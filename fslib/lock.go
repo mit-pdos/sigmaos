@@ -60,7 +60,7 @@ func (fl *FsLib) UnlockFile(f string) error {
 }
 
 func (fl *FsLib) MakeFileAtomic(dir string, fname string, b []byte) error {
-	err := fl.MakeFile(dir+"/"+WRITING+fname, b)
+	err := fl.MakeFile(dir+"/"+WRITING+fname, 0777, b)
 	if err != nil {
 		log.Fatalf("Error in MakeFileAtomic %v/%v: %v", dir, fname, err)
 		return err

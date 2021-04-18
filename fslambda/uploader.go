@@ -34,7 +34,7 @@ func (up *Uploader) Work() {
 	if err != nil {
 		log.Fatalf("Read file error: %v\n", err)
 	}
-	err = up.FsLib.MakeFile(up.dest, contents)
+	err = up.FsLib.MakeFile(up.dest, 0777, contents)
 	if err != nil {
 		db.DPrintf("Overwriting file\n")
 		err = up.FsLib.WriteFile(up.dest, contents)

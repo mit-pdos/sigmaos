@@ -38,7 +38,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 
 func (s *Sleeperl) Work() {
 	time.Sleep(5000 * time.Millisecond)
-	err := s.MakeFile(s.output, []byte("hello"))
+	err := s.MakeFile(s.output, 0777, []byte("hello"))
 	if err != nil {
 		log.Printf("Makefile error %v\n", err)
 	}

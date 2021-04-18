@@ -44,7 +44,7 @@ func TestRename(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, d)
+	err = ts.MakeFile(fn, 0777, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
@@ -237,7 +237,7 @@ func TestWatchRemove(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/w"
-	err := ts.MakeFile(fn, nil)
+	err := ts.MakeFile(fn, 0777, nil)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
@@ -266,7 +266,7 @@ func TestWatchCreate(t *testing.T) {
 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
 	}
 
-	err = ts.MakeFile(fn, nil)
+	err = ts.MakeFile(fn, 0777, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -287,7 +287,7 @@ func TestWatchDir(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 
-	err = ts.MakeFile(fn+"/x", nil)
+	err = ts.MakeFile(fn+"/x", 0777, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -304,7 +304,7 @@ func TestConcur(t *testing.T) {
 			for j := 0; j < 1000; j++ {
 				fn := "name/f" + strconv.Itoa(i)
 				data := []byte(fn)
-				err := ts.MakeFile(fn, data)
+				err := ts.MakeFile(fn, 0777, data)
 				assert.Equal(t, nil, err)
 				d, err := ts.ReadFile(fn)
 				assert.Equal(t, nil, err)

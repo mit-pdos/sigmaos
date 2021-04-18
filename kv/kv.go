@@ -176,7 +176,7 @@ func (kv *Kv) removeShards() {
 func (kv *Kv) prepared() {
 	fn := commitName(kv.me)
 	db.DLPrintf("KV", "Prepared %v\n", fn)
-	err := kv.MakeFile(fn, nil)
+	err := kv.MakeFile(fn, 0777|np.DMTMP, nil)
 	if err != nil {
 		db.DLPrintf("KV", "Prepared: make file %v failed %v\n", fn, err)
 	}

@@ -260,6 +260,21 @@ func TestCrashSharder(t *testing.T) {
 
 	log.Printf("SHARDER restart done\n")
 
+	pid = ts.spawnKv("crash3")
+
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("SHARDER crashed\n")
+
+	pid1 = ts.spawnSharder("restart", kvname(pid))
+	ok, err = ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+
+	log.Printf("SHARDER restart done\n")
+
+	pids = append(pids, pid)
+
 	ts.stopKVs(pids)
 	ts.delFirst()
 

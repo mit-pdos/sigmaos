@@ -129,7 +129,8 @@ func (kv *Kv) moveShard(s int, kvd string) {
 	if kvd != kv.me { // Copy
 		dst := shardPath(kvd, s, kv.nextConf.N)
 		err := kv.Mkdir(dst, 0777)
-		if err != nil {
+		// an aborted view change may have created the directory
+		if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
 			log.Fatalf("%v: makeShardDirs: mkdir %v err %v\n",
 				kv.me, dst, err)
 		}
@@ -143,10 +144,9 @@ func (kv *Kv) moveShard(s int, kvd string) {
 		dst := shardPath(kvd, s, kv.nextConf.N)
 		err := kv.Rename(src, dst)
 		if err != nil {
-			log.Printf("KV Rename failed %v\n", err)
+			log.Printf("KV Rename %v -> %v failed %v\n", src, dst, err)
 		}
 	}
-
 }
 
 func (kv *Kv) moveShards() {
@@ -258,6 +258,7 @@ func (kv *Kv) prepare() {
 	if err == nil {
 		log.Fatalf("KV prepare can read %v err %v\n", KVCONFIG, err)
 	}
+	db.DLPrintf("KV", "prepare: watch for %v\n", KVCONFIG)
 	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)
 	if err != nil {
 		log.Fatalf("KV prepare cannot read %v err %v\n", KVNEXTCONFIG, err)

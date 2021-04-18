@@ -77,7 +77,7 @@ func (wt *WatchTable) DeleteConn(npc *NpConn) {
 		tmp := ws[:0]
 		for _, w := range ws {
 			if w.npc == npc {
-				db.DLPrintf("WATCH", "Delete Watch %v %v\n", p, w)
+				db.DLPrintf("WATCH", "Delete watch %v %v\n", p, w)
 				w.ch <- true
 			} else {
 				tmp = append(tmp, w)

@@ -204,7 +204,7 @@ func (sh *Sharder) doCommit(nextConf *Config, committed map[string]bool) bool {
 
 func (sh *Sharder) abort(conftmp *Config) {
 	db.DLPrintf("SHARDER", "Abort to %v\n", conftmp)
-	err := sh.Rename(KVCONFIGTMP, KVNEXTCONFIG)
+	err := sh.Remove(KVNEXTCONFIG)
 	if err != nil {
 		db.DLPrintf("SHARDER", "Abort: remove %v failed %v\n", KVNEXTCONFIG, err)
 	}
@@ -300,7 +300,7 @@ func (sh *Sharder) Work() {
 	db.DLPrintf("SHARDER", "Sharder: %v %v\n", sh.conf, sh.args)
 
 	switch sh.args[0] {
-	case "crash1", "crash2":
+	case "crash1", "crash2", "crash3":
 		sh.Add()
 	case "add":
 		sh.Add()
@@ -344,6 +344,11 @@ func (sh *Sharder) Work() {
 	for i := 0; i < sh.nkvd; i++ {
 		s := <-sh.ch
 		db.DLPrintf("SHARDER", "KV %v prepared\n", s)
+	}
+
+	if sh.args[0] == "crash3" {
+		db.DLPrintf("SHARDER", "Crash3\n")
+		os.Exit(1)
 	}
 
 	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)

@@ -229,7 +229,7 @@ func TestConcurSharder(t *testing.T) {
 }
 
 func TestCrashSharder(t *testing.T) {
-	const N = 3
+	const N = 1
 	ts := makeTstate(t)
 
 	pids := ts.startKVs(N)
@@ -242,6 +242,19 @@ func TestCrashSharder(t *testing.T) {
 
 	pid1 := ts.spawnSharder("restart", kvname(pid))
 	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+
+	log.Printf("SHARDER restart done\n")
+
+	pid = ts.spawnKv("crash2")
+
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("sharder crashed\n")
+
+	pid1 = ts.spawnSharder("restart", kvname(pid))
+	ok, err = ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 

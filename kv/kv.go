@@ -322,10 +322,26 @@ func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	db.DLPrintf("KV", "commit: to next config %v aborted %v\n", kv.nextConf,
-		kv.nextConf.N == kv.conf.N)
+	conf, err := kv.readConfig(KVCONFIG)
+	if err != nil {
+		log.Fatalf("KV commit cannot read %v err %v\n", KVCONFIG, err)
+	}
+
+	if conf.N == kv.nextConf.N {
+		db.DLPrintf("KV", "commit: to next config %v\n", kv.nextConf)
+	} else {
+		db.DLPrintf("KV", "abort: to next config %v\n", conf)
+		kv.nextConf = conf
+	}
 
 	kv.removeShards()
+
+	present := kv.nextConf.present(kv.me)
+	if !present {
+		db.DLPrintf("KV", "commit exit %v\n", kv.me)
+		kv.done <- true
+		return
+	}
 
 	kv.watchKVs()
 
@@ -333,19 +349,10 @@ func (kv *Kv) commit() {
 	kv.nextConf = nil
 
 	// reset watch for existence of nextconfig, which indicates view change
-	_, err := kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 	if err != nil {
 		db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
-
-	for _, kvd := range kv.conf.Shards {
-		if kvd == kv.me {
-			return
-		}
-	}
-
-	db.DLPrintf("KV", "commit exit %v\n", kv.me)
-	kv.done <- true
 }
 
 func (kv *Kv) Work() {

@@ -37,7 +37,7 @@ type Kv struct {
 func MakeKv(args []string) (*Kv, error) {
 	kv := &Kv{}
 	kv.done = make(chan bool)
-	if len(args) != 1 {
+	if len(args) != 2 {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
 	kv.pid = args[0]
@@ -59,13 +59,35 @@ func MakeKv(args []string) (*Kv, error) {
 	if err != nil {
 		log.Fatalf("MakeKv cannot read %v err %v\n", KVCONFIG, err)
 	}
+
 	// set watch for existence, indicates view change
 	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 	if err != nil {
 		db.DLPrintf("KV", "MakeKv set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
-	kv.prepared()
+
+	db.DLPrintf("KV", "Spawn harder\n")
+
+	pid1 := kv.spawnSharder(args[1], kv.me)
+	ok, err := kv.Wait(pid1)
+
+	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
+
+	if string(ok) != "OK" {
+		return nil, fmt.Errorf("Sharder failed %v\n", string(ok))
+	}
 	return kv, nil
+}
+
+func (kv *Kv) spawnSharder(opcode, pid string) string {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = "bin/sharderd"
+	a.Args = []string{opcode, pid}
+	a.PairDep = nil
+	a.ExitDep = nil
+	kv.Spawn(&a)
+	return a.Pid
 }
 
 func (kv *Kv) watchNextConf(p string) {

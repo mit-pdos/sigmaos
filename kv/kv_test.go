@@ -3,6 +3,7 @@ package kv
 import (
 	"log"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,18 +16,20 @@ const NKEYS = 100
 const NCLERK = 10
 
 type Tstate struct {
-	t     *testing.T
-	s     *fslib.System
-	fsl   *fslib.FsLib
-	clrks []*KvClerk
-	ch    chan bool
-	pid   string
+	t         *testing.T
+	s         *fslib.System
+	fsl       *fslib.FsLib
+	clrks     []*KvClerk
+	ch        chan bool
+	chPresent chan bool
+	pid       string
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.ch = make(chan bool)
+	ts.chPresent = make(chan bool)
 
 	s, err := fslib.Boot("..")
 	if err != nil {
@@ -51,14 +54,7 @@ func makeTstate(t *testing.T) *Tstate {
 		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
 	}
 
-	// Create first KV
-	ts.pid = ts.spawnKv()
-
-	// Have sharder add it to config
-	pid1 := ts.spawnSharder("add", kvname(ts.pid))
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
+	ts.pid = ts.makeKV()
 
 	ts.clrks = make([]*KvClerk, NCLERK)
 	for i := 0; i < NCLERK; i++ {
@@ -68,15 +64,23 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) spawnKv() string {
+func (ts *Tstate) spawnKv(arg string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/kvd"
-	a.Args = []string{}
+	a.Args = []string{arg}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid
+}
+
+func (ts *Tstate) makeKV() string {
+	pid := ts.spawnKv("add")
+	if ok := ts.waitUntilPresent(kvname(pid)); !ok {
+		log.Fatalf("Couldn't add first KV\n")
+	}
+	return pid
 }
 
 func (ts *Tstate) spawnSharder(opcode, pid string) string {
@@ -88,6 +92,28 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid
+}
+
+func (ts *Tstate) presentWatch(p string) {
+	log.Printf("KV present watch fires")
+	ts.chPresent <- true
+}
+
+func (ts *Tstate) waitUntilPresent(kv string) bool {
+	conf := Config{}
+	for {
+		err := ts.fsl.ReadFileJsonWatch(KVCONFIG, &conf, ts.presentWatch)
+		if err == nil {
+			if conf.present(kv) {
+				return true
+			}
+		} else if strings.HasPrefix(err.Error(), "file not found") {
+			<-ts.chPresent
+		} else {
+			break
+		}
+	}
+	return false
 }
 
 func key(k int) string {
@@ -130,14 +156,10 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	pids := make([]string, 0)
 	for r := 0; r < NSHARD-1; r++ {
-		pid := ts.spawnKv()
-		log.Printf("Add %v\n", pid)
-		pid1 := ts.spawnSharder("add", kvname(pid))
-		ok, err := ts.fsl.Wait(pid1)
-		assert.Nil(t, err, "Wait")
-		assert.Equal(t, string(ok), "OK")
-		time.Sleep(200 * time.Millisecond)
+		pid := ts.makeKV()
+		log.Printf("Added %v\n", pid)
 		pids = append(pids, pid)
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	for _, pid := range pids {
@@ -196,37 +218,35 @@ func TestConcurSharder(t *testing.T) {
 }
 
 func TestCrashSharder(t *testing.T) {
-	const N = 5
+	const N = 0
 	ts := makeTstate(t)
 
 	pids := make([]string, 0)
 	for r := 0; r < N; r++ {
-		pid := ts.spawnKv()
-		log.Printf("Add %v\n", pid)
-		pid1 := ts.spawnSharder("add", kvname(pid))
-		ok, err := ts.fsl.Wait(pid1)
-		assert.Nil(t, err, "Wait")
-		assert.Equal(t, string(ok), "OK")
-		time.Sleep(1 * time.Millisecond)
+		pid := ts.makeKV()
 		pids = append(pids, pid)
+		time.Sleep(100 * time.Millisecond)
 	}
-	time.Sleep(100 * time.Millisecond)
 
-	pid := ts.spawnKv()
-	log.Printf("Add %v\n", pid)
-	pid1 := ts.spawnSharder("crash1", kvname(pid))
+	pid := ts.spawnKv("crash1")
+
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("sharder crashed\n")
+
+	pid1 := ts.spawnSharder("restart", kvname(pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 
-	log.Printf("sharder crashed\n")
+	log.Printf("SHARDER restart done\n")
 
-	pid1 = ts.spawnSharder("restart", kvname(pid))
+	// delete first KV
+	pid1 = ts.spawnSharder("del", kvname(ts.pid))
 	ok, err = ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
-
-	log.Printf("restart done\n")
+	time.Sleep(200 * time.Millisecond)
 
 	ts.s.Shutdown(ts.fsl)
 }

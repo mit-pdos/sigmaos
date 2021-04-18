@@ -8,6 +8,7 @@ package kv
 import (
 	"fmt"
 	"log"
+	"os"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
@@ -238,14 +239,18 @@ func (sh *Sharder) restart() {
 
 func (sh *Sharder) Add() {
 	sh.nextKvs = append(sh.kvs, sh.args[1:]...)
-	fn := commitName(sh.args[1])
-	// set watch for existence of fn, which indicates is ready to prepare
-	_, err := sh.ReadFileWatch(fn, sh.watchPrepared)
-	if err == nil {
-		db.DLPrintf("SHARDER", "KV %v started", fn)
-	} else {
-		db.DLPrintf("SHARDER", "Wait for %v", fn)
-		<-sh.ch
+}
+
+func (sh *Sharder) Del() {
+	sh.nextKvs = make([]string, len(sh.kvs))
+	copy(sh.nextKvs, sh.kvs)
+	for _, del := range sh.args[1:] {
+		for i, kv := range sh.nextKvs {
+			if del == kv {
+				sh.nextKvs = append(sh.nextKvs[:i],
+					sh.nextKvs[i+1:]...)
+			}
+		}
 	}
 }
 
@@ -296,16 +301,7 @@ func (sh *Sharder) Work() {
 	case "add":
 		sh.Add()
 	case "del":
-		sh.nextKvs = make([]string, len(sh.kvs))
-		copy(sh.nextKvs, sh.kvs)
-		for _, del := range sh.args[1:] {
-			for i, kv := range sh.nextKvs {
-				if del == kv {
-					sh.nextKvs = append(sh.nextKvs[:i],
-						sh.nextKvs[i+1:]...)
-				}
-			}
-		}
+		sh.Del()
 	case "restart":
 		sh.restart()
 		return
@@ -331,7 +327,7 @@ func (sh *Sharder) Work() {
 
 	if sh.args[0] == "crash1" {
 		db.DLPrintf("SHARDER", "Crash1\n")
-		return
+		os.Exit(1)
 	}
 
 	sh.makeNextConfig()
@@ -343,4 +339,5 @@ func (sh *Sharder) Work() {
 
 	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
 	sh.commit()
+	db.DLPrintf("SHARDER", "Done commit to %v\n", sh.nextConf)
 }

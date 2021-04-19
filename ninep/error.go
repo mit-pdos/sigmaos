@@ -24,4 +24,5 @@ var (
 	// ulambda
 	ErrNotSupported = &Rerror{"not supported"}
 	ErrUnknownMsg   = &Rerror{"unknown message"}
+	ErrNotDir       = &Rerror{"not a directory"}
 )

@@ -28,6 +28,7 @@ type NpObjDir interface {
 	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
 	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+	Renameat(CtxI, string, NpObjDir, string) error
 }
 
 type NpObjFile interface {
@@ -90,7 +91,7 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) 
 	case NpObjDir:
 		return i.WriteDir(f.ctx, off, b, v)
 	default:
-		log.Fatalf("Write: unknown obj type %v\n", o)
+		log.Fatalf("Write: obj type %T isn't NpObjDir or NpObjFile\n", o)
 		return 0, nil
 	}
 }
@@ -129,7 +130,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		log.Fatalf("Read: unknown obj type %v\n", o)
+		log.Fatalf("Read: obj type %T isn't NpObjDir or NpObjFile\n", o)
 		return nil
 	}
 }
@@ -207,6 +208,9 @@ func (npc *NpConn) Detach() {
 
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
+		if npc.wt != nil {
+			npc.wt.WakeupWatch(f.path)
+		}
 	}
 
 	if npc.wt != nil {
@@ -291,8 +295,6 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-// There might be a racing create; it is the clients job to avoid this
-// race
 func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -304,7 +306,8 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 		return &np.Rerror{"Closed by server"}
 	}
 	if args.Version != np.NoV && args.Version != o.Version() {
-		return &np.Rerror{"Version mismatch"}
+		s := fmt.Sprintf("Version mismatch %v %v %v", f.path, args.Version, o.Version())
+		return &np.Rerror{s}
 	}
 	p := np.Copy(f.path)
 	if len(args.Path) > 0 {
@@ -346,6 +349,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 			npc.add(args.Fid, nf)
 			if npc.wt != nil {
 				npc.wt.WakeupWatch(nf.path)
+				npc.wt.WakeupWatch(f.path)
 			}
 			rets.Qid = o1.Qid()
 			break
@@ -484,5 +488,44 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		}
 	}
 	// XXX ignore other Wstat for now
+	return nil
+}
+
+func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+	oldf, ok := npc.lookup(args.OldFid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	newf, ok := npc.lookup(args.NewFid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DLPrintf("9POBJ", "Renameat %v %v %v\n", oldf, newf, args)
+	oo := oldf.Obj()
+	if oo == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	no := newf.Obj()
+	if oo == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	switch d1 := oo.(type) {
+	case NpObjDir:
+		d2, ok := no.(NpObjDir)
+		if !ok {
+			return np.ErrNotDir
+		}
+		err := d1.Renameat(oldf.ctx, args.OldName, d2, args.NewName)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		if npc.wt != nil {
+			dst := np.Copy(newf.path)
+			dst = append(dst, args.NewName)
+			npc.wt.WakeupWatch(dst)
+		}
+	default:
+		return np.ErrNotDir
+	}
 	return nil
 }

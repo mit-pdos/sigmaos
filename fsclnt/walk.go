@@ -65,16 +65,32 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, er
 	return np.NoFid, errors.New("too many iterations")
 }
 
-// XXX watch should check if name now exists?
-func (fsc *FsClient) setWatch(npc *npclnt.NpChan, fid np.Tfid, p []string, r []string, f Watch) {
+// Walk to parent directory, and check if name is there.  If it is, return entry.
+// Otherwise, set watch based on directory's version number
+func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watch) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
-	go func(npc *npclnt.NpChan) {
-		err := npc.Watch(fid, r, np.NoV)
+	fid3 := fsc.allocFid()
+	dir := r[0 : len(r)-1]
+	reply, err := fsc.npch(fid1).Walk(fid1, fid3, dir)
+	if err != nil {
+		return np.NoFid, err
+	}
+	fsc.addFid(fid3, fsc.path(fid1).copyPath())
+	fsc.path(fid3).addn(reply.Qids, dir)
+
+	reply, err = fsc.npch(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
+	if err == nil {
+		return fid2, nil
+	}
+
+	go func(npc *npclnt.NpChan, version np.TQversion) {
+		db.DLPrintf("FSCLNT", "Watch set %v %v %v\n", p, r[len(r)-1], version)
+		err := npc.Watch(fid3, []string{r[len(r)-1]}, version)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
-		if err == nil {
-			f(np.Join(p)) // XXX maybe supply version?
-		}
-	}(npc)
+		fsc.clunkFid(fid3)
+		f(np.Join(p), err)
+	}(fsc.npch(fid3), fsc.path(fid3).lastqid().Version)
+	return np.NoFid, nil
 }
 
 func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
@@ -90,7 +106,6 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		return fid, 0, err
 	}
 	defer fsc.clunkFid(fid1)
-
 	fid2 := fsc.allocFid()
 	first, union := IsUnion(rest)
 	var reply *np.Rwalk
@@ -103,10 +118,21 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 	} else {
 		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
 		if err != nil {
-			if f != nil && strings.HasPrefix(err.Error(), "file not found") {
-				fsc.setWatch(fsc.npch(fid1), fid, path, rest, f)
+			if f != nil && strings.HasPrefix(err.Error(),
+				"file not found") {
+				fid, err1 := fsc.setWatch(fid1, fid2, path, rest, f)
+				if err1 != nil {
+					// couldn't walk to parent dir
+					return np.NoFid, 0, err1
+				}
+				if err1 == nil && fid == np.NoFid {
+					// entry is still not in parent dir
+					return np.NoFid, 0, err
+				}
+				// entry now exists
+			} else {
+				return np.NoFid, 0, err
 			}
-			return np.NoFid, 0, err
 		}
 		todo = len(rest) - len(reply.Qids)
 		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)

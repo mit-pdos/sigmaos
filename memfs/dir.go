@@ -3,6 +3,7 @@ package memfs
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	db "ulambda/debug"
@@ -146,6 +147,7 @@ func (dir *Dir) remove(ctx npo.CtxI, name string) error {
 	default:
 	}
 	dir.version += 1
+	dir.Mtime = time.Now().Unix()
 	return dir.removeL(name)
 }
 
@@ -204,4 +206,58 @@ func (dir *Dir) ReadDir(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQvers
 }
 func (inode *Inode) WriteDir(ctx npo.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, errors.New("Cannot write directory")
+}
+
+func lockOrdered(olddir *Dir, newdir *Dir) {
+	id1 := olddir.Id()
+	id2 := newdir.Id()
+	if id1 == id2 {
+		olddir.mu.Lock()
+	} else if id1 < id2 {
+		olddir.mu.Lock()
+		newdir.mu.Lock()
+	} else {
+		newdir.mu.Lock()
+		olddir.mu.Lock()
+	}
+}
+
+func unlockOrdered(olddir *Dir, newdir *Dir) {
+	id1 := olddir.Id()
+	id2 := newdir.Id()
+	if id1 == id2 {
+		olddir.mu.Unlock()
+	} else if id1 < id2 {
+		olddir.mu.Unlock()
+		newdir.mu.Unlock()
+	} else {
+		newdir.mu.Unlock()
+		olddir.mu.Unlock()
+	}
+}
+
+func (dir *Dir) Renameat(ctx npo.CtxI, old string, nd npo.NpObjDir, new string) error {
+	newdir := nd.(*Dir)
+	lockOrdered(dir, newdir)
+	defer unlockOrdered(dir, newdir)
+
+	db.DLPrintf("MEMFS", "Renameat %v %v to %v %v\n", dir, old, newdir, new)
+	ino, err := dir.lookupL(old)
+	if err != nil {
+		return fmt.Errorf("file not found %v", old)
+	}
+	err = dir.removeL(old)
+	if err != nil {
+		log.Fatalf("Rename %v remove  %v\n", old, err)
+	}
+	_, err = newdir.lookupL(new)
+	if err == nil {
+		err = newdir.removeL(new)
+	}
+	err = newdir.createL(ino, new)
+	if err != nil {
+		log.Fatalf("Rename %v createL: %v\n", new, err)
+		return err
+	}
+	return nil
 }

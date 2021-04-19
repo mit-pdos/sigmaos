@@ -148,7 +148,7 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 
 func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 	// setup
-	err := t.MakeFile(fname, []byte{})
+	err := t.MakeFile(fname, 0777, []byte{})
 	if err != nil && err.Error() != "Name exists" {
 		log.Fatalf("Error creating file: %v", err)
 	}

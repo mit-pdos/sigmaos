@@ -37,7 +37,7 @@ type Kv struct {
 func MakeKv(args []string) (*Kv, error) {
 	kv := &Kv{}
 	kv.done = make(chan bool)
-	if len(args) != 1 {
+	if len(args) != 2 {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
 	kv.pid = args[0]
@@ -59,19 +59,52 @@ func MakeKv(args []string) (*Kv, error) {
 	if err != nil {
 		log.Fatalf("MakeKv cannot read %v err %v\n", KVCONFIG, err)
 	}
+
 	// set watch for existence, indicates view change
 	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 	if err != nil {
 		db.DLPrintf("KV", "MakeKv set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
-	kv.prepared()
+
+	db.DLPrintf("KV", "Spawn harder\n")
+
+	pid1 := kv.spawnSharder(args[1], kv.me)
+	ok, err := kv.Wait(pid1)
+
+	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
+
+	log.Printf("sharder done %v\n", string(ok))
+
+	if string(ok) != "OK" {
+		return nil, fmt.Errorf("Sharder failed %v\n", string(ok))
+	}
 	return kv, nil
 }
 
-func (kv *Kv) watchNextConf(p string) {
-	db.DLPrintf("KV", "Watch fires %v; prepare\n", p)
+func (kv *Kv) spawnSharder(opcode, pid string) string {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = "bin/sharderd"
+	a.Args = []string{opcode, pid}
+	a.PairDep = nil
+	a.ExitDep = nil
+	kv.Spawn(&a)
+	return a.Pid
+}
 
-	kv.prepare()
+func (kv *Kv) watchNextConf(p string, err error) {
+	db.DLPrintf("KV", "Watch fires %v %v; prepare?\n", p, err)
+	if err == nil {
+		kv.prepare()
+	} else {
+		_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+		if err == nil {
+			db.DLPrintf("KV", "watchNextConf: next conf %v (err %v)\n", KVNEXTCONFIG, err)
+			kv.prepare()
+		} else {
+			db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
+		}
+	}
 }
 
 func (kv *Kv) readConfig(conffile string) (*Config, error) {
@@ -107,7 +140,8 @@ func (kv *Kv) moveShard(s int, kvd string) {
 	if kvd != kv.me { // Copy
 		dst := shardPath(kvd, s, kv.nextConf.N)
 		err := kv.Mkdir(dst, 0777)
-		if err != nil {
+		// an aborted view change may have created the directory
+		if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
 			log.Fatalf("%v: makeShardDirs: mkdir %v err %v\n",
 				kv.me, dst, err)
 		}
@@ -121,10 +155,9 @@ func (kv *Kv) moveShard(s int, kvd string) {
 		dst := shardPath(kvd, s, kv.nextConf.N)
 		err := kv.Rename(src, dst)
 		if err != nil {
-			log.Printf("KV Rename failed %v\n", err)
+			log.Printf("KV Rename %v -> %v failed %v\n", src, dst, err)
 		}
 	}
-
 }
 
 func (kv *Kv) moveShards() {
@@ -137,6 +170,26 @@ func (kv *Kv) moveShards() {
 	for s, kvd := range kv.conf.Shards {
 		if kvd == kv.me && kv.nextConf.Shards[s] != "" {
 			kv.moveShard(s, kv.nextConf.Shards[s])
+		}
+	}
+}
+
+func (kv *Kv) restoreShards() {
+	for s, kvd := range kv.conf.Shards {
+		if kvd == kv.me {
+			src := shardPath(kv.me, s, kv.conf.N)
+			src = shardTmp(src)
+			dst := shardPath(kv.me, s, kv.conf.N)
+			err := kv.Rename(src, dst)
+			if err != nil {
+				log.Printf("KV Restore %v -> %v failed %v\n", src, dst, err)
+				src := shardPath(kvd, s, kv.nextConf.N)
+				err := kv.Rename(src, dst)
+				if err != nil {
+					log.Printf("KV Restore %v -> %v failed %v\n", src, dst, err)
+				}
+			}
+
 		}
 	}
 }
@@ -176,7 +229,7 @@ func (kv *Kv) removeShards() {
 func (kv *Kv) prepared() {
 	fn := commitName(kv.me)
 	db.DLPrintf("KV", "Prepared %v\n", fn)
-	err := kv.MakeFile(fn, nil)
+	err := kv.MakeFile(fn, 0777|np.DMTMP, nil)
 	if err != nil {
 		db.DLPrintf("KV", "Prepared: make file %v failed %v\n", fn, err)
 	}
@@ -221,9 +274,20 @@ func (kv *Kv) closeFids() {
 	}
 }
 
-func (kv *Kv) watchConf(p string) {
-	db.DLPrintf("KV", "Watch fires %v; commit\n", p)
+func (kv *Kv) watchConf(p string, err error) {
+	db.DLPrintf("KV", "Watch conf fires %v %v; commit\n", p, err)
 	kv.commit()
+}
+
+func (kv *Kv) watchSharder(p string, err error) {
+	log.Printf("KV Watch sharder fires %v %v\n", p, err)
+	if err != nil {
+		// set remove watch on sharder in case it crashes during 2PC
+		err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
+		if err != nil {
+			log.Printf("KV watchSharder: SHARDER crashed\n")
+		}
+	}
 }
 
 func (kv *Kv) prepare() {
@@ -231,20 +295,27 @@ func (kv *Kv) prepare() {
 
 	var err error
 
+	// set remove watch on sharder in case it crashes during 2PC
+	err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
+	if err != nil {
+		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
+	}
+
 	// set watch for new config file (indicates commit)
 	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
 	if err == nil {
-		log.Fatalf("KV prepare can read %v err %v\n", KVCONFIG, err)
+		log.Fatalf("%v: KV prepare can read %v err %v\n", kv.me, KVCONFIG, err)
 	}
+	db.DLPrintf("KV", "prepare: watch for %v\n", KVCONFIG)
 	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)
 	if err != nil {
-		log.Fatalf("KV prepare cannot read %v err %v\n", KVNEXTCONFIG, err)
+		log.Fatalf("%v: KV prepare cannot read %v err %v\n", kv.me, KVNEXTCONFIG, err)
 	}
 
 	db.DLPrintf("KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
 
 	if kv.nextConf.N != kv.conf.N+1 {
-		log.Fatalf("KV Skipping to %d from %d", kv.nextConf.N, kv.conf.N)
+		log.Fatalf("%v: KV Skipping to %d from %d", kv.me, kv.nextConf.N, kv.conf.N)
 	}
 
 	kv.unpostShards()
@@ -261,30 +332,81 @@ func (kv *Kv) prepare() {
 	kv.prepared()
 }
 
+func (kv *Kv) watchKV(path string, err error) {
+	p := np.Split(path)
+	kvd := p[len(p)-1]
+	db.DLPrintf("KV", "WatchKV fired %v %v act? %v\n", kvd, err, kv.conf.present(kvd))
+}
+
+// If new, set watch on all KVs, except me. Otherwise, set watch on
+// new ones (i have already watch on the ones in conf).
+func (kv *Kv) watchKVs() {
+	done := make(map[string]bool)
+	old := kv.conf.present(kv.me)
+	for _, kvd := range kv.nextConf.Shards {
+		if kvd == "" {
+			continue
+		}
+		if kvd == kv.me {
+			continue
+		}
+		if old && kv.conf.present(kvd) {
+			continue
+		}
+		// set watch if haven't set yet
+		_, ok := done[kvd]
+		if !ok {
+			done[kvd] = true
+			fn := KVDIR + "/" + kvd
+			db.DLPrintf("KV", "Set watch on %v\n", fn)
+			err := kv.SetRemoveWatch(fn, kv.watchKV)
+			if err != nil {
+				log.Fatalf("Remove watch err %v\n", fn)
+			}
+		}
+	}
+}
+
 func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	db.DLPrintf("KV", "commit to new config: %v\n", kv.nextConf)
+	conf, err := kv.readConfig(KVCONFIG)
+	if err != nil {
+		log.Fatalf("KV commit cannot read %v err %v\n", KVCONFIG, err)
+	}
 
-	kv.removeShards()
+	if conf.N == kv.nextConf.N {
+		db.DLPrintf("KV", "commit: to next config %v\n", kv.nextConf)
+		kv.removeShards()
+	} else {
+		db.DLPrintf("KV", "abort: to next config %v\n", conf)
+		kv.restoreShards()
+		kv.nextConf = conf
+	}
+
+	present := kv.nextConf.present(kv.me)
+	if !present {
+		db.DLPrintf("KV", "commit exit %v\n", kv.me)
+		kv.done <- true
+		return
+	}
+
+	kv.watchKVs()
 
 	kv.conf = kv.nextConf
 	kv.nextConf = nil
+
 	// reset watch for existence of nextconfig, which indicates view change
-	_, err := kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
-	if err != nil {
+	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+	if err == nil {
+		db.DLPrintf("KV", "Commit: next conf %v (err %v)\n", KVNEXTCONFIG, err)
+		go func() {
+			kv.prepare()
+		}()
+	} else {
 		db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
-
-	for _, kvd := range kv.conf.Shards {
-		if kvd == kv.me {
-			return
-		}
-	}
-
-	db.DLPrintf("KV", "commit exit %v\n", kv.me)
-	kv.done <- true
 }
 
 func (kv *Kv) Work() {

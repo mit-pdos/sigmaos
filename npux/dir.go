@@ -96,3 +96,7 @@ func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 func (d *Dir) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, fmt.Errorf("not supported")
 }
+
+func (d *Dir) Renameat(ctx npo.CtxI, from string, od npo.NpObjDir, to string) error {
+	return fmt.Errorf("not supported")
+}

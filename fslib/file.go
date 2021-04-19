@@ -90,8 +90,8 @@ func (fl *FsLib) WriteFile(fname string, data []byte) error {
 }
 
 // XXX chunk
-func (fl *FsLib) MakeFile(fname string, data []byte) error {
-	fd, err := fl.Create(fname, 0700, np.OWRITE)
+func (fl *FsLib) MakeFile(fname string, perm np.Tperm, data []byte) error {
+	fd, err := fl.Create(fname, perm, np.OWRITE)
 	if err != nil {
 		return err
 	}
@@ -134,12 +134,12 @@ func (fl *FsLib) ReadFileJsonWatch(name string, i interface{}, f fsclnt.Watch) e
 	return json.Unmarshal(b, i)
 }
 
-func (fl *FsLib) MakeFileJson(fname string, i interface{}) error {
+func (fl *FsLib) MakeFileJson(fname string, perm np.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	return fl.MakeFile(fname, data)
+	return fl.MakeFile(fname, perm, data)
 }
 
 func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {

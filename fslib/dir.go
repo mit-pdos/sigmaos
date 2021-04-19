@@ -87,7 +87,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 		if err != nil {
 			return true, err
 		}
-		err = fl.MakeFile(d, b)
+		err = fl.MakeFile(d, 0777, b)
 		if err != nil {
 			return true, err
 		}

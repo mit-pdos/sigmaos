@@ -18,7 +18,7 @@ const (
 	MAXFD = 20
 )
 
-type Watch func(string)
+type Watch func(string, error)
 
 type FdState struct {
 	offset np.Toffset
@@ -274,22 +274,18 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-// XXX The unix 9p client seems to split a rename across directories
-// into a create and remove, and only does renames within the same
-// directory. For now forget about splitting.
-//
-// XXX update pathname associated with fid in Channel
+// Rename within a single directory using Wstat
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
 
 	if len(opath) != len(npath) {
-		return errors.New("Rename must be within same directory")
+		fsc.renameat(old, new)
 	}
 	for i, n := range opath[:len(opath)-1] {
 		if npath[i] != n {
-			return errors.New("Rename must be within same directory")
+			return fsc.renameat(old, new)
 		}
 	}
 	fid, err := fsc.walkMany(opath, np.EndSlash(old), nil)
@@ -299,6 +295,30 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	st := &np.Stat{}
 	st.Name = npath[len(npath)-1]
 	_, err = fsc.npch(fid).Wstat(fid, st)
+	return err
+}
+
+// Rename across directories using Renameat
+func (fsc *FsClient) renameat(old, new string) error {
+	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
+	opath := np.Split(old)
+	npath := np.Split(new)
+	o := opath[len(opath)-1]
+	n := npath[len(npath)-1]
+	fid, err := fsc.walkMany(opath[:len(opath)-1], np.EndSlash(old), nil)
+	if err != nil {
+		return err
+	}
+	defer fsc.clunkFid(fid)
+	fid1, err := fsc.walkMany(npath[:len(npath)-1], np.EndSlash(old), nil)
+	if err != nil {
+		return err
+	}
+	defer fsc.clunkFid(fid1)
+	if fsc.npch(fid) != fsc.npch(fid1) {
+		return fmt.Errorf("Renameat: files not at same server")
+	}
+	_, err = fsc.npch(fid).Renameat(fid, o, fid1, n)
 	return err
 }
 
@@ -407,7 +427,24 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	return fsc.OpenWatch(path, mode, nil)
 }
 
-func (fsc *FsClient) RemoveWatch(path string, f Watch) error {
+func (fsc *FsClient) SetDirWatch(path string, f Watch) error {
+	db.DLPrintf("FSCLNT", "SetDirWatch %v\n", path)
+	p := np.Split(path)
+	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return err
+	}
+	go func() {
+		version := fsc.path(fid).lastqid().Version
+		err := fsc.npch(fid).Watch(fid, nil, version)
+		db.DLPrintf("FSCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
+		f(path, err)
+	}()
+	return nil
+
+}
+
+func (fsc *FsClient) SetRemoveWatch(path string, f Watch) error {
 	p := np.Split(path)
 	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), f)
 	if err != nil {
@@ -419,10 +456,8 @@ func (fsc *FsClient) RemoveWatch(path string, f Watch) error {
 	go func() {
 		version := fsc.path(fid).lastqid().Version
 		err := fsc.npch(fid).Watch(fid, nil, version)
-		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", path, err)
-		if err == nil {
-			f(path)
-		}
+		db.DLPrintf("FSCLNT", "SetRemoveWatch: Watch returns %v %v\n", path, err)
+		f(path, err)
 	}()
 	return nil
 }

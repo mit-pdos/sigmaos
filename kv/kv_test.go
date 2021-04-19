@@ -3,11 +3,13 @@ package kv
 import (
 	"log"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -15,18 +17,20 @@ const NKEYS = 100
 const NCLERK = 10
 
 type Tstate struct {
-	t     *testing.T
-	s     *fslib.System
-	fsl   *fslib.FsLib
-	clrks []*KvClerk
-	ch    chan bool
-	pid   string
+	t         *testing.T
+	s         *fslib.System
+	fsl       *fslib.FsLib
+	clrks     []*KvClerk
+	ch        chan bool
+	chPresent chan bool
+	pid       string
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.ch = make(chan bool)
+	ts.chPresent = make(chan bool)
 
 	s, err := fslib.Boot("..")
 	if err != nil {
@@ -41,24 +45,17 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.fsl.Mkdir(KVCOMMIT, 0777)
+	err = ts.fsl.Mkdir(KVPREPARED, 0777)
 	if err != nil {
-		t.Fatalf("MkDir %v failed %v\n", KVCOMMIT, err)
+		t.Fatalf("MkDir %v failed %v\n", KVPREPARED, err)
 	}
 	conf := makeConfig(0)
-	err = ts.fsl.MakeFileJson(KVCONFIG, *conf)
+	err = ts.fsl.MakeFileJson(KVCONFIG, 0777, *conf)
 	if err != nil {
 		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
 	}
 
-	// Create first KV
-	ts.pid = ts.spawnKv()
-
-	// Have sharder add it to config
-	pid1 := ts.spawnSharder("add", kvname(ts.pid))
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
+	ts.pid = ts.makeKV()
 
 	ts.clrks = make([]*KvClerk, NCLERK)
 	for i := 0; i < NCLERK; i++ {
@@ -68,15 +65,23 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) spawnKv() string {
+func (ts *Tstate) spawnKv(arg string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/kvd"
-	a.Args = []string{}
+	a.Args = []string{arg}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid
+}
+
+func (ts *Tstate) makeKV() string {
+	pid := ts.spawnKv("add")
+	if ok := ts.waitUntilPresent(kvname(pid)); !ok {
+		log.Fatalf("Couldn't add first KV\n")
+	}
+	return pid
 }
 
 func (ts *Tstate) spawnSharder(opcode, pid string) string {
@@ -90,9 +95,39 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	return a.Pid
 }
 
+func (ts *Tstate) presentWatch(p string, err error) {
+	db.DLPrintf("KV", "presentWatch fires %v %v", p, err)
+	ts.chPresent <- true
+}
+
+func (ts *Tstate) waitUntilPresent(kv string) bool {
+	conf := Config{}
+	for {
+		err := ts.fsl.ReadFileJsonWatch(KVCONFIG, &conf, ts.presentWatch)
+		if err == nil {
+			if conf.present(kv) {
+				return true
+			}
+			time.Sleep(100 * time.Millisecond)
+		} else if strings.HasPrefix(err.Error(), "file not found") {
+			<-ts.chPresent
+		} else {
+			break
+		}
+	}
+	return false
+}
+
+func (ts *Tstate) delFirst() {
+	pid1 := ts.spawnSharder("del", kvname(ts.pid))
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(ts.t, err, "Wait")
+	assert.Equal(ts.t, string(ok), "OK")
+	time.Sleep(200 * time.Millisecond)
+}
+
 func key(k int) string {
 	return "key" + strconv.Itoa(k)
-
 }
 
 func (ts *Tstate) getKeys(c int) bool {
@@ -117,6 +152,28 @@ func (ts *Tstate) clerk(c int) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
+func (ts *Tstate) startKVs(n int) []string {
+	pids := make([]string, 0)
+	for r := 0; r < n; r++ {
+		pid := ts.makeKV()
+		log.Printf("Added %v\n", pid)
+		pids = append(pids, pid)
+		time.Sleep(200 * time.Millisecond)
+	}
+	return pids
+}
+
+func (ts *Tstate) stopKVs(pids []string) {
+	for _, pid := range pids {
+		log.Printf("Del %v\n", pid)
+		pid1 := ts.spawnSharder("del", kvname(pid))
+		ok, err := ts.fsl.Wait(pid1)
+		assert.Nil(ts.t, err, "Wait")
+		assert.Equal(ts.t, string(ok), "OK")
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
 func ConcurN(t *testing.T, nclerk int) {
 	ts := makeTstate(t)
 
@@ -129,37 +186,14 @@ func ConcurN(t *testing.T, nclerk int) {
 		go ts.clerk(i)
 	}
 
-	pids := make([]string, 0)
-	for r := 0; r < NSHARD-1; r++ {
-		pid := ts.spawnKv()
-		log.Printf("Add %v\n", pid)
-		pid1 := ts.spawnSharder("add", kvname(pid))
-		ok, err := ts.fsl.Wait(pid1)
-		assert.Nil(t, err, "Wait")
-		assert.Equal(t, string(ok), "OK")
-		time.Sleep(200 * time.Millisecond)
-		pids = append(pids, pid)
-	}
-
-	for _, pid := range pids {
-		log.Printf("Del %v\n", pid)
-		pid1 := ts.spawnSharder("del", kvname(pid))
-		ok, err := ts.fsl.Wait(pid1)
-		assert.Nil(t, err, "Wait")
-		assert.Equal(t, string(ok), "OK")
-		time.Sleep(200 * time.Millisecond)
-	}
+	pids := ts.startKVs(NSHARD - 1)
+	ts.stopKVs(pids)
 
 	for i := 0; i < nclerk; i++ {
 		ts.ch <- true
 	}
 
-	// delete first KV
-	pid1 := ts.spawnSharder("del", kvname(ts.pid))
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
-	time.Sleep(200 * time.Millisecond)
+	ts.delFirst()
 
 	ts.s.Shutdown(ts.fsl)
 }
@@ -176,50 +210,67 @@ func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
 }
 
-func (ts *Tstate) runSharder(t *testing.T) {
-	pid1 := ts.spawnSharder("check", "")
+func (ts *Tstate) runSharder(t *testing.T, ch chan bool) {
+	pid1 := ts.spawnSharder("restart", "")
 	log.Printf("sharder spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 	log.Printf("sharder %v done\n", pid1)
+	ch <- true
 }
 
 func TestConcurSharder(t *testing.T) {
 	const N = 5
 
 	ts := makeTstate(t)
-
+	ch := make(chan bool)
 	for r := 0; r < N; r++ {
-		go ts.runSharder(t)
+		go ts.runSharder(t, ch)
 	}
+	for r := 0; r < N; r++ {
+		<-ch
+	}
+	ts.delFirst()
 	ts.s.Shutdown(ts.fsl)
 }
 
-// func TestCrash(t *testing.T) {
-// 	const N = 5
-// 	ts := makeTstate(t)
+func (ts *Tstate) restart(pid string) {
+	pid1 := ts.spawnSharder("restart", kvname(pid))
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(ts.t, err, "Wait")
+	assert.Equal(ts.t, string(ok), "OK")
+	log.Printf("SHARDER restart done\n")
+}
 
-// 	pids := make([]string, 0)
-// 	for r := 0; r < N; r++ {
-// 		pid := ts.spawnKv()
-// 		log.Printf("Add %v\n", pid)
-// 		pid1 := ts.spawnSharder("add", kvname(pid))
-// 		ok, err := ts.fsl.Wait(pid1)
-// 		assert.Nil(t, err, "Wait")
-// 		assert.Equal(t, string(ok), "OK")
-// 		time.Sleep(1 * time.Millisecond)
-// 		pids = append(pids, pid)
-// 	}
-// 	time.Sleep(100 * time.Millisecond)
+func TestCrashSharder(t *testing.T) {
+	const N = 1
+	ts := makeTstate(t)
 
-// 	// XXX kill KV (lambda support)
-// 	// do some puts
+	pids := ts.startKVs(N)
 
-// 	for i := 0; i < NKEYS; i++ {
-// 		err := ts.clrks[0].Put(key(i), key(i))
-// 		assert.Nil(t, err, "Put")
-// 	}
+	pid := ts.spawnKv("crash1")
 
-// 	ts.s.Shutdown(ts.fsl)
-// }
+	time.Sleep(1000 * time.Millisecond)
+
+	ts.restart(pid)
+
+	pid = ts.spawnKv("crash2")
+
+	time.Sleep(1000 * time.Millisecond)
+
+	ts.restart(pid)
+
+	pid = ts.spawnKv("crash3")
+
+	time.Sleep(1000 * time.Millisecond)
+
+	ts.restart(pid)
+
+	pids = append(pids, pid)
+
+	ts.stopKVs(pids)
+	ts.delFirst()
+
+	ts.s.Shutdown(ts.fsl)
+}

@@ -52,7 +52,7 @@ func (up *DirUploader) Work() {
 			if err != nil {
 				db.DPrintf("Mkfile dir uploader [%v]\n", dstPath)
 				// XXX Perms?
-				err = up.FsLib.MakeFile(dstPath, contents)
+				err = up.FsLib.MakeFile(dstPath, 0777, contents)
 				if err != nil {
 					// XXX This only occurs if someone else has written the file since we
 					// last checked if it existed. Since it isn't a reduction (by the

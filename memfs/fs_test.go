@@ -4,7 +4,6 @@ package memfs
 
 import (
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 
@@ -42,7 +41,9 @@ func newTest(t *testing.T) *TestState {
 
 func (ts *TestState) initfs() {
 	const N = 1000
-	_, err := ts.rooti.Create(ts.ctx, "todo", np.DMDIR|07000, 0)
+	_, err := ts.rooti.Create(ts.ctx, "done", np.DMDIR|07000, 0)
+	assert.Nil(ts.t, err, "Create done")
+	_, err = ts.rooti.Create(ts.ctx, "todo", np.DMDIR|07000, 0)
 	assert.Nil(ts.t, err, "Create todo")
 	is, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
@@ -56,22 +57,23 @@ func (ts *TestState) testRename(t int) {
 	is, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
 	assert.Nil(ts.t, err, "Lookup todo")
 	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
-	ino := is[0].(*Dir)
-	sts, err := ino.ReadDir(ts.ctx, 0, 100, np.NoV)
+	d1 := is[0].(*Dir)
+
+	is, _, err = ts.rooti.Lookup(ts.ctx, []string{"done"})
+	assert.Nil(ts.t, err, "Lookup done")
+	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
+	d2 := is[0].(*Dir)
+
+	sts, err := d1.ReadDir(ts.ctx, 0, 100, np.NoV)
 	assert.Nil(ts.t, err, "ReadDir")
 	for _, st := range sts {
-		is, _, err := ino.Lookup(ts.ctx, []string{st.Name})
+		is, _, err := d1.Lookup(ts.ctx, []string{st.Name})
 		if len(is) == 0 {
 			continue
 		}
-		assert.Nil(ts.t, err, "Lookup name "+st.Name)
-		assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
-		ino2 := is[0].(*File)
-		if strings.HasPrefix(st.Name, "job") {
-			err = ino2.Rename(ts.ctx, st.Name, "done-"+st.Name)
-			if err != nil {
-				assert.Contains(ts.t, err.Error(), "file not found")
-			}
+		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
+		if err != nil {
+			assert.Contains(ts.t, err.Error(), "file not found")
 		}
 	}
 }

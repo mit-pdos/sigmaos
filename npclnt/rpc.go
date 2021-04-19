@@ -241,3 +241,16 @@ func (npch *NpChan) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 	}
 	return &msg, err
 }
+
+func (npch *NpChan) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string) (*np.Rrenameat, error) {
+	args := np.Trenameat{oldfid, oldname, newfid, newname}
+	reply, err := npch.call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rrenameat)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}

@@ -8,6 +8,7 @@ package kv
 import (
 	"fmt"
 	"log"
+	"os"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
@@ -21,14 +22,15 @@ const (
 	KVDIR           = "name/kv"
 	SHARDER         = KVDIR + "/sharder"
 	KVCONFIG        = KVDIR + "/config"
+	KVCONFIGTMP     = KVDIR + "/config#"
 	KVNEXTCONFIG    = KVDIR + "/nextconfig"
-	KVNEXTCONFIGTMP = KVDIR + "/nextconfigtmp"
-	KVCOMMIT        = KVDIR + "/commit/"
+	KVNEXTCONFIGTMP = KVDIR + "/nextconfig#"
+	KVPREPARED      = KVDIR + "/commit/"
 	KVLOCK          = KVDIR + "/lock"
 )
 
 func commitName(kv string) string {
-	return KVCOMMIT + kv
+	return KVPREPARED + kv
 }
 
 type Config struct {
@@ -39,6 +41,15 @@ type Config struct {
 func makeConfig(n int) *Config {
 	cf := &Config{n, make([]string, NSHARD)}
 	return cf
+}
+
+func (cf *Config) present(n string) bool {
+	for _, s := range cf.Shards {
+		if s == n {
+			return true
+		}
+	}
+	return false
 }
 
 type Sharder struct {
@@ -126,13 +137,13 @@ func (sh *Sharder) readConfig(conffile string) *Config {
 	return &conf
 }
 
-func (sh *Sharder) watchPrepared(p string) {
+func (sh *Sharder) watchPrepared(p string, err error) {
 	db.DLPrintf("SHARDER", "watchPrepared %v\n", p)
 	sh.ch <- p
 }
 
 func (sh *Sharder) makeNextConfig() {
-	err := sh.MakeFileJson(KVNEXTCONFIGTMP, *sh.nextConf)
+	err := sh.MakeFileJson(KVNEXTCONFIGTMP, 0777, *sh.nextConf)
 	if err != nil {
 		return
 	}
@@ -152,47 +163,158 @@ func (sh *Sharder) lock() {
 }
 
 func (sh *Sharder) unlock() {
-	log.Printf("unlock\n")
 	err := sh.Remove(KVLOCK)
 	if err != nil {
 		log.Fatalf("Unlock failed failed %v\n", err)
 	}
 }
 
-func (sh *Sharder) Work() {
-	log.Printf("SHARDER %v Sharder: %v %v\n", sh.pid, sh.conf, sh.args)
+func (sh *Sharder) readPrepared() map[string]bool {
+	sts, err := sh.ReadDir(KVPREPARED)
+	if err != nil {
+		return nil
+	}
+	kvs := make(map[string]bool)
+	for _, st := range sts {
+		kvs[st.Name] = true
+	}
+	return kvs
+}
 
+func (sh *Sharder) doCommit(nextConf *Config, committed map[string]bool) bool {
+	if nextConf == nil {
+		return false
+	}
+	kvds := make(map[string]bool)
+	for _, kv := range nextConf.Shards {
+		if _, ok := kvds[kv]; !ok {
+			kvds[kv] = true
+		}
+	}
+	if committed == nil || len(committed) != len(kvds) {
+		return false
+	}
+	for kv, _ := range kvds {
+		if _, ok := committed[kv]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (sh *Sharder) abort(conftmp *Config) {
+	db.DLPrintf("SHARDER", "Abort to %v\n", conftmp)
+	err := sh.Remove(KVNEXTCONFIG)
+	if err != nil {
+		db.DLPrintf("SHARDER", "Abort: remove %v failed %v\n", KVNEXTCONFIG, err)
+	}
+	err = sh.Rename(KVCONFIGTMP, KVCONFIG)
+	if err != nil {
+		db.DLPrintf("SHARDER", "Abort: rename %v failed %v\n", KVCONFIGTMP, err)
+	}
+}
+
+func (sh *Sharder) repair(conftmp *Config, prepared map[string]bool) {
+	if conftmp == nil { // crash before starting prepare
+		return
+	}
+	if sh.nextConf == nil {
+		// crashed during prepare
+		sh.abort(conftmp)
+	} else {
+		// announced nextConf and some may have prepared but not all
+		sh.abort(conftmp)
+	}
+}
+
+func (sh *Sharder) restart() {
+	sh.conf = sh.readConfig(KVCONFIG)
+	if sh.conf != nil {
+		db.DLPrintf("SHARDER", "Restart: clean\n")
+		return
+	}
+
+	conftmp := sh.readConfig(KVCONFIGTMP)
+	sh.nextConf = sh.readConfig(KVNEXTCONFIG)
+	prepared := sh.readPrepared()
+
+	db.DLPrintf("SHARDER", "Restart: conf %v tmp %v nextConf %v committed %v\n", sh.conf, conftmp, sh.nextConf, prepared)
+	if sh.doCommit(sh.nextConf, prepared) {
+		db.DLPrintf("SHARDER", "Restart: commit\n")
+		sh.commit()
+	} else {
+		db.DLPrintf("SHARDER", "Restart: abort\n")
+		sh.repair(conftmp, prepared)
+	}
+}
+
+func (sh *Sharder) Add() {
+	sh.nextKvs = append(sh.kvs, sh.args[1:]...)
+}
+
+func (sh *Sharder) Del() {
+	sh.nextKvs = make([]string, len(sh.kvs))
+	copy(sh.nextKvs, sh.kvs)
+	for _, del := range sh.args[1:] {
+		for i, kv := range sh.nextKvs {
+			if del == kv {
+				sh.nextKvs = append(sh.nextKvs[:i],
+					sh.nextKvs[i+1:]...)
+			}
+		}
+	}
+}
+
+func (sh *Sharder) setPreparedWatches() {
+	sts, err := sh.ReadDir(KVPREPARED)
+	if err != nil {
+		log.Fatalf("SHARDER: ReadDir commit error %v\n", err)
+	}
+
+	for _, st := range sts {
+		fn := KVPREPARED + st.Name
+		err = sh.Remove(fn)
+		if err != nil {
+			db.DLPrintf("SHARDER", "Remove %v failed %v\n", fn, err)
+		}
+	}
+
+	for _, kv := range sh.nextKvs {
+		fn := KVPREPARED + kv
+		// set watch for existence of fn, which indicates fn has prepared
+		_, err := sh.ReadFileWatch(fn, sh.watchPrepared)
+		if err == nil {
+			log.Fatalf("SHARDER: watch failed %v", err)
+		}
+	}
+}
+
+func (sh *Sharder) commit() {
+	err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
+	if err != nil {
+		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
+			KVNEXTCONFIG, KVCONFIG, err)
+		return
+	}
+}
+
+func (sh *Sharder) Work() {
 	sh.lock()
 	defer sh.unlock()
 
-	sh.conf = sh.readConfig(KVCONFIG)
+	// db.DLPrintf("SHARDER", "Sharder: %v\n", sh.args)
+	log.Printf("SHARDER Sharder: %v\n", sh.args)
 
-	db.DLPrintf("SHARDER", "Sharder: %v %v\n", sh.conf, sh.args)
+	sh.restart()
 
 	switch sh.args[0] {
+	case "crash1", "crash2", "crash3":
+		sh.Add()
 	case "add":
-		sh.nextKvs = append(sh.kvs, sh.args[1:]...)
-		fn := commitName(sh.args[1])
-		// set watch for existence of fn, which indicates is ready to prepare
-		_, err := sh.ReadFileWatch(fn, sh.watchPrepared)
-		if err == nil {
-			db.DLPrintf("SHARDER", "KV %v started", fn)
-		} else {
-			db.DLPrintf("SHARDER", "Wait for %v", fn)
-			<-sh.ch
-		}
+		sh.Add()
 	case "del":
-		sh.nextKvs = make([]string, len(sh.kvs))
-		copy(sh.nextKvs, sh.kvs)
-		for _, del := range sh.args[1:] {
-			for i, kv := range sh.nextKvs {
-				if del == kv {
-					sh.nextKvs = append(sh.nextKvs[:i],
-						sh.nextKvs[i+1:]...)
-				}
-			}
-		}
-	case "check":
+		sh.Del()
+	case "restart":
 		return
 	default:
 		log.Fatalf("Unknown command %v\n", sh.args[0])
@@ -201,52 +323,42 @@ func (sh *Sharder) Work() {
 	sh.nextConf = sh.balance()
 	db.DLPrintf("SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 
-	sts, err := sh.ReadDir(KVCOMMIT)
-	if err != nil {
-		log.Fatalf("SHARDER: ReadDir commit error %v\n", err)
-	}
-
-	for _, st := range sts {
-		fn := KVCOMMIT + st.Name
-		err = sh.Remove(fn)
-		if err != nil {
-			db.DLPrintf("SHARDER", "Remove %v failed %v\n", fn, err)
-		}
-	}
-
 	if sh.args[0] == "del" {
 		sh.nextKvs = append(sh.nextKvs, sh.args[1:]...)
 
 	}
-
 	sh.nkvd = len(sh.nextKvs)
-	for _, kv := range sh.nextKvs {
-		fn := KVCOMMIT + kv
-		// set watch for existence of fn, which indicates fn has prepared
-		_, err := sh.ReadFileWatch(fn, sh.watchPrepared)
-		if err == nil {
-			log.Fatalf("SHARDER: watch failed %v", err)
-		}
+
+	sh.setPreparedWatches()
+
+	err := sh.Rename(KVCONFIG, KVCONFIGTMP)
+	if err != nil {
+		db.DLPrintf("SHARDER", "Rename %v failed %v\n", KVCONFIG, err)
 	}
 
-	err = sh.Remove(KVCONFIG)
-	if err != nil {
-		db.DLPrintf("SHARDER", "Remove %v failed %v\n", KVCONFIG, err)
+	if sh.args[0] == "crash1" {
+		db.DLPrintf("SHARDER", "Crash1\n")
+		os.Exit(1)
 	}
 
 	sh.makeNextConfig()
+
+	if sh.args[0] == "crash2" {
+		db.DLPrintf("SHARDER", "Crash2\n")
+		os.Exit(1)
+	}
 
 	for i := 0; i < sh.nkvd; i++ {
 		s := <-sh.ch
 		db.DLPrintf("SHARDER", "KV %v prepared\n", s)
 	}
 
-	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
-	// commit to new config
-	err = sh.Rename(KVNEXTCONFIG, KVCONFIG)
-	if err != nil {
-		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
-			KVNEXTCONFIG, KVCONFIG, err)
-		return
+	if sh.args[0] == "crash3" {
+		db.DLPrintf("SHARDER", "Crash3\n")
+		os.Exit(1)
 	}
+
+	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
+	sh.commit()
+	db.DLPrintf("SHARDER", "Done commit to %v\n", sh.nextConf)
 }

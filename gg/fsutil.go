@@ -16,7 +16,7 @@ type FsLambda interface {
 	Mkdir(path string, perm np.Tperm) error
 	ReadDir(dir string) ([]*np.Stat, error)
 	IsDir(name string) (bool, error)
-	MakeFile(string, []byte) error
+	MakeFile(string, np.Tperm, []byte) error
 	ReadFile(string) ([]byte, error)
 	WriteFile(string, []byte) error
 	Stat(string) (*np.Stat, error)
@@ -181,7 +181,7 @@ func copyRemoteFile(fslambda FsLambda, src string, dest string) {
 	if err != nil {
 		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
 	}
-	err = fslambda.MakeFile(dest, contents)
+	err = fslambda.MakeFile(dest, 0777, contents)
 	if err != nil {
 		log.Printf("%v Couldn't write remote file [%v]: %v\n", fslambda.Name(), dest, err)
 	}
@@ -209,7 +209,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 			if err != nil {
 				db.DPrintf("%v mkfile dir uploader [%v]\n", fslambda.Name(), dstPath)
 				// XXX Perms?
-				err = fslambda.MakeFile(dstPath, contents)
+				err = fslambda.MakeFile(dstPath, 0777, contents)
 				if err != nil {
 					// XXX This only occurs if someone else has written the file since we
 					// last checked if it existed. Since it isn't a reduction (by the

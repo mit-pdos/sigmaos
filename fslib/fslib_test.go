@@ -34,6 +34,27 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func TestRename(t *testing.T) {
+	ts := makeTstate(t)
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	err = ts.Mkdir("name/d2", 0777)
+	assert.Equal(t, nil, err)
+
+	fn := "name/d1/f"
+	fn1 := "name/d2/g"
+	d := []byte("hello")
+	err = ts.MakeFile(fn, 0777, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Rename(fn, fn1)
+	assert.Equal(t, nil, err)
+
+	d1, err := ts.ReadFile(fn1)
+	assert.Equal(t, "hello", string(d1))
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func (ts *Tstate) localdName(t *testing.T) string {
 	sts, err := ts.ReadDir(LOCALD_ROOT)
 	assert.Nil(t, err, LOCALD_ROOT)
@@ -59,7 +80,7 @@ func TestSymlink(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
 
-	// shutdown schedd
+	// shutdown locald
 	err = ts.Remove(name + "/")
 	assert.Nil(t, err, "Remove")
 
@@ -216,11 +237,11 @@ func TestWatchRemove(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/w"
-	err := ts.MakeFile(fn, nil)
+	err := ts.MakeFile(fn, 0777, nil)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.RemoveWatch(fn, func(string) {
+	err = ts.SetRemoveWatch(fn, func(string, error) {
 		ch <- true
 	})
 
@@ -237,7 +258,7 @@ func TestWatchCreate(t *testing.T) {
 
 	fn := "name/w"
 	ch := make(chan bool)
-	_, err := ts.ReadFileWatch(fn, func(string) {
+	_, err := ts.ReadFileWatch(fn, func(string, error) {
 		ch <- true
 	})
 	assert.NotEqual(t, nil, err)
@@ -245,7 +266,28 @@ func TestWatchCreate(t *testing.T) {
 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
 	}
 
-	err = ts.MakeFile(fn, nil)
+	err = ts.MakeFile(fn, 0777, nil)
+	assert.Equal(t, nil, err)
+
+	<-ch
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestWatchDir(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/d1"
+	err := ts.Mkdir(fn, 0777)
+	assert.Equal(t, nil, err)
+
+	ch := make(chan bool)
+	err = ts.SetDirWatch(fn, func(string, error) {
+		ch <- true
+	})
+	assert.Equal(t, nil, err)
+
+	err = ts.MakeFile(fn+"/x", 0777, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -262,7 +304,7 @@ func TestConcur(t *testing.T) {
 			for j := 0; j < 1000; j++ {
 				fn := "name/f" + strconv.Itoa(i)
 				data := []byte(fn)
-				err := ts.MakeFile(fn, data)
+				err := ts.MakeFile(fn, 0777, data)
 				assert.Equal(t, nil, err)
 				d, err := ts.ReadFile(fn)
 				assert.Equal(t, nil, err)

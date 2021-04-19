@@ -136,7 +136,8 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 }
 
 type NpConn struct {
-	mu        sync.Mutex // for Fids and ephemeral
+	mu        sync.Mutex // for Fids and ephemeral and closed
+	closed    bool
 	conn      net.Conn
 	fids      map[np.Tfid]*Fid
 	osrv      NpObjSrv
@@ -219,6 +220,9 @@ func (npc *NpConn) Detach() {
 	if npc.ct != nil {
 		npc.ct.Del(npc)
 	}
+	npc.mu.Lock()
+	npc.closed = true
+	npc.mu.Unlock()
 }
 
 func makeQids(os []NpObj) []np.Tqid {
@@ -360,6 +364,13 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 				db.DLPrintf("9POBJ", "Watch %v\n", p)
 				npc.wt.Watch(npc, p)
 				db.DLPrintf("9POBJ", "Retry create %v\n", p)
+				// Don't retry create on closed connections
+				npc.mu.Lock()
+				if npc.closed {
+					// XXX Bettter error message?
+					return &np.Rerror{"Closed by client"}
+				}
+				npc.mu.Unlock()
 			} else {
 				return &np.Rerror{err.Error()}
 			}

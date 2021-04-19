@@ -122,11 +122,14 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 				"file not found") {
 				fid, err1 := fsc.setWatch(fid1, fid2, path, rest, f)
 				if err1 != nil {
+					// couldn't walk to parent dir
 					return np.NoFid, 0, err1
 				}
 				if err1 == nil && fid == np.NoFid {
+					// entry is still not in parent dir
 					return np.NoFid, 0, err
 				}
+				// entry now exists
 			} else {
 				return np.NoFid, 0, err
 			}

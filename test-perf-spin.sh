@@ -9,7 +9,7 @@ remote_baseline_its=5000
 N=1
 
 # Dirs
-measurements=./measurements
+measurements=./measurements_contention
 native_baseline=$measurements/spin_test_native_baseline.txt
 remote_baseline=$measurements/spin_test_remote_baseline.txt
 
@@ -18,6 +18,9 @@ if [ ! -d "$measurements" ]
 then
   mkdir $measurements
 fi
+
+echo "Stopping any currently running 9p infrastructure..."
+./stop.sh
 
 echo "Collecting native baseline..."
 echo $dim $baseline_its 1 > $native_baseline
@@ -36,10 +39,19 @@ echo $dim $remote_baseline_its 1 > $remote_baseline
 for test_type in native 9p aws ; do
   ./stop.sh
   echo "Running $test_type tests..."
-  if [ $test_type == "9p" ]; then
+  if [[ $test_type == "9p" || $# -gt 0 && $1 == "contention" ]]; then
     echo "Starting 9p infrastructure..."
     ./start.sh
     sleep 1
+  fi
+
+  if [[ $# -gt 0 && $1 == "contention" ]]; then
+    echo "Clearing cpu util file..."
+    cpu_util=./cpu_util_$test_type.txt
+    echo "" > $cpu_util
+
+    echo "Starting rival process..."
+    ./bin/rival 30 -1 2>> $cpu_util & 
   fi
 
   if [ $test_type == "aws" ]; then
@@ -72,4 +84,8 @@ for test_type in native 9p aws ; do
       fi
     done
   done
+
+  if [[ $# -gt 0 && $1 == "contention" ]]; then
+    killall rival
+  fi
 done

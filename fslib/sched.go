@@ -33,7 +33,6 @@ func (fl *FsLib) WaitForJob() error {
 func (fl *FsLib) SignalNewJob() error {
 	// Needs to be done twice, since someone waiting on the signal will create a
 	// new lock file, even if they've crashed
-	fl.UnlockFile(JOB_SIGNAL)
 	return fl.UnlockFile(JOB_SIGNAL)
 }
 

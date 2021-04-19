@@ -93,9 +93,18 @@ func (kv *Kv) spawnSharder(opcode, pid string) string {
 }
 
 func (kv *Kv) watchNextConf(p string, err error) {
-	db.DLPrintf("KV", "Watch fires %v %v; prepare\n", p, err)
-
-	kv.prepare()
+	db.DLPrintf("KV", "Watch fires %v %v; prepare?\n", p, err)
+	if err == nil {
+		kv.prepare()
+	} else {
+		_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+		if err == nil {
+			db.DLPrintf("KV", "watchNextConf: next conf %v (err %v)\n", KVNEXTCONFIG, err)
+			kv.prepare()
+		} else {
+			db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
+		}
+	}
 }
 
 func (kv *Kv) readConfig(conffile string) (*Config, error) {
@@ -286,29 +295,27 @@ func (kv *Kv) prepare() {
 
 	var err error
 
-	log.Printf("prepare")
-
 	// set remove watch on sharder in case it crashes during 2PC
 	err = kv.RemoveWatch(SHARDER, kv.watchSharder)
 	if err != nil {
-		log.Printf("KV prepare: SHARDER crashed\n")
+		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
 	}
 
 	// set watch for new config file (indicates commit)
 	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
 	if err == nil {
-		log.Fatalf("KV prepare can read %v err %v\n", KVCONFIG, err)
+		log.Fatalf("%v: KV prepare can read %v err %v\n", kv.me, KVCONFIG, err)
 	}
 	db.DLPrintf("KV", "prepare: watch for %v\n", KVCONFIG)
 	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)
 	if err != nil {
-		log.Fatalf("KV prepare cannot read %v err %v\n", KVNEXTCONFIG, err)
+		log.Fatalf("%v: KV prepare cannot read %v err %v\n", kv.me, KVNEXTCONFIG, err)
 	}
 
 	db.DLPrintf("KV", "prepare for new config: %v %v\n", kv.conf, kv.nextConf)
 
 	if kv.nextConf.N != kv.conf.N+1 {
-		log.Fatalf("KV Skipping to %d from %d", kv.nextConf.N, kv.conf.N)
+		log.Fatalf("%v: KV Skipping to %d from %d", kv.me, kv.nextConf.N, kv.conf.N)
 	}
 
 	kv.unpostShards()
@@ -328,7 +335,7 @@ func (kv *Kv) prepare() {
 func (kv *Kv) watchKV(path string, err error) {
 	p := np.Split(path)
 	kvd := p[len(p)-1]
-	log.Printf("KV watch fired %v %v act? %v\n", kvd, err, kv.conf.present(kvd))
+	db.DLPrintf("KV", "WatchKV fired %v %v act? %v\n", kvd, err, kv.conf.present(kvd))
 }
 
 // If new, set watch on all KVs, except me. Otherwise, set watch on
@@ -392,7 +399,12 @@ func (kv *Kv) commit() {
 
 	// reset watch for existence of nextconfig, which indicates view change
 	_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
-	if err != nil {
+	if err == nil {
+		db.DLPrintf("KV", "Commit: next conf %v (err %v)\n", KVNEXTCONFIG, err)
+		go func() {
+			kv.prepare()
+		}()
+	} else {
 		db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
 }

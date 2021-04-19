@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -95,7 +96,7 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 }
 
 func (ts *Tstate) presentWatch(p string, err error) {
-	log.Printf("KV present watch fires %v %v", p, err)
+	db.DLPrintf("KV", "presentWatch fires %v %v", p, err)
 	ts.chPresent <- true
 }
 
@@ -107,6 +108,7 @@ func (ts *Tstate) waitUntilPresent(kv string) bool {
 			if conf.present(kv) {
 				return true
 			}
+			time.Sleep(100 * time.Millisecond)
 		} else if strings.HasPrefix(err.Error(), "file not found") {
 			<-ts.chPresent
 		} else {
@@ -208,23 +210,28 @@ func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
 }
 
-func (ts *Tstate) runSharder(t *testing.T) {
+func (ts *Tstate) runSharder(t *testing.T, ch chan bool) {
 	pid1 := ts.spawnSharder("restart", "")
 	log.Printf("sharder spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 	log.Printf("sharder %v done\n", pid1)
+	ch <- true
 }
 
 func TestConcurSharder(t *testing.T) {
 	const N = 5
 
 	ts := makeTstate(t)
-
+	ch := make(chan bool)
 	for r := 0; r < N; r++ {
-		go ts.runSharder(t)
+		go ts.runSharder(t, ch)
 	}
+	for r := 0; r < N; r++ {
+		<-ch
+	}
+	ts.delFirst()
 	ts.s.Shutdown(ts.fsl)
 }
 

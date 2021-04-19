@@ -229,14 +229,21 @@ func (sh *Sharder) repair(conftmp *Config, prepared map[string]bool) {
 
 func (sh *Sharder) restart() {
 	sh.conf = sh.readConfig(KVCONFIG)
+	if sh.conf != nil {
+		db.DLPrintf("SHARDER", "Restart: clean\n")
+		return
+	}
+
 	conftmp := sh.readConfig(KVCONFIGTMP)
 	sh.nextConf = sh.readConfig(KVNEXTCONFIG)
 	prepared := sh.readPrepared()
 
-	db.DLPrintf("SHARDER", "Check conf %v tmp %v nextConf %v committed %v\n", sh.conf, conftmp, sh.nextConf, prepared)
+	db.DLPrintf("SHARDER", "Restart: conf %v tmp %v nextConf %v committed %v\n", sh.conf, conftmp, sh.nextConf, prepared)
 	if sh.doCommit(sh.nextConf, prepared) {
+		db.DLPrintf("SHARDER", "Restart: commit\n")
 		sh.commit()
 	} else {
+		db.DLPrintf("SHARDER", "Restart: abort\n")
 		sh.repair(conftmp, prepared)
 	}
 }
@@ -295,9 +302,10 @@ func (sh *Sharder) Work() {
 	sh.lock()
 	defer sh.unlock()
 
-	sh.conf = sh.readConfig(KVCONFIG)
+	// db.DLPrintf("SHARDER", "Sharder: %v\n", sh.args)
+	log.Printf("SHARDER Sharder: %v\n", sh.args)
 
-	db.DLPrintf("SHARDER", "Sharder: %v %v\n", sh.conf, sh.args)
+	sh.restart()
 
 	switch sh.args[0] {
 	case "crash1", "crash2", "crash3":
@@ -307,7 +315,6 @@ func (sh *Sharder) Work() {
 	case "del":
 		sh.Del()
 	case "restart":
-		sh.restart()
 		return
 	default:
 		log.Fatalf("Unknown command %v\n", sh.args[0])

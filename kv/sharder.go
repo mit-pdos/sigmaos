@@ -137,7 +137,7 @@ func (sh *Sharder) readConfig(conffile string) *Config {
 	return &conf
 }
 
-func (sh *Sharder) watchPrepared(p string) {
+func (sh *Sharder) watchPrepared(p string, err error) {
 	db.DLPrintf("SHARDER", "watchPrepared %v\n", p)
 	sh.ch <- p
 }

@@ -92,8 +92,8 @@ func (kv *Kv) spawnSharder(opcode, pid string) string {
 	return a.Pid
 }
 
-func (kv *Kv) watchNextConf(p string) {
-	db.DLPrintf("KV", "Watch fires %v; prepare\n", p)
+func (kv *Kv) watchNextConf(p string, err error) {
+	db.DLPrintf("KV", "Watch fires %v %v; prepare\n", p, err)
 
 	kv.prepare()
 }
@@ -265,15 +265,34 @@ func (kv *Kv) closeFids() {
 	}
 }
 
-func (kv *Kv) watchConf(p string) {
-	db.DLPrintf("KV", "Watch fires %v; commit\n", p)
+func (kv *Kv) watchConf(p string, err error) {
+	db.DLPrintf("KV", "Watch conf fires %v %v; commit\n", p, err)
 	kv.commit()
+}
+
+func (kv *Kv) watchSharder(p string, err error) {
+	log.Printf("KV Watch sharder fires %v %v\n", p, err)
+	if err != nil {
+		// set remove watch on sharder in case it crashes during 2PC
+		err = kv.RemoveWatch(SHARDER, kv.watchSharder)
+		if err != nil {
+			log.Printf("KV watchSharder: SHARDER crashed\n")
+		}
+	}
 }
 
 func (kv *Kv) prepare() {
 	kv.mu.Lock()
 
 	var err error
+
+	log.Printf("prepare")
+
+	// set remove watch on sharder in case it crashes during 2PC
+	err = kv.RemoveWatch(SHARDER, kv.watchSharder)
+	if err != nil {
+		log.Printf("KV prepare: SHARDER crashed\n")
+	}
 
 	// set watch for new config file (indicates commit)
 	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
@@ -306,10 +325,10 @@ func (kv *Kv) prepare() {
 	kv.prepared()
 }
 
-func (kv *Kv) watchKV(path string) {
+func (kv *Kv) watchKV(path string, err error) {
 	p := np.Split(path)
 	kvd := p[len(p)-1]
-	log.Printf("KV watch fired %v act? %v\n", kvd, kv.conf.present(kvd))
+	log.Printf("KV watch fired %v %v act? %v\n", kvd, err, kv.conf.present(kvd))
 }
 
 // If new, set watch on all KVs, except me. Otherwise, set watch on

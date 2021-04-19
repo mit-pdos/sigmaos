@@ -94,8 +94,8 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 	return a.Pid
 }
 
-func (ts *Tstate) presentWatch(p string) {
-	log.Printf("KV present watch fires")
+func (ts *Tstate) presentWatch(p string, err error) {
+	log.Printf("KV present watch fires %v %v", p, err)
 	ts.chPresent <- true
 }
 
@@ -228,6 +228,14 @@ func TestConcurSharder(t *testing.T) {
 	ts.s.Shutdown(ts.fsl)
 }
 
+func (ts *Tstate) restart(pid string) {
+	pid1 := ts.spawnSharder("restart", kvname(pid))
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(ts.t, err, "Wait")
+	assert.Equal(ts.t, string(ok), "OK")
+	log.Printf("SHARDER restart done\n")
+}
+
 func TestCrashSharder(t *testing.T) {
 	const N = 1
 	ts := makeTstate(t)
@@ -238,40 +246,19 @@ func TestCrashSharder(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("sharder crashed\n")
-
-	pid1 := ts.spawnSharder("restart", kvname(pid))
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
-
-	log.Printf("SHARDER restart done\n")
+	ts.restart(pid)
 
 	pid = ts.spawnKv("crash2")
 
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("sharder crashed\n")
-
-	pid1 = ts.spawnSharder("restart", kvname(pid))
-	ok, err = ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
-
-	log.Printf("SHARDER restart done\n")
+	ts.restart(pid)
 
 	pid = ts.spawnKv("crash3")
 
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("SHARDER crashed\n")
-
-	pid1 = ts.spawnSharder("restart", kvname(pid))
-	ok, err = ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
-
-	log.Printf("SHARDER restart done\n")
+	ts.restart(pid)
 
 	pids = append(pids, pid)
 

@@ -18,7 +18,7 @@ const (
 	MAXFD = 20
 )
 
-type Watch func(string)
+type Watch func(string, error)
 
 type FdState struct {
 	offset np.Toffset
@@ -438,9 +438,7 @@ func (fsc *FsClient) DirWatch(path string, f Watch) error {
 		version := fsc.path(fid).lastqid().Version
 		err := fsc.npch(fid).Watch(fid, nil, version)
 		db.DLPrintf("FSCLNT", "DirWatch: Watch returns %v %v\n", path, err)
-		if err == nil {
-			f(path)
-		}
+		f(path, err)
 	}()
 	return nil
 
@@ -459,9 +457,7 @@ func (fsc *FsClient) RemoveWatch(path string, f Watch) error {
 		version := fsc.path(fid).lastqid().Version
 		err := fsc.npch(fid).Watch(fid, nil, version)
 		db.DLPrintf("FSCLNT", "RemoveWatch: Watch returns %v %v\n", path, err)
-		if err == nil {
-			f(path)
-		}
+		f(path, err)
 	}()
 	return nil
 }

@@ -65,15 +65,13 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, er
 	return np.NoFid, errors.New("too many iterations")
 }
 
-// XXX watch should check if name now exists?
+// XXX watch should check if name now exists?  Supply version?
 func (fsc *FsClient) setWatch(npc *npclnt.NpChan, fid np.Tfid, p []string, r []string, f Watch) {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
 	go func(npc *npclnt.NpChan) {
 		err := npc.Watch(fid, r, np.NoV)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
-		if err == nil {
-			f(np.Join(p)) // XXX maybe supply version?
-		}
+		f(np.Join(p), err)
 	}(npc)
 }
 

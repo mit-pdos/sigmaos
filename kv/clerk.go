@@ -49,7 +49,7 @@ func MakeClerk() *KvClerk {
 	return kc
 }
 
-func (kc *KvClerk) watch(path string) {
+func (kc *KvClerk) watch(path string, err error) {
 	kc.ch <- true
 }
 

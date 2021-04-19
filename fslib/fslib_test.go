@@ -241,7 +241,7 @@ func TestWatchRemove(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.RemoveWatch(fn, func(string, error) {
+	err = ts.SetRemoveWatch(fn, func(string, error) {
 		ch <- true
 	})
 
@@ -282,7 +282,7 @@ func TestWatchDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.DirWatch(fn, func(string, error) {
+	err = ts.SetDirWatch(fn, func(string, error) {
 		ch <- true
 	})
 	assert.Equal(t, nil, err)

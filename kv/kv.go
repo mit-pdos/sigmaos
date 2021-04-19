@@ -283,7 +283,7 @@ func (kv *Kv) watchSharder(p string, err error) {
 	log.Printf("KV Watch sharder fires %v %v\n", p, err)
 	if err != nil {
 		// set remove watch on sharder in case it crashes during 2PC
-		err = kv.RemoveWatch(SHARDER, kv.watchSharder)
+		err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
 		if err != nil {
 			log.Printf("KV watchSharder: SHARDER crashed\n")
 		}
@@ -296,7 +296,7 @@ func (kv *Kv) prepare() {
 	var err error
 
 	// set remove watch on sharder in case it crashes during 2PC
-	err = kv.RemoveWatch(SHARDER, kv.watchSharder)
+	err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
 	if err != nil {
 		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
 	}
@@ -359,7 +359,7 @@ func (kv *Kv) watchKVs() {
 			done[kvd] = true
 			fn := KVDIR + "/" + kvd
 			db.DLPrintf("KV", "Set watch on %v\n", fn)
-			err := kv.RemoveWatch(fn, kv.watchKV)
+			err := kv.SetRemoveWatch(fn, kv.watchKV)
 			if err != nil {
 				log.Fatalf("Remove watch err %v\n", fn)
 			}

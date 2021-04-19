@@ -73,6 +73,8 @@ func MakeKv(args []string) (*Kv, error) {
 
 	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
 
+	log.Printf("sharder done %v\n", string(ok))
+
 	if string(ok) != "OK" {
 		return nil, fmt.Errorf("Sharder failed %v\n", string(ok))
 	}
@@ -159,6 +161,26 @@ func (kv *Kv) moveShards() {
 	for s, kvd := range kv.conf.Shards {
 		if kvd == kv.me && kv.nextConf.Shards[s] != "" {
 			kv.moveShard(s, kv.nextConf.Shards[s])
+		}
+	}
+}
+
+func (kv *Kv) restoreShards() {
+	for s, kvd := range kv.conf.Shards {
+		if kvd == kv.me {
+			src := shardPath(kv.me, s, kv.conf.N)
+			src = shardTmp(src)
+			dst := shardPath(kv.me, s, kv.conf.N)
+			err := kv.Rename(src, dst)
+			if err != nil {
+				log.Printf("KV Restore %v -> %v failed %v\n", src, dst, err)
+				src := shardPath(kvd, s, kv.nextConf.N)
+				err := kv.Rename(src, dst)
+				if err != nil {
+					log.Printf("KV Restore %v -> %v failed %v\n", src, dst, err)
+				}
+			}
+
 		}
 	}
 }
@@ -330,12 +352,12 @@ func (kv *Kv) commit() {
 
 	if conf.N == kv.nextConf.N {
 		db.DLPrintf("KV", "commit: to next config %v\n", kv.nextConf)
+		kv.removeShards()
 	} else {
 		db.DLPrintf("KV", "abort: to next config %v\n", conf)
+		kv.restoreShards()
 		kv.nextConf = conf
 	}
-
-	kv.removeShards()
 
 	present := kv.nextConf.present(kv.me)
 	if !present {

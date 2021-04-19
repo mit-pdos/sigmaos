@@ -65,26 +65,32 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, er
 	return np.NoFid, errors.New("too many iterations")
 }
 
-func (fsc *FsClient) setWatch(fid1 np.Tfid, p []string, r []string, f Watch) error {
+// Walk to parent directory, and check if name is there.  If it is, return entry.
+// Otherwise, set watch based on directory's version number
+func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watch) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
-	fid2 := fsc.allocFid()
+	fid3 := fsc.allocFid()
 	dir := r[0 : len(r)-1]
-	reply, err := fsc.npch(fid1).Walk(fid1, fid2, dir)
+	reply, err := fsc.npch(fid1).Walk(fid1, fid3, dir)
 	if err != nil {
-		return err
+		return np.NoFid, err
 	}
-	fsc.addFid(fid2, fsc.path(fid1).copyPath())
-	fsc.path(fid2).addn(reply.Qids, dir)
-	npc := fsc.npch(fid2)
-	version := fsc.path(fid2).lastqid().Version
+	fsc.addFid(fid3, fsc.path(fid1).copyPath())
+	fsc.path(fid3).addn(reply.Qids, dir)
+
+	reply, err = fsc.npch(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
+	if err == nil {
+		return fid2, nil
+	}
+
 	go func(npc *npclnt.NpChan, version np.TQversion) {
 		db.DLPrintf("FSCLNT", "Watch set %v %v %v\n", p, r[len(r)-1], version)
-		err := npc.Watch(fid2, []string{r[len(r)-1]}, version)
+		err := npc.Watch(fid3, []string{r[len(r)-1]}, version)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
-		fsc.clunkFid(fid2)
+		fsc.clunkFid(fid3)
 		f(np.Join(p), err)
-	}(npc, version)
-	return nil
+	}(fsc.npch(fid3), fsc.path(fid3).lastqid().Version)
+	return np.NoFid, nil
 }
 
 func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
@@ -114,12 +120,16 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		if err != nil {
 			if f != nil && strings.HasPrefix(err.Error(),
 				"file not found") {
-				err1 := fsc.setWatch(fid1, path, rest, f)
+				fid, err1 := fsc.setWatch(fid1, fid2, path, rest, f)
 				if err1 != nil {
 					return np.NoFid, 0, err1
 				}
+				if err1 == nil && fid == np.NoFid {
+					return np.NoFid, 0, err
+				}
+			} else {
+				return np.NoFid, 0, err
 			}
-			return np.NoFid, 0, err
 		}
 		todo = len(rest) - len(reply.Qids)
 		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)

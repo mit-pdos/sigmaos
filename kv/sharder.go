@@ -319,7 +319,7 @@ func (sh *Sharder) Work() {
 	default:
 		log.Fatalf("Unknown command %v\n", sh.args[0])
 	}
-
+	sh.conf = sh.readConfig(KVCONFIG)
 	sh.nextConf = sh.balance()
 	db.DLPrintf("SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 

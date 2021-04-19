@@ -295,8 +295,6 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-// There might be a racing create; it is the clients job to avoid this
-// race
 func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -308,7 +306,8 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 		return &np.Rerror{"Closed by server"}
 	}
 	if args.Version != np.NoV && args.Version != o.Version() {
-		return &np.Rerror{"Version mismatch"}
+		s := fmt.Sprintf("Version mismatch %v %v %v", f.path, args.Version, o.Version())
+		return &np.Rerror{s}
 	}
 	p := np.Copy(f.path)
 	if len(args.Path) > 0 {

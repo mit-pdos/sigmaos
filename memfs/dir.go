@@ -147,6 +147,7 @@ func (dir *Dir) remove(ctx npo.CtxI, name string) error {
 	default:
 	}
 	dir.version += 1
+	dir.Mtime = time.Now().Unix()
 	return dir.removeL(name)
 }
 

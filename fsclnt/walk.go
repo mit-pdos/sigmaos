@@ -65,14 +65,26 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, er
 	return np.NoFid, errors.New("too many iterations")
 }
 
-// XXX watch should check if name now exists?  Supply version?
-func (fsc *FsClient) setWatch(npc *npclnt.NpChan, fid np.Tfid, p []string, r []string, f Watch) {
+func (fsc *FsClient) setWatch(fid1 np.Tfid, p []string, r []string, f Watch) error {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
-	go func(npc *npclnt.NpChan) {
-		err := npc.Watch(fid, r, np.NoV)
+	fid2 := fsc.allocFid()
+	dir := r[0 : len(r)-1]
+	reply, err := fsc.npch(fid1).Walk(fid1, fid2, dir)
+	if err != nil {
+		return err
+	}
+	fsc.addFid(fid2, fsc.path(fid1).copyPath())
+	fsc.path(fid2).addn(reply.Qids, dir)
+	npc := fsc.npch(fid2)
+	version := fsc.path(fid2).lastqid().Version
+	go func(npc *npclnt.NpChan, version np.TQversion) {
+		db.DLPrintf("FSCLNT", "Watch set %v %v %v\n", p, r[len(r)-1], version)
+		err := npc.Watch(fid2, []string{r[len(r)-1]}, version)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
+		fsc.clunkFid(fid2)
 		f(np.Join(p), err)
-	}(npc)
+	}(npc, version)
+	return nil
 }
 
 func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
@@ -88,7 +100,6 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		return fid, 0, err
 	}
 	defer fsc.clunkFid(fid1)
-
 	fid2 := fsc.allocFid()
 	first, union := IsUnion(rest)
 	var reply *np.Rwalk
@@ -101,8 +112,12 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 	} else {
 		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
 		if err != nil {
-			if f != nil && strings.HasPrefix(err.Error(), "file not found") {
-				fsc.setWatch(fsc.npch(fid1), fid, path, rest, f)
+			if f != nil && strings.HasPrefix(err.Error(),
+				"file not found") {
+				err1 := fsc.setWatch(fid1, path, rest, f)
+				if err1 != nil {
+					return np.NoFid, 0, err1
+				}
 			}
 			return np.NoFid, 0, err
 		}

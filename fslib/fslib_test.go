@@ -241,7 +241,7 @@ func TestWatchRemove(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.RemoveWatch(fn, func(string) {
+	err = ts.RemoveWatch(fn, func(string, error) {
 		ch <- true
 	})
 
@@ -258,7 +258,7 @@ func TestWatchCreate(t *testing.T) {
 
 	fn := "name/w"
 	ch := make(chan bool)
-	_, err := ts.ReadFileWatch(fn, func(string) {
+	_, err := ts.ReadFileWatch(fn, func(string, error) {
 		ch <- true
 	})
 	assert.NotEqual(t, nil, err)
@@ -282,7 +282,7 @@ func TestWatchDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.DirWatch(fn, func(string) {
+	err = ts.DirWatch(fn, func(string, error) {
 		ch <- true
 	})
 	assert.Equal(t, nil, err)

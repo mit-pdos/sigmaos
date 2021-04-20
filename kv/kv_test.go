@@ -49,6 +49,10 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", KVPREPARED, err)
 	}
+	err = ts.fsl.Mkdir(KVCOMMITTED, 0777)
+	if err != nil {
+		t.Fatalf("MkDir %v failed %v\n", KVCOMMITTED, err)
+	}
 	conf := makeConfig(0)
 	err = ts.fsl.MakeFileJson(KVCONFIG, 0777, *conf)
 	if err != nil {
@@ -152,26 +156,30 @@ func (ts *Tstate) clerk(c int) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func (ts *Tstate) startKVs(n int) []string {
+func (ts *Tstate) startKVs(n int, clerks bool) []string {
 	pids := make([]string, 0)
 	for r := 0; r < n; r++ {
 		pid := ts.makeKV()
 		log.Printf("Added %v\n", pid)
 		pids = append(pids, pid)
-		// To allow clerk to do some gets:
-		time.Sleep(200 * time.Millisecond)
+		if clerks {
+			// To allow clerk to do some gets:
+			time.Sleep(200 * time.Millisecond)
+		}
 	}
 	return pids
 }
 
-func (ts *Tstate) stopKVs(pids []string) {
+func (ts *Tstate) stopKVs(pids []string, clerks bool) {
 	for _, pid := range pids {
 		log.Printf("Del %v\n", pid)
 		pid1 := ts.spawnSharder("del", kvname(pid))
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(ts.t, err, "Wait")
 		assert.Equal(ts.t, string(ok), "OK")
-		time.Sleep(200 * time.Millisecond)
+		if clerks {
+			time.Sleep(200 * time.Millisecond)
+		}
 	}
 }
 
@@ -187,8 +195,8 @@ func ConcurN(t *testing.T, nclerk int) {
 		go ts.clerk(i)
 	}
 
-	pids := ts.startKVs(NSHARD - 1)
-	ts.stopKVs(pids)
+	pids := ts.startKVs(NSHARD-1, nclerk > 0)
+	ts.stopKVs(pids, nclerk > 0)
 
 	for i := 0; i < nclerk; i++ {
 		ts.ch <- true
@@ -248,7 +256,7 @@ func TestCrashSharder(t *testing.T) {
 	const N = 1
 	ts := makeTstate(t)
 
-	pids := ts.startKVs(N)
+	pids := ts.startKVs(N, false)
 
 	pid := ts.spawnKv("crash1")
 
@@ -273,7 +281,7 @@ func TestCrashSharder(t *testing.T) {
 	log.Printf("Added %v\n", pid)
 	pids = append(pids, pid)
 
-	ts.stopKVs(pids)
+	ts.stopKVs(pids, false)
 	ts.delFirst()
 
 	ts.s.Shutdown(ts.fsl)

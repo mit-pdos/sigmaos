@@ -73,8 +73,6 @@ func MakeKv(args []string) (*Kv, error) {
 
 	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
 
-	log.Printf("sharder done %v\n", string(ok))
-
 	if err != nil || string(ok) != "OK" {
 		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
 	}
@@ -227,11 +225,20 @@ func (kv *Kv) removeShards() {
 // Tell sharder we are prepared to commit new config
 // XXX make this file ephemeral
 func (kv *Kv) prepared() {
-	fn := commitName(kv.me)
+	fn := prepareName(kv.me)
 	db.DLPrintf("KV", "Prepared %v\n", fn)
 	err := kv.MakeFile(fn, 0777|np.DMTMP, nil)
 	if err != nil {
 		db.DLPrintf("KV", "Prepared: make file %v failed %v\n", fn, err)
+	}
+}
+
+func (kv *Kv) committed() {
+	fn := commitName(kv.me)
+	db.DLPrintf("KV", "Committed %v\n", fn)
+	err := kv.MakeFile(fn, 0777|np.DMTMP, nil)
+	if err != nil {
+		db.DLPrintf("KV", "Committed: make file %v failed %v\n", fn, err)
 	}
 }
 
@@ -308,11 +315,13 @@ func (kv *Kv) prepare() {
 
 	var err error
 
+	log.Printf("KV %v prepare\n", kv.me)
+
 	// set remove watch on sharder in case it crashes during 2PC
-	err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
-	if err != nil {
-		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
-	}
+	//err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
+	//if err != nil {
+	//	db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
+	//}
 
 	// set watch for new config file (indicates commit)
 	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
@@ -420,6 +429,8 @@ func (kv *Kv) commit() {
 	} else {
 		db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
+
+	kv.committed()
 }
 
 func (kv *Kv) Work() {

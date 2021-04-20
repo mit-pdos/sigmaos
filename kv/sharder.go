@@ -25,12 +25,17 @@ const (
 	KVCONFIGTMP     = KVDIR + "/config#"
 	KVNEXTCONFIG    = KVDIR + "/nextconfig"
 	KVNEXTCONFIGTMP = KVDIR + "/nextconfig#"
-	KVPREPARED      = KVDIR + "/commit/"
+	KVPREPARED      = KVDIR + "/prepared/"
+	KVCOMMITTED     = KVDIR + "/committed/"
 	KVLOCK          = KVDIR + "/lock"
 )
 
-func commitName(kv string) string {
+func prepareName(kv string) string {
 	return KVPREPARED + kv
+}
+
+func commitName(kv string) string {
+	return KVCOMMITTED + kv
 }
 
 type Config struct {
@@ -137,8 +142,8 @@ func (sh *Sharder) readConfig(conffile string) *Config {
 	return &conf
 }
 
-func (sh *Sharder) watchPrepared(p string, err error) {
-	db.DLPrintf("SHARDER", "watchPrepared %v\n", p)
+func (sh *Sharder) watchKV(p string, err error) {
+	db.DLPrintf("SHARDER", "watchKV %v\n", p)
 	sh.ch <- p
 }
 
@@ -160,9 +165,11 @@ func (sh *Sharder) lock() {
 	if err != nil {
 		log.Fatalf("Lock failed %v\n", err)
 	}
+	log.Printf("sharder lock\n")
 }
 
 func (sh *Sharder) unlock() {
+	log.Printf("sharder unlock\n")
 	err := sh.Remove(KVLOCK)
 	if err != nil {
 		log.Fatalf("Unlock failed failed %v\n", err)
@@ -265,14 +272,15 @@ func (sh *Sharder) Del() {
 	}
 }
 
-func (sh *Sharder) setPreparedWatches() {
-	sts, err := sh.ReadDir(KVPREPARED)
+// First remove old files, then set watches
+func (sh *Sharder) setKVWatches(dir string) {
+	sts, err := sh.ReadDir(dir)
 	if err != nil {
 		log.Fatalf("SHARDER: ReadDir commit error %v\n", err)
 	}
 
 	for _, st := range sts {
-		fn := KVPREPARED + st.Name
+		fn := dir + st.Name
 		err = sh.Remove(fn)
 		if err != nil {
 			db.DLPrintf("SHARDER", "Remove %v failed %v\n", fn, err)
@@ -280,22 +288,50 @@ func (sh *Sharder) setPreparedWatches() {
 	}
 
 	for _, kv := range sh.nextKvs {
-		fn := KVPREPARED + kv
-		// set watch for existence of fn, which indicates fn has prepared
-		_, err := sh.ReadFileWatch(fn, sh.watchPrepared)
+		fn := dir + kv
+		// set watch for existence of fn, which indicates fn
+		// has prepared/committed
+		_, err := sh.ReadFileWatch(fn, sh.watchKV)
 		if err == nil {
 			log.Fatalf("SHARDER: watch failed %v", err)
 		}
 	}
 }
 
+func (sh *Sharder) prepare() {
+	sh.setKVWatches(KVPREPARED)
+
+	sh.makeNextConfig()
+
+	for i := 0; i < sh.nkvd; i++ {
+		s := <-sh.ch
+		db.DLPrintf("SHARDER", "KV %v prepared\n", s)
+	}
+
+	if sh.args[0] == "crash3" {
+		db.DLPrintf("SHARDER", "Crash3\n")
+		os.Exit(1)
+	}
+}
+
 func (sh *Sharder) commit() {
+	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
+
+	sh.setKVWatches(KVCOMMITTED)
+
 	err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
 		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)
 		return
 	}
+
+	for i := 0; i < sh.nkvd; i++ {
+		s := <-sh.ch
+		db.DLPrintf("SHARDER", "KV %v committed\n", s)
+	}
+
+	db.DLPrintf("SHARDER", "Done commit to %v\n", sh.nextConf)
 }
 
 func (sh *Sharder) Work() {
@@ -319,18 +355,19 @@ func (sh *Sharder) Work() {
 	default:
 		log.Fatalf("Unknown command %v\n", sh.args[0])
 	}
+
 	sh.conf = sh.readConfig(KVCONFIG)
 	sh.nextConf = sh.balance()
 	db.DLPrintf("SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
 
+	// The to-be-deleted KV must ack too
 	if sh.args[0] == "del" {
 		sh.nextKvs = append(sh.nextKvs, sh.args[1:]...)
 
 	}
 	sh.nkvd = len(sh.nextKvs)
 
-	sh.setPreparedWatches()
-
+	// Save KVCONFIG, in case we have to abort
 	err := sh.Rename(KVCONFIG, KVCONFIGTMP)
 	if err != nil {
 		db.DLPrintf("SHARDER", "Rename %v failed %v\n", KVCONFIG, err)
@@ -341,24 +378,16 @@ func (sh *Sharder) Work() {
 		os.Exit(1)
 	}
 
-	sh.makeNextConfig()
+	log.Printf("sharder prepare\n")
+
+	sh.prepare()
+
+	log.Printf("sharder commit\n")
 
 	if sh.args[0] == "crash2" {
 		db.DLPrintf("SHARDER", "Crash2\n")
 		os.Exit(1)
 	}
 
-	for i := 0; i < sh.nkvd; i++ {
-		s := <-sh.ch
-		db.DLPrintf("SHARDER", "KV %v prepared\n", s)
-	}
-
-	if sh.args[0] == "crash3" {
-		db.DLPrintf("SHARDER", "Crash3\n")
-		os.Exit(1)
-	}
-
-	db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
 	sh.commit()
-	db.DLPrintf("SHARDER", "Done commit to %v\n", sh.nextConf)
 }

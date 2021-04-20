@@ -83,17 +83,6 @@ func (ts *Tstate) makeKV() string {
 	return pid
 }
 
-func (ts *Tstate) spawnSharder(opcode, pid string) string {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/sharderd"
-	a.Args = []string{opcode, pid}
-	a.PairDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
-}
-
 func (ts *Tstate) presentWatch(p string, err error) {
 	db.DLPrintf("KV", "presentWatch fires %v %v", p, err)
 	ts.chPresent <- true
@@ -115,6 +104,17 @@ func (ts *Tstate) waitUntilPresent(kv string) bool {
 		}
 	}
 	return false
+}
+
+func (ts *Tstate) spawnSharder(opcode, pid string) string {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = "bin/sharderd"
+	a.Args = []string{opcode, pid}
+	a.PairDep = nil
+	a.ExitDep = nil
+	ts.fsl.Spawn(&a)
+	return a.Pid
 }
 
 func (ts *Tstate) delFirst() {
@@ -176,6 +176,7 @@ func (ts *Tstate) clerk(c int) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
+// start n more KVs (beyond the one made in makeTstate())
 func (ts *Tstate) startKVs(n int, clerks bool) []string {
 	pids := make([]string, 0)
 	for r := 0; r < n; r++ {
@@ -255,32 +256,38 @@ func (ts *Tstate) restart(pid string) {
 }
 
 func TestCrashSharder(t *testing.T) {
-	const N = 1
+	const NMORE = 1
 	ts := makeTstate(t)
 
-	pids := ts.startKVs(N, false)
+	pids := ts.startKVs(NMORE, false)
 
 	pid := ts.spawnKv("crash1")
+	_, err := ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
+	log.Printf("restart")
+
+	// restart because no KV will see crash1 (XXX but it should
+	// just restore KVCONFIGTMP)
 	ts.restart(pid)
 
 	pid = ts.spawnKv("crash2")
+	pids = append(pids, pid) // all KVs will prepare
 
+	// XXX wait until recovered; KVCONFIG exists
 	time.Sleep(1000 * time.Millisecond)
 
+	// see if we can add a new KV
 	pid = ts.makeKV()
 	log.Printf("Added %v\n", pid)
 	pids = append(pids, pid)
 
+	// sharder crashes after adding new KV
 	pid = ts.spawnKv("crash3")
-	pids = append(pids, pid)
-
-	time.Sleep(1000 * time.Millisecond)
-
-	pid = ts.makeKV()
-	log.Printf("Added %v\n", pid)
+	ok := ts.waitUntilPresent(kvname(pid))
+	assert.Equal(ts.t, true, ok)
 	pids = append(pids, pid)
 
 	ts.stopKVs(pids, false)

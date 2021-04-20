@@ -212,21 +212,25 @@ func TestEphemeral(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
-	const N = 10
+	const N = 20
 
 	ts := makeTstate(t)
 	ch := make(chan int)
+	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fsl := MakeFsLib("fslibtest" + strconv.Itoa(i))
 			_, err := fsl.CreateFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
 			assert.Equal(t, nil, err)
+			assert.Equal(t, false, acquired)
+			acquired = true
 			ch <- i
 		}(i)
 	}
 	for i := 0; i < N; i++ {
 		<-ch
 		// log.Printf("%d acquired lock\n", j)
+		acquired = false
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}

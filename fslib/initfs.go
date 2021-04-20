@@ -45,8 +45,8 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	return err
 }
 
-func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
-	fsl := &FsLibSrv{MakeFsLib(name), memfsd}
+func InitFsFsl(name string, fsc *FsLib, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
+	fsl := &FsLibSrv{fsc, memfsd}
 	if dev != nil {
 		err := memfsd.MkNod("dev", dev)
 		if err != nil {
@@ -58,6 +58,11 @@ func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
 		return nil, fmt.Errorf("PostService %v error: %v\n", name, err)
 	}
 	return fsl, nil
+}
+
+func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
+	fsl := MakeFsLib(name)
+	return InitFsFsl(name, fsl, memfsd, dev)
 }
 
 func (fsl *FsLib) ExitFs(name string) {

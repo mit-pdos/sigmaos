@@ -53,13 +53,12 @@ func (kc *KvClerk) watch(path string, err error) {
 	kc.ch <- true
 }
 
+// set watch for conf, which indicates commit to view change
 // XXX atomic read
 func (kc *KvClerk) readConfig() {
-	// set watch for conf, which indicates commit to view change
 	for {
 		err := kc.fsl.ReadFileJsonWatch(KVCONFIG, &kc.nextConf, kc.watch)
 		if err == nil {
-			db.DLPrintf("KV", "readConfig: %v\n", kc.nextConf)
 			if kc.nextConf.N == kc.conf.N+1 {
 				kc.conf = kc.nextConf
 				break

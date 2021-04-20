@@ -272,13 +272,11 @@ func (sh *Sharder) Del() {
 	}
 }
 
-// First remove old files, then set watches
-func (sh *Sharder) setKVWatches(dir string) {
+func (sh *Sharder) rmKVFiles(dir string) {
 	sts, err := sh.ReadDir(dir)
 	if err != nil {
 		log.Fatalf("SHARDER: ReadDir commit error %v\n", err)
 	}
-
 	for _, st := range sts {
 		fn := dir + st.Name
 		err = sh.Remove(fn)
@@ -286,7 +284,9 @@ func (sh *Sharder) setKVWatches(dir string) {
 			db.DLPrintf("SHARDER", "Remove %v failed %v\n", fn, err)
 		}
 	}
+}
 
+func (sh *Sharder) setKVWatches(dir string) {
 	for _, kv := range sh.nextKvs {
 		fn := dir + kv
 		// set watch for existence of fn, which indicates fn
@@ -299,6 +299,10 @@ func (sh *Sharder) setKVWatches(dir string) {
 }
 
 func (sh *Sharder) prepare() {
+
+	sh.rmKVFiles(KVPREPARED)
+	sh.rmKVFiles(KVCOMMITTED)
+
 	sh.setKVWatches(KVPREPARED)
 
 	sh.makeNextConfig()
@@ -343,6 +347,8 @@ func (sh *Sharder) Work() {
 
 	sh.restart()
 
+	// Must have have sh.conf by here; Add() uses it
+
 	switch sh.args[0] {
 	case "crash1", "crash2", "crash3":
 		sh.Add()
@@ -356,9 +362,8 @@ func (sh *Sharder) Work() {
 		log.Fatalf("Unknown command %v\n", sh.args[0])
 	}
 
-	sh.conf = sh.readConfig(KVCONFIG)
 	sh.nextConf = sh.balance()
-	db.DLPrintf("SHARDER", "Sharder next conf: %v %v\n", sh.nextConf, sh.nextKvs)
+	db.DLPrintf("SHARDER", "Sharder conf %v next conf: %v %v\n", sh.conf, sh.nextConf, sh.nextKvs)
 
 	// The to-be-deleted KV must ack too
 	if sh.args[0] == "del" {

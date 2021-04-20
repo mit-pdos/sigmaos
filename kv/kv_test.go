@@ -61,11 +61,6 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.pid = ts.makeKV()
 
-	ts.clrks = make([]*KvClerk, NCLERK)
-	for i := 0; i < NCLERK; i++ {
-		ts.clrks[i] = MakeClerk()
-	}
-
 	return ts
 }
 
@@ -130,6 +125,31 @@ func (ts *Tstate) delFirst() {
 	time.Sleep(200 * time.Millisecond)
 }
 
+func (ts *Tstate) runSharder(t *testing.T, ch chan bool) {
+	pid1 := ts.spawnSharder("restart", "")
+	log.Printf("sharder spawned %v\n", pid1)
+	ok, err := ts.fsl.Wait(pid1)
+	assert.Nil(t, err, "Wait")
+	assert.Equal(t, string(ok), "OK")
+	log.Printf("sharder %v done\n", pid1)
+	ch <- true
+}
+
+func TestConcurSharder(t *testing.T) {
+	const N = 5
+
+	ts := makeTstate(t)
+	ch := make(chan bool)
+	for r := 0; r < N; r++ {
+		go ts.runSharder(t, ch)
+	}
+	for r := 0; r < N; r++ {
+		<-ch
+	}
+	ts.delFirst()
+	ts.s.Shutdown(ts.fsl)
+}
+
 func key(k int) string {
 	return "key" + strconv.Itoa(k)
 }
@@ -186,9 +206,16 @@ func (ts *Tstate) stopKVs(pids []string, clerks bool) {
 func ConcurN(t *testing.T, nclerk int) {
 	ts := makeTstate(t)
 
-	for i := 0; i < NKEYS; i++ {
-		err := ts.clrks[0].Put(key(i), key(i))
-		assert.Nil(t, err, "Put")
+	ts.clrks = make([]*KvClerk, nclerk)
+	for i := 0; i < nclerk; i++ {
+		ts.clrks[i] = MakeClerk()
+	}
+
+	if nclerk > 0 {
+		for i := 0; i < NKEYS; i++ {
+			err := ts.clrks[0].Put(key(i), key(i))
+			assert.Nil(t, err, "Put")
+		}
 	}
 
 	for i := 0; i < nclerk; i++ {
@@ -208,7 +235,7 @@ func ConcurN(t *testing.T, nclerk int) {
 }
 
 func TestConcur0(t *testing.T) {
-	ConcurN(t, 1)
+	ConcurN(t, 0)
 }
 
 func TestConcur1(t *testing.T) {
@@ -217,31 +244,6 @@ func TestConcur1(t *testing.T) {
 
 func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
-}
-
-func (ts *Tstate) runSharder(t *testing.T, ch chan bool) {
-	pid1 := ts.spawnSharder("restart", "")
-	log.Printf("sharder spawned %v\n", pid1)
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
-	log.Printf("sharder %v done\n", pid1)
-	ch <- true
-}
-
-func TestConcurSharder(t *testing.T) {
-	const N = 5
-
-	ts := makeTstate(t)
-	ch := make(chan bool)
-	for r := 0; r < N; r++ {
-		go ts.runSharder(t, ch)
-	}
-	for r := 0; r < N; r++ {
-		<-ch
-	}
-	ts.delFirst()
-	ts.s.Shutdown(ts.fsl)
 }
 
 func (ts *Tstate) restart(pid string) {

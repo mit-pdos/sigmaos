@@ -301,7 +301,7 @@ func (kv *Kv) watchSharder(p string, err error) {
 	log.Printf("KV Watch sharder fires %v %v\n", p, err)
 
 	// sharder may have exited because it is done. if I am not in
-	// transaction, then assume sharder exited because it is done.
+	// 2PC, then assume sharder exited because it is done.
 	// clerks are able to do puts/gets.
 	kv.mu.Lock()
 	done := kv.nextConf == nil

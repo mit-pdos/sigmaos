@@ -299,6 +299,17 @@ func (kv *Kv) restartSharder() {
 
 func (kv *Kv) watchSharder(p string, err error) {
 	log.Printf("KV Watch sharder fires %v %v\n", p, err)
+
+	// sharder may have exited because it is done. if I am not in
+	// transaction, then assume sharder exited because it is done.
+	// clerks are able to do puts/gets.
+	kv.mu.Lock()
+	done := kv.nextConf == nil
+	kv.mu.Unlock()
+	if done {
+		return
+	}
+
 	if err == nil {
 		kv.restartSharder()
 	} else {
@@ -318,10 +329,10 @@ func (kv *Kv) prepare() {
 	log.Printf("KV %v prepare\n", kv.me)
 
 	// set remove watch on sharder in case it crashes during 2PC
-	//err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
-	//if err != nil {
-	//	db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
-	//}
+	err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
+	if err != nil {
+		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
+	}
 
 	// set watch for new config file (indicates commit)
 	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
@@ -392,6 +403,8 @@ func (kv *Kv) watchKVs() {
 func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
+
+	log.Printf("KV %v commit\n", kv.me)
 
 	conf, err := kv.readConfig(KVCONFIG)
 	if err != nil {

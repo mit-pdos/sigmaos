@@ -67,20 +67,20 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, er
 
 // Walk to parent directory, and check if name is there.  If it is, return entry.
 // Otherwise, set watch based on directory's version number
-func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watch) (np.Tfid, error) {
+func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watch) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
 	fid3 := fsc.allocFid()
 	dir := r[0 : len(r)-1]
 	reply, err := fsc.npch(fid1).Walk(fid1, fid3, dir)
 	if err != nil {
-		return np.NoFid, err
+		return nil, err
 	}
 	fsc.addFid(fid3, fsc.path(fid1).copyPath())
 	fsc.path(fid3).addn(reply.Qids, dir)
 
 	reply, err = fsc.npch(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
 	if err == nil {
-		return fid2, nil
+		return reply, nil
 	}
 
 	go func(npc *npclnt.NpChan, version np.TQversion) {
@@ -90,7 +90,7 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watc
 		fsc.clunkFid(fid3)
 		f(np.Join(p), err)
 	}(fsc.npch(fid3), fsc.path(fid3).lastqid().Version)
-	return np.NoFid, nil
+	return nil, nil
 }
 
 func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
@@ -120,12 +120,13 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 		if err != nil {
 			if f != nil && strings.HasPrefix(err.Error(),
 				"file not found") {
-				fid, err1 := fsc.setWatch(fid1, fid2, path, rest, f)
+				var err1 error
+				reply, err1 = fsc.setWatch(fid1, fid2, path, rest, f)
 				if err1 != nil {
 					// couldn't walk to parent dir
 					return np.NoFid, 0, err1
 				}
-				if err1 == nil && fid == np.NoFid {
+				if err1 == nil && reply == nil {
 					// entry is still not in parent dir
 					return np.NoFid, 0, err
 				}

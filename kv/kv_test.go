@@ -158,6 +158,7 @@ func (ts *Tstate) startKVs(n int) []string {
 		pid := ts.makeKV()
 		log.Printf("Added %v\n", pid)
 		pids = append(pids, pid)
+		// To allow clerk to do some gets:
 		time.Sleep(200 * time.Millisecond)
 	}
 	return pids
@@ -251,7 +252,7 @@ func TestCrashSharder(t *testing.T) {
 
 	pid := ts.spawnKv("crash1")
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	ts.restart(pid)
 
@@ -259,14 +260,17 @@ func TestCrashSharder(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	ts.restart(pid)
+	pid = ts.makeKV()
+	log.Printf("Added %v\n", pid)
+	pids = append(pids, pid)
 
 	pid = ts.spawnKv("crash3")
+	pids = append(pids, pid)
 
 	time.Sleep(1000 * time.Millisecond)
 
-	ts.restart(pid)
-
+	pid = ts.makeKV()
+	log.Printf("Added %v\n", pid)
 	pids = append(pids, pid)
 
 	ts.stopKVs(pids)

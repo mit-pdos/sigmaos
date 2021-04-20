@@ -75,8 +75,8 @@ func MakeKv(args []string) (*Kv, error) {
 
 	log.Printf("sharder done %v\n", string(ok))
 
-	if string(ok) != "OK" {
-		return nil, fmt.Errorf("Sharder failed %v\n", string(ok))
+	if err != nil || string(ok) != "OK" {
+		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
 	}
 	return kv, nil
 }
@@ -279,13 +279,26 @@ func (kv *Kv) watchConf(p string, err error) {
 	kv.commit()
 }
 
+func (kv *Kv) restartSharder() {
+	log.Printf("KV watchSharder: SHARDER crashed\n")
+	pid1 := kv.spawnSharder("restart", kv.me)
+	ok, err := kv.Wait(pid1)
+	if err != nil {
+		log.Printf("KV wait failed\n")
+	}
+	log.Printf("KV Sharder done %v\n", string(ok))
+
+}
+
 func (kv *Kv) watchSharder(p string, err error) {
 	log.Printf("KV Watch sharder fires %v %v\n", p, err)
-	if err != nil {
+	if err == nil {
+		kv.restartSharder()
+	} else {
 		// set remove watch on sharder in case it crashes during 2PC
 		err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
 		if err != nil {
-			log.Printf("KV watchSharder: SHARDER crashed\n")
+			kv.restartSharder()
 		}
 	}
 }

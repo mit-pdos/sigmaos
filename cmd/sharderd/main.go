@@ -17,6 +17,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	sh.Work()
-	sh.Exit()
+	sh.TwoPC()
+	// Exit happens in TwoPC()
 }

@@ -73,6 +73,12 @@ func MakeKv(args []string) (*Kv, error) {
 
 	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
 
+	// XXX
+	if args[1] == "crash1" {
+		log.Printf("sharder crashed\n")
+		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
+	}
+
 	if err != nil || string(ok) != "OK" {
 		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
 	}
@@ -286,6 +292,7 @@ func (kv *Kv) watchConf(p string, err error) {
 	kv.commit()
 }
 
+// XXX maybe check if one is already running?
 func (kv *Kv) restartSharder() {
 	log.Printf("KV watchSharder: SHARDER crashed\n")
 	pid1 := kv.spawnSharder("restart", kv.me)
@@ -298,14 +305,15 @@ func (kv *Kv) restartSharder() {
 }
 
 func (kv *Kv) watchSharder(p string, err error) {
-	log.Printf("KV Watch sharder fires %v %v\n", p, err)
+	kv.mu.Lock()
+	done := kv.nextConf == nil
+	kv.mu.Unlock()
+
+	log.Printf("KV Watch sharder fires %v %v done? %v\n", p, err, done)
 
 	// sharder may have exited because it is done. if I am not in
 	// 2PC, then assume sharder exited because it is done.
 	// clerks are able to do puts/gets.
-	kv.mu.Lock()
-	done := kv.nextConf == nil
-	kv.mu.Unlock()
 	if done {
 		return
 	}
@@ -404,7 +412,7 @@ func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	log.Printf("KV %v commit\n", kv.me)
+	log.Printf("KV %v commit/abort\n", kv.me)
 
 	conf, err := kv.readConfig(KVCONFIG)
 	if err != nil {
@@ -412,10 +420,10 @@ func (kv *Kv) commit() {
 	}
 
 	if conf.N == kv.nextConf.N {
-		db.DLPrintf("KV", "commit: to next config %v\n", kv.nextConf)
+		log.Printf("%v: KV commit: to next config %v\n", kv.me, kv.nextConf)
 		kv.removeShards()
 	} else {
-		db.DLPrintf("KV", "abort: to next config %v\n", conf)
+		log.Printf("%v: KV abort: to next config %v\n", kv.me, conf)
 		kv.restoreShards()
 		kv.nextConf = conf
 	}

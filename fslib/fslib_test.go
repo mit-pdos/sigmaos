@@ -55,6 +55,23 @@ func TestRename(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func TestCopy(t *testing.T) {
+	ts := makeTstate(t)
+	d := []byte("hello")
+	src := "name/f"
+	dst := "name/g"
+	err := ts.MakeFile(src, 0777, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.CopyFile(src, dst)
+	assert.Equal(t, nil, err)
+
+	d1, err := ts.ReadFile(dst)
+	assert.Equal(t, "hello", string(d1))
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func (ts *Tstate) localdName(t *testing.T) string {
 	sts, err := ts.ReadDir(LOCALD_ROOT)
 	assert.Nil(t, err, LOCALD_ROOT)

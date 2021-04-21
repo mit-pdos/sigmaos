@@ -265,13 +265,12 @@ func TestCrashSharder(t *testing.T) {
 	_, err := ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
 
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("restart")
-
-	// restart because no KV will see crash1 (XXX but it should
-	// just restore KVCONFIGTMP)
-	ts.restart(pid)
+	// see if we can add a new KV
+	pid = ts.makeKV()
+	log.Printf("Added %v\n", pid)
+	pids = append(pids, pid)
 
 	pid = ts.spawnKv("crash2")
 	pids = append(pids, pid) // all KVs will prepare

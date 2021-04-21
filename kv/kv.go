@@ -342,10 +342,10 @@ func (kv *Kv) prepare() {
 		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
 	}
 
-	// set watch for new config file (indicates commit)
-	_, err = kv.readConfigWatch(KVCONFIG, kv.watchConf)
-	if err == nil {
-		log.Fatalf("%v: KV prepare can read %v err %v\n", kv.me, KVCONFIG, err)
+	// set watch for when old config file is replaced (indicates commit)
+	err = kv.SetRemoveWatch(KVCONFIG, kv.watchConf)
+	if err != nil {
+		log.Fatalf("%v: KV SetRemoveWatch %v err %v\n", kv.me, KVCONFIG, err)
 	}
 	db.DLPrintf("KV", "prepare: watch for %v\n", KVCONFIG)
 	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)

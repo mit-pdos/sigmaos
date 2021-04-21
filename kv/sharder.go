@@ -67,7 +67,6 @@ type Sharder struct {
 	nkvd     int      // # KVs in reconfiguration
 	conf     *Config
 	nextConf *Config
-	done     bool
 }
 
 func MakeSharder(args []string) (*Sharder, error) {
@@ -190,6 +189,15 @@ func (sh *Sharder) readStatus(dir string) map[string]bool {
 	return kvs
 }
 
+func (sh *Sharder) isCommitted(committed map[string]bool) bool {
+	for _, kv := range sh.conf.Shards {
+		if _, ok := committed[kv]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func (sh *Sharder) doCommit(nextConf *Config, committed map[string]bool) bool {
 	if nextConf == nil {
 		return false
@@ -211,8 +219,8 @@ func (sh *Sharder) doCommit(nextConf *Config, committed map[string]bool) bool {
 	return true
 }
 
-func (sh *Sharder) abort(conftmp *Config) {
-	db.DLPrintf("SHARDER", "Abort to %v\n", conftmp)
+func (sh *Sharder) abort() {
+	db.DLPrintf("SHARDER", "Abort to %v\n", sh.conf)
 	err := sh.Remove(KVNEXTCONFIG)
 	if err != nil {
 		db.DLPrintf("SHARDER", "Abort: remove %v failed %v\n", KVNEXTCONFIG, err)
@@ -223,40 +231,30 @@ func (sh *Sharder) abort(conftmp *Config) {
 	}
 }
 
-func (sh *Sharder) repair(conftmp *Config) {
-	if conftmp == nil { // crash before starting prepare
-		return
-	}
-	if sh.nextConf == nil {
-		// crashed during prepare
-		sh.abort(conftmp)
-	} else {
-		// announced nextConf and some may have prepared but not all
-		sh.abort(conftmp)
-	}
-}
-
 func (sh *Sharder) restart() {
 	sh.conf = sh.readConfig(KVCONFIG)
-	if sh.conf != nil {
-		db.DLPrintf("SHARDER", "Restart: clean\n")
-		return
-	}
-
-	conftmp := sh.readConfig(KVCONFIGTMP)
 	sh.nextConf = sh.readConfig(KVNEXTCONFIG)
 	prepared := sh.readStatus(KVPREPARED)
 	committed := sh.readStatus(KVCOMMITTED)
 
-	db.DLPrintf("SHARDER", "Restart: conf %v tmp %v next %v prepared %v commit %v\n",
-		sh.conf, conftmp, sh.nextConf, prepared, committed)
+	db.DLPrintf("SHARDER", "Restart: conf %v next %v prepared %v commit %v\n",
+		sh.conf, sh.nextConf, prepared, committed)
+
+	if sh.isCommitted(committed) {
+		db.DLPrintf("SHARDER", "Restart: clean\n")
+		return
+	}
+
 	if sh.doCommit(sh.nextConf, prepared) {
 		db.DLPrintf("SHARDER", "Restart: commit\n")
 		// XXX maybe subtract KVs that aren't live
 		sh.commit(len(committed))
+		// we committed to NEXTCONFIG; reread sh.conf to
+		// get new this config
+		sh.conf = sh.readConfig(KVCONFIG)
 	} else {
 		db.DLPrintf("SHARDER", "Restart: abort\n")
-		sh.repair(conftmp)
+		sh.abort()
 	}
 }
 
@@ -385,12 +383,6 @@ func (sh *Sharder) TwoPC() {
 
 	}
 	sh.nkvd = len(sh.nextKvs)
-
-	// Save KVCONFIG, in case we have to abort
-	err := sh.Rename(KVCONFIG, KVCONFIGTMP)
-	if err != nil {
-		db.DLPrintf("SHARDER", "Rename %v failed %v\n", KVCONFIG, err)
-	}
 
 	if sh.args[0] == "crash1" {
 		db.DLPrintf("SHARDER", "Crash1\n")

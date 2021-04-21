@@ -3,6 +3,7 @@ package kv
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ type Kv struct {
 	done     chan bool
 	pid      string
 	me       string
+	args     []string
 	conf     *Config
 	nextConf *Config
 }
@@ -41,6 +43,7 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, fmt.Errorf("MakeKv: too few arguments %v\n", args)
 	}
 	kv.pid = args[0]
+	kv.args = args
 	kv.me = kvname(kv.pid)
 	db.Name(kv.me)
 	ip, err := fsclnt.LocalIP()
@@ -138,7 +141,7 @@ func shardTmp(shardp string) string {
 
 // Move shard: either copy to new shard server or rename shard dir
 // for new view.
-func (kv *Kv) moveShard(s int, kvd string) {
+func (kv *Kv) moveShard(s int, kvd string) error {
 	src := shardPath(kv.me, s, kv.conf.N)
 	src = shardTmp(src)
 	if kvd != kv.me { // Copy
@@ -146,13 +149,12 @@ func (kv *Kv) moveShard(s int, kvd string) {
 		err := kv.Mkdir(dst, 0777)
 		// an aborted view change may have created the directory
 		if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
-			log.Fatalf("%v: makeShardDirs: mkdir %v err %v\n",
-				kv.me, dst, err)
+			return err
 		}
 		db.DLPrintf("KV", "Copy shard from %v to %v\n", src, dst)
 		err = kv.CopyDir(src, dst)
 		if err != nil {
-			log.Fatalf("KV copyDir: %v %v err %v\n", src, dst, err)
+			return err
 		}
 		db.DLPrintf("KV", "Copy shard from %v to %v done\n", src, dst)
 	} else { // rename
@@ -162,9 +164,10 @@ func (kv *Kv) moveShard(s int, kvd string) {
 			log.Printf("KV Rename %v -> %v failed %v\n", src, dst, err)
 		}
 	}
+	return nil
 }
 
-func (kv *Kv) moveShards() {
+func (kv *Kv) moveShards() error {
 	if kv.conf == nil {
 		panic("KV kc.conf")
 	}
@@ -173,9 +176,12 @@ func (kv *Kv) moveShards() {
 	}
 	for s, kvd := range kv.conf.Shards {
 		if kvd == kv.me && kv.nextConf.Shards[s] != "" {
-			kv.moveShard(s, kv.nextConf.Shards[s])
+			if err := kv.moveShard(s, kv.nextConf.Shards[s]); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func (kv *Kv) restoreShards() {
@@ -229,11 +235,10 @@ func (kv *Kv) removeShards() {
 }
 
 // Tell sharder we are prepared to commit new config
-// XXX make this file ephemeral
-func (kv *Kv) prepared() {
+func (kv *Kv) prepared(status string) {
 	fn := prepareName(kv.me)
 	db.DLPrintf("KV", "Prepared %v\n", fn)
-	err := kv.MakeFile(fn, 0777|np.DMTMP, nil)
+	err := kv.MakeFile(fn, 0777|np.DMTMP, []byte(status))
 	if err != nil {
 		db.DLPrintf("KV", "Prepared: make file %v failed %v\n", fn, err)
 	}
@@ -242,7 +247,7 @@ func (kv *Kv) prepared() {
 func (kv *Kv) committed() {
 	fn := commitName(kv.me)
 	db.DLPrintf("KV", "Committed %v\n", fn)
-	err := kv.MakeFile(fn, 0777|np.DMTMP, nil)
+	err := kv.MakeFile(fn, 0777|np.DMTMP, []byte("OK"))
 	if err != nil {
 		db.DLPrintf("KV", "Committed: make file %v failed %v\n", fn, err)
 	}
@@ -366,11 +371,20 @@ func (kv *Kv) prepare() {
 	kv.mu.Unlock()
 
 	if kv.nextConf.N > 1 {
-		kv.moveShards()
+		if err := kv.moveShards(); err != nil {
+			kv.prepared("ABORT")
+			return
+		}
 	} else {
 		kv.initShards()
 	}
-	kv.prepared()
+
+	if kv.args[1] == "crash4" {
+		db.DLPrintf("KV", "Crashed in prepare\n")
+		os.Exit(1)
+	}
+
+	kv.prepared("OK")
 }
 
 func (kv *Kv) watchKV(path string, err error) {

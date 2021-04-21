@@ -261,6 +261,7 @@ func TestCrashSharder(t *testing.T) {
 
 	pids := ts.startKVs(NMORE, false)
 
+	// XXX fix exit status of sharder in KV
 	pid := ts.spawnKv("crash1")
 	_, err := ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
@@ -275,7 +276,7 @@ func TestCrashSharder(t *testing.T) {
 	pid = ts.spawnKv("crash2")
 	pids = append(pids, pid) // all KVs will prepare
 
-	// XXX wait until recovered; KVCONFIG exists
+	// XXX wait until new KVCONFIG exists with pid
 	time.Sleep(1000 * time.Millisecond)
 
 	// see if we can add a new KV
@@ -287,6 +288,30 @@ func TestCrashSharder(t *testing.T) {
 	pid = ts.spawnKv("crash3")
 	ok := ts.waitUntilPresent(kvname(pid))
 	assert.Equal(ts.t, true, ok)
+	pids = append(pids, pid)
+
+	ts.stopKVs(pids, false)
+	ts.delFirst()
+
+	ts.s.Shutdown(ts.fsl)
+}
+
+func TestCrashKV(t *testing.T) {
+	const NMORE = 1
+	ts := makeTstate(t)
+
+	pids := ts.startKVs(NMORE, false)
+
+	pid := ts.spawnKv("crash4")
+	_, err := ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
+
+	// XXX wait until new KVCONFIG exists with pid
+	time.Sleep(1000 * time.Millisecond)
+
+	// see if we can add a new KV
+	pid = ts.makeKV()
+	log.Printf("Added %v\n", pid)
 	pids = append(pids, pid)
 
 	ts.stopKVs(pids, false)

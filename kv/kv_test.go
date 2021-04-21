@@ -321,10 +321,11 @@ func TestCrashKV(t *testing.T) {
 	pid = ts.spawnKv("crash5")
 	_, err = ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
-	pids = append(pids, pid)
 
-	// XXX wait until new KVCONFIG exists with pid
-	time.Sleep(1000 * time.Millisecond)
+	// forceful remove pid, since it has crashed
+	pid1 := ts.spawnSharder("excl", kvname(pid))
+	_, err = ts.fsl.Wait(pid1)
+	assert.Nil(ts.t, err, "Wait")
 
 	ts.stopKVs(pids, false)
 	ts.delFirst()

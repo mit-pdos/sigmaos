@@ -233,6 +233,7 @@ func (sh *Sharder) restart() {
 	if sh.nextConf == nil {
 		// either commit/aborted or never started
 		db.DLPrintf("SHARDER", "Restart: clean\n")
+		log.Printf("clean\n")
 		return
 	}
 	todo := sh.nkvd - len(committed)
@@ -264,6 +265,27 @@ func (sh *Sharder) Del() {
 			}
 		}
 	}
+}
+
+func (sh *Sharder) initShards(exclKvs []string) bool {
+	db.DLPrintf("SHARDER", "initShards %v\n", exclKvs)
+	excl := make(map[string]bool)
+	for _, kv := range exclKvs {
+		excl[kv] = true
+	}
+	for s, kv := range sh.conf.Shards {
+		if _, ok := excl[kv]; ok { // shard s has been lost
+			kvd := sh.nextConf.Shards[s]
+			dst := shardPath(kvd, s, sh.nextConf.N)
+			db.DLPrintf("SHARDER: Init shard dir %v\n", dst)
+			err := sh.Mkdir(dst, 0777)
+			if err != nil {
+				db.DLPrintf("KV", "initShards: mkdir %v err %v\n", dst, err)
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (sh *Sharder) rmStatusFiles(dir string) {
@@ -421,6 +443,8 @@ func (sh *Sharder) TwoPC() {
 		sh.Add()
 	case "del":
 		sh.Del()
+	case "excl":
+		sh.Del()
 	case "restart":
 		return
 	default:
@@ -430,7 +454,8 @@ func (sh *Sharder) TwoPC() {
 	sh.nextConf = sh.balance()
 	db.DLPrintf("SHARDER", "Sharder conf %v next conf: %v %v\n", sh.conf, sh.nextConf, sh.nextKvs)
 
-	// The to-be-deleted KV must ack too
+	// A gracefully exiting KV must ack too. We add it back here
+	// after balance() without it.
 	if sh.args[0] == "del" {
 		sh.nextKvs = append(sh.nextKvs, sh.args[1:]...)
 
@@ -447,6 +472,12 @@ func (sh *Sharder) TwoPC() {
 	ok, n := sh.prepare()
 
 	log.Printf("SHARDER commit/abort %v\n", ok)
+
+	if ok && sh.args[0] == "excl" {
+		// make empty shards for the ones we lost; if it fails
+		// abort 2PC.
+		ok = sh.initShards(sh.args[1:])
+	}
 
 	sh.commit(n, ok)
 

@@ -226,9 +226,13 @@ func ConcurN(t *testing.T, nclerk int) {
 	pids := ts.startKVs(NSHARD-1, nclerk > 0)
 	ts.stopKVs(pids, nclerk > 0)
 
+	log.Printf("Wait for clerks\n")
+
 	for i := 0; i < nclerk; i++ {
 		ts.ch <- true
 	}
+
+	log.Printf("Done waiting for clerks\n")
 
 	ts.delFirst()
 
@@ -313,6 +317,14 @@ func TestCrashKV(t *testing.T) {
 	pid = ts.makeKV()
 	log.Printf("Added %v\n", pid)
 	pids = append(pids, pid)
+
+	pid = ts.spawnKv("crash5")
+	_, err = ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
+	pids = append(pids, pid)
+
+	// XXX wait until new KVCONFIG exists with pid
+	time.Sleep(1000 * time.Millisecond)
 
 	ts.stopKVs(pids, false)
 	ts.delFirst()

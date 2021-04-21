@@ -38,6 +38,17 @@ const (
 	CRASH  Tstatus = 2
 )
 
+func (s Tstatus) String() string {
+	switch s {
+	case COMMIT:
+		return "COMMIT"
+	case ABORT:
+		return "ABORT"
+	default:
+		return "CRASH"
+	}
+}
+
 func prepareName(kv string) string {
 	return KVPREPARED + kv
 }
@@ -192,30 +203,18 @@ func (sh *Sharder) readStatus(dir string) map[string]bool {
 	return kvs
 }
 
-func (sh *Sharder) isCommitted(committed map[string]bool) bool {
-	for _, kv := range sh.conf.Shards {
-		if _, ok := committed[kv]; !ok {
-			return false
-		}
-	}
-	return true
-}
-
-func (sh *Sharder) doCommit(nextConf *Config, committed map[string]bool) bool {
-	if nextConf == nil {
-		return false
-	}
+func (sh *Sharder) doCommit(nextConf *Config, prepared map[string]bool) bool {
 	kvds := make(map[string]bool)
 	for _, kv := range nextConf.Shards {
 		if _, ok := kvds[kv]; !ok {
 			kvds[kv] = true
 		}
 	}
-	if committed == nil || len(committed) != len(kvds) {
+	if prepared == nil || len(prepared) != len(kvds) {
 		return false
 	}
 	for kv, _ := range kvds {
-		if _, ok := committed[kv]; !ok {
+		if _, ok := prepared[kv]; !ok {
 			return false
 		}
 	}
@@ -231,7 +230,8 @@ func (sh *Sharder) restart() {
 	db.DLPrintf("SHARDER", "Restart: conf %v next %v prepared %v commit %v\n",
 		sh.conf, sh.nextConf, prepared, committed)
 
-	if sh.isCommitted(committed) {
+	if sh.nextConf == nil {
+		// either commit/aborted or never started
 		db.DLPrintf("SHARDER", "Restart: clean\n")
 		return
 	}
@@ -307,6 +307,7 @@ func (sh *Sharder) setStatusWatches(dir string) {
 
 func (sh *Sharder) watchKV(p string, err error) {
 	db.DLPrintf("SHARDER", "watchKV %v\n", p)
+	log.Printf("SHARDER KV %v crashed\n", p)
 	sh.ch <- CRASH
 }
 
@@ -347,6 +348,7 @@ func (sh *Sharder) prepare() (bool, int) {
 			n += 1
 		case ABORT:
 			db.DLPrintf("SHARDER", "KV aborted\n")
+			log.Printf("SHARDER KV aborted\n")
 			n += 1
 			success = false
 		default:
@@ -357,40 +359,47 @@ func (sh *Sharder) prepare() (bool, int) {
 	return success, n
 }
 
-func (sh *Sharder) commit(npeer int, ok bool) {
-	fn := KVNEXTCONFIG
+func (sh *Sharder) commit(nfollower int, ok bool) {
 	if ok {
 		db.DLPrintf("SHARDER", "Commit to %v\n", sh.nextConf)
 	} else {
+		// Rename KVCONFIGTMP into KVNEXTCONFIG so that the followers
+		// will abort to the old KVCONFIG
 		if err := sh.CopyFile(KVCONFIG, KVCONFIGTMP); err != nil {
 			db.DLPrintf("SHARDER", "CopyFile failed %v\n", err)
 		}
-		fn = KVCONFIGTMP
-		sh.Remove(KVNEXTCONFIG) // don't care if this fails
+		err := sh.Rename(KVCONFIGTMP, KVNEXTCONFIG)
+		if err != nil {
+			db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
+				KVCONFIGTMP, KVNEXTCONFIG, err)
+			return
+		}
 		db.DLPrintf("SHARDER", "Abort to %v\n", sh.conf)
 	}
 
 	sh.setStatusWatches(KVCOMMITTED)
 
-	err := sh.Rename(fn, KVCONFIG)
+	// commit/abort to new KVCONFIG, which maybe the same as the
+	// old one
+	err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
 		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
-			fn, KVCONFIG, err)
+			KVNEXTCONFIG, KVCONFIG, err)
 		return
 	}
 
-	// crash3 should results in commit
+	// crash3 should results in commit (assuming no KVs crash)
 	if sh.args[0] == "crash3" {
 		db.DLPrintf("SHARDER", "Crash3\n")
 		os.Exit(1)
 	}
 
-	for i := 0; i < npeer; i++ {
+	for i := 0; i < nfollower; i++ {
 		s := <-sh.ch
-		db.DLPrintf("SHARDER", "KV %v committed\n", s)
+		db.DLPrintf("SHARDER", "KV commit status %v\n", s)
 	}
 
-	db.DLPrintf("SHARDER", "Done commit/abort to %v\n", fn)
+	db.DLPrintf("SHARDER", "Done commit/abort\n")
 }
 
 func (sh *Sharder) TwoPC() {
@@ -406,7 +415,7 @@ func (sh *Sharder) TwoPC() {
 	// Must have have sh.conf by here; Add() uses it
 
 	switch sh.args[0] {
-	case "crash1", "crash2", "crash3", "crash4":
+	case "crash1", "crash2", "crash3", "crash4", "crash5":
 		sh.Add()
 	case "add":
 		sh.Add()

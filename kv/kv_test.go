@@ -106,10 +106,10 @@ func (ts *Tstate) waitUntilPresent(kv string) bool {
 	return false
 }
 
-func (ts *Tstate) spawnSharder(opcode, pid string) string {
+func (ts *Tstate) spawnCoord(opcode, pid string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/sharderd"
+	a.Program = "bin/coordd"
 	a.Args = []string{opcode, pid}
 	a.PairDep = nil
 	a.ExitDep = nil
@@ -119,30 +119,30 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 
 func (ts *Tstate) delFirst() {
 	log.Printf("Del first %v\n", kvname(ts.pid))
-	pid1 := ts.spawnSharder("del", kvname(ts.pid))
+	pid1 := ts.spawnCoord("del", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(ts.t, string(ok), "OK")
 	time.Sleep(200 * time.Millisecond)
 }
 
-func (ts *Tstate) runSharder(t *testing.T, ch chan bool) {
-	pid1 := ts.spawnSharder("restart", "")
-	log.Printf("sharder spawned %v\n", pid1)
+func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
+	pid1 := ts.spawnCoord("restart", "")
+	log.Printf("coord spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
-	log.Printf("sharder %v done\n", pid1)
+	log.Printf("coord %v done\n", pid1)
 	ch <- true
 }
 
-func TestConcurSharder(t *testing.T) {
+func TestConcurCoord(t *testing.T) {
 	const N = 5
 
 	ts := makeTstate(t)
 	ch := make(chan bool)
 	for r := 0; r < N; r++ {
-		go ts.runSharder(t, ch)
+		go ts.runCoord(t, ch)
 	}
 	for r := 0; r < N; r++ {
 		<-ch
@@ -195,7 +195,7 @@ func (ts *Tstate) startKVs(n int, clerks bool) []string {
 func (ts *Tstate) stopKVs(pids []string, clerks bool) {
 	for _, pid := range pids {
 		log.Printf("Del %v\n", pid)
-		pid1 := ts.spawnSharder("del", kvname(pid))
+		pid1 := ts.spawnCoord("del", kvname(pid))
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(ts.t, err, "Wait")
 		assert.Equal(ts.t, string(ok), "OK")
@@ -254,20 +254,20 @@ func TestConcurN(t *testing.T) {
 }
 
 func (ts *Tstate) restart(pid string) {
-	pid1 := ts.spawnSharder("restart", kvname(pid))
+	pid1 := ts.spawnCoord("restart", kvname(pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(ts.t, string(ok), "OK")
-	log.Printf("SHARDER restart done\n")
+	log.Printf("COORD restart done\n")
 }
 
-func TestCrashSharder(t *testing.T) {
+func TestCrashCoord(t *testing.T) {
 	const NMORE = 1
 	ts := makeTstate(t)
 
 	pids := ts.startKVs(NMORE, false)
 
-	// XXX fix exit status of sharder in KV
+	// XXX fix exit status of coord in KV
 	pid := ts.spawnKv("crash1")
 	_, err := ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
@@ -290,7 +290,7 @@ func TestCrashSharder(t *testing.T) {
 	log.Printf("Added %v\n", pid)
 	pids = append(pids, pid)
 
-	// sharder crashes after adding new KV
+	// coord crashes after adding new KV
 	pid = ts.spawnKv("crash3")
 	ok := ts.waitUntilPresent(kvname(pid))
 	assert.Equal(ts.t, true, ok)
@@ -325,7 +325,7 @@ func TestCrashKV(t *testing.T) {
 	assert.Nil(ts.t, err, "Wait")
 
 	// forceful remove pid, since it has crashed
-	pid1 := ts.spawnSharder("excl", kvname(pid))
+	pid1 := ts.spawnCoord("excl", kvname(pid))
 	_, err = ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 

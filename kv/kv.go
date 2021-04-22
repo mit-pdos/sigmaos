@@ -58,8 +58,8 @@ func MakeKv(args []string) (*Kv, error) {
 	kv.FsLibSrv = fsl
 	kv.Started(kv.pid)
 
-	kv.conf, err = kv.readConfig(KVCONFIG)
-	if err != nil {
+	kv.conf = readConfig(kv.FsLibSrv, KVCONFIG)
+	if kv.conf == nil {
 		log.Fatalf("KV: MakeKv cannot read %v err %v\n", KVCONFIG, err)
 	}
 
@@ -69,29 +69,29 @@ func MakeKv(args []string) (*Kv, error) {
 		db.DLPrintf("KV", "MakeKv set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 	}
 
-	db.DLPrintf("KV", "Spawn harder\n")
+	db.DLPrintf("KV", "Spawn coord\n")
 
-	pid1 := kv.spawnSharder(args[1], kv.me)
+	pid1 := kv.spawnCoord(args[1], kv.me)
 	ok, err := kv.Wait(pid1)
 
-	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
+	db.DLPrintf("KV", "Coord done %v\n", string(ok))
 
 	// XXX fix once Wait returns appropriate exit status
 	if args[1] == "crash1" {
-		log.Printf("KV: sharder crashed\n")
-		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
+		log.Printf("KV: coord crashed\n")
+		return nil, fmt.Errorf("Wait/Coord failed %v %v\n", err, string(ok))
 	}
 
 	if err != nil || string(ok) != "OK" {
-		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
+		return nil, fmt.Errorf("Wait/Coord failed %v %v\n", err, string(ok))
 	}
 	return kv, nil
 }
 
-func (kv *Kv) spawnSharder(opcode, pid string) string {
+func (kv *Kv) spawnCoord(opcode, pid string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/sharderd"
+	a.Program = "bin/coordd"
 	a.Args = []string{opcode, pid}
 	a.PairDep = nil
 	a.ExitDep = nil
@@ -112,12 +112,6 @@ func (kv *Kv) watchNextConf(p string, err error) {
 			db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 		}
 	}
-}
-
-func (kv *Kv) readConfig(conffile string) (*Config, error) {
-	conf := Config{}
-	err := kv.ReadFileJson(conffile, &conf)
-	return &conf, err
 }
 
 func (kv *Kv) readConfigWatch(conffile string, f fsclnt.Watch) (*Config, error) {
@@ -234,7 +228,7 @@ func (kv *Kv) removeShards() {
 	}
 }
 
-// Tell sharder we are prepared to commit new config
+// Tell coord we are prepared to commit new config
 func (kv *Kv) prepared(status string) {
 	fn := prepareName(kv.me)
 	db.DLPrintf("KV", "Prepared %v\n", fn)
@@ -298,38 +292,38 @@ func (kv *Kv) watchConf(p string, err error) {
 }
 
 // XXX maybe check if one is already running?
-func (kv *Kv) restartSharder() {
-	log.Printf("KV %v watchSharder: SHARDER crashed\n", kv.me)
-	pid1 := kv.spawnSharder("restart", kv.me)
+func (kv *Kv) restartCoord() {
+	log.Printf("KV %v watchCoord: COORD crashed\n", kv.me)
+	pid1 := kv.spawnCoord("restart", kv.me)
 	ok, err := kv.Wait(pid1)
 	if err != nil {
 		log.Printf("KV wait failed\n")
 	}
-	log.Printf("KV Sharder done %v\n", string(ok))
+	log.Printf("KV Coord done %v\n", string(ok))
 
 }
 
-func (kv *Kv) watchSharder(p string, err error) {
+func (kv *Kv) watchCoord(p string, err error) {
 	kv.mu.Lock()
 	done := kv.nextConf == nil
 	kv.mu.Unlock()
 
-	log.Printf("KV Watch sharder fires %v %v done? %v\n", p, err, done)
+	log.Printf("KV Watch coord fires %v %v done? %v\n", p, err, done)
 
-	// sharder may have exited because it is done. if I am not in
-	// 2PC, then assume sharder exited because it is done.
+	// coord may have exited because it is done. if I am not in
+	// 2PC, then assume coord exited because it is done.
 	// clerks are able to do puts/gets.
 	if done {
 		return
 	}
 
 	if err == nil {
-		kv.restartSharder()
+		kv.restartCoord()
 	} else {
-		// set remove watch on sharder in case it crashes during 2PC
-		err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
+		// set remove watch on coord in case it crashes during 2PC
+		err = kv.SetRemoveWatch(COORD, kv.watchCoord)
 		if err != nil {
-			kv.restartSharder()
+			kv.restartCoord()
 		}
 	}
 }
@@ -341,10 +335,10 @@ func (kv *Kv) prepare() {
 
 	log.Printf("KV %v prepare\n", kv.me)
 
-	// set remove watch on sharder in case it crashes during 2PC
-	err = kv.SetRemoveWatch(SHARDER, kv.watchSharder)
+	// set remove watch on coord in case it crashes during 2PC
+	err = kv.SetRemoveWatch(COORD, kv.watchCoord)
 	if err != nil {
-		db.DLPrintf("KV", "Prepare: SHARDER crashed\n")
+		db.DLPrintf("KV", "Prepare: COORD crashed\n")
 	}
 
 	// set watch for when old config file is replaced (indicates commit)
@@ -353,8 +347,8 @@ func (kv *Kv) prepare() {
 		log.Fatalf("KV %v: SetRemoveWatch %v err %v\n", kv.me, KVCONFIG, err)
 	}
 	db.DLPrintf("KV", "prepare: watch for %v\n", KVCONFIG)
-	kv.nextConf, err = kv.readConfig(KVNEXTCONFIG)
-	if err != nil {
+	kv.nextConf = readConfig(kv.FsLibSrv, KVNEXTCONFIG)
+	if kv.nextConf == nil {
 		log.Fatalf("KV %v: KV prepare cannot read %v err %v\n", kv.me, KVNEXTCONFIG, err)
 	}
 
@@ -394,9 +388,9 @@ func (kv *Kv) commit() {
 
 	log.Printf("KV %v commit/abort\n", kv.me)
 
-	conf, err := kv.readConfig(KVCONFIG)
-	if err != nil {
-		log.Fatalf("KV commit cannot read %v err %v\n", KVCONFIG, err)
+	conf := readConfig(kv.FsLibSrv, KVCONFIG)
+	if conf == nil {
+		log.Fatalf("KV commit cannot read %v\n", KVCONFIG)
 	}
 
 	if conf.N == kv.nextConf.N {
@@ -413,14 +407,12 @@ func (kv *Kv) commit() {
 		os.Exit(1)
 	}
 
-	present := kv.nextConf.present(kv.me)
-
 	kv.conf = kv.nextConf
+	nextFw := mkFollowers(kv.FsLibSrv.Clnt(), kv.nextConf.Shards)
 	kv.nextConf = nil
 
-	if present {
-		// reset watch for existence of nextconfig, which indicates view change
-		_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
+	if nextFw.kvs[kv.me] { // reset watch for existence of nextconfig, which indicates view change
+		_, err := kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 		if err == nil {
 			log.Fatalf("KV %v: Commit readconfig succeeded\n", kv.me)
 		} else {
@@ -430,7 +422,7 @@ func (kv *Kv) commit() {
 
 	kv.committed()
 
-	if !present {
+	if !nextFw.kvs[kv.me] {
 		db.DLPrintf("KV", "commit exit %v\n", kv.me)
 		kv.done <- true
 		return

@@ -15,6 +15,10 @@ type FsLibSrv struct {
 	*memfsd.Fsd
 }
 
+func (fsl *FsLibSrv) Clnt() *FsLib {
+	return fsl.FsLib
+}
+
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	err := fsl.Remove(srvname)
 	if err != nil {

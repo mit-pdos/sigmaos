@@ -14,7 +14,6 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/memfsd"
-	np "ulambda/ninep"
 )
 
 const (
@@ -26,7 +25,7 @@ const (
 	KVNEXTCONFIG = KVDIR + "/nextconfig"
 	KVPREPARED   = KVDIR + "/prepared/"
 	KVCOMMITTED  = KVDIR + "/committed/"
-	KVLOCK       = KVDIR + "/lock"
+	KVLOCK       = "lock"
 )
 
 type Tstatus int
@@ -99,12 +98,9 @@ func MakeSharder(args []string) (*Sharder, error) {
 
 	// Grab KVLOCK before starting sharder
 	fsl := fslib.MakeFsLib(SHARDER)
-	_, err := fsl.CreateFile(KVLOCK, 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
-	if err != nil {
+	if err := fsl.LockFile(KVDIR, KVLOCK); err != nil {
 		log.Fatalf("Lock failed %v\n", err)
 	}
-
-	log.Printf("sharder: lock\n")
 
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
@@ -171,8 +167,7 @@ func (sh *Sharder) readConfig(conffile string) *Config {
 
 func (sh *Sharder) unlock() {
 	log.Printf("SHARDER unlock\n")
-	err := sh.Remove(KVLOCK)
-	if err != nil {
+	if err := sh.UnlockFile(KVDIR, KVLOCK); err != nil {
 		log.Fatalf("Unlock failed failed %v\n", err)
 	}
 }

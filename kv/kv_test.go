@@ -118,6 +118,7 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 }
 
 func (ts *Tstate) delFirst() {
+	log.Printf("Del first %v\n", kvname(ts.pid))
 	pid1 := ts.spawnSharder("del", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
@@ -199,6 +200,7 @@ func (ts *Tstate) stopKVs(pids []string, clerks bool) {
 		assert.Nil(ts.t, err, "Wait")
 		assert.Equal(ts.t, string(ok), "OK")
 		if clerks {
+			// To allow clerk to do some gets:
 			time.Sleep(200 * time.Millisecond)
 		}
 	}
@@ -226,9 +228,13 @@ func ConcurN(t *testing.T, nclerk int) {
 	pids := ts.startKVs(NSHARD-1, nclerk > 0)
 	ts.stopKVs(pids, nclerk > 0)
 
+	log.Printf("Wait for clerks\n")
+
 	for i := 0; i < nclerk; i++ {
 		ts.ch <- true
 	}
+
+	log.Printf("Done waiting for clerks\n")
 
 	ts.delFirst()
 
@@ -261,22 +267,22 @@ func TestCrashSharder(t *testing.T) {
 
 	pids := ts.startKVs(NMORE, false)
 
+	// XXX fix exit status of sharder in KV
 	pid := ts.spawnKv("crash1")
 	_, err := ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
 
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("restart")
-
-	// restart because no KV will see crash1 (XXX but it should
-	// just restore KVCONFIGTMP)
-	ts.restart(pid)
+	// see if we can add a new KV
+	pid = ts.makeKV()
+	log.Printf("Added %v\n", pid)
+	pids = append(pids, pid)
 
 	pid = ts.spawnKv("crash2")
 	pids = append(pids, pid) // all KVs will prepare
 
-	// XXX wait until recovered; KVCONFIG exists
+	// XXX wait until new KVCONFIG exists with pid
 	time.Sleep(1000 * time.Millisecond)
 
 	// see if we can add a new KV
@@ -289,6 +295,39 @@ func TestCrashSharder(t *testing.T) {
 	ok := ts.waitUntilPresent(kvname(pid))
 	assert.Equal(ts.t, true, ok)
 	pids = append(pids, pid)
+
+	ts.stopKVs(pids, false)
+	ts.delFirst()
+
+	ts.s.Shutdown(ts.fsl)
+}
+
+func TestCrashKV(t *testing.T) {
+	const NMORE = 1
+	ts := makeTstate(t)
+
+	pids := ts.startKVs(NMORE, false)
+
+	pid := ts.spawnKv("crash4")
+	_, err := ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
+
+	// XXX wait until new KVCONFIG exists with pid
+	time.Sleep(1000 * time.Millisecond)
+
+	// see if we can add a new KV
+	pid = ts.makeKV()
+	log.Printf("Added %v\n", pid)
+	pids = append(pids, pid)
+
+	pid = ts.spawnKv("crash5")
+	_, err = ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
+
+	// forceful remove pid, since it has crashed
+	pid1 := ts.spawnSharder("excl", kvname(pid))
+	_, err = ts.fsl.Wait(pid1)
+	assert.Nil(ts.t, err, "Wait")
 
 	ts.stopKVs(pids, false)
 	ts.delFirst()

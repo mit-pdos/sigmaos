@@ -30,7 +30,7 @@ type KvClerk struct {
 	fsl      *fslib.FsLib
 	uname    string
 	conf     Config
-	nextConf Config
+	confNext Config
 	ch       chan bool
 	nget     int
 }
@@ -41,37 +41,39 @@ func MakeClerk() *KvClerk {
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
 	db.Name(kc.uname)
 	kc.fsl = fslib.MakeFsLib(kc.uname)
-	err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
-	if err != nil {
-		// XXX deal with clerk starting during view change
-		log.Fatalf("CLERK: readConfig %v error %v\n", KVCONFIG, err)
-	}
+	kc.readConfig()
 	return kc
 }
 
-func (kc *KvClerk) watch(path string, err error) {
+func (kc *KvClerk) watchConfig(path string, err error) {
+	db.DLPrintf("CLERK", "watch fired %v\n", path)
 	kc.ch <- true
+}
+
+func (kc *KvClerk) watchNext(path string, err error) {
+	db.DLPrintf("CLERK", "watch next fired %v\n", path)
+	kc.readConfig()
 }
 
 // set watch for conf, which indicates commit to view change
 // XXX atomic read
 func (kc *KvClerk) readConfig() {
-	for {
-		err := kc.fsl.ReadFileJsonWatch(KVCONFIG, &kc.nextConf, kc.watch)
-		if err == nil {
-			if kc.nextConf.N == kc.conf.N+1 {
-				kc.conf = kc.nextConf
-				break
-			}
-			log.Fatalf("View mismatch %v %v", kc.conf.N, kc.nextConf.N)
-		} else if strings.HasPrefix(err.Error(), "file not found") {
-			// wait for config
-			db.DLPrintf("CLERK", "Wait for config %v\n", kc.conf.N+1)
-			<-kc.ch
-		} else {
-			log.Fatalf("CLERK: readConfig %v error %v\n", KVCONFIG, err)
-		}
+	err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
+	if err != nil {
+		log.Fatalf("CLERK: ReadFileJson %v error %v\n", KVCONFIG, err)
+
 	}
+	err = kc.fsl.SetRemoveWatch(KVCONFIG, kc.watchConfig)
+	if err != nil {
+		log.Fatalf("CLERK: SetRemoveWatch %v error %v\n", KVCONFIG, err)
+	}
+	err = kc.fsl.ReadFileJsonWatch(KVNEXTCONFIG, &kc.confNext, kc.watchNext)
+	if err == nil {
+		<-kc.ch
+	} else if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
+		log.Fatalf("CLERK: ReadFileJsonWatch %v error %v\n", KVNEXTCONFIG, err)
+	}
+	db.DLPrintf("CLERK", "readConfig %v\n", kc.conf)
 }
 
 func error2shard(error string) string {

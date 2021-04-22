@@ -110,6 +110,40 @@ func (fl *FsLib) CreateFile(fname string, perm np.Tperm, mode np.Tmode) (int, er
 	return fd, nil
 }
 
+func (fl *FsLib) CopyFile(src, dst string) error {
+	st, err := fl.Stat(src)
+	if err != nil {
+		return err
+	}
+	fdsrc, err := fl.OpenWatch(src, np.OREAD, nil)
+	if err != nil {
+		return err
+	}
+	defer fl.Close(fdsrc)
+	fddst, err := fl.Create(dst, st.Mode, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	defer fl.Close(fddst)
+	for {
+		b, err := fl.Read(fdsrc, CHUNKSZ)
+		if err != nil {
+			return err
+		}
+		if len(b) == 0 {
+			break
+		}
+		n, err := fl.Write(fddst, b)
+		if err != nil {
+			return err
+		}
+		if n != np.Tsize(len(b)) {
+			return fmt.Errorf("short write")
+		}
+	}
+	return nil
+}
+
 func (fl *FsLib) IsDir(name string) (bool, error) {
 	st, err := fl.Stat(name)
 	if err != nil {
@@ -148,4 +182,21 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 		return fmt.Errorf("Marshal error %v", err)
 	}
 	return fl.WriteFile(fname, data)
+}
+
+func (fl *FsLib) MakeFileAtomic(fname string, perm np.Tperm, data []byte) error {
+	err := fl.MakeFile(fname+"#", 0777, data)
+	if err != nil {
+		return err
+	}
+	err = fl.Rename(fname+"#", fname)
+	return err
+}
+
+func (fl *FsLib) MakeFileJsonAtomic(fname string, perm np.Tperm, i interface{}) error {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error %v", err)
+	}
+	return fl.MakeFileAtomic(fname, perm, data)
 }

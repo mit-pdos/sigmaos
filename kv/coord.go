@@ -1,7 +1,7 @@
 package kv
 
 //
-// Shard coordinator: assigns shards to KVs.  Assumes no KV failures
+// Shard coordinator: assigns shards to KVs using two-phase commit.
 // This is a short-lived daemon: it rebalances shards and then exists.
 //
 
@@ -41,10 +41,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
-	sh := &Coord{}
-	sh.pid = args[0]
-	sh.args = args[1:]
-	sh.ch = make(chan Tstatus)
+	cd := &Coord{}
+	cd.pid = args[0]
+	cd.args = args[1:]
+	cd.ch = make(chan Tstatus)
 
 	db.Name("coord")
 
@@ -64,86 +64,60 @@ func MakeCoord(args []string) (*Coord, error) {
 	if err != nil {
 		return nil, err
 	}
-	sh.FsLibSrv = fls
-	sh.Started(sh.pid)
-	return sh, nil
+	cd.FsLibSrv = fls
+	cd.Started(cd.pid)
+	return cd, nil
 }
 
-func (sh *Coord) Exit() {
-	sh.ExitFs(COORD)
+func (cd *Coord) Exit() {
+	cd.ExitFs(COORD)
 }
 
-func (sh *Coord) unlock() {
-	log.Printf("COORD unlock\n")
-	if err := sh.UnlockFile(KVDIR, KVLOCK); err != nil {
+func (cd *Coord) unlock() {
+	if err := cd.UnlockFile(KVDIR, KVLOCK); err != nil {
 		log.Fatalf("Unlock failed failed %v\n", err)
 	}
 }
 
-func (sh *Coord) readStatus(dir string) *Followers {
-	sts, err := sh.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-	fw := mkFollowers(sh.FsLibSrv.Clnt(), nil)
-	for _, st := range sts {
-		fw.kvs[st.Name] = true
-	}
-	return fw
-}
+func (cd *Coord) restart() {
+	cd.conf = readConfig(cd.FsLibSrv, KVCONFIG)
 
-func (sh *Coord) doCommit(nextConf *Config, prepared *Followers) bool {
-	kvds := mkFollowers(sh.FsLibSrv.Clnt(), nextConf.Shards)
-	if prepared == nil || prepared.len() != kvds.len() {
-		return false
-	}
-	for kv, _ := range kvds.kvs {
-		if _, ok := prepared.kvs[kv]; !ok {
-			return false
-		}
-	}
-	return true
-}
-
-func (sh *Coord) restart() {
-	sh.conf = readConfig(sh.FsLibSrv, KVCONFIG)
-
-	if sh.nextConf == nil {
+	if cd.nextConf == nil {
 		// either commit/aborted or never started
 		db.DLPrintf("COORD", "Restart: clean\n")
 		return
 	}
 
-	sh.nextConf = readConfig(sh.FsLibSrv, KVNEXTCONFIG)
-	prepared := sh.readStatus(KVPREPARED)
-	committed := sh.readStatus(KVCOMMITTED)
+	cd.nextConf = readConfig(cd.FsLibSrv, KVNEXTCONFIG)
+	prepared := mkFollowersStatus(cd.FsLibSrv.Clnt(), KVPREPARED)
+	committed := mkFollowersStatus(cd.FsLibSrv.Clnt(), KVCOMMITTED)
 
 	db.DLPrintf("COORD", "Restart: conf %v next %v prepared %v commit %v\n",
-		sh.conf, sh.nextConf, prepared, committed)
+		cd.conf, cd.nextConf, prepared, committed)
 
-	fws := mkFollowers(sh.FsLibSrv.Clnt(), sh.nextConf.Shards)
-	if sh.doCommit(sh.nextConf, prepared) {
+	fws := mkFollowers(cd.FsLibSrv.Clnt(), cd.nextConf.Shards)
+	if fws.doCommit(prepared) {
 		db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
-		sh.commit(fws, committed.len(), true)
+		cd.commit(fws, committed.len(), true)
 	} else {
 		db.DLPrintf("COORD", "Restart: abort\n")
-		fws := mkFollowers(sh.FsLibSrv.Clnt(), sh.conf.Shards)
-		sh.commit(fws, committed.len(), false)
+		fws := mkFollowers(cd.FsLibSrv.Clnt(), cd.conf.Shards)
+		cd.commit(fws, committed.len(), false)
 	}
 }
 
-func (sh *Coord) initShards(exclKvs []string) bool {
+func (cd *Coord) initShards(exclKvs []string) bool {
 	db.DLPrintf("COORD", "initShards %v\n", exclKvs)
 	excl := make(map[string]bool)
 	for _, kv := range exclKvs {
 		excl[kv] = true
 	}
-	for s, kv := range sh.conf.Shards {
+	for s, kv := range cd.conf.Shards {
 		if _, ok := excl[kv]; ok { // shard s has been lost
-			kvd := sh.nextConf.Shards[s]
-			dst := shardPath(kvd, s, sh.nextConf.N)
+			kvd := cd.nextConf.Shards[s]
+			dst := shardPath(kvd, s, cd.nextConf.N)
 			db.DLPrintf("COORD: Init shard dir %v\n", dst)
-			err := sh.Mkdir(dst, 0777)
+			err := cd.Mkdir(dst, 0777)
 			if err != nil {
 				db.DLPrintf("KV", "initShards: mkdir %v err %v\n", dst, err)
 				return false
@@ -153,42 +127,42 @@ func (sh *Coord) initShards(exclKvs []string) bool {
 	return true
 }
 
-func (sh *Coord) rmStatusFiles(dir string) {
-	sts, err := sh.ReadDir(dir)
+func (cd *Coord) rmStatusFiles(dir string) {
+	sts, err := cd.ReadDir(dir)
 	if err != nil {
 		log.Fatalf("COORD: ReadDir commit error %v\n", err)
 	}
 	for _, st := range sts {
 		fn := dir + st.Name
-		err = sh.Remove(fn)
+		err = cd.Remove(fn)
 		if err != nil {
 			db.DLPrintf("COORD", "Remove %v failed %v\n", fn, err)
 		}
 	}
 }
 
-func (sh *Coord) watchStatus(p string, err error) {
+func (cd *Coord) watchStatus(p string, err error) {
 	db.DLPrintf("COORD", "watchStatus %v\n", p)
 	status := ABORT
-	b, err := sh.ReadFile(p)
+	b, err := cd.ReadFile(p)
 	if err != nil {
 		db.DLPrintf("COORD", "watchStatus ReadFile %v err %v\n", p, b)
 	}
 	if string(b) == "OK" {
 		status = COMMIT
 	}
-	sh.ch <- status
+	cd.ch <- status
 }
 
-func (sh *Coord) watchKV(p string, err error) {
+func (cd *Coord) watchKV(p string, err error) {
 	db.DLPrintf("COORD", "watchKV %v\n", p)
-	sh.ch <- CRASH
+	cd.ch <- CRASH
 }
 
-func (sh *Coord) prepare(nextFws *Followers) (bool, int) {
-	nextFws.setStatusWatches(KVPREPARED, sh.watchStatus)
+func (cd *Coord) prepare(nextFws *Followers) (bool, int) {
+	nextFws.setStatusWatches(KVPREPARED, cd.watchStatus)
 
-	err := sh.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *sh.nextConf)
+	err := cd.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *cd.nextConf)
 	if err != nil {
 		db.DLPrintf("COORD", "COORD: MakeFileJsonAtomic %v err %v\n",
 			KVNEXTCONFIG, err)
@@ -196,7 +170,7 @@ func (sh *Coord) prepare(nextFws *Followers) (bool, int) {
 
 	// depending how many KVs ack, crash2 results
 	// in a abort or commit
-	if sh.args[0] == "crash2" {
+	if cd.args[0] == "crash2" {
 		db.DLPrintf("COORD", "Crash2\n")
 		os.Exit(1)
 	}
@@ -204,7 +178,7 @@ func (sh *Coord) prepare(nextFws *Followers) (bool, int) {
 	success := true
 	n := 0
 	for i := 0; i < nextFws.len(); i++ {
-		status := <-sh.ch
+		status := <-cd.ch
 		switch status {
 		case COMMIT:
 			db.DLPrintf("COORD", "KV prepared\n")
@@ -221,29 +195,29 @@ func (sh *Coord) prepare(nextFws *Followers) (bool, int) {
 	return success, n
 }
 
-func (sh *Coord) commit(fws *Followers, ndone int, ok bool) {
+func (cd *Coord) commit(fws *Followers, ndone int, ok bool) {
 	if ok {
-		db.DLPrintf("COORD", "Commit to %v\n", sh.nextConf)
+		db.DLPrintf("COORD", "Commit to %v\n", cd.nextConf)
 	} else {
 		// Rename KVCONFIGTMP into KVNEXTCONFIG so that the followers
 		// will abort to the old KVCONFIG
-		if err := sh.CopyFile(KVCONFIG, KVCONFIGTMP); err != nil {
+		if err := cd.CopyFile(KVCONFIG, KVCONFIGTMP); err != nil {
 			db.DLPrintf("COORD", "CopyFile failed %v\n", err)
 		}
-		err := sh.Rename(KVCONFIGTMP, KVNEXTCONFIG)
+		err := cd.Rename(KVCONFIGTMP, KVNEXTCONFIG)
 		if err != nil {
 			db.DLPrintf("COORD", "COORD: rename %v -> %v: error %v\n",
 				KVCONFIGTMP, KVNEXTCONFIG, err)
 			return
 		}
-		db.DLPrintf("COORD", "Abort to %v\n", sh.conf)
+		db.DLPrintf("COORD", "Abort to %v\n", cd.conf)
 	}
 
-	fws.setStatusWatches(KVCOMMITTED, sh.watchStatus)
+	fws.setStatusWatches(KVCOMMITTED, cd.watchStatus)
 
 	// commit/abort to new KVCONFIG, which maybe the same as the
 	// old one
-	err := sh.Rename(KVNEXTCONFIG, KVCONFIG)
+	err := cd.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
 		db.DLPrintf("COORD", "COORD: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)
@@ -251,86 +225,86 @@ func (sh *Coord) commit(fws *Followers, ndone int, ok bool) {
 	}
 
 	// crash3 should results in commit (assuming no KVs crash)
-	if sh.args[0] == "crash3" {
+	if cd.args[0] == "crash3" {
 		db.DLPrintf("COORD", "Crash3\n")
 		os.Exit(1)
 	}
 
 	for i := 0; i < fws.len()-ndone; i++ {
-		s := <-sh.ch
+		s := <-cd.ch
 		db.DLPrintf("COORD", "KV commit status %v\n", s)
 	}
 
 	db.DLPrintf("COORD", "Done commit/abort\n")
 }
 
-func (sh *Coord) TwoPC() {
-	defer sh.unlock() // release lock acquired in MakeCoord()
+func (cd *Coord) TwoPC() {
+	defer cd.unlock() // release lock acquired in MakeCoord()
 
-	// db.DLPrintf("COORD", "Coord: %v\n", sh.args)
-	log.Printf("COORD Coord: %v\n", sh.args)
+	// db.DLPrintf("COORD", "Coord: %v\n", cd.args)
+	log.Printf("COORD Coord: %v\n", cd.args)
 
 	// XXX set removeWatch on KVs? maybe in KV
 
-	sh.restart()
+	cd.restart()
 
-	// We may have committed/aborted; reread sh.conf to get new
+	// We may have committed/aborted; reread cd.conf to get new
 	// this config
-	sh.conf = readConfig(sh.FsLibSrv, KVCONFIG)
+	cd.conf = readConfig(cd.FsLibSrv, KVCONFIG)
 
-	nextFws := mkFollowers(sh.FsLibSrv.Clnt(), sh.conf.Shards)
+	nextFws := mkFollowers(cd.FsLibSrv.Clnt(), cd.conf.Shards)
 
-	switch sh.args[0] {
+	switch cd.args[0] {
 	case "crash1", "crash2", "crash3", "crash4", "crash5":
-		nextFws.add(sh.args[1:])
+		nextFws.add(cd.args[1:])
 	case "add":
-		nextFws.add(sh.args[1:])
+		nextFws.add(cd.args[1:])
 	case "del":
-		nextFws.del(sh.args[1:])
+		nextFws.del(cd.args[1:])
 	case "excl":
-		nextFws.del(sh.args[1:])
+		nextFws.del(cd.args[1:])
 	case "restart":
 		return
 	default:
-		log.Fatalf("Unknown command %v\n", sh.args[0])
+		log.Fatalf("Unknown command %v\n", cd.args[0])
 	}
 
-	sh.nextConf = balance(sh.conf, nextFws)
+	cd.nextConf = balance(cd.conf, nextFws)
 
-	db.DLPrintf("COORD", "Coord conf %v next conf: %v %v\n", sh.conf,
-		sh.nextConf, nextFws)
+	db.DLPrintf("COORD", "Coord conf %v next conf: %v %v\n", cd.conf,
+		cd.nextConf, nextFws)
 
 	// A gracefully exiting KV must ack too. We add it back to followers
 	// after balance() without it.
-	if sh.args[0] == "del" {
-		nextFws.add(sh.args[1:])
+	if cd.args[0] == "del" {
+		nextFws.add(cd.args[1:])
 
 	}
 
-	if sh.args[0] == "crash1" {
+	if cd.args[0] == "crash1" {
 		db.DLPrintf("COORD", "Crash1\n")
 		os.Exit(1)
 	}
 
-	sh.Remove(KVCONFIGTMP) // don't care if succeeds or not
-	sh.rmStatusFiles(KVPREPARED)
-	sh.rmStatusFiles(KVCOMMITTED)
+	cd.Remove(KVCONFIGTMP) // don't care if succeeds or not
+	cd.rmStatusFiles(KVPREPARED)
+	cd.rmStatusFiles(KVCOMMITTED)
 
-	nextFws.setKVWatches(sh.watchKV)
+	nextFws.setKVWatches(cd.watchKV)
 
 	log.Printf("COORD prepare\n")
 
-	ok, n := sh.prepare(nextFws)
+	ok, n := cd.prepare(nextFws)
 
 	log.Printf("COORD commit/abort %v\n", ok)
 
-	if ok && sh.args[0] == "excl" {
-		// make empty shards for the ones we lost; if it fails
+	if ok && cd.args[0] == "excl" {
+		// make empty shards for the ones we lost; if it fails,
 		// abort 2PC.
-		ok = sh.initShards(sh.args[1:])
+		ok = cd.initShards(cd.args[1:])
 	}
 
-	sh.commit(nextFws, nextFws.len()-n, ok)
+	cd.commit(nextFws, nextFws.len()-n, ok)
 
-	sh.Exit()
+	cd.Exit()
 }

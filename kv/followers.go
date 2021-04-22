@@ -25,6 +25,18 @@ func mkFollowers(fsl *fslib.FsLib, shards []string) *Followers {
 	return fw
 }
 
+func mkFollowersStatus(fsl *fslib.FsLib, dir string) *Followers {
+	fw := mkFollowers(fsl, nil)
+	sts, err := fw.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	for _, st := range sts {
+		fw.kvs[st.Name] = true
+	}
+	return fw
+}
+
 func (fw *Followers) String() string {
 	return fmt.Sprintf("%v", fw.mkKvs())
 }
@@ -73,4 +85,16 @@ func (fw *Followers) setKVWatches(f fsclnt.Watch) {
 			log.Fatalf("SHARDER: set KV watch failed %v", err)
 		}
 	}
+}
+
+func (fw *Followers) doCommit(prepared *Followers) bool {
+	if prepared == nil || prepared.len() != fw.len() {
+		return false
+	}
+	for kv, _ := range fw.kvs {
+		if _, ok := prepared.kvs[kv]; !ok {
+			return false
+		}
+	}
+	return true
 }

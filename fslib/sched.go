@@ -193,7 +193,7 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 				fl.UnlockFile(WAITQ + l.Name)
 				continue
 			}
-			err = fl.MakeFileAtomic(SCHEDQ, WAITQ+l.Name, b)
+			err = fl.MakeDirFileAtomic(SCHEDQ, WAITQ+l.Name, b)
 			if err != nil {
 				log.Fatalf("Error in SwapExitDependency MakeFileAtomic %v: %v", l.Name, err)
 				return err
@@ -245,7 +245,7 @@ func (fl *FsLib) WakeupExit(pid string) error {
 				log.Fatalf("Error in WakeupExit Remove %v: %v", l.Name, err)
 				return err
 			}
-			err = fl.MakeFileAtomic(SCHEDQ, WAITQ+l.Name, b)
+			err = fl.MakeDirFileAtomic(SCHEDQ, WAITQ+l.Name, b)
 			if err != nil {
 				log.Fatalf("Error in WakeupExit MakeFileAtomic %v: %v", l.Name, err)
 				return err

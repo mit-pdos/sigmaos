@@ -44,7 +44,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 		fl.UnlockFile(WAIT_LOCK + a.Pid)
 		return err
 	}
-	err = fl.MakeFileAtomic(SCHEDQ, WAITQ+a.Pid, b)
+	err = fl.MakeDirFileAtomic(SCHEDQ, WAITQ+a.Pid, b)
 	if err != nil {
 		return err
 	}

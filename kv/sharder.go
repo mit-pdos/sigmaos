@@ -18,16 +18,15 @@ import (
 )
 
 const (
-	NSHARD          = 10
-	KVDIR           = "name/kv"
-	SHARDER         = KVDIR + "/sharder"
-	KVCONFIG        = KVDIR + "/config"
-	KVCONFIGTMP     = KVDIR + "/configtmp"
-	KVNEXTCONFIG    = KVDIR + "/nextconfig"
-	KVNEXTCONFIGTMP = KVDIR + "/nextconfig#"
-	KVPREPARED      = KVDIR + "/prepared/"
-	KVCOMMITTED     = KVDIR + "/committed/"
-	KVLOCK          = KVDIR + "/lock"
+	NSHARD       = 10
+	KVDIR        = "name/kv"
+	SHARDER      = KVDIR + "/sharder"
+	KVCONFIG     = KVDIR + "/config"
+	KVCONFIGTMP  = KVDIR + "/configtmp"
+	KVNEXTCONFIG = KVDIR + "/nextconfig"
+	KVPREPARED   = KVDIR + "/prepared/"
+	KVCOMMITTED  = KVDIR + "/committed/"
+	KVLOCK       = KVDIR + "/lock"
 )
 
 type Tstatus int
@@ -170,19 +169,6 @@ func (sh *Sharder) readConfig(conffile string) *Config {
 	return &conf
 }
 
-func (sh *Sharder) makeNextConfig() {
-	err := sh.MakeFileJson(KVNEXTCONFIGTMP, 0777, *sh.nextConf)
-	if err != nil {
-		return
-	}
-	err = sh.Rename(KVNEXTCONFIGTMP, KVNEXTCONFIG)
-	if err != nil {
-		db.DLPrintf("SHARDER", "SHARDER: rename %v -> %v: error %v\n",
-			KVNEXTCONFIGTMP, KVNEXTCONFIG, err)
-		return
-	}
-}
-
 func (sh *Sharder) unlock() {
 	log.Printf("SHARDER unlock\n")
 	err := sh.Remove(KVLOCK)
@@ -307,10 +293,13 @@ func (sh *Sharder) watchStatus(p string, err error) {
 	status := ABORT
 	b, err := sh.ReadFile(p)
 	if err != nil {
+		log.Printf("Read %v failed %v\n", p, err)
 		db.DLPrintf("SHARDER", "watchStatus ReadFile %v err %v\n", p, b)
 	}
 	if string(b) == "OK" {
 		status = COMMIT
+	} else {
+		log.Printf("Read %v %v\n", p, string(b))
 	}
 	sh.ch <- status
 }
@@ -351,7 +340,11 @@ func (sh *Sharder) prepare() (bool, int) {
 	sh.setKVWatches()
 	sh.setStatusWatches(KVPREPARED)
 
-	sh.makeNextConfig()
+	err := sh.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *sh.nextConf)
+	if err != nil {
+		db.DLPrintf("SHARDER", "SHARDER: MakeFileJsonAtomic %v err %v\n",
+			KVNEXTCONFIG, err)
+	}
 
 	// depending how many KVs ack, crash2 results
 	// in a abort or commit

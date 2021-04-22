@@ -238,7 +238,7 @@ func (kv *Kv) removeShards() {
 func (kv *Kv) prepared(status string) {
 	fn := prepareName(kv.me)
 	db.DLPrintf("KV", "Prepared %v\n", fn)
-	err := kv.MakeFile(fn, 0777, []byte(status))
+	err := kv.MakeFileAtomic(fn, 0777, []byte(status))
 	if err != nil {
 		db.DLPrintf("KV", "Prepared: make file %v failed %v\n", fn, err)
 	}
@@ -372,6 +372,7 @@ func (kv *Kv) prepare() {
 
 	if kv.nextConf.N > 1 {
 		if err := kv.moveShards(); err != nil {
+			log.Printf("%v: moveShards %v\n", kv.me, err)
 			kv.prepared("ABORT")
 			return
 		}

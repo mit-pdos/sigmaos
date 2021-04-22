@@ -183,3 +183,20 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	}
 	return fl.WriteFile(fname, data)
 }
+
+func (fl *FsLib) MakeFileAtomic(fname string, perm np.Tperm, data []byte) error {
+	err := fl.MakeFile(fname+"#", 0777, data)
+	if err != nil {
+		return err
+	}
+	err = fl.Rename(fname+"#", fname)
+	return err
+}
+
+func (fl *FsLib) MakeFileJsonAtomic(fname string, perm np.Tperm, i interface{}) error {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error %v", err)
+	}
+	return fl.MakeFileAtomic(fname, perm, data)
+}

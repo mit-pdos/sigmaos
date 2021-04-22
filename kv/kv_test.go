@@ -118,6 +118,7 @@ func (ts *Tstate) spawnSharder(opcode, pid string) string {
 }
 
 func (ts *Tstate) delFirst() {
+	log.Printf("Del first %v\n", kvname(ts.pid))
 	pid1 := ts.spawnSharder("del", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
@@ -199,6 +200,7 @@ func (ts *Tstate) stopKVs(pids []string, clerks bool) {
 		assert.Nil(ts.t, err, "Wait")
 		assert.Equal(ts.t, string(ok), "OK")
 		if clerks {
+			// To allow clerk to do some gets:
 			time.Sleep(200 * time.Millisecond)
 		}
 	}

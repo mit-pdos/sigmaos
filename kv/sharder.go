@@ -219,7 +219,6 @@ func (sh *Sharder) restart() {
 	if sh.nextConf == nil {
 		// either commit/aborted or never started
 		db.DLPrintf("SHARDER", "Restart: clean\n")
-		log.Printf("clean\n")
 		return
 	}
 	todo := sh.nkvd - len(committed)
@@ -293,13 +292,10 @@ func (sh *Sharder) watchStatus(p string, err error) {
 	status := ABORT
 	b, err := sh.ReadFile(p)
 	if err != nil {
-		log.Printf("Read %v failed %v\n", p, err)
 		db.DLPrintf("SHARDER", "watchStatus ReadFile %v err %v\n", p, b)
 	}
 	if string(b) == "OK" {
 		status = COMMIT
-	} else {
-		log.Printf("Read %v %v\n", p, string(b))
 	}
 	sh.ch <- status
 }
@@ -318,7 +314,6 @@ func (sh *Sharder) setStatusWatches(dir string) {
 
 func (sh *Sharder) watchKV(p string, err error) {
 	db.DLPrintf("SHARDER", "watchKV %v\n", p)
-	log.Printf("SHARDER KV %v crashed\n", p)
 	sh.ch <- CRASH
 }
 
@@ -363,7 +358,6 @@ func (sh *Sharder) prepare() (bool, int) {
 			n += 1
 		case ABORT:
 			db.DLPrintf("SHARDER", "KV aborted\n")
-			log.Printf("SHARDER KV aborted\n")
 			n += 1
 			success = false
 		default:

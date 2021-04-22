@@ -76,7 +76,7 @@ func MakeKv(args []string) (*Kv, error) {
 
 	db.DLPrintf("KV", "Sharder done %v\n", string(ok))
 
-	// XXX
+	// XXX fix once Wait returns appropriate exit status
 	if args[1] == "crash1" {
 		log.Printf("KV: sharder crashed\n")
 		return nil, fmt.Errorf("Wait/Sharder failed %v %v\n", err, string(ok))
@@ -388,42 +388,6 @@ func (kv *Kv) prepare() {
 	kv.prepared("OK")
 }
 
-func (kv *Kv) watchKV(path string, err error) {
-	p := np.Split(path)
-	kvd := p[len(p)-1]
-	db.DLPrintf("KV", "WatchKV fired %v %v act? %v\n", kvd, err, kv.conf.present(kvd))
-}
-
-// If new, set watch on all KVs, except me. Otherwise, set watch on
-// new ones (i have already watch on the ones in conf).
-func (kv *Kv) watchKVs() {
-	done := make(map[string]bool)
-	old := kv.conf.present(kv.me)
-	for _, kvd := range kv.nextConf.Shards {
-		if kvd == "" {
-			continue
-		}
-		if kvd == kv.me {
-			continue
-		}
-		if old && kv.conf.present(kvd) {
-			continue
-		}
-		// set watch if haven't set yet
-		_, ok := done[kvd]
-		if !ok {
-			done[kvd] = true
-			fn := KVDIR + "/" + kvd
-			db.DLPrintf("KV", "Set watch on %v\n", fn)
-			err := kv.SetRemoveWatch(fn, kv.watchKV)
-			if err != nil {
-				// XXX KV crashed?
-				log.Printf("KV Remove watch err %v\n", fn)
-			}
-		}
-	}
-}
-
 func (kv *Kv) commit() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
@@ -450,11 +414,6 @@ func (kv *Kv) commit() {
 	}
 
 	present := kv.nextConf.present(kv.me)
-
-	if present {
-		// needs kv.conf and kv.nextConf
-		kv.watchKVs()
-	}
 
 	kv.conf = kv.nextConf
 	kv.nextConf = nil

@@ -26,14 +26,14 @@ const (
 
 func (fl *FsLib) WaitForJob() error {
 	// Wait for something runnable
-	return fl.LockFile(JOB_SIGNAL)
+	return fl.LockFile(LOCKS, JOB_SIGNAL)
 }
 
 // Notify localds that a job has become runnable
 func (fl *FsLib) SignalNewJob() error {
 	// Needs to be done twice, since someone waiting on the signal will create a
 	// new lock file, even if they've crashed
-	return fl.UnlockFile(JOB_SIGNAL)
+	return fl.UnlockFile(LOCKS, JOB_SIGNAL)
 }
 
 func (fl *FsLib) ReadRunQ() ([]*np.Stat, error) {
@@ -159,11 +159,11 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 	ls = filterQueue(WAITQ, ls)
 	for _, l := range ls {
 		// Lock the file
-		fl.LockFile(WAITQ + l.Name)
+		fl.LockFile(LOCKS, WAITQ+l.Name)
 		a, err := fl.ReadFile(WAITQ_PATH + l.Name)
 		// May get file not found if someone renamed the file
 		if err != nil && err.Error() != "file not found" {
-			fl.UnlockFile(WAITQ + l.Name)
+			fl.UnlockFile(LOCKS, WAITQ+l.Name)
 			continue
 		}
 		if err != nil {
@@ -189,7 +189,7 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 			err = fl.Remove(WAITQ_PATH + l.Name)
 			// May get file not found if someone renamed the file
 			if err != nil && err.Error() != "file not found" {
-				fl.UnlockFile(WAITQ + l.Name)
+				fl.UnlockFile(LOCKS, WAITQ+l.Name)
 				continue
 			}
 			err = fl.MakeFileAtomic(SCHEDQ, WAITQ+l.Name, b)
@@ -198,7 +198,7 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 				return err
 			}
 		}
-		fl.UnlockFile(WAITQ + l.Name)
+		fl.UnlockFile(LOCKS, WAITQ+l.Name)
 	}
 	return nil
 }
@@ -208,11 +208,11 @@ func (fl *FsLib) WakeupExit(pid string) error {
 	ls = filterQueue(WAITQ, ls)
 	for _, l := range ls {
 		// Lock the file
-		fl.LockFile(WAITQ + l.Name)
+		fl.LockFile(LOCKS, WAITQ+l.Name)
 		a, err := fl.ReadFile(WAITQ_PATH + l.Name)
 		// May get file not found if someone renamed the file
 		if err != nil && err.Error() != "file not found" {
-			fl.UnlockFile(WAITQ + l.Name)
+			fl.UnlockFile(LOCKS, WAITQ+l.Name)
 			continue
 		}
 		if err != nil {
@@ -237,7 +237,7 @@ func (fl *FsLib) WakeupExit(pid string) error {
 			err = fl.Remove(WAITQ_PATH + l.Name)
 			// May get file not found if someone renamed the file
 			if err != nil && err.Error() != "file not found" {
-				fl.UnlockFile(WAITQ + l.Name)
+				fl.UnlockFile(LOCKS, WAITQ+l.Name)
 				continue
 			}
 			if err != nil {
@@ -250,7 +250,7 @@ func (fl *FsLib) WakeupExit(pid string) error {
 				return err
 			}
 		}
-		fl.UnlockFile(WAITQ + l.Name)
+		fl.UnlockFile(LOCKS, WAITQ+l.Name)
 	}
 
 	// Notify localds that a job has become runnable

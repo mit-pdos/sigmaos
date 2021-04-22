@@ -36,12 +36,12 @@ func GenPid() string {
 // Spawn a new lambda
 func (fl *FsLib) Spawn(a *Attr) error {
 	// Create a lock file for waiters to wait on
-	fl.LockFile(WAIT_LOCK + a.Pid)
+	fl.LockFile(LOCKS, WAIT_LOCK+a.Pid)
 	fl.pruneExitDeps(a)
 	b, err := json.Marshal(a)
 	if err != nil {
 		// Unlock the waiter file if unmarshal failed
-		fl.UnlockFile(WAIT_LOCK + a.Pid)
+		fl.UnlockFile(LOCKS, WAIT_LOCK+a.Pid)
 		return err
 	}
 	err = fl.MakeFileAtomic(SCHEDQ, WAITQ+a.Pid, b)
@@ -49,7 +49,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 		return err
 	}
 	// Notify localds that a job has become runnable
-	fl.UnlockFile(JOB_SIGNAL)
+	fl.UnlockFile(LOCKS, JOB_SIGNAL)
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 	if err != nil {
 		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
 	}
-	err = fl.UnlockFile(WAIT_LOCK + pid)
+	err = fl.UnlockFile(LOCKS, WAIT_LOCK+pid)
 	if err != nil {
 		log.Printf("Error unlocking in Exiting %v: %v", pid, err)
 	}
@@ -107,8 +107,8 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 
 // First check waitq, then runq, then the claimed dir
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
-	fl.LockFile(WAIT_LOCK + pid)
-	fl.UnlockFile(WAIT_LOCK + pid)
+	fl.LockFile(LOCKS, WAIT_LOCK+pid)
+	fl.UnlockFile(LOCKS, WAIT_LOCK+pid)
 	// XXX Return an actual exit status
 	return []byte{'O', 'K'}, nil
 }

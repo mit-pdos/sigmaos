@@ -422,10 +422,7 @@ func (kv *Kv) commit() {
 		// reset watch for existence of nextconfig, which indicates view change
 		_, err = kv.readConfigWatch(KVNEXTCONFIG, kv.watchNextConf)
 		if err == nil {
-			db.DLPrintf("KV", "Commit to next conf %v (err %v)\n", KVNEXTCONFIG, err)
-			go func() {
-				kv.prepare()
-			}()
+			log.Fatalf("KV %v: Commit readconfig succeeded\n", kv.me)
 		} else {
 			db.DLPrintf("KV", "Commit: set watch on %v (err %v)\n", KVNEXTCONFIG, err)
 		}

@@ -61,7 +61,10 @@ func MakeLocalD(bin string) *LocalD {
 		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
 	// Try to make scheduling directories if they don't already exist
-	fsl.Mkdir(fslib.SCHEDQ, 0777)
+	fsl.Mkdir(fslib.RUNQ, 0777)
+	fsl.Mkdir(fslib.WAITQ, 0777)
+	fsl.Mkdir(fslib.CLAIMED, 0777)
+	fsl.Mkdir(fslib.CLAIMED_EPH, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	return ld
 }
@@ -258,7 +261,7 @@ func (ld *LocalD) runAll(ls []*Lambda) {
 }
 
 // Worker runs one lambda at a time
-func (ld *LocalD) Worker() {
+func (ld *LocalD) Worker(workerId uint) {
 	ld.SignalNewJob()
 
 	// TODO pin to a core
@@ -301,7 +304,7 @@ func (ld *LocalD) Work() {
 	}
 	for i := uint(0); i < NWorkers; i++ {
 		ld.group.Add(1)
-		go ld.Worker()
+		go ld.Worker(i)
 	}
 	ld.group.Wait()
 

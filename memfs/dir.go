@@ -89,6 +89,10 @@ func (dir *Dir) Size() np.Tlength {
 	return npcodec.DirSize(dir.lsL())
 }
 
+func (dir *Dir) SetParent(p *Dir) {
+	dir.parent = p
+}
+
 func (dir *Dir) namei(ctx npo.CtxI, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
 	var inode InodeI
 	var err error
@@ -259,5 +263,6 @@ func (dir *Dir) Renameat(ctx npo.CtxI, old string, nd npo.NpObjDir, new string) 
 		log.Fatalf("Rename %v createL: %v\n", new, err)
 		return err
 	}
+	ino.SetParent(newdir)
 	return nil
 }

@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-	log.Printf("memfsd: %v\n", os.Args)
 	if os.Args[2] != "" { // initial memfsd?
 		db.Name("memfsd")
 		fsd := memfsd.MakeFsd(os.Args[2])

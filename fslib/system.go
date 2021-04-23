@@ -32,7 +32,7 @@ func run(bin string, name string, args []string) (*exec.Cmd, error) {
 
 func BootMin(bin string) (*System, error) {
 	s := &System{}
-	cmd, err := run(bin, "/bin/named", nil)
+	cmd, err := run(bin, "/bin/memfsd", []string{"0", ":1111"})
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (s *System) Shutdown(clnt *FsLib) {
 	// Shutdown named last
 	err := clnt.Remove(NAMED + "/")
 	if err != nil {
-		log.Fatalf("Named shutdown %v\n", err)
+		log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
 	}
 	s.named.Wait()
 }

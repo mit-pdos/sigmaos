@@ -143,7 +143,7 @@ func (inode *Inode) stat() *np.Stat {
 }
 
 func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
-	db.DLPrintf("MEMFS", "Remove: %v\n", n)
+	db.DLPrintf("MEMFS", "Remove: %v %v %v\n", n, inode, inode.parent)
 
 	dir := inode.parent
 	if dir == nil {

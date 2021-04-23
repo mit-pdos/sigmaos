@@ -108,11 +108,9 @@ func TestRenameAndRemove(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "hello", string(d1))
 
-	log.Printf("Test stat now")
 	_, err = ts.Stat(fn1)
 	assert.Equal(t, nil, err)
 
-	log.Printf("Test remove now")
 	err = ts.Remove(fn1)
 	assert.Equal(t, nil, err)
 	ts.s.Shutdown(ts.FsLib)

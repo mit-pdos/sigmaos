@@ -136,8 +136,18 @@ func TestTwoPC(t *testing.T) {
 
 	mfss := ts.startMemFSs(N)
 
-	ts.fsl.MakeFile(fn(mfss[0], "x"), 0777, []byte("x"))
-	ts.fsl.MakeFile(fn(mfss[1], "y"), 0777, []byte("y"))
+	time.Sleep(200 * time.Millisecond)
+
+	err := ts.fsl.MakeFile(fn(mfss[0], "x"), 0777, []byte("x"))
+	assert.Nil(t, err, "MakeFile")
+	err = ts.fsl.MakeFile(fn(mfss[1], "y"), 0777, []byte("y"))
+	assert.Nil(t, err, "MakeFile")
+
+	ti := Tinput{}
+	ti.Fns = []string{fn(mfss[0], "x"), fn(mfss[1], "y")}
+
+	err = ts.fsl.MakeFileJson(memfsd.MEMFS+"/txni", 0777, ti)
+	assert.Nil(t, err, "MakeFile")
 
 	fws := ts.startFlwrs(N - 1)
 

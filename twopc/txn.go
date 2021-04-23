@@ -5,6 +5,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfsd"
 )
 
 type TxnNull struct {
@@ -15,6 +16,10 @@ type TxnNull struct {
 	index  string
 	opcode string
 	args   []string
+}
+
+type Tinput struct {
+	Fns []string
 }
 
 func txnname(pid string) string {
@@ -35,4 +40,11 @@ func MkTxnTest(args []string) (*TxnNull, error) {
 
 func (txn *TxnNull) Run() {
 	log.Printf("%v: TxnTest %v i %v op %v\n", txn.me, txn.flwr, txn.index, txn.opcode)
+
+	ti := Tinput{}
+	err := txn.ReadFileJson(memfsd.MEMFS+"/txni", &ti)
+	if err != nil {
+		log.Fatalf("Failed to read txn %v\n", err)
+	}
+	log.Printf("ti %v\n", ti)
 }

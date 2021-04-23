@@ -25,6 +25,12 @@ func (s *Symlink) Size() np.Tlength {
 	return np.Tlength(len(s.target))
 }
 
+func (s *Symlink) SetParent(p *Dir) {
+	s.Lock()
+	defer s.Unlock()
+	s.parent = p
+}
+
 func (s *Symlink) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	s.Lock()
 	defer s.Unlock()

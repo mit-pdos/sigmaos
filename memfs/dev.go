@@ -29,6 +29,10 @@ func (d *Device) Size() np.Tlength {
 	return d.d.Len()
 }
 
+func (d *Device) SetParent(p *Dir) {
+	d.parent = p
+}
+
 func (d *Device) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	d.Lock()
 	defer d.Unlock()

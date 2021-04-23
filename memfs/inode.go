@@ -23,6 +23,7 @@ type InodeI interface {
 	Qid() np.Tqid
 	Version() np.TQversion
 	Size() np.Tlength
+	SetParent(*Dir)
 	Open(npo.CtxI, np.Tmode) error
 	Close(npo.CtxI, np.Tmode) error
 	Remove(npo.CtxI, string) error
@@ -200,6 +201,5 @@ func (inode *Inode) Rename(ctx npo.CtxI, from, to string) error {
 		log.Fatalf("Rename create %v failed %v\n", to, err)
 		return err
 	}
-
 	return nil
 }

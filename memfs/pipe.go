@@ -34,6 +34,10 @@ func (p *Pipe) Size() np.Tlength {
 	return np.Tlength(len(p.buf))
 }
 
+func (p *Pipe) SetParent(parent *Dir) {
+	p.parent = parent
+}
+
 func (p *Pipe) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	p.Lock()
 	defer p.Unlock()

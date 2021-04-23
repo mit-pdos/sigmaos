@@ -48,6 +48,25 @@ func TestRemove(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func TestRemovePath(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	fn := "name/d1/f"
+	d := []byte("hello")
+	err = ts.MakeFile(fn, 0777, d)
+	assert.Equal(t, nil, err)
+
+	d1, err := ts.ReadFile(fn)
+	assert.Equal(t, "hello", string(d1))
+
+	err = ts.Remove(fn)
+	assert.Equal(t, nil, err)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestRename(t *testing.T) {
 	ts := makeTstate(t)
 	err := ts.Mkdir("name/d1", 0777)

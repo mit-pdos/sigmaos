@@ -23,6 +23,12 @@ func (f *File) Size() np.Tlength {
 	return np.Tlength(len(f.data))
 }
 
+func (f *File) SetParent(p *Dir) {
+	f.Lock()
+	defer f.Unlock()
+	f.parent = p
+}
+
 func (f *File) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	f.Lock()
 	defer f.Unlock()

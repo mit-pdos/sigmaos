@@ -144,7 +144,11 @@ func TestTwoPC(t *testing.T) {
 	assert.Nil(t, err, "MakeFile")
 
 	ti := Tinput{}
-	ti.Fns = []string{fn(mfss[0], "x"), fn(mfss[1], "y")}
+	ti.Fns = []string{
+		fn(mfss[0], ""),
+		fn(mfss[1], ""),
+		fn(mfss[2], ""),
+	}
 
 	err = ts.fsl.MakeFileJson(memfsd.MEMFS+"/txni", 0777, ti)
 	assert.Nil(t, err, "MakeFile")
@@ -157,6 +161,10 @@ func TestTwoPC(t *testing.T) {
 	ok, err := ts.fsl.Wait(pid)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
+
+	b, err := ts.fsl.ReadFile(fn(mfss[2], "y"))
+	assert.Nil(t, err, "ReadFile")
+	assert.Equal(t, b, []byte("y"))
 
 	time.Sleep(100 * time.Millisecond)
 

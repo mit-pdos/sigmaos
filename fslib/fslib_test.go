@@ -34,6 +34,20 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func TestRemove(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	err := ts.MakeFile(fn, 0777, d)
+	assert.Equal(t, nil, err)
+
+	log.Printf("Test remove now")
+	err = ts.Remove(fn)
+	assert.Equal(t, nil, err)
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestRename(t *testing.T) {
 	ts := makeTstate(t)
 	err := ts.Mkdir("name/d1", 0777)
@@ -52,6 +66,36 @@ func TestRename(t *testing.T) {
 
 	d1, err := ts.ReadFile(fn1)
 	assert.Equal(t, "hello", string(d1))
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestRenameAndRemove(t *testing.T) {
+	ts := makeTstate(t)
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	err = ts.Mkdir("name/d2", 0777)
+	assert.Equal(t, nil, err)
+
+	fn := "name/d1/f"
+	fn1 := "name/d2/g"
+	d := []byte("hello")
+	err = ts.MakeFile(fn, 0777, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Rename(fn, fn1)
+	assert.Equal(t, nil, err)
+
+	d1, err := ts.ReadFile(fn1)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "hello", string(d1))
+
+	log.Printf("Test stat now")
+	_, err = ts.Stat(fn1)
+	assert.Equal(t, nil, err)
+
+	log.Printf("Test remove now")
+	err = ts.Remove(fn1)
+	assert.Equal(t, nil, err)
 	ts.s.Shutdown(ts.FsLib)
 }
 

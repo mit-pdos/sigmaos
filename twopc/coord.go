@@ -28,14 +28,16 @@ const (
 
 type Coord struct {
 	*fslib.FsLib
-	pid  string
-	args []string
-	ch   chan Tstatus
-	txn  *Trans
+	pid     string
+	opcode  string
+	txnprog string
+	args    []string
+	ch      chan Tstatus
+	txn     *Trans
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) < 3 {
+	if len(args) < 4 {
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
 
@@ -43,7 +45,9 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	cd := &Coord{}
 	cd.pid = args[0]
-	cd.args = args[1:]
+	cd.opcode = args[1]
+	cd.txnprog = args[2]
+	cd.args = args[3:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 
@@ -54,7 +58,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	log.Printf("lock\n")
 
-	db.DLPrintf("COORD", "New coord %v", args)
+	db.DLPrintf("COORD", "New coord %v %v", cd.txnprog, args)
 
 	if err := cd.MakeFile(COORD, 0777|np.DMTMP, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
@@ -77,18 +81,11 @@ func (cd *Coord) exit() {
 }
 
 func (cd *Coord) restart() {
-	txn := readTrans(cd.FsLib, TXNPREP)
-	if txn == nil {
-		txn = readTrans(cd.FsLib, TXNCOMMIT)
-	}
-	if txn == nil {
-		// either commit/aborted or never started
+	cd.txn = clean(cd.FsLib)
+	if cd.txn == nil {
 		log.Printf("clean\n")
-		db.DLPrintf("COORD", "Restart: clean\n")
 		return
 	}
-
-	cd.txn = txn
 	prepared := mkFlwsMapStatus(cd.FsLib, TXNPREPARED)
 	committed := mkFlwsMapStatus(cd.FsLib, TXNCOMMITTED)
 
@@ -148,7 +145,7 @@ func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 
 	// depending how many KVs ack, crash2 results
 	// in a abort or commit
-	if cd.args[0] == "crash2" {
+	if cd.opcode == "crash2" {
 		db.DLPrintf("COORD", "Crash2\n")
 		os.Exit(1)
 	}
@@ -199,7 +196,7 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 	}
 
 	// crash3 should results in commit (assuming no KVs crash)
-	if cd.args[0] == "crash3" {
+	if cd.opcode == "crash3" {
 		db.DLPrintf("COORD", "Crash3\n")
 		os.Exit(1)
 	}
@@ -215,7 +212,7 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 func (cd *Coord) TwoPC() {
 	defer cd.exit()
 
-	log.Printf("COORD Coord: %v\n", cd.args)
+	log.Printf("COORD Coord: %v %v\n", cd.txnprog, cd.args)
 
 	// db.DLPrintf("COORD", "Coord: %v\n", cd.args)
 
@@ -223,14 +220,14 @@ func (cd *Coord) TwoPC() {
 
 	cd.restart()
 
-	switch cd.args[0] {
+	switch cd.opcode {
 	case "restart":
 		return
 	}
 
-	cd.txn = makeTrans(1, cd.args[1:])
+	cd.txn = makeTrans(1, cd.args, cd.txnprog)
 
-	fws := mkFlwsMap(cd.FsLib, cd.args[1:])
+	fws := mkFlwsMap(cd.FsLib, cd.args)
 
 	db.DLPrintf("COORD", "Coord txn %v %v\n", cd.txn, fws)
 

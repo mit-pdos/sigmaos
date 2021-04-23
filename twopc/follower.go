@@ -109,13 +109,18 @@ func (flw *Follower) watchTxnCommit(p string, err error) {
 
 // XXX maybe check if one is already running?
 func (flw *Follower) restartCoord() {
-	log.Printf("FLW %v watchCoord: COORD crashed\n", flw.me)
-	pid1 := spawnCoord(flw.FsLib, []string{"restart", flw.me})
+	log.Printf("FLW %v watchCoord: COORD crashed %v\n", flw.me, flw.txn)
+	flw.txn = clean(flw.FsLib)
+	if flw.txn == nil {
+		log.Printf("clean")
+		return
+	}
+	pid1 := spawnCoord(flw.FsLib, "restart", flw.txn.Prog, flw.txn.Followers)
 	ok, err := flw.Wait(pid1)
 	if err != nil {
 		log.Printf("FLW wait failed\n")
 	}
-	log.Printf("FLW Coord done %v\n", string(ok))
+	log.Printf("FLW Coord %v done %v\n", pid1, string(ok))
 
 }
 
@@ -172,7 +177,13 @@ func (flw *Follower) prepare() {
 
 	flw.mu.Unlock()
 
-	// XXX do trans
+	index := flw.txn.Index(flw.me)
+	pid := spawnTrans(flw.FsLib, flw.txn.Prog, flw.me, index, "prepare")
+	ok, err := flw.Wait(pid)
+	if err != nil {
+		log.Printf("Wait spawnTrans failed %v %v\n", string(ok), err)
+		os.Exit(1)
+	}
 
 	if flw.args[1] == "crash4" {
 		db.DLPrintf("FLW", "Crashed in prepare\n")
@@ -188,15 +199,25 @@ func (flw *Follower) commit() {
 
 	log.Printf("FLW %v commit/abort\n", flw.me)
 
-	txn := readTrans(flw.FsLib, TXNCOMMIT)
-	if txn == nil {
+	flw.txn = readTrans(flw.FsLib, TXNCOMMIT)
+	if flw.txn == nil {
 		log.Fatalf("FLW commit cannot read %v\n", TXNCOMMIT)
 	}
 
-	if txn.Status == TCOMMIT {
-		log.Printf("%v: FLW commit txn %v\n", flw.me, txn)
+	opcode := "abort"
+	if flw.txn.Status == TCOMMIT {
+		opcode = "commit"
+		log.Printf("%v: FLW commit txn %v\n", flw.me, flw.txn)
 	} else {
-		log.Printf("%v: FLW abort txn %v\n", flw.me, txn)
+		log.Printf("%v: FLW abort txn %v\n", flw.me, flw.txn)
+	}
+
+	index := flw.txn.Index(flw.me)
+	pid := spawnTrans(flw.FsLib, flw.txn.Prog, flw.me, index, opcode)
+	ok, err := flw.Wait(pid)
+	if err != nil {
+		log.Printf("Wait spawnTrans failed %v %v\n", string(ok), err)
+		os.Exit(1)
 	}
 
 	if flw.args[1] == "crash5" {

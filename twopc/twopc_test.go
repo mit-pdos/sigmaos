@@ -78,7 +78,7 @@ func (ts *Tstate) spawnFlwr() string {
 }
 
 func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
-	pid1 := spawnCoord(ts.fsl, nil)
+	pid1 := spawnCoord(ts.fsl, "restart", "", nil)
 	log.Printf("coord spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
@@ -125,6 +125,10 @@ func (ts *Tstate) stopMemFSs(mfss []string) {
 	}
 }
 
+func fn(mfs, f string) string {
+	return memfsd.MEMFS + "/" + mfs + "/" + f
+}
+
 func TestTwoPC(t *testing.T) {
 	const N = 3
 
@@ -132,21 +136,21 @@ func TestTwoPC(t *testing.T) {
 
 	mfss := ts.startMemFSs(N)
 
+	ts.fsl.MakeFile(fn(mfss[0], "x"), 0777, []byte("x"))
+	ts.fsl.MakeFile(fn(mfss[1], "y"), 0777, []byte("y"))
+
 	fws := ts.startFlwrs(N - 1)
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
-	args := append([]string{"start"}, fws...)
-	pid := spawnCoord(ts.fsl, args)
+	pid := spawnCoord(ts.fsl, "start", "bin/testtxn", fws)
 	ok, err := ts.fsl.Wait(pid)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")
 
-	log.Printf("Coord done %v\n", mfss)
+	time.Sleep(100 * time.Millisecond)
 
 	ts.stopMemFSs(mfss)
-
-	log.Printf("memfs done\n")
 
 	ts.s.Shutdown(ts.fsl)
 }

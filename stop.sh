@@ -1,10 +1,12 @@
 #!/bin/sh
 
 ./umount.sh
-killall named
+killall memfsd
 killall locald
 killall sleeperl
 killall kvd
+killall coord
+killall flwr
 killall sharderd
 killall nps3d
 killall npuxd

@@ -59,7 +59,7 @@ func InitFsFsl(name string, fsc *FsLib, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsL
 	}
 	err := fsl.PostService(memfsd.Addr(), name)
 	if err != nil {
-		return nil, fmt.Errorf("PostService %v error: %v\n", name, err)
+		return nil, fmt.Errorf("PostService %v error: %v", name, err)
 	}
 	return fsl, nil
 }

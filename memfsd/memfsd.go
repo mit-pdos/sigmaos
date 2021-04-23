@@ -11,6 +11,8 @@ import (
 	"ulambda/npsrv"
 )
 
+const MEMFS = "name/memfsd"
+
 type Ctx struct {
 	uname string
 }
@@ -46,11 +48,11 @@ func MakeFsd(addr string) *Fsd {
 
 func (fsd *Fsd) Serve() {
 	<-fsd.ch
-	db.DLPrintf("NAMED", "Exit\n")
+	db.DLPrintf("MEMFSD", "Exit\n")
 }
 
 func (fsd *Fsd) Done() {
-	db.DLPrintf("NAMED", "Done\n")
+	db.DLPrintf("MEMFSD", "Done\n")
 	fsd.ch <- true
 }
 

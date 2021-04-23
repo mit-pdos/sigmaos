@@ -14,7 +14,7 @@ if [[ -z "${NAMED}" ]]; then
   export NAMED=$N
 fi
 
-./bin/named &
+./bin/memfsd 0 ":1111" &
 ./bin/nps3d &
 ./bin/npuxd &
 ./bin/locald ./ &

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
+	"path"
 	"strconv"
 )
 
@@ -26,7 +27,7 @@ type Attr struct {
 const (
 	LOCALD_ROOT  = "name/localds"
 	NO_OP_LAMBDA = "no-op-lambda"
-	WRITING      = "WRITE-IN-PROGRESS."
+	WAIT_LOCK    = "wait-lock."
 )
 
 func GenPid() string {
@@ -44,7 +45,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 		fl.UnlockFile(LOCKS, WAIT_LOCK+a.Pid)
 		return err
 	}
-	err = fl.MakeDirFileAtomic(SCHEDQ, WAITQ+a.Pid, b)
+	err = fl.MakeDirFileAtomic(WAITQ, a.Pid, b)
 	if err != nil {
 		return err
 	}
@@ -75,7 +76,7 @@ func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
 }
 
 func (fl *FsLib) HasBeenSpawned(pid string) bool {
-	_, err := fl.Stat(LOCKS + "/" + LockName(WAIT_LOCK+pid))
+	_, err := fl.Stat(path.Join(LOCKS, LockName(WAIT_LOCK+pid)))
 	if err == nil {
 		return true
 	}
@@ -90,11 +91,11 @@ func (fl *FsLib) Started(pid string) error {
 
 func (fl *FsLib) Exiting(pid string, status string) error {
 	fl.WakeupExit(pid)
-	err := fl.Remove(CLAIMED_PATH + pid)
+	err = fl.Remove(path.Join(CLAIMED, pid))
 	if err != nil {
 		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
 	}
-	err = fl.Remove(CLAIMED_EPH_PATH + pid)
+	err = fl.Remove(path.Join(CLAIMED_EPH, pid))
 	if err != nil {
 		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
 	}

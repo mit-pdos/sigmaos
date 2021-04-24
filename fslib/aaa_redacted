@@ -1,0 +1,416 @@
+2021/04/23 15:48:05 named:651548 NPOBJ MakeNpConn &{{0xc000146080}} -> &{{0 0} false 0xc000138028 map[] 0xc000140000 map[] 0xc000112580 0xc000112590}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Attach -> fid 1 { Names [] Qids [{d 1 824634885440}] } &{localhost:1111 0xc0000dc2c0}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Mount 1 at name &{localhost:1111 0xc0000dc2c0}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Create name/d1 perm qt d p ff
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 []
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 2 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 2
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {2 3 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [] -> [] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {2}
+2021/04/23 15:48:05 WALKING: [name], 3
+2021/04/23 15:48:05 named:651548 9POBJ Create {3 d1 qt d p ff m 0}
+2021/04/23 15:48:05 named:651548 9POBJ f p []
+2021/04/23 15:48:05 named:651548 MEMFS Create d1 in Dir{entries: } -> Dir{entries: }
+2021/04/23 15:48:05 named:651548 9POBJ Create d1 Dir{entries: } <nil>
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {3}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Create name/d2 perm qt d p ff
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 []
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 4 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 4
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {4 5 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [] -> [] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {4}
+2021/04/23 15:48:05 WALKING: [name], 5
+2021/04/23 15:48:05 named:651548 9POBJ Create {5 d2 qt d p ff m 0}
+2021/04/23 15:48:05 named:651548 9POBJ f p []
+2021/04/23 15:48:05 named:651548 MEMFS Create d2 in Dir{entries: [d1 0xc00009a470]} -> Dir{entries: }
+2021/04/23 15:48:05 named:651548 9POBJ Create d2 Dir{entries: } <nil>
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {5}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Create name/d1/f perm qt f p ff
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d1]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 [d1]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 6 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 6
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {6 7 [d1]} (1)
+2021/04/23 15:48:05 named:651548 MEMFS &{fslibtest}: Lookup Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} [d1]
+2021/04/23 15:48:05 named:651548 MEMFS lookup: [d1]
+2021/04/23 15:48:05 lookupL: 0xc000112570 with parent 0x0, d1, map[.:Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} d1:Dir{entries: } d2:Dir{entries: }]
+goroutine 9 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000112570, 0xc0000183aa, 0x2, 0xc000100050, 0x0, 0x47b1fc, 0x418e60)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000012520, 0x1, 0x1, 0x734d88, 0x0, 0x0, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000012520, 0x1, 0x1, 0x3, 0xc0001000a0, 0xc0000bb938, 0x47a3ea, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0x700000006, 0xc000012520, 0x1, 0x1, 0xc0000a6378, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc0000242c0, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00000e2b8)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 named:651548 MEMFS namei [d1] Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} -> [Dir{entries: }]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [d1] -> [{d 1 824634409824}] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {6}
+2021/04/23 15:48:05 WALKING: [name d1], 7
+2021/04/23 15:48:05 named:651548 9POBJ Create {7 f qt f p ff m 1}
+2021/04/23 15:48:05 named:651548 9POBJ f p [d1]
+2021/04/23 15:48:05 named:651548 MEMFS Create f in Dir{entries: } -> Inode 0xc00011c900 qt f p ff
+2021/04/23 15:48:05 named:651548 9POBJ Create f Inode 0xc00011c900 qt f p ff <nil>
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Write 0 5
+2021/04/23 15:48:05 named:651548 9POBJ Write Twrite(7 off 0 cnt 5
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {7}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Rename name/d1/f name/d2/g
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Renameat name/d1/f name/d2/g
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d1]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 [d1]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 8 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 8
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {8 9 [d1]} (1)
+2021/04/23 15:48:05 named:651548 MEMFS &{fslibtest}: Lookup Dir{entries: [d2 0xc000012230][d1 0xc00009a470]} [d1]
+2021/04/23 15:48:05 named:651548 MEMFS lookup: [d1]
+2021/04/23 15:48:05 lookupL: 0xc000112570 with parent 0x0, d1, map[.:Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} d1:Dir{entries: [f 0xc0001441e0]} d2:Dir{entries: }]
+goroutine 27 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000112570, 0xc00013459a, 0x2, 0xc000100050, 0x0, 0x47b1fc, 0x418e60)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000112bf0, 0x1, 0x1, 0x734d88, 0x0, 0x0, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000112bf0, 0x1, 0x1, 0x3, 0xc0001000a0, 0xc00006d938, 0x47a3ea, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0x900000008, 0xc000112bf0, 0x1, 0x1, 0xc00000e2e8, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc0001443e0, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00012a348)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 named:651548 MEMFS namei [d1] Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} -> [Dir{entries: [f 0xc0001441e0]}]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [d1] -> [{d 2 824634409824}] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {8}
+2021/04/23 15:48:05 WALKING: [name d1], 9
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d2]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 [d2]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 10 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 10
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {10 11 [d2]} (1)
+2021/04/23 15:48:05 named:651548 MEMFS &{fslibtest}: Lookup Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} [d2]
+2021/04/23 15:48:05 named:651548 MEMFS lookup: [d2]
+2021/04/23 15:48:05 lookupL: 0xc000112570 with parent 0x0, d2, map[.:Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} d1:Dir{entries: [f 0xc0001441e0]} d2:Dir{entries: }]
+goroutine 12 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000112570, 0xc00001859a, 0x2, 0xc000100050, 0x0, 0x47b1fc, 0x418e60)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000012a10, 0x1, 0x1, 0x734d88, 0x0, 0x0, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000012a10, 0x1, 0x1, 0x3, 0xc0001000a0, 0xc000117938, 0x47a3ea, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0xb0000000a, 0xc000012a10, 0x1, 0x1, 0xc0000a64b0, 0xc0000a6450)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc000024480, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00000e4f8)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 named:651548 MEMFS namei [d2] Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} -> [Dir{entries: }]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [d2] -> [{d 1 824634188112}] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {10}
+2021/04/23 15:48:05 WALKING: [name d2], 11
+2021/04/23 15:48:05 named:651548 9POBJ Renameat p [d1] p [d2] {9 f 11 g}
+2021/04/23 15:48:05 named:651548 MEMFS Renameat Dir{entries: [f 0xc0001441e0]} f to Dir{entries: } g
+2021/04/23 15:48:05 lookupL: 0xc00009a470 with parent 0xc000112570, f, map[.:Dir{entries: [f 0xc0001441e0]} f:Inode 0xc00011c900 qt f p ff]
+goroutine 13 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc00009a470, 0x6f6650, 0x1, 0x18, 0xc0001178b8, 0x4, 0x4)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).Renameat(0xc00009a470, 0x628b58, 0xc00009a0b0, 0x6f6650, 0x1, 0x62ab38, 0xc000012230, 0x6f6658, 0x1, 0x0, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:249 +0x21e
+ulambda/npobjsrv.(*NpConn).Renameat(0xc0001000a0, 0x9, 0x6f6650, 0x1, 0xb, 0x6f6658, 0x1, 0x734d88, 0xc000117e68)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:531 +0x3b6
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628f98, 0xc000072690, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:119 +0x166a
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00000e570)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 lookupL: 0xc000012230 with parent 0xc000112570, g, map[.:Dir{entries: }]
+goroutine 13 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000012230, 0x6f6658, 0x1, 0x1, 0xc0000c0098, 0x1, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).Renameat(0xc00009a470, 0x628b58, 0xc00009a0b0, 0x6f6650, 0x1, 0x62ab38, 0xc000012230, 0x6f6658, 0x1, 0x0, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:257 +0x33d
+ulambda/npobjsrv.(*NpConn).Renameat(0xc0001000a0, 0x9, 0x6f6650, 0x1, 0xb, 0x6f6658, 0x1, 0x734d88, 0xc000117e68)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:531 +0x3b6
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628f98, 0xc000072690, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:119 +0x166a
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00000e570)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 THIS ONE1: g
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {11}
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {9}
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Open name/d2/g m 0
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 [d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 12 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 12
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {12 13 [d2 g]} (2)
+2021/04/23 15:48:05 named:651548 MEMFS &{fslibtest}: Lookup Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} [d2 g]
+2021/04/23 15:48:05 named:651548 MEMFS lookup: [d2 g]
+2021/04/23 15:48:05 lookupL: 0xc000112570 with parent 0x0, d2, map[.:Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} d1:Dir{entries: } d2:Dir{entries: [g 0xc0001441e0]}]
+goroutine 29 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000112570, 0xc00013466e, 0x2, 0xc000100050, 0x0, 0x47b1fc, 0x418e60)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0001444c0, 0x2, 0x2, 0x734d88, 0x0, 0x0, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0001444c0, 0x2, 0x2, 0x3, 0xc0001000a0, 0xc00006d938, 0x47a3ea, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0xd0000000c, 0xc0001444c0, 0x2, 0x2, 0xc00000e5a0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc0001444e0, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00012a408)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 lookupL: 0xc000012230 with parent 0xc000112570, g, map[.:Dir{entries: [g 0xc0001441e0]} g:Inode 0xc00011c900 qt f p ff]
+goroutine 29 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000012230, 0x6f6658, 0x1, 0xc000196800, 0x576, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000012230, 0x628b58, 0xc00009a0b0, 0xc0001444d0, 0x1, 0x1, 0xc000012d10, 0x1, 0x1, 0x0, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0001444c0, 0x2, 0x2, 0xc000012d10, 0x1, 0x1, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:116 +0x47b
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0001444c0, 0x2, 0x2, 0x3, 0xc0001000a0, 0xc00006d938, 0x47a3ea, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0xd0000000c, 0xc0001444c0, 0x2, 0x2, 0xc00000e5a0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc0001444e0, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00012a408)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 named:651548 MEMFS namei [g] Dir{entries: [g 0xc0001441e0]} -> [Dir{entries: [g 0xc0001441e0]} Inode 0xc00011c900 qt f p ff] []
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [d2 g] -> [{d 1 824634188112} {f 2 824634886400}] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {12}
+2021/04/23 15:48:05 WALKING: [name d2 g], 13
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkMany [name d2 g] -> 13 <nil>
+2021/04/23 15:48:05 named:651548 9POBJ Open {13 m 0}
+2021/04/23 15:48:05 named:651548 9POBJ f p [d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Read 0 10000000
+2021/04/23 15:48:05 named:651548 9POBJ Read {13 0 10000000}
+2021/04/23 15:48:05 named:651548 9POBJ ReadFid {13 0 10000000} p [d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Read -> &{[104 101 108 108 111]} <nil>
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Read 0 10000000
+2021/04/23 15:48:05 named:651548 9POBJ Read {13 5 10000000}
+2021/04/23 15:48:05 named:651548 9POBJ ReadFid {13 5 10000000} p [d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Read -> &{[]} <nil>
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {13}
+2021/04/23 15:48:05 Test stat now
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Stat name/d2/g
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 [d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 14 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 14
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {14 15 [d2 g]} (2)
+2021/04/23 15:48:05 named:651548 MEMFS &{fslibtest}: Lookup Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} [d2 g]
+2021/04/23 15:48:05 named:651548 MEMFS lookup: [d2 g]
+2021/04/23 15:48:05 lookupL: 0xc000112570 with parent 0x0, d2, map[.:Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} d1:Dir{entries: } d2:Dir{entries: [g 0xc0001441e0]}]
+goroutine 32 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000112570, 0xc000134782, 0x2, 0xc000100050, 0x0, 0x47b1fc, 0x418e60)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000144600, 0x2, 0x2, 0x734d88, 0x0, 0x0, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000144600, 0x2, 0x2, 0x3, 0x59107d, 0xc00012a4b0, 0x628b58, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0xf0000000e, 0xc000144600, 0x2, 0x2, 0xc00012a5b8, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc000144620, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00012a588)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 lookupL: 0xc000012230 with parent 0xc000112570, g, map[.:Dir{entries: [g 0xc0001441e0]} g:Inode 0xc00011c900 qt f p ff]
+goroutine 32 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000012230, 0x6f6658, 0x1, 0xc00017e000, 0x572, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000012230, 0x628b58, 0xc00009a0b0, 0xc000144610, 0x1, 0x1, 0xc0001132d0, 0x1, 0x1, 0x0, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000144600, 0x2, 0x2, 0xc0001132d0, 0x1, 0x1, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:116 +0x47b
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc000144600, 0x2, 0x2, 0x3, 0x59107d, 0xc00012a4b0, 0x628b58, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0xf0000000e, 0xc000144600, 0x2, 0x2, 0xc00012a5b8, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc000144620, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00012a588)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 named:651548 MEMFS namei [g] Dir{entries: [g 0xc0001441e0]} -> [Dir{entries: [g 0xc0001441e0]} Inode 0xc00011c900 qt f p ff] []
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [d2 g] -> [{d 1 824634188112} {f 2 824634886400}] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {14}
+2021/04/23 15:48:05 WALKING: [name d2 g], 15
+2021/04/23 15:48:05 STAT FID: 15
+2021/04/23 15:48:05 named:651548 9POBJ Stat p [d2 g]
+2021/04/23 15:48:05 Test remove now
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Remove name/d2/g
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d2 g]
+2021/04/23 15:48:05 Walkmany!
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 [d2 g]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 16 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 16
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {16 17 [d2 g]} (2)
+2021/04/23 15:48:05 named:651548 MEMFS &{fslibtest}: Lookup Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} [d2 g]
+2021/04/23 15:48:05 named:651548 MEMFS lookup: [d2 g]
+2021/04/23 15:48:05 lookupL: 0xc000112570 with parent 0x0, d2, map[.:Dir{entries: [d1 0xc00009a470][d2 0xc000012230]} d1:Dir{entries: } d2:Dir{entries: [g 0xc0001441e0]}]
+goroutine 50 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000112570, 0xc000098a3a, 0x2, 0xc000100050, 0x0, 0x47b1fc, 0x418e60)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0000aa860, 0x2, 0x2, 0x734d88, 0x0, 0x0, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0000aa860, 0x2, 0x2, 0x3, 0xc00011c900, 0x1ff00106a80, 0xc00011c900, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0x1100000010, 0xc0000aa860, 0x2, 0x2, 0xc00000e750, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc0000aa880, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc0000a6ab0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 lookupL: 0xc000012230 with parent 0xc000112570, g, map[.:Dir{entries: [g 0xc0001441e0]} g:Inode 0xc00011c900 qt f p ff]
+goroutine 50 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc000012230, 0x6f6658, 0x1, 0xc000197800, 0x57c, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Dir).namei(0xc000012230, 0x628b58, 0xc00009a0b0, 0xc0000aa870, 0x1, 0x1, 0xc0000130f0, 0x1, 0x1, 0x0, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:101 +0xba
+ulambda/memfs.(*Dir).namei(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0000aa860, 0x2, 0x2, 0xc0000130f0, 0x1, 0x1, 0xc00011c540, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:116 +0x47b
+ulambda/memfs.(*Dir).Lookup(0xc000112570, 0x628b58, 0xc00009a0b0, 0xc0000aa860, 0x2, 0x2, 0x3, 0xc00011c900, 0x1ff00106a80, 0xc00011c900, ...)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:192 +0x2f4
+ulambda/npobjsrv.(*NpConn).Walk(0xc0001000a0, 0x1100000010, 0xc0000aa860, 0x2, 0x2, 0xc00000e750, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:257 +0x5a4
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628ff8, 0xc0000aa880, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:71 +0x4ef
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc0000a6ab0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 named:651548 MEMFS namei [g] Dir{entries: [g 0xc0001441e0]} -> [Dir{entries: [g 0xc0001441e0]} Inode 0xc00011c900 qt f p ff] []
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [d2 g] -> [{d 1 824634188112} {f 2 824634886400}] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {16}
+2021/04/23 15:48:05 WALKING: [name d2 g], 17
+2021/04/23 15:48:05 Walkmany! I got fid: 17
+2021/04/23 15:48:05 REMOVVEEEEEEE!
+2021/04/23 15:48:05 REMOVE FID: 17
+2021/04/23 15:48:05 named:651548 9POBJ Remove f p [d2 g]
+2021/04/23 15:48:05 named:651548 MEMFS Remove: g
+2021/04/23 15:48:05 lookupL: 0xc00009a470 with parent 0xc000112570, g, map[.:Dir{entries: }]
+goroutine 66 [running]:
+runtime/debug.Stack(0x5994ef, 0xc000100050, 0x2)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0xab
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x34
+ulambda/memfs.(*Dir).lookupL(0xc00009a470, 0x6f6658, 0x1, 0xb, 0xc000117930, 0x1, 0x1)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/dir.go:73 +0x20f
+ulambda/memfs.(*Inode).Remove(0xc00011c900, 0x628b58, 0xc00009a0b0, 0x6f6658, 0x1, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/memfs/inode.go:157 +0x205
+ulambda/npobjsrv.(*NpConn).Remove(0xc0001000a0, 0x11, 0x734d88, 0x7360a0)
+	/home/ariel/workspace/research/serverless/ulambda/npobjsrv/npobjsrv.go:449 +0x29a
+ulambda/npsrv.(*Channel).dispatch(0xc000100140, 0x628f78, 0xc000134974, 0x0, 0x0, 0x0)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:107 +0x342
+ulambda/npsrv.(*Channel).serve(0xc000100140, 0xc00012a738)
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:156 +0x8d
+created by ulambda/npsrv.(*Channel).reader
+	/home/ariel/workspace/research/serverless/ulambda/npsrv/npconn.go:142 +0x334
+2021/04/23 15:48:05 THIS ONE1: g
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT Remove name/
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name]
+2021/04/23 15:48:05 Walkmany!
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT resolve [{[name], 1}] [name]
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne: mount -> 1 []
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] }
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {1 18 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT clone: 1 { Names [] Qids [{d 1 824634885440}] } -> 18
+2021/04/23 15:48:05 named:651548 9POBJ Walk o p [] args {18 19 []} (0)
+2021/04/23 15:48:05 fslib_test:651542 FSCLNT walkOne rest [] -> [] 0
+2021/04/23 15:48:05 named:651548 9POBJ Clunk {18}
+2021/04/23 15:48:05 WALKING: [name], 19
+2021/04/23 15:48:05 Walkmany! I got fid: 19
+2021/04/23 15:48:05 REMOVVEEEEEEE!
+2021/04/23 15:48:05 REMOVE FID: 19
+2021/04/23 15:48:05 named:651548 9POBJ Done
+2021/04/23 15:48:05 named:651548 NAMED Done
+2021/04/23 15:48:05 named:651548 NAMED Exit
+--- FAIL: TestRenameAndRemove (0.16s)
+    fslib_test.go:98: 
+        	Error Trace:	fslib_test.go:98
+        	Error:      	Not equal: 
+        	            	expected: <nil>(<nil>)
+        	            	actual  : *errors.errorString(&errors.errorString{s:"file not found g"})
+        	Test:       	TestRenameAndRemove
+FAIL
+exit status 1
+FAIL	ulambda/fslib	0.166s

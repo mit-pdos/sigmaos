@@ -3,6 +3,7 @@ package fslib
 import (
 	"encoding/json"
 	"log"
+	"path"
 	"strings"
 	"time"
 
@@ -10,18 +11,13 @@ import (
 )
 
 const (
-	SCHEDQ           = "name/schedq"
-	RUNQ             = "runq="
-	WAITQ            = "waitq="
-	CLAIMED          = "claimed="
-	CLAIMED_EPH      = "claimed_ephemeral="
-	RUNQ_PATH        = SCHEDQ + "/" + RUNQ
-	WAITQ_PATH       = SCHEDQ + "/" + WAITQ
-	CLAIMED_PATH     = SCHEDQ + "/" + CLAIMED
-	CLAIMED_EPH_PATH = SCHEDQ + "/" + CLAIMED_EPH
-	WAIT_LOCK        = "wait-lock."
-	JOB_SIGNAL       = "job-signal"
-	CRASH_TIMEOUT    = 1
+	RUNQ    = "name/runq"
+	WAITQ   = "name/waitq"
+	CLAIMED = "name/claimed"
+	// XXX TODO: handle claimed_eph in a special way
+	CLAIMED_EPH   = "name/claimed_ephemeral"
+	JOB_SIGNAL    = "job-signal"
+	CRASH_TIMEOUT = 1
 )
 
 func (fl *FsLib) WaitForJob() error {
@@ -37,38 +33,38 @@ func (fl *FsLib) SignalNewJob() error {
 }
 
 func (fl *FsLib) ReadRunQ() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(SCHEDQ)
+	d, err := fl.ReadDir(RUNQ)
 	if err != nil {
 		return d, err
 	}
-	jobs := filterQueue(RUNQ, d)
+	jobs := filterQueue(d)
 	return jobs, err
 }
 
 func (fl *FsLib) ReadClaimed() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(SCHEDQ)
+	d, err := fl.ReadDir(CLAIMED)
 	if err != nil {
 		return d, err
 	}
-	jobs := filterQueue(CLAIMED, d)
+	jobs := filterQueue(d)
 	return jobs, err
 }
 
 func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(SCHEDQ)
+	d, err := fl.ReadDir(WAITQ)
 	if err != nil {
 		return d, err
 	}
-	jobs := filterQueue(WAITQ, d)
+	jobs := filterQueue(d)
 	return jobs, err
 }
 
 func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
-	return fl.ReadFile(WAITQ_PATH + pid)
+	return fl.ReadFile(path.Join(WAITQ, pid))
 }
 
 func (fl *FsLib) MarkJobRunnable(pid string) error {
-	fl.Rename(WAITQ_PATH+pid, RUNQ_PATH+pid)
+	fl.Rename(path.Join(WAITQ, pid), path.Join(RUNQ, pid))
 	// Notify localds that a job has become runnable
 	fl.SignalNewJob()
 	return nil
@@ -76,7 +72,7 @@ func (fl *FsLib) MarkJobRunnable(pid string) error {
 
 // Move a job from CLAIMED to RUNQ
 func (fl *FsLib) RestartJob(pid string) error {
-	fl.Rename(CLAIMED_PATH+pid, RUNQ_PATH+pid)
+	fl.Rename(path.Join(CLAIMED, pid), path.Join(RUNQ, pid))
 	// Notify localds that a job has become runnable
 	fl.SignalNewJob()
 	return nil
@@ -88,9 +84,9 @@ func (fl *FsLib) RestartJob(pid string) error {
 // file exists but the CLAIMED_EPH file does not exist, wait a short amount of
 // time (CRASH_TIMEOUT) before declaring a job as failed.
 func (fl *FsLib) JobCrashed(pid string) bool {
-	_, err := fl.Stat(CLAIMED_EPH_PATH + pid)
+	_, err := fl.Stat(path.Join(CLAIMED_EPH, pid))
 	if err != nil {
-		stat, err := fl.Stat(CLAIMED_PATH + pid)
+		stat, err := fl.Stat(path.Join(CLAIMED, pid))
 		// If it has fully exited (both claimed & claimed_ephemeral are gone)
 		if err != nil {
 			return false
@@ -105,29 +101,29 @@ func (fl *FsLib) JobCrashed(pid string) bool {
 
 // Claim a job by moving it from the runq to the claimed dir
 func (fl *FsLib) ClaimRunQJob(pid string) ([]byte, bool) {
-	return fl.claimJob(RUNQ_PATH, pid)
+	return fl.claimJob(RUNQ, pid)
 }
 
 // Claim a job by moving it from the runq to the claimed dir
 func (fl *FsLib) ClaimWaitQJob(pid string) ([]byte, bool) {
-	return fl.claimJob(WAITQ_PATH, pid)
+	return fl.claimJob(WAITQ, pid)
 }
 
 func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore
 	// errors in the event we lose the race.
-	fl.WriteFile(queuePath+pid, []byte{})
-	err := fl.Rename(queuePath+pid, CLAIMED_PATH+pid)
+	fl.WriteFile(path.Join(queuePath, pid), []byte{})
+	err := fl.Rename(path.Join(queuePath, pid), path.Join(CLAIMED, pid))
 	if err != nil {
 		return []byte{}, false
 	}
 	// Create an ephemeral file to mark that locald hasn't crashed
-	fd, err := fl.Create(CLAIMED_EPH_PATH+pid, 0777|np.DMTMP, np.OWRITE)
+	fd, err := fl.Create(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, np.OWRITE)
 	if err != nil {
 		log.Printf("Error creating ephemeral claimed job file: %v", err)
 	}
 	fl.Close(fd)
-	b, err := fl.ReadFile(CLAIMED_PATH + pid)
+	b, err := fl.ReadFile(path.Join(CLAIMED, pid))
 	if err != nil {
 		log.Printf("Error reading claimed job: %v", err)
 		return []byte{}, false
@@ -137,16 +133,14 @@ func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	return b, true
 }
 
-// Filter out jobs from other queues & partially written jobs. Also, rename to
-// remove queue prefix
-func filterQueue(queue string, jobs []*np.Stat) []*np.Stat {
+// Filter out partially written jobs.
+func filterQueue(jobs []*np.Stat) []*np.Stat {
 	filtered := []*np.Stat{}
 	for _, s := range jobs {
-		// Filter jobs from other queues, or jobs with in-progress writes
-		if strings.Index(s.Name, queue) != 0 {
+		// Filter jobs with in-progress writes
+		if strings.Index(s.Name, WRITING) == 0 {
 			continue
 		}
-		s.Name = s.Name[len(queue):]
 		filtered = append(filtered, s)
 	}
 	return filtered
@@ -155,15 +149,15 @@ func filterQueue(queue string, jobs []*np.Stat) []*np.Stat {
 func (fl *FsLib) SwapExitDependency(pids []string) error {
 	fromPid := pids[0]
 	toPid := pids[1]
-	ls, _ := fl.ReadDir(SCHEDQ)
-	ls = filterQueue(WAITQ, ls)
+	ls, _ := fl.ReadDir(WAITQ)
+	ls = filterQueue(ls)
 	for _, l := range ls {
 		// Lock the file
-		fl.LockFile(LOCKS, WAITQ+l.Name)
-		a, err := fl.ReadFile(WAITQ_PATH + l.Name)
+		fl.LockFile(LOCKS, path.Join(WAITQ, l.Name))
+		a, err := fl.ReadFile(WAITQ + l.Name)
 		// May get file not found if someone renamed the file
 		if err != nil && err.Error() != "file not found" {
-			fl.UnlockFile(LOCKS, WAITQ+l.Name)
+			fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 			continue
 		}
 		if err != nil {
@@ -186,33 +180,33 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 				return err
 			}
 			// XXX OTRUNC isn't implemented for memfs yet, so remove & rewrite
-			err = fl.Remove(WAITQ_PATH + l.Name)
+			err = fl.Remove(WAITQ + l.Name)
 			// May get file not found if someone renamed the file
 			if err != nil && err.Error() != "file not found" {
-				fl.UnlockFile(LOCKS, WAITQ+l.Name)
+				fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 				continue
 			}
-			err = fl.MakeDirFileAtomic(SCHEDQ, WAITQ+l.Name, b)
+			err = fl.MakeDirFileAtomic(WAITQ, l.Name, b)
 			if err != nil {
 				log.Fatalf("Error in SwapExitDependency MakeFileAtomic %v: %v", l.Name, err)
 				return err
 			}
 		}
-		fl.UnlockFile(LOCKS, WAITQ+l.Name)
+		fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 	}
 	return nil
 }
 
 func (fl *FsLib) WakeupExit(pid string) error {
-	ls, _ := fl.ReadDir(SCHEDQ)
-	ls = filterQueue(WAITQ, ls)
+	ls, _ := fl.ReadDir(WAITQ)
+	ls = filterQueue(ls)
 	for _, l := range ls {
 		// Lock the file
-		fl.LockFile(LOCKS, WAITQ+l.Name)
-		a, err := fl.ReadFile(WAITQ_PATH + l.Name)
+		fl.LockFile(LOCKS, path.Join(WAITQ, l.Name))
+		a, err := fl.ReadFile(path.Join(WAITQ, l.Name))
 		// May get file not found if someone renamed the file
 		if err != nil && err.Error() != "file not found" {
-			fl.UnlockFile(LOCKS, WAITQ+l.Name)
+			fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 			continue
 		}
 		if err != nil {
@@ -234,23 +228,23 @@ func (fl *FsLib) WakeupExit(pid string) error {
 				return err
 			}
 			// XXX OTRUNC isn't implemented for memfs yet, so remove & rewrite
-			err = fl.Remove(WAITQ_PATH + l.Name)
+			err = fl.Remove(path.Join(WAITQ, l.Name))
 			// May get file not found if someone renamed the file
 			if err != nil && err.Error() != "file not found" {
-				fl.UnlockFile(LOCKS, WAITQ+l.Name)
+				fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 				continue
 			}
 			if err != nil {
 				log.Fatalf("Error in WakeupExit Remove %v: %v", l.Name, err)
 				return err
 			}
-			err = fl.MakeDirFileAtomic(SCHEDQ, WAITQ+l.Name, b)
+			err = fl.MakeDirFileAtomic(WAITQ, l.Name, b)
 			if err != nil {
 				log.Fatalf("Error in WakeupExit MakeFileAtomic %v: %v", l.Name, err)
 				return err
 			}
 		}
-		fl.UnlockFile(LOCKS, WAITQ+l.Name)
+		fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 	}
 
 	// Notify localds that a job has become runnable

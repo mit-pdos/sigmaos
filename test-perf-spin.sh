@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Make sure we built without race detector
+./make_norace.sh
+
 # Params
 dim=64
 max_its=30 # Step size = 5
@@ -9,7 +12,11 @@ remote_baseline_its=5000
 N=1
 
 # Dirs
-measurements=./measurements_contention
+if [[ $# -gt 0 && $1 == "contention" ]]; then
+  measurements=./measurements_contention
+else
+  measurements=./measurements
+fi
 native_baseline=$measurements/spin_test_native_baseline.txt
 remote_baseline=$measurements/spin_test_remote_baseline.txt
 
@@ -39,7 +46,7 @@ echo $dim $remote_baseline_its 1 > $remote_baseline
 for test_type in native 9p aws ; do
   ./stop.sh
   echo "Running $test_type tests..."
-  if [[ $test_type == "9p" || $# -gt 0 && $1 == "contention" ]]; then
+  if [[ $test_type == "9p" ]]; then
     echo "Starting 9p infrastructure..."
     ./start.sh
     sleep 1
@@ -51,7 +58,16 @@ for test_type in native 9p aws ; do
     echo "" > $cpu_util
 
     echo "Starting rival process..."
-    ./bin/rival 30 -1 2>> $cpu_util & 
+    if [[ $test_type == "native" ]]; then
+      # For 4 cores:
+      ./bin/rival 20 -1 native 2>> $cpu_util & 
+      # For 8 cores:
+      # ./bin/rival 38 -1 native 2>> $cpu_util & 
+    else
+      ./bin/rival 17 -1 ninep 2>> $cpu_util & 
+      # For 8 cores:
+      # ./bin/rival 30 -1 ninep 2>> $cpu_util & 
+    fi
   fi
 
   if [ $test_type == "aws" ]; then

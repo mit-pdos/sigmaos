@@ -4,6 +4,8 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -20,11 +22,12 @@ type Rival struct {
 	secs               float64
 	sleepIntervalUsecs int
 	killed             bool
+	ninep              bool
 	*fslib.FsLib
 }
 
 func MakeRival(args []string) (*Rival, error) {
-	if len(args) < 2 {
+	if len(args) < 3 {
 		return nil, errors.New("MakeRival: too few arguments")
 	}
 	log.Printf("MakeRival: %v\n", args)
@@ -51,16 +54,35 @@ func MakeRival(args []string) (*Rival, error) {
 		log.Printf("Spawning every %v usec(s) indefinitely", r.sleepIntervalUsecs)
 	}
 
+	if args[2] == "native" {
+		r.ninep = false
+	} else if args[2] == "ninep" {
+		r.ninep = true
+	} else {
+		log.Fatalf("Unexpected rival spawn type: %v", args[2])
+	}
+
 	return r, nil
 }
 
-func (r *Rival) spawnSpinnerWithPid(pid string) {
+func (r *Rival) spawnSpinner(pid string) {
 	dim := "64"
 	its := "60"
-	a := &fslib.Attr{pid, "bin/c-spinner", "", []string{dim, its}, nil, nil, nil, 0}
-	err := r.Spawn(a)
-	if err != nil {
-		log.Fatalf("couldn't spawn %v: %v\n", pid, err)
+	if r.ninep {
+		a := &fslib.Attr{pid, "bin/c-spinner", "", []string{dim, its}, nil, nil, nil, 0}
+		err := r.Spawn(a)
+		if err != nil {
+			log.Fatalf("couldn't spawn ninep spinner %v: %v\n", pid, err)
+		}
+	} else {
+		cmd := exec.Command("./bin/c-spinner", []string{pid, dim, its, "native"}...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err := cmd.Start()
+		if err != nil {
+			log.Printf("Error starting native spinner: %v, %v\n", pid, err)
+		}
 	}
 }
 
@@ -118,7 +140,7 @@ func (r *Rival) Work() {
 			break
 		}
 		pid := fslib.GenPid()
-		r.spawnSpinnerWithPid(pid)
+		r.spawnSpinner(pid)
 		time.Sleep(time.Duration(r.sleepIntervalUsecs) * time.Microsecond)
 	}
 	r.killed = true

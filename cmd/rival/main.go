@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v spawnsPerSecond seconds\n", os.Args[0])
+	if len(os.Args) < 4 {
+		fmt.Fprintf(os.Stderr, "Usage: %v spawnsPerSecond seconds <ninep/native>\n", os.Args[0])
 		os.Exit(1)
 	}
 	r, err := perf.MakeRival(os.Args[1:])

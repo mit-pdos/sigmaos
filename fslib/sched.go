@@ -154,7 +154,7 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 	for _, l := range ls {
 		// Lock the file
 		fl.LockFile(LOCKS, path.Join(WAITQ, l.Name))
-		a, err := fl.ReadFile(WAITQ + l.Name)
+		a, err := fl.ReadFile(path.Join(WAITQ, l.Name))
 		// May get file not found if someone renamed the file
 		if err != nil && err.Error() != "file not found" {
 			fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
@@ -180,7 +180,7 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 				return err
 			}
 			// XXX OTRUNC isn't implemented for memfs yet, so remove & rewrite
-			err = fl.Remove(WAITQ + l.Name)
+			err = fl.Remove(path.Join(WAITQ, l.Name))
 			// May get file not found if someone renamed the file
 			if err != nil && err.Error() != "file not found" {
 				fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))

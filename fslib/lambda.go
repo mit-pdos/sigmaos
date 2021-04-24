@@ -91,7 +91,7 @@ func (fl *FsLib) Started(pid string) error {
 
 func (fl *FsLib) Exiting(pid string, status string) error {
 	fl.WakeupExit(pid)
-	err = fl.Remove(path.Join(CLAIMED, pid))
+	err := fl.Remove(path.Join(CLAIMED, pid))
 	if err != nil {
 		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
 	}

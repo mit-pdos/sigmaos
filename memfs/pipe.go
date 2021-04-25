@@ -91,7 +91,7 @@ func (pipe *Pipe) Close(ctx npo.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx npo.CtxI, d []byte, v np.TQversion) (np.Tsize, error) {
+func (pipe *Pipe) Write(ctx npo.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, error) {
 	pipe.Lock()
 	defer pipe.Unlock()
 
@@ -114,7 +114,7 @@ func (pipe *Pipe) Write(ctx npo.CtxI, d []byte, v np.TQversion) (np.Tsize, error
 	return np.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx npo.CtxI, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (pipe *Pipe) Read(ctx npo.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	pipe.Lock()
 	defer pipe.Unlock()
 

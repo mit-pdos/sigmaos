@@ -260,3 +260,7 @@ func (fl *FsLib) pruneExitDeps(a *Attr) {
 		}
 	}
 }
+
+func WaitFileName(pid string) string {
+	return LockName(WAIT_LOCK + pid)
+}

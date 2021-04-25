@@ -37,7 +37,7 @@ func GenPid() string {
 // Spawn a new lambda
 func (fl *FsLib) Spawn(a *Attr) error {
 	// Create a lock file for waiters to wait on
-	fl.LockFile(LOCKS, WAIT_LOCK+a.Pid)
+	fl.LockFile(LOCKS, WaitFileName(a.Pid))
 	fl.pruneExitDeps(a)
 	b, err := json.Marshal(a)
 	if err != nil {
@@ -108,7 +108,7 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
 	done := make(chan bool)
-	fl.SetRemoveWatch(path.Join(LOCKS, LockName(WAIT_LOCK+pid)), func(p string, err error) {
+	fl.SetRemoveWatch(path.Join(LOCKS, WaitFileName(pid)), func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {

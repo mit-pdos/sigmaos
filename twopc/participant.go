@@ -14,9 +14,10 @@ import (
 type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	me    string
-	twopc *Twopc
-	txn   TxnI
+	me     string
+	twopc  *Twopc
+	txn    TxnI
+	opcode string
 }
 
 func prepareName(flw string) string {
@@ -27,12 +28,13 @@ func commitName(flw string) string {
 	return TWOPCCOMMITTED + flw
 }
 
-func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI) (*Participant, error) {
+func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Participant, error) {
 	p := &Participant{}
 	log.Printf("MakeParticipant %v\n", me)
 	p.me = me
 	p.FsLib = fsl
 	p.txn = txn
+	p.opcode = opcode
 
 	if err := p.MakeFile(DIR2PC+"/"+p.me, 0777|np.DMTMP, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
@@ -165,6 +167,11 @@ func (p *Participant) prepare() {
 	err = p.txn.Prepare()
 	if err != nil {
 		log.Printf("Prepare failed %v\n", err)
+		os.Exit(1)
+	}
+
+	if p.opcode == "crash1" {
+		db.DLPrintf("PART", "Crashed in prepare\n")
 		os.Exit(1)
 	}
 

@@ -48,7 +48,7 @@ func MkTest2pc(args []string) (*Part2pc, error) {
 	}
 	log.Printf("ti %v\n", p.ti)
 
-	_, err = twopc.MakeParticipant(p.FsLib, p.me, p)
+	_, err = twopc.MakeParticipant(p.FsLib, p.me, p, p.opcode)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

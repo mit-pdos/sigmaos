@@ -69,11 +69,11 @@ func (ts *Tstate) spawnMemFS() string {
 	return a.Pid
 }
 
-func (ts *Tstate) spawnParticipant(index string) string {
+func (ts *Tstate) spawnParticipant(index, opcode string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/test2pc"
-	a.Args = []string{index, ""}
+	a.Args = []string{index, opcode}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
@@ -89,10 +89,15 @@ func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
 	ch <- true
 }
 
-func (ts *Tstate) startParticipants(n int) []string {
+func (ts *Tstate) startParticipants(n int, opcode string) []string {
 	fws := make([]string, 0)
 	for r := 0; r < n; r++ {
-		fw := ts.spawnParticipant(strconv.Itoa(r))
+		var fw string
+		if opcode != "" && r == 0 {
+			fw = ts.spawnParticipant(strconv.Itoa(r), opcode)
+		} else {
+			fw = ts.spawnParticipant(strconv.Itoa(r), "")
+		}
 		fws = append(fws, partname(fw))
 	}
 	return fws
@@ -118,7 +123,7 @@ func fn(mfs, f string) string {
 	return memfsd.MEMFS + "/" + mfs + "/" + f
 }
 
-func (ts *Tstate) setUpParticipants() []string {
+func (ts *Tstate) setUpParticipants(opcode string) []string {
 	const N = 3
 
 	ts.mfss = ts.startMemFSs(N)
@@ -140,26 +145,64 @@ func (ts *Tstate) setUpParticipants() []string {
 	err = ts.fsl.MakeFileJson(memfsd.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
-	fws := ts.startParticipants(N - 1)
+	fws := ts.startParticipants(N-1, opcode)
 	return fws
 }
 
-func TestTwoPC(t *testing.T) {
+func (ts *Tstate) checkCoord(fws []string) {
+	pid := twopc.SpawnCoord(ts.fsl, "start", fws)
+	ok, err := ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
+	assert.Equal(ts.t, "OK", string(ok))
+
+}
+
+func (ts *Tstate) testAbort() {
+	b, err := ts.fsl.ReadFile(fn(ts.mfss[0], "x"))
+	assert.Nil(ts.t, err, "ReadFile")
+	assert.Equal(ts.t, b, []byte("x"))
+
+	b, err = ts.fsl.ReadFile(fn(ts.mfss[2], "y"))
+	assert.NotEqual(ts.t, nil, "ReadFile")
+}
+
+func (ts *Tstate) testCommit() {
+	b, err := ts.fsl.ReadFile(fn(ts.mfss[0], "x"))
+	assert.NotEqual(ts.t, nil, "ReadFile")
+
+	b, err = ts.fsl.ReadFile(fn(ts.mfss[2], "y"))
+	assert.Nil(ts.t, err, "ReadFile")
+	assert.Equal(ts.t, b, []byte("y"))
+}
+
+func TestCommit(t *testing.T) {
 	ts := makeTstate(t)
-	fws := ts.setUpParticipants()
+	fws := ts.setUpParticipants("")
 
 	time.Sleep(500 * time.Millisecond)
 
-	pid := twopc.SpawnCoord(ts.fsl, "start", fws)
-	ok, err := ts.fsl.Wait(pid)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, "OK", string(ok))
-
-	b, err := ts.fsl.ReadFile(fn(ts.mfss[2], "y"))
-	assert.Nil(t, err, "ReadFile")
-	assert.Equal(t, b, []byte("y"))
+	ts.checkCoord(fws)
 
 	time.Sleep(100 * time.Millisecond)
+
+	ts.testCommit()
+
+	ts.stopMemFSs()
+
+	ts.s.Shutdown(ts.fsl)
+}
+
+func TestAbort(t *testing.T) {
+	ts := makeTstate(t)
+	fws := ts.setUpParticipants("crash1")
+
+	time.Sleep(500 * time.Millisecond)
+
+	ts.checkCoord(fws)
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testAbort()
 
 	ts.stopMemFSs()
 

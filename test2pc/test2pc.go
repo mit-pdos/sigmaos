@@ -15,11 +15,10 @@ type Tinput struct {
 	Fns []string
 }
 
-type Flwr2pc struct {
+type Part2pc struct {
 	*fslib.FsLib
 	pid    string
 	me     string
-	flwr   string
 	index  string
 	opcode string
 	args   []string
@@ -27,94 +26,94 @@ type Flwr2pc struct {
 	ti     *Tinput
 }
 
-func flwname(pid string) string {
-	return "flw" + pid
+func partname(pid string) string {
+	return "P" + pid
 }
 
-func MkTest2pc(args []string) (*Flwr2pc, error) {
-	flw := &Flwr2pc{}
-	flw.done = make(chan bool)
-	flw.pid = args[0]
-	flw.me = flwname(flw.pid)
-	flw.index = args[1]
-	flw.opcode = args[2]
-	db.Name(flw.me)
-	flw.FsLib = fslib.MakeFsLib(flw.me)
+func MkTest2pc(args []string) (*Part2pc, error) {
+	p := &Part2pc{}
+	p.done = make(chan bool)
+	p.pid = args[0]
+	p.me = partname(p.pid)
+	p.index = args[1]
+	p.opcode = args[2]
+	db.Name(p.me)
+	p.FsLib = fslib.MakeFsLib(p.me)
 
-	log.Printf("%v: Flwr2pc i %v op %v\n", flw.me, flw.index, flw.opcode)
-	flw.ti = &Tinput{}
-	err := flw.ReadFileJson(memfsd.MEMFS+"/txni", flw.ti)
+	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
+	p.ti = &Tinput{}
+	err := p.ReadFileJson(memfsd.MEMFS+"/txni", p.ti)
 	if err != nil {
 		log.Fatalf("Failed to read txni %v\n", err)
 	}
-	log.Printf("ti %v\n", flw.ti)
+	log.Printf("ti %v\n", p.ti)
 
-	_, err = twopc.MakeFollower(flw.FsLib, flw.me, flw)
+	_, err = twopc.MakeParticipant(p.FsLib, p.me, p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
 
-	flw.Started(flw.pid)
+	p.Started(p.pid)
 
-	return flw, nil
+	return p, nil
 }
 
-func (flw *Flwr2pc) copyFile(fn1, fn2 string) error {
-	b, err := flw.ReadFile(fn1)
+func (p *Part2pc) copyFile(fn1, fn2 string) error {
+	b, err := p.ReadFile(fn1)
 	if err != nil {
 		log.Fatalf("ReadFile %v err %v\n", fn1, err)
 	}
-	err = flw.MakeFile(fn2, 0777, b)
+	err = p.MakeFile(fn2, 0777, b)
 	if err != nil {
 		log.Fatalf("MakeFile %v err %v\n", fn2, err)
 	}
 	return nil
 }
 
-func (flw *Flwr2pc) Prepare() error {
+func (p *Part2pc) Prepare() error {
 	var err error
-	switch flw.index {
+	switch p.index {
 	case "0":
-		err = flw.copyFile(flw.ti.Fns[0]+"x", flw.ti.Fns[1]+"x#")
+		err = p.copyFile(p.ti.Fns[0]+"x", p.ti.Fns[1]+"x#")
 	case "1":
-		err = flw.copyFile(flw.ti.Fns[1]+"y", flw.ti.Fns[2]+"y#")
+		err = p.copyFile(p.ti.Fns[1]+"y", p.ti.Fns[2]+"y#")
 	default:
 	}
 	return err
 }
 
-func (flw *Flwr2pc) Commit() error {
+func (p *Part2pc) Commit() error {
 	var err error
-	switch flw.index {
+	switch p.index {
 	case "0":
-		err = flw.Rename(flw.ti.Fns[1]+"x#", flw.ti.Fns[1]+"x")
+		err = p.Rename(p.ti.Fns[1]+"x#", p.ti.Fns[1]+"x")
 	case "1":
-		err = flw.Rename(flw.ti.Fns[2]+"y#", flw.ti.Fns[2]+"y")
+		err = p.Rename(p.ti.Fns[2]+"y#", p.ti.Fns[2]+"y")
 	default:
 	}
 	return err
 }
 
-func (flw *Flwr2pc) Abort() error {
+func (p *Part2pc) Abort() error {
 	var err error
-	switch flw.index {
+	switch p.index {
 	case "0":
-		err = flw.Remove(flw.ti.Fns[1] + "x#")
+		err = p.Remove(p.ti.Fns[1] + "x#")
 	case "1":
-		err = flw.Remove(flw.ti.Fns[2] + "y#")
+		err = p.Remove(p.ti.Fns[2] + "y#")
 	default:
 	}
 	return err
 }
 
-func (flw *Flwr2pc) Done() {
-	flw.done <- true
+func (p *Part2pc) Done() {
+	p.done <- true
 }
 
-func (flw *Flwr2pc) Work() {
+func (p *Part2pc) Work() {
 	db.DLPrintf("TEST2PC", "Work\n")
-	<-flw.done
+	<-p.done
 	db.DLPrintf("TEST2PC", "exit\n")
 
 }

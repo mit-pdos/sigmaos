@@ -90,7 +90,7 @@ func (cd *Coord) restart() {
 	db.DLPrintf("COORD", "Restart: twopc %v prepared %v commit %v\n",
 		cd.twopc, prepared, committed)
 
-	fws := mkFlwsMap(cd.FsLib, cd.twopc.Followers)
+	fws := mkFlwsMap(cd.FsLib, cd.twopc.Participants)
 	if fws.doCommit(prepared) {
 		db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
 		cd.commit(fws, committed.len(), true)

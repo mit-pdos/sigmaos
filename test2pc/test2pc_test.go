@@ -20,6 +20,7 @@ type Tstate struct {
 	fsl       *fslib.FsLib
 	ch        chan bool
 	chPresent chan bool
+	mfss      []string
 	pid       string
 }
 
@@ -68,7 +69,7 @@ func (ts *Tstate) spawnMemFS() string {
 	return a.Pid
 }
 
-func (ts *Tstate) spawnFlwr(index string) string {
+func (ts *Tstate) spawnParticipant(index string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/test2pc"
@@ -88,11 +89,11 @@ func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
 	ch <- true
 }
 
-func (ts *Tstate) startFlwrs(n int) []string {
+func (ts *Tstate) startParticipants(n int) []string {
 	fws := make([]string, 0)
 	for r := 0; r < n; r++ {
-		fw := ts.spawnFlwr(strconv.Itoa(r))
-		fws = append(fws, flwname(fw))
+		fw := ts.spawnParticipant(strconv.Itoa(r))
+		fws = append(fws, partname(fw))
 	}
 	return fws
 }
@@ -106,8 +107,8 @@ func (ts *Tstate) startMemFSs(n int) []string {
 	return mfss
 }
 
-func (ts *Tstate) stopMemFSs(mfss []string) {
-	for _, mfs := range mfss {
+func (ts *Tstate) stopMemFSs() {
+	for _, mfs := range ts.mfss {
 		err := ts.fsl.Remove(memfsd.MEMFS + "/" + mfs + "/")
 		assert.Nil(ts.t, err, "Remove")
 	}
@@ -117,46 +118,50 @@ func fn(mfs, f string) string {
 	return memfsd.MEMFS + "/" + mfs + "/" + f
 }
 
-func TestTwoPC(t *testing.T) {
+func (ts *Tstate) setUpParticipants() []string {
 	const N = 3
 
-	ts := makeTstate(t)
-
-	mfss := ts.startMemFSs(N)
+	ts.mfss = ts.startMemFSs(N)
 
 	time.Sleep(200 * time.Millisecond)
 
-	err := ts.fsl.MakeFile(fn(mfss[0], "x"), 0777, []byte("x"))
-	assert.Nil(t, err, "MakeFile")
-	err = ts.fsl.MakeFile(fn(mfss[1], "y"), 0777, []byte("y"))
-	assert.Nil(t, err, "MakeFile")
+	err := ts.fsl.MakeFile(fn(ts.mfss[0], "x"), 0777, []byte("x"))
+	assert.Nil(ts.t, err, "MakeFile")
+	err = ts.fsl.MakeFile(fn(ts.mfss[1], "y"), 0777, []byte("y"))
+	assert.Nil(ts.t, err, "MakeFile")
 
 	ti := Tinput{}
 	ti.Fns = []string{
-		fn(mfss[0], ""),
-		fn(mfss[1], ""),
-		fn(mfss[2], ""),
+		fn(ts.mfss[0], ""),
+		fn(ts.mfss[1], ""),
+		fn(ts.mfss[2], ""),
 	}
 
 	err = ts.fsl.MakeFileJson(memfsd.MEMFS+"/txni", 0777, ti)
-	assert.Nil(t, err, "MakeFile")
+	assert.Nil(ts.t, err, "MakeFile")
 
-	fws := ts.startFlwrs(N - 1)
+	fws := ts.startParticipants(N - 1)
+	return fws
+}
+
+func TestTwoPC(t *testing.T) {
+	ts := makeTstate(t)
+	fws := ts.setUpParticipants()
 
 	time.Sleep(500 * time.Millisecond)
 
 	pid := twopc.SpawnCoord(ts.fsl, "start", fws)
 	ok, err := ts.fsl.Wait(pid)
 	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
+	assert.Equal(t, "OK", string(ok))
 
-	b, err := ts.fsl.ReadFile(fn(mfss[2], "y"))
+	b, err := ts.fsl.ReadFile(fn(ts.mfss[2], "y"))
 	assert.Nil(t, err, "ReadFile")
 	assert.Equal(t, b, []byte("y"))
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.stopMemFSs(mfss)
+	ts.stopMemFSs()
 
 	ts.s.Shutdown(ts.fsl)
 }

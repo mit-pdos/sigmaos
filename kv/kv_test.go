@@ -122,7 +122,7 @@ func (ts *Tstate) delFirst() {
 	pid1 := ts.spawnCoord("del", kvname(ts.pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, string(ok), "OK")
+	assert.Equal(ts.t, "OK", string(ok))
 	time.Sleep(200 * time.Millisecond)
 }
 
@@ -131,7 +131,7 @@ func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
 	log.Printf("coord spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
+	assert.Equal(t, "OK", string(ok))
 	log.Printf("coord %v done\n", pid1)
 	ch <- true
 }
@@ -198,7 +198,7 @@ func (ts *Tstate) stopKVs(pids []string, clerks bool) {
 		pid1 := ts.spawnCoord("del", kvname(pid))
 		ok, err := ts.fsl.Wait(pid1)
 		assert.Nil(ts.t, err, "Wait")
-		assert.Equal(ts.t, string(ok), "OK")
+		assert.Equal(ts.t, "OK", string(ok))
 		if clerks {
 			// To allow clerk to do some gets:
 			time.Sleep(200 * time.Millisecond)
@@ -257,7 +257,7 @@ func (ts *Tstate) restart(pid string) {
 	pid1 := ts.spawnCoord("restart", kvname(pid))
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, string(ok), "OK")
+	assert.Equal(ts.t, "OK", string(ok))
 	log.Printf("COORD restart done\n")
 }
 

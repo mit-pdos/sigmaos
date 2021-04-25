@@ -120,7 +120,6 @@ func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
 }
 
 func TestHelloWorld(t *testing.T) {
-	log.Printf("TestHelloWorld...")
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
@@ -132,7 +131,6 @@ func TestHelloWorld(t *testing.T) {
 }
 
 func TestWait(t *testing.T) {
-	log.Printf("TestWait...")
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
@@ -145,7 +143,6 @@ func TestWait(t *testing.T) {
 
 // Should exit immediately
 func TestWaitNonexistentLambda(t *testing.T) {
-	log.Printf("TestWaitNonexistentLambda...")
 	ts := makeTstate(t)
 
 	ch := make(chan bool)
@@ -175,7 +172,6 @@ func TestWaitNonexistentLambda(t *testing.T) {
 
 // Should exit immediately
 func TestNoOpLambdaImmediateExit(t *testing.T) {
-	log.Printf("TestNoOpLambda...")
 	ts := makeTstate(t)
 
 	pid := spawnNoOp(t, ts, []string{})
@@ -204,7 +200,6 @@ func TestNoOpLambdaImmediateExit(t *testing.T) {
 
 // Should start after 5 secs
 func TestTimerLambda(t *testing.T) {
-	log.Printf("TestTimerLambda...")
 	ts := makeTstate(t)
 
 	start := time.Now()
@@ -221,7 +216,6 @@ func TestTimerLambda(t *testing.T) {
 
 // Start a locald, crash it, start a new one, and make sure it reruns lambdas.
 func TestCrashLocald(t *testing.T) {
-	log.Printf("TestCrashLocald...")
 	ts := makeTstateOneLocald(t)
 
 	ch := make(chan bool)
@@ -258,7 +252,6 @@ func TestCrashLocald(t *testing.T) {
 }
 
 func TestExitDep(t *testing.T) {
-	log.Printf("TestExitDep...")
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
@@ -278,7 +271,6 @@ func TestExitDep(t *testing.T) {
 }
 
 func TestSwapExitDeps(t *testing.T) {
-	log.Printf("TestSwapExitDeps...")
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
@@ -310,7 +302,6 @@ func TestSwapExitDeps(t *testing.T) {
 }
 
 func TestPairDepProdFirst(t *testing.T) {
-	log.Printf("TestPairDepConsFirst...")
 	ts := makeTstate(t)
 
 	// Generate a consumer & producer pid, make sure they dont' equal each other
@@ -344,7 +335,6 @@ func TestPairDepProdFirst(t *testing.T) {
 }
 
 func TestPairDepConsFirst(t *testing.T) {
-	log.Printf("TestPairDepConsFirst...")
 	ts := makeTstate(t)
 
 	// Generate a consumer & producer pid, make sure they dont' equal each other
@@ -380,7 +370,6 @@ func TestPairDepConsFirst(t *testing.T) {
 // Spawn a bunch of lambdas concurrently, then wait for all of them & check
 // their result
 func TestConcurrentLambdas(t *testing.T) {
-	log.Printf("TestConcurrentLambdas...")
 	ts := makeTstate(t)
 
 	nLambdas := 27

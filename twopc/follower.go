@@ -1,7 +1,6 @@
 package twopc
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -15,72 +14,58 @@ import (
 type Follower struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	done chan bool
-	pid  string
-	me   string
-	args []string
-	txn  *Trans
+	me    string
+	twopc *Twopc
+	txn   TxnI
 }
 
 func prepareName(flw string) string {
-	return TXNPREPARED + flw
+	return TWOPCPREPARED + flw
 }
 
 func commitName(flw string) string {
-	return TXNCOMMITTED + flw
+	return TWOPCCOMMITTED + flw
 }
 
-func flwname(pid string) string {
-	return "flw" + pid
-}
-
-func MakeFollower(args []string) (*Follower, error) {
+func MakeFollower(fsl *fslib.FsLib, me string, txn TxnI) (*Follower, error) {
 	flw := &Follower{}
-	flw.done = make(chan bool)
-	if len(args) != 2 {
-		return nil, fmt.Errorf("MakeFollower: too few arguments %v\n", args)
-	}
-	log.Printf("MakeFollower %v\n", args)
-	flw.pid = args[0]
-	flw.args = args
-	flw.me = flwname(flw.pid)
-	db.Name(flw.me)
-	flw.FsLib = fslib.MakeFsLib("follower")
+	log.Printf("MakeFollower %v\n", me)
+	flw.me = me
+	flw.FsLib = fsl
+	flw.txn = txn
 
-	if err := flw.MakeFile(TXNDIR+"/"+flw.me, 0777|np.DMTMP, nil); err != nil {
+	if err := flw.MakeFile(DIR2PC+"/"+flw.me, 0777|np.DMTMP, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
-	// set watch for txnprep, indicating a transaction
-	_, err := flw.readTxnWatch(TXNPREP, flw.watchTxnPrep)
+	// set watch for twopcprep, indicating a transaction
+	_, err := flw.readTwopcWatch(TWOPCPREP, flw.watchTwopcPrep)
 	if err != nil {
-		db.DLPrintf("FLW", "MakeFollower set watch on %v (err %v)\n", TXNPREP, err)
+		db.DLPrintf("FLW", "MakeFollower set watch on %v (err %v)\n", TWOPCPREP, err)
 	}
-
-	flw.Started(flw.pid)
 
 	return flw, nil
 }
 
-func (flw *Follower) watchTxnPrep(p string, err error) {
+func (flw *Follower) watchTwopcPrep(p string, err error) {
 	db.DLPrintf("FLW", "Watch fires %v %v; prepare?\n", p, err)
 	if err == nil {
 		flw.prepare()
 	} else {
-		_, err = flw.readTxnWatch(TXNPREP, flw.watchTxnPrep)
+		_, err = flw.readTwopcWatch(TWOPCPREP, flw.watchTwopcPrep)
 		if err == nil {
-			db.DLPrintf("FLW", "watchTxnPrep: next trans %v (err %v)\n", TXNPREP, err)
+			db.DLPrintf("FLW", "watchTwopcPrep: next trans %v (err %v)\n", TWOPCPREP, err)
 			flw.prepare()
 		} else {
-			db.DLPrintf("FLW", "Commit: set watch on %v (err %v)\n", TXNPREP, err)
+			db.DLPrintf("FLW", "Commit: set watch on %v (err %v)\n", TWOPCPREP, err)
 		}
 	}
 }
 
-func (flw *Follower) readTxnWatch(conffile string, f fsclnt.Watch) (*Trans, error) {
-	txn := Trans{}
-	err := flw.ReadFileJsonWatch(conffile, &txn, f)
-	return &txn, err
+func (flw *Follower) readTwopcWatch(conffile string, f fsclnt.Watch) (*Twopc, error) {
+	twopc := Twopc{}
+	err := flw.ReadFileJsonWatch(conffile, &twopc, f)
+	return &twopc, err
 }
 
 // Tell coord we are prepared to commit new config
@@ -102,20 +87,20 @@ func (flw *Follower) committed() {
 	}
 }
 
-func (flw *Follower) watchTxnCommit(p string, err error) {
+func (flw *Follower) watchTwopcCommit(p string, err error) {
 	db.DLPrintf("FLW", "Watch conf fires %v %v; commit\n", p, err)
 	flw.commit()
 }
 
 // XXX maybe check if one is already running?
 func (flw *Follower) restartCoord() {
-	log.Printf("FLW %v watchCoord: COORD crashed %v\n", flw.me, flw.txn)
-	flw.txn = clean(flw.FsLib)
-	if flw.txn == nil {
+	log.Printf("FLW %v watchCoord: COORD crashed %v\n", flw.me, flw.twopc)
+	flw.twopc = clean(flw.FsLib)
+	if flw.twopc == nil {
 		log.Printf("clean")
 		return
 	}
-	pid1 := spawnCoord(flw.FsLib, "restart", flw.txn.Prog, flw.txn.Followers)
+	pid1 := SpawnCoord(flw.FsLib, "restart", flw.twopc.Followers)
 	ok, err := flw.Wait(pid1)
 	if err != nil {
 		log.Printf("FLW wait failed\n")
@@ -126,7 +111,7 @@ func (flw *Follower) restartCoord() {
 
 func (flw *Follower) watchCoord(p string, err error) {
 	flw.mu.Lock()
-	done := flw.txn == nil
+	done := flw.twopc == nil
 	flw.mu.Unlock()
 
 	log.Printf("FLW Watch coord fires %v %v done? %v\n", p, err, done)
@@ -162,31 +147,24 @@ func (flw *Follower) prepare() {
 		db.DLPrintf("FLW", "Prepare: COORD crashed\n")
 	}
 
-	_, err = flw.readTxnWatch(TXNCOMMIT, flw.watchTxnCommit)
+	_, err = flw.readTwopcWatch(TWOPCCOMMIT, flw.watchTwopcCommit)
 	if err == nil {
-		log.Fatalf("FLW %v: readTxnWatch %v err %v\n", flw.me, TXNCOMMIT, err)
+		log.Fatalf("FLW %v: readTwopcWatch %v err %v\n", flw.me, TWOPCCOMMIT, err)
 	}
-	db.DLPrintf("FLW", "prepare: watch for %v\n", TXNCOMMIT)
+	db.DLPrintf("FLW", "prepare: watch for %v\n", TWOPCCOMMIT)
 
-	flw.txn = readTrans(flw.FsLib, TXNPREP)
-	if flw.txn == nil {
-		log.Fatalf("FLW %v: FLW cannot read %v err %v\n", flw.me, TXNPREP, err)
+	flw.twopc = readTwopc(flw.FsLib, TWOPCPREP)
+	if flw.twopc == nil {
+		log.Fatalf("FLW %v: FLW cannot read %v err %v\n", flw.me, TWOPCPREP, err)
 	}
 
-	db.DLPrintf("FLW", "prepare for new config: %v\n", flw.txn)
+	db.DLPrintf("FLW", "prepare for new config: %v\n", flw.twopc)
 
 	flw.mu.Unlock()
 
-	index := flw.txn.Index(flw.me)
-	pid := spawnTrans(flw.FsLib, flw.txn.Prog, flw.me, index, "prepare")
-	ok, err := flw.Wait(pid)
+	err = flw.txn.Prepare()
 	if err != nil {
-		log.Printf("Wait spawnTrans failed %v %v\n", string(ok), err)
-		os.Exit(1)
-	}
-
-	if flw.args[1] == "crash4" {
-		db.DLPrintf("FLW", "Crashed in prepare\n")
+		log.Printf("Prepare failed %v\n", err)
 		os.Exit(1)
 	}
 
@@ -199,38 +177,19 @@ func (flw *Follower) commit() {
 
 	log.Printf("FLW %v commit/abort\n", flw.me)
 
-	flw.txn = readTrans(flw.FsLib, TXNCOMMIT)
-	if flw.txn == nil {
-		log.Fatalf("FLW commit cannot read %v\n", TXNCOMMIT)
+	flw.twopc = readTwopc(flw.FsLib, TWOPCCOMMIT)
+	if flw.twopc == nil {
+		log.Fatalf("FLW commit cannot read %v\n", TWOPCCOMMIT)
 	}
 
-	opcode := "abort"
-	if flw.txn.Status == TCOMMIT {
-		opcode = "commit"
-		log.Printf("%v: FLW commit txn %v\n", flw.me, flw.txn)
+	if flw.twopc.Status == TCOMMIT {
+		log.Printf("%v: FLW commit twopc %v\n", flw.me, flw.twopc)
+		flw.txn.Commit()
 	} else {
-		log.Printf("%v: FLW abort txn %v\n", flw.me, flw.txn)
-	}
-
-	index := flw.txn.Index(flw.me)
-	pid := spawnTrans(flw.FsLib, flw.txn.Prog, flw.me, index, opcode)
-	ok, err := flw.Wait(pid)
-	if err != nil {
-		log.Printf("Wait spawnTrans failed %v %v\n", string(ok), err)
-		os.Exit(1)
-	}
-
-	if flw.args[1] == "crash5" {
-		db.DLPrintf("FLW", "Crashed in commit/abort\n")
-		os.Exit(1)
+		log.Printf("%v: FLW abort twopc %v\n", flw.me, flw.twopc)
+		flw.txn.Abort()
 	}
 
 	flw.committed()
-	flw.done <- true
-}
-
-func (flw *Follower) Work() {
-	db.DLPrintf("FLW", "Work\n")
-	<-flw.done
-	db.DLPrintf("FLW", "exit\n")
+	flw.txn.Done()
 }

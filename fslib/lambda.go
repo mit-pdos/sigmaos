@@ -36,8 +36,11 @@ func GenPid() string {
 
 // Spawn a new lambda
 func (fl *FsLib) Spawn(a *Attr) error {
-	// Create a lock file for waiters to wait on
-	fl.LockFile(LOCKS, WaitFileName(a.Pid))
+	// Create a file for waiters to watch & wait on
+	err := fl.MakeWaitFile(a.Pid)
+	if err != nil {
+		return err
+	}
 	fl.pruneExitDeps(a)
 	b, err := json.Marshal(a)
 	if err != nil {
@@ -75,8 +78,9 @@ func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
 	return fl.Spawn(a)
 }
 
+// XXX may need to change this
 func (fl *FsLib) HasBeenSpawned(pid string) bool {
-	_, err := fl.Stat(path.Join(LOCKS, LockName(WAIT_LOCK+pid)))
+	_, err := fl.Stat(WaitFilePath(pid))
 	if err == nil {
 		return true
 	}
@@ -99,16 +103,20 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 	if err != nil {
 		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
 	}
-	err = fl.UnlockFile(LOCKS, WAIT_LOCK+pid)
+	err = fl.Remove(WaitFilePath(pid))
 	if err != nil {
-		log.Printf("Error unlocking in Exiting %v: %v", pid, err)
+		log.Printf("Error removing wait file in Exiting %v: %v", pid, err)
 	}
 	return nil
 }
 
+// Create a file to read return status from, watch wait file, and return
+// contents of retstat file.
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
+	fpath := fl.MakeRetStatFile()
+	fl.RegisterRetStatFile(pid, fpath)
 	done := make(chan bool)
-	fl.SetRemoveWatch(path.Join(LOCKS, WaitFileName(pid)), func(p string, err error) {
+	fl.SetRemoveWatch(WaitFilePath(pid), func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {
@@ -117,6 +125,15 @@ func (fl *FsLib) Wait(pid string) ([]byte, error) {
 		done <- true
 	})
 	<-done
-	// XXX Return an actual exit status
-	return []byte{'O', 'K'}, nil
+	b, err := fl.ReadFile(fpath)
+	if err != nil {
+		log.Printf("Error reading retstat file in wait: %v, %v", fpath, err)
+		return b, err
+	}
+	err = fl.Remove(fpath)
+	if err != nil {
+		log.Printf("Error removing retstat file in wait: %v, %v", fpath, err)
+		return b, err
+	}
+	return b, err
 }

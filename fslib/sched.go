@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/thanhpk/randstr"
+
 	np "ulambda/ninep"
 )
 
@@ -16,6 +18,8 @@ const (
 	CLAIMED = "name/claimed"
 	// XXX TODO: handle claimed_eph in a special way
 	CLAIMED_EPH   = "name/claimed_ephemeral"
+	SPAWNED       = "name/spawned"
+	RET_STAT      = "name/retstat"
 	JOB_SIGNAL    = "job-signal"
 	CRASH_TIMEOUT = 1
 )
@@ -118,7 +122,7 @@ func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 		return []byte{}, false
 	}
 	// Create an ephemeral file to mark that locald hasn't crashed
-	fd, err := fl.Create(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, np.OWRITE)
+	fd, err := fl.CreateFile(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, np.OWRITE)
 	if err != nil {
 		log.Printf("Error creating ephemeral claimed job file: %v", err)
 	}
@@ -252,6 +256,43 @@ func (fl *FsLib) WakeupExit(pid string) error {
 	return nil
 }
 
+func (fl *FsLib) MakeWaitFile(pid string) error {
+	fpath := WaitFilePath(pid)
+	// Make a writable, versioned file
+	fd, err := fl.CreateFile(fpath, 0777, np.OWRITE|np.OVERSION)
+	// Sometimes we get "EOF" on shutdown
+	if err != nil && err.Error() != "EOF" {
+		log.Fatalf("Error on Create MakeWaitFile %v: %v", fpath, err)
+		return err
+	}
+	err = fl.Close(fd)
+	if err != nil {
+		log.Fatalf("Error on Close MakeWaitFile %v: %v", fpath, err)
+		return err
+	}
+	return nil
+}
+
+// Create a randomly-named ephemeral file to mark into which the return status
+// will be written.
+func (fl *FsLib) MakeRetStatFile() string {
+	fname := randstr.Hex(16)
+	fpath := path.Join(RET_STAT, fname)
+	fd, err := fl.CreateFile(fpath, 0777|np.DMTMP, np.OWRITE)
+	if err != nil {
+		log.Printf("Error creating return status file: %v, %v", fpath, err)
+	}
+	fl.Close(fd)
+	return fpath
+}
+
+func (fl *FsLib) RegisterRetStatFile(pid string, fpath string) {
+	//	var b []byte
+	//	for {
+	//
+	//	}
+}
+
 // If we know nothing about an exit dep, ignore it by marking it as exited
 func (fl *FsLib) pruneExitDeps(a *Attr) {
 	for pid, _ := range a.ExitDep {
@@ -259,6 +300,10 @@ func (fl *FsLib) pruneExitDeps(a *Attr) {
 			a.ExitDep[pid] = true
 		}
 	}
+}
+
+func WaitFilePath(pid string) string {
+	return path.Join(SPAWNED, WaitFileName(pid))
 }
 
 func WaitFileName(pid string) string {

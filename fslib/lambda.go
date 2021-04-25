@@ -106,10 +106,17 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 	return nil
 }
 
-// First check waitq, then runq, then the claimed dir
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
-	fl.LockFile(LOCKS, WAIT_LOCK+pid)
-	fl.UnlockFile(LOCKS, WAIT_LOCK+pid)
+	done := make(chan bool)
+	fl.SetRemoveWatch(path.Join(LOCKS, LockName(WAIT_LOCK+pid)), func(p string, err error) {
+		if err != nil && err.Error() == "EOF" {
+			return
+		} else if err != nil {
+			log.Printf("Error in wait watch: %v", err)
+		}
+		done <- true
+	})
+	<-done
 	// XXX Return an actual exit status
 	return []byte{'O', 'K'}, nil
 }

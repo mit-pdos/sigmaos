@@ -16,28 +16,27 @@ import (
 )
 
 const (
-	TXNDIR       = "name/txn"
-	COORD        = TXNDIR + "/coord"
-	TXN          = TXNDIR + "/txn"
-	TXNPREP      = TXNDIR + "/txnprep"
-	TXNCOMMIT    = TXNDIR + "/txncommit"
-	TXNPREPARED  = TXNDIR + "/prepared/"
-	TXNCOMMITTED = TXNDIR + "/committed/"
-	TXNLOCK      = "lock"
+	DIR2PC         = "name/twopc"
+	COORD          = DIR2PC + "/coord"
+	TWOPC          = DIR2PC + "/twopc"
+	TWOPCPREP      = DIR2PC + "/twopcprep"
+	TWOPCCOMMIT    = DIR2PC + "/twopccommit"
+	TWOPCPREPARED  = DIR2PC + "/prepared/"
+	TWOPCCOMMITTED = DIR2PC + "/committed/"
+	TWOPCLOCK      = "lock"
 )
 
 type Coord struct {
 	*fslib.FsLib
-	pid     string
-	opcode  string
-	txnprog string
-	args    []string
-	ch      chan Tstatus
-	txn     *Trans
+	pid    string
+	opcode string
+	args   []string
+	ch     chan Tstatus
+	twopc  *Twopc
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) < 4 {
+	if len(args) < 3 {
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
 
@@ -46,19 +45,18 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd := &Coord{}
 	cd.pid = args[0]
 	cd.opcode = args[1]
-	cd.txnprog = args[2]
-	cd.args = args[3:]
+	cd.args = args[2:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 
-	// Grab TXNLOCK before starting coord
-	if err := cd.LockFile(TXNDIR, TXNLOCK); err != nil {
+	// Grab TWOPCLOCK before starting coord
+	if err := cd.LockFile(DIR2PC, TWOPCLOCK); err != nil {
 		log.Fatalf("Lock failed %v\n", err)
 	}
 
 	log.Printf("lock\n")
 
-	db.DLPrintf("COORD", "New coord %v %v", cd.txnprog, args)
+	db.DLPrintf("COORD", "New coord %v %v", args)
 
 	if err := cd.MakeFile(COORD, 0777|np.DMTMP, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
@@ -75,24 +73,24 @@ func (cd *Coord) exit() {
 		log.Printf("Remove %v failed %v\n", COORD, err)
 	}
 
-	if err := cd.UnlockFile(TXNDIR, TXNLOCK); err != nil {
+	if err := cd.UnlockFile(DIR2PC, TWOPCLOCK); err != nil {
 		log.Fatalf("Unlock failed failed %v\n", err)
 	}
 }
 
 func (cd *Coord) restart() {
-	cd.txn = clean(cd.FsLib)
-	if cd.txn == nil {
+	cd.twopc = clean(cd.FsLib)
+	if cd.twopc == nil {
 		log.Printf("clean\n")
 		return
 	}
-	prepared := mkFlwsMapStatus(cd.FsLib, TXNPREPARED)
-	committed := mkFlwsMapStatus(cd.FsLib, TXNCOMMITTED)
+	prepared := mkFlwsMapStatus(cd.FsLib, TWOPCPREPARED)
+	committed := mkFlwsMapStatus(cd.FsLib, TWOPCCOMMITTED)
 
-	db.DLPrintf("COORD", "Restart: txn %v prepared %v commit %v\n",
-		cd.txn, prepared, committed)
+	db.DLPrintf("COORD", "Restart: twopc %v prepared %v commit %v\n",
+		cd.twopc, prepared, committed)
 
-	fws := mkFlwsMap(cd.FsLib, cd.txn.Followers)
+	fws := mkFlwsMap(cd.FsLib, cd.twopc.Followers)
 	if fws.doCommit(prepared) {
 		db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
 		cd.commit(fws, committed.len(), true)
@@ -135,12 +133,12 @@ func (cd *Coord) watchFlw(p string, err error) {
 }
 
 func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
-	nextFws.setStatusWatches(TXNPREPARED, cd.watchStatus)
+	nextFws.setStatusWatches(TWOPCPREPARED, cd.watchStatus)
 
-	err := cd.MakeFileJsonAtomic(TXNPREP, 0777, *cd.txn)
+	err := cd.MakeFileJsonAtomic(TWOPCPREP, 0777, *cd.twopc)
 	if err != nil {
 		db.DLPrintf("COORD", "COORD: MakeFileJsonAtomic %v err %v\n",
-			TXNCOMMIT, err)
+			TWOPCCOMMIT, err)
 	}
 
 	// depending how many KVs ack, crash2 results
@@ -172,26 +170,26 @@ func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 
 func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 	if ok {
-		cd.txn.Status = TCOMMIT
-		db.DLPrintf("COORD", "Commit to %v\n", cd.txn)
+		cd.twopc.Status = TCOMMIT
+		db.DLPrintf("COORD", "Commit to %v\n", cd.twopc)
 	} else {
-		cd.txn.Status = TABORT
-		db.DLPrintf("COORD", "Abort to %v\n", cd.txn)
+		cd.twopc.Status = TABORT
+		db.DLPrintf("COORD", "Abort to %v\n", cd.twopc)
 	}
 
-	if err := cd.WriteFileJson(TXNPREP, *cd.txn); err != nil {
-		db.DLPrintf("COORD", "Write %v err %v\n", TXNPREP, err)
+	if err := cd.WriteFileJson(TWOPCPREP, *cd.twopc); err != nil {
+		db.DLPrintf("COORD", "Write %v err %v\n", TWOPCPREP, err)
 		return
 	}
 
-	fws.setStatusWatches(TXNCOMMITTED, cd.watchStatus)
+	fws.setStatusWatches(TWOPCCOMMITTED, cd.watchStatus)
 
-	// commit/abort to new TXN, which maybe the same as the
+	// commit/abort to new TWOPC, which maybe the same as the
 	// old one
-	err := cd.Rename(TXNPREP, TXNCOMMIT)
+	err := cd.Rename(TWOPCPREP, TWOPCCOMMIT)
 	if err != nil {
 		db.DLPrintf("COORD", "COORD: rename %v -> %v: error %v\n",
-			TXNPREP, TXNCOMMIT, err)
+			TWOPCPREP, TWOPCCOMMIT, err)
 		return
 	}
 
@@ -212,7 +210,7 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 func (cd *Coord) TwoPC() {
 	defer cd.exit()
 
-	log.Printf("COORD Coord: %v %v\n", cd.txnprog, cd.args)
+	log.Printf("COORD Coord: %v\n", cd.args)
 
 	// db.DLPrintf("COORD", "Coord: %v\n", cd.args)
 
@@ -225,20 +223,20 @@ func (cd *Coord) TwoPC() {
 		return
 	}
 
-	cd.txn = makeTrans(1, cd.args, cd.txnprog)
+	cd.twopc = makeTwopc(1, cd.args)
 
 	fws := mkFlwsMap(cd.FsLib, cd.args)
 
-	db.DLPrintf("COORD", "Coord txn %v %v\n", cd.txn, fws)
+	db.DLPrintf("COORD", "Coord twopc %v %v\n", cd.twopc, fws)
 
 	if cd.args[0] == "crash1" {
 		db.DLPrintf("COORD", "Crash1\n")
 		os.Exit(1)
 	}
 
-	cd.Remove(TXNCOMMIT) // don't care if succeeds or not
-	cd.rmStatusFiles(TXNPREPARED)
-	cd.rmStatusFiles(TXNCOMMITTED)
+	cd.Remove(TWOPCCOMMIT) // don't care if succeeds or not
+	cd.rmStatusFiles(TWOPCPREPARED)
+	cd.rmStatusFiles(TWOPCCOMMITTED)
 
 	fws.setFlwsWatches(cd.watchFlw)
 
@@ -250,5 +248,5 @@ func (cd *Coord) TwoPC() {
 
 	cd.commit(fws, fws.len()-n, ok)
 
-	cd.Remove(TXNCOMMIT) // don't care if succeeds or not
+	cd.Remove(TWOPCCOMMIT) // don't care if succeeds or not
 }

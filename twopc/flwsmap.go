@@ -60,7 +60,7 @@ func (fw *FlwsMap) setStatusWatches(dir string, f fsclnt.Watch) {
 func (fw *FlwsMap) setFlwsWatches(f fsclnt.Watch) {
 	for flw, _ := range fw.flws {
 		// set watch for KV, in case it crashes during 2PC
-		err := fw.SetRemoveWatch(TXNDIR+"/"+flw, f)
+		err := fw.SetRemoveWatch(DIR2PC+"/"+flw, f)
 		if err != nil {
 			log.Fatalf("COORD: set follower watch failed %v", err)
 		}

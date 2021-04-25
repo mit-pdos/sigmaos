@@ -1,7 +1,8 @@
-package twopc
+package test2pc
 
 import (
 	"log"
+	"strconv"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	// db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	"ulambda/twopc"
 )
 
 type Tstate struct {
@@ -34,17 +36,17 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("twopc_test")
 
-	err = ts.fsl.Mkdir(TXNDIR, 07)
+	err = ts.fsl.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.fsl.Mkdir(TXNPREPARED, 0777)
+	err = ts.fsl.Mkdir(twopc.TWOPCPREPARED, 0777)
 	if err != nil {
-		t.Fatalf("MkDir %v failed %v\n", TXNPREPARED, err)
+		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCPREPARED, err)
 	}
-	err = ts.fsl.Mkdir(TXNCOMMITTED, 0777)
+	err = ts.fsl.Mkdir(twopc.TWOPCCOMMITTED, 0777)
 	if err != nil {
-		t.Fatalf("MkDir %v failed %v\n", TXNCOMMITTED, err)
+		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
 	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
@@ -66,11 +68,11 @@ func (ts *Tstate) spawnMemFS() string {
 	return a.Pid
 }
 
-func (ts *Tstate) spawnFlwr() string {
+func (ts *Tstate) spawnFlwr(index string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/flwr"
-	a.Args = []string{""}
+	a.Program = "bin/test2pc"
+	a.Args = []string{index, ""}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
@@ -78,7 +80,7 @@ func (ts *Tstate) spawnFlwr() string {
 }
 
 func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
-	pid1 := spawnCoord(ts.fsl, "restart", "", nil)
+	pid1 := twopc.SpawnCoord(ts.fsl, "restart", nil)
 	log.Printf("coord spawned %v\n", pid1)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(t, err, "Wait")
@@ -86,24 +88,10 @@ func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
 	ch <- true
 }
 
-func xTestConcurCoord(t *testing.T) {
-	const N = 5
-
-	ts := makeTstate(t)
-	ch := make(chan bool)
-	for r := 0; r < N; r++ {
-		go ts.runCoord(t, ch)
-	}
-	for r := 0; r < N; r++ {
-		<-ch
-	}
-	ts.s.Shutdown(ts.fsl)
-}
-
 func (ts *Tstate) startFlwrs(n int) []string {
 	fws := make([]string, 0)
 	for r := 0; r < n; r++ {
-		fw := ts.spawnFlwr()
+		fw := ts.spawnFlwr(strconv.Itoa(r))
 		fws = append(fws, flwname(fw))
 	}
 	return fws
@@ -157,7 +145,7 @@ func TestTwoPC(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	pid := spawnCoord(ts.fsl, "start", "bin/testtxn", fws)
+	pid := twopc.SpawnCoord(ts.fsl, "start", fws)
 	ok, err := ts.fsl.Wait(pid)
 	assert.Nil(t, err, "Wait")
 	assert.Equal(t, string(ok), "OK")

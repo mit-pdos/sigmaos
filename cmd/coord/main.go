@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"ulambda/twopc"
 )
 
 func main() {
-	log.Printf("coord\n")
-	if len(os.Args) < 5 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid opcode txnprog flwrs\n",
+	if len(os.Args) < 4 {
+		fmt.Fprintf(os.Stderr, "Usage: %v pid opcode flwrs\n",
 			os.Args[0])
 		os.Exit(1)
 	}

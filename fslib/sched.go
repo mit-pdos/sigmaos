@@ -286,11 +286,51 @@ func (fl *FsLib) MakeRetStatFile() string {
 	return fpath
 }
 
+// XXX WriteFile seems to have nasty errors when the file doesn't exist. Need to clean up.
+// Write back return statuses
+func (fl *FsLib) WriteBackRetStats(pid string, status string) {
+	fl.LockFile(LOCKS, WaitFilePath(pid))
+	defer fl.UnlockFile(LOCKS, WaitFilePath(pid))
+
+	b, err := fl.ReadFile(WaitFilePath(pid))
+	if err != nil {
+		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", WaitFilePath(pid), err)
+		return
+	}
+
+	paths := strings.Split(strings.TrimSpace(string(b)), "\n")
+	for _, p := range paths {
+		if len(p) > 0 {
+			fl.WriteFile(p, []byte(status))
+		}
+	}
+}
+
+// Register that we want a return status written back
 func (fl *FsLib) RegisterRetStatFile(pid string, fpath string) {
-	//	var b []byte
-	//	for {
-	//
-	//	}
+	fl.LockFile(LOCKS, WaitFilePath(pid))
+	defer fl.UnlockFile(LOCKS, WaitFilePath(pid))
+
+	// Check if the wait file still exists
+	_, err := fl.Stat(WaitFilePath(pid))
+	if err != nil {
+		return
+	}
+
+	// Shouldn't use versioning since we want writes & reads to be fully atomic.
+	// Specifically, if we're writing while a locald which is Exiting() is
+	// reading, they could get garbage data.
+	b, err := fl.ReadFile(WaitFilePath(pid))
+	if err != nil {
+		log.Printf("Error reading when registerring retstat: %v, %v", WaitFilePath(pid), err)
+		return
+	}
+	b = append(b, '\n')
+	b = append(b, []byte(fpath)...)
+	err = fl.WriteFile(WaitFilePath(pid), b)
+	if err != nil {
+		log.Printf("Error writing when registerring retstat: %v, %v", WaitFilePath(pid), err)
+	}
 }
 
 // If we know nothing about an exit dep, ignore it by marking it as exited

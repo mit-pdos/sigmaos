@@ -1,7 +1,6 @@
 package locald
 
 import (
-	"log"
 	"sync"
 	"testing"
 	"time"
@@ -134,7 +133,10 @@ func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	ts.Wait(pid)
+	status, err := ts.Wait(pid)
+
+	assert.Nil(t, err, "Wait error")
+	assert.Equal(t, string(status), "OK", "Return status")
 
 	checkSleeperlResult(t, ts, pid)
 

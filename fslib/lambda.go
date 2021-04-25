@@ -103,6 +103,8 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 	if err != nil {
 		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
 	}
+	// Write back return statuses
+	fl.WriteBackRetStats(pid, status)
 	err = fl.Remove(WaitFilePath(pid))
 	if err != nil {
 		log.Printf("Error removing wait file in Exiting %v: %v", pid, err)

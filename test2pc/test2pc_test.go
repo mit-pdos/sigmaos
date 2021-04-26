@@ -149,8 +149,8 @@ func (ts *Tstate) setUpParticipants(opcode string) []string {
 	return fws
 }
 
-func (ts *Tstate) checkCoord(fws []string) {
-	pid := twopc.SpawnCoord(ts.fsl, "start", fws)
+func (ts *Tstate) checkCoord(fws []string, opcode string) {
+	pid := twopc.SpawnCoord(ts.fsl, opcode, fws)
 	ok, err := ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(ts.t, "OK", string(ok))
@@ -181,7 +181,7 @@ func TestCommit(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	ts.checkCoord(fws)
+	ts.checkCoord(fws, "start")
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -198,7 +198,41 @@ func TestAbort(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	ts.checkCoord(fws)
+	ts.checkCoord(fws, "start")
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testAbort()
+
+	ts.stopMemFSs()
+
+	ts.s.Shutdown(ts.fsl)
+}
+
+func TestCrash2(t *testing.T) {
+	ts := makeTstate(t)
+	fws := ts.setUpParticipants("")
+
+	time.Sleep(500 * time.Millisecond)
+
+	ts.checkCoord(fws, "crash2")
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testAbort()
+
+	ts.stopMemFSs()
+
+	ts.s.Shutdown(ts.fsl)
+}
+
+func TestCrash3(t *testing.T) {
+	ts := makeTstate(t)
+	fws := ts.setUpParticipants("")
+
+	time.Sleep(500 * time.Millisecond)
+
+	ts.checkCoord(fws, "crash3")
 
 	time.Sleep(100 * time.Millisecond)
 

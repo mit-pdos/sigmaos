@@ -96,10 +96,10 @@ func (p *Participant) watchTwopcCommit(path string, err error) {
 
 // XXX maybe check if one is already running?
 func (p *Participant) restartCoord() {
-	log.Printf("PART %v watchCoord: COORD crashed %v\n", p.me, p.twopc)
+	log.Printf("PART %v restartCoord: COORD crashed %v\n", p.me, p.twopc)
 	p.twopc = clean(p.FsLib)
 	if p.twopc == nil {
-		log.Printf("clean")
+		log.Printf("PART clean")
 		return
 	}
 	pid1 := SpawnCoord(p.FsLib, "restart", p.twopc.Participants)
@@ -147,6 +147,8 @@ func (p *Participant) prepare() {
 	err = p.SetRemoveWatch(COORD, p.watchCoord)
 	if err != nil {
 		db.DLPrintf("PART", "Prepare: COORD crashed\n")
+		p.restartCoord()
+		return
 	}
 
 	_, err = p.readTwopcWatch(TWOPCCOMMIT, p.watchTwopcCommit)

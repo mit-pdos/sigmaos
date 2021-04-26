@@ -30,7 +30,7 @@ func partname(pid string) string {
 	return "P" + pid
 }
 
-func MkTest2pc(args []string) (*Part2pc, error) {
+func MkTest2Participant(args []string) (*Part2pc, error) {
 	p := &Part2pc{}
 	p.done = make(chan bool)
 	p.pid = args[0]
@@ -46,7 +46,6 @@ func MkTest2pc(args []string) (*Part2pc, error) {
 	if err != nil {
 		log.Fatalf("Failed to read txni %v\n", err)
 	}
-	log.Printf("ti %v\n", p.ti)
 
 	_, err = twopc.MakeParticipant(p.FsLib, p.me, p, p.opcode)
 	if err != nil {

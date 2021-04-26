@@ -3,6 +3,7 @@ package locald
 import (
 	//	"github.com/sasha-s/go-deadlock"
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -22,6 +23,8 @@ type Lambda struct {
 	Args    []string
 	Env     []string
 	Dir     string
+	Stdout  string
+	Stderr  string
 	SysPid  int
 	attr    *fslib.Attr
 	ld      *LocalD
@@ -41,6 +44,8 @@ func (l *Lambda) init(a []byte) error {
 	l.Args = attr.Args
 	l.Env = attr.Env
 	l.Dir = attr.Dir
+	l.Stdout = "" // XXX: add to or infer from attr
+	l.Stderr = "" // XXX: add to or infer from attr
 	l.attr = &attr
 	db.DLPrintf("LOCALD", "Locald init: %v\n", attr)
 	d1 := l.ld.makeDir([]string{attr.Pid}, np.DMDIR, l.ld.root)
@@ -52,7 +57,8 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		// XXX Need to think about how to return errors
+		l.ld.Exiting(l.attr.Pid, err.Error())
+		return
 		//		return err
 	}
 
@@ -69,13 +75,33 @@ func (l *Lambda) run() error {
 		l.ld.Exiting(l.Pid, "OK")
 		return nil
 	}
-	args := append([]string{l.Pid}, l.Args...)
+
+	// XXX Hack to get perf stat to work cleanly... we probably want to do proper
+	// stdout/stderr redirection eventually...
+	var args []string
+	var stdout io.Writer
+	var stderr io.Writer
+	if l.Program == "bin/perf" {
+		args = l.Args
+		fname := "/tmp/perf-stat-" + l.Pid + ".out"
+		file, err := os.Create(fname)
+		if err != nil {
+			log.Fatalf("Error creating perf stat output file: %v, %v", fname, err)
+		}
+		stdout = file
+		stderr = file
+	} else {
+		args = append([]string{l.Pid}, l.Args...)
+		stdout = os.Stdout
+		stderr = os.Stderr
+	}
+
 	env := append(os.Environ(), l.Env...)
 	cmd := exec.Command(l.ld.bin+"/"+l.Program, args...)
 	cmd.Env = env
 	cmd.Dir = l.Dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Locald run error: %v, %v\n", l.attr, err)

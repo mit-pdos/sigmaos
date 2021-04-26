@@ -148,7 +148,7 @@ func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 			TWOPCCOMMIT, err)
 	}
 
-	// depending how many KVs ack, crash2 results
+	// depending how many KVs ack, crash3 results
 	// in a abort or commit
 	if cd.opcode == "crash3" {
 		db.DLPrintf("COORD", "Crash3\n")
@@ -200,7 +200,7 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 		return
 	}
 
-	// crash3 should results in commit (assuming no KVs crash)
+	// crash4 should results in commit (assuming no KVs crash)
 	if cd.opcode == "crash4" {
 		db.DLPrintf("COORD", "Crash4\n")
 		os.Exit(1)

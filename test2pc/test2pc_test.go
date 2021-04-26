@@ -161,6 +161,8 @@ func (ts *Tstate) checkCoord(fws []string, opcode string) {
 	assert.Nil(ts.t, err, "Wait")
 	if !strings.HasPrefix(opcode, "crash") {
 		assert.Equal(ts.t, "OK", string(ok))
+	} else {
+		log.Printf("COORD exited %v %v\n", err, string(ok))
 	}
 }
 
@@ -224,6 +226,14 @@ func TestCrash2(t *testing.T) {
 
 	ts.testAbort()
 
+	// Run another 2PC to stop the participants
+
+	ts.checkCoord(fws, "start")
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testCommit()
+
 	ts.shutdown()
 }
 
@@ -238,6 +248,21 @@ func TestCrash3(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	ts.testAbort()
+
+	ts.shutdown()
+}
+
+func TestCrash4(t *testing.T) {
+	ts := makeTstate(t)
+	fws := ts.setUpParticipants("")
+
+	time.Sleep(500 * time.Millisecond)
+
+	ts.checkCoord(fws, "crash4")
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testCommit()
 
 	ts.shutdown()
 }

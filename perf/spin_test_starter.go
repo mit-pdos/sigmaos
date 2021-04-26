@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -24,11 +25,17 @@ type SpinTestStarter struct {
 	baseline  bool
 	aws       bool
 	local     bool
+	perfStat  bool
 	*fslib.FsLib
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
-	a := &fslib.Attr{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0}
+	var a *fslib.Attr
+	if s.perfStat {
+		a = &fslib.Attr{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, nil, nil, 0}
+	} else {
+		a = &fslib.Attr{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0}
+	}
 	err := s.Spawn(a)
 	if err != nil {
 		log.Fatalf("couldn't spawn %v: %v\n", pid, err)
@@ -85,14 +92,19 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 	}
 
 	i, err := strconv.Atoi(args[2])
+	if err != nil {
+		log.Fatalf("Invalid num interations: %v, %v\n", args[2], err)
+	}
+
 	// Limited by the AWS API Gateway timeout
 	if i > 5000 && s.local == false {
 		s.its = "5000"
 	} else {
 		s.its = args[2]
 	}
-	if err != nil {
-		log.Fatalf("Invalid num interations: %v, %v\n", args[2], err)
+
+	if len(args) == 6 && args[5] == "perf_stat" {
+		s.perfStat = true
 	}
 
 	return s, nil
@@ -104,6 +116,7 @@ func (s *SpinTestStarter) TestNinep() time.Duration {
 	// Gen pids
 	for i := 0; i < s.nSpinners; i++ {
 		pid := fslib.GenPid()
+		pid = pid + "-ninep-" + s.its
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
 			pid = fslib.GenPid()
@@ -124,6 +137,19 @@ func (s *SpinTestStarter) TestNinep() time.Duration {
 	}
 	end := time.Now()
 
+	// Print out the results from perf stat
+	if s.perfStat {
+		for pid, _ := range pids {
+			fname := "/tmp/perf-stat-" + pid + ".out"
+			contents, err := ioutil.ReadFile(fname)
+			if err != nil {
+				log.Printf("Couldn't read file contents: %v, %v", fname, err)
+			}
+			os.Remove(fname)
+			log.Printf("%v", string(contents))
+		}
+	}
+
 	// Calculate elapsed time
 	elapsed := end.Sub(start)
 	return elapsed
@@ -135,6 +161,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 	// Gen pids
 	for i := 0; i < s.nSpinners; i++ {
 		pid := fslib.GenPid()
+		pid = pid + "-native-" + s.its
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
 			pid = fslib.GenPid()
@@ -142,9 +169,21 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 		}
 
 		// Set up command struct
-		cmd := exec.Command("./bin/c-spinner", []string{pid, s.dim, s.its, "native"}...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		var cmd *exec.Cmd
+		if s.perfStat {
+			cmd = exec.Command("perf", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its, "native"}...)
+			fname := "/tmp/perf-stat-" + pid + ".out"
+			file, err := os.Create(fname)
+			if err != nil {
+				log.Fatalf("Error creating perf stat output file: %v, %v", fname, err)
+			}
+			cmd.Stdout = file
+			cmd.Stderr = file
+		} else {
+			cmd = exec.Command("./bin/c-spinner", []string{pid, s.dim, s.its, "native"}...)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 
 		// Store it along
 		pids[pid] = cmd
@@ -167,6 +206,19 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 		}
 	}
 	end := time.Now()
+
+	if s.perfStat {
+		// Print out the results from perf stat
+		for pid, _ := range pids {
+			fname := "/tmp/perf-stat-" + pid + ".out"
+			contents, err := ioutil.ReadFile(fname)
+			if err != nil {
+				log.Printf("Couldn't read file contents: %v, %v", fname, err)
+			}
+			os.Remove(fname)
+			log.Printf("%v", string(contents))
+		}
+	}
 
 	// Calculate elapsed time
 	elapsed := end.Sub(start)

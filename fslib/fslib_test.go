@@ -42,7 +42,6 @@ func TestRemove(t *testing.T) {
 	err := ts.MakeFile(fn, 0777, d)
 	assert.Equal(t, nil, err)
 
-	log.Printf("Test remove now")
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 	ts.s.Shutdown(ts.FsLib)

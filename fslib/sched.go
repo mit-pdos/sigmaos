@@ -150,9 +150,7 @@ func filterQueue(jobs []*np.Stat) []*np.Stat {
 	return filtered
 }
 
-func (fl *FsLib) SwapExitDependency(pids []string) error {
-	fromPid := pids[0]
-	toPid := pids[1]
+func (fl *FsLib) modifyExitDependencies(f func(map[string]bool) bool) error {
 	ls, _ := fl.ReadDir(WAITQ)
 	ls = filterQueue(ls)
 	for _, l := range ls {
@@ -174,10 +172,9 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 			log.Fatalf("Error in SwapExitDependency Unmarshal %v: %v", a, err)
 			return err
 		}
-		// If the fromPid is a dependency, swap it & write back
-		if _, ok := attr.ExitDep[fromPid]; ok {
-			attr.ExitDep[toPid] = false
-			attr.ExitDep[fromPid] = true
+		changed := f(attr.ExitDep)
+		// If the ExitDep map changed, write it back.
+		if changed {
 			b, err := json.Marshal(attr)
 			if err != nil {
 				log.Fatalf("Error in SwapExitDependency Marshal %v: %v", b, err)
@@ -201,54 +198,30 @@ func (fl *FsLib) SwapExitDependency(pids []string) error {
 	return nil
 }
 
+func (fl *FsLib) SwapExitDependency(pids []string) error {
+	fromPid := pids[0]
+	toPid := pids[1]
+	return fl.modifyExitDependencies(func(deps map[string]bool) bool {
+		if _, ok := deps[fromPid]; ok {
+			deps[toPid] = false
+			deps[fromPid] = true
+			return true
+		}
+		return false
+	})
+}
+
 func (fl *FsLib) WakeupExit(pid string) error {
-	ls, _ := fl.ReadDir(WAITQ)
-	ls = filterQueue(ls)
-	for _, l := range ls {
-		// Lock the file
-		fl.LockFile(LOCKS, path.Join(WAITQ, l.Name))
-		a, err := fl.ReadFile(path.Join(WAITQ, l.Name))
-		// May get file not found if someone renamed the file
-		if err != nil && err.Error() != "file not found" {
-			fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
-			continue
+	err := fl.modifyExitDependencies(func(deps map[string]bool) bool {
+		if _, ok := deps[pid]; ok {
+			deps[pid] = true
+			return true
 		}
-		if err != nil {
-			log.Fatalf("Error in WakeupExit ReadFile %v: %v", l.Name, err)
-			return err
-		}
-		var attr Attr
-		err = json.Unmarshal(a, &attr)
-		if err != nil {
-			log.Fatalf("Error in WakeupExit Unmarshal %v: %v", a, err)
-			return err
-		}
-		// If the fromPid is a dependency, swap it & write back
-		if _, ok := attr.ExitDep[pid]; ok {
-			attr.ExitDep[pid] = true
-			b, err := json.Marshal(attr)
-			if err != nil {
-				log.Fatalf("Error in WakeupExit Marshal %v: %v", b, err)
-				return err
-			}
-			// XXX OTRUNC isn't implemented for memfs yet, so remove & rewrite
-			err = fl.Remove(path.Join(WAITQ, l.Name))
-			// May get file not found if someone renamed the file
-			if err != nil && err.Error() != "file not found" {
-				fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
-				continue
-			}
-			if err != nil {
-				log.Fatalf("Error in WakeupExit Remove %v: %v", l.Name, err)
-				return err
-			}
-			err = fl.MakeDirFileAtomic(WAITQ, l.Name, b)
-			if err != nil {
-				log.Fatalf("Error in WakeupExit MakeFileAtomic %v: %v", l.Name, err)
-				return err
-			}
-		}
-		fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
+		return false
+	})
+
+	if err != nil {
+		return err
 	}
 
 	// Notify localds that a job has become runnable

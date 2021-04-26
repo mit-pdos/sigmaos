@@ -8,6 +8,12 @@ import os
 def time_from_line(line):
   return line.split(" ")[-2]
 
+def time_from_perf_stat(lines):
+  for l in lines:
+    if "seconds time elapsed" in l:
+      x = l.strip().split(" ")[0]
+      return float(x) * 1000000.0
+
 def parse_profile_file(path):
   with open(path, "r") as f:
     x = f.read()
@@ -26,7 +32,7 @@ def read_profile(paths, p_type):
       dim, iterations, n, comp_time, setup_time = parse_profile_file(p)
       return (dim, iterations, n, comp_time, setup_time)
 
-def read_data_file(path):
+def read_data_file(path, perf_stat):
   with open(path, "r") as f:
     x = f.read()
   lines = x.split("\n")[:-1]
@@ -35,18 +41,21 @@ def read_data_file(path):
   its = int(profile[1])
   n = int(profile[2])
   try:
-    comp_time = float(time_from_line(lines[-1]))
+    if not perf_stat or "aws" in path:
+      comp_time = float(time_from_line(lines[-1]))
+    else:
+      comp_time = float(time_from_perf_stat(lines))
     return (dim, its, n, comp_time)
   except ValueError:
     print("Invalid format:", path)
     return None
 
-def read_data(paths, test_type):
+def read_data(paths, test_type, perf_stat):
   data = {}
   for p in paths:
     if "baseline" in p or test_type not in p:
       continue
-    res = read_data_file(p)
+    res = read_data_file(p, perf_stat)
     if res is None:
       continue
     dim, its, n, comp_time = res
@@ -139,6 +148,7 @@ if __name__ == "__main__":
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--suffix", type=str, default="")
   parser.add_argument("--percentile", type=int, default=99)
+  parser.add_argument("--perf_stat", type=bool, action='store_true', default=False)
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
   native_profile = read_profile(paths, "native")
@@ -146,15 +156,15 @@ if __name__ == "__main__":
   print("native profile:", native_profile)
   print("remote profile:", remote_profile)
   # Read data from native run
-  native_data = read_data(paths, "native")
+  native_data = read_data(paths, "native", args.perf_stat)
   native_runtime = compute_mean(native_data)
   native_tail = compute_tail(native_data, args.percentile)
   # Read data from 9p run
-  ninep_data = read_data(paths, "9p")
+  ninep_data = read_data(paths, "9p", args.perf_stat)
   ninep_runtime = compute_mean(ninep_data)
   ninep_tail = compute_tail(ninep_data, args.percentile)
   # Read data from remote run
-  remote_data = read_data(paths, "aws")
+  remote_data = read_data(paths, "aws", args.perf_stat)
   remote_runtime = compute_mean(remote_data)
   remote_tail = compute_tail(remote_data, args.percentile)
   # Plot runtime
@@ -165,6 +175,8 @@ if __name__ == "__main__":
   native_tail_x_y = get_runtime_x_y(native_profile, native_tail)
   ninep_tail_x_y = get_runtime_x_y(native_profile, ninep_tail)
   remote_tail_x_y = get_runtime_x_y(remote_profile, remote_tail)
+  print(ninep_runtime_x_y)
+  print(ninep_tail_x_y)
   plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, native_tail_x_y=native_tail_x_y, ninep_tail_x_y=ninep_tail_x_y, remote_tail_x_y=remote_tail_x_y, percent=args.percentile, suffix=args.suffix)
   #Plot overhead
   native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)

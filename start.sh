@@ -15,12 +15,18 @@ if [[ -z "${NAMED}" ]]; then
 fi
 
 ./bin/memfsd 0 ":1111" &
-./bin/nps3d &
-./bin/npuxd &
-./bin/locald ./ &
+#./bin/nps3d &
+#./bin/npuxd &
+#./bin/locald ./ &
 
 sleep 2
 ./mount.sh
-mkdir -p /mnt/9p/fs   # make fake file system
-mkdir -p /mnt/9p/kv
-mkdir -p /mnt/9p/gg
+#mkdir -p /mnt/9p/fs   # make fake file system
+#mkdir -p /mnt/9p/kv
+#mkdir -p /mnt/9p/gg
+mkdir -p /mnt/9p/memfsd-replicas
+
+# Start a few memfs replicas
+./bin/memfs-replica 1 &
+./bin/memfs-replica 2 &
+./bin/memfs-replica 3 &

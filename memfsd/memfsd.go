@@ -46,6 +46,10 @@ func MakeFsd(addr string) *Fsd {
 	return fsd
 }
 
+func (fsd *Fsd) GetSrv() *npsrv.NpServer {
+	return fsd.srv
+}
+
 func (fsd *Fsd) Serve() {
 	<-fsd.ch
 	db.DLPrintf("MEMFSD", "Exit\n")

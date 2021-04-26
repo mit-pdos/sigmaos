@@ -30,7 +30,7 @@ func commitName(flw string) string {
 
 func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Participant, error) {
 	p := &Participant{}
-	log.Printf("MakeParticipant %v\n", me)
+	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
 	p.txn = txn
@@ -102,12 +102,12 @@ func (p *Participant) restartCoord() {
 		log.Printf("PART clean")
 		return
 	}
-	pid1 := SpawnCoord(p.FsLib, "restart", p.twopc.Participants)
-	ok, err := p.Wait(pid1)
-	if err != nil {
-		log.Printf("PART wait failed\n")
-	}
-	log.Printf("PART Coord %v done %v\n", pid1, string(ok))
+	SpawnCoord(p.FsLib, "restart", p.twopc.Participants)
+	//ok, err := p.Wait(pid1)
+	//if err != nil {
+	//	log.Printf("PART wait failed\n")
+	//}
+	//log.Printf("PART Coord %v done %v\n", pid1, string(ok))
 
 }
 
@@ -148,7 +148,7 @@ func (p *Participant) prepare() {
 	if err != nil {
 		db.DLPrintf("PART", "Prepare: COORD crashed\n")
 		p.restartCoord()
-		return
+		// return
 	}
 
 	_, err = p.readTwopcWatch(TWOPCCOMMIT, p.watchTwopcCommit)

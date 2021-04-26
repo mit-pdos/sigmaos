@@ -93,8 +93,14 @@ func (cd *Coord) restart() {
 
 	fws := mkFlwsMap(cd.FsLib, cd.twopc.Participants)
 	if fws.doCommit(prepared) {
-		db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
-		cd.commit(fws, committed.len(), true)
+
+		if committed.len() == fws.len() {
+			db.DLPrintf("COORD", "Restart: finished commit %d\n", committed.len())
+			cd.cleanup()
+		} else {
+			db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
+			cd.commit(fws, committed.len(), true)
+		}
 	} else {
 		db.DLPrintf("COORD", "Restart: abort\n")
 		cd.commit(fws, committed.len(), false)
@@ -206,6 +212,8 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 	}
 
 	db.DLPrintf("COORD", "Done commit/abort\n")
+
+	cd.cleanup()
 }
 
 func (cd *Coord) TwoPC() {
@@ -249,6 +257,9 @@ func (cd *Coord) TwoPC() {
 	log.Printf("COORD commit %v\n", ok)
 
 	cd.commit(fws, fws.len()-n, ok)
+}
 
+func (cd *Coord) cleanup() {
+	log.Printf("COORD cleanup %v\n", TWOPCCOMMIT)
 	cd.Remove(TWOPCCOMMIT) // don't care if succeeds or not
 }

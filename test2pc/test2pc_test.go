@@ -3,6 +3,7 @@ package test2pc
 import (
 	"log"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,6 +57,11 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 
 	return ts
+}
+
+func (ts *Tstate) shutdown() {
+	ts.stopMemFSs()
+	ts.s.Shutdown(ts.fsl)
 }
 
 func (ts *Tstate) spawnMemFS() string {
@@ -153,8 +159,9 @@ func (ts *Tstate) checkCoord(fws []string, opcode string) {
 	pid := twopc.SpawnCoord(ts.fsl, opcode, fws)
 	ok, err := ts.fsl.Wait(pid)
 	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, "OK", string(ok))
-
+	if !strings.HasPrefix(opcode, "crash") {
+		assert.Equal(ts.t, "OK", string(ok))
+	}
 }
 
 func (ts *Tstate) testAbort() {
@@ -187,9 +194,7 @@ func TestCommit(t *testing.T) {
 
 	ts.testCommit()
 
-	ts.stopMemFSs()
-
-	ts.s.Shutdown(ts.fsl)
+	ts.shutdown()
 }
 
 func TestAbort(t *testing.T) {
@@ -204,9 +209,7 @@ func TestAbort(t *testing.T) {
 
 	ts.testAbort()
 
-	ts.stopMemFSs()
-
-	ts.s.Shutdown(ts.fsl)
+	ts.shutdown()
 }
 
 func TestCrash2(t *testing.T) {
@@ -221,9 +224,7 @@ func TestCrash2(t *testing.T) {
 
 	ts.testAbort()
 
-	ts.stopMemFSs()
-
-	ts.s.Shutdown(ts.fsl)
+	ts.shutdown()
 }
 
 func TestCrash3(t *testing.T) {
@@ -238,7 +239,5 @@ func TestCrash3(t *testing.T) {
 
 	ts.testAbort()
 
-	ts.stopMemFSs()
-
-	ts.s.Shutdown(ts.fsl)
+	ts.shutdown()
 }

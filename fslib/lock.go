@@ -1,6 +1,8 @@
 package fslib
 
 import (
+	"github.com/thanhpk/randstr"
+
 	"log"
 	"path"
 	"strings"
@@ -57,12 +59,14 @@ func (fl *FsLib) UnlockFile(lockDir string, f string) error {
 }
 
 func (fl *FsLib) MakeDirFileAtomic(dir string, fname string, b []byte) error {
-	err := fl.MakeFile(path.Join(dir, WRITING+fname), 0777, b)
+	tmpName := randstr.Hex(16)
+	tmpPath := path.Join(TMP, tmpName)
+	err := fl.MakeFile(tmpPath, 0777, b)
 	if err != nil {
 		log.Fatalf("Error in MakeFileAtomic %v/%v: %v", dir, fname, err)
 		return err
 	}
-	err = fl.Rename(path.Join(dir, WRITING+fname), path.Join(dir, fname))
+	err = fl.Rename(tmpPath, path.Join(dir, fname))
 	if err != nil {
 		log.Fatalf("Error in MakeFileAtomic rename %v/%v: %v", dir, fname, err)
 		return err

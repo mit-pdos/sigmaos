@@ -20,6 +20,7 @@ const (
 	CLAIMED_EPH   = "name/claimed_ephemeral"
 	SPAWNED       = "name/spawned"
 	RET_STAT      = "name/retstat"
+	TMP           = "name/tmp"
 	JOB_SIGNAL    = "job-signal"
 	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1
@@ -42,8 +43,7 @@ func (fl *FsLib) ReadRunQ() ([]*np.Stat, error) {
 	if err != nil {
 		return d, err
 	}
-	jobs := filterQueue(d)
-	return jobs, err
+	return d, err
 }
 
 func (fl *FsLib) ReadClaimed() ([]*np.Stat, error) {
@@ -51,8 +51,7 @@ func (fl *FsLib) ReadClaimed() ([]*np.Stat, error) {
 	if err != nil {
 		return d, err
 	}
-	jobs := filterQueue(d)
-	return jobs, err
+	return d, err
 }
 
 func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
@@ -60,8 +59,7 @@ func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
 	if err != nil {
 		return d, err
 	}
-	jobs := filterQueue(d)
-	return jobs, err
+	return d, err
 }
 
 func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
@@ -138,22 +136,8 @@ func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	return b, true
 }
 
-// Filter out partially written jobs.
-func filterQueue(jobs []*np.Stat) []*np.Stat {
-	filtered := []*np.Stat{}
-	for _, s := range jobs {
-		// Filter jobs with in-progress writes
-		if strings.Index(s.Name, WRITING) == 0 {
-			continue
-		}
-		filtered = append(filtered, s)
-	}
-	return filtered
-}
-
 func (fl *FsLib) modifyExitDependencies(f func(map[string]bool) bool) error {
 	ls, _ := fl.ReadDir(WAITQ)
-	ls = filterQueue(ls)
 	for _, l := range ls {
 		// Lock the file
 		fl.LockFile(LOCKS, path.Join(WAITQ, l.Name))

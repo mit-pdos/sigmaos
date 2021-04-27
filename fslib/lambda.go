@@ -77,7 +77,6 @@ func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
 	return fl.Spawn(a)
 }
 
-// XXX may need to change this
 func (fl *FsLib) HasBeenSpawned(pid string) bool {
 	_, err := fl.Stat(WaitFilePath(pid))
 	if err == nil {

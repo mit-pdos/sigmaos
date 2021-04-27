@@ -27,7 +27,6 @@ type Attr struct {
 const (
 	LOCALD_ROOT  = "name/localds"
 	NO_OP_LAMBDA = "no-op-lambda"
-	WAIT_LOCK    = "wait-lock."
 )
 
 func GenPid() string {

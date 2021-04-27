@@ -21,6 +21,7 @@ const (
 	SPAWNED       = "name/spawned"
 	RET_STAT      = "name/retstat"
 	JOB_SIGNAL    = "job-signal"
+	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1
 )
 
@@ -259,7 +260,6 @@ func (fl *FsLib) MakeRetStatFile() string {
 	return fpath
 }
 
-// XXX WriteFile seems to have nasty errors when the file doesn't exist. Need to clean up.
 // Write back return statuses
 func (fl *FsLib) WriteBackRetStats(pid string, status string) {
 	fl.LockFile(LOCKS, WaitFilePath(pid))
@@ -306,13 +306,28 @@ func (fl *FsLib) RegisterRetStatFile(pid string, fpath string) {
 	}
 }
 
+// XXX When we start handling large numbers of lambdas, may be better to stat
+// each exit dep individually. For now, this is more efficient (# of RPCs).
 // If we know nothing about an exit dep, ignore it by marking it as exited
 func (fl *FsLib) pruneExitDeps(a *Attr) {
+	spawned := fl.getSpawnedLambdas()
 	for pid, _ := range a.ExitDep {
-		if !fl.HasBeenSpawned(pid) {
+		if _, ok := spawned[WaitFileName(pid)]; !ok {
 			a.ExitDep[pid] = true
 		}
 	}
+}
+
+func (fl *FsLib) getSpawnedLambdas() map[string]bool {
+	d, err := fl.ReadDir(SPAWNED)
+	if err != nil {
+		log.Printf("Error reading spawned dir in pruneExitDeps: %v", err)
+	}
+	spawned := map[string]bool{}
+	for _, l := range d {
+		spawned[l.Name] = true
+	}
+	return spawned
 }
 
 func WaitFilePath(pid string) string {

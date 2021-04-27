@@ -204,11 +204,9 @@ func (fl *FsLib) WakeupExit(pid string) error {
 		}
 		return false
 	})
-
 	if err != nil {
 		return err
 	}
-
 	// Notify localds that a job has become runnable
 	fl.SignalNewJob()
 	return nil
@@ -264,7 +262,6 @@ func (fl *FsLib) writeBackRetStats(pid string, status string) {
 		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
 		return
 	}
-
 	paths := strings.Split(strings.TrimSpace(string(b)), "\n")
 	for _, p := range paths {
 		if len(p) > 0 {
@@ -283,7 +280,6 @@ func (fl *FsLib) registerRetStatFile(pid string, fpath string) {
 	if err != nil {
 		return
 	}
-
 	// Shouldn't use versioning since we want writes & reads to be fully atomic.
 	// Specifically, if we're writing while a locald which is Exiting() is
 	// reading, they could get garbage data.

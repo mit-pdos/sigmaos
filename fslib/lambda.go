@@ -44,7 +44,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	b, err := json.Marshal(a)
 	if err != nil {
 		// Unlock the waiter file if unmarshal failed
-		fl.UnlockFile(LOCKS, WAIT_LOCK+a.Pid)
+		fl.RemoveWaitFile(a.Pid)
 		return err
 	}
 	err = fl.MakeDirFileAtomic(WAITQ, a.Pid, b)
@@ -52,7 +52,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 		return err
 	}
 	// Notify localds that a job has become runnable
-	fl.UnlockFile(LOCKS, JOB_SIGNAL)
+	fl.SignalNewJob()
 	return nil
 }
 
@@ -104,6 +104,8 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 	}
 	// Write back return statuses
 	fl.WriteBackRetStats(pid, status)
+
+	// Release people waiting on this lambda
 	err = fl.Remove(WaitFilePath(pid))
 	if err != nil {
 		log.Printf("Error removing wait file in Exiting %v: %v", pid, err)
@@ -114,8 +116,16 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 // Create a file to read return status from, watch wait file, and return
 // contents of retstat file.
 func (fl *FsLib) Wait(pid string) ([]byte, error) {
+	// XXX We can make return statuses optional to save on RPCs if we don't care
+	// about them... right now they require a LOT of RPCs.
+
+	// Make a file in which to receive the return status
 	fpath := fl.MakeRetStatFile()
+
+	// Communicate the file name to the lambda we're waiting on
 	fl.RegisterRetStatFile(pid, fpath)
+
+	// Wait on the lambda with a watch
 	done := make(chan bool)
 	fl.SetRemoveWatch(WaitFilePath(pid), func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
@@ -126,11 +136,15 @@ func (fl *FsLib) Wait(pid string) ([]byte, error) {
 		done <- true
 	})
 	<-done
+
+	// Read the exit status
 	b, err := fl.ReadFile(fpath)
 	if err != nil {
 		log.Printf("Error reading retstat file in wait: %v, %v", fpath, err)
 		return b, err
 	}
+
+	// Clean up our temp file
 	err = fl.Remove(fpath)
 	if err != nil {
 		log.Printf("Error removing retstat file in wait: %v, %v", fpath, err)

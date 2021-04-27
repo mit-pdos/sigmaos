@@ -247,6 +247,16 @@ func (fl *FsLib) MakeWaitFile(pid string) error {
 	return nil
 }
 
+func (fl *FsLib) RemoveWaitFile(pid string) error {
+	fpath := WaitFilePath(pid)
+	err := fl.Remove(pid)
+	if err != nil {
+		log.Fatalf("Error on RemoveWaitFile  %v: %v", fpath, err)
+		return err
+	}
+	return nil
+}
+
 // Create a randomly-named ephemeral file to mark into which the return status
 // will be written.
 func (fl *FsLib) MakeRetStatFile() string {

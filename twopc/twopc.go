@@ -34,13 +34,13 @@ func (s Tstatus) String() string {
 }
 
 type Twopc struct {
-	Tid       int
-	Followers []string
-	Status    Tstatus
+	Tid          int
+	Participants []string
+	Status       Tstatus
 }
 
-func makeTwopc(tid int, fws []string) *Twopc {
-	cf := &Twopc{tid, fws, TINIT}
+func makeTwopc(tid int, ps []string) *Twopc {
+	cf := &Twopc{tid, ps, TINIT}
 	return cf
 }
 
@@ -53,8 +53,8 @@ func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 	return &twopc
 }
 
-func SpawnCoord(fsl *fslib.FsLib, opcode string, flwrs []string) string {
-	args := append([]string{opcode}, flwrs...)
+func SpawnCoord(fsl *fslib.FsLib, opcode string, ps []string) string {
+	args := append([]string{opcode}, ps...)
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/coord"

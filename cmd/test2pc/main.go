@@ -12,11 +12,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v index opcode\n", os.Args[0])
 		os.Exit(1)
 	}
-	txn, err := test2pc.MkTest2pc(os.Args[1:])
+	p, err := test2pc.MkTest2Participant(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-
-	txn.Work()
+	p.Work()
 }

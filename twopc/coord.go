@@ -37,6 +37,7 @@ type Coord struct {
 
 func MakeCoord(args []string) (*Coord, error) {
 	if len(args) < 3 {
+
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
 
@@ -54,9 +55,9 @@ func MakeCoord(args []string) (*Coord, error) {
 		log.Fatalf("Lock failed %v\n", err)
 	}
 
-	log.Printf("lock\n")
+	log.Printf("COORD lock %v\n", args)
 
-	db.DLPrintf("COORD", "New coord %v %v", args)
+	db.DLPrintf("COORD", "New coord %v", args)
 
 	if err := cd.MakeFile(COORD, 0777|np.DMTMP, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
@@ -81,7 +82,7 @@ func (cd *Coord) exit() {
 func (cd *Coord) restart() {
 	cd.twopc = clean(cd.FsLib)
 	if cd.twopc == nil {
-		log.Printf("clean\n")
+		log.Printf("COORD clean\n")
 		return
 	}
 	prepared := mkFlwsMapStatus(cd.FsLib, TWOPCPREPARED)
@@ -90,10 +91,16 @@ func (cd *Coord) restart() {
 	db.DLPrintf("COORD", "Restart: twopc %v prepared %v commit %v\n",
 		cd.twopc, prepared, committed)
 
-	fws := mkFlwsMap(cd.FsLib, cd.twopc.Followers)
+	fws := mkFlwsMap(cd.FsLib, cd.twopc.Participants)
 	if fws.doCommit(prepared) {
-		db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
-		cd.commit(fws, committed.len(), true)
+
+		if committed.len() == fws.len() {
+			db.DLPrintf("COORD", "Restart: finished commit %d\n", committed.len())
+			cd.cleanup()
+		} else {
+			db.DLPrintf("COORD", "Restart: finish commit %d\n", committed.len())
+			cd.commit(fws, committed.len(), true)
+		}
 	} else {
 		db.DLPrintf("COORD", "Restart: abort\n")
 		cd.commit(fws, committed.len(), false)
@@ -141,10 +148,10 @@ func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 			TWOPCCOMMIT, err)
 	}
 
-	// depending how many KVs ack, crash2 results
+	// depending how many KVs ack, crash3 results
 	// in a abort or commit
-	if cd.opcode == "crash2" {
-		db.DLPrintf("COORD", "Crash2\n")
+	if cd.opcode == "crash3" {
+		db.DLPrintf("COORD", "Crash3\n")
 		os.Exit(1)
 	}
 
@@ -193,9 +200,9 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 		return
 	}
 
-	// crash3 should results in commit (assuming no KVs crash)
-	if cd.opcode == "crash3" {
-		db.DLPrintf("COORD", "Crash3\n")
+	// crash4 should results in commit (assuming no KVs crash)
+	if cd.opcode == "crash4" {
+		db.DLPrintf("COORD", "Crash4\n")
 		os.Exit(1)
 	}
 
@@ -205,6 +212,8 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 	}
 
 	db.DLPrintf("COORD", "Done commit/abort\n")
+
+	cd.cleanup()
 }
 
 func (cd *Coord) TwoPC() {
@@ -212,7 +221,7 @@ func (cd *Coord) TwoPC() {
 
 	log.Printf("COORD Coord: %v\n", cd.args)
 
-	// db.DLPrintf("COORD", "Coord: %v\n", cd.args)
+	db.DLPrintf("COORD", "Coord: %v\n", cd.args)
 
 	// XXX set removeWatch on KVs? maybe in KV
 
@@ -229,8 +238,9 @@ func (cd *Coord) TwoPC() {
 
 	db.DLPrintf("COORD", "Coord twopc %v %v\n", cd.twopc, fws)
 
-	if cd.args[0] == "crash1" {
-		db.DLPrintf("COORD", "Crash1\n")
+	if cd.opcode == "crash2" {
+		log.Printf("crash2\n")
+		db.DLPrintf("COORD", "Crash2\n")
 		os.Exit(1)
 	}
 
@@ -247,6 +257,9 @@ func (cd *Coord) TwoPC() {
 	log.Printf("COORD commit %v\n", ok)
 
 	cd.commit(fws, fws.len()-n, ok)
+}
 
+func (cd *Coord) cleanup() {
+	log.Printf("COORD cleanup %v\n", TWOPCCOMMIT)
 	cd.Remove(TWOPCCOMMIT) // don't care if succeeds or not
 }

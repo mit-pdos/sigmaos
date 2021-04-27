@@ -3,6 +3,7 @@ package npsrv
 import (
 	"log"
 	"net"
+
 	db "ulambda/debug"
 )
 
@@ -11,12 +12,28 @@ type NpConn interface {
 }
 
 type NpServer struct {
-	npc  NpConn
-	addr string
+	npc        NpConn
+	addr       string
+	replicated bool
+	replConfig *NpServerReplConfig
+}
+
+type NpServerReplConfig struct {
+	HeadAddr string
+	TailAddr string
+	NextAddr string
 }
 
 func MakeNpServer(npc NpConn, address string) *NpServer {
-	srv := &NpServer{npc, ""}
+	return MakeReplicatedNpServer(npc, address, false, nil)
+}
+
+// TODO: establish connections with other servers.
+func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config *NpServerReplConfig) *NpServer {
+	if replicated {
+		log.Printf("Starting replicated server: %v", config)
+	}
+	srv := &NpServer{npc, "", replicated, config}
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {

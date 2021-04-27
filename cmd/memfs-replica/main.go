@@ -8,14 +8,23 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	"ulambda/npsrv"
 )
 
 func main() {
+	if len(os.Args) < 6 {
+		log.Fatalf("Usage: %v pid port headAddress tailAddress nextAddress", os.Args[0])
+	}
+	port := os.Args[2]
+	headAddr := os.Args[3]
+	tailAddr := os.Args[4]
+	nextAddr := os.Args[5]
+	config := &npsrv.NpServerReplConfig{headAddr, tailAddr, nextAddr}
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("%v: no IP %v\n", os.Args[0], err)
 	}
-	fsd := memfsd.MakeFsd(ip + ":0")
+	fsd := memfsd.MakeReplicatedFsd(ip+port, true, config)
 	name := memfsd.MEMFS + "-replicas" + "/" + fsd.GetSrv().MyAddr()
 	db.Name(name)
 	fsl, err := fslib.InitFs(name, fsd, nil)

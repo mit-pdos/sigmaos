@@ -207,12 +207,14 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 func (npc *NpConn) Detach() {
 	db.DLPrintf("9POBJ", "Detach %v\n", npc.ephemeral)
 
+	npc.mu.Lock()
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
 		if npc.wt != nil {
 			npc.wt.WakeupWatch(f.path)
 		}
 	}
+	npc.mu.Unlock()
 
 	if npc.wt != nil {
 		npc.wt.DeleteConn(npc)

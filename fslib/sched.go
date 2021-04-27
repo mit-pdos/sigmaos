@@ -214,8 +214,8 @@ func (fl *FsLib) WakeupExit(pid string) error {
 	return nil
 }
 
-func (fl *FsLib) MakeWaitFile(pid string) error {
-	fpath := WaitFilePath(pid)
+func (fl *FsLib) makeWaitFile(pid string) error {
+	fpath := waitFilePath(pid)
 	// Make a writable, versioned file
 	fd, err := fl.CreateFile(fpath, 0777, np.OWRITE|np.OVERSION)
 	// Sometimes we get "EOF" on shutdown
@@ -231,8 +231,8 @@ func (fl *FsLib) MakeWaitFile(pid string) error {
 	return nil
 }
 
-func (fl *FsLib) RemoveWaitFile(pid string) error {
-	fpath := WaitFilePath(pid)
+func (fl *FsLib) removeWaitFile(pid string) error {
+	fpath := waitFilePath(pid)
 	err := fl.Remove(pid)
 	if err != nil {
 		log.Fatalf("Error on RemoveWaitFile  %v: %v", fpath, err)
@@ -243,7 +243,7 @@ func (fl *FsLib) RemoveWaitFile(pid string) error {
 
 // Create a randomly-named ephemeral file to mark into which the return status
 // will be written.
-func (fl *FsLib) MakeRetStatFile() string {
+func (fl *FsLib) makeRetStatFile() string {
 	fname := randstr.Hex(16)
 	fpath := path.Join(RET_STAT, fname)
 	fd, err := fl.CreateFile(fpath, 0777|np.DMTMP, np.OWRITE)
@@ -255,13 +255,13 @@ func (fl *FsLib) MakeRetStatFile() string {
 }
 
 // Write back return statuses
-func (fl *FsLib) WriteBackRetStats(pid string, status string) {
-	fl.LockFile(LOCKS, WaitFilePath(pid))
-	defer fl.UnlockFile(LOCKS, WaitFilePath(pid))
+func (fl *FsLib) writeBackRetStats(pid string, status string) {
+	fl.LockFile(LOCKS, waitFilePath(pid))
+	defer fl.UnlockFile(LOCKS, waitFilePath(pid))
 
-	b, err := fl.ReadFile(WaitFilePath(pid))
+	b, err := fl.ReadFile(waitFilePath(pid))
 	if err != nil {
-		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", WaitFilePath(pid), err)
+		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
 		return
 	}
 
@@ -274,12 +274,12 @@ func (fl *FsLib) WriteBackRetStats(pid string, status string) {
 }
 
 // Register that we want a return status written back
-func (fl *FsLib) RegisterRetStatFile(pid string, fpath string) {
-	fl.LockFile(LOCKS, WaitFilePath(pid))
-	defer fl.UnlockFile(LOCKS, WaitFilePath(pid))
+func (fl *FsLib) registerRetStatFile(pid string, fpath string) {
+	fl.LockFile(LOCKS, waitFilePath(pid))
+	defer fl.UnlockFile(LOCKS, waitFilePath(pid))
 
 	// Check if the wait file still exists
-	_, err := fl.Stat(WaitFilePath(pid))
+	_, err := fl.Stat(waitFilePath(pid))
 	if err != nil {
 		return
 	}
@@ -287,16 +287,16 @@ func (fl *FsLib) RegisterRetStatFile(pid string, fpath string) {
 	// Shouldn't use versioning since we want writes & reads to be fully atomic.
 	// Specifically, if we're writing while a locald which is Exiting() is
 	// reading, they could get garbage data.
-	b, err := fl.ReadFile(WaitFilePath(pid))
+	b, err := fl.ReadFile(waitFilePath(pid))
 	if err != nil {
-		log.Printf("Error reading when registerring retstat: %v, %v", WaitFilePath(pid), err)
+		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
 		return
 	}
 	b = append(b, '\n')
 	b = append(b, []byte(fpath)...)
-	err = fl.WriteFile(WaitFilePath(pid), b)
+	err = fl.WriteFile(waitFilePath(pid), b)
 	if err != nil {
-		log.Printf("Error writing when registerring retstat: %v, %v", WaitFilePath(pid), err)
+		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
 	}
 }
 
@@ -306,7 +306,7 @@ func (fl *FsLib) RegisterRetStatFile(pid string, fpath string) {
 func (fl *FsLib) pruneExitDeps(a *Attr) {
 	spawned := fl.getSpawnedLambdas()
 	for pid, _ := range a.ExitDep {
-		if _, ok := spawned[WaitFileName(pid)]; !ok {
+		if _, ok := spawned[waitFileName(pid)]; !ok {
 			a.ExitDep[pid] = true
 		}
 	}
@@ -324,10 +324,10 @@ func (fl *FsLib) getSpawnedLambdas() map[string]bool {
 	return spawned
 }
 
-func WaitFilePath(pid string) string {
-	return path.Join(SPAWNED, WaitFileName(pid))
+func waitFilePath(pid string) string {
+	return path.Join(SPAWNED, waitFileName(pid))
 }
 
-func WaitFileName(pid string) string {
+func waitFileName(pid string) string {
 	return LockName(WAIT_LOCK + pid)
 }

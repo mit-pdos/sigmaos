@@ -36,7 +36,7 @@ func GenPid() string {
 // Spawn a new lambda
 func (fl *FsLib) Spawn(a *Attr) error {
 	// Create a file for waiters to watch & wait on
-	err := fl.MakeWaitFile(a.Pid)
+	err := fl.makeWaitFile(a.Pid)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	b, err := json.Marshal(a)
 	if err != nil {
 		// Unlock the waiter file if unmarshal failed
-		fl.RemoveWaitFile(a.Pid)
+		fl.removeWaitFile(a.Pid)
 		return err
 	}
 	err = fl.MakeDirFileAtomic(WAITQ, a.Pid, b)
@@ -78,7 +78,7 @@ func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
 }
 
 func (fl *FsLib) HasBeenSpawned(pid string) bool {
-	_, err := fl.Stat(WaitFilePath(pid))
+	_, err := fl.Stat(waitFilePath(pid))
 	if err == nil {
 		return true
 	}
@@ -102,14 +102,10 @@ func (fl *FsLib) Exiting(pid string, status string) error {
 		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
 	}
 	// Write back return statuses
-	fl.WriteBackRetStats(pid, status)
+	fl.writeBackRetStats(pid, status)
 
 	// Release people waiting on this lambda
-	err = fl.Remove(WaitFilePath(pid))
-	if err != nil {
-		log.Printf("Error removing wait file in Exiting %v: %v", pid, err)
-	}
-	return nil
+	return fl.removeWaitFile(pid)
 }
 
 // Create a file to read return status from, watch wait file, and return
@@ -119,14 +115,14 @@ func (fl *FsLib) Wait(pid string) ([]byte, error) {
 	// about them... right now they require a LOT of RPCs.
 
 	// Make a file in which to receive the return status
-	fpath := fl.MakeRetStatFile()
+	fpath := fl.makeRetStatFile()
 
 	// Communicate the file name to the lambda we're waiting on
-	fl.RegisterRetStatFile(pid, fpath)
+	fl.registerRetStatFile(pid, fpath)
 
 	// Wait on the lambda with a watch
 	done := make(chan bool)
-	fl.SetRemoveWatch(WaitFilePath(pid), func(p string, err error) {
+	fl.SetRemoveWatch(waitFilePath(pid), func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {

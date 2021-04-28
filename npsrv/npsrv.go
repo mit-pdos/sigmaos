@@ -39,7 +39,7 @@ func MakeNpServer(npc NpConn, address string) *NpServer {
 // TODO: establish connections with other servers.
 func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config *NpServerReplConfig) *NpServer {
 	if replicated {
-		log.Printf("Starting replicated server: %v", config)
+		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
 	}
 	srv := &NpServer{npc, "", replicated, config}
 	var l net.Listener
@@ -77,23 +77,13 @@ func (srv *NpServer) runsrv(l net.Listener) {
 
 		// If we aren't replicated or we're at the end of the chain, create a normal
 		// channel.
-		if !srv.replicated || srv.isTail() {
+		if !srv.replicated {
 			MakeChannel(srv.npc, conn)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
-			log.Printf("Relay chan from %v -> %v", conn.RemoteAddr(), srv.addr)
-			MakeRelayChannel(srv.npc, conn, srv.replConfig.NextChan)
+			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), srv.addr)
+			MakeRelayChannel(srv.npc, conn, srv.replConfig.NextChan, srv.isTail())
 		}
-		//		if srv.replicated && srv.isChainConn(conn.RemoteAddr()) {
-		//			// TODO: make a special channel.
-		//		} else {
-		//			// TODO: clean up
-		//			if srv.replicated {
-		//				//        if srv.isHead()
-		//			} else {
-		//				MakeChannel(srv.npc, conn)
-		//			}
-		//		}
 	}
 }
 

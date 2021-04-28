@@ -27,8 +27,9 @@ type Channel struct {
 }
 
 type RelayChannel struct {
-	c     *Channel
-	relay *npclnt.NpChan
+	c      *Channel
+	relay  *npclnt.NpChan
+	isTail bool
 }
 
 func MakeChannel(npc NpConn, conn net.Conn) *Channel {
@@ -46,7 +47,7 @@ func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	return c
 }
 
-func MakeRelayChannel(npc NpConn, conn net.Conn, relay *npclnt.NpChan) *RelayChannel {
+func MakeRelayChannel(npc NpConn, conn net.Conn, relay *npclnt.NpChan, isTail bool) *RelayChannel {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -56,7 +57,7 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, relay *npclnt.NpChan) *RelayCha
 		make(chan *np.Fcall),
 		false,
 	}
-	rc := &RelayChannel{c, relay}
+	rc := &RelayChannel{c, relay, isTail}
 	go rc.writer()
 	go rc.reader()
 	return rc
@@ -225,13 +226,18 @@ func (rc *RelayChannel) reader() {
 			}
 			return
 		}
+		// XXX This work can and should be done in another thread...
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
-			rc.relay.Call(fcall.Msg)
+			// Only call down the chain if we aren't at the tail.
+			if !rc.isTail {
+				// XXX This definitely is *not* the most efficient way to do this...
+				rc.relay.Call(fcall.Msg)
+			}
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
-			rc.c.serve(fcall)
+			rc.serve(fcall)
 		}
 	}
 }

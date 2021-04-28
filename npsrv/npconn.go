@@ -8,6 +8,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/npclnt"
 	"ulambda/npcodec"
 )
 
@@ -25,6 +26,11 @@ type Channel struct {
 	closed  bool
 }
 
+type RelayChannel struct {
+	c     *Channel
+	relay *npclnt.NpChan
+}
+
 func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
@@ -38,6 +44,22 @@ func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	go c.writer()
 	go c.reader()
 	return c
+}
+
+func MakeRelayChannel(npc NpConn, conn net.Conn, relay *npclnt.NpChan) *RelayChannel {
+	npapi := npc.Connect(conn)
+	c := &Channel{npc,
+		conn,
+		npapi,
+		bufio.NewReaderSize(conn, Msglen),
+		bufio.NewWriterSize(conn, Msglen),
+		make(chan *np.Fcall),
+		false,
+	}
+	rc := &RelayChannel{c, relay}
+	go rc.writer()
+	go rc.reader()
+	return rc
 }
 
 func (c *Channel) Src() string {
@@ -184,6 +206,69 @@ func (c *Channel) writer() {
 				return
 			}
 			err = c.bw.Flush()
+			if err != nil {
+				log.Print("Writer: Flush error ", err)
+				return
+			}
+		}
+	}
+}
+
+func (rc *RelayChannel) reader() {
+	db.DLPrintf("9PCHAN", "Reader conn from %v\n", rc.c.Src())
+	for {
+		frame, err := npcodec.ReadFrame(rc.c.br)
+		if err != nil {
+			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", rc.c.Src(), err)
+			if err == io.EOF {
+				rc.c.close()
+			}
+			return
+		}
+		fcall := &np.Fcall{}
+		if err := npcodec.Unmarshal(frame, fcall); err != nil {
+			log.Print("Serve: unmarshal error: ", err)
+		} else {
+			rc.relay.Call(fcall.Msg)
+			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
+			rc.c.serve(fcall)
+		}
+	}
+}
+
+func (rc *RelayChannel) serve(fc *np.Fcall) {
+	t := fc.Tag
+	reply, rerror := rc.c.dispatch(fc.Msg)
+	if rerror != nil {
+		reply = *rerror
+	}
+	fcall := &np.Fcall{}
+	fcall.Type = reply.Type()
+	fcall.Msg = reply
+	fcall.Tag = t
+	if !rc.c.closed {
+		rc.c.replies <- fcall
+	}
+}
+
+func (rc *RelayChannel) writer() {
+	for {
+		fcall, ok := <-rc.c.replies
+		if !ok {
+			return
+		}
+		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
+		frame, err := npcodec.Marshal(fcall)
+		if err != nil {
+			log.Print("Writer: marshal error: ", err)
+		} else {
+			// log.Print("Srv: Rframe ", len(frame), frame)
+			err = npcodec.WriteFrame(rc.c.bw, frame)
+			if err != nil {
+				log.Print("Writer: WriteFrame error ", err)
+				return
+			}
+			err = rc.c.bw.Flush()
 			if err != nil {
 				log.Print("Writer: Flush error ", err)
 				return

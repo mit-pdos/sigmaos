@@ -8,6 +8,7 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	"ulambda/npclnt"
 	"ulambda/npsrv"
 )
 
@@ -18,8 +19,10 @@ func main() {
 	port := os.Args[2]
 	headAddr := os.Args[3]
 	tailAddr := os.Args[4]
-	nextAddr := os.Args[5]
-	config := &npsrv.NpServerReplConfig{headAddr, tailAddr, nextAddr}
+	prevAddr := os.Args[5]
+	nextAddr := os.Args[6]
+	clnt := npclnt.MakeNpClnt()
+	config := &npsrv.NpServerReplConfig{headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, clnt}
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("%v: no IP %v\n", os.Args[0], err)

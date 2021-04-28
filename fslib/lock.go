@@ -39,13 +39,16 @@ func (fl *FsLib) LockFile(lockDir string, f string) error {
 	lockName := LockName(f)
 	fd, err := fl.CreateFile(path.Join(lockDir, lockName), 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
 	// Sometimes we get "EOF" on shutdown
-	if err != nil && err.Error() != "EOF" {
+	if err != nil && err.Error() == "EOF" {
+		return nil
+	}
+	if err != nil {
 		log.Fatalf("Error on Create LockFile %v: %v", lockName, err)
 		return err
 	}
 	err = fl.Close(fd)
 	if err != nil {
-		log.Fatalf("Error on Close LockFile %v: %v", lockName, err)
+		log.Fatalf("Error on Close LockFile %v: fd:%v %v", lockName, fd, err)
 		return err
 	}
 	return nil

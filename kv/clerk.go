@@ -3,10 +3,10 @@ package kv
 import (
 	"crypto/rand"
 	"hash/fnv"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -58,21 +58,27 @@ func (kc *KvClerk) watchNext(path string, err error) {
 // set watch for conf, which indicates commit to view change
 // XXX atomic read
 func (kc *KvClerk) readConfig() {
-	err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
-	if err != nil {
-		log.Fatalf("CLERK: ReadFileJson %v error %v\n", KVCONFIG, err)
+	for {
+		err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
+		if err == nil {
+			break
+
+		}
+		time.Sleep(100 * time.Millisecond)
 
 	}
-	err = kc.fsl.SetRemoveWatch(KVCONFIG, kc.watchConfig)
-	if err != nil {
-		log.Fatalf("CLERK: SetRemoveWatch %v error %v\n", KVCONFIG, err)
-	}
-	err = kc.fsl.ReadFileJsonWatch(KVNEXTCONFIG, &kc.confNext, kc.watchNext)
-	if err == nil {
-		<-kc.ch
-	} else if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
-		log.Fatalf("CLERK: ReadFileJsonWatch %v error %v\n", KVNEXTCONFIG, err)
-	}
+
+	// err = kc.fsl.SetRemoveWatch(KVCONFIG, kc.watchConfig)
+	// if err != nil {
+	// 	log.Fatalf("CLERK: SetRemoveWatch %v error %v\n", KVCONFIG, err)
+	// }
+	// err = kc.fsl.ReadFileJsonWatch(KVNEXTCONFIG, &kc.confNext, kc.watchNext)
+	// if err == nil {
+	// 	<-kc.ch
+	// } else if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
+	// 	log.Fatalf("CLERK: ReadFileJsonWatch %v error %v\n", KVNEXTCONFIG, err)
+	// }
+
 	db.DLPrintf("CLERK", "readConfig %v\n", kc.conf)
 }
 
@@ -98,12 +104,12 @@ func doRetry(err error) bool {
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
-		n := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
-		err := kc.fsl.MakeFile(n, 0777, []byte(v))
+		fn := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
+		err := kc.fsl.MakeFile(fn, 0777, []byte(v))
 		if err == nil {
 			return err
 		}
-		db.DLPrintf("CLERK", "Put: %v %v %v\n", n, err, shard)
+		db.DLPrintf("CLERK", "Put: %v %v %v\n", fn, err, shard)
 		if doRetry(err) {
 			kc.readConfig()
 		} else {

@@ -3,34 +3,30 @@ package kv
 import (
 	"log"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfsd"
 )
 
 const NKEYS = 100
 const NCLERK = 10
 
 type Tstate struct {
-	t         *testing.T
-	s         *fslib.System
-	fsl       *fslib.FsLib
-	clrks     []*KvClerk
-	ch        chan bool
-	chPresent chan bool
-	pid       string
+	t     *testing.T
+	s     *fslib.System
+	fsl   *fslib.FsLib
+	clrks []*KvClerk
+	mfss  []string
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.ch = make(chan bool)
-	ts.chPresent = make(chan bool)
 
 	s, err := fslib.Boot("..")
 	if err != nil {
@@ -39,19 +35,13 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("kv_test")
 
-	// Setup KV configuration: name/kv, name/kv/commit/, and
-	// initial name/kv/config
-	err = ts.fsl.Mkdir("name/kv", 07)
+	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.fsl.Mkdir(KVPREPARED, 0777)
+	err = ts.fsl.Mkdir(KVDIR, 07)
 	if err != nil {
-		t.Fatalf("MkDir %v failed %v\n", KVPREPARED, err)
-	}
-	err = ts.fsl.Mkdir(KVCOMMITTED, 0777)
-	if err != nil {
-		t.Fatalf("MkDir %v failed %v\n", KVCOMMITTED, err)
+		t.Fatalf("Mkdir kv %v\n", err)
 	}
 	conf := makeConfig(0)
 	err = ts.fsl.MakeFileJson(KVCONFIG, 0777, *conf)
@@ -59,107 +49,68 @@ func makeTstate(t *testing.T) *Tstate {
 		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
 	}
 
-	ts.pid = ts.makeKV()
-
 	return ts
 }
 
-func (ts *Tstate) spawnKv(arg string) string {
+func (ts *Tstate) spawnMemFS() string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/kvd"
-	a.Args = []string{arg}
+	a.Program = "bin/memfsd"
+	a.Args = []string{""}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid
 }
 
-func (ts *Tstate) makeKV() string {
-	pid := ts.spawnKv("add")
-	if ok := ts.waitUntilPresent(kvname(pid)); !ok {
-		log.Fatalf("Couldn't add first KV\n")
+func (ts *Tstate) startMemFSs(n int) []string {
+	mfss := make([]string, 0)
+	for r := 0; r < n; r++ {
+		mfs := ts.spawnMemFS()
+		mfss = append(mfss, mfs)
 	}
-	return pid
+	return mfss
 }
 
-func (ts *Tstate) presentWatch(p string, err error) {
-	db.DLPrintf("KV", "presentWatch fires %v %v", p, err)
-	ts.chPresent <- true
+func (ts *Tstate) stopMemFS(mfs string) {
+	err := ts.fsl.Remove(memfsd.MEMFS + "/" + mfs + "/")
+	assert.Nil(ts.t, err, "Remove")
 }
 
-func (ts *Tstate) waitUntilPresent(kv string) bool {
-	conf := Config{}
-	for {
-		err := ts.fsl.ReadFileJsonWatch(KVCONFIG, &conf, ts.presentWatch)
-		if err == nil {
-			if conf.present(kv) {
-				return true
-			}
-			time.Sleep(100 * time.Millisecond)
-		} else if strings.HasPrefix(err.Error(), "file not found") {
-			<-ts.chPresent
-		} else {
-			break
-		}
+func (ts *Tstate) stopMemFSs() {
+	for _, mfs := range ts.mfss {
+		ts.stopMemFS(mfs)
 	}
-	return false
 }
 
-func (ts *Tstate) spawnCoord(opcode, pid string) string {
+func (ts *Tstate) spawnBalancer(opcode, mfs string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/coordd"
-	a.Args = []string{opcode, pid}
+	a.Program = "bin/balancer"
+	a.Args = []string{opcode, mfs}
 	a.PairDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid
 }
 
-func (ts *Tstate) delFirst() {
-	log.Printf("Del first %v\n", kvname(ts.pid))
-	pid1 := ts.spawnCoord("del", kvname(ts.pid))
+func (ts *Tstate) runBalancer(opcode, mfs string) {
+	pid1 := ts.spawnBalancer(opcode, mfs)
 	ok, err := ts.fsl.Wait(pid1)
 	assert.Nil(ts.t, err, "Wait")
 	assert.Equal(ts.t, "OK", string(ok))
-	time.Sleep(200 * time.Millisecond)
-}
-
-func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
-	pid1 := ts.spawnCoord("restart", "")
-	log.Printf("coord spawned %v\n", pid1)
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, "OK", string(ok))
-	log.Printf("coord %v done\n", pid1)
-	ch <- true
-}
-
-func TestConcurCoord(t *testing.T) {
-	const N = 5
-
-	ts := makeTstate(t)
-	ch := make(chan bool)
-	for r := 0; r < N; r++ {
-		go ts.runCoord(t, ch)
-	}
-	for r := 0; r < N; r++ {
-		<-ch
-	}
-	ts.delFirst()
-	ts.s.Shutdown(ts.fsl)
+	log.Printf("balancer %v done\n", pid1)
 }
 
 func key(k int) string {
 	return "key" + strconv.Itoa(k)
 }
 
-func (ts *Tstate) getKeys(c int) bool {
+func (ts *Tstate) getKeys(c int, ch chan bool) bool {
 	for i := 0; i < NKEYS; i++ {
 		v, err := ts.clrks[c].Get(key(i))
 		select {
-		case <-ts.ch:
+		case <-ch:
 			return true
 		default:
 			assert.Nil(ts.t, err, "Get "+key(i))
@@ -169,45 +120,23 @@ func (ts *Tstate) getKeys(c int) bool {
 	return false
 }
 
-func (ts *Tstate) clerk(c int) {
+func (ts *Tstate) clerk(c int, ch chan bool) {
 	done := false
 	for !done {
-		done = ts.getKeys(c)
+		done = ts.getKeys(c, ch)
 	}
+	log.Printf("nget %v\n", ts.clrks[c].nget)
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-// start n more KVs (beyond the one made in makeTstate())
-func (ts *Tstate) startKVs(n int, clerks bool) []string {
-	pids := make([]string, 0)
-	for r := 0; r < n; r++ {
-		pid := ts.makeKV()
-		log.Printf("Added %v\n", pid)
-		pids = append(pids, pid)
-		if clerks {
-			// To allow clerk to do some gets:
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
-	return pids
-}
-
-func (ts *Tstate) stopKVs(pids []string, clerks bool) {
-	for _, pid := range pids {
-		log.Printf("Del %v\n", pid)
-		pid1 := ts.spawnCoord("del", kvname(pid))
-		ok, err := ts.fsl.Wait(pid1)
-		assert.Nil(ts.t, err, "Wait")
-		assert.Equal(ts.t, "OK", string(ok))
-		if clerks {
-			// To allow clerk to do some gets:
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
-}
-
 func ConcurN(t *testing.T, nclerk int) {
+	const NMORE = 2
+
 	ts := makeTstate(t)
+
+	// add 1 so that we can put to initialize
+	ts.mfss = append(ts.mfss, ts.spawnMemFS())
+	ts.runBalancer("add", ts.mfss[0])
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -215,28 +144,36 @@ func ConcurN(t *testing.T, nclerk int) {
 	}
 
 	if nclerk > 0 {
+		log.Printf("make keys\n")
 		for i := 0; i < NKEYS; i++ {
 			err := ts.clrks[0].Put(key(i), key(i))
 			assert.Nil(t, err, "Put")
 		}
 	}
 
+	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
-		go ts.clerk(i)
+		go ts.clerk(i, ch)
 	}
 
-	pids := ts.startKVs(NSHARD-1, nclerk > 0)
-	ts.stopKVs(pids, nclerk > 0)
+	for s := 0; s < NMORE; s++ {
+		ts.mfss = append(ts.mfss, ts.spawnMemFS())
+		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
+		// do some puts/gets
+		time.Sleep(1000 * time.Millisecond)
+	}
 
 	log.Printf("Wait for clerks\n")
 
 	for i := 0; i < nclerk; i++ {
-		ts.ch <- true
+		ch <- true
 	}
 
 	log.Printf("Done waiting for clerks\n")
 
-	ts.delFirst()
+	time.Sleep(100000 * time.Millisecond)
+
+	ts.stopMemFSs()
 
 	ts.s.Shutdown(ts.fsl)
 }
@@ -251,86 +188,4 @@ func TestConcur1(t *testing.T) {
 
 func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
-}
-
-func (ts *Tstate) restart(pid string) {
-	pid1 := ts.spawnCoord("restart", kvname(pid))
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, "OK", string(ok))
-	log.Printf("COORD restart done\n")
-}
-
-func TestCrashCoord(t *testing.T) {
-	const NMORE = 1
-	ts := makeTstate(t)
-
-	pids := ts.startKVs(NMORE, false)
-
-	// XXX fix exit status of coord in KV
-	pid := ts.spawnKv("crash1")
-	_, err := ts.fsl.Wait(pid)
-	assert.Nil(ts.t, err, "Wait")
-
-	time.Sleep(1000 * time.Millisecond)
-
-	// see if we can add a new KV
-	pid = ts.makeKV()
-	log.Printf("Added %v\n", pid)
-	pids = append(pids, pid)
-
-	pid = ts.spawnKv("crash2")
-	pids = append(pids, pid) // all KVs will prepare
-
-	// XXX wait until new KVCONFIG exists with pid
-	time.Sleep(1000 * time.Millisecond)
-
-	// see if we can add a new KV
-	pid = ts.makeKV()
-	log.Printf("Added %v\n", pid)
-	pids = append(pids, pid)
-
-	// coord crashes after adding new KV
-	pid = ts.spawnKv("crash3")
-	ok := ts.waitUntilPresent(kvname(pid))
-	assert.Equal(ts.t, true, ok)
-	pids = append(pids, pid)
-
-	ts.stopKVs(pids, false)
-	ts.delFirst()
-
-	ts.s.Shutdown(ts.fsl)
-}
-
-func TestCrashKV(t *testing.T) {
-	const NMORE = 1
-	ts := makeTstate(t)
-
-	pids := ts.startKVs(NMORE, false)
-
-	pid := ts.spawnKv("crash4")
-	_, err := ts.fsl.Wait(pid)
-	assert.Nil(ts.t, err, "Wait")
-
-	// XXX wait until new KVCONFIG exists with pid
-	time.Sleep(1000 * time.Millisecond)
-
-	// see if we can add a new KV
-	pid = ts.makeKV()
-	log.Printf("Added %v\n", pid)
-	pids = append(pids, pid)
-
-	pid = ts.spawnKv("crash5")
-	_, err = ts.fsl.Wait(pid)
-	assert.Nil(ts.t, err, "Wait")
-
-	// forceful remove pid, since it has crashed
-	pid1 := ts.spawnCoord("excl", kvname(pid))
-	_, err = ts.fsl.Wait(pid1)
-	assert.Nil(ts.t, err, "Wait")
-
-	ts.stopKVs(pids, false)
-	ts.delFirst()
-
-	ts.s.Shutdown(ts.fsl)
 }

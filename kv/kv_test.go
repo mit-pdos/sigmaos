@@ -130,7 +130,7 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 }
 
 func ConcurN(t *testing.T, nclerk int) {
-	const NMORE = 2
+	const NMORE = 10
 
 	ts := makeTstate(t)
 
@@ -160,7 +160,15 @@ func ConcurN(t *testing.T, nclerk int) {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
 		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	for s := 0; s < NMORE; s++ {
+		ts.runBalancer("del", ts.mfss[len(ts.mfss)-1])
+		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
+		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
+		// do some puts/gets
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	log.Printf("Wait for clerks\n")

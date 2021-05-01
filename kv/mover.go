@@ -27,7 +27,6 @@ func MakeMover(args []string) (*Mover, error) {
 	if len(args) != 2 {
 		return nil, fmt.Errorf("MakeMover: too few arguments %v\n", args)
 	}
-	log.Printf("MakeMover %v\n", args[1])
 	mv.pid = args[0]
 	mv.kv = args[1]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
@@ -55,13 +54,13 @@ func shardTmp(shardp string) string {
 	return shardp + "#"
 }
 
-// Move shard: either copy to new shard server or rename shard dir
-// for new view.
-func (mv *Mover) moveShard(s int, kvd string) error {
-	src := shardPath(mv.kv, s, mv.conf2.N-1)
+// Move shard: either copy from server `from` to me or rename shard
+// dir for new view.
+func (mv *Mover) moveShard(s int, from string) error {
+	src := shardPath(from, s, mv.conf2.N-1)
 	src = shardTmp(src)
-	if kvd != mv.kv { // Copy
-		dst := shardPath(kvd, s, mv.conf2.N)
+	dst := shardPath(mv.kv, s, mv.conf2.N)
+	if from != mv.kv { // Copy
 		err := mv.Mkdir(dst, 0777)
 		// an aborted view change may have created the directory
 		if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
@@ -74,7 +73,6 @@ func (mv *Mover) moveShard(s int, kvd string) error {
 		}
 		db.DLPrintf("MV", "Copy shard from %v to %v done\n", src, dst)
 	} else { // rename
-		dst := shardPath(kvd, s, mv.conf2.N)
 		err := mv.Rename(src, dst)
 		if err != nil {
 			log.Printf("MV Rename %v -> %v failed %v\n", src, dst, err)
@@ -84,9 +82,9 @@ func (mv *Mover) moveShard(s int, kvd string) error {
 }
 
 func (mv *Mover) moveShards() error {
-	for s, kvd := range mv.conf2.Old {
-		if kvd == mv.kv && mv.conf2.New[s] != "" {
-			if err := mv.moveShard(s, mv.conf2.New[s]); err != nil {
+	for s, kvd := range mv.conf2.New {
+		if kvd == mv.kv {
+			if err := mv.moveShard(s, mv.conf2.Old[s]); err != nil {
 				return err
 			}
 		}
@@ -145,8 +143,7 @@ func (mv *Mover) Work() {
 		log.Fatalf("MV: read %v err %v\n", KVCONFIG, err)
 	}
 
-	// db.DLPrintf("MV", "change %v\n", mv.conf2)
-	log.Printf("MV change %v\n", mv.conf2)
+	log.Printf("MV %v change %v\n", mv.kv, mv.conf2)
 
 	if err := mv.moveShards(); err != nil {
 		log.Printf("MV moveShards %v err %v\n", mv.kv, err)

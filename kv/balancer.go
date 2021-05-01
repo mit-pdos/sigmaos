@@ -58,7 +58,7 @@ func (bl *Balancer) unpostShard(kv string, s, old int) {
 	db.DLPrintf("BAL", "unpostShard: %v\n", fn)
 	err := bl.Rename(fn, shardTmp(fn))
 	if err != nil {
-		log.Printf("BAL %v Remove failed %v\n", fn, err)
+		log.Printf("BAL %v Rename failed %v\n", fn, err)
 	}
 }
 
@@ -94,9 +94,10 @@ func (bl *Balancer) spawnMover(kv string) string {
 func (bl *Balancer) runMovers(ks *KvSet) {
 	for kv, _ := range ks.set {
 		pid1 := bl.spawnMover(kv)
-		log.Printf("Mover spawned for %v\n", kv)
 		ok, err := bl.Wait(pid1)
-		log.Printf("mover %v %v done err %v\n", kv, string(ok), err)
+		if string(ok) != "OK" || err != nil {
+			log.Printf("mover %v failed %v err %v\n", kv, string(ok), err)
+		}
 	}
 }
 

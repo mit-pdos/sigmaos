@@ -85,7 +85,6 @@ func (ks *KvSet) del(old []string) {
 
 // XXX minimize movement
 func balance(conf *Config, kvs *KvSet) *Config2 {
-	j := 0
 	cfg2 := &Config2{}
 	cfg2.N = conf.N + 1
 	cfg2.Old = conf.Shards
@@ -99,6 +98,7 @@ func balance(conf *Config, kvs *KvSet) *Config2 {
 		return cfg2
 	}
 
+	j := 0
 	for i, _ := range conf.Shards {
 		cfg2.New[i] = nextkvs[j]
 		j = (j + 1) % len(nextkvs)

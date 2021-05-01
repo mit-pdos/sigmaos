@@ -65,7 +65,6 @@ func (kc *KvClerk) readConfig() {
 
 		}
 		time.Sleep(100 * time.Millisecond)
-
 	}
 
 	// err = kc.fsl.SetRemoveWatch(KVCONFIG, kc.watchConfig)
@@ -121,9 +120,9 @@ func (kc *KvClerk) Put(k, v string) error {
 func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
-		n := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
-		b, err := kc.fsl.Get(n)
-		db.DLPrintf("CLERK", "Get: %v %v\n", n, err)
+		fn := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
+		b, err := kc.fsl.Get(fn)
+		db.DLPrintf("CLERK", "Get: %v %v\n", fn, err)
 		if err == nil {
 			kc.nget += 1
 			return string(b), err

@@ -10,6 +10,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	np "ulambda/ninep"
 )
 
 type Mover struct {
@@ -37,8 +38,12 @@ func MakeMover(args []string) (*Mover, error) {
 	return mv, nil
 }
 
+func shardDir(kvd string) string {
+	return memfsd.MEMFS + "/" + kvd
+}
+
 func shardPath(kvd string, shard, view int) string {
-	return memfsd.MEMFS + "/" + kvd + "/shard" + strconv.Itoa(shard) + "-v" + strconv.Itoa(view)
+	return memfsd.MEMFS + "/" + kvd + "/shard" + strconv.Itoa(shard) + "-" + strconv.Itoa(view)
 }
 
 func keyPath(kvd string, shard int, view int, k string) string {
@@ -89,19 +94,26 @@ func (mv *Mover) moveShards() error {
 	return nil
 }
 
-func (mv *Mover) removeShards() {
-	for s, kvd := range mv.conf2.New {
-		if kvd != mv.kv && mv.conf2.Old[s] == mv.kv {
-			d := shardPath(mv.kv, s, mv.conf2.N-1)
-			d = shardTmp(d)
-			db.DLPrintf("MV", "RmDir shard %v\n", d)
-			err := mv.RmDir(d)
-			if err != nil {
-				log.Fatalf("MV %v: moveShards: remove %v err %v\n",
-					mv.kv, d, err)
-			}
+func (mv *Mover) removeShards(version int) {
+	d := shardDir(mv.kv)
+	mv.ProcessDir(d, func(st *np.Stat) (bool, error) {
+		name := strings.Trim(st.Name, "#")
+		splits := strings.Split(name, "-")
+		n, err := strconv.Atoi(splits[1])
+		if err != nil {
+			return false, nil
 		}
-	}
+		if n < 0 || n > version {
+			return false, nil
+		}
+		d := d + "/" + st.Name
+		db.DLPrintf("MV", "RmDir shard %v\n", d)
+		err = mv.RmDir(d)
+		if err != nil {
+			log.Printf("MV remove %v err %v\n", d, err)
+		}
+		return false, nil
+	})
 }
 
 // func (mv *Mover) closeFid(shard string) {
@@ -139,4 +151,6 @@ func (mv *Mover) Work() {
 	if err := mv.moveShards(); err != nil {
 		log.Printf("MV moveShards %v err %v\n", mv.kv, err)
 	}
+
+	mv.removeShards(mv.conf2.N - 2)
 }

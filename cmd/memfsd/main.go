@@ -6,7 +6,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
-	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/memfsd"
 )
 
@@ -23,7 +23,7 @@ func main() {
 		}
 		db.Name(name)
 		fsd := memfsd.MakeFsd(ip + ":0")
-		fsl, err := fslib.InitFs(name, fsd, nil)
+		fsl, err := fslibsrv.InitFs(name, fsd, nil)
 		if err != nil {
 			log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 		}

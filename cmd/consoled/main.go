@@ -5,14 +5,14 @@ import (
 	"log"
 	"os"
 
-	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 	"ulambda/npsrv"
 )
 
 type Consoled struct {
-	*fslib.FsLibSrv
+	*fslibsrv.FsLibSrv
 	srv    *npsrv.NpServer
 	memfsd *memfsd.Fsd
 	done   chan bool
@@ -21,7 +21,7 @@ type Consoled struct {
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
 	fsd := memfsd.MakeFsd(":0")
-	fsl, err := fslib.InitFs("name/consoled", fsd, makeConsole())
+	fsl, err := fslibsrv.InitFs("name/consoled", fsd, makeConsole())
 	if err != nil {
 		log.Fatalf("InitFs: err %v\n", err)
 	}

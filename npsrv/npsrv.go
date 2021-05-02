@@ -3,7 +3,9 @@ package npsrv
 import (
 	"log"
 	"net"
+
 	db "ulambda/debug"
+	"ulambda/fslib"
 )
 
 type NpConn interface {
@@ -13,10 +15,11 @@ type NpConn interface {
 type NpServer struct {
 	npc  NpConn
 	addr string
+	*fslib.FsLib
 }
 
 func MakeNpServer(npc NpConn, address string) *NpServer {
-	srv := &NpServer{npc, ""}
+	srv := &NpServer{npc, "", nil}
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
@@ -46,7 +47,7 @@ type Orchestrator struct {
 	cwd          string
 	targets      []string
 	targetHashes []string
-	*fslib.FsLibSrv
+	*fslibsrv.FsLibSrv
 }
 
 func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
@@ -57,7 +58,8 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.cwd = args[1]
 	orc.targets = args[2:]
 	memfsd := memfsd.MakeFsd(":0")
-	fls, err := fslib.InitFs(ORCHESTRATOR, memfsd, &OrchestratorDev{orc})
+	// XXX Don't need this actually
+	fls, err := fslibsrv.InitFs(ORCHESTRATOR, memfsd, &OrchestratorDev{orc})
 	if err != nil {
 		return nil, err
 	}

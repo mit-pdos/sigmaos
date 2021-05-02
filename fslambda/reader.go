@@ -7,7 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
-	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
@@ -15,7 +15,7 @@ import (
 )
 
 type Reader struct {
-	*fslib.FsLibSrv
+	*fslibsrv.FsLibSrv
 	pid    string
 	input  string
 	output string
@@ -39,7 +39,7 @@ func MakeReader(args []string) (*Reader, error) {
 		log.Fatal("Create error: ", err)
 	}
 
-	fsl, err := fslib.InitFs(n, memfsd, nil)
+	fsl, err := fslibsrv.InitFs(n, memfsd, nil)
 	if err != nil {
 		return nil, err
 	}

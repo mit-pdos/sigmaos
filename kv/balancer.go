@@ -16,6 +16,7 @@ const (
 	NSHARD       = 10
 	KVDIR        = "name/kv"
 	KVCONFIG     = KVDIR + "/config"
+	KVCONFIGBK   = KVDIR + "/config#"
 	KVNEXTCONFIG = KVDIR + "/nextconfig"
 	KVLOCK       = "lock"
 )
@@ -132,6 +133,11 @@ func (bl *Balancer) Balance() {
 	log.Printf("BAL conf %v next conf: %v %v\n", bl.conf,
 		bl.nextConf, kvs)
 
+	err = bl.Rename(KVCONFIG, KVCONFIGBK)
+	if err != nil {
+		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
+	}
+
 	if bl.nextConf.N > 1 {
 		bl.unpostShards()
 	}
@@ -164,5 +170,9 @@ func (bl *Balancer) Balance() {
 		db.DLPrintf("BAL", "BAL: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)
 		return
+	}
+	err = bl.Remove(KVCONFIGBK)
+	if err != nil {
+		db.DLPrintf("BAL", "BAL: Remove %v err %v\n", KVCONFIGBK, err)
 	}
 }

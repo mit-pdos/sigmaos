@@ -3,10 +3,11 @@ package kv
 import (
 	"crypto/rand"
 	"hash/fnv"
+	"log"
 	"math/big"
 	"strconv"
 	"strings"
-	"time"
+	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -27,12 +28,11 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	fsl      *fslib.FsLib
-	uname    string
-	conf     Config
-	confNext Config
-	ch       chan bool
-	nget     int
+	fsl   *fslib.FsLib
+	uname string
+	conf  Config
+	ch    chan bool
+	nget  int
 }
 
 func MakeClerk() *KvClerk {
@@ -50,34 +50,20 @@ func (kc *KvClerk) watchConfig(path string, err error) {
 	kc.ch <- true
 }
 
-func (kc *KvClerk) watchNext(path string, err error) {
-	db.DLPrintf("CLERK", "watch next fired %v\n", path)
-	kc.readConfig()
-}
-
-// set watch for conf, which indicates commit to view change
 // XXX atomic read
 func (kc *KvClerk) readConfig() {
 	for {
 		err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
 		if err == nil {
 			break
-
 		}
-		time.Sleep(100 * time.Millisecond)
+		err = kc.fsl.ReadFileJsonWatch(KVCONFIG, &kc.conf, kc.watchConfig)
+		if err != nil {
+			<-kc.ch
+		} else {
+			log.Fatalf("CLERK: Watch %v error %v\n", KVCONFIG, err)
+		}
 	}
-
-	// err = kc.fsl.SetRemoveWatch(KVCONFIG, kc.watchConfig)
-	// if err != nil {
-	// 	log.Fatalf("CLERK: SetRemoveWatch %v error %v\n", KVCONFIG, err)
-	// }
-	// err = kc.fsl.ReadFileJsonWatch(KVNEXTCONFIG, &kc.confNext, kc.watchNext)
-	// if err == nil {
-	// 	<-kc.ch
-	// } else if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
-	// 	log.Fatalf("CLERK: ReadFileJsonWatch %v error %v\n", KVNEXTCONFIG, err)
-	// }
-
 	db.DLPrintf("CLERK", "readConfig %v\n", kc.conf)
 }
 

@@ -233,10 +233,21 @@ func (rc *RelayChannel) reader() {
 		} else {
 			// Only call down the chain if we aren't at the tail.
 			if !rc.isTail {
-				// XXX This definitely is *not* the most efficient way to do this...
-				rc.relay.Call(fcall.Msg)
+				_, err := rc.relay.Call(fcall.Msg)
+				// If the next server has crashed...
+				if err != nil && err.Error() == "EOF" {
+					// TODO:
+					// 1. Switch to the next config.
+					// 2. If I'm still a middle server, then change relay & send to the
+					// next server.
+					// 3. If I'm now the head server, propagate the call.
+					//   XXX may err on  response...
+					// 4. If I'm now the tail server, then serve & return
+					log.Printf("Srv reader error: %v", err)
+				}
 			}
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
+			// XXX Should I serve before calling to replicas?
 			rc.serve(fcall)
 		}
 	}

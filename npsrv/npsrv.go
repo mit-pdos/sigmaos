@@ -38,10 +38,12 @@ func MakeNpServer(npc NpConn, address string) *NpServer {
 
 // TODO: establish connections with other servers.
 func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config *NpServerReplConfig) *NpServer {
+	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
+		emptyConfig = &NpServerReplConfig{"", "", "", "", nil, nil, nil, nil, config.NpClnt}
 	}
-	srv := &NpServer{npc, "", replicated, config}
+	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {
@@ -49,18 +51,35 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 	}
 	srv.addr = l.Addr().String()
 	if replicated {
-		srv.connectToReplicas()
+		srv.reloadConfig(config)
 	}
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }
 
-func (srv *NpServer) connectToReplicas() {
-	srv.replConfig.HeadChan = srv.replConfig.MakeNpChan(srv.replConfig.HeadAddr)
-	srv.replConfig.TailChan = srv.replConfig.MakeNpChan(srv.replConfig.TailAddr)
-	srv.replConfig.PrevChan = srv.replConfig.MakeNpChan(srv.replConfig.PrevAddr)
-	srv.replConfig.NextChan = srv.replConfig.MakeNpChan(srv.replConfig.NextAddr)
+func (srv *NpServer) reloadConfig(cfg *NpServerReplConfig) {
+	// TODO locking, trigger resends, etc.
+	if srv.replConfig.HeadAddr != cfg.HeadAddr {
+		srv.connectToReplica(&srv.replConfig.HeadChan, cfg.HeadAddr)
+		srv.replConfig.HeadAddr = cfg.HeadAddr
+	}
+	if srv.replConfig.TailAddr != cfg.TailAddr {
+		srv.connectToReplica(&srv.replConfig.TailChan, cfg.TailAddr)
+		srv.replConfig.TailAddr = cfg.TailAddr
+	}
+	if srv.replConfig.PrevAddr != cfg.PrevAddr {
+		srv.connectToReplica(&srv.replConfig.PrevChan, cfg.PrevAddr)
+		srv.replConfig.PrevAddr = cfg.PrevAddr
+	}
+	if srv.replConfig.NextAddr != cfg.NextAddr {
+		srv.connectToReplica(&srv.replConfig.NextChan, cfg.NextAddr)
+		srv.replConfig.NextAddr = cfg.NextAddr
+	}
+}
+
+func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {
+	*c = srv.replConfig.MakeNpChan(addr)
 }
 
 func (srv *NpServer) MyAddr() string {

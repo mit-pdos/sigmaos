@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	db "ulambda/debug"
+	"ulambda/fslib"
 	"ulambda/npclnt"
 )
 
@@ -21,6 +23,7 @@ type NpServer struct {
 }
 
 type NpServerReplConfig struct {
+	Path     string
 	HeadAddr string
 	TailAddr string
 	PrevAddr string
@@ -29,6 +32,7 @@ type NpServerReplConfig struct {
 	TailChan *npclnt.NpChan
 	PrevChan *npclnt.NpChan
 	NextChan *npclnt.NpChan
+	*fslib.FsLib
 	*npclnt.NpClnt
 }
 
@@ -41,8 +45,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
-		clnt := npclnt.MakeNpClnt()
-		emptyConfig = &NpServerReplConfig{"", "", "", "", nil, nil, nil, nil, clnt}
+		emptyConfig = &NpServerReplConfig{config.Path, "", "", "", "", nil, nil, nil, nil, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -77,6 +80,30 @@ func (srv *NpServer) reloadConfig(cfg *NpServerReplConfig) {
 		srv.connectToReplica(&srv.replConfig.NextChan, cfg.NextAddr)
 		srv.replConfig.NextAddr = cfg.NextAddr
 	}
+}
+
+func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.NpClnt) *NpServerReplConfig {
+	b, err := fsl.ReadFile(path)
+	if err != nil {
+		log.Fatalf("Error reading config: %v, %v", path, err)
+	}
+	cfgString := strings.TrimSpace(string(b))
+	servers := strings.Split(cfgString, "\n")
+	headAddr := servers[0]
+	tailAddr := servers[len(servers)-1]
+	prevAddr := tailAddr
+	nextAddr := headAddr
+	for idx, s := range servers {
+		if s == myaddr {
+			if idx != 0 {
+				prevAddr = servers[idx-1]
+			}
+			if idx != len(servers)-1 {
+				nextAddr = servers[idx+1]
+			}
+		}
+	}
+	return &NpServerReplConfig{path, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, fsl, clnt}
 }
 
 func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {

@@ -41,7 +41,8 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
-		emptyConfig = &NpServerReplConfig{"", "", "", "", nil, nil, nil, nil, config.NpClnt}
+		clnt := npclnt.MakeNpClnt()
+		emptyConfig = &NpServerReplConfig{"", "", "", "", nil, nil, nil, nil, clnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener

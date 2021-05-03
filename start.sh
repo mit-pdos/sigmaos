@@ -27,6 +27,9 @@ mkdir -p /mnt/9p/gg
 mkdir -p /mnt/9p/memfsd-replicas
 
 # Start a few memfs replicas
-./bin/memfs-replica 1 ":30001" "192.168.0.36:30001" "192.168.0.36:30003" "192.168.0.36:30003" "192.168.0.36:30002" &
-./bin/memfs-replica 2 ":30002" "192.168.0.36:30001" "192.168.0.36:30003" "192.168.0.36:30001" "192.168.0.36:30003" &
-./bin/memfs-replica 3 ":30003" "192.168.0.36:30001" "192.168.0.36:30003" "192.168.0.36:30002" "192.168.0.36:30001" &
+config_path_linux=/mnt/9p/memfs-replica-config.txt
+config_path_9p=name/memfs-replica-config.txt
+printf "192.168.0.36:30001\n192.168.0.36:30002\n192.168.0.36:30003\n" > $config_path_linux
+./bin/memfs-replica 1 ":30001" $config_path_9p &
+./bin/memfs-replica 2 ":30002" $config_path_9p &
+./bin/memfs-replica 3 ":30003" $config_path_9p &

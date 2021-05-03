@@ -2,7 +2,7 @@ package kv
 
 import (
 	db "ulambda/debug"
-	"ulambda/fslib"
+	"ulambda/fslibsrv"
 )
 
 type Config struct {
@@ -24,7 +24,7 @@ func (cf *Config) present(n string) bool {
 	return false
 }
 
-func readConfig(fsl *fslib.FsLibSrv, conffile string) *Config {
+func readConfig(fsl *fslibsrv.FsLibSrv, conffile string) *Config {
 	conf := Config{}
 	err := fsl.ReadFileJson(conffile, &conf)
 	if err != nil {

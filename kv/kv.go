@@ -11,6 +11,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	//"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
@@ -27,7 +28,7 @@ func kvname(pid string) string {
 
 type Kv struct {
 	mu sync.Mutex
-	*fslib.FsLibSrv
+	*fslibsrv.FsLibSrv
 	done     chan bool
 	pid      string
 	me       string
@@ -51,7 +52,7 @@ func MakeKv(args []string) (*Kv, error) {
 		return nil, fmt.Errorf("MakeKv: no IP %v\n", err)
 	}
 	fsd := memfsd.MakeFsd(ip + ":0")
-	fsl, err := fslib.InitFs(KV+"/"+kv.me, fsd, nil)
+	fsl, err := fslibsrv.InitFs(KV+"/"+kv.me, fsd, nil)
 	if err != nil {
 		return nil, err
 	}

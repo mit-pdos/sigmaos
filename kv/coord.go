@@ -13,6 +13,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/memfsd"
 )
 
@@ -29,7 +30,7 @@ const (
 )
 
 type Coord struct {
-	*fslib.FsLibSrv
+	*fslibsrv.FsLibSrv
 	pid      string
 	args     []string
 	ch       chan Tstatus
@@ -60,7 +61,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	fsd := memfsd.MakeFsd(ip + ":0")
 	db.DLPrintf("COORD", "New coord %v", args)
-	fls, err := fslib.InitFsFsl(COORD, fsl, fsd, nil)
+	fls, err := fslibsrv.InitFsFsl(COORD, fsl, fsd, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -200,7 +200,6 @@ func (c *Channel) writer() {
 		if err != nil {
 			log.Print("Writer: marshal error: ", err)
 		} else {
-			// log.Print("Srv: Rframe ", len(frame), frame)
 			err = npcodec.WriteFrame(c.bw, frame)
 			if err != nil {
 				log.Print("Writer: WriteFrame error ", err)

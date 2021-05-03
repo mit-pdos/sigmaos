@@ -40,7 +40,6 @@ func MakeNpServer(npc NpConn, address string) *NpServer {
 	return MakeReplicatedNpServer(npc, address, false, nil)
 }
 
-// TODO: establish connections with other servers.
 func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config *NpServerReplConfig) *NpServer {
 	var emptyConfig *NpServerReplConfig
 	if replicated {
@@ -56,12 +55,14 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 	srv.addr = l.Addr().String()
 	if replicated {
 		srv.reloadConfig(config)
+		go srv.runReplConfigUpdater()
 	}
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }
 
+// Updates addresses if any have changed, and connects to new peers.
 func (srv *NpServer) reloadConfig(cfg *NpServerReplConfig) {
 	// TODO locking, trigger resends, etc.
 	if srv.replConfig.HeadAddr != cfg.HeadAddr {
@@ -82,10 +83,11 @@ func (srv *NpServer) reloadConfig(cfg *NpServerReplConfig) {
 	}
 }
 
-func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.NpClnt) *NpServerReplConfig {
+// Read a replication config file.
+func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.NpClnt) (*NpServerReplConfig, error) {
 	b, err := fsl.ReadFile(path)
 	if err != nil {
-		log.Fatalf("Error reading config: %v, %v", path, err)
+		return nil, err
 	}
 	cfgString := strings.TrimSpace(string(b))
 	servers := strings.Split(cfgString, "\n")
@@ -103,7 +105,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{path, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, fsl, clnt}
+	return &NpServerReplConfig{path, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {
@@ -112,6 +114,37 @@ func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {
 
 func (srv *NpServer) MyAddr() string {
 	return srv.addr
+}
+
+func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
+	for {
+		config, err := ReadReplConfig(srv.replConfig.Path, srv.addr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
+		if err != nil {
+			if strings.Index(err.Error(), "file not found") != 0 {
+				log.Printf("Error reading new config: %v, %v", srv.replConfig.Path, err)
+			}
+			continue
+		}
+		return config
+	}
+}
+
+func (srv *NpServer) runReplConfigUpdater() {
+	for {
+		done := make(chan bool)
+		srv.replConfig.SetRemoveWatch(srv.replConfig.Path, func(p string, err error) {
+			log.Printf("Srv %v detected new config!", srv.addr)
+			if err != nil && err.Error() == "EOF" {
+				return
+			} else if err != nil {
+				log.Printf("Error in runReplConfigUpdater RemoveWatch: %v", err)
+			}
+			done <- true
+		})
+		<-done
+		config := srv.getNewReplConfig()
+		srv.reloadConfig(config)
+	}
 }
 
 func (srv *NpServer) runsrv(l net.Listener) {

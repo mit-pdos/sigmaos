@@ -3,6 +3,7 @@
 ./umount.sh
 killall memfsd
 killall memfs-replica
+killall memfs-replica-monitor
 killall locald
 killall sleeperl
 killall kvd

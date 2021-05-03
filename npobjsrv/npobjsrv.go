@@ -211,6 +211,8 @@ func (npc *NpConn) Detach() {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
 		if npc.wt != nil {
 			npc.wt.WakeupWatch(f.path)
+			// Wake up watches on parent dir as well
+			npc.wt.WakeupWatch(f.path[:len(f.path)-1])
 		}
 	}
 
@@ -451,6 +453,8 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	}
 	if npc.wt != nil {
 		npc.wt.WakeupWatch(f.path)
+		// Wake up watches on parent dir as well
+		npc.wt.WakeupWatch(f.path[:len(f.path)-1])
 	}
 	// XXX delete from ephemeral table, if ephemeral
 	npc.del(args.Fid)

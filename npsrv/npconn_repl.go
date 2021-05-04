@@ -8,17 +8,23 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npclnt"
 	"ulambda/npcodec"
 )
 
-type RelayChannel struct {
-	c      *Channel
-	relay  *npclnt.NpChan
-	isTail bool
+type RelayOp struct {
+	frame   []byte
+	rc      *RelayChannel
+	replies chan []byte
 }
 
-func MakeRelayChannel(npc NpConn, conn net.Conn, relay *npclnt.NpChan, isTail bool) *RelayChannel {
+// XXX when do I close the replies channel? the ops channel?
+type RelayChannel struct {
+	c       *Channel
+	ops     chan *RelayOp
+	replies chan []byte
+}
+
+func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp) *RelayChannel {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -28,7 +34,7 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, relay *npclnt.NpChan, isTail bo
 		make(chan *np.Fcall),
 		false,
 	}
-	rc := &RelayChannel{c, relay, isTail}
+	rc := &RelayChannel{c, ops, make(chan []byte)}
 	go rc.writer()
 	go rc.reader()
 	return rc
@@ -45,14 +51,60 @@ func (rc *RelayChannel) reader() {
 			}
 			return
 		}
-		// XXX This work can and should be done in another thread...
+		op := &RelayOp{frame, rc, rc.replies}
+		rc.ops <- op
+	}
+}
+
+func (rc *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
+	t := fc.Tag
+	reply, rerror := rc.c.dispatch(fc.Msg)
+	if rerror != nil {
+		reply = *rerror
+	}
+	fcall := &np.Fcall{}
+	fcall.Type = reply.Type()
+	fcall.Msg = reply
+	fcall.Tag = t
+	return fcall
+}
+
+func (rc *RelayChannel) writer() {
+	for {
+		frame, ok := <-rc.replies
+		if !ok {
+			return
+		}
+		err := npcodec.WriteFrame(rc.c.bw, frame)
+		if err != nil {
+			log.Print("Writer: WriteFrame error ", err)
+			return
+		}
+		err = rc.c.bw.Flush()
+		if err != nil {
+			log.Print("Writer: Flush error ", err)
+			return
+		}
+	}
+}
+
+func (srv *NpServer) relayWorker() {
+	config := srv.replConfig
+	for {
+		op, ok := <-config.ops
+		if !ok {
+			return
+		}
 		fcall := &np.Fcall{}
-		if err := npcodec.Unmarshal(frame, fcall); err != nil {
+		if err := npcodec.Unmarshal(op.frame, fcall); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
+			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
+			// Serve the op first.
+			reply := op.rc.serve(fcall)
 			// Only call down the chain if we aren't at the tail.
-			if !rc.isTail {
-				_, err := rc.relay.Call(fcall.Msg)
+			if !srv.isTail() {
+				_, err := config.NextChan.Call(fcall.Msg)
 				// If the next server has crashed...
 				if err != nil && err.Error() == "EOF" {
 					// TODO:
@@ -65,49 +117,12 @@ func (rc *RelayChannel) reader() {
 					log.Printf("Srv reader error: %v", err)
 				}
 			}
-			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
-			// XXX Should I serve before calling to replicas?
-			rc.serve(fcall)
-		}
-	}
-}
-
-func (rc *RelayChannel) serve(fc *np.Fcall) {
-	t := fc.Tag
-	reply, rerror := rc.c.dispatch(fc.Msg)
-	if rerror != nil {
-		reply = *rerror
-	}
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
-	fcall.Tag = t
-	if !rc.c.closed {
-		rc.c.replies <- fcall
-	}
-}
-
-func (rc *RelayChannel) writer() {
-	for {
-		fcall, ok := <-rc.c.replies
-		if !ok {
-			return
-		}
-		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
-		frame, err := npcodec.Marshal(fcall)
-		if err != nil {
-			log.Print("Writer: marshal error: ", err)
-		} else {
-			// log.Print("Srv: Rframe ", len(frame), frame)
-			err = npcodec.WriteFrame(rc.c.bw, frame)
+			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)
+			frame, err := npcodec.Marshal(reply)
 			if err != nil {
-				log.Print("Writer: WriteFrame error ", err)
-				return
-			}
-			err = rc.c.bw.Flush()
-			if err != nil {
-				log.Print("Writer: Flush error ", err)
-				return
+				log.Print("Writer: marshal error: ", err)
+			} else {
+				op.replies <- frame
 			}
 		}
 	}

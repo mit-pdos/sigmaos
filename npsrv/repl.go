@@ -20,7 +20,7 @@ type NpServerReplConfig struct {
 	TailChan *npclnt.NpChan
 	PrevChan *npclnt.NpChan
 	NextChan *npclnt.NpChan
-	ops      chan []byte
+	ops      chan *RelayOp
 	*fslib.FsLib
 	*npclnt.NpClnt
 }
@@ -29,7 +29,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
-		ops := make(chan []byte)
+		ops := make(chan *RelayOp)
 		emptyConfig = &NpServerReplConfig{config.Path, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
@@ -42,6 +42,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 	if replicated {
 		srv.reloadReplConfig(config)
 		go srv.runReplConfigUpdater()
+		go srv.relayWorker()
 	}
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)

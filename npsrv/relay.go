@@ -2,6 +2,8 @@ package npsrv
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/gob"
 	"io"
 	"log"
 	"net"
@@ -11,7 +13,17 @@ import (
 	"ulambda/npcodec"
 )
 
+const (
+	NO_SEQNO = 0
+)
+
+type FcallWrapper struct {
+	Seqno uint64
+	Fcall *np.Fcall
+}
+
 type RelayOp struct {
+	wrapped bool
 	frame   []byte
 	rc      *RelayChannel
 	replies chan []byte
@@ -22,9 +34,10 @@ type RelayChannel struct {
 	c       *Channel
 	ops     chan *RelayOp
 	replies chan []byte
+	wrapped bool
 }
 
-func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp) *RelayChannel {
+func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool) *RelayChannel {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -34,7 +47,7 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp) *RelayChanne
 		make(chan *np.Fcall),
 		false,
 	}
-	rc := &RelayChannel{c, ops, make(chan []byte)}
+	rc := &RelayChannel{c, ops, make(chan []byte), wrapped}
 	go rc.writer()
 	go rc.reader()
 	return rc
@@ -51,7 +64,7 @@ func (rc *RelayChannel) reader() {
 			}
 			return
 		}
-		op := &RelayOp{frame, rc, rc.replies}
+		op := &RelayOp{rc.wrapped, frame, rc, rc.replies}
 		rc.ops <- op
 	}
 }
@@ -88,6 +101,37 @@ func (rc *RelayChannel) writer() {
 	}
 }
 
+func marshalFcall(fcall *np.Fcall, req *RelayOp, seqno uint64) ([]byte, error) {
+	var b []byte
+	var err error
+	if req.wrapped {
+		buf := bytes.Buffer{}
+		wrap := &FcallWrapper{seqno, fcall}
+		e := gob.NewEncoder(&buf)
+		err = e.Encode(wrap)
+		b = buf.Bytes()
+	} else {
+		b, err = npcodec.Marshal(fcall)
+	}
+	return b, err
+}
+
+func unmarshalFcall(op *RelayOp) (*FcallWrapper, error) {
+	wrap := &FcallWrapper{}
+	var err error
+	if op.wrapped {
+		buf := bytes.Buffer{}
+		buf.Write(op.frame)
+		d := gob.NewDecoder(&buf)
+		err = d.Decode(wrap)
+	} else {
+		wrap.Seqno = NO_SEQNO
+		wrap.Fcall = &np.Fcall{}
+		err = npcodec.Unmarshal(op.frame, wrap.Fcall)
+	}
+	return wrap, err
+}
+
 func (srv *NpServer) relayWorker() {
 	config := srv.replConfig
 	for {
@@ -95,15 +139,16 @@ func (srv *NpServer) relayWorker() {
 		if !ok {
 			return
 		}
-		fcall := &np.Fcall{}
-		if err := npcodec.Unmarshal(op.frame, fcall); err != nil {
+		if wrap, err := unmarshalFcall(op); err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
+			fcall := wrap.Fcall
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
 			reply := op.rc.serve(fcall)
 			// Only call down the chain if we aren't at the tail.
 			if !srv.isTail() {
+				// XXX Have to think carefully about how we want to "Call" the next server...
 				_, err := config.NextChan.Call(fcall.Msg)
 				// If the next server has crashed...
 				if err != nil && err.Error() == "EOF" {
@@ -118,7 +163,8 @@ func (srv *NpServer) relayWorker() {
 				}
 			}
 			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)
-			frame, err := npcodec.Marshal(reply)
+			// XXX Set seqno appropriately
+			frame, err := marshalFcall(reply, op, 0)
 			if err != nil {
 				log.Print("Writer: marshal error: ", err)
 			} else {

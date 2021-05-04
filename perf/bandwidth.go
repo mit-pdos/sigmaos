@@ -27,7 +27,7 @@ const (
 
 var bucket = "9ps3"
 var key = "write-bandwidth-test"
-var fname = "name/fs/bigfile.txt"
+var fname = "name/bigfile.txt"
 
 type BandwidthTest struct {
 	bytes  int

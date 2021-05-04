@@ -42,16 +42,13 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case []byte:
+			// XXX Bail out early to serialize separately
+			return nil
 			if err := e.encode(uint32(len(v))); err != nil {
 				return err
 			}
 
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return err
-			}
-
-		case *[]byte:
-			if err := e.encode(*v); err != nil {
 				return err
 			}
 		case string:

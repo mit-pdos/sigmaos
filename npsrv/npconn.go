@@ -177,8 +177,28 @@ func (c *Channel) writer() {
 		if err != nil {
 			log.Print("Writer: marshal error: ", err)
 		} else {
-			// log.Print("Srv: Rframe ", len(frame), frame)
-			err = npcodec.WriteFrame(c.bw, frame)
+			sendBuf := false
+			var data []byte
+			switch fcall.Type {
+			case np.TTwrite:
+				msg := fcall.Msg.(np.Twrite)
+				data = msg.Data
+				sendBuf = true
+			case np.TTwritev:
+				msg := fcall.Msg.(np.Twritev)
+				data = msg.Data
+				sendBuf = true
+			case np.TRread:
+				msg := fcall.Msg.(np.Rread)
+				data = msg.Data
+				sendBuf = true
+			default:
+			}
+			if sendBuf {
+				err = npcodec.WriteFrameAndBuf(c.bw, frame, data)
+			} else {
+				err = npcodec.WriteFrame(c.bw, frame)
+			}
 			if err != nil {
 				log.Print("Writer: WriteFrame error ", err)
 				return

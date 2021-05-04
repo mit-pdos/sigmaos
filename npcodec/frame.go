@@ -40,3 +40,29 @@ func WriteFrame(wr io.Writer, frame []byte) error {
 	}
 	return nil
 }
+
+func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) error {
+	// Adjust frame size
+	l := uint32(len(frame) + 4 + len(buf) + 4)
+
+	// Write frame
+	if err := binary.Write(wr, binary.LittleEndian, l); err != nil {
+		return err
+	}
+	if n, err := wr.Write(frame); err != nil {
+		return err
+	} else if n < len(frame) {
+		errors.New("writeFrame too short")
+	}
+
+	// Write buf
+	if err := binary.Write(wr, binary.LittleEndian, uint32(len(buf))); err != nil {
+		return err
+	}
+	if n, err := wr.Write(buf); err != nil {
+		return err
+	} else if n < len(buf) {
+		errors.New("writeFrame buf too short")
+	}
+	return nil
+}

@@ -128,7 +128,28 @@ func (ch *Chan) writer() {
 		if err != nil {
 			rpc.replych <- &Reply{nil, err}
 		} else {
-			err := npcodec.WriteFrame(ch.bw, frame)
+			sendBuf := false
+			var data []byte
+			switch rpc.req.Type {
+			case np.TTwrite:
+				msg := rpc.req.Msg.(np.Twrite)
+				data = msg.Data
+				sendBuf = true
+			case np.TTwritev:
+				msg := rpc.req.Msg.(np.Twritev)
+				data = msg.Data
+				sendBuf = true
+			case np.TRread:
+				msg := rpc.req.Msg.(np.Rread)
+				data = msg.Data
+				sendBuf = true
+			default:
+			}
+			if sendBuf {
+				err = npcodec.WriteFrameAndBuf(ch.bw, frame, data)
+			} else {
+				err = npcodec.WriteFrame(ch.bw, frame)
+			}
 			if err == io.EOF {
 				ch.Close()
 				return

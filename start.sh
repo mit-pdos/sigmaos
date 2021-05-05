@@ -33,9 +33,9 @@ printf "192.168.0.36:30001\n192.168.0.36:30002\n192.168.0.36:30003\n" > $config_
 
 # Start a few memfs replicas
 union_dir_path=name/memfsd-replicas
-./bin/memfs-replica 1 ":30001" $config_path_9p $union_dir_path &
-./bin/memfs-replica 2 ":30002" $config_path_9p $union_dir_path &
-./bin/memfs-replica 3 ":30003" $config_path_9p $union_dir_path &
+./bin/memfs-replica 1 "30001" $config_path_9p $union_dir_path &
+./bin/memfs-replica 2 "30002" $config_path_9p $union_dir_path &
+./bin/memfs-replica 3 "30003" $config_path_9p $union_dir_path &
 
 # Start a monitor to update configs in case of failure
 ./bin/memfs-replica-monitor 4 $config_path_9p $union_dir_path &

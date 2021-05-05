@@ -36,17 +36,17 @@ type Fsd struct {
 }
 
 func MakeFsd(addr string) *Fsd {
-	return MakeReplicatedFsd(addr, false, nil)
+	return MakeReplicatedFsd(addr, false, "", nil)
 }
 
-func MakeReplicatedFsd(addr string, replicated bool, config *npsrv.NpServerReplConfig) *Fsd {
+func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.addr = addr
 	fsd.wt = npo.MkWatchTable()
 	fsd.ct = npo.MkConnTable()
 	fsd.ch = make(chan bool)
-	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, replicated, config)
+	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, replicated, relayAddr, config)
 	return fsd
 }
 

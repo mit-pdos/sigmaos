@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
@@ -18,21 +19,29 @@ func main() {
 	if len(os.Args) < 5 {
 		log.Fatalf("Usage: %v pid port config-path union-dir-path", os.Args[0])
 	}
-	port := os.Args[2]
+	relayPort := os.Args[2]
+	portNum, err := strconv.Atoi(relayPort)
+	if err != nil {
+		log.Printf("Port must be an integer")
+	}
+	// Server port is relay port + 100
+	srvPort := strconv.Itoa(100 + portNum)
 	configPath := os.Args[3]
 	unionDirPath := os.Args[4]
-	fsl := fslib.MakeFsLib("memfs-replica" + port)
+	fsl := fslib.MakeFsLib("memfs-replica:" + relayPort)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("%v: no IP %v\n", os.Args[0], err)
 	}
+	relayAddr := ip + ":" + relayPort
+	srvAddr := ip + ":" + srvPort
 	clnt := npclnt.MakeNpClnt()
-	config, err := npsrv.ReadReplConfig(configPath, ip+port, fsl, clnt)
+	config, err := npsrv.ReadReplConfig(configPath, relayAddr, fsl, clnt)
 	if err != nil {
 		log.Fatalf("Couldn't rea repl config: %v\n", err)
 	}
-	fsd := memfsd.MakeReplicatedFsd(ip+port, true, config)
-	name := path.Join(unionDirPath, fsd.GetSrv().MyAddr())
+	fsd := memfsd.MakeReplicatedFsd(srvAddr, true, relayAddr, config)
+	name := path.Join(unionDirPath, relayAddr)
 	db.Name(name)
 	fs, err := fslibsrv.InitFs(name, fsd, nil)
 	if err != nil {

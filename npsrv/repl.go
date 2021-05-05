@@ -1,6 +1,7 @@
 package npsrv
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"strings"
@@ -11,26 +12,27 @@ import (
 )
 
 type NpServerReplConfig struct {
-	Path     string
-	HeadAddr string
-	TailAddr string
-	PrevAddr string
-	NextAddr string
-	HeadChan *npclnt.NpChan
-	TailChan *npclnt.NpChan
-	PrevChan *npclnt.NpChan
-	NextChan *npclnt.NpChan
-	ops      chan *RelayOp
+	Path      string
+	RelayAddr string
+	HeadAddr  string
+	TailAddr  string
+	PrevAddr  string
+	NextAddr  string
+	HeadChan  *npclnt.NpChan
+	TailChan  *npclnt.NpChan
+	PrevChan  *npclnt.NpChan
+	NextChan  *npclnt.NpChan
+	ops       chan *RelayOp
 	*fslib.FsLib
 	*npclnt.NpClnt
 }
 
-func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config *NpServerReplConfig) *NpServer {
+func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *RelayOp)
-		emptyConfig = &NpServerReplConfig{config.Path, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
+		emptyConfig = &NpServerReplConfig{config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -51,7 +53,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, config 
 
 func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 	for {
-		config, err := ReadReplConfig(srv.replConfig.Path, srv.addr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
+		config, err := ReadReplConfig(srv.replConfig.Path, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
 		if err != nil {
 			if strings.Index(err.Error(), "file not found") != 0 {
 				log.Printf("Error reading new config: %v, %v", srv.replConfig.Path, err)
@@ -105,7 +107,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{path, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {
@@ -113,18 +115,18 @@ func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {
 }
 
 func (srv *NpServer) isHead() bool {
-	return srv.addr == srv.replConfig.HeadAddr
+	return srv.replConfig.RelayAddr == srv.replConfig.HeadAddr
 }
 
 func (srv *NpServer) isTail() bool {
-	return srv.addr == srv.replConfig.TailAddr
+	return srv.replConfig.RelayAddr == srv.replConfig.TailAddr
 }
 
 func (srv *NpServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
 		srv.replConfig.SetRemoveWatch(srv.replConfig.Path, func(p string, err error) {
-			log.Printf("Srv %v detected new config!", srv.addr)
+			log.Printf("Srv %v detected new config!", srv.replConfig.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
@@ -134,6 +136,11 @@ func (srv *NpServer) runReplConfigUpdater() {
 		})
 		<-done
 		config := srv.getNewReplConfig()
+		log.Printf("%v reloading config: %v", srv.replConfig.RelayAddr, config)
 		srv.reloadReplConfig(config)
 	}
+}
+
+func (c *NpServerReplConfig) String() string {
+	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v}", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
 }

@@ -20,7 +20,7 @@ type NpServer struct {
 }
 
 func MakeNpServer(npc NpConn, address string) *NpServer {
-	return MakeReplicatedNpServer(npc, address, false, nil)
+	return MakeReplicatedNpServer(npc, address, false, "", nil)
 }
 
 func (srv *NpServer) MyAddr() string {
@@ -41,7 +41,7 @@ func (srv *NpServer) runsrv(l net.Listener) {
 			MakeChannel(srv.npc, conn)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
-			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), srv.addr)
+			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
 			MakeRelayChannel(srv.npc, conn, srv.replConfig.ops, false)
 		}
 	}
@@ -49,8 +49,4 @@ func (srv *NpServer) runsrv(l net.Listener) {
 
 func (srv *NpServer) String() string {
 	return fmt.Sprintf("{ addr: %v replicated: %v config: %v }", srv.addr, srv.replicated, srv.replConfig)
-}
-
-func (c *NpServerReplConfig) String() string {
-	return fmt.Sprintf("{ head: %v tail: %v prev: %v next: %v}", c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
 }

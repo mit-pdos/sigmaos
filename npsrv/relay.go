@@ -148,7 +148,6 @@ func (srv *NpServer) relayChanWorker() {
 			reply := op.r.serve(fcall)
 			// Only call down the chain if we aren't at the tail.
 			if !srv.isTail() {
-				// XXX Have to think carefully about how we want to "Call" the next server...
 				var err error
 				if op.wrapped {
 					// Just pass wrapped op along...
@@ -167,6 +166,7 @@ func (srv *NpServer) relayChanWorker() {
 						log.Printf("Error sending wrapped fcall: %v", err)
 					}
 				}
+				// TODO: add to some queue here
 				// If the next server has crashed...
 				if err != nil && err.Error() == "EOF" {
 					// TODO: on crash...
@@ -185,7 +185,7 @@ func (srv *NpServer) relayChanWorker() {
 				if err != nil {
 					log.Printf("Error receiving: %v\n", err)
 				}
-				// TODO: bookkeeping marking as received
+				// TODO: bookkeeping marking as received... Remove from some queue here
 			}
 			// Send responpse back to client
 			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)

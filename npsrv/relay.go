@@ -146,47 +146,9 @@ func (srv *NpServer) relayChanWorker() {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
 			reply := op.r.serve(fcall)
-			// Only call down the chain if we aren't at the tail.
-			if !srv.isTail() {
-				var err error
-				if op.wrapped {
-					// Just pass wrapped op along...
-					err = config.NextChan.Send(op.frame)
-				} else {
-					// If this op hasn't been wrapped, wrap it before we send it.
-					var frame []byte
-					// TODO: Set seqno appropriately
-					seqno = seqno + 1
-					frame, err = marshalFcall(fcall, true, seqno)
-					if err != nil {
-						log.Printf("Error marshalling fcall: %v", err)
-					}
-					err = config.NextChan.Send(frame)
-					if err != nil {
-						log.Printf("Error sending wrapped fcall: %v", err)
-					}
-				}
-				// TODO: add to some queue here
-				// If the next server has crashed...
-				if err != nil && err.Error() == "EOF" {
-					// TODO: on crash...
-					// 1. Switch to the next config.
-					// 2. If I'm still a middle server, then change relay & send to the
-					// next server.
-					// 3. If I'm now the head server, propagate the call.
-					//   XXX may err on  response...
-					// 4. If I'm now the tail server, then serve & return
-					log.Printf("Srv sending error: %v", err)
-				}
-				if err != nil {
-					log.Printf("Error sending: %v\n", err)
-				}
-				_, err = config.NextChan.Recv()
-				if err != nil {
-					log.Printf("Error receiving: %v\n", err)
-				}
-				// TODO: bookkeeping marking as received... Remove from some queue here
-			}
+			// Reliably send to the next link in the chain (even if that link changes)
+			seqno = seqno + 1
+			srv.relayReliable(op, fcall, seqno)
 			// Send responpse back to client
 			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)
 			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
@@ -197,4 +159,51 @@ func (srv *NpServer) relayChanWorker() {
 			}
 		}
 	}
+}
+
+func (srv *NpServer) relayReliable(op *RelayOp, fcall *np.Fcall, seqno uint64) {
+	// Retry
+	for !srv.relayOnce(op, fcall, seqno) {
+	}
+}
+
+func (srv *NpServer) relayOnce(op *RelayOp, fcall *np.Fcall, seqno uint64) bool {
+	config := srv.replConfig
+	config.mu.Lock()
+	defer config.mu.Unlock()
+	// Only call down the chain if we aren't at the tail.
+	if !srv.isTail() {
+		var err error
+		if op.wrapped {
+			// Just pass wrapped op along...
+			err = config.NextChan.Send(op.frame)
+		} else {
+			// If this op hasn't been wrapped, wrap it before we send it.
+			var frame []byte
+			// TODO: Set seqno appropriately
+			frame, err = marshalFcall(fcall, true, seqno)
+			if err != nil {
+				log.Fatalf("Error marshalling fcall: %v", err)
+			}
+			err = config.NextChan.Send(frame)
+		}
+		// TODO: add to some queue here
+		// If the next server has crashed...
+		if err != nil && err.Error() == "EOF" {
+			log.Printf("Srv sending error: %v", err)
+			return false
+		}
+		if err != nil {
+			log.Fatalf("Srv error sending: %v\n", err)
+		}
+		// TODO: if we fail on Recv, resend.
+		_, err = config.NextChan.Recv()
+		if err != nil {
+			log.Printf("Srv error receiving: %v\n", err)
+			return false
+		}
+		// TODO: bookkeeping marking as received... Remove from some queue here
+	}
+	// If we made it this far, exit
+	return true
 }

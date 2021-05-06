@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -14,6 +15,7 @@ import (
 )
 
 type NpServerReplConfig struct {
+	mu        sync.Mutex
 	Path      string
 	RelayAddr string
 	HeadAddr  string
@@ -34,7 +36,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *RelayOp)
-		emptyConfig = &NpServerReplConfig{config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
+		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -78,6 +80,8 @@ func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 
 // Updates addresses if any have changed, and connects to new peers.
 func (srv *NpServer) reloadReplConfig(cfg *NpServerReplConfig) {
+	srv.replConfig.mu.Lock()
+	defer srv.replConfig.mu.Unlock()
 	if srv.replConfig.HeadAddr != cfg.HeadAddr {
 		srv.connectToReplica(&srv.replConfig.HeadChan, cfg.HeadAddr)
 		srv.replConfig.HeadAddr = cfg.HeadAddr
@@ -118,7 +122,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{sync.Mutex{}, path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
@@ -126,7 +130,9 @@ func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
 		// May need to retry if receiving server hasn't started up yet.
 		ch, err := MakeRelayChan(addr)
 		if err != nil {
-			log.Printf("Error connecting RelayChan: %v, %v", srv.addr, err)
+			if strings.Index(err.Error(), "connection refused") == -1 {
+				log.Printf("Error connecting RelayChan: %v, %v", srv.addr, err)
+			}
 		} else {
 			*rc = ch
 			break

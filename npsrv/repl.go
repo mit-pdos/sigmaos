@@ -126,6 +126,10 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
+	// If there was an old channel here, close it.
+	if *rc != nil {
+		(*rc).Close()
+	}
 	for {
 		// May need to retry if receiving server hasn't started up yet.
 		ch, err := MakeRelayChan(addr)

@@ -25,19 +25,19 @@ type FcallWrapper struct {
 type RelayOp struct {
 	wrapped bool
 	frame   []byte
-	rc      *RelayChannel
+	r       *Relay
 	replies chan []byte
 }
 
 // XXX when do I close the replies channel? the ops channel?
-type RelayChannel struct {
+type Relay struct {
 	c       *Channel
 	ops     chan *RelayOp
 	replies chan []byte
 	wrapped bool
 }
 
-func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool) *RelayChannel {
+func MakeRelay(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool) *Relay {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -47,31 +47,31 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool
 		make(chan *np.Fcall),
 		false,
 	}
-	rc := &RelayChannel{c, ops, make(chan []byte), wrapped}
-	go rc.writer()
-	go rc.reader()
-	return rc
+	r := &Relay{c, ops, make(chan []byte), wrapped}
+	go r.writer()
+	go r.reader()
+	return r
 }
 
-func (rc *RelayChannel) reader() {
-	db.DLPrintf("9PCHAN", "Reader conn from %v\n", rc.c.Src())
+func (r *Relay) reader() {
+	db.DLPrintf("9PCHAN", "Reader conn from %v\n", r.c.Src())
 	for {
-		frame, err := npcodec.ReadFrame(rc.c.br)
+		frame, err := npcodec.ReadFrame(r.c.br)
 		if err != nil {
-			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", rc.c.Src(), err)
+			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", r.c.Src(), err)
 			if err == io.EOF {
-				rc.c.close()
+				r.c.close()
 			}
 			return
 		}
-		op := &RelayOp{rc.wrapped, frame, rc, rc.replies}
-		rc.ops <- op
+		op := &RelayOp{r.wrapped, frame, r, r.replies}
+		r.ops <- op
 	}
 }
 
-func (rc *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
+func (r *Relay) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
-	reply, rerror := rc.c.dispatch(fc.Msg)
+	reply, rerror := r.c.dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
@@ -82,18 +82,18 @@ func (rc *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 	return fcall
 }
 
-func (rc *RelayChannel) writer() {
+func (r *Relay) writer() {
 	for {
-		frame, ok := <-rc.replies
+		frame, ok := <-r.replies
 		if !ok {
 			return
 		}
-		err := npcodec.WriteFrame(rc.c.bw, frame)
+		err := npcodec.WriteFrame(r.c.bw, frame)
 		if err != nil {
 			log.Print("Writer: WriteFrame error ", err)
 			return
 		}
-		err = rc.c.bw.Flush()
+		err = r.c.bw.Flush()
 		if err != nil {
 			log.Print("Writer: Flush error ", err)
 			return
@@ -101,10 +101,10 @@ func (rc *RelayChannel) writer() {
 	}
 }
 
-func marshalFcall(fcall *np.Fcall, req *RelayOp, seqno uint64) ([]byte, error) {
+func marshalFcall(fcall *np.Fcall, wrapped bool, seqno uint64) ([]byte, error) {
 	var b []byte
 	var err error
-	if req.wrapped {
+	if wrapped {
 		buf := bytes.Buffer{}
 		wrap := &FcallWrapper{seqno, fcall}
 		e := gob.NewEncoder(&buf)
@@ -116,55 +116,78 @@ func marshalFcall(fcall *np.Fcall, req *RelayOp, seqno uint64) ([]byte, error) {
 	return b, err
 }
 
-func unmarshalFcall(op *RelayOp) (*FcallWrapper, error) {
+func unmarshalFcall(frame []byte, wrapped bool) (*FcallWrapper, error) {
 	wrap := &FcallWrapper{}
 	var err error
-	if op.wrapped {
-		buf := bytes.Buffer{}
-		buf.Write(op.frame)
-		d := gob.NewDecoder(&buf)
+	if wrapped {
+		buf := bytes.NewBuffer(frame)
+		d := gob.NewDecoder(buf)
 		err = d.Decode(wrap)
 	} else {
 		wrap.Seqno = NO_SEQNO
 		wrap.Fcall = &np.Fcall{}
-		err = npcodec.Unmarshal(op.frame, wrap.Fcall)
+		err = npcodec.Unmarshal(frame, wrap.Fcall)
 	}
 	return wrap, err
 }
 
-func (srv *NpServer) relayWorker() {
+func (srv *NpServer) relayChanWorker() {
 	config := srv.replConfig
 	for {
 		op, ok := <-config.ops
 		if !ok {
 			return
 		}
-		if wrap, err := unmarshalFcall(op); err != nil {
-			log.Print("Serve: unmarshal error: ", err)
+		if wrap, err := unmarshalFcall(op.frame, op.wrapped); err != nil {
+			log.Printf("Server %v: relayChanWorker unmarshal error: %v", srv.addr, err)
 		} else {
 			fcall := wrap.Fcall
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
-			reply := op.rc.serve(fcall)
+			reply := op.r.serve(fcall)
 			// Only call down the chain if we aren't at the tail.
 			if !srv.isTail() {
 				// XXX Have to think carefully about how we want to "Call" the next server...
-				_, err := config.NextChan.Call(fcall.Msg)
+				var err error
+				if op.wrapped {
+					// Just pass wrapped op along...
+					err = config.NextChan.Send(op.frame)
+				} else {
+					// If this op hasn't been wrapped, wrap it before we send it.
+					var frame []byte
+					// TODO: Set seqno appropriately
+					frame, err = marshalFcall(fcall, true, 0)
+					if err != nil {
+						log.Printf("Error marshalling fcall: %v", err)
+					}
+					err = config.NextChan.Send(frame)
+					if err != nil {
+						log.Printf("Error sending wrapped fcall: %v", err)
+					}
+				}
 				// If the next server has crashed...
 				if err != nil && err.Error() == "EOF" {
-					// TODO:
+					// TODO: on crash...
 					// 1. Switch to the next config.
 					// 2. If I'm still a middle server, then change relay & send to the
 					// next server.
 					// 3. If I'm now the head server, propagate the call.
 					//   XXX may err on  response...
 					// 4. If I'm now the tail server, then serve & return
-					log.Printf("Srv reader error: %v", err)
+					log.Printf("Srv sending error: %v", err)
 				}
+				if err != nil {
+					log.Printf("Error sending: %v\n", err)
+				}
+				_, err = config.NextChan.Recv()
+				if err != nil {
+					log.Printf("Error receiving: %v\n", err)
+				}
+				// TODO: bookkeeping marking as received
 			}
+			// Send responpse back to client
 			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)
-			// XXX Set seqno appropriately
-			frame, err := marshalFcall(reply, op, 0)
+			frame, err := marshalFcall(reply, op.wrapped, 0)
 			if err != nil {
 				log.Print("Writer: marshal error: ", err)
 			} else {

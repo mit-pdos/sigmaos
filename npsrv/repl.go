@@ -1,6 +1,7 @@
 package npsrv
 
 import (
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
@@ -8,6 +9,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/npclnt"
 )
 
@@ -18,10 +20,10 @@ type NpServerReplConfig struct {
 	TailAddr  string
 	PrevAddr  string
 	NextAddr  string
-	HeadChan  *npclnt.NpChan
-	TailChan  *npclnt.NpChan
-	PrevChan  *npclnt.NpChan
-	NextChan  *npclnt.NpChan
+	HeadChan  *RelayChan
+	TailChan  *RelayChan
+	PrevChan  *RelayChan
+	NextChan  *RelayChan
 	ops       chan *RelayOp
 	*fslib.FsLib
 	*npclnt.NpClnt
@@ -36,18 +38,28 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
+	if replicated {
+		registerGobTypes()
+		// Create and start the relay server listener
+		db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
+		relayL, err := net.Listen("tcp", relayAddr)
+		if err != nil {
+			log.Fatal("Relay listen error:", err)
+		}
+		srv.addr = relayL.Addr().String()
+		go srv.runsrv(relayL, true)
+		srv.reloadReplConfig(config)
+		go srv.runReplConfigUpdater()
+		go srv.relayChanWorker()
+	}
+	// Create and start the main server listener
+	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal("Listen error:", err)
 	}
 	srv.addr = l.Addr().String()
-	if replicated {
-		srv.reloadReplConfig(config)
-		go srv.runReplConfigUpdater()
-		go srv.relayWorker()
-	}
-	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
-	go srv.runsrv(l)
+	go srv.runsrv(l, false)
 	return srv
 }
 
@@ -110,8 +122,16 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 	return &NpServerReplConfig{path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
-func (srv *NpServer) connectToReplica(c **npclnt.NpChan, addr string) {
-	*c = srv.replConfig.MakeNpChan(addr)
+func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
+	for {
+		ch, err := MakeRelayChan(addr)
+		if err != nil {
+			log.Printf("Error connecting RelayChan: %v, %v", srv.addr, err)
+		} else {
+			*rc = ch
+			break
+		}
+	}
 }
 
 func (srv *NpServer) isHead() bool {
@@ -143,4 +163,41 @@ func (srv *NpServer) runReplConfigUpdater() {
 
 func (c *NpServerReplConfig) String() string {
 	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v}", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
+}
+
+func registerGobTypes() {
+	gob.Register(np.Tattach{})
+	gob.Register(np.Rattach{})
+	gob.Register(np.Tversion{})
+	gob.Register(np.Rversion{})
+	gob.Register(np.Tauth{})
+	gob.Register(np.Rauth{})
+	gob.Register(np.Tattach{})
+	gob.Register(np.Rattach{})
+	gob.Register(np.Rerror{})
+	gob.Register(np.Tflush{})
+	gob.Register(np.Rflush{})
+	gob.Register(np.Twalk{})
+	gob.Register(np.Rwalk{})
+	gob.Register(np.Topen{})
+	gob.Register(np.Ropen{})
+	gob.Register(np.Tcreate{})
+	gob.Register(np.Rcreate{})
+	gob.Register(np.Tread{})
+	gob.Register(np.Rread{})
+	gob.Register(np.Twrite{})
+	gob.Register(np.Rwrite{})
+	gob.Register(np.Tclunk{})
+	gob.Register(np.Rclunk{})
+	gob.Register(np.Tremove{})
+	gob.Register(np.Rremove{})
+	gob.Register(np.Tstat{})
+	gob.Register(np.Rstat{})
+	gob.Register(np.Twstat{})
+	gob.Register(np.Rwstat{})
+	gob.Register(np.Treadv{})
+	gob.Register(np.Twritev{})
+	gob.Register(np.Twatchv{})
+	gob.Register(np.Trenameat{})
+	gob.Register(np.Rrenameat{})
 }

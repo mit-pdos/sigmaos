@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 	"strconv"
 	"testing"
 
@@ -34,7 +34,7 @@ func RmDir(dir string) error {
 		return err
 	}
 	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
+		err = os.RemoveAll(path.Join(dir, name))
 		if err != nil {
 			return err
 		}
@@ -72,6 +72,23 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func rmDir(ts *Tstate, dir string) {
+	fs, err := ts.ReadDir(dir)
+	if err != nil {
+		log.Printf("Couldn't read dir during rmDir: %v, %v", dir, err)
+	}
+	for _, f := range fs {
+		err = ts.Remove(path.Join(dir, f.Name))
+		if err != nil {
+			log.Printf("Couldn't remove: %v", err)
+		}
+	}
+	err = ts.Remove(dir)
+	if err != nil {
+		log.Printf("Couldn't remove: %v", err)
+	}
+}
+
 func TestWc(t *testing.T) {
 	ts := makeTstate(t)
 	mappers := map[string]bool{}
@@ -84,6 +101,7 @@ func TestWc(t *testing.T) {
 		pid1 := fslib.GenPid()
 		pid2 := fslib.GenPid()
 		m := strconv.Itoa(n)
+		rmDir(ts, "name/ux/~ip/m-"+m)
 		a1 := &fslib.Attr{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0}

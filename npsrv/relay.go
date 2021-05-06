@@ -133,6 +133,7 @@ func unmarshalFcall(frame []byte, wrapped bool) (*FcallWrapper, error) {
 
 func (srv *NpServer) relayChanWorker() {
 	config := srv.replConfig
+	seqno := uint64(0)
 	for {
 		op, ok := <-config.ops
 		if !ok {
@@ -156,7 +157,8 @@ func (srv *NpServer) relayChanWorker() {
 					// If this op hasn't been wrapped, wrap it before we send it.
 					var frame []byte
 					// TODO: Set seqno appropriately
-					frame, err = marshalFcall(fcall, true, 0)
+					seqno = seqno + 1
+					frame, err = marshalFcall(fcall, true, seqno)
 					if err != nil {
 						log.Printf("Error marshalling fcall: %v", err)
 					}
@@ -187,7 +189,7 @@ func (srv *NpServer) relayChanWorker() {
 			}
 			// Send responpse back to client
 			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)
-			frame, err := marshalFcall(reply, op.wrapped, 0)
+			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
 			if err != nil {
 				log.Print("Writer: marshal error: ", err)
 			} else {

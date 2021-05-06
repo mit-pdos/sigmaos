@@ -78,7 +78,6 @@ func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 
 // Updates addresses if any have changed, and connects to new peers.
 func (srv *NpServer) reloadReplConfig(cfg *NpServerReplConfig) {
-	// TODO locking, trigger resends, etc.
 	if srv.replConfig.HeadAddr != cfg.HeadAddr {
 		srv.connectToReplica(&srv.replConfig.HeadChan, cfg.HeadAddr)
 		srv.replConfig.HeadAddr = cfg.HeadAddr
@@ -124,6 +123,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 
 func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
 	for {
+		// May need to retry if receiving server hasn't started up yet.
 		ch, err := MakeRelayChan(addr)
 		if err != nil {
 			log.Printf("Error connecting RelayChan: %v, %v", srv.addr, err)

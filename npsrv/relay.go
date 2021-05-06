@@ -142,6 +142,10 @@ func (srv *NpServer) relayChanWorker() {
 		if wrap, err := unmarshalFcall(op.frame, op.wrapped); err != nil {
 			log.Printf("Server %v: relayChanWorker unmarshal error: %v", srv.addr, err)
 		} else {
+			// If we have already seen this request, don't process it.
+			if seqno >= wrap.Seqno && wrap.Seqno != NO_SEQNO {
+				continue
+			}
 			fcall := wrap.Fcall
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
@@ -180,7 +184,6 @@ func (srv *NpServer) relayOnce(op *RelayOp, fcall *np.Fcall, seqno uint64) bool 
 		} else {
 			// If this op hasn't been wrapped, wrap it before we send it.
 			var frame []byte
-			// TODO: Set seqno appropriately
 			frame, err = marshalFcall(fcall, true, seqno)
 			if err != nil {
 				log.Fatalf("Error marshalling fcall: %v", err)
@@ -196,7 +199,6 @@ func (srv *NpServer) relayOnce(op *RelayOp, fcall *np.Fcall, seqno uint64) bool 
 		if err != nil {
 			log.Fatalf("Srv error sending: %v\n", err)
 		}
-		// TODO: if we fail on Recv, resend.
 		_, err = config.NextChan.Recv()
 		if err != nil {
 			log.Printf("Srv error receiving: %v\n", err)

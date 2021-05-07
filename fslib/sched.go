@@ -112,6 +112,36 @@ func (fl *FsLib) ClaimWaitQJob(pid string) ([]byte, bool) {
 	return fl.claimJob(WAITQ, pid)
 }
 
+func (fl *FsLib) markConsumersRunnable(pid string) {
+	ls, err := fl.ReadWaitQ()
+	if err != nil {
+		log.Printf("Error reading WaitQ in markConsumersRunnable: %v", err)
+	}
+	for _, l := range ls {
+		a, err := fl.ReadWaitQJob(l.Name)
+		if err != nil {
+			continue
+		}
+		var attr Attr
+		err = json.Unmarshal(a, &attr)
+		if err != nil {
+			log.Printf("Error unmarshalling in markConsumersRunnable: %v", err)
+		}
+		for _, pair := range attr.PairDep {
+			if attr.Pid == pair.Producer {
+				break
+			} else if attr.Pid == pair.Consumer {
+				if pair.Producer == pid {
+					fl.MarkJobRunnable(attr.Pid)
+					break
+				}
+			} else {
+				log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
+			}
+		}
+	}
+}
+
 func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore
 	// errors in the event we lose the race.

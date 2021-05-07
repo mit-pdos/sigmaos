@@ -317,9 +317,6 @@ func TestPairDepProdFirst(t *testing.T) {
 	// Spawn the producer first
 	spawnSleeperlWithPidTimerPairDep(t, ts, prod, 0, pairDep)
 
-	// Wait a bit
-	time.Sleep(6 * time.Second)
-
 	// Make sure the producer hasn't run yet...
 	checkSleeperlResultFalse(t, ts, prod)
 

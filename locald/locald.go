@@ -158,18 +158,11 @@ func (ld *LocalD) checkWaitingLambdas() {
 
 /*
  * 1. Timer-based lambdas are runnable after Mtime + attr.Timer > time.Now()
- * 2. PairDep-based lambdas are runnable only if they are the producer (whoever
- *    claims and runs the producer will also start the consumer, so we disallow
- *    unilaterally claiming the consumer for now), and only once all of their
- *    consumers have been spawned. For now we assume that
- *    consumers only have one producer, and the roles of producer and consumer
- *    are mutually exclusive. We also expect (though not strictly necessary)
- *    that producers only have one consumer each. If this is no longer the case,
- *    we should handle oversubscription more carefully.
- * 3. ExitDep-based lambdas are runnable after all entries in the ExitDep map
+ * 2. ExitDep-based lambdas are runnable after all entries in the ExitDep map
  *    are true, whether that be because the dependencies explicitly exited or
  *    because they did not exist at spawn time (and were pruned).
  *
+ * *** For now, PairDep lambdas are marked as runnable in fslib.Started
  * ***For now, we assume the three "types" described above are mutually
  *    exclusive***
  */
@@ -200,20 +193,14 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
 	}
 
 	// If this is a PairDep-based labmda
-	allConsSpawned := true
 	for _, pair := range attr.PairDep {
 		if attr.Pid == pair.Consumer {
 			return false
 		} else if attr.Pid == pair.Producer {
-			allConsSpawned = allConsSpawned && ld.HasBeenSpawned(pair.Consumer)
+			return true
 		} else {
 			log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
 		}
-	}
-
-	// Bail out if a consumer hasn't been spawned yet.
-	if !allConsSpawned {
-		return false
 	}
 
 	// If this is an ExitDep-based lambda
@@ -286,12 +273,12 @@ func (ld *LocalD) Worker(workerId uint) {
 		if err != nil {
 			log.Fatalf("Locald spawn error %v\n", err)
 		}
-		// Try to claim, spawn, and run consumers if this lamba is a producer
-		consumers := l.getConsumers()
-		bs := ld.claimConsumers(consumers)
-		consumerLs := ld.spawnConsumers(bs)
+		//		// Try to claim, spawn, and run consumers if this lamba is a producer
+		//		consumers := l.getConsumers()
+		//		bs := ld.claimConsumers(consumers)
+		//		consumerLs := ld.spawnConsumers(bs)
 		ls := []*Lambda{l}
-		ls = append(ls, consumerLs...)
+		//		ls = append(ls, consumerLs...)
 		ld.runAll(ls)
 	}
 	ld.SignalNewJob()

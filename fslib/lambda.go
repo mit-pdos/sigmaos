@@ -85,9 +85,18 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
 	return false
 }
 
+/*
+ * PairDep-based lambdas are runnable only if they are the producer (whoever
+ * claims and runs the producer will also start the consumer, so we disallow
+ * unilaterally claiming the consumer for now), and only once all of their
+ * consumers have been spawned. For now we assume that
+ * consumers only have one producer, and the roles of producer and consumer
+ * are mutually exclusive. We also expect (though not strictly necessary)
+ * that producers only have one consumer each. If this is no longer the case,
+ * we should handle oversubscription more carefully.
+ */
 func (fl *FsLib) Started(pid string) error {
-	// TODO: update Status, start consumers, etc.
-	// return fl.WriteFile(SCHED+"/"+pid+"/Status", []byte{})
+	fl.markConsumersRunnable(pid)
 	return nil
 }
 

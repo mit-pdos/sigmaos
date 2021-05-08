@@ -101,6 +101,7 @@ func (fl *FsLib) Started(pid string) error {
 }
 
 func (fl *FsLib) Exiting(pid string, status string) error {
+	log.Printf("Marking as exited: %v", pid)
 	fl.WakeupExit(pid)
 	err := fl.Remove(path.Join(CLAIMED, pid))
 	if err != nil {

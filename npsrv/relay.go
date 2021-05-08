@@ -54,11 +54,11 @@ func MakeRelay(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool) *Rela
 }
 
 func (r *Relay) reader() {
-	db.DLPrintf("9PCHAN", "Reader conn from %v\n", r.c.Src())
+	db.DLPrintf("RSRV", "Conn from %v\n", r.c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(r.c.br)
 		if err != nil {
-			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", r.c.Src(), err)
+			db.DLPrintf("RSRV", "Peer %v closed/erred %v\n", r.c.Src(), err)
 			if err == io.EOF {
 				r.c.close()
 			}
@@ -90,12 +90,12 @@ func (r *Relay) writer() {
 		}
 		err := npcodec.WriteFrame(r.c.bw, frame)
 		if err != nil {
-			log.Print("Writer: WriteFrame error ", err)
+			log.Printf("Writer: WriteFrame error: %v", err)
 			return
 		}
 		err = r.c.bw.Flush()
 		if err != nil {
-			log.Print("Writer: Flush error ", err)
+			log.Printf("Writer: Flush error: %v", err)
 			return
 		}
 	}
@@ -147,14 +147,14 @@ func (srv *NpServer) relayChanWorker() {
 				continue
 			}
 			fcall := wrap.Fcall
-			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
+			db.DLPrintf("RSRV", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
 			reply := op.r.serve(fcall)
 			// Reliably send to the next link in the chain (even if that link changes)
 			seqno = seqno + 1
 			srv.relayReliable(op, fcall, seqno)
 			// Send responpse back to client
-			db.DLPrintf("9PCHAN", "Writer rep: %v\n", reply)
+			db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
 			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
 			if err != nil {
 				log.Print("Writer: marshal error: ", err)

@@ -34,7 +34,7 @@ type NpServerReplConfig struct {
 func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
 	var emptyConfig *NpServerReplConfig
 	if replicated {
-		db.DLPrintf("9PSRV", "starting replicated server: %v\n", config)
+		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *RelayOp)
 		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
 	}
@@ -43,15 +43,18 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		registerGobTypes()
 		// Create and start the relay server listener
-		db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
+		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
 		relayL, err := net.Listen("tcp", relayAddr)
 		if err != nil {
 			log.Fatal("Relay listen error:", err)
 		}
 		srv.addr = relayL.Addr().String()
+		// Start a server to listen for relay messages
 		go srv.runsrv(relayL, true)
+		// Load the config & continuously watch for changes
 		srv.reloadReplConfig(config)
 		go srv.runReplConfigUpdater()
+		// Run a worker to process & dispatch relay messages
 		go srv.relayChanWorker()
 	}
 	// Create and start the main server listener
@@ -156,7 +159,8 @@ func (srv *NpServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
 		srv.replConfig.SetRemoveWatch(srv.replConfig.Path, func(p string, err error) {
-			log.Printf("Srv %v detected new config!", srv.replConfig.RelayAddr)
+			db.DLPrintf("RSRV", "Srv %v detected new config\n", srv.replConfig.RelayAddr)
+			log.Printf("%v detected new config!", srv.replConfig.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
@@ -166,13 +170,14 @@ func (srv *NpServer) runReplConfigUpdater() {
 		})
 		<-done
 		config := srv.getNewReplConfig()
+		db.DLPrintf("RSRV", "Srv %v reloading config: %v\n", srv.replConfig.RelayAddr, config)
 		log.Printf("%v reloading config: %v", srv.replConfig.RelayAddr, config)
 		srv.reloadReplConfig(config)
 	}
 }
 
 func (c *NpServerReplConfig) String() string {
-	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v}", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
+	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v }", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
 }
 
 func registerGobTypes() {

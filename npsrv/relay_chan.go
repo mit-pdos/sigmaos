@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	//	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
 
@@ -25,13 +24,13 @@ type RelayChan struct {
 
 func MakeRelayChan(addr string) (*RelayChan, error) {
 	var err error
-	db.DLPrintf("9PCHAN", "mkChan to %v\n", addr)
+	db.DLPrintf("RCHAN", "mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
-		db.DLPrintf("9PCHAN", "mkChan to %v err %v\n", addr, err)
+		db.DLPrintf("RCHAN", "mkChan to %v err %v\n", addr, err)
 		return nil, err
 	}
-	db.DLPrintf("9PCHAN", "mkChan to %v from %v\n", addr, c.LocalAddr())
+	db.DLPrintf("RCHAN", "mkChan to %v from %v\n", addr, c.LocalAddr())
 	rc := &RelayChan{}
 	rc.conn = c
 	rc.dst = addr
@@ -66,7 +65,7 @@ func (rc *RelayChan) Recv() ([]byte, error) {
 		return nil, err
 	}
 	if err != nil {
-		db.DLPrintf("9PCHAN", "Reader: ReadFrame error %v\n", err)
+		db.DLPrintf("RCHAN", "Reader: ReadFrame error %v\n", err)
 		log.Printf("ReadFrame error: %v", err)
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func (rc *RelayChan) Close() {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
-	db.DLPrintf("9PCHAN", "Close relay chan to %v\n", rc.dst)
+	db.DLPrintf("RCHAN", "Close relay chan to %v\n", rc.dst)
 	rc.closed = true
 	rc.conn.Close()
 }

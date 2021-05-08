@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	NO_SEQNO = 0
+	NO_SEQNO       = 0
+	DUMMY_RESPONSE = "DUMMY_RESPONSE"
 )
 
 type FcallWrapper struct {
@@ -22,7 +23,7 @@ type FcallWrapper struct {
 	Fcall *np.Fcall
 }
 
-type RelayOp struct {
+type SrvOp struct {
 	wrapped bool
 	frame   []byte
 	r       *Relay
@@ -32,12 +33,12 @@ type RelayOp struct {
 // XXX when do I close the replies channel? the ops channel?
 type Relay struct {
 	c       *Channel
-	ops     chan *RelayOp
+	ops     chan *SrvOp
 	replies chan []byte
 	wrapped bool
 }
 
-func MakeRelay(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool) *Relay {
+func MakeRelay(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool) *Relay {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -64,7 +65,7 @@ func (r *Relay) reader() {
 			}
 			return
 		}
-		op := &RelayOp{r.wrapped, frame, r, r.replies}
+		op := &SrvOp{r.wrapped, frame, r, r.replies}
 		r.ops <- op
 	}
 }
@@ -142,8 +143,11 @@ func (srv *NpServer) relayChanWorker() {
 		if wrap, err := unmarshalFcall(op.frame, op.wrapped); err != nil {
 			log.Printf("Server %v: relayChanWorker unmarshal error: %v", srv.addr, err)
 		} else {
-			// If we have already seen this request, don't process it.
+			// If we have already seen this request, don't process it. Send a dummy
+			// response (ok since responses are ignored anyway).
 			if seqno >= wrap.Seqno && wrap.Seqno != NO_SEQNO {
+				log.Printf("Ignoring duplicate seqno: %v < %v", wrap.Seqno, seqno)
+				op.replies <- []byte(DUMMY_RESPONSE)
 				continue
 			}
 			fcall := wrap.Fcall
@@ -152,7 +156,8 @@ func (srv *NpServer) relayChanWorker() {
 			reply := op.r.serve(fcall)
 			// Reliably send to the next link in the chain (even if that link changes)
 			seqno = seqno + 1
-			srv.relayReliable(op, fcall, seqno)
+			msg := &RelayMsg{op, fcall, seqno}
+			srv.relayReliable(msg)
 			// Send responpse back to client
 			db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
 			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
@@ -165,33 +170,44 @@ func (srv *NpServer) relayChanWorker() {
 	}
 }
 
-func (srv *NpServer) relayReliable(op *RelayOp, fcall *np.Fcall, seqno uint64) {
-	// Retry
-	for !srv.relayOnce(op, fcall, seqno) {
+func (srv *NpServer) relayReliable(msg *RelayMsg) {
+	config := srv.replConfig
+	toSend := []*RelayMsg{msg}
+	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
+	for len(toSend) != 0 {
+		// We don't want to switch which server we're sending to mid-stream.
+		config.mu.Lock()
+		// Try to send a message.
+		if ok := srv.relayOnce(config, toSend[0]); ok {
+			// If successful, move on to the next one
+			toSend = toSend[1:]
+		} else {
+			// If unsuccessful, restart with queue of un-acked messages + msg.
+			toSend = append(config.q.GetQ(), msg)
+		}
+		config.mu.Unlock()
 	}
 }
 
-func (srv *NpServer) relayOnce(op *RelayOp, fcall *np.Fcall, seqno uint64) bool {
-	config := srv.replConfig
-	config.mu.Lock()
-	defer config.mu.Unlock()
+// Try and send a message to the next server in the chain, and receive a
+// response.
+func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
 	// Only call down the chain if we aren't at the tail.
 	if !srv.isTail() {
 		var err error
-		if op.wrapped {
+		if msg.op.wrapped {
 			// Just pass wrapped op along...
-			err = config.NextChan.Send(op.frame)
+			err = config.NextChan.Send(msg.op.frame)
 		} else {
 			// If this op hasn't been wrapped, wrap it before we send it.
 			var frame []byte
-			frame, err = marshalFcall(fcall, true, seqno)
+			frame, err = marshalFcall(msg.fcall, true, msg.seqno)
 			if err != nil {
 				log.Fatalf("Error marshalling fcall: %v", err)
 			}
 			err = config.NextChan.Send(frame)
 		}
-		// TODO: add to some queue here
-		// If the next server has crashed...
+		// If the next server has crashed, retry...
 		if err != nil && err.Error() == "EOF" {
 			log.Printf("Srv sending error: %v", err)
 			return false
@@ -199,12 +215,16 @@ func (srv *NpServer) relayOnce(op *RelayOp, fcall *np.Fcall, seqno uint64) bool 
 		if err != nil {
 			log.Fatalf("Srv error sending: %v\n", err)
 		}
-		_, err = config.NextChan.Recv()
-		if err != nil {
-			log.Printf("Srv error receiving: %v\n", err)
-			return false
-		}
-		// TODO: bookkeeping marking as received... Remove from some queue here
+		// If send was successful, enqueue the relayMsg until ack'd.
+		config.q.Enqueue(msg)
+		// Start a thread to wait on the ack & update RelayMsgQueue
+		go func(seqno uint64) {
+			_, err = config.NextChan.Recv()
+			if err != nil {
+				log.Printf("Srv error receiving: %v\n", err)
+			}
+			config.q.DequeueUntil(seqno)
+		}(msg.seqno)
 	}
 	// If we made it this far, exit
 	return true

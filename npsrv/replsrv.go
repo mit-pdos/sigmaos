@@ -26,7 +26,8 @@ type NpServerReplConfig struct {
 	TailChan  *RelayChan
 	PrevChan  *RelayChan
 	NextChan  *RelayChan
-	ops       chan *RelayOp
+	ops       chan *SrvOp
+	q         *RelayMsgQueue
 	*fslib.FsLib
 	*npclnt.NpClnt
 }
@@ -35,8 +36,8 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
-		ops := make(chan *RelayOp)
-		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, config.FsLib, config.NpClnt}
+		ops := make(chan *SrvOp)
+		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -125,7 +126,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{sync.Mutex{}, path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{sync.Mutex{}, path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {

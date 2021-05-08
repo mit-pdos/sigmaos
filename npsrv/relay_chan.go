@@ -59,6 +59,8 @@ func (rc *RelayChan) Send(frame []byte) error {
 }
 
 func (rc *RelayChan) Recv() ([]byte, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
 	frame, err := npcodec.ReadFrame(rc.br)
 	if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
 		rc.Close()

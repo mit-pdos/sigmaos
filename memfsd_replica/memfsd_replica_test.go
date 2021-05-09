@@ -1,7 +1,6 @@
 package memfsd_replica
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -23,6 +22,7 @@ const (
 )
 
 type Replica struct {
+	addr string
 	port string
 	cmd  *exec.Cmd
 }
@@ -68,25 +68,27 @@ func bootReplica(ts *Tstate, replica *Replica) {
 func killReplica(ts *Tstate, replica *Replica) {
 	err := replica.cmd.Process.Kill()
 	assert.Nil(ts.t, err, "Failed to kill replica")
+	time.Sleep(100 * time.Millisecond)
 }
 
-func allocReplicas(n int) []*Replica {
+func allocReplicas(ts *Tstate, n int) []*Replica {
 	replicas := make([]*Replica, n)
+	ip, err := fsclnt.LocalIP()
+	assert.Nil(ts.t, err, "Failed to get local ip")
 	for i, _ := range replicas {
-		replicas[i] = &Replica{strconv.Itoa(PORT_OFFSET + i), nil}
+		portstr := strconv.Itoa(PORT_OFFSET + i)
+		replicas[i] = &Replica{ip + ":" + portstr, portstr, nil}
 	}
 	return replicas
 }
 
 func writeConfig(ts *Tstate, replicas []*Replica) {
 	addrs := []string{}
-	ip, err := fsclnt.LocalIP()
-	assert.Nil(ts.t, err, "Failed to get local ip")
 	for _, r := range replicas {
-		addrs = append(addrs, ip+":"+r.port)
+		addrs = append(addrs, r.addr)
 	}
 	config := strings.Join(addrs, "\n")
-	err = ts.MakeFile(CONFIG_PATH_9P, 0777, []byte(config))
+	err := ts.MakeFile(CONFIG_PATH_9P, 0777, []byte(config))
 	assert.Nil(ts.t, err, "Failed to make config file")
 }
 
@@ -100,13 +102,21 @@ func TestHelloWorld(t *testing.T) {
 
 	N := 1
 
-	replicas := allocReplicas(N)
+	replicas := allocReplicas(ts, N)
 	writeConfig(ts, replicas)
 	setupUnionDir(ts)
 
-	log.Printf("Hello world!")
-	bootReplica(ts, replicas[0])
-	killReplica(ts, replicas[0])
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
 
 	ts.s.Shutdown(ts.FsLib)
 }

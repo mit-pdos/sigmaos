@@ -155,9 +155,14 @@ func (srv *NpServer) relayChanWorker() {
 			// Serve the op first.
 			reply := op.r.serve(fcall)
 			// Reliably send to the next link in the chain (even if that link changes)
-			seqno = seqno + 1
-			msg := &RelayMsg{op, fcall, seqno}
-			srv.relayReliable(msg)
+			if !srv.isTail() {
+				// Only increment the seqno if this is a request from another replica
+				if wrap.Seqno != NO_SEQNO {
+					seqno = seqno + 1
+				}
+				msg := &RelayMsg{op, fcall, seqno}
+				srv.relayReliable(msg)
+			}
 			// Send responpse back to client
 			db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
 			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
@@ -219,11 +224,14 @@ func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
 		config.q.Enqueue(msg)
 		// Start a thread to wait on the ack & update RelayMsgQueue
 		go func(seqno uint64) {
-			_, err = config.NextChan.Recv()
+			data, err := config.NextChan.Recv()
 			if err != nil {
 				log.Printf("Srv error receiving: %v\n", err)
 			}
 			config.q.DequeueUntil(seqno)
+			if string(data) == DUMMY_RESPONSE {
+				log.Printf("Dummy response in srv: %v", srv.addr)
+			}
 		}(msg.seqno)
 	}
 	// If we made it this far, exit

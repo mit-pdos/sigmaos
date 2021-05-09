@@ -38,8 +38,9 @@ func main() {
 	clnt := npclnt.MakeNpClnt()
 	config, err := npsrv.ReadReplConfig(configPath, relayAddr, fsl, clnt)
 	if err != nil {
-		log.Fatalf("Couldn't rea repl config: %v\n", err)
+		log.Fatalf("Couldn't read repl config: %v\n", err)
 	}
+	config.UnionDirPath = unionDirPath
 	fsd := memfsd.MakeReplicatedFsd(srvAddr, true, relayAddr, config)
 	name := path.Join(unionDirPath, relayAddr)
 	db.Name(name)

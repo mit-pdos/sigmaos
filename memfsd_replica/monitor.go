@@ -50,19 +50,9 @@ func (m *MemfsReplicaMonitor) updateConfig() {
 
 func (m *MemfsReplicaMonitor) Work() {
 	m.Started(m.pid)
-	for {
-		done := make(chan bool)
-		m.SetDirWatch(m.unionDirPath, func(p string, err error) {
-			log.Printf("Dir watch triggered!")
-			if err != nil && err.Error() == "EOF" {
-				return
-			} else if err != nil {
-				log.Printf("Error in ReplicaMonitor DirWatch: %v", err)
-			}
-			done <- true
-		})
-		<-done
+	// Get exclusive access to the config file.
+	if ok := m.TryLockFile(fslib.LOCKS, m.configPath); ok {
 		m.updateConfig()
+		m.UnlockFile(fslib.LOCKS, m.configPath)
 	}
-	m.Exiting(m.pid, "OK")
 }

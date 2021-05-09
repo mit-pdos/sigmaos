@@ -15,19 +15,20 @@ import (
 )
 
 type NpServerReplConfig struct {
-	mu        sync.Mutex
-	Path      string
-	RelayAddr string
-	HeadAddr  string
-	TailAddr  string
-	PrevAddr  string
-	NextAddr  string
-	HeadChan  *RelayChan
-	TailChan  *RelayChan
-	PrevChan  *RelayChan
-	NextChan  *RelayChan
-	ops       chan *SrvOp
-	q         *RelayMsgQueue
+	mu           sync.Mutex
+	ConfigPath   string
+	UnionDirPath string
+	RelayAddr    string
+	HeadAddr     string
+	TailAddr     string
+	PrevAddr     string
+	NextAddr     string
+	HeadChan     *RelayChan
+	TailChan     *RelayChan
+	PrevChan     *RelayChan
+	NextChan     *RelayChan
+	ops          chan *SrvOp
+	q            *RelayMsgQueue
 	*fslib.FsLib
 	*npclnt.NpClnt
 }
@@ -37,7 +38,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *SrvOp)
-		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.Path, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
+		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.ConfigPath, config.UnionDirPath, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -55,6 +56,8 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 		// Load the config & continuously watch for changes
 		srv.reloadReplConfig(config)
 		go srv.runReplConfigUpdater()
+		// Watch for other servers that go down, and spawn a lambda to update config
+		go srv.runDirWatcher()
 		// Run a worker to process & dispatch relay messages
 		go srv.relayChanWorker()
 	}
@@ -71,10 +74,10 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 
 func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 	for {
-		config, err := ReadReplConfig(srv.replConfig.Path, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
+		config, err := ReadReplConfig(srv.replConfig.ConfigPath, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
 		if err != nil {
 			if strings.Index(err.Error(), "file not found") != 0 {
-				log.Printf("Error reading new config: %v, %v", srv.replConfig.Path, err)
+				log.Printf("Error reading new config: %v, %v", srv.replConfig.ConfigPath, err)
 			}
 			continue
 		}
@@ -126,13 +129,16 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{sync.Mutex{}, path, myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{sync.Mutex{}, path, "", myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
 	// If there was an old channel here, close it.
 	if *rc != nil {
 		(*rc).Close()
+	}
+	if addr == "" {
+		return
 	}
 	for {
 		// May need to retry if receiving server hasn't started up yet.
@@ -156,10 +162,35 @@ func (srv *NpServer) isTail() bool {
 	return srv.replConfig.RelayAddr == srv.replConfig.TailAddr
 }
 
+// Watch in case servers go down, and start a lambda to update the config if
+// they do.
+func (srv *NpServer) runDirWatcher() {
+	config := srv.replConfig
+	for {
+		done := make(chan bool)
+		config.SetDirWatch(config.UnionDirPath, func(p string, err error) {
+			log.Printf("Dir watch triggered!")
+			if err != nil && err.Error() == "EOF" {
+				return
+			} else if err != nil {
+				log.Printf("Error in ReplicaMonitor DirWatch: %v", err)
+			}
+			done <- true
+		})
+		<-done
+		attr := &fslib.Attr{}
+		attr.Pid = fslib.GenPid()
+		attr.Program = "bin/memfs-replica-monitor"
+		attr.Args = []string{config.ConfigPath, config.UnionDirPath}
+		config.Spawn(attr)
+	}
+}
+
+// Watch for changes to the config file, and update if necessary
 func (srv *NpServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
-		srv.replConfig.SetRemoveWatch(srv.replConfig.Path, func(p string, err error) {
+		srv.replConfig.SetRemoveWatch(srv.replConfig.ConfigPath, func(p string, err error) {
 			db.DLPrintf("RSRV", "Srv %v detected new config\n", srv.replConfig.RelayAddr)
 			log.Printf("%v detected new config!", srv.replConfig.RelayAddr)
 			if err != nil && err.Error() == "EOF" {

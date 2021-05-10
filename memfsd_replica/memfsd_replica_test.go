@@ -1,11 +1,13 @@
 package memfsd_replica
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
+	//	"sync"
 	"testing"
 	"time"
 
@@ -67,6 +69,11 @@ func bootReplica(ts *Tstate, replica *Replica) {
 	time.Sleep(100 * time.Millisecond)
 }
 
+func crashReplica(ts *Tstate, replica *Replica) {
+	killReplica(ts, replica)
+	replica.crashed = true
+}
+
 func killReplica(ts *Tstate, replica *Replica) {
 	err := replica.cmd.Process.Kill()
 	assert.Nil(ts.t, err, "Failed to kill replica")
@@ -121,6 +128,26 @@ func compareReplicaLogs(ts *Tstate, replicas []*Replica) {
 	}
 }
 
+// Calculate the ZK path to the head: the first un-crashed server in the chain
+func headPath(replicas []*Replica) string {
+	for _, r := range replicas {
+		if !r.crashed {
+			return path.Join(UNION_DIR_PATH, r.addr)
+		}
+	}
+	return ""
+}
+
+// Calculate the ZK path to the tail: the last un-crashed server in the chain
+func tailPath(replicas []*Replica) string {
+	for i := len(replicas) - 1; i >= 0; i++ {
+		if !replicas[i].crashed {
+			return path.Join(UNION_DIR_PATH, replicas[i].addr)
+		}
+	}
+	return ""
+}
+
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -145,7 +172,7 @@ func TestHelloWorld(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// Test a few ops on the chain.
+// Test making & reading a few files.
 func TestChainSimple(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -166,14 +193,69 @@ func TestChainSimple(t *testing.T) {
 	// Write some files to the head
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(UNION_DIR_PATH, replicas[0].addr, i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 
-	// Read some files from the tail
+	// Read some files from the head
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.ReadFile(path.Join(UNION_DIR_PATH, replicas[0].addr, i_str))
+		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
+		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
+		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
+	}
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	compareReplicaLogs(ts, replicas)
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+// Test making & reading a few files in the presence of crashes in the middle of
+// the chain
+func TestChainCrashMiddle(t *testing.T) {
+	ts := makeTstate(t)
+
+	N := 5
+	n_files := 3
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// Write some files to the head
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile in head")
+	}
+
+	// Crash a couple of replicas in the middle of the chain
+	crashReplica(ts, replicas[1])
+	crashReplica(ts, replicas[2])
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Read some files from the head
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		log.Printf("pre Read a file: %v", i_str)
+		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
+		log.Printf("post Read a file: %v", i_str)
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}

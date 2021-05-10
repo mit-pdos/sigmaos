@@ -1,6 +1,8 @@
 package npsrv
 
 import (
+	//	"github.com/sasha-s/go-deadlock"
+
 	"encoding/gob"
 	"fmt"
 	"log"
@@ -24,10 +26,10 @@ type NpServerReplConfig struct {
 	TailAddr     string
 	PrevAddr     string
 	NextAddr     string
-	HeadChan     *RelayChan
-	TailChan     *RelayChan
-	PrevChan     *RelayChan
-	NextChan     *RelayChan
+	HeadChan     *RelayConn
+	TailChan     *RelayConn
+	PrevChan     *RelayConn
+	NextChan     *RelayConn
 	ops          chan *SrvOp
 	q            *RelayMsgQueue
 	*fslib.FsLib
@@ -66,8 +68,8 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 		go srv.runReplConfigUpdater()
 		// Watch for other servers that go down, and spawn a lambda to update config
 		go srv.runDirWatcher()
-		// Run a worker to process & dispatch relay messages
-		go srv.relayChanWorker()
+		// Set up the relay for this server
+		srv.setupRelay()
 	}
 	// Create and start the main server listener
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
@@ -140,7 +142,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 	return &NpServerReplConfig{sync.Mutex{}, false, path, "", myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
-func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
+func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 	// If there was an old channel here, close it.
 	if *rc != nil {
 		(*rc).Close()
@@ -150,10 +152,10 @@ func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {
 	}
 	for {
 		// May need to retry if receiving server hasn't started up yet.
-		ch, err := MakeRelayChan(addr)
+		ch, err := MakeRelayConn(addr)
 		if err != nil {
 			if strings.Index(err.Error(), "connection refused") == -1 {
-				log.Printf("Error connecting RelayChan: %v, %v", srv.addr, err)
+				log.Printf("Error connecting RelayConn: %v, %v", srv.addr, err)
 			}
 		} else {
 			*rc = ch

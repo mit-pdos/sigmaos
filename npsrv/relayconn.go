@@ -14,7 +14,8 @@ import (
 	"ulambda/npcodec"
 )
 
-type RelayChan struct {
+// A connection between replicas
+type RelayConn struct {
 	mu     sync.Mutex
 	conn   net.Conn
 	np     NpAPI
@@ -24,7 +25,7 @@ type RelayChan struct {
 	closed bool
 }
 
-func MakeRelayChan(addr string) (*RelayChan, error) {
+func MakeRelayConn(addr string) (*RelayConn, error) {
 	var err error
 	db.DLPrintf("RCHAN", "mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
@@ -33,7 +34,7 @@ func MakeRelayChan(addr string) (*RelayChan, error) {
 		return nil, err
 	}
 	db.DLPrintf("RCHAN", "mkChan to %v from %v\n", addr, c.LocalAddr())
-	rc := &RelayChan{}
+	rc := &RelayConn{}
 	rc.conn = c
 	rc.dst = addr
 	rc.br = bufio.NewReaderSize(c, Msglen)
@@ -42,7 +43,7 @@ func MakeRelayChan(addr string) (*RelayChan, error) {
 	return rc, nil
 }
 
-func (rc *RelayChan) Send(frame []byte) error {
+func (rc *RelayConn) Send(frame []byte) error {
 	err := npcodec.WriteFrame(rc.bw, frame)
 	if err == io.EOF {
 		rc.Close()
@@ -60,7 +61,7 @@ func (rc *RelayChan) Send(frame []byte) error {
 	return nil
 }
 
-func (rc *RelayChan) Recv() ([]byte, error) {
+func (rc *RelayConn) Recv() ([]byte, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	frame, err := npcodec.ReadFrame(rc.br)
@@ -76,13 +77,13 @@ func (rc *RelayChan) Recv() ([]byte, error) {
 	return frame, nil
 }
 
-func (rc *RelayChan) closeL() {
+func (rc *RelayConn) closeL() {
 	db.DLPrintf("RCHAN", "Close relay chan to %v\n", rc.dst)
 	rc.closed = true
 	rc.conn.Close()
 }
 
-func (rc *RelayChan) Close() {
+func (rc *RelayConn) Close() {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	rc.closeL()

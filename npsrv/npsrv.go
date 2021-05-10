@@ -42,7 +42,7 @@ func (srv *NpServer) runsrv(l net.Listener, wrapped bool) {
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
-			MakeRelay(srv.npc, conn, srv.replConfig.ops, wrapped)
+			MakeRelayChannel(srv.npc, conn, srv.replConfig.ops, wrapped)
 		}
 	}
 }

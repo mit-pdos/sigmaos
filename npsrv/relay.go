@@ -26,19 +26,19 @@ type FcallWrapper struct {
 type SrvOp struct {
 	wrapped bool
 	frame   []byte
-	r       *Relay
+	r       *RelayChannel
 	replies chan []byte
 }
 
-// XXX when do I close the replies channel? the ops channel?
-type Relay struct {
+// A channel between clients & replicas, or replicas & replicas
+type RelayChannel struct {
 	c       *Channel
 	ops     chan *SrvOp
 	replies chan []byte
 	wrapped bool
 }
 
-func MakeRelay(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool) *Relay {
+func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool) *RelayChannel {
 	npapi := npc.Connect(conn)
 	c := &Channel{npc,
 		conn,
@@ -48,13 +48,13 @@ func MakeRelay(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool) *Relay 
 		make(chan *np.Fcall),
 		false,
 	}
-	r := &Relay{c, ops, make(chan []byte), wrapped}
+	r := &RelayChannel{c, ops, make(chan []byte), wrapped}
 	go r.writer()
 	go r.reader()
 	return r
 }
 
-func (r *Relay) reader() {
+func (r *RelayChannel) reader() {
 	db.DLPrintf("RSRV", "Conn from %v\n", r.c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(r.c.br)
@@ -70,7 +70,7 @@ func (r *Relay) reader() {
 	}
 }
 
-func (r *Relay) serve(fc *np.Fcall) *np.Fcall {
+func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
 	reply, rerror := r.c.dispatch(fc.Msg)
 	if rerror != nil {
@@ -83,7 +83,7 @@ func (r *Relay) serve(fc *np.Fcall) *np.Fcall {
 	return fcall
 }
 
-func (r *Relay) writer() {
+func (r *RelayChannel) writer() {
 	for {
 		frame, ok := <-r.replies
 		if !ok {
@@ -132,7 +132,14 @@ func unmarshalFcall(frame []byte, wrapped bool) (*FcallWrapper, error) {
 	return wrap, err
 }
 
-func (srv *NpServer) relayChanWorker() {
+func (srv *NpServer) setupRelay() {
+	// Run a worker to process messages
+	go srv.relayReader()
+	// Run a worker to dispatch responses
+	go srv.relayWriter()
+}
+
+func (srv *NpServer) relayReader() {
 	config := srv.replConfig
 	seqno := uint64(0)
 	for {
@@ -141,8 +148,10 @@ func (srv *NpServer) relayChanWorker() {
 			return
 		}
 		if wrap, err := unmarshalFcall(op.frame, op.wrapped); err != nil {
-			log.Printf("Server %v: relayChanWorker unmarshal error: %v", srv.addr, err)
+			log.Printf("Server %v: relayWriter unmarshal error: %v", srv.addr, err)
 		} else {
+			db.DLPrintf("RSRV", "Relay request: %v\n", wrap)
+			log.Printf("%v Relay request: %v\n", config.RelayAddr, wrap)
 			// If we have already seen this request, don't process it. Send a dummy
 			// response (ok since responses are ignored anyway).
 			if seqno >= wrap.Seqno && wrap.Seqno != NO_SEQNO {
@@ -154,6 +163,7 @@ func (srv *NpServer) relayChanWorker() {
 			db.DLPrintf("RSRV", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
 			reply := op.r.serve(fcall)
+			log.Printf("%v serving: %v\n", config.RelayAddr, fcall)
 			// Optionally log the fcall.
 			srv.logOp(fcall)
 			// Reliably send to the next link in the chain (even if that link changes)
@@ -163,9 +173,12 @@ func (srv *NpServer) relayChanWorker() {
 					seqno = seqno + 1
 				}
 				msg := &RelayMsg{op, fcall, seqno}
+				log.Printf("%v about to relay: %v\n", config.RelayAddr, fcall)
 				srv.relayReliable(msg)
+				log.Printf("%v returned from relay: %v\n", config.RelayAddr, fcall)
 			}
 			// Send responpse back to client
+			log.Printf("%v responding to client: %v\n", config.RelayAddr, fcall)
 			db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
 			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
 			if err != nil {
@@ -173,7 +186,38 @@ func (srv *NpServer) relayChanWorker() {
 			} else {
 				op.replies <- frame
 			}
+			log.Printf("%v end loop: %v\n", config.RelayAddr, fcall)
 		}
+	}
+}
+
+func (srv *NpServer) relayWriter() {
+	config := srv.replConfig
+	seqno := uint64(0)
+	for {
+		// TODO: follow here
+		// Start a thread to wait on the ack & update RelayMsgQueue
+		go func(seqno uint64) {
+			data, err := config.NextChan.Recv()
+			if err != nil {
+				log.Printf("Srv error receiving: %v\n", err)
+			}
+			config.q.DequeueUntil(seqno)
+			if string(data) == DUMMY_RESPONSE {
+				log.Printf("Dummy response in srv: %v", srv.addr)
+			}
+		}(msg.seqno)
+
+		// Send responpse back to client
+		log.Printf("%v responding to client: %v\n", config.RelayAddr, fcall)
+		db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
+		frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
+		if err != nil {
+			log.Print("Writer: marshal error: ", err)
+		} else {
+			op.replies <- frame
+		}
+		log.Printf("%v end loop: %v\n", config.RelayAddr, fcall)
 	}
 }
 
@@ -185,6 +229,7 @@ func (srv *NpServer) relayReliable(msg *RelayMsg) {
 		// We don't want to switch which server we're sending to mid-stream.
 		config.mu.Lock()
 		// Try to send a message.
+		log.Printf("%v relay queue: %v", config.RelayAddr, toSend)
 		if ok := srv.relayOnce(config, toSend[0]); ok {
 			// If successful, move on to the next one
 			toSend = toSend[1:]
@@ -224,17 +269,6 @@ func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
 		}
 		// If send was successful, enqueue the relayMsg until ack'd.
 		config.q.Enqueue(msg)
-		// Start a thread to wait on the ack & update RelayMsgQueue
-		go func(seqno uint64) {
-			data, err := config.NextChan.Recv()
-			if err != nil {
-				log.Printf("Srv error receiving: %v\n", err)
-			}
-			config.q.DequeueUntil(seqno)
-			if string(data) == DUMMY_RESPONSE {
-				log.Printf("Dummy response in srv: %v", srv.addr)
-			}
-		}(msg.seqno)
 	}
 	// If we made it this far, exit
 	return true

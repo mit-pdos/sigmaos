@@ -1,6 +1,8 @@
 package npsrv
 
 import (
+	//	"github.com/sasha-s/go-deadlock"
+
 	"bufio"
 	"io"
 	"log"
@@ -63,7 +65,7 @@ func (rc *RelayChan) Recv() ([]byte, error) {
 	defer rc.mu.Unlock()
 	frame, err := npcodec.ReadFrame(rc.br)
 	if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
-		rc.Close()
+		rc.closeL()
 		return nil, err
 	}
 	if err != nil {
@@ -74,11 +76,14 @@ func (rc *RelayChan) Recv() ([]byte, error) {
 	return frame, nil
 }
 
-func (rc *RelayChan) Close() {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-
+func (rc *RelayChan) closeL() {
 	db.DLPrintf("RCHAN", "Close relay chan to %v\n", rc.dst)
 	rc.closed = true
 	rc.conn.Close()
+}
+
+func (rc *RelayChan) Close() {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	rc.closeL()
 }

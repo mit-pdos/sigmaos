@@ -41,6 +41,9 @@ func main() {
 		log.Fatalf("Couldn't read repl config: %v\n", err)
 	}
 	config.UnionDirPath = unionDirPath
+	if len(os.Args) == 6 && os.Args[5] == "log-ops" {
+		config.LogOps = true
+	}
 	fsd := memfsd.MakeReplicatedFsd(srvAddr, true, relayAddr, config)
 	name := path.Join(unionDirPath, relayAddr)
 	db.Name(name)

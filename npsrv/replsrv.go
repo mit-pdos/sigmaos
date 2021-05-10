@@ -16,6 +16,7 @@ import (
 
 type NpServerReplConfig struct {
 	mu           sync.Mutex
+	LogOps       bool
 	ConfigPath   string
 	UnionDirPath string
 	RelayAddr    string
@@ -38,7 +39,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *SrvOp)
-		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.ConfigPath, config.UnionDirPath, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
+		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.LogOps, config.ConfigPath, config.UnionDirPath, relayAddr, "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -51,6 +52,13 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 			log.Fatal("Relay listen error:", err)
 		}
 		srv.addr = relayL.Addr().String()
+		// Set up op logging if necessary
+		if config.LogOps {
+			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, []byte(""))
+			if err != nil {
+				log.Fatalf("Error making log file: %v", err)
+			}
+		}
 		// Start a server to listen for relay messages
 		go srv.runsrv(relayL, true)
 		// Load the config & continuously watch for changes
@@ -129,7 +137,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{sync.Mutex{}, path, "", myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{sync.Mutex{}, false, path, "", myaddr, headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayChan, addr string) {

@@ -3,6 +3,7 @@ package memfsd_replica
 import (
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,9 +23,10 @@ const (
 )
 
 type Replica struct {
-	addr string
-	port string
-	cmd  *exec.Cmd
+	addr    string
+	port    string
+	crashed bool
+	cmd     *exec.Cmd
 }
 
 type Tstate struct {
@@ -60,7 +62,7 @@ func run(bin string, name string, args []string) (*exec.Cmd, error) {
 func bootReplica(ts *Tstate, replica *Replica) {
 	bin := ".."
 	var err error
-	replica.cmd, err = run(bin, "bin/memfs-replica", []string{"placeholder-pid", replica.port, CONFIG_PATH_9P, UNION_DIR_PATH})
+	replica.cmd, err = run(bin, "bin/memfs-replica", []string{"placeholder-pid", replica.port, CONFIG_PATH_9P, UNION_DIR_PATH, "log-ops"})
 	assert.Nil(ts.t, err, "Failed to boot replica")
 	time.Sleep(100 * time.Millisecond)
 }
@@ -77,7 +79,7 @@ func allocReplicas(ts *Tstate, n int) []*Replica {
 	assert.Nil(ts.t, err, "Failed to get local ip")
 	for i, _ := range replicas {
 		portstr := strconv.Itoa(PORT_OFFSET + i)
-		replicas[i] = &Replica{ip + ":" + portstr, portstr, nil}
+		replicas[i] = &Replica{ip + ":" + portstr, portstr, false, nil}
 	}
 	return replicas
 }
@@ -97,6 +99,28 @@ func setupUnionDir(ts *Tstate) {
 	assert.Nil(ts.t, err, "Failed to create union dir")
 }
 
+func compareReplicaLogs(ts *Tstate, replicas []*Replica) {
+	if len(replicas) < 2 {
+		return
+	}
+	logs := [][]byte{}
+	for _, r := range replicas {
+		// If this replica was not killed...
+		if !r.crashed {
+			b, err := ts.ReadFile(path.Join("name", r.addr+"-log.txt"))
+			assert.Nil(ts.t, err, "Failed to read log file for replica: %v", r.addr)
+			logs = append(logs, b)
+		}
+	}
+
+	for i, l := range logs {
+		assert.Greater(ts.t, len(l), 0, "Zero length log")
+		if i > 0 {
+			assert.ElementsMatch(ts.t, logs[i-1], l, "Logs do not match: %v, %v", i-1, i)
+		}
+	}
+}
+
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -112,6 +136,52 @@ func TestHelloWorld(t *testing.T) {
 	}
 
 	time.Sleep(200 * time.Millisecond)
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+// Test a few ops on the chain.
+func TestChainSimple(t *testing.T) {
+	ts := makeTstate(t)
+
+	N := 5
+	n_files := 100
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// Write some files to the head
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		err := ts.MakeFile(path.Join(UNION_DIR_PATH, replicas[0].addr, i_str), 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile in head")
+	}
+
+	// Read some files from the tail
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		b, err := ts.ReadFile(path.Join(UNION_DIR_PATH, replicas[0].addr, i_str))
+		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
+		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
+	}
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	compareReplicaLogs(ts, replicas)
 
 	// Shut down
 	for _, r := range replicas {

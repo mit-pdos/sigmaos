@@ -154,6 +154,8 @@ func (srv *NpServer) relayChanWorker() {
 			db.DLPrintf("RSRV", "Reader sv req: %v\n", fcall)
 			// Serve the op first.
 			reply := op.r.serve(fcall)
+			// Optionally log the fcall.
+			srv.logOp(fcall)
 			// Reliably send to the next link in the chain (even if that link changes)
 			if !srv.isTail() {
 				// Only increment the seqno if this is a request from another replica
@@ -236,4 +238,24 @@ func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
 	}
 	// If we made it this far, exit
 	return true
+}
+
+func (srv *NpServer) logOp(fcall *np.Fcall) {
+	config := srv.replConfig
+	if config.LogOps {
+		fpath := "name/" + config.RelayAddr + "-log.txt"
+		b, err := config.ReadFile(fpath)
+		if err != nil {
+			log.Printf("Error reading log file in logOp: %v", err)
+		}
+		frame, err := npcodec.Marshal(fcall)
+		if err != nil {
+			log.Printf("Error marshalling fcall in logOp: %v", err)
+		}
+		b = append(b, frame...)
+		err = config.WriteFile(fpath, b)
+		if err != nil {
+			log.Printf("Error writing log file in logOp: %v", err)
+		}
+	}
 }

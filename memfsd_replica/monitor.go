@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -25,7 +26,7 @@ func MakeMemfsReplicaMonitor(args []string) *MemfsReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	log.Printf("MakeMemfsReplicaMonitor %v", args)
+	db.DLPrintf("RMTR", "MakeMemfsReplicaMonitor %v", args)
 	return m
 }
 

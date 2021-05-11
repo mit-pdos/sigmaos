@@ -39,7 +39,7 @@ func main() {
 	config, err := npsrv.ReadReplConfig(configPath, relayAddr, fsl, clnt)
 	// Reread until successful
 	for err != nil {
-		log.Printf("Couldn't read repl config: %v\n", err)
+		db.DLPrintf("RSRV", "Couldn't read repl config: %v\n", err)
 		config, err = npsrv.ReadReplConfig(configPath, relayAddr, fsl, clnt)
 	}
 	config.UnionDirPath = unionDirPath

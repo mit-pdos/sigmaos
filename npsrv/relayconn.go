@@ -72,13 +72,12 @@ func (rc *RelayConn) Recv() ([]byte, error) {
 		return []byte{}, io.EOF
 	}
 	frame, err := npcodec.ReadFrame(rc.br)
-	if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
+	if err == io.EOF || (err != nil && (strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "use of closed network connection"))) {
 		rc.Close()
 		return nil, err
 	}
 	if err != nil {
 		db.DLPrintf("RCHAN", "Reader: ReadFrame error %v\n", err)
-		log.Printf("ReadFrame error: %v", err)
 		return nil, err
 	}
 	return frame, nil

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -233,11 +234,11 @@ func (srv *NpServer) relayWriter() {
 		// Get an ack from the downstream servers
 		frame, err := ch.Recv()
 		// Move on if the connection closed
-		if err != nil && err.Error() == "EOF" {
+		if err != nil && (err.Error() == "EOF" || strings.Contains(err.Error(), "use of closed network connection")) {
 			continue
 		}
 		if err != nil {
-			log.Printf("%v Srv error receiving ack: %v\n", config.RelayAddr, err)
+			log.Printf("%v error receiving ack: %v\n", config.RelayAddr, err)
 			continue
 		}
 		wrap, err := unmarshalFcall(frame, true)

@@ -91,7 +91,7 @@ func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 	for {
 		config, err := ReadReplConfig(srv.replConfig.ConfigPath, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
 		if err != nil {
-			if strings.Index(err.Error(), "file not found") != 0 {
+			if !strings.Contains(err.Error(), "file not found") {
 				log.Printf("Error reading new config: %v, %v", srv.replConfig.ConfigPath, err)
 			}
 			continue
@@ -159,7 +159,7 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 		// May need to retry if receiving server hasn't started up yet.
 		ch, err := MakeRelayConn(addr)
 		if err != nil {
-			if strings.Index(err.Error(), "connection refused") == -1 {
+			if !strings.Contains(err.Error(), "connection refused") {
 				log.Printf("Error connecting RelayConn: %v, %v", srv.addr, err)
 			}
 		} else {
@@ -187,7 +187,7 @@ func (srv *NpServer) runDirWatcher() {
 			db.DLPrintf("RSRV", "%v Dir watch triggered!", config.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
-			} else if err != nil {
+			} else if err != nil && !strings.Contains(err.Error(), "Version mismatch") {
 				log.Printf("Error in ReplicaMonitor DirWatch: %v", err)
 			}
 			done <- true

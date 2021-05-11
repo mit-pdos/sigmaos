@@ -170,10 +170,14 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 }
 
 func (srv *NpServer) isHead() bool {
+	srv.replConfig.mu.Lock()
+	defer srv.replConfig.mu.Unlock()
 	return srv.replConfig.RelayAddr == srv.replConfig.HeadAddr
 }
 
 func (srv *NpServer) isTail() bool {
+	srv.replConfig.mu.Lock()
+	defer srv.replConfig.mu.Unlock()
 	return srv.replConfig.RelayAddr == srv.replConfig.TailAddr
 }
 

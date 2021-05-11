@@ -286,123 +286,122 @@ func TestChainCrashMiddle(t *testing.T) {
 }
 
 func TestChainCrashHead(t *testing.T) {
-	// TODO
-	//	ts := makeTstate(t)
-	//
-	//	N := 5
-	//	n_files := 100
-	//
-	//	replicas := allocReplicas(ts, N)
-	//	writeConfig(ts, replicas)
-	//	setupUnionDir(ts)
-	//
-	//	// Start up
-	//	for _, r := range replicas {
-	//		bootReplica(ts, r)
-	//	}
-	//
-	//	time.Sleep(1000 * time.Millisecond)
-	//
-	//	// Write some files to the head
-	//	log.Printf("Writing some files...")
-	//	for i := 0; i < n_files; i++ {
-	//		i_str := strconv.Itoa(i)
-	//		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
-	//		assert.Nil(ts.t, err, "Failed to MakeFile in head")
-	//	}
-	//	log.Printf("Done writing files...")
-	//
-	//	// Crash a couple of replicas in the middle of the chain
-	//	log.Printf("Crashing replica %v...", replicas[0].addr)
-	//	crashReplica(ts, replicas[0])
-	//	log.Printf("Done crashing replica %v...", replicas[0].addr)
-	//
-	//	time.Sleep(200 * time.Millisecond)
-	//
-	//	// Read some files from the head
-	//	log.Printf("Reading files...")
-	//	for i := 0; i < n_files; i++ {
-	//		i_str := strconv.Itoa(i)
-	//		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
-	//		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
-	//		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
-	//	}
-	//	log.Printf("Done reading files...")
-	//
-	//	// Wait a bit to allow replica logs to stabilize
-	//	time.Sleep(1000 * time.Millisecond)
-	//
-	//	log.Printf("Comparing replica logs...")
-	//	compareReplicaLogs(ts, replicas)
-	//	log.Printf("Done comparing replica logs...")
-	//
-	//	// Shut down
-	//	for _, r := range replicas {
-	//		killReplica(ts, r)
-	//	}
-	//
-	//	ts.s.Shutdown(ts.FsLib)
-	//
+	ts := makeTstate(t)
+
+	N := 5
+	n_files := 100
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// Write some files to the head
+	log.Printf("Writing some files...")
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile in head")
+	}
+	log.Printf("Done writing files...")
+
+	time.Sleep(500 * time.Millisecond)
+
+	// Crash a couple of replicas in the middle of the chain
+	log.Printf("Crashing head replica %v...", replicas[0].addr)
+	crashReplica(ts, replicas[0])
+	log.Printf("Done crashing head replica %v...", replicas[0].addr)
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Read some files from the head
+	log.Printf("Reading files...")
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
+		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
+		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
+	}
+	log.Printf("Done reading files...")
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("Comparing replica logs...")
+	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestChainCrashTail(t *testing.T) {
-	// TODO
-	//	ts := makeTstate(t)
-	//
-	//	N := 5
-	//	n_files := 100
-	//
-	//	replicas := allocReplicas(ts, N)
-	//	writeConfig(ts, replicas)
-	//	setupUnionDir(ts)
-	//
-	//	// Start up
-	//	for _, r := range replicas {
-	//		bootReplica(ts, r)
-	//	}
-	//
-	//	time.Sleep(1000 * time.Millisecond)
-	//
-	//	// Write some files to the head
-	//	log.Printf("Writing some files...")
-	//	for i := 0; i < n_files; i++ {
-	//		i_str := strconv.Itoa(i)
-	//		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
-	//		assert.Nil(ts.t, err, "Failed to MakeFile in head")
-	//	}
-	//	log.Printf("Done writing files...")
-	//
-	//	// Crash a couple of replicas in the middle of the chain
-	//	log.Printf("Crashing replica %v...", replicas[N-1].addr)
-	//	crashReplica(ts, replicas[N-1])
-	//	log.Printf("Done crashing replica %v...", replicas[N-1].addr)
-	//
-	//	time.Sleep(200 * time.Millisecond)
-	//
-	//	// Read some files from the head
-	//	log.Printf("Reading files...")
-	//	for i := 0; i < n_files; i++ {
-	//		i_str := strconv.Itoa(i)
-	//		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
-	//		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
-	//		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
-	//	}
-	//	log.Printf("Done reading files...")
-	//
-	//	// Wait a bit to allow replica logs to stabilize
-	//	time.Sleep(1000 * time.Millisecond)
-	//
-	//	log.Printf("Comparing replica logs...")
-	//	compareReplicaLogs(ts, replicas)
-	//	log.Printf("Done comparing replica logs...")
-	//
-	//	// Shut down
-	//	for _, r := range replicas {
-	//		killReplica(ts, r)
-	//	}
-	//
-	//	ts.s.Shutdown(ts.FsLib)
-	//
+	ts := makeTstate(t)
+
+	N := 5
+	n_files := 100
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// Write some files to the head
+	log.Printf("Writing some files...")
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile in head")
+	}
+	log.Printf("Done writing files...")
+
+	// Crash a couple of replicas in the middle of the chain
+	log.Printf("Crashing replica %v...", replicas[N-1].addr)
+	crashReplica(ts, replicas[N-1])
+	log.Printf("Done crashing replica %v...", replicas[N-1].addr)
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Read some files from the head
+	log.Printf("Reading files...")
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(i)
+		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
+		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
+		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
+	}
+	log.Printf("Done reading files...")
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("Comparing replica logs...")
+	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
+
 }
 
 func basicClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sync.WaitGroup, end *sync.WaitGroup) {

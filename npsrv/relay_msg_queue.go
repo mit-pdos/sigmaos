@@ -23,11 +23,26 @@ func (q *RelayMsgQueue) Enqueue(msg *RelayMsg) {
 	q.q = append(q.q, msg)
 }
 
-// Dequeue all entries up until and including the one labelled as seqno.
-// We do this since responses may come back out of order.
-func (q *RelayMsgQueue) DequeueUntil(seqno uint64) {
+// Enqueue another copy of this message if it's already in the queue. Return
+// true on success, and false otherwise.
+func (q *RelayMsgQueue) EnqueueDuplicate(msg *RelayMsg) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	for i, m := range q.q {
+		if m.seqno == msg.seqno {
+			q.q = append(append(q.q[:i], msg), q.q[i:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// Dequeue all entries up until and including the one labelled as seqno.
+// We do this since responses may come back out of order.
+func (q *RelayMsgQueue) DequeueUntil(seqno uint64) []*RelayMsg {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	msgs := []*RelayMsg{}
 	for i, m := range q.q {
 		// Message with seqno was not present
 		if m.seqno > seqno {
@@ -35,10 +50,25 @@ func (q *RelayMsgQueue) DequeueUntil(seqno uint64) {
 		}
 		// Trim the front of the queue
 		if m.seqno == seqno {
+			msgs = q.q[:i]
 			q.q = q.q[i+1:]
 			break
 		}
 	}
+	return msgs
+}
+
+// Dequeue an entry with seqno
+func (q *RelayMsgQueue) Dequeue(seqno uint64) (*RelayMsg, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	for i, m := range q.q {
+		if m.seqno == seqno {
+			q.q = append(q.q[:i], q.q[i+1:]...)
+			return m, true
+		}
+	}
+	return nil, false
 }
 
 func (q *RelayMsgQueue) GetQ() []*RelayMsg {

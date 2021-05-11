@@ -26,6 +26,7 @@ type FcallWrapper struct {
 type SrvOp struct {
 	wrapped bool
 	frame   []byte
+	reply   []byte
 	r       *RelayChannel
 	replies chan []byte
 }
@@ -65,7 +66,7 @@ func (r *RelayChannel) reader() {
 			}
 			return
 		}
-		op := &SrvOp{r.wrapped, frame, r, r.replies}
+		op := &SrvOp{r.wrapped, frame, []byte{}, r, r.replies}
 		r.ops <- op
 	}
 }
@@ -149,75 +150,83 @@ func (srv *NpServer) relayReader() {
 		}
 		if wrap, err := unmarshalFcall(op.frame, op.wrapped); err != nil {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", srv.addr, err)
+			// TODO: enqueue op with empty reply
 		} else {
 			db.DLPrintf("RSRV", "Relay request: %v\n", wrap)
-			log.Printf("%v Relay request: %v\n", config.RelayAddr, wrap)
-			// If we have already seen this request, don't process it. Send a dummy
-			// response (ok since responses are ignored anyway).
-			if seqno >= wrap.Seqno && wrap.Seqno != NO_SEQNO {
-				log.Printf("Ignoring duplicate seqno: %v < %v", wrap.Seqno, seqno)
-				op.replies <- []byte(DUMMY_RESPONSE)
-				continue
-			}
-			fcall := wrap.Fcall
-			db.DLPrintf("RSRV", "Reader sv req: %v\n", fcall)
-			// Serve the op first.
-			reply := op.r.serve(fcall)
-			log.Printf("%v serving: %v\n", config.RelayAddr, fcall)
-			// Optionally log the fcall.
-			srv.logOp(fcall)
-			// Reliably send to the next link in the chain (even if that link changes)
-			if !srv.isTail() {
-				// Only increment the seqno if this is a request from another replica
-				if wrap.Seqno != NO_SEQNO {
-					seqno = seqno + 1
+			// If we have never seen this request, process it.
+			if wrap.Seqno == NO_SEQNO || seqno < wrap.Seqno {
+				// Increment the sequence number
+				seqno = seqno + 1
+				fcall := wrap.Fcall
+				db.DLPrintf("RSRV", "Reader sv req: %v\n", fcall)
+				// Serve the op first.
+				reply := op.r.serve(fcall)
+				db.DLPrintf("RSRV", "Reader rep: %v\n", reply)
+				frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
+				if err != nil {
+					log.Fatalf("Writer: marshal error: %v", err)
 				}
-				msg := &RelayMsg{op, fcall, seqno}
-				log.Printf("%v about to relay: %v\n", config.RelayAddr, fcall)
-				srv.relayReliable(msg)
-				log.Printf("%v returned from relay: %v\n", config.RelayAddr, fcall)
-			}
-			// Send responpse back to client
-			log.Printf("%v responding to client: %v\n", config.RelayAddr, fcall)
-			db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
-			frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
-			if err != nil {
-				log.Print("Writer: marshal error: ", err)
+				// Store the reply
+				op.reply = frame
+				// Optionally log the fcall.
+				srv.logOp(fcall)
+				// Reliably send to the next link in the chain (even if that link
+				// changes)
+				if !srv.isTail() {
+					// TODO: fix how we reliably send
+					// Only increment the seqno if this is a request from another replica
+					msg := &RelayMsg{op, fcall, seqno}
+					srv.relayReliable(msg)
+				}
 			} else {
-				op.replies <- frame
+				// We have already seen this request. 2 Options:
+				// 1. If it's in-flight (we haven't seen an ack from the tail yet), we
+				//    need to register the op in order to have our ack thread send a
+				//    reply.
+				// 2. If it isn't in flight (we have already seen an ack from the tail
+				//    for this request), we need to respond immediately with a dummy
+				//    response.
+				// Note that we do *not* need to resend the request, as our reliable
+				// send mechanism will take care of this (and on configuration switch,
+				// the request will be resent automatically).
+				//
+				// EnqueueDuplicate is a CAS-like function which atomically checks if
+				// the op is in-flight, and if so, enqueues this duplicate and returns
+				// true. Otherwise, it returns false. This atomicity is needed to make
+				// sure we never drop acks which should be relayed upstream.
+				// TODO: what about the tail? We shouldn't enqueue in this case, right?
+				msg := &RelayMsg{op, wrap.Fcall, wrap.Seqno}
+				if !config.q.EnqueueDuplicate(msg) {
+					log.Printf("Ignoring duplicate seqno: %v < %v", wrap.Seqno, seqno)
+					// TODO: send an empty reply, but this works for now since it
+					// preserves the seqno.
+					op.replies <- op.frame
+					continue
+				}
 			}
-			log.Printf("%v end loop: %v\n", config.RelayAddr, fcall)
+			// TODO: If we're the tail, we always ack immediately
 		}
 	}
 }
 
 func (srv *NpServer) relayWriter() {
 	config := srv.replConfig
-	seqno := uint64(0)
 	for {
-		// TODO: follow here
-		// Start a thread to wait on the ack & update RelayMsgQueue
-		go func(seqno uint64) {
-			data, err := config.NextChan.Recv()
-			if err != nil {
-				log.Printf("Srv error receiving: %v\n", err)
-			}
-			config.q.DequeueUntil(seqno)
-			if string(data) == DUMMY_RESPONSE {
-				log.Printf("Dummy response in srv: %v", srv.addr)
-			}
-		}(msg.seqno)
-
-		// Send responpse back to client
-		log.Printf("%v responding to client: %v\n", config.RelayAddr, fcall)
-		db.DLPrintf("RSRV", "Writer rep: %v\n", reply)
-		frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
+		// Get an ack from the downstream servers
+		frame, err := config.NextChan.Recv()
 		if err != nil {
-			log.Print("Writer: marshal error: ", err)
-		} else {
-			op.replies <- frame
+			log.Printf("Srv error receiving: %v\n", err)
 		}
-		log.Printf("%v end loop: %v\n", config.RelayAddr, fcall)
+		wrap, err := unmarshalFcall(frame, true)
+		if err != nil {
+			log.Printf("Error unmarshalling in relayWriter: %v", err)
+		}
+		// Dequeue all acks up until this one
+		msgs := config.q.DequeueUntil(wrap.Seqno)
+		// Ack upstream
+		for _, msg := range msgs {
+			msg.op.replies <- msg.op.reply
+		}
 	}
 }
 
@@ -229,7 +238,6 @@ func (srv *NpServer) relayReliable(msg *RelayMsg) {
 		// We don't want to switch which server we're sending to mid-stream.
 		config.mu.Lock()
 		// Try to send a message.
-		log.Printf("%v relay queue: %v", config.RelayAddr, toSend)
 		if ok := srv.relayOnce(config, toSend[0]); ok {
 			// If successful, move on to the next one
 			toSend = toSend[1:]

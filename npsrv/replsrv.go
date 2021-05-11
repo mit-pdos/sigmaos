@@ -213,7 +213,7 @@ func (srv *NpServer) runReplConfigUpdater() {
 			db.DLPrintf("RSRV", "%v detected new config\n", srv.replConfig.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
-			} else if err != nil {
+			} else if err != nil && !strings.Contains(err.Error(), "Version mismatch") {
 				log.Printf("Error in runReplConfigUpdater RemoveWatch: %v", err)
 			}
 			done <- true

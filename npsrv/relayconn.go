@@ -1,14 +1,14 @@
 package npsrv
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
+	"github.com/sasha-s/go-deadlock"
 
 	"bufio"
 	"io"
 	"log"
 	"net"
 	"strings"
-	"sync"
+	//	"sync"
 
 	db "ulambda/debug"
 	"ulambda/npcodec"
@@ -16,9 +16,9 @@ import (
 
 // A connection between replicas
 type RelayConn struct {
-	mu     sync.Mutex
-	rMu    sync.Mutex
-	wMu    sync.Mutex
+	mu     deadlock.Mutex
+	rMu    deadlock.Mutex
+	wMu    deadlock.Mutex
 	conn   net.Conn
 	np     NpAPI
 	br     *bufio.Reader

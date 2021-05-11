@@ -1,8 +1,10 @@
 package npsrv
 
 import (
+	"github.com/sasha-s/go-deadlock"
+
 	"fmt"
-	"sync"
+	//	"sync"
 
 	np "ulambda/ninep"
 )
@@ -14,7 +16,7 @@ type RelayMsg struct {
 }
 
 type RelayMsgQueue struct {
-	mu sync.Mutex
+	mu deadlock.Mutex
 	q  []*RelayMsg
 }
 

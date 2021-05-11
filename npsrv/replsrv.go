@@ -1,14 +1,14 @@
 package npsrv
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
+	"github.com/sasha-s/go-deadlock"
 
 	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
 	"strings"
-	"sync"
+	//	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -16,8 +16,12 @@ import (
 	"ulambda/npclnt"
 )
 
+const (
+	MAX_CONNECT_RETRIES = 1000
+)
+
 type NpServerReplConfig struct {
-	mu           sync.Mutex
+	mu           deadlock.Mutex
 	LogOps       bool
 	ConfigPath   string
 	UnionDirPath string
@@ -42,7 +46,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *SrvOp)
-		emptyConfig = &NpServerReplConfig{sync.Mutex{}, config.LogOps, config.ConfigPath, config.UnionDirPath, relayAddr, "", "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
+		emptyConfig = &NpServerReplConfig{deadlock.Mutex{}, config.LogOps, config.ConfigPath, config.UnionDirPath, relayAddr, "", "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -140,7 +144,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{sync.Mutex{}, false, path, "", myaddr, "", headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{deadlock.Mutex{}, false, path, "", myaddr, "", headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
@@ -151,7 +155,7 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 	if addr == "" {
 		return
 	}
-	for {
+	for i := 0; i < MAX_CONNECT_RETRIES; i++ {
 		// May need to retry if receiving server hasn't started up yet.
 		ch, err := MakeRelayConn(addr)
 		if err != nil {

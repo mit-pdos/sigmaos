@@ -153,8 +153,7 @@ func (srv *NpServer) relayReader() {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", srv.addr, err)
 			// TODO: enqueue op with empty reply
 		} else {
-			log.Printf("%v Handling request %v", config.RelayAddr, wrap)
-			db.DLPrintf("RSRV", "Relay request: %v\n", wrap)
+			db.DLPrintf("RSRV", "%v Handling relay request %v", config.RelayAddr, wrap)
 			var msg *RelayMsg
 			// If we have never seen this request, process it.
 			if wrap.Seqno == NO_SEQNO || seqno < wrap.Seqno {
@@ -183,7 +182,7 @@ func (srv *NpServer) relayReader() {
 					srv.sendRelayMsg(msg)
 				}
 			} else {
-				log.Printf("%v Duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
+				db.DLPrintf("RSRV", "%v Duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 				// We have already seen this request, and we aren't the tail. 2 Options:
 				// 1. If it's in-flight (we haven't seen an ack from the tail yet), we
 				//    need to register the op in order to have our ack thread send a
@@ -202,18 +201,18 @@ func (srv *NpServer) relayReader() {
 				// TODO: what about the tail? We shouldn't enqueue in this case, right?
 				msg = &RelayMsg{op, wrap.Fcall, wrap.Seqno}
 				if !config.q.EnqueueIfDuplicate(msg) && !srv.isTail() {
-					log.Printf("%v Didn't enqueue duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
+					db.DLPrintf("RSRV", "%v Didn't enqueue duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 					// TODO: send an empty reply, but this works for now since it
 					// preserves the seqno.
 					op.replies <- op.frame
 					continue
 				} else {
-					log.Printf("%v Enqueued duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
+					db.DLPrintf("RSRV", "%v Enqueued duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 				}
 			}
 			// If we're the tail, we always ack immediately
 			if srv.isTail() {
-				log.Printf("%v Tail acking %v", config.RelayAddr, wrap.Fcall)
+				db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, wrap.Fcall)
 				op.replies <- op.frame
 			}
 		}
@@ -245,11 +244,11 @@ func (srv *NpServer) relayWriter() {
 		if err != nil {
 			log.Printf("Error unmarshalling in relayWriter: %v", err)
 		}
-		log.Printf("%v Got ack: %v", config.RelayAddr, wrap)
+		db.DLPrintf("RSRV", "%v Got ack: %v", config.RelayAddr, wrap)
 		// Dequeue all acks up until this one (they may come out of order, which is
 		// OK.
 		msgs := config.q.DequeueUntil(wrap.Seqno)
-		log.Printf("%v Dequeued until: %v", config.RelayAddr, msgs)
+		db.DLPrintf("RSRV", "%v Dequeued until: %v", config.RelayAddr, msgs)
 		// Ack upstream
 		for _, msg := range msgs {
 			msg.op.replies <- msg.op.reply
@@ -269,7 +268,7 @@ func (srv *NpServer) sendRelayMsg(msg *RelayMsg) {
 	// If the next server has changed (detected by config swap, or message send
 	// failure), resend all in-flight requests. Should already include this
 	// message.
-	log.Printf("%v -> %v Sending initial relayMsg: %v", config.RelayAddr, nextAddr, msg)
+	db.DLPrintf("RSRV", "%v -> %v Sending initial relayMsg: %v", config.RelayAddr, nextAddr, msg)
 	if lastSendAddr != nextAddr || !srv.relayOnce(ch, msg) {
 		srv.resendInflightRelayMsgs()
 	}
@@ -291,7 +290,7 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 	config.mu.Unlock()
 
 	toSend := config.q.GetQ()
-	log.Printf("%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
+	db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
 	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
 	for len(toSend) != 0 {
 		// Try to send a message.
@@ -305,10 +304,10 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 			config.LastSendAddr = config.NextAddr
 			config.mu.Unlock()
 			toSend = config.q.GetQ()
-			log.Printf("%v -> %v Resending inflight messages: %v", nextAddr, config.RelayAddr, toSend)
+			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", nextAddr, config.RelayAddr, toSend)
 		}
 	}
-	log.Printf("%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
+	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
 }
 
 // Try and send a message to the next server in the chain, and receive a

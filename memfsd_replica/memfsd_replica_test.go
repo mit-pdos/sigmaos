@@ -191,24 +191,30 @@ func TestChainSimple(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 
 	// Write some files to the head
+	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
 		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
+	log.Printf("Done writing files...")
 
 	// Read some files from the head
+	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
 		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
+	log.Printf("Done reading files...")
 
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
+	log.Printf("Comparing replica logs...")
 	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
 
 	// Shut down
 	for _, r := range replicas {
@@ -224,7 +230,7 @@ func TestChainCrashMiddle(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := 5
-	n_files := 3
+	n_files := 100
 
 	replicas := allocReplicas(ts, N)
 	writeConfig(ts, replicas)
@@ -238,32 +244,38 @@ func TestChainCrashMiddle(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 
 	// Write some files to the head
+	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
 		err := ts.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
+	log.Printf("Done writing files...")
 
 	// Crash a couple of replicas in the middle of the chain
+	log.Printf("Crashing replicas %v and %v...", replicas[1].addr, replicas[2].addr)
 	crashReplica(ts, replicas[1])
 	crashReplica(ts, replicas[2])
+	log.Printf("Done crashing replicas %v and %v...", replicas[1].addr, replicas[2].addr)
 
 	time.Sleep(200 * time.Millisecond)
 
 	// Read some files from the head
+	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		log.Printf("pre Read a file: %v", i_str)
 		b, err := ts.ReadFile(path.Join(headPath(replicas), i_str))
-		log.Printf("post Read a file: %v", i_str)
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
+	log.Printf("Done reading files...")
 
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
+	log.Printf("Comparing replica logs...")
 	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
 
 	// Shut down
 	for _, r := range replicas {

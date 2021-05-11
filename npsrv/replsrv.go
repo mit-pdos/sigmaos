@@ -184,7 +184,7 @@ func (srv *NpServer) runDirWatcher() {
 	for {
 		done := make(chan bool)
 		config.SetDirWatch(config.UnionDirPath, func(p string, err error) {
-			log.Printf("Dir watch triggered!")
+			db.DLPrintf("RSRV", "%v Dir watch triggered!", config.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
@@ -206,8 +206,7 @@ func (srv *NpServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
 		srv.replConfig.SetRemoveWatch(srv.replConfig.ConfigPath, func(p string, err error) {
-			db.DLPrintf("RSRV", "Srv %v detected new config\n", srv.replConfig.RelayAddr)
-			log.Printf("%v detected new config!", srv.replConfig.RelayAddr)
+			db.DLPrintf("RSRV", "%v detected new config\n", srv.replConfig.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
@@ -217,8 +216,7 @@ func (srv *NpServer) runReplConfigUpdater() {
 		})
 		<-done
 		config := srv.getNewReplConfig()
-		db.DLPrintf("RSRV", "Srv %v reloading config: %v\n", srv.replConfig.RelayAddr, config)
-		log.Printf("%v reloading config: %v", srv.replConfig.RelayAddr, config)
+		db.DLPrintf("RSRV", "%v reloading config: %v\n", srv.replConfig.RelayAddr, config)
 		srv.reloadReplConfig(config)
 		// Resend any in-flight messages
 		srv.resendInflightRelayMsgs()

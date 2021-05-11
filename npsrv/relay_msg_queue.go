@@ -1,6 +1,7 @@
 package npsrv
 
 import (
+	"fmt"
 	"sync"
 
 	np "ulambda/ninep"
@@ -25,7 +26,7 @@ func (q *RelayMsgQueue) Enqueue(msg *RelayMsg) {
 
 // Enqueue another copy of this message if it's already in the queue. Return
 // true on success, and false otherwise.
-func (q *RelayMsgQueue) EnqueueDuplicate(msg *RelayMsg) bool {
+func (q *RelayMsgQueue) EnqueueIfDuplicate(msg *RelayMsg) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	for i, m := range q.q {
@@ -50,7 +51,7 @@ func (q *RelayMsgQueue) DequeueUntil(seqno uint64) []*RelayMsg {
 		}
 		// Trim the front of the queue
 		if m.seqno == seqno {
-			msgs = q.q[:i]
+			msgs = q.q[:i+1]
 			q.q = q.q[i+1:]
 			break
 		}
@@ -89,4 +90,8 @@ func (q *RelayMsgQueue) Next(seqno uint64) *RelayMsg {
 		}
 	}
 	return nil
+}
+
+func (m *RelayMsg) String() string {
+	return fmt.Sprintf("{ seqno:%v op:%v fcall:%v }", m.seqno, m.op, m.fcall)
 }

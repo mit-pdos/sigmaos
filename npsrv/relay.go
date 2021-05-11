@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -152,7 +153,9 @@ func (srv *NpServer) relayReader() {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", srv.addr, err)
 			// TODO: enqueue op with empty reply
 		} else {
+			log.Printf("%v Handling request %v", config.RelayAddr, wrap)
 			db.DLPrintf("RSRV", "Relay request: %v\n", wrap)
+			var msg *RelayMsg
 			// If we have never seen this request, process it.
 			if wrap.Seqno == NO_SEQNO || seqno < wrap.Seqno {
 				// Increment the sequence number
@@ -173,13 +176,14 @@ func (srv *NpServer) relayReader() {
 				// Reliably send to the next link in the chain (even if that link
 				// changes)
 				if !srv.isTail() {
-					// TODO: fix how we reliably send
 					// Only increment the seqno if this is a request from another replica
-					msg := &RelayMsg{op, fcall, seqno}
-					srv.relayReliable(msg)
+					msg = &RelayMsg{op, fcall, seqno}
+					// Enqueue the message to mark it as in-flight.
+					config.q.Enqueue(msg)
+					srv.sendRelayMsg(msg)
 				}
 			} else {
-				// We have already seen this request. 2 Options:
+				// We have already seen this request, and we aren't the tail. 2 Options:
 				// 1. If it's in-flight (we haven't seen an ack from the tail yet), we
 				//    need to register the op in order to have our ack thread send a
 				//    reply.
@@ -195,8 +199,8 @@ func (srv *NpServer) relayReader() {
 				// true. Otherwise, it returns false. This atomicity is needed to make
 				// sure we never drop acks which should be relayed upstream.
 				// TODO: what about the tail? We shouldn't enqueue in this case, right?
-				msg := &RelayMsg{op, wrap.Fcall, wrap.Seqno}
-				if !config.q.EnqueueDuplicate(msg) {
+				msg = &RelayMsg{op, wrap.Fcall, wrap.Seqno}
+				if !config.q.EnqueueIfDuplicate(msg) && !srv.isTail() {
 					log.Printf("Ignoring duplicate seqno: %v < %v", wrap.Seqno, seqno)
 					// TODO: send an empty reply, but this works for now since it
 					// preserves the seqno.
@@ -204,11 +208,15 @@ func (srv *NpServer) relayReader() {
 					continue
 				}
 			}
-			// TODO: If we're the tail, we always ack immediately
+			// If we're the tail, we always ack immediately
+			if srv.isTail() {
+				op.replies <- op.frame
+			}
 		}
 	}
 }
 
+// Relay acks upstream.
 func (srv *NpServer) relayWriter() {
 	config := srv.replConfig
 	for {
@@ -221,8 +229,11 @@ func (srv *NpServer) relayWriter() {
 		if err != nil {
 			log.Printf("Error unmarshalling in relayWriter: %v", err)
 		}
-		// Dequeue all acks up until this one
+		log.Printf("%v Got ack: %v", config.RelayAddr, wrap)
+		// Dequeue all acks up until this one (they may come out of order, which is
+		// OK.
 		msgs := config.q.DequeueUntil(wrap.Seqno)
+		log.Printf("%v Dequeued until: %v", config.RelayAddr, msgs)
 		// Ack upstream
 		for _, msg := range msgs {
 			msg.op.replies <- msg.op.reply
@@ -230,34 +241,62 @@ func (srv *NpServer) relayWriter() {
 	}
 }
 
-func (srv *NpServer) relayReliable(msg *RelayMsg) {
+func (srv *NpServer) sendRelayMsg(msg *RelayMsg) {
 	config := srv.replConfig
-	toSend := []*RelayMsg{msg}
+
+	// Get the next channel & address of the last person we sent to...
+	config.mu.Lock()
+	ch := config.NextChan
+	nextAddr := config.NextAddr
+	lastSendAddr := config.LastSendAddr
+	config.mu.Unlock()
+	// If the next server has changed (detected by config swap, or message send
+	// failure), resend all in-flight requests. Should already include this
+	// message.
+	if lastSendAddr != nextAddr || !srv.relayOnce(ch, msg) {
+		srv.resendInflightRelayMsgs()
+	}
+}
+
+func (srv *NpServer) resendInflightRelayMsgs() {
+	config := srv.replConfig
+
+	// Get the connection to the next server, and reflect that we've sent to it.
+	config.mu.Lock()
+	ch := config.NextChan
+	config.LastSendAddr = config.NextAddr
+	config.mu.Unlock()
+
+	toSend := config.q.GetQ()
+	log.Printf("%v Resending inflight messages: %v", config.RelayAddr, toSend)
 	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
 	for len(toSend) != 0 {
-		// We don't want to switch which server we're sending to mid-stream.
-		config.mu.Lock()
 		// Try to send a message.
-		if ok := srv.relayOnce(config, toSend[0]); ok {
+		if ok := srv.relayOnce(ch, toSend[0]); ok {
 			// If successful, move on to the next one
 			toSend = toSend[1:]
 		} else {
-			// If unsuccessful, restart with queue of un-acked messages + msg.
-			toSend = append(config.q.GetQ(), msg)
+			// Else, retry sending the whole queue again
+			config.mu.Lock()
+			ch = config.NextChan
+			config.LastSendAddr = config.NextAddr
+			config.mu.Unlock()
+			toSend = config.q.GetQ()
+			log.Printf("%v Resending inflight messages: %v", config.RelayAddr, toSend)
 		}
-		config.mu.Unlock()
 	}
 }
 
 // Try and send a message to the next server in the chain, and receive a
 // response.
-func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
+func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
 	// Only call down the chain if we aren't at the tail.
+	// XXX Get rid of this if
 	if !srv.isTail() {
 		var err error
 		if msg.op.wrapped {
 			// Just pass wrapped op along...
-			err = config.NextChan.Send(msg.op.frame)
+			err = ch.Send(msg.op.frame)
 		} else {
 			// If this op hasn't been wrapped, wrap it before we send it.
 			var frame []byte
@@ -265,9 +304,9 @@ func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
 			if err != nil {
 				log.Fatalf("Error marshalling fcall: %v", err)
 			}
-			err = config.NextChan.Send(frame)
+			err = ch.Send(frame)
 		}
-		// If the next server has crashed, retry...
+		// If the next server has crashed, note failure...
 		if err != nil && err.Error() == "EOF" {
 			log.Printf("Srv sending error: %v", err)
 			return false
@@ -275,10 +314,10 @@ func (srv *NpServer) relayOnce(config *NpServerReplConfig, msg *RelayMsg) bool {
 		if err != nil {
 			log.Fatalf("Srv error sending: %v\n", err)
 		}
-		// If send was successful, enqueue the relayMsg until ack'd.
-		config.q.Enqueue(msg)
+	} else {
+		log.Fatalf("Tail trying to relay")
 	}
-	// If we made it this far, exit
+	// If we made it this far, the send was successful
 	return true
 }
 
@@ -300,4 +339,12 @@ func (srv *NpServer) logOp(fcall *np.Fcall) {
 			log.Printf("Error writing log file in logOp: %v", err)
 		}
 	}
+}
+
+func (w *FcallWrapper) String() string {
+	return fmt.Sprintf("{ seqno:%v fcall:%v }", w.Seqno, w.Fcall)
+}
+
+func (op *SrvOp) String() string {
+	return fmt.Sprintf("{ wrapped:%v }", op.wrapped)
 }

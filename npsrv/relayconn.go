@@ -17,6 +17,8 @@ import (
 // A connection between replicas
 type RelayConn struct {
 	mu     sync.Mutex
+	rMu    sync.Mutex
+	wMu    sync.Mutex
 	conn   net.Conn
 	np     NpAPI
 	br     *bufio.Reader
@@ -44,6 +46,8 @@ func MakeRelayConn(addr string) (*RelayConn, error) {
 }
 
 func (rc *RelayConn) Send(frame []byte) error {
+	rc.wMu.Lock()
+	defer rc.wMu.Unlock()
 	err := npcodec.WriteFrame(rc.bw, frame)
 	if err == io.EOF {
 		rc.Close()
@@ -62,11 +66,14 @@ func (rc *RelayConn) Send(frame []byte) error {
 }
 
 func (rc *RelayConn) Recv() ([]byte, error) {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
+	rc.rMu.Lock()
+	defer rc.rMu.Unlock()
+	if rc.isClosed() {
+		return []byte{}, io.EOF
+	}
 	frame, err := npcodec.ReadFrame(rc.br)
 	if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
-		rc.closeL()
+		rc.Close()
 		return nil, err
 	}
 	if err != nil {
@@ -87,4 +94,10 @@ func (rc *RelayConn) Close() {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	rc.closeL()
+}
+
+func (rc *RelayConn) isClosed() bool {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return rc.closed
 }

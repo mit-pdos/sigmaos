@@ -216,6 +216,8 @@ func (srv *NpServer) runReplConfigUpdater() {
 		db.DLPrintf("RSRV", "Srv %v reloading config: %v\n", srv.replConfig.RelayAddr, config)
 		log.Printf("%v reloading config: %v", srv.replConfig.RelayAddr, config)
 		srv.reloadReplConfig(config)
+		// Resend any in-flight messages
+		srv.resendInflightRelayMsgs()
 	}
 }
 

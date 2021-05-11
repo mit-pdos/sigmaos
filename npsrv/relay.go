@@ -183,6 +183,7 @@ func (srv *NpServer) relayReader() {
 					srv.sendRelayMsg(msg)
 				}
 			} else {
+				log.Printf("%v Duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 				// We have already seen this request, and we aren't the tail. 2 Options:
 				// 1. If it's in-flight (we haven't seen an ack from the tail yet), we
 				//    need to register the op in order to have our ack thread send a
@@ -201,15 +202,18 @@ func (srv *NpServer) relayReader() {
 				// TODO: what about the tail? We shouldn't enqueue in this case, right?
 				msg = &RelayMsg{op, wrap.Fcall, wrap.Seqno}
 				if !config.q.EnqueueIfDuplicate(msg) && !srv.isTail() {
-					log.Printf("Ignoring duplicate seqno: %v < %v", wrap.Seqno, seqno)
+					log.Printf("%v Didn't enqueue duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 					// TODO: send an empty reply, but this works for now since it
 					// preserves the seqno.
 					op.replies <- op.frame
 					continue
+				} else {
+					log.Printf("%v Enqueued duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 				}
 			}
 			// If we're the tail, we always ack immediately
 			if srv.isTail() {
+				log.Printf("%v Tail acking %v", config.RelayAddr, wrap.Fcall)
 				op.replies <- op.frame
 			}
 		}
@@ -220,10 +224,22 @@ func (srv *NpServer) relayReader() {
 func (srv *NpServer) relayWriter() {
 	config := srv.replConfig
 	for {
+		// XXX Don't spin
+		if srv.isTail() {
+			continue
+		}
+		config.mu.Lock()
+		ch := config.NextChan
+		config.mu.Unlock()
 		// Get an ack from the downstream servers
-		frame, err := config.NextChan.Recv()
+		frame, err := ch.Recv()
+		// Move on if the connection closed
+		if err != nil && err.Error() == "EOF" {
+			continue
+		}
 		if err != nil {
-			log.Printf("Srv error receiving: %v\n", err)
+			log.Printf("%v Srv error receiving ack: %v\n", config.RelayAddr, err)
+			continue
 		}
 		wrap, err := unmarshalFcall(frame, true)
 		if err != nil {
@@ -253,6 +269,7 @@ func (srv *NpServer) sendRelayMsg(msg *RelayMsg) {
 	// If the next server has changed (detected by config swap, or message send
 	// failure), resend all in-flight requests. Should already include this
 	// message.
+	log.Printf("%v -> %v Sending initial relayMsg: %v", config.RelayAddr, nextAddr, msg)
 	if lastSendAddr != nextAddr || !srv.relayOnce(ch, msg) {
 		srv.resendInflightRelayMsgs()
 	}
@@ -261,14 +278,20 @@ func (srv *NpServer) sendRelayMsg(msg *RelayMsg) {
 func (srv *NpServer) resendInflightRelayMsgs() {
 	config := srv.replConfig
 
+	// We shouldn't send anything if we're the tail
+	if srv.isTail() {
+		return
+	}
+
 	// Get the connection to the next server, and reflect that we've sent to it.
 	config.mu.Lock()
 	ch := config.NextChan
 	config.LastSendAddr = config.NextAddr
+	nextAddr := config.NextAddr
 	config.mu.Unlock()
 
 	toSend := config.q.GetQ()
-	log.Printf("%v Resending inflight messages: %v", config.RelayAddr, toSend)
+	log.Printf("%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
 	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
 	for len(toSend) != 0 {
 		// Try to send a message.
@@ -282,9 +305,10 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 			config.LastSendAddr = config.NextAddr
 			config.mu.Unlock()
 			toSend = config.q.GetQ()
-			log.Printf("%v Resending inflight messages: %v", config.RelayAddr, toSend)
+			log.Printf("%v -> %v Resending inflight messages: %v", nextAddr, config.RelayAddr, toSend)
 		}
 	}
+	log.Printf("%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
 }
 
 // Try and send a message to the next server in the chain, and receive a

@@ -31,6 +31,8 @@ func (q *RelayMsgQueue) EnqueueIfDuplicate(msg *RelayMsg) bool {
 	defer q.mu.Unlock()
 	for i, m := range q.q {
 		if m.seqno == msg.seqno {
+			// Copy the reply
+			msg.op.reply = m.op.reply
 			q.q = append(append(q.q[:i], msg), q.q[i:]...)
 			return true
 		}
@@ -44,17 +46,25 @@ func (q *RelayMsgQueue) DequeueUntil(seqno uint64) []*RelayMsg {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	msgs := []*RelayMsg{}
+	start := -1
+	end := -1
 	for i, m := range q.q {
-		// Message with seqno was not present
+		// Done scanning
 		if m.seqno > seqno {
 			break
 		}
-		// Trim the front of the queue
-		if m.seqno == seqno {
-			msgs = q.q[:i+1]
-			q.q = q.q[i+1:]
-			break
+		// Mark where to start & stop trimming, and record message to be trimmed
+		if m.seqno <= seqno {
+			if start == -1 {
+				start = i
+			}
+			end = i
+			msgs = append(msgs, m)
 		}
+	}
+	// Trim the queue
+	if len(msgs) > 0 {
+		q.q = append(q.q[:start], q.q[end+1:]...)
 	}
 	return msgs
 }
@@ -63,6 +73,10 @@ func (q *RelayMsgQueue) DequeueUntil(seqno uint64) []*RelayMsg {
 func (q *RelayMsgQueue) Dequeue(seqno uint64) (*RelayMsg, bool) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.dequeueL(seqno)
+}
+
+func (q *RelayMsgQueue) dequeueL(seqno uint64) (*RelayMsg, bool) {
 	for i, m := range q.q {
 		if m.seqno == seqno {
 			q.q = append(q.q[:i], q.q[i+1:]...)

@@ -37,8 +37,10 @@ func main() {
 	srvAddr := ip + ":" + srvPort
 	clnt := npclnt.MakeNpClnt()
 	config, err := npsrv.ReadReplConfig(configPath, relayAddr, fsl, clnt)
-	if err != nil {
-		log.Fatalf("Couldn't read repl config: %v\n", err)
+	// Reread until successful
+	for err != nil {
+		log.Printf("Couldn't read repl config: %v\n", err)
+		config, err = npsrv.ReadReplConfig(configPath, relayAddr, fsl, clnt)
 	}
 	config.UnionDirPath = unionDirPath
 	if len(os.Args) == 6 && os.Args[5] == "log-ops" {

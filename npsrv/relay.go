@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"strings"
 
@@ -309,6 +310,18 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 		}
 	}
 	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
+}
+
+func (srv *NpServer) sendAllAcks() {
+	config := srv.replConfig
+	msgs := config.q.DequeueUntil(math.MaxUint64)
+	db.DLPrintf("RSRV", "%v Sent all acks: %v", config.RelayAddr, msgs)
+	// Ack upstream
+	go func() {
+		for _, msg := range msgs {
+			msg.op.replies <- msg.op.reply
+		}
+	}()
 }
 
 // Try and send a message to the next server in the chain, and receive a

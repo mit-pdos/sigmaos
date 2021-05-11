@@ -224,6 +224,9 @@ func (srv *NpServer) runReplConfigUpdater() {
 		srv.reloadReplConfig(config)
 		// Resend any in-flight messages
 		srv.resendInflightRelayMsgs()
+		if srv.isTail() {
+			srv.sendAllAcks()
+		}
 	}
 }
 

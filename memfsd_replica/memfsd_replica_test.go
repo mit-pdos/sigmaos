@@ -111,11 +111,13 @@ func compareReplicaLogs(ts *Tstate, replicas []*Replica) {
 		return
 	}
 	logs := [][]byte{}
+	idxMap := map[int]string{}
 	for _, r := range replicas {
 		// If this replica was not killed...
 		if !r.crashed {
 			b, err := ts.ReadFile(path.Join("name", r.addr+"-log.txt"))
 			assert.Nil(ts.t, err, "Failed to read log file for replica: %v", r.addr)
+			idxMap[len(logs)] = r.addr
 			logs = append(logs, b)
 		}
 	}
@@ -123,7 +125,7 @@ func compareReplicaLogs(ts *Tstate, replicas []*Replica) {
 	for i, l := range logs {
 		assert.Greater(ts.t, len(l), 0, "Zero length log for log idx %v", i)
 		if i > 0 {
-			assert.ElementsMatch(ts.t, logs[i-1], l, "Logs do not match: %v, %v", i-1, i)
+			assert.ElementsMatch(ts.t, logs[i-1], l, "Logs do not match: %v, %v", idxMap[i-1], idxMap[i])
 		}
 	}
 }
@@ -259,7 +261,7 @@ func TestChainCrashMiddle(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := 5
-	n_files := 100
+	n_files := 2
 
 	replicas := allocReplicas(ts, N)
 	writeConfig(ts, replicas)

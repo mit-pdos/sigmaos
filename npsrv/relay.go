@@ -63,7 +63,7 @@ func (r *RelayChannel) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(r.c.br)
 		if err != nil {
-			db.DLPrintf("RSRV", "Peer %v closed/erred %v\n", r.c.Src(), err)
+			db.DLPrintf("RSRV", "%v Peer %v closed/erred %v\n", r.c.Dst(), r.c.Src(), err)
 			if err == io.EOF {
 				r.c.close()
 			}
@@ -95,12 +95,12 @@ func (r *RelayChannel) writer() {
 		}
 		err := npcodec.WriteFrame(r.c.bw, frame)
 		if err != nil {
-			log.Printf("Writer: WriteFrame error: %v", err)
+			log.Printf("%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)
 			return
 		}
 		err = r.c.bw.Flush()
 		if err != nil {
-			log.Printf("Writer: Flush error: %v", err)
+			log.Printf("%v -> %v Writer: Flush error: %v", r.c.Src(), r.c.Dst(), err)
 			return
 		}
 	}
@@ -344,8 +344,8 @@ func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
 			err = ch.Send(frame)
 		}
 		// If the next server has crashed, note failure...
-		if err != nil && err.Error() == "EOF" {
-			log.Printf("Srv sending error: %v", err)
+		if err != nil && (err.Error() == "EOF" || strings.Contains(err.Error(), "use of closed network connection")) {
+			db.DLPrintf("RSRV", "%v sending error: %v", srv.replConfig.RelayAddr, err)
 			return false
 		}
 		if err != nil {

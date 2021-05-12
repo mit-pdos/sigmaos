@@ -54,12 +54,12 @@ func (rc *RelayConn) Send(frame []byte) error {
 		return err
 	}
 	if err != nil {
-		log.Fatalf("WriteFrame error %v\n", err)
+		db.DLPrintf("RCHAN", "WriteFrame error %v\n", err)
 		return err
 	}
 	err = rc.bw.Flush()
 	if err != nil {
-		log.Fatalf("Flush error %v\n", err)
+		log.Printf("Flush error %v\n", err)
 		return err
 	}
 	return nil

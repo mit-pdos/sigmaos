@@ -222,8 +222,9 @@ func (srv *NpServer) runReplConfigUpdater() {
 		config := srv.getNewReplConfig()
 		db.DLPrintf("RSRV", "%v reloading config: %v\n", srv.replConfig.RelayAddr, config)
 		srv.reloadReplConfig(config)
-		// Resend any in-flight messages
-		srv.resendInflightRelayMsgs()
+		// Resend any in-flight messages. Do this asynchronously in case the sends
+		// fail.
+		go srv.resendInflightRelayMsgs()
 		if srv.isTail() {
 			srv.sendAllAcks()
 		}

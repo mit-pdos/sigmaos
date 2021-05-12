@@ -128,6 +128,31 @@ func compareReplicaLogs(ts *Tstate, replicas []*Replica) {
 	}
 }
 
+// Check that the contents of all files are present & correct on all replicas
+func checkFiles(ts *Tstate, replicas []*Replica, n_files int) {
+	for _, r := range replicas {
+		// TODO: check tail too
+		if !r.crashed && !isTail(r, replicas) {
+			for i := 0; i < n_files; i++ {
+				i_str := strconv.Itoa(i)
+				b, err := ts.ReadFile(path.Join(UNION_DIR_PATH, r.addr, i_str))
+				assert.Nil(ts.t, err, "Failed to ReadFile from replica: %v", r.addr)
+				assert.Equal(ts.t, string(b), i_str, "File contents not equal")
+			}
+		}
+	}
+}
+
+// Check if this replica is currently the head
+func isHead(replica *Replica, replicas []*Replica) bool {
+	return strings.Contains(headPath(replicas), replica.addr)
+}
+
+// Check if this replica is currently the tail
+func isTail(replica *Replica, replicas []*Replica) bool {
+	return strings.Contains(tailPath(replicas), replica.addr)
+}
+
 // Calculate the ZK path to the head: the first un-crashed server in the chain
 func headPath(replicas []*Replica) string {
 	for _, r := range replicas {
@@ -140,7 +165,7 @@ func headPath(replicas []*Replica) string {
 
 // Calculate the ZK path to the tail: the last un-crashed server in the chain
 func tailPath(replicas []*Replica) string {
-	for i := len(replicas) - 1; i >= 0; i++ {
+	for i := len(replicas) - 1; i >= 0; i-- {
 		if !replicas[i].crashed {
 			return path.Join(UNION_DIR_PATH, replicas[i].addr)
 		}
@@ -216,6 +241,10 @@ func TestChainSimple(t *testing.T) {
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
 
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files)
+	log.Printf("Done checking file contents on each replica...")
+
 	// Shut down
 	for _, r := range replicas {
 		killReplica(ts, r)
@@ -277,6 +306,10 @@ func TestChainCrashMiddle(t *testing.T) {
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
 
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files)
+	log.Printf("Done checking file contents on each replica...")
+
 	// Shut down
 	for _, r := range replicas {
 		killReplica(ts, r)
@@ -337,6 +370,10 @@ func TestChainCrashHead(t *testing.T) {
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
 
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files)
+	log.Printf("Done checking file contents on each replica...")
+
 	// Shut down
 	for _, r := range replicas {
 		killReplica(ts, r)
@@ -395,6 +432,10 @@ func TestChainCrashTail(t *testing.T) {
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
 
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files)
+	log.Printf("Done checking file contents on each replica...")
+
 	// Shut down
 	for _, r := range replicas {
 		killReplica(ts, r)
@@ -410,12 +451,12 @@ func basicClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sy
 	fsl := fslib.MakeFsLib("client-" + strconv.Itoa(id))
 	start.Done()
 	start.Wait()
-	for i := id; i < n_files; i++ {
+	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
 		err := fsl.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
-	for i := id; i < n_files; i++ {
+	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
 		b, err := fsl.ReadFile(path.Join(headPath(replicas), i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
@@ -463,6 +504,10 @@ func TestConcurrentClientsSimple(t *testing.T) {
 	log.Printf("Comparing replica logs...")
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
+
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files_per_cli*n_clients)
+	log.Printf("Done checking file contents on each replica...")
 
 	// Shut down
 	for _, r := range replicas {
@@ -519,6 +564,10 @@ func TestConcurrentClientsCrashMiddle(t *testing.T) {
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
 
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files_per_cli*n_clients)
+	log.Printf("Done checking file contents on each replica...")
+
 	// Shut down
 	for _, r := range replicas {
 		killReplica(ts, r)
@@ -572,6 +621,105 @@ func TestConcurrentClientsCrashTail(t *testing.T) {
 	log.Printf("Comparing replica logs...")
 	compareReplicaLogs(ts, replicas)
 	log.Printf("Done comparing replica logs...")
+
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files_per_cli*n_clients)
+	log.Printf("Done checking file contents on each replica...")
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func pausedClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sync.WaitGroup, end *sync.WaitGroup, writes *sync.WaitGroup, reads *sync.WaitGroup) {
+	defer end.Done()
+
+	fsl := fslib.MakeFsLib("client-" + strconv.Itoa(id))
+	start.Done()
+	start.Wait()
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(id*n_files + i)
+		err := fsl.MakeFile(path.Join(headPath(replicas), i_str), 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile in head")
+	}
+	writes.Done()
+	reads.Wait()
+	for i := 0; i < n_files; i++ {
+		i_str := strconv.Itoa(id*n_files + i)
+		fpath := path.Join(headPath(replicas), i_str)
+		b, err := fsl.ReadFile(fpath)
+		assert.Nil(ts.t, err, "Failed to ReadFile path: %v", fpath)
+		assert.Equal(ts.t, i_str, string(b), "File contents not equal")
+	}
+}
+
+func TestConcurrentClientsCrashHead(t *testing.T) {
+	ts := makeTstate(t)
+
+	N := 5
+	n_clients := 10
+	n_files_per_cli := 10
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	var start sync.WaitGroup
+	var end sync.WaitGroup
+	var writes sync.WaitGroup
+	var reads sync.WaitGroup
+
+	start.Add(n_clients)
+	end.Add(n_clients)
+	writes.Add(n_clients)
+	reads.Add(1)
+
+	// Write some files to the head
+	log.Printf("Starting clients...")
+	for id := 0; id < n_clients; id++ {
+		go pausedClient(ts, replicas, id, n_files_per_cli, &start, &end, &writes, &reads)
+	}
+
+	log.Printf("Waiting for clients to finish writes...")
+	writes.Wait()
+	log.Printf("Done waiting for clients to finish writes...")
+
+	time.Sleep(2 * time.Second)
+
+	//	// Crash a couple of replicas in the middle of the chain
+	//	log.Printf("Crashing head replica %v...", replicas[0].addr)
+	//	crashReplica(ts, replicas[0])
+	//	log.Printf("Done crashing head replica %v...", replicas[0].addr)
+
+	time.Sleep(2 * time.Second)
+
+	log.Printf("Releasing clients to commence reads...")
+	reads.Done()
+
+	log.Printf("Waiting for clients to terminate...")
+	end.Wait()
+	log.Printf("Done waiting for clients to terminate...")
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("Comparing replica logs...")
+	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
+
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_files_per_cli*n_clients)
+	log.Printf("Done checking file contents on each replica...")
 
 	// Shut down
 	for _, r := range replicas {

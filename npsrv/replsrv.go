@@ -226,6 +226,7 @@ func (srv *NpServer) runReplConfigUpdater() {
 		// fail.
 		go srv.resendInflightRelayMsgs()
 		if srv.isTail() {
+			db.DLPrintf("RSRV", "%v had become the tail in configUpdater", srv.replConfig.RelayAddr)
 			srv.sendAllAcks()
 		}
 	}

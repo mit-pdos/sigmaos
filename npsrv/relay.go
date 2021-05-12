@@ -162,10 +162,10 @@ func (srv *NpServer) relayReader() {
 				// Increment the sequence number
 				seqno = seqno + 1
 				fcall := wrap.Fcall
-				db.DLPrintf("RSRV", "Reader sv req: %v\n", fcall)
+				db.DLPrintf("RSRV", " %v Reader sv req: %v\n", config.RelayAddr, fcall)
 				// Serve the op first.
 				reply := op.r.serve(fcall)
-				db.DLPrintf("RSRV", "Reader rep: %v\n", reply)
+				db.DLPrintf("RSRV", "%v Reader rep: %v\n", config.RelayAddr, reply)
 				frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
 				if err != nil {
 					log.Fatalf("Writer: marshal error: %v", err)
@@ -232,10 +232,15 @@ func (srv *NpServer) relayWriter() {
 		config.mu.Lock()
 		ch := config.NextChan
 		config.mu.Unlock()
+		// Channels start as nil during initialization.
+		if ch == nil {
+			continue
+		}
 		// Get an ack from the downstream servers
 		frame, err := ch.Recv()
 		// Move on if the connection closed
-		if err != nil && (err.Error() == "EOF" || strings.Contains(err.Error(), "use of closed network connection")) {
+		if peerCrashed(err) {
+			db.DLPrintf("RSRV", "%v error relayWriter Recv: %v", config.RelayAddr, err)
 			continue
 		}
 		if err != nil {
@@ -267,6 +272,7 @@ func (srv *NpServer) sendRelayMsg(msg *RelayMsg) {
 	nextAddr := config.NextAddr
 	lastSendAddr := config.LastSendAddr
 	config.mu.Unlock()
+
 	// If the next server has changed (detected by config swap, or message send
 	// failure), resend all in-flight requests. Should already include this
 	// message.
@@ -279,11 +285,6 @@ func (srv *NpServer) sendRelayMsg(msg *RelayMsg) {
 func (srv *NpServer) resendInflightRelayMsgs() {
 	config := srv.replConfig
 
-	// We shouldn't send anything if we're the tail
-	if srv.isTail() {
-		return
-	}
-
 	// Get the connection to the next server, and reflect that we've sent to it.
 	config.mu.Lock()
 	ch := config.NextChan
@@ -295,6 +296,10 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 	db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
 	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
 	for len(toSend) != 0 {
+		// We shouldn't send anything if we're the tail
+		if srv.isTail() {
+			return
+		}
 		// Try to send a message.
 		if ok := srv.relayOnce(ch, toSend[0]); ok {
 			// If successful, move on to the next one
@@ -306,7 +311,7 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 			config.LastSendAddr = config.NextAddr
 			config.mu.Unlock()
 			toSend = config.q.GetQ()
-			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", nextAddr, config.RelayAddr, toSend)
+			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
 		}
 	}
 	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
@@ -344,7 +349,7 @@ func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
 			err = ch.Send(frame)
 		}
 		// If the next server has crashed, note failure...
-		if err != nil && (err.Error() == "EOF" || strings.Contains(err.Error(), "use of closed network connection")) {
+		if peerCrashed(err) {
 			db.DLPrintf("RSRV", "%v sending error: %v", srv.replConfig.RelayAddr, err)
 			return false
 		}
@@ -352,7 +357,8 @@ func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
 			log.Fatalf("Srv error sending: %v\n", err)
 		}
 	} else {
-		log.Fatalf("Tail trying to relay")
+		db.DLPrintf("%v Tail trying to relay", srv.replConfig.RelayAddr)
+		return false
 	}
 	// If we made it this far, the send was successful
 	return true
@@ -384,4 +390,11 @@ func (w *FcallWrapper) String() string {
 
 func (op *SrvOp) String() string {
 	return fmt.Sprintf("{ wrapped:%v }", op.wrapped)
+}
+
+func peerCrashed(err error) bool {
+	return err != nil &&
+		(err.Error() == "EOF" ||
+			strings.Contains(err.Error(), "use of closed network connection") ||
+			strings.Contains(err.Error(), "connection reset by peer"))
 }

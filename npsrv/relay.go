@@ -95,12 +95,12 @@ func (r *RelayChannel) writer() {
 		}
 		err := npcodec.WriteFrame(r.c.bw, frame)
 		if err != nil {
-			log.Printf("%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)
+			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)
 			return
 		}
 		err = r.c.bw.Flush()
 		if err != nil {
-			log.Printf("%v -> %v Writer: Flush error: %v", r.c.Src(), r.c.Dst(), err)
+			db.DLPrintf("RSRV", "%v -> %v Writer: Flush error: %v", r.c.Src(), r.c.Dst(), err)
 			return
 		}
 	}

@@ -5,7 +5,6 @@ import (
 
 	"bufio"
 	"io"
-	"log"
 	"net"
 	"strings"
 	//	"sync"
@@ -59,7 +58,7 @@ func (rc *RelayConn) Send(frame []byte) error {
 	}
 	err = rc.bw.Flush()
 	if err != nil {
-		log.Printf("Flush error %v\n", err)
+		db.DLPrintf("RCHAN", "Flush error %v\n", err)
 		return err
 	}
 	return nil

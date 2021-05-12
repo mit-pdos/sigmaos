@@ -526,3 +526,57 @@ func TestConcurrentClientsCrashMiddle(t *testing.T) {
 
 	ts.s.Shutdown(ts.FsLib)
 }
+
+func TestConcurrentClientsCrashTail(t *testing.T) {
+	ts := makeTstate(t)
+
+	N := 5
+	n_clients := 10
+	n_files_per_cli := 10
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	var start sync.WaitGroup
+	var end sync.WaitGroup
+
+	start.Add(n_clients)
+	end.Add(n_clients)
+
+	// Write some files to the head
+	log.Printf("Starting clients...")
+	for id := 0; id < n_clients; id++ {
+		go basicClient(ts, replicas, id, n_files_per_cli, &start, &end)
+	}
+
+	// Crash a couple of replicas in the middle of the chain
+	log.Printf("Crashing tail replica %v...", replicas[N-1].addr)
+	crashReplica(ts, replicas[N-1])
+	log.Printf("Done crashing tail replica %v...", replicas[N-1].addr)
+
+	log.Printf("Waiting for clients to terminate...")
+	end.Wait()
+	log.Printf("Done waiting for clients to terminate...")
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("Comparing replica logs...")
+	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
+}

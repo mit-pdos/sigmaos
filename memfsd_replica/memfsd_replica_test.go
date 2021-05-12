@@ -121,7 +121,7 @@ func compareReplicaLogs(ts *Tstate, replicas []*Replica) {
 	}
 
 	for i, l := range logs {
-		assert.Greater(ts.t, len(l), 0, "Zero length log")
+		assert.Greater(ts.t, len(l), 0, "Zero length log for log idx %v", i)
 		if i > 0 {
 			assert.ElementsMatch(ts.t, logs[i-1], l, "Logs do not match: %v, %v", i-1, i)
 		}

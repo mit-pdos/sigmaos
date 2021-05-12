@@ -14,6 +14,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
+	"ulambda/npobjsrv"
 )
 
 const (
@@ -37,6 +38,7 @@ type NpServerReplConfig struct {
 	NextChan     *RelayConn
 	ops          chan *SrvOp
 	q            *RelayMsgQueue
+	fids         map[np.Tfid]*npobjsrv.Fid
 	*fslib.FsLib
 	*npclnt.NpClnt
 }
@@ -46,7 +48,18 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *SrvOp)
-		emptyConfig = &NpServerReplConfig{deadlock.Mutex{}, config.LogOps, config.ConfigPath, config.UnionDirPath, relayAddr, "", "", "", "", "", nil, nil, nil, nil, ops, &RelayMsgQueue{}, config.FsLib, config.NpClnt}
+		emptyConfig = &NpServerReplConfig{deadlock.Mutex{},
+			config.LogOps,
+			config.ConfigPath,
+			config.UnionDirPath,
+			relayAddr,
+			"", "", "", "", "",
+			nil, nil, nil, nil,
+			ops,
+			&RelayMsgQueue{},
+			map[np.Tfid]*npobjsrv.Fid{},
+			config.FsLib,
+			config.NpClnt}
 	}
 	srv := &NpServer{npc, "", replicated, emptyConfig}
 	var l net.Listener
@@ -144,7 +157,19 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{deadlock.Mutex{}, false, path, "", myaddr, "", headAddr, tailAddr, prevAddr, nextAddr, nil, nil, nil, nil, nil, nil, fsl, clnt}, nil
+	return &NpServerReplConfig{deadlock.Mutex{},
+		false,
+		path,
+		"",
+		myaddr,
+		"",
+		headAddr, tailAddr, prevAddr, nextAddr,
+		nil, nil, nil, nil,
+		nil,
+		nil,
+		nil,
+		fsl,
+		clnt}, nil
 }
 
 func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {

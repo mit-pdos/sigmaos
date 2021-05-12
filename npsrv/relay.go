@@ -14,6 +14,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/npobjsrv"
 )
 
 const (
@@ -42,11 +43,17 @@ type RelayChannel struct {
 	wrapped bool
 }
 
-func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool) *RelayChannel {
+func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
 	npapi := npc.Connect(conn)
+	n := npapi.(*npobjsrv.NpConn)
+	// Keep a single Fid table around for all connections between this replica and
+	// the previous one, even if that replica changes, since clients expect Fids
+	// to remain valid all along the chain even in the presence of failures, and
+	// they're normally per-connection (and therefore reset when a replica fails).
+	n.SetFids(fids)
 	c := &Channel{npc,
 		conn,
-		npapi,
+		n,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
@@ -172,8 +179,8 @@ func (srv *NpServer) relayReader() {
 				}
 				// Store the reply
 				op.reply = frame
-				// Optionally log the fcall.
-				srv.logOp(fcall)
+				// Optionally log the fcall & its reply type.
+				srv.logOp(fcall, reply)
 				// Reliably send to the next link in the chain (even if that link
 				// changes)
 				if !srv.isTail() {
@@ -364,7 +371,9 @@ func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
 	return true
 }
 
-func (srv *NpServer) logOp(fcall *np.Fcall) {
+// Log an op & the type of the reply. Logging the exact reply is not useful,
+// since contents may vary between replicas (e.g. time)
+func (srv *NpServer) logOp(fcall *np.Fcall, reply *np.Fcall) {
 	config := srv.replConfig
 	if config.LogOps {
 		fpath := "name/" + config.RelayAddr + "-log.txt"
@@ -377,6 +386,7 @@ func (srv *NpServer) logOp(fcall *np.Fcall) {
 			log.Printf("Error marshalling fcall in logOp: %v", err)
 		}
 		b = append(b, frame...)
+		b = append(b, []byte(reply.Type.String())...)
 		err = config.WriteFile(fpath, b)
 		if err != nil {
 			log.Printf("Error writing log file in logOp: %v", err)

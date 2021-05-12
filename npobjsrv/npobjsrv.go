@@ -161,6 +161,10 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	return npc
 }
 
+func (npc *NpConn) SetFids(fids map[np.Tfid]*Fid) {
+	npc.fids = fids
+}
+
 func (npc *NpConn) Addr() string {
 	return npc.conn.LocalAddr().String()
 }

@@ -182,7 +182,7 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 		// May need to retry if receiving server hasn't started up yet.
 		ch, err := MakeRelayConn(addr)
 		if err != nil {
-			if !strings.Contains(err.Error(), "connection refused") {
+			if !strings.Contains(err.Error(), "connection refused") && !peerCrashed(err) {
 				log.Printf("Error connecting RelayConn: %v, %v", srv.addr, err)
 			}
 		} else {

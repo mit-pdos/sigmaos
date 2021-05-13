@@ -69,7 +69,6 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 		if err != nil {
 			log.Fatal("Relay listen error:", err)
 		}
-		srv.addr = relayL.Addr().String()
 		// Set up op logging if necessary
 		if config.LogOps {
 			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, []byte(""))

@@ -42,6 +42,10 @@ func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr st
 	return npux
 }
 
+func (npux *NpUx) GetSrv() *npsrv.NpServer {
+	return npux.srv
+}
+
 func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {
 	clnt := npo.MakeNpConn(npux, conn)
 	return clnt

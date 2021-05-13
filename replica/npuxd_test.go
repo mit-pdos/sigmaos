@@ -7,7 +7,7 @@ import (
 	"ulambda/fslib"
 )
 
-func makeMemfsTstate(t *testing.T) *Tstate {
+func makeNpUxTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
@@ -17,7 +17,7 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 	}
 	ts.s = s
 
-	replicaName := "memfs-replica"
+	replicaName := "npux-replica"
 	db.Name(replicaName + "-test")
 	ts.FsLib = fslib.MakeFsLib(replicaName + "-test")
 	ts.t = t
@@ -27,59 +27,59 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestMemfsHelloWorld(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxHelloWorld(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	HelloWorld(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
 // Test making & reading a few files.
-func TestMemfsChainSimple(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxChainSimple(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ChainSimple(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
 // Test making & reading a few files in the presence of crashes in the middle of
 // the chain
-func TestMemfsChainCrashMiddle(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxChainCrashMiddle(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ChainCrashMiddle(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestMemfsChainCrashHead(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxChainCrashHead(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ChainCrashHead(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestMemfsChainCrashTail(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxChainCrashTail(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ChainCrashTail(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestMemfsConcurrentClientsSimple(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxConcurrentClientsSimple(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ConcurrentClientsSimple(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestMemfsConcurrentClientsCrashMiddle(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxConcurrentClientsCrashMiddle(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ConcurrentClientsCrashMiddle(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestMemfsConcurrentClientsCrashTail(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxConcurrentClientsCrashTail(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ConcurrentClientsCrashTail(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestMemfsConcurrentClientsCrashHead(t *testing.T) {
-	ts := makeMemfsTstate(t)
+func TestNpUxConcurrentClientsCrashHead(t *testing.T) {
+	ts := makeNpUxTstate(t)
 	ConcurrentClientsCrashHead(ts)
 	ts.s.Shutdown(ts.FsLib)
 }

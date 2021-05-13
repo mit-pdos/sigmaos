@@ -89,7 +89,7 @@ func writeConfig(ts *Tstate, replicas []*Replica) {
 	}
 	config := strings.Join(addrs, "\n")
 	err := ts.MakeFile(ts.configPath9p, 0777, []byte(config))
-	assert.Nil(ts.t, err, "Failed to make config file")
+	assert.Nil(ts.t, err, "Failed to make config file: %v", ts.configPath9p)
 }
 
 func setupUnionDir(ts *Tstate) {
@@ -129,7 +129,7 @@ func checkFiles(ts *Tstate, replicas []*Replica, n_files int) {
 			for i := 0; i < n_files; i++ {
 				i_str := strconv.Itoa(i)
 				b, err := ts.ReadFile(path.Join(ts.unionDirPath9p, r.addr, i_str))
-				assert.Nil(ts.t, err, "Failed to ReadFile from replica: %v", r.addr)
+				assert.Nil(ts.t, err, "Failed to ReadFile from replica: %v, %v", r.addr, path.Join(ts.unionDirPath9p, r.addr, i_str))
 				assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 			}
 		}
@@ -210,6 +210,9 @@ func ChainSimple(ts *Tstate) {
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
+
+	for {
+	}
 
 	// Read some files from the head
 	log.Printf("Reading files...")

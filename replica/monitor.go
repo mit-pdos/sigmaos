@@ -1,4 +1,4 @@
-package memfsd_replica
+package replica
 
 import (
 	"log"
@@ -10,15 +10,15 @@ import (
 	"ulambda/fslib"
 )
 
-type MemfsReplicaMonitor struct {
+type ReplicaMonitor struct {
 	pid          string
 	configPath   string
 	unionDirPath string
 	*fslib.FsLib
 }
 
-func MakeMemfsReplicaMonitor(args []string) *MemfsReplicaMonitor {
-	m := &MemfsReplicaMonitor{}
+func MakeReplicaMonitor(args []string) *ReplicaMonitor {
+	m := &ReplicaMonitor{}
 	// Set up paths
 	m.pid = args[0]
 	m.configPath = args[1]
@@ -26,11 +26,11 @@ func MakeMemfsReplicaMonitor(args []string) *MemfsReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	db.DLPrintf("RMTR", "MakeMemfsReplicaMonitor %v", args)
+	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }
 
-func (m *MemfsReplicaMonitor) updateConfig() {
+func (m *ReplicaMonitor) updateConfig() {
 	replicas, err := m.ReadDir(m.unionDirPath)
 	if err != nil {
 		log.Fatalf("Error reading union dir in monitor: %v", err)
@@ -49,7 +49,7 @@ func (m *MemfsReplicaMonitor) updateConfig() {
 	}
 }
 
-func (m *MemfsReplicaMonitor) Work() {
+func (m *ReplicaMonitor) Work() {
 	m.Started(m.pid)
 	// Get exclusive access to the config file.
 	if ok := m.TryLockFile(fslib.LOCKS, m.configPath); ok {

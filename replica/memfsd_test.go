@@ -1,4 +1,4 @@
-package memfsd_replica
+package replica
 
 import (
 	"log"
@@ -261,7 +261,7 @@ func TestChainCrashMiddle(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := 5
-	n_files := 2
+	n_files := 100
 
 	replicas := allocReplicas(ts, N)
 	writeConfig(ts, replicas)

@@ -222,7 +222,7 @@ func (srv *NpServer) runDirWatcher() {
 		<-done
 		attr := &fslib.Attr{}
 		attr.Pid = fslib.GenPid()
-		attr.Program = "bin/memfs-replica-monitor"
+		attr.Program = "bin/replica-monitor"
 		attr.Args = []string{config.ConfigPath, config.UnionDirPath}
 		config.Spawn(attr)
 	}

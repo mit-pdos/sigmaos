@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -16,6 +17,7 @@ const (
 )
 
 type Channel struct {
+	mu      sync.Mutex
 	npc     NpConn
 	conn    net.Conn
 	np      NpAPI
@@ -27,7 +29,8 @@ type Channel struct {
 
 func MakeChannel(npc NpConn, conn net.Conn) *Channel {
 	npapi := npc.Connect(conn)
-	c := &Channel{npc,
+	c := &Channel{sync.Mutex{},
+		npc,
 		conn,
 		npapi,
 		bufio.NewReaderSize(conn, Msglen),
@@ -146,9 +149,18 @@ func (c *Channel) reader() {
 
 func (c *Channel) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
+	c.mu.Lock()
 	c.closed = true
 	close(c.replies)
+	c.mu.Unlock()
 	c.np.Detach()
+}
+
+func (c *Channel) isClosed() bool {
+	defer c.mu.Unlock()
+	c.mu.Lock()
+	return c.closed
+
 }
 
 func (c *Channel) serve(fc *np.Fcall) {
@@ -161,7 +173,7 @@ func (c *Channel) serve(fc *np.Fcall) {
 	fcall.Type = reply.Type()
 	fcall.Msg = reply
 	fcall.Tag = t
-	if !c.closed {
+	if !c.isClosed() {
 		c.replies <- fcall
 	}
 }

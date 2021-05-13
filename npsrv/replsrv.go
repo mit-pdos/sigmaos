@@ -1,14 +1,12 @@
 package npsrv
 
 import (
-	"github.com/sasha-s/go-deadlock"
-
 	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
 	"strings"
-	//	"sync"
+	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -22,7 +20,7 @@ const (
 )
 
 type NpServerReplConfig struct {
-	mu           deadlock.Mutex
+	mu           sync.Mutex
 	LogOps       bool
 	ConfigPath   string
 	UnionDirPath string
@@ -48,7 +46,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *SrvOp)
-		emptyConfig = &NpServerReplConfig{deadlock.Mutex{},
+		emptyConfig = &NpServerReplConfig{sync.Mutex{},
 			config.LogOps,
 			config.ConfigPath,
 			config.UnionDirPath,
@@ -157,7 +155,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{deadlock.Mutex{},
+	return &NpServerReplConfig{sync.Mutex{},
 		false,
 		path,
 		"",

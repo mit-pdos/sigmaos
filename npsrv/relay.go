@@ -10,6 +10,7 @@ import (
 	"math"
 	"net"
 	"strings"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -51,7 +52,8 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool, 
 	// to remain valid all along the chain even in the presence of failures, and
 	// they're normally per-connection (and therefore reset when a replica fails).
 	n.SetFids(fids)
-	c := &Channel{npc,
+	c := &Channel{sync.Mutex{},
+		npc,
 		conn,
 		n,
 		bufio.NewReaderSize(conn, Msglen),

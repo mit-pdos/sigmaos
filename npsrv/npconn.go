@@ -156,13 +156,6 @@ func (c *Channel) close() {
 	c.np.Detach()
 }
 
-func (c *Channel) isClosed() bool {
-	defer c.mu.Unlock()
-	c.mu.Lock()
-	return c.closed
-
-}
-
 func (c *Channel) serve(fc *np.Fcall) {
 	t := fc.Tag
 	reply, rerror := c.dispatch(fc.Msg)
@@ -173,7 +166,9 @@ func (c *Channel) serve(fc *np.Fcall) {
 	fcall.Type = reply.Type()
 	fcall.Msg = reply
 	fcall.Tag = t
-	if !c.isClosed() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.closed {
 		c.replies <- fcall
 	}
 }

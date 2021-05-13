@@ -696,14 +696,10 @@ func TestConcurrentClientsCrashHead(t *testing.T) {
 	writes.Wait()
 	log.Printf("Done waiting for clients to finish writes...")
 
-	time.Sleep(2 * time.Second)
-
-	//	// Crash a couple of replicas in the middle of the chain
-	//	log.Printf("Crashing head replica %v...", replicas[0].addr)
-	//	crashReplica(ts, replicas[0])
-	//	log.Printf("Done crashing head replica %v...", replicas[0].addr)
-
-	time.Sleep(2 * time.Second)
+	// Crash a couple of replicas in the middle of the chain
+	log.Printf("Crashing head replica %v...", replicas[0].addr)
+	crashReplica(ts, replicas[0])
+	log.Printf("Done crashing head replica %v...", replicas[0].addr)
 
 	log.Printf("Releasing clients to commence reads...")
 	reads.Done()

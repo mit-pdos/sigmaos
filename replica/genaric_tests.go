@@ -211,9 +211,6 @@ func ChainSimple(ts *Tstate) {
 	}
 	log.Printf("Done writing files...")
 
-	for {
-	}
-
 	// Read some files from the head
 	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {

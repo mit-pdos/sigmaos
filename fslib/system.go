@@ -63,6 +63,16 @@ func Boot(bin string) (*System, error) {
 	return s, nil
 }
 
+func (s *System) BootNpUxd(bin string) error {
+	var err error
+	s.npuxd, err = run(bin, "/bin/npuxd", nil)
+	if err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
+
 func (s *System) BootNps3d(bin string) error {
 	var err error
 	s.nps3d, err = run(bin, "/bin/nps3d", nil)

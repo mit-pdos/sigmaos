@@ -47,7 +47,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 	kva := []KeyValue{}
 
 	db.DLPrintf("REDUCE", "reduce %v\n", r.input+"/"+file)
-	fd, err := r.Open(r.input+"/"+file, np.OREAD)
+	fd, err := r.Open(r.input+"/"+file+"/", np.OREAD)
 	if err != nil {
 		log.Fatal("Open error ", err)
 	}

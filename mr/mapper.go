@@ -137,7 +137,7 @@ func (m *Mapper) doMap() {
 			return
 		}
 		name := "name/fs/" + strconv.Itoa(r) + "/m-" + m.output
-		target := st.Name + ":pubkey:m-" + m.output + "/r-" + strconv.Itoa(r)
+		target := "name/ux/" + st.Name + "/m-" + m.output + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
 			db.DLPrintf("MAPPER", "Mapper: cannot create symlink %v %v\n", name, err)

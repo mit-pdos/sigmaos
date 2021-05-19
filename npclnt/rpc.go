@@ -204,7 +204,7 @@ func (npch *NpChan) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwri
 }
 
 func (npch *NpChan) WriteV(fid np.Tfid, offset np.Toffset, data []byte, version np.TQversion) (*np.Rwrite, error) {
-	args := np.Twritev{fid, offset, data, version}
+	args := np.Twritev{fid, offset, version, data}
 	reply, err := npch.call(args)
 	if err != nil {
 		return nil, err

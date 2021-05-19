@@ -391,8 +391,8 @@ type Twrite struct {
 type Twritev struct {
 	Fid     Tfid
 	Offset  Toffset
-	Data    []byte
 	Version TQversion
+	Data    []byte
 }
 
 func (tw Twrite) String() string {

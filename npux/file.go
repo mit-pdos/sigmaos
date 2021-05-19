@@ -23,7 +23,7 @@ func (npux *NpUx) makeFile(path []string, t np.Tperm, p *Dir) *File {
 }
 
 func (f *File) Open(ctx npo.CtxI, m np.Tmode) error {
-	db.DLPrintf("UXD", "%v: Open %v %v\n", ctx, f, m)
+	db.DLPrintf("UXD", "%v: Open %v %v path %v\n", ctx, f, m, f.Path())
 	file, err := os.OpenFile(f.Path(), uxFlags(m), 0)
 	if err != nil {
 		return err

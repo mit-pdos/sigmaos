@@ -140,40 +140,126 @@ func (ts *Tstate) localdName(t *testing.T) string {
 	return name
 }
 
-func TestSymlink(t *testing.T) {
+func TestSymlink1(t *testing.T) {
 	ts := makeTstate(t)
 
-	var err error
-	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
-	assert.Nil(t, err, "bin/locald")
-	time.Sleep(100 * time.Millisecond)
+	err := ts.s.BootNpUxd("..")
+	assert.Nil(t, err, "Error booting npuxd")
 
-	name := ts.localdName(t)
-	b, err := ts.ReadFile(name)
-	assert.Nil(t, err, name)
-	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+	// Make a target file
+	targetPath := "name/ux/~ip/symlink-test-file"
+	contents := "symlink test!"
+	ts.Remove(targetPath)
+	err = ts.MakeFile(targetPath, 0777, []byte(contents))
+	assert.Nil(t, err, "Creating symlink target")
 
-	sts, err := ts.ReadDir(name + "/")
-	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 0, len(sts))
+	// Read target file
+	b, err := ts.ReadFile(targetPath)
+	assert.Nil(t, err, "Creating symlink target")
+	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
-	// shutdown locald
-	err = ts.Remove(name + "/")
-	assert.Nil(t, err, "Remove")
+	// Create a symlink
+	linkPath := "name/symlink-test"
+	err = ts.Symlink(targetPath, linkPath, 0777)
+	assert.Nil(t, err, "Creating link")
 
-	time.Sleep(100 * time.Millisecond)
+	// Read symlink contents
+	b, err = ts.ReadFile(linkPath + "/")
+	assert.Nil(t, err, "Reading linked file")
+	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	// start schedd
-	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
-	assert.Nil(t, err, "bin/locald")
-	time.Sleep(100 * time.Millisecond)
+	ts.s.Shutdown(ts.FsLib)
+}
 
-	name = ts.localdName(t)
+func TestSymlink2(t *testing.T) {
+	ts := makeTstate(t)
 
-	b1, err := ts.ReadFile(name)
-	assert.Nil(t, err, name)
-	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
-	assert.NotEqual(t, b, b1)
+	err := ts.s.BootNpUxd("..")
+	assert.Nil(t, err, "Error booting npuxd")
+
+	// Make a target file
+	targetDirPath := "name/ux/~ip/dir1"
+	targetPath := targetDirPath + "/symlink-test-file"
+	contents := "symlink test!"
+	ts.Remove(targetPath)
+	ts.Remove(targetDirPath)
+	err = ts.Mkdir(targetDirPath, 0777)
+	assert.Nil(t, err, "Creating symlink target dir")
+	err = ts.MakeFile(targetPath, 0777, []byte(contents))
+	assert.Nil(t, err, "Creating symlink target")
+
+	// Read target file
+	b, err := ts.ReadFile(targetPath)
+	assert.Nil(t, err, "Creating symlink target")
+	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
+
+	// Create a symlink
+	linkDir := "name/dir2"
+	linkPath := linkDir + "/symlink-test"
+	err = ts.Mkdir(linkDir, 0777)
+	assert.Nil(t, err, "Creating link dir")
+	err = ts.Symlink(targetPath, linkPath, 0777)
+	assert.Nil(t, err, "Creating link")
+
+	// Read symlink contents
+	b, err = ts.ReadFile(linkPath + "/")
+	assert.Nil(t, err, "Reading linked file")
+	assert.Equal(t, contents, string(b), "File contents don't match")
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestSymlink3(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.s.BootNpUxd("..")
+	assert.Nil(t, err, "Error booting npuxd")
+
+	uxs, err := ts.ReadDir("name/ux")
+	assert.Nil(t, err, "Error reading ux dir")
+
+	uxip := uxs[0].Name
+	log.Printf("IP: %v", uxip)
+
+	// Make a target file
+	targetDirPath := "name/ux/" + uxip + "/tdir"
+	targetPath := targetDirPath + "/target"
+	contents := "symlink test!"
+	ts.Remove(targetPath)
+	ts.Remove(targetDirPath)
+	err = ts.Mkdir(targetDirPath, 0777)
+	assert.Nil(t, err, "Creating symlink target dir")
+	err = ts.MakeFile(targetPath, 0777, []byte(contents))
+	assert.Nil(t, err, "Creating symlink target")
+
+	// Read target file
+	b, err := ts.ReadFile(targetPath)
+	assert.Nil(t, err, "Creating symlink target")
+	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
+
+	// Create a symlink
+	linkDir := "name/ldir"
+	linkPath := linkDir + "/link"
+	err = ts.Mkdir(linkDir, 0777)
+	assert.Nil(t, err, "Creating link dir")
+	err = ts.Symlink(targetPath, linkPath, 0777)
+	assert.Nil(t, err, "Creating link")
+
+	fsl := MakeFsLib("abcd")
+	fsl.ProcessDir(linkDir, func(st *np.Stat) (bool, error) {
+		// Read symlink contents
+		fd, err := fsl.Open(linkPath+"/", np.OREAD)
+		assert.Nil(t, err, "Opening")
+		// Read symlink contents again
+		b, err = fsl.ReadFile(linkPath + "/")
+		assert.Nil(t, err, "Reading linked file")
+		assert.Equal(t, contents, string(b), "File contents don't match")
+
+		err = fsl.Close(fd)
+		assert.Nil(t, err, "closing linked file")
+
+		return false, nil
+	})
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -256,6 +342,7 @@ func TestCounter(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+// TODO: switch to using memfsd instead of locald
 func TestEphemeral(t *testing.T) {
 	ts := makeTstate(t)
 

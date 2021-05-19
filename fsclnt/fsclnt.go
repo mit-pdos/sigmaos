@@ -493,7 +493,7 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 		}
 		fdst, _ = fsc.lookupSt(fd)
 	}
-	db.DLPrintf("FSCLNT", "Read -> %v %v\n", reply, err)
+	db.DLPrintf("FSCLNT", "Read %v -> %v %v\n", fd, reply, err)
 	return reply.Data, err
 }
 

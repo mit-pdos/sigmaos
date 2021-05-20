@@ -224,6 +224,9 @@ func (srv *NpServer) relayReader() {
 			// If we're the tail, we always ack immediately
 			if srv.isTail() {
 				db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, wrap.Fcall)
+				if len(op.reply) > 0 {
+					op.replies <- op.reply
+				}
 				op.replies <- op.frame
 			}
 		}

@@ -9,8 +9,13 @@ import (
 	"log"
 	"math"
 	"net"
+	//	"os"
+	//	"os/user"
+	//	"path"
+	//	"runtime/pprof"
 	"strings"
 	"sync"
+	//	"time"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -153,6 +158,26 @@ func (srv *NpServer) setupRelay() {
 }
 
 func (srv *NpServer) relayReader() {
+
+	//	// ===== Profiling code =====
+	//	usr, err := user.Current()
+	//	if err != nil {
+	//		log.Fatalf("Error getting current user: %v", err)
+	//	}
+	//	f, err := os.Create(path.Join(usr.HomeDir, "replica-"+srv.replConfig.RelayAddr+".out"))
+	//	if err != nil {
+	//		log.Printf("Couldn't make profile file")
+	//	}
+	//	defer f.Close()
+	//	if err := pprof.StartCPUProfile(f); err != nil {
+	//		log.Fatalf("Couldn't start CPU profile: %v", err)
+	//	}
+	//	go func() {
+	//		defer pprof.StopCPUProfile()
+	//		time.Sleep(10 * time.Second)
+	//	}()
+	// ===== Profiling code =====
+
 	config := srv.replConfig
 	seqno := uint64(0)
 	for {

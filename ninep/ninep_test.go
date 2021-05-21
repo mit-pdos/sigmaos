@@ -1,7 +1,6 @@
 package ninep
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

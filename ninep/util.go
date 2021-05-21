@@ -1,11 +1,14 @@
 package ninep
 
 import (
+	"regexp"
 	"strings"
 )
 
 func Split(path string) []string {
+	slash := regexp.MustCompile(`//+`)
 	path = strings.TrimRight(path, "/")
+	path = slash.ReplaceAllString(path, "/")
 	p := strings.Split(path, "/")
 	return p
 }

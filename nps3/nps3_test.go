@@ -143,3 +143,43 @@ func TestStat(t *testing.T) {
 
 	ts.s.Shutdown(ts.FsLib)
 }
+
+func (ts *Tstate) s3Name(t *testing.T) string {
+	sts, err := ts.ReadDir("name/s3/")
+	assert.Nil(t, err, "name/s3")
+	assert.Equal(t, 1, len(sts))
+	name := "name/s3" + "/" + sts[0].Name
+	return name
+}
+
+func TestSymlinkFile(t *testing.T) {
+	ts := makeTstate(t)
+
+	dn := ts.s3Name(t)
+	fn := dn + "/b.txt"
+
+	_, err := ts.ReadFile(fn)
+	assert.Nil(t, err, "ReadFile")
+
+	fn = dn + "//b.txt"
+	_, err = ts.ReadFile(fn)
+	assert.Nil(t, err, "ReadFile")
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestSymlinkDir(t *testing.T) {
+	ts := makeTstate(t)
+
+	dn := ts.s3Name(t)
+
+	b, err := ts.ReadFile(dn)
+	assert.Nil(t, err, "ReadFile")
+	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+
+	dirents, err := ts.ReadDir(dn + "/")
+	assert.Nil(t, err, "ReadDir")
+	assert.Equal(t, 5, len(dirents))
+
+	ts.s.Shutdown(ts.FsLib)
+}

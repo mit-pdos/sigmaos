@@ -7,7 +7,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
+	"runtime/pprof"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	db "ulambda/debug"
@@ -36,6 +40,7 @@ type LocalD struct {
 	srv          *npsrv.NpServer
 	group        sync.WaitGroup
 	benchmarking bool
+	bFile        *os.File
 	*fslib.FsLib
 }
 
@@ -62,7 +67,10 @@ func MakeLocalD(bin string, benchFile string) *LocalD {
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
-	ld.benchmarking = benchFile == ""
+	ld.benchmarking = benchFile != ""
+	if ld.benchmarking {
+		ld.setupPprof(benchFile)
+	}
 	// Try to make scheduling directories if they don't already exist
 	fsl.Mkdir(fslib.RUNQ, 0777)
 	fsl.Mkdir(fslib.WAITQ, 0777)
@@ -97,6 +105,7 @@ func (ld *LocalD) Done() {
 	defer ld.mu.Unlock()
 
 	ld.done = true
+	ld.teardownPprof()
 	ld.SignalNewJob()
 }
 
@@ -253,6 +262,32 @@ func (ld *LocalD) runAll(ls []*Lambda) {
 	wg.Wait()
 }
 
+func (ld *LocalD) setupPprof(fpath string) {
+	if ld.benchmarking {
+		f, err := os.Create(fpath)
+		if err != nil {
+			log.Printf("Couldn't make profile file")
+		}
+		ld.bFile = f
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("Couldn't start CPU profile: %v", err)
+		}
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
+		go func() {
+			<-sigc
+			ld.teardownPprof()
+		}()
+	}
+}
+
+func (ld *LocalD) teardownPprof() {
+	if ld.benchmarking {
+		ld.bFile.Close()
+		pprof.StopCPUProfile()
+	}
+}
+
 func (ld *LocalD) setCoreAffinity() {
 	// XXX Currently, we just set the affinity for all available cores Linux seems
 	// to do a decent job of avoiding moving things around too much.
@@ -283,7 +318,7 @@ func (ld *LocalD) Worker(workerId uint) {
 			ld.checkWaitingLambdas()
 			continue
 		}
-		if err == io.EOF {
+		if err == io.EOF || strings.Contains(err.Error(), "unknown mount") {
 			continue
 		}
 		if err != nil {

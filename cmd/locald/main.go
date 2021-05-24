@@ -21,7 +21,7 @@ func main() {
 	//		locald.PrintTopology(ti)
 	//	}
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin <pprof-output-path>\n", os.Args[0])
 		os.Exit(1)
 	}
 	benchFile := ""

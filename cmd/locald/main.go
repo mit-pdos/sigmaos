@@ -20,10 +20,14 @@ func main() {
 	//	if err == nil {
 	//		locald.PrintTopology(ti)
 	//	}
-	if len(os.Args) != 2 {
+	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin\n", os.Args[0])
 		os.Exit(1)
 	}
-	ld := locald.MakeLocalD(os.Args[1])
+	benchFile := ""
+	if len(os.Args) == 3 {
+		benchFile = os.Args[2]
+	}
+	ld := locald.MakeLocalD(os.Args[1], benchFile)
 	ld.Work()
 }

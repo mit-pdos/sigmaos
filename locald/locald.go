@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -23,21 +24,22 @@ const (
 
 type LocalD struct {
 	//	mu deadlock.Mutex
-	mu   sync.Mutex
-	cond *sync.Cond
-	load int // XXX bogus
-	bin  string
-	nid  uint64
-	root *Dir
-	done bool
-	ip   string
-	ls   map[string]*Lambda
-	srv  *npsrv.NpServer
+	mu           sync.Mutex
+	cond         *sync.Cond
+	load         int // XXX bogus
+	bin          string
+	nid          uint64
+	root         *Dir
+	done         bool
+	ip           string
+	ls           map[string]*Lambda
+	srv          *npsrv.NpServer
+	group        sync.WaitGroup
+	benchmarking bool
 	*fslib.FsLib
-	group sync.WaitGroup
 }
 
-func MakeLocalD(bin string) *LocalD {
+func MakeLocalD(bin string, benchFile string) *LocalD {
 	ld := &LocalD{}
 	ld.cond = sync.NewCond(&ld.mu)
 	ld.load = 0
@@ -60,6 +62,7 @@ func MakeLocalD(bin string) *LocalD {
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
+	ld.benchmarking = benchFile == ""
 	// Try to make scheduling directories if they don't already exist
 	fsl.Mkdir(fslib.RUNQ, 0777)
 	fsl.Mkdir(fslib.WAITQ, 0777)
@@ -250,6 +253,24 @@ func (ld *LocalD) runAll(ls []*Lambda) {
 	wg.Wait()
 }
 
+func (ld *LocalD) setCoreAffinity() {
+	// XXX Currently, we just set the affinity for all available cores Linux seems
+	// to do a decent job of avoiding moving things around too much.
+	m := &CPUMask{}
+	for i := uint(0); i < NCores; i++ {
+		m.Set(i)
+	}
+	// XXX For my current benchmarking setup, core 0 is reserved for ZK.
+	if ld.benchmarking {
+		m.Clear(0)
+	}
+	osPid := os.Getpid()
+	err := SchedSetAffinity(osPid, m)
+	if err != nil {
+		log.Fatalf("Error setting core affinity: %v", err)
+	}
+}
+
 // Worker runs one lambda at a time
 func (ld *LocalD) Worker(workerId uint) {
 	ld.SignalNewJob()
@@ -287,15 +308,17 @@ func (ld *LocalD) Worker(workerId uint) {
 
 func (ld *LocalD) Work() {
 	var NWorkers uint
-	if NCores < 20 {
+	// XXX May need a certain number of workers for tests, but need
+	// NWorkers = NCores for benchmarks
+	if !ld.benchmarking && NCores < 20 {
 		NWorkers = 20
 	} else {
 		NWorkers = NCores
 	}
+	ld.setCoreAffinity()
 	for i := uint(0); i < NWorkers; i++ {
 		ld.group.Add(1)
 		go ld.Worker(i)
 	}
 	ld.group.Wait()
-
 }

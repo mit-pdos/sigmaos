@@ -43,6 +43,7 @@ def setup_sec_public(ec2, vpc, name):
     sg.authorize_ingress(CidrIp='173.76.110.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='66.92.71.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='75.100.81.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
+    sg.authorize_ingress(CidrIp='65.96.172.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='10.0.0.0/16', IpProtocol='tcp', FromPort=0, ToPort=65535,)
     return sg
     

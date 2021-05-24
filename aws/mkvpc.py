@@ -8,6 +8,7 @@ import boto3
 parser=argparse.ArgumentParser(description='mk VPC on AWS.')
 parser.add_argument('--vpc', metavar='vpc-id', help='Create only vm instance')
 parser.add_argument('name', help='name for this VPC')
+parser.add_argument('--instance_type', type=str, default='t3.small')
 args = vars(parser.parse_args())
 
 #
@@ -59,12 +60,12 @@ def setup_keypair(vpc, ec2):
     os.chmod(n, 0o400)
     return kpn
 
-def setup_instance(ec2, vpc, sg, sn, kpn):
+def setup_instance(ec2, vpc, sg, sn, kpn, instance_type):
     script=''
     with open('cloud-localds-user-data', 'r') as fin:
         script = fin.read()
 
-    instance = 't3.small'
+    instance = instance_type
     storage = 20
         
     vm = ec2.create_instances(
@@ -129,7 +130,7 @@ def main():
         sn = find_sn(vpc)
         sg = find_sg(vpc)
         kpn = kpname(vpc)
-        setup_instance(ec2, vpc, sg, sn, kpn)
+        setup_instance(ec2, vpc, sg, sn, kpn, args['instance_type'])
 
 if __name__ == "__main__":
     main()

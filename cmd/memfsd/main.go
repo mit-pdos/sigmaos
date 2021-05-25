@@ -8,10 +8,22 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/memfsd"
+	"ulambda/perf"
 )
 
 func main() {
 	if os.Args[2] != "" { // initial memfsd?
+		// If we're benchmarking, make a flame graph
+		p := perf.MakePerf()
+		if len(os.Args) >= 4 {
+			pprofPath := os.Args[3]
+			p.SetupPprof(pprofPath)
+		}
+		if len(os.Args) >= 5 {
+			utilPath := os.Args[4]
+			p.SetupCPUUtil(100, utilPath)
+		}
+		defer p.Teardown()
 		db.Name("memfsd")
 		fsd := memfsd.MakeFsd(os.Args[2])
 		fsd.Serve()

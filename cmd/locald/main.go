@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"ulambda/linuxsched"
 	"ulambda/locald"
 )
 
@@ -15,7 +16,7 @@ import (
 //
 
 func main() {
-	locald.ScanTopology()
+	linuxsched.ScanTopology()
 	//	ti, err := locald.ScanTopology()
 	//	if err == nil {
 	//		locald.PrintTopology(ti)
@@ -24,10 +25,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin <pprof-output-path>\n", os.Args[0])
 		os.Exit(1)
 	}
-	benchFile := ""
-	if len(os.Args) == 3 {
-		benchFile = os.Args[2]
+	pprofPath := ""
+	if len(os.Args) >= 3 {
+		pprofPath = os.Args[2]
 	}
-	ld := locald.MakeLocalD(os.Args[1], benchFile)
+	utilPath := ""
+	if len(os.Args) >= 4 {
+		utilPath = os.Args[3]
+	}
+	ld := locald.MakeLocalD(os.Args[1], pprofPath, utilPath)
 	ld.Work()
 }

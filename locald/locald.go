@@ -7,19 +7,18 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
-	"runtime/pprof"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	"ulambda/perf"
 )
 
 const (
@@ -28,23 +27,22 @@ const (
 
 type LocalD struct {
 	//	mu deadlock.Mutex
-	mu           sync.Mutex
-	cond         *sync.Cond
-	load         int // XXX bogus
-	bin          string
-	nid          uint64
-	root         *Dir
-	done         bool
-	ip           string
-	ls           map[string]*Lambda
-	srv          *npsrv.NpServer
-	group        sync.WaitGroup
-	benchmarking bool
-	bFile        *os.File
+	mu    sync.Mutex
+	cond  *sync.Cond
+	load  int // XXX bogus
+	bin   string
+	nid   uint64
+	root  *Dir
+	done  bool
+	ip    string
+	ls    map[string]*Lambda
+	srv   *npsrv.NpServer
+	group sync.WaitGroup
+	perf  *perf.Perf
 	*fslib.FsLib
 }
 
-func MakeLocalD(bin string, benchFile string) *LocalD {
+func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	ld := &LocalD{}
 	ld.cond = sync.NewCond(&ld.mu)
 	ld.load = 0
@@ -54,6 +52,7 @@ func MakeLocalD(bin string, benchFile string) *LocalD {
 	ld.root = ld.makeDir([]string{}, np.DMDIR, nil)
 	ld.root.time = time.Now().Unix()
 	ld.ls = map[string]*Lambda{}
+	ld.perf = perf.MakePerf()
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
 	if err != nil {
@@ -67,9 +66,13 @@ func MakeLocalD(bin string, benchFile string) *LocalD {
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
-	ld.benchmarking = benchFile != ""
-	if ld.benchmarking {
-		ld.setupPprof(benchFile)
+	pprof := pprofPath != ""
+	if pprof {
+		ld.perf.SetupPprof(pprofPath)
+	}
+	util := utilPath != ""
+	if util {
+		ld.perf.SetupCPUUtil(100, utilPath)
 	}
 	// Try to make scheduling directories if they don't already exist
 	fsl.Mkdir(fslib.RUNQ, 0777)
@@ -105,7 +108,7 @@ func (ld *LocalD) Done() {
 	defer ld.mu.Unlock()
 
 	ld.done = true
-	ld.teardownPprof()
+	ld.perf.Teardown()
 	ld.SignalNewJob()
 }
 
@@ -262,45 +265,19 @@ func (ld *LocalD) runAll(ls []*Lambda) {
 	wg.Wait()
 }
 
-func (ld *LocalD) setupPprof(fpath string) {
-	if ld.benchmarking {
-		f, err := os.Create(fpath)
-		if err != nil {
-			log.Printf("Couldn't make profile file")
-		}
-		ld.bFile = f
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatalf("Couldn't start CPU profile: %v", err)
-		}
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
-		go func() {
-			<-sigc
-			ld.teardownPprof()
-		}()
-	}
-}
-
-func (ld *LocalD) teardownPprof() {
-	if ld.benchmarking {
-		ld.bFile.Close()
-		pprof.StopCPUProfile()
-	}
-}
-
 func (ld *LocalD) setCoreAffinity() {
 	// XXX Currently, we just set the affinity for all available cores Linux seems
 	// to do a decent job of avoiding moving things around too much.
-	m := &CPUMask{}
-	for i := uint(0); i < NCores; i++ {
+	m := &linuxsched.CPUMask{}
+	for i := uint(0); i < linuxsched.NCores; i++ {
 		m.Set(i)
 	}
 	// XXX For my current benchmarking setup, core 0 is reserved for ZK.
-	if ld.benchmarking {
+	if ld.perf.RunningBenchmark() {
 		m.Clear(0)
 	}
 	osPid := os.Getpid()
-	err := SchedSetAffinity(osPid, m)
+	err := linuxsched.SchedSetAffinity(osPid, m)
 	if err != nil {
 		log.Fatalf("Error setting core affinity: %v", err)
 	}
@@ -345,10 +322,10 @@ func (ld *LocalD) Work() {
 	var NWorkers uint
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks
-	if !ld.benchmarking && NCores < 20 {
+	if !ld.perf.RunningBenchmark() && linuxsched.NCores < 20 {
 		NWorkers = 20
 	} else {
-		NWorkers = NCores
+		NWorkers = linuxsched.NCores
 	}
 	ld.setCoreAffinity()
 	for i := uint(0); i < NWorkers; i++ {

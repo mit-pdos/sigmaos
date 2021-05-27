@@ -70,6 +70,8 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	if pprof {
 		ld.perf.SetupPprof(pprofPath)
 	}
+	// Must set core affinity before starting CPU Util measurements
+	ld.setCoreAffinity()
 	util := utilPath != ""
 	if util {
 		ld.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
@@ -266,8 +268,8 @@ func (ld *LocalD) runAll(ls []*Lambda) {
 }
 
 func (ld *LocalD) setCoreAffinity() {
-	// XXX Currently, we just set the affinity for all available cores Linux seems
-	// to do a decent job of avoiding moving things around too much.
+	// XXX Currently, we just set the affinity for all available cores since Linux
+	// seems to do a decent job of avoiding moving things around too much.
 	m := &linuxsched.CPUMask{}
 	for i := uint(0); i < linuxsched.NCores; i++ {
 		m.Set(i)
@@ -326,7 +328,6 @@ func (ld *LocalD) Work() {
 			NWorkers -= 1
 		}
 	}
-	ld.setCoreAffinity()
 	for i := uint(0); i < NWorkers; i++ {
 		ld.group.Add(1)
 		go ld.Worker(i)

@@ -322,6 +322,9 @@ func (ld *LocalD) Work() {
 		NWorkers = 20
 	} else {
 		NWorkers = linuxsched.NCores
+		if ld.perf.RunningBenchmark() {
+			NWorkers -= 1
+		}
 	}
 	ld.setCoreAffinity()
 	for i := uint(0); i < NWorkers; i++ {

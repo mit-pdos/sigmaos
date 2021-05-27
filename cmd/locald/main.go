@@ -18,7 +18,7 @@ import (
 func main() {
 	linuxsched.ScanTopology()
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin <pprof-output-path>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin <pprof-output-path> <util-path>\n", os.Args[0])
 		os.Exit(1)
 	}
 	pprofPath := ""

@@ -64,7 +64,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	ld.FsLib = fsl
 	err = fsl.PostServiceUnion(ld.srv.MyAddr(), fslib.LOCALD_ROOT, ld.srv.MyAddr())
 	if err != nil {
-		log.Fatalf("PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
+		log.Fatalf("locald PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)
 	}
 	pprof := pprofPath != ""
 	if pprof {
@@ -276,11 +276,7 @@ func (ld *LocalD) setCoreAffinity() {
 	if ld.perf.RunningBenchmark() {
 		m.Clear(0)
 	}
-	osPid := os.Getpid()
-	err := linuxsched.SchedSetAffinity(osPid, m)
-	if err != nil {
-		log.Fatalf("Error setting core affinity: %v", err)
-	}
+	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 
 // Worker runs one lambda at a time

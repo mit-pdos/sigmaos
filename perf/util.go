@@ -27,6 +27,7 @@ type Perf struct {
 	mu             sync.Mutex
 	done           uint32
 	util           bool
+	utilChan       chan bool
 	utilPath       string
 	utilFile       *os.File
 	cpuCyclesBusy  []float64
@@ -41,6 +42,8 @@ type Perf struct {
 
 func MakePerf() *Perf {
 	p := &Perf{}
+	p.cores = map[string]bool{}
+	p.utilChan = make(chan bool, 1)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
 	go func() {
@@ -60,7 +63,7 @@ func (p *Perf) getCPUSample() (idle, total uint64) {
 	if err != nil {
 		return
 	}
-	lines := strings.Split(string(contents), "\n")
+	lines := strings.Split(strings.TrimSpace(string(contents)), "\n")
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if active, ok := p.cores[fields[0]]; ok && active {
@@ -101,6 +104,7 @@ func (p *Perf) monitorCPUUtil(hz int) {
 		idle0 = idle1
 		total0 = total1
 	}
+	p.utilChan <- true
 }
 
 // Only count cycles on cores we can run on
@@ -159,7 +163,7 @@ func (p *Perf) Teardown() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.done == 0 {
-		p.done = 1
+		atomic.StoreUint32(&p.done, 1)
 		p.teardownPprof()
 		p.teardownUtil()
 	}
@@ -176,6 +180,7 @@ func (p *Perf) teardownPprof() {
 
 func (p *Perf) teardownUtil() {
 	if p.util {
+		<-p.utilChan
 		// Avoid double-closing
 		p.util = false
 		for i := 0; i < len(p.cpuCyclesBusy); i++ {

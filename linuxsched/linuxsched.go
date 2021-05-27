@@ -114,7 +114,7 @@ func CreateCPUMaskOfOne(core uint) *CPUMask {
 
 // SchedSetAffinityAllTasks pins all of a process's tasks to a mask of cores.
 func SchedSetAffinityAllTasks(procPid int, m *CPUMask) error {
-	pids := []int{procPid}
+	pids := []int{}
 	taskDirPath := path.Join("/proc", strconv.Itoa(procPid), "task")
 	ps, err := ioutil.ReadDir(taskDirPath)
 	if err != nil {

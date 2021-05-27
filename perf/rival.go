@@ -21,7 +21,6 @@ type Rival struct {
 	sleepIntervalUsecs int
 	killed             bool
 	ninep              bool
-	p                  *Perf
 	*fslib.FsLib
 }
 
@@ -61,9 +60,6 @@ func MakeRival(args []string) (*Rival, error) {
 		log.Fatalf("Unexpected rival spawn type: %v", args[2])
 	}
 
-	r.p = MakePerf()
-	r.p.SetupCPUUtil(CPU_UTIL_HZ, args[3])
-
 	return r, nil
 }
 
@@ -100,5 +96,4 @@ func (r *Rival) Work() {
 		time.Sleep(time.Duration(r.sleepIntervalUsecs) * time.Microsecond)
 	}
 	r.killed = true
-	r.p.Teardown()
 }

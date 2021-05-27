@@ -17,6 +17,10 @@ import (
 	"ulambda/linuxsched"
 )
 
+const (
+	CPU_UTIL_HZ = 100
+)
+
 // Tracks performance statistics for any cores on which the current process is
 // able to run.
 type Perf struct {

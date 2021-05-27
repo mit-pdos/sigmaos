@@ -7,11 +7,13 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
+	"ulambda/linuxsched"
 	"ulambda/memfsd"
 	"ulambda/perf"
 )
 
 func main() {
+	linuxsched.ScanTopology()
 	if os.Args[2] != "" { // initial memfsd?
 		// If we're benchmarking, make a flame graph
 		p := perf.MakePerf()
@@ -21,7 +23,11 @@ func main() {
 		}
 		if len(os.Args) >= 5 {
 			utilPath := os.Args[4]
-			p.SetupCPUUtil(100, utilPath)
+			p.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
+		}
+		if p.RunningBenchmark() {
+			// XXX For my current benchmarking setup, ZK gets core 0 all to itself.
+			linuxsched.SchedSetAffinityAllTasks(os.Getpid(), linuxsched.CreateCPUMaskOfOne(0))
 		}
 		defer p.Teardown()
 		db.Name("memfsd")

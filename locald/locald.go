@@ -72,7 +72,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	}
 	util := utilPath != ""
 	if util {
-		ld.perf.SetupCPUUtil(100, utilPath)
+		ld.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 	// Try to make scheduling directories if they don't already exist
 	fsl.Mkdir(fslib.RUNQ, 0777)

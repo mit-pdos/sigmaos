@@ -80,6 +80,29 @@ func (p *Perf) getCPUSample() (idle, total uint64) {
 	return
 }
 
+func (p *Perf) monitorCPUUtil(hz int) {
+	sleepMsecs := 1000 / hz
+	var idle0 uint64
+	var total0 uint64
+	var idle1 uint64
+	var total1 uint64
+	idle0, total0 = getCPUSample()
+	for atomic.LoadUint32(&p.done) != 1 {
+		time.Sleep(time.Duration(sleepMsecs) * time.Millisecond)
+		idle1, total1 = p.getCPUSample()
+		idleDelta := float64(idle1 - idle0)
+		totalDelta := float64(total1 - total0)
+		util := 100.0 * (totalDelta - idleDelta) / totalDelta
+		//		log.Printf("CPU util: %f [busy: %f, total: %f]\n", util, totalDelta-idleDelta, totalDelta)
+		// Record number of cycles busy, utilized, and total
+		p.cpuCyclesBusy = append(p.cpuCyclesBusy, totalDelta-idleDelta)
+		p.cpuCyclesTotal = append(p.cpuCyclesTotal, totalDelta)
+		p.cpuUtilPct = append(p.cpuUtilPct, util)
+		idle0 = idle1
+		total0 = total1
+	}
+}
+
 // Only count cycles on cores we can run on
 func (p *Perf) getActiveCores() {
 	linuxsched.ScanTopology()
@@ -113,26 +136,7 @@ func (p *Perf) SetupCPUUtil(hz int, fpath string) {
 
 	p.mu.Unlock()
 
-	sleepMsecs := 1000 / hz
-	var idle0 uint64
-	var total0 uint64
-	var idle1 uint64
-	var total1 uint64
-	idle0, total0 = getCPUSample()
-	for atomic.LoadUint32(&p.done) != 1 {
-		time.Sleep(time.Duration(sleepMsecs) * time.Millisecond)
-		idle1, total1 = p.getCPUSample()
-		idleDelta := float64(idle1 - idle0)
-		totalDelta := float64(total1 - total0)
-		util := 100.0 * (totalDelta - idleDelta) / totalDelta
-		//		log.Printf("CPU util: %f [busy: %f, total: %f]\n", util, totalDelta-idleDelta, totalDelta)
-		// Record number of cycles busy, utilized, and total
-		p.cpuCyclesBusy = append(p.cpuCyclesBusy, totalDelta-idleDelta)
-		p.cpuCyclesTotal = append(p.cpuCyclesTotal, totalDelta)
-		p.cpuUtilPct = append(p.cpuUtilPct, util)
-		idle0 = idle1
-		total0 = total1
-	}
+	go p.monitorCPUUtil(hz)
 }
 
 func (p *Perf) SetupPprof(fpath string) {

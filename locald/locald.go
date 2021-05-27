@@ -291,7 +291,7 @@ func (ld *LocalD) Worker(workerId uint) {
 			ld.checkWaitingLambdas()
 			continue
 		}
-		if err == io.EOF || strings.Contains(err.Error(), "unknown mount") {
+		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "unknown mount")) {
 			continue
 		}
 		if err != nil {

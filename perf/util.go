@@ -32,6 +32,7 @@ type Perf struct {
 	pprofPath      string
 	pprofFile      *os.File
 	cores          map[string]bool
+	sigc           chan os.Signal
 }
 
 func MakePerf() *Perf {
@@ -41,6 +42,7 @@ func MakePerf() *Perf {
 	go func() {
 		<-sigc
 		p.Teardown()
+		os.Exit(0)
 	}()
 	return p
 }
@@ -74,11 +76,18 @@ func (p *Perf) getCPUSample() (idle, total uint64) {
 	return
 }
 
+// Only count cycles on cores we can run on
 func (p *Perf) getActiveCores() {
 	linuxsched.ScanTopology()
-	for i := 0; i < int(linuxsched.NCores); i++ {
-		// TODO: get actual active cores which we can run on (i.e. check affinity)
-		p.cores["cpu"+strconv.Itoa(i)] = true
+	// Get the cores we can run on
+	m, err := linuxsched.SchedGetAffinity(os.Getpid())
+	if err != nil {
+		log.Fatalf("Error getting affinity mask: %v", err)
+	}
+	for i := uint(0); i < linuxsched.NCores; i++ {
+		if m.Test(i) {
+			p.cores["cpu"+strconv.Itoa(int(i))] = true
+		}
 	}
 }
 
@@ -139,15 +148,16 @@ func (p *Perf) SetupPprof(fpath string) {
 }
 
 func (p *Perf) Teardown() {
-	p.done = 1
-	p.teardownPprof()
-	p.teardownUtil()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.done == 0 {
+		p.done = 1
+		p.teardownPprof()
+		p.teardownUtil()
+	}
 }
 
 func (p *Perf) teardownPprof() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if p.pprof {
 		// Avoid double-closing
 		p.pprof = false
@@ -157,9 +167,6 @@ func (p *Perf) teardownPprof() {
 }
 
 func (p *Perf) teardownUtil() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if p.util {
 		// Avoid double-closing
 		p.util = false

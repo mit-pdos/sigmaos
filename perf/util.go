@@ -86,7 +86,7 @@ func (p *Perf) monitorCPUUtil(hz int) {
 	var total0 uint64
 	var idle1 uint64
 	var total1 uint64
-	idle0, total0 = getCPUSample()
+	idle0, total0 = p.getCPUSample()
 	for atomic.LoadUint32(&p.done) != 1 {
 		time.Sleep(time.Duration(sleepMsecs) * time.Millisecond)
 		idle1, total1 = p.getCPUSample()

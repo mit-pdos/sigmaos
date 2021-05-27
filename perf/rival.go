@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
+	"ulambda/linuxsched"
 )
 
 const (
@@ -21,11 +22,13 @@ type Rival struct {
 	sleepIntervalUsecs int
 	killed             bool
 	ninep              bool
+	dim                string
+	its                string
 	*fslib.FsLib
 }
 
 func MakeRival(args []string) (*Rival, error) {
-	if len(args) < 4 {
+	if len(args) < 5 {
 		return nil, errors.New("MakeRival: too few arguments")
 	}
 	log.Printf("MakeRival: %v\n", args)
@@ -60,31 +63,63 @@ func MakeRival(args []string) (*Rival, error) {
 		log.Fatalf("Unexpected rival spawn type: %v", args[2])
 	}
 
+	r.dim = args[3]
+	if err != nil {
+		log.Fatalf("Invalid dimension: %v, %v\n", args[3], err)
+	}
+
+	r.dim = args[4]
+	if err != nil {
+		log.Fatalf("Invalid dimension: %v, %v\n", args[4], err)
+	}
+
 	return r, nil
 }
 
 func (r *Rival) spawnSpinner(pid string) {
-	dim := "64"
-	its := "60"
 	if r.ninep {
-		a := &fslib.Attr{pid, "bin/c-spinner", "", []string{dim, its}, nil, nil, nil, 0}
+		a := &fslib.Attr{pid, "bin/c-spinner", "", []string{r.dim, r.its}, nil, nil, nil, 0}
+		start := time.Now()
 		err := r.Spawn(a)
 		if err != nil {
 			log.Fatalf("couldn't spawn ninep spinner %v: %v\n", pid, err)
 		}
+		go func() {
+			_, err := r.Wait(pid)
+			if err != nil {
+				log.Printf("Error running lambda: %v", err)
+			}
+			end := time.Now()
+			elapsed := end.Sub(start)
+			log.Printf("Ninep elapsed time: %f usec(s)\n", float64(elapsed.Microseconds()))
+		}()
 	} else {
-		cmd := exec.Command("./bin/c-spinner", []string{pid, dim, its, "native"}...)
+		cmd := exec.Command("./bin/c-spinner", []string{pid, r.dim, r.its, "native"}...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
+		start := time.Now()
 		err := cmd.Start()
 		if err != nil {
 			log.Printf("Error starting native spinner: %v, %v\n", pid, err)
 		}
+		go func() {
+			err := cmd.Wait()
+			if err != nil {
+				log.Printf("Error running command: %v", err)
+			}
+			end := time.Now()
+			elapsed := end.Sub(start)
+			log.Printf("Ninep elapsed time: %f usec(s)\n", float64(elapsed.Microseconds()))
+		}()
 	}
 }
 
 func (r *Rival) Work() {
+	// For current benchmarking setup, restrict to core 0
+	linuxsched.ScanTopology()
+	m := linuxsched.CreateCPUMaskOfOne(0)
+	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 	start := time.Now()
 	for {
 		// Check if we're done

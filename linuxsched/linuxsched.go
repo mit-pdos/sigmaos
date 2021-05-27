@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math/bits"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -111,14 +112,49 @@ func CreateCPUMaskOfOne(core uint) *CPUMask {
 	return mask
 }
 
+// SchedSetAffinityAllTasks pins all of a process's tasks to a mask of cores.
+func SchedSetAffinityAllTasks(procPid int, m *CPUMask) error {
+	pids := []int{procPid}
+	taskDirPath := path.Join("/proc", strconv.Itoa(procPid), "task")
+	ps, err := ioutil.ReadDir(taskDirPath)
+	if err != nil {
+		return fmt.Errorf("Error getting task pids: %v, %v", taskDirPath, err)
+	}
+	for _, p := range ps {
+		pid, err := strconv.Atoi(p.Name())
+		if err != nil {
+			return fmt.Errorf("Error converting task pid to int: %v, %v", p.Name(), err)
+		}
+		pids = append(pids, pid)
+	}
+	for _, pid := range pids {
+		err := SchedSetAffinity(pid, m)
+		if err != nil {
+			return fmt.Errorf("Error setting core affinity: %v", err)
+		}
+	}
+	return nil
+}
+
 // SchedSetAffinity pins a task to a mask of cores.
 func SchedSetAffinity(pid int, m *CPUMask) error {
 	_, _, errno := syscall.Syscall(syscall.SYS_SCHED_SETAFFINITY,
-		uintptr(pid), uintptr(NCores), uintptr(unsafe.Pointer(&m.mask)))
+		uintptr(pid), uintptr(len(m.mask)*8), uintptr(unsafe.Pointer(&m.mask)))
 	if errno != 0 {
 		return errno
 	}
 	return nil
+}
+
+// SchedSetAffinity pins a task to a mask of cores.
+func SchedGetAffinity(pid int) (*CPUMask, error) {
+	m := new(CPUMask)
+	_, _, errno := syscall.Syscall(syscall.SYS_SCHED_GETAFFINITY,
+		uintptr(pid), uintptr( /*len(m.mask)*8*/ 128), uintptr(unsafe.Pointer(&m.mask)))
+	if errno != 0 {
+		return nil, errno
+	}
+	return m, nil
 }
 
 func fsReadInt(path string) (int, error) {

@@ -2,8 +2,10 @@ package npobjsrv
 
 import (
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 
@@ -46,11 +48,15 @@ type Stats struct {
 	Nstat     Tcounter
 	Nwstat    Tcounter
 	Nrenameat Tcounter
+
+	mu    sync.Mutex
+	paths map[string]int
 }
 
 func MkStats() *Stats {
-	sts := &Stats{}
-	return sts
+	st := &Stats{}
+	st.paths = make(map[string]int)
+	return st
 }
 
 func (st *Stats) Write(off np.Toffset, data []byte) (np.Tsize, error) {
@@ -73,18 +79,51 @@ func (st *Stats) Len() np.Tlength {
 	return np.Tlength(len(b))
 }
 
+func (st *Stats) Path(p []string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	path := np.Join(p)
+	if _, ok := st.paths[path]; !ok {
+		st.paths[path] = 0
+	}
+	st.paths[path] += 1
+}
+
+type pair struct {
+	path string
+	cnt  int
+}
+
+func (st *Stats) SortPath() []pair {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	var s []pair
+
+	for k, v := range st.paths {
+		s = append(s, pair{k, v})
+	}
+	sort.Slice(s, func(i, j int) bool {
+		return s[i].cnt > s[j].cnt
+	})
+	return s
+}
+
 func (st *Stats) String() string {
 	v := reflect.ValueOf(*st)
 	s := ""
 	for i := 0; i < v.NumField(); i++ {
-		if i > 0 {
-			s += "\n"
-		}
 		t := v.Field(i).Type().String()
 		if strings.HasSuffix(t, "Tcounter") {
 			n := v.Field(i).Interface().(Tcounter)
-			s += "#" + v.Type().Field(i).Name + ": " + strconv.FormatInt(int64(n), 10)
+			s += "#" + v.Type().Field(i).Name + ": " + strconv.FormatInt(int64(n), 10) + "\n"
 		}
 	}
-	return s + "\n"
+	s = s + "\nTop paths:\n"
+	ss := st.SortPath()
+	for _, p := range ss {
+		s += p.path + ":" + strconv.Itoa(p.cnt) + "\n"
+	}
+	return s
 }

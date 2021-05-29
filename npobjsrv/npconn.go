@@ -178,6 +178,9 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
+	if npc.st != nil {
+		npc.st.Path(f.path)
+	}
 	err := o.Open(f.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}

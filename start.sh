@@ -15,6 +15,9 @@ if [[ -z "${NAMED}" ]]; then
 fi
 
 ./bin/memfsd 0 ":1111" &
+
+sleep 1
+
 ./bin/nps3d &
 ./bin/npuxd &
 ./bin/locald ./ &

@@ -35,6 +35,7 @@ func MakeNpUx(mount string) *NpUx {
 	}
 	npux.srv = npsrv.MakeNpServer(npux, ip+":0")
 	fsl := fslib.MakeFsLib("npux")
+	fsl.Mkdir(fslib.UX, 0777)
 	err = fsl.PostServiceUnion(npux.srv.MyAddr(), fslib.UX, npux.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", npux.srv.MyAddr(), err)
@@ -64,6 +65,10 @@ func (npux *NpUx) WatchTable() *npo.WatchTable {
 }
 
 func (npux *NpUx) ConnTable() *npo.ConnTable {
+	return nil
+}
+
+func (npux *NpUx) Stats() *npo.Stats {
 	return nil
 }
 

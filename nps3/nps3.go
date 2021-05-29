@@ -54,6 +54,7 @@ func MakeNps3() *Nps3 {
 	}
 	nps3.srv = npsrv.MakeNpServer(nps3, ip+":0")
 	fsl := fslib.MakeFsLib("nps3")
+	fsl.Mkdir(fslib.S3, 0777)
 	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), fslib.S3, nps3.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", nps3.srv.MyAddr(), err)
@@ -84,5 +85,9 @@ func (nps3 *Nps3) WatchTable() *npo.WatchTable {
 }
 
 func (nps3 *Nps3) ConnTable() *npo.ConnTable {
+	return nil
+}
+
+func (nps3 *Nps3) Stats() *npo.Stats {
 	return nil
 }

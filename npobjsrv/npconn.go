@@ -18,6 +18,7 @@ type NpConn struct {
 	ephemeral map[NpObj]*Fid
 	wt        *WatchTable
 	ct        *ConnTable
+	st        *Stats
 }
 
 func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
@@ -28,6 +29,7 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc.ephemeral = make(map[NpObj]*Fid)
 	npc.wt = osrv.WatchTable()
 	npc.ct = osrv.ConnTable()
+	npc.st = osrv.Stats()
 	if npc.ct != nil {
 		npc.ct.Add(npc)
 	}
@@ -110,6 +112,9 @@ func makeQids(os []NpObj) []np.Tqid {
 }
 
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nwalk.Inc()
+	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -146,6 +151,9 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 // XXX call close? keep refcnt per obj?
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
+	if npc.st != nil {
+		npc.st.Nclunk.Inc()
+	}
 	_, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -157,6 +165,9 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 }
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nopen.Inc()
+	}
 	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -176,6 +187,9 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nwatchv.Inc()
+	}
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -198,6 +212,9 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Ncreate.Inc()
+	}
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -256,10 +273,16 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 }
 
 func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nflush.Inc()
+	}
 	return nil
 }
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nread.Inc()
+	}
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -270,6 +293,9 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nreadv.Inc()
+	}
 	db.DLPrintf("9POBJ", "ReadV %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -279,6 +305,9 @@ func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nwrite.Inc()
+	}
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -293,6 +322,9 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 }
 
 func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nwritev.Inc()
+	}
 	db.DLPrintf("9POBJ", "WriteV %v\n", args)
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -307,6 +339,9 @@ func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 }
 
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nremove.Inc()
+	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -334,6 +369,9 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 }
 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nstat.Inc()
+	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -352,6 +390,9 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nwstat.Inc()
+	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
@@ -379,6 +420,9 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 }
 
 func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+	if npc.st != nil {
+		npc.st.Nrenameat.Inc()
+	}
 	oldf, ok := npc.lookup(args.OldFid)
 	if !ok {
 		return np.ErrUnknownfid

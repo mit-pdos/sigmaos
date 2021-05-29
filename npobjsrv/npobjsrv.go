@@ -10,6 +10,7 @@ type NpObjSrv interface {
 	Done()
 	WatchTable() *WatchTable
 	ConnTable() *ConnTable
+	Stats() *Stats
 }
 
 type CtxI interface {

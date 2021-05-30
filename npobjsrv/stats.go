@@ -25,13 +25,6 @@ func (c *Tcounter) Inc() {
 	}
 }
 
-func (c *TCycles) Add(m uint64) {
-	if TIMING {
-		n := (*uint64)(unsafe.Pointer(c))
-		atomic.AddUint64(n, m)
-	}
-}
-
 // XXX separate cache lines
 type Stats struct {
 	Nwalk     Tcounter
@@ -95,10 +88,7 @@ type pair struct {
 	cnt  int
 }
 
-func (st *Stats) SortPath() []pair {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-
+func (st *Stats) SortPathL() []pair {
 	var s []pair
 
 	for k, v := range st.paths {
@@ -111,17 +101,22 @@ func (st *Stats) SortPath() []pair {
 }
 
 func (st *Stats) String() string {
-	v := reflect.ValueOf(*st)
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	v := reflect.ValueOf(st).Elem()
 	s := ""
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		if strings.HasSuffix(t, "Tcounter") {
-			n := v.Field(i).Interface().(Tcounter)
+			p := v.Field(i).Addr().Interface().(*Tcounter)
+			ptr := (*uint64)(unsafe.Pointer(p))
+			n := atomic.LoadUint64(ptr)
 			s += "#" + v.Type().Field(i).Name + ": " + strconv.FormatInt(int64(n), 10) + "\n"
 		}
 	}
 	s = s + "\nTop paths:\n"
-	ss := st.SortPath()
+	ss := st.SortPathL()
 	for _, p := range ss {
 		s += p.path + ":" + strconv.Itoa(p.cnt) + "\n"
 	}

@@ -23,7 +23,7 @@ remote_baseline=$measurements/spin_test_remote_baseline.txt
 echo "Spinning perf test, dimension=$dim max iterations per lambda invocation=$max_its"
 if [ ! -d "$measurements" ]
 then
-  mkdir $measurements
+  mkdir -p $measurements
 fi
 
 echo "Stopping any currently running 9p infrastructure..."

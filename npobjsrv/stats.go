@@ -1,9 +1,10 @@
 package npobjsrv
 
 import (
+	"encoding/json"
+	"log"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -43,12 +44,12 @@ type Stats struct {
 	Nrenameat Tcounter
 
 	mu    sync.Mutex
-	paths map[string]int
+	Paths map[string]int
 }
 
 func MkStats() *Stats {
 	st := &Stats{}
-	st.paths = make(map[string]int)
+	st.Paths = make(map[string]int)
 	return st
 }
 
@@ -60,7 +61,10 @@ func (st *Stats) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
 	if st == nil {
 		return nil, nil
 	}
-	b := []byte(st.String())
+	if off > 0 {
+		return nil, nil
+	}
+	b := st.stats()
 	return b, nil
 }
 
@@ -68,7 +72,7 @@ func (st *Stats) Len() np.Tlength {
 	if st == nil {
 		return 0
 	}
-	b := []byte(st.String())
+	b := st.stats()
 	return np.Tlength(len(b))
 }
 
@@ -77,10 +81,10 @@ func (st *Stats) Path(p []string) {
 	defer st.mu.Unlock()
 
 	path := np.Join(p)
-	if _, ok := st.paths[path]; !ok {
-		st.paths[path] = 0
+	if _, ok := st.Paths[path]; !ok {
+		st.Paths[path] = 0
 	}
-	st.paths[path] += 1
+	st.Paths[path] += 1
 }
 
 type pair struct {
@@ -91,7 +95,7 @@ type pair struct {
 func (st *Stats) SortPathL() []pair {
 	var s []pair
 
-	for k, v := range st.paths {
+	for k, v := range st.Paths {
 		s = append(s, pair{k, v})
 	}
 	sort.Slice(s, func(i, j int) bool {
@@ -100,25 +104,35 @@ func (st *Stats) SortPathL() []pair {
 	return s
 }
 
-func (st *Stats) String() string {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+// Make a copy of st while concurrent Inc()s may happen
+func (st *Stats) acopy() *Stats {
+	stcp := &Stats{}
 
 	v := reflect.ValueOf(st).Elem()
-	s := ""
+	v1 := reflect.ValueOf(stcp).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		if strings.HasSuffix(t, "Tcounter") {
 			p := v.Field(i).Addr().Interface().(*Tcounter)
 			ptr := (*uint64)(unsafe.Pointer(p))
 			n := atomic.LoadUint64(ptr)
-			s += "#" + v.Type().Field(i).Name + ": " + strconv.FormatInt(int64(n), 10) + "\n"
+			p1 := v1.Field(i).Addr().Interface().(*Tcounter)
+			*p1 = Tcounter(n)
 		}
 	}
-	s = s + "\nTop paths:\n"
-	ss := st.SortPathL()
-	for _, p := range ss {
-		s += p.path + ":" + strconv.Itoa(p.cnt) + "\n"
+
+	return stcp
+}
+
+func (st *Stats) stats() []byte {
+	stcp := st.acopy()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	stcp.Paths = st.Paths
+
+	data, err := json.Marshal(*stcp)
+	if err != nil {
+		log.Fatalf("stats: json failed %v\n", err)
 	}
-	return s
+	return data
 }

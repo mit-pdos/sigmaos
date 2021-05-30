@@ -7,7 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	// np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 type Monitor struct {
@@ -37,13 +37,12 @@ func (mo *Monitor) Work() {
 	for _, st := range sts {
 		kvd := "name/memfsd/" + st.Name + "/statsd"
 		log.Printf("kv: %v\n", kvd)
-		b, err := mo.ReadFile(kvd)
+		stats := npo.Stats{}
+		err := mo.ReadFileJson(kvd, &stats)
 		if err != nil {
-			log.Printf("Readdir failed %v\n", err)
+			log.Printf("ReadFileJson failed %v\n", err)
 			os.Exit(1)
 		}
-		// re := regexp.MustCompile(`#Nread: (?P<cnt>\d+)`)
-		// n, err := strconv.Atoi(string(re.FindSubmatch(b)[1]))
-		log.Printf("stats:\n%v\n", string(b))
+		log.Printf("stats:\n%v\n", stats)
 	}
 }

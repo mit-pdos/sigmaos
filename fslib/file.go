@@ -154,6 +154,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
 	b, err := fl.ReadFile(name)
+	log.Printf("b = %v\n", string(b))
 	if err != nil {
 		return err
 	}

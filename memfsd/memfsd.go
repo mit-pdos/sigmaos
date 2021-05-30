@@ -1,6 +1,7 @@
 package memfsd
 
 import (
+	"log"
 	"net"
 	"sync"
 
@@ -26,13 +27,14 @@ func (ctx *Ctx) Uname() string {
 }
 
 type Fsd struct {
-	mu   sync.Mutex
-	root *memfs.Dir
-	srv  *npsrv.NpServer
-	ch   chan bool
-	addr string
-	wt   *npo.WatchTable
-	ct   *npo.ConnTable
+	mu    sync.Mutex
+	root  *memfs.Dir
+	srv   *npsrv.NpServer
+	ch    chan bool
+	addr  string
+	wt    *npo.WatchTable
+	ct    *npo.ConnTable
+	stats *npo.Stats
 }
 
 func MakeFsd(addr string) *Fsd {
@@ -41,8 +43,12 @@ func MakeFsd(addr string) *Fsd {
 	fsd.addr = addr
 	fsd.wt = npo.MkWatchTable()
 	fsd.ct = npo.MkConnTable()
+	fsd.stats = npo.MkStats()
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeNpServer(fsd, addr)
+	if err := fsd.MkNod("statsd", fsd.stats); err != nil {
+		log.Fatalf("Mknod failed %v\n", err)
+	}
 	return fsd
 }
 
@@ -62,6 +68,10 @@ func (fsd *Fsd) WatchTable() *npo.WatchTable {
 
 func (fsd *Fsd) ConnTable() *npo.ConnTable {
 	return fsd.ct
+}
+
+func (fsd *Fsd) Stats() *npo.Stats {
+	return fsd.stats
 }
 
 func (fsd *Fsd) Addr() string {

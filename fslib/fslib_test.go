@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -260,6 +261,30 @@ func TestSymlink3(t *testing.T) {
 
 		return false, nil
 	})
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestStatsd(t *testing.T) {
+	ts := makeTstate(t)
+
+	b, err := ts.ReadFile("name/statsd")
+	assert.Nil(t, err, "statsd")
+	re := regexp.MustCompile(`#Nread: (?P<cnt>\d+)`)
+	n, err := strconv.Atoi(string(re.FindSubmatch(b)[1]))
+	assert.Equal(t, nil, err, "Nread")
+	assert.Equal(t, 1, n, "Nread")
+
+	for i := 0; i < 1000; i++ {
+		_, err := ts.ReadFile("name/statsd")
+		assert.Nil(t, err, "statsd")
+	}
+	b, err = ts.ReadFile("name/statsd")
+	assert.Nil(t, err, "statsd")
+	re = regexp.MustCompile(`statsd:(?P<cnt>\d+)`)
+	n, err = strconv.Atoi(string(re.FindSubmatch(b)[1]))
+	assert.Equal(t, nil, err, "statsd")
+	assert.Equal(t, 1002, n, "statsd")
 
 	ts.s.Shutdown(ts.FsLib)
 }

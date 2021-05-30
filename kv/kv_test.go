@@ -2,6 +2,7 @@ package kv
 
 import (
 	"log"
+	// "regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -129,11 +130,7 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func ConcurN(t *testing.T, nclerk int) {
-	const NMORE = 10
-
-	ts := makeTstate(t)
-
+func (ts *Tstate) setup(nclerk int) {
 	// add 1 so that we can put to initialize
 	ts.mfss = append(ts.mfss, ts.spawnMemFS())
 	ts.runBalancer("add", ts.mfss[0])
@@ -144,12 +141,19 @@ func ConcurN(t *testing.T, nclerk int) {
 	}
 
 	if nclerk > 0 {
-		log.Printf("make keys\n")
 		for i := 0; i < NKEYS; i++ {
 			err := ts.clrks[0].Put(key(i), key(i))
-			assert.Nil(t, err, "Put")
+			assert.Nil(ts.t, err, "Put")
 		}
 	}
+}
+
+func ConcurN(t *testing.T, nclerk int) {
+	const NMORE = 10
+
+	ts := makeTstate(t)
+
+	ts.setup(nclerk)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -196,4 +200,55 @@ func TestConcur1(t *testing.T) {
 
 func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
+}
+
+func (ts *Tstate) spawnMonitor() string {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = "bin/monitor"
+	a.Args = []string{}
+	a.PairDep = nil
+	a.ExitDep = nil
+	ts.fsl.Spawn(&a)
+	return a.Pid
+}
+
+func (ts *Tstate) runMonitor() {
+	pid := ts.spawnMonitor()
+	ok, err := ts.fsl.Wait(pid)
+	assert.Nil(ts.t, err, "Wait")
+	assert.Equal(ts.t, "OK", string(ok))
+	log.Printf("monitor %v done\n", pid)
+}
+
+func TestMonitor(t *testing.T) {
+	nclerk := 1
+	ts := makeTstate(t)
+
+	ts.setup(nclerk)
+
+	ch := make(chan bool)
+	for i := 0; i < nclerk; i++ {
+		go ts.clerk(i, ch)
+	}
+
+	time.Sleep(500 * time.Millisecond)
+
+	for i := 0; i < 5; i++ {
+		time.Sleep(100 * time.Millisecond)
+		ts.runMonitor()
+	}
+
+	for i := 0; i < nclerk; i++ {
+		ch <- true
+	}
+
+	log.Printf("Done waiting for clerks\n")
+
+	// time.Sleep(100 * time.Millisecond)
+
+	ts.stopMemFSs()
+
+	ts.s.Shutdown(ts.fsl)
+
 }

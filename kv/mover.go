@@ -95,20 +95,22 @@ func (mv *Mover) moveShards() error {
 func (mv *Mover) removeShards(version int) {
 	d := shardDir(mv.kv)
 	mv.ProcessDir(d, func(st *np.Stat) (bool, error) {
-		name := strings.Trim(st.Name, "#")
-		splits := strings.Split(name, "-")
-		n, err := strconv.Atoi(splits[1])
-		if err != nil {
-			return false, nil
-		}
-		if n < 0 || n > version {
-			return false, nil
-		}
-		d := d + "/" + st.Name
-		db.DLPrintf("MV", "RmDir shard %v\n", d)
-		err = mv.RmDir(d)
-		if err != nil {
-			log.Printf("MV remove %v err %v\n", d, err)
+		if st.Name != "statsd" {
+			name := strings.Trim(st.Name, "#")
+			splits := strings.Split(name, "-")
+			n, err := strconv.Atoi(splits[1])
+			if err != nil {
+				return false, nil
+			}
+			if n < 0 || n > version {
+				return false, nil
+			}
+			d := d + "/" + st.Name
+			db.DLPrintf("MV", "RmDir shard %v\n", d)
+			err = mv.RmDir(d)
+			if err != nil {
+				log.Printf("MV remove %v err %v\n", d, err)
+			}
 		}
 		return false, nil
 	})

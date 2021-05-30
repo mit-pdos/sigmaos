@@ -275,9 +275,9 @@ func (ld *LocalD) setCoreAffinity() {
 		m.Set(i)
 	}
 	// XXX For my current benchmarking setup, core 0 is reserved for ZK.
-	if ld.perf.RunningBenchmark() {
-		m.Clear(0)
-	}
+	//	if ld.perf.RunningBenchmark() {
+	//		m.Clear(0)
+	//	}
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 

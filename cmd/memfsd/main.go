@@ -26,8 +26,8 @@ func main() {
 			p.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 		}
 		if p.RunningBenchmark() {
-			// XXX For my current benchmarking setup, ZK gets core 0 all to itself.
-			linuxsched.SchedSetAffinityAllTasks(os.Getpid(), linuxsched.CreateCPUMaskOfOne(0))
+			//			// XXX For my current benchmarking setup, ZK gets core 0 all to itself.
+			//			linuxsched.SchedSetAffinityAllTasks(os.Getpid(), linuxsched.CreateCPUMaskOfOne(0))
 		}
 		defer p.Teardown()
 		db.Name("memfsd")

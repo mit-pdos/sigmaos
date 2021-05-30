@@ -105,36 +105,3 @@ if __name__ == "__main__":
   graph_latency(latency, args.suffix)
   graph_util(memfsd_util, "memfsd", args.util_sample_hz, args.suffix)
   graph_util(locald_util, "locald", args.util_sample_hz, args.suffix)
-#  paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
-#  native_profile = read_profile(paths, "native")
-#  remote_profile = read_profile(paths, "remote")
-#  print("native profile:", native_profile)
-#  print("remote profile:", remote_profile)
-#  # Read data from native run
-#  native_data = read_data(paths, "native", args.perf_stat)
-#  native_runtime = compute_mean(native_data)
-#  native_tail = compute_tail(native_data, args.percentile)
-#  # Read data from 9p run
-#  ninep_data = read_data(paths, "9p", args.perf_stat)
-#  ninep_runtime = compute_mean(ninep_data)
-#  ninep_tail = compute_tail(ninep_data, args.percentile)
-#  # Read data from remote run
-#  remote_data = read_data(paths, "aws", args.perf_stat)
-#  remote_runtime = compute_mean(remote_data)
-#  remote_tail = compute_tail(remote_data, args.percentile)
-#  # Plot runtime
-#  native_runtime_x_y = get_runtime_x_y(native_profile, native_runtime)
-#  ninep_runtime_x_y = get_runtime_x_y(native_profile, ninep_runtime)
-#  remote_runtime_x_y = get_runtime_x_y(remote_profile, remote_runtime)
-#  # Plot runtime
-#  native_tail_x_y = get_runtime_x_y(native_profile, native_tail)
-#  ninep_tail_x_y = get_runtime_x_y(native_profile, ninep_tail)
-#  remote_tail_x_y = get_runtime_x_y(remote_profile, remote_tail)
-#  print(ninep_runtime_x_y)
-#  print(ninep_tail_x_y)
-#  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, native_tail_x_y=native_tail_x_y, ninep_tail_x_y=ninep_tail_x_y, remote_tail_x_y=remote_tail_x_y, percent=args.percentile, suffix=args.suffix)
-#  #Plot overhead
-#  native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)
-#  ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
-#  remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
-#  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, suffix=args.suffix)

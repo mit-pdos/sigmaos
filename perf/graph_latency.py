@@ -148,7 +148,7 @@ if __name__ == "__main__":
   parser.add_argument("--measurement_dir", type=str, required=True)
   parser.add_argument("--suffix", type=str, default="")
   parser.add_argument("--percentile", type=int, default=99)
-  parser.add_argument("--perf_stat", type=bool, action='store_true', default=False)
+  parser.add_argument("--perf_stat", action='store_true', default=False)
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
   native_profile = read_profile(paths, "native")

@@ -13,9 +13,9 @@ N=1
 
 # Dirs
 if [[ $# -gt 0 && $1 == "contention" ]]; then
-  measurements=./measurements_contention
+  measurements=./measurements/contention
 else
-  measurements=./measurements
+  measurements=./measurements/vanilla_latency
 fi
 native_baseline=$measurements/spin_test_native_baseline.txt
 remote_baseline=$measurements/spin_test_remote_baseline.txt
@@ -55,18 +55,17 @@ for test_type in native 9p aws ; do
   if [[ $# -gt 0 && $1 == "contention" ]]; then
     echo "Clearing cpu util file..."
     cpu_util=./cpu_util_$test_type.txt
-    echo "" > $cpu_util
 
     echo "Starting rival process..."
     if [[ $test_type == "native" ]]; then
       # For 4 cores:
-      ./bin/rival 20 -1 native 2>> $cpu_util & 
+      ./bin/rival 20 -1 native $dim $its & 
       # For 8 cores:
-      # ./bin/rival 38 -1 native 2>> $cpu_util & 
+      # ./bin/rival 38 -1 native $cpu_util & 
     else
-      ./bin/rival 17 -1 ninep 2>> $cpu_util & 
+      ./bin/rival 17 -1 ninep $dim $its & 
       # For 8 cores:
-      # ./bin/rival 30 -1 ninep 2>> $cpu_util & 
+      # ./bin/rival 30 -1 ninep $cpu_util & 
     fi
   fi
 

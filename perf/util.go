@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CPU_UTIL_HZ = 100
+	CPU_UTIL_HZ = 10
 )
 
 // Tracks performance statistics for any cores on which the current process is

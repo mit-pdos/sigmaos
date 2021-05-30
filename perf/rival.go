@@ -12,10 +12,6 @@ import (
 	"ulambda/linuxsched"
 )
 
-const (
-	MONITOR_HZ = 10
-)
-
 type Rival struct {
 	spawnsPerSec       int
 	secs               float64

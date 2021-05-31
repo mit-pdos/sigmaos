@@ -75,7 +75,7 @@ func (p *Perf) getCPUSample() (idle, total uint64) {
 				}
 				total += val // tally up all the numbers to get total ticks
 				if i == 4 {  // idle is the 5th field in the cpu line
-					idle = val
+					idle += val
 				}
 			}
 		}

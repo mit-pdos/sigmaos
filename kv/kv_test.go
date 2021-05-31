@@ -2,6 +2,7 @@ package kv
 
 import (
 	"log"
+	"math/rand"
 	// "regexp"
 	"strconv"
 	"testing"
@@ -221,23 +222,61 @@ func (ts *Tstate) runMonitor() {
 	log.Printf("monitor %v done\n", pid)
 }
 
+// Zipfian:
+// r := rand.New(rand.NewSource(time.Now().UnixNano()))
+// z := rand.NewZipf(r, 2.0, 1.0, 100)
+// z.Uint64()
+//
+func (ts *Tstate) clerkMon(c int, ch chan bool) {
+	tot := int64(0)
+	max := int64(0)
+	n := int64(0)
+	for true {
+		k := rand.Intn(NKEYS)
+		t0 := time.Now().UnixNano()
+		v, err := ts.clrks[c].Get(key(k))
+		t1 := time.Now().UnixNano()
+		tot += t1 - t0
+		if t1-t0 > max {
+			max = t1 - t0
+		}
+		n += 1
+		select {
+		case <-ch:
+			log.Printf("n %v avg %v ns max %v ns\n", n, tot/n, max)
+			return
+		default:
+			assert.Nil(ts.t, err, "Get "+key(k))
+			assert.Equal(ts.t, key(k), v, "Get")
+		}
+	}
+}
+
 func TestMonitor(t *testing.T) {
 	nclerk := 1
+	N := 0
 	ts := makeTstate(t)
 
 	ts.setup(nclerk)
 
+	// set up N other servers
+	for i := 0; i < N; i++ {
+		ts.mfss = append(ts.mfss, ts.spawnMemFS())
+		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
+		time.Sleep(500 * time.Millisecond)
+	}
+
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
-		go ts.clerk(i, ch)
+		go ts.clerkMon(i, ch)
 	}
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(30000 * time.Millisecond)
 
-	for i := 0; i < 5; i++ {
-		time.Sleep(100 * time.Millisecond)
-		ts.runMonitor()
-	}
+	//for i := 0; i < 5; i++ {
+	//	time.Sleep(100 * time.Millisecond)
+	//	ts.runMonitor()
+	//}
 
 	for i := 0; i < nclerk; i++ {
 		ch <- true

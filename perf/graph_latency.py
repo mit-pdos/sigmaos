@@ -116,7 +116,7 @@ def trim(a, b, c):
   c = cutoff_at(c, cutoff)
   return a, b, c
 
-def plot(title, units, native_x_y, ninep_x_y, remote_x_y, native_tail_x_y=None, ninep_tail_x_y=None, remote_tail_x_y=None, suffix="", percent=99):
+def plot(title, units, native_x_y, ninep_x_y, remote_x_y, native_tail_x_y=None, ninep_tail_x_y=None, remote_tail_x_y=None, suffix="", percent=99, ignore_aws=False):
   native_x_y, ninep_x_y, remote_x_y = trim(native_x_y, ninep_x_y, remote_x_y)
   if native_tail_x_y is not None:
     native_tail_x_y, ninep_tail_x_y, remote_tail_x_y = trim(native_tail_x_y, ninep_tail_x_y, remote_tail_x_y)
@@ -127,7 +127,8 @@ def plot(title, units, native_x_y, ninep_x_y, remote_x_y, native_tail_x_y=None, 
   fig, ax = plt.subplots(1)
   ax.plot(native_x, native_y, label="Native", color="blue")
   ax.plot(ninep_x, ninep_y, label="9p", color="orange")
-  ax.plot(remote_x, remote_y, label="Remote (AWS Lambda)", color="red")
+  if not ignore_aws:
+    ax.plot(remote_x, remote_y, label="Remote (AWS Lambda)", color="red")
 
   if native_tail_x_y is not None:
     native_tail_x, native_y = native_tail_x_y
@@ -135,7 +136,8 @@ def plot(title, units, native_x_y, ninep_x_y, remote_x_y, native_tail_x_y=None, 
     remote_tail_x, remote_y = remote_tail_x_y
     ax.plot(native_tail_x, native_y, label="Native " + str(percent) + "%", color="blue", linestyle="dashed")
     ax.plot(ninep_tail_x, ninep_y, label="9p " + str(percent) + "%", color="orange", linestyle="dashed")
-    ax.plot(remote_tail_x, remote_y, label="Remote (AWS Lambda) " + str(percent) + "%", color="red", linestyle="dashed")
+    if not ignore_aws:
+      ax.plot(remote_tail_x, remote_y, label="Remote (AWS Lambda) " + str(percent) + "%", color="red", linestyle="dashed")
 
   ax.set_xlabel("Work per invocation (msec)")
   ax.set_ylabel(title + " " + units) 
@@ -149,6 +151,7 @@ if __name__ == "__main__":
   parser.add_argument("--suffix", type=str, default="")
   parser.add_argument("--percentile", type=int, default=99)
   parser.add_argument("--perf_stat", action='store_true', default=False)
+  parser.add_argument("--ignore_aws", action='store_true', default=False)
   args = parser.parse_args()
   paths = [ os.path.join(args.measurement_dir, d) for d in os.listdir(args.measurement_dir) ]
   native_profile = read_profile(paths, "native")
@@ -177,9 +180,9 @@ if __name__ == "__main__":
   remote_tail_x_y = get_runtime_x_y(remote_profile, remote_tail)
   print(ninep_runtime_x_y)
   print(ninep_tail_x_y)
-  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, native_tail_x_y=native_tail_x_y, ninep_tail_x_y=ninep_tail_x_y, remote_tail_x_y=remote_tail_x_y, percent=args.percentile, suffix=args.suffix)
+  plot("Runtime", "(msec)", native_runtime_x_y, ninep_runtime_x_y, remote_runtime_x_y, native_tail_x_y=native_tail_x_y, ninep_tail_x_y=ninep_tail_x_y, remote_tail_x_y=remote_tail_x_y, percent=args.percentile, suffix=args.suffix, ignore_aws=args.ignore_aws)
   #Plot overhead
   native_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, native_runtime)
   ninep_overhead_x_y = get_overhead_x_y(native_profile, native_runtime, ninep_runtime)
   remote_overhead_x_y = get_overhead_x_y(remote_profile, native_runtime, remote_runtime)
-  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, suffix=args.suffix)
+  plot("Overhead", "", native_overhead_x_y, ninep_overhead_x_y, remote_overhead_x_y, suffix=args.suffix, ignore_aws=args.ignore_aws)

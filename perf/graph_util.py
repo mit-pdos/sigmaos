@@ -42,7 +42,7 @@ def parse_util_file(d, fname, hz):
     if math.isnan(util_pct[i]):
       util_pct[i] = 0.0
   # Ignore the first and last 2 seconds, during which warm-up and cool-down happens
-  ignored = int(2.0 * hz)
+  ignored = int(4.0 * hz)
   util = util_pct[ignored:-1 * ignored]
   return rate, util
 
@@ -65,7 +65,7 @@ def graph_bar(data, fname, title, xlabel, ylabel, ymax=-1):
   x_pos = np.arange(len(rates))
   ax.bar(x_pos, means, yerr=stds, align="center", label="9p")
   ax.set_xticks(x_pos)
-  ax.set_xticklabels(rates)
+  ax.set_xticklabels(rates, rotation=60)
   ax.set_xlabel(xlabel)
   ax.set_ylabel(ylabel) 
   if ymax > -1:
@@ -75,17 +75,27 @@ def graph_bar(data, fname, title, xlabel, ylabel, ymax=-1):
   plt.savefig("perf/" + fname + ".pdf", bbox_inches="tight")
 
 def graph_latency(latency, suffix):
-  graph_bar(latency, "arrival-process-latency" + suffix, "Latency Varying Arrival Rate", "Arrival rate (spawns per second)", "Latency (usec)")
+  graph_bar(latency, "arrival-process-avg-latency" + suffix, "Average Latency Varying Arrival Rate", "Arrival rate (spawns per second)", "Average Latency (usec)")
+  # TODO: DRY up code
+  fig, ax = plt.subplots(1)
+  for rate in sorted(latency.keys()):
+      x = np.arange(float(len(latency[rate])))
+      ax.plot(x, latency[rate], label=str(rate) + " spawns per second")
+  ax.set_xlabel("Request #")
+  ax.set_ylabel("Latency (usec)") 
+  ax.legend(bbox_to_anchor=(1.05,1), loc="upper left")
+  ax.set_title("Request Latency") 
+  plt.savefig("perf/" + "arrival-process-latency" + suffix + ".pdf", bbox_inches="tight")
 
 def graph_util(util, daemon, hz, suffix):
   graph_bar(util, "arrival-process-" + daemon + "-avg-utilization" + suffix, "Average CPU Utilization Varying Arrival Rate", "Arrival rate (spawns per second)", "CPU Utilization (%)", ymax=100)
   fig, ax = plt.subplots(1)
   for rate in sorted(util.keys()):
-    if rate < 50:
       x = np.arange(float(len(util[rate]))) * 1.0 / hz
       ax.plot(x, util[rate], label=str(rate) + " spawns per second")
   ax.set_xlabel("Time (usec)")
   ax.set_ylabel("CPU Utilization (%)") 
+  ax.set_ylim(top=100)
   ax.legend(bbox_to_anchor=(1.05,1), loc="upper left")
   ax.set_title(daemon + " CPU utilization") 
   plt.savefig("perf/" + "arrival-process-" + daemon + "-utilization" + suffix + ".pdf", bbox_inches="tight")

@@ -89,6 +89,7 @@ func (p *Perf) monitorCPUUtil(hz int) {
 	var total0 uint64
 	var idle1 uint64
 	var total1 uint64
+	idx := 0
 	idle0, total0 = p.getCPUSample()
 	for atomic.LoadUint32(&p.done) != 1 {
 		time.Sleep(time.Duration(sleepMsecs) * time.Millisecond)
@@ -98,12 +99,23 @@ func (p *Perf) monitorCPUUtil(hz int) {
 		util := 100.0 * (totalDelta - idleDelta) / totalDelta
 		//		log.Printf("CPU util: %f [busy: %f, total: %f]\n", util, totalDelta-idleDelta, totalDelta)
 		// Record number of cycles busy, utilized, and total
-		p.cpuCyclesBusy = append(p.cpuCyclesBusy, totalDelta-idleDelta)
-		p.cpuCyclesTotal = append(p.cpuCyclesTotal, totalDelta)
-		p.cpuUtilPct = append(p.cpuUtilPct, util)
+		if idx < 40*CPU_UTIL_HZ {
+			p.cpuCyclesBusy[idx] = totalDelta - idleDelta
+			p.cpuCyclesTotal[idx] = totalDelta
+			p.cpuUtilPct[idx] = util
+		} else {
+			p.cpuCyclesBusy = append(p.cpuCyclesBusy, totalDelta-idleDelta)
+			p.cpuCyclesTotal = append(p.cpuCyclesTotal, totalDelta)
+			p.cpuUtilPct = append(p.cpuUtilPct, util)
+		}
+		idx += 1
 		idle0 = idle1
 		total0 = total1
 	}
+	// Trim preallocated
+	p.cpuCyclesBusy = p.cpuCyclesBusy[:idx]
+	p.cpuCyclesTotal = p.cpuCyclesTotal[:idx]
+	p.cpuUtilPct = p.cpuUtilPct[:idx]
 	p.utilChan <- true
 }
 
@@ -133,9 +145,9 @@ func (p *Perf) SetupCPUUtil(hz int, fpath string) {
 	}
 	p.utilFile = f
 	// TODO: pre-allocate a large number of entries
-	p.cpuCyclesBusy = []float64{}
-	p.cpuCyclesTotal = []float64{}
-	p.cpuUtilPct = []float64{}
+	p.cpuCyclesBusy = make([]float64, 40*CPU_UTIL_HZ)
+	p.cpuCyclesTotal = make([]float64, 40*CPU_UTIL_HZ)
+	p.cpuUtilPct = make([]float64, 40*CPU_UTIL_HZ)
 	p.getActiveCores()
 
 	p.mu.Unlock()

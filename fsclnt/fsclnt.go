@@ -282,7 +282,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	npath := np.Split(new)
 
 	if len(opath) != len(npath) {
-		fsc.renameat(old, new)
+		return fsc.renameat(old, new)
 	}
 	for i, n := range opath[:len(opath)-1] {
 		if npath[i] != n {

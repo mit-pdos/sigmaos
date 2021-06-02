@@ -71,7 +71,7 @@ func (fl *FsLib) MakeDirFileAtomic(dir string, fname string, b []byte) error {
 	}
 	err = fl.Rename(tmpPath, path.Join(dir, fname))
 	if err != nil {
-		log.Fatalf("Error in MakeFileAtomic rename %v/%v: %v", dir, fname, err)
+		log.Fatalf("Error in MakeFileAtomic rename %v -> %v: %v", tmpPath, path.Join(dir, fname), err)
 		return err
 	}
 	return nil

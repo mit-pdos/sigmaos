@@ -263,7 +263,7 @@ func (fl *FsLib) removeWaitFile(pid string) error {
 	fpath := waitFilePath(pid)
 	err := fl.Remove(fpath)
 	if err != nil {
-		log.Fatalf("Error on RemoveWaitFile  %v: %v", fpath, err)
+		log.Printf("Error on RemoveWaitFile  %v: %v", fpath, err)
 		return err
 	}
 	return nil

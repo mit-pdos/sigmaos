@@ -54,11 +54,7 @@ func MakePerf() *Perf {
 	return p
 }
 
-func (p *Perf) RunningBenchmark() bool {
-	return p.util || p.pprof
-}
-
-func (p *Perf) getCPUSample() (idle, total uint64) {
+func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 	contents, err := ioutil.ReadFile("/proc/stat")
 	if err != nil {
 		return
@@ -66,7 +62,7 @@ func (p *Perf) getCPUSample() (idle, total uint64) {
 	lines := strings.Split(strings.TrimSpace(string(contents)), "\n")
 	for _, line := range lines {
 		fields := strings.Fields(line)
-		if active, ok := p.cores[fields[0]]; ok && active {
+		if active, ok := cores[fields[0]]; ok && active {
 			numFields := len(fields)
 			for i := 1; i < numFields; i++ {
 				val, err := strconv.ParseUint(fields[i], 10, 64)
@@ -83,6 +79,10 @@ func (p *Perf) getCPUSample() (idle, total uint64) {
 	return
 }
 
+func (p *Perf) RunningBenchmark() bool {
+	return p.util || p.pprof
+}
+
 func (p *Perf) monitorCPUUtil(hz int) {
 	sleepMsecs := 1000 / hz
 	var idle0 uint64
@@ -90,14 +90,14 @@ func (p *Perf) monitorCPUUtil(hz int) {
 	var idle1 uint64
 	var total1 uint64
 	idx := 0
-	idle0, total0 = p.getCPUSample()
+	idle0, total0 = GetCPUSample(p.cores)
 	for atomic.LoadUint32(&p.done) != 1 {
 		time.Sleep(time.Duration(sleepMsecs) * time.Millisecond)
-		idle1, total1 = p.getCPUSample()
+		idle1, total1 = GetCPUSample(p.cores)
 		idleDelta := float64(idle1 - idle0)
 		totalDelta := float64(total1 - total0)
 		util := 100.0 * (totalDelta - idleDelta) / totalDelta
-		//		log.Printf("CPU util: %f [busy: %f, total: %f]\n", util, totalDelta-idleDelta, totalDelta)
+		// log.Printf("CPU util: %f [busy: %f, total: %f]\n", util, totalDelta-idleDelta, totalDelta)
 		// Record number of cycles busy, utilized, and total
 		if idx < 40*CPU_UTIL_HZ {
 			p.cpuCyclesBusy[idx] = totalDelta - idleDelta
@@ -141,7 +141,7 @@ func (p *Perf) SetupCPUUtil(hz int, fpath string) {
 	p.utilPath = fpath
 	f, err := os.Create(p.utilPath)
 	if err != nil {
-		log.Fatalf("Couldn't create util profile file: %v, %v", p.utilPath, err)
+		log.Fatalf("Create util file %v failed %v", p.utilPath, err)
 	}
 	p.utilFile = f
 	// TODO: pre-allocate a large number of entries

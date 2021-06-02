@@ -369,6 +369,9 @@ func (srv *NpServer) sendAllAcks() {
 // Try and send a message to the next server in the chain, and receive a
 // response.
 func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
+	if ch == nil {
+		return false
+	}
 	// Only call down the chain if we aren't at the tail.
 	// XXX Get rid of this if
 	if !srv.isTail() {

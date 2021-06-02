@@ -41,6 +41,10 @@ func (npc *NpConn) Addr() string {
 	return npc.conn.LocalAddr().String()
 }
 
+func (npc *NpConn) SetFids(fids map[np.Tfid]*Fid) {
+	npc.fids = fids
+}
+
 func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()

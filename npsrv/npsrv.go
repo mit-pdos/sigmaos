@@ -1,11 +1,11 @@
 package npsrv
 
 import (
+	"fmt"
 	"log"
 	"net"
 
 	db "ulambda/debug"
-	"ulambda/fslib"
 )
 
 type NpConn interface {
@@ -13,35 +13,40 @@ type NpConn interface {
 }
 
 type NpServer struct {
-	npc  NpConn
-	addr string
-	*fslib.FsLib
+	npc        NpConn
+	addr       string
+	replicated bool
+	replConfig *NpServerReplConfig
 }
 
 func MakeNpServer(npc NpConn, address string) *NpServer {
-	srv := &NpServer{npc, "", nil}
-	var l net.Listener
-	l, err := net.Listen("tcp", address)
-	if err != nil {
-		log.Fatal("Listen error:", err)
-	}
-	srv.addr = l.Addr().String()
-	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
-	go srv.runsrv(l)
-	return srv
+	return MakeReplicatedNpServer(npc, address, false, "", nil)
 }
 
 func (srv *NpServer) MyAddr() string {
 	return srv.addr
 }
 
-func (srv *NpServer) runsrv(l net.Listener) {
+func (srv *NpServer) runsrv(l net.Listener, wrapped bool) {
 	defer l.Close()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			log.Fatal("Accept error: ", err)
 		}
-		MakeChannel(srv.npc, conn)
+
+		// If we aren't replicated or we're at the end of the chain, create a normal
+		// channel.
+		if !srv.replicated {
+			MakeChannel(srv.npc, conn)
+		} else {
+			// Else, make a relay channel which forwards calls along the chain.
+			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
+			MakeRelayChannel(srv.npc, conn, srv.replConfig.ops, wrapped, srv.replConfig.fids)
+		}
 	}
+}
+
+func (srv *NpServer) String() string {
+	return fmt.Sprintf("{ addr: %v replicated: %v config: %v }", srv.addr, srv.replicated, srv.replConfig)
 }

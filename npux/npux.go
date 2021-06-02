@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	db "ulambda/debug"
-	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
@@ -24,23 +23,27 @@ type NpUx struct {
 	mount string
 }
 
-func MakeNpUx(mount string) *NpUx {
+func MakeNpUx(mount string, addr string) *NpUx {
+	return MakeReplicatedNpUx(mount, addr, false, "", nil)
+}
+
+func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *NpUx {
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
 	npux.root = npux.makeDir([]string{mount}, np.DMDIR, nil)
 	db.Name("npuxd")
-	ip, err := fsclnt.LocalIP()
-	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", fslib.UX, err)
-	}
-	npux.srv = npsrv.MakeNpServer(npux, ip+":0")
+	npux.srv = npsrv.MakeReplicatedNpServer(npux, addr, replicated, relayAddr, config)
 	fsl := fslib.MakeFsLib("npux")
 	fsl.Mkdir(fslib.UX, 0777)
-	err = fsl.PostServiceUnion(npux.srv.MyAddr(), fslib.UX, npux.srv.MyAddr())
+	err := fsl.PostServiceUnion(npux.srv.MyAddr(), fslib.UX, npux.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", npux.srv.MyAddr(), err)
 	}
 	return npux
+}
+
+func (npux *NpUx) GetSrv() *npsrv.NpServer {
+	return npux.srv
 }
 
 func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {

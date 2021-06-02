@@ -42,9 +42,10 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.fids = make(map[np.Tfid]*Path)
 	fsc.mount = makeMount()
 	fsc.npc = npclnt.MakeNpClnt()
-	fsc.next = 1
 	fsc.uname = uname
 	rand.Seed(time.Now().UnixNano())
+	// Set next to a random int
+	fsc.next = np.Tfid(int32(rand.Int31() << 16))
 	return fsc
 }
 

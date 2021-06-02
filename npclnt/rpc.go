@@ -16,7 +16,7 @@ func MakeNpClnt() *NpClnt {
 	return npc
 }
 
-func (npc *NpClnt) callServer(server string, args np.Tmsg) (np.Tmsg, error) {
+func (npc *NpClnt) CallServer(server string, args np.Tmsg) (np.Tmsg, error) {
 	reply, err := npc.cm.makeCall(server, args)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (npc *NpClnt) callServer(server string, args np.Tmsg) (np.Tmsg, error) {
 
 func (npc *NpClnt) Attach(server string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
 	args := np.Tattach{fid, np.NoFid, uname, ""}
-	reply, err := npc.callServer(server, args)
+	reply, err := npc.CallServer(server, args)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (npc *NpChan) Close() {
 	npc.cm.Close(npc.server)
 }
 
-func (npch *NpChan) call(args np.Tmsg) (np.Tmsg, error) {
+func (npch *NpChan) Call(args np.Tmsg) (np.Tmsg, error) {
 	reply, err := npch.cm.makeCall(npch.server, args)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (npch *NpChan) call(args np.Tmsg) (np.Tmsg, error) {
 
 func (npch *NpChan) Flush(tag np.Ttag) error {
 	args := np.Tflush{tag}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (npch *NpChan) Flush(tag np.Ttag) error {
 
 func (npch *NpChan) Walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk, error) {
 	args := np.Twalk{fid, nfid, path}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (npch *NpChan) Walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk, e
 
 func (npch *NpChan) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmode) (*np.Rcreate, error) {
 	args := np.Tcreate{fid, name, perm, mode}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (npch *NpChan) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmod
 
 func (npch *NpChan) Remove(fid np.Tfid) error {
 	args := np.Tremove{fid}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (npch *NpChan) Remove(fid np.Tfid) error {
 
 func (npch *NpChan) Clunk(fid np.Tfid) error {
 	args := np.Tclunk{fid}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (npch *NpChan) Clunk(fid np.Tfid) error {
 
 func (npch *NpChan) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
 	args := np.Topen{fid, mode}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (npch *NpChan) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
 
 func (npch *NpChan) Watch(fid np.Tfid, path []string, version np.TQversion) error {
 	args := np.Twatchv{fid, path, np.OWATCH, version}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (npch *NpChan) Watch(fid np.Tfid, path []string, version np.TQversion) erro
 
 func (npch *NpChan) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rread, error) {
 	args := np.Tread{fid, offset, cnt}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (npch *NpChan) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rrea
 
 func (npch *NpChan) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, version np.TQversion) (*np.Rread, error) {
 	args := np.Treadv{fid, offset, cnt, version}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (npch *NpChan) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, version 
 
 func (npch *NpChan) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwrite, error) {
 	args := np.Twrite{fid, offset, data}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func (npch *NpChan) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwri
 
 func (npch *NpChan) WriteV(fid np.Tfid, offset np.Toffset, data []byte, version np.TQversion) (*np.Rwrite, error) {
 	args := np.Twritev{fid, offset, version, data}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (npch *NpChan) WriteV(fid np.Tfid, offset np.Toffset, data []byte, version 
 
 func (npch *NpChan) Stat(fid np.Tfid) (*np.Rstat, error) {
 	args := np.Tstat{fid}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func (npch *NpChan) Stat(fid np.Tfid) (*np.Rstat, error) {
 
 func (npch *NpChan) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 	args := np.Twstat{fid, 0, *st}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (npch *NpChan) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 
 func (npch *NpChan) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string) (*np.Rrenameat, error) {
 	args := np.Trenameat{oldfid, oldname, newfid, newname}
-	reply, err := npch.call(args)
+	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}

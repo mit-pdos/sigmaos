@@ -38,6 +38,10 @@ type Fsd struct {
 }
 
 func MakeFsd(addr string) *Fsd {
+	return MakeReplicatedFsd(addr, false, "", nil)
+}
+
+func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.addr = addr
@@ -45,11 +49,15 @@ func MakeFsd(addr string) *Fsd {
 	fsd.ct = npo.MkConnTable()
 	fsd.stats = npo.MkStats()
 	fsd.ch = make(chan bool)
-	fsd.srv = npsrv.MakeNpServer(fsd, addr)
+	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, replicated, relayAddr, config)
 	if err := fsd.MkNod("statsd", fsd.stats); err != nil {
 		log.Fatalf("Mknod failed %v\n", err)
 	}
 	return fsd
+}
+
+func (fsd *Fsd) GetSrv() *npsrv.NpServer {
+	return fsd.srv
 }
 
 func (fsd *Fsd) Serve() {

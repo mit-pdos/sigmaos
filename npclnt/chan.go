@@ -64,6 +64,8 @@ func mkChan(addr string) (*Chan, error) {
 
 func (ch *Chan) Dst() string { return ch.conn.RemoteAddr().String() }
 
+func (ch *Chan) Src() string { return ch.conn.LocalAddr().String() }
+
 func (ch *Chan) Close() {
 	ch.mu.Lock()
 	defer ch.mu.Unlock()
@@ -108,7 +110,7 @@ func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	ch.requests <- rpc
 	reply, ok := <-rpc.replych
 	if !ok {
-		db.DLPrintf("9PCHAN", "Error reply ch closed %v\n", ch.Dst())
+		db.DLPrintf("9PCHAN", "Error reply ch closed %v -> %v\n", ch.Src(), ch.Dst())
 		return nil, io.EOF
 	}
 	db.DLPrintf("9PCHAN", "RPC reply %v %v\n", reply.fc, reply.err)

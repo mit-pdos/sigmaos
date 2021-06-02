@@ -64,9 +64,9 @@ func MakeRival(args []string) (*Rival, error) {
 		log.Fatalf("Invalid dimension: %v, %v\n", args[3], err)
 	}
 
-	r.dim = args[4]
+	r.its = args[4]
 	if err != nil {
-		log.Fatalf("Invalid dimension: %v, %v\n", args[4], err)
+		log.Fatalf("Invalid iterations: %v, %v\n", args[4], err)
 	}
 
 	return r, nil

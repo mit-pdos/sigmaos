@@ -17,6 +17,21 @@ import (
 	"ulambda/linuxsched"
 )
 
+/*
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <stdlib.h>
+*/
+import "C"
+
+func Hz() int {
+	var chz C.long
+	chz = C.sysconf(C._SC_CLK_TCK)
+	h := int(chz)
+	return h
+}
+
 const (
 	CPU_UTIL_HZ = 10
 )
@@ -52,6 +67,24 @@ func MakePerf() *Perf {
 		os.Exit(0)
 	}()
 	return p
+}
+
+// Read utime+stime from /proc/<pid>/stat
+func GetPIDSample(pid int) uint64 {
+	contents, err := ioutil.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+	if err != nil {
+		log.Printf("Error reading /proc/<pid>/stat %v", err)
+	}
+	line := strings.Split(strings.TrimSpace(string(contents)), " ")
+	utime, err := strconv.ParseUint(line[13], 10, 32)
+	if err != nil {
+		log.Printf("Error: utime %v", err)
+	}
+	stime, err := strconv.ParseUint(line[14], 10, 32)
+	if err != nil {
+		log.Printf("Error: stime %v", err)
+	}
+	return utime + stime
 }
 
 func GetCPUSample(cores map[string]bool) (idle, total uint64) {

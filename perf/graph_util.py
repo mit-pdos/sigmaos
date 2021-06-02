@@ -65,7 +65,7 @@ def graph_bar(data, fname, title, xlabel, ylabel, ymax=-1):
   x_pos = np.arange(len(rates))
   ax.bar(x_pos, means, yerr=stds, align="center", label="9p")
   ax.set_xticks(x_pos)
-  ax.set_xticklabels(rates, rotation=60)
+  ax.set_xticklabels(rates, rotation=90)
   ax.set_xlabel(xlabel)
   ax.set_ylabel(ylabel) 
   if ymax > -1:
@@ -106,11 +106,16 @@ if __name__ == "__main__":
   parser.add_argument("--util_dir", type=str, required=True)
   parser.add_argument("--suffix", type=str, default="")
   parser.add_argument("--util_sample_hz", type=float, default=10.0)
+  parser.add_argument("--max_rate", type=int, default=-1)
   args = parser.parse_args()
   # Parsing
   latency = parse_latency_dir(args.latency_dir)
   memfsd_util = parse_util_dir(args.util_dir, "memfsd", args.util_sample_hz)
   locald_util = parse_util_dir(args.util_dir, "locald", args.util_sample_hz)
+  if args.max_rate > 0:
+    latency = { k : v for k, v in latency.items() if k < args.max_rate  }
+    memfsd_util = { k : v for k, v in memfsd_util.items() if k < args.max_rate  }
+    locald_util = { k : v for k, v in locald_util.items() if k < args.max_rate  }
   # Graphing
   graph_latency(latency, args.suffix)
   graph_util(memfsd_util, "memfsd", args.util_sample_hz, args.suffix)

@@ -2,7 +2,6 @@ package fslib
 
 import (
 	"log"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 type Tstate struct {
@@ -268,23 +268,17 @@ func TestSymlink3(t *testing.T) {
 func TestStatsd(t *testing.T) {
 	ts := makeTstate(t)
 
-	b, err := ts.ReadFile("name/statsd")
+	stats := npo.Stats{}
+	err := ts.ReadFileJson("name/statsd", &stats)
 	assert.Nil(t, err, "statsd")
-	re := regexp.MustCompile(`#Nread: (?P<cnt>\d+)`)
-	n, err := strconv.Atoi(string(re.FindSubmatch(b)[1]))
-	assert.Equal(t, nil, err, "Nread")
-	assert.Equal(t, 1, n, "Nread")
-
+	assert.Equal(t, npo.Tcounter(1), stats.Nread, "Nread")
 	for i := 0; i < 1000; i++ {
 		_, err := ts.ReadFile("name/statsd")
 		assert.Nil(t, err, "statsd")
 	}
-	b, err = ts.ReadFile("name/statsd")
+	err = ts.ReadFileJson("name/statsd", &stats)
 	assert.Nil(t, err, "statsd")
-	re = regexp.MustCompile(`statsd:(?P<cnt>\d+)`)
-	n, err = strconv.Atoi(string(re.FindSubmatch(b)[1]))
-	assert.Equal(t, nil, err, "statsd")
-	assert.Equal(t, 1002, n, "statsd")
+	assert.Equal(t, npo.Tcounter(1002), stats.Nopen, "statsd")
 
 	ts.s.Shutdown(ts.FsLib)
 }

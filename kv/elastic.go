@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -132,11 +133,12 @@ func (e *Elastic) shrink() {
 func (e *Elastic) monitorPID() {
 	const (
 		MAXLOAD float64 = 85.0
-		MINLOAD float64 = 50.0
+		MINLOAD float64 = 10.0
 	)
 
 	ms := 1000
 	j := 1000 / e.hz
+	ncpu := runtime.NumCPU()
 	var total0 uint64
 	var total1 uint64
 	pid := os.Getpid()
@@ -146,7 +148,8 @@ func (e *Elastic) monitorPID() {
 		total1 = perf.GetPIDSample(pid)
 		delta := total1 - total0
 		util := 100.0 * float64(delta) / float64(ms/j)
-		log.Printf("CPU delta: %v util %f\n", delta, util)
+		util = util / float64(ncpu)
+		log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
 		if util >= MAXLOAD {
 			e.grow()
 		}

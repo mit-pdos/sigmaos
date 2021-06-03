@@ -19,6 +19,7 @@ import (
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 	"ulambda/perf"
+	"ulambda/stats"
 )
 
 const (
@@ -122,7 +123,7 @@ func (ld *LocalD) ConnTable() *npo.ConnTable {
 	return nil
 }
 
-func (ld *LocalD) Stats() *npo.Stats {
+func (ld *LocalD) Stats() *stats.Stats {
 	return nil
 }
 

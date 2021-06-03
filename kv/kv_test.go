@@ -85,25 +85,6 @@ func (ts *Tstate) stopMemFSs() {
 	}
 }
 
-func (ts *Tstate) spawnBalancer(opcode, mfs string) string {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/balancer"
-	a.Args = []string{opcode, mfs}
-	a.PairDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
-}
-
-func (ts *Tstate) runBalancer(opcode, mfs string) {
-	pid1 := ts.spawnBalancer(opcode, mfs)
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, "OK", string(ok))
-	log.Printf("balancer %v done\n", pid1)
-}
-
 func key(k int) string {
 	return "key" + strconv.Itoa(k)
 }
@@ -131,10 +112,15 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func (ts *Tstate) setup(nclerk int) {
+func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	// add 1 so that we can put to initialize
-	ts.mfss = append(ts.mfss, ts.spawnMemFS())
-	ts.runBalancer("add", ts.mfss[0])
+	mfs := ""
+	if memfs {
+		mfs = ts.spawnMemFS()
+	} else {
+		mfs = spawnKV(ts.fsl)
+	}
+	runBalancer(ts.fsl, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -147,6 +133,7 @@ func (ts *Tstate) setup(nclerk int) {
 			assert.Nil(ts.t, err, "Put")
 		}
 	}
+	return mfs
 }
 
 func ConcurN(t *testing.T, nclerk int) {
@@ -154,7 +141,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	ts := makeTstate(t)
 
-	ts.setup(nclerk)
+	ts.mfss = append(ts.mfss, ts.setup(nclerk, true))
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -163,13 +150,13 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	for s := 0; s < NMORE; s++ {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
+		runBalancer(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		ts.runBalancer("del", ts.mfss[len(ts.mfss)-1])
+		runBalancer(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
 		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets
@@ -184,7 +171,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	log.Printf("Done waiting for clerks\n")
 
-	// time.Sleep(100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	ts.stopMemFSs()
 
@@ -201,25 +188,6 @@ func TestConcur1(t *testing.T) {
 
 func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
-}
-
-func (ts *Tstate) spawnMonitor() string {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/monitor"
-	a.Args = []string{}
-	a.PairDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
-}
-
-func (ts *Tstate) runMonitor() {
-	pid := ts.spawnMonitor()
-	ok, err := ts.fsl.Wait(pid)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, "OK", string(ok))
-	log.Printf("monitor %v done\n", pid)
 }
 
 // Zipfian:
@@ -253,18 +221,10 @@ func (ts *Tstate) clerkMon(c int, ch chan bool) {
 }
 
 func TestMonitor(t *testing.T) {
-	nclerk := 1
-	N := 0
+	nclerk := 30
 	ts := makeTstate(t)
 
-	ts.setup(nclerk)
-
-	// set up N other servers
-	for i := 0; i < N; i++ {
-		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
-		time.Sleep(500 * time.Millisecond)
-	}
+	ts.setup(nclerk, false)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -273,21 +233,32 @@ func TestMonitor(t *testing.T) {
 
 	time.Sleep(30000 * time.Millisecond)
 
-	//for i := 0; i < 5; i++ {
-	//	time.Sleep(100 * time.Millisecond)
-	//	ts.runMonitor()
-	//}
-
 	for i := 0; i < nclerk; i++ {
 		ch <- true
 	}
 
-	log.Printf("Done waiting for clerks\n")
+	log.Printf("shutdown\n")
 
-	// time.Sleep(100 * time.Millisecond)
+	memfs := ""
+	for true {
+		time.Sleep(1000 * time.Millisecond)
+		conf, err := readConfig(ts.fsl, KVCONFIG)
+		if err != nil {
+			// balancer may be at work
+			log.Printf("readConfig: err %v\n", err)
+			continue
+		}
+		kvs := makeKvs(conf.Shards)
+		log.Printf("Monitor config %v\n", kvs)
+		if len(kvs.set) == 1 {
+			for k := range kvs.set {
+				memfs = k
+			}
+			break
+		}
+	}
 
-	ts.stopMemFSs()
+	ts.stopMemFS(memfs)
 
 	ts.s.Shutdown(ts.fsl)
-
 }

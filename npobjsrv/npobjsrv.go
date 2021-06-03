@@ -2,6 +2,7 @@ package npobjsrv
 
 import (
 	np "ulambda/ninep"
+	"ulambda/stats"
 )
 
 type NpObjSrv interface {
@@ -10,7 +11,7 @@ type NpObjSrv interface {
 	Done()
 	WatchTable() *WatchTable
 	ConnTable() *ConnTable
-	Stats() *Stats
+	Stats() *stats.Stats
 }
 
 type CtxI interface {

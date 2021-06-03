@@ -33,6 +33,12 @@ func Hz() int {
 }
 
 const (
+	MAXLOAD float64 = 85.0
+	MINLOAD float64 = 40.0
+)
+
+// XXX delete? use Hz()
+const (
 	CPU_UTIL_HZ = 10
 )
 

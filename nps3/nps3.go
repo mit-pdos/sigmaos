@@ -15,6 +15,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	"ulambda/stats"
 )
 
 var bucket = "9ps3"
@@ -88,6 +89,6 @@ func (nps3 *Nps3) ConnTable() *npo.ConnTable {
 	return nil
 }
 
-func (nps3 *Nps3) Stats() *npo.Stats {
+func (nps3 *Nps3) Stats() *stats.Stats {
 	return nil
 }

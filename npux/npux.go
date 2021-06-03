@@ -13,6 +13,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	"ulambda/stats"
 )
 
 type NpUx struct {
@@ -71,7 +72,7 @@ func (npux *NpUx) ConnTable() *npo.ConnTable {
 	return nil
 }
 
-func (npux *NpUx) Stats() *npo.Stats {
+func (npux *NpUx) Stats() *stats.Stats {
 	return nil
 }
 

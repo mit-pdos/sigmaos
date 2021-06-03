@@ -85,25 +85,6 @@ func (ts *Tstate) stopMemFSs() {
 	}
 }
 
-func (ts *Tstate) spawnBalancer(opcode, mfs string) string {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/balancer"
-	a.Args = []string{opcode, mfs}
-	a.PairDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
-}
-
-func (ts *Tstate) runBalancer(opcode, mfs string) {
-	pid1 := ts.spawnBalancer(opcode, mfs)
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, "OK", string(ok))
-	log.Printf("balancer %v done\n", pid1)
-}
-
 func key(k int) string {
 	return "key" + strconv.Itoa(k)
 }
@@ -131,10 +112,14 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func (ts *Tstate) setup(nclerk int) {
+func (ts *Tstate) setup(nclerk int, memfs bool) {
 	// add 1 so that we can put to initialize
-	ts.mfss = append(ts.mfss, ts.spawnMemFS())
-	ts.runBalancer("add", ts.mfss[0])
+	if memfs {
+		ts.mfss = append(ts.mfss, ts.spawnMemFS())
+	} else {
+		ts.mfss = append(ts.mfss, spawnKV(ts.fsl))
+	}
+	runBalancer(ts.fsl, "add", ts.mfss[0])
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -154,7 +139,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	ts := makeTstate(t)
 
-	ts.setup(nclerk)
+	ts.setup(nclerk, true)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -163,13 +148,13 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	for s := 0; s < NMORE; s++ {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
+		runBalancer(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		ts.runBalancer("del", ts.mfss[len(ts.mfss)-1])
+		runBalancer(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
 		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets
@@ -253,18 +238,10 @@ func (ts *Tstate) clerkMon(c int, ch chan bool) {
 }
 
 func TestMonitor(t *testing.T) {
-	nclerk := 1
-	N := 0
+	nclerk := 30
 	ts := makeTstate(t)
 
-	ts.setup(nclerk)
-
-	// set up N other servers
-	for i := 0; i < N; i++ {
-		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		ts.runBalancer("add", ts.mfss[len(ts.mfss)-1])
-		time.Sleep(500 * time.Millisecond)
-	}
+	ts.setup(nclerk, false)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -284,10 +261,9 @@ func TestMonitor(t *testing.T) {
 
 	log.Printf("Done waiting for clerks\n")
 
-	// time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
-	ts.stopMemFSs()
+	log.Printf("shutdown\n")
 
 	ts.s.Shutdown(ts.fsl)
-
 }

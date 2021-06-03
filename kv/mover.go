@@ -145,7 +145,7 @@ func (mv *Mover) Work() {
 		log.Fatalf("MV: read %v err %v\n", KVCONFIG, err)
 	}
 
-	log.Printf("MV %v change %v\n", mv.kv, mv.conf2)
+	// log.Printf("MV %v change %v\n", mv.kv, mv.conf2)
 
 	if err := mv.moveShards(); err != nil {
 		log.Printf("MV moveShards %v err %v\n", mv.kv, err)

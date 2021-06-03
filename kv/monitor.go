@@ -76,7 +76,6 @@ func runBalancer(fsl *fslib.FsLib, opcode, mfs string) {
 	if string(ok) != "OK" || err != nil {
 		log.Printf("runBalancer: ok %v err %v\n", string(ok), err)
 	}
-	log.Printf("balancer %v done\n", pid1)
 }
 
 // See if there is KV waiting to be run
@@ -110,7 +109,6 @@ func (mo *Monitor) grow() {
 			break
 		}
 	}
-	log.Printf("kv running\n")
 	runBalancer(mo.FsLib, "add", pid)
 }
 

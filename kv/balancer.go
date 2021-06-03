@@ -130,8 +130,7 @@ func (bl *Balancer) Balance() {
 	db.DLPrintf("BAL", "Balancer conf %v next conf: %v %v\n", bl.conf,
 		bl.nextConf, kvs)
 
-	log.Printf("BAL conf %v next conf: %v %v\n", bl.conf,
-		bl.nextConf, kvs)
+	// log.Printf("BAL conf %v next conf: %v %v\n", bl.conf, bl.nextConf, kvs)
 
 	err = bl.Rename(KVCONFIG, KVCONFIGBK)
 	if err != nil {

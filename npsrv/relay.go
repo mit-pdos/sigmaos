@@ -218,6 +218,11 @@ func (srv *NpServer) relayReader() {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", srv.addr, err)
 			// TODO: enqueue op with empty reply
 		} else {
+			// If this was a duplicate, we still need to ack with something that has
+			// the same seqno
+			if op.reply == nil {
+				op.reply = wrap.Fcall
+			}
 			db.DLPrintf("RSRV", "%v Handling relay request %v", config.RelayAddr, wrap)
 			var msg *RelayMsg
 			// If we have never seen this request, process it.
@@ -275,10 +280,6 @@ func (srv *NpServer) relayReader() {
 			// If we're the tail, we always ack immediately
 			if srv.isTail() {
 				db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, wrap.Fcall)
-				// TODO: not sure why this was here...
-				//				if len(op.reply) > 0 {
-				//					op.replies <- op.reply
-				//				}
 				op.replies <- op
 			}
 		}

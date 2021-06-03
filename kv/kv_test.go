@@ -112,14 +112,15 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func (ts *Tstate) setup(nclerk int, memfs bool) {
+func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	// add 1 so that we can put to initialize
+	mfs := ""
 	if memfs {
-		ts.mfss = append(ts.mfss, ts.spawnMemFS())
+		mfs = ts.spawnMemFS()
 	} else {
-		ts.mfss = append(ts.mfss, spawnKV(ts.fsl))
+		mfs = spawnKV(ts.fsl)
 	}
-	runBalancer(ts.fsl, "add", ts.mfss[0])
+	runBalancer(ts.fsl, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -132,6 +133,7 @@ func (ts *Tstate) setup(nclerk int, memfs bool) {
 			assert.Nil(ts.t, err, "Put")
 		}
 	}
+	return mfs
 }
 
 func ConcurN(t *testing.T, nclerk int) {
@@ -139,7 +141,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	ts := makeTstate(t)
 
-	ts.setup(nclerk, true)
+	ts.mfss = append(ts.mfss, ts.setup(nclerk, true))
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -235,13 +237,28 @@ func TestMonitor(t *testing.T) {
 		ch <- true
 	}
 
-	log.Printf("Done waiting for clerks\n")
-
-	time.Sleep(20000 * time.Millisecond)
-
 	log.Printf("shutdown\n")
 
-	ts.stopMemFSs()
+	memfs := ""
+	for true {
+		time.Sleep(1000 * time.Millisecond)
+		conf, err := readConfig(ts.fsl, KVCONFIG)
+		if err != nil {
+			// balancer may be at work
+			log.Printf("readConfig: err %v\n", err)
+			continue
+		}
+		kvs := makeKvs(conf.Shards)
+		log.Printf("Monitor config %v\n", kvs)
+		if len(kvs.set) == 1 {
+			for k := range kvs.set {
+				memfs = k
+			}
+			break
+		}
+	}
+
+	ts.stopMemFS(memfs)
 
 	ts.s.Shutdown(ts.fsl)
 }

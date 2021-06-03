@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -114,7 +115,6 @@ func (mo *Monitor) grow() {
 }
 
 func (mo *Monitor) shrink(kv string) {
-	log.Printf("shrink: del %v\n", kv)
 	runBalancer(mo.FsLib, "del", kv)
 	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
 	if err != nil {
@@ -125,9 +125,16 @@ func (mo *Monitor) shrink(kv string) {
 func (mo *Monitor) Work() {
 	defer mo.unlock() // release lock acquired in MakeMonitor()
 
-	conf, err := readConfig(mo.FsLib, KVCONFIG)
-	if err != nil {
-		log.Fatalf("readConfig: err %v\n", err)
+	var conf *Config
+	for true {
+		c, err := readConfig(mo.FsLib, KVCONFIG)
+		if err != nil {
+			log.Printf("readConfig: err %v\n", err)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		conf = c
+		break
 	}
 	kvs := makeKvs(conf.Shards)
 	log.Printf("Monitor config %v\n", kvs)
@@ -138,7 +145,6 @@ func (mo *Monitor) Work() {
 	n := 0
 	for kv, _ := range kvs.set {
 		kvd := memfsd.MEMFS + "/" + kv + "/statsd"
-		log.Printf("monitor: %v\n", kvd)
 		sti := stats.StatInfo{}
 		err := mo.ReadFileJson(kvd, &sti)
 		if err != nil {

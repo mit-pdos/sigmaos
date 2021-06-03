@@ -98,13 +98,11 @@ func (st *Stats) spawnMonitor() string {
 }
 
 func (st *Stats) monitor() {
-	log.Printf("monitor low/high util %v\n", st.pid)
 	pid := st.spawnMonitor()
 	ok, err := st.fsl.Wait(pid)
 	if string(ok) != "OK" || err != nil {
 		log.Printf("monitor: ok %v err %v\n", string(ok), err)
 	}
-	log.Printf("monitor %v done\n", pid)
 }
 
 func (st *Stats) monitorPID() {
@@ -131,7 +129,7 @@ func (st *Stats) monitorPID() {
 			first = false
 			continue
 		}
-		log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
+		// log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
 		if util >= perf.MAXLOAD {
 			st.monitor()
 		}

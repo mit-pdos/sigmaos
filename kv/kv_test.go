@@ -169,7 +169,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	log.Printf("Done waiting for clerks\n")
 
-	// time.Sleep(100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	ts.stopMemFSs()
 

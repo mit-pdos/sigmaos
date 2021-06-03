@@ -7,7 +7,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
-	"ulambda/kv"
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
 )
@@ -26,8 +25,8 @@ func main() {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
 	fsl.Started(os.Args[1])
-	e := kv.MakeElastic(fsl.Clnt(), os.Args[1])
+	fsd.Stats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()
-	e.Done()
+	fsd.Stats().Done()
 	fsl.ExitFs(name)
 }

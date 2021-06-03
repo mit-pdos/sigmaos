@@ -188,25 +188,6 @@ func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
 }
 
-func (ts *Tstate) spawnMonitor() string {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/monitor"
-	a.Args = []string{}
-	a.PairDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
-}
-
-func (ts *Tstate) runMonitor() {
-	pid := ts.spawnMonitor()
-	ok, err := ts.fsl.Wait(pid)
-	assert.Nil(ts.t, err, "Wait")
-	assert.Equal(ts.t, "OK", string(ok))
-	log.Printf("monitor %v done\n", pid)
-}
-
 // Zipfian:
 // r := rand.New(rand.NewSource(time.Now().UnixNano()))
 // z := rand.NewZipf(r, 2.0, 1.0, 100)
@@ -250,11 +231,6 @@ func TestMonitor(t *testing.T) {
 
 	time.Sleep(30000 * time.Millisecond)
 
-	//for i := 0; i < 5; i++ {
-	//	time.Sleep(100 * time.Millisecond)
-	//	ts.runMonitor()
-	//}
-
 	for i := 0; i < nclerk; i++ {
 		ch <- true
 	}
@@ -264,6 +240,8 @@ func TestMonitor(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 
 	log.Printf("shutdown\n")
+
+	ts.stopMemFSs()
 
 	ts.s.Shutdown(ts.fsl)
 }

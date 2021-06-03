@@ -3,14 +3,20 @@ package npobjsrv
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
+	"ulambda/fslib"
 	np "ulambda/ninep"
+
+	"ulambda/perf"
 )
 
 const STATS = true
@@ -27,7 +33,7 @@ func (c *Tcounter) Inc() {
 }
 
 // XXX separate cache lines
-type Stats struct {
+type StatInfo struct {
 	Nwalk     Tcounter
 	Nclunk    Tcounter
 	Nopen     Tcounter
@@ -43,14 +49,97 @@ type Stats struct {
 	Nwstat    Tcounter
 	Nrenameat Tcounter
 
-	mu    sync.Mutex
 	Paths map[string]int
+
+	Util float64
+}
+
+func MkStatInfo() *StatInfo {
+	sti := &StatInfo{}
+	sti.Paths = make(map[string]int)
+	return sti
+}
+
+type Stats struct {
+	mu   sync.Mutex // protects some fields of StatInfo
+	sti  *StatInfo
+	pid  string
+	hz   int
+	done uint32
+	fsl  *fslib.FsLib
 }
 
 func MkStats() *Stats {
 	st := &Stats{}
-	st.Paths = make(map[string]int)
+	st.sti = MkStatInfo()
 	return st
+}
+
+func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
+	st.pid = pid
+	st.fsl = fsl
+	st.hz = perf.Hz()
+	go st.monitorPID()
+}
+
+func (st *Stats) spawnMonitor() string {
+	a := fslib.Attr{}
+	a.Pid = fslib.GenPid()
+	a.Program = "bin/monitor"
+	a.Args = []string{}
+	a.PairDep = nil
+	a.ExitDep = nil
+	st.fsl.Spawn(&a)
+	return a.Pid
+}
+
+func (st *Stats) monitor() {
+	log.Printf("monitor low/high util %v\n", st.pid)
+	pid := st.spawnMonitor()
+	ok, err := st.fsl.Wait(pid)
+	if string(ok) != "OK" || err != nil {
+		log.Printf("monitor: ok %v err %v\n", string(ok), err)
+	}
+	log.Printf("monitor %v done\n", pid)
+}
+
+func (st *Stats) monitorPID() {
+	ms := 1000
+	j := 1000 / st.hz
+	ncpu := runtime.GOMAXPROCS(0)
+	var total0 uint64
+	var total1 uint64
+	pid := os.Getpid()
+	total0 = perf.GetPIDSample(pid)
+	first := true
+	for atomic.LoadUint32(&st.done) != 1 {
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+		total1 = perf.GetPIDSample(pid)
+		delta := total1 - total0
+		util := 100.0 * float64(delta) / float64(ms/j)
+		util = util / float64(ncpu)
+
+		st.mu.Lock()
+		st.sti.Util = util
+		st.mu.Unlock()
+
+		if first {
+			first = false
+			continue
+		}
+		log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
+		if util >= perf.MAXLOAD {
+			st.monitor()
+		}
+		if util < perf.MINLOAD {
+			st.monitor()
+		}
+		total0 = total1
+	}
+}
+
+func (st *Stats) Done() {
+	atomic.StoreUint32(&st.done, 1)
 }
 
 func (st *Stats) Write(off np.Toffset, data []byte) (np.Tsize, error) {
@@ -81,10 +170,10 @@ func (st *Stats) Path(p []string) {
 	defer st.mu.Unlock()
 
 	path := np.Join(p)
-	if _, ok := st.Paths[path]; !ok {
-		st.Paths[path] = 0
+	if _, ok := st.sti.Paths[path]; !ok {
+		st.sti.Paths[path] = 0
 	}
-	st.Paths[path] += 1
+	st.sti.Paths[path] += 1
 }
 
 type pair struct {
@@ -95,7 +184,7 @@ type pair struct {
 func (st *Stats) SortPathL() []pair {
 	var s []pair
 
-	for k, v := range st.Paths {
+	for k, v := range st.sti.Paths {
 		s = append(s, pair{k, v})
 	}
 	sort.Slice(s, func(i, j int) bool {
@@ -105,11 +194,11 @@ func (st *Stats) SortPathL() []pair {
 }
 
 // Make a copy of st while concurrent Inc()s may happen
-func (st *Stats) acopy() *Stats {
-	stcp := &Stats{}
+func (sti *StatInfo) acopy() *StatInfo {
+	sticp := &StatInfo{}
 
-	v := reflect.ValueOf(st).Elem()
-	v1 := reflect.ValueOf(stcp).Elem()
+	v := reflect.ValueOf(sti).Elem()
+	v1 := reflect.ValueOf(sticp).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		if strings.HasSuffix(t, "Tcounter") {
@@ -120,15 +209,15 @@ func (st *Stats) acopy() *Stats {
 			*p1 = Tcounter(n)
 		}
 	}
-
-	return stcp
+	return sticp
 }
 
 func (st *Stats) stats() []byte {
-	stcp := st.acopy()
+	stcp := st.sti.acopy()
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	stcp.Paths = st.Paths
+	stcp.Paths = st.sti.Paths
+	stcp.Util = st.sti.Util
 
 	data, err := json.Marshal(*stcp)
 	if err != nil {

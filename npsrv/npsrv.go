@@ -15,12 +15,17 @@ type NpConn interface {
 type NpServer struct {
 	npc        NpConn
 	addr       string
+	wireCompat bool
 	replicated bool
 	replConfig *NpServerReplConfig
 }
 
 func MakeNpServer(npc NpConn, address string) *NpServer {
-	return MakeReplicatedNpServer(npc, address, false, "", nil)
+	return MakeReplicatedNpServer(npc, address, false, false, "", nil)
+}
+
+func MakeNpServerWireCompatible(npc NpConn, address string) *NpServer {
+	return MakeReplicatedNpServer(npc, address, true, false, "", nil)
 }
 
 func (srv *NpServer) MyAddr() string {
@@ -38,7 +43,7 @@ func (srv *NpServer) runsrv(l net.Listener, wrapped bool) {
 		// If we aren't replicated or we're at the end of the chain, create a normal
 		// channel.
 		if !srv.replicated {
-			MakeChannel(srv.npc, conn)
+			MakeChannel(srv.npc, conn, srv.wireCompat)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())

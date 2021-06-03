@@ -17,21 +17,23 @@ const (
 )
 
 type Channel struct {
-	mu      sync.Mutex
-	npc     NpConn
-	conn    net.Conn
-	np      NpAPI
-	br      *bufio.Reader
-	bw      *bufio.Writer
-	replies chan *np.Fcall
-	closed  bool
+	mu         sync.Mutex
+	npc        NpConn
+	conn       net.Conn
+	wireCompat bool
+	np         NpAPI
+	br         *bufio.Reader
+	bw         *bufio.Writer
+	replies    chan *np.Fcall
+	closed     bool
 }
 
-func MakeChannel(npc NpConn, conn net.Conn) *Channel {
+func MakeChannel(npc NpConn, conn net.Conn, wireCompat bool) *Channel {
 	npapi := npc.Connect(conn)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,
+		wireCompat,
 		npapi,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
@@ -137,8 +139,16 @@ func (c *Channel) reader() {
 			}
 			return
 		}
-		fcall := &np.Fcall{}
-		if err := npcodec.Unmarshal(frame, fcall); err != nil {
+		var fcall *np.Fcall
+		if c.wireCompat {
+			fcallWC := &np.FcallWireCompat{}
+			err = npcodec.Unmarshal(frame, fcallWC)
+			fcall = fcallWC.ToInternal()
+		} else {
+			fcall = &np.Fcall{}
+			err = npcodec.Unmarshal(frame, fcall)
+		}
+		if err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
@@ -180,7 +190,14 @@ func (c *Channel) writer() {
 			return
 		}
 		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
-		frame, err := npcodec.Marshal(fcall)
+		var frame []byte
+		var err error
+		if c.wireCompat {
+			fcallWC := fcall.ToWireCompatible()
+			frame, err = npcodec.Marshal(fcallWC)
+		} else {
+			frame, err = npcodec.Marshal(fcall)
+		}
 		if err != nil {
 			log.Print("Writer: marshal error: ", err)
 		} else {

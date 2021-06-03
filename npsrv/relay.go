@@ -62,6 +62,7 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool, 
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,
+		false,
 		n,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
@@ -397,10 +398,6 @@ func (srv *NpServer) sendAllAcks() {
 // Try and send a message to the next server in the chain, and receive a
 // response.
 func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
-	if ch == nil {
-		log.Printf("Nil chan %v -> %v", srv.replConfig.RelayAddr, srv.replConfig.NextAddr)
-		return false
-	}
 	// Only call down the chain if we aren't at the tail.
 	// XXX Get rid of this if
 	if !srv.isTail() {

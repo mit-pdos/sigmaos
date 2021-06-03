@@ -41,7 +41,7 @@ type NpServerReplConfig struct {
 	*npclnt.NpClnt
 }
 
-func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
+func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
@@ -59,7 +59,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, replicated bool, relayAd
 			config.FsLib,
 			config.NpClnt}
 	}
-	srv := &NpServer{npc, "", replicated, emptyConfig}
+	srv := &NpServer{npc, "", wireCompat, replicated, emptyConfig}
 	var l net.Listener
 	if replicated {
 		registerGobTypes()

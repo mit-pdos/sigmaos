@@ -36,8 +36,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case uint8, uint16, uint32, uint64, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
+			*uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -142,8 +142,16 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Fcall:
+		case np.FcallWireCompat:
 			if err := e.encode(v.Type, v.Tag, v.Msg); err != nil {
+				return err
+			}
+		case *np.FcallWireCompat:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
+		case np.Fcall:
+			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Msg); err != nil {
 				return err
 			}
 		case *np.Fcall:
@@ -173,7 +181,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -281,8 +289,25 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
-		case *np.Fcall:
+		case *np.FcallWireCompat:
 			if err := d.decode(&v.Type, &v.Tag); err != nil {
+				return err
+			}
+			msg, err := newMsg(v.Type)
+			if err != nil {
+				return err
+			}
+
+			// allocate msg
+			rv := reflect.New(reflect.TypeOf(msg))
+			if err := d.decode(rv.Interface()); err != nil {
+				return err
+			}
+
+			v.Msg = rv.Elem().Interface().(np.Tmsg)
+
+		case *np.Fcall:
+			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno); err != nil {
 				return err
 			}
 			msg, err := newMsg(v.Type)
@@ -327,8 +352,8 @@ func SizeNp(vs ...interface{}) uint32 {
 		}
 
 		switch v := v.(type) {
-		case uint8, uint16, uint32, uint64, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*uint8, *uint16, *uint32, *uint64, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
+			*uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			s += uint32(binary.Size(v))
 		case []byte:
 			s += uint32(binary.Size(uint32(0)) + len(v))
@@ -375,8 +400,12 @@ func SizeNp(vs ...interface{}) uint32 {
 			s += SizeNp(elements...)
 		case *[]np.Stat:
 			s += SizeNp(*v)
-		case np.Fcall:
+		case np.FcallWireCompat:
 			s += SizeNp(v.Type, v.Tag, v.Msg)
+		case *np.FcallWireCompat:
+			s += SizeNp(*v)
+		case np.Fcall:
+			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, v.Msg)
 		case *np.Fcall:
 			s += SizeNp(*v)
 		case np.Tmsg:

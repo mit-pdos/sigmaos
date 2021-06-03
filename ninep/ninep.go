@@ -18,6 +18,16 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 
+// Augmentations
+type Tsession uint64
+type Tseqno uint64
+
+// NoSession signifies the fcall came from a wire-compatible peer
+const NoSession Tsession = ^Tsession(0)
+
+// NoSeqno signifies the fcall came from a wire-compatible peer
+const NoSeqno Tseqno = ^Tseqno(0)
+
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
 
@@ -278,10 +288,36 @@ type Tmsg interface {
 	Type() Tfcall
 }
 
-type Fcall struct {
+type FcallWireCompat struct {
 	Type Tfcall
 	Tag  Ttag
 	Msg  Tmsg
+}
+
+func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
+	fcall := &Fcall{}
+	fcall.Type = fcallWC.Type
+	fcall.Tag = fcallWC.Tag
+	fcall.Msg = fcallWC.Msg
+	fcall.Session = NoSession
+	fcall.Seqno = NoSeqno
+	return fcall
+}
+
+type Fcall struct {
+	Type    Tfcall
+	Tag     Ttag
+	Session Tsession
+	Seqno   Tseqno
+	Msg     Tmsg
+}
+
+func (fcall *Fcall) ToWireCompatible() *FcallWireCompat {
+	fcallWC := &FcallWireCompat{}
+	fcallWC.Type = fcall.Type
+	fcallWC.Tag = fcall.Tag
+	fcallWC.Msg = fcall.Msg
+	return fcallWC
 }
 
 type Tversion struct {

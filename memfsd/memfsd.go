@@ -49,7 +49,7 @@ func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *n
 	fsd.ct = npo.MkConnTable()
 	fsd.stats = npo.MkStats()
 	fsd.ch = make(chan bool)
-	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, replicated, relayAddr, config)
+	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, false, replicated, relayAddr, config)
 	if err := fsd.MkNod("statsd", fsd.stats); err != nil {
 		log.Fatalf("Mknod failed %v\n", err)
 	}

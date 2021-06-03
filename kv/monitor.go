@@ -8,19 +8,22 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/memfsd"
 	"ulambda/perf"
 	"ulambda/stats"
 )
 
-const KV = "bin/kv"
+const (
+	KV        = "bin/kv"
+	KVMONLOCK = "monlock"
+)
 
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	pid   string
-	kv    string
-	args  []string
-	conf2 *Config2
+	pid  string
+	kv   string
+	args []string
 }
 
 func MakeMonitor(args []string) (*Monitor, error) {
@@ -28,8 +31,20 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
 	db.Name(mo.pid)
+
+	if err := mo.LockFile(KVDIR, KVMONLOCK); err != nil {
+		log.Fatalf("Lock failed %v\n", err)
+	}
+
 	mo.Started(mo.pid)
 	return mo, nil
+}
+
+func (mo *Monitor) unlock() {
+	if err := mo.UnlockFile(KVDIR, KVMONLOCK); err != nil {
+		log.Fatalf("Unlock failed failed %v\n", err)
+	}
+
 }
 
 func spawnBalancer(fsl *fslib.FsLib, opcode, mfs string) string {
@@ -98,17 +113,31 @@ func (mo *Monitor) grow() {
 	runBalancer(mo.FsLib, "add", pid)
 }
 
-// XXX monitor should take lock?
-func (mo *Monitor) Work() {
-	util := float64(0)
-	n := 0
-	sts, err := mo.ReadDir("name/memfsd")
+func (mo *Monitor) shrink(kv string) {
+	log.Printf("shrink: del %v\n", kv)
+	runBalancer(mo.FsLib, "del", kv)
+	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
 	if err != nil {
-		log.Printf("Readdir failed %v\n", err)
-		os.Exit(1)
+		log.Printf("shrink: remove failed %v\n", err)
 	}
-	for _, st := range sts {
-		kvd := "name/memfsd/" + st.Name + "/statsd"
+}
+
+func (mo *Monitor) Work() {
+	defer mo.unlock() // release lock acquired in MakeMonitor()
+
+	conf, err := readConfig(mo.FsLib, KVCONFIG)
+	if err != nil {
+		log.Fatalf("readConfig: err %v\n", err)
+	}
+	kvs := makeKvs(conf.Shards)
+	log.Printf("Monitor config %v\n", kvs)
+
+	util := float64(0)
+	low := float64(100.0)
+	lowkv := ""
+	n := 0
+	for kv, _ := range kvs.set {
+		kvd := memfsd.MEMFS + "/" + kv + "/statsd"
 		log.Printf("monitor: %v\n", kvd)
 		sti := stats.StatInfo{}
 		err := mo.ReadFileJson(kvd, &sti)
@@ -118,10 +147,17 @@ func (mo *Monitor) Work() {
 		}
 		n += 1
 		util += sti.Util
+		if sti.Util < low {
+			low = sti.Util
+			lowkv = kv
+		}
 	}
 	util = util / float64(n)
-	log.Printf("monitor: avg util: %f\n", util)
+	log.Printf("monitor: avg util %f low %f\n", util, low)
 	if util >= perf.MAXLOAD {
 		mo.grow()
+	}
+	if util < perf.MINLOAD && len(kvs.set) > 1 {
+		mo.shrink(lowkv)
 	}
 }

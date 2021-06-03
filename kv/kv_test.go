@@ -237,7 +237,7 @@ func TestMonitor(t *testing.T) {
 
 	log.Printf("Done waiting for clerks\n")
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(20000 * time.Millisecond)
 
 	log.Printf("shutdown\n")
 

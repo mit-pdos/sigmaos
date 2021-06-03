@@ -114,19 +114,19 @@ func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 func (srv *NpServer) reloadReplConfig(cfg *NpServerReplConfig) {
 	srv.replConfig.mu.Lock()
 	defer srv.replConfig.mu.Unlock()
-	if srv.replConfig.HeadAddr != cfg.HeadAddr {
+	if srv.replConfig.HeadAddr != cfg.HeadAddr || srv.replConfig.HeadChan == nil {
 		srv.connectToReplica(&srv.replConfig.HeadChan, cfg.HeadAddr)
 		srv.replConfig.HeadAddr = cfg.HeadAddr
 	}
-	if srv.replConfig.TailAddr != cfg.TailAddr {
+	if srv.replConfig.TailAddr != cfg.TailAddr || srv.replConfig.TailChan == nil {
 		srv.connectToReplica(&srv.replConfig.TailChan, cfg.TailAddr)
 		srv.replConfig.TailAddr = cfg.TailAddr
 	}
-	if srv.replConfig.PrevAddr != cfg.PrevAddr {
+	if srv.replConfig.PrevAddr != cfg.PrevAddr || srv.replConfig.PrevChan == nil {
 		srv.connectToReplica(&srv.replConfig.PrevChan, cfg.PrevAddr)
 		srv.replConfig.PrevAddr = cfg.PrevAddr
 	}
-	if srv.replConfig.NextAddr != cfg.NextAddr {
+	if srv.replConfig.NextAddr != cfg.NextAddr || srv.replConfig.NextChan == nil {
 		srv.connectToReplica(&srv.replConfig.NextChan, cfg.NextAddr)
 		srv.replConfig.NextAddr = cfg.NextAddr
 	}
@@ -186,7 +186,7 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 			}
 		} else {
 			*rc = ch
-			break
+			return
 		}
 	}
 }

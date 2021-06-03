@@ -35,17 +35,19 @@ type FcallWrapper struct {
 
 type SrvOp struct {
 	wrapped bool
+	seqno   uint64
 	frame   []byte
-	reply   []byte
+	reply   *np.Fcall
 	r       *RelayChannel
-	replies chan []byte
+	// XXX get rid of this chan
+	replies chan *SrvOp
 }
 
 // A channel between clients & replicas, or replicas & replicas
 type RelayChannel struct {
 	c       *Channel
 	ops     chan *SrvOp
-	replies chan []byte
+	replies chan *SrvOp
 	wrapped bool
 }
 
@@ -66,7 +68,7 @@ func MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *SrvOp, wrapped bool, 
 		make(chan *np.Fcall),
 		false,
 	}
-	r := &RelayChannel{c, ops, make(chan []byte), wrapped}
+	r := &RelayChannel{c, ops, make(chan *SrvOp), wrapped}
 	go r.writer()
 	go r.reader()
 	return r
@@ -83,7 +85,7 @@ func (r *RelayChannel) reader() {
 			}
 			return
 		}
-		op := &SrvOp{r.wrapped, frame, []byte{}, r, r.replies}
+		op := &SrvOp{r.wrapped, NO_SEQNO, frame, nil, r, r.replies}
 		r.ops <- op
 	}
 }
@@ -103,11 +105,38 @@ func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 
 func (r *RelayChannel) writer() {
 	for {
-		frame, ok := <-r.replies
+		op, ok := <-r.replies
 		if !ok {
 			return
 		}
-		err := npcodec.WriteFrame(r.c.bw, frame)
+
+		frame, err := marshalFcall(op.reply, op.wrapped, op.seqno)
+
+		sendBuf := false
+		var data []byte
+		switch op.reply.Type {
+		case np.TTwrite:
+			msg := op.reply.Msg.(np.Twrite)
+			data = msg.Data
+			sendBuf = true
+		case np.TTwritev:
+			msg := op.reply.Msg.(np.Twritev)
+			data = msg.Data
+			sendBuf = true
+		case np.TRread:
+			msg := op.reply.Msg.(np.Rread)
+			data = msg.Data
+			sendBuf = true
+		default:
+		}
+
+		if sendBuf {
+			err = npcodec.WriteFrameAndBuf(r.c.bw, frame, data)
+		} else {
+			err = npcodec.WriteFrame(r.c.bw, frame)
+		}
+
+		//		err := npcodec.WriteFrame(r.c.bw, frame)
 		if err != nil {
 			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)
 			return
@@ -199,13 +228,10 @@ func (srv *NpServer) relayReader() {
 				db.DLPrintf("RSRV", " %v Reader sv req: %v\n", config.RelayAddr, fcall)
 				// Serve the op first.
 				reply := op.r.serve(fcall)
+				op.seqno = seqno
 				db.DLPrintf("RSRV", "%v Reader rep: %v\n", config.RelayAddr, reply)
-				frame, err := marshalFcall(reply, op.wrapped, wrap.Seqno)
-				if err != nil {
-					log.Fatalf("Writer: marshal error: %v", err)
-				}
 				// Store the reply
-				op.reply = frame
+				op.reply = reply
 				// Optionally log the fcall & its reply type.
 				srv.logOp(fcall, reply)
 				// Reliably send to the next link in the chain (even if that link
@@ -240,7 +266,7 @@ func (srv *NpServer) relayReader() {
 					db.DLPrintf("RSRV", "%v Didn't enqueue duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
 					// TODO: send an empty reply, but this works for now since it
 					// preserves the seqno.
-					op.replies <- op.frame
+					op.replies <- op
 					continue
 				} else {
 					db.DLPrintf("RSRV", "%v Enqueued duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
@@ -249,10 +275,11 @@ func (srv *NpServer) relayReader() {
 			// If we're the tail, we always ack immediately
 			if srv.isTail() {
 				db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, wrap.Fcall)
-				if len(op.reply) > 0 {
-					op.replies <- op.reply
-				}
-				op.replies <- op.frame
+				// TODO: not sure why this was here...
+				//				if len(op.reply) > 0 {
+				//					op.replies <- op.reply
+				//				}
+				op.replies <- op
 			}
 		}
 	}
@@ -295,7 +322,7 @@ func (srv *NpServer) relayWriter() {
 		db.DLPrintf("RSRV", "%v Dequeued until: %v", config.RelayAddr, msgs)
 		// Ack upstream
 		for _, msg := range msgs {
-			msg.op.replies <- msg.op.reply
+			msg.op.replies <- msg.op
 		}
 	}
 }
@@ -361,7 +388,7 @@ func (srv *NpServer) sendAllAcks() {
 	// Ack upstream
 	go func() {
 		for _, msg := range msgs {
-			msg.op.replies <- msg.op.reply
+			msg.op.replies <- msg.op
 		}
 	}()
 }
@@ -370,6 +397,7 @@ func (srv *NpServer) sendAllAcks() {
 // response.
 func (srv *NpServer) relayOnce(ch *RelayConn, msg *RelayMsg) bool {
 	if ch == nil {
+		log.Printf("Nil chan %v -> %v", srv.replConfig.RelayAddr, srv.replConfig.NextAddr)
 		return false
 	}
 	// Only call down the chain if we aren't at the tail.

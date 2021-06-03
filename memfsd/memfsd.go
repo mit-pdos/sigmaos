@@ -10,6 +10,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	"ulambda/stats"
 )
 
 const MEMFS = "name/memfsd"
@@ -34,7 +35,7 @@ type Fsd struct {
 	addr  string
 	wt    *npo.WatchTable
 	ct    *npo.ConnTable
-	stats *npo.Stats
+	stats *stats.Stats
 }
 
 func MakeFsd(addr string) *Fsd {
@@ -47,7 +48,7 @@ func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *n
 	fsd.addr = addr
 	fsd.wt = npo.MkWatchTable()
 	fsd.ct = npo.MkConnTable()
-	fsd.stats = npo.MkStats()
+	fsd.stats = stats.MkStats()
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, replicated, relayAddr, config)
 	if err := fsd.MkNod("statsd", fsd.stats); err != nil {
@@ -78,7 +79,7 @@ func (fsd *Fsd) ConnTable() *npo.ConnTable {
 	return fsd.ct
 }
 
-func (fsd *Fsd) Stats() *npo.Stats {
+func (fsd *Fsd) Stats() *stats.Stats {
 	return fsd.stats
 }
 

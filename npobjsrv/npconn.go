@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/stats"
 )
 
 type NpConn struct {
@@ -18,7 +19,7 @@ type NpConn struct {
 	ephemeral map[NpObj]*Fid
 	wt        *WatchTable
 	ct        *ConnTable
-	st        *Stats
+	st        *stats.Stats
 }
 
 func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
@@ -117,7 +118,7 @@ func makeQids(os []NpObj) []np.Tqid {
 
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nwalk.Inc()
+		npc.st.StatInfo().Nwalk.Inc()
 	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -156,7 +157,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	if npc.st != nil {
-		npc.st.sti.Nclunk.Inc()
+		npc.st.StatInfo().Nclunk.Inc()
 	}
 	_, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -170,7 +171,7 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nopen.Inc()
+		npc.st.StatInfo().Nopen.Inc()
 	}
 	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -195,7 +196,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 
 func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nwatchv.Inc()
+		npc.st.StatInfo().Nwatchv.Inc()
 	}
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -220,7 +221,7 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Ncreate.Inc()
+		npc.st.StatInfo().Ncreate.Inc()
 	}
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -281,14 +282,14 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 
 func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nflush.Inc()
+		npc.st.StatInfo().Nflush.Inc()
 	}
 	return nil
 }
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nread.Inc()
+		npc.st.StatInfo().Nread.Inc()
 	}
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -301,7 +302,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 
 func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nreadv.Inc()
+		npc.st.StatInfo().Nreadv.Inc()
 	}
 	db.DLPrintf("9POBJ", "ReadV %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -313,7 +314,7 @@ func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nwrite.Inc()
+		npc.st.StatInfo().Nwrite.Inc()
 	}
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -330,7 +331,7 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 
 func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nwritev.Inc()
+		npc.st.StatInfo().Nwritev.Inc()
 	}
 	db.DLPrintf("9POBJ", "WriteV %v\n", args)
 	f, ok := npc.lookup(args.Fid)
@@ -347,7 +348,7 @@ func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nremove.Inc()
+		npc.st.StatInfo().Nremove.Inc()
 	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -377,7 +378,7 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nstat.Inc()
+		npc.st.StatInfo().Nstat.Inc()
 	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -398,7 +399,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 
 func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nwstat.Inc()
+		npc.st.StatInfo().Nwstat.Inc()
 	}
 	f, ok := npc.lookup(args.Fid)
 	if !ok {
@@ -428,7 +429,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 
 func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	if npc.st != nil {
-		npc.st.sti.Nrenameat.Inc()
+		npc.st.StatInfo().Nrenameat.Inc()
 	}
 	oldf, ok := npc.lookup(args.OldFid)
 	if !ok {

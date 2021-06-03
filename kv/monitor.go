@@ -8,8 +8,8 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	npo "ulambda/npobjsrv"
 	"ulambda/perf"
+	"ulambda/stats"
 )
 
 const KV = "bin/kv"
@@ -110,7 +110,7 @@ func (mo *Monitor) Work() {
 	for _, st := range sts {
 		kvd := "name/memfsd/" + st.Name + "/statsd"
 		log.Printf("monitor: %v\n", kvd)
-		sti := npo.StatInfo{}
+		sti := stats.StatInfo{}
 		err := mo.ReadFileJson(kvd, &sti)
 		if err != nil {
 			log.Printf("ReadFileJson failed %v\n", err)

@@ -12,7 +12,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Tstate struct {
@@ -261,24 +260,6 @@ func TestSymlink3(t *testing.T) {
 
 		return false, nil
 	})
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestStatsd(t *testing.T) {
-	ts := makeTstate(t)
-
-	stats := npo.Stats{}
-	err := ts.ReadFileJson("name/statsd", &stats)
-	assert.Nil(t, err, "statsd")
-	assert.Equal(t, npo.Tcounter(1), stats.Nread, "Nread")
-	for i := 0; i < 1000; i++ {
-		_, err := ts.ReadFile("name/statsd")
-		assert.Nil(t, err, "statsd")
-	}
-	err = ts.ReadFileJson("name/statsd", &stats)
-	assert.Nil(t, err, "statsd")
-	assert.Equal(t, npo.Tcounter(1002), stats.Nopen, "statsd")
 
 	ts.s.Shutdown(ts.FsLib)
 }

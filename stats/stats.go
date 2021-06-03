@@ -1,4 +1,4 @@
-package npobjsrv
+package stats
 
 import (
 	"encoding/json"
@@ -73,6 +73,10 @@ func MkStats() *Stats {
 	st := &Stats{}
 	st.sti = MkStatInfo()
 	return st
+}
+
+func (st *Stats) StatInfo() *StatInfo {
+	return st.sti
 }
 
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {

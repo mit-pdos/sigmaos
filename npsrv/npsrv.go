@@ -17,6 +17,7 @@ type NpServer struct {
 	addr       string
 	wireCompat bool
 	replicated bool
+	replyCache *ReplyCache
 	replConfig *NpServerReplConfig
 }
 

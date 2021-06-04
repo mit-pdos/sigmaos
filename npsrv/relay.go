@@ -235,6 +235,7 @@ func (srv *NpServer) relayReader() {
 				db.DLPrintf("RSRV", " %v Reader sv req: %v\n", config.RelayAddr, fcall)
 				// Serve the op first.
 				reply := op.r.serve(fcall)
+				srv.replyCache.Put(fcall)
 				op.seqno = seqno
 				db.DLPrintf("RSRV", "%v Reader rep: %v\n", config.RelayAddr, reply)
 				// Store the reply

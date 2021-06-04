@@ -59,7 +59,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			config.FsLib,
 			config.NpClnt}
 	}
-	srv := &NpServer{npc, "", wireCompat, replicated, emptyConfig}
+	srv := &NpServer{npc, "", wireCompat, replicated, MakeReplyCache(), emptyConfig}
 	var l net.Listener
 	if replicated {
 		registerGobTypes()

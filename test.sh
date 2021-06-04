@@ -10,3 +10,4 @@ go test $1 ulambda/fslib
 go test $1 ulambda/locald
 (cd mr; go test $1)
 (cd kv; go test $1)
+(cd replica; go test -timeout=45m $1)

@@ -111,6 +111,7 @@ func (r *RelayChannel) writer() {
 			return
 		}
 
+		db.DLPrintf("RSRV", "%v marshalling op %v", r.c.Dst(), op)
 		frame, err := marshalFcall(op.reply, op.wrapped, op.seqno)
 
 		sendBuf := false
@@ -267,6 +268,7 @@ func (srv *NpServer) relayReader() {
 				// true. Otherwise, it returns false. This atomicity is needed to make
 				// sure we never drop acks which should be relayed upstream.
 				// TODO: what about the tail? We shouldn't enqueue in this case, right?
+				op.seqno = wrap.Seqno
 				msg = &RelayMsg{op, wrap.Fcall, wrap.Seqno}
 				if !config.q.EnqueueIfDuplicate(msg) && !srv.isTail() {
 					db.DLPrintf("RSRV", "%v Didn't enqueue duplicate seqno: %v < %v", config.RelayAddr, wrap.Seqno, seqno)
@@ -364,6 +366,7 @@ func (srv *NpServer) resendInflightRelayMsgs() {
 	for len(toSend) != 0 {
 		// We shouldn't send anything if we're the tail
 		if srv.isTail() {
+			db.DLPrintf("RSRV", "%v -> %v Was tail, cancelling resend", config.RelayAddr, nextAddr)
 			return
 		}
 		// Try to send a message.
@@ -458,7 +461,7 @@ func (w *FcallWrapper) String() string {
 }
 
 func (op *SrvOp) String() string {
-	return fmt.Sprintf("{ wrapped:%v }", op.wrapped)
+	return fmt.Sprintf("{ seqno:%v wrapped:%v reply:%v }", op.seqno, op.wrapped, op.reply)
 }
 
 func peerCrashed(err error) bool {

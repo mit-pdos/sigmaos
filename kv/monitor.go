@@ -157,6 +157,13 @@ func (mo *Monitor) Work() {
 		conf = c
 		break
 	}
+
+	now := time.Now().UnixNano()
+	if (now-conf.Ctime)/1_000_000_000 < 1 {
+		log.Printf("Monitor: skip\n")
+		return
+	}
+
 	kvs := makeKvs(conf.Shards)
 	log.Printf("Monitor config %v\n", kvs)
 

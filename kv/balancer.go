@@ -7,6 +7,7 @@ package kv
 import (
 	"fmt"
 	"log"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -108,12 +109,13 @@ func (bl *Balancer) Balance() {
 	defer bl.unlock() // release lock acquired in MakeBalancer()
 
 	// db.DLPrintf("BAL", "Balancer: %v\n", bl.args)
-	log.Printf("BAL Balancer: %v\n", bl.args)
 
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err != nil {
 		log.Fatalf("readConfig: err %v\n", err)
 	}
+
+	log.Printf("BAL Balancer: %v %v\n", bl.args, bl.conf)
 
 	kvs := makeKvs(bl.conf.Shards)
 
@@ -159,6 +161,10 @@ func (bl *Balancer) Balance() {
 
 	bl.conf.N = bl.nextConf.N
 	bl.conf.Shards = bl.nextConf.New
+	bl.conf.Ctime = time.Now().UnixNano()
+
+	log.Printf("new %v\n", bl.conf)
+
 	err = bl.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: MakeFile %v err %v\n", KVNEXTCONFIG, err)

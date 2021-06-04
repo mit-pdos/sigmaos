@@ -48,15 +48,35 @@ func (mo *Monitor) unlock() {
 
 }
 
-func spawnBalancer(fsl *fslib.FsLib, opcode, mfs string) string {
+func spawnBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
+	a := fslib.Attr{}
+	a.Pid = pid2
+	a.Program = "bin/balancer"
+	a.Args = []string{opcode, pid1}
+	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
+	a.ExitDep = nil
+	fsl.Spawn(&a)
+}
+
+func spawnBalancer(fsl *fslib.FsLib, opcode, pid1 string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/balancer"
-	a.Args = []string{opcode, mfs}
+	a.Args = []string{opcode, pid1}
 	a.PairDep = nil
 	a.ExitDep = nil
 	fsl.Spawn(&a)
 	return a.Pid
+}
+
+func spawnKVPid(fsl *fslib.FsLib, pid1 string, pid2 string) {
+	a := fslib.Attr{}
+	a.Pid = pid1
+	a.Program = KV
+	a.Args = []string{""}
+	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
+	a.ExitDep = nil
+	fsl.Spawn(&a)
 }
 
 func spawnKV(fsl *fslib.FsLib) string {
@@ -70,9 +90,17 @@ func spawnKV(fsl *fslib.FsLib) string {
 	return a.Pid
 }
 
-func runBalancer(fsl *fslib.FsLib, opcode, mfs string) {
-	pid1 := spawnBalancer(fsl, opcode, mfs)
-	ok, err := fsl.Wait(pid1)
+func runBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
+	spawnBalancerPid(fsl, opcode, pid1, pid2)
+	ok, err := fsl.Wait(pid2)
+	if string(ok) != "OK" || err != nil {
+		log.Printf("runBalancer: ok %v err %v\n", string(ok), err)
+	}
+}
+
+func runBalancer(fsl *fslib.FsLib, opcode, pid1 string) {
+	pid2 := spawnBalancer(fsl, opcode, pid1)
+	ok, err := fsl.Wait(pid2)
 	if string(ok) != "OK" || err != nil {
 		log.Printf("runBalancer: ok %v err %v\n", string(ok), err)
 	}
@@ -101,15 +129,10 @@ func (mo *Monitor) kvwaiting() bool {
 }
 
 func (mo *Monitor) grow() {
-	pid := spawnKV(mo.FsLib)
-	// XXX
-	for true {
-		ok := mo.HasBeenSpawned(pid)
-		if ok {
-			break
-		}
-	}
-	runBalancer(mo.FsLib, "add", pid)
+	pid1 := fslib.GenPid()
+	pid2 := fslib.GenPid()
+	spawnKVPid(mo.FsLib, pid1, pid2)
+	runBalancerPid(mo.FsLib, "add", pid1, pid2)
 }
 
 func (mo *Monitor) shrink(kv string) {

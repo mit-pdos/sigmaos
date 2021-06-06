@@ -1,6 +1,7 @@
 package npcodec
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -27,6 +28,39 @@ func Marshal(v interface{}) ([]byte, error) {
 		return nil, err
 	}
 	return b.Bytes(), nil
+}
+
+func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) error {
+	frame, err := Marshal(fcall)
+	if err != nil {
+		return fmt.Errorf("marshal error: %v", err)
+	}
+	dataBuf := false
+	var data []byte
+	switch fcall.GetType() {
+	case np.TTwrite:
+		msg := fcall.GetMsg().(np.Twrite)
+		data = msg.Data
+		dataBuf = true
+	case np.TTwritev:
+		msg := fcall.GetMsg().(np.Twritev)
+		data = msg.Data
+		dataBuf = true
+	case np.TRread:
+		msg := fcall.GetMsg().(np.Rread)
+		data = msg.Data
+		dataBuf = true
+	default:
+	}
+	if dataBuf {
+		err = WriteFrameAndBuf(b, frame, data)
+	} else {
+		err = WriteFrame(b, frame)
+	}
+	if err != nil {
+		return fmt.Errorf("WriteFrame error: %v", err)
+	}
+	return nil
 }
 
 type encoder struct {

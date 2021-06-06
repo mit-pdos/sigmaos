@@ -295,10 +295,23 @@ type Tmsg interface {
 	Type() Tfcall
 }
 
+type WritableFcall interface {
+	GetType() Tfcall
+	GetMsg() Tmsg
+}
+
 type FcallWireCompat struct {
 	Type Tfcall
 	Tag  Ttag
 	Msg  Tmsg
+}
+
+func (fcallWC *FcallWireCompat) GetType() Tfcall {
+	return fcallWC.Type
+}
+
+func (fcallWC *FcallWireCompat) GetMsg() Tmsg {
+	return fcallWC.Msg
 }
 
 func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
@@ -317,6 +330,14 @@ type Fcall struct {
 	Session Tsession
 	Seqno   Tseqno
 	Msg     Tmsg
+}
+
+func (fcall *Fcall) GetType() Tfcall {
+	return fcall.Type
+}
+
+func (fcall *Fcall) GetMsg() Tmsg {
+	return fcall.Msg
 }
 
 func (fcall *Fcall) ToWireCompatible() *FcallWireCompat {

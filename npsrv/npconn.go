@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 
 	db "ulambda/debug"
@@ -190,43 +191,23 @@ func (c *Channel) writer() {
 			return
 		}
 		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
-		var frame []byte
 		var err error
+		var writableFcall np.WritableFcall
 		if c.wireCompat {
-			fcallWC := fcall.ToWireCompatible()
-			frame, err = npcodec.Marshal(fcallWC)
+			log.Printf("wire compatible!")
+			writableFcall = fcall.ToWireCompatible()
 		} else {
-			frame, err = npcodec.Marshal(fcall)
+			log.Printf("not wire compatible!")
+			writableFcall = fcall
 		}
+		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)
 		if err != nil {
-			log.Print("Writer: marshal error: ", err)
-		} else {
-			sendBuf := false
-			var data []byte
-			switch fcall.Type {
-			case np.TTwrite:
-				msg := fcall.Msg.(np.Twrite)
-				data = msg.Data
-				sendBuf = true
-			case np.TTwritev:
-				msg := fcall.Msg.(np.Twritev)
-				data = msg.Data
-				sendBuf = true
-			case np.TRread:
-				msg := fcall.Msg.(np.Rread)
-				data = msg.Data
-				sendBuf = true
-			default:
-			}
-			if sendBuf {
-				err = npcodec.WriteFrameAndBuf(c.bw, frame, data)
-			} else {
-				err = npcodec.WriteFrame(c.bw, frame)
-			}
-			if err != nil {
-				log.Print("Writer: WriteFrame error ", err)
+			log.Print(err)
+			// If exit the thread if the connection is broken
+			if strings.Contains(err.Error(), "WriteFrame error") {
 				return
 			}
+		} else {
 			err = c.bw.Flush()
 			if err != nil {
 				log.Print("Writer: Flush error ", err)

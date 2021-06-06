@@ -7,6 +7,7 @@ package ninep
 
 import (
 	"fmt"
+	"sync/atomic"
 )
 
 type Tsize uint32
@@ -21,6 +22,12 @@ type Tgid uint32
 // Augmentations
 type Tsession uint64
 type Tseqno uint64
+
+// Atomically increment pointer and return result
+func (n *Tseqno) Next() Tseqno {
+	next := atomic.AddUint64((*uint64)(n), 1)
+	return Tseqno(next)
+}
 
 // NoSession signifies the fcall came from a wire-compatible peer
 const NoSession Tsession = ^Tsession(0)

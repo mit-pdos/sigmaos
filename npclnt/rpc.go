@@ -2,17 +2,25 @@ package npclnt
 
 import (
 	"errors"
+	"math/rand"
+	"time"
 
 	np "ulambda/ninep"
 )
 
 type NpClnt struct {
-	cm *ChanMgr
+	session np.Tsession
+	seqno   np.Tseqno
+	cm      *ChanMgr
 }
 
 func MakeNpClnt() *NpClnt {
 	npc := &NpClnt{}
-	npc.cm = makeChanMgr()
+	// Generate a fresh session token
+	rand.Seed(time.Now().UnixNano())
+	npc.session = np.Tsession(rand.Uint64())
+	npc.seqno = 0
+	npc.cm = makeChanMgr(npc.session, &npc.seqno)
 	return npc
 }
 

@@ -126,40 +126,21 @@ func (ch *Chan) writer() {
 		t := ch.allocate(rpc)
 		rpc.req.Tag = t
 		db.DLPrintf("9PCHAN", "Writer: to %v %v\n", ch.Dst(), rpc.req)
-		frame, err := npcodec.Marshal(rpc.req)
+		err := npcodec.MarshalFcallToWriter(rpc.req, ch.bw)
 		if err != nil {
-			rpc.replych <- &Reply{nil, err}
-		} else {
-			sendBuf := false
-			var data []byte
-			switch rpc.req.Type {
-			case np.TTwrite:
-				msg := rpc.req.Msg.(np.Twrite)
-				data = msg.Data
-				sendBuf = true
-			case np.TTwritev:
-				msg := rpc.req.Msg.(np.Twritev)
-				data = msg.Data
-				sendBuf = true
-			case np.TRread:
-				msg := rpc.req.Msg.(np.Rread)
-				data = msg.Data
-				sendBuf = true
-			default:
+			if strings.Contains(err.Error(), "marshal error") {
+				rpc.replych <- &Reply{nil, err}
 			}
-			if sendBuf {
-				err = npcodec.WriteFrameAndBuf(ch.bw, frame, data)
-			} else {
-				err = npcodec.WriteFrame(ch.bw, frame)
-			}
-			if err == io.EOF {
+			if strings.Contains(err.Error(), "EOF") {
 				ch.Close()
 				return
 			}
-			if err != nil {
-				log.Fatalf("WriteFrame error %v\n", err)
+			// If exit the thread if the connection is broken
+			if strings.Contains(err.Error(), "WriteFrame error") {
+				log.Fatal(err)
 				return
 			}
+		} else {
 			err = ch.bw.Flush()
 			if err != nil {
 				log.Fatalf("Flush error %v\n", err)

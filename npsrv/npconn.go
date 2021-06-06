@@ -194,10 +194,8 @@ func (c *Channel) writer() {
 		var err error
 		var writableFcall np.WritableFcall
 		if c.wireCompat {
-			log.Printf("wire compatible!")
 			writableFcall = fcall.ToWireCompatible()
 		} else {
-			log.Printf("not wire compatible!")
 			writableFcall = fcall
 		}
 		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)

@@ -129,7 +129,7 @@ func (st *Stats) monitorPID() {
 			first = false
 			continue
 		}
-		// log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
+		log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
 		if util >= perf.MAXLOAD {
 			st.monitor()
 		}

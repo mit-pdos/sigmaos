@@ -187,7 +187,7 @@ func (mo *Monitor) Work() {
 		}
 	}
 	util = util / float64(n)
-	log.Printf("monitor: avg util %f low %f\n", util, low)
+	log.Printf("monitor: avg util %f low %f %v\n", util, low, lowkv)
 	if util >= perf.MAXLOAD {
 		mo.grow()
 	}

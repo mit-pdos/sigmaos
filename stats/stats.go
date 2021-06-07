@@ -51,6 +51,7 @@ type StatInfo struct {
 
 	Paths map[string]int
 
+	Load float64
 	Util float64
 }
 
@@ -83,6 +84,7 @@ func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
 	st.hz = perf.Hz()
+	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()
 }
 
@@ -98,45 +100,69 @@ func (st *Stats) spawnMonitor() string {
 }
 
 func (st *Stats) monitor() {
+	t0 := time.Now().UnixNano()
 	pid := st.spawnMonitor()
 	ok, err := st.fsl.Wait(pid)
 	if string(ok) != "OK" || err != nil {
 		log.Printf("monitor: ok %v err %v\n", string(ok), err)
 	}
+	t1 := time.Now().UnixNano()
+	log.Printf("mon: %v\n", t1-t0)
+}
+
+const (
+	EXP_1 = 0.9048 // 1/exp(100ms/1000ms) as fixed-point
+	MS    = 100    // 100 ms
+	SEC   = 1000   // 1s
+)
+
+func (st *Stats) load(ticks uint64) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	j := SEC / st.hz
+	ncpu := runtime.GOMAXPROCS(0)
+
+	util := 100.0 * float64(ticks) / float64(MS/j)
+	util = util / float64(ncpu)
+
+	nthread := float64(runtime.NumGoroutine())
+
+	st.sti.Load *= EXP_1
+	st.sti.Load += (1 - EXP_1) * nthread
+
+	st.sti.Util = util
+}
+
+func (st *Stats) doMonitor() bool {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	log.Printf("CPU util %f load %f\n", st.sti.Util, st.sti.Load)
+	if st.sti.Util >= perf.MAXLOAD {
+		return true
+	}
+	if st.sti.Util < perf.MINLOAD {
+		return true
+	}
+	return false
 }
 
 func (st *Stats) monitorPID() {
-	ms := 1000
-	j := 1000 / st.hz
-	ncpu := runtime.GOMAXPROCS(0)
-	var total0 uint64
-	var total1 uint64
+	total0 := uint64(0)
+	total1 := uint64(0)
 	pid := os.Getpid()
 	total0 = perf.GetPIDSample(pid)
-	first := true
+	period1 := 10 // 1000/MS;
+
 	for atomic.LoadUint32(&st.done) != 1 {
-		time.Sleep(time.Duration(ms) * time.Millisecond)
-		total1 = perf.GetPIDSample(pid)
-		delta := total1 - total0
-		util := 100.0 * float64(delta) / float64(ms/j)
-		util = util / float64(ncpu)
-
-		st.mu.Lock()
-		st.sti.Util = util
-		st.mu.Unlock()
-
-		if first {
-			first = false
-			continue
+		for i := 0; i < period1; i++ {
+			time.Sleep(time.Duration(MS) * time.Millisecond)
+			total1 = perf.GetPIDSample(pid)
+			st.load(total1 - total0)
+			total0 = total1
 		}
-		log.Printf("CPU delta: %v util %f ncpu %v\n", delta, util, ncpu)
-		if util >= perf.MAXLOAD {
+		if st.doMonitor() {
 			st.monitor()
 		}
-		if util < perf.MINLOAD {
-			st.monitor()
-		}
-		total0 = total1
 	}
 }
 
@@ -220,6 +246,7 @@ func (st *Stats) stats() []byte {
 	defer st.mu.Unlock()
 	stcp.Paths = st.sti.Paths
 	stcp.Util = st.sti.Util
+	stcp.Load = st.sti.Load
 
 	data, err := json.Marshal(*stcp)
 	if err != nil {

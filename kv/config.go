@@ -8,6 +8,7 @@ import (
 type Config struct {
 	N      int
 	Shards []string // maps shard # to server
+	Ctime  int64    // XXX use ctime of config file?
 }
 
 type Config2 struct {
@@ -17,7 +18,7 @@ type Config2 struct {
 }
 
 func makeConfig(n int) *Config {
-	cf := &Config{n, make([]string, NSHARD)}
+	cf := &Config{n, make([]string, NSHARD), 0}
 	return cf
 }
 

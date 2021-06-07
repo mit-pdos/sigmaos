@@ -220,7 +220,7 @@ func (ts *Tstate) clerkMon(c int, ch chan bool) {
 	}
 }
 
-func TestMonitor(t *testing.T) {
+func TestElastic(t *testing.T) {
 	nclerk := 30
 	ts := makeTstate(t)
 

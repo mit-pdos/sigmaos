@@ -1,7 +1,6 @@
 package npsrv
 
 import (
-	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
@@ -34,8 +33,8 @@ type NpServerReplConfig struct {
 	TailChan     *RelayConn
 	PrevChan     *RelayConn
 	NextChan     *RelayConn
-	ops          chan *SrvOp
-	q            *RelayMsgQueue
+	ops          chan *RelayOp
+	inFlight     *RelayOpSet
 	fids         map[np.Tfid]*npobjsrv.Fid
 	*fslib.FsLib
 	*npclnt.NpClnt
@@ -45,7 +44,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
-		ops := make(chan *SrvOp)
+		ops := make(chan *RelayOp)
 		emptyConfig = &NpServerReplConfig{sync.Mutex{},
 			config.LogOps,
 			config.ConfigPath,
@@ -54,7 +53,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			"", "", "", "", "",
 			nil, nil, nil, nil,
 			ops,
-			&RelayMsgQueue{},
+			MakeRelayOpSet(),
 			map[np.Tfid]*npobjsrv.Fid{},
 			config.FsLib,
 			config.NpClnt}
@@ -62,7 +61,6 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 	srv := &NpServer{npc, "", wireCompat, replicated, MakeReplyCache(), emptyConfig}
 	var l net.Listener
 	if replicated {
-		registerGobTypes()
 		// Create and start the relay server listener
 		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
 		relayL, err := net.Listen("tcp", relayAddr)
@@ -246,7 +244,7 @@ func (srv *NpServer) runReplConfigUpdater() {
 		srv.reloadReplConfig(config)
 		// Resend any in-flight messages. Do this asynchronously in case the sends
 		// fail.
-		go srv.resendInflightRelayMsgs()
+		go srv.resendInflightRelayOps()
 		if srv.isTail() {
 			db.DLPrintf("RSRV", "%v had become the tail in configUpdater", srv.replConfig.RelayAddr)
 			srv.sendAllAcks()
@@ -256,41 +254,4 @@ func (srv *NpServer) runReplConfigUpdater() {
 
 func (c *NpServerReplConfig) String() string {
 	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v }", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
-}
-
-func registerGobTypes() {
-	gob.Register(np.Tattach{})
-	gob.Register(np.Rattach{})
-	gob.Register(np.Tversion{})
-	gob.Register(np.Rversion{})
-	gob.Register(np.Tauth{})
-	gob.Register(np.Rauth{})
-	gob.Register(np.Tattach{})
-	gob.Register(np.Rattach{})
-	gob.Register(np.Rerror{})
-	gob.Register(np.Tflush{})
-	gob.Register(np.Rflush{})
-	gob.Register(np.Twalk{})
-	gob.Register(np.Rwalk{})
-	gob.Register(np.Topen{})
-	gob.Register(np.Ropen{})
-	gob.Register(np.Tcreate{})
-	gob.Register(np.Rcreate{})
-	gob.Register(np.Tread{})
-	gob.Register(np.Rread{})
-	gob.Register(np.Twrite{})
-	gob.Register(np.Rwrite{})
-	gob.Register(np.Tclunk{})
-	gob.Register(np.Rclunk{})
-	gob.Register(np.Tremove{})
-	gob.Register(np.Rremove{})
-	gob.Register(np.Tstat{})
-	gob.Register(np.Rstat{})
-	gob.Register(np.Twstat{})
-	gob.Register(np.Rwstat{})
-	gob.Register(np.Treadv{})
-	gob.Register(np.Twritev{})
-	gob.Register(np.Twatchv{})
-	gob.Register(np.Trenameat{})
-	gob.Register(np.Rrenameat{})
 }

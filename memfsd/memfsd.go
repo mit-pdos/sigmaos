@@ -49,6 +49,7 @@ func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *n
 	fsd.addr = addr
 	fsd.wt = npo.MkWatchTable()
 	fsd.ct = npo.MkConnTable()
+	fsd.st = npo.MakeSessionTable()
 	fsd.stats = stats.MkStats()
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, false, replicated, relayAddr, config)
@@ -84,6 +85,10 @@ func (fsd *Fsd) SessionTable() *npo.SessionTable {
 	return fsd.st
 }
 
+func (fsd *Fsd) RegisterSession(sess np.Tsession) {
+	fsd.st.RegisterSession(sess)
+}
+
 func (fsd *Fsd) Stats() *stats.Stats {
 	return fsd.stats
 }
@@ -96,8 +101,9 @@ func (fsd *Fsd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return fsd.root, MkCtx(uname)
 }
 
-func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(fsd, conn)
+func (fsd *Fsd) Connect(conn net.Conn, sess np.Tsession) npsrv.NpAPI {
+	fsd.st.RegisterSession(sess)
+	return npo.MakeNpConn(fsd, conn, sess)
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {

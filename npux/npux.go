@@ -49,9 +49,9 @@ func (npux *NpUx) GetSrv() *npsrv.NpServer {
 	return npux.srv
 }
 
-func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npo.MakeNpConn(npux, conn)
-	return clnt
+func (npux *NpUx) Connect(conn net.Conn, sess np.Tsession) npsrv.NpAPI {
+	npux.st.RegisterSession(sess)
+	return npo.MakeNpConn(npux, conn, sess)
 }
 
 func (npux *NpUx) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
@@ -76,6 +76,10 @@ func (npux *NpUx) ConnTable() *npo.ConnTable {
 
 func (npux *NpUx) SessionTable() *npo.SessionTable {
 	return npux.st
+}
+
+func (npux *NpUx) RegisterSession(sess np.Tsession) {
+	npux.st.RegisterSession(sess)
 }
 
 func (npux *NpUx) Stats() *stats.Stats {

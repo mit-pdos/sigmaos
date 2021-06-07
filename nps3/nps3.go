@@ -66,9 +66,9 @@ func MakeNps3() *Nps3 {
 	return nps3
 }
 
-func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	clnt := npo.MakeNpConn(nps3, conn)
-	return clnt
+func (nps3 *Nps3) Connect(conn net.Conn, sess np.Tsession) npsrv.NpAPI {
+	nps3.st.RegisterSession(sess)
+	return npo.MakeNpConn(nps3, conn, sess)
 }
 
 func (nps3 *Nps3) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
@@ -93,6 +93,10 @@ func (nps3 *Nps3) ConnTable() *npo.ConnTable {
 
 func (nps3 *Nps3) SessionTable() *npo.SessionTable {
 	return nps3.st
+}
+
+func (nps3 *Nps3) RegisterSession(sess np.Tsession) {
+	nps3.st.RegisterSession(sess)
 }
 
 func (nps3 *Nps3) Stats() *stats.Stats {

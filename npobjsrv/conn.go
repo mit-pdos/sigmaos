@@ -26,15 +26,3 @@ func (ct *ConnTable) Del(conn *NpConn) {
 	defer ct.mu.Unlock()
 	delete(ct.conns, conn)
 }
-
-func (ct *ConnTable) IterateFids(fi func(*Fid)) {
-	ct.mu.Lock()
-	defer ct.mu.Unlock()
-	for npc, _ := range ct.conns {
-		npc.mu.Lock()
-		for _, f := range npc.fids {
-			fi(f)
-		}
-		npc.mu.Unlock()
-	}
-}

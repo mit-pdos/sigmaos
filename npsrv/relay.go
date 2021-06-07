@@ -40,18 +40,11 @@ type RelayChannel struct {
 }
 
 func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
-	npapi := npc.Connect(conn)
-	n := npapi.(*npobjsrv.NpConn)
-	// Keep a single Fid table around for all connections between this replica and
-	// the previous one, even if that replica changes, since clients expect Fids
-	// to remain valid all along the chain even in the presence of failures, and
-	// they're normally per-connection (and therefore reset when a replica fails).
-	n.SetFids(fids)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,
 		false,
-		n,
+		nil,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
@@ -79,6 +72,10 @@ func (r *RelayChannel) reader() {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", r.c.Dst(), err)
 			// TODO: enqueue op with empty reply
 		} else {
+			// Set up session
+			if r.c.np == nil {
+				r.c.np = r.c.npc.Connect(r.c.conn, fcall.Session)
+			}
 			op := &RelayOp{fcall, frame, nil, []byte{}, r, r.replies}
 			r.ops <- op
 		}

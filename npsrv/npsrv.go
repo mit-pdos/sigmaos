@@ -6,10 +6,11 @@ import (
 	"net"
 
 	db "ulambda/debug"
+	np "ulambda/ninep"
 )
 
 type NpConn interface {
-	Connect(net.Conn) NpAPI
+	Connect(net.Conn, np.Tsession) NpAPI
 }
 
 type NpServer struct {

@@ -30,12 +30,11 @@ type Channel struct {
 }
 
 func MakeChannel(npc NpConn, conn net.Conn, wireCompat bool) *Channel {
-	npapi := npc.Connect(conn)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,
 		wireCompat,
-		npapi,
+		nil,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
@@ -148,6 +147,10 @@ func (c *Channel) reader() {
 		} else {
 			fcall = &np.Fcall{}
 			err = npcodec.Unmarshal(frame, fcall)
+		}
+		// We connect once we have a session ID to associate with this channel
+		if c.np == nil {
+			c.np = c.npc.Connect(c.conn, fcall.Session)
 		}
 		if err != nil {
 			log.Print("Serve: unmarshal error: ", err)

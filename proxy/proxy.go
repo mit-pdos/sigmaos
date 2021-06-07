@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
+	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 )
 
@@ -63,16 +64,24 @@ func (npc *NpConn) delch(fid np.Tfid) {
 
 type Npd struct {
 	named string
+	st    *npo.SessionTable
 }
 
 func MakeNpd() *Npd {
-	return &Npd{fslib.Named()}
+	return &Npd{fslib.Named(), nil}
 }
 
 // XXX should/is happen only once for the one mount for :1110
-func (npd *Npd) Connect(conn net.Conn) npsrv.NpAPI {
+func (npd *Npd) Connect(conn net.Conn, sess np.Tsession) npsrv.NpAPI {
 	clnt := makeNpConn(conn, npd.named)
 	return clnt
+}
+
+func (npd *Npd) RegisterSession(sess np.Tsession) {
+	if npd.st == nil {
+		npd.st = npo.MakeSessionTable()
+	}
+	npd.st.RegisterSession(sess)
 }
 
 func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {

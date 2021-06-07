@@ -10,27 +10,30 @@ import (
 	"ulambda/stats"
 )
 
+// XXX move ephemeral into session?
 type NpConn struct {
 	mu        sync.Mutex // for Fids and ephemeral and closed
 	closed    bool
 	conn      net.Conn
-	fids      map[np.Tfid]*Fid
+	session   np.Tsession
 	osrv      NpObjSrv
 	ephemeral map[NpObj]*Fid
 	wt        *WatchTable
 	ct        *ConnTable
+	st        *SessionTable
 	stats     *stats.Stats
 }
 
-func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
+func MakeNpConn(osrv NpObjSrv, conn net.Conn, session np.Tsession) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.osrv = osrv
-	npc.fids = make(map[np.Tfid]*Fid)
 	npc.ephemeral = make(map[NpObj]*Fid)
 	npc.wt = osrv.WatchTable()
 	npc.ct = osrv.ConnTable()
+	npc.st = osrv.SessionTable()
 	npc.stats = osrv.Stats()
+	npc.session = session
 	if npc.ct != nil {
 		npc.ct.Add(npc)
 	}
@@ -42,28 +45,18 @@ func (npc *NpConn) Addr() string {
 	return npc.conn.LocalAddr().String()
 }
 
-func (npc *NpConn) SetFids(fids map[np.Tfid]*Fid) {
-	npc.fids = fids
-}
-
 func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
-	npc.mu.Lock()
-	defer npc.mu.Unlock()
-	f, ok := npc.fids[fid]
-	return f, ok
+	return npc.st.lookupFid(npc.session, fid)
 }
 
 func (npc *NpConn) add(fid np.Tfid, f *Fid) {
-	npc.mu.Lock()
-	defer npc.mu.Unlock()
-	npc.fids[fid] = f
+	npc.st.addFid(npc.session, fid, f)
 }
 
 func (npc *NpConn) del(fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
-	o := npc.fids[fid].obj
-	delete(npc.fids, fid)
+	o := npc.st.delFid(npc.session, fid)
 	delete(npc.ephemeral, o)
 }
 
@@ -165,9 +158,7 @@ func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	npc.mu.Lock()
-	delete(npc.fids, args.Fid)
-	npc.mu.Unlock()
+	npc.st.delFid(npc.session, args.Fid)
 	return nil
 }
 

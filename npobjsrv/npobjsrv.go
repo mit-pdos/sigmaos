@@ -11,6 +11,7 @@ type NpObjSrv interface {
 	Done()
 	WatchTable() *WatchTable
 	ConnTable() *ConnTable
+	SessionTable() *SessionTable
 	Stats() *stats.Stats
 }
 

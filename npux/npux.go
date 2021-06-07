@@ -22,6 +22,7 @@ type NpUx struct {
 	ch    chan bool
 	root  *Dir
 	mount string
+	st    *npo.SessionTable
 }
 
 func MakeNpUx(mount string, addr string) *NpUx {
@@ -32,6 +33,7 @@ func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr st
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
 	npux.root = npux.makeDir([]string{mount}, np.DMDIR, nil)
+	npux.st = npo.MakeSessionTable()
 	db.Name("npuxd")
 	npux.srv = npsrv.MakeReplicatedNpServer(npux, addr, false, replicated, relayAddr, config)
 	fsl := fslib.MakeFsLib("npux")
@@ -70,6 +72,10 @@ func (npux *NpUx) WatchTable() *npo.WatchTable {
 
 func (npux *NpUx) ConnTable() *npo.ConnTable {
 	return nil
+}
+
+func (npux *NpUx) SessionTable() *npo.SessionTable {
+	return npux.st
 }
 
 func (npux *NpUx) Stats() *stats.Stats {

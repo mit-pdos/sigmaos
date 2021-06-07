@@ -30,6 +30,7 @@ type Nps3 struct {
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
+	st     *npo.SessionTable
 	root   *Dir
 }
 
@@ -38,6 +39,7 @@ func MakeNps3() *Nps3 {
 	nps3.ch = make(chan bool)
 	db.Name("nps3d")
 	nps3.root = nps3.makeDir([]string{}, np.DMDIR, nil)
+	nps3.st = npo.MakeSessionTable()
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
@@ -87,6 +89,10 @@ func (nps3 *Nps3) WatchTable() *npo.WatchTable {
 
 func (nps3 *Nps3) ConnTable() *npo.ConnTable {
 	return nil
+}
+
+func (nps3 *Nps3) SessionTable() *npo.SessionTable {
+	return nps3.st
 }
 
 func (nps3 *Nps3) Stats() *stats.Stats {

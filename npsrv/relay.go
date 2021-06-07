@@ -164,9 +164,9 @@ func (srv *NpServer) relayReader() {
 			// is in-flight, and if so, adds this duplicate to the set and returns
 			// true. Otherwise, it returns false. This atomicity is needed to make
 			// sure we never drop acks which should be relayed upstream.
-			// XXX any races in the two clauses of the if?
 			// Tail acks taken care of separately
 			if !srv.isTail() {
+				// XXX Could there be a race here?
 				if config.inFlight.AddIfDuplicate(op) {
 					db.DLPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
 				} else {

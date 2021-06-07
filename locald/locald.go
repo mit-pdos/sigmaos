@@ -40,6 +40,7 @@ type LocalD struct {
 	srv   *npsrv.NpServer
 	group sync.WaitGroup
 	perf  *perf.Perf
+	st    *npo.SessionTable
 	*fslib.FsLib
 }
 
@@ -52,6 +53,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	db.Name("locald")
 	ld.root = ld.makeDir([]string{}, np.DMDIR, nil)
 	ld.root.time = time.Now().Unix()
+	ld.st = npo.MakeSessionTable()
 	ld.ls = map[string]*Lambda{}
 	ld.perf = perf.MakePerf()
 	ip, err := fsclnt.LocalIP()
@@ -121,6 +123,10 @@ func (ld *LocalD) WatchTable() *npo.WatchTable {
 
 func (ld *LocalD) ConnTable() *npo.ConnTable {
 	return nil
+}
+
+func (ld *LocalD) SessionTable() *npo.SessionTable {
+	return ld.st
 }
 
 func (ld *LocalD) Stats() *stats.Stats {

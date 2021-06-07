@@ -35,6 +35,7 @@ type Fsd struct {
 	addr  string
 	wt    *npo.WatchTable
 	ct    *npo.ConnTable
+	st    *npo.SessionTable
 	stats *stats.Stats
 }
 
@@ -77,6 +78,10 @@ func (fsd *Fsd) WatchTable() *npo.WatchTable {
 
 func (fsd *Fsd) ConnTable() *npo.ConnTable {
 	return fsd.ct
+}
+
+func (fsd *Fsd) SessionTable() *npo.SessionTable {
+	return fsd.st
 }
 
 func (fsd *Fsd) Stats() *stats.Stats {

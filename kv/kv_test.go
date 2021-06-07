@@ -226,6 +226,9 @@ func TestElastic(t *testing.T) {
 
 	ts.setup(nclerk, false)
 
+	// start out with no load
+	time.Sleep(3000 * time.Millisecond)
+
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
 		go ts.clerkMon(i, ch)

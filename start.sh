@@ -27,15 +27,3 @@ sleep 2
 mkdir -p /mnt/9p/fs   # make fake file system
 mkdir -p /mnt/9p/kv
 mkdir -p /mnt/9p/gg
-mkdir -p /mnt/9p/memfsd-replicas
-
-# Set up the replica config
-#config_path_linux=/mnt/9p/memfs-replica-config.txt
-#config_path_9p=name/memfs-replica-config.txt
-#printf "192.168.0.36:30001\n192.168.0.36:30002\n192.168.0.36:30003\n" > $config_path_linux
-
-## Start a few memfs replicas
-#union_dir_path=name/memfsd-replicas
-#./bin/memfs-replica 1 "30001" $config_path_9p $union_dir_path &
-#./bin/memfs-replica 2 "30002" $config_path_9p $union_dir_path &
-#./bin/memfs-replica 3 "30003" $config_path_9p $union_dir_path &

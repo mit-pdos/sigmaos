@@ -167,7 +167,9 @@ func (c *Channel) close() {
 	c.closed = true
 	close(c.replies)
 	c.mu.Unlock()
-	c.np.Detach()
+	if c.np != nil {
+		c.np.Detach()
+	}
 }
 
 func (c *Channel) serve(fc *np.Fcall) {

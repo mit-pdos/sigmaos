@@ -104,8 +104,7 @@ func (r *RelayChannel) writer() {
 		if !ok {
 			return
 		}
-
-		err := npcodec.WriteFrame(r.c.bw, op.replyFrame)
+		err := npcodec.WriteRawBuffer(r.c.bw, op.replyFrame)
 		if err != nil {
 			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)
 			return
@@ -133,6 +132,7 @@ func (srv *NpServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	if err != nil {
 		log.Printf("Error marshaling reply: %v", err)
 	}
+	bw.Flush()
 	replyFrame = replyBuffer.Bytes()
 	srv.replyCache.Put(request, reply, replyFrame)
 }
@@ -165,11 +165,11 @@ func (srv *NpServer) relayReader() {
 			// true. Otherwise, it returns false. This atomicity is needed to make
 			// sure we never drop acks which should be relayed upstream.
 			// XXX any races in the two clauses of the if?
-			if config.inFlight.AddIfDuplicate(op) {
-				db.DLPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
-			} else {
-				// Tail acks taken care of separately
-				if !srv.isTail() {
+			// Tail acks taken care of separately
+			if !srv.isTail() {
+				if config.inFlight.AddIfDuplicate(op) {
+					db.DLPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
+				} else {
 					db.DLPrintf("RSRV", "%v Dup request not in-flight, replying immediately. req: %v rep: %v", config.RelayAddr, op.request, op.reply)
 					op.replies <- op
 				}
@@ -183,6 +183,8 @@ func (srv *NpServer) relayReader() {
 			db.DLPrintf("RSRV", "%v Reader relay request %v", config.RelayAddr, op.request)
 			// Serve the op first.
 			op.reply = op.r.serve(op.request)
+			op.reply.Session = op.request.Session
+			op.reply.Seqno = op.request.Seqno
 			// Cache the reply
 			srv.cacheReply(op.request, op.reply)
 			cachedReply, _ := srv.replyCache.Get(op.request)
@@ -235,6 +237,7 @@ func (srv *NpServer) relayWriter() {
 		ack := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, ack); err != nil {
 			log.Printf("Error unmarshalling in relayWriter: %v", err)
+			log.Printf("Frame: %v, len: %v", frame, len(frame))
 		} else {
 			db.DLPrintf("RSRV", "%v Got ack: %v", config.RelayAddr, ack)
 			// Dequeue all acks up until this one (they may come out of order, which is

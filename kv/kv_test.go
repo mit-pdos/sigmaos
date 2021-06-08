@@ -195,24 +195,28 @@ func TestConcurN(t *testing.T) {
 // z := rand.NewZipf(r, 2.0, 1.0, 100)
 // z.Uint64()
 //
-func (ts *Tstate) clerkMon(c int, ch chan bool) {
-	tot := int64(0)
-	max := int64(0)
-	n := int64(0)
+
+type Tstat struct {
+	tot int64
+	max int64
+	n   int64
+}
+
+func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat) {
+	st := Tstat{}
 	for true {
 		k := rand.Intn(NKEYS)
 		t0 := time.Now().UnixNano()
 		v, err := ts.clrks[c].Get(key(k))
 		t1 := time.Now().UnixNano()
-		tot += t1 - t0
-		if t1-t0 > max {
-			max = t1 - t0
+		st.tot += t1 - t0
+		if t1-t0 > st.max {
+			st.max = t1 - t0
 		}
-		n += 1
+		st.n += 1
 		select {
-		case <-ch:
-			log.Printf("n %v avg %v ns max %v ns\n", n, tot/n, max)
-			ts.clrks[c].Exit()
+		case <-in:
+			out <- st
 			return
 		default:
 			assert.Nil(ts.t, err, "Get "+key(k))
@@ -238,8 +242,13 @@ func readKVs(fsl *fslib.FsLib) *KvSet {
 }
 
 func TestElastic(t *testing.T) {
-	const S = 1000
+	const (
+		S = 1000
+		T = 20
+	)
+
 	nclerk := 30
+	nthread := 100
 	ts := makeTstate(t)
 
 	ts.setup(nclerk, false)
@@ -251,21 +260,38 @@ func TestElastic(t *testing.T) {
 		assert.Equal(ts.t, 1, len(kvs.set), "No grow")
 	}
 
-	ch := make(chan bool)
+	in := make(chan bool)
+	out := make(chan Tstat)
 	for i := 0; i < nclerk; i++ {
-		go ts.clerkMon(i, ch)
+		for t := 0; t < nthread; t++ {
+			go ts.clerkMon(i, in, out)
+		}
 	}
 
 	// grow KV
-	for i := 0; i < 10000; i += S {
+	for i := 0; i < T*S; i += S {
 		// start out with no load, no growing/shrinking
 		time.Sleep(S * time.Millisecond)
 	}
 	kvs := readKVs(ts.fsl)
 	assert.NotEqual(ts.t, 1, len(kvs.set), "Grow")
 
+	stat := Tstat{}
+	for i := 0; i < nclerk*nthread; i++ {
+		in <- true
+		st := <-out
+		stat.n += st.n
+		stat.tot += st.tot
+		if st.max > stat.max {
+			stat.max = st.max
+		}
+	}
+
+	log.Printf("STATS n %v tput %v/s avg %v ns max %v ns\n", stat.n, stat.n/20,
+		stat.tot/stat.n, stat.max)
+
 	for i := 0; i < nclerk; i++ {
-		ch <- true
+		ts.clrks[i].Exit()
 	}
 
 	// shrink KV

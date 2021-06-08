@@ -15,7 +15,6 @@ type NpConn struct {
 	mu        sync.Mutex // for Fids and ephemeral and closed
 	closed    bool
 	conn      net.Conn
-	session   np.Tsession
 	osrv      NpObjSrv
 	ephemeral map[NpObj]*Fid
 	wt        *WatchTable
@@ -24,7 +23,7 @@ type NpConn struct {
 	stats     *stats.Stats
 }
 
-func MakeNpConn(osrv NpObjSrv, conn net.Conn, session np.Tsession) *NpConn {
+func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.osrv = osrv
@@ -33,7 +32,6 @@ func MakeNpConn(osrv NpObjSrv, conn net.Conn, session np.Tsession) *NpConn {
 	npc.ct = osrv.ConnTable()
 	npc.st = osrv.SessionTable()
 	npc.stats = osrv.Stats()
-	npc.session = session
 	if npc.ct != nil {
 		npc.ct.Add(npc)
 	}
@@ -45,34 +43,34 @@ func (npc *NpConn) Addr() string {
 	return npc.conn.LocalAddr().String()
 }
 
-func (npc *NpConn) lookup(fid np.Tfid) (*Fid, bool) {
-	return npc.st.lookupFid(npc.session, fid)
+func (npc *NpConn) lookup(sess np.Tsession, fid np.Tfid) (*Fid, bool) {
+	return npc.st.lookupFid(sess, fid)
 }
 
-func (npc *NpConn) add(fid np.Tfid, f *Fid) {
-	npc.st.addFid(npc.session, fid, f)
+func (npc *NpConn) add(sess np.Tsession, fid np.Tfid, f *Fid) {
+	npc.st.addFid(sess, fid, f)
 }
 
-func (npc *NpConn) del(fid np.Tfid) {
+func (npc *NpConn) del(sess np.Tsession, fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
-	o := npc.st.delFid(npc.session, fid)
+	o := npc.st.delFid(sess, fid)
 	delete(npc.ephemeral, o)
 }
 
-func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
+func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
+func (npc *NpConn) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.Rerror {
 	return np.ErrUnknownMsg
 }
 
-func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
+func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root, ctx := npc.osrv.RootAttach(args.Uname)
-	npc.add(args.Fid, &Fid{sync.Mutex{}, []string{}, root, root.Version(), ctx})
+	npc.add(sess, args.Fid, &Fid{sync.Mutex{}, []string{}, root, root.Version(), ctx})
 	rets.Qid = root.Qid()
 	return nil
 }
@@ -111,11 +109,11 @@ func makeQids(os []NpObj) []np.Tqid {
 	return qids
 }
 
-func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwalk.Inc()
 	}
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -125,7 +123,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if o == nil {
 			return &np.Rerror{"Closed by server"}
 		}
-		npc.add(args.NewFid, &Fid{sync.Mutex{}, f.path, o, o.Version(), f.ctx})
+		npc.add(sess, args.NewFid, &Fid{sync.Mutex{}, f.path, o, o.Version(), f.ctx})
 	} else {
 		o := f.Obj()
 		if o == nil {
@@ -142,32 +140,32 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		n := len(args.Wnames) - len(rest)
 		p := append(f.path, args.Wnames[:n]...)
 		lo := os[len(os)-1]
-		npc.add(args.NewFid, &Fid{sync.Mutex{}, p, lo, lo.Version(), f.ctx})
+		npc.add(sess, args.NewFid, &Fid{sync.Mutex{}, p, lo, lo.Version(), f.ctx})
 		rets.Qids = makeQids(os)
 	}
 	return nil
 }
 
 // XXX call close? keep refcnt per obj?
-func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
+func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nclunk.Inc()
 	}
-	_, ok := npc.lookup(args.Fid)
+	_, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	npc.st.delFid(npc.session, args.Fid)
+	npc.st.delFid(sess, args.Fid)
 	return nil
 }
 
-func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nopen.Inc()
 	}
 	db.DLPrintf("9POBJ", "Open %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -187,12 +185,12 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwatchv.Inc()
 	}
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -212,12 +210,12 @@ func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Ncreate.Inc()
 	}
 	db.DLPrintf("9POBJ", "Create %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -244,7 +242,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 				npc.ephemeral[o1] = nf
 				npc.mu.Unlock()
 			}
-			npc.add(args.Fid, nf)
+			npc.add(sess, args.Fid, nf)
 			if npc.wt != nil {
 				npc.wt.WakeupWatch(nf.path)
 				npc.wt.WakeupWatch(f.path)
@@ -273,19 +271,19 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
+func (npc *NpConn) Flush(sess np.Tsession, args np.Tflush, rets *np.Rflush) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nflush.Inc()
 	}
 	return nil
 }
 
-func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nread.Inc()
 	}
 	db.DLPrintf("9POBJ", "Read %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -293,24 +291,24 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return f.Read(args.Offset, args.Count, np.NoV, rets)
 }
 
-func (npc *NpConn) ReadV(args np.Treadv, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) ReadV(sess np.Tsession, args np.Treadv, rets *np.Rread) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nreadv.Inc()
 	}
 	db.DLPrintf("9POBJ", "ReadV %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
 	return f.Read(args.Offset, args.Count, f.vers, rets)
 }
 
-func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwrite.Inc()
 	}
 	db.DLPrintf("9POBJ", "Write %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -322,12 +320,12 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) WriteV(sess np.Tsession, args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwritev.Inc()
 	}
 	db.DLPrintf("9POBJ", "WriteV %v\n", args)
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -339,11 +337,11 @@ func (npc *NpConn) WriteV(args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nremove.Inc()
 	}
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -367,15 +365,15 @@ func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		npc.wt.WakeupWatch(f.path[:len(f.path)-1])
 	}
 	// XXX delete from ephemeral table, if ephemeral
-	npc.del(args.Fid)
+	npc.del(sess, args.Fid)
 	return nil
 }
 
-func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
+func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nstat.Inc()
 	}
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -392,11 +390,11 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
+func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwstat.Inc()
 	}
-	f, ok := npc.lookup(args.Fid)
+	f, ok := npc.lookup(sess, args.Fid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
@@ -422,15 +420,15 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nrenameat.Inc()
 	}
-	oldf, ok := npc.lookup(args.OldFid)
+	oldf, ok := npc.lookup(sess, args.OldFid)
 	if !ok {
 		return np.ErrUnknownfid
 	}
-	newf, ok := npc.lookup(args.NewFid)
+	newf, ok := npc.lookup(sess, args.NewFid)
 	if !ok {
 		return np.ErrUnknownfid
 	}

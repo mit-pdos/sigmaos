@@ -40,11 +40,12 @@ type RelayChannel struct {
 }
 
 func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
+	npapi := npc.Connect(conn)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,
 		false,
-		nil,
+		npapi,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
@@ -72,10 +73,6 @@ func (r *RelayChannel) reader() {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", r.c.Dst(), err)
 			// TODO: enqueue op with empty reply
 		} else {
-			// Set up session
-			if r.c.np == nil {
-				r.c.np = r.c.npc.Connect(r.c.conn, fcall.Session)
-			}
 			op := &RelayOp{fcall, frame, nil, []byte{}, r, r.replies}
 			r.ops <- op
 		}
@@ -84,7 +81,7 @@ func (r *RelayChannel) reader() {
 
 func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
-	reply, rerror := r.c.dispatch(fc.Msg)
+	reply, rerror := r.c.dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
@@ -182,6 +179,7 @@ func (srv *NpServer) relayReader() {
 			op.reply = op.r.serve(op.request)
 			op.reply.Session = op.request.Session
 			op.reply.Seqno = op.request.Seqno
+			db.DLPrintf("RSRV", "%v Reader relay reply %v", config.RelayAddr, op.reply)
 			// Cache the reply
 			srv.cacheReply(op.request, op.reply)
 			cachedReply, _ := srv.replyCache.Get(op.request)
@@ -343,7 +341,7 @@ func (srv *NpServer) relayOnce(ch *RelayConn, op *RelayOp) bool {
 
 // Log an op & the type of the reply. Logging the exact reply is not useful,
 // since contents may vary between replicas (e.g. time)
-func (srv *NpServer) logOp(fcall *np.Fcall, reply *np.Fcall) {
+func (srv *NpServer) logOp(request *np.Fcall, reply *np.Fcall) {
 	config := srv.replConfig
 	if config.LogOps {
 		fpath := "name/" + config.RelayAddr + "-log.txt"
@@ -351,11 +349,12 @@ func (srv *NpServer) logOp(fcall *np.Fcall, reply *np.Fcall) {
 		if err != nil {
 			log.Printf("Error reading log file in logOp: %v", err)
 		}
-		frame, err := npcodec.Marshal(fcall)
+		frame, err := npcodec.Marshal(request)
 		if err != nil {
-			log.Printf("Error marshalling fcall in logOp: %v", err)
+			log.Printf("Error marshalling request in logOp: %v", err)
 		}
 		b = append(b, frame...)
+		b = append(b, []byte(request.Type.String())...)
 		b = append(b, []byte(reply.Type.String())...)
 		err = config.WriteFile(fpath, b)
 		if err != nil {

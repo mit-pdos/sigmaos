@@ -6,11 +6,12 @@ import (
 	"net"
 
 	db "ulambda/debug"
-	np "ulambda/ninep"
+	npo "ulambda/npobjsrv"
 )
 
 type NpConn interface {
-	Connect(net.Conn, np.Tsession) NpAPI
+	Connect(net.Conn) NpAPI
+	SessionTable() *npo.SessionTable
 }
 
 type NpServer struct {

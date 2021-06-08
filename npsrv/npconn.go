@@ -30,11 +30,12 @@ type Channel struct {
 }
 
 func MakeChannel(npc NpConn, conn net.Conn, wireCompat bool) *Channel {
+	npapi := npc.Connect(conn)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,
 		wireCompat,
-		nil,
+		npapi,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
@@ -53,75 +54,75 @@ func (c *Channel) Dst() string {
 	return c.conn.LocalAddr().String()
 }
 
-func (c *Channel) dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}
-		err := c.np.Version(req, reply)
+		err := c.np.Version(sess, req, reply)
 		return *reply, err
 	case np.Tauth:
 		reply := &np.Rauth{}
-		err := c.np.Auth(req, reply)
+		err := c.np.Auth(sess, req, reply)
 		return *reply, err
 	case np.Tattach:
 		reply := &np.Rattach{}
-		err := c.np.Attach(req, reply)
+		err := c.np.Attach(sess, req, reply)
 		return *reply, err
 	case np.Tflush:
 		reply := &np.Rflush{}
-		err := c.np.Flush(req, reply)
+		err := c.np.Flush(sess, req, reply)
 		return *reply, err
 	case np.Twalk:
 		reply := &np.Rwalk{}
-		err := c.np.Walk(req, reply)
+		err := c.np.Walk(sess, req, reply)
 		return *reply, err
 	case np.Topen:
 		reply := &np.Ropen{}
-		err := c.np.Open(req, reply)
+		err := c.np.Open(sess, req, reply)
 		return *reply, err
 	case np.Twatchv:
 		reply := &np.Ropen{}
-		err := c.np.WatchV(req, reply)
+		err := c.np.WatchV(sess, req, reply)
 		return *reply, err
 	case np.Tcreate:
 		reply := &np.Rcreate{}
-		err := c.np.Create(req, reply)
+		err := c.np.Create(sess, req, reply)
 		return *reply, err
 	case np.Tread:
 		reply := &np.Rread{}
-		err := c.np.Read(req, reply)
+		err := c.np.Read(sess, req, reply)
 		return *reply, err
 	case np.Treadv:
 		reply := &np.Rread{}
-		err := c.np.ReadV(req, reply)
+		err := c.np.ReadV(sess, req, reply)
 		return *reply, err
 	case np.Twrite:
 		reply := &np.Rwrite{}
-		err := c.np.Write(req, reply)
+		err := c.np.Write(sess, req, reply)
 		return *reply, err
 	case np.Twritev:
 		reply := &np.Rwrite{}
-		err := c.np.WriteV(req, reply)
+		err := c.np.WriteV(sess, req, reply)
 		return *reply, err
 	case np.Tclunk:
 		reply := &np.Rclunk{}
-		err := c.np.Clunk(req, reply)
+		err := c.np.Clunk(sess, req, reply)
 		return *reply, err
 	case np.Tremove:
 		reply := &np.Rremove{}
-		err := c.np.Remove(req, reply)
+		err := c.np.Remove(sess, req, reply)
 		return *reply, err
 	case np.Tstat:
 		reply := &np.Rstat{}
-		err := c.np.Stat(req, reply)
+		err := c.np.Stat(sess, req, reply)
 		return *reply, err
 	case np.Twstat:
 		reply := &np.Rwstat{}
-		err := c.np.Wstat(req, reply)
+		err := c.np.Wstat(sess, req, reply)
 		return *reply, err
 	case np.Trenameat:
 		reply := &np.Rrenameat{}
-		err := c.np.Renameat(req, reply)
+		err := c.np.Renameat(sess, req, reply)
 		return *reply, err
 	default:
 		return np.ErrUnknownMsg, nil
@@ -148,10 +149,6 @@ func (c *Channel) reader() {
 			fcall = &np.Fcall{}
 			err = npcodec.Unmarshal(frame, fcall)
 		}
-		// We connect once we have a session ID to associate with this channel
-		if c.np == nil {
-			c.np = c.npc.Connect(c.conn, fcall.Session)
-		}
 		if err != nil {
 			log.Print("Serve: unmarshal error: ", err)
 		} else {
@@ -174,7 +171,9 @@ func (c *Channel) close() {
 
 func (c *Channel) serve(fc *np.Fcall) {
 	t := fc.Tag
-	reply, rerror := c.dispatch(fc.Msg)
+	// XXX Avoid doing this every time
+	c.npc.SessionTable().RegisterSession(fc.Session)
+	reply, rerror := c.dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}

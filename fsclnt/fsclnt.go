@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"sync"
-	"time"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -43,9 +41,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.mount = makeMount()
 	fsc.npc = npclnt.MakeNpClnt()
 	fsc.uname = uname
-	rand.Seed(time.Now().UnixNano())
-	// Set next to a random int
-	fsc.next = np.Tfid(int32(rand.Int31() << 16))
+	fsc.next = 0
 	return fsc
 }
 

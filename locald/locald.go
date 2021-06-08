@@ -104,9 +104,8 @@ func (ld *LocalD) spawn(a []byte) (*Lambda, error) {
 	return l, nil
 }
 
-func (ld *LocalD) Connect(conn net.Conn, sess np.Tsession) npsrv.NpAPI {
-	ld.st.RegisterSession(sess)
-	return npo.MakeNpConn(ld, conn, sess)
+func (ld *LocalD) Connect(conn net.Conn) npsrv.NpAPI {
+	return npo.MakeNpConn(ld, conn)
 }
 
 func (ld *LocalD) Done() {

@@ -101,9 +101,8 @@ func (fsd *Fsd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return fsd.root, MkCtx(uname)
 }
 
-func (fsd *Fsd) Connect(conn net.Conn, sess np.Tsession) npsrv.NpAPI {
-	fsd.st.RegisterSession(sess)
-	return npo.MakeNpConn(fsd, conn, sess)
+func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
+	return npo.MakeNpConn(fsd, conn)
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {

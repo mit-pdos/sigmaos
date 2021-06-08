@@ -19,8 +19,14 @@ import (
 	"ulambda/perf"
 )
 
+const (
+	MAXLOAD float64 = 85.0
+	MINLOAD float64 = 40.0
+)
+
 const STATS = true
-const TIMING = false
+
+// const TIMING = false
 
 type Tcounter uint64
 type TCycles uint64
@@ -119,6 +125,7 @@ const (
 	SEC   = 1000   // 1s
 )
 
+// XXX nthread includes 2 threads per conn
 func (st *Stats) load(ticks uint64) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
@@ -153,10 +160,10 @@ func (st *Stats) doMonitor() bool {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	log.Printf("CPU util %f load %f\n", st.sti.Util, st.sti.Load)
-	if st.sti.Util >= perf.MAXLOAD && isDelay(st.sti.Load) {
+	if st.sti.Util >= MAXLOAD && isDelay(st.sti.Load) {
 		return true
 	}
-	if st.sti.Util < perf.MINLOAD && noDelay(st.sti.Load) {
+	if st.sti.Util < MINLOAD && noDelay(st.sti.Load) {
 		return true
 	}
 	return false

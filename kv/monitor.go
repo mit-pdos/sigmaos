@@ -10,7 +10,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfsd"
-	"ulambda/perf"
 	"ulambda/stats"
 )
 
@@ -143,6 +142,7 @@ func (mo *Monitor) shrink(kv string) {
 	}
 }
 
+// XXX Use load too?
 func (mo *Monitor) Work() {
 	defer mo.unlock() // release lock acquired in MakeMonitor()
 
@@ -170,6 +170,7 @@ func (mo *Monitor) Work() {
 	util := float64(0)
 	low := float64(100.0)
 	lowkv := ""
+	var lowload stats.Tload
 	n := 0
 	for kv, _ := range kvs.set {
 		kvd := memfsd.MEMFS + "/" + kv + "/statsd"
@@ -184,14 +185,15 @@ func (mo *Monitor) Work() {
 		if sti.Util < low {
 			low = sti.Util
 			lowkv = kv
+			lowload = sti.Load
 		}
 	}
 	util = util / float64(n)
-	log.Printf("monitor: avg util %f low %f\n", util, low)
-	if util >= perf.MAXLOAD {
+	log.Printf("monitor: avg util %f low %f %v %v\n", util, low, lowkv, lowload)
+	if util >= stats.MAXLOAD {
 		mo.grow()
 	}
-	if util < perf.MINLOAD && len(kvs.set) > 1 {
+	if util < stats.MINLOAD && len(kvs.set) > 1 {
 		mo.shrink(lowkv)
 	}
 }

@@ -28,6 +28,17 @@ func makeChanMgr(session np.Tsession, seqno *np.Tseqno) *ChanMgr {
 	return cm
 }
 
+func (cm *ChanMgr) exit() {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	for addr, conn := range cm.conns {
+		db.DLPrintf("9PCHAN", "exit close connection to %v\n", addr)
+		conn.Close()
+		delete(cm.conns, addr)
+	}
+}
+
 func (cm *ChanMgr) lookup(addr string) (*Chan, bool) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()

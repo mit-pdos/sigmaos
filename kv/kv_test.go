@@ -212,6 +212,7 @@ func (ts *Tstate) clerkMon(c int, ch chan bool) {
 		select {
 		case <-ch:
 			log.Printf("n %v avg %v ns max %v ns\n", n, tot/n, max)
+			ts.clrks[c].Exit()
 			return
 		default:
 			assert.Nil(ts.t, err, "Get "+key(k))
@@ -220,46 +221,62 @@ func (ts *Tstate) clerkMon(c int, ch chan bool) {
 	}
 }
 
+func readKVs(fsl *fslib.FsLib) *KvSet {
+	for true {
+		conf, err := readConfig(fsl, KVCONFIG)
+		if err != nil {
+			// balancer may be at work
+			log.Printf("readKVs: err %v\n", err)
+			time.Sleep(1000 * time.Millisecond)
+			continue
+		}
+		kvs := makeKvs(conf.Shards)
+		log.Printf("Monitor config %v\n", kvs)
+		return kvs
+	}
+	return nil
+}
+
 func TestElastic(t *testing.T) {
+	const S = 1000
 	nclerk := 30
 	ts := makeTstate(t)
 
 	ts.setup(nclerk, false)
 
-	// start out with no load
-	time.Sleep(3000 * time.Millisecond)
+	for i := 0; i < 3000; i += S {
+		// start out with no load, no growing/shrinking
+		time.Sleep(S * time.Millisecond)
+		kvs := readKVs(ts.fsl)
+		assert.Equal(ts.t, 1, len(kvs.set), "No grow")
+	}
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
 		go ts.clerkMon(i, ch)
 	}
 
-	time.Sleep(30000 * time.Millisecond)
+	// grow KV
+	for i := 0; i < 10000; i += S {
+		// start out with no load, no growing/shrinking
+		time.Sleep(S * time.Millisecond)
+	}
+	kvs := readKVs(ts.fsl)
+	assert.NotEqual(ts.t, 1, len(kvs.set), "Grow")
 
 	for i := 0; i < nclerk; i++ {
 		ch <- true
 	}
 
-	log.Printf("shutdown\n")
+	// shrink KV
+	time.Sleep(5000 * time.Millisecond)
 
-	memfs := ""
-	for true {
-		time.Sleep(1000 * time.Millisecond)
-		conf, err := readConfig(ts.fsl, KVCONFIG)
-		if err != nil {
-			// balancer may be at work
-			log.Printf("readConfig: err %v\n", err)
-			continue
-		}
-		kvs := makeKvs(conf.Shards)
-		log.Printf("Monitor config %v\n", kvs)
-		if len(kvs.set) == 1 {
-			for k := range kvs.set {
-				memfs = k
-			}
-			break
-		}
-	}
+	kvs = readKVs(ts.fsl)
+	assert.Equal(ts.t, 1, len(kvs.set), "Shrink")
+
+	log.Printf("shutdown %v\n", kvs)
+
+	memfs := kvs.first()
 
 	ts.stopMemFS(memfs)
 

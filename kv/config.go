@@ -84,6 +84,15 @@ func (ks *KvSet) del(old []string) {
 	}
 }
 
+func (ks *KvSet) first() string {
+	memfs := ""
+	for k := range ks.set {
+		memfs = k
+		break
+	}
+	return memfs
+}
+
 // XXX minimize movement
 func balance(conf *Config, kvs *KvSet) *Config2 {
 	cfg2 := &Config2{}

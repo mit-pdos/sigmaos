@@ -24,6 +24,7 @@ const TIMING = false
 
 type Tcounter uint64
 type TCycles uint64
+type Tload [3]float64
 
 func (c *Tcounter) Inc() {
 	if STATS {
@@ -51,7 +52,7 @@ type StatInfo struct {
 
 	Paths map[string]int
 
-	Load float64
+	Load Tload
 	Util float64
 }
 
@@ -111,7 +112,9 @@ func (st *Stats) monitor() {
 }
 
 const (
-	EXP_1 = 0.9048 // 1/exp(100ms/1000ms) as fixed-point
+	EXP_0 = 0.9048 // 1/exp(100ms/1000ms)
+	EXP_1 = 0.9512 // 1/exp(100ms/2000ms)
+	EXP_2 = 0.9801 // 1/exp(100ms/5000ms)
 	MS    = 100    // 100 ms
 	SEC   = 1000   // 1s
 )
@@ -127,20 +130,33 @@ func (st *Stats) load(ticks uint64) {
 
 	nthread := float64(runtime.NumGoroutine())
 
-	st.sti.Load *= EXP_1
-	st.sti.Load += (1 - EXP_1) * nthread
+	st.sti.Load[0] *= EXP_0
+	st.sti.Load[0] += (1 - EXP_0) * nthread
+	st.sti.Load[1] *= EXP_1
+	st.sti.Load[1] += (1 - EXP_1) * nthread
+	st.sti.Load[2] *= EXP_2
+	st.sti.Load[2] += (1 - EXP_2) * nthread
 
 	st.sti.Util = util
+}
+
+// XXX too simplistic?
+func isDelay(load Tload) bool {
+	return load[0] > load[1] && load[1] > load[2]
+}
+
+func noDelay(load Tload) bool {
+	return load[0] < load[1] && load[1] < load[2]
 }
 
 func (st *Stats) doMonitor() bool {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	log.Printf("CPU util %f load %f\n", st.sti.Util, st.sti.Load)
-	if st.sti.Util >= perf.MAXLOAD {
+	if st.sti.Util >= perf.MAXLOAD && isDelay(st.sti.Load) {
 		return true
 	}
-	if st.sti.Util < perf.MINLOAD {
+	if st.sti.Util < perf.MINLOAD && noDelay(st.sti.Load) {
 		return true
 	}
 	return false

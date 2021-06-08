@@ -248,6 +248,8 @@ func (srv *NpServer) runReplConfigUpdater() {
 		// If we are the head, write a symlink
 		if srv.isHead() {
 			targetPath := srv.MyAddr() + ":pubkey:"
+			db.DLPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", srv.replConfig.RelayAddr, srv.replConfig.SymlinkPath, targetPath)
+			srv.replConfig.Remove(srv.replConfig.SymlinkPath)
 			srv.replConfig.Symlink(targetPath, srv.replConfig.SymlinkPath, 0777)
 		}
 		// Resend any in-flight messages. Do this asynchronously in case the sends

@@ -202,7 +202,7 @@ func ChainSimple(ts *Tstate) {
 		bootReplica(ts, r)
 	}
 
-	time.Sleep(5000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	// Write some files to the head
 	log.Printf("Writing some files...")
@@ -304,8 +304,8 @@ func ChainCrashMiddle(ts *Tstate) {
 }
 
 func ChainCrashHead(ts *Tstate) {
-	N := 5
-	n_files := 100
+	N := 2
+	n_files := 1
 
 	replicas := allocReplicas(ts, N)
 	writeConfig(ts, replicas)
@@ -334,7 +334,7 @@ func ChainCrashHead(ts *Tstate) {
 	crashReplica(ts, replicas[0])
 	log.Printf("Done crashing head replica %v...", replicas[0].addr)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	// Read some files from the head
 	log.Printf("Reading files...")

@@ -23,7 +23,7 @@ func makeNpUxTstate(t *testing.T) *Tstate {
 	ts.t = t
 	ts.configPath9p = "name/" + replicaName + "-config.txt"
 	ts.unionDirPath9p = "name/" + replicaName
-	ts.symlinkPath9p = "name/" + replicaName + "-HEAD/"
+	ts.symlinkPath9p = "name/" + replicaName + "-HEAD"
 	ts.replicaBin = "bin/" + replicaName
 	return ts
 }

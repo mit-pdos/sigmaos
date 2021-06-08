@@ -50,6 +50,10 @@ func (kc *KvClerk) watchConfig(path string, err error) {
 	kc.ch <- true
 }
 
+func (kc *KvClerk) Exit() {
+	kc.fsl.Exit()
+}
+
 // XXX atomic read
 func (kc *KvClerk) readConfig() {
 	for {

@@ -81,6 +81,8 @@ func (r *RelayChannel) reader() {
 
 func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
+	// XXX Avoid doing this every time
+	r.c.npc.SessionTable().RegisterSession(fc.Session)
 	reply, rerror := r.c.dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror

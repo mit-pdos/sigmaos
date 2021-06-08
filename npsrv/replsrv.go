@@ -250,7 +250,7 @@ func (srv *NpServer) runReplConfigUpdater() {
 			targetPath := srv.MyAddr() + ":pubkey:"
 			db.DLPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", srv.replConfig.RelayAddr, srv.replConfig.SymlinkPath, targetPath)
 			srv.replConfig.Remove(srv.replConfig.SymlinkPath)
-			srv.replConfig.Symlink(targetPath, srv.replConfig.SymlinkPath, 0777)
+			srv.replConfig.Symlink(targetPath, srv.replConfig.SymlinkPath, 0777|np.DMTMP)
 		}
 		// Resend any in-flight messages. Do this asynchronously in case the sends
 		// fail.

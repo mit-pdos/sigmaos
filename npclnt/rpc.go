@@ -24,6 +24,10 @@ func MakeNpClnt() *NpClnt {
 	return npc
 }
 
+func (npc *NpClnt) Exit() {
+	npc.cm.exit()
+}
+
 func (npc *NpClnt) CallServer(server string, args np.Tmsg) (np.Tmsg, error) {
 	reply, err := npc.cm.makeCall(server, args)
 	if err != nil {

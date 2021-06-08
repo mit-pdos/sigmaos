@@ -49,6 +49,10 @@ func MakeFsClient(uname string) *FsClient {
 	return fsc
 }
 
+func (fsc *FsClient) Exit() {
+	fsc.npc.Exit()
+}
+
 func (fsc *FsClient) String() string {
 	str := fmt.Sprintf("Fsclnt table:\n")
 	str += fmt.Sprintf("fds %v\n", fsc.fds)

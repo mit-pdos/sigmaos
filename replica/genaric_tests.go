@@ -304,8 +304,8 @@ func ChainCrashMiddle(ts *Tstate) {
 }
 
 func ChainCrashHead(ts *Tstate) {
-	N := 2
-	n_files := 1
+	N := 5
+	n_files := 100
 
 	replicas := allocReplicas(ts, N)
 	writeConfig(ts, replicas)

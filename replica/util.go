@@ -12,6 +12,7 @@ type SrvReplica interface {
 	GetPort() string
 	GetConfigPath() string
 	GetUnionDirPath() string
+	GetSymlinkPath() string
 	GetServiceName() string
 }
 
@@ -25,5 +26,6 @@ func getConfig(r SrvReplica) *npsrv.NpServerReplConfig {
 		config, err = npsrv.ReadReplConfig(r.GetConfigPath(), r.GetAddr(), fsl, clnt)
 	}
 	config.UnionDirPath = r.GetUnionDirPath()
+	config.SymlinkPath = r.GetSymlinkPath()
 	return config
 }

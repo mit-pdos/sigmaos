@@ -21,6 +21,7 @@ type MemfsdReplica struct {
 	srvAddr      string
 	configPath   string
 	unionDirPath string
+	symlinkPath  string
 	config       *npsrv.NpServerReplConfig
 	fsd          *memfsd.Fsd
 	*fslibsrv.FsLibSrv
@@ -38,6 +39,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 	r.srvPort = strconv.Itoa(100 + portNum)
 	r.configPath = args[2]
 	r.unionDirPath = args[3]
+	r.symlinkPath = args[4]
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("%v: no IP %v\n", args, err)
@@ -45,7 +47,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 	r.relayAddr = ip + ":" + r.relayPort
 	r.srvAddr = ip + ":" + r.srvPort
 	r.config = getConfig(r)
-	if len(args) == 5 && args[4] == "log-ops" {
+	if len(args) == 6 && args[5] == "log-ops" {
 		r.config.LogOps = true
 	}
 	r.fsd = memfsd.MakeReplicatedFsd(r.srvAddr, true, r.relayAddr, r.config)
@@ -83,4 +85,8 @@ func (r *MemfsdReplica) GetUnionDirPath() string {
 
 func (r *MemfsdReplica) GetServiceName() string {
 	return "memfsd"
+}
+
+func (r *MemfsdReplica) GetSymlinkPath() string {
+	return r.symlinkPath
 }

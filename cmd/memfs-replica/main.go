@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 5 {
-		log.Fatalf("Usage: %v pid port config-path union-dir-path", os.Args[0])
+	if len(os.Args) < 6 {
+		log.Fatalf("Usage: %v pid port config-path union-dir-path symlink-path", os.Args[0])
 	}
 	r := replica.MakeMemfsdReplica(os.Args[1:])
 	r.Work()

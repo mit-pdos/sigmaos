@@ -23,6 +23,7 @@ type NpServerReplConfig struct {
 	LogOps       bool
 	ConfigPath   string
 	UnionDirPath string
+	SymlinkPath  string
 	RelayAddr    string
 	LastSendAddr string
 	HeadAddr     string
@@ -49,6 +50,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			config.LogOps,
 			config.ConfigPath,
 			config.UnionDirPath,
+			config.SymlinkPath,
 			relayAddr,
 			"", "", "", "", "",
 			nil, nil, nil, nil,
@@ -156,6 +158,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 		false,
 		path,
 		"",
+		"",
 		myaddr,
 		"",
 		headAddr, tailAddr, prevAddr, nextAddr,
@@ -242,6 +245,11 @@ func (srv *NpServer) runReplConfigUpdater() {
 		config := srv.getNewReplConfig()
 		db.DLPrintf("RSRV", "%v reloading config: %v\n", srv.replConfig.RelayAddr, config)
 		srv.reloadReplConfig(config)
+		// If we are the head, write a symlink
+		if srv.isHead() {
+			targetPath := srv.MyAddr() + ":pubkey:"
+			srv.replConfig.Symlink(targetPath, srv.replConfig.SymlinkPath, 0777)
+		}
 		// Resend any in-flight messages. Do this asynchronously in case the sends
 		// fail.
 		go srv.resendInflightRelayOps()

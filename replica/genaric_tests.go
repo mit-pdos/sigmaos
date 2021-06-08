@@ -33,6 +33,7 @@ type Tstate struct {
 	replicaBin     string
 	configPath9p   string
 	unionDirPath9p string
+	symlinkPath9p  string
 	t              *testing.T
 	s              *fslib.System
 	*fslib.FsLib
@@ -55,6 +56,7 @@ func bootReplica(ts *Tstate, replica *Replica) {
 			replica.port,
 			ts.configPath9p,
 			ts.unionDirPath9p,
+			ts.symlinkPath9p,
 			"log-ops"})
 	assert.Nil(ts.t, err, "Failed to boot replica")
 	time.Sleep(100 * time.Millisecond)
@@ -200,22 +202,24 @@ func ChainSimple(ts *Tstate) {
 		bootReplica(ts, r)
 	}
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 
 	// Write some files to the head
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(headPath(ts, replicas), i_str), 0777, []byte(i_str))
-		assert.Nil(ts.t, err, "Failed to MakeFile in head")
+		f_path := path.Join(ts.symlinkPath9p, i_str) + "/"
+		err := ts.MakeFile(f_path, 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile %v in head", f_path)
 	}
+
 	log.Printf("Done writing files...")
 
 	// Read some files from the head
 	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.ReadFile(path.Join(headPath(ts, replicas), i_str))
+		b, err := ts.ReadFile(path.Join(ts.symlinkPath9p, i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
@@ -259,7 +263,7 @@ func ChainCrashMiddle(ts *Tstate) {
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(headPath(ts, replicas), i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
@@ -276,7 +280,7 @@ func ChainCrashMiddle(ts *Tstate) {
 	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.ReadFile(path.Join(headPath(ts, replicas), i_str))
+		b, err := ts.ReadFile(path.Join(ts.symlinkPath9p, i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
@@ -318,7 +322,7 @@ func ChainCrashHead(ts *Tstate) {
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(headPath(ts, replicas), i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
@@ -336,7 +340,7 @@ func ChainCrashHead(ts *Tstate) {
 	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.ReadFile(path.Join(headPath(ts, replicas), i_str))
+		b, err := ts.ReadFile(path.Join(ts.symlinkPath9p, i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
@@ -378,7 +382,7 @@ func ChainCrashTail(ts *Tstate) {
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(headPath(ts, replicas), i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
@@ -394,7 +398,7 @@ func ChainCrashTail(ts *Tstate) {
 	log.Printf("Reading files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.ReadFile(path.Join(headPath(ts, replicas), i_str))
+		b, err := ts.ReadFile(path.Join(ts.symlinkPath9p, i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
@@ -425,12 +429,12 @@ func basicClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sy
 	start.Wait()
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
-		err := fsl.MakeFile(path.Join(headPath(ts, replicas), i_str), 0777, []byte(i_str))
+		err := fsl.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
-		b, err := fsl.ReadFile(path.Join(headPath(ts, replicas), i_str))
+		b, err := fsl.ReadFile(path.Join(ts.symlinkPath9p, i_str))
 		assert.Nil(ts.t, err, "Failed to ReadFile from tail")
 		assert.Equal(ts.t, string(b), i_str, "File contents not equal")
 	}
@@ -602,14 +606,14 @@ func pausedClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *s
 	start.Wait()
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
-		err := fsl.MakeFile(path.Join(headPath(ts, replicas), i_str), 0777, []byte(i_str))
+		err := fsl.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	writes.Done()
 	reads.Wait()
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
-		fpath := path.Join(headPath(ts, replicas), i_str)
+		fpath := path.Join(ts.symlinkPath9p, i_str)
 		b, err := fsl.ReadFile(fpath)
 		assert.Nil(ts.t, err, "Failed to ReadFile path: %v", fpath)
 		assert.Equal(ts.t, i_str, string(b), "File contents not equal")

@@ -157,6 +157,7 @@ const (
 	DMSYMLINK   Tperm = 0x02000000
 	DMLINK      Tperm = 0x01000000
 	DMDEVICE    Tperm = 0x00800000
+	DMREPL      Tperm = 0x00400000
 	DMNAMEDPIPE Tperm = 0x00200000
 	DMSOCKET    Tperm = 0x00100000
 	DMSETUID    Tperm = 0x00080000
@@ -169,11 +170,12 @@ const (
 	TYPESHIFT  = 16
 )
 
-func (p Tperm) IsDir() bool       { return p&DMDIR == DMDIR }
-func (p Tperm) IsSymlink() bool   { return p&DMSYMLINK == DMSYMLINK }
-func (p Tperm) IsDevice() bool    { return p&DMDEVICE == DMDEVICE }
-func (p Tperm) IsPipe() bool      { return p&DMNAMEDPIPE == DMNAMEDPIPE }
-func (p Tperm) IsEphemeral() bool { return p&DMTMP == DMTMP }
+func (p Tperm) IsDir() bool        { return p&DMDIR == DMDIR }
+func (p Tperm) IsSymlink() bool    { return p&DMSYMLINK == DMSYMLINK }
+func (p Tperm) IsReplicated() bool { return p&DMREPL == DMREPL }
+func (p Tperm) IsDevice() bool     { return p&DMDEVICE == DMDEVICE }
+func (p Tperm) IsPipe() bool       { return p&DMNAMEDPIPE == DMNAMEDPIPE }
+func (p Tperm) IsEphemeral() bool  { return p&DMTMP == DMTMP }
 
 func (p Tperm) String() string {
 	qt := Qtype(p >> QTYPESHIFT)

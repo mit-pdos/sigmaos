@@ -39,14 +39,7 @@ func (cm *ChanMgr) exit() {
 	}
 }
 
-func (cm *ChanMgr) lookup(addr string) (*Chan, bool) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	conn, ok := cm.conns[addr]
-	return conn, ok
-}
-
+// XXX Make array
 func (cm *ChanMgr) allocChan(addr string) (*Chan, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -54,24 +47,12 @@ func (cm *ChanMgr) allocChan(addr string) (*Chan, error) {
 	var err error
 	conn, ok := cm.conns[addr]
 	if !ok {
-		conn, err = mkChan(addr)
+		conn, err = mkChan([]string{addr})
 		if err == nil {
 			cm.conns[addr] = conn
 		}
 	}
 	return conn, err
-}
-
-func (cm *ChanMgr) Close(addr string) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	conn, ok := cm.conns[addr]
-	if ok {
-		db.DLPrintf("9PCHAN", "Close connection to %v\n", addr)
-		conn.Close()
-		delete(cm.conns, addr)
-	}
 }
 
 func (cm *ChanMgr) makeCall(dst string, req np.Tmsg) (np.Tmsg, error) {

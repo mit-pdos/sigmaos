@@ -1,12 +1,14 @@
 package npclnt
 
 import (
+	"github.com/sasha-s/go-deadlock"
+
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"strings"
-	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -31,8 +33,9 @@ func mkRpcT(fc *np.Fcall) *RpcT {
 }
 
 type Chan struct {
-	mu          sync.Mutex
+	mu          deadlock.Mutex
 	conn        net.Conn
+	addrs       []string
 	closed      bool
 	br          *bufio.Reader
 	bw          *bufio.Writer
@@ -41,42 +44,139 @@ type Chan struct {
 	outstanding map[np.Ttag]*RpcT
 }
 
-func mkChan(addr string) (*Chan, error) {
-	var err error
-	db.DLPrintf("9PCHAN", "mkChan to %v\n", addr)
-	c, err := net.Dial("tcp", addr)
-	if err != nil {
-		db.DLPrintf("9PCHAN", "mkChan to %v err %v\n", addr, err)
-		return nil, err
-	}
-	db.DLPrintf("9PCHAN", "mkChan to %v from %v\n", addr, c.LocalAddr())
+func mkChan(addrs []string) (*Chan, error) {
+	db.DLPrintf("9PCHAN", "mkChan to %v\n", addrs)
 	ch := &Chan{}
-	ch.conn = c
-	ch.br = bufio.NewReaderSize(c, Msglen)
-	ch.bw = bufio.NewWriterSize(c, Msglen)
 	ch.requests = make(chan *RpcT)
 	ch.outstanding = make(map[np.Ttag]*RpcT)
+	ch.addrs = addrs
+	ch.connect()
 	go ch.writer()
 	go ch.reader()
 
 	return ch, nil
 }
 
-func (ch *Chan) Dst() string { return ch.conn.RemoteAddr().String() }
+func (ch *Chan) Dst() string {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
 
-func (ch *Chan) Src() string { return ch.conn.LocalAddr().String() }
+	return ch.dstL()
+}
+
+func (ch *Chan) dstL() string {
+	return ch.conn.RemoteAddr().String()
+}
+
+func (ch *Chan) Src() string {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
+	return ch.conn.LocalAddr().String()
+}
+
+func (ch *Chan) getOutstanding() map[np.Ttag]*RpcT {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
+	cp := make(map[np.Ttag]*RpcT)
+	for t, r := range ch.outstanding {
+		cp[t] = r
+	}
+	return cp
+}
+
+func (ch *Chan) terminateOutstanding() {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
+	ch.terminateOutstandingL()
+}
+
+func (ch *Chan) terminateOutstandingL() {
+	for _, rpc := range ch.outstanding {
+		close(rpc.replych)
+	}
+}
+
+func (ch *Chan) resendOutstanding() {
+	outstanding := ch.getOutstanding()
+	for t, r := range outstanding {
+		// Retry sending the request in a separate thread
+		go func(t np.Ttag, r *RpcT) {
+			ch.lookupDel(t)
+			ch.requests <- r
+		}(t, r)
+	}
+}
 
 func (ch *Chan) Close() {
 	ch.mu.Lock()
 	defer ch.mu.Unlock()
 
-	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.Dst())
-	for _, rpc := range ch.outstanding {
-		close(rpc.replych)
-	}
+	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.dstL())
+	ch.terminateOutstandingL()
 	close(ch.requests)
 	ch.closed = true
 	ch.conn.Close()
+}
+
+func (ch *Chan) resetConnection() {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	ch.br = nil
+	ch.bw = nil
+	ch.connectL()
+}
+
+func (ch *Chan) getBw() (*bufio.Writer, error) {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
+	if ch.conn == nil || ch.bw == nil {
+		err := ch.connectL()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ch.bw, nil
+}
+
+func (ch *Chan) getBr() (*bufio.Reader, error) {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
+	if ch.conn == nil || ch.br == nil {
+		err := ch.connectL()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ch.br, nil
+}
+
+func (ch *Chan) connect() error {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
+	return ch.connectL()
+}
+
+func (ch *Chan) connectL() error {
+	for _, addr := range ch.addrs {
+		c, err := net.Dial("tcp", addr)
+		if err != nil {
+			db.DLPrintf("9PCHAN", "Connect to %v err %v\n", addr, err)
+			continue
+		}
+		db.DLPrintf("9PCHAN", "Connect to %v from %v\n", addr, c.LocalAddr())
+		ch.conn = c
+		ch.br = bufio.NewReaderSize(c, Msglen)
+		ch.bw = bufio.NewWriterSize(c, Msglen)
+		return nil
+	}
+	db.DLPrintf("9PCHAN", "No successful connections %v\n", ch.addrs)
+	return fmt.Errorf("Unable to connect")
 }
 
 func (ch *Chan) allocate(req *RpcT) np.Ttag {
@@ -126,22 +226,34 @@ func (ch *Chan) writer() {
 		t := ch.allocate(rpc)
 		rpc.req.Tag = t
 		db.DLPrintf("9PCHAN", "Writer: to %v %v\n", ch.Dst(), rpc.req)
-		err := npcodec.MarshalFcallToWriter(rpc.req, ch.bw)
+		// Get the bw for the latest connection
+		bw, err := ch.getBw()
+		// If none was available, close the channel.
+		if err != nil {
+			db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
+			ch.Close()
+			return
+		}
+		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
 		if err != nil {
 			if strings.Contains(err.Error(), "marshal error") {
 				rpc.replych <- &Reply{nil, err}
 			}
+			// Retry sends on network error
 			if strings.Contains(err.Error(), "EOF") {
-				ch.Close()
-				return
+				ch.resetConnection()
+				ch.resendOutstanding()
+				continue
 			}
 			// If exit the thread if the connection is broken
 			if strings.Contains(err.Error(), "WriteFrame error") {
+				// XXX network errors here too?
 				log.Fatal(err)
 				return
 			}
 		} else {
 			err = ch.bw.Flush()
+			// XXX Network errors here too?
 			if err != nil {
 				log.Fatalf("Flush error %v\n", err)
 				return
@@ -153,10 +265,19 @@ func (ch *Chan) writer() {
 func (ch *Chan) reader() {
 	for {
 		db.DLPrintf("9PCHAN", "Reader: about to ReadFrame %v\n", ch.Dst())
-		frame, err := npcodec.ReadFrame(ch.br)
-		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
+		// Get the br for the latest connection
+		br, err := ch.getBr()
+		// If none was available, close the channel.
+		if err != nil {
+			db.DLPrintf("9PCHAN", "Reader: no viable connections: %v", err)
 			ch.Close()
 			return
+		}
+		frame, err := npcodec.ReadFrame(br)
+		// On connection error, retry
+		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
+			ch.resetConnection()
+			continue
 		}
 		if err != nil {
 			db.DLPrintf("9PCHAN", "Reader: ReadFrame error %v\n", err)

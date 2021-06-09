@@ -196,19 +196,19 @@ type Tstat struct {
 	n   int64
 }
 
-func (ts *Tstate) zipf() uint64 {
-	z := rand.NewZipf(ts.rand, 2.0, 1.0, 99)
+func zipf(r *rand.Rand) uint64 {
+	z := rand.NewZipf(r, 2.0, 1.0, 99)
 	return z.Uint64()
 }
 
-func (ts *Tstate) uniform() uint64 {
-	return ts.rand.Uint64() % NKEYS
+func uniform(r *rand.Rand) uint64 {
+	return r.Uint64() % NKEYS
 }
 
-func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat, chooseKey func() uint64) {
+func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat, dist func(*rand.Rand) uint64) {
 	st := Tstat{}
 	for true {
-		k := chooseKey()
+		k := dist(ts.rand)
 		t0 := time.Now().UnixNano()
 		v, err := ts.clrks[c].Get(key(k))
 		t1 := time.Now().UnixNano()
@@ -228,8 +228,7 @@ func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat, chooseKey func()
 	}
 }
 
-// XXX run without race detector
-func TestElastic(t *testing.T) {
+func Elastic(t *testing.T, dist func(*rand.Rand) uint64) {
 	const (
 		S = 1000
 		T = 20
@@ -252,8 +251,7 @@ func TestElastic(t *testing.T) {
 	out := make(chan Tstat)
 	for i := 0; i < nclerk; i++ {
 		for t := 0; t < nthread; t++ {
-			// go ts.clerkMon(i, in, out, ts.zipf)
-			go ts.clerkMon(i, in, out, ts.uniform)
+			go ts.clerkMon(i, in, out, dist)
 		}
 	}
 
@@ -296,4 +294,14 @@ func TestElastic(t *testing.T) {
 	ts.stopMemFS(memfs)
 
 	ts.s.Shutdown(ts.fsl)
+}
+
+// XXX run these tests without race detector
+
+func TestElasticUniform(t *testing.T) {
+	Elastic(t, uniform)
+}
+
+func TestElasticZipf(t *testing.T) {
+	Elastic(t, zipf)
 }

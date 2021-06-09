@@ -8,7 +8,7 @@ killall replica-monitor
 killall perf-memfs-replica
 killall locald
 killall sleeperl
-killall kvd
+killall kv
 killall coord
 killall flwr
 killall sharderd

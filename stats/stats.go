@@ -2,6 +2,7 @@ package stats
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -13,6 +14,7 @@ import (
 	"time"
 	"unsafe"
 
+	"ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 
@@ -31,6 +33,10 @@ const STATS = true
 type Tcounter uint64
 type TCycles uint64
 type Tload [3]float64
+
+func (t Tload) String() string {
+	return fmt.Sprintf("[%.1f %.1f %.1f]", t[0], t[1], t[2])
+}
 
 func (c *Tcounter) Inc() {
 	if STATS {
@@ -159,7 +165,7 @@ func noDelay(load Tload) bool {
 func (st *Stats) doMonitor() bool {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	log.Printf("CPU util %f load %f\n", st.sti.Util, st.sti.Load)
+	log.Printf("%v: u %.1f l %v\n", debug.GetName(), st.sti.Util, st.sti.Load)
 	if st.sti.Util >= MAXLOAD && isDelay(st.sti.Load) {
 		return true
 	}

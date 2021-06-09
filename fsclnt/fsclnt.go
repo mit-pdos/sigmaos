@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	db "ulambda/debug"
@@ -202,7 +203,7 @@ func (fsc *FsClient) Close(fd int) error {
 
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
-func (fsc *FsClient) attachChannel(fid np.Tfid, server string, p []string) (*Path, error) {
+func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string) (*Path, error) {
 	reply, err := fsc.npc.Attach(server, fsc.Uname(), fid, p)
 	if err != nil {
 		return nil, err
@@ -215,7 +216,7 @@ func (fsc *FsClient) detachChannel(fid np.Tfid) {
 	fsc.freeFid(fid)
 }
 
-func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
+func (fsc *FsClient) AttachReplicas(server []string, path string) (np.Tfid, error) {
 	p := np.Split(path)
 	fid := fsc.allocFid()
 	ch, err := fsc.attachChannel(fid, server, p)
@@ -229,6 +230,10 @@ func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
 
 	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
 	return fid, nil
+}
+
+func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
+	return fsc.AttachReplicas([]string{server}, path)
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
@@ -378,7 +383,7 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 	target, rest := fsc.mount.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) {
 		st := &np.Stat{}
-		st.Name = fsc.npch(target).Server()
+		st.Name = strings.Join(fsc.npch(target).Server(), ",")
 		return st, nil
 	} else {
 		fid, err := fsc.walkMany(np.Split(name), np.EndSlash(name), nil)

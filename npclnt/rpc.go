@@ -28,7 +28,7 @@ func (npc *NpClnt) Exit() {
 	npc.cm.exit()
 }
 
-func (npc *NpClnt) CallServer(server string, args np.Tmsg) (np.Tmsg, error) {
+func (npc *NpClnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
 	reply, err := npc.cm.makeCall(server, args)
 	if err != nil {
 		return nil, err
@@ -40,9 +40,7 @@ func (npc *NpClnt) CallServer(server string, args np.Tmsg) (np.Tmsg, error) {
 	return reply, nil
 }
 
-// XXX copying msg once too many?
-
-func (npc *NpClnt) Attach(server string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
+func (npc *NpClnt) Attach(server []string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
 	args := np.Tattach{fid, np.NoFid, uname, ""}
 	reply, err := npc.CallServer(server, args)
 	if err != nil {
@@ -56,16 +54,16 @@ func (npc *NpClnt) Attach(server string, uname string, fid np.Tfid, path []strin
 }
 
 type NpChan struct {
-	server string
+	server []string
 	cm     *ChanMgr
 }
 
-func (npc *NpClnt) MakeNpChan(server string) *NpChan {
+func (npc *NpClnt) MakeNpChan(server []string) *NpChan {
 	npchan := &NpChan{server, npc.cm}
 	return npchan
 }
 
-func (npc *NpChan) Server() string {
+func (npc *NpChan) Server() []string {
 	return npc.server
 }
 

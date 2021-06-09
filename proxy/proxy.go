@@ -110,11 +110,11 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 
 	log.Printf("attach %v\n", args)
 
-	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, np.Split(args.Aname))
+	reply, err := npc.clnt.Attach([]string{npc.named}, npc.uname, args.Fid, np.Split(args.Aname))
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.addch(args.Fid, npc.clnt.MakeNpChan(npc.named))
+	npc.addch(args.Fid, npc.clnt.MakeNpChan([]string{npc.named}))
 	rets.Qid = reply.Qid
 	return nil
 }
@@ -127,11 +127,11 @@ func (npc *NpConn) Detach() {
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)
 	server, _ := fsclnt.SplitTarget(target)
-	reply, err := npc.clnt.Attach(server, npc.uname, newfid, path)
+	reply, err := npc.clnt.Attach([]string{server}, npc.uname, newfid, path)
 	if err != nil {
 		return np.Tqid{}, err
 	}
-	npc.addch(newfid, npc.clnt.MakeNpChan(server))
+	npc.addch(newfid, npc.clnt.MakeNpChan([]string{server}))
 	return reply.Qid, nil
 }
 

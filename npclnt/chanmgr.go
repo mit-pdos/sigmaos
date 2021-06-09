@@ -1,6 +1,7 @@
 package npclnt
 
 import (
+	"strings"
 	"sync"
 
 	db "ulambda/debug"
@@ -40,22 +41,25 @@ func (cm *ChanMgr) exit() {
 }
 
 // XXX Make array
-func (cm *ChanMgr) allocChan(addr string) (*Chan, error) {
+func (cm *ChanMgr) allocChan(addrs []string) (*Chan, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
+	// Store as concatenation of addresses
+	key := strings.Join(addrs, ",")
+
 	var err error
-	conn, ok := cm.conns[addr]
+	conn, ok := cm.conns[key]
 	if !ok {
-		conn, err = mkChan([]string{addr})
+		conn, err = mkChan(addrs)
 		if err == nil {
-			cm.conns[addr] = conn
+			cm.conns[key] = conn
 		}
 	}
 	return conn, err
 }
 
-func (cm *ChanMgr) makeCall(dst string, req np.Tmsg) (np.Tmsg, error) {
+func (cm *ChanMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, error) {
 	conn, err := cm.allocChan(dst)
 	if err != nil {
 		return nil, err

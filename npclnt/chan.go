@@ -1,14 +1,13 @@
 package npclnt
 
 import (
-	"github.com/sasha-s/go-deadlock"
-
 	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"strings"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -33,7 +32,7 @@ func mkRpcT(fc *np.Fcall) *RpcT {
 }
 
 type Chan struct {
-	mu          deadlock.Mutex
+	mu          sync.Mutex
 	conn        net.Conn
 	addrs       []string
 	closed      bool
@@ -218,6 +217,12 @@ func (ch *Chan) RPC(fc *np.Fcall) (*np.Fcall, error) {
 }
 
 func (ch *Chan) writer() {
+	bw, err := ch.getBw()
+	if err != nil {
+		db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
+		ch.Close()
+		return
+	}
 	for {
 		rpc, ok := <-ch.requests
 		if !ok {
@@ -226,14 +231,6 @@ func (ch *Chan) writer() {
 		t := ch.allocate(rpc)
 		rpc.req.Tag = t
 		db.DLPrintf("9PCHAN", "Writer: to %v %v\n", ch.Dst(), rpc.req)
-		// Get the bw for the latest connection
-		bw, err := ch.getBw()
-		// If none was available, close the channel.
-		if err != nil {
-			db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
-			ch.Close()
-			return
-		}
 		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
 		if err != nil {
 			if strings.Contains(err.Error(), "marshal error") {
@@ -242,6 +239,15 @@ func (ch *Chan) writer() {
 			// Retry sends on network error
 			if strings.Contains(err.Error(), "EOF") {
 				ch.resetConnection()
+				// Get the bw for the latest connection
+				bw, err = ch.getBw()
+				// If none was available, close the channel.
+				if err != nil {
+					db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
+					ch.Close()
+					return
+				}
+
 				ch.resendOutstanding()
 				continue
 			}
@@ -263,20 +269,28 @@ func (ch *Chan) writer() {
 }
 
 func (ch *Chan) reader() {
+	// Get the br for the latest connection
+	br, err := ch.getBr()
+	// If none was available, close the channel.
+	if err != nil {
+		db.DLPrintf("9PCHAN", "Reader: no viable connections: %v", err)
+		ch.Close()
+		return
+	}
 	for {
 		db.DLPrintf("9PCHAN", "Reader: about to ReadFrame %v\n", ch.Dst())
-		// Get the br for the latest connection
-		br, err := ch.getBr()
-		// If none was available, close the channel.
-		if err != nil {
-			db.DLPrintf("9PCHAN", "Reader: no viable connections: %v", err)
-			ch.Close()
-			return
-		}
 		frame, err := npcodec.ReadFrame(br)
 		// On connection error, retry
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
 			ch.resetConnection()
+			// Get the br for the latest connection
+			br, err = ch.getBr()
+			// If none was available, close the channel.
+			if err != nil {
+				db.DLPrintf("9PCHAN", "Reader: no viable connections: %v", err)
+				ch.Close()
+				return
+			}
 			continue
 		}
 		if err != nil {

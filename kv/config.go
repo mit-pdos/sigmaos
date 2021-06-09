@@ -1,6 +1,9 @@
 package kv
 
 import (
+	"log"
+	"time"
+
 	db "ulambda/debug"
 	"ulambda/fslib"
 )
@@ -91,6 +94,22 @@ func (ks *KvSet) first() string {
 		break
 	}
 	return memfs
+}
+
+func readKVs(fsl *fslib.FsLib) *KvSet {
+	for true {
+		conf, err := readConfig(fsl, KVCONFIG)
+		if err != nil {
+			// balancer may be at work
+			log.Printf("readKVs: err %v\n", err)
+			time.Sleep(1000 * time.Millisecond)
+			continue
+		}
+		kvs := makeKvs(conf.Shards)
+		log.Printf("Monitor config %v\n", kvs)
+		return kvs
+	}
+	return nil
 }
 
 // XXX minimize movement

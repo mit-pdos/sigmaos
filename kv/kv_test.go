@@ -3,7 +3,6 @@ package kv
 import (
 	"log"
 	"math/rand"
-	// "regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -24,6 +23,7 @@ type Tstate struct {
 	fsl   *fslib.FsLib
 	clrks []*KvClerk
 	mfss  []string
+	rand  *rand.Rand
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -50,7 +50,7 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
 	}
-
+	ts.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return ts
 }
 
@@ -85,12 +85,12 @@ func (ts *Tstate) stopMemFSs() {
 	}
 }
 
-func key(k int) string {
-	return "key" + strconv.Itoa(k)
+func key(k uint64) string {
+	return "key" + strconv.FormatUint(k, 16)
 }
 
 func (ts *Tstate) getKeys(c int, ch chan bool) bool {
-	for i := 0; i < NKEYS; i++ {
+	for i := uint64(0); i < NKEYS; i++ {
 		v, err := ts.clrks[c].Get(key(i))
 		select {
 		case <-ch:
@@ -128,7 +128,7 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	}
 
 	if nclerk > 0 {
-		for i := 0; i < NKEYS; i++ {
+		for i := uint64(0); i < NKEYS; i++ {
 			err := ts.clrks[0].Put(key(i), key(i))
 			assert.Nil(ts.t, err, "Put")
 		}
@@ -190,22 +190,25 @@ func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
 }
 
-// Zipfian:
-// r := rand.New(rand.NewSource(time.Now().UnixNano()))
-// z := rand.NewZipf(r, 2.0, 1.0, 100)
-// z.Uint64()
-//
-
 type Tstat struct {
 	tot int64
 	max int64
 	n   int64
 }
 
-func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat) {
+func (ts *Tstate) zipf() uint64 {
+	z := rand.NewZipf(ts.rand, 2.0, 1.0, 99)
+	return z.Uint64()
+}
+
+func (ts *Tstate) uniform() uint64 {
+	return ts.rand.Uint64() % NKEYS
+}
+
+func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat, chooseKey func() uint64) {
 	st := Tstat{}
 	for true {
-		k := rand.Intn(NKEYS)
+		k := chooseKey()
 		t0 := time.Now().UnixNano()
 		v, err := ts.clrks[c].Get(key(k))
 		t1 := time.Now().UnixNano()
@@ -225,22 +228,7 @@ func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat) {
 	}
 }
 
-func readKVs(fsl *fslib.FsLib) *KvSet {
-	for true {
-		conf, err := readConfig(fsl, KVCONFIG)
-		if err != nil {
-			// balancer may be at work
-			log.Printf("readKVs: err %v\n", err)
-			time.Sleep(1000 * time.Millisecond)
-			continue
-		}
-		kvs := makeKvs(conf.Shards)
-		log.Printf("Monitor config %v\n", kvs)
-		return kvs
-	}
-	return nil
-}
-
+// XXX run without race detector
 func TestElastic(t *testing.T) {
 	const (
 		S = 1000
@@ -264,7 +252,8 @@ func TestElastic(t *testing.T) {
 	out := make(chan Tstat)
 	for i := 0; i < nclerk; i++ {
 		for t := 0; t < nthread; t++ {
-			go ts.clerkMon(i, in, out)
+			// go ts.clerkMon(i, in, out, ts.zipf)
+			go ts.clerkMon(i, in, out, ts.uniform)
 		}
 	}
 

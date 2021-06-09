@@ -144,6 +144,7 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 }
 
 func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string, error) {
+	// XXX change how we readlink
 	target, err := fsc.Readlink(fid)
 	if err != nil {
 		return nil, err
@@ -163,16 +164,23 @@ func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string
 	return path, nil
 }
 
+// Replicated: >1 of IPv6/IPv4, separated by a '\n'
 // IPv6: [::]:port:pubkey:name
 // IPv4: host:port:pubkey[:path]
 func IsRemoteTarget(target string) bool {
-	if strings.HasPrefix(target, "[") {
-		parts := strings.SplitN(target, ":", 6)
+	targets := strings.Split(target, "\n")
+	if strings.HasPrefix(targets[0], "[") {
+		parts := strings.SplitN(targets[0], ":", 6)
 		return len(parts) >= 5
 	} else { // IPv4
-		parts := strings.SplitN(target, ":", 4)
+		parts := strings.SplitN(targets[0], ":", 4)
 		return len(parts) >= 3
 	}
+}
+
+// Remote targets separated by '\n'
+func IsReplicated(target string) bool {
+	return IsRemoteTarget(target) && strings.Contains(target, "\n")
 }
 
 // XXX pubkey is unused
@@ -196,10 +204,33 @@ func SplitTarget(target string) (string, []string) {
 	return server, rest
 }
 
+func SplitTargetReplicated(target string) ([]string, []string) {
+	target = strings.TrimSpace(target)
+	targets := strings.Split(target, "\n")
+	servers := []string{}
+	rest := []string{}
+	for _, t := range targets {
+		serv, r := SplitTarget(t)
+		rest = r
+		servers = append(servers, serv)
+	}
+	return servers, rest
+}
+
 func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
-	server, rest := SplitTarget(target)
-	fid, err := fsc.Attach(server, np.Join(path))
+	var rest []string
+	var fid np.Tfid
+	var err error
+	if IsReplicated(target) {
+		servers, r := SplitTargetReplicated(target)
+		rest = r
+		fid, err = fsc.AttachReplicas(servers, np.Join(path))
+	} else {
+		server, r := SplitTarget(target)
+		rest = r
+		fid, err = fsc.Attach(server, np.Join(path))
+	}
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)
 		return nil, err

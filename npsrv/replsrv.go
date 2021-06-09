@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"path"
+	"sort"
 	"strings"
 	"sync"
 
@@ -228,6 +230,30 @@ func (srv *NpServer) runDirWatcher() {
 	}
 }
 
+func (srv *NpServer) getReplicaTargets() []string {
+	config := srv.replConfig
+	targets := []string{}
+	// Get list of replica links
+	d, err := config.ReadDir(config.UnionDirPath)
+	// Sort them
+	sort.Slice(d, func(i, j int) bool {
+		return d[i].Name < d[j].Name
+	})
+	if err != nil {
+		log.Printf("Error getting replica targets: %v", err)
+	}
+	// Read links
+	for _, replica := range d {
+		target, err := srv.replConfig.ReadFile(path.Join(srv.replConfig.UnionDirPath, replica.Name))
+		if err != nil {
+			log.Printf("Error reading link file: %v", err)
+			continue
+		}
+		targets = append(targets, string(target))
+	}
+	return targets
+}
+
 // Watch for changes to the config file, and update if necessary
 func (srv *NpServer) runReplConfigUpdater() {
 	for {
@@ -247,10 +273,10 @@ func (srv *NpServer) runReplConfigUpdater() {
 		srv.reloadReplConfig(config)
 		// If we are the head, write a symlink
 		if srv.isHead() {
-			targetPath := srv.MyAddr() + ":pubkey:"
-			db.DLPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", srv.replConfig.RelayAddr, srv.replConfig.SymlinkPath, targetPath)
+			targets := srv.getReplicaTargets()
+			db.DLPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", srv.replConfig.RelayAddr, srv.replConfig.SymlinkPath, targets)
 			srv.replConfig.Remove(srv.replConfig.SymlinkPath)
-			srv.replConfig.Symlink(targetPath, srv.replConfig.SymlinkPath, 0777|np.DMTMP|np.DMREPL)
+			srv.replConfig.SymlinkReplica(targets, srv.replConfig.SymlinkPath, 0777|np.DMTMP|np.DMREPL)
 		}
 		// Resend any in-flight messages. Do this asynchronously in case the sends
 		// fail.

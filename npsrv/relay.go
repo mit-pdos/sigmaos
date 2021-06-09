@@ -68,6 +68,7 @@ func (r *RelayChannel) reader() {
 			}
 			return
 		}
+		db.DLPrintf("RSRV", "%v relay reader read frame from %v\n", r.c.Dst(), r.c.Src())
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", r.c.Dst(), err)

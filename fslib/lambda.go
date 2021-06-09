@@ -131,7 +131,7 @@ func (fl *FsLib) Wait(pid string) ([]byte, error) {
 
 	// Wait on the lambda with a watch
 	done := make(chan bool)
-	fl.SetRemoveWatch(waitFilePath(pid), func(p string, err error) {
+	err := fl.SetRemoveWatch(waitFilePath(pid), func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {
@@ -139,7 +139,10 @@ func (fl *FsLib) Wait(pid string) ([]byte, error) {
 		}
 		done <- true
 	})
-	<-done
+	// if error, don't wait; the lambda may already have exited.
+	if err == nil {
+		<-done
+	}
 
 	// Read the exit status
 	b, err := fl.ReadFile(fpath)

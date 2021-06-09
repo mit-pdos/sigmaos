@@ -100,11 +100,13 @@ func (ch *Chan) terminateOutstandingL() {
 
 func (ch *Chan) resendOutstanding() {
 	outstanding := ch.getOutstanding()
+	db.DLPrintf("9PCHAN", "Resending outstanding requests: %v", outstanding)
 	for t, r := range outstanding {
 		// Retry sending the request in a separate thread
 		go func(t np.Ttag, r *RpcT) {
 			ch.lookupDel(t)
 			ch.requests <- r
+			db.DLPrintf("9PCHAN", "Resent outstanding request: %v", r)
 		}(t, r)
 	}
 }
@@ -123,6 +125,7 @@ func (ch *Chan) Close() {
 func (ch *Chan) resetConnection() {
 	ch.mu.Lock()
 	defer ch.mu.Unlock()
+	ch.conn.Close()
 	ch.br = nil
 	ch.bw = nil
 	ch.connectL()
@@ -168,10 +171,10 @@ func (ch *Chan) connectL() error {
 			db.DLPrintf("9PCHAN", "Connect to %v err %v\n", addr, err)
 			continue
 		}
-		db.DLPrintf("9PCHAN", "Connect to %v from %v\n", addr, c.LocalAddr())
 		ch.conn = c
 		ch.br = bufio.NewReaderSize(c, Msglen)
 		ch.bw = bufio.NewWriterSize(c, Msglen)
+		db.DLPrintf("9PCHAN", "Connect %v -> %v bw:%p, br:%p\n", c.LocalAddr(), addr, ch.bw, ch.br)
 		return nil
 	}
 	db.DLPrintf("9PCHAN", "No successful connections %v\n", ch.addrs)
@@ -230,7 +233,9 @@ func (ch *Chan) writer() {
 		}
 		t := ch.allocate(rpc)
 		rpc.req.Tag = t
-		db.DLPrintf("9PCHAN", "Writer: to %v %v\n", ch.Dst(), rpc.req)
+		// Get the bw for the latest connection
+		bw, err = ch.getBw()
+		db.DLPrintf("9PCHAN", "Writer: %v -> %v %v, %p\n", ch.Src(), ch.Dst(), rpc.req, bw)
 		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
 		if err != nil {
 			if strings.Contains(err.Error(), "marshal error") {
@@ -238,9 +243,8 @@ func (ch *Chan) writer() {
 			}
 			// Retry sends on network error
 			if strings.Contains(err.Error(), "EOF") {
+				db.DLPrintf("9PCHAN", "Writer: Connection error to %v. Resetting connection.\n", ch.Dst())
 				ch.resetConnection()
-				// Get the bw for the latest connection
-				bw, err = ch.getBw()
 				// If none was available, close the channel.
 				if err != nil {
 					db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
@@ -257,6 +261,7 @@ func (ch *Chan) writer() {
 				log.Fatal(err)
 				return
 			}
+			db.DLPrintf("9PCHAN", "Writer: Connection error to %v: %v", ch.Dst(), err)
 		} else {
 			err = ch.bw.Flush()
 			// XXX Network errors here too?
@@ -278,10 +283,11 @@ func (ch *Chan) reader() {
 		return
 	}
 	for {
-		db.DLPrintf("9PCHAN", "Reader: about to ReadFrame %v\n", ch.Dst())
+		db.DLPrintf("9PCHAN", "Reader: about to ReadFrame from %v br:%p\n", ch.Dst(), br)
 		frame, err := npcodec.ReadFrame(br)
 		// On connection error, retry
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
+			db.DLPrintf("9PCHAN", "Reader: Connection error to %v. Resetting connection\n", ch.Dst())
 			ch.resetConnection()
 			// Get the br for the latest connection
 			br, err = ch.getBr()
@@ -291,6 +297,7 @@ func (ch *Chan) reader() {
 				ch.Close()
 				return
 			}
+			ch.resendOutstanding()
 			continue
 		}
 		if err != nil {

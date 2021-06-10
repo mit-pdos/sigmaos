@@ -13,6 +13,19 @@ type PDep struct {
 	Consumer string
 }
 
+type Ttype uint32
+type Tcore uint32
+
+const (
+	DEFP Ttype = 0
+	LC   Ttype = 1
+	BE   Ttype = 2
+)
+
+const (
+	DEFC Tcore = 0
+)
+
 type Attr struct {
 	Pid     string
 	Program string
@@ -22,6 +35,8 @@ type Attr struct {
 	PairDep []PDep
 	ExitDep map[string]bool
 	Timer   uint32
+	Type    Ttype
+	Ncore   Tcore
 }
 
 const (

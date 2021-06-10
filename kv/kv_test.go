@@ -293,6 +293,8 @@ func Elastic(t *testing.T, dist func(*rand.Rand) uint64) {
 
 	ts.stopMemFS(memfs)
 
+	time.Sleep(100 * time.Millisecond)
+
 	ts.s.Shutdown(ts.fsl)
 }
 

@@ -238,10 +238,10 @@ type pair struct {
 	cnt  int
 }
 
-func (st *Stats) SortPathL() []pair {
+func (sti *StatInfo) SortPath() []pair {
 	var s []pair
 
-	for k, v := range st.sti.Paths {
+	for k, v := range sti.Paths {
 		s = append(s, pair{k, v})
 	}
 	sort.Slice(s, func(i, j int) bool {

@@ -187,6 +187,7 @@ func (mo *Monitor) Work() {
 			lowkv = kv
 			lowload = sti.Load
 		}
+		log.Printf("path %v\n", sti.SortPath()[0:3])
 	}
 	util = util / float64(n)
 	log.Printf("monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)

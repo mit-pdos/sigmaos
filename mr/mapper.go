@@ -140,6 +140,7 @@ func (m *Mapper) doMap() error {
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
 			db.DLPrintf("MAPPER", "Mapper: cannot create symlink %v %v\n", name, err)
+			return err
 		}
 	}
 	return nil

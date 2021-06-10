@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 
 	db "ulambda/debug"
@@ -90,7 +91,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 	return kva
 }
 
-func (r *Reducer) doReduce() {
+func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 
 	db.DLPrintf("REDUCE", "doReduce %v\n", r.input)
@@ -103,7 +104,7 @@ func (r *Reducer) doReduce() {
 
 	fd, err := r.Create(r.output, 0777, np.OWRITE)
 	if err != nil {
-		log.Fatal("Create error ", err)
+		return err
 	}
 	defer r.Close(fd)
 	i := 0
@@ -120,12 +121,17 @@ func (r *Reducer) doReduce() {
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
-			log.Fatal("Write error ", err)
+			return err
 		}
 		i = j
 	}
+	return nil
 }
 
 func (r *Reducer) Work() {
-	r.doReduce()
+	err := r.doReduce()
+	if err != nil {
+		log.Printf("doReduce error %v", err)
+		os.Exit(1)
+	}
 }

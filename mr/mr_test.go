@@ -72,21 +72,16 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func rmDir(ts *Tstate, dir string) {
+func rmDir(ts *Tstate, dir string) error {
 	fs, err := ts.ReadDir(dir)
 	if err != nil {
-		log.Printf("Couldn't read dir during rmDir: %v, %v", dir, err)
+		return err
 	}
 	for _, f := range fs {
-		err = ts.Remove(path.Join(dir, f.Name))
-		if err != nil {
-			log.Printf("Couldn't remove: %v", err)
-		}
+		ts.Remove(path.Join(dir, f.Name))
 	}
-	err = ts.Remove(dir)
-	if err != nil {
-		log.Printf("Couldn't remove: %v", err)
-	}
+	ts.Remove(dir)
+	return nil
 }
 
 func TestWc(t *testing.T) {

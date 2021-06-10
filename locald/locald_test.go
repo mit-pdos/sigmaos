@@ -68,7 +68,8 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 
 func spawnMonitor(t *testing.T, ts *Tstate) {
 	pid := "monitor-" + fslib.GenPid()
-	a := &fslib.Attr{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil, 1}
+	a := &fslib.Attr{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil, 1,
+		fslib.DEFP, fslib.DEFC}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -79,7 +80,7 @@ func spawnSleeperlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint3
 }
 
 func spawnSleeperlWithPidTimerPairDep(t *testing.T, ts *Tstate, pid string, timer uint32, pairDep []fslib.PDep) {
-	a := &fslib.Attr{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, pairDep, nil, timer}
+	a := &fslib.Attr{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, pairDep, nil, timer, fslib.DEFP, fslib.DEFC}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)

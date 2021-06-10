@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 
 	db "ulambda/debug"
@@ -40,7 +41,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.fds = make([]int, NReduce)
 
 	m.FsLib = fslib.MakeFsLib("mapper")
-	db.DLPrintf("MAPPER", "MakeMapper %v\n", args)
+	log.Printf("MakeMapper %v\n", args)
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {
@@ -94,7 +95,7 @@ func (m *Mapper) Map(txt string) {
 	}
 }
 
-func (m *Mapper) doMap() {
+func (m *Mapper) doMap() error {
 	rest := ""
 	for {
 		b, err := m.Read(m.fd, memfs.PIPESZ)
@@ -119,22 +120,20 @@ func (m *Mapper) doMap() {
 	}
 	err := m.Close(m.fd)
 	if err != nil {
-		db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fd, err)
-		return
+		log.Printf("close failed %v\n", err)
 	}
 
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")
 	if err != nil {
-		db.DLPrintf("MAPPER", "Makemapper: cannot stat ~ip\n")
-		return
+		return err
 	}
 
 	for r := 0; r < NReduce; r++ {
 		err = m.Close(m.fds[r])
 		if err != nil {
 			db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fd, err)
-			return
+			return err
 		}
 		name := "name/fs/" + strconv.Itoa(r) + "/m-" + m.output
 		target := "name/ux/" + st.Name + "/m-" + m.output + "/r-" + strconv.Itoa(r) + "/"
@@ -143,9 +142,14 @@ func (m *Mapper) doMap() {
 			db.DLPrintf("MAPPER", "Mapper: cannot create symlink %v %v\n", name, err)
 		}
 	}
+	return nil
 }
 
 func (m *Mapper) Work() {
-	m.doMap()
-	m.Close(m.fd)
+	err := m.doMap()
+	if err != nil {
+		log.Printf("doMap failed %v\n", err)
+		os.Exit(1)
+	}
+
 }

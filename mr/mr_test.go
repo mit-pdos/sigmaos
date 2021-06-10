@@ -170,7 +170,10 @@ func Compare(t *testing.T) {
 	b2 := out2.Bytes()
 	assert.Equal(t, len(b1), len(b2), "Output len")
 	for i, v := range b1 {
-		assert.Equal(t, v, b2[i], fmt.Sprintf("Buf %v diff %v %v\n", i, v, b2[i]))
+		if v != b2[i] {
+			assert.Equal(t, v, b2[i], fmt.Sprintf("Buf %v diff %v %v\n", i, v, b2[i]))
+			break
+		}
 	}
 
 }

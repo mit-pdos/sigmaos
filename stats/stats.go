@@ -108,6 +108,7 @@ func (st *Stats) spawnMonitor() string {
 	a.Args = []string{}
 	a.PairDep = nil
 	a.ExitDep = nil
+	a.Type = fslib.T_LC
 	st.fsl.Spawn(&a)
 	return a.Pid
 }

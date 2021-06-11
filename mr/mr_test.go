@@ -99,12 +99,12 @@ func TestWc(t *testing.T) {
 		rmDir(ts, "name/ux/~ip/m-"+m)
 		a1 := &fslib.Attr{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
-			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.DEFP,
-			fslib.DEFC}
+			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.T_BE,
+			fslib.C_DEF}
 		a2 := &fslib.Attr{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil,
-			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.DEFP,
-			fslib.DEFC}
+			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.T_BE,
+			fslib.C_DEF}
 		ts.Spawn(a1)
 		ts.Spawn(a2)
 		n += 1
@@ -117,7 +117,7 @@ func TestWc(t *testing.T) {
 		r := strconv.Itoa(i)
 		a := &fslib.Attr{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
-			nil, mappers, 0, fslib.DEFP, fslib.DEFC}
+			nil, mappers, 0, fslib.T_BE, fslib.C_DEF}
 		reducers = append(reducers, pid)
 		ts.Spawn(a)
 	}

@@ -17,13 +17,13 @@ type Ttype uint32
 type Tcore uint32
 
 const (
-	DEFP Ttype = 0
-	LC   Ttype = 1
-	BE   Ttype = 2
+	T_DEF Ttype = 0
+	T_LC  Ttype = 1
+	T_BE  Ttype = 2
 )
 
 const (
-	DEFC Tcore = 0
+	C_DEF Tcore = 0
 )
 
 type Attr struct {

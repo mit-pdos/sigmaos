@@ -31,7 +31,7 @@ func MakeMonitor(pid string) *Monitor {
 // Enqueue a new monitor to be run in MONITOR_TIMER seconds
 func (m *Monitor) RestartSelf() {
 	newPid := "monitor-" + fslib.GenPid()
-	a := &fslib.Attr{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, MONITOR_TIMER, fslib.LC, fslib.DEFC}
+	a := &fslib.Attr{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, MONITOR_TIMER, fslib.T_LC, fslib.C_DEF}
 	err := m.Spawn(a)
 	if err != nil {
 		log.Printf("Error spawning monitor: %v", err)

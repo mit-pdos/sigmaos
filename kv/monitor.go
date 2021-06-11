@@ -54,6 +54,7 @@ func spawnBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
 	a.Args = []string{opcode, pid1}
 	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
 	a.ExitDep = nil
+	a.Type = fslib.T_LC
 	fsl.Spawn(&a)
 }
 
@@ -64,6 +65,7 @@ func spawnBalancer(fsl *fslib.FsLib, opcode, pid1 string) string {
 	a.Args = []string{opcode, pid1}
 	a.PairDep = nil
 	a.ExitDep = nil
+	a.Type = fslib.T_LC
 	fsl.Spawn(&a)
 	return a.Pid
 }
@@ -75,6 +77,7 @@ func spawnKVPid(fsl *fslib.FsLib, pid1 string, pid2 string) {
 	a.Args = []string{""}
 	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
 	a.ExitDep = nil
+	a.Type = fslib.T_LC
 	fsl.Spawn(&a)
 }
 
@@ -85,6 +88,7 @@ func spawnKV(fsl *fslib.FsLib) string {
 	a.Args = []string{""}
 	a.PairDep = nil
 	a.ExitDep = nil
+	a.Type = fslib.T_LC
 	fsl.Spawn(&a)
 	return a.Pid
 }

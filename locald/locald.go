@@ -81,6 +81,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	}
 	// Try to make scheduling directories if they don't already exist
 	fsl.Mkdir(fslib.RUNQ, 0777)
+	fsl.Mkdir(fslib.RUNQLC, 0777)
 	fsl.Mkdir(fslib.WAITQ, 0777)
 	fsl.Mkdir(fslib.CLAIMED, 0777)
 	fsl.Mkdir(fslib.CLAIMED_EPH, 0777)
@@ -147,18 +148,13 @@ func (ld *LocalD) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return ld.root, nil
 }
 
-// Tries to claim a job from the runq. If none are available, return.
-func (ld *LocalD) getLambda() ([]byte, error) {
-	err := ld.WaitForJob()
-	if err != nil {
-		return []byte{}, err
-	}
-	jobs, err := ld.ReadRunQ()
+func (ld *LocalD) getRun(runq string) ([]byte, error) {
+	jobs, err := ld.ReadRunQ(runq)
 	if err != nil {
 		return []byte{}, err
 	}
 	for _, j := range jobs {
-		b, claimed := ld.ClaimRunQJob(j.Name)
+		b, claimed := ld.ClaimRunQJob(runq, j.Name)
 		if err != nil {
 			return []byte{}, err
 		}
@@ -167,6 +163,22 @@ func (ld *LocalD) getLambda() ([]byte, error) {
 		}
 	}
 	return []byte{}, nil
+}
+
+// Tries to claim a job from the runq. If none are available, return.
+func (ld *LocalD) getLambda() ([]byte, error) {
+	err := ld.WaitForJob()
+	if err != nil {
+		return []byte{}, err
+	}
+	b, err := ld.getRun(fslib.RUNQLC)
+	if err != nil {
+		return []byte{}, err
+	}
+	if len(b) != 0 {
+		return b, nil
+	}
+	return ld.getRun(fslib.RUNQ)
 }
 
 // Scan through the waitq, and try to move jobs to the runq.
@@ -181,9 +193,9 @@ func (ld *LocalD) checkWaitingLambdas() {
 		if err != nil || len(b) == 0 {
 			continue
 		}
-		if ld.jobIsRunnable(j, b) {
+		if ok, t := ld.jobIsRunnable(j, b); ok {
 			// Ignore errors: they may be frequent under high concurrency
-			ld.MarkJobRunnable(j.Name)
+			ld.MarkJobRunnable(j.Name, t)
 		}
 	}
 }
@@ -198,18 +210,18 @@ func (ld *LocalD) checkWaitingLambdas() {
  * ***For now, we assume the three "types" described above are mutually
  *    exclusive***
  */
-func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
+func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 	var attr fslib.Attr
 	err := json.Unmarshal(a, &attr)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
-		return false
+		return false, fslib.T_DEF
 	}
 	// If this is a timer-based lambda
 	if attr.Timer != 0 {
 		// If the timer has expired
 		if uint32(time.Now().Unix()) > j.Mtime+attr.Timer {
-			return true
+			return true, attr.Type
 		} else {
 			// XXX Factor this out & do it in a monitor lambda
 			// For now, just make sure *some* locald eventually wakes up to mark this
@@ -220,16 +232,16 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
 				time.Sleep(dur)
 				ld.SignalNewJob()
 			}(attr.Timer)
-			return false
+			return false, fslib.T_DEF
 		}
 	}
 
 	// If this is a PairDep-based labmda
 	for _, pair := range attr.PairDep {
 		if attr.Pid == pair.Consumer {
-			return false
+			return false, fslib.T_DEF
 		} else if attr.Pid == pair.Producer {
-			return true
+			return true, attr.Type
 		} else {
 			log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
 		}
@@ -238,19 +250,20 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) bool {
 	// If this is an ExitDep-based lambda
 	for _, b := range attr.ExitDep {
 		if !b {
-			return false
+			return false, fslib.T_DEF
 		}
 	}
-	return true
+	return true, attr.Type
 }
 
+// XXX unused?
 func (ld *LocalD) claimConsumers(consumers []string) [][]byte {
 	bs := [][]byte{}
 	for _, c := range consumers {
 		if b, ok := ld.ClaimWaitQJob(c); ok {
 			bs = append(bs, b)
 		} else {
-			runq, _ := ld.ReadRunQ()
+			runq, _ := ld.ReadRunQ(fslib.RUNQ)
 			waitq, _ := ld.ReadWaitQ()
 			log.Fatalf("Couldn't claim consumer job: %v, runq:%v, waitq:%v", c, runq, waitq)
 		}

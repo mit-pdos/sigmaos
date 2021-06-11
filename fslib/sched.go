@@ -14,6 +14,7 @@ import (
 
 const (
 	RUNQ    = "name/runq"
+	RUNQLC  = "name/runqlc"
 	WAITQ   = "name/waitq"
 	CLAIMED = "name/claimed"
 	// XXX TODO: handle claimed_eph in a special way
@@ -38,8 +39,8 @@ func (fl *FsLib) SignalNewJob() error {
 	return fl.UnlockFile(LOCKS, JOB_SIGNAL)
 }
 
-func (fl *FsLib) ReadRunQ() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(RUNQ)
+func (fl *FsLib) ReadRunQ(dir string) ([]*np.Stat, error) {
+	d, err := fl.ReadDir(dir)
 	if err != nil {
 		return d, err
 	}
@@ -66,8 +67,12 @@ func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
 	return fl.ReadFile(path.Join(WAITQ, pid))
 }
 
-func (fl *FsLib) MarkJobRunnable(pid string) error {
-	fl.Rename(path.Join(WAITQ, pid), path.Join(RUNQ, pid))
+func (fl *FsLib) MarkJobRunnable(pid string, t Ttype) error {
+	if t == T_LC {
+		fl.Rename(path.Join(WAITQ, pid), path.Join(RUNQLC, pid))
+	} else {
+		fl.Rename(path.Join(WAITQ, pid), path.Join(RUNQ, pid))
+	}
 	// Notify localds that a job has become runnable
 	fl.SignalNewJob()
 	return nil
@@ -75,7 +80,21 @@ func (fl *FsLib) MarkJobRunnable(pid string) error {
 
 // Move a job from CLAIMED to RUNQ
 func (fl *FsLib) RestartJob(pid string) error {
-	fl.Rename(path.Join(CLAIMED, pid), path.Join(RUNQ, pid))
+	// XXX read CLAIMED to find out if it is LC?
+	b, err := fl.ReadFile(path.Join(CLAIMED, pid))
+	if err != nil {
+		return nil
+	}
+	var attr Attr
+	err = json.Unmarshal(b, &attr)
+	if err != nil {
+		log.Printf("Error unmarshalling in RestartJob: %v", err)
+	}
+	runq := RUNQ
+	if attr.Type == T_LC {
+		runq = RUNQLC
+	}
+	fl.Rename(path.Join(CLAIMED, pid), path.Join(runq, pid))
 	// Notify localds that a job has become runnable
 	fl.SignalNewJob()
 	return nil
@@ -103,8 +122,8 @@ func (fl *FsLib) JobCrashed(pid string) bool {
 }
 
 // Claim a job by moving it from the runq to the claimed dir
-func (fl *FsLib) ClaimRunQJob(pid string) ([]byte, bool) {
-	return fl.claimJob(RUNQ, pid)
+func (fl *FsLib) ClaimRunQJob(dir string, pid string) ([]byte, bool) {
+	return fl.claimJob(dir, pid)
 }
 
 // Claim a job by moving it from the runq to the claimed dir
@@ -132,7 +151,7 @@ func (fl *FsLib) markConsumersRunnable(pid string) {
 				break
 			} else if attr.Pid == pair.Consumer {
 				if pair.Producer == pid {
-					fl.MarkJobRunnable(attr.Pid)
+					fl.MarkJobRunnable(attr.Pid, attr.Type)
 					break
 				}
 			} else {

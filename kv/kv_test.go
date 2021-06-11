@@ -45,7 +45,7 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	conf := makeConfig(0)
+	conf := MakeConfig(0)
 	err = ts.fsl.MakeFileJson(KVCONFIG, 0777, *conf)
 	if err != nil {
 		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
@@ -118,9 +118,9 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	if memfs {
 		mfs = ts.spawnMemFS()
 	} else {
-		mfs = spawnKV(ts.fsl)
+		mfs = SpawnKV(ts.fsl)
 	}
-	runBalancer(ts.fsl, "add", mfs)
+	RunBalancer(ts.fsl, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -150,13 +150,13 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	for s := 0; s < NMORE; s++ {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		runBalancer(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		runBalancer(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
 		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets
@@ -188,122 +188,4 @@ func TestConcur1(t *testing.T) {
 
 func TestConcurN(t *testing.T) {
 	ConcurN(t, NCLERK)
-}
-
-type Tstat struct {
-	tot int64
-	max int64
-	n   int64
-}
-
-func zipf(r *rand.Rand) uint64 {
-	z := rand.NewZipf(r, 2.0, 1.0, 99)
-	return z.Uint64()
-}
-
-func uniform(r *rand.Rand) uint64 {
-	return r.Uint64() % NKEYS
-}
-
-func (ts *Tstate) clerkMon(c int, in chan bool, out chan Tstat, dist func(*rand.Rand) uint64) {
-	st := Tstat{}
-	for true {
-		k := dist(ts.rand)
-		t0 := time.Now().UnixNano()
-		v, err := ts.clrks[c].Get(key(k))
-		t1 := time.Now().UnixNano()
-		st.tot += t1 - t0
-		if t1-t0 > st.max {
-			st.max = t1 - t0
-		}
-		st.n += 1
-		select {
-		case <-in:
-			out <- st
-			return
-		default:
-			assert.Nil(ts.t, err, "Get "+key(k))
-			assert.Equal(ts.t, key(k), v, "Get")
-		}
-	}
-}
-
-func Elastic(t *testing.T, dist func(*rand.Rand) uint64) {
-	const (
-		S = 1000
-		T = 20
-	)
-
-	nclerk := 30
-	nthread := 100
-	ts := makeTstate(t)
-
-	ts.setup(nclerk, false)
-
-	for i := 0; i < 3000; i += S {
-		// start out with no load, no growing/shrinking
-		time.Sleep(S * time.Millisecond)
-		kvs := readKVs(ts.fsl)
-		assert.Equal(ts.t, 1, len(kvs.set), "No grow")
-	}
-
-	in := make(chan bool)
-	out := make(chan Tstat)
-	for i := 0; i < nclerk; i++ {
-		for t := 0; t < nthread; t++ {
-			go ts.clerkMon(i, in, out, dist)
-		}
-	}
-
-	// grow KV
-	for i := 0; i < T*S; i += S {
-		// start out with no load, no growing/shrinking
-		time.Sleep(S * time.Millisecond)
-	}
-	kvs := readKVs(ts.fsl)
-	assert.NotEqual(ts.t, 1, len(kvs.set), "Grow")
-
-	stat := Tstat{}
-	for i := 0; i < nclerk*nthread; i++ {
-		in <- true
-		st := <-out
-		stat.n += st.n
-		stat.tot += st.tot
-		if st.max > stat.max {
-			stat.max = st.max
-		}
-	}
-
-	log.Printf("STATS n %v tput %v/s avg %v ns max %v ns\n", stat.n, stat.n/20,
-		stat.tot/stat.n, stat.max)
-
-	for i := 0; i < nclerk; i++ {
-		ts.clrks[i].Exit()
-	}
-
-	// shrink KV
-	time.Sleep(5000 * time.Millisecond)
-
-	kvs = readKVs(ts.fsl)
-	assert.Equal(ts.t, 1, len(kvs.set), "Shrink")
-
-	log.Printf("shutdown %v\n", kvs)
-
-	memfs := kvs.first()
-
-	ts.stopMemFS(memfs)
-
-	time.Sleep(100 * time.Millisecond)
-
-	ts.s.Shutdown(ts.fsl)
-}
-
-// XXX run these tests without race detector
-
-func TestElasticUniform(t *testing.T) {
-	Elastic(t, uniform)
-}
-
-func TestElasticZipf(t *testing.T) {
-	Elastic(t, zipf)
 }

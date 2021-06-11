@@ -81,7 +81,7 @@ func spawnKVPid(fsl *fslib.FsLib, pid1 string, pid2 string) {
 	fsl.Spawn(&a)
 }
 
-func spawnKV(fsl *fslib.FsLib) string {
+func SpawnKV(fsl *fslib.FsLib) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = KV
@@ -101,7 +101,7 @@ func runBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
 	}
 }
 
-func runBalancer(fsl *fslib.FsLib, opcode, pid1 string) {
+func RunBalancer(fsl *fslib.FsLib, opcode, pid1 string) {
 	pid2 := spawnBalancer(fsl, opcode, pid1)
 	ok, err := fsl.Wait(pid2)
 	if string(ok) != "OK" || err != nil {
@@ -139,7 +139,7 @@ func (mo *Monitor) grow() {
 }
 
 func (mo *Monitor) shrink(kv string) {
-	runBalancer(mo.FsLib, "del", kv)
+	RunBalancer(mo.FsLib, "del", kv)
 	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
 	if err != nil {
 		log.Printf("shrink: remove failed %v\n", err)

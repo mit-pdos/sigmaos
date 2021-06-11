@@ -20,7 +20,7 @@ type Config2 struct {
 	New []string
 }
 
-func makeConfig(n int) *Config {
+func MakeConfig(n int) *Config {
 	cf := &Config{n, make([]string, NSHARD), 0}
 	return cf
 }

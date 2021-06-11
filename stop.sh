@@ -9,6 +9,8 @@ killall perf-memfs-replica
 killall locald
 killall sleeperl
 killall kv
+killall kvd
+killall kvclerk
 killall coord
 killall flwr
 killall sharderd

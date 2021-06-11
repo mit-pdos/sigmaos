@@ -13,7 +13,7 @@ const (
 	NKEYS   = 100
 	NCLERK  = 10
 	NTHREAD = 100
-	T       = 10 * 1000
+	T       = 30 * 1000
 )
 
 type Tstat struct {

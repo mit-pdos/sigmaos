@@ -124,3 +124,9 @@ func (kc *KvClerk) Get(k string) (string, error) {
 		}
 	}
 }
+
+func (kc *KvClerk) KVs() []string {
+	kc.readConfig()
+	kcs := makeKvs(kc.conf.Shards)
+	return kcs.mkKvs()
+}

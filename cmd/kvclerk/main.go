@@ -12,7 +12,7 @@ import (
 const (
 	NKEYS   = 100
 	NCLERK  = 10
-	NTHREAD = 1
+	NTHREAD = 100
 	T       = 10 * 1000
 )
 
@@ -80,10 +80,17 @@ func main() {
 	}
 
 	for i := 0; i < NCLERK; i++ {
-		go clerk(clks[i], in, out, uniform)
+		for t := 0; t < NTHREAD; t++ {
+			go clerk(clks[i], in, out, uniform)
+		}
 	}
 
 	time.Sleep(T * time.Millisecond)
+
+	kvs := clks[0].KVs()
+	if len(kvs) < 2 {
+		log.Fatalf("KVs didn't expand %v\n", kvs)
+	}
 
 	stat := Tstat{}
 	for i := 0; i < NCLERK*NTHREAD; i++ {
@@ -99,7 +106,16 @@ func main() {
 	log.Printf("STATS n %v tput %v/s avg %v ns max %v ns\n", stat.n, stat.n/20,
 		stat.tot/stat.n, stat.max)
 
-	for i := 0; i < NCLERK; i++ {
-		clks[i].Exit()
+	time.Sleep(5000 * time.Millisecond)
+
+	kvs = clks[0].KVs()
+	if len(kvs) != 1 {
+		log.Fatalf("KVs didn't shrink %v\n", kvs)
 	}
+
+	//for i := 0; i < NCLERK; i++ {
+	//	clks[i].Exit()
+	//}
+
+	log.Printf("PASS\n")
 }

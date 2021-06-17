@@ -221,7 +221,6 @@ func (ch *Chan) writer() {
 	br, bw, err := ch.getBufio()
 	if err != nil {
 		db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
-		log.Printf("No viable connections: %v", err)
 		ch.Close()
 		return
 	}
@@ -235,7 +234,6 @@ func (ch *Chan) writer() {
 		// If none was available, close the channel.
 		if err != nil {
 			db.DLPrintf("9PCHAN", "Writer: no viable connections: %v", err)
-			log.Printf("No viable connections: %v", err)
 			ch.Close()
 			return
 		}
@@ -281,14 +279,13 @@ func (ch *Chan) reader() {
 	// If none was available, close the channel.
 	if err != nil {
 		db.DLPrintf("9PCHAN", "Reader: no viable connections: %v", err)
-		log.Printf("No viable connections: %v", err)
 		ch.Close()
 		return
 	}
 	for {
 		db.DLPrintf("9PCHAN", "Reader: about to ReadFrame from %v br:%p\n", ch.Dst(), br)
 		frame, err := npcodec.ReadFrame(br)
-		db.DLPrintf("9PCHAN", "Reader: ReadFrame from %v br:%p, frame:%v\n", ch.Dst(), br)
+		db.DLPrintf("9PCHAN", "Reader: ReadFrame from %v br:%p\n", ch.Dst(), br)
 		// On connection error, retry
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
 			db.DLPrintf("9PCHAN", "Reader: Connection error to %v\n", ch.Dst())
@@ -298,7 +295,6 @@ func (ch *Chan) reader() {
 			// If none was available, close the channel.
 			if err != nil {
 				db.DLPrintf("9PCHAN", "Reader: no viable connections: %v", err)
-				log.Printf("No viable connections: %v", err)
 				ch.Close()
 				return
 			}

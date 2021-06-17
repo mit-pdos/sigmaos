@@ -105,12 +105,12 @@ func (r *RelayChannel) writer() {
 		err := npcodec.WriteRawBuffer(r.c.bw, op.replyFrame)
 		if err != nil {
 			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)
-			return
+			continue
 		}
 		err = r.c.bw.Flush()
 		if err != nil {
 			db.DLPrintf("RSRV", "%v -> %v Writer: Flush error: %v", r.c.Src(), r.c.Dst(), err)
-			return
+			continue
 		}
 	}
 }
@@ -216,13 +216,16 @@ func (srv *NpServer) relayWriter() {
 		}
 		config.mu.Lock()
 		ch := config.NextChan
+		nextAddr := config.NextAddr
 		config.mu.Unlock()
 		// Channels start as nil during initialization.
 		if ch == nil {
 			continue
 		}
+		db.DLPrintf("RSRV", "%v Recv from downstream %v", config.RelayAddr, nextAddr)
 		// Get an ack from the downstream servers
 		frame, err := ch.Recv()
+		db.DLPrintf("RSRV", "%v Recv'd downstream from %v", config.RelayAddr, nextAddr)
 		// Move on if the connection closed
 		if peerCrashed(err) {
 			db.DLPrintf("RSRV", "%v error relayWriter Recv: %v", config.RelayAddr, err)
@@ -247,6 +250,7 @@ func (srv *NpServer) relayWriter() {
 			for _, op := range ops {
 				op.replies <- op
 			}
+			db.DLPrintf("RSRV", "%v Done sending acks: %v", config.RelayAddr, ops)
 		}
 	}
 }
@@ -300,7 +304,7 @@ func (srv *NpServer) resendInflightRelayOps() {
 			config.LastSendAddr = config.NextAddr
 			config.mu.Unlock()
 			toSend = config.inFlight.GetOps()
-			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
+			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages (retry): %v", config.RelayAddr, nextAddr, toSend)
 		}
 	}
 	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)

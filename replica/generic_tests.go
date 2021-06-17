@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	//	db "ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 )
@@ -696,9 +696,9 @@ func symlinkWasMissing(ts *Tstate, err error) bool {
 
 func retryOp(ts *Tstate, f fn, a assertion) bool {
 	for n_retries := 0; n_retries < MAX_OPEN_RETRIES; n_retries++ {
-		log.Printf("Pre-op: %v", n_retries)
+		db.DLPrintf("TEST", "Pre-op: %v", n_retries)
 		res, err := f()
-		log.Printf("Retry: %v, %v", n_retries, err)
+		db.DLPrintf("TEST", "Retry: %v, %v", n_retries, err)
 		if symlinkWasMissing(ts, err) {
 			continue
 		}
@@ -720,22 +720,22 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 	for i := 0; i < n_renames; i++ {
 		old := id_str + "_" + strconv.Itoa(i)
 		new := id_str + "_" + strconv.Itoa(i+1)
-		log.Printf("%v Start rename %v -> %v", id, old, new)
+		db.DLPrintf("TEST", "%v Start rename %v -> %v", id, old, new)
 		retryOp(ts,
 			func() (string, error) {
-				log.Printf("Rename op %v -> %v", path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
+				db.DLPrintf("TEST", path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
 				return "", fsl.Rename(path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
 			},
 			func(res string, err error) bool {
 				return assert.Nil(ts.t, err, "Failed to rename: %v -> %v, %v", old, new, err)
 			})
-		log.Printf("%v Finish rename %v -> %v", id, old, new)
+		db.DLPrintf("TEST", "%v Finish rename %v -> %v", id, old, new)
 	}
 
 	// Check the file contents remain unchanged
 	fname := id_str + "_" + strconv.Itoa(n_renames)
 	fpath := path.Join(ts.symlinkPath9p, fname)
-	log.Printf("%v Start check file contents %v", id, fname)
+	db.DLPrintf("TEST", "%v Start check file contents %v", id, fname)
 	success := retryOp(ts,
 		func() (string, error) {
 			b, err := fsl.ReadFile(fpath)
@@ -744,10 +744,10 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 		func(res string, err error) bool {
 			return assert.Nil(ts.t, err, "Rename client failed to ReadFile: %v, %v", fpath, err) && assert.Equal(ts.t, id_str, res, "Renamed file contents not equal")
 		})
-	log.Printf("%v Finish check file contents %v", id, fname)
+	db.DLPrintf("TEST", "%v Finish check file contents %v", id, fname)
 
 	if success {
-		log.Printf("%v Start final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
+		db.DLPrintf("TEST", "%v Start final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
 		retryOp(ts,
 			func() (string, error) {
 				// Rename the file to its final name for our consistency checks
@@ -756,7 +756,7 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 			func(res string, err error) bool {
 				return assert.Nil(ts.t, err, "Final rename: %v, %v", id_str, err)
 			})
-		log.Printf("%v Finish final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
+		db.DLPrintf("TEST", "%v Finish final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
 	}
 }
 
@@ -771,7 +771,7 @@ func setupRenameableFiles(ts *Tstate, n_clients int) {
 
 func ConcurrentClientsCrashHeadNotIdempotent(ts *Tstate) {
 	N := 5
-	n_clients := 3
+	n_clients := 10
 	n_renames := 10
 
 	replicas := allocReplicas(ts, N)

@@ -720,16 +720,18 @@ func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start 
 	for i := 0; i < n_renames; i++ {
 		old := id_str + "_" + strconv.Itoa(i)
 		new := id_str + "_" + strconv.Itoa(i+1)
+		oldpath := path.Join(ts.symlinkPath9p, old)
+		newpath := path.Join(ts.symlinkPath9p, new)
 		db.DLPrintf("TEST", "%v Start rename %v -> %v", id, old, new)
 		retryOp(ts,
 			func() (string, error) {
-				db.DLPrintf("TEST", path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
-				return "", fsl.Rename(path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
+				db.DLPrintf("TEST", oldpath, newpath)
+				return "", fsl.Rename(oldpath, newpath)
 			},
 			func(res string, err error) bool {
-				return assert.Nil(ts.t, err, "Failed to rename: %v -> %v, %v", old, new, err)
+				return assert.Nil(ts.t, err, "Failed to rename: %v -> %v, %v", oldpath, newpath, err)
 			})
-		db.DLPrintf("TEST", "%v Finish rename %v -> %v", id, old, new)
+		db.DLPrintf("TEST", "%v Finish rename %v -> %v", id, oldpath, newpath)
 	}
 
 	// Check the file contents remain unchanged

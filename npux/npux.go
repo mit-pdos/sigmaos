@@ -226,10 +226,11 @@ func (o *Obj) Remove(ctx npo.CtxI, name string) error {
 }
 
 func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
+	oldPath := o.Path()
 	p := o.path[:len(o.path)-1]
 	d := append(p, to)
-	db.DLPrintf("UXD", "%v: Rename %v %v %v %v\n", ctx, o, from, to, d)
-	err := syscall.Rename(o.Path(), np.Join(d))
+	db.DLPrintf("UXD", "%v: Rename o:%v from:%v to:%v d:%v\n", ctx, o, from, to, d)
+	err := syscall.Rename(oldPath, np.Join(d))
 	if err != nil {
 		return err
 	}

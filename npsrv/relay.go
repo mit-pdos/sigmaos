@@ -250,7 +250,6 @@ func (srv *NpServer) relayWriter() {
 			for _, op := range ops {
 				op.replies <- op
 			}
-			db.DLPrintf("RSRV", "%v Done sending acks: %v", config.RelayAddr, ops)
 		}
 	}
 }

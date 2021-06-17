@@ -84,3 +84,9 @@ func TestMemfsConcurrentClientsCrashHead(t *testing.T) {
 	ConcurrentClientsCrashHead(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
+
+func TestMemfsConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
+	ts := makeMemfsTstate(t)
+	ConcurrentClientsCrashHeadNotIdempotent(ts)
+	ts.s.Shutdown(ts.FsLib)
+}

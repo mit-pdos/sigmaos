@@ -84,3 +84,9 @@ func TestNpUxConcurrentClientsCrashHead(t *testing.T) {
 	ConcurrentClientsCrashHead(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
+
+func TestNpUxConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
+	ts := makeNpUxTstate(t)
+	ConcurrentClientsCrashHeadNotIdempotent(ts)
+	ts.s.Shutdown(ts.FsLib)
+}

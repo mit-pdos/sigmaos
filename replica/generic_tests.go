@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	PORT_OFFSET = 30001
+	PORT_OFFSET      = 30001
+	MAX_OPEN_RETRIES = 1000
 )
 
 type Replica struct {
@@ -677,6 +678,147 @@ func ConcurrentClientsCrashHead(ts *Tstate) {
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files_per_cli*n_clients)
+	log.Printf("Done checking file contents on each replica...")
+
+	// Shut down
+	for _, r := range replicas {
+		killReplica(ts, r)
+	}
+}
+
+type fn func() (string, error)
+type assertion func(res string, err error) bool
+
+// Return true if the cause of the error was a missing replica symlink
+func symlinkWasMissing(ts *Tstate, err error) bool {
+	return err != nil && err.Error() == "file not found "+path.Base(ts.symlinkPath9p)
+}
+
+func retryOp(ts *Tstate, f fn, a assertion) bool {
+	for n_retries := 0; n_retries < MAX_OPEN_RETRIES; n_retries++ {
+		log.Printf("Pre-op: %v", n_retries)
+		res, err := f()
+		log.Printf("Retry: %v, %v", n_retries, err)
+		if symlinkWasMissing(ts, err) {
+			continue
+		}
+		return a(res, err)
+	}
+	// Flag the error
+	assert.True(ts.t, false, "Op failed to execute in %v retries", MAX_OPEN_RETRIES)
+	return false
+}
+
+func renameClient(ts *Tstate, replicas []*Replica, id int, n_renames int, start *sync.WaitGroup, end *sync.WaitGroup) {
+	defer end.Done()
+
+	id_str := strconv.Itoa(id)
+
+	fsl := fslib.MakeFsLib("client-" + strconv.Itoa(id))
+	start.Done()
+	start.Wait()
+	for i := 0; i < n_renames; i++ {
+		old := id_str + "_" + strconv.Itoa(i)
+		new := id_str + "_" + strconv.Itoa(i+1)
+		log.Printf("%v Start rename %v -> %v", id, old, new)
+		retryOp(ts,
+			func() (string, error) {
+				log.Printf("Rename op %v -> %v", path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
+				return "", fsl.Rename(path.Join(ts.symlinkPath9p, old), path.Join(ts.symlinkPath9p, new))
+			},
+			func(res string, err error) bool {
+				return assert.Nil(ts.t, err, "Failed to rename: %v -> %v, %v", old, new, err)
+			})
+		log.Printf("%v Finish rename %v -> %v", id, old, new)
+	}
+
+	// Check the file contents remain unchanged
+	fname := id_str + "_" + strconv.Itoa(n_renames)
+	fpath := path.Join(ts.symlinkPath9p, fname)
+	log.Printf("%v Start check file contents %v", id, fname)
+	success := retryOp(ts,
+		func() (string, error) {
+			b, err := fsl.ReadFile(fpath)
+			return string(b), err
+		},
+		func(res string, err error) bool {
+			return assert.Nil(ts.t, err, "Rename client failed to ReadFile: %v, %v", fpath, err) && assert.Equal(ts.t, id_str, res, "Renamed file contents not equal")
+		})
+	log.Printf("%v Finish check file contents %v", id, fname)
+
+	if success {
+		log.Printf("%v Start final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
+		retryOp(ts,
+			func() (string, error) {
+				// Rename the file to its final name for our consistency checks
+				return "", ts.Rename(fpath, path.Join(ts.symlinkPath9p, id_str))
+			},
+			func(res string, err error) bool {
+				return assert.Nil(ts.t, err, "Final rename: %v, %v", id_str, err)
+			})
+		log.Printf("%v Finish final rename %v -> %v", id, fname, path.Join(ts.symlinkPath9p, id_str))
+	}
+}
+
+func setupRenameableFiles(ts *Tstate, n_clients int) {
+	for i := 0; i < n_clients; i++ {
+		i_str := strconv.Itoa(i)
+		fname := i_str + "_0"
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, fname), 0777, []byte(i_str))
+		assert.Nil(ts.t, err, "Failed to MakeFile Renameable File: %v", err)
+	}
+}
+
+func ConcurrentClientsCrashHeadNotIdempotent(ts *Tstate) {
+	N := 5
+	n_clients := 3
+	n_renames := 10
+
+	replicas := allocReplicas(ts, N)
+	writeConfig(ts, replicas)
+	setupUnionDir(ts)
+
+	// Start up
+	for _, r := range replicas {
+		bootReplica(ts, r)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	setupRenameableFiles(ts, n_clients)
+
+	var start sync.WaitGroup
+	var end sync.WaitGroup
+
+	start.Add(n_clients)
+	end.Add(n_clients)
+
+	// Write some files to the head
+	log.Printf("Starting clients...")
+	for id := 0; id < n_clients; id++ {
+		go renameClient(ts, replicas, id, n_renames, &start, &end)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Crash a couple of replicas in the middle of the chain
+	log.Printf("Crashing head replica %v...", replicas[0].addr)
+	crashReplica(ts, replicas[0])
+	log.Printf("Done crashing head replica %v...", replicas[0].addr)
+
+	log.Printf("Waiting for clients to terminate...")
+	end.Wait()
+	log.Printf("Done waiting for clients to terminate...")
+
+	// Wait a bit to allow replica logs to stabilize
+	time.Sleep(1000 * time.Millisecond)
+
+	log.Printf("Comparing replica logs...")
+	compareReplicaLogs(ts, replicas)
+	log.Printf("Done comparing replica logs...")
+
+	log.Printf("Checking file contents on each replica...")
+	checkFiles(ts, replicas, n_clients)
 	log.Printf("Done checking file contents on each replica...")
 
 	// Shut down

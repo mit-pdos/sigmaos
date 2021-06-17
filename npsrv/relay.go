@@ -101,6 +101,7 @@ func (r *RelayChannel) writer() {
 		if !ok {
 			return
 		}
+		db.DLPrintf("RSRV", "%v -> %v relay writer reply: %v", r.c.Dst(), r.c.Src(), op.reply)
 		err := npcodec.WriteRawBuffer(r.c.bw, op.replyFrame)
 		if err != nil {
 			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.c.Src(), r.c.Dst(), err)

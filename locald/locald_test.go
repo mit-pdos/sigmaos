@@ -421,3 +421,17 @@ func TestConcurrentLambdas(t *testing.T) {
 
 	ts.s.Shutdown(ts.FsLib)
 }
+
+// Spawn a LC lambda
+func TestLcLambda(t *testing.T) {
+	ts := makeTstate(t)
+
+	pid := fslib.GenPid()
+	a := &fslib.Attr{pid, "bin/compute", "", []string{}, nil, nil, nil, 1,
+		fslib.T_LC, fslib.C_DEF}
+	err := ts.Spawn(a)
+
+	assert.Nil(t, err, "Spawn")
+
+	ts.s.Shutdown(ts.FsLib)
+}

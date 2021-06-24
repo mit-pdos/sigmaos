@@ -28,19 +28,21 @@ const (
 
 type LocalD struct {
 	//	mu deadlock.Mutex
-	mu    sync.Mutex
-	cond  *sync.Cond
-	load  int // XXX bogus
-	bin   string
-	nid   uint64
-	root  *Dir
-	done  bool
-	ip    string
-	ls    map[string]*Lambda
-	srv   *npsrv.NpServer
-	group sync.WaitGroup
-	perf  *perf.Perf
-	st    *npo.SessionTable
+	mu         sync.Mutex
+	cond       *sync.Cond
+	load       int // XXX bogus
+	bin        string
+	nid        uint64
+	root       *Dir
+	done       bool
+	ip         string
+	ls         map[string]*Lambda
+	coreBitmap []bool
+	coresAvail fslib.Tcore
+	srv        *npsrv.NpServer
+	group      sync.WaitGroup
+	perf       *perf.Perf
+	st         *npo.SessionTable
 	*fslib.FsLib
 }
 
@@ -55,6 +57,8 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	ld.root.time = time.Now().Unix()
 	ld.st = npo.MakeSessionTable()
 	ld.ls = map[string]*Lambda{}
+	ld.coreBitmap = make([]bool, linuxsched.NCores)
+	ld.coresAvail = fslib.Tcore(linuxsched.NCores)
 	ld.perf = perf.MakePerf()
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
@@ -148,19 +152,65 @@ func (ld *LocalD) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return ld.root, nil
 }
 
+// XXX Statsd information?
+// Check if this locald instance is able to satisfy a job's constraints.
+// Trivially true when not benchmarking.
+func (ld *LocalD) satisfiesConstraints(attr *fslib.Attr) bool {
+	// Constraints are not checked when testing, as some tests require more cores
+	// than we may have on our test machine.
+	if !ld.perf.RunningBenchmark() {
+		return true
+	}
+	// If we have enough cores to run this job...
+	if ld.coresAvail >= attr.Ncore {
+		return true
+	}
+	return false
+}
+
+// Update resource accounting information.
+func (ld *LocalD) decrementResourcesL(attr *fslib.Attr) {
+	ld.coresAvail -= attr.Ncore
+}
+
+// Update resource accounting information.
+func (ld *LocalD) incrementResources(attr *fslib.Attr) {
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+
+	ld.incrementResourcesL(attr)
+}
+func (ld *LocalD) incrementResourcesL(attr *fslib.Attr) {
+	ld.coresAvail += attr.Ncore
+}
+
 func (ld *LocalD) getRun(runq string) ([]byte, error) {
 	jobs, err := ld.ReadRunQ(runq)
 	if err != nil {
 		return []byte{}, err
 	}
 	for _, j := range jobs {
-		b, claimed := ld.ClaimRunQJob(runq, j.Name)
+		ld.mu.Lock()
+		// Read a job
+		b, err := ld.ReadJob(runq, j.Name)
+		// If job has already been claimed, move on
 		if err != nil {
-			return []byte{}, err
+			ld.mu.Unlock()
+			continue
+		}
+		// Unmarshal it
+		attr := unmarshalJob(b)
+		// See if we can run it, and if so, try to claim it
+		claimed := false
+		if ld.satisfiesConstraints(attr) {
+			b, claimed = ld.ClaimRunQJob(runq, j.Name)
 		}
 		if claimed {
+			ld.decrementResourcesL(attr)
+			ld.mu.Unlock()
 			return b, nil
 		}
+		ld.mu.Unlock()
 	}
 	return []byte{}, nil
 }
@@ -283,13 +333,54 @@ func (ld *LocalD) spawnConsumers(bs [][]byte) []*Lambda {
 	return ls
 }
 
+func (ld *LocalD) allocCores(n fslib.Tcore) []uint {
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+	cores := []uint{}
+	for i := 0; i < len(ld.coreBitmap); i++ {
+		// If not running a benchmark or lambda asks for 0 cores, run on any core
+		if !ld.perf.RunningBenchmark() || n == fslib.C_DEF {
+			cores = append(cores, uint(i))
+		} else {
+			if !ld.coreBitmap[i] {
+				ld.coreBitmap[i] = true
+				cores = append(cores, uint(i))
+				n -= 1
+				if n == 0 {
+					break
+				}
+			}
+		}
+	}
+	return cores
+}
+
+func (ld *LocalD) freeCores(cores []uint) {
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+
+	for _, i := range cores {
+		ld.coreBitmap[i] = false
+	}
+}
+
 func (ld *LocalD) runAll(ls []*Lambda) {
 	var wg sync.WaitGroup
 	for _, l := range ls {
 		wg.Add(1)
 		go func(l *Lambda) {
 			defer wg.Done()
-			l.run()
+
+			// Allocate dedicated cores for this lambda to run on.
+			cores := ld.allocCores(l.attr.Ncore)
+
+			// Run the lambda.
+			l.run(cores)
+
+			// Free resources and dedicated cores.
+			ld.incrementResources(l.attr)
+			ld.freeCores(cores)
+
 		}(l)
 	}
 	wg.Wait()
@@ -362,4 +453,14 @@ func (ld *LocalD) Work() {
 		go ld.Worker(i)
 	}
 	ld.group.Wait()
+}
+
+func unmarshalJob(b []byte) *fslib.Attr {
+	var attr fslib.Attr
+	err := json.Unmarshal(b, &attr)
+	if err != nil {
+		log.Fatalf("Locald couldn't unmarshal job: %v, %v", b, err)
+		return nil
+	}
+	return &attr
 }

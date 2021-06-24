@@ -12,6 +12,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/linuxsched"
 	np "ulambda/ninep"
 )
 
@@ -66,7 +67,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	l.ld.Exiting(l.attr.Pid, "OK")
 }
 
-func (l *Lambda) run() error {
+func (l *Lambda) run(cores []uint) error {
 	db.DLPrintf("LOCALD", "Locald run: %v\n", l.attr)
 
 	// Don't run anything if this is a no-op
@@ -109,10 +110,25 @@ func (l *Lambda) run() error {
 	}
 
 	l.SysPid = cmd.Process.Pid
+	// XXX May want to start the process with a certain affinity (using taskset)
+	// instead of setting the affinity after it starts
+	l.setCpuAffinity(cores)
 
 	l.wait(cmd)
 	db.DLPrintf("LOCALD", "Locald ran: %v\n", l.attr)
+
 	return nil
+}
+
+func (l *Lambda) setCpuAffinity(cores []uint) {
+	m := &linuxsched.CPUMask{}
+	for _, i := range cores {
+		m.Set(i)
+	}
+	err := linuxsched.SchedSetAffinityAllTasks(l.SysPid, m)
+	if err != nil {
+		log.Printf("Error setting CPU affinity for child lambda: %v", err)
+	}
 }
 
 func (l *Lambda) getConsumers() []string {

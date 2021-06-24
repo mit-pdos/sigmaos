@@ -39,6 +39,10 @@ func (fl *FsLib) SignalNewJob() error {
 	return fl.UnlockFile(LOCKS, JOB_SIGNAL)
 }
 
+func (fl *FsLib) ReadJob(dir string, job string) ([]byte, error) {
+	return fl.ReadFile(path.Join(dir, job))
+}
+
 func (fl *FsLib) ReadRunQ(dir string) ([]*np.Stat, error) {
 	d, err := fl.ReadDir(dir)
 	if err != nil {

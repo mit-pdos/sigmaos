@@ -104,7 +104,7 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
 	return outputFiles
 }
 
-func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []Thunk {
+func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []*Thunk {
 	// Maps of new thunks to their dependencies
 	g := MakeGraph()
 	first := true

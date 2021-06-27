@@ -6,9 +6,6 @@ import (
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/fslibsrv"
-	"ulambda/memfsd"
-	np "ulambda/ninep"
 )
 
 const (
@@ -26,28 +23,12 @@ type ExecutorLauncher interface {
 	Started(string) error
 }
 
-type OrchestratorDev struct {
-	orc *Orchestrator
-}
-
-func (orcdev *OrchestratorDev) Write(off np.Toffset, data []byte) (np.Tsize, error) {
-	return np.Tsize(len(data)), nil
-}
-
-func (orcdev *OrchestratorDev) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
-	return nil, nil
-}
-
-func (orcdev *OrchestratorDev) Len() np.Tlength {
-	return 0
-}
-
 type Orchestrator struct {
 	pid          string
 	cwd          string
 	targets      []string
 	targetHashes []string
-	*fslibsrv.FsLibSrv
+	*fslib.FsLib
 }
 
 func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
@@ -57,13 +38,8 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.pid = args[0]
 	orc.cwd = args[1]
 	orc.targets = args[2:]
-	memfsd := memfsd.MakeFsd(":0")
-	// XXX Don't need this actually
-	fls, err := fslibsrv.InitFs(ORCHESTRATOR, memfsd, &OrchestratorDev{orc})
-	if err != nil {
-		return nil, err
-	}
-	orc.FsLibSrv = fls
+	fls := fslib.MakeFsLib("orchestrator")
+	orc.FsLib = fls
 	orc.Started(orc.pid)
 	return orc, nil
 }
@@ -82,7 +58,6 @@ func (orc *Orchestrator) Work() {
 		// Ignore reductions, which aren't actually executable
 		if !isReduction(targetHash) {
 			orc.executeStaticGraph(targetHash, g)
-			// TODO: How do I make sure the reduction writer properly waits in the other case?
 			spawnReductionWriter(orc, orc.targets[i], targetHash, path.Join(orc.cwd, "results"), "", []string{})
 		}
 	}
@@ -107,7 +82,6 @@ func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {
 	return g
 }
 
-// XXX If it is a reduction, we should make sure to wait on the right thing...
 func (orc *Orchestrator) executeStaticGraph(targetHash string, g *Graph) {
 	thunks := g.GetThunks()
 	for _, thunk := range thunks {

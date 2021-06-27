@@ -11,13 +11,13 @@ type Thunk struct {
 }
 
 type Graph struct {
-	thunks map[string]Thunk
+	thunks map[string]*Thunk
 	forced map[string]bool
 }
 
 func MakeGraph() *Graph {
 	g := &Graph{}
-	g.thunks = map[string]Thunk{}
+	g.thunks = map[string]*Thunk{}
 	g.forced = map[string]bool{}
 	return g
 }
@@ -27,7 +27,7 @@ func (g *Graph) AddThunk(hash string, deps []string) {
 	if _, ok := g.thunks[hash]; ok {
 		return
 	}
-	t := Thunk{}
+	t := &Thunk{}
 	t.hash = hash
 	t.graph = g
 	t.deps = map[string]bool{}
@@ -37,11 +37,13 @@ func (g *Graph) AddThunk(hash string, deps []string) {
 	g.thunks[hash] = t
 }
 
-func (g *Graph) GetThunks() []Thunk {
-	thunks := []Thunk{}
+func (g *Graph) GetThunks() []*Thunk {
+	thunks := []*Thunk{}
 	for len(g.thunks) > 0 {
 		n_left := len(g.thunks)
-		thunks = append(thunks, g.getThunk())
+		next := g.GetThunk()
+		g.ForceThunk(next.hash)
+		thunks = append(thunks, next)
 		if n_left == len(g.thunks) {
 			log.Fatalf("Couldn't remove thunk, %v left, g=%v\n", len(g.thunks), g)
 		}
@@ -49,7 +51,7 @@ func (g *Graph) GetThunks() []Thunk {
 	return thunks
 }
 
-func (g *Graph) getThunk() Thunk {
+func (g *Graph) GetThunk() *Thunk {
 	var hash string
 	for h, t := range g.thunks {
 		if t.isRunnable() {
@@ -59,8 +61,11 @@ func (g *Graph) getThunk() Thunk {
 	}
 	t := g.thunks[hash]
 	delete(g.thunks, hash)
-	g.forced[hash] = true
 	return t
+}
+
+func (g *Graph) ForceThunk(hash string) {
+	g.forced[hash] = true
 }
 
 func (t *Thunk) isRunnable() bool {

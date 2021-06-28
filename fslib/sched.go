@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"path"
 	"strings"
@@ -271,8 +272,7 @@ func (fl *FsLib) makeWaitFile(pid string) error {
 	fd, err := fl.CreateFile(fpath, 0777, np.OWRITE|np.OVERSION)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() != "EOF" {
-		log.Fatalf("Error on Create MakeWaitFile %v: %v", fpath, err)
-		return err
+		return fmt.Errorf("Error on Create MakeWaitFile %v: %v", fpath, err)
 	}
 	err = fl.Close(fd)
 	if err != nil {

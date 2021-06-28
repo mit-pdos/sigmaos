@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	ORCHESTRATOR              = "name/gg/orchestrator"
 	THUNK_OUTPUTS_SUFFIX      = ".thunk-outputs"
 	EXIT_DEPENDENCIES_SUFFIX  = ".exit-dependencies"
 	INPUT_DEPENDENCIES_SUFFIX = ".input-dependencies"
@@ -76,7 +75,8 @@ func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {
 		}
 		exitDeps := getExitDependencies(orc, current)
 		exitDeps = thunkHashesFromReductions(exitDeps)
-		g.AddThunk(current, exitDeps)
+		// XXX Should I add the thunk's hash as an output file?
+		g.AddThunk(current, exitDeps, []string{})
 		queue = append(queue, exitDeps...)
 	}
 	return g
@@ -89,7 +89,10 @@ func (orc *Orchestrator) executeStaticGraph(targetHash string, g *Graph) {
 		if reductionExists(orc, thunk.hash) || currentlyExecuting(orc, thunk.hash) || isReduction(thunk.hash) {
 			continue
 		}
-		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
+		exPid, err := spawnExecutor(orc, thunk.hash, exitDeps)
+		if err != nil {
+			log.Fatalf("Error orchestrator: %v", err)
+		}
 		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid}, thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)
 	}

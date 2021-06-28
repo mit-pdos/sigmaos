@@ -1,6 +1,7 @@
 package gg
 
 import (
+	"fmt"
 	"log"
 	"path"
 	//	"runtime/debug"
@@ -64,7 +65,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	return a.Pid
 }
 
-func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) string {
+func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
 	a := fslib.Attr{}
 	a.Pid = executorPid(targetHash)
 	a.Program = "bin/gg-executor"
@@ -80,9 +81,9 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 	a.ExitDep = exitDepMap
 	err := launch.Spawn(&a)
 	if err != nil {
-		log.Fatalf("Error spawning executor [%v]: %v\n", targetHash, err)
+		return a.Pid, fmt.Errorf("Error spawning executor [%v]: %v\n", targetHash, err)
 	}
-	return a.Pid
+	return a.Pid, nil
 }
 
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {

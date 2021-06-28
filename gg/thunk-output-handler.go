@@ -9,24 +9,30 @@ import (
 )
 
 type ThunkOutputHandler struct {
-	pid                   string
-	thunkHash             string
-	primaryOutputThunkPid string
-	outputFiles           []string
+	pid                    string
+	thunkHash              string
+	primaryOutputThunkHash string
+	primaryOutputThunkPid  string
+	outputFiles            []string
 	*fslib.FsLib
 }
 
 func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, error) {
 	db.DPrintf("ThunkOutputHandler: %v\n", args)
-	toh := &ThunkOutputHandler{}
 
-	toh.pid = args[0]
-	toh.thunkHash = args[1]
-	toh.outputFiles = args[2:]
-	fls := fslib.MakeFsLib("gg-thunk-output-handler")
-	toh.FsLib = fls
+	toh := mkThunkOutputHandler(args[0], args[1], args[2:])
 	toh.Started(toh.pid)
 	return toh, nil
+}
+
+func mkThunkOutputHandler(pid string, thunkHash string, outputFiles []string) *ThunkOutputHandler {
+	toh := &ThunkOutputHandler{}
+	toh.pid = pid
+	toh.thunkHash = thunkHash
+	toh.outputFiles = outputFiles
+	fls := fslib.MakeFsLib("gg-thunk-output-handler")
+	toh.FsLib = fls
+	return toh
 }
 
 func (toh *ThunkOutputHandler) Exit() {
@@ -34,35 +40,45 @@ func (toh *ThunkOutputHandler) Exit() {
 }
 
 func (toh *ThunkOutputHandler) Work() {
-	// Read the thunk output file
-	thunkOutput := toh.readThunkOutputs()
-	newThunks := toh.getNewThunks(thunkOutput)
-	outputFiles := toh.getOutputFiles(thunkOutput)
-	if len(newThunks) == 0 {
-		// We have produced a value, and need to propagate it upstream to functions
-		// which depend on us.
-		toh.propagateResultUpstream()
-	} else {
-		for _, thunk := range newThunks {
-			// Avoid doing redundant work
-			if reductionExists(toh, thunk.hash) || currentlyExecuting(toh, thunk.hash) {
-				continue
-			}
-			exitDeps := outputHandlerPids(thunk.deps)
-			toh.initDownstreamThunk(thunk.hash, exitDeps, outputFiles)
+	newThunks := toh.processOutput()
+	for _, thunk := range newThunks {
+		// Avoid doing redundant work
+		if reductionExists(toh, thunk.hash) || currentlyExecuting(toh, thunk.hash) {
+			continue
 		}
+		exitDeps := outputHandlerPids(thunk.deps)
+		toh.initDownstreamThunk(thunk.hash, exitDeps, thunk.outputFiles)
+	}
+	if len(newThunks) != 0 {
 		toh.adjustExitDependencies()
 	}
 }
 
-func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []string, outputFiles map[string][]string) string {
+func (toh *ThunkOutputHandler) processOutput() []*Thunk {
+	// Read the thunk output file
+	thunkOutput := toh.readThunkOutputs()
+	outputFiles := toh.getOutputFiles(thunkOutput)
+	newThunks := toh.getNewThunks(thunkOutput, outputFiles)
+	if len(newThunks) == 0 {
+		// We have produced a value, and need to propagate it upstream to functions
+		// which depend on us.
+		toh.propagateResultUpstream()
+	}
+	return newThunks
+}
+
+func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []string, outputFiles []string) string {
 	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
-	exPid := spawnExecutor(toh, thunkHash, deps)
-	outputHandlerPid := spawnThunkOutputHandler(toh, []string{exPid}, thunkHash, outputFiles[thunkHash])
+	exPid, err := spawnExecutor(toh, thunkHash, deps)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+	outputHandlerPid := spawnThunkOutputHandler(toh, []string{exPid}, thunkHash, outputFiles)
 	return spawnNoOp(toh, outputHandlerPid)
 }
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {
+	log.Printf("TOH propagating %v results to: %v", toh.thunkHash, toh.outputFiles)
 	reduction := getReductionResult(toh, toh.thunkHash)
 	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {
@@ -104,7 +120,7 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
 	return outputFiles
 }
 
-func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []*Thunk {
+func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string, outputFiles map[string][]string) []*Thunk {
 	// Maps of new thunks to their dependencies
 	g := MakeGraph()
 	first := true
@@ -112,10 +128,11 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string) []*Thunk {
 		thunkLine := strings.Split(strings.TrimSpace(line), "=")[1]
 		// Compute new thunk's dependencies
 		hashes := strings.Split(thunkLine, " ")
-		g.AddThunk(hashes[0], hashes[1:])
+		g.AddThunk(hashes[0], hashes[1:], outputFiles[hashes[0]])
 		if first {
 			// XXX I'm actually not sure if I should just wait on the output handler
 			// here, but for consistency, I'll wait on the no-op
+			toh.primaryOutputThunkHash = hashes[0]
 			outputHandlerPid := outputHandlerPid(hashes[0])
 			noOpPid := noOpPid(outputHandlerPid)
 			toh.primaryOutputThunkPid = noOpPid

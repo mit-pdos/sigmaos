@@ -7,6 +7,7 @@ package kv
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	db "ulambda/debug"
@@ -55,25 +56,28 @@ func (bl *Balancer) unlock() {
 	}
 }
 
-func (bl *Balancer) unpostShard(kv string, s, old int) {
-	fn := shardPath(kv, s, old)
-	db.DLPrintf("BAL", "unpostShard: %v\n", fn)
+func (bl *Balancer) unpostShard(kv, s string) {
+	fn := shardPath(kv, s)
+	// db.DLPrintf("BAL", "unpostShard: %v\n", fn)
 	err := bl.Rename(fn, shardTmp(fn))
 	if err != nil {
 		log.Printf("BAL %v Rename failed %v\n", fn, err)
 	}
 }
 
+// Unpost shards that are moving
 func (bl *Balancer) unpostShards() {
-	for i, kvd := range bl.conf.Shards {
-		bl.unpostShard(kvd, i, bl.conf.N)
+	for i, kvd := range bl.nextConf.Old {
+		if kvd != bl.nextConf.New[i] {
+			bl.unpostShard(kvd, strconv.Itoa(i))
+		}
 	}
 }
 
 // Make intial shard directories
 func (bl *Balancer) initShards() {
 	for s, kvd := range bl.nextConf.New {
-		dst := shardPath(kvd, s, bl.nextConf.N)
+		dst := shardPath(kvd, strconv.Itoa(s))
 		db.DLPrintf("BAL", "Init shard dir %v\n", dst)
 		err := bl.Mkdir(dst, 0777)
 		if err != nil {
@@ -82,11 +86,11 @@ func (bl *Balancer) initShards() {
 	}
 }
 
-func (bl *Balancer) spawnMover(kv string) string {
+func (bl *Balancer) spawnMover(s, src, dst string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/mover"
-	a.Args = []string{kv}
+	a.Args = []string{s, src, dst}
 	a.PairDep = nil
 	a.ExitDep = nil
 	bl.Spawn(&a)
@@ -94,11 +98,14 @@ func (bl *Balancer) spawnMover(kv string) string {
 }
 
 func (bl *Balancer) runMovers(ks *KvSet) {
-	for kv, _ := range ks.set {
-		pid1 := bl.spawnMover(kv)
-		ok, err := bl.Wait(pid1)
-		if string(ok) != "OK" || err != nil {
-			log.Printf("mover %v failed %v err %v\n", kv, string(ok), err)
+	for i, kvd := range bl.nextConf.Old {
+		if kvd != bl.nextConf.New[i] {
+			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, bl.nextConf.New[i])
+			ok, err := bl.Wait(pid1)
+			if string(ok) != "OK" || err != nil {
+				log.Printf("mover %v failed %v err %v\n", kvd,
+					string(ok), err)
+			}
 		}
 	}
 }
@@ -143,20 +150,10 @@ func (bl *Balancer) Balance() {
 		bl.unpostShards()
 	}
 
-	err = bl.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *bl.nextConf)
-	if err != nil {
-		db.DLPrintf("BAL", "BAL: MakeFile %v err %v\n", KVNEXTCONFIG, err)
-	}
-
 	if bl.nextConf.N == 1 {
 		bl.initShards()
 	} else {
 		bl.runMovers(kvs)
-	}
-
-	err = bl.Remove(KVNEXTCONFIG)
-	if err != nil {
-		db.DLPrintf("BAL", "BAL: remove %v err %v\n", KVNEXTCONFIG, err)
 	}
 
 	bl.conf.N = bl.nextConf.N

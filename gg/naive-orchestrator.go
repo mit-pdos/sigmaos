@@ -51,7 +51,6 @@ func (orc *NaiveOrchestrator) Exit() {
 func (orc *NaiveOrchestrator) stillProcessing() bool {
 	orc.mu.Lock()
 	defer orc.mu.Unlock()
-	//	log.Printf("Remaining: %v", orc.nRemaining)
 	return orc.nRemaining > 0
 }
 
@@ -62,7 +61,6 @@ func (orc *NaiveOrchestrator) workerThread() {
 		if !ok {
 			break
 		}
-		//		log.Printf("thunk to be executed: %v", thunk)
 		if reductionExists(orc, thunk.hash) || currentlyExecuting(orc, thunk.hash) || isReduction(thunk.hash) {
 			orc.mu.Lock()
 			orc.nRemaining -= 1
@@ -81,7 +79,6 @@ func (orc *NaiveOrchestrator) workerThread() {
 		toh := mkThunkOutputHandler("", thunk.hash, thunk.outputFiles)
 		newThunks := toh.processOutput()
 		orc.mu.Lock()
-		//		log.Printf("========== Graph Pre %v ========== \n\n %v \n\n ========== Graph Pre %v ==========", thunk.hash, orc.g, thunk.hash)
 		// Force thunk we just executed
 		orc.g.ForceThunk(thunk.hash)
 		orc.nRemaining -= 1
@@ -93,13 +90,10 @@ func (orc *NaiveOrchestrator) workerThread() {
 			for dep, _ := range t.deps {
 				deps = append(deps, dep)
 			}
-			//			log.Printf("Adding thunk %v deps %v", t.hash, deps)
 			orc.g.AddThunk(t.hash, deps, t.outputFiles)
 		}
-		//		log.Printf("========== Graph Post1 %v ========== \n\n %v \n\n ========== Graph Post1 %v ==========", thunk.hash, orc.g, thunk.hash)
 		// Add newly runnable thunks to the queue
 		orc.updateThunkQL()
-		//		log.Printf("========== Graph Post2 %v ========== \n\n %v \n\n ========== Graph Post2 %v ==========", thunk.hash, orc.g, thunk.hash)
 		orc.mu.Unlock()
 	}
 	orc.mu.Lock()
@@ -129,8 +123,6 @@ func (orc *NaiveOrchestrator) Work() {
 		go orc.workerThread()
 	}
 	orc.wg.Wait()
-
-	log.Printf("\nTargets: %v\nHashes: %v\n", orc.targets, orc.targetHashes)
 
 	// Write back targets
 	// XXX eventually get rid of this...
@@ -178,24 +170,10 @@ func (orc *NaiveOrchestrator) ingestStaticGraph(targetHash string) {
 		}
 		exitDeps := getExitDependencies(orc, current)
 		exitDeps = thunkHashesFromReductions(exitDeps)
-		// XXX should I add the thunk's has as an output file?
 		orc.g.AddThunk(current, exitDeps, []string{current})
 		queue = append(queue, exitDeps...)
 	}
 }
-
-//func (orc *NaiveOrchestrator) executeStaticGraph(targetHash string, g *Graph) {
-//	thunks := g.GetThunks()
-//	for _, thunk := range thunks {
-//		exitDeps := outputHandlerPids(thunk.deps)
-//		if reductionExists(orc, thunk.hash) || currentlyExecuting(orc, thunk.hash) || isReduction(thunk.hash) {
-//			continue
-//		}
-//		exPid := spawnExecutor(orc, thunk.hash, exitDeps)
-//		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid}, thunk.hash, []string{thunk.hash})
-//		spawnNoOp(orc, outputHandlerPid)
-//	}
-//}
 
 func (orc *NaiveOrchestrator) waitPids(pids []string) {
 	for _, p := range pids {

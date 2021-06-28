@@ -130,6 +130,8 @@ func (orc *NaiveOrchestrator) Work() {
 	}
 	orc.wg.Wait()
 
+	log.Printf("\nTargets: %v\nHashes: %v\n", orc.targets, orc.targetHashes)
+
 	// Write back targets
 	// XXX eventually get rid of this...
 	var targetsWritten sync.WaitGroup
@@ -166,7 +168,6 @@ func (orc *NaiveOrchestrator) updateThunkQL() {
 }
 
 func (orc *NaiveOrchestrator) ingestStaticGraph(targetHash string) {
-	orc.targetHashes = append(orc.targetHashes, targetHash)
 	var current string
 	queue := []string{targetHash}
 	// Will loop inifinitely if the graph is circular

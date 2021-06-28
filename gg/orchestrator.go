@@ -64,7 +64,6 @@ func (orc *Orchestrator) Work() {
 
 func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {
 	g := MakeGraph()
-	orc.targetHashes = append(orc.targetHashes, targetHash)
 	var current string
 	queue := []string{targetHash}
 	// Will loop inifinitely if the graph is circular

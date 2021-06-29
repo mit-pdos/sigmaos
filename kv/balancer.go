@@ -126,8 +126,10 @@ func (bl *Balancer) Balance() {
 	var nextShards []string
 	switch bl.args[0] {
 	case "add":
+		// XXX call balanceAdd repeatedly for each bl.args[1:]
 		nextShards = balanceAdd(bl.conf, bl.args[1])
 	case "del":
+		// XXX call balanceDel repeatedly for each bl.args[1:]
 		nextShards = balanceDel(bl.conf, bl.args[1])
 	default:
 	}

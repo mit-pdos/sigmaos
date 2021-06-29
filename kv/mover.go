@@ -20,7 +20,6 @@ type Mover struct {
 	src   string
 	dst   string
 	args  []string
-	conf2 *Config2
 }
 
 func MakeMover(args []string) (*Mover, error) {

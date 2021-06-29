@@ -25,10 +25,9 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	pid      string
-	args     []string
-	conf     *Config
-	nextConf *Config2
+	pid  string
+	args []string
+	conf *Config
 }
 
 func MakeBalancer(args []string) (*Balancer, error) {
@@ -66,17 +65,17 @@ func (bl *Balancer) unpostShard(kv, s string) {
 }
 
 // Unpost shards that are moving
-func (bl *Balancer) unpostShards() {
-	for i, kvd := range bl.nextConf.Old {
-		if kvd != bl.nextConf.New[i] {
+func (bl *Balancer) unpostShards(nextShards []string) {
+	for i, kvd := range bl.conf.Shards {
+		if kvd != nextShards[i] {
 			bl.unpostShard(kvd, strconv.Itoa(i))
 		}
 	}
 }
 
 // Make intial shard directories
-func (bl *Balancer) initShards() {
-	for s, kvd := range bl.nextConf.New {
+func (bl *Balancer) initShards(nextShards []string) {
+	for s, kvd := range nextShards {
 		dst := shardPath(kvd, strconv.Itoa(s))
 		db.DLPrintf("BAL", "Init shard dir %v\n", dst)
 		err := bl.Mkdir(dst, 0777)
@@ -97,10 +96,10 @@ func (bl *Balancer) spawnMover(s, src, dst string) string {
 	return a.Pid
 }
 
-func (bl *Balancer) runMovers(ks *KvSet) {
-	for i, kvd := range bl.nextConf.Old {
-		if kvd != bl.nextConf.New[i] {
-			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, bl.nextConf.New[i])
+func (bl *Balancer) runMovers(nextShards []string) {
+	for i, kvd := range bl.conf.Shards {
+		if kvd != nextShards[i] {
+			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, nextShards[i])
 			ok, err := bl.Wait(pid1)
 			if string(ok) != "OK" || err != nil {
 				log.Printf("mover %v failed %v err %v\n", kvd,
@@ -124,40 +123,36 @@ func (bl *Balancer) Balance() {
 
 	log.Printf("BAL Balancer: %v %v\n", bl.args, bl.conf)
 
-	kvs := makeKvs(bl.conf.Shards)
-
+	var nextShards []string
 	switch bl.args[0] {
 	case "add":
-		kvs.add(bl.args[1:])
+		nextShards = balanceAdd(bl.conf, bl.args[1])
 	case "del":
-		kvs.del(bl.args[1:])
+		nextShards = balanceDel(bl.conf, bl.args[1])
 	default:
 	}
 
-	bl.nextConf = balance(bl.conf, kvs)
+	db.DLPrintf("BAL", "Balancer conf %v next shards: %v \n", bl.conf, nextShards)
 
-	db.DLPrintf("BAL", "Balancer conf %v next conf: %v %v\n", bl.conf,
-		bl.nextConf, kvs)
-
-	// log.Printf("BAL conf %v next conf: %v %v\n", bl.conf, bl.nextConf, kvs)
+	log.Printf("BAL conf %v next shards: %v\n", bl.conf, nextShards)
 
 	err = bl.Rename(KVCONFIG, KVCONFIGBK)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
 	}
 
-	if bl.nextConf.N > 1 {
-		bl.unpostShards()
+	if bl.conf.N > 0 {
+		bl.unpostShards(nextShards)
 	}
 
-	if bl.nextConf.N == 1 {
-		bl.initShards()
+	if bl.conf.N == 0 {
+		bl.initShards(nextShards)
 	} else {
-		bl.runMovers(kvs)
+		bl.runMovers(nextShards)
 	}
 
-	bl.conf.N = bl.nextConf.N
-	bl.conf.Shards = bl.nextConf.New
+	bl.conf.N += 1
+	bl.conf.Shards = nextShards
 	bl.conf.Ctime = time.Now().UnixNano()
 
 	log.Printf("new %v\n", bl.conf)

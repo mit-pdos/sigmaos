@@ -93,7 +93,7 @@ func doRetry(err error) bool {
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
-		fn := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
+		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
 		err := kc.fsl.MakeFile(fn, 0777, []byte(v))
 		if err == nil {
 			return err
@@ -110,7 +110,7 @@ func (kc *KvClerk) Put(k, v string) error {
 func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
-		fn := keyPath(kc.conf.Shards[shard], shard, kc.conf.N, k)
+		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
 		b, err := kc.fsl.Get(fn)
 		db.DLPrintf("CLERK", "Get: %v %v\n", fn, err)
 		if err == nil {

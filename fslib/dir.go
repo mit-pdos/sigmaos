@@ -79,10 +79,10 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
 }
 
 func (fl *FsLib) CopyDir(src, dst string) error {
-	fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
+	_, err := fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
 		s := src + "/" + st.Name
 		d := dst + "/" + st.Name
-		db.DLPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
+		// db.DLPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
 		b, err := fl.ReadFile(s)
 		if err != nil {
 			return true, err
@@ -93,7 +93,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 		}
 		return false, nil
 	})
-	return nil
+	return err
 }
 
 func (fl *FsLib) RmDir(dir string) error {

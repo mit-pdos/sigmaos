@@ -4,20 +4,13 @@ import (
 	"log"
 	"time"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
 type Config struct {
 	N      int
-	Shards []string // maps shard # to server
+	Shards []string // slice mapping shard # to server
 	Ctime  int64    // XXX use ctime of config file?
-}
-
-type Config2 struct {
-	N   int
-	Old []string
-	New []string
 }
 
 func MakeConfig(n int) *Config {
@@ -43,25 +36,19 @@ func readConfig(fsl *fslib.FsLib, conffile string) (*Config, error) {
 	return &conf, nil
 }
 
-func readConfig2(fsl *fslib.FsLib, conffile string) (*Config2, error) {
-	conf := Config2{}
-	err := fsl.ReadFileJson(conffile, &conf)
-	if err != nil {
-		return nil, err
-	}
-	return &conf, nil
-}
-
 type KvSet struct {
-	set map[string]bool
+	set map[string]int
 }
 
 func makeKvs(shards []string) *KvSet {
 	ks := &KvSet{}
-	ks.set = make(map[string]bool)
+	ks.set = make(map[string]int)
 	for _, kv := range shards {
 		if _, ok := ks.set[kv]; !ok && kv != "" {
-			ks.set[kv] = true
+			ks.set[kv] = 0
+		}
+		if kv != "" {
+			ks.set[kv] += 1
 		}
 	}
 	return ks
@@ -77,7 +64,7 @@ func (ks *KvSet) mkKvs() []string {
 
 func (ks *KvSet) add(new []string) {
 	for _, kv := range new {
-		ks.set[kv] = true
+		ks.set[kv] = 0
 	}
 }
 
@@ -96,6 +83,30 @@ func (ks *KvSet) first() string {
 	return memfs
 }
 
+func (ks *KvSet) high() (string, int) {
+	h := ""
+	n := 0
+	for k := range ks.set {
+		if ks.set[k] > n {
+			h = k
+			n = ks.set[k]
+		}
+	}
+	return h, n
+}
+
+func (ks *KvSet) low() (string, int) {
+	l := ""
+	n := NSHARD
+	for k := range ks.set {
+		if ks.set[k] < n && k != "" {
+			l = k
+			n = ks.set[k]
+		}
+	}
+	return l, n
+}
+
 func readKVs(fsl *fslib.FsLib) *KvSet {
 	for true {
 		conf, err := readConfig(fsl, KVCONFIG)
@@ -112,25 +123,87 @@ func readKVs(fsl *fslib.FsLib) *KvSet {
 	return nil
 }
 
-// XXX minimize movement
-func balance(conf *Config, kvs *KvSet) *Config2 {
-	cfg2 := &Config2{}
-	cfg2.N = conf.N + 1
-	cfg2.Old = conf.Shards
-	cfg2.New = make([]string, NSHARD)
+func assign(conf *Config, nextShards []string, hkv string, n, t int, newkv string) {
+	m := 0
+	for i, kv := range conf.Shards {
+		if kv == hkv {
+			if m < n {
+				nextShards[i] = hkv
+				m += 1
+			} else {
+				nextShards[i] = newkv
+				t -= 1
+				if t <= 0 {
+					break
+				}
+			}
+		}
+	}
+}
 
-	db.DLPrintf("SHARDER", "balance %v (len %v) kvs %v\n", conf.Shards,
-		len(conf.Shards), kvs)
+func balanceAdd(conf *Config, newkv string) []string {
+	nextShards := make([]string, NSHARD)
+	kvs := makeKvs(conf.Shards)
+	l := len(kvs.mkKvs()) + 1
 
-	nextkvs := kvs.mkKvs()
-	if len(nextkvs) == 0 {
-		return cfg2
+	if l == 1 { // newkv is first shard
+		for i, _ := range conf.Shards {
+			nextShards[i] = newkv
+		}
+		return nextShards
 	}
 
-	j := 0
-	for i, _ := range conf.Shards {
-		cfg2.New[i] = nextkvs[j]
-		j = (j + 1) % len(nextkvs)
+	for i, kv := range conf.Shards {
+		nextShards[i] = kv
 	}
-	return cfg2
+	kvs.set[newkv] = 0
+	n := (NSHARD + l - 1) / l
+
+	for {
+		hkv, h := kvs.high()
+		if h-n <= 0 {
+			break
+		}
+		t := h - n
+		assign(conf, nextShards, hkv, n, t, newkv)
+		kvs.set[hkv] -= t
+		kvs.set[newkv] += t
+	}
+
+	// give newkv at least one shard
+	if kvs.set[newkv] == 0 {
+		hkv, h := kvs.high()
+		if h > 1 {
+			assign(conf, nextShards, hkv, n-1, 1, newkv)
+		}
+	}
+
+	return nextShards
+}
+
+func balanceDel(conf *Config, delkv string) []string {
+	nextShards := make([]string, NSHARD)
+	kvs := makeKvs(conf.Shards)
+	kvs.del([]string{delkv})
+	l := len(kvs.mkKvs())
+	n := (NSHARD + l - 1) / l
+	for i, kv := range conf.Shards {
+		nextShards[i] = kv
+	}
+	for {
+		lkv, l := kvs.low()
+		if n-l <= 0 {
+			break
+		}
+		t1 := n - l
+		for i, kv := range nextShards {
+			nextShards[i] = kv
+			if kv == delkv && t1 > 0 {
+				nextShards[i] = lkv
+				t1 -= 1
+			}
+		}
+		kvs.set[lkv] += n - l
+	}
+	return nextShards
 }

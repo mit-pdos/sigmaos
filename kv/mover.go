@@ -3,7 +3,6 @@ package kv
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -17,18 +16,21 @@ type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	pid   string
-	kv    string
+	shard string
+	src   string
+	dst   string
 	args  []string
-	conf2 *Config2
 }
 
 func MakeMover(args []string) (*Mover, error) {
 	mv := &Mover{}
-	if len(args) != 2 {
+	if len(args) != 4 {
 		return nil, fmt.Errorf("MakeMover: too few arguments %v\n", args)
 	}
 	mv.pid = args[0]
-	mv.kv = args[1]
+	mv.shard = args[1]
+	mv.src = args[2]
+	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
 
 	db.Name(mv.pid)
@@ -41,12 +43,12 @@ func shardDir(kvd string) string {
 	return memfsd.MEMFS + "/" + kvd
 }
 
-func shardPath(kvd string, shard, view int) string {
-	return memfsd.MEMFS + "/" + kvd + "/shard" + strconv.Itoa(shard) + "-" + strconv.Itoa(view)
+func shardPath(kvd, shard string) string {
+	return memfsd.MEMFS + "/" + kvd + "/shard" + shard
 }
 
-func keyPath(kvd string, shard int, view int, k string) string {
-	d := shardPath(kvd, shard, view)
+func keyPath(kvd, shard string, k string) string {
+	d := shardPath(kvd, shard)
 	return d + "/" + k
 }
 
@@ -54,60 +56,38 @@ func shardTmp(shardp string) string {
 	return shardp + "#"
 }
 
-// Move shard: either copy from server `from` to me or rename shard
-// dir for new view.
-func (mv *Mover) moveShard(s int, from string) error {
-	src := shardPath(from, s, mv.conf2.N-1)
-	src = shardTmp(src)
-	dst := shardPath(mv.kv, s, mv.conf2.N)
-	if from != mv.kv { // Copy
-		err := mv.Mkdir(dst, 0777)
-		// an aborted view change may have created the directory
-		if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
-			return err
-		}
-		db.DLPrintf("MV", "Copy shard from %v to %v\n", src, dst)
-		err = mv.CopyDir(src, dst)
-		if err != nil {
-			return err
-		}
-		db.DLPrintf("MV", "Copy shard from %v to %v done\n", src, dst)
-	} else { // rename
-		err := mv.Rename(src, dst)
-		if err != nil {
-			log.Printf("MV Rename %v -> %v failed %v\n", src, dst, err)
-		}
+// Move shard from src to dst
+func (mv *Mover) moveShard(shard, src, dst string) error {
+	s := shardPath(src, shard)
+	s = shardTmp(s)
+	d := shardPath(dst, shard)
+	d1 := shardTmp(d)
+	err := mv.Mkdir(d1, 0777)
+	// an aborted view change may have created the directory
+	if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
+		return err
+	}
+	db.DLPrintf("MV", "Copy shard from %v to %v\n", s, d1)
+	err = mv.CopyDir(s, d1)
+	if err != nil {
+		return err
+	}
+	db.DLPrintf("MV", "Copy shard from %v to %v done\n", s, d1)
+	err = mv.Rename(d1, d)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func (mv *Mover) moveShards() error {
-	for s, kvd := range mv.conf2.New {
-		if kvd == mv.kv {
-			if err := mv.moveShard(s, mv.conf2.Old[s]); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (mv *Mover) removeShards(version int) {
-	d := shardDir(mv.kv)
+func (mv *Mover) removeShard(shard, src string) {
+	d := shardPath(src, shard)
 	mv.ProcessDir(d, func(st *np.Stat) (bool, error) {
 		if st.Name != "statsd" {
-			name := strings.Trim(st.Name, "#")
-			splits := strings.Split(name, "-")
-			n, err := strconv.Atoi(splits[1])
-			if err != nil {
-				return false, nil
-			}
-			if n < 0 || n > version {
-				return false, nil
-			}
 			d := d + "/" + st.Name
 			db.DLPrintf("MV", "RmDir shard %v\n", d)
-			err = mv.RmDir(d)
+			log.Printf("RmDir shard %v\n", d)
+			err := mv.RmDir(d)
 			if err != nil {
 				log.Printf("MV remove %v err %v\n", d, err)
 			}
@@ -139,17 +119,10 @@ func (mv *Mover) removeShards(version int) {
 // }
 
 func (mv *Mover) Work() {
-	var err error
-	mv.conf2, err = readConfig2(mv.FsLib, KVNEXTCONFIG)
-	if err != nil {
-		log.Fatalf("MV: read %v err %v\n", KVCONFIG, err)
+	log.Printf("MV shard %v from %v to %v\n", mv.shard, mv.src, mv.dst)
+	if err := mv.moveShard(mv.shard, mv.src, mv.dst); err != nil {
+		log.Printf("MV moveShards %v %v err %v\n", mv.src, mv.dst, err)
 	}
 
-	// log.Printf("MV %v change %v\n", mv.kv, mv.conf2)
-
-	if err := mv.moveShards(); err != nil {
-		log.Printf("MV moveShards %v err %v\n", mv.kv, err)
-	}
-
-	mv.removeShards(mv.conf2.N - 2)
+	mv.removeShard(mv.shard, mv.src)
 }

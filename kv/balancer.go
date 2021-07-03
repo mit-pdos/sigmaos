@@ -7,6 +7,7 @@ package kv
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	db "ulambda/debug"
@@ -24,10 +25,9 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	pid      string
-	args     []string
-	conf     *Config
-	nextConf *Config2
+	pid  string
+	args []string
+	conf *Config
 }
 
 func MakeBalancer(args []string) (*Balancer, error) {
@@ -55,25 +55,28 @@ func (bl *Balancer) unlock() {
 	}
 }
 
-func (bl *Balancer) unpostShard(kv string, s, old int) {
-	fn := shardPath(kv, s, old)
-	db.DLPrintf("BAL", "unpostShard: %v\n", fn)
+func (bl *Balancer) unpostShard(kv, s string) {
+	fn := shardPath(kv, s)
+	// db.DLPrintf("BAL", "unpostShard: %v\n", fn)
 	err := bl.Rename(fn, shardTmp(fn))
 	if err != nil {
 		log.Printf("BAL %v Rename failed %v\n", fn, err)
 	}
 }
 
-func (bl *Balancer) unpostShards() {
+// Unpost shards that are moving
+func (bl *Balancer) unpostShards(nextShards []string) {
 	for i, kvd := range bl.conf.Shards {
-		bl.unpostShard(kvd, i, bl.conf.N)
+		if kvd != nextShards[i] {
+			bl.unpostShard(kvd, strconv.Itoa(i))
+		}
 	}
 }
 
 // Make intial shard directories
-func (bl *Balancer) initShards() {
-	for s, kvd := range bl.nextConf.New {
-		dst := shardPath(kvd, s, bl.nextConf.N)
+func (bl *Balancer) initShards(nextShards []string) {
+	for s, kvd := range nextShards {
+		dst := shardPath(kvd, strconv.Itoa(s))
 		db.DLPrintf("BAL", "Init shard dir %v\n", dst)
 		err := bl.Mkdir(dst, 0777)
 		if err != nil {
@@ -82,23 +85,26 @@ func (bl *Balancer) initShards() {
 	}
 }
 
-func (bl *Balancer) spawnMover(kv string) string {
+func (bl *Balancer) spawnMover(s, src, dst string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/mover"
-	a.Args = []string{kv}
+	a.Args = []string{s, src, dst}
 	a.PairDep = nil
 	a.ExitDep = nil
 	bl.Spawn(&a)
 	return a.Pid
 }
 
-func (bl *Balancer) runMovers(ks *KvSet) {
-	for kv, _ := range ks.set {
-		pid1 := bl.spawnMover(kv)
-		ok, err := bl.Wait(pid1)
-		if string(ok) != "OK" || err != nil {
-			log.Printf("mover %v failed %v err %v\n", kv, string(ok), err)
+func (bl *Balancer) runMovers(nextShards []string) {
+	for i, kvd := range bl.conf.Shards {
+		if kvd != nextShards[i] {
+			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, nextShards[i])
+			ok, err := bl.Wait(pid1)
+			if string(ok) != "OK" || err != nil {
+				log.Printf("mover %v failed %v err %v\n", kvd,
+					string(ok), err)
+			}
 		}
 	}
 }
@@ -117,50 +123,38 @@ func (bl *Balancer) Balance() {
 
 	log.Printf("BAL Balancer: %v %v\n", bl.args, bl.conf)
 
-	kvs := makeKvs(bl.conf.Shards)
-
+	var nextShards []string
 	switch bl.args[0] {
 	case "add":
-		kvs.add(bl.args[1:])
+		// XXX call balanceAdd repeatedly for each bl.args[1:]
+		nextShards = balanceAdd(bl.conf, bl.args[1])
 	case "del":
-		kvs.del(bl.args[1:])
+		// XXX call balanceDel repeatedly for each bl.args[1:]
+		nextShards = balanceDel(bl.conf, bl.args[1])
 	default:
 	}
 
-	bl.nextConf = balance(bl.conf, kvs)
+	db.DLPrintf("BAL", "Balancer conf %v next shards: %v \n", bl.conf, nextShards)
 
-	db.DLPrintf("BAL", "Balancer conf %v next conf: %v %v\n", bl.conf,
-		bl.nextConf, kvs)
-
-	// log.Printf("BAL conf %v next conf: %v %v\n", bl.conf, bl.nextConf, kvs)
+	log.Printf("BAL conf %v next shards: %v\n", bl.conf, nextShards)
 
 	err = bl.Rename(KVCONFIG, KVCONFIGBK)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
 	}
 
-	if bl.nextConf.N > 1 {
-		bl.unpostShards()
+	if bl.conf.N > 0 {
+		bl.unpostShards(nextShards)
 	}
 
-	err = bl.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *bl.nextConf)
-	if err != nil {
-		db.DLPrintf("BAL", "BAL: MakeFile %v err %v\n", KVNEXTCONFIG, err)
-	}
-
-	if bl.nextConf.N == 1 {
-		bl.initShards()
+	if bl.conf.N == 0 {
+		bl.initShards(nextShards)
 	} else {
-		bl.runMovers(kvs)
+		bl.runMovers(nextShards)
 	}
 
-	err = bl.Remove(KVNEXTCONFIG)
-	if err != nil {
-		db.DLPrintf("BAL", "BAL: remove %v err %v\n", KVNEXTCONFIG, err)
-	}
-
-	bl.conf.N = bl.nextConf.N
-	bl.conf.Shards = bl.nextConf.New
+	bl.conf.N += 1
+	bl.conf.Shards = nextShards
 	bl.conf.Ctime = time.Now().UnixNano()
 
 	log.Printf("new %v\n", bl.conf)

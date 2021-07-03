@@ -17,6 +17,24 @@ import (
 const NKEYS = 100
 const NCLERK = 10
 
+func TestBalance(t *testing.T) {
+	conf := &Config{}
+	for i := 0; i < NSHARD; i++ {
+		conf.Shards = append(conf.Shards, "")
+	}
+	shards := balanceAdd(conf, "a")
+	log.Printf("balance %v\n", shards)
+	conf.Shards = shards
+	shards = balanceAdd(conf, "b")
+	log.Printf("balance %v\n", shards)
+	conf.Shards = shards
+	shards = balanceAdd(conf, "c")
+	log.Printf("balance %v\n", shards)
+	conf.Shards = shards
+	shards = balanceDel(conf, "c")
+	log.Printf("balance %v\n", shards)
+}
+
 type Tstate struct {
 	t     *testing.T
 	s     *fslib.System

@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid shard\n", os.Args[0])
+	if len(os.Args) < 5 {
+		fmt.Fprintf(os.Stderr, "Usage: %v pid shard src dst\n", os.Args[0])
 		os.Exit(1)
 	}
 	mv, err := kv.MakeMover(os.Args[1:])

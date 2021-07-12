@@ -2,6 +2,7 @@ package npobjsrv
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -458,6 +459,49 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 		}
 	default:
 		return np.ErrNotDir
+	}
+	return nil
+}
+
+func (npc *NpConn) GetFile(sess np.Tsession, args np.Tget, rets *np.Rread) *np.Rerror {
+	if npc.stats != nil {
+		npc.stats.StatInfo().Nget.Inc()
+	}
+	f, ok := npc.lookup(sess, args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
+	o := f.Obj()
+	if o == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	if !o.Perm().IsDir() {
+		return np.ErrNotfound
+	}
+	d := o.(NpObjDir)
+	os, rest, err := d.Lookup(f.ctx, args.Wnames)
+	if err != nil || len(rest) != 0 {
+		return &np.Rerror{err.Error()}
+	}
+	lo := os[len(os)-1]
+	err = lo.Open(f.ctx, args.Mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	switch i := lo.(type) {
+	case NpObjDir:
+		return np.ErrNotFile
+	case NpObjFile:
+		b, err := i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), lo.Version())
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		rets.Data = b
+		return nil
+	default:
+		log.Fatalf("GetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
+
 	}
 	return nil
 }

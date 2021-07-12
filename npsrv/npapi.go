@@ -22,5 +22,6 @@ type NpAPI interface {
 	Stat(np.Tsession, np.Tstat, *np.Rstat) *np.Rerror
 	Wstat(np.Tsession, np.Twstat, *np.Rwstat) *np.Rerror
 	Renameat(np.Tsession, np.Trenameat, *np.Rrenameat) *np.Rerror
+	GetFile(np.Tsession, np.Tget, *np.Rread) *np.Rerror
 	Detach()
 }

@@ -74,6 +74,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Treadv{}, nil
 	case np.TTwatchv:
 		return np.Twatchv{}, nil
+	case np.TTget:
+		return np.Tget{}, nil
 	}
 	return nil, fmt.Errorf("unknown message type: %v", (uint64)(typ))
 }

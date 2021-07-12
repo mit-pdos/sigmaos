@@ -218,6 +218,7 @@ const (
 	TTwatchv
 	TTrenameat
 	TRrenameat
+	TTget
 )
 
 func (fct Tfcall) String() string {
@@ -288,6 +289,8 @@ func (fct Tfcall) String() string {
 		return "Trenameat"
 	case TRrenameat:
 		return "Rrenameat"
+	case TTget:
+		return "Tget"
 	default:
 		return "Tunknown"
 	}
@@ -529,6 +532,14 @@ type Trenameat struct {
 
 type Rrenameat struct{}
 
+type Tget struct {
+	Fid    Tfid
+	Mode   Tmode
+	Offset Toffset
+	Count  Tsize
+	Wnames []string
+}
+
 func (Tversion) Type() Tfcall  { return TTversion }
 func (Rversion) Type() Tfcall  { return TRversion }
 func (Tauth) Type() Tfcall     { return TTauth }
@@ -561,3 +572,4 @@ func (Twstat) Type() Tfcall    { return TTwstat }
 func (Rwstat) Type() Tfcall    { return TRwstat }
 func (Trenameat) Type() Tfcall { return TTrenameat }
 func (Rrenameat) Type() Tfcall { return TRrenameat }
+func (Tget) Type() Tfcall      { return TTget }

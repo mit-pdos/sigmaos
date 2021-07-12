@@ -280,7 +280,8 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-// Rename within a single directory using Wstat
+// Rename using renameat() for across directories or using wstat()
+// for within a directory.
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
@@ -304,7 +305,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	return err
 }
 
-// Rename across directories using Renameat
+// Rename across directories of a single server using Renameat
 func (fsc *FsClient) renameat(old, new string) error {
 	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
 	opath := np.Split(old)
@@ -550,4 +551,17 @@ func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
 	}
 	fdst.offset = off
 	return nil
+}
+
+func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
+	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
+	p := np.Split(path)
+	fid, rest := fsc.mount.resolve(p)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
+		return nil, errors.New("Unknown file")
+
+	}
+	reply, err := fsc.npch(fid).GetFile(fid, rest, mode, 0, 0)
+	return reply.Data, err
 }

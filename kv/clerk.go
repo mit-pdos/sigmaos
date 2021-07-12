@@ -111,7 +111,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		b, err := kc.fsl.Get(fn)
+		b, err := kc.fsl.GetFile(fn)
 		db.DLPrintf("CLERK", "Get: %v %v\n", fn, err)
 		if err == nil {
 			kc.nget += 1

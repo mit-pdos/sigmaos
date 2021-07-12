@@ -68,8 +68,8 @@ func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
 	return fl.readFile(fname, 0x0, f)
 }
 
-func (fl *FsLib) Get(fname string) ([]byte, error) {
-	return fl.readFile(fname, np.OVERSION, nil)
+func (fl *FsLib) GetFile(fname string) ([]byte, error) {
+	return fl.FsClient.GetFile(fname, np.OREAD)
 }
 
 // XXX chunk

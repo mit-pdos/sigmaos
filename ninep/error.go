@@ -25,4 +25,5 @@ var (
 	ErrNotSupported = &Rerror{"not supported"}
 	ErrUnknownMsg   = &Rerror{"unknown message"}
 	ErrNotDir       = &Rerror{"not a directory"}
+	ErrNotFile      = &Rerror{"not a directory"}
 )

@@ -92,17 +92,9 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 		reply := &np.Rread{}
 		err := c.np.Read(sess, req, reply)
 		return *reply, err
-	case np.Treadv:
-		reply := &np.Rread{}
-		err := c.np.ReadV(sess, req, reply)
-		return *reply, err
 	case np.Twrite:
 		reply := &np.Rwrite{}
 		err := c.np.Write(sess, req, reply)
-		return *reply, err
-	case np.Twritev:
-		reply := &np.Rwrite{}
-		err := c.np.WriteV(sess, req, reply)
 		return *reply, err
 	case np.Tclunk:
 		reply := &np.Rclunk{}

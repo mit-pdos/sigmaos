@@ -68,16 +68,16 @@ func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
 	return fl.readFile(fname, 0x0, f)
 }
 
-func (fl *FsLib) GetFile(fname string) ([]byte, error) {
+func (fl *FsLib) GetFile(fname string) ([]byte, np.TQversion, error) {
 	return fl.FsClient.GetFile(fname, np.OREAD)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, 0, data)
+func (fl *FsLib) SetFile(fname string, data []byte, version np.TQversion) (np.Tsize, error) {
+	return fl.FsClient.SetFile(fname, np.OWRITE, 0, version, data)
 }
 
 func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, perm, data)
+	return fl.FsClient.SetFile(fname, np.OWRITE, perm, np.NoV, data)
 }
 
 // XXX chunk

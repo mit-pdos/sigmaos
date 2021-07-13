@@ -292,18 +292,6 @@ func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rer
 	return f.Read(args.Offset, args.Count, np.NoV, rets)
 }
 
-func (npc *NpConn) ReadV(sess np.Tsession, args np.Treadv, rets *np.Rread) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nreadv.Inc()
-	}
-	db.DLPrintf("9POBJ", "ReadV %v\n", args)
-	f, ok := npc.lookup(sess, args.Fid)
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	return f.Read(args.Offset, args.Count, f.vers, rets)
-}
-
 func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwrite.Inc()
@@ -315,23 +303,6 @@ func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.
 	}
 	var err error
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
-	if err != nil {
-		return &np.Rerror{err.Error()}
-	}
-	return nil
-}
-
-func (npc *NpConn) WriteV(sess np.Tsession, args np.Twritev, rets *np.Rwrite) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nwritev.Inc()
-	}
-	db.DLPrintf("9POBJ", "WriteV %v\n", args)
-	f, ok := npc.lookup(sess, args.Fid)
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	var err error
-	rets.Count, err = f.Write(args.Offset, args.Data, f.vers)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -464,8 +435,7 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 }
 
 // Special code path for GetFile: in one RPC, GetFile() looks up the file,
-// opens it, and reads it.  If the file changes between open and read,
-// it returns a version-mismatch error. XXX maybe use a lock?
+// opens it, and reads it.
 func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rread) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nget.Inc()
@@ -495,11 +465,13 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rread) *
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
+	v := lo.Version()
 	switch i := lo.(type) {
 	case NpObjDir:
 		return np.ErrNotFile
 	case NpObjFile:
-		rets.Data, err = i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), lo.Version())
+		rets.Data, err = i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), v)
+		rets.Version = v
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
@@ -512,9 +484,7 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rread) *
 }
 
 // Special code path for SetFile: in one RPC, SetFile() looks up the
-// file, opens/creates it, and writes it.  If the file changes between
-// open and read, it returns a version-mismatch error. XXX maybe use a
-// lock?
+// file, opens/creates it, and writes it.
 func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	var err error
 	if npc.stats != nil {
@@ -564,7 +534,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 	case NpObjDir:
 		return np.ErrNotFile
 	case NpObjFile:
-		rets.Count, err = i.Write(f.ctx, args.Offset, args.Data, lo.Version())
+		rets.Count, err = i.Write(f.ctx, args.Offset, args.Data, args.Version)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

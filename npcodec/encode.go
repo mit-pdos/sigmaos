@@ -42,10 +42,6 @@ func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) error {
 		msg := fcall.GetMsg().(np.Twrite)
 		data = msg.Data
 		dataBuf = true
-	case np.TTwritev:
-		msg := fcall.GetMsg().(np.Twritev)
-		data = msg.Data
-		dataBuf = true
 	case np.TRread:
 		msg := fcall.GetMsg().(np.Rread)
 		data = msg.Data

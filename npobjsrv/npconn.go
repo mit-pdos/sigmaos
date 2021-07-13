@@ -461,6 +461,9 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 		}
 		lo = os[len(os)-1]
 	}
+	if npc.stats != nil {
+		npc.stats.Path(f.path)
+	}
 	err := lo.Open(f.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -525,6 +528,9 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 			return &np.Rerror{err.Error()}
 		}
 	} else {
+		if npc.stats != nil {
+			npc.stats.Path(f.path)
+		}
 		err = lo.Open(f.ctx, args.Mode)
 		if err != nil {
 			return &np.Rerror{err.Error()}

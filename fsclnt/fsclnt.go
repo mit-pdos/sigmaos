@@ -559,9 +559,56 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 	fid, rest := fsc.mount.resolve(p)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
-		return nil, errors.New("Unknown file")
+		return nil, errors.New("file not found")
 
 	}
 	reply, err := fsc.npch(fid).GetFile(fid, rest, mode, 0, 0)
+	if err != nil {
+		// force automounting, but only on dir error
+		if strings.HasPrefix(err.Error(), "dir not found") {
+			fid, err = fsc.WalkManyUmount(p, np.EndSlash(path), nil)
+			if err != nil {
+				return nil, err
+			}
+			reply, err = fsc.npch(fid).GetFile(fid, []string{}, mode, 0, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return reply.Data, err
+}
+
+// Create or write file (if perm = 0).
+func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []byte) (np.Tsize, error) {
+	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
+	p := np.Split(path)
+	dir := p[0 : len(p)-1]
+	base := []string{p[len(p)-1]}
+	fid, rest := fsc.mount.resolve(p)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "SetFile: mount -> unknown fid\n")
+		return 0, errors.New("file not found")
+
+	}
+	reply, err := fsc.npch(fid).SetFile(fid, rest, mode, perm, 0, data)
+	if err != nil {
+		// force automounting, but only on dir error
+		if strings.HasPrefix(err.Error(), "dir not found") {
+			if perm == 0 {
+				dir = p
+				base = []string{}
+			}
+			fid, err = fsc.WalkManyUmount(dir, np.EndSlash(path), nil)
+			if err != nil {
+				return 0, err
+			}
+			reply, err = fsc.npch(fid).SetFile(fid, base, mode, perm, 0, data)
+			if err != nil {
+				return 0, err
+			}
+		}
+		return 0, err
+	}
+	return reply.Count, err
 }

@@ -463,7 +463,10 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 	return nil
 }
 
-func (npc *NpConn) GetFile(sess np.Tsession, args np.Tget, rets *np.Rread) *np.Rerror {
+// Special code path for GetFile: in one RPC, GetFile() looks up the file,
+// opens it, and reads it.  If the file changes between open and read,
+// it returns a version-mismatch error. XXX maybe use a lock?
+func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rread) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nget.Inc()
 	}
@@ -476,16 +479,19 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tget, rets *np.Rread) *np.R
 	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	if !o.Perm().IsDir() {
-		return np.ErrNotfound
+	lo := o
+	if len(args.Wnames) > 0 {
+		if !o.Perm().IsDir() {
+			return np.ErrNotfound
+		}
+		d := o.(NpObjDir)
+		os, rest, err := d.Lookup(f.ctx, args.Wnames)
+		if err != nil || len(rest) != 0 {
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+		}
+		lo = os[len(os)-1]
 	}
-	d := o.(NpObjDir)
-	os, rest, err := d.Lookup(f.ctx, args.Wnames)
-	if err != nil || len(rest) != 0 {
-		return &np.Rerror{err.Error()}
-	}
-	lo := os[len(os)-1]
-	err = lo.Open(f.ctx, args.Mode)
+	err := lo.Open(f.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -493,14 +499,78 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tget, rets *np.Rread) *np.R
 	case NpObjDir:
 		return np.ErrNotFile
 	case NpObjFile:
-		b, err := i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), lo.Version())
+		rets.Data, err = i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), lo.Version())
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		rets.Data = b
 		return nil
 	default:
 		log.Fatalf("GetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
+
+	}
+	return nil
+}
+
+// Special code path for SetFile: in one RPC, SetFile() looks up the
+// file, opens/creates it, and writes it.  If the file changes between
+// open and read, it returns a version-mismatch error. XXX maybe use a
+// lock?
+func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+	var err error
+	if npc.stats != nil {
+		npc.stats.StatInfo().Nset.Inc()
+	}
+	f, ok := npc.lookup(sess, args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
+	o := f.Obj()
+	if o == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	names := args.Wnames
+	lo := o
+	if args.Perm != 0 { // create?
+		names = names[0 : len(args.Wnames)-1]
+	}
+	if len(names) > 0 {
+		if !o.Perm().IsDir() {
+			return np.ErrNotfound
+		}
+		d := o.(NpObjDir)
+		os, rest, err := d.Lookup(f.ctx, names)
+		if err != nil || len(rest) != 0 {
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+		}
+		lo = os[len(os)-1]
+	}
+	if args.Perm != 0 { // create?
+		if !lo.Perm().IsDir() {
+			return np.ErrNotfound
+		}
+		d := lo.(NpObjDir)
+		lo, err = d.Create(f.ctx, args.Wnames[len(args.Wnames)-1], args.Perm, args.Mode)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+	} else {
+		err = lo.Open(f.ctx, args.Mode)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+	}
+	switch i := lo.(type) {
+	case NpObjDir:
+		return np.ErrNotFile
+	case NpObjFile:
+		rets.Count, err = i.Write(f.ctx, args.Offset, args.Data, lo.Version())
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		return nil
+	default:
+		log.Fatalf("SetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
 
 	}
 	return nil

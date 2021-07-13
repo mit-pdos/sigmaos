@@ -90,11 +90,30 @@ func doRetry(err error) bool {
 	return false
 }
 
+func (kc *KvClerk) Set(k, v string) error {
+	shard := key2shard(k)
+	for {
+		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
+		// log.Printf("set %v\n", fn)
+		_, err := kc.fsl.SetFile(fn, []byte(v))
+		if err == nil {
+			return err
+		}
+		db.DLPrintf("CLERK", "Set: %v %v %v\n", fn, err, shard)
+		if doRetry(err) {
+			kc.readConfig()
+		} else {
+			return err
+		}
+	}
+}
+
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		err := kc.fsl.MakeFile(fn, 0777, []byte(v))
+		// log.Printf("put %v\n", fn)
+		_, err := kc.fsl.PutFile(fn, []byte(v), 0777)
 		if err == nil {
 			return err
 		}

@@ -262,12 +262,25 @@ func (npch *NpChan) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, new
 }
 
 func (npch *NpChan) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, cnt np.Tsize) (*np.Rread, error) {
-	args := np.Tget{fid, mode, offset, cnt, path}
+	args := np.Tgetfile{fid, mode, offset, cnt, path}
 	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
 	}
 	msg, ok := reply.(np.Rread)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (npch *NpChan) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, offset np.Toffset, data []byte) (*np.Rwrite, error) {
+	args := np.Tsetfile{fid, mode, perm, offset, path, data}
+	reply, err := npch.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rwrite)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}

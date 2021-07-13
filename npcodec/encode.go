@@ -50,6 +50,10 @@ func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) error {
 		msg := fcall.GetMsg().(np.Rread)
 		data = msg.Data
 		dataBuf = true
+	case np.TTsetfile:
+		msg := fcall.GetMsg().(np.Tsetfile)
+		data = msg.Data
+		dataBuf = true
 	default:
 	}
 	if dataBuf {
@@ -264,7 +268,6 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(&l); err != nil {
 				return err
 			}
-
 			elements := make([]interface{}, int(l))
 			*v = make([]string, int(l))
 			for i := range elements {

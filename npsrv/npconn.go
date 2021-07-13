@@ -124,9 +124,13 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 		reply := &np.Rrenameat{}
 		err := c.np.Renameat(sess, req, reply)
 		return *reply, err
-	case np.Tget:
+	case np.Tgetfile:
 		reply := &np.Rread{}
 		err := c.np.GetFile(sess, req, reply)
+		return *reply, err
+	case np.Tsetfile:
+		reply := &np.Rwrite{}
+		err := c.np.SetFile(sess, req, reply)
 		return *reply, err
 	default:
 		return np.ErrUnknownMsg, nil
@@ -154,7 +158,7 @@ func (c *Channel) reader() {
 			err = npcodec.Unmarshal(frame, fcall)
 		}
 		if err != nil {
-			log.Print("reader: unmarshal error: ", err)
+			log.Print("reader: unmarshal error: ", err, fcall)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			go c.serve(fcall)

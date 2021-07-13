@@ -117,7 +117,7 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 		err := c.np.Renameat(sess, req, reply)
 		return *reply, err
 	case np.Tgetfile:
-		reply := &np.Rread{}
+		reply := &np.Rgetfile{}
 		err := c.np.GetFile(sess, req, reply)
 		return *reply, err
 	case np.Tsetfile:

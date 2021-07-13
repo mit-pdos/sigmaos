@@ -214,6 +214,7 @@ const (
 	TTrenameat
 	TRrenameat
 	TTgetfile
+	TRgetfile
 	TTsetfile
 )
 
@@ -283,6 +284,8 @@ func (fct Tfcall) String() string {
 		return "Rrenameat"
 	case TTgetfile:
 		return "Tgetfile"
+	case TRgetfile:
+		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
 	default:
@@ -435,8 +438,7 @@ type Tread struct {
 }
 
 type Rread struct {
-	Version TQversion
-	Data    []byte
+	Data []byte
 }
 
 type Twrite struct {
@@ -517,6 +519,11 @@ type Tgetfile struct {
 	Wnames []string
 }
 
+type Rgetfile struct {
+	Version TQversion
+	Data    []byte
+}
+
 type Tsetfile struct {
 	Fid     Tfid
 	Mode    Tmode
@@ -558,4 +565,5 @@ func (Rwstat) Type() Tfcall    { return TRwstat }
 func (Trenameat) Type() Tfcall { return TTrenameat }
 func (Rrenameat) Type() Tfcall { return TRrenameat }
 func (Tgetfile) Type() Tfcall  { return TTgetfile }
+func (Rgetfile) Type() Tfcall  { return TRgetfile }
 func (Tsetfile) Type() Tfcall  { return TTsetfile }

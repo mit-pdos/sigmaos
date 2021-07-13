@@ -72,6 +72,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Twatchv{}, nil
 	case np.TTgetfile:
 		return np.Tgetfile{}, nil
+	case np.TRgetfile:
+		return np.Rgetfile{}, nil
 	case np.TTsetfile:
 		return np.Tsetfile{}, nil
 	}

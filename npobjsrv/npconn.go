@@ -436,7 +436,7 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 
 // Special code path for GetFile: in one RPC, GetFile() looks up the file,
 // opens it, and reads it.
-func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nget.Inc()
 	}

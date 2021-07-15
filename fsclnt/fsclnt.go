@@ -559,6 +559,8 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, np.TQversion, 
 			if err != nil {
 				return nil, np.NoV, err
 			}
+		} else {
+			return nil, np.NoV, err
 		}
 	}
 	return reply.Data, reply.Version, err
@@ -592,8 +594,9 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 			if err != nil {
 				return 0, err
 			}
+		} else {
+			return 0, err
 		}
-		return 0, err
 	}
 	return reply.Count, err
 }

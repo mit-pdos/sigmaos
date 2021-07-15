@@ -211,6 +211,37 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 	return nil
 }
 
+func (npc *NpConn) makeFid(sess np.Tsession, f *Fid, name string, o NpObj, emph bool) *Fid {
+	p := np.Copy(f.path)
+	nf := &Fid{sync.Mutex{}, append(p, name), o, o.Version(), f.ctx}
+	if emph {
+		npc.mu.Lock()
+		npc.ephemeral[o] = nf
+		npc.mu.Unlock()
+	}
+	if npc.wt != nil {
+		npc.wt.WakeupWatch(nf.path)
+		npc.wt.WakeupWatch(f.path)
+	}
+	return nf
+}
+
+func (npc *NpConn) retry(f *Fid, name string) *np.Rerror {
+	p := np.Copy(f.path)
+	p = append(p, name)
+	db.DLPrintf("9POBJ", "Watch %v\n", p)
+	npc.wt.Watch(npc, p)
+	db.DLPrintf("9POBJ", "Retry create %v\n", p)
+	// Don't retry create on closed connections
+	npc.mu.Lock()
+	if npc.closed {
+		// XXX Bettter error message?
+		return &np.Rerror{"Closed by client"}
+	}
+	npc.mu.Unlock()
+	return nil
+}
+
 func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Ncreate.Inc()
@@ -236,34 +267,16 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
-			p := np.Copy(f.path)
-			nf := &Fid{sync.Mutex{}, append(p, names[0]), o1, o1.Version(), f.ctx}
-			if args.Perm.IsEphemeral() {
-				npc.mu.Lock()
-				npc.ephemeral[o1] = nf
-				npc.mu.Unlock()
-			}
+			nf := npc.makeFid(sess, f, names[0], o1, args.Perm.IsEphemeral())
 			npc.add(sess, args.Fid, nf)
-			if npc.wt != nil {
-				npc.wt.WakeupWatch(nf.path)
-				npc.wt.WakeupWatch(f.path)
-			}
 			rets.Qid = o1.Qid()
 			break
 		} else {
-			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH { // retry?
-				p := np.Copy(f.path)
-				p = append(p, names[0])
-				db.DLPrintf("9POBJ", "Watch %v\n", p)
-				npc.wt.Watch(npc, p)
-				db.DLPrintf("9POBJ", "Retry create %v\n", p)
-				// Don't retry create on closed connections
-				npc.mu.Lock()
-				if npc.closed {
-					// XXX Bettter error message?
-					return &np.Rerror{"Closed by client"}
+			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+				err := npc.retry(f, names[0])
+				if err != nil {
+					return err
 				}
-				npc.mu.Unlock()
 			} else {
 				return &np.Rerror{err.Error()}
 			}
@@ -523,9 +536,23 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 			return np.ErrNotfound
 		}
 		d := lo.(NpObjDir)
-		lo, err = d.Create(f.ctx, args.Wnames[len(args.Wnames)-1], args.Perm, args.Mode)
-		if err != nil {
-			return &np.Rerror{err.Error()}
+		name := args.Wnames[len(args.Wnames)-1]
+		for {
+			lo, err = d.Create(f.ctx, name, args.Perm, args.Mode)
+			if err == nil {
+				npc.makeFid(sess, f, name, lo, args.Perm.IsEphemeral())
+				break
+			} else {
+				if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+					err := npc.retry(f, name)
+					if err != nil {
+						return err
+					}
+				} else {
+					return &np.Rerror{err.Error()}
+				}
+			}
+
 		}
 	} else {
 		if npc.stats != nil {

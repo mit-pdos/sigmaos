@@ -14,7 +14,7 @@ import (
 	"ulambda/memfsd"
 )
 
-const NKEYS = 100
+const NKEYS = 2 // 100
 const NCLERK = 10
 
 func TestBalance(t *testing.T) {

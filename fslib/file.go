@@ -99,6 +99,8 @@ func (fl *FsLib) WriteFile(fname string, data []byte) error {
 
 // XXX chunk
 func (fl *FsLib) MakeFile(fname string, perm np.Tperm, data []byte) error {
+	//	_, err := fl.PutFile(fname, data, perm)
+	// return err
 	fd, err := fl.Create(fname, perm, np.OWRITE)
 	if err != nil {
 		return err

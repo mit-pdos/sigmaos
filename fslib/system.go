@@ -130,7 +130,7 @@ func (s *System) Kill(srv string) error {
 
 func (s *System) Shutdown(clnt *FsLib) {
 	if s.nps3d != nil {
-		err := s.RmUnionDir(clnt, "name/s3")
+		err := s.RmUnionDir(clnt, S3)
 		if err != nil {
 			log.Printf("S3 shutdown %v\n", err)
 		}
@@ -138,7 +138,7 @@ func (s *System) Shutdown(clnt *FsLib) {
 
 	}
 	if s.npuxd != nil {
-		err := s.RmUnionDir(clnt, "name/ux")
+		err := s.RmUnionDir(clnt, UX)
 		if err != nil {
 			log.Printf("Ux shutdown %v\n", err)
 		}

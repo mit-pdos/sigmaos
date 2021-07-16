@@ -48,8 +48,9 @@ func (wt *WatchTable) Watch(npc *NpConn, path []string) {
 }
 
 // XXX maybe support wakeupOne?
-func (wt *WatchTable) WakeupWatch(path []string) {
-	p := np.Join(path)
+func (wt *WatchTable) WakeupWatch(fn, dir []string) {
+	p := np.Join(fn)
+	p1 := np.Join(dir)
 
 	// db.DLPrintf("WATCH", "WakeupWatch check for %v\n", p)
 
@@ -58,13 +59,22 @@ func (wt *WatchTable) WakeupWatch(path []string) {
 	if ok {
 		delete(wt.watches, p)
 	}
-	wt.mu.Unlock()
-	if !ok {
-		return
+	ws1, ok1 := wt.watches[p1]
+	if ok1 {
+		delete(wt.watches, p1)
 	}
-	for _, w := range ws {
-		db.DLPrintf("WATCH", "WakeupWatch %v %v\n", p, w)
-		w.ch <- true
+	wt.mu.Unlock()
+	if ok {
+		for _, w := range ws {
+			db.DLPrintf("WATCH", "WakeupWatch %v %v\n", p, w)
+			w.ch <- true
+		}
+	}
+	if ok1 {
+		for _, w := range ws1 {
+			db.DLPrintf("WATCH", "WakeupWatch %v %v\n", p1, w)
+			w.ch <- true
+		}
 	}
 }
 

@@ -84,9 +84,8 @@ func (npc *NpConn) Detach() {
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
 		if npc.wt != nil {
-			npc.wt.WakeupWatch(f.path)
 			// Wake up watches on parent dir as well
-			npc.wt.WakeupWatch(f.path[:len(f.path)-1])
+			npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
 		}
 	}
 	npc.mu.Unlock()
@@ -211,17 +210,16 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 	return nil
 }
 
-func (npc *NpConn) makeFid(sess np.Tsession, f *Fid, name string, o NpObj, emph bool) *Fid {
-	p := np.Copy(f.path)
-	nf := &Fid{sync.Mutex{}, append(p, name), o, o.Version(), f.ctx}
+func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string, o NpObj, emph bool) *Fid {
+	p := np.Copy(dir)
+	nf := &Fid{sync.Mutex{}, append(p, name), o, o.Version(), ctx}
 	if emph {
 		npc.mu.Lock()
 		npc.ephemeral[o] = nf
 		npc.mu.Unlock()
 	}
 	if npc.wt != nil {
-		npc.wt.WakeupWatch(nf.path)
-		npc.wt.WakeupWatch(f.path)
+		npc.wt.WakeupWatch(nf.path, dir)
 	}
 	return nf
 }
@@ -229,7 +227,7 @@ func (npc *NpConn) makeFid(sess np.Tsession, f *Fid, name string, o NpObj, emph 
 func (npc *NpConn) retry(f *Fid, name string) *np.Rerror {
 	p := np.Copy(f.path)
 	p = append(p, name)
-	db.DLPrintf("9POBJ", "Watch %v\n", p)
+	db.DLPrintf("9POBJ", "Retry %v\n", p)
 	npc.wt.Watch(npc, p)
 	db.DLPrintf("9POBJ", "Retry create %v\n", p)
 	// Don't retry create on closed connections
@@ -267,7 +265,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
-			nf := npc.makeFid(sess, f, names[0], o1, args.Perm.IsEphemeral())
+			nf := npc.makeFid(sess, f.ctx, f.path, names[0], o1, args.Perm.IsEphemeral())
 			npc.add(sess, args.Fid, nf)
 			rets.Qid = o1.Qid()
 			break
@@ -345,9 +343,8 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 		return &np.Rerror{err.Error()}
 	}
 	if npc.wt != nil {
-		npc.wt.WakeupWatch(f.path)
 		// Wake up watches on parent dir as well
-		npc.wt.WakeupWatch(f.path[:len(f.path)-1])
+		npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
 	}
 	// XXX delete from ephemeral table, if ephemeral
 	npc.del(sess, args.Fid)
@@ -398,7 +395,7 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.path[len(f.path)-1], args.Stat.Name)
 		f.path = dst
 		if npc.wt != nil {
-			npc.wt.WakeupWatch(dst)
+			npc.wt.WakeupWatch(dst, nil)
 		}
 	}
 	// XXX ignore other Wstat for now
@@ -439,7 +436,7 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 		if npc.wt != nil {
 			dst := np.Copy(newf.path)
 			dst = append(dst, args.NewName)
-			npc.wt.WakeupWatch(dst)
+			npc.wt.WakeupWatch(dst, nil)
 		}
 	default:
 		return np.ErrNotDir
@@ -520,6 +517,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 	if args.Perm != 0 { // create?
 		names = names[0 : len(args.Wnames)-1]
 	}
+	dname := append(f.path, names[0:len(args.Wnames)-1]...)
 	if len(names) > 0 {
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
@@ -540,7 +538,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		for {
 			lo, err = d.Create(f.ctx, name, args.Perm, args.Mode)
 			if err == nil {
-				npc.makeFid(sess, f, name, lo, args.Perm.IsEphemeral())
+				npc.makeFid(sess, f.ctx, dname, name, lo, args.Perm.IsEphemeral())
 				break
 			} else {
 				if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {

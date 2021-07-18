@@ -1,5 +1,25 @@
 #!/bin/bash
 
+usage() {
+    echo "Usage: $0 [-naive]" 1>&2
+}
+
+NAIVE=0
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    -naive)
+        shift
+        NAIVE=1
+	;;
+    *)
+	error "unexpected argument $1"
+	usage
+	exit 1
+	;;
+    esac
+done
+
 memfs_dir=/mnt/9p/fs/gg
 
 if [ ! -d "/mnt/9p/fs" ]
@@ -29,7 +49,7 @@ cd $exc_dir
 
 # Set up the thunks for GG
 echo "2. Generate Makefile"
-./gen_makefile.py 1 6 16 63 > Makefile
+./gen_makefile.py 1 2 16 63 > Makefile
 
 echo "3. Clean excamera directory"
 make clean
@@ -60,4 +80,8 @@ cp -r ./.gg $memfs_dir
 cp ./$targets $memfs_dir
 
 echo '7. Running...'
-$ulambda_dir/mk-gg-ulambda-job.sh $targets | $ulambda_dir/bin/submit
+if [[ $NAIVE -gt 0 ]]; then
+  $ulambda_dir/mk-gg-ulambda-job-naive.sh $targets | $ulambda_dir/bin/submit
+else
+  $ulambda_dir/mk-gg-ulambda-job.sh $targets | $ulambda_dir/bin/submit
+fi

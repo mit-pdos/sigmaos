@@ -1,5 +1,25 @@
 #!/bin/bash
 
+usage() {
+    echo "Usage: $0 [-naive]" 1>&2
+}
+
+NAIVE=0
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    -naive)
+        shift
+        NAIVE=1
+	;;
+    *)
+	error "unexpected argument $1"
+	usage
+	exit 1
+	;;
+    esac
+done
+
 memfs_dir=/mnt/9p/fs/gg
 
 if [ ! -d "/mnt/9p/fs" ]
@@ -48,4 +68,8 @@ cp ./$target $memfs_dir
 
 # Submit jobs to scheduler
 echo "5. Running..."
-$ulambda_dir/mk-gg-ulambda-job.sh $target | $ulambda_dir/bin/submit
+if [[ $NAIVE -gt 0 ]]; then
+  $ulambda_dir/mk-gg-ulambda-job-naive.sh $target | $ulambda_dir/bin/submit
+else
+  $ulambda_dir/mk-gg-ulambda-job.sh $target | $ulambda_dir/bin/submit
+fi

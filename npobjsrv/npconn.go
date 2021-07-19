@@ -531,7 +531,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 	}
 	if args.Perm != 0 { // create?
 		if !lo.Perm().IsDir() {
-			return np.ErrNotfound
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		d := lo.(NpObjDir)
 		name := args.Wnames[len(args.Wnames)-1]

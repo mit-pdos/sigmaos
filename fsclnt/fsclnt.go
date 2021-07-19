@@ -586,7 +586,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 				dir = p
 				base = []string{}
 			}
-			fid, err = fsc.WalkManyUmount(dir, np.EndSlash(path), nil)
+			fid, err = fsc.WalkManyUmount(dir, true, nil)
 			if err != nil {
 				return 0, err
 			}

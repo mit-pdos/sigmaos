@@ -242,20 +242,12 @@ func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rer
 	return nil
 }
 
-func (npc *NpConn) ReadV(sess np.Tsession, args np.Treadv, rets *np.Rread) *np.Rerror {
-	return nil
-}
-
 func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Write(args.Fid, args.Offset, args.Data)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
 	*rets = *reply
-	return nil
-}
-
-func (npc *NpConn) WriteV(sess np.Tsession, args np.Twritev, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
@@ -287,4 +279,12 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 
 func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return np.ErrNotSupported
+}
+
+func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+	return nil
+}
+
+func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+	return nil
 }

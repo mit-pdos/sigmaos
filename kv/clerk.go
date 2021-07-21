@@ -11,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 func key2shard(key string) int {
@@ -90,11 +91,30 @@ func doRetry(err error) bool {
 	return false
 }
 
+func (kc *KvClerk) Set(k, v string) error {
+	shard := key2shard(k)
+	for {
+		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
+		// log.Printf("set %v\n", fn)
+		_, err := kc.fsl.SetFile(fn, []byte(v), np.NoV)
+		if err == nil {
+			return err
+		}
+		db.DLPrintf("CLERK", "Set: %v %v %v\n", fn, err, shard)
+		if doRetry(err) {
+			kc.readConfig()
+		} else {
+			return err
+		}
+	}
+}
+
 func (kc *KvClerk) Put(k, v string) error {
 	shard := key2shard(k)
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		err := kc.fsl.MakeFile(fn, 0777, []byte(v))
+		// log.Printf("put %v\n", fn)
+		_, err := kc.fsl.PutFile(fn, []byte(v), 0777)
 		if err == nil {
 			return err
 		}
@@ -111,7 +131,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		b, err := kc.fsl.Get(fn)
+		b, _, err := kc.fsl.GetFile(fn)
 		db.DLPrintf("CLERK", "Get: %v %v\n", fn, err)
 		if err == nil {
 			kc.nget += 1

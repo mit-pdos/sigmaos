@@ -280,7 +280,8 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-// Rename within a single directory using Wstat
+// Rename using renameat() for across directories or using wstat()
+// for within a directory.
 func (fsc *FsClient) Rename(old string, new string) error {
 	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
@@ -304,7 +305,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	return err
 }
 
-// Rename across directories using Renameat
+// Rename across directories of a single server using Renameat
 func (fsc *FsClient) renameat(old, new string) error {
 	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
 	opath := np.Split(old)
@@ -447,7 +448,6 @@ func (fsc *FsClient) SetDirWatch(path string, f Watch) error {
 		f(path, err)
 	}()
 	return nil
-
 }
 
 func (fsc *FsClient) SetRemoveWatch(path string, f Watch) error {
@@ -476,16 +476,9 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 		fsc.mu.Unlock()
 		return nil, err
 	}
-	p := fsc.fids[fdst.fid]
-	version := p.lastqid().Version
-	v := fdst.mode&np.OVERSION == np.OVERSION
 	fsc.mu.Unlock()
 	var reply *np.Rread
-	if v {
-		reply, err = fsc.npch(fdst.fid).ReadV(fdst.fid, fdst.offset, cnt, version)
-	} else {
-		reply, err = fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
-	}
+	reply, err = fsc.npch(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
 	if err != nil {
 		return nil, err
 	}
@@ -511,16 +504,9 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 		fsc.mu.Unlock()
 		return 0, err
 	}
-	p := fsc.fids[fdst.fid]
-	version := p.lastqid().Version
-	v := fdst.mode&np.OVERSION == np.OVERSION
 	fsc.mu.Unlock()
 	var reply *np.Rwrite
-	if v {
-		reply, err = fsc.npch(fdst.fid).WriteV(fdst.fid, fdst.offset, data, version)
-	} else {
-		reply, err = fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
-	}
+	reply, err = fsc.npch(fdst.fid).Write(fdst.fid, fdst.offset, data)
 
 	if err != nil {
 		return 0, err
@@ -550,4 +536,67 @@ func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
 	}
 	fdst.offset = off
 	return nil
+}
+
+func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, np.TQversion, error) {
+	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
+	p := np.Split(path)
+	fid, rest := fsc.mount.resolve(p)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
+		return nil, np.NoV, errors.New("file not found")
+
+	}
+	reply, err := fsc.npch(fid).GetFile(fid, rest, mode, 0, 0)
+	if err != nil {
+		// force automounting, but only on dir error
+		if strings.HasPrefix(err.Error(), "dir not found") {
+			fid, err = fsc.WalkManyUmount(p, np.EndSlash(path), nil)
+			if err != nil {
+				return nil, np.NoV, err
+			}
+			reply, err = fsc.npch(fid).GetFile(fid, []string{}, mode, 0, 0)
+			if err != nil {
+				return nil, np.NoV, err
+			}
+		} else {
+			return nil, np.NoV, err
+		}
+	}
+	return reply.Data, reply.Version, err
+}
+
+// Create or write file (if perm = 0).
+func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version np.TQversion, data []byte) (np.Tsize, error) {
+	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
+	p := np.Split(path)
+	dir := p[0 : len(p)-1]
+	base := []string{p[len(p)-1]}
+	fid, rest := fsc.mount.resolve(p)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "SetFile: mount -> unknown fid\n")
+		return 0, errors.New("file not found")
+
+	}
+	reply, err := fsc.npch(fid).SetFile(fid, rest, mode, perm, 0, version, data)
+	if err != nil {
+		// force automounting, but only on dir error
+		if strings.HasPrefix(err.Error(), "dir not found") {
+			if perm == 0 {
+				dir = p
+				base = []string{}
+			}
+			fid, err = fsc.WalkManyUmount(dir, true, nil)
+			if err != nil {
+				return 0, err
+			}
+			reply, err = fsc.npch(fid).SetFile(fid, base, mode, perm, 0, version, data)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			return 0, err
+		}
+	}
+	return reply.Count, err
 }

@@ -269,7 +269,7 @@ func (fl *FsLib) WakeupExit(pid string) error {
 func (fl *FsLib) makeWaitFile(pid string) error {
 	fpath := waitFilePath(pid)
 	// Make a writable, versioned file
-	fd, err := fl.CreateFile(fpath, 0777, np.OWRITE|np.OVERSION)
+	fd, err := fl.CreateFile(fpath, 0777, np.OWRITE)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() != "EOF" {
 		return fmt.Errorf("Error on Create MakeWaitFile %v: %v", fpath, err)

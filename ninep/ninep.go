@@ -121,9 +121,6 @@ const (
 	// ulambda extensions/hacks:
 	//
 
-	// ulambda uses OVERSION for atomic read-and-write
-	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
-
 	// ulambda uses OWATCH to block a client until a file is
 	// removed.  OWATCH with Tcreate will retry the create, and
 	// and provides an atomic way to lock a file, with remove()
@@ -213,11 +210,12 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
-	TTreadv
-	TTwritev
 	TTwatchv
 	TTrenameat
 	TRrenameat
+	TTgetfile
+	TRgetfile
+	TTsetfile
 )
 
 func (fct Tfcall) String() string {
@@ -278,16 +276,18 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
-	case TTreadv:
-		return "Treadv"
-	case TTwritev:
-		return "Twritev"
 	case TTwatchv:
 		return "Twatchv"
 	case TTrenameat:
 		return "Trenameat"
 	case TRrenameat:
 		return "Rrenameat"
+	case TTgetfile:
+		return "Tgetfile"
+	case TRgetfile:
+		return "Rgetfile"
+	case TTsetfile:
+		return "Tsetfile"
 	default:
 		return "Tunknown"
 	}
@@ -437,13 +437,6 @@ type Tread struct {
 	Count  Tsize
 }
 
-type Treadv struct {
-	Fid     Tfid
-	Offset  Toffset
-	Count   Tsize
-	Version TQversion
-}
-
 type Rread struct {
 	Data []byte
 }
@@ -452,17 +445,6 @@ type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
 	Data   []byte
-}
-
-type Twritev struct {
-	Fid     Tfid
-	Offset  Toffset
-	Version TQversion
-	Data    []byte
-}
-
-func (tw Twrite) String() string {
-	return fmt.Sprintf("Twrite(%v off %v cnt %v", tw.Fid, tw.Offset, len(tw.Data))
 }
 
 type Rwrite struct {
@@ -529,6 +511,29 @@ type Trenameat struct {
 
 type Rrenameat struct{}
 
+type Tgetfile struct {
+	Fid    Tfid
+	Mode   Tmode
+	Offset Toffset
+	Count  Tsize
+	Wnames []string
+}
+
+type Rgetfile struct {
+	Version TQversion
+	Data    []byte
+}
+
+type Tsetfile struct {
+	Fid     Tfid
+	Mode    Tmode
+	Perm    Tperm
+	Version TQversion
+	Offset  Toffset
+	Wnames  []string
+	Data    []byte
+}
+
 func (Tversion) Type() Tfcall  { return TTversion }
 func (Rversion) Type() Tfcall  { return TRversion }
 func (Tauth) Type() Tfcall     { return TTauth }
@@ -546,10 +551,8 @@ func (Ropen) Type() Tfcall     { return TRopen }
 func (Tcreate) Type() Tfcall   { return TTcreate }
 func (Rcreate) Type() Tfcall   { return TRcreate }
 func (Tread) Type() Tfcall     { return TTread }
-func (Treadv) Type() Tfcall    { return TTreadv }
 func (Rread) Type() Tfcall     { return TRread }
 func (Twrite) Type() Tfcall    { return TTwrite }
-func (Twritev) Type() Tfcall   { return TTwritev }
 func (Rwrite) Type() Tfcall    { return TRwrite }
 func (Tclunk) Type() Tfcall    { return TTclunk }
 func (Rclunk) Type() Tfcall    { return TRclunk }
@@ -561,3 +564,6 @@ func (Twstat) Type() Tfcall    { return TTwstat }
 func (Rwstat) Type() Tfcall    { return TRwstat }
 func (Trenameat) Type() Tfcall { return TTrenameat }
 func (Rrenameat) Type() Tfcall { return TRrenameat }
+func (Tgetfile) Type() Tfcall  { return TTgetfile }
+func (Rgetfile) Type() Tfcall  { return TRgetfile }
+func (Tsetfile) Type() Tfcall  { return TTsetfile }

@@ -264,25 +264,6 @@ func TestSymlink3(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestVersion(t *testing.T) {
-	ts := makeTstate(t)
-
-	fd, err := ts.CreateFile("name/xxx", 0777, np.OWRITE|np.OVERSION)
-	assert.Nil(t, err, "CreateFile")
-	buf := make([]byte, 1000)
-	off, err := ts.Write(fd, buf)
-	assert.Nil(t, err, "Vwrite0")
-	assert.Equal(t, np.Tsize(1000), off)
-	err = ts.Remove("name/xxx")
-	assert.Nil(t, err, "Remove")
-	off, err = ts.Write(fd, buf)
-	assert.Equal(t, err.Error(), "Version mismatch")
-	_, err = ts.Read(fd, np.Tsize(1000))
-	assert.Equal(t, err.Error(), "Version mismatch")
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
 func TestCounter(t *testing.T) {
 	const N = 10
 
@@ -302,25 +283,17 @@ func TestCounter(t *testing.T) {
 			ntrial := 0
 			for {
 				ntrial += 1
-				fd, err := ts.Open("name/cnt", np.ORDWR|np.OVERSION)
-				assert.Equal(t, nil, err)
-				b, err := ts.Read(fd, 100)
-				if err != nil && err.Error() == "Version mismatch" {
-					continue
-				}
+				b, v, err := ts.GetFile("name/cnt")
 				assert.Equal(t, nil, err)
 				n, err := strconv.Atoi(string(b))
 				assert.Equal(t, nil, err)
 				n += 1
 				b = []byte(strconv.Itoa(n))
-				err = ts.Lseek(fd, 0)
-				assert.Equal(t, nil, err)
-				_, err = ts.Write(fd, b)
+				_, err = ts.SetFile("name/cnt", b, v)
 				if err != nil && err.Error() == "Version mismatch" {
 					continue
 				}
 				assert.Equal(t, nil, err)
-				ts.Close(fd)
 				break
 			}
 			// log.Printf("%d: tries %v\n", i, ntrial)

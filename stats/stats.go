@@ -61,6 +61,8 @@ type StatInfo struct {
 	Nstat     Tcounter
 	Nwstat    Tcounter
 	Nrenameat Tcounter
+	Nget      Tcounter
+	Nset      Tcounter
 
 	Paths map[string]int
 

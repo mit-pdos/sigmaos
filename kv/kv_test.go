@@ -14,7 +14,7 @@ import (
 	"ulambda/memfsd"
 )
 
-const NKEYS = 100
+const NKEYS = 2 // 100
 const NCLERK = 10
 
 func TestBalance(t *testing.T) {
@@ -152,6 +152,29 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 		}
 	}
 	return mfs
+}
+
+func TestGetPutSet(t *testing.T) {
+	ts := makeTstate(t)
+	ts.mfss = append(ts.mfss, ts.setup(1, true))
+
+	_, err := ts.clrks[0].Get(key(NKEYS + 1))
+	assert.NotEqual(ts.t, err, nil, "Get")
+
+	err = ts.clrks[0].Set(key(NKEYS+1), key(NKEYS+1))
+	assert.NotEqual(ts.t, err, nil, "Set")
+
+	err = ts.clrks[0].Set(key(0), key(0))
+	assert.Nil(ts.t, err, "Set")
+
+	for i := uint64(0); i < NKEYS; i++ {
+		v, err := ts.clrks[0].Get(key(i))
+		assert.Nil(ts.t, err, "Get "+key(i))
+		assert.Equal(ts.t, key(i), v, "Get")
+	}
+
+	ts.stopMemFSs()
+	ts.s.Shutdown(ts.fsl)
 }
 
 func ConcurN(t *testing.T, nclerk int) {

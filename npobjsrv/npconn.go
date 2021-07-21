@@ -2,6 +2,7 @@ package npobjsrv
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -83,9 +84,8 @@ func (npc *NpConn) Detach() {
 	for o, f := range npc.ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
 		if npc.wt != nil {
-			npc.wt.WakeupWatch(f.path)
 			// Wake up watches on parent dir as well
-			npc.wt.WakeupWatch(f.path[:len(f.path)-1])
+			npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
 		}
 	}
 	npc.mu.Unlock()
@@ -210,6 +210,36 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 	return nil
 }
 
+func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string, o NpObj, emph bool) *Fid {
+	p := np.Copy(dir)
+	nf := &Fid{sync.Mutex{}, append(p, name), o, o.Version(), ctx}
+	if emph {
+		npc.mu.Lock()
+		npc.ephemeral[o] = nf
+		npc.mu.Unlock()
+	}
+	if npc.wt != nil {
+		npc.wt.WakeupWatch(nf.path, dir)
+	}
+	return nf
+}
+
+func (npc *NpConn) retry(f *Fid, name string) *np.Rerror {
+	p := np.Copy(f.path)
+	p = append(p, name)
+	db.DLPrintf("9POBJ", "Retry %v\n", p)
+	npc.wt.Watch(npc, p)
+	db.DLPrintf("9POBJ", "Retry create %v\n", p)
+	// Don't retry create on closed connections
+	npc.mu.Lock()
+	if npc.closed {
+		// XXX Bettter error message?
+		return &np.Rerror{"Closed by client"}
+	}
+	npc.mu.Unlock()
+	return nil
+}
+
 func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Ncreate.Inc()
@@ -235,34 +265,16 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
-			p := np.Copy(f.path)
-			nf := &Fid{sync.Mutex{}, append(p, names[0]), o1, o1.Version(), f.ctx}
-			if args.Perm.IsEphemeral() {
-				npc.mu.Lock()
-				npc.ephemeral[o1] = nf
-				npc.mu.Unlock()
-			}
+			nf := npc.makeFid(sess, f.ctx, f.path, names[0], o1, args.Perm.IsEphemeral())
 			npc.add(sess, args.Fid, nf)
-			if npc.wt != nil {
-				npc.wt.WakeupWatch(nf.path)
-				npc.wt.WakeupWatch(f.path)
-			}
 			rets.Qid = o1.Qid()
 			break
 		} else {
-			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH { // retry?
-				p := np.Copy(f.path)
-				p = append(p, names[0])
-				db.DLPrintf("9POBJ", "Watch %v\n", p)
-				npc.wt.Watch(npc, p)
-				db.DLPrintf("9POBJ", "Retry create %v\n", p)
-				// Don't retry create on closed connections
-				npc.mu.Lock()
-				if npc.closed {
-					// XXX Bettter error message?
-					return &np.Rerror{"Closed by client"}
+			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+				err := npc.retry(f, names[0])
+				if err != nil {
+					return err
 				}
-				npc.mu.Unlock()
 			} else {
 				return &np.Rerror{err.Error()}
 			}
@@ -291,18 +303,6 @@ func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rer
 	return f.Read(args.Offset, args.Count, np.NoV, rets)
 }
 
-func (npc *NpConn) ReadV(sess np.Tsession, args np.Treadv, rets *np.Rread) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nreadv.Inc()
-	}
-	db.DLPrintf("9POBJ", "ReadV %v\n", args)
-	f, ok := npc.lookup(sess, args.Fid)
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	return f.Read(args.Offset, args.Count, f.vers, rets)
-}
-
 func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nwrite.Inc()
@@ -314,23 +314,6 @@ func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.
 	}
 	var err error
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
-	if err != nil {
-		return &np.Rerror{err.Error()}
-	}
-	return nil
-}
-
-func (npc *NpConn) WriteV(sess np.Tsession, args np.Twritev, rets *np.Rwrite) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nwritev.Inc()
-	}
-	db.DLPrintf("9POBJ", "WriteV %v\n", args)
-	f, ok := npc.lookup(sess, args.Fid)
-	if !ok {
-		return np.ErrUnknownfid
-	}
-	var err error
-	rets.Count, err = f.Write(args.Offset, args.Data, f.vers)
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -360,9 +343,8 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 		return &np.Rerror{err.Error()}
 	}
 	if npc.wt != nil {
-		npc.wt.WakeupWatch(f.path)
 		// Wake up watches on parent dir as well
-		npc.wt.WakeupWatch(f.path[:len(f.path)-1])
+		npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
 	}
 	// XXX delete from ephemeral table, if ephemeral
 	npc.del(sess, args.Fid)
@@ -413,7 +395,7 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.path[len(f.path)-1], args.Stat.Name)
 		f.path = dst
 		if npc.wt != nil {
-			npc.wt.WakeupWatch(dst)
+			npc.wt.WakeupWatch(dst, nil)
 		}
 	}
 	// XXX ignore other Wstat for now
@@ -454,10 +436,143 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 		if npc.wt != nil {
 			dst := np.Copy(newf.path)
 			dst = append(dst, args.NewName)
-			npc.wt.WakeupWatch(dst)
+			npc.wt.WakeupWatch(dst, nil)
 		}
 	default:
 		return np.ErrNotDir
+	}
+	return nil
+}
+
+// Special code path for GetFile: in one RPC, GetFile() looks up the file,
+// opens it, and reads it.
+func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+	if npc.stats != nil {
+		npc.stats.StatInfo().Nget.Inc()
+	}
+	f, ok := npc.lookup(sess, args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
+	o := f.Obj()
+	if o == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	lo := o
+	if len(args.Wnames) > 0 {
+		if !o.Perm().IsDir() {
+			return np.ErrNotfound
+		}
+		d := o.(NpObjDir)
+		os, rest, err := d.Lookup(f.ctx, args.Wnames)
+		if err != nil || len(rest) != 0 {
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+		}
+		lo = os[len(os)-1]
+	}
+	if npc.stats != nil {
+		npc.stats.Path(f.path)
+	}
+	err := lo.Open(f.ctx, args.Mode)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	v := lo.Version()
+	switch i := lo.(type) {
+	case NpObjDir:
+		return np.ErrNotFile
+	case NpObjFile:
+		rets.Data, err = i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), v)
+		rets.Version = v
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		return nil
+	default:
+		log.Fatalf("GetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
+
+	}
+	return nil
+}
+
+// Special code path for SetFile: in one RPC, SetFile() looks up the
+// file, opens/creates it, and writes it.
+func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+	var err error
+	if npc.stats != nil {
+		npc.stats.StatInfo().Nset.Inc()
+	}
+	f, ok := npc.lookup(sess, args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
+	o := f.Obj()
+	if o == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	names := args.Wnames
+	lo := o
+	if args.Perm != 0 { // create?
+		names = names[0 : len(args.Wnames)-1]
+	}
+	dname := append(f.path, names[0:len(args.Wnames)-1]...)
+	if len(names) > 0 {
+		if !o.Perm().IsDir() {
+			return np.ErrNotfound
+		}
+		d := o.(NpObjDir)
+		os, rest, err := d.Lookup(f.ctx, names)
+		if err != nil || len(rest) != 0 {
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+		}
+		lo = os[len(os)-1]
+	}
+	if args.Perm != 0 { // create?
+		if !lo.Perm().IsDir() {
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+		}
+		d := lo.(NpObjDir)
+		name := args.Wnames[len(args.Wnames)-1]
+		for {
+			lo, err = d.Create(f.ctx, name, args.Perm, args.Mode)
+			if err == nil {
+				npc.makeFid(sess, f.ctx, dname, name, lo, args.Perm.IsEphemeral())
+				break
+			} else {
+				if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+					err := npc.retry(f, name)
+					if err != nil {
+						return err
+					}
+				} else {
+					return &np.Rerror{err.Error()}
+				}
+			}
+
+		}
+	} else {
+		if npc.stats != nil {
+			npc.stats.Path(f.path)
+		}
+		err = lo.Open(f.ctx, args.Mode)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+	}
+	switch i := lo.(type) {
+	case NpObjDir:
+		return np.ErrNotFile
+	case NpObjFile:
+		rets.Count, err = i.Write(f.ctx, args.Offset, args.Data, args.Version)
+		if err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		return nil
+	default:
+		log.Fatalf("SetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
+
 	}
 	return nil
 }

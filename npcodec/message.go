@@ -68,12 +68,14 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Trenameat{}, nil
 	case np.TRrenameat:
 		return np.Rrenameat{}, nil
-	case np.TTwritev:
-		return np.Twritev{}, nil
-	case np.TTreadv:
-		return np.Treadv{}, nil
 	case np.TTwatchv:
 		return np.Twatchv{}, nil
+	case np.TTgetfile:
+		return np.Tgetfile{}, nil
+	case np.TRgetfile:
+		return np.Rgetfile{}, nil
+	case np.TTsetfile:
+		return np.Tsetfile{}, nil
 	}
 	return nil, fmt.Errorf("unknown message type: %v", (uint64)(typ))
 }

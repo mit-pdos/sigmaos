@@ -183,34 +183,8 @@ func (npch *NpChan) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rrea
 	return &msg, err
 }
 
-func (npch *NpChan) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, version np.TQversion) (*np.Rread, error) {
-	args := np.Treadv{fid, offset, cnt, version}
-	reply, err := npch.Call(args)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.(np.Rread)
-	if !ok {
-		return nil, errors.New("Not correct reply msg")
-	}
-	return &msg, err
-}
-
 func (npch *NpChan) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwrite, error) {
 	args := np.Twrite{fid, offset, data}
-	reply, err := npch.Call(args)
-	if err != nil {
-		return nil, err
-	}
-	msg, ok := reply.(np.Rwrite)
-	if !ok {
-		return nil, errors.New("Not correct reply msg")
-	}
-	return &msg, err
-}
-
-func (npch *NpChan) WriteV(fid np.Tfid, offset np.Toffset, data []byte, version np.TQversion) (*np.Rwrite, error) {
-	args := np.Twritev{fid, offset, version, data}
 	reply, err := npch.Call(args)
 	if err != nil {
 		return nil, err
@@ -255,6 +229,32 @@ func (npch *NpChan) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, new
 		return nil, err
 	}
 	msg, ok := reply.(np.Rrenameat)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (npch *NpChan) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, cnt np.Tsize) (*np.Rgetfile, error) {
+	args := np.Tgetfile{fid, mode, offset, cnt, path}
+	reply, err := npch.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rgetfile)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (npch *NpChan) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, offset np.Toffset, version np.TQversion, data []byte) (*np.Rwrite, error) {
+	args := np.Tsetfile{fid, mode, perm, version, offset, path, data}
+	reply, err := npch.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rwrite)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}

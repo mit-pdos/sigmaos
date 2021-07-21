@@ -92,17 +92,9 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 		reply := &np.Rread{}
 		err := c.np.Read(sess, req, reply)
 		return *reply, err
-	case np.Treadv:
-		reply := &np.Rread{}
-		err := c.np.ReadV(sess, req, reply)
-		return *reply, err
 	case np.Twrite:
 		reply := &np.Rwrite{}
 		err := c.np.Write(sess, req, reply)
-		return *reply, err
-	case np.Twritev:
-		reply := &np.Rwrite{}
-		err := c.np.WriteV(sess, req, reply)
 		return *reply, err
 	case np.Tclunk:
 		reply := &np.Rclunk{}
@@ -123,6 +115,14 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 	case np.Trenameat:
 		reply := &np.Rrenameat{}
 		err := c.np.Renameat(sess, req, reply)
+		return *reply, err
+	case np.Tgetfile:
+		reply := &np.Rgetfile{}
+		err := c.np.GetFile(sess, req, reply)
+		return *reply, err
+	case np.Tsetfile:
+		reply := &np.Rwrite{}
+		err := c.np.SetFile(sess, req, reply)
 		return *reply, err
 	default:
 		return np.ErrUnknownMsg, nil
@@ -150,7 +150,7 @@ func (c *Channel) reader() {
 			err = npcodec.Unmarshal(frame, fcall)
 		}
 		if err != nil {
-			log.Print("Serve: unmarshal error: ", err)
+			log.Print("reader: unmarshal error: ", err, fcall)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			go c.serve(fcall)

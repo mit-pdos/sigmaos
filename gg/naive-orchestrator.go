@@ -4,6 +4,7 @@ import (
 	"log"
 	"path"
 	"sync"
+	"time"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
@@ -107,6 +108,7 @@ func (orc *NaiveOrchestrator) workerThread() {
 func (orc *NaiveOrchestrator) Work() {
 	setUpRemoteDirs(orc)
 	copyRemoteDirTree(orc, path.Join(orc.cwd, ".gg"), ggRemote("", ""))
+	start := time.Now()
 	for _, target := range orc.targets {
 		targetHash := getTargetHash(orc, orc.cwd, target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
@@ -139,6 +141,9 @@ func (orc *NaiveOrchestrator) Work() {
 		}(i, &targetsWritten)
 	}
 	targetsWritten.Wait()
+	end := time.Now()
+	elapsed := end.Sub(start)
+	log.Printf("Elapsed time: %v ms", elapsed.Milliseconds())
 }
 
 func (orc *NaiveOrchestrator) updateThunkQ() {

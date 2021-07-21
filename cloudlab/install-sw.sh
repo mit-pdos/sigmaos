@@ -2,13 +2,13 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./install-sw.sh address"
+  echo "Usage: ./install-sw.sh user@address"
   exit 1
 fi
 
 echo "$0 $1"
 
-ssh arielck@$1 <<ENDSSH
+ssh $1 <<ENDSSH
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
@@ -116,6 +116,6 @@ fi
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh arielck@$1"
+echo "ssh $1"
 echo "============================="
 

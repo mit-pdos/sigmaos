@@ -60,7 +60,6 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
 		l.ld.Exiting(l.attr.Pid, err.Error())
 		return
-		//		return err
 	}
 
 	// Notify schedd that the process exited

@@ -59,6 +59,7 @@ gg init
 
 # Create initial fib thunk(s) to run
 echo "3. Generating input thunks..."
+rm -rf $fib_dir/.gg/*
 GG_DIR=$fib_dir/.gg
 ./create-thunk.sh $N ./fib ./add
 

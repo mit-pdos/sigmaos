@@ -78,7 +78,6 @@ func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []stri
 }
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {
-	log.Printf("TOH propagating %v results to: %v", toh.thunkHash, toh.outputFiles)
 	reduction := getReductionResult(toh, toh.thunkHash)
 	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {

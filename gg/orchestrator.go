@@ -3,6 +3,7 @@ package gg
 import (
 	"log"
 	"path"
+	"time"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
@@ -50,6 +51,8 @@ func (orc *Orchestrator) Exit() {
 func (orc *Orchestrator) Work() {
 	setUpRemoteDirs(orc)
 	copyRemoteDirTree(orc, path.Join(orc.cwd, ".gg"), ggRemote("", ""))
+	reductionWriters := []string{}
+	start := time.Now()
 	for i, target := range orc.targets {
 		targetHash := getTargetHash(orc, orc.cwd, target)
 		orc.targetHashes = append(orc.targetHashes, targetHash)
@@ -57,9 +60,16 @@ func (orc *Orchestrator) Work() {
 		// Ignore reductions, which aren't actually executable
 		if !isReduction(targetHash) {
 			orc.executeStaticGraph(targetHash, g)
-			spawnReductionWriter(orc, orc.targets[i], targetHash, path.Join(orc.cwd, "results"), "", []string{})
+			rwPid := spawnReductionWriter(orc, orc.targets[i], targetHash, path.Join(orc.cwd, "results"), "", []string{})
+			reductionWriters = append(reductionWriters, rwPid)
 		}
 	}
+	for _, rw := range reductionWriters {
+		orc.Wait(rw)
+	}
+	end := time.Now()
+	elapsed := end.Sub(start)
+	log.Printf("Elapsed time: %v ms", elapsed.Milliseconds())
 }
 
 func (orc *Orchestrator) ingestStaticGraph(targetHash string) *Graph {

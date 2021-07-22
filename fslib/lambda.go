@@ -160,7 +160,7 @@ func (fl *FsLib) Wait(pid string) ([]byte, error) {
 	}
 
 	// Read the exit status
-	b, err := fl.ReadFile(fpath)
+	b, _, err := fl.GetFile(fpath)
 	if err != nil {
 		log.Printf("Error reading retstat file in wait: %v, %v", fpath, err)
 		return b, err

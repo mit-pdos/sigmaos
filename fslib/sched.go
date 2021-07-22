@@ -41,7 +41,8 @@ func (fl *FsLib) SignalNewJob() error {
 }
 
 func (fl *FsLib) ReadJob(dir string, job string) ([]byte, error) {
-	return fl.ReadFile(path.Join(dir, job))
+	b, _, err := fl.GetFile(path.Join(dir, job))
+	return b, err
 }
 
 func (fl *FsLib) ReadRunQ(dir string) ([]*np.Stat, error) {
@@ -69,7 +70,8 @@ func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
 }
 
 func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
-	return fl.ReadFile(path.Join(WAITQ, pid))
+	b, _, err := fl.GetFile(path.Join(WAITQ, pid))
+	return b, err
 }
 
 func (fl *FsLib) MarkJobRunnable(pid string, t Ttype) error {
@@ -86,7 +88,7 @@ func (fl *FsLib) MarkJobRunnable(pid string, t Ttype) error {
 // Move a job from CLAIMED to RUNQ
 func (fl *FsLib) RestartJob(pid string) error {
 	// XXX read CLAIMED to find out if it is LC?
-	b, err := fl.ReadFile(path.Join(CLAIMED, pid))
+	b, _, err := fl.GetFile(path.Join(CLAIMED, pid))
 	if err != nil {
 		return nil
 	}
@@ -175,12 +177,11 @@ func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 		return []byte{}, false
 	}
 	// Create an ephemeral file to mark that locald hasn't crashed
-	fd, err := fl.CreateFile(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, np.OWRITE)
+	err = fl.MakeFile(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, []byte{})
 	if err != nil {
-		log.Printf("Error creating ephemeral claimed job file: %v", err)
+		log.Printf("Error making ephemeral claimed job file: %v", err)
 	}
-	fl.Close(fd)
-	b, err := fl.ReadFile(path.Join(CLAIMED, pid))
+	b, _, err := fl.GetFile(path.Join(CLAIMED, pid))
 	if err != nil {
 		log.Printf("Error reading claimed job: %v", err)
 		return []byte{}, false
@@ -195,14 +196,14 @@ func (fl *FsLib) modifyExitDependencies(f func(map[string]bool) bool) error {
 	for _, l := range ls {
 		// Lock the file
 		fl.LockFile(LOCKS, path.Join(WAITQ, l.Name))
-		a, err := fl.ReadFile(path.Join(WAITQ, l.Name))
+		a, _, err := fl.GetFile(path.Join(WAITQ, l.Name))
 		// May get file not found if someone renamed the file
 		if err != nil && err.Error() != "file not found" {
 			fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Error in SwapExitDependency ReadFile %v: %v", l.Name, err)
+			log.Fatalf("Error in SwapExitDependency GetFile %v: %v", l.Name, err)
 			return err
 		}
 		var attr Attr
@@ -310,7 +311,7 @@ func (fl *FsLib) writeBackRetStats(pid string, status string) {
 	fl.LockFile(LOCKS, waitFilePath(pid))
 	defer fl.UnlockFile(LOCKS, waitFilePath(pid))
 
-	b, err := fl.ReadFile(waitFilePath(pid))
+	b, _, err := fl.GetFile(waitFilePath(pid))
 	if err != nil {
 		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
 		return
@@ -336,7 +337,7 @@ func (fl *FsLib) registerRetStatFile(pid string, fpath string) {
 	// Shouldn't use versioning since we want writes & reads to be fully atomic.
 	// Specifically, if we're writing while a locald which is Exiting() is
 	// reading, they could get garbage data.
-	b, err := fl.ReadFile(waitFilePath(pid))
+	b, _, err := fl.GetFile(waitFilePath(pid))
 	if err != nil {
 		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
 		return

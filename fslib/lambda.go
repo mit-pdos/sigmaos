@@ -71,14 +71,6 @@ func (fl *FsLib) Spawn(a *Attr) error {
 	return nil
 }
 
-func (fl *FsLib) SpawnProgram(name string, args []string) error {
-	a := &Attr{}
-	a.Pid = GenPid()
-	a.Program = name
-	a.Args = args
-	return fl.Spawn(a)
-}
-
 // Spawn a no-op lambda
 func (fl *FsLib) SpawnNoOp(pid string, exitDep []string) error {
 	a := &Attr{}

@@ -270,15 +270,10 @@ func (fl *FsLib) WakeupExit(pid string) error {
 func (fl *FsLib) makeWaitFile(pid string) error {
 	fpath := waitFilePath(pid)
 	// Make a writable, versioned file
-	fd, err := fl.CreateFile(fpath, 0777, np.OWRITE)
+	err := fl.MakeFile(fpath, 0777, []byte{})
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() != "EOF" {
-		return fmt.Errorf("Error on Create MakeWaitFile %v: %v", fpath, err)
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		log.Fatalf("Error on Close MakeWaitFile %v: %v", fpath, err)
-		return err
+		return fmt.Errorf("Error on MakeFile MakeWaitFile %v: %v", fpath, err)
 	}
 	return nil
 }
@@ -298,11 +293,10 @@ func (fl *FsLib) removeWaitFile(pid string) error {
 func (fl *FsLib) makeRetStatFile() string {
 	fname := randstr.Hex(16)
 	fpath := path.Join(RET_STAT, fname)
-	fd, err := fl.CreateFile(fpath, 0777|np.DMTMP, np.OWRITE)
+	err := fl.MakeFile(fpath, 0777|np.DMTMP, []byte{})
 	if err != nil {
 		log.Printf("Error creating return status file: %v, %v", fpath, err)
 	}
-	fl.Close(fd)
 	return fpath
 }
 

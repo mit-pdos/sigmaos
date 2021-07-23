@@ -89,6 +89,7 @@ then
   net-tools \
   libprotoc-dev \
   libssl-dev \
+  git-lfs \
   htop
 
   wget 'https://golang.org/dl/go1.16.4.linux-amd64.tar.gz'
@@ -112,6 +113,7 @@ else
    ssh-agent bash -c 'sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 10'
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@github.com:ArielSzekely/gg.git'
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; git clone git@github.com:excamera/excamera-static-bins.git excamera_bin_dir'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; rm *.y4m; git checkout .'
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; sudo make -j2 install'
 fi
 ENDSSH

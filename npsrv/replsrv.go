@@ -73,7 +73,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 		}
 		// Set up op logging if necessary
 		if config.LogOps {
-			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, []byte(""))
+			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
 			if err != nil {
 				log.Fatalf("Error making log file: %v", err)
 			}

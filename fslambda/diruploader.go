@@ -8,6 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 type DirUploader struct {
@@ -52,7 +53,7 @@ func (up *DirUploader) Work() {
 			if err != nil {
 				db.DPrintf("Mkfile dir uploader [%v]\n", dstPath)
 				// XXX Perms?
-				err = up.FsLib.MakeFile(dstPath, 0777, contents)
+				err = up.FsLib.MakeFile(dstPath, 0777, np.OWRITE, contents)
 				if err != nil {
 					// XXX This only occurs if someone else has written the file since we
 					// last checked if it existed. Since it isn't a reduction (by the

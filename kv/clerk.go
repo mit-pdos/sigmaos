@@ -114,7 +114,7 @@ func (kc *KvClerk) Put(k, v string) error {
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
 		// log.Printf("put %v\n", fn)
-		_, err := kc.fsl.PutFile(fn, []byte(v), 0777)
+		_, err := kc.fsl.PutFile(fn, []byte(v), 0777, np.OWRITE)
 		if err == nil {
 			return err
 		}

@@ -76,8 +76,8 @@ func (fl *FsLib) SetFile(fname string, data []byte, version np.TQversion) (np.Ts
 	return fl.FsClient.SetFile(fname, np.OWRITE, 0, version, data)
 }
 
-func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, perm, np.NoV, data)
+func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode) (np.Tsize, error) {
+	return fl.FsClient.SetFile(fname, mode|np.OWRITE, perm, np.NoV, data)
 }
 
 // XXX chunk
@@ -98,8 +98,8 @@ func (fl *FsLib) WriteFile(fname string, data []byte) error {
 }
 
 // XXX chunk
-func (fl *FsLib) MakeFile(fname string, perm np.Tperm, data []byte) error {
-	_, err := fl.PutFile(fname, data, perm)
+func (fl *FsLib) MakeFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) error {
+	_, err := fl.PutFile(fname, data, perm, mode)
 	return err
 }
 
@@ -174,7 +174,7 @@ func (fl *FsLib) MakeFileJson(fname string, perm np.Tperm, i interface{}) error 
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	return fl.MakeFile(fname, perm, data)
+	return fl.MakeFile(fname, perm, np.OWRITE, data)
 }
 
 func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
@@ -186,7 +186,7 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 }
 
 func (fl *FsLib) MakeFileAtomic(fname string, perm np.Tperm, data []byte) error {
-	err := fl.MakeFile(fname+"#", 0777, data)
+	err := fl.MakeFile(fname+"#", 0777, np.OWRITE, data)
 	if err != nil {
 		return err
 	}

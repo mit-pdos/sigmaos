@@ -257,7 +257,7 @@ func (ld *LocalD) checkWaitingLambdas() {
  *    because they did not exist at spawn time (and were pruned).
  *
  * *** For now, PairDep lambdas are marked as runnable in fslib.Started
- * ***For now, we assume the three "types" described above are mutually
+ * *** For now, we assume the three "types" described above are mutually
  *    exclusive***
  */
 func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
@@ -405,7 +405,6 @@ func (ld *LocalD) setCoreAffinity() {
 func (ld *LocalD) Worker(workerId uint) {
 	ld.SignalNewJob()
 
-	// TODO pin to a core
 	for !ld.readDone() {
 		b, err := ld.getLambda()
 		// If no job was on the runq, try and move some from waitq -> runq

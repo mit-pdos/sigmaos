@@ -16,6 +16,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 const (
@@ -91,7 +92,7 @@ func writeConfig(ts *Tstate, replicas []*Replica) {
 		addrs = append(addrs, r.addr)
 	}
 	config := strings.Join(addrs, "\n")
-	err := ts.MakeFile(ts.configPath9p, 0777, []byte(config))
+	err := ts.MakeFile(ts.configPath9p, 0777, np.OWRITE, []byte(config))
 	assert.Nil(ts.t, err, "Failed to make config file: %v", ts.configPath9p)
 }
 
@@ -210,7 +211,7 @@ func ChainSimple(ts *Tstate) {
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
 		f_path := path.Join(ts.symlinkPath9p, i_str) + "/"
-		err := ts.MakeFile(f_path, 0777, []byte(i_str))
+		err := ts.MakeFile(f_path, 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile %v in head", f_path)
 	}
 
@@ -264,7 +265,7 @@ func ChainCrashMiddle(ts *Tstate) {
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
@@ -323,7 +324,7 @@ func ChainCrashHead(ts *Tstate) {
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
@@ -383,7 +384,7 @@ func ChainCrashTail(ts *Tstate) {
 	log.Printf("Writing some files...")
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(i)
-		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	log.Printf("Done writing files...")
@@ -430,7 +431,7 @@ func basicClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *sy
 	start.Wait()
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
-		err := fsl.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
+		err := fsl.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	for i := 0; i < n_files; i++ {
@@ -607,7 +608,7 @@ func pausedClient(ts *Tstate, replicas []*Replica, id int, n_files int, start *s
 	start.Wait()
 	for i := 0; i < n_files; i++ {
 		i_str := strconv.Itoa(id*n_files + i)
-		err := fsl.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, []byte(i_str))
+		err := fsl.MakeFile(path.Join(ts.symlinkPath9p, i_str), 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile in head")
 	}
 	writes.Done()
@@ -766,7 +767,7 @@ func setupRenameableFiles(ts *Tstate, n_clients int) {
 	for i := 0; i < n_clients; i++ {
 		i_str := strconv.Itoa(i)
 		fname := i_str + "_0"
-		err := ts.MakeFile(path.Join(ts.symlinkPath9p, fname), 0777, []byte(i_str))
+		err := ts.MakeFile(path.Join(ts.symlinkPath9p, fname), 0777, np.OWRITE, []byte(i_str))
 		assert.Nil(ts.t, err, "Failed to MakeFile Renameable File: %v", err)
 	}
 }

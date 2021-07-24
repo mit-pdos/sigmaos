@@ -177,7 +177,7 @@ func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 		return []byte{}, false
 	}
 	// Create an ephemeral file to mark that locald hasn't crashed
-	err = fl.MakeFile(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, []byte{})
+	err = fl.MakeFile(path.Join(CLAIMED_EPH, pid), 0777|np.DMTMP, np.OWRITE, []byte{})
 	if err != nil {
 		log.Printf("Error making ephemeral claimed job file: %v", err)
 	}
@@ -270,7 +270,7 @@ func (fl *FsLib) WakeupExit(pid string) error {
 func (fl *FsLib) makeWaitFile(pid string) error {
 	fpath := waitFilePath(pid)
 	// Make a writable, versioned file
-	err := fl.MakeFile(fpath, 0777, []byte{})
+	err := fl.MakeFile(fpath, 0777, np.OWRITE, []byte{})
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() != "EOF" {
 		return fmt.Errorf("Error on MakeFile MakeWaitFile %v: %v", fpath, err)
@@ -293,7 +293,7 @@ func (fl *FsLib) removeWaitFile(pid string) error {
 func (fl *FsLib) makeRetStatFile() string {
 	fname := randstr.Hex(16)
 	fpath := path.Join(RET_STAT, fname)
-	err := fl.MakeFile(fpath, 0777|np.DMTMP, []byte{})
+	err := fl.MakeFile(fpath, 0777|np.DMTMP, np.OWRITE, []byte{})
 	if err != nil {
 		log.Printf("Error creating return status file: %v, %v", fpath, err)
 	}

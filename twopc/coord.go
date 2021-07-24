@@ -59,7 +59,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	db.DLPrintf("COORD", "New coord %v", args)
 
-	if err := cd.MakeFile(COORD, 0777|np.DMTMP, nil); err != nil {
+	if err := cd.MakeFile(COORD, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 

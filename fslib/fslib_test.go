@@ -39,7 +39,7 @@ func TestRemove(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, d)
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove(fn)
@@ -54,7 +54,7 @@ func TestRemovePath(t *testing.T) {
 	assert.Equal(t, nil, err)
 	fn := "name/d1/f"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, d)
+	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	d1, err := ts.ReadFile(fn)
@@ -76,7 +76,7 @@ func TestRename(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, d)
+	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
@@ -97,7 +97,7 @@ func TestRenameAndRemove(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, d)
+	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
@@ -120,7 +120,7 @@ func TestCopy(t *testing.T) {
 	d := []byte("hello")
 	src := "name/f"
 	dst := "name/g"
-	err := ts.MakeFile(src, 0777, d)
+	err := ts.MakeFile(src, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.CopyFile(src, dst)
@@ -150,7 +150,7 @@ func TestSymlink1(t *testing.T) {
 	targetPath := "name/ux/~ip/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
-	err = ts.MakeFile(targetPath, 0777, []byte(contents))
+	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -185,7 +185,7 @@ func TestSymlink2(t *testing.T) {
 	ts.Remove(targetDirPath)
 	err = ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	err = ts.MakeFile(targetPath, 0777, []byte(contents))
+	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -229,7 +229,7 @@ func TestSymlink3(t *testing.T) {
 	ts.Remove(targetDirPath)
 	err = ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	err = ts.MakeFile(targetPath, 0777, []byte(contents))
+	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -378,7 +378,7 @@ func TestWatchRemove(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/w"
-	err := ts.MakeFile(fn, 0777, nil)
+	err := ts.MakeFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
@@ -407,7 +407,7 @@ func TestWatchCreate(t *testing.T) {
 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
 	}
 
-	err = ts.MakeFile(fn, 0777, nil)
+	err = ts.MakeFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -428,7 +428,7 @@ func TestWatchDir(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 
-	err = ts.MakeFile(fn+"/x", 0777, nil)
+	err = ts.MakeFile(fn+"/x", 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -445,7 +445,7 @@ func TestConcur(t *testing.T) {
 			for j := 0; j < 1000; j++ {
 				fn := "name/f" + strconv.Itoa(i)
 				data := []byte(fn)
-				err := ts.MakeFile(fn, 0777, data)
+				err := ts.MakeFile(fn, 0777, np.OWRITE, data)
 				assert.Equal(t, nil, err)
 				d, err := ts.ReadFile(fn)
 				assert.Equal(t, nil, err)

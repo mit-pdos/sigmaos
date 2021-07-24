@@ -36,7 +36,7 @@ func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Par
 	p.txn = txn
 	p.opcode = opcode
 
-	if err := p.MakeFile(DIR2PC+"/"+p.me, 0777|np.DMTMP, nil); err != nil {
+	if err := p.MakeFile(DIR2PC+"/"+p.me, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
@@ -83,7 +83,7 @@ func (p *Participant) prepared(status string) {
 func (p *Participant) committed() {
 	fn := commitName(p.me)
 	db.DLPrintf("PART", "Committed %v\n", fn)
-	err := p.MakeFile(fn, 0777, []byte("OK"))
+	err := p.MakeFile(fn, 0777, np.OWRITE, []byte("OK"))
 	if err != nil {
 		db.DLPrintf("PART", "Committed: make file %v failed %v\n", fn, err)
 	}

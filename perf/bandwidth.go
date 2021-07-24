@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 const (
@@ -148,7 +149,7 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 
 func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 	// setup
-	err := t.MakeFile(fname, 0777, []byte{})
+	err := t.MakeFile(fname, 0777, np.OWRITE, []byte{})
 	if err != nil && err.Error() != "Name exists" {
 		log.Fatalf("Error creating file: %v", err)
 	}

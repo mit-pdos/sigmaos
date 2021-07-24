@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	np "ulambda/ninep"
 	"ulambda/twopc"
 )
 
@@ -63,7 +64,7 @@ func (p *Part2pc) copyFile(fn1, fn2 string) error {
 	if err != nil {
 		log.Fatalf("ReadFile %v err %v\n", fn1, err)
 	}
-	err = p.MakeFile(fn2, 0777, b)
+	err = p.MakeFile(fn2, 0777, np.OWRITE, b)
 	if err != nil {
 		log.Fatalf("MakeFile %v err %v\n", fn2, err)
 	}

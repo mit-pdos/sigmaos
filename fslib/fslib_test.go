@@ -219,7 +219,6 @@ func TestSymlink3(t *testing.T) {
 	assert.Nil(t, err, "Error reading ux dir")
 
 	uxip := uxs[0].Name
-	log.Printf("IP: %v", uxip)
 
 	// Make a target file
 	targetDirPath := "name/ux/" + uxip + "/tdir"
@@ -357,7 +356,7 @@ func TestLock(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fsl := MakeFsLib("fslibtest" + strconv.Itoa(i))
-			_, err := fsl.CreateFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC)
+			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -371,6 +370,32 @@ func TestLock(t *testing.T) {
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestLock1(t *testing.T) {
+	ts := makeTstate(t)
+	ch := make(chan int)
+	err := ts.Mkdir("name/locks", 0777)
+	assert.Equal(t, nil, err)
+	// Lock the file
+	err = ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	assert.Equal(t, nil, err)
+	fsl := MakeFsLib("fslibtest0")
+	go func() {
+		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+		assert.Equal(t, nil, err)
+		ch <- 0
+	}()
+	time.Sleep(time.Second * 2)
+	err = ts.Remove("name/locks/test-lock")
+	assert.Equal(t, nil, err)
+	go func() {
+		time.Sleep(2 * time.Second)
+		ch <- 1
+	}()
+	i := <-ch
+	assert.Equal(t, 0, i)
 	ts.s.Shutdown(ts.FsLib)
 }
 

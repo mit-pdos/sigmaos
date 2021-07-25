@@ -224,8 +224,8 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string
 	return nf
 }
 
-func (npc *NpConn) retry(f *Fid, name string) *np.Rerror {
-	p := np.Copy(f.path)
+func (npc *NpConn) retry(dname []string, name string) *np.Rerror {
+	p := np.Copy(dname)
 	p = append(p, name)
 	db.DLPrintf("9POBJ", "Retry %v\n", p)
 	npc.wt.Watch(npc, p)
@@ -271,7 +271,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 			break
 		} else {
 			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
-				err := npc.retry(f, names[0])
+				err := npc.retry(f.path, names[0])
 				if err != nil {
 					return err
 				}
@@ -343,6 +343,7 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 		return &np.Rerror{err.Error()}
 	}
 	if npc.wt != nil {
+		db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
 		// Wake up watches on parent dir as well
 		npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
 	}
@@ -542,7 +543,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 				break
 			} else {
 				if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
-					err := npc.retry(f, name)
+					err := npc.retry(dname, name)
 					if err != nil {
 						return err
 					}

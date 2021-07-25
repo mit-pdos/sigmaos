@@ -52,7 +52,7 @@ func (wt *WatchTable) WakeupWatch(fn, dir []string) {
 	p := np.Join(fn)
 	p1 := np.Join(dir)
 
-	// db.DLPrintf("WATCH", "WakeupWatch check for %v\n", p)
+	// db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", p, wt.watches)
 
 	wt.mu.Lock()
 	ws, ok := wt.watches[p]

@@ -155,7 +155,12 @@ func (s *System) Shutdown(clnt *FsLib) {
 	// Shutdown named last
 	err := clnt.Remove(NAMED + "/")
 	if err != nil {
-		log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
+		// XXX sometimes we get EOF....
+		if err.Error() == "EOF" {
+			log.Printf("Remove %v shutdown %v\n", NAMED, err)
+		} else {
+			log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
+		}
 	}
 	s.named.Wait()
 }

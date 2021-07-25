@@ -39,6 +39,11 @@ type Attr struct {
 	Ncore   Tcore
 }
 
+type WaitFile struct {
+	Started      bool
+	RetStatFiles []string
+}
+
 const (
 	LOCALD_ROOT  = "name/localds"
 	NO_OP_LAMBDA = "no-op-lambda"
@@ -96,13 +101,14 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
  * PairDep-based lambdas are runnable only if they are the producer (whoever
  * claims and runs the producer will also start the consumer, so we disallow
  * unilaterally claiming the consumer for now), and only once all of their
- * consumers have been spawned. For now we assume that
+ * consumers have been started. For now we assume that
  * consumers only have one producer, and the roles of producer and consumer
  * are mutually exclusive. We also expect (though not strictly necessary)
  * that producers only have one consumer each. If this is no longer the case,
  * we should handle oversubscription more carefully.
  */
 func (fl *FsLib) Started(pid string) error {
+	fl.setWaitFileStarted(pid, true)
 	fl.markConsumersRunnable(pid)
 	return nil
 }

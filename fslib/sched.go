@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/thanhpk/randstr"
@@ -269,8 +268,14 @@ func (fl *FsLib) WakeupExit(pid string) error {
 
 func (fl *FsLib) makeWaitFile(pid string) error {
 	fpath := waitFilePath(pid)
+	var wf WaitFile
+	wf.Started = false
+	b, err := json.Marshal(wf)
+	if err != nil {
+		log.Printf("Error marshalling waitfile: %v", err)
+	}
 	// Make a writable, versioned file
-	err := fl.MakeFile(fpath, 0777, np.OWRITE, []byte{})
+	err = fl.MakeFile(fpath, 0777, np.OWRITE, b)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() != "EOF" {
 		return fmt.Errorf("Error on MakeFile MakeWaitFile %v: %v", fpath, err)
@@ -286,6 +291,40 @@ func (fl *FsLib) removeWaitFile(pid string) error {
 		return err
 	}
 	return nil
+}
+
+func (fl *FsLib) setWaitFileStarted(pid string, started bool) {
+	fl.LockFile(LOCKS, waitFilePath(pid))
+	defer fl.UnlockFile(LOCKS, waitFilePath(pid))
+
+	// Get the current contents of the file & its version
+	b1, _, err := fl.GetFile(waitFilePath(pid))
+	if err != nil {
+		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
+		return
+	}
+	var wf WaitFile
+	err = json.Unmarshal(b1, &wf)
+	if err != nil {
+		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
+		return
+	}
+	wf.Started = started
+	b2, err := json.Marshal(wf)
+	if err != nil {
+		log.Printf("Error marshalling waitfile: %v", err)
+		return
+	}
+	// XXX Dirty hack since we don't have a truncate mode at the moment... Without
+	// this we break unmarshalling when setting to true, since we may end with an
+	// extra '}' at the end of the file
+	if started {
+		b2 = append(b2, ' ')
+	}
+	_, err = fl.SetFile(waitFilePath(pid), b2, np.NoV)
+	if err != nil {
+		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
+	}
 }
 
 // Create a randomly-named ephemeral file to mark into which the return status
@@ -310,8 +349,12 @@ func (fl *FsLib) writeBackRetStats(pid string, status string) {
 		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
 		return
 	}
-	paths := strings.Split(strings.TrimSpace(string(b)), "\n")
-	for _, p := range paths {
+	var wf WaitFile
+	err = json.Unmarshal(b, &wf)
+	if err != nil {
+		log.Printf("Error unmarshalling waitfile: %v, %v, %v", string(b), wf, err)
+	}
+	for _, p := range wf.RetStatFiles {
 		if len(p) > 0 {
 			fl.WriteFile(p, []byte(status))
 		}
@@ -323,22 +366,25 @@ func (fl *FsLib) registerRetStatFile(pid string, fpath string) {
 	fl.LockFile(LOCKS, waitFilePath(pid))
 	defer fl.UnlockFile(LOCKS, waitFilePath(pid))
 
-	// Check if the wait file still exists
-	_, err := fl.Stat(waitFilePath(pid))
-	if err != nil {
-		return
-	}
-	// Shouldn't use versioning since we want writes & reads to be fully atomic.
-	// Specifically, if we're writing while a locald which is Exiting() is
-	// reading, they could get garbage data.
-	b, _, err := fl.GetFile(waitFilePath(pid))
+	// Get the current contents of the file & its version
+	b1, _, err := fl.GetFile(waitFilePath(pid))
 	if err != nil {
 		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
 		return
 	}
-	b = append(b, '\n')
-	b = append(b, []byte(fpath)...)
-	err = fl.WriteFile(waitFilePath(pid), b)
+	var wf WaitFile
+	err = json.Unmarshal(b1, &wf)
+	if err != nil {
+		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
+		return
+	}
+	wf.RetStatFiles = append(wf.RetStatFiles, fpath)
+	b2, err := json.Marshal(wf)
+	if err != nil {
+		log.Printf("Error marshalling waitfile: %v", err)
+		return
+	}
+	_, err = fl.SetFile(waitFilePath(pid), b2, np.NoV)
 	if err != nil {
 		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
 	}

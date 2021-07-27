@@ -18,5 +18,5 @@ func main() {
 		os.Exit(1)
 	}
 	bl.Balance()
-	// Exit happens in TwoPC()
+	os.Exit(0)
 }

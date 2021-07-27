@@ -109,7 +109,6 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
  */
 func (fl *FsLib) Started(pid string) error {
 	fl.setWaitFileStarted(pid, true)
-	fl.markConsumersRunnable(pid)
 	return nil
 }
 

@@ -255,8 +255,11 @@ func (ld *LocalD) checkWaitingLambdas() {
  * 2. ExitDep-based lambdas are runnable after all entries in the ExitDep map
  *    are true, whether that be because the dependencies explicitly exited or
  *    because they did not exist at spawn time (and were pruned).
+ * 3. PairDep-based lambdas are runnable immediately if they are the producer,
+ *    and after all producers have started running if they are the consumer. For
+ *    now, we assume that the roles "Producer" and "Consumer" are mutually
+ *    exclusive.
  *
- * *** For now, PairDep lambdas are marked as runnable in fslib.Started
  * *** For now, we assume the three "types" described above are mutually
  *    exclusive***
  */
@@ -287,13 +290,19 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 	}
 
 	// If this is a PairDep-based labmda
-	for _, pair := range attr.PairDep {
-		if attr.Pid == pair.Consumer {
-			return false, fslib.T_DEF
-		} else if attr.Pid == pair.Producer {
-			return true, attr.Type
-		} else {
-			log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
+	if len(attr.PairDep) > 0 {
+		// Update its pair deps
+		// XXX CONTINUE HERE
+		//		ld.updatePDeps(attr.Pid)
+		for _, pair := range attr.PairDep {
+			if attr.Pid == pair.Producer {
+				return true, attr.Type
+			} else if attr.Pid == pair.Consumer {
+				// Someone will retry
+				return false, fslib.T_DEF
+			} else {
+				log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
+			}
 		}
 	}
 
@@ -304,21 +313,6 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 		}
 	}
 	return true, attr.Type
-}
-
-// XXX unused?
-func (ld *LocalD) claimConsumers(consumers []string) [][]byte {
-	bs := [][]byte{}
-	for _, c := range consumers {
-		if b, ok := ld.ClaimWaitQJob(c); ok {
-			bs = append(bs, b)
-		} else {
-			runq, _ := ld.ReadRunQ(fslib.RUNQ)
-			waitq, _ := ld.ReadWaitQ()
-			log.Fatalf("Couldn't claim consumer job: %v, runq:%v, waitq:%v", c, runq, waitq)
-		}
-	}
-	return bs
 }
 
 func (ld *LocalD) spawnConsumers(bs [][]byte) []*Lambda {

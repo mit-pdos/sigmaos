@@ -137,35 +137,58 @@ func (fl *FsLib) ClaimWaitQJob(pid string) ([]byte, bool) {
 	return fl.claimJob(WAITQ, pid)
 }
 
-func (fl *FsLib) markConsumersRunnable(pid string) {
-	ls, err := fl.ReadWaitQ()
+func (fl *FsLib) updatePDeps(pid string) {
+	fl.LockFile(LOCKS, path.Join(WAITQ, pid))
+	defer fl.UnlockFile(LOCKS, path.Join(WAITQ, pid))
+
+	b, _, err := fl.GetFile(path.Join(WAITQ, pid))
 	if err != nil {
-		log.Printf("Error reading WaitQ in markConsumersRunnable: %v", err)
+		log.Printf("Error getting file in updatePDeps: %v", err)
+		return
 	}
-	for _, l := range ls {
-		a, err := fl.ReadWaitQJob(l.Name)
-		if err != nil {
-			continue
-		}
-		var attr Attr
-		err = json.Unmarshal(a, &attr)
-		if err != nil {
-			log.Printf("Error unmarshalling in markConsumersRunnable: %v", err)
-		}
-		for _, pair := range attr.PairDep {
-			if attr.Pid == pair.Producer {
-				break
-			} else if attr.Pid == pair.Consumer {
-				if pair.Producer == pid {
-					fl.MarkJobRunnable(attr.Pid, attr.Type)
-					break
-				}
-			} else {
-				log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
-			}
-		}
+	var a Attr
+	err = json.Unmarshal(b, &a)
+	if err != nil {
+		log.Printf("Couldn't unmarshal job in updatePDeps %v: %v", string(b), err)
 	}
+
+	// Remove here
+	//	for _, dep := range a.PairDeps {
+	//		if fl.hasStarted(dep.Producer) {
+	//			// XXX CONTINUE HERE
+	//		}
+	//	}
 }
+
+//func (fl *FsLib) markConsumersRunnable(pid string) {
+//	ls, err := fl.ReadWaitQ()
+//	if err != nil {
+//		log.Printf("Error reading WaitQ in markConsumersRunnable: %v", err)
+//	}
+//	for _, l := range ls {
+//		a, err := fl.ReadWaitQJob(l.Name)
+//		if err != nil {
+//			continue
+//		}
+//		var attr Attr
+//		err = json.Unmarshal(a, &attr)
+//		if err != nil {
+//			log.Printf("Error unmarshalling in markConsumersRunnable: %v", err)
+//		}
+//		for _, pair := range attr.PairDep {
+//			if attr.Pid == pair.Producer {
+//				break
+//			} else if attr.Pid == pair.Consumer {
+//				if pair.Producer == pid {
+//					fl.MarkJobRunnable(attr.Pid, attr.Type)
+//					break
+//				}
+//			} else {
+//				log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
+//			}
+//		}
+//	}
+//}
 
 func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore

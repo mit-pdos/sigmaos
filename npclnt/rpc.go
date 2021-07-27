@@ -131,6 +131,19 @@ func (npch *NpChan) Remove(fid np.Tfid) error {
 	return err
 }
 
+func (npch *NpChan) RemoveFile(fid np.Tfid, wnames []string) error {
+	args := np.Tremovefile{fid, wnames}
+	reply, err := npch.Call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Rremove)
+	if !ok {
+		return errors.New("Not correct reply msg")
+	}
+	return err
+}
+
 func (npch *NpChan) Clunk(fid np.Tfid) error {
 	args := np.Tclunk{fid}
 	reply, err := npch.Call(args)

@@ -17,6 +17,7 @@ type NpAPI interface {
 	Read(np.Tsession, np.Tread, *np.Rread) *np.Rerror
 	Write(np.Tsession, np.Twrite, *np.Rwrite) *np.Rerror
 	Remove(np.Tsession, np.Tremove, *np.Rremove) *np.Rerror
+	RemoveFile(np.Tsession, np.Tremovefile, *np.Rremove) *np.Rerror
 	Stat(np.Tsession, np.Tstat, *np.Rstat) *np.Rerror
 	Wstat(np.Tsession, np.Twstat, *np.Rwstat) *np.Rerror
 	Renameat(np.Tsession, np.Trenameat, *np.Rrenameat) *np.Rerror

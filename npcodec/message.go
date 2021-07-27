@@ -54,6 +54,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Rclunk{}, nil // no response body
 	case np.TTremove:
 		return np.Tremove{}, nil
+	case np.TTremovefile:
+		return np.Tremovefile{}, nil
 	case np.TRremove:
 		return np.Rremove{}, nil
 	case np.TTstat:

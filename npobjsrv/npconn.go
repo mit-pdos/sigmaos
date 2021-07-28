@@ -352,6 +352,52 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	return nil
 }
 
+func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+	if npc.stats != nil {
+		npc.stats.StatInfo().Nremove.Inc()
+	}
+	f, ok := npc.lookup(sess, args.Fid)
+	if !ok {
+		return np.ErrUnknownfid
+	}
+	o := f.Obj()
+	if o == nil {
+		return &np.Rerror{"Closed by server"}
+	}
+	lo := o
+	if len(f.path) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == "." { // exit?
+		db.DLPrintf("9POBJ", "Done\n")
+		npc.osrv.Done()
+		return nil
+	}
+	if len(args.Wnames) > 0 {
+		if !o.Perm().IsDir() {
+			return np.ErrNotfound
+		}
+		d := o.(NpObjDir)
+		os, rest, err := d.Lookup(f.ctx, args.Wnames)
+		if err != nil || len(rest) != 0 {
+			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+		}
+		lo = os[len(os)-1]
+	}
+	if npc.stats != nil {
+		npc.stats.Path(f.path)
+	}
+	fname := append(f.path, args.Wnames[0:len(args.Wnames)]...)
+	dname := append(f.path, args.Wnames[0:len(args.Wnames)-1]...)
+	err := lo.Remove(f.ctx, fname[len(fname)-1])
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
+	if npc.wt != nil {
+		// Wake up watches on parent dir as well
+		npc.wt.WakeupWatch(fname, dname)
+	}
+	// XXX delete from ephemeral table, if ephemeral
+	return nil
+}
+
 func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
 	if npc.stats != nil {
 		npc.stats.StatInfo().Nstat.Inc()

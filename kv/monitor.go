@@ -63,7 +63,7 @@ func spawnBalancer(fsl *fslib.FsLib, opcode, pid1 string) string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/balancer"
 	a.Args = []string{opcode, pid1}
-	a.PairDep = nil
+	a.PairDep = []fslib.PDep{fslib.PDep{pid1, a.Pid}}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
 	fsl.Spawn(&a)

@@ -370,11 +370,27 @@ func (fsc *FsClient) Remove(name string) error {
 	if len(rest) == 0 && !np.EndSlash(name) { // mount point
 		return fsc.removeMount(path)
 	} else {
-		fid, err := fsc.walkMany(path, np.EndSlash(name), nil)
-		if err != nil {
-			return err
+		fid, rest := fsc.mount.resolve(path)
+		if fid == np.NoFid {
+			db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
+			return errors.New("file not found")
+
 		}
-		return fsc.npch(fid).Remove(fid)
+		if np.EndSlash(name) {
+			rest = append(rest, ".")
+		}
+		err := fsc.npch(fid).RemoveFile(fid, rest)
+		if err != nil {
+			// force automounting, but only on dir error
+			if strings.HasPrefix(err.Error(), "dir not found") {
+				fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
+				if err != nil {
+					return err
+				}
+				err = fsc.npch(fid).Remove(fid)
+			}
+		}
+		return err
 	}
 }
 

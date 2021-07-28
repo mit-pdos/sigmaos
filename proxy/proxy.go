@@ -259,6 +259,10 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	return nil
 }
 
+func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+	return nil
+}
+
 func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Stat(args.Fid)
 	if err != nil {

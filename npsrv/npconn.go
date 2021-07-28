@@ -104,6 +104,10 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 		reply := &np.Rremove{}
 		err := c.np.Remove(sess, req, reply)
 		return *reply, err
+	case np.Tremovefile:
+		reply := &np.Rremove{}
+		err := c.np.RemoveFile(sess, req, reply)
+		return *reply, err
 	case np.Tstat:
 		reply := &np.Rstat{}
 		err := c.np.Stat(sess, req, reply)

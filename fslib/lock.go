@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	LOCKS   = "name/locks"
-	WRITING = "WRITE-IN-PROGRESS."
+	LOCKS = "name/locks"
 )
 
 func LockName(f string) string {

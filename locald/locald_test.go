@@ -391,13 +391,12 @@ func TestConcurrentLambdas(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// Spawn a LC lambda
-func TestLcLambda(t *testing.T) {
+func TestEvict(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "bin/compute", "", []string{}, nil, nil, nil, 1,
-		fslib.T_LC, fslib.C_DEF}
+	a := &fslib.Attr{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil, nil, nil, 0,
+		fslib.T_DEF, fslib.C_DEF}
 	err := ts.Spawn(a)
 
 	assert.Nil(t, err, "Spawn")

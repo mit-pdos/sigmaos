@@ -9,15 +9,15 @@ import (
 
 	"github.com/thanhpk/randstr"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
 const (
-	RUNQ    = "name/runq"
-	RUNQLC  = "name/runqlc"
-	WAITQ   = "name/waitq"
-	CLAIMED = "name/claimed"
-	// XXX TODO: handle claimed_eph in a special way
+	RUNQ          = "name/runq"
+	RUNQLC        = "name/runqlc"
+	WAITQ         = "name/waitq"
+	CLAIMED       = "name/claimed"
 	CLAIMED_EPH   = "name/claimed_ephemeral"
 	SPAWNED       = "name/spawned"
 	RET_STAT      = "name/retstat"
@@ -25,6 +25,8 @@ const (
 	JOB_SIGNAL    = "job-signal"
 	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1
+	// XXX REMOVE
+	WAITFILE_PADDING = 1000
 )
 
 func (fl *FsLib) WaitForJob() error {
@@ -127,6 +129,27 @@ func (fl *FsLib) JobCrashed(pid string) bool {
 	return false
 }
 
+// Return true if the job has started. This function assumes the job has at
+// least been spawned, and hasn't exited yet. If the job file is not present,
+// we assume that it has already started (and probably exited).
+func (fl *FsLib) JobStarted(pid string) bool {
+	fl.LockFile(LOCKS, waitFilePath(pid))
+	defer fl.UnlockFile(LOCKS, waitFilePath(pid))
+
+	// Get the current contents of the file & its version
+	b, _, err := fl.GetFile(waitFilePath(pid))
+	if err != nil {
+		db.DLPrintf("LOCALD", "Job file not found JobStarted: %v, %v", waitFilePath(pid), err)
+		return true
+	}
+	var wf WaitFile
+	err = json.Unmarshal(b, &wf)
+	if err != nil {
+		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b), err)
+	}
+	return wf.Started
+}
+
 // Claim a job by moving it from the runq to the claimed dir
 func (fl *FsLib) ClaimRunQJob(dir string, pid string) ([]byte, bool) {
 	return fl.claimJob(dir, pid)
@@ -137,14 +160,15 @@ func (fl *FsLib) ClaimWaitQJob(pid string) ([]byte, bool) {
 	return fl.claimJob(WAITQ, pid)
 }
 
-func (fl *FsLib) updatePDeps(pid string) {
+func (fl *FsLib) UpdatePDeps(pid string) ([]PDep, error) {
 	fl.LockFile(LOCKS, path.Join(WAITQ, pid))
 	defer fl.UnlockFile(LOCKS, path.Join(WAITQ, pid))
 
+	newDeps := []PDep{}
+
 	b, _, err := fl.GetFile(path.Join(WAITQ, pid))
 	if err != nil {
-		log.Printf("Error getting file in updatePDeps: %v", err)
-		return
+		return newDeps, err
 	}
 	var a Attr
 	err = json.Unmarshal(b, &a)
@@ -152,43 +176,29 @@ func (fl *FsLib) updatePDeps(pid string) {
 		log.Printf("Couldn't unmarshal job in updatePDeps %v: %v", string(b), err)
 	}
 
-	// Remove here
-	//	for _, dep := range a.PairDeps {
-	//		if fl.hasStarted(dep.Producer) {
-	//			// XXX CONTINUE HERE
-	//		}
-	//	}
-}
+	for _, dep := range a.PairDep {
+		if dep.Consumer == pid {
+			if started := fl.JobStarted(dep.Producer); !started {
+				newDeps = append(newDeps, dep)
+			}
+		}
+	}
 
-//func (fl *FsLib) markConsumersRunnable(pid string) {
-//	ls, err := fl.ReadWaitQ()
-//	if err != nil {
-//		log.Printf("Error reading WaitQ in markConsumersRunnable: %v", err)
-//	}
-//	for _, l := range ls {
-//		a, err := fl.ReadWaitQJob(l.Name)
-//		if err != nil {
-//			continue
-//		}
-//		var attr Attr
-//		err = json.Unmarshal(a, &attr)
-//		if err != nil {
-//			log.Printf("Error unmarshalling in markConsumersRunnable: %v", err)
-//		}
-//		for _, pair := range attr.PairDep {
-//			if attr.Pid == pair.Producer {
-//				break
-//			} else if attr.Pid == pair.Consumer {
-//				if pair.Producer == pid {
-//					fl.MarkJobRunnable(attr.Pid, attr.Type)
-//					break
-//				}
-//			} else {
-//				log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
-//			}
-//		}
-//	}
-//}
+	// Write back updated deps if
+	if len(newDeps) != len(a.PairDep) {
+		a.PairDep = newDeps
+		b2, err := json.Marshal(a)
+		if err != nil {
+			log.Fatalf("Error marshalling new pairdeps: %v", err)
+		}
+		_, err = fl.SetFile(waitFilePath(pid), b2, np.NoV)
+		if err != nil {
+			log.Printf("Error writing UpdatePDeps: %v, %v", waitFilePath(pid), err)
+		}
+	}
+
+	return newDeps, nil
+}
 
 func (fl *FsLib) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore
@@ -297,6 +307,10 @@ func (fl *FsLib) makeWaitFile(pid string) error {
 	if err != nil {
 		log.Printf("Error marshalling waitfile: %v", err)
 	}
+	// XXX hack around lack of OTRUNC
+	for i := 0; i < WAITFILE_PADDING; i++ {
+		b = append(b, ' ')
+	}
 	// Make a writable, versioned file
 	err = fl.MakeFile(fpath, 0777, np.OWRITE, b)
 	// Sometimes we get "EOF" on shutdown
@@ -338,10 +352,8 @@ func (fl *FsLib) setWaitFileStarted(pid string, started bool) {
 		log.Printf("Error marshalling waitfile: %v", err)
 		return
 	}
-	// XXX Dirty hack since we don't have a truncate mode at the moment... Without
-	// this we break unmarshalling when setting to true, since we may end with an
-	// extra '}' at the end of the file
-	if started {
+	// XXX hack around lack of OTRUNC
+	for i := 0; i < WAITFILE_PADDING; i++ {
 		b2 = append(b2, ' ')
 	}
 	_, err = fl.SetFile(waitFilePath(pid), b2, np.NoV)
@@ -392,7 +404,7 @@ func (fl *FsLib) registerRetStatFile(pid string, fpath string) {
 	// Get the current contents of the file & its version
 	b1, _, err := fl.GetFile(waitFilePath(pid))
 	if err != nil {
-		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
+		db.DLPrintf("LOCALD", "Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
 		return
 	}
 	var wf WaitFile
@@ -406,6 +418,10 @@ func (fl *FsLib) registerRetStatFile(pid string, fpath string) {
 	if err != nil {
 		log.Printf("Error marshalling waitfile: %v", err)
 		return
+	}
+	// XXX hack around lack of OTRUNC
+	for i := 0; i < WAITFILE_PADDING; i++ {
+		b2 = append(b2, ' ')
 	}
 	_, err = fl.SetFile(waitFilePath(pid), b2, np.NoV)
 	if err != nil {

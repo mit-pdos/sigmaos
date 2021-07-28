@@ -264,8 +264,8 @@ func (ld *LocalD) checkWaitingLambdas() {
  *    exclusive***
  */
 func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
-	var attr fslib.Attr
-	err := json.Unmarshal(a, &attr)
+	attr := &fslib.Attr{}
+	err := json.Unmarshal(a, attr)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
 		return false, fslib.T_DEF
@@ -292,17 +292,10 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 	// If this is a PairDep-based labmda
 	if len(attr.PairDep) > 0 {
 		// Update its pair deps
-		// XXX CONTINUE HERE
-		//		ld.updatePDeps(attr.Pid)
-		for _, pair := range attr.PairDep {
-			if attr.Pid == pair.Producer {
-				return true, attr.Type
-			} else if attr.Pid == pair.Consumer {
-				// Someone will retry
-				return false, fslib.T_DEF
-			} else {
-				log.Fatalf("Locald got PairDep-based lambda with lambda not in pair: %v, %v", attr.Pid, pair)
-			}
+		attr.PairDep, err = ld.UpdatePDeps(attr.Pid)
+		// If some producers haven't started, the job isn't runnable
+		if len(attr.PairDep) > 0 || err != nil {
+			return false, fslib.T_DEF
 		}
 	}
 

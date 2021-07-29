@@ -8,6 +8,7 @@ import (
 
 	"github.com/thanhpk/randstr"
 
+	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
@@ -22,22 +23,24 @@ type Cond struct {
 	pid       string // Caller's PID
 	path      string // Path to condition variable
 	bcastPath string // Path to broadcast file watched by everyone
+	*fslib.FsLib
 }
 
-func MakeCond(pid, condpath string, lock *Lock) *Cond {
+func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 	c := &Cond{}
 	c.condLock = lock
 	c.pid = pid
 	c.path = condpath
 	c.bcastPath = path.Join(condpath, BROADCAST)
+	c.FsLib = fsl
 
 	// Make a directory in which waiters register themselves
-	err := fsl.Mkdir(c.path, 0777)
+	err := c.Mkdir(c.path, 0777)
 	if err != nil {
 		log.Fatalf("Error creating cond variable dir: %v", err)
 	}
 
-	c.dirLock = MakeLock(c.path, DIR_LOCK)
+	c.dirLock = MakeLock(fsl, c.path, DIR_LOCK)
 
 	c.createBcastFile()
 
@@ -59,7 +62,7 @@ func (c *Cond) Wait() {
 	// Everyone waits on the broadcast file
 	go func() {
 		bcast := make(chan bool)
-		err := fsl.SetRemoveWatch(c.bcastPath, func(p string, err error) {
+		err := c.SetRemoveWatch(c.bcastPath, func(p string, err error) {
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
@@ -76,13 +79,13 @@ func (c *Cond) Wait() {
 		done <- true
 
 		// Make sure the waitfile was removed
-		fsl.Remove(waitfilePath)
+		c.Remove(waitfilePath)
 	}()
 
 	// Everyone waits on their waitfile
 	go func() {
 		signal := make(chan bool)
-		err := fsl.SetRemoveWatch(waitfilePath, func(p string, err error) {
+		err := c.SetRemoveWatch(waitfilePath, func(p string, err error) {
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
@@ -114,7 +117,7 @@ func (c *Cond) Broadcast() {
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
-	err := fsl.Remove(c.bcastPath)
+	err := c.Remove(c.bcastPath)
 	if err != nil {
 		log.Fatalf("Error Remove in Cond.Broadcast: %v", err)
 	}
@@ -127,7 +130,7 @@ func (c *Cond) Signal() {
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
-	waiters, err := fsl.ReadDir(c.path)
+	waiters, err := c.ReadDir(c.path)
 	if err != nil {
 		log.Fatalf("Error ReadDir in Cond.Signal: %v", err)
 	}
@@ -138,7 +141,7 @@ func (c *Cond) Signal() {
 	for _, w := range waiters {
 		if w.Name != BROADCAST && w.Name != DIR_LOCK {
 			// Wake a single waiter
-			err := fsl.Remove(path.Join(c.path, w.Name))
+			err := c.Remove(path.Join(c.path, w.Name))
 			if err != nil {
 				log.Fatalf("Error Remove in Cond.Signal: %v", err)
 			}
@@ -149,7 +152,7 @@ func (c *Cond) Signal() {
 
 // Make a broadcast file to be waited on.
 func (c *Cond) createBcastFile() {
-	err := fsl.MakeFile(c.bcastPath, 0777, np.OWRITE, []byte{})
+	err := c.MakeFile(c.bcastPath, 0777, np.OWRITE, []byte{})
 	if err != nil {
 		log.Fatalf("Error creating cond variable broadcast file: %v", err)
 	}
@@ -164,7 +167,7 @@ func (c *Cond) createWaitfile() string {
 	waitfilePath := path.Join(c.path, id)
 
 	// XXX Should be ephemeral?
-	err := fsl.MakeFile(waitfilePath, 0777, np.OWRITE, []byte{})
+	err := c.MakeFile(waitfilePath, 0777, np.OWRITE, []byte{})
 	if err != nil {
 		log.Fatalf("Error MakeFile in Cond.Wait: %v, %v", waitfilePath, err)
 	}

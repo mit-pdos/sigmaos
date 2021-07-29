@@ -42,8 +42,6 @@ func makeTstate(t *testing.T) *Tstate {
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
-	Init(ts.FsLib)
-
 	assert.True(ts.t, true, "test")
 
 	ts.s.Shutdown(ts.FsLib)
@@ -67,13 +65,11 @@ func waiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 func TestOneWaiterSignal(t *testing.T) {
 	ts := makeTstate(t)
 
-	Init(ts.FsLib)
-
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(PID, COND_PATH, lock)
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
 
 	done := make(chan int)
 	go waiter(ts, cond, done, 0, false)
@@ -92,13 +88,11 @@ func TestOneWaiterSignal(t *testing.T) {
 func TestOneWaiterBroadcast(t *testing.T) {
 	ts := makeTstate(t)
 
-	Init(ts.FsLib)
-
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(PID, COND_PATH, lock)
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
 
 	done := make(chan int)
 	go waiter(ts, cond, done, 0, false)
@@ -120,13 +114,11 @@ func TestNWaitersSignal(t *testing.T) {
 	N := 20
 	_ = N
 
-	Init(ts.FsLib)
-
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(PID, COND_PATH, lock)
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
 
 	sum := 0
 
@@ -155,13 +147,11 @@ func TestNWaitersBroadcast(t *testing.T) {
 	N := 20
 	_ = N
 
-	Init(ts.FsLib)
-
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(PID, COND_PATH, lock)
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
 
 	sum := 0
 

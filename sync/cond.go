@@ -26,6 +26,7 @@ type Cond struct {
 
 func MakeCond(pid, condpath, lockDir, lockName string) *Cond {
 	c := &Cond{}
+	c.pid = pid
 	c.path = condpath
 	c.bcastPath = path.Join(condpath, BROADCAST)
 	c.lockDir = lockDir
@@ -59,7 +60,6 @@ func (c *Cond) Wait() {
 		bcast := make(chan bool)
 		err := fsl.SetRemoveWatch(c.bcastPath, func(p string, err error) {
 			if err != nil && err.Error() == "EOF" {
-				log.Fatalf("Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
 				return
 			} else if err != nil {
 				log.Printf("Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
@@ -83,7 +83,6 @@ func (c *Cond) Wait() {
 		signal := make(chan bool)
 		err := fsl.SetRemoveWatch(waitfilePath, func(p string, err error) {
 			if err != nil && err.Error() == "EOF" {
-				log.Fatalf("Error RemoveWatch signal triggered in Cond.Wait: %v", err)
 				return
 			} else if err != nil {
 				log.Printf("Error RemoveWatch signal triggered in Cond.Wait: %v", err)
@@ -99,6 +98,7 @@ func (c *Cond) Wait() {
 		done <- true
 	}()
 
+	fsl.UnlockFile(c.lockDir, c.lockName)
 	fsl.UnlockFile(c.path, DIR_LOCK)
 
 	// Wait for either the Signal or Broadcast watch to be triggered

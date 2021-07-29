@@ -17,26 +17,27 @@ const (
 )
 
 type Cond struct {
+	condLock  *Lock  // Lock this condition variable protects
+	dirLock   *Lock  // Lock protecting this condition variable (used to avoid sleep/wake races)
 	pid       string // Caller's PID
 	path      string // Path to condition variable
 	bcastPath string // Path to broadcast file watched by everyone
-	lockDir   string // Path to the lock's parent dir
-	lockName  string // Lock's name
 }
 
-func MakeCond(pid, condpath, lockDir, lockName string) *Cond {
+func MakeCond(pid, condpath string, lock *Lock) *Cond {
 	c := &Cond{}
+	c.condLock = lock
 	c.pid = pid
 	c.path = condpath
 	c.bcastPath = path.Join(condpath, BROADCAST)
-	c.lockDir = lockDir
-	c.lockName = lockName
 
 	// Make a directory in which waiters register themselves
 	err := fsl.Mkdir(c.path, 0777)
 	if err != nil {
 		log.Fatalf("Error creating cond variable dir: %v", err)
 	}
+
+	c.dirLock = MakeLock(c.path, DIR_LOCK)
 
 	c.createBcastFile()
 
@@ -48,7 +49,7 @@ func MakeCond(pid, condpath, lockDir, lockName string) *Cond {
 
 // Wait.
 func (c *Cond) Wait() {
-	fsl.LockFile(c.path, DIR_LOCK)
+	c.dirLock.Lock()
 
 	waitfilePath := c.createWaitfile()
 
@@ -98,20 +99,20 @@ func (c *Cond) Wait() {
 		done <- true
 	}()
 
-	fsl.UnlockFile(c.lockDir, c.lockName)
-	fsl.UnlockFile(c.path, DIR_LOCK)
+	c.condLock.Unlock()
+	c.dirLock.Unlock()
 
 	// Wait for either the Signal or Broadcast watch to be triggered
 	<-done
 
 	// Lock & return
-	fsl.LockFile(c.lockDir, c.lockName)
+	c.condLock.Lock()
 }
 
 // Wake up all waiters.
 func (c *Cond) Broadcast() {
-	fsl.LockFile(c.path, DIR_LOCK)
-	defer fsl.UnlockFile(c.path, DIR_LOCK)
+	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
 
 	err := fsl.Remove(c.bcastPath)
 	if err != nil {
@@ -123,8 +124,8 @@ func (c *Cond) Broadcast() {
 
 // Wake up one waiter.
 func (c *Cond) Signal() {
-	fsl.LockFile(c.path, DIR_LOCK)
-	defer fsl.UnlockFile(c.path, DIR_LOCK)
+	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
 
 	waiters, err := fsl.ReadDir(c.path)
 	if err != nil {

@@ -72,15 +72,16 @@ func TestOneWaiterSignal(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	c := MakeCond(PID, COND_PATH, LOCK_DIR, LOCK_NAME)
+	lock := MakeLock(LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(PID, COND_PATH, lock)
 
 	done := make(chan int)
-	go waiter(ts, c, done, 0, false)
+	go waiter(ts, cond, done, 0, false)
 
 	// Make sure we don't miss the signal
 	time.Sleep(250 * time.Millisecond)
 
-	c.Signal()
+	cond.Signal()
 
 	res := <-done
 	assert.Equal(ts.t, 0, res, "Bad done result")
@@ -96,15 +97,16 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	c := MakeCond(PID, COND_PATH, LOCK_DIR, LOCK_NAME)
+	lock := MakeLock(LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(PID, COND_PATH, lock)
 
 	done := make(chan int)
-	go waiter(ts, c, done, 0, false)
+	go waiter(ts, cond, done, 0, false)
 
 	// Make sure we don't miss the signal
 	time.Sleep(250 * time.Millisecond)
 
-	c.Broadcast()
+	cond.Broadcast()
 
 	res := <-done
 	assert.Equal(ts.t, 0, res, "Bad done result")
@@ -123,20 +125,21 @@ func TestNWaitersSignal(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	c := MakeCond(PID, COND_PATH, LOCK_DIR, LOCK_NAME)
+	lock := MakeLock(LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(PID, COND_PATH, lock)
 
 	sum := 0
 
 	done := make(chan int)
 	for i := 0; i < N; i++ {
-		go waiter(ts, c, done, i, true)
+		go waiter(ts, cond, done, i, true)
 		sum += i
 	}
 
 	// Make sure we don't miss the signal
 	time.Sleep(250 * time.Millisecond)
 
-	c.Signal()
+	cond.Signal()
 
 	for i := 0; i < N; i++ {
 		sum -= <-done
@@ -157,20 +160,21 @@ func TestNWaitersBroadcast(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	c := MakeCond(PID, COND_PATH, LOCK_DIR, LOCK_NAME)
+	lock := MakeLock(LOCK_DIR, LOCK_NAME)
+	cond := MakeCond(PID, COND_PATH, lock)
 
 	sum := 0
 
 	done := make(chan int)
 	for i := 0; i < N; i++ {
-		go waiter(ts, c, done, i, false)
+		go waiter(ts, cond, done, i, false)
 		sum += i
 	}
 
 	// Make sure we don't miss the signal
 	time.Sleep(250 * time.Millisecond)
 
-	c.Broadcast()
+	cond.Broadcast()
 
 	for i := 0; i < N; i++ {
 		sum -= <-done

@@ -89,6 +89,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	fsl.Mkdir(fslib.WAITQ, 0777)
 	fsl.Mkdir(fslib.CLAIMED, 0777)
 	fsl.Mkdir(fslib.CLAIMED_EPH, 0777)
+	fsl.Mkdir(fslib.EVICT, 0777)
 	fsl.Mkdir(fslib.SPAWNED, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.RET_STAT, 0777)

@@ -19,6 +19,7 @@ const (
 	WAITQ         = "name/waitq"
 	CLAIMED       = "name/claimed"
 	CLAIMED_EPH   = "name/claimed_ephemeral"
+	EVICT         = "name/evict"
 	SPAWNED       = "name/spawned"
 	RET_STAT      = "name/retstat"
 	TMP           = "name/tmp"
@@ -451,6 +452,10 @@ func (fl *FsLib) getSpawnedLambdas() map[string]bool {
 		spawned[l.Name] = true
 	}
 	return spawned
+}
+
+func evictFilePath(pid string) string {
+	return path.Join(EVICT, waitFileName(pid))
 }
 
 func waitFilePath(pid string) string {

@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
+	"os"
 	"path"
 	"strconv"
+
+	np "ulambda/ninep"
 )
 
 type PDep struct {
@@ -97,6 +100,15 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
 	return false
 }
 
+func (fl *FsLib) Evict(pid string) error {
+	return fl.MakeFile(evictFilePath(pid), 0777, np.OWRITE, nil)
+}
+
+// XXX allow processes to their own eviction
+func (fl *FsLib) EvictWatch(fn string, err error) {
+	os.Exit(1)
+}
+
 /*
  * PairDep-based lambdas are runnable only if they are the producer (whoever
  * claims and runs the producer will also start the consumer, so we disallow
@@ -109,6 +121,7 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
  */
 func (fl *FsLib) Started(pid string) error {
 	fl.setWaitFileStarted(pid, true)
+	fl.ReadFileWatch(evictFilePath(pid), fl.EvictWatch)
 	return nil
 }
 

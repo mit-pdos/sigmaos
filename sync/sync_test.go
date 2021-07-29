@@ -39,14 +39,6 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestHelloWorld(t *testing.T) {
-	ts := makeTstate(t)
-
-	assert.True(ts.t, true, "test")
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
 func waiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 	err := ts.LockFile(LOCK_DIR, LOCK_NAME)
 	assert.Nil(ts.t, err, "LockFile waiter [%v]: %v", id, err)
@@ -60,6 +52,52 @@ func waiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 
 	err = ts.UnlockFile(LOCK_DIR, LOCK_NAME)
 	assert.Nil(ts.t, err, "UnlockFile waiter [%v]: %v", id, err)
+}
+
+func TestHelloWorld(t *testing.T) {
+	ts := makeTstate(t)
+
+	assert.True(ts.t, true, "test")
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestLock(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	N := 20
+
+	sum := 0
+	current := 0
+	done := make(chan int)
+
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			me := false
+			for !me {
+				lock.Lock()
+				if current == i {
+					current += 1
+					done <- i
+					me = true
+				}
+				lock.Unlock()
+			}
+		}(i)
+		sum += i
+	}
+
+	for i := 0; i < N; i++ {
+		next := <-done
+		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestOneWaiterSignal(t *testing.T) {

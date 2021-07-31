@@ -11,10 +11,12 @@ import (
 )
 
 const (
-	PID       = "test-PID"
-	COND_PATH = "name/cond"
-	LOCK_DIR  = "name/cond-locks"
-	LOCK_NAME = "test-lock"
+	PID           = "test-PID"
+	COND_PATH     = "name/cond"
+	LOCK_DIR      = "name/cond-locks"
+	LOCK_NAME     = "test-lock"
+	BROADCAST_REL = "broadcast"
+	SIGNAL_REL    = "signal"
 )
 
 type Tstate struct {
@@ -54,12 +56,38 @@ func waiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 	assert.Nil(ts.t, err, "UnlockFile waiter [%v]: %v", id, err)
 }
 
-func TestHelloWorld(t *testing.T) {
-	ts := makeTstate(t)
+func runWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	conds := []*Cond{}
 
-	assert.True(ts.t, true, "test")
+	for i := 0; i < n_conds; i++ {
+		conds = append(conds, MakeCond(ts.FsLib, PID, COND_PATH, lock))
+	}
 
-	ts.s.Shutdown(ts.FsLib)
+	sum := 0
+
+	done := make(chan int)
+	for i := 0; i < n_waiters; i++ {
+		go waiter(ts, conds[i%len(conds)], done, i, n_waiters > 1 && releaseType == SIGNAL_REL)
+		sum += i
+	}
+
+	// Make sure we don't miss the signal
+	time.Sleep(500 * time.Millisecond)
+
+	switch releaseType {
+	case BROADCAST_REL:
+		conds[0].Broadcast()
+	case SIGNAL_REL:
+		conds[0].Signal()
+	default:
+		assert.True(ts.t, false, "Invalid release type")
+	}
+
+	for i := 0; i < n_waiters; i++ {
+		sum -= <-done
+	}
+	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
 func TestLock(t *testing.T) {
@@ -106,19 +134,9 @@ func TestOneWaiterSignal(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
-
-	done := make(chan int)
-	go waiter(ts, cond, done, 0, false)
-
-	// Make sure we don't miss the signal
-	time.Sleep(250 * time.Millisecond)
-
-	cond.Signal()
-
-	res := <-done
-	assert.Equal(ts.t, 0, res, "Bad done result")
+	n_waiters := 1
+	n_conds := 1
+	runWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -129,85 +147,61 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
-
-	done := make(chan int)
-	go waiter(ts, cond, done, 0, false)
-
-	// Make sure we don't miss the signal
-	time.Sleep(250 * time.Millisecond)
-
-	cond.Broadcast()
-
-	res := <-done
-	assert.Equal(ts.t, 0, res, "Bad done result")
+	n_waiters := 1
+	n_conds := 1
+	runWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNWaitersSignal(t *testing.T) {
+func TestNWaitersOneCondSignal(t *testing.T) {
 	ts := makeTstate(t)
-
-	N := 20
-	_ = N
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
-
-	sum := 0
-
-	done := make(chan int)
-	for i := 0; i < N; i++ {
-		go waiter(ts, cond, done, i, true)
-		sum += i
-	}
-
-	// Make sure we don't miss the signal
-	time.Sleep(250 * time.Millisecond)
-
-	cond.Signal()
-
-	for i := 0; i < N; i++ {
-		sum -= <-done
-	}
-	assert.Equal(ts.t, 0, sum, "Bad sum")
+	n_waiters := 20
+	n_conds := 1
+	runWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNWaitersBroadcast(t *testing.T) {
+func TestNWaitersOneCondBroadcast(t *testing.T) {
 	ts := makeTstate(t)
-
-	N := 20
-	_ = N
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
-	cond := MakeCond(ts.FsLib, PID, COND_PATH, lock)
+	n_waiters := 20
+	n_conds := 1
+	runWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	sum := 0
+	ts.s.Shutdown(ts.FsLib)
+}
 
-	done := make(chan int)
-	for i := 0; i < N; i++ {
-		go waiter(ts, cond, done, i, false)
-		sum += i
-	}
+func TestNWaitersNCondsSignal(t *testing.T) {
+	ts := makeTstate(t)
 
-	// Make sure we don't miss the signal
-	time.Sleep(250 * time.Millisecond)
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	cond.Broadcast()
+	n_waiters := 20
+	n_conds := 20
+	runWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	for i := 0; i < N; i++ {
-		sum -= <-done
-	}
-	assert.Equal(ts.t, 0, sum, "Bad sum")
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestNWaitersNCondsBroadcast(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	n_waiters := 20
+	n_conds := 20
+	runWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }

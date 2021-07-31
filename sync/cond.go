@@ -8,6 +8,7 @@ import (
 
 	"github.com/thanhpk/randstr"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -37,7 +38,7 @@ func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 	// Make a directory in which waiters register themselves
 	err := c.Mkdir(c.path, 0777)
 	if err != nil {
-		log.Fatalf("Error creating cond variable dir: %v", err)
+		db.DLPrintf("COND", "Error creating cond variable dir: %v", err)
 	}
 
 	c.dirLock = MakeLock(fsl, c.path, DIR_LOCK)
@@ -50,7 +51,48 @@ func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 	return c
 }
 
-// Wait.
+// Wake up all waiters. The condLock need not be held, and needs to be manually
+// unlocked independently of this function call.
+func (c *Cond) Broadcast() {
+	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
+
+	err := c.Remove(c.bcastPath)
+	if err != nil {
+		log.Fatalf("Error Remove in Cond.Broadcast: %v", err)
+	}
+
+	c.createBcastFile()
+}
+
+// Wake up one waiter. The condLock need not be held, and needs to be manually
+// unlocked independently of this function call..
+func (c *Cond) Signal() {
+	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
+
+	waiters, err := c.ReadDir(c.path)
+	if err != nil {
+		log.Fatalf("Error ReadDir in Cond.Signal: %v", err)
+	}
+
+	// Shuffle the list of waiters
+	rand.Shuffle(len(waiters), func(i, j int) { waiters[i], waiters[j] = waiters[j], waiters[i] })
+
+	for _, w := range waiters {
+		if w.Name != BROADCAST && w.Name != DIR_LOCK {
+			// Wake a single waiter
+			err := c.Remove(path.Join(c.path, w.Name))
+			if err != nil {
+				log.Fatalf("Error Remove in Cond.Signal: %v", err)
+			}
+			return
+		}
+	}
+}
+
+// Wait. If condLock != nil, assumes the condLock is held, and returns with the
+// condLock held once again.
 func (c *Cond) Wait() {
 	c.dirLock.Lock()
 
@@ -102,51 +144,17 @@ func (c *Cond) Wait() {
 		done <- true
 	}()
 
-	c.condLock.Unlock()
+	if c.condLock != nil {
+		c.condLock.Unlock()
+	}
 	c.dirLock.Unlock()
 
 	// Wait for either the Signal or Broadcast watch to be triggered
 	<-done
 
 	// Lock & return
-	c.condLock.Lock()
-}
-
-// Wake up all waiters.
-func (c *Cond) Broadcast() {
-	c.dirLock.Lock()
-	defer c.dirLock.Unlock()
-
-	err := c.Remove(c.bcastPath)
-	if err != nil {
-		log.Fatalf("Error Remove in Cond.Broadcast: %v", err)
-	}
-
-	c.createBcastFile()
-}
-
-// Wake up one waiter.
-func (c *Cond) Signal() {
-	c.dirLock.Lock()
-	defer c.dirLock.Unlock()
-
-	waiters, err := c.ReadDir(c.path)
-	if err != nil {
-		log.Fatalf("Error ReadDir in Cond.Signal: %v", err)
-	}
-
-	// Shuffle the list of waiters
-	rand.Shuffle(len(waiters), func(i, j int) { waiters[i], waiters[j] = waiters[j], waiters[i] })
-
-	for _, w := range waiters {
-		if w.Name != BROADCAST && w.Name != DIR_LOCK {
-			// Wake a single waiter
-			err := c.Remove(path.Join(c.path, w.Name))
-			if err != nil {
-				log.Fatalf("Error Remove in Cond.Signal: %v", err)
-			}
-			return
-		}
+	if c.condLock != nil {
+		c.condLock.Lock()
 	}
 }
 
@@ -154,7 +162,7 @@ func (c *Cond) Signal() {
 func (c *Cond) createBcastFile() {
 	err := c.MakeFile(c.bcastPath, 0777, np.OWRITE, []byte{})
 	if err != nil {
-		log.Fatalf("Error creating cond variable broadcast file: %v", err)
+		db.DLPrintf("COND", "Error creating cond variable broadcast file: %v", err)
 	}
 }
 

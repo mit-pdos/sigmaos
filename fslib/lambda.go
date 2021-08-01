@@ -67,7 +67,7 @@ func (fl *FsLib) Spawn(a *Attr) error {
 		fl.removeWaitFile(a.Pid)
 		return err
 	}
-	err = fl.MakeDirFileAtomic(WAITQ, a.Pid, b)
+	err = fl.MakeFileAtomic(path.Join(WAITQ, a.Pid), 0777, b)
 	if err != nil {
 		return err
 	}

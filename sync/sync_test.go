@@ -41,7 +41,41 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func waiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
+func eventWaiter(ts *Tstate, e *Event, done chan int, id int) {
+	// Wait, and then possibly signal future waiters
+	e.Wait()
+	done <- id
+}
+
+func runEventWaiters(ts *Tstate, n_waiters, n_events int) {
+	events := []*Event{}
+
+	for i := 0; i < n_events; i++ {
+		events = append(events, MakeEvent(ts.FsLib, PID, COND_PATH))
+	}
+
+	events[0].Init()
+
+	sum := 0
+
+	done := make(chan int)
+	for i := 0; i < n_waiters; i++ {
+		go eventWaiter(ts, events[i%len(events)], done, i)
+		sum += i
+	}
+
+	// Make sure we don't miss the signal
+	time.Sleep(500 * time.Millisecond)
+
+	events[0].Broadcast()
+
+	for i := 0; i < n_waiters; i++ {
+		sum -= <-done
+	}
+	assert.Equal(ts.t, 0, sum, "Bad sum")
+}
+
+func condWaiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 	err := ts.LockFile(LOCK_DIR, LOCK_NAME)
 	assert.Nil(ts.t, err, "LockFile waiter [%v]: %v", id, err)
 
@@ -56,7 +90,7 @@ func waiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 	assert.Nil(ts.t, err, "UnlockFile waiter [%v]: %v", id, err)
 }
 
-func runWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
+func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
 	conds := []*Cond{}
 
@@ -70,7 +104,7 @@ func runWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 
 	done := make(chan int)
 	for i := 0; i < n_waiters; i++ {
-		go waiter(ts, conds[i%len(conds)], done, i, n_waiters > 1 && releaseType == SIGNAL_REL)
+		go condWaiter(ts, conds[i%len(conds)], done, i, n_waiters > 1 && releaseType == SIGNAL_REL)
 		sum += i
 	}
 
@@ -138,7 +172,7 @@ func TestOneWaiterSignal(t *testing.T) {
 
 	n_waiters := 1
 	n_conds := 1
-	runWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
+	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -151,7 +185,7 @@ func TestOneWaiterBroadcast(t *testing.T) {
 
 	n_waiters := 1
 	n_conds := 1
-	runWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
+	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -164,7 +198,7 @@ func TestNWaitersOneCondSignal(t *testing.T) {
 
 	n_waiters := 20
 	n_conds := 1
-	runWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
+	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -177,7 +211,7 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 
 	n_waiters := 20
 	n_conds := 1
-	runWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
+	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -190,7 +224,7 @@ func TestNWaitersNCondsSignal(t *testing.T) {
 
 	n_waiters := 20
 	n_conds := 20
-	runWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
+	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -203,7 +237,37 @@ func TestNWaitersNCondsBroadcast(t *testing.T) {
 
 	n_waiters := 20
 	n_conds := 20
-	runWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
+	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestOneWaiterOneEvent(t *testing.T) {
+	ts := makeTstate(t)
+
+	n_waiters := 1
+	n_events := 1
+	runEventWaiters(ts, n_waiters, n_events)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestNWaitersOneEvent(t *testing.T) {
+	ts := makeTstate(t)
+
+	n_waiters := 20
+	n_events := 1
+	runEventWaiters(ts, n_waiters, n_events)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestNWaitersNEvents(t *testing.T) {
+	ts := makeTstate(t)
+
+	n_waiters := 20
+	n_events := 20
+	runEventWaiters(ts, n_waiters, n_events)
 
 	ts.s.Shutdown(ts.FsLib)
 }

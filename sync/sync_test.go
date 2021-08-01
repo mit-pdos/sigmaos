@@ -64,6 +64,8 @@ func runWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 		conds = append(conds, MakeCond(ts.FsLib, PID, COND_PATH, lock))
 	}
 
+	conds[0].Init()
+
 	sum := 0
 
 	done := make(chan int)

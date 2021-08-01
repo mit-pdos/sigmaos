@@ -8,7 +8,7 @@ import (
 
 	"github.com/thanhpk/randstr"
 
-	db "ulambda/debug"
+	//	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -35,20 +35,27 @@ func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 	c.bcastPath = path.Join(condpath, BROADCAST)
 	c.FsLib = fsl
 
-	// Make a directory in which waiters register themselves
-	err := c.Mkdir(c.path, 0777)
-	if err != nil {
-		db.DLPrintf("COND", "Error creating cond variable dir: %v", err)
-	}
-
 	c.dirLock = MakeLock(fsl, c.path, DIR_LOCK)
-
-	c.createBcastFile()
 
 	// Seed the random number generator (used to pick random waiter to signal)
 	rand.Seed(time.Now().Unix())
 
 	return c
+}
+
+// Initialize the condition variable by creating its sigmaOS state. This should
+// only ever be called once globally per condition variable.
+func (c *Cond) Init() {
+	// Make a directory in which waiters register themselves
+	err := c.Mkdir(c.path, 0777)
+	if err != nil {
+		log.Fatalf("Error condvar Init MkDir: %v", err)
+	}
+
+	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
+
+	c.createBcastFile()
 }
 
 // Wake up all waiters. The condLock need not be held, and needs to be manually
@@ -162,7 +169,7 @@ func (c *Cond) Wait() {
 func (c *Cond) createBcastFile() {
 	err := c.MakeFile(c.bcastPath, 0777, np.OWRITE, []byte{})
 	if err != nil {
-		db.DLPrintf("COND", "Error creating cond variable broadcast file: %v", err)
+		log.Fatalf("Error condvar createBcastFile MakeFile: %v", err)
 	}
 }
 

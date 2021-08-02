@@ -9,9 +9,11 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type Tstate struct {
+	*proc.ProcCtl
 	*fslib.FsLib
 	t *testing.T
 	s *fslib.System
@@ -29,7 +31,9 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib)
 	ts.t = t
+	time.Sleep(500 * time.Millisecond)
 	return ts
 }
 
@@ -49,6 +53,7 @@ func makeTstateOneLocald(t *testing.T) *Tstate {
 	}
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib)
 	ts.t = t
 	return ts
 }
@@ -59,6 +64,7 @@ func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib)
 	return ts
 }
 

@@ -17,6 +17,10 @@ import (
 //const CHUNKSZ = 8192
 const CHUNKSZ = 10000000
 
+const (
+	TMP = "name/tmp"
+)
+
 type FsLib struct {
 	*fsclnt.FsClient
 }

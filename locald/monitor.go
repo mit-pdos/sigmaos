@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 const (
@@ -16,6 +17,7 @@ type Monitor struct {
 	mu  sync.Mutex
 	pid string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeMonitor(pid string) *Monitor {
@@ -23,6 +25,7 @@ func MakeMonitor(pid string) *Monitor {
 	m.pid = pid
 	fsl := fslib.MakeFsLib("monitor")
 	m.FsLib = fsl
+	m.ProcCtl = proc.MakeProcCtl(fsl)
 	log.Printf("Monitor %v", m.pid)
 	return m
 }

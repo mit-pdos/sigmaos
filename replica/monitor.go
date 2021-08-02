@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type ReplicaMonitor struct {
@@ -14,6 +15,7 @@ type ReplicaMonitor struct {
 	configPath   string
 	unionDirPath string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeReplicaMonitor(args []string) *ReplicaMonitor {
@@ -25,6 +27,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
+	m.ProcCtl = proc.MakeProcCtl(fsl)
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }

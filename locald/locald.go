@@ -19,6 +19,7 @@ import (
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 	"ulambda/perf"
+	"ulambda/proc"
 	"ulambda/stats"
 )
 
@@ -44,6 +45,7 @@ type LocalD struct {
 	perf       *perf.Perf
 	st         *npo.SessionTable
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
@@ -69,6 +71,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	fsl := fslib.MakeFsLib("locald")
 	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
 	ld.FsLib = fsl
+	ld.ProcCtl = proc.MakeProcCtl(fsl)
 	err = fsl.PostServiceUnion(ld.srv.MyAddr(), fslib.LOCALD_ROOT, ld.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("locald PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)

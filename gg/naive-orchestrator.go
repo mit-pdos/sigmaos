@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 const (
@@ -26,6 +26,7 @@ type NaiveOrchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error) {
@@ -41,6 +42,7 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
+	orc.ProcCtl = proc.MakeProcCtl(fls)
 	orc.Started(orc.pid)
 	return orc, nil
 }

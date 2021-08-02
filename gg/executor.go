@@ -7,12 +7,14 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type Executor struct {
 	pid       string
 	thunkHash string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
@@ -22,6 +24,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
+	ex.ProcCtl = proc.MakeProcCtl(fls)
 	ex.Started(ex.pid)
 	return ex, nil
 }

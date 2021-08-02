@@ -9,6 +9,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/twopc"
 )
 
@@ -18,6 +19,7 @@ type Tinput struct {
 
 type Part2pc struct {
 	*fslib.FsLib
+	*proc.ProcCtl
 	pid    string
 	me     string
 	index  string
@@ -40,6 +42,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.opcode = args[2]
 	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
+	p.ProcCtl = proc.MakeProcCtl(p.FsLib)
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}

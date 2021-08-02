@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 // XXX make input parsing more robust
@@ -63,6 +64,7 @@ func readLambda(line string) (*fslib.Attr, error) {
 
 func main() {
 	clnt := fslib.MakeFsLib("submit")
+	pctl := proc.MakeProcCtl(clnt)
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		a, err := readLambda(scanner.Text())
@@ -70,7 +72,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v: readLambda error %v\n", os.Args[0], err)
 			os.Exit(1)
 		}
-		err = clnt.Spawn(a)
+		err = pctl.Spawn(a)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v: Spawn error %v\n", os.Args[0], err)
 			os.Exit(1)

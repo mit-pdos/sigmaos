@@ -17,6 +17,7 @@ import (
 	"ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 
 	"ulambda/perf"
 )
@@ -83,6 +84,7 @@ type Stats struct {
 	hz   int
 	done uint32
 	fsl  *fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MkStats() *Stats {
@@ -98,6 +100,7 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
+	st.ProcCtl = proc.MakeProcCtl(fsl)
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()
@@ -111,14 +114,14 @@ func (st *Stats) spawnMonitor() string {
 	a.PairDep = nil
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
-	st.fsl.Spawn(&a)
+	st.Spawn(&a)
 	return a.Pid
 }
 
 func (st *Stats) monitor() {
 	t0 := time.Now().UnixNano()
 	pid := st.spawnMonitor()
-	ok, err := st.fsl.Wait(pid)
+	ok, err := st.Wait(pid)
 	if string(ok) != "OK" || err != nil {
 		log.Printf("monitor: ok %v err %v\n", string(ok), err)
 	}

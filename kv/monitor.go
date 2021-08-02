@@ -10,6 +10,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfsd"
+	"ulambda/proc"
 	"ulambda/stats"
 )
 
@@ -21,6 +22,7 @@ const (
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
+	*proc.ProcCtl
 	pid  string
 	kv   string
 	args []string
@@ -30,6 +32,7 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
+	mo.ProcCtl = proc.MakeProcCtl(mo.FsLib)
 	db.Name(mo.pid)
 
 	if err := mo.LockFile(KVDIR, KVMONLOCK); err != nil {
@@ -47,7 +50,7 @@ func (mo *Monitor) unlock() {
 
 }
 
-func spawnBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
+func spawnBalancerPid(pctl *proc.ProcCtl, opcode, pid1, pid2 string) {
 	a := fslib.Attr{}
 	a.Pid = pid2
 	a.Program = "bin/balancer"
@@ -55,10 +58,10 @@ func spawnBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
 	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
-	fsl.Spawn(&a)
+	pctl.Spawn(&a)
 }
 
-func spawnBalancer(fsl *fslib.FsLib, opcode, pid1 string) string {
+func spawnBalancer(pctl *proc.ProcCtl, opcode, pid1 string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/balancer"
@@ -66,11 +69,11 @@ func spawnBalancer(fsl *fslib.FsLib, opcode, pid1 string) string {
 	a.PairDep = []fslib.PDep{fslib.PDep{pid1, a.Pid}}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
-	fsl.Spawn(&a)
+	pctl.Spawn(&a)
 	return a.Pid
 }
 
-func spawnKVPid(fsl *fslib.FsLib, pid1 string, pid2 string) {
+func spawnKVPid(pctl *proc.ProcCtl, pid1 string, pid2 string) {
 	a := fslib.Attr{}
 	a.Pid = pid1
 	a.Program = KV
@@ -78,10 +81,10 @@ func spawnKVPid(fsl *fslib.FsLib, pid1 string, pid2 string) {
 	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
-	fsl.Spawn(&a)
+	pctl.Spawn(&a)
 }
 
-func SpawnKV(fsl *fslib.FsLib) string {
+func SpawnKV(pctl *proc.ProcCtl) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
 	a.Program = KV
@@ -89,21 +92,21 @@ func SpawnKV(fsl *fslib.FsLib) string {
 	a.PairDep = nil
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
-	fsl.Spawn(&a)
+	pctl.Spawn(&a)
 	return a.Pid
 }
 
-func runBalancerPid(fsl *fslib.FsLib, opcode, pid1, pid2 string) {
-	spawnBalancerPid(fsl, opcode, pid1, pid2)
-	ok, err := fsl.Wait(pid2)
+func runBalancerPid(pctl *proc.ProcCtl, opcode, pid1, pid2 string) {
+	spawnBalancerPid(pctl, opcode, pid1, pid2)
+	ok, err := pctl.Wait(pid2)
 	if string(ok) != "OK" || err != nil {
 		log.Printf("runBalancer: ok %v err %v\n", string(ok), err)
 	}
 }
 
-func RunBalancer(fsl *fslib.FsLib, opcode, pid1 string) {
-	pid2 := spawnBalancer(fsl, opcode, pid1)
-	ok, err := fsl.Wait(pid2)
+func RunBalancer(pctl *proc.ProcCtl, opcode, pid1 string) {
+	pid2 := spawnBalancer(pctl, opcode, pid1)
+	ok, err := pctl.Wait(pid2)
 	if string(ok) != "OK" || err != nil {
 		log.Printf("runBalancer: ok %v err %v\n", string(ok), err)
 	}
@@ -134,12 +137,12 @@ func (mo *Monitor) kvwaiting() bool {
 func (mo *Monitor) grow() {
 	pid1 := fslib.GenPid()
 	pid2 := fslib.GenPid()
-	spawnKVPid(mo.FsLib, pid1, pid2)
-	runBalancerPid(mo.FsLib, "add", pid1, pid2)
+	spawnKVPid(mo.ProcCtl, pid1, pid2)
+	runBalancerPid(mo.ProcCtl, "add", pid1, pid2)
 }
 
 func (mo *Monitor) shrink(kv string) {
-	RunBalancer(mo.FsLib, "del", kv)
+	RunBalancer(mo.ProcCtl, "del", kv)
 	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
 	if err != nil {
 		log.Printf("shrink: remove failed %v\n", err)

@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type SpinTestStarter struct {
@@ -27,6 +27,7 @@ type SpinTestStarter struct {
 	local     bool
 	perfStat  bool
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
@@ -77,6 +78,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spin-test-starter")
+		s.ProcCtl = proc.MakeProcCtl(s.FsLib)
 	}
 
 	nSpinners, err := strconv.Atoi(args[0])

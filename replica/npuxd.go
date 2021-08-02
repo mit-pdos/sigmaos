@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/npsrv"
 	"ulambda/npux"
+	"ulambda/proc"
 )
 
 type NpUxReplica struct {
@@ -27,6 +28,7 @@ type NpUxReplica struct {
 	config       *npsrv.NpServerReplConfig
 	ux           *npux.NpUx
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeNpUxReplica(args []string) *NpUxReplica {
@@ -54,7 +56,7 @@ func MakeNpUxReplica(args []string) *NpUxReplica {
 	}
 	fsl := fslib.MakeFsLib("npux-replica" + r.relayAddr)
 	r.FsLib = fsl
-	r.setupMountPoint()
+	r.ProcCtl = proc.MakeProcCtl(fsl)
 	r.ux = npux.MakeReplicatedNpUx(r.mount, r.srvAddr, true, r.relayAddr, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)
 	// Post in union dir

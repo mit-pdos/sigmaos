@@ -10,11 +10,13 @@ import (
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
+	*proc.ProcCtl
 	pid   string
 	shard string
 	src   string
@@ -32,6 +34,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[2]
 	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
+	mv.ProcCtl = proc.MakeProcCtl(mv.FsLib)
 
 	db.Name(mv.pid)
 

@@ -15,6 +15,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/mr"
+	"ulambda/proc"
 )
 
 func RmDir(dir string) error {
@@ -82,6 +83,7 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
+	pctl := proc.MakeProcCtl(fsl)
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
@@ -109,8 +111,8 @@ func main() {
 			[]string{"name/" + m + "/pipe", m}, nil,
 			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.T_BE,
 			fslib.C_DEF}
-		fsl.Spawn(a1)
-		fsl.Spawn(a2)
+		pctl.Spawn(a1)
+		pctl.Spawn(a2)
 		n += 1
 		mappers[pid2] = false
 	}
@@ -123,13 +125,13 @@ func main() {
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
 			nil, mappers, 0, fslib.T_BE, fslib.C_DEF}
 		reducers = append(reducers, pid)
-		fsl.Spawn(a)
+		pctl.Spawn(a)
 	}
 
 	// Spawn noop lambda that is dependent on reducers
 	pid := fslib.GenPid()
-	fsl.SpawnNoOp(pid, reducers)
-	status, err := fsl.Wait(pid)
+	pctl.SpawnNoOp(pid, reducers)
+	status, err := pctl.Wait(pid)
 	if err != nil {
 		log.Fatalf("Wait failed %v status %v\n", err, string(status))
 	}

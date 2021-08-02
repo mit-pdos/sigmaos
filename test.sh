@@ -6,6 +6,7 @@ go test $1 ulambda/ninep
 go test $1 ulambda/memfs
 go test $1 ulambda/fsclnt
 go test $1 ulambda/fslib
+go test $1 ulambda/sync
 (cd nps3; go test $1)
 go test $1 ulambda/locald
 ./test-mr.sh

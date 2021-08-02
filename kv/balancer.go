@@ -12,6 +12,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
+	*proc.ProcCtl
 	pid  string
 	args []string
 	conf *Config
@@ -38,6 +40,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
+	bl.ProcCtl = proc.MakeProcCtl(bl.FsLib)
 
 	db.Name("balancer")
 

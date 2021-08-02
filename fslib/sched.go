@@ -21,7 +21,6 @@ const (
 	CLAIMED_EPH   = "name/claimed_ephemeral"
 	SPAWNED       = "name/spawned"
 	RET_STAT      = "name/retstat"
-	TMP           = "name/tmp"
 	JOB_SIGNAL    = "job-signal"
 	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1
@@ -259,7 +258,7 @@ func (fl *FsLib) modifyExitDependencies(f func(map[string]bool) bool) error {
 				fl.UnlockFile(LOCKS, path.Join(WAITQ, l.Name))
 				continue
 			}
-			err = fl.MakeDirFileAtomic(WAITQ, l.Name, b)
+			err = fl.MakeFileAtomic(path.Join(WAITQ, l.Name), 0777, b)
 			if err != nil {
 				log.Fatalf("Error in SwapExitDependency MakeFileAtomic %v: %v", l.Name, err)
 				return err

@@ -9,6 +9,7 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
+	"ulambda/proc"
 )
 
 func main() {
@@ -24,7 +25,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
-	fsl.Started(os.Args[1])
+	pctl := proc.MakeProcCtl(fsl.FsLib)
+	pctl.Started(os.Args[1])
 	fsd.Stats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()
 	fsd.Stats().Done()

@@ -14,6 +14,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/npclnt"
 	"ulambda/npobjsrv"
+	"ulambda/proc"
 )
 
 const (
@@ -40,6 +41,7 @@ type NpServerReplConfig struct {
 	inFlight     *RelayOpSet
 	fids         map[np.Tfid]*npobjsrv.Fid
 	*fslib.FsLib
+	*proc.ProcCtl
 	*npclnt.NpClnt
 }
 
@@ -60,6 +62,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			MakeRelayOpSet(),
 			map[np.Tfid]*npobjsrv.Fid{},
 			config.FsLib,
+			proc.MakeProcCtl(config.FsLib),
 			config.NpClnt}
 	}
 	srv := &NpServer{npc, "", wireCompat, replicated, MakeReplyCache(), emptyConfig}
@@ -169,6 +172,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 		nil,
 		nil,
 		fsl,
+		proc.MakeProcCtl(fsl),
 		clnt}, nil
 }
 

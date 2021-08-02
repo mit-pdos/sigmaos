@@ -8,10 +8,12 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type Sleeperl struct {
 	*fslib.FsLib
+	*proc.ProcCtl
 	pid    string
 	output string
 }
@@ -23,6 +25,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	s := &Sleeperl{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
+	s.ProcCtl = proc.MakeProcCtl(s.FsLib)
 	s.pid = args[0]
 	s.output = args[1]
 

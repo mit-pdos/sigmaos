@@ -10,6 +10,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/linuxsched"
+	"ulambda/proc"
 )
 
 type Rival struct {
@@ -21,6 +22,7 @@ type Rival struct {
 	dim                string
 	its                string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeRival(args []string) (*Rival, error) {
@@ -31,6 +33,7 @@ func MakeRival(args []string) (*Rival, error) {
 
 	r := &Rival{}
 	r.FsLib = fslib.MakeFsLib("rival")
+	r.ProcCtl = proc.MakeProcCtl(r.FsLib)
 
 	sps, err := strconv.Atoi(args[0])
 	r.spawnsPerSec = sps

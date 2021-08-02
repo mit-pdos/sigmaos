@@ -3,7 +3,6 @@ package fslambda
 import (
 	"errors"
 	"log"
-	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
@@ -12,10 +11,12 @@ import (
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
+	"ulambda/proc"
 )
 
 type Reader struct {
 	*fslibsrv.FsLibSrv
+	pctl   *proc.ProcCtl
 	pid    string
 	input  string
 	output string
@@ -46,11 +47,12 @@ func MakeReader(args []string) (*Reader, error) {
 
 	r := &Reader{}
 	r.FsLibSrv = fsl
+	r.pctl = proc.MakeProcCtl(fsl.FsLib)
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]
 	r.pipe = pipe
-	r.Started(r.pid)
+	r.pctl.Started(r.pid)
 
 	return r, nil
 }

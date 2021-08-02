@@ -7,6 +7,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type Uploader struct {
@@ -14,6 +15,7 @@ type Uploader struct {
 	src  string
 	dest string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeUploader(args []string, debug bool) (*Uploader, error) {
@@ -25,6 +27,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("uploader")
 	up.FsLib = fls
+	up.ProcCtl = proc.MakeProcCtl(fls)
 	up.Started(up.pid)
 	return up, nil
 }

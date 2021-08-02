@@ -10,6 +10,7 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/memfsd"
 	"ulambda/npsrv"
+	"ulambda/proc"
 )
 
 type MemfsdReplica struct {
@@ -25,6 +26,7 @@ type MemfsdReplica struct {
 	config       *npsrv.NpServerReplConfig
 	fsd          *memfsd.Fsd
 	*fslibsrv.FsLibSrv
+	*proc.ProcCtl
 }
 
 func MakeMemfsdReplica(args []string) *MemfsdReplica {
@@ -58,6 +60,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 		log.Fatalf("%v: InitFs failed %v\n", args, err)
 	}
 	r.FsLibSrv = fs
+	r.ProcCtl = proc.MakeProcCtl(fs.FsLib)
 	return r
 }
 

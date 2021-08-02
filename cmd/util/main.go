@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 // XXX make input parsing more robust
@@ -73,10 +74,11 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
+	pctl := proc.MakeProcCtl(clnt)
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]
-		clnt.Exiting(pid, "OK")
+		pctl.Exiting(pid, "OK")
 	} else {
 		usage()
 	}

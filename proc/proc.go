@@ -44,11 +44,6 @@ const (
 	CRASH_TIMEOUT = 1
 )
 
-type WaitFile struct {
-	Started      bool
-	RetStatFiles []string
-}
-
 //type Proc struct {
 //	Pid        string          // SigmaOS PID
 //	Program    string          // Program to run
@@ -99,7 +94,7 @@ func (pctl *ProcCtl) Spawn(p *fslib.Attr) error {
 
 func (pctl *ProcCtl) makeWaitFile(pid string) error {
 	fpath := waitFilePath(pid)
-	var wf WaitFile
+	var wf fslib.WaitFile
 	wf.Started = false
 	b, err := json.Marshal(wf)
 	if err != nil {
@@ -187,7 +182,7 @@ func (pctl *ProcCtl) setWaitFileStarted(pid string, started bool) {
 		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
 		return
 	}
-	var wf WaitFile
+	var wf fslib.WaitFile
 	err = json.Unmarshal(b1, &wf)
 	if err != nil {
 		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
@@ -212,7 +207,7 @@ func (pctl *ProcCtl) setWaitFileStarted(pid string, started bool) {
 // ========== EXITING ==========
 
 func (pctl *ProcCtl) Exiting(pid string, status string) error {
-	pctl.WakeupExit(pid)
+	pctl.wakeupExit(pid)
 	err := pctl.Remove(path.Join(CLAIMED, pid))
 	if err != nil {
 		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
@@ -228,6 +223,22 @@ func (pctl *ProcCtl) Exiting(pid string, status string) error {
 	return pctl.removeWaitFile(pid)
 }
 
+func (pctl *ProcCtl) wakeupExit(pid string) error {
+	err := pctl.modifyExitDependencies(func(deps map[string]bool) bool {
+		if _, ok := deps[pid]; ok {
+			deps[pid] = true
+			return true
+		}
+		return false
+	})
+	if err != nil {
+		return err
+	}
+	// Notify localds that a job has become runnable
+	pctl.SignalNewJob()
+	return nil
+}
+
 // Write back return statuses
 func (pctl *ProcCtl) writeBackRetStats(pid string, status string) {
 	pctl.LockFile(fslib.LOCKS, waitFilePath(pid))
@@ -238,7 +249,7 @@ func (pctl *ProcCtl) writeBackRetStats(pid string, status string) {
 		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
 		return
 	}
-	var wf WaitFile
+	var wf fslib.WaitFile
 	err = json.Unmarshal(b, &wf)
 	if err != nil {
 		log.Printf("Error unmarshalling waitfile: %v, %v, %v", string(b), wf, err)
@@ -318,7 +329,7 @@ func (pctl *ProcCtl) registerRetStatFile(pid string, fpath string) {
 		db.DLPrintf("LOCALD", "Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
 		return
 	}
-	var wf WaitFile
+	var wf fslib.WaitFile
 	err = json.Unmarshal(b1, &wf)
 	if err != nil {
 		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
@@ -354,4 +365,66 @@ func (pctl *ProcCtl) SpawnNoOp(pid string, exitDep []string) error {
 	}
 	a.ExitDep = exitDepMap
 	return pctl.Spawn(a)
+}
+
+// ========== SWAP EXIT DEPENDENCY =========
+
+func (pctl *ProcCtl) SwapExitDependency(pids []string) error {
+	fromPid := pids[0]
+	toPid := pids[1]
+	return pctl.modifyExitDependencies(func(deps map[string]bool) bool {
+		if _, ok := deps[fromPid]; ok {
+			deps[toPid] = false
+			deps[fromPid] = true
+			return true
+		}
+		return false
+	})
+}
+
+func (pctl *ProcCtl) modifyExitDependencies(f func(map[string]bool) bool) error {
+	ls, _ := pctl.ReadDir(WAITQ)
+	for _, l := range ls {
+		// Lock the file
+		pctl.LockFile(fslib.LOCKS, path.Join(WAITQ, l.Name))
+		a, _, err := pctl.GetFile(path.Join(WAITQ, l.Name))
+		// May get file not found if someone renamed the file
+		if err != nil && err.Error() != "file not found" {
+			pctl.UnlockFile(fslib.LOCKS, path.Join(WAITQ, l.Name))
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Error in SwapExitDependency GetFile %v: %v", l.Name, err)
+			return err
+		}
+		var attr fslib.Attr
+		err = json.Unmarshal(a, &attr)
+		if err != nil {
+			log.Fatalf("Error in SwapExitDependency Unmarshal %v: %v", a, err)
+			return err
+		}
+		changed := f(attr.ExitDep)
+		// If the ExitDep map changed, write it back.
+		if changed {
+			b, err := json.Marshal(attr)
+			if err != nil {
+				log.Fatalf("Error in SwapExitDependency Marshal %v: %v", b, err)
+				return err
+			}
+			// XXX OTRUNC isn't implemented for memfs yet, so remove & rewrite
+			err = pctl.Remove(path.Join(WAITQ, l.Name))
+			// May get file not found if someone renamed the file
+			if err != nil && err.Error() != "file not found" {
+				pctl.UnlockFile(fslib.LOCKS, path.Join(WAITQ, l.Name))
+				continue
+			}
+			err = pctl.MakeFileAtomic(path.Join(WAITQ, l.Name), 0777, b)
+			if err != nil {
+				log.Fatalf("Error in SwapExitDependency MakeFileAtomic %v: %v", l.Name, err)
+				return err
+			}
+		}
+		pctl.UnlockFile(fslib.LOCKS, path.Join(WAITQ, l.Name))
+	}
+	return nil
 }

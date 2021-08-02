@@ -49,11 +49,3 @@ const (
 func GenPid() string {
 	return strconv.Itoa(rand.Intn(100000))
 }
-
-func (fl *FsLib) HasBeenSpawned(pid string) bool {
-	_, err := fl.Stat(waitFilePath(pid))
-	if err == nil {
-		return true
-	}
-	return false
-}

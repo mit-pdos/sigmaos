@@ -38,6 +38,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.FsLib = fslib.MakeFsLib("sync_test")
 	ts.t = t
+	ts.Mkdir(fslib.LOCKS, 0777)
 	return ts
 }
 
@@ -47,7 +48,7 @@ func eventWaiter(ts *Tstate, e *Event, done chan int, id int) {
 	done <- id
 }
 
-func runEventWaiters(ts *Tstate, n_waiters, n_events int) {
+func runEventWaiters(ts *Tstate, n_waiters, n_events int, destroy bool) {
 	events := []*Event{}
 
 	for i := 0; i < n_events; i++ {
@@ -65,12 +66,19 @@ func runEventWaiters(ts *Tstate, n_waiters, n_events int) {
 	}
 
 	// Make sure we don't miss the signal
-	time.Sleep(500 * time.Millisecond)
+	if !destroy {
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	events[0].Broadcast()
 
+	if destroy {
+		events[0].Destroy()
+	}
+
 	for i := 0; i < n_waiters; i++ {
-		sum -= <-done
+		next := <-done
+		sum -= next
 	}
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
@@ -91,7 +99,7 @@ func condWaiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 }
 
 func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
 	conds := []*Cond{}
 
 	for i := 0; i < n_conds; i++ {
@@ -138,7 +146,7 @@ func TestLock(t *testing.T) {
 	current := 0
 	done := make(chan int)
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME)
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
@@ -247,7 +255,7 @@ func TestOneWaiterOneEvent(t *testing.T) {
 
 	n_waiters := 1
 	n_events := 1
-	runEventWaiters(ts, n_waiters, n_events)
+	runEventWaiters(ts, n_waiters, n_events, false)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -257,7 +265,7 @@ func TestNWaitersOneEvent(t *testing.T) {
 
 	n_waiters := 20
 	n_events := 1
-	runEventWaiters(ts, n_waiters, n_events)
+	runEventWaiters(ts, n_waiters, n_events, false)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -267,7 +275,17 @@ func TestNWaitersNEvents(t *testing.T) {
 
 	n_waiters := 20
 	n_events := 20
-	runEventWaiters(ts, n_waiters, n_events)
+	runEventWaiters(ts, n_waiters, n_events, false)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestNWaitersNEventsDestroy(t *testing.T) {
+	ts := makeTstate(t)
+
+	n_waiters := 20
+	n_events := 20
+	runEventWaiters(ts, n_waiters, n_events, true)
 
 	ts.s.Shutdown(ts.FsLib)
 }

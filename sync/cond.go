@@ -27,6 +27,7 @@ type Cond struct {
 	*fslib.FsLib
 }
 
+// Strict lock checking is turned on if this is a true condition variable.
 func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 	c := &Cond{}
 	c.condLock = lock
@@ -35,7 +36,7 @@ func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 	c.bcastPath = path.Join(condpath, BROADCAST)
 	c.FsLib = fsl
 
-	c.dirLock = MakeLock(fsl, c.path, DIR_LOCK)
+	c.dirLock = MakeLock(fsl, fslib.LOCKS, fslib.LockName(path.Join(c.path, DIR_LOCK)), lock != nil)
 
 	// Seed the random number generator (used to pick random waiter to signal)
 	rand.Seed(time.Now().Unix())
@@ -66,7 +67,7 @@ func (c *Cond) Broadcast() {
 
 	err := c.Remove(c.bcastPath)
 	if err != nil {
-		log.Fatalf("Error Remove in Cond.Broadcast: %v", err)
+		log.Printf("Error Remove in Cond.Broadcast: %v", err)
 	}
 
 	c.createBcastFile()
@@ -80,7 +81,7 @@ func (c *Cond) Signal() {
 
 	waiters, err := c.ReadDir(c.path)
 	if err != nil {
-		log.Fatalf("Error ReadDir in Cond.Signal: %v", err)
+		log.Printf("Error ReadDir in Cond.Signal: %v", err)
 	}
 
 	// Shuffle the list of waiters
@@ -91,7 +92,7 @@ func (c *Cond) Signal() {
 			// Wake a single waiter
 			err := c.Remove(path.Join(c.path, w.Name))
 			if err != nil {
-				log.Fatalf("Error Remove in Cond.Signal: %v", err)
+				log.Printf("Error Remove in Cond.Signal: %v", err)
 			}
 			return
 		}
@@ -123,7 +124,7 @@ func (c *Cond) Wait() {
 		if err == nil {
 			<-bcast
 		} else {
-			log.Fatalf("Error SetRemoveWatch bcast Cond.Wait: %v", err)
+			log.Printf("Error SetRemoveWatch bcast Cond.Wait: %v", err)
 		}
 		done <- true
 
@@ -146,7 +147,7 @@ func (c *Cond) Wait() {
 		if err == nil {
 			<-signal
 		} else {
-			log.Fatalf("Error SetRemoveWatch signal Cond.Wait: %v", err)
+			log.Printf("Error SetRemoveWatch signal Cond.Wait: %v", err)
 		}
 		done <- true
 	}()
@@ -162,6 +163,50 @@ func (c *Cond) Wait() {
 	// Lock & return
 	if c.condLock != nil {
 		c.condLock.Lock()
+	}
+}
+
+// Tear down a condition variable by waking all waiters and deleting the
+// condition variable directory. This will make waiting on it an error.
+func (c *Cond) Destroy() {
+	c.dirLock.Lock()
+
+	// Wake up all waiters with an individual signal.
+	waiters, err := c.ReadDir(c.path)
+	if err != nil {
+		log.Fatalf("Error ReadDir in Cond.Destroy: %v", err)
+	}
+
+	for _, w := range waiters {
+		if w.Name == DIR_LOCK || w.Name == BROADCAST {
+			continue
+		}
+		err := c.Remove(path.Join(c.path, w.Name))
+		if err != nil {
+			log.Fatalf("Error Remove in Cond.Destroy: %v", err)
+		}
+	}
+
+	// Wake up all waiters with a broadcast.
+	err = c.Remove(c.bcastPath)
+	if err != nil {
+		log.Fatalf("Error Remove in Cond.Destroy: %v", err)
+	}
+
+	c.dirLock.Unlock()
+
+	// XXX slight race here, might cause the remove to fail...
+
+	// Rename the directory to make sure we don't take on any more waiters.
+	newPath := path.Join(fslib.TMP, randstr.Hex(16))
+	err = c.Rename(c.path, newPath)
+	if err != nil {
+		log.Fatalf("Error Rename in Cond.Destroy: %v", err)
+	}
+
+	err = c.Remove(newPath)
+	if err != nil {
+		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
 	}
 }
 
@@ -184,7 +229,7 @@ func (c *Cond) createWaitfile() string {
 	// XXX Should be ephemeral?
 	err := c.MakeFile(waitfilePath, 0777, np.OWRITE, []byte{})
 	if err != nil {
-		log.Fatalf("Error MakeFile in Cond.Wait: %v, %v", waitfilePath, err)
+		log.Printf("Error MakeFile in Cond.createWaitFile: %v, %v", waitfilePath, err)
 	}
 	return waitfilePath
 }

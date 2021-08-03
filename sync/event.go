@@ -34,3 +34,7 @@ func (e *Event) Wait() {
 func (e *Event) Broadcast() {
 	e.c.Broadcast()
 }
+
+func (e *Event) Destroy() {
+	e.c.Destroy()
+}

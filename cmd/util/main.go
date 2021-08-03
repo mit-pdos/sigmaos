@@ -25,8 +25,8 @@ func split(s string) []string {
 	return s1
 }
 
-func splitPairs(s string) []fslib.PDep {
-	ps := []fslib.PDep{}
+func splitPairs(s string) []string {
+	ps := []string{}
 	s = strings.TrimRight(s, "]")
 	s = strings.TrimLeft(s, "[")
 	if len(s) == 0 {
@@ -34,13 +34,10 @@ func splitPairs(s string) []fslib.PDep {
 	}
 	s1 := strings.Split(s, " ")
 	for _, e := range s1 {
-		p := fslib.PDep{}
 		e = strings.TrimRight(e, ")")
 		e = strings.TrimLeft(e, "(")
 		s1 := strings.Split(e, ";")
-		p.Producer = s1[0]
-		p.Consumer = s1[1]
-		ps = append(ps, p)
+		ps = append(ps, s1[0])
 	}
 	return ps
 }
@@ -55,7 +52,7 @@ func readLambda(line string) (*fslib.Attr, error) {
 	a.Program = l[1]
 	a.Args = split(l[2])
 	a.Env = split(l[3])
-	a.PairDep = splitPairs(l[4])
+	a.StartDep = splitPairs(l[4])
 	a.ExitDep = map[string]bool{}
 	for _, dep := range split(l[5]) {
 		a.ExitDep[dep] = false

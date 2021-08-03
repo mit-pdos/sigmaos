@@ -30,7 +30,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 		"",
 	}
 	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
+	a.StartDep = []string{}
 	a.ExitDep = map[string]bool{}
 	err := launch.Spawn(&a)
 	if err != nil {
@@ -49,7 +49,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 		targetReduction,
 	}
 	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
+	a.StartDep = []string{}
 	reductionPid := outputHandlerPid(targetReduction)
 	noOpReductionPid := noOpPid(reductionPid)
 	deps = append(deps, noOpReductionPid)
@@ -73,7 +73,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 		targetHash,
 	}
 	a.Dir = ""
-	a.PairDep = []fslib.PDep{}
+	a.StartDep = []string{}
 	exitDepMap := map[string]bool{}
 	for _, dep := range depPids {
 		exitDepMap[dep] = false
@@ -95,7 +95,7 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	}
 	a.Args = append(a.Args, outputFiles...)
 	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
+	a.StartDep = []string{}
 	exitDepMap := map[string]bool{}
 	for _, dep := range deps {
 		exitDepMap[dep] = false

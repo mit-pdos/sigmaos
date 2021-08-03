@@ -5,11 +5,6 @@ import (
 	"strconv"
 )
 
-type PDep struct {
-	Producer string
-	Consumer string
-}
-
 type Ttype uint32
 type Tcore uint32
 
@@ -24,16 +19,16 @@ const (
 )
 
 type Attr struct {
-	Pid     string
-	Program string
-	Dir     string
-	Args    []string
-	Env     []string
-	PairDep []PDep
-	ExitDep map[string]bool
-	Timer   uint32
-	Type    Ttype
-	Ncore   Tcore
+	Pid      string
+	Program  string
+	Dir      string
+	Args     []string
+	Env      []string
+	StartDep []string
+	ExitDep  map[string]bool
+	Timer    uint32
+	Type     Ttype
+	Ncore    Tcore
 }
 
 type WaitFile struct {

@@ -111,7 +111,7 @@ func (st *Stats) spawnMonitor() string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/monitor"
 	a.Args = []string{}
-	a.PairDep = nil
+	a.StartDep = nil
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
 	st.Spawn(&a)

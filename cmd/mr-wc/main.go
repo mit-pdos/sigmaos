@@ -105,11 +105,11 @@ func main() {
 		rmDir(fsl, "name/ux/~ip/m-"+m)
 		a1 := &fslib.Attr{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
-			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.T_BE,
+			[]string{}, nil, 0, fslib.T_BE,
 			fslib.C_DEF}
 		a2 := &fslib.Attr{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil,
-			[]fslib.PDep{fslib.PDep{pid1, pid2}}, nil, 0, fslib.T_BE,
+			[]string{pid1}, nil, 0, fslib.T_BE,
 			fslib.C_DEF}
 		pctl.Spawn(a1)
 		pctl.Spawn(a2)

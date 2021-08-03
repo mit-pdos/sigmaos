@@ -129,14 +129,3 @@ func (l *Lambda) setCpuAffinity(cores []uint) {
 		log.Printf("Error setting CPU affinity for child lambda: %v", err)
 	}
 }
-
-func (l *Lambda) getConsumers() []string {
-	consumers := []string{}
-	for _, pair := range l.attr.PairDep {
-		if pair.Producer != l.Pid {
-			log.Fatalf("Trying to get consumers from lambda, but isn't producer: %v", l)
-		}
-		consumers = append(consumers, pair.Consumer)
-	}
-	return consumers
-}

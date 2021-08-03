@@ -73,11 +73,11 @@ func (ld *LocalD) ClaimWaitQJob(pid string) ([]byte, bool) {
 	return ld.claimJob(fslib.WAITQ, pid)
 }
 
-func (ld *LocalD) UpdatePDeps(pid string) ([]fslib.PDep, error) {
+func (ld *LocalD) UpdateStartDeps(pid string) ([]string, error) {
 	ld.LockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
 	defer ld.UnlockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
 
-	newDeps := []fslib.PDep{}
+	newDeps := []string{}
 
 	b, _, err := ld.GetFile(path.Join(fslib.WAITQ, pid))
 	if err != nil {
@@ -89,17 +89,18 @@ func (ld *LocalD) UpdatePDeps(pid string) ([]fslib.PDep, error) {
 		log.Printf("Couldn't unmarshal job in updatefslib.PDeps %v: %v", string(b), err)
 	}
 
-	for _, dep := range a.PairDep {
-		if dep.Consumer == pid {
-			if started := ld.JobStarted(dep.Producer); !started {
-				newDeps = append(newDeps, dep)
-			}
+	for _, dep := range a.StartDep {
+		if dep == pid {
+			log.Fatalf("Tried to set self as StartDep! pid:%v startDeps:%v", pid, a.StartDep)
+		}
+		if started := ld.JobStarted(dep); !started {
+			newDeps = append(newDeps, dep)
 		}
 	}
 
 	// Write back updated deps if
-	if len(newDeps) != len(a.PairDep) {
-		a.PairDep = newDeps
+	if len(newDeps) != len(a.StartDep) {
+		a.StartDep = newDeps
 		b2, err := json.Marshal(a)
 		if err != nil {
 			log.Fatalf("Error marshalling new pairdeps: %v", err)

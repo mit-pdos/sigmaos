@@ -60,7 +60,7 @@ func SpawnCoord(pctl *proc.ProcCtl, opcode string, ps []string) string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/coord"
 	a.Args = args
-	a.PairDep = nil
+	a.StartDep = nil
 	a.ExitDep = nil
 	pctl.Spawn(&a)
 	return a.Pid

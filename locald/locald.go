@@ -258,7 +258,7 @@ func (ld *LocalD) checkWaitingLambdas() {
  * 2. ExitDep-based lambdas are runnable after all entries in the ExitDep map
  *    are true, whether that be because the dependencies explicitly exited or
  *    because they did not exist at spawn time (and were pruned).
- * 3. PairDep-based lambdas are runnable immediately if they are the producer,
+ * 3. StartDep-based lambdas are runnable immediately if they are the producer,
  *    and after all producers have started running if they are the consumer. For
  *    now, we assume that the roles "Producer" and "Consumer" are mutually
  *    exclusive.
@@ -292,12 +292,12 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 		}
 	}
 
-	// If this is a PairDep-based labmda
-	if len(attr.PairDep) > 0 {
+	// If this is a StartDep-based labmda
+	if len(attr.StartDep) > 0 {
 		// Update its pair deps
-		attr.PairDep, err = ld.UpdatePDeps(attr.Pid)
+		attr.StartDep, err = ld.UpdateStartDeps(attr.Pid)
 		// If some producers haven't started, the job isn't runnable
-		if len(attr.PairDep) > 0 || err != nil {
+		if len(attr.StartDep) > 0 || err != nil {
 			return false, fslib.T_DEF
 		}
 	}

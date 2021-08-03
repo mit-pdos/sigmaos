@@ -93,7 +93,7 @@ func (bl *Balancer) spawnMover(s, src, dst string) string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/mover"
 	a.Args = []string{s, src, dst}
-	a.PairDep = nil
+	a.StartDep = nil
 	a.ExitDep = nil
 	bl.Spawn(&a)
 	return a.Pid

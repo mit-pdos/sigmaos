@@ -55,7 +55,7 @@ func spawnBalancerPid(pctl *proc.ProcCtl, opcode, pid1, pid2 string) {
 	a.Pid = pid2
 	a.Program = "bin/balancer"
 	a.Args = []string{opcode, pid1}
-	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
+	a.StartDep = []string{pid1}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
 	pctl.Spawn(&a)
@@ -66,7 +66,7 @@ func spawnBalancer(pctl *proc.ProcCtl, opcode, pid1 string) string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/balancer"
 	a.Args = []string{opcode, pid1}
-	a.PairDep = []fslib.PDep{fslib.PDep{pid1, a.Pid}}
+	a.StartDep = []string{pid1}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
 	pctl.Spawn(&a)
@@ -78,7 +78,7 @@ func spawnKVPid(pctl *proc.ProcCtl, pid1 string, pid2 string) {
 	a.Pid = pid1
 	a.Program = KV
 	a.Args = []string{""}
-	a.PairDep = []fslib.PDep{fslib.PDep{pid1, pid2}}
+	a.StartDep = []string{pid1}
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
 	pctl.Spawn(&a)
@@ -89,7 +89,7 @@ func SpawnKV(pctl *proc.ProcCtl) string {
 	a.Pid = fslib.GenPid()
 	a.Program = KV
 	a.Args = []string{""}
-	a.PairDep = nil
+	a.StartDep = nil
 	a.ExitDep = nil
 	a.Type = fslib.T_LC
 	pctl.Spawn(&a)

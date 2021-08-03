@@ -10,7 +10,7 @@ import (
 
 func main() {
 	fsl := fslib.MakeFsLib("kvd")
-	pctl := proc.MakeProcCtl(fsl)
+	pctl := proc.MakeProcCtl(fsl, "kvd")
 	conf := kv.MakeConfig(0)
 	err := fsl.MakeFileJson(kv.KVCONFIG, 0777, *conf)
 	if err != nil {

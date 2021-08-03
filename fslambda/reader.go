@@ -47,7 +47,7 @@ func MakeReader(args []string) (*Reader, error) {
 
 	r := &Reader{}
 	r.FsLibSrv = fsl
-	r.pctl = proc.MakeProcCtl(fsl.FsLib)
+	r.pctl = proc.MakeProcCtl(fsl.FsLib, r.pid)
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]

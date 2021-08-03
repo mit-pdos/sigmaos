@@ -24,7 +24,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.ProcCtl = proc.MakeProcCtl(fls)
+	ex.ProcCtl = proc.MakeProcCtl(fls, ex.pid)
 	ex.Started(ex.pid)
 	return ex, nil
 }

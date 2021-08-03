@@ -62,7 +62,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			MakeRelayOpSet(),
 			map[np.Tfid]*npobjsrv.Fid{},
 			config.FsLib,
-			proc.MakeProcCtl(config.FsLib),
+			proc.MakeProcCtl(config.FsLib, "replsrv-"+address),
 			config.NpClnt}
 	}
 	srv := &NpServer{npc, "", wireCompat, replicated, MakeReplyCache(), emptyConfig}
@@ -172,7 +172,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 		nil,
 		nil,
 		fsl,
-		proc.MakeProcCtl(fsl),
+		proc.MakeProcCtl(fsl, "replsrv"+myaddr),
 		clnt}, nil
 }
 

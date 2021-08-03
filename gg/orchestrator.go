@@ -41,7 +41,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.ProcCtl = proc.MakeProcCtl(fls)
+	orc.ProcCtl = proc.MakeProcCtl(fls, orc.pid)
 	orc.Started(orc.pid)
 	return orc, nil
 }

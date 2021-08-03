@@ -28,7 +28,7 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	tw.targetReduction = args[3]
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
-	tw.ProcCtl = proc.MakeProcCtl(fls)
+	tw.ProcCtl = proc.MakeProcCtl(fls, tw.pid)
 	tw.Started(tw.pid)
 	return tw, nil
 }

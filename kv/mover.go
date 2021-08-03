@@ -34,7 +34,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[2]
 	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
-	mv.ProcCtl = proc.MakeProcCtl(mv.FsLib)
+	mv.ProcCtl = proc.MakeProcCtl(mv.FsLib, mv.pid)
 
 	db.Name(mv.pid)
 

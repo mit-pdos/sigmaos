@@ -42,7 +42,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.opcode = args[2]
 	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
-	p.ProcCtl = proc.MakeProcCtl(p.FsLib)
+	p.ProcCtl = proc.MakeProcCtl(p.FsLib, p.pid)
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}

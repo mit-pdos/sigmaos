@@ -56,7 +56,7 @@ func MakeNpUxReplica(args []string) *NpUxReplica {
 	}
 	fsl := fslib.MakeFsLib("npux-replica" + r.relayAddr)
 	r.FsLib = fsl
-	r.ProcCtl = proc.MakeProcCtl(fsl)
+	r.ProcCtl = proc.MakeProcCtl(fsl, r.Pid)
 	r.ux = npux.MakeReplicatedNpUx(r.mount, r.srvAddr, true, r.relayAddr, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)
 	// Post in union dir

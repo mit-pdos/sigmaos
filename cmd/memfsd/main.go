@@ -48,7 +48,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 		}
-		pctl := proc.MakeProcCtl(fsl.FsLib)
+		pctl := proc.MakeProcCtl(fsl.FsLib, "memfsd")
 		pctl.Started(os.Args[1])
 		fsd.Serve()
 		fsl.ExitFs(name)

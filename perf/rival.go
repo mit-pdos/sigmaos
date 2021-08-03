@@ -33,7 +33,7 @@ func MakeRival(args []string) (*Rival, error) {
 
 	r := &Rival{}
 	r.FsLib = fslib.MakeFsLib("rival")
-	r.ProcCtl = proc.MakeProcCtl(r.FsLib)
+	r.ProcCtl = proc.MakeProcCtl(r.FsLib, "rival")
 
 	sps, err := strconv.Atoi(args[0])
 	r.spawnsPerSec = sps

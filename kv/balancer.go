@@ -40,7 +40,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
-	bl.ProcCtl = proc.MakeProcCtl(bl.FsLib)
+	bl.ProcCtl = proc.MakeProcCtl(bl.FsLib, bl.pid)
 
 	db.Name("balancer")
 

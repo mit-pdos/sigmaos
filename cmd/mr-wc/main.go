@@ -83,7 +83,7 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
-	pctl := proc.MakeProcCtl(fsl)
+	pctl := proc.MakeProcCtl(fsl, "mr-wc")
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)

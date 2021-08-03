@@ -44,7 +44,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	m.FsLib = fslib.MakeFsLib("mapper")
 	log.Printf("MakeMapper %v\n", args)
-	m.ProcCtl = proc.MakeProcCtl(m.FsLib)
+	m.ProcCtl = proc.MakeProcCtl(m.FsLib, m.pid)
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {

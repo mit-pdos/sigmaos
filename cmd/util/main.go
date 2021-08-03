@@ -74,7 +74,7 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
-	pctl := proc.MakeProcCtl(clnt)
+	pctl := proc.MakeProcCtl(clnt, "util")
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]

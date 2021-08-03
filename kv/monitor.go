@@ -32,7 +32,7 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
-	mo.ProcCtl = proc.MakeProcCtl(mo.FsLib)
+	mo.ProcCtl = proc.MakeProcCtl(mo.FsLib, mo.pid)
 	db.Name(mo.pid)
 
 	if err := mo.LockFile(KVDIR, KVMONLOCK); err != nil {

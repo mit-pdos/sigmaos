@@ -31,7 +31,7 @@ func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("dir-uploader")
 	up.FsLib = fls
-	up.ProcCtl = proc.MakeProcCtl(fls)
+	up.ProcCtl = proc.MakeProcCtl(fls, up.pid)
 	up.Started(up.pid)
 	return up, nil
 }

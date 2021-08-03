@@ -71,7 +71,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	fsl := fslib.MakeFsLib("locald")
 	fsl.Mkdir(fslib.LOCALD_ROOT, 0777)
 	ld.FsLib = fsl
-	ld.ProcCtl = proc.MakeProcCtl(fsl)
+	ld.ProcCtl = proc.MakeProcCtl(fsl, "locald-"+ip)
 	err = fsl.PostServiceUnion(ld.srv.MyAddr(), fslib.LOCALD_ROOT, ld.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("locald PostServiceUnion failed %v %v\n", ld.srv.MyAddr(), err)

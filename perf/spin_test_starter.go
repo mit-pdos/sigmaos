@@ -78,7 +78,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spin-test-starter")
-		s.ProcCtl = proc.MakeProcCtl(s.FsLib)
+		s.ProcCtl = proc.MakeProcCtl(s.FsLib, "spin-test-starter")
 	}
 
 	nSpinners, err := strconv.Atoi(args[0])

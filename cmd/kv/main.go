@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
-	pctl := proc.MakeProcCtl(fsl.FsLib)
+	pctl := proc.MakeProcCtl(fsl.FsLib, "cmd-kvd")
 	pctl.Started(os.Args[1])
 	fsd.Stats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()

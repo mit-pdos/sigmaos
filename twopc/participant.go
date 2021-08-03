@@ -35,7 +35,7 @@ func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Par
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
-	p.ProcCtl = proc.MakeProcCtl(fsl)
+	p.ProcCtl = proc.MakeProcCtl(fsl, p.me)
 	p.txn = txn
 	p.opcode = opcode
 

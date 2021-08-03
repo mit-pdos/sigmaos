@@ -58,12 +58,14 @@ const (
 //}
 
 type ProcCtl struct {
+	pid string
 	*fslib.FsLib
 }
 
-func MakeProcCtl(fsl *fslib.FsLib) *ProcCtl {
+func MakeProcCtl(fsl *fslib.FsLib, pid string) *ProcCtl {
 	pctl := &ProcCtl{}
 	pctl.FsLib = fsl
+	pctl.pid = pid
 
 	return pctl
 }
@@ -90,6 +92,13 @@ func (pctl *ProcCtl) Spawn(p *fslib.Attr) error {
 	// Notify localds that a job has become runnable
 	pctl.SignalNewJob()
 	return nil
+}
+
+// Notify localds that a job has become runnable
+func (pctl *ProcCtl) SignalNewJob() error {
+	// Needs to be done twice, since someone waiting on the signal will create a
+	// new lock file, even if they've crashed
+	return pctl.UnlockFile(fslib.LOCKS, fslib.JOB_SIGNAL)
 }
 
 func (pctl *ProcCtl) makeWaitFile(pid string) error {

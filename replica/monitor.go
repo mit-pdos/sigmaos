@@ -27,7 +27,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	m.ProcCtl = proc.MakeProcCtl(fsl)
+	m.ProcCtl = proc.MakeProcCtl(fsl, m.pid)
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }

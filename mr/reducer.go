@@ -41,7 +41,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
-	r.ProcCtl = proc.MakeProcCtl(r.FsLib)
+	r.ProcCtl = proc.MakeProcCtl(r.FsLib, r.pid)
 	log.Printf("MakeReducer %v\n", args)
 	r.Started(r.pid)
 	return r, nil

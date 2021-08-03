@@ -100,7 +100,7 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
-	st.ProcCtl = proc.MakeProcCtl(fsl)
+	st.ProcCtl = proc.MakeProcCtl(fsl, pid)
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()

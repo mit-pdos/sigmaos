@@ -25,8 +25,8 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	s := &Sleeperl{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
-	s.ProcCtl = proc.MakeProcCtl(s.FsLib)
 	s.pid = args[0]
+	s.ProcCtl = proc.MakeProcCtl(s.FsLib, s.pid)
 	s.output = args[1]
 
 	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)

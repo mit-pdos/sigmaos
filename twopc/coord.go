@@ -51,7 +51,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.args = args[2:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
-	cd.ProcCtl = proc.MakeProcCtl(cd.FsLib)
+	cd.ProcCtl = proc.MakeProcCtl(cd.FsLib, cd.pid)
 
 	// Grab TWOPCLOCK before starting coord
 	if err := cd.LockFile(DIR2PC, TWOPCLOCK); err != nil {

@@ -35,7 +35,7 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	assert.True(ts.t, true, "test")
-	MakeProcCtl(ts.FsLib)
+	MakeProcCtl(ts.FsLib, "test-pid")
 
 	ts.s.Shutdown(ts.FsLib)
 }

@@ -24,11 +24,6 @@ const (
 )
 
 const (
-	// XXX REMOVE BY IMPLEMENTING TRUNC
-	WAITFILE_PADDING = 1000
-)
-
-const (
 	RUNQ          = "name/runq"
 	RUNQLC        = "name/runqlc"
 	WAITQ         = "name/waitq"
@@ -104,10 +99,6 @@ func (pctl *ProcCtl) makeWaitFile(pid string) error {
 	b, err := json.Marshal(wf)
 	if err != nil {
 		log.Printf("Error marshalling waitfile: %v", err)
-	}
-	// XXX hack around lack of OTRUNC
-	for i := 0; i < WAITFILE_PADDING; i++ {
-		b = append(b, ' ')
 	}
 	// Make a writable, versioned file
 	err = pctl.MakeFile(fpath, 0777, np.OWRITE, b)
@@ -198,10 +189,6 @@ func (pctl *ProcCtl) setWaitFileStarted(pid string, started bool) {
 	if err != nil {
 		log.Printf("Error marshalling waitfile: %v", err)
 		return
-	}
-	// XXX hack around lack of OTRUNC
-	for i := 0; i < WAITFILE_PADDING; i++ {
-		b2 = append(b2, ' ')
 	}
 	_, err = pctl.SetFile(waitFilePath(pid), b2, np.NoV)
 	if err != nil {

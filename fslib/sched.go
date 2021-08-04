@@ -16,8 +16,6 @@ const (
 	RET_STAT    = "name/retstat"
 	JOB_SIGNAL  = "job-signal"
 	WAIT_LOCK   = "wait-lock."
-	// XXX REMOVE
-	WAITFILE_PADDING = 1000
 )
 
 func waitFilePath(pid string) string {

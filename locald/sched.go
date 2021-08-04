@@ -2,7 +2,6 @@ package locald
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"path"
 
@@ -133,93 +132,6 @@ func (ld *LocalD) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// We shouldn't hold the "new job" lock while running a lambda/doing work
 	ld.SignalNewJob()
 	return b, true
-}
-
-func (ld *LocalD) makeWaitFile(pid string) error {
-	fpath := waitFilePath(pid)
-	var wf fslib.WaitFile
-	wf.Started = false
-	b, err := json.Marshal(wf)
-	if err != nil {
-		log.Printf("Error marshalling waitfile: %v", err)
-	}
-	// XXX hack around lack of OTRUNC
-	for i := 0; i < fslib.WAITFILE_PADDING; i++ {
-		b = append(b, ' ')
-	}
-	// Make a writable, versioned file
-	err = ld.MakeFile(fpath, 0777, np.OWRITE, b)
-	// Sometimes we get "EOF" on shutdown
-	if err != nil && err.Error() != "EOF" {
-		return fmt.Errorf("Error on MakeFile MakeWaitFile %v: %v", fpath, err)
-	}
-	return nil
-}
-
-func (ld *LocalD) removeWaitFile(pid string) error {
-	fpath := waitFilePath(pid)
-	err := ld.Remove(fpath)
-	if err != nil {
-		log.Printf("Error on RemoveWaitFile  %v: %v", fpath, err)
-		return err
-	}
-	return nil
-}
-
-func (ld *LocalD) setWaitFileStarted(pid string, started bool) {
-	ld.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer ld.UnlockFile(fslib.LOCKS, waitFilePath(pid))
-
-	// Get the current contents of the file & its version
-	b1, _, err := ld.GetFile(waitFilePath(pid))
-	if err != nil {
-		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
-		return
-	}
-	var wf fslib.WaitFile
-	err = json.Unmarshal(b1, &wf)
-	if err != nil {
-		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
-		return
-	}
-	wf.Started = started
-	b2, err := json.Marshal(wf)
-	if err != nil {
-		log.Printf("Error marshalling waitfile: %v", err)
-		return
-	}
-	// XXX hack around lack of OTRUNC
-	for i := 0; i < fslib.WAITFILE_PADDING; i++ {
-		b2 = append(b2, ' ')
-	}
-	_, err = ld.SetFile(waitFilePath(pid), b2, np.NoV)
-	if err != nil {
-		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
-	}
-}
-
-// XXX When we start handling large numbers of lambdas, may be better to stat
-// each exit dep individually. For now, this is more efficient (# of RPCs).
-// If we know nothing about an exit dep, ignore it by marking it as exited
-func (ld *LocalD) pruneExitDeps(a *fslib.Attr) {
-	spawned := ld.getSpawnedLambdas()
-	for pid, _ := range a.ExitDep {
-		if _, ok := spawned[waitFileName(pid)]; !ok {
-			a.ExitDep[pid] = true
-		}
-	}
-}
-
-func (ld *LocalD) getSpawnedLambdas() map[string]bool {
-	d, err := ld.ReadDir(fslib.SPAWNED)
-	if err != nil {
-		log.Printf("Error reading spawned dir in pruneExitDeps: %v", err)
-	}
-	spawned := map[string]bool{}
-	for _, l := range d {
-		spawned[l.Name] = true
-	}
-	return spawned
 }
 
 func waitFilePath(pid string) string {

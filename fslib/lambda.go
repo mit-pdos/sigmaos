@@ -33,6 +33,7 @@ type Attr struct {
 
 type WaitFile struct {
 	Started bool
+	ExitDep []string
 }
 
 //type WaitFile struct {

@@ -35,7 +35,6 @@ const (
 	CLAIMED       = "name/claimed"
 	CLAIMED_EPH   = "name/claimed_ephemeral"
 	SPAWNED       = "name/spawned"
-	RET_STAT      = "name/retstat"
 	JOB_SIGNAL    = "job-signal"
 	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1

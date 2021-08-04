@@ -6,8 +6,6 @@ import (
 	"log"
 	"path"
 
-	"github.com/thanhpk/randstr"
-
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -198,18 +196,6 @@ func (ld *LocalD) setWaitFileStarted(pid string, started bool) {
 	if err != nil {
 		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
 	}
-}
-
-// Create a randomly-named ephemeral file to mark into which the return status
-// will be written.
-func (ld *LocalD) makeRetStatFile() string {
-	fname := randstr.Hex(16)
-	fpath := path.Join(fslib.RET_STAT, fname)
-	err := ld.MakeFile(fpath, 0777|np.DMTMP, np.OWRITE, []byte{})
-	if err != nil {
-		log.Printf("Error creating return status file: %v, %v", fpath, err)
-	}
-	return fpath
 }
 
 // XXX When we start handling large numbers of lambdas, may be better to stat

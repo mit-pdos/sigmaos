@@ -35,6 +35,6 @@ func (e *Event) Broadcast() {
 	e.c.Broadcast()
 }
 
-func (e *Event) Destroy() {
-	e.c.Destroy()
+func (e *Event) Destroy() []string {
+	return e.c.Destroy()
 }

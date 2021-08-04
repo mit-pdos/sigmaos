@@ -167,9 +167,12 @@ func (c *Cond) Wait() {
 }
 
 // Tear down a condition variable by waking all waiters and deleting the
-// condition variable directory. This will make waiting on it an error.
-func (c *Cond) Destroy() {
+// condition variable directory. Return the names of all the waiters. This will
+// make waiting on it an error.
+func (c *Cond) Destroy() []string {
 	c.dirLock.Lock()
+
+	waiterNames := []string{}
 
 	// Wake up all waiters with an individual signal.
 	waiters, err := c.ReadDir(c.path)
@@ -181,6 +184,7 @@ func (c *Cond) Destroy() {
 		if w.Name == DIR_LOCK || w.Name == BROADCAST {
 			continue
 		}
+		waiterNames = append(waiterNames, w.Name)
 		err := c.Remove(path.Join(c.path, w.Name))
 		if err != nil {
 			log.Fatalf("Error Remove in Cond.Destroy: %v", err)
@@ -208,6 +212,7 @@ func (c *Cond) Destroy() {
 	if err != nil {
 		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
 	}
+	return waiterNames
 }
 
 // Make a broadcast file to be waited on.

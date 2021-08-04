@@ -32,9 +32,13 @@ type Attr struct {
 }
 
 type WaitFile struct {
-	Started      bool
-	RetStatFiles []string
+	Started bool
 }
+
+//type WaitFile struct {
+//	StartDep []string // PIDs of lambdas that have a start dependency on this lambda.
+//	ExitDep  []string // PIDs of lambdas that have a start dependency on this lambda.
+//}
 
 const (
 	LOCALD_ROOT  = "name/localds"

@@ -212,61 +212,6 @@ func (ld *LocalD) makeRetStatFile() string {
 	return fpath
 }
 
-// Write back return statuses
-func (ld *LocalD) writeBackRetStats(pid string, status string) {
-	ld.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer ld.UnlockFile(fslib.LOCKS, waitFilePath(pid))
-
-	b, _, err := ld.GetFile(waitFilePath(pid))
-	if err != nil {
-		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
-		return
-	}
-	var wf fslib.WaitFile
-	err = json.Unmarshal(b, &wf)
-	if err != nil {
-		log.Printf("Error unmarshalling waitfile: %v, %v, %v", string(b), wf, err)
-	}
-	for _, p := range wf.RetStatFiles {
-		if len(p) > 0 {
-			ld.WriteFile(p, []byte(status))
-		}
-	}
-}
-
-// Register that we want a return status written back
-func (ld *LocalD) registerRetStatFile(pid string, fpath string) {
-	ld.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer ld.UnlockFile(fslib.LOCKS, waitFilePath(pid))
-
-	// Get the current contents of the file & its version
-	b1, _, err := ld.GetFile(waitFilePath(pid))
-	if err != nil {
-		db.DLPrintf("LOCALD", "Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
-		return
-	}
-	var wf fslib.WaitFile
-	err = json.Unmarshal(b1, &wf)
-	if err != nil {
-		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
-		return
-	}
-	wf.RetStatFiles = append(wf.RetStatFiles, fpath)
-	b2, err := json.Marshal(wf)
-	if err != nil {
-		log.Printf("Error marshalling waitfile: %v", err)
-		return
-	}
-	// XXX hack around lack of OTRUNC
-	for i := 0; i < fslib.WAITFILE_PADDING; i++ {
-		b2 = append(b2, ' ')
-	}
-	_, err = ld.SetFile(waitFilePath(pid), b2, np.NoV)
-	if err != nil {
-		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
-	}
-}
-
 // XXX When we start handling large numbers of lambdas, may be better to stat
 // each exit dep individually. For now, this is more efficient (# of RPCs).
 // If we know nothing about an exit dep, ignore it by marking it as exited

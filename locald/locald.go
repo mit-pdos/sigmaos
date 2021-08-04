@@ -294,7 +294,7 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 
 	// If this is a StartDep-based labmda
 	if len(attr.StartDep) > 0 {
-		// Update its pair deps
+		// Update its start deps
 		attr.StartDep, err = ld.UpdateStartDeps(attr.Pid)
 		// If some producers haven't started, the job isn't runnable
 		if len(attr.StartDep) > 0 || err != nil {

@@ -6,9 +6,6 @@ import (
 	"log"
 	"path"
 
-	"github.com/thanhpk/randstr"
-
-	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -225,8 +222,6 @@ func (pctl *ProcCtl) Exiting(pid string, status string) error {
 	if err != nil {
 		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
 	}
-	// Write back return statuses
-	pctl.writeBackRetStats(pid, status)
 
 	// Release people waiting on this lambda
 	return pctl.removeWaitFile(pid)
@@ -248,41 +243,10 @@ func (pctl *ProcCtl) wakeupExit(pid string) error {
 	return nil
 }
 
-// Write back return statuses
-func (pctl *ProcCtl) writeBackRetStats(pid string, status string) {
-	pctl.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer pctl.UnlockFile(fslib.LOCKS, waitFilePath(pid))
-
-	b, _, err := pctl.GetFile(waitFilePath(pid))
-	if err != nil {
-		log.Printf("Error reading waitfile in WriteBackRetStats: %v, %v", waitFilePath(pid), err)
-		return
-	}
-	var wf fslib.WaitFile
-	err = json.Unmarshal(b, &wf)
-	if err != nil {
-		log.Printf("Error unmarshalling waitfile: %v, %v, %v", string(b), wf, err)
-	}
-	for _, p := range wf.RetStatFiles {
-		if len(p) > 0 {
-			pctl.WriteFile(p, []byte(status))
-		}
-	}
-}
-
 // ========== WAIT ==========
 
-// Create a file to read return status from, watch wait file, and return
-// contents of retstat file.
+// Wait for a task's completion.
 func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
-	// XXX We can make return statuses optional to save on RPCs if we don't care
-	// about them... right now they require a LOT of RPCs.
-
-	// Make a file in which to receive the return status
-	fpath := pctl.makeRetStatFile()
-
-	// Communicate the file name to the lambda we're waiting on
-	pctl.registerRetStatFile(pid, fpath)
 
 	// Wait on the lambda with a watch
 	done := make(chan bool)
@@ -299,65 +263,7 @@ func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
 		<-done
 	}
 
-	// Read the exit status
-	b, _, err := pctl.GetFile(fpath)
-	if err != nil {
-		log.Printf("Error reading retstat file in wait: %v, %v", fpath, err)
-		return b, err
-	}
-
-	// Clean up our temp file
-	err = pctl.Remove(fpath)
-	if err != nil {
-		log.Printf("Error removing retstat file in wait: %v, %v", fpath, err)
-		return b, err
-	}
-	return b, err
-}
-
-// Create a randomly-named ephemeral file to mark into which the return status
-// will be written.
-func (pctl *ProcCtl) makeRetStatFile() string {
-	fname := randstr.Hex(16)
-	fpath := path.Join(RET_STAT, fname)
-	err := pctl.MakeFile(fpath, 0777|np.DMTMP, np.OWRITE, []byte{})
-	if err != nil {
-		log.Printf("Error creating return status file: %v, %v", fpath, err)
-	}
-	return fpath
-}
-
-// Register that we want a return status written back
-func (pctl *ProcCtl) registerRetStatFile(pid string, fpath string) {
-	pctl.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer pctl.UnlockFile(fslib.LOCKS, waitFilePath(pid))
-
-	// Get the current contents of the file & its version
-	b1, _, err := pctl.GetFile(waitFilePath(pid))
-	if err != nil {
-		db.DLPrintf("LOCALD", "Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
-		return
-	}
-	var wf fslib.WaitFile
-	err = json.Unmarshal(b1, &wf)
-	if err != nil {
-		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
-		return
-	}
-	wf.RetStatFiles = append(wf.RetStatFiles, fpath)
-	b2, err := json.Marshal(wf)
-	if err != nil {
-		log.Printf("Error marshalling waitfile: %v", err)
-		return
-	}
-	// XXX hack around lack of OTRUNC
-	for i := 0; i < WAITFILE_PADDING; i++ {
-		b2 = append(b2, ' ')
-	}
-	_, err = pctl.SetFile(waitFilePath(pid), b2, np.NoV)
-	if err != nil {
-		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
-	}
+	return []byte{'O', 'K'}, err
 }
 
 // XXX REMOVE

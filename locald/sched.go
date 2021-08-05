@@ -53,7 +53,7 @@ func (ld *LocalD) JobStarted(pid string) bool {
 		db.DLPrintf("LOCALD", "Job file not found JobStarted: %v, %v", proc.WaitFilePath(pid), err)
 		return true
 	}
-	var wf fslib.WaitFile
+	var wf proc.WaitFile
 	err = json.Unmarshal(b, &wf)
 	if err != nil {
 		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b), err)

@@ -56,6 +56,12 @@ type Proc struct {
 	//	StartTimer uint32          // Start timer in seconds
 }
 
+type WaitFile struct {
+	Started  bool
+	StartDep []string // PIDs of lambdas that have a start dependency on this lambda.
+	ExitDep  []string // PIDs of lambdas that have a start dependency on this lambda.
+}
+
 type ProcCtl struct {
 	pid string
 	*fslib.FsLib
@@ -187,7 +193,7 @@ func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
 
 func (pctl *ProcCtl) makeWaitFile(pid string) error {
 	fpath := WaitFilePath(pid)
-	var wf fslib.WaitFile
+	var wf WaitFile
 	wf.Started = false
 	b, err := json.Marshal(wf)
 	if err != nil {
@@ -245,7 +251,7 @@ func (pctl *ProcCtl) registerDependant(depPid string, waiterPid string, depType 
 		return false
 	}
 
-	var wf fslib.WaitFile
+	var wf WaitFile
 	err = json.Unmarshal(b, &wf)
 	if err != nil {
 		log.Printf("Couldn't unmarshal waitfile in ProcCtl.registerDependant: %v, %v", string(b), err)
@@ -287,7 +293,7 @@ func (pctl *ProcCtl) updateDependants(pid string, depType int) {
 	}
 
 	// Unmarshal
-	var wf fslib.WaitFile
+	var wf WaitFile
 	err = json.Unmarshal(b1, &wf)
 	if err != nil {
 		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)

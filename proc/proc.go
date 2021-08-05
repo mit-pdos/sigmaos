@@ -129,6 +129,29 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 	return nil
 }
 
+// ========== WAIT ==========
+
+// Wait for a task's completion.
+func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
+
+	// Wait on the lambda with a watch
+	done := make(chan bool)
+	err := pctl.SetRemoveWatch(WaitFilePath(pid), func(p string, err error) {
+		if err != nil && err.Error() == "EOF" {
+			return
+		} else if err != nil {
+			log.Printf("Error in wait watch: %v", err)
+		}
+		done <- true
+	})
+	// if error, don't wait; the lambda may already have exited.
+	if err == nil {
+		<-done
+	}
+
+	return []byte{'O', 'K'}, err
+}
+
 // ========== STARTED ==========
 
 func (pctl *ProcCtl) Started(pid string) error {
@@ -164,29 +187,6 @@ func (pctl *ProcCtl) Exiting(pid string, status string) error {
 
 	// Release people waiting on this lambda
 	return pctl.removeWaitFile(pid)
-}
-
-// ========== WAIT ==========
-
-// Wait for a task's completion.
-func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
-
-	// Wait on the lambda with a watch
-	done := make(chan bool)
-	err := pctl.SetRemoveWatch(WaitFilePath(pid), func(p string, err error) {
-		if err != nil && err.Error() == "EOF" {
-			return
-		} else if err != nil {
-			log.Printf("Error in wait watch: %v", err)
-		}
-		done <- true
-	})
-	// if error, don't wait; the lambda may already have exited.
-	if err == nil {
-		<-done
-	}
-
-	return []byte{'O', 'K'}, err
 }
 
 // ========== HELPERS ==========

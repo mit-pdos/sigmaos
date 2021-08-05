@@ -42,6 +42,7 @@ func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
 	return d, err
 }
 
+// XXX Currently used by kv/monitor.go
 func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
 	b, _, err := fl.GetFile(path.Join(WAITQ, pid))
 	return b, err

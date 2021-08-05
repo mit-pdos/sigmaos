@@ -70,46 +70,46 @@ func (ld *LocalD) ClaimWaitQJob(pid string) ([]byte, bool) {
 	return ld.claimJob(fslib.WAITQ, pid)
 }
 
-func (ld *LocalD) UpdateStartDeps(pid string) ([]string, error) {
-	ld.LockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
-	defer ld.UnlockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
-
-	newDeps := []string{}
-
-	b, _, err := ld.GetFile(path.Join(fslib.WAITQ, pid))
-	if err != nil {
-		return newDeps, err
-	}
-	var a fslib.Attr
-	err = json.Unmarshal(b, &a)
-	if err != nil {
-		log.Printf("Couldn't unmarshal job in updatefslib.PDeps %v: %v", string(b), err)
-	}
-
-	for _, dep := range a.StartDep {
-		if dep == pid {
-			log.Fatalf("Tried to set self as StartDep! pid:%v startDeps:%v", pid, a.StartDep)
-		}
-		if started := ld.JobStarted(dep); !started {
-			newDeps = append(newDeps, dep)
-		}
-	}
-
-	// Write back updated deps if
-	if len(newDeps) != len(a.StartDep) {
-		a.StartDep = newDeps
-		b2, err := json.Marshal(a)
-		if err != nil {
-			log.Fatalf("Error marshalling new pairdeps: %v", err)
-		}
-		_, err = ld.SetFile(waitFilePath(pid), b2, np.NoV)
-		if err != nil {
-			log.Printf("Error writing Updatefslib.PDeps: %v, %v", waitFilePath(pid), err)
-		}
-	}
-
-	return newDeps, nil
-}
+//func (ld *LocalD) UpdateStartDeps(pid string) ([]string, error) {
+//	ld.LockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
+//	defer ld.UnlockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
+//
+//	newDeps := []string{}
+//
+//	b, _, err := ld.GetFile(path.Join(fslib.WAITQ, pid))
+//	if err != nil {
+//		return newDeps, err
+//	}
+//	var a fslib.Attr
+//	err = json.Unmarshal(b, &a)
+//	if err != nil {
+//		log.Printf("Couldn't unmarshal job in updatefslib.PDeps %v: %v", string(b), err)
+//	}
+//
+//	for _, dep := range a.StartDep {
+//		if dep == pid {
+//			log.Fatalf("Tried to set self as StartDep! pid:%v startDeps:%v", pid, a.StartDep)
+//		}
+//		if started := ld.JobStarted(dep); !started {
+//			newDeps = append(newDeps, dep)
+//		}
+//	}
+//
+//	// Write back updated deps if
+//	if len(newDeps) != len(a.StartDep) {
+//		a.StartDep = newDeps
+//		b2, err := json.Marshal(a)
+//		if err != nil {
+//			log.Fatalf("Error marshalling new pairdeps: %v", err)
+//		}
+//		_, err = ld.SetFile(waitFilePath(pid), b2, np.NoV)
+//		if err != nil {
+//			log.Printf("Error writing Updatefslib.PDeps: %v, %v", waitFilePath(pid), err)
+//		}
+//	}
+//
+//	return newDeps, nil
+//}
 
 func (ld *LocalD) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore

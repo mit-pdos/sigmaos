@@ -24,7 +24,7 @@ type Attr struct {
 	Dir      string
 	Args     []string
 	Env      []string
-	StartDep []string
+	StartDep map[string]bool
 	ExitDep  map[string]bool
 	Timer    uint32
 	Type     Ttype

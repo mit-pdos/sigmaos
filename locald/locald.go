@@ -292,15 +292,16 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 		}
 	}
 
+	// XXX TODO: rework
 	// If this is a StartDep-based labmda
-	if len(attr.StartDep) > 0 {
-		// Update its start deps
-		attr.StartDep, err = ld.UpdateStartDeps(attr.Pid)
-		// If some producers haven't started, the job isn't runnable
-		if len(attr.StartDep) > 0 || err != nil {
-			return false, fslib.T_DEF
-		}
-	}
+	//	if len(attr.StartDep) > 0 {
+	//		// Update its start deps
+	//		attr.StartDep, err = ld.UpdateStartDeps(attr.Pid)
+	//		// If some producers haven't started, the job isn't runnable
+	//		if len(attr.StartDep) > 0 || err != nil {
+	//			return false, fslib.T_DEF
+	//		}
+	//	}
 
 	// If this is an ExitDep-based lambda
 	for _, b := range attr.ExitDep {

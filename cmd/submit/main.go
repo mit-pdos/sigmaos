@@ -23,8 +23,8 @@ func split(s string) []string {
 	return s1
 }
 
-func splitPairs(s string) []string {
-	ps := []string{}
+func splitPairs(s string) map[string]bool {
+	ps := map[string]bool{}
 	s = strings.TrimRight(s, "]")
 	s = strings.TrimLeft(s, "[")
 	if len(s) == 0 {
@@ -35,7 +35,7 @@ func splitPairs(s string) []string {
 		e = strings.TrimRight(e, ")")
 		e = strings.TrimLeft(e, "(")
 		s1 := strings.Split(e, ";")
-		ps = append(ps, s1[0])
+		ps[s1[0]] = false
 	}
 	return ps
 }

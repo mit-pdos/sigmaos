@@ -106,11 +106,11 @@ func main() {
 		a1 := &proc.Proc{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
 			map[string]bool{}, nil, 0, proc.T_BE,
-			fslib.C_DEF}
+			proc.C_DEF}
 		a2 := &proc.Proc{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil,
 			map[string]bool{pid1: false}, nil, 0, proc.T_BE,
-			fslib.C_DEF}
+			proc.C_DEF}
 		pctl.Spawn(a1)
 		pctl.Spawn(a2)
 		n += 1
@@ -123,7 +123,7 @@ func main() {
 		r := strconv.Itoa(i)
 		a := &proc.Proc{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
-			nil, mappers, 0, proc.T_BE, fslib.C_DEF}
+			nil, mappers, 0, proc.T_BE, proc.C_DEF}
 		reducers = append(reducers, pid)
 		pctl.Spawn(a)
 	}

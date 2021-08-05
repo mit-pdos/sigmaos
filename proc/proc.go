@@ -51,7 +51,7 @@ type Proc struct {
 	ExitDep  map[string]bool // Exit dependencies// XXX Replace somehow?
 	Timer    uint32          // Start timer in seconds
 	Type     Ttype           // Type
-	Ncore    fslib.Tcore     // Number of cores requested
+	Ncore    Tcore           // Number of cores requested
 	//	WDir       string          // Working directory for the process
 	//	StartTimer uint32          // Start timer in seconds
 }

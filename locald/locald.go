@@ -39,7 +39,7 @@ type LocalD struct {
 	ip         string
 	ls         map[string]*Lambda
 	coreBitmap []bool
-	coresAvail fslib.Tcore
+	coresAvail proc.Tcore
 	srv        *npsrv.NpServer
 	group      sync.WaitGroup
 	perf       *perf.Perf
@@ -60,7 +60,7 @@ func MakeLocalD(bin string, pprofPath string, utilPath string) *LocalD {
 	ld.st = npo.MakeSessionTable()
 	ld.ls = map[string]*Lambda{}
 	ld.coreBitmap = make([]bool, linuxsched.NCores)
-	ld.coresAvail = fslib.Tcore(linuxsched.NCores)
+	ld.coresAvail = proc.Tcore(linuxsched.NCores)
 	ld.perf = perf.MakePerf()
 	ip, err := fsclnt.LocalIP()
 	ld.ip = ip
@@ -324,13 +324,13 @@ func (ld *LocalD) spawnConsumers(bs [][]byte) []*Lambda {
 	return ls
 }
 
-func (ld *LocalD) allocCores(n fslib.Tcore) []uint {
+func (ld *LocalD) allocCores(n proc.Tcore) []uint {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 	cores := []uint{}
 	for i := 0; i < len(ld.coreBitmap); i++ {
 		// If not running a benchmark or lambda asks for 0 cores, run on any core
-		if !ld.perf.RunningBenchmark() || n == fslib.C_DEF {
+		if !ld.perf.RunningBenchmark() || n == proc.C_DEF {
 			cores = append(cores, uint(i))
 		} else {
 			if !ld.coreBitmap[i] {

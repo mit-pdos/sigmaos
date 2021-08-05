@@ -33,9 +33,9 @@ type SpinTestStarter struct {
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
 	var a *proc.Proc
 	if s.perfStat {
-		a = &proc.Proc{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, nil, nil, 0, proc.T_DEF, fslib.C_DEF}
+		a = &proc.Proc{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, nil, nil, 0, proc.T_DEF, proc.C_DEF}
 	} else {
-		a = &proc.Proc{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0, proc.T_DEF, fslib.C_DEF}
+		a = &proc.Proc{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0, proc.T_DEF, proc.C_DEF}
 	}
 	err := s.Spawn(a)
 	if err != nil {

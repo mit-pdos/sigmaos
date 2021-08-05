@@ -5,12 +5,6 @@ import (
 	"strconv"
 )
 
-type Tcore uint32
-
-const (
-	C_DEF Tcore = 0
-)
-
 type WaitFile struct {
 	Started  bool
 	StartDep []string // PIDs of lambdas that have a start dependency on this lambda.

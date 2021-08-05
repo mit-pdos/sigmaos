@@ -8,6 +8,7 @@ import (
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/sync"
 )
 
 type Ttype uint32
@@ -35,13 +36,18 @@ const (
 	CRASH_TIMEOUT = 1
 )
 
+const (
+	START_DEP = iota
+	EXIT_DEP  = iota
+)
+
 //type Proc struct {
 //	Pid        string          // SigmaOS PID
 //	Program    string          // Program to run
 //	WDir       string          // Working directory for the process
 //	Args       []string        // Args
 //	Env        []string        // Environment variables
-//	StartDep   []string        // Start dependencies // XXX Replace somehow?
+//	StartDep   map[string]bool // Start dependencies // XXX Replace somehow?
 //	ExitDep    map[string]bool // Exit dependencies// XXX Replace somehow?
 //	StartTimer uint32          // Start timer in seconds
 //	Type       Ttype           // Type
@@ -61,6 +67,23 @@ func MakeProcCtl(fsl *fslib.FsLib, pid string) *ProcCtl {
 	return pctl
 }
 
+// Notify localds that a job has become runnable
+func (pctl *ProcCtl) SignalNewJob() error {
+	// Needs to be done twice, since someone waiting on the signal will create a
+	// new lock file, even if they've crashed
+	return pctl.UnlockFile(fslib.LOCKS, fslib.JOB_SIGNAL)
+}
+
+// ========== NAMING CONVENTIONS ==========
+
+func WaitFilePath(pid string) string {
+	return path.Join(SPAWNED, waitFileName(pid))
+}
+
+func waitFileName(pid string) string {
+	return fslib.LockName(WAIT_LOCK + pid)
+}
+
 // ========== SPAWN ==========
 
 func (pctl *ProcCtl) Spawn(p *fslib.Attr) error {
@@ -69,137 +92,59 @@ func (pctl *ProcCtl) Spawn(p *fslib.Attr) error {
 	if err != nil {
 		return err
 	}
-	pctl.pruneExitDeps(p)
+
+	procFPath := path.Join(WAITQ, p.Pid)
+	// Create a lock to atomically update the job file.
+	pLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(procFPath), true)
+
+	// Lock the job file to make sure we don't miss any dependency updates
+	pLock.Lock()
+	defer pLock.Unlock()
+
+	// Register dependency backwards pointers.
+	pctl.registerDependants(p)
+
 	b, err := json.Marshal(p)
 	if err != nil {
 		// Unlock the waiter file if unmarshal failed
 		pctl.removeWaitFile(p.Pid)
 		return err
 	}
-	err = pctl.MakeFileAtomic(path.Join(WAITQ, p.Pid), 0777, b)
+
+	// Atomically create the job file.
+	err = pctl.MakeFileAtomic(procFPath, 0777, b)
 	if err != nil {
 		return err
 	}
-	// Notify localds that a job has become runnable
+	// Notify localds that a job has joined the queue
 	pctl.SignalNewJob()
 	return nil
 }
 
-// Notify localds that a job has become runnable
-func (pctl *ProcCtl) SignalNewJob() error {
-	// Needs to be done twice, since someone waiting on the signal will create a
-	// new lock file, even if they've crashed
-	return pctl.UnlockFile(fslib.LOCKS, fslib.JOB_SIGNAL)
-}
-
-func (pctl *ProcCtl) makeWaitFile(pid string) error {
-	fpath := waitFilePath(pid)
-	var wf fslib.WaitFile
-	wf.Started = false
-	b, err := json.Marshal(wf)
-	if err != nil {
-		log.Printf("Error marshalling waitfile: %v", err)
-	}
-	// Make a writable, versioned file
-	err = pctl.MakeFile(fpath, 0777, np.OWRITE, b)
-	// Sometimes we get "EOF" on shutdown
-	if err != nil && err.Error() != "EOF" {
-		return fmt.Errorf("Error on MakeFile MakeWaitFile %v: %v", fpath, err)
-	}
-	return nil
-}
-
-// XXX When we start handling large numbers of lambdas, may be better to stat
-// each exit dep individually. For now, this is more efficient (# of RPCs).
-// If we know nothing about an exit dep, ignore it by marking it as exited
-func (pctl *ProcCtl) pruneExitDeps(p *fslib.Attr) {
-	spawned := pctl.getSpawnedLambdas()
-	for pid, _ := range p.ExitDep {
-		if _, ok := spawned[waitFileName(pid)]; !ok {
-			p.ExitDep[pid] = true
-		}
-	}
-}
-
-func (pctl *ProcCtl) removeWaitFile(pid string) error {
-	fpath := waitFilePath(pid)
-	err := pctl.Remove(fpath)
-	if err != nil {
-		log.Printf("Error on RemoveWaitFile  %v: %v", fpath, err)
-		return err
-	}
-	return nil
-}
-
-func waitFilePath(pid string) string {
-	return path.Join(SPAWNED, waitFileName(pid))
-}
-
-func waitFileName(pid string) string {
-	return fslib.LockName(WAIT_LOCK + pid)
-}
-
-func (pctl *ProcCtl) getSpawnedLambdas() map[string]bool {
-	d, err := pctl.ReadDir(SPAWNED)
-	if err != nil {
-		log.Printf("Error reading spawned dir in pruneExitDeps: %v", err)
-	}
-	spawned := map[string]bool{}
-	for _, l := range d {
-		spawned[l.Name] = true
-	}
-	return spawned
-}
-
 // ========== STARTED ==========
 
-/*
- * PairDep-based lambdas are runnable only if they are the producer (whoever
- * claims and runs the producer will also start the consumer, so we disallow
- * unilaterally claiming the consumer for now), and only once all of their
- * consumers have been started. For now we assume that
- * consumers only have one producer, and the roles of producer and consumer
- * are mutually exclusive. We also expect (though not strictly necessary)
- * that producers only have one consumer each. If this is no longer the case,
- * we should handle oversubscription more carefully.
- */
 func (pctl *ProcCtl) Started(pid string) error {
-	pctl.setWaitFileStarted(pid, true)
+	waitFileLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(WaitFilePath(pid)), true)
+
+	waitFileLock.Lock()
+	defer waitFileLock.Unlock()
+
+	pctl.updateDependants(pid, START_DEP)
+
 	return nil
-}
-
-func (pctl *ProcCtl) setWaitFileStarted(pid string, started bool) {
-	pctl.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer pctl.UnlockFile(fslib.LOCKS, waitFilePath(pid))
-
-	// Get the current contents of the file & its version
-	b1, _, err := pctl.GetFile(waitFilePath(pid))
-	if err != nil {
-		log.Printf("Error reading when registerring retstat: %v, %v", waitFilePath(pid), err)
-		return
-	}
-	var wf fslib.WaitFile
-	err = json.Unmarshal(b1, &wf)
-	if err != nil {
-		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
-		return
-	}
-	wf.Started = started
-	b2, err := json.Marshal(wf)
-	if err != nil {
-		log.Printf("Error marshalling waitfile: %v", err)
-		return
-	}
-	_, err = pctl.SetFile(waitFilePath(pid), b2, np.NoV)
-	if err != nil {
-		log.Printf("Error writing when registerring retstat: %v, %v", waitFilePath(pid), err)
-	}
 }
 
 // ========== EXITING ==========
 
 func (pctl *ProcCtl) Exiting(pid string, status string) error {
-	pctl.wakeupExit(pid)
+	waitFileLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(WaitFilePath(pid)), true)
+
+	waitFileLock.Lock()
+	defer waitFileLock.Unlock()
+
+	// Update waiters
+	pctl.updateDependants(pid, EXIT_DEP)
+
 	err := pctl.Remove(path.Join(CLAIMED, pid))
 	if err != nil {
 		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
@@ -213,22 +158,6 @@ func (pctl *ProcCtl) Exiting(pid string, status string) error {
 	return pctl.removeWaitFile(pid)
 }
 
-func (pctl *ProcCtl) wakeupExit(pid string) error {
-	err := pctl.modifyExitDependencies(func(deps map[string]bool) bool {
-		if _, ok := deps[pid]; ok {
-			deps[pid] = true
-			return true
-		}
-		return false
-	})
-	if err != nil {
-		return err
-	}
-	// Notify localds that a job has become runnable
-	pctl.SignalNewJob()
-	return nil
-}
-
 // ========== WAIT ==========
 
 // Wait for a task's completion.
@@ -236,7 +165,7 @@ func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
 
 	// Wait on the lambda with a watch
 	done := make(chan bool)
-	err := pctl.SetRemoveWatch(waitFilePath(pid), func(p string, err error) {
+	err := pctl.SetRemoveWatch(WaitFilePath(pid), func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {
@@ -252,7 +181,197 @@ func (pctl *ProcCtl) Wait(pid string) ([]byte, error) {
 	return []byte{'O', 'K'}, err
 }
 
-// XXX REMOVE
+// ========== HELPERS ==========
+
+func (pctl *ProcCtl) makeWaitFile(pid string) error {
+	fpath := WaitFilePath(pid)
+	var wf fslib.WaitFile
+	wf.Started = false
+	b, err := json.Marshal(wf)
+	if err != nil {
+		log.Printf("Error marshalling waitfile: %v", err)
+	}
+	// Make a writable, versioned file
+	err = pctl.MakeFile(fpath, 0777, np.OWRITE, b)
+	// Sometimes we get "EOF" on shutdown
+	if err != nil && err.Error() != "EOF" {
+		return fmt.Errorf("Error on MakeFile MakeWaitFile %v: %v", fpath, err)
+	}
+	return nil
+}
+
+func (pctl *ProcCtl) removeWaitFile(pid string) error {
+	fpath := WaitFilePath(pid)
+	err := pctl.Remove(fpath)
+	if err != nil {
+		log.Printf("Error on RemoveWaitFile  %v: %v", fpath, err)
+		return err
+	}
+	return nil
+}
+
+// Register start & exit dependencies in dependencies' waitfiles, and update the
+// current proc's dependencies.
+func (pctl *ProcCtl) registerDependants(p *fslib.Attr) {
+	for dep, _ := range p.StartDep {
+		if ok := pctl.registerDependant(dep, p.Pid, START_DEP); !ok {
+			// If we failed to register the dependency, assume the dependency has
+			// already been satisfied.
+			p.StartDep[dep] = true
+		}
+	}
+	for dep, _ := range p.ExitDep {
+		if ok := pctl.registerDependant(dep, p.Pid, EXIT_DEP); !ok {
+			// If we failed to register the dependency, assume the dependency has
+			// already been satisfied.
+			p.ExitDep[dep] = true
+		}
+	}
+}
+
+// Register a dependency in another Proc's WaitFile. If the registration
+// succeeded, return true. If the registration failed, assume the dependency has
+// been satisfied, and return false.
+func (pctl *ProcCtl) registerDependant(depPid string, waiterPid string, depType int) bool {
+	depLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(WaitFilePath(depPid)), true)
+
+	depLock.Lock()
+	defer depLock.Unlock()
+
+	b, _, err := pctl.GetFile(WaitFilePath(depPid))
+	if err != nil {
+		return false
+	}
+
+	var wf fslib.WaitFile
+	err = json.Unmarshal(b, &wf)
+	if err != nil {
+		log.Printf("Couldn't unmarshal waitfile in ProcCtl.registerDependant: %v, %v", string(b), err)
+	}
+
+	switch depType {
+	case START_DEP:
+		// Check we didn't miss the start signal already.
+		if wf.Started {
+			return false
+		}
+		wf.StartDep = append(wf.StartDep, waiterPid)
+	case EXIT_DEP:
+		wf.ExitDep = append(wf.ExitDep, waiterPid)
+	default:
+		log.Fatalf("Unknown dep type in ProcCtl.registerDependant: %v", depType)
+	}
+
+	// Write back updated deps if
+	b2, err := json.Marshal(wf)
+	if err != nil {
+		log.Fatalf("Error marshalling deps in ProcCtl.registerDependant: %v", err)
+	}
+
+	_, err = pctl.SetFile(WaitFilePath(depPid), b2, np.NoV)
+	if err != nil {
+		log.Printf("Error setting waitfile in ProcCtl.registerDependant: %v, %v", WaitFilePath(depPid), err)
+	}
+
+	return true
+}
+
+func (pctl *ProcCtl) updateDependants(pid string, depType int) {
+	// Get the current contents of the wait file
+	b1, _, err := pctl.GetFile(WaitFilePath(pid))
+	if err != nil {
+		log.Printf("Error reading when registerring retstat: %v, %v", WaitFilePath(pid), err)
+		return
+	}
+
+	// Unmarshal
+	var wf fslib.WaitFile
+	err = json.Unmarshal(b1, &wf)
+	if err != nil {
+		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
+		return
+	}
+
+	var waiters []string
+
+	switch depType {
+	case START_DEP:
+		waiters = wf.StartDep
+	case EXIT_DEP:
+		waiters = wf.ExitDep
+	default:
+		log.Fatalf("Unknown depType in ProcCtl.updateDependants: %v", depType)
+	}
+
+	for _, waiter := range waiters {
+		pctl.updateDependant(pid, waiter, depType)
+	}
+
+	// Record the start signal if applicable.
+	if depType == START_DEP {
+		wf.Started = true
+		b2, err := json.Marshal(wf)
+		if err != nil {
+			log.Printf("Error marshalling waitfile: %v", err)
+			return
+		}
+		_, err = pctl.SetFile(WaitFilePath(pid), b2, np.NoV)
+		if err != nil {
+			log.Printf("Error writing when registerring retstat: %v, %v", WaitFilePath(pid), err)
+		}
+	}
+}
+
+func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType int) {
+	waiterFPath := path.Join(fslib.WAITQ, waiterPid)
+
+	// Create a lock to atomically update the job file.
+	waiterPLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(waiterFPath), true)
+
+	// Lock the job file to make sure we don't miss any dependency updates
+	waiterPLock.Lock()
+	defer waiterPLock.Unlock()
+
+	b, _, err := pctl.GetFile(waiterFPath)
+	if err != nil {
+		log.Printf("Couldn't get waiter file in ProcCtl.updateDependant: %v, %v", waiterPid, err)
+		return
+	}
+
+	var p fslib.Attr
+	err = json.Unmarshal(b, &p)
+	if err != nil {
+		log.Printf("Couldn't unmarshal job in ProcCtl.updateDependant %v: %v", string(b), err)
+	}
+
+	switch depType {
+	case START_DEP:
+		// If the dependency has already been marked, move along.
+		if done := p.StartDep[depPid]; done {
+			return
+		}
+		p.StartDep[depPid] = true
+	case EXIT_DEP:
+		// If the dependency has already been marked, move along.
+		if done := p.ExitDep[depPid]; done {
+			return
+		}
+		p.ExitDep[depPid] = true
+	default:
+		log.Fatalf("Unknown depType in ProcCtl.updateDependant: %v", depType)
+	}
+
+	b2, err := json.Marshal(p)
+	if err != nil {
+		log.Fatalf("Error marshalling in ProcCtl.updateDependant: %v", err)
+	}
+	_, err = pctl.SetFile(waiterFPath, b2, np.NoV)
+	if err != nil {
+		log.Printf("Error writing in ProcCtl.updateDependant: %v, %v", waiterFPath, err)
+	}
+}
+
+// XXX REMOVE --- just used by GG
 // ========== SPAWN_NO_OP =========
 
 // Spawn a no-op lambda

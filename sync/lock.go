@@ -4,6 +4,7 @@ import (
 	"log"
 	"path"
 	"runtime/debug"
+	"strings"
 
 	"ulambda/fslib"
 )
@@ -23,6 +24,10 @@ func MakeLock(fsl *fslib.FsLib, lockDir, lockName string, strict bool) *Lock {
 	l.lockName = lockName
 	l.FsLib = fsl
 	l.strict = strict
+
+	if strings.Contains(lockName, "/") {
+		log.Fatalf("Invalid lock name: %v", lockName)
+	}
 
 	return l
 }

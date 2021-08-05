@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 func (ld *LocalD) WaitForJob() error {
@@ -43,13 +44,13 @@ func (ld *LocalD) MarkJobRunnable(pid string, t fslib.Ttype) error {
 // least been spawned, and hasn't exited yet. If the job file is not present,
 // we assume that it has already started (and probably exited).
 func (ld *LocalD) JobStarted(pid string) bool {
-	ld.LockFile(fslib.LOCKS, waitFilePath(pid))
-	defer ld.UnlockFile(fslib.LOCKS, waitFilePath(pid))
+	ld.LockFile(fslib.LOCKS, proc.WaitFilePath(pid))
+	defer ld.UnlockFile(fslib.LOCKS, proc.WaitFilePath(pid))
 
 	// Get the current contents of the file & its version
-	b, _, err := ld.GetFile(waitFilePath(pid))
+	b, _, err := ld.GetFile(proc.WaitFilePath(pid))
 	if err != nil {
-		db.DLPrintf("LOCALD", "Job file not found JobStarted: %v, %v", waitFilePath(pid), err)
+		db.DLPrintf("LOCALD", "Job file not found JobStarted: %v, %v", proc.WaitFilePath(pid), err)
 		return true
 	}
 	var wf fslib.WaitFile
@@ -69,47 +70,6 @@ func (ld *LocalD) ClaimRunQJob(dir string, pid string) ([]byte, bool) {
 func (ld *LocalD) ClaimWaitQJob(pid string) ([]byte, bool) {
 	return ld.claimJob(fslib.WAITQ, pid)
 }
-
-//func (ld *LocalD) UpdateStartDeps(pid string) ([]string, error) {
-//	ld.LockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
-//	defer ld.UnlockFile(fslib.LOCKS, path.Join(fslib.WAITQ, pid))
-//
-//	newDeps := []string{}
-//
-//	b, _, err := ld.GetFile(path.Join(fslib.WAITQ, pid))
-//	if err != nil {
-//		return newDeps, err
-//	}
-//	var a fslib.Attr
-//	err = json.Unmarshal(b, &a)
-//	if err != nil {
-//		log.Printf("Couldn't unmarshal job in updatefslib.PDeps %v: %v", string(b), err)
-//	}
-//
-//	for _, dep := range a.StartDep {
-//		if dep == pid {
-//			log.Fatalf("Tried to set self as StartDep! pid:%v startDeps:%v", pid, a.StartDep)
-//		}
-//		if started := ld.JobStarted(dep); !started {
-//			newDeps = append(newDeps, dep)
-//		}
-//	}
-//
-//	// Write back updated deps if
-//	if len(newDeps) != len(a.StartDep) {
-//		a.StartDep = newDeps
-//		b2, err := json.Marshal(a)
-//		if err != nil {
-//			log.Fatalf("Error marshalling new pairdeps: %v", err)
-//		}
-//		_, err = ld.SetFile(waitFilePath(pid), b2, np.NoV)
-//		if err != nil {
-//			log.Printf("Error writing Updatefslib.PDeps: %v, %v", waitFilePath(pid), err)
-//		}
-//	}
-//
-//	return newDeps, nil
-//}
 
 func (ld *LocalD) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore
@@ -132,12 +92,4 @@ func (ld *LocalD) claimJob(queuePath string, pid string) ([]byte, bool) {
 	// We shouldn't hold the "new job" lock while running a lambda/doing work
 	ld.SignalNewJob()
 	return b, true
-}
-
-func waitFilePath(pid string) string {
-	return path.Join(fslib.SPAWNED, waitFileName(pid))
-}
-
-func waitFileName(pid string) string {
-	return fslib.LockName(fslib.WAIT_LOCK + pid)
 }

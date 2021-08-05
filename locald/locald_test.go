@@ -75,7 +75,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 
 func spawnMonitor(t *testing.T, ts *Tstate) {
 	pid := "monitor-" + fslib.GenPid()
-	a := &fslib.Attr{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil, 1,
+	a := &proc.Proc{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil, 1,
 		fslib.T_DEF, fslib.C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -87,7 +87,7 @@ func spawnSleeperlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint3
 }
 
 func spawnSleeperlWithPidTimerStartDep(t *testing.T, ts *Tstate, pid string, timer uint32, startDep []string) {
-	a := &fslib.Attr{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, startDep, nil, timer, fslib.T_DEF, fslib.C_DEF}
+	a := &proc.Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, startDep, nil, timer, fslib.T_DEF, fslib.C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -401,7 +401,7 @@ func TestEvict(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := fslib.GenPid()
-	a := &fslib.Attr{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil, nil, nil, 0,
+	a := &proc.Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil, nil, nil, 0,
 		fslib.T_DEF, fslib.C_DEF}
 	err := ts.Spawn(a)
 

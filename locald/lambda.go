@@ -34,22 +34,22 @@ type Lambda struct {
 
 // XXX init/run pattern seems a bit redundant...
 func (l *Lambda) init(a []byte) error {
-	var attr proc.Proc
-	err := json.Unmarshal(a, &attr)
+	var p proc.Proc
+	err := json.Unmarshal(a, &p)
 	if err != nil {
 		log.Printf("Locald unmarshalling error: %v, %v", err, a)
 		return err
 	}
-	l.Program = attr.Program
-	l.Pid = attr.Pid
-	l.Args = attr.Args
-	l.Env = attr.Env
-	l.Dir = attr.Dir
-	l.Stdout = "" // XXX: add to or infer from attr
-	l.Stderr = "" // XXX: add to or infer from attr
-	l.attr = &attr
-	db.DLPrintf("LOCALD", "Locald init: %v\n", attr)
-	d1 := l.ld.makeDir([]string{attr.Pid}, np.DMDIR, l.ld.root)
+	l.Program = p.Program
+	l.Pid = p.Pid
+	l.Args = p.Args
+	l.Env = p.Env
+	l.Dir = p.Dir
+	l.Stdout = "" // XXX: add to or infer from p
+	l.Stderr = "" // XXX: add to or infer from p
+	l.attr = &p
+	db.DLPrintf("LOCALD", "Locald init: %v\n", p)
+	d1 := l.ld.makeDir([]string{p.Pid}, np.DMDIR, l.ld.root)
 	d1.time = time.Now().Unix()
 	return nil
 }

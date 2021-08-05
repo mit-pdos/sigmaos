@@ -113,7 +113,7 @@ func (st *Stats) spawnMonitor() string {
 	a.Args = []string{}
 	a.StartDep = nil
 	a.ExitDep = nil
-	a.Type = fslib.T_LC
+	a.Type = proc.T_LC
 	st.Spawn(&a)
 	return a.Pid
 }

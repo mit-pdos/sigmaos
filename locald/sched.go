@@ -29,8 +29,8 @@ func (ld *LocalD) ReadRunQ(dir string) ([]*np.Stat, error) {
 	return d, err
 }
 
-func (ld *LocalD) MarkJobRunnable(pid string, t fslib.Ttype) error {
-	if t == fslib.T_LC {
+func (ld *LocalD) MarkJobRunnable(pid string, t proc.Ttype) error {
+	if t == proc.T_LC {
 		ld.Rename(path.Join(fslib.WAITQ, pid), path.Join(fslib.RUNQLC, pid))
 	} else {
 		ld.Rename(path.Join(fslib.WAITQ, pid), path.Join(fslib.RUNQ, pid))

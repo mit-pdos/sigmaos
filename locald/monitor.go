@@ -38,7 +38,7 @@ func MakeMonitor(pid string) *Monitor {
 // Enqueue a new monitor to be run in MONITOR_TIMER seconds
 func (m *Monitor) RestartSelf() {
 	newPid := "monitor-" + fslib.GenPid()
-	a := &proc.Proc{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, MONITOR_TIMER, fslib.T_LC, fslib.C_DEF}
+	a := &proc.Proc{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, MONITOR_TIMER, proc.T_LC, fslib.C_DEF}
 	err := m.Spawn(a)
 	if err != nil {
 		log.Printf("Error spawning monitor: %v", err)
@@ -92,7 +92,7 @@ func (m *Monitor) RestartJob(pid string) error {
 		log.Printf("Error unmarshalling in RestartJob: %v", err)
 	}
 	runq := fslib.RUNQ
-	if attr.Type == fslib.T_LC {
+	if attr.Type == proc.T_LC {
 		runq = fslib.RUNQLC
 	}
 	m.Rename(path.Join(fslib.CLAIMED, pid), path.Join(runq, pid))

@@ -57,7 +57,7 @@ func spawnBalancerPid(pctl *proc.ProcCtl, opcode, pid1, pid2 string) {
 	a.Args = []string{opcode, pid1}
 	a.StartDep = map[string]bool{pid1: false}
 	a.ExitDep = nil
-	a.Type = fslib.T_LC
+	a.Type = proc.T_LC
 	pctl.Spawn(&a)
 }
 
@@ -68,7 +68,7 @@ func spawnBalancer(pctl *proc.ProcCtl, opcode, pid1 string) string {
 	a.Args = []string{opcode, pid1}
 	a.StartDep = map[string]bool{pid1: false}
 	a.ExitDep = nil
-	a.Type = fslib.T_LC
+	a.Type = proc.T_LC
 	pctl.Spawn(&a)
 	return a.Pid
 }
@@ -80,7 +80,7 @@ func spawnKVPid(pctl *proc.ProcCtl, pid1 string, pid2 string) {
 	a.Args = []string{""}
 	a.StartDep = map[string]bool{pid1: false}
 	a.ExitDep = nil
-	a.Type = fslib.T_LC
+	a.Type = proc.T_LC
 	pctl.Spawn(&a)
 }
 
@@ -91,7 +91,7 @@ func SpawnKV(pctl *proc.ProcCtl) string {
 	a.Args = []string{""}
 	a.StartDep = nil
 	a.ExitDep = nil
-	a.Type = fslib.T_LC
+	a.Type = proc.T_LC
 	pctl.Spawn(&a)
 	return a.Pid
 }

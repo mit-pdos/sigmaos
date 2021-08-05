@@ -5,14 +5,7 @@ import (
 	"strconv"
 )
 
-type Ttype uint32
 type Tcore uint32
-
-const (
-	T_DEF Ttype = 0
-	T_LC  Ttype = 1
-	T_BE  Ttype = 2
-)
 
 const (
 	C_DEF Tcore = 0

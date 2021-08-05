@@ -41,19 +41,6 @@ const (
 	EXIT_DEP  = iota
 )
 
-//type Attr struct {
-//	Pid      string
-//	Program  string
-//	Dir      string
-//	Args     []string
-//	Env      []string
-//	StartDep map[string]bool
-//	ExitDep  map[string]bool
-//	Timer    uint32
-//	Type     Ttype
-//	Ncore    Tcore
-//}
-
 type Proc struct {
 	Pid      string          // SigmaOS PID
 	Program  string          // Program to run
@@ -63,7 +50,7 @@ type Proc struct {
 	StartDep map[string]bool // Start dependencies // XXX Replace somehow?
 	ExitDep  map[string]bool // Exit dependencies// XXX Replace somehow?
 	Timer    uint32          // Start timer in seconds
-	Type     fslib.Ttype     // Type
+	Type     Ttype           // Type
 	Ncore    fslib.Tcore     // Number of cores requested
 	//	WDir       string          // Working directory for the process
 	//	StartTimer uint32          // Start timer in seconds

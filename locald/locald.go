@@ -266,12 +266,12 @@ func (ld *LocalD) checkWaitingLambdas() {
  * *** For now, we assume the three "types" described above are mutually
  *    exclusive***
  */
-func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
+func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, proc.Ttype) {
 	attr := &proc.Proc{}
 	err := json.Unmarshal(a, attr)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
-		return false, fslib.T_DEF
+		return false, proc.T_DEF
 	}
 	// If this is a timer-based lambda
 	if attr.Timer != 0 {
@@ -288,7 +288,7 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 				time.Sleep(dur)
 				ld.SignalNewJob()
 			}(attr.Timer)
-			return false, fslib.T_DEF
+			return false, proc.T_DEF
 		}
 	}
 
@@ -299,14 +299,14 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
 	//		attr.StartDep, err = ld.UpdateStartDeps(attr.Pid)
 	//		// If some producers haven't started, the job isn't runnable
 	//		if len(attr.StartDep) > 0 || err != nil {
-	//			return false, fslib.T_DEF
+	//			return false, proc.T_DEF
 	//		}
 	//	}
 
 	// If this is an ExitDep-based lambda
 	for _, b := range attr.ExitDep {
 		if !b {
-			return false, fslib.T_DEF
+			return false, proc.T_DEF
 		}
 	}
 	return true, attr.Type

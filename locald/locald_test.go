@@ -76,7 +76,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 func spawnMonitor(t *testing.T, ts *Tstate) {
 	pid := "monitor-" + fslib.GenPid()
 	a := &proc.Proc{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil, 1,
-		fslib.T_DEF, fslib.C_DEF}
+		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -86,8 +86,8 @@ func spawnSleeperlWithPidTimer(t *testing.T, ts *Tstate, pid string, timer uint3
 	spawnSleeperlWithPidTimerStartDep(t, ts, pid, timer, nil)
 }
 
-func spawnSleeperlWithPidTimerStartDep(t *testing.T, ts *Tstate, pid string, timer uint32, startDep []string) {
-	a := &proc.Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, startDep, nil, timer, fslib.T_DEF, fslib.C_DEF}
+func spawnSleeperlWithPidTimerStartDep(t *testing.T, ts *Tstate, pid string, timer uint32, startDep map[string]bool) {
+	a := &proc.Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, startDep, nil, timer, proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -324,13 +324,13 @@ func TestStartDepProdFirst(t *testing.T) {
 	}
 
 	// Spawn the producer first
-	spawnSleeperlWithPidTimerStartDep(t, ts, prod, 0, []string{})
+	spawnSleeperlWithPidTimerStartDep(t, ts, prod, 0, map[string]bool{})
 
 	// Make sure the producer hasn't run yet...
 	checkSleeperlResultFalse(t, ts, prod)
 
 	// Spawn the consumer
-	spawnSleeperlWithPidTimerStartDep(t, ts, cons, 0, []string{prod})
+	spawnSleeperlWithPidTimerStartDep(t, ts, cons, 0, map[string]bool{prod: false})
 
 	// Wait a bit
 	time.Sleep(12 * time.Second)
@@ -402,7 +402,7 @@ func TestEvict(t *testing.T) {
 
 	pid := fslib.GenPid()
 	a := &proc.Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil, nil, nil, 0,
-		fslib.T_DEF, fslib.C_DEF}
+		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
 
 	assert.Nil(t, err, "Spawn")

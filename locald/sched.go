@@ -9,6 +9,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/sync"
 )
 
 func (ld *LocalD) WaitForJob() error {
@@ -44,8 +45,10 @@ func (ld *LocalD) MarkJobRunnable(pid string, t proc.Ttype) error {
 // least been spawned, and hasn't exited yet. If the job file is not present,
 // we assume that it has already started (and probably exited).
 func (ld *LocalD) JobStarted(pid string) bool {
-	ld.LockFile(fslib.LOCKS, proc.WaitFilePath(pid))
-	defer ld.UnlockFile(fslib.LOCKS, proc.WaitFilePath(pid))
+	waitFileLock := sync.MakeLock(ld.FsLib, fslib.LOCKS, fslib.LockName(proc.WaitFilePath(pid)), true)
+
+	waitFileLock.Lock()
+	defer waitFileLock.Unlock()
 
 	// Get the current contents of the file & its version
 	b, _, err := ld.GetFile(proc.WaitFilePath(pid))

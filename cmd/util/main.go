@@ -42,12 +42,12 @@ func splitPairs(s string) map[string]bool {
 	return ps
 }
 
-func readLambda(line string) (*fslib.Attr, error) {
+func readLambda(line string) (*proc.Proc, error) {
 	l := strings.Split(line, ",")
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
-	a := &fslib.Attr{}
+	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])

@@ -51,7 +51,7 @@ func (mo *Monitor) unlock() {
 }
 
 func spawnBalancerPid(pctl *proc.ProcCtl, opcode, pid1, pid2 string) {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = pid2
 	a.Program = "bin/balancer"
 	a.Args = []string{opcode, pid1}
@@ -62,7 +62,7 @@ func spawnBalancerPid(pctl *proc.ProcCtl, opcode, pid1, pid2 string) {
 }
 
 func spawnBalancer(pctl *proc.ProcCtl, opcode, pid1 string) string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/balancer"
 	a.Args = []string{opcode, pid1}
@@ -74,7 +74,7 @@ func spawnBalancer(pctl *proc.ProcCtl, opcode, pid1 string) string {
 }
 
 func spawnKVPid(pctl *proc.ProcCtl, pid1 string, pid2 string) {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = pid1
 	a.Program = KV
 	a.Args = []string{""}
@@ -85,7 +85,7 @@ func spawnKVPid(pctl *proc.ProcCtl, pid1 string, pid2 string) {
 }
 
 func SpawnKV(pctl *proc.ProcCtl) string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = fslib.GenPid()
 	a.Program = KV
 	a.Args = []string{""}
@@ -121,7 +121,7 @@ func (mo *Monitor) kvwaiting() bool {
 	for _, j := range jobs {
 		log.Printf("job %v\n", j.Name)
 		a, err := mo.ReadWaitQJob(j.Name)
-		var attr fslib.Attr
+		var attr proc.Proc
 		err = json.Unmarshal(a, &attr)
 		if err != nil {
 			log.Printf("grow: unmarshal err %v", err)

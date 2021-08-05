@@ -76,7 +76,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/memfsd"
 	a.Args = []string{""}

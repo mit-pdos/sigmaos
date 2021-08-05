@@ -18,7 +18,7 @@ const (
 
 type ExecutorLauncher interface {
 	FsLambda
-	Spawn(*fslib.Attr) error
+	Spawn(*proc.Proc) error
 	SpawnNoOp(string, []string) error
 	Started(string) error
 }

@@ -226,7 +226,7 @@ func (srv *NpServer) runDirWatcher() {
 			done <- true
 		})
 		<-done
-		attr := &fslib.Attr{}
+		attr := &proc.Proc{}
 		attr.Pid = fslib.GenPid()
 		attr.Program = "bin/replica-monitor"
 		attr.Args = []string{config.ConfigPath, config.UnionDirPath}

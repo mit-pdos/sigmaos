@@ -158,7 +158,7 @@ func (ld *LocalD) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 // XXX Statsd information?
 // Check if this locald instance is able to satisfy a job's constraints.
 // Trivially true when not benchmarking.
-func (ld *LocalD) satisfiesConstraints(attr *fslib.Attr) bool {
+func (ld *LocalD) satisfiesConstraints(attr *proc.Proc) bool {
 	// Constraints are not checked when testing, as some tests require more cores
 	// than we may have on our test machine.
 	if !ld.perf.RunningBenchmark() {
@@ -172,18 +172,18 @@ func (ld *LocalD) satisfiesConstraints(attr *fslib.Attr) bool {
 }
 
 // Update resource accounting information.
-func (ld *LocalD) decrementResourcesL(attr *fslib.Attr) {
+func (ld *LocalD) decrementResourcesL(attr *proc.Proc) {
 	ld.coresAvail -= attr.Ncore
 }
 
 // Update resource accounting information.
-func (ld *LocalD) incrementResources(attr *fslib.Attr) {
+func (ld *LocalD) incrementResources(attr *proc.Proc) {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
 	ld.incrementResourcesL(attr)
 }
-func (ld *LocalD) incrementResourcesL(attr *fslib.Attr) {
+func (ld *LocalD) incrementResourcesL(attr *proc.Proc) {
 	ld.coresAvail += attr.Ncore
 }
 
@@ -267,7 +267,7 @@ func (ld *LocalD) checkWaitingLambdas() {
  *    exclusive***
  */
 func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, fslib.Ttype) {
-	attr := &fslib.Attr{}
+	attr := &proc.Proc{}
 	err := json.Unmarshal(a, attr)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
@@ -445,8 +445,8 @@ func (ld *LocalD) Work() {
 	ld.group.Wait()
 }
 
-func unmarshalJob(b []byte) *fslib.Attr {
-	var attr fslib.Attr
+func unmarshalJob(b []byte) *proc.Proc {
+	var attr proc.Proc
 	err := json.Unmarshal(b, &attr)
 	if err != nil {
 		log.Fatalf("Locald couldn't unmarshal job: %v, %v", b, err)

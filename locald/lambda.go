@@ -11,9 +11,9 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/fslib"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type Lambda struct {
@@ -27,14 +27,14 @@ type Lambda struct {
 	Stdout  string
 	Stderr  string
 	SysPid  int
-	attr    *fslib.Attr
+	attr    *proc.Proc
 	ld      *LocalD
 	// XXX add fields (e.g. CPU mask, etc.)
 }
 
 // XXX init/run pattern seems a bit redundant...
 func (l *Lambda) init(a []byte) error {
-	var attr fslib.Attr
+	var attr proc.Proc
 	err := json.Unmarshal(a, &attr)
 	if err != nil {
 		log.Printf("Locald unmarshalling error: %v, %v", err, a)

@@ -41,18 +41,33 @@ const (
 	EXIT_DEP  = iota
 )
 
-//type Proc struct {
-//	Pid        string          // SigmaOS PID
-//	Program    string          // Program to run
-//	WDir       string          // Working directory for the process
-//	Args       []string        // Args
-//	Env        []string        // Environment variables
-//	StartDep   map[string]bool // Start dependencies // XXX Replace somehow?
-//	ExitDep    map[string]bool // Exit dependencies// XXX Replace somehow?
-//	StartTimer uint32          // Start timer in seconds
-//	Type       Ttype           // Type
-//	Ncore      Tcore           // Number of cores requested
+//type Attr struct {
+//	Pid      string
+//	Program  string
+//	Dir      string
+//	Args     []string
+//	Env      []string
+//	StartDep map[string]bool
+//	ExitDep  map[string]bool
+//	Timer    uint32
+//	Type     Ttype
+//	Ncore    Tcore
 //}
+
+type Proc struct {
+	Pid      string          // SigmaOS PID
+	Program  string          // Program to run
+	Dir      string          // Working directory for the process
+	Args     []string        // Args
+	Env      []string        // Environment variables
+	StartDep map[string]bool // Start dependencies // XXX Replace somehow?
+	ExitDep  map[string]bool // Exit dependencies// XXX Replace somehow?
+	Timer    uint32          // Start timer in seconds
+	Type     fslib.Ttype     // Type
+	Ncore    fslib.Tcore     // Number of cores requested
+	//	WDir       string          // Working directory for the process
+	//	StartTimer uint32          // Start timer in seconds
+}
 
 type ProcCtl struct {
 	pid string
@@ -86,7 +101,7 @@ func waitFileName(pid string) string {
 
 // ========== SPAWN ==========
 
-func (pctl *ProcCtl) Spawn(p *fslib.Attr) error {
+func (pctl *ProcCtl) Spawn(p *Proc) error {
 	// Create a file for waiters to watch & wait on
 	err := pctl.makeWaitFile(p.Pid)
 	if err != nil {
@@ -212,7 +227,7 @@ func (pctl *ProcCtl) removeWaitFile(pid string) error {
 
 // Register start & exit dependencies in dependencies' waitfiles, and update the
 // current proc's dependencies.
-func (pctl *ProcCtl) registerDependants(p *fslib.Attr) {
+func (pctl *ProcCtl) registerDependants(p *Proc) {
 	for dep, _ := range p.StartDep {
 		if ok := pctl.registerDependant(dep, p.Pid, START_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
@@ -338,7 +353,7 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 		return
 	}
 
-	var p fslib.Attr
+	var p Proc
 	err = json.Unmarshal(b, &p)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job in ProcCtl.updateDependant %v: %v", string(b), err)
@@ -376,7 +391,7 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 
 // Spawn a no-op lambda
 func (pctl *ProcCtl) SpawnNoOp(pid string, exitDep []string) error {
-	a := &fslib.Attr{}
+	a := &Proc{}
 	a.Pid = pid
 	a.Program = fslib.NO_OP_LAMBDA
 	exitDepMap := map[string]bool{}
@@ -417,7 +432,7 @@ func (pctl *ProcCtl) modifyExitDependencies(f func(map[string]bool) bool) error 
 			log.Fatalf("Error in SwapExitDependency GetFile %v: %v", l.Name, err)
 			return err
 		}
-		var attr fslib.Attr
+		var attr Proc
 		err = json.Unmarshal(a, &attr)
 		if err != nil {
 			log.Fatalf("Error in SwapExitDependency Unmarshal %v: %v", a, err)

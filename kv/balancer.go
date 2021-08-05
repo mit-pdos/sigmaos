@@ -89,7 +89,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnMover(s, src, dst string) string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/mover"
 	a.Args = []string{s, src, dst}

@@ -18,29 +18,11 @@ const (
 	C_DEF Tcore = 0
 )
 
-type Attr struct {
-	Pid      string
-	Program  string
-	Dir      string
-	Args     []string
-	Env      []string
-	StartDep map[string]bool
-	ExitDep  map[string]bool
-	Timer    uint32
-	Type     Ttype
-	Ncore    Tcore
-}
-
 type WaitFile struct {
 	Started  bool
-	StartDep []string
-	ExitDep  []string
+	StartDep []string // PIDs of lambdas that have a start dependency on this lambda.
+	ExitDep  []string // PIDs of lambdas that have a start dependency on this lambda.
 }
-
-//type WaitFile struct {
-//	StartDep []string // PIDs of lambdas that have a start dependency on this lambda.
-//	ExitDep  []string // PIDs of lambdas that have a start dependency on this lambda.
-//}
 
 const (
 	LOCALD_ROOT  = "name/localds"

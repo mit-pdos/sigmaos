@@ -77,7 +77,7 @@ func MakeRival(args []string) (*Rival, error) {
 
 func (r *Rival) spawnSpinner(pid string) {
 	if r.ninep {
-		a := &fslib.Attr{pid, "bin/c-spinner", "", []string{r.dim, r.its}, nil, nil, nil, 0, fslib.T_DEF, fslib.C_DEF}
+		a := &proc.Proc{pid, "bin/c-spinner", "", []string{r.dim, r.its}, nil, nil, nil, 0, fslib.T_DEF, fslib.C_DEF}
 		start := time.Now()
 		err := r.Spawn(a)
 		if err != nil {

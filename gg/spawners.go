@@ -6,7 +6,7 @@ import (
 	"path"
 	//	"runtime/debug"
 
-	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 // Given a PID, create a no-op which waits on that Pid
@@ -21,7 +21,7 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 }
 
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = origDirUploaderPid(subDir)
 	a.Program = "bin/fsdiruploader"
 	a.Args = []string{
@@ -40,7 +40,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 }
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = reductionWriterPid(dstDir, subDir, target)
 	a.Program = "bin/gg-target-writer"
 	a.Args = []string{
@@ -66,7 +66,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = executorPid(targetHash)
 	a.Program = "bin/gg-executor"
 	a.Args = []string{
@@ -87,7 +87,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 }
 
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
-	a := fslib.Attr{}
+	a := proc.Proc{}
 	a.Pid = outputHandlerPid(thunkHash)
 	a.Program = "bin/gg-thunk-output-handler"
 	a.Args = []string{

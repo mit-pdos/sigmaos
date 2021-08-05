@@ -103,11 +103,11 @@ func main() {
 		pid2 := fslib.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
-		a1 := &fslib.Attr{pid1, "bin/fsreader", "",
+		a1 := &proc.Proc{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
 			map[string]bool{}, nil, 0, fslib.T_BE,
 			fslib.C_DEF}
-		a2 := &fslib.Attr{pid2, "bin/mr-m-wc", "",
+		a2 := &proc.Proc{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil,
 			map[string]bool{pid1: false}, nil, 0, fslib.T_BE,
 			fslib.C_DEF}
@@ -121,7 +121,7 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		pid := fslib.GenPid()
 		r := strconv.Itoa(i)
-		a := &fslib.Attr{pid, "bin/mr-r-wc", "",
+		a := &proc.Proc{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
 			nil, mappers, 0, fslib.T_BE, fslib.C_DEF}
 		reducers = append(reducers, pid)

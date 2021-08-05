@@ -31,11 +31,11 @@ type SpinTestStarter struct {
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
-	var a *fslib.Attr
+	var a *proc.Proc
 	if s.perfStat {
-		a = &fslib.Attr{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, nil, nil, 0, fslib.T_DEF, fslib.C_DEF}
+		a = &proc.Proc{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, nil, nil, 0, fslib.T_DEF, fslib.C_DEF}
 	} else {
-		a = &fslib.Attr{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0, fslib.T_DEF, fslib.C_DEF}
+		a = &proc.Proc{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, 0, fslib.T_DEF, fslib.C_DEF}
 	}
 	err := s.Spawn(a)
 	if err != nil {

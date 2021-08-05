@@ -158,33 +158,33 @@ func (ld *LocalD) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 // XXX Statsd information?
 // Check if this locald instance is able to satisfy a job's constraints.
 // Trivially true when not benchmarking.
-func (ld *LocalD) satisfiesConstraints(attr *proc.Proc) bool {
+func (ld *LocalD) satisfiesConstraints(p *proc.Proc) bool {
 	// Constraints are not checked when testing, as some tests require more cores
 	// than we may have on our test machine.
 	if !ld.perf.RunningBenchmark() {
 		return true
 	}
 	// If we have enough cores to run this job...
-	if ld.coresAvail >= attr.Ncore {
+	if ld.coresAvail >= p.Ncore {
 		return true
 	}
 	return false
 }
 
 // Update resource accounting information.
-func (ld *LocalD) decrementResourcesL(attr *proc.Proc) {
-	ld.coresAvail -= attr.Ncore
+func (ld *LocalD) decrementResourcesL(p *proc.Proc) {
+	ld.coresAvail -= p.Ncore
 }
 
 // Update resource accounting information.
-func (ld *LocalD) incrementResources(attr *proc.Proc) {
+func (ld *LocalD) incrementResources(p *proc.Proc) {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
 
-	ld.incrementResourcesL(attr)
+	ld.incrementResourcesL(p)
 }
-func (ld *LocalD) incrementResourcesL(attr *proc.Proc) {
-	ld.coresAvail += attr.Ncore
+func (ld *LocalD) incrementResourcesL(p *proc.Proc) {
+	ld.coresAvail += p.Ncore
 }
 
 func (ld *LocalD) getRun(runq string) ([]byte, error) {
@@ -202,14 +202,14 @@ func (ld *LocalD) getRun(runq string) ([]byte, error) {
 			continue
 		}
 		// Unmarshal it
-		attr := unmarshalJob(b)
+		p := unmarshalJob(b)
 		// See if we can run it, and if so, try to claim it
 		claimed := false
-		if ld.satisfiesConstraints(attr) {
+		if ld.satisfiesConstraints(p) {
 			b, claimed = ld.ClaimRunQJob(runq, j.Name)
 		}
 		if claimed {
-			ld.decrementResourcesL(attr)
+			ld.decrementResourcesL(p)
 			ld.mu.Unlock()
 			return b, nil
 		}
@@ -254,30 +254,29 @@ func (ld *LocalD) checkWaitingLambdas() {
 }
 
 /*
- * 1. Timer-based lambdas are runnable after Mtime + attr.Timer > time.Now()
+ * 1. Timer-based lambdas are runnable after Mtime + p.Timer > time.Now()
  * 2. ExitDep-based lambdas are runnable after all entries in the ExitDep map
  *    are true, whether that be because the dependencies explicitly exited or
  *    because they did not exist at spawn time (and were pruned).
- * 3. StartDep-based lambdas are runnable immediately if they are the producer,
- *    and after all producers have started running if they are the consumer. For
- *    now, we assume that the roles "Producer" and "Consumer" are mutually
- *    exclusive.
+ * 3. StartDep-based lambdas are runnable once all entries in the StartDep map
+ *    are true.
  *
  * *** For now, we assume the three "types" described above are mutually
  *    exclusive***
  */
 func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, proc.Ttype) {
-	attr := &proc.Proc{}
-	err := json.Unmarshal(a, attr)
+	p := &proc.Proc{}
+	err := json.Unmarshal(a, p)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
 		return false, proc.T_DEF
 	}
+
 	// If this is a timer-based lambda
-	if attr.Timer != 0 {
+	if p.Timer != 0 {
 		// If the timer has expired
-		if uint32(time.Now().Unix()) > j.Mtime+attr.Timer {
-			return true, attr.Type
+		if uint32(time.Now().Unix()) > j.Mtime+p.Timer {
+			return true, p.Type
 		} else {
 			// XXX Factor this out & do it in a monitor lambda
 			// For now, just make sure *some* locald eventually wakes up to mark this
@@ -287,41 +286,26 @@ func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, proc.Ttype) {
 				dur := time.Duration(uint64(timer) * 1000000000)
 				time.Sleep(dur)
 				ld.SignalNewJob()
-			}(attr.Timer)
+			}(p.Timer)
 			return false, proc.T_DEF
 		}
 	}
 
-	// XXX TODO: rework
-	// If this is a StartDep-based labmda
-	//	if len(attr.StartDep) > 0 {
-	//		// Update its start deps
-	//		attr.StartDep, err = ld.UpdateStartDeps(attr.Pid)
-	//		// If some producers haven't started, the job isn't runnable
-	//		if len(attr.StartDep) > 0 || err != nil {
-	//			return false, proc.T_DEF
-	//		}
-	//	}
-
-	// If this is an ExitDep-based lambda
-	for _, b := range attr.ExitDep {
-		if !b {
+	// Check for any unstarted StartDeps
+	for _, started := range p.StartDep {
+		if !started {
 			return false, proc.T_DEF
 		}
 	}
-	return true, attr.Type
-}
 
-func (ld *LocalD) spawnConsumers(bs [][]byte) []*Lambda {
-	ls := []*Lambda{}
-	for _, b := range bs {
-		l, err := ld.spawn(b)
-		if err != nil {
-			log.Fatalf("Couldn't spawn consumer job: %v", string(b))
+	// Check for any unexited ExitDeps
+	for _, exited := range p.ExitDep {
+		if !exited {
+			return false, proc.T_DEF
 		}
-		ls = append(ls, l)
 	}
-	return ls
+
+	return true, p.Type
 }
 
 func (ld *LocalD) allocCores(n proc.Tcore) []uint {
@@ -414,10 +398,6 @@ func (ld *LocalD) Worker(workerId uint) {
 		if err != nil {
 			log.Fatalf("Locald spawn error %v\n", err)
 		}
-		//		// Try to claim, spawn, and run consumers if this lamba is a producer
-		//		consumers := l.getConsumers()
-		//		bs := ld.claimConsumers(consumers)
-		//		consumerLs := ld.spawnConsumers(bs)
 		ls := []*Lambda{l}
 		//		ls = append(ls, consumerLs...)
 		ld.runAll(ls)
@@ -446,11 +426,11 @@ func (ld *LocalD) Work() {
 }
 
 func unmarshalJob(b []byte) *proc.Proc {
-	var attr proc.Proc
-	err := json.Unmarshal(b, &attr)
+	var p proc.Proc
+	err := json.Unmarshal(b, &p)
 	if err != nil {
 		log.Fatalf("Locald couldn't unmarshal job: %v, %v", b, err)
 		return nil
 	}
-	return &attr
+	return &p
 }

@@ -33,7 +33,6 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.FsLib = fslib.MakeFsLib("sched_test")
 	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "locald-test")
 	ts.t = t
-	time.Sleep(500 * time.Millisecond)
 	return ts
 }
 
@@ -55,7 +54,6 @@ func makeTstateOneLocald(t *testing.T) *Tstate {
 	ts.FsLib = fslib.MakeFsLib("sched_test")
 	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "locald-test")
 	ts.t = t
-	time.Sleep(500 * time.Millisecond)
 	return ts
 }
 

@@ -15,6 +15,10 @@ const (
 	UX     = "name/ux"
 )
 
+const (
+	POST_BOOT_SLEEP_MS = 500
+)
+
 type System struct {
 	named  *exec.Cmd
 	nps3d  *exec.Cmd
@@ -37,7 +41,7 @@ func BootMin(bin string) (*System, error) {
 		return nil, err
 	}
 	s.named = cmd
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return s, nil
 }
 
@@ -50,7 +54,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	err = s.BootNps3d(bin)
 	if err != nil {
 		return nil, err
@@ -59,7 +63,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return s, nil
 }
 
@@ -69,7 +73,7 @@ func (s *System) BootNpUxd(bin string) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return nil
 }
 
@@ -79,7 +83,7 @@ func (s *System) BootNps3d(bin string) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return nil
 }
 
@@ -89,7 +93,7 @@ func (s *System) BootLocald(bin string) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return nil
 }
 

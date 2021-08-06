@@ -115,6 +115,9 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 			first, rest[len(first)])
 		rest = rest[len(first)+1:]
 		todo = len(rest)
+		if err != nil {
+			return np.NoFid, 0, err
+		}
 	} else {
 		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
 		if err != nil {

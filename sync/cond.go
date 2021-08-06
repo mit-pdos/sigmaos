@@ -8,7 +8,7 @@ import (
 
 	"github.com/thanhpk/randstr"
 
-	//	db "ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -116,7 +116,7 @@ func (c *Cond) Wait() {
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
-				log.Printf("Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
+				db.DLPrintf("COND", "Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
 			}
 			bcast <- true
 		})
@@ -124,7 +124,7 @@ func (c *Cond) Wait() {
 		if err == nil {
 			<-bcast
 		} else {
-			log.Printf("Error SetRemoveWatch bcast Cond.Wait: %v", err)
+			db.DLPrintf("COND", "Error SetRemoveWatch bcast Cond.Wait: %v", err)
 		}
 		done <- true
 
@@ -139,7 +139,7 @@ func (c *Cond) Wait() {
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil {
-				log.Printf("Error RemoveWatch signal triggered in Cond.Wait: %v", err)
+				db.DLPrintf("COND", "Error RemoveWatch signal triggered in Cond.Wait: %v", err)
 			}
 			signal <- true
 		})
@@ -147,7 +147,7 @@ func (c *Cond) Wait() {
 		if err == nil {
 			<-signal
 		} else {
-			log.Printf("Error SetRemoveWatch signal Cond.Wait: %v", err)
+			db.DLPrintf("COND", "Error SetRemoveWatch signal Cond.Wait: %v", err)
 		}
 		done <- true
 	}()

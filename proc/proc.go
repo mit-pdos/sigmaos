@@ -292,7 +292,7 @@ func (pctl *ProcCtl) updateDependants(pid string, depType int) {
 	// Get the current contents of the wait file
 	b1, _, err := pctl.GetFile(WaitFilePath(pid))
 	if err != nil {
-		log.Printf("Error reading when registerring retstat: %v, %v", WaitFilePath(pid), err)
+		log.Printf("Error GetFile in ProcCtl.updateDependants: %v, %v", WaitFilePath(pid), err)
 		return
 	}
 
@@ -330,7 +330,7 @@ func (pctl *ProcCtl) updateDependants(pid string, depType int) {
 		b2 = append(b2, ' ')
 		_, err = pctl.SetFile(WaitFilePath(pid), b2, np.NoV)
 		if err != nil {
-			log.Printf("Error writing when registerring retstat: %v, %v", WaitFilePath(pid), err)
+			log.Printf("Error SetFile in ProcCtl.updateDependants: %v, %v", WaitFilePath(pid), err)
 		}
 	}
 }

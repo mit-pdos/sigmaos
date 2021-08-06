@@ -282,36 +282,36 @@ func TestExitDep(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestSwapExitDeps(t *testing.T) {
-	ts := makeTstate(t)
-
-	pid := spawnSleeperl(t, ts)
-
-	pid2 := spawnNoOp(t, ts, []string{pid})
-
-	start := time.Now()
-
-	// Sleep a bit
-	time.Sleep(4 * time.Second)
-
-	// Spawn a new sleeperl lambda
-	pid3 := spawnSleeperl(t, ts)
-
-	// Wait on the new sleeperl lambda instead of the old one
-	swaps := []string{pid, pid3}
-	db.DLPrintf("SCHEDD", "Swapping %v\n", swaps)
-	ts.SwapExitDependency(swaps)
-
-	ts.Wait(pid2)
-	end := time.Now()
-	elapsed := end.Sub(start)
-	assert.True(t, elapsed.Seconds() > 8.0, "Didn't wait for exit dep for long enough (%v)", elapsed.Seconds())
-
-	checkSleeperlResult(t, ts, pid)
-	checkSleeperlResult(t, ts, pid3)
-
-	ts.s.Shutdown(ts.FsLib)
-}
+//func TestSwapExitDeps(t *testing.T) {
+//	ts := makeTstate(t)
+//
+//	pid := spawnSleeperl(t, ts)
+//
+//	pid2 := spawnNoOp(t, ts, []string{pid})
+//
+//	start := time.Now()
+//
+//	// Sleep a bit
+//	time.Sleep(4 * time.Second)
+//
+//	// Spawn a new sleeperl lambda
+//	pid3 := spawnSleeperl(t, ts)
+//
+//	// Wait on the new sleeperl lambda instead of the old one
+//	swaps := []string{pid, pid3}
+//	db.DLPrintf("SCHEDD", "Swapping %v\n", swaps)
+//	ts.SwapExitDependency(swaps)
+//
+//	ts.Wait(pid2)
+//	end := time.Now()
+//	elapsed := end.Sub(start)
+//	assert.True(t, elapsed.Seconds() > 8.0, "Didn't wait for exit dep for long enough (%v)", elapsed.Seconds())
+//
+//	checkSleeperlResult(t, ts, pid)
+//	checkSleeperlResult(t, ts, pid3)
+//
+//	ts.s.Shutdown(ts.FsLib)
+//}
 
 func TestStartDepProdFirst(t *testing.T) {
 	ts := makeTstate(t)

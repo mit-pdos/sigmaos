@@ -93,6 +93,7 @@ func (ch *Chan) terminateOutstandingL() {
 	for _, rpc := range ch.outstanding {
 		close(rpc.replych)
 	}
+	ch.outstanding = map[np.Ttag]*RpcT{}
 }
 
 func (ch *Chan) resendOutstandingL() {
@@ -118,7 +119,9 @@ func (ch *Chan) Close() {
 
 	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.dstL())
 	ch.terminateOutstandingL()
-	close(ch.requests)
+	if !ch.closed {
+		close(ch.requests)
+	}
 	ch.closed = true
 	ch.conn.Close()
 }

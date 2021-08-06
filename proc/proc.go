@@ -41,6 +41,10 @@ const (
 	EXIT_DEP  = iota
 )
 
+const (
+	WAITFILE_PADDING = 1000
+)
+
 type Proc struct {
 	Pid      string          // SigmaOS PID
 	Program  string          // Program to run
@@ -323,6 +327,7 @@ func (pctl *ProcCtl) updateDependants(pid string, depType int) {
 			log.Printf("Error marshalling waitfile: %v", err)
 			return
 		}
+		b2 = append(b2, ' ')
 		_, err = pctl.SetFile(WaitFilePath(pid), b2, np.NoV)
 		if err != nil {
 			log.Printf("Error writing when registerring retstat: %v, %v", WaitFilePath(pid), err)
@@ -373,10 +378,15 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 	if err != nil {
 		log.Fatalf("Error marshalling in ProcCtl.updateDependant: %v", err)
 	}
+	// XXX Hack around lack of OTRUNC
+	for i := 0; i < WAITFILE_PADDING; i++ {
+		b2 = append(b2, ' ')
+	}
 	_, err = pctl.SetFile(waiterFPath, b2, np.NoV)
 	if err != nil {
 		log.Printf("Error writing in ProcCtl.updateDependant: %v, %v", waiterFPath, err)
 	}
+	pctl.SignalNewJob()
 }
 
 // XXX REMOVE --- just used by GG

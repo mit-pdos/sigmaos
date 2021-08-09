@@ -234,7 +234,7 @@ func (c *Cond) createWaitfile() string {
 	// XXX Should be ephemeral?
 	err := c.MakeFile(waitfilePath, 0777, np.OWRITE, []byte{})
 	if err != nil {
-		log.Printf("Error MakeFile in Cond.createWaitFile: %v, %v", waitfilePath, err)
+		db.DLPrintf("COND", "Error MakeFile in Cond.createWaitFile: %v, %v", waitfilePath, err)
 	}
 	return waitfilePath
 }

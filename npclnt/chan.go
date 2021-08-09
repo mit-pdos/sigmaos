@@ -305,6 +305,7 @@ func (ch *Chan) reader() {
 		}
 		if err != nil {
 			db.DLPrintf("9PCHAN", "Reader: ReadFrame error %v\n", err)
+			ch.Close()
 			return
 		}
 		fcall := &np.Fcall{}

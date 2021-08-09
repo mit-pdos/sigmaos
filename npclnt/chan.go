@@ -263,7 +263,7 @@ func (ch *Chan) writer() {
 			}
 			db.DLPrintf("9PCHAN", "Writer: Connection error to %v: %v", ch.Dst(), err)
 		} else {
-			err = ch.bw.Flush()
+			err = bw.Flush()
 			if err != nil {
 				if strings.Contains(err.Error(), "connection reset by peer") {
 					ch.resetConnection(br, bw)

@@ -76,27 +76,7 @@ func (c *Cond) Broadcast() {
 // Wake up one waiter. The condLock need not be held, and needs to be manually
 // unlocked independently of this function call..
 func (c *Cond) Signal() {
-	c.dirLock.Lock()
-	defer c.dirLock.Unlock()
-
-	waiters, err := c.ReadDir(c.path)
-	if err != nil {
-		log.Printf("Error ReadDir in Cond.Signal: %v", err)
-	}
-
-	// Shuffle the list of waiters
-	rand.Shuffle(len(waiters), func(i, j int) { waiters[i], waiters[j] = waiters[j], waiters[i] })
-
-	for _, w := range waiters {
-		if w.Name != BROADCAST && w.Name != DIR_LOCK {
-			// Wake a single waiter
-			err := c.Remove(path.Join(c.path, w.Name))
-			if err != nil {
-				log.Printf("Error Remove in Cond.Signal: %v", err)
-			}
-			return
-		}
-	}
+	log.Fatalf("Cond.Signal unimplemented")
 }
 
 // Wait. If condLock != nil, assumes the condLock is held, and returns with the
@@ -104,10 +84,7 @@ func (c *Cond) Signal() {
 func (c *Cond) Wait() {
 	c.dirLock.Lock()
 
-	waitfilePath := c.createWaitfile()
-
-	// Size 2 so we don't get hanging threads
-	done := make(chan bool, 2)
+	done := make(chan bool, 1)
 
 	// Everyone waits on the broadcast file
 	go func() {
@@ -125,29 +102,6 @@ func (c *Cond) Wait() {
 			<-bcast
 		} else {
 			db.DLPrintf("COND", "Error SetRemoveWatch bcast Cond.Wait: %v", err)
-		}
-		done <- true
-
-		// Make sure the waitfile was removed
-		c.Remove(waitfilePath)
-	}()
-
-	// Everyone waits on their waitfile
-	go func() {
-		signal := make(chan bool)
-		err := c.SetRemoveWatch(waitfilePath, func(p string, err error) {
-			if err != nil && err.Error() == "EOF" {
-				return
-			} else if err != nil {
-				db.DLPrintf("COND", "Error RemoveWatch signal triggered in Cond.Wait: %v", err)
-			}
-			signal <- true
-		})
-		// If error, don't wait.
-		if err == nil {
-			<-signal
-		} else {
-			db.DLPrintf("COND", "Error SetRemoveWatch signal Cond.Wait: %v", err)
 		}
 		done <- true
 	}()
@@ -174,32 +128,13 @@ func (c *Cond) Destroy() []string {
 
 	waiterNames := []string{}
 
-	// Wake up all waiters with an individual signal.
-	waiters, err := c.ReadDir(c.path)
-	if err != nil {
-		log.Fatalf("Error ReadDir in Cond.Destroy: %v", err)
-	}
-
-	for _, w := range waiters {
-		if w.Name == DIR_LOCK || w.Name == BROADCAST {
-			continue
-		}
-		waiterNames = append(waiterNames, w.Name)
-		err := c.Remove(path.Join(c.path, w.Name))
-		if err != nil {
-			log.Fatalf("Error Remove in Cond.Destroy: %v", err)
-		}
-	}
-
 	// Wake up all waiters with a broadcast.
-	err = c.Remove(c.bcastPath)
+	err := c.Remove(c.bcastPath)
 	if err != nil {
 		log.Fatalf("Error Remove in Cond.Destroy: %v", err)
 	}
 
 	c.dirLock.Unlock()
-
-	// XXX slight race here, might cause the remove to fail...
 
 	// Rename the directory to make sure we don't take on any more waiters.
 	newPath := path.Join(fslib.TMP, randstr.Hex(16))
@@ -221,20 +156,4 @@ func (c *Cond) createBcastFile() {
 	if err != nil {
 		log.Fatalf("Error condvar createBcastFile MakeFile: %v", err)
 	}
-}
-
-// Create a unique file to be waited on. Name is PID + "." + randstr to
-// accommodate multiple threads waiting on a condition from within the same
-// process.
-func (c *Cond) createWaitfile() string {
-	r := randstr.Hex(16)
-	id := c.pid + "." + r
-	waitfilePath := path.Join(c.path, id)
-
-	// XXX Should be ephemeral?
-	err := c.MakeFile(waitfilePath, 0777, np.OWRITE, []byte{})
-	if err != nil {
-		db.DLPrintf("COND", "Error MakeFile in Cond.createWaitFile: %v, %v", waitfilePath, err)
-	}
-	return waitfilePath
 }

@@ -234,80 +234,6 @@ func (ld *LocalD) getLambda() ([]byte, error) {
 	return ld.getRun(fslib.RUNQ)
 }
 
-// Scan through the waitq, and try to move jobs to the runq.
-func (ld *LocalD) checkWaitingLambdas() {
-	jobs, err := ld.ReadWaitQ()
-	if err != nil {
-		log.Fatalf("Error reading WaitQ: %v", err)
-	}
-	for _, j := range jobs {
-		b, err := ld.ReadWaitQJob(j.Name)
-		// Ignore errors: they may be frequent under high concurrency
-		if err != nil || len(b) == 0 {
-			continue
-		}
-		if ok, t := ld.jobIsRunnable(j, b); ok {
-			// Ignore errors: they may be frequent under high concurrency
-			ld.MarkJobRunnable(j.Name, t)
-		}
-	}
-}
-
-/*
- * 1. Timer-based lambdas are runnable after Mtime + p.Timer > time.Now()
- * 2. ExitDep-based lambdas are runnable after all entries in the ExitDep map
- *    are true, whether that be because the dependencies explicitly exited or
- *    because they did not exist at spawn time (and were pruned).
- * 3. StartDep-based lambdas are runnable once all entries in the StartDep map
- *    are true.
- *
- * *** For now, we assume the three "types" described above are mutually
- *    exclusive***
- */
-func (ld *LocalD) jobIsRunnable(j *np.Stat, a []byte) (bool, proc.Ttype) {
-	p := &proc.Proc{}
-	err := json.Unmarshal(a, p)
-	if err != nil {
-		log.Printf("Couldn't unmarshal job to check if runnable %v: %v", a, err)
-		return false, proc.T_DEF
-	}
-
-	// If this is a timer-based lambda
-	if p.Timer != 0 {
-		// If the timer has expired
-		if uint32(time.Now().Unix()) > j.Mtime+p.Timer {
-			return true, p.Type
-		} else {
-			// XXX Factor this out & do it in a monitor lambda
-			// For now, just make sure *some* locald eventually wakes up to mark this
-			// lambda as runnable. Otherwise, if there are only timer lambdas, localds
-			// may never wake up to scan them.
-			go func(timer uint32) {
-				dur := time.Duration(uint64(timer) * 1000000000)
-				time.Sleep(dur)
-				ld.SignalNewJob()
-			}(p.Timer)
-			return false, proc.T_DEF
-		}
-	}
-
-	// Check for any unstarted StartDeps
-	for _, started := range p.StartDep {
-		if !started {
-			return false, proc.T_DEF
-		}
-	}
-
-	// Check for any unexited ExitDeps
-	for _, exited := range p.ExitDep {
-		if !exited {
-			return false, proc.T_DEF
-		}
-	}
-
-	return true, p.Type
-}
-
 func (ld *LocalD) allocCores(n proc.Tcore) []uint {
 	ld.mu.Lock()
 	defer ld.mu.Unlock()
@@ -382,9 +308,8 @@ func (ld *LocalD) Worker(workerId uint) {
 
 	for !ld.readDone() {
 		b, err := ld.getLambda()
-		// If no job was on the runq, try and move some from waitq -> runq
+		// If no job was on the runq, try again
 		if err == nil && len(b) == 0 {
-			ld.checkWaitingLambdas()
 			continue
 		}
 		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "unknown mount")) {

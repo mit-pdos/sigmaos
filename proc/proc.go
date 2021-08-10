@@ -53,9 +53,9 @@ type Proc struct {
 	Env      []string        // Environment variables
 	StartDep map[string]bool // Start dependencies // XXX Replace somehow?
 	ExitDep  map[string]bool // Exit dependencies// XXX Replace somehow?
-	Timer    uint32          // Start timer in seconds
 	Type     Ttype           // Type
 	Ncore    Tcore           // Number of cores requested
+	//	Timer    uint32          // Start timer in seconds
 	//	WDir       string          // Working directory for the process
 	//	StartTimer uint32          // Start timer in seconds
 }
@@ -128,7 +128,45 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 	if err != nil {
 		return err
 	}
+
+	// Start the job if it is runnable
+	if pctl.procIsRunnable(p) {
+		pctl.runProc(p)
+	}
+
 	// Notify localds that a job has joined the queue
+	return nil
+}
+
+func (pctl *ProcCtl) procIsRunnable(p *Proc) bool {
+	// Check for any unexited StartDeps
+	for _, started := range p.StartDep {
+		if !started {
+			return false
+		}
+	}
+
+	// Check for any unexited ExitDeps
+	for _, exited := range p.ExitDep {
+		if !exited {
+			return false
+		}
+	}
+	return true
+}
+
+func (pctl *ProcCtl) runProc(p *Proc) error {
+	var err error
+	if p.Type == T_LC {
+		err = pctl.Rename(path.Join(fslib.WAITQ, p.Pid), path.Join(fslib.RUNQLC, p.Pid))
+	} else {
+		err = pctl.Rename(path.Join(fslib.WAITQ, p.Pid), path.Join(fslib.RUNQ, p.Pid))
+	}
+
+	if err != nil {
+		log.Fatalf("Error in runProc: %v", err)
+	}
+	// Notify localds that a job has become runnable
 	pctl.SignalNewJob()
 	return nil
 }
@@ -167,6 +205,25 @@ func (pctl *ProcCtl) Started(pid string) error {
 	pctl.updateDependants(pid, START_DEP)
 
 	return nil
+}
+
+func (pctl *ProcCtl) HasStarted(pid string) bool {
+	waitFileLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(WaitFilePath(pid)), true)
+
+	waitFileLock.Lock()
+	defer waitFileLock.Unlock()
+
+	b, _, err := pctl.GetFile(WaitFilePath(pid))
+	if err != nil {
+		return false
+	}
+
+	var wf WaitFile
+	err = json.Unmarshal(b, &wf)
+	if err != nil {
+		log.Printf("Couldn't unmarshal waitfile in ProcCtl.registerDependant: %v, %v", string(b), err)
+	}
+	return wf.Started
 }
 
 // ========== EXITING ==========
@@ -351,8 +408,8 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 		return
 	}
 
-	var p Proc
-	err = json.Unmarshal(b, &p)
+	p := &Proc{}
+	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Printf("Couldn't unmarshal job in ProcCtl.updateDependant %v: %v", string(b), err)
 	}
@@ -386,7 +443,11 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 	if err != nil {
 		log.Printf("Error writing in ProcCtl.updateDependant: %v, %v", waiterFPath, err)
 	}
-	pctl.SignalNewJob()
+
+	if pctl.procIsRunnable(p) {
+		pctl.runProc(p)
+		pctl.SignalNewJob()
+	}
 }
 
 // XXX REMOVE --- just used by GG

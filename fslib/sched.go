@@ -26,6 +26,7 @@ func waitFileName(pid string) string {
 	return LockName(WAIT_LOCK + pid)
 }
 
+// XXX Currently used by gg
 func (fl *FsLib) HasBeenSpawned(pid string) bool {
 	_, err := fl.Stat(waitFilePath(pid))
 	if err == nil {
@@ -34,6 +35,7 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
 	return false
 }
 
+// XXX Currently used by kv/monitor.go
 func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
 	d, err := fl.ReadDir(WAITQ)
 	if err != nil {
@@ -46,12 +48,4 @@ func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
 func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
 	b, _, err := fl.GetFile(path.Join(WAITQ, pid))
 	return b, err
-}
-
-func (fl *FsLib) ReadClaimed() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(CLAIMED)
-	if err != nil {
-		return d, err
-	}
-	return d, err
 }

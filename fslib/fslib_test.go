@@ -483,7 +483,6 @@ func TestConcur(t *testing.T) {
 	}
 	for i := 0; i < N; i++ {
 		j := <-ch
-		log.Printf("%d done\n", j)
 	}
 	ts.s.Shutdown(ts.FsLib)
 }

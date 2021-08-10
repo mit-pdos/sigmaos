@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
@@ -15,6 +16,8 @@ const (
 	MONITOR_TIMER = 4
 	CRASH_TIMEOUT = 1
 )
+
+// XXX RUN A SPAWNER
 
 // Monitors for crashed localds/lambdas
 type Monitor struct {
@@ -38,7 +41,7 @@ func MakeMonitor(pid string) *Monitor {
 // Enqueue a new monitor to be run in MONITOR_TIMER seconds
 func (m *Monitor) RestartSelf() {
 	newPid := "monitor-" + fslib.GenPid()
-	a := &proc.Proc{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, MONITOR_TIMER, proc.T_LC, proc.C_DEF}
+	a := &proc.Proc{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, proc.T_LC, proc.C_DEF}
 	err := m.Spawn(a)
 	if err != nil {
 		log.Printf("Error spawning monitor: %v", err)
@@ -99,4 +102,12 @@ func (m *Monitor) RestartJob(pid string) error {
 	// Notify localds that a job has become runnable
 	m.SignalNewJob()
 	return nil
+}
+
+func (m *Monitor) ReadClaimed() ([]*np.Stat, error) {
+	d, err := m.ReadDir(fslib.CLAIMED)
+	if err != nil {
+		return d, err
+	}
+	return d, err
 }

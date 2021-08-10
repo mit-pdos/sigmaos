@@ -158,9 +158,9 @@ func (pctl *ProcCtl) procIsRunnable(p *Proc) bool {
 func (pctl *ProcCtl) runProc(p *Proc) error {
 	var err error
 	if p.Type == T_LC {
-		err = pctl.Rename(path.Join(fslib.WAITQ, p.Pid), path.Join(fslib.RUNQLC, p.Pid))
+		err = pctl.Rename(path.Join(WAITQ, p.Pid), path.Join(RUNQLC, p.Pid))
 	} else {
-		err = pctl.Rename(path.Join(fslib.WAITQ, p.Pid), path.Join(fslib.RUNQ, p.Pid))
+		err = pctl.Rename(path.Join(WAITQ, p.Pid), path.Join(RUNQ, p.Pid))
 	}
 
 	if err != nil {
@@ -393,7 +393,7 @@ func (pctl *ProcCtl) updateDependants(pid string, depType int) {
 }
 
 func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType int) {
-	waiterFPath := path.Join(fslib.WAITQ, waiterPid)
+	waiterFPath := path.Join(WAITQ, waiterPid)
 
 	// Create a lock to atomically update the job file.
 	waiterPLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(waiterFPath), true)

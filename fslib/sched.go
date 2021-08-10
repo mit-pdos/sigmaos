@@ -7,19 +7,14 @@ import (
 )
 
 const (
-	RUNQ        = "name/runq"
-	RUNQLC      = "name/runqlc"
-	WAITQ       = "name/waitq"
-	CLAIMED     = "name/claimed"
-	CLAIMED_EPH = "name/claimed_ephemeral"
-	SPAWNED     = "name/spawned"
-	RET_STAT    = "name/retstat"
-	JOB_SIGNAL  = "job-signal"
-	WAIT_LOCK   = "wait-lock."
+	waitq      = "name/waitq"
+	spawned    = "name/spawned"
+	JOB_SIGNAL = "job-signal"
+	WAIT_LOCK  = "wait-lock."
 )
 
 func waitFilePath(pid string) string {
-	return path.Join(SPAWNED, waitFileName(pid))
+	return path.Join(spawned, waitFileName(pid))
 }
 
 func waitFileName(pid string) string {
@@ -37,7 +32,7 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
 
 // XXX Currently used by kv/monitor.go
 func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(WAITQ)
+	d, err := fl.ReadDir(waitq)
 	if err != nil {
 		return d, err
 	}
@@ -46,6 +41,6 @@ func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
 
 // XXX Currently used by kv/monitor.go
 func (fl *FsLib) ReadWaitQJob(pid string) ([]byte, error) {
-	b, _, err := fl.GetFile(path.Join(WAITQ, pid))
+	b, _, err := fl.GetFile(path.Join(waitq, pid))
 	return b, err
 }

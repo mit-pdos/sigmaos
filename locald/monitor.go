@@ -61,15 +61,15 @@ func (m *Monitor) Work() {
 	m.RestartSelf()
 }
 
-// Check if a job crashed. We know this is the case if it is fslib.CLAIMED, but
-// the corresponding fslib.CLAIMED_EPH file is missing (locald crashed). Since, upon
-// successful ClaimJob, there is a very short window during with the fslib.CLAIMED
-// file exists but the fslib.CLAIMED_EPH file does not exist, wait a short amount of
+// Check if a job crashed. We know this is the case if it is proc.CLAIMED, but
+// the corresponding proc.CLAIMED_EPH file is missing (locald crashed). Since, upon
+// successful ClaimJob, there is a very short window during with the proc.CLAIMED
+// file exists but the proc.CLAIMED_EPH file does not exist, wait a short amount of
 // time (CRASH_TIMEOUT) before declaring a job as failed.
 func (m *Monitor) JobCrashed(pid string) bool {
-	_, err := m.Stat(path.Join(fslib.CLAIMED_EPH, pid))
+	_, err := m.Stat(path.Join(proc.CLAIMED_EPH, pid))
 	if err != nil {
-		stat, err := m.Stat(path.Join(fslib.CLAIMED, pid))
+		stat, err := m.Stat(path.Join(proc.CLAIMED, pid))
 		// If it has fully exited (both claimed & claimed_ephemeral are gone)
 		if err != nil {
 			return false
@@ -82,10 +82,10 @@ func (m *Monitor) JobCrashed(pid string) bool {
 	return false
 }
 
-// Move a job from fslib.CLAIMED to fslib.RUNQ
+// Move a job from proc.CLAIMED to proc.RUNQ
 func (m *Monitor) RestartJob(pid string) error {
-	// XXX read fslib.CLAIMED to find out if it is LC?
-	b, _, err := m.GetFile(path.Join(fslib.CLAIMED, pid))
+	// XXX read proc.CLAIMED to find out if it is LC?
+	b, _, err := m.GetFile(path.Join(proc.CLAIMED, pid))
 	if err != nil {
 		return nil
 	}
@@ -94,18 +94,18 @@ func (m *Monitor) RestartJob(pid string) error {
 	if err != nil {
 		log.Printf("Error unmarshalling in RestartJob: %v", err)
 	}
-	runq := fslib.RUNQ
+	runq := proc.RUNQ
 	if attr.Type == proc.T_LC {
-		runq = fslib.RUNQLC
+		runq = proc.RUNQLC
 	}
-	m.Rename(path.Join(fslib.CLAIMED, pid), path.Join(runq, pid))
+	m.Rename(path.Join(proc.CLAIMED, pid), path.Join(runq, pid))
 	// Notify localds that a job has become runnable
 	m.SignalNewJob()
 	return nil
 }
 
 func (m *Monitor) ReadClaimed() ([]*np.Stat, error) {
-	d, err := m.ReadDir(fslib.CLAIMED)
+	d, err := m.ReadDir(proc.CLAIMED)
 	if err != nil {
 		return d, err
 	}

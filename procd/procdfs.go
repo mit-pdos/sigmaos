@@ -1,4 +1,4 @@
-package locald
+package procd
 
 import (
 	//	"encoding/json"
@@ -19,12 +19,12 @@ type Obj struct {
 	t    np.Tperm
 	uid  uint64
 	dir  *Dir
-	ld   *LocalD
+	pd   *Procd
 	time int64
 }
 
-func (ld *LocalD) MakeObj(path []string, t np.Tperm, p *Dir) *Obj {
-	o := &Obj{path, t, 0, p, ld, int64(0)}
+func (pd *Procd) MakeObj(path []string, t np.Tperm, p *Dir) *Obj {
+	o := &Obj{path, t, 0, p, pd, int64(0)}
 	return o
 }
 
@@ -50,7 +50,7 @@ func (o *Obj) Version() np.TQversion {
 }
 
 func (o *Obj) Qid() np.Tqid {
-	db.DLPrintf("LOCALD", "Qid %v\n", o)
+	db.DLPrintf("PROCD", "Qid %v\n", o)
 	switch len(o.name) {
 	case 0:
 		return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),

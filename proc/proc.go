@@ -79,7 +79,7 @@ func MakeProcCtl(fsl *fslib.FsLib, pid string) *ProcCtl {
 	return pctl
 }
 
-// Notify localds that a job has become runnable
+// Notify procds that a job has become runnable
 func (pctl *ProcCtl) SignalNewJob() error {
 	// Needs to be done twice, since someone waiting on the signal will create a
 	// new lock file, even if they've crashed
@@ -134,7 +134,7 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 		pctl.runProc(p)
 	}
 
-	// Notify localds that a job has joined the queue
+	// Notify procds that a job has joined the queue
 	return nil
 }
 
@@ -166,7 +166,7 @@ func (pctl *ProcCtl) runProc(p *Proc) error {
 	if err != nil {
 		log.Fatalf("Error in runProc: %v", err)
 	}
-	// Notify localds that a job has become runnable
+	// Notify procds that a job has become runnable
 	pctl.SignalNewJob()
 	return nil
 }

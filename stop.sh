@@ -6,7 +6,7 @@ killall memfs-replica
 killall npux-replica
 killall replica-monitor
 killall perf-memfs-replica
-killall locald
+killall procd 
 killall sleeperl
 killall kv
 killall kvd

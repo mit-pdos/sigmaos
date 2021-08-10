@@ -1,4 +1,4 @@
-package locald
+package procd
 
 import (
 	"sync"
@@ -31,12 +31,12 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "locald-test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "procd-test")
 	ts.t = t
 	return ts
 }
 
-func makeTstateOneLocald(t *testing.T) *Tstate {
+func makeTstateOneProcd(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
@@ -46,13 +46,13 @@ func makeTstateOneLocald(t *testing.T) *Tstate {
 	}
 	ts.s = s
 	db.Name("sched_test")
-	err = ts.s.BootLocald(bin)
+	err = ts.s.BootProcd(bin)
 	if err != nil {
-		t.Fatalf("BootLocald %v\n", err)
+		t.Fatalf("BootProcd %v\n", err)
 	}
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "locald-test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "procd-test")
 	ts.t = t
 	return ts
 }
@@ -63,7 +63,7 @@ func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "locald-test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "procd-test")
 	return ts
 }
 
@@ -74,7 +74,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 // XXX FIX
 func spawnMonitor(t *testing.T, ts *Tstate) {
 	pid := "monitor-" + fslib.GenPid()
-	a := &proc.Proc{pid, "bin/locald-monitor", "", []string{}, nil, nil, nil,
+	a := &proc.Proc{pid, "bin/procd-monitor", "", []string{}, nil, nil, nil,
 		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
@@ -199,9 +199,9 @@ func TestNoOpLambdaImmediateExit(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// Start a locald, crash it, start a new one, and make sure it reruns lambdas.
-//func TestCrashLocald(t *testing.T) {
-//	ts := makeTstateOneLocald(t)
+// Start a procd, crash it, start a new one, and make sure it reruns lambdas.
+//func TestCrashProcd(t *testing.T) {
+//	ts := makeTstateOneProcd(t)
 //
 //	ch := make(chan bool)
 //	spawnMonitor(t, ts)
@@ -211,7 +211,7 @@ func TestNoOpLambdaImmediateExit(t *testing.T) {
 //		ts.Wait(pid)
 //		end := time.Now()
 //		elapsed := end.Sub(start)
-//		assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for respawn after locald crash (%v)", elapsed.Seconds())
+//		assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for respawn after procd crash (%v)", elapsed.Seconds())
 //		checkSleeperlResult(t, ts, pid)
 //		ch <- true
 //	}()
@@ -219,17 +219,17 @@ func TestNoOpLambdaImmediateExit(t *testing.T) {
 //	// Wait for a bit
 //	time.Sleep(1 * time.Second)
 //
-//	// Kill the locald instance
-//	ts.s.Kill(fslib.LOCALD)
+//	// Kill the procd instance
+//	ts.s.Kill(fslib.PROCD)
 //
 //	// Wait for a bit
 //	time.Sleep(10 * time.Second)
 //
 //	//	ts.SignalNewJob()
 //
-//	err := ts.s.BootLocald("..")
+//	err := ts.s.BootProcd("..")
 //	if err != nil {
-//		t.Fatalf("BootLocald %v\n", err)
+//		t.Fatalf("BootProcd %v\n", err)
 //	}
 //
 //	<-ch

@@ -1,4 +1,4 @@
-package locald
+package procd
 
 import (
 	//	"github.com/sasha-s/go-deadlock"
@@ -28,7 +28,7 @@ type Lambda struct {
 	Stderr  string
 	SysPid  int
 	attr    *proc.Proc
-	ld      *LocalD
+	pd      *Procd
 	// XXX add fields (e.g. CPU mask, etc.)
 }
 
@@ -37,7 +37,7 @@ func (l *Lambda) init(a []byte) error {
 	var p proc.Proc
 	err := json.Unmarshal(a, &p)
 	if err != nil {
-		log.Printf("Locald unmarshalling error: %v, %v", err, a)
+		log.Printf("Procd unmarshalling error: %v, %v", err, a)
 		return err
 	}
 	l.Program = p.Program
@@ -48,8 +48,8 @@ func (l *Lambda) init(a []byte) error {
 	l.Stdout = "" // XXX: add to or infer from p
 	l.Stderr = "" // XXX: add to or infer from p
 	l.attr = &p
-	db.DLPrintf("LOCALD", "Locald init: %v\n", p)
-	d1 := l.ld.makeDir([]string{p.Pid}, np.DMDIR, l.ld.root)
+	db.DLPrintf("PROCD", "Procd init: %v\n", p)
+	d1 := l.pd.makeDir([]string{p.Pid}, np.DMDIR, l.pd.root)
 	d1.time = time.Now().Unix()
 	return nil
 }
@@ -58,21 +58,21 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		l.ld.Exiting(l.attr.Pid, err.Error())
+		l.pd.Exiting(l.attr.Pid, err.Error())
 		return
 	}
 
 	// Notify schedd that the process exited
-	l.ld.Exiting(l.attr.Pid, "OK")
+	l.pd.Exiting(l.attr.Pid, "OK")
 }
 
 func (l *Lambda) run(cores []uint) error {
-	db.DLPrintf("LOCALD", "Locald run: %v\n", l.attr)
+	db.DLPrintf("PROCD", "Procd run: %v\n", l.attr)
 
 	// Don't run anything if this is a no-op
 	if l.Program == NO_OP_LAMBDA {
 		// XXX Should perhaps do this asynchronously, but worried about fsclnt races
-		l.ld.Exiting(l.Pid, "OK")
+		l.pd.Exiting(l.Pid, "OK")
 		return nil
 	}
 
@@ -97,14 +97,14 @@ func (l *Lambda) run(cores []uint) error {
 	}
 
 	env := append(os.Environ(), l.Env...)
-	cmd := exec.Command(l.ld.bin+"/"+l.Program, args...)
+	cmd := exec.Command(l.pd.bin+"/"+l.Program, args...)
 	cmd.Env = env
 	cmd.Dir = l.Dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	err := cmd.Start()
 	if err != nil {
-		log.Printf("Locald run error: %v, %v\n", l.attr, err)
+		log.Printf("Procd run error: %v, %v\n", l.attr, err)
 		return err
 	}
 
@@ -114,7 +114,7 @@ func (l *Lambda) run(cores []uint) error {
 	l.setCpuAffinity(cores)
 
 	l.wait(cmd)
-	db.DLPrintf("LOCALD", "Locald ran: %v\n", l.attr)
+	db.DLPrintf("PROCD", "Procd ran: %v\n", l.attr)
 
 	return nil
 }

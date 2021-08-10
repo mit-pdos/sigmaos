@@ -9,21 +9,21 @@ import (
 )
 
 const (
-	NAMED  = "name"
-	LOCALD = "name/locald"
-	S3     = "name/s3"
-	UX     = "name/ux"
+	NAMED = "name"
+	PROCD = "name/procd"
+	S3    = "name/s3"
+	UX    = "name/ux"
 )
 
 const (
-	POST_BOOT_SLEEP_MS = 500
+	POST_BOOT_SLEEP_MS = 1000
 )
 
 type System struct {
-	named  *exec.Cmd
-	nps3d  *exec.Cmd
-	npuxd  *exec.Cmd
-	locald *exec.Cmd
+	named *exec.Cmd
+	nps3d *exec.Cmd
+	npuxd *exec.Cmd
+	procd *exec.Cmd
 }
 
 func run(bin string, name string, args []string) (*exec.Cmd, error) {
@@ -59,7 +59,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.locald, err = run(bin, "/bin/locald", []string{bin})
+	s.procd, err = run(bin, "/bin/procd", []string{bin})
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +87,9 @@ func (s *System) BootNps3d(bin string) error {
 	return nil
 }
 
-func (s *System) BootLocald(bin string) error {
+func (s *System) BootProcd(bin string) error {
 	var err error
-	s.locald, err = run(bin, "/bin/locald", []string{bin})
+	s.procd, err = run(bin, "/bin/procd", []string{bin})
 	if err != nil {
 		return err
 	}
@@ -118,13 +118,13 @@ func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 func (s *System) Kill(srv string) error {
 	var err error
 	switch srv {
-	case LOCALD:
-		if s.locald != nil {
-			err = s.locald.Process.Kill()
+	case PROCD:
+		if s.procd != nil {
+			err = s.procd.Process.Kill()
 			if err == nil {
-				s.locald = nil
+				s.procd = nil
 			} else {
-				log.Fatalf("Locald kill failed %v\n", err)
+				log.Fatalf("Procd kill failed %v\n", err)
 			}
 		}
 	default:
@@ -148,12 +148,12 @@ func (s *System) Shutdown(clnt *FsLib) {
 		}
 		s.npuxd.Wait()
 	}
-	if s.locald != nil {
-		err := s.RmUnionDir(clnt, LOCALD_ROOT)
+	if s.procd != nil {
+		err := s.RmUnionDir(clnt, PROCD_ROOT)
 		if err != nil {
-			log.Printf("Localds shutdown %v\n", err)
+			log.Printf("Procds shutdown %v\n", err)
 		}
-		s.locald.Wait()
+		s.procd.Wait()
 	}
 
 	// Shutdown named last

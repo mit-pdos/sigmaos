@@ -8,7 +8,7 @@ go test $1 ulambda/fsclnt
 go test $1 ulambda/fslib
 go test $1 ulambda/sync
 (cd nps3; go test $1)
-go test $1 ulambda/locald
+go test $1 ulambda/procd
 ./test-mr.sh
 (cd kv; go test $1)
 ./test-kv.sh

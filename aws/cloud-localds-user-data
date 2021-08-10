@@ -2,7 +2,7 @@
 repo_update: true
 repo_upgrade: all
 
-# /var/log/cloud-init-output.log on instance has output of cloud-localds script
+# /var/log/cloud-init-output.log on instance has output of cloud-procds script
 # avoid using \t in script
 
 package_upgrade: true

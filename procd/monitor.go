@@ -1,4 +1,4 @@
-package locald
+package procd
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ const (
 
 // XXX RUN A SPAWNER
 
-// Monitors for crashed localds/lambdas
+// Monitors for crashed procds/lambdas
 type Monitor struct {
 	mu  sync.Mutex
 	pid string
@@ -41,7 +41,7 @@ func MakeMonitor(pid string) *Monitor {
 // Enqueue a new monitor to be run in MONITOR_TIMER seconds
 func (m *Monitor) RestartSelf() {
 	newPid := "monitor-" + fslib.GenPid()
-	a := &proc.Proc{newPid, "bin/locald-monitor", "", []string{}, nil, nil, nil, proc.T_LC, proc.C_DEF}
+	a := &proc.Proc{newPid, "bin/procd-monitor", "", []string{}, nil, nil, nil, proc.T_LC, proc.C_DEF}
 	err := m.Spawn(a)
 	if err != nil {
 		log.Printf("Error spawning monitor: %v", err)
@@ -62,7 +62,7 @@ func (m *Monitor) Work() {
 }
 
 // Check if a job crashed. We know this is the case if it is proc.CLAIMED, but
-// the corresponding proc.CLAIMED_EPH file is missing (locald crashed). Since, upon
+// the corresponding proc.CLAIMED_EPH file is missing (procd crashed). Since, upon
 // successful ClaimJob, there is a very short window during with the proc.CLAIMED
 // file exists but the proc.CLAIMED_EPH file does not exist, wait a short amount of
 // time (CRASH_TIMEOUT) before declaring a job as failed.
@@ -99,7 +99,7 @@ func (m *Monitor) RestartJob(pid string) error {
 		runq = proc.RUNQLC
 	}
 	m.Rename(path.Join(proc.CLAIMED, pid), path.Join(runq, pid))
-	// Notify localds that a job has become runnable
+	// Notify procds that a job has become runnable
 	m.SignalNewJob()
 	return nil
 }

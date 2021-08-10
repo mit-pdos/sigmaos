@@ -131,11 +131,11 @@ func TestCopy(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func (ts *Tstate) localdName(t *testing.T) string {
-	sts, err := ts.ReadDir(LOCALD_ROOT)
-	assert.Nil(t, err, LOCALD_ROOT)
+func (ts *Tstate) procdName(t *testing.T) string {
+	sts, err := ts.ReadDir(PROCD_ROOT)
+	assert.Nil(t, err, PROCD_ROOT)
 	assert.Equal(t, 1, len(sts))
-	name := LOCALD_ROOT + "/" + sts[0].Name
+	name := PROCD_ROOT + "/" + sts[0].Name
 	return name
 }
 
@@ -313,16 +313,16 @@ func TestCounter(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// TODO: switch to using memfsd instead of locald
+// TODO: switch to using memfsd instead of procd
 func TestEphemeral(t *testing.T) {
 	ts := makeTstate(t)
 
 	var err error
-	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
-	assert.Nil(t, err, "bin/locald")
+	ts.s.procd, err = run("..", "/bin/procd", []string{"./"})
+	assert.Nil(t, err, "bin/procd")
 	time.Sleep(100 * time.Millisecond)
 
-	name := ts.localdName(t)
+	name := ts.procdName(t)
 	b, err := ts.ReadFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
@@ -333,7 +333,7 @@ func TestEphemeral(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.s.Kill(LOCALD)
+	ts.s.Kill(PROCD)
 
 	time.Sleep(100 * time.Millisecond)
 

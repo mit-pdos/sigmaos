@@ -29,6 +29,6 @@ do
     fi
     nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
     nohup ./ulambda/bin/npuxd > nnpuxd.out 2>&1 < /dev/null &
-    nohup ./ulambda/bin/locald > locald.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/procd > procd.out 2>&1 < /dev/null &
 ENDSSH
 done

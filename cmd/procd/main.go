@@ -5,13 +5,13 @@ import (
 	"os"
 
 	"ulambda/linuxsched"
-	"ulambda/locald"
+	"ulambda/procd"
 )
 
 //
 // Requires Unix path to parent of "bin" directory (e.g., ulambda) so
-// locald knows where to find its executables.  In the longer run this
-// should probably be a lambda pathname, but since locald uses
+// procd knows where to find its executables.  In the longer run this
+// should probably be a lambda pathname, but since procd uses
 // cmd.Run, which requires a Unix path, we use Unix pathnames.
 //
 
@@ -29,6 +29,6 @@ func main() {
 	if len(os.Args) >= 4 {
 		utilPath = os.Args[3]
 	}
-	ld := locald.MakeLocalD(os.Args[1], pprofPath, utilPath)
-	ld.Work()
+	pd := procd.MakeProcd(os.Args[1], pprofPath, utilPath)
+	pd.Work()
 }

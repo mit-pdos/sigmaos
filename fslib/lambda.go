@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	LOCALD_ROOT  = "name/localds"
+	PROCD_ROOT   = "name/procds"
 	NO_OP_LAMBDA = "no-op-lambda"
 )
 

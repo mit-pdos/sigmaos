@@ -1,7 +1,6 @@
 package fslib
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -482,7 +481,7 @@ func TestConcur(t *testing.T) {
 		}(i)
 	}
 	for i := 0; i < N; i++ {
-		j := <-ch
+		<-ch
 	}
 	ts.s.Shutdown(ts.FsLib)
 }

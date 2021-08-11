@@ -113,7 +113,7 @@ func RunBalancer(pctl *proc.ProcCtl, opcode, pid1 string) {
 
 // See if there is KV waiting to be run
 func (mo *Monitor) kvwaiting() bool {
-	jobs, err := mo.ReadWaitQ()
+	jobs, err := mo.ReadDir(proc.WAITQ)
 	if err != nil {
 		log.Fatalf("grow: cannot read runq err %v\n", err)
 	}

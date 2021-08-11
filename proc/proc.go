@@ -461,17 +461,6 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 	}
 }
 
-// XXX REMOVE --- just used by kv
-
-// XXX Currently used by kv/monitor.go
-func (pctl *ProcCtl) ReadWaitQ() ([]*np.Stat, error) {
-	d, err := pctl.ReadDir(WAITQ)
-	if err != nil {
-		return d, err
-	}
-	return d, err
-}
-
 // XXX REMOVE --- just used by GG
 // ========== SPAWN_NO_OP =========
 

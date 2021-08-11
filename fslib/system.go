@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	NAMED = "name"
-	PROCD = "name/procd"
-	S3    = "name/s3"
-	UX    = "name/ux"
+	NAMED      = "name"
+	PROCD      = "name/procd"
+	PROCD_ROOT = "name/procds"
+	S3         = "name/s3"
+	UX         = "name/ux"
 )
 
 const (

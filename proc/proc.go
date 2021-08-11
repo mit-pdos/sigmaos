@@ -58,7 +58,6 @@ type Proc struct {
 	ExitDep  map[string]bool // Exit dependencies// XXX Replace somehow?
 	Type     Ttype           // Type
 	Ncore    Tcore           // Number of cores requested
-	//	Timer    uint32          // Start timer in seconds
 	//	WDir       string          // Working directory for the process
 	//	StartTimer uint32          // Start timer in seconds
 }
@@ -460,6 +459,17 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 	if pctl.procIsRunnable(p) {
 		pctl.runProc(p)
 	}
+}
+
+// XXX REMOVE --- just used by kv
+
+// XXX Currently used by kv/monitor.go
+func (pctl *ProcCtl) ReadWaitQ() ([]*np.Stat, error) {
+	d, err := pctl.ReadDir(WAITQ)
+	if err != nil {
+		return d, err
+	}
+	return d, err
 }
 
 // XXX REMOVE --- just used by GG

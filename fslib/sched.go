@@ -2,8 +2,6 @@ package fslib
 
 import (
 	"path"
-
-	np "ulambda/ninep"
 )
 
 const (
@@ -27,13 +25,4 @@ func (fl *FsLib) HasBeenSpawned(pid string) bool {
 		return true
 	}
 	return false
-}
-
-// XXX Currently used by kv/monitor.go
-func (fl *FsLib) ReadWaitQ() ([]*np.Stat, error) {
-	d, err := fl.ReadDir(waitq)
-	if err != nil {
-		return d, err
-	}
-	return d, err
 }

@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	PROCD_ROOT   = "name/procds"
 	NO_OP_LAMBDA = "no-op-lambda"
 )
 
@@ -71,7 +72,7 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	}
 	pd.srv = npsrv.MakeNpServer(pd, pd.ip+":0")
 	fsl := fslib.MakeFsLib("procd")
-	fsl.Mkdir(fslib.PROCD_ROOT, 0777)
+	fsl.Mkdir(PROCD_ROOT, 0777)
 	pd.FsLib = fsl
 	pd.ProcCtl = proc.MakeProcCtl(fsl, "procd-"+ip)
 	err = fsl.PostServiceUnion(pd.srv.MyAddr(), fslib.PROCD_ROOT, pd.srv.MyAddr())

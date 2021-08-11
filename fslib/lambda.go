@@ -6,8 +6,7 @@ import (
 )
 
 const (
-	PROCD_ROOT   = "name/procds"
-	NO_OP_LAMBDA = "no-op-lambda"
+	PROCD_ROOT = "name/procds"
 )
 
 func GenPid() string {

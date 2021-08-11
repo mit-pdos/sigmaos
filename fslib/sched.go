@@ -7,10 +7,9 @@ import (
 )
 
 const (
-	waitq      = "name/waitq"
-	spawned    = "name/spawned"
-	JOB_SIGNAL = "job-signal"
-	WAIT_LOCK  = "wait-lock."
+	waitq     = "name/waitq"
+	spawned   = "name/spawned"
+	WAIT_LOCK = "wait-lock."
 )
 
 func waitFilePath(pid string) string {

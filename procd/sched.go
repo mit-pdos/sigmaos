@@ -4,14 +4,13 @@ import (
 	"log"
 	"path"
 
-	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
-func (pd *Procd) WaitForJob() error {
+func (pd *Procd) WaitForJob() {
 	// Wait for something runnable
-	return pd.LockFile(fslib.LOCKS, fslib.JOB_SIGNAL)
+	pd.jobCond.Wait()
 }
 
 func (pd *Procd) ReadRunQ(dir string) ([]*np.Stat, error) {

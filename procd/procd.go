@@ -21,6 +21,7 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/stats"
+	usync "ulambda/sync"
 )
 
 const (
@@ -31,6 +32,7 @@ type Procd struct {
 	//	mu deadlock.Mutex
 	mu         sync.Mutex
 	cond       *sync.Cond
+	jobCond    *usync.Cond
 	load       int // XXX bogus
 	bin        string
 	nid        uint64
@@ -95,6 +97,9 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	fsl.Mkdir(proc.SPAWNED, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
+	// Set up the 9p Condition variable
+	pd.jobCond = usync.MakeCond(fsl, "locald", proc.JOB_SIGNAL, nil)
+	pd.jobCond.Init()
 	return pd
 }
 
@@ -212,10 +217,10 @@ func (pd *Procd) getRun(runq string) (*proc.Proc, error) {
 
 // Tries to claim a job from the runq. If none are available, return.
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	err := pd.WaitForJob()
-	if err != nil {
-		return nil, err
-	}
+	pd.WaitForJob()
+	//	if err != nil {
+	//		return nil, err
+	//	}
 	p, err := pd.getRun(proc.RUNQLC)
 	if err != nil {
 		return nil, err

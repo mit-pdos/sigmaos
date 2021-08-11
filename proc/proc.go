@@ -32,7 +32,7 @@ const (
 	CLAIMED       = "name/claimed"
 	CLAIMED_EPH   = "name/claimed_ephemeral"
 	SPAWNED       = "name/spawned"
-	JOB_SIGNAL    = "job-signal"
+	JOB_SIGNAL    = "name/job-signal"
 	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1
 )
@@ -42,8 +42,10 @@ const (
 	EXIT_DEP  = iota
 )
 
+// XXX factor out
 const (
 	WAITFILE_PADDING = 1000
+	NO_OP_LAMBDA     = "no-op-lambda"
 )
 
 type Proc struct {
@@ -68,7 +70,8 @@ type WaitFile struct {
 }
 
 type ProcCtl struct {
-	pid string
+	pid     string
+	jobCond *sync.Cond
 	*fslib.FsLib
 }
 
@@ -76,15 +79,14 @@ func MakeProcCtl(fsl *fslib.FsLib, pid string) *ProcCtl {
 	pctl := &ProcCtl{}
 	pctl.FsLib = fsl
 	pctl.pid = pid
+	pctl.jobCond = sync.MakeCond(fsl, "locald", JOB_SIGNAL, nil)
 
 	return pctl
 }
 
 // Notify procds that a job has become runnable
-func (pctl *ProcCtl) SignalNewJob() error {
-	// Needs to be done twice, since someone waiting on the signal will create a
-	// new lock file, even if they've crashed
-	return pctl.UnlockFile(fslib.LOCKS, fslib.JOB_SIGNAL)
+func (pctl *ProcCtl) SignalNewJob() {
+	pctl.jobCond.Broadcast()
 }
 
 // ========== NAMING CONVENTIONS ==========
@@ -468,7 +470,7 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 func (pctl *ProcCtl) SpawnNoOp(pid string, exitDep []string) error {
 	a := &Proc{}
 	a.Pid = pid
-	a.Program = fslib.NO_OP_LAMBDA
+	a.Program = NO_OP_LAMBDA
 	exitDepMap := map[string]bool{}
 	for _, dep := range exitDep {
 		exitDepMap[dep] = false

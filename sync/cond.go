@@ -46,17 +46,19 @@ func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
 
 // Initialize the condition variable by creating its sigmaOS state. This should
 // only ever be called once globally per condition variable.
-func (c *Cond) Init() {
+func (c *Cond) Init() error {
 	// Make a directory in which waiters register themselves
 	err := c.Mkdir(c.path, 0777)
 	if err != nil {
-		log.Fatalf("Error condvar Init MkDir: %v", err)
+		db.DLPrintf("COND", "Error condvar Init MkDir: %v", err)
+		return err
 	}
 
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
 	c.createBcastFile()
+	return nil
 }
 
 // Wake up all waiters. The condLock need not be held, and needs to be manually

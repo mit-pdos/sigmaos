@@ -6,6 +6,7 @@ import (
 	"log"
 	"path"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/sync"
@@ -138,39 +139,6 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 	return nil
 }
 
-func (pctl *ProcCtl) procIsRunnable(p *Proc) bool {
-	// Check for any unexited StartDeps
-	for _, started := range p.StartDep {
-		if !started {
-			return false
-		}
-	}
-
-	// Check for any unexited ExitDeps
-	for _, exited := range p.ExitDep {
-		if !exited {
-			return false
-		}
-	}
-	return true
-}
-
-func (pctl *ProcCtl) runProc(p *Proc) error {
-	var err error
-	if p.Type == T_LC {
-		err = pctl.Rename(path.Join(WAITQ, p.Pid), path.Join(RUNQLC, p.Pid))
-	} else {
-		err = pctl.Rename(path.Join(WAITQ, p.Pid), path.Join(RUNQ, p.Pid))
-	}
-
-	if err != nil {
-		log.Fatalf("Error in runProc: %v", err)
-	}
-	// Notify procds that a job has become runnable
-	pctl.SignalNewJob()
-	return nil
-}
-
 // ========== WAIT ==========
 
 // Wait for a task's completion.
@@ -207,21 +175,17 @@ func (pctl *ProcCtl) Started(pid string) error {
 	return nil
 }
 
+// ========== HAS STARTED ==========
+
 func (pctl *ProcCtl) HasStarted(pid string) bool {
 	waitFileLock := sync.MakeLock(pctl.FsLib, fslib.LOCKS, fslib.LockName(WaitFilePath(pid)), true)
 
 	waitFileLock.Lock()
 	defer waitFileLock.Unlock()
 
-	b, _, err := pctl.GetFile(WaitFilePath(pid))
+	wf, err := pctl.getWaitFile(pid)
 	if err != nil {
 		return false
-	}
-
-	var wf WaitFile
-	err = json.Unmarshal(b, &wf)
-	if err != nil {
-		log.Printf("Couldn't unmarshal waitfile in ProcCtl.registerDependant: %v, %v", string(b), err)
 	}
 	return wf.Started
 }
@@ -250,7 +214,59 @@ func (pctl *ProcCtl) Exiting(pid string, status string) error {
 	return pctl.removeWaitFile(pid)
 }
 
+// ========== JOB MANIPULATION ==========
+
+func (pctl *ProcCtl) GetProcFile(dir string, pid string) (*Proc, error) {
+	fpath := path.Join(dir, pid)
+
+	b, _, err := pctl.GetFile(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &Proc{}
+	err = json.Unmarshal(b, p)
+	if err != nil {
+		log.Fatalf("Couldn't unmarshal proc file: %v, %v", string(b), err)
+		return nil, err
+	}
+	return p, nil
+}
+
 // ========== HELPERS ==========
+
+func (pctl *ProcCtl) procIsRunnable(p *Proc) bool {
+	// Check for any unexited StartDeps
+	for _, started := range p.StartDep {
+		if !started {
+			return false
+		}
+	}
+
+	// Check for any unexited ExitDeps
+	for _, exited := range p.ExitDep {
+		if !exited {
+			return false
+		}
+	}
+	return true
+}
+
+func (pctl *ProcCtl) runProc(p *Proc) error {
+	var err error
+	if p.Type == T_LC {
+		err = pctl.Rename(path.Join(WAITQ, p.Pid), path.Join(RUNQLC, p.Pid))
+	} else {
+		err = pctl.Rename(path.Join(WAITQ, p.Pid), path.Join(RUNQ, p.Pid))
+	}
+
+	if err != nil {
+		log.Fatalf("Error in runProc: %v", err)
+	}
+	// Notify procds that a job has become runnable
+	pctl.SignalNewJob()
+	return nil
+}
 
 func (pctl *ProcCtl) makeWaitFile(pid string) error {
 	fpath := WaitFilePath(pid)
@@ -277,6 +293,21 @@ func (pctl *ProcCtl) removeWaitFile(pid string) error {
 		return err
 	}
 	return nil
+}
+
+func (pctl *ProcCtl) getWaitFile(pid string) (*WaitFile, error) {
+	b, _, err := pctl.GetFile(WaitFilePath(pid))
+	if err != nil {
+		return nil, err
+	}
+
+	wf := &WaitFile{}
+	err = json.Unmarshal(b, wf)
+	if err != nil {
+		log.Fatalf("Couldn't unmarshal waitfile: %v, %v", string(b), err)
+		return nil, err
+	}
+	return wf, nil
 }
 
 // Register start & exit dependencies in dependencies' waitfiles, and update the
@@ -307,15 +338,9 @@ func (pctl *ProcCtl) registerDependant(depPid string, waiterPid string, depType 
 	depLock.Lock()
 	defer depLock.Unlock()
 
-	b, _, err := pctl.GetFile(WaitFilePath(depPid))
+	wf, err := pctl.getWaitFile(depPid)
 	if err != nil {
 		return false
-	}
-
-	var wf WaitFile
-	err = json.Unmarshal(b, &wf)
-	if err != nil {
-		log.Printf("Couldn't unmarshal waitfile in ProcCtl.registerDependant: %v, %v", string(b), err)
 	}
 
 	switch depType {
@@ -347,17 +372,9 @@ func (pctl *ProcCtl) registerDependant(depPid string, waiterPid string, depType 
 
 func (pctl *ProcCtl) updateDependants(pid string, depType int) {
 	// Get the current contents of the wait file
-	b1, _, err := pctl.GetFile(WaitFilePath(pid))
+	wf, err := pctl.getWaitFile(pid)
 	if err != nil {
-		log.Printf("Error GetFile in ProcCtl.updateDependants: %v, %v", WaitFilePath(pid), err)
-		return
-	}
-
-	// Unmarshal
-	var wf WaitFile
-	err = json.Unmarshal(b1, &wf)
-	if err != nil {
-		log.Fatalf("Error unmarshalling waitfile: %v, %v", string(b1), err)
+		db.DLPrintf("PROCCTL", "Error GetFile in ProcCtl.updateDependants: %v, %v", WaitFilePath(pid), err)
 		return
 	}
 
@@ -402,16 +419,10 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 	waiterPLock.Lock()
 	defer waiterPLock.Unlock()
 
-	b, _, err := pctl.GetFile(waiterFPath)
+	p, err := pctl.GetProcFile(WAITQ, waiterPid)
 	if err != nil {
 		log.Printf("Couldn't get waiter file in ProcCtl.updateDependant: %v, %v", waiterPid, err)
 		return
-	}
-
-	p := &Proc{}
-	err = json.Unmarshal(b, p)
-	if err != nil {
-		log.Printf("Couldn't unmarshal job in ProcCtl.updateDependant %v: %v", string(b), err)
 	}
 
 	switch depType {

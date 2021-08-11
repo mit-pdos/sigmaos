@@ -1,14 +1,14 @@
 package procd
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
-	"encoding/json"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"sync"
 	"time"
+
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/linuxsched"
@@ -33,13 +33,7 @@ type Lambda struct {
 }
 
 // XXX init/run pattern seems a bit redundant...
-func (l *Lambda) init(a []byte) error {
-	var p proc.Proc
-	err := json.Unmarshal(a, &p)
-	if err != nil {
-		log.Printf("Procd unmarshalling error: %v, %v", err, a)
-		return err
-	}
+func (l *Lambda) init(p *proc.Proc) {
 	l.Program = p.Program
 	l.Pid = p.Pid
 	l.Args = p.Args
@@ -47,11 +41,10 @@ func (l *Lambda) init(a []byte) error {
 	l.Dir = p.Dir
 	l.Stdout = "" // XXX: add to or infer from p
 	l.Stderr = "" // XXX: add to or infer from p
-	l.attr = &p
+	l.attr = p
 	db.DLPrintf("PROCD", "Procd init: %v\n", p)
 	d1 := l.pd.makeDir([]string{p.Pid}, np.DMDIR, l.pd.root)
 	d1.time = time.Now().Unix()
-	return nil
 }
 
 func (l *Lambda) wait(cmd *exec.Cmd) {

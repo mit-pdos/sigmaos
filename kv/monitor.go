@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 	"sync"
@@ -120,14 +119,12 @@ func (mo *Monitor) kvwaiting() bool {
 	}
 	for _, j := range jobs {
 		log.Printf("job %v\n", j.Name)
-		a, err := mo.ReadWaitQJob(j.Name)
-		var attr proc.Proc
-		err = json.Unmarshal(a, &attr)
+		p, err := mo.GetProcFile(proc.WAITQ, j.Name)
 		if err != nil {
-			log.Printf("grow: unmarshal err %v", err)
+			log.Printf("Error getting proc file in Monitor.kvwaiting: %v", err)
 		}
-		log.Printf("attr %v\n", attr)
-		if attr.Program == KV {
+		log.Printf("proc %v\n", p)
+		if p.Program == KV {
 			return true
 		}
 	}

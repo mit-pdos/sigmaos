@@ -1,8 +1,6 @@
 package procd
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
-	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -10,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
@@ -98,15 +98,12 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	return pd
 }
 
-func (pd *Procd) spawn(a []byte) (*Lambda, error) {
+func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 	l := &Lambda{}
 	l.pd = pd
-	err := l.init(a)
-	if err != nil {
-		return nil, err
-	}
+	l.init(p)
 	pd.ls[l.Pid] = l
 	return l, nil
 }
@@ -186,49 +183,45 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 	pd.coresAvail += p.Ncore
 }
 
-func (pd *Procd) getRun(runq string) ([]byte, error) {
+func (pd *Procd) getRun(runq string) (*proc.Proc, error) {
 	jobs, err := pd.ReadRunQ(runq)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	for _, j := range jobs {
 		pd.mu.Lock()
 		// Read a job
-		b, err := pd.ReadJob(runq, j.Name)
+		p, err := pd.GetProcFile(runq, j.Name)
 		// If job has already been claimed, move on
 		if err != nil {
 			pd.mu.Unlock()
 			continue
 		}
-		// Unmarshal it
-		p := unmarshalJob(b)
 		// See if we can run it, and if so, try to claim it
-		claimed := false
 		if pd.satisfiesConstraints(p) {
-			b, claimed = pd.ClaimRunQJob(runq, j.Name)
-		}
-		if claimed {
-			pd.decrementResourcesL(p)
-			pd.mu.Unlock()
-			return b, nil
+			if ok := pd.ClaimRunQJob(runq, j.Name); ok {
+				pd.decrementResourcesL(p)
+				pd.mu.Unlock()
+				return p, nil
+			}
 		}
 		pd.mu.Unlock()
 	}
-	return []byte{}, nil
+	return nil, nil
 }
 
 // Tries to claim a job from the runq. If none are available, return.
-func (pd *Procd) getLambda() ([]byte, error) {
+func (pd *Procd) getProc() (*proc.Proc, error) {
 	err := pd.WaitForJob()
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
-	b, err := pd.getRun(proc.RUNQLC)
+	p, err := pd.getRun(proc.RUNQLC)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
-	if len(b) != 0 {
-		return b, nil
+	if p != nil {
+		return p, nil
 	}
 	return pd.getRun(proc.RUNQ)
 }
@@ -306,19 +299,19 @@ func (pd *Procd) Worker(workerId uint) {
 	pd.SignalNewJob()
 
 	for !pd.readDone() {
-		b, err := pd.getLambda()
+		p, err := pd.getProc()
 		// If no job was on the runq, try again
-		if err == nil && len(b) == 0 {
+		if err == nil && p == nil {
 			continue
 		}
 		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "unknown mount")) {
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Procd GetLambda error %v, %v\n", err, b)
+			log.Fatalf("Procd GetLambda error %v, %v\n", p, err)
 		}
 		// XXX return err from spawn
-		l, err := pd.spawn(b)
+		l, err := pd.spawn(p)
 		if err != nil {
 			log.Fatalf("Procd spawn error %v\n", err)
 		}
@@ -347,14 +340,4 @@ func (pd *Procd) Work() {
 		go pd.Worker(i)
 	}
 	pd.group.Wait()
-}
-
-func unmarshalJob(b []byte) *proc.Proc {
-	var p proc.Proc
-	err := json.Unmarshal(b, &p)
-	if err != nil {
-		log.Fatalf("Procd couldn't unmarshal job: %v, %v", b, err)
-		return nil
-	}
-	return &p
 }

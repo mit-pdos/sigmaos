@@ -79,7 +79,8 @@ func (d *Dir) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion
 	case 0:
 		return 0, fmt.Errorf("Root is not writable %v", d)
 	case 1:
-		go d.pd.spawn(data)
+		log.Fatalf("WRITE DIR SPAWN NOT SUPPORTED")
+		//		go d.pd.spawn(data)
 		return np.Tsize(len(data)), nil
 	default:
 		log.Fatalf("WriteDir: name %v\n", d)

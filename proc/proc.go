@@ -32,7 +32,7 @@ const (
 	CLAIMED       = "name/claimed"
 	CLAIMED_EPH   = "name/claimed_ephemeral"
 	SPAWNED       = "name/spawned"
-	JOB_SIGNAL    = "name/job-signal"
+	JOB_SIGNAL    = "job-signal"
 	WAIT_LOCK     = "wait-lock."
 	CRASH_TIMEOUT = 1
 )
@@ -71,7 +71,7 @@ type WaitFile struct {
 
 type ProcCtl struct {
 	pid     string
-	jobCond *sync.Cond
+	jobLock *sync.Lock
 	*fslib.FsLib
 }
 
@@ -79,14 +79,14 @@ func MakeProcCtl(fsl *fslib.FsLib, pid string) *ProcCtl {
 	pctl := &ProcCtl{}
 	pctl.FsLib = fsl
 	pctl.pid = pid
-	pctl.jobCond = sync.MakeCond(fsl, "locald", JOB_SIGNAL, nil)
+	pctl.jobLock = sync.MakeLock(fsl, fslib.LOCKS, JOB_SIGNAL, false)
 
 	return pctl
 }
 
 // Notify procds that a job has become runnable
 func (pctl *ProcCtl) SignalNewJob() {
-	pctl.jobCond.Broadcast()
+	pctl.jobLock.Unlock()
 }
 
 // ========== NAMING CONVENTIONS ==========
@@ -459,7 +459,6 @@ func (pctl *ProcCtl) updateDependant(depPid string, waiterPid string, depType in
 
 	if pctl.procIsRunnable(p) {
 		pctl.runProc(p)
-		pctl.SignalNewJob()
 	}
 }
 

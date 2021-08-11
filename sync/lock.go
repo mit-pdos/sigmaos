@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 )
 
@@ -39,7 +40,7 @@ func (l *Lock) Lock() {
 			debug.PrintStack()
 			log.Fatalf("Error Lock.Lock: %v, %v", path.Join(l.lockDir, l.lockName), err)
 		} else {
-			log.Printf("Error Lock.Lock: %v, %v", path.Join(l.lockDir, l.lockName), err)
+			db.DLPrintf("LOCK", "Error Lock.Lock: %v, %v", path.Join(l.lockDir, l.lockName), err)
 		}
 	}
 }
@@ -55,7 +56,7 @@ func (l *Lock) Unlock() {
 			debug.PrintStack()
 			log.Fatalf("Error Lock.Unlock: %v, %v", path.Join(l.lockDir, l.lockName), err)
 		} else {
-			log.Printf("Error Lock.Unlock: %v, %v", path.Join(l.lockDir, l.lockName), err)
+			db.DLPrintf("LOCK", "Error Lock.Unlock: %v, %v", path.Join(l.lockDir, l.lockName), err)
 		}
 	}
 }

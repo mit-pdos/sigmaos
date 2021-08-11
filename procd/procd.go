@@ -32,7 +32,7 @@ type Procd struct {
 	//	mu deadlock.Mutex
 	mu         sync.Mutex
 	cond       *sync.Cond
-	jobCond    *usync.Cond
+	jobLock    *usync.Lock
 	load       int // XXX bogus
 	bin        string
 	nid        uint64
@@ -97,9 +97,8 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	fsl.Mkdir(proc.SPAWNED, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
-	// Set up the 9p Condition variable
-	pd.jobCond = usync.MakeCond(fsl, "locald", proc.JOB_SIGNAL, nil)
-	pd.jobCond.Init()
+	// Set up the job lock
+	pd.jobLock = usync.MakeLock(fsl, fslib.LOCKS, proc.JOB_SIGNAL, false)
 	return pd
 }
 

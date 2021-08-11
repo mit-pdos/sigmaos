@@ -10,7 +10,7 @@ import (
 
 func (pd *Procd) WaitForJob() {
 	// Wait for something runnable
-	pd.jobCond.Wait()
+	pd.jobLock.Lock()
 }
 
 func (pd *Procd) ReadRunQ(dir string) ([]*np.Stat, error) {

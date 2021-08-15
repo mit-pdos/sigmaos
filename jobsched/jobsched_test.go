@@ -258,7 +258,7 @@ func TestExitDep(t *testing.T) {
 //	ts.s.Shutdown(ts.FsLib)
 //}
 
-func TestStartDepProdFirst(t *testing.T) {
+func TestStartDep(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Generate a consumer & producer pid, make sure they dont' equal each other

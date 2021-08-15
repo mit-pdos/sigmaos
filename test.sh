@@ -10,7 +10,7 @@ go test $1 ulambda/sync
 (cd nps3; go test $1)
 go test $1 ulambda/procd
 go test $1 ulambda/jobsched
-./test-mr.sh
 (cd kv; go test $1)
+./test-mr.sh
 ./test-kv.sh
 (cd replica; go test -timeout=45m $1)

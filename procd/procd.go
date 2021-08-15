@@ -75,7 +75,7 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(PROCD_ROOT, 0777)
 	pd.FsLib = fsl
-	pd.ProcCtl = proc.MakeProcCtl(fsl, "procd-"+ip)
+	pd.ProcCtl = proc.MakeProcCtl(fsl)
 	err = fsl.PostServiceUnion(pd.srv.MyAddr(), fslib.PROCD_ROOT, pd.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.srv.MyAddr(), err)
@@ -97,6 +97,7 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	fsl.Mkdir(proc.CLAIMED, 0777)
 	fsl.Mkdir(proc.CLAIMED_EPH, 0777)
 	fsl.Mkdir(proc.SPAWNED, 0777)
+	fsl.Mkdir(proc.PROC_COND, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
 	// Set up the job lock
@@ -376,3 +377,14 @@ func (pd *Procd) Work() {
 	}
 	pd.group.Wait()
 }
+
+// TODO: manage claimed directory
+// XXX Have procd manage claimed queues etc.
+//	err := pctl.Remove(path.Join(CLAIMED, pid))
+//	if err != nil {
+//		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
+//	}
+//	err = pctl.Remove(path.Join(CLAIMED_EPH, pid))
+//	if err != nil {
+//		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
+//	}

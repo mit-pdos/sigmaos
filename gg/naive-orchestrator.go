@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
-	"ulambda/proc"
+	"ulambda/jobsched"
 )
 
 const (
@@ -26,7 +26,7 @@ type NaiveOrchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 }
 
 func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error) {
@@ -42,13 +42,13 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.ProcCtl = proc.MakeProcCtl(fls, orc.pid)
+	orc.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	orc.Started(orc.pid)
 	return orc, nil
 }
 
 func (orc *NaiveOrchestrator) Exit() {
-	//	orc.Exiting(orc.pid, "OK")
+	orc.Exited(orc.pid)
 }
 
 func (orc *NaiveOrchestrator) stillProcessing() bool {
@@ -78,7 +78,7 @@ func (orc *NaiveOrchestrator) workerThread() {
 			orc.mu.Unlock()
 			continue
 		}
-		orc.Wait(pid)
+		orc.WaitExit(pid)
 		toh := mkThunkOutputHandler("", thunk.hash, thunk.outputFiles)
 		newThunks := toh.processOutput()
 		orc.mu.Lock()
@@ -139,7 +139,7 @@ func (orc *NaiveOrchestrator) Work() {
 		go func(i int, wg *sync.WaitGroup) {
 			defer wg.Done()
 			pid := spawnReductionWriter(orc, orc.targets[i], orc.targetHashes[i], path.Join(orc.cwd, "results"), "", []string{})
-			orc.Wait(pid)
+			orc.WaitExit(pid)
 		}(i, &targetsWritten)
 	}
 	targetsWritten.Wait()
@@ -184,7 +184,7 @@ func (orc *NaiveOrchestrator) ingestStaticGraph(targetHash string) {
 
 func (orc *NaiveOrchestrator) waitPids(pids []string) {
 	for _, p := range pids {
-		orc.Wait(p)
+		orc.WaitExit(p)
 	}
 }
 

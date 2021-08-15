@@ -12,7 +12,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
+	"ulambda/jobsched"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 	pid  string
 	args []string
 	conf *Config
@@ -40,7 +40,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
-	bl.ProcCtl = proc.MakeProcCtl(bl.FsLib, bl.pid)
+	bl.SchedCtl = jobsched.MakeSchedCtl(bl.FsLib, jobsched.DEFAULT_JOB_ID)
 
 	db.Name("balancer")
 
@@ -89,24 +89,22 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnMover(s, src, dst string) string {
-	a := proc.Proc{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/mover"
-	a.Args = []string{s, src, dst}
-	a.StartDep = nil
-	a.ExitDep = nil
-	bl.Spawn(&a)
-	return a.Pid
+	t := jobsched.MakeTask()
+	t.Pid = fslib.GenPid()
+	t.Program = "bin/mover"
+	t.Args = []string{s, src, dst}
+	bl.Spawn(t)
+	return t.Pid
 }
 
 func (bl *Balancer) runMovers(nextShards []string) {
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
 			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, nextShards[i])
-			ok, err := bl.Wait(pid1)
-			if string(ok) != "OK" || err != nil {
-				log.Printf("mover %v failed %v err %v\n", kvd,
-					string(ok), err)
+			err := bl.WaitExit(pid1)
+			if err != nil {
+				log.Printf("mover %v failed err %v\n", kvd,
+					err)
 			}
 		}
 	}
@@ -177,4 +175,8 @@ func (bl *Balancer) Balance() {
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Remove %v err %v\n", KVCONFIGBK, err)
 	}
+}
+
+func (bl *Balancer) Exit() {
+	bl.Exited(bl.pid)
 }

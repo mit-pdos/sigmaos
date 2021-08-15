@@ -18,4 +18,5 @@ func main() {
 		os.Exit(1)
 	}
 	p.Work()
+	p.Exit()
 }

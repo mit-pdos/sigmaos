@@ -8,14 +8,14 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 	me     string
 	twopc  *Twopc
 	txn    TxnI
@@ -35,7 +35,7 @@ func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Par
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
-	p.ProcCtl = proc.MakeProcCtl(fsl, p.me)
+	p.SchedCtl = jobsched.MakeSchedCtl(fsl, jobsched.DEFAULT_JOB_ID)
 	p.txn = txn
 	p.opcode = opcode
 
@@ -105,7 +105,7 @@ func (p *Participant) restartCoord() {
 		log.Printf("PART clean")
 		return
 	}
-	SpawnCoord(p.ProcCtl, "restart", p.twopc.Participants)
+	SpawnCoord(p.SchedCtl, "restart", p.twopc.Participants)
 	//ok, err := p.Wait(pid1)
 	//if err != nil {
 	//	log.Printf("PART wait failed\n")

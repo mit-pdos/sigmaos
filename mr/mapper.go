@@ -11,16 +11,16 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	"ulambda/memfs"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 type MapT func(string, string) []KeyValue
 
 type Mapper struct {
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 	mapf   MapT
 	pid    string
 	input  string
@@ -44,7 +44,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	m.FsLib = fslib.MakeFsLib("mapper")
 	log.Printf("MakeMapper %v\n", args)
-	m.ProcCtl = proc.MakeProcCtl(m.FsLib, m.pid)
+	m.SchedCtl = jobsched.MakeSchedCtl(m.FsLib, jobsched.DEFAULT_JOB_ID)
 
 	err := m.Mkdir("name/ux/~ip/m-"+m.output, 0777)
 	if err != nil {
@@ -156,4 +156,8 @@ func (m *Mapper) Work() {
 		os.Exit(1)
 	}
 
+}
+
+func (m *Mapper) Exit() {
+	m.Exited(m.pid)
 }

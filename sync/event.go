@@ -7,16 +7,14 @@ import (
 // An asynchronous event.
 type Event struct {
 	path string // Path to the event
-	pid  string // Caller's PID
 	c    *Cond  // Non-exclusive condition variable to wait on.
 	*fslib.FsLib
 }
 
-func MakeEvent(fsl *fslib.FsLib, pid, path string) *Event {
+func MakeEvent(fsl *fslib.FsLib, path string) *Event {
 	e := &Event{}
 	e.path = path
-	e.pid = pid
-	e.c = MakeCond(fsl, pid, path, nil)
+	e.c = MakeCond(fsl, path, nil)
 	e.FsLib = fsl
 	return e
 }

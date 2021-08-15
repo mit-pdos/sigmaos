@@ -27,7 +27,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	m.ProcCtl = proc.MakeProcCtl(fsl, m.pid)
+	m.ProcCtl = proc.MakeProcCtl(fsl)
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }
@@ -58,4 +58,8 @@ func (m *ReplicaMonitor) Work() {
 		m.updateConfig()
 		m.UnlockFile(fslib.LOCKS, m.configPath)
 	}
+}
+
+func (m *ReplicaMonitor) Exit() {
+	m.Exited(m.pid)
 }

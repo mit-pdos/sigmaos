@@ -21,4 +21,5 @@ func main() {
 	}
 	m := procd.MakeMonitor(os.Args[1])
 	m.Work()
+	m.Exit()
 }

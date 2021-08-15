@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	"ulambda/proc"
 )
 
@@ -42,23 +43,26 @@ func splitPairs(s string) map[string]bool {
 	return ps
 }
 
-func readLambda(line string) (*proc.Proc, error) {
+func readLambda(line string) (*jobsched.Task, error) {
 	l := strings.Split(line, ",")
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
+	t := jobsched.MakeTask()
 	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])
 	a.Env = split(l[3])
-	a.StartDep = splitPairs(l[4])
-	a.ExitDep = map[string]bool{}
+	t.Proc = a
+	t.Dependencies = &jobsched.Deps{}
+	t.Dependencies.StartDep = splitPairs(l[4])
+	t.Dependencies.ExitDep = map[string]bool{}
 	for _, dep := range split(l[5]) {
-		a.ExitDep[dep] = false
+		t.Dependencies.ExitDep[dep] = false
 	}
-	fmt.Println("a ", a)
-	return a, nil
+	fmt.Println("a ", t)
+	return t, nil
 }
 
 func usage() {
@@ -71,11 +75,11 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
-	pctl := proc.MakeProcCtl(clnt, "util")
+	sctl := jobsched.MakeSchedCtl(clnt, jobsched.DEFAULT_JOB_ID)
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]
-		pctl.Exiting(pid, "OK")
+		sctl.Exited(pid)
 	} else {
 		usage()
 	}

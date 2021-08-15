@@ -33,9 +33,9 @@ type SpinTestStarter struct {
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
 	var a *proc.Proc
 	if s.perfStat {
-		a = &proc.Proc{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, nil, nil, proc.T_DEF, proc.C_DEF}
+		a = &proc.Proc{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, proc.T_DEF, proc.C_DEF}
 	} else {
-		a = &proc.Proc{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, nil, nil, proc.T_DEF, proc.C_DEF}
+		a = &proc.Proc{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, proc.T_DEF, proc.C_DEF}
 	}
 	err := s.Spawn(a)
 	if err != nil {
@@ -78,7 +78,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spin-test-starter")
-		s.ProcCtl = proc.MakeProcCtl(s.FsLib, "spin-test-starter")
+		s.ProcCtl = proc.MakeProcCtl(s.FsLib)
 	}
 
 	nSpinners, err := strconv.Atoi(args[0])
@@ -135,7 +135,7 @@ func (s *SpinTestStarter) TestNinep() time.Duration {
 
 	// Wait for them all
 	for pid, _ := range pids {
-		s.Wait(pid)
+		s.WaitExit(pid)
 	}
 	end := time.Now()
 

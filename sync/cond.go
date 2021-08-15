@@ -2,11 +2,7 @@ package sync
 
 import (
 	"log"
-	"math/rand"
 	"path"
-	"time"
-
-	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -21,25 +17,20 @@ const (
 type Cond struct {
 	condLock  *Lock  // Lock this condition variable protects
 	dirLock   *Lock  // Lock protecting this condition variable (used to avoid sleep/wake races)
-	pid       string // Caller's PID
 	path      string // Path to condition variable
 	bcastPath string // Path to broadcast file watched by everyone
 	*fslib.FsLib
 }
 
 // Strict lock checking is turned on if this is a true condition variable.
-func MakeCond(fsl *fslib.FsLib, pid, condpath string, lock *Lock) *Cond {
+func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock) *Cond {
 	c := &Cond{}
 	c.condLock = lock
-	c.pid = pid
 	c.path = condpath
 	c.bcastPath = path.Join(condpath, BROADCAST)
 	c.FsLib = fsl
 
 	c.dirLock = MakeLock(fsl, fslib.LOCKS, fslib.LockName(path.Join(c.path, DIR_LOCK)), lock != nil)
-
-	// Seed the random number generator (used to pick random waiter to signal)
-	rand.Seed(time.Now().Unix())
 
 	return c
 }
@@ -133,22 +124,31 @@ func (c *Cond) Destroy() []string {
 	// Wake up all waiters with a broadcast.
 	err := c.Remove(c.bcastPath)
 	if err != nil {
-		log.Fatalf("Error Remove in Cond.Destroy: %v", err)
+		log.Fatalf("Error Remove 1 in Cond.Destroy: %v", err)
+	}
+
+	// Remove the directory so we don't take on any more waiters
+	err = c.Remove(c.path)
+	if err != nil {
+		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
 	}
 
 	c.dirLock.Unlock()
 
-	// Rename the directory to make sure we don't take on any more waiters.
-	newPath := path.Join(fslib.TMP, randstr.Hex(16))
-	err = c.Rename(c.path, newPath)
-	if err != nil {
-		log.Fatalf("Error Rename in Cond.Destroy: %v", err)
-	}
-
-	err = c.Remove(newPath)
-	if err != nil {
-		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
-	}
+	// XXX Remove if tests pass...
+	//	c.dirLock.Unlock()
+	//
+	//	// Rename the directory to make sure we don't take on any more waiters.
+	//	newPath := path.Join(fslib.TMP, randstr.Hex(16))
+	//	err = c.Rename(c.path, newPath)
+	//	if err != nil {
+	//		log.Fatalf("Error Rename in Cond.Destroy: %v", err)
+	//	}
+	//
+	//	err = c.Remove(newPath)
+	//	if err != nil {
+	//		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
+	//	}
 	return waiterNames
 }
 

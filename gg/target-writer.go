@@ -5,7 +5,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
+	"ulambda/jobsched"
 )
 
 // XXX Rename
@@ -15,7 +15,7 @@ type TargetWriter struct {
 	target          string
 	targetReduction string
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 }
 
 func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
@@ -28,13 +28,13 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	tw.targetReduction = args[3]
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
-	tw.ProcCtl = proc.MakeProcCtl(fls, tw.pid)
+	tw.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	tw.Started(tw.pid)
 	return tw, nil
 }
 
 func (tw *TargetWriter) Exit() {
-	//	tw.Exiting(tw.pid, "OK")
+	tw.Exited(tw.pid)
 }
 
 func (tw *TargetWriter) Work() {

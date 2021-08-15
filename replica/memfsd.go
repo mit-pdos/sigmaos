@@ -60,7 +60,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 		log.Fatalf("%v: InitFs failed %v\n", args, err)
 	}
 	r.FsLibSrv = fs
-	r.ProcCtl = proc.MakeProcCtl(fs.FsLib, r.Pid)
+	r.ProcCtl = proc.MakeProcCtl(fs.FsLib)
 	return r
 }
 

@@ -32,7 +32,7 @@ func MakeMonitor(pid string) *Monitor {
 	m.pid = pid
 	fsl := fslib.MakeFsLib("monitor")
 	m.FsLib = fsl
-	m.ProcCtl = proc.MakeProcCtl(fsl, m.pid)
+	m.ProcCtl = proc.MakeProcCtl(fsl)
 	log.Printf("Monitor %v", m.pid)
 	return m
 }
@@ -41,7 +41,7 @@ func MakeMonitor(pid string) *Monitor {
 // Enqueue a new monitor to be run in MONITOR_TIMER seconds
 func (m *Monitor) RestartSelf() {
 	newPid := "monitor-" + fslib.GenPid()
-	a := &proc.Proc{newPid, "bin/procd-monitor", "", []string{}, nil, nil, nil, proc.T_LC, proc.C_DEF}
+	a := &proc.Proc{newPid, "bin/procd-monitor", "", []string{}, nil, proc.T_LC, proc.C_DEF}
 	err := m.Spawn(a)
 	if err != nil {
 		log.Printf("Error spawning monitor: %v", err)
@@ -110,4 +110,8 @@ func (m *Monitor) ReadClaimed() ([]*np.Stat, error) {
 		return d, err
 	}
 	return d, err
+}
+
+func (m *Monitor) Exit() {
+	m.Exited(m.pid)
 }

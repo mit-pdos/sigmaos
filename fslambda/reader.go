@@ -7,16 +7,16 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
+	"ulambda/jobsched"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
-	"ulambda/proc"
 )
 
 type Reader struct {
 	*fslibsrv.FsLibSrv
-	pctl   *proc.ProcCtl
+	sched  *jobsched.SchedCtl
 	pid    string
 	input  string
 	output string
@@ -47,12 +47,12 @@ func MakeReader(args []string) (*Reader, error) {
 
 	r := &Reader{}
 	r.FsLibSrv = fsl
-	r.pctl = proc.MakeProcCtl(fsl.FsLib, r.pid)
+	r.sched = jobsched.MakeSchedCtl(fsl.FsLib, jobsched.DEFAULT_JOB_ID)
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]
 	r.pipe = pipe
-	r.pctl.Started(r.pid)
+	r.sched.Started(r.pid)
 
 	return r, nil
 }
@@ -84,4 +84,8 @@ func (r *Reader) Work() {
 	r.pipe.Close(nil, np.OWRITE)
 
 	r.ExitFs("name/" + r.output)
+}
+
+func (r *Reader) Exit() {
+	r.sched.Exited(r.pid)
 }

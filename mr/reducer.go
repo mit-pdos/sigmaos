@@ -12,8 +12,8 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 type ReduceT func(string, []string) string
@@ -22,7 +22,7 @@ const NReduce = 2
 
 type Reducer struct {
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 	reducef ReduceT
 	pid     string
 	input   string
@@ -41,7 +41,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
-	r.ProcCtl = proc.MakeProcCtl(r.FsLib, r.pid)
+	r.SchedCtl = jobsched.MakeSchedCtl(r.FsLib, jobsched.DEFAULT_JOB_ID)
 	log.Printf("MakeReducer %v\n", args)
 	r.Started(r.pid)
 	return r, nil
@@ -137,4 +137,8 @@ func (r *Reducer) Work() {
 		log.Printf("doReduce error %v", err)
 		os.Exit(1)
 	}
+}
+
+func (r *Reducer) Exit() {
+	r.Exited(r.pid)
 }

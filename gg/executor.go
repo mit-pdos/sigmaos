@@ -7,14 +7,14 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
+	"ulambda/jobsched"
 )
 
 type Executor struct {
 	pid       string
 	thunkHash string
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
@@ -24,7 +24,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.ProcCtl = proc.MakeProcCtl(fls, ex.pid)
+	ex.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	ex.Started(ex.pid)
 	return ex, nil
 }
@@ -96,5 +96,5 @@ func (ex *Executor) Name() string {
 }
 
 func (ex *Executor) Exit() {
-	//	ex.Exiting(ex.pid, "OK")
+	ex.Exited(ex.pid)
 }

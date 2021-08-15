@@ -12,8 +12,8 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 
 type Coord struct {
 	*fslib.FsLib
-	*proc.ProcCtl
+	*jobsched.SchedCtl
 	pid    string
 	opcode string
 	args   []string
@@ -51,7 +51,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.args = args[2:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
-	cd.ProcCtl = proc.MakeProcCtl(cd.FsLib, cd.pid)
+	cd.SchedCtl = jobsched.MakeSchedCtl(cd.FsLib, jobsched.DEFAULT_JOB_ID)
 
 	// Grab TWOPCLOCK before starting coord
 	if err := cd.LockFile(DIR2PC, TWOPCLOCK); err != nil {
@@ -265,4 +265,8 @@ func (cd *Coord) TwoPC() {
 func (cd *Coord) cleanup() {
 	log.Printf("COORD cleanup %v\n", TWOPCCOMMIT)
 	cd.Remove(TWOPCCOMMIT) // don't care if succeeds or not
+}
+
+func (cd *Coord) Exit() {
+	cd.Exited(cd.pid)
 }

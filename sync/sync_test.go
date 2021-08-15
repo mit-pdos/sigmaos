@@ -52,7 +52,7 @@ func runEventWaiters(ts *Tstate, n_waiters, n_events int, destroy bool) {
 	events := []*Event{}
 
 	for i := 0; i < n_events; i++ {
-		events = append(events, MakeEvent(ts.FsLib, PID, COND_PATH))
+		events = append(events, MakeEvent(ts.FsLib, COND_PATH))
 	}
 
 	events[0].Init()
@@ -103,7 +103,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	conds := []*Cond{}
 
 	for i := 0; i < n_conds; i++ {
-		conds = append(conds, MakeCond(ts.FsLib, PID, COND_PATH, lock))
+		conds = append(conds, MakeCond(ts.FsLib, COND_PATH, lock))
 	}
 
 	conds[0].Init()
@@ -134,7 +134,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
-func TestLock(t *testing.T) {
+func TestLock1(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
@@ -167,6 +167,27 @@ func TestLock(t *testing.T) {
 	for i := 0; i < N; i++ {
 		next := <-done
 		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
+	}
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestLock2(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	N := 20
+
+	lock1 := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+	lock2 := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+
+	for i := 0; i < N; i++ {
+		lock1.Lock()
+		lock1.Unlock()
+		lock2.Lock()
+		lock2.Unlock()
 	}
 
 	ts.s.Shutdown(ts.FsLib)

@@ -13,4 +13,5 @@ func main() {
 	}
 	m := replica.MakeReplicaMonitor(os.Args[1:])
 	m.Work()
+	m.Exit()
 }

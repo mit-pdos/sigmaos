@@ -31,7 +31,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "procd-test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib)
 	ts.t = t
 	return ts
 }
@@ -52,7 +52,7 @@ func makeTstateOneProcd(t *testing.T) *Tstate {
 	}
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "procd-test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib)
 	ts.t = t
 	return ts
 }
@@ -63,26 +63,12 @@ func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib, "procd-test")
+	ts.ProcCtl = proc.MakeProcCtl(ts.FsLib)
 	return ts
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	spawnSleeperlWithPidStartDep(t, ts, pid, nil)
-}
-
-// XXX FIX
-func spawnMonitor(t *testing.T, ts *Tstate) {
-	pid := "monitor-" + fslib.GenPid()
-	a := &proc.Proc{pid, "bin/procd-monitor", "", []string{}, nil, nil, nil,
-		proc.T_DEF, proc.C_DEF}
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
-}
-
-func spawnSleeperlWithPidStartDep(t *testing.T, ts *Tstate, pid string, startDep map[string]bool) {
-	a := &proc.Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, startDep, nil, proc.T_DEF, proc.C_DEF}
+	a := &proc.Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -108,15 +94,6 @@ func checkSleeperlResultFalse(t *testing.T, ts *Tstate, pid string) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func spawnNoOp(t *testing.T, ts *Tstate, deps []string) string {
-	pid := fslib.GenPid()
-	err := ts.SpawnNoOp(pid, deps)
-	assert.Nil(t, err, "SpawnNoOp")
-
-	db.DLPrintf("SCHEDD", "SpawnNoOp %v\n", pid)
-	return pid
-}
-
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -132,10 +109,9 @@ func TestWait(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	status, err := ts.Wait(pid)
+	err := ts.WaitExit(pid)
 
 	assert.Nil(t, err, "Wait error")
-	assert.Equal(t, string(status), "OK", "Return status")
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -150,7 +126,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 
 	pid := fslib.GenPid()
 	go func() {
-		ts.Wait(pid)
+		ts.WaitExit(pid)
 		ch <- true
 	}()
 
@@ -167,150 +143,6 @@ func TestWaitNonexistentLambda(t *testing.T) {
 	db.DLPrintf("SCHEDD", "Wait on nonexistent lambda\n")
 
 	close(ch)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-// Should exit immediately
-func TestNoOpLambdaImmediateExit(t *testing.T) {
-	ts := makeTstate(t)
-
-	pid := spawnNoOp(t, ts, []string{})
-
-	ch := make(chan bool)
-
-	go func() {
-		ts.Wait(pid)
-		ch <- true
-	}()
-
-	for i := 0; i < 500; i++ {
-		select {
-		case done := <-ch:
-			assert.True(t, done, "No-op lambda")
-			break
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-
-	close(ch)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-// Start a procd, crash it, start a new one, and make sure it reruns lambdas.
-//func TestCrashProcd(t *testing.T) {
-//	ts := makeTstateOneProcd(t)
-//
-//	ch := make(chan bool)
-//	spawnMonitor(t, ts)
-//	go func() {
-//		start := time.Now()
-//		pid := spawnSleeperlWithTimer(t, ts, 5)
-//		ts.Wait(pid)
-//		end := time.Now()
-//		elapsed := end.Sub(start)
-//		assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for respawn after procd crash (%v)", elapsed.Seconds())
-//		checkSleeperlResult(t, ts, pid)
-//		ch <- true
-//	}()
-//
-//	// Wait for a bit
-//	time.Sleep(1 * time.Second)
-//
-//	// Kill the procd instance
-//	ts.s.Kill(fslib.PROCD)
-//
-//	// Wait for a bit
-//	time.Sleep(10 * time.Second)
-//
-//	//	ts.SignalNewJob()
-//
-//	err := ts.s.BootProcd("..")
-//	if err != nil {
-//		t.Fatalf("BootProcd %v\n", err)
-//	}
-//
-//	<-ch
-//	ts.s.Shutdown(ts.FsLib)
-//}
-
-func TestExitDep(t *testing.T) {
-	ts := makeTstate(t)
-
-	pid := spawnSleeperl(t, ts)
-
-	pid2 := spawnNoOp(t, ts, []string{pid})
-
-	// Make sure no-op waited for sleeperl lambda
-	start := time.Now()
-	ts.Wait(pid2)
-	end := time.Now()
-	elapsed := end.Sub(start)
-	assert.True(t, elapsed.Seconds() > 4.0, "Didn't wait for exit dep for long enough")
-
-	checkSleeperlResult(t, ts, pid)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-//func TestSwapExitDeps(t *testing.T) {
-//	ts := makeTstate(t)
-//
-//	pid := spawnSleeperl(t, ts)
-//
-//	pid2 := spawnNoOp(t, ts, []string{pid})
-//
-//	start := time.Now()
-//
-//	// Sleep a bit
-//	time.Sleep(4 * time.Second)
-//
-//	// Spawn a new sleeperl lambda
-//	pid3 := spawnSleeperl(t, ts)
-//
-//	// Wait on the new sleeperl lambda instead of the old one
-//	swaps := []string{pid, pid3}
-//	db.DLPrintf("SCHEDD", "Swapping %v\n", swaps)
-//	ts.SwapExitDependency(swaps)
-//
-//	ts.Wait(pid2)
-//	end := time.Now()
-//	elapsed := end.Sub(start)
-//	assert.True(t, elapsed.Seconds() > 8.0, "Didn't wait for exit dep for long enough (%v)", elapsed.Seconds())
-//
-//	checkSleeperlResult(t, ts, pid)
-//	checkSleeperlResult(t, ts, pid3)
-//
-//	ts.s.Shutdown(ts.FsLib)
-//}
-
-func TestStartDepProdFirst(t *testing.T) {
-	ts := makeTstate(t)
-
-	// Generate a consumer & producer pid, make sure they dont' equal each other
-	cons := fslib.GenPid()
-	prod := fslib.GenPid()
-	for cons == prod {
-		prod = fslib.GenPid()
-	}
-
-	// Spawn the producer first
-	spawnSleeperlWithPidStartDep(t, ts, prod, map[string]bool{})
-
-	// Make sure the producer hasn't run yet...
-	checkSleeperlResultFalse(t, ts, prod)
-
-	// Spawn the consumer
-	spawnSleeperlWithPidStartDep(t, ts, cons, map[string]bool{prod: false})
-
-	// Wait a bit
-	time.Sleep(12 * time.Second)
-
-	// Make sure they both ran
-	checkSleeperlResult(t, ts, prod)
-	checkSleeperlResult(t, ts, cons)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -360,7 +192,7 @@ func TestConcurrentLambdas(t *testing.T) {
 		_ = i
 		go func(pid string, done *sync.WaitGroup, i int) {
 			defer done.Done()
-			ts.Wait(pid)
+			ts.WaitExit(pid)
 			checkSleeperlResult(t, tses[i], pid)
 		}(pid, &done, i)
 	}
@@ -374,7 +206,7 @@ func TestEvict(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := fslib.GenPid()
-	a := &proc.Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil, nil, nil,
+	a := &proc.Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil,
 		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
 

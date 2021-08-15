@@ -51,12 +51,12 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		l.pd.Exiting(l.attr.Pid, err.Error())
+		l.pd.Exited(l.attr.Pid)
 		return
 	}
 
 	// Notify schedd that the process exited
-	l.pd.Exiting(l.attr.Pid, "OK")
+	//	l.pd.Exited(l.attr.Pid)
 }
 
 func (l *Lambda) run(cores []uint) error {
@@ -65,7 +65,7 @@ func (l *Lambda) run(cores []uint) error {
 	// Don't run anything if this is a no-op
 	if l.Program == NO_OP_LAMBDA {
 		// XXX Should perhaps do this asynchronously, but worried about fsclnt races
-		l.pd.Exiting(l.Pid, "OK")
+		l.pd.Exited(l.Pid)
 		return nil
 	}
 

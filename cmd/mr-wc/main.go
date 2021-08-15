@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	"ulambda/mr"
 	"ulambda/proc"
 )
@@ -83,7 +84,7 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
-	pctl := proc.MakeProcCtl(fsl, "mr-wc")
+	sctl := jobsched.MakeSchedCtl(fsl, jobsched.DEFAULT_JOB_ID)
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
@@ -103,16 +104,16 @@ func main() {
 		pid2 := fslib.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
-		a1 := &proc.Proc{pid1, "bin/fsreader", "",
-			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil,
-			map[string]bool{}, nil, proc.T_BE,
-			proc.C_DEF}
-		a2 := &proc.Proc{pid2, "bin/mr-m-wc", "",
-			[]string{"name/" + m + "/pipe", m}, nil,
-			map[string]bool{pid1: false}, nil, proc.T_BE,
-			proc.C_DEF}
-		pctl.Spawn(a1)
-		pctl.Spawn(a2)
+		a1 := jobsched.MakeTask()
+		a1.Dependencies = &jobsched.Deps{map[string]bool{}, nil}
+		a1.Proc = &proc.Proc{pid1, "bin/fsreader", "",
+			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil, proc.T_BE, proc.C_DEF}
+		a2 := jobsched.MakeTask()
+		a2.Dependencies = &jobsched.Deps{map[string]bool{pid1: false}, nil}
+		a2.Proc = &proc.Proc{pid2, "bin/mr-m-wc", "",
+			[]string{"name/" + m + "/pipe", m}, nil, proc.T_BE, proc.C_DEF}
+		sctl.Spawn(a1)
+		sctl.Spawn(a2)
 		n += 1
 		mappers[pid2] = false
 	}
@@ -121,19 +122,21 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		pid := fslib.GenPid()
 		r := strconv.Itoa(i)
-		a := &proc.Proc{pid, "bin/mr-r-wc", "",
+		a := jobsched.MakeTask()
+		a.Proc = &proc.Proc{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
-			nil, mappers, proc.T_BE, proc.C_DEF}
+			proc.T_BE, proc.C_DEF}
+		a.Dependencies = &jobsched.Deps{nil, mappers}
 		reducers = append(reducers, pid)
-		pctl.Spawn(a)
+		sctl.Spawn(a)
 	}
 
 	// Spawn noop lambda that is dependent on reducers
-	pid := fslib.GenPid()
-	pctl.SpawnNoOp(pid, reducers)
-	status, err := pctl.Wait(pid)
-	if err != nil {
-		log.Fatalf("Wait failed %v status %v\n", err, string(status))
+	for _, r := range reducers {
+		err = sctl.WaitExit(r)
+		if err != nil {
+			log.Fatalf("Wait failed %v\n", err)
+		}
 	}
 
 	file, err := os.OpenFile("mr/par-mr.out", os.O_WRONLY|os.O_CREATE, 0644)

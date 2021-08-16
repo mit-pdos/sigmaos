@@ -3,8 +3,6 @@ package fslib
 import (
 	"math/rand"
 	"strconv"
-
-	np "ulambda/ninep"
 )
 
 func GenPid() string {

@@ -204,10 +204,19 @@ func TestConcurrentLambdas(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func (ts *Tstate) evict(pid string) {
+	time.Sleep(1 * time.Second)
+	err := ts.Evict(pid)
+	assert.Nil(ts.t, err, "evict")
+}
+
 func TestEvict(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := fslib.GenPid()
+
+	go ts.evict(pid)
+
 	a := &proc.Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil,
 		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)

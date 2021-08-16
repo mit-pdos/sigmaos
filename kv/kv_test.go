@@ -11,9 +11,9 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/jobsched"
+	"ulambda/kernel"
 	"ulambda/memfsd"
 	"ulambda/proc"
-	"ulamda/kernel"
 )
 
 const NKEYS = 2 // 100

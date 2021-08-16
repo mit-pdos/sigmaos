@@ -10,6 +10,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
@@ -37,8 +38,8 @@ func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr st
 	db.Name("npuxd")
 	npux.srv = npsrv.MakeReplicatedNpServer(npux, addr, false, replicated, relayAddr, config)
 	fsl := fslib.MakeFsLib("npux")
-	fsl.Mkdir(fslib.UX, 0777)
-	err := fsl.PostServiceUnion(npux.srv.MyAddr(), fslib.UX, npux.srv.MyAddr())
+	fsl.Mkdir(kernel.UX, 0777)
+	err := fsl.PostServiceUnion(npux.srv.MyAddr(), kernel.UX, npux.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", npux.srv.MyAddr(), err)
 	}

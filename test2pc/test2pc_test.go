@@ -69,7 +69,7 @@ func (ts *Tstate) spawnMemFS() string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/memfsd"
 	a.Args = []string{""}
-	a.PairDep = nil
+	a.StartDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid
@@ -80,7 +80,7 @@ func (ts *Tstate) spawnParticipant(index, opcode string) string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/test2pc"
 	a.Args = []string{index, opcode}
-	a.PairDep = nil
+	a.StartDep = nil
 	a.ExitDep = nil
 	ts.fsl.Spawn(&a)
 	return a.Pid

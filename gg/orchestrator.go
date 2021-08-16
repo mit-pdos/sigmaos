@@ -5,8 +5,8 @@ import (
 	"path"
 	"time"
 
-	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 
 type ExecutorLauncher interface {
 	FsLambda
-	Spawn(*fslib.Attr) error
+	Spawn(*jobsched.Task) error
 	SpawnNoOp(string, []string) error
 	Started(string) error
 }
@@ -29,6 +29,7 @@ type Orchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
+	*jobsched.SchedCtl
 }
 
 func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
@@ -40,12 +41,13 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
+	orc.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	orc.Started(orc.pid)
 	return orc, nil
 }
 
 func (orc *Orchestrator) Exit() {
-	//	orc.Exiting(orc.pid, "OK")
+	orc.Exited(orc.pid)
 }
 
 func (orc *Orchestrator) Work() {
@@ -65,7 +67,7 @@ func (orc *Orchestrator) Work() {
 		}
 	}
 	for _, rw := range reductionWriters {
-		orc.Wait(rw)
+		orc.WaitExit(rw)
 	}
 	end := time.Now()
 	elapsed := end.Sub(start)
@@ -109,7 +111,7 @@ func (orc *Orchestrator) executeStaticGraph(targetHash string, g *Graph) {
 
 func (orc *Orchestrator) waitPids(pids []string) {
 	for _, p := range pids {
-		orc.Wait(p)
+		orc.WaitExit(p)
 	}
 }
 

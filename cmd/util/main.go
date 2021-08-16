@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"ulambda/fslib"
+	"ulambda/jobsched"
+	"ulambda/proc"
 )
 
 // XXX make input parsing more robust
@@ -24,8 +26,8 @@ func split(s string) []string {
 	return s1
 }
 
-func splitPairs(s string) []fslib.PDep {
-	ps := []fslib.PDep{}
+func splitPairs(s string) map[string]bool {
+	ps := map[string]bool{}
 	s = strings.TrimRight(s, "]")
 	s = strings.TrimLeft(s, "[")
 	if len(s) == 0 {
@@ -33,34 +35,34 @@ func splitPairs(s string) []fslib.PDep {
 	}
 	s1 := strings.Split(s, " ")
 	for _, e := range s1 {
-		p := fslib.PDep{}
 		e = strings.TrimRight(e, ")")
 		e = strings.TrimLeft(e, "(")
 		s1 := strings.Split(e, ";")
-		p.Producer = s1[0]
-		p.Consumer = s1[1]
-		ps = append(ps, p)
+		ps[s1[0]] = false
 	}
 	return ps
 }
 
-func readLambda(line string) (*fslib.Attr, error) {
+func readLambda(line string) (*jobsched.Task, error) {
 	l := strings.Split(line, ",")
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
-	a := &fslib.Attr{}
+	t := jobsched.MakeTask()
+	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])
 	a.Env = split(l[3])
-	a.PairDep = splitPairs(l[4])
-	a.ExitDep = map[string]bool{}
+	t.Proc = a
+	t.Dependencies = &jobsched.Deps{}
+	t.Dependencies.StartDep = splitPairs(l[4])
+	t.Dependencies.ExitDep = map[string]bool{}
 	for _, dep := range split(l[5]) {
-		a.ExitDep[dep] = false
+		t.Dependencies.ExitDep[dep] = false
 	}
-	fmt.Println("a ", a)
-	return a, nil
+	fmt.Println("a ", t)
+	return t, nil
 }
 
 func usage() {
@@ -73,10 +75,11 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
+	sctl := jobsched.MakeSchedCtl(clnt, jobsched.DEFAULT_JOB_ID)
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]
-		clnt.Exiting(pid, "OK")
+		sctl.Exited(pid)
 	} else {
 		usage()
 	}

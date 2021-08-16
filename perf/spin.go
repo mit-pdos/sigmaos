@@ -5,8 +5,8 @@ import (
 	"log"
 	"strconv"
 
-	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type Spinner struct {
@@ -15,6 +15,7 @@ type Spinner struct {
 	its    int
 	native bool
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeSpinner(args []string) (*Spinner, error) {
@@ -25,10 +26,11 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	s := &Spinner{}
 	// If we're running in "native" mode, ignore the 9p stuff
 	s.native = len(args) > 3 && args[3] == "native"
+	s.pid = args[0]
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spinner")
+		s.ProcCtl = proc.MakeProcCtl(s.FsLib)
 	}
-	s.pid = args[0]
 	dim, err := strconv.Atoi(args[1])
 	s.dim = dim
 	if err != nil {

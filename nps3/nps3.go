@@ -12,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
@@ -53,12 +54,12 @@ func MakeNps3() *Nps3 {
 
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", fslib.S3, err)
+		log.Fatalf("LocalIP %v %v\n", kernel.S3, err)
 	}
 	nps3.srv = npsrv.MakeNpServer(nps3, ip+":0")
 	fsl := fslib.MakeFsLib("nps3")
-	fsl.Mkdir(fslib.S3, 0777)
-	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), fslib.S3, nps3.srv.MyAddr())
+	fsl.Mkdir(kernel.S3, 0777)
+	err = fsl.PostServiceUnion(nps3.srv.MyAddr(), kernel.S3, nps3.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", nps3.srv.MyAddr(), err)
 	}

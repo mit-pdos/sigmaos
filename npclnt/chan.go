@@ -93,6 +93,7 @@ func (ch *Chan) terminateOutstandingL() {
 	for _, rpc := range ch.outstanding {
 		close(rpc.replych)
 	}
+	ch.outstanding = map[np.Ttag]*RpcT{}
 }
 
 func (ch *Chan) resendOutstandingL() {
@@ -118,7 +119,9 @@ func (ch *Chan) Close() {
 
 	db.DLPrintf("9PCHAN", "Close chan to %v\n", ch.dstL())
 	ch.terminateOutstandingL()
-	close(ch.requests)
+	if !ch.closed {
+		close(ch.requests)
+	}
 	ch.closed = true
 	ch.conn.Close()
 }
@@ -260,7 +263,7 @@ func (ch *Chan) writer() {
 			}
 			db.DLPrintf("9PCHAN", "Writer: Connection error to %v: %v", ch.Dst(), err)
 		} else {
-			err = ch.bw.Flush()
+			err = bw.Flush()
 			if err != nil {
 				if strings.Contains(err.Error(), "connection reset by peer") {
 					ch.resetConnection(br, bw)
@@ -302,6 +305,7 @@ func (ch *Chan) reader() {
 		}
 		if err != nil {
 			db.DLPrintf("9PCHAN", "Reader: ReadFrame error %v\n", err)
+			ch.Close()
 			return
 		}
 		fcall := &np.Fcall{}

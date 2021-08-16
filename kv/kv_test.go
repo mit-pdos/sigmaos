@@ -9,9 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	"ulambda/memfsd"
+	"ulambda/proc"
+	"ulamda/kernel"
 )
 
 const NKEYS = 2 // 100
@@ -36,9 +38,10 @@ func TestBalance(t *testing.T) {
 }
 
 type Tstate struct {
-	t     *testing.T
-	s     *fslib.System
-	fsl   *fslib.FsLib
+	t   *testing.T
+	s   *kernel.System
+	fsl *fslib.FsLib
+	*jobsched.SchedCtl
 	clrks []*KvClerk
 	mfss  []string
 	rand  *rand.Rand
@@ -48,12 +51,13 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	s, err := fslib.Boot("..")
+	s, err := kernel.Boot("..")
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("kv_test")
+	ts.SchedCtl = jobsched.MakeSchedCtl(ts.fsl, jobsched.DEFAULT_JOB_ID)
 
 	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
 	if err != nil {
@@ -73,13 +77,13 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	a := fslib.Attr{}
+	t := jobsched.MakeTask()
+	a := &proc.Proc{}
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/memfsd"
 	a.Args = []string{""}
-	a.PairDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
+	t.Proc = a
+	ts.Spawn(t)
 	return a.Pid
 }
 
@@ -136,9 +140,9 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	if memfs {
 		mfs = ts.spawnMemFS()
 	} else {
-		mfs = SpawnKV(ts.fsl)
+		mfs = SpawnKV(ts.SchedCtl)
 	}
-	RunBalancer(ts.fsl, "add", mfs)
+	RunBalancer(ts.SchedCtl, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -191,13 +195,13 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	for s := 0; s < NMORE; s++ {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		RunBalancer(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.SchedCtl, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		RunBalancer(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.SchedCtl, "del", ts.mfss[len(ts.mfss)-1])
 		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets

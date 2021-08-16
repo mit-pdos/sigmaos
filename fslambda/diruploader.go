@@ -8,6 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	np "ulambda/ninep"
 )
 
@@ -17,6 +18,7 @@ type DirUploader struct {
 	dest      string
 	thunkHash string
 	*fslib.FsLib
+	*jobsched.SchedCtl
 }
 
 func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {
@@ -29,6 +31,7 @@ func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("dir-uploader")
 	up.FsLib = fls
+	up.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	up.Started(up.pid)
 	return up, nil
 }
@@ -79,5 +82,5 @@ func (up *DirUploader) Work() {
 }
 
 func (up *DirUploader) Exit() {
-	up.Exiting(up.pid, "OK")
+	up.Exited(up.pid)
 }

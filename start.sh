@@ -20,7 +20,7 @@ sleep 1
 
 ./bin/nps3d &
 ./bin/npuxd &
-./bin/locald ./ &
+./bin/procd ./ &
 
 sleep 2
 ./mount.sh

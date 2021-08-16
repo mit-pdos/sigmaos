@@ -1,7 +1,6 @@
-package fslib
+package fslib_test
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,23 +10,25 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
+	"ulambda/fslib"
+	"ulambda/kernel"
 	np "ulambda/ninep"
 )
 
 type Tstate struct {
-	*FsLib
+	*fslib.FsLib
 	t *testing.T
-	s *System
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	s, err := BootMin("..")
+	s, err := kernel.BootMin("..")
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
 	db.Name("fslib_test")
-	ts.FsLib = MakeFsLib("fslibtest")
+	ts.FsLib = fslib.MakeFsLib("fslibtest")
 	ts.s = s
 	ts.t = t
 
@@ -132,11 +133,11 @@ func TestCopy(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func (ts *Tstate) localdName(t *testing.T) string {
-	sts, err := ts.ReadDir(LOCALD_ROOT)
-	assert.Nil(t, err, LOCALD_ROOT)
+func (ts *Tstate) procdName(t *testing.T) string {
+	sts, err := ts.ReadDir(kernel.PROCD)
+	assert.Nil(t, err, kernel.PROCD)
 	assert.Equal(t, 1, len(sts))
-	name := LOCALD_ROOT + "/" + sts[0].Name
+	name := kernel.PROCD + "/" + sts[0].Name
 	return name
 }
 
@@ -244,7 +245,7 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink(targetPath, linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	fsl := MakeFsLib("abcd")
+	fsl := fslib.MakeFsLib("abcd")
 	fsl.ProcessDir(linkDir, func(st *np.Stat) (bool, error) {
 		// Read symlink contents
 		fd, err := fsl.Open(linkPath+"/", np.OREAD)
@@ -314,16 +315,16 @@ func TestCounter(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// TODO: switch to using memfsd instead of locald
+// TODO: switch to using memfsd instead of procd
 func TestEphemeral(t *testing.T) {
 	ts := makeTstate(t)
 
 	var err error
-	ts.s.locald, err = run("..", "/bin/locald", []string{"./"})
-	assert.Nil(t, err, "bin/locald")
+	err = ts.s.BootProcd("..")
+	assert.Nil(t, err, "bin/procd")
 	time.Sleep(100 * time.Millisecond)
 
-	name := ts.localdName(t)
+	name := ts.procdName(t)
 	b, err := ts.ReadFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
@@ -334,7 +335,7 @@ func TestEphemeral(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.s.Kill(LOCALD)
+	ts.s.Kill(kernel.PROCD)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -355,7 +356,7 @@ func TestLock(t *testing.T) {
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			fsl := MakeFsLib("fslibtest" + strconv.Itoa(i))
+			fsl := fslib.MakeFsLib("fslibtest" + strconv.Itoa(i))
 			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
@@ -381,7 +382,7 @@ func TestLock1(t *testing.T) {
 	// Lock the file
 	err = ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
-	fsl := MakeFsLib("fslibtest0")
+	fsl := fslib.MakeFsLib("fslibtest0")
 	go func() {
 		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 		assert.Equal(t, nil, err)
@@ -482,8 +483,7 @@ func TestConcur(t *testing.T) {
 		}(i)
 	}
 	for i := 0; i < N; i++ {
-		j := <-ch
-		log.Printf("%d done\n", j)
+		<-ch
 	}
 	ts.s.Shutdown(ts.FsLib)
 }

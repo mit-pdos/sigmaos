@@ -1,8 +1,6 @@
-package locald
+package procd
 
 import (
-	//	"github.com/sasha-s/go-deadlock"
-	"encoding/json"
 	"io"
 	"log"
 	"os"
@@ -10,10 +8,12 @@ import (
 	"sync"
 	"time"
 
+	//	"github.com/sasha-s/go-deadlock"
+
 	db "ulambda/debug"
-	"ulambda/fslib"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type Lambda struct {
@@ -27,52 +27,45 @@ type Lambda struct {
 	Stdout  string
 	Stderr  string
 	SysPid  int
-	attr    *fslib.Attr
-	ld      *LocalD
+	attr    *proc.Proc
+	pd      *Procd
 	// XXX add fields (e.g. CPU mask, etc.)
 }
 
 // XXX init/run pattern seems a bit redundant...
-func (l *Lambda) init(a []byte) error {
-	var attr fslib.Attr
-	err := json.Unmarshal(a, &attr)
-	if err != nil {
-		log.Printf("Locald unmarshalling error: %v, %v", err, a)
-		return err
-	}
-	l.Program = attr.Program
-	l.Pid = attr.Pid
-	l.Args = attr.Args
-	l.Env = attr.Env
-	l.Dir = attr.Dir
-	l.Stdout = "" // XXX: add to or infer from attr
-	l.Stderr = "" // XXX: add to or infer from attr
-	l.attr = &attr
-	db.DLPrintf("LOCALD", "Locald init: %v\n", attr)
-	d1 := l.ld.makeDir([]string{attr.Pid}, np.DMDIR, l.ld.root)
+func (l *Lambda) init(p *proc.Proc) {
+	l.Program = p.Program
+	l.Pid = p.Pid
+	l.Args = p.Args
+	l.Env = p.Env
+	l.Dir = p.Dir
+	l.Stdout = "" // XXX: add to or infer from p
+	l.Stderr = "" // XXX: add to or infer from p
+	l.attr = p
+	db.DLPrintf("PROCD", "Procd init: %v\n", p)
+	d1 := l.pd.makeDir([]string{p.Pid}, np.DMDIR, l.pd.root)
 	d1.time = time.Now().Unix()
-	return nil
 }
 
 func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		l.ld.Exiting(l.attr.Pid, err.Error())
+		l.pd.Exited(l.attr.Pid)
 		return
 	}
 
 	// Notify schedd that the process exited
-	l.ld.Exiting(l.attr.Pid, "OK")
+	//	l.pd.Exited(l.attr.Pid)
 }
 
 func (l *Lambda) run(cores []uint) error {
-	db.DLPrintf("LOCALD", "Locald run: %v\n", l.attr)
+	db.DLPrintf("PROCD", "Procd run: %v\n", l.attr)
 
 	// Don't run anything if this is a no-op
 	if l.Program == NO_OP_LAMBDA {
 		// XXX Should perhaps do this asynchronously, but worried about fsclnt races
-		l.ld.Exiting(l.Pid, "OK")
+		l.pd.Exited(l.Pid)
 		return nil
 	}
 
@@ -97,14 +90,14 @@ func (l *Lambda) run(cores []uint) error {
 	}
 
 	env := append(os.Environ(), l.Env...)
-	cmd := exec.Command(l.ld.bin+"/"+l.Program, args...)
+	cmd := exec.Command(l.pd.bin+"/"+l.Program, args...)
 	cmd.Env = env
 	cmd.Dir = l.Dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	err := cmd.Start()
 	if err != nil {
-		log.Printf("Locald run error: %v, %v\n", l.attr, err)
+		log.Printf("Procd run error: %v, %v\n", l.attr, err)
 		return err
 	}
 
@@ -114,7 +107,7 @@ func (l *Lambda) run(cores []uint) error {
 	l.setCpuAffinity(cores)
 
 	l.wait(cmd)
-	db.DLPrintf("LOCALD", "Locald ran: %v\n", l.attr)
+	db.DLPrintf("PROCD", "Procd ran: %v\n", l.attr)
 
 	return nil
 }
@@ -128,15 +121,4 @@ func (l *Lambda) setCpuAffinity(cores []uint) {
 	if err != nil {
 		log.Printf("Error setting CPU affinity for child lambda: %v", err)
 	}
-}
-
-func (l *Lambda) getConsumers() []string {
-	consumers := []string{}
-	for _, pair := range l.attr.PairDep {
-		if pair.Producer != l.Pid {
-			log.Fatalf("Trying to get consumers from lambda, but isn't producer: %v", l)
-		}
-		consumers = append(consumers, pair.Consumer)
-	}
-	return consumers
 }

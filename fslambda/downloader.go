@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 )
 
 type Downloader struct {
@@ -14,6 +15,7 @@ type Downloader struct {
 	src  string
 	dest string
 	*fslib.FsLib
+	*jobsched.SchedCtl
 }
 
 func MakeDownloader(args []string, debug bool) (*Downloader, error) {
@@ -23,6 +25,7 @@ func MakeDownloader(args []string, debug bool) (*Downloader, error) {
 	down.src = args[1]
 	down.dest = args[2]
 	fls := fslib.MakeFsLib("downloader")
+	down.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	down.FsLib = fls
 	down.Started(down.pid)
 	return down, nil
@@ -47,5 +50,5 @@ func (down *Downloader) Work() {
 }
 
 func (down *Downloader) Exit() {
-	down.Exiting(down.pid, "OK")
+	down.Exited(down.pid)
 }

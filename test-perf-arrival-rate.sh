@@ -25,7 +25,7 @@ do
   echo "Starting 9p infrastructure"
   GOGC=off ./bin/memfsd 0 ":1111" $measurements_pprof/$spawns_per_sec-memfsd-pprof.out $measurements_util/$spawns_per_sec-memfsd-util.txt &
   sleep 2
-  GOGC=off ./bin/locald ./ $measurements_pprof/$spawns_per_sec-locald-pprof.out $measurements_util/$spawns_per_sec-locald-util.txt &
+  GOGC=off ./bin/procd ./ $measurements_pprof/$spawns_per_sec-procd-pprof.out $measurements_util/$spawns_per_sec-procd-util.txt &
   sleep 2
 
   echo "Spawning $spawns_per_sec spinners per second"

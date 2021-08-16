@@ -6,7 +6,7 @@ import (
 	"path"
 	//	"runtime/debug"
 
-	"ulambda/fslib"
+	"ulambda/jobsched"
 )
 
 // Given a PID, create a no-op which waits on that Pid
@@ -21,7 +21,7 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 }
 
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
-	a := fslib.Attr{}
+	a := jobsched.MakeTask()
 	a.Pid = origDirUploaderPid(subDir)
 	a.Program = "bin/fsdiruploader"
 	a.Args = []string{
@@ -30,9 +30,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 		"",
 	}
 	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
-	a.ExitDep = map[string]bool{}
-	err := launch.Spawn(&a)
+	err := launch.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error spawning orig dir upload worker [%v/%v]: %v\n", dir, subDir, err)
 	}
@@ -40,7 +38,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 }
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
-	a := fslib.Attr{}
+	a := jobsched.MakeTask()
 	a.Pid = reductionWriterPid(dstDir, subDir, target)
 	a.Program = "bin/gg-target-writer"
 	a.Args = []string{
@@ -49,7 +47,6 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 		targetReduction,
 	}
 	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
 	reductionPid := outputHandlerPid(targetReduction)
 	noOpReductionPid := noOpPid(reductionPid)
 	deps = append(deps, noOpReductionPid)
@@ -57,8 +54,8 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	for _, dep := range deps {
 		exitDepMap[dep] = false
 	}
-	a.ExitDep = exitDepMap
-	err := launch.Spawn(&a)
+	a.Dependencies = &jobsched.Deps{nil, exitDepMap}
+	err := launch.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
 	}
@@ -66,20 +63,20 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
-	a := fslib.Attr{}
+	a := jobsched.MakeTask()
 	a.Pid = executorPid(targetHash)
 	a.Program = "bin/gg-executor"
 	a.Args = []string{
 		targetHash,
 	}
 	a.Dir = ""
-	a.PairDep = []fslib.PDep{}
+	a.Dependencies = &jobsched.Deps{map[string]bool{}, map[string]bool{}}
 	exitDepMap := map[string]bool{}
 	for _, dep := range depPids {
 		exitDepMap[dep] = false
 	}
-	a.ExitDep = exitDepMap
-	err := launch.Spawn(&a)
+	a.Dependencies.ExitDep = exitDepMap
+	err := launch.Spawn(a)
 	if err != nil {
 		return a.Pid, fmt.Errorf("Error spawning executor [%v]: %v\n", targetHash, err)
 	}
@@ -87,7 +84,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 }
 
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
-	a := fslib.Attr{}
+	a := jobsched.MakeTask()
 	a.Pid = outputHandlerPid(thunkHash)
 	a.Program = "bin/gg-thunk-output-handler"
 	a.Args = []string{
@@ -95,13 +92,12 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	}
 	a.Args = append(a.Args, outputFiles...)
 	a.Env = []string{}
-	a.PairDep = []fslib.PDep{}
 	exitDepMap := map[string]bool{}
 	for _, dep := range deps {
 		exitDepMap[dep] = false
 	}
-	a.ExitDep = exitDepMap
-	err := launch.Spawn(&a)
+	a.Dependencies = &jobsched.Deps{nil, exitDepMap}
+	err := launch.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err)
 	}

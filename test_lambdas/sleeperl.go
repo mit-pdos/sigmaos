@@ -7,11 +7,13 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	np "ulambda/ninep"
 )
 
 type Sleeperl struct {
 	*fslib.FsLib
+	*jobsched.SchedCtl
 	pid    string
 	output string
 }
@@ -24,6 +26,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
 	s.pid = args[0]
+	s.SchedCtl = jobsched.MakeSchedCtl(s.FsLib, jobsched.DEFAULT_JOB_ID)
 	s.output = args[1]
 
 	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)
@@ -43,4 +46,8 @@ func (s *Sleeperl) Work() {
 	if err != nil {
 		log.Printf("Makefile error %v\n", err)
 	}
+}
+
+func (s *Sleeperl) Exit() {
+	s.Exited(s.pid)
 }

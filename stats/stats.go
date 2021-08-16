@@ -17,6 +17,7 @@ import (
 	"ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 
 	"ulambda/perf"
 )
@@ -83,6 +84,7 @@ type Stats struct {
 	hz   int
 	done uint32
 	fsl  *fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MkStats() *Stats {
@@ -98,29 +100,28 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
+	st.ProcCtl = proc.MakeProcCtl(fsl)
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()
 }
 
 func (st *Stats) spawnMonitor() string {
-	a := fslib.Attr{}
-	a.Pid = fslib.GenPid()
-	a.Program = "bin/monitor"
-	a.Args = []string{}
-	a.PairDep = nil
-	a.ExitDep = nil
-	a.Type = fslib.T_LC
-	st.fsl.Spawn(&a)
-	return a.Pid
+	p := proc.Proc{}
+	p.Pid = fslib.GenPid()
+	p.Program = "bin/monitor"
+	p.Args = []string{}
+	p.Type = proc.T_LC
+	st.Spawn(&p)
+	return p.Pid
 }
 
 func (st *Stats) monitor() {
 	t0 := time.Now().UnixNano()
 	pid := st.spawnMonitor()
-	ok, err := st.fsl.Wait(pid)
-	if string(ok) != "OK" || err != nil {
-		log.Printf("monitor: ok %v err %v\n", string(ok), err)
+	err := st.WaitExit(pid)
+	if err != nil {
+		log.Printf("monitor: err %v\n", err)
 	}
 	t1 := time.Now().UnixNano()
 	log.Printf("mon: %v\n", t1-t0)

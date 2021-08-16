@@ -2,12 +2,12 @@ package replica
 
 import (
 	"log"
-	"path"
 	"sort"
 	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type ReplicaMonitor struct {
@@ -15,6 +15,7 @@ type ReplicaMonitor struct {
 	configPath   string
 	unionDirPath string
 	*fslib.FsLib
+	*proc.ProcCtl
 }
 
 func MakeReplicaMonitor(args []string) *ReplicaMonitor {
@@ -26,6 +27,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
+	m.ProcCtl = proc.MakeProcCtl(fsl)
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }
@@ -43,7 +45,7 @@ func (m *ReplicaMonitor) updateConfig() {
 		new += r.Name + "\n"
 	}
 	m.Remove(m.configPath)
-	err = m.MakeDirFileAtomic(path.Dir(m.configPath), path.Base(m.configPath), []byte(strings.TrimSpace(new)))
+	err = m.MakeFileAtomic(m.configPath, 0777, []byte(strings.TrimSpace(new)))
 	if err != nil {
 		log.Fatalf("Error writing new config file: %v", err)
 	}
@@ -56,4 +58,8 @@ func (m *ReplicaMonitor) Work() {
 		m.updateConfig()
 		m.UnlockFile(fslib.LOCKS, m.configPath)
 	}
+}
+
+func (m *ReplicaMonitor) Exit() {
+	m.Exited(m.pid)
 }

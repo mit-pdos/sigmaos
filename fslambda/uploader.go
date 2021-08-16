@@ -6,6 +6,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/jobsched"
 	np "ulambda/ninep"
 )
 
@@ -14,6 +15,7 @@ type Uploader struct {
 	src  string
 	dest string
 	*fslib.FsLib
+	*jobsched.SchedCtl
 }
 
 func MakeUploader(args []string, debug bool) (*Uploader, error) {
@@ -25,6 +27,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("uploader")
 	up.FsLib = fls
+	up.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
 	up.Started(up.pid)
 	return up, nil
 }
@@ -46,5 +49,5 @@ func (up *Uploader) Work() {
 }
 
 func (up *Uploader) Exit() {
-	up.Exiting(up.pid, "OK")
+	up.Exited(up.pid)
 }

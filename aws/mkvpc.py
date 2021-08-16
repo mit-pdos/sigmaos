@@ -62,7 +62,7 @@ def setup_keypair(vpc, ec2):
 
 def setup_instance(ec2, vpc, sg, sn, kpn, instance_type):
     script=''
-    with open('cloud-localds-user-data', 'r') as fin:
+    with open('cloud-procds-user-data', 'r') as fin:
         script = fin.read()
 
     instance = instance_type

@@ -111,12 +111,12 @@ if __name__ == "__main__":
   # Parsing
   latency = parse_latency_dir(args.latency_dir)
   memfsd_util = parse_util_dir(args.util_dir, "memfsd", args.util_sample_hz)
-  locald_util = parse_util_dir(args.util_dir, "locald", args.util_sample_hz)
+  procd_util = parse_util_dir(args.util_dir, "procd", args.util_sample_hz)
   if args.max_rate > 0:
     latency = { k : v for k, v in latency.items() if k < args.max_rate  }
     memfsd_util = { k : v for k, v in memfsd_util.items() if k < args.max_rate  }
-    locald_util = { k : v for k, v in locald_util.items() if k < args.max_rate  }
+    procd_util = { k : v for k, v in procd_util.items() if k < args.max_rate  }
   # Graphing
   graph_latency(latency, args.suffix)
   graph_util(memfsd_util, "memfsd", args.util_sample_hz, args.suffix)
-  graph_util(locald_util, "locald", args.util_sample_hz, args.suffix)
+  graph_util(procd_util, "procd", args.util_sample_hz, args.suffix)

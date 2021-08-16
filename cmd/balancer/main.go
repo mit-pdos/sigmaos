@@ -18,5 +18,6 @@ func main() {
 		os.Exit(1)
 	}
 	bl.Balance()
+	bl.Exit()
 	os.Exit(0)
 }

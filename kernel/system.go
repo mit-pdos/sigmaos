@@ -1,29 +1,35 @@
-package fslib
+package kernel
 
 import (
 	"log"
-
 	"os"
 	"os/exec"
+	"path"
 	"time"
+
+	"ulambda/fslib"
 )
 
 const (
-	NAMED  = "name"
-	LOCALD = "name/locald"
-	S3     = "name/s3"
-	UX     = "name/ux"
+	NAMED = "name"
+	PROCD = "name/procd"
+	S3    = "name/s3"
+	UX    = "name/ux"
+)
+
+const (
+	POST_BOOT_SLEEP_MS = 1000
 )
 
 type System struct {
-	named  *exec.Cmd
-	nps3d  *exec.Cmd
-	npuxd  *exec.Cmd
-	locald *exec.Cmd
+	named *exec.Cmd
+	nps3d *exec.Cmd
+	npuxd *exec.Cmd
+	procd *exec.Cmd
 }
 
 func run(bin string, name string, args []string) (*exec.Cmd, error) {
-	cmd := exec.Command(bin+"/"+name, args...)
+	cmd := exec.Command(path.Join(bin, name), args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ())
@@ -37,7 +43,7 @@ func BootMin(bin string) (*System, error) {
 		return nil, err
 	}
 	s.named = cmd
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return s, nil
 }
 
@@ -50,16 +56,16 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	err = s.BootNps3d(bin)
 	if err != nil {
 		return nil, err
 	}
-	s.locald, err = run(bin, "/bin/locald", []string{bin})
+	s.procd, err = run(bin, "/bin/procd", []string{bin})
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return s, nil
 }
 
@@ -69,7 +75,7 @@ func (s *System) BootNpUxd(bin string) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return nil
 }
 
@@ -79,21 +85,21 @@ func (s *System) BootNps3d(bin string) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return nil
 }
 
-func (s *System) BootLocald(bin string) error {
+func (s *System) BootProcd(bin string) error {
 	var err error
-	s.locald, err = run(bin, "/bin/locald", []string{bin})
+	s.procd, err = run(bin, "/bin/procd", []string{bin})
 	if err != nil {
 		return err
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	return nil
 }
 
-func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
+func (s *System) RmUnionDir(clnt *fslib.FsLib, mdir string) error {
 	dirents, err := clnt.ReadDir(mdir)
 	if err != nil {
 		return err
@@ -114,13 +120,13 @@ func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
 func (s *System) Kill(srv string) error {
 	var err error
 	switch srv {
-	case LOCALD:
-		if s.locald != nil {
-			err = s.locald.Process.Kill()
+	case PROCD:
+		if s.procd != nil {
+			err = s.procd.Process.Kill()
 			if err == nil {
-				s.locald = nil
+				s.procd = nil
 			} else {
-				log.Fatalf("Locald kill failed %v\n", err)
+				log.Fatalf("Procd kill failed %v\n", err)
 			}
 		}
 	default:
@@ -128,7 +134,7 @@ func (s *System) Kill(srv string) error {
 	return nil
 }
 
-func (s *System) Shutdown(clnt *FsLib) {
+func (s *System) Shutdown(clnt *fslib.FsLib) {
 	if s.nps3d != nil {
 		err := s.RmUnionDir(clnt, S3)
 		if err != nil {
@@ -144,12 +150,12 @@ func (s *System) Shutdown(clnt *FsLib) {
 		}
 		s.npuxd.Wait()
 	}
-	if s.locald != nil {
-		err := s.RmUnionDir(clnt, LOCALD_ROOT)
+	if s.procd != nil {
+		err := s.RmUnionDir(clnt, PROCD)
 		if err != nil {
-			log.Printf("Localds shutdown %v\n", err)
+			log.Printf("Procds shutdown %v\n", err)
 		}
-		s.locald.Wait()
+		s.procd.Wait()
 	}
 
 	// Shutdown named last

@@ -101,6 +101,7 @@ func TestHelloWorld(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	checkSleeperlResult(t, ts, pid)
+	time.Sleep(100)
 
 	ts.s.Shutdown(ts.FsLib)
 }

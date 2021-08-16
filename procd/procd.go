@@ -1,11 +1,11 @@
 package procd
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -33,8 +33,7 @@ const (
 type Procd struct {
 	//	mu deadlock.Mutex
 	mu         sync.Mutex
-	cond       *sync.Cond
-	jobLock    *usync.Lock
+	runq       *usync.FileBag
 	load       int // XXX bogus
 	bin        string
 	nid        uint64
@@ -54,7 +53,6 @@ type Procd struct {
 
 func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	pd := &Procd{}
-	pd.cond = sync.NewCond(&pd.mu)
 	pd.load = 0
 	pd.nid = 0
 	pd.bin = bin
@@ -91,17 +89,13 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 	// Try to make scheduling directories if they don't already exist
-	fsl.Mkdir(proc.RUNQ, 0777)
-	fsl.Mkdir(proc.RUNQLC, 0777)
 	fsl.Mkdir(proc.WAITQ, 0777)
-	fsl.Mkdir(proc.CLAIMED, 0777)
-	fsl.Mkdir(proc.CLAIMED_EPH, 0777)
 	fsl.Mkdir(proc.SPAWNED, 0777)
 	fsl.Mkdir(proc.PROC_COND, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
-	// Set up the job lock
-	pd.jobLock = usync.MakeLock(fsl, fslib.LOCKS, proc.JOB_SIGNAL, false)
+	// Set up FileBags
+	pd.runq = usync.MakeFileBag(fsl, proc.RUNQ)
 	return pd
 }
 
@@ -125,7 +119,7 @@ func (pd *Procd) Done() {
 
 	pd.done = true
 	pd.perf.Teardown()
-	pd.SignalNewJob()
+	pd.runq.Destroy()
 }
 
 func (pd *Procd) WatchTable() *npo.WatchTable {
@@ -156,35 +150,6 @@ func (pd *Procd) readDone() bool {
 
 func (pd *Procd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return pd.root, nil
-}
-
-func (pd *Procd) WaitForJob() {
-	// Wait for something runnable
-	pd.jobLock.Lock()
-}
-
-// Claim a job by moving it from the runq to the claimed dir
-func (pd *Procd) ClaimRunQJob(queuePath string, pid string) bool {
-	// Write the file to reset its mtime (to avoid racing with Monitor). Ignore
-	// errors in the event we lose the race.
-	pd.WriteFile(path.Join(queuePath, pid), []byte{})
-	err := pd.Rename(path.Join(queuePath, pid), path.Join(proc.CLAIMED, pid))
-	if err != nil {
-		return false
-	}
-	// Create an ephemeral file to mark that procd hasn't crashed
-	err = pd.MakeFile(path.Join(proc.CLAIMED_EPH, pid), 0777|np.DMTMP, np.OWRITE, []byte{})
-	if err != nil {
-		log.Printf("Error making ephemeral claimed job file: %v", err)
-	}
-	_, _, err = pd.GetFile(path.Join(proc.CLAIMED, pid))
-	if err != nil {
-		log.Printf("Error reading claimed job: %v", err)
-		return false
-	}
-	// We shouldn't hold the "new job" lock while running a lambda/doing work
-	pd.SignalNewJob()
-	return true
 }
 
 // XXX Statsd information?
@@ -219,47 +184,30 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 	pd.coresAvail += p.Ncore
 }
 
-func (pd *Procd) getRun(runq string) (*proc.Proc, error) {
-	jobs, err := pd.ReadDir(runq)
-	if err != nil {
-		return nil, err
-	}
-	for _, j := range jobs {
-		pd.mu.Lock()
-		// Read a job
-		p, err := pd.GetProcFile(runq, j.Name)
-		// If job has already been claimed, move on
-		if err != nil {
-			pd.mu.Unlock()
-			continue
-		}
-		// See if we can run it, and if so, try to claim it
-		if pd.satisfiesConstraints(p) {
-			if ok := pd.ClaimRunQJob(runq, j.Name); ok {
-				pd.decrementResourcesL(p)
-				pd.mu.Unlock()
-				return p, nil
-			}
-		}
-		pd.mu.Unlock()
-	}
-	return nil, nil
-}
-
-// Tries to claim a job from the runq. If none are available, return.
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	pd.WaitForJob()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	p, err := pd.getRun(proc.RUNQLC)
+	pName, b, err := pd.runq.Get()
 	if err != nil {
 		return nil, err
 	}
-	if p != nil {
-		return p, nil
+
+	p := &proc.Proc{}
+	err = json.Unmarshal(b, p)
+	if err != nil {
+		log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)
+		return nil, err
 	}
-	return pd.getRun(proc.RUNQ)
+
+	if pd.satisfiesConstraints(p) {
+		pd.decrementResourcesL(p)
+		return p, nil
+	} else {
+		err = pd.runq.Put(pName, b)
+		if err != nil {
+			log.Fatalf("Error Put in Procd.getProc: %v", err)
+		}
+	}
+
+	return nil, nil
 }
 
 func (pd *Procd) allocCores(n proc.Tcore) []uint {
@@ -332,11 +280,10 @@ func (pd *Procd) setCoreAffinity() {
 
 // Worker runs one lambda at a time
 func (pd *Procd) Worker(workerId uint) {
-	pd.SignalNewJob()
-
+	defer pd.group.Done()
 	for !pd.readDone() {
 		p, err := pd.getProc()
-		// If no job was on the runq, try again
+		// If get failed, try again.
 		if err == nil && p == nil {
 			continue
 		}
@@ -344,6 +291,10 @@ func (pd *Procd) Worker(workerId uint) {
 			continue
 		}
 		if err != nil {
+			if strings.Contains(err.Error(), "file not found "+usync.COND) {
+				db.DLPrintf("PROCD", "cond file not found: %v", err)
+				return
+			}
 			log.Fatalf("Procd GetLambda error %v, %v\n", p, err)
 		}
 		// XXX return err from spawn
@@ -355,8 +306,6 @@ func (pd *Procd) Worker(workerId uint) {
 		//		ls = append(ls, consumerLs...)
 		pd.runAll(ls)
 	}
-	pd.SignalNewJob()
-	pd.group.Done()
 }
 
 func (pd *Procd) Work() {
@@ -377,14 +326,3 @@ func (pd *Procd) Work() {
 	}
 	pd.group.Wait()
 }
-
-// TODO: manage claimed directory
-// XXX Have procd manage claimed queues etc.
-//	err := pctl.Remove(path.Join(CLAIMED, pid))
-//	if err != nil {
-//		log.Printf("Error removing claimed in Exiting %v: %v", pid, err)
-//	}
-//	err = pctl.Remove(path.Join(CLAIMED_EPH, pid))
-//	if err != nil {
-//		log.Printf("Error removing claimed_eph in Exiting %v: %v", pid, err)
-//	}

@@ -9,6 +9,7 @@ killall perf-memfs-replica
 killall procd 
 killall sleeperl
 killall kv
+killall monitor
 killall kvd
 killall kvclerk
 killall coord

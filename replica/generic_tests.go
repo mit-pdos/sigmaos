@@ -16,6 +16,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	np "ulambda/ninep"
 )
 
@@ -37,7 +38,7 @@ type Tstate struct {
 	unionDirPath9p string
 	symlinkPath9p  string
 	t              *testing.T
-	s              *fslib.System
+	s              *kernel.System
 	*fslib.FsLib
 }
 

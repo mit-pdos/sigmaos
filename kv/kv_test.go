@@ -13,6 +13,7 @@ import (
 	"ulambda/jobsched"
 	"ulambda/memfsd"
 	"ulambda/proc"
+	"ulamda/kernel"
 )
 
 const NKEYS = 2 // 100
@@ -38,7 +39,7 @@ func TestBalance(t *testing.T) {
 
 type Tstate struct {
 	t   *testing.T
-	s   *fslib.System
+	s   *kernel.System
 	fsl *fslib.FsLib
 	*jobsched.SchedCtl
 	clrks []*KvClerk
@@ -50,7 +51,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	s, err := fslib.Boot("..")
+	s, err := kernel.Boot("..")
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}

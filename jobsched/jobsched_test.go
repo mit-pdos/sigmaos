@@ -9,6 +9,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/proc"
 )
 
@@ -16,14 +17,14 @@ type Tstate struct {
 	*SchedCtl
 	*fslib.FsLib
 	t *testing.T
-	s *fslib.System
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := fslib.Boot(bin)
+	s, err := kernel.Boot(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -40,7 +41,7 @@ func makeTstateOneProcd(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := fslib.BootMin(bin)
+	s, err := kernel.BootMin(bin)
 	if err != nil {
 		t.Fatalf("BootMin %v\n", err)
 	}
@@ -57,7 +58,7 @@ func makeTstateOneProcd(t *testing.T) *Tstate {
 	return ts
 }
 
-func makeTstateNoBoot(t *testing.T, s *fslib.System) *Tstate {
+func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.s = s

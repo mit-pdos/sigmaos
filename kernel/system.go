@@ -1,19 +1,20 @@
-package fslib
+package kernel
 
 import (
 	"log"
-
 	"os"
 	"os/exec"
+	"path"
 	"time"
+
+	"ulambda/fslib"
 )
 
 const (
-	NAMED      = "name"
-	PROCD      = "name/procd"
-	PROCD_ROOT = "name/procds"
-	S3         = "name/s3"
-	UX         = "name/ux"
+	NAMED = "name"
+	PROCD = "name/procd"
+	S3    = "name/s3"
+	UX    = "name/ux"
 )
 
 const (
@@ -28,7 +29,7 @@ type System struct {
 }
 
 func run(bin string, name string, args []string) (*exec.Cmd, error) {
-	cmd := exec.Command(bin+"/"+name, args...)
+	cmd := exec.Command(path.Join(bin, name), args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ())
@@ -98,7 +99,7 @@ func (s *System) BootProcd(bin string) error {
 	return nil
 }
 
-func (s *System) RmUnionDir(clnt *FsLib, mdir string) error {
+func (s *System) RmUnionDir(clnt *fslib.FsLib, mdir string) error {
 	dirents, err := clnt.ReadDir(mdir)
 	if err != nil {
 		return err
@@ -133,7 +134,7 @@ func (s *System) Kill(srv string) error {
 	return nil
 }
 
-func (s *System) Shutdown(clnt *FsLib) {
+func (s *System) Shutdown(clnt *fslib.FsLib) {
 	if s.nps3d != nil {
 		err := s.RmUnionDir(clnt, S3)
 		if err != nil {
@@ -150,7 +151,7 @@ func (s *System) Shutdown(clnt *FsLib) {
 		s.npuxd.Wait()
 	}
 	if s.procd != nil {
-		err := s.RmUnionDir(clnt, PROCD_ROOT)
+		err := s.RmUnionDir(clnt, PROCD)
 		if err != nil {
 			log.Printf("Procds shutdown %v\n", err)
 		}

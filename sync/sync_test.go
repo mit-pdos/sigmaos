@@ -11,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 )
 
 const (
@@ -26,14 +27,14 @@ const (
 type Tstate struct {
 	*fslib.FsLib
 	t *testing.T
-	s *fslib.System
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := fslib.Boot(bin)
+	s, err := kernel.Boot(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}

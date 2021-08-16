@@ -15,6 +15,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
@@ -26,7 +27,6 @@ import (
 )
 
 const (
-	PROCD_ROOT   = "name/procds"
 	NO_OP_LAMBDA = "no-op-lambda"
 )
 
@@ -71,10 +71,10 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	}
 	pd.srv = npsrv.MakeNpServer(pd, pd.ip+":0")
 	fsl := fslib.MakeFsLib("procd")
-	fsl.Mkdir(PROCD_ROOT, 0777)
+	fsl.Mkdir(kernel.PROCD, 0777)
 	pd.FsLib = fsl
 	pd.ProcCtl = proc.MakeProcCtl(fsl)
-	err = fsl.PostServiceUnion(pd.srv.MyAddr(), fslib.PROCD_ROOT, pd.srv.MyAddr())
+	err = fsl.PostServiceUnion(pd.srv.MyAddr(), kernel.PROCD, pd.srv.MyAddr())
 	if err != nil {
 		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.srv.MyAddr(), err)
 	}

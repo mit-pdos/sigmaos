@@ -104,7 +104,7 @@ func (c *Cond) Signal() {
 
 // Wait. If condLock != nil, assumes the condLock is held, and returns with the
 // condLock held once again.
-func (c *Cond) Wait() {
+func (c *Cond) Wait() error {
 	c.dirLock.Lock()
 
 	done := make(chan bool, 2)
@@ -112,10 +112,7 @@ func (c *Cond) Wait() {
 	signalPath, err := c.createSignalFile()
 	if err != nil {
 		c.dirLock.Unlock()
-		if c.condLock != nil {
-			c.condLock.Lock()
-		}
-		return
+		return err
 	}
 
 	// Everyone waits on the broadcast file
@@ -172,6 +169,7 @@ func (c *Cond) Wait() {
 	if c.condLock != nil {
 		c.condLock.Lock()
 	}
+	return nil
 }
 
 // Tear down a condition variable by waking all waiters and deleting the

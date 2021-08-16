@@ -76,9 +76,14 @@ func (fb *FileBag) Get() (string, []byte, error) {
 	var entries []*np.Stat
 	var empty bool
 
+	entries, empty = fb.isEmptyL()
+
 	// Wait until there are entries available.
-	for entries, empty = fb.isEmptyL(); empty; {
-		fb.cond.Wait()
+	for ; empty; entries, empty = fb.isEmptyL() {
+		err := fb.cond.Wait()
+		if err != nil {
+			return "", nil, err
+		}
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -121,5 +126,11 @@ func (fb *FileBag) isEmptyL() ([]*np.Stat, bool) {
 	}
 
 	// We expect LOCK and COND to be present...
-	return entries, len(entries) == 2
+	return entries, len(entries) <= 2
+}
+
+func (fb *FileBag) Destroy() {
+	fb.lock.Lock()
+	defer fb.lock.Unlock()
+	fb.cond.Destroy()
 }

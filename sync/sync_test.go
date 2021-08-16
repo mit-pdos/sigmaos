@@ -1,6 +1,9 @@
 package sync
 
 import (
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,6 +20,7 @@ const (
 	LOCK_NAME     = "test-lock"
 	BROADCAST_REL = "broadcast"
 	SIGNAL_REL    = "signal"
+	FILE_BAG_PATH = "name/filebag"
 )
 
 type Tstate struct {
@@ -307,6 +311,61 @@ func TestNWaitersNEventsDestroy(t *testing.T) {
 	n_waiters := 20
 	n_events := 20
 	runEventWaiters(ts, n_waiters, n_events, true)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func fileBagConsumer(ts *Tstate, id int, ctr *uint64) {
+	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
+	fb := MakeFileBag(fsl, FILE_BAG_PATH)
+
+	for {
+		name, contents, err := fb.Get()
+		assert.Nil(ts.t, err, "Error consumer get: %v", err)
+		assert.Equal(ts.t, name, string(contents), "Error consumer contents and fname not equal")
+		atomic.AddUint64(ctr, 1)
+	}
+}
+
+func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
+	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
+	fb := MakeFileBag(fsl, FILE_BAG_PATH)
+
+	for i := 0; i < nFiles; i++ {
+		iStr := fmt.Sprintf("%v", i)
+		err := fb.Put(iStr, []byte(iStr))
+		assert.Nil(ts.t, err, "Error producer put: %v", err)
+	}
+
+	done.Done()
+}
+
+func TestFileBag(t *testing.T) {
+	ts := makeTstate(t)
+
+	n_consumers := 20
+	n_producers := 20
+	n_files := 1000
+	n_files_per_producer := n_files / n_producers
+
+	var done sync.WaitGroup
+	done.Add(n_producers)
+
+	var ctr uint64 = 0
+	for i := 0; i < n_consumers; i++ {
+		go fileBagConsumer(ts, i, &ctr)
+	}
+
+	for i := 0; i < n_producers; i++ {
+		go fileBagProducer(ts, i, n_files_per_producer, &done)
+	}
+
+	done.Wait()
+
+	// XXX Wait for convergence in a more principled way...
+	time.Sleep(2 * time.Second)
+
+	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
 	ts.s.Shutdown(ts.FsLib)
 }

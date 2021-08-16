@@ -3,6 +3,7 @@ package sync
 import (
 	"log"
 	"path"
+	"sort"
 
 	"github.com/thanhpk/randstr"
 
@@ -79,6 +80,10 @@ func (fb *FileBag) Get() (string, []byte, error) {
 	for entries, empty = fb.isEmptyL(); empty; {
 		fb.cond.Wait()
 	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name < entries[j].Name
+	})
 
 	var entry *np.Stat
 	for _, e := range entries {

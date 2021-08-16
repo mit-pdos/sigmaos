@@ -138,6 +138,31 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
+func fileBagConsumer(ts *Tstate, id int, ctr *uint64) {
+	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
+	fb := MakeFileBag(fsl, FILE_BAG_PATH)
+
+	for {
+		name, contents, err := fb.Get()
+		assert.Nil(ts.t, err, "Error consumer get: %v", err)
+		assert.Equal(ts.t, name, string(contents), "Error consumer contents and fname not equal")
+		atomic.AddUint64(ctr, 1)
+	}
+}
+
+func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
+	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
+	fb := MakeFileBag(fsl, FILE_BAG_PATH)
+
+	for i := 0; i < nFiles; i++ {
+		iStr := fmt.Sprintf("%v", i)
+		err := fb.Put(iStr, []byte(iStr))
+		assert.Nil(ts.t, err, "Error producer put: %v", err)
+	}
+
+	done.Done()
+}
+
 func TestLock1(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -313,31 +338,6 @@ func TestNWaitersNEventsDestroy(t *testing.T) {
 	runEventWaiters(ts, n_waiters, n_events, true)
 
 	ts.s.Shutdown(ts.FsLib)
-}
-
-func fileBagConsumer(ts *Tstate, id int, ctr *uint64) {
-	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
-	fb := MakeFileBag(fsl, FILE_BAG_PATH)
-
-	for {
-		name, contents, err := fb.Get()
-		assert.Nil(ts.t, err, "Error consumer get: %v", err)
-		assert.Equal(ts.t, name, string(contents), "Error consumer contents and fname not equal")
-		atomic.AddUint64(ctr, 1)
-	}
-}
-
-func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
-	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
-	fb := MakeFileBag(fsl, FILE_BAG_PATH)
-
-	for i := 0; i < nFiles; i++ {
-		iStr := fmt.Sprintf("%v", i)
-		err := fb.Put(iStr, []byte(iStr))
-		assert.Nil(ts.t, err, "Error producer put: %v", err)
-	}
-
-	done.Done()
 }
 
 func TestFileBag(t *testing.T) {

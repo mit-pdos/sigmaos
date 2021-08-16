@@ -206,6 +206,19 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func TestOneWaiterSignal(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	n_waiters := 1
+	n_conds := 1
+	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestNWaitersOneCondBroadcast(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -219,6 +232,19 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
+func TestNWaitersOneCondSignal(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	n_waiters := 20
+	n_conds := 1
+	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestNWaitersNCondsBroadcast(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -228,6 +254,19 @@ func TestNWaitersNCondsBroadcast(t *testing.T) {
 	n_waiters := 20
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestNWaitersNCondsSignal(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	n_waiters := 20
+	n_conds := 20
+	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
 	ts.s.Shutdown(ts.FsLib)
 }

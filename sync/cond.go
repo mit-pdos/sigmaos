@@ -2,7 +2,10 @@ package sync
 
 import (
 	"log"
+	"math/rand"
 	"path"
+
+	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -69,7 +72,34 @@ func (c *Cond) Broadcast() {
 // Wake up one waiter. The condLock need not be held, and needs to be manually
 // unlocked independently of this function call..
 func (c *Cond) Signal() {
-	log.Fatalf("Cond.Signal unimplemented")
+	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
+
+	wFiles, err := c.ReadDir(c.path)
+	if err != nil {
+		log.Printf("Error ReadDir in Cond.Signal: %v", err)
+	}
+
+	var waiter string
+	for {
+		// If no one was waiting, return
+		if len(wFiles) == 0 {
+			return
+		}
+		i := rand.Intn(len(wFiles))
+		waiter = wFiles[i].Name
+		// Make sure we don't remove the broadcast file accidentally
+		if waiter == BROADCAST {
+			wFiles = append(wFiles[:i], wFiles[i+1:]...)
+		} else {
+			break
+		}
+	}
+
+	err = c.Remove(path.Join(c.path, waiter))
+	if err != nil {
+		log.Printf("Error Remove in Cond.Signal: %v", err)
+	}
 }
 
 // Wait. If condLock != nil, assumes the condLock is held, and returns with the
@@ -77,7 +107,16 @@ func (c *Cond) Signal() {
 func (c *Cond) Wait() {
 	c.dirLock.Lock()
 
-	done := make(chan bool, 1)
+	done := make(chan bool, 2)
+
+	signalPath, err := c.createSignalFile()
+	if err != nil {
+		c.dirLock.Unlock()
+		if c.condLock != nil {
+			c.condLock.Lock()
+		}
+		return
+	}
 
 	// Everyone waits on the broadcast file
 	go func() {
@@ -93,6 +132,28 @@ func (c *Cond) Wait() {
 		// If error, don't wait.
 		if err == nil {
 			<-bcast
+		} else {
+			db.DLPrintf("COND", "Error SetRemoveWatch bcast Cond.Wait: %v", err)
+		}
+
+		c.Remove(signalPath)
+		done <- true
+	}()
+
+	// Each waiter waits on its own signal file
+	go func() {
+		signal := make(chan bool)
+		err := c.SetRemoveWatch(signalPath, func(p string, err error) {
+			if err != nil && err.Error() == "EOF" {
+				return
+			} else if err != nil {
+				db.DLPrintf("COND", "Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
+			}
+			signal <- true
+		})
+		// If error, don't wait.
+		if err == nil {
+			<-signal
 		} else {
 			db.DLPrintf("COND", "Error SetRemoveWatch bcast Cond.Wait: %v", err)
 		}
@@ -116,10 +177,8 @@ func (c *Cond) Wait() {
 // Tear down a condition variable by waking all waiters and deleting the
 // condition variable directory. Return the names of all the waiters. This will
 // make waiting on it an error.
-func (c *Cond) Destroy() []string {
+func (c *Cond) Destroy() {
 	c.dirLock.Lock()
-
-	waiterNames := []string{}
 
 	// Wake up all waiters with a broadcast.
 	err := c.Remove(c.bcastPath)
@@ -134,22 +193,6 @@ func (c *Cond) Destroy() []string {
 	}
 
 	c.dirLock.Unlock()
-
-	// XXX Remove if tests pass...
-	//	c.dirLock.Unlock()
-	//
-	//	// Rename the directory to make sure we don't take on any more waiters.
-	//	newPath := path.Join(fslib.TMP, randstr.Hex(16))
-	//	err = c.Rename(c.path, newPath)
-	//	if err != nil {
-	//		log.Fatalf("Error Rename in Cond.Destroy: %v", err)
-	//	}
-	//
-	//	err = c.Remove(newPath)
-	//	if err != nil {
-	//		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
-	//	}
-	return waiterNames
 }
 
 // Make a broadcast file to be waited on.
@@ -158,4 +201,15 @@ func (c *Cond) createBcastFile() {
 	if err != nil {
 		log.Fatalf("Error condvar createBcastFile MakeFile: %v", err)
 	}
+}
+
+// XXX ephemeral?
+func (c *Cond) createSignalFile() (string, error) {
+	signalFname := randstr.Hex(16)
+	signalPath := path.Join(c.path, signalFname)
+	err := c.MakeFile(signalPath, 0777, np.OWRITE, []byte{})
+	if err != nil {
+		db.DLPrintf("CONDVAR", "Error MakeFile Cond.createSignalFile: %v", err)
+	}
+	return signalPath, err
 }

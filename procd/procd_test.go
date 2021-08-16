@@ -206,8 +206,8 @@ func TestConcurrentLambdas(t *testing.T) {
 
 func (ts *Tstate) evict(pid string) {
 	time.Sleep(1 * time.Second)
-	err := ts.Evict(pid)
-	assert.Nil(ts.t, err, "evict")
+	//	err := ts.Evict(pid)
+	//	assert.Nil(ts.t, err, "evict")
 }
 
 func TestEvict(t *testing.T) {
@@ -222,6 +222,8 @@ func TestEvict(t *testing.T) {
 	err := ts.Spawn(a)
 
 	assert.Nil(t, err, "Spawn")
+
+	assert.True(t, false, "Need to re-implement eviction")
 
 	ts.s.Shutdown(ts.FsLib)
 }

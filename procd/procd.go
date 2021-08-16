@@ -88,9 +88,7 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	if util {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
-	// Try to make scheduling directories if they don't already exist
-	fsl.Mkdir(proc.WAITQ, 0777)
-	fsl.Mkdir(proc.SPAWNED, 0777)
+	// Make some directories used by other services.
 	fsl.Mkdir(proc.PROC_COND, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)

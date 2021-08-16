@@ -39,8 +39,6 @@ const (
 	RUNQ          = "name/runq"
 	RUNQ_PREFIX   = "1_"
 	RUNQLC_PREFIX = "0_"
-	WAITQ         = "name/waitq"
-	SPAWNED       = "name/spawned"
 	JOB_SIGNAL    = "job-signal"
 	WAIT_START    = "wait-start."
 	WAIT_EXIT     = "wait-exit."

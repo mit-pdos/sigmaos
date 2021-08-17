@@ -51,7 +51,7 @@ func (mo *Monitor) unlock() {
 }
 
 func spawnBalancerPid(sched *depproc.DepProcCtl, opcode, pid1, pid2 string) {
-	t := depproc.MakeTask()
+	t := depproc.MakeDepProc()
 	t.Pid = pid2
 	t.Program = "bin/balancer"
 	t.Args = []string{opcode, pid1}
@@ -61,7 +61,7 @@ func spawnBalancerPid(sched *depproc.DepProcCtl, opcode, pid1, pid2 string) {
 }
 
 func spawnBalancer(sched *depproc.DepProcCtl, opcode, pid1 string) string {
-	t := depproc.MakeTask()
+	t := depproc.MakeDepProc()
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/balancer"
 	t.Args = []string{opcode, pid1}
@@ -72,7 +72,7 @@ func spawnBalancer(sched *depproc.DepProcCtl, opcode, pid1 string) string {
 }
 
 func spawnKVPid(sched *depproc.DepProcCtl, pid1 string, pid2 string) {
-	t := depproc.MakeTask()
+	t := depproc.MakeDepProc()
 	t.Pid = pid1
 	t.Program = KV
 	t.Args = []string{""}
@@ -82,7 +82,7 @@ func spawnKVPid(sched *depproc.DepProcCtl, pid1 string, pid2 string) {
 }
 
 func SpawnKV(sched *depproc.DepProcCtl) string {
-	t := depproc.MakeTask()
+	t := depproc.MakeDepProc()
 	t.Pid = fslib.GenPid()
 	t.Program = KV
 	t.Args = []string{""}

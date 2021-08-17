@@ -41,12 +41,12 @@ func splitPairs(s string) map[string]bool {
 	return ps
 }
 
-func readLambda(line string) (*depproc.Task, error) {
+func readLambda(line string) (*depproc.DepProc, error) {
 	l := strings.Split(line, ",")
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
-	t := depproc.MakeTask()
+	t := depproc.MakeDepProc()
 	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]

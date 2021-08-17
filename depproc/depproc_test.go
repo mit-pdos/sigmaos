@@ -75,7 +75,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 // XXX FIX
 func spawnMonitor(t *testing.T, ts *Tstate) {
 	pid := "monitor-" + fslib.GenPid()
-	a := MakeTask()
+	a := MakeDepProc()
 	a.Proc = &proc.Proc{pid, "bin/procd-monitor", "", []string{}, nil,
 		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)
@@ -90,7 +90,7 @@ func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string
 }
 
 func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exitDep map[string]bool) {
-	a := MakeTask()
+	a := MakeDepProc()
 	a.Proc = &proc.Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, proc.T_DEF, proc.C_DEF}
 	a.Dependencies.StartDep = startDep
 	a.Dependencies.ExitDep = exitDep
@@ -356,7 +356,7 @@ func TestEvict(t *testing.T) {
 
 	go ts.evict(pid)
 
-	a := MakeTask()
+	a := MakeDepProc()
 	a.Proc = &proc.Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil,
 		proc.T_DEF, proc.C_DEF}
 	err := ts.Spawn(a)

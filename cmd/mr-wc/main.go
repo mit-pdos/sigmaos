@@ -104,11 +104,11 @@ func main() {
 		pid2 := fslib.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
-		a1 := depproc.MakeTask()
+		a1 := depproc.MakeDepProc()
 		a1.Dependencies = &depproc.Deps{map[string]bool{}, nil}
 		a1.Proc = &proc.Proc{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil, proc.T_BE, proc.C_DEF}
-		a2 := depproc.MakeTask()
+		a2 := depproc.MakeDepProc()
 		a2.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 		a2.Proc = &proc.Proc{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil, proc.T_BE, proc.C_DEF}
@@ -122,7 +122,7 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		pid := fslib.GenPid()
 		r := strconv.Itoa(i)
-		a := depproc.MakeTask()
+		a := depproc.MakeDepProc()
 		a.Proc = &proc.Proc{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
 			proc.T_BE, proc.C_DEF}

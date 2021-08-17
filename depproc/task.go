@@ -6,10 +6,10 @@ import (
 	"ulambda/proc"
 )
 
-type Task struct {
+type DepProc struct {
 	Started      bool
-	Dependencies *Deps // Tasks which this task depends on
-	Dependants   *Deps // Tasks which depend on this task
+	Dependencies *Deps // DepProcs which this depProc depends on
+	Dependants   *Deps // DepProcs which depend on this depProc
 	*proc.Proc
 }
 
@@ -22,15 +22,15 @@ func MakeDeps(start, end map[string]bool) *Deps {
 	return &Deps{start, end}
 }
 
-func MakeTask() *Task {
-	t := &Task{}
+func MakeDepProc() *DepProc {
+	t := &DepProc{}
 	t.Dependencies = MakeDeps(map[string]bool{}, map[string]bool{})
 	t.Dependants = MakeDeps(map[string]bool{}, map[string]bool{})
 	t.Proc = &proc.Proc{}
 	return t
 }
 
-func (t *Task) String() string {
+func (t *DepProc) String() string {
 	return fmt.Sprintf("&{ proc:%v started:%v, dependencies:%v, dependants:%v }", t.Proc, t.Started, t.Dependencies, t.Dependants)
 }
 

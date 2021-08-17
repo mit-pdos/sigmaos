@@ -18,7 +18,7 @@ const (
 
 type ExecutorLauncher interface {
 	FsLambda
-	Spawn(*depproc.Task) error
+	Spawn(*depproc.DepProc) error
 	SpawnNoOp(string, []string) error
 	Started(string) error
 }

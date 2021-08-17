@@ -4,8 +4,8 @@ import (
 	"path"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 )
 
 // XXX Rename
@@ -15,7 +15,7 @@ type TargetWriter struct {
 	target          string
 	targetReduction string
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 }
 
 func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
@@ -28,7 +28,7 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	tw.targetReduction = args[3]
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
-	tw.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
+	tw.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
 	tw.Started(tw.pid)
 	return tw, nil
 }

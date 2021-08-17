@@ -5,8 +5,8 @@ import (
 	"log"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	np "ulambda/ninep"
 )
 
@@ -15,7 +15,7 @@ type Uploader struct {
 	src  string
 	dest string
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 }
 
 func MakeUploader(args []string, debug bool) (*Uploader, error) {
@@ -27,7 +27,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("uploader")
 	up.FsLib = fls
-	up.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
+	up.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
 	up.Started(up.pid)
 	return up, nil
 }

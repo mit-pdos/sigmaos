@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
 )
@@ -16,7 +16,7 @@ import (
 type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 	pid   string
 	shard string
 	src   string
@@ -34,7 +34,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[2]
 	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
-	mv.SchedCtl = jobsched.MakeSchedCtl(mv.FsLib, jobsched.DEFAULT_JOB_ID)
+	mv.DepProcCtl = depproc.MakeDepProcCtl(mv.FsLib, depproc.DEFAULT_JOB_ID)
 
 	db.Name(mv.pid)
 

@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	"ulambda/proc"
 )
 
@@ -43,19 +43,19 @@ func splitPairs(s string) map[string]bool {
 	return ps
 }
 
-func readLambda(line string) (*jobsched.Task, error) {
+func readLambda(line string) (*depproc.Task, error) {
 	l := strings.Split(line, ",")
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
-	t := jobsched.MakeTask()
+	t := depproc.MakeTask()
 	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])
 	a.Env = split(l[3])
 	t.Proc = a
-	t.Dependencies = &jobsched.Deps{}
+	t.Dependencies = &depproc.Deps{}
 	t.Dependencies.StartDep = splitPairs(l[4])
 	t.Dependencies.ExitDep = map[string]bool{}
 	for _, dep := range split(l[5]) {
@@ -75,7 +75,7 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
-	sctl := jobsched.MakeSchedCtl(clnt, jobsched.DEFAULT_JOB_ID)
+	sctl := depproc.MakeDepProcCtl(clnt, depproc.DEFAULT_JOB_ID)
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]

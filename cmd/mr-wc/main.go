@@ -13,8 +13,8 @@ import (
 	"path"
 	"strconv"
 
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	"ulambda/mr"
 	"ulambda/proc"
 )
@@ -84,7 +84,7 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
-	sctl := jobsched.MakeSchedCtl(fsl, jobsched.DEFAULT_JOB_ID)
+	sctl := depproc.MakeDepProcCtl(fsl, depproc.DEFAULT_JOB_ID)
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
@@ -104,12 +104,12 @@ func main() {
 		pid2 := fslib.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
-		a1 := jobsched.MakeTask()
-		a1.Dependencies = &jobsched.Deps{map[string]bool{}, nil}
+		a1 := depproc.MakeTask()
+		a1.Dependencies = &depproc.Deps{map[string]bool{}, nil}
 		a1.Proc = &proc.Proc{pid1, "bin/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m}, nil, proc.T_BE, proc.C_DEF}
-		a2 := jobsched.MakeTask()
-		a2.Dependencies = &jobsched.Deps{map[string]bool{pid1: false}, nil}
+		a2 := depproc.MakeTask()
+		a2.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 		a2.Proc = &proc.Proc{pid2, "bin/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m}, nil, proc.T_BE, proc.C_DEF}
 		sctl.Spawn(a1)
@@ -122,11 +122,11 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		pid := fslib.GenPid()
 		r := strconv.Itoa(i)
-		a := jobsched.MakeTask()
+		a := depproc.MakeTask()
 		a.Proc = &proc.Proc{pid, "bin/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r}, nil,
 			proc.T_BE, proc.C_DEF}
-		a.Dependencies = &jobsched.Deps{nil, mappers}
+		a.Dependencies = &depproc.Deps{nil, mappers}
 		reducers = append(reducers, pid)
 		sctl.Spawn(a)
 	}

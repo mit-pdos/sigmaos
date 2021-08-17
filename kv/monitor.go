@@ -7,8 +7,8 @@ import (
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	"ulambda/memfsd"
 	"ulambda/proc"
 	"ulambda/stats"
@@ -22,7 +22,7 @@ const (
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 	pid  string
 	kv   string
 	args []string
@@ -32,7 +32,7 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
-	mo.SchedCtl = jobsched.MakeSchedCtl(mo.FsLib, jobsched.DEFAULT_JOB_ID)
+	mo.DepProcCtl = depproc.MakeDepProcCtl(mo.FsLib, depproc.DEFAULT_JOB_ID)
 	db.Name(mo.pid)
 
 	if err := mo.LockFile(KVDIR, KVMONLOCK); err != nil {
@@ -50,39 +50,39 @@ func (mo *Monitor) unlock() {
 
 }
 
-func spawnBalancerPid(sched *jobsched.SchedCtl, opcode, pid1, pid2 string) {
-	t := jobsched.MakeTask()
+func spawnBalancerPid(sched *depproc.DepProcCtl, opcode, pid1, pid2 string) {
+	t := depproc.MakeTask()
 	t.Pid = pid2
 	t.Program = "bin/balancer"
 	t.Args = []string{opcode, pid1}
-	t.Dependencies = &jobsched.Deps{map[string]bool{pid1: false}, nil}
+	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 }
 
-func spawnBalancer(sched *jobsched.SchedCtl, opcode, pid1 string) string {
-	t := jobsched.MakeTask()
+func spawnBalancer(sched *depproc.DepProcCtl, opcode, pid1 string) string {
+	t := depproc.MakeTask()
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/balancer"
 	t.Args = []string{opcode, pid1}
-	t.Dependencies = &jobsched.Deps{map[string]bool{pid1: false}, nil}
+	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
 }
 
-func spawnKVPid(sched *jobsched.SchedCtl, pid1 string, pid2 string) {
-	t := jobsched.MakeTask()
+func spawnKVPid(sched *depproc.DepProcCtl, pid1 string, pid2 string) {
+	t := depproc.MakeTask()
 	t.Pid = pid1
 	t.Program = KV
 	t.Args = []string{""}
-	t.Dependencies = &jobsched.Deps{map[string]bool{pid1: false}, nil}
+	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 }
 
-func SpawnKV(sched *jobsched.SchedCtl) string {
-	t := jobsched.MakeTask()
+func SpawnKV(sched *depproc.DepProcCtl) string {
+	t := depproc.MakeTask()
 	t.Pid = fslib.GenPid()
 	t.Program = KV
 	t.Args = []string{""}
@@ -91,7 +91,7 @@ func SpawnKV(sched *jobsched.SchedCtl) string {
 	return t.Pid
 }
 
-func runBalancerPid(sched *jobsched.SchedCtl, opcode, pid1, pid2 string) {
+func runBalancerPid(sched *depproc.DepProcCtl, opcode, pid1, pid2 string) {
 	spawnBalancerPid(sched, opcode, pid1, pid2)
 	err := sched.WaitExit(pid2)
 	if err != nil {
@@ -99,7 +99,7 @@ func runBalancerPid(sched *jobsched.SchedCtl, opcode, pid1, pid2 string) {
 	}
 }
 
-func RunBalancer(sched *jobsched.SchedCtl, opcode, pid1 string) {
+func RunBalancer(sched *depproc.DepProcCtl, opcode, pid1 string) {
 	pid2 := spawnBalancer(sched, opcode, pid1)
 	err := sched.WaitExit(pid2)
 	if err != nil {
@@ -110,12 +110,12 @@ func RunBalancer(sched *jobsched.SchedCtl, opcode, pid1 string) {
 func (mo *Monitor) grow() {
 	pid1 := fslib.GenPid()
 	pid2 := fslib.GenPid()
-	spawnKVPid(mo.SchedCtl, pid1, pid2)
-	runBalancerPid(mo.SchedCtl, "add", pid1, pid2)
+	spawnKVPid(mo.DepProcCtl, pid1, pid2)
+	runBalancerPid(mo.DepProcCtl, "add", pid1, pid2)
 }
 
 func (mo *Monitor) shrink(kv string) {
-	RunBalancer(mo.SchedCtl, "del", kv)
+	RunBalancer(mo.DepProcCtl, "del", kv)
 	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
 	if err != nil {
 		log.Printf("shrink: remove failed %v\n", err)

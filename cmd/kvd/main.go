@@ -3,14 +3,14 @@ package main
 import (
 	"log"
 
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	"ulambda/kv"
 )
 
 func main() {
 	fsl := fslib.MakeFsLib("kvd")
-	sctl := jobsched.MakeSchedCtl(fsl, jobsched.DEFAULT_JOB_ID)
+	sctl := depproc.MakeDepProcCtl(fsl, depproc.DEFAULT_JOB_ID)
 	conf := kv.MakeConfig(0)
 	err := fsl.MakeFileJson(kv.KVCONFIG, 0777, *conf)
 	if err != nil {

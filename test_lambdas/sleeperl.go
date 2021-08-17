@@ -6,14 +6,14 @@ import (
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	np "ulambda/ninep"
 )
 
 type Sleeperl struct {
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 	pid    string
 	output string
 }
@@ -26,7 +26,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
 	s.pid = args[0]
-	s.SchedCtl = jobsched.MakeSchedCtl(s.FsLib, jobsched.DEFAULT_JOB_ID)
+	s.DepProcCtl = depproc.MakeDepProcCtl(s.FsLib, depproc.DEFAULT_JOB_ID)
 	s.output = args[1]
 
 	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)

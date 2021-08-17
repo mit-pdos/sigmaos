@@ -6,15 +6,15 @@ import (
 	"os/exec"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 )
 
 type Executor struct {
 	pid       string
 	thunkHash string
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
@@ -24,7 +24,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
+	ex.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
 	ex.Started(ex.pid)
 	return ex, nil
 }

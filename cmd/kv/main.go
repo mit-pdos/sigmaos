@@ -5,9 +5,9 @@ import (
 	"os"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
-	"ulambda/jobsched"
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
 )
@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
-	sctl := jobsched.MakeSchedCtl(fsl.FsLib, jobsched.DEFAULT_JOB_ID)
+	sctl := depproc.MakeDepProcCtl(fsl.FsLib, depproc.DEFAULT_JOB_ID)
 	sctl.Started(os.Args[1])
 	fsd.Stats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()

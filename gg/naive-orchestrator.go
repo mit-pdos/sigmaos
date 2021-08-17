@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 )
 
 const (
@@ -26,7 +26,7 @@ type NaiveOrchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 }
 
 func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error) {
@@ -42,7 +42,7 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
+	orc.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
 	orc.Started(orc.pid)
 	return orc, nil
 }

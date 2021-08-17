@@ -1,8 +1,8 @@
 package twopc
 
 import (
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 )
 
 type TxnI interface {
@@ -54,9 +54,9 @@ func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 	return &twopc
 }
 
-func SpawnCoord(pctl *jobsched.SchedCtl, opcode string, ps []string) string {
+func SpawnCoord(pctl *depproc.DepProcCtl, opcode string, ps []string) string {
 	args := append([]string{opcode}, ps...)
-	t := jobsched.MakeTask()
+	t := depproc.MakeTask()
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/coord"
 	t.Args = args

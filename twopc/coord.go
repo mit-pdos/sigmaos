@@ -11,8 +11,8 @@ import (
 	"os"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 	np "ulambda/ninep"
 )
 
@@ -29,7 +29,7 @@ const (
 
 type Coord struct {
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 	pid    string
 	opcode string
 	args   []string
@@ -51,7 +51,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.args = args[2:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
-	cd.SchedCtl = jobsched.MakeSchedCtl(cd.FsLib, jobsched.DEFAULT_JOB_ID)
+	cd.DepProcCtl = depproc.MakeDepProcCtl(cd.FsLib, depproc.DEFAULT_JOB_ID)
 
 	// Grab TWOPCLOCK before starting coord
 	if err := cd.LockFile(DIR2PC, TWOPCLOCK); err != nil {

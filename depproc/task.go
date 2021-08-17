@@ -1,4 +1,4 @@
-package jobsched
+package depproc
 
 import (
 	"fmt"

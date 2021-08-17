@@ -5,9 +5,9 @@ import (
 	"log"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
-	"ulambda/jobsched"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
@@ -16,7 +16,7 @@ import (
 
 type Reader struct {
 	*fslibsrv.FsLibSrv
-	sched  *jobsched.SchedCtl
+	sched  *depproc.DepProcCtl
 	pid    string
 	input  string
 	output string
@@ -47,7 +47,7 @@ func MakeReader(args []string) (*Reader, error) {
 
 	r := &Reader{}
 	r.FsLibSrv = fsl
-	r.sched = jobsched.MakeSchedCtl(fsl.FsLib, jobsched.DEFAULT_JOB_ID)
+	r.sched = depproc.MakeDepProcCtl(fsl.FsLib, depproc.DEFAULT_JOB_ID)
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]

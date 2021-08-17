@@ -9,7 +9,7 @@ go test $1 ulambda/fslib_test
 go test $1 ulambda/sync
 (cd nps3; go test $1)
 go test $1 ulambda/procd
-go test $1 ulambda/jobsched
+go test $1 ulambda/depproc
 (cd kv; go test $1)
 ./test-mr.sh
 ./test-kv.sh

@@ -1,4 +1,4 @@
-package jobsched
+package depproc
 
 import (
 	"sync"
@@ -14,7 +14,7 @@ import (
 )
 
 type Tstate struct {
-	*SchedCtl
+	*DepProcCtl
 	*fslib.FsLib
 	t *testing.T
 	s *kernel.System
@@ -32,7 +32,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.SchedCtl = MakeSchedCtl(ts.FsLib, DEFAULT_JOB_ID)
+	ts.DepProcCtl = MakeDepProcCtl(ts.FsLib, DEFAULT_JOB_ID)
 	ts.t = t
 	return ts
 }
@@ -53,7 +53,7 @@ func makeTstateOneProcd(t *testing.T) *Tstate {
 	}
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.SchedCtl = MakeSchedCtl(ts.FsLib, DEFAULT_JOB_ID)
+	ts.DepProcCtl = MakeDepProcCtl(ts.FsLib, DEFAULT_JOB_ID)
 	ts.t = t
 	return ts
 }
@@ -64,7 +64,7 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.SchedCtl = MakeSchedCtl(ts.FsLib, DEFAULT_JOB_ID)
+	ts.DepProcCtl = MakeDepProcCtl(ts.FsLib, DEFAULT_JOB_ID)
 	return ts
 }
 

@@ -1,4 +1,4 @@
-package jobsched
+package depproc
 
 import (
 	"encoding/json"
@@ -34,9 +34,9 @@ const (
 	START_DEP Tdep = 1
 )
 
-var usingJobsched = false
+var usingDepProc = false
 
-type SchedCtl struct {
+type DepProcCtl struct {
 	JobID  string
 	jobDir string
 	pctl   *proc.ProcCtl
@@ -50,36 +50,36 @@ func MakeJob(fsl *fslib.FsLib, jid string) {
 	// Make a directory in which to store task info
 	err := fsl.Mkdir(path.Join(JOBS, jid), 0777)
 	if err != nil {
-		db.DLPrintf("JOBSCHED", "Error creating job dir: %v", err)
+		db.DLPrintf("DEPPROC", "Error creating job dir: %v", err)
 	}
 }
 
-func MakeSchedCtl(fsl *fslib.FsLib, jid string) *SchedCtl {
-	sched := &SchedCtl{}
+func MakeDepProcCtl(fsl *fslib.FsLib, jid string) *DepProcCtl {
+	sched := &DepProcCtl{}
 	sched.JobID = jid
 	sched.pctl = proc.MakeProcCtl(fsl)
 	sched.FsLib = fsl
 	sched.jobDir = path.Join(JOBS, jid)
 
 	MakeJob(fsl, DEFAULT_JOB_ID)
-	usingJobsched = true
+	usingDepProc = true
 
 	return sched
 }
 
 // ========== NAMING CONVENTIONS ==========
 
-func (sched *SchedCtl) taskFilePath(pid string) string {
+func (sched *DepProcCtl) taskFilePath(pid string) string {
 	return path.Join(sched.jobDir, pid)
 }
 
-func (sched *SchedCtl) depFilePath(pid string) string {
+func (sched *DepProcCtl) depFilePath(pid string) string {
 	return path.Join(sched.jobDir, DEPFILE+pid)
 }
 
 // ========== SPAWN ==========
 
-func (sched *SchedCtl) Spawn(t *Task) error {
+func (sched *DepProcCtl) Spawn(t *Task) error {
 	taskFPath := path.Join(sched.jobDir, t.Pid)
 
 	// If the underlying proc hasn't been spawned yet, the Waits will fall
@@ -122,7 +122,7 @@ func (sched *SchedCtl) Spawn(t *Task) error {
 // ========== WAIT ==========
 
 // Wait for a task to start
-func (sched *SchedCtl) WaitStart(pid string) error {
+func (sched *DepProcCtl) WaitStart(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitStart will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
@@ -132,7 +132,7 @@ func (sched *SchedCtl) WaitStart(pid string) error {
 }
 
 // Wait for a task to exit
-func (sched *SchedCtl) WaitExit(pid string) error {
+func (sched *DepProcCtl) WaitExit(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitExit will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
@@ -143,7 +143,7 @@ func (sched *SchedCtl) WaitExit(pid string) error {
 
 // ========== STARTED ==========
 
-func (sched *SchedCtl) Started(pid string) error {
+func (sched *DepProcCtl) Started(pid string) error {
 	// Lock the task file
 	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.taskFilePath(pid)), true)
 
@@ -159,7 +159,7 @@ func (sched *SchedCtl) Started(pid string) error {
 
 // ========== EXITED ==========
 
-func (sched *SchedCtl) Exited(pid string) error {
+func (sched *DepProcCtl) Exited(pid string) error {
 	// Lock the task file
 	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.taskFilePath(pid)), true)
 
@@ -172,10 +172,10 @@ func (sched *SchedCtl) Exited(pid string) error {
 
 	err := sched.Remove(sched.taskFilePath(pid))
 	if err != nil {
-		if usingJobsched {
-			db.DLPrintf("JOBSCHED", "Error removing task file in SchedCtl.Exited: %v", err)
+		if usingDepProc {
+			db.DLPrintf("DEPPROC", "Error removing task file in DepProcCtl.Exited: %v", err)
 		} else {
-			log.Printf("Error removing task file in SchedCtl.Exited: %v", err)
+			log.Printf("Error removing task file in DepProcCtl.Exited: %v", err)
 		}
 		return err
 	}
@@ -185,7 +185,7 @@ func (sched *SchedCtl) Exited(pid string) error {
 
 // ========== HELPERS ==========
 
-func (sched *SchedCtl) taskIsRunnable(t *Task) bool {
+func (sched *DepProcCtl) taskIsRunnable(t *Task) bool {
 	// Check for any unexited StartDeps
 	for _, started := range t.Dependencies.StartDep {
 		if !started {
@@ -202,17 +202,17 @@ func (sched *SchedCtl) taskIsRunnable(t *Task) bool {
 	return true
 }
 
-func (sched *SchedCtl) runTask(t *Task) {
+func (sched *DepProcCtl) runTask(t *Task) {
 	err := sched.pctl.Spawn(t.Proc)
 	if err != nil {
-		log.Fatalf("Error spawning task in SchedCtl.runTask: %v", err)
+		log.Fatalf("Error spawning task in DepProcCtl.runTask: %v", err)
 	}
 	// Release waiters and allow them to wait on the underlying proc.
 	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+t.Pid), nil)
 	tSpawnCond.Destroy()
 }
 
-func (sched *SchedCtl) getTask(pid string) (*Task, error) {
+func (sched *DepProcCtl) getTask(pid string) (*Task, error) {
 	b, _, err := sched.GetFile(sched.taskFilePath(pid))
 	if err != nil {
 		return nil, err
@@ -229,7 +229,7 @@ func (sched *SchedCtl) getTask(pid string) (*Task, error) {
 
 // Register start & exit dependencies in dependencies' waitfiles, and update the
 // current proc's dependencies.
-func (sched *SchedCtl) registerDependencies(t *Task) {
+func (sched *DepProcCtl) registerDependencies(t *Task) {
 	for dep, _ := range t.Dependencies.StartDep {
 		if ok := sched.registerDependant(dep, t.Pid, START_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
@@ -249,7 +249,7 @@ func (sched *SchedCtl) registerDependencies(t *Task) {
 // Register a dependency on another the Task corresponding to pid. If the
 // registration succeeded, return true. If the registration failed, assume the
 // dependency has been satisfied, and return false.
-func (sched *SchedCtl) registerDependant(pid string, dependant string, depType Tdep) bool {
+func (sched *DepProcCtl) registerDependant(pid string, dependant string, depType Tdep) bool {
 	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.taskFilePath(pid)), true)
 
 	l.Lock()
@@ -270,7 +270,7 @@ func (sched *SchedCtl) registerDependant(pid string, dependant string, depType T
 	case EXIT_DEP:
 		t.Dependants.ExitDep[dependant] = false
 	default:
-		log.Fatalf("Unknown dep type in SchedCtl.registerDependant: %v", depType)
+		log.Fatalf("Unknown dep type in DepProcCtl.registerDependant: %v", depType)
 	}
 
 	// Write back updated deps
@@ -288,11 +288,11 @@ func (sched *SchedCtl) registerDependant(pid string, dependant string, depType T
 }
 
 // Update dependants of the Task named by pid.
-func (sched *SchedCtl) updateDependants(pid string, depType Tdep) {
+func (sched *DepProcCtl) updateDependants(pid string, depType Tdep) {
 	// Get the current contents of the wait file
 	t, err := sched.getTask(pid)
 	if err != nil {
-		db.DLPrintf("SCHEDCTL", "Error GetFile in SchedCtl.updateDependants: %v, %v", sched.taskFilePath(pid), err)
+		db.DLPrintf("SCHEDCTL", "Error GetFile in DepProcCtl.updateDependants: %v, %v", sched.taskFilePath(pid), err)
 		return
 	}
 
@@ -304,7 +304,7 @@ func (sched *SchedCtl) updateDependants(pid string, depType Tdep) {
 	case EXIT_DEP:
 		dependants = t.Dependants.ExitDep
 	default:
-		log.Fatalf("Unknown depType in SchedCtl.updateDependants: %v", depType)
+		log.Fatalf("Unknown depType in DepProcCtl.updateDependants: %v", depType)
 	}
 
 	for dependant, _ := range dependants {
@@ -322,13 +322,13 @@ func (sched *SchedCtl) updateDependants(pid string, depType Tdep) {
 		b2 = append(b2, ' ')
 		_, err = sched.SetFile(sched.taskFilePath(pid), b2, np.NoV)
 		if err != nil {
-			log.Printf("Error SetFile in SchedCtl.updateDependants: %v, %v", sched.taskFilePath(pid), err)
+			log.Printf("Error SetFile in DepProcCtl.updateDependants: %v, %v", sched.taskFilePath(pid), err)
 		}
 	}
 }
 
 // Update the dependency pid of dependant.
-func (sched *SchedCtl) updateDependant(pid string, dependant string, depType Tdep) {
+func (sched *DepProcCtl) updateDependant(pid string, dependant string, depType Tdep) {
 	// Create a lock to atomically update the job file.
 	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.taskFilePath(dependant)), true)
 
@@ -338,7 +338,7 @@ func (sched *SchedCtl) updateDependant(pid string, dependant string, depType Tde
 
 	t, err := sched.getTask(dependant)
 	if err != nil {
-		log.Printf("Couldn't get waiter file in SchedCtl.updateDependant: %v, %v", dependant, err)
+		log.Printf("Couldn't get waiter file in DepProcCtl.updateDependant: %v, %v", dependant, err)
 		return
 	}
 
@@ -356,12 +356,12 @@ func (sched *SchedCtl) updateDependant(pid string, dependant string, depType Tde
 		}
 		t.Dependencies.ExitDep[pid] = true
 	default:
-		log.Fatalf("Unknown depType in SchedCtl.updateDependant: %v", depType)
+		log.Fatalf("Unknown depType in DepProcCtl.updateDependant: %v", depType)
 	}
 
 	b2, err := json.Marshal(t)
 	if err != nil {
-		log.Fatalf("Error marshalling in SchedCtl.updateDependant: %v", err)
+		log.Fatalf("Error marshalling in DepProcCtl.updateDependant: %v", err)
 	}
 	// XXX Hack around lack of OTRUNC
 	for i := 0; i < DEPFILE_PADDING; i++ {
@@ -378,12 +378,12 @@ func (sched *SchedCtl) updateDependant(pid string, dependant string, depType Tde
 }
 
 // XXX REMOVE
-func (sched *SchedCtl) SpawnNoOp(pid string, extiDep []string) error {
+func (sched *DepProcCtl) SpawnNoOp(pid string, extiDep []string) error {
 	log.Fatalf("SpawnNoOp not implemented")
 	return nil
 }
 
-func (sched *SchedCtl) SwapExitDependency(pids []string) error {
+func (sched *DepProcCtl) SwapExitDependency(pids []string) error {
 	log.Fatalf("SwapExitDependency not implemented")
 	return nil
 }

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 	pid  string
 	args []string
 	conf *Config
@@ -40,7 +40,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
-	bl.SchedCtl = jobsched.MakeSchedCtl(bl.FsLib, jobsched.DEFAULT_JOB_ID)
+	bl.DepProcCtl = depproc.MakeDepProcCtl(bl.FsLib, depproc.DEFAULT_JOB_ID)
 
 	db.Name("balancer")
 
@@ -89,7 +89,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnMover(s, src, dst string) string {
-	t := jobsched.MakeTask()
+	t := depproc.MakeTask()
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/mover"
 	t.Args = []string{s, src, dst}

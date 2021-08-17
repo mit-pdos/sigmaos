@@ -5,8 +5,8 @@ import (
 	"path"
 	"time"
 
+	"ulambda/depproc"
 	"ulambda/fslib"
-	"ulambda/jobsched"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 
 type ExecutorLauncher interface {
 	FsLambda
-	Spawn(*jobsched.Task) error
+	Spawn(*depproc.Task) error
 	SpawnNoOp(string, []string) error
 	Started(string) error
 }
@@ -29,7 +29,7 @@ type Orchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
-	*jobsched.SchedCtl
+	*depproc.DepProcCtl
 }
 
 func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
@@ -41,7 +41,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.SchedCtl = jobsched.MakeSchedCtl(fls, jobsched.DEFAULT_JOB_ID)
+	orc.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
 	orc.Started(orc.pid)
 	return orc, nil
 }

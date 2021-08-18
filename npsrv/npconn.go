@@ -27,6 +27,7 @@ type Channel struct {
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
 	closed     bool
+	sessions   []np.Tsession
 }
 
 func MakeChannel(npc NpConn, conn net.Conn, wireCompat bool) *Channel {
@@ -40,6 +41,7 @@ func MakeChannel(npc NpConn, conn net.Conn, wireCompat bool) *Channel {
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
 		false,
+		[]np.Tsession{},
 	}
 	go c.writer()
 	go c.reader()
@@ -167,14 +169,27 @@ func (c *Channel) close() {
 	c.mu.Lock()
 	c.closed = true
 	close(c.replies)
-	c.mu.Unlock()
 	if c.np != nil {
-		c.np.Detach()
+		// Detach each session which used this channel
+		for _, sess := range c.sessions {
+			c.np.Detach(sess)
+		}
 	}
+	c.mu.Unlock()
+}
+
+// Remember which sessions we're handling to detach them when this channel
+// closes.
+func (c *Channel) registerSession(sess np.Tsession) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.sessions = append(c.sessions, sess)
 }
 
 func (c *Channel) serve(fc *np.Fcall) {
 	t := fc.Tag
+	c.registerSession(fc.Session)
 	// XXX Avoid doing this every time
 	c.npc.SessionTable().RegisterSession(fc.Session)
 	reply, rerror := c.dispatch(fc.Session, fc.Msg)

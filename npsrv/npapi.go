@@ -23,5 +23,5 @@ type NpAPI interface {
 	Renameat(np.Tsession, np.Trenameat, *np.Rrenameat) *np.Rerror
 	GetFile(np.Tsession, np.Tgetfile, *np.Rgetfile) *np.Rerror
 	SetFile(np.Tsession, np.Tsetfile, *np.Rwrite) *np.Rerror
-	Detach()
+	Detach(np.Tsession)
 }

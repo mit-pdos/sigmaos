@@ -119,7 +119,7 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 	return nil
 }
 
-func (npc *NpConn) Detach() {
+func (npc *NpConn) Detach(sess np.Tsession) {
 	db.DLPrintf("9POBJ", "Detach\n")
 }
 

@@ -77,8 +77,8 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 }
 
 // Delete ephemeral files created on this connection
-func (npc *NpConn) Detach() {
-	db.DLPrintf("9POBJ", "Detach %v\n", npc.ephemeral)
+func (npc *NpConn) Detach(sess np.Tsession) {
+	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, npc.ephemeral)
 
 	npc.mu.Lock()
 	for o, f := range npc.ephemeral {

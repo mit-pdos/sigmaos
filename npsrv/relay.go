@@ -50,6 +50,7 @@ func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *Relay
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
 		false,
+		[]np.Tsession{},
 	}
 	r := &RelayChannel{srv, c, ops, make(chan *RelayOp), wrapped}
 	go r.writer()

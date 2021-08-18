@@ -8,8 +8,9 @@ import (
 )
 
 type Session struct {
-	mu   sync.Mutex
-	fids map[np.Tfid]*Fid
+	mu        sync.Mutex
+	fids      map[np.Tfid]*Fid
+	ephemeral map[NpObj]*Fid
 }
 
 type SessionTable struct {
@@ -32,6 +33,7 @@ func (st *SessionTable) RegisterSession(id np.Tsession) {
 	if _, ok := st.sessions[id]; !ok {
 		new := &Session{}
 		new.fids = make(map[np.Tfid]*Fid)
+		new.ephemeral = make(map[NpObj]*Fid)
 		st.sessions[id] = new
 	}
 }
@@ -76,6 +78,49 @@ func (st *SessionTable) delFid(id np.Tsession, fid np.Tfid) NpObj {
 	o := sess.fids[fid].obj
 	delete(sess.fids, fid)
 	return o
+}
+
+func (st *SessionTable) addEphemeral(id np.Tsession, o NpObj, f *Fid) {
+	db.DLPrintf("SETAB", "addEphemeral %v %v %v", id, o, f)
+
+	st.mu.Lock()
+	sess := st.sessions[id]
+	st.mu.Unlock()
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	sess.ephemeral[o] = f
+}
+
+func (st *SessionTable) delEphemeral(id np.Tsession, o NpObj) {
+	db.DLPrintf("SETAB", "delEpehemeral %v %v", id, o)
+
+	st.mu.Lock()
+	sess := st.sessions[id]
+	st.mu.Unlock()
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	delete(sess.ephemeral, o)
+}
+
+func (st *SessionTable) getEphemeral(id np.Tsession) map[NpObj]*Fid {
+	st.mu.Lock()
+	sess := st.sessions[id]
+	st.mu.Unlock()
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	// XXX Making a full copy may be overkill...
+	e := make(map[NpObj]*Fid)
+	for o, f := range sess.ephemeral {
+		e[o] = f
+	}
+
+	return e
 }
 
 func (st *SessionTable) IterateFids(fi func(*Fid)) {

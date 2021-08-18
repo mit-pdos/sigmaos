@@ -11,24 +11,21 @@ import (
 	"ulambda/stats"
 )
 
-// XXX move ephemeral into session?
 type NpConn struct {
-	mu        sync.Mutex // for Fids and ephemeral and closed
-	closed    bool
-	conn      net.Conn
-	osrv      NpObjSrv
-	ephemeral map[NpObj]*Fid
-	wt        *WatchTable
-	ct        *ConnTable
-	st        *SessionTable
-	stats     *stats.Stats
+	mu     sync.Mutex // for Fids and ephemeral and closed
+	closed bool
+	conn   net.Conn
+	osrv   NpObjSrv
+	wt     *WatchTable
+	ct     *ConnTable
+	st     *SessionTable
+	stats  *stats.Stats
 }
 
 func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.osrv = osrv
-	npc.ephemeral = make(map[NpObj]*Fid)
 	npc.wt = osrv.WatchTable()
 	npc.ct = osrv.ConnTable()
 	npc.st = osrv.SessionTable()
@@ -56,7 +53,7 @@ func (npc *NpConn) del(sess np.Tsession, fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	o := npc.st.delFid(sess, fid)
-	delete(npc.ephemeral, o)
+	npc.st.delEphemeral(sess, o)
 }
 
 func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -78,10 +75,11 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 
 // Delete ephemeral files created on this connection
 func (npc *NpConn) Detach(sess np.Tsession) {
-	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, npc.ephemeral)
 
 	npc.mu.Lock()
-	for o, f := range npc.ephemeral {
+	ephemeral := npc.st.getEphemeral(sess)
+	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
+	for o, f := range ephemeral {
 		o.Remove(f.ctx, f.path[len(f.path)-1])
 		if npc.wt != nil {
 			// Wake up watches on parent dir as well
@@ -211,12 +209,12 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 	return nil
 }
 
-func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string, o NpObj, emph bool) *Fid {
+func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string, o NpObj, eph bool) *Fid {
 	p := np.Copy(dir)
 	nf := &Fid{sync.Mutex{}, append(p, name), o, o.Version(), ctx}
-	if emph {
+	if eph {
 		npc.mu.Lock()
-		npc.ephemeral[o] = nf
+		npc.st.addEphemeral(sess, o, nf)
 		npc.mu.Unlock()
 	}
 	if npc.wt != nil {
@@ -341,7 +339,7 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 		// Wake up watches on parent dir as well
 		npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
 	}
-	// XXX delete from ephemeral table, if ephemeral
+	// delete from ephemeral table, if ephemeral
 	npc.del(sess, args.Fid)
 	return nil
 }
@@ -389,6 +387,7 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 		npc.wt.WakeupWatch(fname, dname)
 	}
 	// XXX delete from ephemeral table, if ephemeral
+	//	npc.del(sess, args.Fid) // XXX doing this here causes "unkown Fid" errors in fslib tests
 	return nil
 }
 

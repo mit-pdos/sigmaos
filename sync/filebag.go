@@ -56,7 +56,8 @@ func (fb *FilePriorityQueue) Put(priority string, name string, contents []byte) 
 	fb.lock.Lock()
 	defer fb.lock.Unlock()
 
-	// Add a random suffix to the file name in case of duplicates
+	// Add a random suffix to the file name in case of duplicates (but divide by
+	// two since each byte will have two characters)
 	name = name + randstr.Hex(SUFFIX_LEN/2)
 
 	// XXX Maybe we could avoid doing this every time
@@ -126,7 +127,7 @@ func (fb *FilePriorityQueue) nextFileL() (string, string, error) {
 		log.Fatalf("Error ReadDir 1 in FilePriorityQueue.nextFile: %v, %v", fb.path, err)
 	}
 
-	// Sort the priorities
+	// Sort the priority buckets
 	sort.Slice(priorities, func(i, j int) bool {
 		return priorities[i].Name < priorities[j].Name
 	})
@@ -141,6 +142,7 @@ func (fb *FilePriorityQueue) nextFileL() (string, string, error) {
 		if err != nil {
 			log.Fatalf("Error ReadDir 2 in FilePriorityQueue.nextFile: %v, %v", path.Join(fb.path, p.Name), err)
 		}
+		// Select the first file (guaranteeing no particular order)
 		return p.Name, files[0].Name, nil
 	}
 	return "", "", fmt.Errorf("No files left")

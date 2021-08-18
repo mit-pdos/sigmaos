@@ -16,35 +16,85 @@ func mkWatch(npc *NpConn) *Watch {
 	return &Watch{npc, make(chan bool)}
 }
 
+type Watchers struct {
+	mu       sync.Mutex
+	watchers []*Watch
+}
+
+func mkWatchers() *Watchers {
+	w := &Watchers{}
+	w.watchers = make([]*Watch, 0)
+	return w
+}
+
+func (w *Watchers) Watch(npc *NpConn) *np.Rerror {
+	ws := mkWatch(npc)
+	w.watchers = append(w.watchers, ws)
+	w.mu.Unlock()
+	<-ws.ch
+	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", w)
+
+	defer ws.npc.mu.Unlock()
+	ws.npc.mu.Lock()
+	if npc.closed {
+		// XXX Bettter error message?
+		return &np.Rerror{"Closed by client"}
+	}
+	return nil
+}
+
+func (ws *Watchers) wakeupWatch() {
+	defer ws.mu.Unlock()
+	ws.mu.Lock()
+	for _, w := range ws.watchers {
+		db.DLPrintf("WATCH", "WakeupWatch %v\n", w)
+		w.ch <- true
+	}
+}
+
+func (ws *Watchers) deleteConn(npc *NpConn) {
+	defer ws.mu.Unlock()
+	ws.mu.Lock()
+
+	tmp := ws.watchers[:0]
+	for _, w := range ws.watchers {
+		if w.npc == npc {
+			db.DLPrintf("WATCH", "Delete watch %v\n", w)
+			w.ch <- true
+		} else {
+			tmp = append(tmp, w)
+		}
+	}
+	ws.watchers = tmp
+}
+
 type WatchTable struct {
-	mu      sync.Mutex
-	watches map[string][]*Watch
+	mu       sync.Mutex
+	watchers map[string]*Watchers
 }
 
 func MkWatchTable() *WatchTable {
 	wt := &WatchTable{}
-	wt.watches = make(map[string][]*Watch)
+	wt.watchers = make(map[string]*Watchers)
 	return wt
 }
 
+// Returns locked Watchers
 // XXX Normalize paths (e.g., delete extra /) so that matches
 // work for equivalent paths
-func (wt *WatchTable) Watch(npc *NpConn, path []string) {
-	p := np.Join(path)
+func (wt *WatchTable) WatchLookup(dname []string) *Watchers {
+	defer wt.mu.Unlock()
+	p := np.Join(dname)
 	wt.mu.Lock()
-	_, ok := wt.watches[p]
+	ws, ok := wt.watchers[p]
 	if !ok {
-		ws := make([]*Watch, 0)
-		wt.watches[p] = ws
+		p1 := np.Copy(dname)
+		p = np.Join(p1)
+		ws = mkWatchers()
+		wt.watchers[p] = ws
 	}
-	w := mkWatch(npc)
-	wt.watches[p] = append(wt.watches[p], w)
-	db.DLPrintf("WATCH", "Watch %v %v l %v\n", p, w, len(wt.watches[p]))
-
-	wt.mu.Unlock()
-
-	<-w.ch
-	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", p, w)
+	ws.mu.Lock()
+	return ws
 }
 
 // XXX maybe support wakeupOne?
@@ -52,29 +102,23 @@ func (wt *WatchTable) WakeupWatch(fn, dir []string) {
 	p := np.Join(fn)
 	p1 := np.Join(dir)
 
-	// db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", p, wt.watches)
+	db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", p, p1)
 
 	wt.mu.Lock()
-	ws, ok := wt.watches[p]
+	ws, ok := wt.watchers[p]
 	if ok {
-		delete(wt.watches, p)
+		delete(wt.watchers, p)
 	}
-	ws1, ok1 := wt.watches[p1]
+	ws1, ok1 := wt.watchers[p1]
 	if ok1 {
-		delete(wt.watches, p1)
+		delete(wt.watchers, p1)
 	}
 	wt.mu.Unlock()
 	if ok {
-		for _, w := range ws {
-			db.DLPrintf("WATCH", "WakeupWatch %v %v\n", p, w)
-			w.ch <- true
-		}
+		ws.wakeupWatch()
 	}
 	if ok1 {
-		for _, w := range ws1 {
-			db.DLPrintf("WATCH", "WakeupWatch %v %v\n", p1, w)
-			w.ch <- true
-		}
+		ws1.wakeupWatch()
 	}
 }
 
@@ -83,16 +127,7 @@ func (wt *WatchTable) DeleteConn(npc *NpConn) {
 	wt.mu.Lock()
 	defer wt.mu.Unlock()
 
-	for p, ws := range wt.watches {
-		tmp := ws[:0]
-		for _, w := range ws {
-			if w.npc == npc {
-				db.DLPrintf("WATCH", "Delete watch %v %v\n", p, w)
-				w.ch <- true
-			} else {
-				tmp = append(tmp, w)
-			}
-		}
-		wt.watches[p] = tmp
+	for _, ws := range wt.watchers {
+		ws.deleteConn(npc)
 	}
 }

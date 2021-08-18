@@ -202,11 +202,12 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 		s := fmt.Sprintf("Version mismatch %v %v %v", f.path, args.Version, o.Version())
 		return &np.Rerror{s}
 	}
-	p := np.Copy(f.path)
+	p := f.path
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	npc.wt.Watch(npc, p)
+	ws := npc.wt.WatchLookup(p)
+	ws.Watch(npc)
 	return nil
 }
 
@@ -222,22 +223,6 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string
 		npc.wt.WakeupWatch(nf.path, dir)
 	}
 	return nf
-}
-
-func (npc *NpConn) retry(dname []string, name string) *np.Rerror {
-	p := np.Copy(dname)
-	p = append(p, name)
-	db.DLPrintf("9POBJ", "Retry %v\n", p)
-	npc.wt.Watch(npc, p)
-	db.DLPrintf("9POBJ", "Retry create %v\n", p)
-	// Don't retry create on closed connections
-	npc.mu.Lock()
-	if npc.closed {
-		// XXX Bettter error message?
-		return &np.Rerror{"Closed by client"}
-	}
-	npc.mu.Unlock()
-	return nil
 }
 
 func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
@@ -260,22 +245,31 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	for {
-		// XXX make create and setting watch atomic (hold lock on fid?)
 		d := o.(NpObjDir)
+		var ws *Watchers
+		if npc.wt != nil {
+			ws = npc.wt.WatchLookup(append(f.path, names[0]))
+		}
 		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
+			if ws != nil {
+				ws.mu.Unlock()
+			}
 			nf := npc.makeFid(sess, f.ctx, f.path, names[0], o1, args.Perm.IsEphemeral())
 			npc.add(sess, args.Fid, nf)
 			rets.Qid = o1.Qid()
 			break
 		} else {
 			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
-				err := npc.retry(f.path, names[0])
+				err := ws.Watch(npc)
 				if err != nil {
 					return err
 				}
 			} else {
+				if ws != nil {
+					ws.mu.Unlock()
+				}
 				return &np.Rerror{err.Error()}
 			}
 		}
@@ -583,17 +577,28 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		d := lo.(NpObjDir)
 		name := args.Wnames[len(args.Wnames)-1]
 		for {
+			var ws *Watchers
+			if npc.wt != nil {
+				ws = npc.wt.WatchLookup(append(dname, name))
+			}
 			lo, err = d.Create(f.ctx, name, args.Perm, args.Mode)
 			if err == nil {
+				if ws != nil {
+					ws.mu.Unlock()
+				}
 				npc.makeFid(sess, f.ctx, dname, name, lo, args.Perm.IsEphemeral())
 				break
 			} else {
 				if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
-					err := npc.retry(dname, name)
+					err := ws.Watch(npc)
 					if err != nil {
 						return err
 					}
 				} else {
+					if ws != nil {
+						ws.mu.Unlock()
+					}
+
 					return &np.Rerror{err.Error()}
 				}
 			}

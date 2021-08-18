@@ -183,7 +183,7 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	pName, b, err := pd.runq.Get()
+	pPriority, pName, b, err := pd.runq.Get()
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		pd.decrementResourcesL(p)
 		return p, nil
 	} else {
-		err = pd.runq.Put(pName, b)
+		err = pd.runq.Put(pPriority, pName, b)
 		if err != nil {
 			log.Fatalf("Error Put in Procd.getProc: %v", err)
 		}

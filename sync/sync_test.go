@@ -141,7 +141,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 
 func fileBagConsumer(ts *Tstate, fb *FileBag, id int, ctr *uint64) {
 	for {
-		name, contents, err := fb.Get()
+		_, name, contents, err := fb.Get()
 		assert.Nil(ts.t, err, "Error consumer get: %v", err)
 		assert.Equal(ts.t, name, string(contents), "Error consumer contents and fname not equal")
 		atomic.AddUint64(ctr, 1)
@@ -154,7 +154,7 @@ func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
 
 	for i := 0; i < nFiles; i++ {
 		iStr := fmt.Sprintf("%v", i)
-		err := fb.Put(iStr, []byte(iStr))
+		err := fb.Put("0", iStr, []byte(iStr))
 		assert.Nil(ts.t, err, "Error producer put: %v", err)
 	}
 

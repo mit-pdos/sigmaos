@@ -36,13 +36,16 @@ const (
 )
 
 const (
-	RUNQ          = "name/runq"
-	RUNQ_PREFIX   = "1_"
-	RUNQLC_PREFIX = "0_"
-	JOB_SIGNAL    = "job-signal"
-	WAIT_START    = "wait-start."
-	WAIT_EXIT     = "wait-exit."
-	PROC_COND     = "name/proc-cond"
+	RUNQLC_PRIORITY = "0"
+	RUNQ_PRIORITY   = "1"
+)
+
+const (
+	RUNQ       = "name/runq"
+	JOB_SIGNAL = "job-signal"
+	WAIT_START = "wait-start."
+	WAIT_EXIT  = "wait-exit."
+	PROC_COND  = "name/proc-cond"
 )
 
 // XXX factor out
@@ -80,14 +83,14 @@ func MakeProcCtl(fsl *fslib.FsLib) *ProcCtl {
 
 func (pctl *ProcCtl) Spawn(p *Proc) error {
 	// Select which queue to put the job in
-	var procFName string
+	var procPriority string
 	switch p.Type {
 	case T_DEF:
-		procFName = RUNQ_PREFIX + p.Pid
+		procPriority = RUNQ_PRIORITY
 	case T_LC:
-		procFName = RUNQLC_PREFIX + p.Pid
+		procPriority = RUNQLC_PRIORITY
 	case T_BE:
-		procFName = RUNQ_PREFIX + p.Pid
+		procPriority = RUNQ_PRIORITY
 	default:
 		log.Fatalf("Error in ProcCtl.Spawn: Unknown proc type %v", p.Type)
 	}
@@ -107,7 +110,7 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 		return err
 	}
 
-	err = pctl.runq.Put(procFName, b)
+	err = pctl.runq.Put(procPriority, p.Pid, b)
 	if err != nil {
 		log.Printf("Error Put in ProcCtl.Spawn: %v", err)
 		return err

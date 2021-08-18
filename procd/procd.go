@@ -33,7 +33,7 @@ const (
 type Procd struct {
 	//	mu deadlock.Mutex
 	mu         sync.Mutex
-	runq       *usync.FileBag
+	runq       *usync.FilePriorityQueue
 	load       int // XXX bogus
 	bin        string
 	nid        uint64
@@ -92,8 +92,8 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	fsl.Mkdir(proc.PROC_COND, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
-	// Set up FileBags
-	pd.runq = usync.MakeFileBag(fsl, proc.RUNQ)
+	// Set up FilePriorityQueues
+	pd.runq = usync.MakeFilePriorityQueue(fsl, proc.RUNQ)
 	return pd
 }
 

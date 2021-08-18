@@ -66,14 +66,14 @@ type Proc struct {
 }
 
 type ProcCtl struct {
-	runq *sync.FileBag
+	runq *sync.FilePriorityQueue
 	*fslib.FsLib
 }
 
 // XXX remove pid arg
 func MakeProcCtl(fsl *fslib.FsLib) *ProcCtl {
 	pctl := &ProcCtl{}
-	pctl.runq = sync.MakeFileBag(fsl, RUNQ)
+	pctl.runq = sync.MakeFilePriorityQueue(fsl, RUNQ)
 	pctl.FsLib = fsl
 
 	return pctl

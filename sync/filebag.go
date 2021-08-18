@@ -19,7 +19,7 @@ const (
 	SUFFIX_LEN = 16
 )
 
-type FileBag struct {
+type FilePriorityQueue struct {
 	lock *Lock
 	cond *Cond
 	path string
@@ -27,8 +27,8 @@ type FileBag struct {
 }
 
 // Strict lock checking is turned on if this is a true condition variable.
-func MakeFileBag(fsl *fslib.FsLib, bagPath string) *FileBag {
-	fb := &FileBag{}
+func MakeFilePriorityQueue(fsl *fslib.FsLib, bagPath string) *FilePriorityQueue {
+	fb := &FilePriorityQueue{}
 	fb.path = bagPath
 	fb.lock = MakeLock(fsl, bagPath, LOCK, true)
 	fb.cond = MakeCond(fsl, path.Join(bagPath, COND), fb.lock)
@@ -39,12 +39,12 @@ func MakeFileBag(fsl *fslib.FsLib, bagPath string) *FileBag {
 	return fb
 }
 
-func (fb *FileBag) init() error {
+func (fb *FilePriorityQueue) init() error {
 	fb.cond.Init()
 
 	err := fb.Mkdir(fb.path, 0777)
 	if err != nil {
-		db.DLPrintf("FB", "Error FileBag.Init MkDir: %v", err)
+		db.DLPrintf("FB", "Error FilePriorityQueue.Init MkDir: %v", err)
 		return err
 	}
 	return nil
@@ -52,7 +52,7 @@ func (fb *FileBag) init() error {
 
 // Add a file to the file bag. We assume there is always space for a file to be
 // added (producers don't block other than in order to wait for the lock).
-func (fb *FileBag) Put(priority string, name string, contents []byte) error {
+func (fb *FilePriorityQueue) Put(priority string, name string, contents []byte) error {
 	fb.lock.Lock()
 	defer fb.lock.Unlock()
 
@@ -64,7 +64,7 @@ func (fb *FileBag) Put(priority string, name string, contents []byte) error {
 
 	err := fb.MakeFile(path.Join(fb.path, priority, name), 0777, np.OWRITE, contents)
 	if err != nil {
-		log.Fatalf("Error MakeFile in FileBag.Put: %v", err)
+		log.Fatalf("Error MakeFile in FilePriorityQueue.Put: %v", err)
 		return err
 	}
 
@@ -74,7 +74,7 @@ func (fb *FileBag) Put(priority string, name string, contents []byte) error {
 }
 
 // Remove a file from the bag. Consumers may block if no file is available.
-func (fb *FileBag) Get() (string, string, []byte, error) {
+func (fb *FilePriorityQueue) Get() (string, string, []byte, error) {
 	fb.lock.Lock()
 	defer fb.lock.Unlock()
 
@@ -98,7 +98,7 @@ func (fb *FileBag) Get() (string, string, []byte, error) {
 	return nextPriority, name, contents, nil
 }
 
-func (fb *FileBag) IsEmpty() bool {
+func (fb *FilePriorityQueue) IsEmpty() bool {
 	fb.lock.Lock()
 	defer fb.lock.Unlock()
 
@@ -106,13 +106,13 @@ func (fb *FileBag) IsEmpty() bool {
 	return empty
 }
 
-func (fb *FileBag) Destroy() {
+func (fb *FilePriorityQueue) Destroy() {
 	fb.lock.Lock()
 	defer fb.lock.Unlock()
 	fb.cond.Destroy()
 }
 
-func (fb *FileBag) isEmptyL() (string, string, bool) {
+func (fb *FilePriorityQueue) isEmptyL() (string, string, bool) {
 	nextP, nextF, err := fb.nextFileL()
 	if err != nil {
 		return "", "", true
@@ -120,10 +120,10 @@ func (fb *FileBag) isEmptyL() (string, string, bool) {
 	return nextP, nextF, false
 }
 
-func (fb *FileBag) nextFileL() (string, string, error) {
+func (fb *FilePriorityQueue) nextFileL() (string, string, error) {
 	priorities, err := fb.ReadDir(fb.path)
 	if err != nil {
-		log.Fatalf("Error ReadDir 1 in FileBag.nextFile: %v, %v", fb.path, err)
+		log.Fatalf("Error ReadDir 1 in FilePriorityQueue.nextFile: %v, %v", fb.path, err)
 	}
 
 	// Sort the priorities
@@ -139,7 +139,7 @@ func (fb *FileBag) nextFileL() (string, string, error) {
 		// Read the files in this bucket.
 		files, err := fb.ReadDir(path.Join(fb.path, p.Name))
 		if err != nil {
-			log.Fatalf("Error ReadDir 2 in FileBag.nextFile: %v, %v", path.Join(fb.path, p.Name), err)
+			log.Fatalf("Error ReadDir 2 in FilePriorityQueue.nextFile: %v, %v", path.Join(fb.path, p.Name), err)
 		}
 		return p.Name, files[0].Name, nil
 	}
@@ -147,29 +147,29 @@ func (fb *FileBag) nextFileL() (string, string, error) {
 }
 
 // Retrieve a file's contents and remove the file.
-func (fb *FileBag) removeFileL(priority string, name string) []byte {
+func (fb *FilePriorityQueue) removeFileL(priority string, name string) []byte {
 	fpath := path.Join(fb.path, priority, name)
 
 	contents, _, err := fb.GetFile(fpath)
 	if err != nil {
-		log.Fatalf("Error GetFile in FileBag.removeFileL: %v", err)
+		log.Fatalf("Error GetFile in FilePriorityQueue.removeFileL: %v", err)
 	}
 
 	err = fb.Remove(fpath)
 	if err != nil {
-		log.Fatalf("Error Remove 1 in FileBag.removeFileL: %v", err)
+		log.Fatalf("Error Remove 1 in FilePriorityQueue.removeFileL: %v", err)
 	}
 
 	// Clean up priority dir if it's now empty
 	entries, err := fb.ReadDir(path.Join(fb.path, priority))
 	if err != nil {
-		log.Fatalf("Error ReadDir in FileBag.removeFileL: %v", err)
+		log.Fatalf("Error ReadDir in FilePriorityQueue.removeFileL: %v", err)
 	}
 
 	if len(entries) == 0 {
 		err = fb.Remove(path.Join(fb.path, priority))
 		if err != nil {
-			log.Fatalf("Error Remove 2 in FileBag.removeFileL: %v", err)
+			log.Fatalf("Error Remove 2 in FilePriorityQueue.removeFileL: %v", err)
 		}
 	}
 

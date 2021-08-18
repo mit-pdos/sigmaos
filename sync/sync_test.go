@@ -139,7 +139,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
-func fileBagConsumer(ts *Tstate, fb *FileBag, id int, ctr *uint64) {
+func fileBagConsumer(ts *Tstate, fb *FilePriorityQueue, id int, ctr *uint64) {
 	for {
 		_, name, contents, err := fb.Get()
 		assert.Nil(ts.t, err, "Error consumer get: %v", err)
@@ -150,7 +150,7 @@ func fileBagConsumer(ts *Tstate, fb *FileBag, id int, ctr *uint64) {
 
 func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
 	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
-	fb := MakeFileBag(fsl, FILE_BAG_PATH)
+	fb := MakeFilePriorityQueue(fsl, FILE_BAG_PATH)
 
 	for i := 0; i < nFiles; i++ {
 		iStr := fmt.Sprintf("%v", i)
@@ -403,7 +403,7 @@ func TestNWaitersNEventsDestroy(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestFileBag(t *testing.T) {
+func TestFilePriorityQueue(t *testing.T) {
 	ts := makeTstate(t)
 
 	n_consumers := 39
@@ -415,7 +415,7 @@ func TestFileBag(t *testing.T) {
 	done.Add(n_producers)
 
 	//	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", i))
-	fb := MakeFileBag(ts.FsLib, FILE_BAG_PATH)
+	fb := MakeFilePriorityQueue(ts.FsLib, FILE_BAG_PATH)
 
 	var ctr uint64 = 0
 	for i := 0; i < n_consumers; i++ {

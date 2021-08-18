@@ -139,10 +139,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
-func fileBagConsumer(ts *Tstate, id int, ctr *uint64) {
-	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
-	fb := MakeFileBag(fsl, FILE_BAG_PATH)
-
+func fileBagConsumer(ts *Tstate, fb *FileBag, id int, ctr *uint64) {
 	for {
 		name, contents, err := fb.Get()
 		assert.Nil(ts.t, err, "Error consumer get: %v", err)
@@ -170,7 +167,7 @@ func TestLock1(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	N := 20
+	N := 100
 
 	sum := 0
 	current := 0
@@ -219,6 +216,71 @@ func TestLock2(t *testing.T) {
 		lock2.Lock()
 		lock2.Unlock()
 	}
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestLock3(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	N := 3000
+	n_threads := 20
+	cnt := 0
+
+	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+
+	var done sync.WaitGroup
+	done.Add(n_threads)
+
+	for i := 0; i < n_threads; i++ {
+		go func(done *sync.WaitGroup, lock *Lock, N *int, cnt *int) {
+			defer done.Done()
+			for {
+				lock.Lock()
+				if *cnt < *N {
+					*cnt += 1
+				} else {
+					lock.Unlock()
+					break
+				}
+				lock.Unlock()
+			}
+		}(&done, lock, &N, &cnt)
+	}
+
+	done.Wait()
+	assert.Equal(ts.t, N, cnt, "Count doesn't match up")
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestLock4(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(LOCK_DIR, 0777)
+	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
+
+	fsl1 := fslib.MakeFsLib("fslib-1")
+	fsl2 := fslib.MakeFsLib("fslib-1")
+
+	lock1 := MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
+	//	lock2 := MakeLock(fsl2, LOCK_DIR, LOCK_NAME, true)
+
+	// Establish a connection
+	_, err = fsl2.ReadDir(LOCK_DIR)
+
+	assert.Nil(ts.t, err, "ReadDir")
+
+	lock1.Lock()
+
+	fsl2.Exit()
+
+	time.Sleep(2 * time.Second)
+
+	lock1.Unlock()
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -344,17 +406,20 @@ func TestNWaitersNEventsDestroy(t *testing.T) {
 func TestFileBag(t *testing.T) {
 	ts := makeTstate(t)
 
-	n_consumers := 20
-	n_producers := 20
-	n_files := 1000
+	n_consumers := 39
+	n_producers := 1
+	n_files := 500
 	n_files_per_producer := n_files / n_producers
 
 	var done sync.WaitGroup
 	done.Add(n_producers)
 
+	//	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", i))
+	fb := MakeFileBag(ts.FsLib, FILE_BAG_PATH)
+
 	var ctr uint64 = 0
 	for i := 0; i < n_consumers; i++ {
-		go fileBagConsumer(ts, i, &ctr)
+		go fileBagConsumer(ts, fb, i, &ctr)
 	}
 
 	for i := 0; i < n_producers; i++ {

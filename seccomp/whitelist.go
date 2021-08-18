@@ -42,6 +42,7 @@ var whitelist = []string{
 	"munmap",
 	"nanosleep",
 	"newfstatat",
+	"open", // XXX Needed to open /dev/urandom
 	"pipe2",
 	"pread64",
 	"prlimit64",

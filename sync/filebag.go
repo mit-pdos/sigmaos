@@ -93,10 +93,11 @@ func (fb *FilePriorityQueue) Get() (string, string, []byte, error) {
 		}
 	}
 
+	priority := nextPriority
 	name := nextName[:len(nextName)-SUFFIX_LEN]
 	contents := fb.removeFileL(nextPriority, nextName)
 
-	return nextPriority, name, contents, nil
+	return priority, name, contents, nil
 }
 
 func (fb *FilePriorityQueue) IsEmpty() bool {
@@ -174,6 +175,5 @@ func (fb *FilePriorityQueue) removeFileL(priority string, name string) []byte {
 			log.Fatalf("Error Remove 2 in FilePriorityQueue.removeFileL: %v", err)
 		}
 	}
-
 	return contents
 }

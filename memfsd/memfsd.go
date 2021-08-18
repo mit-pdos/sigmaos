@@ -10,6 +10,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	"ulambda/seccomp"
 	"ulambda/stats"
 )
 
@@ -44,6 +45,7 @@ func MakeFsd(addr string) *Fsd {
 }
 
 func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *Fsd {
+	seccomp.LoadFilter()
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.addr = addr

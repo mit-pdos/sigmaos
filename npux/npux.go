@@ -14,6 +14,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	// "ulambda/seccomp"
 	"ulambda/stats"
 )
 
@@ -31,6 +32,7 @@ func MakeNpUx(mount string, addr string) *NpUx {
 }
 
 func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *NpUx {
+	// seccomp.LoadFilter()  // sanity check: if enabled we want npux to fail
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
 	npux.root = npux.makeDir([]string{mount}, np.DMDIR, nil)

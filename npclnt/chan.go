@@ -49,7 +49,11 @@ func mkChan(addrs []string) (*Chan, error) {
 	ch.requests = make(chan *RpcT)
 	ch.outstanding = make(map[np.Ttag]*RpcT)
 	ch.addrs = addrs
-	ch.connect()
+	err := ch.connect()
+	if err != nil {
+		log.Printf("mkChan: connect failed %v\n", err)
+		return nil, err
+	}
 	go ch.writer()
 	go ch.reader()
 

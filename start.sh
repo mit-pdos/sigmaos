@@ -14,12 +14,14 @@ if [[ -z "${NAMED}" ]]; then
   export NAMED=$N
 fi
 
-./bin/memfsd 0 ":1111" &
+#strace -fc ./bin/memfsd 0 ":1111" 2> strace.txt &
+./bin/memfsd 0 ":1111" 2> memfsd.err &
 
 sleep 1
 
 ./bin/nps3d &
-./bin/npuxd &
+#strace -f ./bin/npuxd 2> strace.txt &
+./bin/npuxd 2> npuxd.err &
 ./bin/procd ./ &
 
 sleep 2

@@ -38,7 +38,7 @@ func run(bin string, name string, args []string) (*exec.Cmd, error) {
 
 func BootMin(bin string) (*System, error) {
 	s := &System{}
-	cmd, err := run(bin, "/bin/memfsd", []string{"0", ":1111"})
+	cmd, err := run(bin, "/bin/kernel/memfsd", []string{"0", ":1111"})
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.npuxd, err = run(bin, "/bin/npuxd", nil)
+	s.npuxd, err = run(bin, "/bin/kernel/npuxd", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.procd, err = run(bin, "/bin/procd", []string{bin})
+	s.procd, err = run(bin, "/bin/kernel/procd", []string{bin})
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func Boot(bin string) (*System, error) {
 
 func (s *System) BootNpUxd(bin string) error {
 	var err error
-	s.npuxd, err = run(bin, "/bin/npuxd", nil)
+	s.npuxd, err = run(bin, "bin/kernel/npuxd", nil)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (s *System) BootNpUxd(bin string) error {
 
 func (s *System) BootNps3d(bin string) error {
 	var err error
-	s.nps3d, err = run(bin, "/bin/nps3d", nil)
+	s.nps3d, err = run(bin, "bin/kernel/nps3d", nil)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (s *System) BootNps3d(bin string) error {
 
 func (s *System) BootProcd(bin string) error {
 	var err error
-	s.procd, err = run(bin, "/bin/procd", []string{bin})
+	s.procd, err = run(bin, "bin/kernel/procd", []string{bin})
 	if err != nil {
 		return err
 	}

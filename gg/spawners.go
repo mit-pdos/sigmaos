@@ -22,7 +22,7 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
 	a := depproc.MakeDepProc()
 	a.Pid = origDirUploaderPid(subDir)
-	a.Program = "bin/fsdiruploader"
+	a.Program = "bin/user/fsdiruploader"
 	a.Args = []string{
 		ggOrig(dir, subDir, ""),
 		ggRemote(subDir, ""),
@@ -39,7 +39,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
 	a := depproc.MakeDepProc()
 	a.Pid = reductionWriterPid(dstDir, subDir, target)
-	a.Program = "bin/gg-target-writer"
+	a.Program = "bin/user/gg-target-writer"
 	a.Args = []string{
 		path.Join(dstDir, subDir),
 		target,
@@ -64,7 +64,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
 	a := depproc.MakeDepProc()
 	a.Pid = executorPid(targetHash)
-	a.Program = "bin/gg-executor"
+	a.Program = "bin/user/gg-executor"
 	a.Args = []string{
 		targetHash,
 	}
@@ -85,7 +85,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
 	a := depproc.MakeDepProc()
 	a.Pid = outputHandlerPid(thunkHash)
-	a.Program = "bin/gg-thunk-output-handler"
+	a.Program = "bin/user/gg-thunk-output-handler"
 	a.Args = []string{
 		thunkHash,
 	}

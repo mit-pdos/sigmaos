@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	KV        = "bin/kv"
+	KV        = "bin/user/kv"
 	KVMONLOCK = "monlock"
 )
 
@@ -53,7 +53,7 @@ func (mo *Monitor) unlock() {
 func spawnBalancerPid(sched *depproc.DepProcCtl, opcode, pid1, pid2 string) {
 	t := depproc.MakeDepProc()
 	t.Pid = pid2
-	t.Program = "bin/balancer"
+	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
@@ -63,7 +63,7 @@ func spawnBalancerPid(sched *depproc.DepProcCtl, opcode, pid1, pid2 string) {
 func spawnBalancer(sched *depproc.DepProcCtl, opcode, pid1 string) string {
 	t := depproc.MakeDepProc()
 	t.Pid = fslib.GenPid()
-	t.Program = "bin/balancer"
+	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC

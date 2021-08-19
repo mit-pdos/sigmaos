@@ -1,6 +1,6 @@
 SRCS=main.c
 BIN=c-spinner
-BIN_DIR=../../bin
+BIN_DIR=../../bin/user
 
 all: clean compile
 

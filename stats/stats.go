@@ -109,7 +109,7 @@ func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 func (st *Stats) spawnMonitor() string {
 	p := proc.Proc{}
 	p.Pid = fslib.GenPid()
-	p.Program = "bin/monitor"
+	p.Program = "bin/user/monitor"
 	p.Args = []string{}
 	p.Type = proc.T_LC
 	st.Spawn(&p)

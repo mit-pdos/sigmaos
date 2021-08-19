@@ -7,10 +7,10 @@
 
 echo "start kv"
 
-./bin/kvd
+./bin/user/kvd
 
 sleep 1
 
-./bin/kvclerk
+./bin/user/kvclerk
 
 ./stop.sh

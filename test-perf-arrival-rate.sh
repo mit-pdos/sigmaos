@@ -23,13 +23,13 @@ do
   sleep 2
 
   echo "Starting 9p infrastructure"
-  GOGC=off ./bin/memfsd 0 ":1111" $measurements_pprof/$spawns_per_sec-memfsd-pprof.out $measurements_util/$spawns_per_sec-memfsd-util.txt &
+  GOGC=off ./bin/kernel/memfsd 0 ":1111" $measurements_pprof/$spawns_per_sec-memfsd-pprof.out $measurements_util/$spawns_per_sec-memfsd-util.txt &
   sleep 2
-  GOGC=off ./bin/procd ./ $measurements_pprof/$spawns_per_sec-procd-pprof.out $measurements_util/$spawns_per_sec-procd-util.txt &
+  GOGC=off ./bin/kernel/procd ./ $measurements_pprof/$spawns_per_sec-procd-pprof.out $measurements_util/$spawns_per_sec-procd-util.txt &
   sleep 2
 
   echo "Spawning $spawns_per_sec spinners per second"
-  GOGC=off ./bin/rival $spawns_per_sec $secs_per_test ninep $dim $its 2> $measurements_latency/$spawns_per_sec-latency.txt
+  GOGC=off ./bin/user/rival $spawns_per_sec $secs_per_test ninep $dim $its 2> $measurements_latency/$spawns_per_sec-latency.txt
 done
 
 ./stop.sh

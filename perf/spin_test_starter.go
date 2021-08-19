@@ -33,9 +33,9 @@ type SpinTestStarter struct {
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
 	var a *proc.Proc
 	if s.perfStat {
-		a = &proc.Proc{pid, "bin/perf", "", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its}, nil, proc.T_DEF, proc.C_DEF}
+		a = &proc.Proc{pid, "bin/user/perf", "", []string{"stat", "./bin/user/c-spinner", pid, s.dim, s.its}, nil, proc.T_DEF, proc.C_DEF}
 	} else {
-		a = &proc.Proc{pid, "bin/c-spinner", "", []string{s.dim, s.its}, nil, proc.T_DEF, proc.C_DEF}
+		a = &proc.Proc{pid, "bin/user/c-spinner", "", []string{s.dim, s.its}, nil, proc.T_DEF, proc.C_DEF}
 	}
 	err := s.Spawn(a)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 		// Set up command struct
 		var cmd *exec.Cmd
 		if s.perfStat {
-			cmd = exec.Command("perf", []string{"stat", "./bin/c-spinner", pid, s.dim, s.its, "native"}...)
+			cmd = exec.Command("perf", []string{"stat", "./bin/user/c-spinner", pid, s.dim, s.its, "native"}...)
 			fname := "/tmp/perf-stat-" + pid + ".out"
 			file, err := os.Create(fname)
 			if err != nil {
@@ -182,7 +182,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 			cmd.Stdout = file
 			cmd.Stderr = file
 		} else {
-			cmd = exec.Command("./bin/c-spinner", []string{pid, s.dim, s.its, "native"}...)
+			cmd = exec.Command("./bin/user/c-spinner", []string{pid, s.dim, s.its, "native"}...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 		}
@@ -258,7 +258,7 @@ func (s *SpinTestStarter) TestLocalBaseline() {
 	pid := fslib.GenPid()
 
 	// Set up command struct
-	cmd := exec.Command("./bin/c-spinner", []string{pid, s.dim, s.its, "baseline"}...)
+	cmd := exec.Command("./bin/user/c-spinner", []string{pid, s.dim, s.its, "baseline"}...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

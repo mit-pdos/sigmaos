@@ -67,7 +67,7 @@ func (ts *Tstate) shutdown() {
 func (ts *Tstate) spawnMemFS() string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/memfsd"
+	a.Program = "bin/kernel/memfsd"
 	a.Args = []string{""}
 	a.StartDep = nil
 	a.ExitDep = nil
@@ -78,7 +78,7 @@ func (ts *Tstate) spawnMemFS() string {
 func (ts *Tstate) spawnParticipant(index, opcode string) string {
 	a := fslib.Attr{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/test2pc"
+	a.Program = "bin/user/test2pc"
 	a.Args = []string{index, opcode}
 	a.StartDep = nil
 	a.ExitDep = nil

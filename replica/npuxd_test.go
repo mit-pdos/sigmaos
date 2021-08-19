@@ -5,13 +5,14 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 )
 
 func makeNpUxTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := fslib.Boot(bin)
+	s, err := kernel.Boot(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -24,7 +25,7 @@ func makeNpUxTstate(t *testing.T) *Tstate {
 	ts.configPath9p = "name/" + replicaName + "-config.txt"
 	ts.unionDirPath9p = "name/" + replicaName
 	ts.symlinkPath9p = "name/" + replicaName + "-HEAD"
-	ts.replicaBin = "bin/" + replicaName
+	ts.replicaBin = "bin/kernel/" + replicaName
 	return ts
 }
 

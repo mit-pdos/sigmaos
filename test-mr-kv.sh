@@ -7,15 +7,15 @@
 
 echo "start kv"
 
-./bin/kvd  &
+./bin/user/kvd  &
 
 echo "start mr"
 
-./bin/mr-wc &
+./bin/user/mr-wc &
 
 sleep 1
 
-./bin/kvclerk
+./bin/user/kvclerk
 
 echo "done"
 

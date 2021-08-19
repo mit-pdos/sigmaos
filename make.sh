@@ -20,10 +20,17 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
-for f in `ls cmd`
+mkdir -p bin/kernel
+mkdir -p bin/user
+
+for k in `ls cmd`
 do
-    echo "go build $RACE -o bin/$f cmd/$f/main.go"
-    go build $RACE -o bin/$f cmd/$f/main.go
+  echo "Building $k components"
+  for f in `ls cmd/$k`
+  do
+      echo "go build $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+      go build $RACE -o bin/$k/$f cmd/$k/$f/main.go
+  done
 done
 
 echo "Build c_spinner"

@@ -42,7 +42,7 @@ var whitelist = []string{
 	"munmap",
 	"nanosleep",
 	"newfstatat",
-	"openat", // XXX Needed to open /dev/urandom
+	"openat", // XXX Needed for kv test
 	"open",   // XXX Needed to open /dev/urandom
 	"pipe2",
 	"pread64",

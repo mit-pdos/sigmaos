@@ -31,17 +31,17 @@ echo "Stopping any currently running 9p infrastructure..."
 
 echo "Collecting native baseline..."
 echo $dim $baseline_its 1 > $native_baseline
-./bin/perf-spin-test-starter 1 $dim $baseline_its baseline local >> $native_baseline 2>&1
+./bin/user/perf-spin-test-starter 1 $dim $baseline_its baseline local >> $native_baseline 2>&1
 
 echo "Warming up aws lambda..."
 for k in {1..50} ; do
   echo "Aws warmup round $k..."
-  ./bin/perf-spin-test-starter $N $dim 20 aws remote >> /dev/null 2>&1
+  ./bin/user/perf-spin-test-starter $N $dim 20 aws remote >> /dev/null 2>&1
 done
 
 echo "Collecting remote baseline..."
 echo $dim $remote_baseline_its 1 > $remote_baseline
-./bin/perf-spin-test-starter 1 $dim $remote_baseline_its baseline remote >> $remote_baseline 2>&1
+./bin/user/perf-spin-test-starter 1 $dim $remote_baseline_its baseline remote >> $remote_baseline 2>&1
 
 for test_type in native 9p aws ; do
   ./stop.sh
@@ -59,13 +59,13 @@ for test_type in native 9p aws ; do
     echo "Starting rival process..."
     if [[ $test_type == "native" ]]; then
       # For 4 cores:
-      ./bin/rival 20 -1 native $dim $its & 
+      ./bin/user/rival 20 -1 native $dim $its & 
       # For 8 cores:
-      # ./bin/rival 38 -1 native $cpu_util & 
+      # ./bin/user/rival 38 -1 native $cpu_util & 
     else
-      ./bin/rival 17 -1 ninep $dim $its & 
+      ./bin/user/rival 17 -1 ninep $dim $its & 
       # For 8 cores:
-      # ./bin/rival 30 -1 ninep $cpu_util & 
+      # ./bin/user/rival 30 -1 ninep $cpu_util & 
     fi
   fi
 
@@ -74,7 +74,7 @@ for test_type in native 9p aws ; do
     echo "Warming up aws lambda..."
     for k in {1..50} ; do
       echo "Aws warmup round $k..."
-      ./bin/perf-spin-test-starter $N $dim 20 $test_type remote >> /dev/null 2>&1
+      ./bin/user/perf-spin-test-starter $N $dim 20 $test_type remote >> /dev/null 2>&1
     done
   fi
    
@@ -93,9 +93,9 @@ for test_type in native 9p aws ; do
       echo "Starting spin test, spinners=$N, iterations=$its, trial=$j, type=$test_type"
       echo $dim $its $N > $outfile
       if [ $test_type == "aws" ]; then
-        ./bin/perf-spin-test-starter $N $dim $its $test_type remote >> $outfile 2>&1
+        ./bin/user/perf-spin-test-starter $N $dim $its $test_type remote >> $outfile 2>&1
       else
-        ./bin/perf-spin-test-starter $N $dim $its $test_type local >> $outfile 2>&1
+        ./bin/user/perf-spin-test-starter $N $dim $its $test_type local >> $outfile 2>&1
       fi
     done
   done

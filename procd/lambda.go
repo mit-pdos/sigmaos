@@ -74,7 +74,7 @@ func (l *Lambda) run(cores []uint) error {
 	var args []string
 	var stdout io.Writer
 	var stderr io.Writer
-	if l.Program == "bin/perf" {
+	if l.Program == "bin/user/perf" {
 		args = l.Args
 		fname := "/tmp/perf-stat-" + l.Pid + ".out"
 		file, err := os.Create(fname)

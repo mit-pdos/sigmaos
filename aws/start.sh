@@ -23,12 +23,12 @@ do
     (cd ulambda; ./make.sh)
     if [ "${vm}" = "${MAIN}" ]; then 
        echo "START NAMED"
-       nohup ./ulambda/bin/named > named.out 2>&1 < /dev/null &
+       nohup ./ulambda/bin/kernel/named > named.out 2>&1 < /dev/null &
        sleep 1
-       nohup ./ulambda/bin/proxyd > proxyd.out 2>&1 < /dev/null &
+       nohup ./ulambda/bin/kernel/proxyd > proxyd.out 2>&1 < /dev/null &
     fi
-    nohup ./ulambda/bin/nps3d > npsd3.out 2>&1 < /dev/null &
-    nohup ./ulambda/bin/npuxd > nnpuxd.out 2>&1 < /dev/null &
-    nohup ./ulambda/bin/procd > procd.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/kernel/nps3d > npsd3.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/kernel/npuxd > nnpuxd.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/kernel/procd > procd.out 2>&1 < /dev/null &
 ENDSSH
 done

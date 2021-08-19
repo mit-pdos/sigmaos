@@ -81,7 +81,7 @@ cp ./$targets $memfs_dir
 
 echo '7. Running...'
 if [[ $NAIVE -gt 0 ]]; then
-  $ulambda_dir/mk-gg-ulambda-job-naive.sh $targets | $ulambda_dir/bin/submit
+  $ulambda_dir/mk-gg-ulambda-job-naive.sh $targets | $ulambda_dir/bin/user/submit
 else
-  $ulambda_dir/mk-gg-ulambda-job.sh $targets | $ulambda_dir/bin/submit
+  $ulambda_dir/mk-gg-ulambda-job.sh $targets | $ulambda_dir/bin/user/submit
 fi

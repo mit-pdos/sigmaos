@@ -80,7 +80,7 @@ func (ts *Tstate) spawnMemFS() string {
 	t := depproc.MakeDepProc()
 	a := &proc.Proc{}
 	a.Pid = fslib.GenPid()
-	a.Program = "bin/memfsd"
+	a.Program = "bin/kernel/memfsd"
 	a.Args = []string{""}
 	t.Proc = a
 	ts.Spawn(t)

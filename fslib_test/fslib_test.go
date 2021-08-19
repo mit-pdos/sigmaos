@@ -321,7 +321,7 @@ func TestEphemeral(t *testing.T) {
 
 	var err error
 	err = ts.s.BootProcd("..")
-	assert.Nil(t, err, "bin/procd")
+	assert.Nil(t, err, "bin/kernel/procd")
 	time.Sleep(100 * time.Millisecond)
 
 	name := ts.procdName(t)

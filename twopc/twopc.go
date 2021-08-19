@@ -58,7 +58,7 @@ func SpawnCoord(pctl *depproc.DepProcCtl, opcode string, ps []string) string {
 	args := append([]string{opcode}, ps...)
 	t := depproc.MakeDepProc()
 	t.Pid = fslib.GenPid()
-	t.Program = "bin/coord"
+	t.Program = "bin/user/coord"
 	t.Args = args
 	pctl.Spawn(t)
 	return t.Pid

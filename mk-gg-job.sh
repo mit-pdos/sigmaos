@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ./mk-kv-job.sh | ./bin/submit
+# ./mk-kv-job.sh | ./bin/user/submit
 
 L="/mnt/9p/ulambd/dev"
 N=1

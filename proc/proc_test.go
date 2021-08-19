@@ -68,7 +68,7 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &Proc{pid, "bin/sleeperl", "", []string{"name/out_" + pid, ""}, nil, T_DEF, C_DEF}
+	a := &Proc{pid, "bin/user/sleeperl", "", []string{"name/out_" + pid, ""}, nil, T_DEF, C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -216,7 +216,7 @@ func TestEvict(t *testing.T) {
 
 	go ts.evict(pid)
 
-	a := &Proc{pid, "bin/perf-spinner", "", []string{"1000", "1"}, nil,
+	a := &Proc{pid, "bin/user/perf-spinner", "", []string{"1000", "1"}, nil,
 		T_DEF, C_DEF}
 	err := ts.Spawn(a)
 

@@ -177,20 +177,30 @@ func (c *Cond) Wait() error {
 // make waiting on it an error.
 func (c *Cond) Destroy() {
 	c.dirLock.Lock()
+	defer c.dirLock.Unlock()
 
 	// Wake up all waiters with a broadcast.
 	err := c.Remove(c.bcastPath)
 	if err != nil {
-		log.Fatalf("Error Remove 1 in Cond.Destroy: %v", err)
+		if err.Error() == "EOF" {
+			log.Printf("Error Remove 1 in Cond.Destroy: %v", err)
+		} else {
+			log.Fatalf("Error Remove 1 in Cond.Destroy: %v", err)
+		}
+		return
 	}
 
 	// Remove the directory so we don't take on any more waiters
 	err = c.Remove(c.path)
 	if err != nil {
-		log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
+		if err.Error() == "EOF" {
+			log.Printf("Error Remove 2 in Cond.Destroy: %v", err)
+		} else {
+			log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
+		}
+		return
 	}
 
-	c.dirLock.Unlock()
 }
 
 // Make a broadcast file to be waited on.

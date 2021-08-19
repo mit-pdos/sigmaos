@@ -70,7 +70,7 @@ cp ./$target $memfs_dir
 # Submit jobs to scheduler
 echo "5. Running..."
 if [[ $NAIVE -gt 0 ]]; then
-  $ulambda_dir/mk-gg-ulambda-job-naive.sh $target | $ulambda_dir/bin/submit
+  $ulambda_dir/mk-gg-ulambda-job-naive.sh $target | $ulambda_dir/bin/user/submit
 else
-  $ulambda_dir/mk-gg-ulambda-job.sh $target | $ulambda_dir/bin/submit
+  $ulambda_dir/mk-gg-ulambda-job.sh $target | $ulambda_dir/bin/user/submit
 fi

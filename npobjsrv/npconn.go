@@ -53,7 +53,9 @@ func (npc *NpConn) del(sess np.Tsession, fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	o := npc.st.delFid(sess, fid)
-	npc.st.delEphemeral(sess, o)
+	if o.Perm().IsEphemeral() {
+		npc.st.delEphemeral(sess, o)
+	}
 }
 
 func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -388,6 +390,9 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 	}
 	// XXX delete from ephemeral table, if ephemeral
 	//	npc.del(sess, args.Fid) // XXX doing this here causes "unkown Fid" errors in fslib tests
+	if lo.Perm().IsEphemeral() {
+		npc.st.delEphemeral(sess, lo)
+	}
 	return nil
 }
 

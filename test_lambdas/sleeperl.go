@@ -14,25 +14,32 @@ import (
 type Sleeperl struct {
 	*fslib.FsLib
 	*depproc.DepProcCtl
-	pid    string
-	output string
+	pid         string
+	sleepLength time.Duration
+	output      string
 }
 
 func MakeSleeperl(args []string) (*Sleeperl, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, errors.New("MakeSleeperl: too few arguments")
 	}
 	s := &Sleeperl{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
-	s.pid = args[0]
 	s.DepProcCtl = depproc.MakeDepProcCtl(s.FsLib, depproc.DEFAULT_JOB_ID)
-	s.output = args[1]
+	s.pid = args[0]
+	s.output = args[2]
+
+	d, err := time.ParseDuration(args[1])
+	if err != nil {
+		log.Fatalf("Error parsing duration: %v", err)
+	}
+	s.sleepLength = d
 
 	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)
 	log.Printf("MakeSleeperl: %v\n", args)
 
-	err := s.Started(s.pid)
+	err = s.Started(s.pid)
 	if err != nil {
 		log.Fatalf("Started: error %v\n", err)
 	}

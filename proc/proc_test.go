@@ -68,7 +68,7 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &Proc{pid, "bin/user/sleeperl", "", []string{"name/out_" + pid, ""}, nil, T_DEF, C_DEF}
+	a := &Proc{pid, "bin/user/sleeperl", "", []string{"5s", "name/out_" + pid, ""}, nil, T_DEF, C_DEF}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -98,21 +98,45 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	time.Sleep(10 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	checkSleeperlResult(t, ts, pid)
-	time.Sleep(100)
 
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestWait(t *testing.T) {
+func TestWaitExit(t *testing.T) {
 	ts := makeTstate(t)
+
+	start := time.Now()
 
 	pid := spawnSleeperl(t, ts)
 	err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit error")
 
-	assert.Nil(t, err, "Wait error")
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > 5*time.Second)
+
+	checkSleeperlResult(t, ts, pid)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestWaitStart(t *testing.T) {
+	ts := makeTstate(t)
+
+	start := time.Now()
+
+	pid := spawnSleeperl(t, ts)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
+
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) < 5*time.Second, "WaitStart waited too long")
+
+	ts.WaitExit(pid)
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -131,17 +155,8 @@ func TestWaitNonexistentLambda(t *testing.T) {
 		ch <- true
 	}()
 
-	for i := 0; i < 50; i++ {
-		select {
-		case done := <-ch:
-			assert.True(t, done, "Nonexistent lambda")
-			break
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-
-	db.DLPrintf("SCHEDD", "Wait on nonexistent lambda\n")
+	done := <-ch
+	assert.True(t, done, "Nonexistent lambda")
 
 	close(ch)
 

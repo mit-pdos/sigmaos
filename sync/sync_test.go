@@ -47,47 +47,6 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func eventWaiter(ts *Tstate, e *Event, done chan int, id int) {
-	// Wait, and then possibly signal future waiters
-	e.Wait()
-	done <- id
-}
-
-func runEventWaiters(ts *Tstate, n_waiters, n_events int, destroy bool) {
-	events := []*Event{}
-
-	for i := 0; i < n_events; i++ {
-		events = append(events, MakeEvent(ts.FsLib, COND_PATH))
-	}
-
-	events[0].Init()
-
-	sum := 0
-
-	done := make(chan int)
-	for i := 0; i < n_waiters; i++ {
-		go eventWaiter(ts, events[i%len(events)], done, i)
-		sum += i
-	}
-
-	// Make sure we don't miss the signal
-	if !destroy {
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	events[0].Broadcast()
-
-	if destroy {
-		events[0].Destroy()
-	}
-
-	for i := 0; i < n_waiters; i++ {
-		next := <-done
-		sum -= next
-	}
-	assert.Equal(ts.t, 0, sum, "Bad sum")
-}
-
 func condWaiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 	err := ts.LockFile(LOCK_DIR, LOCK_NAME)
 	assert.Nil(ts.t, err, "LockFile waiter [%v]: %v", id, err)
@@ -139,7 +98,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
-func fileBagConsumer(ts *Tstate, fb *FilePriorityQueue, id int, ctr *uint64) {
+func fileBagConsumer(ts *Tstate, fb *FilePriorityBag, id int, ctr *uint64) {
 	for {
 		_, name, contents, err := fb.Get()
 		assert.Nil(ts.t, err, "Error consumer get: %v", err)
@@ -150,7 +109,7 @@ func fileBagConsumer(ts *Tstate, fb *FilePriorityQueue, id int, ctr *uint64) {
 
 func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
 	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
-	fb := MakeFilePriorityQueue(fsl, FILE_BAG_PATH)
+	fb := MakeFilePriorityBag(fsl, FILE_BAG_PATH)
 
 	for i := 0; i < nFiles; i++ {
 		iStr := fmt.Sprintf("%v", i)
@@ -363,47 +322,7 @@ func TestNWaitersNCondsSignal(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestOneWaiterOneEvent(t *testing.T) {
-	ts := makeTstate(t)
-
-	n_waiters := 1
-	n_events := 1
-	runEventWaiters(ts, n_waiters, n_events, false)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestNWaitersOneEvent(t *testing.T) {
-	ts := makeTstate(t)
-
-	n_waiters := 20
-	n_events := 1
-	runEventWaiters(ts, n_waiters, n_events, false)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestNWaitersNEvents(t *testing.T) {
-	ts := makeTstate(t)
-
-	n_waiters := 20
-	n_events := 20
-	runEventWaiters(ts, n_waiters, n_events, false)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestNWaitersNEventsDestroy(t *testing.T) {
-	ts := makeTstate(t)
-
-	n_waiters := 20
-	n_events := 20
-	runEventWaiters(ts, n_waiters, n_events, true)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestFilePriorityQueue(t *testing.T) {
+func TestFilePriorityBag(t *testing.T) {
 	ts := makeTstate(t)
 
 	n_consumers := 39
@@ -415,7 +334,7 @@ func TestFilePriorityQueue(t *testing.T) {
 	done.Add(n_producers)
 
 	//	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", i))
-	fb := MakeFilePriorityQueue(ts.FsLib, FILE_BAG_PATH)
+	fb := MakeFilePriorityBag(ts.FsLib, FILE_BAG_PATH)
 
 	var ctr uint64 = 0
 	for i := 0; i < n_consumers; i++ {

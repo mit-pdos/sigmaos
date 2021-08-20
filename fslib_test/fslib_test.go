@@ -322,7 +322,6 @@ func TestEphemeral(t *testing.T) {
 	var err error
 	err = ts.s.BootProcd("..")
 	assert.Nil(t, err, "bin/kernel/procd")
-	time.Sleep(100 * time.Millisecond)
 
 	name := ts.procdName(t)
 	b, err := ts.ReadFile(name)
@@ -332,8 +331,6 @@ func TestEphemeral(t *testing.T) {
 	sts, err := ts.ReadDir(name + "/")
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
-
-	time.Sleep(100 * time.Millisecond)
 
 	ts.s.Kill(kernel.PROCD)
 
@@ -385,12 +382,12 @@ func TestLock1(t *testing.T) {
 	fsl := fslib.MakeFsLib("fslibtest0")
 	go func() {
 		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
-		assert.Equal(t, nil, err)
+		assert.Nil(t, err, "MakeFile")
 		ch <- 0
 	}()
 	time.Sleep(time.Second * 2)
 	err = ts.Remove("name/locks/test-lock")
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err, "Remove")
 	go func() {
 		time.Sleep(2 * time.Second)
 		ch <- 1

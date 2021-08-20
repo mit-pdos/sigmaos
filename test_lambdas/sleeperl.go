@@ -3,6 +3,7 @@ package test_lambdas
 import (
 	"errors"
 	"log"
+	"os"
 	"time"
 
 	db "ulambda/debug"
@@ -47,7 +48,17 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	return s, nil
 }
 
+func (s *Sleeperl) waitEvict() {
+	err := s.WaitEvict(s.pid)
+	if err != nil {
+		log.Fatalf("Error WaitEvict: %v", err)
+	}
+	s.Exit()
+	os.Exit(0)
+}
+
 func (s *Sleeperl) Work() {
+	go s.waitEvict()
 	time.Sleep(5000 * time.Millisecond)
 	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {

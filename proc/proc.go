@@ -32,6 +32,7 @@ const (
 
 const (
 	START_COND = "start-cond."
+	EVICT_COND = "evict-cond."
 	EXIT_COND  = "exit-cond."
 )
 
@@ -101,11 +102,15 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 	pExitCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EXIT_COND+p.Pid), nil)
 	pExitCond.Init()
 
+	pEvictCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EVICT_COND+p.Pid), nil)
+	pEvictCond.Init()
+
 	b, err := json.Marshal(p)
 	if err != nil {
 		// Unlock the waiter file if unmarshal failed
 		pStartCond.Destroy()
 		pExitCond.Destroy()
+		pEvictCond.Destroy()
 		log.Fatalf("Error marshal: %v", err)
 		return err
 	}
@@ -135,6 +140,13 @@ func (pctl *ProcCtl) WaitExit(pid string) error {
 	return nil
 }
 
+// Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
+func (pctl *ProcCtl) WaitEvict(pid string) error {
+	pEvictCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
+	pEvictCond.Wait()
+	return nil
+}
+
 // ========== STARTED ==========
 
 // Mark that a process has started.
@@ -155,4 +167,13 @@ func (pctl *ProcCtl) Exited(pid string) error {
 
 func (p *Proc) String() string {
 	return fmt.Sprintf("&{ pid:%v prog:%v dir:%v args:%v env:%v type:%v ncore:%v }", p.Pid, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
+}
+
+// ========== EVICT ==========
+
+// Notify a process that it will be evicted.
+func (pctl *ProcCtl) Evict(pid string) error {
+	pEvictCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
+	pEvictCond.Destroy()
+	return nil
 }

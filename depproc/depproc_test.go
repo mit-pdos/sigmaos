@@ -372,25 +372,27 @@ func TestConcurrentLambdas(t *testing.T) {
 
 func (ts *Tstate) evict(pid string) {
 	time.Sleep(1 * time.Second)
-	//	err := ts.Evict(pid)
-	//	assert.Nil(ts.t, err, "evict")
+	err := ts.Evict(pid)
+	assert.Nil(ts.t, err, "evict")
 }
 
 func TestEvict(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := fslib.GenPid()
+	start := time.Now()
+	pid := spawnSleeperl(t, ts)
 
 	go ts.evict(pid)
 
-	a := MakeDepProc()
-	a.Proc = &proc.Proc{pid, "bin/user/perf-spinner", "", []string{"1000", "1"}, nil,
-		proc.T_DEF, proc.C_DEF}
-	err := ts.Spawn(a)
+	err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	end := time.Now()
 
-	assert.Nil(t, err, "Spawn")
+	assert.True(t, end.Sub(start) < 3*time.Second, "Didn't evict early enough.")
+	assert.True(t, end.Sub(start) > 1*time.Second, "Evicted too early")
 
-	assert.True(t, false, "Need to re-implement eviction")
+	// Make sure the lambda didn't finish
+	checkSleeperlResultFalse(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }

@@ -141,6 +141,16 @@ func (sched *DepProcCtl) WaitExit(pid string) error {
 	return sched.pctl.WaitExit(pid)
 }
 
+// Wait for a depProc to evict
+func (sched *DepProcCtl) WaitEvict(pid string) error {
+	// If the underlying proc hasn't been spawned yet, the WaitEvict will fall
+	// through. This condition variable fires (and is destroyed) once the
+	// underlying proc is spawned, so we don't accidentally fall through early.
+	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+pid), nil)
+	tSpawnCond.Wait()
+	return sched.pctl.WaitEvict(pid)
+}
+
 // ========== STARTED ==========
 
 func (sched *DepProcCtl) Started(pid string) error {
@@ -181,6 +191,12 @@ func (sched *DepProcCtl) Exited(pid string) error {
 	}
 
 	return nil
+}
+
+// ========== EVICTED ==========
+
+func (sched *DepProcCtl) Evict(pid string) error {
+	return sched.pctl.Evict(pid)
 }
 
 // ========== HELPERS ==========

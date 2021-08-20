@@ -68,7 +68,7 @@ func MakeNps3() *Nps3 {
 }
 
 func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(nps3, conn)
+	return npo.MakeNpConn(nps3, nps3.srv.GetFsServer(), conn)
 }
 
 func (nps3 *Nps3) RootAttach(uname string) (npo.NpObj, npo.CtxI) {

@@ -7,6 +7,7 @@ go test $1 ulambda/memfs
 go test $1 ulambda/fsclnt
 go test $1 ulambda/fslib_test
 go test $1 ulambda/sync
+go test $1 ulambda/stats
 (cd nps3; go test $1)
 go test $1 ulambda/proc
 go test $1 ulambda/depproc

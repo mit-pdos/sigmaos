@@ -53,7 +53,7 @@ func (npux *NpUx) GetSrv() *npsrv.NpServer {
 }
 
 func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(npux, conn)
+	return npo.MakeNpConn(npux, npux.srv.GetFsServer(), conn)
 }
 
 func (npux *NpUx) RootAttach(uname string) (npo.NpObj, npo.CtxI) {

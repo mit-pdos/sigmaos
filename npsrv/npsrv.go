@@ -6,6 +6,7 @@ import (
 	"net"
 
 	db "ulambda/debug"
+	"ulambda/fssrv"
 	npo "ulambda/npobjsrv"
 )
 
@@ -17,6 +18,7 @@ type NpConn interface {
 type NpServer struct {
 	npc        NpConn
 	addr       string
+	fssrv      *fssrv.FsServer
 	wireCompat bool
 	replicated bool
 	replyCache *ReplyCache
@@ -33,6 +35,10 @@ func MakeNpServerWireCompatible(npc NpConn, address string) *NpServer {
 
 func (srv *NpServer) MyAddr() string {
 	return srv.addr
+}
+
+func (srv *NpServer) GetFsServer() *fssrv.FsServer {
+	return srv.fssrv
 }
 
 func (srv *NpServer) runsrv(l net.Listener, wrapped bool) {

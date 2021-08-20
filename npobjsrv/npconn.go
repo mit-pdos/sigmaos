@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/stats"
 )
@@ -22,14 +23,14 @@ type NpConn struct {
 	stats  *stats.Stats
 }
 
-func MakeNpConn(osrv NpObjSrv, conn net.Conn) *NpConn {
+func MakeNpConn(osrv NpObjSrv, srv *fssrv.FsServer, conn net.Conn) *NpConn {
 	npc := &NpConn{}
 	npc.conn = conn
 	npc.osrv = osrv
 	npc.wt = osrv.WatchTable()
 	npc.ct = osrv.ConnTable()
 	npc.st = osrv.SessionTable()
-	npc.stats = osrv.Stats()
+	npc.stats = srv.GetStats()
 	if npc.ct != nil {
 		npc.ct.Add(npc)
 	}
@@ -114,9 +115,7 @@ func makeQids(os []NpObj) []np.Tqid {
 }
 
 func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nwalk.Inc()
-	}
+	npc.stats.StatInfo().Nwalk.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -153,9 +152,7 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 // XXX call close? keep refcnt per obj?
 func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nclunk.Inc()
-	}
+	npc.stats.StatInfo().Nclunk.Inc()
 	_, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -165,9 +162,7 @@ func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.
 }
 
 func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nopen.Inc()
-	}
+	npc.stats.StatInfo().Nopen.Inc()
 	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -178,9 +173,7 @@ func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rer
 	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	if npc.stats != nil {
-		npc.stats.Path(f.path)
-	}
+	npc.stats.Path(f.path)
 	r := o.Open(f.ctx, args.Mode)
 	if err != nil {
 		return &np.Rerror{r.Error()}
@@ -190,9 +183,7 @@ func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rer
 }
 
 func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nwatchv.Inc()
-	}
+	npc.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -230,9 +221,7 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string
 }
 
 func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Ncreate.Inc()
-	}
+	npc.stats.StatInfo().Ncreate.Inc()
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -282,16 +271,12 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 }
 
 func (npc *NpConn) Flush(sess np.Tsession, args np.Tflush, rets *np.Rflush) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nflush.Inc()
-	}
+	npc.stats.StatInfo().Nflush.Inc()
 	return nil
 }
 
 func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nread.Inc()
-	}
+	npc.stats.StatInfo().Nread.Inc()
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -302,9 +287,7 @@ func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rer
 }
 
 func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nwrite.Inc()
-	}
+	npc.stats.StatInfo().Nwrite.Inc()
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -319,9 +302,7 @@ func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.
 }
 
 func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nremove.Inc()
-	}
+	npc.stats.StatInfo().Nremove.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -351,9 +332,7 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 }
 
 func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nremove.Inc()
-	}
+	npc.stats.StatInfo().Nremove.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -379,9 +358,7 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 		}
 		lo = os[len(os)-1]
 	}
-	if npc.stats != nil {
-		npc.stats.Path(f.path)
-	}
+	npc.stats.Path(f.path)
 	fname := append(f.path, args.Wnames[0:len(args.Wnames)]...)
 	dname := append(f.path, args.Wnames[0:len(args.Wnames)-1]...)
 	r := lo.Remove(f.ctx, fname[len(fname)-1])
@@ -401,9 +378,7 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 }
 
 func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nstat.Inc()
-	}
+	npc.stats.StatInfo().Nstat.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -422,9 +397,7 @@ func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rer
 }
 
 func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nwstat.Inc()
-	}
+	npc.stats.StatInfo().Nwstat.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -452,9 +425,7 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 }
 
 func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nrenameat.Inc()
-	}
+	npc.stats.StatInfo().Nrenameat.Inc()
 	oldf, err := npc.lookup(sess, args.OldFid)
 	if err != nil {
 		return err
@@ -496,9 +467,7 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 // Special code path for GetFile: in one RPC, GetFile() looks up the file,
 // opens it, and reads it.
 func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nget.Inc()
-	}
+	npc.stats.StatInfo().Nget.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -520,9 +489,7 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 		}
 		lo = os[len(os)-1]
 	}
-	if npc.stats != nil {
-		npc.stats.Path(f.path)
-	}
+	npc.stats.Path(f.path)
 	r := lo.Open(f.ctx, args.Mode)
 	if r != nil {
 		return &np.Rerror{r.Error()}
@@ -549,9 +516,7 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 // file, opens/creates it, and writes it.
 func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	var r error
-	if npc.stats != nil {
-		npc.stats.StatInfo().Nset.Inc()
-	}
+	npc.stats.StatInfo().Nset.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -613,9 +578,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 
 		}
 	} else {
-		if npc.stats != nil {
-			npc.stats.Path(f.path)
-		}
+		npc.stats.Path(f.path)
 		r = lo.Open(f.ctx, args.Mode)
 		if r != nil {
 			return &np.Rerror{r.Error()}

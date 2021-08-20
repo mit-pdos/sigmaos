@@ -11,7 +11,6 @@ import (
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
 	"ulambda/seccomp"
-	"ulambda/stats"
 )
 
 const MEMFS = "name/memfsd"
@@ -29,15 +28,14 @@ func (ctx *Ctx) Uname() string {
 }
 
 type Fsd struct {
-	mu    sync.Mutex
-	root  *memfs.Dir
-	srv   *npsrv.NpServer
-	ch    chan bool
-	addr  string
-	wt    *npo.WatchTable
-	ct    *npo.ConnTable
-	st    *npo.SessionTable
-	stats *stats.Stats
+	mu   sync.Mutex
+	root *memfs.Dir
+	srv  *npsrv.NpServer
+	ch   chan bool
+	addr string
+	wt   *npo.WatchTable
+	ct   *npo.ConnTable
+	st   *npo.SessionTable
 }
 
 func MakeFsd(addr string) *Fsd {
@@ -52,10 +50,9 @@ func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *n
 	fsd.wt = npo.MkWatchTable()
 	fsd.ct = npo.MkConnTable()
 	fsd.st = npo.MakeSessionTable()
-	fsd.stats = stats.MkStats()
 	fsd.ch = make(chan bool)
 	fsd.srv = npsrv.MakeReplicatedNpServer(fsd, addr, false, replicated, relayAddr, config)
-	if err := fsd.MkNod("statsd", fsd.stats); err != nil {
+	if err := fsd.MkNod("statsd", fsd.srv.GetFsServer().GetStats()); err != nil {
 		log.Fatalf("Mknod failed %v\n", err)
 	}
 	return fsd
@@ -91,10 +88,6 @@ func (fsd *Fsd) RegisterSession(sess np.Tsession) {
 	fsd.st.RegisterSession(sess)
 }
 
-func (fsd *Fsd) Stats() *stats.Stats {
-	return fsd.stats
-}
-
 func (fsd *Fsd) Addr() string {
 	return fsd.srv.MyAddr()
 }
@@ -104,7 +97,7 @@ func (fsd *Fsd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 }
 
 func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(fsd, conn)
+	return npo.MakeNpConn(fsd, fsd.srv.GetFsServer(), conn)
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {

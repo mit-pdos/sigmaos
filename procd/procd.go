@@ -106,7 +106,7 @@ func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
 }
 
 func (pd *Procd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(pd, conn)
+	return npo.MakeNpConn(pd, pd.srv.GetFsServer(), conn)
 }
 
 func (pd *Procd) Done() {

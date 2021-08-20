@@ -11,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
 	"ulambda/npobjsrv"
@@ -65,7 +66,12 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			proc.MakeProcCtl(config.FsLib),
 			config.NpClnt}
 	}
-	srv := &NpServer{npc, "", wireCompat, replicated, MakeReplyCache(), emptyConfig}
+	srv := &NpServer{npc, "",
+		fssrv.MkFsServer(),
+		wireCompat, replicated,
+		MakeReplyCache(),
+		emptyConfig,
+	}
 	var l net.Listener
 	if replicated {
 		// Create and start the relay server listener

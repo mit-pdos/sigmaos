@@ -123,7 +123,7 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	time.Sleep(10 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -160,6 +160,9 @@ func TestWaitStart(t *testing.T) {
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) < 5*time.Second, "WaitStart waited too long")
+
+	// Make sure the lambda hasn't finished yet...
+	checkSleeperlResultFalse(t, ts, pid)
 
 	ts.WaitExit(pid)
 
@@ -228,16 +231,17 @@ func TestWaitNonexistentLambda(t *testing.T) {
 func TestExitDep(t *testing.T) {
 	ts := makeTstate(t)
 
+	start := time.Now()
+
 	pid := spawnSleeperl(t, ts)
 
 	pid2 := spawnSleeperlWithDep(t, ts, map[string]bool{}, map[string]bool{pid: false})
 
 	// Make sure no-op waited for sleeperl lambda
-	start := time.Now()
 	ts.WaitExit(pid2)
 	end := time.Now()
 	elapsed := end.Sub(start)
-	assert.True(t, elapsed.Seconds() > 8.0, "Didn't wait for exit dep for long enough")
+	assert.True(t, elapsed > 10*time.Second, "Didn't wait for exit dep for long enough")
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -285,6 +289,8 @@ func TestStartDep(t *testing.T) {
 		prod = fslib.GenPid()
 	}
 
+	start := time.Now()
+
 	// Spawn the producer first
 	spawnSleeperlWithPidDep(t, ts, prod, map[string]bool{}, map[string]bool{})
 
@@ -294,8 +300,13 @@ func TestStartDep(t *testing.T) {
 	// Spawn the consumer
 	spawnSleeperlWithPidDep(t, ts, cons, map[string]bool{prod: false}, map[string]bool{})
 
+	end := time.Now()
+
+	err := ts.WaitExit(cons)
+	assert.Nil(t, err, "WaitExit error")
+
 	// Wait a bit
-	time.Sleep(12 * time.Second)
+	assert.True(t, end.Sub(start) < 10*time.Second, "Start dep waited too long....")
 
 	// Make sure they both ran
 	checkSleeperlResult(t, ts, prod)

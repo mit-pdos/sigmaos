@@ -136,6 +136,9 @@ func TestWaitStart(t *testing.T) {
 
 	assert.True(t, end.Sub(start) < 5*time.Second, "WaitStart waited too long")
 
+	// Make sure the lambda hasn't finished yet...
+	checkSleeperlResultFalse(t, ts, pid)
+
 	ts.WaitExit(pid)
 
 	checkSleeperlResult(t, ts, pid)

@@ -76,7 +76,6 @@ func spawnKVPid(sched *depproc.DepProcCtl, pid1 string, pid2 string) {
 	t.Pid = pid1
 	t.Program = KV
 	t.Args = []string{""}
-	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 }

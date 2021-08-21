@@ -11,7 +11,7 @@ import (
 )
 
 type NpConn interface {
-	Connect(net.Conn) NpAPI
+	Connect(net.Conn, *fssrv.FsServer) NpAPI
 	SessionTable() *npo.SessionTable
 }
 
@@ -52,7 +52,7 @@ func (srv *NpServer) runsrv(l net.Listener, wrapped bool) {
 		// If we aren't replicated or we're at the end of the chain, create a normal
 		// channel.
 		if !srv.replicated {
-			MakeChannel(srv.npc, conn, srv.wireCompat)
+			MakeChannel(srv.npc, conn, srv.fssrv, srv.wireCompat)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())

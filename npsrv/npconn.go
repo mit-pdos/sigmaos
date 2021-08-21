@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -30,8 +31,8 @@ type Channel struct {
 	sessions   []np.Tsession
 }
 
-func MakeChannel(npc NpConn, conn net.Conn, wireCompat bool) *Channel {
-	npapi := npc.Connect(conn)
+func MakeChannel(npc NpConn, conn net.Conn, fssrv *fssrv.FsServer, wireCompat bool) *Channel {
+	npapi := npc.Connect(conn, fssrv)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,

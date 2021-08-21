@@ -40,7 +40,7 @@ type RelayChannel struct {
 }
 
 func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
-	npapi := npc.Connect(conn)
+	npapi := npc.Connect(conn, srv.fssrv)
 	c := &Channel{sync.Mutex{},
 		npc,
 		conn,

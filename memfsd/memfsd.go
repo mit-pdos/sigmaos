@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fssrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
@@ -96,8 +97,8 @@ func (fsd *Fsd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
 	return fsd.root, MkCtx(uname)
 }
 
-func (fsd *Fsd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(fsd, fsd.srv.GetFsServer(), conn)
+func (fsd *Fsd) Connect(conn net.Conn, srv *fssrv.FsServer) npsrv.NpAPI {
+	return npo.MakeNpConn(fsd, srv, conn)
 }
 
 func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {

@@ -15,6 +15,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
@@ -105,8 +106,8 @@ func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
 	return l, nil
 }
 
-func (pd *Procd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(pd, pd.srv.GetFsServer(), conn)
+func (pd *Procd) Connect(conn net.Conn, fssrv *fssrv.FsServer) npsrv.NpAPI {
+	return npo.MakeNpConn(pd, fssrv, conn)
 }
 
 func (pd *Procd) Done() {

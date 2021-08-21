@@ -10,6 +10,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
@@ -52,8 +53,8 @@ func (npux *NpUx) GetSrv() *npsrv.NpServer {
 	return npux.srv
 }
 
-func (npux *NpUx) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(npux, npux.srv.GetFsServer(), conn)
+func (npux *NpUx) Connect(conn net.Conn, fssrv *fssrv.FsServer) npsrv.NpAPI {
+	return npo.MakeNpConn(npux, fssrv, conn)
 }
 
 func (npux *NpUx) RootAttach(uname string) (npo.NpObj, npo.CtxI) {

@@ -9,6 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/npclnt"
 	npo "ulambda/npobjsrv"
@@ -72,7 +73,7 @@ func MakeNpd() *Npd {
 }
 
 // XXX should/is happen only once for the one mount for :1110
-func (npd *Npd) Connect(conn net.Conn) npsrv.NpAPI {
+func (npd *Npd) Connect(conn net.Conn, fssrv *fssrv.FsServer) npsrv.NpAPI {
 	clnt := makeNpConn(conn, npd.named)
 	return clnt
 }

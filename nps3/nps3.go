@@ -12,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
@@ -67,8 +68,8 @@ func MakeNps3() *Nps3 {
 	return nps3
 }
 
-func (nps3 *Nps3) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(nps3, nps3.srv.GetFsServer(), conn)
+func (nps3 *Nps3) Connect(conn net.Conn, fssrv *fssrv.FsServer) npsrv.NpAPI {
+	return npo.MakeNpConn(nps3, fssrv, conn)
 }
 
 func (nps3 *Nps3) RootAttach(uname string) (npo.NpObj, npo.CtxI) {

@@ -87,6 +87,7 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 				log.Fatalf("Error making log file: %v", err)
 			}
 		}
+		log.Printf("srv0 %v\n", srv.fssrv)
 		// Start a server to listen for relay messages
 		go srv.runsrv(relayL, true)
 		// Load the config & continuously watch for changes

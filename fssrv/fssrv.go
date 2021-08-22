@@ -29,12 +29,14 @@ func MakeFsServer(fs Fs, root fs.NpObj, addr string,
 	replicated bool,
 	relayAddr string, config *npsrv.NpServerReplConfig) *FsServer {
 	fssrv := &FsServer{}
+	fssrv.fs = fs
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.npcm = npcm
 	fssrv.stats = stats.MkStats()
 	fssrv.wt = MkWatchTable()
 	fssrv.ct = MkConnTable()
+	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = npsrv.MakeReplicatedNpServer(fssrv, addr, false, replicated, relayAddr, config)
 	return fssrv
 }

@@ -113,10 +113,6 @@ func (pd *Procd) Done() {
 	pd.runq.Destroy()
 }
 
-func (pd *Procd) RegisterSession(sess np.Tsession) {
-	pd.st.RegisterSession(sess)
-}
-
 func (pd *Procd) readDone() bool {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()

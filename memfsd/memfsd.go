@@ -30,7 +30,8 @@ func MakeFsd(addr string) *Fsd {
 func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *Fsd {
 	seccomp.LoadFilter()
 	fsd := &Fsd{}
-	fsd.fssrv = fssrv.MakeFsServer(fsd, memfs.MkRootInode(),
+	fsd.root = memfs.MkRootInode()
+	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,
 		addr, npobjsrv.MakeConnMaker(), replicated, relayAddr, config)
 	fsd.ch = make(chan bool)
 	if err := fsd.MkNod("statsd", fsd.fssrv.GetStats()); err != nil {

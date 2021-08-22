@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type File struct {
@@ -29,7 +29,7 @@ func (f *File) SetParent(p *Dir) {
 	f.parent = p
 }
 
-func (f *File) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (f *File) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	f.Lock()
 	defer f.Unlock()
 	st := f.Inode.stat()
@@ -41,7 +41,7 @@ func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	f.Lock()
 	defer f.Unlock()
 
@@ -71,7 +71,7 @@ func (f *File) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversio
 	return cnt, nil
 }
 
-func (f *File) Read(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	f.Lock()
 	defer f.Unlock()
 

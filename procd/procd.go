@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"net"
 	"os"
 	"strings"
 	"sync"
@@ -15,14 +14,14 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
-	"ulambda/npsrv"
 	"ulambda/perf"
 	"ulambda/proc"
-	"ulambda/stats"
+	"ulambda/session"
 	usync "ulambda/sync"
 )
 
@@ -42,10 +41,10 @@ type Procd struct {
 	ls         map[string]*Lambda
 	coreBitmap []bool
 	coresAvail proc.Tcore
-	srv        *npsrv.NpServer
+	fssrv      *fssrv.FsServer
 	group      sync.WaitGroup
 	perf       *perf.Perf
-	st         *npo.SessionTable
+	st         *session.SessionTable
 	*fslib.FsLib
 	*proc.ProcCtl
 }
@@ -57,7 +56,7 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	db.Name("procd")
 	pd.root = pd.makeDir([]string{}, np.DMDIR, nil)
 	pd.root.time = time.Now().Unix()
-	pd.st = npo.MakeSessionTable()
+	pd.st = session.MakeSessionTable()
 	pd.ls = map[string]*Lambda{}
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
@@ -67,14 +66,14 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	if err != nil {
 		log.Fatalf("LocalIP %v\n", err)
 	}
-	pd.srv = npsrv.MakeNpServer(pd, pd.ip+":0")
+	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, pd.ip+":0", npo.MakeConnMaker(), false, "", nil)
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(kernel.PROCD, 0777)
 	pd.FsLib = fsl
 	pd.ProcCtl = proc.MakeProcCtl(fsl)
-	err = fsl.PostServiceUnion(pd.srv.MyAddr(), kernel.PROCD, pd.srv.MyAddr())
+	err = fsl.PostServiceUnion(pd.fssrv.MyAddr(), kernel.PROCD, pd.fssrv.MyAddr())
 	if err != nil {
-		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.srv.MyAddr(), err)
+		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.fssrv.MyAddr(), err)
 	}
 	pprof := pprofPath != ""
 	if pprof {
@@ -105,10 +104,6 @@ func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
 	return l, nil
 }
 
-func (pd *Procd) Connect(conn net.Conn) npsrv.NpAPI {
-	return npo.MakeNpConn(pd, pd.srv.GetFsServer(), conn)
-}
-
 func (pd *Procd) Done() {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
@@ -118,34 +113,10 @@ func (pd *Procd) Done() {
 	pd.runq.Destroy()
 }
 
-func (pd *Procd) WatchTable() *npo.WatchTable {
-	return nil
-}
-
-func (pd *Procd) ConnTable() *npo.ConnTable {
-	return nil
-}
-
-func (pd *Procd) RegisterSession(sess np.Tsession) {
-	pd.st.RegisterSession(sess)
-}
-
-func (pd *Procd) SessionTable() *npo.SessionTable {
-	return pd.st
-}
-
-func (pd *Procd) Stats() *stats.Stats {
-	return nil
-}
-
 func (pd *Procd) readDone() bool {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 	return pd.done
-}
-
-func (pd *Procd) RootAttach(uname string) (npo.NpObj, npo.CtxI) {
-	return pd.root, nil
 }
 
 // XXX Statsd information?

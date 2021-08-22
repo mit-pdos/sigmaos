@@ -1,16 +1,18 @@
-package npobjsrv
+package session
 
 import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fid"
+	"ulambda/fs"
 	np "ulambda/ninep"
 )
 
 type Session struct {
 	mu        sync.Mutex
-	fids      map[np.Tfid]*Fid
-	ephemeral map[NpObj]*Fid
+	fids      map[np.Tfid]*fid.Fid
+	ephemeral map[fs.NpObj]*fid.Fid
 }
 
 type SessionTable struct {
@@ -32,13 +34,13 @@ func (st *SessionTable) RegisterSession(id np.Tsession) {
 
 	if _, ok := st.sessions[id]; !ok {
 		new := &Session{}
-		new.fids = make(map[np.Tfid]*Fid)
-		new.ephemeral = make(map[NpObj]*Fid)
+		new.fids = make(map[np.Tfid]*fid.Fid)
+		new.ephemeral = make(map[fs.NpObj]*fid.Fid)
 		st.sessions[id] = new
 	}
 }
 
-func (st *SessionTable) lookupFid(id np.Tsession, fid np.Tfid) (*Fid, bool) {
+func (st *SessionTable) LookupFid(id np.Tsession, fid np.Tfid) (*fid.Fid, bool) {
 	db.DLPrintf("SETAB", "lookupFid %v %v", id, fid)
 
 	st.mu.Lock()
@@ -52,7 +54,7 @@ func (st *SessionTable) lookupFid(id np.Tsession, fid np.Tfid) (*Fid, bool) {
 	return f, ok
 }
 
-func (st *SessionTable) addFid(id np.Tsession, fid np.Tfid, f *Fid) {
+func (st *SessionTable) AddFid(id np.Tsession, fid np.Tfid, f *fid.Fid) {
 	db.DLPrintf("SETAB", "addFid %v %v %v", id, fid, f)
 
 	st.mu.Lock()
@@ -65,7 +67,7 @@ func (st *SessionTable) addFid(id np.Tsession, fid np.Tfid, f *Fid) {
 	sess.fids[fid] = f
 }
 
-func (st *SessionTable) delFid(id np.Tsession, fid np.Tfid) NpObj {
+func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) fs.NpObj {
 	db.DLPrintf("SETAB", "delFid %v %v", id, fid)
 
 	st.mu.Lock()
@@ -75,12 +77,12 @@ func (st *SessionTable) delFid(id np.Tsession, fid np.Tfid) NpObj {
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
 
-	o := sess.fids[fid].obj
+	o := sess.fids[fid].ObjU()
 	delete(sess.fids, fid)
 	return o
 }
 
-func (st *SessionTable) addEphemeral(id np.Tsession, o NpObj, f *Fid) {
+func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.NpObj, f *fid.Fid) {
 	db.DLPrintf("SETAB", "addEphemeral %v %v %v", id, o, f)
 
 	st.mu.Lock()
@@ -93,7 +95,7 @@ func (st *SessionTable) addEphemeral(id np.Tsession, o NpObj, f *Fid) {
 	sess.ephemeral[o] = f
 }
 
-func (st *SessionTable) delEphemeral(id np.Tsession, o NpObj) {
+func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.NpObj) {
 	db.DLPrintf("SETAB", "delEpehemeral %v %v", id, o)
 
 	st.mu.Lock()
@@ -106,7 +108,7 @@ func (st *SessionTable) delEphemeral(id np.Tsession, o NpObj) {
 	delete(sess.ephemeral, o)
 }
 
-func (st *SessionTable) getEphemeral(id np.Tsession) map[NpObj]*Fid {
+func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.NpObj]*fid.Fid {
 	st.mu.Lock()
 	sess := st.sessions[id]
 	st.mu.Unlock()
@@ -115,7 +117,7 @@ func (st *SessionTable) getEphemeral(id np.Tsession) map[NpObj]*Fid {
 	defer sess.mu.Unlock()
 
 	// XXX Making a full copy may be overkill...
-	e := make(map[NpObj]*Fid)
+	e := make(map[fs.NpObj]*fid.Fid)
 	for o, f := range sess.ephemeral {
 		e[o] = f
 	}
@@ -123,7 +125,7 @@ func (st *SessionTable) getEphemeral(id np.Tsession) map[NpObj]*Fid {
 	return e
 }
 
-func (st *SessionTable) IterateFids(fi func(*Fid)) {
+func (st *SessionTable) IterateFids(fi func(*fid.Fid)) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 

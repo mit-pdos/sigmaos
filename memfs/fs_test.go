@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Ctx struct {
@@ -28,7 +28,7 @@ func (ctx *Ctx) Uname() string {
 type TestState struct {
 	t     *testing.T
 	rooti *Dir
-	ctx   npo.CtxI
+	ctx   fs.CtxI
 }
 
 func newTest(t *testing.T) *TestState {

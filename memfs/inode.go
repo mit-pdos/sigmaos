@@ -9,8 +9,8 @@ import (
 	"unsafe"
 
 	db "ulambda/debug"
+	fs "ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Tinum uint64
@@ -24,11 +24,11 @@ type InodeI interface {
 	Version() np.TQversion
 	Size() np.Tlength
 	SetParent(*Dir)
-	Open(npo.CtxI, np.Tmode) error
-	Close(npo.CtxI, np.Tmode) error
-	Remove(npo.CtxI, string) error
-	Stat(npo.CtxI) (*np.Stat, error)
-	Rename(npo.CtxI, string, string) error
+	Open(fs.CtxI, np.Tmode) error
+	Close(fs.CtxI, np.Tmode) error
+	Remove(fs.CtxI, string) error
+	Stat(fs.CtxI) (*np.Stat, error)
+	Rename(fs.CtxI, string, string) error
 }
 
 type Inode struct {
@@ -112,11 +112,11 @@ func permToInode(uname string, p np.Tperm, parent *Dir) (InodeI, error) {
 	}
 }
 
-func (i *Inode) Open(ctx npo.CtxI, mode np.Tmode) error {
+func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (i *Inode) Close(ctx npo.CtxI, mode np.Tmode) error {
+func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) error {
 	return nil
 }
 
@@ -142,7 +142,7 @@ func (inode *Inode) stat() *np.Stat {
 	return stat
 }
 
-func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
+func (inode *Inode) Remove(ctx fs.CtxI, n string) error {
 	db.DLPrintf("MEMFS", "Remove: %v %v %v\n", n, inode, inode.parent)
 
 	dir := inode.parent
@@ -170,7 +170,7 @@ func (inode *Inode) Remove(ctx npo.CtxI, n string) error {
 	return nil
 }
 
-func (inode *Inode) Rename(ctx npo.CtxI, from, to string) error {
+func (inode *Inode) Rename(ctx fs.CtxI, from, to string) error {
 	if inode.parent == nil {
 		return errors.New("Cannot remove root directory")
 	}

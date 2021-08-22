@@ -3,64 +3,72 @@ package npobjsrv
 import (
 	"fmt"
 	"log"
-	"net"
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fid"
+	"ulambda/fs"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/npapi"
+	"ulambda/session"
 	"ulambda/stats"
 )
 
 type NpConn struct {
 	mu     sync.Mutex
 	closed bool
-	conn   net.Conn
-	osrv   NpObjSrv
-	wt     *WatchTable
-	ct     *ConnTable
-	st     *SessionTable
+	fssrv  *fssrv.FsServer
+	wt     *fssrv.WatchTable
+	ct     *fssrv.ConnTable
+	st     *session.SessionTable
 	stats  *stats.Stats
 }
 
-func MakeNpConn(osrv NpObjSrv, srv *fssrv.FsServer, conn net.Conn) *NpConn {
+type NpConnMaker struct{}
+
+func MakeConnMaker() npapi.NpConnMaker {
+	return &NpConnMaker{}
+}
+
+func (ncm *NpConnMaker) MakeNpConn(s npapi.FsServer) npapi.NpAPI {
 	npc := &NpConn{}
-	npc.conn = conn
-	npc.osrv = osrv
-	npc.wt = osrv.WatchTable()
-	npc.ct = osrv.ConnTable()
-	npc.st = osrv.SessionTable()
+	srv := s.(*fssrv.FsServer)
+	npc.fssrv = srv
+	npc.ct = srv.GetConnTable()
+	npc.st = srv.SessionTable()
+	npc.wt = srv.GetWatchTable()
 	npc.stats = srv.GetStats()
-	if npc.ct != nil {
-		npc.ct.Add(npc)
-	}
-	db.DLPrintf("NPOBJ", "MakeNpConn %v -> %v", conn, npc)
+	db.DLPrintf("NPOBJ", "MakeNpConn -> %v", npc)
 	return npc
 }
 
-func (npc *NpConn) Addr() string {
-	return npc.conn.LocalAddr().String()
-}
-
-func (npc *NpConn) lookup(sess np.Tsession, fid np.Tfid) (*Fid, *np.Rerror) {
-	f, ok := npc.st.lookupFid(sess, fid)
+func (npc *NpConn) lookup(sess np.Tsession, fid np.Tfid) (*fid.Fid, *np.Rerror) {
+	f, ok := npc.st.LookupFid(sess, fid)
 	if !ok {
 		return nil, np.ErrUnknownfid
 	}
 	return f, nil
 }
 
-func (npc *NpConn) add(sess np.Tsession, fid np.Tfid, f *Fid) {
-	npc.st.addFid(sess, fid, f)
+func (npc *NpConn) add(sess np.Tsession, fid np.Tfid, f *fid.Fid) {
+	npc.st.AddFid(sess, fid, f)
 }
 
 func (npc *NpConn) del(sess np.Tsession, fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
-	o := npc.st.delFid(sess, fid)
+	o := npc.st.DelFid(sess, fid)
 	if o.Perm().IsEphemeral() {
-		npc.st.delEphemeral(sess, o)
+		npc.st.DelEphemeral(sess, o)
 	}
+}
+
+func (npc *NpConn) Closed() bool {
+	defer npc.mu.Unlock()
+	npc.mu.Lock()
+
+	return npc.closed
 }
 
 func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -74,8 +82,8 @@ func (npc *NpConn) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.Rer
 }
 
 func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
-	root, ctx := npc.osrv.RootAttach(args.Uname)
-	npc.add(sess, args.Fid, &Fid{sync.Mutex{}, []string{}, root, root.Version(), ctx})
+	root, ctx := npc.fssrv.RootAttach(args.Uname)
+	npc.add(sess, args.Fid, fid.MakeFid(root, ctx))
 	rets.Qid = root.Qid()
 	return nil
 }
@@ -84,13 +92,13 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 func (npc *NpConn) Detach(sess np.Tsession) {
 
 	npc.mu.Lock()
-	ephemeral := npc.st.getEphemeral(sess)
+	ephemeral := npc.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
-		o.Remove(f.ctx, f.path[len(f.path)-1])
+		o.Remove(f.Ctx(), f.PathLast())
 		if npc.wt != nil {
 			// Wake up watches on parent dir as well
-			npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
+			npc.wt.WakeupWatch(f.Path(), f.PathDir())
 		}
 	}
 	npc.mu.Unlock()
@@ -106,7 +114,7 @@ func (npc *NpConn) Detach(sess np.Tsession) {
 	npc.mu.Unlock()
 }
 
-func makeQids(os []NpObj) []np.Tqid {
+func makeQids(os []fs.NpObj) []np.Tqid {
 	var qids []np.Tqid
 	for _, o := range os {
 		qids = append(qids, o.Qid())
@@ -126,7 +134,7 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 		if o == nil {
 			return &np.Rerror{"Closed by server"}
 		}
-		npc.add(sess, args.NewFid, &Fid{sync.Mutex{}, f.path, o, o.Version(), f.ctx})
+		npc.add(sess, args.NewFid, fid.MakeFid(o, f.Ctx()))
 	} else {
 		o := f.Obj()
 		if o == nil {
@@ -135,15 +143,15 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		d := o.(NpObjDir)
-		os, rest, err := d.Lookup(f.ctx, args.Wnames)
+		d := o.(fs.NpObjDir)
+		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
 		n := len(args.Wnames) - len(rest)
-		p := append(f.path, args.Wnames[:n]...)
+		p := append(f.Path(), args.Wnames[:n]...)
 		lo := os[len(os)-1]
-		npc.add(sess, args.NewFid, &Fid{sync.Mutex{}, p, lo, lo.Version(), f.ctx})
+		npc.add(sess, args.NewFid, fid.MakeFidPath(p, lo, f.Ctx()))
 		rets.Qids = makeQids(os)
 	}
 	return nil
@@ -157,7 +165,7 @@ func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.
 	if err != nil {
 		return err
 	}
-	npc.st.delFid(sess, args.Fid)
+	npc.st.DelFid(sess, args.Fid)
 	return nil
 }
 
@@ -173,8 +181,8 @@ func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rer
 	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	npc.stats.Path(f.path)
-	r := o.Open(f.ctx, args.Mode)
+	npc.stats.Path(f.Path())
+	r := o.Open(f.Ctx(), args.Mode)
 	if err != nil {
 		return &np.Rerror{r.Error()}
 	}
@@ -194,28 +202,28 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 		return &np.Rerror{"Closed by server"}
 	}
 	if args.Version != np.NoV && args.Version != o.Version() {
-		s := fmt.Sprintf("Version mismatch %v %v %v", f.path, args.Version, o.Version())
+		s := fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())
 		return &np.Rerror{s}
 	}
-	p := f.path
+	p := f.Path()
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	ws := npc.wt.WatchLookup(p)
+	ws := npc.wt.WatchLookupL(p)
 	ws.Watch(npc)
 	return nil
 }
 
-func (npc *NpConn) makeFid(sess np.Tsession, ctx CtxI, dir []string, name string, o NpObj, eph bool) *Fid {
+func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name string, o fs.NpObj, eph bool) *fid.Fid {
 	p := np.Copy(dir)
-	nf := &Fid{sync.Mutex{}, append(p, name), o, o.Version(), ctx}
+	nf := fid.MakeFidPath(append(p, name), o, ctx)
 	if eph {
 		npc.mu.Lock()
-		npc.st.addEphemeral(sess, o, nf)
+		npc.st.AddEphemeral(sess, o, nf)
 		npc.mu.Unlock()
 	}
 	if npc.wt != nil {
-		npc.wt.WakeupWatch(nf.path, dir)
+		npc.wt.WakeupWatch(nf.Path(), dir)
 	}
 	return nf
 }
@@ -238,31 +246,24 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 	for {
-		d := o.(NpObjDir)
-		var ws *Watchers
-		if npc.wt != nil {
-			ws = npc.wt.WatchLookup(append(f.path, names[0]))
-		}
-		o1, err := d.Create(f.ctx, names[0], args.Perm, args.Mode)
+		d := o.(fs.NpObjDir)
+		ws := npc.wt.WatchLookupL(append(f.Path(), names[0]))
+		o1, err := d.Create(f.Ctx(), names[0], args.Perm, args.Mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
 		if err == nil {
-			if ws != nil {
-				ws.mu.Unlock()
-			}
-			nf := npc.makeFid(sess, f.ctx, f.path, names[0], o1, args.Perm.IsEphemeral())
+			ws.Unlock()
+			nf := npc.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
 			npc.add(sess, args.Fid, nf)
 			rets.Qid = o1.Qid()
 			break
 		} else {
-			if npc.wt != nil && err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+			if err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
 				err := ws.Watch(npc)
 				if err != nil {
 					return err
 				}
 			} else {
-				if ws != nil {
-					ws.mu.Unlock()
-				}
+				ws.Unlock()
 				return &np.Rerror{err.Error()}
 			}
 		}
@@ -311,20 +312,19 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	if len(f.path) == 0 { // exit?
+	if len(f.Path()) == 0 { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
-		npc.osrv.Done()
+		npc.fssrv.Done()
 		return nil
 	}
 	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	r := o.Remove(f.ctx, f.path[len(f.path)-1])
+	r := o.Remove(f.Ctx(), f.PathLast())
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
 	if npc.wt != nil {
 		db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
-		// Wake up watches on parent dir as well
-		npc.wt.WakeupWatch(f.path, f.path[:len(f.path)-1])
+		npc.wt.WakeupWatch(f.Path(), f.PathDir())
 	}
 	// delete from ephemeral table, if ephemeral
 	npc.del(sess, args.Fid)
@@ -342,26 +342,26 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 		return &np.Rerror{"Closed by server"}
 	}
 	lo := o
-	if len(f.path) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == "." { // exit?
+	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == "." { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
-		npc.osrv.Done()
+		npc.fssrv.Done()
 		return nil
 	}
 	if len(args.Wnames) > 0 {
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		d := o.(NpObjDir)
-		os, rest, err := d.Lookup(f.ctx, args.Wnames)
+		d := o.(fs.NpObjDir)
+		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
 		if err != nil || len(rest) != 0 {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		lo = os[len(os)-1]
 	}
-	npc.stats.Path(f.path)
-	fname := append(f.path, args.Wnames[0:len(args.Wnames)]...)
-	dname := append(f.path, args.Wnames[0:len(args.Wnames)-1]...)
-	r := lo.Remove(f.ctx, fname[len(fname)-1])
+	npc.stats.Path(f.Path())
+	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
+	dname := append(f.Path(), args.Wnames[0:len(args.Wnames)-1]...)
+	r := lo.Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
@@ -372,7 +372,7 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 	// XXX delete from ephemeral table, if ephemeral
 	//	npc.del(sess, args.Fid) // XXX doing this here causes "unkown Fid" errors in fslib tests
 	if lo.Perm().IsEphemeral() {
-		npc.st.delEphemeral(sess, lo)
+		npc.st.DelEphemeral(sess, lo)
 	}
 	return nil
 }
@@ -388,7 +388,7 @@ func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rer
 	if o == nil {
 		return &np.Rerror{"Closed by server"}
 	}
-	st, r := o.Stat(f.ctx)
+	st, r := o.Stat(f.Ctx())
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
@@ -409,13 +409,13 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 	}
 	if args.Stat.Name != "" {
 		// XXX if dst exists run watch?
-		err := o.Rename(f.ctx, f.path[len(f.path)-1], args.Stat.Name)
+		err := o.Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		dst := append(f.path[:len(f.path)-1], np.Split(args.Stat.Name)...)
-		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.path[len(f.path)-1], args.Stat.Name)
-		f.path = dst
+		dst := append(f.PathDir(), np.Split(args.Stat.Name)...)
+		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.PathLast(), args.Stat.Name)
+		f.SetPath(dst)
 		if npc.wt != nil {
 			npc.wt.WakeupWatch(dst, nil)
 		}
@@ -444,17 +444,17 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 		return &np.Rerror{"Closed by server"}
 	}
 	switch d1 := oo.(type) {
-	case NpObjDir:
-		d2, ok := no.(NpObjDir)
+	case fs.NpObjDir:
+		d2, ok := no.(fs.NpObjDir)
 		if !ok {
 			return np.ErrNotDir
 		}
-		err := d1.Renameat(oldf.ctx, args.OldName, d2, args.NewName)
+		err := d1.Renameat(oldf.Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
 		if npc.wt != nil {
-			dst := np.Copy(newf.path)
+			dst := np.Copy(newf.Path())
 			dst = append(dst, args.NewName)
 			npc.wt.WakeupWatch(dst, nil)
 		}
@@ -482,24 +482,24 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		d := o.(NpObjDir)
-		os, rest, err := d.Lookup(f.ctx, args.Wnames)
+		d := o.(fs.NpObjDir)
+		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
 		if err != nil || len(rest) != 0 {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		lo = os[len(os)-1]
 	}
-	npc.stats.Path(f.path)
-	r := lo.Open(f.ctx, args.Mode)
+	npc.stats.Path(f.Path())
+	r := lo.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
 	v := lo.Version()
 	switch i := lo.(type) {
-	case NpObjDir:
+	case fs.NpObjDir:
 		return np.ErrNotFile
-	case NpObjFile:
-		rets.Data, r = i.Read(f.ctx, args.Offset, np.Tsize(lo.Size()), v)
+	case fs.NpObjFile:
+		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), v)
 		rets.Version = v
 		if r != nil {
 			return &np.Rerror{r.Error()}
@@ -531,13 +531,13 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 	if args.Perm != 0 { // create?
 		names = names[0 : len(args.Wnames)-1]
 	}
-	dname := append(f.path, names[0:len(args.Wnames)-1]...)
+	dname := append(f.Path(), names[0:len(args.Wnames)-1]...)
 	if len(names) > 0 {
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		d := o.(NpObjDir)
-		os, rest, r := d.Lookup(f.ctx, names)
+		d := o.(fs.NpObjDir)
+		os, rest, r := d.Lookup(f.Ctx(), names)
 		if r != nil || len(rest) != 0 {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
@@ -547,29 +547,24 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		if !lo.Perm().IsDir() {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
-		d := lo.(NpObjDir)
+		d := lo.(fs.NpObjDir)
 		name := args.Wnames[len(args.Wnames)-1]
 		for {
-			var ws *Watchers
-			if npc.wt != nil {
-				ws = npc.wt.WatchLookup(append(dname, name))
-			}
-			lo, r = d.Create(f.ctx, name, args.Perm, args.Mode)
+			ws := npc.wt.WatchLookupL(append(dname, name))
+			lo, r = d.Create(f.Ctx(), name, args.Perm, args.Mode)
 			if r == nil {
-				if ws != nil {
-					ws.mu.Unlock()
-				}
-				npc.makeFid(sess, f.ctx, dname, name, lo, args.Perm.IsEphemeral())
+				ws.Unlock()
+				npc.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 				break
 			} else {
-				if npc.wt != nil && r.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+				if r.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
 					err := ws.Watch(npc)
 					if err != nil {
 						return err
 					}
 				} else {
 					if ws != nil {
-						ws.mu.Unlock()
+						ws.Unlock()
 					}
 
 					return &np.Rerror{r.Error()}
@@ -578,17 +573,17 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 
 		}
 	} else {
-		npc.stats.Path(f.path)
-		r = lo.Open(f.ctx, args.Mode)
+		npc.stats.Path(f.Path())
+		r = lo.Open(f.Ctx(), args.Mode)
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}
 	}
 	switch i := lo.(type) {
-	case NpObjDir:
+	case fs.NpObjDir:
 		return np.ErrNotFile
-	case NpObjFile:
-		rets.Count, r = i.Write(f.ctx, args.Offset, args.Data, args.Version)
+	case fs.NpObjFile:
+		rets.Count, r = i.Write(f.Ctx(), args.Offset, args.Data, args.Version)
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}

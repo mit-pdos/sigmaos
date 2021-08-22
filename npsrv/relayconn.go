@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/npapi"
 	"ulambda/npcodec"
 )
 
@@ -17,7 +18,7 @@ type RelayConn struct {
 	rMu    sync.Mutex
 	wMu    sync.Mutex
 	conn   net.Conn
-	np     NpAPI
+	np     npapi.NpAPI
 	br     *bufio.Reader
 	bw     *bufio.Writer
 	dst    string

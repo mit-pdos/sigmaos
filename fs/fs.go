@@ -1,17 +1,8 @@
-package npobjsrv
+package fs
 
 import (
 	np "ulambda/ninep"
 )
-
-type NpObjSrv interface {
-	// Maybe pass uname to RootAttach()
-	RootAttach(string) (NpObj, CtxI)
-	Done()
-	WatchTable() *WatchTable
-	ConnTable() *ConnTable
-	SessionTable() *SessionTable
-}
 
 type CtxI interface {
 	Uname() string

@@ -10,11 +10,11 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fid"
 	"ulambda/fslib"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/npapi"
 	"ulambda/npclnt"
-	"ulambda/npobjsrv"
 	"ulambda/proc"
 )
 
@@ -40,13 +40,13 @@ type NpServerReplConfig struct {
 	NextChan     *RelayConn
 	ops          chan *RelayOp
 	inFlight     *RelayOpSet
-	fids         map[np.Tfid]*npobjsrv.Fid
+	fids         map[np.Tfid]*fid.Fid
 	*fslib.FsLib
 	*proc.ProcCtl
 	*npclnt.NpClnt
 }
 
-func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
+func MakeReplicatedNpServer(fs npapi.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
@@ -61,40 +61,36 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			nil, nil, nil, nil,
 			ops,
 			MakeRelayOpSet(),
-			map[np.Tfid]*npobjsrv.Fid{},
+			map[np.Tfid]*fid.Fid{},
 			config.FsLib,
 			proc.MakeProcCtl(config.FsLib),
 			config.NpClnt}
 	}
-	srv := &NpServer{npc, address,
-		fssrv.MkFsServer(),
+	srv := &NpServer{"",
+		fs,
 		wireCompat, replicated,
 		MakeReplyCache(),
 		emptyConfig,
 	}
-	return srv
-}
-
-func (srv *NpServer) Start() {
 	var l net.Listener
-	if srv.replicated {
+	if replicated {
 		// Create and start the relay server listener
-		db.DLPrintf("RSRV", "listen myaddr %v\n", srv.addr)
-		relayL, err := net.Listen("tcp", srv.replConfig.RelayAddr)
+		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
+		relayL, err := net.Listen("tcp", relayAddr)
 		if err != nil {
 			log.Fatal("Relay listen error:", err)
 		}
 		// Set up op logging if necessary
-		if srv.replConfig.LogOps {
-			err = srv.replConfig.MakeFile("name/"+srv.replConfig.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
+		if config.LogOps {
+			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
 			if err != nil {
 				log.Fatalf("Error making log file: %v", err)
 			}
 		}
+		log.Printf("srv0 %v\n", srv.fssrv)
 		// Start a server to listen for relay messages
 		go srv.runsrv(relayL)
 		// Load the config & continuously watch for changes
-		config := srv.getNewReplConfig()
 		srv.reloadReplConfig(config)
 		go srv.runReplConfigUpdater()
 		// Watch for other servers that go down, and spawn a lambda to update config
@@ -103,13 +99,14 @@ func (srv *NpServer) Start() {
 		srv.setupRelay()
 	}
 	// Create and start the main server listener
-	db.DLPrintf("9PCHAN", "listen myaddr %v\n", srv.addr)
-	l, err := net.Listen("tcp", srv.addr)
+	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal("Listen error:", err)
 	}
 	srv.addr = l.Addr().String()
 	go srv.runsrv(l)
+	return srv
 }
 
 func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {

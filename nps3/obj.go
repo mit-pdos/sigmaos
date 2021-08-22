@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 func mode(key string) np.Tperm {
@@ -26,7 +26,7 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) npo.NpObj {
+func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) fs.NpObj {
 	id := nps3.nextId
 	nps3.nextId += 1
 
@@ -39,7 +39,7 @@ func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) npo.NpObj {
 	return o
 }
 
-func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, d *Dir) npo.NpObj {
+func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, d *Dir) fs.NpObj {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
 	return nps3.makeObjL(key, t, d)
@@ -98,7 +98,7 @@ func (o *Obj) stat() *np.Stat {
 	return st
 }
 
-func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	db.DLPrintf("NPS3", "Stat: %v\n", o)
 	var err error
 	o.mu.Lock()
@@ -110,7 +110,7 @@ func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return o.stat(), err
 }
 
-func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {
+func (o *Obj) Wstat(ctx fs.CtxI, st *np.Stat) error {
 	return nil
 }
 
@@ -168,7 +168,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 	return result.Body, nil
 }
 
-func (o *Obj) Read(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	db.DLPrintf("NPS3", "Read: %v %v %v\n", o.key, off, cnt)
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
@@ -205,15 +205,15 @@ func (o *Obj) Read(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) (
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Close(ctx npo.CtxI, m np.Tmode) error {
+func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Remove(ctx npo.CtxI, name string) error {
+func (o *Obj) Remove(ctx fs.CtxI, name string) error {
 	key := np.Join(o.key)
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
@@ -229,14 +229,14 @@ func (o *Obj) Remove(ctx npo.CtxI, name string) error {
 	return nil
 }
 
-func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
+func (o *Obj) Rename(ctx fs.CtxI, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
-func (o *Obj) Write(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("NPS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
@@ -273,6 +273,6 @@ func (o *Obj) Write(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.
 }
 
 // sub directories will be implicitly created; fake write
-func (o *Obj) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (o *Obj) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return np.Tsize(len(b)), nil
 }

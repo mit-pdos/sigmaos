@@ -9,8 +9,8 @@ import (
 	"log"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 // XXX move elsewhere
@@ -29,11 +29,11 @@ func (pd *Procd) MakeObj(path []string, t np.Tperm, p *Dir) *Obj {
 }
 
 // check permissions etc.
-func (o *Obj) Open(ctx npo.CtxI, m np.Tmode) error {
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Close(ctx npo.CtxI, m np.Tmode) error {
+func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {
 	return nil
 }
 
@@ -64,19 +64,19 @@ func (o *Obj) Qid() np.Tqid {
 	return np.Tqid{}
 }
 
-func (o *Obj) Remove(ctx npo.CtxI, name string) error {
+func (o *Obj) Remove(ctx fs.CtxI, name string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Rename(ctx npo.CtxI, from, to string) error {
+func (o *Obj) Rename(ctx fs.CtxI, from, to string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (o *Obj) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	return o.stat(), nil
 }
 
-func (o *Obj) Wstat(ctx npo.CtxI, st *np.Stat) error {
+func (o *Obj) Wstat(ctx fs.CtxI, st *np.Stat) error {
 	return nil
 }
 

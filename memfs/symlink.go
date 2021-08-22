@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Symlink struct {
@@ -31,7 +31,7 @@ func (s *Symlink) SetParent(p *Dir) {
 	s.parent = p
 }
 
-func (s *Symlink) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	s.Lock()
 	defer s.Unlock()
 	st := s.Inode.stat()
@@ -39,7 +39,7 @@ func (s *Symlink) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (s *Symlink) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+func (s *Symlink) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -52,7 +52,7 @@ func (s *Symlink) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQver
 	return np.Tsize(len(data)), nil
 }
 
-func (s *Symlink) Read(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	s.Lock()
 	defer s.Unlock()
 

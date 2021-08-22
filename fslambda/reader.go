@@ -6,12 +6,12 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/depproc"
+	"ulambda/fs"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Reader struct {
@@ -20,7 +20,7 @@ type Reader struct {
 	pid    string
 	input  string
 	output string
-	pipe   npo.NpObj
+	pipe   fs.NpObj
 }
 
 func MakeReader(args []string) (*Reader, error) {
@@ -75,7 +75,7 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.(npo.NpObjFile).Write(nil, 0, data, np.NoV)
+		_, err = r.pipe.(fs.NpObjFile).Write(nil, 0, data, np.NoV)
 		if err != nil {
 			log.Fatal(err)
 		}

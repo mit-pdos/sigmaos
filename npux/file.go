@@ -5,8 +5,8 @@ import (
 	"os"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type File struct {
@@ -22,7 +22,7 @@ func (npux *NpUx) makeFile(path []string, t np.Tperm, p *Dir) *File {
 	return f
 }
 
-func (f *File) Open(ctx npo.CtxI, m np.Tmode) error {
+func (f *File) Open(ctx fs.CtxI, m np.Tmode) error {
 	db.DLPrintf("UXD", "%v: Open %v %v path %v\n", ctx, f, m, f.Path())
 	file, err := os.OpenFile(f.Path(), uxFlags(m), 0)
 	if err != nil {
@@ -58,7 +58,7 @@ func (f *File) uxRead(off int64, cnt int) ([]byte, error) {
 	return b[:n], err
 }
 
-func (f *File) Read(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	db.DLPrintf("UXD", "%v: Read: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b, err := f.uxRead(int64(off), int(cnt))
 	if err != nil {
@@ -67,7 +67,7 @@ func (f *File) Read(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 	return b, nil
 }
 
-func (f *File) Write(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("UXD", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
 	return f.uxWrite(int64(off), b)
 }

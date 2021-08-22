@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"ulambda/fslib"
-	//	np "ulambda/ninep"
+	"ulambda/seccomp"
 	"ulambda/sync"
 )
 
@@ -153,6 +153,8 @@ func (pctl *ProcCtl) WaitEvict(pid string) error {
 func (pctl *ProcCtl) Started(pid string) error {
 	pStartCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
 	pStartCond.Destroy()
+	// Load a seccomp filter.
+	seccomp.LoadFilter()
 	return nil
 }
 

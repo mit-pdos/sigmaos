@@ -39,6 +39,7 @@ func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr st
 	npux.st = npo.MakeSessionTable()
 	db.Name("npuxd")
 	npux.srv = npsrv.MakeReplicatedNpServer(npux, addr, false, replicated, relayAddr, config)
+	npux.srv.Start()
 	fsl := fslib.MakeFsLib("npux")
 	fsl.Mkdir(kernel.UX, 0777)
 	err := fsl.PostServiceUnion(npux.srv.MyAddr(), kernel.UX, npux.srv.MyAddr())

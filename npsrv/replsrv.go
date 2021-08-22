@@ -66,30 +66,35 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			proc.MakeProcCtl(config.FsLib),
 			config.NpClnt}
 	}
-	srv := &NpServer{npc, "",
+	srv := &NpServer{npc, address,
 		fssrv.MkFsServer(),
 		wireCompat, replicated,
 		MakeReplyCache(),
 		emptyConfig,
 	}
+	return srv
+}
+
+func (srv *NpServer) Start() {
 	var l net.Listener
-	if replicated {
+	if srv.replicated {
 		// Create and start the relay server listener
-		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
-		relayL, err := net.Listen("tcp", relayAddr)
+		db.DLPrintf("RSRV", "listen myaddr %v\n", srv.addr)
+		relayL, err := net.Listen("tcp", srv.replConfig.RelayAddr)
 		if err != nil {
 			log.Fatal("Relay listen error:", err)
 		}
 		// Set up op logging if necessary
-		if config.LogOps {
-			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
+		if srv.replConfig.LogOps {
+			err = srv.replConfig.MakeFile("name/"+srv.replConfig.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
 			if err != nil {
 				log.Fatalf("Error making log file: %v", err)
 			}
 		}
 		// Start a server to listen for relay messages
-		go srv.runsrv(relayL, true)
+		go srv.runsrv(relayL)
 		// Load the config & continuously watch for changes
+		config := srv.getNewReplConfig()
 		srv.reloadReplConfig(config)
 		go srv.runReplConfigUpdater()
 		// Watch for other servers that go down, and spawn a lambda to update config
@@ -98,14 +103,13 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 		srv.setupRelay()
 	}
 	// Create and start the main server listener
-	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
-	l, err := net.Listen("tcp", address)
+	db.DLPrintf("9PCHAN", "listen myaddr %v\n", srv.addr)
+	l, err := net.Listen("tcp", srv.addr)
 	if err != nil {
 		log.Fatal("Listen error:", err)
 	}
 	srv.addr = l.Addr().String()
-	go srv.runsrv(l, false)
-	return srv
+	go srv.runsrv(l)
 }
 
 func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {

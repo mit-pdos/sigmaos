@@ -36,10 +36,9 @@ type RelayChannel struct {
 	c       *Channel
 	ops     chan *RelayOp
 	replies chan *RelayOp
-	wrapped bool
 }
 
-func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
+func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
 	npapi := npc.Connect(conn)
 	c := &Channel{sync.Mutex{},
 		npc,
@@ -52,7 +51,7 @@ func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *Relay
 		false,
 		[]np.Tsession{},
 	}
-	r := &RelayChannel{srv, c, ops, make(chan *RelayOp), wrapped}
+	r := &RelayChannel{srv, c, ops, make(chan *RelayOp)}
 	go r.writer()
 	go r.reader()
 	return r

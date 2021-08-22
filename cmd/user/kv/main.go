@@ -27,9 +27,9 @@ func main() {
 	}
 	sctl := depproc.MakeDepProcCtl(fsl.FsLib, depproc.DEFAULT_JOB_ID)
 	sctl.Started(os.Args[1])
-	fsd.GetSrv().GetFsServer().GetStats().MakeElastic(fsl.Clnt(), os.Args[1])
+	fsd.GetSrv().GetStats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()
-	fsd.GetSrv().GetFsServer().GetStats().Done()
+	fsd.GetSrv().GetStats().Done()
 	sctl.Exited(os.Args[1])
 	fsl.ExitFs(name)
 }

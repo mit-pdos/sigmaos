@@ -50,6 +50,10 @@ func (fsd *Fsd) Done() {
 	fsd.ch <- true
 }
 
+func (fsd *Fsd) GetSrv() *fssrv.FsServer {
+	return fsd.fssrv
+}
+
 func (fsd *Fsd) Addr() string {
 	return fsd.fssrv.MyAddr()
 }

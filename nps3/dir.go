@@ -7,25 +7,25 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	npo "ulambda/npobjsrv"
 )
 
 type Dir struct {
 	*Obj
-	dirents map[string]npo.NpObj
+	dirents map[string]fs.NpObj
 }
 
 func (nps3 *Nps3) makeDir(key []string, t np.Tperm, p *Dir) *Dir {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
 	o := nps3.makeObjL(key, t, p)
-	dir := &Dir{o.(*Obj), make(map[string]npo.NpObj)}
+	dir := &Dir{o.(*Obj), make(map[string]fs.NpObj)}
 	return dir
 }
 
-func (d *Dir) lookupDirent(name string) (npo.NpObj, bool) {
+func (d *Dir) lookupDirent(name string) (fs.NpObj, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	n, ok := d.dirents[name]
@@ -58,7 +58,7 @@ func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 	return name, m, !ok
 }
 
-func (d *Dir) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	db.DLPrintf("NPS3", "Stat Dir: %v\n", d)
 	var err error
 	d.mu.Lock()
@@ -106,7 +106,7 @@ func (d *Dir) s3ReadDirL() error {
 	return nil
 }
 
-func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
 	db.DLPrintf("NPS3", "%v: lookup %v %v\n", ctx, d, p)
 	if !d.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
@@ -120,13 +120,13 @@ func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 		return nil, nil, fmt.Errorf("file not found")
 	}
 	if len(p) == 1 {
-		return []npo.NpObj{o1}, nil, nil
+		return []fs.NpObj{o1}, nil, nil
 	} else {
 		return o1.(*Dir).Lookup(ctx, p[1:])
 	}
 }
 
-func (d *Dir) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	var dirents []*np.Stat
 	db.DLPrintf("NPS3", "readDir: %v\n", d)
 	d.mu.Lock()
@@ -149,7 +149,7 @@ func (d *Dir) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 // XXX directories don't fully work: there is a fake directory, when
 // trying to read it we get an error.  Maybe create . or .. in the
 // directory args.Name, to force the directory into existence
-func (d *Dir) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.NpObj, error) {
 	if perm.IsDir() {
 		o1 := d.nps3.makeDir(append(d.key, name), np.DMDIR, d)
 		return o1, nil
@@ -175,6 +175,6 @@ func (d *Dir) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.
 	return o1, nil
 }
 
-func (d *Dir) Renameat(ctx npo.CtxI, from string, od npo.NpObjDir, to string) error {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.NpObjDir, to string) error {
 	return fmt.Errorf("not supported")
 }

@@ -1,18 +1,19 @@
-package npobjsrv
+package fssrv
 
 import (
 	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/npapi"
 )
 
 type Watch struct {
-	npc *NpConn
+	npc npapi.NpAPI
 	ch  chan bool
 }
 
-func mkWatch(npc *NpConn) *Watch {
+func mkWatch(npc npapi.NpAPI) *Watch {
 	return &Watch{npc, make(chan bool)}
 }
 
@@ -27,16 +28,18 @@ func mkWatchers() *Watchers {
 	return w
 }
 
-func (w *Watchers) Watch(npc *NpConn) *np.Rerror {
+func (w *Watchers) Unlock() {
+	w.mu.Unlock()
+}
+
+func (w *Watchers) Watch(npc npapi.NpAPI) *np.Rerror {
 	ws := mkWatch(npc)
 	w.watchers = append(w.watchers, ws)
 	w.mu.Unlock()
 	<-ws.ch
 	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", w)
 
-	defer ws.npc.mu.Unlock()
-	ws.npc.mu.Lock()
-	if npc.closed {
+	if npc.Closed() {
 		// XXX Bettter error message?
 		return &np.Rerror{"Closed by client"}
 	}
@@ -52,7 +55,7 @@ func (ws *Watchers) wakeupWatch() {
 	}
 }
 
-func (ws *Watchers) deleteConn(npc *NpConn) {
+func (ws *Watchers) deleteConn(npc npapi.NpAPI) {
 	defer ws.mu.Unlock()
 	ws.mu.Lock()
 
@@ -82,7 +85,7 @@ func MkWatchTable() *WatchTable {
 // Returns locked Watchers
 // XXX Normalize paths (e.g., delete extra /) so that matches
 // work for equivalent paths
-func (wt *WatchTable) WatchLookup(dname []string) *Watchers {
+func (wt *WatchTable) WatchLookupL(dname []string) *Watchers {
 	defer wt.mu.Unlock()
 	p := np.Join(dname)
 	wt.mu.Lock()
@@ -123,7 +126,7 @@ func (wt *WatchTable) WakeupWatch(fn, dir []string) {
 }
 
 // Wakeup threads waiting for a watch on this connection
-func (wt *WatchTable) DeleteConn(npc *NpConn) {
+func (wt *WatchTable) DeleteConn(npc npapi.NpAPI) {
 	wt.mu.Lock()
 	defer wt.mu.Unlock()
 

@@ -2,18 +2,16 @@ package proxy
 
 import (
 	"log"
-	"net"
 	"os/user"
 	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/npapi"
 	"ulambda/npclnt"
-	npo "ulambda/npobjsrv"
-	"ulambda/npsrv"
+	"ulambda/session"
 )
 
 //
@@ -25,20 +23,22 @@ const MAXSYMLINK = 20
 // The connection from the kernel/client
 type NpConn struct {
 	mu    sync.Mutex
-	conn  net.Conn
 	clnt  *npclnt.NpClnt
 	uname string
 	fids  map[np.Tfid]*npclnt.NpChan // The outgoing channels to servers proxied
 	named string
 }
 
-func makeNpConn(conn net.Conn, named string) *NpConn {
+func makeNpConn(named string) *NpConn {
 	npc := &NpConn{}
-	npc.conn = conn
 	npc.clnt = npclnt.MakeNpClnt()
 	npc.fids = make(map[np.Tfid]*npclnt.NpChan)
 	npc.named = named
 	return npc
+}
+
+func (npc *NpConn) Closed() bool {
+	return false
 }
 
 func (npc *NpConn) npch(fid np.Tfid) *npclnt.NpChan {
@@ -65,7 +65,7 @@ func (npc *NpConn) delch(fid np.Tfid) {
 
 type Npd struct {
 	named string
-	st    *npo.SessionTable
+	st    *session.SessionTable
 }
 
 func MakeNpd() *Npd {
@@ -73,21 +73,21 @@ func MakeNpd() *Npd {
 }
 
 // XXX should/is happen only once for the one mount for :1110
-func (npd *Npd) Connect(conn net.Conn, fssrv *fssrv.FsServer) npsrv.NpAPI {
-	clnt := makeNpConn(conn, npd.named)
+func (npd *Npd) Connect() npapi.NpAPI {
+	clnt := makeNpConn(npd.named)
 	return clnt
 }
 
-func (npd *Npd) SessionTable() *npo.SessionTable {
+func (npd *Npd) SessionTable() *session.SessionTable {
 	if npd.st == nil {
-		npd.st = npo.MakeSessionTable()
+		npd.st = session.MakeSessionTable()
 	}
 	return npd.st
 }
 
 func (npd *Npd) RegisterSession(sess np.Tsession) {
 	if npd.st == nil {
-		npd.st = npo.MakeSessionTable()
+		npd.st = session.MakeSessionTable()
 	}
 	npd.st.RegisterSession(sess)
 }

@@ -10,11 +10,11 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fid"
 	"ulambda/fslib"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/npapi"
 	"ulambda/npclnt"
-	"ulambda/npobjsrv"
 	"ulambda/proc"
 )
 
@@ -40,13 +40,13 @@ type NpServerReplConfig struct {
 	NextChan     *RelayConn
 	ops          chan *RelayOp
 	inFlight     *RelayOpSet
-	fids         map[np.Tfid]*npobjsrv.Fid
+	fids         map[np.Tfid]*fid.Fid
 	*fslib.FsLib
 	*proc.ProcCtl
 	*npclnt.NpClnt
 }
 
-func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
+func MakeReplicatedNpServer(fs npapi.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
 	var emptyConfig *NpServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
@@ -61,13 +61,13 @@ func MakeReplicatedNpServer(npc NpConn, address string, wireCompat bool, replica
 			nil, nil, nil, nil,
 			ops,
 			MakeRelayOpSet(),
-			map[np.Tfid]*npobjsrv.Fid{},
+			map[np.Tfid]*fid.Fid{},
 			config.FsLib,
 			proc.MakeProcCtl(config.FsLib),
 			config.NpClnt}
 	}
-	srv := &NpServer{npc, "",
-		fssrv.MkFsServer(),
+	srv := &NpServer{"",
+		fs,
 		wireCompat, replicated,
 		MakeReplyCache(),
 		emptyConfig,

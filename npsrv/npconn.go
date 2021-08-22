@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/npapi"
 	"ulambda/npcodec"
 )
 
@@ -20,10 +20,10 @@ const (
 
 type Channel struct {
 	mu         sync.Mutex
-	npc        NpConn
+	fssrv      npapi.FsServer
 	conn       net.Conn
 	wireCompat bool
-	np         NpAPI
+	np         npapi.NpAPI
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
@@ -31,10 +31,10 @@ type Channel struct {
 	sessions   []np.Tsession
 }
 
-func MakeChannel(npc NpConn, conn net.Conn, fssrv *fssrv.FsServer, wireCompat bool) *Channel {
-	npapi := npc.Connect(conn, fssrv)
+func MakeChannel(conn net.Conn, fssrv npapi.FsServer, wireCompat bool) *Channel {
+	npapi := fssrv.Connect()
 	c := &Channel{sync.Mutex{},
-		npc,
+		fssrv,
 		conn,
 		wireCompat,
 		npapi,
@@ -192,7 +192,7 @@ func (c *Channel) serve(fc *np.Fcall) {
 	t := fc.Tag
 	c.registerSession(fc.Session)
 	// XXX Avoid doing this every time
-	c.npc.SessionTable().RegisterSession(fc.Session)
+	c.fssrv.SessionTable().RegisterSession(fc.Session)
 	reply, rerror := c.dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror

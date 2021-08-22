@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Dev interface {
@@ -33,7 +33,7 @@ func (d *Device) SetParent(p *Dir) {
 	d.parent = p
 }
 
-func (d *Device) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (d *Device) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	d.Lock()
 	defer d.Unlock()
 	st := d.Inode.stat()
@@ -41,7 +41,7 @@ func (d *Device) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (d *Device) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+func (d *Device) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	d.Lock()
 	defer d.Unlock()
 	if v != np.NoV && d.version != v {
@@ -52,7 +52,7 @@ func (d *Device) Write(ctx npo.CtxI, offset np.Toffset, data []byte, v np.TQvers
 	return d.d.Write(offset, data)
 }
 
-func (d *Device) Read(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (d *Device) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	d.Lock()
 	defer d.Unlock()
 

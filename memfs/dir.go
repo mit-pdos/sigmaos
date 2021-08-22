@@ -7,9 +7,9 @@ import (
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	npo "ulambda/npobjsrv"
 )
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
@@ -75,7 +75,7 @@ func (dir *Dir) lookupL(name string) (InodeI, error) {
 	}
 }
 
-func (dir *Dir) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (dir *Dir) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	dir.Lock()
 	defer dir.Unlock()
 	st := dir.Inode.stat()
@@ -93,7 +93,7 @@ func (dir *Dir) SetParent(p *Dir) {
 	dir.parent = p
 }
 
-func (dir *Dir) namei(ctx npo.CtxI, path []string, inodes []npo.NpObj) ([]npo.NpObj, []string, error) {
+func (dir *Dir) namei(ctx fs.CtxI, path []string, inodes []fs.NpObj) ([]fs.NpObj, []string, error) {
 	var inode InodeI
 	var err error
 
@@ -134,7 +134,7 @@ func (dir *Dir) lsL() []*np.Stat {
 	return entries
 }
 
-func (dir *Dir) remove(ctx npo.CtxI, name string) error {
+func (dir *Dir) remove(ctx fs.CtxI, name string) error {
 	dir.Lock()
 	defer dir.Unlock()
 
@@ -155,7 +155,7 @@ func (dir *Dir) remove(ctx npo.CtxI, name string) error {
 	return dir.removeL(name)
 }
 
-func (dir *Dir) CreateDev(ctx npo.CtxI, name string, d Dev, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (dir *Dir) CreateDev(ctx fs.CtxI, name string, d Dev, t np.Tperm, m np.Tmode) (fs.NpObj, error) {
 	dir.Lock()
 	defer dir.Unlock()
 
@@ -176,15 +176,15 @@ func (dir *Dir) CreateDev(ctx npo.CtxI, name string, d Dev, t np.Tperm, m np.Tmo
 	return newi, dir.createL(newi, name)
 }
 
-func (dir *Dir) Create(ctx npo.CtxI, name string, t np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (dir *Dir) Create(ctx fs.CtxI, name string, t np.Tperm, m np.Tmode) (fs.NpObj, error) {
 	return dir.CreateDev(ctx, name, nil, t, m)
 }
 
-func (dir *Dir) Lookup(ctx npo.CtxI, path []string) ([]npo.NpObj, []string, error) {
+func (dir *Dir) Lookup(ctx fs.CtxI, path []string) ([]fs.NpObj, []string, error) {
 	dir.Lock()
 	db.DLPrintf("MEMFS", "%v: Lookup %v %v\n", ctx, dir, path)
 	dir.Unlock()
-	inodes := []npo.NpObj{}
+	inodes := []fs.NpObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
 	}
@@ -197,7 +197,7 @@ func (dir *Dir) Lookup(ctx npo.CtxI, path []string) ([]npo.NpObj, []string, erro
 	}
 }
 
-func (dir *Dir) ReadDir(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (dir *Dir) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	dir.Lock()
 	defer dir.Unlock()
 
@@ -208,7 +208,7 @@ func (dir *Dir) ReadDir(ctx npo.CtxI, offset np.Toffset, n np.Tsize, v np.TQvers
 
 	return dir.lsL(), nil
 }
-func (inode *Inode) WriteDir(ctx npo.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (inode *Inode) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, errors.New("Cannot write directory")
 }
 
@@ -240,7 +240,7 @@ func unlockOrdered(olddir *Dir, newdir *Dir) {
 	}
 }
 
-func (dir *Dir) Renameat(ctx npo.CtxI, old string, nd npo.NpObjDir, new string) error {
+func (dir *Dir) Renameat(ctx fs.CtxI, old string, nd fs.NpObjDir, new string) error {
 	newdir := nd.(*Dir)
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)

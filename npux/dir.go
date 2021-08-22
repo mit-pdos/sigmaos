@@ -6,8 +6,8 @@ import (
 	"os"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Dir struct {
@@ -43,7 +43,7 @@ func (d *Dir) uxReadDir() ([]*np.Stat, error) {
 	return sts, nil
 }
 
-func (d *Dir) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, off, cnt)
 	dirents, err := d.uxReadDir()
 	if err != nil {
@@ -53,7 +53,7 @@ func (d *Dir) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 }
 
 // XXX close
-func (d *Dir) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.NpObj, error) {
 	p := np.Join(append(d.path, name))
 	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
 	var err error
@@ -78,7 +78,7 @@ func (d *Dir) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.
 }
 
 // XXX intermediate dirs?
-func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
 	fi, err := os.Stat(np.Join(append(d.path, p...)))
 	if err != nil {
@@ -86,17 +86,17 @@ func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 	}
 	if fi.IsDir() {
 		d := d.npux.makeDir(append(d.path, p...), np.DMDIR, d)
-		return []npo.NpObj{d}, nil, nil
+		return []fs.NpObj{d}, nil, nil
 	} else {
 		f := d.npux.makeFile(append(d.path, p...), np.Tperm(0), d)
-		return []npo.NpObj{f}, nil, nil
+		return []fs.NpObj{f}, nil, nil
 	}
 }
 
-func (d *Dir) WriteDir(ctx npo.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, fmt.Errorf("not supported")
 }
 
-func (d *Dir) Renameat(ctx npo.CtxI, from string, od npo.NpObjDir, to string) error {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.NpObjDir, to string) error {
 	return fmt.Errorf("not supported")
 }

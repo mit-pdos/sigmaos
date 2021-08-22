@@ -10,8 +10,8 @@ import (
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 type Dir struct {
@@ -25,17 +25,17 @@ func (pd *Procd) makeDir(path []string, t np.Tperm, p *Dir) *Dir {
 }
 
 // Creating a lambda is always a directory
-func (d *Dir) Create(ctx npo.CtxI, name string, perm np.Tperm, m np.Tmode) (npo.NpObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.NpObj, error) {
 	db.DLPrintf("PROCD", "%v: Create %v\n", d, name)
 	d1 := d.pd.makeDir(append(d.name, name), perm|np.DMDIR, d)
 	d1.time = time.Now().Unix()
 	return d1, nil
 }
 
-func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
 	db.DLPrintf("PROCD", "%v: Lookup %v %v %v\n", ctx, d, p, len(p))
 	// XXX maybe include root dir
-	var os []npo.NpObj
+	var os []fs.NpObj
 	switch len(d.name) {
 	case 0:
 		// XXX Lookup always succeeds for now
@@ -43,23 +43,23 @@ func (d *Dir) Lookup(ctx npo.CtxI, p []string) ([]npo.NpObj, []string, error) {
 		if len(p) > 1 {
 			o1 := d.pd.MakeObj(append(d.name, p[1]), 0, d)
 			o1.time = d.time
-			os = []npo.NpObj{o1}
+			os = []fs.NpObj{o1}
 		} else {
-			os = []npo.NpObj{d1}
+			os = []fs.NpObj{d1}
 		}
 
 	case 1:
 		d1 := d.pd.makeDir(append(d.name, p[0]), 0, d)
 		d1.time = d.time
 		d1.uid = d.uid
-		os = []npo.NpObj{d1}
+		os = []fs.NpObj{d1}
 	default:
 		log.Fatalf("%v: Lookup: %v\n", d, p)
 	}
 	return os, nil, nil
 }
 
-func (d *Dir) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	db.DLPrintf("PROCD", "ReadDir: %v\n", d)
 	switch len(d.name) {
 	case 0:
@@ -73,7 +73,7 @@ func (d *Dir) ReadDir(ctx npo.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 	return nil, nil
 }
 
-func (d *Dir) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	db.DLPrintf("PROCD", "%v: WriteDir %v %v\n", d, off, len(data))
 	switch len(d.name) {
 	case 0:
@@ -88,6 +88,6 @@ func (d *Dir) WriteDir(ctx npo.CtxI, off np.Toffset, data []byte, v np.TQversion
 	return 0, fmt.Errorf("not suported")
 }
 
-func (d *Dir) Renameat(ctx npo.CtxI, from string, od npo.NpObjDir, to string) error {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.NpObjDir, to string) error {
 	return fmt.Errorf("not supported")
 }

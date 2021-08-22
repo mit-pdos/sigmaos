@@ -6,38 +6,31 @@ import (
 	"net"
 
 	db "ulambda/debug"
-	"ulambda/fssrv"
-	npo "ulambda/npobjsrv"
+	"ulambda/npapi"
 )
 
-type NpConn interface {
-	Connect(net.Conn, *fssrv.FsServer) NpAPI
-	SessionTable() *npo.SessionTable
-}
-
 type NpServer struct {
-	npc        NpConn
 	addr       string
-	fssrv      *fssrv.FsServer
+	fssrv      npapi.FsServer
 	wireCompat bool
 	replicated bool
 	replyCache *ReplyCache
 	replConfig *NpServerReplConfig
 }
 
-func MakeNpServer(npc NpConn, address string) *NpServer {
-	return MakeReplicatedNpServer(npc, address, false, false, "", nil)
+func MakeNpServer(address string, fssrv npapi.FsServer) *NpServer {
+	return MakeReplicatedNpServer(fssrv, address, false, false, "", nil)
 }
 
-func MakeNpServerWireCompatible(npc NpConn, address string) *NpServer {
-	return MakeReplicatedNpServer(npc, address, true, false, "", nil)
+func MakeNpServerWireCompatible(address string, fssrv npapi.FsServer) *NpServer {
+	return MakeReplicatedNpServer(fssrv, address, true, false, "", nil)
 }
 
 func (srv *NpServer) MyAddr() string {
 	return srv.addr
 }
 
-func (srv *NpServer) GetFsServer() *fssrv.FsServer {
+func (srv *NpServer) GetFsServer() npapi.FsServer {
 	return srv.fssrv
 }
 
@@ -52,11 +45,11 @@ func (srv *NpServer) runsrv(l net.Listener, wrapped bool) {
 		// If we aren't replicated or we're at the end of the chain, create a normal
 		// channel.
 		if !srv.replicated {
-			MakeChannel(srv.npc, conn, srv.fssrv, srv.wireCompat)
+			MakeChannel(conn, srv.fssrv, srv.wireCompat)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
-			srv.MakeRelayChannel(srv.npc, conn, srv.replConfig.ops, wrapped, srv.replConfig.fids)
+			srv.MakeRelayChannel(srv.fssrv, conn, srv.replConfig.ops, wrapped, srv.replConfig.fids)
 		}
 	}
 }

@@ -1,8 +1,14 @@
-package npsrv
+package npapi
 
 import (
 	np "ulambda/ninep"
+	"ulambda/session"
 )
+
+type FsServer interface {
+	Connect() NpAPI
+	SessionTable() *session.SessionTable
+}
 
 type NpAPI interface {
 	Version(np.Tsession, np.Tversion, *np.Rversion) *np.Rerror
@@ -24,4 +30,9 @@ type NpAPI interface {
 	GetFile(np.Tsession, np.Tgetfile, *np.Rgetfile) *np.Rerror
 	SetFile(np.Tsession, np.Tsetfile, *np.Rwrite) *np.Rerror
 	Detach(np.Tsession)
+	Closed() bool
+}
+
+type NpConnMaker interface {
+	MakeNpConn(FsServer) NpAPI
 }

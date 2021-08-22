@@ -11,9 +11,10 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fid"
 	np "ulambda/ninep"
+	"ulambda/npapi"
 	"ulambda/npcodec"
-	"ulambda/npobjsrv"
 )
 
 const (
@@ -39,10 +40,10 @@ type RelayChannel struct {
 	wrapped bool
 }
 
-func (srv *NpServer) MakeRelayChannel(npc NpConn, conn net.Conn, ops chan *RelayOp, wrapped bool, fids map[np.Tfid]*npobjsrv.Fid) *RelayChannel {
-	npapi := npc.Connect(conn, srv.fssrv)
+func (srv *NpServer) MakeRelayChannel(fssrv npapi.FsServer, conn net.Conn, ops chan *RelayOp, wrapped bool, fids map[np.Tfid]*fid.Fid) *RelayChannel {
+	npapi := fssrv.Connect()
 	c := &Channel{sync.Mutex{},
-		npc,
+		fssrv,
 		conn,
 		false,
 		npapi,
@@ -84,7 +85,7 @@ func (r *RelayChannel) reader() {
 func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
 	// XXX Avoid doing this every time
-	r.c.npc.SessionTable().RegisterSession(fc.Session)
+	r.c.fssrv.SessionTable().RegisterSession(fc.Session)
 	reply, rerror := r.c.dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror

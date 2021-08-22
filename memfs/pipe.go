@@ -6,8 +6,8 @@ import (
 	// "errors"
 
 	db "ulambda/debug"
+	"ulambda/fs"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 )
 
 const PIPESZ = 8192
@@ -38,7 +38,7 @@ func (p *Pipe) SetParent(parent *Dir) {
 	p.parent = parent
 }
 
-func (p *Pipe) Stat(ctx npo.CtxI) (*np.Stat, error) {
+func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	p.Lock()
 	defer p.Unlock()
 	st := p.Inode.stat()
@@ -46,7 +46,7 @@ func (p *Pipe) Stat(ctx npo.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (pipe *Pipe) Open(ctx npo.CtxI, mode np.Tmode) error {
+func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) error {
 	pipe.Lock()
 	defer pipe.Unlock()
 
@@ -69,7 +69,7 @@ func (pipe *Pipe) Open(ctx npo.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) Close(ctx npo.CtxI, mode np.Tmode) error {
+func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 	pipe.Lock()
 	defer pipe.Unlock()
 
@@ -91,7 +91,7 @@ func (pipe *Pipe) Close(ctx npo.CtxI, mode np.Tmode) error {
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx npo.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, error) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, error) {
 	pipe.Lock()
 	defer pipe.Unlock()
 
@@ -114,7 +114,7 @@ func (pipe *Pipe) Write(ctx npo.CtxI, o np.Toffset, d []byte, v np.TQversion) (n
 	return np.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx npo.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	pipe.Lock()
 	defer pipe.Unlock()
 

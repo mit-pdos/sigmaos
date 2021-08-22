@@ -30,10 +30,6 @@ func (srv *NpServer) MyAddr() string {
 	return srv.addr
 }
 
-func (srv *NpServer) GetFsServer() npapi.FsServer {
-	return srv.fssrv
-}
-
 func (srv *NpServer) runsrv(l net.Listener) {
 	defer l.Close()
 	for {

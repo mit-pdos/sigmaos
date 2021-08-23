@@ -54,8 +54,6 @@ func (npc *NpConn) add(sess np.Tsession, fid np.Tfid, f *fid.Fid) {
 }
 
 func (npc *NpConn) del(sess np.Tsession, fid np.Tfid) {
-	npc.mu.Lock()
-	defer npc.mu.Unlock()
 	o := npc.st.DelFid(sess, fid)
 	if o.Perm().IsEphemeral() {
 		npc.st.DelEphemeral(sess, o)
@@ -86,18 +84,17 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 	return nil
 }
 
-// Delete ephemeral files created on this connection
+// Delete ephemeral files created on this connection; caller
+// is responsible for calling this serially, which should
+// is not burden, because it is typically called once.
 func (npc *NpConn) Detach(sess np.Tsession) {
 
-	npc.mu.Lock()
 	ephemeral := npc.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
 		o.Remove(f.Ctx(), f.PathLast())
-		// Wake up watches on parent dir as well
 		npc.wt.WakeupWatch(f.Path(), f.PathDir())
 	}
-	npc.mu.Unlock()
 
 	npc.wt.DeleteConn(npc)
 	npc.fssrv.GetConnTable().Del(npc)
@@ -210,9 +207,7 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name str
 	p := np.Copy(dir)
 	nf := fid.MakeFidPath(append(p, name), o, ctx)
 	if eph {
-		npc.mu.Lock()
 		npc.st.AddEphemeral(sess, o, nf)
-		npc.mu.Unlock()
 	}
 	npc.wt.WakeupWatch(nf.Path(), dir)
 	return nf

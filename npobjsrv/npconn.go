@@ -20,7 +20,6 @@ type NpConn struct {
 	closed bool
 	fssrv  *fssrv.FsServer
 	wt     *fssrv.WatchTable
-	ct     *fssrv.ConnTable
 	st     *session.SessionTable
 	stats  *stats.Stats
 }
@@ -35,7 +34,6 @@ func (ncm *NpConnMaker) MakeNpConn(s npapi.FsServer) npapi.NpAPI {
 	npc := &NpConn{}
 	srv := s.(*fssrv.FsServer)
 	npc.fssrv = srv
-	npc.ct = srv.GetConnTable()
 	npc.st = srv.SessionTable()
 	npc.wt = srv.GetWatchTable()
 	npc.stats = srv.GetStats()
@@ -96,19 +94,13 @@ func (npc *NpConn) Detach(sess np.Tsession) {
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
 		o.Remove(f.Ctx(), f.PathLast())
-		if npc.wt != nil {
-			// Wake up watches on parent dir as well
-			npc.wt.WakeupWatch(f.Path(), f.PathDir())
-		}
+		// Wake up watches on parent dir as well
+		npc.wt.WakeupWatch(f.Path(), f.PathDir())
 	}
 	npc.mu.Unlock()
 
-	if npc.wt != nil {
-		npc.wt.DeleteConn(npc)
-	}
-	if npc.ct != nil {
-		npc.ct.Del(npc)
-	}
+	npc.wt.DeleteConn(npc)
+	npc.fssrv.GetConnTable().Del(npc)
 	npc.mu.Lock()
 	npc.closed = true
 	npc.mu.Unlock()
@@ -222,9 +214,7 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name str
 		npc.st.AddEphemeral(sess, o, nf)
 		npc.mu.Unlock()
 	}
-	if npc.wt != nil {
-		npc.wt.WakeupWatch(nf.Path(), dir)
-	}
+	npc.wt.WakeupWatch(nf.Path(), dir)
 	return nf
 }
 
@@ -322,10 +312,9 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
-	if npc.wt != nil {
-		db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
-		npc.wt.WakeupWatch(f.Path(), f.PathDir())
-	}
+	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
+	npc.wt.WakeupWatch(f.Path(), f.PathDir())
+
 	// delete from ephemeral table, if ephemeral
 	npc.del(sess, args.Fid)
 	return nil
@@ -365,10 +354,10 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
-	if npc.wt != nil {
-		// Wake up watches on parent dir as well
-		npc.wt.WakeupWatch(fname, dname)
-	}
+
+	// Wake up watches on parent dir as well
+	npc.wt.WakeupWatch(fname, dname)
+
 	// XXX delete from ephemeral table, if ephemeral
 	//	npc.del(sess, args.Fid) // XXX doing this here causes "unkown Fid" errors in fslib tests
 	if lo.Perm().IsEphemeral() {
@@ -416,9 +405,7 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 		dst := append(f.PathDir(), np.Split(args.Stat.Name)...)
 		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.PathLast(), args.Stat.Name)
 		f.SetPath(dst)
-		if npc.wt != nil {
-			npc.wt.WakeupWatch(dst, nil)
-		}
+		npc.wt.WakeupWatch(dst, nil)
 	}
 	// XXX ignore other Wstat for now
 	return nil
@@ -453,11 +440,9 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		if npc.wt != nil {
-			dst := np.Copy(newf.Path())
-			dst = append(dst, args.NewName)
-			npc.wt.WakeupWatch(dst, nil)
-		}
+		dst := np.Copy(newf.Path())
+		dst = append(dst, args.NewName)
+		npc.wt.WakeupWatch(dst, nil)
 	default:
 		return np.ErrNotDir
 	}

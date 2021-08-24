@@ -56,7 +56,7 @@ func BootMin(bin string) (*System, error) {
 	}
 	err = s.Mkdir(fslib.LOCKS, 0777)
 	if err != nil {
-		log.Printf("Error creating boot dir: %v", err)
+		log.Printf("Error creating locks dir: %v", err)
 		return s, err
 	}
 	return s, nil

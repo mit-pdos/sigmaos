@@ -15,7 +15,6 @@ import (
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
-	"ulambda/session"
 )
 
 var bucket = "9ps3"
@@ -30,7 +29,6 @@ type Nps3 struct {
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
-	st     *session.SessionTable
 	root   *Dir
 }
 
@@ -39,7 +37,6 @@ func MakeNps3() *Nps3 {
 	nps3.ch = make(chan bool)
 	db.Name("nps3d")
 	nps3.root = nps3.makeDir([]string{}, np.DMDIR, nil)
-	nps3.st = session.MakeSessionTable()
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))

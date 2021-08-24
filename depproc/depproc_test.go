@@ -37,27 +37,6 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func makeTstateOneProcd(t *testing.T) *Tstate {
-	ts := &Tstate{}
-
-	bin := ".."
-	s, err := kernel.BootMin(bin)
-	if err != nil {
-		t.Fatalf("BootMin %v\n", err)
-	}
-	ts.s = s
-	db.Name("sched_test")
-	err = ts.s.BootProcd(bin)
-	if err != nil {
-		t.Fatalf("BootProcd %v\n", err)
-	}
-
-	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.DepProcCtl = MakeDepProcCtl(ts.FsLib, DEFAULT_JOB_ID)
-	ts.t = t
-	return ts
-}
-
 func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
@@ -126,67 +105,6 @@ func TestHelloWorld(t *testing.T) {
 	time.Sleep(6 * time.Second)
 
 	checkSleeperlResult(t, ts, pid)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestWaitExit(t *testing.T) {
-	ts := makeTstate(t)
-
-	start := time.Now()
-
-	pid := spawnSleeperl(t, ts)
-	err := ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit error")
-
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) > 5*time.Second)
-
-	checkSleeperlResult(t, ts, pid)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func TestWaitStart(t *testing.T) {
-	ts := makeTstate(t)
-
-	start := time.Now()
-
-	pid := spawnSleeperl(t, ts)
-	err := ts.WaitStart(pid)
-	assert.Nil(t, err, "WaitStart error")
-
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) < 5*time.Second, "WaitStart waited too long")
-
-	// Make sure the lambda hasn't finished yet...
-	checkSleeperlResultFalse(t, ts, pid)
-
-	ts.WaitExit(pid)
-
-	checkSleeperlResult(t, ts, pid)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-// Should exit immediately
-func TestWaitNonexistentLambda(t *testing.T) {
-	ts := makeTstate(t)
-
-	ch := make(chan bool)
-
-	pid := fslib.GenPid()
-	go func() {
-		ts.WaitExit(pid)
-		ch <- true
-	}()
-
-	done := <-ch
-	assert.True(t, done, "Nonexistent lambda")
-
-	close(ch)
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -311,88 +229,6 @@ func TestStartDep(t *testing.T) {
 	// Make sure they both ran
 	checkSleeperlResult(t, ts, prod)
 	checkSleeperlResult(t, ts, cons)
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-// Spawn a bunch of lambdas concurrently, then wait for all of them & check
-// their result
-func TestConcurrentLambdas(t *testing.T) {
-	ts := makeTstate(t)
-
-	nLambdas := 27
-	pids := map[string]int{}
-
-	// Make a bunch of fslibs to avoid concurrency issues
-	tses := []*Tstate{}
-
-	for j := 0; j < nLambdas; j++ {
-	}
-
-	var barrier sync.WaitGroup
-	barrier.Add(nLambdas)
-	var started sync.WaitGroup
-	started.Add(nLambdas)
-	var done sync.WaitGroup
-	done.Add(nLambdas)
-
-	for i := 0; i < nLambdas; i++ {
-		pid := fslib.GenPid()
-		_, alreadySpawned := pids[pid]
-		for alreadySpawned {
-			pid = fslib.GenPid()
-			_, alreadySpawned = pids[pid]
-		}
-		pids[pid] = i
-		newts := makeTstateNoBoot(t, ts.s)
-		tses = append(tses, newts)
-		go func(pid string, started *sync.WaitGroup, i int) {
-			barrier.Done()
-			barrier.Wait()
-			spawnSleeperlWithPid(t, tses[i], pid)
-			started.Done()
-		}(pid, &started, i)
-	}
-
-	started.Wait()
-
-	for pid, i := range pids {
-		_ = i
-		go func(pid string, done *sync.WaitGroup, i int) {
-			defer done.Done()
-			ts.WaitExit(pid)
-			checkSleeperlResult(t, tses[i], pid)
-		}(pid, &done, i)
-	}
-
-	done.Wait()
-
-	ts.s.Shutdown(ts.FsLib)
-}
-
-func (ts *Tstate) evict(pid string) {
-	time.Sleep(1 * time.Second)
-	err := ts.Evict(pid)
-	assert.Nil(ts.t, err, "evict")
-}
-
-func TestEvict(t *testing.T) {
-	ts := makeTstate(t)
-
-	start := time.Now()
-	pid := spawnSleeperl(t, ts)
-
-	go ts.evict(pid)
-
-	err := ts.WaitExit(pid)
-	assert.Nil(t, err, "WaitExit")
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) < 3*time.Second, "Didn't evict early enough.")
-	assert.True(t, end.Sub(start) > 1*time.Second, "Evicted too early")
-
-	// Make sure the lambda didn't finish
-	checkSleeperlResultFalse(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }

@@ -11,7 +11,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/npobjsrv"
 	"ulambda/npsrv"
-	"ulambda/seccomp"
 )
 
 const MEMFS = "name/memfsd"
@@ -28,7 +27,6 @@ func MakeFsd(addr string) *Fsd {
 }
 
 func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *Fsd {
-	seccomp.LoadFilter()
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,

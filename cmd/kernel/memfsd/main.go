@@ -11,6 +11,7 @@ import (
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
 	"ulambda/perf"
+	"ulambda/seccomp"
 )
 
 func main() {
@@ -35,6 +36,7 @@ func main() {
 		defer p.Teardown()
 		db.Name("memfsd")
 		fsd := memfsd.MakeFsd(os.Args[2])
+		seccomp.LoadFilter()
 		fsd.Serve()
 	} else { // started as a ulambda
 		name := memfsd.MEMFS + "/" + os.Args[1]
@@ -50,6 +52,7 @@ func main() {
 		}
 		sctl := depproc.MakeDepProcCtl(fsl.FsLib, depproc.DEFAULT_JOB_ID)
 		sctl.Started(os.Args[1])
+		seccomp.LoadFilter()
 		fsd.Serve()
 		sctl.Exited(os.Args[1])
 		fsl.ExitFs(name)

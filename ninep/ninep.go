@@ -118,14 +118,15 @@ const (
 	OAPPEND Tmode = 0x80 // append
 
 	//
-	// ulambda extensions/hacks:
+	// sigmaP extensions/hacks:
 	//
 
-	// ulambda uses OWATCH to block a client until a file is
+	// A client uses OWATCH to block at the server until a file is
 	// removed.  OWATCH with Tcreate will retry the create, and
-	// and provides an atomic way to lock a file, with remove()
+	// provides an atomic way to lock a file, with remove()
 	// releasing the lock.  OWATCH with Open() and a closure will
-	// invoke the closure when a client creates or removes the file.
+	// invoke the closure when a client creates or removes the
+	// file.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
 )
 
@@ -141,7 +142,7 @@ const (
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
 
-	// DMTMP is ephemeral in ulambda
+	// DMTMP is ephemeral in sigmaP
 	DMTMP Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission

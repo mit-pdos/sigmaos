@@ -170,7 +170,7 @@ func (c *Channel) close() {
 	c.mu.Lock()
 	c.closed = true
 	close(c.replies)
-	if c.np != nil {
+	if c.np != nil { // XXX why check for nil?
 		// Detach each session which used this channel
 		for _, sess := range c.sessions {
 			c.np.Detach(sess)

@@ -27,7 +27,7 @@ type NpObj interface {
 	Version() np.TQversion
 	Size() np.Tlength
 	Open(CtxI, np.Tmode) error
-	Close(CtxI, np.Tmode) error
+	Close(CtxI, np.Tmode) error // for pipes
 	Remove(CtxI, string) error
 	Stat(CtxI) (*np.Stat, error)
 	Rename(CtxI, string, string) error

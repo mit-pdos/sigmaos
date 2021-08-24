@@ -85,7 +85,7 @@ func doRetry(err error) bool {
 	shard := error2shard(err.Error())
 	if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
 		strings.HasPrefix(shard, "shard") ||
-		err.Error() == "Closed by server" {
+		err.Error() == "cluncked by server" {
 		return true
 	}
 	return false

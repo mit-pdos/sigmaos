@@ -167,7 +167,6 @@ func (c *Channel) reader() {
 
 func (c *Channel) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
-	log.Printf("Close: %v %v", c.conn.RemoteAddr(), len(c.sessions))
 	c.mu.Lock()
 	close(c.replies)
 	if !c.closed {

@@ -1,7 +1,6 @@
 package fssrv
 
 import (
-	"log"
 	"sync"
 
 	db "ulambda/debug"
@@ -115,7 +114,7 @@ func (wt *WatchTable) Release(ws *Watchers, path []string) {
 	wt.mu.Lock()
 	ws, ok := wt.watchers[p]
 	if !ok {
-		log.Printf("Release: %v doesn't exist\n", path)
+		// Another thread already deleted the entry
 		return
 	}
 	ws.mu.Lock()

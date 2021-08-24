@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path"
 
 	"ulambda/fslib"
+	"ulambda/namespace"
 	"ulambda/seccomp"
 	"ulambda/sync"
 )
@@ -153,6 +155,11 @@ func (pctl *ProcCtl) WaitEvict(pid string) error {
 func (pctl *ProcCtl) Started(pid string) error {
 	pStartCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
 	pStartCond.Destroy()
+	// Isolate the process namespace
+	newRoot := os.Getenv("NEWROOT")
+	if err := namespace.Isolate(newRoot); err != nil {
+		log.Fatalf("Error Isolate in pctl.Started: %v", err)
+	}
 	// Load a seccomp filter.
 	seccomp.LoadFilter()
 	return nil

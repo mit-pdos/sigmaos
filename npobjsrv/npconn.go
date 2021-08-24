@@ -121,13 +121,13 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		o := f.Obj()
 		if o == nil {
-			return &np.Rerror{"Closed by server"}
+			return np.ErrClunked
 		}
 		npc.add(sess, args.NewFid, fid.MakeFid(o, f.Ctx()))
 	} else {
 		o := f.Obj()
 		if o == nil {
-			return &np.Rerror{"Closed by server"}
+			return np.ErrClunked
 		}
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
@@ -146,7 +146,6 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 	return nil
 }
 
-// XXX call close? keep refcnt per obj?
 func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	npc.stats.StatInfo().Nclunk.Inc()
@@ -168,7 +167,7 @@ func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rer
 	db.DLPrintf("9POBJ", "f %v\n", f)
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	npc.stats.Path(f.Path())
 	r := o.Open(f.Ctx(), args.Mode)
@@ -188,7 +187,7 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 	}
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	if args.Version != np.NoV && args.Version != o.Version() {
 		s := fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())
@@ -223,7 +222,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 	db.DLPrintf("9POBJ", "f %v\n", f)
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 
 	names := []string{args.Name}
@@ -279,12 +278,9 @@ func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.
 	if err != nil {
 		return err
 	}
-	var r error
+	var r *np.Rerror
 	rets.Count, r = f.Write(args.Offset, args.Data, np.NoV)
-	if r != nil {
-		return &np.Rerror{r.Error()}
-	}
-	return nil
+	return r
 }
 
 func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
@@ -295,7 +291,7 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	}
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	if len(f.Path()) == 0 { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
@@ -323,7 +319,7 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 	}
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	lo := o
 	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == "." { // exit?
@@ -370,7 +366,7 @@ func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rer
 	db.DLPrintf("9POBJ", "Stat %v\n", f)
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	st, r := o.Stat(f.Ctx())
 	if r != nil {
@@ -389,7 +385,7 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
 		// XXX if dst exists run watch?
@@ -419,11 +415,11 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 	db.DLPrintf("9POBJ", "Renameat %v %v %v\n", oldf, newf, args)
 	oo := oldf.Obj()
 	if oo == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	no := newf.Obj()
 	if oo == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	switch d1 := oo.(type) {
 	case fs.NpObjDir:
@@ -455,7 +451,7 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	lo := o
 	if len(args.Wnames) > 0 {
@@ -504,7 +500,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
 	if o == nil {
-		return &np.Rerror{"Closed by server"}
+		return np.ErrClunked
 	}
 	names := args.Wnames
 	lo := o

@@ -5,13 +5,16 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"sync"
 	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
+	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
 	"ulambda/linuxsched"
+	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
@@ -27,6 +30,7 @@ type Lambda struct {
 	Stdout  string
 	Stderr  string
 	SysPid  int
+	NewRoot string
 	attr    *proc.Proc
 	pd      *Procd
 	// XXX add fields (e.g. CPU mask, etc.)
@@ -39,6 +43,7 @@ func (l *Lambda) init(p *proc.Proc) {
 	l.Args = p.Args
 	l.Env = p.Env
 	l.Dir = p.Dir
+	l.NewRoot = path.Join(namespace.NAMESPACE_DIR, l.Pid+randstr.Hex(16))
 	l.Stdout = "" // XXX: add to or infer from p
 	l.Stderr = "" // XXX: add to or infer from p
 	l.attr = p
@@ -53,6 +58,11 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
 		l.pd.Exited(l.attr.Pid)
 		return
+	}
+
+	err = namespace.Destroy(l.NewRoot)
+	if err != nil {
+		log.Printf("Error namespace destroy: %v")
 	}
 
 	// Notify schedd that the process exited
@@ -90,11 +100,13 @@ func (l *Lambda) run(cores []uint) error {
 	}
 
 	env := append(os.Environ(), l.Env...)
+	env = append(env, "NEWROOT="+l.NewRoot)
 	cmd := exec.Command(l.pd.bin+"/"+l.Program, args...)
 	cmd.Env = env
 	cmd.Dir = l.Dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
+	namespace.SetupProc(cmd)
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Procd run error: %v, %v\n", l.attr, err)

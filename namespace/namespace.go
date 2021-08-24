@@ -52,8 +52,7 @@ func Isolate(fsRoot string) error {
 }
 
 func Destroy(fsRoot string) error {
-	if err := os.RemoveAll(fsRoot); err != nil {
-		log.Printf("Error RemoveAll in namespace.Destroy: %v", err)
+	if err := destroyFSNamespace(fsRoot); err != nil {
 		return err
 	}
 	return nil
@@ -144,6 +143,10 @@ func isolateFSNamespace(newRoot string) error {
 	return nil
 }
 
-func DestroyFSNamespace() error {
+func destroyFSNamespace(fsRoot string) error {
+	if err := os.RemoveAll(fsRoot); err != nil {
+		log.Printf("Error RemoveAll in namespace.Destroy: %v", err)
+		return err
+	}
 	return nil
 }

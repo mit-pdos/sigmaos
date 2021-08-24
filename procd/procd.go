@@ -17,6 +17,7 @@ import (
 	"ulambda/fssrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
+	"ulambda/namespace"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/perf"
@@ -89,6 +90,7 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	fsl.Mkdir(proc.PROC_COND, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
+	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
 	pd.runq = usync.MakeFilePriorityBag(fsl, proc.RUNQ)
 	return pd

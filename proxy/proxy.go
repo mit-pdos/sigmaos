@@ -85,13 +85,6 @@ func (npd *Npd) SessionTable() *session.SessionTable {
 	return npd.st
 }
 
-func (npd *Npd) RegisterSession(sess np.Tsession) {
-	if npd.st == nil {
-		npd.st = session.MakeSessionTable()
-	}
-	npd.st.RegisterSession(sess)
-}
-
 func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"

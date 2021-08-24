@@ -36,27 +36,6 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func makeTstateOneProcd(t *testing.T) *Tstate {
-	ts := &Tstate{}
-
-	bin := ".."
-	s, err := kernel.BootMin(bin)
-	if err != nil {
-		t.Fatalf("BootMin %v\n", err)
-	}
-	ts.s = s
-	db.Name("sched_test")
-	err = ts.s.BootProcd(bin)
-	if err != nil {
-		t.Fatalf("BootProcd %v\n", err)
-	}
-
-	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = MakeProcCtl(ts.FsLib)
-	ts.t = t
-	return ts
-}
-
 func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts := &Tstate{}
 	ts.t = t

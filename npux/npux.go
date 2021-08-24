@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"sync"
 	"syscall"
 
@@ -15,6 +16,7 @@ import (
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
 	"ulambda/npsrv"
+	usync "ulambda/sync"
 	// "ulambda/seccomp"
 )
 
@@ -26,11 +28,11 @@ type NpUx struct {
 	mount string
 }
 
-func MakeNpUx(mount string, addr string) *NpUx {
-	return MakeReplicatedNpUx(mount, addr, false, "", nil)
+func MakeNpUx(mount string, addr string, pid string) *NpUx {
+	return MakeReplicatedNpUx(mount, addr, pid, false, "", nil)
 }
 
-func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *NpUx {
+func MakeReplicatedNpUx(mount string, addr string, pid string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *NpUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want npux to fail
 	npux := &NpUx{}
 	npux.ch = make(chan bool)
@@ -43,6 +45,12 @@ func MakeReplicatedNpUx(mount string, addr string, replicated bool, relayAddr st
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", npux.fssrv.MyAddr(), err)
 	}
+
+	if !replicated {
+		npuxStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
+		npuxStartCond.Destroy()
+	}
+
 	return npux
 }
 

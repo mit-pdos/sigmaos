@@ -22,7 +22,6 @@ import (
 	npo "ulambda/npobjsrv"
 	"ulambda/perf"
 	"ulambda/proc"
-	"ulambda/session"
 	usync "ulambda/sync"
 )
 
@@ -45,7 +44,6 @@ type Procd struct {
 	fssrv      *fssrv.FsServer
 	group      sync.WaitGroup
 	perf       *perf.Perf
-	st         *session.SessionTable
 	*fslib.FsLib
 	*proc.ProcCtl
 }
@@ -57,7 +55,6 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	db.Name("procd")
 	pd.root = pd.makeDir([]string{}, np.DMDIR, nil)
 	pd.root.time = time.Now().Unix()
-	pd.st = session.MakeSessionTable()
 	pd.ls = map[string]*Lambda{}
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)

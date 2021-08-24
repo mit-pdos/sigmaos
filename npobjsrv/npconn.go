@@ -95,7 +95,6 @@ func (npc *NpConn) Detach(sess np.Tsession) {
 		o.Remove(f.Ctx(), f.PathLast())
 		npc.wt.WakeupWatch(f.Path(), f.PathDir())
 	}
-
 	npc.wt.DeleteConn(npc)
 	npc.fssrv.GetConnTable().Del(npc)
 	npc.mu.Lock()
@@ -231,23 +230,31 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 	}
 	for {
 		d := o.(fs.NpObjDir)
-		ws := npc.wt.WatchLookupL(append(f.Path(), names[0]))
+		p := append(f.Path(), names[0])
+		var ws *fssrv.Watchers
+		if args.Mode&np.OWATCH == np.OWATCH {
+			ws = npc.wt.WatchLookupL(p)
+		}
 		o1, err := d.Create(f.Ctx(), names[0], args.Perm, args.Mode)
-		db.DLPrintf("9POBJ", "Create %v %v %v\n", names[0], o1, err)
+		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", names[0], o1, err, args.Perm.IsEphemeral())
 		if err == nil {
-			ws.Unlock()
+			if ws != nil {
+				npc.wt.Release(ws, p)
+			}
 			nf := npc.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
 			npc.add(sess, args.Fid, nf)
 			rets.Qid = o1.Qid()
 			break
 		} else {
-			if err.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+			if ws != nil && err.Error() == "Name exists" {
 				err := ws.Watch(npc)
 				if err != nil {
 					return err
 				}
 			} else {
-				ws.Unlock()
+				if ws != nil {
+					npc.wt.Release(ws, p)
+				}
 				return &np.Rerror{err.Error()}
 			}
 		}
@@ -346,7 +353,6 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 		return &np.Rerror{r.Error()}
 	}
 
-	// Wake up watches on parent dir as well
 	npc.wt.WakeupWatch(fname, dname)
 
 	// XXX delete from ephemeral table, if ephemeral
@@ -526,23 +532,28 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		d := lo.(fs.NpObjDir)
 		name := args.Wnames[len(args.Wnames)-1]
 		for {
-			ws := npc.wt.WatchLookupL(append(dname, name))
+			var ws *fssrv.Watchers
+			p := append(dname, name)
+			if args.Mode&np.OWATCH == np.OWATCH {
+				ws = npc.wt.WatchLookupL(p)
+			}
 			lo, r = d.Create(f.Ctx(), name, args.Perm, args.Mode)
 			if r == nil {
-				ws.Unlock()
+				if ws != nil {
+					npc.wt.Release(ws, p)
+				}
 				npc.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 				break
 			} else {
-				if r.Error() == "Name exists" && args.Mode&np.OWATCH == np.OWATCH {
+				if ws != nil && r.Error() == "Name exists" {
 					err := ws.Watch(npc)
 					if err != nil {
 						return err
 					}
 				} else {
 					if ws != nil {
-						ws.Unlock()
+						npc.wt.Release(ws, p)
 					}
-
 					return &np.Rerror{r.Error()}
 				}
 			}

@@ -1,6 +1,7 @@
 package fssrv
 
 import (
+	"log"
 	"sync"
 
 	db "ulambda/debug"
@@ -46,6 +47,10 @@ func (w *Watchers) Watch(npc npapi.NpAPI) *np.Rerror {
 	return nil
 }
 
+func (ws *Watchers) NoWaiters() bool {
+	return len(ws.watchers) == 0
+}
+
 func (ws *Watchers) wakeupWatch() {
 	defer ws.mu.Unlock()
 	ws.mu.Lock()
@@ -85,13 +90,13 @@ func MkWatchTable() *WatchTable {
 // Returns locked Watchers
 // XXX Normalize paths (e.g., delete extra /) so that matches
 // work for equivalent paths
-func (wt *WatchTable) WatchLookupL(dname []string) *Watchers {
+func (wt *WatchTable) WatchLookupL(path []string) *Watchers {
 	defer wt.mu.Unlock()
-	p := np.Join(dname)
+	p := np.Join(path)
 	wt.mu.Lock()
 	ws, ok := wt.watchers[p]
 	if !ok {
-		p1 := np.Copy(dname)
+		p1 := np.Copy(path)
 		p = np.Join(p1)
 		ws = mkWatchers()
 		wt.watchers[p] = ws
@@ -100,6 +105,27 @@ func (wt *WatchTable) WatchLookupL(dname []string) *Watchers {
 	return ws
 }
 
+// Release watchers for path. Caller should have watchers locked
+// through WatchLookupL().
+func (wt *WatchTable) Release(ws *Watchers, path []string) {
+	ws.Unlock()
+
+	defer wt.mu.Unlock()
+	p := np.Join(path)
+	wt.mu.Lock()
+	ws, ok := wt.watchers[p]
+	if !ok {
+		log.Printf("Release: %v doesn't exist\n", path)
+		return
+	}
+	ws.mu.Lock()
+	if ws.NoWaiters() {
+		delete(wt.watchers, p)
+	}
+	ws.Unlock()
+}
+
+// Wake up watches on file and parent dir
 // XXX maybe support wakeupOne?
 func (wt *WatchTable) WakeupWatch(fn, dir []string) {
 	p := np.Join(fn)

@@ -332,9 +332,9 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
 
-	ts.s.Kill(kernel.PROCD)
+	ts.s.KillOne(kernel.PROCD)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	_, err = ts.ReadFile(name)
 	assert.NotEqual(t, nil, err)
@@ -374,10 +374,9 @@ func TestLock(t *testing.T) {
 func TestLock1(t *testing.T) {
 	ts := makeTstate(t)
 	ch := make(chan int)
-	err := ts.Mkdir("name/locks", 0777)
-	assert.Equal(t, nil, err)
+	ts.Mkdir("name/locks", 0777)
 	// Lock the file
-	err = ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	err := ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLib("fslibtest0")
 	go func() {

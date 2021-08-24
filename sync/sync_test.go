@@ -1,4 +1,4 @@
-package sync
+package sync_test
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	usync "ulambda/sync"
 )
 
 const (
@@ -47,7 +48,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func condWaiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
+func condWaiter(ts *Tstate, c *usync.Cond, done chan int, id int, signal bool) {
 	err := ts.LockFile(LOCK_DIR, LOCK_NAME)
 	assert.Nil(ts.t, err, "LockFile waiter [%v]: %v", id, err)
 
@@ -63,11 +64,11 @@ func condWaiter(ts *Tstate, c *Cond, done chan int, id int, signal bool) {
 }
 
 func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
-	conds := []*Cond{}
+	lock := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
+	conds := []*usync.Cond{}
 
 	for i := 0; i < n_conds; i++ {
-		conds = append(conds, MakeCond(ts.FsLib, COND_PATH, lock))
+		conds = append(conds, usync.MakeCond(ts.FsLib, COND_PATH, lock))
 	}
 
 	conds[0].Init()
@@ -98,7 +99,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	assert.Equal(ts.t, 0, sum, "Bad sum")
 }
 
-func fileBagConsumer(ts *Tstate, fb *FilePriorityBag, id int, ctr *uint64) {
+func fileBagConsumer(ts *Tstate, fb *usync.FilePriorityBag, id int, ctr *uint64) {
 	for {
 		_, name, contents, err := fb.Get()
 		assert.Nil(ts.t, err, "Error consumer get: %v", err)
@@ -109,7 +110,7 @@ func fileBagConsumer(ts *Tstate, fb *FilePriorityBag, id int, ctr *uint64) {
 
 func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
 	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
-	fb := MakeFilePriorityBag(fsl, FILE_BAG_PATH)
+	fb := usync.MakeFilePriorityBag(fsl, FILE_BAG_PATH)
 
 	for i := 0; i < nFiles; i++ {
 		iStr := fmt.Sprintf("%v", i)
@@ -132,7 +133,7 @@ func TestLock1(t *testing.T) {
 	current := 0
 	done := make(chan int)
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
+	lock := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
@@ -166,8 +167,8 @@ func TestLock2(t *testing.T) {
 
 	N := 20
 
-	lock1 := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
-	lock2 := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+	lock1 := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+	lock2 := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
 
 	for i := 0; i < N; i++ {
 		lock1.Lock()
@@ -189,13 +190,13 @@ func TestLock3(t *testing.T) {
 	n_threads := 20
 	cnt := 0
 
-	lock := MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+	lock := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
 
 	var done sync.WaitGroup
 	done.Add(n_threads)
 
 	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, lock *Lock, N *int, cnt *int) {
+		go func(done *sync.WaitGroup, lock *usync.Lock, N *int, cnt *int) {
 			defer done.Done()
 			for {
 				lock.Lock()
@@ -225,7 +226,7 @@ func TestLock4(t *testing.T) {
 	fsl1 := fslib.MakeFsLib("fslib-1")
 	fsl2 := fslib.MakeFsLib("fslib-1")
 
-	lock1 := MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
+	lock1 := usync.MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
 	//	lock2 := MakeLock(fsl2, LOCK_DIR, LOCK_NAME, true)
 
 	// Establish a connection
@@ -334,7 +335,7 @@ func TestFilePriorityBag(t *testing.T) {
 	done.Add(n_producers)
 
 	//	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", i))
-	fb := MakeFilePriorityBag(ts.FsLib, FILE_BAG_PATH)
+	fb := usync.MakeFilePriorityBag(ts.FsLib, FILE_BAG_PATH)
 
 	var ctr uint64 = 0
 	for i := 0; i < n_consumers; i++ {

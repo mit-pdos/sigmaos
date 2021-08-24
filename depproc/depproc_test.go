@@ -1,7 +1,6 @@
 package depproc
 
 import (
-	"sync"
 	"testing"
 	"time"
 

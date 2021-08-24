@@ -3,6 +3,7 @@ package nps3
 import (
 	"context"
 	"log"
+	"path"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -15,7 +16,9 @@ import (
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
+	"ulambda/proc"
 	"ulambda/session"
+	usync "ulambda/sync"
 )
 
 var bucket = "9ps3"
@@ -26,16 +29,19 @@ const (
 
 type Nps3 struct {
 	mu     sync.Mutex
+	pid    string
 	fssrv  *fssrv.FsServer
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
 	st     *session.SessionTable
 	root   *Dir
+	*proc.ProcCtl
 }
 
-func MakeNps3() *Nps3 {
+func MakeNps3(pid string) *Nps3 {
 	nps3 := &Nps3{}
+	nps3.pid = pid
 	nps3.ch = make(chan bool)
 	db.Name("nps3d")
 	nps3.root = nps3.makeDir([]string{}, np.DMDIR, nil)
@@ -63,6 +69,9 @@ func MakeNps3() *Nps3 {
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", nps3.fssrv.MyAddr(), err)
 	}
+
+	nps3dStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
+	nps3dStartCond.Destroy()
 
 	return nps3
 }

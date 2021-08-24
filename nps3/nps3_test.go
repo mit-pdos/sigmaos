@@ -15,6 +15,10 @@ import (
 	np "ulambda/ninep"
 )
 
+const (
+	bin = ".."
+)
+
 type Tstate struct {
 	*fslib.FsLib
 	t    *testing.T
@@ -27,7 +31,6 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.t = t
 
-	bin := ".."
 	s, err := kernel.BootMin(bin)
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
@@ -54,8 +57,7 @@ func TestTwo(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.nps3 = MakeNps3()
-	go ts.nps3.Serve()
+	ts.s.BootNps3d(bin)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -71,8 +73,7 @@ func TestUnionSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.nps3 = MakeNps3()
-	go ts.nps3.Serve()
+	ts.s.BootNps3d(bin)
 
 	dirents, err := ts.ReadDir("name/s3/~ip/")
 	assert.Nil(t, err, "ReadDir")
@@ -86,8 +87,7 @@ func TestUnionDir(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.nps3 = MakeNps3()
-	go ts.nps3.Serve()
+	ts.s.BootNps3d(bin)
 
 	dirents, err := ts.ReadDir("name/s3/~ip/input")
 	assert.Nil(t, err, "ReadDir")
@@ -101,8 +101,7 @@ func TestUnionFile(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.nps3 = MakeNps3()
-	go ts.nps3.Serve()
+	ts.s.BootNps3d(bin)
 
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)

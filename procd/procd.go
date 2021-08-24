@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +51,7 @@ type Procd struct {
 	*proc.ProcCtl
 }
 
-func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
+func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd {
 	pd := &Procd{}
 	pd.nid = 0
 	pd.bin = bin
@@ -93,6 +94,10 @@ func MakeProcd(bin string, pprofPath string, utilPath string) *Procd {
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
 	pd.runq = usync.MakeFilePriorityBag(fsl, proc.RUNQ)
+
+	procdStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
+	procdStartCond.Destroy()
+
 	return pd
 }
 

@@ -1,6 +1,7 @@
 package fslib_test
 
 import (
+	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -317,6 +318,7 @@ func TestCounter(t *testing.T) {
 
 // TODO: switch to using memfsd instead of procd
 func TestEphemeral(t *testing.T) {
+	const N = 20
 	ts := makeTstate(t)
 
 	var err error
@@ -334,13 +336,19 @@ func TestEphemeral(t *testing.T) {
 
 	ts.s.Kill(kernel.PROCD)
 
-	time.Sleep(100 * time.Millisecond)
-
-	_, err = ts.ReadFile(name)
-	assert.NotEqual(t, nil, err)
-	if err != nil {
+	n := 0
+	for n < N {
+		time.Sleep(100 * time.Millisecond)
+		_, err = ts.ReadFile(name)
+		if err == nil {
+			n += 1
+			log.Printf("retry\n")
+			continue
+		}
 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+		break
 	}
+	assert.Greater(t, N, n, "Waiting too long")
 
 	ts.s.Shutdown(ts.FsLib)
 }
@@ -354,7 +362,7 @@ func TestLock(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fsl := fslib.MakeFsLib("fslibtest" + strconv.Itoa(i))
-			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -377,11 +385,11 @@ func TestLock1(t *testing.T) {
 	err := ts.Mkdir("name/locks", 0777)
 	assert.Equal(t, nil, err)
 	// Lock the file
-	err = ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	err = ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLib("fslibtest0")
 	go func() {
-		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.Nil(t, err, "MakeFile")
 		ch <- 0
 	}()

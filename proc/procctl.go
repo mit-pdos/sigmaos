@@ -47,16 +47,16 @@ type ProcCtl struct {
 
 // XXX remove pid arg
 func MakeProcCtl(fsl *fslib.FsLib) *ProcCtl {
-	pctl := &ProcCtl{}
-	pctl.runq = sync.MakeFilePriorityBag(fsl, RUNQ)
-	pctl.FsLib = fsl
+	ctl := &ProcCtl{}
+	ctl.runq = sync.MakeFilePriorityBag(fsl, RUNQ)
+	ctl.FsLib = fsl
 
-	return pctl
+	return ctl
 }
 
 // ========== SPAWN ==========
 
-func (pctl *ProcCtl) Spawn(p *Proc) error {
+func (ctl *ProcCtl) Spawn(p *Proc) error {
 	// Select which queue to put the job in
 	var procPriority string
 	switch p.Type {
@@ -70,13 +70,13 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 		log.Fatalf("Error in ProcCtl.Spawn: Unknown proc type %v", p.Type)
 	}
 
-	pStartCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, START_COND+p.Pid), nil)
+	pStartCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, START_COND+p.Pid), nil)
 	pStartCond.Init()
 
-	pExitCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EXIT_COND+p.Pid), nil)
+	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+p.Pid), nil)
 	pExitCond.Init()
 
-	pEvictCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EVICT_COND+p.Pid), nil)
+	pEvictCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EVICT_COND+p.Pid), nil)
 	pEvictCond.Init()
 
 	b, err := json.Marshal(p)
@@ -89,7 +89,7 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 		return err
 	}
 
-	err = pctl.runq.Put(procPriority, p.Pid, b)
+	err = ctl.runq.Put(procPriority, p.Pid, b)
 	if err != nil {
 		log.Printf("Error Put in ProcCtl.Spawn: %v", err)
 		return err
@@ -101,22 +101,22 @@ func (pctl *ProcCtl) Spawn(p *Proc) error {
 // ========== WAIT ==========
 
 // Wait until a proc has started. If the proc doesn't exist, return immediately.
-func (pctl *ProcCtl) WaitStart(pid string) error {
-	pStartCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
+func (ctl *ProcCtl) WaitStart(pid string) error {
+	pStartCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
 	pStartCond.Wait()
 	return nil
 }
 
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
-func (pctl *ProcCtl) WaitExit(pid string) error {
-	pExitCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
+func (ctl *ProcCtl) WaitExit(pid string) error {
+	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
 	pExitCond.Wait()
 	return nil
 }
 
 // Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
-func (pctl *ProcCtl) WaitEvict(pid string) error {
-	pEvictCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
+func (ctl *ProcCtl) WaitEvict(pid string) error {
+	pEvictCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
 	pEvictCond.Wait()
 	return nil
 }
@@ -124,13 +124,13 @@ func (pctl *ProcCtl) WaitEvict(pid string) error {
 // ========== STARTED ==========
 
 // Mark that a process has started.
-func (pctl *ProcCtl) Started(pid string) error {
-	pStartCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
+func (ctl *ProcCtl) Started(pid string) error {
+	pStartCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
 	pStartCond.Destroy()
 	// Isolate the process namespace
 	newRoot := os.Getenv("NEWROOT")
 	if err := namespace.Isolate(newRoot); err != nil {
-		log.Fatalf("Error Isolate in pctl.Started: %v", err)
+		log.Fatalf("Error Isolate in ctl.Started: %v", err)
 	}
 	// Load a seccomp filter.
 	seccomp.LoadFilter()
@@ -140,8 +140,8 @@ func (pctl *ProcCtl) Started(pid string) error {
 // ========== EXITED ==========
 
 // Mark that a process has exited.
-func (pctl *ProcCtl) Exited(pid string) error {
-	pExitCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
+func (ctl *ProcCtl) Exited(pid string) error {
+	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
 	pExitCond.Destroy()
 	return nil
 }
@@ -149,8 +149,8 @@ func (pctl *ProcCtl) Exited(pid string) error {
 // ========== EVICT ==========
 
 // Notify a process that it will be evicted.
-func (pctl *ProcCtl) Evict(pid string) error {
-	pEvictCond := sync.MakeCond(pctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
+func (ctl *ProcCtl) Evict(pid string) error {
+	pEvictCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
 	pEvictCond.Destroy()
 	return nil
 }

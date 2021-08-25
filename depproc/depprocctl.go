@@ -39,7 +39,7 @@ var usingDepProc = false
 type DepProcCtl struct {
 	JobID  string
 	jobDir string
-	pctl   *proc.ProcCtl
+	*proc.ProcCtl
 	*fslib.FsLib
 }
 
@@ -55,48 +55,48 @@ func MakeJob(fsl *fslib.FsLib, jid string) {
 }
 
 func MakeDepProcCtl(fsl *fslib.FsLib, jid string) *DepProcCtl {
-	sched := &DepProcCtl{}
-	sched.JobID = jid
-	sched.pctl = proc.MakeProcCtl(fsl)
-	sched.FsLib = fsl
-	sched.jobDir = path.Join(JOBS, jid)
+	ctl := &DepProcCtl{}
+	ctl.JobID = jid
+	ctl.ProcCtl = proc.MakeProcCtl(fsl)
+	ctl.FsLib = fsl
+	ctl.jobDir = path.Join(JOBS, jid)
 
 	MakeJob(fsl, DEFAULT_JOB_ID)
 	usingDepProc = true
 
-	return sched
+	return ctl
 }
 
 // ========== NAMING CONVENTIONS ==========
 
-func (sched *DepProcCtl) depProcFilePath(pid string) string {
-	return path.Join(sched.jobDir, pid)
+func (ctl *DepProcCtl) depProcFilePath(pid string) string {
+	return path.Join(ctl.jobDir, pid)
 }
 
-func (sched *DepProcCtl) depFilePath(pid string) string {
-	return path.Join(sched.jobDir, DEPFILE+pid)
+func (ctl *DepProcCtl) depFilePath(pid string) string {
+	return path.Join(ctl.jobDir, DEPFILE+pid)
 }
 
 // ========== SPAWN ==========
 
-func (sched *DepProcCtl) Spawn(t *DepProc) error {
-	depProcFPath := path.Join(sched.jobDir, t.Pid)
+func (ctl *DepProcCtl) Spawn(t *DepProc) error {
+	depProcFPath := path.Join(ctl.jobDir, t.Pid)
 
 	// If the underlying proc hasn't been spawned yet, the Waits will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+t.Pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+t.Pid), nil)
 	tSpawnCond.Init()
 
 	// Create a lock to make sure we don't miss updates from depProcs we depend on.
-	tLock := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(depProcFPath), true)
+	tLock := sync.MakeLock(ctl.FsLib, fslib.LOCKS, fslib.LockName(depProcFPath), true)
 
 	// Lock the depProc file to make sure we don't miss any dependency updates.
 	tLock.Lock()
 	defer tLock.Unlock()
 
 	// Register dependency backwards pointers.
-	sched.registerDependencies(t)
+	ctl.registerDependencies(t)
 
 	b, err := json.Marshal(t)
 	if err != nil {
@@ -106,14 +106,14 @@ func (sched *DepProcCtl) Spawn(t *DepProc) error {
 	}
 
 	// Atomically create the depProc file.
-	err = sched.MakeFileAtomic(depProcFPath, 0777, b)
+	err = ctl.MakeFileAtomic(depProcFPath, 0777, b)
 	if err != nil {
 		return err
 	}
 
 	// Start the depProc if it is runnable
-	if sched.depProcIsRunnable(t) {
-		sched.runDepProc(t)
+	if ctl.depProcIsRunnable(t) {
+		ctl.runDepProc(t)
 	}
 
 	return nil
@@ -122,65 +122,65 @@ func (sched *DepProcCtl) Spawn(t *DepProc) error {
 // ========== WAIT ==========
 
 // Wait for a depProc to start
-func (sched *DepProcCtl) WaitStart(pid string) error {
+func (ctl *DepProcCtl) WaitStart(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitStart will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+pid), nil)
 	tSpawnCond.Wait()
-	return sched.pctl.WaitStart(pid)
+	return ctl.ProcCtl.WaitStart(pid)
 }
 
 // Wait for a depProc to exit
-func (sched *DepProcCtl) WaitExit(pid string) error {
+func (ctl *DepProcCtl) WaitExit(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitExit will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+pid), nil)
 	tSpawnCond.Wait()
-	return sched.pctl.WaitExit(pid)
+	return ctl.ProcCtl.WaitExit(pid)
 }
 
 // Wait for a depProc to evict
-func (sched *DepProcCtl) WaitEvict(pid string) error {
+func (ctl *DepProcCtl) WaitEvict(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitEvict will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+pid), nil)
 	tSpawnCond.Wait()
-	return sched.pctl.WaitEvict(pid)
+	return ctl.ProcCtl.WaitEvict(pid)
 }
 
 // ========== STARTED ==========
 
-func (sched *DepProcCtl) Started(pid string) error {
+func (ctl *DepProcCtl) Started(pid string) error {
 	// Lock the depProc file
-	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.depProcFilePath(pid)), true)
+	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, fslib.LockName(ctl.depProcFilePath(pid)), true)
 
 	l.Lock()
 	defer l.Unlock()
 
 	// Update depProcs that depend on this depProc.
-	sched.updateDependants(pid, START_DEP)
-	sched.pctl.Started(pid)
+	ctl.updateDependants(pid, START_DEP)
+	ctl.ProcCtl.Started(pid)
 
 	return nil
 }
 
 // ========== EXITED ==========
 
-func (sched *DepProcCtl) Exited(pid string) error {
+func (ctl *DepProcCtl) Exited(pid string) error {
 	// Lock the depProc file
-	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.depProcFilePath(pid)), true)
+	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, fslib.LockName(ctl.depProcFilePath(pid)), true)
 
 	l.Lock()
 	defer l.Unlock()
 
 	// Update depProcs that depend on this depProc.
-	sched.updateDependants(pid, EXIT_DEP)
-	sched.pctl.Exited(pid)
+	ctl.updateDependants(pid, EXIT_DEP)
+	ctl.ProcCtl.Exited(pid)
 
-	err := sched.Remove(sched.depProcFilePath(pid))
+	err := ctl.Remove(ctl.depProcFilePath(pid))
 	if err != nil {
 		if usingDepProc {
 			db.DLPrintf("DEPPROC", "Error removing depProc file in DepProcCtl.Exited: %v", err)
@@ -195,13 +195,13 @@ func (sched *DepProcCtl) Exited(pid string) error {
 
 // ========== EVICTED ==========
 
-func (sched *DepProcCtl) Evict(pid string) error {
-	return sched.pctl.Evict(pid)
+func (ctl *DepProcCtl) Evict(pid string) error {
+	return ctl.ProcCtl.Evict(pid)
 }
 
 // ========== HELPERS ==========
 
-func (sched *DepProcCtl) depProcIsRunnable(t *DepProc) bool {
+func (ctl *DepProcCtl) depProcIsRunnable(t *DepProc) bool {
 	// Check for any unexited StartDeps
 	for _, started := range t.Dependencies.StartDep {
 		if !started {
@@ -218,18 +218,18 @@ func (sched *DepProcCtl) depProcIsRunnable(t *DepProc) bool {
 	return true
 }
 
-func (sched *DepProcCtl) runDepProc(t *DepProc) {
-	err := sched.pctl.Spawn(t.Proc)
+func (ctl *DepProcCtl) runDepProc(t *DepProc) {
+	err := ctl.ProcCtl.Spawn(t.Proc)
 	if err != nil {
 		log.Fatalf("Error spawning depProc in DepProcCtl.runDepProc: %v", err)
 	}
 	// Release waiters and allow them to wait on the underlying proc.
-	tSpawnCond := sync.MakeCond(sched.FsLib, path.Join(sched.jobDir, COND+t.Pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+t.Pid), nil)
 	tSpawnCond.Destroy()
 }
 
-func (sched *DepProcCtl) getDepProc(pid string) (*DepProc, error) {
-	b, _, err := sched.GetFile(sched.depProcFilePath(pid))
+func (ctl *DepProcCtl) getDepProc(pid string) (*DepProc, error) {
+	b, _, err := ctl.GetFile(ctl.depProcFilePath(pid))
 	if err != nil {
 		return nil, err
 	}
@@ -245,16 +245,16 @@ func (sched *DepProcCtl) getDepProc(pid string) (*DepProc, error) {
 
 // Register start & exit dependencies in dependencies' waitfiles, and update the
 // current proc's dependencies.
-func (sched *DepProcCtl) registerDependencies(t *DepProc) {
+func (ctl *DepProcCtl) registerDependencies(t *DepProc) {
 	for dep, _ := range t.Dependencies.StartDep {
-		if ok := sched.registerDependant(dep, t.Pid, START_DEP); !ok {
+		if ok := ctl.registerDependant(dep, t.Pid, START_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
 			// already been satisfied.
 			t.Dependencies.StartDep[dep] = true
 		}
 	}
 	for dep, _ := range t.Dependencies.ExitDep {
-		if ok := sched.registerDependant(dep, t.Pid, EXIT_DEP); !ok {
+		if ok := ctl.registerDependant(dep, t.Pid, EXIT_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
 			// already been satisfied.
 			t.Dependencies.ExitDep[dep] = true
@@ -265,13 +265,13 @@ func (sched *DepProcCtl) registerDependencies(t *DepProc) {
 // Register a dependency on another the DepProc corresponding to pid. If the
 // registration succeeded, return true. If the registration failed, assume the
 // dependency has been satisfied, and return false.
-func (sched *DepProcCtl) registerDependant(pid string, dependant string, depType Tdep) bool {
-	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.depProcFilePath(pid)), true)
+func (ctl *DepProcCtl) registerDependant(pid string, dependant string, depType Tdep) bool {
+	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, fslib.LockName(ctl.depProcFilePath(pid)), true)
 
 	l.Lock()
 	defer l.Unlock()
 
-	t, err := sched.getDepProc(pid)
+	t, err := ctl.getDepProc(pid)
 	if err != nil {
 		return false
 	}
@@ -295,20 +295,20 @@ func (sched *DepProcCtl) registerDependant(pid string, dependant string, depType
 		log.Fatalf("Error marshalling deps in ProcCtl.registerDependant: %v", err)
 	}
 
-	_, err = sched.SetFile(sched.depProcFilePath(pid), b2, np.NoV)
+	_, err = ctl.SetFile(ctl.depProcFilePath(pid), b2, np.NoV)
 	if err != nil {
-		log.Printf("Error setting waitfile in ProcCtl.registerDependant: %v, %v", sched.depProcFilePath(pid), err)
+		log.Printf("Error setting waitfile in ProcCtl.registerDependant: %v, %v", ctl.depProcFilePath(pid), err)
 	}
 
 	return true
 }
 
 // Update dependants of the DepProc named by pid.
-func (sched *DepProcCtl) updateDependants(pid string, depType Tdep) {
+func (ctl *DepProcCtl) updateDependants(pid string, depType Tdep) {
 	// Get the current contents of the wait file
-	t, err := sched.getDepProc(pid)
+	t, err := ctl.getDepProc(pid)
 	if err != nil {
-		db.DLPrintf("SCHEDCTL", "Error GetFile in DepProcCtl.updateDependants: %v, %v", sched.depProcFilePath(pid), err)
+		db.DLPrintf("SCHEDCTL", "Error GetFile in DepProcCtl.updateDependants: %v, %v", ctl.depProcFilePath(pid), err)
 		return
 	}
 
@@ -324,7 +324,7 @@ func (sched *DepProcCtl) updateDependants(pid string, depType Tdep) {
 	}
 
 	for dependant, _ := range dependants {
-		sched.updateDependant(pid, dependant, depType)
+		ctl.updateDependant(pid, dependant, depType)
 	}
 
 	// Record the start signal if applicable.
@@ -336,23 +336,23 @@ func (sched *DepProcCtl) updateDependants(pid string, depType Tdep) {
 			return
 		}
 		b2 = append(b2, ' ')
-		_, err = sched.SetFile(sched.depProcFilePath(pid), b2, np.NoV)
+		_, err = ctl.SetFile(ctl.depProcFilePath(pid), b2, np.NoV)
 		if err != nil {
-			log.Printf("Error SetFile in DepProcCtl.updateDependants: %v, %v", sched.depProcFilePath(pid), err)
+			log.Printf("Error SetFile in DepProcCtl.updateDependants: %v, %v", ctl.depProcFilePath(pid), err)
 		}
 	}
 }
 
 // Update the dependency pid of dependant.
-func (sched *DepProcCtl) updateDependant(pid string, dependant string, depType Tdep) {
+func (ctl *DepProcCtl) updateDependant(pid string, dependant string, depType Tdep) {
 	// Create a lock to atomically update the job file.
-	l := sync.MakeLock(sched.FsLib, fslib.LOCKS, fslib.LockName(sched.depProcFilePath(dependant)), true)
+	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, fslib.LockName(ctl.depProcFilePath(dependant)), true)
 
 	// Lock the job file to make sure we don't miss any dependency updates
 	l.Lock()
 	defer l.Unlock()
 
-	t, err := sched.getDepProc(dependant)
+	t, err := ctl.getDepProc(dependant)
 	if err != nil {
 		log.Printf("Couldn't get waiter file in DepProcCtl.updateDependant: %v, %v", dependant, err)
 		return
@@ -383,23 +383,23 @@ func (sched *DepProcCtl) updateDependant(pid string, dependant string, depType T
 	for i := 0; i < DEPFILE_PADDING; i++ {
 		b2 = append(b2, ' ')
 	}
-	_, err = sched.SetFile(sched.depProcFilePath(dependant), b2, np.NoV)
+	_, err = ctl.SetFile(ctl.depProcFilePath(dependant), b2, np.NoV)
 	if err != nil {
-		log.Printf("Error writing in ProcCtl.updateDependant: %v, %v", sched.depProcFilePath(dependant), err)
+		log.Printf("Error writing in ProcCtl.updateDependant: %v, %v", ctl.depProcFilePath(dependant), err)
 	}
 
-	if sched.depProcIsRunnable(t) {
-		sched.runDepProc(t)
+	if ctl.depProcIsRunnable(t) {
+		ctl.runDepProc(t)
 	}
 }
 
 // XXX REMOVE
-func (sched *DepProcCtl) SpawnNoOp(pid string, extiDep []string) error {
+func (ctl *DepProcCtl) SpawnNoOp(pid string, extiDep []string) error {
 	log.Fatalf("SpawnNoOp not implemented")
 	return nil
 }
 
-func (sched *DepProcCtl) SwapExitDependency(pids []string) error {
+func (ctl *DepProcCtl) SwapExitDependency(pids []string) error {
 	log.Fatalf("SwapExitDependency not implemented")
 	return nil
 }

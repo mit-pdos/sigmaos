@@ -20,10 +20,8 @@ type Proc struct {
 	Dir     string   // Working directory for the process
 	Args    []string // Args
 	Env     []string // Environment variables
-	//	StartDep map[string]bool // Start dependencies // XXX Replace somehow?
-	//	ExitDep  map[string]bool // Exit dependencies// XXX Replace somehow?
-	Type  Ttype // Type
-	Ncore Tcore // Number of cores requested
+	Type    Ttype    // Type
+	Ncore   Tcore    // Number of cores requested
 }
 
 func (p *Proc) String() string {

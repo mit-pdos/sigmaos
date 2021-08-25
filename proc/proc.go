@@ -25,5 +25,5 @@ type Proc struct {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore%v }", p.Pid, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
 }

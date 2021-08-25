@@ -212,6 +212,39 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name str
 	return nf
 }
 
+// Create name in dir. If OWATCH is set and name already exits, wait
+// until another thread deletes it, and retry.
+func (npc *NpConn) CreateObj(ctx fs.CtxI, d fs.NpObjDir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.NpObj, *np.Rerror) {
+	for {
+		p := append(dir, name)
+		var ws *watch.Watchers
+		if mode&np.OWATCH == np.OWATCH {
+			ws = npc.wt.WatchLookupL(p)
+		}
+		o1, err := d.Create(ctx, name, perm, mode)
+		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
+		if err == nil {
+			if ws != nil {
+				npc.wt.Release(ws, p)
+			}
+			return o1, nil
+		} else {
+			if ws != nil && err.Error() == "Name exists" {
+				err := ws.Watch(npc)
+				if err != nil {
+					return nil, err
+				}
+				// try again
+			} else {
+				if ws != nil {
+					npc.wt.Release(ws, p)
+				}
+				return nil, &np.Rerror{err.Error()}
+			}
+		}
+	}
+}
+
 func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	npc.stats.StatInfo().Ncreate.Inc()
 	db.DLPrintf("9POBJ", "Create %v\n", args)
@@ -229,37 +262,15 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 	if !o.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
-	for {
-		d := o.(fs.NpObjDir)
-		p := append(f.Path(), names[0])
-		var ws *watch.Watchers
-		if args.Mode&np.OWATCH == np.OWATCH {
-			ws = npc.wt.WatchLookupL(p)
-		}
-		o1, err := d.Create(f.Ctx(), names[0], args.Perm, args.Mode)
-		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", names[0], o1, err, args.Perm.IsEphemeral())
-		if err == nil {
-			if ws != nil {
-				npc.wt.Release(ws, p)
-			}
-			nf := npc.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
-			npc.add(sess, args.Fid, nf)
-			rets.Qid = o1.Qid()
-			break
-		} else {
-			if ws != nil && err.Error() == "Name exists" {
-				err := ws.Watch(npc)
-				if err != nil {
-					return err
-				}
-			} else {
-				if ws != nil {
-					npc.wt.Release(ws, p)
-				}
-				return &np.Rerror{err.Error()}
-			}
-		}
+
+	d := o.(fs.NpObjDir)
+	o1, r := npc.CreateObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
+	if r != nil {
+		return r
 	}
+	nf := npc.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	npc.add(sess, args.Fid, nf)
+	rets.Qid = o1.Qid()
 	return nil
 }
 
@@ -499,6 +510,7 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 // file, opens/creates it, and writes it.
 func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	var r error
+	var err *np.Rerror
 	npc.stats.StatInfo().Nset.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -530,36 +542,12 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		if !lo.Perm().IsDir() {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
-		d := lo.(fs.NpObjDir)
 		name := args.Wnames[len(args.Wnames)-1]
-		for {
-			var ws *watch.Watchers
-			p := append(dname, name)
-			if args.Mode&np.OWATCH == np.OWATCH {
-				ws = npc.wt.WatchLookupL(p)
-			}
-			lo, r = d.Create(f.Ctx(), name, args.Perm, args.Mode)
-			if r == nil {
-				if ws != nil {
-					npc.wt.Release(ws, p)
-				}
-				npc.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
-				break
-			} else {
-				if ws != nil && r.Error() == "Name exists" {
-					err := ws.Watch(npc)
-					if err != nil {
-						return err
-					}
-				} else {
-					if ws != nil {
-						npc.wt.Release(ws, p)
-					}
-					return &np.Rerror{r.Error()}
-				}
-			}
-
+		lo, err = npc.CreateObj(f.Ctx(), lo.(fs.NpObjDir), dname, name, args.Perm, args.Mode)
+		if err != nil {
+			return err
 		}
+		npc.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
 		npc.stats.Path(f.Path())
 		r = lo.Open(f.Ctx(), args.Mode)

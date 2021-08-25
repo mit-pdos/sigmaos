@@ -41,9 +41,12 @@ func (l *Lambda) init(p *proc.Proc) {
 	l.Program = p.Program
 	l.Pid = p.Pid
 	l.Args = p.Args
-	l.Env = p.Env
 	l.Dir = p.Dir
 	l.NewRoot = path.Join(namespace.NAMESPACE_DIR, l.Pid+randstr.Hex(16))
+	env := append(os.Environ(), p.Env...)
+	env = append(env, "NEWROOT="+l.NewRoot)
+	env = append(env, "PROCDIP="+l.pd.ip)
+	l.Env = env
 	l.Stdout = "" // XXX: add to or infer from p
 	l.Stderr = "" // XXX: add to or infer from p
 	l.attr = p
@@ -99,10 +102,8 @@ func (l *Lambda) run(cores []uint) error {
 		stderr = os.Stderr
 	}
 
-	env := append(os.Environ(), l.Env...)
-	env = append(env, "NEWROOT="+l.NewRoot)
 	cmd := exec.Command(l.pd.bin+"/"+l.Program, args...)
-	cmd.Env = env
+	cmd.Env = l.Env
 	cmd.Dir = l.Dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

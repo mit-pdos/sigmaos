@@ -79,13 +79,13 @@ func (ctl *DepProcCtl) depFilePath(pid string) string {
 
 // ========== SPAWN ==========
 
-func (ctl *DepProcCtl) Spawn(t *DepProc) error {
-	depProcFPath := path.Join(ctl.jobDir, t.Pid)
+func (ctl *DepProcCtl) Spawn(p *DepProc) error {
+	depProcFPath := path.Join(ctl.jobDir, p.Pid)
 
 	// If the underlying proc hasn't been spawned yet, the Waits will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+t.Pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+p.Pid), nil)
 	tSpawnCond.Init()
 
 	// Create a lock to make sure we don't miss updates from depProcs we depend on.
@@ -96,9 +96,9 @@ func (ctl *DepProcCtl) Spawn(t *DepProc) error {
 	defer tLock.Unlock()
 
 	// Register dependency backwards pointers.
-	ctl.registerDependencies(t)
+	ctl.registerDependencies(p)
 
-	b, err := json.Marshal(t)
+	b, err := json.Marshal(p)
 	if err != nil {
 		// Release waiters if spawn fails.
 		tSpawnCond.Destroy()
@@ -112,8 +112,8 @@ func (ctl *DepProcCtl) Spawn(t *DepProc) error {
 	}
 
 	// Start the depProc if it is runnable
-	if ctl.depProcIsRunnable(t) {
-		ctl.runDepProc(t)
+	if ctl.depProcIsRunnable(p) {
+		ctl.runDepProc(p)
 	}
 
 	return nil
@@ -201,16 +201,16 @@ func (ctl *DepProcCtl) Evict(pid string) error {
 
 // ========== HELPERS ==========
 
-func (ctl *DepProcCtl) depProcIsRunnable(t *DepProc) bool {
+func (ctl *DepProcCtl) depProcIsRunnable(p *DepProc) bool {
 	// Check for any unexited StartDeps
-	for _, started := range t.Dependencies.StartDep {
+	for _, started := range p.Dependencies.StartDep {
 		if !started {
 			return false
 		}
 	}
 
 	// Check for any unexited ExitDeps
-	for _, exited := range t.Dependencies.ExitDep {
+	for _, exited := range p.Dependencies.ExitDep {
 		if !exited {
 			return false
 		}
@@ -218,13 +218,13 @@ func (ctl *DepProcCtl) depProcIsRunnable(t *DepProc) bool {
 	return true
 }
 
-func (ctl *DepProcCtl) runDepProc(t *DepProc) {
-	err := ctl.ProcCtl.Spawn(t.Proc)
+func (ctl *DepProcCtl) runDepProc(p *DepProc) {
+	err := ctl.ProcCtl.Spawn(p.Proc)
 	if err != nil {
 		log.Fatalf("Error spawning depProc in DepProcCtl.runDepProc: %v", err)
 	}
 	// Release waiters and allow them to wait on the underlying proc.
-	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+t.Pid), nil)
+	tSpawnCond := sync.MakeCond(ctl.FsLib, path.Join(ctl.jobDir, COND+p.Pid), nil)
 	tSpawnCond.Destroy()
 }
 
@@ -234,30 +234,30 @@ func (ctl *DepProcCtl) getDepProc(pid string) (*DepProc, error) {
 		return nil, err
 	}
 
-	t := MakeDepProc()
-	err = json.Unmarshal(b, t)
+	p := MakeDepProc()
+	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Fatalf("Couldn't unmarshal waitfile: %v, %v", string(b), err)
 		return nil, err
 	}
-	return t, nil
+	return p, nil
 }
 
 // Register start & exit dependencies in dependencies' waitfiles, and update the
 // current proc's dependencies.
-func (ctl *DepProcCtl) registerDependencies(t *DepProc) {
-	for dep, _ := range t.Dependencies.StartDep {
-		if ok := ctl.registerDependant(dep, t.Pid, START_DEP); !ok {
+func (ctl *DepProcCtl) registerDependencies(p *DepProc) {
+	for dep, _ := range p.Dependencies.StartDep {
+		if ok := ctl.registerDependant(dep, p.Pid, START_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
 			// already been satisfied.
-			t.Dependencies.StartDep[dep] = true
+			p.Dependencies.StartDep[dep] = true
 		}
 	}
-	for dep, _ := range t.Dependencies.ExitDep {
-		if ok := ctl.registerDependant(dep, t.Pid, EXIT_DEP); !ok {
+	for dep, _ := range p.Dependencies.ExitDep {
+		if ok := ctl.registerDependant(dep, p.Pid, EXIT_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
 			// already been satisfied.
-			t.Dependencies.ExitDep[dep] = true
+			p.Dependencies.ExitDep[dep] = true
 		}
 	}
 }
@@ -271,7 +271,7 @@ func (ctl *DepProcCtl) registerDependant(pid string, dependant string, depType T
 	l.Lock()
 	defer l.Unlock()
 
-	t, err := ctl.getDepProc(pid)
+	p, err := ctl.getDepProc(pid)
 	if err != nil {
 		return false
 	}
@@ -279,18 +279,18 @@ func (ctl *DepProcCtl) registerDependant(pid string, dependant string, depType T
 	switch depType {
 	case START_DEP:
 		// Check we didn't miss the start signal already.
-		if t.Started {
+		if p.Started {
 			return false
 		}
-		t.Dependants.StartDep[dependant] = false
+		p.Dependants.StartDep[dependant] = false
 	case EXIT_DEP:
-		t.Dependants.ExitDep[dependant] = false
+		p.Dependants.ExitDep[dependant] = false
 	default:
 		log.Fatalf("Unknown dep type in DepProcCtl.registerDependant: %v", depType)
 	}
 
 	// Write back updated deps
-	b2, err := json.Marshal(t)
+	b2, err := json.Marshal(p)
 	if err != nil {
 		log.Fatalf("Error marshalling deps in ProcCtl.registerDependant: %v", err)
 	}
@@ -306,7 +306,7 @@ func (ctl *DepProcCtl) registerDependant(pid string, dependant string, depType T
 // Update dependants of the DepProc named by pid.
 func (ctl *DepProcCtl) updateDependants(pid string, depType Tdep) {
 	// Get the current contents of the wait file
-	t, err := ctl.getDepProc(pid)
+	p, err := ctl.getDepProc(pid)
 	if err != nil {
 		db.DLPrintf("SCHEDCTL", "Error GetFile in DepProcCtl.updateDependants: %v, %v", ctl.depProcFilePath(pid), err)
 		return
@@ -316,9 +316,9 @@ func (ctl *DepProcCtl) updateDependants(pid string, depType Tdep) {
 
 	switch depType {
 	case START_DEP:
-		dependants = t.Dependants.StartDep
+		dependants = p.Dependants.StartDep
 	case EXIT_DEP:
-		dependants = t.Dependants.ExitDep
+		dependants = p.Dependants.ExitDep
 	default:
 		log.Fatalf("Unknown depType in DepProcCtl.updateDependants: %v", depType)
 	}
@@ -329,8 +329,8 @@ func (ctl *DepProcCtl) updateDependants(pid string, depType Tdep) {
 
 	// Record the start signal if applicable.
 	if depType == START_DEP {
-		t.Started = true
-		b2, err := json.Marshal(t)
+		p.Started = true
+		b2, err := json.Marshal(p)
 		if err != nil {
 			log.Printf("Error marshalling depProcfile: %v", err)
 			return
@@ -352,7 +352,7 @@ func (ctl *DepProcCtl) updateDependant(pid string, dependant string, depType Tde
 	l.Lock()
 	defer l.Unlock()
 
-	t, err := ctl.getDepProc(dependant)
+	p, err := ctl.getDepProc(dependant)
 	if err != nil {
 		log.Printf("Couldn't get waiter file in DepProcCtl.updateDependant: %v, %v", dependant, err)
 		return
@@ -361,21 +361,21 @@ func (ctl *DepProcCtl) updateDependant(pid string, dependant string, depType Tde
 	switch depType {
 	case START_DEP:
 		// If the dependency has already been marked, move along.
-		if done := t.Dependencies.StartDep[pid]; done {
+		if done := p.Dependencies.StartDep[pid]; done {
 			return
 		}
-		t.Dependencies.StartDep[pid] = true
+		p.Dependencies.StartDep[pid] = true
 	case EXIT_DEP:
 		// If the dependency has already been marked, move along.
-		if done := t.Dependencies.ExitDep[pid]; done {
+		if done := p.Dependencies.ExitDep[pid]; done {
 			return
 		}
-		t.Dependencies.ExitDep[pid] = true
+		p.Dependencies.ExitDep[pid] = true
 	default:
 		log.Fatalf("Unknown depType in DepProcCtl.updateDependant: %v", depType)
 	}
 
-	b2, err := json.Marshal(t)
+	b2, err := json.Marshal(p)
 	if err != nil {
 		log.Fatalf("Error marshalling in DepProcCtl.updateDependant: %v", err)
 	}
@@ -388,8 +388,8 @@ func (ctl *DepProcCtl) updateDependant(pid string, dependant string, depType Tde
 		log.Printf("Error writing in ProcCtl.updateDependant: %v, %v", ctl.depProcFilePath(dependant), err)
 	}
 
-	if ctl.depProcIsRunnable(t) {
-		ctl.runDepProc(t)
+	if ctl.depProcIsRunnable(p) {
+		ctl.runDepProc(p)
 	}
 }
 

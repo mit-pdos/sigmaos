@@ -153,7 +153,6 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("Killing a procd")
 			err = s.procd[0].Process.Kill()
 			if err == nil {
 				s.procd[0].Wait()

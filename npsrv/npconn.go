@@ -2,7 +2,6 @@ package npsrv
 
 import (
 	"bufio"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -142,9 +141,7 @@ func (c *Channel) reader() {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
 			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", c.Src(), err)
-			if err == io.EOF {
-				c.close()
-			}
+			c.close()
 			return
 		}
 		var fcall *np.Fcall

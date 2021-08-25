@@ -6,6 +6,7 @@ import (
 	"ulambda/npsrv"
 	"ulambda/session"
 	"ulambda/stats"
+	"ulambda/watch"
 )
 
 type Fs interface {
@@ -18,7 +19,7 @@ type FsServer struct {
 	root  fs.NpObj
 	npcm  npapi.NpConnMaker
 	stats *stats.Stats
-	wt    *WatchTable
+	wt    *watch.WatchTable
 	st    *session.SessionTable
 	ct    *ConnTable
 	srv   *npsrv.NpServer
@@ -34,7 +35,7 @@ func MakeFsServer(fs Fs, root fs.NpObj, addr string,
 	fssrv.addr = addr
 	fssrv.npcm = npcm
 	fssrv.stats = stats.MkStats()
-	fssrv.wt = MkWatchTable()
+	fssrv.wt = watch.MkWatchTable()
 	fssrv.ct = MkConnTable()
 	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = npsrv.MakeReplicatedNpServer(fssrv, addr, false, replicated, relayAddr, config)
@@ -49,7 +50,7 @@ func (fssrv *FsServer) GetStats() *stats.Stats {
 	return fssrv.stats
 }
 
-func (fssrv *FsServer) GetWatchTable() *WatchTable {
+func (fssrv *FsServer) GetWatchTable() *watch.WatchTable {
 	return fssrv.wt
 }
 

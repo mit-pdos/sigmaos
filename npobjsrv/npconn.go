@@ -13,13 +13,14 @@ import (
 	"ulambda/npapi"
 	"ulambda/session"
 	"ulambda/stats"
+	"ulambda/watch"
 )
 
 type NpConn struct {
 	mu     sync.Mutex
 	closed bool
 	fssrv  *fssrv.FsServer
-	wt     *fssrv.WatchTable
+	wt     *watch.WatchTable
 	st     *session.SessionTable
 	stats  *stats.Stats
 }
@@ -231,7 +232,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 	for {
 		d := o.(fs.NpObjDir)
 		p := append(f.Path(), names[0])
-		var ws *fssrv.Watchers
+		var ws *watch.Watchers
 		if args.Mode&np.OWATCH == np.OWATCH {
 			ws = npc.wt.WatchLookupL(p)
 		}
@@ -532,7 +533,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		d := lo.(fs.NpObjDir)
 		name := args.Wnames[len(args.Wnames)-1]
 		for {
-			var ws *fssrv.Watchers
+			var ws *watch.Watchers
 			p := append(dname, name)
 			if args.Mode&np.OWATCH == np.OWATCH {
 				ws = npc.wt.WatchLookupL(p)

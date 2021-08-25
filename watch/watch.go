@@ -1,4 +1,4 @@
-package fssrv
+package watch
 
 import (
 	"sync"

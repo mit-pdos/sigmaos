@@ -32,6 +32,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
 	ts.IdemProcCtl = MakeIdemProcCtl(ts.FsLib)
+	ts.IdemProcCtl.Init()
 	ts.t = t
 	return ts
 }
@@ -43,6 +44,7 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
 	ts.IdemProcCtl = MakeIdemProcCtl(ts.FsLib)
+	ts.IdemProcCtl.Init()
 	return ts
 }
 

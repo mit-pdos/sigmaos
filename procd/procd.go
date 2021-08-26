@@ -38,7 +38,7 @@ type Procd struct {
 	nid        uint64
 	root       *Dir
 	done       bool
-	ip         string
+	addr       string
 	ls         map[string]*Lambda
 	coreBitmap []bool
 	coresAvail proc.Tcore
@@ -61,11 +61,11 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 	ip, err := fsclnt.LocalIP()
-	pd.ip = ip
 	if err != nil {
 		log.Fatalf("LocalIP %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, pd.ip+":0", npo.MakeConnMaker(), false, "", nil)
+	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", npo.MakeConnMaker(), false, "", nil)
+	pd.addr = pd.fssrv.MyAddr()
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(kernel.PROCD, 0777)
 	pd.FsLib = fsl

@@ -45,7 +45,7 @@ func (l *Lambda) init(p *proc.Proc) {
 	l.NewRoot = path.Join(namespace.NAMESPACE_DIR, l.Pid+randstr.Hex(16))
 	env := append(os.Environ(), p.Env...)
 	env = append(env, "NEWROOT="+l.NewRoot)
-	env = append(env, "PROCDIP="+l.pd.ip)
+	env = append(env, "PROCDIP="+l.pd.addr)
 	l.Env = env
 	l.Stdout = "" // XXX: add to or infer from p
 	l.Stderr = "" // XXX: add to or infer from p

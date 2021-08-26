@@ -214,7 +214,7 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name str
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (npc *NpConn) CreateObj(ctx fs.CtxI, d fs.NpObjDir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.NpObj, *np.Rerror) {
+func (npc *NpConn) createObj(ctx fs.CtxI, d fs.NpObjDir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.NpObj, *np.Rerror) {
 	for {
 		p := append(dir, name)
 		var ws *watch.Watchers
@@ -264,7 +264,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 	}
 
 	d := o.(fs.NpObjDir)
-	o1, r := npc.CreateObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
+	o1, r := npc.createObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
 	if r != nil {
 		return r
 	}
@@ -330,7 +330,21 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	return nil
 }
 
+func (npc *NpConn) lookupObj(ctx fs.CtxI, o fs.NpObj, names []string) (fs.NpObj, *np.Rerror) {
+	if !o.Perm().IsDir() {
+		return nil, np.ErrNotfound
+	}
+	d := o.(fs.NpObjDir)
+	os, rest, err := d.Lookup(ctx, names)
+	if err != nil || len(rest) != 0 {
+		return nil, &np.Rerror{fmt.Errorf("dir not found %v", names).Error()}
+	}
+	return os[len(os)-1], nil
+
+}
+
 func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+	var err *np.Rerror
 	npc.stats.StatInfo().Nremove.Inc()
 	f, err := npc.lookup(sess, args.Fid)
 	if err != nil {
@@ -347,15 +361,10 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 		return nil
 	}
 	if len(args.Wnames) > 0 {
-		if !o.Perm().IsDir() {
-			return np.ErrNotfound
+		lo, err = npc.lookupObj(f.Ctx(), o, args.Wnames)
+		if err != nil {
+			return err
 		}
-		d := o.(fs.NpObjDir)
-		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
-		if err != nil || len(rest) != 0 {
-			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
-		}
-		lo = os[len(os)-1]
 	}
 	npc.stats.Path(f.Path())
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
@@ -406,7 +415,6 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
-		// XXX if dst exists run watch?
 		err := o.Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -473,15 +481,10 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 	}
 	lo := o
 	if len(args.Wnames) > 0 {
-		if !o.Perm().IsDir() {
-			return np.ErrNotfound
+		lo, err = npc.lookupObj(f.Ctx(), o, args.Wnames)
+		if err != nil {
+			return err
 		}
-		d := o.(fs.NpObjDir)
-		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
-		if err != nil || len(rest) != 0 {
-			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
-		}
-		lo = os[len(os)-1]
 	}
 	npc.stats.Path(f.Path())
 	r := lo.Open(f.Ctx(), args.Mode)
@@ -528,22 +531,17 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 	}
 	dname := append(f.Path(), names[0:len(args.Wnames)-1]...)
 	if len(names) > 0 {
-		if !o.Perm().IsDir() {
-			return np.ErrNotfound
+		lo, err = npc.lookupObj(f.Ctx(), o, names)
+		if err != nil {
+			return err
 		}
-		d := o.(fs.NpObjDir)
-		os, rest, r := d.Lookup(f.Ctx(), names)
-		if r != nil || len(rest) != 0 {
-			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
-		}
-		lo = os[len(os)-1]
 	}
 	if args.Perm != 0 { // create?
 		if !lo.Perm().IsDir() {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		name := args.Wnames[len(args.Wnames)-1]
-		lo, err = npc.CreateObj(f.Ctx(), lo.(fs.NpObjDir), dname, name, args.Perm, args.Mode)
+		lo, err = npc.createObj(f.Ctx(), lo.(fs.NpObjDir), dname, name, args.Perm, args.Mode)
 		if err != nil {
 			return err
 		}

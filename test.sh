@@ -11,6 +11,7 @@ go test $1 ulambda/stats
 (cd nps3; go test $1)
 go test $1 ulambda/proc
 go test $1 ulambda/depproc
+go test $1 ulambda/idemproc
 (cd kv; go test $1)
 ./test-mr.sh
 ./test-kv.sh

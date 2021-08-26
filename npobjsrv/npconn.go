@@ -10,7 +10,7 @@ import (
 	"ulambda/fs"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
-	"ulambda/npapi"
+	"ulambda/protsrv"
 	"ulambda/session"
 	"ulambda/stats"
 	"ulambda/watch"
@@ -25,13 +25,13 @@ type NpConn struct {
 	stats  *stats.Stats
 }
 
-type NpConnMaker struct{}
+type ProtServer struct{}
 
-func MakeConnMaker() npapi.NpConnMaker {
-	return &NpConnMaker{}
+func MakeProtServer() protsrv.MakeProtServer {
+	return &ProtServer{}
 }
 
-func (ncm *NpConnMaker) MakeNpConn(s npapi.FsServer) npapi.NpAPI {
+func (ncm *ProtServer) MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 	npc := &NpConn{}
 	srv := s.(*fssrv.FsServer)
 	npc.fssrv = srv

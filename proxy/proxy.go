@@ -9,8 +9,8 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/npapi"
 	"ulambda/npclnt"
+	"ulambda/protsrv"
 	"ulambda/session"
 )
 
@@ -73,7 +73,7 @@ func MakeNpd() *Npd {
 }
 
 // XXX should/is happen only once for the one mount for :1110
-func (npd *Npd) Connect() npapi.NpAPI {
+func (npd *Npd) Connect() protsrv.Protsrv {
 	clnt := makeNpConn(npd.named)
 	return clnt
 }

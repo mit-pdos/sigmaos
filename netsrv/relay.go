@@ -13,8 +13,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fid"
 	np "ulambda/ninep"
-	"ulambda/npapi"
 	"ulambda/npcodec"
+	"ulambda/protsrv"
 )
 
 const (
@@ -39,13 +39,13 @@ type RelayConn struct {
 	replies chan *RelayOp
 }
 
-func (srv *NetServer) MakeRelayConn(fssrv npapi.FsServer, conn net.Conn, ops chan *RelayOp, fids map[np.Tfid]*fid.Fid) *RelayConn {
-	npapi := fssrv.Connect()
+func (srv *NetServer) MakeRelayConn(fssrv protsrv.FsServer, conn net.Conn, ops chan *RelayOp, fids map[np.Tfid]*fid.Fid) *RelayConn {
+	protsrv := fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
 		fssrv,
 		conn,
 		false,
-		npapi,
+		protsrv,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),

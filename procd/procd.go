@@ -65,7 +65,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	if err != nil {
 		log.Fatalf("LocalIP %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, pd.ip+":0", npo.MakeConnMaker(), false, "", nil)
+	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, pd.ip+":0", npo.MakeProtServer(), false, "", nil)
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(kernel.PROCD, 0777)
 	pd.FsLib = fsl

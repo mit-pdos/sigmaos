@@ -1,4 +1,4 @@
-package npapi
+package protsrv
 
 import (
 	np "ulambda/ninep"
@@ -6,11 +6,11 @@ import (
 )
 
 type FsServer interface {
-	Connect() NpAPI
+	Connect() Protsrv
 	SessionTable() *session.SessionTable
 }
 
-type NpAPI interface {
+type Protsrv interface {
 	Version(np.Tsession, np.Tversion, *np.Rversion) *np.Rerror
 	Auth(np.Tsession, np.Tauth, *np.Rauth) *np.Rerror
 	Flush(np.Tsession, np.Tflush, *np.Rflush) *np.Rerror
@@ -33,6 +33,6 @@ type NpAPI interface {
 	Closed() bool
 }
 
-type NpConnMaker interface {
-	MakeNpConn(FsServer) NpAPI
+type MakeProtServer interface {
+	MakeProtServer(FsServer) Protsrv
 }

@@ -58,7 +58,7 @@ func MakeNps3(pid string) *Nps3 {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", kernel.S3, err)
 	}
-	nps3.fssrv = fssrv.MakeFsServer(nps3, nps3.root, ip+":0", npo.MakeConnMaker(),
+	nps3.fssrv = fssrv.MakeFsServer(nps3, nps3.root, ip+":0", npo.MakeProtServer(),
 		false, "", nil)
 	fsl := fslib.MakeFsLib("nps3")
 	fsl.Mkdir(kernel.S3, 0777)

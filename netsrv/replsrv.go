@@ -13,9 +13,9 @@ import (
 	"ulambda/fid"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/npapi"
 	"ulambda/npclnt"
 	"ulambda/proc"
+	"ulambda/protsrv"
 )
 
 const (
@@ -46,7 +46,7 @@ type NetServerReplConfig struct {
 	*npclnt.NpClnt
 }
 
-func MakeReplicatedNetServer(fs npapi.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NetServerReplConfig) *NetServer {
+func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NetServerReplConfig) *NetServer {
 	var emptyConfig *NetServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)

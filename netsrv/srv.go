@@ -6,23 +6,23 @@ import (
 	"net"
 
 	db "ulambda/debug"
-	"ulambda/npapi"
+	"ulambda/protsrv"
 )
 
 type NetServer struct {
 	addr       string
-	fssrv      npapi.FsServer
+	fssrv      protsrv.FsServer
 	wireCompat bool
 	replicated bool
 	replyCache *ReplyCache
 	replConfig *NetServerReplConfig
 }
 
-func MakeNetServer(address string, fssrv npapi.FsServer) *NetServer {
+func MakeNetServer(address string, fssrv protsrv.FsServer) *NetServer {
 	return MakeReplicatedNetServer(fssrv, address, false, false, "", nil)
 }
 
-func MakeNpServerWireCompatible(address string, fssrv npapi.FsServer) *NetServer {
+func MakeNpServerWireCompatible(address string, fssrv protsrv.FsServer) *NetServer {
 	return MakeReplicatedNetServer(fssrv, address, true, false, "", nil)
 }
 

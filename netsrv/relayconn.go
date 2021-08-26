@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/npapi"
 	"ulambda/npcodec"
+	"ulambda/protsrv"
 )
 
 // A connection between replicas
@@ -18,7 +18,7 @@ type RelayNetConn struct {
 	rMu    sync.Mutex
 	wMu    sync.Mutex
 	conn   net.Conn
-	np     npapi.NpAPI
+	np     protsrv.Protsrv
 	br     *bufio.Reader
 	bw     *bufio.Writer
 	dst    string

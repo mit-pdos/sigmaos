@@ -5,15 +5,15 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npapi"
+	"ulambda/protsrv"
 )
 
 type Watch struct {
-	npc npapi.NpAPI
+	npc protsrv.Protsrv
 	ch  chan bool
 }
 
-func mkWatch(npc npapi.NpAPI) *Watch {
+func mkWatch(npc protsrv.Protsrv) *Watch {
 	return &Watch{npc, make(chan bool)}
 }
 
@@ -32,7 +32,7 @@ func (w *Watchers) Unlock() {
 	w.mu.Unlock()
 }
 
-func (w *Watchers) Watch(npc npapi.NpAPI) *np.Rerror {
+func (w *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
 	ws := mkWatch(npc)
 	w.watchers = append(w.watchers, ws)
 	w.mu.Unlock()
@@ -59,7 +59,7 @@ func (ws *Watchers) wakeupWatch() {
 	}
 }
 
-func (ws *Watchers) deleteConn(npc npapi.NpAPI) {
+func (ws *Watchers) deleteConn(npc protsrv.Protsrv) {
 	defer ws.mu.Unlock()
 	ws.mu.Lock()
 
@@ -151,7 +151,7 @@ func (wt *WatchTable) WakeupWatch(fn, dir []string) {
 }
 
 // Wakeup threads waiting for a watch on this connection
-func (wt *WatchTable) DeleteConn(npc npapi.NpAPI) {
+func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
 	wt.mu.Lock()
 	defer wt.mu.Unlock()
 

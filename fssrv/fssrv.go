@@ -3,7 +3,7 @@ package fssrv
 import (
 	"ulambda/fs"
 	"ulambda/netsrv"
-	"ulambda/npapi"
+	"ulambda/protsrv"
 	"ulambda/session"
 	"ulambda/stats"
 	"ulambda/watch"
@@ -17,7 +17,7 @@ type FsServer struct {
 	fs    Fs
 	addr  string
 	root  fs.NpObj
-	npcm  npapi.NpConnMaker
+	npcm  protsrv.MakeProtServer
 	stats *stats.Stats
 	wt    *watch.WatchTable
 	st    *session.SessionTable
@@ -26,7 +26,7 @@ type FsServer struct {
 }
 
 func MakeFsServer(fs Fs, root fs.NpObj, addr string,
-	npcm npapi.NpConnMaker,
+	npcm protsrv.MakeProtServer,
 	replicated bool,
 	relayAddr string, config *netsrv.NetServerReplConfig) *FsServer {
 	fssrv := &FsServer{}
@@ -70,8 +70,8 @@ func (fssrv *FsServer) RootAttach(uname string) (fs.NpObj, fs.CtxI) {
 	return fssrv.root, MkCtx(uname)
 }
 
-func (fssrv *FsServer) Connect() npapi.NpAPI {
-	conn := fssrv.npcm.MakeNpConn(fssrv)
+func (fssrv *FsServer) Connect() protsrv.Protsrv {
+	conn := fssrv.npcm.MakeProtServer(fssrv)
 	fssrv.ct.Add(conn)
 	return conn
 }

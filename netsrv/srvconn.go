@@ -9,8 +9,8 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npapi"
 	"ulambda/npcodec"
+	"ulambda/protsrv"
 )
 
 const (
@@ -19,10 +19,10 @@ const (
 
 type SrvConn struct {
 	mu         sync.Mutex
-	fssrv      npapi.FsServer
+	fssrv      protsrv.FsServer
 	conn       net.Conn
 	wireCompat bool
-	np         npapi.NpAPI
+	np         protsrv.Protsrv
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
@@ -30,13 +30,13 @@ type SrvConn struct {
 	sessions   map[np.Tsession]bool
 }
 
-func MakeSrvConn(conn net.Conn, fssrv npapi.FsServer, wireCompat bool) *SrvConn {
-	npapi := fssrv.Connect()
+func MakeSrvConn(conn net.Conn, fssrv protsrv.FsServer, wireCompat bool) *SrvConn {
+	protsrv := fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
 		fssrv,
 		conn,
 		wireCompat,
-		npapi,
+		protsrv,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),

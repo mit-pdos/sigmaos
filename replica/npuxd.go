@@ -9,7 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
-	"ulambda/npsrv"
+	"ulambda/netsrv"
 	"ulambda/npux"
 	"ulambda/proc"
 )
@@ -25,7 +25,7 @@ type NpUxReplica struct {
 	unionDirPath string
 	symlinkPath  string
 	mount        string
-	config       *npsrv.NpServerReplConfig
+	config       *netsrv.NetServerReplConfig
 	ux           *npux.NpUx
 	*fslib.FsLib
 	*proc.ProcCtl

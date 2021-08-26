@@ -1,4 +1,4 @@
-package npsrv
+package netsrv
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 )
 
 // A connection between replicas
-type RelayConn struct {
+type RelayNetConn struct {
 	mu     sync.Mutex
 	rMu    sync.Mutex
 	wMu    sync.Mutex
@@ -25,16 +25,16 @@ type RelayConn struct {
 	closed bool
 }
 
-func MakeRelayConn(addr string) (*RelayConn, error) {
+func MakeRelayNetConn(addr string) (*RelayNetConn, error) {
 	var err error
-	db.DLPrintf("RCHAN", "mkChan to %v\n", addr)
+	db.DLPrintf("RTCP", "mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
-		db.DLPrintf("RCHAN", "mkChan to %v err %v\n", addr, err)
+		db.DLPrintf("RTCP", "mkChan to %v err %v\n", addr, err)
 		return nil, err
 	}
-	db.DLPrintf("RCHAN", "mkChan to %v from %v\n", addr, c.LocalAddr())
-	rc := &RelayConn{}
+	db.DLPrintf("RTCP", "mkChan to %v from %v\n", addr, c.LocalAddr())
+	rc := &RelayNetConn{}
 	rc.conn = c
 	rc.dst = addr
 	rc.br = bufio.NewReaderSize(c, Msglen)
@@ -43,7 +43,7 @@ func MakeRelayConn(addr string) (*RelayConn, error) {
 	return rc, nil
 }
 
-func (rc *RelayConn) Send(frame []byte) error {
+func (rc *RelayNetConn) Send(frame []byte) error {
 	rc.wMu.Lock()
 	defer rc.wMu.Unlock()
 	err := npcodec.WriteFrame(rc.bw, frame)
@@ -52,18 +52,18 @@ func (rc *RelayConn) Send(frame []byte) error {
 		return err
 	}
 	if err != nil {
-		db.DLPrintf("RCHAN", "WriteFrame error %v\n", err)
+		db.DLPrintf("RTCP", "WriteFrame error %v\n", err)
 		return err
 	}
 	err = rc.bw.Flush()
 	if err != nil {
-		db.DLPrintf("RCHAN", "Flush error %v\n", err)
+		db.DLPrintf("RTCP", "Flush error %v\n", err)
 		return err
 	}
 	return nil
 }
 
-func (rc *RelayConn) Recv() ([]byte, error) {
+func (rc *RelayNetConn) Recv() ([]byte, error) {
 	rc.rMu.Lock()
 	defer rc.rMu.Unlock()
 	if rc.isClosed() {
@@ -75,25 +75,25 @@ func (rc *RelayConn) Recv() ([]byte, error) {
 		return nil, err
 	}
 	if err != nil {
-		db.DLPrintf("RCHAN", "Reader: ReadFrame error %v\n", err)
+		db.DLPrintf("RTCP", "Reader: ReadFrame error %v\n", err)
 		return nil, err
 	}
 	return frame, nil
 }
 
-func (rc *RelayConn) closeL() {
-	db.DLPrintf("RCHAN", "Close relay chan to %v\n", rc.dst)
+func (rc *RelayNetConn) closeL() {
+	db.DLPrintf("RTCP", "Close relay chan to %v\n", rc.dst)
 	rc.closed = true
 	rc.conn.Close()
 }
 
-func (rc *RelayConn) Close() {
+func (rc *RelayNetConn) Close() {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	rc.closeL()
 }
 
-func (rc *RelayConn) isClosed() bool {
+func (rc *RelayNetConn) isClosed() bool {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return rc.closed

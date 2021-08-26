@@ -1,4 +1,4 @@
-package npsrv
+package netsrv
 
 import (
 	np "ulambda/ninep"

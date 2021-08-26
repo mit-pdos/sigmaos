@@ -1,6 +1,7 @@
 package idemproc
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -48,6 +49,13 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	return ts
 }
 
+func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
+	p := &IdemProc{}
+	p.Proc = &proc.Proc{pid, "bin/user/idemproc-monitor", "", []string{}, nil, proc.T_DEF, proc.C_DEF}
+	err := ts.Spawn(p)
+	assert.Nil(t, err, "Monitor spawn")
+}
+
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	p := &IdemProc{}
 	p.Proc = &proc.Proc{pid, "bin/user/sleeperl", "", []string{"5s", "name/out_" + pid, ""}, nil, proc.T_DEF, proc.C_DEF}
@@ -86,6 +94,52 @@ func TestHelloWorld(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	checkSleeperlResultFalse(t, ts, pid)
+
+	ts.s.Shutdown(ts.FsLib)
+}
+
+func TestCrashProcd(t *testing.T) {
+	ts := makeTstate(t)
+
+	ts.s.BootProcd("..")
+
+	N_MON := 5
+	N_SLEEP := 40
+
+	monPids := []string{}
+	for i := 0; i < N_MON; i++ {
+		pid := fslib.GenPid()
+		spawnMonitor(t, ts, pid)
+		monPids = append(monPids, pid)
+	}
+
+	time.Sleep(time.Second * 5)
+
+	ts.s.KillOne(kernel.PROCD)
+	log.Printf("Killed a procd")
+
+	time.Sleep(time.Second * 10)
+
+	_ = N_SLEEP
+	//	sleeperPids := []string{}
+	//	for i := 0; i < N_MON; i++ {
+	//		pid := fslib.GenPid()
+	//		spawnSleeperWithPid(t, ts, pid)
+	//		sleeperPids = append(sleeperPids, pid)
+	//	}
+
+	//	pid := spawnSleeperl(t, ts)
+	//	time.Sleep(3 * time.Second)
+	//
+	//	ts.s.KillOne(kernel.PROCD)
+	//
+	//	time.Sleep(3 * time.Second)
+
+	//	checkSleeperlResultFalse(t, ts, pid)
+
+	for _, pid := range monPids {
+		ts.Evict(pid)
+	}
 
 	ts.s.Shutdown(ts.FsLib)
 }

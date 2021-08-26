@@ -41,7 +41,6 @@ func idemProcFilePath(procdIP string, pid string) string {
 func (ctl *IdemProcCtl) Init() error {
 	ctl.Mkdir(IDEM_PROCS, 0777)
 	ctl.Mkdir(path.Join(IDEM_PROCS, UNCLAIMED), 0777)
-	// TODO: Start a monitor process to watch for failed procds
 	return nil
 }
 

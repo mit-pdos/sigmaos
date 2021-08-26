@@ -376,8 +376,6 @@ func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rr
 
 	npc.wt.WakeupWatch(fname, dname)
 
-	// XXX delete from ephemeral table, if ephemeral
-	//	npc.del(sess, args.Fid) // XXX doing this here causes "unkown Fid" errors in fslib tests
 	if lo.Perm().IsEphemeral() {
 		npc.st.DelEphemeral(sess, lo)
 	}

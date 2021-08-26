@@ -16,7 +16,7 @@ type Fs interface {
 type FsServer struct {
 	fs    Fs
 	addr  string
-	root  fs.NpObj
+	root  fs.FsObj
 	npcm  protsrv.MakeProtServer
 	stats *stats.Stats
 	wt    *watch.WatchTable
@@ -25,7 +25,7 @@ type FsServer struct {
 	srv   *netsrv.NetServer
 }
 
-func MakeFsServer(fs Fs, root fs.NpObj, addr string,
+func MakeFsServer(fs Fs, root fs.FsObj, addr string,
 	npcm protsrv.MakeProtServer,
 	replicated bool,
 	relayAddr string, config *netsrv.NetServerReplConfig) *FsServer {
@@ -66,7 +66,7 @@ func (fssrv *FsServer) Done() {
 	fssrv.fs.Done()
 }
 
-func (fssrv *FsServer) RootAttach(uname string) (fs.NpObj, fs.CtxI) {
+func (fssrv *FsServer) RootAttach(uname string) (fs.FsObj, fs.CtxI) {
 	return fssrv.root, MkCtx(uname)
 }
 

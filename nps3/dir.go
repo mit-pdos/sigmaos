@@ -14,18 +14,18 @@ import (
 
 type Dir struct {
 	*Obj
-	dirents map[string]fs.NpObj
+	dirents map[string]fs.FsObj
 }
 
 func (nps3 *Nps3) makeDir(key []string, t np.Tperm, p *Dir) *Dir {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
 	o := nps3.makeObjL(key, t, p)
-	dir := &Dir{o.(*Obj), make(map[string]fs.NpObj)}
+	dir := &Dir{o.(*Obj), make(map[string]fs.FsObj)}
 	return dir
 }
 
-func (d *Dir) lookupDirent(name string) (fs.NpObj, bool) {
+func (d *Dir) lookupDirent(name string) (fs.FsObj, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	n, ok := d.dirents[name]
@@ -106,7 +106,7 @@ func (d *Dir) s3ReadDirL() error {
 	return nil
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	db.DLPrintf("NPS3", "%v: lookup %v %v\n", ctx, d, p)
 	if !d.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
@@ -120,7 +120,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
 		return nil, nil, fmt.Errorf("file not found")
 	}
 	if len(p) == 1 {
-		return []fs.NpObj{o1}, nil, nil
+		return []fs.FsObj{o1}, nil, nil
 	} else {
 		return o1.(*Dir).Lookup(ctx, p[1:])
 	}
@@ -149,7 +149,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 // XXX directories don't fully work: there is a fake directory, when
 // trying to read it we get an error.  Maybe create . or .. in the
 // directory args.Name, to force the directory into existence
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.NpObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
 	if perm.IsDir() {
 		o1 := d.nps3.makeDir(append(d.key, name), np.DMDIR, d)
 		return o1, nil
@@ -175,6 +175,6 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Np
 	return o1, nil
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.NpObjDir, to string) error {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
 	return fmt.Errorf("not supported")
 }

@@ -93,7 +93,7 @@ func (dir *Dir) SetParent(p *Dir) {
 	dir.parent = p
 }
 
-func (dir *Dir) namei(ctx fs.CtxI, path []string, inodes []fs.NpObj) ([]fs.NpObj, []string, error) {
+func (dir *Dir) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.FsObj, []string, error) {
 	var inode InodeI
 	var err error
 
@@ -155,7 +155,7 @@ func (dir *Dir) remove(ctx fs.CtxI, name string) error {
 	return dir.removeL(name)
 }
 
-func (dir *Dir) CreateDev(ctx fs.CtxI, name string, d Dev, t np.Tperm, m np.Tmode) (fs.NpObj, error) {
+func (dir *Dir) CreateDev(ctx fs.CtxI, name string, d Dev, t np.Tperm, m np.Tmode) (fs.FsObj, error) {
 	dir.Lock()
 	defer dir.Unlock()
 
@@ -176,15 +176,15 @@ func (dir *Dir) CreateDev(ctx fs.CtxI, name string, d Dev, t np.Tperm, m np.Tmod
 	return newi, dir.createL(newi, name)
 }
 
-func (dir *Dir) Create(ctx fs.CtxI, name string, t np.Tperm, m np.Tmode) (fs.NpObj, error) {
+func (dir *Dir) Create(ctx fs.CtxI, name string, t np.Tperm, m np.Tmode) (fs.FsObj, error) {
 	return dir.CreateDev(ctx, name, nil, t, m)
 }
 
-func (dir *Dir) Lookup(ctx fs.CtxI, path []string) ([]fs.NpObj, []string, error) {
+func (dir *Dir) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, error) {
 	dir.Lock()
 	db.DLPrintf("MEMFS", "%v: Lookup %v %v\n", ctx, dir, path)
 	dir.Unlock()
-	inodes := []fs.NpObj{}
+	inodes := []fs.FsObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
 	}
@@ -240,7 +240,7 @@ func unlockOrdered(olddir *Dir, newdir *Dir) {
 	}
 }
 
-func (dir *Dir) Renameat(ctx fs.CtxI, old string, nd fs.NpObjDir, new string) error {
+func (dir *Dir) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) error {
 	newdir := nd.(*Dir)
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)

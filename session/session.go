@@ -12,7 +12,7 @@ import (
 type Session struct {
 	mu        sync.Mutex
 	fids      map[np.Tfid]*fid.Fid
-	ephemeral map[fs.NpObj]*fid.Fid
+	ephemeral map[fs.FsObj]*fid.Fid
 }
 
 type SessionTable struct {
@@ -35,7 +35,7 @@ func (st *SessionTable) RegisterSession(id np.Tsession) {
 	if _, ok := st.sessions[id]; !ok {
 		new := &Session{}
 		new.fids = make(map[np.Tfid]*fid.Fid)
-		new.ephemeral = make(map[fs.NpObj]*fid.Fid)
+		new.ephemeral = make(map[fs.FsObj]*fid.Fid)
 		st.sessions[id] = new
 	}
 }
@@ -67,7 +67,7 @@ func (st *SessionTable) AddFid(id np.Tsession, fid np.Tfid, f *fid.Fid) {
 	sess.fids[fid] = f
 }
 
-func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) fs.NpObj {
+func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) fs.FsObj {
 	db.DLPrintf("SETAB", "delFid %v %v", id, fid)
 
 	st.mu.Lock()
@@ -82,7 +82,7 @@ func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) fs.NpObj {
 	return o
 }
 
-func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.NpObj, f *fid.Fid) {
+func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.FsObj, f *fid.Fid) {
 	db.DLPrintf("SETAB", "addEphemeral %v %v %v", id, o, f)
 
 	st.mu.Lock()
@@ -95,7 +95,7 @@ func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.NpObj, f *fid.Fid) {
 	sess.ephemeral[o] = f
 }
 
-func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.NpObj) {
+func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.FsObj) {
 	db.DLPrintf("SETAB", "delEpehemeral %v %v", id, o)
 
 	st.mu.Lock()
@@ -108,7 +108,7 @@ func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.NpObj) {
 	delete(sess.ephemeral, o)
 }
 
-func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.NpObj]*fid.Fid {
+func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.FsObj]*fid.Fid {
 	st.mu.Lock()
 	sess := st.sessions[id]
 	st.mu.Unlock()
@@ -117,7 +117,7 @@ func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.NpObj]*fid.Fid {
 	defer sess.mu.Unlock()
 
 	// XXX Making a full copy may be overkill...
-	e := make(map[fs.NpObj]*fid.Fid)
+	e := make(map[fs.FsObj]*fid.Fid)
 	for o, f := range sess.ephemeral {
 		e[o] = f
 	}

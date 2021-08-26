@@ -82,7 +82,7 @@ func (npux *NpUx) makeObjL(path []string, t np.Tperm, d *Dir) *Obj {
 	return o
 }
 
-func (npux *NpUx) MakeObj(path []string, t np.Tperm, d *Dir) fs.NpObj {
+func (npux *NpUx) MakeObj(path []string, t np.Tperm, d *Dir) fs.FsObj {
 	npux.mu.Lock()
 	defer npux.mu.Unlock()
 	return npux.makeObjL(path, t, d)

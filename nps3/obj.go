@@ -26,7 +26,7 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) fs.NpObj {
+func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) fs.FsObj {
 	id := nps3.nextId
 	nps3.nextId += 1
 
@@ -39,7 +39,7 @@ func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) fs.NpObj {
 	return o
 }
 
-func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, d *Dir) fs.NpObj {
+func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
 	nps3.mu.Lock()
 	defer nps3.mu.Unlock()
 	return nps3.makeObjL(key, t, d)

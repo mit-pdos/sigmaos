@@ -53,7 +53,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 }
 
 // XXX close
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.NpObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
 	p := np.Join(append(d.path, name))
 	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
 	var err error
@@ -78,7 +78,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Np
 }
 
 // XXX intermediate dirs?
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
 	fi, err := os.Stat(np.Join(append(d.path, p...)))
 	if err != nil {
@@ -86,10 +86,10 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
 	}
 	if fi.IsDir() {
 		d := d.npux.makeDir(append(d.path, p...), np.DMDIR, d)
-		return []fs.NpObj{d}, nil, nil
+		return []fs.FsObj{d}, nil, nil
 	} else {
 		f := d.npux.makeFile(append(d.path, p...), np.Tperm(0), d)
-		return []fs.NpObj{f}, nil, nil
+		return []fs.FsObj{f}, nil, nil
 	}
 }
 
@@ -97,6 +97,6 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 	return 0, fmt.Errorf("not supported")
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.NpObjDir, to string) error {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
 	return fmt.Errorf("not supported")
 }

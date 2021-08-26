@@ -13,16 +13,16 @@ import (
 type Fid struct {
 	mu   sync.Mutex
 	path []string
-	obj  fs.NpObj
+	obj  fs.FsObj
 	vers np.TQversion
 	ctx  fs.CtxI
 }
 
-func MakeFid(o fs.NpObj, ctx fs.CtxI) *Fid {
+func MakeFid(o fs.FsObj, ctx fs.CtxI) *Fid {
 	return &Fid{sync.Mutex{}, []string{}, o, o.Version(), ctx}
 }
 
-func MakeFidPath(p []string, o fs.NpObj, ctx fs.CtxI) *Fid {
+func MakeFidPath(p []string, o fs.FsObj, ctx fs.CtxI) *Fid {
 	return &Fid{sync.Mutex{}, p, o, o.Version(), ctx}
 }
 
@@ -50,7 +50,7 @@ func (f *Fid) PathDir() []string {
 	return f.path[:len(f.path)-1]
 }
 
-func (f *Fid) ObjU() fs.NpObj {
+func (f *Fid) ObjU() fs.FsObj {
 	return f.obj
 }
 
@@ -60,7 +60,7 @@ func (f *Fid) Close() {
 	f.obj = nil
 }
 
-func (f *Fid) Obj() fs.NpObj {
+func (f *Fid) Obj() fs.FsObj {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.obj
@@ -74,12 +74,12 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Rer
 	var err error
 	sz := np.Tsize(0)
 	switch i := o.(type) {
-	case fs.NpObjFile:
+	case fs.File:
 		sz, err = i.Write(f.ctx, off, b, v)
-	case fs.NpObjDir:
+	case fs.Dir:
 		sz, err = i.WriteDir(f.ctx, off, b, v)
 	default:
-		log.Fatalf("Write: obj type %T isn't NpObjDir or NpObjFile\n", o)
+		log.Fatalf("Write: obj type %T isn't Dir or File\n", o)
 	}
 	var r *np.Rerror
 	if err != nil {
@@ -88,13 +88,13 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Rer
 	return sz, r
 }
 
-func (f *Fid) readDir(o fs.NpObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
+func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
 	var dirents []*np.Stat
 	var err error
 	if o.Size() > 0 && off >= np.Toffset(o.Size()) {
 		dirents = []*np.Stat{}
 	} else {
-		d := o.(fs.NpObjDir)
+		d := o.(fs.Dir)
 		dirents, err = d.ReadDir(f.ctx, off, count, v)
 
 	}
@@ -112,9 +112,9 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		return np.ErrClunked
 	}
 	switch i := o.(type) {
-	case fs.NpObjDir:
+	case fs.Dir:
 		return f.readDir(o, off, count, v, rets)
-	case fs.NpObjFile:
+	case fs.File:
 		b, err := i.Read(f.ctx, off, count, v)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -122,7 +122,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		log.Fatalf("Read: obj type %T isn't NpObjDir or NpObjFile\n", o)
+		log.Fatalf("Read: obj type %T isn't Dir or File\n", o)
 		return nil
 	}
 }

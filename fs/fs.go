@@ -8,20 +8,20 @@ type CtxI interface {
 	Uname() string
 }
 
-type NpObjDir interface {
-	Lookup(CtxI, []string) ([]NpObj, []string, error)
-	Create(CtxI, string, np.Tperm, np.Tmode) (NpObj, error)
+type Dir interface {
+	Lookup(CtxI, []string) ([]FsObj, []string, error)
+	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, error)
 	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
-	Renameat(CtxI, string, NpObjDir, string) error
+	Renameat(CtxI, string, Dir, string) error
 }
 
-type NpObjFile interface {
+type File interface {
 	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, error)
 	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
 }
 
-type NpObj interface {
+type FsObj interface {
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Version() np.TQversion

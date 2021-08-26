@@ -103,7 +103,7 @@ func (npc *NpConn) Detach(sess np.Tsession) {
 	npc.mu.Unlock()
 }
 
-func makeQids(os []fs.NpObj) []np.Tqid {
+func makeQids(os []fs.FsObj) []np.Tqid {
 	var qids []np.Tqid
 	for _, o := range os {
 		qids = append(qids, o.Qid())
@@ -132,7 +132,7 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
-		d := o.(fs.NpObjDir)
+		d := o.(fs.Dir)
 		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -202,7 +202,7 @@ func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np
 	return nil
 }
 
-func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name string, o fs.NpObj, eph bool) *fid.Fid {
+func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
 	p := np.Copy(dir)
 	nf := fid.MakeFidPath(append(p, name), o, ctx)
 	if eph {
@@ -214,7 +214,7 @@ func (npc *NpConn) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name str
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (npc *NpConn) createObj(ctx fs.CtxI, d fs.NpObjDir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.NpObj, *np.Rerror) {
+func (npc *NpConn) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
 	for {
 		p := append(dir, name)
 		var ws *watch.Watchers
@@ -263,7 +263,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
 	}
 
-	d := o.(fs.NpObjDir)
+	d := o.(fs.Dir)
 	o1, r := npc.createObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
 	if r != nil {
 		return r
@@ -330,11 +330,11 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	return nil
 }
 
-func (npc *NpConn) lookupObj(ctx fs.CtxI, o fs.NpObj, names []string) (fs.NpObj, *np.Rerror) {
+func (npc *NpConn) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Rerror) {
 	if !o.Perm().IsDir() {
 		return nil, np.ErrNotfound
 	}
-	d := o.(fs.NpObjDir)
+	d := o.(fs.Dir)
 	os, rest, err := d.Lookup(ctx, names)
 	if err != nil || len(rest) != 0 {
 		return nil, &np.Rerror{fmt.Errorf("dir not found %v", names).Error()}
@@ -446,8 +446,8 @@ func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenam
 		return np.ErrClunked
 	}
 	switch d1 := oo.(type) {
-	case fs.NpObjDir:
-		d2, ok := no.(fs.NpObjDir)
+	case fs.Dir:
+		d2, ok := no.(fs.Dir)
 		if !ok {
 			return np.ErrNotDir
 		}
@@ -491,9 +491,9 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 	}
 	v := lo.Version()
 	switch i := lo.(type) {
-	case fs.NpObjDir:
+	case fs.Dir:
 		return np.ErrNotFile
-	case fs.NpObjFile:
+	case fs.File:
 		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), v)
 		rets.Version = v
 		if r != nil {
@@ -501,7 +501,7 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 		}
 		return nil
 	default:
-		log.Fatalf("GetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
+		log.Fatalf("GetFile: obj type %T isn't Dir or File\n", o)
 
 	}
 	return nil
@@ -539,7 +539,7 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		name := args.Wnames[len(args.Wnames)-1]
-		lo, err = npc.createObj(f.Ctx(), lo.(fs.NpObjDir), dname, name, args.Perm, args.Mode)
+		lo, err = npc.createObj(f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
 		if err != nil {
 			return err
 		}
@@ -552,16 +552,16 @@ func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) 
 		}
 	}
 	switch i := lo.(type) {
-	case fs.NpObjDir:
+	case fs.Dir:
 		return np.ErrNotFile
-	case fs.NpObjFile:
+	case fs.File:
 		rets.Count, r = i.Write(f.Ctx(), args.Offset, args.Data, args.Version)
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}
 		return nil
 	default:
-		log.Fatalf("SetFile: obj type %T isn't NpObjDir or NpObjFile\n", o)
+		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)
 
 	}
 	return nil

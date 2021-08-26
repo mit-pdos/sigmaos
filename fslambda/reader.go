@@ -20,7 +20,7 @@ type Reader struct {
 	pid    string
 	input  string
 	output string
-	pipe   fs.NpObj
+	pipe   fs.FsObj
 }
 
 func MakeReader(args []string) (*Reader, error) {
@@ -75,7 +75,7 @@ func (r *Reader) Work() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = r.pipe.(fs.NpObjFile).Write(nil, 0, data, np.NoV)
+		_, err = r.pipe.(fs.File).Write(nil, 0, data, np.NoV)
 		if err != nil {
 			log.Fatal(err)
 		}

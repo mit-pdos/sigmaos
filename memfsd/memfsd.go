@@ -61,7 +61,7 @@ func (fsd *Fsd) MkNod(name string, d memfs.Dev) error {
 	return err
 }
 
-func (fsd *Fsd) MkPipe(name string) (fs.NpObj, error) {
+func (fsd *Fsd) MkPipe(name string) (fs.FsObj, error) {
 	obj, err := fsd.root.Create(fssrv.MkCtx(""), name, np.DMNAMEDPIPE, 0)
 	if err != nil {
 		return nil, err

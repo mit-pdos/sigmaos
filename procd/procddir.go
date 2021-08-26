@@ -25,17 +25,17 @@ func (pd *Procd) makeDir(path []string, t np.Tperm, p *Dir) *Dir {
 }
 
 // Creating a lambda is always a directory
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.NpObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
 	db.DLPrintf("PROCD", "%v: Create %v\n", d, name)
 	d1 := d.pd.makeDir(append(d.name, name), perm|np.DMDIR, d)
 	d1.time = time.Now().Unix()
 	return d1, nil
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	db.DLPrintf("PROCD", "%v: Lookup %v %v %v\n", ctx, d, p, len(p))
 	// XXX maybe include root dir
-	var os []fs.NpObj
+	var os []fs.FsObj
 	switch len(d.name) {
 	case 0:
 		// XXX Lookup always succeeds for now
@@ -43,16 +43,16 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.NpObj, []string, error) {
 		if len(p) > 1 {
 			o1 := d.pd.MakeObj(append(d.name, p[1]), 0, d)
 			o1.time = d.time
-			os = []fs.NpObj{o1}
+			os = []fs.FsObj{o1}
 		} else {
-			os = []fs.NpObj{d1}
+			os = []fs.FsObj{d1}
 		}
 
 	case 1:
 		d1 := d.pd.makeDir(append(d.name, p[0]), 0, d)
 		d1.time = d.time
 		d1.uid = d.uid
-		os = []fs.NpObj{d1}
+		os = []fs.FsObj{d1}
 	default:
 		log.Fatalf("%v: Lookup: %v\n", d, p)
 	}
@@ -88,6 +88,6 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion)
 	return 0, fmt.Errorf("not suported")
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.NpObjDir, to string) error {
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
 	return fmt.Errorf("not supported")
 }

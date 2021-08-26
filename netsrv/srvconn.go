@@ -1,4 +1,4 @@
-package npsrv
+package netsrv
 
 import (
 	"bufio"
@@ -17,7 +17,7 @@ const (
 	Msglen = 64 * 1024
 )
 
-type Channel struct {
+type SrvConn struct {
 	mu         sync.Mutex
 	fssrv      npapi.FsServer
 	conn       net.Conn
@@ -30,9 +30,9 @@ type Channel struct {
 	sessions   map[np.Tsession]bool
 }
 
-func MakeChannel(conn net.Conn, fssrv npapi.FsServer, wireCompat bool) *Channel {
+func MakeSrvConn(conn net.Conn, fssrv npapi.FsServer, wireCompat bool) *SrvConn {
 	npapi := fssrv.Connect()
-	c := &Channel{sync.Mutex{},
+	c := &SrvConn{sync.Mutex{},
 		fssrv,
 		conn,
 		wireCompat,
@@ -48,15 +48,15 @@ func MakeChannel(conn net.Conn, fssrv npapi.FsServer, wireCompat bool) *Channel 
 	return c
 }
 
-func (c *Channel) Src() string {
+func (c *SrvConn) Src() string {
 	return c.conn.RemoteAddr().String()
 }
 
-func (c *Channel) Dst() string {
+func (c *SrvConn) Dst() string {
 	return c.conn.LocalAddr().String()
 }
 
-func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+func (c *SrvConn) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}
@@ -135,7 +135,7 @@ func (c *Channel) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 	}
 }
 
-func (c *Channel) reader() {
+func (c *SrvConn) reader() {
 	db.DLPrintf("9PCHAN", "Reader conn from %v\n", c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
@@ -162,7 +162,7 @@ func (c *Channel) reader() {
 	}
 }
 
-func (c *Channel) close() {
+func (c *SrvConn) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.mu.Lock()
 	close(c.replies)
@@ -178,14 +178,14 @@ func (c *Channel) close() {
 
 // Remember which sessions we're handling to detach them when this channel
 // closes.
-func (c *Channel) registerSession(sess np.Tsession) {
+func (c *SrvConn) registerSession(sess np.Tsession) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.sessions[sess] = true
 }
 
-func (c *Channel) serve(fc *np.Fcall) {
+func (c *SrvConn) serve(fc *np.Fcall) {
 	t := fc.Tag
 	c.registerSession(fc.Session)
 	// XXX Avoid doing this every time
@@ -205,7 +205,7 @@ func (c *Channel) serve(fc *np.Fcall) {
 	}
 }
 
-func (c *Channel) writer() {
+func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
 		if !ok {

@@ -1,4 +1,4 @@
-package npsrv
+package netsrv
 
 import (
 	"bufio"
@@ -27,21 +27,21 @@ type RelayOp struct {
 	requestFrame []byte
 	reply        *np.Fcall
 	replyFrame   []byte
-	r            *RelayChannel
+	r            *RelayConn
 	replies      chan *RelayOp
 }
 
 // A channel between clients & replicas, or replicas & replicas
-type RelayChannel struct {
-	srv     *NpServer
-	c       *Channel
+type RelayConn struct {
+	srv     *NetServer
+	c       *SrvConn
 	ops     chan *RelayOp
 	replies chan *RelayOp
 }
 
-func (srv *NpServer) MakeRelayChannel(fssrv npapi.FsServer, conn net.Conn, ops chan *RelayOp, fids map[np.Tfid]*fid.Fid) *RelayChannel {
+func (srv *NetServer) MakeRelayConn(fssrv npapi.FsServer, conn net.Conn, ops chan *RelayOp, fids map[np.Tfid]*fid.Fid) *RelayConn {
 	npapi := fssrv.Connect()
-	c := &Channel{sync.Mutex{},
+	c := &SrvConn{sync.Mutex{},
 		fssrv,
 		conn,
 		false,
@@ -52,13 +52,13 @@ func (srv *NpServer) MakeRelayChannel(fssrv npapi.FsServer, conn net.Conn, ops c
 		false,
 		make(map[np.Tsession]bool),
 	}
-	r := &RelayChannel{srv, c, ops, make(chan *RelayOp)}
+	r := &RelayConn{srv, c, ops, make(chan *RelayOp)}
 	go r.writer()
 	go r.reader()
 	return r
 }
 
-func (r *RelayChannel) reader() {
+func (r *RelayConn) reader() {
 	db.DLPrintf("RSRV", "Conn from %v\n", r.c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(r.c.br)
@@ -81,7 +81,7 @@ func (r *RelayChannel) reader() {
 	}
 }
 
-func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
+func (r *RelayConn) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
 	// XXX Avoid doing this every time
 	r.c.fssrv.SessionTable().RegisterSession(fc.Session)
@@ -96,7 +96,7 @@ func (r *RelayChannel) serve(fc *np.Fcall) *np.Fcall {
 	return fcall
 }
 
-func (r *RelayChannel) writer() {
+func (r *RelayConn) writer() {
 	for {
 		op, ok := <-r.replies
 		if !ok {
@@ -116,14 +116,14 @@ func (r *RelayChannel) writer() {
 	}
 }
 
-func (srv *NpServer) setupRelay() {
+func (srv *NetServer) setupRelay() {
 	// Run a worker to process messages
 	go srv.relayReader()
 	// Run a worker to dispatch responses
 	go srv.relayWriter()
 }
 
-func (srv *NpServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
+func (srv *NetServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	var replyFrame []byte
 	var replyBuffer bytes.Buffer
 	bw := bufio.NewWriter(&replyBuffer)
@@ -136,7 +136,7 @@ func (srv *NpServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	srv.replyCache.Put(request, reply, replyFrame)
 }
 
-func (srv *NpServer) relayReader() {
+func (srv *NetServer) relayReader() {
 	config := srv.replConfig
 	for {
 		op, ok := <-config.ops
@@ -208,7 +208,7 @@ func (srv *NpServer) relayReader() {
 }
 
 // Relay acks upstream.
-func (srv *NpServer) relayWriter() {
+func (srv *NetServer) relayWriter() {
 	config := srv.replConfig
 	for {
 		// XXX Don't spin
@@ -255,7 +255,7 @@ func (srv *NpServer) relayWriter() {
 	}
 }
 
-func (srv *NpServer) relayOp(op *RelayOp) {
+func (srv *NetServer) relayOp(op *RelayOp) {
 	config := srv.replConfig
 
 	// Get the next channel & address of the last person we sent to...
@@ -274,7 +274,7 @@ func (srv *NpServer) relayOp(op *RelayOp) {
 	}
 }
 
-func (srv *NpServer) resendInflightRelayOps() {
+func (srv *NetServer) resendInflightRelayOps() {
 	config := srv.replConfig
 
 	// Get the connection to the next server, and reflect that we've sent to it.
@@ -310,7 +310,7 @@ func (srv *NpServer) resendInflightRelayOps() {
 	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
 }
 
-func (srv *NpServer) sendAllAcks() {
+func (srv *NetServer) sendAllAcks() {
 	config := srv.replConfig
 	ops := config.inFlight.RemoveAll()
 	db.DLPrintf("RSRV", "%v Sent all acks: %v", config.RelayAddr, ops)
@@ -324,7 +324,7 @@ func (srv *NpServer) sendAllAcks() {
 
 // Try and send a message to the next server in the chain, and receive a
 // response.
-func (srv *NpServer) relayOnce(ch *RelayConn, op *RelayOp) bool {
+func (srv *NetServer) relayOnce(ch *RelayNetConn, op *RelayOp) bool {
 	// Only call down the chain if we aren't at the tail.
 	// XXX Get rid of this if
 	if !srv.isTail() {
@@ -349,7 +349,7 @@ func (srv *NpServer) relayOnce(ch *RelayConn, op *RelayOp) bool {
 
 // Log an op & the type of the reply. Logging the exact reply is not useful,
 // since contents may vary between replicas (e.g. time)
-func (srv *NpServer) logOp(request *np.Fcall, reply *np.Fcall) {
+func (srv *NetServer) logOp(request *np.Fcall, reply *np.Fcall) {
 	config := srv.replConfig
 	if config.LogOps {
 		fpath := "name/" + config.RelayAddr + "-log.txt"

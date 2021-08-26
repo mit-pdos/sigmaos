@@ -13,9 +13,9 @@ import (
 	"ulambda/fslib"
 	"ulambda/fssrv"
 	"ulambda/kernel"
+	"ulambda/netsrv"
 	np "ulambda/ninep"
 	npo "ulambda/npobjsrv"
-	"ulambda/npsrv"
 	usync "ulambda/sync"
 	// "ulambda/seccomp"
 )
@@ -32,7 +32,7 @@ func MakeNpUx(mount string, addr string, pid string) *NpUx {
 	return MakeReplicatedNpUx(mount, addr, pid, false, "", nil)
 }
 
-func MakeReplicatedNpUx(mount string, addr string, pid string, replicated bool, relayAddr string, config *npsrv.NpServerReplConfig) *NpUx {
+func MakeReplicatedNpUx(mount string, addr string, pid string, replicated bool, relayAddr string, config *netsrv.NetServerReplConfig) *NpUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want npux to fail
 	npux := &NpUx{}
 	npux.ch = make(chan bool)

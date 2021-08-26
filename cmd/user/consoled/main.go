@@ -7,13 +7,13 @@ import (
 
 	"ulambda/fslibsrv"
 	"ulambda/memfsd"
+	"ulambda/netsrv"
 	np "ulambda/ninep"
-	"ulambda/npsrv"
 )
 
 type Consoled struct {
 	*fslibsrv.FsLibSrv
-	srv    *npsrv.NpServer
+	srv    *netsrv.NetServer
 	memfsd *memfsd.Fsd
 	done   chan bool
 }

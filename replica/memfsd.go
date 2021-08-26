@@ -9,7 +9,7 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/memfsd"
-	"ulambda/npsrv"
+	"ulambda/netsrv"
 	"ulambda/proc"
 )
 
@@ -23,7 +23,7 @@ type MemfsdReplica struct {
 	configPath   string
 	unionDirPath string
 	symlinkPath  string
-	config       *npsrv.NpServerReplConfig
+	config       *netsrv.NetServerReplConfig
 	fsd          *memfsd.Fsd
 	*fslibsrv.FsLibSrv
 	*proc.ProcCtl

@@ -1,4 +1,4 @@
-package npsrv
+package netsrv
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ const (
 	MAX_CONNECT_RETRIES = 1000
 )
 
-type NpServerReplConfig struct {
+type NetServerReplConfig struct {
 	mu           sync.Mutex
 	LogOps       bool
 	ConfigPath   string
@@ -34,10 +34,10 @@ type NpServerReplConfig struct {
 	TailAddr     string
 	PrevAddr     string
 	NextAddr     string
-	HeadChan     *RelayConn
-	TailChan     *RelayConn
-	PrevChan     *RelayConn
-	NextChan     *RelayConn
+	HeadChan     *RelayNetConn
+	TailChan     *RelayNetConn
+	PrevChan     *RelayNetConn
+	NextChan     *RelayNetConn
 	ops          chan *RelayOp
 	inFlight     *RelayOpSet
 	fids         map[np.Tfid]*fid.Fid
@@ -46,12 +46,12 @@ type NpServerReplConfig struct {
 	*npclnt.NpClnt
 }
 
-func MakeReplicatedNpServer(fs npapi.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NpServerReplConfig) *NpServer {
-	var emptyConfig *NpServerReplConfig
+func MakeReplicatedNetServer(fs npapi.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NetServerReplConfig) *NetServer {
+	var emptyConfig *NetServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		ops := make(chan *RelayOp)
-		emptyConfig = &NpServerReplConfig{sync.Mutex{},
+		emptyConfig = &NetServerReplConfig{sync.Mutex{},
 			config.LogOps,
 			config.ConfigPath,
 			config.UnionDirPath,
@@ -66,7 +66,7 @@ func MakeReplicatedNpServer(fs npapi.FsServer, address string, wireCompat bool, 
 			proc.MakeProcCtl(config.FsLib),
 			config.NpClnt}
 	}
-	srv := &NpServer{"",
+	srv := &NetServer{"",
 		fs,
 		wireCompat, replicated,
 		MakeReplyCache(),
@@ -109,7 +109,7 @@ func MakeReplicatedNpServer(fs npapi.FsServer, address string, wireCompat bool, 
 	return srv
 }
 
-func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
+func (srv *NetServer) getNewReplConfig() *NetServerReplConfig {
 	for {
 		config, err := ReadReplConfig(srv.replConfig.ConfigPath, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
 		if err != nil {
@@ -123,7 +123,7 @@ func (srv *NpServer) getNewReplConfig() *NpServerReplConfig {
 }
 
 // Updates addresses if any have changed, and connects to new peers.
-func (srv *NpServer) reloadReplConfig(cfg *NpServerReplConfig) {
+func (srv *NetServer) reloadReplConfig(cfg *NetServerReplConfig) {
 	srv.replConfig.mu.Lock()
 	defer srv.replConfig.mu.Unlock()
 	if srv.replConfig.HeadAddr != cfg.HeadAddr || srv.replConfig.HeadChan == nil {
@@ -145,7 +145,7 @@ func (srv *NpServer) reloadReplConfig(cfg *NpServerReplConfig) {
 }
 
 // Read a replication config file.
-func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.NpClnt) (*NpServerReplConfig, error) {
+func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.NpClnt) (*NetServerReplConfig, error) {
 	b, err := fsl.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 			}
 		}
 	}
-	return &NpServerReplConfig{sync.Mutex{},
+	return &NetServerReplConfig{sync.Mutex{},
 		false,
 		path,
 		"",
@@ -183,7 +183,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 		clnt}, nil
 }
 
-func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
+func (srv *NetServer) connectToReplica(rc **RelayNetConn, addr string) {
 	// If there was an old channel here, close it.
 	if *rc != nil {
 		(*rc).Close()
@@ -193,7 +193,7 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 	}
 	for i := 0; i < MAX_CONNECT_RETRIES; i++ {
 		// May need to retry if receiving server hasn't started up yet.
-		ch, err := MakeRelayConn(addr)
+		ch, err := MakeRelayNetConn(addr)
 		if err != nil {
 			if !strings.Contains(err.Error(), "connection refused") && !peerCrashed(err) {
 				log.Printf("Error connecting RelayConn: %v, %v", srv.addr, err)
@@ -205,13 +205,13 @@ func (srv *NpServer) connectToReplica(rc **RelayConn, addr string) {
 	}
 }
 
-func (srv *NpServer) isHead() bool {
+func (srv *NetServer) isHead() bool {
 	srv.replConfig.mu.Lock()
 	defer srv.replConfig.mu.Unlock()
 	return srv.replConfig.RelayAddr == srv.replConfig.HeadAddr
 }
 
-func (srv *NpServer) isTail() bool {
+func (srv *NetServer) isTail() bool {
 	srv.replConfig.mu.Lock()
 	defer srv.replConfig.mu.Unlock()
 	return srv.replConfig.RelayAddr == srv.replConfig.TailAddr
@@ -219,7 +219,7 @@ func (srv *NpServer) isTail() bool {
 
 // Watch in case servers go down, and start a lambda to update the config if
 // they do.
-func (srv *NpServer) runDirWatcher() {
+func (srv *NetServer) runDirWatcher() {
 	config := srv.replConfig
 	for {
 		done := make(chan bool)
@@ -241,7 +241,7 @@ func (srv *NpServer) runDirWatcher() {
 	}
 }
 
-func (srv *NpServer) getReplicaTargets() []string {
+func (srv *NetServer) getReplicaTargets() []string {
 	config := srv.replConfig
 	targets := []string{}
 	// Get list of replica links
@@ -266,7 +266,7 @@ func (srv *NpServer) getReplicaTargets() []string {
 }
 
 // Watch for changes to the config file, and update if necessary
-func (srv *NpServer) runReplConfigUpdater() {
+func (srv *NetServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
 		srv.replConfig.SetRemoveWatch(srv.replConfig.ConfigPath, func(p string, err error) {
@@ -299,6 +299,6 @@ func (srv *NpServer) runReplConfigUpdater() {
 	}
 }
 
-func (c *NpServerReplConfig) String() string {
+func (c *NetServerReplConfig) String() string {
 	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v }", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
 }

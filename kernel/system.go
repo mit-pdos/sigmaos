@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	"ulambda/fslib"
@@ -34,6 +35,8 @@ type System struct {
 
 func run(bin string, name string, args []string) (*exec.Cmd, error) {
 	cmd := exec.Command(path.Join(bin, name), args...)
+	// Create a process group ID to kill all children if necessary.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ())
@@ -153,7 +156,8 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case PROCD:
 		if len(s.procd) > 0 {
-			err = s.procd[0].Process.Kill()
+			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
+			//			err = s.procd[0].Process.Kill()
 			if err == nil {
 				s.procd[0].Wait()
 				s.procd = s.procd[1:]

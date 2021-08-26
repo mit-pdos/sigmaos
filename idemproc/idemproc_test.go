@@ -79,9 +79,13 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	time.Sleep(6 * time.Second)
+	time.Sleep(3 * time.Second)
 
-	checkSleeperlResult(t, ts, pid)
+	ts.s.KillOne(kernel.PROCD)
+
+	time.Sleep(3 * time.Second)
+
+	checkSleeperlResultFalse(t, ts, pid)
 
 	ts.s.Shutdown(ts.FsLib)
 }

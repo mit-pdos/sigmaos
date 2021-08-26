@@ -15,12 +15,12 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	"ulambda/namespace"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 	"ulambda/perf"
 	"ulambda/proc"
 	usync "ulambda/sync"
@@ -65,7 +65,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	if err != nil {
 		log.Fatalf("LocalIP %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, pd.ip+":0", npo.MakeProtServer(), false, "", nil)
+	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, pd.ip+":0", fos.MakeProtServer(), false, "", nil)
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(kernel.PROCD, 0777)
 	pd.FsLib = fsl

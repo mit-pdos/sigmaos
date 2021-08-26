@@ -12,10 +12,10 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/kernel"
 	np "ulambda/ninep"
-	npo "ulambda/npobjsrv"
 	"ulambda/proc"
 	usync "ulambda/sync"
 )
@@ -58,7 +58,7 @@ func MakeNps3(pid string) *Nps3 {
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", kernel.S3, err)
 	}
-	nps3.fssrv = fssrv.MakeFsServer(nps3, nps3.root, ip+":0", npo.MakeProtServer(),
+	nps3.fssrv = fssrv.MakeFsServer(nps3, nps3.root, ip+":0", fos.MakeProtServer(),
 		false, "", nil)
 	fsl := fslib.MakeFsLib("nps3")
 	fsl.Mkdir(kernel.S3, 0777)

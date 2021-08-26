@@ -1,4 +1,4 @@
-package npobjsrv
+package fsobjsrv
 
 import (
 	"fmt"

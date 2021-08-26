@@ -6,11 +6,11 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fs"
+	"ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/memfs"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
-	"ulambda/npobjsrv"
 )
 
 const MEMFS = "name/memfsd"
@@ -30,7 +30,7 @@ func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *n
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,
-		addr, npobjsrv.MakeProtServer(), replicated, relayAddr, config)
+		addr, fsobjsrv.MakeProtServer(), replicated, relayAddr, config)
 	fsd.ch = make(chan bool)
 	if err := fsd.MkNod("statsd", fsd.fssrv.GetStats()); err != nil {
 		log.Fatalf("Mknod failed %v\n", err)

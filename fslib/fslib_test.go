@@ -145,7 +145,7 @@ func (ts *Tstate) procdName(t *testing.T) string {
 func TestSymlink1(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootNpUxd("..")
+	err := ts.s.BootFsUxd("..")
 	assert.Nil(t, err, "Error booting npuxd")
 
 	// Make a target file
@@ -176,7 +176,7 @@ func TestSymlink1(t *testing.T) {
 func TestSymlink2(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootNpUxd("..")
+	err := ts.s.BootFsUxd("..")
 	assert.Nil(t, err, "Error booting npuxd")
 
 	// Make a target file
@@ -214,7 +214,7 @@ func TestSymlink2(t *testing.T) {
 func TestSymlink3(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootNpUxd("..")
+	err := ts.s.BootFsUxd("..")
 	assert.Nil(t, err, "Error booting npuxd")
 
 	uxs, err := ts.ReadDir("name/ux")

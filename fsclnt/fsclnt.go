@@ -63,7 +63,7 @@ func (fsc *FsClient) Uname() string {
 	return fsc.uname
 }
 
-func (fsc *FsClient) npch(fid np.Tfid) *npclnt.NpChan {
+func (fsc *FsClient) npch(fid np.Tfid) *npclnt.ProtClnt {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
 
@@ -208,7 +208,7 @@ func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string) (*P
 	if err != nil {
 		return nil, err
 	}
-	ch := fsc.npc.MakeNpChan(server)
+	ch := fsc.npc.MakeProtClnt(server)
 	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 

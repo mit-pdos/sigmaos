@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/netclnt"
 	np "ulambda/ninep"
 )
 
@@ -13,23 +14,23 @@ const (
 	Msglen = 64 * 1024
 )
 
-type ChanMgr struct {
+type ConnMgr struct {
 	mu      sync.Mutex
 	name    string
 	session np.Tsession
 	seqno   *np.Tseqno
-	conns   map[string]*Chan
+	conns   map[string]*netclnt.NetClnt
 }
 
-func makeChanMgr(session np.Tsession, seqno *np.Tseqno) *ChanMgr {
-	cm := &ChanMgr{}
-	cm.conns = make(map[string]*Chan)
+func makeConnMgr(session np.Tsession, seqno *np.Tseqno) *ConnMgr {
+	cm := &ConnMgr{}
+	cm.conns = make(map[string]*netclnt.NetClnt)
 	cm.session = session
 	cm.seqno = seqno
 	return cm
 }
 
-func (cm *ChanMgr) exit() {
+func (cm *ConnMgr) exit() {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -41,7 +42,7 @@ func (cm *ChanMgr) exit() {
 }
 
 // XXX Make array
-func (cm *ChanMgr) allocChan(addrs []string) (*Chan, error) {
+func (cm *ConnMgr) allocConn(addrs []string) (*netclnt.NetClnt, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -51,7 +52,7 @@ func (cm *ChanMgr) allocChan(addrs []string) (*Chan, error) {
 	var err error
 	conn, ok := cm.conns[key]
 	if !ok {
-		conn, err = mkChan(addrs)
+		conn, err = netclnt.MkNetClnt(addrs)
 		if err == nil {
 			cm.conns[key] = conn
 		}
@@ -59,8 +60,8 @@ func (cm *ChanMgr) allocChan(addrs []string) (*Chan, error) {
 	return conn, err
 }
 
-func (cm *ChanMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, error) {
-	conn, err := cm.allocChan(dst)
+func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, error) {
+	conn, err := cm.allocConn(dst)
 	if err != nil {
 		return nil, err
 	}

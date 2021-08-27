@@ -25,14 +25,14 @@ type NpConn struct {
 	mu    sync.Mutex
 	clnt  *npclnt.NpClnt
 	uname string
-	fids  map[np.Tfid]*npclnt.NpChan // The outgoing channels to servers proxied
+	fids  map[np.Tfid]*npclnt.ProtClnt // The outgoing channels to servers proxied
 	named string
 }
 
 func makeNpConn(named string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = npclnt.MakeNpClnt()
-	npc.fids = make(map[np.Tfid]*npclnt.NpChan)
+	npc.fids = make(map[np.Tfid]*npclnt.ProtClnt)
 	npc.named = named
 	return npc
 }
@@ -41,7 +41,7 @@ func (npc *NpConn) Closed() bool {
 	return false
 }
 
-func (npc *NpConn) npch(fid np.Tfid) *npclnt.NpChan {
+func (npc *NpConn) npch(fid np.Tfid) *npclnt.ProtClnt {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	ch, ok := npc.fids[fid]
@@ -51,7 +51,7 @@ func (npc *NpConn) npch(fid np.Tfid) *npclnt.NpChan {
 	return ch
 }
 
-func (npc *NpConn) addch(fid np.Tfid, ch *npclnt.NpChan) {
+func (npc *NpConn) addch(fid np.Tfid, ch *npclnt.ProtClnt) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	npc.fids[fid] = ch
@@ -108,7 +108,7 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.addch(args.Fid, npc.clnt.MakeNpChan([]string{npc.named}))
+	npc.addch(args.Fid, npc.clnt.MakeProtClnt([]string{npc.named}))
 	rets.Qid = reply.Qid
 	return nil
 }
@@ -125,7 +125,7 @@ func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.T
 	if err != nil {
 		return np.Tqid{}, err
 	}
-	npc.addch(newfid, npc.clnt.MakeNpChan([]string{server}))
+	npc.addch(newfid, npc.clnt.MakeProtClnt([]string{server}))
 	return reply.Qid, nil
 }
 

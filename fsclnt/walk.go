@@ -83,7 +83,7 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watc
 		return reply, nil
 	}
 
-	go func(npc *npclnt.NpChan, version np.TQversion) {
+	go func(npc *npclnt.ProtClnt, version np.TQversion) {
 		db.DLPrintf("FSCLNT", "Watch set %v %v %v\n", p, r[len(r)-1], version)
 		err := npc.Watch(fid3, []string{r[len(r)-1]}, version)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
@@ -250,7 +250,7 @@ func IsUnion(path []string) ([]string, bool) {
 	return nil, false
 }
 
-func (fsc *FsClient) walkUnion(ch *npclnt.NpChan, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, error) {
+func (fsc *FsClient) walkUnion(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "Walk union: %v %v\n", dir, q)
 	fid3 := fsc.allocFid()
 	reply, err := ch.Walk(fid, fid3, dir)
@@ -286,7 +286,7 @@ func (fsc *FsClient) unionMatch(q, name string) bool {
 	return true
 }
 
-func (fsc *FsClient) unionScan(ch *npclnt.NpChan, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, error) {
+func (fsc *FsClient) unionScan(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "unionScan: %v %v\n", dirents, q)
 	for _, de := range dirents {
 		if fsc.unionMatch(q, de.Name) {
@@ -300,7 +300,7 @@ func (fsc *FsClient) unionScan(ch *npclnt.NpChan, fid, fid2 np.Tfid, dirents []*
 	return nil, nil
 }
 
-func (fsc *FsClient) unionLookup(ch *npclnt.NpChan, fid, fid2 np.Tfid, q string) (*np.Rwalk, error) {
+func (fsc *FsClient) unionLookup(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "unionLookup: %v %v %v\n", fid, fid2, q)
 	_, err := ch.Open(fid, np.OREAD)
 	if err != nil {

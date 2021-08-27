@@ -9,12 +9,12 @@ import (
 
 // The path and 9p channel associated with an fid
 type Path struct {
-	npch  *npclnt.NpChan
+	npch  *npclnt.ProtClnt
 	cname []string
 	qids  []np.Tqid
 }
 
-func makePath(npc *npclnt.NpChan, n []string, qs []np.Tqid) *Path {
+func makePath(npc *npclnt.ProtClnt, n []string, qs []np.Tqid) *Path {
 	p := &Path{}
 	p.npch = npc
 	p.cname = n

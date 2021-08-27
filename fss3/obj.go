@@ -1,4 +1,4 @@
-package nps3
+package fss3
 
 import (
 	"bytes"
@@ -26,12 +26,12 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) fs.FsObj {
-	id := nps3.nextId
-	nps3.nextId += 1
+func (fss3 *Fss3) makeObjL(key []string, t np.Tperm, d *Dir) fs.FsObj {
+	id := fss3.nextId
+	fss3.nextId += 1
 
 	o := &Obj{}
-	o.nps3 = nps3
+	o.fss3 = fss3
 	o.key = key
 	o.t = t
 	o.id = id
@@ -39,15 +39,15 @@ func (nps3 *Nps3) makeObjL(key []string, t np.Tperm, d *Dir) fs.FsObj {
 	return o
 }
 
-func (nps3 *Nps3) MakeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	return nps3.makeObjL(key, t, d)
+func (fss3 *Fss3) MakeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
+	fss3.mu.Lock()
+	defer fss3.mu.Unlock()
+	return fss3.makeObjL(key, t, d)
 }
 
 type Obj struct {
 	mu     sync.Mutex
-	nps3   *Nps3
+	fss3   *Fss3
 	key    []string
 	t      np.Tperm
 	id     np.Tpath
@@ -99,7 +99,7 @@ func (o *Obj) stat() *np.Stat {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, error) {
-	db.DLPrintf("NPS3", "Stat: %v\n", o)
+	db.DLPrintf("FSS3", "Stat: %v\n", o)
 	var err error
 	o.mu.Lock()
 	read := o.isRead
@@ -120,7 +120,7 @@ func (o *Obj) readHead() error {
 		Bucket: &bucket,
 		Key:    &key,
 	}
-	result, err := o.nps3.client.HeadObject(context.TODO(), input)
+	result, err := o.fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 		Key:    &key,
 		Range:  &region,
 	}
-	result, err := o.nps3.client.GetObject(context.TODO(), input)
+	result, err := o.fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, error) {
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	db.DLPrintf("NPS3", "Read: %v %v %v\n", o.key, off, cnt)
+	db.DLPrintf("FSS3", "Read: %v %v %v\n", o.key, off, cnt)
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
 		o.readHead()
@@ -219,7 +219,7 @@ func (o *Obj) Remove(ctx fs.CtxI, name string) error {
 		Bucket: &bucket,
 		Key:    &key,
 	}
-	_, err := o.nps3.client.DeleteObject(context.TODO(), input)
+	_, err := o.fss3.client.DeleteObject(context.TODO(), input)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (o *Obj) Rename(ctx fs.CtxI, from, to string) error {
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
 func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	db.DLPrintf("NPS3", "Write %v %v sz %v\n", off, len(b), o.sz)
+	db.DLPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	key := np.Join(o.key)
 	r, err := o.s3Read(-1, 0)
 	if err != nil {
@@ -265,7 +265,7 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 		Key:    &key,
 		Body:   r1,
 	}
-	_, err = o.nps3.client.PutObject(context.TODO(), input)
+	_, err = o.fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
 		return 0, err
 	}

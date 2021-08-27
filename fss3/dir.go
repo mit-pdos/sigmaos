@@ -1,4 +1,4 @@
-package nps3
+package fss3
 
 import (
 	"context"
@@ -17,10 +17,10 @@ type Dir struct {
 	dirents map[string]fs.FsObj
 }
 
-func (nps3 *Nps3) makeDir(key []string, t np.Tperm, p *Dir) *Dir {
-	nps3.mu.Lock()
-	defer nps3.mu.Unlock()
-	o := nps3.makeObjL(key, t, p)
+func (fss3 *Fss3) makeDir(key []string, t np.Tperm, p *Dir) *Dir {
+	fss3.mu.Lock()
+	defer fss3.mu.Unlock()
+	o := fss3.makeObjL(key, t, p)
 	dir := &Dir{o.(*Obj), make(map[string]fs.FsObj)}
 	return dir
 }
@@ -37,7 +37,7 @@ func (d *Dir) lookupDirent(name string) (fs.FsObj, bool) {
 func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
 	m := mode(key)
-	db.DLPrintf("NPS3", "s %v d.key %v dirents %v\n", s, d.key, d.dirents)
+	db.DLPrintf("FSS3", "s %v d.key %v dirents %v\n", s, d.key, d.dirents)
 	for i, c := range d.key {
 		if c != s[i] {
 			return "", m, false
@@ -59,7 +59,7 @@ func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 }
 
 func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, error) {
-	db.DLPrintf("NPS3", "Stat Dir: %v\n", d)
+	db.DLPrintf("FSS3", "Stat Dir: %v\n", d)
 	var err error
 	d.mu.Lock()
 	read := d.isRead
@@ -77,7 +77,7 @@ func (d *Dir) s3ReadDirL() error {
 		Bucket: &bucket,
 		Prefix: &key,
 	}
-	p := s3.NewListObjectsV2Paginator(d.nps3.client, params,
+	p := s3.NewListObjectsV2Paginator(d.fss3.client, params,
 		func(o *s3.ListObjectsV2PaginatorOptions) {
 			if v := int32(maxKeys); v != 0 {
 				o.Limit = v
@@ -89,14 +89,14 @@ func (d *Dir) s3ReadDirL() error {
 			return fmt.Errorf("bad offset")
 		}
 		for _, obj := range page.Contents {
-			db.DLPrintf("NPS3", "Key: %v\n", *obj.Key)
+			db.DLPrintf("FSS3", "Key: %v\n", *obj.Key)
 			if n, m, ok := d.includeNameL(*obj.Key); ok {
-				db.DLPrintf("NPS3", "incl %v %v\n", n, m)
+				db.DLPrintf("FSS3", "incl %v %v\n", n, m)
 				if m == np.DMDIR {
-					dir := d.nps3.makeDir(append(d.key, n), m, d)
+					dir := d.fss3.makeDir(append(d.key, n), m, d)
 					d.dirents[n] = dir
 				} else {
-					o1 := d.nps3.makeObjL(append(d.key, n), m, d)
+					o1 := d.fss3.makeObjL(append(d.key, n), m, d)
 					d.dirents[n] = o1.(*Obj)
 				}
 			}
@@ -107,7 +107,7 @@ func (d *Dir) s3ReadDirL() error {
 }
 
 func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
-	db.DLPrintf("NPS3", "%v: lookup %v %v\n", ctx, d, p)
+	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
 	if !d.t.IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
@@ -128,7 +128,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 
 func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
 	var dirents []*np.Stat
-	db.DLPrintf("NPS3", "readDir: %v\n", d)
+	db.DLPrintf("FSS3", "readDir: %v\n", d)
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if !d.isRead {
@@ -151,7 +151,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 // directory args.Name, to force the directory into existence
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
 	if perm.IsDir() {
-		o1 := d.nps3.makeDir(append(d.key, name), np.DMDIR, d)
+		o1 := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
 		return o1, nil
 	}
 	key := np.Join(append(d.key, name))
@@ -159,7 +159,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		Bucket: &bucket,
 		Key:    &key,
 	}
-	_, err := d.nps3.client.PutObject(context.TODO(), input)
+	_, err := d.fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if ok {
 		return nil, fmt.Errorf("Name exists")
 	}
-	o1 := d.nps3.MakeObj(np.Split(key), 0, d)
+	o1 := d.fss3.MakeObj(np.Split(key), 0, d)
 	d.dirents[name] = o1.(*Obj)
 	return o1, nil
 }

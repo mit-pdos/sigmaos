@@ -27,7 +27,7 @@ const (
 
 type System struct {
 	named *exec.Cmd
-	nps3d []*exec.Cmd
+	fss3d []*exec.Cmd
 	npuxd []*exec.Cmd
 	procd []*exec.Cmd
 	*fslib.FsLib
@@ -74,7 +74,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = s.BootNps3d(bin)
+	err = s.BootFss3d(bin)
 	if err != nil {
 		return nil, err
 	}
@@ -101,19 +101,19 @@ func (s *System) BootNpUxd(bin string) error {
 	return nil
 }
 
-func (s *System) BootNps3d(bin string) error {
+func (s *System) BootFss3d(bin string) error {
 	// Create boot cond
-	pid := "nps3d-" + fslib.GenPid()
-	nps3dStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
-	nps3dStartCond.Init()
+	pid := "fss3d-" + fslib.GenPid()
+	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
+	fss3dStartCond.Init()
 	var err error
-	nps3d, err := run(bin, "bin/kernel/nps3d", []string{pid})
-	s.nps3d = append(s.nps3d, nps3d)
+	fss3d, err := run(bin, "bin/kernel/fss3d", []string{pid})
+	s.fss3d = append(s.fss3d, fss3d)
 	if err != nil {
 		return err
 	}
 	// Wait for boot
-	nps3dStartCond.Wait()
+	fss3dStartCond.Wait()
 	return nil
 }
 
@@ -171,12 +171,12 @@ func (s *System) KillOne(srv string) error {
 }
 
 func (s *System) Shutdown(clnt *fslib.FsLib) {
-	if len(s.nps3d) != 0 {
+	if len(s.fss3d) != 0 {
 		err := s.RmUnionDir(clnt, S3)
 		if err != nil {
 			log.Printf("S3 shutdown %v\n", err)
 		}
-		for _, d := range s.nps3d {
+		for _, d := range s.fss3d {
 			d.Wait()
 		}
 	}

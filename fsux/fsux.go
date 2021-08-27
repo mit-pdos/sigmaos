@@ -1,4 +1,4 @@
-package npux
+package fsux
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 	// "ulambda/seccomp"
 )
 
-type NpUx struct {
+type FsUx struct {
 	mu    sync.Mutex
 	fssrv *fssrv.FsServer
 	ch    chan bool
@@ -28,43 +28,43 @@ type NpUx struct {
 	mount string
 }
 
-func MakeNpUx(mount string, addr string, pid string) *NpUx {
-	return MakeReplicatedNpUx(mount, addr, pid, false, "", nil)
+func MakeFsUx(mount string, addr string, pid string) *FsUx {
+	return MakeReplicatedFsUx(mount, addr, pid, false, "", nil)
 }
 
-func MakeReplicatedNpUx(mount string, addr string, pid string, replicated bool, relayAddr string, config *netsrv.NetServerReplConfig) *NpUx {
-	// seccomp.LoadFilter()  // sanity check: if enabled we want npux to fail
-	npux := &NpUx{}
-	npux.ch = make(chan bool)
-	npux.root = npux.makeDir([]string{mount}, np.DMDIR, nil)
-	db.Name("npuxd")
-	npux.fssrv = fssrv.MakeFsServer(npux, npux.root, addr, fos.MakeProtServer(), replicated, relayAddr, config)
-	fsl := fslib.MakeFsLib("npux")
+func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, relayAddr string, config *netsrv.NetServerReplConfig) *FsUx {
+	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
+	fsux := &FsUx{}
+	fsux.ch = make(chan bool)
+	fsux.root = fsux.makeDir([]string{mount}, np.DMDIR, nil)
+	db.Name("fsuxd")
+	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), replicated, relayAddr, config)
+	fsl := fslib.MakeFsLib("fsux")
 	fsl.Mkdir(kernel.UX, 0777)
-	err := fsl.PostServiceUnion(npux.fssrv.MyAddr(), kernel.UX, npux.fssrv.MyAddr())
+	err := fsl.PostServiceUnion(fsux.fssrv.MyAddr(), kernel.UX, fsux.fssrv.MyAddr())
 	if err != nil {
-		log.Fatalf("PostServiceUnion failed %v %v\n", npux.fssrv.MyAddr(), err)
+		log.Fatalf("PostServiceUnion failed %v %v\n", fsux.fssrv.MyAddr(), err)
 	}
 
 	if !replicated {
-		npuxStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
-		npuxStartCond.Destroy()
+		fsuxStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
+		fsuxStartCond.Destroy()
 	}
 
-	return npux
+	return fsux
 }
 
-func (npux *NpUx) Serve() {
-	<-npux.ch
+func (fsux *FsUx) Serve() {
+	<-fsux.ch
 }
 
-func (npux *NpUx) Done() {
-	npux.ch <- true
+func (fsux *FsUx) Done() {
+	fsux.ch <- true
 }
 
 type Obj struct {
 	mu   sync.Mutex
-	npux *NpUx
+	fsux *FsUx
 	path []string
 	t    np.Tperm
 	ino  uint64
@@ -73,19 +73,19 @@ type Obj struct {
 	init bool
 }
 
-func (npux *NpUx) makeObjL(path []string, t np.Tperm, d *Dir) *Obj {
+func (fsux *FsUx) makeObjL(path []string, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
-	o.npux = npux
+	o.fsux = fsux
 	o.path = path
 	o.t = t
 	o.dir = d
 	return o
 }
 
-func (npux *NpUx) MakeObj(path []string, t np.Tperm, d *Dir) fs.FsObj {
-	npux.mu.Lock()
-	defer npux.mu.Unlock()
-	return npux.makeObjL(path, t, d)
+func (fsux *FsUx) MakeObj(path []string, t np.Tperm, d *Dir) fs.FsObj {
+	fsux.mu.Lock()
+	defer fsux.mu.Unlock()
+	return fsux.makeObjL(path, t, d)
 }
 
 func (o *Obj) String() string {

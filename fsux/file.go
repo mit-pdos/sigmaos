@@ -1,4 +1,4 @@
-package npux
+package fsux
 
 import (
 	"io"
@@ -14,11 +14,11 @@ type File struct {
 	file *os.File
 }
 
-func (npux *NpUx) makeFile(path []string, t np.Tperm, p *Dir) *File {
+func (fsux *FsUx) makeFile(path []string, t np.Tperm, p *Dir) *File {
 	f := &File{}
-	npux.mu.Lock()
-	defer npux.mu.Unlock()
-	f.Obj = npux.makeObjL(path, t, p)
+	fsux.mu.Lock()
+	defer fsux.mu.Unlock()
+	f.Obj = fsux.makeObjL(path, t, p)
 	return f
 }
 

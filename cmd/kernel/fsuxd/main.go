@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"ulambda/fsclnt"
+	"ulambda/fsux"
 	"ulambda/kernel"
-	"ulambda/npux"
 )
 
 func main() {
@@ -18,6 +18,6 @@ func main() {
 		log.Fatalf("LocalIP %v %v\n", kernel.UX, err)
 	}
 
-	npux := npux.MakeNpUx("/tmp", ip+":0", os.Args[1])
-	npux.Serve()
+	fsux := fsux.MakeFsUx("/tmp", ip+":0", os.Args[1])
+	fsux.Serve()
 }

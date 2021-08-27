@@ -28,7 +28,7 @@ const (
 type System struct {
 	named *exec.Cmd
 	fss3d []*exec.Cmd
-	npuxd []*exec.Cmd
+	fsuxd []*exec.Cmd
 	procd []*exec.Cmd
 	*fslib.FsLib
 }
@@ -70,7 +70,7 @@ func Boot(bin string) (*System, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = s.BootNpUxd(bin)
+	err = s.BootFsUxd(bin)
 	if err != nil {
 		return nil, err
 	}
@@ -85,19 +85,19 @@ func Boot(bin string) (*System, error) {
 	return s, nil
 }
 
-func (s *System) BootNpUxd(bin string) error {
+func (s *System) BootFsUxd(bin string) error {
 	// Create boot cond
-	pid := "npuxd-" + fslib.GenPid()
-	npuxdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
-	npuxdStartCond.Init()
+	pid := "fsuxd-" + fslib.GenPid()
+	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
+	fsuxdStartCond.Init()
 	var err error
-	npuxd, err := run(bin, "bin/kernel/npuxd", []string{pid})
-	s.npuxd = append(s.npuxd, npuxd)
+	fsuxd, err := run(bin, "bin/kernel/fsuxd", []string{pid})
+	s.fsuxd = append(s.fsuxd, fsuxd)
 	if err != nil {
 		return err
 	}
 	// Wait for boot
-	npuxdStartCond.Wait()
+	fsuxdStartCond.Wait()
 	return nil
 }
 
@@ -180,12 +180,12 @@ func (s *System) Shutdown(clnt *fslib.FsLib) {
 			d.Wait()
 		}
 	}
-	if len(s.npuxd) != 0 {
+	if len(s.fsuxd) != 0 {
 		err := s.RmUnionDir(clnt, UX)
 		if err != nil {
 			log.Printf("Ux shutdown %v\n", err)
 		}
-		for _, d := range s.npuxd {
+		for _, d := range s.fsuxd {
 			d.Wait()
 		}
 	}

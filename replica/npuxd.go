@@ -9,12 +9,12 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/fsux"
 	"ulambda/netsrv"
-	"ulambda/npux"
 	"ulambda/proc"
 )
 
-type NpUxReplica struct {
+type FsUxReplica struct {
 	Pid          string
 	name         string
 	relayPort    string
@@ -26,13 +26,13 @@ type NpUxReplica struct {
 	symlinkPath  string
 	mount        string
 	config       *netsrv.NetServerReplConfig
-	ux           *npux.NpUx
+	ux           *fsux.FsUx
 	*fslib.FsLib
 	*proc.ProcCtl
 }
 
-func MakeNpUxReplica(args []string) *NpUxReplica {
-	r := &NpUxReplica{}
+func MakeFsUxReplica(args []string) *FsUxReplica {
+	r := &FsUxReplica{}
 	r.Pid = args[0]
 	r.relayPort = args[1]
 	portNum, err := strconv.Atoi(r.relayPort)
@@ -54,10 +54,10 @@ func MakeNpUxReplica(args []string) *NpUxReplica {
 	if len(args) == 6 && args[5] == "log-ops" {
 		r.config.LogOps = true
 	}
-	fsl := fslib.MakeFsLib("npux-replica" + r.relayAddr)
+	fsl := fslib.MakeFsLib("fsux-replica" + r.relayAddr)
 	r.FsLib = fsl
 	r.ProcCtl = proc.MakeProcCtl(fsl)
-	r.ux = npux.MakeReplicatedNpUx(r.mount, r.srvAddr, "", true, r.relayAddr, r.config)
+	r.ux = fsux.MakeReplicatedFsUx(r.mount, r.srvAddr, "", true, r.relayAddr, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)
 	// Post in union dir
 	err = r.PostService(r.srvAddr, r.name)
@@ -73,38 +73,38 @@ func MakeNpUxReplica(args []string) *NpUxReplica {
 	return r
 }
 
-func (r *NpUxReplica) setupMountPoint() {
-	r.mount = "/tmp/npux-" + r.relayAddr
+func (r *FsUxReplica) setupMountPoint() {
+	r.mount = "/tmp/fsux-" + r.relayAddr
 	// Remove the old mount if it already existed
 	os.RemoveAll(r.mount)
 	os.Mkdir(r.mount, 0777)
 }
 
-func (r *NpUxReplica) Work() {
+func (r *FsUxReplica) Work() {
 	r.Started(r.Pid)
 	r.ux.Serve()
 }
 
-func (r *NpUxReplica) GetAddr() string {
+func (r *FsUxReplica) GetAddr() string {
 	return r.relayAddr
 }
 
-func (r *NpUxReplica) GetPort() string {
+func (r *FsUxReplica) GetPort() string {
 	return r.relayPort
 }
 
-func (r *NpUxReplica) GetConfigPath() string {
+func (r *FsUxReplica) GetConfigPath() string {
 	return r.configPath
 }
 
-func (r *NpUxReplica) GetUnionDirPath() string {
+func (r *FsUxReplica) GetUnionDirPath() string {
 	return r.unionDirPath
 }
 
-func (r *NpUxReplica) GetServiceName() string {
-	return "npux"
+func (r *FsUxReplica) GetServiceName() string {
+	return "fsux"
 }
 
-func (r *NpUxReplica) GetSymlinkPath() string {
+func (r *FsUxReplica) GetSymlinkPath() string {
 	return r.symlinkPath
 }

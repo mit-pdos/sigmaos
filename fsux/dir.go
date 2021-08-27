@@ -1,4 +1,4 @@
-package npux
+package fsux
 
 import (
 	"fmt"
@@ -14,11 +14,11 @@ type Dir struct {
 	*Obj
 }
 
-func (npux *NpUx) makeDir(path []string, t np.Tperm, p *Dir) *Dir {
+func (fsux *FsUx) makeDir(path []string, t np.Tperm, p *Dir) *Dir {
 	d := &Dir{}
-	npux.mu.Lock()
-	defer npux.mu.Unlock()
-	d.Obj = npux.makeObjL(path, t, p)
+	fsux.mu.Lock()
+	defer fsux.mu.Unlock()
+	d.Obj = fsux.makeObjL(path, t, p)
 	return d
 }
 
@@ -62,14 +62,14 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		if err != nil {
 			return nil, err
 		}
-		d1 := d.npux.makeDir(append(d.path, name), 0, d)
+		d1 := d.fsux.makeDir(append(d.path, name), 0, d)
 		return d1, nil
 	} else {
 		file, err := os.OpenFile(p, uxFlags(m)|os.O_CREATE, os.FileMode(perm&0777))
 		if err != nil {
 			return nil, err
 		}
-		f := d.npux.makeFile(append(d.path, name), 0, d)
+		f := d.fsux.makeFile(append(d.path, name), 0, d)
 		if file != nil {
 			f.file = file
 		}
@@ -85,10 +85,10 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 		return nil, nil, err
 	}
 	if fi.IsDir() {
-		d := d.npux.makeDir(append(d.path, p...), np.DMDIR, d)
+		d := d.fsux.makeDir(append(d.path, p...), np.DMDIR, d)
 		return []fs.FsObj{d}, nil, nil
 	} else {
-		f := d.npux.makeFile(append(d.path, p...), np.Tperm(0), d)
+		f := d.fsux.makeFile(append(d.path, p...), np.Tperm(0), d)
 		return []fs.FsObj{f}, nil, nil
 	}
 }

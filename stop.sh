@@ -16,6 +16,6 @@ killall kvclerk
 killall coord
 killall flwr
 killall sharderd
-killall nps3d
-killall npuxd
+killall fss3d
+killall fsuxd
 killall fsreader

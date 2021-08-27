@@ -104,7 +104,7 @@ func TestCrashProcd(t *testing.T) {
 	ts.s.BootProcd("..")
 
 	N_MON := 5
-	N_SLEEP := 40
+	N_SLEEP := 5
 
 	monPids := []string{}
 	for i := 0; i < N_MON; i++ {
@@ -113,33 +113,32 @@ func TestCrashProcd(t *testing.T) {
 		monPids = append(monPids, pid)
 	}
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 3)
+
+	// Spawn some sleepers
+	sleeperPids := []string{}
+	for i := 0; i < N_SLEEP; i++ {
+		pid := fslib.GenPid()
+		spawnSleeperlWithPid(t, ts, pid)
+		sleeperPids = append(sleeperPids, pid)
+	}
+
+	time.Sleep(time.Second * 1)
 
 	ts.s.KillOne(kernel.PROCD)
 	log.Printf("Killed a procd")
 
 	time.Sleep(time.Second * 10)
 
-	_ = N_SLEEP
-	//	sleeperPids := []string{}
-	//	for i := 0; i < N_MON; i++ {
-	//		pid := fslib.GenPid()
-	//		spawnSleeperWithPid(t, ts, pid)
-	//		sleeperPids = append(sleeperPids, pid)
-	//	}
+	for _, pid := range sleeperPids {
+		checkSleeperlResult(t, ts, pid)
+	}
 
-	//	pid := spawnSleeperl(t, ts)
-	//	time.Sleep(3 * time.Second)
-	//
-	//	ts.s.KillOne(kernel.PROCD)
-	//
-	//	time.Sleep(3 * time.Second)
-
-	//	checkSleeperlResultFalse(t, ts, pid)
-
+	log.Printf("Start evictions")
 	for _, pid := range monPids {
 		ts.Evict(pid)
 	}
+	log.Printf("Finish evictions")
 
 	ts.s.Shutdown(ts.FsLib)
 }

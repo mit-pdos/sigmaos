@@ -70,46 +70,7 @@ func (m *Monitor) watchProcds() {
 	}
 }
 
-func (m *Monitor) getFailedProcds() []string {
-	remaining, err := m.ReadDir(kernel.PROCD)
-	if err != nil {
-		log.Fatalf("Error ReadDir 1 in Monitor.getFailedProcs: %v", err)
-	}
-
-	procdIPs := map[string]bool{}
-	for _, r := range remaining {
-		procdIPs[r.Name] = true
-	}
-
-	oldProcds, err := m.ReadDir(IDEM_PROCS)
-	if err != nil {
-		log.Fatalf("Error ReadDir 2 in Monitor.getFailedProcs: %v", err)
-	}
-
-	failedProcds := []string{}
-	for _, o := range oldProcds {
-		if _, ok := procdIPs[o.Name]; !ok {
-			failedProcds = append(failedProcds, o.Name)
-		}
-	}
-	return failedProcds
-}
-
-func (m *Monitor) getFailedProcs() []*IdemProc {
-	failedProcds := m.getFailedProcds()
-	failedProcs := []*IdemProc{}
-	for _, procdIP := range failedProcds {
-		procs, err := m.ReadDir(path.Join(IDEM_PROCS, procdIP))
-		if err != nil {
-			log.Fatalf("Error ReadDir 3 in Monitor.getFailedProcs: %v", err)
-		}
-		for _, p := range procs {
-			failedProcs = append(failedProcs, m.getProc(procdIP, p.Name))
-		}
-	}
-	return failedProcs
-}
-
+// Read & unmarshal a proc.
 func (m *Monitor) getProc(procdIP string, pid string) *IdemProc {
 	b, err := m.ReadFile(idemProcFilePath(procdIP, pid))
 	if err != nil {
@@ -124,9 +85,75 @@ func (m *Monitor) getProc(procdIP string, pid string) *IdemProc {
 	return &IdemProc{p}
 }
 
-func (m *Monitor) respawnFailedProcs(ps []*IdemProc) {
+// Get a list of the failed procds.
+func (m *Monitor) getFailedProcds() []string {
+	remaining, err := m.ReadDir(kernel.PROCD)
+	if err != nil {
+		log.Fatalf("Error ReadDir 1 in Monitor.getFailedProcds: %v", err)
+	}
+
+	procdIPs := map[string]bool{}
+	for _, r := range remaining {
+		procdIPs[r.Name] = true
+	}
+
+	oldProcds, err := m.ReadDir(IDEM_PROCS)
+	if err != nil {
+		log.Fatalf("Error ReadDir 2 in Monitor.getFailedProcds: %v", err)
+	}
+
+	failedProcds := []string{}
+	for _, o := range oldProcds {
+		if _, ok := procdIPs[o.Name]; !ok && o.Name != NEED_RESTART {
+			failedProcds = append(failedProcds, o.Name)
+		}
+	}
+	return failedProcds
+}
+
+// Moves procs from failed procd directory to NEED_RESTART directory.
+func (m *Monitor) markProcsNeedRestart() {
+	failedProcds := m.getFailedProcds()
+	for _, procdIP := range failedProcds {
+		procs, err := m.ReadDir(path.Join(IDEM_PROCS, procdIP))
+		if err != nil {
+			log.Fatalf("Error ReadDir in Monitor.markProcsNeedRestart: %v", err)
+		}
+		for _, p := range procs {
+			old := idemProcFilePath(procdIP, p.Name)
+			new := idemProcFilePath(NEED_RESTART, p.Name)
+			err := m.Rename(old, new)
+			if err != nil {
+				log.Fatalf("Error rename in Monitor.markProcsNeedRestart: %v", err)
+			}
+		}
+	}
+}
+
+// Retrieves procs from NEED_RESTART directory.
+func (m *Monitor) getProcsNeedRestart() []*IdemProc {
+	needRestart := []*IdemProc{}
+	procs, err := m.ReadDir(path.Join(IDEM_PROCS, NEED_RESTART))
+	if err != nil {
+		log.Fatalf("Error ReadDir in Monitor.getProcsNeedRestart: %v", err)
+	}
+	for _, p := range procs {
+		needRestart = append(needRestart, m.getProc(NEED_RESTART, p.Name))
+	}
+	return needRestart
+}
+
+// Respawn procs which may need a restart.
+func (m *Monitor) respawnProcs(ps []*IdemProc) {
 	for _, p := range ps {
-		m.Spawn(p)
+		err := m.Spawn(p)
+		if err != nil {
+			log.Fatalf("Error Spawn in Monitor.respawnFailedProcs: %v", err)
+		}
+		err = m.Remove(idemProcFilePath(NEED_RESTART, p.Pid))
+		if err != nil {
+			log.Fatalf("Error Remove in Monitor.respawnFailedProcs: %v", err)
+		}
 	}
 }
 
@@ -137,9 +164,10 @@ func (m *Monitor) Work() {
 		if ok := m.l.TryLock(); !ok {
 			continue
 		}
-		ps := m.getFailedProcs()
-		m.respawnFailedProcs(ps)
-		// XXX clean up old files & dirs
+		m.markProcsNeedRestart()
+		ps := m.getProcsNeedRestart()
+		m.respawnProcs(ps)
+		m.l.Unlock()
 	}
 }
 

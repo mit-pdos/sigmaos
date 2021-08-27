@@ -45,7 +45,6 @@ type ProcCtl struct {
 	*fslib.FsLib
 }
 
-// XXX remove pid arg
 func MakeProcCtl(fsl *fslib.FsLib) *ProcCtl {
 	ctl := &ProcCtl{}
 	ctl.runq = sync.MakeFilePriorityBag(fsl, RUNQ)

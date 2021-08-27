@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	IDEM_PROCS = "name/idemprocs"
-	UNCLAIMED  = "unclaimed"
+	IDEM_PROCS   = "name/idemprocs"
+	UNCLAIMED    = "unclaimed"
+	NEED_RESTART = "need-restart"
 )
 
 type IdemProcCtl struct {
@@ -41,6 +42,7 @@ func idemProcFilePath(procdIP string, pid string) string {
 func (ctl *IdemProcCtl) Init() error {
 	ctl.Mkdir(IDEM_PROCS, 0777)
 	ctl.Mkdir(path.Join(IDEM_PROCS, UNCLAIMED), 0777)
+	ctl.Mkdir(path.Join(IDEM_PROCS, NEED_RESTART), 0777)
 	return nil
 }
 

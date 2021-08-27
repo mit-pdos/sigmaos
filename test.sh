@@ -8,7 +8,7 @@ go test $1 ulambda/fsclnt
 go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats
-(cd nps3; go test $1)
+(cd fss3; go test $1)
 go test $1 ulambda/proc
 go test $1 ulambda/depproc
 go test $1 ulambda/idemproc

@@ -7,14 +7,15 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Sleeperl struct {
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	pid         string
 	sleepLength time.Duration
 	output      string
@@ -27,7 +28,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	s := &Sleeperl{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
-	s.DepProcCtl = depproc.MakeDepProcCtl(s.FsLib, depproc.DEFAULT_JOB_ID)
+	s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayers())
 	s.pid = args[0]
 	s.output = args[2]
 

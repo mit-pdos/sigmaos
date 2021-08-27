@@ -39,7 +39,7 @@ var usingDepProc = false
 type DepProcCtl struct {
 	JobID  string
 	jobDir string
-	*proc.ProcCtl
+	proc.ProcCtl
 	*fslib.FsLib
 }
 
@@ -54,17 +54,18 @@ func MakeJob(fsl *fslib.FsLib, jid string) {
 	}
 }
 
-func MakeDepProcCtl(fsl *fslib.FsLib, jid string) *DepProcCtl {
-	ctl := &DepProcCtl{}
-	ctl.JobID = jid
-	ctl.ProcCtl = proc.MakeProcCtl(fsl)
-	ctl.FsLib = fsl
-	ctl.jobDir = path.Join(JOBS, jid)
+func MakeDepProcCtl(fsl *fslib.FsLib, ctl proc.ProcCtl) *DepProcCtl {
+	jid := DEFAULT_JOB_ID
+	dctl := &DepProcCtl{}
+	dctl.JobID = jid
+	dctl.ProcCtl = ctl
+	dctl.FsLib = fsl
+	dctl.jobDir = path.Join(JOBS, jid)
 
 	MakeJob(fsl, DEFAULT_JOB_ID)
 	usingDepProc = true
 
-	return ctl
+	return dctl
 }
 
 // ========== NAMING CONVENTIONS ==========
@@ -79,7 +80,8 @@ func (ctl *DepProcCtl) depFilePath(pid string) string {
 
 // ========== SPAWN ==========
 
-func (ctl *DepProcCtl) Spawn(p *DepProc) error {
+func (ctl *DepProcCtl) Spawn(gp proc.GenericProc) error {
+	p := gp.(*DepProc)
 	depProcFPath := path.Join(ctl.jobDir, p.Pid)
 
 	// If the underlying proc hasn't been spawned yet, the Waits will fall

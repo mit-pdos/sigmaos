@@ -19,21 +19,21 @@ const (
 )
 
 type IdemProcCtl struct {
-	*proc.ProcCtl
+	proc.ProcCtl
 	*fslib.FsLib
 }
 
-func MakeIdemProcCtl(fsl *fslib.FsLib) *IdemProcCtl {
-	ctl := &IdemProcCtl{}
-	ctl.FsLib = fsl
-	ctl.ProcCtl = proc.MakeProcCtl(fsl)
+func MakeIdemProcCtl(fsl *fslib.FsLib, ctl proc.ProcCtl) *IdemProcCtl {
+	ictl := &IdemProcCtl{}
+	ictl.FsLib = fsl
+	ictl.ProcCtl = ctl
 
-	return ctl
+	return ictl
 }
 
 // ========== NAMING CONVENTIONS ==========
 
-func idemProcFilePath(procdIP string, pid string) string {
+func IdemProcFilePath(procdIP string, pid string) string {
 	return path.Join(IDEM_PROCS, procdIP, pid)
 }
 
@@ -48,14 +48,16 @@ func (ctl *IdemProcCtl) Init() error {
 
 // ========== SPAWN ==========
 
-func (ctl *IdemProcCtl) Spawn(p *IdemProc) error {
+func (ctl *IdemProcCtl) Spawn(gp proc.GenericProc) error {
+	p := IdemProc{}
+	p.Proc = gp.GetProc()
 	b, err := json.Marshal(p)
 	if err != nil {
 		log.Fatalf("Error marshalling IdemProc in IdemProcCtl.Spawn: %v", err)
 		return err
 	}
 
-	idemProcFPath := idemProcFilePath(UNCLAIMED, p.Pid)
+	idemProcFPath := IdemProcFilePath(UNCLAIMED, p.Pid)
 
 	// Atomically create the idemProc file.
 	err = ctl.MakeFileAtomic(idemProcFPath, 0777, b)
@@ -93,8 +95,8 @@ func (ctl *IdemProcCtl) Started(pid string) error {
 		return fmt.Errorf("Error: Bad procdIP in IdemProcCtl.Started: %v", procdIP)
 	}
 	ctl.Mkdir(path.Join(IDEM_PROCS, procdIP), 0777)
-	old := idemProcFilePath(UNCLAIMED, pid)
-	new := idemProcFilePath(procdIP, pid)
+	old := IdemProcFilePath(UNCLAIMED, pid)
+	new := IdemProcFilePath(procdIP, pid)
 	err := ctl.Rename(old, new)
 	if err != nil {
 		log.Fatalf("Error: Rename in IdemProcCtl.Started: %v", err)
@@ -111,7 +113,7 @@ func (ctl *IdemProcCtl) Exited(pid string) error {
 		log.Fatalf("Error: Bad procdIP in IdemProcCtl.Exited: %v", procdIP)
 		return fmt.Errorf("Error: Bad procdIP in IdemProcCtl.Exited: %v", procdIP)
 	}
-	path := idemProcFilePath(procdIP, pid)
+	path := IdemProcFilePath(procdIP, pid)
 	err := ctl.Remove(path)
 	if err != nil {
 		log.Fatalf("Error: Remove in IdemProcCtl.Exited: %v", err)

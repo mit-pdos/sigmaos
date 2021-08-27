@@ -18,6 +18,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procinit"
 
 	"ulambda/perf"
 )
@@ -84,7 +85,7 @@ type Stats struct {
 	hz   int
 	done uint32
 	fsl  *fslib.FsLib
-	*proc.ProcCtl
+	proc.ProcCtl
 }
 
 func MkStats() *Stats {
@@ -100,7 +101,7 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
-	st.ProcCtl = proc.MakeProcCtl(fsl)
+	st.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()

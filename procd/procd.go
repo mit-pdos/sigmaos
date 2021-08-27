@@ -12,6 +12,7 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	"ulambda/baseproc"
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
@@ -46,7 +47,6 @@ type Procd struct {
 	group      sync.WaitGroup
 	perf       *perf.Perf
 	*fslib.FsLib
-	*proc.ProcCtl
 }
 
 func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd {
@@ -69,7 +69,6 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(kernel.PROCD, 0777)
 	pd.FsLib = fsl
-	pd.ProcCtl = proc.MakeProcCtl(fsl)
 	err = fsl.PostServiceUnion(pd.fssrv.MyAddr(), kernel.PROCD, pd.fssrv.MyAddr())
 	if err != nil {
 		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.fssrv.MyAddr(), err)
@@ -85,12 +84,12 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 	// Make some directories used by other services.
-	fsl.Mkdir(proc.PROC_COND, 0777)
+	fsl.Mkdir(baseproc.PROC_COND, 0777)
 	fsl.Mkdir(fslib.LOCKS, 0777)
 	fsl.Mkdir(fslib.TMP, 0777)
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(fsl, proc.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(fsl, baseproc.RUNQ)
 
 	procdStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
 	procdStartCond.Destroy()

@@ -3,6 +3,7 @@ package twopc
 import (
 	"ulambda/depproc"
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 type TxnI interface {
@@ -54,7 +55,7 @@ func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 	return &twopc
 }
 
-func SpawnCoord(pctl *depproc.DepProcCtl, opcode string, ps []string) string {
+func SpawnCoord(pctl proc.ProcCtl, opcode string, ps []string) string {
 	args := append([]string{opcode}, ps...)
 	t := depproc.MakeDepProc()
 	t.Pid = fslib.GenPid()

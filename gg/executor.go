@@ -6,15 +6,16 @@ import (
 	"os/exec"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Executor struct {
 	pid       string
 	thunkHash string
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
@@ -24,7 +25,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
+	ex.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
 	ex.Started(ex.pid)
 	return ex, nil
 }

@@ -17,6 +17,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/mr"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 func RmDir(dir string) error {
@@ -84,7 +85,7 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
-	sctl := depproc.MakeDepProcCtl(fsl, depproc.DEFAULT_JOB_ID)
+	sctl := procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)

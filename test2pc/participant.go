@@ -6,10 +6,11 @@ import (
 	"os"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 	"ulambda/twopc"
 )
 
@@ -19,7 +20,7 @@ type Tinput struct {
 
 type Part2pc struct {
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	pid    string
 	me     string
 	index  string
@@ -42,7 +43,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.opcode = args[2]
 	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
-	p.DepProcCtl = depproc.MakeDepProcCtl(p.FsLib, depproc.DEFAULT_JOB_ID)
+	p.ProcCtl = procinit.MakeProcCtl(p.FsLib, procinit.GetProcLayers())
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}

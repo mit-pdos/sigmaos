@@ -59,7 +59,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		l.pd.Exited(l.attr.Pid)
+		// XXX Mark as exited?
 		return
 	}
 
@@ -74,13 +74,6 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 
 func (l *Lambda) run(cores []uint) error {
 	db.DLPrintf("PROCD", "Procd run: %v\n", l.attr)
-
-	// Don't run anything if this is a no-op
-	if l.Program == NO_OP_LAMBDA {
-		// XXX Should perhaps do this asynchronously, but worried about fsclnt races
-		l.pd.Exited(l.Pid)
-		return nil
-	}
 
 	// XXX Hack to get perf stat to work cleanly... we probably want to do proper
 	// stdout/stderr redirection eventually...

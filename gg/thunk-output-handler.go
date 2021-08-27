@@ -5,8 +5,9 @@ import (
 	"strings"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type ThunkOutputHandler struct {
@@ -16,7 +17,7 @@ type ThunkOutputHandler struct {
 	primaryOutputThunkPid  string
 	outputFiles            []string
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 }
 
 func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, error) {
@@ -34,7 +35,7 @@ func mkThunkOutputHandler(pid string, thunkHash string, outputFiles []string) *T
 	toh.outputFiles = outputFiles
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
 	toh.FsLib = fls
-	toh.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
+	toh.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
 	return toh
 }
 
@@ -90,15 +91,16 @@ func (toh *ThunkOutputHandler) propagateResultUpstream() {
 }
 
 func (toh *ThunkOutputHandler) adjustExitDependencies() {
-	exitDepSwaps := []string{
-		toh.pid,
-		toh.primaryOutputThunkPid,
-	}
+	//	exitDepSwaps := []string{
+	//		toh.pid,
+	//		toh.primaryOutputThunkPid,
+	//	}
 	db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
-	err := toh.SwapExitDependency(exitDepSwaps)
-	if err != nil {
-		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
-	}
+	// XXX Need to get rid of SwapExitDependency
+	//	err := toh.SwapExitDependency(exitDepSwaps)
+	//	if err != nil {
+	//		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
+	//	}
 }
 
 func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][]string {

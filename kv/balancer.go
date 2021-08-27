@@ -13,6 +13,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/depproc"
 	"ulambda/fslib"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 const (
@@ -26,7 +28,7 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	pid  string
 	args []string
 	conf *Config
@@ -40,7 +42,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
-	bl.DepProcCtl = depproc.MakeDepProcCtl(bl.FsLib, depproc.DEFAULT_JOB_ID)
+	bl.ProcCtl = procinit.MakeProcCtl(bl.FsLib, procinit.GetProcLayers())
 
 	db.Name("balancer")
 

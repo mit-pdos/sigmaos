@@ -5,18 +5,19 @@ import (
 	"log"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fs"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/memfs"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Reader struct {
 	*fslibsrv.FsLibSrv
-	sched  *depproc.DepProcCtl
+	proc.ProcCtl
 	pid    string
 	input  string
 	output string
@@ -47,12 +48,12 @@ func MakeReader(args []string) (*Reader, error) {
 
 	r := &Reader{}
 	r.FsLibSrv = fsl
-	r.sched = depproc.MakeDepProcCtl(fsl.FsLib, depproc.DEFAULT_JOB_ID)
+	r.ProcCtl = procinit.MakeProcCtl(fsl.FsLib, procinit.GetProcLayers())
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]
 	r.pipe = pipe
-	r.sched.Started(r.pid)
+	r.Started(r.pid)
 
 	return r, nil
 }
@@ -87,5 +88,5 @@ func (r *Reader) Work() {
 }
 
 func (r *Reader) Exit() {
-	r.sched.Exited(r.pid)
+	r.Exited(r.pid)
 }

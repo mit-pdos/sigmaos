@@ -11,6 +11,7 @@ import (
 	"ulambda/memfsd"
 	"ulambda/netsrv"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type MemfsdReplica struct {
@@ -26,7 +27,7 @@ type MemfsdReplica struct {
 	config       *netsrv.NetServerReplConfig
 	fsd          *memfsd.Fsd
 	*fslibsrv.FsLibSrv
-	*proc.ProcCtl
+	proc.ProcCtl
 }
 
 func MakeMemfsdReplica(args []string) *MemfsdReplica {
@@ -60,7 +61,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 		log.Fatalf("%v: InitFs failed %v\n", args, err)
 	}
 	r.FsLibSrv = fs
-	r.ProcCtl = proc.MakeProcCtl(fs.FsLib)
+	r.ProcCtl = procinit.MakeProcCtl(fs.FsLib, procinit.GetProcLayers())
 	return r
 }
 

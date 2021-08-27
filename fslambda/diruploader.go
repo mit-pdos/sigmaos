@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type DirUploader struct {
@@ -18,7 +19,7 @@ type DirUploader struct {
 	dest      string
 	thunkHash string
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 }
 
 func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {
@@ -31,7 +32,7 @@ func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("dir-uploader")
 	up.FsLib = fls
-	up.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
+	up.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
 	up.Started(up.pid)
 	return up, nil
 }

@@ -7,16 +7,17 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	pid   string
 	shard string
 	src   string
@@ -34,7 +35,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[2]
 	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
-	mv.DepProcCtl = depproc.MakeDepProcCtl(mv.FsLib, depproc.DEFAULT_JOB_ID)
+	mv.ProcCtl = procinit.MakeProcCtl(mv.FsLib, procinit.GetProcLayers())
 
 	db.Name(mv.pid)
 

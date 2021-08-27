@@ -6,16 +6,17 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	me     string
 	twopc  *Twopc
 	txn    TxnI
@@ -35,7 +36,7 @@ func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Par
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
-	p.DepProcCtl = depproc.MakeDepProcCtl(fsl, depproc.DEFAULT_JOB_ID)
+	p.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
 	p.txn = txn
 	p.opcode = opcode
 
@@ -105,7 +106,7 @@ func (p *Participant) restartCoord() {
 		log.Printf("PART clean")
 		return
 	}
-	SpawnCoord(p.DepProcCtl, "restart", p.twopc.Participants)
+	SpawnCoord(p.ProcCtl, "restart", p.twopc.Participants)
 	//ok, err := p.Wait(pid1)
 	//if err != nil {
 	//	log.Printf("PART wait failed\n")

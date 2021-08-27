@@ -12,6 +12,7 @@ import (
 	"ulambda/fsux"
 	"ulambda/netsrv"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type FsUxReplica struct {
@@ -28,7 +29,7 @@ type FsUxReplica struct {
 	config       *netsrv.NetServerReplConfig
 	ux           *fsux.FsUx
 	*fslib.FsLib
-	*proc.ProcCtl
+	proc.ProcCtl
 }
 
 func MakeFsUxReplica(args []string) *FsUxReplica {
@@ -56,7 +57,7 @@ func MakeFsUxReplica(args []string) *FsUxReplica {
 	}
 	fsl := fslib.MakeFsLib("fsux-replica" + r.relayAddr)
 	r.FsLib = fsl
-	r.ProcCtl = proc.MakeProcCtl(fsl)
+	r.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
 	r.ux = fsux.MakeReplicatedFsUx(r.mount, r.srvAddr, "", true, r.relayAddr, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)
 	// Post in union dir

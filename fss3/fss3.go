@@ -16,7 +16,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/kernel"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	usync "ulambda/sync"
 )
 
@@ -34,7 +33,6 @@ type Fss3 struct {
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
 	root   *Dir
-	*proc.ProcCtl
 }
 
 func MakeFss3(pid string) *Fss3 {

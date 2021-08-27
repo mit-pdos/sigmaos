@@ -30,8 +30,12 @@ func MakeDepProc() *DepProc {
 	return t
 }
 
-func (t *DepProc) String() string {
-	return fmt.Sprintf("&{ proc:%v started:%v, dependencies:%v, dependants:%v }", t.Proc, t.Started, t.Dependencies, t.Dependants)
+func (p *DepProc) GetProc() *proc.Proc {
+	return p.Proc
+}
+
+func (p *DepProc) String() string {
+	return fmt.Sprintf("&{ proc:%v started:%v, dependencies:%v, dependants:%v }", p.Proc, p.Started, p.Dependencies, p.Dependants)
 }
 
 func (d *Deps) String() string {

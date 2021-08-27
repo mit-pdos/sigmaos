@@ -15,6 +15,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/npclnt"
 	"ulambda/proc"
+	"ulambda/procinit"
 	"ulambda/protsrv"
 )
 
@@ -42,7 +43,7 @@ type NetServerReplConfig struct {
 	inFlight     *RelayOpSet
 	fids         map[np.Tfid]*fid.Fid
 	*fslib.FsLib
-	*proc.ProcCtl
+	proc.ProcCtl
 	*npclnt.NpClnt
 }
 
@@ -63,7 +64,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 			MakeRelayOpSet(),
 			map[np.Tfid]*fid.Fid{},
 			config.FsLib,
-			proc.MakeProcCtl(config.FsLib),
+			procinit.MakeProcCtl(config.FsLib, procinit.GetProcLayers()),
 			config.NpClnt}
 	}
 	srv := &NetServer{"",
@@ -179,7 +180,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 		nil,
 		nil,
 		fsl,
-		proc.MakeProcCtl(fsl),
+		procinit.MakeProcCtl(fsl, procinit.GetProcLayers()),
 		clnt}, nil
 }
 

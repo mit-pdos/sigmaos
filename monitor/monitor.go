@@ -1,4 +1,4 @@
-package idemproc
+package monitor
 
 import (
 	"encoding/json"
@@ -9,8 +9,10 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/idemproc"
 	"ulambda/kernel"
 	"ulambda/proc"
+	"ulambda/procinit"
 	"ulambda/sync"
 )
 
@@ -22,7 +24,7 @@ type Monitor struct {
 	pid string
 	l   *sync.Lock
 	*fslib.FsLib
-	*IdemProcCtl
+	proc.ProcCtl
 }
 
 func MakeMonitor(args []string) *Monitor {
@@ -30,7 +32,7 @@ func MakeMonitor(args []string) *Monitor {
 	m.pid = args[0]
 	m.FsLib = fslib.MakeFsLib(m.pid)
 	m.l = sync.MakeLock(m.FsLib, fslib.LOCKS, IDEMPROC_LOCK, true)
-	m.IdemProcCtl = MakeIdemProcCtl(m.FsLib)
+	m.ProcCtl = procinit.MakeProcCtl(m.FsLib, procinit.GetProcLayers())
 	db.Name(m.pid)
 
 	log.Printf("Monitor: %v", m)
@@ -71,8 +73,8 @@ func (m *Monitor) watchProcds() {
 }
 
 // Read & unmarshal a proc.
-func (m *Monitor) getProc(procdIP string, pid string) *IdemProc {
-	b, err := m.ReadFile(idemProcFilePath(procdIP, pid))
+func (m *Monitor) getProc(procdIP string, pid string) *idemproc.IdemProc {
+	b, err := m.ReadFile(idemproc.IdemProcFilePath(procdIP, pid))
 	if err != nil {
 		log.Fatalf("Error ReadFile in Monitor.getProc: %v", err)
 	}
@@ -82,7 +84,7 @@ func (m *Monitor) getProc(procdIP string, pid string) *IdemProc {
 	if err != nil {
 		log.Fatalf("Error Unmarshal in Monitor.getProc: %v", err)
 	}
-	return &IdemProc{p}
+	return &idemproc.IdemProc{p}
 }
 
 // Get a list of the failed procds.
@@ -97,31 +99,31 @@ func (m *Monitor) getFailedProcds() []string {
 		procdIPs[r.Name] = true
 	}
 
-	oldProcds, err := m.ReadDir(IDEM_PROCS)
+	oldProcds, err := m.ReadDir(idemproc.IDEM_PROCS)
 	if err != nil {
 		log.Fatalf("Error ReadDir 2 in Monitor.getFailedProcds: %v", err)
 	}
 
 	failedProcds := []string{}
 	for _, o := range oldProcds {
-		if _, ok := procdIPs[o.Name]; !ok && o.Name != NEED_RESTART {
+		if _, ok := procdIPs[o.Name]; !ok && o.Name != idemproc.NEED_RESTART {
 			failedProcds = append(failedProcds, o.Name)
 		}
 	}
 	return failedProcds
 }
 
-// Moves procs from failed procd directory to NEED_RESTART directory.
+// Moves procs from failed procd directory to idemproc.NEED_RESTART directory.
 func (m *Monitor) markProcsNeedRestart() {
 	failedProcds := m.getFailedProcds()
 	for _, procdIP := range failedProcds {
-		procs, err := m.ReadDir(path.Join(IDEM_PROCS, procdIP))
+		procs, err := m.ReadDir(path.Join(idemproc.IDEM_PROCS, procdIP))
 		if err != nil {
 			log.Fatalf("Error ReadDir in Monitor.markProcsNeedRestart: %v", err)
 		}
 		for _, p := range procs {
-			old := idemProcFilePath(procdIP, p.Name)
-			new := idemProcFilePath(NEED_RESTART, p.Name)
+			old := idemproc.IdemProcFilePath(procdIP, p.Name)
+			new := idemproc.IdemProcFilePath(idemproc.NEED_RESTART, p.Name)
 			err := m.Rename(old, new)
 			if err != nil {
 				log.Fatalf("Error rename in Monitor.markProcsNeedRestart: %v", err)
@@ -130,27 +132,27 @@ func (m *Monitor) markProcsNeedRestart() {
 	}
 }
 
-// Retrieves procs from NEED_RESTART directory.
-func (m *Monitor) getProcsNeedRestart() []*IdemProc {
-	needRestart := []*IdemProc{}
-	procs, err := m.ReadDir(path.Join(IDEM_PROCS, NEED_RESTART))
+// Retrieves procs from idemproc.NEED_RESTART directory.
+func (m *Monitor) getProcsNeedRestart() []*idemproc.IdemProc {
+	needRestart := []*idemproc.IdemProc{}
+	procs, err := m.ReadDir(path.Join(idemproc.IDEM_PROCS, idemproc.NEED_RESTART))
 	if err != nil {
 		log.Fatalf("Error ReadDir in Monitor.getProcsNeedRestart: %v", err)
 	}
 	for _, p := range procs {
-		needRestart = append(needRestart, m.getProc(NEED_RESTART, p.Name))
+		needRestart = append(needRestart, m.getProc(idemproc.NEED_RESTART, p.Name))
 	}
 	return needRestart
 }
 
 // Respawn procs which may need a restart.
-func (m *Monitor) respawnProcs(ps []*IdemProc) {
+func (m *Monitor) respawnProcs(ps []*idemproc.IdemProc) {
 	for _, p := range ps {
 		err := m.Spawn(p)
 		if err != nil {
 			log.Fatalf("Error Spawn in Monitor.respawnFailedProcs: %v", err)
 		}
-		err = m.Remove(idemProcFilePath(NEED_RESTART, p.Pid))
+		err = m.Remove(idemproc.IdemProcFilePath(idemproc.NEED_RESTART, p.Pid))
 		if err != nil {
 			log.Fatalf("Error Remove in Monitor.respawnFailedProcs: %v", err)
 		}

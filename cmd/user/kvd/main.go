@@ -3,14 +3,14 @@ package main
 import (
 	"log"
 
-	"ulambda/depproc"
 	"ulambda/fslib"
 	"ulambda/kv"
+	"ulambda/procinit"
 )
 
 func main() {
 	fsl := fslib.MakeFsLib("kvd")
-	sctl := depproc.MakeDepProcCtl(fsl, depproc.DEFAULT_JOB_ID)
+	sctl := procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
 	conf := kv.MakeConfig(0)
 	err := fsl.MakeFileJson(kv.KVCONFIG, 0777, *conf)
 	if err != nil {

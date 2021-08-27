@@ -4,6 +4,9 @@ import (
 	"fmt"
 )
 
+type Ttype uint32
+type Tcore uint32
+
 const (
 	T_DEF Ttype = 0
 	T_LC  Ttype = 1
@@ -22,6 +25,10 @@ type Proc struct {
 	Env     []string // Environment variables
 	Type    Ttype    // Type
 	Ncore   Tcore    // Number of cores requested
+}
+
+func (p *Proc) GetProc() *Proc {
+	return p
 }
 
 func (p *Proc) String() string {

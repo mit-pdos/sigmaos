@@ -5,11 +5,11 @@ import (
 	"os"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
+	"ulambda/procinit"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
-	sctl := depproc.MakeDepProcCtl(fsl.FsLib, depproc.DEFAULT_JOB_ID)
+	sctl := procinit.MakeProcCtl(fsl.FsLib, procinit.GetProcLayers())
 	sctl.Started(os.Args[1])
 	fsd.GetSrv().GetStats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()

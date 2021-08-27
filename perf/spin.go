@@ -7,6 +7,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Spinner struct {
@@ -15,7 +16,7 @@ type Spinner struct {
 	its    int
 	native bool
 	*fslib.FsLib
-	*proc.ProcCtl
+	proc.ProcCtl
 }
 
 func MakeSpinner(args []string) (*Spinner, error) {
@@ -29,7 +30,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	s.pid = args[0]
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spinner")
-		s.ProcCtl = proc.MakeProcCtl(s.FsLib)
+		s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayers())
 	}
 	dim, err := strconv.Atoi(args[1])
 	s.dim = dim

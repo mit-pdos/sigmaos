@@ -13,6 +13,7 @@ import (
 	"ulambda/depproc"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 // XXX make input parsing more robust
@@ -75,7 +76,7 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
-	sctl := depproc.MakeDepProcCtl(clnt, depproc.DEFAULT_JOB_ID)
+	sctl := procinit.MakeProcCtl(clnt, procinit.GetProcLayers())
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]

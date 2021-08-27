@@ -5,9 +5,10 @@ import (
 	"log"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Uploader struct {
@@ -15,7 +16,7 @@ type Uploader struct {
 	src  string
 	dest string
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 }
 
 func MakeUploader(args []string, debug bool) (*Uploader, error) {
@@ -27,7 +28,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("uploader")
 	up.FsLib = fls
-	up.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
+	up.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
 	up.Started(up.pid)
 	return up, nil
 }

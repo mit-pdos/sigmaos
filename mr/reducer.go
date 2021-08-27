@@ -11,9 +11,10 @@ import (
 	"sort"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type ReduceT func(string, []string) string
@@ -22,7 +23,7 @@ const NReduce = 2
 
 type Reducer struct {
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	reducef ReduceT
 	pid     string
 	input   string
@@ -41,7 +42,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
-	r.DepProcCtl = depproc.MakeDepProcCtl(r.FsLib, depproc.DEFAULT_JOB_ID)
+	r.ProcCtl = procinit.MakeProcCtl(r.FsLib, procinit.GetProcLayers())
 	log.Printf("MakeReducer %v\n", args)
 	r.Started(r.pid)
 	return r, nil

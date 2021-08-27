@@ -6,8 +6,9 @@ import (
 	"os"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Downloader struct {
@@ -15,7 +16,7 @@ type Downloader struct {
 	src  string
 	dest string
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 }
 
 func MakeDownloader(args []string, debug bool) (*Downloader, error) {
@@ -25,7 +26,7 @@ func MakeDownloader(args []string, debug bool) (*Downloader, error) {
 	down.src = args[1]
 	down.dest = args[2]
 	fls := fslib.MakeFsLib("downloader")
-	down.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
+	down.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
 	down.FsLib = fls
 	down.Started(down.pid)
 	return down, nil

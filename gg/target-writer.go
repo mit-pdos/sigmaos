@@ -4,8 +4,9 @@ import (
 	"path"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
 	"ulambda/fslib"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 // XXX Rename
@@ -15,7 +16,7 @@ type TargetWriter struct {
 	target          string
 	targetReduction string
 	*fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 }
 
 func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
@@ -28,7 +29,7 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	tw.targetReduction = args[3]
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
-	tw.DepProcCtl = depproc.MakeDepProcCtl(fls, depproc.DEFAULT_JOB_ID)
+	tw.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
 	tw.Started(tw.pid)
 	return tw, nil
 }

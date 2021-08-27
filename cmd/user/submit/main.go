@@ -11,6 +11,7 @@ import (
 	"ulambda/depproc"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 // XXX make input parsing more robust
@@ -65,7 +66,7 @@ func readLambda(line string) (*depproc.DepProc, error) {
 
 func main() {
 	clnt := fslib.MakeFsLib("submit")
-	sctl := depproc.MakeDepProcCtl(clnt, depproc.DEFAULT_JOB_ID)
+	sctl := procinit.MakeProcCtl(clnt, procinit.GetProcLayers())
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		a, err := readLambda(scanner.Text())

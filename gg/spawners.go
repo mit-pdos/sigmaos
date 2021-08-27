@@ -11,11 +11,12 @@ import (
 // Given a PID, create a no-op which waits on that Pid
 func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 	noOpPid := noOpPid(waitPid)
-	exitDep := []string{waitPid}
-	err := launch.SpawnNoOp(noOpPid, exitDep)
-	if err != nil {
-		log.Fatalf("Error spawning noop [%v]: %v\n", noOpPid, err)
-	}
+	//	exitDep := []string{waitPid}
+	// XXX no more no-ops
+	//	err := launch.SpawnNoOp(noOpPid, exitDep)
+	//	if err != nil {
+	//		log.Fatalf("Error spawning noop [%v]: %v\n", noOpPid, err)
+	//	}
 	return noOpPid
 }
 

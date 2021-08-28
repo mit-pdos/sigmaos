@@ -23,7 +23,7 @@ type Tstate struct {
 	*fslib.FsLib
 	t    *testing.T
 	s    *kernel.System
-	nps3 *Nps3
+	nps3 *Fss3
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -35,7 +35,7 @@ func makeTstate(t *testing.T) *Tstate {
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	s.BootNps3d(bin)
+	s.BootFss3d(bin)
 	ts.s = s
 	ts.FsLib = fslib.MakeFsLib("nps3_test")
 	db.Name("nps3_test")
@@ -57,7 +57,7 @@ func TestTwo(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootNps3d(bin)
+	ts.s.BootFss3d(bin)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -73,7 +73,7 @@ func TestUnionSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootNps3d(bin)
+	ts.s.BootFss3d(bin)
 
 	dirents, err := ts.ReadDir("name/s3/~ip/")
 	assert.Nil(t, err, "ReadDir")
@@ -87,7 +87,7 @@ func TestUnionDir(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootNps3d(bin)
+	ts.s.BootFss3d(bin)
 
 	dirents, err := ts.ReadDir("name/s3/~ip/input")
 	assert.Nil(t, err, "ReadDir")
@@ -101,7 +101,7 @@ func TestUnionFile(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootNps3d(bin)
+	ts.s.BootFss3d(bin)
 
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)

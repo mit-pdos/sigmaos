@@ -40,13 +40,12 @@ func MakeFilePriorityBag(fsl *fslib.FsLib, bagPath string) *FilePriorityBag {
 }
 
 func (fb *FilePriorityBag) init() error {
-	fb.cond.Init()
-
 	err := fb.Mkdir(fb.path, 0777)
 	if err != nil {
 		db.DLPrintf("FB", "Error FilePriorityBag.Init MkDir: %v", err)
 		return err
 	}
+	fb.cond.Init()
 	return nil
 }
 

@@ -35,7 +35,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[2]
 	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
-	mv.ProcCtl = procinit.MakeProcCtl(mv.FsLib, procinit.GetProcLayers())
+	mv.ProcCtl = procinit.MakeProcCtl(mv.FsLib, procinit.GetProcLayersMap())
 
 	db.Name(mv.pid)
 

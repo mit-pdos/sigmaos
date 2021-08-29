@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"ulambda/fslib"
 	"ulambda/kv"
@@ -11,8 +10,8 @@ import (
 
 func main() {
 	fsl := fslib.MakeFsLib("kvd")
-	os.Setenv(procinit.SCHED_LAYERS, procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true}))
-	sctl := procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
+	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+	sctl := procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
 	conf := kv.MakeConfig(0)
 	err := fsl.MakeFileJson(kv.KVCONFIG, 0777, *conf)
 	if err != nil {

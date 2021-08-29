@@ -57,7 +57,7 @@ func MakeFsUxReplica(args []string) *FsUxReplica {
 	}
 	fsl := fslib.MakeFsLib("fsux-replica" + r.relayAddr)
 	r.FsLib = fsl
-	r.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
+	r.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
 	r.ux = fsux.MakeReplicatedFsUx(r.mount, r.srvAddr, "", true, r.relayAddr, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)
 	// Post in union dir

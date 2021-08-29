@@ -64,7 +64,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 			MakeRelayOpSet(),
 			map[np.Tfid]*fid.Fid{},
 			config.FsLib,
-			procinit.MakeProcCtl(config.FsLib, procinit.GetProcLayers()),
+			procinit.MakeProcCtl(config.FsLib, procinit.GetProcLayersMap()),
 			config.NpClnt}
 	}
 	srv := &NetServer{"",
@@ -180,7 +180,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.N
 		nil,
 		nil,
 		fsl,
-		procinit.MakeProcCtl(fsl, procinit.GetProcLayers()),
+		procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap()),
 		clnt}, nil
 }
 
@@ -238,7 +238,7 @@ func (srv *NetServer) runDirWatcher() {
 		attr.Pid = fslib.GenPid()
 		attr.Program = "bin/user/replica-monitor"
 		attr.Args = []string{config.ConfigPath, config.UnionDirPath}
-		attr.Env = []string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true})}
+		attr.Env = []string{procinit.GetProcLayersString()}
 		config.Spawn(attr)
 	}
 }

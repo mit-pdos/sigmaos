@@ -101,7 +101,7 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
-	st.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayers())
+	st.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()
@@ -112,7 +112,7 @@ func (st *Stats) spawnMonitor() string {
 	p.Pid = fslib.GenPid()
 	p.Program = "bin/user/monitor"
 	p.Args = []string{}
-	p.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
+	p.Env = []string{procinit.GetProcLayersString()}
 	p.Type = proc.T_LC
 	st.Spawn(&p)
 	return p.Pid

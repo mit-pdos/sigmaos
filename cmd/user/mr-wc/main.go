@@ -85,8 +85,8 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
-	procLayers := map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true}
-	sctl := procinit.MakeProcCtl(fsl, procLayers)
+	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+	sctl := procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
@@ -110,14 +110,14 @@ func main() {
 		a1.Dependencies = &depproc.Deps{map[string]bool{}, nil}
 		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m},
-			[]string{procinit.MakeProcLayers(procLayers)},
+			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
 		a2 := depproc.MakeDepProc()
 		a2.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 		a2.Proc = &proc.Proc{pid2, "bin/user/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m},
-			[]string{procinit.MakeProcLayers(procLayers)},
+			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
 		sctl.Spawn(a1)
@@ -133,7 +133,7 @@ func main() {
 		a := depproc.MakeDepProc()
 		a.Proc = &proc.Proc{pid, "bin/user/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r},
-			[]string{procinit.MakeProcLayers(procLayers)},
+			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
 		a.Dependencies = &depproc.Deps{nil, mappers}

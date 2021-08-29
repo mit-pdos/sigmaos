@@ -79,7 +79,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spin-test-starter")
-		s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayers())
+		s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayersMap())
 	}
 
 	nSpinners, err := strconv.Atoi(args[0])

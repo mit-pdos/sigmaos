@@ -61,7 +61,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 		log.Fatalf("%v: InitFs failed %v\n", args, err)
 	}
 	r.FsLibSrv = fs
-	r.ProcCtl = procinit.MakeProcCtl(fs.FsLib, procinit.GetProcLayers())
+	r.ProcCtl = procinit.MakeProcCtl(fs.FsLib, procinit.GetProcLayersMap())
 	return r
 }
 

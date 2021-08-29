@@ -14,19 +14,19 @@ import (
 )
 
 const (
-	SCHED_LAYERS = "SCHED_LAYERS" // Environment variable in which to store layer configuration
+	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
 )
 
 // XXX Rename
 const ( // Possible stackable layers. BASE_SCHED is always included by default
-	BASESCHED = "BASESCHED"
-	IDEMSCHED = "IDEMSCHED"
-	DEPSCHED  = "DEPSCHED"
+	BASEPROC = "BASEPROC"
+	IDEMPROC = "IDEMPROC"
+	DEPPROC  = "DEPPROC"
 )
 
 // Get proc layers from environment variables.
-func GetProcLayers() map[string]bool {
-	s := os.Getenv(SCHED_LAYERS)
+func GetProcLayersMap() map[string]bool {
+	s := os.Getenv(PROC_LAYERS)
 	// XXX Remove eventually, just here to make sure we don't miss anything
 	if len(s) == 0 {
 		debug.PrintStack()
@@ -37,12 +37,12 @@ func GetProcLayers() map[string]bool {
 	for _, l := range ls {
 		layers[l] = true
 	}
-	layers[BASESCHED] = true
+	layers[BASEPROC] = true
 	return layers
 }
 
-func CopyProcLayers() string {
-	s := os.Getenv(SCHED_LAYERS)
+func GetProcLayersString() string {
+	s := os.Getenv(PROC_LAYERS)
 	// XXX Remove eventually, just here to make sure we don't miss anything
 	if len(s) == 0 {
 		debug.PrintStack()
@@ -51,9 +51,13 @@ func CopyProcLayers() string {
 	return s
 }
 
+func SetProcLayers(layers map[string]bool) {
+	os.Setenv(PROC_LAYERS, MakeProcLayersString(layers))
+}
+
 // XXX Rename
-func MakeProcLayers(layers map[string]bool) string {
-	s := SCHED_LAYERS + "="
+func MakeProcLayersString(layers map[string]bool) string {
+	s := PROC_LAYERS + "="
 	for l, _ := range layers {
 		s += l
 		s += ","
@@ -66,10 +70,10 @@ func MakeProcLayers(layers map[string]bool) string {
 func MakeProcCtl(fsl *fslib.FsLib, layers map[string]bool) proc.ProcCtl {
 	var ctl proc.ProcCtl
 	ctl = baseproc.MakeBaseProcCtl(fsl)
-	if _, ok := layers[IDEMSCHED]; ok {
+	if _, ok := layers[IDEMPROC]; ok {
 		ctl = idemproc.MakeIdemProcCtl(fsl, ctl)
 	}
-	if _, ok := layers[DEPSCHED]; ok {
+	if _, ok := layers[DEPPROC]; ok {
 		ctl = depproc.MakeDepProcCtl(fsl, ctl)
 	}
 	return ctl

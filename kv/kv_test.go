@@ -3,7 +3,6 @@ package kv
 import (
 	"log"
 	"math/rand"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -53,7 +52,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	os.Setenv(procinit.SCHED_LAYERS, procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true}))
+	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
 
 	s, err := kernel.Boot("..")
 	if err != nil {
@@ -61,7 +60,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("kv_test")
-	ts.ProcCtl = procinit.MakeProcCtl(ts.fsl, procinit.GetProcLayers())
+	ts.ProcCtl = procinit.MakeProcCtl(ts.fsl, procinit.GetProcLayersMap())
 
 	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
 	if err != nil {
@@ -86,7 +85,7 @@ func (ts *Tstate) spawnMemFS() string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/kernel/memfsd"
 	a.Args = []string{""}
-	a.Env = []string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})}
+	a.Env = []string{procinit.GetProcLayersString()}
 	t.Proc = a
 	ts.Spawn(t)
 	return a.Pid

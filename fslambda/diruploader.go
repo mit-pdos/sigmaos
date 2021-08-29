@@ -32,7 +32,7 @@ func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("dir-uploader")
 	up.FsLib = fls
-	up.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
+	up.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
 	up.Started(up.pid)
 	return up, nil
 }

@@ -24,6 +24,8 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
+	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+
 	bin := ".."
 	s, err := kernel.Boot(bin)
 	if err != nil {
@@ -33,18 +35,8 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})
+	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
-	return ts
-}
-
-func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.s = s
-	db.Name("sched_test")
-	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})
 	return ts
 }
 
@@ -62,7 +54,7 @@ func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exi
 	a := depproc.MakeDepProc()
 	a.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
 		[]string{"5s", "name/out_" + pid, ""},
-		[]string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})},
+		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
 	a.Dependencies.StartDep = startDep

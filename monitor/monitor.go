@@ -32,7 +32,7 @@ func MakeMonitor(args []string) *Monitor {
 	m.pid = args[0]
 	m.FsLib = fslib.MakeFsLib(m.pid)
 	m.l = sync.MakeLock(m.FsLib, fslib.LOCKS, IDEMPROC_LOCK, true)
-	m.ProcCtl = procinit.MakeProcCtl(m.FsLib, procinit.GetProcLayers())
+	m.ProcCtl = procinit.MakeProcCtl(m.FsLib, procinit.GetProcLayersMap())
 	db.Name(m.pid)
 
 	log.Printf("Monitor: %v", m)

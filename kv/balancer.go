@@ -42,7 +42,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
-	bl.ProcCtl = procinit.MakeProcCtl(bl.FsLib, procinit.GetProcLayers())
+	bl.ProcCtl = procinit.MakeProcCtl(bl.FsLib, procinit.GetProcLayersMap())
 
 	db.Name("balancer")
 
@@ -95,7 +95,7 @@ func (bl *Balancer) spawnMover(s, src, dst string) string {
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/user/mover"
 	t.Args = []string{s, src, dst}
-	t.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
+	t.Env = []string{procinit.GetProcLayersString()}
 	bl.Spawn(t)
 	return t.Pid
 }

@@ -25,7 +25,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
+	ex.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
 	ex.Started(ex.pid)
 	return ex, nil
 }

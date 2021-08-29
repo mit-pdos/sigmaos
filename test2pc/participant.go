@@ -43,7 +43,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.opcode = args[2]
 	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
-	p.ProcCtl = procinit.MakeProcCtl(p.FsLib, procinit.GetProcLayers())
+	p.ProcCtl = procinit.MakeProcCtl(p.FsLib, procinit.GetProcLayersMap())
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}

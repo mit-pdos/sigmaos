@@ -42,7 +42,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
-	r.ProcCtl = procinit.MakeProcCtl(r.FsLib, procinit.GetProcLayers())
+	r.ProcCtl = procinit.MakeProcCtl(r.FsLib, procinit.GetProcLayersMap())
 	log.Printf("MakeReducer %v\n", args)
 	r.Started(r.pid)
 	return r, nil

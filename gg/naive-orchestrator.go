@@ -43,7 +43,7 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
+	orc.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
 	orc.Started(orc.pid)
 	return orc, nil
 }

@@ -26,7 +26,7 @@ func MakeDownloader(args []string, debug bool) (*Downloader, error) {
 	down.src = args[1]
 	down.dest = args[2]
 	fls := fslib.MakeFsLib("downloader")
-	down.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayers())
+	down.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
 	down.FsLib = fls
 	down.Started(down.pid)
 	return down, nil

@@ -33,7 +33,7 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
-	mo.ProcCtl = procinit.MakeProcCtl(mo.FsLib, procinit.GetProcLayers())
+	mo.ProcCtl = procinit.MakeProcCtl(mo.FsLib, procinit.GetProcLayersMap())
 	db.Name(mo.pid)
 
 	if err := mo.LockFile(KVDIR, KVMONLOCK); err != nil {
@@ -56,7 +56,7 @@ func spawnBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {
 	t.Pid = pid2
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
-	t.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
+	t.Env = []string{procinit.GetProcLayersString()}
 	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
@@ -67,7 +67,7 @@ func spawnBalancer(sched proc.ProcCtl, opcode, pid1 string) string {
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
-	t.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
+	t.Env = []string{procinit.GetProcLayersString()}
 	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
@@ -79,7 +79,7 @@ func spawnKVPid(sched proc.ProcCtl, pid1 string, pid2 string) {
 	t.Pid = pid1
 	t.Program = KV
 	t.Args = []string{""}
-	t.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
+	t.Env = []string{procinit.GetProcLayersString()}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 }
@@ -89,7 +89,7 @@ func SpawnKV(sched proc.ProcCtl) string {
 	t.Pid = fslib.GenPid()
 	t.Program = KV
 	t.Args = []string{""}
-	t.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
+	t.Env = []string{procinit.GetProcLayersString()}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid

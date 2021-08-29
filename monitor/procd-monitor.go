@@ -20,28 +20,28 @@ const (
 	IDEMPROC_LOCK = "idemproc-lock"
 )
 
-type Monitor struct {
+type ProcdMonitor struct {
 	pid string
 	l   *sync.Lock
 	*fslib.FsLib
 	proc.ProcCtl
 }
 
-func MakeMonitor(args []string) *Monitor {
-	m := &Monitor{}
+func MakeProcdMonitor(args []string) *ProcdMonitor {
+	m := &ProcdMonitor{}
 	m.pid = args[0]
 	m.FsLib = fslib.MakeFsLib(m.pid)
 	m.l = sync.MakeLock(m.FsLib, fslib.LOCKS, IDEMPROC_LOCK, true)
 	m.ProcCtl = procinit.MakeProcCtl(m.FsLib, procinit.GetProcLayersMap())
 	db.Name(m.pid)
 
-	log.Printf("Monitor: %v", m)
+	log.Printf("ProcdMonitor: %v", m)
 
 	m.Started(m.pid)
 	return m
 }
 
-func (m *Monitor) waitEvict() {
+func (m *ProcdMonitor) waitEvict() {
 	err := m.WaitEvict(m.pid)
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
@@ -50,15 +50,15 @@ func (m *Monitor) waitEvict() {
 	os.Exit(0)
 }
 
-func (m *Monitor) watchProcds() {
-	log.Printf("Monitor %v set watch", m)
+func (m *ProcdMonitor) watchProcds() {
+	log.Printf("ProcdMonitor %v set watch", m)
 	done := make(chan bool)
 	err := m.SetDirWatch(kernel.PROCD, func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {
-			log.Printf("Error SetDirWatch in idemproc.Monitor.watchProcds: %v", err)
-			db.DLPrintf("MONITOR", "Error DirWatch in idemproc.Monitor.watchProcds: %v", err)
+			log.Printf("Error SetDirWatch in idemproc.ProcdMonitor.watchProcds: %v", err)
+			db.DLPrintf("MONITOR", "Error DirWatch in idemproc.ProcdMonitor.watchProcds: %v", err)
 		}
 		done <- true
 	})
@@ -67,31 +67,31 @@ func (m *Monitor) watchProcds() {
 	if err == nil {
 		<-done
 	} else {
-		log.Printf("Error SetDirWatch in idemproc.Monitor.watchProcds: %v", err)
-		db.DLPrintf("MONITOR", "Error SetDirWatch in idemproc.Monitor.watchProcds: %v", err)
+		log.Printf("Error SetDirWatch in idemproc.ProcdMonitor.watchProcds: %v", err)
+		db.DLPrintf("MONITOR", "Error SetDirWatch in idemproc.ProcdMonitor.watchProcds: %v", err)
 	}
 }
 
 // Read & unmarshal a proc.
-func (m *Monitor) getProc(procdIP string, pid string) *idemproc.IdemProc {
+func (m *ProcdMonitor) getProc(procdIP string, pid string) *idemproc.IdemProc {
 	b, err := m.ReadFile(idemproc.IdemProcFilePath(procdIP, pid))
 	if err != nil {
-		log.Fatalf("Error ReadFile in Monitor.getProc: %v", err)
+		log.Fatalf("Error ReadFile in ProcdMonitor.getProc: %v", err)
 	}
 
 	p := &proc.Proc{}
 	err = json.Unmarshal(b, p)
 	if err != nil {
-		log.Fatalf("Error Unmarshal in Monitor.getProc: %v", err)
+		log.Fatalf("Error Unmarshal in ProcdMonitor.getProc: %v", err)
 	}
 	return &idemproc.IdemProc{p}
 }
 
 // Get a list of the failed procds.
-func (m *Monitor) getFailedProcds() []string {
+func (m *ProcdMonitor) getFailedProcds() []string {
 	remaining, err := m.ReadDir(kernel.PROCD)
 	if err != nil {
-		log.Fatalf("Error ReadDir 1 in Monitor.getFailedProcds: %v", err)
+		log.Fatalf("Error ReadDir 1 in ProcdMonitor.getFailedProcds: %v", err)
 	}
 
 	procdIPs := map[string]bool{}
@@ -101,7 +101,7 @@ func (m *Monitor) getFailedProcds() []string {
 
 	oldProcds, err := m.ReadDir(idemproc.IDEM_PROCS)
 	if err != nil {
-		log.Fatalf("Error ReadDir 2 in Monitor.getFailedProcds: %v", err)
+		log.Fatalf("Error ReadDir 2 in ProcdMonitor.getFailedProcds: %v", err)
 	}
 
 	failedProcds := []string{}
@@ -114,30 +114,30 @@ func (m *Monitor) getFailedProcds() []string {
 }
 
 // Moves procs from failed procd directory to idemproc.NEED_RESTART directory.
-func (m *Monitor) markProcsNeedRestart() {
+func (m *ProcdMonitor) markProcsNeedRestart() {
 	failedProcds := m.getFailedProcds()
 	for _, procdIP := range failedProcds {
 		procs, err := m.ReadDir(path.Join(idemproc.IDEM_PROCS, procdIP))
 		if err != nil {
-			log.Fatalf("Error ReadDir in Monitor.markProcsNeedRestart: %v", err)
+			log.Fatalf("Error ReadDir in ProcdMonitor.markProcsNeedRestart: %v", err)
 		}
 		for _, p := range procs {
 			old := idemproc.IdemProcFilePath(procdIP, p.Name)
 			new := idemproc.IdemProcFilePath(idemproc.NEED_RESTART, p.Name)
 			err := m.Rename(old, new)
 			if err != nil {
-				log.Fatalf("Error rename in Monitor.markProcsNeedRestart: %v", err)
+				log.Fatalf("Error rename in ProcdMonitor.markProcsNeedRestart: %v", err)
 			}
 		}
 	}
 }
 
 // Retrieves procs from idemproc.NEED_RESTART directory.
-func (m *Monitor) getProcsNeedRestart() []*idemproc.IdemProc {
+func (m *ProcdMonitor) getProcsNeedRestart() []*idemproc.IdemProc {
 	needRestart := []*idemproc.IdemProc{}
 	procs, err := m.ReadDir(path.Join(idemproc.IDEM_PROCS, idemproc.NEED_RESTART))
 	if err != nil {
-		log.Fatalf("Error ReadDir in Monitor.getProcsNeedRestart: %v", err)
+		log.Fatalf("Error ReadDir in ProcdMonitor.getProcsNeedRestart: %v", err)
 	}
 	for _, p := range procs {
 		needRestart = append(needRestart, m.getProc(idemproc.NEED_RESTART, p.Name))
@@ -146,20 +146,20 @@ func (m *Monitor) getProcsNeedRestart() []*idemproc.IdemProc {
 }
 
 // Respawn procs which may need a restart.
-func (m *Monitor) respawnProcs(ps []*idemproc.IdemProc) {
+func (m *ProcdMonitor) respawnProcs(ps []*idemproc.IdemProc) {
 	for _, p := range ps {
 		err := m.Spawn(p)
 		if err != nil {
-			log.Fatalf("Error Spawn in Monitor.respawnFailedProcs: %v", err)
+			log.Fatalf("Error Spawn in ProcdMonitor.respawnFailedProcs: %v", err)
 		}
 		err = m.Remove(idemproc.IdemProcFilePath(idemproc.NEED_RESTART, p.Pid))
 		if err != nil {
-			log.Fatalf("Error Remove in Monitor.respawnFailedProcs: %v", err)
+			log.Fatalf("Error Remove in ProcdMonitor.respawnFailedProcs: %v", err)
 		}
 	}
 }
 
-func (m *Monitor) Work() {
+func (m *ProcdMonitor) Work() {
 	go m.waitEvict()
 	for {
 		m.watchProcds()
@@ -173,10 +173,10 @@ func (m *Monitor) Work() {
 	}
 }
 
-func (m *Monitor) Exit() {
+func (m *ProcdMonitor) Exit() {
 	m.Exited(m.pid)
 }
 
-func (m *Monitor) String() string {
+func (m *ProcdMonitor) String() string {
 	return fmt.Sprintf("&{ pid:%v }", m.pid)
 }

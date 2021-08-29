@@ -12,7 +12,7 @@ func main() {
 		log.Fatalf("Usage: %v pid", os.Args[0])
 	}
 
-	m := monitor.MakeMonitor(os.Args[1:])
+	m := monitor.MakeProcdMonitor(os.Args[1:])
 	m.Work()
 	m.Exit()
 }

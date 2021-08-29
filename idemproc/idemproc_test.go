@@ -42,7 +42,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
 	p := &idemproc.IdemProc{}
-	p.Proc = &proc.Proc{pid, "bin/user/idemproc-monitor", "",
+	p.Proc = &proc.Proc{pid, "bin/user/procd-monitor", "",
 		[]string{},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,

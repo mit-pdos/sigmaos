@@ -8,8 +8,8 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npclnt"
 	"ulambda/npcodec"
+	"ulambda/protclnt"
 )
 
 const (
@@ -83,9 +83,9 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watc
 		return reply, nil
 	}
 
-	go func(npc *npclnt.ProtClnt, version np.TQversion) {
+	go func(pc *protclnt.ProtClnt, version np.TQversion) {
 		db.DLPrintf("FSCLNT", "Watch set %v %v %v\n", p, r[len(r)-1], version)
-		err := npc.Watch(fid3, []string{r[len(r)-1]}, version)
+		err := pc.Watch(fid3, []string{r[len(r)-1]}, version)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
 		fsc.clunkFid(fid3)
 		f(np.Join(p), err)
@@ -250,10 +250,10 @@ func IsUnion(path []string) ([]string, bool) {
 	return nil, false
 }
 
-func (fsc *FsClient) walkUnion(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, error) {
+func (fsc *FsClient) walkUnion(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "Walk union: %v %v\n", dir, q)
 	fid3 := fsc.allocFid()
-	reply, err := ch.Walk(fid, fid3, dir)
+	reply, err := pc.Walk(fid, fid3, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -286,11 +286,11 @@ func (fsc *FsClient) unionMatch(q, name string) bool {
 	return true
 }
 
-func (fsc *FsClient) unionScan(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, error) {
+func (fsc *FsClient) unionScan(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "unionScan: %v %v\n", dirents, q)
 	for _, de := range dirents {
 		if fsc.unionMatch(q, de.Name) {
-			reply, err := ch.Walk(fid, fid2, []string{de.Name})
+			reply, err := pc.Walk(fid, fid2, []string{de.Name})
 			if err != nil {
 				return nil, err
 			}
@@ -300,15 +300,15 @@ func (fsc *FsClient) unionScan(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, dirents [
 	return nil, nil
 }
 
-func (fsc *FsClient) unionLookup(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, q string) (*np.Rwalk, error) {
+func (fsc *FsClient) unionLookup(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "unionLookup: %v %v %v\n", fid, fid2, q)
-	_, err := ch.Open(fid, np.OREAD)
+	_, err := pc.Open(fid, np.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	off := np.Toffset(0)
 	for {
-		reply, err := ch.Read(fid, off, 1024)
+		reply, err := pc.Read(fid, off, 1024)
 		if err != nil {
 			return nil, err
 		}
@@ -319,7 +319,7 @@ func (fsc *FsClient) unionLookup(ch *npclnt.ProtClnt, fid, fid2 np.Tfid, q strin
 		if err != nil {
 			return nil, err
 		}
-		reply1, err := fsc.unionScan(ch, fid, fid2, dirents, q)
+		reply1, err := fsc.unionScan(pc, fid, fid2, dirents, q)
 		if err != nil {
 			return nil, err
 		}

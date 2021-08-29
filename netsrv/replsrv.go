@@ -13,9 +13,9 @@ import (
 	"ulambda/fid"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/npclnt"
 	"ulambda/proc"
 	"ulambda/procinit"
+	"ulambda/protclnt"
 	"ulambda/protsrv"
 )
 
@@ -44,7 +44,7 @@ type NetServerReplConfig struct {
 	fids         map[np.Tfid]*fid.Fid
 	*fslib.FsLib
 	proc.ProcCtl
-	*npclnt.NpClnt
+	*protclnt.Clnt
 }
 
 func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NetServerReplConfig) *NetServer {
@@ -65,7 +65,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 			map[np.Tfid]*fid.Fid{},
 			config.FsLib,
 			procinit.MakeProcCtl(config.FsLib, procinit.GetProcLayersMap()),
-			config.NpClnt}
+			config.Clnt}
 	}
 	srv := &NetServer{"",
 		fs,
@@ -112,7 +112,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 
 func (srv *NetServer) getNewReplConfig() *NetServerReplConfig {
 	for {
-		config, err := ReadReplConfig(srv.replConfig.ConfigPath, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.NpClnt)
+		config, err := ReadReplConfig(srv.replConfig.ConfigPath, srv.replConfig.RelayAddr, srv.replConfig.FsLib, srv.replConfig.Clnt)
 		if err != nil {
 			if !strings.Contains(err.Error(), "file not found") {
 				log.Printf("Error reading new config: %v, %v", srv.replConfig.ConfigPath, err)
@@ -146,7 +146,7 @@ func (srv *NetServer) reloadReplConfig(cfg *NetServerReplConfig) {
 }
 
 // Read a replication config file.
-func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *npclnt.NpClnt) (*NetServerReplConfig, error) {
+func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *protclnt.Clnt) (*NetServerReplConfig, error) {
 	b, err := fsl.ReadFile(path)
 	if err != nil {
 		return nil, err

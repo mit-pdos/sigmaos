@@ -126,7 +126,7 @@ func (nc *NetClnt) Close() {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
-	db.DLPrintf("NETCLNT", "Close chan to %v\n", nc.dstL())
+	db.DLPrintf("NETCLNT", "Close conn to %v\n", nc.dstL())
 	nc.terminateOutstandingL()
 	if !nc.closed {
 		close(nc.requests)
@@ -243,7 +243,7 @@ func (nc *NetClnt) writer() {
 		}
 		// Get the bw for the latest connection
 		br, bw, err = nc.getBufio()
-		// If none was available, close the channel.
+		// If none was available, close the conn
 		if err != nil {
 			db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
 			nc.Close()
@@ -288,7 +288,7 @@ func (nc *NetClnt) writer() {
 func (nc *NetClnt) reader() {
 	// Get the br for the latest connection
 	br, bw, err := nc.getBufio()
-	// If none was available, close the channel.
+	// If none was available, close the conn
 	if err != nil {
 		db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", err)
 		nc.Close()
@@ -304,7 +304,7 @@ func (nc *NetClnt) reader() {
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection
 			br, bw, err = nc.getBufio()
-			// If none was available, close the channel.
+			// If none was available, close the conn
 			if err != nil {
 				db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", err)
 				nc.Close()

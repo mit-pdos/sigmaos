@@ -10,7 +10,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npclnt"
+	"ulambda/protclnt"
 )
 
 const (
@@ -29,7 +29,7 @@ type FsClient struct {
 	mu    sync.Mutex
 	fds   []FdState
 	fids  map[np.Tfid]*Path
-	npc   *npclnt.NpClnt
+	pc    *protclnt.Clnt
 	mount *Mount
 	next  np.Tfid
 	uname string
@@ -40,14 +40,14 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.fds = make([]FdState, 0, MAXFD)
 	fsc.fids = make(map[np.Tfid]*Path)
 	fsc.mount = makeMount()
-	fsc.npc = npclnt.MakeNpClnt()
+	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
 	fsc.next = 0
 	return fsc
 }
 
 func (fsc *FsClient) Exit() {
-	fsc.npc.Exit()
+	fsc.pc.Exit()
 }
 
 func (fsc *FsClient) String() string {
@@ -63,11 +63,11 @@ func (fsc *FsClient) Uname() string {
 	return fsc.uname
 }
 
-func (fsc *FsClient) npch(fid np.Tfid) *npclnt.ProtClnt {
+func (fsc *FsClient) npch(fid np.Tfid) *protclnt.ProtClnt {
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
 
-	return fsc.fids[fid].npch
+	return fsc.fids[fid].pc
 }
 
 func (fsc *FsClient) path(fid np.Tfid) *Path {
@@ -204,11 +204,11 @@ func (fsc *FsClient) Close(fd int) error {
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
 func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string) (*Path, error) {
-	reply, err := fsc.npc.Attach(server, fsc.Uname(), fid, p)
+	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, p)
 	if err != nil {
 		return nil, err
 	}
-	ch := fsc.npc.MakeProtClnt(server)
+	ch := fsc.pc.MakeProtClnt(server)
 	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
@@ -228,7 +228,7 @@ func (fsc *FsClient) AttachReplicas(server []string, path string) (np.Tfid, erro
 	fsc.mu.Lock()
 	defer fsc.mu.Unlock()
 
-	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].npch)
+	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].pc)
 	return fid, nil
 }
 
@@ -244,7 +244,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	}
 	path := fid2.copyPath()
 	fid1 := fsc.allocFid()
-	_, err := fid2.npch.Walk(fid, fid1, nil)
+	_, err := fid2.pc.Walk(fid, fid1, nil)
 	if err != nil {
 		// XXX free fid
 		return np.NoFid, err

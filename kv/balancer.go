@@ -95,6 +95,7 @@ func (bl *Balancer) spawnMover(s, src, dst string) string {
 	t.Pid = fslib.GenPid()
 	t.Program = "bin/user/mover"
 	t.Args = []string{s, src, dst}
+	t.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
 	bl.Spawn(t)
 	return t.Pid
 }

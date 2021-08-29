@@ -140,7 +140,6 @@ func (ctl *BaseProcCtl) Started(pid string) error {
 
 // Mark that a process has exited.
 func (ctl *BaseProcCtl) Exited(pid string) error {
-	log.Printf("BaseProcCtl.Exited: %v", pid)
 	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
 	pExitCond.Destroy()
 	return nil

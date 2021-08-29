@@ -81,7 +81,14 @@ func (ctl *DepProcCtl) depFilePath(pid string) string {
 // ========== SPAWN ==========
 
 func (ctl *DepProcCtl) Spawn(gp proc.GenericProc) error {
-	p := gp.(*DepProc)
+	var p *DepProc
+	switch gp.(type) {
+	case *DepProc:
+		p = gp.(*DepProc)
+	case *proc.Proc:
+		p = MakeDepProc()
+		p.Proc = gp.(*proc.Proc)
+	}
 	depProcFPath := path.Join(ctl.jobDir, p.Pid)
 
 	// If the underlying proc hasn't been spawned yet, the Waits will fall

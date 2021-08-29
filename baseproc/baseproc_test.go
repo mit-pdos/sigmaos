@@ -1,4 +1,4 @@
-package baseproc
+package baseproc_test
 
 import (
 	"sync"
@@ -10,10 +10,12 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Tstate struct {
-	*ProcCtl
+	proc.ProcCtl
 	*fslib.FsLib
 	t *testing.T
 	s *kernel.System
@@ -31,7 +33,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = MakeProcCtl(ts.FsLib)
+	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, map[string]bool{procinit.BASESCHED: true})
 	ts.t = t
 	return ts
 }
@@ -42,12 +44,16 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = MakeProcCtl(ts.FsLib)
+	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, map[string]bool{procinit.BASESCHED: true})
 	return ts
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &Proc{pid, "bin/user/sleeperl", "", []string{"5s", "name/out_" + pid, ""}, nil, T_DEF, C_DEF}
+	a := &proc.Proc{pid, "bin/user/sleeperl", "",
+		[]string{"5s", "name/out_" + pid, ""},
+		[]string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})},
+		proc.T_DEF, proc.C_DEF,
+	}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)

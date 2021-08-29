@@ -3,6 +3,7 @@ package kv
 import (
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"ulambda/kernel"
 	"ulambda/memfsd"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 const NKEYS = 2 // 100
@@ -41,7 +43,7 @@ type Tstate struct {
 	t   *testing.T
 	s   *kernel.System
 	fsl *fslib.FsLib
-	*depproc.DepProcCtl
+	proc.ProcCtl
 	clrks []*KvClerk
 	mfss  []string
 	rand  *rand.Rand
@@ -51,13 +53,15 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
+	os.Setenv(procinit.SCHED_LAYERS, procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true}))
+
 	s, err := kernel.Boot("..")
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("kv_test")
-	ts.DepProcCtl = depproc.MakeDepProcCtl(ts.fsl, depproc.DEFAULT_JOB_ID)
+	ts.ProcCtl = procinit.MakeProcCtl(ts.fsl, procinit.GetProcLayers())
 
 	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
 	if err != nil {
@@ -82,6 +86,7 @@ func (ts *Tstate) spawnMemFS() string {
 	a.Pid = fslib.GenPid()
 	a.Program = "bin/kernel/memfsd"
 	a.Args = []string{""}
+	a.Env = []string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})}
 	t.Proc = a
 	ts.Spawn(t)
 	return a.Pid
@@ -140,9 +145,9 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	if memfs {
 		mfs = ts.spawnMemFS()
 	} else {
-		mfs = SpawnKV(ts.DepProcCtl)
+		mfs = SpawnKV(ts.ProcCtl)
 	}
-	RunBalancer(ts.DepProcCtl, "add", mfs)
+	RunBalancer(ts.ProcCtl, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -195,13 +200,13 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	for s := 0; s < NMORE; s++ {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		RunBalancer(ts.DepProcCtl, "add", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.ProcCtl, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		RunBalancer(ts.DepProcCtl, "del", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.ProcCtl, "del", ts.mfss[len(ts.mfss)-1])
 		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets

@@ -28,6 +28,8 @@ func MakeIdemProcCtl(fsl *fslib.FsLib, ctl proc.ProcCtl) *IdemProcCtl {
 	ictl.FsLib = fsl
 	ictl.ProcCtl = ctl
 
+	ictl.Init()
+
 	return ictl
 }
 

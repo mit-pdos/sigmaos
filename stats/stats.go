@@ -112,6 +112,7 @@ func (st *Stats) spawnMonitor() string {
 	p.Pid = fslib.GenPid()
 	p.Program = "bin/user/monitor"
 	p.Args = []string{}
+	p.Env = []string{procinit.MakeProcLayers(procinit.GetProcLayers())}
 	p.Type = proc.T_LC
 	st.Spawn(&p)
 	return p.Pid

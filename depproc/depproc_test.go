@@ -1,4 +1,4 @@
-package depproc
+package depproc_test
 
 import (
 	"testing"
@@ -7,13 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
+	"ulambda/depproc"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/proc"
+	"ulambda/procinit"
 )
 
 type Tstate struct {
-	*DepProcCtl
+	proc.ProcCtl
 	*fslib.FsLib
 	t *testing.T
 	s *kernel.System
@@ -31,7 +33,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.DepProcCtl = MakeDepProcCtl(ts.FsLib, DEFAULT_JOB_ID)
+	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})
 	ts.t = t
 	return ts
 }
@@ -42,23 +44,12 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.DepProcCtl = MakeDepProcCtl(ts.FsLib, DEFAULT_JOB_ID)
+	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})
 	return ts
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	spawnSleeperlWithPidDep(t, ts, pid, nil, nil)
-}
-
-// XXX FIX
-func spawnMonitor(t *testing.T, ts *Tstate) {
-	pid := "monitor-" + fslib.GenPid()
-	a := MakeDepProc()
-	a.Proc = &proc.Proc{pid, "bin/user/procd-monitor", "", []string{}, nil,
-		proc.T_DEF, proc.C_DEF}
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
 func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string]bool) string {
@@ -68,8 +59,12 @@ func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string
 }
 
 func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exitDep map[string]bool) {
-	a := MakeDepProc()
-	a.Proc = &proc.Proc{pid, "bin/user/sleeperl", "", []string{"5s", "name/out_" + pid, ""}, nil, proc.T_DEF, proc.C_DEF}
+	a := depproc.MakeDepProc()
+	a.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
+		[]string{"5s", "name/out_" + pid, ""},
+		[]string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true, procinit.DEPSCHED: true})},
+		proc.T_DEF, proc.C_DEF,
+	}
 	a.Dependencies.StartDep = startDep
 	a.Dependencies.ExitDep = exitDep
 	err := ts.Spawn(a)
@@ -108,43 +103,6 @@ func TestHelloWorld(t *testing.T) {
 	ts.s.Shutdown(ts.FsLib)
 }
 
-// Start a procd, crash it, start a new one, and make sure it reruns lambdas.
-//func TestCrashProcd(t *testing.T) {
-//	ts := makeTstateOneProcd(t)
-//
-//	ch := make(chan bool)
-//	spawnMonitor(t, ts)
-//	go func() {
-//		start := time.Now()
-//		pid := spawnSleeperlWithTimer(t, ts, 5)
-//		ts.Wait(pid)
-//		end := time.Now()
-//		elapsed := end.Sub(start)
-//		assert.True(t, elapsed.Seconds() > 9.0, "Didn't wait for respawn after procd crash (%v)", elapsed.Seconds())
-//		checkSleeperlResult(t, ts, pid)
-//		ch <- true
-//	}()
-//
-//	// Wait for a bit
-//	time.Sleep(1 * time.Second)
-//
-//	// Kill the procd instance
-//	ts.s.Kill(fslib.PROCD)
-//
-//	// Wait for a bit
-//	time.Sleep(10 * time.Second)
-//
-//	//	ts.SignalNewJob()
-//
-//	err := ts.s.BootProcd("..")
-//	if err != nil {
-//		t.Fatalf("BootProcd %v\n", err)
-//	}
-//
-//	<-ch
-//	ts.s.Shutdown(ts.FsLib)
-//}
-
 func TestExitDep(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -164,37 +122,6 @@ func TestExitDep(t *testing.T) {
 
 	ts.s.Shutdown(ts.FsLib)
 }
-
-//func TestSwapExitDeps(t *testing.T) {
-//	ts := makeTstate(t)
-//
-//	pid := spawnSleeperl(t, ts)
-//
-//	pid2 := spawnNoOp(t, ts, []string{pid})
-//
-//	start := time.Now()
-//
-//	// Sleep a bit
-//	time.Sleep(4 * time.Second)
-//
-//	// Spawn a new sleeperl lambda
-//	pid3 := spawnSleeperl(t, ts)
-//
-//	// Wait on the new sleeperl lambda instead of the old one
-//	swaps := []string{pid, pid3}
-//	db.DLPrintf("SCHEDD", "Swapping %v\n", swaps)
-//	ts.SwapExitDependency(swaps)
-//
-//	ts.Wait(pid2)
-//	end := time.Now()
-//	elapsed := end.Sub(start)
-//	assert.True(t, elapsed.Seconds() > 8.0, "Didn't wait for exit dep for long enough (%v)", elapsed.Seconds())
-//
-//	checkSleeperlResult(t, ts, pid)
-//	checkSleeperlResult(t, ts, pid3)
-//
-//	ts.s.Shutdown(ts.FsLib)
-//}
 
 func TestStartDep(t *testing.T) {
 	ts := makeTstate(t)

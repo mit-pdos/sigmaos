@@ -238,6 +238,7 @@ func (srv *NetServer) runDirWatcher() {
 		attr.Pid = fslib.GenPid()
 		attr.Program = "bin/user/replica-monitor"
 		attr.Args = []string{config.ConfigPath, config.UnionDirPath}
+		attr.Env = []string{procinit.MakeProcLayers(map[string]bool{procinit.BASESCHED: true})}
 		config.Spawn(attr)
 	}
 }

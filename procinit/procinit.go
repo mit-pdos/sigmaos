@@ -17,7 +17,6 @@ const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
 )
 
-// XXX Rename
 const ( // Possible stackable layers. BASE_SCHED is always included by default
 	BASEPROC = "BASEPROC"
 	IDEMPROC = "IDEMPROC"
@@ -48,16 +47,15 @@ func GetProcLayersString() string {
 		debug.PrintStack()
 		log.Fatalf("Error! Length 0 sched layers!")
 	}
-	return s
+	return PROC_LAYERS + "=" + s
 }
 
 func SetProcLayers(layers map[string]bool) {
-	os.Setenv(PROC_LAYERS, MakeProcLayersString(layers))
+	os.Setenv(PROC_LAYERS, makeProcLayersString(layers))
 }
 
-// XXX Rename
-func MakeProcLayersString(layers map[string]bool) string {
-	s := PROC_LAYERS + "="
+func makeProcLayersString(layers map[string]bool) string {
+	s := ""
 	for l, _ := range layers {
 		s += l
 		s += ","

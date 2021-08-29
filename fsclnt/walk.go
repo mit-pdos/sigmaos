@@ -71,14 +71,14 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watc
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
 	fid3 := fsc.allocFid()
 	dir := r[0 : len(r)-1]
-	reply, err := fsc.npch(fid1).Walk(fid1, fid3, dir)
+	reply, err := fsc.clnt(fid1).Walk(fid1, fid3, dir)
 	if err != nil {
 		return nil, err
 	}
 	fsc.addFid(fid3, fsc.path(fid1).copyPath())
 	fsc.path(fid3).addn(reply.Qids, dir)
 
-	reply, err = fsc.npch(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
+	reply, err = fsc.clnt(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
 	if err == nil {
 		return reply, nil
 	}
@@ -89,7 +89,7 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watc
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
 		fsc.clunkFid(fid3)
 		f(np.Join(p), err)
-	}(fsc.npch(fid3), fsc.path(fid3).lastqid().Version)
+	}(fsc.clnt(fid3), fsc.path(fid3).lastqid().Version)
 	return nil, nil
 }
 
@@ -111,7 +111,7 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 	var reply *np.Rwalk
 	todo := 0
 	if union {
-		reply, err = fsc.walkUnion(fsc.npch(fid1), fid1, fid2,
+		reply, err = fsc.walkUnion(fsc.clnt(fid1), fid1, fid2,
 			first, rest[len(first)])
 		rest = rest[len(first)+1:]
 		todo = len(rest)
@@ -119,7 +119,7 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 			return np.NoFid, 0, err
 		}
 	} else {
-		reply, err = fsc.npch(fid1).Walk(fid1, fid2, rest)
+		reply, err = fsc.clnt(fid1).Walk(fid1, fid2, rest)
 		if err != nil {
 			if f != nil && strings.HasPrefix(err.Error(),
 				"file not found") {
@@ -257,7 +257,7 @@ func (fsc *FsClient) walkUnion(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dir []s
 	if err != nil {
 		return nil, err
 	}
-	reply, err = fsc.unionLookup(fsc.npch(fid), fid3, fid2, q)
+	reply, err = fsc.unionLookup(fsc.clnt(fid), fid3, fid2, q)
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,7 @@ import (
 	"ulambda/protclnt"
 )
 
-// The path and 9p channel associated with an fid
+// The path and prot clnt associated with an fid
 type Path struct {
 	pc    *protclnt.ProtClnt
 	cname []string

@@ -182,14 +182,15 @@ func (c *SrvConn) registerSession(sess np.Tsession) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.sessions[sess] = true
+	if _, ok := c.sessions[sess]; !ok {
+		c.sessions[sess] = true
+		c.fssrv.SessionTable().RegisterSession(sess)
+	}
 }
 
 func (c *SrvConn) serve(fc *np.Fcall) {
 	t := fc.Tag
 	c.registerSession(fc.Session)
-	// XXX Avoid doing this every time
-	c.fssrv.SessionTable().RegisterSession(fc.Session)
 	reply, rerror := c.dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror

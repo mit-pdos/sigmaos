@@ -66,7 +66,6 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 }
 
 func (r *MemfsdReplica) Work() {
-	r.Started(r.Pid)
 	r.fsd.Serve()
 	r.ExitFs(r.name)
 }

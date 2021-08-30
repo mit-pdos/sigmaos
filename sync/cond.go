@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"path"
+	"runtime/debug"
 
 	"github.com/thanhpk/randstr"
 
@@ -182,6 +183,7 @@ func (c *Cond) Destroy() {
 	// Wake up all waiters with a broadcast.
 	err := c.Remove(c.bcastPath)
 	if err != nil {
+		debug.PrintStack()
 		if err.Error() == "EOF" {
 			log.Printf("Error Remove 1 in Cond.Destroy: %v", err)
 		} else {

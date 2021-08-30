@@ -33,6 +33,7 @@ type FsUxReplica struct {
 }
 
 func MakeFsUxReplica(args []string) *FsUxReplica {
+	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true})
 	r := &FsUxReplica{}
 	r.Pid = args[0]
 	r.relayPort = args[1]

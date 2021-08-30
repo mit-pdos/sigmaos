@@ -6,6 +6,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/procinit"
 )
 
 func makeNpUxTstate(t *testing.T) *Tstate {
@@ -17,6 +18,8 @@ func makeNpUxTstate(t *testing.T) *Tstate {
 		t.Fatalf("Boot %v\n", err)
 	}
 	ts.s = s
+
+	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true})
 
 	replicaName := "npux-replica"
 	db.Name(replicaName + "-test")

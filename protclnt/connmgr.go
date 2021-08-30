@@ -1,4 +1,4 @@
-package npclnt
+package protclnt
 
 import (
 	"strings"

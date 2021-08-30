@@ -1,4 +1,4 @@
-package npclnt
+package protclnt
 
 import (
 	"errors"
@@ -8,28 +8,28 @@ import (
 	np "ulambda/ninep"
 )
 
-type NpClnt struct {
+type Clnt struct {
 	session np.Tsession
 	seqno   np.Tseqno
 	cm      *ConnMgr
 }
 
-func MakeNpClnt() *NpClnt {
-	npc := &NpClnt{}
+func MakeClnt() *Clnt {
+	clnt := &Clnt{}
 	// Generate a fresh session token
 	rand.Seed(time.Now().UnixNano())
-	npc.session = np.Tsession(rand.Uint64())
-	npc.seqno = 0
-	npc.cm = makeConnMgr(npc.session, &npc.seqno)
-	return npc
+	clnt.session = np.Tsession(rand.Uint64())
+	clnt.seqno = 0
+	clnt.cm = makeConnMgr(clnt.session, &clnt.seqno)
+	return clnt
 }
 
-func (npc *NpClnt) Exit() {
-	npc.cm.exit()
+func (clnt *Clnt) Exit() {
+	clnt.cm.exit()
 }
 
-func (npc *NpClnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
-	reply, err := npc.cm.makeCall(server, args)
+func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
+	reply, err := clnt.cm.makeCall(server, args)
 	if err != nil {
 		return nil, err
 	}
@@ -40,9 +40,9 @@ func (npc *NpClnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
 	return reply, nil
 }
 
-func (npc *NpClnt) Attach(server []string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
+func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
 	args := np.Tattach{fid, np.NoFid, uname, ""}
-	reply, err := npc.CallServer(server, args)
+	reply, err := clnt.CallServer(server, args)
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +53,14 @@ func (npc *NpClnt) Attach(server []string, uname string, fid np.Tfid, path []str
 	return &msg, err
 }
 
+func (clnt *Clnt) MakeProtClnt(server []string) *ProtClnt {
+	protclnt := &ProtClnt{server, clnt.cm}
+	return protclnt
+}
+
 type ProtClnt struct {
 	server []string
 	cm     *ConnMgr
-}
-
-func (npc *NpClnt) MakeProtClnt(server []string) *ProtClnt {
-	protclnt := &ProtClnt{server, npc.cm}
-	return protclnt
 }
 
 func (pclnt *ProtClnt) Server() []string {

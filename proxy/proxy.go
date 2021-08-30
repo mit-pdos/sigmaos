@@ -9,7 +9,7 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/npclnt"
+	"ulambda/protclnt"
 	"ulambda/protsrv"
 	"ulambda/session"
 )
@@ -23,16 +23,16 @@ const MAXSYMLINK = 20
 // The connection from the kernel/client
 type NpConn struct {
 	mu    sync.Mutex
-	clnt  *npclnt.NpClnt
+	clnt  *protclnt.Clnt
 	uname string
-	fids  map[np.Tfid]*npclnt.ProtClnt // The outgoing channels to servers proxied
+	fids  map[np.Tfid]*protclnt.ProtClnt // The outgoing channels to servers proxied
 	named string
 }
 
 func makeNpConn(named string) *NpConn {
 	npc := &NpConn{}
-	npc.clnt = npclnt.MakeNpClnt()
-	npc.fids = make(map[np.Tfid]*npclnt.ProtClnt)
+	npc.clnt = protclnt.MakeClnt()
+	npc.fids = make(map[np.Tfid]*protclnt.ProtClnt)
 	npc.named = named
 	return npc
 }
@@ -41,7 +41,7 @@ func (npc *NpConn) Closed() bool {
 	return false
 }
 
-func (npc *NpConn) npch(fid np.Tfid) *npclnt.ProtClnt {
+func (npc *NpConn) npch(fid np.Tfid) *protclnt.ProtClnt {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	ch, ok := npc.fids[fid]
@@ -51,7 +51,7 @@ func (npc *NpConn) npch(fid np.Tfid) *npclnt.ProtClnt {
 	return ch
 }
 
-func (npc *NpConn) addch(fid np.Tfid, ch *npclnt.ProtClnt) {
+func (npc *NpConn) addch(fid np.Tfid, ch *protclnt.ProtClnt) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	npc.fids[fid] = ch

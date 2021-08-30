@@ -4,19 +4,19 @@ import (
 	"fmt"
 
 	np "ulambda/ninep"
-	"ulambda/npclnt"
+	"ulambda/protclnt"
 )
 
-// The path and 9p channel associated with an fid
+// The path and prot clnt associated with an fid
 type Path struct {
-	npch  *npclnt.ProtClnt
+	pc    *protclnt.ProtClnt
 	cname []string
 	qids  []np.Tqid
 }
 
-func makePath(npc *npclnt.ProtClnt, n []string, qs []np.Tqid) *Path {
+func makePath(pc *protclnt.ProtClnt, n []string, qs []np.Tqid) *Path {
 	p := &Path{}
-	p.npch = npc
+	p.pc = pc
 	p.cname = n
 	p.qids = qs
 	return p
@@ -31,7 +31,7 @@ func (p *Path) String() string {
 func (p *Path) copyPath() *Path {
 	qids := make([]np.Tqid, len(p.qids))
 	copy(qids, p.qids)
-	return makePath(p.npch, p.cname, qids)
+	return makePath(p.pc, p.cname, qids)
 }
 
 func (p *Path) add(name string, q np.Tqid) {

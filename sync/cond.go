@@ -34,7 +34,7 @@ func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock) *Cond {
 	c.bcastPath = path.Join(condpath, BROADCAST)
 	c.FsLib = fsl
 
-	c.dirLock = MakeLock(fsl, fslib.LOCKS, fslib.LockName(path.Join(c.path, DIR_LOCK)), lock != nil)
+	c.dirLock = MakeLock(fsl, fslib.LOCKS, path.Join(c.path, DIR_LOCK), lock != nil)
 
 	return c
 }

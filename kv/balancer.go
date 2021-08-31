@@ -15,6 +15,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procinit"
+	"ulambda/sync"
 )
 
 const (
@@ -29,9 +30,10 @@ const (
 type Balancer struct {
 	*fslib.FsLib
 	proc.ProcCtl
-	pid  string
-	args []string
-	conf *Config
+	pid    string
+	args   []string
+	conf   *Config
+	kvlock *sync.Lock
 }
 
 func MakeBalancer(args []string) (*Balancer, error) {
@@ -43,21 +45,18 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
 	bl.ProcCtl = procinit.MakeProcCtl(bl.FsLib, procinit.GetProcLayersMap())
+	bl.kvlock = sync.MakeLock(bl.FsLib, KVDIR, KVLOCK, true)
 
 	db.Name("balancer")
 
-	if err := bl.LockFile(KVDIR, KVLOCK); err != nil {
-		log.Fatalf("Lock failed %v\n", err)
-	}
+	bl.kvlock.Lock()
 
 	bl.Started(bl.pid)
 	return bl, nil
 }
 
 func (bl *Balancer) unlock() {
-	if err := bl.UnlockFile(KVDIR, KVLOCK); err != nil {
-		log.Fatalf("Unlock failed failed %v\n", err)
-	}
+	bl.kvlock.Unlock()
 }
 
 func (bl *Balancer) unpostShard(kv, s string) {

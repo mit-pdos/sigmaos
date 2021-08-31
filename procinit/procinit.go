@@ -17,7 +17,7 @@ const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
 )
 
-const ( // Possible stackable layers. BASE_SCHED is always included by default
+const ( // Possible stackable layers. BASEPROC is always included by default
 	BASEPROC = "BASEPROC"
 	IDEMPROC = "IDEMPROC"
 	DEPPROC  = "DEPPROC"

@@ -13,6 +13,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procinit"
 	"ulambda/stats"
+	usync "ulambda/sync"
 )
 
 const (
@@ -24,9 +25,10 @@ type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	proc.ProcCtl
-	pid  string
-	kv   string
-	args []string
+	pid       string
+	kv        string
+	args      []string
+	kvmonlock *usync.Lock
 }
 
 func MakeMonitor(args []string) (*Monitor, error) {
@@ -34,21 +36,17 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
 	mo.ProcCtl = procinit.MakeProcCtl(mo.FsLib, procinit.GetProcLayersMap())
+	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
 	db.Name(mo.pid)
 
-	if err := mo.LockFile(KVDIR, KVMONLOCK); err != nil {
-		log.Fatalf("Lock failed %v\n", err)
-	}
+	mo.kvmonlock.Lock()
 
 	mo.Started(mo.pid)
 	return mo, nil
 }
 
 func (mo *Monitor) unlock() {
-	if err := mo.UnlockFile(KVDIR, KVMONLOCK); err != nil {
-		log.Fatalf("Unlock failed failed %v\n", err)
-	}
-
+	mo.kvmonlock.Unlock()
 }
 
 func spawnBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {

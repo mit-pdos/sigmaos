@@ -20,7 +20,6 @@ type FsLambda interface {
 	ReadFile(string) ([]byte, error)
 	WriteFile(string, []byte) error
 	Stat(string) (*np.Stat, error)
-	HasBeenSpawned(pid string) bool
 	Name() string
 }
 
@@ -317,5 +316,7 @@ func reductionExists(fslambda FsLambda, hash string) bool {
 
 // Check if either the thunk executor or the output handler are running
 func currentlyExecuting(fslambda FsLambda, thunkHash string) bool {
-	return fslambda.HasBeenSpawned(executorPid(thunkHash)) || fslambda.HasBeenSpawned(outputHandlerPid(thunkHash))
+	log.Fatalf("currentlyExecuting needs reimplementation")
+	//	return fslambda.HasBeenSpawned(executorPid(thunkHash)) || fslambda.HasBeenSpawned(outputHandlerPid(thunkHash))
+	return false
 }

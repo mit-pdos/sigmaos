@@ -15,6 +15,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
+	"ulambda/sync"
 )
 
 const (
@@ -31,11 +32,12 @@ const (
 type Coord struct {
 	*fslib.FsLib
 	proc.ProcCtl
-	pid    string
-	opcode string
-	args   []string
-	ch     chan Tstatus
-	twopc  *Twopc
+	pid       string
+	opcode    string
+	args      []string
+	ch        chan Tstatus
+	twopc     *Twopc
+	twopclock *sync.Lock
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -53,11 +55,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcCtl = procinit.MakeProcCtl(cd.FsLib, procinit.GetProcLayersMap())
+	cd.twopclock = sync.MakeLock(cd.FsLib, DIR2PC, TWOPCLOCK, true)
 
 	// Grab TWOPCLOCK before starting coord
-	if err := cd.LockFile(DIR2PC, TWOPCLOCK); err != nil {
-		log.Fatalf("Lock failed %v\n", err)
-	}
+	cd.twopclock.Lock()
 
 	log.Printf("COORD lock %v\n", args)
 
@@ -78,9 +79,7 @@ func (cd *Coord) exit() {
 		log.Printf("Remove %v failed %v\n", COORD, err)
 	}
 
-	if err := cd.UnlockFile(DIR2PC, TWOPCLOCK); err != nil {
-		log.Fatalf("Unlock failed failed %v\n", err)
-	}
+	cd.twopclock.Unlock()
 }
 
 func (cd *Coord) restart() {

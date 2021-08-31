@@ -11,8 +11,6 @@ import (
 	np "ulambda/ninep"
 )
 
-const ()
-
 type Lock struct {
 	lockDir  string // Path to the lock's parent dir
 	lockName string // Lock's name. "/" characters are replaced with "-" characters

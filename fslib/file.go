@@ -13,13 +13,14 @@ import (
 	np "ulambda/ninep"
 )
 
-// XXX Picking a small chunk size really kills throughput
-//const CHUNKSZ = 8192
-const CHUNKSZ = 10000000
-
+// XXX remove
 const (
 	TMP = "name/tmp"
 )
+
+// XXX Picking a small chunk size really kills throughput
+//const CHUNKSZ = 8192
+const CHUNKSZ = 10000000
 
 type FsLib struct {
 	*fsclnt.FsClient

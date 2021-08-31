@@ -21,6 +21,10 @@ const (
 )
 
 const (
+	PROC_COND = "name/proc-cond"
+)
+
+const (
 	START_COND = "start-cond."
 	EVICT_COND = "evict-cond."
 	EXIT_COND  = "exit-cond."
@@ -36,7 +40,6 @@ const (
 	JOB_SIGNAL = "job-signal"
 	WAIT_START = "wait-start."
 	WAIT_EXIT  = "wait-exit."
-	PROC_COND  = "name/proc-cond"
 )
 
 type BaseProcCtl struct {
@@ -48,6 +51,8 @@ func MakeBaseProcCtl(fsl *fslib.FsLib) *BaseProcCtl {
 	ctl := &BaseProcCtl{}
 	ctl.runq = sync.MakeFilePriorityBag(fsl, RUNQ)
 	ctl.FsLib = fsl
+
+	ctl.Mkdir(PROC_COND, 0777)
 
 	return ctl
 }

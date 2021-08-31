@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/idemproc"
 	"ulambda/kernel"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procinit"
 	"ulambda/sync"
@@ -31,7 +32,7 @@ func MakeProcdMonitor(args []string) *ProcdMonitor {
 	m := &ProcdMonitor{}
 	m.pid = args[0]
 	m.FsLib = fslib.MakeFsLib(m.pid)
-	m.l = sync.MakeLock(m.FsLib, fslib.LOCKS, IDEMPROC_LOCK, true)
+	m.l = sync.MakeLock(m.FsLib, named.LOCKS, IDEMPROC_LOCK, true)
 	m.ProcCtl = procinit.MakeProcCtl(m.FsLib, procinit.GetProcLayersMap())
 	db.Name(m.pid)
 

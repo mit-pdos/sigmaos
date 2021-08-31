@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procinit"
 	"ulambda/sync"
@@ -30,7 +31,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	m.configLock = sync.MakeLock(fsl, fslib.LOCKS, m.configPath, true)
+	m.configLock = sync.MakeLock(fsl, named.LOCKS, m.configPath, true)
 	m.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m

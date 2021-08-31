@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
+	"ulambda/named"
 	"ulambda/sync"
 )
 
@@ -52,16 +53,7 @@ func BootMin(bin string) (*System, error) {
 	s.named = cmd
 	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLib("kernel")
-	err = s.Mkdir(BOOT, 0777)
-	if err != nil {
-		log.Printf("Error creating boot dir: %v", err)
-		return s, err
-	}
-	err = s.Mkdir(fslib.LOCKS, 0777)
-	if err != nil {
-		log.Printf("Error creating locks dir: %v", err)
-		return s, err
-	}
+	err = named.MakeInitFs(s.FsLib)
 	return s, nil
 }
 

@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/sync"
@@ -98,7 +99,7 @@ func (ctl *DepProcCtl) Spawn(gp proc.GenericProc) error {
 	tSpawnCond.Init()
 
 	// Create a lock to make sure we don't miss updates from depProcs we depend on.
-	tLock := sync.MakeLock(ctl.FsLib, fslib.LOCKS, depProcFPath, true)
+	tLock := sync.MakeLock(ctl.FsLib, named.LOCKS, depProcFPath, true)
 
 	// Lock the depProc file to make sure we don't miss any dependency updates.
 	tLock.Lock()
@@ -164,7 +165,7 @@ func (ctl *DepProcCtl) WaitEvict(pid string) error {
 
 func (ctl *DepProcCtl) Started(pid string) error {
 	// Lock the depProc file
-	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, ctl.depProcFilePath(pid), true)
+	l := sync.MakeLock(ctl.FsLib, named.LOCKS, ctl.depProcFilePath(pid), true)
 
 	l.Lock()
 	defer l.Unlock()
@@ -180,7 +181,7 @@ func (ctl *DepProcCtl) Started(pid string) error {
 
 func (ctl *DepProcCtl) Exited(pid string) error {
 	// Lock the depProc file
-	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, ctl.depProcFilePath(pid), true)
+	l := sync.MakeLock(ctl.FsLib, named.LOCKS, ctl.depProcFilePath(pid), true)
 
 	l.Lock()
 	defer l.Unlock()
@@ -275,7 +276,7 @@ func (ctl *DepProcCtl) registerDependencies(p *DepProc) {
 // registration succeeded, return true. If the registration failed, assume the
 // dependency has been satisfied, and return false.
 func (ctl *DepProcCtl) registerDependant(pid string, dependant string, depType Tdep) bool {
-	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, ctl.depProcFilePath(pid), true)
+	l := sync.MakeLock(ctl.FsLib, named.LOCKS, ctl.depProcFilePath(pid), true)
 
 	l.Lock()
 	defer l.Unlock()
@@ -355,7 +356,7 @@ func (ctl *DepProcCtl) updateDependants(pid string, depType Tdep) {
 // Update the dependency pid of dependant.
 func (ctl *DepProcCtl) updateDependant(pid string, dependant string, depType Tdep) {
 	// Create a lock to atomically update the job file.
-	l := sync.MakeLock(ctl.FsLib, fslib.LOCKS, ctl.depProcFilePath(dependant), true)
+	l := sync.MakeLock(ctl.FsLib, named.LOCKS, ctl.depProcFilePath(dependant), true)
 
 	// Lock the job file to make sure we don't miss any dependency updates
 	l.Lock()

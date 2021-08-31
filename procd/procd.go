@@ -84,9 +84,6 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 	// Make some directories used by other services.
-	fsl.Mkdir(baseproc.PROC_COND, 0777)
-	fsl.Mkdir(fslib.LOCKS, 0777)
-	fsl.Mkdir(fslib.TMP, 0777)
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
 	pd.runq = usync.MakeFilePriorityBag(fsl, baseproc.RUNQ)

@@ -12,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/named"
 	usync "ulambda/sync"
 )
 
@@ -44,13 +45,13 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.FsLib = fslib.MakeFsLib("sync_test")
 	ts.t = t
-	ts.Mkdir(fslib.LOCKS, 0777)
+	ts.Mkdir(named.LOCKS, 0777)
 	return ts
 }
 
 func condWaiter(ts *Tstate, c *usync.Cond, done chan int, id int, signal bool) {
-	err := ts.LockFile(LOCK_DIR, LOCK_NAME)
-	assert.Nil(ts.t, err, "LockFile waiter [%v]: %v", id, err)
+	l := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
+	l.Lock()
 
 	// Wait, and then possibly signal future waiters
 	c.Wait()
@@ -59,8 +60,7 @@ func condWaiter(ts *Tstate, c *usync.Cond, done chan int, id int, signal bool) {
 		c.Signal()
 	}
 
-	err = ts.UnlockFile(LOCK_DIR, LOCK_NAME)
-	assert.Nil(ts.t, err, "UnlockFile waiter [%v]: %v", id, err)
+	l.Unlock()
 }
 
 func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {

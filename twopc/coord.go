@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 
+	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -145,7 +146,7 @@ func (cd *Coord) watchFlw(p string, err error) {
 func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 	nextFws.setStatusWatches(TWOPCPREPARED, cd.watchStatus)
 
-	err := cd.MakeFileJsonAtomic(TWOPCPREP, 0777, *cd.twopc)
+	err := atomic.MakeFileJsonAtomic(cd.FsLib, TWOPCPREP, 0777, *cd.twopc)
 	if err != nil {
 		db.DLPrintf("COORD", "COORD: MakeFileJsonAtomic %v err %v\n",
 			TWOPCCOMMIT, err)

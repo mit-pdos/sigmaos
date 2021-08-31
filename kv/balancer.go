@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/depproc"
 	"ulambda/fslib"
@@ -162,7 +163,7 @@ func (bl *Balancer) Balance() {
 
 	log.Printf("new %v\n", bl.conf)
 
-	err = bl.MakeFileJsonAtomic(KVNEXTCONFIG, 0777, *bl.conf)
+	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: MakeFile %v err %v\n", KVNEXTCONFIG, err)
 	}

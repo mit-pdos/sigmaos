@@ -1,15 +1,14 @@
 package idemproc
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path"
 
+	"ulambda/atomic"
 	"ulambda/fslib"
 	"ulambda/proc"
-	//	"ulambda/sync"
 )
 
 const (
@@ -53,16 +52,11 @@ func (ctl *IdemProcCtl) Init() error {
 func (ctl *IdemProcCtl) Spawn(gp proc.GenericProc) error {
 	p := IdemProc{}
 	p.Proc = gp.GetProc()
-	b, err := json.Marshal(p)
-	if err != nil {
-		log.Fatalf("Error marshalling IdemProc in IdemProcCtl.Spawn: %v", err)
-		return err
-	}
 
 	idemProcFPath := IdemProcFilePath(UNCLAIMED, p.Pid)
 
 	// Atomically create the idemProc file.
-	err = ctl.MakeFileAtomic(idemProcFPath, 0777, b)
+	err := atomic.MakeFileJsonAtomic(ctl.FsLib, idemProcFPath, 0777, p)
 	if err != nil {
 		return err
 	}

@@ -5,17 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
-
-	"github.com/thanhpk/randstr"
 
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
-)
-
-// XXX remove
-const (
-	TMP = "name/tmp"
 )
 
 // XXX Picking a small chunk size really kills throughput
@@ -111,22 +103,6 @@ func (fl *FsLib) MakeFile(fname string, perm np.Tperm, mode np.Tmode, data []byt
 	return err
 }
 
-func (fl *FsLib) MakeFileAtomic(fname string, perm np.Tperm, data []byte) error {
-	tmpName := randstr.Hex(16)
-	tmpPath := path.Join(TMP, tmpName)
-	err := fl.MakeFile(tmpPath, perm, np.OWRITE, data)
-	if err != nil {
-		log.Fatalf("Error in MakeFileAtomic %v: %v", fname, err)
-		return err
-	}
-	err = fl.Rename(tmpPath, fname)
-	if err != nil {
-		log.Fatalf("Error in MakeFileAtomic rename %v -> %v: %v", tmpPath, fname, err)
-		return err
-	}
-	return err
-}
-
 func (fl *FsLib) CreateFile(fname string, perm np.Tperm, mode np.Tmode) (int, error) {
 	fd, err := fl.Create(fname, perm, mode)
 	if err != nil {
@@ -218,11 +194,3 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 //	err = fl.Rename(fname+"#", fname)
 //	return err
 //}
-
-func (fl *FsLib) MakeFileJsonAtomic(fname string, perm np.Tperm, i interface{}) error {
-	data, err := json.Marshal(i)
-	if err != nil {
-		return fmt.Errorf("Marshal error %v", err)
-	}
-	return fl.MakeFileAtomic(fname, perm, data)
-}

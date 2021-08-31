@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 
+	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
@@ -78,7 +79,7 @@ func (p *Participant) readTwopcWatch(conffile string, f fsclnt.Watch) (*Twopc, e
 func (p *Participant) prepared(status string) {
 	fn := prepareName(p.me)
 	db.DLPrintf("PART", "Prepared %v\n", fn)
-	err := p.MakeFileAtomic(fn, 0777, []byte(status))
+	err := atomic.MakeFileAtomic(p.FsLib, fn, 0777, []byte(status))
 	if err != nil {
 		db.DLPrintf("PART", "Prepared: make file %v failed %v\n", fn, err)
 	}

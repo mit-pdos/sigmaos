@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
@@ -50,7 +51,7 @@ func (m *ReplicaMonitor) updateConfig() {
 		new += r.Name + "\n"
 	}
 	m.Remove(m.configPath)
-	err = m.MakeFileAtomic(m.configPath, 0777, []byte(strings.TrimSpace(new)))
+	err = atomic.MakeFileAtomic(m.FsLib, m.configPath, 0777, []byte(strings.TrimSpace(new)))
 	if err != nil {
 		log.Fatalf("Error writing new config file: %v", err)
 	}

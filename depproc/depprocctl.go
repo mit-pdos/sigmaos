@@ -5,6 +5,7 @@ import (
 	"log"
 	"path"
 
+	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
@@ -108,16 +109,11 @@ func (ctl *DepProcCtl) Spawn(gp proc.GenericProc) error {
 	// Register dependency backwards pointers.
 	ctl.registerDependencies(p)
 
-	b, err := json.Marshal(p)
+	// Atomically create the depProc file.
+	err := atomic.MakeFileJsonAtomic(ctl.FsLib, depProcFPath, 0777, p)
 	if err != nil {
 		// Release waiters if spawn fails.
 		tSpawnCond.Destroy()
-		return err
-	}
-
-	// Atomically create the depProc file.
-	err = ctl.MakeFileAtomic(depProcFPath, 0777, b)
-	if err != nil {
 		return err
 	}
 

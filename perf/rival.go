@@ -126,7 +126,7 @@ func (r *Rival) Work() {
 		if r.secs >= 0 && time.Now().Sub(start).Seconds() >= r.secs {
 			break
 		}
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		r.spawnSpinner(pid)
 		time.Sleep(time.Duration(r.sleepIntervalUsecs) * time.Microsecond)
 	}

@@ -62,7 +62,7 @@ func spawnBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {
 
 func spawnBalancer(sched proc.ProcCtl, opcode, pid1 string) string {
 	t := depproc.MakeDepProc()
-	t.Pid = fslib.GenPid()
+	t.Pid = proc.GenPid()
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Env = []string{procinit.GetProcLayersString()}
@@ -84,7 +84,7 @@ func spawnKVPid(sched proc.ProcCtl, pid1 string, pid2 string) {
 
 func SpawnKV(sched proc.ProcCtl) string {
 	t := depproc.MakeDepProc()
-	t.Pid = fslib.GenPid()
+	t.Pid = proc.GenPid()
 	t.Program = KV
 	t.Args = []string{""}
 	t.Env = []string{procinit.GetProcLayersString()}
@@ -110,8 +110,8 @@ func RunBalancer(sched proc.ProcCtl, opcode, pid1 string) {
 }
 
 func (mo *Monitor) grow() {
-	pid1 := fslib.GenPid()
-	pid2 := fslib.GenPid()
+	pid1 := proc.GenPid()
+	pid2 := proc.GenPid()
 	spawnKVPid(mo.ProcCtl, pid1, pid2)
 	runBalancerPid(mo.ProcCtl, "add", pid1, pid2)
 }

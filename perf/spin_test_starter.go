@@ -45,7 +45,7 @@ func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
 }
 
 func (s *SpinTestStarter) spawnSpinner() string {
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 	s.spawnSpinnerWithPid(pid)
 	return pid
 }
@@ -118,11 +118,11 @@ func (s *SpinTestStarter) TestNinep() time.Duration {
 
 	// Gen pids
 	for i := 0; i < s.nSpinners; i++ {
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		pid = pid + "-ninep-" + s.its
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
-			pid = fslib.GenPid()
+			pid = proc.GenPid()
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
@@ -163,11 +163,11 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 
 	// Gen pids
 	for i := 0; i < s.nSpinners; i++ {
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		pid = pid + "-native-" + s.its
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
-			pid = fslib.GenPid()
+			pid = proc.GenPid()
 			_, alreadySpawned = pids[pid]
 		}
 
@@ -256,7 +256,7 @@ func (s *SpinTestStarter) TestAws() time.Duration {
 }
 
 func (s *SpinTestStarter) TestLocalBaseline() {
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 
 	// Set up command struct
 	cmd := exec.Command("./bin/user/c-spinner", []string{pid, s.dim, s.its, "baseline"}...)

@@ -235,7 +235,7 @@ func (srv *NetServer) runDirWatcher() {
 		})
 		<-done
 		attr := &proc.Proc{}
-		attr.Pid = fslib.GenPid()
+		attr.Pid = proc.GenPid()
 		attr.Program = "bin/user/replica-monitor"
 		attr.Args = []string{config.ConfigPath, config.UnionDirPath}
 		attr.Env = []string{procinit.GetProcLayersString()}

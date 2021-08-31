@@ -1,4 +1,4 @@
-package fslib
+package proc
 
 import (
 	"math/rand"

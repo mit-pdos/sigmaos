@@ -45,7 +45,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 }
 
 func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string]bool) string {
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 	spawnSleeperlWithPidDep(t, ts, pid, startDep, exitDep)
 	return pid
 }
@@ -65,7 +65,7 @@ func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exi
 }
 
 func spawnSleeperl(t *testing.T, ts *Tstate) string {
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 	spawnSleeperlWithPid(t, ts, pid)
 	return pid
 }
@@ -119,10 +119,10 @@ func TestStartDep(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Generate a consumer & producer pid, make sure they dont' equal each other
-	cons := fslib.GenPid()
-	prod := fslib.GenPid()
+	cons := proc.GenPid()
+	prod := proc.GenPid()
 	for cons == prod {
-		prod = fslib.GenPid()
+		prod = proc.GenPid()
 	}
 
 	start := time.Now()

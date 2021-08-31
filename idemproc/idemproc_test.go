@@ -63,7 +63,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 }
 
 func spawnSleeperl(t *testing.T, ts *Tstate) string {
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 	spawnSleeperlWithPid(t, ts, pid)
 	return pid
 }
@@ -107,7 +107,7 @@ func TestCrashProcd(t *testing.T) {
 
 	monPids := []string{}
 	for i := 0; i < N_MON; i++ {
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		spawnMonitor(t, ts, pid)
 		monPids = append(monPids, pid)
 	}
@@ -117,7 +117,7 @@ func TestCrashProcd(t *testing.T) {
 	// Spawn some sleepers
 	sleeperPids := []string{}
 	for i := 0; i < N_SLEEP; i++ {
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		spawnSleeperlWithPid(t, ts, pid)
 		sleeperPids = append(sleeperPids, pid)
 	}

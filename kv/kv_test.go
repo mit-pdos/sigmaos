@@ -82,7 +82,7 @@ func makeTstate(t *testing.T) *Tstate {
 func (ts *Tstate) spawnMemFS() string {
 	t := depproc.MakeDepProc()
 	a := &proc.Proc{}
-	a.Pid = fslib.GenPid()
+	a.Pid = proc.GenPid()
 	a.Program = "bin/kernel/memfsd"
 	a.Args = []string{""}
 	a.Env = []string{procinit.GetProcLayersString()}

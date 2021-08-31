@@ -11,6 +11,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/named"
+	"ulambda/proc"
 	"ulambda/sync"
 )
 
@@ -79,7 +80,7 @@ func Boot(bin string) (*System, error) {
 
 func (s *System) BootFsUxd(bin string) error {
 	// Create boot cond
-	pid := "fsuxd-" + fslib.GenPid()
+	pid := "fsuxd-" + proc.GenPid()
 	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	fsuxdStartCond.Init()
 	var err error
@@ -95,7 +96,7 @@ func (s *System) BootFsUxd(bin string) error {
 
 func (s *System) BootFss3d(bin string) error {
 	// Create boot cond
-	pid := "fss3d-" + fslib.GenPid()
+	pid := "fss3d-" + proc.GenPid()
 	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	fss3dStartCond.Init()
 	var err error
@@ -111,7 +112,7 @@ func (s *System) BootFss3d(bin string) error {
 
 func (s *System) BootProcd(bin string) error {
 	// Create boot cond
-	pid := "procd-" + fslib.GenPid()
+	pid := "procd-" + proc.GenPid()
 	procdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	procdStartCond.Init()
 	var err error

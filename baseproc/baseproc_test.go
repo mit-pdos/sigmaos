@@ -63,7 +63,7 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 }
 
 func spawnSleeperl(t *testing.T, ts *Tstate) string {
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 	spawnSleeperlWithPid(t, ts, pid)
 	return pid
 }
@@ -140,7 +140,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 
 	ch := make(chan bool)
 
-	pid := fslib.GenPid()
+	pid := proc.GenPid()
 	go func() {
 		ts.WaitExit(pid)
 		ch <- true
@@ -176,10 +176,10 @@ func TestConcurrentLambdas(t *testing.T) {
 	done.Add(nLambdas)
 
 	for i := 0; i < nLambdas; i++ {
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
-			pid = fslib.GenPid()
+			pid = proc.GenPid()
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i

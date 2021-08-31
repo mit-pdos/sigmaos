@@ -102,8 +102,8 @@ func main() {
 		log.Fatalf("Readdir %v\n", err)
 	}
 	for _, f := range files {
-		pid1 := fslib.GenPid()
-		pid2 := fslib.GenPid()
+		pid1 := proc.GenPid()
+		pid2 := proc.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
 		a1 := depproc.MakeDepProc()
@@ -128,7 +128,7 @@ func main() {
 
 	reducers := []string{}
 	for i := 0; i < mr.NReduce; i++ {
-		pid := fslib.GenPid()
+		pid := proc.GenPid()
 		r := strconv.Itoa(i)
 		a := depproc.MakeDepProc()
 		a.Proc = &proc.Proc{pid, "bin/user/mr-r-wc", "",

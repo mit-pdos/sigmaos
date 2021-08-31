@@ -109,7 +109,7 @@ func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 
 func (st *Stats) spawnMonitor() string {
 	p := proc.Proc{}
-	p.Pid = fslib.GenPid()
+	p.Pid = proc.GenPid()
 	p.Program = "bin/user/monitor"
 	p.Args = []string{}
 	p.Env = []string{procinit.GetProcLayersString()}

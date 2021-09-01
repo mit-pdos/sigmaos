@@ -67,7 +67,7 @@ func (ts *Tstate) shutdown() {
 func (ts *Tstate) spawnMemFS() string {
 	a := fslib.Attr{}
 	a.Pid = proc.GenPid()
-	a.Program = "bin/kernel/memfsd"
+	a.Program = "bin/user/memfsd"
 	a.Args = []string{""}
 	a.StartDep = nil
 	a.ExitDep = nil

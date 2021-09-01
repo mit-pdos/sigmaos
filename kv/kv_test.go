@@ -83,7 +83,7 @@ func (ts *Tstate) spawnMemFS() string {
 	t := depproc.MakeDepProc()
 	a := &proc.Proc{}
 	a.Pid = proc.GenPid()
-	a.Program = "bin/kernel/memfsd"
+	a.Program = "bin/user/memfsd"
 	a.Args = []string{""}
 	a.Env = []string{procinit.GetProcLayersString()}
 	t.Proc = a

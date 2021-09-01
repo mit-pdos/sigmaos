@@ -211,7 +211,7 @@ func bootReplica(replica *Replica) {
 	bin := "."
 	var err error
 	replica.cmd, err = run(bin,
-		"bin/kernel/memfs-replica",
+		"bin/user/memfs-replica",
 		[]string{"placeholder-pid",
 			replica.port,
 			CONFIG_PATH,

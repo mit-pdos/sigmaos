@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if len(os.Args) != 2 {
-		log.Fatalf("Usage: npux <pid>")
+		log.Fatalf("Usage: fsux <pid>")
 	}
 	ip, err := fsclnt.LocalIP()
 	if err != nil {

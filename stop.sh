@@ -4,7 +4,7 @@
 killall named
 killall memfsd
 killall memfs-replica
-killall npux-replica
+killall fsux-replica
 killall replica-monitor
 killall idemproc-monitor
 killall perf-memfs-replica

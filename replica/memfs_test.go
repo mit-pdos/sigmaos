@@ -9,7 +9,7 @@ import (
 	"ulambda/procinit"
 )
 
-func makeNpUxTstate(t *testing.T) *Tstate {
+func makeMemfsTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
@@ -21,76 +21,76 @@ func makeNpUxTstate(t *testing.T) *Tstate {
 
 	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true})
 
-	replicaName := "npux-replica"
+	replicaName := "memfs-replica"
 	db.Name(replicaName + "-test")
 	ts.FsLib = fslib.MakeFsLib(replicaName + "-test")
 	ts.t = t
 	ts.configPath9p = "name/" + replicaName + "-config.txt"
 	ts.unionDirPath9p = "name/" + replicaName
 	ts.symlinkPath9p = "name/" + replicaName + "-HEAD"
-	ts.replicaBin = "bin/kernel/" + replicaName
+	ts.replicaBin = "bin/user/" + replicaName
 	return ts
 }
 
-func TestNpUxHelloWorld(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsHelloWorld(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	HelloWorld(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
 // Test making & reading a few files.
-func TestNpUxChainSimple(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsChainSimple(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ChainSimple(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
 // Test making & reading a few files in the presence of crashes in the middle of
 // the chain
-func TestNpUxChainCrashMiddle(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsChainCrashMiddle(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ChainCrashMiddle(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxChainCrashHead(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsChainCrashHead(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ChainCrashHead(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxChainCrashTail(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsChainCrashTail(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ChainCrashTail(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxConcurrentClientsSimple(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsConcurrentClientsSimple(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ConcurrentClientsSimple(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxConcurrentClientsCrashMiddle(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsConcurrentClientsCrashMiddle(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashMiddle(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxConcurrentClientsCrashTail(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsConcurrentClientsCrashTail(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashTail(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxConcurrentClientsCrashHead(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsConcurrentClientsCrashHead(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashHead(ts)
 	ts.s.Shutdown(ts.FsLib)
 }
 
-func TestNpUxConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
-	ts := makeNpUxTstate(t)
+func TestMemfsConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
+	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashHeadNotIdempotent(ts)
 	ts.s.Shutdown(ts.FsLib)
 }

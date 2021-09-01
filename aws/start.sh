@@ -28,7 +28,7 @@ do
        nohup ./ulambda/bin/kernel/proxyd > proxyd.out 2>&1 < /dev/null &
     fi
     nohup ./ulambda/bin/kernel/nps3d > npsd3.out 2>&1 < /dev/null &
-    nohup ./ulambda/bin/kernel/npuxd > nnpuxd.out 2>&1 < /dev/null &
+    nohup ./ulambda/bin/kernel/fsxd > fsuxd.out 2>&1 < /dev/null &
     nohup ./ulambda/bin/kernel/procd > procd.out 2>&1 < /dev/null &
 ENDSSH
 done

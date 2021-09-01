@@ -146,7 +146,7 @@ func TestSymlink1(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.s.BootFsUxd("..")
-	assert.Nil(t, err, "Error booting npuxd")
+	assert.Nil(t, err, "Error booting fsuxd")
 
 	// Make a target file
 	targetPath := "name/ux/~ip/symlink-test-file"
@@ -177,7 +177,7 @@ func TestSymlink2(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.s.BootFsUxd("..")
-	assert.Nil(t, err, "Error booting npuxd")
+	assert.Nil(t, err, "Error booting fsuxd")
 
 	// Make a target file
 	targetDirPath := "name/ux/~ip/dir1"
@@ -215,7 +215,7 @@ func TestSymlink3(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.s.BootFsUxd("..")
-	assert.Nil(t, err, "Error booting npuxd")
+	assert.Nil(t, err, "Error booting fsuxd")
 
 	uxs, err := ts.ReadDir("name/ux")
 	assert.Nil(t, err, "Error reading ux dir")

@@ -7,7 +7,7 @@ package seccomp
 // probably be paired down further or limited based on arguments.
 //
 // Don't allow "openat", because this would allow a process to read
-// local resources. For example, adding it would enable npuxd to work,
+// local resources. For example, adding it would enable fsuxd to work,
 // and we want arbitrary processes not to read/write local files.
 //
 // allow exit_group() to exit a process. don't use _exit because it

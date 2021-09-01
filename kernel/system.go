@@ -47,7 +47,7 @@ func run(bin string, name string, args []string) (*exec.Cmd, error) {
 
 func BootMin(bin string) (*System, error) {
 	s := &System{}
-	cmd, err := run(bin, "/bin/kernel/memfsd", []string{"0", ":1111"})
+	cmd, err := run(bin, "/bin/kernel/named", []string{"0", ":1111"})
 	if err != nil {
 		return nil, err
 	}

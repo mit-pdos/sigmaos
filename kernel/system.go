@@ -47,14 +47,15 @@ func run(bin string, name string, args []string) (*exec.Cmd, error) {
 
 func BootMin(bin string) (*System, error) {
 	s := &System{}
-	cmd, err := run(bin, "/bin/kernel/named", []string{"0", ":1111"})
+	err := s.BootNamed(bin, fslib.Named())
 	if err != nil {
 		return nil, err
 	}
-	s.named = cmd
-	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLib("kernel")
 	err = named.MakeInitFs(s.FsLib)
+	if err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -76,6 +77,16 @@ func Boot(bin string) (*System, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func (s *System) BootNamed(bin string, addr string) error {
+	cmd, err := run(bin, "/bin/kernel/named", []string{"0", addr})
+	if err != nil {
+		return err
+	}
+	s.named = cmd
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
+	return nil
 }
 
 func (s *System) BootFsUxd(bin string) error {
@@ -159,6 +170,7 @@ func (s *System) KillOne(srv string) error {
 			}
 		}
 	default:
+		log.Fatalf("Unkown server type in System.KillOne: %v", srv)
 	}
 	return nil
 }
@@ -192,15 +204,17 @@ func (s *System) Shutdown(clnt *fslib.FsLib) {
 		}
 	}
 
-	// Shutdown named last
-	err := clnt.Remove(NAMED + "/")
-	if err != nil {
-		// XXX sometimes we get EOF....
-		if err.Error() == "EOF" {
-			log.Printf("Remove %v shutdown %v\n", NAMED, err)
-		} else {
-			log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
+	if s.named != nil {
+		// Shutdown named last
+		err := clnt.Remove(NAMED + "/")
+		if err != nil {
+			// XXX sometimes we get EOF....
+			if err.Error() == "EOF" {
+				log.Printf("Remove %v shutdown %v\n", NAMED, err)
+			} else {
+				log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
+			}
 		}
+		s.named.Wait()
 	}
-	s.named.Wait()
 }

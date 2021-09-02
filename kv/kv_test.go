@@ -183,7 +183,7 @@ func TestGetPutSet(t *testing.T) {
 	}
 
 	ts.stopMemFSs()
-	ts.s.Shutdown(ts.fsl)
+	ts.s.Shutdown()
 }
 
 func ConcurN(t *testing.T, nclerk int) {
@@ -225,7 +225,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	ts.stopMemFSs()
 
-	ts.s.Shutdown(ts.fsl)
+	ts.s.Shutdown()
 }
 
 func TestConcur0(t *testing.T) {

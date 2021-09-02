@@ -199,7 +199,7 @@ func (s *System) Shutdown() {
 		// Shutdown named last
 		err := s.Remove(NAMED + "/")
 		if err != nil {
-			// XXX sometimes we get EOF....
+			// XXX sometimes we get EOF..
 			if err.Error() == "EOF" {
 				log.Printf("Remove %v shutdown %v\n", NAMED, err)
 			} else {

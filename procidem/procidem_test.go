@@ -101,7 +101,7 @@ func TestHelloWorld(t *testing.T) {
 func TestCrashProcd(t *testing.T) {
 	ts := makeTstate(t)
 
-	ts.s.BootProcd("..")
+	ts.s.BootProcd()
 
 	N_MON := 5
 	N_SLEEP := 5

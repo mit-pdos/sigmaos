@@ -42,7 +42,7 @@ type Tstate struct {
 	t   *testing.T
 	s   *kernel.System
 	fsl *fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
 	rand  *rand.Rand
@@ -60,7 +60,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.s = s
 	ts.fsl = fslib.MakeFsLib("kv_test")
-	ts.ProcCtl = procinit.MakeProcCtl(ts.fsl, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClnt(ts.fsl, procinit.GetProcLayersMap())
 
 	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
 	if err != nil {
@@ -144,9 +144,9 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	if memfs {
 		mfs = ts.spawnMemFS()
 	} else {
-		mfs = SpawnKV(ts.ProcCtl)
+		mfs = SpawnKV(ts.ProcClnt)
 	}
-	RunBalancer(ts.ProcCtl, "add", mfs)
+	RunBalancer(ts.ProcClnt, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
@@ -199,13 +199,13 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	for s := 0; s < NMORE; s++ {
 		ts.mfss = append(ts.mfss, ts.spawnMemFS())
-		RunBalancer(ts.ProcCtl, "add", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.ProcClnt, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		RunBalancer(ts.ProcCtl, "del", ts.mfss[len(ts.mfss)-1])
+		RunBalancer(ts.ProcClnt, "del", ts.mfss[len(ts.mfss)-1])
 		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets

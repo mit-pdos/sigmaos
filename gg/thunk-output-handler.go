@@ -17,7 +17,7 @@ type ThunkOutputHandler struct {
 	primaryOutputThunkPid  string
 	outputFiles            []string
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, error) {
@@ -35,7 +35,7 @@ func mkThunkOutputHandler(pid string, thunkHash string, outputFiles []string) *T
 	toh.outputFiles = outputFiles
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
 	toh.FsLib = fls
-	toh.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
+	toh.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
 	return toh
 }
 

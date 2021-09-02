@@ -64,15 +64,15 @@ func makeProcLayersString(layers map[string]bool) string {
 	return s
 }
 
-// Make a generic ProcCtl with the desired layers.
-func MakeProcCtl(fsl *fslib.FsLib, layers map[string]bool) proc.ProcCtl {
-	var ctl proc.ProcCtl
-	ctl = baseproc.MakeBaseProcCtl(fsl)
+// Make a generic ProcClnt with the desired layers.
+func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
+	var ctl proc.ProcClnt
+	ctl = baseproc.MakeBaseProcClnt(fsl)
 	if _, ok := layers[IDEMPROC]; ok {
-		ctl = idemproc.MakeIdemProcCtl(fsl, ctl)
+		ctl = idemproc.MakeIdemProcClnt(fsl, ctl)
 	}
 	if _, ok := layers[DEPPROC]; ok {
-		ctl = depproc.MakeDepProcCtl(fsl, ctl)
+		ctl = depproc.MakeDepProcClnt(fsl, ctl)
 	}
 	return ctl
 }

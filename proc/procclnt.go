@@ -5,7 +5,7 @@ type GenericProc interface {
 	String() string
 }
 
-type ProcCtl interface {
+type ProcClnt interface {
 	Spawn(GenericProc) error
 	WaitStart(string) error
 	WaitExit(string) error

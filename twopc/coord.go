@@ -32,7 +32,7 @@ const (
 
 type Coord struct {
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	pid       string
 	opcode    string
 	args      []string
@@ -55,7 +55,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.args = args[2:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
-	cd.ProcCtl = procinit.MakeProcCtl(cd.FsLib, procinit.GetProcLayersMap())
+	cd.ProcClnt = procinit.MakeProcClnt(cd.FsLib, procinit.GetProcLayersMap())
 	cd.twopclock = sync.MakeLock(cd.FsLib, DIR2PC, TWOPCLOCK, true)
 
 	// Grab TWOPCLOCK before starting coord

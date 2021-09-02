@@ -66,7 +66,7 @@ func readLambda(line string) (*depproc.DepProc, error) {
 
 func main() {
 	clnt := fslib.MakeFsLib("submit")
-	sctl := procinit.MakeProcCtl(clnt, procinit.GetProcLayersMap())
+	sctl := procinit.MakeProcClnt(clnt, procinit.GetProcLayersMap())
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		a, err := readLambda(scanner.Text())

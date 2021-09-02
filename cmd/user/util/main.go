@@ -76,7 +76,7 @@ func main() {
 		usage()
 	}
 	clnt := fslib.MakeFsLib("util")
-	sctl := procinit.MakeProcCtl(clnt, procinit.GetProcLayersMap())
+	sctl := procinit.MakeProcClnt(clnt, procinit.GetProcLayersMap())
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]

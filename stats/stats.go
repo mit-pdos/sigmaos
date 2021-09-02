@@ -85,7 +85,7 @@ type Stats struct {
 	hz   int
 	done uint32
 	fsl  *fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MkStats() *Stats {
@@ -101,7 +101,7 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
-	st.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
+	st.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()

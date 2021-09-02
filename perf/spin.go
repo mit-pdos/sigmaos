@@ -16,7 +16,7 @@ type Spinner struct {
 	its    int
 	native bool
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeSpinner(args []string) (*Spinner, error) {
@@ -30,7 +30,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	s.pid = args[0]
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spinner")
-		s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayersMap())
+		s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
 	}
 	dim, err := strconv.Atoi(args[1])
 	s.dim = dim

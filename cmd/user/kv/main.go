@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
-	sctl := procinit.MakeProcCtl(fsl.FsLib, procinit.GetProcLayersMap())
+	sctl := procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
 	sctl.Started(os.Args[1])
 	fsd.GetSrv().GetStats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()

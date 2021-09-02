@@ -20,7 +20,7 @@ type ReplicaMonitor struct {
 	unionDirPath string
 	configLock   *sync.Lock
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeReplicaMonitor(args []string) *ReplicaMonitor {
@@ -33,7 +33,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
 	m.configLock = sync.MakeLock(fsl, named.LOCKS, m.configPath, true)
-	m.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
+	m.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }

@@ -30,7 +30,7 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	pid    string
 	args   []string
 	conf   *Config
@@ -45,7 +45,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.pid = args[0]
 	bl.args = args[1:]
 	bl.FsLib = fslib.MakeFsLib(bl.pid)
-	bl.ProcCtl = procinit.MakeProcCtl(bl.FsLib, procinit.GetProcLayersMap())
+	bl.ProcClnt = procinit.MakeProcClnt(bl.FsLib, procinit.GetProcLayersMap())
 	bl.kvlock = sync.MakeLock(bl.FsLib, KVDIR, KVLOCK, true)
 
 	db.Name("balancer")

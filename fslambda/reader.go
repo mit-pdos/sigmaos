@@ -17,7 +17,7 @@ import (
 
 type Reader struct {
 	*fslibsrv.FsLibSrv
-	proc.ProcCtl
+	proc.ProcClnt
 	pid    string
 	input  string
 	output string
@@ -48,7 +48,7 @@ func MakeReader(args []string) (*Reader, error) {
 
 	r := &Reader{}
 	r.FsLibSrv = fsl
-	r.ProcCtl = procinit.MakeProcCtl(fsl.FsLib, procinit.GetProcLayersMap())
+	r.ProcClnt = procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
 	r.pid = args[0]
 	r.input = args[1]
 	r.output = args[2]

@@ -25,7 +25,7 @@ type ProcdMonitor struct {
 	pid string
 	l   *sync.Lock
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeProcdMonitor(args []string) *ProcdMonitor {
@@ -33,7 +33,7 @@ func MakeProcdMonitor(args []string) *ProcdMonitor {
 	m.pid = args[0]
 	m.FsLib = fslib.MakeFsLib(m.pid)
 	m.l = sync.MakeLock(m.FsLib, named.LOCKS, IDEMPROC_LOCK, true)
-	m.ProcCtl = procinit.MakeProcCtl(m.FsLib, procinit.GetProcLayersMap())
+	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
 	db.Name(m.pid)
 
 	log.Printf("ProcdMonitor: %v", m)

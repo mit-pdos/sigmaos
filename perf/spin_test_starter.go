@@ -28,7 +28,7 @@ type SpinTestStarter struct {
 	local     bool
 	perfStat  bool
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
@@ -79,7 +79,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spin-test-starter")
-		s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayersMap())
+		s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
 	}
 
 	nSpinners, err := strconv.Atoi(args[0])

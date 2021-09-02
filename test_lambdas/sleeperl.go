@@ -15,7 +15,7 @@ import (
 
 type Sleeperl struct {
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	pid         string
 	sleepLength time.Duration
 	output      string
@@ -28,7 +28,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	s := &Sleeperl{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
-	s.ProcCtl = procinit.MakeProcCtl(s.FsLib, procinit.GetProcLayersMap())
+	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
 	s.pid = args[0]
 	s.output = args[2]
 

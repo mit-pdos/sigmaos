@@ -16,7 +16,7 @@ type Downloader struct {
 	src  string
 	dest string
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeDownloader(args []string, debug bool) (*Downloader, error) {
@@ -26,7 +26,7 @@ func MakeDownloader(args []string, debug bool) (*Downloader, error) {
 	down.src = args[1]
 	down.dest = args[2]
 	fls := fslib.MakeFsLib("downloader")
-	down.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
+	down.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
 	down.FsLib = fls
 	down.Started(down.pid)
 	return down, nil

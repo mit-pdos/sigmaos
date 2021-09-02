@@ -27,7 +27,7 @@ type NaiveOrchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error) {
@@ -43,7 +43,7 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
+	orc.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
 	orc.Started(orc.pid)
 	return orc, nil
 }

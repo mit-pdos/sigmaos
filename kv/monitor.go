@@ -24,7 +24,7 @@ const (
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	pid       string
 	kv        string
 	args      []string
@@ -35,7 +35,7 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
 	mo.pid = args[0]
 	mo.FsLib = fslib.MakeFsLib(mo.pid)
-	mo.ProcCtl = procinit.MakeProcCtl(mo.FsLib, procinit.GetProcLayersMap())
+	mo.ProcClnt = procinit.MakeProcClnt(mo.FsLib, procinit.GetProcLayersMap())
 	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
 	db.Name(mo.pid)
 
@@ -49,7 +49,7 @@ func (mo *Monitor) unlock() {
 	mo.kvmonlock.Unlock()
 }
 
-func spawnBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {
+func spawnBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
 	t := depproc.MakeDepProc()
 	t.Pid = pid2
 	t.Program = "bin/user/balancer"
@@ -60,7 +60,7 @@ func spawnBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {
 	sched.Spawn(t)
 }
 
-func spawnBalancer(sched proc.ProcCtl, opcode, pid1 string) string {
+func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
 	t := depproc.MakeDepProc()
 	t.Pid = proc.GenPid()
 	t.Program = "bin/user/balancer"
@@ -72,7 +72,7 @@ func spawnBalancer(sched proc.ProcCtl, opcode, pid1 string) string {
 	return t.Pid
 }
 
-func spawnKVPid(sched proc.ProcCtl, pid1 string, pid2 string) {
+func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
 	t := depproc.MakeDepProc()
 	t.Pid = pid1
 	t.Program = KV
@@ -82,7 +82,7 @@ func spawnKVPid(sched proc.ProcCtl, pid1 string, pid2 string) {
 	sched.Spawn(t)
 }
 
-func SpawnKV(sched proc.ProcCtl) string {
+func SpawnKV(sched proc.ProcClnt) string {
 	t := depproc.MakeDepProc()
 	t.Pid = proc.GenPid()
 	t.Program = KV
@@ -93,7 +93,7 @@ func SpawnKV(sched proc.ProcCtl) string {
 	return t.Pid
 }
 
-func runBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {
+func runBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
 	spawnBalancerPid(sched, opcode, pid1, pid2)
 	err := sched.WaitExit(pid2)
 	if err != nil {
@@ -101,7 +101,7 @@ func runBalancerPid(sched proc.ProcCtl, opcode, pid1, pid2 string) {
 	}
 }
 
-func RunBalancer(sched proc.ProcCtl, opcode, pid1 string) {
+func RunBalancer(sched proc.ProcClnt, opcode, pid1 string) {
 	pid2 := spawnBalancer(sched, opcode, pid1)
 	err := sched.WaitExit(pid2)
 	if err != nil {
@@ -112,12 +112,12 @@ func RunBalancer(sched proc.ProcCtl, opcode, pid1 string) {
 func (mo *Monitor) grow() {
 	pid1 := proc.GenPid()
 	pid2 := proc.GenPid()
-	spawnKVPid(mo.ProcCtl, pid1, pid2)
-	runBalancerPid(mo.ProcCtl, "add", pid1, pid2)
+	spawnKVPid(mo.ProcClnt, pid1, pid2)
+	runBalancerPid(mo.ProcClnt, "add", pid1, pid2)
 }
 
 func (mo *Monitor) shrink(kv string) {
-	RunBalancer(mo.ProcCtl, "del", kv)
+	RunBalancer(mo.ProcClnt, "del", kv)
 	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
 	if err != nil {
 		log.Printf("shrink: remove failed %v\n", err)

@@ -43,7 +43,7 @@ type NetServerReplConfig struct {
 	inFlight     *RelayOpSet
 	fids         map[np.Tfid]*fid.Fid
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	*protclnt.Clnt
 }
 
@@ -64,7 +64,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 			MakeRelayOpSet(),
 			map[np.Tfid]*fid.Fid{},
 			config.FsLib,
-			procinit.MakeProcCtl(config.FsLib, procinit.GetProcLayersMap()),
+			procinit.MakeProcClnt(config.FsLib, procinit.GetProcLayersMap()),
 			config.Clnt}
 	}
 	srv := &NetServer{"",
@@ -180,7 +180,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *protclnt
 		nil,
 		nil,
 		fsl,
-		procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap()),
+		procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap()),
 		clnt}, nil
 }
 

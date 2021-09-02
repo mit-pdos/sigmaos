@@ -27,7 +27,7 @@ type MemfsdReplica struct {
 	config       *netsrv.NetServerReplConfig
 	fsd          *memfsd.Fsd
 	*fslibsrv.FsLibSrv
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeMemfsdReplica(args []string) *MemfsdReplica {
@@ -61,7 +61,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 		log.Fatalf("%v: InitFs failed %v\n", args, err)
 	}
 	r.FsLibSrv = fs
-	r.ProcCtl = procinit.MakeProcCtl(fs.FsLib, procinit.GetProcLayersMap())
+	r.ProcClnt = procinit.MakeProcClnt(fs.FsLib, procinit.GetProcLayersMap())
 	return r
 }
 

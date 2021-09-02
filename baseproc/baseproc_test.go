@@ -15,7 +15,7 @@ import (
 )
 
 type Tstate struct {
-	proc.ProcCtl
+	proc.ProcClnt
 	*fslib.FsLib
 	t *testing.T
 	s *kernel.System
@@ -35,7 +35,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 	return ts
 }
@@ -47,7 +47,7 @@ func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts.s = s
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLib("sched_test")
-	ts.ProcCtl = procinit.MakeProcCtl(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	return ts
 }
 

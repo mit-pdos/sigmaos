@@ -17,7 +17,7 @@ import (
 type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 	pid   string
 	shard string
 	src   string
@@ -35,7 +35,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[2]
 	mv.dst = args[3]
 	mv.FsLib = fslib.MakeFsLib(mv.pid)
-	mv.ProcCtl = procinit.MakeProcCtl(mv.FsLib, procinit.GetProcLayersMap())
+	mv.ProcClnt = procinit.MakeProcClnt(mv.FsLib, procinit.GetProcLayersMap())
 
 	db.Name(mv.pid)
 

@@ -29,7 +29,7 @@ type FsUxReplica struct {
 	config       *netsrv.NetServerReplConfig
 	ux           *fsux.FsUx
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeFsUxReplica(args []string) *FsUxReplica {
@@ -57,7 +57,7 @@ func MakeFsUxReplica(args []string) *FsUxReplica {
 	}
 	fsl := fslib.MakeFsLib("fsux-replica" + r.relayAddr)
 	r.FsLib = fsl
-	r.ProcCtl = procinit.MakeProcCtl(fsl, procinit.GetProcLayersMap())
+	r.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	r.mount = "/tmp"
 	r.ux = fsux.MakeReplicatedFsUx(r.mount, r.srvAddr, "", true, r.relayAddr, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)

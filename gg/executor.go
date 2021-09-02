@@ -15,7 +15,7 @@ type Executor struct {
 	pid       string
 	thunkHash string
 	*fslib.FsLib
-	proc.ProcCtl
+	proc.ProcClnt
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
@@ -25,7 +25,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.ProcCtl = procinit.MakeProcCtl(fls, procinit.GetProcLayersMap())
+	ex.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
 	ex.Started(ex.pid)
 	return ex, nil
 }

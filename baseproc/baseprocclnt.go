@@ -48,18 +48,18 @@ type BaseProcClnt struct {
 }
 
 func MakeBaseProcClnt(fsl *fslib.FsLib) *BaseProcClnt {
-	ctl := &BaseProcClnt{}
-	ctl.runq = sync.MakeFilePriorityBag(fsl, RUNQ)
-	ctl.FsLib = fsl
+	clnt := &BaseProcClnt{}
+	clnt.runq = sync.MakeFilePriorityBag(fsl, RUNQ)
+	clnt.FsLib = fsl
 
-	ctl.Mkdir(PROC_COND, 0777)
+	clnt.Mkdir(PROC_COND, 0777)
 
-	return ctl
+	return clnt
 }
 
 // ========== SPAWN ==========
 
-func (ctl *BaseProcClnt) Spawn(gp proc.GenericProc) error {
+func (clnt *BaseProcClnt) Spawn(gp proc.GenericProc) error {
 	p := gp.GetProc()
 	// Select which queue to put the job in
 	var procPriority string
@@ -74,13 +74,13 @@ func (ctl *BaseProcClnt) Spawn(gp proc.GenericProc) error {
 		log.Fatalf("Error in BaseProcClnt.Spawn: Unknown proc type %v", p.Type)
 	}
 
-	pStartCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, START_COND+p.Pid), nil)
+	pStartCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, START_COND+p.Pid), nil)
 	pStartCond.Init()
 
-	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+p.Pid), nil)
+	pExitCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, EXIT_COND+p.Pid), nil)
 	pExitCond.Init()
 
-	pEvictCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EVICT_COND+p.Pid), nil)
+	pEvictCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, EVICT_COND+p.Pid), nil)
 	pEvictCond.Init()
 
 	b, err := json.Marshal(p)
@@ -93,7 +93,7 @@ func (ctl *BaseProcClnt) Spawn(gp proc.GenericProc) error {
 		return err
 	}
 
-	err = ctl.runq.Put(procPriority, p.Pid, b)
+	err = clnt.runq.Put(procPriority, p.Pid, b)
 	if err != nil {
 		log.Printf("Error Put in BaseProcClnt.Spawn: %v", err)
 		return err
@@ -105,22 +105,22 @@ func (ctl *BaseProcClnt) Spawn(gp proc.GenericProc) error {
 // ========== WAIT ==========
 
 // Wait until a proc has started. If the proc doesn't exist, return immediately.
-func (ctl *BaseProcClnt) WaitStart(pid string) error {
-	pStartCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
+func (clnt *BaseProcClnt) WaitStart(pid string) error {
+	pStartCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
 	pStartCond.Wait()
 	return nil
 }
 
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
-func (ctl *BaseProcClnt) WaitExit(pid string) error {
-	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
+func (clnt *BaseProcClnt) WaitExit(pid string) error {
+	pExitCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
 	pExitCond.Wait()
 	return nil
 }
 
 // Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
-func (ctl *BaseProcClnt) WaitEvict(pid string) error {
-	pEvictCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
+func (clnt *BaseProcClnt) WaitEvict(pid string) error {
+	pEvictCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
 	pEvictCond.Wait()
 	return nil
 }
@@ -128,13 +128,13 @@ func (ctl *BaseProcClnt) WaitEvict(pid string) error {
 // ========== STARTED ==========
 
 // Mark that a process has started.
-func (ctl *BaseProcClnt) Started(pid string) error {
-	pStartCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
+func (clnt *BaseProcClnt) Started(pid string) error {
+	pStartCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, START_COND+pid), nil)
 	pStartCond.Destroy()
 	// Isolate the process namespace
 	newRoot := os.Getenv("NEWROOT")
 	if err := namespace.Isolate(newRoot); err != nil {
-		log.Fatalf("Error Isolate in ctl.Started: %v", err)
+		log.Fatalf("Error Isolate in clnt.Started: %v", err)
 	}
 	// Load a seccomp filter.
 	seccomp.LoadFilter()
@@ -144,8 +144,8 @@ func (ctl *BaseProcClnt) Started(pid string) error {
 // ========== EXITED ==========
 
 // Mark that a process has exited.
-func (ctl *BaseProcClnt) Exited(pid string) error {
-	pExitCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
+func (clnt *BaseProcClnt) Exited(pid string) error {
+	pExitCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, EXIT_COND+pid), nil)
 	pExitCond.Destroy()
 	return nil
 }
@@ -153,8 +153,8 @@ func (ctl *BaseProcClnt) Exited(pid string) error {
 // ========== EVICT ==========
 
 // Notify a process that it will be evicted.
-func (ctl *BaseProcClnt) Evict(pid string) error {
-	pEvictCond := sync.MakeCond(ctl.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
+func (clnt *BaseProcClnt) Evict(pid string) error {
+	pEvictCond := sync.MakeCond(clnt.FsLib, path.Join(PROC_COND, EVICT_COND+pid), nil)
 	pEvictCond.Destroy()
 	return nil
 }

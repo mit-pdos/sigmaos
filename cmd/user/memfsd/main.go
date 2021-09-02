@@ -27,10 +27,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}
-	sctl := procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
-	sctl.Started(os.Args[1])
+	sclnt := procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
+	sclnt.Started(os.Args[1])
 	seccomp.LoadFilter()
 	fsd.Serve()
-	sctl.Exited(os.Args[1])
+	sclnt.Exited(os.Args[1])
 	fsl.ExitFs(name)
 }

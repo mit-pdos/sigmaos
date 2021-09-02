@@ -86,7 +86,7 @@ func Compare(fsl *fslib.FsLib) {
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
 	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
-	sctl := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
@@ -120,8 +120,8 @@ func main() {
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
-		sctl.Spawn(a1)
-		sctl.Spawn(a2)
+		sclnt.Spawn(a1)
+		sclnt.Spawn(a2)
 		n += 1
 		mappers[pid2] = false
 	}
@@ -138,12 +138,12 @@ func main() {
 		}
 		a.Dependencies = &depproc.Deps{nil, mappers}
 		reducers = append(reducers, pid)
-		sctl.Spawn(a)
+		sclnt.Spawn(a)
 	}
 
 	// Spawn noop lambda that is dependent on reducers
 	for _, r := range reducers {
-		err = sctl.WaitExit(r)
+		err = sclnt.WaitExit(r)
 		if err != nil {
 			log.Fatalf("Wait failed %v\n", err)
 		}

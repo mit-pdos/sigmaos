@@ -55,13 +55,13 @@ func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 	return &twopc
 }
 
-func SpawnCoord(pctl proc.ProcClnt, opcode string, ps []string) string {
+func SpawnCoord(pclnt proc.ProcClnt, opcode string, ps []string) string {
 	args := append([]string{opcode}, ps...)
 	t := depproc.MakeDepProc()
 	t.Pid = proc.GenPid()
 	t.Program = "bin/user/coord"
 	t.Args = args
-	pctl.Spawn(t)
+	pclnt.Spawn(t)
 	return t.Pid
 }
 

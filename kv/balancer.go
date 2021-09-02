@@ -12,7 +12,7 @@ import (
 
 	"ulambda/atomic"
 	db "ulambda/debug"
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -91,7 +91,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnMover(s, src, dst string) string {
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
 	t.Program = "bin/user/mover"
 	t.Args = []string{s, src, dst}

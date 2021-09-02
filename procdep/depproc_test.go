@@ -1,4 +1,4 @@
-package depproc_test
+package procdep_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/proc"
@@ -24,7 +24,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 
 	bin := ".."
 	s, err := kernel.Boot(bin)
@@ -51,7 +51,7 @@ func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string
 }
 
 func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exitDep map[string]bool) {
-	a := depproc.MakeDepProc()
+	a := procdep.MakeProcDep()
 	a.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
 		[]string{"5s", "name/out_" + pid, ""},
 		[]string{procinit.GetProcLayersString()},

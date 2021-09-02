@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -44,19 +44,19 @@ func splitPairs(s string) map[string]bool {
 	return ps
 }
 
-func readLambda(line string) (*depproc.DepProc, error) {
+func readLambda(line string) (*procdep.ProcDep, error) {
 	l := strings.Split(line, ",")
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]
 	a.Args = split(l[2])
 	a.Env = split(l[3])
 	t.Proc = a
-	t.Dependencies = &depproc.Deps{}
+	t.Dependencies = &procdep.Deps{}
 	t.Dependencies.StartDep = splitPairs(l[4])
 	t.Dependencies.ExitDep = map[string]bool{}
 	for _, dep := range split(l[5]) {

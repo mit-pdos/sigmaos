@@ -1,4 +1,4 @@
-package idemproc
+package procidem
 
 import (
 	"fmt"
@@ -12,18 +12,18 @@ import (
 )
 
 const (
-	IDEM_PROCS   = "name/idemprocs"
+	IDEM_PROCS   = "name/procidems"
 	UNCLAIMED    = "unclaimed"
 	NEED_RESTART = "need-restart"
 )
 
-type IdemProcClnt struct {
+type ProcIdemClnt struct {
 	proc.ProcClnt
 	*fslib.FsLib
 }
 
-func MakeIdemProcClnt(fsl *fslib.FsLib, clnt proc.ProcClnt) *IdemProcClnt {
-	iclnt := &IdemProcClnt{}
+func MakeProcIdemClnt(fsl *fslib.FsLib, clnt proc.ProcClnt) *ProcIdemClnt {
+	iclnt := &ProcIdemClnt{}
 	iclnt.FsLib = fsl
 	iclnt.ProcClnt = clnt
 
@@ -34,13 +34,13 @@ func MakeIdemProcClnt(fsl *fslib.FsLib, clnt proc.ProcClnt) *IdemProcClnt {
 
 // ========== NAMING CONVENTIONS ==========
 
-func IdemProcFilePath(procdIP string, pid string) string {
+func ProcIdemFilePath(procdIP string, pid string) string {
 	return path.Join(IDEM_PROCS, procdIP, pid)
 }
 
 // ========== INIT ==========
 
-func (clnt *IdemProcClnt) Init() error {
+func (clnt *ProcIdemClnt) Init() error {
 	clnt.Mkdir(IDEM_PROCS, 0777)
 	clnt.Mkdir(path.Join(IDEM_PROCS, UNCLAIMED), 0777)
 	clnt.Mkdir(path.Join(IDEM_PROCS, NEED_RESTART), 0777)
@@ -49,14 +49,14 @@ func (clnt *IdemProcClnt) Init() error {
 
 // ========== SPAWN ==========
 
-func (clnt *IdemProcClnt) Spawn(gp proc.GenericProc) error {
-	p := IdemProc{}
+func (clnt *ProcIdemClnt) Spawn(gp proc.GenericProc) error {
+	p := ProcIdem{}
 	p.Proc = gp.GetProc()
 
-	idemProcFPath := IdemProcFilePath(UNCLAIMED, p.Pid)
+	procIdemFPath := ProcIdemFilePath(UNCLAIMED, p.Pid)
 
-	// Atomically create the idemProc file.
-	err := atomic.MakeFileJsonAtomic(clnt.FsLib, idemProcFPath, 0777, p)
+	// Atomically create the procIdem file.
+	err := atomic.MakeFileJsonAtomic(clnt.FsLib, procIdemFPath, 0777, p)
 	if err != nil {
 		return err
 	}
@@ -67,35 +67,35 @@ func (clnt *IdemProcClnt) Spawn(gp proc.GenericProc) error {
 // ========== WAIT ==========
 
 // Wait until a proc has started. If the proc doesn't exist, return immediately.
-func (clnt *IdemProcClnt) WaitStart(pid string) error {
+func (clnt *ProcIdemClnt) WaitStart(pid string) error {
 	return clnt.ProcClnt.WaitStart(pid)
 }
 
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
-func (clnt *IdemProcClnt) WaitExit(pid string) error {
+func (clnt *ProcIdemClnt) WaitExit(pid string) error {
 	return clnt.ProcClnt.WaitExit(pid)
 }
 
 // Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
-func (clnt *IdemProcClnt) WaitEvict(pid string) error {
+func (clnt *ProcIdemClnt) WaitEvict(pid string) error {
 	return clnt.ProcClnt.WaitEvict(pid)
 }
 
 // ========== STARTED ==========
 
 // Mark that a process has started.
-func (clnt *IdemProcClnt) Started(pid string) error {
+func (clnt *ProcIdemClnt) Started(pid string) error {
 	procdIP := os.Getenv("PROCDIP")
 	if len(procdIP) == 0 {
-		log.Fatalf("Error: Bad procdIP in IdemProcClnt.Started: %v", procdIP)
-		return fmt.Errorf("Error: Bad procdIP in IdemProcClnt.Started: %v", procdIP)
+		log.Fatalf("Error: Bad procdIP in ProcIdemClnt.Started: %v", procdIP)
+		return fmt.Errorf("Error: Bad procdIP in ProcIdemClnt.Started: %v", procdIP)
 	}
 	clnt.Mkdir(path.Join(IDEM_PROCS, procdIP), 0777)
-	old := IdemProcFilePath(UNCLAIMED, pid)
-	new := IdemProcFilePath(procdIP, pid)
+	old := ProcIdemFilePath(UNCLAIMED, pid)
+	new := ProcIdemFilePath(procdIP, pid)
 	err := clnt.Rename(old, new)
 	if err != nil {
-		log.Fatalf("Error: Rename in IdemProcClnt.Started: %v", err)
+		log.Fatalf("Error: Rename in ProcIdemClnt.Started: %v", err)
 	}
 	return clnt.ProcClnt.Started(pid)
 }
@@ -103,16 +103,16 @@ func (clnt *IdemProcClnt) Started(pid string) error {
 // ========== EXITED ==========
 
 // Mark that a process has exited.
-func (clnt *IdemProcClnt) Exited(pid string) error {
+func (clnt *ProcIdemClnt) Exited(pid string) error {
 	procdIP := os.Getenv("PROCDIP")
 	if len(procdIP) == 0 {
-		log.Fatalf("Error: Bad procdIP in IdemProcClnt.Exited: %v", procdIP)
-		return fmt.Errorf("Error: Bad procdIP in IdemProcClnt.Exited: %v", procdIP)
+		log.Fatalf("Error: Bad procdIP in ProcIdemClnt.Exited: %v", procdIP)
+		return fmt.Errorf("Error: Bad procdIP in ProcIdemClnt.Exited: %v", procdIP)
 	}
-	path := IdemProcFilePath(procdIP, pid)
+	path := ProcIdemFilePath(procdIP, pid)
 	err := clnt.Remove(path)
 	if err != nil {
-		log.Fatalf("Error: Remove in IdemProcClnt.Exited: %v", err)
+		log.Fatalf("Error: Remove in ProcIdemClnt.Exited: %v", err)
 	}
 	return clnt.ProcClnt.Exited(pid)
 }
@@ -120,6 +120,6 @@ func (clnt *IdemProcClnt) Exited(pid string) error {
 // ========== EVICT ==========
 
 // Notify a process that it will be evicted.
-func (clnt *IdemProcClnt) Evict(pid string) error {
+func (clnt *ProcIdemClnt) Evict(pid string) error {
 	return clnt.ProcClnt.Evict(pid)
 }

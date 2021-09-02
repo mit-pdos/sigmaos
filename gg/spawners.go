@@ -5,7 +5,7 @@ import (
 	"log"
 	"path"
 
-	"ulambda/depproc"
+	"ulambda/procdep"
 )
 
 // Given a PID, create a no-op which waits on that Pid
@@ -21,7 +21,7 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 }
 
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
-	a := depproc.MakeDepProc()
+	a := procdep.MakeProcDep()
 	a.Pid = origDirUploaderPid(subDir)
 	a.Program = "bin/user/fsdiruploader"
 	a.Args = []string{
@@ -38,7 +38,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 }
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
-	a := depproc.MakeDepProc()
+	a := procdep.MakeProcDep()
 	a.Pid = reductionWriterPid(dstDir, subDir, target)
 	a.Program = "bin/user/gg-target-writer"
 	a.Args = []string{
@@ -54,7 +54,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	for _, dep := range deps {
 		exitDepMap[dep] = false
 	}
-	a.Dependencies = &depproc.Deps{nil, exitDepMap}
+	a.Dependencies = &procdep.Deps{nil, exitDepMap}
 	err := launch.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
@@ -63,14 +63,14 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
-	a := depproc.MakeDepProc()
+	a := procdep.MakeProcDep()
 	a.Pid = executorPid(targetHash)
 	a.Program = "bin/user/gg-executor"
 	a.Args = []string{
 		targetHash,
 	}
 	a.Dir = ""
-	a.Dependencies = &depproc.Deps{map[string]bool{}, map[string]bool{}}
+	a.Dependencies = &procdep.Deps{map[string]bool{}, map[string]bool{}}
 	exitDepMap := map[string]bool{}
 	for _, dep := range depPids {
 		exitDepMap[dep] = false
@@ -84,7 +84,7 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 }
 
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
-	a := depproc.MakeDepProc()
+	a := procdep.MakeProcDep()
 	a.Pid = outputHandlerPid(thunkHash)
 	a.Program = "bin/user/gg-thunk-output-handler"
 	a.Args = []string{
@@ -96,7 +96,7 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	for _, dep := range deps {
 		exitDepMap[dep] = false
 	}
-	a.Dependencies = &depproc.Deps{nil, exitDepMap}
+	a.Dependencies = &procdep.Deps{nil, exitDepMap}
 	err := launch.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err)

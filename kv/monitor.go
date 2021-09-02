@@ -7,7 +7,7 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	"ulambda/proc"
@@ -50,30 +50,30 @@ func (mo *Monitor) unlock() {
 }
 
 func spawnBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	t.Pid = pid2
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Env = []string{procinit.GetProcLayersString()}
-	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
+	t.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 }
 
 func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Env = []string{procinit.GetProcLayersString()}
-	t.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
+	t.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
 }
 
 func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	t.Pid = pid1
 	t.Program = KV
 	t.Args = []string{""}
@@ -83,7 +83,7 @@ func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
 }
 
 func SpawnKV(sched proc.ProcClnt) string {
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
 	t.Program = KV
 	t.Args = []string{""}

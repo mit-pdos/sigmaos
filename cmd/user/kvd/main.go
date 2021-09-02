@@ -10,7 +10,7 @@ import (
 
 func main() {
 	fsl := fslib.MakeFsLib("kvd")
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	conf := kv.MakeConfig(0)
 	err := fsl.MakeFileJson(kv.KVCONFIG, 0777, *conf)

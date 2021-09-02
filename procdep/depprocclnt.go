@@ -1,4 +1,4 @@
-package depproc
+package procdep
 
 import (
 	"encoding/json"
@@ -36,9 +36,9 @@ const (
 	START_DEP Tdep = 1
 )
 
-var usingDepProc = false
+var usingProcDep = false
 
-type DepProcClnt struct {
+type ProcDepClnt struct {
 	JobID  string
 	jobDir string
 	proc.ProcClnt
@@ -49,49 +49,49 @@ func MakeJob(fsl *fslib.FsLib, jid string) {
 	// Make sure someone created the jobs dir
 	fsl.Mkdir(JOBS, 0777)
 
-	// Make a directory in which to store depProc info
+	// Make a directory in which to store procDep info
 	err := fsl.Mkdir(path.Join(JOBS, jid), 0777)
 	if err != nil {
-		db.DLPrintf("DEPPROC", "Error creating job dir: %v", err)
+		db.DLPrintf("PROCDEP", "Error creating job dir: %v", err)
 	}
 }
 
-func MakeDepProcClnt(fsl *fslib.FsLib, clnt proc.ProcClnt) *DepProcClnt {
+func MakeProcDepClnt(fsl *fslib.FsLib, clnt proc.ProcClnt) *ProcDepClnt {
 	jid := DEFAULT_JOB_ID
-	dclnt := &DepProcClnt{}
+	dclnt := &ProcDepClnt{}
 	dclnt.JobID = jid
 	dclnt.ProcClnt = clnt
 	dclnt.FsLib = fsl
 	dclnt.jobDir = path.Join(JOBS, jid)
 
 	MakeJob(fsl, DEFAULT_JOB_ID)
-	usingDepProc = true
+	usingProcDep = true
 
 	return dclnt
 }
 
 // ========== NAMING CONVENTIONS ==========
 
-func (clnt *DepProcClnt) depProcFilePath(pid string) string {
+func (clnt *ProcDepClnt) procDepFilePath(pid string) string {
 	return path.Join(clnt.jobDir, pid)
 }
 
-func (clnt *DepProcClnt) depFilePath(pid string) string {
+func (clnt *ProcDepClnt) depFilePath(pid string) string {
 	return path.Join(clnt.jobDir, DEPFILE+pid)
 }
 
 // ========== SPAWN ==========
 
-func (clnt *DepProcClnt) Spawn(gp proc.GenericProc) error {
-	var p *DepProc
+func (clnt *ProcDepClnt) Spawn(gp proc.GenericProc) error {
+	var p *ProcDep
 	switch gp.(type) {
-	case *DepProc:
-		p = gp.(*DepProc)
+	case *ProcDep:
+		p = gp.(*ProcDep)
 	case *proc.Proc:
-		p = MakeDepProc()
+		p = MakeProcDep()
 		p.Proc = gp.(*proc.Proc)
 	}
-	depProcFPath := path.Join(clnt.jobDir, p.Pid)
+	procDepFPath := path.Join(clnt.jobDir, p.Pid)
 
 	// If the underlying proc hasn't been spawned yet, the Waits will fall
 	// through. This condition variable fires (and is destroyed) once the
@@ -99,27 +99,27 @@ func (clnt *DepProcClnt) Spawn(gp proc.GenericProc) error {
 	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+p.Pid), nil)
 	tSpawnCond.Init()
 
-	// Create a lock to make sure we don't miss updates from depProcs we depend on.
-	tLock := sync.MakeLock(clnt.FsLib, named.LOCKS, depProcFPath, true)
+	// Create a lock to make sure we don't miss updates from procDeps we depend on.
+	tLock := sync.MakeLock(clnt.FsLib, named.LOCKS, procDepFPath, true)
 
-	// Lock the depProc file to make sure we don't miss any dependency updates.
+	// Lock the procDep file to make sure we don't miss any dependency updates.
 	tLock.Lock()
 	defer tLock.Unlock()
 
 	// Register dependency backwards pointers.
 	clnt.registerDependencies(p)
 
-	// Atomically create the depProc file.
-	err := atomic.MakeFileJsonAtomic(clnt.FsLib, depProcFPath, 0777, p)
+	// Atomically create the procDep file.
+	err := atomic.MakeFileJsonAtomic(clnt.FsLib, procDepFPath, 0777, p)
 	if err != nil {
 		// Release waiters if spawn fails.
 		tSpawnCond.Destroy()
 		return err
 	}
 
-	// Start the depProc if it is runnable
-	if clnt.depProcIsRunnable(p) {
-		clnt.runDepProc(p)
+	// Start the procDep if it is runnable
+	if clnt.procDepIsRunnable(p) {
+		clnt.runProcDep(p)
 	}
 
 	return nil
@@ -127,8 +127,8 @@ func (clnt *DepProcClnt) Spawn(gp proc.GenericProc) error {
 
 // ========== WAIT ==========
 
-// Wait for a depProc to start
-func (clnt *DepProcClnt) WaitStart(pid string) error {
+// Wait for a procDep to start
+func (clnt *ProcDepClnt) WaitStart(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitStart will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
@@ -137,8 +137,8 @@ func (clnt *DepProcClnt) WaitStart(pid string) error {
 	return clnt.ProcClnt.WaitStart(pid)
 }
 
-// Wait for a depProc to exit
-func (clnt *DepProcClnt) WaitExit(pid string) error {
+// Wait for a procDep to exit
+func (clnt *ProcDepClnt) WaitExit(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitExit will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
@@ -147,8 +147,8 @@ func (clnt *DepProcClnt) WaitExit(pid string) error {
 	return clnt.ProcClnt.WaitExit(pid)
 }
 
-// Wait for a depProc to evict
-func (clnt *DepProcClnt) WaitEvict(pid string) error {
+// Wait for a procDep to evict
+func (clnt *ProcDepClnt) WaitEvict(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitEvict will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
@@ -159,14 +159,14 @@ func (clnt *DepProcClnt) WaitEvict(pid string) error {
 
 // ========== STARTED ==========
 
-func (clnt *DepProcClnt) Started(pid string) error {
-	// Lock the depProc file
-	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.depProcFilePath(pid), true)
+func (clnt *ProcDepClnt) Started(pid string) error {
+	// Lock the procDep file
+	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.procDepFilePath(pid), true)
 
 	l.Lock()
 	defer l.Unlock()
 
-	// Update depProcs that depend on this depProc.
+	// Update procDeps that depend on this procDep.
 	clnt.updateDependants(pid, START_DEP)
 	clnt.ProcClnt.Started(pid)
 
@@ -175,23 +175,23 @@ func (clnt *DepProcClnt) Started(pid string) error {
 
 // ========== EXITED ==========
 
-func (clnt *DepProcClnt) Exited(pid string) error {
-	// Lock the depProc file
-	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.depProcFilePath(pid), true)
+func (clnt *ProcDepClnt) Exited(pid string) error {
+	// Lock the procDep file
+	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.procDepFilePath(pid), true)
 
 	l.Lock()
 	defer l.Unlock()
 
-	// Update depProcs that depend on this depProc.
+	// Update procDeps that depend on this procDep.
 	clnt.updateDependants(pid, EXIT_DEP)
 	clnt.ProcClnt.Exited(pid)
 
-	err := clnt.Remove(clnt.depProcFilePath(pid))
+	err := clnt.Remove(clnt.procDepFilePath(pid))
 	if err != nil {
-		if usingDepProc {
-			db.DLPrintf("DEPPROC", "Error removing depProc file in DepProcClnt.Exited: %v", err)
+		if usingProcDep {
+			db.DLPrintf("PROCDEP", "Error removing procDep file in ProcDepClnt.Exited: %v", err)
 		} else {
-			log.Printf("Error removing depProc file in DepProcClnt.Exited: %v", err)
+			log.Printf("Error removing procDep file in ProcDepClnt.Exited: %v", err)
 		}
 		return err
 	}
@@ -201,13 +201,13 @@ func (clnt *DepProcClnt) Exited(pid string) error {
 
 // ========== EVICTED ==========
 
-func (clnt *DepProcClnt) Evict(pid string) error {
+func (clnt *ProcDepClnt) Evict(pid string) error {
 	return clnt.ProcClnt.Evict(pid)
 }
 
 // ========== HELPERS ==========
 
-func (clnt *DepProcClnt) depProcIsRunnable(p *DepProc) bool {
+func (clnt *ProcDepClnt) procDepIsRunnable(p *ProcDep) bool {
 	// Check for any unexited StartDeps
 	for _, started := range p.Dependencies.StartDep {
 		if !started {
@@ -224,23 +224,23 @@ func (clnt *DepProcClnt) depProcIsRunnable(p *DepProc) bool {
 	return true
 }
 
-func (clnt *DepProcClnt) runDepProc(p *DepProc) {
+func (clnt *ProcDepClnt) runProcDep(p *ProcDep) {
 	err := clnt.ProcClnt.Spawn(p.Proc)
 	if err != nil {
-		log.Fatalf("Error spawning depProc in DepProcClnt.runDepProc: %v", err)
+		log.Fatalf("Error spawning procDep in ProcDepClnt.runProcDep: %v", err)
 	}
 	// Release waiters and allow them to wait on the underlying proc.
 	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+p.Pid), nil)
 	tSpawnCond.Destroy()
 }
 
-func (clnt *DepProcClnt) getDepProc(pid string) (*DepProc, error) {
-	b, _, err := clnt.GetFile(clnt.depProcFilePath(pid))
+func (clnt *ProcDepClnt) getProcDep(pid string) (*ProcDep, error) {
+	b, _, err := clnt.GetFile(clnt.procDepFilePath(pid))
 	if err != nil {
 		return nil, err
 	}
 
-	p := MakeDepProc()
+	p := MakeProcDep()
 	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Fatalf("Couldn't unmarshal waitfile: %v, %v", string(b), err)
@@ -251,7 +251,7 @@ func (clnt *DepProcClnt) getDepProc(pid string) (*DepProc, error) {
 
 // Register start & exit dependencies in dependencies' waitfiles, and update the
 // current proc's dependencies.
-func (clnt *DepProcClnt) registerDependencies(p *DepProc) {
+func (clnt *ProcDepClnt) registerDependencies(p *ProcDep) {
 	for dep, _ := range p.Dependencies.StartDep {
 		if ok := clnt.registerDependant(dep, p.Pid, START_DEP); !ok {
 			// If we failed to register the dependency, assume the dependency has
@@ -268,16 +268,16 @@ func (clnt *DepProcClnt) registerDependencies(p *DepProc) {
 	}
 }
 
-// Register a dependency on another the DepProc corresponding to pid. If the
+// Register a dependency on another the ProcDep corresponding to pid. If the
 // registration succeeded, return true. If the registration failed, assume the
 // dependency has been satisfied, and return false.
-func (clnt *DepProcClnt) registerDependant(pid string, dependant string, depType Tdep) bool {
-	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.depProcFilePath(pid), true)
+func (clnt *ProcDepClnt) registerDependant(pid string, dependant string, depType Tdep) bool {
+	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.procDepFilePath(pid), true)
 
 	l.Lock()
 	defer l.Unlock()
 
-	p, err := clnt.getDepProc(pid)
+	p, err := clnt.getProcDep(pid)
 	if err != nil {
 		return false
 	}
@@ -292,7 +292,7 @@ func (clnt *DepProcClnt) registerDependant(pid string, dependant string, depType
 	case EXIT_DEP:
 		p.Dependants.ExitDep[dependant] = false
 	default:
-		log.Fatalf("Unknown dep type in DepProcClnt.registerDependant: %v", depType)
+		log.Fatalf("Unknown dep type in ProcDepClnt.registerDependant: %v", depType)
 	}
 
 	// Write back updated deps
@@ -301,20 +301,20 @@ func (clnt *DepProcClnt) registerDependant(pid string, dependant string, depType
 		log.Fatalf("Error marshalling deps in ProcClnt.registerDependant: %v", err)
 	}
 
-	_, err = clnt.SetFile(clnt.depProcFilePath(pid), b2, np.NoV)
+	_, err = clnt.SetFile(clnt.procDepFilePath(pid), b2, np.NoV)
 	if err != nil {
-		log.Printf("Error setting waitfile in ProcClnt.registerDependant: %v, %v", clnt.depProcFilePath(pid), err)
+		log.Printf("Error setting waitfile in ProcClnt.registerDependant: %v, %v", clnt.procDepFilePath(pid), err)
 	}
 
 	return true
 }
 
-// Update dependants of the DepProc named by pid.
-func (clnt *DepProcClnt) updateDependants(pid string, depType Tdep) {
+// Update dependants of the ProcDep named by pid.
+func (clnt *ProcDepClnt) updateDependants(pid string, depType Tdep) {
 	// Get the current contents of the wait file
-	p, err := clnt.getDepProc(pid)
+	p, err := clnt.getProcDep(pid)
 	if err != nil {
-		db.DLPrintf("SCHEDCTL", "Error GetFile in DepProcClnt.updateDependants: %v, %v", clnt.depProcFilePath(pid), err)
+		db.DLPrintf("SCHEDCTL", "Error GetFile in ProcDepClnt.updateDependants: %v, %v", clnt.procDepFilePath(pid), err)
 		return
 	}
 
@@ -326,7 +326,7 @@ func (clnt *DepProcClnt) updateDependants(pid string, depType Tdep) {
 	case EXIT_DEP:
 		dependants = p.Dependants.ExitDep
 	default:
-		log.Fatalf("Unknown depType in DepProcClnt.updateDependants: %v", depType)
+		log.Fatalf("Unknown depType in ProcDepClnt.updateDependants: %v", depType)
 	}
 
 	for dependant, _ := range dependants {
@@ -338,29 +338,29 @@ func (clnt *DepProcClnt) updateDependants(pid string, depType Tdep) {
 		p.Started = true
 		b2, err := json.Marshal(p)
 		if err != nil {
-			log.Printf("Error marshalling depProcfile: %v", err)
+			log.Printf("Error marshalling procDepfile: %v", err)
 			return
 		}
 		b2 = append(b2, ' ')
-		_, err = clnt.SetFile(clnt.depProcFilePath(pid), b2, np.NoV)
+		_, err = clnt.SetFile(clnt.procDepFilePath(pid), b2, np.NoV)
 		if err != nil {
-			log.Printf("Error SetFile in DepProcClnt.updateDependants: %v, %v", clnt.depProcFilePath(pid), err)
+			log.Printf("Error SetFile in ProcDepClnt.updateDependants: %v, %v", clnt.procDepFilePath(pid), err)
 		}
 	}
 }
 
 // Update the dependency pid of dependant.
-func (clnt *DepProcClnt) updateDependant(pid string, dependant string, depType Tdep) {
+func (clnt *ProcDepClnt) updateDependant(pid string, dependant string, depType Tdep) {
 	// Create a lock to atomically update the job file.
-	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.depProcFilePath(dependant), true)
+	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.procDepFilePath(dependant), true)
 
 	// Lock the job file to make sure we don't miss any dependency updates
 	l.Lock()
 	defer l.Unlock()
 
-	p, err := clnt.getDepProc(dependant)
+	p, err := clnt.getProcDep(dependant)
 	if err != nil {
-		log.Printf("Couldn't get waiter file in DepProcClnt.updateDependant: %v, %v", dependant, err)
+		log.Printf("Couldn't get waiter file in ProcDepClnt.updateDependant: %v, %v", dependant, err)
 		return
 	}
 
@@ -378,34 +378,34 @@ func (clnt *DepProcClnt) updateDependant(pid string, dependant string, depType T
 		}
 		p.Dependencies.ExitDep[pid] = true
 	default:
-		log.Fatalf("Unknown depType in DepProcClnt.updateDependant: %v", depType)
+		log.Fatalf("Unknown depType in ProcDepClnt.updateDependant: %v", depType)
 	}
 
 	b2, err := json.Marshal(p)
 	if err != nil {
-		log.Fatalf("Error marshalling in DepProcClnt.updateDependant: %v", err)
+		log.Fatalf("Error marshalling in ProcDepClnt.updateDependant: %v", err)
 	}
 	// XXX Hack around lack of OTRUNC
 	for i := 0; i < DEPFILE_PADDING; i++ {
 		b2 = append(b2, ' ')
 	}
-	_, err = clnt.SetFile(clnt.depProcFilePath(dependant), b2, np.NoV)
+	_, err = clnt.SetFile(clnt.procDepFilePath(dependant), b2, np.NoV)
 	if err != nil {
-		log.Printf("Error writing in ProcClnt.updateDependant: %v, %v", clnt.depProcFilePath(dependant), err)
+		log.Printf("Error writing in ProcClnt.updateDependant: %v, %v", clnt.procDepFilePath(dependant), err)
 	}
 
-	if clnt.depProcIsRunnable(p) {
-		clnt.runDepProc(p)
+	if clnt.procDepIsRunnable(p) {
+		clnt.runProcDep(p)
 	}
 }
 
 // XXX REMOVE
-func (clnt *DepProcClnt) SpawnNoOp(pid string, extiDep []string) error {
+func (clnt *ProcDepClnt) SpawnNoOp(pid string, extiDep []string) error {
 	log.Fatalf("SpawnNoOp not implemented")
 	return nil
 }
 
-func (clnt *DepProcClnt) SwapExitDependency(pids []string) error {
+func (clnt *ProcDepClnt) SwapExitDependency(pids []string) error {
 	log.Fatalf("SwapExitDependency not implemented")
 	return nil
 }

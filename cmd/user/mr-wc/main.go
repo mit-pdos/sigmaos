@@ -13,7 +13,7 @@ import (
 	"path"
 	"strconv"
 
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/mr"
 	"ulambda/proc"
@@ -85,7 +85,7 @@ func Compare(fsl *fslib.FsLib) {
 
 func main() {
 	fsl := fslib.MakeFsLib("mr-wc")
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
@@ -106,15 +106,15 @@ func main() {
 		pid2 := proc.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
-		a1 := depproc.MakeDepProc()
-		a1.Dependencies = &depproc.Deps{map[string]bool{}, nil}
+		a1 := procdep.MakeProcDep()
+		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
 			[]string{"name/s3/~ip/input/" + f.Name(), m},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
-		a2 := depproc.MakeDepProc()
-		a2.Dependencies = &depproc.Deps{map[string]bool{pid1: false}, nil}
+		a2 := procdep.MakeProcDep()
+		a2.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
 		a2.Proc = &proc.Proc{pid2, "bin/user/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m},
 			[]string{procinit.GetProcLayersString()},
@@ -130,13 +130,13 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		pid := proc.GenPid()
 		r := strconv.Itoa(i)
-		a := depproc.MakeDepProc()
+		a := procdep.MakeProcDep()
 		a.Proc = &proc.Proc{pid, "bin/user/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
-		a.Dependencies = &depproc.Deps{nil, mappers}
+		a.Dependencies = &procdep.Deps{nil, mappers}
 		reducers = append(reducers, pid)
 		sclnt.Spawn(a)
 	}

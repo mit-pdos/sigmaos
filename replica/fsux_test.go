@@ -19,7 +19,7 @@ func makeFsUxTstate(t *testing.T) *Tstate {
 	}
 	ts.s = s
 
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	replicaName := "fsux-replica"
 	db.Name(replicaName + "-test")

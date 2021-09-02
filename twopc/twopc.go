@@ -1,7 +1,7 @@
 package twopc
 
 import (
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/proc"
 )
@@ -57,7 +57,7 @@ func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 
 func SpawnCoord(pclnt proc.ProcClnt, opcode string, ps []string) string {
 	args := append([]string{opcode}, ps...)
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
 	t.Program = "bin/user/coord"
 	t.Args = args

@@ -1,4 +1,4 @@
-package depproc
+package procdep
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"ulambda/proc"
 )
 
-type DepProc struct {
+type ProcDep struct {
 	Started      bool
-	Dependencies *Deps // DepProcs which this depProc depends on
-	Dependants   *Deps // DepProcs which depend on this depProc
+	Dependencies *Deps // ProcDeps which this procDep depends on
+	Dependants   *Deps // ProcDeps which depend on this procDep
 	*proc.Proc
 }
 
@@ -22,19 +22,19 @@ func MakeDeps(start, end map[string]bool) *Deps {
 	return &Deps{start, end}
 }
 
-func MakeDepProc() *DepProc {
-	t := &DepProc{}
+func MakeProcDep() *ProcDep {
+	t := &ProcDep{}
 	t.Dependencies = MakeDeps(map[string]bool{}, map[string]bool{})
 	t.Dependants = MakeDeps(map[string]bool{}, map[string]bool{})
 	t.Proc = &proc.Proc{}
 	return t
 }
 
-func (p *DepProc) GetProc() *proc.Proc {
+func (p *ProcDep) GetProc() *proc.Proc {
 	return p.Proc
 }
 
-func (p *DepProc) String() string {
+func (p *ProcDep) String() string {
 	return fmt.Sprintf("&{ proc:%v started:%v, dependencies:%v, dependants:%v }", p.Proc, p.Started, p.Dependencies, p.Dependants)
 }
 

@@ -1,4 +1,4 @@
-package baseproc_test
+package procbase_test
 
 import (
 	"sync"
@@ -24,7 +24,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	bin := ".."
 	s, err := kernel.Boot(bin)
@@ -42,7 +42,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
 	ts := &Tstate{}
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	ts.t = t
 	ts.s = s
 	db.Name("sched_test")

@@ -1,4 +1,4 @@
-package idemproc_test
+package procidem_test
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/idemproc"
+	"ulambda/procidem"
 	"ulambda/kernel"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -24,7 +24,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.IDEMPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCIDEM: true})
 
 	bin := ".."
 	s, err := kernel.Boot(bin)
@@ -41,7 +41,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
-	p := &idemproc.IdemProc{}
+	p := &procidem.ProcIdem{}
 	p.Proc = &proc.Proc{pid, "bin/user/procd-monitor", "",
 		[]string{},
 		[]string{procinit.GetProcLayersString()},
@@ -52,7 +52,7 @@ func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	p := &idemproc.IdemProc{}
+	p := &procidem.ProcIdem{}
 	p.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
 		[]string{"5s", "name/out_" + pid, ""},
 		[]string{procinit.GetProcLayersString()},

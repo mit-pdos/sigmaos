@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/depproc"
+	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/memfsd"
@@ -52,7 +52,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	procinit.SetProcLayers(map[string]bool{procinit.BASEPROC: true, procinit.DEPPROC: true})
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 
 	s, err := kernel.Boot("..")
 	if err != nil {
@@ -80,7 +80,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := depproc.MakeDepProc()
+	t := procdep.MakeProcDep()
 	a := &proc.Proc{}
 	a.Pid = proc.GenPid()
 	a.Program = "bin/user/memfsd"

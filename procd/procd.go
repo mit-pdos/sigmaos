@@ -12,7 +12,7 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	"ulambda/baseproc"
+	"ulambda/procbase"
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
@@ -86,7 +86,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	// Make some directories used by other services.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(fsl, baseproc.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(fsl, procbase.RUNQ)
 
 	procdStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
 	procdStartCond.Destroy()

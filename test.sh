@@ -9,9 +9,9 @@ go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats
 (cd fss3; go test $1)
-go test $1 ulambda/baseproc
-go test $1 ulambda/depproc
-go test $1 ulambda/idemproc
+go test $1 ulambda/procbase
+go test $1 ulambda/procidem
+go test $1 ulambda/procdep
 (cd kv; go test $1)
 ./test-mr.sh
 ./test-kv.sh

@@ -6,10 +6,10 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"ulambda/baseproc"
-	"ulambda/depproc"
+	"ulambda/procbase"
+	"ulambda/procdep"
 	"ulambda/fslib"
-	"ulambda/idemproc"
+	"ulambda/procidem"
 	"ulambda/proc"
 )
 
@@ -17,10 +17,10 @@ const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
 )
 
-const ( // Possible stackable layers. BASEPROC is always included by default
-	BASEPROC = "BASEPROC"
-	IDEMPROC = "IDEMPROC"
-	DEPPROC  = "DEPPROC"
+const ( // Possible stackable layers. PROCBASE is always included by default
+	PROCBASE = "PROCBASE"
+	PROCIDEM = "PROCIDEM"
+	PROCDEP  = "PROCDEP"
 )
 
 // Get proc layers from environment variables.
@@ -36,7 +36,7 @@ func GetProcLayersMap() map[string]bool {
 	for _, l := range ls {
 		layers[l] = true
 	}
-	layers[BASEPROC] = true
+	layers[PROCBASE] = true
 	return layers
 }
 
@@ -67,12 +67,12 @@ func makeProcLayersString(layers map[string]bool) string {
 // Make a generic ProcClnt with the desired layers.
 func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	clnt = baseproc.MakeBaseProcClnt(fsl)
-	if _, ok := layers[IDEMPROC]; ok {
-		clnt = idemproc.MakeIdemProcClnt(fsl, clnt)
+	clnt = procbase.MakeProcBaseClnt(fsl)
+	if _, ok := layers[PROCIDEM]; ok {
+		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}
-	if _, ok := layers[DEPPROC]; ok {
-		clnt = depproc.MakeDepProcClnt(fsl, clnt)
+	if _, ok := layers[PROCDEP]; ok {
+		clnt = procdep.MakeProcDepClnt(fsl, clnt)
 	}
 	return clnt
 }

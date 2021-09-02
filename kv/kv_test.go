@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/memfsd"
 	"ulambda/proc"
+	"ulambda/procdep"
 	"ulambda/procinit"
 )
 
@@ -54,7 +54,8 @@ func makeTstate(t *testing.T) *Tstate {
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 
-	s, err := kernel.Boot("..")
+	s := kernel.MakeSystem("..")
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}

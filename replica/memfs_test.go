@@ -13,7 +13,8 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := kernel.Boot(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -35,14 +36,14 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 func TestMemfsHelloWorld(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	HelloWorld(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // Test making & reading a few files.
 func TestMemfsChainSimple(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainSimple(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // Test making & reading a few files in the presence of crashes in the middle of
@@ -50,47 +51,47 @@ func TestMemfsChainSimple(t *testing.T) {
 func TestMemfsChainCrashMiddle(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainCrashMiddle(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsChainCrashHead(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainCrashHead(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsChainCrashTail(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainCrashTail(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsConcurrentClientsSimple(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsSimple(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashMiddle(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashMiddle(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashTail(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashTail(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashHead(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashHead(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashHeadNotIdempotent(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

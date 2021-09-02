@@ -31,11 +31,12 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.t = t
 
-	s, err := kernel.BootMin(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.BootMin()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	s.BootFss3d(bin)
+	s.BootFss3d()
 	ts.s = s
 	ts.FsLib = fslib.MakeFsLib("nps3_test")
 	db.Name("nps3_test")
@@ -50,14 +51,14 @@ func TestOne(t *testing.T) {
 
 	assert.Equal(t, 1, len(dirents))
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestTwo(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d(bin)
+	ts.s.BootFss3d()
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -66,42 +67,42 @@ func TestTwo(t *testing.T) {
 
 	assert.Equal(t, 2, len(dirents))
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestUnionSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d(bin)
+	ts.s.BootFss3d()
 
 	dirents, err := ts.ReadDir("name/s3/~ip/")
 	assert.Nil(t, err, "ReadDir")
 
 	assert.Equal(t, 5, len(dirents))
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestUnionDir(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d(bin)
+	ts.s.BootFss3d()
 
 	dirents, err := ts.ReadDir("name/s3/~ip/input")
 	assert.Nil(t, err, "ReadDir")
 
 	assert.Equal(t, 8, len(dirents))
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestUnionFile(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d(bin)
+	ts.s.BootFss3d()
 
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)
@@ -124,7 +125,7 @@ func TestUnionFile(t *testing.T) {
 	}
 	assert.Equal(ts.t, int(st.Length), n)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestStat(t *testing.T) {
@@ -141,7 +142,7 @@ func TestStat(t *testing.T) {
 	a := strings.Split(st.Name, ":")[0]
 	assert.Equal(t, addr, a)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) s3Name(t *testing.T) string {
@@ -165,7 +166,7 @@ func TestSymlinkFile(t *testing.T) {
 	_, err = ts.ReadFile(fn)
 	assert.Nil(t, err, "ReadFile")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestSymlinkDir(t *testing.T) {
@@ -181,5 +182,5 @@ func TestSymlinkDir(t *testing.T) {
 	assert.Nil(t, err, "ReadDir")
 	assert.Equal(t, 5, len(dirents))
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

@@ -11,6 +11,7 @@ import (
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/memfsd"
 	"ulambda/twopc"
 )
@@ -31,7 +32,8 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
 
-	s, err := fslib.Boot("..")
+	s := kernel.MakeSystem("..")
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -61,7 +63,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 func (ts *Tstate) shutdown() {
 	ts.stopMemFSs()
-	ts.s.Shutdown(ts.fsl)
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) spawnMemFS() string {

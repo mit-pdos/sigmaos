@@ -8,9 +8,9 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/procidem"
 	"ulambda/kernel"
 	"ulambda/proc"
+	"ulambda/procidem"
 	"ulambda/procinit"
 )
 
@@ -27,7 +27,8 @@ func makeTstate(t *testing.T) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCIDEM: true})
 
 	bin := ".."
-	s, err := kernel.Boot(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -94,7 +95,7 @@ func TestHelloWorld(t *testing.T) {
 
 	checkSleeperlResultFalse(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestCrashProcd(t *testing.T) {
@@ -138,5 +139,5 @@ func TestCrashProcd(t *testing.T) {
 		ts.Evict(pid)
 	}
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

@@ -18,7 +18,8 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	s, err := kernel.BootMin("..")
+	s := kernel.MakeSystem("..")
+	err := s.BootMin()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -45,5 +46,5 @@ func TestStatsd(t *testing.T) {
 	assert.Nil(t, err, "statsd")
 	assert.Equal(t, Tcounter(1002), stats.Nopen, "statsd")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

@@ -24,7 +24,8 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	s, err := kernel.BootMin("..")
+	s := kernel.MakeSystem("..")
+	err := s.BootMin()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -46,7 +47,7 @@ func TestRemove(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestRemovePath(t *testing.T) {
@@ -65,7 +66,7 @@ func TestRemovePath(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestRename(t *testing.T) {
@@ -86,7 +87,7 @@ func TestRename(t *testing.T) {
 
 	d1, err := ts.ReadFile(fn1)
 	assert.Equal(t, "hello", string(d1))
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestRenameAndRemove(t *testing.T) {
@@ -114,7 +115,7 @@ func TestRenameAndRemove(t *testing.T) {
 
 	err = ts.Remove(fn1)
 	assert.Equal(t, nil, err)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestCopy(t *testing.T) {
@@ -131,7 +132,7 @@ func TestCopy(t *testing.T) {
 	d1, err := ts.ReadFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) procdName(t *testing.T) string {
@@ -145,7 +146,7 @@ func (ts *Tstate) procdName(t *testing.T) string {
 func TestSymlink1(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootFsUxd("..")
+	err := ts.s.BootFsUxd()
 	assert.Nil(t, err, "Error booting fsuxd")
 
 	// Make a target file
@@ -170,13 +171,13 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestSymlink2(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootFsUxd("..")
+	err := ts.s.BootFsUxd()
 	assert.Nil(t, err, "Error booting fsuxd")
 
 	// Make a target file
@@ -208,13 +209,13 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestSymlink3(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootFsUxd("..")
+	err := ts.s.BootFsUxd()
 	assert.Nil(t, err, "Error booting fsuxd")
 
 	uxs, err := ts.ReadDir("name/ux")
@@ -262,7 +263,7 @@ func TestSymlink3(t *testing.T) {
 		return false, nil
 	})
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestCounter(t *testing.T) {
@@ -313,7 +314,7 @@ func TestCounter(t *testing.T) {
 
 	assert.Equal(t, N, n)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // TODO: switch to using memfsd instead of procd
@@ -322,7 +323,7 @@ func TestEphemeral(t *testing.T) {
 	ts := makeTstate(t)
 
 	var err error
-	err = ts.s.BootProcd("..")
+	err = ts.s.BootProcd()
 	assert.Nil(t, err, "bin/kernel/procd")
 
 	name := ts.procdName(t)
@@ -350,7 +351,7 @@ func TestEphemeral(t *testing.T) {
 	}
 	assert.Greater(t, N, n, "Waiting too long")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestLock(t *testing.T) {
@@ -376,7 +377,7 @@ func TestLock(t *testing.T) {
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestLock1(t *testing.T) {
@@ -401,7 +402,7 @@ func TestLock1(t *testing.T) {
 	}()
 	i := <-ch
 	assert.Equal(t, 0, i)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestWatchRemove(t *testing.T) {
@@ -421,7 +422,7 @@ func TestWatchRemove(t *testing.T) {
 
 	<-ch
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestWatchCreate(t *testing.T) {
@@ -442,7 +443,7 @@ func TestWatchCreate(t *testing.T) {
 
 	<-ch
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestWatchDir(t *testing.T) {
@@ -463,7 +464,7 @@ func TestWatchDir(t *testing.T) {
 
 	<-ch
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestConcur(t *testing.T) {
@@ -489,5 +490,5 @@ func TestConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

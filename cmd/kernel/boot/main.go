@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	_, err := kernel.Boot(".")
+	s := kernel.MakeSystem(".")
+	err := s.Boot()
 	if err != nil {
 		log.Fatalf("Boot error: %v", err)
 	}

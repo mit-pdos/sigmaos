@@ -27,7 +27,8 @@ func makeTstate(t *testing.T) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	bin := ".."
-	s, err := kernel.Boot(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -90,7 +91,7 @@ func TestHelloWorld(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestWaitExit(t *testing.T) {
@@ -108,7 +109,7 @@ func TestWaitExit(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestWaitStart(t *testing.T) {
@@ -131,7 +132,7 @@ func TestWaitStart(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // Should exit immediately
@@ -151,7 +152,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 
 	close(ch)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // Spawn a bunch of lambdas concurrently, then wait for all of them & check
@@ -206,7 +207,7 @@ func TestConcurrentLambdas(t *testing.T) {
 
 	done.Wait()
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) evict(pid string) {
@@ -233,5 +234,5 @@ func TestEvict(t *testing.T) {
 	// Make sure the lambda didn't finish
 	checkSleeperlResultFalse(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

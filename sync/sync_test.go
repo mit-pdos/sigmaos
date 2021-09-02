@@ -36,7 +36,8 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := kernel.Boot(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -156,7 +157,7 @@ func TestLock1(t *testing.T) {
 		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestLock2(t *testing.T) {
@@ -177,7 +178,7 @@ func TestLock2(t *testing.T) {
 		lock2.Unlock()
 	}
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestLock3(t *testing.T) {
@@ -214,7 +215,7 @@ func TestLock3(t *testing.T) {
 	done.Wait()
 	assert.Equal(ts.t, N, cnt, "Count doesn't match up")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestLock4(t *testing.T) {
@@ -242,7 +243,7 @@ func TestLock4(t *testing.T) {
 
 	lock1.Unlock()
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestOneWaiterBroadcast(t *testing.T) {
@@ -255,7 +256,7 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestOneWaiterSignal(t *testing.T) {
@@ -268,7 +269,7 @@ func TestOneWaiterSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestNWaitersOneCondBroadcast(t *testing.T) {
@@ -281,7 +282,7 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestNWaitersOneCondSignal(t *testing.T) {
@@ -294,7 +295,7 @@ func TestNWaitersOneCondSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestNWaitersNCondsBroadcast(t *testing.T) {
@@ -307,7 +308,7 @@ func TestNWaitersNCondsBroadcast(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestNWaitersNCondsSignal(t *testing.T) {
@@ -320,7 +321,7 @@ func TestNWaitersNCondsSignal(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFilePriorityBag(t *testing.T) {
@@ -353,5 +354,5 @@ func TestFilePriorityBag(t *testing.T) {
 
 	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

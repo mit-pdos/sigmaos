@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/proc"
+	"ulambda/procdep"
 	"ulambda/procinit"
 )
 
@@ -27,7 +27,8 @@ func makeTstate(t *testing.T) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 
 	bin := ".."
-	s, err := kernel.Boot(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -92,7 +93,7 @@ func TestHelloWorld(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestExitDep(t *testing.T) {
@@ -112,7 +113,7 @@ func TestExitDep(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestStartDep(t *testing.T) {
@@ -148,5 +149,5 @@ func TestStartDep(t *testing.T) {
 	checkSleeperlResult(t, ts, prod)
 	checkSleeperlResult(t, ts, cons)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

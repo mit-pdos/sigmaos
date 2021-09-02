@@ -28,6 +28,7 @@ const (
 )
 
 type System struct {
+	bin   string
 	named *exec.Cmd
 	fss3d []*exec.Cmd
 	fsuxd []*exec.Cmd
@@ -35,67 +36,57 @@ type System struct {
 	*fslib.FsLib
 }
 
-func run(bin string, name string, args []string) (*exec.Cmd, error) {
-	cmd := exec.Command(path.Join(bin, name), args...)
-	// Create a process group ID to kill all children if necessary.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ())
-	return cmd, cmd.Start()
-}
-
-func BootMin(bin string) (*System, error) {
+func MakeSystem(bin string) *System {
 	s := &System{}
-	err := s.BootNamed(bin, fslib.Named())
-	if err != nil {
-		return nil, err
-	}
-	s.FsLib = fslib.MakeFsLib("kernel")
-	err = named.MakeInitFs(s.FsLib)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
+	s.bin = bin
+	return s
 }
 
-func Boot(bin string) (*System, error) {
-	s, err := BootMin(bin)
-	if err != nil {
-		return nil, err
-	}
-	err = s.BootFsUxd(bin)
-	if err != nil {
-		return nil, err
-	}
-	err = s.BootFss3d(bin)
-	if err != nil {
-		return nil, err
-	}
-	err = s.BootProcd(bin)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
+func (s *System) BootMin() error {
+	return s.BootNamed(fslib.Named())
 }
 
-func (s *System) BootNamed(bin string, addr string) error {
-	cmd, err := run(bin, "/bin/kernel/named", []string{"0", addr})
+// Boot a full system
+func (s *System) Boot() error {
+	err := s.BootNamed(fslib.Named())
+	if err != nil {
+		return err
+	}
+	err = s.BootFsUxd()
+	if err != nil {
+		return err
+	}
+	err = s.BootFss3d()
+	if err != nil {
+		return err
+	}
+	err = s.BootProcd()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Boot a named and set up the initfs
+func (s *System) BootNamed(addr string) error {
+	cmd, err := run(s.bin, "/bin/kernel/named", []string{"0", addr})
 	if err != nil {
 		return err
 	}
 	s.named = cmd
 	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
+	s.FsLib = fslib.MakeFsLib("kernel")
+	err = named.MakeInitFs(s.FsLib)
 	return nil
 }
 
-func (s *System) BootFsUxd(bin string) error {
+func (s *System) BootFsUxd() error {
 	// Create boot cond
 	pid := "fsuxd-" + proc.GenPid()
 	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	fsuxdStartCond.Init()
 	var err error
-	fsuxd, err := run(bin, "bin/kernel/fsuxd", []string{pid})
+	fsuxd, err := run(s.bin, "bin/kernel/fsuxd", []string{pid})
 	s.fsuxd = append(s.fsuxd, fsuxd)
 	if err != nil {
 		return err
@@ -105,13 +96,13 @@ func (s *System) BootFsUxd(bin string) error {
 	return nil
 }
 
-func (s *System) BootFss3d(bin string) error {
+func (s *System) BootFss3d() error {
 	// Create boot cond
 	pid := "fss3d-" + proc.GenPid()
 	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	fss3dStartCond.Init()
 	var err error
-	fss3d, err := run(bin, "bin/kernel/fss3d", []string{pid})
+	fss3d, err := run(s.bin, "bin/kernel/fss3d", []string{pid})
 	s.fss3d = append(s.fss3d, fss3d)
 	if err != nil {
 		return err
@@ -121,13 +112,13 @@ func (s *System) BootFss3d(bin string) error {
 	return nil
 }
 
-func (s *System) BootProcd(bin string) error {
+func (s *System) BootProcd() error {
 	// Create boot cond
 	pid := "procd-" + proc.GenPid()
 	procdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	procdStartCond.Init()
 	var err error
-	procd, err := run(bin, "bin/kernel/procd", []string{bin, pid})
+	procd, err := run(s.bin, "bin/kernel/procd", []string{s.bin, pid})
 	s.procd = append(s.procd, procd)
 	if err != nil {
 		return err
@@ -137,17 +128,17 @@ func (s *System) BootProcd(bin string) error {
 	return nil
 }
 
-func (s *System) RmUnionDir(clnt *fslib.FsLib, mdir string) error {
-	dirents, err := clnt.ReadDir(mdir)
+func (s *System) RmUnionDir(mdir string) error {
+	dirents, err := s.ReadDir(mdir)
 	if err != nil {
 		return err
 	}
 	for _, st := range dirents {
-		err = clnt.Remove(mdir + "/" + st.Name + "/")
+		err = s.Remove(mdir + "/" + st.Name + "/")
 		if err != nil {
 			return err
 		}
-		err = clnt.Remove(mdir + "/" + st.Name)
+		err = s.Remove(mdir + "/" + st.Name)
 		if err != nil && !strings.Contains(err.Error(), "file not found") {
 			return err
 		}
@@ -175,9 +166,9 @@ func (s *System) KillOne(srv string) error {
 	return nil
 }
 
-func (s *System) Shutdown(clnt *fslib.FsLib) {
+func (s *System) Shutdown() {
 	if len(s.fss3d) != 0 {
-		err := s.RmUnionDir(clnt, S3)
+		err := s.RmUnionDir(S3)
 		if err != nil {
 			log.Printf("S3 shutdown %v\n", err)
 		}
@@ -186,7 +177,7 @@ func (s *System) Shutdown(clnt *fslib.FsLib) {
 		}
 	}
 	if len(s.fsuxd) != 0 {
-		err := s.RmUnionDir(clnt, UX)
+		err := s.RmUnionDir(UX)
 		if err != nil {
 			log.Printf("Ux shutdown %v\n", err)
 		}
@@ -195,7 +186,7 @@ func (s *System) Shutdown(clnt *fslib.FsLib) {
 		}
 	}
 	if len(s.procd) != 0 {
-		err := s.RmUnionDir(clnt, PROCD)
+		err := s.RmUnionDir(PROCD)
 		if err != nil {
 			log.Printf("Procds shutdown %v\n", err)
 		}
@@ -206,7 +197,7 @@ func (s *System) Shutdown(clnt *fslib.FsLib) {
 
 	if s.named != nil {
 		// Shutdown named last
-		err := clnt.Remove(NAMED + "/")
+		err := s.Remove(NAMED + "/")
 		if err != nil {
 			// XXX sometimes we get EOF....
 			if err.Error() == "EOF" {
@@ -217,4 +208,14 @@ func (s *System) Shutdown(clnt *fslib.FsLib) {
 		}
 		s.named.Wait()
 	}
+}
+
+func run(bin string, name string, args []string) (*exec.Cmd, error) {
+	cmd := exec.Command(path.Join(bin, name), args...)
+	// Create a process group ID to kill all children if necessary.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ())
+	return cmd, cmd.Start()
 }

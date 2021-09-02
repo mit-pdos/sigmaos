@@ -13,7 +13,8 @@ func makeFsUxTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s, err := kernel.Boot(bin)
+	s := kernel.MakeSystem(bin)
+	err := s.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
@@ -35,14 +36,14 @@ func makeFsUxTstate(t *testing.T) *Tstate {
 func TestFsUxHelloWorld(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	HelloWorld(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // Test making & reading a few files.
 func TestFsUxChainSimple(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ChainSimple(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 // Test making & reading a few files in the presence of crashes in the middle of
@@ -50,47 +51,47 @@ func TestFsUxChainSimple(t *testing.T) {
 func TestFsUxChainCrashMiddle(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ChainCrashMiddle(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxChainCrashHead(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ChainCrashHead(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxChainCrashTail(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ChainCrashTail(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxConcurrentClientsSimple(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ConcurrentClientsSimple(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxConcurrentClientsCrashMiddle(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ConcurrentClientsCrashMiddle(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxConcurrentClientsCrashTail(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ConcurrentClientsCrashTail(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxConcurrentClientsCrashHead(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ConcurrentClientsCrashHead(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }
 
 func TestFsUxConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
 	ts := makeFsUxTstate(t)
 	ConcurrentClientsCrashHeadNotIdempotent(ts)
-	ts.s.Shutdown(ts.FsLib)
+	ts.s.Shutdown()
 }

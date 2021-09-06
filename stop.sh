@@ -4,6 +4,7 @@
 killall realmmgr
 killall realmd
 killall create
+killall destroy
 killall named
 killall memfsd
 killall memfs-replica

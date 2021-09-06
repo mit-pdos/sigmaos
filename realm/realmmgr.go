@@ -112,10 +112,6 @@ func (m *RealmMgr) deallocRealmds(rid string) {
 	for _, rd := range rds {
 		m.deallocRealmd(rd.Name)
 	}
-
-	if err := m.Remove(path.Join(REALMS, rid)); err != nil {
-		log.Fatalf("Error Remove in RealmMgr.deallocRealms: %v", err)
-	}
 }
 
 func (m *RealmMgr) destroyRealms() {

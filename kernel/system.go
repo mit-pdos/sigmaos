@@ -193,6 +193,21 @@ func (s *System) KillOne(srv string) error {
 	return nil
 }
 
+func (s *System) ShutdownNamed() {
+	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
+	// Shutdown named last
+	err := s.Remove(NAMED + "/")
+	if err != nil {
+		// XXX sometimes we get EOF..
+		if err.Error() == "EOF" {
+			log.Printf("Remove %v shutdown %v\n", NAMED, err)
+		} else {
+			log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
+		}
+	}
+	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
+}
+
 func (s *System) Shutdown() {
 	if len(s.fss3d) != 0 {
 		err := s.RmUnionDir(S3)
@@ -223,17 +238,7 @@ func (s *System) Shutdown() {
 	}
 
 	if s.named != nil {
-		// Shutdown named last
-		err := s.Remove(NAMED + "/")
-		if err != nil {
-			// XXX sometimes we get EOF..
-			if err.Error() == "EOF" {
-				log.Printf("Remove %v shutdown %v\n", NAMED, err)
-			} else {
-				log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
-			}
-		}
-		s.named.Wait()
+		s.ShutdownNamed()
 	}
 }
 

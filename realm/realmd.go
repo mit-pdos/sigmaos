@@ -98,17 +98,17 @@ func (r *Realmd) readConfig() {
 
 // If this is the first realmd assigned to a realm, initialize the realm by
 // starting a named for it.
-func (r *Realmd) tryInitRealm() {
+func (r *Realmd) tryInitRealmL() {
 	rds, err := r.ReadDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
-		log.Fatalf("Error ReadDir in Realmd.tryInitRealm: %v", err)
+		log.Fatalf("Error ReadDir in Realmd.tryInitRealmL: %v", err)
 	}
 
 	// If this is the first realmd, start the realm's named.
 	if len(rds) == 0 {
 		ip, err := fsclnt.LocalIP()
 		if err != nil {
-			log.Fatalf("Error LocalIP in Realmd.tryInitRealm: %v", err)
+			log.Fatalf("Error LocalIP in Realmd.tryInitRealmL: %v", err)
 		}
 		namedAddr := genNamedAddr(ip)
 		s := kernel.MakeSystem(r.bin)
@@ -127,7 +127,7 @@ func (r *Realmd) tryInitRealm() {
 }
 
 // Register this realmd as part of a realm.
-func (r *Realmd) registerL() {
+func (r *Realmd) register() {
 	// Register this realmd as belonging to this realm.
 	if err := atomic.MakeFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId, r.id), 0777, []byte{}); err != nil {
 		log.Fatalf("Error MakeFileAtomic in Realmd.register: %v", err)
@@ -141,31 +141,90 @@ func (r *Realmd) boot(realmCfg *RealmConfig) {
 	}
 }
 
+// Join a realm
+func (r *Realmd) joinRealm(done chan bool) {
+	r.realmLock.Lock()
+	defer r.realmLock.Unlock()
+
+	// Try to initalize this realm if it hasn't been initialized already.
+	r.tryInitRealmL()
+	// Get the realm config
+	realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
+	// Register this realmd
+	r.register()
+	// Boot this realmd's system services
+	r.boot(realmCfg)
+	// Watch for changes to the config
+	go r.watchConfig(done)
+
+}
+
+func (r *Realmd) teardown() {
+	// TODO: evict procs gracefully
+	// Tear down realm resources
+	r.s.Shutdown()
+}
+
+func (r *Realmd) deregister() {
+	// Register this realmd as belonging to this realm
+	if err := r.Remove(path.Join(REALMS, r.cfg.RealmId, r.id)); err != nil {
+		log.Fatalf("Error Remove in Realmd.deregister: %v", err)
+	}
+}
+
+func (r *Realmd) tryDestroyRealmL() {
+	rds, err := r.ReadDir(path.Join(REALMS, r.cfg.RealmId))
+	if err != nil {
+		log.Fatalf("Error ReadDir in Realmd.tryDestroyRealmL: %v", err)
+	}
+
+	// If this is the last realmd, destroy the realmd's named
+	if len(rds) == 0 {
+		realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
+		s := kernel.MakeSystemNamedAddr(r.bin, realmCfg.NamedAddr)
+		s.ShutdownNamed()
+
+		// Remove the realm config file
+		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {
+			log.Fatalf("Error Remove in REALM_CONFIG Realmd.tryDestroyRealmL: %v", err)
+		}
+
+		// Remove the realm directory
+		if err := r.Remove(path.Join(REALMS, r.cfg.RealmId)); err != nil {
+			log.Fatalf("Error Remove REALMS in Realmd.tryDestroyRealmL: %v", err)
+		}
+
+		// Signal that the realm has been initialized
+		rExitCond := sync.MakeCond(r.FsLib, path.Join(kernel.BOOT, r.cfg.RealmId), nil)
+		rExitCond.Destroy()
+	}
+}
+
+// Leave a realm
+func (r *Realmd) leaveRealm() {
+	r.realmLock.Lock()
+	defer r.realmLock.Unlock()
+
+	// Tear down resources
+	r.teardown()
+	// Deregister this realmd
+	r.deregister()
+	// Try to destroy a realm (if this is the last realmd remaining)
+	r.tryDestroyRealmL()
+}
+
 func (r *Realmd) Work() {
 	for {
 		// Get the next realm assignment.
 		r.readConfig()
 
-		r.realmLock.Lock()
-
-		// Try to initalize this realm.
-		r.tryInitRealm()
-		// Get the realm config
-		realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
-		// Register this realmd
-		r.registerL()
-		// Boot this realmd's system services
-		r.boot(realmCfg)
-		// Watch for changes to the config
+		// Join a realm
 		done := make(chan bool)
-		go r.watchConfig(done)
-
-		r.realmLock.Unlock()
-
+		r.joinRealm(done)
 		// Wait for the watch to trigger
 		<-done
 
-		// Tear down realm resources.
-		r.s.Shutdown()
+		// Leave a realm
+		r.leaveRealm()
 	}
 }

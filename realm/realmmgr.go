@@ -176,5 +176,3 @@ func (m *RealmMgr) Work() {
 	go m.allocRealmds()
 	<-m.done
 }
-
-// TODO: unassign/reassign realmds

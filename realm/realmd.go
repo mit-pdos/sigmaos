@@ -61,11 +61,24 @@ func MakeRealmd(bin string) *Realmd {
 
 	r.freeRealmds = sync.MakeFilePriorityBag(r.FsLib, FREE_REALMDS)
 
-	if err := r.freeRealmds.Put(DEFAULT_REALMD_PRIORITY, id, b); err != nil {
-		log.Fatalf("Error Put in MakeRealmd: %v", err)
-	}
+	r.markFree()
 
 	return r
+}
+
+func (r *Realmd) markFree() {
+	cfg := &RealmdConfig{}
+	cfg.Id = r.id
+	cfg.RealmId = NO_REALM
+
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		log.Fatalf("Error Marshal in MakeRealm: %v", err)
+	}
+
+	if err := r.freeRealmds.Put(DEFAULT_REALMD_PRIORITY, r.id, b); err != nil {
+		log.Fatalf("Error Put in MakeRealmd: %v", err)
+	}
 }
 
 func (r *Realmd) watchConfig(done chan bool) {
@@ -226,5 +239,8 @@ func (r *Realmd) Work() {
 
 		// Leave a realm
 		r.leaveRealm()
+
+		// Mark self as available for allocation.
+		r.markFree()
 	}
 }

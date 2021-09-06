@@ -14,11 +14,6 @@ import (
 	np "ulambda/ninep"
 )
 
-// TODO: Remove with OCREAT
-const (
-	JSON_PADDING = 500
-)
-
 func MakeFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) error {
 	tmpName := randstr.Hex(16)
 	tmpPath := path.Join(named.TMP, tmpName)
@@ -41,9 +36,6 @@ func MakeFileJsonAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, i interfa
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
-	}
-	for i := 0; i < JSON_PADDING; i++ {
-		data = append(data, ' ')
 	}
 	return MakeFileAtomic(fsl, fname, perm, data)
 }

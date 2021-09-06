@@ -18,17 +18,19 @@ const (
 
 const (
 	FREE_REALMDS  = "name/free-realmds"  // Unassigned realmds
-	REALM_ALLOC   = "name/realm-alloc"   // Realm allocation requests
+	REALM_CREATE  = "name/realm-create"  // Realm allocation requests
+	REALM_DESTROY = "name/realm-destroy" // Realm destruction requests
 	REALMS        = "name/realms"        // List of realms, with realmds registered under them
 	REALM_CONFIG  = "name/realm-config"  // Store of realm configs
 	REALMD_CONFIG = "name/realmd-config" // Store of realmd configs
 )
 
 type RealmMgr struct {
-	s           *kernel.System
-	freeRealmds *sync.FilePriorityBag
-	realmAlloc  *sync.FilePriorityBag
-	done        chan bool
+	s            *kernel.System
+	freeRealmds  *sync.FilePriorityBag
+	realmCreate  *sync.FilePriorityBag
+	realmDestroy *sync.FilePriorityBag
+	done         chan bool
 	*fslib.FsLib
 }
 
@@ -61,26 +63,30 @@ func (m *RealmMgr) makeInitFs() {
 func (m *RealmMgr) makeFileBags() {
 	// Set up FilePriorityBags
 	m.freeRealmds = sync.MakeFilePriorityBag(m.FsLib, FREE_REALMDS)
-	m.realmAlloc = sync.MakeFilePriorityBag(m.FsLib, REALM_ALLOC)
+	m.realmCreate = sync.MakeFilePriorityBag(m.FsLib, REALM_CREATE)
+	m.realmDestroy = sync.MakeFilePriorityBag(m.FsLib, REALM_DESTROY)
 }
 
-// Handle realm allocation requests.
-func (m *RealmMgr) allocRealms() {
+// Handle realm creation requests.
+func (m *RealmMgr) createRealms() {
 	for {
-		// Get a realm allocation request
-		_, rid, b, err := m.realmAlloc.Get()
+		// Get a realm creation request
+		_, rid, b, err := m.realmCreate.Get()
 		if err != nil {
-			log.Fatalf("Error Get in RealmMgr.allocRealms: %v", err)
+			log.Fatalf("Error Get in RealmMgr.createRealms: %v", err)
 		}
 		// Make a directory for this realm.
 		if err := m.Mkdir(path.Join(REALMS, rid), 0777); err != nil {
-			log.Fatalf("Error Mkdir in RealmMgr.allocRealms: %v", err)
+			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 		// Make the realm config file.
 		if err := atomic.MakeFileAtomic(m.FsLib, path.Join(REALM_CONFIG, rid), 0777, b); err != nil {
-			log.Fatalf("Error MakeFileAtomic in RealmMgr.allocRealms: %v", err)
+			log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
 		}
 	}
+}
+
+func (m *RealmMgr) destroyRealms() {
 }
 
 // Select a realm to assign a new realmd to. Currently done by random choice.
@@ -111,7 +117,7 @@ func (m *RealmMgr) assignRealmd(realmdId string, rid string) {
 	realmd.RealmId = rid
 	// Update the realm config file.
 	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, realmd); err != nil {
-		log.Fatalf("Error MakeFileAtomic in RealmMgr.allocRealms: %v", err)
+		log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
 	}
 }
 
@@ -136,7 +142,8 @@ func (m *RealmMgr) assignRealmds() {
 }
 
 func (m *RealmMgr) Work() {
-	go m.allocRealms()
+	go m.createRealms()
+	go m.destroyRealms()
 	go m.assignRealmds()
 	<-m.done
 }

@@ -26,18 +26,20 @@ type RealmConfig struct {
 }
 
 type RealmClnt struct {
-	alloc *sync.FilePriorityBag
+	create  *sync.FilePriorityBag
+	destroy *sync.FilePriorityBag
 	*fslib.FsLib
 }
 
 func MakeRealmClnt() *RealmClnt {
 	clnt := &RealmClnt{}
 	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
-	clnt.alloc = sync.MakeFilePriorityBag(clnt.FsLib, REALM_ALLOC)
+	clnt.create = sync.MakeFilePriorityBag(clnt.FsLib, REALM_CREATE)
+	clnt.destroy = sync.MakeFilePriorityBag(clnt.FsLib, REALM_DESTROY)
 	return clnt
 }
 
-// Submit a realm allocation request to the realm manager, and wait for the
+// Submit a realm creation request to the realm manager, and wait for the
 // request to be handled.
 func (clnt *RealmClnt) CreateRealm(rid string) {
 	cfg := &RealmConfig{}
@@ -52,7 +54,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) {
 		log.Fatalf("Error Marshal in RealmClnt.CreateRealm: %v", err)
 	}
 
-	if err := clnt.alloc.Put(DEFAULT_REALM_PRIORITY, rid, b); err != nil {
+	if err := clnt.create.Put(DEFAULT_REALM_PRIORITY, rid, b); err != nil {
 		log.Fatalf("Error Put in RealmClnt.CreateRealm: %v", err)
 	}
 

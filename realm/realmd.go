@@ -129,15 +129,16 @@ func (r *Realmd) tryInitRealm() {
 // Register this realmd as part of a realm.
 func (r *Realmd) registerL() {
 	// Register this realmd as belonging to this realm.
-	if err := atomic.MakeFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId), 0777, []byte{}); err != nil {
+	if err := atomic.MakeFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId, r.id), 0777, []byte{}); err != nil {
 		log.Fatalf("Error MakeFileAtomic in Realmd.register: %v", err)
 	}
 }
 
 func (r *Realmd) boot(realmCfg *RealmConfig) {
-	// TODO: boot
-	r.s = kernel.MakeSystemNamedAddr("..", realmCfg.NamedAddr)
-	r.s.BootFollower()
+	r.s = kernel.MakeSystemNamedAddr(r.bin, realmCfg.NamedAddr)
+	if err := r.s.BootFollower(); err != nil {
+		log.Fatalf("Error BootFollower in Realmd.boot: %v", err)
+	}
 }
 
 func (r *Realmd) Work() {

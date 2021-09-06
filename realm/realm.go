@@ -38,8 +38,6 @@ func MakeRealm(rid string) *Realm {
 	r.cfg.Rid = rid
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-%v", rid))
 
-	log.Fatalf("Error: CreateRealm unimplemented")
-
 	rStartCond := sync.MakeCond(r.FsLib, path.Join(kernel.BOOT, rid), nil)
 	rStartCond.Init()
 
@@ -71,14 +69,14 @@ func genNamedAddr(localIP string) string {
 
 func getRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
 	cfg := &RealmConfig{}
-	if err := fsl.ReadFileJson(path.Join(REALMS, rid), cfg); err != nil {
-		log.Fatalf("Error ReadFileJson in getRealmConfig: %v", err)
+	if err := fsl.ReadFileJson(path.Join(REALM_CONFIG, rid), cfg); err != nil {
+		log.Fatalf("Error ReadFileJson in getRealmConfig: %v, %v", path.Join(REALM_CONFIG, rid), err)
 	}
 	return cfg
 }
 
 func setRealmConfig(fsl *fslib.FsLib, cfg *RealmConfig) {
-	if err := atomic.MakeFileJsonAtomic(fsl, path.Join(REALMS, cfg.Rid), 0777, cfg); err != nil {
+	if err := atomic.MakeFileJsonAtomic(fsl, path.Join(REALM_CONFIG, cfg.Rid), 0777, cfg); err != nil {
 		log.Fatalf("Error ReadFileJson in setRealmConfig: %v", err)
 	}
 }

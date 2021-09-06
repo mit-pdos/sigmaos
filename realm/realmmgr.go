@@ -32,12 +32,14 @@ type RealmMgr struct {
 	*fslib.FsLib
 }
 
-func MakeRealmMgr() *RealmMgr {
+func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
 	m.done = make(chan bool)
-	m.s = kernel.MakeSystem("..")
+	m.s = kernel.MakeSystem(bin)
 	// Start a named instance.
-	m.s.BootMin()
+	if err := m.s.BootMin(); err != nil {
+		log.Fatalf("Error BootMin in MakeRealmMgr: %v", err)
+	}
 	m.FsLib = fslib.MakeFsLib("realmmgr")
 	m.makeInitFs()
 	m.makeFileBags()

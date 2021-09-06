@@ -164,5 +164,8 @@ func (r *Realmd) Work() {
 
 		// Wait for the watch to trigger
 		<-done
+
+		// Tear down realm resources.
+		r.s.Shutdown()
 	}
 }

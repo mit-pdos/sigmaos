@@ -25,38 +25,41 @@ type RealmConfig struct {
 	NamedAddr string // IP address of this realm's named.
 }
 
-type Realm struct {
-	cfg *RealmConfig
+type RealmClnt struct {
+	alloc *sync.FilePriorityBag
 	*fslib.FsLib
+}
+
+func MakeRealmClnt() *RealmClnt {
+	clnt := &RealmClnt{}
+	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
+	clnt.alloc = sync.MakeFilePriorityBag(clnt.FsLib, REALM_ALLOC)
+	return clnt
 }
 
 // Submit a realm allocation request to the realm manager, and wait for the
 // request to be handled.
-func MakeRealm(rid string) *Realm {
-	r := &Realm{}
-	r.cfg = &RealmConfig{}
-	r.cfg.Rid = rid
-	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-%v", rid))
+func (clnt *RealmClnt) CreateRealm(rid string) {
+	cfg := &RealmConfig{}
+	cfg.Rid = rid
 
-	rStartCond := sync.MakeCond(r.FsLib, path.Join(kernel.BOOT, rid), nil)
+	// Create cond var to wait on realm creation/initialization.
+	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(kernel.BOOT, rid), nil)
 	rStartCond.Init()
 
-	b, err := json.Marshal(r)
+	b, err := json.Marshal(cfg)
 	if err != nil {
-		log.Fatalf("Error Marshal in MakeRealm: %v", err)
+		log.Fatalf("Error Marshal in RealmClnt.CreateRealm: %v", err)
 	}
 
-	alloc := sync.MakeFilePriorityBag(r.FsLib, REALM_ALLOC)
-	if err := alloc.Put(DEFAULT_REALM_PRIORITY, rid, b); err != nil {
-		log.Fatalf("Error Put in MakeRealm: %v", err)
+	if err := clnt.alloc.Put(DEFAULT_REALM_PRIORITY, rid, b); err != nil {
+		log.Fatalf("Error Put in RealmClnt.CreateRealm: %v", err)
 	}
 
 	rStartCond.Wait()
-
-	return r
 }
 
-func (r *Realm) Destroy() {
+func (r *RealmClnt) DestroyRealm(rid string) {
 	log.Fatalf("Error: DestroyRealm unimplemented")
 	// TODO: remove a named
 }

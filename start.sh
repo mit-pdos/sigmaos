@@ -19,7 +19,7 @@ fi
 sleep 2
 ./bin/realm/realmd . &
 sleep 1
-./bin/realm/create 1
+./bin/realm/create 1000
 
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system

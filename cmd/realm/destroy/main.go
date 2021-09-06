@@ -12,5 +12,5 @@ func main() {
 		log.Fatalf("Usage: %v realmId", os.Args[0])
 	}
 	clnt := realm.MakeRealmClnt()
-	clnt.CreateRealm(os.Args[1])
+	clnt.DestroyRealm(os.Args[1])
 }

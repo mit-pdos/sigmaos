@@ -26,6 +26,7 @@ type RealmdConfig struct {
 
 type Realmd struct {
 	id          string
+	bin         string
 	cfg         *RealmdConfig
 	s           *kernel.System
 	freeRealmds *sync.FilePriorityBag
@@ -33,7 +34,7 @@ type Realmd struct {
 	*fslib.FsLib
 }
 
-func MakeRealmd() *Realmd {
+func MakeRealmd(bin string) *Realmd {
 	// XXX Get id somehow
 	id, err := fsclnt.LocalIP()
 	if err != nil {
@@ -41,6 +42,7 @@ func MakeRealmd() *Realmd {
 	}
 	r := &Realmd{}
 	r.id = id
+	r.bin = bin
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("realmd-%v", id))
 
 	// Set up the realmd config
@@ -51,6 +53,10 @@ func MakeRealmd() *Realmd {
 	b, err := json.Marshal(r.cfg)
 	if err != nil {
 		log.Fatalf("Error Marshal in MakeRealm: %v", err)
+	}
+
+	if err := atomic.MakeFileAtomic(r.FsLib, path.Join(REALMD_CONFIG, id), 0777, b); err != nil {
+		log.Fatalf("Error MakeFileAtomic in MakeRealmd: %v", err)
 	}
 
 	r.freeRealmds = sync.MakeFilePriorityBag(r.FsLib, FREE_REALMDS)
@@ -105,7 +111,7 @@ func (r *Realmd) tryInitRealm() {
 			log.Fatalf("Error LocalIP in Realmd.tryInitRealm: %v", err)
 		}
 		namedAddr := genNamedAddr(ip)
-		s := kernel.MakeSystem("..")
+		s := kernel.MakeSystem(r.bin)
 
 		// Start a named instance.
 		s.BootNamed(namedAddr)

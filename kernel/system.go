@@ -51,6 +51,7 @@ func MakeSystemNamedAddr(bin string, namedAddr string) *System {
 
 // XXX To be removed
 func (s *System) BootFollower() error {
+	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
 	err := s.BootFsUxd()
 	if err != nil {
 		return err
@@ -101,7 +102,7 @@ func (s *System) BootNamed(addr string) error {
 	}
 	s.named = cmd
 	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
-	s.FsLib = fslib.MakeFsLib("kernel")
+	s.FsLib = fslib.MakeFsLibAddr("kernel", addr)
 	err = named.MakeInitFs(s.FsLib)
 	return nil
 }

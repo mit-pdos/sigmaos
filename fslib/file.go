@@ -26,6 +26,17 @@ func Named() string {
 	return named
 }
 
+func MakeFsLibAddr(uname string, namedAddr string) *FsLib {
+	fl := &FsLib{fsclnt.MakeFsClient(uname)}
+	if fd, err := fl.Attach(namedAddr, ""); err == nil {
+		err := fl.Mount(fd, "name")
+		if err != nil {
+			log.Fatal("Mount error: ", err)
+		}
+	}
+	return fl
+}
+
 func MakeFsLib(uname string) *FsLib {
 	fl := &FsLib{fsclnt.MakeFsClient(uname)}
 	if fd, err := fl.Attach(Named(), ""); err == nil {

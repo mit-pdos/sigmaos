@@ -101,16 +101,13 @@ func (m *RealmMgr) assignRealmd(realmdId string, rid string) {
 	if err != nil {
 		log.Fatalf("Error GetFile in RealmMgr.assignRealmd: %v", err)
 	}
-	realmd := &Realmd{}
+	realmd := &RealmdConfig{}
 	err = json.Unmarshal(b, realmd)
 	if err != nil {
 		log.Fatalf("Error Unmarshal in RealmMgr.assignRealmd: %v", err)
 	}
 	realmd.RealmId = rid
-	if err := m.Remove(fpath); err != nil {
-		log.Fatalf("Error Remove in RealmMgr.allocRealms: %v", err)
-	}
-	// Make the realm config file.
+	// Update the realm config file.
 	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, realmd); err != nil {
 		log.Fatalf("Error MakeFileAtomic in RealmMgr.allocRealms: %v", err)
 	}
@@ -141,3 +138,5 @@ func (m *RealmMgr) Work() {
 	go m.assignRealmds()
 	<-m.done
 }
+
+// TODO: unassign/reassign realmds

@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"path"
+	"strconv"
 
+	"ulambda/atomic"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/sync"
@@ -13,11 +16,17 @@ import (
 
 const (
 	DEFAULT_REALM_PRIORITY = "0"
+	MIN_PORT               = 1112
+	MAX_PORT               = 65535
 )
 
+type RealmConfig struct {
+	Rid       string // Realm id.
+	NamedAddr string // IP address of this realm's named.
+}
+
 type Realm struct {
-	Rid     string // Realm id.
-	NamedIP string // IP address of this realm's named.
+	cfg *RealmConfig
 	*fslib.FsLib
 }
 
@@ -25,8 +34,9 @@ type Realm struct {
 // request to be handled.
 func MakeRealm(rid string) *Realm {
 	r := &Realm{}
-	r.Rid = rid
-	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-%v", r.Rid))
+	r.cfg = &RealmConfig{}
+	r.cfg.Rid = rid
+	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-%v", rid))
 
 	log.Fatalf("Error: CreateRealm unimplemented")
 
@@ -51,4 +61,24 @@ func MakeRealm(rid string) *Realm {
 func (r *Realm) Destroy() {
 	log.Fatalf("Error: DestroyRealm unimplemented")
 	// TODO: remove a named
+}
+
+// Generate an address for a new named
+func genNamedAddr(localIP string) string {
+	port := strconv.Itoa(MIN_PORT + rand.Intn(MAX_PORT-MIN_PORT))
+	return localIP + ":" + port
+}
+
+func getRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
+	cfg := &RealmConfig{}
+	if err := fsl.ReadFileJson(path.Join(REALMS, rid), cfg); err != nil {
+		log.Fatalf("Error ReadFileJson in getRealmConfig: %v", err)
+	}
+	return cfg
+}
+
+func setRealmConfig(fsl *fslib.FsLib, cfg *RealmConfig) {
+	if err := atomic.MakeFileJsonAtomic(fsl, path.Join(REALMS, cfg.Rid), 0777, cfg); err != nil {
+		log.Fatalf("Error ReadFileJson in setRealmConfig: %v", err)
+	}
 }

@@ -28,17 +28,24 @@ const (
 )
 
 type System struct {
-	bin   string
-	named *exec.Cmd
-	fss3d []*exec.Cmd
-	fsuxd []*exec.Cmd
-	procd []*exec.Cmd
+	bin       string
+	namedAddr string
+	named     *exec.Cmd
+	fss3d     []*exec.Cmd
+	fsuxd     []*exec.Cmd
+	procd     []*exec.Cmd
 	*fslib.FsLib
 }
 
+// XXX To be removed
 func MakeSystem(bin string) *System {
+	return MakeSystemNamedAddr(bin, fslib.Named())
+}
+
+func MakeSystemNamedAddr(bin string, namedAddr string) *System {
 	s := &System{}
 	s.bin = bin
+	s.namedAddr = namedAddr
 	return s
 }
 
@@ -64,6 +71,7 @@ func (s *System) BootMin() error {
 	return s.BootNamed(fslib.Named())
 }
 
+// XXX To be removed
 // Boot a full system
 func (s *System) Boot() error {
 	err := s.BootNamed(fslib.Named())
@@ -87,7 +95,7 @@ func (s *System) Boot() error {
 
 // Boot a named and set up the initfs
 func (s *System) BootNamed(addr string) error {
-	cmd, err := run(s.bin, "/bin/kernel/named", []string{"0", addr})
+	cmd, err := run(s.bin, "/bin/kernel/named", s.namedAddr, []string{"0", addr})
 	if err != nil {
 		return err
 	}
@@ -104,7 +112,7 @@ func (s *System) BootFsUxd() error {
 	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	fsuxdStartCond.Init()
 	var err error
-	fsuxd, err := run(s.bin, "bin/kernel/fsuxd", []string{pid})
+	fsuxd, err := run(s.bin, "bin/kernel/fsuxd", s.namedAddr, []string{pid})
 	s.fsuxd = append(s.fsuxd, fsuxd)
 	if err != nil {
 		return err
@@ -120,7 +128,7 @@ func (s *System) BootFss3d() error {
 	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	fss3dStartCond.Init()
 	var err error
-	fss3d, err := run(s.bin, "bin/kernel/fss3d", []string{pid})
+	fss3d, err := run(s.bin, "bin/kernel/fss3d", s.namedAddr, []string{pid})
 	s.fss3d = append(s.fss3d, fss3d)
 	if err != nil {
 		return err
@@ -136,7 +144,7 @@ func (s *System) BootProcd() error {
 	procdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
 	procdStartCond.Init()
 	var err error
-	procd, err := run(s.bin, "bin/kernel/procd", []string{s.bin, pid})
+	procd, err := run(s.bin, "bin/kernel/procd", s.namedAddr, []string{s.bin, pid})
 	s.procd = append(s.procd, procd)
 	if err != nil {
 		return err
@@ -228,12 +236,13 @@ func (s *System) Shutdown() {
 	}
 }
 
-func run(bin string, name string, args []string) (*exec.Cmd, error) {
+func run(bin string, name string, namedAddr string, args []string) (*exec.Cmd, error) {
 	cmd := exec.Command(path.Join(bin, name), args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ())
+	cmd.Env = append(cmd.Env, "NAMED="+namedAddr)
 	return cmd, cmd.Start()
 }

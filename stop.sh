@@ -2,6 +2,7 @@
 
 ./umount.sh
 killall realmmgr
+killall realmd
 killall named
 killall memfsd
 killall memfs-replica

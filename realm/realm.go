@@ -61,9 +61,16 @@ func (clnt *RealmClnt) CreateRealm(rid string) {
 	rStartCond.Wait()
 }
 
-func (r *RealmClnt) DestroyRealm(rid string) {
-	log.Fatalf("Error: DestroyRealm unimplemented")
-	// TODO: remove a named
+func (clnt *RealmClnt) DestroyRealm(rid string) {
+	// Create cond var to wait on realm creation/initialization.
+	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(kernel.BOOT, rid), nil)
+	rExitCond.Init()
+
+	if err := clnt.destroy.Put(DEFAULT_REALM_PRIORITY, rid, []byte{}); err != nil {
+		log.Fatalf("Error Put in RealmClnt.DestroyRealm: %v", err)
+	}
+
+	rExitCond.Wait()
 }
 
 // Generate an address for a new named

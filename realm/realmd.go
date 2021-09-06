@@ -93,7 +93,7 @@ func (r *Realmd) readConfig() {
 		go r.watchConfig(done)
 		<-done
 	}
-	r.realmLock = sync.MakeLock(r.FsLib, named.LOCKS, REALM_LOCK+r.id, true)
+	r.realmLock = sync.MakeLock(r.FsLib, named.LOCKS, REALM_LOCK+r.cfg.RealmId, true)
 }
 
 // If this is the first realmd assigned to a realm, initialize the realm by

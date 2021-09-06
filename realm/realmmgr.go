@@ -1,7 +1,6 @@
 package realm
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
 	"path"
@@ -9,6 +8,7 @@ import (
 	"ulambda/atomic"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/named"
 	"ulambda/sync"
 )
 
@@ -86,7 +86,47 @@ func (m *RealmMgr) createRealms() {
 	}
 }
 
+// Deallocate a realmd from a realm.
+func (m *RealmMgr) deallocRealmd(realmdId string) {
+	cfg := &RealmdConfig{}
+	cfg.Id = realmdId
+	cfg.RealmId = NO_REALM
+	fpath := path.Join(REALMD_CONFIG, realmdId)
+	// Update the realm config file.
+	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, cfg); err != nil {
+		log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
+	}
+}
+
+func (m *RealmMgr) deallocRealmds(rid string) {
+	realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+rid, true)
+
+	realmLock.Lock()
+	defer realmLock.Unlock()
+
+	rds, err := m.ReadDir(path.Join(REALMS, rid))
+	if err != nil {
+		log.Fatalf("Error ReadDir in RealmMgr.deallocRealms: %v", err)
+	}
+
+	for _, rd := range rds {
+		m.deallocRealmd(rd.Name)
+	}
+
+	if err := m.Remove(path.Join(REALMS, rid)); err != nil {
+		log.Fatalf("Error Remove in RealmMgr.deallocRealms: %v", err)
+	}
+}
+
 func (m *RealmMgr) destroyRealms() {
+	for {
+		// Get a realm creation request
+		_, rid, _, err := m.realmDestroy.Get()
+		if err != nil {
+			log.Fatalf("Error Get in RealmMgr.createRealms: %v", err)
+		}
+		m.deallocRealmds(rid)
+	}
 }
 
 // Select a realm to assign a new realmd to. Currently done by random choice.
@@ -103,48 +143,41 @@ func (m *RealmMgr) selectRealm() string {
 }
 
 // Set the realm id in the realmd's config file & trigger its watch.
-func (m *RealmMgr) assignRealmd(realmdId string, rid string) {
+func (m *RealmMgr) allocRealmd(realmdId string, realmId string) {
+	cfg := &RealmdConfig{}
+	cfg.Id = realmdId
+	cfg.RealmId = realmId
 	fpath := path.Join(REALMD_CONFIG, realmdId)
-	b, _, err := m.GetFile(fpath)
-	if err != nil {
-		log.Fatalf("Error GetFile in RealmMgr.assignRealmd: %v", err)
-	}
-	realmd := &RealmdConfig{}
-	err = json.Unmarshal(b, realmd)
-	if err != nil {
-		log.Fatalf("Error Unmarshal in RealmMgr.assignRealmd: %v", err)
-	}
-	realmd.RealmId = rid
 	// Update the realm config file.
-	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, realmd); err != nil {
+	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, cfg); err != nil {
 		log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
 	}
 }
 
 // Assign free realmds to realms.
-func (m *RealmMgr) assignRealmds() {
+func (m *RealmMgr) allocRealmds() {
 	for {
 		rPriority, realmd, b, err := m.freeRealmds.Get()
 		if err != nil {
-			log.Fatalf("Error Get in RealmMgr.assignRealmds: %v", err)
+			log.Fatalf("Error Get in RealmMgr.allocRealmds: %v", err)
 		}
 		rid := m.selectRealm()
 		// If there are no realms to assign this realmd to, try again later.
 		if rid == NO_REALM {
 			// TODO: Avoid spinning when no realms are available.
 			if err := m.freeRealmds.Put(rPriority, realmd, b); err != nil {
-				log.Fatalf("Error Put in RealmMgr.assignRealmds: %v", err)
+				log.Fatalf("Error Put in RealmMgr.allocRealmds: %v", err)
 			}
 			continue
 		}
-		m.assignRealmd(realmd, rid)
+		m.allocRealmd(realmd, rid)
 	}
 }
 
 func (m *RealmMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
-	go m.assignRealmds()
+	go m.allocRealmds()
 	<-m.done
 }
 

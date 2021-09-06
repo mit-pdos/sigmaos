@@ -42,6 +42,24 @@ func MakeSystem(bin string) *System {
 	return s
 }
 
+// XXX To be removed
+func (s *System) BootFollower() error {
+	err := s.BootFsUxd()
+	if err != nil {
+		return err
+	}
+	err = s.BootFss3d()
+	if err != nil {
+		return err
+	}
+	err = s.BootProcd()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// XXX To be removed
 func (s *System) BootMin() error {
 	return s.BootNamed(fslib.Named())
 }

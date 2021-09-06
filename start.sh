@@ -14,7 +14,12 @@ if [[ -z "${NAMED}" ]]; then
   export NAMED=$N
 fi
 
-./bin/kernel/boot
+#./bin/kernel/boot
+./bin/realm/realmmgr . &
+sleep 2
+./bin/realm/realmd . &
+sleep 1
+./bin/realm/create 1
 
 ./mount.sh
 mkdir -p /mnt/9p/fs   # make fake file system

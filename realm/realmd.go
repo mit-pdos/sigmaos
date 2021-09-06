@@ -61,11 +61,13 @@ func MakeRealmd(bin string) *Realmd {
 
 	r.freeRealmds = sync.MakeFilePriorityBag(r.FsLib, FREE_REALMDS)
 
+	// Mark self as available for allocation
 	r.markFree()
 
 	return r
 }
 
+// Mark self as available for allocation to a realm.
 func (r *Realmd) markFree() {
 	cfg := &RealmdConfig{}
 	cfg.Id = r.id
@@ -124,10 +126,11 @@ func (r *Realmd) tryInitRealmL() {
 			log.Fatalf("Error LocalIP in Realmd.tryInitRealmL: %v", err)
 		}
 		namedAddr := genNamedAddr(ip)
-		s := kernel.MakeSystem(r.bin)
 
 		// Start a named instance.
-		s.BootNamed(namedAddr)
+		if _, err := BootNamed(r.bin, namedAddr); err != nil {
+			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
+		}
 
 		realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
 		realmCfg.NamedAddr = namedAddr
@@ -149,8 +152,8 @@ func (r *Realmd) register() {
 
 func (r *Realmd) boot(realmCfg *RealmConfig) {
 	r.s = kernel.MakeSystemNamedAddr(r.bin, realmCfg.NamedAddr)
-	if err := r.s.BootFollower(); err != nil {
-		log.Fatalf("Error BootFollower in Realmd.boot: %v", err)
+	if err := r.s.Boot(); err != nil {
+		log.Fatalf("Error Boot in Realmd.boot: %v", err)
 	}
 }
 
@@ -194,8 +197,7 @@ func (r *Realmd) tryDestroyRealmL() {
 	// If this is the last realmd, destroy the realmd's named
 	if len(rds) == 0 {
 		realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
-		s := kernel.MakeSystemNamedAddr(r.bin, realmCfg.NamedAddr)
-		s.ShutdownNamed()
+		ShutdownNamed(realmCfg.NamedAddr)
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {

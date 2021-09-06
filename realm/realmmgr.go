@@ -3,11 +3,11 @@ package realm
 import (
 	"log"
 	"math/rand"
+	"os/exec"
 	"path"
 
 	"ulambda/atomic"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/named"
 	"ulambda/sync"
 )
@@ -26,7 +26,7 @@ const (
 )
 
 type RealmMgr struct {
-	s            *kernel.System
+	named        *exec.Cmd
 	freeRealmds  *sync.FilePriorityBag
 	realmCreate  *sync.FilePriorityBag
 	realmDestroy *sync.FilePriorityBag
@@ -37,10 +37,11 @@ type RealmMgr struct {
 func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
 	m.done = make(chan bool)
-	m.s = kernel.MakeSystem(bin)
+	named, err := BootNamed(bin, fslib.Named())
+	m.named = named
 	// Start a named instance.
-	if err := m.s.BootMin(); err != nil {
-		log.Fatalf("Error BootMin in MakeRealmMgr: %v", err)
+	if err != nil {
+		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)
 	}
 	m.FsLib = fslib.MakeFsLib("realmmgr")
 	m.makeInitFs()

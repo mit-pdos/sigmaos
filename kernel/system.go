@@ -7,14 +7,14 @@ import (
 	"path"
 	"strings"
 	"syscall"
-	"time"
 
 	"ulambda/fslib"
-	"ulambda/named"
+	//	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/sync"
 )
 
+// XXX move to named
 const (
 	NAMED = "name"
 	PROCD = "name/procd"
@@ -23,14 +23,9 @@ const (
 	BOOT  = "name/boot"
 )
 
-const (
-	POST_BOOT_SLEEP_MS = 1000
-)
-
 type System struct {
 	bin       string
 	namedAddr string
-	named     *exec.Cmd
 	fss3d     []*exec.Cmd
 	fsuxd     []*exec.Cmd
 	procd     []*exec.Cmd
@@ -46,12 +41,12 @@ func MakeSystemNamedAddr(bin string, namedAddr string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = namedAddr
+	s.FsLib = fslib.MakeFsLibAddr("kernel", namedAddr)
 	return s
 }
 
-// XXX To be removed
-func (s *System) BootFollower() error {
-	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
+// Boot a full system
+func (s *System) Boot() error {
 	err := s.BootFsUxd()
 	if err != nil {
 		return err
@@ -64,46 +59,6 @@ func (s *System) BootFollower() error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// XXX To be removed
-func (s *System) BootMin() error {
-	return s.BootNamed(fslib.Named())
-}
-
-// XXX To be removed
-// Boot a full system
-func (s *System) Boot() error {
-	err := s.BootNamed(fslib.Named())
-	if err != nil {
-		return err
-	}
-	err = s.BootFsUxd()
-	if err != nil {
-		return err
-	}
-	err = s.BootFss3d()
-	if err != nil {
-		return err
-	}
-	err = s.BootProcd()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Boot a named and set up the initfs
-func (s *System) BootNamed(addr string) error {
-	cmd, err := run(s.bin, "/bin/kernel/named", s.namedAddr, []string{"0", addr})
-	if err != nil {
-		return err
-	}
-	s.named = cmd
-	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
-	s.FsLib = fslib.MakeFsLibAddr("kernel", addr)
-	err = named.MakeInitFs(s.FsLib)
 	return nil
 }
 
@@ -193,21 +148,6 @@ func (s *System) KillOne(srv string) error {
 	return nil
 }
 
-func (s *System) ShutdownNamed() {
-	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
-	// Shutdown named last
-	err := s.Remove(NAMED + "/")
-	if err != nil {
-		// XXX sometimes we get EOF..
-		if err.Error() == "EOF" {
-			log.Printf("Remove %v shutdown %v\n", NAMED, err)
-		} else {
-			log.Fatalf("Remove %v shutdown %v\n", NAMED, err)
-		}
-	}
-	time.Sleep(POST_BOOT_SLEEP_MS * time.Millisecond)
-}
-
 func (s *System) Shutdown() {
 	if len(s.fss3d) != 0 {
 		err := s.RmUnionDir(S3)
@@ -237,9 +177,6 @@ func (s *System) Shutdown() {
 		}
 	}
 
-	if s.named != nil {
-		s.ShutdownNamed()
-	}
 }
 
 func run(bin string, name string, namedAddr string, args []string) (*exec.Cmd, error) {

@@ -5,11 +5,22 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kv"
+	"ulambda/memfsd"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 func main() {
-	fsl := fslib.MakeFsLib("kvd")
+
+	fsl1 := fslib.MakeFsLib("kvd-1")
+	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
+
+	fsl := fslib.MakeFsLibAddr("kvd", cfg.NamedAddr)
+
+	// Set up some dirs
+	fsl.Mkdir(kv.KVDIR, 0777)
+	fsl.Mkdir(memfsd.MEMFS, 0777)
+
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	conf := kv.MakeConfig(0)

@@ -8,6 +8,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kv"
+	"ulambda/realm"
 )
 
 const (
@@ -69,8 +70,11 @@ func main() {
 	in := make(chan bool)
 	out := make(chan Tstat)
 
+	fsl1 := fslib.MakeFsLib("kvclerk-1")
+	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
+
 	for i := 0; i < NCLERK; i++ {
-		clks[i] = kv.MakeClerk(fslib.Named())
+		clks[i] = kv.MakeClerk(cfg.NamedAddr)
 	}
 
 	for i := uint64(0); i < NKEYS; i++ {

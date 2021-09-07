@@ -24,4 +24,3 @@ sleep 1
 ./mount.sh
 mkdir -p /mnt/9p/kv
 mkdir -p /mnt/9p/gg
-mkdir -p /mnt/9p/memfsd

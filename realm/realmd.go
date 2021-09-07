@@ -91,7 +91,7 @@ func (r *Realmd) watchConfig(done chan bool) {
 		}
 		done <- true
 	})
-	if err != nil {
+	if err != nil && err.Error() != "EOF" && err.Error() != "umount: unknown mount []" {
 		log.Fatalf("Error SetRemoveWatch in Realmd.watchConfig: %v", err)
 	}
 }

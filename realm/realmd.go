@@ -132,7 +132,7 @@ func (r *Realmd) tryInitRealmL() {
 			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
 		}
 
-		realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
+		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 		realmCfg.NamedAddr = namedAddr
 		setRealmConfig(r.FsLib, realmCfg)
 
@@ -165,7 +165,7 @@ func (r *Realmd) joinRealm(done chan bool) {
 	// Try to initalize this realm if it hasn't been initialized already.
 	r.tryInitRealmL()
 	// Get the realm config
-	realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
+	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	// Register this realmd
 	r.register()
 	// Boot this realmd's system services
@@ -196,7 +196,7 @@ func (r *Realmd) tryDestroyRealmL() {
 
 	// If this is the last realmd, destroy the realmd's named
 	if len(rds) == 0 {
-		realmCfg := getRealmConfig(r.FsLib, r.cfg.RealmId)
+		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 		ShutdownNamed(realmCfg.NamedAddr)
 
 		// Remove the realm config file

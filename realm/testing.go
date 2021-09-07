@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"ulambda/fslib"
-	"ulambda/proc"
+)
+
+const (
+	TEST_RID = "1000"
 )
 
 type TestEnv struct {
@@ -20,7 +23,7 @@ type TestEnv struct {
 func MakeTestEnv(bin string) *TestEnv {
 	e := &TestEnv{}
 	e.bin = bin
-	e.rid = proc.GenPid()
+	e.rid = TEST_RID
 
 	return e
 }

@@ -13,11 +13,12 @@ import (
 	"path"
 	"strconv"
 
-	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/mr"
 	"ulambda/proc"
+	"ulambda/procdep"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 func RmDir(dir string) error {
@@ -84,7 +85,9 @@ func Compare(fsl *fslib.FsLib) {
 }
 
 func main() {
-	fsl := fslib.MakeFsLib("mr-wc")
+	fsl1 := fslib.MakeFsLib("mr-wc-1")
+	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
+	fsl := fslib.MakeFsLibAddr("mr-wc", cfg.NamedAddr)
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 	for r := 0; r < mr.NReduce; r++ {

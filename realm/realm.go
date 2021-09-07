@@ -61,7 +61,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	// Wait for the realm to be initialized
 	rStartCond.Wait()
 
-	return getRealmConfig(clnt.FsLib, rid)
+	return GetRealmConfig(clnt.FsLib, rid)
 }
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
@@ -82,10 +82,10 @@ func genNamedAddr(localIP string) string {
 	return localIP + ":" + port
 }
 
-func getRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
+func GetRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
 	cfg := &RealmConfig{}
 	if err := fsl.ReadFileJson(path.Join(REALM_CONFIG, rid), cfg); err != nil {
-		log.Fatalf("Error ReadFileJson in getRealmConfig: %v, %v", path.Join(REALM_CONFIG, rid), err)
+		log.Fatalf("Error ReadFileJson in GetRealmConfig: %v, %v", path.Join(REALM_CONFIG, rid), err)
 	}
 	return cfg
 }

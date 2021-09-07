@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/named"
 )
 
@@ -33,13 +32,13 @@ func BootNamed(bin string, addr string) (*exec.Cmd, error) {
 func ShutdownNamed(namedAddr string) {
 	fsl := fslib.MakeFsLibAddr("kernel", namedAddr)
 	// Shutdown named last
-	err := fsl.Remove(kernel.NAMED + "/")
+	err := fsl.Remove(named.NAMED + "/")
 	if err != nil {
 		// XXX sometimes we get EOF..
 		if err.Error() == "EOF" {
-			log.Printf("Remove %v shutdown %v\n", kernel.NAMED, err)
+			log.Printf("Remove %v shutdown %v\n", named.NAMED, err)
 		} else {
-			log.Fatalf("Remove %v shutdown %v\n", kernel.NAMED, err)
+			log.Fatalf("Remove %v shutdown %v\n", named.NAMED, err)
 		}
 	}
 	time.Sleep(SLEEP_MS * time.Millisecond)

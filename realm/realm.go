@@ -10,7 +10,7 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/fslib"
-	"ulambda/kernel"
+	"ulambda/named"
 	"ulambda/sync"
 )
 
@@ -46,7 +46,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) {
 	cfg.Rid = rid
 
 	// Create cond var to wait on realm creation/initialization.
-	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(kernel.BOOT, rid), nil)
+	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil)
 	rStartCond.Init()
 
 	b, err := json.Marshal(cfg)
@@ -63,7 +63,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) {
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
 	// Create cond var to wait on realm creation/initialization.
-	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(kernel.BOOT, rid), nil)
+	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil)
 	rExitCond.Init()
 
 	if err := clnt.destroy.Put(DEFAULT_REALM_PRIORITY, rid, []byte{}); err != nil {

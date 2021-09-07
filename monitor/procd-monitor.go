@@ -9,10 +9,9 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/procidem"
-	"ulambda/kernel"
 	"ulambda/named"
 	"ulambda/proc"
+	"ulambda/procidem"
 	"ulambda/procinit"
 	"ulambda/sync"
 )
@@ -54,7 +53,7 @@ func (m *ProcdMonitor) waitEvict() {
 func (m *ProcdMonitor) watchProcds() {
 	log.Printf("ProcdMonitor %v set watch", m)
 	done := make(chan bool)
-	err := m.SetDirWatch(kernel.PROCD, func(p string, err error) {
+	err := m.SetDirWatch(named.PROCD, func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {
@@ -90,7 +89,7 @@ func (m *ProcdMonitor) getProc(procdIP string, pid string) *procidem.ProcIdem {
 
 // Get a list of the failed procds.
 func (m *ProcdMonitor) getFailedProcds() []string {
-	remaining, err := m.ReadDir(kernel.PROCD)
+	remaining, err := m.ReadDir(named.PROCD)
 	if err != nil {
 		log.Fatalf("Error ReadDir 1 in ProcdMonitor.getFailedProcds: %v", err)
 	}

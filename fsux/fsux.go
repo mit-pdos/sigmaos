@@ -13,7 +13,7 @@ import (
 	"ulambda/fslib"
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
-	"ulambda/kernel"
+	"ulambda/named"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
 	usync "ulambda/sync"
@@ -40,14 +40,14 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, 
 	db.Name("fsuxd")
 	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), replicated, relayAddr, config)
 	fsl := fslib.MakeFsLib("fsux")
-	fsl.Mkdir(kernel.UX, 0777)
-	err := fsl.PostServiceUnion(fsux.fssrv.MyAddr(), kernel.UX, fsux.fssrv.MyAddr())
+	fsl.Mkdir(named.UX, 0777)
+	err := fsl.PostServiceUnion(fsux.fssrv.MyAddr(), named.UX, fsux.fssrv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", fsux.fssrv.MyAddr(), err)
 	}
 
 	if !replicated {
-		fsuxStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
+		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 		fsuxStartCond.Destroy()
 	}
 

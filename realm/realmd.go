@@ -137,7 +137,7 @@ func (r *Realmd) tryInitRealmL() {
 		setRealmConfig(r.FsLib, realmCfg)
 
 		// Signal that the realm has been initialized
-		rStartCond := sync.MakeCond(r.FsLib, path.Join(kernel.BOOT, r.cfg.RealmId), nil)
+		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
 		rStartCond.Destroy()
 	}
 }
@@ -210,7 +210,7 @@ func (r *Realmd) tryDestroyRealmL() {
 		}
 
 		// Signal that the realm has been initialized
-		rExitCond := sync.MakeCond(r.FsLib, path.Join(kernel.BOOT, r.cfg.RealmId), nil)
+		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
 		rExitCond.Destroy()
 	}
 }

@@ -136,10 +136,10 @@ func TestCopy(t *testing.T) {
 }
 
 func (ts *Tstate) procdName(t *testing.T) string {
-	sts, err := ts.ReadDir(kernel.PROCD)
-	assert.Nil(t, err, kernel.PROCD)
+	sts, err := ts.ReadDir(named.PROCD)
+	assert.Nil(t, err, named.PROCD)
 	assert.Equal(t, 1, len(sts))
-	name := kernel.PROCD + "/" + sts[0].Name
+	name := named.PROCD + "/" + sts[0].Name
 	return name
 }
 
@@ -335,7 +335,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 0, len(sts))
 
-	ts.s.KillOne(kernel.PROCD)
+	ts.s.KillOne(named.PROCD)
 
 	n := 0
 	for n < N {

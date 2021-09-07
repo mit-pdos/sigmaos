@@ -5,8 +5,12 @@ import (
 )
 
 const (
+	NAMED = "name"
 	LOCKS = "name/locks"
 	TMP   = "name/tmp"
+	PROCD = "name/procd"
+	S3    = "name/s3"
+	UX    = "name/ux"
 	BOOT  = "name/boot"
 )
 

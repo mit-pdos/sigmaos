@@ -14,7 +14,7 @@ import (
 	"ulambda/fslib"
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
-	"ulambda/kernel"
+	"ulambda/named"
 	np "ulambda/ninep"
 	usync "ulambda/sync"
 )
@@ -54,18 +54,18 @@ func MakeFss3(pid string) *Fss3 {
 
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", kernel.S3, err)
+		log.Fatalf("LocalIP %v %v\n", named.S3, err)
 	}
 	fss3.fssrv = fssrv.MakeFsServer(fss3, fss3.root, ip+":0", fos.MakeProtServer(),
 		false, "", nil)
 	fsl := fslib.MakeFsLib("fss3")
-	fsl.Mkdir(kernel.S3, 0777)
-	err = fsl.PostServiceUnion(fss3.fssrv.MyAddr(), kernel.S3, fss3.fssrv.MyAddr())
+	fsl.Mkdir(named.S3, 0777)
+	err = fsl.PostServiceUnion(fss3.fssrv.MyAddr(), named.S3, fss3.fssrv.MyAddr())
 	if err != nil {
 		log.Fatalf("PostServiceUnion failed %v %v\n", fss3.fssrv.MyAddr(), err)
 	}
 
-	fss3dStartCond := usync.MakeCond(fsl, path.Join(kernel.BOOT, pid), nil)
+	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 	fss3dStartCond.Destroy()
 
 	return fss3

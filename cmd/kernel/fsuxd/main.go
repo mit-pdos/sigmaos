@@ -6,7 +6,7 @@ import (
 
 	"ulambda/fsclnt"
 	"ulambda/fsux"
-	"ulambda/kernel"
+	"ulambda/named"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	}
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", kernel.UX, err)
+		log.Fatalf("LocalIP %v %v\n", named.UX, err)
 	}
 
 	fsux := fsux.MakeFsUx("/tmp", ip+":0", os.Args[1])

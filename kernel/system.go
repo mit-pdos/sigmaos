@@ -9,19 +9,13 @@ import (
 	"syscall"
 
 	"ulambda/fslib"
-	//	"ulambda/named"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/sync"
 )
 
 // XXX move to named
-const (
-	NAMED = "name"
-	PROCD = "name/procd"
-	S3    = "name/s3"
-	UX    = "name/ux"
-	BOOT  = "name/boot"
-)
+const ()
 
 type System struct {
 	bin       string
@@ -65,7 +59,7 @@ func (s *System) Boot() error {
 func (s *System) BootFsUxd() error {
 	// Create boot cond
 	pid := "fsuxd-" + proc.GenPid()
-	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
+	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
 	fsuxdStartCond.Init()
 	var err error
 	fsuxd, err := run(s.bin, "bin/kernel/fsuxd", s.namedAddr, []string{pid})
@@ -81,7 +75,7 @@ func (s *System) BootFsUxd() error {
 func (s *System) BootFss3d() error {
 	// Create boot cond
 	pid := "fss3d-" + proc.GenPid()
-	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
+	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
 	fss3dStartCond.Init()
 	var err error
 	fss3d, err := run(s.bin, "bin/kernel/fss3d", s.namedAddr, []string{pid})
@@ -97,7 +91,7 @@ func (s *System) BootFss3d() error {
 func (s *System) BootProcd() error {
 	// Create boot cond
 	pid := "procd-" + proc.GenPid()
-	procdStartCond := sync.MakeCond(s.FsLib, path.Join(BOOT, pid), nil)
+	procdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Init()
 	var err error
 	procd, err := run(s.bin, "bin/kernel/procd", s.namedAddr, []string{s.bin, pid})
@@ -131,7 +125,7 @@ func (s *System) RmUnionDir(mdir string) error {
 func (s *System) KillOne(srv string) error {
 	var err error
 	switch srv {
-	case PROCD:
+	case named.PROCD:
 		if len(s.procd) > 0 {
 			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
 			//			err = s.procd[0].Process.Kill()
@@ -150,16 +144,16 @@ func (s *System) KillOne(srv string) error {
 
 func (s *System) Shutdown() {
 	if len(s.fss3d) != 0 {
-		err := s.RmUnionDir(S3)
+		err := s.RmUnionDir(named.S3)
 		if err != nil {
-			log.Printf("S3 shutdown %v\n", err)
+			log.Printf("named.S3 shutdown %v\n", err)
 		}
 		for _, d := range s.fss3d {
 			d.Wait()
 		}
 	}
 	if len(s.fsuxd) != 0 {
-		err := s.RmUnionDir(UX)
+		err := s.RmUnionDir(named.UX)
 		if err != nil {
 			log.Printf("Ux shutdown %v\n", err)
 		}
@@ -168,7 +162,7 @@ func (s *System) Shutdown() {
 		}
 	}
 	if len(s.procd) != 0 {
-		err := s.RmUnionDir(PROCD)
+		err := s.RmUnionDir(named.PROCD)
 		if err != nil {
 			log.Printf("Procds shutdown %v\n", err)
 		}
@@ -176,7 +170,6 @@ func (s *System) Shutdown() {
 			d.Wait()
 		}
 	}
-
 }
 
 func run(bin string, name string, namedAddr string, args []string) (*exec.Cmd, error) {

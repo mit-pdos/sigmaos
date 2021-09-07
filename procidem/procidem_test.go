@@ -89,7 +89,7 @@ func TestHelloWorld(t *testing.T) {
 	pid := spawnSleeperl(t, ts)
 	time.Sleep(3 * time.Second)
 
-	ts.s.KillOne(kernel.PROCD)
+	ts.s.KillOne(named.PROCD)
 
 	time.Sleep(3 * time.Second)
 
@@ -125,7 +125,7 @@ func TestCrashProcd(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
-	ts.s.KillOne(kernel.PROCD)
+	ts.s.KillOne(named.PROCD)
 
 	for _, pid := range sleeperPids {
 		ts.WaitExit(pid)

@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/memfsd"
 	"ulambda/proc"
 	"ulambda/procdep"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 const NKEYS = 2 // 100
@@ -40,12 +40,13 @@ func TestBalance(t *testing.T) {
 
 type Tstate struct {
 	t   *testing.T
-	s   *kernel.System
 	fsl *fslib.FsLib
 	proc.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
 	rand  *rand.Rand
+	e     *realm.TestEnv
+	cfg   *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -54,13 +55,16 @@ func makeTstate(t *testing.T) *Tstate {
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 
-	s := kernel.MakeSystem("..")
-	err := s.Boot()
+	bin := ".."
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.s = s
-	ts.fsl = fslib.MakeFsLib("kv_test")
+	ts.e = e
+	ts.cfg = cfg
+
+	ts.fsl = fslib.MakeFsLibAddr("kv_test", cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClnt(ts.fsl, procinit.GetProcLayersMap())
 
 	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
@@ -151,7 +155,7 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
-		ts.clrks[i] = MakeClerk()
+		ts.clrks[i] = MakeClerk(ts.cfg.NamedAddr)
 	}
 
 	if nclerk > 0 {
@@ -182,8 +186,10 @@ func TestGetPutSet(t *testing.T) {
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
 
+	log.Printf("one")
+
 	ts.stopMemFSs()
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func ConcurN(t *testing.T, nclerk int) {
@@ -225,7 +231,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	ts.stopMemFSs()
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestConcur0(t *testing.T) {

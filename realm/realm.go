@@ -41,7 +41,7 @@ func MakeRealmClnt() *RealmClnt {
 
 // Submit a realm creation request to the realm manager, and wait for the
 // request to be handled.
-func (clnt *RealmClnt) CreateRealm(rid string) {
+func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	cfg := &RealmConfig{}
 	cfg.Rid = rid
 
@@ -58,7 +58,10 @@ func (clnt *RealmClnt) CreateRealm(rid string) {
 		log.Fatalf("Error Put in RealmClnt.CreateRealm: %v", err)
 	}
 
+	// Wait for the realm to be initialized
 	rStartCond.Wait()
+
+	return getRealmConfig(clnt.FsLib, rid)
 }
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {

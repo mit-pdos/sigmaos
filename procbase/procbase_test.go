@@ -9,16 +9,17 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/proc"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 type Tstate struct {
 	proc.ProcClnt
 	*fslib.FsLib
-	t *testing.T
-	s *kernel.System
+	t   *testing.T
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -27,27 +28,30 @@ func makeTstate(t *testing.T) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	bin := ".."
-	s := kernel.MakeSystem(bin)
-	err := s.Boot()
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.s = s
+	ts.e = e
+	ts.cfg = cfg
+
 	db.Name("sched_test")
 
-	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 	return ts
 }
 
-func makeTstateNoBoot(t *testing.T, s *kernel.System) *Tstate {
+func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv) *Tstate {
 	ts := &Tstate{}
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	ts.t = t
-	ts.s = s
+	ts.e = e
+	ts.cfg = cfg
 	db.Name("sched_test")
-	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	return ts
 }
@@ -91,7 +95,7 @@ func TestHelloWorld(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestWaitExit(t *testing.T) {
@@ -109,7 +113,7 @@ func TestWaitExit(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestWaitStart(t *testing.T) {
@@ -132,7 +136,7 @@ func TestWaitStart(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 // Should exit immediately
@@ -152,7 +156,7 @@ func TestWaitNonexistentLambda(t *testing.T) {
 
 	close(ch)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 // Spawn a bunch of lambdas concurrently, then wait for all of them & check
@@ -184,7 +188,7 @@ func TestConcurrentLambdas(t *testing.T) {
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		newts := makeTstateNoBoot(t, ts.s)
+		newts := makeTstateNoBoot(t, ts.cfg, ts.e)
 		tses = append(tses, newts)
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()
@@ -207,7 +211,7 @@ func TestConcurrentLambdas(t *testing.T) {
 
 	done.Wait()
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func (ts *Tstate) evict(pid string) {
@@ -234,5 +238,5 @@ func TestEvict(t *testing.T) {
 	// Make sure the lambda didn't finish
 	checkSleeperlResultFalse(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

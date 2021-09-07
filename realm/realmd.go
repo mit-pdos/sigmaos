@@ -86,7 +86,7 @@ func (r *Realmd) markFree() {
 func (r *Realmd) watchConfig(done chan bool) {
 	fpath := path.Join(REALMD_CONFIG, r.id)
 	err := r.SetRemoveWatch(fpath, func(path string, err error) {
-		if err != nil {
+		if err != nil && err.Error() != "EOF" && err.Error() != "umount: unknown mount []" {
 			log.Fatalf("Error Watch in Realmd.watchConfig: %v", err)
 		}
 		done <- true

@@ -46,6 +46,7 @@ func MakeRealmMgr(bin string) *RealmMgr {
 	m.FsLib = fslib.MakeFsLib("realmmgr")
 	m.makeInitFs()
 	m.makeFileBags()
+
 	return m
 }
 

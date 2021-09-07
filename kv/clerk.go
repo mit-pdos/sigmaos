@@ -36,12 +36,12 @@ type KvClerk struct {
 	nget  int
 }
 
-func MakeClerk() *KvClerk {
+func MakeClerk(namedAddr string) *KvClerk {
 	kc := &KvClerk{}
 	kc.ch = make(chan bool)
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
 	db.Name(kc.uname)
-	kc.fsl = fslib.MakeFsLib(kc.uname)
+	kc.fsl = fslib.MakeFsLibAddr(kc.uname, namedAddr)
 	kc.readConfig()
 	return kc
 }

@@ -5,26 +5,27 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 func makeMemfsTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s := kernel.MakeSystem(bin)
-	err := s.Boot()
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.s = s
+	ts.e = e
+	ts.cfg = cfg
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	replicaName := "memfs-replica"
 	db.Name(replicaName + "-test")
-	ts.FsLib = fslib.MakeFsLib(replicaName + "-test")
+	ts.FsLib = fslib.MakeFsLibAddr(replicaName+"-test", cfg.NamedAddr)
 	ts.t = t
 	ts.configPath9p = "name/" + replicaName + "-config.txt"
 	ts.unionDirPath9p = "name/" + replicaName
@@ -36,14 +37,14 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 func TestMemfsHelloWorld(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	HelloWorld(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 // Test making & reading a few files.
 func TestMemfsChainSimple(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainSimple(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 // Test making & reading a few files in the presence of crashes in the middle of
@@ -51,47 +52,47 @@ func TestMemfsChainSimple(t *testing.T) {
 func TestMemfsChainCrashMiddle(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainCrashMiddle(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsChainCrashHead(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainCrashHead(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsChainCrashTail(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ChainCrashTail(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsSimple(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsSimple(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashMiddle(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashMiddle(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashTail(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashTail(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashHead(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashHead(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
 	ts := makeMemfsTstate(t)
 	ConcurrentClientsCrashHeadNotIdempotent(ts)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

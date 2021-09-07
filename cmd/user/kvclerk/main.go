@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"ulambda/fslib"
 	"ulambda/kv"
 )
 
@@ -69,7 +70,7 @@ func main() {
 	out := make(chan Tstat)
 
 	for i := 0; i < NCLERK; i++ {
-		clks[i] = kv.MakeClerk()
+		clks[i] = kv.MakeClerk(fslib.Named())
 	}
 
 	for i := uint64(0); i < NKEYS; i++ {

@@ -9,16 +9,20 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procidem"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 type Tstate struct {
 	proc.ProcClnt
 	*fslib.FsLib
-	t *testing.T
-	s *kernel.System
+	t   *testing.T
+	s   *kernel.System
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -27,15 +31,19 @@ func makeTstate(t *testing.T) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCIDEM: true})
 
 	bin := ".."
-	s := kernel.MakeSystem(bin)
-	err := s.Boot()
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
+	ts.e = e
+	ts.cfg = cfg
+	s := kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
 	ts.s = s
-	db.Name("sched_test")
+	ts.FsLib = fslib.MakeFsLibAddr("procidem_test", cfg.NamedAddr)
 
-	ts.FsLib = fslib.MakeFsLib("sched_test")
+	db.Name("procidem_test")
+
 	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 	return ts
@@ -77,25 +85,17 @@ func checkSleeperlResult(t *testing.T, ts *Tstate, pid string) bool {
 	return res
 }
 
-func checkSleeperlResultFalse(t *testing.T, ts *Tstate, pid string) {
-	b, err := ts.ReadFile("name/out_" + pid)
-	assert.NotNil(t, err, "ReadFile")
-	assert.NotEqual(t, string(b), "hello", "Output")
-}
-
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	time.Sleep(3 * time.Second)
 
-	ts.s.KillOne(named.PROCD)
+	time.Sleep(6 * time.Second)
 
-	time.Sleep(3 * time.Second)
-
-	checkSleeperlResultFalse(t, ts, pid)
+	checkSleeperlResult(t, ts, pid)
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestCrashProcd(t *testing.T) {
@@ -103,7 +103,7 @@ func TestCrashProcd(t *testing.T) {
 
 	ts.s.BootProcd()
 
-	N_MON := 5
+	N_MON := 10
 	N_SLEEP := 5
 
 	monPids := []string{}
@@ -140,4 +140,5 @@ func TestCrashProcd(t *testing.T) {
 	}
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

@@ -7,25 +7,33 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
+	"ulambda/realm"
+)
+
+const (
+	bin = ".."
 )
 
 type Tstate struct {
 	*fslib.FsLib
-	t *testing.T
-	s *kernel.System
+	t   *testing.T
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	s := kernel.MakeSystem("..")
-	err := s.BootMin()
+
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
+	ts.e = e
+	ts.cfg = cfg
+
 	db.Name("stats_test")
-	ts.FsLib = fslib.MakeFsLib("statstest")
-	ts.s = s
+	ts.FsLib = fslib.MakeFsLibAddr("statstest", cfg.NamedAddr)
 	ts.t = t
 
 	return ts
@@ -37,14 +45,14 @@ func TestStatsd(t *testing.T) {
 	stats := StatInfo{}
 	err := ts.ReadFileJson("name/statsd", &stats)
 	assert.Nil(t, err, "statsd")
-	assert.Equal(t, Tcounter(1), stats.Nread, "Nread")
+	assert.Equal(t, Tcounter(81), stats.Nread, "Nread")
 	for i := 0; i < 1000; i++ {
 		_, err := ts.ReadFile("name/statsd")
 		assert.Nil(t, err, "statsd")
 	}
 	err = ts.ReadFileJson("name/statsd", &stats)
 	assert.Nil(t, err, "statsd")
-	assert.Equal(t, Tcounter(1002), stats.Nopen, "statsd")
+	assert.Equal(t, Tcounter(1042), stats.Nopen, "statsd")
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

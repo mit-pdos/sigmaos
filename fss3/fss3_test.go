@@ -13,6 +13,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/realm"
 )
 
 const (
@@ -23,6 +24,8 @@ type Tstate struct {
 	*fslib.FsLib
 	t    *testing.T
 	s    *kernel.System
+	e    *realm.TestEnv
+	cfg  *realm.RealmConfig
 	nps3 *Fss3
 }
 
@@ -31,14 +34,16 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.t = t
 
-	s := kernel.MakeSystem(bin)
-	err := s.BootMin()
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	s.BootFss3d()
+	ts.e = e
+	ts.cfg = cfg
+	s := kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
 	ts.s = s
-	ts.FsLib = fslib.MakeFsLib("nps3_test")
+	ts.FsLib = fslib.MakeFsLibAddr("nps3_test", cfg.NamedAddr)
 	db.Name("nps3_test")
 	return ts
 }
@@ -52,6 +57,7 @@ func TestOne(t *testing.T) {
 	assert.Equal(t, 1, len(dirents))
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestTwo(t *testing.T) {
@@ -68,6 +74,7 @@ func TestTwo(t *testing.T) {
 	assert.Equal(t, 2, len(dirents))
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestUnionSimple(t *testing.T) {
@@ -82,6 +89,7 @@ func TestUnionSimple(t *testing.T) {
 	assert.Equal(t, 5, len(dirents))
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestUnionDir(t *testing.T) {
@@ -96,6 +104,7 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, 8, len(dirents))
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestUnionFile(t *testing.T) {
@@ -126,6 +135,7 @@ func TestUnionFile(t *testing.T) {
 	assert.Equal(ts.t, int(st.Length), n)
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestStat(t *testing.T) {
@@ -143,6 +153,7 @@ func TestStat(t *testing.T) {
 	assert.Equal(t, addr, a)
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func (ts *Tstate) s3Name(t *testing.T) string {
@@ -167,6 +178,7 @@ func TestSymlinkFile(t *testing.T) {
 	assert.Nil(t, err, "ReadFile")
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestSymlinkDir(t *testing.T) {
@@ -183,4 +195,5 @@ func TestSymlinkDir(t *testing.T) {
 	assert.Equal(t, 5, len(dirents))
 
 	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

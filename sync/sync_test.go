@@ -11,8 +11,8 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/named"
+	"ulambda/realm"
 	usync "ulambda/sync"
 )
 
@@ -28,23 +28,25 @@ const (
 
 type Tstate struct {
 	*fslib.FsLib
-	t *testing.T
-	s *kernel.System
+	t   *testing.T
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	s := kernel.MakeSystem(bin)
-	err := s.Boot()
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.s = s
+	ts.e = e
+	ts.cfg = cfg
 	db.Name("sync_test")
 
-	ts.FsLib = fslib.MakeFsLib("sync_test")
+	ts.FsLib = fslib.MakeFsLibAddr("sync_test", ts.cfg.NamedAddr)
 	ts.t = t
 	ts.Mkdir(named.LOCKS, 0777)
 	return ts
@@ -110,7 +112,7 @@ func fileBagConsumer(ts *Tstate, fb *usync.FilePriorityBag, id int, ctr *uint64)
 }
 
 func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
-	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", id))
+	fsl := fslib.MakeFsLibAddr(fmt.Sprintf("consumer-%v", id), ts.cfg.NamedAddr)
 	fb := usync.MakeFilePriorityBag(fsl, FILE_BAG_PATH)
 
 	for i := 0; i < nFiles; i++ {
@@ -157,7 +159,7 @@ func TestLock1(t *testing.T) {
 		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestLock2(t *testing.T) {
@@ -178,7 +180,7 @@ func TestLock2(t *testing.T) {
 		lock2.Unlock()
 	}
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestLock3(t *testing.T) {
@@ -215,7 +217,7 @@ func TestLock3(t *testing.T) {
 	done.Wait()
 	assert.Equal(ts.t, N, cnt, "Count doesn't match up")
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestLock4(t *testing.T) {
@@ -224,8 +226,8 @@ func TestLock4(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	fsl1 := fslib.MakeFsLib("fslib-1")
-	fsl2 := fslib.MakeFsLib("fslib-1")
+	fsl1 := fslib.MakeFsLibAddr("fslib-1", ts.cfg.NamedAddr)
+	fsl2 := fslib.MakeFsLibAddr("fslib-1", ts.cfg.NamedAddr)
 
 	lock1 := usync.MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
 	//	lock2 := MakeLock(fsl2, LOCK_DIR, LOCK_NAME, true)
@@ -243,7 +245,7 @@ func TestLock4(t *testing.T) {
 
 	lock1.Unlock()
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestOneWaiterBroadcast(t *testing.T) {
@@ -256,7 +258,7 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestOneWaiterSignal(t *testing.T) {
@@ -269,7 +271,7 @@ func TestOneWaiterSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestNWaitersOneCondBroadcast(t *testing.T) {
@@ -282,7 +284,7 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestNWaitersOneCondSignal(t *testing.T) {
@@ -295,7 +297,7 @@ func TestNWaitersOneCondSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestNWaitersNCondsBroadcast(t *testing.T) {
@@ -308,7 +310,7 @@ func TestNWaitersNCondsBroadcast(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestNWaitersNCondsSignal(t *testing.T) {
@@ -321,7 +323,7 @@ func TestNWaitersNCondsSignal(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestFilePriorityBag(t *testing.T) {
@@ -335,7 +337,6 @@ func TestFilePriorityBag(t *testing.T) {
 	var done sync.WaitGroup
 	done.Add(n_producers)
 
-	//	fsl := fslib.MakeFsLib(fmt.Sprintf("consumer-%v", i))
 	fb := usync.MakeFilePriorityBag(ts.FsLib, FILE_BAG_PATH)
 
 	var ctr uint64 = 0
@@ -354,5 +355,5 @@ func TestFilePriorityBag(t *testing.T) {
 
 	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

@@ -1,7 +1,7 @@
 package fslib_test
 
 import (
-	"log"
+	//	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,28 +10,36 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/fsclnt"
+	//	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/realm"
 )
 
 type Tstate struct {
 	*fslib.FsLib
-	t *testing.T
-	s *kernel.System
+	t   *testing.T
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
+	s   *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	s := kernel.MakeSystem("..")
-	err := s.BootMin()
+	bin := ".."
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
+	ts.e = e
+	ts.cfg = cfg
+	ts.s = kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
+
 	db.Name("fslib_test")
-	ts.FsLib = fslib.MakeFsLib("fslibtest")
-	ts.s = s
+	ts.FsLib = fslib.MakeFsLibAddr("fslibtest", cfg.NamedAddr)
 	ts.t = t
 
 	return ts
@@ -47,7 +55,7 @@ func TestRemove(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestRemovePath(t *testing.T) {
@@ -66,7 +74,7 @@ func TestRemovePath(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestRename(t *testing.T) {
@@ -87,7 +95,7 @@ func TestRename(t *testing.T) {
 
 	d1, err := ts.ReadFile(fn1)
 	assert.Equal(t, "hello", string(d1))
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestRenameAndRemove(t *testing.T) {
@@ -115,7 +123,7 @@ func TestRenameAndRemove(t *testing.T) {
 
 	err = ts.Remove(fn1)
 	assert.Equal(t, nil, err)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestCopy(t *testing.T) {
@@ -132,7 +140,7 @@ func TestCopy(t *testing.T) {
 	d1, err := ts.ReadFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func (ts *Tstate) procdName(t *testing.T) string {
@@ -146,14 +154,11 @@ func (ts *Tstate) procdName(t *testing.T) string {
 func TestSymlink1(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.s.BootFsUxd()
-	assert.Nil(t, err, "Error booting fsuxd")
-
 	// Make a target file
 	targetPath := "name/ux/~ip/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
-	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	err := ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
@@ -171,14 +176,11 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestSymlink2(t *testing.T) {
 	ts := makeTstate(t)
-
-	err := ts.s.BootFsUxd()
-	assert.Nil(t, err, "Error booting fsuxd")
 
 	// Make a target file
 	targetDirPath := "name/ux/~ip/dir1"
@@ -186,7 +188,7 @@ func TestSymlink2(t *testing.T) {
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
-	err = ts.Mkdir(targetDirPath, 0777)
+	err := ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
 	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
@@ -209,14 +211,11 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestSymlink3(t *testing.T) {
 	ts := makeTstate(t)
-
-	err := ts.s.BootFsUxd()
-	assert.Nil(t, err, "Error booting fsuxd")
 
 	uxs, err := ts.ReadDir("name/ux")
 	assert.Nil(t, err, "Error reading ux dir")
@@ -247,7 +246,7 @@ func TestSymlink3(t *testing.T) {
 	err = ts.Symlink(targetPath, linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
-	fsl := fslib.MakeFsLib("abcd")
+	fsl := fslib.MakeFsLibAddr("abcd", ts.cfg.NamedAddr)
 	fsl.ProcessDir(linkDir, func(st *np.Stat) (bool, error) {
 		// Read symlink contents
 		fd, err := fsl.Open(linkPath+"/", np.OREAD)
@@ -263,7 +262,7 @@ func TestSymlink3(t *testing.T) {
 		return false, nil
 	})
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestCounter(t *testing.T) {
@@ -314,45 +313,46 @@ func TestCounter(t *testing.T) {
 
 	assert.Equal(t, N, n)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 // TODO: switch to using memfsd instead of procd
-func TestEphemeral(t *testing.T) {
-	const N = 20
-	ts := makeTstate(t)
-
-	var err error
-	err = ts.s.BootProcd()
-	assert.Nil(t, err, "bin/kernel/procd")
-
-	name := ts.procdName(t)
-	b, err := ts.ReadFile(name)
-	assert.Nil(t, err, name)
-	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
-
-	sts, err := ts.ReadDir(name + "/")
-	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 0, len(sts))
-
-	ts.s.KillOne(named.PROCD)
-
-	n := 0
-	for n < N {
-		time.Sleep(100 * time.Millisecond)
-		_, err = ts.ReadFile(name)
-		if err == nil {
-			n += 1
-			log.Printf("retry\n")
-			continue
-		}
-		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
-		break
-	}
-	assert.Greater(t, N, n, "Waiting too long")
-
-	ts.s.Shutdown()
-}
+//func TestEphemeral(t *testing.T) {
+//	const N = 20
+//	ts := makeTstate(t)
+//
+//	var err error
+//	err = ts.s.BootProcd()
+//	assert.Nil(t, err, "bin/kernel/procd")
+//
+//	name := ts.procdName(t)
+//	b, err := ts.ReadFile(name)
+//	assert.Nil(t, err, name)
+//	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+//
+//	sts, err := ts.ReadDir(name + "/")
+//	assert.Nil(t, err, name+"/")
+//	assert.Equal(t, 0, len(sts))
+//
+//	ts.s.KillOne(named.PROCD)
+//
+//	n := 0
+//	for n < N {
+//		time.Sleep(100 * time.Millisecond)
+//		_, err = ts.ReadFile(name)
+//		if err == nil {
+//			n += 1
+//			log.Printf("retry\n")
+//			continue
+//		}
+//		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+//		break
+//	}
+//	assert.Greater(t, N, n, "Waiting too long")
+//
+//	ts.s.Shutdown()
+//	ts.e.Shutdown()
+//}
 
 func TestLock(t *testing.T) {
 	const N = 20
@@ -362,7 +362,7 @@ func TestLock(t *testing.T) {
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
-			fsl := fslib.MakeFsLib("fslibtest" + strconv.Itoa(i))
+			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), ts.cfg.NamedAddr)
 			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
@@ -377,7 +377,7 @@ func TestLock(t *testing.T) {
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestLock1(t *testing.T) {
@@ -387,7 +387,7 @@ func TestLock1(t *testing.T) {
 	// Lock the file
 	err := ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
-	fsl := fslib.MakeFsLib("fslibtest0")
+	fsl := fslib.MakeFsLibAddr("fslibtest0", ts.cfg.NamedAddr)
 	go func() {
 		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.Nil(t, err, "MakeFile")
@@ -402,7 +402,7 @@ func TestLock1(t *testing.T) {
 	}()
 	i := <-ch
 	assert.Equal(t, 0, i)
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestWatchRemove(t *testing.T) {
@@ -422,7 +422,7 @@ func TestWatchRemove(t *testing.T) {
 
 	<-ch
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestWatchCreate(t *testing.T) {
@@ -443,7 +443,7 @@ func TestWatchCreate(t *testing.T) {
 
 	<-ch
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestWatchDir(t *testing.T) {
@@ -464,7 +464,7 @@ func TestWatchDir(t *testing.T) {
 
 	<-ch
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestConcur(t *testing.T) {
@@ -490,5 +490,5 @@ func TestConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

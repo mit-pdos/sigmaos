@@ -8,17 +8,18 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/proc"
 	"ulambda/procdep"
 	"ulambda/procinit"
+	"ulambda/realm"
 )
 
 type Tstate struct {
 	proc.ProcClnt
 	*fslib.FsLib
-	t *testing.T
-	s *kernel.System
+	t   *testing.T
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -27,15 +28,16 @@ func makeTstate(t *testing.T) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 
 	bin := ".."
-	s := kernel.MakeSystem(bin)
-	err := s.Boot()
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.s = s
+	ts.e = e
+	ts.cfg = cfg
 	db.Name("sched_test")
 
-	ts.FsLib = fslib.MakeFsLib("sched_test")
+	ts.FsLib = fslib.MakeFsLibAddr("sched_test", cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 	return ts
@@ -93,7 +95,7 @@ func TestHelloWorld(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestExitDep(t *testing.T) {
@@ -113,7 +115,7 @@ func TestExitDep(t *testing.T) {
 
 	checkSleeperlResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func TestStartDep(t *testing.T) {
@@ -149,5 +151,5 @@ func TestStartDep(t *testing.T) {
 	checkSleeperlResult(t, ts, prod)
 	checkSleeperlResult(t, ts, cons)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }

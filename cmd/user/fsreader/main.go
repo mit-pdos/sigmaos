@@ -17,6 +17,11 @@ import (
 	"ulambda/procinit"
 )
 
+//
+// Creates a named pipe in name/<name>/pipe (name is os.Args[2]), reads a
+// data from input (os.Args[1])), and writes it to the named pipe.
+//
+
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid args...\n", os.Args[0])

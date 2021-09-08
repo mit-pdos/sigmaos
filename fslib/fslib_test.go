@@ -1,7 +1,8 @@
 package fslib_test
 
 import (
-	//	"log"
+	"log"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	//	"ulambda/fsclnt"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/named"
@@ -143,11 +144,17 @@ func TestCopy(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-func (ts *Tstate) procdName(t *testing.T) string {
+func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
 	sts, err := ts.ReadDir(named.PROCD)
+	stsExcluded := []*np.Stat{}
+	for _, s := range sts {
+		if ok := exclude[path.Join(named.PROCD, s.Name)]; !ok {
+			stsExcluded = append(stsExcluded, s)
+		}
+	}
 	assert.Nil(t, err, named.PROCD)
-	assert.Equal(t, 1, len(sts))
-	name := named.PROCD + "/" + sts[0].Name
+	assert.Equal(t, 1, len(stsExcluded))
+	name := path.Join(named.PROCD, stsExcluded[0].Name)
 	return name
 }
 
@@ -316,43 +323,44 @@ func TestCounter(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-// TODO: switch to using memfsd instead of procd
-//func TestEphemeral(t *testing.T) {
-//	const N = 20
-//	ts := makeTstate(t)
-//
-//	var err error
-//	err = ts.s.BootProcd()
-//	assert.Nil(t, err, "bin/kernel/procd")
-//
-//	name := ts.procdName(t)
-//	b, err := ts.ReadFile(name)
-//	assert.Nil(t, err, name)
-//	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
-//
-//	sts, err := ts.ReadDir(name + "/")
-//	assert.Nil(t, err, name+"/")
-//	assert.Equal(t, 0, len(sts))
-//
-//	ts.s.KillOne(named.PROCD)
-//
-//	n := 0
-//	for n < N {
-//		time.Sleep(100 * time.Millisecond)
-//		_, err = ts.ReadFile(name)
-//		if err == nil {
-//			n += 1
-//			log.Printf("retry\n")
-//			continue
-//		}
-//		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
-//		break
-//	}
-//	assert.Greater(t, N, n, "Waiting too long")
-//
-//	ts.s.Shutdown()
-//	ts.e.Shutdown()
-//}
+func TestEphemeral(t *testing.T) {
+	const N = 20
+	ts := makeTstate(t)
+
+	name1 := ts.procdName(t, map[string]bool{})
+
+	var err error
+	err = ts.s.BootProcd()
+	assert.Nil(t, err, "bin/kernel/procd")
+
+	name := ts.procdName(t, map[string]bool{name1: true})
+	b, err := ts.ReadFile(name)
+	assert.Nil(t, err, name)
+	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+
+	sts, err := ts.ReadDir(name + "/")
+	assert.Nil(t, err, name+"/")
+	assert.Equal(t, 0, len(sts))
+
+	ts.s.KillOne(named.PROCD)
+
+	n := 0
+	for n < N {
+		time.Sleep(100 * time.Millisecond)
+		_, err = ts.ReadFile(name)
+		if err == nil {
+			n += 1
+			log.Printf("retry\n")
+			continue
+		}
+		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+		break
+	}
+	assert.Greater(t, N, n, "Waiting too long")
+
+	ts.s.Shutdown()
+	ts.e.Shutdown()
+}
 
 func TestLock(t *testing.T) {
 	const N = 20

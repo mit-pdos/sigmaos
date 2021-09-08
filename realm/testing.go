@@ -48,8 +48,6 @@ func (e *TestEnv) Shutdown() {
 	// Destroy the realm
 	e.clnt.DestroyRealm(e.rid)
 
-	time.Sleep(SLEEP_MS * time.Millisecond)
-
 	// Kill the realmd
 	for _, realmd := range e.realmd {
 		kill(realmd)
@@ -82,7 +80,6 @@ func (e *TestEnv) BootRealmd() error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(SLEEP_MS * time.Millisecond)
 	return nil
 }
 

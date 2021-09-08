@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"ulambda/atomic"
+	"ulambda/config"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
@@ -27,10 +28,12 @@ type RealmdConfig struct {
 type Realmd struct {
 	id          string
 	bin         string
+	cfgPath     string
 	cfg         *RealmdConfig
 	s           *kernel.System
 	freeRealmds *sync.FilePriorityBag
 	realmLock   *sync.Lock
+	*config.ConfigClnt
 	*fslib.FsLib
 }
 
@@ -43,21 +46,17 @@ func MakeRealmd(bin string) *Realmd {
 	r := &Realmd{}
 	r.id = id
 	r.bin = bin
+	r.cfgPath = path.Join(REALMD_CONFIG, id)
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("realmd-%v", id))
+	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
 
 	// Set up the realmd config
 	r.cfg = &RealmdConfig{}
 	r.cfg.Id = id
 	r.cfg.RealmId = NO_REALM
 
-	b, err := json.Marshal(r.cfg)
-	if err != nil {
-		log.Fatalf("Error Marshal in MakeRealm: %v", err)
-	}
-
-	if err := atomic.MakeFileAtomic(r.FsLib, path.Join(REALMD_CONFIG, id), 0777, b); err != nil {
-		log.Fatalf("Error MakeFileAtomic in MakeRealmd: %v", err)
-	}
+	// Write the initial config file
+	r.WriteConfig(r.cfgPath, r.cfg)
 
 	r.freeRealmds = sync.MakeFilePriorityBag(r.FsLib, FREE_REALMDS)
 
@@ -83,31 +82,17 @@ func (r *Realmd) markFree() {
 	}
 }
 
-func (r *Realmd) watchConfig(done chan bool) {
-	fpath := path.Join(REALMD_CONFIG, r.id)
-	err := r.SetRemoveWatch(fpath, func(path string, err error) {
-		if err != nil && err.Error() != "EOF" && err.Error() != "umount: unknown mount []" {
-			log.Fatalf("Error Watch in Realmd.watchConfig: %v", err)
-		}
-		done <- true
-	})
-	if err != nil && err.Error() != "EOF" && err.Error() != "umount: unknown mount []" {
-		log.Fatalf("Error SetRemoveWatch in Realmd.watchConfig: %v", err)
-	}
-}
-
 // Update configuration.
-func (r *Realmd) readConfig() {
+func (r *Realmd) getNextConfig() {
+	// XXX Does it matter that we spin?
 	for {
-		fpath := path.Join(REALMD_CONFIG, r.id)
-		err := r.ReadFileJson(fpath, r.cfg)
-		if err == nil && r.cfg.RealmId != NO_REALM {
+		r.ReadConfig(r.cfgPath, r.cfg)
+		// Make sure we've been assigned to a realm
+		if r.cfg.RealmId != NO_REALM {
 			break
 		}
-		done := make(chan bool)
-		go r.watchConfig(done)
-		<-done
 	}
+	// Update the realm lock
 	r.realmLock = sync.MakeLock(r.FsLib, named.LOCKS, REALM_LOCK+r.cfg.RealmId, true)
 }
 
@@ -134,7 +119,7 @@ func (r *Realmd) tryInitRealmL() bool {
 
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 		realmCfg.NamedAddr = namedAddr
-		setRealmConfig(r.FsLib, realmCfg)
+		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 		return true
 	}
@@ -157,7 +142,7 @@ func (r *Realmd) boot(realmCfg *RealmConfig) {
 }
 
 // Join a realm
-func (r *Realmd) joinRealm(done chan bool) {
+func (r *Realmd) joinRealm() chan bool {
 	r.realmLock.Lock()
 	defer r.realmLock.Unlock()
 
@@ -175,8 +160,7 @@ func (r *Realmd) joinRealm(done chan bool) {
 		rStartCond.Destroy()
 	}
 	// Watch for changes to the config
-	go r.watchConfig(done)
-
+	return r.WatchConfig(r.cfgPath)
 }
 
 func (r *Realmd) teardown() {
@@ -235,11 +219,10 @@ func (r *Realmd) leaveRealm() {
 func (r *Realmd) Work() {
 	for {
 		// Get the next realm assignment.
-		r.readConfig()
+		r.getNextConfig()
 
 		// Join a realm
-		done := make(chan bool)
-		r.joinRealm(done)
+		done := r.joinRealm()
 		// Wait for the watch to trigger
 		<-done
 

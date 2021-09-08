@@ -1,12 +1,13 @@
 package realm
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"os/exec"
 	"path"
 
-	"ulambda/atomic"
+	"ulambda/config"
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/sync"
@@ -31,6 +32,7 @@ type RealmMgr struct {
 	realmCreate  *sync.FilePriorityBag
 	realmDestroy *sync.FilePriorityBag
 	done         chan bool
+	*config.ConfigClnt
 	*fslib.FsLib
 }
 
@@ -44,6 +46,7 @@ func MakeRealmMgr(bin string) *RealmMgr {
 		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)
 	}
 	m.FsLib = fslib.MakeFsLib("realmmgr")
+	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
 	m.makeFileBags()
 
@@ -77,14 +80,20 @@ func (m *RealmMgr) createRealms() {
 		if err != nil {
 			log.Fatalf("Error Get in RealmMgr.createRealms: %v", err)
 		}
+
+		// Unmarshal the realm config file.
+		cfg := &RealmConfig{}
+		if err := json.Unmarshal(b, cfg); err != nil {
+			log.Fatalf("Error Unmarshal in RealmMgr.createRealms: %v", err)
+		}
+
 		// Make a directory for this realm.
 		if err := m.Mkdir(path.Join(REALMS, rid), 0777); err != nil {
 			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
+
 		// Make the realm config file.
-		if err := atomic.MakeFileAtomic(m.FsLib, path.Join(REALM_CONFIG, rid), 0777, b); err != nil {
-			log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
-		}
+		m.WriteConfig(path.Join(REALM_CONFIG, rid), cfg)
 	}
 }
 
@@ -93,11 +102,8 @@ func (m *RealmMgr) deallocRealmd(realmdId string) {
 	cfg := &RealmdConfig{}
 	cfg.Id = realmdId
 	cfg.RealmId = NO_REALM
-	fpath := path.Join(REALMD_CONFIG, realmdId)
 	// Update the realm config file.
-	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, cfg); err != nil {
-		log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
-	}
+	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), cfg)
 }
 
 func (m *RealmMgr) deallocRealmds(rid string) {
@@ -145,11 +151,7 @@ func (m *RealmMgr) allocRealmd(realmdId string, realmId string) {
 	cfg := &RealmdConfig{}
 	cfg.Id = realmdId
 	cfg.RealmId = realmId
-	fpath := path.Join(REALMD_CONFIG, realmdId)
-	// Update the realm config file.
-	if err := atomic.MakeFileJsonAtomic(m.FsLib, fpath, 0777, cfg); err != nil {
-		log.Fatalf("Error MakeFileAtomic in RealmMgr.createRealms: %v", err)
-	}
+	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), cfg)
 }
 
 // Assign free realmds to realms.

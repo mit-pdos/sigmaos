@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"path"
-	"strconv"
 
-	"ulambda/atomic"
+	"ulambda/config"
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/sync"
@@ -76,22 +74,10 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 	rExitCond.Wait()
 }
 
-// Generate an address for a new named
-func genNamedAddr(localIP string) string {
-	port := strconv.Itoa(MIN_PORT + rand.Intn(MAX_PORT-MIN_PORT))
-	return localIP + ":" + port
-}
-
+// Get a realm's configuration
 func GetRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
+	clnt := config.MakeConfigClnt(fsl)
 	cfg := &RealmConfig{}
-	if err := fsl.ReadFileJson(path.Join(REALM_CONFIG, rid), cfg); err != nil {
-		log.Fatalf("Error ReadFileJson in GetRealmConfig: %v, %v", path.Join(REALM_CONFIG, rid), err)
-	}
+	clnt.ReadConfig(path.Join(REALM_CONFIG, rid), cfg)
 	return cfg
-}
-
-func setRealmConfig(fsl *fslib.FsLib, cfg *RealmConfig) {
-	if err := atomic.MakeFileJsonAtomic(fsl, path.Join(REALM_CONFIG, cfg.Rid), 0777, cfg); err != nil {
-		log.Fatalf("Error ReadFileJson in setRealmConfig: %v", err)
-	}
 }

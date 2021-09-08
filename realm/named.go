@@ -2,9 +2,11 @@ package realm
 
 import (
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -54,4 +56,10 @@ func run(bin string, name string, namedAddr string, args []string) (*exec.Cmd, e
 	cmd.Env = append(os.Environ())
 	cmd.Env = append(cmd.Env, "NAMED="+namedAddr)
 	return cmd, cmd.Start()
+}
+
+// Generate an address for a new named
+func genNamedAddr(localIP string) string {
+	port := strconv.Itoa(MIN_PORT + rand.Intn(MAX_PORT-MIN_PORT))
+	return localIP + ":" + port
 }

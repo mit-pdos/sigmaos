@@ -113,7 +113,7 @@ func (r *Realmd) readConfig() {
 
 // If this is the first realmd assigned to a realm, initialize the realm by
 // starting a named for it.
-func (r *Realmd) tryInitRealmL() {
+func (r *Realmd) tryInitRealmL() bool {
 	rds, err := r.ReadDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
 		log.Fatalf("Error ReadDir in Realmd.tryInitRealmL: %v", err)
@@ -136,10 +136,9 @@ func (r *Realmd) tryInitRealmL() {
 		realmCfg.NamedAddr = namedAddr
 		setRealmConfig(r.FsLib, realmCfg)
 
-		// Signal that the realm has been initialized
-		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
-		rStartCond.Destroy()
+		return true
 	}
+	return false
 }
 
 // Register this realmd as part of a realm.
@@ -163,13 +162,18 @@ func (r *Realmd) joinRealm(done chan bool) {
 	defer r.realmLock.Unlock()
 
 	// Try to initalize this realm if it hasn't been initialized already.
-	r.tryInitRealmL()
+	first := r.tryInitRealmL()
 	// Get the realm config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	// Register this realmd
 	r.register()
 	// Boot this realmd's system services
 	r.boot(realmCfg)
+	// Signal that the realm has been initialized
+	if first {
+		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
+		rStartCond.Destroy()
+	}
 	// Watch for changes to the config
 	go r.watchConfig(done)
 

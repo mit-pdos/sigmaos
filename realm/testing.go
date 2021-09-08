@@ -41,7 +41,6 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 	clnt := MakeRealmClnt()
 	e.clnt = clnt
 	cfg := clnt.CreateRealm(e.rid)
-	time.Sleep(500 * time.Millisecond)
 	return cfg, nil
 }
 

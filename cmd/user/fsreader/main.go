@@ -39,10 +39,9 @@ func main() {
 type Reader struct {
 	*fslibsrv.FsLibSrv
 	proc.ProcClnt
-	pid    string
-	input  string
-	output string
-	pipe   fs.FsObj
+	pid   string
+	input string
+	pipe  fs.FsObj
 }
 
 func MakeReader(args []string) (*Reader, error) {
@@ -72,7 +71,6 @@ func MakeReader(args []string) (*Reader, error) {
 	r.ProcClnt = procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
 	r.pid = args[0]
 	r.input = args[1]
-	r.output = args[2]
 	r.pipe = pipe
 	r.Started(r.pid)
 
@@ -105,7 +103,7 @@ func (r *Reader) Work() {
 	r.Close(fd)
 	r.pipe.Close(nil, np.OWRITE)
 
-	r.ExitFs("name/" + r.output)
+	r.ExitFs("name/" + r.pid)
 }
 
 func (r *Reader) Exit() {

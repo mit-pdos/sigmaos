@@ -26,12 +26,12 @@ func BootNamed(bin string, addr string, realmId string) (*exec.Cmd, error) {
 	} else {
 		args = []string{"0", addr, realmId}
 	}
-	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
+	cmd, err := run(bin, "/bin/realm/named", fslib.Named(), args)
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(SLEEP_MS * time.Millisecond)
-	fsl := fslib.MakeFsLibAddr("kernel", addr)
+	fsl := fslib.MakeFsLibAddr("realm", addr)
 	if err := named.MakeInitFs(fsl); err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func BootNamed(bin string, addr string, realmId string) (*exec.Cmd, error) {
 }
 
 func ShutdownNamed(namedAddr string) {
-	fsl := fslib.MakeFsLibAddr("kernel", namedAddr)
+	fsl := fslib.MakeFsLibAddr("realm", namedAddr)
 	// Shutdown named last
 	err := fsl.Remove(named.NAMED + "/")
 	if err != nil {

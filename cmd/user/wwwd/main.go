@@ -45,55 +45,49 @@ func MakeWwwd() *Wwwd {
 	return www
 }
 
-func (www *Wwwd) makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
 			return
 		}
-
-		pid := proc.GenPid()
-		a := &proc.Proc{pid, "bin/user/fsreader", "",
-			[]string{"name/hello.html", pid},
-			[]string{procinit.GetProcLayersString()},
-			proc.T_DEF, proc.C_DEF,
-		}
-		err := www.Spawn(a)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		log.Printf("spawned %v\n", m)
-		err = www.WaitStart(pid)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		fn := "name/" + pid + "/pipe"
-		log.Printf("open %v\n", fn)
-		fd, err := www.Open(fn, np.OREAD)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		b, err := www.Read(fd, memfs.PIPESZ)
-		if err != nil || len(b) == 0 {
-			err := www.Close(fd)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-		fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", "Hello", b)
+		fn(www, w, r, m[2])
 	}
 }
 
-func getPage(w http.ResponseWriter, r *http.Request, title string) {
-	//p, err := loadPage(title)
-	//if err != nil {
-	//	http.Redirect(w, r, "/edit/"+title, http.StatusFound)
-	//	return
-	//}
-	http.NotFound(w, r)
+func getPage(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
+	log.Printf("getpage: %v\n", file)
+	pid := proc.GenPid()
+	a := &proc.Proc{pid, "bin/user/fsreader", "",
+		[]string{"name/" + file, pid},
+		[]string{procinit.GetProcLayersString()},
+		proc.T_DEF, proc.C_DEF,
+	}
+	err := www.Spawn(a)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = www.WaitStart(pid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fn := "name/" + pid + "/pipe"
+	log.Printf("open %v\n", fn)
+	fd, err := www.Open(fn, np.OREAD)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	b, err := www.Read(fd, memfs.PIPESZ)
+	if err != nil || len(b) == 0 {
+		err := www.Close(fd)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", "Hello", b)
 }

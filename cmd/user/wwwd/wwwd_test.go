@@ -58,6 +58,9 @@ func TestSimple(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "hello")
 
+	_, err = exec.Command("wget", "-qO-", "http://localhost:8080/view/nonexist.html").Output()
+	assert.NotEqual(t, nil, err)
+
 	err = cmd.Process.Kill()
 	assert.Equal(t, nil, err)
 

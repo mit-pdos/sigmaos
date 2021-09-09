@@ -24,11 +24,6 @@ const (
 	DEPFILE = "depfile."
 )
 
-// XXX REMOVE
-const (
-	DEPFILE_PADDING = 1000
-)
-
 type Tdep uint32
 
 const (
@@ -336,15 +331,9 @@ func (clnt *ProcDepClnt) updateDependants(pid string, depType Tdep) {
 	// Record the start signal if applicable.
 	if depType == START_DEP {
 		p.Started = true
-		b2, err := json.Marshal(p)
+		err := atomic.MakeFileJsonAtomic(clnt.FsLib, clnt.procDepFilePath(pid), 0777, p)
 		if err != nil {
-			log.Printf("Error marshalling procDepfile: %v", err)
-			return
-		}
-		b2 = append(b2, ' ')
-		_, err = clnt.SetFile(clnt.procDepFilePath(pid), b2, np.NoV)
-		if err != nil {
-			log.Printf("Error SetFile in ProcDepClnt.updateDependants: %v, %v", clnt.procDepFilePath(pid), err)
+			log.Printf("Error MakeFileJsonAtomic in ProcDepClnt.updateDependants: %v, %v", clnt.procDepFilePath(pid), err)
 		}
 	}
 }
@@ -381,17 +370,10 @@ func (clnt *ProcDepClnt) updateDependant(pid string, dependant string, depType T
 		log.Fatalf("Unknown depType in ProcDepClnt.updateDependant: %v", depType)
 	}
 
-	b2, err := json.Marshal(p)
+	// XXX Might have too many RPCs
+	err = atomic.MakeFileJsonAtomic(clnt.FsLib, clnt.procDepFilePath(dependant), 0777, p)
 	if err != nil {
-		log.Fatalf("Error marshalling in ProcDepClnt.updateDependant: %v", err)
-	}
-	// XXX Hack around lack of OTRUNC
-	for i := 0; i < DEPFILE_PADDING; i++ {
-		b2 = append(b2, ' ')
-	}
-	_, err = clnt.SetFile(clnt.procDepFilePath(dependant), b2, np.NoV)
-	if err != nil {
-		log.Printf("Error writing in ProcClnt.updateDependant: %v, %v", clnt.procDepFilePath(dependant), err)
+		log.Fatalf("Error MakeFileJsonAtomic in ProcDepClnt.updateDependant: %v", err)
 	}
 
 	if clnt.procDepIsRunnable(p) {

@@ -24,6 +24,7 @@ const (
 	REALMS        = "name/realms"        // List of realms, with realmds registered under them
 	REALM_CONFIG  = "name/realm-config"  // Store of realm configs
 	REALMD_CONFIG = "name/realmd-config" // Store of realmd configs
+	REALM_NAMEDS  = "name/realm-nameds"  // Symlinks to realms' nameds
 )
 
 type RealmMgr struct {
@@ -39,7 +40,7 @@ type RealmMgr struct {
 func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
 	m.done = make(chan bool)
-	named, err := BootNamed(bin, fslib.Named())
+	named, err := BootNamed(bin, fslib.Named(), NO_REALM)
 	m.named = named
 	// Start a named instance.
 	if err != nil {
@@ -61,6 +62,9 @@ func (m *RealmMgr) makeInitFs() {
 		log.Fatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.Mkdir(REALMD_CONFIG, 0777); err != nil {
+		log.Fatalf("Error Mkdir REALMD_CONFIG in RealmMgr.makeInitFs: %v", err)
+	}
+	if err := m.Mkdir(REALM_NAMEDS, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALMD_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
 }

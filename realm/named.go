@@ -19,8 +19,14 @@ const (
 )
 
 // Boot a named and set up the initfs
-func BootNamed(bin string, addr string) (*exec.Cmd, error) {
-	cmd, err := run(bin, "/bin/kernel/named", addr, []string{"0", addr})
+func BootNamed(bin string, addr string, realmId string) (*exec.Cmd, error) {
+	var args []string
+	if realmId == NO_REALM {
+		args = []string{"0", addr}
+	} else {
+		args = []string{"0", addr, realmId}
+	}
+	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		return nil, err
 	}

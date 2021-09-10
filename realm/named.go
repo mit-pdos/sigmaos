@@ -26,7 +26,7 @@ func BootNamed(bin string, addr string, realmId string) (*exec.Cmd, error) {
 	} else {
 		args = []string{"0", addr, realmId}
 	}
-	cmd, err := run(bin, "/bin/realm/named", fslib.Named(), args)
+	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		return nil, err
 	}

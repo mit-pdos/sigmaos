@@ -65,7 +65,7 @@ func (m *RealmMgr) makeInitFs() {
 		log.Fatalf("Error Mkdir REALMD_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.Mkdir(REALM_NAMEDS, 0777); err != nil {
-		log.Fatalf("Error Mkdir REALMD_CONFIG in RealmMgr.makeInitFs: %v", err)
+		log.Fatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
 	}
 }
 

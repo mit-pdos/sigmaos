@@ -30,10 +30,10 @@ type SrvConn struct {
 	sessions   map[np.Tsession]bool
 }
 
-func MakeSrvConn(conn net.Conn, fssrv protsrv.FsServer, wireCompat bool) *SrvConn {
-	protsrv := fssrv.Connect()
+func MakeSrvConn(srv *NetServer, conn net.Conn, wireCompat bool) *SrvConn {
+	protsrv := srv.fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
-		fssrv,
+		srv.fssrv,
 		conn,
 		wireCompat,
 		protsrv,

@@ -41,11 +41,11 @@ func (srv *NetServer) runsrv(l net.Listener) {
 		// If we aren't replicated or we're at the end of the chain, create a normal
 		// channel.
 		if !srv.replicated {
-			MakeSrvConn(conn, srv.fssrv, srv.wireCompat)
+			MakeSrvConn(srv, conn, srv.wireCompat)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
-			srv.MakeRelayConn(srv.fssrv, conn, srv.replConfig.ops, srv.replConfig.fids)
+			MakeRelayConn(srv, conn, false)
 		}
 	}
 }

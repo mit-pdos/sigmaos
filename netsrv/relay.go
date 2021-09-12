@@ -11,10 +11,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fid"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/protsrv"
 )
 
 const (
@@ -39,10 +37,10 @@ type RelayConn struct {
 	replies chan *RelayOp
 }
 
-func (srv *NetServer) MakeRelayConn(fssrv protsrv.FsServer, conn net.Conn, ops chan *RelayOp, fids map[np.Tfid]*fid.Fid) *RelayConn {
-	protsrv := fssrv.Connect()
+func MakeRelayConn(srv *NetServer, conn net.Conn, wireCompat bool) *RelayConn {
+	protsrv := srv.fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
-		fssrv,
+		srv.fssrv,
 		conn,
 		false,
 		protsrv,
@@ -52,7 +50,7 @@ func (srv *NetServer) MakeRelayConn(fssrv protsrv.FsServer, conn net.Conn, ops c
 		false,
 		make(map[np.Tsession]bool),
 	}
-	r := &RelayConn{srv, c, ops, make(chan *RelayOp)}
+	r := &RelayConn{srv, c, srv.replConfig.ops, make(chan *RelayOp)}
 	go r.writer()
 	go r.reader()
 	return r

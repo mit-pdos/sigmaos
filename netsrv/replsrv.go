@@ -73,7 +73,6 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 		MakeReplyCache(),
 		emptyConfig,
 	}
-	var l net.Listener
 	if replicated {
 		// Create and start the relay server listener
 		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
@@ -101,6 +100,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 	}
 	// Create and start the main server listener
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
+	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal("Listen error:", err)

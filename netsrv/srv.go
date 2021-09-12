@@ -9,13 +9,15 @@ import (
 	"ulambda/protsrv"
 )
 
+var setupRelay uint32 = 0
+
 type NetServer struct {
 	addr       string
 	fssrv      protsrv.FsServer
 	wireCompat bool
 	replicated bool
-	replyCache *ReplyCache
 	replConfig *NetServerReplConfig
+	replState  *ReplState
 }
 
 func MakeNetServer(address string, fssrv protsrv.FsServer) *NetServer {
@@ -41,11 +43,11 @@ func (srv *NetServer) runsrv(l net.Listener) {
 		// If we aren't replicated or we're at the end of the chain, create a normal
 		// channel.
 		if !srv.replicated {
-			MakeSrvConn(srv, conn, srv.wireCompat)
+			MakeSrvConn(srv, conn)
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
-			MakeRelayConn(srv, conn, false)
+			MakeRelayConn(srv, conn)
 		}
 	}
 }

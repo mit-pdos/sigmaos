@@ -30,12 +30,12 @@ type SrvConn struct {
 	sessions   map[np.Tsession]bool
 }
 
-func MakeSrvConn(srv *NetServer, conn net.Conn, wireCompat bool) *SrvConn {
+func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 	protsrv := srv.fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
 		srv.fssrv,
 		conn,
-		wireCompat,
+		srv.wireCompat,
 		protsrv,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),

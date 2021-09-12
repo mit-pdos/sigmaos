@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -37,7 +38,7 @@ type RelayConn struct {
 	replies chan *RelayOp
 }
 
-func MakeRelayConn(srv *NetServer, conn net.Conn, wireCompat bool) *RelayConn {
+func MakeRelayConn(srv *NetServer, conn net.Conn) *RelayConn {
 	protsrv := srv.fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
 		srv.fssrv,
@@ -50,9 +51,12 @@ func MakeRelayConn(srv *NetServer, conn net.Conn, wireCompat bool) *RelayConn {
 		false,
 		make(map[np.Tsession]bool),
 	}
-	r := &RelayConn{srv, c, srv.replConfig.ops, make(chan *RelayOp)}
+	r := &RelayConn{srv, c, srv.replState.ops, make(chan *RelayOp)}
 	go r.writer()
 	go r.reader()
+	if atomic.CompareAndSwapUint32(&setupRelay, 0, 1) {
+		r.setupRelay()
+	}
 	return r
 }
 
@@ -114,14 +118,14 @@ func (r *RelayConn) writer() {
 	}
 }
 
-func (srv *NetServer) setupRelay() {
+func (r *RelayConn) setupRelay() {
 	// Run a worker to process messages
-	go srv.relayReader()
+	go r.relayReader()
 	// Run a worker to dispatch responses
-	go srv.relayWriter()
+	go r.relayWriter()
 }
 
-func (srv *NetServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
+func (r *RelayConn) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	var replyFrame []byte
 	var replyBuffer bytes.Buffer
 	bw := bufio.NewWriter(&replyBuffer)
@@ -131,18 +135,19 @@ func (srv *NetServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	}
 	bw.Flush()
 	replyFrame = replyBuffer.Bytes()
-	srv.replyCache.Put(request, reply, replyFrame)
+	r.srv.replState.replyCache.Put(request, reply, replyFrame)
 }
 
-func (srv *NetServer) relayReader() {
-	config := srv.replConfig
+func (r *RelayConn) relayReader() {
+	config := r.srv.replConfig
+	state := r.srv.replState
 	for {
-		op, ok := <-config.ops
+		op, ok := <-state.ops
 		if !ok {
 			return
 		}
 		// If this was a duplicate reply from the cache
-		if reply, ok := srv.replyCache.Get(op.request); ok {
+		if reply, ok := r.srv.replState.replyCache.Get(op.request); ok {
 			op.reply = reply.fcall
 			op.replyFrame = reply.frame
 			db.DLPrintf("RSRV", "%v Dup relay request %v", config.RelayAddr, op.request)
@@ -162,9 +167,9 @@ func (srv *NetServer) relayReader() {
 			// true. Otherwise, it returns false. This atomicity is needed to make
 			// sure we never drop acks which should be relayed upstream.
 			// Tail acks taken care of separately
-			if !srv.isTail() {
+			if !r.srv.isTail() {
 				// XXX Could there be a race here?
-				if config.inFlight.AddIfDuplicate(op) {
+				if state.inFlight.AddIfDuplicate(op) {
 					db.DLPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
 				} else {
 					db.DLPrintf("RSRV", "%v Dup request not in-flight, replying immediately. req: %v rep: %v", config.RelayAddr, op.request, op.reply)
@@ -184,21 +189,21 @@ func (srv *NetServer) relayReader() {
 			op.reply.Seqno = op.request.Seqno
 			db.DLPrintf("RSRV", "%v Reader relay reply %v", config.RelayAddr, op.reply)
 			// Cache the reply
-			srv.cacheReply(op.request, op.reply)
-			cachedReply, _ := srv.replyCache.Get(op.request)
+			r.cacheReply(op.request, op.reply)
+			cachedReply, _ := r.srv.replState.replyCache.Get(op.request)
 			op.replyFrame = cachedReply.frame
 			// Optionally log the fcall & its reply type.
-			srv.logOp(op.request, op.reply)
+			r.srv.logOp(op.request, op.reply)
 			// Reliably send to the next link in the chain (even if that link
 			// changes)
-			if !srv.isTail() {
+			if !r.srv.isTail() {
 				// Enqueue the message to mark it as in-flight.
-				config.inFlight.Add(op)
-				srv.relayOp(op)
+				state.inFlight.Add(op)
+				r.relayOp(op)
 			}
 		}
 		// If we're the tail, we always ack immediately
-		if srv.isTail() {
+		if r.srv.isTail() {
 			db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, op.request)
 			op.replies <- op
 		}
@@ -206,17 +211,18 @@ func (srv *NetServer) relayReader() {
 }
 
 // Relay acks upstream.
-func (srv *NetServer) relayWriter() {
-	config := srv.replConfig
+func (r *RelayConn) relayWriter() {
+	config := r.srv.replConfig
+	state := r.srv.replState
 	for {
 		// XXX Don't spin
-		if srv.isTail() {
+		if r.srv.isTail() {
 			continue
 		}
-		config.mu.Lock()
-		ch := config.NextChan
+		state.mu.Lock()
+		ch := state.NextChan
 		nextAddr := config.NextAddr
-		config.mu.Unlock()
+		state.mu.Unlock()
 		// Channels start as nil during initialization.
 		if ch == nil {
 			continue
@@ -243,7 +249,7 @@ func (srv *NetServer) relayWriter() {
 			db.DLPrintf("RSRV", "%v Got ack: %v", config.RelayAddr, ack)
 			// Dequeue all acks up until this one (they may come out of order, which is
 			// OK.
-			ops := config.inFlight.Remove(ack)
+			ops := state.inFlight.Remove(ack)
 			db.DLPrintf("RSRV", "%v Removed ack'd ops: %v", config.RelayAddr, ops)
 			// Ack upstream
 			for _, op := range ops {
@@ -253,36 +259,38 @@ func (srv *NetServer) relayWriter() {
 	}
 }
 
-func (srv *NetServer) relayOp(op *RelayOp) {
-	config := srv.replConfig
+func (r *RelayConn) relayOp(op *RelayOp) {
+	config := r.srv.replConfig
+	state := r.srv.replState
 
 	// Get the next channel & address of the last person we sent to...
-	config.mu.Lock()
-	ch := config.NextChan
+	state.mu.Lock()
+	ch := state.NextChan
 	nextAddr := config.NextAddr
 	lastSendAddr := config.LastSendAddr
-	config.mu.Unlock()
+	state.mu.Unlock()
 
 	// If the next server has changed (detected by config swap, or message send
 	// failure), resend all in-flight requests. Should already include this
 	// message.
 	db.DLPrintf("RSRV", "%v -> %v Sending initial relayOp: %v", config.RelayAddr, nextAddr, op)
-	if lastSendAddr != nextAddr || !srv.relayOnce(ch, op) {
-		srv.resendInflightRelayOps()
+	if lastSendAddr != nextAddr || !relayOnce(r.srv, ch, op) {
+		resendInflightRelayOps(r.srv)
 	}
 }
 
-func (srv *NetServer) resendInflightRelayOps() {
+func resendInflightRelayOps(srv *NetServer) {
 	config := srv.replConfig
+	state := srv.replState
 
 	// Get the connection to the next server, and reflect that we've sent to it.
-	config.mu.Lock()
-	ch := config.NextChan
+	state.mu.Lock()
+	ch := state.NextChan
 	config.LastSendAddr = config.NextAddr
 	nextAddr := config.NextAddr
-	config.mu.Unlock()
+	state.mu.Unlock()
 
-	toSend := config.inFlight.GetOps()
+	toSend := state.inFlight.GetOps()
 	db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
 	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
 	for len(toSend) != 0 {
@@ -292,25 +300,27 @@ func (srv *NetServer) resendInflightRelayOps() {
 			return
 		}
 		// Try to send a message.
-		if ok := srv.relayOnce(ch, toSend[0]); ok {
+		if ok := relayOnce(srv, ch, toSend[0]); ok {
 			// If successful, move on to the next one
 			toSend = toSend[1:]
 		} else {
 			// Else, retry sending the whole queue again
-			config.mu.Lock()
-			ch = config.NextChan
+			state.mu.Lock()
+			ch = state.NextChan
 			config.LastSendAddr = config.NextAddr
-			config.mu.Unlock()
-			toSend = config.inFlight.GetOps()
+			state.mu.Unlock()
+			toSend = state.inFlight.GetOps()
 			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages (retry): %v", config.RelayAddr, nextAddr, toSend)
 		}
 	}
 	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
 }
 
-func (srv *NetServer) sendAllAcks() {
+func sendAllAcks(srv *NetServer) {
 	config := srv.replConfig
-	ops := config.inFlight.RemoveAll()
+	state := srv.replState
+
+	ops := state.inFlight.RemoveAll()
 	db.DLPrintf("RSRV", "%v Sent all acks: %v", config.RelayAddr, ops)
 	// Ack upstream
 	go func() {
@@ -322,7 +332,7 @@ func (srv *NetServer) sendAllAcks() {
 
 // Try and send a message to the next server in the chain, and receive a
 // response.
-func (srv *NetServer) relayOnce(ch *RelayNetConn, op *RelayOp) bool {
+func relayOnce(srv *NetServer, ch *RelayNetConn, op *RelayOp) bool {
 	// Only call down the chain if we aren't at the tail.
 	// XXX Get rid of this if
 	if !srv.isTail() {
@@ -349,9 +359,11 @@ func (srv *NetServer) relayOnce(ch *RelayNetConn, op *RelayOp) bool {
 // since contents may vary between replicas (e.g. time)
 func (srv *NetServer) logOp(request *np.Fcall, reply *np.Fcall) {
 	config := srv.replConfig
+	state := srv.replState
+
 	if config.LogOps {
 		fpath := "name/" + config.RelayAddr + "-log.txt"
-		b, err := config.ReadFile(fpath)
+		b, err := state.ReadFile(fpath)
 		if err != nil {
 			log.Printf("Error reading log file in logOp: %v", err)
 		}
@@ -362,7 +374,7 @@ func (srv *NetServer) logOp(request *np.Fcall, reply *np.Fcall) {
 		b = append(b, frame...)
 		b = append(b, []byte(request.Type.String())...)
 		b = append(b, []byte(reply.Type.String())...)
-		err = config.WriteFile(fpath, b)
+		err = state.WriteFile(fpath, b)
 		if err != nil {
 			log.Printf("Error writing log file in logOp: %v", err)
 		}

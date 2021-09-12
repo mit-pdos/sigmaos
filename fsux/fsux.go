@@ -29,16 +29,16 @@ type FsUx struct {
 }
 
 func MakeFsUx(mount string, addr string, pid string) *FsUx {
-	return MakeReplicatedFsUx(mount, addr, pid, false, "", nil)
+	return MakeReplicatedFsUx(mount, addr, pid, false, nil)
 }
 
-func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, relayAddr string, config *netsrv.NetServerReplConfig) *FsUx {
+func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, config *netsrv.NetServerReplConfig) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	fsux.ch = make(chan bool)
 	fsux.root = fsux.makeDir([]string{mount}, np.DMDIR, nil)
 	db.Name("fsuxd")
-	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), replicated, relayAddr, config)
+	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), replicated, config)
 	fsl := fslib.MakeFsLib("fsux")
 	fsl.Mkdir(named.UX, 0777)
 	err := fsl.PostServiceUnion(fsux.fssrv.MyAddr(), named.UX, fsux.fssrv.MyAddr())

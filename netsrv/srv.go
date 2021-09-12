@@ -19,11 +19,11 @@ type NetServer struct {
 }
 
 func MakeNetServer(address string, fssrv protsrv.FsServer) *NetServer {
-	return MakeReplicatedNetServer(fssrv, address, false, false, "", nil)
+	return MakeReplicatedNetServer(fssrv, address, false, false, nil)
 }
 
-func MakeNpServerWireCompatible(address string, fssrv protsrv.FsServer) *NetServer {
-	return MakeReplicatedNetServer(fssrv, address, true, false, "", nil)
+func MakeNetServerWireCompatible(address string, fssrv protsrv.FsServer) *NetServer {
+	return MakeReplicatedNetServer(fssrv, address, true, false, nil)
 }
 
 func (srv *NetServer) MyAddr() string {

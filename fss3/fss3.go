@@ -57,7 +57,7 @@ func MakeFss3(pid string) *Fss3 {
 		log.Fatalf("LocalIP %v %v\n", named.S3, err)
 	}
 	fss3.fssrv = fssrv.MakeFsServer(fss3, fss3.root, ip+":0", fos.MakeProtServer(),
-		false, "", nil)
+		false, nil)
 	fsl := fslib.MakeFsLib("fss3")
 	fsl.Mkdir(named.S3, 0777)
 	err = fsl.PostServiceUnion(fss3.fssrv.MyAddr(), named.S3, fss3.fssrv.MyAddr())

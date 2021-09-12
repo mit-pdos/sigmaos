@@ -32,7 +32,6 @@ const (
 )
 
 type Procd struct {
-	//	mu deadlock.Mutex
 	mu         sync.Mutex
 	runq       *usync.FilePriorityBag
 	bin        string
@@ -64,7 +63,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	if err != nil {
 		log.Fatalf("LocalIP %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", fos.MakeProtServer(), false, "", nil)
+	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", fos.MakeProtServer(), false, nil)
 	pd.addr = pd.fssrv.MyAddr()
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(named.PROCD, 0777)

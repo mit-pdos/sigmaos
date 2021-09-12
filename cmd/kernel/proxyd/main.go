@@ -15,7 +15,7 @@ func makeProxyd() *Proxyd {
 	pd := &Proxyd{}
 	pd.done = make(chan bool)
 	pd.fsd = proxy.MakeNpd()
-	pd.srv = netsrv.MakeNpServerWireCompatible(":1110", pd.fsd)
+	pd.srv = netsrv.MakeNetServerWireCompatible(":1110", pd.fsd)
 	return pd
 }
 

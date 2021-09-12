@@ -47,7 +47,7 @@ type NetServerReplConfig struct {
 	*protclnt.Clnt
 }
 
-func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, replicated bool, relayAddr string, config *NetServerReplConfig) *NetServer {
+func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, replicated bool, config *NetServerReplConfig) *NetServer {
 	var emptyConfig *NetServerReplConfig
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
@@ -57,7 +57,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 			config.ConfigPath,
 			config.UnionDirPath,
 			config.SymlinkPath,
-			relayAddr,
+			config.RelayAddr,
 			"", "", "", "", "",
 			nil, nil, nil, nil,
 			ops,
@@ -77,13 +77,13 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 	if replicated {
 		// Create and start the relay server listener
 		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
-		relayL, err := net.Listen("tcp", relayAddr)
+		relayL, err := net.Listen("tcp", config.RelayAddr)
 		if err != nil {
 			log.Fatal("Relay listen error:", err)
 		}
 		// Set up op logging if necessary
 		if config.LogOps {
-			err = config.MakeFile("name/"+relayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
+			err = config.MakeFile("name/"+config.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
 			if err != nil {
 				log.Fatalf("Error making log file: %v", err)
 			}

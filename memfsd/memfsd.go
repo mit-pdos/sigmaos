@@ -23,14 +23,14 @@ type Fsd struct {
 }
 
 func MakeFsd(addr string) *Fsd {
-	return MakeReplicatedFsd(addr, false, "", nil)
+	return MakeReplicatedFsd(addr, false, nil)
 }
 
-func MakeReplicatedFsd(addr string, replicated bool, relayAddr string, config *netsrv.NetServerReplConfig) *Fsd {
+func MakeReplicatedFsd(addr string, replicated bool, config *netsrv.NetServerReplConfig) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,
-		addr, fsobjsrv.MakeProtServer(), replicated, relayAddr, config)
+		addr, fsobjsrv.MakeProtServer(), replicated, config)
 	fsd.ch = make(chan bool)
 	if err := fsd.MkNod("statsd", fsd.fssrv.GetStats()); err != nil {
 		log.Fatalf("Mknod failed %v\n", err)

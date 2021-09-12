@@ -38,6 +38,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 	if err != nil {
 		log.Fatalf("Relay port must be an integer")
 	}
+
 	// Server port is relay port + 100
 	r.srvPort = strconv.Itoa(100 + portNum)
 	r.configPath = args[2]
@@ -53,7 +54,7 @@ func MakeMemfsdReplica(args []string) *MemfsdReplica {
 	if len(args) == 6 && args[5] == "log-ops" {
 		r.config.LogOps = true
 	}
-	r.fsd = memfsd.MakeReplicatedFsd(r.srvAddr, true, r.relayAddr, r.config)
+	r.fsd = memfsd.MakeReplicatedFsd(r.srvAddr, true, r.config)
 	r.name = path.Join(r.unionDirPath, r.relayAddr)
 	db.Name(r.name)
 	fs, err := fslibsrv.InitFs(r.name, r.fsd, nil)

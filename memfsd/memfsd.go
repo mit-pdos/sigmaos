@@ -26,7 +26,7 @@ func MakeFsd(addr string) *Fsd {
 	return MakeReplicatedFsd(addr, false, nil)
 }
 
-func MakeReplicatedFsd(addr string, replicated bool, config *replchain.NetServerReplConfig) *Fsd {
+func MakeReplicatedFsd(addr string, replicated bool, config *replchain.ChainReplConfig) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,

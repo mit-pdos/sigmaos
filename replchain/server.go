@@ -21,9 +21,9 @@ const (
 	MAX_CONNECT_RETRIES = 1000
 )
 
-type ReplState struct {
+type ChainReplServer struct {
 	mu         *sync.Mutex
-	config     *NetServerReplConfig
+	config     *ChainReplConfig
 	HeadChan   *RelayNetConn
 	TailChan   *RelayNetConn
 	PrevChan   *RelayNetConn
@@ -37,12 +37,12 @@ type ReplState struct {
 	*protclnt.Clnt
 }
 
-func MakeReplState(cfg repl.Config) *ReplState {
-	c := cfg.(*NetServerReplConfig)
-	config := CopyNetServerReplConfig(c)
+func MakeChainReplServer(cfg repl.Config) *ChainReplServer {
+	c := cfg.(*ChainReplConfig)
+	config := CopyChainReplConfig(c)
 	fsl := fslib.MakeFsLib("replstate")
 	ops := make(chan *RelayOp)
-	return &ReplState{&sync.Mutex{},
+	return &ChainReplServer{&sync.Mutex{},
 		config,
 		nil, nil, nil, nil,
 		ops,
@@ -55,7 +55,7 @@ func MakeReplState(cfg repl.Config) *ReplState {
 	}
 }
 
-func (rs *ReplState) Init() {
+func (rs *ChainReplServer) Init() {
 	// Set up op logging if necessary
 	if rs.config.LogOps {
 		err := rs.MakeFile("name/"+rs.config.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
@@ -68,9 +68,10 @@ func (rs *ReplState) Init() {
 	go rs.runReplConfigUpdater()
 	// Watch for other servers that go down, and spawn a lambda to update config
 	go rs.runDirWatcher()
+	rs.setupRelay()
 }
 
-func (rs *ReplState) getNewReplConfig() *NetServerReplConfig {
+func (rs *ChainReplServer) getNewReplConfig() *ChainReplConfig {
 	for {
 		config, err := ReadReplConfig(rs.config.ConfigPath, rs.config.RelayAddr, rs.FsLib, rs.Clnt)
 		if err != nil {
@@ -84,7 +85,7 @@ func (rs *ReplState) getNewReplConfig() *NetServerReplConfig {
 }
 
 // Updates addresses if any have changed, and connects to new peers.
-func (rs *ReplState) reloadReplConfig(cfg *NetServerReplConfig) {
+func (rs *ChainReplServer) reloadReplConfig(cfg *ChainReplConfig) {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	if rs.config.HeadAddr != cfg.HeadAddr || rs.HeadChan == nil {
@@ -106,7 +107,7 @@ func (rs *ReplState) reloadReplConfig(cfg *NetServerReplConfig) {
 }
 
 // Read a replication config file.
-func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *protclnt.Clnt) (*NetServerReplConfig, error) {
+func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *protclnt.Clnt) (*ChainReplConfig, error) {
 	b, err := fsl.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -127,7 +128,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *protclnt
 			}
 		}
 	}
-	return &NetServerReplConfig{
+	return &ChainReplConfig{
 		false,
 		path,
 		"",
@@ -138,7 +139,7 @@ func ReadReplConfig(path string, myaddr string, fsl *fslib.FsLib, clnt *protclnt
 	}, nil
 }
 
-func (rs *ReplState) connectToReplica(rc **RelayNetConn, addr string) {
+func (rs *ChainReplServer) connectToReplica(rc **RelayNetConn, addr string) {
 	// If there was an old channel here, close it.
 	if *rc != nil {
 		(*rc).Close()
@@ -160,13 +161,13 @@ func (rs *ReplState) connectToReplica(rc **RelayNetConn, addr string) {
 	}
 }
 
-func (rs *ReplState) isHead() bool {
+func (rs *ChainReplServer) isHead() bool {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	return rs.config.RelayAddr == rs.config.HeadAddr
 }
 
-func (rs *ReplState) isTail() bool {
+func (rs *ChainReplServer) isTail() bool {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	return rs.config.RelayAddr == rs.config.TailAddr
@@ -174,7 +175,7 @@ func (rs *ReplState) isTail() bool {
 
 // Watch in case servers go down, and start a lambda to update the config if
 // they do.
-func (rs *ReplState) runDirWatcher() {
+func (rs *ChainReplServer) runDirWatcher() {
 	config := rs.config
 	for {
 		done := make(chan bool)
@@ -197,7 +198,7 @@ func (rs *ReplState) runDirWatcher() {
 	}
 }
 
-func (rs *ReplState) getReplicaTargets() []string {
+func (rs *ChainReplServer) getReplicaTargets() []string {
 	config := rs.config
 	targets := []string{}
 	// Get list of replica links
@@ -222,7 +223,7 @@ func (rs *ReplState) getReplicaTargets() []string {
 }
 
 // Watch for changes to the config file, and update if necessary
-func (rs *ReplState) runReplConfigUpdater() {
+func (rs *ChainReplServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
 		rs.SetRemoveWatch(rs.config.ConfigPath, func(p string, err error) {

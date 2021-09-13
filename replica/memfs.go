@@ -24,7 +24,7 @@ type MemfsdReplica struct {
 	configPath   string
 	unionDirPath string
 	symlinkPath  string
-	config       *replchain.NetServerReplConfig
+	config       *replchain.ChainReplConfig
 	fsd          *memfsd.Fsd
 	*fslibsrv.FsLibSrv
 	proc.ProcClnt

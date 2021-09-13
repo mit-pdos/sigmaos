@@ -26,7 +26,7 @@ type FsUxReplica struct {
 	unionDirPath string
 	symlinkPath  string
 	mount        string
-	config       *replchain.NetServerReplConfig
+	config       *replchain.ChainReplConfig
 	ux           *fsux.FsUx
 	*fslib.FsLib
 	proc.ProcClnt

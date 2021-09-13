@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"sync/atomic"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -26,8 +25,6 @@ const (
 	DUMMY_RESPONSE = "DUMMY_RESPONSE"
 )
 
-var setupRelay uint32 = 0
-
 type RelayOp struct {
 	request      *np.Fcall
 	requestFrame []byte
@@ -39,30 +36,26 @@ type RelayOp struct {
 
 // A channel between clients & replicas, or replicas & replicas
 type RelayConn struct {
-	replConfig *NetServerReplConfig
-	replState  *ReplState
-	fssrv      protsrv.FsServer
-	np         protsrv.Protsrv
-	conn       net.Conn
-	br         *bufio.Reader
-	bw         *bufio.Writer
-	ops        chan *RelayOp
-	replies    chan *RelayOp
+	srv     *ChainReplServer
+	fssrv   protsrv.FsServer
+	np      protsrv.Protsrv
+	conn    net.Conn
+	br      *bufio.Reader
+	bw      *bufio.Writer
+	ops     chan *RelayOp
+	replies chan *RelayOp
 }
 
-func (rs *ReplState) MakeConn(psrv protsrv.FsServer, conn net.Conn) repl.Conn {
+func (rs *ChainReplServer) MakeConn(psrv protsrv.FsServer, conn net.Conn) repl.Conn {
 	protsrv := psrv.Connect()
 	r := &RelayConn{
-		rs.config, rs,
+		rs,
 		psrv, protsrv, conn,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		rs.ops, make(chan *RelayOp)}
 	go r.writer()
 	go r.reader()
-	if atomic.CompareAndSwapUint32(&setupRelay, 0, 1) {
-		r.setupRelay()
-	}
 	return r
 }
 
@@ -124,14 +117,14 @@ func (r *RelayConn) writer() {
 	}
 }
 
-func (r *RelayConn) setupRelay() {
+func (rs *ChainReplServer) setupRelay() {
 	// Run a worker to process messages
-	go r.relayReader()
+	go rs.relayReader()
 	// Run a worker to dispatch responses
-	go r.replState.relayWriter()
+	go rs.relayWriter()
 }
 
-func (rs *ReplState) cacheReply(request *np.Fcall, reply *np.Fcall) {
+func (rs *ChainReplServer) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	var replyFrame []byte
 	var replyBuffer bytes.Buffer
 	bw := bufio.NewWriter(&replyBuffer)
@@ -144,16 +137,15 @@ func (rs *ReplState) cacheReply(request *np.Fcall, reply *np.Fcall) {
 	rs.replyCache.Put(request, reply, replyFrame)
 }
 
-func (r *RelayConn) relayReader() {
-	config := r.replConfig
-	state := r.replState
+func (rs *ChainReplServer) relayReader() {
+	config := rs.config
 	for {
-		op, ok := <-state.ops
+		op, ok := <-rs.ops
 		if !ok {
 			return
 		}
 		// If this was a duplicate reply from the cache
-		if reply, ok := state.replyCache.Get(op.request); ok {
+		if reply, ok := rs.replyCache.Get(op.request); ok {
 			op.reply = reply.fcall
 			op.replyFrame = reply.frame
 			db.DLPrintf("RSRV", "%v Dup relay request %v", config.RelayAddr, op.request)
@@ -173,9 +165,9 @@ func (r *RelayConn) relayReader() {
 			// true. Otherwise, it returns false. This atomicity is needed to make
 			// sure we never drop acks which should be relayed upstream.
 			// Tail acks taken care of separately
-			if !state.isTail() {
+			if !rs.isTail() {
 				// XXX Could there be a race here?
-				if state.inFlight.AddIfDuplicate(op) {
+				if rs.inFlight.AddIfDuplicate(op) {
 					db.DLPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
 				} else {
 					db.DLPrintf("RSRV", "%v Dup request not in-flight, replying immediately. req: %v rep: %v", config.RelayAddr, op.request, op.reply)
@@ -195,21 +187,21 @@ func (r *RelayConn) relayReader() {
 			op.reply.Seqno = op.request.Seqno
 			db.DLPrintf("RSRV", "%v Reader relay reply %v", config.RelayAddr, op.reply)
 			// Cache the reply
-			r.replState.cacheReply(op.request, op.reply)
-			cachedReply, _ := state.replyCache.Get(op.request)
+			rs.cacheReply(op.request, op.reply)
+			cachedReply, _ := rs.replyCache.Get(op.request)
 			op.replyFrame = cachedReply.frame
 			// Optionally log the fcall & its reply type.
-			state.logOp(op.request, op.reply)
+			rs.logOp(op.request, op.reply)
 			// Reliably send to the next link in the chain (even if that link
 			// changes)
-			if !state.isTail() {
+			if !rs.isTail() {
 				// Enqueue the message to mark it as in-flight.
-				state.inFlight.Add(op)
-				r.relayOp(op)
+				rs.inFlight.Add(op)
+				rs.relayOp(op)
 			}
 		}
 		// If we're the tail, we always ack immediately
-		if state.isTail() {
+		if rs.isTail() {
 			db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, op.request)
 			op.replies <- op
 		}
@@ -229,7 +221,7 @@ func (r *RelayConn) close() {
 }
 
 // Relay acks upstream.
-func (rs *ReplState) relayWriter() {
+func (rs *ChainReplServer) relayWriter() {
 	config := rs.config
 	for {
 		// XXX Don't spin
@@ -276,27 +268,26 @@ func (rs *ReplState) relayWriter() {
 	}
 }
 
-func (r *RelayConn) relayOp(op *RelayOp) {
-	config := r.replState.config
-	state := r.replState
+func (rs *ChainReplServer) relayOp(op *RelayOp) {
+	config := rs.config
 
 	// Get the next channel & address of the last person we sent to...
-	state.mu.Lock()
-	ch := state.NextChan
+	rs.mu.Lock()
+	ch := rs.NextChan
 	nextAddr := config.NextAddr
 	lastSendAddr := config.LastSendAddr
-	state.mu.Unlock()
+	rs.mu.Unlock()
 
 	// If the next server has changed (detected by config swap, or message send
 	// failure), resend all in-flight requests. Should already include this
 	// message.
 	db.DLPrintf("RSRV", "%v -> %v Sending initial relayOp: %v", config.RelayAddr, nextAddr, op)
-	if lastSendAddr != nextAddr || !relayOnce(r.replState, ch, op) {
-		resendInflightRelayOps(r.replState)
+	if lastSendAddr != nextAddr || !relayOnce(rs, ch, op) {
+		resendInflightRelayOps(rs)
 	}
 }
 
-func resendInflightRelayOps(rs *ReplState) {
+func resendInflightRelayOps(rs *ChainReplServer) {
 	config := rs.config
 
 	// Get the connection to the next server, and reflect that we've sent to it.
@@ -332,7 +323,7 @@ func resendInflightRelayOps(rs *ReplState) {
 	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
 }
 
-func sendAllAcks(rs *ReplState) {
+func sendAllAcks(rs *ChainReplServer) {
 	config := rs.config
 
 	ops := rs.inFlight.RemoveAll()
@@ -347,7 +338,7 @@ func sendAllAcks(rs *ReplState) {
 
 // Try and send a message to the next server in the chain, and receive a
 // response.
-func relayOnce(rs *ReplState, ch *RelayNetConn, op *RelayOp) bool {
+func relayOnce(rs *ChainReplServer, ch *RelayNetConn, op *RelayOp) bool {
 	// Only call down the chain if we aren't at the tail.
 	// XXX Get rid of this if
 	if !rs.isTail() {
@@ -372,7 +363,7 @@ func relayOnce(rs *ReplState, ch *RelayNetConn, op *RelayOp) bool {
 
 // Log an op & the type of the reply. Logging the exact reply is not useful,
 // since contents may vary between replicas (e.g. time)
-func (rs *ReplState) logOp(request *np.Fcall, reply *np.Fcall) {
+func (rs *ChainReplServer) logOp(request *np.Fcall, reply *np.Fcall) {
 	config := rs.config
 
 	if config.LogOps {

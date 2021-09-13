@@ -6,7 +6,7 @@ import (
 	"ulambda/repl"
 )
 
-type NetServerReplConfig struct {
+type ChainReplConfig struct {
 	LogOps       bool
 	ConfigPath   string
 	UnionDirPath string
@@ -19,12 +19,12 @@ type NetServerReplConfig struct {
 	NextAddr     string
 }
 
-func MakeNetServerReplConfig() *NetServerReplConfig {
-	return &NetServerReplConfig{}
+func MakeChainReplConfig() *ChainReplConfig {
+	return &ChainReplConfig{}
 }
 
-func CopyNetServerReplConfig(old *NetServerReplConfig) *NetServerReplConfig {
-	return &NetServerReplConfig{
+func CopyChainReplConfig(old *ChainReplConfig) *ChainReplConfig {
+	return &ChainReplConfig{
 		old.LogOps,
 		old.ConfigPath,
 		old.UnionDirPath,
@@ -34,14 +34,14 @@ func CopyNetServerReplConfig(old *NetServerReplConfig) *NetServerReplConfig {
 	}
 }
 
-func (c *NetServerReplConfig) MakeServer() repl.Server {
-	return MakeReplState(c)
+func (c *ChainReplConfig) MakeServer() repl.Server {
+	return MakeChainReplServer(c)
 }
 
-func (c *NetServerReplConfig) ReplAddr() string {
+func (c *ChainReplConfig) ReplAddr() string {
 	return c.RelayAddr
 }
 
-func (c *NetServerReplConfig) String() string {
+func (c *ChainReplConfig) String() string {
 	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v }", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
 }

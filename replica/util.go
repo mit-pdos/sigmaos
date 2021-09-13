@@ -16,7 +16,7 @@ type SrvReplica interface {
 	GetServiceName() string
 }
 
-func getConfig(r SrvReplica) *replchain.NetServerReplConfig {
+func getConfig(r SrvReplica) *replchain.ChainReplConfig {
 	fsl := fslib.MakeFsLib(r.GetServiceName() + "-replica:" + r.GetPort())
 	clnt := protclnt.MakeClnt()
 	config, err := replchain.ReadReplConfig(r.GetConfigPath(), r.GetAddr(), fsl, clnt)

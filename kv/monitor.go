@@ -7,10 +7,10 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/memfsd"
 	"ulambda/proc"
+	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/stats"
 	usync "ulambda/sync"

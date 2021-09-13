@@ -14,6 +14,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procinit"
 	"ulambda/protclnt"
+	"ulambda/repl"
 )
 
 const (
@@ -36,7 +37,8 @@ type ReplState struct {
 	*protclnt.Clnt
 }
 
-func MakeReplState(c *NetServerReplConfig) *ReplState {
+func MakeReplState(cfg repl.Config) *ReplState {
+	c := cfg.(*NetServerReplConfig)
 	config := CopyNetServerReplConfig(c)
 	fsl := fslib.MakeFsLib("replstate")
 	ops := make(chan *RelayOp)

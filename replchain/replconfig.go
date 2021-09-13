@@ -32,6 +32,10 @@ func CopyNetServerReplConfig(old *NetServerReplConfig) *NetServerReplConfig {
 	}
 }
 
+func (c *NetServerReplConfig) ReplAddr() string {
+	return c.RelayAddr
+}
+
 func (c *NetServerReplConfig) String() string {
 	return fmt.Sprintf("{ relayAddr: %v head: %v tail: %v prev: %v next: %v }", c.RelayAddr, c.HeadAddr, c.TailAddr, c.PrevAddr, c.NextAddr)
 }

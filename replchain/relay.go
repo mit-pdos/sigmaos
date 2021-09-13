@@ -14,6 +14,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 	"ulambda/protsrv"
+	"ulambda/repl"
 )
 
 const (
@@ -49,7 +50,7 @@ type RelayConn struct {
 	replies    chan *RelayOp
 }
 
-func MakeRelayConn(psrv protsrv.FsServer, conn net.Conn, rs *ReplState) *RelayConn {
+func (rs *ReplState) MakeConn(psrv protsrv.FsServer, conn net.Conn) repl.Conn {
 	protsrv := psrv.Connect()
 	r := &RelayConn{
 		rs.config, rs,

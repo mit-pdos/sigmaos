@@ -7,7 +7,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/protsrv"
 	"ulambda/repl"
-	"ulambda/replchain"
 )
 
 func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, replicated bool, config repl.Config) *NetServer {
@@ -18,12 +17,12 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 	}
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
-		srv.replSrv = replchain.MakeReplState(config)
+		srv.replSrv = config.MakeServer()
 		// Create and start the relay server listener
 		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
 		relayL, err := net.Listen("tcp", config.ReplAddr())
 		if err != nil {
-			log.Fatal("Relay listen error:", err)
+			log.Fatal("Replica server listen error:", err)
 		}
 		srv.replSrv.Init()
 		// Start a server to listen for relay messages

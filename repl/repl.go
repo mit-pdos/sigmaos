@@ -7,6 +7,7 @@ import (
 )
 
 type Config interface {
+	MakeServer() Server
 	ReplAddr() string
 	String() string
 }

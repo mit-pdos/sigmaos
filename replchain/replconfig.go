@@ -2,6 +2,8 @@ package replchain
 
 import (
 	"fmt"
+
+	"ulambda/repl"
 )
 
 type NetServerReplConfig struct {
@@ -30,6 +32,10 @@ func CopyNetServerReplConfig(old *NetServerReplConfig) *NetServerReplConfig {
 		old.RelayAddr,
 		"", "", "", "", "",
 	}
+}
+
+func (c *NetServerReplConfig) MakeServer() repl.Server {
+	return MakeReplState(c)
 }
 
 func (c *NetServerReplConfig) ReplAddr() string {

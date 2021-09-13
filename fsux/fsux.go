@@ -14,8 +14,8 @@ import (
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
-	"ulambda/netsrv"
 	np "ulambda/ninep"
+	"ulambda/replchain"
 	usync "ulambda/sync"
 	// "ulambda/seccomp"
 )
@@ -32,7 +32,7 @@ func MakeFsUx(mount string, addr string, pid string) *FsUx {
 	return MakeReplicatedFsUx(mount, addr, pid, false, nil)
 }
 
-func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, config *netsrv.NetServerReplConfig) *FsUx {
+func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, config *replchain.NetServerReplConfig) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	fsux.ch = make(chan bool)

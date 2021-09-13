@@ -4,6 +4,7 @@ import (
 	"ulambda/fs"
 	"ulambda/netsrv"
 	"ulambda/protsrv"
+	"ulambda/repl"
 	"ulambda/session"
 	"ulambda/stats"
 	"ulambda/watch"
@@ -28,7 +29,7 @@ type FsServer struct {
 func MakeFsServer(fs Fs, root fs.FsObj, addr string,
 	npcm protsrv.MakeProtServer,
 	replicated bool,
-	config *netsrv.NetServerReplConfig) *FsServer {
+	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.fs = fs
 	fssrv.root = root

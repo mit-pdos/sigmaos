@@ -10,9 +10,9 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/fsux"
-	"ulambda/netsrv"
 	"ulambda/proc"
 	"ulambda/procinit"
+	"ulambda/replchain"
 )
 
 type FsUxReplica struct {
@@ -26,7 +26,7 @@ type FsUxReplica struct {
 	unionDirPath string
 	symlinkPath  string
 	mount        string
-	config       *netsrv.NetServerReplConfig
+	config       *replchain.NetServerReplConfig
 	ux           *fsux.FsUx
 	*fslib.FsLib
 	proc.ProcClnt

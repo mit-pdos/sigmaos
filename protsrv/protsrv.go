@@ -36,3 +36,82 @@ type Protsrv interface {
 type MakeProtServer interface {
 	MakeProtServer(FsServer) Protsrv
 }
+
+func Dispatch(p Protsrv, sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	switch req := msg.(type) {
+	case np.Tversion:
+		reply := &np.Rversion{}
+		err := p.Version(sess, req, reply)
+		return *reply, err
+	case np.Tauth:
+		reply := &np.Rauth{}
+		err := p.Auth(sess, req, reply)
+		return *reply, err
+	case np.Tattach:
+		reply := &np.Rattach{}
+		err := p.Attach(sess, req, reply)
+		return *reply, err
+	case np.Tflush:
+		reply := &np.Rflush{}
+		err := p.Flush(sess, req, reply)
+		return *reply, err
+	case np.Twalk:
+		reply := &np.Rwalk{}
+		err := p.Walk(sess, req, reply)
+		return *reply, err
+	case np.Topen:
+		reply := &np.Ropen{}
+		err := p.Open(sess, req, reply)
+		return *reply, err
+	case np.Twatchv:
+		reply := &np.Ropen{}
+		err := p.WatchV(sess, req, reply)
+		return *reply, err
+	case np.Tcreate:
+		reply := &np.Rcreate{}
+		err := p.Create(sess, req, reply)
+		return *reply, err
+	case np.Tread:
+		reply := &np.Rread{}
+		err := p.Read(sess, req, reply)
+		return *reply, err
+	case np.Twrite:
+		reply := &np.Rwrite{}
+		err := p.Write(sess, req, reply)
+		return *reply, err
+	case np.Tclunk:
+		reply := &np.Rclunk{}
+		err := p.Clunk(sess, req, reply)
+		return *reply, err
+	case np.Tremove:
+		reply := &np.Rremove{}
+		err := p.Remove(sess, req, reply)
+		return *reply, err
+	case np.Tremovefile:
+		reply := &np.Rremove{}
+		err := p.RemoveFile(sess, req, reply)
+		return *reply, err
+	case np.Tstat:
+		reply := &np.Rstat{}
+		err := p.Stat(sess, req, reply)
+		return *reply, err
+	case np.Twstat:
+		reply := &np.Rwstat{}
+		err := p.Wstat(sess, req, reply)
+		return *reply, err
+	case np.Trenameat:
+		reply := &np.Rrenameat{}
+		err := p.Renameat(sess, req, reply)
+		return *reply, err
+	case np.Tgetfile:
+		reply := &np.Rgetfile{}
+		err := p.GetFile(sess, req, reply)
+		return *reply, err
+	case np.Tsetfile:
+		reply := &np.Rwrite{}
+		err := p.SetFile(sess, req, reply)
+		return *reply, err
+	default:
+		return np.ErrUnknownMsg, nil
+	}
+}

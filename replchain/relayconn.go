@@ -1,4 +1,4 @@
-package netsrv
+package replchain
 
 import (
 	"bufio"

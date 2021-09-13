@@ -7,17 +7,15 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/protsrv"
+	"ulambda/replchain"
 )
-
-var setupRelay uint32 = 0
 
 type NetServer struct {
 	addr       string
 	fssrv      protsrv.FsServer
 	wireCompat bool
 	replicated bool
-	replConfig *NetServerReplConfig
-	replState  *ReplState
+	replState  *replchain.ReplState
 }
 
 func MakeNetServer(address string, fssrv protsrv.FsServer) *NetServer {
@@ -47,11 +45,11 @@ func (srv *NetServer) runsrv(l net.Listener) {
 		} else {
 			// Else, make a relay channel which forwards calls along the chain.
 			db.DLPrintf("9PCHAN", "relay chan from %v -> %v\n", conn.RemoteAddr(), l.Addr())
-			MakeRelayConn(srv, conn)
+			replchain.MakeRelayConn(srv.fssrv, conn, srv.replState)
 		}
 	}
 }
 
 func (srv *NetServer) String() string {
-	return fmt.Sprintf("{ addr: %v replicated: %v config: %v }", srv.addr, srv.replicated, srv.replConfig)
+	return fmt.Sprintf("{ addr: %v replicated: %v config: %v }", srv.addr, srv.replicated, srv.replState)
 }

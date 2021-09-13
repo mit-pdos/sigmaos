@@ -56,85 +56,6 @@ func (c *SrvConn) Dst() string {
 	return c.conn.LocalAddr().String()
 }
 
-func (c *SrvConn) dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	switch req := msg.(type) {
-	case np.Tversion:
-		reply := &np.Rversion{}
-		err := c.np.Version(sess, req, reply)
-		return *reply, err
-	case np.Tauth:
-		reply := &np.Rauth{}
-		err := c.np.Auth(sess, req, reply)
-		return *reply, err
-	case np.Tattach:
-		reply := &np.Rattach{}
-		err := c.np.Attach(sess, req, reply)
-		return *reply, err
-	case np.Tflush:
-		reply := &np.Rflush{}
-		err := c.np.Flush(sess, req, reply)
-		return *reply, err
-	case np.Twalk:
-		reply := &np.Rwalk{}
-		err := c.np.Walk(sess, req, reply)
-		return *reply, err
-	case np.Topen:
-		reply := &np.Ropen{}
-		err := c.np.Open(sess, req, reply)
-		return *reply, err
-	case np.Twatchv:
-		reply := &np.Ropen{}
-		err := c.np.WatchV(sess, req, reply)
-		return *reply, err
-	case np.Tcreate:
-		reply := &np.Rcreate{}
-		err := c.np.Create(sess, req, reply)
-		return *reply, err
-	case np.Tread:
-		reply := &np.Rread{}
-		err := c.np.Read(sess, req, reply)
-		return *reply, err
-	case np.Twrite:
-		reply := &np.Rwrite{}
-		err := c.np.Write(sess, req, reply)
-		return *reply, err
-	case np.Tclunk:
-		reply := &np.Rclunk{}
-		err := c.np.Clunk(sess, req, reply)
-		return *reply, err
-	case np.Tremove:
-		reply := &np.Rremove{}
-		err := c.np.Remove(sess, req, reply)
-		return *reply, err
-	case np.Tremovefile:
-		reply := &np.Rremove{}
-		err := c.np.RemoveFile(sess, req, reply)
-		return *reply, err
-	case np.Tstat:
-		reply := &np.Rstat{}
-		err := c.np.Stat(sess, req, reply)
-		return *reply, err
-	case np.Twstat:
-		reply := &np.Rwstat{}
-		err := c.np.Wstat(sess, req, reply)
-		return *reply, err
-	case np.Trenameat:
-		reply := &np.Rrenameat{}
-		err := c.np.Renameat(sess, req, reply)
-		return *reply, err
-	case np.Tgetfile:
-		reply := &np.Rgetfile{}
-		err := c.np.GetFile(sess, req, reply)
-		return *reply, err
-	case np.Tsetfile:
-		reply := &np.Rwrite{}
-		err := c.np.SetFile(sess, req, reply)
-		return *reply, err
-	default:
-		return np.ErrUnknownMsg, nil
-	}
-}
-
 func (c *SrvConn) reader() {
 	db.DLPrintf("9PCHAN", "Reader conn from %v\n", c.Src())
 	for {
@@ -191,7 +112,7 @@ func (c *SrvConn) registerSession(sess np.Tsession) {
 func (c *SrvConn) serve(fc *np.Fcall) {
 	t := fc.Tag
 	c.registerSession(fc.Session)
-	reply, rerror := c.dispatch(fc.Session, fc.Msg)
+	reply, rerror := protsrv.Dispatch(c.np, fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}

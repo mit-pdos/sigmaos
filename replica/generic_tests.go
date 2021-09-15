@@ -37,6 +37,7 @@ type Tstate struct {
 	configPath9p   string
 	unionDirPath9p string
 	symlinkPath9p  string
+	checkLogs      bool
 	t              *testing.T
 	e              *realm.TestEnv
 	cfg            *realm.RealmConfig
@@ -233,9 +234,11 @@ func ChainSimple(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files)
@@ -294,9 +297,11 @@ func ChainCrashMiddle(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files)
@@ -354,9 +359,11 @@ func ChainCrashHead(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files)
@@ -412,9 +419,11 @@ func ChainCrashTail(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files)
@@ -480,9 +489,11 @@ func ConcurrentClientsSimple(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files_per_cli*n_clients)
@@ -535,9 +546,11 @@ func ConcurrentClientsCrashMiddle(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files_per_cli*n_clients)
@@ -589,9 +602,11 @@ func ConcurrentClientsCrashTail(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files_per_cli*n_clients)
@@ -676,9 +691,11 @@ func ConcurrentClientsCrashHead(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_files_per_cli*n_clients)
@@ -819,9 +836,11 @@ func ConcurrentClientsCrashHeadNotIdempotent(ts *Tstate) {
 	// Wait a bit to allow replica logs to stabilize
 	time.Sleep(1000 * time.Millisecond)
 
-	log.Printf("Comparing replica logs...")
-	compareReplicaLogs(ts, replicas)
-	log.Printf("Done comparing replica logs...")
+	if ts.checkLogs {
+		log.Printf("Comparing replica logs...")
+		compareReplicaLogs(ts, replicas)
+		log.Printf("Done comparing replica logs...")
+	}
 
 	log.Printf("Checking file contents on each replica...")
 	checkFiles(ts, replicas, n_clients)

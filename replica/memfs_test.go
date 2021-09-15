@@ -9,8 +9,9 @@ import (
 	"ulambda/realm"
 )
 
-func makeMemfsTstate(t *testing.T) *Tstate {
+func makeMemfsTstate(t *testing.T, name string, checkLogs bool) *Tstate {
 	ts := &Tstate{}
+	ts.checkLogs = checkLogs
 
 	bin := ".."
 	e := realm.MakeTestEnv(bin)
@@ -23,7 +24,7 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
-	replicaName := "memfs-chain-replica"
+	replicaName := name
 	db.Name(replicaName + "-test")
 	ts.FsLib = fslib.MakeFsLibAddr(replicaName+"-test", cfg.NamedAddr)
 	ts.t = t
@@ -35,14 +36,14 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 }
 
 func TestMemfsHelloWorld(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	HelloWorld(ts)
 	ts.e.Shutdown()
 }
 
 // Test making & reading a few files.
 func TestMemfsChainSimple(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ChainSimple(ts)
 	ts.e.Shutdown()
 }
@@ -50,49 +51,49 @@ func TestMemfsChainSimple(t *testing.T) {
 // Test making & reading a few files in the presence of crashes in the middle of
 // the chain
 func TestMemfsChainCrashMiddle(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ChainCrashMiddle(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsChainCrashHead(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ChainCrashHead(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsChainCrashTail(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ChainCrashTail(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsSimple(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ConcurrentClientsSimple(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashMiddle(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ConcurrentClientsCrashMiddle(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashTail(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ConcurrentClientsCrashTail(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashHead(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ConcurrentClientsCrashHead(ts)
 	ts.e.Shutdown()
 }
 
 func TestMemfsConcurrentClientsCrashHeadNotIdempotent(t *testing.T) {
-	ts := makeMemfsTstate(t)
+	ts := makeMemfsTstate(t, "memfs-chain-replica", true)
 	ConcurrentClientsCrashHeadNotIdempotent(ts)
 	ts.e.Shutdown()
 }

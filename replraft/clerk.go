@@ -11,6 +11,7 @@ import (
 
 type Clerk struct {
 	mu       *sync.Mutex
+	id       int
 	fssrv    protsrv.FsServer
 	np       protsrv.Protsrv
 	opmap    map[np.Tsession]map[np.Tseqno]*SrvOp
@@ -19,8 +20,10 @@ type Clerk struct {
 	proposeC chan<- []byte
 }
 
-func makeClerk(fs protsrv.FsServer, commit <-chan [][]byte, propose chan<- []byte) *Clerk {
+func makeClerk(id int, fs protsrv.FsServer, commit <-chan [][]byte, propose chan<- []byte) *Clerk {
 	c := &Clerk{}
+	c.mu = &sync.Mutex{}
+	c.id = id
 	c.fssrv = fs
 	c.np = fs.Connect()
 	c.opmap = make(map[np.Tsession]map[np.Tseqno]*SrvOp)
@@ -73,6 +76,7 @@ func (c *Clerk) apply(fc *np.Fcall) *np.Fcall {
 	fcall.Session = fc.Session
 	fcall.Seqno = fc.Seqno
 	fcall.Tag = t
+	log.Printf("SERVER %v DISPATCH %v REPLY %v", c.id, fc, fcall)
 	return fcall
 }
 

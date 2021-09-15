@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -86,11 +85,8 @@ func (n *RaftNode) start(peers []raft.Peer) {
 }
 
 func (n *RaftNode) serveRaft() {
-	url, err := url.Parse(n.peerAddrs[n.id-1])
-	if err != nil {
-		log.Fatalf("Error parsing raft URL: %v", err)
-	}
-	addr := url.Host
+	addr := n.peerAddrs[n.id-1]
+	log.Printf("Listening on: %v", addr)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Error listen: %v", err)

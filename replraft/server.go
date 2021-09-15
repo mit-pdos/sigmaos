@@ -24,7 +24,7 @@ func MakeRaftReplServer(id int, peerAddrs []string, fs protsrv.FsServer) *RaftRe
 	commitC := make(chan [][]byte)
 	proposeC := make(chan []byte)
 	srv.node = makeRaftNode(id, peers, peerAddrs, commitC, proposeC)
-	srv.clerk = makeClerk(fs, commitC, proposeC)
+	srv.clerk = makeClerk(id, fs, commitC, proposeC)
 	go srv.clerk.serve()
 	return srv
 }

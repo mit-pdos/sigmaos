@@ -10,7 +10,7 @@ import (
 	"ulambda/fssrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
-	"ulambda/replchain"
+	"ulambda/repl"
 )
 
 const MEMFS = "name/memfsd"
@@ -26,7 +26,7 @@ func MakeFsd(addr string) *Fsd {
 	return MakeReplicatedFsd(addr, false, nil)
 }
 
-func MakeReplicatedFsd(addr string, replicated bool, config *replchain.ChainReplConfig) *Fsd {
+func MakeReplicatedFsd(addr string, replicated bool, config repl.Config) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = memfs.MkRootInode()
 	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,

@@ -51,7 +51,7 @@ func MakeFsUxReplica(args []string) *FsUxReplica {
 	}
 	r.relayAddr = ip + ":" + r.relayPort
 	r.srvAddr = ip + ":" + r.srvPort
-	r.config = getConfig(r)
+	r.config = GetChainReplConfig("fsux", r.relayPort, r.configPath, r.relayAddr, r.unionDirPath, r.symlinkPath)
 	if len(args) == 6 && args[5] == "log-ops" {
 		r.config.LogOps = true
 	}
@@ -67,11 +67,6 @@ func MakeFsUxReplica(args []string) *FsUxReplica {
 		log.Fatalf("PostService %v error: %v", r.name, err)
 	}
 	db.Name(r.name)
-	//	fs, err := fslibsrv.InitFs(r.name, r.ux, nil)
-	//	if err != nil {
-	//		log.Fatalf("%v: InitFs failed %v\n", args, err)
-	//	}
-	//	r.FsLibSrv = fs
 	return r
 }
 

@@ -3,6 +3,7 @@ package replchain
 import (
 	"fmt"
 
+	"ulambda/protsrv"
 	"ulambda/repl"
 )
 
@@ -34,7 +35,7 @@ func CopyChainReplConfig(old *ChainReplConfig) *ChainReplConfig {
 	}
 }
 
-func (c *ChainReplConfig) MakeServer() repl.Server {
+func (c *ChainReplConfig) MakeServer(psrv protsrv.FsServer) repl.Server {
 	return MakeChainReplServer(c)
 }
 

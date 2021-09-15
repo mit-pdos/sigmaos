@@ -7,7 +7,7 @@ import (
 )
 
 type Config interface {
-	MakeServer() Server
+	MakeServer(protsrv.FsServer) Server
 	ReplAddr() string
 	String() string
 }

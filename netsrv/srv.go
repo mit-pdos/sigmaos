@@ -34,7 +34,7 @@ func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat boo
 	}
 	if replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
-		srv.replSrv = config.MakeServer()
+		srv.replSrv = config.MakeServer(fs)
 		// Create and start the relay server listener
 		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
 		relayL, err := net.Listen("tcp", config.ReplAddr())

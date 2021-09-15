@@ -12,6 +12,13 @@ type RaftConfig struct {
 	peerAddrs []string
 }
 
+func MakeRaftConfig(id int, peerAddrs []string) *RaftConfig {
+	rc := &RaftConfig{}
+	rc.id = id
+	rc.peerAddrs = peerAddrs
+	return rc
+}
+
 func (rc *RaftConfig) MakeServer(fs protsrv.FsServer) repl.Server {
 	return MakeRaftReplServer(rc.id, rc.peerAddrs, fs)
 }

@@ -32,7 +32,7 @@ type RaftNode struct {
 	config        *raft.Config
 	storage       *raft.MemoryStorage
 	transport     *rafthttp.Transport
-	confState     raftpb.ConfState
+	confState     *raftpb.ConfState
 	snapshotIndex uint64
 	appliedIndex  uint64
 }
@@ -77,7 +77,7 @@ func (n *RaftNode) start(peers []raft.Peer) {
 	n.transport.Start()
 	for i := range peers {
 		if i+1 != n.id {
-			n.transport.AddPeer(types.ID(i+1), []string{n.peerAddrs[i]})
+			n.transport.AddPeer(types.ID(i+1), []string{"http://" + n.peerAddrs[i]})
 		}
 	}
 
@@ -110,7 +110,7 @@ func (n *RaftNode) serveChannels() {
 	if err != nil {
 		log.Fatalf("Error getting raft storage: %v", err)
 	}
-	n.confState = snap.Metadata.ConfState
+	n.confState = &snap.Metadata.ConfState
 	n.snapshotIndex = snap.Metadata.Index
 	n.appliedIndex = snap.Metadata.Index
 
@@ -159,8 +159,23 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 				break
 			}
 			data = append(data, e.Data)
+		case raftpb.EntryConfChange:
+			var change raftpb.ConfChange
+			change.Unmarshal(e.Data)
+			n.confState = n.node.ApplyConfChange(change)
+			switch change.Type {
+			case raftpb.ConfChangeAddNode:
+				if len(change.Context) > 0 {
+					n.transport.AddPeer(types.ID(change.NodeID), []string{string(change.Context)})
+				}
+			case raftpb.ConfChangeRemoveNode:
+				if change.NodeID == uint64(n.id) {
+					log.Fatalf("Node removed")
+				}
+				n.transport.RemovePeer(types.ID(change.NodeID))
+			}
 		default:
-			log.Fatalf("Unexpected entry type")
+			log.Fatalf("Unexpected entry type: %v", e.Type)
 		}
 	}
 

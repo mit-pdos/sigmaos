@@ -23,7 +23,7 @@ func makeMemfsTstate(t *testing.T) *Tstate {
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
-	replicaName := "memfs-replica"
+	replicaName := "memfs-chain-replica"
 	db.Name(replicaName + "-test")
 	ts.FsLib = fslib.MakeFsLibAddr(replicaName+"-test", cfg.NamedAddr)
 	ts.t = t

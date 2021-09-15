@@ -7,8 +7,8 @@ killall create
 killall destroy
 killall named
 killall memfsd
-killall memfs-replica
-killall fsux-replica
+killall memfs-chain-replica
+killall fsux-chain-replica
 killall replica-monitor
 killall procd-monitor
 killall perf-memfs-replica

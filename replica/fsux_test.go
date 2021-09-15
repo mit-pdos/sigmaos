@@ -23,7 +23,7 @@ func makeFsUxTstate(t *testing.T) *Tstate {
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
-	replicaName := "fsux-replica"
+	replicaName := "fsux-chain-replica"
 	db.Name(replicaName + "-test")
 	ts.FsLib = fslib.MakeFsLibAddr(replicaName+"-test", cfg.NamedAddr)
 	ts.t = t

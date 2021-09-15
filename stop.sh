@@ -8,6 +8,7 @@ killall destroy
 killall named
 killall memfsd
 killall memfs-chain-replica
+killall memfs-raft-replica
 killall fsux-chain-replica
 killall replica-monitor
 killall procd-monitor

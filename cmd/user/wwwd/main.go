@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -34,7 +33,7 @@ func MakeWwwd() *Wwwd {
 	cfg := realm.GetRealmConfig(fsl, realm.TEST_RID)
 	www.FsLib = fslib.MakeFsLibAddr("www", cfg.NamedAddr)
 
-	err := www.MakeFile("name/hello.html", 0777, np.OWRITE, []byte("hello\n"))
+	err := www.MakeFile("name/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
@@ -81,13 +80,20 @@ func getPage(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	b, err := www.Read(fd, memfs.PIPESZ)
-	if err != nil || len(b) == 0 {
-		err := www.Close(fd)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	for {
+		b, err := www.Read(fd, memfs.PIPESZ)
+		if err != nil || len(b) == 0 {
+			break
 		}
+		_, err = w.Write(b)
+		if err != nil {
+			break
+		}
+	}
+	defer www.Close(fd)
+	err = www.WaitExit(pid)
+	log.Printf("pid %v finished %v\n", pid, err)
+	if err == nil {
 		return
 	}
-	fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", "Hello", b)
 }

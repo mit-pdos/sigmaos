@@ -45,7 +45,6 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs {
-				// TODO: process
 				req := &np.Fcall{}
 				if err := npcodec.Unmarshal(frame, req); err != nil {
 					log.Fatalf("Error unmarshalling req in Clerk.serve: %v", err)
@@ -76,7 +75,6 @@ func (c *Clerk) apply(fc *np.Fcall) *np.Fcall {
 	fcall.Session = fc.Session
 	fcall.Seqno = fc.Seqno
 	fcall.Tag = t
-	log.Printf("SERVER %v DISPATCH %v REPLY %v", c.id, fc, fcall)
 	return fcall
 }
 

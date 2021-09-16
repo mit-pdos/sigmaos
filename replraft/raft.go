@@ -121,10 +121,10 @@ func (n *RaftNode) serveChannels() {
 			n.node.Tick()
 		case read := <-n.node.Ready():
 			if !raft.IsEmptySnap(read.Snapshot) {
+				n.publishSnapshot(read.Snapshot)
 				// XXX Right now we don't handle/generate snapshots.
 				log.Fatalf("Received snapshot!")
 			}
-			// TODO
 			n.storage.Append(read.Entries)
 			n.transport.Send(read.Messages)
 			n.handleEntries(read.Entries)
@@ -133,6 +133,16 @@ func (n *RaftNode) serveChannels() {
 			log.Fatalf("Raft transport error: %v", err)
 		}
 	}
+}
+
+func (n *RaftNode) publishSnapshot(snapshot raftpb.Snapshot) {
+	if raft.IsEmptySnap(snapshot) {
+		return
+	}
+
+	n.confState = &snapshot.Metadata.ConfState
+	n.snapshotIndex = snapshot.Metadata.Index
+	n.appliedIndex = snapshot.Metadata.Index
 }
 
 func (n *RaftNode) sendProposals() {

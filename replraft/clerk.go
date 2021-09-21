@@ -103,7 +103,6 @@ func (c *Clerk) registerOp(op *SrvOp) {
 	m[op.request.Seqno] = op
 }
 
-// TODO: deal with duplicate commits more cleanly
 func (c *Clerk) getOp(rep *np.Fcall) *SrvOp {
 	c.mu.Lock()
 	defer c.mu.Unlock()

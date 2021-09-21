@@ -87,7 +87,7 @@ func (r *Reader) Work() {
 	if err != nil {
 		// XXX need to return an sigmaOS exit value so that
 		// wwwd terminates waiting for this process
-		os.Exit(127)
+		os.Exit(66) //EX_NOINPUT
 	}
 	for {
 		data, err := r.Read(fd, memfs.PIPESZ)

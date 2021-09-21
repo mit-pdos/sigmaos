@@ -83,6 +83,7 @@ func getPage(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 	for {
 		b, err := www.Read(fd, memfs.PIPESZ)
 		if err != nil || len(b) == 0 {
+			// http.NotFound(w, r) on certain errors?
 			break
 		}
 		_, err = w.Write(b)

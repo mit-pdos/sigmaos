@@ -10,6 +10,10 @@ import (
 	"ulambda/repl"
 )
 
+const (
+	RAFT_PORT_OFFSET = 1000
+)
+
 type RaftConfig struct {
 	id        int
 	replAddr  string
@@ -19,8 +23,11 @@ type RaftConfig struct {
 func MakeRaftConfig(id int, peerAddrs []string) *RaftConfig {
 	rc := &RaftConfig{}
 	rc.id = id
-	rc.peerAddrs = peerAddrs
-	rc.replAddr = ReplicaAddrFromPeerAddr(peerAddrs[id-1])
+	rc.replAddr = peerAddrs[id-1]
+	rc.peerAddrs = []string{}
+	for _, addr := range peerAddrs {
+		rc.peerAddrs = append(rc.peerAddrs, addRaftPortOffset(addr))
+	}
 
 	return rc
 }
@@ -37,7 +44,7 @@ func (rc *RaftConfig) String() string {
 	return fmt.Sprintf("&{ id:%v peerAddrs:%v }", rc.id, rc.peerAddrs)
 }
 
-func ReplicaAddrFromPeerAddr(peerAddr string) string {
+func addRaftPortOffset(peerAddr string) string {
 	// Compute replica address as peerAddr + 100
 	host, port, err := net.SplitHostPort(peerAddr)
 	if err != nil {
@@ -47,7 +54,7 @@ func ReplicaAddrFromPeerAddr(peerAddr string) string {
 	if err != nil {
 		log.Fatalf("Error conv port: %v", err)
 	}
-	newPort := strconv.Itoa(portI + 1000)
+	newPort := strconv.Itoa(portI + RAFT_PORT_OFFSET)
 
 	return host + ":" + newPort
 }

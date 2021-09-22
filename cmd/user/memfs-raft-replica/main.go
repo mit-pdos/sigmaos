@@ -40,13 +40,8 @@ func main() {
 	fsl := fslib.MakeFsLib(fmt.Sprintf("memfs-raft-replica-%v", id))
 	fsl.Mkdir(unionDirPath, 0777)
 
-	replicaAddrs := []string{}
-	for _, p := range peers {
-		replicaAddrs = append(replicaAddrs, replraft.ReplicaAddrFromPeerAddr(p))
-	}
-
 	// XXX Hack to get around lakc of proxy support for multi simlinks
-	addr := replraft.ReplicaAddrFromPeerAddr(peers[0]) + ":pubkey"
+	addr := peers[0] + ":pubkey"
 	fsl.Symlink(addr, symlinkPath, 0777|np.DMTMP|np.DMREPL)
 	//	fsl.SymlinkReplica(peers, symlinkPath, 0777|np.DMTMP|np.DMREPL)
 

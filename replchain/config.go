@@ -35,8 +35,8 @@ func CopyChainReplConfig(old *ChainReplConfig) *ChainReplConfig {
 	}
 }
 
-func (c *ChainReplConfig) MakeServer(psrv protsrv.FsServer) repl.Server {
-	return MakeChainReplServer(c)
+func (c *ChainReplConfig) MakeServer(fssrv protsrv.FsServer) repl.Server {
+	return MakeChainReplServer(c, fssrv)
 }
 
 func (c *ChainReplConfig) ReplAddr() string {

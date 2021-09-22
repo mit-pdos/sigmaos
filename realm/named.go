@@ -25,8 +25,8 @@ const (
 
 func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
-	for _, addr := range addrs {
-		cmd, err := BootNamed(bin, addr, realmId)
+	for i, addr := range addrs {
+		cmd, err := BootNamed(bin, addr, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err
@@ -37,12 +37,17 @@ func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd,
 }
 
 // Boot a named and set up the initfs
-func BootNamed(bin string, addr string, realmId string) (*exec.Cmd, error) {
+func BootNamed(bin string, addr string, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	var args []string
 	if realmId == NO_REALM {
-		args = []string{"0", addr}
+		args = []string{"0", addr, NO_REALM}
 	} else {
 		args = []string{"0", addr, realmId}
+	}
+	// If we're running replicated...
+	if N_REPLICAS > 1 {
+		args = append(args, strconv.Itoa(id))
+		args = append(args, strings.Join(peers, ","))
 	}
 	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
@@ -50,7 +55,7 @@ func BootNamed(bin string, addr string, realmId string) (*exec.Cmd, error) {
 	}
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
-	if err := named.MakeInitFs(fsl); err != nil {
+	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
 		return nil, err
 	}
 	return cmd, nil

@@ -19,7 +19,7 @@ const ()
 
 type System struct {
 	bin       string
-	namedAddr string
+	namedAddr []string
 	fss3d     []*exec.Cmd
 	fsuxd     []*exec.Cmd
 	procd     []*exec.Cmd
@@ -31,7 +31,7 @@ func MakeSystem(bin string) *System {
 	return MakeSystemNamedAddr(bin, fslib.Named())
 }
 
-func MakeSystemNamedAddr(bin string, namedAddr string) *System {
+func MakeSystemNamedAddr(bin string, namedAddr []string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = namedAddr
@@ -172,13 +172,13 @@ func (s *System) Shutdown() {
 	}
 }
 
-func run(bin string, name string, namedAddr string, args []string) (*exec.Cmd, error) {
+func run(bin string, name string, namedAddr []string, args []string) (*exec.Cmd, error) {
 	cmd := exec.Command(path.Join(bin, name), args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ())
-	cmd.Env = append(cmd.Env, "NAMED="+namedAddr)
+	cmd.Env = append(cmd.Env, "NAMED="+strings.Join(namedAddr, ","))
 	return cmd, cmd.Start()
 }

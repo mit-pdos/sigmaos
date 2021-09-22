@@ -44,11 +44,11 @@ type Tstate struct {
 	*fslib.FsLib
 }
 
-func run(bin string, name string, args []string, namedAddr string) (*exec.Cmd, error) {
+func run(bin string, name string, args []string, namedAddr []string) (*exec.Cmd, error) {
 	cmd := exec.Command(bin+"/"+name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "NAMED="+namedAddr)
+	cmd.Env = append(os.Environ(), "NAMED="+strings.Join(namedAddr, ","))
 	return cmd, cmd.Start()
 }
 

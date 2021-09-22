@@ -58,7 +58,7 @@ func (e *TestEnv) Shutdown() {
 	kill(e.realmmgr)
 	e.realmmgr = nil
 
-	ShutdownNamed(fslib.Named())
+	ShutdownNamedReplicas(fslib.Named())
 }
 
 func (e *TestEnv) bootRealmMgr() error {

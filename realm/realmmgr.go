@@ -28,7 +28,7 @@ const (
 )
 
 type RealmMgr struct {
-	named        *exec.Cmd
+	nameds       []*exec.Cmd
 	freeRealmds  *sync.FilePriorityBag
 	realmCreate  *sync.FilePriorityBag
 	realmDestroy *sync.FilePriorityBag
@@ -40,8 +40,8 @@ type RealmMgr struct {
 func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
 	m.done = make(chan bool)
-	named, err := BootNamed(bin, fslib.Named(), NO_REALM)
-	m.named = named
+	nameds, err := BootNamedReplicas(bin, fslib.Named(), NO_REALM)
+	m.nameds = nameds
 	// Start a named instance.
 	if err != nil {
 		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)

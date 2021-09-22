@@ -34,12 +34,13 @@ func main() {
 	}
 	defer p.Teardown()
 	db.Name("memfsd")
-	fsd := memfsd.MakeFsd(os.Args[2])
+	addr := os.Args[2]
+	fsd := memfsd.MakeFsd(addr)
 	// Register a realm's named in the global namespace
 	if len(os.Args) >= 4 {
 		realmId := os.Args[3]
-		name := path.Join(realm.REALM_NAMEDS, realmId)
-		_, err := fslibsrv.InitFs(name, fsd, nil)
+		path := path.Join(realm.REALM_NAMEDS, realmId, addr)
+		_, err := fslibsrv.InitFs(path, fsd, nil)
 		if err != nil {
 			log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 		}

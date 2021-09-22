@@ -8,11 +8,11 @@ go test $1 ulambda/fsclnt
 go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats
-(cd fss3; go test $1)
+go test $1 ulambda/fss3
 go test $1 ulambda/procbase
 go test $1 ulambda/procidem
 go test $1 ulambda/procdep
-(cd kv; go test $1)
+go test $1 ulambda/kv
 ./test-mr.sh
 ./test-kv.sh
-(cd replica; go test -timeout=45m $1)
+go test $1 -timeout=45m ulambda/replica

@@ -17,6 +17,8 @@ import (
 	"go.etcd.io/etcd/server/v3/etcdserver/api/rafthttp"
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	"go.uber.org/zap"
+
+	db "ulambda/debug"
 )
 
 const (
@@ -66,7 +68,7 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, commit chan<- [
 
 func (n *RaftNode) start(peers []raft.Peer) {
 	if n.id == 1 {
-		n.node = raft.StartNode(n.config, peers)
+		n.node = raft.StartNode(n.config, peers[:1])
 	} else {
 		n.postNodeId()
 		n.node = raft.RestartNode(n.config)
@@ -97,7 +99,8 @@ func (n *RaftNode) serveRaft() {
 	if err != nil {
 		log.Fatalf("Error listen: %v", err)
 	}
-	log.Printf("Listening at: %v", l.Addr().String())
+
+	db.DLPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
 
 	srv := &http.Server{Handler: apiHandler(n)}
 	err = srv.Serve(l)
@@ -178,8 +181,8 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 			n.confState = n.node.ApplyConfChange(change)
 			switch change.Type {
 			case raftpb.ConfChangeAddNode:
-				log.Printf("%v ADD NODE: %v, %v", n.id, change.NodeID, "http://"+string(change.Context))
 				if len(change.Context) > 0 {
+					db.DLPrintf("REPLRAFT", "Adding peer %v", string(change.Context))
 					n.transport.AddPeer(types.ID(change.NodeID), []string{"http://" + string(change.Context)})
 				}
 			case raftpb.ConfChangeRemoveNode:
@@ -208,9 +211,9 @@ func (n *RaftNode) postNodeId() {
 		}
 		_, err = http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b))
 		if err == nil {
+			log.Fatalf("Error posting node id: %v", err)
 			return
 		}
-		log.Printf("Error posting node id: %v", err)
 	}
 	log.Fatalf("Failed to post node ID")
 }

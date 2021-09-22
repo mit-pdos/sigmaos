@@ -57,13 +57,15 @@ func (c *RaftReplConn) reader() {
 			}
 			return
 		}
-		db.DLPrintf("REPLRAFT", "%v relay reader read frame from %v\n", c.Dst(), c.Src())
+		db.DLPrintf("REPLRAFT", "%v raft reader read frame from %v\n", c.Dst(), c.Src())
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Printf("Server %v: replraft reader unmarshal error: %v", c.Dst(), err)
 		} else {
 			op := &SrvOp{fcall, frame, nil, c.replies}
+			db.DLPrintf("REPLRAFT", "%v raft about to request %v clerk %v\n", c.Dst(), fcall, c.Src())
 			c.clerk.request(op)
+			db.DLPrintf("REPLRAFT", "%v raft reader requested from clerk %v\n", c.Dst(), c.Src())
 		}
 	}
 }
@@ -74,7 +76,7 @@ func (c *RaftReplConn) writer() {
 		if !ok {
 			return
 		}
-		db.DLPrintf("REPLRAFT", "%v -> %v relay writer reply: %v", c.Dst(), c.Src(), op.reply)
+		db.DLPrintf("REPLRAFT", "%v -> %v raft writer reply: %v", c.Dst(), c.Src(), op.reply)
 		err := npcodec.MarshalFcallToWriter(op.reply, c.bw)
 		if err != nil {
 			db.DLPrintf("REPLRAFT", "%v -> %v Writer: WriteFrame error: %v", c.Src(), c.Dst(), err)

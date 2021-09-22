@@ -45,7 +45,7 @@ func (rc *RaftConfig) String() string {
 }
 
 func addRaftPortOffset(peerAddr string) string {
-	// Compute replica address as peerAddr + 100
+	// Compute replica address as peerAddr + RAFT_PORT_OFFSET
 	host, port, err := net.SplitHostPort(peerAddr)
 	if err != nil {
 		log.Fatalf("Error splitting host port: %v", err)

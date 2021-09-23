@@ -26,7 +26,7 @@ type FsObj interface {
 	Perm() np.Tperm
 	Version() np.TQversion
 	Size() np.Tlength
-	Open(CtxI, np.Tmode) error
+	Open(CtxI, np.Tmode) (FsObj, error)
 	Close(CtxI, np.Tmode) error // for pipes
 	Remove(CtxI, string) error
 	Stat(CtxI) (*np.Stat, error)

@@ -79,7 +79,7 @@ func MakeReader(args []string) (*Reader, error) {
 
 func (r *Reader) Work() {
 	db.DLPrintf("Reader", "Reader: work\n")
-	err := r.pipe.Open(nil, np.OWRITE)
+	_, err := r.pipe.Open(nil, np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}

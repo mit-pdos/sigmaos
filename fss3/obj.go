@@ -205,8 +205,8 @@ func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([
 }
 
 // XXX Check permissions?
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) error {
-	return nil
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
+	return nil, nil
 }
 
 func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {

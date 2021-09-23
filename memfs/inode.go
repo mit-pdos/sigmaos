@@ -24,7 +24,7 @@ type InodeI interface {
 	Version() np.TQversion
 	Size() np.Tlength
 	SetParent(*Dir)
-	Open(fs.CtxI, np.Tmode) error
+	Open(fs.CtxI, np.Tmode) (fs.FsObj, error)
 	Close(fs.CtxI, np.Tmode) error
 	Remove(fs.CtxI, string) error
 	Stat(fs.CtxI) (*np.Stat, error)
@@ -112,8 +112,8 @@ func permToInode(uname string, p np.Tperm, parent *Dir) (InodeI, error) {
 	}
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) error {
-	return nil
+func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
+	return nil, nil
 }
 
 func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) error {

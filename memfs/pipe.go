@@ -46,7 +46,7 @@ func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) error {
+func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	pipe.Lock()
 	defer pipe.Unlock()
 
@@ -64,9 +64,9 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) error {
 			pipe.condw.Wait()
 		}
 	} else {
-		return fmt.Errorf("Pipe open unknown mode %v\n", mode)
+		return nil, fmt.Errorf("Pipe open unknown mode %v\n", mode)
 	}
-	return nil
+	return nil, nil
 }
 
 func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {

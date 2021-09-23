@@ -187,8 +187,8 @@ func (o *Obj) Wstat(ctx fs.CtxI, st *np.Stat) error {
 	return nil
 }
 
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) error {
-	return nil
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
+	return nil, nil
 }
 
 // XXX close

@@ -13,6 +13,7 @@ const (
 	S3    = "name/s3"
 	UX    = "name/ux"
 	FS    = "name/fs"
+	DB    = "name/db"
 )
 
 func MakeInitFs(fsl *fslib.FsLib) error {

@@ -170,11 +170,16 @@ func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.R
 		return np.ErrClunked
 	}
 	fos.stats.Path(f.Path())
-	r := o.Open(f.Ctx(), args.Mode)
+	no, r := o.Open(f.Ctx(), args.Mode)
 	if err != nil {
 		return &np.Rerror{r.Error()}
 	}
-	rets.Qid = o.Qid()
+	if no != nil {
+		f.SetObj(no)
+		rets.Qid = no.Qid()
+	} else {
+		rets.Qid = o.Qid()
+	}
 	return nil
 }
 
@@ -485,7 +490,7 @@ func (fos *FsObjSrv) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfi
 		}
 	}
 	fos.stats.Path(f.Path())
-	r := lo.Open(f.Ctx(), args.Mode)
+	_, r := lo.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
@@ -546,7 +551,7 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 		fos.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
 		fos.stats.Path(f.Path())
-		r = lo.Open(f.Ctx(), args.Mode)
+		_, r = lo.Open(f.Ctx(), args.Mode)
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}

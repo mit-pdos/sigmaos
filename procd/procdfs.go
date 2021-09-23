@@ -29,8 +29,8 @@ func (pd *Procd) MakeObj(path []string, t np.Tperm, p *Dir) *Obj {
 }
 
 // check permissions etc.
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) error {
-	return nil
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
+	return nil, nil
 }
 
 func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {

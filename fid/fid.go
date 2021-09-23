@@ -40,6 +40,7 @@ func (f *Fid) Path() []string {
 
 func (f *Fid) SetPath(p []string) {
 	f.path = p
+
 }
 
 func (f *Fid) PathLast() string {
@@ -64,6 +65,10 @@ func (f *Fid) Obj() fs.FsObj {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.obj
+}
+
+func (f *Fid) SetObj(o fs.FsObj) {
+	f.obj = o
 }
 
 func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Rerror) {

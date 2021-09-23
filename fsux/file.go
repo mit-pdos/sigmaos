@@ -22,14 +22,14 @@ func (fsux *FsUx) makeFile(path []string, t np.Tperm, p *Dir) *File {
 	return f
 }
 
-func (f *File) Open(ctx fs.CtxI, m np.Tmode) error {
+func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	db.DLPrintf("UXD", "%v: Open %v %v path %v\n", ctx, f, m, f.Path())
 	file, err := os.OpenFile(f.Path(), uxFlags(m), 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	f.file = file
-	return nil
+	return nil, nil
 }
 
 func (f *File) uxWrite(off int64, b []byte) (np.Tsize, error) {

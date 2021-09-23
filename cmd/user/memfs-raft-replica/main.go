@@ -9,14 +9,13 @@ import (
 
 	"ulambda/fsclnt"
 	"ulambda/fslib"
-	np "ulambda/ninep"
 	"ulambda/replica"
 	"ulambda/replraft"
 )
 
 func main() {
-	if len(os.Args) < 6 {
-		log.Fatalf("Usage: %v pid id peerAddrs union-dir-path symlink-path", os.Args[0])
+	if len(os.Args) < 5 {
+		log.Fatalf("Usage: %v pid id peerAddrs union-dir-path", os.Args[0])
 	}
 	args := os.Args[1:]
 
@@ -28,7 +27,6 @@ func main() {
 	peers := strings.Split(args[2], ",")
 
 	unionDirPath := args[3]
-	symlinkPath := args[4]
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("%v: no IP %v\n", args, err)
@@ -39,16 +37,6 @@ func main() {
 
 	fsl := fslib.MakeFsLib(fmt.Sprintf("memfs-raft-replica-%v", id))
 	fsl.Mkdir(unionDirPath, 0777)
-
-	replicaAddrs := []string{}
-	for _, p := range peers {
-		replicaAddrs = append(replicaAddrs, replraft.ReplicaAddrFromPeerAddr(p))
-	}
-
-	// XXX Hack to get around lakc of proxy support for multi simlinks
-	addr := replraft.ReplicaAddrFromPeerAddr(peers[0]) + ":pubkey"
-	fsl.Symlink(addr, symlinkPath, 0777|np.DMTMP|np.DMREPL)
-	//	fsl.SymlinkReplica(peers, symlinkPath, 0777|np.DMTMP|np.DMREPL)
 
 	// Start the replica server
 	r := replica.MakeMemfsdReplica(args, srvAddr, unionDirPath, config)

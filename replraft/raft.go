@@ -1,10 +1,13 @@
 package replraft
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"log"
 	"net"
 	"net/http"
+	"path"
 	"strconv"
 	"time"
 
@@ -14,7 +17,8 @@ import (
 	"go.etcd.io/etcd/server/v3/etcdserver/api/rafthttp"
 	stats "go.etcd.io/etcd/server/v3/etcdserver/api/v2stats"
 	"go.uber.org/zap"
-	//	np "ulambda/ninep"
+
+	db "ulambda/debug"
 )
 
 const (
@@ -63,7 +67,12 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, commit chan<- [
 }
 
 func (n *RaftNode) start(peers []raft.Peer) {
-	n.node = raft.StartNode(n.config, peers)
+	if n.id == 1 {
+		n.node = raft.StartNode(n.config, peers[:1])
+	} else {
+		n.postNodeId()
+		n.node = raft.RestartNode(n.config)
+	}
 	n.transport = &rafthttp.Transport{
 		Logger:      zap.NewExample(),
 		ID:          types.ID(n.id),
@@ -86,13 +95,14 @@ func (n *RaftNode) start(peers []raft.Peer) {
 
 func (n *RaftNode) serveRaft() {
 	addr := n.peerAddrs[n.id-1]
-	log.Printf("Listening on: %v", addr)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Error listen: %v", err)
 	}
 
-	srv := &http.Server{Handler: n.transport.Handler()}
+	db.DLPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
+
+	srv := &http.Server{Handler: apiHandler(n)}
 	err = srv.Serve(l)
 	if err != nil {
 		log.Fatalf("Error server: %v", err)
@@ -172,7 +182,8 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 			switch change.Type {
 			case raftpb.ConfChangeAddNode:
 				if len(change.Context) > 0 {
-					n.transport.AddPeer(types.ID(change.NodeID), []string{string(change.Context)})
+					db.DLPrintf("REPLRAFT", "Adding peer %v", string(change.Context))
+					n.transport.AddPeer(types.ID(change.NodeID), []string{"http://" + string(change.Context)})
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if change.NodeID == uint64(n.id) {
@@ -188,6 +199,23 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 	n.commit <- data
 
 	n.appliedIndex = entries[len(entries)-1].Index
+}
+
+// Send a post request, indicating that the node will join the cluster.
+func (n *RaftNode) postNodeId() {
+	for _, addr := range n.peerAddrs {
+		mcr := &membershipChangeReq{uint64(n.id), n.peerAddrs[n.id-1]}
+		b, err := json.Marshal(mcr)
+		if err != nil {
+			log.Fatalf("Error Marshal in RaftNode.postNodeID: %v", err)
+		}
+		_, err = http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b))
+		if err == nil {
+			log.Fatalf("Error posting node id: %v", err)
+			return
+		}
+	}
+	log.Fatalf("Failed to post node ID")
 }
 
 func (n *RaftNode) IsIDRemoved(id uint64) bool {

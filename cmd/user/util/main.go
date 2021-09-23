@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
-	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procdep"
 	"ulambda/procinit"
 )
 
@@ -80,7 +80,7 @@ func main() {
 	cmd := os.Args[1]
 	if cmd == "exit" {
 		pid := os.Args[2]
-		sclnt.Exited(pid)
+		sclnt.Exited(pid, "OK")
 	} else {
 		usage()
 	}

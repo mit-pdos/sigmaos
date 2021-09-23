@@ -30,6 +30,6 @@ func main() {
 	fsd.GetSrv().GetStats().MakeElastic(fsl.Clnt(), os.Args[1])
 	fsd.Serve()
 	fsd.GetSrv().GetStats().Done()
-	sclnt.Exited(os.Args[1])
+	sclnt.Exited(os.Args[1], "OK")
 	fsl.ExitFs(name)
 }

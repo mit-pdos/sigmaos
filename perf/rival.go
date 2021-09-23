@@ -85,7 +85,7 @@ func (r *Rival) spawnSpinner(pid string) {
 			log.Fatalf("couldn't spawn ninep spinner %v: %v\n", pid, err)
 		}
 		go func() {
-			err := r.WaitExit(pid)
+			_, err := r.WaitExit(pid)
 			if err != nil {
 				log.Printf("Error running lambda: %v", err)
 			}

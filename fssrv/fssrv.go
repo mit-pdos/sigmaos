@@ -28,7 +28,6 @@ type FsServer struct {
 
 func MakeFsServer(fs Fs, root fs.FsObj, addr string,
 	npcm protsrv.MakeProtServer,
-	replicated bool,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.fs = fs
@@ -39,7 +38,7 @@ func MakeFsServer(fs Fs, root fs.FsObj, addr string,
 	fssrv.wt = watch.MkWatchTable()
 	fssrv.ct = MkConnTable()
 	fssrv.st = session.MakeSessionTable()
-	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, replicated, config)
+	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	return fssrv
 }
 

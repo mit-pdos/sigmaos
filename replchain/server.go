@@ -2,6 +2,7 @@ package replchain
 
 import (
 	"log"
+	"net"
 	"path"
 	"sort"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procinit"
 	"ulambda/protclnt"
+	"ulambda/protsrv"
 	"ulambda/repl"
 )
 
@@ -23,6 +25,7 @@ const (
 
 type ChainReplServer struct {
 	mu         *sync.Mutex
+	fssrv      protsrv.FsServer
 	config     *ChainReplConfig
 	HeadChan   *RelayNetConn
 	TailChan   *RelayNetConn
@@ -37,13 +40,13 @@ type ChainReplServer struct {
 	*protclnt.Clnt
 }
 
-func MakeChainReplServer(cfg repl.Config) *ChainReplServer {
+func MakeChainReplServer(cfg repl.Config, fssrv protsrv.FsServer) *ChainReplServer {
 	c := cfg.(*ChainReplConfig)
 	config := CopyChainReplConfig(c)
 	fsl := fslib.MakeFsLib("replstate")
 	ops := make(chan *RelayOp)
 	return &ChainReplServer{&sync.Mutex{},
-		config,
+		fssrv, config,
 		nil, nil, nil, nil,
 		ops,
 		MakeRelayOpSet(),
@@ -56,6 +59,15 @@ func MakeChainReplServer(cfg repl.Config) *ChainReplServer {
 }
 
 func (rs *ChainReplServer) Init() {
+	// Create and start the relay server listener
+	db.DLPrintf("RSRV", "listen %v\n", rs.config.ReplAddr())
+	relayL, err := net.Listen("tcp", rs.config.ReplAddr())
+	if err != nil {
+		log.Fatal("Replica server listen error:", err)
+	}
+	// Start a server to listen for relay messages
+	go rs.runsrv(relayL)
+
 	// Set up op logging if necessary
 	if rs.config.LogOps {
 		err := rs.MakeFile("name/"+rs.config.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
@@ -69,6 +81,23 @@ func (rs *ChainReplServer) Init() {
 	// Watch for other servers that go down, and spawn a lambda to update config
 	go rs.runDirWatcher()
 	rs.setupRelay()
+}
+
+func (rs *ChainReplServer) runsrv(l net.Listener) {
+	defer l.Close()
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Fatal("Accept error: ", err)
+		}
+
+		//		if !srv.replicated {
+		//			MakeSrvConn(srv, conn)
+		//		} else {
+		db.DLPrintf("9PCHAN", "replsrv conn from %v -> %v\n", conn.RemoteAddr(), l.Addr())
+		rs.MakeConn(rs.fssrv, conn)
+		//		}
+	}
 }
 
 func (rs *ChainReplServer) getNewReplConfig() *ChainReplConfig {

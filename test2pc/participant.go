@@ -123,5 +123,5 @@ func (p *Part2pc) Work() {
 }
 
 func (p *Part2pc) Exit() {
-	p.Exited(p.pid)
+	p.Exited(p.pid, "OK")
 }

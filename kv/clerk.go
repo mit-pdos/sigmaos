@@ -36,7 +36,7 @@ type KvClerk struct {
 	nget  int
 }
 
-func MakeClerk(namedAddr string) *KvClerk {
+func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.ch = make(chan bool)
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)

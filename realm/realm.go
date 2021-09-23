@@ -19,8 +19,8 @@ const (
 )
 
 type RealmConfig struct {
-	Rid       string // Realm id.
-	NamedAddr string // IP address of this realm's named.
+	Rid       string   // Realm id.
+	NamedAddr []string // IP address of this realm's named.
 }
 
 type RealmClnt struct {

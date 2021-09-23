@@ -29,7 +29,7 @@ func MakeFsUxReplica(args []string, srvAddr string, unionDirPath string, config 
 	fsl := fslib.MakeFsLib("fsux-chain-replica" + config.ReplAddr())
 	r.FsLib = fsl
 
-	r.ux = fsux.MakeReplicatedFsUx(r.mount, srvAddr, "", true, config)
+	r.ux = fsux.MakeReplicatedFsUx(r.mount, srvAddr, "", config)
 	r.name = path.Join(unionDirPath, config.ReplAddr())
 	// Post in union dir
 	err := r.PostService(srvAddr, r.name)

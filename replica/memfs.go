@@ -23,7 +23,7 @@ func MakeMemfsdReplica(args []string, srvAddr string, unionDirPath string, confi
 	r.Pid = args[0]
 	r.config = config
 
-	r.fsd = memfsd.MakeReplicatedFsd(srvAddr, true, r.config)
+	r.fsd = memfsd.MakeReplicatedFsd(srvAddr, r.config)
 	r.name = path.Join(unionDirPath, config.ReplAddr())
 	db.Name(r.name)
 	fs, err := fslibsrv.InitFs(r.name, r.fsd, nil)

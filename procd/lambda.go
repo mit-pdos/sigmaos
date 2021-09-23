@@ -59,7 +59,7 @@ func (l *Lambda) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		// XXX Mark as exited?
+		l.pd.procclnt.Exited(l.Pid, err.Error())
 		return
 	}
 

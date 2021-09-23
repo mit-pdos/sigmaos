@@ -45,6 +45,7 @@ type Procd struct {
 	fssrv      *fssrv.FsServer
 	group      sync.WaitGroup
 	perf       *perf.Perf
+	procclnt   *procbase.ProcBaseClnt
 	*fslib.FsLib
 }
 
@@ -63,11 +64,12 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	if err != nil {
 		log.Fatalf("LocalIP %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", fos.MakeProtServer(), false, nil)
+	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", fos.MakeProtServer(), nil)
 	pd.addr = pd.fssrv.MyAddr()
 	fsl := fslib.MakeFsLib("procd")
 	fsl.Mkdir(named.PROCD, 0777)
 	pd.FsLib = fsl
+	pd.procclnt = procbase.MakeProcBaseClnt(pd.FsLib)
 	err = fsl.PostServiceUnion(pd.fssrv.MyAddr(), named.PROCD, pd.fssrv.MyAddr())
 	if err != nil {
 		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.fssrv.MyAddr(), err)

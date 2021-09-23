@@ -29,16 +29,16 @@ type FsUx struct {
 }
 
 func MakeFsUx(mount string, addr string, pid string) *FsUx {
-	return MakeReplicatedFsUx(mount, addr, pid, false, nil)
+	return MakeReplicatedFsUx(mount, addr, pid, nil)
 }
 
-func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, config repl.Config) *FsUx {
+func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	fsux.ch = make(chan bool)
 	fsux.root = fsux.makeDir([]string{mount}, np.DMDIR, nil)
 	db.Name("fsuxd")
-	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), replicated, config)
+	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), config)
 	fsl := fslib.MakeFsLib("fsux")
 	fsl.Mkdir(named.UX, 0777)
 	err := fsl.PostServiceUnion(fsux.fssrv.MyAddr(), named.UX, fsux.fssrv.MyAddr())
@@ -46,7 +46,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, replicated bool, 
 		log.Fatalf("PostServiceUnion failed %v %v\n", fsux.fssrv.MyAddr(), err)
 	}
 
-	if !replicated {
+	if config == nil {
 		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 		fsuxStartCond.Destroy()
 	}

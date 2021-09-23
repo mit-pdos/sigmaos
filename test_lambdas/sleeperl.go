@@ -60,7 +60,7 @@ func (s *Sleeperl) waitEvict() {
 
 func (s *Sleeperl) Work() {
 	go s.waitEvict()
-	time.Sleep(5000 * time.Millisecond)
+	time.Sleep(s.sleepLength)
 	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {
 		log.Printf("Error: Makefile in Sleeperl.Work: %v\n", err)
@@ -68,5 +68,5 @@ func (s *Sleeperl) Work() {
 }
 
 func (s *Sleeperl) Exit() {
-	s.Exited(s.pid)
+	s.Exited(s.pid, "OK")
 }

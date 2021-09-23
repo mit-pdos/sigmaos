@@ -51,5 +51,5 @@ func (down *Downloader) Work() {
 }
 
 func (down *Downloader) Exit() {
-	down.Exited(down.pid)
+	down.Exited(down.pid, "OK")
 }

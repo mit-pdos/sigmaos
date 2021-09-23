@@ -19,31 +19,23 @@ type NetServer struct {
 }
 
 func MakeNetServer(address string, fssrv protsrv.FsServer) *NetServer {
-	return MakeReplicatedNetServer(fssrv, address, false, false, nil)
+	return MakeReplicatedNetServer(fssrv, address, false, nil)
 }
 
 func MakeNetServerWireCompatible(address string, fssrv protsrv.FsServer) *NetServer {
-	return MakeReplicatedNetServer(fssrv, address, true, false, nil)
+	return MakeReplicatedNetServer(fssrv, address, true, nil)
 }
 
-func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, replicated bool, config repl.Config) *NetServer {
+func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, config repl.Config) *NetServer {
 	srv := &NetServer{"",
 		fs,
-		wireCompat, replicated,
+		wireCompat, config != nil,
 		nil,
 	}
-	if replicated {
+	if srv.replicated {
 		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
 		srv.replSrv = config.MakeServer(fs)
-		// Create and start the relay server listener
-		db.DLPrintf("RSRV", "listen %v  myaddr %v\n", address, srv.addr)
-		relayL, err := net.Listen("tcp", config.ReplAddr())
-		if err != nil {
-			log.Fatal("Replica server listen error:", err)
-		}
 		srv.replSrv.Init()
-		// Start a server to listen for relay messages
-		go srv.runsrv(relayL)
 	}
 	// Create and start the main server listener
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)

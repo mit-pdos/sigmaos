@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 	"ulambda/protsrv"
@@ -49,14 +50,21 @@ func (c *Clerk) serve() {
 				if err := npcodec.Unmarshal(frame, req); err != nil {
 					log.Fatalf("Error unmarshalling req in Clerk.serve: %v", err)
 				}
-				rep := c.apply(req)
-				go c.reply(rep)
+				db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
+				// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
+				go func() {
+					rep := c.apply(req)
+					db.DLPrintf("REPLRAFT", "Reply %v\n", rep)
+					// go c.reply(rep)
+					c.reply(rep)
+				}()
 			}
 		}
 	}
 }
 
 func (c *Clerk) propose(op *SrvOp) {
+	db.DLPrintf("REPLRAFT", "Propose %v\n", op.request)
 	c.registerOp(op)
 	c.proposeC <- op.frame
 }
@@ -103,7 +111,6 @@ func (c *Clerk) registerOp(op *SrvOp) {
 	m[op.request.Seqno] = op
 }
 
-// TODO: deal with duplicate commits more cleanly
 func (c *Clerk) getOp(rep *np.Fcall) *SrvOp {
 	c.mu.Lock()
 	defer c.mu.Unlock()

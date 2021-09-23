@@ -67,5 +67,5 @@ func (m *ReplicaMonitor) Work() {
 }
 
 func (m *ReplicaMonitor) Exit() {
-	m.Exited(m.pid)
+	m.Exited(m.pid, "OK")
 }

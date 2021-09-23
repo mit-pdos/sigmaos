@@ -26,10 +26,10 @@ type NpConn struct {
 	clnt  *protclnt.Clnt
 	uname string
 	fids  map[np.Tfid]*protclnt.ProtClnt // The outgoing channels to servers proxied
-	named string
+	named []string
 }
 
-func makeNpConn(named string) *NpConn {
+func makeNpConn(named []string) *NpConn {
 	npc := &NpConn{}
 	npc.clnt = protclnt.MakeClnt()
 	npc.fids = make(map[np.Tfid]*protclnt.ProtClnt)
@@ -64,7 +64,7 @@ func (npc *NpConn) delch(fid np.Tfid) {
 }
 
 type Npd struct {
-	named string
+	named []string
 	st    *session.SessionTable
 }
 
@@ -104,11 +104,11 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 
 	log.Printf("attach %v\n", args)
 
-	reply, err := npc.clnt.Attach([]string{npc.named}, npc.uname, args.Fid, np.Split(args.Aname))
+	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, np.Split(args.Aname))
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
-	npc.addch(args.Fid, npc.clnt.MakeProtClnt([]string{npc.named}))
+	npc.addch(args.Fid, npc.clnt.MakeProtClnt(npc.named))
 	rets.Qid = reply.Qid
 	return nil
 }

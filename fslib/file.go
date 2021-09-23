@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
@@ -18,17 +19,18 @@ type FsLib struct {
 	*fsclnt.FsClient
 }
 
-func Named() string {
+func Named() []string {
 	named := os.Getenv("NAMED")
 	if named == "" {
 		log.Fatal("Getenv error: missing NAMED")
 	}
-	return named
+	nameds := strings.Split(named, ",")
+	return nameds
 }
 
-func MakeFsLibAddr(uname string, namedAddr string) *FsLib {
+func MakeFsLibAddr(uname string, namedAddr []string) *FsLib {
 	fl := &FsLib{fsclnt.MakeFsClient(uname)}
-	if fd, err := fl.Attach(namedAddr, ""); err == nil {
+	if fd, err := fl.AttachReplicas(namedAddr, ""); err == nil {
 		err := fl.Mount(fd, "name")
 		if err != nil {
 			log.Fatal("Mount error: ", err)
@@ -39,7 +41,7 @@ func MakeFsLibAddr(uname string, namedAddr string) *FsLib {
 
 func MakeFsLib(uname string) *FsLib {
 	fl := &FsLib{fsclnt.MakeFsClient(uname)}
-	if fd, err := fl.Attach(Named(), ""); err == nil {
+	if fd, err := fl.AttachReplicas(Named(), ""); err == nil {
 		err := fl.Mount(fd, "name")
 		if err != nil {
 			log.Fatal("Mount error: ", err)
@@ -195,13 +197,3 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	}
 	return fl.WriteFile(fname, data)
 }
-
-// XXX This implementation seems to only be used in 2pc... we should remove it if possible.
-//func (fl *FsLib) MakeFileAtomic(fname string, perm np.Tperm, data []byte) error {
-//	err := fl.MakeFile(fname+"#", 0777, np.OWRITE, data)
-//	if err != nil {
-//		return err
-//	}
-//	err = fl.Rename(fname+"#", fname)
-//	return err
-//}

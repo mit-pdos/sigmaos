@@ -110,15 +110,15 @@ func (r *Realmd) tryInitRealmL() bool {
 		if err != nil {
 			log.Fatalf("Error LocalIP in Realmd.tryInitRealmL: %v", err)
 		}
-		namedAddr := genNamedAddr(ip)
+		namedAddrs := genNamedAddrs(ip)
 
 		// Start a named instance.
-		if _, err := BootNamed(r.bin, namedAddr, r.cfg.RealmId); err != nil {
+		if _, err := BootNamedReplicas(r.bin, namedAddrs, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
 		}
 
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-		realmCfg.NamedAddr = namedAddr
+		realmCfg.NamedAddr = namedAddrs
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 		return true
@@ -185,7 +185,7 @@ func (r *Realmd) tryDestroyRealmL() {
 	// If this is the last realmd, destroy the realmd's named
 	if len(rds) == 0 {
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-		ShutdownNamed(realmCfg.NamedAddr)
+		ShutdownNamedReplicas(realmCfg.NamedAddr)
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {

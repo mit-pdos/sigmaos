@@ -141,5 +141,5 @@ func (r *Reducer) Work() {
 }
 
 func (r *Reducer) Exit() {
-	r.Exited(r.pid)
+	r.Exited(r.pid, "OK")
 }

@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"ulambda/fsclnt"
-	"ulambda/fsux"
 	"ulambda/named"
+	"ulambda/ux"
 )
 
 func main() {

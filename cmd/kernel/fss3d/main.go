@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"ulambda/fss3"
+	"ulambda/s3"
 )
 
 func main() {

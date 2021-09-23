@@ -7,8 +7,8 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/fsux"
 	"ulambda/repl"
+	"ulambda/ux"
 )
 
 type FsUxReplica struct {

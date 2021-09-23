@@ -23,6 +23,7 @@ type System struct {
 	fss3d     []*exec.Cmd
 	fsuxd     []*exec.Cmd
 	procd     []*exec.Cmd
+	dbd       []*exec.Cmd
 	*fslib.FsLib
 }
 
@@ -50,6 +51,10 @@ func (s *System) Boot() error {
 		return err
 	}
 	err = s.BootProcd()
+	if err != nil {
+		return err
+	}
+	err = s.BootDbd()
 	if err != nil {
 		return err
 	}
@@ -101,6 +106,22 @@ func (s *System) BootProcd() error {
 	}
 	// Wait for boot
 	procdStartCond.Wait()
+	return nil
+}
+
+func (s *System) BootDbd() error {
+	// Create dbd cond
+	pid := "dbd-" + proc.GenPid()
+	dbdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
+	dbdStartCond.Init()
+	var err error
+	dbd, err := run(s.bin, "bin/kernel/dbd", s.namedAddr, []string{pid})
+	s.dbd = append(s.dbd, dbd)
+	if err != nil {
+		return err
+	}
+	// Wait for boot
+	dbdStartCond.Wait()
 	return nil
 }
 
@@ -167,6 +188,15 @@ func (s *System) Shutdown() {
 			log.Printf("Procds shutdown %v\n", err)
 		}
 		for _, d := range s.procd {
+			d.Wait()
+		}
+	}
+	if len(s.dbd) != 0 {
+		err := s.RmUnionDir(named.DB)
+		if err != nil {
+			log.Printf("Db shutdown %v\n", err)
+		}
+		for _, d := range s.dbd {
 			d.Wait()
 		}
 	}

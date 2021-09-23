@@ -1,0 +1,60 @@
+package dbd
+
+import (
+	// "log"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	db "ulambda/debug"
+	"ulambda/fslib"
+	"ulambda/kernel"
+	"ulambda/realm"
+)
+
+const (
+	bin = ".."
+	dbd = "name/db/mydb/"
+)
+
+type Tstate struct {
+	*fslib.FsLib
+	t   *testing.T
+	s   *kernel.System
+	e   *realm.TestEnv
+	cfg *realm.RealmConfig
+}
+
+func makeTstate(t *testing.T) *Tstate {
+	ts := &Tstate{}
+
+	ts.t = t
+
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
+	if err != nil {
+		t.Fatalf("Boot %v\n", err)
+	}
+	ts.e = e
+	ts.cfg = cfg
+	s := kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
+	ts.s = s
+	ts.FsLib = fslib.MakeFsLibAddr("db_test", cfg.NamedAddr)
+	db.Name("db_test")
+	return ts
+}
+
+func TestQuery(t *testing.T) {
+	ts := makeTstate(t)
+
+	q := []byte("select * from book;")
+	b, err := ts.ReadFile(dbd + "clone")
+	assert.Nil(t, err, "ReadFile")
+	sid := string(b)
+	assert.Equal(t, "2", sid)
+	err = ts.WriteFile(dbd+sid+"/query", q)
+	assert.Nil(t, err, "WriteFile")
+
+	ts.s.Shutdown()
+	ts.e.Shutdown()
+}

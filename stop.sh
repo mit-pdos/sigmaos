@@ -26,3 +26,4 @@ killall fss3d
 killall fsuxd
 killall fsreader
 killall wwwd
+killall dbd

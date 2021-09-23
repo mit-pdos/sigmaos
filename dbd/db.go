@@ -37,7 +37,7 @@ func MakeReplicatedDbd(addr string, pid string, replicated bool, config repl.Con
 	dbd.ch = make(chan bool)
 	dbd.root = makeRoot(dbd)
 	db.Name("dbd")
-	dbd.fssrv = fssrv.MakeFsServer(dbd, dbd.root, addr, fos.MakeProtServer(), replicated, config)
+	dbd.fssrv = fssrv.MakeFsServer(dbd, dbd.root, addr, fos.MakeProtServer(), config)
 	fsl := fslib.MakeFsLib("dbd")
 	fsl.Mkdir(named.DB, 0777)
 	err := fsl.PostServiceUnion(dbd.fssrv.MyAddr(), named.DB, "mydb")

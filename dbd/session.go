@@ -86,6 +86,7 @@ func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np
 	return np.Tsize(len(b)), nil
 }
 
+// XXX incremental read
 func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	if off > 0 {
 		return nil, nil
@@ -96,7 +97,7 @@ func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 		return nil, err
 	}
 	count := len(columns)
-	tableData := make([]map[string]interface{}, 0)
+	table := make([]map[string]interface{}, 0)
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
 	for q.rows.Next() {
@@ -116,12 +117,15 @@ func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 			}
 			entry[col] = v
 		}
-		tableData = append(tableData, entry)
+		table = append(table, entry)
 	}
-	jsonData, err := json.Marshal(tableData)
+	b, err := json.Marshal(table)
+	if np.Tsize(len(b)) > cnt {
+		return nil, fmt.Errorf("too large")
+	}
 	if err != nil {
 		return nil, err
 	}
-	log.Printf(string(jsonData))
-	return jsonData, nil
+	log.Printf(string(b))
+	return b, nil
 }

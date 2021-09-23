@@ -146,9 +146,9 @@ func main() {
 
 	// Spawn noop lambda that is dependent on reducers
 	for _, r := range reducers {
-		err = sclnt.WaitExit(r)
-		if err != nil {
-			log.Fatalf("Wait failed %v\n", err)
+		status, err := sclnt.WaitExit(r)
+		if err != nil || status != "OK" {
+			log.Fatalf("Wait failed %v %v\n", err, status)
 		}
 	}
 

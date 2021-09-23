@@ -12,9 +12,9 @@ import (
 
 	"ulambda/atomic"
 	db "ulambda/debug"
-	"ulambda/procdep"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/sync"
 )
@@ -104,10 +104,10 @@ func (bl *Balancer) runMovers(nextShards []string) {
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
 			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, nextShards[i])
-			err := bl.WaitExit(pid1)
-			if err != nil {
-				log.Printf("mover %v failed err %v\n", kvd,
-					err)
+			status, err := bl.WaitExit(pid1)
+			if err != nil || status != "OK" {
+				log.Printf("mover %v failed err %v status %v\n", kvd,
+					err, status)
 			}
 		}
 	}
@@ -181,5 +181,5 @@ func (bl *Balancer) Balance() {
 }
 
 func (bl *Balancer) Exit() {
-	bl.Exited(bl.pid)
+	bl.Exited(bl.pid, "OK")
 }

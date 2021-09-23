@@ -83,5 +83,5 @@ func (up *DirUploader) Work() {
 }
 
 func (up *DirUploader) Exit() {
-	up.Exited(up.pid)
+	up.Exited(up.pid, "OK")
 }

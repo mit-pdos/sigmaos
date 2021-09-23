@@ -132,5 +132,5 @@ func (mv *Mover) Work() {
 }
 
 func (mv *Mover) Exit() {
-	mv.Exited(mv.pid)
+	mv.Exited(mv.pid, "OK")
 }

@@ -104,8 +104,9 @@ func TestWaitExit(t *testing.T) {
 	start := time.Now()
 
 	pid := spawnSleeperl(t, ts)
-	err := ts.WaitExit(pid)
+	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
+	assert.Equal(t, status, "OK", "Exit status wrong")
 
 	end := time.Now()
 
@@ -228,8 +229,9 @@ func TestEvict(t *testing.T) {
 
 	go ts.evict(pid)
 
-	err := ts.WaitExit(pid)
+	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
+	assert.Equal(t, status, "OK", "WaitExit status")
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) < 3*time.Second, "Didn't evict early enough.")

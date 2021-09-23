@@ -197,13 +197,3 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	}
 	return fl.WriteFile(fname, data)
 }
-
-// XXX This implementation seems to only be used in 2pc... we should remove it if possible.
-//func (fl *FsLib) MakeFileAtomic(fname string, perm np.Tperm, data []byte) error {
-//	err := fl.MakeFile(fname+"#", 0777, np.OWRITE, data)
-//	if err != nil {
-//		return err
-//	}
-//	err = fl.Rename(fname+"#", fname)
-//	return err
-//}

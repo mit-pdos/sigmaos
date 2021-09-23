@@ -109,5 +109,5 @@ func (r *Reader) Work() {
 }
 
 func (r *Reader) Exit() {
-	r.Exited(r.pid)
+	r.Exited(r.pid, "OK")
 }

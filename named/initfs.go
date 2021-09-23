@@ -5,14 +5,16 @@ import (
 )
 
 const (
-	NAMED = "name"
-	LOCKS = "name/locks"
-	BOOT  = "name/boot"
-	TMP   = "name/tmp"
-	PROCD = "name/procd"
-	S3    = "name/s3"
-	UX    = "name/ux"
-	FS    = "name/fs"
+	NAMED         = "name"
+	LOCKS         = "name/locks"
+	BOOT          = "name/boot"
+	TMP           = "name/tmp"
+	PROCD         = "name/procd"
+	S3            = "name/s3"
+	UX            = "name/ux"
+	FS            = "name/fs"
+	PROC_COND     = "name/proc-cond"
+	PROC_RET_STAT = "name/proc-ret-stat"
 )
 
 func MakeInitFs(fsl *fslib.FsLib) error {
@@ -26,6 +28,12 @@ func MakeInitFs(fsl *fslib.FsLib) error {
 		return err
 	}
 	if err := fsl.Mkdir(FS, 0777); err != nil {
+		return err
+	}
+	if err := fsl.Mkdir(PROC_COND, 0777); err != nil {
+		return err
+	}
+	if err := fsl.Mkdir(PROC_RET_STAT, 0777); err != nil {
 		return err
 	}
 	return nil

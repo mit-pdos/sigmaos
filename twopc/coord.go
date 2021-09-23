@@ -269,5 +269,5 @@ func (cd *Coord) cleanup() {
 }
 
 func (cd *Coord) Exit() {
-	cd.Exited(cd.pid)
+	cd.Exited(cd.pid, "OK")
 }

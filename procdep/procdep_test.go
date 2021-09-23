@@ -141,8 +141,9 @@ func TestStartDep(t *testing.T) {
 
 	end := time.Now()
 
-	err := ts.WaitExit(cons)
+	status, err := ts.WaitExit(cons)
 	assert.Nil(t, err, "WaitExit error")
+	assert.Equal(t, status, "OK", "WaitExit error")
 
 	// Wait a bit
 	assert.True(t, end.Sub(start) < 10*time.Second, "Start dep waited too long....")

@@ -50,5 +50,5 @@ func (up *Uploader) Work() {
 }
 
 func (up *Uploader) Exit() {
-	up.Exited(up.pid)
+	up.Exited(up.pid, "OK")
 }

@@ -95,17 +95,17 @@ func SpawnKV(sched proc.ProcClnt) string {
 
 func runBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
 	spawnBalancerPid(sched, opcode, pid1, pid2)
-	err := sched.WaitExit(pid2)
-	if err != nil {
-		log.Printf("runBalancer: err %v\n", err)
+	status, err := sched.WaitExit(pid2)
+	if err != nil || status != "OK" {
+		log.Printf("runBalancer: err %v, status %v\n", err, status)
 	}
 }
 
 func RunBalancer(sched proc.ProcClnt, opcode, pid1 string) {
 	pid2 := spawnBalancer(sched, opcode, pid1)
-	err := sched.WaitExit(pid2)
-	if err != nil {
-		log.Printf("runBalancer: err %v\n", err)
+	status, err := sched.WaitExit(pid2)
+	if err != nil || status != "OK" {
+		log.Printf("runBalancer: err %v status %v\n", err, status)
 	}
 }
 
@@ -182,5 +182,5 @@ func (mo *Monitor) Work() {
 }
 
 func (mo *Monitor) Exit() {
-	mo.Exited(mo.pid)
+	mo.Exited(mo.pid, "OK")
 }

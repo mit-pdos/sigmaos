@@ -72,7 +72,7 @@ func (clnt *ProcIdemClnt) WaitStart(pid string) error {
 }
 
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
-func (clnt *ProcIdemClnt) WaitExit(pid string) error {
+func (clnt *ProcIdemClnt) WaitExit(pid string) (string, error) {
 	return clnt.ProcClnt.WaitExit(pid)
 }
 
@@ -103,7 +103,7 @@ func (clnt *ProcIdemClnt) Started(pid string) error {
 // ========== EXITED ==========
 
 // Mark that a process has exited.
-func (clnt *ProcIdemClnt) Exited(pid string) error {
+func (clnt *ProcIdemClnt) Exited(pid string, status string) error {
 	procdIP := os.Getenv("PROCDIP")
 	if len(procdIP) == 0 {
 		log.Fatalf("Error: Bad procdIP in ProcIdemClnt.Exited: %v", procdIP)
@@ -114,7 +114,7 @@ func (clnt *ProcIdemClnt) Exited(pid string) error {
 	if err != nil {
 		log.Fatalf("Error: Remove in ProcIdemClnt.Exited: %v", err)
 	}
-	return clnt.ProcClnt.Exited(pid)
+	return clnt.ProcClnt.Exited(pid, status)
 }
 
 // ========== EVICT ==========

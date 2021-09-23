@@ -31,6 +31,6 @@ func main() {
 	sclnt.Started(os.Args[1])
 	seccomp.LoadFilter()
 	fsd.Serve()
-	sclnt.Exited(os.Args[1])
+	sclnt.Exited(os.Args[1], "OK")
 	fsl.ExitFs(name)
 }

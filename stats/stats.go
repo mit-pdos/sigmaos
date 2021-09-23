@@ -121,9 +121,9 @@ func (st *Stats) spawnMonitor() string {
 func (st *Stats) monitor() {
 	t0 := time.Now().UnixNano()
 	pid := st.spawnMonitor()
-	err := st.WaitExit(pid)
-	if err != nil {
-		log.Printf("monitor: err %v\n", err)
+	status, err := st.WaitExit(pid)
+	if err != nil || status != "OK" {
+		log.Printf("monitor: err %v status %v \n", err, status)
 	}
 	t1 := time.Now().UnixNano()
 	log.Printf("mon: %v\n", t1-t0)

@@ -174,7 +174,7 @@ func (m *ProcdMonitor) Work() {
 }
 
 func (m *ProcdMonitor) Exit() {
-	m.Exited(m.pid)
+	m.Exited(m.pid, "OK")
 }
 
 func (m *ProcdMonitor) String() string {

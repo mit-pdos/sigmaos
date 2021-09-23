@@ -91,8 +91,8 @@ func getPage(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 		}
 	}
 	defer www.Close(fd)
-	err = www.WaitExit(pid)
-	log.Printf("pid %v finished %v\n", pid, err)
+	status, err := www.WaitExit(pid)
+	log.Printf("pid %v finished %v %v\n", pid, err, status)
 	if err == nil {
 		return
 	}

@@ -160,5 +160,5 @@ func (m *Mapper) Work() {
 }
 
 func (m *Mapper) Exit() {
-	m.Exited(m.pid)
+	m.Exited(m.pid, "OK")
 }

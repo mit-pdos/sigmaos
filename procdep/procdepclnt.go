@@ -133,7 +133,7 @@ func (clnt *ProcDepClnt) WaitStart(pid string) error {
 }
 
 // Wait for a procDep to exit
-func (clnt *ProcDepClnt) WaitExit(pid string) error {
+func (clnt *ProcDepClnt) WaitExit(pid string) (string, error) {
 	// If the underlying proc hasn't been spawned yet, the WaitExit will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
@@ -170,7 +170,7 @@ func (clnt *ProcDepClnt) Started(pid string) error {
 
 // ========== EXITED ==========
 
-func (clnt *ProcDepClnt) Exited(pid string) error {
+func (clnt *ProcDepClnt) Exited(pid string, status string) error {
 	// Lock the procDep file
 	l := sync.MakeLock(clnt.FsLib, named.LOCKS, clnt.procDepFilePath(pid), true)
 
@@ -179,7 +179,7 @@ func (clnt *ProcDepClnt) Exited(pid string) error {
 
 	// Update procDeps that depend on this procDep.
 	clnt.updateDependants(pid, EXIT_DEP)
-	clnt.ProcClnt.Exited(pid)
+	clnt.ProcClnt.Exited(pid, status)
 
 	err := clnt.Remove(clnt.procDepFilePath(pid))
 	if err != nil {

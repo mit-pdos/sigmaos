@@ -25,7 +25,8 @@ type Session struct {
 
 type Query struct {
 	*Obj
-	db *sql.DB
+	db   *sql.DB
+	rows *sql.Rows
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
@@ -57,6 +58,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	q.db = db
 	q.Obj = makeObj(c.db, []string{s.id, "query"}, 0, d)
 	d.create("query", q)
+	d.create("data", q)
 
 	return s, nil
 }
@@ -73,10 +75,6 @@ func (s *Session) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 	return 0, fmt.Errorf("not supported")
 }
 
-func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	return nil, fmt.Errorf("not supported")
-}
-
 // XXX wait on close before processing data?
 func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	log.Printf("query: %v", string(b))
@@ -84,20 +82,28 @@ func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np
 	if err != nil {
 		return 0, err
 	}
-	defer rows.Close()
-	columns, err := rows.Columns()
+	q.rows = rows
+	return np.Tsize(len(b)), nil
+}
+
+func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+	if off > 0 {
+		return nil, nil
+	}
+	defer q.rows.Close()
+	columns, err := q.rows.Columns()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	count := len(columns)
 	tableData := make([]map[string]interface{}, 0)
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
-	for rows.Next() {
+	for q.rows.Next() {
 		for i := 0; i < count; i++ {
 			valuePtrs[i] = &values[i]
 		}
-		rows.Scan(valuePtrs...)
+		q.rows.Scan(valuePtrs...)
 		entry := make(map[string]interface{})
 		for i, col := range columns {
 			var v interface{}
@@ -114,8 +120,8 @@ func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np
 	}
 	jsonData, err := json.Marshal(tableData)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	log.Printf(string(jsonData))
-	return np.Tsize(len(b)), nil
+	return jsonData, nil
 }

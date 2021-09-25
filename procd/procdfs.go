@@ -7,11 +7,16 @@ import (
 	//	"unicode/utf8"
 	"fmt"
 	"log"
+	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
+
+func makeInode(string, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, error) {
+	return nil, nil
+}
 
 // XXX move elsewhere
 type Obj struct {
@@ -26,6 +31,29 @@ type Obj struct {
 func (pd *Procd) MakeObj(path []string, t np.Tperm, p *Dir) *Obj {
 	o := &Obj{path, t, 0, p, pd, int64(0)}
 	return o
+}
+
+func (o *Obj) Lock() {
+}
+
+func (o *Obj) Unlock() {
+}
+
+func (o *Obj) LockAddr() *sync.Mutex {
+	return nil
+}
+
+func (o *Obj) VersionInc() {
+}
+
+func (o *Obj) SetMtime() {
+}
+
+func (o *Obj) SetParent(d fs.Dir) {
+}
+
+func (o *Obj) Inum() uint64 {
+	return 0
 }
 
 // check permissions etc.

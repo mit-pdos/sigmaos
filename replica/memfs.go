@@ -26,7 +26,7 @@ func MakeMemfsdReplica(args []string, srvAddr string, unionDirPath string, confi
 	r.fsd = memfsd.MakeReplicatedFsd(srvAddr, r.config)
 	r.name = path.Join(unionDirPath, config.ReplAddr())
 	db.Name(r.name)
-	fs, err := fslibsrv.InitFs(r.name, r.fsd, nil)
+	fs, err := fslibsrv.InitFs(r.name, r.fsd)
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", args, err)
 	}

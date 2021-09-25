@@ -13,7 +13,7 @@ import (
 const PIPESZ = 8192
 
 type Pipe struct {
-	*Inode
+	fs.FsObj
 	condr   *sync.Cond
 	condw   *sync.Cond
 	nreader int
@@ -21,11 +21,11 @@ type Pipe struct {
 	buf     []byte
 }
 
-func MakePipe(i *Inode) *Pipe {
+func MakePipe(i fs.FsObj) *Pipe {
 	pipe := &Pipe{}
-	pipe.Inode = i
-	pipe.condr = sync.NewCond(&i.mu)
-	pipe.condw = sync.NewCond(&i.mu)
+	pipe.FsObj = i
+	pipe.condr = sync.NewCond(i.LockAddr())
+	pipe.condw = sync.NewCond(i.LockAddr())
 	pipe.buf = make([]byte, 0, PIPESZ)
 	return pipe
 }
@@ -34,14 +34,13 @@ func (p *Pipe) Size() np.Tlength {
 	return np.Tlength(len(p.buf))
 }
 
-func (p *Pipe) SetParent(parent *Dir) {
-	p.parent = parent
-}
-
 func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	p.Lock()
 	defer p.Unlock()
-	st := p.Inode.stat()
+	st, err := p.FsObj.Stat(ctx)
+	if err != nil {
+		return nil, err
+	}
 	st.Length = np.Tlength(len(p.buf))
 	return st, nil
 }

@@ -1,106 +1,15 @@
 package memfs
 
 import (
-	"errors"
-	"fmt"
-	"log"
-	"sync"
-	"time"
-	"unsafe"
-
-	db "ulambda/debug"
-	fs "ulambda/fs"
+	"ulambda/fs"
+	"ulambda/fsimpl"
 	np "ulambda/ninep"
 )
 
-type Tinum uint64
-type Tversion uint32
-
-type InodeI interface {
-	Lock()
-	Unlock()
-	Perm() np.Tperm
-	Qid() np.Tqid
-	Version() np.TQversion
-	Size() np.Tlength
-	SetParent(*Dir)
-	Open(fs.CtxI, np.Tmode) (fs.FsObj, error)
-	Close(fs.CtxI, np.Tmode) error
-	Remove(fs.CtxI, string) error
-	Stat(fs.CtxI) (*np.Stat, error)
-	Rename(fs.CtxI, string, string) error
-}
-
-type Inode struct {
-	mu      sync.Mutex
-	perm    np.Tperm
-	version np.TQversion
-	Mtime   int64
-	parent  *Dir
-	owner   string
-}
-
-func makeInode(owner string, p np.Tperm, parent *Dir) *Inode {
-	i := Inode{}
-	i.perm = p
-	i.Mtime = time.Now().Unix()
-	i.parent = parent
-	i.owner = owner
-	i.version = np.TQversion(1)
-	return &i
-}
-
-func (inode *Inode) String() string {
-	str := fmt.Sprintf("Inode %p %v", inode, inode.perm)
-	return str
-}
-
-func (inode *Inode) Lock() {
-	inode.mu.Lock()
-}
-
-func (inode *Inode) Unlock() {
-	inode.mu.Unlock()
-}
-
-func (inode *Inode) Id() uint64 {
-	id := uintptr(unsafe.Pointer(inode))
-	return uint64(id)
-}
-
-func (inode *Inode) qidL() np.Tqid {
-	return np.MakeQid(
-		np.Qtype(inode.perm>>np.QTYPESHIFT),
-		np.TQversion(inode.version),
-		np.Tpath(inode.Id()))
-}
-
-func (inode *Inode) Qid() np.Tqid {
-	inode.Lock()
-	defer inode.Unlock()
-	return inode.qidL()
-}
-
-func (inode *Inode) Perm() np.Tperm {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	return inode.perm
-}
-
-func (inode *Inode) Parent() *Dir {
-	return inode.parent
-}
-
-func (inode *Inode) Version() np.TQversion {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	return inode.version
-}
-
-func permToInode(uname string, p np.Tperm, parent *Dir) (InodeI, error) {
-	i := makeInode(uname, p, parent)
+func MakeInode(uname string, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, error) {
+	i := fsimpl.MakeInode(uname, p, parent)
 	if p.IsDir() {
-		return makeDir(i), nil
+		return fsimpl.MakeDir(i), nil
 	} else if p.IsSymlink() {
 		return MakeSym(i), nil
 	} else if p.IsPipe() {
@@ -112,94 +21,12 @@ func permToInode(uname string, p np.Tperm, parent *Dir) (InodeI, error) {
 	}
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
-	return nil, nil
-}
-
-func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) error {
-	return nil
-}
-
-func (inode *Inode) Mode() np.Tperm {
-	perm := np.Tperm(0777)
-	if inode.perm.IsDir() {
-		perm |= np.DMDIR
-	}
-	return perm
-}
-
-func (inode *Inode) stat() *np.Stat {
-	stat := &np.Stat{}
-	stat.Type = 0 // XXX
-	stat.Qid = inode.qidL()
-	stat.Mode = inode.Mode()
-	stat.Mtime = uint32(inode.Mtime)
-	stat.Atime = 0
-	stat.Name = ""
-	stat.Uid = inode.owner
-	stat.Gid = inode.owner
-	stat.Muid = ""
-	return stat
-}
-
-func (inode *Inode) Remove(ctx fs.CtxI, n string) error {
-	db.DLPrintf("MEMFS", "Remove: %v %v %v\n", n, inode, inode.parent)
-
-	dir := inode.parent
-	if dir == nil {
-		return errors.New("Cannot remove root directory")
-	}
-	dir.Lock()
-	defer dir.Unlock()
-
-	inode.Lock()
-	defer inode.Unlock()
-
-	_, err := dir.lookupL(n)
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, dev Dev) error {
+	di, err := dir.Create(ctx, name, np.DMDEVICE, 0)
 	if err != nil {
 		return err
 	}
-	inode.version += 1
-	dir.version += 1
-
-	err = dir.removeL(n)
-	if err != nil {
-		log.Fatalf("Remove: error %v\n", n)
-	}
-
-	return nil
-}
-
-func (inode *Inode) Rename(ctx fs.CtxI, from, to string) error {
-	if inode.parent == nil {
-		return errors.New("Cannot remove root directory")
-	}
-	dir := inode.parent
-	dir.Lock()
-	defer dir.Unlock()
-
-	db.DLPrintf("MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
-	ino, err := dir.lookupL(from)
-	if err != nil {
-		return err
-	}
-	err = dir.removeL(from)
-	if err != nil {
-		log.Fatalf("Rename: remove failed %v %v\n", from, err)
-	}
-	_, err = dir.lookupL(to)
-	if err == nil { // i is valid
-		// XXX 9p: it is an error to change the name to that
-		// of an existing file.
-		err = dir.removeL(to)
-		if err != nil {
-			log.Fatalf("Rename remove failed %v %v\n", to, err)
-		}
-	}
-	err = dir.createL(ino, to)
-	if err != nil {
-		log.Fatalf("Rename create %v failed %v\n", to, err)
-		return err
-	}
+	d := di.(*Device)
+	d.d = dev
 	return nil
 }

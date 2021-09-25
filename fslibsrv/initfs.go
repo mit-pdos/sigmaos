@@ -2,11 +2,9 @@ package fslibsrv
 
 import (
 	"fmt"
-	"log"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfs"
 	"ulambda/memfsd"
 )
 
@@ -19,14 +17,8 @@ func (fsl *FsLibSrv) Clnt() *fslib.FsLib {
 	return fsl.FsLib
 }
 
-func InitFsFsl(name string, fsc *fslib.FsLib, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
+func InitFsFsl(name string, fsc *fslib.FsLib, memfsd *memfsd.Fsd) (*FsLibSrv, error) {
 	fsl := &FsLibSrv{fsc, memfsd}
-	if dev != nil {
-		err := memfsd.MkNod("dev", dev)
-		if err != nil {
-			log.Fatal("Create error: dev: ", err)
-		}
-	}
 	err := fsl.PostService(memfsd.Addr(), name)
 	if err != nil {
 		return nil, fmt.Errorf("PostService %v error: %v", name, err)
@@ -34,9 +26,9 @@ func InitFsFsl(name string, fsc *fslib.FsLib, memfsd *memfsd.Fsd, dev memfs.Dev)
 	return fsl, nil
 }
 
-func InitFs(name string, memfsd *memfsd.Fsd, dev memfs.Dev) (*FsLibSrv, error) {
+func InitFs(name string, memfsd *memfsd.Fsd) (*FsLibSrv, error) {
 	fsl := fslib.MakeFsLib(name)
-	return InitFsFsl(name, fsl, memfsd, dev)
+	return InitFsFsl(name, fsl, memfsd)
 }
 
 func (fsl *FsLibSrv) ExitFs(name string) {

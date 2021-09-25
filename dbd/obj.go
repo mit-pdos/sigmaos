@@ -19,6 +19,10 @@ type Obj struct {
 	p    *Dir
 }
 
+func makeInode(string, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, error) {
+	return nil, nil
+}
+
 func makeObj(db *Database, path []string, t np.Tperm, p *Dir) *Obj {
 	o := &Obj{}
 	id := db.nextId
@@ -46,6 +50,30 @@ func (o *Obj) stat() (*np.Stat, error) {
 	st.Length = o.sz
 
 	return st, nil
+}
+
+func (o *Obj) SetParent(d fs.Dir) {
+	// o.p = d
+}
+
+func (o *Obj) Lock() {
+}
+
+func (o *Obj) Unlock() {
+}
+
+func (o *Obj) VersionInc() {
+}
+
+func (o *Obj) SetMtime() {
+}
+
+func (o *Obj) LockAddr() *sync.Mutex {
+	return nil
+}
+
+func (o *Obj) Inum() uint64 {
+	return 0
 }
 
 func (o *Obj) String() string {

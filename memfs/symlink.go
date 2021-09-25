@@ -2,20 +2,19 @@ package memfs
 
 import (
 	"fmt"
-	"time"
 
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
 
 type Symlink struct {
-	*Inode
+	fs.FsObj
 	target []byte
 }
 
-func MakeSym(i *Inode) *Symlink {
+func MakeSym(i fs.FsObj) *Symlink {
 	s := Symlink{}
-	s.Inode = i
+	s.FsObj = i
 	return &s
 }
 
@@ -25,16 +24,13 @@ func (s *Symlink) Size() np.Tlength {
 	return np.Tlength(len(s.target))
 }
 
-func (s *Symlink) SetParent(p *Dir) {
-	s.Lock()
-	defer s.Unlock()
-	s.parent = p
-}
-
 func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	s.Lock()
 	defer s.Unlock()
-	st := s.Inode.stat()
+	st, err := s.FsObj.Stat(ctx)
+	if err != nil {
+		return nil, err
+	}
 	st.Length = np.Tlength(len(s.target))
 	return st, nil
 }
@@ -43,12 +39,12 @@ func (s *Symlink) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQvers
 	s.Lock()
 	defer s.Unlock()
 
-	if v != np.NoV && s.version != v {
+	if v != np.NoV && s.Version() != v {
 		return 0, fmt.Errorf("Version mismatch")
 	}
 	s.target = data
-	s.version += 1
-	s.Mtime = time.Now().Unix()
+	s.VersionInc()
+	s.SetMtime()
 	return np.Tsize(len(data)), nil
 }
 
@@ -56,7 +52,7 @@ func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversio
 	s.Lock()
 	defer s.Unlock()
 
-	if v != np.NoV && s.version != v {
+	if v != np.NoV && s.Version() != v {
 		return nil, fmt.Errorf("Version mismatch")
 	}
 	if offset >= np.Toffset(len(s.target)) {

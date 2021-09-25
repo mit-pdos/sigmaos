@@ -18,7 +18,7 @@ type FsServer struct {
 	fs    Fs
 	addr  string
 	root  fs.FsObj
-	npcm  protsrv.MakeProtServer
+	mkps  protsrv.MakeProtServer
 	stats *stats.Stats
 	wt    *watch.WatchTable
 	st    *session.SessionTable
@@ -27,13 +27,13 @@ type FsServer struct {
 }
 
 func MakeFsServer(fs Fs, root fs.FsObj, addr string,
-	npcm protsrv.MakeProtServer,
+	mkps protsrv.MakeProtServer,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.fs = fs
 	fssrv.root = root
 	fssrv.addr = addr
-	fssrv.npcm = npcm
+	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats()
 	fssrv.wt = watch.MkWatchTable()
 	fssrv.ct = MkConnTable()
@@ -71,9 +71,9 @@ func (fssrv *FsServer) RootAttach(uname string) (fs.FsObj, fs.CtxI) {
 }
 
 func (fssrv *FsServer) Connect() protsrv.Protsrv {
-	conn := fssrv.npcm.MakeProtServer(fssrv)
-	fssrv.ct.Add(conn)
-	return conn
+	psrv := fssrv.mkps.MakeProtServer(fssrv)
+	fssrv.ct.Add(psrv)
+	return psrv
 }
 
 type Ctx struct {

@@ -61,7 +61,7 @@ func MakeReader(args []string) (*Reader, error) {
 		log.Fatal("Create error: ", err)
 	}
 
-	fsl, err := fslibsrv.InitFs(n, memfsd, nil)
+	fsl, err := fslibsrv.InitFs(n, memfsd)
 	if err != nil {
 		return nil, err
 	}

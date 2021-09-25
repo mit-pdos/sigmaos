@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"sync"
+
 	np "ulambda/ninep"
 )
 
@@ -22,13 +24,20 @@ type File interface {
 }
 
 type FsObj interface {
+	Inum() uint64
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Version() np.TQversion
+	VersionInc()
+	SetMtime()
 	Size() np.Tlength
 	Open(CtxI, np.Tmode) (FsObj, error)
 	Close(CtxI, np.Tmode) error // for pipes
 	Remove(CtxI, string) error
 	Stat(CtxI) (*np.Stat, error)
 	Rename(CtxI, string, string) error
+	SetParent(Dir)
+	Lock()
+	Unlock()
+	LockAddr() *sync.Mutex
 }

@@ -2,9 +2,9 @@ package memfs
 
 import (
 	"fmt"
-	"time"
 
 	"ulambda/fs"
+	_ "ulambda/fsimpl"
 	np "ulambda/ninep"
 )
 
@@ -15,28 +15,27 @@ type Dev interface {
 }
 
 type Device struct {
-	*Inode
+	fs.FsObj
 	d Dev
 }
 
-func MakeDev(i *Inode) *Device {
-	d := Device{}
-	d.Inode = i
-	return &d
+func MakeDev(i fs.FsObj) *Device {
+	dev := Device{}
+	dev.FsObj = i
+	return &dev
 }
 
 func (d *Device) Size() np.Tlength {
 	return d.d.Len()
 }
 
-func (d *Device) SetParent(p *Dir) {
-	d.parent = p
-}
-
 func (d *Device) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	d.Lock()
 	defer d.Unlock()
-	st := d.Inode.stat()
+	st, err := d.FsObj.Stat(ctx)
+	if err != nil {
+		return nil, err
+	}
 	st.Length = d.d.Len()
 	return st, nil
 }
@@ -44,11 +43,11 @@ func (d *Device) Stat(ctx fs.CtxI) (*np.Stat, error) {
 func (d *Device) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	d.Lock()
 	defer d.Unlock()
-	if v != np.NoV && d.version != v {
+	if v != np.NoV && d.Version() != v {
 		return 0, fmt.Errorf("Version mismatch")
 	}
-	d.version += 1
-	d.Mtime = time.Now().Unix()
+	d.VersionInc()
+	d.SetMtime()
 	return d.d.Write(offset, data)
 }
 
@@ -56,7 +55,7 @@ func (d *Device) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion
 	d.Lock()
 	defer d.Unlock()
 
-	if v != np.NoV && d.version != v {
+	if v != np.NoV && d.Version() != v {
 		return nil, fmt.Errorf("Version mismatch")
 	}
 	if offset >= np.Toffset(d.Size()) {

@@ -73,6 +73,29 @@ type Obj struct {
 	init bool
 }
 
+func (o *Obj) SetParent(d fs.Dir) {
+}
+
+func (o *Obj) Lock() {
+}
+
+func (o *Obj) Unlock() {
+}
+
+func (o *Obj) VersionInc() {
+}
+
+func (o *Obj) SetMtime() {
+}
+
+func (o *Obj) LockAddr() *sync.Mutex {
+	return nil
+}
+
+func (o *Obj) Inum() uint64 {
+	return 0
+}
+
 func (fsux *FsUx) makeObjL(path []string, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
 	o.fsux = fsux

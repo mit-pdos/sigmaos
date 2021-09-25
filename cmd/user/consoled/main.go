@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"ulambda/fslibsrv"
+	"ulambda/fssrv"
+	"ulambda/memfs"
 	"ulambda/memfsd"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
@@ -21,9 +23,13 @@ type Consoled struct {
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
 	fsd := memfsd.MakeFsd(":0")
-	fsl, err := fslibsrv.InitFs("name/consoled", fsd, makeConsole())
+	fsl, err := fslibsrv.InitFs("name/consoled", fsd)
 	if err != nil {
 		log.Fatalf("InitFs: err %v\n", err)
+	}
+	err = memfs.MkNod(fssrv.MkCtx(""), fsd.GetRoot(), "statsd", makeConsole())
+	if err != nil {
+		log.Fatalf("MakeNod failed %v\n", err)
 	}
 	cons.FsLibSrv = fsl
 	cons.done = make(chan bool)

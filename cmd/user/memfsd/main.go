@@ -23,7 +23,7 @@ func main() {
 	}
 	db.Name(name)
 	fsd := memfsd.MakeFsd(ip + ":0")
-	fsl, err := fslibsrv.InitFs(name, fsd, nil)
+	fsl, err := fslibsrv.InitFs(name, fsd)
 	if err != nil {
 		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 	}

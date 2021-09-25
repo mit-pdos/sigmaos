@@ -9,7 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/debug"
 	"ulambda/fs"
+	"ulambda/fsimpl"
 	np "ulambda/ninep"
 )
 
@@ -27,14 +29,14 @@ func (ctx *Ctx) Uname() string {
 
 type TestState struct {
 	t     *testing.T
-	rooti *Dir
+	rooti fs.Dir
 	ctx   fs.CtxI
 }
 
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.rooti = MkRootInode()
+	ts.rooti = fsimpl.MkRootDir(MakeInode)
 	ts.ctx = MkCtx("")
 	return ts
 }
@@ -48,21 +50,25 @@ func (ts *TestState) initfs() {
 	is, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
 	for i := 0; i < N; i++ {
-		_, err = is[0].(*Dir).Create(ts.ctx, "job"+strconv.Itoa(i), 07000, 0)
+		_, err = is[0].(fs.Dir).Create(ts.ctx, "job"+strconv.Itoa(i), 07000, 0)
 		assert.Nil(ts.t, err, "Create job")
+		_, _, err = ts.rooti.Lookup(ts.ctx, []string{"todo", "job" + strconv.Itoa(i)})
+		assert.Nil(ts.t, err, "Walk job")
+
 	}
+	debug.Name("memfs")
 }
 
 func (ts *TestState) testRename(t int) {
 	is, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
 	assert.Nil(ts.t, err, "Lookup todo")
 	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
-	d1 := is[0].(*Dir)
+	d1 := is[0].(fs.Dir)
 
 	is, _, err = ts.rooti.Lookup(ts.ctx, []string{"done"})
 	assert.Nil(ts.t, err, "Lookup done")
 	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
-	d2 := is[0].(*Dir)
+	d2 := is[0].(fs.Dir)
 
 	sts, err := d1.ReadDir(ts.ctx, 0, 100, np.NoV)
 	assert.Nil(ts.t, err, "ReadDir")
@@ -76,6 +82,11 @@ func (ts *TestState) testRename(t int) {
 			assert.Contains(ts.t, err.Error(), "file not found")
 		}
 	}
+}
+
+func TestSimple(t *testing.T) {
+	ts := newTest(t)
+	ts.initfs()
 }
 
 func TestConcurRename(t *testing.T) {

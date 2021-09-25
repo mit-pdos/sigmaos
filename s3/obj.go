@@ -276,3 +276,27 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 func (o *Obj) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return np.Tsize(len(b)), nil
 }
+
+func (o *Obj) SetParent(d fs.Dir) {
+	return
+}
+
+func (o *Obj) Lock() {
+}
+
+func (o *Obj) Unlock() {
+}
+
+func (o *Obj) VersionInc() {
+}
+
+func (o *Obj) SetMtime() {
+}
+
+func (o *Obj) LockAddr() *sync.Mutex {
+	return nil
+}
+
+func (o *Obj) Inum() uint64 {
+	return 0
+}

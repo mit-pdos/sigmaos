@@ -2,18 +2,17 @@ package memfs
 
 import (
 	"fmt"
-	"time"
 
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
 
 type File struct {
-	*Inode
+	fs.FsObj
 	data []byte
 }
 
-func MakeFile(i *Inode) *File {
+func MakeFile(i fs.FsObj) *File {
 	return &File{i, make([]byte, 0)}
 }
 
@@ -23,16 +22,13 @@ func (f *File) Size() np.Tlength {
 	return np.Tlength(len(f.data))
 }
 
-func (f *File) SetParent(p *Dir) {
-	f.Lock()
-	defer f.Unlock()
-	f.parent = p
-}
-
 func (f *File) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	f.Lock()
 	defer f.Unlock()
-	st := f.Inode.stat()
+	st, err := f.FsObj.Stat(ctx)
+	if err != nil {
+		return nil, err
+	}
 	st.Length = np.Tlength(len(f.data))
 	return st, nil
 }
@@ -45,12 +41,12 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 	f.Lock()
 	defer f.Unlock()
 
-	if v != np.NoV && f.version != v {
+	if v != np.NoV && f.Version() != v {
 		return 0, fmt.Errorf("Version mismatch")
 	}
 
-	f.version += 1
-	f.Mtime = time.Now().Unix()
+	f.VersionInc()
+	f.SetMtime()
 
 	cnt := np.Tsize(len(data))
 	sz := np.Toffset(len(data))
@@ -75,7 +71,7 @@ func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) 
 	f.Lock()
 	defer f.Unlock()
 
-	if v != np.NoV && f.version != v {
+	if v != np.NoV && f.Version() != v {
 		return nil, fmt.Errorf("Version mismatch")
 	}
 

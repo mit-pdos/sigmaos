@@ -7,6 +7,7 @@ go clean -testcache
 go test $1 ulambda/ninep
 go test $1 ulambda/memfs
 go test $1 ulambda/fsclnt
+go test $1 ulambda/ux
 go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats

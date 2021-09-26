@@ -73,6 +73,10 @@ type Obj struct {
 	init bool
 }
 
+func (o *Obj) Parent() fs.Dir {
+	return o.dir
+}
+
 func (o *Obj) SetParent(d fs.Dir) {
 }
 
@@ -216,24 +220,5 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 
 // XXX close
 func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {
-	return nil
-}
-
-func (o *Obj) Remove(ctx fs.CtxI, name string) error {
-	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, o, name)
-	err := os.Remove(o.Path())
-	return err
-}
-
-func (o *Obj) Rename(ctx fs.CtxI, from, to string) error {
-	oldPath := o.Path()
-	p := o.path[:len(o.path)-1]
-	d := append(p, to)
-	db.DLPrintf("UXD", "%v: Rename o:%v from:%v to:%v d:%v\n", ctx, o, from, to, d)
-	err := syscall.Rename(oldPath, np.Join(d))
-	if err != nil {
-		return err
-	}
-	o.path = d
 	return nil
 }

@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/dir"
 	"ulambda/fs"
-	"ulambda/fsimpl"
 	"ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/memfs"
@@ -29,7 +29,7 @@ func MakeFsd(addr string) *Fsd {
 
 func MakeReplicatedFsd(addr string, config repl.Config) *Fsd {
 	fsd := &Fsd{}
-	fsd.root = fsimpl.MkRootDir(memfs.MakeInode)
+	fsd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root.(fs.FsObj),
 		addr, fsobjsrv.MakeProtServer(), config)
 	fsd.ch = make(chan bool)

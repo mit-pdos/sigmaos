@@ -213,26 +213,6 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Remove(ctx fs.CtxI, name string) error {
-	key := np.Join(o.key)
-	input := &s3.DeleteObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-	_, err := o.fss3.client.DeleteObject(context.TODO(), input)
-	if err != nil {
-		return err
-	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	delete(o.dir.dirents, o.key[len(o.key)-1])
-	return nil
-}
-
-func (o *Obj) Rename(ctx fs.CtxI, from, to string) error {
-	return fmt.Errorf("not supported")
-}
-
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
@@ -275,6 +255,10 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 // sub directories will be implicitly created; fake write
 func (o *Obj) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	return np.Tsize(len(b)), nil
+}
+
+func (o *Obj) Parent() fs.Dir {
+	return o.dir
 }
 
 func (o *Obj) SetParent(d fs.Dir) {

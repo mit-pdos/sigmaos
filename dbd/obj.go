@@ -56,6 +56,10 @@ func (o *Obj) SetParent(d fs.Dir) {
 	// o.p = d
 }
 
+func (o *Obj) Parent() fs.Dir {
+	return o.p
+}
+
 func (o *Obj) Lock() {
 }
 

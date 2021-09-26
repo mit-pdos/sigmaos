@@ -1,4 +1,4 @@
-package fsimpl
+package dir
 
 import (
 	"errors"
@@ -12,6 +12,7 @@ import (
 )
 
 type makeInodeF func(string, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, error)
+type makeRootInodeF func(fs.MakeDirF, string, np.Tperm) (fs.FsObj, error)
 
 var makeInode makeInodeF
 
@@ -34,6 +35,11 @@ func MakeDir(i fs.FsObj) *DirImpl {
 	return d
 }
 
+func MakeDirF(i fs.FsObj) fs.FsObj {
+	d := MakeDir(i)
+	return d
+}
+
 func (dir *DirImpl) String() string {
 	str := "Dir{entries: "
 	for n, e := range dir.entries {
@@ -45,9 +51,9 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func MkRootDir(f makeInodeF) fs.Dir {
+func MkRootDir(f makeInodeF, r makeRootInodeF) fs.Dir {
 	makeInode = f
-	i := MakeInode("", np.DMDIR, nil)
+	i, _ := r(MakeDirF, "", np.DMDIR)
 	return MakeDir(i)
 }
 
@@ -238,6 +244,38 @@ func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
 	}
 }
 
+// Rename inode within directory
+func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
+	dir.Lock()
+	defer dir.Unlock()
+
+	db.DLPrintf("MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
+	ino, err := dir.lookupL(from)
+	if err != nil {
+		return err
+	}
+	err = dir.removeL(from)
+	if err != nil {
+		log.Fatalf("Rename: remove failed %v %v\n", from, err)
+	}
+	_, err = dir.lookupL(to)
+	if err == nil { // i is valid
+		// XXX 9p: it is an error to change the name to that
+		// of an existing file.
+		err = dir.removeL(to)
+		if err != nil {
+			log.Fatalf("Rename remove failed %v %v\n", to, err)
+		}
+	}
+	err = dir.createL(ino, to)
+	if err != nil {
+		log.Fatalf("Rename create %v failed %v\n", to, err)
+		return err
+	}
+	return nil
+
+}
+
 func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) error {
 	newdir := nd.(*DirImpl)
 	lockOrdered(dir, newdir)
@@ -262,5 +300,30 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) err
 		return err
 	}
 	ino.SetParent(newdir)
+	return nil
+}
+
+func (dir *DirImpl) Remove(ctx fs.CtxI, n string) error {
+	db.DLPrintf("MEMFS", "Remove: %v %v\n", dir, n)
+
+	dir.Lock()
+	defer dir.Unlock()
+
+	inode, err := dir.lookupL(n)
+	if err != nil {
+		return err
+	}
+
+	inode.Lock()
+	defer inode.Unlock()
+
+	inode.VersionInc()
+	dir.VersionInc()
+
+	err = dir.removeL(n)
+	if err != nil {
+		log.Fatalf("Remove: error %v\n", n)
+	}
+
 	return nil
 }

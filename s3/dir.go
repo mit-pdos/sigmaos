@@ -178,3 +178,23 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
 	return fmt.Errorf("not supported")
 }
+
+func (d *Dir) Remove(ctx fs.CtxI, name string) error {
+	key := np.Join(d.key) + "/" + name
+	input := &s3.DeleteObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	}
+	_, err := d.fss3.client.DeleteObject(context.TODO(), input)
+	if err != nil {
+		return err
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.dirents, name)
+	return nil
+}
+
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) error {
+	return fmt.Errorf("not supported")
+}

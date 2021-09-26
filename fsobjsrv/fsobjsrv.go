@@ -93,7 +93,7 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	ephemeral := fos.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
-		o.Remove(f.Ctx(), f.PathLast())
+		o.Parent().Remove(f.Ctx(), f.PathLast())
 		fos.wt.WakeupWatch(f.Path(), f.PathDir())
 	}
 	fos.wt.DeleteConn(fos)
@@ -323,10 +323,7 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 		return nil
 	}
 	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	r := o.Remove(f.Ctx(), f.PathLast())
-	if r != nil {
-		return &np.Rerror{r.Error()}
-	}
+	o.Parent().Remove(f.Ctx(), f.PathLast())
 	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
 	fos.wt.WakeupWatch(f.Path(), f.PathDir())
 
@@ -374,7 +371,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	fos.stats.Path(f.Path())
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
 	dname := append(f.Path(), args.Wnames[0:len(args.Wnames)-1]...)
-	r := lo.Remove(f.Ctx(), fname[len(fname)-1])
+	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
@@ -418,7 +415,7 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
-		err := o.Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
+		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}

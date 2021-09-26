@@ -52,6 +52,10 @@ func (o *Obj) SetMtime() {
 func (o *Obj) SetParent(d fs.Dir) {
 }
 
+func (o *Obj) Parent() fs.Dir {
+	return o.dir
+}
+
 func (o *Obj) Inum() uint64 {
 	return 0
 }

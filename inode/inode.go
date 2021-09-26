@@ -1,14 +1,11 @@
-package fsimpl
+package inode
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 	"unsafe"
 
-	db "ulambda/debug"
 	fs "ulambda/fs"
 	np "ulambda/ninep"
 )
@@ -128,69 +125,4 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	stat.Gid = inode.owner
 	stat.Muid = ""
 	return stat, nil
-}
-
-// XXX Not here?
-func (inode *Inode) Remove(ctx fs.CtxI, n string) error {
-	db.DLPrintf("MEMFS", "Remove: %v %v %v\n", n, inode, inode.parent)
-
-	dir := inode.parent
-	if dir == nil {
-		return errors.New("Cannot remove root directory")
-	}
-	di := dir.(*DirImpl)
-	di.Lock()
-	defer di.Unlock()
-
-	inode.Lock()
-	defer inode.Unlock()
-
-	_, err := di.lookupL(n)
-	if err != nil {
-		return err
-	}
-	inode.VersionInc()
-	di.VersionInc()
-
-	err = di.removeL(n)
-	if err != nil {
-		log.Fatalf("Remove: error %v\n", n)
-	}
-
-	return nil
-}
-
-func (inode *Inode) Rename(ctx fs.CtxI, from, to string) error {
-	if inode.parent == nil {
-		return errors.New("Cannot remove root directory")
-	}
-	dir := inode.parent
-	di := dir.(*DirImpl)
-	di.Lock()
-	defer di.Unlock()
-
-	db.DLPrintf("MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
-	ino, err := di.lookupL(from)
-	if err != nil {
-		return err
-	}
-	err = di.removeL(from)
-	if err != nil {
-		log.Fatalf("Rename: remove failed %v %v\n", from, err)
-	}
-	_, err = di.lookupL(to)
-	if err == nil { // i is valid
-		// XXX 9p: it is an error to change the name to that
-		// of an existing file.
-		err = di.removeL(to)
-		if err != nil {
-			log.Fatalf("Rename remove failed %v %v\n", to, err)
-		}
-	}
-	err = di.createL(ino, to)
-	if err != nil {
-		log.Fatalf("Rename create %v failed %v\n", to, err)
-		return err
-	}
-	return nil
 }

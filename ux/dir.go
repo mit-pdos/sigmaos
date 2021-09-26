@@ -77,19 +77,30 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-// XXX intermediate dirs?
 func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
-	fi, err := os.Stat(np.Join(append(d.path, p...)))
+	fi, err := os.Stat(np.Join(d.path))
 	if err != nil {
 		return nil, nil, err
 	}
-	if fi.IsDir() {
-		d := d.fsux.makeDir(append(d.path, p...), np.DMDIR, d)
-		return []fs.FsObj{d}, nil, nil
+	if !fi.IsDir() {
+		return nil, nil, fmt.Errorf("Not a directory")
+	}
+	fi, err = os.Stat(np.Join(append(d.path, p[0])))
+	if err != nil {
+		return nil, nil, fmt.Errorf("file not found")
+	}
+	if len(p) == 1 {
+		if fi.IsDir() {
+			d1 := d.fsux.makeDir(append(d.path, p[0]), np.DMDIR, d)
+			return []fs.FsObj{d1}, nil, nil
+		} else {
+			f := d.fsux.makeFile(append(d.path, p[0]), np.Tperm(0), d)
+			return []fs.FsObj{f}, nil, nil
+		}
 	} else {
-		f := d.fsux.makeFile(append(d.path, p...), np.Tperm(0), d)
-		return []fs.FsObj{f}, nil, nil
+		d1 := d.fsux.makeDir(append(d.path, p[0]), np.DMDIR, d)
+		return d1.Lookup(ctx, p[1:])
 	}
 }
 
@@ -99,4 +110,21 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
 	return fmt.Errorf("not supported")
+}
+
+func (d *Dir) Remove(ctx fs.CtxI, name string) error {
+	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
+	err := os.Remove(d.Path() + "/" + name)
+	return err
+}
+
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) error {
+	oldPath := d.Path() + "/" + from
+	newPath := d.Path() + "/" + to
+	db.DLPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
+	err := os.Rename(oldPath, newPath)
+	if err != nil {
+		return err
+	}
+	return nil
 }

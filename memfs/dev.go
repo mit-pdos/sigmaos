@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"ulambda/fs"
-	_ "ulambda/fsimpl"
+	_ "ulambda/inode"
 	np "ulambda/ninep"
 )
 

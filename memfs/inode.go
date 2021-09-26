@@ -2,14 +2,21 @@ package memfs
 
 import (
 	"ulambda/fs"
-	"ulambda/fsimpl"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
+var makeDir fs.MakeDirF
+
+func MakeRootInode(f fs.MakeDirF, owner string, perm np.Tperm) (fs.FsObj, error) {
+	makeDir = f
+	return MakeInode(owner, np.DMDIR, 0, nil)
+}
+
 func MakeInode(uname string, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, error) {
-	i := fsimpl.MakeInode(uname, p, parent)
+	i := inode.MakeInode(uname, p, parent)
 	if p.IsDir() {
-		return fsimpl.MakeDir(i), nil
+		return makeDir(i), nil
 	} else if p.IsSymlink() {
 		return MakeSym(i), nil
 	} else if p.IsPipe() {

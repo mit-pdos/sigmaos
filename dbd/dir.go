@@ -5,18 +5,19 @@ import (
 	"log"
 
 	"ulambda/fs"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
 // XXX locking
 type Dir struct {
-	*Obj
+	*inode.Inode
 	dirents map[string]fs.FsObj
 }
 
-func makeDir(db *Database, path []string, t np.Tperm, p *Dir) *Dir {
+func makeDir(db *Database, path []string, perm np.Tperm, p *Dir) *Dir {
 	d := &Dir{}
-	d.Obj = makeObj(db, path, t, p)
+	d.Inode = inode.MakeInode("", perm, p)
 	d.dirents = make(map[string]fs.FsObj)
 	return d
 }
@@ -24,7 +25,7 @@ func makeDir(db *Database, path []string, t np.Tperm, p *Dir) *Dir {
 func makeRoot(db *Database) *Dir {
 	d := makeDir(db, []string{""}, np.DMDIR, nil)
 	c := &Clone{}
-	c.Obj = makeObj(db, []string{"clone"}, 0, d)
+	c.Inode = inode.MakeInode("", 0, d)
 	d.dirents["clone"] = c
 	return d
 }
@@ -93,5 +94,13 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
+	return fmt.Errorf("not supported")
+}
+
+func (d *Dir) Remove(fs.CtxI, string) error {
+	return fmt.Errorf("not supported")
+}
+
+func (d *Dir) Rename(fs.CtxI, string, string) error {
 	return fmt.Errorf("not supported")
 }

@@ -10,21 +10,22 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"ulambda/fs"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
 type Clone struct {
-	*Obj
+	*inode.Inode
 }
 
 type Session struct {
-	*Obj
+	*inode.Inode
 	id string
 	db *sql.DB
 }
 
 type Query struct {
-	*Obj
+	*inode.Inode
 	db   *sql.DB
 	rows *sql.Rows
 }
@@ -42,21 +43,20 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	log.Printf("Connected\n")
 
 	s := &Session{}
-	s.Obj = makeObj(c.db, nil, 0, nil)
-	s.id = strconv.Itoa(int(s.Obj.id))
-	s.path = []string{s.id, "ctl"}
+	s.Inode = inode.MakeInode("", 0, nil)
+	s.id = strconv.Itoa(int(s.Inode.Inum()))
 	s.db = db
 
 	// create directory for session
-	d := makeDir(c.Obj.db, []string{s.id}, np.DMDIR, c.p)
-	s.Obj.p = d
-	c.p.create(s.id, d)
+	d := makeDir(nil, []string{s.id}, np.DMDIR, c.Parent().(*Dir))
+	s.Inode.SetParent(d)
+	c.Parent().(*Dir).create(s.id, d)
 	d.create("ctl", s) // put ctl file into session dir
 
 	// make query file
 	q := &Query{}
 	q.db = db
-	q.Obj = makeObj(c.db, []string{s.id, "query"}, 0, d)
+	q.Inode = inode.MakeInode("", 0, d)
 	d.create("query", q)
 	d.create("data", q)
 

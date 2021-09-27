@@ -183,7 +183,7 @@ func (clnt *ProcBaseClnt) makeRetStatWaiterFile(pid string) {
 	l.Lock()
 	defer l.Unlock()
 
-	if err := clnt.MakeFileJson(path.Join(named.PROC_RET_STAT, pid), 0777, &RetStatWaiters{}); err != nil && !strings.Contains(err.Error(), "Name exists") {
+	if err := clnt.MakeFileJson(path.Join(named.PROC_RET_STAT, RET_STAT+pid), 0777, &RetStatWaiters{}); err != nil && !strings.Contains(err.Error(), "Name exists") {
 		log.Fatalf("Error MakeFileJson in ProcBaseClnt.makeRetStatWaiterFile: %v", err)
 	}
 }
@@ -194,7 +194,7 @@ func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) {
 	l.Lock()
 	defer l.Unlock()
 
-	rswPath := path.Join(named.PROC_RET_STAT, pid)
+	rswPath := path.Join(named.PROC_RET_STAT, RET_STAT+pid)
 	rsw := &RetStatWaiters{}
 	if err := clnt.ReadFileJson(rswPath, rsw); err != nil {
 		log.Fatalf("Error ReadFileJson in ProcBaseClnt.writeBackRetStats: %v", err)
@@ -218,10 +218,10 @@ func (clnt *ProcBaseClnt) registerRetStatWaiter(pid string) (string, error) {
 	defer l.Unlock()
 
 	// Get & update the list of backwards pointers
-	rswPath := path.Join(named.PROC_RET_STAT, pid)
+	rswPath := path.Join(named.PROC_RET_STAT, RET_STAT+pid)
 	rsw := &RetStatWaiters{}
 	if err := clnt.ReadFileJson(rswPath, rsw); err != nil {
-		if err.Error() == "file not found "+pid {
+		if err.Error() == "file not found "+RET_STAT+pid {
 			return "", err
 		}
 		log.Fatalf("Error ReadFileJson in ProcBaseClnt.registerRetStatWaiter: %v", err)

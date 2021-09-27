@@ -97,6 +97,7 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 		fos.wt.WakeupWatch(f.Path(), f.PathDir())
 	}
 	fos.wt.DeleteConn(fos)
+	fos.st.DeleteSession(sess)
 	fos.fssrv.GetConnTable().Del(fos)
 	fos.mu.Lock()
 	fos.closed = true

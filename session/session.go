@@ -40,6 +40,18 @@ func (st *SessionTable) RegisterSession(id np.Tsession) {
 	}
 }
 
+func (st *SessionTable) DeleteSession(id np.Tsession) {
+	db.DLPrintf("SETAB", "Remove session %v", id)
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	// If the session exists...
+	if _, ok := st.sessions[id]; ok {
+		delete(st.sessions, id)
+	}
+}
+
 func (st *SessionTable) LookupFid(id np.Tsession, fid np.Tfid) (*fid.Fid, bool) {
 	db.DLPrintf("SETAB", "lookupFid %v %v", id, fid)
 

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 
 	"ulambda/fslib"
 	"ulambda/mr"
@@ -147,8 +148,8 @@ func main() {
 	// Spawn noop lambda that is dependent on reducers
 	for _, r := range reducers {
 		status, err := sclnt.WaitExit(r)
-		if err != nil || status != "OK" {
-			log.Fatalf("Wait failed %v %v\n", err, status)
+		if err != nil && !strings.Contains(err.Error(), "file not found") || status != "OK" && status != "" {
+			log.Fatalf("Wait failed %v, %v\n", err, status)
 		}
 	}
 

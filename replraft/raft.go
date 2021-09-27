@@ -203,15 +203,18 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 
 // Send a post request, indicating that the node will join the cluster.
 func (n *RaftNode) postNodeId() {
-	for _, addr := range n.peerAddrs {
+	for i, addr := range n.peerAddrs {
+		if i == n.id-1 {
+			continue
+		}
 		mcr := &membershipChangeReq{uint64(n.id), n.peerAddrs[n.id-1]}
 		b, err := json.Marshal(mcr)
 		if err != nil {
 			log.Fatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
 		_, err = http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b))
+		// Only post the node ID to one node
 		if err == nil {
-			log.Fatalf("Error posting node id: %v", err)
 			return
 		}
 	}

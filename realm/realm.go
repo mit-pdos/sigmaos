@@ -15,7 +15,7 @@ import (
 const (
 	DEFAULT_REALM_PRIORITY = "0"
 	MIN_PORT               = 1112
-	MAX_PORT               = 65535
+	MAX_PORT               = 60000
 )
 
 type RealmConfig struct {

@@ -45,17 +45,19 @@ func BootNamed(bin string, addr string, id int, peers []string, realmId string) 
 		args = []string{"0", addr, realmId}
 	}
 	// If we're running replicated...
-	if N_REPLICAS > 1 {
+	if len(peers) > 1 {
 		args = append(args, strconv.Itoa(id))
-		args = append(args, strings.Join(peers, ","))
+		args = append(args, strings.Join(peers[:id], ","))
 	}
 	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
+		log.Printf("Error running named: %v", err)
 		return nil, err
 	}
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
 	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
+		log.Printf("MakeInitFs error: %v", err)
 		return nil, err
 	}
 	return cmd, nil

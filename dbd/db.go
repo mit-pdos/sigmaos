@@ -5,9 +5,12 @@ import (
 	"path"
 
 	db "ulambda/debug"
+	"ulambda/dir"
+	"ulambda/fs"
 	"ulambda/fslib"
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
+	"ulambda/memfs"
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/repl"
@@ -23,7 +26,7 @@ import (
 type Database struct {
 	fssrv  *fssrv.FsServer
 	ch     chan bool
-	root   *Dir
+	root   fs.Dir
 	nextId np.Tpath
 }
 
@@ -35,7 +38,7 @@ func MakeReplicatedDbd(addr string, pid string, replicated bool, config repl.Con
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	dbd := &Database{}
 	dbd.ch = make(chan bool)
-	dbd.root = makeRoot(dbd)
+	dbd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	db.Name("dbd")
 	dbd.fssrv = fssrv.MakeFsServer(dbd, dbd.root, addr, fos.MakeProtServer(), config)
 	fsl := fslib.MakeFsLib("dbd")
@@ -49,7 +52,10 @@ func MakeReplicatedDbd(addr string, pid string, replicated bool, config repl.Con
 		dbdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 		dbdStartCond.Destroy()
 	}
-
+	err = dir.MkNod(fssrv.MkCtx(""), dbd.root, "clone", makeClone("", dbd.root))
+	if err != nil {
+		log.Fatalf("MakeNod clone failed %v\n", err)
+	}
 	return dbd, nil
 }
 

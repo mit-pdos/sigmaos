@@ -57,6 +57,14 @@ func MkRootDir(f makeInodeF, r makeRootInodeF) fs.Dir {
 	return MakeDir(i)
 }
 
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.FsObj) error {
+	err := dir.(*DirImpl).CreateDev(ctx, name, np.DMDEVICE, 0, i)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (dir *DirImpl) removeL(name string) error {
 	_, ok := dir.entries[name]
 	if ok {
@@ -214,6 +222,19 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	dir.VersionInc()
 	dir.SetMtime()
 	return newi, dir.createL(newi, name)
+}
+
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode, i fs.FsObj) error {
+	dir.Lock()
+	defer dir.Unlock()
+
+	if IsCurrentDir(name) {
+		return errors.New("Cannot create name")
+	}
+	db.DLPrintf("MEMFS", "CreateDev %v in %v -> %v\n", name, dir, i)
+	dir.VersionInc()
+	dir.SetMtime()
+	return dir.createL(i, name)
 }
 
 func lockOrdered(olddir *DirImpl, newdir *DirImpl) {

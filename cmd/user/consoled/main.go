@@ -5,9 +5,11 @@ import (
 	"log"
 	"os"
 
+	"ulambda/dir"
+	"ulambda/fs"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
-	"ulambda/memfs"
+	"ulambda/inode"
 	"ulambda/memfsd"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
@@ -27,7 +29,7 @@ func makeConsoled() *Consoled {
 	if err != nil {
 		log.Fatalf("InitFs: err %v\n", err)
 	}
-	err = memfs.MkNod(fssrv.MkCtx(""), fsd.GetRoot(), "statsd", makeConsole())
+	err = dir.MkNod(fssrv.MkCtx(""), fsd.GetRoot(), "console", makeConsole(fsd.GetRoot()))
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
 	}
@@ -37,12 +39,14 @@ func makeConsoled() *Consoled {
 }
 
 type Console struct {
+	fs.FsObj
 	stdin  *bufio.Reader
 	stdout *bufio.Writer
 }
 
-func makeConsole() *Console {
+func makeConsole(parent fs.Dir) *Console {
 	cons := &Console{}
+	cons.FsObj = inode.MakeInode("", np.DMDEVICE, parent)
 	cons.stdin = bufio.NewReader(os.Stdin)
 	cons.stdout = bufio.NewWriter(os.Stdout)
 	return cons

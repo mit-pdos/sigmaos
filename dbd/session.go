@@ -9,13 +9,19 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
+	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
 type Clone struct {
-	*inode.Inode
+	fs.FsObj
+}
+
+func makeClone(uname string, parent fs.Dir) fs.FsObj {
+	i := inode.MakeInode(uname, np.DMDEVICE, parent)
+	return &Clone{i}
 }
 
 type Session struct {
@@ -48,17 +54,23 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	s.db = db
 
 	// create directory for session
-	d := makeDir(nil, []string{s.id}, np.DMDIR, c.Parent().(*Dir))
-	s.Inode.SetParent(d)
-	c.Parent().(*Dir).create(s.id, d)
-	d.create("ctl", s) // put ctl file into session dir
+	di := inode.MakeInode("", np.DMDIR, c.Parent())
+	d := dir.MakeDir(di)
+	err = dir.MkNod(ctx, c.Parent(), s.id, d)
+	if err != nil {
+		log.Fatalf("MkNod err %v\n", err)
+	}
+	err = dir.MkNod(ctx, d, "ctl", s) // put ctl file into session dir
+	if err != nil {
+		log.Fatalf("MkNod err %v\n", err)
+	}
 
 	// make query file
 	q := &Query{}
 	q.db = db
 	q.Inode = inode.MakeInode("", 0, d)
-	d.create("query", q)
-	d.create("data", q)
+	dir.MkNod(ctx, d, "query", q)
+	dir.MkNod(ctx, d, "data", q)
 
 	return s, nil
 }

@@ -80,8 +80,8 @@ func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.R
 
 func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
 	root, ctx := fos.fssrv.RootAttach(args.Uname)
-	fos.add(sess, args.Fid, fid.MakeFid(root, ctx))
-	rets.Qid = root.Qid()
+	fos.add(sess, args.Fid, fid.MakeFid(root.(fs.FsObj), ctx))
+	rets.Qid = root.(fs.FsObj).Qid()
 	return nil
 }
 

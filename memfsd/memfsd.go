@@ -30,10 +30,11 @@ func MakeFsd(addr string) *Fsd {
 func MakeReplicatedFsd(addr string, config repl.Config) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root.(fs.FsObj),
+	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,
 		addr, fsobjsrv.MakeProtServer(), config)
 	fsd.ch = make(chan bool)
-	err := memfs.MkNod(fssrv.MkCtx(""), fsd.root, "statsd", fsd.fssrv.GetStats())
+
+	err := dir.MkNod(fssrv.MkCtx(""), fsd.root, "statsd", fsd.fssrv.GetStats())
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
 	}

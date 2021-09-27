@@ -13,6 +13,7 @@ import (
 	"ulambda/fslib"
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
+	"ulambda/inode"
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/repl"
@@ -36,7 +37,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Confi
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	fsux.ch = make(chan bool)
-	fsux.root = fsux.makeDir([]string{mount}, np.DMDIR, nil)
+	fsux.root = makeDir([]string{mount}, np.DMDIR, nil)
 	db.Name("fsuxd")
 	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), config)
 	fsl := fslib.MakeFsLib("fsux")
@@ -63,87 +64,19 @@ func (fsux *FsUx) Done() {
 }
 
 type Obj struct {
+	*inode.Inode
 	mu   sync.Mutex
-	fsux *FsUx
 	path []string
-	t    np.Tperm
-	ino  uint64
+	ino  uint64 // Unix inode
 	sz   np.Tlength
-	dir  *Dir
 	init bool
 }
 
-func (o *Obj) Parent() fs.Dir {
-	return o.dir
-}
-
-func (o *Obj) SetParent(d fs.Dir) {
-}
-
-func (o *Obj) Lock() {
-}
-
-func (o *Obj) Unlock() {
-}
-
-func (o *Obj) VersionInc() {
-}
-
-func (o *Obj) SetMtime() {
-}
-
-func (o *Obj) LockAddr() *sync.Mutex {
-	return nil
-}
-
-func (o *Obj) Inum() uint64 {
-	return 0
-}
-
-func (fsux *FsUx) makeObjL(path []string, t np.Tperm, d *Dir) *Obj {
+func makeObj(path []string, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
-	o.fsux = fsux
+	o.Inode = inode.MakeInode("", t, d)
 	o.path = path
-	o.t = t
-	o.dir = d
 	return o
-}
-
-func (fsux *FsUx) MakeObj(path []string, t np.Tperm, d *Dir) fs.FsObj {
-	fsux.mu.Lock()
-	defer fsux.mu.Unlock()
-	return fsux.makeObjL(path, t, d)
-}
-
-func (o *Obj) String() string {
-	s := fmt.Sprintf("p %v t %v", o.path, o.t)
-	return s
-}
-
-func (o *Obj) Qid() np.Tqid {
-	if !o.init {
-		o.stat()
-	}
-	return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
-		np.TQversion(0), np.Tpath(o.ino))
-}
-
-func (o *Obj) Perm() np.Tperm {
-	if !o.init {
-		o.stat()
-	}
-	return o.t
-}
-
-func (o *Obj) Size() np.Tlength {
-	if !o.init {
-		o.stat()
-	}
-	return o.sz
-}
-
-func (o *Obj) Version() np.TQversion {
-	return 0
 }
 
 func (o *Obj) Path() string {
@@ -172,6 +105,28 @@ func uxFlags(m np.Tmode) int {
 	return f
 }
 
+func (o *Obj) Inum() uint64 {
+	if !o.init {
+		o.stat()
+	}
+	return o.ino
+}
+
+func (o *Obj) Qid() np.Tqid {
+	if !o.init {
+		o.stat()
+	}
+	return np.MakeQid(np.Qtype(o.Perm()>>np.QTYPESHIFT),
+		np.TQversion(0), np.Tpath(o.ino))
+}
+
+func (o *Obj) Size() np.Tlength {
+	if !o.init {
+		o.stat()
+	}
+	return o.sz
+}
+
 func (o *Obj) stat() (*np.Stat, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -194,7 +149,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 	} else {
 		st.Name = "" // root
 	}
-	st.Mode = o.t | np.Tperm(0777)
+	st.Mode = o.Inode.Perm() | np.Tperm(0777)
 	st.Qid = o.Qid()
 	st.Uid = ""
 	st.Gid = ""
@@ -208,17 +163,4 @@ func (o *Obj) stat() (*np.Stat, error) {
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	db.DLPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	return o.stat()
-}
-
-func (o *Obj) Wstat(ctx fs.CtxI, st *np.Stat) error {
-	return nil
-}
-
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
-	return nil, nil
-}
-
-// XXX close
-func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {
-	return nil
 }

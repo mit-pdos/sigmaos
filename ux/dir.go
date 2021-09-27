@@ -14,11 +14,9 @@ type Dir struct {
 	*Obj
 }
 
-func (fsux *FsUx) makeDir(path []string, t np.Tperm, p *Dir) *Dir {
+func makeDir(path []string, t np.Tperm, p *Dir) *Dir {
 	d := &Dir{}
-	fsux.mu.Lock()
-	defer fsux.mu.Unlock()
-	d.Obj = fsux.makeObjL(path, t, p)
+	d.Obj = makeObj(path, t, p)
 	return d
 }
 
@@ -62,14 +60,14 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		if err != nil {
 			return nil, err
 		}
-		d1 := d.fsux.makeDir(append(d.path, name), 0, d)
+		d1 := makeDir(append(d.path, name), 0, d)
 		return d1, nil
 	} else {
 		file, err := os.OpenFile(p, uxFlags(m)|os.O_CREATE, os.FileMode(perm&0777))
 		if err != nil {
 			return nil, err
 		}
-		f := d.fsux.makeFile(append(d.path, name), 0, d)
+		f := makeFile(append(d.path, name), 0, d)
 		if file != nil {
 			f.file = file
 		}
@@ -92,14 +90,14 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	}
 	if len(p) == 1 {
 		if fi.IsDir() {
-			d1 := d.fsux.makeDir(append(d.path, p[0]), np.DMDIR, d)
+			d1 := makeDir(append(d.path, p[0]), np.DMDIR, d)
 			return []fs.FsObj{d1}, nil, nil
 		} else {
-			f := d.fsux.makeFile(append(d.path, p[0]), np.Tperm(0), d)
+			f := makeFile(append(d.path, p[0]), np.Tperm(0), d)
 			return []fs.FsObj{f}, nil, nil
 		}
 	} else {
-		d1 := d.fsux.makeDir(append(d.path, p[0]), np.DMDIR, d)
+		d1 := makeDir(append(d.path, p[0]), np.DMDIR, d)
 		return d1.Lookup(ctx, p[1:])
 	}
 }
@@ -118,6 +116,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) error {
 	return err
 }
 
+// XXX update cached file obj?
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) error {
 	oldPath := d.Path() + "/" + from
 	newPath := d.Path() + "/" + to

@@ -3,6 +3,7 @@ package fss3
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
@@ -14,14 +15,15 @@ import (
 
 type Dir struct {
 	*Obj
+	mu      sync.Mutex
 	dirents map[string]fs.FsObj
 }
 
 func (fss3 *Fss3) makeDir(key []string, t np.Tperm, p *Dir) *Dir {
-	fss3.mu.Lock()
-	defer fss3.mu.Unlock()
-	o := fss3.makeObjL(key, t, p)
-	dir := &Dir{o.(*Obj), make(map[string]fs.FsObj)}
+	o := fss3.makeObj(key, t, p)
+	dir := &Dir{}
+	dir.Obj = o.(*Obj)
+	dir.dirents = make(map[string]fs.FsObj)
 	return dir
 }
 
@@ -49,7 +51,7 @@ func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 	name := s[len(d.key)]
 	_, ok := d.dirents[name]
 	if ok {
-		m = d.t
+		m = d.Perm()
 	} else {
 		if len(s) > len(d.key)+1 {
 			m = np.DMDIR
@@ -96,7 +98,7 @@ func (d *Dir) s3ReadDirL() error {
 					dir := d.fss3.makeDir(append(d.key, n), m, d)
 					d.dirents[n] = dir
 				} else {
-					o1 := d.fss3.makeObjL(append(d.key, n), m, d)
+					o1 := d.fss3.makeObj(append(d.key, n), m, d)
 					d.dirents[n] = o1.(*Obj)
 				}
 			}
@@ -108,7 +110,7 @@ func (d *Dir) s3ReadDirL() error {
 
 func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
-	if !d.t.IsDir() {
+	if !d.Perm().IsDir() {
 		return nil, nil, fmt.Errorf("Not a directory")
 	}
 	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
@@ -146,6 +148,11 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 	return dirents, nil
 }
 
+// sub directories will be implicitly created; fake write
+func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+	return np.Tsize(len(b)), nil
+}
+
 // XXX directories don't fully work: there is a fake directory, when
 // trying to read it we get an error.  Maybe create . or .. in the
 // directory args.Name, to force the directory into existence
@@ -170,7 +177,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if ok {
 		return nil, fmt.Errorf("Name exists")
 	}
-	o1 := d.fss3.MakeObj(np.Split(key), 0, d)
+	o1 := d.Obj.fss3.makeObj(np.Split(key), 0, d)
 	d.dirents[name] = o1.(*Obj)
 	return o1, nil
 }

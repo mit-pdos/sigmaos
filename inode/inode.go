@@ -17,7 +17,7 @@ type Inode struct {
 	mu      sync.Mutex
 	perm    np.Tperm
 	version np.TQversion
-	Mtime   int64
+	mtime   int64
 	parent  fs.Dir
 	owner   string
 }
@@ -25,7 +25,7 @@ type Inode struct {
 func MakeInode(owner string, p np.Tperm, parent fs.Dir) *Inode {
 	i := Inode{}
 	i.perm = p
-	i.Mtime = time.Now().Unix()
+	i.mtime = time.Now().Unix()
 	i.parent = parent
 	i.owner = owner
 	i.version = np.TQversion(1)
@@ -35,18 +35,6 @@ func MakeInode(owner string, p np.Tperm, parent fs.Dir) *Inode {
 func (inode *Inode) String() string {
 	str := fmt.Sprintf("Inode %p %v", inode, inode.perm)
 	return str
-}
-
-func (inode *Inode) Lock() {
-	inode.mu.Lock()
-}
-
-func (inode *Inode) Unlock() {
-	inode.mu.Unlock()
-}
-
-func (inode *Inode) LockAddr() *sync.Mutex {
-	return &inode.mu
 }
 
 func (inode *Inode) Inum() uint64 {
@@ -62,35 +50,51 @@ func (inode *Inode) qidL() np.Tqid {
 }
 
 func (inode *Inode) Qid() np.Tqid {
-	inode.Lock()
-	defer inode.Unlock()
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	return inode.qidL()
 }
 
 func (inode *Inode) Perm() np.Tperm {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
 	return inode.perm
 }
 
 func (inode *Inode) Parent() fs.Dir {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	return inode.parent
 }
 
 func (inode *Inode) Version() np.TQversion {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	return inode.version
 }
 
 func (inode *Inode) VersionInc() {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	inode.version += 1
 }
 
 func (inode *Inode) SetParent(p fs.Dir) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
 	inode.parent = p
 }
 
-func (inode *Inode) SetMtime() {
-	inode.Mtime = time.Now().Unix()
+func (inode *Inode) Mtime() int64 {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+	return inode.mtime
+}
+
+func (inode *Inode) SetMtime(m int64) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+	inode.mtime = m
 }
 
 func (i *Inode) Size() np.Tlength {
@@ -114,11 +118,14 @@ func (inode *Inode) Mode() np.Tperm {
 }
 
 func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, error) {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
 	stat := &np.Stat{}
 	stat.Type = 0 // XXX
 	stat.Qid = inode.qidL()
 	stat.Mode = inode.Mode()
-	stat.Mtime = uint32(inode.Mtime)
+	stat.Mtime = uint32(inode.mtime)
 	stat.Atime = 0
 	stat.Name = ""
 	stat.Uid = inode.owner

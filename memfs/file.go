@@ -2,6 +2,8 @@ package memfs
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"ulambda/fs"
 	np "ulambda/ninep"
@@ -9,22 +11,26 @@ import (
 
 type File struct {
 	fs.FsObj
+	mu   sync.Mutex
 	data []byte
 }
 
 func MakeFile(i fs.FsObj) *File {
-	return &File{i, make([]byte, 0)}
+	f := &File{}
+	f.FsObj = i
+	f.data = make([]byte, 0)
+	return f
 }
 
 func (f *File) Size() np.Tlength {
-	f.Lock()
-	defer f.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return np.Tlength(len(f.data))
 }
 
 func (f *File) Stat(ctx fs.CtxI) (*np.Stat, error) {
-	f.Lock()
-	defer f.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	st, err := f.FsObj.Stat(ctx)
 	if err != nil {
 		return nil, err
@@ -38,15 +44,15 @@ func (f *File) LenOff() np.Toffset {
 }
 
 func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
-	f.Lock()
-	defer f.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	if v != np.NoV && f.Version() != v {
 		return 0, fmt.Errorf("Version mismatch")
 	}
 
 	f.VersionInc()
-	f.SetMtime()
+	f.SetMtime(time.Now().Unix())
 
 	cnt := np.Tsize(len(data))
 	sz := np.Toffset(len(data))
@@ -68,8 +74,8 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 }
 
 func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
-	f.Lock()
-	defer f.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	if v != np.NoV && f.Version() != v {
 		return nil, fmt.Errorf("Version mismatch")

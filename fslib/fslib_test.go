@@ -414,6 +414,38 @@ func TestLock1(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestLockAfterConnClose(t *testing.T) {
+	ts := makeTstate(t)
+
+	lPath := "name/lock-conn-close-test"
+
+	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", ts.cfg.NamedAddr)
+	fsl2 := fslib.MakeFsLibAddr("fslibtest-2", ts.cfg.NamedAddr)
+
+	err := fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	assert.Nil(t, err, "Make lock 1")
+
+	go func() {
+		// Should wait
+		err := fsl2.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		assert.Equal(t, err.Error(), "EOF", "Make lock 2")
+	}()
+
+	time.Sleep(500 * time.Millisecond)
+
+	// Kill fsl2's connection
+	fsl2.Exit()
+
+	// Remove the lock file
+	fsl1.Remove(lPath)
+
+	// Try to lock again (should succeed)
+	err = fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	assert.Nil(t, err, "Make lock 3")
+
+	ts.e.Shutdown()
+}
+
 func TestWatchRemove(t *testing.T) {
 	ts := makeTstate(t)
 

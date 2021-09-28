@@ -14,6 +14,7 @@ const PIPESZ = 8192
 
 type Pipe struct {
 	fs.FsObj
+	mu      sync.Mutex
 	condr   *sync.Cond
 	condw   *sync.Cond
 	nreader int
@@ -24,8 +25,8 @@ type Pipe struct {
 func MakePipe(i fs.FsObj) *Pipe {
 	pipe := &Pipe{}
 	pipe.FsObj = i
-	pipe.condr = sync.NewCond(i.LockAddr())
-	pipe.condw = sync.NewCond(i.LockAddr())
+	pipe.condr = sync.NewCond(&pipe.mu)
+	pipe.condw = sync.NewCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
 	return pipe
 }
@@ -35,8 +36,8 @@ func (p *Pipe) Size() np.Tlength {
 }
 
 func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	st, err := p.FsObj.Stat(ctx)
 	if err != nil {
 		return nil, err
@@ -46,8 +47,8 @@ func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
 }
 
 func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
-	pipe.Lock()
-	defer pipe.Unlock()
+	pipe.mu.Lock()
+	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
 		pipe.nreader += 1
@@ -69,8 +70,8 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 }
 
 func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
-	pipe.Lock()
-	defer pipe.Unlock()
+	pipe.mu.Lock()
+	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
 		if pipe.nreader < 0 {
@@ -91,8 +92,8 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 }
 
 func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, error) {
-	pipe.Lock()
-	defer pipe.Unlock()
+	pipe.mu.Lock()
+	defer pipe.mu.Unlock()
 
 	n := len(d)
 	for len(d) > 0 {
@@ -114,8 +115,8 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 }
 
 func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
-	pipe.Lock()
-	defer pipe.Unlock()
+	pipe.mu.Lock()
+	defer pipe.mu.Unlock()
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {

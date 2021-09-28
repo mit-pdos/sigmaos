@@ -46,10 +46,18 @@ func (o *Obj) LockAddr() *sync.Mutex {
 func (o *Obj) VersionInc() {
 }
 
-func (o *Obj) SetMtime() {
+func (o *Obj) Mtime() int64 {
+	return 0
+}
+
+func (o *Obj) SetMtime(int64) {
 }
 
 func (o *Obj) SetParent(d fs.Dir) {
+}
+
+func (o *Obj) Parent() fs.Dir {
+	return o.dir
 }
 
 func (o *Obj) Inum() uint64 {

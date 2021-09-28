@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "ulambda/debug"
 	"ulambda/fs"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
@@ -26,75 +26,46 @@ func mode(key string) np.Tperm {
 	return m
 }
 
-func (fss3 *Fss3) makeObjL(key []string, t np.Tperm, d *Dir) fs.FsObj {
-	id := fss3.nextId
-	fss3.nextId += 1
-
-	o := &Obj{}
-	o.fss3 = fss3
-	o.key = key
-	o.t = t
-	o.id = id
-	o.dir = d
-	return o
-}
-
-func (fss3 *Fss3) MakeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
-	fss3.mu.Lock()
-	defer fss3.mu.Unlock()
-	return fss3.makeObjL(key, t, d)
-}
-
 type Obj struct {
+	*inode.Inode
 	mu     sync.Mutex
 	fss3   *Fss3
 	key    []string
-	t      np.Tperm
-	id     np.Tpath
 	sz     np.Tlength
-	mtime  time.Time
 	isRead bool
-	dir    *Dir
+}
+
+func (fss3 *Fss3) makeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
+	o := &Obj{}
+	o.Inode = inode.MakeInode("", t, d)
+	o.fss3 = fss3
+	o.key = key
+	return o
 }
 
 func (o *Obj) String() string {
-	s := fmt.Sprintf("%v t %v id %v sz %v %v", o.key, o.t, o.id, o.sz, o.mtime)
+	s := fmt.Sprintf("%v t %v id %v sz %v %v", o.key, o.Perm(), o.Inum(), o.sz,
+		o.Mtime())
 	return s
-}
-
-func (o *Obj) Qid() np.Tqid {
-	return np.MakeQid(np.Qtype(o.t>>np.QTYPESHIFT),
-		np.TQversion(0), np.Tpath(o.id))
-}
-
-func (o *Obj) Perm() np.Tperm {
-	return o.t
 }
 
 func (o *Obj) Size() np.Tlength {
 	return o.sz
 }
 
-func (o *Obj) Version() np.TQversion {
-	return 0
-}
-
 func (o *Obj) stat() *np.Stat {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
 	st := &np.Stat{}
 	if len(o.key) > 0 {
 		st.Name = o.key[len(o.key)-1]
 	} else {
 		st.Name = "" // root
 	}
-	st.Mode = o.t | np.Tperm(0777)
+	st.Mode = o.Perm() | np.Tperm(0777)
 	st.Qid = o.Qid()
 	st.Uid = ""
 	st.Gid = ""
 	st.Length = o.sz
-	st.Mtime = uint32(o.mtime.Unix())
+	st.Mtime = uint32(o.Mtime())
 	return st
 }
 
@@ -108,10 +79,6 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, error) {
 		err = o.readHead()
 	}
 	return o.stat(), err
-}
-
-func (o *Obj) Wstat(ctx fs.CtxI, st *np.Stat) error {
-	return nil
 }
 
 func (o *Obj) readHead() error {
@@ -128,7 +95,7 @@ func (o *Obj) readHead() error {
 	defer o.mu.Unlock()
 	o.sz = np.Tlength(result.ContentLength)
 	if result.LastModified != nil {
-		o.mtime = *result.LastModified
+		o.SetMtime((*result.LastModified).Unix())
 	}
 	return nil
 }
@@ -213,26 +180,6 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) error {
 	return nil
 }
 
-func (o *Obj) Remove(ctx fs.CtxI, name string) error {
-	key := np.Join(o.key)
-	input := &s3.DeleteObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-	_, err := o.fss3.client.DeleteObject(context.TODO(), input)
-	if err != nil {
-		return err
-	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	delete(o.dir.dirents, o.key[len(o.key)-1])
-	return nil
-}
-
-func (o *Obj) Rename(ctx fs.CtxI, from, to string) error {
-	return fmt.Errorf("not supported")
-}
-
 // XXX maybe represent a file as several objects to avoid
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
@@ -270,33 +217,4 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 		return 0, err
 	}
 	return np.Tsize(len(b)), nil
-}
-
-// sub directories will be implicitly created; fake write
-func (o *Obj) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	return np.Tsize(len(b)), nil
-}
-
-func (o *Obj) SetParent(d fs.Dir) {
-	return
-}
-
-func (o *Obj) Lock() {
-}
-
-func (o *Obj) Unlock() {
-}
-
-func (o *Obj) VersionInc() {
-}
-
-func (o *Obj) SetMtime() {
-}
-
-func (o *Obj) LockAddr() *sync.Mutex {
-	return nil
-}
-
-func (o *Obj) Inum() uint64 {
-	return 0
 }

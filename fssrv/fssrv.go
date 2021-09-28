@@ -17,7 +17,7 @@ type Fs interface {
 type FsServer struct {
 	fs    Fs
 	addr  string
-	root  fs.FsObj
+	root  fs.Dir
 	mkps  protsrv.MakeProtServer
 	stats *stats.Stats
 	wt    *watch.WatchTable
@@ -26,7 +26,7 @@ type FsServer struct {
 	srv   *netsrv.NetServer
 }
 
-func MakeFsServer(fs Fs, root fs.FsObj, addr string,
+func MakeFsServer(fs Fs, root fs.Dir, addr string,
 	mkps protsrv.MakeProtServer,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
@@ -34,7 +34,7 @@ func MakeFsServer(fs Fs, root fs.FsObj, addr string,
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
-	fssrv.stats = stats.MkStats()
+	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.wt = watch.MkWatchTable()
 	fssrv.ct = MkConnTable()
 	fssrv.st = session.MakeSessionTable()
@@ -66,7 +66,7 @@ func (fssrv *FsServer) Done() {
 	fssrv.fs.Done()
 }
 
-func (fssrv *FsServer) RootAttach(uname string) (fs.FsObj, fs.CtxI) {
+func (fssrv *FsServer) RootAttach(uname string) (fs.Dir, fs.CtxI) {
 	return fssrv.root, MkCtx(uname)
 }
 

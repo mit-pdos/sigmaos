@@ -15,7 +15,9 @@ import (
 	"unsafe"
 
 	"ulambda/debug"
+	"ulambda/fs"
 	"ulambda/fslib"
+	"ulambda/inode"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -79,6 +81,7 @@ func MkStatInfo() *StatInfo {
 }
 
 type Stats struct {
+	fs.FsObj
 	mu   sync.Mutex // protects some fields of StatInfo
 	sti  *StatInfo
 	pid  string
@@ -88,8 +91,9 @@ type Stats struct {
 	proc.ProcClnt
 }
 
-func MkStats() *Stats {
+func MkStats(parent fs.Dir) *Stats {
 	st := &Stats{}
+	st.FsObj = inode.MakeInode("", np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
 	return st
 }
@@ -205,11 +209,11 @@ func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
 }
 
-func (st *Stats) Write(off np.Toffset, data []byte) (np.Tsize, error) {
+func (st *Stats) Write(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
 	return 0, nil
 }
 
-func (st *Stats) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
+func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
 	if st == nil {
 		return nil, nil
 	}
@@ -218,14 +222,6 @@ func (st *Stats) Read(off np.Toffset, n np.Tsize) ([]byte, error) {
 	}
 	b := st.stats()
 	return b, nil
-}
-
-func (st *Stats) Len() np.Tlength {
-	if st == nil {
-		return 0
-	}
-	b := st.stats()
-	return np.Tlength(len(b))
 }
 
 func (st *Stats) Path(p []string) {

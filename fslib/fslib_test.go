@@ -320,6 +320,7 @@ func TestCounter(t *testing.T) {
 
 	assert.Equal(t, N, n)
 
+	ts.s.Shutdown()
 	ts.e.Shutdown()
 }
 

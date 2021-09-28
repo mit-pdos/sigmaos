@@ -14,11 +14,9 @@ type File struct {
 	file *os.File
 }
 
-func (fsux *FsUx) makeFile(path []string, t np.Tperm, p *Dir) *File {
+func makeFile(path []string, t np.Tperm, p *Dir) *File {
 	f := &File{}
-	fsux.mu.Lock()
-	defer fsux.mu.Unlock()
-	f.Obj = fsux.makeObjL(path, t, p)
+	f.Obj = makeObj(path, t, p)
 	return f
 }
 

@@ -9,22 +9,29 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
+	"ulambda/dir"
 	"ulambda/fs"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
 type Clone struct {
-	*Obj
+	fs.FsObj
+}
+
+func makeClone(uname string, parent fs.Dir) fs.FsObj {
+	i := inode.MakeInode(uname, np.DMDEVICE, parent)
+	return &Clone{i}
 }
 
 type Session struct {
-	*Obj
+	*inode.Inode
 	id string
 	db *sql.DB
 }
 
 type Query struct {
-	*Obj
+	*inode.Inode
 	db   *sql.DB
 	rows *sql.Rows
 }
@@ -42,23 +49,28 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	log.Printf("Connected\n")
 
 	s := &Session{}
-	s.Obj = makeObj(c.db, nil, 0, nil)
-	s.id = strconv.Itoa(int(s.Obj.id))
-	s.path = []string{s.id, "ctl"}
+	s.Inode = inode.MakeInode("", 0, nil)
+	s.id = strconv.Itoa(int(s.Inode.Inum()))
 	s.db = db
 
 	// create directory for session
-	d := makeDir(c.Obj.db, []string{s.id}, np.DMDIR, c.p)
-	s.Obj.p = d
-	c.p.create(s.id, d)
-	d.create("ctl", s) // put ctl file into session dir
+	di := inode.MakeInode("", np.DMDIR, c.Parent())
+	d := dir.MakeDir(di)
+	err = dir.MkNod(ctx, c.Parent(), s.id, d)
+	if err != nil {
+		log.Fatalf("MkNod err %v\n", err)
+	}
+	err = dir.MkNod(ctx, d, "ctl", s) // put ctl file into session dir
+	if err != nil {
+		log.Fatalf("MkNod err %v\n", err)
+	}
 
 	// make query file
 	q := &Query{}
 	q.db = db
-	q.Obj = makeObj(c.db, []string{s.id, "query"}, 0, d)
-	d.create("query", q)
-	d.create("data", q)
+	q.Inode = inode.MakeInode("", 0, d)
+	dir.MkNod(ctx, d, "query", q)
+	dir.MkNod(ctx, d, "data", q)
 
 	return s, nil
 }

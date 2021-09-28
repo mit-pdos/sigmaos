@@ -1,9 +1,11 @@
-package fsimpl
+package dir
 
 import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -12,6 +14,7 @@ import (
 )
 
 type makeInodeF func(string, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, error)
+type makeRootInodeF func(fs.MakeDirF, string, np.Tperm) (fs.FsObj, error)
 
 var makeInode makeInodeF
 
@@ -23,6 +26,7 @@ func IsCurrentDir(name string) bool {
 
 type DirImpl struct {
 	fs.FsObj
+	mu      sync.Mutex
 	entries map[string]fs.FsObj
 }
 
@@ -31,6 +35,11 @@ func MakeDir(i fs.FsObj) *DirImpl {
 	d.FsObj = i
 	d.entries = make(map[string]fs.FsObj)
 	d.entries["."] = d
+	return d
+}
+
+func MakeDirF(i fs.FsObj) fs.FsObj {
+	d := MakeDir(i)
 	return d
 }
 
@@ -45,10 +54,18 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func MkRootDir(f makeInodeF) fs.Dir {
+func MkRootDir(f makeInodeF, r makeRootInodeF) fs.Dir {
 	makeInode = f
-	i := MakeInode("", np.DMDIR, nil)
+	i, _ := r(MakeDirF, "", np.DMDIR)
 	return MakeDir(i)
+}
+
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.FsObj) error {
+	err := dir.(*DirImpl).CreateDev(ctx, name, np.DMDEVICE, 0, i)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (dir *DirImpl) removeL(name string) error {
@@ -79,8 +96,8 @@ func (dir *DirImpl) lookupL(name string) (fs.FsObj, error) {
 }
 
 func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, error) {
-	dir.Lock()
-	defer dir.Unlock()
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
 	st, err := dir.FsObj.Stat(ctx)
 	if err != nil {
 		return nil, err
@@ -90,8 +107,8 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, error) {
 }
 
 func (dir *DirImpl) Size() np.Tlength {
-	dir.Lock()
-	defer dir.Unlock()
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
 	return npcodec.DirSize(dir.lsL())
 }
 
@@ -99,11 +116,11 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	var inode fs.FsObj
 	var err error
 
-	dir.Lock()
+	dir.mu.Lock()
 	inode, err = dir.lookupL(path[0])
 	if err != nil {
 		db.DLPrintf("MEMFS", "dir %v: file not found %v", dir, path[0])
-		dir.Unlock()
+		dir.mu.Unlock()
 		return nil, nil, err
 	}
 	inodes = append(inodes, inode)
@@ -111,14 +128,14 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	case *DirImpl:
 		if len(path) == 1 { // done?
 			db.DLPrintf("MEMFS", "namei %v %v -> %v", path, dir, inodes)
-			dir.Unlock()
+			dir.mu.Unlock()
 			return inodes, nil, nil
 		}
-		dir.Unlock() // for "."
+		dir.mu.Unlock() // for "."
 		return i.namei(ctx, path[1:], inodes)
 	default:
 		db.DLPrintf("MEMFS", "namei %v %v -> %v %v", path, dir, inodes, path[1:])
-		dir.Unlock()
+		dir.mu.Unlock()
 		return inodes, path[1:], nil
 	}
 }
@@ -137,8 +154,8 @@ func (dir *DirImpl) lsL() []*np.Stat {
 }
 
 func (dir *DirImpl) remove(ctx fs.CtxI, name string) error {
-	dir.Lock()
-	defer dir.Unlock()
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
 
 	inode, err := dir.lookupL(name)
 	if err != nil {
@@ -153,14 +170,14 @@ func (dir *DirImpl) remove(ctx fs.CtxI, name string) error {
 	default:
 	}
 	dir.VersionInc()
-	dir.SetMtime()
+	dir.SetMtime(time.Now().Unix())
 	return dir.removeL(name)
 }
 
 func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, error) {
-	dir.Lock()
+	dir.mu.Lock()
 	db.DLPrintf("MEMFS", "%v: Lookup %v %v\n", ctx, dir, path)
-	dir.Unlock()
+	dir.mu.Unlock()
 	inodes := []fs.FsObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
@@ -175,8 +192,8 @@ func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, er
 }
 
 func (dir *DirImpl) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]*np.Stat, error) {
-	dir.Lock()
-	defer dir.Unlock()
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
 
 	db.DLPrintf("MEMFS", "%v: ReadDir %v\n", ctx, dir)
 	if v != np.NoV && dir.Version() != v {
@@ -187,14 +204,14 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQv
 
 // XXX ax WriteDir from fs.Dir
 func (dir *DirImpl) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	dir.Lock()
-	defer dir.Unlock()
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
 	return 0, errors.New("Cannot write directory")
 }
 
 func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
-	dir.Lock()
-	defer dir.Unlock()
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
 
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
@@ -206,21 +223,34 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 
 	db.DLPrintf("MEMFS", "Create %v in %v -> %v\n", name, dir, newi)
 	dir.VersionInc()
-	dir.SetMtime()
+	dir.SetMtime(time.Now().Unix())
 	return newi, dir.createL(newi, name)
+}
+
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode, i fs.FsObj) error {
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	if IsCurrentDir(name) {
+		return errors.New("Cannot create name")
+	}
+	db.DLPrintf("MEMFS", "CreateDev %v in %v -> %v\n", name, dir, i)
+	dir.VersionInc()
+	dir.SetMtime(time.Now().Unix())
+	return dir.createL(i, name)
 }
 
 func lockOrdered(olddir *DirImpl, newdir *DirImpl) {
 	id1 := olddir.Inum()
 	id2 := newdir.Inum()
 	if id1 == id2 {
-		olddir.Lock()
+		olddir.mu.Lock()
 	} else if id1 < id2 {
-		olddir.Lock()
-		newdir.Lock()
+		olddir.mu.Lock()
+		newdir.mu.Lock()
 	} else {
-		newdir.Lock()
-		olddir.Lock()
+		newdir.mu.Lock()
+		olddir.mu.Lock()
 	}
 }
 
@@ -228,14 +258,46 @@ func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
 	id1 := olddir.Inum()
 	id2 := newdir.Inum()
 	if id1 == id2 {
-		olddir.Unlock()
+		olddir.mu.Unlock()
 	} else if id1 < id2 {
-		olddir.Unlock()
-		newdir.Unlock()
+		olddir.mu.Unlock()
+		newdir.mu.Unlock()
 	} else {
-		newdir.Unlock()
-		olddir.Unlock()
+		newdir.mu.Unlock()
+		olddir.mu.Unlock()
 	}
+}
+
+// Rename inode within directory
+func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	db.DLPrintf("MEMFS", "%v: Rename %v -> %v\n", dir, from, to)
+	ino, err := dir.lookupL(from)
+	if err != nil {
+		return err
+	}
+	err = dir.removeL(from)
+	if err != nil {
+		log.Fatalf("Rename: remove failed %v %v\n", from, err)
+	}
+	_, err = dir.lookupL(to)
+	if err == nil { // i is valid
+		// XXX 9p: it is an error to change the name to that
+		// of an existing file.
+		err = dir.removeL(to)
+		if err != nil {
+			log.Fatalf("Rename remove failed %v %v\n", to, err)
+		}
+	}
+	err = dir.createL(ino, to)
+	if err != nil {
+		log.Fatalf("Rename create %v failed %v\n", to, err)
+		return err
+	}
+	return nil
+
 }
 
 func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) error {
@@ -262,5 +324,27 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) err
 		return err
 	}
 	ino.SetParent(newdir)
+	return nil
+}
+
+func (dir *DirImpl) Remove(ctx fs.CtxI, n string) error {
+	db.DLPrintf("MEMFS", "Remove: %v %v\n", dir, n)
+
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	inode, err := dir.lookupL(n)
+	if err != nil {
+		return err
+	}
+
+	inode.VersionInc()
+	dir.VersionInc()
+
+	err = dir.removeL(n)
+	if err != nil {
+		log.Fatalf("Remove: error %v\n", n)
+	}
+
 	return nil
 }

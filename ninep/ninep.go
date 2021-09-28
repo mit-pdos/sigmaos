@@ -166,6 +166,7 @@ const (
 const (
 	QTYPESHIFT = 24
 	TYPESHIFT  = 16
+	TYPEMASK   = 0xFF
 )
 
 func (p Tperm) IsDir() bool        { return p&DMDIR == DMDIR }
@@ -174,10 +175,11 @@ func (p Tperm) IsReplicated() bool { return p&DMREPL == DMREPL }
 func (p Tperm) IsDevice() bool     { return p&DMDEVICE == DMDEVICE }
 func (p Tperm) IsPipe() bool       { return p&DMNAMEDPIPE == DMNAMEDPIPE }
 func (p Tperm) IsEphemeral() bool  { return p&DMTMP == DMTMP }
+func (p Tperm) IsFile() bool       { return (p>>QTYPESHIFT)&0xFF == 0 }
 
 func (p Tperm) String() string {
 	qt := Qtype(p >> QTYPESHIFT)
-	return fmt.Sprintf("qt %v p %x", qt, uint8(p&0xFF))
+	return fmt.Sprintf("qt %v p %x", qt, uint8(p&TYPEMASK))
 }
 
 type Tfcall uint8

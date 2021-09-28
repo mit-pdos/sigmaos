@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/debug"
+	"ulambda/dir"
 	"ulambda/fs"
-	"ulambda/fsimpl"
 	np "ulambda/ninep"
 )
 
@@ -36,7 +36,7 @@ type TestState struct {
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.rooti = fsimpl.MkRootDir(MakeInode)
+	ts.rooti = dir.MkRootDir(MakeInode, MakeRootInode)
 	ts.ctx = MkCtx("")
 	return ts
 }

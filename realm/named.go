@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	N_REPLICAS = 1
+	N_REPLICAS = "N_REPLICAS"
 )
 
 const (
@@ -99,10 +99,22 @@ func run(bin string, name string, namedAddr []string, args []string) (*exec.Cmd,
 func genNamedAddrs(localIP string) []string {
 	basePort := MIN_PORT + rand.Intn(MAX_PORT-MIN_PORT)
 	addrs := []string{}
-	for i := 0; i < N_REPLICAS; i++ {
+	n := nReplicas()
+	for i := 0; i < n; i++ {
 		portStr := strconv.Itoa(basePort + i)
 		addr := localIP + ":" + portStr
 		addrs = append(addrs, addr)
 	}
 	return addrs
+}
+
+func nReplicas() int {
+	if nStr, ok := os.LookupEnv(N_REPLICAS); ok {
+		n, err := strconv.Atoi(nStr)
+		if err != nil {
+			log.Fatalf("Invalid N_REPLICAS format: %v", err)
+		}
+		return n
+	}
+	return 1
 }

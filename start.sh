@@ -14,6 +14,13 @@ if [[ -z "${NAMED}" ]]; then
   export NAMED=$N
 fi
 
+if [[ -z "${N_REPLICAS}" ]]; then
+  export N_REPLICAS=1
+fi
+
+echo "running with NAMED=$NAMED"
+echo "each realm runs with $N_REPLICAS replicas"
+
 #./bin/kernel/boot
 ./bin/realm/realmmgr . &
 sleep 2

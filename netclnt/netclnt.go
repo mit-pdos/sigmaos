@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -277,6 +278,7 @@ func (nc *NetClnt) writer() {
 				if strings.Contains(err.Error(), "connection reset by peer") {
 					nc.resetConnection(br, bw)
 				} else {
+					debug.PrintStack()
 					log.Fatalf("Flush error %v\n", err)
 					return
 				}

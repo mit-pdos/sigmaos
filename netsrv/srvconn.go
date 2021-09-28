@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"net"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -151,6 +152,7 @@ func (c *SrvConn) writer() {
 		} else {
 			err = c.bw.Flush()
 			if err != nil {
+				debug.PrintStack()
 				log.Print("Writer: Flush error ", err)
 				return
 			}

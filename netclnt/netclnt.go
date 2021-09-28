@@ -279,7 +279,7 @@ func (nc *NetClnt) writer() {
 					nc.resetConnection(br, bw)
 				} else {
 					debug.PrintStack()
-					log.Fatalf("Flush error %v\n", err)
+					log.Printf("Flush error %v\n", err)
 					return
 				}
 			}

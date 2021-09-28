@@ -8,13 +8,16 @@ import (
 	"strings"
 
 	db "ulambda/debug"
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
+	"ulambda/named"
 	"ulambda/perf"
 	"ulambda/realm"
 	"ulambda/replraft"
 	"ulambda/seccomp"
+	"ulambda/sync"
 )
 
 func main() {
@@ -67,5 +70,19 @@ func main() {
 		}
 	}
 	seccomp.LoadFilter()
+
+	// Mark self as started if this isn't the initial named
+	isInitNamed := false
+	for _, a := range fslib.Named() {
+		if a == addr {
+			isInitNamed = true
+			break
+		}
+	}
+	if !isInitNamed {
+		namedStartCond := sync.MakeCond(fslib.MakeFsLib("named"), path.Join(named.BOOT, addr), nil)
+		namedStartCond.Destroy()
+	}
+
 	fsd.Serve()
 }

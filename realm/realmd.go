@@ -113,7 +113,7 @@ func (r *Realmd) tryInitRealmL() bool {
 		namedAddrs := genNamedAddrs(ip)
 
 		// Start a named instance.
-		if _, err := BootNamedReplicas(r.bin, namedAddrs, r.cfg.RealmId); err != nil {
+		if _, err := BootNamedReplicas(r.FsLib, r.bin, namedAddrs, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
 		}
 

@@ -14,9 +14,6 @@ import (
 	"ulambda/sync"
 )
 
-// XXX move to named
-const ()
-
 type System struct {
 	bin       string
 	namedAddr []string
@@ -25,11 +22,6 @@ type System struct {
 	procd     []*exec.Cmd
 	dbd       []*exec.Cmd
 	*fslib.FsLib
-}
-
-// XXX To be removed
-func MakeSystem(bin string) *System {
-	return MakeSystemNamedAddr(bin, fslib.Named())
 }
 
 func MakeSystemNamedAddr(bin string, namedAddr []string) *System {

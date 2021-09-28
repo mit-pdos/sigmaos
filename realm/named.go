@@ -13,6 +13,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/named"
+	"ulambda/sync"
 )
 
 const (
@@ -23,10 +24,10 @@ const (
 	SLEEP_MS = 1000
 )
 
-func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
+func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
 	for i, addr := range addrs {
-		cmd, err := BootNamed(bin, addr, i+1, addrs, realmId)
+		cmd, err := BootNamed(fsl, bin, addr, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err
@@ -37,7 +38,7 @@ func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd,
 }
 
 // Boot a named and set up the initfs
-func BootNamed(bin string, addr string, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	var args []string
 	if realmId == NO_REALM {
 		args = []string{"0", addr, NO_REALM}
@@ -49,12 +50,26 @@ func BootNamed(bin string, addr string, id int, peers []string, realmId string) 
 		args = append(args, strconv.Itoa(id))
 		args = append(args, strings.Join(peers[:id], ","))
 	}
+
+	// If this isn't the root named, create a cond to wait on
+	var namedStartCond *sync.Cond
+	if rootFsl != nil {
+		namedStartCond = sync.MakeCond(rootFsl, path.Join(named.BOOT, addr), nil)
+		namedStartCond.Init()
+	}
+
 	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		log.Printf("Error running named: %v", err)
 		return nil, err
 	}
-	time.Sleep(SLEEP_MS * time.Millisecond)
+
+	if rootFsl != nil {
+		namedStartCond.Wait()
+	} else {
+		time.Sleep(SLEEP_MS * time.Millisecond)
+	}
+
 	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
 	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
 		log.Printf("MakeInitFs error: %v", err)

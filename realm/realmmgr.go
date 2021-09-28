@@ -40,7 +40,7 @@ type RealmMgr struct {
 func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
 	m.done = make(chan bool)
-	nameds, err := BootNamedReplicas(bin, fslib.Named(), NO_REALM)
+	nameds, err := BootNamedReplicas(nil, bin, fslib.Named(), NO_REALM)
 	m.nameds = nameds
 	// Start a named instance.
 	if err != nil {

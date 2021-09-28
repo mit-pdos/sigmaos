@@ -96,7 +96,6 @@ func ShutdownNamed(namedAddr string) {
 			log.Fatalf("Remove %v shutdown %v\n", named.NAMED, err)
 		}
 	}
-	time.Sleep(SLEEP_MS * time.Millisecond)
 }
 
 func run(bin string, name string, namedAddr []string, args []string) (*exec.Cmd, error) {

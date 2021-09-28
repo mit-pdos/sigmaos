@@ -1,6 +1,7 @@
 package procdep_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,6 +13,10 @@ import (
 	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/realm"
+)
+
+const (
+	SLEEP_MSECS = 2000
 )
 
 type Tstate struct {
@@ -56,7 +61,7 @@ func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string
 func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exitDep map[string]bool) {
 	a := procdep.MakeProcDep()
 	a.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
-		[]string{"5s", "name/out_" + pid, ""},
+		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, ""},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
@@ -91,7 +96,7 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	time.Sleep(6 * time.Second)
+	time.Sleep(SLEEP_MSECS * 1.25 * time.Millisecond)
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -111,7 +116,7 @@ func TestExitDep(t *testing.T) {
 	ts.WaitExit(pid2)
 	end := time.Now()
 	elapsed := end.Sub(start)
-	assert.True(t, elapsed > 10*time.Second, "Didn't wait for exit dep for long enough")
+	assert.True(t, elapsed > 2*SLEEP_MSECS*time.Millisecond, "Didn't wait for exit dep for long enough")
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -146,7 +151,7 @@ func TestStartDep(t *testing.T) {
 	assert.Equal(t, status, "OK", "WaitExit error")
 
 	// Wait a bit
-	assert.True(t, end.Sub(start) < 10*time.Second, "Start dep waited too long....")
+	assert.True(t, end.Sub(start) < 2*SLEEP_MSECS*time.Millisecond, "Start dep waited too long....")
 
 	// Make sure they both ran
 	checkSleeperlResult(t, ts, prod)

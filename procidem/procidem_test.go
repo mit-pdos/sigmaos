@@ -1,6 +1,7 @@
 package procidem_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 	"ulambda/procidem"
 	"ulambda/procinit"
 	"ulambda/realm"
+)
+
+const (
+	SLEEP_MSECS = 2000
 )
 
 type Tstate struct {
@@ -63,7 +68,7 @@ func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	p := &procidem.ProcIdem{}
 	p.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
-		[]string{"5s", "name/out_" + pid, ""},
+		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, ""},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
@@ -90,7 +95,7 @@ func TestHelloWorld(t *testing.T) {
 
 	pid := spawnSleeperl(t, ts)
 
-	time.Sleep(6 * time.Second)
+	time.Sleep(SLEEP_MSECS * 1.25 * time.Millisecond)
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -113,7 +118,7 @@ func TestCrashProcd(t *testing.T) {
 		monPids = append(monPids, pid)
 	}
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(SLEEP_MSECS * time.Millisecond)
 
 	// Spawn some sleepers
 	sleeperPids := []string{}
@@ -123,7 +128,7 @@ func TestCrashProcd(t *testing.T) {
 		sleeperPids = append(sleeperPids, pid)
 	}
 
-	time.Sleep(time.Second * 1)
+	time.Sleep(0.5 * SLEEP_MSECS * time.Millisecond)
 
 	ts.s.KillOne(named.PROCD)
 

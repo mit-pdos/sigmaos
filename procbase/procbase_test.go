@@ -1,6 +1,7 @@
 package procbase_test
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +13,10 @@ import (
 	"ulambda/proc"
 	"ulambda/procinit"
 	"ulambda/realm"
+)
+
+const (
+	SLEEP_MSECS = 2000
 )
 
 type Tstate struct {
@@ -58,7 +63,7 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv) *T
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	a := &proc.Proc{pid, "bin/user/sleeperl", "",
-		[]string{"5s", "name/out_" + pid, ""},
+		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, ""},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
@@ -91,7 +96,7 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
-	time.Sleep(6 * time.Second)
+	time.Sleep(SLEEP_MSECS * 1.25 * time.Millisecond)
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -110,7 +115,7 @@ func TestWaitExit(t *testing.T) {
 
 	end := time.Now()
 
-	assert.True(t, end.Sub(start) > 5*time.Second)
+	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
 	checkSleeperlResult(t, ts, pid)
 
@@ -128,7 +133,7 @@ func TestWaitStart(t *testing.T) {
 
 	end := time.Now()
 
-	assert.True(t, end.Sub(start) < 5*time.Second, "WaitStart waited too long")
+	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Make sure the lambda hasn't finished yet...
 	checkSleeperlResultFalse(t, ts, pid)
@@ -216,7 +221,7 @@ func TestConcurrentLambdas(t *testing.T) {
 }
 
 func (ts *Tstate) evict(pid string) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(SLEEP_MSECS / 2 * time.Millisecond)
 	err := ts.Evict(pid)
 	assert.Nil(ts.t, err, "evict")
 }
@@ -234,8 +239,8 @@ func TestEvict(t *testing.T) {
 	assert.Equal(t, status, "OK", "WaitExit status")
 	end := time.Now()
 
-	assert.True(t, end.Sub(start) < 3*time.Second, "Didn't evict early enough.")
-	assert.True(t, end.Sub(start) > 1*time.Second, "Evicted too early")
+	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "Didn't evict early enough.")
+	assert.True(t, end.Sub(start) > (SLEEP_MSECS/2)*time.Millisecond, "Evicted too early")
 
 	// Make sure the lambda didn't finish
 	checkSleeperlResultFalse(t, ts, pid)

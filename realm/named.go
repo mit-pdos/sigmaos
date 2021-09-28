@@ -21,7 +21,7 @@ const (
 )
 
 const (
-	SLEEP_MS = 1000
+	SLEEP_MS = 100
 )
 
 func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {

@@ -86,6 +86,7 @@ func (ba *BookApp) Work() string {
 	if err != nil {
 		return fmt.Sprintf("Open err %v\n", err)
 	}
+	defer ba.pipe.Close(nil, np.OWRITE)
 
 	q := []byte("select * from book where author='Homer';")
 	b, err := ba.ReadFile(dbd.DBD + "clone")
@@ -109,8 +110,6 @@ func (ba *BookApp) Work() string {
 		return fmt.Sprintf("Marshall err %v\n", err)
 	}
 
-	log.Printf("bookapp: books %v\n", books)
-
 	t, err := template.New("test").Parse("<h1>Books</h1>{{.Title}} by {{.Author}}")
 	if err != nil {
 		return fmt.Sprintf("Template parse err %v\n", err)
@@ -128,8 +127,6 @@ func (ba *BookApp) Work() string {
 	if err != nil {
 		return fmt.Sprintf("Pipe parse err %v\n", err)
 	}
-
-	ba.pipe.Close(nil, np.OWRITE)
 
 	ba.ExitFs("name/" + ba.pid)
 	return "OK"

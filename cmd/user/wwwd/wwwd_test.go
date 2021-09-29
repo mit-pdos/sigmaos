@@ -58,8 +58,10 @@ func TestStatic(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "hello")
 
-	_, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
-	assert.NotEqual(t, nil, err)
+	out, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
+	log.Printf("error: %v %v\n", err, string(out))
+	assert.Equal(t, nil, err)
+	log.Printf("error: %v\n", string(out))
 
 	err = cmd.Process.Kill()
 	assert.Equal(t, nil, err)

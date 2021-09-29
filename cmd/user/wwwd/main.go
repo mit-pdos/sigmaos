@@ -59,18 +59,18 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 	fn := "name/" + pid + "/pipe"
-	log.Printf("open %v\n", fn)
+	log.Printf("wwwd: open %v\n", fn)
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("wwwd: open failed %v\n", err)
 		return
 	}
 	for {
 		b, err := www.Read(fd, memfs.PIPESZ)
 		if err != nil || len(b) == 0 {
-			// http.NotFound(w, r) on certain errors?
 			break
 		}
+		log.Printf("wwwd: write %v\n", string(b))
 		_, err = w.Write(b)
 		if err != nil {
 			break
@@ -99,7 +99,10 @@ func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 	}
 	www.rwResponse(w, pid)
 	status, err := www.WaitExit(pid)
-	log.Printf("pid %v finished %v %v\n", pid, err, status)
+	log.Printf("pid %v finished err '%v' status '%v'\n", pid, err, status)
+	if status != "OK" {
+		http.NotFound(w, r)
+	}
 }
 
 func getBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {

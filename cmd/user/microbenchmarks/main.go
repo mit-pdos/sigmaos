@@ -4,8 +4,8 @@ import (
 	"log"
 	"sort"
 
+	"ulambda/benchmarks"
 	"ulambda/fslib"
-	"ulambda/perf"
 	"ulambda/realm"
 )
 
@@ -14,7 +14,7 @@ func main() {
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("microbenchmarks", cfg.NamedAddr)
 
-	m := perf.MakeMicrobenchmarks(fsl)
+	m := benchmarks.MakeMicrobenchmarks(fsl)
 	res := m.RunAll()
 	names := []string{}
 	for name, _ := range res {

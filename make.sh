@@ -34,5 +34,5 @@ do
 done
 
 echo "Build c_spinner"
-cd perf/c-spinner
+cd benchmarks/c-spinner
 make

@@ -8,7 +8,9 @@ fi
 
 echo "$0 $1"
 
-ssh $1 <<ENDSSH
+DIR=$(dirname $0)
+
+ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no

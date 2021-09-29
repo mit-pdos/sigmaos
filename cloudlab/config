@@ -1,0 +1,6 @@
+#!/bin/bash
+
+USER=arielck
+N_REPLICAS=1
+LEADER=node0
+SERVERS=servers.txt

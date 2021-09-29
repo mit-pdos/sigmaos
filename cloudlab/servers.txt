@@ -1,0 +1,3 @@
+node0 c220g2-010818.wisc.cloudlab.us
+node1 c220g2-010822.wisc.cloudlab.us
+node2 c220g2-010821.wisc.cloudlab.us

@@ -121,7 +121,7 @@ func (r *Realmd) tryAddNamedReplicaL() bool {
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 		// Start a named instance.
-		if _, err := BootNamed(r.FsLib, r.bin, namedAddrs[0], len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		if _, err := BootNamed(r.FsLib, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
 		}
 	}

@@ -27,7 +27,7 @@ const (
 func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
 	for i, addr := range addrs {
-		cmd, err := BootNamed(fsl, bin, addr, i+1, addrs, realmId)
+		cmd, err := BootNamed(fsl, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err
@@ -38,7 +38,7 @@ func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId str
 }
 
 // Boot a named and set up the initfs
-func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	var args []string
 	if realmId == NO_REALM {
 		args = []string{"0", addr, NO_REALM}
@@ -46,7 +46,7 @@ func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, id int, peers []st
 		args = []string{"0", addr, realmId}
 	}
 	// If we're running replicated...
-	if len(peers) > 1 {
+	if replicate {
 		args = append(args, strconv.Itoa(id))
 		args = append(args, strings.Join(peers[:id], ","))
 	}

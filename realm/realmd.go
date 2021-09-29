@@ -92,34 +92,40 @@ func (r *Realmd) getNextConfig() {
 	r.realmLock = sync.MakeLock(r.FsLib, named.LOCKS, REALM_LOCK+r.cfg.RealmId, true)
 }
 
-// If this is the first realmd assigned to a realm, initialize the realm by
-// starting a named for it.
-func (r *Realmd) tryInitRealmL() bool {
+// If we need more named replicas, help initialize a realm by starting another
+// named replica for it. Return true when all named replicas have been
+// initialized.
+func (r *Realmd) tryAddNamedReplicaL() bool {
 	rds, err := r.ReadDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
 		log.Fatalf("Error ReadDir in Realmd.tryInitRealmL: %v", err)
 	}
 
-	// If this is the first realmd, start the realm's named.
-	if len(rds) == 0 {
+	initDone := false
+	// If this is the last realmd replica...
+	if len(rds) == nReplicas()-1 {
+		initDone = true
+	}
+
+	// If we need to add a named replica, do so
+	if len(rds) < nReplicas() {
 		ip, err := fsclnt.LocalIP()
 		if err != nil {
 			log.Fatalf("Error LocalIP in Realmd.tryInitRealmL: %v", err)
 		}
-		namedAddrs := genNamedAddrs(ip)
+		namedAddrs := genNamedAddrs(1, ip)
 
-		// Start a named instance.
-		if _, err := BootNamedReplicas(r.FsLib, r.bin, namedAddrs, r.cfg.RealmId); err != nil {
-			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
-		}
-
+		// Update config
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-		realmCfg.NamedAddr = namedAddrs
+		realmCfg.NamedAddr = append(realmCfg.NamedAddr, namedAddrs...)
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
-		return true
+		// Start a named instance.
+		if _, err := BootNamed(r.FsLib, r.bin, namedAddrs[0], len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+			log.Fatalf("Error BootNamed in Realmd.tryInitRealmL: %v", err)
+		}
 	}
-	return false
+	return initDone
 }
 
 // Register this realmd as part of a realm.
@@ -143,7 +149,7 @@ func (r *Realmd) joinRealm() chan bool {
 	defer r.realmLock.Unlock()
 
 	// Try to initalize this realm if it hasn't been initialized already.
-	first := r.tryInitRealmL()
+	initDone := r.tryAddNamedReplicaL()
 	// Get the realm config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	// Register this realmd
@@ -151,7 +157,7 @@ func (r *Realmd) joinRealm() chan bool {
 	// Boot this realmd's system services
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
-	if first {
+	if initDone {
 		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
 		rStartCond.Destroy()
 	}

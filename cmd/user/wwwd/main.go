@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 
+	"ulambda/dbd"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfs"
@@ -14,11 +15,12 @@ import (
 	"ulambda/realm"
 )
 
-var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+.html)$")
+var validPath = regexp.MustCompile("^/(static|edit|save|view)/([.a-zA-Z0-9]+)$")
 
 func main() {
 	www := MakeWwwd()
-	http.HandleFunc("/view/", www.makeHandler(getPage))
+	http.HandleFunc("/static/", www.makeHandler(getStatic))
+	http.HandleFunc("/view/", www.makeHandler(getBook))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -55,7 +57,29 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 	}
 }
 
-func getPage(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
+func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
+	fn := "name/" + pid + "/pipe"
+	log.Printf("wwwd: open %v\n", fn)
+	fd, err := www.Open(fn, np.OREAD)
+	if err != nil {
+		log.Printf("wwwd: open failed %v\n", err)
+		return
+	}
+	for {
+		b, err := www.Read(fd, memfs.PIPESZ)
+		if err != nil || len(b) == 0 {
+			break
+		}
+		log.Printf("wwwd: write %v\n", string(b))
+		_, err = w.Write(b)
+		if err != nil {
+			break
+		}
+	}
+	defer www.Close(fd)
+}
+
+func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 	log.Printf("getpage: %v\n", file)
 	pid := proc.GenPid()
 	a := &proc.Proc{pid, "bin/user/fsreader", "",
@@ -73,28 +97,33 @@ func getPage(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fn := "name/" + pid + "/pipe"
-	log.Printf("open %v\n", fn)
-	fd, err := www.Open(fn, np.OREAD)
+	www.rwResponse(w, pid)
+	status, err := www.WaitExit(pid)
+	log.Printf("pid %v finished err '%v' status '%v'\n", pid, err, status)
+	if status != "OK" {
+		http.NotFound(w, r)
+	}
+}
+
+func getBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
+	log.Printf("getbook %v\n", args)
+	pid := proc.GenPid()
+	a := &proc.Proc{pid, "bin/user/bookapp", "",
+		[]string{dbd.DBD, pid},
+		[]string{procinit.GetProcLayersString()},
+		proc.T_DEF, proc.C_DEF,
+	}
+	err := www.Spawn(a)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	for {
-		b, err := www.Read(fd, memfs.PIPESZ)
-		if err != nil || len(b) == 0 {
-			// http.NotFound(w, r) on certain errors?
-			break
-		}
-		_, err = w.Write(b)
-		if err != nil {
-			break
-		}
-	}
-	defer www.Close(fd)
-	status, err := www.WaitExit(pid)
-	log.Printf("pid %v finished %v %v\n", pid, err, status)
-	if err == nil {
+	err = www.WaitStart(pid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	www.rwResponse(w, pid)
+	status, err := www.WaitExit(pid)
+	log.Printf("pid %v finished %v %v\n", pid, err, status)
 }

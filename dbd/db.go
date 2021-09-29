@@ -23,6 +23,16 @@ import (
 // http://man.cat-v.org/plan_9_contrib/4/mysqlfs
 //
 
+const (
+	DBD = "name/db/mydb/"
+)
+
+type Book struct {
+	Author string
+	Price  string
+	Title  string
+}
+
 type Database struct {
 	fssrv  *fssrv.FsServer
 	ch     chan bool

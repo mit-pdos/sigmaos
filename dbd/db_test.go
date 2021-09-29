@@ -14,7 +14,6 @@ import (
 
 const (
 	bin = ".."
-	dbd = "name/db/mydb/"
 )
 
 type Tstate struct {
@@ -44,21 +43,15 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-type Book struct {
-	Author string
-	Price  string
-	Title  string
-}
-
 func TestQuery(t *testing.T) {
 	ts := makeTstate(t)
 
 	q := []byte("select * from book where author='Homer';")
-	b, err := ts.ReadFile(dbd + "clone")
+	b, err := ts.ReadFile(DBD + "clone")
 	sid := string(b)
-	err = ts.WriteFile(dbd+sid+"/query", q)
+	err = ts.WriteFile(DBD+sid+"/query", q)
 	assert.Nil(t, err, "WriteFile")
-	b, err = ts.ReadFile(dbd + sid + "/data")
+	b, err = ts.ReadFile(DBD + sid + "/data")
 	assert.Nil(t, err, "Read data")
 
 	var books []Book

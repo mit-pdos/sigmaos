@@ -32,8 +32,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	m.Work()
-	m.Exit()
+	s := m.Work()
+	m.Exit(s)
 }
 
 type Reader struct {
@@ -77,25 +77,24 @@ func MakeReader(args []string) (*Reader, error) {
 	return r, nil
 }
 
-func (r *Reader) Work() {
+// Open r.pipe before opening r.input so that when open r.input fails
+// we will close r.pipe causing the reader to stop waiting on the
+// pipe, and can pick up the exit status "File not found".
+func (r *Reader) Work() string {
 	db.DLPrintf("Reader", "Reader: work\n")
 	_, err := r.pipe.Open(nil, np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}
+	defer r.pipe.Close(nil, np.OWRITE)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
-		// XXX need to return an sigmaOS exit value so that
-		// wwwd terminates waiting for this process
-		os.Exit(66) //EX_NOINPUT
+		return "File not found"
 	}
 	for {
 		data, err := r.Read(fd, memfs.PIPESZ)
-		if len(data) == 0 {
+		if len(data) == 0 || err != nil {
 			break
-		}
-		if err != nil {
-			log.Fatal(err)
 		}
 		_, err = r.pipe.(fs.File).Write(nil, 0, data, np.NoV)
 		if err != nil {
@@ -103,11 +102,10 @@ func (r *Reader) Work() {
 		}
 	}
 	r.Close(fd)
-	r.pipe.Close(nil, np.OWRITE)
-
-	r.ExitFs("name/" + r.pid)
+	return "OK"
 }
 
-func (r *Reader) Exit() {
-	r.Exited(r.pid, "OK")
+func (r *Reader) Exit(status string) {
+	r.ExitFs("name/" + r.pid)
+	r.Exited(r.pid, status)
 }

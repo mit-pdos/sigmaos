@@ -42,7 +42,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestSimple(t *testing.T) {
+func TestStatic(t *testing.T) {
 	ts := makeTstate(t)
 
 	cmd := exec.Command("../../../bin/user/wwwd")
@@ -54,12 +54,14 @@ func TestSimple(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/view/hello.html").Output()
+	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/static/hello.html").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "hello")
 
-	_, err = exec.Command("wget", "-qO-", "http://localhost:8080/view/nonexist.html").Output()
-	assert.NotEqual(t, nil, err)
+	out, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
+	log.Printf("error: %v %v\n", err, string(out))
+	assert.Equal(t, nil, err)
+	log.Printf("error: %v\n", string(out))
 
 	err = cmd.Process.Kill()
 	assert.Equal(t, nil, err)
@@ -67,5 +69,32 @@ func TestSimple(t *testing.T) {
 	s, _ := io.ReadAll(stderr)
 	log.Printf("wwwd: stderr %s", s)
 
+	ts.s.Shutdown()
+	ts.e.Shutdown()
+}
+
+func TestView(t *testing.T) {
+	ts := makeTstate(t)
+
+	cmd := exec.Command("../../../bin/user/wwwd")
+	stderr, err := cmd.StderrPipe()
+	assert.Equal(t, nil, err)
+
+	err = cmd.Start()
+	assert.Equal(t, nil, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/view/books").Output()
+	assert.Equal(t, nil, err)
+	assert.Contains(t, string(out), "Homer")
+
+	err = cmd.Process.Kill()
+	assert.Equal(t, nil, err)
+
+	s, _ := io.ReadAll(stderr)
+	log.Printf("wwwd: stderr %s", s)
+
+	ts.s.Shutdown()
 	ts.e.Shutdown()
 }

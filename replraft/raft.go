@@ -217,6 +217,7 @@ func (n *RaftNode) postNodeId() {
 		if err == nil {
 			return
 		}
+		log.Printf("Error posting node ID: %v", err)
 	}
 	log.Fatalf("Failed to post node ID")
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
+	"ulambda/proc"
 )
 
 const (
@@ -75,7 +76,7 @@ func (e *TestEnv) bootRealmMgr() error {
 
 func (e *TestEnv) BootRealmd() error {
 	var err error
-	realmd, err := run(e.bin, "bin/realm/realmd", fslib.Named(), []string{e.bin})
+	realmd, err := run(e.bin, "bin/realm/realmd", fslib.Named(), []string{e.bin, proc.GenPid()})
 	e.realmd = append(e.realmd, realmd)
 	if err != nil {
 		return err

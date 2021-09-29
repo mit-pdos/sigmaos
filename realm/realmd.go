@@ -37,12 +37,8 @@ type Realmd struct {
 	*fslib.FsLib
 }
 
-func MakeRealmd(bin string) *Realmd {
+func MakeRealmd(bin string, id string) *Realmd {
 	// XXX Get id somehow
-	id, err := fsclnt.LocalIP()
-	if err != nil {
-		log.Fatalf("Error LocalIP in MakeRealmd: %v", err)
-	}
 	r := &Realmd{}
 	r.id = id
 	r.bin = bin

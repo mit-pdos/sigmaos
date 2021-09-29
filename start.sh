@@ -24,7 +24,7 @@ echo "each realm runs with $N_REPLICAS replicas"
 #./bin/kernel/boot
 ./bin/realm/realmmgr . &
 sleep 2
-./bin/realm/realmd . &
+./bin/realm/realmd . $(hostname) &
 sleep 1
 ./bin/realm/create 1000
 

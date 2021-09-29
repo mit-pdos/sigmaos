@@ -31,7 +31,7 @@ if [[ $IS_LEADER -gt 0 ]]; then
   sleep 2
   nohup ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &
   sleep 1
-  ./bin/realm/create 1000
+  nohup ./bin/realm/create 1000 > create.out 2>&1 &
 
 else
   nohup ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &

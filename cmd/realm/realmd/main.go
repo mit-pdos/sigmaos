@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		log.Fatalf("Usage: %v bin id", os.Args[0])
 	}
 

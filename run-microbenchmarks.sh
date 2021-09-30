@@ -2,6 +2,6 @@
 
 ./start.sh
 
-./bin/user/microbenchmarks
+GOGC=off ./bin/user/microbenchmarks
 
 ./stop.sh

@@ -27,14 +27,14 @@ if [[ $IS_LEADER -gt 0 ]]; then
   echo "each realm runs with $N_REPLICAS replicas"
   
   # Start a realm manager, realmd, and create a realm
-  nohup ./bin/realm/realmmgr . > realmmgr.out 2>&1 & 
+  nohup GOGC=off ./bin/realm/realmmgr . > realmmgr.out 2>&1 & 
   sleep 2
-  nohup ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &
+  nohup GOGC=off ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &
   sleep 1
-  nohup ./bin/realm/create 1000 > create.out 2>&1 &
+  nohup GOGC=off ./bin/realm/create 1000 > create.out 2>&1 &
 
 else
-  nohup ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &
+  nohup GOGC=off ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &
 fi
 ENDSSH
 )

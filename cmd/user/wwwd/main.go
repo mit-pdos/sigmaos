@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"ulambda/dbd"
+	//	"ulambda/dbd"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfs"
@@ -15,12 +15,14 @@ import (
 	"ulambda/realm"
 )
 
-var validPath = regexp.MustCompile("^/(static|edit|save|view)/([.a-zA-Z0-9]+)$")
+var validPath = regexp.MustCompile("^/(static|edit|save|view)/([=.a-zA-Z0-9]*)$")
 
 func main() {
 	www := MakeWwwd()
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
-	http.HandleFunc("/view/", www.makeHandler(getBook))
+	http.HandleFunc("/view/", www.makeHandler(getBooks))
+	http.HandleFunc("/edit/", www.makeHandler(editBook))
+	http.HandleFunc("/save/", www.makeHandler(saveBook))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -48,6 +50,7 @@ func MakeWwwd() *Wwwd {
 
 func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("path %v\n", r.URL.Path)
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
@@ -105,11 +108,10 @@ func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
 	}
 }
 
-func getBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
-	log.Printf("getbook %v\n", args)
+func (www *Wwwd) doBook(w http.ResponseWriter, r *http.Request, args []string) {
 	pid := proc.GenPid()
 	a := &proc.Proc{pid, "bin/user/bookapp", "",
-		[]string{dbd.DBD, pid},
+		args,
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
@@ -126,4 +128,23 @@ func getBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
 	www.rwResponse(w, pid)
 	status, err := www.WaitExit(pid)
 	log.Printf("pid %v finished %v %v\n", pid, err, status)
+}
+
+func getBooks(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
+	log.Printf("getbooks %v\n", args)
+	www.doBook(w, r, []string{"view"})
+}
+
+func editBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
+	log.Printf("editbook %v\n", args)
+	www.doBook(w, r, append([]string{"edit"}, args))
+}
+
+func saveBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
+	title := r.FormValue("title")
+	log.Printf("savebook %v\n", args)
+	a := append([]string{"save", args}, title)
+	www.doBook(w, r, a)
+	http.Redirect(w, r, "/view/", http.StatusFound)
+
 }

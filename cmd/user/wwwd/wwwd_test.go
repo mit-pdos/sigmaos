@@ -85,7 +85,59 @@ func TestView(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/view/books").Output()
+	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/view/").Output()
+	assert.Equal(t, nil, err)
+	assert.Contains(t, string(out), "Homer")
+
+	err = cmd.Process.Kill()
+	assert.Equal(t, nil, err)
+
+	s, _ := io.ReadAll(stderr)
+	log.Printf("wwwd: stderr %s", s)
+
+	ts.s.Shutdown()
+	ts.e.Shutdown()
+}
+
+func TestEdit(t *testing.T) {
+	ts := makeTstate(t)
+
+	cmd := exec.Command("../../../bin/user/wwwd")
+	stderr, err := cmd.StderrPipe()
+	assert.Equal(t, nil, err)
+
+	err = cmd.Start()
+	assert.Equal(t, nil, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/edit/Odyssey").Output()
+	assert.Equal(t, nil, err)
+	assert.Contains(t, string(out), "Homer")
+
+	err = cmd.Process.Kill()
+	assert.Equal(t, nil, err)
+
+	s, _ := io.ReadAll(stderr)
+	log.Printf("wwwd: stderr %s", s)
+
+	ts.s.Shutdown()
+	ts.e.Shutdown()
+}
+
+func TestSave(t *testing.T) {
+	ts := makeTstate(t)
+
+	cmd := exec.Command("../../../bin/user/wwwd")
+	stderr, err := cmd.StderrPipe()
+	assert.Equal(t, nil, err)
+
+	err = cmd.Start()
+	assert.Equal(t, nil, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	out, err := exec.Command("wget", "-qO-", "--post-data", "title=Odyseus", "http://localhost:8080/save/Odyssey").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 

@@ -9,6 +9,7 @@
 
 * Create db
 
+  mysql -u root -p
   mysql> create database books;
   mysql> use books;
   mysql> source init-db.sql
@@ -22,7 +23,7 @@
 |  3 | Odyssey                      | Homer      | 34.98 |
 +----+------------------------------+------------+-------+
 
-* Create user
+* Create user sigma with pw sigmaos
 
   CREATE USER 'sigma'@'localhost' IDENTIFIED BY 'sigmaos';
   GRANT ALL PRIVILEGES ON books.* TO 'sigma'@'localhost';

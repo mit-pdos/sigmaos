@@ -8,6 +8,7 @@ import (
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/sync"
 )
 
 const (
@@ -20,6 +21,9 @@ const (
 	PUT_FILE_DIR = "name/put-file-microbenchmark"
 	SET_FILE_DIR = "name/set-file-microbenchmark"
 	GET_FILE_DIR = "name/get-file-microbenchmark"
+	LOCK_DIR     = "name/lock-microbenchmark"
+	SIGNAL_DIR   = "name/signal-microbenchmark"
+	FILE_BAG_DIR = "name/filebag-microbenchmark"
 )
 
 type Microbenchmarks struct {
@@ -39,6 +43,12 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
 	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	r["lock_lock"] = m.LockLockBenchmark(DEFAULT_N_TRIALS)
+	r["lock_unlock"] = m.LockUnlockBenchmark(DEFAULT_N_TRIALS)
+	//	r["signal_signal"] = m.SignalSignalBenchmark(DEFAULT_N_TRIALS)
+	//	r["signal_wait"] = m.SignalWaitBenchmark(DEFAULT_N_TRIALS)
+	r["file_bag_put"] = m.FileBagPutBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	r["file_bag_get"] = m.FileBagGetBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	return r
 }
 
@@ -142,6 +152,151 @@ func (m *Microbenchmarks) GetFileBenchmark(nTrials int, size int) *RawResults {
 	}
 
 	log.Printf("GetFileBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) LockLockBenchmark(nTrials int) *RawResults {
+	m.setup(LOCK_DIR)
+	defer m.teardown(LOCK_DIR)
+
+	log.Printf("Running LockLockBenchmark...")
+
+	lName := "test-lock"
+
+	l := sync.MakeLock(m.FsLib, LOCK_DIR, lName, true)
+
+	rs := MakeRawResults(nTrials)
+
+	for i := 0; i < nTrials; i++ {
+		start := time.Now()
+		l.Lock()
+		end := time.Now()
+		l.Unlock()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("LockLockBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) LockUnlockBenchmark(nTrials int) *RawResults {
+	m.setup(LOCK_DIR)
+	defer m.teardown(LOCK_DIR)
+
+	log.Printf("Running LockUnlockBenchmark...")
+
+	lName := "test-lock"
+
+	l := sync.MakeLock(m.FsLib, LOCK_DIR, lName, true)
+
+	rs := MakeRawResults(nTrials)
+
+	for i := 0; i < nTrials; i++ {
+		l.Lock()
+		start := time.Now()
+		l.Unlock()
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("LockUnlockBenchmark Done")
+
+	return rs
+}
+
+//func (m *Microbenchmarks) SignalSignalBenchmark(nTrials int) *RawResults {
+//	m.setup(SIGNAL_DIR)
+//	defer m.teardown(SIGNAL_DIR)
+//
+//	log.Printf("Running SignalSignalBenchmark...")
+//
+//	lName := "test-lock"
+//
+//	l := sync.MakeLock(m.FsLib, LOCK_DIR, lName, true)
+//
+//	rs := MakeRawResults(nTrials)
+//
+//	for i := 0; i < nTrials; i++ {
+//		l.Lock()
+//		start := time.Now()
+//		l.Unlock()
+//		end := time.Now()
+//		elapsed := float64(end.Sub(start).Microseconds())
+//		throughput := float64(1.0) / elapsed
+//		rs.data[i].set(throughput, elapsed)
+//	}
+//
+//	log.Printf("SignalSignalBenchmark Done")
+//
+//	return rs
+//}
+
+func (m *Microbenchmarks) FileBagPutBenchmark(nTrials int, size int) *RawResults {
+	m.setup(FILE_BAG_DIR)
+	defer m.teardown(FILE_BAG_DIR)
+
+	log.Printf("Running FileBagPutBenchmark (size=%dKB)...", size/(1<<10))
+
+	rs := MakeRawResults(nTrials)
+
+	path := path.Join(FILE_BAG_DIR, "filebag")
+	priority := "1"
+	name := "abcd"
+	bag := sync.MakeFilePriorityBag(m.FsLib, path)
+	b := genData(size)
+	for i := 0; i < nTrials; i++ {
+		start := time.Now()
+		if err := bag.Put(priority, name, b); err != nil {
+			log.Fatalf("Error Put in Microbenchmarks.FileBagPutBenchmark: %v", err)
+		}
+		end := time.Now()
+		if _, _, _, err := bag.Get(); err != nil {
+			log.Fatalf("Error Get in Microbenchmarks.FileBagPutBenchmark: %v", err)
+		}
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("FileBagPutBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) FileBagGetBenchmark(nTrials int, size int) *RawResults {
+	m.setup(FILE_BAG_DIR)
+	defer m.teardown(FILE_BAG_DIR)
+
+	log.Printf("Running FileBagGetBenchmark (size=%dKB)...", size/(1<<10))
+
+	rs := MakeRawResults(nTrials)
+
+	path := path.Join(FILE_BAG_DIR, "filebag")
+	priority := "1"
+	name := "abcd"
+	bag := sync.MakeFilePriorityBag(m.FsLib, path)
+	b := genData(size)
+	for i := 0; i < nTrials; i++ {
+		if err := bag.Put(priority, name, b); err != nil {
+			log.Fatalf("Error Put in Microbenchmarks.FileBagGetBenchmark: %v", err)
+		}
+		start := time.Now()
+		if _, _, _, err := bag.Get(); err != nil {
+			log.Fatalf("Error Get in Microbenchmarks.FileBagGetBenchmark: %v", err)
+		}
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("FileBagGetBenchmark Done")
 
 	return rs
 }

@@ -45,8 +45,8 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
 	r["lock_lock"] = m.LockLockBenchmark(DEFAULT_N_TRIALS)
 	r["lock_unlock"] = m.LockUnlockBenchmark(DEFAULT_N_TRIALS)
-	//	r["signal_signal"] = m.SignalSignalBenchmark(DEFAULT_N_TRIALS)
-	//	r["signal_wait"] = m.SignalWaitBenchmark(DEFAULT_N_TRIALS)
+	r["cond_signal"] = m.CondSignalBenchmark(DEFAULT_N_TRIALS)
+	r["cond_wait"] = m.CondWaitBenchmark(DEFAULT_N_TRIALS)
 	r["file_bag_put"] = m.FileBagPutBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["file_bag_get"] = m.FileBagGetBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	return r
@@ -210,32 +210,79 @@ func (m *Microbenchmarks) LockUnlockBenchmark(nTrials int) *RawResults {
 	return rs
 }
 
-//func (m *Microbenchmarks) SignalSignalBenchmark(nTrials int) *RawResults {
-//	m.setup(SIGNAL_DIR)
-//	defer m.teardown(SIGNAL_DIR)
-//
-//	log.Printf("Running SignalSignalBenchmark...")
-//
-//	lName := "test-lock"
-//
-//	l := sync.MakeLock(m.FsLib, LOCK_DIR, lName, true)
-//
-//	rs := MakeRawResults(nTrials)
-//
-//	for i := 0; i < nTrials; i++ {
-//		l.Lock()
-//		start := time.Now()
-//		l.Unlock()
-//		end := time.Now()
-//		elapsed := float64(end.Sub(start).Microseconds())
-//		throughput := float64(1.0) / elapsed
-//		rs.data[i].set(throughput, elapsed)
-//	}
-//
-//	log.Printf("SignalSignalBenchmark Done")
-//
-//	return rs
-//}
+func (m *Microbenchmarks) CondSignalBenchmark(nTrials int) *RawResults {
+	m.setup(SIGNAL_DIR)
+	defer m.teardown(SIGNAL_DIR)
+
+	log.Printf("Running CondSignalBenchmark...")
+
+	rs := MakeRawResults(nTrials)
+
+	condPath := path.Join(SIGNAL_DIR, "cond")
+	cond := sync.MakeCond(m.FsLib, condPath, nil)
+	if err := cond.Init(); err != nil {
+		log.Fatalf("Error Init in Microbenchmarks.CondSignalBenchmark: %v", err)
+	}
+
+	done := make(chan bool)
+	for i := 0; i < nTrials; i++ {
+		go func() {
+			done <- true
+			cond.Wait()
+		}()
+		<-done
+		time.Sleep(10 * time.Millisecond)
+		start := time.Now()
+		cond.Signal()
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+	cond.Destroy()
+
+	log.Printf("CondSignalBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) CondWaitBenchmark(nTrials int) *RawResults {
+	m.setup(SIGNAL_DIR)
+	defer m.teardown(SIGNAL_DIR)
+
+	log.Printf("Running CondWaitBenchmark...")
+
+	rs := MakeRawResults(nTrials)
+
+	condPath := path.Join(SIGNAL_DIR, "cond")
+	cond := sync.MakeCond(m.FsLib, condPath, nil)
+	if err := cond.Init(); err != nil {
+		log.Fatalf("Error Init in Microbenchmarks.CondWaitBenchmark: %v", err)
+	}
+
+	done := make(chan bool)
+	for i := 0; i < nTrials; i++ {
+		var end *time.Time
+		go func() {
+			done <- true
+			cond.Wait()
+			t := time.Now()
+			end = &t
+		}()
+		<-done
+		time.Sleep(10 * time.Millisecond)
+		start := time.Now()
+		cond.Signal()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+	cond.Destroy()
+
+	log.Printf("CondWaitBenchmark Done")
+
+	return rs
+}
 
 func (m *Microbenchmarks) FileBagPutBenchmark(nTrials int, size int) *RawResults {
 	m.setup(FILE_BAG_DIR)

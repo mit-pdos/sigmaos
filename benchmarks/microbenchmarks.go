@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	DEFAULT_N_TRIALS = 10000
+	DEFAULT_N_TRIALS = 1000
 	SMALL_FILE_SIZE  = 1 << 10 // 1 KB
 	LARGE_FILE_SIZE  = 1 << 20 // 1 MB
 )

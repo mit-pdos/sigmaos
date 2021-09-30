@@ -4,7 +4,9 @@ DIR=$(dirname $0)
 
 . $DIR/config
 
+echo "Starting replicas..."
 $DIR/start-all.sh
+echo "Done starting replicas..."
 
 LEADER_ADDR=
 
@@ -21,14 +23,19 @@ do
   fi
 done < $DIR/$SERVERS
 
+echo "Running microbenchmarks..."
 ssh -i $DIR/keys/cloudlab-sigmaos $USER@$LEADER_ADDR <<ENDSSH
 
+export NAMED=$LEADER_ADDR:1111
 cd ulambda
 ./bin/user/microbenchmarks > benchmarks/results/microbenchmarks_${N_REPLICAS}_replicas.txt 2>&1
 cat benchmarks/results/microbenchmarks_${N_REPLICAS}_replicas.txt
 
 ENDSSH
+echo "Done running microbenchmarks..."
 
+echo "Copying results..."
 scp -r -i $DIR/keys/cloudlab-sigmaos $USER@$LEADER_ADDR:~/ulambda/benchmarks/results/* $DIR/../benchmarks/results
+echo "Done copying results..."
 
 $DIR/stop-all.sh

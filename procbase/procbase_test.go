@@ -122,6 +122,26 @@ func TestWaitExit(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestWaitExitParentRetStat(t *testing.T) {
+	ts := makeTstate(t)
+
+	start := time.Now()
+
+	pid := spawnSleeperl(t, ts)
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+	status, err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit error")
+	assert.Equal(t, "OK", status, "Exit status wrong")
+
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
+
+	checkSleeperlResult(t, ts, pid)
+
+	ts.e.Shutdown()
+}
+
 func TestWaitStart(t *testing.T) {
 	ts := makeTstate(t)
 

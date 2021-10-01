@@ -30,10 +30,11 @@ const (
 )
 
 const (
-	START_COND = "start-cond."
-	EVICT_COND = "evict-cond."
-	EXIT_COND  = "exit-cond."
-	RET_STAT   = "ret-stat."
+	START_COND      = "start-cond."
+	EVICT_COND      = "evict-cond."
+	EXIT_COND       = "exit-cond."
+	RET_STAT        = "ret-stat."
+	PARENT_RET_STAT = "parent-ret-stat."
 )
 
 const (
@@ -80,6 +81,8 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	pEvictCond := sync.MakeCond(clnt.FsLib, path.Join(named.PROC_COND, EVICT_COND+p.Pid), nil)
 	pEvictCond.Init()
 
+	clnt.makeParentRetStatFile(p.Pid)
+
 	clnt.makeRetStatWaiterFile(p.Pid)
 
 	b, err := json.Marshal(p)
@@ -113,16 +116,13 @@ func (clnt *ProcBaseClnt) WaitStart(pid string) error {
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
 	// Register that we want to get a return status back
-	fpath, err := clnt.registerRetStatWaiter(pid)
-	if err != nil {
-		return "", err
-	}
+	fpath, _ := clnt.registerRetStatWaiter(pid)
 
 	// Wait for the process to exit
 	pExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.PROC_COND, EXIT_COND+pid), nil)
 	pExitCond.Wait()
 
-	status := clnt.getRetStat(fpath)
+	status := clnt.getRetStat(pid, fpath)
 
 	return status, nil
 }
@@ -174,6 +174,12 @@ func (clnt *ProcBaseClnt) Evict(pid string) error {
 
 // ========== Helpers ==========
 
+func (clnt *ProcBaseClnt) makeParentRetStatFile(pid string) {
+	if err := clnt.MakeFile(path.Join(named.TMP, PARENT_RET_STAT+pid), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil && !strings.Contains(err.Error(), "Name exists") {
+		log.Fatalf("Error MakeFile in ProcBaseClnt.makeParentRetStatFile: %v", err)
+	}
+}
+
 type RetStatWaiters struct {
 	Fpaths []string
 }
@@ -193,6 +199,8 @@ func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) {
 	l := sync.MakeLock(clnt.FsLib, named.LOCKS, RET_STAT+pid, true)
 	l.Lock()
 	defer l.Unlock()
+
+	clnt.WriteFile(path.Join(named.TMP, PARENT_RET_STAT+pid), []byte(status))
 
 	rswPath := path.Join(named.PROC_RET_STAT, RET_STAT+pid)
 	rsw := &RetStatWaiters{}
@@ -243,14 +251,25 @@ func (clnt *ProcBaseClnt) registerRetStatWaiter(pid string) (string, error) {
 }
 
 // Read & destroy a return status file
-func (clnt *ProcBaseClnt) getRetStat(fpath string) string {
-	b, err := clnt.ReadFile(fpath)
-	if err != nil {
-		log.Fatalf("Error ReadFile in ProcBaseClnt.getRetStat: %v", err)
-	}
+func (clnt *ProcBaseClnt) getRetStat(pid string, fpath string) string {
+	var b []byte
+	var err error
 
-	if err := clnt.Remove(fpath); err != nil {
-		log.Fatalf("Error Remove in ProcBaseClnt.getRetStat: %v", err)
+	// If we didn't successfully register the ret stat file
+	if fpath == "" {
+		// Try to read the parent ret stat file
+		b, err = clnt.ReadFile(path.Join(named.TMP, PARENT_RET_STAT+pid))
+	} else {
+		// Try to read the registerred ret stat file
+		b, err = clnt.ReadFile(fpath)
+		if err != nil {
+			log.Fatalf("Error ReadFile in ProcBaseClnt.getRetStat: %v", err)
+		}
+
+		// Remove the registerred ret stat file
+		if err := clnt.Remove(fpath); err != nil {
+			log.Fatalf("Error Remove in ProcBaseClnt.getRetStat: %v", err)
+		}
 	}
 
 	return string(b)

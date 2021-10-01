@@ -1,6 +1,7 @@
 package session
 
 import (
+	"log"
 	"sync"
 
 	db "ulambda/debug"
@@ -101,10 +102,14 @@ func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.FsObj, f *fid.Fid) {
 	sess := st.sessions[id]
 	st.mu.Unlock()
 
-	sess.mu.Lock()
-	defer sess.mu.Unlock()
+	if sess == nil {
+		log.Printf("Nil session in SessionTable.AddEphemeral: %v %v %v", id, o, f)
+	} else {
+		sess.mu.Lock()
+		defer sess.mu.Unlock()
 
-	sess.ephemeral[o] = f
+		sess.ephemeral[o] = f
+	}
 }
 
 func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.FsObj) {

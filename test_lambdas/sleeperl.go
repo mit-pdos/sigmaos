@@ -39,7 +39,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	s.sleepLength = d
 
 	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)
-	log.Printf("MakeSleeperl: %v\n", args)
+	//	log.Printf("MakeSleeperl: %v\n", args)
 
 	err = s.Started(s.pid)
 	if err != nil {

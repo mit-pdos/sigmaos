@@ -108,12 +108,18 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	log.Printf("getpage: %v\n", args)
+	log.Printf("getstatic: %v\n", args)
 	return www.spawnApp("bin/user/fsreader", w, r, []string{"name/" + args})
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	log.Printf("book: %v\n", args)
+	log.Printf("dobook: %v\n", args)
+	// XXX maybe pass all form key/values to app
+	//r.ParseForm()
+	//for key, value := range r.Form {
+	//	log.Printf("form: %v %v", key, value)
+	//}
+	// log.Printf("\n")
 	title := r.FormValue("title")
 	return www.spawnApp("bin/user/bookapp", w, r, []string{args, title})
 }

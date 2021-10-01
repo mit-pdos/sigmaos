@@ -12,6 +12,7 @@ do
   addr=${tuple[1]}
 
 ssh -i $DIR/keys/cloudlab-sigmaos $USER@$addr <<ENDSSH
+cd ulambda
 ./turn-off-hyperthread-siblings.sh
 ENDSSH
 

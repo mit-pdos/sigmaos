@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"strings"
 
 	// db "ulambda/debug"
 	"ulambda/dbd"
@@ -26,11 +27,11 @@ import (
 //
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid args...\n", os.Args[0])
+	if len(os.Args) < 4 {
+		fmt.Fprintf(os.Stderr, "Usage: %v pid <name> args...\n", os.Args[0])
 		os.Exit(1)
 	}
-	m, err := MakeBookApp(os.Args[1:])
+	m, err := MakeBookApp(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -54,7 +55,7 @@ func MakeBookApp(args []string) (*BookApp, error) {
 	if err != nil {
 		return nil, errors.New("MakeBookApp: No IP")
 	}
-	n := "name/" + args[0]
+	n := "name/" + args[2]
 	memfsd := memfsd.MakeFsd(ip + ":0")
 	pipe, err := memfsd.MkPipe("pipe")
 	if err != nil {
@@ -69,8 +70,8 @@ func MakeBookApp(args []string) (*BookApp, error) {
 	r := &BookApp{}
 	r.FsLibSrv = fsl
 	r.ProcClnt = procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
-	r.pid = args[0]
-	r.input = args[1:]
+	r.pid = args[1]
+	r.input = strings.Split(args[3], "/")
 	r.pipe = pipe
 	r.Started(r.pid)
 
@@ -105,7 +106,6 @@ func (ba *BookApp) query(q string) ([]byte, error) {
 }
 
 func (ba *BookApp) doView() string {
-	log.Printf("view\n")
 	b, err := ba.query("select * from book;")
 	if err != nil {
 		return fmt.Sprintf("Query err %v\n", err)
@@ -132,8 +132,8 @@ func (ba *BookApp) doView() string {
 	return ba.writeResponse(data.Bytes())
 }
 
-func (ba *BookApp) doEdit(args []string) string {
-	q := fmt.Sprintf("select * from book where title=\"%v\";", args[0])
+func (ba *BookApp) doEdit(key string) string {
+	q := fmt.Sprintf("select * from book where title=\"%v\";", key)
 	b, err := ba.query(q)
 	if err != nil {
 		return fmt.Sprintf("Query err %v\n", err)
@@ -160,14 +160,13 @@ func (ba *BookApp) doEdit(args []string) string {
 	return ba.writeResponse(data.Bytes())
 }
 
-func (ba *BookApp) doSave(args []string) string {
-	log.Printf("save %v\n", args)
-	q := fmt.Sprintf("update book SET title=\"%v\" where title=\"%v\";", args[1], args[0])
+func (ba *BookApp) doSave(key string, title string) string {
+	q := fmt.Sprintf("update book SET title=\"%v\" where title=\"%v\";", title, key)
 	_, err := ba.query(q)
 	if err != nil {
 		return fmt.Sprintf("Query err %v\n", err)
 	}
-	return fmt.Sprintf("OK %v\n", "view")
+	return fmt.Sprintf("Redirect %v", "/book/view/")
 }
 
 func (ba *BookApp) Work() string {
@@ -182,11 +181,11 @@ func (ba *BookApp) Work() string {
 	case "view":
 		return ba.doView()
 	case "edit":
-		return ba.doEdit(ba.input[1:])
+		return ba.doEdit(ba.input[1])
 	case "save":
-		return ba.doSave(ba.input[1:])
+		return ba.doSave(ba.input[1], os.Args[4])
 	default:
-		return ba.writeResponse([]byte("error"))
+		return "File not found"
 	}
 }
 

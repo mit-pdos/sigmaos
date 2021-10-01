@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 
 	//	"ulambda/dbd"
 	db "ulambda/debug"
@@ -15,14 +16,12 @@ import (
 	"ulambda/realm"
 )
 
-var validPath = regexp.MustCompile("^/(static|edit|save|view)/([=.a-zA-Z0-9]*)$")
+var validPath = regexp.MustCompile(`^/(static|book)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {
 	www := MakeWwwd()
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
-	http.HandleFunc("/view/", www.makeHandler(getBooks))
-	http.HandleFunc("/edit/", www.makeHandler(editBook))
-	http.HandleFunc("/save/", www.makeHandler(saveBook))
+	http.HandleFunc("/book/", www.makeHandler(doBook))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -48,21 +47,30 @@ func MakeWwwd() *Wwwd {
 	return www
 }
 
-func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (string, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("path %v\n", r.URL.Path)
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
 			return
 		}
-		fn(www, w, r, m[2])
+		status, err := fn(www, w, r, m[2])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		if status == "File not found" {
+			http.NotFound(w, r)
+		} else if strings.HasPrefix(status, "Redirect") {
+			t := strings.Split(status, " ")
+			if len(t) > 1 {
+				http.Redirect(w, r, t[1], http.StatusFound)
+			}
+		}
 	}
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 	fn := "name/" + pid + "/pipe"
-	log.Printf("wwwd: open %v\n", fn)
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
 		log.Printf("wwwd: open failed %v\n", err)
@@ -82,69 +90,36 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 	defer www.Close(fd)
 }
 
-func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, file string) {
-	log.Printf("getpage: %v\n", file)
+func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
-	a := &proc.Proc{pid, "bin/user/fsreader", "",
-		[]string{"name/" + file, pid},
-		[]string{procinit.GetProcLayersString()},
+	a := &proc.Proc{pid, app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
 	err := www.Spawn(a)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 	err = www.WaitStart(pid)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 	www.rwResponse(w, pid)
-	status, err := www.WaitExit(pid)
-	log.Printf("pid %v finished err '%v' status '%v'\n", pid, err, status)
-	if status != "OK" {
-		http.NotFound(w, r)
-	}
+	return www.WaitExit(pid)
 }
 
-func (www *Wwwd) doBook(w http.ResponseWriter, r *http.Request, args []string) {
-	pid := proc.GenPid()
-	a := &proc.Proc{pid, "bin/user/bookapp", "",
-		args,
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
-	err := www.Spawn(a)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = www.WaitStart(pid)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	www.rwResponse(w, pid)
-	status, err := www.WaitExit(pid)
-	log.Printf("pid %v finished %v %v\n", pid, err, status)
+func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+	log.Printf("getstatic: %v\n", args)
+	return www.spawnApp("bin/user/fsreader", w, r, []string{"name/" + args})
 }
 
-func getBooks(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
-	log.Printf("getbooks %v\n", args)
-	www.doBook(w, r, []string{"view"})
-}
-
-func editBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
-	log.Printf("editbook %v\n", args)
-	www.doBook(w, r, append([]string{"edit"}, args))
-}
-
-func saveBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) {
+func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+	log.Printf("dobook: %v\n", args)
+	// XXX maybe pass all form key/values to app
+	//r.ParseForm()
+	//for key, value := range r.Form {
+	//	log.Printf("form: %v %v", key, value)
+	//}
+	// log.Printf("\n")
 	title := r.FormValue("title")
-	log.Printf("savebook %v\n", args)
-	a := append([]string{"save", args}, title)
-	www.doBook(w, r, a)
-	http.Redirect(w, r, "/view/", http.StatusFound)
-
+	return www.spawnApp("bin/user/bookapp", w, r, []string{args, title})
 }

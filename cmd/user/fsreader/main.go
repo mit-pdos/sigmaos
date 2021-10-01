@@ -19,15 +19,11 @@ import (
 
 //
 // Creates a named pipe in name/<name>/pipe (name is os.Args[2]), reads a
-// data from input (os.Args[1])), and writes it to the named pipe.
+// data from input (os.Args[3])), and writes it to the named pipe.
 //
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid args...\n", os.Args[0])
-		os.Exit(1)
-	}
-	m, err := MakeReader(os.Args[1:])
+	m, err := MakeReader(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -45,7 +41,7 @@ type Reader struct {
 }
 
 func MakeReader(args []string) (*Reader, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeReader: %v\n", args)
@@ -69,8 +65,8 @@ func MakeReader(args []string) (*Reader, error) {
 	r := &Reader{}
 	r.FsLibSrv = fsl
 	r.ProcClnt = procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
-	r.pid = args[0]
-	r.input = args[1]
+	r.pid = args[1]
+	r.input = args[3]
 	r.pipe = pipe
 	r.Started(r.pid)
 

@@ -37,7 +37,6 @@ type Query struct {
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
-	log.Printf("session open %v\n", c)
 	db, err := sql.Open("mysql", "sigma:sigmaos@/books")
 	if err != nil {
 		return nil, err
@@ -46,7 +45,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	if pingErr != nil {
 		log.Fatal(pingErr)
 	}
-	log.Printf("Connected\n")
+	log.Printf("Connected to db\n")
 
 	s := &Session{}
 	s.Inode = inode.MakeInode("", 0, nil)
@@ -76,7 +75,6 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 }
 
 func (s *Session) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	log.Printf("read session %v off %v\n", s, off)
 	if off > 0 {
 		return nil, nil
 	}
@@ -89,7 +87,6 @@ func (s *Session) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 
 // XXX wait on close before processing data?
 func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	log.Printf("query: %v", string(b))
 	rows, err := q.db.Query(string(b))
 	if err != nil {
 		return 0, err
@@ -138,6 +135,5 @@ func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 	if err != nil {
 		return nil, err
 	}
-	log.Printf(string(b))
 	return b, nil
 }

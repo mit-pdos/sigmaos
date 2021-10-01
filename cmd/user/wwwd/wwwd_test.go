@@ -59,9 +59,7 @@ func TestStatic(t *testing.T) {
 	assert.Contains(t, string(out), "hello")
 
 	out, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
-	log.Printf("error: %v %v\n", err, string(out))
-	assert.Equal(t, nil, err)
-	log.Printf("error: %v\n", string(out))
+	assert.NotEqual(t, nil, err) // wget return error because of HTTP not found
 
 	err = cmd.Process.Kill()
 	assert.Equal(t, nil, err)
@@ -85,7 +83,7 @@ func TestView(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/view/").Output()
+	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/view/").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
@@ -111,9 +109,9 @@ func TestEdit(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/edit/Odyssey").Output()
+	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/edit/Odyssey").Output()
 	assert.Equal(t, nil, err)
-	assert.Contains(t, string(out), "Homer")
+	assert.Contains(t, string(out), "Odyssey")
 
 	err = cmd.Process.Kill()
 	assert.Equal(t, nil, err)
@@ -137,7 +135,7 @@ func TestSave(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	out, err := exec.Command("wget", "-qO-", "--post-data", "title=Odyseus", "http://localhost:8080/save/Odyssey").Output()
+	out, err := exec.Command("wget", "-qO-", "--post-data", "title=Odyssey", "http://localhost:8080/book/save/Odyssey").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 

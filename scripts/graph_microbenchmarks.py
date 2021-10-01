@@ -26,7 +26,7 @@ def get_y_vals(data):
 
 
 def graph_data(data, normalize, out, units):
-  fig = plt.figure(figsize=(15,10))
+  fig = plt.figure(figsize=(20,15))
   plt.xlabel("Microbenchmark")
   unnormalized_data = data
   if normalize:
@@ -51,7 +51,7 @@ def graph_data(data, normalize, out, units):
         label = "{:.2f} {}".format(y_vals[n][i], units)
       plt.text(bar[i].get_x() + bar[i].get_width() / 2.0, height, label, ha="center", va="bottom", rotation=90)
     offset += width
-  plt.xticks([ i + width for i in ind ], experiments, rotation=45)
+  plt.xticks([ i + width for i in ind ], experiments, rotation=25)
   plt.legend()
   plt.savefig(out)
 

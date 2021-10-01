@@ -113,7 +113,7 @@ func main() {
 		a1 := procdep.MakeProcDep()
 		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
-			[]string{"name/s3/~ip/input/" + f.Name(), m},
+			[]string{m, "name/s3/~ip/input/" + f.Name()},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}

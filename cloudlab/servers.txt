@@ -1,3 +1,4 @@
-node0 pc05.cloudlab.umass.edu
-node1 pc01.cloudlab.umass.edu
-node2 pc03.cloudlab.umass.edu
+node0 amd250.utah.cloudlab.us
+node1 amd269.utah.cloudlab.us
+node2 amd259.utah.cloudlab.us
+node3 amd249.utah.cloudlab.us

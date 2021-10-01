@@ -4,6 +4,10 @@ DIR=$(dirname $0)
 
 . $DIR/config
 
+echo "Stopping replicas..."
+$DIR/stop-all.sh
+echo "Done stopping replicas..."
+
 echo "Starting replicas..."
 $DIR/start-all.sh
 echo "Done starting replicas..."

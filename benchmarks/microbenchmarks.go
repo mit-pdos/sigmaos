@@ -273,6 +273,8 @@ func (m *Microbenchmarks) CondWaitBenchmark(nTrials int) *RawResults {
 		time.Sleep(10 * time.Millisecond)
 		start := time.Now()
 		cond.Signal()
+		for end == nil {
+		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
 		rs.data[i].set(throughput, elapsed)

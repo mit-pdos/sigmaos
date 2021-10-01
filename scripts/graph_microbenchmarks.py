@@ -17,8 +17,6 @@ def normalize_run(x, norm):
 
 def get_data(d_path, normalize):
   data = { int(r.split("_")[-2]) : get_run_data(d_path, r) for r in os.listdir(d_path) if ".txt" in r }
-  if normalize:
-    data = { k : normalize_run(v, data[1]) for (k, v) in data.items() }
   return data
 
 def get_y_vals(data):
@@ -30,18 +28,28 @@ def get_y_vals(data):
 def graph_data(data, normalize, out, units):
   fig = plt.figure(figsize=(15,10))
   plt.xlabel("Microbenchmark")
+  unnormalized_data = data
   if normalize:
+    data = { k : normalize_run(v, data[1]) for (k, v) in data.items() }
     plt.ylabel("Slowdown vs. Unreplicated")
   else:
     plt.ylabel("Running time (" + units + ")")
   y_vals = get_y_vals(data)
+  unnormalized_y_vals = get_y_vals(unnormalized_data)
   experiments = sorted(data[1].keys())
   ind = np.arange(len(experiments))
   width = 0.25
   offset = 0.0
   for n in sorted(data.keys()):
     inds = [ i + offset for i in ind ]
-    plt.bar(inds, y_vals[n], width, label=str(n) + " replicas")
+    bar = plt.bar(inds, y_vals[n], width, label=str(n) + " replicas")
+    for i in range(len(bar)):
+      height = bar[i].get_height()
+      if normalize:
+        label = "{:.2f} {}".format(y_vals[n][i] * unnormalized_y_vals[1][i], units)
+      else:
+        label = "{:.2f} {}".format(y_vals[n][i], units)
+      plt.text(bar[i].get_x() + bar[i].get_width() / 2.0, height, label, ha="center", va="bottom", rotation=90)
     offset += width
   plt.xticks([ i + width for i in ind ], experiments, rotation=45)
   plt.legend()

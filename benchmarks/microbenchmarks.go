@@ -1,6 +1,7 @@
 package benchmarks
 
 import (
+	"fmt"
 	"log"
 	"path"
 	"strconv"
@@ -8,6 +9,8 @@ import (
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procinit"
 	"ulambda/sync"
 )
 
@@ -15,6 +18,7 @@ const (
 	DEFAULT_N_TRIALS = 1000
 	SMALL_FILE_SIZE  = 1 << 10 // 1 KB
 	LARGE_FILE_SIZE  = 1 << 20 // 1 MB
+	SLEEP_MSECS      = 5
 )
 
 const (
@@ -28,11 +32,14 @@ const (
 
 type Microbenchmarks struct {
 	*fslib.FsLib
+	proc.ProcClnt
 }
 
 func MakeMicrobenchmarks(fsl *fslib.FsLib) *Microbenchmarks {
 	m := &Microbenchmarks{}
 	m.FsLib = fsl
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
+	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
 	return m
 }
 
@@ -49,6 +56,7 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["cond_wait"] = m.CondWaitBenchmark(DEFAULT_N_TRIALS)
 	r["file_bag_put"] = m.FileBagPutBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["file_bag_get"] = m.FileBagGetBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	r["proc_base_spawn_wait_exit"] = m.ProcBaseSpawnWaitExitBenchmark(DEFAULT_N_TRIALS)
 	return r
 }
 
@@ -346,6 +354,41 @@ func (m *Microbenchmarks) FileBagGetBenchmark(nTrials int, size int) *RawResults
 	}
 
 	log.Printf("FileBagGetBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int) *RawResults {
+	log.Printf("Running ProcBaseSpawnWaitExitBenchmark...")
+
+	rs := MakeRawResults(nTrials)
+
+	ps := []*proc.Proc{}
+	for i := 0; i < nTrials; i++ {
+		pid := strconv.Itoa(i)
+		p := &proc.Proc{pid, "bin/user/sleeperl", "",
+			[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, ""},
+			[]string{procinit.GetProcLayersString()},
+			proc.T_DEF, proc.C_DEF,
+		}
+		ps = append(ps, p)
+	}
+
+	for i := 0; i < nTrials; i++ {
+		start := time.Now()
+		if err := m.Spawn(ps[i]); err != nil {
+			log.Fatalf("Error spawning: %v", err)
+		}
+		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
+			log.Fatalf("Error WaitExit: %v %v", status, err)
+		}
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("ProcBaseSpawnWaitExitBenchmark Done")
 
 	return rs
 }

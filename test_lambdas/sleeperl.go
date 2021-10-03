@@ -55,12 +55,14 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 }
 
 func (s *Sleeperl) waitEvict() {
-	err := s.WaitEvict(s.pid)
-	if err != nil {
-		log.Fatalf("Error WaitEvict: %v", err)
+	if !s.native {
+		err := s.WaitEvict(s.pid)
+		if err != nil {
+			log.Fatalf("Error WaitEvict: %v", err)
+		}
+		s.Exited(s.pid, "EVICTED")
+		os.Exit(0)
 	}
-	s.Exit()
-	os.Exit(0)
 }
 
 func (s *Sleeperl) Work() {
@@ -68,7 +70,7 @@ func (s *Sleeperl) Work() {
 	time.Sleep(s.sleepLength)
 	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {
-		log.Printf("Error: Makefile in Sleeperl.Work: %v\n", err)
+		log.Printf("Error: Makefile %v in Sleeperl.Work: %v\n", s.output, err)
 	}
 }
 

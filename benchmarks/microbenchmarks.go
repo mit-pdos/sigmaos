@@ -10,9 +10,14 @@ import (
 	"strings"
 	"time"
 
+	//	"github.com/thanhpk/randstr"
+
 	"ulambda/fslib"
+	//	"ulambda/named"
+	//	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	//	"ulambda/procbase"
 	"ulambda/procinit"
 	"ulambda/sync"
 )
@@ -62,7 +67,9 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["file_bag_put"] = m.FileBagPutBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["file_bag_get"] = m.FileBagGetBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["proc_base_spawn_wait_exit"] = m.ProcBaseSpawnWaitExitBenchmark(DEFAULT_N_TRIALS)
+	r["proc_base_spawn_wait_exit_pprof"] = m.ProcBaseSpawnWaitExitPprofBenchmark(5)
 	r["proc_base_exec_wait_native"] = m.ProcBaseExecWaitNativeBenchmark(DEFAULT_N_TRIALS)
+	//	r["proc_base_exec_wait_native_mark_conds"] = m.ProcBaseExecWaitNativeMarkCondsBenchmark(DEFAULT_N_TRIALS)
 	return r
 }
 
@@ -373,7 +380,7 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int) *RawResult
 	for i := 0; i < nTrials; i++ {
 		pid := strconv.Itoa(i)
 		p := &proc.Proc{pid, "bin/user/sleeperl", "",
-			[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, ""},
+			[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_DEF, proc.C_DEF,
 		}
@@ -399,6 +406,88 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int) *RawResult
 	return rs
 }
 
+func (m *Microbenchmarks) ProcBaseSpawnWaitExitPprofBenchmark(nTrials int) *RawResults {
+	log.Printf("Running ProcBaseSpawnWaitExitPprofBenchmark...")
+
+	rs := MakeRawResults(nTrials)
+
+	ps := []*proc.Proc{}
+	for i := 0; i < nTrials; i++ {
+		pid := strconv.Itoa(i + DEFAULT_N_TRIALS)
+		p := &proc.Proc{pid, "bin/user/sleeperl", "",
+			[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "~/ulambda/benchmarks/results/" + pid + "-pprof.txt"},
+			[]string{procinit.GetProcLayersString()},
+			proc.T_DEF, proc.C_DEF,
+		}
+		ps = append(ps, p)
+	}
+
+	for i := 0; i < nTrials; i++ {
+		start := time.Now()
+		if err := m.Spawn(ps[i]); err != nil {
+			log.Fatalf("Error spawning: %v", err)
+		}
+		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
+			log.Fatalf("Error WaitExit: %v %v", status, err)
+		}
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("ProcBaseSpawnWaitExitPprofBenchmark Done")
+
+	return rs
+}
+
+//func (m *Microbenchmarks) ProcBaseExecWaitNativeMarkCondsBenchmark(nTrials int) *RawResults {
+//	log.Printf("Running ProcBaseExecWaitNativeMarkCondsBenchmark...")
+//
+//	rs := MakeRawResults(nTrials)
+//
+//	cmds := []*exec.Cmd{}
+//	for i := 0; i < nTrials; i++ {
+//		pid := strconv.Itoa(i + nTrials)
+//		args := []string{pid, fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid}
+//		newRoot := path.Join(namespace.NAMESPACE_DIR, pid) + randstr.Hex(16)
+//		env := []string{procinit.GetProcLayersString(), "NAMED=" + strings.Join(m.namedAddr, ","), "NEWROOT=" + newRoot}
+//		cmd := exec.Command("./bin/user/sleeperl", args...)
+//		cmd.Env = env
+//		cmd.Stdout = os.Stdout
+//		cmd.Stderr = os.Stderr
+//		cmds = append(cmds, cmd)
+//		namespace.SetupProc(cmd)
+//		// Make Start cond
+//		pStartCond := sync.MakeCond(m.FsLib, path.Join(named.PROC_COND, procbase.START_COND+pid), nil)
+//		pStartCond.Init()
+//		// Make Exit cond
+//		pExitCond := sync.MakeCond(m.FsLib, path.Join(named.PROC_COND, procbase.EXIT_COND+pid), nil)
+//		pExitCond.Init()
+//		if err := m.MakeFileJson(path.Join(named.PROC_RET_STAT, procbase.RET_STAT+pid), 0777, &procbase.RetStatWaiters{}); err != nil && !strings.Contains(err.Error(), "Name exists") {
+//			log.Fatalf("Error MakeFileJson in ProcBaseClnt.makeRetStatWaiterFile: %v", err)
+//		}
+//	}
+//
+//	for i := 0; i < nTrials; i++ {
+//		pid := strconv.Itoa(i + nTrials)
+//		log.Printf("pid: %v", pid)
+//		start := time.Now()
+//		if err := cmds[i].Start(); err != nil {
+//			log.Fatalf("Error command start: %v", err)
+//		}
+//		m.WaitExit(pid)
+//		end := time.Now()
+//		elapsed := float64(end.Sub(start).Microseconds())
+//		throughput := float64(1.0) / elapsed
+//		rs.data[i].set(throughput, elapsed)
+//	}
+//
+//	log.Printf("ProcBaseExecWaitNativeMarkCondsBenchmark Done")
+//
+//	return rs
+//}
+
 func (m *Microbenchmarks) ProcBaseExecWaitNativeBenchmark(nTrials int) *RawResults {
 	log.Printf("Running ProcBaseExecWaitNativeBenchmark...")
 
@@ -406,7 +495,7 @@ func (m *Microbenchmarks) ProcBaseExecWaitNativeBenchmark(nTrials int) *RawResul
 
 	cmds := []*exec.Cmd{}
 	for i := 0; i < nTrials; i++ {
-		pid := strconv.Itoa(i + nTrials)
+		pid := strconv.Itoa(i + 2*DEFAULT_N_TRIALS)
 		args := []string{pid, fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "native"}
 		env := []string{procinit.GetProcLayersString(), "NAMED=" + strings.Join(m.namedAddr, ",")}
 		cmd := exec.Command("./bin/user/sleeperl", args...)

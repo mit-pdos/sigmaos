@@ -16,7 +16,7 @@ def normalize_run(x, norm):
  return { k : x[k] / norm[k] for k in x }
 
 def get_data(d_path, normalize):
-  data = { int(r.split("_")[-2]) : get_run_data(d_path, r) for r in os.listdir(d_path) if ".txt" in r }
+  data = { int(r.split("_")[-2]) : get_run_data(d_path, r) for r in os.listdir(d_path) if ".txt" in r and "pprof" not in r }
   return data
 
 def get_y_vals(data):

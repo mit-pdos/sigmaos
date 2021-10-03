@@ -29,8 +29,6 @@ if [[ $IS_LEADER -gt 0 ]]; then
   
   # Start a realm manager, realmd, and create a realm
   GOGC=off nohup ./bin/realm/realmmgr . > realmmgr.out 2>&1 & 
-  sleep 2
-  GOGC=off nohup ./bin/realm/realmd . $(hostname) > realmd.out 2>&1 &
   sleep 1
   GOGC=off nohup ./bin/realm/create 1000 > create.out 2>&1 &
 

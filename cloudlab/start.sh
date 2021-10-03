@@ -2,6 +2,11 @@
 
 DIR=$(dirname $0)
 
+if [[ -z "${N_REPLICAS}" ]]; then
+  echo "Must specify number of replicas"
+  exit 1
+fi
+
 if [ "$#" -ne 2 ]
 then
   echo "Usage: ./start.sh user@address root_named_addr"

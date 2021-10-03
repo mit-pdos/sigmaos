@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"strconv"
 	"strings"
@@ -410,12 +411,13 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitPprofBenchmark(nTrials int) *RawR
 	log.Printf("Running ProcBaseSpawnWaitExitPprofBenchmark...")
 
 	rs := MakeRawResults(nTrials)
+	usr, _ := user.Current()
 
 	ps := []*proc.Proc{}
 	for i := 0; i < nTrials; i++ {
 		pid := strconv.Itoa(i + DEFAULT_N_TRIALS)
 		p := &proc.Proc{pid, "bin/user/sleeperl", "",
-			[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "~/ulambda/benchmarks/results/" + pid + "-pprof.txt"},
+			[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, path.Join(usr.HomeDir, "ulambda/benchmarks/results/"+pid+"-pprof.txt")},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_DEF, proc.C_DEF,
 		}

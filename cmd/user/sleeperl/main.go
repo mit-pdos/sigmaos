@@ -27,10 +27,8 @@ func main() {
 		if prof {
 			// If we're benchmarking, make a flame graph
 			p := perf.MakePerf()
-			if len(os.Args) >= 7 {
-				p.SetupPprof(pprofPath)
-				defer p.Teardown()
-			}
+			p.SetupPprof(pprofPath)
+			defer p.Teardown()
 		}
 	}
 	l, err := test_lambdas.MakeSleeperl(os.Args[1:])

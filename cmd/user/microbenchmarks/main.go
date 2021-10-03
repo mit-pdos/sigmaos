@@ -14,7 +14,7 @@ func main() {
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("microbenchmarks", cfg.NamedAddr)
 
-	m := benchmarks.MakeMicrobenchmarks(fsl)
+	m := benchmarks.MakeMicrobenchmarks(fsl, cfg.NamedAddr)
 	res := m.RunAll()
 	names := []string{}
 	for name, _ := range res {

@@ -3,8 +3,11 @@ package benchmarks
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"ulambda/fslib"
@@ -31,12 +34,14 @@ const (
 )
 
 type Microbenchmarks struct {
+	namedAddr []string
 	*fslib.FsLib
 	proc.ProcClnt
 }
 
-func MakeMicrobenchmarks(fsl *fslib.FsLib) *Microbenchmarks {
+func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string) *Microbenchmarks {
 	m := &Microbenchmarks{}
+	m.namedAddr = namedAddr
 	m.FsLib = fsl
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
@@ -57,6 +62,7 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["file_bag_put"] = m.FileBagPutBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["file_bag_get"] = m.FileBagGetBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["proc_base_spawn_wait_exit"] = m.ProcBaseSpawnWaitExitBenchmark(DEFAULT_N_TRIALS)
+	r["proc_base_exec_wait_native"] = m.ProcBaseExecWaitNativeBenchmark(DEFAULT_N_TRIALS)
 	return r
 }
 
@@ -389,6 +395,42 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int) *RawResult
 	}
 
 	log.Printf("ProcBaseSpawnWaitExitBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) ProcBaseExecWaitNativeBenchmark(nTrials int) *RawResults {
+	log.Printf("Running ProcBaseExecWaitNativeBenchmark...")
+
+	rs := MakeRawResults(nTrials)
+
+	cmds := []*exec.Cmd{}
+	for i := 0; i < nTrials; i++ {
+		pid := strconv.Itoa(i + nTrials)
+		args := []string{pid, fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "native"}
+		env := []string{procinit.GetProcLayersString(), "NAMED=" + strings.Join(m.namedAddr, ",")}
+		cmd := exec.Command("./bin/user/sleeperl", args...)
+		cmd.Env = env
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmds = append(cmds, cmd)
+	}
+
+	for i := 0; i < nTrials; i++ {
+		start := time.Now()
+		if err := cmds[i].Start(); err != nil {
+			log.Fatalf("Error command start: %v", err)
+		}
+		if err := cmds[i].Wait(); err != nil {
+			log.Fatalf("Error command start: %v", err)
+		}
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("ProcBaseExecWaitNativeBenchmark Done")
 
 	return rs
 }

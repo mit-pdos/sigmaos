@@ -16,13 +16,14 @@ import (
 type Sleeperl struct {
 	*fslib.FsLib
 	proc.ProcClnt
+	native      bool
 	pid         string
 	sleepLength time.Duration
 	output      string
 }
 
 func MakeSleeperl(args []string) (*Sleeperl, error) {
-	if len(args) != 4 {
+	if len(args) < 3 {
 		return nil, errors.New("MakeSleeperl: too few arguments")
 	}
 	s := &Sleeperl{}
@@ -38,12 +39,16 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	}
 	s.sleepLength = d
 
+	s.native = len(args) == 4 && args[3] == "native"
+
 	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)
 	//	log.Printf("MakeSleeperl: %v\n", args)
 
-	err = s.Started(s.pid)
-	if err != nil {
-		log.Fatalf("Started: error %v\n", err)
+	if !s.native {
+		err = s.Started(s.pid)
+		if err != nil {
+			log.Fatalf("Started: error %v\n", err)
+		}
 	}
 
 	return s, nil
@@ -68,5 +73,7 @@ func (s *Sleeperl) Work() {
 }
 
 func (s *Sleeperl) Exit() {
-	s.Exited(s.pid, "OK")
+	if !s.native {
+		s.Exited(s.pid, "OK")
+	}
 }

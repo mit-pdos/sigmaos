@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/thanhpk/randstr"
 
@@ -146,7 +147,10 @@ func (clnt *ProcBaseClnt) Started(pid string) error {
 		log.Fatalf("Error Isolate in clnt.Started: %v", err)
 	}
 	// Load a seccomp filter.
+	start := time.Now()
 	seccomp.LoadFilter()
+	end := time.Now()
+	log.Printf("Load seccompt time: %v us", end.Sub(start).Microseconds())
 	return nil
 }
 

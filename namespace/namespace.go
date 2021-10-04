@@ -7,6 +7,7 @@ import (
 	"path"
 	"runtime/debug"
 	"syscall"
+	"time"
 )
 
 const (
@@ -40,14 +41,20 @@ func SetupProc(cmd *exec.Cmd) {
 }
 
 func Isolate(fsRoot string) error {
+	start := time.Now()
 	if err := createFSNamespace(fsRoot); err != nil {
 		log.Printf("Error CreateFSNamespace in namespace.Isolate: %v", err)
 		return err
 	}
+	end := time.Now()
+	log.Printf("create namespace time: %v us", end.Sub(start).Microseconds())
+	start = time.Now()
 	if err := isolateFSNamespace(fsRoot); err != nil {
 		log.Printf("Error IsolateFSNamespace in namespace.Isolate: %v", err)
 		return err
 	}
+	end = time.Now()
+	log.Printf("isolate namespace time: %v us", end.Sub(start).Microseconds())
 	return nil
 }
 

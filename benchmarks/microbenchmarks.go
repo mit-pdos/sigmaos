@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	//	"github.com/thanhpk/randstr"
 
 	"ulambda/fslib"
+	"ulambda/perf"
 	//	"ulambda/named"
 	//	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -69,6 +71,7 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["file_bag_get"] = m.FileBagGetBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["proc_base_spawn_wait_exit"] = m.ProcBaseSpawnWaitExitBenchmark(DEFAULT_N_TRIALS)
 	r["proc_base_spawn_wait_exit_pprof"] = m.ProcBaseSpawnWaitExitPprofBenchmark(5)
+	r["proc_base_pprof"] = m.ProcBasePprofBenchmark(DEFAULT_N_TRIALS * 2)
 	r["proc_base_exec_wait_native"] = m.ProcBaseExecWaitNativeBenchmark(DEFAULT_N_TRIALS)
 	//	r["proc_base_exec_wait_native_mark_conds"] = m.ProcBaseExecWaitNativeMarkCondsBenchmark(DEFAULT_N_TRIALS)
 	return r
@@ -522,6 +525,53 @@ func (m *Microbenchmarks) ProcBaseExecWaitNativeBenchmark(nTrials int) *RawResul
 	}
 
 	log.Printf("ProcBaseExecWaitNativeBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int) *RawResults {
+	log.Printf("Running ProcBasePprofBenchmark...")
+
+	// Start pprof to break down costs
+	runtime.SetCPUProfileRate(250)
+	usr, _ := user.Current()
+	pprofPath := path.Join(usr.HomeDir, "ulambda/benchmarks/results/long-pprof.txt")
+	p := perf.MakePerf()
+	p.SetupPprof(pprofPath)
+	defer p.Teardown()
+
+	rs := MakeRawResults(nTrials)
+
+	ps := []*proc.Proc{}
+	for i := 0; i < nTrials; i++ {
+		pid := strconv.Itoa(i + 3*DEFAULT_N_TRIALS)
+		p := &proc.Proc{pid, "bin/user/sleeperl", "",
+			// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
+			[]string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid, "native"},
+			[]string{procinit.GetProcLayersString()},
+			proc.T_DEF, proc.C_DEF,
+		}
+		ps = append(ps, p)
+	}
+
+	for i := 0; i < nTrials; i++ {
+		start := time.Now()
+		if err := m.Spawn(ps[i]); err != nil {
+			log.Fatalf("Error spawning: %v", err)
+		}
+		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
+			log.Fatalf("Error exited: %v", err)
+		}
+		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
+			log.Fatalf("Error WaitExit: %v %v", status, err)
+		}
+		end := time.Now()
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.data[i].set(throughput, elapsed)
+	}
+
+	log.Printf("ProcBasePprofBenchmark Done")
 
 	return rs
 }

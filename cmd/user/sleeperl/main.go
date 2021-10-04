@@ -2,17 +2,21 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	"ulambda/perf"
 	"ulambda/test_lambdas"
 )
 
 func main() {
+	start := time.Now()
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid sleep_length out <native> <pprof_path>\n", os.Args[0])
 		os.Exit(1)
 	}
+	var p *perf.Perf
 	if len(os.Args) > 4 {
 		prof := false
 		pprofPath := ""
@@ -26,7 +30,7 @@ func main() {
 		}
 		if prof {
 			// If we're benchmarking, make a flame graph
-			p := perf.MakePerf()
+			p = perf.MakePerf()
 			p.SetupPprof(pprofPath)
 			defer p.Teardown()
 		}
@@ -38,4 +42,6 @@ func main() {
 	}
 	l.Work()
 	l.Exit()
+	end := time.Now()
+	log.Printf("E2E time: %v usec", end.Sub(start).Microseconds())
 }

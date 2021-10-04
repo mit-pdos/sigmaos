@@ -559,6 +559,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int) *RawResults {
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
 		}
+		log.Printf("Spawn time: %v us", time.Now().Sub(start).Microseconds())
 		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
 			log.Fatalf("Error exited: %v", err)
 		}

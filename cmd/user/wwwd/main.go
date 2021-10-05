@@ -16,6 +16,11 @@ import (
 	"ulambda/realm"
 )
 
+//
+// Web front end that spawns an app to handle a request.
+// XXX limit process's name space to the app binary and pipe.
+//
+
 var validPath = regexp.MustCompile(`^/(static|book)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {

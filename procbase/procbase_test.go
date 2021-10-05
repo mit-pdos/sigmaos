@@ -272,7 +272,7 @@ func TestEvict(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, status, "OK", "WaitExit status")
+	assert.Equal(t, "EVICTED", status, "WaitExit status")
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "Didn't evict early enough.")

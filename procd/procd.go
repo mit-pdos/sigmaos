@@ -97,18 +97,18 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	return pd
 }
 
-func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
+func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
-	l := &Lambda{}
-	l.FsObj = inode.MakeInode("", np.DMDEVICE, pd.root)
-	l.pd = pd
-	l.init(p)
-	err := dir.MkNod(fssrv.MkCtx(""), pd.root, l.Pid, l)
+	p := &Proc{}
+	p.FsObj = inode.MakeInode("", np.DMDEVICE, pd.root)
+	p.pd = pd
+	p.init(a)
+	err := dir.MkNod(fssrv.MkCtx(""), pd.root, p.Pid, p)
 	if err != nil {
 		return nil, err
 	}
-	return l, nil
+	return p, nil
 }
 
 func (pd *Procd) Done() {
@@ -215,24 +215,24 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
-func (pd *Procd) runAll(ls []*Lambda) {
+func (pd *Procd) runAll(ls []*Proc) {
 	var wg sync.WaitGroup
-	for _, l := range ls {
+	for _, p := range ls {
 		wg.Add(1)
-		go func(l *Lambda) {
+		go func(p *Proc) {
 			defer wg.Done()
 
 			// Allocate dedicated cores for this lambda to run on.
-			cores := pd.allocCores(l.attr.Ncore)
+			cores := pd.allocCores(p.attr.Ncore)
 
 			// Run the lambda.
-			l.run(cores)
+			p.run(cores)
 
 			// Free resources and dedicated cores.
-			pd.incrementResources(l.attr)
+			pd.incrementResources(p.attr)
 			pd.freeCores(cores)
 
-		}(l)
+		}(p)
 	}
 	wg.Wait()
 }
@@ -269,14 +269,14 @@ func (pd *Procd) Worker(workerId uint) {
 				db.DLPrintf("PROCD", "cond file not found: %v", err)
 				return
 			}
-			log.Fatalf("Procd GetLambda error %v, %v\n", p, err)
+			log.Fatalf("Procd GetProc error %v, %v\n", p, err)
 		}
 		// XXX return err from spawn
 		l, err := pd.spawn(p)
 		if err != nil {
 			log.Fatalf("Procd spawn error %v\n", err)
 		}
-		ls := []*Lambda{l}
+		ls := []*Proc{l}
 		//		ls = append(ls, consumerLs...)
 		pd.runAll(ls)
 	}

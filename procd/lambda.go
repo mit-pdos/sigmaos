@@ -7,20 +7,21 @@ import (
 	"os/exec"
 	"path"
 	"sync"
-	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
+	"ulambda/fs"
+	"ulambda/fssrv"
 	"ulambda/linuxsched"
 	"ulambda/namespace"
-	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
 type Lambda struct {
 	//	mu deadlock.Mutex
+	fs.FsObj
 	mu      sync.Mutex
 	Program string
 	Pid     string
@@ -51,11 +52,10 @@ func (l *Lambda) init(p *proc.Proc) {
 	l.Stderr = "" // XXX: add to or infer from p
 	l.attr = p
 	db.DLPrintf("PROCD", "Procd init: %v\n", p)
-	d1 := l.pd.makeDir([]string{p.Pid}, np.DMDIR, l.pd.root)
-	d1.time = time.Now().Unix()
 }
 
 func (l *Lambda) wait(cmd *exec.Cmd) {
+	defer l.pd.root.Remove(fssrv.MkCtx(""), l.Pid)
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Lambda %v finished with error: %v", l.attr, err)

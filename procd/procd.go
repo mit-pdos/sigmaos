@@ -8,16 +8,19 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
+	"ulambda/dir"
+	"ulambda/fs"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
+	"ulambda/inode"
 	"ulambda/linuxsched"
+	"ulambda/memfs"
 	"ulambda/named"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -36,10 +39,9 @@ type Procd struct {
 	runq       *usync.FilePriorityBag
 	bin        string
 	nid        uint64
-	root       *Dir
+	root       fs.Dir
 	done       bool
 	addr       string
-	ls         map[string]*Lambda
 	coreBitmap []bool
 	coresAvail proc.Tcore
 	fssrv      *fssrv.FsServer
@@ -54,9 +56,8 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	pd.nid = 0
 	pd.bin = bin
 	db.Name("procd")
-	pd.root = pd.makeDir([]string{}, np.DMDIR, nil)
-	pd.root.time = time.Now().Unix()
-	pd.ls = map[string]*Lambda{}
+
+	pd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
@@ -74,6 +75,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	if err != nil {
 		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.fssrv.MyAddr(), err)
 	}
+
 	pprof := pprofPath != ""
 	if pprof {
 		pd.perf.SetupPprof(pprofPath)
@@ -99,9 +101,13 @@ func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 	l := &Lambda{}
+	l.FsObj = inode.MakeInode("", np.DMDEVICE, pd.root)
 	l.pd = pd
 	l.init(p)
-	pd.ls[l.Pid] = l
+	err := dir.MkNod(fssrv.MkCtx(""), pd.root, l.Pid, l)
+	if err != nil {
+		return nil, err
+	}
 	return l, nil
 }
 

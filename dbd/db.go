@@ -31,8 +31,7 @@ type Book struct {
 }
 
 type Database struct {
-	fssrv  *fssrv.FsServer
-	ch     chan bool
+	*fssrv.FsServer
 	root   fs.Dir
 	nextId np.Tpath
 }
@@ -40,13 +39,12 @@ type Database struct {
 func MakeDbd(pid string) (*Database, error) {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	dbd := &Database{}
-	dbd.ch = make(chan bool)
 	dbd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	srv, fsl, err := fslibsrv.MakeSrvFsLib(dbd, dbd.root, named.DB, "dbd")
+	srv, fsl, err := fslibsrv.MakeSrvFsLib(dbd.root, named.DB, "dbd")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	dbd.fssrv = srv
+	dbd.FsServer = srv
 	dbdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 	dbdStartCond.Destroy()
 	err = dir.MkNod(fssrv.MkCtx(""), dbd.root, "clone", makeClone("", dbd.root))
@@ -54,12 +52,4 @@ func MakeDbd(pid string) (*Database, error) {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
 	return dbd, nil
-}
-
-func (dbd *Database) Serve() {
-	<-dbd.ch
-}
-
-func (dbd *Database) Done() {
-	dbd.ch <- true
 }

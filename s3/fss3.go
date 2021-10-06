@@ -24,9 +24,9 @@ const (
 )
 
 type Fss3 struct {
+	*fssrv.FsServer
 	mu     sync.Mutex
 	pid    string
-	fssrv  *fssrv.FsServer
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
@@ -38,12 +38,12 @@ func MakeFss3(pid string) *Fss3 {
 	fss3.pid = pid
 	fss3.ch = make(chan bool)
 	fss3.root = fss3.makeDir([]string{}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeSrvFsLib(fss3, fss3.root, named.S3, "fss3d")
+	srv, fsl, err := fslibsrv.MakeSrvFsLib(fss3.root, named.S3, "fss3d")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 
-	fss3.fssrv = srv
+	fss3.FsServer = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -58,12 +58,4 @@ func MakeFss3(pid string) *Fss3 {
 	fss3dStartCond.Destroy()
 
 	return fss3
-}
-
-func (fss3 *Fss3) Serve() {
-	<-fss3.ch
-}
-
-func (fss3 *Fss3) Done() {
-	fss3.ch <- true
 }

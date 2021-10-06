@@ -43,13 +43,13 @@ func (fsl *FsLibSrv) ExitFs(name string) {
 	}
 }
 
-func MakeSrvFsLib(fs fssrv.Fs, root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.FsLib, error) {
+func MakeSrvFsLib(root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.FsLib, error) {
 	db.Name(name)
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		return nil, nil, err
 	}
-	srv := fssrv.MakeFsServer(fs, root, ip+":0", fos.MakeProtServer(), nil)
+	srv := fssrv.MakeFsServer(root, ip+":0", fos.MakeProtServer(), nil)
 	fsl := fslib.MakeFsLib(name)
 	fsl.Mkdir(path, 0777)
 	err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
@@ -59,9 +59,9 @@ func MakeSrvFsLib(fs fssrv.Fs, root fs.Dir, path string, name string) (*fssrv.Fs
 	return srv, fsl, nil
 }
 
-func MakeReplSrvFsLib(fs fssrv.Fs, root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
+func MakeReplSrvFsLib(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
 	db.Name(name)
-	srv := fssrv.MakeFsServer(fs, root, addr, fos.MakeProtServer(), config)
+	srv := fssrv.MakeFsServer(root, addr, fos.MakeProtServer(), config)
 	fsl := fslib.MakeFsLib(name)
 	fsl.Mkdir(path, 0777)
 	err := fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())

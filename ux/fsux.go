@@ -22,9 +22,8 @@ import (
 )
 
 type FsUx struct {
+	*fssrv.FsServer
 	mu    sync.Mutex
-	fssrv *fssrv.FsServer
-	ch    chan bool
 	root  fs.Dir
 	mount string
 }
@@ -40,26 +39,17 @@ func MakeFsUx(mount string, pid string) *FsUx {
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
-	fsux.ch = make(chan bool)
 	fsux.root = makeDir([]string{mount}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeReplSrvFsLib(fsux, fsux.root, addr, named.UX, "ux", config)
+	srv, fsl, err := fslibsrv.MakeReplSrvFsLib(fsux.root, addr, named.UX, "ux", config)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	fsux.fssrv = srv
+	fsux.FsServer = srv
 	if config == nil {
 		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 		fsuxStartCond.Destroy()
 	}
 	return fsux
-}
-
-func (fsux *FsUx) Serve() {
-	<-fsux.ch
-}
-
-func (fsux *FsUx) Done() {
-	fsux.ch <- true
 }
 
 type Obj struct {

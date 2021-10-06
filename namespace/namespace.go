@@ -7,7 +7,6 @@ import (
 	"path"
 	"runtime/debug"
 	"syscall"
-	"time"
 )
 
 const (
@@ -41,20 +40,14 @@ func SetupProc(cmd *exec.Cmd) {
 }
 
 func Isolate(fsRoot string) error {
-	start := time.Now()
 	if err := createFSNamespace(fsRoot); err != nil {
 		log.Printf("Error CreateFSNamespace in namespace.Isolate: %v", err)
 		return err
 	}
-	end := time.Now()
-	log.Printf("create namespace time: %v us", end.Sub(start).Microseconds())
-	start = time.Now()
 	if err := isolateFSNamespace(fsRoot); err != nil {
 		log.Printf("Error IsolateFSNamespace in namespace.Isolate: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("isolate namespace time: %v us", end.Sub(start).Microseconds())
 	return nil
 }
 
@@ -101,77 +94,53 @@ func createFSNamespace(root string) error {
 func isolateFSNamespace(newRoot string) error {
 	oldRootMnt := "old_root"
 
-	start := time.Now()
 	// Mount new file system as a mount point so we can pivot_root to it later
 	if err := syscall.Mount(newRoot, newRoot, "", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount new root filesystem: %v", err)
 		return err
 	}
-	end := time.Now()
-	log.Printf("mount root namespace time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// Mount old file system
 	if err := syscall.Mkdir(path.Join(newRoot, oldRootMnt), 0700); err != nil {
 		log.Printf("failed to mkdir: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("make root time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// Mount /dev/urandom
 	if err := syscall.Mount("/dev/urandom", path.Join(newRoot, "dev/urandom"), "none", syscall.MS_BIND, ""); err != nil {
 		log.Printf("failed to mount /dev/urandom: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("mount urandom time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// pivot_root
 	if err := syscall.PivotRoot(newRoot, path.Join(newRoot, oldRootMnt)); err != nil {
 		log.Printf("failed to pivot root: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("pivot root time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// Chdir to new root
 	if err := syscall.Chdir("/"); err != nil {
 		log.Printf("failed to chdir to /: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("chdir time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// Mount proc
 	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
 		log.Printf("failed to mount /proc: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("mount proc time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// unmount the old root filesystem
 	if err := syscall.Unmount(oldRootMnt, syscall.MNT_DETACH); err != nil {
 		log.Printf("failed to unmount the old root filesystem: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("umount old root time: %v us", end.Sub(start).Microseconds())
 
-	start = time.Now()
 	// Remove the old root filesystem
 	if err := os.RemoveAll(oldRootMnt); err != nil {
 		log.Printf("failed to remove old root filesystem: %v", err)
 		return err
 	}
-	end = time.Now()
-	log.Printf("remove old root time: %v us", end.Sub(start).Microseconds())
 
 	return nil
 }

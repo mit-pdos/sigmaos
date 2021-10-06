@@ -128,7 +128,7 @@ func (m *Microbenchmarks) PutFileBenchmark(nTrials int) *RawResults {
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("PutFileBenchmark Done")
@@ -156,7 +156,7 @@ func (m *Microbenchmarks) SetFileBenchmark(nTrials int, size int) *RawResults {
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("SetFileBenchmark Done")
@@ -182,7 +182,7 @@ func (m *Microbenchmarks) GetFileBenchmark(nTrials int, size int) *RawResults {
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("GetFileBenchmark Done")
@@ -209,7 +209,7 @@ func (m *Microbenchmarks) LockLockBenchmark(nTrials int) *RawResults {
 		l.Unlock()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("LockLockBenchmark Done")
@@ -236,7 +236,7 @@ func (m *Microbenchmarks) LockUnlockBenchmark(nTrials int) *RawResults {
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("LockUnlockBenchmark Done")
@@ -271,7 +271,7 @@ func (m *Microbenchmarks) CondSignalBenchmark(nTrials int) *RawResults {
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 	cond.Destroy()
 
@@ -311,7 +311,7 @@ func (m *Microbenchmarks) CondWaitBenchmark(nTrials int) *RawResults {
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 	cond.Destroy()
 
@@ -344,7 +344,7 @@ func (m *Microbenchmarks) FileBagPutBenchmark(nTrials int, size int) *RawResults
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("FileBagPutBenchmark Done")
@@ -376,7 +376,7 @@ func (m *Microbenchmarks) FileBagGetBenchmark(nTrials int, size int) *RawResults
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("FileBagGetBenchmark Done")
@@ -411,7 +411,7 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int, pidOffset 
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("ProcBaseSpawnWaitExitBenchmark Done")
@@ -447,7 +447,7 @@ func (m *Microbenchmarks) ProcBaseLinuxBenchmark(nTrials int, pidOffset int) *Ra
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("ProcBaseLinuxBenchmark Done")
@@ -486,7 +486,7 @@ func (m *Microbenchmarks) ProcBaseSpawnClientBenchmark(nTrials int, pidOffset in
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("ProcBaseSpawnClientBenchmark Done")
@@ -525,7 +525,7 @@ func (m *Microbenchmarks) ProcBaseExitedBenchmark(nTrials int, pidOffset int) *R
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("ProcBaseExitedBenchmark Done")
@@ -564,7 +564,7 @@ func (m *Microbenchmarks) ProcBaseWaitExitBenchmark(nTrials int, pidOffset int) 
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("ProcBaseWaitExitBenchmark Done")
@@ -610,7 +610,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 		end := time.Now()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed)
 	}
 
 	log.Printf("ProcBasePprofBenchmark Done")

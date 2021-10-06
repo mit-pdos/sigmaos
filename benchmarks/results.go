@@ -25,25 +25,25 @@ func (r *Result) set(throughput, latency float64) {
 }
 
 type RawResults struct {
-	data []*Result
+	Data []*Result
 }
 
 func MakeRawResults(nTrials int) *RawResults {
 	r := &RawResults{}
-	r.data = make([]*Result, nTrials)
+	r.Data = make([]*Result, nTrials)
 	for i := 0; i < nTrials; i++ {
-		r.data[i] = MakeResult()
+		r.Data[i] = MakeResult()
 	}
 	return r
 }
 
 func (r *RawResults) Mean() *Result {
-	tpt := make([]float64, len(r.data))
-	lat := make([]float64, len(r.data))
+	tpt := make([]float64, len(r.Data))
+	lat := make([]float64, len(r.Data))
 
-	for i := range r.data {
-		tpt[i] = r.data[i].Throughput
-		lat[i] = r.data[i].Latency
+	for i := range r.Data {
+		tpt[i] = r.Data[i].Throughput
+		lat[i] = r.Data[i].Latency
 	}
 
 	res := MakeResult()

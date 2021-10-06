@@ -45,15 +45,11 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	//	log.Printf("MakeSleeperl: %v\n", args)
 
 	if !s.native {
-		start := time.Now()
-		err = s.Started(s.pid)
-		end := time.Now()
-		log.Printf("Started time: %v usec", end.Sub(start).Microseconds())
+		err := s.Started(s.pid)
 		if err != nil {
 			log.Fatalf("Started: error %v\n", err)
 		}
 	}
-
 	return s, nil
 }
 
@@ -79,9 +75,6 @@ func (s *Sleeperl) Work() {
 
 func (s *Sleeperl) Exit() {
 	if !s.native {
-		start := time.Now()
 		s.Exited(s.pid, "OK")
-		end := time.Now()
-		log.Printf("Exited time: %v usec", end.Sub(start).Microseconds())
 	}
 }

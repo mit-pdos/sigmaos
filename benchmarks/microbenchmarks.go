@@ -79,10 +79,10 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	pidOffset += DEFAULT_N_TRIALS
 	r["proc_base_wait_exit"] = m.ProcBaseWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_pprof"] = m.ProcBasePprofBenchmark(DEFAULT_N_TRIALS*2, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS * 2
 	r["proc_base_linux"] = m.ProcBaseLinuxBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
+	r["proc_base_pprof"] = m.ProcBasePprofBenchmark(DEFAULT_N_TRIALS*2, pidOffset)
+	pidOffset += DEFAULT_N_TRIALS * 2
 	return r
 }
 

@@ -2,15 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"time"
 
 	"ulambda/test_lambdas"
 )
 
 func main() {
-	start := time.Now()
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid sleep_length out <native>\n", os.Args[0])
 		os.Exit(1)
@@ -22,6 +19,4 @@ func main() {
 	}
 	l.Work()
 	l.Exit()
-	end := time.Now()
-	log.Printf("E2E time: %v usec", end.Sub(start).Microseconds())
 }

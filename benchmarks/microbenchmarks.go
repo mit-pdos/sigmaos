@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"path"
 	"runtime"
 	"strconv"
@@ -43,13 +42,15 @@ const (
 
 type Microbenchmarks struct {
 	namedAddr []string
+	resDir    string
 	*fslib.FsLib
 	proc.ProcClnt
 }
 
-func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string) *Microbenchmarks {
+func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *Microbenchmarks {
 	m := &Microbenchmarks{}
 	m.namedAddr = namedAddr
+	m.resDir = resDir
 	m.FsLib = fsl
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
@@ -576,8 +577,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 
 	// Start pprof to break down costs
 	runtime.SetCPUProfileRate(250)
-	usr, _ := user.Current()
-	pprofPath := path.Join(usr.HomeDir, "ulambda/benchmarks/results/long-pprof.txt")
+	pprofPath := path.Join(m.resDir, "pprof", "procbase.txt")
 	p := perf.MakePerf()
 	p.SetupPprof(pprofPath)
 	defer p.Teardown()

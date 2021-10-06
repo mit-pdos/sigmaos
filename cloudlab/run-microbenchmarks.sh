@@ -33,8 +33,13 @@ ssh -i $DIR/keys/cloudlab-sigmaos $USER@$LEADER_ADDR <<ENDSSH
 ulimit -n 100000
 export NAMED=$LEADER_ADDR:1111
 cd ulambda
-GOGC=off ./bin/user/microbenchmarks 2>&1 | tee benchmarks/results/microbenchmarks_${N_REPLICAS}_replicas.txt
-cat benchmarks/results/microbenchmarks_${N_REPLICAS}_replicas.txt
+
+# Make results dirs
+mkdir -p benchmarks/results/microbenchmarks
+mkdir -p benchmarks/results/pprof
+
+# Run benchmarks
+GOGC=off ./bin/user/microbenchmarks benchmarks/results/microbenchmarks
 
 ENDSSH
 echo "Done running microbenchmarks..."

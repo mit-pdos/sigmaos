@@ -4,16 +4,13 @@ import (
 	"log"
 	"path"
 
-	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
-	"ulambda/fslib"
-	fos "ulambda/fsobjsrv"
+	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/memfs"
 	"ulambda/named"
 	np "ulambda/ninep"
-	"ulambda/repl"
 	usync "ulambda/sync"
 )
 
@@ -24,7 +21,7 @@ import (
 //
 
 const (
-	DBD = "name/db/mydb/"
+	DBD = "name/db/~ip/"
 )
 
 type Book struct {
@@ -40,28 +37,18 @@ type Database struct {
 	nextId np.Tpath
 }
 
-func MakeDbd(addr, pid string) (*Database, error) {
-	return MakeReplicatedDbd(addr, pid, false, nil)
-}
-
-func MakeReplicatedDbd(addr string, pid string, replicated bool, config repl.Config) (*Database, error) {
+func MakeDbd(pid string) (*Database, error) {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	dbd := &Database{}
 	dbd.ch = make(chan bool)
 	dbd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	db.Name("dbd")
-	dbd.fssrv = fssrv.MakeFsServer(dbd, dbd.root, addr, fos.MakeProtServer(), config)
-	fsl := fslib.MakeFsLib("dbd")
-	fsl.Mkdir(named.DB, 0777)
-	err := fsl.PostServiceUnion(dbd.fssrv.MyAddr(), named.DB, "mydb")
+	srv, fsl, err := fslibsrv.MakeSrvFsLib(dbd, dbd.root, named.DB, "dbd")
 	if err != nil {
-		log.Fatalf("PostServiceUnion failed %v %v\n", dbd.fssrv.MyAddr(), err)
+		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-
-	if !replicated {
-		dbdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
-		dbdStartCond.Destroy()
-	}
+	dbd.fssrv = srv
+	dbdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
+	dbdStartCond.Destroy()
 	err = dir.MkNod(fssrv.MkCtx(""), dbd.root, "clone", makeClone("", dbd.root))
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)

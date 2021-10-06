@@ -8,16 +8,18 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
-	"ulambda/fsclnt"
+	"ulambda/dir"
+	"ulambda/fs"
 	"ulambda/fslib"
-	fos "ulambda/fsobjsrv"
+	"ulambda/fslibsrv"
 	"ulambda/fssrv"
+	"ulambda/inode"
 	"ulambda/linuxsched"
+	"ulambda/memfs"
 	"ulambda/named"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -36,10 +38,9 @@ type Procd struct {
 	runq       *usync.FilePriorityBag
 	bin        string
 	nid        uint64
-	root       *Dir
+	root       fs.Dir
 	done       bool
 	addr       string
-	ls         map[string]*Lambda
 	coreBitmap []bool
 	coresAvail proc.Tcore
 	fssrv      *fssrv.FsServer
@@ -50,30 +51,24 @@ type Procd struct {
 }
 
 func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd {
+	var err error
+
 	pd := &Procd{}
 	pd.nid = 0
 	pd.bin = bin
-	db.Name("procd")
-	pd.root = pd.makeDir([]string{}, np.DMDIR, nil)
-	pd.root.time = time.Now().Unix()
-	pd.ls = map[string]*Lambda{}
+
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
-	ip, err := fsclnt.LocalIP()
+
+	pd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
+	pd.fssrv, pd.FsLib, err = fslibsrv.MakeSrvFsLib(pd, pd.root, named.PROCD, "procd")
 	if err != nil {
-		log.Fatalf("LocalIP %v\n", err)
+		log.Fatalf("MakeSrvClnt %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", fos.MakeProtServer(), nil)
 	pd.addr = pd.fssrv.MyAddr()
-	fsl := fslib.MakeFsLib("procd")
-	fsl.Mkdir(named.PROCD, 0777)
-	pd.FsLib = fsl
 	pd.procclnt = procbase.MakeProcBaseClnt(pd.FsLib)
-	err = fsl.PostServiceUnion(pd.fssrv.MyAddr(), named.PROCD, pd.fssrv.MyAddr())
-	if err != nil {
-		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.fssrv.MyAddr(), err)
-	}
+
 	pprof := pprofPath != ""
 	if pprof {
 		pd.perf.SetupPprof(pprofPath)
@@ -87,22 +82,26 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	// Make some directories used by other services.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(fsl, procbase.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbase.RUNQ)
 
-	procdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
+	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()
 
 	return pd
 }
 
-func (pd *Procd) spawn(p *proc.Proc) (*Lambda, error) {
+func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
-	l := &Lambda{}
-	l.pd = pd
-	l.init(p)
-	pd.ls[l.Pid] = l
-	return l, nil
+	p := &Proc{}
+	p.FsObj = inode.MakeInode("", np.DMDEVICE, pd.root)
+	p.pd = pd
+	p.init(a)
+	err := dir.MkNod(fssrv.MkCtx(""), pd.root, p.Pid, p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func (pd *Procd) Done() {
@@ -209,24 +208,24 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
-func (pd *Procd) runAll(ls []*Lambda) {
+func (pd *Procd) runAll(ls []*Proc) {
 	var wg sync.WaitGroup
-	for _, l := range ls {
+	for _, p := range ls {
 		wg.Add(1)
-		go func(l *Lambda) {
+		go func(p *Proc) {
 			defer wg.Done()
 
 			// Allocate dedicated cores for this lambda to run on.
-			cores := pd.allocCores(l.attr.Ncore)
+			cores := pd.allocCores(p.attr.Ncore)
 
 			// Run the lambda.
-			l.run(cores)
+			p.run(cores)
 
 			// Free resources and dedicated cores.
-			pd.incrementResources(l.attr)
+			pd.incrementResources(p.attr)
 			pd.freeCores(cores)
 
-		}(l)
+		}(p)
 	}
 	wg.Wait()
 }
@@ -263,14 +262,14 @@ func (pd *Procd) Worker(workerId uint) {
 				db.DLPrintf("PROCD", "cond file not found: %v", err)
 				return
 			}
-			log.Fatalf("Procd GetLambda error %v, %v\n", p, err)
+			log.Fatalf("Procd GetProc error %v, %v\n", p, err)
 		}
 		// XXX return err from spawn
 		l, err := pd.spawn(p)
 		if err != nil {
 			log.Fatalf("Procd spawn error %v\n", err)
 		}
-		ls := []*Lambda{l}
+		ls := []*Proc{l}
 		//		ls = append(ls, consumerLs...)
 		pd.runAll(ls)
 	}

@@ -48,6 +48,7 @@ func TestQuery(t *testing.T) {
 
 	q := []byte("select * from book where author='Homer';")
 	b, err := ts.ReadFile(DBD + "clone")
+	assert.Nil(t, err, "ReadFile")
 	sid := string(b)
 	err = ts.WriteFile(DBD+sid+"/query", q)
 	assert.Nil(t, err, "WriteFile")

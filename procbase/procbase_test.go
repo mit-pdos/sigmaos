@@ -49,6 +49,12 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) procd(t *testing.T) string {
+	st, err := ts.ReadDir("name/procd")
+	assert.Nil(t, err, "Readdir")
+	return st[0].Name
+}
+
 func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv) *Tstate {
 	ts := &Tstate{}
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
@@ -96,9 +102,14 @@ func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid := spawnSleeperl(t, ts)
+
 	time.Sleep(SLEEP_MSECS * 1.25 * time.Millisecond)
 
 	checkSleeperlResult(t, ts, pid)
+
+	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
+	assert.Nil(t, err, "Readdir")
+	assert.Equal(t, 0, len(st), "readdir")
 
 	ts.e.Shutdown()
 }
@@ -154,6 +165,11 @@ func TestWaitStart(t *testing.T) {
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
+
+	// Check if proc exists
+	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
+	assert.Nil(t, err, "Readdir")
+	assert.Equal(t, pid, st[0].Name, "pid")
 
 	// Make sure the lambda hasn't finished yet...
 	checkSleeperlResultFalse(t, ts, pid)
@@ -256,7 +272,7 @@ func TestEvict(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, status, "OK", "WaitExit status")
+	assert.Equal(t, "EVICTED", status, "WaitExit status")
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "Didn't evict early enough.")

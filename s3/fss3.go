@@ -9,10 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	db "ulambda/debug"
-	"ulambda/fsclnt"
-	"ulambda/fslib"
-	fos "ulambda/fsobjsrv"
+	"ulambda/fs"
+	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
 	np "ulambda/ninep"
@@ -32,16 +30,20 @@ type Fss3 struct {
 	client *s3.Client
 	nextId np.Tpath // XXX delete?
 	ch     chan bool
-	root   *Dir
+	root   fs.Dir
 }
 
 func MakeFss3(pid string) *Fss3 {
 	fss3 := &Fss3{}
 	fss3.pid = pid
 	fss3.ch = make(chan bool)
-	db.Name("fss3d")
 	fss3.root = fss3.makeDir([]string{}, np.DMDIR, nil)
+	srv, fsl, err := fslibsrv.MakeSrvFsLib(fss3, fss3.root, named.S3, "fss3d")
+	if err != nil {
+		log.Fatalf("MakeSrvFsLib %v\n", err)
+	}
 
+	fss3.fssrv = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -51,18 +53,6 @@ func MakeFss3(pid string) *Fss3 {
 	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-
-	ip, err := fsclnt.LocalIP()
-	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", named.S3, err)
-	}
-	fss3.fssrv = fssrv.MakeFsServer(fss3, fss3.root, ip+":0", fos.MakeProtServer(), nil)
-	fsl := fslib.MakeFsLib("fss3")
-	fsl.Mkdir(named.S3, 0777)
-	err = fsl.PostServiceUnion(fss3.fssrv.MyAddr(), named.S3, fss3.fssrv.MyAddr())
-	if err != nil {
-		log.Fatalf("PostServiceUnion failed %v %v\n", fss3.fssrv.MyAddr(), err)
-	}
 
 	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 	fss3dStartCond.Destroy()

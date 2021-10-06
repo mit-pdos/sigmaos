@@ -4,8 +4,13 @@ import (
 	"fmt"
 
 	db "ulambda/debug"
+	"ulambda/fs"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
+	fos "ulambda/fsobjsrv"
+	"ulambda/fssrv"
 	"ulambda/memfsd"
+	"ulambda/repl"
 )
 
 type FsLibSrv struct {
@@ -36,4 +41,32 @@ func (fsl *FsLibSrv) ExitFs(name string) {
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", name, err)
 	}
+}
+
+func MakeSrvFsLib(fs fssrv.Fs, root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.FsLib, error) {
+	db.Name(name)
+	ip, err := fsclnt.LocalIP()
+	if err != nil {
+		return nil, nil, err
+	}
+	srv := fssrv.MakeFsServer(fs, root, ip+":0", fos.MakeProtServer(), nil)
+	fsl := fslib.MakeFsLib(name)
+	fsl.Mkdir(path, 0777)
+	err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
+	if err != nil {
+		return nil, nil, err
+	}
+	return srv, fsl, nil
+}
+
+func MakeReplSrvFsLib(fs fssrv.Fs, root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
+	db.Name(name)
+	srv := fssrv.MakeFsServer(fs, root, addr, fos.MakeProtServer(), config)
+	fsl := fslib.MakeFsLib(name)
+	fsl.Mkdir(path, 0777)
+	err := fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
+	if err != nil {
+		return nil, nil, err
+	}
+	return srv, fsl, nil
 }

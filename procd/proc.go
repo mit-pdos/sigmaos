@@ -7,20 +7,21 @@ import (
 	"os/exec"
 	"path"
 	"sync"
-	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
+	"ulambda/fs"
+	"ulambda/fssrv"
 	"ulambda/linuxsched"
 	"ulambda/namespace"
-	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
-type Lambda struct {
+type Proc struct {
 	//	mu deadlock.Mutex
+	fs.FsObj
 	mu      sync.Mutex
 	Program string
 	Pid     string
@@ -37,52 +38,51 @@ type Lambda struct {
 }
 
 // XXX init/run pattern seems a bit redundant...
-func (l *Lambda) init(p *proc.Proc) {
-	l.Program = p.Program
-	l.Pid = p.Pid
-	l.Args = p.Args
-	l.Dir = p.Dir
-	l.NewRoot = path.Join(namespace.NAMESPACE_DIR, l.Pid+randstr.Hex(16))
-	env := append(os.Environ(), p.Env...)
-	env = append(env, "NEWROOT="+l.NewRoot)
-	env = append(env, "PROCDIP="+l.pd.addr)
-	l.Env = env
-	l.Stdout = "" // XXX: add to or infer from p
-	l.Stderr = "" // XXX: add to or infer from p
-	l.attr = p
+func (p *Proc) init(a *proc.Proc) {
+	p.Program = a.Program
+	p.Pid = a.Pid
+	p.Args = a.Args
+	p.Dir = a.Dir
+	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+randstr.Hex(16))
+	env := append(os.Environ(), a.Env...)
+	env = append(env, "NEWROOT="+p.NewRoot)
+	env = append(env, "PROCDIP="+p.pd.addr)
+	p.Env = env
+	p.Stdout = "" // XXX: add to or infer from p
+	p.Stderr = "" // XXX: add to or infer from p
+	p.attr = a
 	db.DLPrintf("PROCD", "Procd init: %v\n", p)
-	d1 := l.pd.makeDir([]string{p.Pid}, np.DMDIR, l.pd.root)
-	d1.time = time.Now().Unix()
 }
 
-func (l *Lambda) wait(cmd *exec.Cmd) {
+func (p *Proc) wait(cmd *exec.Cmd) {
+	defer p.pd.root.Remove(fssrv.MkCtx(""), p.Pid)
 	err := cmd.Wait()
 	if err != nil {
-		log.Printf("Lambda %v finished with error: %v", l.attr, err)
-		l.pd.procclnt.Exited(l.Pid, err.Error())
+		log.Printf("Proc %v finished with error: %v", p.attr, err)
+		p.pd.procclnt.Exited(p.Pid, err.Error())
 		return
 	}
 
-	err = namespace.Destroy(l.NewRoot)
+	err = namespace.Destroy(p.NewRoot)
 	if err != nil {
-		log.Printf("Error namespace destroy: %v")
+		log.Printf("Error namespace destroy: %v", err)
 	}
 
 	// Notify schedd that the process exited
-	//	l.pd.Exited(l.attr.Pid)
+	//	p.pd.Exited(p.attr.Pid)
 }
 
-func (l *Lambda) run(cores []uint) error {
-	db.DLPrintf("PROCD", "Procd run: %v\n", l.attr)
+func (p *Proc) run(cores []uint) error {
+	db.DLPrintf("PROCD", "Procd run: %v\n", p.attr)
 
 	// XXX Hack to get perf stat to work cleanly... we probably want to do proper
 	// stdout/stderr redirection eventually...
 	var args []string
 	var stdout io.Writer
 	var stderr io.Writer
-	if l.Program == "bin/user/perf" {
-		args = l.Args
-		fname := "/tmp/perf-stat-" + l.Pid + ".out"
+	if p.Program == "bin/user/perf" {
+		args = p.Args
+		fname := "/tmp/perf-stat-" + p.Pid + ".out"
 		file, err := os.Create(fname)
 		if err != nil {
 			log.Fatalf("Error creating perf stat output file: %v, %v", fname, err)
@@ -90,40 +90,40 @@ func (l *Lambda) run(cores []uint) error {
 		stdout = file
 		stderr = file
 	} else {
-		args = append([]string{l.Pid}, l.Args...)
+		args = append([]string{p.Pid}, p.Args...)
 		stdout = os.Stdout
 		stderr = os.Stderr
 	}
 
-	cmd := exec.Command(l.pd.bin+"/"+l.Program, args...)
-	cmd.Env = l.Env
-	cmd.Dir = l.Dir
+	cmd := exec.Command(p.pd.bin+"/"+p.Program, args...)
+	cmd.Env = p.Env
+	cmd.Dir = p.Dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	namespace.SetupProc(cmd)
 	err := cmd.Start()
 	if err != nil {
-		log.Printf("Procd run error: %v, %v\n", l.attr, err)
+		log.Printf("Procd run error: %v, %v\n", p.attr, err)
 		return err
 	}
 
-	l.SysPid = cmd.Process.Pid
+	p.SysPid = cmd.Process.Pid
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
-	l.setCpuAffinity(cores)
+	p.setCpuAffinity(cores)
 
-	l.wait(cmd)
-	db.DLPrintf("PROCD", "Procd ran: %v\n", l.attr)
+	p.wait(cmd)
+	db.DLPrintf("PROCD", "Procd ran: %v\n", p.attr)
 
 	return nil
 }
 
-func (l *Lambda) setCpuAffinity(cores []uint) {
+func (p *Proc) setCpuAffinity(cores []uint) {
 	m := &linuxsched.CPUMask{}
 	for _, i := range cores {
 		m.Set(i)
 	}
-	err := linuxsched.SchedSetAffinityAllTasks(l.SysPid, m)
+	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, m)
 	if err != nil {
 		log.Printf("Error setting CPU affinity for child lambda: %v", err)
 	}

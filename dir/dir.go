@@ -44,7 +44,7 @@ func MakeDirF(i fs.FsObj) fs.FsObj {
 }
 
 func (dir *DirImpl) String() string {
-	str := "Dir{entries: "
+	str := fmt.Sprintf("%p Dir{entries: ", dir)
 	for n, e := range dir.entries {
 		if n != "." {
 			str += fmt.Sprintf("[%v %p]", n, e)
@@ -127,14 +127,14 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	switch i := inode.(type) {
 	case *DirImpl:
 		if len(path) == 1 { // done?
-			db.DLPrintf("MEMFS", "namei %v %v -> %v", path, dir, inodes)
+			db.DLPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, inodes)
 			dir.mu.Unlock()
 			return inodes, nil, nil
 		}
 		dir.mu.Unlock() // for "."
 		return i.namei(ctx, path[1:], inodes)
 	default:
-		db.DLPrintf("MEMFS", "namei %v %v -> %v %v", path, dir, inodes, path[1:])
+		db.DLPrintf("MEMFS", "namei %T %v %v -> %v %v", i, path, dir, inodes, path[1:])
 		dir.mu.Unlock()
 		return inodes, path[1:], nil
 	}

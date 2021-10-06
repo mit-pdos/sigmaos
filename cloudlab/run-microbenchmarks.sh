@@ -50,6 +50,7 @@ echo "Done running microbenchmarks..."
 
 echo "Copying results..."
 scp -r -i $DIR/keys/cloudlab-sigmaos $USER@$LEADER_ADDR:~/ulambda/benchmarks/results/* $DIR/../benchmarks/results
+$DIR/download-logs.sh
 echo "Done copying results..."
 
 $DIR/stop-all.sh

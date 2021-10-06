@@ -42,7 +42,7 @@ mkdir -p benchmarks/results/microbenchmarks
 mkdir -p benchmarks/results/pprof
 
 # Run benchmarks
-GOGC=off ./bin/user/microbenchmarks benchmarks/results/microbenchmarks
+GOGC=off ./bin/user/microbenchmarks $(pwd)/benchmarks/results
 
 ENDSSH
 echo "Done running microbenchmarks..."

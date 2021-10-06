@@ -45,7 +45,7 @@ func TestStatsd(t *testing.T) {
 	stats := StatInfo{}
 	err := ts.ReadFileJson("name/statsd", &stats)
 	assert.Nil(t, err, "statsd")
-	assert.Equal(t, Tcounter(11), stats.Nread, "Nread")
+	assert.NotEqual(t, Tcounter(0), stats.Nread, "Nread")
 	for i := 0; i < 1000; i++ {
 		_, err := ts.ReadFile("name/statsd")
 		assert.Nil(t, err, "statsd")

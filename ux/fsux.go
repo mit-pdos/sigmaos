@@ -10,8 +10,8 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fs"
-	"ulambda/fslib"
-	fos "ulambda/fsobjsrv"
+	"ulambda/fsclnt"
+	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/inode"
 	"ulambda/named"
@@ -25,12 +25,16 @@ type FsUx struct {
 	mu    sync.Mutex
 	fssrv *fssrv.FsServer
 	ch    chan bool
-	root  *Dir
+	root  fs.Dir
 	mount string
 }
 
-func MakeFsUx(mount string, addr string, pid string) *FsUx {
-	return MakeReplicatedFsUx(mount, addr, pid, nil)
+func MakeFsUx(mount string, pid string) *FsUx {
+	ip, err := fsclnt.LocalIP()
+	if err != nil {
+		log.Fatalf("LocalIP %v %v\n", named.UX, err)
+	}
+	return MakeReplicatedFsUx(mount, ip+":0", pid, nil)
 }
 
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
@@ -38,20 +42,15 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Confi
 	fsux := &FsUx{}
 	fsux.ch = make(chan bool)
 	fsux.root = makeDir([]string{mount}, np.DMDIR, nil)
-	db.Name("fsuxd")
-	fsux.fssrv = fssrv.MakeFsServer(fsux, fsux.root, addr, fos.MakeProtServer(), config)
-	fsl := fslib.MakeFsLib("fsux")
-	fsl.Mkdir(named.UX, 0777)
-	err := fsl.PostServiceUnion(fsux.fssrv.MyAddr(), named.UX, fsux.fssrv.MyAddr())
+	srv, fsl, err := fslibsrv.MakeReplSrvFsLib(fsux, fsux.root, addr, named.UX, "ux", config)
 	if err != nil {
-		log.Fatalf("PostServiceUnion failed %v %v\n", fsux.fssrv.MyAddr(), err)
+		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-
+	fsux.fssrv = srv
 	if config == nil {
 		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 		fsuxStartCond.Destroy()
 	}
-
 	return fsux
 }
 

@@ -14,9 +14,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
-	"ulambda/fsclnt"
 	"ulambda/fslib"
-	fos "ulambda/fsobjsrv"
+	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/inode"
 	"ulambda/linuxsched"
@@ -52,29 +51,23 @@ type Procd struct {
 }
 
 func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd {
+	var err error
+
 	pd := &Procd{}
 	pd.nid = 0
 	pd.bin = bin
-	db.Name("procd")
 
-	pd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
-	ip, err := fsclnt.LocalIP()
+
+	pd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
+	pd.fssrv, pd.FsLib, err = fslibsrv.MakeSrvFsLib(pd, pd.root, named.PROCD, "procd")
 	if err != nil {
-		log.Fatalf("LocalIP %v\n", err)
+		log.Fatalf("MakeSrvClnt %v\n", err)
 	}
-	pd.fssrv = fssrv.MakeFsServer(pd, pd.root, ip+":0", fos.MakeProtServer(), nil)
 	pd.addr = pd.fssrv.MyAddr()
-	fsl := fslib.MakeFsLib("procd")
-	fsl.Mkdir(named.PROCD, 0777)
-	pd.FsLib = fsl
 	pd.procclnt = procbase.MakeProcBaseClnt(pd.FsLib)
-	err = fsl.PostServiceUnion(pd.fssrv.MyAddr(), named.PROCD, pd.fssrv.MyAddr())
-	if err != nil {
-		log.Fatalf("procd PostServiceUnion failed %v %v\n", pd.fssrv.MyAddr(), err)
-	}
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -89,9 +82,9 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	// Make some directories used by other services.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(fsl, procbase.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbase.RUNQ)
 
-	procdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
+	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()
 
 	return pd

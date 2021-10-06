@@ -31,7 +31,7 @@ func MakeProtServer() protsrv.MakeProtServer {
 	return &ProtServer{}
 }
 
-func (ncm *ProtServer) MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
+func (ps *ProtServer) MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 	fos := &FsObjSrv{}
 	srv := s.(*fssrv.FsServer)
 	fos.fssrv = srv

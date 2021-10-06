@@ -27,6 +27,7 @@ ulimit -n 100000
 export NAMED=$ROOT_NAMED_ADDR
 export N_REPLICAS=$N_REPLICAS
 cd ulambda
+
 echo "running with NAMED=$NAMED"
 
 if [[ $IS_LEADER -gt 0 ]]; then

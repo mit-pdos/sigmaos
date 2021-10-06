@@ -32,6 +32,9 @@ ssh -i $DIR/keys/cloudlab-sigmaos $USER@$LEADER_ADDR <<ENDSSH
 
 ulimit -n 100000
 export NAMED=$LEADER_ADDR:1111
+
+echo "each realm runs with $N_REPLICAS replicas"
+
 cd ulambda
 
 # Make results dirs

@@ -32,6 +32,7 @@ ssh -i $DIR/keys/cloudlab-sigmaos $USER@$LEADER_ADDR <<ENDSSH
 
 ulimit -n 100000
 export NAMED=$LEADER_ADDR:1111
+export N_REPLICAS=$N_REPLICAS
 
 echo "each realm runs with $N_REPLICAS replicas"
 
@@ -42,7 +43,7 @@ mkdir -p benchmarks/results/microbenchmarks
 mkdir -p benchmarks/results/pprof
 
 # Run benchmarks
-GOGC=off ./bin/user/microbenchmarks $(pwd)/benchmarks/results
+GOGC=off ./bin/user/microbenchmarks benchmarks/results
 
 ENDSSH
 echo "Done running microbenchmarks..."

@@ -4,19 +4,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 import os
+import json
 
 def get_run_data(d_path, run):
   with open(os.path.join(d_path, run), "r") as f:
     x = f.read()
-  lines = [ l.split(" ") for l in x.split("\n") if "_" in l ]
-  mean_latency = { l[2] : float(l[8].split(":")[1]) for l in lines }
+  data = json.loads(x)
+  mean_latency = { k : np.mean([ float(result["Latency"]) for result in v["Data"] ]) for k, v in data.items() }
   return mean_latency
 
 def normalize_run(x, norm):
  return { k : x[k] / norm[k] for k in x }
 
 def get_data(d_path, normalize):
-  data = { int(r.split("_")[-2]) : get_run_data(d_path, r) for r in os.listdir(d_path) if ".txt" in r and "pprof" not in r }
+  data = { int(r.split("_")[-2]) : get_run_data(d_path, r) for r in os.listdir(d_path) if ".txt" in r }
   return data
 
 def get_y_vals(data):

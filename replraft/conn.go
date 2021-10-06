@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -27,10 +28,11 @@ type RaftReplConn struct {
 }
 
 type SrvOp struct {
-	request *np.Fcall
-	frame   []byte
-	reply   *np.Fcall
-	replyC  chan *SrvOp
+	request   *np.Fcall
+	frame     []byte
+	reply     *np.Fcall
+	replyC    chan *SrvOp
+	startTime time.Time
 }
 
 func MakeRaftReplConn(psrv protsrv.FsServer, conn net.Conn, clerk *Clerk) *RaftReplConn {
@@ -62,7 +64,7 @@ func (c *RaftReplConn) reader() {
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
 			log.Printf("Server %v: replraft reader unmarshal error: %v", c.Dst(), err)
 		} else {
-			op := &SrvOp{fcall, frame, nil, c.replies}
+			op := &SrvOp{fcall, frame, nil, c.replies, time.Time{}}
 			db.DLPrintf("REPLRAFT", "%v raft about to request %v clerk %v\n", c.Dst(), fcall, c.Src())
 			c.clerk.request(op)
 			db.DLPrintf("REPLRAFT", "%v raft reader requested from clerk %v\n", c.Dst(), c.Src())

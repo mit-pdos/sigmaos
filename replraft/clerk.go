@@ -3,6 +3,7 @@ package replraft
 import (
 	"log"
 	"sync"
+	"time"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -65,6 +66,7 @@ func (c *Clerk) serve() {
 
 func (c *Clerk) propose(op *SrvOp) {
 	db.DLPrintf("REPLRAFT", "Propose %v\n", op.request)
+	op.startTime = time.Now()
 	c.registerOp(op)
 	c.proposeC <- op.frame
 }
@@ -92,6 +94,7 @@ func (c *Clerk) reply(rep *np.Fcall) {
 		return
 	}
 
+	log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(op.frame))
 	op.reply = rep
 	op.replyC <- op
 }

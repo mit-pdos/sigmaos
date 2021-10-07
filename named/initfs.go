@@ -4,16 +4,17 @@ import (
 	"ulambda/fslib"
 )
 
+// if name ends in "/", it is a directory for that service
 const (
 	NAMED         = "name"
 	LOCKS         = "name/locks"
 	BOOT          = "name/boot"
 	TMP           = "name/tmp"
-	PROCD         = "name/procd"
-	S3            = "name/s3"
+	PROCD         = "name/procd/"
+	S3            = "name/s3/"
 	UX            = "name/ux"
 	FS            = "name/fs"
-	DB            = "name/db"
+	DB            = "name/db/"
 	PROC_COND     = "name/proc-cond"
 	PROC_RET_STAT = "name/proc-ret-stat"
 )

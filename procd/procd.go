@@ -19,7 +19,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/inode"
 	"ulambda/linuxsched"
-	"ulambda/memfs"
 	"ulambda/named"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -43,14 +42,14 @@ type Procd struct {
 	addr       string
 	coreBitmap []bool
 	coresAvail proc.Tcore
-	fssrv      *fssrv.FsServer
 	group      sync.WaitGroup
 	perf       *perf.Perf
 	procclnt   *procbase.ProcBaseClnt
 	*fslib.FsLib
+	*fssrv.FsServer
 }
 
-func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd {
+func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	var err error
 
 	pd := &Procd{}
@@ -61,12 +60,11 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 
-	pd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	pd.fssrv, pd.FsLib, err = fslibsrv.MakeSrvFsLib(pd, pd.root, named.PROCD, "procd")
+	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
 	if err != nil {
-		log.Fatalf("MakeSrvClnt %v\n", err)
+		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	pd.addr = pd.fssrv.MyAddr()
+	pd.addr = pd.MyAddr()
 	pd.procclnt = procbase.MakeProcBaseClnt(pd.FsLib)
 
 	pprof := pprofPath != ""
@@ -87,7 +85,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()
 
-	return pd
+	pd.Work()
 }
 
 func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {
@@ -247,6 +245,10 @@ func (pd *Procd) setCoreAffinity() {
 
 // Worker runs one lambda at a time
 func (pd *Procd) Worker(workerId uint) {
+	go func() {
+		pd.Serve()
+		pd.Done()
+	}()
 	defer pd.group.Done()
 	for !pd.readDone() {
 		p, err := pd.getProc()

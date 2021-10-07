@@ -8,10 +8,10 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fs"
-	"ulambda/fsclnt"
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
+	"ulambda/fssrv"
 	"ulambda/memfs"
-	"ulambda/memfsd"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -23,17 +23,17 @@ import (
 //
 
 func main() {
-	m, err := MakeReader(os.Args)
+	r, err := MakeReader(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	s := m.Work()
-	m.Exit(s)
+	s := r.Work()
+	r.Exit(s)
 }
 
 type Reader struct {
-	*fslibsrv.FsLibSrv
+	*fslib.FsLib
 	proc.ProcClnt
 	pid   string
 	input string
@@ -45,31 +45,21 @@ func MakeReader(args []string) (*Reader, error) {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeReader: %v\n", args)
-
-	ip, err := fsclnt.LocalIP()
-	if err != nil {
-		return nil, errors.New("MakeReader: No IP")
-	}
 	n := "name/" + args[2]
-	memfsd := memfsd.MakeFsd(ip + ":0")
-	pipe, err := memfsd.MkPipe("pipe")
+	mfs, err := fslibsrv.StartMemFs(n, "fsreader")
+	if err != nil {
+		log.Fatalf("MakeSrvFsLib %v\n", err)
+	}
+	r := &Reader{}
+	r.FsLib = mfs.FsLib
+	r.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-
-	fsl, err := fslibsrv.InitFs(n, memfsd)
-	if err != nil {
-		return nil, err
-	}
-
-	r := &Reader{}
-	r.FsLibSrv = fsl
-	r.ProcClnt = procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
+	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	r.pid = args[1]
 	r.input = args[3]
-	r.pipe = pipe
 	r.Started(r.pid)
-
 	return r, nil
 }
 

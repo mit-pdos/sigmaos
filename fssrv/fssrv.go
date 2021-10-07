@@ -10,12 +10,7 @@ import (
 	"ulambda/watch"
 )
 
-type Fs interface {
-	Done()
-}
-
 type FsServer struct {
-	fs    Fs
 	addr  string
 	root  fs.Dir
 	mkps  protsrv.MakeProtServer
@@ -24,13 +19,13 @@ type FsServer struct {
 	st    *session.SessionTable
 	ct    *ConnTable
 	srv   *netsrv.NetServer
+	ch    chan bool
 }
 
-func MakeFsServer(fs Fs, root fs.Dir, addr string,
+func MakeFsServer(root fs.Dir, addr string,
 	mkps protsrv.MakeProtServer,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
-	fssrv.fs = fs
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
@@ -39,7 +34,16 @@ func MakeFsServer(fs Fs, root fs.Dir, addr string,
 	fssrv.ct = MkConnTable()
 	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
+	fssrv.ch = make(chan bool)
 	return fssrv
+}
+
+func (fsd *FsServer) Serve() {
+	<-fsd.ch
+}
+
+func (fsd *FsServer) Done() {
+	fsd.ch <- true
 }
 
 func (fssrv *FsServer) MyAddr() string {
@@ -60,10 +64,6 @@ func (fssrv *FsServer) SessionTable() *session.SessionTable {
 
 func (fssrv *FsServer) GetConnTable() *ConnTable {
 	return fssrv.ct
-}
-
-func (fssrv *FsServer) Done() {
-	fssrv.fs.Done()
 }
 
 func (fssrv *FsServer) RootAttach(uname string) (fs.Dir, fs.CtxI) {

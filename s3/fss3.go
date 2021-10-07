@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"ulambda/fs"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
@@ -24,26 +23,20 @@ const (
 )
 
 type Fss3 struct {
+	*fssrv.FsServer
 	mu     sync.Mutex
-	pid    string
-	fssrv  *fssrv.FsServer
 	client *s3.Client
-	nextId np.Tpath // XXX delete?
-	ch     chan bool
-	root   fs.Dir
 }
 
-func MakeFss3(pid string) *Fss3 {
+func RunFss3(pid string) {
 	fss3 := &Fss3{}
-	fss3.pid = pid
-	fss3.ch = make(chan bool)
-	fss3.root = fss3.makeDir([]string{}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeSrvFsLib(fss3, fss3.root, named.S3, "fss3d")
+	root := fss3.makeDir([]string{}, np.DMDIR, nil)
+	srv, fsl, err := fslibsrv.MakeServer(root, named.S3, "fss3d")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 
-	fss3.fssrv = srv
+	fss3.FsServer = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -57,13 +50,5 @@ func MakeFss3(pid string) *Fss3 {
 	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
 	fss3dStartCond.Destroy()
 
-	return fss3
-}
-
-func (fss3 *Fss3) Serve() {
-	<-fss3.ch
-}
-
-func (fss3 *Fss3) Done() {
-	fss3.ch <- true
+	fss3.Serve()
 }

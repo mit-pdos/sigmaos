@@ -29,6 +29,5 @@ func main() {
 	if len(os.Args) >= 5 {
 		utilPath = os.Args[4]
 	}
-	pd := procd.MakeProcd(os.Args[1], os.Args[2], pprofPath, utilPath)
-	pd.Work()
+	procd.RunProcd(os.Args[1], os.Args[2], pprofPath, utilPath)
 }

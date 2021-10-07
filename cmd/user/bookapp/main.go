@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -13,10 +12,9 @@ import (
 	// db "ulambda/debug"
 	"ulambda/dbd"
 	"ulambda/fs"
-	"ulambda/fsclnt"
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	//"ulambda/memfs"
-	"ulambda/memfsd"
+	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -31,7 +29,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid <name> args...\n", os.Args[0])
 		os.Exit(1)
 	}
-	m, err := MakeBookApp(os.Args)
+	m, err := RunBookApp(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -41,41 +39,32 @@ func main() {
 }
 
 type BookApp struct {
-	*fslibsrv.FsLibSrv
+	*fslib.FsLib
 	proc.ProcClnt
 	pid   string
 	input []string
 	pipe  fs.FsObj
 }
 
-func MakeBookApp(args []string) (*BookApp, error) {
+func RunBookApp(args []string) (*BookApp, error) {
 	log.Printf("MakeBookApp: %v\n", args)
-
-	ip, err := fsclnt.LocalIP()
-	if err != nil {
-		return nil, errors.New("MakeBookApp: No IP")
-	}
 	n := "name/" + args[2]
-	memfsd := memfsd.MakeFsd(ip + ":0")
-	pipe, err := memfsd.MkPipe("pipe")
+	mfs, err := fslibsrv.StartMemFs(n, "fsreader")
+	if err != nil {
+		log.Fatalf("MakeSrvFsLib %v\n", err)
+	}
+	ba := &BookApp{}
+	ba.FsLib = mfs.FsLib
+	ba.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
+	ba.ProcClnt = procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
+	ba.pid = args[1]
+	ba.input = strings.Split(args[3], "/")
+	ba.Started(ba.pid)
 
-	fsl, err := fslibsrv.InitFs(n, memfsd)
-	if err != nil {
-		return nil, err
-	}
-
-	r := &BookApp{}
-	r.FsLibSrv = fsl
-	r.ProcClnt = procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
-	r.pid = args[1]
-	r.input = strings.Split(args[3], "/")
-	r.pipe = pipe
-	r.Started(r.pid)
-
-	return r, nil
+	return ba, nil
 }
 
 func (ba *BookApp) writeResponse(data []byte) string {
@@ -191,5 +180,6 @@ func (ba *BookApp) Work() string {
 
 func (ba *BookApp) Exit(status string) {
 	log.Printf("bookapp exit %v\n", status)
+	ba.ExitFs("name/" + ba.pid)
 	ba.Exited(ba.pid, status)
 }

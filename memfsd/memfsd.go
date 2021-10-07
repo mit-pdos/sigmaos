@@ -20,7 +20,6 @@ type Fsd struct {
 	mu    sync.Mutex
 	fssrv *fssrv.FsServer
 	root  fs.Dir
-	ch    chan bool
 }
 
 func MakeFsd(addr string) *Fsd {
@@ -30,10 +29,8 @@ func MakeFsd(addr string) *Fsd {
 func MakeReplicatedFsd(addr string, config repl.Config) *Fsd {
 	fsd := &Fsd{}
 	fsd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	fsd.fssrv = fssrv.MakeFsServer(fsd, fsd.root,
+	fsd.fssrv = fssrv.MakeFsServer(fsd.root,
 		addr, fsobjsrv.MakeProtServer(), config)
-	fsd.ch = make(chan bool)
-
 	err := dir.MkNod(fssrv.MkCtx(""), fsd.root, "statsd", fsd.fssrv.GetStats())
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
@@ -42,13 +39,8 @@ func MakeReplicatedFsd(addr string, config repl.Config) *Fsd {
 }
 
 func (fsd *Fsd) Serve() {
-	<-fsd.ch
+	fsd.fssrv.Serve()
 	db.DLPrintf("MEMFSD", "Exit\n")
-}
-
-func (fsd *Fsd) Done() {
-	db.DLPrintf("MEMFSD", "Done\n")
-	fsd.ch <- true
 }
 
 func (fsd *Fsd) GetSrv() *fssrv.FsServer {
@@ -57,10 +49,6 @@ func (fsd *Fsd) GetSrv() *fssrv.FsServer {
 
 func (fsd *Fsd) Addr() string {
 	return fsd.fssrv.MyAddr()
-}
-
-func (fsd *Fsd) GetRoot() fs.Dir {
-	return fsd.root
 }
 
 func (fsd *Fsd) MkPipe(name string) (fs.FsObj, error) {

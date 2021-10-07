@@ -5,7 +5,6 @@ import (
 	"path"
 	"sync"
 
-	"ulambda/fs"
 	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
@@ -19,7 +18,6 @@ import (
 type FsUx struct {
 	*fssrv.FsServer
 	mu    sync.Mutex
-	root  fs.Dir
 	mount string
 }
 
@@ -34,8 +32,8 @@ func MakeFsUx(mount string, pid string) *FsUx {
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
-	fsux.root = makeDir([]string{mount}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeReplSrvFsLib(fsux.root, addr, named.UX, "ux", config)
+	root := makeDir([]string{mount}, np.DMDIR, nil)
+	srv, fsl, err := fslibsrv.MakeReplSrvFsLib(root, addr, named.UX, "ux", config)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

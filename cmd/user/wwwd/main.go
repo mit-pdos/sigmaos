@@ -86,7 +86,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 		if err != nil || len(b) == 0 {
 			break
 		}
-		log.Printf("wwwd: write %v\n", string(b))
+		// log.Printf("wwwd: write %v\n", string(b))
 		_, err = w.Write(b)
 		if err != nil {
 			break

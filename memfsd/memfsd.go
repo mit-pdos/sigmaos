@@ -51,10 +51,6 @@ func (fsd *Fsd) Addr() string {
 	return fsd.fssrv.MyAddr()
 }
 
-func (fsd *Fsd) GetRoot() fs.Dir {
-	return fsd.root
-}
-
 func (fsd *Fsd) MkPipe(name string) (fs.FsObj, error) {
 	obj, err := fsd.root.Create(fssrv.MkCtx(""), name, np.DMNAMEDPIPE, 0)
 	if err != nil {

@@ -5,12 +5,9 @@ import (
 	"path"
 
 	"ulambda/dir"
-	"ulambda/fs"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
-	"ulambda/memfs"
 	"ulambda/named"
-	np "ulambda/ninep"
 	usync "ulambda/sync"
 )
 
@@ -30,26 +27,17 @@ type Book struct {
 	Title  string
 }
 
-type Database struct {
-	*fssrv.FsServer
-	root   fs.Dir
-	nextId np.Tpath
-}
-
-func MakeDbd(pid string) (*Database, error) {
+func RunDbd(pid string) {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
-	dbd := &Database{}
-	dbd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	srv, fsl, err := fslibsrv.MakeSrvFsLib(dbd.root, named.DB, "dbd")
+	mfs, err := fslibsrv.StartMemFs(named.DB, "dbd")
 	if err != nil {
-		log.Fatalf("MakeSrvFsLib %v\n", err)
+		log.Fatalf("StartMemFs %v\n", err)
 	}
-	dbd.FsServer = srv
-	dbdStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
+	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, pid), nil)
 	dbdStartCond.Destroy()
-	err = dir.MkNod(fssrv.MkCtx(""), dbd.root, "clone", makeClone("", dbd.root))
+	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "clone", makeClone("", mfs.Root()))
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
-	return dbd, nil
+	mfs.Wait()
 }

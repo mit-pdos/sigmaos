@@ -19,7 +19,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/inode"
 	"ulambda/linuxsched"
-	"ulambda/memfs"
 	"ulambda/named"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -50,7 +49,7 @@ type Procd struct {
 	*fssrv.FsServer
 }
 
-func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd {
+func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	var err error
 
 	pd := &Procd{}
@@ -61,8 +60,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 
-	pd.root = dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	pd.FsServer, pd.FsLib, err = fslibsrv.MakeSrvFsLib(pd.root, named.PROCD, "procd")
+	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
@@ -87,7 +85,7 @@ func MakeProcd(bin string, pid string, pprofPath string, utilPath string) *Procd
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()
 
-	return pd
+	pd.Work()
 }
 
 func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {

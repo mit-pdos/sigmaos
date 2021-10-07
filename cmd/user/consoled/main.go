@@ -9,32 +9,24 @@ import (
 	"ulambda/fs"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
-	"ulambda/inode"
-	"ulambda/memfsd"
-	"ulambda/netsrv"
 	np "ulambda/ninep"
 )
 
 type Consoled struct {
-	*fslibsrv.FsLibSrv
-	srv    *netsrv.NetServer
-	memfsd *memfsd.Fsd
-	done   chan bool
+	*fssrv.FsServer
 }
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	fsd := memfsd.MakeFsd(":0")
-	fsl, err := fslibsrv.InitFs("name/consoled", fsd)
+	root, srv, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
 	if err != nil {
-		log.Fatalf("InitFs: err %v\n", err)
+		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	err = dir.MkNod(fssrv.MkCtx(""), fsd.GetRoot(), "console", makeConsole(fsd.GetRoot()))
+	cons.FsServer = srv
+	err = dir.MkNod(fssrv.MkCtx(""), root, "console", makeConsole())
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
 	}
-	cons.FsLibSrv = fsl
-	cons.done = make(chan bool)
 	return cons
 }
 
@@ -44,9 +36,8 @@ type Console struct {
 	stdout *bufio.Writer
 }
 
-func makeConsole(parent fs.Dir) *Console {
+func makeConsole() *Console {
 	cons := &Console{}
-	cons.FsObj = inode.MakeInode("", np.DMDEVICE, parent)
 	cons.stdin = bufio.NewReader(os.Stdin)
 	cons.stdout = bufio.NewWriter(os.Stdout)
 	return cons
@@ -68,7 +59,6 @@ func (cons *Console) Len() np.Tlength { return 0 }
 
 func main() {
 	cons := makeConsoled()
-	<-cons.done
-	// cons.Close(fd)
+	cons.Serve()
 	log.Printf("Consoled: finished\n")
 }

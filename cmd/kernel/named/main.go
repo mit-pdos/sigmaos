@@ -64,7 +64,7 @@ func main() {
 	realmId := os.Args[3]
 	if realmId != realm.NO_REALM {
 		path := path.Join(realm.REALM_NAMEDS, realmId, addr)
-		_, err := fslibsrv.InitFs(path, fsd)
+		_, err := fslibsrv.InitFs(path, fsd.FsServer)
 		if err != nil {
 			log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
 		}

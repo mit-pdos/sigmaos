@@ -4,8 +4,6 @@ import (
 	"log"
 	"os"
 
-	db "ulambda/debug"
-	"ulambda/fsclnt"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
 	"ulambda/memfsd"
@@ -17,20 +15,14 @@ func main() {
 	linuxsched.ScanTopology()
 	// started as a ulambda
 	name := memfsd.MEMFS + "/" + os.Args[1]
-	ip, err := fsclnt.LocalIP()
+	mfs, err := fslibsrv.StartMemFs(name, name)
 	if err != nil {
-		log.Fatalf("%v: no IP %v\n", os.Args[0], err)
+		log.Fatalf("StartMemFs %v\n", err)
 	}
-	db.Name(name)
-	fsd := memfsd.MakeFsd(ip + ":0")
-	fsl, err := fslibsrv.InitFs(name, fsd)
-	if err != nil {
-		log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
-	}
-	sclnt := procinit.MakeProcClnt(fsl.FsLib, procinit.GetProcLayersMap())
+	sclnt := procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
 	sclnt.Started(os.Args[1])
 	seccomp.LoadFilter()
-	fsd.Serve()
+	mfs.Wait()
 	sclnt.Exited(os.Args[1], "OK")
-	fsl.ExitFs(name)
+	mfs.FsLib.ExitFs(name)
 }

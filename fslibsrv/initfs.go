@@ -11,32 +11,31 @@ import (
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/memfs"
-	"ulambda/memfsd"
 	np "ulambda/ninep"
 	"ulambda/repl"
 )
 
 type FsLibSrv struct {
 	*fslib.FsLib
-	*memfsd.Fsd
+	*fssrv.FsServer
 }
 
 func (fsl *FsLibSrv) Clnt() *fslib.FsLib {
 	return fsl.FsLib
 }
 
-func InitFsFsl(name string, fsc *fslib.FsLib, memfsd *memfsd.Fsd) (*FsLibSrv, error) {
-	fsl := &FsLibSrv{fsc, memfsd}
-	err := fsl.PostService(memfsd.Addr(), name)
+func InitFsFsl(name string, fsc *fslib.FsLib, fss *fssrv.FsServer) (*FsLibSrv, error) {
+	fsl := &FsLibSrv{fsc, fss}
+	err := fsl.PostService(fss.MyAddr(), name)
 	if err != nil {
 		return nil, fmt.Errorf("PostService %v error: %v", name, err)
 	}
 	return fsl, nil
 }
 
-func InitFs(name string, memfsd *memfsd.Fsd) (*FsLibSrv, error) {
+func InitFs(name string, fss *fssrv.FsServer) (*FsLibSrv, error) {
 	fsl := fslib.MakeFsLib(name)
-	return InitFsFsl(name, fsl, memfsd)
+	return InitFsFsl(name, fsl, fss)
 }
 
 func makeServer(root fs.Dir, name string) (*fssrv.FsServer, *fslib.FsLib, error) {
@@ -70,7 +69,7 @@ func MakeServer(root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.
 	return srv, fsl, nil
 }
 
-func MakeReplSrvFsLib(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
+func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
 	db.Name(name)
 	srv := fssrv.MakeFsServer(root, addr, fos.MakeProtServer(), config)
 	fsl := fslib.MakeFsLib(name)
@@ -84,6 +83,7 @@ func MakeReplSrvFsLib(root fs.Dir, addr string, path string, name string, config
 
 type MemFs struct {
 	*fslib.FsLib
+	*fssrv.FsServer
 	root fs.Dir
 	ch   chan bool
 }
@@ -110,7 +110,14 @@ func StartMemFs(path string, name string) (*MemFs, error) {
 		return nil, err
 	}
 	fs.FsLib = fsl
+	fs.FsServer = srv
 	fs.root = root
+
+	err = dir.MkNod(fssrv.MkCtx(""), root, "statsd", srv.GetStats())
+	if err != nil {
+		return nil, err
+	}
+
 	go func() {
 		srv.Serve()
 		fs.ch <- true

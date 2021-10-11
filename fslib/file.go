@@ -171,7 +171,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 }
 
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
-	b, err := fl.ReadFile(name)
+	b, _, err := fl.GetFile(name)
 	if err != nil {
 		return err
 	}
@@ -199,5 +199,6 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	return fl.WriteFile(fname, data)
+	_, err = fl.SetFile(fname, data, np.NoV)
+	return err
 }

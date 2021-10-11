@@ -53,6 +53,7 @@ func (c *Clerk) serve() {
 				}
 				db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
 				// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
+				c.printOpTiming(req)
 				go func() {
 					rep := c.apply(req)
 					db.DLPrintf("REPLRAFT", "Reply %v\n", rep)
@@ -94,7 +95,6 @@ func (c *Clerk) reply(rep *np.Fcall) {
 		return
 	}
 
-	log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(op.frame))
 	op.reply = rep
 	op.replyC <- op
 }
@@ -125,4 +125,15 @@ func (c *Clerk) getOp(rep *np.Fcall) *SrvOp {
 		}
 	}
 	return nil
+}
+
+func (c *Clerk) printOpTiming(rep *np.Fcall) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if m, ok := c.opmap[rep.Session]; ok {
+		if op, ok := m[rep.Seqno]; ok {
+			log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(op.frame))
+		}
+	}
 }

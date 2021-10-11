@@ -61,7 +61,7 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r := make(map[string]*RawResults)
 	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
 	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	for sz := SMALL_FILE_SIZE; sz <= 17*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 20 {
+	for sz := SMALL_FILE_SIZE; sz <= 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 20 {
 		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
 	}
 	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)

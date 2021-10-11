@@ -31,7 +31,7 @@ type Fss3 struct {
 func RunFss3(pid string) {
 	fss3 := &Fss3{}
 	root := fss3.makeDir([]string{}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeServer(root, named.S3, "fss3d")
+	srv, fsl, err := fslibsrv.MakeSrvClt(root, named.S3, "fss3d")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

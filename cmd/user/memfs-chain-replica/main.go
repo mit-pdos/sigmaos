@@ -40,6 +40,5 @@ func main() {
 	}
 
 	// Start the replica server
-	r := replica.MakeMemfsdReplica(args, srvAddr, unionDirPath, config)
-	r.Work()
+	replica.RunMemfsdReplica(args, srvAddr, unionDirPath, config)
 }

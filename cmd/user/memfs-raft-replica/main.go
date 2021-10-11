@@ -39,6 +39,5 @@ func main() {
 	fsl.Mkdir(unionDirPath, 0777)
 
 	// Start the replica server
-	r := replica.MakeMemfsdReplica(args, srvAddr, unionDirPath, config)
-	r.Work()
+	replica.RunMemfsdReplica(args, srvAddr, unionDirPath, config)
 }

@@ -21,19 +21,20 @@ type FsUx struct {
 	mount string
 }
 
-func MakeFsUx(mount string, pid string) *FsUx {
+func RunFsUx(mount string, pid string) {
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", named.UX, err)
 	}
-	return MakeReplicatedFsUx(mount, ip+":0", pid, nil)
+	fsux := MakeReplicatedFsUx(mount, ip+":0", pid, nil)
+	fsux.Serve()
 }
 
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	root := makeDir([]string{mount}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeReplSrvFsLib(root, addr, named.UX, "ux", config)
+	srv, fsl, err := fslibsrv.MakeReplServer(root, addr, named.UX, "ux", config)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

@@ -200,7 +200,7 @@ func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) {
 	l.Lock()
 	defer l.Unlock()
 
-	clnt.WriteFile(path.Join(named.TMP, PARENT_RET_STAT+pid), []byte(status))
+	clnt.SetFile(path.Join(named.TMP, PARENT_RET_STAT+pid), []byte(status), np.NoV)
 
 	rswPath := path.Join(named.PROC_RET_STAT, RET_STAT+pid)
 	rsw := &RetStatWaiters{}
@@ -209,7 +209,7 @@ func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) {
 	}
 
 	for _, fpath := range rsw.Fpaths {
-		if err := clnt.WriteFile(fpath, []byte(status)); err != nil {
+		if _, err := clnt.SetFile(fpath, []byte(status), np.NoV); err != nil {
 			log.Fatalf("Error WriteFile in ProcBaseClnt.writeBackRetStats: %v", err)
 		}
 	}
@@ -258,10 +258,10 @@ func (clnt *ProcBaseClnt) getRetStat(pid string, fpath string) string {
 	// If we didn't successfully register the ret stat file
 	if fpath == "" {
 		// Try to read the parent ret stat file
-		b, err = clnt.ReadFile(path.Join(named.TMP, PARENT_RET_STAT+pid))
+		b, _, err = clnt.GetFile(path.Join(named.TMP, PARENT_RET_STAT+pid))
 	} else {
 		// Try to read the registerred ret stat file
-		b, err = clnt.ReadFile(fpath)
+		b, _, err = clnt.GetFile(fpath)
 		if err != nil {
 			log.Fatalf("Error ReadFile in ProcBaseClnt.getRetStat: %v", err)
 		}

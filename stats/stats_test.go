@@ -52,7 +52,7 @@ func TestStatsd(t *testing.T) {
 	}
 	err = ts.ReadFileJson("name/statsd", &stats)
 	assert.Nil(t, err, "statsd")
-	assert.Equal(t, Tcounter(1022), stats.Nopen, "statsd")
+	assert.Equal(t, Tcounter(1020), stats.Nopen, "statsd")
 
 	ts.e.Shutdown()
 }

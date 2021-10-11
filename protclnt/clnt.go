@@ -24,6 +24,10 @@ func MakeClnt() *Clnt {
 	return clnt
 }
 
+func (clnt *Clnt) ReadSeqNo() np.Tseqno {
+	return clnt.seqno
+}
+
 func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }

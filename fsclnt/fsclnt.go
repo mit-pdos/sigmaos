@@ -46,6 +46,10 @@ func MakeFsClient(uname string) *FsClient {
 	return fsc
 }
 
+func (fsc *FsClient) ReadSeqNo() np.Tseqno {
+	return fsc.pc.ReadSeqNo()
+}
+
 func (fsc *FsClient) Exit() {
 	fsc.pc.Exit()
 }

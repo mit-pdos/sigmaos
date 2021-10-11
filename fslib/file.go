@@ -50,6 +50,10 @@ func MakeFsLib(uname string) *FsLib {
 	return fl
 }
 
+func (fl *FsLib) ReadSeqNo() np.Tseqno {
+	return fl.FsClient.ReadSeqNo()
+}
+
 func (fl *FsLib) readFile(fname string, m np.Tmode, f fsclnt.Watch) ([]byte, error) {
 	fd, err := fl.OpenWatch(fname, np.OREAD|m, f)
 	if err != nil {

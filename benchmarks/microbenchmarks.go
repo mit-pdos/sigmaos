@@ -124,14 +124,16 @@ func (m *Microbenchmarks) PutFileBenchmark(nTrials int) *RawResults {
 
 	b := genData(0)
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, err := m.PutFile(fNames[i], b, 0777, np.OWRITE); err != nil {
 			log.Fatalf("Error PutFile in Microbenchmarks.PutFileBenchmark: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("PutFileBenchmark Done")
@@ -152,14 +154,16 @@ func (m *Microbenchmarks) SetFileBenchmark(nTrials int, size int) *RawResults {
 	m.makeFile(fpath, 0)
 	b := genData(size)
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, err := m.SetFile(fpath, b, np.NoV); err != nil {
 			log.Fatalf("Error SetFile in Microbenchmarks.SetFileBenchmark: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("SetFileBenchmark Done")
@@ -178,14 +182,16 @@ func (m *Microbenchmarks) GetFileBenchmark(nTrials int, size int) *RawResults {
 	fpath := path.Join(GET_FILE_DIR, "test-file")
 	m.makeFile(fpath, size)
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, _, err := m.GetFile(fpath); err != nil {
 			log.Fatalf("Error GetFile in Microbenchmarks.GetFileBenchmark: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("GetFileBenchmark Done")
@@ -206,13 +212,15 @@ func (m *Microbenchmarks) LockLockBenchmark(nTrials int) *RawResults {
 	rs := MakeRawResults(nTrials)
 
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		l.Lock()
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		l.Unlock()
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("LockLockBenchmark Done")
@@ -234,12 +242,14 @@ func (m *Microbenchmarks) LockUnlockBenchmark(nTrials int) *RawResults {
 
 	for i := 0; i < nTrials; i++ {
 		l.Lock()
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		l.Unlock()
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("LockUnlockBenchmark Done")
@@ -269,12 +279,14 @@ func (m *Microbenchmarks) CondSignalBenchmark(nTrials int) *RawResults {
 		}()
 		<-done
 		time.Sleep(10 * time.Millisecond)
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		cond.Signal()
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 	cond.Destroy()
 
@@ -308,13 +320,15 @@ func (m *Microbenchmarks) CondWaitBenchmark(nTrials int) *RawResults {
 		}()
 		<-done
 		time.Sleep(10 * time.Millisecond)
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		cond.Signal()
 		for end == nil {
 		}
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 	cond.Destroy()
 
@@ -337,17 +351,19 @@ func (m *Microbenchmarks) FileBagPutBenchmark(nTrials int, size int) *RawResults
 	bag := sync.MakeFilePriorityBag(m.FsLib, path)
 	b := genData(size)
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := bag.Put(priority, name, b); err != nil {
 			log.Fatalf("Error Put in Microbenchmarks.FileBagPutBenchmark: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		if _, _, _, err := bag.Get(); err != nil {
 			log.Fatalf("Error Get in Microbenchmarks.FileBagPutBenchmark: %v", err)
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("FileBagPutBenchmark Done")
@@ -372,14 +388,16 @@ func (m *Microbenchmarks) FileBagGetBenchmark(nTrials int, size int) *RawResults
 		if err := bag.Put(priority, name, b); err != nil {
 			log.Fatalf("Error Put in Microbenchmarks.FileBagGetBenchmark: %v", err)
 		}
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, _, _, err := bag.Get(); err != nil {
 			log.Fatalf("Error Get in Microbenchmarks.FileBagGetBenchmark: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("FileBagGetBenchmark Done")
@@ -404,6 +422,7 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int, pidOffset 
 	}
 
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
@@ -412,9 +431,10 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int, pidOffset 
 			log.Fatalf("Error WaitExit: %v %v", status, err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcBaseSpawnWaitExitBenchmark Done")
@@ -440,6 +460,7 @@ func (m *Microbenchmarks) ProcBaseLinuxBenchmark(nTrials int, pidOffset int) *Ra
 	}
 
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := cmds[i].Start(); err != nil {
 			log.Fatalf("Error command start: %v", err)
@@ -448,9 +469,10 @@ func (m *Microbenchmarks) ProcBaseLinuxBenchmark(nTrials int, pidOffset int) *Ra
 			log.Fatalf("Error command start: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcBaseLinuxBenchmark Done")
@@ -476,11 +498,13 @@ func (m *Microbenchmarks) ProcBaseSpawnClientBenchmark(nTrials int, pidOffset in
 	}
 
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
 			log.Fatalf("Error exited: %v", err)
 		}
@@ -489,7 +513,7 @@ func (m *Microbenchmarks) ProcBaseSpawnClientBenchmark(nTrials int, pidOffset in
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcBaseSpawnClientBenchmark Done")
@@ -518,17 +542,19 @@ func (m *Microbenchmarks) ProcBaseExitedBenchmark(nTrials int, pidOffset int) *R
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
 		}
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
 			log.Fatalf("Error exited: %v", err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
 			log.Fatalf("Error WaitExit: %v %v", status, err)
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcBaseExitedBenchmark Done")
@@ -560,14 +586,16 @@ func (m *Microbenchmarks) ProcBaseWaitExitBenchmark(nTrials int, pidOffset int) 
 		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
 			log.Fatalf("Error exited: %v", err)
 		}
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
 			log.Fatalf("Error WaitExit: %v %v", status, err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcBaseWaitExitBenchmark Done")
@@ -600,6 +628,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 	}
 
 	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
@@ -611,9 +640,10 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 			log.Fatalf("Error WaitExit: %v %v", status, err)
 		}
 		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed)
+		rs.Data[i].set(throughput, elapsed, nRPC)
 	}
 
 	log.Printf("ProcBasePprofBenchmark Done")

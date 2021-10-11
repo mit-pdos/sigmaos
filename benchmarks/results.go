@@ -5,11 +5,14 @@ import (
 	"log"
 
 	"github.com/montanaflynn/stats"
+
+	np "ulambda/ninep"
 )
 
 type Result struct {
-	Throughput float64 // ops/usec
-	Latency    float64 // usecs
+	Throughput float64   // ops/usec
+	Latency    float64   // usecs
+	NRPC       np.Tseqno // Number of RPCs
 }
 
 func MakeResult() *Result {
@@ -19,9 +22,10 @@ func MakeResult() *Result {
 	return r
 }
 
-func (r *Result) set(throughput, latency float64) {
+func (r *Result) set(throughput, latency float64, nRPC np.Tseqno) {
 	r.Throughput = throughput
 	r.Latency = latency
+	r.NRPC = nRPC
 }
 
 type RawResults struct {
@@ -40,10 +44,12 @@ func MakeRawResults(nTrials int) *RawResults {
 func (r *RawResults) Mean() *Result {
 	tpt := make([]float64, len(r.Data))
 	lat := make([]float64, len(r.Data))
+	nRPC := make([]float64, len(r.Data))
 
 	for i := range r.Data {
 		tpt[i] = r.Data[i].Throughput
 		lat[i] = r.Data[i].Latency
+		nRPC[i] = float64(r.Data[i].NRPC)
 	}
 
 	res := MakeResult()
@@ -60,9 +66,15 @@ func (r *RawResults) Mean() *Result {
 	}
 	res.Latency = l
 
+	n, err := stats.Mean(nRPC)
+	if err != nil {
+		log.Fatalf("Error Mean in RawResults.Mean: %v", err)
+	}
+	res.NRPC = np.Tseqno(n)
+
 	return res
 }
 
 func (r *Result) String() string {
-	return fmt.Sprintf("&{ Throughput (ops/usec):%f Latency (usec):%f }", r.Throughput, r.Latency)
+	return fmt.Sprintf("&{ Throughput (ops/usec):%f Latency (usec):%f NRPC:%d }", r.Throughput, r.Latency, r.NRPC)
 }

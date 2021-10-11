@@ -60,11 +60,7 @@ func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fs
 	if err != nil {
 		return nil, nil, err
 	}
-	err = makeStatDev(root, srv)
-	if err != nil {
-		return nil, nil, err
-	}
-	return srv, fsl, err
+	return srv, fsl, makeStatDev(root, srv)
 }
 
 type MemFs struct {
@@ -88,11 +84,7 @@ func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib,
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	err = makeStatDev(root, srv)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return root, srv, fsl, err
+	return root, srv, fsl, makeStatDev(root, srv)
 }
 
 func StartMemFs(path string, name string) (*MemFs, error) {

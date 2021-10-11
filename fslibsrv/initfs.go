@@ -82,7 +82,7 @@ func (fs *MemFs) Root() fs.Dir {
 	return fs.root
 }
 
-func (fs *MemFs) Wait1() {
+func (fs *MemFs) Wait() {
 	<-fs.ch
 }
 

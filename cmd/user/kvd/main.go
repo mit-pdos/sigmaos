@@ -5,7 +5,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kv"
-	"ulambda/memfsd"
+	"ulambda/named"
 	"ulambda/procinit"
 	"ulambda/realm"
 )
@@ -19,7 +19,7 @@ func main() {
 
 	// Set up some dirs
 	fsl.Mkdir(kv.KVDIR, 0777)
-	fsl.Mkdir(memfsd.MEMFS, 0777)
+	fsl.Mkdir(named.MEMFS, 0777)
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())

@@ -8,7 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfsd"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procdep"
 	"ulambda/procinit"
@@ -118,7 +118,7 @@ func (mo *Monitor) grow() {
 
 func (mo *Monitor) shrink(kv string) {
 	RunBalancer(mo.ProcClnt, "del", kv)
-	err := mo.Remove(memfsd.MEMFS + "/" + kv + "/")
+	err := mo.Remove(named.MEMFS + "/" + kv + "/")
 	if err != nil {
 		log.Printf("shrink: remove failed %v\n", err)
 	}
@@ -155,7 +155,7 @@ func (mo *Monitor) Work() {
 	var lowload stats.Tload
 	n := 0
 	for kv, _ := range kvs.set {
-		kvd := memfsd.MEMFS + "/" + kv + "/statsd"
+		kvd := named.MEMFS + "/" + kv + "/statsd"
 		sti := stats.StatInfo{}
 		err := mo.ReadFileJson(kvd, &sti)
 		if err != nil {

@@ -8,7 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfsd"
+	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -44,11 +44,11 @@ func MakeMover(args []string) (*Mover, error) {
 }
 
 func shardDir(kvd string) string {
-	return memfsd.MEMFS + "/" + kvd
+	return named.MEMFS + "/" + kvd
 }
 
 func shardPath(kvd, shard string) string {
-	return memfsd.MEMFS + "/" + kvd + "/shard" + shard
+	return named.MEMFS + "/" + kvd + "/shard" + shard
 }
 
 func keyPath(kvd, shard string, k string) string {

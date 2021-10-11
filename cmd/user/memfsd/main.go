@@ -6,7 +6,7 @@ import (
 
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
-	"ulambda/memfsd"
+	"ulambda/named"
 	"ulambda/procinit"
 	"ulambda/seccomp"
 )
@@ -14,7 +14,7 @@ import (
 func main() {
 	linuxsched.ScanTopology()
 	// started as a ulambda
-	name := memfsd.MEMFS + "/" + os.Args[1]
+	name := named.MEMFS + "/" + os.Args[1]
 	mfs, err := fslibsrv.StartMemFs(name, name)
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)

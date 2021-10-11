@@ -17,6 +17,7 @@ const (
 	DB            = "name/db/"
 	PROC_COND     = "name/proc-cond"
 	PROC_RET_STAT = "name/proc-ret-stat"
+	MEMFS         = "name/memfsd"
 )
 
 func MakeInitFs(fsl *fslib.FsLib) error {

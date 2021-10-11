@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
-	"ulambda/memfsd"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procdep"
 	"ulambda/procinit"
@@ -67,7 +67,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClnt(ts.fsl, procinit.GetProcLayersMap())
 
-	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
+	err = ts.fsl.Mkdir(named.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -106,7 +106,7 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFS(mfs string) {
-	err := ts.fsl.Remove(memfsd.MEMFS + "/" + mfs + "/")
+	err := ts.fsl.Remove(named.MEMFS + "/" + mfs + "/")
 	assert.Nil(ts.t, err, "Remove")
 }
 

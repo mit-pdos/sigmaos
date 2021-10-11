@@ -7,11 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
+	"ulambda/fssrv"
 	"ulambda/linuxsched"
-	"ulambda/memfsd"
 	"ulambda/named"
 	"ulambda/perf"
 	"ulambda/realm"
@@ -42,11 +41,16 @@ func main() {
 	}
 	defer p.Teardown()
 
-	db.Name("named")
-
 	addr := os.Args[2]
 
-	var fsd *memfsd.Fsd
+	// A realm's named in the global namespace
+	realmId := os.Args[3]
+	var pname string
+	if realmId != realm.NO_REALM {
+		pname = path.Join(realm.REALM_NAMEDS, realmId, addr)
+	}
+
+	var fss *fssrv.FsServer
 	// Replicate?
 	if len(os.Args) >= 5 {
 		id, err := strconv.Atoi(os.Args[4])
@@ -55,20 +59,11 @@ func main() {
 		}
 		peers := strings.Split(os.Args[5], ",")
 		config := replraft.MakeRaftConfig(id, peers)
-		fsd = memfsd.MakeReplicatedFsd(addr, config)
+		fss, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", config)
 	} else {
-		fsd = memfsd.MakeFsd(addr)
+		fss, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
 	}
 
-	// Register a realm's named in the global namespace
-	realmId := os.Args[3]
-	if realmId != realm.NO_REALM {
-		path := path.Join(realm.REALM_NAMEDS, realmId, addr)
-		_, err := fslibsrv.InitFs(path, fsd.FsServer)
-		if err != nil {
-			log.Fatalf("%v: InitFs failed %v\n", os.Args[0], err)
-		}
-	}
 	seccomp.LoadFilter()
 
 	// Mark self as started if this isn't the initial named
@@ -84,5 +79,5 @@ func main() {
 		namedStartCond.Destroy()
 	}
 
-	fsd.Serve()
+	fss.Serve()
 }

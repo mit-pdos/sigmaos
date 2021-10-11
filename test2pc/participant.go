@@ -7,7 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfsd"
+	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -47,7 +47,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}
-	err := p.ReadFileJson(memfsd.MEMFS+"/txni", p.ti)
+	err := p.ReadFileJson(named.MEMFS+"/txni", p.ti)
 	if err != nil {
 		log.Fatalf("Failed to read txni %v\n", err)
 	}

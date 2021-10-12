@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
@@ -13,7 +15,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
-	"ulambda/realm"
+	//"ulambda/realm"
 )
 
 //
@@ -21,25 +23,33 @@ import (
 // XXX limit process's name space to the app binary and pipe.
 //
 
-var validPath = regexp.MustCompile(`^/(static|book)/([=.a-zA-Z0-9/]*)$`)
+var validPath = regexp.MustCompile(`^/(static|book|exit)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v pid\n", os.Args[0])
+		os.Exit(1)
+	}
 	www := MakeWwwd()
+	www.pid = os.Args[1]
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
+	http.HandleFunc("/exit/", www.makeHandler(doExit))
+
+	www.Started(www.pid)
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 type Wwwd struct {
 	*fslib.FsLib
 	proc.ProcClnt
+	pid string
 }
 
 func MakeWwwd() *Wwwd {
 	www := &Wwwd{}
-	fsl := fslib.MakeFsLib("www")
-	cfg := realm.GetRealmConfig(fsl, realm.TEST_RID)
-	www.FsLib = fslib.MakeFsLibAddr("www", cfg.NamedAddr)
+	www.FsLib = fslib.MakeFsLib("www")
 
 	err := www.MakeFile("name/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
@@ -98,7 +108,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
 	a := &proc.Proc{pid, app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
+		proc.T_DEF, proc.C_DEF, []string{},
 	}
 	err := www.Spawn(a)
 	if err != nil {
@@ -127,4 +137,10 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 	// log.Printf("\n")
 	title := r.FormValue("title")
 	return www.spawnApp("bin/user/bookapp", w, r, []string{args, title})
+}
+
+func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+	www.Exited(www.pid, "OK")
+	os.Exit(0)
+	return "", nil
 }

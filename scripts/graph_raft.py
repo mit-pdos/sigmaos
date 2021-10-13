@@ -53,10 +53,6 @@ def graph_avg_request_latency(data, out):
   for k in sorted(data.keys()):
     if k == 1:
       continue
-#    sorted_data = sorted(data[k], key=lambda x: x["bytes"], reverse=True)
-#    x = [ d["bytes"] for d in sorted_data if d["latency"] < outlier_threshold ]
-#    y = [ d["latency"] for d in sorted_data if d["latency"] < outlier_threshold ]
-#    ax.plot(x, y, label="{} replicas".format(k))
     outliers = [ d["latency"] for d in data[k] if d["latency"] > outlier_threshold ]
     print("n outliers:", len(outliers))
     x = bins
@@ -91,17 +87,6 @@ def graph_absolute_request_latency(data, out):
     ax.plot(x, y, label="{} replicas".format(k))
     outliers = [ d["latency"] for d in data[k] if d["latency"] > outlier_threshold ]
     print("n outliers:", len(outliers))
-#    x = bins
-#    y = [ [] for b in bins ]
-#    for d in data[k]:
-#      idx = bisect.bisect_left(x, d["bytes"])
-#      if idx >= len(y):
-#        idx = idx - 1
-#      y[idx].append(d["latency"])
-#    stdev = [ np.std(i) for i in y ]
-#    y = [ np.mean(i) for i in y ]
-#    print("xy and std", x, y, stdev)
-#    ax.plot(x, y, label="{} replicas".format(k))
   ax.set_title("Latency (us) for request size (byte)")
   ax.set_xlabel("# of bytes")
   ax.set_ylabel("Latency (us)")
@@ -120,17 +105,6 @@ def graph_latency_outliers(data, out):
     y = [ d["latency"] for d in data[k] ]
     x = np.arange(len(y))
     ax.plot(x, y, label="{} replicas".format(k))
-#    x = bins
-#    y = [ [] for b in bins ]
-#    for d in data[k]:
-#      idx = bisect.bisect_left(x, d["bytes"])
-#      if idx >= len(y):
-#        idx = idx - 1
-#      y[idx].append(d["latency"])
-#    stdev = [ np.std(i) for i in y ]
-#    y = [ np.mean(i) for i in y ]
-#    ax.plot(x, y, label="{} replicas".format(k))
-#    print("xy and std", x, y, stdev)
   ax.set_title("Latency (us) of <1KB Requests")
   ax.set_xlabel("Request #")
   ax.set_ylabel("Latency (us)")

@@ -15,6 +15,7 @@ killall procd-monitor
 killall perf-memfs-replica
 killall procd 
 killall sleeperl
+killall spinner
 killall kv
 killall monitor
 killall kvd

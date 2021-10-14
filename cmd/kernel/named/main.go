@@ -47,7 +47,7 @@ func main() {
 	realmId := os.Args[3]
 	var pname string
 	if realmId != realm.NO_REALM {
-		pname = path.Join(realm.REALM_NAMEDS, realmId, addr)
+		pname = path.Join(realm.REALM_NAMEDS, realmId)
 	}
 
 	var fss *fssrv.FsServer

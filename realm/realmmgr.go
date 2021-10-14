@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	SCAN_INTERVAL_MS = 10
+	SCAN_INTERVAL_MS        = 50
+	GROW_CPU_UTIL_THRESHOLD = 50
 )
 
 const (
@@ -222,8 +223,12 @@ func (m *RealmMgr) needsRealmd(realmId string) bool {
 	}
 	// Get stats
 	procdStats := m.getRealmProcdStats(cfg.NamedAddr, realmId)
-	log.Printf("Procd stats for realm %v: %v", realmId, procdStats)
-	return false
+	avgUtil := 0.0
+	for _, stat := range procdStats {
+		avgUtil += stat.Util
+	}
+	avgUtil /= float64(len(procdStats))
+	return avgUtil > GROW_CPU_UTIL_THRESHOLD
 }
 
 // Balance realmds across realms.

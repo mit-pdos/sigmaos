@@ -6,6 +6,9 @@ import (
 )
 
 func Split(path string) []string {
+	if path == "" {
+		return []string{}
+	}
 	slash := regexp.MustCompile(`//+`)
 	path = strings.TrimRight(path, "/")
 	path = slash.ReplaceAllString(path, "/")

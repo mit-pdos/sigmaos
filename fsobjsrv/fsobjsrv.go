@@ -79,9 +79,19 @@ func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.R
 }
 
 func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
-	root, ctx := fos.fssrv.RootAttach(args.Uname)
-	fos.add(sess, args.Fid, fid.MakeFid(root.(fs.FsObj), ctx))
-	rets.Qid = root.(fs.FsObj).Qid()
+	log.Printf("Attach %v\n", args)
+	path := np.Split(args.Aname)
+	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
+	tree := root.(fs.FsObj)
+	if args.Aname != "" {
+		os, rest, err := root.Lookup(ctx, path)
+		if len(rest) > 0 || err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		tree = os[len(os)-1]
+	}
+	fos.add(sess, args.Fid, fid.MakeFidPath(path, tree, ctx))
+	rets.Qid = tree.(fs.FsObj).Qid()
 	return nil
 }
 

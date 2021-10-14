@@ -66,7 +66,7 @@ func (fssrv *FsServer) GetConnTable() *ConnTable {
 	return fssrv.ct
 }
 
-func (fssrv *FsServer) RootAttach(uname string) (fs.Dir, fs.CtxI) {
+func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) {
 	return fssrv.root, MkCtx(uname)
 }
 

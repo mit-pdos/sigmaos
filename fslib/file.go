@@ -50,6 +50,17 @@ func MakeFsLib(uname string) *FsLib {
 	return fl
 }
 
+func MakeFsLibTree(uname string, tree string) *FsLib {
+	fl := &FsLib{fsclnt.MakeFsClient(uname)}
+	if fd, err := fl.AttachReplicas(Named(), tree); err == nil {
+		err := fl.Mount(fd, tree)
+		if err != nil {
+			log.Fatal("Mount error: ", err)
+		}
+	}
+	return fl
+}
+
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
 	return fl.FsClient.ReadSeqNo()
 }

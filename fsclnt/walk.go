@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	db "ulambda/debug"
@@ -222,17 +223,18 @@ func SplitTargetReplicated(target string) ([]string, []string) {
 
 func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
+	log.Printf("automount %v %v\n", target, path)
 	var rest []string
 	var fid np.Tfid
 	var err error
 	if IsReplicated(target) {
 		servers, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = fsc.AttachReplicas(servers, np.Join(path))
+		fid, err = fsc.AttachReplicas(servers, "")
 	} else {
 		server, r := SplitTarget(target)
 		rest = r
-		fid, err = fsc.Attach(server, np.Join(path))
+		fid, err = fsc.Attach(server, "")
 	}
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)

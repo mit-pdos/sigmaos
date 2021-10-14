@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"os"
 	"path"
 
 	"ulambda/benchmarks"

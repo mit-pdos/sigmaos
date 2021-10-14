@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	db "ulambda/debug"
@@ -223,7 +222,6 @@ func SplitTargetReplicated(target string) ([]string, []string) {
 
 func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
-	log.Printf("automount %v %v\n", target, path)
 	var rest []string
 	var fid np.Tfid
 	var err error

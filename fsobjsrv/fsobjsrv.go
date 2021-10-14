@@ -79,7 +79,6 @@ func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.R
 }
 
 func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
-	log.Printf("Attach %v\n", args)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
 	tree := root.(fs.FsObj)

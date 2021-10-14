@@ -93,7 +93,6 @@ func (c *Cond) Signal() {
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
-	log.Printf("signal %v\n", c.bcastPath)
 	wFiles, err := c.ReadDir(c.path)
 	if err != nil {
 		log.Printf("Error ReadDir in Cond.Signal: %v", err)
@@ -181,12 +180,8 @@ func (c *Cond) Wait() error {
 	}
 	c.dirLock.Unlock()
 
-	log.Printf("%v: wait %v\n", db.GetName(), c.bcastPath)
-
 	// Wait for either the Signal or Broadcast watch to be triggered
 	<-done
-
-	log.Printf("%v: wait done %v\n", db.GetName(), c.bcastPath)
 
 	// Lock & return
 	if c.condLock != nil {
@@ -202,11 +197,9 @@ func (c *Cond) Destroy() {
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
-	log.Printf("%v: Wakeup and destroy %v\n", db.GetName(), c.path)
 	// Wake up all waiters with a broadcast.
 	err := c.Remove(c.bcastPath)
 	if err != nil {
-		log.Printf("%v: remove failed %v %v\n", db.GetName(), c.bcastPath, err)
 		debug.PrintStack()
 		if err.Error() == "EOF" {
 			log.Printf("Error Remove 1 in Cond.Destroy: %v", err)

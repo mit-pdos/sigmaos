@@ -24,7 +24,15 @@ func MakeLock(fsl *fslib.FsLib, lDir, lName string, strict bool) *Lock {
 	l.lockName = lockName(lName)
 	l.FsLib = fsl
 	l.strict = strict
+	return l
+}
 
+func MakeLockNew(fsl *fslib.FsLib, lDir, lName string, strict bool) *Lock {
+	l := &Lock{}
+	l.lockDir = lDir
+	l.lockName = lockName(lName)
+	l.FsLib = fsl
+	l.strict = strict
 	return l
 }
 

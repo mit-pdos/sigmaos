@@ -26,17 +26,17 @@ import (
 var validPath = regexp.MustCompile(`^/(static|book|exit)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) != 3 {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	www := MakeWwwd()
+	www := MakeWwwd(os.Args[2])
 	www.pid = os.Args[1]
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
 
-	www.Started(www.pid)
+	www.StartedNew(www.pid)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -47,18 +47,20 @@ type Wwwd struct {
 	pid string
 }
 
-func MakeWwwd() *Wwwd {
+func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
-	www.FsLib = fslib.MakeFsLib("www")
+	// www.FsLib = fslib.MakeFsLib("www")
+	db.Name("wwwd")
+	www.FsLib = fslib.MakeFsLibTree("www", tree)
 
-	err := www.MakeFile("name/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
+	log.Printf("%v: tree %v\n", db.GetName(), tree)
+	err := www.MakeFile(tree+"/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
-	db.Name("wwwd")
 	return www
 }
 
@@ -108,7 +110,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
 	a := &proc.Proc{pid, app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF, []string{},
+		proc.T_DEF, proc.C_DEF,
 	}
 	err := www.Spawn(a)
 	if err != nil {
@@ -140,7 +142,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	www.Exited(www.pid, "OK")
+	www.ExitedNew(www.pid, "OK")
 	os.Exit(0)
 	return "", nil
 }

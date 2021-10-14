@@ -45,7 +45,7 @@ func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
 }
 
 func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path []string) (*np.Rattach, error) {
-	args := np.Tattach{fid, np.NoFid, uname, ""}
+	args := np.Tattach{fid, np.NoFid, uname, np.Join(path)}
 	reply, err := clnt.CallServer(server, args)
 	if err != nil {
 		return nil, err

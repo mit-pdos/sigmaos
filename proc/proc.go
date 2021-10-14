@@ -20,7 +20,7 @@ const (
 type Proc struct {
 	Pid     string   // SigmaOS PID
 	Program string   // Program to run
-	Dir     string   // Working directory for the process
+	Dir     string   // Unix working directory for the process
 	Args    []string // Args
 	Env     []string // Environment variables
 	Type    Ttype    // Type

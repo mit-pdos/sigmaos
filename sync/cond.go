@@ -40,6 +40,21 @@ func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock) *Cond {
 	return c
 }
 
+// Strict lock checking is turned on if this is a true condition variable.
+func MakeCondNew(fsl *fslib.FsLib, dir string, cond string, lock *Lock) *Cond {
+	c := &Cond{}
+	c.condLock = lock
+	c.path = path.Join(dir, cond)
+	c.bcastPath = path.Join(c.path, BROADCAST)
+	c.FsLib = fsl
+
+	log.Printf("makeCondNew %v bcast %v\n", c.path, c.bcastPath)
+
+	c.dirLock = MakeLockNew(fsl, dir, path.Join(c.path, DIR_LOCK), lock != nil)
+
+	return c
+}
+
 // Initialize the condition variable by creating its sigmaOS state. This should
 // only ever be called once globally per condition variable.
 func (c *Cond) Init() error {
@@ -54,6 +69,7 @@ func (c *Cond) Init() error {
 	defer c.dirLock.Unlock()
 
 	c.createBcastFile()
+
 	return nil
 }
 
@@ -77,6 +93,7 @@ func (c *Cond) Signal() {
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
+	log.Printf("signal %v\n", c.bcastPath)
 	wFiles, err := c.ReadDir(c.path)
 	if err != nil {
 		log.Printf("Error ReadDir in Cond.Signal: %v", err)
@@ -164,8 +181,12 @@ func (c *Cond) Wait() error {
 	}
 	c.dirLock.Unlock()
 
+	log.Printf("%v: wait %v\n", db.GetName(), c.bcastPath)
+
 	// Wait for either the Signal or Broadcast watch to be triggered
 	<-done
+
+	log.Printf("%v: wait done %v\n", db.GetName(), c.bcastPath)
 
 	// Lock & return
 	if c.condLock != nil {
@@ -181,9 +202,11 @@ func (c *Cond) Destroy() {
 	c.dirLock.Lock()
 	defer c.dirLock.Unlock()
 
+	log.Printf("%v: Wakeup and destroy %v\n", db.GetName(), c.path)
 	// Wake up all waiters with a broadcast.
 	err := c.Remove(c.bcastPath)
 	if err != nil {
+		log.Printf("%v: remove failed %v %v\n", db.GetName(), c.bcastPath, err)
 		debug.PrintStack()
 		if err.Error() == "EOF" {
 			log.Printf("Error Remove 1 in Cond.Destroy: %v", err)

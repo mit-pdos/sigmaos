@@ -25,11 +25,11 @@ type Tstate struct {
 
 func spawn(t *testing.T, ts *Tstate, pid string) {
 	a := &proc.Proc{pid, "bin/user/wwwd", "",
-		[]string{},
+		[]string{pid},
 		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF, []string{"name/" + pid},
+		proc.T_DEF, proc.C_DEF,
 	}
-	err := ts.Spawn(a)
+	err := ts.SpawnNew(a)
 	assert.Nil(t, err, "Spawn")
 }
 
@@ -54,7 +54,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.pid = proc.GenPid()
 	spawn(t, ts, ts.pid)
 
-	err = ts.WaitStart(ts.pid)
+	err = ts.WaitStartNew(ts.pid)
 	assert.Equal(t, nil, err)
 
 	return ts
@@ -64,10 +64,11 @@ func (ts *Tstate) waitWww() {
 	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
 	assert.NotEqual(ts.t, nil, err)
 
-	log.Printf("wait %v\n", ts.pid)
-	status, err := ts.WaitExit(ts.pid)
+	status, err := ts.WaitExitNew(ts.pid)
 	assert.Nil(ts.t, err, "WaitExit error")
-	assert.Equal(ts.t, status, "OK", "Exit status wrong")
+	assert.Equal(ts.t, "OK", status, "Exit status wrong")
+
+	log.Printf("SHUTDOWN\n")
 
 	ts.e.Shutdown()
 }

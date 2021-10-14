@@ -285,3 +285,7 @@ func (st *Stats) stats() []byte {
 	}
 	return data
 }
+
+func (si *StatInfo) String() string {
+	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatchv:%v Ncreate:%v Nflush:%v Nread:%v Nreadv:%v Nwrite:%v Nwritev:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nset:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatchv, si.Ncreate, si.Nflush, si.Nread, si.Nreadv, si.Nwrite, si.Nwritev, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nset, si.Paths, si.Load, si.Util)
+}

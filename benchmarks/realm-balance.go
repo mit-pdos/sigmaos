@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	N_SPINNERS_PER_PROCD = 8
+	N_SPINNERS_PER_PROCD = 40
 	SLEEP_TIME_MS        = 3000
 )
 

@@ -12,11 +12,6 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid out\n", os.Args[0])
-		os.Exit(1)
-	}
-
 	fsl1 := fslib.MakeFsLib("microbenchmarks-1")
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("microbenchmarks", cfg.NamedAddr)

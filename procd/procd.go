@@ -25,6 +25,7 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procbase"
+	"ulambda/procinit"
 	usync "ulambda/sync"
 )
 
@@ -84,6 +85,9 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()
+
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
+	pd.FsServer.GetStats().MakeElastic(pd.FsLib, "")
 
 	pd.Work()
 }

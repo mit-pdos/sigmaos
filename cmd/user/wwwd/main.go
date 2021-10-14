@@ -14,6 +14,7 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procbasev1"
 	"ulambda/procinit"
 	//"ulambda/realm"
 )
@@ -36,7 +37,7 @@ func main() {
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
 
-	www.StartedNew(www.pid)
+	www.Started(www.pid)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -60,7 +61,8 @@ func MakeWwwd(tree string) *Wwwd {
 	}
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
+	// www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
+	www.ProcClnt = procbasev1.MakeProcBaseClnt(www.FsLib)
 	return www
 }
 
@@ -142,7 +144,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	www.ExitedNew(www.pid, "OK")
+	www.Exited(www.pid, "OK")
 	os.Exit(0)
 	return "", nil
 }

@@ -10,6 +10,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procbasev1"
 	"ulambda/procinit"
 	"ulambda/realm"
 )
@@ -29,7 +30,7 @@ func spawn(t *testing.T, ts *Tstate, pid string) {
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
-	err := ts.SpawnNew(a)
+	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }
 
@@ -48,13 +49,14 @@ func makeTstate(t *testing.T) *Tstate {
 
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	// ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procbasev1.MakeProcBaseClnt(ts.FsLib)
 	ts.t = t
 
 	ts.pid = proc.GenPid()
 	spawn(t, ts, ts.pid)
 
-	err = ts.WaitStartNew(ts.pid)
+	err = ts.WaitStart(ts.pid)
 	assert.Equal(t, nil, err)
 
 	return ts
@@ -64,7 +66,7 @@ func (ts *Tstate) waitWww() {
 	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
 	assert.NotEqual(ts.t, nil, err)
 
-	status, err := ts.WaitExitNew(ts.pid)
+	status, err := ts.WaitExit(ts.pid)
 	assert.Nil(ts.t, err, "WaitExit error")
 	assert.Equal(ts.t, "OK", status, "Exit status wrong")
 

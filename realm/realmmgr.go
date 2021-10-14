@@ -3,14 +3,19 @@ package realm
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
 	"os/exec"
 	"path"
+	"strings"
+	"time"
 
 	"ulambda/config"
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/sync"
+)
+
+const (
+	SCAN_INTERVAL_MS = 10
 )
 
 const (
@@ -80,10 +85,13 @@ func (m *RealmMgr) makeFileBags() {
 func (m *RealmMgr) createRealms() {
 	for {
 		// Get a realm creation request
-		_, rid, b, err := m.realmCreate.Get()
+		_, realmId, b, err := m.realmCreate.Get()
 		if err != nil {
 			log.Fatalf("Error Get in RealmMgr.createRealms: %v", err)
 		}
+
+		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
+		realmLock.Lock()
 
 		// Unmarshal the realm config file.
 		cfg := &RealmConfig{}
@@ -92,100 +100,137 @@ func (m *RealmMgr) createRealms() {
 		}
 
 		// Make a directory for this realm.
-		if err := m.Mkdir(path.Join(REALMS, rid), 0777); err != nil {
+		if err := m.Mkdir(path.Join(REALMS, realmId), 0777); err != nil {
 			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 
 		// Make a directory for this realm's nameds.
-		if err := m.Mkdir(path.Join(REALM_NAMEDS, rid), 0777); err != nil {
+		if err := m.Mkdir(path.Join(REALM_NAMEDS, realmId), 0777); err != nil {
 			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 
 		// Make the realm config file.
-		m.WriteConfig(path.Join(REALM_CONFIG, rid), cfg)
+		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
+
+		realmLock.Unlock()
 	}
 }
 
 // Deallocate a realmd from a realm.
-func (m *RealmMgr) deallocRealmd(realmdId string) {
-	cfg := &RealmdConfig{}
-	cfg.Id = realmdId
-	cfg.RealmId = NO_REALM
-	// Update the realm config file.
-	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), cfg)
+func (m *RealmMgr) deallocRealmd(realmId string, realmdId string) {
+	rdCfg := &RealmdConfig{}
+	rdCfg.Id = realmdId
+	rdCfg.RealmId = NO_REALM
+	// Update the realmd config file.
+	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), rdCfg)
+
+	// Note realmd de-registration
+	rCfg := &RealmConfig{}
+	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	rCfg.NRealmds -= 1
+	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-func (m *RealmMgr) deallocRealmds(rid string) {
-	realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+rid, true)
-
-	realmLock.Lock()
-	defer realmLock.Unlock()
-
-	rds, err := m.ReadDir(path.Join(REALMS, rid))
+func (m *RealmMgr) deallocAllRealmds(realmId string) {
+	rds, err := m.ReadDir(path.Join(REALMS, realmId))
 	if err != nil {
 		log.Fatalf("Error ReadDir in RealmMgr.deallocRealms: %v", err)
 	}
 
-	for _, rd := range rds {
-		m.deallocRealmd(rd.Name)
+	for _, realmd := range rds {
+		m.deallocRealmd(realmId, realmd.Name)
 	}
 }
 
 func (m *RealmMgr) destroyRealms() {
 	for {
 		// Get a realm creation request
-		_, rid, _, err := m.realmDestroy.Get()
+		_, realmId, _, err := m.realmDestroy.Get()
 		if err != nil {
-			log.Fatalf("Error Get in RealmMgr.createRealms: %v", err)
+			log.Fatalf("Error Get in RealmMgr.destroyRealms: %v", err)
 		}
-		m.deallocRealmds(rid)
+
+		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
+		realmLock.Lock()
+
+		m.deallocAllRealmds(realmId)
+
+		cfg := &RealmConfig{}
+		m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
+		cfg.Shutdown = true
+		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
+
+		realmLock.Unlock()
 	}
 }
 
-// Select a realm to assign a new realmd to. Currently done by random choice.
-func (m *RealmMgr) selectRealm() string {
-	realms, err := m.ReadDir(REALMS)
+// Get & alloc a realmd to this realm.
+func (m *RealmMgr) allocRealmd(realmId string) {
+	// Get a free realmd
+	_, realmdId, _, err := m.freeRealmds.Get()
 	if err != nil {
-		log.Fatalf("Error ReadDir in RealmMgr.selectRealm: %v", err)
+		log.Fatalf("Error Get in RealmMgr.allocRealmd: %v", err)
 	}
-	if len(realms) == 0 {
-		return NO_REALM
-	}
-	choice := rand.Intn(len(realms))
-	return realms[choice].Name
+
+	// Update the realmd's config
+	rdCfg := &RealmdConfig{}
+	rdCfg.Id = realmdId
+	rdCfg.RealmId = realmId
+	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), rdCfg)
+
+	// Update the realm's config
+	rCfg := &RealmConfig{}
+	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	rCfg.NRealmds += 1
+	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-// Set the realm id in the realmd's config file & trigger its watch.
-func (m *RealmMgr) allocRealmd(realmdId string, realmId string) {
-	cfg := &RealmdConfig{}
-	cfg.Id = realmdId
-	cfg.RealmId = realmId
-	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), cfg)
+func (m *RealmMgr) needsRealmd(realmId string) bool {
+	// If the realm is being shut down, the realm config file may not be there
+	// anymore. In this case, another realmd is not needed.
+	if _, err := m.Stat(path.Join(REALM_CONFIG, realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
+		return false
+	}
+	cfg := &RealmConfig{}
+	m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
+	// If we are below the target replication level, start a new realmd
+	if cfg.NRealmds < nReplicas() && !cfg.Shutdown {
+		return true
+	}
+	// TODO: scan utilization
+	return false
 }
 
-// Assign free realmds to realms.
-func (m *RealmMgr) allocRealmds() {
+// Balance realmds across realms.
+func (m *RealmMgr) balanceRealmds() {
 	for {
-		rPriority, realmd, b, err := m.freeRealmds.Get()
+		realms, err := m.ReadDir(REALMS)
 		if err != nil {
-			log.Fatalf("Error Get in RealmMgr.allocRealmds: %v", err)
+			log.Fatalf("Error ReadDir in RealmMgr.balanceRealmds: %v", err)
 		}
-		rid := m.selectRealm()
-		// If there are no realms to assign this realmd to, try again later.
-		if rid == NO_REALM {
-			// TODO: Avoid spinning when no realms are available.
-			if err := m.freeRealmds.Put(rPriority, realmd, b); err != nil {
-				log.Fatalf("Error Put in RealmMgr.allocRealmds: %v", err)
+
+		for _, realm := range realms {
+			realmId := realm.Name
+			// XXX Currently we assume there are always enough realmds for the number
+			// of realms we have. If that assumption is broken, this may deadlock when
+			// a realm is trying to exit & we're trying to assign a realmd to it.
+			realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
+			realmLock.Lock()
+
+			if m.needsRealmd(realmId) {
+				m.allocRealmd(realmId)
 			}
-			continue
+
+			realmLock.Unlock()
 		}
-		m.allocRealmd(realmd, rid)
+
+		time.Sleep(SCAN_INTERVAL_MS * time.Millisecond)
 	}
 }
 
 func (m *RealmMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
-	go m.allocRealmds()
+	go m.balanceRealmds()
 	<-m.done
 }

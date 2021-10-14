@@ -11,6 +11,7 @@ import (
 	"ulambda/config"
 	"ulambda/fslib"
 	"ulambda/named"
+	"ulambda/stats"
 	"ulambda/sync"
 )
 
@@ -185,6 +186,28 @@ func (m *RealmMgr) allocRealmd(realmId string) {
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
+// Get all a realm's procd's stats
+func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) []*stats.StatInfo {
+	// XXX For now we assume all the nameds are up
+	stat := []*stats.StatInfo{}
+	if len(nameds) == 0 {
+		return stat
+	}
+	procds, err := m.ReadDir(path.Join(REALM_NAMEDS, realmId, nameds[0], "procd"))
+	if err != nil {
+		log.Fatalf("Error ReadDir 2 in RealmMgr.getRealmProcdStats: %v", err)
+	}
+	for _, pd := range procds {
+		s := &stats.StatInfo{}
+		err := m.ReadFileJson(path.Join(REALM_NAMEDS, realmId, nameds[0], "procd", pd.Name, "statsd"), s)
+		if err != nil {
+			log.Fatalf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
+		}
+		stat = append(stat, s)
+	}
+	return stat
+}
+
 func (m *RealmMgr) needsRealmd(realmId string) bool {
 	// If the realm is being shut down, the realm config file may not be there
 	// anymore. In this case, another realmd is not needed.
@@ -197,7 +220,9 @@ func (m *RealmMgr) needsRealmd(realmId string) bool {
 	if cfg.NRealmds < nReplicas() && !cfg.Shutdown {
 		return true
 	}
-	// TODO: scan utilization
+	// Get stats
+	procdStats := m.getRealmProcdStats(cfg.NamedAddr, realmId)
+	log.Printf("Procd stats for realm %v: %v", realmId, procdStats)
 	return false
 }
 

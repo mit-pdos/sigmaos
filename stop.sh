@@ -20,6 +20,7 @@ killall kv
 killall monitor
 killall kvd
 killall kvclerk
+killall balancer
 killall coord
 killall flwr
 killall sharderd

@@ -3,9 +3,6 @@ package fslib
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"strings"
 
 	"ulambda/fsclnt"
 	np "ulambda/ninep"
@@ -14,52 +11,6 @@ import (
 // XXX Picking a small chunk size really kills throughput
 //const CHUNKSZ = 8192
 const CHUNKSZ = 10000000
-
-type FsLib struct {
-	*fsclnt.FsClient
-}
-
-func Named() []string {
-	named := os.Getenv("NAMED")
-	if named == "" {
-		log.Fatal("Getenv error: missing NAMED")
-	}
-	nameds := strings.Split(named, ",")
-	return nameds
-}
-
-func MakeFsLibAddr(uname string, namedAddr []string) *FsLib {
-	fl := &FsLib{fsclnt.MakeFsClient(uname)}
-	if fd, err := fl.AttachReplicas(namedAddr, ""); err == nil {
-		err := fl.Mount(fd, "name")
-		if err != nil {
-			log.Fatal("Mount error: ", err)
-		}
-	}
-	return fl
-}
-
-func MakeFsLib(uname string) *FsLib {
-	fl := &FsLib{fsclnt.MakeFsClient(uname)}
-	if fd, err := fl.AttachReplicas(Named(), ""); err == nil {
-		err := fl.Mount(fd, "name")
-		if err != nil {
-			log.Fatal("Mount error: ", err)
-		}
-	}
-	return fl
-}
-
-func MakeFsLibTree(uname string, tree string) *FsLib {
-	fl := &FsLib{fsclnt.MakeFsClient(uname)}
-	if fd, err := fl.AttachReplicas(Named(), tree); err == nil {
-		err := fl.Mount(fd, tree)
-		if err != nil {
-			log.Fatal("Mount error: ", err)
-		}
-	}
-	return fl
-}
 
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
 	return fl.FsClient.ReadSeqNo()

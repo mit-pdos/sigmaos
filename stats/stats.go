@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,6 +19,7 @@ import (
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/inode"
+	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -111,6 +113,13 @@ func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	go st.monitorPID()
 }
 
+func (st *Stats) MonitorCPUUtil(fsl *fslib.FsLib) {
+	st.fsl = fsl
+	st.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	st.hz = perf.Hz()
+	go st.monitorCPUUtil()
+}
+
 func (st *Stats) spawnMonitor() string {
 	p := proc.Proc{}
 	p.Pid = proc.GenPid()
@@ -150,6 +159,25 @@ func (st *Stats) load(ticks uint64) {
 
 	util := 100.0 * float64(ticks) / float64(MS/j)
 	util = util / float64(ncpu)
+	log.Printf("Ticks: %v, Util: %v", ticks, util)
+
+	nthread := float64(runtime.NumGoroutine())
+
+	st.sti.Load[0] *= EXP_0
+	st.sti.Load[0] += (1 - EXP_0) * nthread
+	st.sti.Load[1] *= EXP_1
+	st.sti.Load[1] += (1 - EXP_1) * nthread
+	st.sti.Load[2] *= EXP_2
+	st.sti.Load[2] += (1 - EXP_2) * nthread
+
+	st.sti.Util = util
+}
+
+func (st *Stats) loadCPUUtil(idle, total uint64) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	util := 100.0 * (1.0 - float64(idle)/float64(total))
 
 	nthread := float64(runtime.NumGoroutine())
 
@@ -170,6 +198,40 @@ func isDelay(load Tload) bool {
 
 func noDelay(load Tload) bool {
 	return load[0] < load[1] && load[1] < load[2]
+}
+
+func (st *Stats) monitorCPUUtil() {
+	total0 := uint64(0)
+	total1 := uint64(0)
+	idle0 := uint64(0)
+	idle1 := uint64(0)
+	pid := os.Getpid()
+	total0 = perf.GetPIDSample(pid)
+	period1 := 10 // 1000/MS;
+
+	cores := map[string]bool{}
+
+	linuxsched.ScanTopology()
+	// Get the cores we can run on
+	m, err := linuxsched.SchedGetAffinity(os.Getpid())
+	if err != nil {
+		log.Fatalf("Error getting affinity mask: %v", err)
+	}
+	for i := uint(0); i < linuxsched.NCores; i++ {
+		if m.Test(i) {
+			cores["cpu"+strconv.Itoa(int(i))] = true
+		}
+	}
+
+	for atomic.LoadUint32(&st.done) != 1 {
+		for i := 0; i < period1; i++ {
+			time.Sleep(time.Duration(MS) * time.Millisecond)
+			idle1, total1 = perf.GetCPUSample(cores)
+			st.loadCPUUtil(idle1-idle0, total1-total0)
+			total0 = total1
+			idle0 = idle1
+		}
+	}
 }
 
 func (st *Stats) doMonitor() bool {

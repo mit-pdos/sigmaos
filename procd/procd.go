@@ -87,7 +87,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	procdStartCond.Destroy()
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	pd.FsServer.GetStats().MakeElastic(pd.FsLib, "")
+	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
 
 	pd.Work()
 }

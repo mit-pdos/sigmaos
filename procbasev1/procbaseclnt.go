@@ -10,6 +10,7 @@ import (
 
 	"github.com/thanhpk/randstr"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -48,11 +49,16 @@ type ProcBaseClnt struct {
 	*fslib.FsLib
 }
 
-func MakeProcBaseClnt(fsl *fslib.FsLib) *ProcBaseClnt {
+func MakeProcBaseClnt(fsl *fslib.FsLib, pid string) *ProcBaseClnt {
 	clnt := &ProcBaseClnt{}
 	clnt.runq = sync.MakeFilePriorityBag(fsl, RUNQ)
 	clnt.FsLib = fsl
 
+	if pid != "" {
+		if err := fsl.MountTree(fslib.Named(), pid, pid); err != nil {
+			log.Fatalf("Error mounting %v err %v\n", pid, err)
+		}
+	}
 	return clnt
 }
 
@@ -64,6 +70,7 @@ func childDir(pid string) string {
 // ========== SPAWN ==========
 
 func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
+	log.Printf("%v: V1\n", db.GetName())
 	p := gp.GetProc()
 	// Select which queue to put the job in
 	var procPriority string
@@ -79,8 +86,7 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	}
 
 	dir := childDir(p.Pid)
-	err := clnt.Mkdir(dir, 0777)
-	if err != nil {
+	if err := clnt.Mkdir(dir, 0777); err != nil {
 		log.Printf("DIR FAILED %v %v\n", dir, err)
 		return err
 	}
@@ -122,6 +128,9 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 // called by parent
 // Wait until a proc has started. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitStart(pid string) error {
+	if _, err := clnt.Stat(childDir(pid)); err != nil {
+		return err
+	}
 	pStartCond := sync.MakeCondNew(clnt.FsLib, childDir(pid), START_COND, nil)
 	pStartCond.Wait()
 	return nil
@@ -130,6 +139,9 @@ func (clnt *ProcBaseClnt) WaitStart(pid string) error {
 // called by parent
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
+	if _, err := clnt.Stat(childDir(pid)); err != nil {
+		return "", err
+	}
 	// Register that we want to get a return status back
 	fpath, _ := clnt.registerRetStatWaiter(pid)
 

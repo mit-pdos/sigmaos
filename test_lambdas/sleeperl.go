@@ -29,10 +29,9 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	s := &Sleeperl{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
-	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
+	s.ProcClnt = procinit.MakeProcClntv1(s.FsLib, procinit.GetProcLayersMap(), args[0])
 	s.pid = args[0]
 	s.output = args[2]
-
 	d, err := time.ParseDuration(args[1])
 	if err != nil {
 		log.Fatalf("Error parsing duration: %v", err)

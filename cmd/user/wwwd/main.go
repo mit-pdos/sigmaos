@@ -14,7 +14,6 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procbasev1"
 	"ulambda/procinit"
 	//"ulambda/realm"
 )
@@ -52,17 +51,17 @@ func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
 	// www.FsLib = fslib.MakeFsLib("www")
 	db.Name("wwwd")
-	www.FsLib = fslib.MakeFsLibTree("www", tree)
+	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
 	log.Printf("%v: tree %v\n", db.GetName(), tree)
+
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
+	www.ProcClnt = procinit.MakeProcClntv1(www.FsLib, procinit.GetProcLayersMap(), tree)
 	err := www.MakeFile(tree+"/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	// www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
-	www.ProcClnt = procbasev1.MakeProcBaseClnt(www.FsLib)
 	return www
 }
 

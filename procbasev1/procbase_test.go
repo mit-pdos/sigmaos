@@ -44,7 +44,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntv1(ts.FsLib, procinit.GetProcLayersMap(), "")
 	ts.t = t
 	return ts
 }
@@ -55,7 +55,7 @@ func (ts *Tstate) procd(t *testing.T) string {
 	return st[0].Name
 }
 
-func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv) *Tstate {
+func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pid string) *Tstate {
 	ts := &Tstate{}
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	ts.t = t
@@ -63,7 +63,7 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv) *T
 	ts.cfg = cfg
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntv1(ts.FsLib, procinit.GetProcLayersMap(), "")
 	return ts
 }
 
@@ -182,7 +182,7 @@ func TestWaitStart(t *testing.T) {
 }
 
 // Should exit immediately
-func TestWaitNonexistentLambda(t *testing.T) {
+func TestWaitNonexistentProc(t *testing.T) {
 	ts := makeTstate(t)
 
 	ch := make(chan bool)
@@ -203,26 +203,23 @@ func TestWaitNonexistentLambda(t *testing.T) {
 
 // Spawn a bunch of lambdas concurrently, then wait for all of them & check
 // their result
-func TestConcurrentLambdas(t *testing.T) {
+func TestConcurrentProcs(t *testing.T) {
 	ts := makeTstate(t)
 
-	nLambdas := 27
+	nProcs := 27
 	pids := map[string]int{}
 
 	// Make a bunch of fslibs to avoid concurrency issues
 	tses := []*Tstate{}
 
-	for j := 0; j < nLambdas; j++ {
-	}
-
 	var barrier sync.WaitGroup
-	barrier.Add(nLambdas)
+	barrier.Add(nProcs)
 	var started sync.WaitGroup
-	started.Add(nLambdas)
+	started.Add(nProcs)
 	var done sync.WaitGroup
-	done.Add(nLambdas)
+	done.Add(nProcs)
 
-	for i := 0; i < nLambdas; i++ {
+	for i := 0; i < nProcs; i++ {
 		pid := proc.GenPid()
 		_, alreadySpawned := pids[pid]
 		for alreadySpawned {
@@ -230,7 +227,7 @@ func TestConcurrentLambdas(t *testing.T) {
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		newts := makeTstateNoBoot(t, ts.cfg, ts.e)
+		newts := makeTstateNoBoot(t, ts.cfg, ts.e, pid)
 		tses = append(tses, newts)
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()

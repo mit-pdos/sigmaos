@@ -6,11 +6,12 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"ulambda/procbase"
-	"ulambda/procdep"
 	"ulambda/fslib"
-	"ulambda/procidem"
 	"ulambda/proc"
+	"ulambda/procbase"
+	"ulambda/procbasev1"
+	"ulambda/procdep"
+	"ulambda/procidem"
 )
 
 const (
@@ -68,6 +69,19 @@ func makeProcLayersString(layers map[string]bool) string {
 func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 	var clnt proc.ProcClnt
 	clnt = procbase.MakeProcBaseClnt(fsl)
+	if _, ok := layers[PROCIDEM]; ok {
+		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
+	}
+	if _, ok := layers[PROCDEP]; ok {
+		clnt = procdep.MakeProcDepClnt(fsl, clnt)
+	}
+	return clnt
+}
+
+// Make a generic ProcClnt with the desired layers.
+func MakeProcClntv1(fsl *fslib.FsLib, layers map[string]bool, pid string) proc.ProcClnt {
+	var clnt proc.ProcClnt
+	clnt = procbasev1.MakeProcBaseClnt(fsl, pid)
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}

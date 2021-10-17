@@ -10,7 +10,6 @@ import (
 
 	"github.com/thanhpk/randstr"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -70,7 +69,6 @@ func childDir(pid string) string {
 // ========== SPAWN ==========
 
 func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
-	log.Printf("%v: V1\n", db.GetName())
 	p := gp.GetProc()
 	// Select which queue to put the job in
 	var procPriority string
@@ -311,7 +309,6 @@ func (clnt *ProcBaseClnt) getRetStat(pid string, fpath string) string {
 	var b []byte
 	var err error
 
-	log.Printf("getRetStatNew: %v\n", fpath)
 	// If we didn't successfully register the ret stat file
 	if fpath == "" {
 		// Try to read the parent ret stat file

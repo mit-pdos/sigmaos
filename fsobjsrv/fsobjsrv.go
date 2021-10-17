@@ -83,7 +83,6 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
 	tree := root.(fs.FsObj)
 	if args.Aname != "" {
-		log.Printf("Attach %v %v\n", args, root)
 		os, rest, err := root.Lookup(ctx, path)
 		if len(rest) > 0 || err != nil {
 			return &np.Rerror{err.Error()}

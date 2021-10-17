@@ -48,8 +48,6 @@ func MakeCondNew(fsl *fslib.FsLib, dir string, cond string, lock *Lock) *Cond {
 	c.bcastPath = path.Join(c.path, BROADCAST)
 	c.FsLib = fsl
 
-	log.Printf("makeCondNew %v bcast %v\n", c.path, c.bcastPath)
-
 	c.dirLock = MakeLockNew(fsl, dir, path.Join(c.path, DIR_LOCK), lock != nil)
 
 	return c

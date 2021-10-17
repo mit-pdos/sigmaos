@@ -124,14 +124,6 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	return nil
 }
 
-func (fl *FsLib) IsDir(name string) (bool, error) {
-	st, err := fl.Stat(name)
-	if err != nil {
-		return false, err
-	}
-	return st.Mode.IsDir(), nil
-}
-
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
 	b, _, err := fl.GetFile(name)
 	if err != nil {

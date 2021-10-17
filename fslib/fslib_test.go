@@ -46,7 +46,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestRemove(t *testing.T) {
+func TestRemoveSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/f"
@@ -56,6 +56,10 @@ func TestRemove(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
+
+	_, err = ts.Stat(fn)
+	assert.NotEqual(t, nil, err)
+
 	ts.e.Shutdown()
 }
 
@@ -140,6 +144,21 @@ func TestCopy(t *testing.T) {
 
 	d1, err := ts.ReadFile(dst)
 	assert.Equal(t, "hello", string(d1))
+
+	ts.e.Shutdown()
+}
+
+func TestDirSimple(t *testing.T) {
+	ts := makeTstate(t)
+	dn := "name/d"
+	err := ts.Mkdir(dn, 0777)
+	assert.Equal(t, nil, err)
+	b, err := ts.IsDir(dn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, b)
+	err = ts.RmDir(dn)
+	_, err = ts.Stat(dn)
+	assert.NotEqual(t, nil, err)
 
 	ts.e.Shutdown()
 }

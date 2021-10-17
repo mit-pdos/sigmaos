@@ -326,6 +326,14 @@ func (clnt *ProcBaseClnt) getRetStat(pid string, fpath string) string {
 		if err := clnt.Remove(fpath); err != nil {
 			log.Fatalf("Error Remove in ProcBaseClnt.getRetStatNew: %v", err)
 		}
+
+		// XXX if parent doesn't call WaitExit(), someone should
+		// Remove pid dir
+		dir := childDir(pid)
+		if err := clnt.RmDir(dir); err != nil {
+			log.Fatalf("Error RmDir in ProcBaseClnt.getRetStatNew: %v", err)
+		}
+
 	}
 
 	return string(b)

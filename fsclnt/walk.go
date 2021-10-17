@@ -228,11 +228,11 @@ func (fsc *FsClient) autoMount(target string, path []string) ([]string, error) {
 	if IsReplicated(target) {
 		servers, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = fsc.AttachReplicas(servers, "")
+		fid, err = fsc.AttachReplicas(servers, np.Join(path), "")
 	} else {
 		server, r := SplitTarget(target)
 		rest = r
-		fid, err = fsc.Attach(server, "")
+		fid, err = fsc.Attach(server, np.Join(path), "")
 	}
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)

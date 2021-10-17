@@ -24,7 +24,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
-	"ulambda/procbase"
+	"ulambda/procbasev1"
 	usync "ulambda/sync"
 )
 
@@ -44,7 +44,7 @@ type Procd struct {
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
 	perf       *perf.Perf
-	procclnt   *procbase.ProcBaseClnt
+	procclnt   *procbasev1.ProcBaseClnt
 	*fslib.FsLib
 	*fssrv.FsServer
 }
@@ -65,7 +65,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	pd.addr = pd.MyAddr()
-	pd.procclnt = procbase.MakeProcBaseClnt(pd.FsLib)
+	pd.procclnt = procbasev1.MakeProcBaseClnt(pd.FsLib, "")
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -80,7 +80,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	// Make some directories used by other services.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbase.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbasev1.RUNQ)
 
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()

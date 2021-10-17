@@ -26,7 +26,7 @@ func MakeFsLibBase(uname string) *FsLib {
 }
 
 func (fl *FsLib) MountTree(server []string, tree, mount string) error {
-	if fd, err := fl.AttachReplicas(server, tree); err == nil {
+	if fd, err := fl.AttachReplicas(server, "", tree); err == nil {
 		return fl.Mount(fd, mount)
 	} else {
 		return err

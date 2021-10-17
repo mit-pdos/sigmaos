@@ -37,7 +37,7 @@ func (w *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
 	w.watchers = append(w.watchers, ws)
 	w.mu.Unlock()
 	<-ws.ch
-	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", w)
+	db.DLPrintf("WATCH", "Watch done waiting %v\n", w)
 
 	if npc.Closed() {
 		// XXX Bettter error message?

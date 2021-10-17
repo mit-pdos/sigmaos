@@ -207,8 +207,8 @@ func (fsc *FsClient) Close(fd int) error {
 
 // XXX if server lives in this process, do something special?  FsClient doesn't
 // know about the server currently.
-func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string) (*Path, error) {
-	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, p)
+func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string, tree []string) (*Path, error) {
+	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, tree)
 	if err != nil {
 		return nil, err
 	}
@@ -220,10 +220,10 @@ func (fsc *FsClient) detachChannel(fid np.Tfid) {
 	fsc.freeFid(fid)
 }
 
-func (fsc *FsClient) AttachReplicas(server []string, path string) (np.Tfid, error) {
+func (fsc *FsClient) AttachReplicas(server []string, path, tree string) (np.Tfid, error) {
 	p := np.Split(path)
 	fid := fsc.allocFid()
-	ch, err := fsc.attachChannel(fid, server, p)
+	ch, err := fsc.attachChannel(fid, server, p, np.Split(tree))
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -236,8 +236,8 @@ func (fsc *FsClient) AttachReplicas(server []string, path string) (np.Tfid, erro
 	return fid, nil
 }
 
-func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
-	return fsc.AttachReplicas([]string{server}, path)
+func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
+	return fsc.AttachReplicas([]string{server}, path, tree)
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {

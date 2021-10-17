@@ -47,6 +47,7 @@ func (p *Proc) init(a *proc.Proc) {
 	env := append(os.Environ(), a.Env...)
 	env = append(env, "NEWROOT="+p.NewRoot)
 	env = append(env, "PROCDIP="+p.pd.addr)
+	env = append(env, "SIGMAPID="+p.Pid)
 	p.Env = env
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p

@@ -8,11 +8,16 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procbase"
+	// "ulambda/procbase"
 	"ulambda/procbasev1"
 	"ulambda/procdep"
 	"ulambda/procidem"
 )
+
+// Can return "" for test programs that make a procclnt
+func GetPid() string {
+	return os.Getenv("SIGMAPID")
+}
 
 const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
@@ -68,20 +73,8 @@ func makeProcLayersString(layers map[string]bool) string {
 // Make a generic ProcClnt with the desired layers.
 func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	clnt = procbase.MakeProcBaseClnt(fsl)
-	if _, ok := layers[PROCIDEM]; ok {
-		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
-	}
-	if _, ok := layers[PROCDEP]; ok {
-		clnt = procdep.MakeProcDepClnt(fsl, clnt)
-	}
-	return clnt
-}
-
-// Make a generic ProcClnt with the desired layers.
-func MakeProcClntv1(fsl *fslib.FsLib, layers map[string]bool, pid string) proc.ProcClnt {
-	var clnt proc.ProcClnt
-	clnt = procbasev1.MakeProcBaseClnt(fsl, pid)
+	// clnt = procbase.MakeProcBaseClnt(fsl)
+	clnt = procbasev1.MakeProcBaseClnt(fsl, GetPid())
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}

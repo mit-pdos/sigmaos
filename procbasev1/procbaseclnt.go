@@ -157,6 +157,9 @@ func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
 // called by parent
 // Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitEvict(pid string) error {
+	if _, err := clnt.Stat(childDir(pid)); err != nil {
+		return err
+	}
 	pEvictCond := sync.MakeCondNew(clnt.FsLib, childDir(pid), EVICT_COND, nil)
 	pEvictCond.Wait()
 	return nil
@@ -167,6 +170,9 @@ func (clnt *ProcBaseClnt) WaitEvict(pid string) error {
 // called by child
 // Mark that a process has started.
 func (clnt *ProcBaseClnt) Started(pid string) error {
+	if _, err := clnt.Stat(pid); err != nil {
+		return err
+	}
 	dir := pid + "/"
 	pStartCond := sync.MakeCondNew(clnt.FsLib, dir, START_COND, nil)
 	pStartCond.Destroy()
@@ -199,7 +205,9 @@ func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 
 // Notify a process that it will be evicted.
 func (clnt *ProcBaseClnt) Evict(pid string) error {
-
+	if _, err := clnt.Stat(childDir(pid)); err != nil {
+		return err
+	}
 	pEvictCond := sync.MakeCondNew(clnt.FsLib, childDir(pid), EVICT_COND, nil)
 	pEvictCond.Destroy()
 	return nil

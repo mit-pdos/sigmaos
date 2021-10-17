@@ -48,7 +48,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClntv1(ts.FsLib, procinit.GetProcLayersMap(), "")
+	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 
 	ts.pid = proc.GenPid()

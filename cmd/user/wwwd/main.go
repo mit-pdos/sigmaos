@@ -53,10 +53,14 @@ func MakeWwwd(tree string) *Wwwd {
 	db.Name("wwwd")
 	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
+	if err := www.MountTree(fslib.Named(), tree, tree); err != nil {
+		log.Fatalf("wwwd MounTree %v", err)
+	}
+
 	log.Printf("%v: tree %v\n", db.GetName(), tree)
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	www.ProcClnt = procinit.MakeProcClntv1(www.FsLib, procinit.GetProcLayersMap(), tree)
+	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
 	err := www.MakeFile(tree+"/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)

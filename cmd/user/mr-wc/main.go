@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"ulambda/fslib"
-	"ulambda/mr"
 	"ulambda/proc"
 	"ulambda/procdep"
 	"ulambda/procinit"
@@ -32,17 +31,21 @@ func rmDir(fsl *fslib.FsLib, dir string) error {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %v s3_input_dir", os.Args[0])
+	if len(os.Args) < 3 {
+		log.Fatalf("Usage: %v nReducers s3_input_dir", os.Args[0])
 	}
-	s3Dir := os.Args[1]
+	nReducers, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		log.Fatalf("Error invalid nReducers: %v", err)
+	}
+	s3Dir := os.Args[2]
 
 	fsl1 := fslib.MakeFsLib("mr-wc-1")
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("mr-wc", cfg.NamedAddr)
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
-	for r := 0; r < mr.NReduce; r++ {
+	for r := 0; r < nReducers; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
 		if err != nil {
@@ -82,7 +85,7 @@ func main() {
 	}
 
 	reducers := []string{}
-	for i := 0; i < mr.NReduce; i++ {
+	for i := 0; i < nReducers; i++ {
 		pid := proc.GenPid()
 		r := strconv.Itoa(i)
 		a := procdep.MakeProcDep()
@@ -110,7 +113,7 @@ func main() {
 	}
 
 	defer file.Close()
-	for i := 0; i < mr.NReduce; i++ {
+	for i := 0; i < nReducers; i++ {
 		// XXX run as a lambda?
 		r := strconv.Itoa(i)
 		data, err := fsl.ReadFile("name/fs/mr-out-" + r)

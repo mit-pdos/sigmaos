@@ -83,25 +83,25 @@ func main() {
 		log.Fatalf("Readdir %v\n", err)
 	}
 	for _, f := range files {
-		pid1 := proc.GenPid()
+		//		pid1 := proc.GenPid()
 		pid2 := proc.GenPid()
 		m := strconv.Itoa(n)
 		rmDir(fsl, "name/ux/~ip/m-"+m)
-		a1 := procdep.MakeProcDep()
-		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
-		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
-			[]string{m, "name/s3/~ip/input/" + f.Name()},
-			[]string{procinit.GetProcLayersString()},
-			proc.T_BE, proc.C_DEF,
-		}
+		//		a1 := procdep.MakeProcDep()
+		//		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
+		//		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
+		//			[]string{m, "name/s3/~ip/input/" + f.Name()},
+		//			[]string{procinit.GetProcLayersString()},
+		//			proc.T_BE, proc.C_DEF,
+		//		}
 		a2 := procdep.MakeProcDep()
-		a2.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
+		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		a2.Proc = &proc.Proc{pid2, "bin/user/mr-m-wc", "",
-			[]string{"name/" + m + "/pipe", m},
+			[]string{"name/s3/~ip/input/" + f.Name(), m},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
-		sclnt.Spawn(a1)
+		//		sclnt.Spawn(a1)
 		sclnt.Spawn(a2)
 		n += 1
 		mappers[pid2] = false
@@ -122,7 +122,7 @@ func main() {
 		sclnt.Spawn(a)
 	}
 
-	// Spawn noop lambda that is dependent on reducers
+	// Wait for reducers to exit
 	for _, r := range reducers {
 		status, err := sclnt.WaitExit(r)
 		if err != nil && !strings.Contains(err.Error(), "file not found") || status != "OK" && status != "" {

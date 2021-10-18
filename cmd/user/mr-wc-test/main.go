@@ -5,8 +5,11 @@ package main
 //
 
 import (
+	"bytes"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -31,12 +34,35 @@ func rmDir(fsl *fslib.FsLib, dir string) error {
 	return nil
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %v s3_input_dir", os.Args[0])
+func Compare(fsl *fslib.FsLib) {
+	cmd := exec.Command("sort", "mr/seq-mr.out")
+	var out1 bytes.Buffer
+	cmd.Stdout = &out1
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
 	}
-	s3Dir := os.Args[1]
+	cmd = exec.Command("sort", "mr/par-mr.out")
+	var out2 bytes.Buffer
+	cmd.Stdout = &out2
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
+	}
+	b1 := out1.Bytes()
+	b2 := out2.Bytes()
+	if len(b1) != len(b2) {
+		log.Fatalf("Output files have different length\n")
+	}
+	for i, v := range b1 {
+		if v != b2[i] {
+			log.Fatalf("Buf %v diff %v %v\n", i, v, b2[i])
+			break
+		}
+	}
+}
 
+func main() {
 	fsl1 := fslib.MakeFsLib("mr-wc-1")
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("mr-wc", cfg.NamedAddr)
@@ -52,7 +78,7 @@ func main() {
 
 	mappers := map[string]bool{}
 	n := 0
-	files, err := fsl.ReadDir(path.Join("name/s3/~ip/", s3Dir))
+	files, err := ioutil.ReadDir("input/")
 	if err != nil {
 		log.Fatalf("Readdir %v\n", err)
 	}
@@ -64,7 +90,7 @@ func main() {
 		a1 := procdep.MakeProcDep()
 		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
-			[]string{m, path.Join("name/s3/~ip/", s3Dir, f.Name)},
+			[]string{m, "name/s3/~ip/input/" + f.Name()},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
@@ -96,7 +122,7 @@ func main() {
 		sclnt.Spawn(a)
 	}
 
-	// Wait for reducers to exit
+	// Spawn noop lambda that is dependent on reducers
 	for _, r := range reducers {
 		status, err := sclnt.WaitExit(r)
 		if err != nil && !strings.Contains(err.Error(), "file not found") || status != "OK" && status != "" {
@@ -123,5 +149,6 @@ func main() {
 		}
 	}
 
-	log.Printf("mr-wc DONE\n")
+	Compare(fsl)
+	log.Printf("mr-wc PASS\n")
 }

@@ -18,10 +18,6 @@ type Fid struct {
 	ctx  fs.CtxI
 }
 
-func MakeFid(o fs.FsObj, ctx fs.CtxI) *Fid {
-	return &Fid{sync.Mutex{}, []string{}, o, o.Version(), ctx}
-}
-
 func MakeFidPath(p []string, o fs.FsObj, ctx fs.CtxI) *Fid {
 	return &Fid{sync.Mutex{}, p, o, o.Version(), ctx}
 }

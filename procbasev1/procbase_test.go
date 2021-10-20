@@ -2,6 +2,7 @@ package procbasev1_test
 
 import (
 	"fmt"
+	"path"
 	"sync"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/procbasev1"
 	"ulambda/procinit"
 	"ulambda/realm"
 )
@@ -149,6 +151,23 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
 	checkSleeperlResult(t, ts, pid)
+
+	ts.e.Shutdown()
+}
+
+func TestExitCleanup(t *testing.T) {
+	ts := makeTstate(t)
+
+	pid := spawnSleeperl(t, ts)
+
+	// Simulate parent exiting before child
+	err := ts.Remove(path.Join(procbasev1.ChildDir(pid), procbasev1.PARENT_RET_STAT+pid))
+	assert.Nil(t, err, "Remove")
+
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+
+	_, err = ts.Stat(procbasev1.ChildDir(pid))
+	assert.NotNil(t, err, "Stat")
 
 	ts.e.Shutdown()
 }

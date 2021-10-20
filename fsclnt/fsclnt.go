@@ -347,9 +347,18 @@ func (fsc *FsClient) removeMount(path []string) error {
 	if len(path) < 1 {
 		return fmt.Errorf("unmount bad path %v\n", path)
 	}
-	prefix := make([]string, len(path)-1)
-	last := path[len(path)-1:]
-	copy(prefix, path[:len(path)-1])
+	var prefix []string
+	var last []string
+	if len(path) == 1 {
+		prefix = make([]string, len(path))
+		copy(prefix, path[:len(path)])
+		last = []string{}
+	} else {
+		prefix = make([]string, len(path)-1)
+		copy(prefix, path[:len(path)-1])
+		last = path[len(path)-1:]
+	}
+
 	fid, err := fsc.walkMany(prefix, true, nil)
 	if err != nil {
 		return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
@@ -371,7 +380,7 @@ func (fsc *FsClient) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
 	_, rest := fsc.mount.resolve(path)
-	if len(rest) == 0 && !np.EndSlash(name) { // mount point
+	if len(rest) == 0 && !np.EndSlash(name) { // remove mount point
 		return fsc.removeMount(path)
 	} else {
 		fid, rest := fsc.mount.resolve(path)
@@ -380,11 +389,19 @@ func (fsc *FsClient) Remove(name string) error {
 			return errors.New("file not found")
 
 		}
+
+		// Tell the service to exit
 		if np.EndSlash(name) {
+			log.Printf("exit %v\n", name)
 			rest = append(rest, ".")
 		}
+
+		// Optimistcally remove obj without doing a pathname
+		// walk; this may fail if rest contains an automount
+		// symlink.
 		err := fsc.clnt(fid).RemoveFile(fid, rest)
 		if err != nil {
+			// There must have been a symlink in rest
 			// force automounting, but only on dir error
 			if strings.HasPrefix(err.Error(), "dir not found") {
 				fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)

@@ -62,7 +62,7 @@ func MakeProcBaseClnt(fsl *fslib.FsLib, pid string) *ProcBaseClnt {
 }
 
 // called by parent
-func childDir(pid string) string {
+func ChildDir(pid string) string {
 	return "name/" + pid + "/"
 }
 
@@ -83,7 +83,7 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 		log.Fatalf("Error in ProcBaseClnt.Spawn: Unknown proc type %v", p.Type)
 	}
 
-	dir := childDir(p.Pid)
+	dir := ChildDir(p.Pid)
 	if err := clnt.Mkdir(dir, 0777); err != nil {
 		log.Printf("DIR FAILED %v %v\n", dir, err)
 		return err
@@ -126,10 +126,10 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 // called by parent
 // Wait until a proc has started. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitStart(pid string) error {
-	if _, err := clnt.Stat(childDir(pid)); err != nil {
+	if _, err := clnt.Stat(ChildDir(pid)); err != nil {
 		return err
 	}
-	pStartCond := sync.MakeCondNew(clnt.FsLib, childDir(pid), START_COND, nil)
+	pStartCond := sync.MakeCondNew(clnt.FsLib, ChildDir(pid), START_COND, nil)
 	pStartCond.Wait()
 	return nil
 }
@@ -137,14 +137,14 @@ func (clnt *ProcBaseClnt) WaitStart(pid string) error {
 // called by parent
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
-	if _, err := clnt.Stat(childDir(pid)); err != nil {
+	if _, err := clnt.Stat(ChildDir(pid)); err != nil {
 		return "", err
 	}
 	// Register that we want to get a return status back
 	fpath, _ := clnt.registerRetStatWaiter(pid)
 
 	// Wait for the process to exit
-	pExitCond := sync.MakeCond(clnt.FsLib, childDir(pid)+EXIT_COND, nil)
+	pExitCond := sync.MakeCond(clnt.FsLib, ChildDir(pid)+EXIT_COND, nil)
 	pExitCond.Wait()
 
 	status := clnt.getRetStat(pid, fpath)
@@ -155,10 +155,10 @@ func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
 // called by parent
 // Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitEvict(pid string) error {
-	if _, err := clnt.Stat(childDir(pid)); err != nil {
+	if _, err := clnt.Stat(ChildDir(pid)); err != nil {
 		return err
 	}
-	pEvictCond := sync.MakeCondNew(clnt.FsLib, childDir(pid), EVICT_COND, nil)
+	pEvictCond := sync.MakeCondNew(clnt.FsLib, ChildDir(pid), EVICT_COND, nil)
 	pEvictCond.Wait()
 	return nil
 }
@@ -192,10 +192,17 @@ func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 	dir := pid + "/"
 
 	// Write back return statuses
-	clnt.writeBackRetStats(pid, status)
+	del := clnt.writeBackRetStats(pid, status)
 
 	pExitCond := sync.MakeCondNew(clnt.FsLib, dir, EXIT_COND, nil)
 	pExitCond.Destroy()
+
+	if del {
+		if err := clnt.RmDir(pid); err != nil {
+			log.Fatalf("Error RmDir in ProcBaseClnt.writeBackRetStatNew: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -203,10 +210,10 @@ func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 
 // Notify a process that it will be evicted.
 func (clnt *ProcBaseClnt) Evict(pid string) error {
-	if _, err := clnt.Stat(childDir(pid)); err != nil {
+	if _, err := clnt.Stat(ChildDir(pid)); err != nil {
 		return err
 	}
-	pEvictCond := sync.MakeCondNew(clnt.FsLib, childDir(pid), EVICT_COND, nil)
+	pEvictCond := sync.MakeCondNew(clnt.FsLib, ChildDir(pid), EVICT_COND, nil)
 	pEvictCond.Destroy()
 	return nil
 }
@@ -215,7 +222,7 @@ func (clnt *ProcBaseClnt) Evict(pid string) error {
 
 // called by parent
 func (clnt *ProcBaseClnt) makeParentRetStatFile(pid string) {
-	dir := childDir(pid)
+	dir := ChildDir(pid)
 	if err := clnt.MakeFile(path.Join(dir, PARENT_RET_STAT+pid), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil && !strings.Contains(err.Error(), "Name exists") {
 		log.Fatalf("Error MakeFile in ProcBaseClnt.makeParentRetStatFile: %v", err)
 	}
@@ -227,7 +234,7 @@ type RetStatWaiters struct {
 
 // called by parent
 func (clnt *ProcBaseClnt) makeRetStatWaiterFile(pid string) {
-	dir := childDir(pid)
+	dir := ChildDir(pid)
 	l := sync.MakeLock(clnt.FsLib, dir, LOCK+RET_STAT+pid, true)
 	l.Lock()
 	defer l.Unlock()
@@ -239,12 +246,17 @@ func (clnt *ProcBaseClnt) makeRetStatWaiterFile(pid string) {
 
 // called by child
 // Write back exit statuses to backwards pointers
-func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) {
+func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) bool {
 	l := sync.MakeLock(clnt.FsLib, pid, LOCK+RET_STAT+pid, true)
 	l.Lock()
 	defer l.Unlock()
 
 	clnt.SetFile(pid+"/"+PARENT_RET_STAT+pid, []byte(status), np.NoV)
+	delete := false
+	if _, err := clnt.SetFile(pid+"/"+PARENT_RET_STAT+pid, []byte(status), np.NoV); err != nil {
+		log.Printf("parent of %v is gone\n", pid)
+		delete = true
+	}
 
 	rswPath := path.Join(pid, RET_STAT+pid)
 	rsw := &RetStatWaiters{}
@@ -264,12 +276,13 @@ func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) {
 		debug.PrintStack()
 		log.Fatalf("Error Remove in ProcBaseClnt.writeBackRetStatsNew: %v", err)
 	}
+	return delete
 }
 
 // called by parent
 // Register backwards pointers for files in which to write return statuses
 func (clnt *ProcBaseClnt) registerRetStatWaiter(pid string) (string, error) {
-	dir := childDir(pid)
+	dir := ChildDir(pid)
 	l := sync.MakeLock(clnt.FsLib, dir, LOCK+RET_STAT+pid, true)
 	l.Lock()
 	defer l.Unlock()
@@ -312,26 +325,28 @@ func (clnt *ProcBaseClnt) getRetStat(pid string, fpath string) string {
 	// If we didn't successfully register the ret stat file
 	if fpath == "" {
 		// Try to read the parent ret stat file
-		b, _, err = clnt.GetFile(path.Join(childDir(pid), PARENT_RET_STAT+pid))
+		b, _, err = clnt.GetFile(path.Join(ChildDir(pid), PARENT_RET_STAT+pid))
 
 		// XXX remove file?
 	} else {
+		// XXX file lock?
+
 		// Try to read the registerred ret stat file
 		b, _, err = clnt.GetFile(fpath)
 		if err != nil {
-			log.Fatalf("Error ReadFile in ProcBaseClnt.getRetStatNew: %v", err)
+			log.Fatalf("Error ReadFile in ProcBaseClnt.getRetStat: %v", err)
 		}
 
 		// Remove the registerred ret stat file
 		if err := clnt.Remove(fpath); err != nil {
-			log.Fatalf("Error Remove in ProcBaseClnt.getRetStatNew: %v", err)
+			log.Fatalf("Error Remove in ProcBaseClnt.getRetStat: %v", err)
 		}
 
 		// XXX if parent doesn't call WaitExit(), someone should
 		// Remove pid dir
-		dir := childDir(pid)
+		dir := ChildDir(pid)
 		if err := clnt.RmDir(dir); err != nil {
-			log.Fatalf("Error RmDir in ProcBaseClnt.getRetStatNew: %v", err)
+			log.Fatalf("Error RmDir %v in ProcBaseClnt.getRetStat: %v", dir, err)
 		}
 
 	}

@@ -156,10 +156,36 @@ func TestDirSimple(t *testing.T) {
 	b, err := ts.IsDir(dn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, b)
+
+	d := []byte("hello")
+	err = ts.MakeFile(dn+"/f", 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	sts, err := ts.ReadDir(dn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 1, len(sts))
+	assert.Equal(t, "f", sts[0].Name)
+
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn)
 	assert.NotEqual(t, nil, err)
 
+	ts.e.Shutdown()
+}
+
+func TestDirDot(t *testing.T) {
+	ts := makeTstate(t)
+	dn := "name/dir0"
+	err := ts.Mkdir(dn, 0777)
+	assert.Equal(t, nil, err)
+	b, err := ts.IsDir(dn + "/.")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, b)
+	err = ts.RmDir(dn)
+	_, err = ts.Stat(dn + "/.")
+	assert.NotEqual(t, nil, err)
+	_, err = ts.Stat("name/.")
+	assert.Equal(t, nil, err)
 	ts.e.Shutdown()
 }
 

@@ -317,6 +317,7 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 	return r
 }
 
+// XXX is remove obsolete?  (removefile -> remove?)
 func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
 	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(sess, args.Fid)
@@ -376,7 +377,8 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 		return np.ErrClunked
 	}
 	lo := o
-	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == "." { // exit?
+	// XXX make .exit a reserved name
+	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil

@@ -172,7 +172,6 @@ func (r *Realmd) teardown() {
 }
 
 func (r *Realmd) deregister() {
-	// Register this realmd as belonging to this realm
 	if err := r.Remove(path.Join(REALMS, r.cfg.RealmId, r.id)); err != nil {
 		log.Fatalf("Error Remove in Realmd.deregister: %v", err)
 	}

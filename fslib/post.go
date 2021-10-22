@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"fmt"
+	"log"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -40,6 +41,6 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 func (fsl *FsLib) ExitFs(name string) {
 	err := fsl.Remove(name)
 	if err != nil {
-		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", name, err)
+		log.Fatalf("ExitFs failed %v %v\n", name, err)
 	}
 }

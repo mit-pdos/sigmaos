@@ -87,7 +87,7 @@ func ShutdownNamedReplicas(addrs []string) {
 func ShutdownNamed(namedAddr string) {
 	fsl := fslib.MakeFsLibAddr("realm", []string{namedAddr})
 	// Shutdown named last
-	err := fsl.Remove(named.NAMED + "/")
+	err := fsl.ShutdownFs(named.NAMED)
 	if err != nil {
 		// XXX sometimes we get EOF..
 		if err.Error() == "EOF" {

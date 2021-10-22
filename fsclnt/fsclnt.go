@@ -390,12 +390,6 @@ func (fsc *FsClient) Remove(name string) error {
 
 		}
 
-		// Tell the service to exit
-		if np.EndSlash(name) {
-			log.Printf("exit %v\n", name)
-			rest = append(rest, ".")
-		}
-
 		// Optimistcally remove obj without doing a pathname
 		// walk; this may fail if rest contains an automount
 		// symlink.
@@ -636,4 +630,18 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 		}
 	}
 	return reply.Count, err
+}
+
+func (fsc *FsClient) ShutdownFs(name string) error {
+	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
+	path := np.Split(name)
+	fid, err := fsc.walkMany(path, true, nil)
+	if err != nil {
+		return fmt.Errorf("ShutdownFs walkMany %v error %v\n", path, err)
+	}
+	err = fsc.clnt(fid).RemoveFile(fid, []string{".exit"})
+	if err != nil {
+		return err
+	}
+	return fsc.Umount(path)
 }

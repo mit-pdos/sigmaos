@@ -123,12 +123,9 @@ func (s *System) RmUnionDir(mdir string) error {
 		return err
 	}
 	for _, st := range dirents {
-		err = s.Remove(mdir + "/" + st.Name + "/")
+		err = s.FsLib.ShutdownFs(mdir + "/" + st.Name)
 		if err != nil {
-			return err
-		}
-		err = s.Remove(mdir + "/" + st.Name)
-		if err != nil && !strings.Contains(err.Error(), "file not found") {
+			log.Printf("shutdown err %v\n", err)
 			return err
 		}
 	}

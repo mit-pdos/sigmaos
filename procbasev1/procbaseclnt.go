@@ -85,7 +85,7 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 
 	dir := ChildDir(p.Pid)
 	if err := clnt.Mkdir(dir, 0777); err != nil {
-		log.Printf("DIR FAILED %v %v\n", dir, err)
+		log.Fatalf("Spawn mkdir %v err %v\n", dir, err)
 		return err
 	}
 

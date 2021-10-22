@@ -2,7 +2,6 @@ package fslib
 
 import (
 	"fmt"
-	"log"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -36,11 +35,4 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	}
 	err = fsl.Symlink(srvaddr+":pubkey", p, 0777|np.DMTMP)
 	return err
-}
-
-func (fsl *FsLib) ExitFs(name string) {
-	err := fsl.Remove(name)
-	if err != nil {
-		log.Fatalf("ExitFs failed %v %v\n", name, err)
-	}
 }

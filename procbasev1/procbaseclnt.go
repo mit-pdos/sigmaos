@@ -254,7 +254,6 @@ func (clnt *ProcBaseClnt) writeBackRetStats(pid string, status string) bool {
 	clnt.SetFile(pid+"/"+PARENT_RET_STAT+pid, []byte(status), np.NoV)
 	delete := false
 	if _, err := clnt.SetFile(pid+"/"+PARENT_RET_STAT+pid, []byte(status), np.NoV); err != nil {
-		log.Printf("parent of %v is gone\n", pid)
 		delete = true
 	}
 

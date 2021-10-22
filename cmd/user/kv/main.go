@@ -25,5 +25,5 @@ func main() {
 	mfs.FsServer.GetStats().Done()
 
 	sclnt.Exited(os.Args[1], "OK")
-	mfs.FsLib.ExitFs(name)
+	mfs.FsLib.ShutdownFs(name)
 }

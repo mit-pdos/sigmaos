@@ -92,6 +92,6 @@ func (r *Reader) Work() string {
 }
 
 func (r *Reader) Exit(status string) {
-	r.ExitFs("name/" + r.pid)
+	r.ShutdownFs("name/" + r.pid)
 	r.Exited(r.pid, status)
 }

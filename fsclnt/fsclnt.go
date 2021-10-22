@@ -389,7 +389,6 @@ func (fsc *FsClient) Remove(name string) error {
 			return errors.New("file not found")
 
 		}
-
 		// Optimistcally remove obj without doing a pathname
 		// walk; this may fail if rest contains an automount
 		// symlink.

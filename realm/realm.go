@@ -71,6 +71,8 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 		log.Fatalf("Error Put in RealmClnt.DestroyRealm: %v", err)
 	}
 
+	log.Printf("wait for destroy\n")
+
 	rExitCond.Wait()
 }
 

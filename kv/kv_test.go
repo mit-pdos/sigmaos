@@ -106,8 +106,9 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFS(mfs string) {
-	err := ts.fsl.Remove(named.MEMFS + "/" + mfs + "/")
-	assert.Nil(ts.t, err, "Remove")
+	log.Printf("stop %v\n", mfs)
+	err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
+	assert.Nil(ts.t, err, "ShutdownFS")
 }
 
 func (ts *Tstate) stopMemFSs() {
@@ -153,6 +154,8 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	}
 	RunBalancer(ts.ProcClnt, "add", mfs)
 
+	log.Printf("balancer done\n")
+
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
 		ts.clrks[i] = MakeClerk(ts.cfg.NamedAddr)
@@ -186,10 +189,13 @@ func TestGetPutSet(t *testing.T) {
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
 
-	log.Printf("one")
-
 	ts.stopMemFSs()
+
+	log.Printf("shutdown\n")
+
 	ts.e.Shutdown()
+
+	log.Printf("done\n")
 }
 
 func ConcurN(t *testing.T, nclerk int) {

@@ -19,7 +19,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v pid sleep_length out <native>\n", os.Args[0])
 		os.Exit(1)
 	}
-	l, err := MakeSleeperl(os.Args[1:])
+	l, err := MakeSleeper(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
@@ -27,7 +27,7 @@ func main() {
 	l.Work()
 }
 
-type Sleeperl struct {
+type Sleeper struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	native      bool
@@ -36,11 +36,11 @@ type Sleeperl struct {
 	output      string
 }
 
-func MakeSleeperl(args []string) (*Sleeperl, error) {
+func MakeSleeper(args []string) (*Sleeper, error) {
 	if len(args) < 3 {
-		return nil, errors.New("MakeSleeperl: too few arguments")
+		return nil, errors.New("MakeSleeper: too few arguments")
 	}
-	s := &Sleeperl{}
+	s := &Sleeper{}
 	db.Name("sleeperl")
 	s.FsLib = fslib.MakeFsLib("sleeperl")
 	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
@@ -54,8 +54,8 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 
 	s.native = len(args) == 4 && args[3] == "native"
 
-	db.DLPrintf("SCHEDL", "MakeSleeperl: %v\n", args)
-	//	log.Printf("MakeSleeperl: %v\n", args)
+	db.DLPrintf("SCHEDL", "MakeSleeper: %v\n", args)
+	//	log.Printf("MakeSleeper: %v\n", args)
 
 	if !s.native {
 		err := s.Started(s.pid)
@@ -66,7 +66,7 @@ func MakeSleeperl(args []string) (*Sleeperl, error) {
 	return s, nil
 }
 
-func (s *Sleeperl) waitEvict() {
+func (s *Sleeper) waitEvict() {
 	if !s.native {
 		err := s.WaitEvict(s.pid)
 		if err != nil {
@@ -77,12 +77,12 @@ func (s *Sleeperl) waitEvict() {
 	}
 }
 
-func (s *Sleeperl) Work() {
+func (s *Sleeper) Work() {
 	go s.waitEvict()
 	time.Sleep(s.sleepLength)
 	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {
-		log.Printf("Error: Makefile %v in Sleeperl.Work: %v\n", s.output, err)
+		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}
 	if !s.native {
 		s.Exited(s.pid, "OK")

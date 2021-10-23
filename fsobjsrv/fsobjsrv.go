@@ -381,6 +381,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
+		log.Printf("%v: done\n", db.GetName())
 		return nil
 	}
 	if len(args.Wnames) > 0 {
@@ -391,7 +392,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	}
 	fos.stats.Path(f.Path())
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
-	dname := append(f.Path(), args.Wnames[0:len(args.Wnames)-1]...)
+	dname := np.Dir(fname)
 
 	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {

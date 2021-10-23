@@ -343,69 +343,32 @@ func (fsc *FsClient) Umount(path []string) error {
 	return nil
 }
 
-func (fsc *FsClient) removeMount(path []string) error {
-	if len(path) < 1 {
-		return fmt.Errorf("unmount bad path %v\n", path)
-	}
-	var prefix []string
-	var last []string
-	if len(path) == 1 {
-		prefix = make([]string, len(path))
-		copy(prefix, path[:len(path)])
-		last = []string{}
-	} else {
-		prefix = make([]string, len(path)-1)
-		copy(prefix, path[:len(path)-1])
-		last = path[len(path)-1:]
-	}
-
-	fid, err := fsc.walkMany(prefix, true, nil)
-	if err != nil {
-		return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
-	}
-	fid1 := fsc.allocFid()
-	_, err = fsc.clnt(fid).Walk(fid, fid1, last)
-	if err != nil {
-		return err
-	}
-	err = fsc.clnt(fid).Remove(fid1)
-	if err != nil {
-		return err
-	}
-	return fsc.Umount(path)
-}
-
 // XXX free fid?
 func (fsc *FsClient) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
-	_, rest := fsc.mount.resolve(path)
-	if len(rest) == 0 && !np.EndSlash(name) { // remove mount point
-		return fsc.removeMount(path)
-	} else {
-		fid, rest := fsc.mount.resolve(path)
-		if fid == np.NoFid {
-			db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
-			return errors.New("file not found")
+	fid, rest := fsc.mount.resolve(path)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
+		return errors.New("file not found")
 
-		}
-		// Optimistcally remove obj without doing a pathname
-		// walk; this may fail if rest contains an automount
-		// symlink.
-		err := fsc.clnt(fid).RemoveFile(fid, rest)
-		if err != nil {
-			// There must have been a symlink in rest
-			// force automounting, but only on dir error
-			if strings.HasPrefix(err.Error(), "dir not found") {
-				fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
-				if err != nil {
-					return err
-				}
-				err = fsc.clnt(fid).Remove(fid)
-			}
-		}
-		return err
 	}
+	// Optimistcally remove obj without doing a pathname
+	// walk; this may fail if rest contains an automount
+	// symlink.
+	err := fsc.clnt(fid).RemoveFile(fid, rest)
+	if err != nil {
+		// There must have been a symlink in rest
+		// force automounting, but only on dir error
+		if strings.HasPrefix(err.Error(), "dir not found") {
+			fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
+			if err != nil {
+				return err
+			}
+			err = fsc.clnt(fid).Remove(fid)
+		}
+	}
+	return err
 }
 
 func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
@@ -633,6 +596,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 
 func (fsc *FsClient) ShutdownFs(name string) error {
 	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
+	log.Printf("shutdown %v\n", name)
 	path := np.Split(name)
 	fid, err := fsc.walkMany(path, true, nil)
 	if err != nil {

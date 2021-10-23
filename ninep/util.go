@@ -1,6 +1,7 @@
 package ninep
 
 import (
+	"log"
 	"regexp"
 	"strings"
 )
@@ -41,4 +42,11 @@ func IsPathEq(p1, p2 []string) bool {
 		}
 	}
 	return true
+}
+
+func Dir(path []string) []string {
+	if len(path) < 1 {
+		log.Fatalf("Dir")
+	}
+	return path[0 : len(path)-1]
 }

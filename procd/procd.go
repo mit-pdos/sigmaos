@@ -65,7 +65,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	pd.addr = pd.MyAddr()
-	pd.procclnt = procbasev1.MakeProcBaseClnt(pd.FsLib, "")
+	pd.procclnt = procbasev1.MakeProcBaseClnt(pd.FsLib, "", "")
 
 	pprof := pprofPath != ""
 	if pprof {

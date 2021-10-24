@@ -24,7 +24,7 @@ type Tstate struct {
 }
 
 func spawn(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, "bin/user/wwwd", "",
+	a := &proc.Proc{pid, "", "bin/user/wwwd", "",
 		[]string{pid},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
@@ -48,7 +48,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 
 	ts.pid = proc.GenPid()

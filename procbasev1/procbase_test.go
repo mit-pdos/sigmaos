@@ -46,7 +46,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sched_test")
 
 	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 	return ts
 }
@@ -65,12 +65,12 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 	ts.cfg = cfg
 	db.Name("sched_test")
 	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
 	return ts
 }
 
-func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, "bin/user/sleeperl", "",
+func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
+	a := &proc.Proc{pid, "", "bin/user/sleeper", "",
 		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
@@ -80,13 +80,13 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
-func spawnSleeperl(t *testing.T, ts *Tstate) string {
+func spawnSleeper(t *testing.T, ts *Tstate) string {
 	pid := proc.GenPid()
-	spawnSleeperlWithPid(t, ts, pid)
+	spawnSleeperWithPid(t, ts, pid)
 	return pid
 }
 
-func checkSleeperlResult(t *testing.T, ts *Tstate, pid string) bool {
+func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
 	res := true
 	b, err := ts.ReadFile("name/out_" + pid)
 	res = assert.Nil(t, err, "ReadFile") && res
@@ -94,7 +94,7 @@ func checkSleeperlResult(t *testing.T, ts *Tstate, pid string) bool {
 	return res
 }
 
-func checkSleeperlResultFalse(t *testing.T, ts *Tstate, pid string) {
+func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
 	b, err := ts.ReadFile("name/out_" + pid)
 	assert.NotNil(t, err, "ReadFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
@@ -103,11 +103,11 @@ func checkSleeperlResultFalse(t *testing.T, ts *Tstate, pid string) {
 func TestHelloWorld(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := spawnSleeperl(t, ts)
+	pid := spawnSleeper(t, ts)
 
 	time.Sleep(SLEEP_MSECS * 1.25 * time.Millisecond)
 
-	checkSleeperlResult(t, ts, pid)
+	checkSleeperResult(t, ts, pid)
 
 	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
 	assert.Nil(t, err, "Readdir")
@@ -121,7 +121,7 @@ func TestWaitExit(t *testing.T) {
 
 	start := time.Now()
 
-	pid := spawnSleeperl(t, ts)
+	pid := spawnSleeper(t, ts)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
 	assert.Equal(t, status, "OK", "Exit status wrong")
@@ -130,7 +130,7 @@ func TestWaitExit(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
-	checkSleeperlResult(t, ts, pid)
+	checkSleeperResult(t, ts, pid)
 
 	ts.e.Shutdown()
 }
@@ -140,7 +140,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	start := time.Now()
 
-	pid := spawnSleeperl(t, ts)
+	pid := spawnSleeper(t, ts)
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
@@ -150,7 +150,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
-	checkSleeperlResult(t, ts, pid)
+	checkSleeperResult(t, ts, pid)
 
 	ts.e.Shutdown()
 }
@@ -158,15 +158,15 @@ func TestWaitExitParentRetStat(t *testing.T) {
 func TestExitCleanup(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid := spawnSleeperl(t, ts)
+	pid := spawnSleeper(t, ts)
 
 	// Simulate parent exiting before child
-	err := ts.Remove(path.Join(procbasev1.ChildDir(pid), procbasev1.PARENT_RET_STAT+pid))
+	err := ts.Remove(path.Join(ts.ChildDir(pid), procbasev1.PARENT_RET_STAT+pid))
 	assert.Nil(t, err, "Remove")
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
-	_, err = ts.Stat(procbasev1.ChildDir(pid))
+	_, err = ts.Stat(ts.ChildDir(pid))
 	assert.NotNil(t, err, "Stat")
 
 	ts.e.Shutdown()
@@ -177,7 +177,7 @@ func TestWaitStart(t *testing.T) {
 
 	start := time.Now()
 
-	pid := spawnSleeperl(t, ts)
+	pid := spawnSleeper(t, ts)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 
@@ -191,11 +191,11 @@ func TestWaitStart(t *testing.T) {
 	assert.Equal(t, pid, st[0].Name, "pid")
 
 	// Make sure the lambda hasn't finished yet...
-	checkSleeperlResultFalse(t, ts, pid)
+	checkSleeperResultFalse(t, ts, pid)
 
 	ts.WaitExit(pid)
 
-	checkSleeperlResult(t, ts, pid)
+	checkSleeperResult(t, ts, pid)
 
 	ts.e.Shutdown()
 }
@@ -251,7 +251,7 @@ func TestConcurrentProcs(t *testing.T) {
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()
 			barrier.Wait()
-			spawnSleeperlWithPid(t, tses[i], pid)
+			spawnSleeperWithPid(t, tses[i], pid)
 			started.Done()
 		}(pid, &started, i)
 	}
@@ -263,7 +263,7 @@ func TestConcurrentProcs(t *testing.T) {
 		go func(pid string, done *sync.WaitGroup, i int) {
 			defer done.Done()
 			ts.WaitExit(pid)
-			checkSleeperlResult(t, tses[i], pid)
+			checkSleeperResult(t, tses[i], pid)
 		}(pid, &done, i)
 	}
 
@@ -282,7 +282,7 @@ func TestEvict(t *testing.T) {
 	ts := makeTstate(t)
 
 	start := time.Now()
-	pid := spawnSleeperl(t, ts)
+	pid := spawnSleeper(t, ts)
 
 	go ts.evict(pid)
 
@@ -295,7 +295,7 @@ func TestEvict(t *testing.T) {
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS/2)*time.Millisecond, "Evicted too early")
 
 	// Make sure the lambda didn't finish
-	checkSleeperlResultFalse(t, ts, pid)
+	checkSleeperResultFalse(t, ts, pid)
 
 	ts.e.Shutdown()
 }

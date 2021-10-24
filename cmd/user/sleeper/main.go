@@ -41,8 +41,8 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 		return nil, errors.New("MakeSleeper: too few arguments")
 	}
 	s := &Sleeper{}
-	db.Name("sleeperl")
-	s.FsLib = fslib.MakeFsLib("sleeperl")
+	db.Name("sleeper")
+	s.FsLib = fslib.MakeFsLib("sleeper")
 	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
 	s.pid = args[0]
 	s.output = args[2]

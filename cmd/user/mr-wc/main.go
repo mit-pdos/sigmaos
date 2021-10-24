@@ -112,14 +112,14 @@ func main() {
 		rmDir(fsl, "name/ux/~ip/m-"+m)
 		a1 := procdep.MakeProcDep()
 		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
-		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
+		a1.Proc = &proc.Proc{pid1, "name", "bin/user/fsreader", "",
 			[]string{m, "name/s3/~ip/input/" + f.Name()},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
 		}
 		a2 := procdep.MakeProcDep()
 		a2.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
-		a2.Proc = &proc.Proc{pid2, "bin/user/mr-m-wc", "",
+		a2.Proc = &proc.Proc{pid2, "name", "bin/user/mr-m-wc", "",
 			[]string{"name/" + m + "/pipe", m},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,
@@ -135,7 +135,7 @@ func main() {
 		pid := proc.GenPid()
 		r := strconv.Itoa(i)
 		a := procdep.MakeProcDep()
-		a.Proc = &proc.Proc{pid, "bin/user/mr-r-wc", "",
+		a.Proc = &proc.Proc{pid, "name", "bin/user/mr-r-wc", "",
 			[]string{"name/fs/" + r, "name/fs/mr-out-" + r},
 			[]string{procinit.GetProcLayersString()},
 			proc.T_BE, proc.C_DEF,

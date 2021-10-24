@@ -19,6 +19,17 @@ func GetPid() string {
 	return os.Getenv("SIGMAPID")
 }
 
+// Can return "" for test programs that make a procclnt
+func GetParent() string {
+	return os.Getenv("SIGMAPARENT")
+}
+
+// Can return "" for test programs that make a procclnt
+func GetPidDir() string {
+	log.Printf("parent %v pid %v\n", GetPid(), GetParent())
+	return os.Getenv("SIGMAPARENT") + "/" + os.Getenv("SIGMAPID")
+}
+
 const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
 )
@@ -71,10 +82,9 @@ func makeProcLayersString(layers map[string]bool) string {
 }
 
 // Make a generic ProcClnt with the desired layers.
-func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
+func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid string) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	// clnt = procbase.MakeProcBaseClnt(fsl)
-	clnt = procbasev1.MakeProcBaseClnt(fsl, GetPid())
+	clnt = procbasev1.MakeProcBaseClnt(fsl, parent, pid)
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}
@@ -82,4 +92,14 @@ func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 		clnt = procdep.MakeProcDepClnt(fsl, clnt)
 	}
 	return clnt
+}
+
+// Called by a sigmaOS process after being spawned
+func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
+	return MakeProcClntBase(fsl, layers, GetParent(), GetPid())
+}
+
+// Called by tests to fake an initial process
+func MakeProcClntInit(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
+	return MakeProcClntBase(fsl, layers, "name", "")
 }

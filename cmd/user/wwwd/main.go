@@ -53,12 +53,6 @@ func MakeWwwd(tree string) *Wwwd {
 	db.Name("wwwd")
 	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
-	if err := www.MountTree(fslib.Named(), tree, tree); err != nil {
-		log.Fatalf("wwwd MounTree %v", err)
-	}
-
-	log.Printf("%v: tree %v\n", db.GetName(), tree)
-
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
 	err := www.MakeFile(tree+"/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
@@ -114,7 +108,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
-	a := &proc.Proc{pid, app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
+	a := &proc.Proc{pid, procinit.GetPid(), app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
 	err := www.Spawn(a)

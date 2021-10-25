@@ -192,7 +192,7 @@ func TestSymlinkDir(t *testing.T) {
 
 	dirents, err := ts.ReadDir(dn + "/")
 	assert.Nil(t, err, "ReadDir")
-	assert.Equal(t, 5, len(dirents))
+	assert.Equal(t, 7, len(dirents))
 
 	ts.s.Shutdown()
 	ts.e.Shutdown()

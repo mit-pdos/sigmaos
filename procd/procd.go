@@ -159,7 +159,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		return nil, err
 	}
 
-	p := &proc.Proc{}
+	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)

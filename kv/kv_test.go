@@ -85,15 +85,10 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := procdep.MakeProcDep()
-	a := &proc.Proc{}
-	a.Pid = proc.GenPid()
-	a.Program = "bin/user/memfsd"
-	a.Args = []string{""}
-	a.Env = []string{procinit.GetProcLayersString()}
-	t.Proc = a
+	t := procdep.MakeProcDep(proc.GenPid(), "bin/user/memfsd", []string{""})
+	t.Proc.Env = []string{procinit.GetProcLayersString()}
 	ts.Spawn(t)
-	return a.Pid
+	return t.Proc.Pid
 }
 
 func (ts *Tstate) startMemFSs(n int) []string {

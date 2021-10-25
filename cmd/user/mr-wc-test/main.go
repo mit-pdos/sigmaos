@@ -94,13 +94,11 @@ func main() {
 		//			[]string{procinit.GetProcLayersString()},
 		//			proc.T_BE, proc.C_DEF,
 		//		}
-		a2 := procdep.MakeProcDep()
+		a2 := procdep.MakeProcDep(pid2, "bin/user/mr-m-wc", []string{"name/s3/~ip/input/" + f.Name(), m})
+		a2.Env = []string{procinit.GetProcLayersString()}
+		a2.Type = proc.T_BE
+		a2.Ncore = proc.C_DEF
 		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
-		a2.Proc = &proc.Proc{pid2, "bin/user/mr-m-wc", "",
-			[]string{"name/s3/~ip/input/" + f.Name(), m},
-			[]string{procinit.GetProcLayersString()},
-			proc.T_BE, proc.C_DEF,
-		}
 		//		sclnt.Spawn(a1)
 		sclnt.Spawn(a2)
 		n += 1
@@ -111,12 +109,10 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		pid := proc.GenPid()
 		r := strconv.Itoa(i)
-		a := procdep.MakeProcDep()
-		a.Proc = &proc.Proc{pid, "bin/user/mr-r-wc", "",
-			[]string{"name/fs/" + r, "name/fs/mr-out-" + r},
-			[]string{procinit.GetProcLayersString()},
-			proc.T_BE, proc.C_DEF,
-		}
+		a := procdep.MakeProcDep(pid, "bin/user/mr-r-wc", []string{"name/fs/" + r, "name/fs/mr-out-" + r})
+		a.Env = []string{procinit.GetProcLayersString()}
+		a.Type = proc.T_BE
+		a.Ncore = proc.C_DEF
 		a.Dependencies = &procdep.Deps{nil, mappers}
 		reducers = append(reducers, pid)
 		sclnt.Spawn(a)

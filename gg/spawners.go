@@ -21,15 +21,11 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 }
 
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
-	a := procdep.MakeProcDep()
-	a.Pid = origDirUploaderPid(subDir)
-	a.Program = "bin/user/fsdiruploader"
-	a.Args = []string{
+	a := procdep.MakeProcDep(origDirUploaderPid(subDir), "bin/user/fsdiruploader", []string{
 		ggOrig(dir, subDir, ""),
 		ggRemote(subDir, ""),
 		"",
-	}
-	a.Env = []string{}
+	})
 	err := launch.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error spawning orig dir upload worker [%v/%v]: %v\n", dir, subDir, err)
@@ -38,15 +34,11 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 }
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
-	a := procdep.MakeProcDep()
-	a.Pid = reductionWriterPid(dstDir, subDir, target)
-	a.Program = "bin/user/gg-target-writer"
-	a.Args = []string{
+	a := procdep.MakeProcDep(reductionWriterPid(dstDir, subDir, target), "bin/user/gg-target-writer", []string{
 		path.Join(dstDir, subDir),
 		target,
 		targetReduction,
-	}
-	a.Env = []string{}
+	})
 	reductionPid := outputHandlerPid(targetReduction)
 	noOpReductionPid := noOpPid(reductionPid)
 	deps = append(deps, noOpReductionPid)
@@ -63,13 +55,9 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
-	a := procdep.MakeProcDep()
-	a.Pid = executorPid(targetHash)
-	a.Program = "bin/user/gg-executor"
-	a.Args = []string{
+	a := procdep.MakeProcDep(executorPid(targetHash), "bin/user/gg-executor", []string{
 		targetHash,
-	}
-	a.Dir = ""
+	})
 	a.Dependencies = &procdep.Deps{map[string]bool{}, map[string]bool{}}
 	exitDepMap := map[string]bool{}
 	for _, dep := range depPids {
@@ -84,14 +72,11 @@ func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string)
 }
 
 func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash string, outputFiles []string) string {
-	a := procdep.MakeProcDep()
-	a.Pid = outputHandlerPid(thunkHash)
-	a.Program = "bin/user/gg-thunk-output-handler"
-	a.Args = []string{
+	args := []string{
 		thunkHash,
 	}
-	a.Args = append(a.Args, outputFiles...)
-	a.Env = []string{}
+	args = append(args, outputFiles...)
+	a := procdep.MakeProcDep(outputHandlerPid(thunkHash), "bin/user/gg-thunk-output-handler", args)
 	exitDepMap := map[string]bool{}
 	for _, dep := range deps {
 		exitDepMap[dep] = false

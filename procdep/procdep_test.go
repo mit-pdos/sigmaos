@@ -62,8 +62,6 @@ func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exi
 	a := procdep.MakeEmptyProcDep()
 	a.Proc = proc.MakeProc(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
 	a.Proc.Env = []string{procinit.GetProcLayersString()}
-	a.Proc.Type = proc.T_DEF
-	a.Proc.Ncore = proc.C_DEF
 	a.Dependencies.StartDep = startDep
 	a.Dependencies.ExitDep = exitDep
 	err := ts.Spawn(a)

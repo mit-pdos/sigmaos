@@ -99,8 +99,6 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	pid := proc.GenPid()
 	a := proc.MakeProc(pid, app, append([]string{pid}, args...))
 	a.Env = []string{procinit.GetProcLayersString()}
-	a.Type = proc.T_DEF
-	a.Ncore = proc.C_DEF
 	err := www.Spawn(a)
 	if err != nil {
 		return "", err

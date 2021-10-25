@@ -58,8 +58,6 @@ func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
 	p := &procidem.ProcIdem{}
 	p.Proc = proc.MakeProc(pid, "bin/user/procd-monitor", []string{})
 	p.Proc.Env = []string{procinit.GetProcLayersString()}
-	p.Proc.Type = proc.T_DEF
-	p.Proc.Ncore = proc.C_DEF
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Monitor spawn")
 }
@@ -68,8 +66,6 @@ func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	p := &procidem.ProcIdem{}
 	p.Proc = proc.MakeProc(pid, "bin/user/sleeperl", }, []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
 	p.Proc.Env = []string{procinit.GetProcLayersString()}
-	p.Proc.Type = proc.T_DEF
-	p.Proc.Ncore = proc.C_DEF
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 }

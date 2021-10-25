@@ -37,6 +37,8 @@ func MakeProc(pid string, program string, args []string) *Proc {
 	p.Pid = pid
 	p.Program = program
 	p.Args = args
+	p.Type = T_DEF
+	p.Ncore = C_DEF
 	return p
 }
 

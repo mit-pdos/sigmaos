@@ -75,7 +75,6 @@ func main() {
 		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		a2.Env = []string{procinit.GetProcLayersString()}
 		a2.Proc.Type = proc.T_BE
-		a2.Proc.Ncore = proc.C_DEF
 		//		sclnt.Spawn(a1)
 		sclnt.Spawn(a2)
 		n += 1
@@ -89,7 +88,6 @@ func main() {
 		a := procdep.MakeProcDep(pid, "bin/user/mr-r-wc", []string{"name/fs/" + r, "name/fs/mr-out-" + r})
 		a.Proc.Env = []string{procinit.GetProcLayersString()}
 		a.Proc.Type = proc.T_BE
-		a.Proc.Ncore = proc.C_DEF
 		a.Dependencies = &procdep.Deps{nil, mappers}
 		reducers = append(reducers, pid)
 		sclnt.Spawn(a)

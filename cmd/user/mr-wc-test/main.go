@@ -97,7 +97,6 @@ func main() {
 		a2 := procdep.MakeProcDep(pid2, "bin/user/mr-m-wc", []string{"name/s3/~ip/input/" + f.Name(), m})
 		a2.Env = []string{procinit.GetProcLayersString()}
 		a2.Type = proc.T_BE
-		a2.Ncore = proc.C_DEF
 		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		//		sclnt.Spawn(a1)
 		sclnt.Spawn(a2)
@@ -112,7 +111,6 @@ func main() {
 		a := procdep.MakeProcDep(pid, "bin/user/mr-r-wc", []string{"name/fs/" + r, "name/fs/mr-out-" + r})
 		a.Env = []string{procinit.GetProcLayersString()}
 		a.Type = proc.T_BE
-		a.Ncore = proc.C_DEF
 		a.Dependencies = &procdep.Deps{nil, mappers}
 		reducers = append(reducers, pid)
 		sclnt.Spawn(a)

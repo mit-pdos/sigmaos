@@ -27,6 +27,14 @@ type Proc struct {
 	Ncore   Tcore    // Number of cores requested
 }
 
+func MakeProc(pid string, program string, args []string) *Proc {
+	p := &Proc{}
+	p.Pid = pid
+	p.Program = program
+	p.Args = args
+	return p
+}
+
 func (p *Proc) GetProc() *Proc {
 	return p
 }

@@ -159,7 +159,6 @@ func (st *Stats) load(ticks uint64) {
 
 	util := 100.0 * float64(ticks) / float64(MS/j)
 	util = util / float64(ncpu)
-	log.Printf("Ticks: %v, Util: %v", ticks, util)
 
 	nthread := float64(runtime.NumGoroutine())
 

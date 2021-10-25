@@ -29,11 +29,8 @@ func MakeRealmBalanceBenchmark(fsl *fslib.FsLib) *RealmBalanceBenchmark {
 
 func (b *RealmBalanceBenchmark) spawnSpinner() {
 	pid := proc.GenPid()
-	a := &proc.Proc{pid, "bin/user/spinner", "",
-		[]string{"name/out_" + pid},
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.Tcore(1),
-	}
+	a := proc.MakeProc(pid, "bin/user/spinner", []string{"name/out_" + pid})
+	a.Ncore = proc.Tcore(1)
 	err := b.Spawn(a)
 	if err != nil {
 		log.Fatalf("Error Spawn in RealmBalanceBenchmark.spawnSpinner: %v", err)

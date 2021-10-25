@@ -27,6 +27,11 @@ type Proc struct {
 	Ncore   Tcore    // Number of cores requested
 }
 
+func MakeEmptyProc() *Proc {
+	p := &Proc{}
+	return p
+}
+
 func MakeProc(pid string, program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = pid

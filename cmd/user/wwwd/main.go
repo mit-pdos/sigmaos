@@ -97,9 +97,10 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
-	a := &proc.Proc{pid, app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
+	a := proc.MakeProc(pid, app, append([]string{pid}, args...))
+	a.Env = []string{procinit.GetProcLayersString()}
+	a.Type = proc.T_DEF
+	a.Ncore = proc.C_DEF
 	err := www.Spawn(a)
 	if err != nil {
 		return "", err

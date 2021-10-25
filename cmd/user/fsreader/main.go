@@ -45,18 +45,19 @@ func MakeReader(args []string) (*Reader, error) {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeReader: %v\n", args)
-	n := "name/" + args[2]
-	mfs, err := fslibsrv.StartMemFs(n, "fsreader")
+	r := &Reader{}
+	db.Name("fsreader")
+	r.FsLib = fslib.MakeFsLib("fsreader")
+	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
+	n := args[2] + "/server"
+	mfs, err := fslibsrv.StartMemFsFsl(n, "fsreader", r.FsLib)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	r := &Reader{}
-	r.FsLib = mfs.FsLib
 	r.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	r.pid = args[1]
 	r.input = args[3]
 	r.Started(r.pid)

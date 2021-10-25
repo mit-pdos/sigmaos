@@ -69,6 +69,12 @@ func MakeProcBaseClnt(fsl *fslib.FsLib, parent, pid string) *ProcBaseClnt {
 		if err := fsl.MountTree(fslib.Named(), tree, pid); err != nil {
 			log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, pid, err)
 		}
+		if err := fsl.MountTree(fslib.Named(), "runq", "name/runq"); err != nil {
+			log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
+		}
+		if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
+			log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
+		}
 	}
 	return clnt
 }
@@ -170,7 +176,6 @@ func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
 // called by child
 // Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
 func (clnt *ProcBaseClnt) WaitEvict(pid string) error {
-	log.Printf("waitevict %v\n", pid)
 	if _, err := clnt.Stat(pid); err != nil {
 		return err
 	}
@@ -256,8 +261,9 @@ func (clnt *ProcBaseClnt) makeRetStatWaiterFile(pid string) {
 	l.Lock()
 	defer l.Unlock()
 
+	log.Printf("%v: makeRetStat ... %v\n", db.GetName(), dir)
 	if err := clnt.MakeFileJson(path.Join(dir, RET_STAT+pid), 0777, &RetStatWaiters{}); err != nil && !strings.Contains(err.Error(), "Name exists") {
-		log.Fatalf("Error MakeFileJson in ProcBaseClnt.makeRetStatWaiterFileNew: %v", err)
+		log.Fatalf("Error MakeFileJson in ProcBaseClnt.makeRetStatWaiterFile: %v", err)
 	}
 }
 
@@ -310,22 +316,22 @@ func (clnt *ProcBaseClnt) registerRetStatWaiter(pid string) (string, error) {
 		if err.Error() == "file not found "+RET_STAT+pid {
 			return "", err
 		}
-		log.Fatalf("Error ReadFileJson in ProcBaseClnt.registerRetStatWaiterNew: %v", err)
+		log.Fatalf("Error ReadFileJson in ProcBaseClnt.registerRetStatWaiter: %v", err)
 		return "", err
 
 	}
 	// pathname for child
-	fpath := path.Join(pid, randstr.Hex(16))
+	fpath := path.Join(randstr.Hex(16))
 	rsw.Fpaths = append(rsw.Fpaths, fpath)
 
 	// pathname for parent
-	fpath = "name/" + fpath
+	fpath = clnt.ChildDir(pid) + fpath
 	if err := clnt.MakeFile(fpath, 0777, np.OWRITE, []byte{}); err != nil {
-		log.Fatalf("Error MakeFile in ProcBaseClnt.registerRetStatWaiterNew: %v", err)
+		log.Fatalf("Error MakeFile %v err %v", fpath, err)
 	}
 
 	if err := clnt.WriteFileJson(rswPath, rsw); err != nil {
-		log.Fatalf("Error WriteFileJson in ProcBaseClnt.registerRetStatWaiterNew: %v", err)
+		log.Fatalf("Error WriteFileJson %v err %v", rswPath, err)
 		return "", err
 	}
 

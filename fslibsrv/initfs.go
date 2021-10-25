@@ -20,6 +20,12 @@ func makeSrvClt(root fs.Dir, addr string, name string, config repl.Config) (*fss
 	return srv, fsl
 }
 
+func makeSrv(root fs.Dir, addr string, name string, config repl.Config) *fssrv.FsServer {
+	db.Name(name)
+	srv := fssrv.MakeFsServer(root, addr, fos.MakeProtServer(), config)
+	return srv
+}
+
 func MakeSrvClt(root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.FsLib, error) {
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
@@ -36,6 +42,24 @@ func MakeSrvClt(root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.
 		return nil, nil, err
 	}
 	return srv, fsl, nil
+}
+
+func MakeSrv(root fs.Dir, path string, name string, fsl *fslib.FsLib) (*fssrv.FsServer, error) {
+	ip, err := fsclnt.LocalIP()
+	if err != nil {
+		return nil, err
+	}
+	srv := makeSrv(root, ip+":0", name, nil)
+	if np.EndSlash(path) {
+		fsl.Mkdir(path, 0777)
+		err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
+	} else {
+		err = fsl.PostService(srv.MyAddr(), path)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return srv, nil
 }
 
 func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
@@ -87,10 +111,38 @@ func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib,
 	return root, srv, fsl, makeStatDev(root, srv)
 }
 
+func MakeMemFsFsl(path string, name string, fsl *fslib.FsLib) (fs.Dir, *fssrv.FsServer, error) {
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
+	srv, err := MakeSrv(root, path, name, fsl)
+	if err != nil {
+		return nil, nil, err
+	}
+	return root, srv, makeStatDev(root, srv)
+}
+
 func StartMemFs(path string, name string) (*MemFs, error) {
 	fs := &MemFs{}
 	fs.ch = make(chan bool)
 	root, srv, fsl, err := MakeMemFs(path, name)
+	if err != nil {
+		return nil, err
+	}
+	fs.FsLib = fsl
+	fs.FsServer = srv
+	fs.root = root
+
+	go func() {
+		srv.Serve()
+		fs.ch <- true
+	}()
+	return fs, err
+}
+
+// XXX hack fsl
+func StartMemFsFsl(path string, name string, fsl *fslib.FsLib) (*MemFs, error) {
+	fs := &MemFs{}
+	fs.ch = make(chan bool)
+	root, srv, err := MakeMemFsFsl(path, name, fsl)
 	if err != nil {
 		return nil, err
 	}

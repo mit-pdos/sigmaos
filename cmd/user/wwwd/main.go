@@ -86,10 +86,10 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
-	fn := "name/" + pid + "/pipe"
+	fn := www.ChildDir(pid) + "server/pipe"
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
-		log.Printf("wwwd: open failed %v\n", err)
+		log.Printf("wwwd: open %v failed %v\n", fn, err)
 		return
 	}
 	for {
@@ -125,7 +125,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
 	log.Printf("getstatic: %v\n", args)
-	return www.spawnApp("bin/user/fsreader", w, r, []string{"name/" + args})
+	return www.spawnApp("bin/user/fsreader", w, r, []string{"name/" + www.pid + "/" + args})
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {

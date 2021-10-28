@@ -45,6 +45,7 @@ type NetClnt struct {
 	br          *bufio.Reader
 	bw          *bufio.Writer
 	requests    chan *RpcT
+	senders     sync.WaitGroup
 	nextTag     np.Ttag
 	outstanding map[np.Ttag]*RpcT
 }
@@ -115,6 +116,10 @@ func (nc *NetClnt) resendOutstandingL() {
 			nc.mu.Lock()
 			defer nc.mu.Unlock()
 
+			nc.senders.Add(1)
+			defer nc.senders.Done()
+
+			// XXX deadlocks, shouldn't hold lock
 			if !nc.closed {
 				nc.requests <- r
 				db.DLPrintf("NETCLNT", "Resent outstanding request: %v", r)
@@ -129,11 +134,17 @@ func (nc *NetClnt) Close() {
 
 	db.DLPrintf("NETCLNT", "Close conn to %v\n", nc.dstL())
 	nc.terminateOutstandingL()
-	if !nc.closed {
-		close(nc.requests)
-	}
+	wasClosed := nc.closed
 	nc.closed = true
-	nc.conn.Close()
+
+	// Close the requests channel asynchronously so we don't deadlock
+	if !wasClosed {
+		go func() {
+			nc.senders.Wait()
+			nc.conn.Close()
+			close(nc.requests)
+		}()
+	}
 }
 
 func (nc *NetClnt) resetConnection(br *bufio.Reader, bw *bufio.Writer) {
@@ -178,6 +189,7 @@ func (nc *NetClnt) connectL() error {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
 			db.DLPrintf("NETCLNT", "NetClntect to %v err %v\n", addr, err)
+
 			continue
 		}
 		nc.conn = c
@@ -208,19 +220,35 @@ func (nc *NetClnt) lookupDel(t np.Ttag) (*RpcT, bool) {
 	return rpc, ok
 }
 
+func (nc *NetClnt) drainRequests() {
+	ok := true
+	for ok {
+		_, ok = <-nc.requests
+	}
+}
+
 func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	db.DLPrintf("NETCLNT", "RPC %v to %v\n", fc, nc.Dst())
+	rpc := mkRpcT(fc)
+	t := nc.allocate(rpc)
+	rpc.req.Tag = t
+
+	// Make sure the channel doesn't close under our feet by adding to the senders wg.
 	nc.mu.Lock()
 	closed := nc.closed
+	if !closed {
+		nc.senders.Add(1)
+	}
 	nc.mu.Unlock()
+
 	if closed {
 		db.DLPrintf("NETCLNT", "Error ch to %v closed\n", nc.Dst())
 		return nil, io.EOF
 	}
-	rpc := mkRpcT(fc)
-	t := nc.allocate(rpc)
-	rpc.req.Tag = t
 	nc.requests <- rpc
+
+	nc.senders.Done()
+
 	reply, ok := <-rpc.replych
 	if !ok {
 		db.DLPrintf("NETCLNT", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
@@ -231,6 +259,9 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
 }
 
 func (nc *NetClnt) writer() {
+	// Need to make sure requests are drained so the requests channel can be safely closed
+	defer nc.drainRequests()
+
 	br, bw, err := nc.getBufio()
 	if err != nil {
 		db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
@@ -278,8 +309,8 @@ func (nc *NetClnt) writer() {
 				if strings.Contains(err.Error(), "connection reset by peer") {
 					nc.resetConnection(br, bw)
 				} else {
-					debug.PrintStack()
-					log.Printf("Flush error %v\n", err)
+					stacktrace := debug.Stack()
+					db.DLPrintf("NETCLNT", "%v\nFlush error %v\n", string(stacktrace), err)
 					return
 				}
 			}

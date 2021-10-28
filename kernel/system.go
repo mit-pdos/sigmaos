@@ -180,7 +180,6 @@ func (s *System) Shutdown() {
 			d.Wait()
 		}
 	}
-	log.Printf("shutdown procd done\n")
 	if len(s.dbd) != 0 {
 		err := s.RmUnionDir(named.DB)
 		if err != nil {
@@ -190,7 +189,6 @@ func (s *System) Shutdown() {
 			d.Wait()
 		}
 	}
-	log.Printf("shutdown done\n")
 }
 
 func run(bin string, name string, namedAddr []string, args []string) (*exec.Cmd, error) {

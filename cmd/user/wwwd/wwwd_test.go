@@ -23,8 +23,16 @@ type Tstate struct {
 	pid string
 }
 
+func piddir(pid string) string {
+	return "pids/" + pid + "/pids/"
+}
+
+func childdir(pid string) string {
+	return "pids/" + pid + "/pids/" + pid
+}
+
 func spawn(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, "", "bin/user/wwwd", "",
+	a := &proc.Proc{pid, piddir(pid), "bin/user/wwwd", "",
 		[]string{pid},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
@@ -48,13 +56,18 @@ func makeTstate(t *testing.T) *Tstate {
 
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
+
+	if err := ts.FsLib.MountTree(cfg.NamedAddr, "pids", "pids"); err != nil {
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
+	}
+
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 
 	ts.pid = proc.GenPid()
 	spawn(t, ts, ts.pid)
 
-	err = ts.WaitStart(ts.pid)
+	err = ts.WaitStart(childdir(ts.pid))
 	assert.Equal(t, nil, err)
 
 	return ts
@@ -64,11 +77,9 @@ func (ts *Tstate) waitWww() {
 	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
 	assert.NotEqual(ts.t, nil, err)
 
-	status, err := ts.WaitExit(ts.pid)
+	status, err := ts.WaitExit(childdir(ts.pid))
 	assert.Nil(ts.t, err, "WaitExit error")
 	assert.Equal(ts.t, "OK", status, "Exit status wrong")
-
-	log.Printf("SHUTDOWN\n")
 
 	ts.e.Shutdown()
 }

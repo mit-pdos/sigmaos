@@ -2,6 +2,7 @@ package procbasev1_test
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 	"testing"
@@ -43,9 +44,14 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 
-	db.Name("sched_test")
+	db.Name("proc_test")
 
-	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
+	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
+
+	if err := ts.FsLib.MountTree(cfg.NamedAddr, "pids", "pids"); err != nil {
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
+	}
+
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
 	ts.t = t
 	return ts
@@ -63,14 +69,19 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 	ts.t = t
 	ts.e = e
 	ts.cfg = cfg
-	db.Name("sched_test")
-	ts.FsLib = fslib.MakeFsLibAddr("sched_test", ts.cfg.NamedAddr)
+	db.Name("proc_test")
+	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
+
+	if err := ts.FsLib.MountTree(ts.cfg.NamedAddr, "pids", "pids"); err != nil {
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
+	}
+
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
 	return ts
 }
 
 func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, "", "bin/user/sleeper", "",
+	a := &proc.Proc{pid, "pids", "bin/user/sleeper", "",
 		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid},
 		[]string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
@@ -124,7 +135,7 @@ func TestWaitExit(t *testing.T) {
 	pid := spawnSleeper(t, ts)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
-	assert.Equal(t, status, "OK", "Exit status wrong")
+	assert.Equal(t, "OK", status, "Exit status wrong")
 
 	end := time.Now()
 

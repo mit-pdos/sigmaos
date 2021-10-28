@@ -381,7 +381,6 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
-		log.Printf("%v: done\n", db.GetName())
 		return nil
 	}
 	if len(args.Wnames) > 0 {

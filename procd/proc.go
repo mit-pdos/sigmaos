@@ -22,19 +22,19 @@ import (
 type Proc struct {
 	//	mu deadlock.Mutex
 	fs.FsObj
-	mu        sync.Mutex
-	Program   string
-	Pid       string
-	ParentDir string
-	Args      []string
-	Env       []string
-	Dir       string
-	Stdout    string
-	Stderr    string
-	SysPid    int
-	NewRoot   string
-	attr      *proc.Proc
-	pd        *Procd
+	mu      sync.Mutex
+	Program string
+	Pid     string
+	PidDir  string
+	Args    []string
+	Env     []string
+	Dir     string
+	Stdout  string
+	Stderr  string
+	SysPid  int
+	NewRoot string
+	attr    *proc.Proc
+	pd      *Procd
 	// XXX add fields (e.g. CPU mask, etc.)
 }
 
@@ -42,7 +42,7 @@ type Proc struct {
 func (p *Proc) init(a *proc.Proc) {
 	p.Program = a.Program
 	p.Pid = a.Pid
-	p.ParentDir = a.ParentDir
+	p.PidDir = a.PidDir
 	p.Args = a.Args
 	p.Dir = a.Dir
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+randstr.Hex(16))
@@ -50,7 +50,7 @@ func (p *Proc) init(a *proc.Proc) {
 	env = append(env, "NEWROOT="+p.NewRoot)
 	env = append(env, "PROCDIP="+p.pd.addr)
 	env = append(env, "SIGMAPID="+p.Pid)
-	env = append(env, "SIGMAPARENT="+p.ParentDir)
+	env = append(env, "SIGMAPIDDIR="+p.PidDir)
 	p.Env = env
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p

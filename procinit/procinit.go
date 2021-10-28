@@ -20,14 +20,8 @@ func GetPid() string {
 }
 
 // Can return "" for test programs that make a procclnt
-func GetParent() string {
-	return os.Getenv("SIGMAPARENT")
-}
-
-// Can return "" for test programs that make a procclnt
 func GetPidDir() string {
-	log.Printf("parent %v pid %v\n", GetPid(), GetParent())
-	return os.Getenv("SIGMAPARENT") + "/" + os.Getenv("SIGMAPID")
+	return os.Getenv("SIGMAPIDDIR")
 }
 
 const (
@@ -96,10 +90,10 @@ func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid stri
 
 // Called by a sigmaOS process after being spawned
 func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
-	return MakeProcClntBase(fsl, layers, GetParent(), GetPid())
+	return MakeProcClntBase(fsl, layers, GetPidDir(), GetPid())
 }
 
 // Called by tests to fake an initial process
 func MakeProcClntInit(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
-	return MakeProcClntBase(fsl, layers, "name", "")
+	return MakeProcClntBase(fsl, layers, "pids", "")
 }

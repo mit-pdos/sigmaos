@@ -18,6 +18,7 @@ const (
 	PROC_COND     = "name/proc-cond"
 	PROC_RET_STAT = "name/proc-ret-stat"
 	MEMFS         = "name/memfsd"
+	PIDS          = "name/pids"
 )
 
 func MakeInitFs(fsl *fslib.FsLib) error {
@@ -37,6 +38,9 @@ func MakeInitFs(fsl *fslib.FsLib) error {
 		return err
 	}
 	if err := fsl.Mkdir(PROC_RET_STAT, 0777); err != nil {
+		return err
+	}
+	if err := fsl.Mkdir(PIDS, 0777); err != nil {
 		return err
 	}
 	return nil

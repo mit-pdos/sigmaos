@@ -18,14 +18,14 @@ const (
 )
 
 type Proc struct {
-	Pid       string   // SigmaOS PID
-	ParentDir string   // Parent SigmaOS directory
-	Program   string   // Program to run
-	Dir       string   // Unix working directory for the process
-	Args      []string // Args
-	Env       []string // Environment variables
-	Type      Ttype    // Type
-	Ncore     Tcore    // Number of cores requested
+	Pid     string   // SigmaOS PID
+	PidDir  string   // SigmaOS PID pathname
+	Program string   // Program to run
+	Dir     string   // Unix working directory for the process
+	Args    []string // Args
+	Env     []string // Environment variables
+	Type    Ttype    // Type
+	Ncore   Tcore    // Number of cores requested
 }
 
 func (p *Proc) GetProc() *Proc {
@@ -33,5 +33,5 @@ func (p *Proc) GetProc() *Proc {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.ParentDir, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.PidDir, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
 }

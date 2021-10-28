@@ -55,7 +55,6 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	s.native = len(args) == 4 && args[3] == "native"
 
 	db.DLPrintf("SCHEDL", "MakeSleeper: %v\n", args)
-	//	log.Printf("MakeSleeper: %v\n", args)
 
 	if !s.native {
 		err := s.Started(s.pid)

@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	db "ulambda/debug"
 	"ulambda/fsclnt"
 )
 
@@ -27,7 +26,6 @@ func MakeFsLibBase(uname string) *FsLib {
 }
 
 func (fl *FsLib) MountTree(server []string, tree, mount string) error {
-	log.Printf("%v: MountTree srv %v tree '%v' as '%v'\n", db.GetName(), server, tree, mount)
 	if fd, err := fl.AttachReplicas(server, "", tree); err == nil {
 		return fl.Mount(fd, mount)
 	} else {

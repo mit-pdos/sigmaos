@@ -49,17 +49,17 @@ type Wwwd struct {
 
 func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
-	// www.FsLib = fslib.MakeFsLib("www")
 	db.Name("wwwd")
 	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
+	log.Printf("pid %v piddir %v\n", procinit.GetPid(), procinit.GetPidDir())
+
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
-	err := www.MakeFile(tree+"/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
+	err := www.MakeFile("pids/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
-
 	return www
 }
 
@@ -86,7 +86,7 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
-	fn := www.ChildDir(pid) + "server/pipe"
+	fn := www.ChildDir(pid) + "/server/pipe"
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
 		log.Printf("wwwd: open %v failed %v\n", fn, err)
@@ -108,7 +108,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
-	a := &proc.Proc{pid, procinit.GetPid(), app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
+	a := &proc.Proc{pid, procinit.GetPidDir(), app, "", append([]string{pid}, args...), []string{procinit.GetProcLayersString()},
 		proc.T_DEF, proc.C_DEF,
 	}
 	err := www.Spawn(a)
@@ -124,8 +124,9 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	log.Printf("getstatic: %v\n", args)
-	return www.spawnApp("bin/user/fsreader", w, r, []string{"name/" + www.pid + "/" + args})
+	log.Printf("%v: getstatic: %v\n", db.GetName(), args)
+	file := "name/" + procinit.GetPidDir() + args
+	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {

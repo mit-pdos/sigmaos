@@ -76,6 +76,7 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 	db.DLPrintf("FSCLNT", "resolve %v %v\n", mnt.mounts, path)
+	// log.Printf("%v: mnts %v path %v\n", db.GetName(), mnt.mounts, path)
 	for _, p := range mnt.mounts {
 		ok, rest := match(p.path, path)
 		if ok {

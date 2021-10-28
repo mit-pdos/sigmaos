@@ -205,8 +205,6 @@ func (fsc *FsClient) Close(fd int) error {
 	return err
 }
 
-// XXX if server lives in this process, do something special?  FsClient doesn't
-// know about the server currently.
 func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string, tree []string) (*Path, error) {
 	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, tree)
 	if err != nil {
@@ -220,6 +218,7 @@ func (fsc *FsClient) detachChannel(fid np.Tfid) {
 	fsc.freeFid(fid)
 }
 
+// XXX a version that finds server based on pathname?
 func (fsc *FsClient) AttachReplicas(server []string, path, tree string) (np.Tfid, error) {
 	p := np.Split(path)
 	fid := fsc.allocFid()
@@ -596,7 +595,6 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 
 func (fsc *FsClient) ShutdownFs(name string) error {
 	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
-	log.Printf("shutdown %v\n", name)
 	path := np.Split(name)
 	fid, err := fsc.walkMany(path, true, nil)
 	if err != nil {

@@ -204,7 +204,7 @@ func (r *Realmd) tryDestroyRealmL() {
 			log.Fatalf("Error Remove REALMS in Realmd.tryDestroyRealmL: %v", err)
 		}
 
-		// Signal that the realm has been initialized
+		// Signal that the realm has been destroyed
 		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
 		rExitCond.Destroy()
 	}

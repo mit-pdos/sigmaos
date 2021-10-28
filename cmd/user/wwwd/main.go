@@ -86,7 +86,7 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
-	fn := www.ChildDir(pid) + "/server/pipe"
+	fn := proc.PidDir(pid) + "/server/pipe"
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
 		log.Printf("wwwd: open %v failed %v\n", fn, err)

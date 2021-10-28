@@ -13,5 +13,5 @@ type ProcClnt interface {
 	Started(string) error
 	Exited(string, string) error
 	Evict(string) error
-	ChildDir(string) string
+	// ChildDir(string) string
 }

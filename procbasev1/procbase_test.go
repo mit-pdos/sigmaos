@@ -172,12 +172,12 @@ func TestExitCleanup(t *testing.T) {
 	pid := spawnSleeper(t, ts)
 
 	// Simulate parent exiting before child
-	err := ts.Remove(path.Join(ts.ChildDir(pid), procbasev1.PARENT_RET_STAT+pid))
+	err := ts.Remove(path.Join(proc.PidDir(pid), procbasev1.PARENT_RET_STAT+pid))
 	assert.Nil(t, err, "Remove")
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
-	_, err = ts.Stat(ts.ChildDir(pid))
+	_, err = ts.Stat(proc.PidDir(pid))
 	assert.NotNil(t, err, "Stat")
 
 	ts.e.Shutdown()

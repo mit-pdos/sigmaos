@@ -2,6 +2,7 @@ package proc
 
 import (
 	"fmt"
+	"path"
 )
 
 type Ttype uint32
@@ -16,6 +17,16 @@ const (
 const (
 	C_DEF Tcore = 0
 )
+
+func PidDir(pid string) string {
+	piddir := path.Dir(pid)
+	if piddir == "." {
+		piddir = "pids/" + pid
+	} else {
+		piddir = pid
+	}
+	return piddir
+}
 
 type Proc struct {
 	Pid     string   // SigmaOS PID

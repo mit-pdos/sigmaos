@@ -29,3 +29,4 @@ killall fsuxd
 killall fsreader
 killall wwwd
 killall dbd
+killall realm-balance

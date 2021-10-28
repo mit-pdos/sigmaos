@@ -3,6 +3,7 @@ package fsclnt
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -51,6 +52,7 @@ func (fsc *FsClient) ReadSeqNo() np.Tseqno {
 }
 
 func (fsc *FsClient) Exit() {
+	fsc.mount.exit()
 	fsc.pc.Exit()
 }
 
@@ -244,7 +246,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
 	fid2 := fsc.path(fid)
 	if fid2 == nil {
-		return np.NoFid, errors.New("Unknown file")
+		return np.NoFid, errors.New("unknown file")
 	}
 	path := fid2.copyPath()
 	fid1 := fsc.allocFid()
@@ -377,8 +379,10 @@ func (fsc *FsClient) Remove(name string) error {
 		fid, rest := fsc.mount.resolve(path)
 		if fid == np.NoFid {
 			db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
+			if fsc.mount.hasExited() {
+				return io.EOF
+			}
 			return errors.New("file not found")
-
 		}
 		if np.EndSlash(name) {
 			rest = append(rest, ".")
@@ -564,6 +568,9 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, np.TQversion, 
 	fid, rest := fsc.mount.resolve(p)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
+		if fsc.mount.hasExited() {
+			return nil, np.NoV, io.EOF
+		}
 		return nil, np.NoV, errors.New("file not found")
 
 	}
@@ -595,6 +602,9 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 	fid, rest := fsc.mount.resolve(p)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "SetFile: mount -> unknown fid\n")
+		if fsc.mount.hasExited() {
+			return 0, io.EOF
+		}
 		return 0, errors.New("file not found")
 
 	}

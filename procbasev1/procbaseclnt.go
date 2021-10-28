@@ -57,21 +57,6 @@ func MakeProcBaseClnt(fsl *fslib.FsLib, piddir, pid string) *ProcBaseClnt {
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.piddir = piddir
-
-	// XXX resolve mounts to find server?
-	tree := strings.TrimPrefix(clnt.piddir, "name/")
-
-	if pid != "" {
-		if err := fsl.MountTree(fslib.Named(), tree, "pids"); err != nil {
-			log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, "pids", err)
-		}
-		if err := fsl.MountTree(fslib.Named(), "runq", "name/runq"); err != nil {
-			log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
-		}
-		if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
-			log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
-		}
-	}
 	return clnt
 }
 

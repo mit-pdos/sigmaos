@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os/exec"
 	"testing"
 
@@ -57,11 +56,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
 
-	if err := ts.FsLib.MountTree(cfg.NamedAddr, "pids", "pids"); err != nil {
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
-	}
-
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
 
 	ts.pid = proc.GenPid()

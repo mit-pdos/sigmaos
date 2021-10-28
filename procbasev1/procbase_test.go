@@ -2,7 +2,6 @@ package procbasev1_test
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"sync"
 	"testing"
@@ -47,12 +46,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("proc_test")
 
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-
-	if err := ts.FsLib.MountTree(cfg.NamedAddr, "pids", "pids"); err != nil {
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
-	}
-
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
 	return ts
 }
@@ -71,12 +65,7 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 	ts.cfg = cfg
 	db.Name("proc_test")
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-
-	if err := ts.FsLib.MountTree(ts.cfg.NamedAddr, "pids", "pids"); err != nil {
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
-	}
-
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	return ts
 }
 

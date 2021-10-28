@@ -202,14 +202,13 @@ func (st *Stats) monitorCPUUtil() {
 	idle0 := uint64(0)
 	idle1 := uint64(0)
 	pid := os.Getpid()
-	total0 = perf.GetPIDSample(pid)
 	period1 := 10 // 1000/MS;
 
 	cores := map[string]bool{}
 
 	linuxsched.ScanTopology()
 	// Get the cores we can run on
-	m, err := linuxsched.SchedGetAffinity(os.Getpid())
+	m, err := linuxsched.SchedGetAffinity(pid)
 	if err != nil {
 		log.Fatalf("Error getting affinity mask: %v", err)
 	}

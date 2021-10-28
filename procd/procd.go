@@ -112,7 +112,7 @@ func (pd *Procd) Done() {
 
 	pd.done = true
 	pd.perf.Teardown()
-	pd.runq.Destroy()
+	pd.Exit()
 }
 
 func (pd *Procd) readDone() bool {

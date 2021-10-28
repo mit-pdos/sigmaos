@@ -1,4 +1,5 @@
 node0 amd246.utah.cloudlab.us
 node1 amd253.utah.cloudlab.us
+node2 amd254.utah.cloudlab.us
 node3 amd269.utah.cloudlab.us
 node4 amd249.utah.cloudlab.us

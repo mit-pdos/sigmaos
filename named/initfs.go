@@ -12,7 +12,7 @@ const (
 	TMP           = "name/tmp"
 	PROCD         = "name/procd/"
 	S3            = "name/s3/"
-	UX            = "name/ux"
+	UX            = "name/ux/"
 	FS            = "name/fs"
 	DB            = "name/db/"
 	PROC_COND     = "name/proc-cond"

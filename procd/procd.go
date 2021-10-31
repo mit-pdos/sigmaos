@@ -245,10 +245,6 @@ func (pd *Procd) setCoreAffinity() {
 
 // Worker runs one lambda at a time
 func (pd *Procd) Worker(workerId uint) {
-	go func() {
-		pd.Serve()
-		pd.Done()
-	}()
 	defer pd.group.Done()
 	for !pd.readDone() {
 		p, err := pd.getProc()
@@ -278,6 +274,10 @@ func (pd *Procd) Worker(workerId uint) {
 }
 
 func (pd *Procd) Work() {
+	go func() {
+		pd.Serve()
+		pd.Done()
+	}()
 	var NWorkers uint
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

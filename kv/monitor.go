@@ -52,6 +52,7 @@ func (mo *Monitor) unlock() {
 func spawnBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
 	t := procdep.MakeProcDep()
 	t.Pid = pid2
+	t.PidDir = "pids"
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Env = []string{procinit.GetProcLayersString()}
@@ -63,6 +64,7 @@ func spawnBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
 func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
 	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
+	t.PidDir = "pids"
 	t.Program = "bin/user/balancer"
 	t.Args = []string{opcode, pid1}
 	t.Env = []string{procinit.GetProcLayersString()}
@@ -75,6 +77,7 @@ func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
 func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
 	t := procdep.MakeProcDep()
 	t.Pid = pid1
+	t.PidDir = "pids"
 	t.Program = KV
 	t.Args = []string{""}
 	t.Env = []string{procinit.GetProcLayersString()}
@@ -85,6 +88,7 @@ func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
 func SpawnKV(sched proc.ProcClnt) string {
 	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
+	t.PidDir = "pids"
 	t.Program = KV
 	t.Args = []string{""}
 	t.Env = []string{procinit.GetProcLayersString()}

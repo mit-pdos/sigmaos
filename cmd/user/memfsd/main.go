@@ -24,5 +24,4 @@ func main() {
 	seccomp.LoadFilter()
 	mfs.Wait()
 	sclnt.Exited(os.Args[1], "OK")
-	mfs.FsLib.ShutdownFs(name)
 }

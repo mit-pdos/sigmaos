@@ -43,8 +43,6 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 
-	db.Name("proc_test")
-
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
@@ -63,7 +61,6 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 	ts.t = t
 	ts.e = e
 	ts.cfg = cfg
-	db.Name("proc_test")
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	return ts

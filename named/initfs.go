@@ -17,7 +17,7 @@ const (
 	DB            = "name/db/"
 	PROC_COND     = "name/proc-cond"
 	PROC_RET_STAT = "name/proc-ret-stat"
-	MEMFS         = "name/memfsd"
+	MEMFS         = "name/memfsd/"
 	PIDS          = "name/pids"
 )
 

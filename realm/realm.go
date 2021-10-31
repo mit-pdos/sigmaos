@@ -63,7 +63,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 }
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
-	// Create cond var to wait on realm creation/initialization.
+	// Create cond var to wait on realm exit
 	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil)
 	rExitCond.Init()
 

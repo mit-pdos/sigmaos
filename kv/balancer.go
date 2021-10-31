@@ -93,6 +93,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 func (bl *Balancer) spawnMover(s, src, dst string) string {
 	t := procdep.MakeProcDep()
 	t.Pid = proc.GenPid()
+	t.PidDir = "pids"
 	t.Program = "bin/user/mover"
 	t.Args = []string{s, src, dst}
 	t.Env = []string{procinit.GetProcLayersString()}

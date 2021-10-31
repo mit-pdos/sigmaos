@@ -65,7 +65,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.fsl, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
 
 	err = ts.fsl.Mkdir(named.MEMFS, 07)
 	if err != nil {
@@ -88,6 +88,7 @@ func (ts *Tstate) spawnMemFS() string {
 	t := procdep.MakeProcDep()
 	a := &proc.Proc{}
 	a.Pid = proc.GenPid()
+	a.PidDir = "pids"
 	a.Program = "bin/user/memfsd"
 	a.Args = []string{""}
 	a.Env = []string{procinit.GetProcLayersString()}
@@ -106,7 +107,6 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFS(mfs string) {
-	log.Printf("stop %v\n", mfs)
 	err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
 	assert.Nil(ts.t, err, "ShutdownFS")
 }
@@ -154,8 +154,6 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	}
 	RunBalancer(ts.ProcClnt, "add", mfs)
 
-	log.Printf("balancer done\n")
-
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
 		ts.clrks[i] = MakeClerk(ts.cfg.NamedAddr)
@@ -191,11 +189,7 @@ func TestGetPutSet(t *testing.T) {
 
 	ts.stopMemFSs()
 
-	log.Printf("shutdown\n")
-
 	ts.e.Shutdown()
-
-	log.Printf("done\n")
 }
 
 func ConcurN(t *testing.T, nclerk int) {

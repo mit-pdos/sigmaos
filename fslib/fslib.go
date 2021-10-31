@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	db "ulambda/debug"
 	"ulambda/fsclnt"
 )
 
@@ -37,16 +38,12 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(server, "", "name")
 	if err != nil {
-		log.Fatal("Mount error: ", err)
+		log.Fatalf("%v: Mount %v error: %v", db.GetName(), server, err)
 	}
 	return fl
 }
 
 func MakeFsLib(uname string) *FsLib {
-	fl := MakeFsLibBase(uname)
-	err := fl.MountTree(Named(), "", "name")
-	if err != nil {
-		log.Fatal("Mount error: ", err)
-	}
-	return fl
+	db.Name(uname)
+	return MakeFsLibAddr("name", Named())
 }

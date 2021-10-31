@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
@@ -31,7 +32,8 @@ type Fss3 struct {
 func RunFss3(pid string) {
 	fss3 := &Fss3{}
 	root := fss3.makeDir([]string{}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeSrvClt(root, named.S3, "fss3d")
+	fsl := fslib.MakeFsLib("fss3d")
+	srv, err := fslibsrv.MakeSrv(root, named.S3, fsl)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

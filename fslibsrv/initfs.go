@@ -13,43 +13,17 @@ import (
 	"ulambda/repl"
 )
 
-func makeSrvClt(root fs.Dir, addr string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib) {
-	db.Name(name)
-	srv := fssrv.MakeFsServer(root, addr, fos.MakeProtServer(), config)
-	fsl := fslib.MakeFsLib(name)
-	return srv, fsl
-}
-
-func makeSrv(root fs.Dir, addr string, name string, config repl.Config) *fssrv.FsServer {
-	db.Name(name)
+func makeSrv(root fs.Dir, addr string, config repl.Config) *fssrv.FsServer {
 	srv := fssrv.MakeFsServer(root, addr, fos.MakeProtServer(), config)
 	return srv
 }
 
-func MakeSrvClt(root fs.Dir, path string, name string) (*fssrv.FsServer, *fslib.FsLib, error) {
-	ip, err := fsclnt.LocalIP()
-	if err != nil {
-		return nil, nil, err
-	}
-	srv, fsl := makeSrvClt(root, ip+":0", name, nil)
-	if np.EndSlash(path) {
-		fsl.Mkdir(path, 0777)
-		err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
-	} else {
-		err = fsl.PostService(srv.MyAddr(), path)
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	return srv, fsl, nil
-}
-
-func MakeSrv(root fs.Dir, path string, name string, fsl *fslib.FsLib) (*fssrv.FsServer, error) {
+func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib) (*fssrv.FsServer, error) {
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		return nil, err
 	}
-	srv := makeSrv(root, ip+":0", name, nil)
+	srv := makeSrv(root, ip+":0", nil)
 	if np.EndSlash(path) {
 		fsl.Mkdir(path, 0777)
 		err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
@@ -63,7 +37,9 @@ func MakeSrv(root fs.Dir, path string, name string, fsl *fslib.FsLib) (*fssrv.Fs
 }
 
 func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
-	srv, fsl := makeSrvClt(root, addr, name, config)
+	db.Name(name)
+	srv := makeSrv(root, addr, config)
+	fsl := fslib.MakeFsLib(name)
 	if len(path) > 0 {
 		fsl.Mkdir(path, 0777)
 		err := fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
@@ -104,26 +80,27 @@ func (fs *MemFs) Wait() {
 
 func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib, error) {
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	srv, fsl, err := MakeSrvClt(root, path, name)
+	fsl := fslib.MakeFsLib(name)
+	srv, err := MakeSrv(root, path, fsl)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	return root, srv, fsl, makeStatDev(root, srv)
 }
 
-func MakeMemFsFsl(path string, name string, fsl *fslib.FsLib) (fs.Dir, *fssrv.FsServer, error) {
+func MakeMemFsFsl(path string, fsl *fslib.FsLib) (fs.Dir, *fssrv.FsServer, error) {
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
-	srv, err := MakeSrv(root, path, name, fsl)
+	srv, err := MakeSrv(root, path, fsl)
 	if err != nil {
 		return nil, nil, err
 	}
 	return root, srv, makeStatDev(root, srv)
 }
 
-func StartMemFs(path string, name string) (*MemFs, error) {
+func StartMemFsFsl(path string, fsl *fslib.FsLib) (*MemFs, error) {
 	fs := &MemFs{}
 	fs.ch = make(chan bool)
-	root, srv, fsl, err := MakeMemFs(path, name)
+	root, srv, err := MakeMemFsFsl(path, fsl)
 	if err != nil {
 		return nil, err
 	}
@@ -138,21 +115,7 @@ func StartMemFs(path string, name string) (*MemFs, error) {
 	return fs, err
 }
 
-// XXX hack fsl
-func StartMemFsFsl(path string, name string, fsl *fslib.FsLib) (*MemFs, error) {
-	fs := &MemFs{}
-	fs.ch = make(chan bool)
-	root, srv, err := MakeMemFsFsl(path, name, fsl)
-	if err != nil {
-		return nil, err
-	}
-	fs.FsLib = fsl
-	fs.FsServer = srv
-	fs.root = root
-
-	go func() {
-		srv.Serve()
-		fs.ch <- true
-	}()
-	return fs, err
+func StartMemFs(path string, name string) (*MemFs, error) {
+	fsl := fslib.MakeFsLib(name)
+	return StartMemFsFsl(path, fsl)
 }

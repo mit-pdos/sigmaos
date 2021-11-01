@@ -83,7 +83,7 @@ func (clnt *ProcDepClnt) Spawn(gp proc.GenericProc) error {
 	case *ProcDep:
 		p = gp.(*ProcDep)
 	case *proc.Proc:
-		p = MakeProcDep()
+		p = MakeEmptyProcDep()
 		p.Proc = gp.(*proc.Proc)
 	}
 	procDepFPath := path.Join(clnt.jobDir, p.Pid)
@@ -235,7 +235,7 @@ func (clnt *ProcDepClnt) getProcDep(pid string) (*ProcDep, error) {
 		return nil, err
 	}
 
-	p := MakeProcDep()
+	p := MakeEmptyProcDep()
 	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Fatalf("Couldn't unmarshal waitfile: %v, %v", string(b), err)

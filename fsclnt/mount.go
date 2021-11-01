@@ -20,6 +20,7 @@ func (p *Point) String() string {
 type Mount struct {
 	mu     sync.Mutex
 	mounts []*Point
+	exited bool
 }
 
 func makeMount() *Mount {
@@ -72,11 +73,32 @@ func matchexact(mp []string, path []string) bool {
 	return true
 }
 
+func (mnt *Mount) exit() {
+	mnt.mu.Lock()
+	defer mnt.mu.Unlock()
+
+	mnt.exited = true
+}
+
+// XXX Right now, we return EOF once we've "exited". Perhaps it makes more
+// sense to return "unknown mount" or something along those lines.
+func (mnt *Mount) hasExited() bool {
+	mnt.mu.Lock()
+	defer mnt.mu.Unlock()
+
+	return mnt.exited
+}
+
 func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
+
 	db.DLPrintf("FSCLNT", "resolve %v %v\n", mnt.mounts, path)
-	// log.Printf("%v: mnts %v path %v\n", db.GetName(), mnt.mounts, path)
+	if mnt.exited {
+		db.DLPrintf("FSCLNT", "resolve %v %v failed: mount exited \n", mnt.mounts, path)
+		return np.NoFid, path
+	}
+
 	for _, p := range mnt.mounts {
 		ok, rest := match(p.path, path)
 		if ok {
@@ -89,6 +111,7 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 func (mnt *Mount) umount(path []string) (np.Tfid, error) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
+
 	db.DLPrintf("FSCLNT", "umount %v\n", path)
 	for i, p := range mnt.mounts {
 		ok := matchexact(p.path, path)

@@ -93,7 +93,8 @@ func (c *Cond) Signal() {
 
 	wFiles, err := c.ReadDir(c.path)
 	if err != nil {
-		log.Printf("Error ReadDir in Cond.Signal: %v", err)
+		debug.PrintStack()
+		log.Printf("Error ReadDir %v in Cond.Signal: %v", c.path, err)
 	}
 
 	var waiter string
@@ -123,7 +124,7 @@ func (c *Cond) Signal() {
 func (c *Cond) Wait() error {
 	c.dirLock.Lock()
 
-	done := make(chan bool, 2)
+	done := make(chan error, 2)
 
 	signalPath, err := c.createSignalFile()
 	if err != nil {
@@ -133,44 +134,40 @@ func (c *Cond) Wait() error {
 
 	// Everyone waits on the broadcast file
 	go func() {
-		bcast := make(chan bool)
+		bcast := make(chan error)
 		err := c.SetRemoveWatch(c.bcastPath, func(p string, err error) {
-			if err != nil && err.Error() == "EOF" {
-				return
-			} else if err != nil {
+			if err != nil {
 				db.DLPrintf("COND", "Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
 			}
-			bcast <- true
+			bcast <- err
 		})
 		// If error, don't wait.
 		if err == nil {
-			<-bcast
+			err = <-bcast
 		} else {
 			db.DLPrintf("COND", "Error SetRemoveWatch bcast Cond.Wait: %v", err)
 		}
 
 		c.Remove(signalPath)
-		done <- true
+		done <- err
 	}()
 
 	// Each waiter waits on its own signal file
 	go func() {
-		signal := make(chan bool)
+		signal := make(chan error)
 		err := c.SetRemoveWatch(signalPath, func(p string, err error) {
-			if err != nil && err.Error() == "EOF" {
-				return
-			} else if err != nil {
+			if err != nil {
 				db.DLPrintf("COND", "Error RemoveWatch bcast triggered in Cond.Wait: %v", err)
 			}
-			signal <- true
+			signal <- err
 		})
 		// If error, don't wait.
 		if err == nil {
-			<-signal
+			err = <-signal
 		} else {
 			db.DLPrintf("COND", "Error SetRemoveWatch bcast Cond.Wait: %v", err)
 		}
-		done <- true
+		done <- err
 	}()
 
 	if c.condLock != nil {
@@ -179,7 +176,11 @@ func (c *Cond) Wait() error {
 	c.dirLock.Unlock()
 
 	// Wait for either the Signal or Broadcast watch to be triggered
-	<-done
+	err = <-done
+
+	if err != nil {
+		return err
+	}
 
 	// Lock & return
 	if c.condLock != nil {

@@ -87,6 +87,7 @@ func (c *SrvConn) reader() {
 func (c *SrvConn) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.mu.Lock()
+
 	close(c.replies)
 	if !c.closed {
 		// Detach each session which used this channel
@@ -152,8 +153,8 @@ func (c *SrvConn) writer() {
 		} else {
 			err = c.bw.Flush()
 			if err != nil {
-				debug.PrintStack()
-				log.Print("Writer: Flush error ", err)
+				stacktrace := debug.Stack()
+				db.DLPrintf("NETSRV", "%v\nWriter: Flush error ", string(stacktrace), err)
 				return
 			}
 		}

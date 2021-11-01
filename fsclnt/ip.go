@@ -10,7 +10,11 @@ func LocalIP() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, i := range ifaces {
+	//	for _, i := range ifaces {
+	// XXX Loop over interfaces backwards since cloudlab places control network
+	// interface before local network interface
+	for idx := len(ifaces) - 1; idx >= 0; idx-- {
+		i := ifaces[idx]
 		addrs, err := i.Addrs()
 		if err != nil {
 			return "", err

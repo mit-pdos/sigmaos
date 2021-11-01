@@ -172,6 +172,7 @@ func (r *Realmd) teardown() {
 }
 
 func (r *Realmd) deregister() {
+	// De-register this realmd as belonging to this realm
 	if err := r.Remove(path.Join(REALMS, r.cfg.RealmId, r.id)); err != nil {
 		log.Fatalf("Error Remove in Realmd.deregister: %v", err)
 	}
@@ -198,7 +199,12 @@ func (r *Realmd) tryDestroyRealmL() {
 			log.Fatalf("Error Remove REALMS in Realmd.tryDestroyRealmL: %v", err)
 		}
 
-		// Signal that the realm has been removed
+		// Remove the realm's named directory
+		if err := r.Remove(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
+			log.Fatalf("Error Remove REALMS in Realmd.tryDestroyRealmL: %v", err)
+		}
+
+		// Signal that the realm has been destroyed
 		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
 		rExitCond.Destroy()
 	}

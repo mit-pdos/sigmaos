@@ -5,13 +5,17 @@ package main
 //
 
 import (
+	"bytes"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 
 	"ulambda/fslib"
+	"ulambda/mr"
 	"ulambda/proc"
 	"ulambda/procdep"
 	"ulambda/procinit"
@@ -30,22 +34,41 @@ func rmDir(fsl *fslib.FsLib, dir string) error {
 	return nil
 }
 
-func main() {
-	if len(os.Args) < 3 {
-		log.Fatalf("Usage: %v nReducers s3_input_dir", os.Args[0])
-	}
-	nReducers, err := strconv.Atoi(os.Args[1])
+func Compare(fsl *fslib.FsLib) {
+	cmd := exec.Command("sort", "mr/seq-mr.out")
+	var out1 bytes.Buffer
+	cmd.Stdout = &out1
+	err := cmd.Run()
 	if err != nil {
-		log.Fatalf("Error invalid nReducers: %v", err)
+		log.Printf("cmd err %v\n", err)
 	}
-	s3Dir := os.Args[2]
+	cmd = exec.Command("sort", "mr/par-mr.out")
+	var out2 bytes.Buffer
+	cmd.Stdout = &out2
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
+	}
+	b1 := out1.Bytes()
+	b2 := out2.Bytes()
+	if len(b1) != len(b2) {
+		log.Fatalf("Output files have different length\n")
+	}
+	for i, v := range b1 {
+		if v != b2[i] {
+			log.Fatalf("Buf %v diff %v %v\n", i, v, b2[i])
+			break
+		}
+	}
+}
 
+func main() {
 	fsl1 := fslib.MakeFsLib("mr-wc-1")
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("mr-wc", cfg.NamedAddr)
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
-	for r := 0; r < nReducers; r++ {
+	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)
 		if err != nil {
@@ -55,7 +78,7 @@ func main() {
 
 	mappers := map[string]bool{}
 	n := 0
-	files, err := fsl.ReadDir(path.Join("name/s3/~ip/", s3Dir))
+	files, err := ioutil.ReadDir("input/")
 	if err != nil {
 		log.Fatalf("Readdir %v\n", err)
 	}
@@ -67,14 +90,14 @@ func main() {
 		//		a1 := procdep.MakeProcDep()
 		//		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		//		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
-		//			[]string{m, path.Join("name/s3/~ip/", s3Dir, f.Name)},
+		//			[]string{m, "name/s3/~ip/input/" + f.Name()},
 		//			[]string{procinit.GetProcLayersString()},
 		//			proc.T_BE, proc.C_DEF,
 		//		}
-		a2 := procdep.MakeProcDep(pid2, "bin/user/mr-m-wc", []string{path.Join("name/s3/~ip/", s3Dir, f.Name), m})
-		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
+		a2 := procdep.MakeProcDep(pid2, "bin/user/mr-m-wc", []string{"name/s3/~ip/input/" + f.Name(), m})
 		a2.Env = []string{procinit.GetProcLayersString()}
-		a2.Proc.Type = proc.T_BE
+		a2.Type = proc.T_BE
+		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
 		//		sclnt.Spawn(a1)
 		sclnt.Spawn(a2)
 		n += 1
@@ -82,12 +105,12 @@ func main() {
 	}
 
 	reducers := []string{}
-	for i := 0; i < nReducers; i++ {
+	for i := 0; i < mr.NReduce; i++ {
 		pid := proc.GenPid()
 		r := strconv.Itoa(i)
 		a := procdep.MakeProcDep(pid, "bin/user/mr-r-wc", []string{"name/fs/" + r, "name/fs/mr-out-" + r})
-		a.Proc.Env = []string{procinit.GetProcLayersString()}
-		a.Proc.Type = proc.T_BE
+		a.Env = []string{procinit.GetProcLayersString()}
+		a.Type = proc.T_BE
 		a.Dependencies = &procdep.Deps{nil, mappers}
 		reducers = append(reducers, pid)
 		sclnt.Spawn(a)
@@ -107,7 +130,7 @@ func main() {
 	}
 
 	defer file.Close()
-	for i := 0; i < nReducers; i++ {
+	for i := 0; i < mr.NReduce; i++ {
 		// XXX run as a lambda?
 		r := strconv.Itoa(i)
 		data, err := fsl.ReadFile("name/fs/mr-out-" + r)
@@ -120,5 +143,6 @@ func main() {
 		}
 	}
 
-	log.Printf("mr-wc DONE\n")
+	Compare(fsl)
+	log.Printf("mr-wc PASS\n")
 }

@@ -93,11 +93,16 @@ then
   libssl-dev \
   git-lfs \
   libseccomp-dev \
+  awscli \
   htop
+
+  # For hadoop
+  yes | sudo apt install openjdk-8-jdk \
+  openjdk-8-jre-headless
 
   wget 'https://golang.org/dl/go1.16.4.linux-amd64.tar.gz'
   sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz
-  export PATH=$PATH:/usr/local/go/bin
+  export PATH=/bin:/sbin:$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
 fi

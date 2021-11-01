@@ -57,8 +57,13 @@ func (st *SessionTable) LookupFid(id np.Tsession, fid np.Tfid) (*fid.Fid, bool) 
 	db.DLPrintf("SETAB", "lookupFid %v %v", id, fid)
 
 	st.mu.Lock()
-	sess := st.sessions[id]
+	sess, ok := st.sessions[id]
 	st.mu.Unlock()
+
+	if !ok {
+		log.Printf("Nil session in SessionTable.LookupFid: %v %v", id, fid)
+		return nil, false
+	}
 
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
@@ -99,25 +104,31 @@ func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.FsObj, f *fid.Fid) {
 	db.DLPrintf("SETAB", "addEphemeral %v %v %v", id, o, f)
 
 	st.mu.Lock()
-	sess := st.sessions[id]
+	sess, ok := st.sessions[id]
 	st.mu.Unlock()
 
-	if sess == nil {
+	if !ok {
 		log.Printf("Nil session in SessionTable.AddEphemeral: %v %v %v", id, o, f)
-	} else {
-		sess.mu.Lock()
-		defer sess.mu.Unlock()
-
-		sess.ephemeral[o] = f
+		return
 	}
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	sess.ephemeral[o] = f
 }
 
 func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.FsObj) {
 	db.DLPrintf("SETAB", "delEpehemeral %v %v", id, o)
 
 	st.mu.Lock()
-	sess := st.sessions[id]
+	sess, ok := st.sessions[id]
 	st.mu.Unlock()
+
+	if !ok {
+		log.Printf("Nil session in SessionTable.DelEphemeral: %v %v", id, o)
+		return
+	}
 
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
@@ -127,14 +138,20 @@ func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.FsObj) {
 
 func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.FsObj]*fid.Fid {
 	st.mu.Lock()
-	sess := st.sessions[id]
+	sess, ok := st.sessions[id]
 	st.mu.Unlock()
+
+	e := make(map[fs.FsObj]*fid.Fid)
+
+	if !ok {
+		log.Printf("Nil session in SessionTable.GetEphemeral: %v %v", id)
+		return e
+	}
 
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
 
 	// XXX Making a full copy may be overkill...
-	e := make(map[fs.FsObj]*fid.Fid)
 	for o, f := range sess.ephemeral {
 		e[o] = f
 	}

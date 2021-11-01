@@ -79,7 +79,7 @@ func (m *ProcdMonitor) getProc(procdIP string, pid string) *procidem.ProcIdem {
 		log.Fatalf("Error ReadFile in ProcdMonitor.getProc: %v", err)
 	}
 
-	p := &proc.Proc{}
+	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Fatalf("Error Unmarshal in ProcdMonitor.getProc: %v", err)

@@ -68,11 +68,8 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv) *T
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, "bin/user/sleeperl", "",
-		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid},
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
+	a := proc.MakeProc(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
+	a.Env = []string{procinit.GetProcLayersString()}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)

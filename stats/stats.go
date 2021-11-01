@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,6 +19,7 @@ import (
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/inode"
+	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -111,14 +113,18 @@ func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	go st.monitorPID()
 }
 
+func (st *Stats) MonitorCPUUtil(fsl *fslib.FsLib) {
+	st.fsl = fsl
+	st.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	st.hz = perf.Hz()
+	go st.monitorCPUUtil()
+}
+
 func (st *Stats) spawnMonitor() string {
-	p := proc.Proc{}
-	p.Pid = proc.GenPid()
-	p.Program = "bin/user/monitor"
-	p.Args = []string{}
+	p := proc.MakeProc(proc.GenPid(), "bin/user/monitor", []string{})
 	p.Env = []string{procinit.GetProcLayersString()}
 	p.Type = proc.T_LC
-	st.Spawn(&p)
+	st.Spawn(p)
 	return p.Pid
 }
 
@@ -163,6 +169,24 @@ func (st *Stats) load(ticks uint64) {
 	st.sti.Util = util
 }
 
+func (st *Stats) loadCPUUtil(idle, total uint64) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	util := 100.0 * (1.0 - float64(idle)/float64(total))
+
+	nthread := float64(runtime.NumGoroutine())
+
+	st.sti.Load[0] *= EXP_0
+	st.sti.Load[0] += (1 - EXP_0) * nthread
+	st.sti.Load[1] *= EXP_1
+	st.sti.Load[1] += (1 - EXP_1) * nthread
+	st.sti.Load[2] *= EXP_2
+	st.sti.Load[2] += (1 - EXP_2) * nthread
+
+	st.sti.Util = util
+}
+
 // XXX too simplistic?
 func isDelay(load Tload) bool {
 	return load[0] > load[1] && load[1] > load[2]
@@ -170,6 +194,39 @@ func isDelay(load Tload) bool {
 
 func noDelay(load Tload) bool {
 	return load[0] < load[1] && load[1] < load[2]
+}
+
+func (st *Stats) monitorCPUUtil() {
+	total0 := uint64(0)
+	total1 := uint64(0)
+	idle0 := uint64(0)
+	idle1 := uint64(0)
+	pid := os.Getpid()
+	period1 := 10 // 1000/MS;
+
+	cores := map[string]bool{}
+
+	linuxsched.ScanTopology()
+	// Get the cores we can run on
+	m, err := linuxsched.SchedGetAffinity(pid)
+	if err != nil {
+		log.Fatalf("Error getting affinity mask: %v", err)
+	}
+	for i := uint(0); i < linuxsched.NCores; i++ {
+		if m.Test(i) {
+			cores["cpu"+strconv.Itoa(int(i))] = true
+		}
+	}
+
+	for atomic.LoadUint32(&st.done) != 1 {
+		for i := 0; i < period1; i++ {
+			time.Sleep(time.Duration(MS) * time.Millisecond)
+			idle1, total1 = perf.GetCPUSample(cores)
+			st.loadCPUUtil(idle1-idle0, total1-total0)
+			total0 = total1
+			idle0 = idle1
+		}
+	}
 }
 
 func (st *Stats) doMonitor() bool {
@@ -284,4 +341,8 @@ func (st *Stats) stats() []byte {
 		log.Fatalf("stats: json failed %v\n", err)
 	}
 	return data
+}
+
+func (si *StatInfo) String() string {
+	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatchv:%v Ncreate:%v Nflush:%v Nread:%v Nreadv:%v Nwrite:%v Nwritev:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nset:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatchv, si.Ncreate, si.Nflush, si.Nread, si.Nreadv, si.Nwrite, si.Nwritev, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nset, si.Paths, si.Load, si.Util)
 }

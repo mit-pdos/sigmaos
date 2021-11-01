@@ -49,7 +49,7 @@ func readLambda(line string) (*procdep.ProcDep, error) {
 	if len(l) != 6 {
 		return nil, fmt.Errorf("not enough attributes")
 	}
-	t := procdep.MakeProcDep()
+	t := procdep.MakeEmptyProcDep()
 	a := &proc.Proc{}
 	a.Pid = l[0]
 	a.Program = l[1]

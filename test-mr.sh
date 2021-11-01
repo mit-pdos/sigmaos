@@ -7,6 +7,6 @@
 
 echo "start mr"
 
-./bin/user/mr-wc
+./bin/user/mr-wc-test
 
 ./stop.sh

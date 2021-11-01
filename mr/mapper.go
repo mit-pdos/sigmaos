@@ -11,7 +11,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
@@ -26,8 +25,8 @@ type Mapper struct {
 	pid    string
 	input  string
 	output string
-	fd     int
 	fds    []int
+	//	fd     int
 }
 
 // XXX create in a temporary file and then rename
@@ -51,10 +50,10 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Makemapper: cannot create %v: %v\n", m.output, err)
 	}
-	m.fd, err = m.Open(m.input, np.OREAD)
-	if err != nil {
-		return nil, fmt.Errorf("Makemapper: unknown %v\n", m.input)
-	}
+	//	m.fd, err = m.Open(m.input, np.OREAD)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("Makemapper: unknown %v\n", m.input)
+	//	}
 	for r := 0; r < NReduce; r++ {
 		oname := "name/ux/~ip/m-" + m.output + "/r-" + strconv.Itoa(r)
 		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
@@ -100,32 +99,38 @@ func (m *Mapper) Map(txt string) {
 }
 
 func (m *Mapper) doMap() error {
-	rest := ""
-	for {
-		b, err := m.Read(m.fd, memfs.PIPESZ)
-		if err != nil || len(b) == 0 {
-			db.DLPrintf("MAPPER", "Read %v %v", m.input, err)
-			m.Map(rest)
-			break
-		}
-
-		// backup up if in the middle of word
-		txt := string(b)
-		for i := len(txt) - 1; i >= 0; i-- {
-			if txt[i] == ' ' {
-				t := rest
-				rest = txt[i+1:]
-				txt = t + txt[0:i]
-				break
-			}
-		}
-
-		m.Map(txt)
-	}
-	err := m.Close(m.fd)
+	b, err := m.ReadFile(m.input)
 	if err != nil {
-		log.Printf("close failed %v\n", err)
+		log.Fatalf("Error ReadFile in Mapper.doMap: %v", err)
 	}
+	txt := string(b)
+	m.Map(txt)
+	//	rest := ""
+	//	for {
+	//		b, err := m.Read(m.fd, memfs.PIPESZ)
+	//		if err != nil || len(b) == 0 {
+	//			db.DLPrintf("MAPPER", "Read %v %v", m.input, err)
+	//			m.Map(rest)
+	//			break
+	//		}
+	//
+	//		// backup up if in the middle of word
+	//		txt := string(b)
+	//		for i := len(txt) - 1; i >= 0; i-- {
+	//			if txt[i] == ' ' {
+	//				t := rest
+	//				rest = txt[i+1:]
+	//				txt = t + txt[0:i]
+	//				break
+	//			}
+	//		}
+	//
+	//		m.Map(txt)
+	//	}
+	//	err := m.Close(m.fd)
+	//	if err != nil {
+	//		log.Printf("close failed %v\n", err)
+	//	}
 
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")
@@ -136,7 +141,7 @@ func (m *Mapper) doMap() error {
 	for r := 0; r < NReduce; r++ {
 		err = m.Close(m.fds[r])
 		if err != nil {
-			db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fd, err)
+			db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fds[r], err)
 			return err
 		}
 		name := "name/fs/" + strconv.Itoa(r) + "/m-" + m.output

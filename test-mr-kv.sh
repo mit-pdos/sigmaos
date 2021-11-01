@@ -11,7 +11,7 @@ echo "start kv"
 
 echo "start mr"
 
-./bin/user/mr-wc &
+./bin/user/mr-wc-test &
 
 sleep 1
 

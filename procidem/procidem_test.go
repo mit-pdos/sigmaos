@@ -56,22 +56,16 @@ func makeTstate(t *testing.T) *Tstate {
 
 func spawnMonitor(t *testing.T, ts *Tstate, pid string) {
 	p := &procidem.ProcIdem{}
-	p.Proc = &proc.Proc{pid, "bin/user/procd-monitor", "",
-		[]string{},
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
+	p.Proc = proc.MakeProc(pid, "bin/user/procd-monitor", []string{})
+	p.Proc.Env = []string{procinit.GetProcLayersString()}
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Monitor spawn")
 }
 
 func spawnSleeperlWithPid(t *testing.T, ts *Tstate, pid string) {
 	p := &procidem.ProcIdem{}
-	p.Proc = &proc.Proc{pid, "bin/user/sleeperl", "",
-		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid},
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
+	p.Proc = proc.MakeProc(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
+	p.Proc.Env = []string{procinit.GetProcLayersString()}
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 }

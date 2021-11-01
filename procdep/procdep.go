@@ -22,11 +22,19 @@ func MakeDeps(start, end map[string]bool) *Deps {
 	return &Deps{start, end}
 }
 
-func MakeProcDep() *ProcDep {
+func MakeEmptyProcDep() *ProcDep {
 	t := &ProcDep{}
 	t.Dependencies = MakeDeps(map[string]bool{}, map[string]bool{})
 	t.Dependants = MakeDeps(map[string]bool{}, map[string]bool{})
-	t.Proc = &proc.Proc{}
+	t.Proc = nil
+	return t
+}
+
+func MakeProcDep(pid, program string, args []string) *ProcDep {
+	t := &ProcDep{}
+	t.Dependencies = MakeDeps(map[string]bool{}, map[string]bool{})
+	t.Dependants = MakeDeps(map[string]bool{}, map[string]bool{})
+	t.Proc = proc.MakeProc(pid, program, args)
 	return t
 }
 

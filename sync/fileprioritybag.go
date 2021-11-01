@@ -124,7 +124,11 @@ func (fb *FilePriorityBag) isEmptyL() (string, string, bool) {
 func (fb *FilePriorityBag) nextFileL() (string, string, error) {
 	priorities, err := fb.ReadDir(fb.path)
 	if err != nil {
-		log.Fatalf("Error ReadDir 1 in FilePriorityBag.nextFile: %v, %v", fb.path, err)
+		if err.Error() != "EOF" {
+			log.Fatalf("Error ReadDir 1 in FilePriorityBag.nextFile: %v, %v", fb.path, err)
+		}
+		db.DLPrintf("FILEBAG", "Error ReadDir 1 in FilePriorityBag.nextFile: %v, %v", fb.path, err)
+		return "", "", err
 	}
 
 	// Sort the priority buckets

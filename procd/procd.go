@@ -85,6 +85,9 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
 	procdStartCond.Destroy()
 
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
+	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
+
 	pd.Work()
 }
 
@@ -108,7 +111,7 @@ func (pd *Procd) Done() {
 
 	pd.done = true
 	pd.perf.Teardown()
-	pd.runq.Destroy()
+	pd.Exit()
 }
 
 func (pd *Procd) readDone() bool {
@@ -155,7 +158,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		return nil, err
 	}
 
-	p := &proc.Proc{}
+	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
 		log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)

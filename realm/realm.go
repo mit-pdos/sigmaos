@@ -20,6 +20,8 @@ const (
 
 type RealmConfig struct {
 	Rid       string   // Realm id.
+	NRealmds  int      // Number of realmds currently assigned to this realm.
+	Shutdown  bool     // True if this realm is in the process of being destroyed.
 	NamedAddr []string // IP address of this realm's named.
 }
 

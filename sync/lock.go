@@ -71,7 +71,7 @@ func (l *Lock) Unlock() {
 	err := l.Remove(path.Join(l.lockDir, l.lockName))
 	if err != nil {
 		if err.Error() == "EOF" {
-			log.Printf("Error Lock.Unlock: %v", err)
+			db.DLPrintf("LOCK", "Error Lock.Unlock: %v", err)
 			return
 		}
 		if l.strict {

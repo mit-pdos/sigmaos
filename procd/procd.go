@@ -41,6 +41,7 @@ type Procd struct {
 	root       fs.Dir
 	done       bool
 	addr       string
+	procs      map[string]bool
 	coreBitmap []bool
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
@@ -57,6 +58,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	pd.nid = 0
 	pd.bin = bin
 
+	pd.procs = make(map[string]bool)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
@@ -83,7 +85,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	// Set up FilePriorityBags
 	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbase.RUNQ)
 
-	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil)
+	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil, true)
 	procdStartCond.Destroy()
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
@@ -106,12 +108,20 @@ func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {
 	return p, nil
 }
 
+// Evict all procs running in this procd
+func (pd *Procd) evictProcsL() {
+	for pid, _ := range pd.procs {
+		pd.procclnt.Evict(pid)
+	}
+}
+
 func (pd *Procd) Done() {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
 	pd.done = true
 	pd.perf.Teardown()
+	pd.evictProcsL()
 	pd.Exit()
 }
 
@@ -210,9 +220,16 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
-func (pd *Procd) runAll(ls []*Proc) {
+func (pd *Procd) runAll(ps []*Proc) {
+	// Register running procs
+	pd.mu.Lock()
+	for _, p := range ps {
+		pd.procs[p.Pid] = true
+	}
+	pd.mu.Unlock()
+
 	var wg sync.WaitGroup
-	for _, p := range ls {
+	for _, p := range ps {
 		wg.Add(1)
 		go func(p *Proc) {
 			defer wg.Done()
@@ -230,6 +247,13 @@ func (pd *Procd) runAll(ls []*Proc) {
 		}(p)
 	}
 	wg.Wait()
+
+	// Deregister running procs
+	pd.mu.Lock()
+	for _, p := range ps {
+		delete(pd.procs, p.Pid)
+	}
+	pd.mu.Unlock()
 }
 
 func (pd *Procd) setCoreAffinity() {

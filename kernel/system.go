@@ -56,7 +56,7 @@ func (s *System) Boot() error {
 func (s *System) BootFsUxd() error {
 	// Create boot cond
 	pid := "fsuxd-" + proc.GenPid()
-	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
+	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	fsuxdStartCond.Init()
 	var err error
 	fsuxd, err := run(s.bin, "bin/kernel/fsuxd", s.namedAddr, []string{pid})
@@ -72,7 +72,7 @@ func (s *System) BootFsUxd() error {
 func (s *System) BootFss3d() error {
 	// Create boot cond
 	pid := "fss3d-" + proc.GenPid()
-	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
+	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	fss3dStartCond.Init()
 	var err error
 	fss3d, err := run(s.bin, "bin/kernel/fss3d", s.namedAddr, []string{pid})
@@ -88,7 +88,7 @@ func (s *System) BootFss3d() error {
 func (s *System) BootProcd() error {
 	// Create boot cond
 	pid := "procd-" + proc.GenPid()
-	procdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
+	procdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	procdStartCond.Init()
 	var err error
 	procd, err := run(s.bin, "bin/kernel/procd", s.namedAddr, []string{s.bin, pid})
@@ -104,7 +104,7 @@ func (s *System) BootProcd() error {
 func (s *System) BootDbd() error {
 	// Create dbd cond
 	pid := "dbd-" + proc.GenPid()
-	dbdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil)
+	dbdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	dbdStartCond.Init()
 	var err error
 	dbd, err := run(s.bin, "bin/kernel/dbd", s.namedAddr, []string{pid})

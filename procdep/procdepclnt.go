@@ -91,7 +91,7 @@ func (clnt *ProcDepClnt) Spawn(gp proc.GenericProc) error {
 	// If the underlying proc hasn't been spawned yet, the Waits will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+p.Pid), nil)
+	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+p.Pid), nil, true)
 	tSpawnCond.Init()
 
 	// Create a lock to make sure we don't miss updates from procDeps we depend on.
@@ -127,7 +127,7 @@ func (clnt *ProcDepClnt) WaitStart(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitStart will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+pid), nil)
+	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+pid), nil, false)
 	tSpawnCond.Wait()
 	return clnt.ProcClnt.WaitStart(pid)
 }
@@ -137,7 +137,7 @@ func (clnt *ProcDepClnt) WaitExit(pid string) (string, error) {
 	// If the underlying proc hasn't been spawned yet, the WaitExit will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+pid), nil)
+	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+pid), nil, false)
 	tSpawnCond.Wait()
 	return clnt.ProcClnt.WaitExit(pid)
 }
@@ -147,7 +147,7 @@ func (clnt *ProcDepClnt) WaitEvict(pid string) error {
 	// If the underlying proc hasn't been spawned yet, the WaitEvict will fall
 	// through. This condition variable fires (and is destroyed) once the
 	// underlying proc is spawned, so we don't accidentally fall through early.
-	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+pid), nil)
+	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+pid), nil, false)
 	tSpawnCond.Wait()
 	return clnt.ProcClnt.WaitEvict(pid)
 }
@@ -225,7 +225,7 @@ func (clnt *ProcDepClnt) runProcDep(p *ProcDep) {
 		log.Fatalf("Error spawning procDep in ProcDepClnt.runProcDep: %v", err)
 	}
 	// Release waiters and allow them to wait on the underlying proc.
-	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+p.Pid), nil)
+	tSpawnCond := sync.MakeCond(clnt.FsLib, path.Join(clnt.jobDir, COND+p.Pid), nil, false)
 	tSpawnCond.Destroy()
 }
 

@@ -40,7 +40,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Confi
 	}
 	fsux.FsServer = srv
 	if config == nil {
-		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
+		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil, true)
 		fsuxStartCond.Destroy()
 	}
 	return fsux

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"time"
 
 	"ulambda/config"
 	"ulambda/fslib"
@@ -19,10 +20,11 @@ const (
 )
 
 type RealmConfig struct {
-	Rid       string   // Realm id.
-	NRealmds  int      // Number of realmds currently assigned to this realm.
-	Shutdown  bool     // True if this realm is in the process of being destroyed.
-	NamedAddr []string // IP address of this realm's named.
+	Rid        string    // Realm id.
+	NRealmds   int       // Number of realmds currently assigned to this realm.
+	LastResize time.Time // Timestamp from the last time this realm was resized
+	Shutdown   bool      // True if this realm is in the process of being destroyed.
+	NamedAddr  []string  // IP address of this realm's named.
 }
 
 type RealmClnt struct {
@@ -46,7 +48,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	cfg.Rid = rid
 
 	// Create cond var to wait on realm creation/initialization.
-	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil)
+	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil, true)
 	rStartCond.Init()
 
 	b, err := json.Marshal(cfg)
@@ -66,7 +68,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
 	// Create cond var to wait on realm creation/initialization.
-	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil)
+	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil, true)
 	rExitCond.Init()
 
 	if err := clnt.destroy.Put(DEFAULT_REALM_PRIORITY, rid, []byte{}); err != nil {

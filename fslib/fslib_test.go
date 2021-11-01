@@ -59,6 +59,19 @@ func TestRemove(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestRemoveNonexistent(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Remove("name/this-file-does-not-exist")
+	assert.NotNil(t, err)
+	ts.e.Shutdown()
+}
+
 func TestRemovePath(t *testing.T) {
 	ts := makeTstate(t)
 

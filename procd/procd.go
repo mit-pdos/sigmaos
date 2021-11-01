@@ -84,7 +84,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	// Make some directories used by other services.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbase.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbasev1.RUNQ)
 	// Set up ctl file
 	pd.ctlFile = makeCtlFile(pd, "", pd.root)
 	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)

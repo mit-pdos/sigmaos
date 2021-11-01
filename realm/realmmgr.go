@@ -243,8 +243,7 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	// Get the realm's config
 	realmCfg, err := m.getRealmConfig(realmId)
 	if err != nil {
-		log.Printf("Error getRealmConfig: %v", err)
-		db.DLPrintf("REALMMGR", "Error getRealmConfig in RealmMgr.adjustRealm: %v", err)
+		db.DLPrintf("REALMMGR", "Error RealmMgr.getRealmConfig in RealmMgr.adjustRealm: %v", err)
 		return
 	}
 

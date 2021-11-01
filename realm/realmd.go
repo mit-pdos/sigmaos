@@ -159,7 +159,7 @@ func (r *Realmd) joinRealm() chan bool {
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
+		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil, true)
 		rStartCond.Destroy()
 	}
 	db.DLPrintf("REALMD", "Realmd %v joined Realm %v", r.id, r.cfg.RealmId)
@@ -207,7 +207,7 @@ func (r *Realmd) tryDestroyRealmL() {
 		}
 
 		// Signal that the realm has been destroyed
-		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
+		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil, true)
 		rExitCond.Destroy()
 	}
 }

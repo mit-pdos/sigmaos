@@ -17,7 +17,7 @@ import (
 
 const (
 	SCAN_INTERVAL_MS        = 50
-	GROW_CPU_UTIL_THRESHOLD = 50
+	GROW_CPU_UTIL_THRESHOLD = 100
 )
 
 const (
@@ -123,6 +123,7 @@ func (m *RealmMgr) deallocRealmd(realmId string, realmdId string) {
 	rdCfg := &RealmdConfig{}
 	rdCfg.Id = realmdId
 	rdCfg.RealmId = NO_REALM
+
 	// Update the realmd config file.
 	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), rdCfg)
 

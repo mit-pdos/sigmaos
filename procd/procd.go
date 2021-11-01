@@ -25,6 +25,7 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procbasev1"
+	"ulambda/procinit"
 	usync "ulambda/sync"
 )
 

@@ -351,8 +351,10 @@ func (fsc *FsClient) Remove(name string) error {
 	fid, rest := fsc.mount.resolve(path)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
+		if fsc.mount.hasExited() {
+			return io.EOF
+		}
 		return errors.New("file not found")
-
 	}
 	// Optimistcally remove obj without doing a pathname
 	// walk; this may fail if rest contains an automount

@@ -2,6 +2,7 @@ package realm
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os/exec"
 	"path"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"ulambda/config"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/stats"
@@ -16,8 +18,10 @@ import (
 )
 
 const (
-	SCAN_INTERVAL_MS        = 50
-	GROW_CPU_UTIL_THRESHOLD = 50
+	SCAN_INTERVAL_MS          = 50
+	RESIZE_INTERVAL_MS        = 100
+	GROW_CPU_UTIL_THRESHOLD   = 50
+	SHRINK_CPU_UTIL_THRESHOLD = 25
 )
 
 const (
@@ -130,6 +134,7 @@ func (m *RealmMgr) deallocRealmd(realmId string, realmdId string) {
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 	rCfg.NRealmds -= 1
+	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
@@ -184,13 +189,14 @@ func (m *RealmMgr) allocRealmd(realmId string) {
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 	rCfg.NRealmds += 1
+	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
 // Get all a realm's procd's stats
-func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) []*stats.StatInfo {
+func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[string]*stats.StatInfo {
 	// XXX For now we assume all the nameds are up
-	stat := []*stats.StatInfo{}
+	stat := make(map[string]*stats.StatInfo)
 	if len(nameds) == 0 {
 		return stat
 	}
@@ -204,31 +210,94 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) []*stats.
 		if err != nil {
 			log.Fatalf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
 		}
-		stat = append(stat, s)
+		stat[pd.Name] = s
 	}
 	return stat
 }
 
-func (m *RealmMgr) needsRealmd(realmId string) bool {
+func (m *RealmMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
 	// If the realm is being shut down, the realm config file may not be there
 	// anymore. In this case, another realmd is not needed.
 	if _, err := m.Stat(path.Join(REALM_CONFIG, realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
-		return false
+		return nil, fmt.Errorf("Realm not found")
 	}
 	cfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
-	// If we are below the target replication level, start a new realmd
-	if cfg.NRealmds < nReplicas() && !cfg.Shutdown {
-		return true
-	}
+	return cfg, nil
+}
+
+func (m *RealmMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[string]float64) {
 	// Get stats
+	utilMap := make(map[string]float64)
 	procdStats := m.getRealmProcdStats(cfg.NamedAddr, realmId)
 	avgUtil := 0.0
-	for _, stat := range procdStats {
+	for realmdId, stat := range procdStats {
 		avgUtil += stat.Util
+		utilMap[realmdId] = stat.Util
 	}
 	avgUtil /= float64(len(procdStats))
-	return avgUtil > GROW_CPU_UTIL_THRESHOLD
+	return avgUtil, utilMap
+}
+
+func (m *RealmMgr) adjustRealm(realmId string) {
+	// Get the realm's config
+	realmCfg, err := m.getRealmConfig(realmId)
+	if err != nil {
+		log.Printf("Error getRealmConfig: %v", err)
+		db.DLPrintf("REALMMGR", "Error getRealmConfig in RealmMgr.adjustRealm: %v", err)
+		return
+	}
+
+	// If the realm is shutting down, return
+	if realmCfg.Shutdown {
+		return
+	}
+
+	// If we are below the target replication level
+	if realmCfg.NRealmds < nReplicas() {
+		// Start enough realmds to reach the target replication level
+		for i := realmCfg.NRealmds; i < nReplicas(); i++ {
+			m.allocRealmd(realmId)
+		}
+		return
+	}
+
+	// If we have resized too recently, return
+	if time.Now().Sub(realmCfg.LastResize).Milliseconds() < RESIZE_INTERVAL_MS {
+		return
+	}
+
+	//	log.Printf("Avg util pre: %v", realmCfg)
+	avgUtil, procdUtils := m.getRealmUtil(realmId, realmCfg)
+	//	log.Printf("Avg util post: %v, %v", realmCfg, avgUtil)
+	if avgUtil > GROW_CPU_UTIL_THRESHOLD {
+		// XXX: remove when not testing locally
+		if realmCfg.NRealmds < 2 {
+			m.allocRealmd(realmId)
+		}
+	} else if avgUtil < SHRINK_CPU_UTIL_THRESHOLD {
+		// If there are replicas to spare
+		if realmCfg.NRealmds > nReplicas() {
+			// Find least utilized procd
+			//			min := 100.0
+			//			minRealmdId := ""
+			//			for realmdId, util := range procdUtils {
+			//				if min > util {
+			//					min = util
+			//					minRealmdId = realmdId
+			//				}
+			//			}
+			// XXX A hack for now, since we don't have a good way of linking a procd to a realmd
+			_ = procdUtils
+			realmdIds, err := m.ReadDir(path.Join(REALMS, realmId))
+			if err != nil {
+				log.Printf("Error ReadDir in RealmMgr.adjustRealm: %v", err)
+			}
+			minRealmdId := realmdIds[1].Name
+			// Deallocate least utilized procd
+			m.deallocRealmd(realmId, minRealmdId)
+		}
+	}
 }
 
 // Balance realmds across realms.
@@ -247,9 +316,7 @@ func (m *RealmMgr) balanceRealmds() {
 			realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
 			realmLock.Lock()
 
-			if m.needsRealmd(realmId) {
-				m.allocRealmd(realmId)
-			}
+			m.adjustRealm(realmId)
 
 			realmLock.Unlock()
 		}

@@ -48,18 +48,18 @@ type BookApp struct {
 
 func RunBookApp(args []string) (*BookApp, error) {
 	log.Printf("MakeBookApp: %v\n", args)
-	n := "name/" + args[2]
-	mfs, err := fslibsrv.StartMemFs(n, "fsreader")
+	ba := &BookApp{}
+	ba.FsLib = fslib.MakeFsLib("bookapp")
+	ba.ProcClnt = procinit.MakeProcClnt(ba.FsLib, procinit.GetProcLayersMap())
+	n := "pids/" + args[2] + "/server"
+	mfs, err := fslibsrv.StartMemFsFsl(n, ba.FsLib)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	ba := &BookApp{}
-	ba.FsLib = mfs.FsLib
 	ba.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	ba.ProcClnt = procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
 	ba.pid = args[1]
 	ba.input = strings.Split(args[3], "/")
 	ba.Started(ba.pid)

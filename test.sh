@@ -18,4 +18,10 @@ go test $1 ulambda/procdep
 go test $1 ulambda/kv
 ./test-mr.sh
 ./test-kv.sh
+
+# wwwd_test required mariadb running
+# go test -v ulambda/cmd/user/wwwd
+
+# ./test2pc
+
 go test $1 -timeout=45m ulambda/replica

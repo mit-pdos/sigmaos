@@ -46,7 +46,6 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader: %v\n", args)
 	r := &Reader{}
-	db.Name("fsreader")
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	n := "pids/" + args[2] + "/server"

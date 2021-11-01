@@ -59,18 +59,6 @@ func MakeProcBaseClnt(fsl *fslib.FsLib) *ProcBaseClnt {
 
 func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	p := gp.GetProc()
-	// Select which queue to put the job in
-	var procPriority string
-	switch p.Type {
-	case proc.T_DEF:
-		procPriority = RUNQ_PRIORITY
-	case proc.T_LC:
-		procPriority = RUNQLC_PRIORITY
-	case proc.T_BE:
-		procPriority = RUNQ_PRIORITY
-	default:
-		log.Fatalf("Error in ProcBaseClnt.Spawn: Unknown proc type %v", p.Type)
-	}
 
 	pStartCond := sync.MakeCond(clnt.FsLib, path.Join(named.PROC_COND, START_COND+p.Pid), nil, true)
 	pStartCond.Init()
@@ -95,11 +83,7 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 		return err
 	}
 
-	err = clnt.runq.Put(procPriority, p.Pid, b)
-	if err != nil {
-		log.Printf("Error Put in ProcBaseClnt.Spawn: %v", err)
-		return err
-	}
+	err = clnt.WriteFile(path.Join("name/procd/~ip", named.PROC_CTL_FILE), b)
 
 	return nil
 }

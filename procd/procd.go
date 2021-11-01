@@ -36,6 +36,7 @@ const (
 type Procd struct {
 	mu         sync.Mutex
 	runq       *usync.FilePriorityBag
+	ctlFile    fs.FsObj
 	bin        string
 	nid        uint64
 	root       fs.Dir
@@ -84,6 +85,9 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 	// Set up FilePriorityBags
 	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbase.RUNQ)
+	// Set up ctl file
+	pd.ctlFile = makeCtlFile(pd, "", pd.root)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)
 
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil, true)
 	procdStartCond.Destroy()

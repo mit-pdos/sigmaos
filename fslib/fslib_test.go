@@ -63,6 +63,19 @@ func TestRemoveSimple(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestRemoveNonexistent(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Remove("name/this-file-does-not-exist")
+	assert.NotNil(t, err)
+	ts.e.Shutdown()
+}
+
 func TestRemovePath(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -386,7 +399,7 @@ func TestEphemeral(t *testing.T) {
 
 	sts, err := ts.ReadDir(name + "/")
 	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 1, len(sts)) // statsd
+	assert.Equal(t, 2, len(sts)) // statsd
 
 	ts.s.KillOne(named.PROCD)
 

@@ -106,7 +106,7 @@ func TestHelloWorld(t *testing.T) {
 
 	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
 	assert.Nil(t, err, "Readdir")
-	assert.Equal(t, 1, len(st), "readdir") // statsd
+	assert.Equal(t, 2, len(st), "readdir") // statsd
 
 	ts.e.Shutdown()
 }
@@ -277,6 +277,9 @@ func TestEvict(t *testing.T) {
 
 	// Make sure the lambda didn't finish
 	checkSleeperlResultFalse(t, ts, pid)
+
+	// Sleep a bit, otherwise procd doesn't see the proc exited & throws nasty errors
+	time.Sleep(50 * time.Millisecond)
 
 	ts.e.Shutdown()
 }

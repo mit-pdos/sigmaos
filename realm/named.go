@@ -54,7 +54,7 @@ func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id
 	// If this isn't the root named, create a cond to wait on
 	var namedStartCond *sync.Cond
 	if rootFsl != nil {
-		namedStartCond = sync.MakeCond(rootFsl, path.Join(named.BOOT, addr), nil)
+		namedStartCond = sync.MakeCond(rootFsl, path.Join(named.BOOT, addr), nil, true)
 		namedStartCond.Init()
 	}
 

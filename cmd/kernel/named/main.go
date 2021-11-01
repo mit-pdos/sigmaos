@@ -75,7 +75,7 @@ func main() {
 		}
 	}
 	if !isInitNamed {
-		namedStartCond := sync.MakeCond(fslib.MakeFsLib("named"), path.Join(named.BOOT, addr), nil)
+		namedStartCond := sync.MakeCond(fslib.MakeFsLib("named"), path.Join(named.BOOT, addr), nil, true)
 		namedStartCond.Destroy()
 	}
 

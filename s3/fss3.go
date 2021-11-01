@@ -49,7 +49,7 @@ func RunFss3(pid string) {
 		o.UsePathStyle = true
 	})
 
-	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil)
+	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil, true)
 	fss3dStartCond.Destroy()
 
 	fss3.Serve()

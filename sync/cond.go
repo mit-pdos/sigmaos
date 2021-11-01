@@ -24,15 +24,17 @@ type Cond struct {
 	dirLock   *Lock  // Lock protecting this condition variable (used to avoid sleep/wake races)
 	path      string // Path to condition variable
 	bcastPath string // Path to broadcast file watched by everyone
+	strict    bool   // If true, kill on error. Otherwise, print to debug
 	*fslib.FsLib
 }
 
 // Strict lock checking is turned on if this is a true condition variable.
-func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock) *Cond {
+func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock, strict bool) *Cond {
 	c := &Cond{}
 	c.condLock = lock
 	c.path = condpath
 	c.bcastPath = path.Join(condpath, BROADCAST)
+	c.strict = strict
 	c.FsLib = fsl
 
 	c.dirLock = MakeLock(fsl, named.LOCKS, path.Join(c.path, DIR_LOCK), lock != nil)
@@ -79,7 +81,11 @@ func (c *Cond) Broadcast() {
 
 	err := c.Remove(c.bcastPath)
 	if err != nil {
-		log.Printf("Error Remove in Cond.Broadcast: %v", err)
+		if c.strict {
+			log.Fatalf("Error Remove in Cond.Broadcast: %v", err)
+		} else {
+			log.Printf("Error Remove in Cond.Broadcast: %v", err)
+		}
 	}
 
 	c.createBcastFile()
@@ -94,7 +100,11 @@ func (c *Cond) Signal() {
 	wFiles, err := c.ReadDir(c.path)
 	if err != nil {
 		debug.PrintStack()
-		log.Printf("Error ReadDir %v in Cond.Signal: %v", c.path, err)
+		if c.strict {
+			log.Printf("Error ReadDir %v in Cond.Signal: %v", c.path, err)
+		} else {
+			log.Fatalf("Error ReadDir %v in Cond.Signal: %v", c.path, err)
+		}
 	}
 
 	var waiter string
@@ -115,7 +125,11 @@ func (c *Cond) Signal() {
 
 	err = c.Remove(path.Join(c.path, waiter))
 	if err != nil {
-		log.Printf("Error Remove in Cond.Signal: %v", err)
+		if c.strict {
+			log.Printf("Error Remove in Cond.Signal: %v", err)
+		} else {
+			log.Fatalf("Error Remove in Cond.Signal: %v", err)
+		}
 	}
 }
 
@@ -203,7 +217,11 @@ func (c *Cond) Destroy() {
 		if err.Error() == "EOF" {
 			log.Printf("Error Remove 1 in Cond.Destroy: %v", err)
 		} else {
-			log.Fatalf("Error Remove 1 in Cond.Destroy: %v", err)
+			if c.strict {
+				log.Fatalf("Error Remove 1 in Cond.Destroy: %v", err)
+			} else {
+				log.Printf("Error Remove 1 in Cond.Destroy: %v", err)
+			}
 		}
 		return
 	}
@@ -214,7 +232,11 @@ func (c *Cond) Destroy() {
 		if err.Error() == "EOF" {
 			log.Printf("Error Remove 2 in Cond.Destroy: %v", err)
 		} else {
-			log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
+			if c.strict {
+				log.Fatalf("Error Remove 2 in Cond.Destroy: %v", err)
+			} else {
+				log.Printf("Error Remove 2 in Cond.Destroy: %v", err)
+			}
 		}
 		return
 	}
@@ -225,7 +247,11 @@ func (c *Cond) Destroy() {
 func (c *Cond) createBcastFile() {
 	err := c.MakeFile(c.bcastPath, 0777, np.OWRITE, []byte{})
 	if err != nil {
-		log.Fatalf("Error condvar createBcastFile MakeFile: %v", err)
+		if c.strict {
+			log.Fatalf("Error condvar createBcastFile MakeFile: %v", err)
+		} else {
+			log.Printf("Error condvar createBcastFile MakeFile: %v", err)
+		}
 	}
 }
 

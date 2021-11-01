@@ -31,7 +31,7 @@ func MakeFilePriorityBag(fsl *fslib.FsLib, bagPath string) *FilePriorityBag {
 	fb := &FilePriorityBag{}
 	fb.path = bagPath
 	fb.lock = MakeLock(fsl, bagPath, LOCK, true)
-	fb.cond = MakeCond(fsl, path.Join(bagPath, COND), fb.lock)
+	fb.cond = MakeCond(fsl, path.Join(bagPath, COND), fb.lock, true)
 	fb.FsLib = fsl
 
 	fb.init()

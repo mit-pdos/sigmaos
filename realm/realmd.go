@@ -8,6 +8,7 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/config"
+	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
@@ -158,9 +159,10 @@ func (r *Realmd) joinRealm() chan bool {
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
+		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil, true)
 		rStartCond.Destroy()
 	}
+	db.DLPrintf("REALMD", "Realmd %v joined Realm %v", r.id, r.cfg.RealmId)
 	// Watch for changes to the config
 	return r.WatchConfig(r.cfgPath)
 }
@@ -205,7 +207,7 @@ func (r *Realmd) tryDestroyRealmL() {
 		}
 
 		// Signal that the realm has been destroyed
-		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil)
+		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil, true)
 		rExitCond.Destroy()
 	}
 }
@@ -214,6 +216,8 @@ func (r *Realmd) tryDestroyRealmL() {
 func (r *Realmd) leaveRealm() {
 	r.realmLock.Lock()
 	defer r.realmLock.Unlock()
+
+	db.DLPrintf("REALMD", "Realmd %v leaving Realm %v", r.id, r.cfg.RealmId)
 
 	// Tear down resources
 	r.teardown()

@@ -33,7 +33,7 @@ func RunDbd(pid string) {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, pid), nil)
+	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, pid), nil, true)
 	dbdStartCond.Destroy()
 	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "clone", makeClone("", mfs.Root()))
 	if err != nil {

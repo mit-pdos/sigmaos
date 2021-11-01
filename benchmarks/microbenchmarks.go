@@ -266,7 +266,7 @@ func (m *Microbenchmarks) CondSignalBenchmark(nTrials int) *RawResults {
 	rs := MakeRawResults(nTrials)
 
 	condPath := path.Join(SIGNAL_DIR, "cond")
-	cond := sync.MakeCond(m.FsLib, condPath, nil)
+	cond := sync.MakeCond(m.FsLib, condPath, nil, true)
 	if err := cond.Init(); err != nil {
 		log.Fatalf("Error Init in Microbenchmarks.CondSignalBenchmark: %v", err)
 	}
@@ -304,7 +304,7 @@ func (m *Microbenchmarks) CondWaitBenchmark(nTrials int) *RawResults {
 	rs := MakeRawResults(nTrials)
 
 	condPath := path.Join(SIGNAL_DIR, "cond")
-	cond := sync.MakeCond(m.FsLib, condPath, nil)
+	cond := sync.MakeCond(m.FsLib, condPath, nil, true)
 	if err := cond.Init(); err != nil {
 		log.Fatalf("Error Init in Microbenchmarks.CondWaitBenchmark: %v", err)
 	}

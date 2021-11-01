@@ -71,7 +71,7 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 	conds := []*usync.Cond{}
 
 	for i := 0; i < n_conds; i++ {
-		conds = append(conds, usync.MakeCond(ts.FsLib, COND_PATH, lock))
+		conds = append(conds, usync.MakeCond(ts.FsLib, COND_PATH, lock, true))
 	}
 
 	conds[0].Init()

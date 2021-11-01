@@ -144,7 +144,7 @@ func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.FsObj]*fid.Fid {
 	e := make(map[fs.FsObj]*fid.Fid)
 
 	if !ok {
-		log.Printf("Nil session in SessionTable.GetEphemeral: %v %v", id)
+		log.Printf("Nil session in SessionTable.GetEphemeral: %v", id)
 		return e
 	}
 

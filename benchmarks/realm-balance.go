@@ -86,32 +86,34 @@ func (b *RealmBalanceBenchmark) Run() {
 
 	b.checkNRealmds(2, 100)
 
-	//	log.Printf("Evicting %v spinning lambdas", linuxsched.NCores)
-	//	for i := 0; i < int(linuxsched.NCores); i++ {
-	//		b.Evict(pids[0])
-	//		pids = pids[1:]
-	//	}
-	//
-	//	log.Printf("Sleeping yet again")
-	//	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
-	//
-	//	b.checkNRealmds(1, 1)
-	//
-	//	log.Printf("Starting %v more spinning lambdas", linuxsched.NCores/2)
-	//	for i := 0; i < int(linuxsched.NCores/2); i++ {
-	//		pids = append(pids, b.spawnSpinner())
-	//	}
-	//
-	//	log.Printf("Sleeping yet again")
-	//	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
-	//
-	//	b.checkNRealmds(1, 1)
-	//
-	//	log.Printf("Evicting %v spinning lambdas again", linuxsched.NCores/2)
-	//	for i := 0; i < int(linuxsched.NCores/2); i++ {
-	//		b.Evict(pids[0])
-	//		pids = pids[1:]
-	//	}
+	log.Printf("Evicting %v spinning lambdas", linuxsched.NCores+7*linuxsched.NCores/8)
+	for i := 0; i < int(linuxsched.NCores)+7*int(linuxsched.NCores)/8; i++ {
+		b.Evict(pids[0])
+		pids = pids[1:]
+	}
+
+	log.Printf("Sleeping yet again")
+	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
+
+	b.checkNRealmds(1, 1)
+
+	log.Printf("Starting %v more spinning lambdas", linuxsched.NCores/2)
+	for i := 0; i < int(linuxsched.NCores/2); i++ {
+		pids = append(pids, b.spawnSpinner())
+	}
+
+	log.Printf("Sleeping yet again")
+	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
+
+	b.checkNRealmds(1, 100)
+
+	log.Printf("Evicting %v spinning lambdas again", linuxsched.NCores/2)
+	for i := 0; i < int(linuxsched.NCores/2); i++ {
+		b.Evict(pids[0])
+		pids = pids[1:]
+	}
+
+	b.checkNRealmds(1, 1)
 
 	log.Printf("PASS")
 }

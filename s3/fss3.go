@@ -14,6 +14,7 @@ import (
 	"ulambda/fssrv"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/procinit"
 	usync "ulambda/sync"
 )
 
@@ -29,7 +30,7 @@ type Fss3 struct {
 	client *s3.Client
 }
 
-func RunFss3(pid string) {
+func RunFss3() {
 	fss3 := &Fss3{}
 	root := fss3.makeDir([]string{}, np.DMDIR, nil)
 	fsl := fslib.MakeFsLib("fss3d")
@@ -49,7 +50,7 @@ func RunFss3(pid string) {
 		o.UsePathStyle = true
 	})
 
-	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil, true)
+	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, procinit.GetPid()), nil, true)
 	fss3dStartCond.Destroy()
 
 	fss3.Serve()

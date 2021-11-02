@@ -8,11 +8,11 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"ulambda/fslib"
 	"ulambda/named"
+	"ulambda/procd"
 	"ulambda/sync"
 )
 
@@ -41,9 +41,9 @@ func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId str
 func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	var args []string
 	if realmId == NO_REALM {
-		args = []string{"0", addr, NO_REALM}
+		args = []string{addr, NO_REALM}
 	} else {
-		args = []string{"0", addr, realmId}
+		args = []string{addr, realmId}
 	}
 	// If we're running replicated...
 	if replicate {
@@ -58,7 +58,7 @@ func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id
 		namedStartCond.Init()
 	}
 
-	cmd, err := run(bin, "/bin/kernel/named", fslib.Named(), args)
+	cmd, err := procd.Run("0", bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		log.Printf("Error running named: %v", err)
 		return nil, err
@@ -96,17 +96,6 @@ func ShutdownNamed(namedAddr string) {
 			log.Fatalf("Remove %v shutdown %v\n", named.NAMED, err)
 		}
 	}
-}
-
-func run(bin string, name string, namedAddr []string, args []string) (*exec.Cmd, error) {
-	cmd := exec.Command(path.Join(bin, name), args...)
-	// Create a process group ID to kill all children if necessary.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ())
-	cmd.Env = append(cmd.Env, "NAMED="+strings.Join(namedAddr, ","))
-	return cmd, cmd.Start()
 }
 
 // Generate an address for a new named

@@ -18,8 +18,8 @@ import (
 )
 
 //
-// Creates a named pipe in name/<name>/pipe (name is os.Args[2]), reads a
-// data from input (os.Args[3])), and writes it to the named pipe.
+// Creates a named pipe in name/<name>/pipe (name is os.Args[1]), reads a
+// data from input (os.Args[2])), and writes it to the named pipe.
 //
 
 func main() {
@@ -35,20 +35,19 @@ func main() {
 type Reader struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	pid   string
 	input string
 	pipe  fs.FsObj
 }
 
 func MakeReader(args []string) (*Reader, error) {
-	if len(args) != 4 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
 	log.Printf("MakeReader: %v\n", args)
 	r := &Reader{}
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
-	n := "pids/" + args[2] + "/server"
+	n := "pids/" + args[1] + "/server"
 	mfs, err := fslibsrv.StartMemFsFsl(n, r.FsLib)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
@@ -57,9 +56,8 @@ func MakeReader(args []string) (*Reader, error) {
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	r.pid = args[1]
-	r.input = args[3]
-	r.Started(r.pid)
+	r.input = args[2]
+	r.Started(procinit.GetPid())
 	return r, nil
 }
 
@@ -92,6 +90,6 @@ func (r *Reader) Work() string {
 }
 
 func (r *Reader) Exit(status string) {
-	r.ShutdownFs("name/" + r.pid)
-	r.Exited(r.pid, status)
+	r.ShutdownFs("name/" + procinit.GetPid())
+	r.Exited(procinit.GetPid(), status)
 }

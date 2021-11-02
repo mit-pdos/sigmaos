@@ -20,17 +20,17 @@ import (
 )
 
 func main() {
-	// Usage: <named> pid address realmId <peerId> <peers> <pprofPath> <utilPath>
+	// Usage: <named> address realmId <peerId> <peers> <pprofPath> <utilPath>
 
 	linuxsched.ScanTopology()
 	// If we're benchmarking, make a flame graph
 	p := perf.MakePerf()
-	if len(os.Args) >= 7 {
-		pprofPath := os.Args[6]
+	if len(os.Args) >= 6 {
+		pprofPath := os.Args[5]
 		p.SetupPprof(pprofPath)
 	}
-	if len(os.Args) >= 8 {
-		utilPath := os.Args[7]
+	if len(os.Args) >= 7 {
+		utilPath := os.Args[6]
 		p.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 	if p.RunningBenchmark() {
@@ -41,10 +41,10 @@ func main() {
 	}
 	defer p.Teardown()
 
-	addr := os.Args[2]
+	addr := os.Args[1]
 
 	// A realm's named in the global namespace
-	realmId := os.Args[3]
+	realmId := os.Args[2]
 	var pname string
 	if realmId != realm.NO_REALM {
 		pname = path.Join(realm.REALM_NAMEDS, realmId)
@@ -52,12 +52,12 @@ func main() {
 
 	var fss *fssrv.FsServer
 	// Replicate?
-	if len(os.Args) >= 5 {
-		id, err := strconv.Atoi(os.Args[4])
+	if len(os.Args) >= 4 {
+		id, err := strconv.Atoi(os.Args[3])
 		if err != nil {
 			log.Fatalf("Couldn't convert id string: %v", err)
 		}
-		peers := strings.Split(os.Args[5], ",")
+		peers := strings.Split(os.Args[4], ",")
 		config := replraft.MakeRaftConfig(id, peers)
 		fss, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", config)
 	} else {

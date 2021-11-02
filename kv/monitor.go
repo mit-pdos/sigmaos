@@ -25,23 +25,20 @@ type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	proc.ProcClnt
-	pid       string
 	kv        string
-	args      []string
 	kvmonlock *usync.Lock
 }
 
 func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
-	mo.pid = args[0]
-	mo.FsLib = fslib.MakeFsLib(mo.pid)
+	mo.FsLib = fslib.MakeFsLib(procinit.GetPid())
 	mo.ProcClnt = procinit.MakeProcClnt(mo.FsLib, procinit.GetProcLayersMap())
 	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
-	db.Name(mo.pid)
+	db.Name(procinit.GetPid())
 
 	mo.kvmonlock.Lock()
 
-	mo.Started(mo.pid)
+	mo.Started(procinit.GetPid())
 	return mo, nil
 }
 
@@ -171,5 +168,5 @@ func (mo *Monitor) Work() {
 }
 
 func (mo *Monitor) Exit() {
-	mo.Exited(mo.pid, "OK")
+	mo.Exited(procinit.GetPid(), "OK")
 }

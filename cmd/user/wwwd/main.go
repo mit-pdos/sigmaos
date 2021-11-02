@@ -26,17 +26,16 @@ import (
 var validPath = regexp.MustCompile(`^/(static|book|exit)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid\n", os.Args[0])
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <tree>\n", os.Args[0])
 		os.Exit(1)
 	}
-	www := MakeWwwd(os.Args[2])
-	www.pid = os.Args[1]
+	www := MakeWwwd(os.Args[1])
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
 
-	www.Started(www.pid)
+	www.Started(procinit.GetPid())
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -44,7 +43,6 @@ func main() {
 type Wwwd struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	pid string
 }
 
 func MakeWwwd(tree string) *Wwwd {
@@ -142,7 +140,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	www.Exited(www.pid, "OK")
+	www.Exited(procinit.GetPid(), "OK")
 	os.Exit(0)
 	return "", nil
 }

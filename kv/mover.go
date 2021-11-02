@@ -18,28 +18,25 @@ type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	proc.ProcClnt
-	pid   string
 	shard string
 	src   string
 	dst   string
-	args  []string
 }
 
 func MakeMover(args []string) (*Mover, error) {
 	mv := &Mover{}
-	if len(args) != 4 {
+	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMover: too few arguments %v\n", args)
 	}
-	mv.pid = args[0]
-	mv.shard = args[1]
-	mv.src = args[2]
-	mv.dst = args[3]
-	mv.FsLib = fslib.MakeFsLib(mv.pid)
+	mv.shard = args[0]
+	mv.src = args[1]
+	mv.dst = args[2]
+	mv.FsLib = fslib.MakeFsLib(procinit.GetPid())
 	mv.ProcClnt = procinit.MakeProcClnt(mv.FsLib, procinit.GetProcLayersMap())
 
-	db.Name(mv.pid)
+	db.Name(procinit.GetPid())
 
-	mv.Started(mv.pid)
+	mv.Started(procinit.GetPid())
 	return mv, nil
 }
 
@@ -132,5 +129,5 @@ func (mv *Mover) Work() {
 }
 
 func (mv *Mover) Exit() {
-	mv.Exited(mv.pid, "OK")
+	mv.Exited(procinit.GetPid(), "OK")
 }

@@ -17,17 +17,17 @@ import (
 
 func main() {
 	linuxsched.ScanTopology()
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin pid <pprof-output-path> <util-path>\n", os.Args[0])
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin <pprof-output-path> <util-path>\n", os.Args[0])
 		os.Exit(1)
 	}
 	pprofPath := ""
-	if len(os.Args) >= 4 {
-		pprofPath = os.Args[3]
+	if len(os.Args) >= 3 {
+		pprofPath = os.Args[2]
 	}
 	utilPath := ""
-	if len(os.Args) >= 5 {
-		utilPath = os.Args[4]
+	if len(os.Args) >= 4 {
+		utilPath = os.Args[3]
 	}
-	procd.RunProcd(os.Args[1], os.Args[2], pprofPath, utilPath)
+	procd.RunProcd(os.Args[1], pprofPath, utilPath)
 }

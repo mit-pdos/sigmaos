@@ -31,11 +31,8 @@ func childdir(pid string) string {
 }
 
 func spawn(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, piddir(pid), "bin/user/wwwd", "",
-		[]string{pid},
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
+	a := proc.MakeProc(pid, "bin/user/wwwd", []string{""})
+	a.PidDir = piddir(pid)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }

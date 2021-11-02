@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("Usage: dbd <pid>")
+	if len(os.Args) != 1 {
+		log.Fatalf("Usage: dbd")
 	}
-	dbd.RunDbd(os.Args[1])
+	dbd.RunDbd()
 }

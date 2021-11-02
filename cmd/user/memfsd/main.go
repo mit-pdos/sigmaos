@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
@@ -14,14 +13,14 @@ import (
 func main() {
 	linuxsched.ScanTopology()
 	// started as a ulambda
-	name := named.MEMFS + "/" + os.Args[1]
+	name := named.MEMFS + "/" + procinit.GetPid()
 	mfs, err := fslibsrv.StartMemFs(name, name)
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
 	sclnt := procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
-	sclnt.Started(os.Args[1])
+	sclnt.Started(procinit.GetPid())
 	seccomp.LoadFilter()
 	mfs.Wait()
-	sclnt.Exited(os.Args[1], "OK")
+	sclnt.Exited(procinit.GetPid(), "OK")
 }

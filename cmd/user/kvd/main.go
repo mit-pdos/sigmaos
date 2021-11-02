@@ -22,7 +22,7 @@ func main() {
 	fsl.Mkdir(named.MEMFS, 0777)
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
-	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	sclnt := procinit.MakeProcClntInit(fsl, procinit.GetProcLayersMap())
 	conf := kv.MakeConfig(0)
 	err := fsl.MakeFileJson(kv.KVCONFIG, 0777, *conf)
 	if err != nil {

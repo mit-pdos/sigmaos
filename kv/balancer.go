@@ -31,20 +31,18 @@ const (
 type Balancer struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	pid    string
 	args   []string
 	conf   *Config
 	kvlock *sync.Lock
 }
 
 func MakeBalancer(args []string) (*Balancer, error) {
-	if len(args) < 3 {
+	if len(args) < 2 {
 		return nil, fmt.Errorf("MakeBalancer: too few arguments %v\n", args)
 	}
 	bl := &Balancer{}
-	bl.pid = args[0]
-	bl.args = args[1:]
-	bl.FsLib = fslib.MakeFsLib(bl.pid)
+	bl.args = args
+	bl.FsLib = fslib.MakeFsLib(procinit.GetPid())
 	bl.ProcClnt = procinit.MakeProcClnt(bl.FsLib, procinit.GetProcLayersMap())
 	bl.kvlock = sync.MakeLock(bl.FsLib, KVDIR, KVLOCK, true)
 
@@ -52,7 +50,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 
 	bl.kvlock.Lock()
 
-	bl.Started(bl.pid)
+	bl.Started(procinit.GetPid())
 	return bl, nil
 }
 
@@ -178,5 +176,5 @@ func (bl *Balancer) Balance() {
 }
 
 func (bl *Balancer) Exit() {
-	bl.Exited(bl.pid, "OK")
+	bl.Exited(procinit.GetPid(), "OK")
 }

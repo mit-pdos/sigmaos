@@ -52,7 +52,7 @@ type Procd struct {
 	*fssrv.FsServer
 }
 
-func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
+func RunProcd(bin string, pprofPath string, utilPath string) {
 	var err error
 
 	pd := &Procd{}
@@ -89,7 +89,7 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	pd.ctlFile = makeCtlFile(pd, "", pd.root)
 	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)
 
-	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil, true)
+	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, procinit.GetPid()), nil, true)
 	procdStartCond.Destroy()
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})

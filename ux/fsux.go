@@ -10,6 +10,7 @@ import (
 	"ulambda/fssrv"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/procinit"
 	"ulambda/repl"
 	usync "ulambda/sync"
 	// "ulambda/seccomp"
@@ -21,12 +22,12 @@ type FsUx struct {
 	mount string
 }
 
-func RunFsUx(mount string, pid string) {
+func RunFsUx(mount string) {
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", named.UX, err)
 	}
-	fsux := MakeReplicatedFsUx(mount, ip+":0", pid, nil)
+	fsux := MakeReplicatedFsUx(mount, ip+":0", procinit.GetPid(), nil)
 	fsux.Serve()
 }
 

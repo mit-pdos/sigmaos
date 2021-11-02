@@ -1,29 +1,45 @@
 package main
 
 import (
-	"io"
-	"log"
 	"os/exec"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
+	"ulambda/proc"
+	"ulambda/procinit"
 	"ulambda/realm"
 )
 
 type Tstate struct {
+	proc.ProcClnt
 	*fslib.FsLib
 	t   *testing.T
 	e   *realm.TestEnv
 	cfg *realm.RealmConfig
-	s   *kernel.System
+	pid string
+}
+
+func piddir(pid string) string {
+	return "pids/" + pid + "/pids/"
+}
+
+func childdir(pid string) string {
+	return "pids/" + pid + "/pids/" + pid
+}
+
+func spawn(t *testing.T, ts *Tstate, pid string) {
+	a := proc.MakeProc(pid, "bin/user/wwwd", []string{""})
+	a.PidDir = piddir(pid)
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
+
 	ts := &Tstate{}
 	bin := "../../../"
 	e := realm.MakeTestEnv(bin)
@@ -33,26 +49,44 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.e = e
 	ts.cfg = cfg
-	ts.s = kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
 
-	db.Name("fslib_test")
-	ts.FsLib = fslib.MakeFsLibAddr("fslibtest", cfg.NamedAddr)
+	db.Name("wwwd_test")
+	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
+
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
+
+	ts.pid = proc.GenPid()
+	spawn(t, ts, ts.pid)
+
+	err = ts.WaitStart(childdir(ts.pid))
+	assert.Equal(t, nil, err)
 
 	return ts
 }
 
-func TestStatic(t *testing.T) {
+func (ts *Tstate) waitWww() {
+	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
+	assert.NotEqual(ts.t, nil, err)
+
+	status, err := ts.WaitExit(childdir(ts.pid))
+	assert.Nil(ts.t, err, "WaitExit error")
+	assert.Equal(ts.t, "OK", status, "Exit status wrong")
+
+	ts.e.Shutdown()
+}
+
+func TestSandbox(t *testing.T) {
 	ts := makeTstate(t)
 
-	cmd := exec.Command("../../../bin/user/wwwd")
-	stderr, err := cmd.StderrPipe()
-	assert.Equal(t, nil, err)
+	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
+	assert.NotEqual(t, nil, err)
 
-	err = cmd.Start()
-	assert.Equal(t, nil, err)
+	ts.waitWww()
+}
 
-	time.Sleep(100 * time.Millisecond)
+func TestStatic(t *testing.T) {
+	ts := makeTstate(t)
 
 	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/static/hello.html").Output()
 	assert.Equal(t, nil, err)
@@ -61,90 +95,35 @@ func TestStatic(t *testing.T) {
 	out, err = exec.Command("wget", "-qO-", "http://localhost:8080/static/nonexist.html").Output()
 	assert.NotEqual(t, nil, err) // wget return error because of HTTP not found
 
-	err = cmd.Process.Kill()
-	assert.Equal(t, nil, err)
-
-	s, _ := io.ReadAll(stderr)
-	log.Printf("wwwd: stderr %s", s)
-
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.waitWww()
 }
 
 func TestView(t *testing.T) {
 	ts := makeTstate(t)
 
-	cmd := exec.Command("../../../bin/user/wwwd")
-	stderr, err := cmd.StderrPipe()
-	assert.Equal(t, nil, err)
-
-	err = cmd.Start()
-	assert.Equal(t, nil, err)
-
-	time.Sleep(100 * time.Millisecond)
-
 	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/view/").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
-	err = cmd.Process.Kill()
-	assert.Equal(t, nil, err)
-
-	s, _ := io.ReadAll(stderr)
-	log.Printf("wwwd: stderr %s", s)
-
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.waitWww()
 }
 
 func TestEdit(t *testing.T) {
 	ts := makeTstate(t)
 
-	cmd := exec.Command("../../../bin/user/wwwd")
-	stderr, err := cmd.StderrPipe()
-	assert.Equal(t, nil, err)
-
-	err = cmd.Start()
-	assert.Equal(t, nil, err)
-
-	time.Sleep(100 * time.Millisecond)
-
 	out, err := exec.Command("wget", "-qO-", "http://localhost:8080/book/edit/Odyssey").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Odyssey")
 
-	err = cmd.Process.Kill()
-	assert.Equal(t, nil, err)
-
-	s, _ := io.ReadAll(stderr)
-	log.Printf("wwwd: stderr %s", s)
-
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.waitWww()
 }
 
 func TestSave(t *testing.T) {
 	ts := makeTstate(t)
 
-	cmd := exec.Command("../../../bin/user/wwwd")
-	stderr, err := cmd.StderrPipe()
-	assert.Equal(t, nil, err)
-
-	err = cmd.Start()
-	assert.Equal(t, nil, err)
-
-	time.Sleep(100 * time.Millisecond)
-
 	out, err := exec.Command("wget", "-qO-", "--post-data", "title=Odyssey", "http://localhost:8080/book/save/Odyssey").Output()
 	assert.Equal(t, nil, err)
 	assert.Contains(t, string(out), "Homer")
 
-	err = cmd.Process.Kill()
-	assert.Equal(t, nil, err)
-
-	s, _ := io.ReadAll(stderr)
-	log.Printf("wwwd: stderr %s", s)
-
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.waitWww()
 }

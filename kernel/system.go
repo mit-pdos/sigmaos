@@ -2,15 +2,14 @@ package kernel
 
 import (
 	"log"
-	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"syscall"
 
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
+	"ulambda/procd"
 	"ulambda/sync"
 )
 
@@ -59,7 +58,7 @@ func (s *System) BootFsUxd() error {
 	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	fsuxdStartCond.Init()
 	var err error
-	fsuxd, err := run(s.bin, "bin/kernel/fsuxd", s.namedAddr, []string{pid})
+	fsuxd, err := procd.Run(pid, s.bin, "bin/kernel/fsuxd", s.namedAddr, []string{})
 	s.fsuxd = append(s.fsuxd, fsuxd)
 	if err != nil {
 		return err
@@ -75,7 +74,7 @@ func (s *System) BootFss3d() error {
 	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	fss3dStartCond.Init()
 	var err error
-	fss3d, err := run(s.bin, "bin/kernel/fss3d", s.namedAddr, []string{pid})
+	fss3d, err := procd.Run(pid, s.bin, "bin/kernel/fss3d", s.namedAddr, []string{})
 	s.fss3d = append(s.fss3d, fss3d)
 	if err != nil {
 		return err
@@ -91,7 +90,7 @@ func (s *System) BootProcd() error {
 	procdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	procdStartCond.Init()
 	var err error
-	procd, err := run(s.bin, "bin/kernel/procd", s.namedAddr, []string{s.bin, pid})
+	procd, err := procd.Run(pid, s.bin, "bin/kernel/procd", s.namedAddr, []string{s.bin})
 	s.procd = append(s.procd, procd)
 	if err != nil {
 		return err
@@ -107,7 +106,7 @@ func (s *System) BootDbd() error {
 	dbdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	dbdStartCond.Init()
 	var err error
-	dbd, err := run(s.bin, "bin/kernel/dbd", s.namedAddr, []string{pid})
+	dbd, err := procd.Run(pid, s.bin, "bin/kernel/dbd", s.namedAddr, []string{})
 	s.dbd = append(s.dbd, dbd)
 	if err != nil {
 		return err
@@ -123,12 +122,9 @@ func (s *System) RmUnionDir(mdir string) error {
 		return err
 	}
 	for _, st := range dirents {
-		err = s.Remove(mdir + "/" + st.Name + "/")
+		err = s.FsLib.ShutdownFs(mdir + "/" + st.Name)
 		if err != nil {
-			return err
-		}
-		err = s.Remove(mdir + "/" + st.Name)
-		if err != nil && !strings.Contains(err.Error(), "file not found") {
+			log.Printf("shutdown err %v\n", err)
 			return err
 		}
 	}
@@ -192,15 +188,4 @@ func (s *System) Shutdown() {
 			d.Wait()
 		}
 	}
-}
-
-func run(bin string, name string, namedAddr []string, args []string) (*exec.Cmd, error) {
-	cmd := exec.Command(path.Join(bin, name), args...)
-	// Create a process group ID to kill all children if necessary.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ())
-	cmd.Env = append(cmd.Env, "NAMED="+strings.Join(namedAddr, ","))
-	return cmd, cmd.Start()
 }

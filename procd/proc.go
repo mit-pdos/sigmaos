@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"sync"
+	"syscall"
 
 	//	"github.com/sasha-s/go-deadlock"
 	"github.com/thanhpk/randstr"
@@ -19,12 +21,26 @@ import (
 	"ulambda/proc"
 )
 
+// To run kernel processes
+func Run(pid, bin, name string, namedAddr []string, args []string) (*exec.Cmd, error) {
+	cmd := exec.Command(path.Join(bin, name), args...)
+	// Create a process group ID to kill all children if necessary.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ())
+	cmd.Env = append(cmd.Env, "NAMED="+strings.Join(namedAddr, ","))
+	cmd.Env = append(cmd.Env, "SIGMAPID="+pid)
+	return cmd, cmd.Start()
+}
+
 type Proc struct {
 	//	mu deadlock.Mutex
 	fs.FsObj
 	mu      sync.Mutex
 	Program string
 	Pid     string
+	PidDir  string
 	Args    []string
 	Env     []string
 	Dir     string
@@ -41,12 +57,15 @@ type Proc struct {
 func (p *Proc) init(a *proc.Proc) {
 	p.Program = a.Program
 	p.Pid = a.Pid
+	p.PidDir = a.PidDir
 	p.Args = a.Args
 	p.Dir = a.Dir
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+randstr.Hex(16))
 	env := append(os.Environ(), a.Env...)
 	env = append(env, "NEWROOT="+p.NewRoot)
 	env = append(env, "PROCDIP="+p.pd.addr)
+	env = append(env, "SIGMAPID="+p.Pid)
+	env = append(env, "SIGMAPIDDIR="+p.PidDir)
 	p.Env = env
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p
@@ -90,7 +109,7 @@ func (p *Proc) run(cores []uint) error {
 		stdout = file
 		stderr = file
 	} else {
-		args = append([]string{p.Pid}, p.Args...)
+		args = p.Args
 		stdout = os.Stdout
 		stderr = os.Stderr
 	}

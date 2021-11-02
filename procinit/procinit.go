@@ -6,12 +6,24 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"ulambda/procbase"
-	"ulambda/procdep"
+	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/procidem"
 	"ulambda/proc"
+	// "ulambda/procbase"
+	"ulambda/procbasev1"
+	"ulambda/procdep"
+	"ulambda/procidem"
 )
+
+// Can return "" for test programs that make a procclnt
+func GetPid() string {
+	return os.Getenv("SIGMAPID")
+}
+
+// Can return "" for test programs that make a procclnt
+func GetPidDir() string {
+	return os.Getenv("SIGMAPIDDIR")
+}
 
 const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
@@ -65,9 +77,9 @@ func makeProcLayersString(layers map[string]bool) string {
 }
 
 // Make a generic ProcClnt with the desired layers.
-func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
+func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid string) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	clnt = procbase.MakeProcBaseClnt(fsl)
+	clnt = procbasev1.MakeProcBaseClnt(fsl, parent, pid)
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}
@@ -75,4 +87,32 @@ func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 		clnt = procdep.MakeProcDepClnt(fsl, clnt)
 	}
 	return clnt
+}
+
+// Called by a sigmaOS process after being spawned
+func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
+	piddir := GetPidDir()
+
+	// XXX resolve mounts to find server?
+	tree := strings.TrimPrefix(piddir, "name/")
+
+	if err := fsl.MountTree(fslib.Named(), tree, "pids"); err != nil {
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, "pids", err)
+	}
+	if err := fsl.MountTree(fslib.Named(), "runq", "name/runq"); err != nil {
+		log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
+	}
+	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
+		log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
+	}
+
+	return MakeProcClntBase(fsl, layers, piddir, GetPid())
+}
+
+// Called by tests to fake an initial process
+func MakeProcClntInit(fsl *fslib.FsLib, layers map[string]bool, NamedAddr []string) proc.ProcClnt {
+	if err := fsl.MountTree(NamedAddr, "pids", "pids"); err != nil {
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
+	}
+	return MakeProcClntBase(fsl, layers, "pids", "")
 }

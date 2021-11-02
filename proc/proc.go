@@ -2,6 +2,7 @@ package proc
 
 import (
 	"fmt"
+	"path"
 )
 
 type Ttype uint32
@@ -17,10 +18,21 @@ const (
 	C_DEF Tcore = 0
 )
 
+func PidDir(pid string) string {
+	piddir := path.Dir(pid)
+	if piddir == "." {
+		piddir = "pids/" + pid
+	} else {
+		piddir = pid
+	}
+	return piddir
+}
+
 type Proc struct {
 	Pid     string   // SigmaOS PID
+	PidDir  string   // SigmaOS PID pathname
 	Program string   // Program to run
-	Dir     string   // Working directory for the process
+	Dir     string   // Unix working directory for the process
 	Args    []string // Args
 	Env     []string // Environment variables
 	Type    Ttype    // Type
@@ -35,6 +47,7 @@ func MakeEmptyProc() *Proc {
 func MakeProc(pid string, program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = pid
+	p.PidDir = "pids"
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
@@ -47,5 +60,5 @@ func (p *Proc) GetProc() *Proc {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.PidDir, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
 }

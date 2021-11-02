@@ -9,10 +9,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/procinit"
 	usync "ulambda/sync"
 )
 
@@ -28,10 +30,11 @@ type Fss3 struct {
 	client *s3.Client
 }
 
-func RunFss3(pid string) {
+func RunFss3() {
 	fss3 := &Fss3{}
 	root := fss3.makeDir([]string{}, np.DMDIR, nil)
-	srv, fsl, err := fslibsrv.MakeSrvClt(root, named.S3, "fss3d")
+	fsl := fslib.MakeFsLib("fss3d")
+	srv, err := fslibsrv.MakeSrv(root, named.S3, fsl)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
@@ -47,7 +50,7 @@ func RunFss3(pid string) {
 		o.UsePathStyle = true
 	})
 
-	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil, true)
+	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, procinit.GetPid()), nil, true)
 	fss3dStartCond.Destroy()
 
 	fss3.Serve()

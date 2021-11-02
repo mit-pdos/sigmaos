@@ -25,23 +25,20 @@ type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	proc.ProcClnt
-	pid       string
 	kv        string
-	args      []string
 	kvmonlock *usync.Lock
 }
 
 func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
-	mo.pid = args[0]
-	mo.FsLib = fslib.MakeFsLib(mo.pid)
+	mo.FsLib = fslib.MakeFsLib(procinit.GetPid())
 	mo.ProcClnt = procinit.MakeProcClnt(mo.FsLib, procinit.GetProcLayersMap())
 	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
-	db.Name(mo.pid)
+	db.Name(procinit.GetPid())
 
 	mo.kvmonlock.Lock()
 
-	mo.Started(mo.pid)
+	mo.Started(procinit.GetPid())
 	return mo, nil
 }
 
@@ -75,6 +72,7 @@ func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
 
 func SpawnKV(sched proc.ProcClnt) string {
 	t := procdep.MakeProcDep(proc.GenPid(), KV, []string{""})
+	t.Pid = proc.GenPid()
 	t.Env = []string{procinit.GetProcLayersString()}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
@@ -106,9 +104,10 @@ func (mo *Monitor) grow() {
 
 func (mo *Monitor) shrink(kv string) {
 	RunBalancer(mo.ProcClnt, "del", kv)
-	err := mo.Remove(named.MEMFS + "/" + kv + "/")
+	n := named.MEMFS + "/" + kv + "/"
+	err := mo.ShutdownFs(n)
 	if err != nil {
-		log.Printf("shrink: remove failed %v\n", err)
+		log.Printf("shrink: remove %v failed %v\n", n, err)
 	}
 }
 
@@ -170,5 +169,5 @@ func (mo *Monitor) Work() {
 }
 
 func (mo *Monitor) Exit() {
-	mo.Exited(mo.pid, "OK")
+	mo.Exited(procinit.GetPid(), "OK")
 }

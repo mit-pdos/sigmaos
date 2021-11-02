@@ -42,6 +42,19 @@ func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock, strict bool) *Cond 
 	return c
 }
 
+// Strict lock checking is turned on if this is a true condition variable.
+func MakeCondNew(fsl *fslib.FsLib, dir string, cond string, lock *Lock) *Cond {
+	c := &Cond{}
+	c.condLock = lock
+	c.path = path.Join(dir, cond)
+	c.bcastPath = path.Join(c.path, BROADCAST)
+	c.FsLib = fsl
+
+	c.dirLock = MakeLockNew(fsl, dir, path.Join(c.path, DIR_LOCK), lock != nil)
+
+	return c
+}
+
 // Initialize the condition variable by creating its sigmaOS state. This should
 // only ever be called once globally per condition variable.
 func (c *Cond) Init() error {
@@ -56,6 +69,7 @@ func (c *Cond) Init() error {
 	defer c.dirLock.Unlock()
 
 	c.createBcastFile()
+
 	return nil
 }
 

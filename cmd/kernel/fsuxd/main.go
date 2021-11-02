@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("Usage: fsux <pid>")
+	if len(os.Args) != 1 {
+		log.Fatalf("Usage: fsux")
 	}
-	fsux.RunFsUx("/tmp", os.Args[1])
+	fsux.RunFsUx("/tmp")
 }

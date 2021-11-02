@@ -102,9 +102,7 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 	}
 	npc.uname = u.Uid
 
-	log.Printf("attach %v\n", args)
-
-	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, np.Split(args.Aname))
+	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, []string{""})
 	if err != nil {
 		return &np.Rerror{err.Error()}
 	}
@@ -121,7 +119,7 @@ func (npc *NpConn) Detach(sess np.Tsession) {
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)
 	server, _ := fsclnt.SplitTarget(target)
-	reply, err := npc.clnt.Attach([]string{server}, npc.uname, newfid, path)
+	reply, err := npc.clnt.Attach([]string{server}, npc.uname, newfid, []string{""})
 	if err != nil {
 		return np.Tqid{}, err
 	}

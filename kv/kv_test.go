@@ -65,7 +65,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.fsl, procinit.GetProcLayersMap())
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
 
 	err = ts.fsl.Mkdir(named.MEMFS, 07)
 	if err != nil {
@@ -101,8 +101,8 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFS(mfs string) {
-	err := ts.fsl.Remove(named.MEMFS + "/" + mfs + "/")
-	assert.Nil(ts.t, err, "Remove")
+	err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
+	assert.Nil(ts.t, err, "ShutdownFS")
 }
 
 func (ts *Tstate) stopMemFSs() {
@@ -181,9 +181,8 @@ func TestGetPutSet(t *testing.T) {
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
 
-	log.Printf("one")
-
 	ts.stopMemFSs()
+
 	ts.e.Shutdown()
 }
 

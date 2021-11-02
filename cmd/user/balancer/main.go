@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid opcode pids\n", os.Args[0])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %v opcode pids\n", os.Args[0])
 		os.Exit(1)
 	}
 	bl, err := kv.MakeBalancer(os.Args[1:])

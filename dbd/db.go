@@ -8,6 +8,7 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
+	"ulambda/procinit"
 	usync "ulambda/sync"
 )
 
@@ -27,13 +28,13 @@ type Book struct {
 	Title  string
 }
 
-func RunDbd(pid string) {
+func RunDbd() {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	mfs, err := fslibsrv.StartMemFs(named.DB, "dbd")
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, pid), nil, true)
+	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, procinit.GetPid()), nil, true)
 	dbdStartCond.Destroy()
 	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "clone", makeClone("", mfs.Root()))
 	if err != nil {

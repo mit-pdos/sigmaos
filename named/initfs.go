@@ -12,13 +12,14 @@ const (
 	TMP           = "name/tmp"
 	PROCD         = "name/procd/"
 	S3            = "name/s3/"
-	UX            = "name/ux"
+	UX            = "name/ux/"
 	FS            = "name/fs"
 	DB            = "name/db/"
 	PROC_COND     = "name/proc-cond"
 	PROC_RET_STAT = "name/proc-ret-stat"
-	MEMFS         = "name/memfsd"
 	REALM_MGR     = "name/realmmgr"
+	MEMFS         = "name/memfsd/"
+	PIDS          = "name/pids"
 	PROC_CTL_FILE = "ctl"
 )
 
@@ -39,6 +40,9 @@ func MakeInitFs(fsl *fslib.FsLib) error {
 		return err
 	}
 	if err := fsl.Mkdir(PROC_RET_STAT, 0777); err != nil {
+		return err
+	}
+	if err := fsl.Mkdir(PIDS, 0777); err != nil {
 		return err
 	}
 	return nil

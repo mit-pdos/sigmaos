@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
@@ -13,7 +15,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
-	"ulambda/realm"
+	//"ulambda/realm"
 )
 
 //
@@ -21,12 +23,20 @@ import (
 // XXX limit process's name space to the app binary and pipe.
 //
 
-var validPath = regexp.MustCompile(`^/(static|book)/([=.a-zA-Z0-9/]*)$`)
+var validPath = regexp.MustCompile(`^/(static|book|exit)/([=.a-zA-Z0-9/]*)$`)
 
 func main() {
-	www := MakeWwwd()
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <tree>\n", os.Args[0])
+		os.Exit(1)
+	}
+	www := MakeWwwd(os.Args[1])
 	http.HandleFunc("/static/", www.makeHandler(getStatic))
 	http.HandleFunc("/book/", www.makeHandler(doBook))
+	http.HandleFunc("/exit/", www.makeHandler(doExit))
+
+	www.Started(procinit.GetPid())
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -35,20 +45,19 @@ type Wwwd struct {
 	proc.ProcClnt
 }
 
-func MakeWwwd() *Wwwd {
+func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
-	fsl := fslib.MakeFsLib("www")
-	cfg := realm.GetRealmConfig(fsl, realm.TEST_RID)
-	www.FsLib = fslib.MakeFsLibAddr("www", cfg.NamedAddr)
+	db.Name("wwwd")
+	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
-	err := www.MakeFile("name/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
-	if err != nil {
-		log.Fatalf("wwwd MakeFile %v", err)
-	}
+	log.Printf("pid %v piddir %v\n", procinit.GetPid(), procinit.GetPidDir())
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
-	db.Name("wwwd")
+	err := www.MakeFile("pids/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
+	if err != nil {
+		log.Fatalf("wwwd MakeFile %v", err)
+	}
 	return www
 }
 
@@ -75,10 +84,10 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
-	fn := "name/" + pid + "/pipe"
+	fn := proc.PidDir(pid) + "/server/pipe"
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
-		log.Printf("wwwd: open failed %v\n", err)
+		log.Printf("wwwd: open %v failed %v\n", fn, err)
 		return
 	}
 	for {
@@ -98,6 +107,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
 	a := proc.MakeProc(pid, app, append([]string{pid}, args...))
+	a.PidDir = procinit.GetPidDir()
 	a.Env = []string{procinit.GetProcLayersString()}
 	err := www.Spawn(a)
 	if err != nil {
@@ -112,8 +122,9 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	log.Printf("getstatic: %v\n", args)
-	return www.spawnApp("bin/user/fsreader", w, r, []string{"name/" + args})
+	log.Printf("%v: getstatic: %v\n", db.GetName(), args)
+	file := "name/" + procinit.GetPidDir() + args
+	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
@@ -126,4 +137,10 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 	// log.Printf("\n")
 	title := r.FormValue("title")
 	return www.spawnApp("bin/user/bookapp", w, r, []string{args, title})
+}
+
+func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+	www.Exited(procinit.GetPid(), "OK")
+	os.Exit(0)
+	return "", nil
 }

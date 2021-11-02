@@ -46,7 +46,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestRemove(t *testing.T) {
+func TestRemoveSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/f"
@@ -56,6 +56,10 @@ func TestRemove(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
+
+	_, err = ts.Stat(fn)
+	assert.NotEqual(t, nil, err)
+
 	ts.e.Shutdown()
 }
 
@@ -154,6 +158,47 @@ func TestCopy(t *testing.T) {
 	d1, err := ts.ReadFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
+	ts.e.Shutdown()
+}
+
+func TestDirSimple(t *testing.T) {
+	ts := makeTstate(t)
+	dn := "name/d"
+	err := ts.Mkdir(dn, 0777)
+	assert.Equal(t, nil, err)
+	b, err := ts.IsDir(dn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, b)
+
+	d := []byte("hello")
+	err = ts.MakeFile(dn+"/f", 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	sts, err := ts.ReadDir(dn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 1, len(sts))
+	assert.Equal(t, "f", sts[0].Name)
+
+	err = ts.RmDir(dn)
+	_, err = ts.Stat(dn)
+	assert.NotEqual(t, nil, err)
+
+	ts.e.Shutdown()
+}
+
+func TestDirDot(t *testing.T) {
+	ts := makeTstate(t)
+	dn := "name/dir0"
+	err := ts.Mkdir(dn, 0777)
+	assert.Equal(t, nil, err)
+	b, err := ts.IsDir(dn + "/.")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, b)
+	err = ts.RmDir(dn)
+	_, err = ts.Stat(dn + "/.")
+	assert.NotEqual(t, nil, err)
+	_, err = ts.Stat("name/.")
+	assert.Equal(t, nil, err)
 	ts.e.Shutdown()
 }
 
@@ -405,9 +450,11 @@ func TestLock(t *testing.T) {
 func TestLock1(t *testing.T) {
 	ts := makeTstate(t)
 	ch := make(chan int)
-	ts.Mkdir("name/locks", 0777)
+	err := ts.Mkdir("name/locks", 0777)
+	assert.NotNil(t, err, "MkDir")
+
 	// Lock the file
-	err := ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	err = ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLibAddr("fslibtest0", ts.cfg.NamedAddr)
 	go func() {

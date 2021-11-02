@@ -1,4 +1,4 @@
-package stats
+package stats_test
 
 import (
 	"testing"
@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/realm"
+	"ulambda/stats"
 )
 
 const (
@@ -42,17 +43,17 @@ func makeTstate(t *testing.T) *Tstate {
 func TestStatsd(t *testing.T) {
 	ts := makeTstate(t)
 
-	stats := StatInfo{}
-	err := ts.ReadFileJson("name/statsd", &stats)
+	st := stats.StatInfo{}
+	err := ts.ReadFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
-	assert.NotEqual(t, Tcounter(0), stats.Nread, "Nread")
+	assert.NotEqual(t, stats.Tcounter(0), st.Nread, "Nread")
 	for i := 0; i < 1000; i++ {
 		_, err := ts.ReadFile("name/statsd")
 		assert.Nil(t, err, "statsd")
 	}
-	err = ts.ReadFileJson("name/statsd", &stats)
+	err = ts.ReadFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
-	assert.Equal(t, Tcounter(1020), stats.Nopen, "statsd")
+	assert.Greater(t, st.Nopen, stats.Tcounter(1000), "statsd")
 
 	ts.e.Shutdown()
 }

@@ -69,7 +69,7 @@ func TestFile(t *testing.T) {
 	d1, err := ts.ReadFile(fn + "f")
 	assert.Equal(t, string(d), string(d1))
 
-	err = ts.Remove(fn)
+	err = ts.Remove(fn + "f")
 	assert.Equal(t, nil, err)
 
 	ts.s.Shutdown()

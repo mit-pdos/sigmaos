@@ -207,10 +207,8 @@ func (fsc *FsClient) Close(fd int) error {
 	return err
 }
 
-// XXX if server lives in this process, do something special?  FsClient doesn't
-// know about the server currently.
-func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string) (*Path, error) {
-	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, p)
+func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string, tree []string) (*Path, error) {
+	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, tree)
 	if err != nil {
 		return nil, err
 	}
@@ -222,10 +220,11 @@ func (fsc *FsClient) detachChannel(fid np.Tfid) {
 	fsc.freeFid(fid)
 }
 
-func (fsc *FsClient) AttachReplicas(server []string, path string) (np.Tfid, error) {
+// XXX a version that finds server based on pathname?
+func (fsc *FsClient) AttachReplicas(server []string, path, tree string) (np.Tfid, error) {
 	p := np.Split(path)
 	fid := fsc.allocFid()
-	ch, err := fsc.attachChannel(fid, server, p)
+	ch, err := fsc.attachChannel(fid, server, p, np.Split(tree))
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -238,8 +237,8 @@ func (fsc *FsClient) AttachReplicas(server []string, path string) (np.Tfid, erro
 	return fid, nil
 }
 
-func (fsc *FsClient) Attach(server string, path string) (np.Tfid, error) {
-	return fsc.AttachReplicas([]string{server}, path)
+func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
+	return fsc.AttachReplicas([]string{server}, path, tree)
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
@@ -345,61 +344,34 @@ func (fsc *FsClient) Umount(path []string) error {
 	return nil
 }
 
-func (fsc *FsClient) removeMount(path []string) error {
-	if len(path) < 1 {
-		return fmt.Errorf("unmount bad path %v\n", path)
-	}
-	prefix := make([]string, len(path)-1)
-	last := path[len(path)-1:]
-	copy(prefix, path[:len(path)-1])
-	fid, err := fsc.walkMany(prefix, true, nil)
-	if err != nil {
-		return fmt.Errorf("Remove walkMany %v error %v\n", prefix, err)
-	}
-	fid1 := fsc.allocFid()
-	_, err = fsc.clnt(fid).Walk(fid, fid1, last)
-	if err != nil {
-		return err
-	}
-	err = fsc.clnt(fid).Remove(fid1)
-	if err != nil {
-		return err
-	}
-	return fsc.Umount(path)
-}
-
 // XXX free fid?
 func (fsc *FsClient) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
-	_, rest := fsc.mount.resolve(path)
-	if len(rest) == 0 && !np.EndSlash(name) { // mount point
-		return fsc.removeMount(path)
-	} else {
-		fid, rest := fsc.mount.resolve(path)
-		if fid == np.NoFid {
-			db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
-			if fsc.mount.hasExited() {
-				return io.EOF
-			}
-			return errors.New("file not found")
+	fid, rest := fsc.mount.resolve(path)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
+		if fsc.mount.hasExited() {
+			return io.EOF
 		}
-		if np.EndSlash(name) {
-			rest = append(rest, ".")
-		}
-		err := fsc.clnt(fid).RemoveFile(fid, rest)
-		if err != nil {
-			// force automounting, but only on dir error
-			if strings.HasPrefix(err.Error(), "dir not found") {
-				fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
-				if err != nil {
-					return err
-				}
-				err = fsc.clnt(fid).Remove(fid)
-			}
-		}
-		return err
+		return errors.New("file not found")
 	}
+	// Optimistcally remove obj without doing a pathname
+	// walk; this may fail if rest contains an automount
+	// symlink.
+	err := fsc.clnt(fid).RemoveFile(fid, rest)
+	if err != nil {
+		// There must have been a symlink in rest
+		// force automounting, but only on dir error
+		if strings.HasPrefix(err.Error(), "dir not found") {
+			fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
+			if err != nil {
+				return err
+			}
+			err = fsc.clnt(fid).Remove(fid)
+		}
+	}
+	return err
 }
 
 func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
@@ -629,4 +601,18 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 		}
 	}
 	return reply.Count, err
+}
+
+func (fsc *FsClient) ShutdownFs(name string) error {
+	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
+	path := np.Split(name)
+	fid, err := fsc.walkMany(path, true, nil)
+	if err != nil {
+		return fmt.Errorf("ShutdownFs walkMany %v error %v\n", path, err)
+	}
+	err = fsc.clnt(fid).RemoveFile(fid, []string{".exit"})
+	if err != nil {
+		return err
+	}
+	return fsc.Umount(path)
 }

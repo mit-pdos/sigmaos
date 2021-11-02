@@ -25,8 +25,8 @@ import (
 //
 
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid <name> args...\n", os.Args[0])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <name> args...\n", os.Args[0])
 		os.Exit(1)
 	}
 	m, err := RunBookApp(os.Args)
@@ -41,28 +41,26 @@ func main() {
 type BookApp struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	pid   string
 	input []string
 	pipe  fs.FsObj
 }
 
 func RunBookApp(args []string) (*BookApp, error) {
 	log.Printf("MakeBookApp: %v\n", args)
-	n := "name/" + args[2]
-	mfs, err := fslibsrv.StartMemFs(n, "fsreader")
+	ba := &BookApp{}
+	ba.FsLib = fslib.MakeFsLib("bookapp")
+	ba.ProcClnt = procinit.MakeProcClnt(ba.FsLib, procinit.GetProcLayersMap())
+	n := "pids/" + args[1] + "/server"
+	mfs, err := fslibsrv.StartMemFsFsl(n, ba.FsLib)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	ba := &BookApp{}
-	ba.FsLib = mfs.FsLib
 	ba.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
-	ba.ProcClnt = procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
-	ba.pid = args[1]
-	ba.input = strings.Split(args[3], "/")
-	ba.Started(ba.pid)
+	ba.input = strings.Split(args[2], "/")
+	ba.Started(procinit.GetPid())
 
 	return ba, nil
 }
@@ -72,7 +70,7 @@ func (ba *BookApp) writeResponse(data []byte) string {
 	if err != nil {
 		return fmt.Sprintf("Pipe parse err %v\n", err)
 	}
-	ba.ExitFs("name/" + ba.pid)
+	ba.ShutdownFs("name/" + procinit.GetPid())
 	return "OK"
 }
 
@@ -172,7 +170,7 @@ func (ba *BookApp) Work() string {
 	case "edit":
 		return ba.doEdit(ba.input[1])
 	case "save":
-		return ba.doSave(ba.input[1], os.Args[4])
+		return ba.doSave(ba.input[1], os.Args[3])
 	default:
 		return "File not found"
 	}
@@ -180,6 +178,6 @@ func (ba *BookApp) Work() string {
 
 func (ba *BookApp) Exit(status string) {
 	log.Printf("bookapp exit %v\n", status)
-	ba.ExitFs("name/" + ba.pid)
-	ba.Exited(ba.pid, status)
+	ba.ShutdownFs("name/" + procinit.GetPid())
+	ba.Exited(procinit.GetPid(), status)
 }

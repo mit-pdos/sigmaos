@@ -29,4 +29,5 @@ killall fsuxd
 killall fsreader
 killall wwwd
 killall dbd
+killall bookapp
 killall realm-balance

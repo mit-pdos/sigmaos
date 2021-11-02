@@ -18,6 +18,14 @@ func (fl *FsLib) Mkdir(path string, perm np.Tperm) error {
 	return nil
 }
 
+func (fl *FsLib) IsDir(name string) (bool, error) {
+	st, err := fl.Stat(name)
+	if err != nil {
+		return false, err
+	}
+	return st.Mode.IsDir(), nil
+}
+
 func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 	data, err := fl.Read(fd, n)
 	db.DLPrintf("FSLIB", "Readdir: read -> %d %v\n", len(data), err)
@@ -104,6 +112,5 @@ func (fl *FsLib) RmDir(dir string) error {
 		}
 		return false, nil
 	})
-	fl.Remove(dir)
-	return nil
+	return fl.Remove(dir)
 }

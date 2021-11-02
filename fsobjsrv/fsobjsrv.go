@@ -79,9 +79,18 @@ func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.R
 }
 
 func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
-	root, ctx := fos.fssrv.RootAttach(args.Uname)
-	fos.add(sess, args.Fid, fid.MakeFid(root.(fs.FsObj), ctx))
-	rets.Qid = root.(fs.FsObj).Qid()
+	path := np.Split(args.Aname)
+	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
+	tree := root.(fs.FsObj)
+	if args.Aname != "" {
+		os, rest, err := root.Lookup(ctx, path)
+		if len(rest) > 0 || err != nil {
+			return &np.Rerror{err.Error()}
+		}
+		tree = os[len(os)-1]
+	}
+	fos.add(sess, args.Fid, fid.MakeFidPath(path, tree, ctx))
+	rets.Qid = tree.(fs.FsObj).Qid()
 	return nil
 }
 
@@ -124,7 +133,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 		if o == nil {
 			return np.ErrClunked
 		}
-		fos.add(sess, args.NewFid, fid.MakeFid(o, f.Ctx()))
+		fos.add(sess, args.NewFid, fid.MakeFidPath(f.Path(), o, f.Ctx()))
 	} else {
 		o := f.Obj()
 		if o == nil {
@@ -308,6 +317,7 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 	return r
 }
 
+// XXX is remove obsolete?  (removefile -> remove?)
 func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
 	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(sess, args.Fid)
@@ -324,12 +334,18 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 		return nil
 	}
 	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	o.Parent().Remove(f.Ctx(), f.PathLast())
+	r := o.Parent().Remove(f.Ctx(), f.PathLast())
+	if r != nil {
+		log.Printf("remove err %v f %v\n", r, f.Path())
+		// return &np.Rerror{r.Error()}
+	}
+
 	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
 	fos.wt.WakeupWatch(f.Path(), f.PathDir())
 
-	// delete from ephemeral table, if ephemeral
-	fos.del(sess, args.Fid)
+	if o.Perm().IsEphemeral() {
+		fos.del(sess, args.Fid)
+	}
 	return nil
 }
 
@@ -346,6 +362,9 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 
 }
 
+// RemoveFile is Remove() but args.Wnames may contain a symlink that
+// hasn't been walked. If so, RemoveFile() will not succeed looking up
+// args.Wnames, and caller should first walk the pathname.
 func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	var err *np.Rerror
 	fos.stats.StatInfo().Nremove.Inc()
@@ -358,7 +377,8 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 		return np.ErrClunked
 	}
 	lo := o
-	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == "." { // exit?
+	// XXX make .exit a reserved name
+	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil
@@ -371,7 +391,8 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	}
 	fos.stats.Path(f.Path())
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
-	dname := append(f.Path(), args.Wnames[0:len(args.Wnames)-1]...)
+	dname := np.Dir(fname)
+
 	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {
 		return &np.Rerror{r.Error()}

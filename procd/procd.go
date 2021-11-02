@@ -88,6 +88,9 @@ func RunProcd(bin string, pid string, pprofPath string, utilPath string) {
 	// Set up ctl file
 	pd.ctlFile = makeCtlFile(pd, "", pd.root)
 	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)
+	if err != nil {
+		log.Fatalf("Error MkNod in RunProcd: %v", err)
+	}
 
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, pid), nil, true)
 	procdStartCond.Destroy()
@@ -277,10 +280,6 @@ func (pd *Procd) setCoreAffinity() {
 
 // Worker runs one lambda at a time
 func (pd *Procd) Worker(workerId uint) {
-	go func() {
-		pd.Serve()
-		pd.Done()
-	}()
 	defer pd.group.Done()
 	for !pd.readDone() {
 		p, err := pd.getProc()
@@ -310,6 +309,10 @@ func (pd *Procd) Worker(workerId uint) {
 }
 
 func (pd *Procd) Work() {
+	go func() {
+		pd.Serve()
+		pd.Done()
+	}()
 	var NWorkers uint
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

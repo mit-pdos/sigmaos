@@ -67,11 +67,7 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 }
 
 func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := &proc.Proc{pid, "pids", "bin/user/sleeper", "",
-		[]string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid},
-		[]string{procinit.GetProcLayersString()},
-		proc.T_DEF, proc.C_DEF,
-	}
+	a := proc.MakeProc(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -108,7 +104,7 @@ func TestHelloWorld(t *testing.T) {
 
 	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
 	assert.Nil(t, err, "Readdir")
-	assert.Equal(t, 1, len(st), "readdir") // statsd
+	assert.Equal(t, 2, len(st), "readdir") // statsd and ctl
 
 	ts.e.Shutdown()
 }

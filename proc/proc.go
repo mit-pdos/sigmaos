@@ -47,6 +47,7 @@ func MakeEmptyProc() *Proc {
 func MakeProc(pid string, program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = pid
+	p.PidDir = "pids"
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF

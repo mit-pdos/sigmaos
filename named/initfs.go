@@ -18,6 +18,7 @@ const (
 	PROC_COND     = "name/proc-cond"
 	PROC_RET_STAT = "name/proc-ret-stat"
 	MEMFS         = "name/memfsd"
+	REALM_MGR     = "name/realmmgr"
 	PROC_CTL_FILE = "ctl"
 )
 

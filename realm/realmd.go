@@ -1,7 +1,6 @@
 package realm
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"path"
@@ -27,13 +26,12 @@ type RealmdConfig struct {
 }
 
 type Realmd struct {
-	id          string
-	bin         string
-	cfgPath     string
-	cfg         *RealmdConfig
-	s           *kernel.System
-	freeRealmds *sync.FilePriorityBag
-	realmLock   *sync.Lock
+	id        string
+	bin       string
+	cfgPath   string
+	cfg       *RealmdConfig
+	s         *kernel.System
+	realmLock *sync.Lock
 	*config.ConfigClnt
 	*fslib.FsLib
 }
@@ -55,7 +53,7 @@ func MakeRealmd(bin string, id string) *Realmd {
 	// Write the initial config file
 	r.WriteConfig(r.cfgPath, r.cfg)
 
-	r.freeRealmds = sync.MakeFilePriorityBag(r.FsLib, FREE_REALMDS)
+	WaitRealmMgrStart(r.FsLib)
 
 	// Mark self as available for allocation
 	r.markFree()
@@ -69,13 +67,8 @@ func (r *Realmd) markFree() {
 	cfg.Id = r.id
 	cfg.RealmId = NO_REALM
 
-	b, err := json.Marshal(cfg)
-	if err != nil {
-		log.Fatalf("Error Marshal in MakeRealm: %v", err)
-	}
-
-	if err := r.freeRealmds.Put(DEFAULT_REALMD_PRIORITY, r.id, b); err != nil {
-		log.Fatalf("Error Put in MakeRealmd: %v", err)
+	if err := r.WriteFile(FREE_REALMDS, []byte(r.id)); err != nil {
+		log.Fatalf("Error WriteFile in MakeRealmd: %v %v", FREE_REALMDS, err)
 	}
 }
 
@@ -168,7 +161,6 @@ func (r *Realmd) joinRealm() chan bool {
 }
 
 func (r *Realmd) teardown() {
-	// TODO: evict procs gracefully
 	// Tear down realm resources
 	r.s.Shutdown()
 }

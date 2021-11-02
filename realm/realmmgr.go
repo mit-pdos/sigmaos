@@ -1,7 +1,6 @@
 package realm
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
@@ -11,7 +10,11 @@ import (
 
 	"ulambda/config"
 	db "ulambda/debug"
+	"ulambda/dir"
+	"ulambda/fs"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
+	"ulambda/fssrv"
 	"ulambda/named"
 	"ulambda/stats"
 	"ulambda/sync"
@@ -29,27 +32,35 @@ const (
 )
 
 const (
-	FREE_REALMDS  = "name/free-realmds"  // Unassigned realmds
-	REALM_CREATE  = "name/realm-create"  // Realm allocation requests
-	REALM_DESTROY = "name/realm-destroy" // Realm destruction requests
-	REALMS        = "name/realms"        // List of realms, with realmds registered under them
-	REALM_CONFIG  = "name/realm-config"  // Store of realm configs
-	REALMD_CONFIG = "name/realmd-config" // Store of realmd configs
-	REALM_NAMEDS  = "name/realm-nameds"  // Symlinks to realms' nameds
+	free_realmds  = "free-realmds"
+	realm_create  = "realm_create"
+	realm_destroy = "realm_destroy"
+	FREE_REALMDS  = named.REALM_MGR + "/" + free_realmds  // Unassigned realmds
+	REALM_CREATE  = named.REALM_MGR + "/" + realm_create  // Realm allocation requests
+	REALM_DESTROY = named.REALM_MGR + "/" + realm_destroy // Realm destruction requests
+	REALMS        = "name/realms"                         // List of realms, with realmds registered under them
+	REALM_CONFIG  = "name/realm-config"                   // Store of realm configs
+	REALMD_CONFIG = "name/realmd-config"                  // Store of realmd configs
+	REALM_NAMEDS  = "name/realm-nameds"                   // Symlinks to realms' nameds
 )
 
 type RealmMgr struct {
 	nameds       []*exec.Cmd
-	freeRealmds  *sync.FilePriorityBag
-	realmCreate  *sync.FilePriorityBag
-	realmDestroy *sync.FilePriorityBag
+	freeRealmds  chan string
+	realmCreate  chan string
+	realmDestroy chan string
 	done         chan bool
+	root         fs.Dir
 	*config.ConfigClnt
 	*fslib.FsLib
+	*fssrv.FsServer
 }
 
 func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
+	m.freeRealmds = make(chan string)
+	m.realmCreate = make(chan string)
+	m.realmDestroy = make(chan string)
 	m.done = make(chan bool)
 	nameds, err := BootNamedReplicas(nil, bin, fslib.Named(), NO_REALM)
 	m.nameds = nameds
@@ -57,12 +68,34 @@ func MakeRealmMgr(bin string) *RealmMgr {
 	if err != nil {
 		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)
 	}
-	m.FsLib = fslib.MakeFsLib("realmmgr")
+	m.root, m.FsServer, m.FsLib, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
+	if err != nil {
+		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
+	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
-	m.makeFileBags()
+	m.makeCtlFiles()
 
 	return m
+}
+
+// Wait until the realmmgr has set its control files up.
+func WaitRealmMgrStart(fsl *fslib.FsLib) {
+	for {
+		if _, err := fsl.Stat(FREE_REALMDS); err == nil {
+			break
+		}
+	}
+	for {
+		if _, err := fsl.Stat(REALM_CREATE); err == nil {
+			break
+		}
+	}
+	for {
+		if _, err := fsl.Stat(REALM_DESTROY); err == nil {
+			break
+		}
+	}
 }
 
 func (m *RealmMgr) makeInitFs() {
@@ -80,30 +113,39 @@ func (m *RealmMgr) makeInitFs() {
 	}
 }
 
-func (m *RealmMgr) makeFileBags() {
-	// Set up FilePriorityBags
-	m.freeRealmds = sync.MakeFilePriorityBag(m.FsLib, FREE_REALMDS)
-	m.realmCreate = sync.MakeFilePriorityBag(m.FsLib, REALM_CREATE)
-	m.realmDestroy = sync.MakeFilePriorityBag(m.FsLib, REALM_DESTROY)
+func (m *RealmMgr) makeCtlFiles() {
+	// Set up control files
+	realmCreate := makeCtlFile(m.realmCreate, "", m.root)
+	err := dir.MkNod(fssrv.MkCtx(""), m.root, realm_create, realmCreate)
+	if err != nil {
+		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 1: %v", err)
+	}
+
+	realmDestroy := makeCtlFile(m.realmDestroy, "", m.root)
+	err = dir.MkNod(fssrv.MkCtx(""), m.root, realm_destroy, realmDestroy)
+	if err != nil {
+		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
+	}
+
+	freeRealmds := makeCtlFile(m.freeRealmds, "", m.root)
+	err = dir.MkNod(fssrv.MkCtx(""), m.root, free_realmds, freeRealmds)
+	if err != nil {
+		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
+	}
 }
 
 // Handle realm creation requests.
 func (m *RealmMgr) createRealms() {
 	for {
 		// Get a realm creation request
-		_, realmId, b, err := m.realmCreate.Get()
-		if err != nil {
-			log.Fatalf("Error Get in RealmMgr.createRealms: %v", err)
-		}
+		realmId := <-m.realmCreate
 
 		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
 		realmLock.Lock()
 
 		// Unmarshal the realm config file.
 		cfg := &RealmConfig{}
-		if err := json.Unmarshal(b, cfg); err != nil {
-			log.Fatalf("Error Unmarshal in RealmMgr.createRealms: %v", err)
-		}
+		cfg.Rid = realmId
 
 		// Make a directory for this realm.
 		if err := m.Mkdir(path.Join(REALMS, realmId), 0777); err != nil {
@@ -152,10 +194,7 @@ func (m *RealmMgr) deallocAllRealmds(realmId string) {
 func (m *RealmMgr) destroyRealms() {
 	for {
 		// Get a realm creation request
-		_, realmId, _, err := m.realmDestroy.Get()
-		if err != nil {
-			log.Fatalf("Error Get in RealmMgr.destroyRealms: %v", err)
-		}
+		realmId := <-m.realmDestroy
 
 		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
 		realmLock.Lock()
@@ -174,9 +213,9 @@ func (m *RealmMgr) destroyRealms() {
 // Get & alloc a realmd to this realm.
 func (m *RealmMgr) allocRealmd(realmId string) {
 	// Get a free realmd
-	_, realmdId, _, err := m.freeRealmds.Get()
-	if err != nil {
-		log.Fatalf("Error Get in RealmMgr.allocRealmd: %v", err)
+	realmdId, ok := <-m.freeRealmds
+	if !ok {
+		return
 	}
 
 	// Update the realmd's config

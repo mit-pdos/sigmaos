@@ -1,7 +1,6 @@
 package realm
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"path"
@@ -28,36 +27,24 @@ type RealmConfig struct {
 }
 
 type RealmClnt struct {
-	create  *sync.FilePriorityBag
-	destroy *sync.FilePriorityBag
 	*fslib.FsLib
 }
 
 func MakeRealmClnt() *RealmClnt {
 	clnt := &RealmClnt{}
 	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
-	clnt.create = sync.MakeFilePriorityBag(clnt.FsLib, REALM_CREATE)
-	clnt.destroy = sync.MakeFilePriorityBag(clnt.FsLib, REALM_DESTROY)
 	return clnt
 }
 
 // Submit a realm creation request to the realm manager, and wait for the
 // request to be handled.
 func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
-	cfg := &RealmConfig{}
-	cfg.Rid = rid
-
 	// Create cond var to wait on realm creation/initialization.
 	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil, true)
 	rStartCond.Init()
 
-	b, err := json.Marshal(cfg)
-	if err != nil {
-		log.Fatalf("Error Marshal in RealmClnt.CreateRealm: %v", err)
-	}
-
-	if err := clnt.create.Put(DEFAULT_REALM_PRIORITY, rid, b); err != nil {
-		log.Fatalf("Error Put in RealmClnt.CreateRealm: %v", err)
+	if err := clnt.WriteFile(REALM_CREATE, []byte(rid)); err != nil {
+		log.Fatalf("Error WriteFile in RealmClnt.CreateRealm: %v", err)
 	}
 
 	// Wait for the realm to be initialized
@@ -71,8 +58,8 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil, true)
 	rExitCond.Init()
 
-	if err := clnt.destroy.Put(DEFAULT_REALM_PRIORITY, rid, []byte{}); err != nil {
-		log.Fatalf("Error Put in RealmClnt.DestroyRealm: %v", err)
+	if err := clnt.WriteFile(REALM_DESTROY, []byte(rid)); err != nil {
+		log.Fatalf("Error WriteFile in RealmClnt.DestroyRealm: %v", err)
 	}
 
 	rExitCond.Wait()

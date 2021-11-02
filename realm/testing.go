@@ -70,7 +70,9 @@ func (e *TestEnv) bootRealmMgr() error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(SLEEP_MS * 2 * time.Millisecond)
+	time.Sleep(SLEEP_MS * time.Millisecond)
+	fsl := fslib.MakeFsLib("testenv")
+	WaitRealmMgrStart(fsl)
 	return nil
 }
 

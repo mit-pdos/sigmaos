@@ -26,40 +26,10 @@ const (
 )
 
 func InitWorkerFS(fsl *fslib.FsLib, nreducetask int) {
-	if err := fsl.Mkdir(MRDIR, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(MDIR, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(RDIR, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(MDIR+CLAIMED, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(RDIR+CLAIMED, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(MDIR+TIP, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(RDIR+TIP, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(MDIR+DONE, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
-	}
-
-	if err := fsl.Mkdir(RDIR+DONE, 0777); err != nil {
-		log.Fatalf("Mkdir %v\n", err)
+	for _, n := range []string{MRDIR, MDIR, RDIR, MDIR + CLAIMED, RDIR + CLAIMED, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
+		if err := fsl.Mkdir(n, 0777); err != nil {
+			log.Fatalf("Mkdir %v\n", err)
+		}
 	}
 
 	lock := usync.MakeLock(fsl, MRDIR, "lock-done", true)
@@ -198,6 +168,7 @@ func (w *Worker) doWork(dir string, f func(string) string) {
 	}
 }
 
+// XXX read dir incrementally
 func (w *Worker) barrier(dir string) {
 	w.lock.Lock()
 	for {

@@ -16,9 +16,9 @@ const (
 	MRDIR    = "name/mr"
 	MDIR     = "name/mr/m"
 	RDIR     = "name/mr/r"
-	MCLAIM   = "name/mr/m-claimed"
-	RCLAIM   = "name/mr/r-claimed"
 	ROUT     = "name/mr/mr-out-"
+	CLAIMED  = "-claimed"
+	DONE     = "-done"
 )
 
 type Worker struct {
@@ -69,56 +69,41 @@ func (w *Worker) reducer(task string) string {
 	return ok
 }
 
-func (w *Worker) doMapper() error {
-	isWork := true
-	for isWork {
-		sts, err := w.ReadDir(MDIR)
-		if err != nil {
-			log.Printf("Readdir mapper err %v\n", err)
-			return err
-		}
-		isWork = false
-		for _, st := range sts {
-			log.Printf("try to claim %v\n", st.Name)
-			_, err := w.PutFile(MCLAIM+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
-			if err == nil {
-				ok := w.mapper(st.Name)
-				log.Printf("task returned %v\n", ok)
-				isWork = true
-			}
+func (w *Worker) getTask(dir string) (string, error) {
+	sts, err := w.ReadDir(dir)
+	if err != nil {
+		log.Printf("Readdir getTask %v err %v\n", dir, err)
+		return "", err
+	}
+	for _, st := range sts {
+		log.Printf("try to claim %v\n", st.Name)
+		_, err := w.PutFile(dir+CLAIMED+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
+		if err == nil {
+			return st.Name, nil
 		}
 	}
-	return nil
+	return "", nil
 }
 
-func (w *Worker) doReducer() error {
-	isWork := true
-	for isWork {
-		sts, err := w.ReadDir(RDIR)
+func (w *Worker) doWork(dir string, f func(string) string) error {
+	for {
+		t, err := w.getTask(dir)
 		if err != nil {
-			log.Printf("Readdir reducer err %v\n", err)
 			return err
 		}
-		isWork = false
-		n := 0
-		for _, st := range sts {
-			log.Printf("try to claim %v\n", st.Name)
-			_, err := w.PutFile(RCLAIM+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
-			if err == nil {
-				ok := w.reducer(st.Name)
-				log.Printf("task returned %v\n", ok)
-				isWork = true
-			}
-			n += 1
+		if t == "" {
+			break
 		}
+		ok := f(t)
+		log.Printf("task %v returned %v\n", t, ok)
 	}
 	return nil
 }
 
 func (w *Worker) Work() {
-	err := w.doMapper()
+	err := w.doWork(MDIR, w.mapper)
 	if err == nil {
-		err = w.doReducer()
+		err = w.doWork(RDIR, w.reducer)
 		if err == nil {
 			w.Exited(procinit.GetPid(), "OK")
 			return

@@ -70,11 +70,11 @@ func main() {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
-	if err := fsl.Mkdir(mr.MCLAIM, 0777); err != nil {
+	if err := fsl.Mkdir(mr.MDIR+mr.CLAIMED, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
-	if err := fsl.Mkdir(mr.RCLAIM, 0777); err != nil {
+	if err := fsl.Mkdir(mr.RDIR+mr.CLAIMED, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 

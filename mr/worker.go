@@ -3,6 +3,7 @@ package mr
 import (
 	"errors"
 	"log"
+	"strconv"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
@@ -20,6 +21,36 @@ const (
 	CLAIMED  = "-claimed"
 	DONE     = "-done"
 )
+
+func InitWorkerFS(fsl *fslib.FsLib) {
+	if err := fsl.Mkdir(MRDIR, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(MDIR, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(RDIR, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(MDIR+CLAIMED, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(RDIR+CLAIMED, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	// input directories for reduce tasks
+	for r := 0; r < NReduce; r++ {
+		n := "name/mr/r/" + strconv.Itoa(r)
+		if err := fsl.Mkdir(n, 0777); err != nil {
+			log.Fatalf("Mkdir %v err %v\n", n, err)
+		}
+	}
+}
 
 type Worker struct {
 	*fslib.FsLib

@@ -17,8 +17,8 @@ import (
 //
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: <nworker> %v\n", os.Args[0])
+	if len(os.Args) != 4 {
+		fmt.Fprintf(os.Stderr, "Usage: <nworker> <mapper> <reducer> %v\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -39,8 +39,7 @@ func main() {
 	workers := map[string]bool{}
 	for i := 0; i < nworker; i++ {
 		pid := proc.GenPid()
-		a := proc.MakeProc(pid, "bin/user/worker", []string{"bin/user/mr-m-wc",
-			"bin/user/mr-r-wc"})
+		a := proc.MakeProc(pid, "bin/user/worker", []string{os.Args[2], os.Args[3]})
 		sclnt.Spawn(a)
 		workers[pid] = true
 	}

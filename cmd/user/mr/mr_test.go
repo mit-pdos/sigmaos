@@ -121,9 +121,8 @@ func runN(t *testing.T, n string) {
 	ts := makeTstate(t)
 
 	ts.submitJob()
-
 	pid := proc.GenPid()
-	a := proc.MakeProc(pid, "bin/user/mr", []string{n})
+	a := proc.MakeProc(pid, "bin/user/mr", []string{n, "bin/user/mr-m-wc", "bin/user/mr-r-wc"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 

@@ -78,9 +78,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func TestOne(t *testing.T) {
-	ts := makeTstate(t)
-
+func (ts *Tstate) submitJob() {
 	// Put names of input files in name/mr/m
 	files, err := ioutil.ReadDir("../../../input/")
 	if err != nil {
@@ -94,24 +92,17 @@ func TestOne(t *testing.T) {
 			log.Fatalf("PutFile %v err %v\n", n, err)
 		}
 	}
+}
 
-	pid := proc.GenPid()
-	a := proc.MakeProc(pid, "bin/user/mr", []string{})
-	err = ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-
-	ok, err := ts.WaitExit(pid)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "OK", ok, "WaitExit")
-
+func (ts *Tstate) checkJob() {
 	file, err := os.OpenFile("../../../mr/par-mr.out", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Couldn't open output file\n")
 	}
-
 	defer file.Close()
+
+	// XXX run as a proc?
 	for i := 0; i < mr.NReduce; i++ {
-		// XXX run as a proc?
 		r := strconv.Itoa(i)
 		data, err := ts.ReadFile(mr.ROUT + r)
 		if err != nil {
@@ -124,7 +115,31 @@ func TestOne(t *testing.T) {
 	}
 
 	Compare(ts.FsLib)
-	log.Printf("mr-wc PASS\n")
+}
+
+func runN(t *testing.T, n string) {
+	ts := makeTstate(t)
+
+	ts.submitJob()
+
+	pid := proc.GenPid()
+	a := proc.MakeProc(pid, "bin/user/mr", []string{n})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+
+	ok, err := ts.WaitExit(pid)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "OK", ok, "WaitExit")
+
+	ts.checkJob()
 
 	ts.e.Shutdown()
+}
+
+func TestOne(t *testing.T) {
+	runN(t, "1")
+}
+
+func TestTwo(t *testing.T) {
+	runN(t, "2")
 }

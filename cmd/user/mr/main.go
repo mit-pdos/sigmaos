@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"ulambda/fslib"
-	"ulambda/mr"
 	"ulambda/proc"
 	"ulambda/procinit"
 )
@@ -17,8 +17,14 @@ import (
 //
 
 func main() {
-	if len(os.Args) != 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %v\n", os.Args[0])
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: <nworker> %v\n", os.Args[0])
+		os.Exit(1)
+	}
+
+	nworker, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Nworker %v is not a number\n", os.Args[1])
 		os.Exit(1)
 	}
 
@@ -31,7 +37,7 @@ func main() {
 
 	// Start workers
 	workers := map[string]bool{}
-	for i := 0; i < mr.NWorker; i++ {
+	for i := 0; i < nworker; i++ {
 		pid := proc.GenPid()
 		a := proc.MakeProc(pid, "bin/user/worker", []string{"bin/user/mr-m-wc",
 			"bin/user/mr-r-wc"})

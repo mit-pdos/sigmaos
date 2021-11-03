@@ -12,6 +12,16 @@ import (
 	"ulambda/procinit"
 )
 
+const (
+	INPUTDIR = "name/s3/~ip/input/"
+	MRDIR    = "name/mr"
+	MDIR     = "name/mr/m"
+	RDIR     = "name/mr/r"
+	MCLAIM   = "name/mr/m-claimed"
+	RCLAIM   = "name/mr/r-claimed"
+	ROUT     = "name/mr/mr-out-"
+)
+
 type Worker struct {
 	*fslib.FsLib
 	proc.ProcClnt
@@ -19,7 +29,6 @@ type Worker struct {
 	reducerbin string
 }
 
-// XXX create in a temporary file and then rename
 func MakeWorker(args []string) (*Worker, error) {
 	if len(args) != 2 {
 		return nil, errors.New("MakeWorker: too few arguments")
@@ -30,12 +39,6 @@ func MakeWorker(args []string) (*Worker, error) {
 	w.mapperbin = args[0]
 	w.reducerbin = args[1]
 	w.ProcClnt = procinit.MakeProcClnt(w.FsLib, procinit.GetProcLayersMap())
-
-	//err := w.Mkdir("name/ux/~ip/m-"+w.output, 0777)
-	//if err != nil {
-	//	return nil, fmt.Errorf("Makemapper: cannot create %v: %v\n", w.output, err)
-	//}
-
 	w.Started(procinit.GetPid())
 	return w, nil
 }
@@ -43,7 +46,7 @@ func MakeWorker(args []string) (*Worker, error) {
 func (w *Worker) mapper(fn string, n string) string {
 	log.Printf("task: %v\n", fn)
 	pid := proc.GenPid()
-	fn = "name/s3/~ip/input/" + fn
+	fn = INPUTDIR + fn
 	a := proc.MakeProc(pid, w.mapperbin, []string{fn, n})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
@@ -56,7 +59,7 @@ func (w *Worker) mapper(fn string, n string) string {
 func (w *Worker) doMapper() error {
 	isWork := true
 	for isWork {
-		sts, err := w.ReadDir("name/mr/m")
+		sts, err := w.ReadDir(MDIR)
 		if err != nil {
 			log.Printf("Readdir mapper err %v\n", err)
 			return err
@@ -66,7 +69,7 @@ func (w *Worker) doMapper() error {
 		n := 0
 		for _, st := range sts {
 			log.Printf("try to claim %v\n", st.Name)
-			_, err := w.PutFile("name/mr/m-claimed/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
+			_, err := w.PutFile(MCLAIM+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
 			if err == nil {
 				ok := w.mapper(st.Name, strconv.Itoa(n))
 				log.Printf("task returned %v\n", ok)
@@ -81,8 +84,8 @@ func (w *Worker) doMapper() error {
 func (w *Worker) reducer(job string) string {
 	log.Printf("task: %v\n", job)
 	pid := proc.GenPid()
-	in := "name/mr/r/" + job
-	out := "name/mr/mr-out-" + job
+	in := RDIR + "/" + job
+	out := ROUT + job
 	a := proc.MakeProc(pid, w.reducerbin, []string{in, out})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
@@ -95,7 +98,7 @@ func (w *Worker) reducer(job string) string {
 func (w *Worker) doReducer() error {
 	isWork := true
 	for isWork {
-		sts, err := w.ReadDir("name/mr/r")
+		sts, err := w.ReadDir(RDIR)
 		if err != nil {
 			log.Printf("Readdir reducer err %v\n", err)
 			return err
@@ -104,7 +107,7 @@ func (w *Worker) doReducer() error {
 		n := 0
 		for _, st := range sts {
 			log.Printf("try to claim %v\n", st.Name)
-			_, err := w.PutFile("name/mr/r-claimed/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
+			_, err := w.PutFile(RCLAIM+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
 			if err == nil {
 				ok := w.reducer(st.Name)
 				log.Printf("task returned %v\n", ok)

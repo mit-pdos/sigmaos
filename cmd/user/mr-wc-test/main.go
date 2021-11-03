@@ -58,23 +58,23 @@ func main() {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClntInit(fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
 
-	if err := fsl.Mkdir("name/mr/", 0777); err != nil {
+	if err := fsl.Mkdir(mr.MRDIR, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
-	if err := fsl.Mkdir("name/mr/m", 0777); err != nil {
+	if err := fsl.Mkdir(mr.MDIR, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
-	if err := fsl.Mkdir("name/mr/r", 0777); err != nil {
+	if err := fsl.Mkdir(mr.RDIR, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
-	if err := fsl.Mkdir("name/mr/m-claimed", 0777); err != nil {
+	if err := fsl.Mkdir(mr.MCLAIM, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
-	if err := fsl.Mkdir("name/mr/r-claimed", 0777); err != nil {
+	if err := fsl.Mkdir(mr.RCLAIM, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
@@ -86,13 +86,15 @@ func main() {
 		}
 	}
 
+	// Put names of input files in name/mr/m
 	files, err := ioutil.ReadDir("input/")
 	if err != nil {
 		log.Fatalf("Readdir %v\n", err)
 	}
 	for i, f := range files {
+		// remove mapper output directory from previous run
 		fsl.RmDir("name/ux/~ip/m-" + strconv.Itoa(i))
-		n := "name/mr/m/" + f.Name()
+		n := mr.MDIR + "/" + f.Name()
 		if _, err := fsl.PutFile(n, []byte(n), 0777, np.OWRITE); err != nil {
 			log.Fatalf("PutFile %v err %v\n", n, err)
 		}
@@ -125,7 +127,7 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		// XXX run as a lambda?
 		r := strconv.Itoa(i)
-		data, err := fsl.ReadFile("name/mr/mr-out-" + r)
+		data, err := fsl.ReadFile(mr.ROUT + r)
 		if err != nil {
 			log.Fatalf("ReadFile %v err %v\n", r, err)
 		}

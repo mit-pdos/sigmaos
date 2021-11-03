@@ -139,21 +139,34 @@ func (w *Worker) reducer(task string) string {
 	return ok
 }
 
+func (w *Worker) processEntry(dir string, st *np.Stat) string {
+	log.Printf("try to claim %v\n", st.Name)
+	if _, err := w.PutFile(dir+CLAIMED+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE); err == nil {
+		from := dir + "/" + st.Name
+		if w.Rename(from, dir+TIP+"/"+st.Name) != nil {
+			log.Fatalf("getTask: rename %v err %v\n", from, err)
+		}
+		return st.Name
+	}
+	// some other worker claimed the task
+	return ""
+}
+
 func (w *Worker) getTask(dir string) string {
-	sts, err := w.ReadDir(dir)
+	t := ""
+	stopped, err := w.ProcessDir(dir, func(st *np.Stat) (bool, error) {
+		t = w.processEntry(dir, st)
+		if t == "" {
+			return false, nil
+		}
+		return true, nil
+
+	})
 	if err != nil {
 		log.Fatalf("Readdir getTask %v err %v\n", dir, err)
 	}
-	for _, st := range sts {
-		log.Printf("try to claim %v\n", st.Name)
-		if _, err := w.PutFile(dir+CLAIMED+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE); err == nil {
-			from := dir + "/" + st.Name
-			if w.Rename(from, dir+TIP+"/"+st.Name) != nil {
-				log.Fatalf("getTask: rename %v err %v\n", from, err)
-			}
-			return st.Name
-		}
-		// some other worker claimed the task
+	if stopped {
+		return t
 	}
 	return ""
 }

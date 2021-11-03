@@ -122,23 +122,6 @@ func (w *Worker) mapper(task string) string {
 	if err != nil {
 		return err.Error()
 	}
-
-	// Mark task as done
-	f := MDIR + DONE + "/" + task
-	_, err = w.PutFile(f, []byte{}, 0777, np.OWRITE)
-	if err != nil {
-		log.Fatalf("getTask: putfile %v err %v\n", f, err)
-	}
-
-	// Remove from in-progress tasks
-	f = MDIR + TIP + "/" + task
-	if w.Remove(f) != nil {
-		log.Fatalf("getTask: remove %v err %v\n", f, err)
-	}
-
-	// Signal waiters
-	w.cond.Broadcast()
-
 	return ok
 }
 
@@ -183,15 +166,31 @@ func (w *Worker) doWork(dir string, f func(string) string) {
 		}
 		ok := f(t)
 		log.Printf("task %v returned %v\n", t, ok)
+
+		// Mark task as done
+		f := dir + DONE + "/" + t
+		_, err := w.PutFile(f, []byte{}, 0777, np.OWRITE)
+		if err != nil {
+			log.Fatalf("getTask: putfile %v err %v\n", f, err)
+		}
+
+		// Remove from in-progress tasks
+		f = dir + TIP + "/" + t
+		if w.Remove(f) != nil {
+			log.Fatalf("getTask: remove %v err %v\n", f, err)
+		}
+
+		// Signal waiters
+		w.cond.Broadcast()
 	}
 }
 
-func (w *Worker) waitForMappers() {
+func (w *Worker) barrier(dir string) {
 	w.lock.Lock()
 	for {
-		sts, err := w.ReadDir(MDIR + TIP)
+		sts, err := w.ReadDir(dir + TIP)
 		if err != nil {
-			log.Fatalf("Readdir waitForMappers %v err %v\n", MDIR+TIP, err)
+			log.Fatalf("Readdir waitForMappers %v err %v\n", dir+TIP, err)
 		}
 		if len(sts) == 0 {
 			break
@@ -204,7 +203,8 @@ func (w *Worker) waitForMappers() {
 
 func (w *Worker) Work() {
 	w.doWork(MDIR, w.mapper)
-	w.waitForMappers()
+	w.barrier(MDIR)
 	w.doWork(RDIR, w.reducer)
+	w.barrier(RDIR)
 	w.Exited(procinit.GetPid(), "OK")
 }

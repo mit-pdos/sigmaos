@@ -20,14 +20,14 @@ import (
 )
 
 func Compare(fsl *fslib.FsLib) {
-	cmd := exec.Command("sort", "mr/seq-mr.out")
+	cmd := exec.Command("sort", "../../../mr/seq-mr.out")
 	var out1 bytes.Buffer
 	cmd.Stdout = &out1
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("cmd err %v\n", err)
 	}
-	cmd = exec.Command("sort", "mr/par-mr.out")
+	cmd = exec.Command("sort", "../../../mr/par-mr.out")
 	var out2 bytes.Buffer
 	cmd.Stdout = &out2
 	err = cmd.Run()
@@ -120,7 +120,7 @@ func (ts *Tstate) checkJob() {
 }
 
 func runN(t *testing.T, n string) {
-	const NReduce = 1
+	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
 	ts.submitJob()

@@ -145,3 +145,7 @@ func TestOne(t *testing.T) {
 func TestTwo(t *testing.T) {
 	runN(t, "2")
 }
+
+func TestMany(t *testing.T) {
+	runN(t, "10")
+}

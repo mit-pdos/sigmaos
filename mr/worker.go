@@ -11,6 +11,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
+	usync "ulambda/sync"
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 	RDIR     = "name/mr/r"
 	ROUT     = "name/mr/mr-out-"
 	CLAIMED  = "-claimed"
+	TIP      = "-tip"
 	DONE     = "-done"
 )
 
@@ -44,6 +46,27 @@ func InitWorkerFS(fsl *fslib.FsLib, nreducetask int) {
 		log.Fatalf("Mkdir %v\n", err)
 	}
 
+	if err := fsl.Mkdir(MDIR+TIP, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(RDIR+TIP, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(MDIR+DONE, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir(RDIR+DONE, 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	lock := usync.MakeLock(fsl, MRDIR, "lock-done", true)
+	cond := usync.MakeCondNew(fsl, MRDIR, "cond-done", lock)
+
+	cond.Init()
+
 	// input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := "name/mr/r/" + strconv.Itoa(r)
@@ -59,6 +82,8 @@ type Worker struct {
 	nreducetask int
 	mapperbin   string
 	reducerbin  string
+	lock        *usync.Lock
+	cond        *usync.Cond
 }
 
 func MakeWorker(args []string) (*Worker, error) {
@@ -77,20 +102,43 @@ func MakeWorker(args []string) (*Worker, error) {
 	w.reducerbin = args[2]
 
 	w.ProcClnt = procinit.MakeProcClnt(w.FsLib, procinit.GetProcLayersMap())
+
+	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-done", true)
+	w.cond = usync.MakeCondNew(w.FsLib, MRDIR, "cond-done", w.lock)
+
 	w.Started(procinit.GetPid())
 	return w, nil
 }
 
 func (w *Worker) mapper(task string) string {
 	log.Printf("task: %v\n", task)
+
+	// Spawn task
 	pid := proc.GenPid()
-	task = INPUTDIR + task
-	a := proc.MakeProc(pid, w.mapperbin, []string{strconv.Itoa(w.nreducetask), task})
+	input := INPUTDIR + task
+	a := proc.MakeProc(pid, w.mapperbin, []string{strconv.Itoa(w.nreducetask), input})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
 	if err != nil {
 		return err.Error()
 	}
+
+	// Mark task as done
+	f := MDIR + DONE + "/" + task
+	_, err = w.PutFile(f, []byte{}, 0777, np.OWRITE)
+	if err != nil {
+		log.Fatalf("getTask: putfile %v err %v\n", f, err)
+	}
+
+	// Remove from in-progress tasks
+	f = MDIR + TIP + "/" + task
+	if w.Remove(f) != nil {
+		log.Fatalf("getTask: remove %v err %v\n", f, err)
+	}
+
+	// Signal waiters
+	w.cond.Broadcast()
+
 	return ok
 }
 
@@ -108,45 +156,55 @@ func (w *Worker) reducer(task string) string {
 	return ok
 }
 
-func (w *Worker) getTask(dir string) (string, error) {
+func (w *Worker) getTask(dir string) string {
 	sts, err := w.ReadDir(dir)
 	if err != nil {
-		log.Printf("Readdir getTask %v err %v\n", dir, err)
-		return "", err
+		log.Fatalf("Readdir getTask %v err %v\n", dir, err)
 	}
 	for _, st := range sts {
 		log.Printf("try to claim %v\n", st.Name)
-		_, err := w.PutFile(dir+CLAIMED+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
-		if err == nil {
-			return st.Name, nil
+		if _, err := w.PutFile(dir+CLAIMED+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE); err == nil {
+			from := dir + "/" + st.Name
+			if w.Rename(from, dir+TIP+"/"+st.Name) != nil {
+				log.Fatalf("getTask: rename %v err %v\n", from, err)
+			}
+			return st.Name
 		}
+		// some other worker claimed the task
 	}
-	return "", nil
+	return ""
 }
 
-func (w *Worker) doWork(dir string, f func(string) string) error {
+func (w *Worker) doWork(dir string, f func(string) string) {
 	for {
-		t, err := w.getTask(dir)
-		if err != nil {
-			return err
-		}
+		t := w.getTask(dir)
 		if t == "" {
 			break
 		}
 		ok := f(t)
 		log.Printf("task %v returned %v\n", t, ok)
 	}
-	return nil
+}
+
+func (w *Worker) waitForMappers() {
+	w.lock.Lock()
+	for {
+		sts, err := w.ReadDir(MDIR + TIP)
+		if err != nil {
+			log.Fatalf("Readdir waitForMappers %v err %v\n", MDIR+TIP, err)
+		}
+		if len(sts) == 0 {
+			break
+		}
+		log.Printf("wait %v\n", sts)
+		w.cond.Wait()
+	}
+	w.lock.Unlock()
 }
 
 func (w *Worker) Work() {
-	err := w.doWork(MDIR, w.mapper)
-	if err == nil {
-		err = w.doWork(RDIR, w.reducer)
-		if err == nil {
-			w.Exited(procinit.GetPid(), "OK")
-			return
-		}
-	}
-	w.Exited(procinit.GetPid(), err.Error())
+	w.doWork(MDIR, w.mapper)
+	w.waitForMappers()
+	w.doWork(RDIR, w.reducer)
+	w.Exited(procinit.GetPid(), "OK")
 }

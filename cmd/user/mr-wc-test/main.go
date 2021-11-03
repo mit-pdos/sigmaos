@@ -91,9 +91,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Readdir %v\n", err)
 	}
-	for i, f := range files {
+	for _, f := range files {
 		// remove mapper output directory from previous run
-		fsl.RmDir("name/ux/~ip/m-" + strconv.Itoa(i))
+		fsl.RmDir("name/ux/~ip/m-" + f.Name())
 		n := mr.MDIR + "/" + f.Name()
 		if _, err := fsl.PutFile(n, []byte(n), 0777, np.OWRITE); err != nil {
 			log.Fatalf("PutFile %v err %v\n", n, err)

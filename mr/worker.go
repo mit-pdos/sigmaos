@@ -3,7 +3,6 @@ package mr
 import (
 	"errors"
 	"log"
-	"strconv"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
@@ -43,11 +42,25 @@ func MakeWorker(args []string) (*Worker, error) {
 	return w, nil
 }
 
-func (w *Worker) mapper(fn string, n string) string {
-	log.Printf("task: %v\n", fn)
+func (w *Worker) mapper(task string) string {
+	log.Printf("task: %v\n", task)
 	pid := proc.GenPid()
-	fn = INPUTDIR + fn
-	a := proc.MakeProc(pid, w.mapperbin, []string{fn, n})
+	task = INPUTDIR + task
+	a := proc.MakeProc(pid, w.mapperbin, []string{task})
+	w.Spawn(a)
+	ok, err := w.WaitExit(pid)
+	if err != nil {
+		return err.Error()
+	}
+	return ok
+}
+
+func (w *Worker) reducer(task string) string {
+	log.Printf("task: %v\n", task)
+	pid := proc.GenPid()
+	in := RDIR + "/" + task
+	out := ROUT + task
+	a := proc.MakeProc(pid, w.reducerbin, []string{in, out})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
 	if err != nil {
@@ -65,34 +78,17 @@ func (w *Worker) doMapper() error {
 			return err
 		}
 		isWork = false
-		// XXX use file name for claim
-		n := 0
 		for _, st := range sts {
 			log.Printf("try to claim %v\n", st.Name)
 			_, err := w.PutFile(MCLAIM+"/"+st.Name, []byte{}, 0777|np.DMTMP, np.OWRITE)
 			if err == nil {
-				ok := w.mapper(st.Name, strconv.Itoa(n))
+				ok := w.mapper(st.Name)
 				log.Printf("task returned %v\n", ok)
 				isWork = true
 			}
-			n += 1
 		}
 	}
 	return nil
-}
-
-func (w *Worker) reducer(job string) string {
-	log.Printf("task: %v\n", job)
-	pid := proc.GenPid()
-	in := RDIR + "/" + job
-	out := ROUT + job
-	a := proc.MakeProc(pid, w.reducerbin, []string{in, out})
-	w.Spawn(a)
-	ok, err := w.WaitExit(pid)
-	if err != nil {
-		return err.Error()
-	}
-	return ok
 }
 
 func (w *Worker) doReducer() error {

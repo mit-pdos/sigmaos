@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const NWorker = 1
+
 //
 // Crash testing
 //

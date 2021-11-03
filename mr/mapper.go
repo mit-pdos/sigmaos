@@ -22,7 +22,6 @@ type Mapper struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	mapf   MapT
-	pid    string
 	input  string
 	output string
 	fds    []int
@@ -31,15 +30,14 @@ type Mapper struct {
 
 // XXX create in a temporary file and then rename
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
-	if len(args) != 3 {
+	if len(args) != 2 {
 		return nil, errors.New("MakeMapper: too few arguments")
 	}
 	m := &Mapper{}
 	db.Name("mapper")
 	m.mapf = mapf
-	m.pid = args[0]
-	m.input = args[1]
-	m.output = args[2]
+	m.input = args[0]
+	m.output = args[1]
 	m.fds = make([]int, NReduce)
 
 	m.FsLib = fslib.MakeFsLib("mapper")
@@ -61,7 +59,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 			return nil, fmt.Errorf("Makemapper: cannot create %v\n", oname)
 		}
 	}
-	m.Started(m.pid)
+	m.Started(procinit.GetPid())
 	return m, nil
 }
 
@@ -141,14 +139,14 @@ func (m *Mapper) doMap() error {
 	for r := 0; r < NReduce; r++ {
 		err = m.Close(m.fds[r])
 		if err != nil {
-			db.DLPrintf("MAPPER", "Close failed %v %v\n", m.fds[r], err)
+			log.Printf("Close failed %v %v\n", m.fds[r], err)
 			return err
 		}
-		name := "name/fs/" + strconv.Itoa(r) + "/m-" + m.output
+		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.output
 		target := "name/ux/" + st.Name + "/m-" + m.output + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
-			db.DLPrintf("MAPPER", "Mapper: cannot create symlink %v %v\n", name, err)
+			log.Printf("Mapper: cannot create symlink %v %v\n", name, err)
 			return err
 		}
 	}
@@ -165,5 +163,5 @@ func (m *Mapper) Work() {
 }
 
 func (m *Mapper) Exit() {
-	m.Exited(m.pid, "OK")
+	m.Exited(procinit.GetPid(), "OK")
 }

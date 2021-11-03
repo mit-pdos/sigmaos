@@ -10,29 +10,17 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	// "path"
 	"strconv"
 	"strings"
 
 	"ulambda/fslib"
 	"ulambda/mr"
+	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/realm"
 )
-
-func rmDir(fsl *fslib.FsLib, dir string) error {
-	fs, err := fsl.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	for _, f := range fs {
-		fsl.Remove(path.Join(dir, f.Name))
-	}
-	fsl.Remove(dir)
-	return nil
-}
 
 func Compare(fsl *fslib.FsLib) {
 	cmd := exec.Command("sort", "mr/seq-mr.out")
@@ -65,60 +53,64 @@ func Compare(fsl *fslib.FsLib) {
 func main() {
 	fsl1 := fslib.MakeFsLib("mr-wc-1")
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
-	fsl := fslib.MakeFsLibAddr("mr-wc", cfg.NamedAddr)
+
+	fsl := fslib.MakeFsLibAddr("mr-wc-test", cfg.NamedAddr)
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
-	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	sclnt := procinit.MakeProcClntInit(fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
+
+	if err := fsl.Mkdir("name/mr/", 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir("name/mr/m", 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir("name/mr/r", 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir("name/mr/m-claimed", 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	if err := fsl.Mkdir("name/mr/r-claimed", 0777); err != nil {
+		log.Fatalf("Mkdir %v\n", err)
+	}
+
+	// input directories for reduce tasks
 	for r := 0; r < mr.NReduce; r++ {
-		s := strconv.Itoa(r)
-		err := fsl.Mkdir("name/fs/"+s, 0777)
-		if err != nil {
-			log.Fatalf("Mkdir %v\n", err)
+		n := "name/mr/r/" + strconv.Itoa(r)
+		if err := fsl.Mkdir(n, 0777); err != nil {
+			log.Fatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
 
-	mappers := map[string]bool{}
-	n := 0
 	files, err := ioutil.ReadDir("input/")
 	if err != nil {
 		log.Fatalf("Readdir %v\n", err)
 	}
-	for _, f := range files {
-		//		pid1 := proc.GenPid()
-		pid2 := proc.GenPid()
-		m := strconv.Itoa(n)
-		rmDir(fsl, "name/ux/~ip/m-"+m)
-		//		a1 := procdep.MakeProcDep()
-		//		a1.Dependencies = &procdep.Deps{map[string]bool{}, nil}
-		//		a1.Proc = &proc.Proc{pid1, "bin/user/fsreader", "",
-		//			[]string{m, "name/s3/~ip/input/" + f.Name()},
-		//			[]string{procinit.GetProcLayersString()},
-		//			proc.T_BE, proc.C_DEF,
-		//		}
-		a2 := procdep.MakeProcDep(pid2, "bin/user/mr-m-wc", []string{"name/s3/~ip/input/" + f.Name(), m})
-		a2.Env = []string{procinit.GetProcLayersString()}
-		a2.Type = proc.T_BE
-		a2.Dependencies = &procdep.Deps{map[string]bool{}, nil}
-		//		sclnt.Spawn(a1)
-		sclnt.Spawn(a2)
-		n += 1
-		mappers[pid2] = false
+	for i, f := range files {
+		fsl.RmDir("name/ux/~ip/m-" + strconv.Itoa(i))
+		n := "name/mr/m/" + f.Name()
+		if _, err := fsl.PutFile(n, []byte(n), 0777, np.OWRITE); err != nil {
+			log.Fatalf("PutFile %v err %v\n", n, err)
+		}
 	}
 
-	reducers := []string{}
-	for i := 0; i < mr.NReduce; i++ {
+	// Start workers
+	workers := map[string]bool{}
+	for i := 0; i < mr.NWorker; i++ {
 		pid := proc.GenPid()
-		r := strconv.Itoa(i)
-		a := procdep.MakeProcDep(pid, "bin/user/mr-r-wc", []string{"name/fs/" + r, "name/fs/mr-out-" + r})
-		a.Env = []string{procinit.GetProcLayersString()}
-		a.Type = proc.T_BE
-		a.Dependencies = &procdep.Deps{nil, mappers}
-		reducers = append(reducers, pid)
+		a := proc.MakeProc(pid, "bin/user/worker", []string{"bin/user/mr-m-wc",
+			"bin/user/mr-r-wc"})
 		sclnt.Spawn(a)
+		workers[pid] = true
 	}
 
-	// Wait for reducers to exit
-	for _, r := range reducers {
-		status, err := sclnt.WaitExit(r)
+	// Wait for workers to exit
+	for w, _ := range workers {
+		status, err := sclnt.WaitExit(w)
 		if err != nil && !strings.Contains(err.Error(), "file not found") || status != "OK" && status != "" {
 			log.Fatalf("Wait failed %v, %v\n", err, status)
 		}
@@ -133,7 +125,7 @@ func main() {
 	for i := 0; i < mr.NReduce; i++ {
 		// XXX run as a lambda?
 		r := strconv.Itoa(i)
-		data, err := fsl.ReadFile("name/fs/mr-out-" + r)
+		data, err := fsl.ReadFile("name/mr/mr-out-" + r)
 		if err != nil {
 			log.Fatalf("ReadFile %v err %v\n", r, err)
 		}

@@ -3,14 +3,13 @@ package mr
 import (
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path"
 	"strconv"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -22,24 +21,29 @@ type MapT func(string, string) []KeyValue
 type Mapper struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	mapf  MapT
-	input string
-	file  string
-	fds   []int
+	mapf        MapT
+	nreducetask int
+	input       string
+	file        string
+	fds         []int
 	//	fd     int
 }
 
 // XXX create in a temporary file and then rename
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
-	if len(args) != 1 {
-		return nil, errors.New("MakeMapper: too few arguments")
+	if len(args) != 2 {
+		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
 	m := &Mapper{}
-	db.Name("mapper")
 	m.mapf = mapf
-	m.input = args[0]
+	n, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[0])
+	}
+	m.nreducetask = n
+	m.input = args[1]
 	m.file = path.Base(m.input)
-	m.fds = make([]int, NReduce)
+	m.fds = make([]int, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper")
 	log.Printf("MakeMapper %v\n", args)
@@ -47,7 +51,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	// Make a directory for holding the output files of a map task
 	d := "name/ux/~ip/m-" + m.file
-	err := m.Mkdir(d, 0777)
+	err = m.Mkdir(d, 0777)
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: cannot create dir %v err %v\n", d, err)
 	}
@@ -60,7 +64,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	//      }
 
 	// Create the output files
-	for r := 0; r < NReduce; r++ {
+	for r := 0; r < m.nreducetask; r++ {
 		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
 		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
 		if err != nil {
@@ -76,13 +80,13 @@ func (m *Mapper) Map(txt string) {
 	// log.Printf("Map %v: kvs = %v\n", m.input, kvs)
 
 	// split
-	skvs := make([][]KeyValue, NReduce)
+	skvs := make([][]KeyValue, m.nreducetask)
 	for _, kv := range kvs {
-		r := Khash(kv.Key) % NReduce
+		r := Khash(kv.Key) % m.nreducetask
 		skvs[r] = append(skvs[r], kv)
 	}
 
-	for r := 0; r < NReduce; r++ {
+	for r := 0; r < m.nreducetask; r++ {
 		b, err := json.Marshal(skvs[r])
 		if err != nil {
 			log.Fatal("doMap marshal error", err)
@@ -147,7 +151,7 @@ func (m *Mapper) doMap() error {
 	if err != nil {
 		return err
 	}
-	for r := 0; r < NReduce; r++ {
+	for r := 0; r < m.nreducetask; r++ {
 		err = m.Close(m.fds[r])
 		if err != nil {
 			log.Printf("Close failed %v %v\n", m.fds[r], err)

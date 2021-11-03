@@ -50,12 +50,13 @@ func Compare(fsl *fslib.FsLib) {
 type Tstate struct {
 	proc.ProcClnt
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
+	t           *testing.T
+	e           *realm.TestEnv
+	cfg         *realm.RealmConfig
+	nreducetask int
 }
 
-func makeTstate(t *testing.T) *Tstate {
+func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	ts := &Tstate{}
@@ -72,8 +73,9 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
+	ts.nreducetask = nreducetask
 
-	mr.InitWorkerFS(ts.FsLib)
+	mr.InitWorkerFS(ts.FsLib, nreducetask)
 
 	return ts
 }
@@ -102,7 +104,7 @@ func (ts *Tstate) checkJob() {
 	defer file.Close()
 
 	// XXX run as a proc?
-	for i := 0; i < mr.NReduce; i++ {
+	for i := 0; i < ts.nreducetask; i++ {
 		r := strconv.Itoa(i)
 		data, err := ts.ReadFile(mr.ROUT + r)
 		if err != nil {
@@ -118,11 +120,12 @@ func (ts *Tstate) checkJob() {
 }
 
 func runN(t *testing.T, n string) {
-	ts := makeTstate(t)
+	const NReduce = 1
+	ts := makeTstate(t, NReduce)
 
 	ts.submitJob()
 	pid := proc.GenPid()
-	a := proc.MakeProc(pid, "bin/user/mr", []string{n, "bin/user/mr-m-wc", "bin/user/mr-r-wc"})
+	a := proc.MakeProc(pid, "bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 

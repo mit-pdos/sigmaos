@@ -19,8 +19,6 @@ import (
 
 type ReduceT func(string, []string) string
 
-const NReduce = 1
-
 type Reducer struct {
 	*fslib.FsLib
 	proc.ProcClnt

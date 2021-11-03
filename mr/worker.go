@@ -2,6 +2,7 @@ package mr
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -22,7 +23,7 @@ const (
 	DONE     = "-done"
 )
 
-func InitWorkerFS(fsl *fslib.FsLib) {
+func InitWorkerFS(fsl *fslib.FsLib, nreducetask int) {
 	if err := fsl.Mkdir(MRDIR, 0777); err != nil {
 		log.Fatalf("Mkdir %v\n", err)
 	}
@@ -44,7 +45,7 @@ func InitWorkerFS(fsl *fslib.FsLib) {
 	}
 
 	// input directories for reduce tasks
-	for r := 0; r < NReduce; r++ {
+	for r := 0; r < nreducetask; r++ {
 		n := "name/mr/r/" + strconv.Itoa(r)
 		if err := fsl.Mkdir(n, 0777); err != nil {
 			log.Fatalf("Mkdir %v err %v\n", n, err)
@@ -55,19 +56,26 @@ func InitWorkerFS(fsl *fslib.FsLib) {
 type Worker struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	mapperbin  string
-	reducerbin string
+	nreducetask int
+	mapperbin   string
+	reducerbin  string
 }
 
 func MakeWorker(args []string) (*Worker, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeWorker: too few arguments")
 	}
 	log.Printf("MakeWorker %v\n", args)
 	w := &Worker{}
 	w.FsLib = fslib.MakeFsLib("worker-" + procinit.GetPid())
-	w.mapperbin = args[0]
-	w.reducerbin = args[1]
+	n, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("MakeWorker: nreducetask %v isn't int", args[0])
+	}
+	w.nreducetask = n
+	w.mapperbin = args[1]
+	w.reducerbin = args[2]
+
 	w.ProcClnt = procinit.MakeProcClnt(w.FsLib, procinit.GetProcLayersMap())
 	w.Started(procinit.GetPid())
 	return w, nil
@@ -77,7 +85,7 @@ func (w *Worker) mapper(task string) string {
 	log.Printf("task: %v\n", task)
 	pid := proc.GenPid()
 	task = INPUTDIR + task
-	a := proc.MakeProc(pid, w.mapperbin, []string{task})
+	a := proc.MakeProc(pid, w.mapperbin, []string{strconv.Itoa(w.nreducetask), task})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
 	if err != nil {

@@ -67,7 +67,7 @@ func main() {
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("mr-wc", cfg.NamedAddr)
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
-	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	sclnt := procinit.MakeProcClntInit(fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	for r := 0; r < mr.NReduce; r++ {
 		s := strconv.Itoa(r)
 		err := fsl.Mkdir("name/fs/"+s, 0777)

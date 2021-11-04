@@ -119,13 +119,13 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, n string) {
+func runN(t *testing.T, n string, crash string) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
 	ts.submitJob()
 	pid := proc.GenPid()
-	a := proc.MakeProc(pid, "bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc"})
+	a := proc.MakeProc(pid, "bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
@@ -139,13 +139,17 @@ func runN(t *testing.T, n string) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, "1")
+	runN(t, "1", "NO")
 }
 
 func TestTwo(t *testing.T) {
-	runN(t, "2")
+	runN(t, "2", "NO")
 }
 
 func TestMany(t *testing.T) {
-	runN(t, "10")
+	runN(t, "10", "NO")
+}
+
+func TestCrash(t *testing.T) {
+	runN(t, "2", "YES")
 }

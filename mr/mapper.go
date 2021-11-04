@@ -22,6 +22,7 @@ type Mapper struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	mapf        MapT
+	crash       string
 	nreducetask int
 	input       string
 	file        string
@@ -31,17 +32,18 @@ type Mapper struct {
 
 // XXX create in a temporary file and then rename
 func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
 	m := &Mapper{}
 	m.mapf = mapf
-	n, err := strconv.Atoi(args[0])
+	m.crash = args[0]
+	n, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[0])
 	}
 	m.nreducetask = n
-	m.input = args[1]
+	m.input = args[2]
 	m.file = path.Base(m.input)
 	m.fds = make([]int, m.nreducetask)
 
@@ -145,6 +147,10 @@ func (m *Mapper) doMap() error {
 	//	if err != nil {
 	//		log.Printf("close failed %v\n", err)
 	//	}
+
+	if m.crash == "YES" {
+		MaybeCrash()
+	}
 
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")

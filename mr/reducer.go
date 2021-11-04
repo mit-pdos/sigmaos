@@ -23,19 +23,21 @@ type Reducer struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	reducef ReduceT
+	crash   string
 	input   string
 	output  string
 	name    string
 }
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
 	db.Name("reducer")
-	r.input = args[0]
-	r.output = args[1]
+	r.crash = args[0]
+	r.input = args[1]
+	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
@@ -119,6 +121,9 @@ func (r *Reducer) doReduce() error {
 		}
 		output := r.reducef(kva[i].Key, values)
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
+		if r.crash == "YES" {
+			MaybeCrash()
+		}
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
 			return err

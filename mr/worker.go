@@ -50,6 +50,7 @@ type Worker struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	nreducetask int
+	crash       string
 	mapperbin   string
 	reducerbin  string
 	lock        *usync.Lock
@@ -57,7 +58,7 @@ type Worker struct {
 }
 
 func MakeWorker(args []string) (*Worker, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, errors.New("MakeWorker: too few arguments")
 	}
 	log.Printf("MakeWorker %v\n", args)
@@ -70,6 +71,7 @@ func MakeWorker(args []string) (*Worker, error) {
 	w.nreducetask = n
 	w.mapperbin = args[1]
 	w.reducerbin = args[2]
+	w.crash = args[3]
 
 	w.ProcClnt = procinit.MakeProcClnt(w.FsLib, procinit.GetProcLayersMap())
 
@@ -86,7 +88,7 @@ func (w *Worker) mapper(task string) string {
 	// Spawn task
 	pid := proc.GenPid()
 	input := INPUTDIR + task
-	a := proc.MakeProc(pid, w.mapperbin, []string{strconv.Itoa(w.nreducetask), input})
+	a := proc.MakeProc(pid, w.mapperbin, []string{w.crash, strconv.Itoa(w.nreducetask), input})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
 	if err != nil {
@@ -100,7 +102,7 @@ func (w *Worker) reducer(task string) string {
 	pid := proc.GenPid()
 	in := RDIR + "/" + task
 	out := ROUT + task
-	a := proc.MakeProc(pid, w.reducerbin, []string{in, out})
+	a := proc.MakeProc(pid, w.reducerbin, []string{w.crash, in, out})
 	w.Spawn(a)
 	ok, err := w.WaitExit(pid)
 	if err != nil {

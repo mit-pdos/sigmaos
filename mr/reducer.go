@@ -25,26 +25,24 @@ type Reducer struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	reducef ReduceT
-	pid     string
 	input   string
 	output  string
 	name    string
 }
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	if len(args) != 3 {
+	if len(args) != 2 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
 	db.Name("reducer")
-	r.pid = args[0]
-	r.input = args[1]
-	r.output = args[2]
+	r.input = args[0]
+	r.output = args[1]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	log.Printf("MakeReducer %v\n", args)
-	r.Started(r.pid)
+	r.Started(procinit.GetPid())
 	return r, nil
 }
 
@@ -141,5 +139,5 @@ func (r *Reducer) Work() {
 }
 
 func (r *Reducer) Exit() {
-	r.Exited(r.pid, "OK")
+	r.Exited(procinit.GetPid(), "OK")
 }

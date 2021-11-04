@@ -32,18 +32,18 @@ func InitWorkerFS(fsl *fslib.FsLib, nreducetask int) {
 		}
 	}
 
-	lock := usync.MakeLock(fsl, MRDIR, "lock-done", true)
-	cond := usync.MakeCondNew(fsl, MRDIR, "cond-done", lock)
-
-	cond.Init()
-
 	// input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
-		n := "name/mr/r/" + strconv.Itoa(r)
+		n := RDIR + "/" + strconv.Itoa(r)
 		if err := fsl.Mkdir(n, 0777); err != nil {
 			log.Fatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
+
+	lock := usync.MakeLock(fsl, MRDIR, "lock-done", true)
+	cond := usync.MakeCondNew(fsl, MRDIR, "cond-done", lock)
+
+	cond.Init()
 }
 
 type Worker struct {
@@ -99,8 +99,9 @@ func (w *Worker) mapper(task string) string {
 
 func (w *Worker) reducer(task string) string {
 	log.Printf("task: %v\n", task)
+
 	pid := proc.GenPid()
-	in := RDIR + "/" + task
+	in := RDIR + TIP + "/" + task
 	out := ROUT + task
 	a := proc.MakeProc(pid, w.reducerbin, []string{w.crash, in, out})
 	w.Spawn(a)
@@ -151,22 +152,24 @@ func (w *Worker) doWork(dir string, f func(string) string) {
 		}
 		ok := f(t)
 		log.Printf("task %v returned %v\n", t, ok)
+		if ok == "OK" {
 
-		// Mark task as done
-		f := dir + DONE + "/" + t
-		_, err := w.PutFile(f, []byte{}, 0777, np.OWRITE)
-		if err != nil {
-			log.Fatalf("getTask: putfile %v err %v\n", f, err)
+			// Mark task as done
+			f := dir + DONE + "/" + t
+			_, err := w.PutFile(f, []byte{}, 0777, np.OWRITE)
+			if err != nil {
+				log.Fatalf("getTask: putfile %v err %v\n", f, err)
+			}
+
+			// Remove from in-progress tasks
+			f = dir + TIP + "/" + t
+			if w.Remove(f) != nil {
+				log.Fatalf("getTask: remove %v err %v\n", f, err)
+			}
+
+			// Signal waiters
+			w.cond.Broadcast()
 		}
-
-		// Remove from in-progress tasks
-		f = dir + TIP + "/" + t
-		if w.Remove(f) != nil {
-			log.Fatalf("getTask: remove %v err %v\n", f, err)
-		}
-
-		// Signal waiters
-		w.cond.Broadcast()
 	}
 }
 

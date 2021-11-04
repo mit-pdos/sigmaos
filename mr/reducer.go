@@ -42,6 +42,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.FsLib = fslib.MakeFsLib(r.name)
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	log.Printf("MakeReducer %v\n", args)
+
 	r.Started(procinit.GetPid())
 	return r, nil
 }
@@ -97,10 +98,14 @@ func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 
 	log.Printf("doReduce %v %v\n", r.input, r.output)
-	r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
+
+	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		kva = append(kva, r.processFile(st.Name)...)
 		return false, nil
 	})
+	if err != nil {
+		log.Fatalf("doReduce: ProcessDir %v err %v\n", r.input, err)
+	}
 
 	sort.Sort(ByKey(kva))
 

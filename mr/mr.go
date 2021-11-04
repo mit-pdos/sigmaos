@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"os"
 	"time"
+
+	"ulambda/procinit"
 )
 
 //
@@ -19,9 +21,10 @@ func MaybeCrash() {
 	rr, _ := crand.Int(crand.Reader, max)
 	if rr.Int64() < 330 {
 		// crash!
-		log.Printf("Crash %v\n", os.Getpid())
+		log.Printf("Crash %v\n", procinit.GetPid())
 		os.Exit(1)
 	} else if rr.Int64() < 660 {
+		log.Printf("Delay %v\n", procinit.GetPid())
 		// delay for a while.
 		maxms := big.NewInt(10 * 1000)
 		ms, _ := crand.Int(crand.Reader, maxms)

@@ -16,7 +16,8 @@ go test $1 ulambda/procbasev1
 go test $1 ulambda/procidem
 go test $1 ulambda/procdep
 go test $1 ulambda/kv
-./test-mr.sh
+go test $1 ulambda/cmd/user/mr
+
 ./test-kv.sh
 
 # wwwd_test requires mariaddb running

@@ -46,9 +46,9 @@ func (l *Lock) Lock() {
 	if err != nil {
 		if l.strict {
 			debug.PrintStack()
-			log.Fatalf("Error MakeFile in Lock.Lock: %v, %v", path.Join(l.lockDir, l.lockName), err)
+			log.Fatalf("%v: Error MakeFile in Lock.Lock: %v, %v", db.GetName(), path.Join(l.lockDir, l.lockName), err)
 		} else {
-			log.Printf("Error MakeFile in Lock.Lock: %v, %v", path.Join(l.lockDir, l.lockName), err)
+			log.Printf("%v: Error MakeFile in Lock.Lock: %v, %v", db.GetName(), path.Join(l.lockDir, l.lockName), err)
 		}
 		return
 	}

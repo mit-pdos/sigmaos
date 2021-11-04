@@ -31,6 +31,7 @@ func Run(pid, bin, name string, namedAddr []string, args []string) (*exec.Cmd, e
 	cmd.Env = append(os.Environ())
 	cmd.Env = append(cmd.Env, "NAMED="+strings.Join(namedAddr, ","))
 	cmd.Env = append(cmd.Env, "SIGMAPID="+pid)
+	cmd.Env = append(cmd.Env, "SIGMAPIDDIR="+"pids")
 	return cmd, cmd.Start()
 }
 

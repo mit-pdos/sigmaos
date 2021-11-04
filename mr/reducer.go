@@ -19,25 +19,25 @@ import (
 
 type ReduceT func(string, []string) string
 
-const NReduce = 2
-
 type Reducer struct {
 	*fslib.FsLib
 	proc.ProcClnt
 	reducef ReduceT
+	crash   string
 	input   string
 	output  string
 	name    string
 }
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
 	db.Name("reducer")
-	r.input = args[0]
-	r.output = args[1]
+	r.crash = args[0]
+	r.input = args[1]
+	r.output = args[2]
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib(r.name)
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
@@ -49,7 +49,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 func (r *Reducer) processFile(file string) []KeyValue {
 	kva := []KeyValue{}
 
-	db.DLPrintf("REDUCE", "reduce %v\n", r.input+"/"+file)
+	log.Printf("reduce %v\n", r.input+"/"+file)
 	fd, err := r.Open(r.input+"/"+file+"/", np.OREAD)
 	if err != nil {
 		log.Fatal("Open error ", err)
@@ -96,7 +96,7 @@ func (r *Reducer) processFile(file string) []KeyValue {
 func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 
-	db.DLPrintf("REDUCE", "doReduce %v\n", r.input)
+	log.Printf("doReduce %v %v\n", r.input, r.output)
 	r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		kva = append(kva, r.processFile(st.Name)...)
 		return false, nil
@@ -121,6 +121,9 @@ func (r *Reducer) doReduce() error {
 		}
 		output := r.reducef(kva[i].Key, values)
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
+		if r.crash == "YES" {
+			MaybeCrash()
+		}
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
 			return err

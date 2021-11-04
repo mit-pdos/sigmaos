@@ -18,6 +18,8 @@ sudo mount /dev/nvme0n1p4 /var/local
 sudo mkdir /var/local/$USER
 sudo chown $USER /var/local/$USER
 
+sudo blkid /dev/nvme0n1p4 | cut -d \" -f2
+
 cd /var/local/$USER
 mkdir kernel
 

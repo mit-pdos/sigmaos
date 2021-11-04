@@ -19,6 +19,8 @@ import (
 	"ulambda/realm"
 )
 
+const OUTPUT = "../../../mr/par-mr.out"
+
 func Compare(fsl *fslib.FsLib) {
 	cmd := exec.Command("sort", "../../../mr/seq-mr.out")
 	var out1 bytes.Buffer
@@ -27,7 +29,7 @@ func Compare(fsl *fslib.FsLib) {
 	if err != nil {
 		log.Printf("cmd err %v\n", err)
 	}
-	cmd = exec.Command("sort", "../../../mr/par-mr.out")
+	cmd = exec.Command("sort", "OUTPUT")
 	var out2 bytes.Buffer
 	cmd.Stdout = &out2
 	err = cmd.Run()
@@ -77,6 +79,8 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 
 	mr.InitWorkerFS(ts.FsLib, nreducetask)
 
+	os.Remove("OUTPUT")
+
 	return ts
 }
 
@@ -97,7 +101,7 @@ func (ts *Tstate) submitJob() {
 }
 
 func (ts *Tstate) checkJob() {
-	file, err := os.OpenFile("../../../mr/par-mr.out", os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile("OUTPUT", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Couldn't open output file\n")
 	}

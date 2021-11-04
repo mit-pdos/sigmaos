@@ -2,7 +2,7 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./setup-machine.sh user@address"
+  echo "Usage: $0 user@address"
   exit 1
 fi
 

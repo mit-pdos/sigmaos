@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$#" -ne 1 ]
+then
+  echo "Usage: $0 user@address"
+  exit 1
+fi
+
 DIR=$(dirname $0)
 
 . $DIR/config

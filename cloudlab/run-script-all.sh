@@ -2,7 +2,7 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./run-script-all.sh script_path"
+  echo "Usage: $0 script_path"
   exit 1
 fi
 
@@ -18,6 +18,8 @@ do
 
   hostname=${tuple[0]}
   addr=${tuple[1]}
+
+  echo "========================= $SCRIPT_PATH $USER@$addr ========================="
 
   $SCRIPT_PATH $USER@$addr
 done < $DIR/$SERVERS

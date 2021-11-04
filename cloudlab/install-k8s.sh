@@ -1,5 +1,15 @@
 #!/bin/bash
 
+if [ "$#" -ne 1 ]
+then
+  echo "Usage: $0 user@address"
+  exit 1
+fi
+DIR=$(dirname $0)
+
+. $DIR/config
+
+ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH"
 # Install kubernetes
 sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl
@@ -47,3 +57,4 @@ minikube --memory 4096 --cpus 2 start
 
 # Add the helm stable repo
 helm repo add stable https://charts.helm.sh/stable
+ENDSSH

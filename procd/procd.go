@@ -47,7 +47,7 @@ type Procd struct {
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
 	perf       *perf.Perf
-	procclnt   *procbasev1.ProcBaseClnt
+	procclnt   proc.ProcClnt
 	*fslib.FsLib
 	*fssrv.FsServer
 }
@@ -64,12 +64,18 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 
+	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
+
 	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
+
+	// Set up FilePriorityBags and create name/runq
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbasev1.RUNQ)
+
 	pd.addr = pd.MyAddr()
-	pd.procclnt = procbasev1.MakeProcBaseClnt(pd.FsLib, "", "")
+	pd.procclnt = procinit.MakeProcClnt(pd.FsLib, procinit.GetProcLayersMap())
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -83,8 +89,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	}
 	// Make some directories used by other services.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
-	// Set up FilePriorityBags
-	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbasev1.RUNQ)
 	// Set up ctl file
 	pd.ctlFile = makeCtlFile(pd, "", pd.root)
 	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)

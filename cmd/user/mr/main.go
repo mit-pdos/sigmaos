@@ -18,13 +18,13 @@ import (
 
 func main() {
 	if len(os.Args) != 6 {
-		fmt.Fprintf(os.Stderr, "%v: Usage: <nworker> <nreducetasks> <mapper> <reducer> <crash>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "%v: Usage: <ncoord> <nreducetasks> <mapper> <reducer> <crash>\n", os.Args[0])
 		os.Exit(1)
 	}
 
-	nworker, err := strconv.Atoi(os.Args[1])
+	ncoord, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Nworker %v is not a number\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "Ncoord %v is not a number\n", os.Args[1])
 		os.Exit(1)
 	}
 
@@ -35,16 +35,16 @@ func main() {
 
 	sclnt.Started(procinit.GetPid())
 
-	// Start workers
+	// Start coordinators
 	workers := map[string]bool{}
-	for i := 0; i < nworker; i++ {
+	for i := 0; i < ncoord; i++ {
 		pid := proc.GenPid()
-		a := proc.MakeProc(pid, "bin/user/worker", []string{os.Args[2], os.Args[3], os.Args[4], os.Args[5]})
+		a := proc.MakeProc(pid, "bin/user/mr-coord", []string{os.Args[2], os.Args[3], os.Args[4], os.Args[5]})
 		sclnt.Spawn(a)
 		workers[pid] = true
 	}
 
-	// Wait for workers to exit
+	// Wait for coordinators to exit
 	for w, _ := range workers {
 		status, err := sclnt.WaitExit(w)
 		if err != nil && !strings.Contains(err.Error(), "file not found") || status != "OK" && status != "" {

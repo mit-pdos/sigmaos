@@ -77,7 +77,7 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts.t = t
 	ts.nreducetask = nreducetask
 
-	mr.InitWorkerFS(ts.FsLib, nreducetask)
+	mr.InitCoordFS(ts.FsLib, nreducetask)
 
 	os.Remove("OUTPUT")
 
@@ -150,10 +150,6 @@ func TestTwo(t *testing.T) {
 	runN(t, "2", "NO")
 }
 
-func TestMany(t *testing.T) {
-	runN(t, "10", "NO")
-}
-
-func TestCrash(t *testing.T) {
-	runN(t, "2", "YES")
+func TestCrashTask(t *testing.T) {
+	runN(t, "1", "YES")
 }

@@ -34,12 +34,11 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
-	db.Name("reducer")
 	r.crash = args[0]
 	r.input = args[1]
 	r.output = args[2]
 	r.reducef = reducef
-	r.FsLib = fslib.MakeFsLib(r.name)
+	r.FsLib = fslib.MakeFsLib("reducer" + r.name)
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	log.Printf("MakeReducer %v\n", args)
 

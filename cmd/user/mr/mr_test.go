@@ -157,3 +157,7 @@ func TestCrashTask(t *testing.T) {
 func TestCrashCoord(t *testing.T) {
 	runN(t, "2", "NO", "YES")
 }
+
+func TestCrashTaskAndCoord(t *testing.T) {
+	runN(t, "2", "YES", "YES")
+}

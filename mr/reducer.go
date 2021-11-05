@@ -109,6 +109,12 @@ func (r *Reducer) doReduce() error {
 
 	sort.Sort(ByKey(kva))
 
+	if r.crash == "YES" {
+		MaybeCrash()
+	}
+
+	// remove r.output file in case a crashed task left it behind
+	r.Remove(r.output)
 	fd, err := r.Create(r.output, 0777, np.OWRITE)
 	if err != nil {
 		return err
@@ -126,9 +132,6 @@ func (r *Reducer) doReduce() error {
 		}
 		output := r.reducef(kva[i].Key, values)
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
-		if r.crash == "YES" {
-			MaybeCrash()
-		}
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
 			return err

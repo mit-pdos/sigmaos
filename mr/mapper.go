@@ -51,12 +51,10 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	log.Printf("MakeMapper %v\n", args)
 	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
 
-	// Make a directory for holding the output files of a map task
+	// Make a directory for holding the output files of a map task.  Ignore
+	// error in case it already exits.  XXX who cleans up?
 	d := "name/ux/~ip/m-" + m.file
-	err = m.Mkdir(d, 0777)
-	if err != nil {
-		return nil, fmt.Errorf("MakeMapper: cannot create dir %v err %v\n", d, err)
-	}
+	m.Mkdir(d, 0777)
 
 	//  when using fsreader:
 	//
@@ -68,6 +66,8 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
 		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
+		// in case it alread exits
+		m.Remove(oname)
 		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
 		if err != nil {
 			return nil, fmt.Errorf("MakeMapper: cannot create %v err %v\n", oname, err)

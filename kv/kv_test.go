@@ -12,7 +12,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/realm"
 )
@@ -85,10 +84,9 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := procdep.MakeProcDep(proc.GenPid(), "bin/user/memfsd", []string{""})
-	t.Proc.Env = []string{procinit.GetProcLayersString()}
+	t := proc.MakeProc(proc.GenPid(), "bin/user/memfsd", []string{""})
 	ts.Spawn(t)
-	return t.Proc.Pid
+	return t.Pid
 }
 
 func (ts *Tstate) startMemFSs(n int) []string {

@@ -164,6 +164,11 @@ func (m *Mapper) doMap() error {
 			return err
 		}
 		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file
+
+		// remove in case an earlier mapper created this
+		// XXX handle racing mappers
+		m.Remove(name)
+
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink(target, name, 0777)
 		if err != nil {

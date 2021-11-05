@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
+	// "math/rand"
 	"strconv"
-	"time"
+	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -41,62 +41,57 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 			log.Fatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
-
-	lock := usync.MakeLock(fsl, MRDIR, "lock-done", true)
-	cond := usync.MakeCondNew(fsl, MRDIR, "cond-done", lock)
-
-	cond.Init()
 }
 
 type Coord struct {
 	*fslib.FsLib
 	proc.ProcClnt
+	crashCoord  string
 	nreducetask int
 	crash       string
 	mapperbin   string
 	reducerbin  string
 	lock        *usync.Lock
-	cond        *usync.Cond
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, errors.New("MakeCoord: too few arguments")
 	}
 	log.Printf("MakeCoord %v\n", args)
 	w := &Coord{}
 	w.FsLib = fslib.MakeFsLib("coord-" + procinit.GetPid())
+
 	n, err := strconv.Atoi(args[0])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: nreducetask %v isn't int", args[0])
+		return nil, fmt.Errorf("MakeCoord: nreducetask %v isn't int", args[1])
 	}
+
 	w.nreducetask = n
 	w.mapperbin = args[1]
 	w.reducerbin = args[2]
 	w.crash = args[3]
+	w.crashCoord = args[4]
 
 	w.ProcClnt = procinit.MakeProcClnt(w.FsLib, procinit.GetProcLayersMap())
 
-	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-done", true)
-	w.cond = usync.MakeCondNew(w.FsLib, MRDIR, "cond-done", w.lock)
-
-	// go w.monitor()
+	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-coord", true)
 
 	w.Started(procinit.GetPid())
 
 	return w, nil
 }
 
-// XXX set timer based on # of workers?
-func (w *Coord) monitor() {
-	for true {
-		ms := 1000 + (rand.Int63() % 10000)
-		time.Sleep(time.Duration(ms) * time.Millisecond)
-		log.Printf("%v: signal\n", db.GetName())
-		// wakeup one worker to check
-		w.cond.Signal()
-	}
-}
+// // XXX set timer based on # of workers?
+// func (w *Coord) monitor() {
+// 	for true {
+// 		ms := 1000 + (rand.Int63() % 10000)
+// 		time.Sleep(time.Duration(ms) * time.Millisecond)
+// 		log.Printf("%v: signal\n", db.GetName())
+// 		// wakeup one worker to check
+// 		w.cond.Signal()
+// 	}
+// }
 
 func (w *Coord) mapper(task string) string {
 	pid := proc.GenPid()
@@ -126,8 +121,7 @@ func (w *Coord) reducer(task string) string {
 func (w *Coord) claimEntry(dir string, st *np.Stat) string {
 	from := dir + "/" + st.Name
 	if err := w.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		// log.Printf("claimEntry: rename from %v err %v\n", from, err)
-		// some other worker claimed the task
+		// another coord claimed the task
 		return ""
 	}
 	return st.Name
@@ -176,8 +170,9 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.ok == "OK" {
+		// mark task as done
+
 		log.Printf("%v: task done %v\n", db.GetName(), res.task)
-		// Mark task as done
 		f := dir + DONE + "/" + res.task
 		_, err := w.PutFile(f, []byte{}, 0777, np.OWRITE)
 		if err != nil {
@@ -191,6 +186,7 @@ func (w *Coord) processResult(dir string, res Ttask) {
 		}
 	} else {
 		// task failed; make it runnable again
+
 		to := dir + "/" + res.task
 		log.Printf("%v: task %v failed %v\n", db.GetName(), res.task, res.ok)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
@@ -199,61 +195,54 @@ func (w *Coord) processResult(dir string, res Ttask) {
 	}
 }
 
-// XXX look one at time?
-func (w *Coord) redoWork(dir string) bool {
-	sts, err := w.ReadDir(dir + TIP)
+func (w *Coord) recover(dir string) {
+	sts, err := w.ReadDir(dir + TIP) // handle one entry at the time?
 	if err != nil {
-		log.Fatalf("redoWork: ReadDir %v err %v\n", dir+TIP, err)
+		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
 	}
-	for _, st := range sts {
-		if false {
-			log.Printf("%v: redo?: %v\n", db.GetName(), st.Name)
-			to := dir + "/" + st.Name
-			if w.Rename(dir+TIP+"/"+st.Name, to) != nil {
-				log.Fatalf("redoWork: rename to %v err %v\n", to, err)
-			}
-			return true
-		}
-	}
-	return false
-}
 
-// XXX read dir incrementally
-func (w *Coord) barrier(dir string) bool {
-	w.lock.Lock()
-	for {
-		sts, err := w.ReadDir(dir + TIP)
-		if err != nil {
-			log.Fatalf("Readdir waitForMappers %v err %v\n", dir+TIP, err)
-		}
-		if len(sts) == 0 {
-			log.Printf("%v: barrier done\n", dir)
-			break
-		}
-		log.Printf("wait dir %v %v e.g. %v\n", dir, len(sts), sts[0].Name)
-		w.cond.Wait()
-		//if w.redoWork(dir) {
-		//	return false
-		//}
+	if len(sts) > 0 {
+		// don't crash the backup
+		w.crashCoord = "NO"
 	}
-	w.lock.Unlock()
-	return true
+
+	// just treat all tasks in progress as failed; too aggressive, but correct.
+	for _, st := range sts {
+		log.Printf("%v: recover %v\n", db.GetName(), st.Name)
+		to := dir + "/" + st.Name
+		if w.Rename(dir+TIP+"/"+st.Name, to) != nil {
+			// an old, disconnected coord may do this too,
+			// if one of its tasks fails
+			log.Printf("recover: rename to %v err %v\n", to, err)
+		}
+	}
 }
 
 func (w *Coord) phase(dir string, f func(string) string) {
 	ch := make(chan Ttask)
 	for n := w.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
+		if w.crashCoord == "YES" {
+			MaybeCrash()
+		}
 		w.processResult(dir, res)
 		if res.ok != "OK" {
 			n += w.startTasks(dir, ch, f)
 		}
 	}
+	// XXX double check no tasks are in TIP because of disconnected old coord
 }
 
 func (w *Coord) Work() {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
+	w.recover(MDIR)
+	w.recover(RDIR)
+
 	w.phase(MDIR, w.mapper)
 	log.Printf("%v: Reduce phase\n", db.GetName())
 	w.phase(RDIR, w.reducer)
+
 	w.Exited(procinit.GetPid(), "OK")
 }

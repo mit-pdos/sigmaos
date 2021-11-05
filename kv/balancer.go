@@ -14,7 +14,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/sync"
 )
@@ -89,7 +88,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnMover(s, src, dst string) string {
-	t := procdep.MakeProcDep(proc.GenPid(), "bin/user/mover", []string{s, src, dst})
+	t := proc.MakeProc(proc.GenPid(), "bin/user/mover", []string{s, src, dst})
 	t.Env = []string{procinit.GetProcLayersString()}
 	bl.Spawn(t)
 	return t.Pid

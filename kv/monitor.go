@@ -10,7 +10,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procdep"
 	"ulambda/procinit"
 	"ulambda/stats"
 	usync "ulambda/sync"
@@ -46,45 +45,20 @@ func (mo *Monitor) unlock() {
 	mo.kvmonlock.Unlock()
 }
 
-func spawnBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
-	t := procdep.MakeProcDep(pid2, "bin/user/balancer", []string{opcode, pid1})
-	t.Env = []string{procinit.GetProcLayersString()}
-	t.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
-	t.Type = proc.T_LC
-	sched.Spawn(t)
-}
-
 func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
-	t := procdep.MakeProcDep(proc.GenPid(), "bin/user/balancer", []string{opcode, pid1})
-	t.Env = []string{procinit.GetProcLayersString()}
-	t.Dependencies = &procdep.Deps{map[string]bool{pid1: false}, nil}
+	t := proc.MakeProc(proc.GenPid(), "bin/user/balancer", []string{opcode, pid1})
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
 }
 
-func spawnKVPid(sched proc.ProcClnt, pid1 string, pid2 string) {
-	t := procdep.MakeProcDep(pid1, KV, []string{""})
-	t.Env = []string{procinit.GetProcLayersString()}
-	t.Type = proc.T_LC
-	sched.Spawn(t)
-}
-
 func SpawnKV(sched proc.ProcClnt) string {
-	t := procdep.MakeProcDep(proc.GenPid(), KV, []string{""})
+	t := proc.MakeProc(proc.GenPid(), KV, []string{""})
 	t.Pid = proc.GenPid()
 	t.Env = []string{procinit.GetProcLayersString()}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
-}
-
-func runBalancerPid(sched proc.ProcClnt, opcode, pid1, pid2 string) {
-	spawnBalancerPid(sched, opcode, pid1, pid2)
-	status, err := sched.WaitExit(pid2)
-	if err != nil || status != "OK" {
-		log.Printf("runBalancer: err %v, status %v\n", err, status)
-	}
 }
 
 func RunBalancer(sched proc.ProcClnt, opcode, pid1 string) {
@@ -96,10 +70,12 @@ func RunBalancer(sched proc.ProcClnt, opcode, pid1 string) {
 }
 
 func (mo *Monitor) grow() {
-	pid1 := proc.GenPid()
-	pid2 := proc.GenPid()
-	spawnKVPid(mo.ProcClnt, pid1, pid2)
-	runBalancerPid(mo.ProcClnt, "add", pid1, pid2)
+	pid1 := SpawnKV(mo.ProcClnt)
+	err := mo.ProcClnt.WaitStart(pid1)
+	if err != nil {
+		log.Printf("runBalancer: err %v\n", err)
+	}
+	RunBalancer(mo.ProcClnt, "add", pid1)
 }
 
 func (mo *Monitor) shrink(kv string) {

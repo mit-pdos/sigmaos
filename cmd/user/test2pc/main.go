@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
+	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %v index opcode\n", os.Args[0])
 		os.Exit(1)
 	}
@@ -18,5 +18,4 @@ func main() {
 		os.Exit(1)
 	}
 	p.Work()
-	p.Exit()
 }

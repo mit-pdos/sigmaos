@@ -21,7 +21,6 @@ type Tinput struct {
 type Part2pc struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	pid    string
 	me     string
 	index  string
 	opcode string
@@ -37,10 +36,9 @@ func partname(pid string) string {
 func MkTest2Participant(args []string) (*Part2pc, error) {
 	p := &Part2pc{}
 	p.done = make(chan bool)
-	p.pid = args[0]
-	p.me = partname(p.pid)
-	p.index = args[1]
-	p.opcode = args[2]
+	p.me = partname(procinit.GetPid())
+	p.index = args[0]
+	p.opcode = args[1]
 	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
 	p.ProcClnt = procinit.MakeProcClnt(p.FsLib, procinit.GetProcLayersMap())
@@ -58,7 +56,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 		os.Exit(1)
 	}
 
-	p.Started(p.pid)
+	p.Started(procinit.GetPid())
 
 	return p, nil
 }
@@ -119,9 +117,5 @@ func (p *Part2pc) Work() {
 	db.DLPrintf("TEST2PC", "Work\n")
 	<-p.done
 	db.DLPrintf("TEST2PC", "exit\n")
-
-}
-
-func (p *Part2pc) Exit() {
-	p.Exited(p.pid, "OK")
+	p.Exited(procinit.GetPid(), "OK")
 }

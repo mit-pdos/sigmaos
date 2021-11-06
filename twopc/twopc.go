@@ -2,8 +2,6 @@ package twopc
 
 import (
 	"ulambda/fslib"
-	"ulambda/proc"
-	"ulambda/procdep"
 )
 
 type TxnI interface {
@@ -53,13 +51,6 @@ func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 		return nil
 	}
 	return &twopc
-}
-
-func SpawnCoord(pclnt proc.ProcClnt, opcode string, ps []string) string {
-	args := append([]string{opcode}, ps...)
-	t := procdep.MakeProcDep(proc.GenPid(), "bin/user/coord", args)
-	pclnt.Spawn(t)
-	return t.Pid
 }
 
 func clean(fsl *fslib.FsLib) *Twopc {

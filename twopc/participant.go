@@ -107,7 +107,9 @@ func (p *Participant) restartCoord() {
 		log.Printf("PART clean")
 		return
 	}
-	SpawnCoord(p.ProcClnt, "restart", p.twopc.Participants)
+	t := proc.MakeProc(proc.GenPid(), "bin/user/coord", append([]string{"restart"}, p.twopc.Participants...))
+	p.Spawn(t)
+
 	//ok, err := p.Wait(pid1)
 	//if err != nil {
 	//	log.Printf("PART wait failed\n")

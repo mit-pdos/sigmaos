@@ -33,7 +33,6 @@ const (
 type Coord struct {
 	*fslib.FsLib
 	proc.ProcClnt
-	pid       string
 	opcode    string
 	args      []string
 	ch        chan Tstatus
@@ -42,7 +41,7 @@ type Coord struct {
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) < 3 {
+	if len(args) < 2 {
 
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
@@ -50,9 +49,8 @@ func MakeCoord(args []string) (*Coord, error) {
 	db.Name("coord")
 
 	cd := &Coord{}
-	cd.pid = args[0]
-	cd.opcode = args[1]
-	cd.args = args[2:]
+	cd.opcode = args[0]
+	cd.args = args[1:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procinit.MakeProcClnt(cd.FsLib, procinit.GetProcLayersMap())
@@ -69,7 +67,7 @@ func MakeCoord(args []string) (*Coord, error) {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
-	cd.Started(cd.pid)
+	cd.Started(procinit.GetPid())
 	return cd, nil
 }
 
@@ -269,5 +267,5 @@ func (cd *Coord) cleanup() {
 }
 
 func (cd *Coord) Exit() {
-	cd.Exited(cd.pid, "OK")
+	cd.Exited(procinit.GetPid(), "OK")
 }

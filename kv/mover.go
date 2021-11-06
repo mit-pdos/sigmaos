@@ -9,7 +9,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
-	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procinit"
 )
@@ -83,18 +82,8 @@ func (mv *Mover) moveShard(shard, src, dst string) error {
 
 func (mv *Mover) removeShard(shard, src string) {
 	d := shardPath(src, shard)
-	mv.ProcessDir(d, func(st *np.Stat) (bool, error) {
-		if st.Name != "statsd" {
-			d := d + "/" + st.Name
-			db.DLPrintf("MV", "RmDir shard %v\n", d)
-			log.Printf("RmDir shard %v\n", d)
-			err := mv.RmDir(d)
-			if err != nil {
-				log.Printf("MV remove %v err %v\n", d, err)
-			}
-		}
-		return false, nil
-	})
+	d = shardTmp(d)
+	mv.RmDir(d)
 }
 
 // func (mv *Mover) closeFid(shard string) {

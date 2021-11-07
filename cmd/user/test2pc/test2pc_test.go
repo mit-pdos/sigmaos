@@ -1,4 +1,4 @@
-package test2pc
+package main
 
 import (
 	"log"
@@ -40,7 +40,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
 
-	bin := ".."
+	bin := "../../../"
 	e := realm.MakeTestEnv(bin)
 	cfg, err := e.Boot()
 	if err != nil {

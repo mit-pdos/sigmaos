@@ -32,3 +32,4 @@ killall dbd
 killall bookapp
 killall realm-balance
 killall worker
+killall test2pc

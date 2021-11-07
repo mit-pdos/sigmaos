@@ -93,7 +93,7 @@ func (ts *Tstate) spawnParticipant(index, opcode string) string {
 func (ts *Tstate) spawnCoord(opcode string, fws []string) string {
 	p := proc.MakeProc(proc.GenPid(), "bin/user/coord", append([]string{opcode}, fws...))
 	ts.Spawn(p)
-	log.Printf("coord spawned %v\n", p.Pid)
+	// log.Printf("coord spawned %v\n", p.Pid)
 	return p.Pid
 }
 

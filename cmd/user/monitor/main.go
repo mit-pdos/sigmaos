@@ -15,5 +15,4 @@ func main() {
 	}
 	mo.Work()
 	mo.Exit()
-	os.Exit(0)
 }

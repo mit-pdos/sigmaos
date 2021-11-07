@@ -23,7 +23,6 @@ go test $1 ulambda/cmd/user/mr
 # wwwd_test requires mariaddb running
 pgrep mariadb >/dev/null && go test -v ulambda/cmd/user/wwwd
 
-# go test -v ulambda/test2pc
-
+go test -v ulambda/test2pc
 
 go test $1 -timeout=45m ulambda/replica

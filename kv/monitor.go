@@ -30,7 +30,7 @@ type Monitor struct {
 
 func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
-	mo.FsLib = fslib.MakeFsLib(procinit.GetPid())
+	mo.FsLib = fslib.MakeFsLib("monitor")
 	mo.ProcClnt = procinit.MakeProcClnt(mo.FsLib, procinit.GetProcLayersMap())
 	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
 	db.Name(procinit.GetPid())

@@ -20,7 +20,7 @@ go test $1 ulambda/cmd/user/mr
 
 ./test-kv.sh
 
-# wwwd_test requires mariaddb running
+# wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test -v ulambda/cmd/user/wwwd
 
 go test -v ulambda/test2pc

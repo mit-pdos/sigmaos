@@ -73,7 +73,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 			return nil, fmt.Errorf("MakeMapper: cannot create %v err %v\n", oname, err)
 		}
 	}
-	m.Started(procinit.GetPid())
+	m.Started(proc.GetPid())
 	return m, nil
 }
 
@@ -189,5 +189,5 @@ func (m *Mapper) Work() {
 }
 
 func (m *Mapper) Exit() {
-	m.Exited(procinit.GetPid(), "OK")
+	m.Exited(proc.GetPid(), "OK")
 }

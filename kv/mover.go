@@ -30,12 +30,12 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.shard = args[0]
 	mv.src = args[1]
 	mv.dst = args[2]
-	mv.FsLib = fslib.MakeFsLib(procinit.GetPid())
+	mv.FsLib = fslib.MakeFsLib(proc.GetPid())
 	mv.ProcClnt = procinit.MakeProcClnt(mv.FsLib, procinit.GetProcLayersMap())
 
-	db.Name(procinit.GetPid())
+	db.Name(proc.GetPid())
 
-	mv.Started(procinit.GetPid())
+	mv.Started(proc.GetPid())
 	return mv, nil
 }
 
@@ -118,5 +118,5 @@ func (mv *Mover) Work() {
 }
 
 func (mv *Mover) Exit() {
-	mv.Exited(procinit.GetPid(), "OK")
+	mv.Exited(proc.GetPid(), "OK")
 }

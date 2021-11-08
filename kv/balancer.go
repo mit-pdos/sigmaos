@@ -41,7 +41,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	}
 	bl := &Balancer{}
 	bl.args = args
-	bl.FsLib = fslib.MakeFsLib(procinit.GetPid())
+	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
 	bl.ProcClnt = procinit.MakeProcClnt(bl.FsLib, procinit.GetProcLayersMap())
 	bl.kvlock = sync.MakeLock(bl.FsLib, KVDIR, KVLOCK, true)
 
@@ -49,7 +49,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 
 	bl.kvlock.Lock()
 
-	bl.Started(procinit.GetPid())
+	bl.Started(proc.GetPid())
 	return bl, nil
 }
 
@@ -175,5 +175,5 @@ func (bl *Balancer) Balance() {
 }
 
 func (bl *Balancer) Exit() {
-	bl.Exited(procinit.GetPid(), "OK")
+	bl.Exited(proc.GetPid(), "OK")
 }

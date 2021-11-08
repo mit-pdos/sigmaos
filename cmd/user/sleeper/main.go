@@ -55,7 +55,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	db.DLPrintf("SCHEDL", "MakeSleeper: %v\n", args)
 
 	if !s.native {
-		err := s.Started(procinit.GetPid())
+		err := s.Started(proc.GetPid())
 		if err != nil {
 			log.Fatalf("Started: error %v\n", err)
 		}
@@ -65,11 +65,11 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 
 func (s *Sleeper) waitEvict() {
 	if !s.native {
-		err := s.WaitEvict(procinit.GetPid())
+		err := s.WaitEvict(proc.GetPid())
 		if err != nil {
 			log.Fatalf("Error WaitEvict: %v", err)
 		}
-		s.Exited(procinit.GetPid(), "EVICTED")
+		s.Exited(proc.GetPid(), "EVICTED")
 		os.Exit(0)
 	}
 }
@@ -82,6 +82,6 @@ func (s *Sleeper) Work() {
 		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}
 	if !s.native {
-		s.Exited(procinit.GetPid(), "OK")
+		s.Exited(proc.GetPid(), "OK")
 	}
 }

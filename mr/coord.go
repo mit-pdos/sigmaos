@@ -60,7 +60,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	log.Printf("MakeCoord %v\n", args)
 	w := &Coord{}
-	w.FsLib = fslib.MakeFsLib("coord-" + procinit.GetPid())
+	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid())
 
 	n, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -77,7 +77,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-coord", true)
 
-	w.Started(procinit.GetPid())
+	w.Started(proc.GetPid())
 
 	return w, nil
 }
@@ -244,5 +244,5 @@ func (w *Coord) Work() {
 	log.Printf("%v: Reduce phase\n", db.GetName())
 	w.phase(RDIR, w.reducer)
 
-	w.Exited(procinit.GetPid(), "OK")
+	w.Exited(proc.GetPid(), "OK")
 }

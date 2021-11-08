@@ -33,11 +33,11 @@ func MakeMonitor(args []string) (*Monitor, error) {
 	mo.FsLib = fslib.MakeFsLib("monitor")
 	mo.ProcClnt = procinit.MakeProcClnt(mo.FsLib, procinit.GetProcLayersMap())
 	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
-	db.Name(procinit.GetPid())
+	db.Name(proc.GetPid())
 
 	mo.kvmonlock.Lock()
 
-	mo.Started(procinit.GetPid())
+	mo.Started(proc.GetPid())
 	return mo, nil
 }
 
@@ -145,5 +145,5 @@ func (mo *Monitor) Work() {
 }
 
 func (mo *Monitor) Exit() {
-	mo.Exited(procinit.GetPid(), "OK")
+	mo.Exited(proc.GetPid(), "OK")
 }

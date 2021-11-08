@@ -57,7 +57,7 @@ func MakeReader(args []string) (*Reader, error) {
 		log.Fatal("Create error: ", err)
 	}
 	r.input = args[2]
-	r.Started(procinit.GetPid())
+	r.Started(proc.GetPid())
 	return r, nil
 }
 
@@ -90,6 +90,6 @@ func (r *Reader) Work() string {
 }
 
 func (r *Reader) Exit(status string) {
-	r.ShutdownFs("name/" + procinit.GetPid())
-	r.Exited(procinit.GetPid(), status)
+	r.ShutdownFs("name/" + proc.GetPid())
+	r.Exited(proc.GetPid(), status)
 }

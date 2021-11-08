@@ -35,6 +35,8 @@ const (
 	RET_STAT        = "ret-stat."
 	PARENT_RET_STAT = "parent-ret-stat."
 	LOCK            = "L-"
+	CHILD           = "childs"
+	PIDS            = "pids"
 )
 
 const (
@@ -60,6 +62,7 @@ func MakeProcBaseClnt(fsl *fslib.FsLib, piddir, pid string) *ProcBaseClnt {
 
 // ========== SPAWN ==========
 
+// XXX cleanup on failure
 func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	p := gp.GetProc()
 	// Select which queue to put the job in
@@ -102,7 +105,20 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	pEvictCond := sync.MakeCondNew(clnt.FsLib, piddir, EVICT_COND, nil)
 	pEvictCond.Init()
 
+	d := piddir + "/" + CHILD
+	if err := clnt.Mkdir(d, 0777); err != nil {
+		log.Fatalf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), d, err)
+		return err
+	}
+
 	clnt.makeParentRetStatFile(piddir)
+
+	// Add pid to my children
+	f := PIDS + "/" + proc.GetPid() + "/" + CHILD + "/" + p.Pid
+	if err := clnt.MakeFile(f, 0777, np.OWRITE, []byte{}); err != nil {
+		log.Fatalf("%v: Spawn mkfile child %v err %v\n", db.GetName(), f, err)
+		return err
+	}
 
 	b, err := json.Marshal(p)
 	if err != nil {
@@ -190,17 +206,10 @@ func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
 	// Write back return statuses
-	del := clnt.writeBackRetStats(piddir, status)
+	clnt.writeBackRetStats(piddir, status)
 
 	pExitCond := sync.MakeCondNew(clnt.FsLib, piddir, EXIT_COND, nil)
 	pExitCond.Destroy()
-
-	// XXX never do this?
-	if del {
-		if err := clnt.RmDir(piddir); err != nil {
-			log.Fatalf("Error RmDir in ProcBaseClnt.writeBackRetStatNew: %v", err)
-		}
-	}
 
 	return nil
 }
@@ -238,11 +247,12 @@ func (clnt *ProcBaseClnt) getRetStat(piddir string) string {
 		log.Fatalf("Error ReadFile in ProcBaseClnt.getRetStat: %v", err)
 	}
 
-	// XXX if parent doesn't call WaitExit(), someone should
 	// Remove pid dir
 	if err := clnt.RmDir(piddir); err != nil {
 		log.Fatalf("Error RmDir %v in ProcBaseClnt.getRetStat: %v", piddir, err)
 	}
+
+	// Remove pid from children
 
 	return string(b)
 }

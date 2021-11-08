@@ -60,7 +60,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 		log.Fatal("Create error: ", err)
 	}
 	ba.input = strings.Split(args[2], "/")
-	ba.Started(procinit.GetPid())
+	ba.Started(proc.GetPid())
 
 	return ba, nil
 }
@@ -70,7 +70,7 @@ func (ba *BookApp) writeResponse(data []byte) string {
 	if err != nil {
 		return fmt.Sprintf("Pipe parse err %v\n", err)
 	}
-	ba.ShutdownFs("name/" + procinit.GetPid())
+	ba.ShutdownFs("name/" + proc.GetPid())
 	return "OK"
 }
 
@@ -178,6 +178,6 @@ func (ba *BookApp) Work() string {
 
 func (ba *BookApp) Exit(status string) {
 	log.Printf("bookapp exit %v\n", status)
-	ba.ShutdownFs("name/" + procinit.GetPid())
-	ba.Exited(procinit.GetPid(), status)
+	ba.ShutdownFs("name/" + proc.GetPid())
+	ba.Exited(proc.GetPid(), status)
 }

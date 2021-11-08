@@ -49,7 +49,7 @@ func partname(pid string) string {
 func MkTest2Participant(args []string) (*Part2pc, error) {
 	p := &Part2pc{}
 	p.done = make(chan bool)
-	p.me = partname(procinit.GetPid())
+	p.me = partname(proc.GetPid())
 	p.index = args[0]
 	p.opcode = args[1]
 	db.Name(p.me)
@@ -69,7 +69,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 		os.Exit(1)
 	}
 
-	p.Started(procinit.GetPid())
+	p.Started(proc.GetPid())
 
 	return p, nil
 }
@@ -130,5 +130,5 @@ func (p *Part2pc) Work() {
 	db.DLPrintf("TEST2PC", "Work\n")
 	<-p.done
 	db.DLPrintf("TEST2PC", "exit\n")
-	p.Exited(procinit.GetPid(), "OK")
+	p.Exited(proc.GetPid(), "OK")
 }

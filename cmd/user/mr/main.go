@@ -32,7 +32,7 @@ func main() {
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
 	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
 
-	sclnt.Started(procinit.GetPid())
+	sclnt.Started(proc.GetPid())
 
 	// Start coordinators
 	workers := map[string]bool{}
@@ -51,5 +51,5 @@ func main() {
 		}
 	}
 
-	sclnt.Exited(procinit.GetPid(), "OK")
+	sclnt.Exited(proc.GetPid(), "OK")
 }

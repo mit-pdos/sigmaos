@@ -42,7 +42,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
 	log.Printf("MakeReducer %v\n", args)
 
-	r.Started(procinit.GetPid())
+	r.Started(proc.GetPid())
 	return r, nil
 }
 
@@ -149,5 +149,5 @@ func (r *Reducer) Work() {
 }
 
 func (r *Reducer) Exit() {
-	r.Exited(procinit.GetPid(), "OK")
+	r.Exited(proc.GetPid(), "OK")
 }

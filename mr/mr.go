@@ -10,7 +10,7 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/procinit"
+	"ulambda/proc"
 )
 
 //
@@ -22,10 +22,10 @@ func MaybeCrash() {
 	rr, _ := crand.Int(crand.Reader, max)
 	if rr.Int64() < 330 {
 		// crash!
-		log.Printf("%v: Crash %v\n", db.GetName(), procinit.GetPid())
+		log.Printf("%v: Crash %v\n", db.GetName(), proc.GetPid())
 		os.Exit(1)
 	} else if rr.Int64() < 660 {
-		log.Printf("%v: Delay %v\n", db.GetName(), procinit.GetPid())
+		log.Printf("%v: Delay %v\n", db.GetName(), proc.GetPid())
 		// delay for a while.
 		maxms := big.NewInt(10 * 1000)
 		ms, _ := crand.Int(crand.Reader, maxms)

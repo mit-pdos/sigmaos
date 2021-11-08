@@ -96,7 +96,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 		log.Fatalf("Error MkNod in RunProcd: %v", err)
 	}
 
-	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, procinit.GetPid()), nil, true)
+	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
 	procdStartCond.Destroy()
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})

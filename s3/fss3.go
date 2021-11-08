@@ -14,7 +14,7 @@ import (
 	"ulambda/fssrv"
 	"ulambda/named"
 	np "ulambda/ninep"
-	"ulambda/procinit"
+	"ulambda/proc"
 	usync "ulambda/sync"
 )
 
@@ -50,7 +50,7 @@ func RunFss3() {
 		o.UsePathStyle = true
 	})
 
-	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, procinit.GetPid()), nil, true)
+	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, proc.GetPid()), nil, true)
 	fss3dStartCond.Destroy()
 
 	fss3.Serve()

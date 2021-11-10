@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	"fmt"
 	"io"
 
 	db "ulambda/debug"
@@ -112,4 +113,27 @@ func (fl *FsLib) RmDir(dir string) error {
 		return false, nil
 	})
 	return fl.Remove(dir)
+}
+
+func (fsl *FsLib) SprintfDir(d string) (string, error) {
+	return fsl.sprintfDirIndent(d, "")
+}
+
+func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
+	s := fmt.Sprintf("%v dir %v\n", indent, d)
+	sts, err := fsl.ReadDir(d)
+	if err != nil {
+		return "", err
+	}
+	for _, st := range sts {
+		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Qid.Type)
+		if st.Mode.IsDir() {
+			s1, err := fsl.sprintfDirIndent(d+"/"+st.Name, indent+" ")
+			if err != nil {
+				return s, err
+			}
+			s += s1
+		}
+	}
+	return s, nil
 }

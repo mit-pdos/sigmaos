@@ -2,7 +2,6 @@ package procbasev1_test
 
 import (
 	"fmt"
-	"path"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procbasev1"
+	// "ulambda/procbasev1"
 	"ulambda/procinit"
 	"ulambda/realm"
 )
@@ -84,6 +83,7 @@ func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
 	b, err := ts.ReadFile("name/out_" + pid)
 	res = assert.Nil(t, err, "ReadFile") && res
 	res = assert.Equal(t, string(b), "hello", "Output") && res
+
 	return res
 }
 
@@ -119,6 +119,10 @@ func TestWaitExit(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
+	// cleaned up
+	_, err = ts.Stat(proc.PidDir(pid))
+	assert.NotNil(t, err, "Stat")
+
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
@@ -139,28 +143,15 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
+	// cleaned up
+	_, err = ts.Stat(proc.PidDir(pid))
+	assert.NotNil(t, err, "Stat")
+
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
 	checkSleeperResult(t, ts, pid)
-
-	ts.e.Shutdown()
-}
-
-func TestExitCleanup(t *testing.T) {
-	ts := makeTstate(t)
-
-	pid := spawnSleeper(t, ts)
-
-	// Simulate parent exiting before child
-	err := ts.Remove(path.Join(proc.PidDir(pid), procbasev1.PARENT_RET_STAT+pid))
-	assert.Nil(t, err, "Remove")
-
-	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
-
-	_, err = ts.Stat(proc.PidDir(pid))
-	assert.NotNil(t, err, "Stat")
 
 	ts.e.Shutdown()
 }
@@ -183,7 +174,7 @@ func TestWaitStart(t *testing.T) {
 	assert.Nil(t, err, "Readdir")
 	assert.Equal(t, pid, st[0].Name, "pid")
 
-	// Make sure the lambda hasn't finished yet...
+	// Make sure the proc hasn't finished yet...
 	checkSleeperResultFalse(t, ts, pid)
 
 	ts.WaitExit(pid)
@@ -206,14 +197,46 @@ func TestWaitNonexistentProc(t *testing.T) {
 	}()
 
 	done := <-ch
-	assert.True(t, done, "Nonexistent lambda")
+	assert.True(t, done, "Nonexistent proc")
 
 	close(ch)
 
 	ts.e.Shutdown()
 }
 
-// Spawn a bunch of lambdas concurrently, then wait for all of them & check
+func TestEarlyExit(t *testing.T) {
+	ts := makeTstate(t)
+
+	pid0 := proc.GenPid()
+	pid1 := proc.GenPid()
+	a := proc.MakeProc(pid0, "bin/user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+
+	// Wait for parent to finish
+	status, err := ts.WaitExit(pid0)
+	assert.Nil(t, err, "WaitExit")
+	assert.Equal(t, "OK", status, "WaitExit")
+
+	// Child should be still running
+	_, err = ts.Stat(proc.PidDir(pid1))
+	assert.Nil(t, err, "Stat")
+
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+
+	// Child should have exited
+	b, err := ts.ReadFile("name/out_" + pid1)
+	assert.Nil(t, err, "ReadFile")
+	assert.Equal(t, string(b), "hello", "Output")
+
+	// .. and cleaned up
+	_, err = ts.Stat(proc.PidDir(pid1))
+	assert.NotNil(t, err, "Stat")
+
+	ts.e.Shutdown()
+}
+
+// Spawn a bunch of procs concurrently, then wait for all of them & check
 // their result
 func TestConcurrentProcs(t *testing.T) {
 	ts := makeTstate(t)
@@ -257,6 +280,8 @@ func TestConcurrentProcs(t *testing.T) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, tses[i], pid)
+			_, err := ts.Stat(proc.PidDir(pid))
+			assert.NotNil(t, err, "Stat")
 		}(pid, &done, i)
 	}
 
@@ -287,7 +312,7 @@ func TestEvict(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "Didn't evict early enough.")
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS/2)*time.Millisecond, "Evicted too early")
 
-	// Make sure the lambda didn't finish
+	// Make sure the proc didn't finish
 	checkSleeperResultFalse(t, ts, pid)
 
 	ts.e.Shutdown()

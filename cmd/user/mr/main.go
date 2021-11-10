@@ -35,19 +35,19 @@ func main() {
 	sclnt.Started(proc.GetPid())
 
 	// Start coordinators
-	workers := map[string]bool{}
+	coords := map[string]bool{}
 	for i := 0; i < ncoord; i++ {
 		pid := proc.GenPid()
 		a := proc.MakeProc(pid, "bin/user/mr-coord", os.Args[2:])
 		sclnt.Spawn(a)
-		workers[pid] = true
+		coords[pid] = true
 	}
 
 	// Wait for coordinators to exit
-	for w, _ := range workers {
-		status, err := sclnt.WaitExit(w)
+	for c, _ := range coords {
+		status, err := sclnt.WaitExit(c)
 		if status != "OK" || err != nil {
-			log.Printf("Wait %v failed %v %v\n", w, status, err)
+			log.Printf("Wait %v failed %v %v\n", c, status, err)
 		}
 	}
 

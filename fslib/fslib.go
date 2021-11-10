@@ -45,5 +45,5 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 }
 
 func MakeFsLib(uname string) *FsLib {
-	return MakeFsLibAddr("name", Named())
+	return MakeFsLibAddr(uname, Named())
 }

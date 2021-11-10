@@ -13,8 +13,6 @@ go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats
 go test $1 ulambda/procbasev1
-go test $1 ulambda/procidem
-go test $1 ulambda/procdep
 go test $1 ulambda/kv
 go test $1 ulambda/cmd/user/mr
 
@@ -25,4 +23,5 @@ pgrep mariadb >/dev/null && go test -v ulambda/cmd/user/wwwd
 
 go test -v ulambda/cmd/user/test2pc
 
-go test $1 -timeout=45m ulambda/replica
+# XXX needs fixing
+# go test $1 -timeout=45m ulambda/replica

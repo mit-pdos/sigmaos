@@ -32,7 +32,6 @@ const (
 	START_COND      = "start-cond."
 	EVICT_COND      = "evict-cond."
 	EXIT_COND       = "exit-cond."
-	RET_STAT        = "ret-stat."
 	PARENT_RET_STAT = "parent-ret-stat."
 	LOCK            = "L-"
 	CHILD           = "childs"
@@ -153,6 +152,7 @@ func (clnt *ProcBaseClnt) WaitStart(pid string) error {
 }
 
 // Wait until a proc has exited. If the proc doesn't exist, return immediately.
+// Should be called only by parent
 func (clnt *ProcBaseClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
@@ -215,9 +215,12 @@ func (clnt *ProcBaseClnt) Started(pid string) error {
 
 // ========== EXITED ==========
 
-// Mark that a process has exited.
-// XXX lock pid dir; race between parent exit/abandon and exited,
-// race between parent calling waitexit and exited()
+// Mark that a process has exited.  XXX are there races between parent
+// exit/abandon and child exited, and between parent calling waitexit
+// and child exited()?  For example, child write ret status file
+// successfully, parent exits w.o. calling waitexit() for child and
+// removes ret status file, and child should remove itself but it
+// won't.  Probably need lock on proc dir.
 func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 

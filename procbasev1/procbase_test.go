@@ -204,7 +204,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-func TestEarlyExit(t *testing.T) {
+func TestEarlyExit1(t *testing.T) {
 	ts := makeTstate(t)
 
 	pid0 := proc.GenPid()
@@ -233,6 +233,43 @@ func TestEarlyExit(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(pid1))
 	assert.NotNil(t, err, "Stat")
 
+	ts.e.Shutdown()
+}
+
+func TestEarlyExitN(t *testing.T) {
+	ts := makeTstate(t)
+
+	nProcs := 27
+	var done sync.WaitGroup
+	done.Add(nProcs)
+
+	for i := 0; i < nProcs; i++ {
+		go func() {
+			pid0 := proc.GenPid()
+			pid1 := proc.GenPid()
+			a := proc.MakeProc(pid0, "bin/user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1})
+			err := ts.Spawn(a)
+			assert.Nil(t, err, "Spawn")
+
+			// Wait for parent to finish
+			status, err := ts.WaitExit(pid0)
+			assert.Nil(t, err, "WaitExit")
+			assert.Equal(t, "OK", status, "WaitExit")
+
+			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+
+			// Child should have exited
+			b, err := ts.ReadFile("name/out_" + pid1)
+			assert.Nil(t, err, "ReadFile")
+			assert.Equal(t, string(b), "hello", "Output")
+
+			// .. and cleaned up
+			_, err = ts.Stat(proc.PidDir(pid1))
+			assert.NotNil(t, err, "Stat")
+			done.Done()
+		}()
+	}
+	done.Wait()
 	ts.e.Shutdown()
 }
 

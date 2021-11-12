@@ -173,8 +173,14 @@ func (m *Mapper) doMap() error {
 
 		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file
 
-		// remove in case an earlier mapper created this
-		// XXX handle racing mappers
+		// Remove name in case an earlier mapper created the
+		// symlink.  A reducer will have opened and is reading
+		// the old target, open the new input file and read
+		// the new target, or file because there is no
+		// symlink. Failing is fine because the coodinator
+		// will start a new reducer once this map completes.
+		// We could use rename to atomically remove and create
+		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"

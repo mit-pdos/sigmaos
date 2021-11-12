@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
@@ -27,6 +28,7 @@ type Mapper struct {
 	input       string
 	file        string
 	fds         []int
+	rand        string
 	//	fd     int
 }
 
@@ -45,6 +47,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.nreducetask = n
 	m.input = args[2]
 	m.file = path.Base(m.input)
+	m.rand = strconv.Itoa(rand.Intn(100000))
 	m.fds = make([]int, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper")
@@ -65,9 +68,8 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
-		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
-		// in case it alread exits
-		m.Remove(oname)
+		// create temp output file
+		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
 		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
 		if err != nil {
 			return nil, fmt.Errorf("MakeMapper: cannot create %v err %v\n", oname, err)
@@ -163,6 +165,12 @@ func (m *Mapper) doMap() error {
 			log.Printf("Close failed %v %v\n", m.fds[r], err)
 			return err
 		}
+		fn := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
+		err = m.Rename(fn+m.rand, fn)
+		if err != nil {
+			log.Fatalf("rename failed %v\n", err)
+		}
+
 		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file
 
 		// remove in case an earlier mapper created this

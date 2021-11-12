@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
-	// "runtime/debug"
+	"runtime/debug"
 	"strings"
 
 	db "ulambda/debug"
@@ -84,11 +84,13 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	}
 
 	piddir := proc.PidDir(p.Pid)
+	log.Printf("pid %v piddir %v\n", p.Pid, piddir)
 	if err := clnt.Mkdir(piddir, 0777); err != nil {
 		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
 		return err
 	}
 	if clnt.piddir != p.PidDir {
+		debug.PrintStack()
 		log.Printf("%v: spawn clnt %v make piddir %v\n", db.GetName(), clnt.piddir, p.PidDir)
 		if err := clnt.Mkdir(p.PidDir, 0777); err != nil {
 			log.Fatalf("%v: Spawn new piddir %v err %v\n", db.GetName(), p.PidDir, err)
@@ -331,7 +333,7 @@ func (clnt *ProcBaseClnt) abandonChild(piddir string) {
 	}
 }
 
-// Caller must have piddir locked and collectChild release it.
+// Caller must have piddir locked and collectChild releases it.
 func (clnt *ProcBaseClnt) collectChild(piddir string, l *usync.Lock) string {
 	status := clnt.getRetStat(piddir)
 

@@ -11,7 +11,8 @@ import (
 	np "ulambda/ninep"
 )
 
-// XXX TODO: handle network partition with leases.
+// XXX TODO: handle network partition; maybe notify client
+// that client lost lock because connection failed.
 
 type Lock struct {
 	lockDir  string // Path to the lock's parent dir

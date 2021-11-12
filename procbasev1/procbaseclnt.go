@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"runtime/debug"
 	"strings"
 
 	db "ulambda/debug"
@@ -90,7 +89,6 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 		return err
 	}
 	if clnt.piddir != p.PidDir {
-		debug.PrintStack()
 		log.Printf("%v: spawn clnt %v make piddir %v\n", db.GetName(), clnt.piddir, p.PidDir)
 		if err := clnt.Mkdir(p.PidDir, 0777); err != nil {
 			log.Fatalf("%v: Spawn new piddir %v err %v\n", db.GetName(), p.PidDir, err)

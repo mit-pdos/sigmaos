@@ -50,7 +50,7 @@ func MakeWwwd(tree string) *Wwwd {
 	db.Name("wwwd")
 	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
-	log.Printf("pid %v piddir %v\n", proc.GetPid(), proc.GetPidDir())
+	log.Printf("%v: pid %v piddir %v\n", db.GetName(), proc.GetPid(), proc.GetPidDir())
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())

@@ -83,7 +83,6 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	}
 
 	piddir := proc.PidDir(p.Pid)
-	log.Printf("pid %v piddir %v\n", p.Pid, piddir)
 	if err := clnt.Mkdir(piddir, 0777); err != nil {
 		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
 		return err

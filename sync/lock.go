@@ -11,6 +11,8 @@ import (
 	np "ulambda/ninep"
 )
 
+// XXX TODO: handle network partition with leases.
+
 type Lock struct {
 	lockDir  string // Path to the lock's parent dir
 	lockName string // Lock's name. "/" characters are replaced with "-" characters
@@ -19,15 +21,6 @@ type Lock struct {
 }
 
 func MakeLock(fsl *fslib.FsLib, lDir, lName string, strict bool) *Lock {
-	l := &Lock{}
-	l.lockDir = lDir
-	l.lockName = lockName(lName)
-	l.FsLib = fsl
-	l.strict = strict
-	return l
-}
-
-func MakeLockNew(fsl *fslib.FsLib, lDir, lName string, strict bool) *Lock {
 	l := &Lock{}
 	l.lockDir = lDir
 	l.lockName = lockName(lName)

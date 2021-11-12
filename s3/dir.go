@@ -67,7 +67,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	read := d.isRead
 	d.mu.Unlock()
 	if !read {
-		_, err = d.ReadDir(ctx, 0, 0, np.NoV)
+		_, err = d.fakeStat(ctx, 0, 0, np.NoV)
 	}
 	return d.stat(), err
 }
@@ -145,6 +145,21 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 	}
 
 	d.sz = npcodec.DirSize(dirents)
+	return dirents, nil
+}
+
+// Just read the names of the entries without stat-ing each of one
+// them, because stat-ing an entry that is a directory would read that
+// subdir too.  Thus, a stat of the root would compute the file
+// system.
+func (d *Dir) fakeStat(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+	var dirents []*np.Stat
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if !d.isRead {
+		d.s3ReadDirL()
+	}
+	d.sz = np.Tlength(len(d.dirents)) // make up a size
 	return dirents, nil
 }
 

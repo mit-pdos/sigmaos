@@ -82,17 +82,6 @@ func MakeCoord(args []string) (*Coord, error) {
 	return w, nil
 }
 
-// // XXX set timer based on # of workers?
-// func (w *Coord) monitor() {
-// 	for true {
-// 		ms := 1000 + (rand.Int63() % 10000)
-// 		time.Sleep(time.Duration(ms) * time.Millisecond)
-// 		log.Printf("%v: signal\n", db.GetName())
-// 		// wakeup one worker to check
-// 		w.cond.Signal()
-// 	}
-// }
-
 func (w *Coord) mapper(task string) string {
 	pid := proc.GenPid()
 	input := INPUTDIR + task
@@ -196,7 +185,7 @@ func (w *Coord) processResult(dir string, res Ttask) {
 }
 
 func (w *Coord) recover(dir string) {
-	sts, err := w.ReadDir(dir + TIP) // handle one entry at the time?
+	sts, err := w.ReadDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
 		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
 	}
@@ -230,10 +219,16 @@ func (w *Coord) phase(dir string, f func(string) string) {
 			n += w.startTasks(dir, ch, f)
 		}
 	}
-	// XXX double check no tasks are in TIP because of disconnected old coord
 }
 
 func (w *Coord) Work() {
+	// Try to become the primary coordinator.  Backup coordinators
+	// will be able to acquire the lock if the primary fails.
+	//
+	// XXX network partition may cause two coordinators to be
+	// active.  Since the work of a coordinator is also stored in
+	// named along the lock, the partitioned coordinator probably
+	// will fail anyway because it cannot access named.
 	w.lock.Lock()
 	defer w.lock.Unlock()
 

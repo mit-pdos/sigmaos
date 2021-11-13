@@ -2,6 +2,7 @@ package protclnt
 
 import (
 	"errors"
+	"log"
 	"math/rand"
 	"time"
 
@@ -69,6 +70,11 @@ type ProtClnt struct {
 
 func (pclnt *ProtClnt) Server() []string {
 	return pclnt.server
+}
+
+func (pclnt *ProtClnt) Disconnect() {
+	log.Printf("close conn to %v\n", pclnt.server)
+	pclnt.cm.disconnect(pclnt.server)
 }
 
 func (pclnt *ProtClnt) Call(args np.Tmsg) (np.Tmsg, error) {

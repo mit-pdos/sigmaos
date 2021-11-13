@@ -60,6 +60,14 @@ func (cm *ConnMgr) allocConn(addrs []string) (*netclnt.NetClnt, error) {
 	return conn, err
 }
 
+func (cm *ConnMgr) lookupConn(addrs []string) (*netclnt.NetClnt, bool) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	conn, ok := cm.conns[strings.Join(addrs, ",")]
+	return conn, ok
+}
+
 func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, error) {
 	conn, err := cm.allocConn(dst)
 	if err != nil {
@@ -75,4 +83,13 @@ func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, error) {
 		return nil, err
 	}
 	return repfc.Msg, nil
+}
+
+func (cm *ConnMgr) disconnect(dst []string) bool {
+	conn, ok := cm.lookupConn(dst)
+	if !ok {
+		return false
+	}
+	conn.Close()
+	return true
 }

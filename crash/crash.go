@@ -13,20 +13,8 @@ import (
 )
 
 //
-// Crash/Delay testing
+// Crash/partition testing
 //
-
-func MaybeDelay() {
-	maxms := big.NewInt(1000)
-	max := big.NewInt(1000)
-	rr, _ := crand.Int(crand.Reader, max)
-	if rr.Int64() < 660 {
-		log.Printf("%v: DELAY %v\n", db.GetName(), proc.GetPid())
-		// delay for a while.
-		ms, _ := crand.Int(crand.Reader, maxms)
-		time.Sleep(time.Duration(ms.Int64()) * time.Millisecond)
-	}
-}
 
 func Crasher(fsl *fslib.FsLib) {
 	maxms := big.NewInt(500)

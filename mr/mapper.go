@@ -12,6 +12,7 @@ import (
 
 	// db "ulambda/debug"
 	"ulambda/crash"
+	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -80,6 +81,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	if m.crash == "YES" {
 		crash.Crasher(m.FsLib)
+		delay.SetDelay(100)
 	}
 
 	return m, nil
@@ -155,10 +157,6 @@ func (m *Mapper) doMap() error {
 	//	if err != nil {
 	//		log.Printf("close failed %v\n", err)
 	//	}
-
-	if m.crash == "YES" {
-		crash.MaybeDelay()
-	}
 
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")

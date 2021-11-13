@@ -11,9 +11,14 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/delay"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
+
+//
+// Multiplexes RPCs onto a single network connection to server
+//
 
 // XXX duplicate
 const (
@@ -233,7 +238,10 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	t := nc.allocate(rpc)
 	rpc.req.Tag = t
 
-	// Make sure the channel doesn't close under our feet by adding to the senders wg.
+	// maybe delay sending this RPC
+	delay.MaybeDelay()
+
+	// Make sure the conn doesn't close under our feet by adding to the senders wg.
 	nc.mu.Lock()
 	closed := nc.closed
 	if !closed {

@@ -211,9 +211,6 @@ func (w *Coord) phase(dir string, f func(string) string) {
 	ch := make(chan Ttask)
 	for n := w.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
-		if w.crashCoord == "YES" {
-			crash.MaybeDelay()
-		}
 		w.processResult(dir, res)
 		if res.ok != "OK" {
 			n += w.startTasks(dir, ch, f)

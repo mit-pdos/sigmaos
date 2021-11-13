@@ -12,6 +12,7 @@ import (
 
 	"ulambda/crash"
 	db "ulambda/debug"
+	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -47,6 +48,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 
 	if r.crash == "YES" {
 		crash.Crasher(r.FsLib)
+		delay.SetDelay(3)
 	}
 
 	return r, nil
@@ -113,10 +115,6 @@ func (r *Reducer) doReduce() error {
 	}
 
 	sort.Sort(ByKey(kva))
-
-	if r.crash == "YES" {
-		crash.MaybeDelay()
-	}
 
 	// remove r.output file in case a crashed task left it behind
 	r.Remove(r.output)

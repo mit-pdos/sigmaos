@@ -55,8 +55,8 @@ func (fos *FsObjSrv) add(sess np.Tsession, fid np.Tfid, f *fid.Fid) {
 }
 
 func (fos *FsObjSrv) del(sess np.Tsession, fid np.Tfid) {
-	o := fos.st.DelFid(sess, fid)
-	if o.Perm().IsEphemeral() {
+	o, ok := fos.st.DelFid(sess, fid)
+	if ok && o.Perm().IsEphemeral() {
 		fos.st.DelEphemeral(sess, o)
 	}
 }

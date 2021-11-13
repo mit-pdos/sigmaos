@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 
+	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -43,6 +44,11 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	log.Printf("MakeReducer %v\n", args)
 
 	r.Started(proc.GetPid())
+
+	if r.crash == "YES" {
+		crash.Crasher(r.FsLib)
+	}
+
 	return r, nil
 }
 
@@ -109,7 +115,7 @@ func (r *Reducer) doReduce() error {
 	sort.Sort(ByKey(kva))
 
 	if r.crash == "YES" {
-		MaybeCrash()
+		crash.MaybeDelay()
 	}
 
 	// remove r.output file in case a crashed task left it behind

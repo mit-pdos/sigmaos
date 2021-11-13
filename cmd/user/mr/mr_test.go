@@ -150,11 +150,11 @@ func TestTwo(t *testing.T) {
 	runN(t, "2", "NO", "NO")
 }
 
-func TestCrashTask(t *testing.T) {
+func TestCrashTaskOnly(t *testing.T) {
 	runN(t, "1", "YES", "NO")
 }
 
-func TestCrashCoord(t *testing.T) {
+func TestCrashCoordOnly(t *testing.T) {
 	runN(t, "2", "NO", "YES")
 }
 

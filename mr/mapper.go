@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	// db "ulambda/debug"
+	"ulambda/crash"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -50,7 +51,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.rand = strconv.Itoa(rand.Intn(100000))
 	m.fds = make([]int, m.nreducetask)
 
-	m.FsLib = fslib.MakeFsLib("mapper")
+	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)
 	log.Printf("MakeMapper %v\n", args)
 	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
 
@@ -76,6 +77,11 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 		}
 	}
 	m.Started(proc.GetPid())
+
+	if m.crash == "YES" {
+		crash.Crasher(m.FsLib)
+	}
+
 	return m, nil
 }
 
@@ -151,7 +157,7 @@ func (m *Mapper) doMap() error {
 	//	}
 
 	if m.crash == "YES" {
-		MaybeCrash()
+		crash.MaybeDelay()
 	}
 
 	// Inform reducer where to find map output

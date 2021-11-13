@@ -8,6 +8,7 @@ import (
 	"strconv"
 	// "time"
 
+	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -78,6 +79,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-coord", true)
 
 	w.Started(proc.GetPid())
+
+	if w.crashCoord == "YES" {
+		crash.Crasher(w.FsLib)
+	}
 
 	return w, nil
 }
@@ -212,7 +217,7 @@ func (w *Coord) phase(dir string, f func(string) string) {
 	for n := w.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
 		if w.crashCoord == "YES" {
-			MaybeCrash()
+			crash.MaybeDelay()
 		}
 		w.processResult(dir, res)
 		if res.ok != "OK" {

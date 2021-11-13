@@ -16,7 +16,6 @@ const (
 
 type ConnMgr struct {
 	mu      sync.Mutex
-	name    string
 	session np.Tsession
 	seqno   *np.Tseqno
 	conns   map[string]*netclnt.NetClnt

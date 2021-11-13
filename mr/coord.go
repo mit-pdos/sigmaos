@@ -195,11 +195,6 @@ func (w *Coord) recover(dir string) {
 		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
 	}
 
-	if len(sts) > 0 {
-		// don't crash the backup
-		w.crashCoord = "NO"
-	}
-
 	// just treat all tasks in progress as failed; too aggressive, but correct.
 	for _, st := range sts {
 		log.Printf("%v: recover %v\n", db.GetName(), st.Name)

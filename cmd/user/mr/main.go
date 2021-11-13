@@ -38,6 +38,10 @@ func main() {
 	coords := map[string]bool{}
 	for i := 0; i < ncoord; i++ {
 		pid := proc.GenPid()
+		if i == ncoord-1 {
+			// last coordinator doesn't crash
+			os.Args[len(os.Args)-1] = "NO"
+		}
 		a := proc.MakeProc(pid, "bin/user/mr-coord", os.Args[2:])
 		sclnt.Spawn(a)
 		coords[pid] = true

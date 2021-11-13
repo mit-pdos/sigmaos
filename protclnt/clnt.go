@@ -73,7 +73,7 @@ func (pclnt *ProtClnt) Server() []string {
 }
 
 func (pclnt *ProtClnt) Disconnect() {
-	log.Printf("close conn to %v\n", pclnt.server)
+	log.Printf("Disconnect: close conn to %v\n", pclnt.server)
 	pclnt.cm.disconnect(pclnt.server)
 }
 

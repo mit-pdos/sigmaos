@@ -80,7 +80,6 @@ func (st *SessionTable) AddFid(id np.Tsession, fid np.Tfid, f *fid.Fid) {
 	st.mu.Unlock()
 
 	if !ok {
-		log.Printf("AddFid: unkownn sess %v\n", id)
 		return
 	}
 
@@ -98,7 +97,6 @@ func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) (fs.FsObj, bool) {
 	st.mu.Unlock()
 
 	if !ok {
-		log.Printf("DelFid: unkown sess %v\n", id)
 		return nil, false
 	}
 

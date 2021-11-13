@@ -39,11 +39,10 @@ func Crasher(fsl *fslib.FsLib) {
 			// crash!
 			log.Printf("%v: CRASH %v\n", db.GetName(), proc.GetPid())
 			os.Exit(1)
+		} else if rr.Int64() < 660 {
+			log.Printf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
+			fsl.Disconnect("name")
 		}
-		//else if rr.Int64() < 660 {
-		//	log.Printf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
-		//	fsl.Disconnect("name")
-		//}
 
 	}()
 }

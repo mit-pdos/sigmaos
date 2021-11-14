@@ -47,7 +47,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
-	log.Printf("MakeReducer %v\n", args)
+	db.DPrintf("MakeReducer %v\n", args)
 
 	r.Started(proc.GetPid())
 
@@ -63,11 +63,11 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	kva := []KeyValue{}
 
 	d := r.input + "/" + file + "/"
-	log.Printf("reduce %v\n", d)
+	db.DPrintf("reduce %v\n", d)
 	fd, err := r.Open(d, np.OREAD)
 	if err != nil {
 		// another reducer already completed; nothing to be done
-		log.Printf("Open %v err %v", d, err)
+		db.DPrintf("Open %v err %v", d, err)
 		return nil, err
 	}
 	defer r.Close(fd)
@@ -112,7 +112,7 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 
-	log.Printf("doReduce %v %v\n", r.input, r.output)
+	db.DPrintf("doReduce %v %v\n", r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
@@ -124,10 +124,10 @@ func (r *Reducer) doReduce() error {
 		return false, nil
 	})
 	if err != nil {
-		log.Printf("doReduce: ProcessDir %v err %v\n", r.input, err)
+		db.DPrintf("doReduce: ProcessDir %v err %v\n", r.input, err)
 		return nil
 	}
-	log.Printf("doReduce %v process %d files\n", r.input, n)
+	db.DPrintf("doReduce %v process %d files\n", r.input, n)
 
 	sort.Sort(ByKey(kva))
 

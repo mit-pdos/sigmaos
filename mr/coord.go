@@ -57,7 +57,6 @@ func MakeCoord(args []string) (*Coord, error) {
 	if len(args) != 5 {
 		return nil, errors.New("MakeCoord: too few arguments")
 	}
-	log.Printf("MakeCoord %v\n", args)
 	w := &Coord{}
 	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid())
 
@@ -152,7 +151,7 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 		}
 		n += 1
 		go func() {
-			log.Printf("%v: start task %v\n", db.GetName(), t)
+			db.DPrintf("start task %v\n", t)
 			ok := f(t)
 			ch <- Ttask{t, ok}
 		}()
@@ -163,7 +162,7 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.ok == "OK" {
 		// mark task as done
-		log.Printf("%v: task done %v\n", db.GetName(), res.task)
+		db.DPrintf("task done %v\n", res.task)
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
 		err := w.Rename(s, d)
@@ -174,7 +173,7 @@ func (w *Coord) processResult(dir string, res Ttask) {
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
-		log.Printf("%v: task %v failed %v\n", db.GetName(), res.task, res.ok)
+		db.DPrintf("task %v failed %v\n", res.task, res.ok)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
 			log.Fatalf("doWork: rename to %v err %v\n", to, err)
 		}
@@ -246,7 +245,7 @@ func (w *Coord) Work() {
 	w.recover(RDIR)
 
 	w.phase(MDIR, w.mapper)
-	log.Printf("%v: Reduce phase\n", db.GetName())
+	db.DPrintf("Reduce phase\n")
 	w.phase(RDIR, w.reducer)
 
 	w.Exited(proc.GetPid(), "OK")

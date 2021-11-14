@@ -2,7 +2,6 @@ package protclnt
 
 import (
 	"errors"
-	"log"
 	"math/rand"
 	"time"
 
@@ -73,7 +72,6 @@ func (pclnt *ProtClnt) Server() []string {
 }
 
 func (pclnt *ProtClnt) Disconnect() {
-	log.Printf("Disconnect: close conn to %v\n", pclnt.server)
 	pclnt.cm.disconnect(pclnt.server)
 }
 

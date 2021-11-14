@@ -2,7 +2,6 @@ package crash
 
 import (
 	crand "crypto/rand"
-	"log"
 	"math/big"
 	"os"
 	"time"
@@ -25,10 +24,10 @@ func Crasher(fsl *fslib.FsLib) {
 		rr, _ := crand.Int(crand.Reader, max)
 		if rr.Int64() < 330 {
 			// crash!
-			log.Printf("%v: CRASH %v\n", db.GetName(), proc.GetPid())
+			db.DPrintf("%v: CRASH %v\n", db.GetName(), proc.GetPid())
 			os.Exit(1)
 		} else if rr.Int64() < 660 {
-			log.Printf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
+			db.DPrintf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
 			fsl.Disconnect("name")
 		}
 

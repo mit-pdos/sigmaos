@@ -56,7 +56,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.fds = make([]int, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)
-	log.Printf("MakeMapper %v\n", args)
+	db.DPrintf("MakeMapper %v\n", args)
 	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
 
 	// Make a directory for holding the output files of a map task.  Ignore
@@ -194,7 +194,7 @@ func (m *Mapper) doMap() error {
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
-			log.Printf("Mapper: cannot create symlink %v %v\n", name, err)
+			db.DPrintf("Mapper: cannot create symlink %v %v\n", name, err)
 			return err
 		}
 	}
@@ -204,7 +204,6 @@ func (m *Mapper) doMap() error {
 func (m *Mapper) Work() {
 	err := m.doMap()
 	if err != nil {
-		log.Printf("doMap failed %v\n", err)
 		os.Exit(1)
 	}
 

@@ -2,7 +2,6 @@ package delay
 
 import (
 	crand "crypto/rand"
-	"log"
 	"math/big"
 	"time"
 
@@ -33,7 +32,7 @@ func MaybeDelay() {
 			totalDelay += ms.Int64()
 			if totalDelay-lastTotal > 1000 {
 				lastTotal = totalDelay
-				log.Printf("%v: DELAY %v tot %vms\n", db.GetName(), proc.GetPid(), totalDelay)
+				db.DPrintf("%v: DELAY %v tot %vms\n", db.GetName(), proc.GetPid(), totalDelay)
 			}
 			time.Sleep(time.Duration(ms.Int64()) * time.Millisecond)
 		}

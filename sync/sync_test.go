@@ -371,7 +371,9 @@ func testLocker(t *testing.T, part string) {
 	ts := makeTstate(t)
 	pids := []string{}
 
-	dir := "name/output"
+	// XXX use the same dir independent of machine running proc
+	dir := "name/ux/~ip/outdir"
+	ts.RmDir(dir)
 	err := ts.Mkdir(dir, 0777)
 	assert.Nil(t, err, "mkdir error")
 

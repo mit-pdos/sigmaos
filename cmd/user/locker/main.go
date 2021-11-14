@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	N   = 1000
+	N   = 20
 	DIR = "name/locktest"
 )
 

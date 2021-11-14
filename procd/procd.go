@@ -24,7 +24,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
-	"ulambda/procbasev1"
+	"ulambda/procclnt"
 	"ulambda/procinit"
 	usync "ulambda/sync"
 )
@@ -72,7 +72,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	}
 
 	// Set up FilePriorityBags and create name/runq
-	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbasev1.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procclnt.RUNQ)
 
 	pd.addr = pd.MyAddr()
 	pd.procclnt = procinit.MakeProcClnt(pd.FsLib, procinit.GetProcLayersMap())

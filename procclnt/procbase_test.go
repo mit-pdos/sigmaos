@@ -1,4 +1,4 @@
-package procbasev1_test
+package procclnt_test
 
 import (
 	"fmt"

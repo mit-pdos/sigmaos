@@ -1,4 +1,4 @@
-package procbasev1
+package procclnt
 
 import (
 	"encoding/json"

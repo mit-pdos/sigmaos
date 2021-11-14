@@ -10,7 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/proc"
 	// "ulambda/procbase"
-	"ulambda/procbasev1"
+	"ulambda/procclnt"
 	"ulambda/procdep"
 	"ulambda/procidem"
 )
@@ -69,7 +69,7 @@ func makeProcLayersString(layers map[string]bool) string {
 // Make a generic ProcClnt with the desired layers.
 func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid string) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	clnt = procbasev1.MakeProcBaseClnt(fsl, parent, pid)
+	clnt = procclnt.MakeProcBaseClnt(fsl, parent, pid)
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}
@@ -104,16 +104,16 @@ func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 func MakeProcClntInit(fsl *fslib.FsLib, layers map[string]bool, NamedAddr []string) proc.ProcClnt {
 	pid := proc.GenPid()
 	os.Setenv("SIGMAPID", pid)
-	if err := fsl.MountTree(NamedAddr, procbasev1.PIDS, procbasev1.PIDS); err != nil {
+	if err := fsl.MountTree(NamedAddr, procclnt.PIDS, procclnt.PIDS); err != nil {
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
 	}
-	d := procbasev1.PIDS + "/" + proc.GetPid()
+	d := procclnt.PIDS + "/" + proc.GetPid()
 	if err := fsl.Mkdir(d, 0777); err != nil {
 		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), d, err)
 		return nil
 	}
 
-	d = procbasev1.PIDS + "/" + proc.GetPid() + "/" + procbasev1.CHILD
+	d = procclnt.PIDS + "/" + proc.GetPid() + "/" + procclnt.CHILD
 	if err := fsl.Mkdir(d, 0777); err != nil {
 		log.Fatalf("%v: MakeProcClntInit childs %v err %v\n", db.GetName(), d, err)
 		return nil

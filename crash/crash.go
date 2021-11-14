@@ -23,13 +23,28 @@ func Crasher(fsl *fslib.FsLib) {
 		max := big.NewInt(1000)
 		rr, _ := crand.Int(crand.Reader, max)
 		if rr.Int64() < 330 {
-			// crash!
-			db.DPrintf("%v: CRASH %v\n", db.GetName(), proc.GetPid())
-			os.Exit(1)
+			Crash(fsl)
 		} else if rr.Int64() < 660 {
-			db.DPrintf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
-			fsl.Disconnect("name")
+			Partition(fsl)
 		}
 
 	}()
+}
+
+func Crash(fsl *fslib.FsLib) {
+	db.DPrintf("%v: CRASH %v\n", db.GetName(), proc.GetPid())
+	os.Exit(1)
+}
+
+func Partition(fsl *fslib.FsLib) {
+	db.DPrintf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
+	fsl.Disconnect("name")
+}
+
+func MaybePartition(fsl *fslib.FsLib) {
+	max := big.NewInt(1000)
+	rr, _ := crand.Int(crand.Reader, max)
+	if rr.Int64() < 330 {
+		Partition(fsl)
+	}
 }

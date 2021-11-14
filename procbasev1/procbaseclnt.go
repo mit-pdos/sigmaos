@@ -254,7 +254,9 @@ func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 
 // ========== EVICT ==========
 
-// Notify a process that it will be evicted.
+// Notify a process that it will be evicted.  XXX race between procd's
+// call to evict() and parent/child: between procd stat-ing and
+// Destroy() parent/child may have removed the piddir.
 func (clnt *ProcBaseClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
 	if _, err := clnt.Stat(piddir); err != nil {

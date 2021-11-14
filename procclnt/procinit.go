@@ -3,11 +3,32 @@ package procclnt
 import (
 	"log"
 	"os"
+	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 )
+
+// Called by a sigmaOS process after being spawned
+func MakeProcClnt(fsl *fslib.FsLib) proc.ProcClnt {
+	piddir := proc.GetPidDir()
+
+	// XXX resolve mounts to find server?
+	tree := strings.TrimPrefix(piddir, "name/")
+
+	if err := fsl.MountTree(fslib.Named(), tree, "pids"); err != nil {
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, "pids", err)
+	}
+	if err := fsl.MountTree(fslib.Named(), "runq", "name/runq"); err != nil {
+		log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
+	}
+	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
+		log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
+	}
+
+	return MakeProcClntBase(fsl, piddir, proc.GetPid())
+}
 
 // Called by tests to fake an initial process
 // XXX deduplicate with with Spawn()
@@ -28,5 +49,5 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) proc.ProcClnt {
 		log.Fatalf("%v: MakeProcClntInit childs %v err %v\n", db.GetName(), d, err)
 		return nil
 	}
-	return MakeProcClnt(fsl, "pids", "")
+	return MakeProcClntBase(fsl, "pids", "")
 }

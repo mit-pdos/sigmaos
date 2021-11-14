@@ -14,7 +14,7 @@ import (
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 	"ulambda/twopc"
 )
@@ -35,8 +35,6 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
-
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
 
@@ -50,7 +48,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	ts.fsl = fslib.MakeFsLibAddr("twopc_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, cfg.NamedAddr)
 
 	err = ts.fsl.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {

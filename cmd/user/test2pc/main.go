@@ -10,7 +10,7 @@ import (
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/twopc"
 )
 
@@ -54,7 +54,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.opcode = args[1]
 	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
-	p.ProcClnt = procinit.MakeProcClnt(p.FsLib, procinit.GetProcLayersMap())
+	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}

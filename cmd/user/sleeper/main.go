@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	s := &Sleeper{}
 	db.Name("sleeper")
 	s.FsLib = fslib.MakeFsLib("sleeper")
-	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
+	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.output = args[1]
 	d, err := time.ParseDuration(args[0])
 	if err != nil {

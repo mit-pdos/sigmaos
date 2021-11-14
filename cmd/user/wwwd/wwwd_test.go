@@ -9,7 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
 
@@ -39,8 +39,6 @@ func spawn(t *testing.T, ts *Tstate) string {
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	ts := &Tstate{}
 	bin := "../../../"
 	e := realm.MakeTestEnv(bin)
@@ -54,7 +52,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
 
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	ts.t = t
 
 	ts.pid = spawn(t, ts)

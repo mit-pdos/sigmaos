@@ -14,7 +14,7 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	//"ulambda/realm"
 )
 
@@ -51,9 +51,7 @@ func MakeWwwd(tree string) *Wwwd {
 	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
 	log.Printf("%v: pid %v piddir %v\n", db.GetName(), proc.GetPid(), proc.GetPidDir())
-
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
+	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	err := www.MakeFile("pids/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
@@ -108,7 +106,6 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, app, append([]string{pid}, args...))
 	a.PidDir = proc.GetPidDir()
-	a.Env = []string{procinit.GetProcLayersString()}
 	err := www.Spawn(a)
 	if err != nil {
 		return "", err

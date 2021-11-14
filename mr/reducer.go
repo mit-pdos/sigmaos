@@ -19,7 +19,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type ReduceT func(string, []string) string
@@ -46,7 +46,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.tmp = r.output + strconv.Itoa(rand.Intn(100000))
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
-	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
+	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	db.DPrintf("MakeReducer %v\n", args)
 
 	r.Started(proc.GetPid())

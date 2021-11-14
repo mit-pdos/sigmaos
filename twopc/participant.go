@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Participant struct {
@@ -37,7 +37,7 @@ func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Par
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
-	p.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	p.ProcClnt = procclnt.MakeProcClnt(fsl)
 	p.txn = txn
 	p.opcode = opcode
 

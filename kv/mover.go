@@ -10,7 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Mover struct {
@@ -31,7 +31,7 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.src = args[1]
 	mv.dst = args[2]
 	mv.FsLib = fslib.MakeFsLib(proc.GetPid())
-	mv.ProcClnt = procinit.MakeProcClnt(mv.FsLib, procinit.GetProcLayersMap())
+	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 
 	db.Name(proc.GetPid())
 

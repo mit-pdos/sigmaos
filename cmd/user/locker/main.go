@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	usync "ulambda/sync"
 )
 
@@ -27,7 +27,7 @@ func main() {
 	}
 	fsl := fslib.MakeFsLib("locker-" + proc.GetPid())
 
-	pclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	pclnt := procclnt.MakeProcClnt(fsl)
 
 	fsl.Mkdir(DIR, 0777)
 

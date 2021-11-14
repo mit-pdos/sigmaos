@@ -7,7 +7,7 @@ import (
 	"ulambda/linuxsched"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	sclnt := procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
+	sclnt := procclnt.MakeProcClnt(mfs.FsLib)
 	sclnt.Started(proc.GetPid())
 
 	mfs.FsServer.GetStats().MakeElastic(mfs.FsLib, proc.GetPid())

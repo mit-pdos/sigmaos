@@ -15,7 +15,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
@@ -53,7 +53,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.args = args[1:]
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
-	cd.ProcClnt = procinit.MakeProcClnt(cd.FsLib, procinit.GetProcLayersMap())
+	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
 	cd.twopclock = sync.MakeLock(cd.FsLib, DIR2PC, TWOPCLOCK, true)
 
 	// Grab TWOPCLOCK before starting coord

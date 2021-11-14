@@ -55,7 +55,7 @@ type ProcBaseClnt struct {
 	piddir string
 }
 
-func MakeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcBaseClnt {
+func MakeProcClntBase(fsl *fslib.FsLib, piddir, pid string) *ProcBaseClnt {
 	clnt := &ProcBaseClnt{}
 	clnt.runq = usync.MakeFilePriorityBag(fsl, RUNQ)
 	clnt.FsLib = fsl

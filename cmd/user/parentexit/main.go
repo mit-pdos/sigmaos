@@ -6,7 +6,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 //
@@ -19,7 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 	fsl := fslib.MakeFsLib(os.Args[0])
-	pclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	pclnt := procclnt.MakeProcClnt(fsl)
 	pid1 := os.Args[2]
 	a := proc.MakeProcPid(pid1, "bin/user/sleeper", []string{os.Args[1], "name/out_" + pid1})
 	err := pclnt.Spawn(a)

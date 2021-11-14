@@ -14,7 +14,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
@@ -42,7 +42,7 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl := &Balancer{}
 	bl.args = args
 	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
-	bl.ProcClnt = procinit.MakeProcClnt(bl.FsLib, procinit.GetProcLayersMap())
+	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 	bl.kvlock = sync.MakeLock(bl.FsLib, KVDIR, KVLOCK, true)
 
 	db.Name("balancer")
@@ -89,7 +89,6 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnMover(s, src, dst string) string {
 	t := proc.MakeProc("bin/user/mover", []string{s, src, dst})
-	t.Env = []string{procinit.GetProcLayersString()}
 	bl.Spawn(t)
 	return t.Pid
 }

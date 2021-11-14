@@ -13,7 +13,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 	usync "ulambda/sync"
 )
@@ -39,8 +39,6 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	bin := ".."
 	e := realm.MakeTestEnv(bin)
 	cfg, err := e.Boot()
@@ -52,7 +50,7 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("sync_test")
 	ts.FsLib = fslib.MakeFsLibAddr("sync_test", ts.cfg.NamedAddr)
 
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 
 	ts.t = t
 	ts.Mkdir(named.LOCKS, 0777)

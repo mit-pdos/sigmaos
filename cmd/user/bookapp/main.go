@@ -17,7 +17,7 @@ import (
 	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 //
@@ -49,7 +49,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	log.Printf("MakeBookApp: %v\n", args)
 	ba := &BookApp{}
 	ba.FsLib = fslib.MakeFsLib("bookapp")
-	ba.ProcClnt = procinit.MakeProcClnt(ba.FsLib, procinit.GetProcLayersMap())
+	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
 	n := "pids/" + args[1] + "/server"
 	mfs, err := fslibsrv.StartMemFsFsl(n, ba.FsLib)
 	if err != nil {

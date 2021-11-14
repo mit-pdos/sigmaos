@@ -8,7 +8,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 //
@@ -29,8 +29,7 @@ func main() {
 
 	fsl := fslib.MakeFsLib("mr-wc")
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
-	sclnt := procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	sclnt := procclnt.MakeProcClnt(fsl)
 
 	sclnt.Started(proc.GetPid())
 

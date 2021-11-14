@@ -14,7 +14,7 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 //
@@ -46,7 +46,7 @@ func MakeReader(args []string) (*Reader, error) {
 	log.Printf("MakeReader: %v\n", args)
 	r := &Reader{}
 	r.FsLib = fslib.MakeFsLib("fsreader")
-	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
+	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	n := "pids/" + args[1] + "/server"
 	mfs, err := fslibsrv.StartMemFsFsl(n, r.FsLib)
 	if err != nil {

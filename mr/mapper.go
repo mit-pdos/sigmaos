@@ -17,7 +17,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type MapT func(string, string) []KeyValue
@@ -57,7 +57,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)
 	db.DPrintf("MakeMapper %v\n", args)
-	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
+	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?

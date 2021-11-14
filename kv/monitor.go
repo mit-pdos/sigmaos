@@ -10,7 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/stats"
 	usync "ulambda/sync"
 )
@@ -31,7 +31,7 @@ type Monitor struct {
 func MakeMonitor(args []string) (*Monitor, error) {
 	mo := &Monitor{}
 	mo.FsLib = fslib.MakeFsLib("monitor")
-	mo.ProcClnt = procinit.MakeProcClnt(mo.FsLib, procinit.GetProcLayersMap())
+	mo.ProcClnt = procclnt.MakeProcClnt(mo.FsLib)
 	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
 	db.Name(proc.GetPid())
 
@@ -54,7 +54,6 @@ func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
 
 func SpawnKV(sched proc.ProcClnt) string {
 	t := proc.MakeProc(KV, []string{""})
-	t.Env = []string{procinit.GetProcLayersString()}
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid

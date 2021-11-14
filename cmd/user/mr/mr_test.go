@@ -15,7 +15,7 @@ import (
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
 
@@ -59,8 +59,6 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	ts := &Tstate{}
 	bin := "../../../"
 	e := realm.MakeTestEnv(bin)
@@ -73,7 +71,7 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 
 	ts.FsLib = fslib.MakeFsLibAddr("mr-wc_test", cfg.NamedAddr)
 
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	ts.t = t
 	ts.nreducetask = nreducetask
 

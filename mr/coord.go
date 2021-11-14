@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	usync "ulambda/sync"
 )
 
@@ -71,7 +71,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	w.crash = args[3]
 	w.crashCoord = args[4]
 
-	w.ProcClnt = procinit.MakeProcClnt(w.FsLib, procinit.GetProcLayersMap())
+	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
 	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-coord", true)
 

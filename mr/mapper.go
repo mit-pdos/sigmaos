@@ -9,9 +9,10 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
-	// db "ulambda/debug"
 	"ulambda/crash"
+	db "ulambda/debug"
 	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -39,6 +40,8 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
+	rand.Seed(int64(time.Now().UnixNano()))
+
 	m := &Mapper{}
 	m.mapf = mapf
 	m.crash = args[0]
@@ -172,7 +175,8 @@ func (m *Mapper) doMap() error {
 		fn := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
-			log.Fatalf("rename failed %v\n", err)
+			log.Fatalf("%v: rename %v -> %v failed %v\n", db.GetName(),
+				fn+m.rand, fn, err)
 		}
 
 		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file

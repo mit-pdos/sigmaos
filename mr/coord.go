@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	// "math/rand"
 	"strconv"
-	// "time"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -165,27 +163,37 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.ok == "OK" {
 		// mark task as done
-
 		log.Printf("%v: task done %v\n", db.GetName(), res.task)
-		f := dir + DONE + "/" + res.task
-		_, err := w.PutFile(f, []byte{}, 0777, np.OWRITE)
+		s := dir + TIP + "/" + res.task
+		d := dir + DONE + "/" + res.task
+		err := w.Rename(s, d)
 		if err != nil {
-			log.Fatalf("getTask: putfile %v err %v\n", f, err)
-		}
-
-		// Remove from in-progress tasks
-		f = dir + TIP + "/" + res.task
-		if w.Remove(f) != nil {
-			log.Fatalf("getTask: remove %v err %v\n", f, err)
+			// an earlier instance already succeeded
+			log.Printf("getTask: rename %v to %v err %v\n", s, d, err)
 		}
 	} else {
 		// task failed; make it runnable again
-
 		to := dir + "/" + res.task
 		log.Printf("%v: task %v failed %v\n", db.GetName(), res.task, res.ok)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
 			log.Fatalf("doWork: rename to %v err %v\n", to, err)
 		}
+	}
+}
+
+func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) string) {
+	sts, err := w.ReadDir(dir + TIP) // XXX handle one entry at the time?
+	if err != nil {
+		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
+	}
+	n := 0
+	for _, st := range sts {
+		n += 1
+		go func() {
+			log.Printf("%v: start straggler task %v\n", db.GetName(), st.Name)
+			ok := f(st.Name)
+			ch <- Ttask{st.Name, ok}
+		}()
 	}
 }
 
@@ -209,11 +217,16 @@ func (w *Coord) recover(dir string) {
 
 func (w *Coord) phase(dir string, f func(string) string) {
 	ch := make(chan Ttask)
+	straggler := false
 	for n := w.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
 		w.processResult(dir, res)
 		if res.ok != "OK" {
 			n += w.startTasks(dir, ch, f)
+		}
+		if n == 2 && !straggler { // XXX percentage of total computation
+			straggler = true
+			w.stragglers(dir, ch, f)
 		}
 	}
 }

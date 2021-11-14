@@ -30,11 +30,12 @@ func childdir(pid string) string {
 	return "pids/" + pid + "/pids/" + pid
 }
 
-func spawn(t *testing.T, ts *Tstate, pid string) {
-	a := proc.MakeProc(pid, "bin/user/wwwd", []string{""})
-	a.PidDir = piddir(pid)
+func spawn(t *testing.T, ts *Tstate) string {
+	a := proc.MakeProc("bin/user/wwwd", []string{""})
+	a.PidDir = piddir(a.Pid)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
+	return a.Pid
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -56,8 +57,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
 
-	ts.pid = proc.GenPid()
-	spawn(t, ts, ts.pid)
+	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(childdir(ts.pid))
 	assert.Equal(t, nil, err)

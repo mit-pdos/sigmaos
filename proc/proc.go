@@ -44,14 +44,20 @@ func MakeEmptyProc() *Proc {
 	return p
 }
 
-func MakeProc(pid string, program string, args []string) *Proc {
+func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
-	p.Pid = pid
+	p.Pid = GenPid()
 	p.PidDir = "pids"
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
 	p.Ncore = C_DEF
+	return p
+}
+
+func MakeProcPid(pid string, program string, args []string) *Proc {
+	p := MakeProc(program, args)
+	p.Pid = pid
 	return p
 }
 

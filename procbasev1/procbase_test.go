@@ -66,7 +66,7 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 }
 
 func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := proc.MakeProc(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
+	a := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
@@ -207,14 +207,13 @@ func TestWaitNonexistentProc(t *testing.T) {
 func TestEarlyExit1(t *testing.T) {
 	ts := makeTstate(t)
 
-	pid0 := proc.GenPid()
 	pid1 := proc.GenPid()
-	a := proc.MakeProc(pid0, "bin/user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1})
+	a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
 	// Wait for parent to finish
-	status, err := ts.WaitExit(pid0)
+	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.Equal(t, "OK", status, "WaitExit")
 
@@ -245,14 +244,13 @@ func TestEarlyExitN(t *testing.T) {
 
 	for i := 0; i < nProcs; i++ {
 		go func() {
-			pid0 := proc.GenPid()
 			pid1 := proc.GenPid()
-			a := proc.MakeProc(pid0, "bin/user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1})
+			a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1})
 			err := ts.Spawn(a)
 			assert.Nil(t, err, "Spawn")
 
 			// Wait for parent to finish
-			status, err := ts.WaitExit(pid0)
+			status, err := ts.WaitExit(a.Pid)
 			assert.Nil(t, err, "WaitExit")
 			assert.Equal(t, "OK", status, "WaitExit")
 

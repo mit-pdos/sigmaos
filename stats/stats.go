@@ -121,7 +121,7 @@ func (st *Stats) MonitorCPUUtil(fsl *fslib.FsLib) {
 }
 
 func (st *Stats) spawnMonitor() string {
-	p := proc.MakeProc(proc.GenPid(), "bin/user/monitor", []string{})
+	p := proc.MakeProc("bin/user/monitor", []string{})
 	p.Env = []string{procinit.GetProcLayersString()}
 	p.Type = proc.T_LC
 	st.Spawn(p)

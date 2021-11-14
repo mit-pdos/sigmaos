@@ -79,19 +79,19 @@ func (ts *Tstate) shutdown() {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := proc.MakeProc(proc.GenPid(), "bin/user/memfsd", []string{""})
+	t := proc.MakeProc("bin/user/memfsd", []string{""})
 	ts.Spawn(t)
 	return t.Pid
 }
 
 func (ts *Tstate) spawnParticipant(index, opcode string) string {
-	t := proc.MakeProc(proc.GenPid(), "bin/user/test2pc", []string{index, opcode})
+	t := proc.MakeProc("bin/user/test2pc", []string{index, opcode})
 	ts.Spawn(t)
 	return t.Pid
 }
 
 func (ts *Tstate) spawnCoord(opcode string, fws []string) string {
-	p := proc.MakeProc(proc.GenPid(), "bin/user/twopc-coord", append([]string{opcode}, fws...))
+	p := proc.MakeProc("bin/user/twopc-coord", append([]string{opcode}, fws...))
 	ts.Spawn(p)
 	// log.Printf("coord spawned %v\n", p.Pid)
 	return p.Pid

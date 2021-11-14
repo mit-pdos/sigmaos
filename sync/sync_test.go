@@ -378,11 +378,10 @@ func testLocker(t *testing.T, part string) {
 	assert.Nil(t, err, "mkdir error")
 
 	for i := 0; i < N; i++ {
-		pid := proc.GenPid()
-		a := proc.MakeProc(pid, "bin/user/locker", []string{part, dir})
+		a := proc.MakeProc("bin/user/locker", []string{part, dir})
 		err = ts.Spawn(a)
 		assert.Nil(t, err, "Spawn")
-		pids = append(pids, pid)
+		pids = append(pids, a.Pid)
 	}
 	for _, pid := range pids {
 		status, err := ts.WaitExit(pid)

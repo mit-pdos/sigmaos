@@ -128,12 +128,11 @@ func runN(t *testing.T, n, crash, crashCoord string) {
 	ts := makeTstate(t, NReduce)
 
 	ts.submitJob()
-	pid := proc.GenPid()
-	a := proc.MakeProc(pid, "bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash, crashCoord})
+	a := proc.MakeProc("bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash, crashCoord})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
-	ok, err := ts.WaitExit(pid)
+	ok, err := ts.WaitExit(a.Pid)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "OK", ok, "WaitExit")
 

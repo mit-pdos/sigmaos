@@ -46,15 +46,14 @@ func (mo *Monitor) unlock() {
 }
 
 func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
-	t := proc.MakeProc(proc.GenPid(), "bin/user/balancer", []string{opcode, pid1})
+	t := proc.MakeProc("bin/user/balancer", []string{opcode, pid1})
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
 }
 
 func SpawnKV(sched proc.ProcClnt) string {
-	t := proc.MakeProc(proc.GenPid(), KV, []string{""})
-	t.Pid = proc.GenPid()
+	t := proc.MakeProc(KV, []string{""})
 	t.Env = []string{procinit.GetProcLayersString()}
 	t.Type = proc.T_LC
 	sched.Spawn(t)

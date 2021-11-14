@@ -85,11 +85,10 @@ func MakeCoord(args []string) (*Coord, error) {
 }
 
 func (w *Coord) mapper(task string) string {
-	pid := proc.GenPid()
 	input := INPUTDIR + task
-	a := proc.MakeProc(pid, w.mapperbin, []string{w.crash, strconv.Itoa(w.nreducetask), input})
+	a := proc.MakeProc(w.mapperbin, []string{w.crash, strconv.Itoa(w.nreducetask), input})
 	w.Spawn(a)
-	ok, err := w.WaitExit(pid)
+	ok, err := w.WaitExit(a.Pid)
 	if err != nil {
 		return err.Error()
 	}
@@ -97,12 +96,11 @@ func (w *Coord) mapper(task string) string {
 }
 
 func (w *Coord) reducer(task string) string {
-	pid := proc.GenPid()
 	in := RDIR + TIP + "/" + task
 	out := ROUT + task
-	a := proc.MakeProc(pid, w.reducerbin, []string{w.crash, in, out})
+	a := proc.MakeProc(w.reducerbin, []string{w.crash, in, out})
 	w.Spawn(a)
-	ok, err := w.WaitExit(pid)
+	ok, err := w.WaitExit(a.Pid)
 	if err != nil {
 		return err.Error()
 	}

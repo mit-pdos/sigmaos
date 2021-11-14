@@ -84,7 +84,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := proc.MakeProc(proc.GenPid(), "bin/user/memfsd", []string{""})
+	t := proc.MakeProc("bin/user/memfsd", []string{""})
 	ts.Spawn(t)
 	return t.Pid
 }

@@ -239,7 +239,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	rpc.req.Tag = t
 
 	// maybe delay sending this RPC
-	delay.MaybeDelay()
+	delay.MaybeDelayRPC()
 
 	// Make sure the conn doesn't close under our feet by adding to the senders wg.
 	nc.mu.Lock()

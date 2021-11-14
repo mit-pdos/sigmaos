@@ -53,7 +53,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 
 	if r.crash == "YES" {
 		crash.Crasher(r.FsLib)
-		delay.SetDelay(3)
+		delay.SetDelayRPC(3)
 	}
 
 	return r, nil

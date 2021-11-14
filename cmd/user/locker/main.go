@@ -33,8 +33,6 @@ func main() {
 
 	lock := usync.MakeLock(fsl, DIR, "lock", true)
 
-	delay.SetDelay(100)
-
 	pclnt.Started(proc.GetPid())
 
 	for i := 0; i < N; i++ {
@@ -46,7 +44,7 @@ func main() {
 
 		if os.Args[1] == "YES" {
 			crash.MaybePartition(fsl)
-			delay.Delay()
+			delay.Delay(100)
 		}
 
 		if sts, err := fsl.ReadDir(os.Args[2]); err != nil {

@@ -84,7 +84,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	if m.crash == "YES" {
 		crash.Crasher(m.FsLib)
-		delay.SetDelay(100)
+		delay.SetDelayRPC(100)
 	}
 
 	return m, nil

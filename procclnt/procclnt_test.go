@@ -11,8 +11,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	// "ulambda/procbasev1"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
 
@@ -31,8 +30,6 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	bin := ".."
 	e := realm.MakeTestEnv(bin)
 	cfg, err := e.Boot()
@@ -43,7 +40,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	ts.t = t
 	return ts
 }
@@ -56,12 +53,11 @@ func (ts *Tstate) procd(t *testing.T) string {
 
 func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pid string) *Tstate {
 	ts := &Tstate{}
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	ts.t = t
 	ts.e = e
 	ts.cfg = cfg
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	return ts
 }
 

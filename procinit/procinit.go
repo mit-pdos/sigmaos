@@ -69,7 +69,7 @@ func makeProcLayersString(layers map[string]bool) string {
 // Make a generic ProcClnt with the desired layers.
 func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid string) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	clnt = procclnt.MakeProcBaseClnt(fsl, parent, pid)
+	clnt = procclnt.MakeProcClnt(fsl, parent, pid)
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}

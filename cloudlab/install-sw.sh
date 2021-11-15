@@ -102,7 +102,7 @@ then
 
   wget 'https://golang.org/dl/go1.16.4.linux-amd64.tar.gz'
   sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz
-  export PATH=/bin:/sbin:$PATH:/usr/local/go/bin
+  export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
 fi

@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Participant struct {
@@ -37,7 +37,7 @@ func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Par
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
-	p.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	p.ProcClnt = procclnt.MakeProcClnt(fsl)
 	p.txn = txn
 	p.opcode = opcode
 
@@ -107,7 +107,9 @@ func (p *Participant) restartCoord() {
 		log.Printf("PART clean")
 		return
 	}
-	SpawnCoord(p.ProcClnt, "restart", p.twopc.Participants)
+	t := proc.MakeProc("bin/user/twopc-coord", append([]string{"restart"}, p.twopc.Participants...))
+	p.Spawn(t)
+
 	//ok, err := p.Wait(pid1)
 	//if err != nil {
 	//	log.Printf("PART wait failed\n")

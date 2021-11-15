@@ -7,14 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"sort"
+	"strconv"
+	"time"
 
+	"ulambda/crash"
 	db "ulambda/debug"
+	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type ReduceT func(string, []string) string
@@ -26,33 +31,44 @@ type Reducer struct {
 	crash   string
 	input   string
 	output  string
-	name    string
+	tmp     string
 }
 
 func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
+	rand.Seed(int64(time.Now().UnixNano()))
 	r := &Reducer{}
-	db.Name("reducer")
 	r.crash = args[0]
 	r.input = args[1]
 	r.output = args[2]
+	r.tmp = r.output + strconv.Itoa(rand.Intn(100000))
 	r.reducef = reducef
-	r.FsLib = fslib.MakeFsLib(r.name)
-	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
-	log.Printf("MakeReducer %v\n", args)
-	r.Started(procinit.GetPid())
+	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
+	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+	db.DPrintf("MakeReducer %v\n", args)
+
+	r.Started(proc.GetPid())
+
+	if r.crash == "YES" {
+		crash.Crasher(r.FsLib)
+		delay.SetDelayRPC(3)
+	}
+
 	return r, nil
 }
 
-func (r *Reducer) processFile(file string) []KeyValue {
+func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	kva := []KeyValue{}
 
-	log.Printf("reduce %v\n", r.input+"/"+file)
-	fd, err := r.Open(r.input+"/"+file+"/", np.OREAD)
+	d := r.input + "/" + file + "/"
+	db.DPrintf("reduce %v\n", d)
+	fd, err := r.Open(d, np.OREAD)
 	if err != nil {
-		log.Fatal("Open error ", err)
+		// another reducer already completed; nothing to be done
+		db.DPrintf("Open %v err %v", d, err)
+		return nil, err
 	}
 	defer r.Close(fd)
 	data, err := r.Read(fd, binary.MaxVarintLen64)
@@ -90,21 +106,32 @@ func (r *Reducer) processFile(file string) []KeyValue {
 			log.Fatal(err)
 		}
 	}
-	return kva
+	return kva, nil
 }
 
 func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 
-	log.Printf("doReduce %v %v\n", r.input, r.output)
-	r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
-		kva = append(kva, r.processFile(st.Name)...)
+	db.DPrintf("doReduce %v %v\n", r.input, r.output)
+	n := 0
+	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
+		tkva, err := r.processFile(st.Name)
+		if err != nil {
+			return true, err
+		}
+		kva = append(kva, tkva...)
+		n += 1
 		return false, nil
 	})
+	if err != nil {
+		db.DPrintf("doReduce: ProcessDir %v err %v\n", r.input, err)
+		return nil
+	}
+	db.DPrintf("doReduce %v process %d files\n", r.input, n)
 
 	sort.Sort(ByKey(kva))
 
-	fd, err := r.Create(r.output, 0777, np.OWRITE)
+	fd, err := r.Create(r.tmp, 0777, np.OWRITE)
 	if err != nil {
 		return err
 	}
@@ -121,14 +148,15 @@ func (r *Reducer) doReduce() error {
 		}
 		output := r.reducef(kva[i].Key, values)
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
-		if r.crash == "YES" {
-			MaybeCrash()
-		}
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
 			return err
 		}
 		i = j
+	}
+	err = r.Rename(r.tmp, r.output)
+	if err != nil {
+		log.Fatalf("%v: rename %v -> %v failed %v\n", db.GetName(), r.tmp, r.output, err)
 	}
 	return nil
 }
@@ -142,5 +170,5 @@ func (r *Reducer) Work() {
 }
 
 func (r *Reducer) Exit() {
-	r.Exited(procinit.GetPid(), "OK")
+	r.Exited(proc.GetPid(), "OK")
 }

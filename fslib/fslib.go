@@ -23,6 +23,7 @@ func Named() []string {
 }
 
 func MakeFsLibBase(uname string) *FsLib {
+	db.Name(uname)
 	return &FsLib{fsclnt.MakeFsClient(uname)}
 }
 
@@ -44,6 +45,5 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 }
 
 func MakeFsLib(uname string) *FsLib {
-	db.Name(uname)
-	return MakeFsLibAddr("name", Named())
+	return MakeFsLibAddr(uname, Named())
 }

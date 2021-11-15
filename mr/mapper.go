@@ -5,15 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
+	"time"
 
-	// db "ulambda/debug"
+	"ulambda/crash"
+	db "ulambda/debug"
+	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type MapT func(string, string) []KeyValue
@@ -27,6 +31,8 @@ type Mapper struct {
 	input       string
 	file        string
 	fds         []int
+	rand        string
+	//	fd     int
 }
 
 // XXX create in a temporary file and then rename
@@ -34,6 +40,8 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
+	rand.Seed(int64(time.Now().UnixNano()))
+
 	m := &Mapper{}
 	m.mapf = mapf
 	m.crash = args[0]
@@ -44,18 +52,17 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.nreducetask = n
 	m.input = args[2]
 	m.file = path.Base(m.input)
+	m.rand = strconv.Itoa(rand.Intn(100000))
 	m.fds = make([]int, m.nreducetask)
 
-	m.FsLib = fslib.MakeFsLib("mapper")
-	log.Printf("MakeMapper %v\n", args)
-	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
+	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)
+	db.DPrintf("MakeMapper %v\n", args)
+	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 
-	// Make a directory for holding the output files of a map task
+	// Make a directory for holding the output files of a map task.  Ignore
+	// error in case it already exits.  XXX who cleans up?
 	d := "name/ux/~ip/m-" + m.file
-	err = m.Mkdir(d, 0777)
-	if err != nil {
-		return nil, fmt.Errorf("MakeMapper: cannot create dir %v err %v\n", d, err)
-	}
+	m.Mkdir(d, 0777)
 
 	//  when using fsreader:
 	//
@@ -66,13 +73,20 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
-		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
+		// create temp output file
+		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
 		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
 		if err != nil {
 			return nil, fmt.Errorf("MakeMapper: cannot create %v err %v\n", oname, err)
 		}
 	}
-	m.Started(procinit.GetPid())
+	m.Started(proc.GetPid())
+
+	if m.crash == "YES" {
+		crash.Crasher(m.FsLib)
+		delay.SetDelayRPC(100)
+	}
+
 	return m, nil
 }
 
@@ -147,10 +161,6 @@ func (m *Mapper) doMap() error {
 	//		log.Printf("close failed %v\n", err)
 	//	}
 
-	if m.crash == "YES" {
-		MaybeCrash()
-	}
-
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")
 	if err != nil {
@@ -162,11 +172,29 @@ func (m *Mapper) doMap() error {
 			log.Printf("Close failed %v %v\n", m.fds[r], err)
 			return err
 		}
+		fn := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
+		err = m.Rename(fn+m.rand, fn)
+		if err != nil {
+			log.Fatalf("%v: rename %v -> %v failed %v\n", db.GetName(),
+				fn+m.rand, fn, err)
+		}
+
 		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file
+
+		// Remove name in case an earlier mapper created the
+		// symlink.  A reducer will have opened and is reading
+		// the old target, open the new input file and read
+		// the new target, or file because there is no
+		// symlink. Failing is fine because the coodinator
+		// will start a new reducer once this map completes.
+		// We could use rename to atomically remove and create
+		// the symlink if we want to avoid the failing case.
+		m.Remove(name)
+
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
-			log.Printf("Mapper: cannot create symlink %v %v\n", name, err)
+			db.DPrintf("Mapper: cannot create symlink %v %v\n", name, err)
 			return err
 		}
 	}
@@ -176,12 +204,11 @@ func (m *Mapper) doMap() error {
 func (m *Mapper) Work() {
 	err := m.doMap()
 	if err != nil {
-		log.Printf("doMap failed %v\n", err)
 		os.Exit(1)
 	}
 
 }
 
 func (m *Mapper) Exit() {
-	m.Exited(procinit.GetPid(), "OK")
+	m.Exited(proc.GetPid(), "OK")
 }

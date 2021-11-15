@@ -1,4 +1,4 @@
-package test2pc
+package main
 
 import (
 	"log"
@@ -11,34 +11,44 @@ import (
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/kernel"
-	"ulambda/memfsd"
+	"ulambda/named"
+	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procclnt"
+	"ulambda/realm"
 	"ulambda/twopc"
 )
 
 type Tstate struct {
-	t         *testing.T
-	s         *fslib.System
-	fsl       *fslib.FsLib
+	t   *testing.T
+	fsl *fslib.FsLib
+	proc.ProcClnt
 	ch        chan bool
 	chPresent chan bool
 	mfss      []string
 	pid       string
+	e         *realm.TestEnv
+	cfg       *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
+
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
 
-	s := kernel.MakeSystem("..")
-	err := s.Boot()
+	bin := "../../../"
+	e := realm.MakeTestEnv(bin)
+	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
 	}
-	ts.s = s
-	ts.fsl = fslib.MakeFsLib("twopc_test")
+	ts.e = e
+	ts.cfg = cfg
+
+	ts.fsl = fslib.MakeFsLibAddr("twopc_test", cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, cfg.NamedAddr)
 
 	err = ts.fsl.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {
@@ -53,7 +63,7 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
-	err = ts.fsl.Mkdir(memfsd.MEMFS, 07)
+	err = ts.fsl.Mkdir(named.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -63,38 +73,26 @@ func makeTstate(t *testing.T) *Tstate {
 
 func (ts *Tstate) shutdown() {
 	ts.stopMemFSs()
-	ts.s.Shutdown()
+	ts.e.Shutdown()
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	a := fslib.Attr{}
-	a.Pid = proc.GenPid()
-	a.Program = "bin/user/memfsd"
-	a.Args = []string{""}
-	a.StartDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
+	t := proc.MakeProc("bin/user/memfsd", []string{""})
+	ts.Spawn(t)
+	return t.Pid
 }
 
 func (ts *Tstate) spawnParticipant(index, opcode string) string {
-	a := fslib.Attr{}
-	a.Pid = proc.GenPid()
-	a.Program = "bin/user/test2pc"
-	a.Args = []string{index, opcode}
-	a.StartDep = nil
-	a.ExitDep = nil
-	ts.fsl.Spawn(&a)
-	return a.Pid
+	t := proc.MakeProc("bin/user/test2pc", []string{index, opcode})
+	ts.Spawn(t)
+	return t.Pid
 }
 
-func (ts *Tstate) runCoord(t *testing.T, ch chan bool) {
-	pid1 := twopc.SpawnCoord(ts.fsl, "restart", nil)
-	log.Printf("coord spawned %v\n", pid1)
-	ok, err := ts.fsl.Wait(pid1)
-	assert.Nil(t, err, "Wait")
-	assert.Equal(t, string(ok), "OK")
-	ch <- true
+func (ts *Tstate) spawnCoord(opcode string, fws []string) string {
+	p := proc.MakeProc("bin/user/twopc-coord", append([]string{opcode}, fws...))
+	ts.Spawn(p)
+	// log.Printf("coord spawned %v\n", p.Pid)
+	return p.Pid
 }
 
 func (ts *Tstate) startParticipants(n int, opcode string) []string {
@@ -122,13 +120,13 @@ func (ts *Tstate) startMemFSs(n int) []string {
 
 func (ts *Tstate) stopMemFSs() {
 	for _, mfs := range ts.mfss {
-		err := ts.fsl.Remove(memfsd.MEMFS + "/" + mfs + "/")
+		err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
 		assert.Nil(ts.t, err, "Remove")
 	}
 }
 
 func fn(mfs, f string) string {
-	return memfsd.MEMFS + "/" + mfs + "/" + f
+	return named.MEMFS + "/" + mfs + "/" + f
 }
 
 func (ts *Tstate) setUpParticipants(opcode string) []string {
@@ -138,9 +136,9 @@ func (ts *Tstate) setUpParticipants(opcode string) []string {
 
 	time.Sleep(200 * time.Millisecond)
 
-	err := ts.fsl.MakeFile(fn(ts.mfss[0], "x"), 0777, []byte("x"))
+	err := ts.fsl.MakeFile(fn(ts.mfss[0], "x"), 0777, np.OWRITE, []byte("x"))
 	assert.Nil(ts.t, err, "MakeFile")
-	err = ts.fsl.MakeFile(fn(ts.mfss[1], "y"), 0777, []byte("y"))
+	err = ts.fsl.MakeFile(fn(ts.mfss[1], "y"), 0777, np.OWRITE, []byte("y"))
 	assert.Nil(ts.t, err, "MakeFile")
 
 	ti := Tinput{}
@@ -150,7 +148,7 @@ func (ts *Tstate) setUpParticipants(opcode string) []string {
 		fn(ts.mfss[2], ""),
 	}
 
-	err = ts.fsl.MakeFileJson(memfsd.MEMFS+"/txni", 0777, ti)
+	err = ts.fsl.MakeFileJson(named.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
 	fws := ts.startParticipants(N-1, opcode)
@@ -158,9 +156,9 @@ func (ts *Tstate) setUpParticipants(opcode string) []string {
 }
 
 func (ts *Tstate) checkCoord(fws []string, opcode string) {
-	pid := twopc.SpawnCoord(ts.fsl, opcode, fws)
-	ok, err := ts.fsl.Wait(pid)
-	assert.Nil(ts.t, err, "Wait")
+	pid := ts.spawnCoord(opcode, fws)
+	ok, err := ts.WaitExit(pid)
+	assert.Nil(ts.t, err, "WaitStart")
 	if !strings.HasPrefix(opcode, "crash") {
 		assert.Equal(ts.t, "OK", string(ok))
 	} else {

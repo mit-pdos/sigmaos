@@ -10,20 +10,10 @@ import (
 	"ulambda/fslib"
 	"ulambda/proc"
 	// "ulambda/procbase"
-	"ulambda/procbasev1"
+	"ulambda/procclnt"
 	"ulambda/procdep"
 	"ulambda/procidem"
 )
-
-// Can return "" for test programs that make a procclnt
-func GetPid() string {
-	return os.Getenv("SIGMAPID")
-}
-
-// Can return "" for test programs that make a procclnt
-func GetPidDir() string {
-	return os.Getenv("SIGMAPIDDIR")
-}
 
 const (
 	PROC_LAYERS = "PROC_LAYERS" // Environment variable in which to store layer configuration
@@ -79,7 +69,7 @@ func makeProcLayersString(layers map[string]bool) string {
 // Make a generic ProcClnt with the desired layers.
 func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid string) proc.ProcClnt {
 	var clnt proc.ProcClnt
-	clnt = procbasev1.MakeProcBaseClnt(fsl, parent, pid)
+	clnt = procclnt.MakeProcClntBase(fsl, parent, pid)
 	if _, ok := layers[PROCIDEM]; ok {
 		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
 	}
@@ -91,7 +81,7 @@ func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid stri
 
 // Called by a sigmaOS process after being spawned
 func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
-	piddir := GetPidDir()
+	piddir := proc.GetPidDir()
 
 	// XXX resolve mounts to find server?
 	tree := strings.TrimPrefix(piddir, "name/")
@@ -106,13 +96,27 @@ func MakeProcClnt(fsl *fslib.FsLib, layers map[string]bool) proc.ProcClnt {
 		log.Fatalf("%v: Fatal error mounting runq err %v\n", db.GetName(), err)
 	}
 
-	return MakeProcClntBase(fsl, layers, piddir, GetPid())
+	return MakeProcClntBase(fsl, layers, piddir, proc.GetPid())
 }
 
 // Called by tests to fake an initial process
+// XXX deduplicate with with spawn
 func MakeProcClntInit(fsl *fslib.FsLib, layers map[string]bool, NamedAddr []string) proc.ProcClnt {
-	if err := fsl.MountTree(NamedAddr, "pids", "pids"); err != nil {
+	pid := proc.GenPid()
+	os.Setenv("SIGMAPID", pid)
+	if err := fsl.MountTree(NamedAddr, procclnt.PIDS, procclnt.PIDS); err != nil {
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), "pids", "pids", err)
+	}
+	d := procclnt.PIDS + "/" + proc.GetPid()
+	if err := fsl.Mkdir(d, 0777); err != nil {
+		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), d, err)
+		return nil
+	}
+
+	d = procclnt.PIDS + "/" + proc.GetPid() + "/" + procclnt.CHILD
+	if err := fsl.Mkdir(d, 0777); err != nil {
+		log.Fatalf("%v: MakeProcClntInit childs %v err %v\n", db.GetName(), d, err)
+		return nil
 	}
 	return MakeProcClntBase(fsl, layers, "pids", "")
 }

@@ -15,9 +15,11 @@ import (
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
+
+const OUTPUT = "../../../mr/par-mr.out"
 
 func Compare(fsl *fslib.FsLib) {
 	cmd := exec.Command("sort", "../../../mr/seq-mr.out")
@@ -27,7 +29,7 @@ func Compare(fsl *fslib.FsLib) {
 	if err != nil {
 		log.Printf("cmd err %v\n", err)
 	}
-	cmd = exec.Command("sort", "../../../mr/par-mr.out")
+	cmd = exec.Command("sort", "OUTPUT")
 	var out2 bytes.Buffer
 	cmd.Stdout = &out2
 	err = cmd.Run()
@@ -57,8 +59,6 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	ts := &Tstate{}
 	bin := "../../../"
 	e := realm.MakeTestEnv(bin)
@@ -71,11 +71,13 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 
 	ts.FsLib = fslib.MakeFsLibAddr("mr-wc_test", cfg.NamedAddr)
 
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	ts.t = t
 	ts.nreducetask = nreducetask
 
-	mr.InitWorkerFS(ts.FsLib, nreducetask)
+	mr.InitCoordFS(ts.FsLib, nreducetask)
+
+	os.Remove("OUTPUT")
 
 	return ts
 }
@@ -97,7 +99,7 @@ func (ts *Tstate) submitJob() {
 }
 
 func (ts *Tstate) checkJob() {
-	file, err := os.OpenFile("../../../mr/par-mr.out", os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile("OUTPUT", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Couldn't open output file\n")
 	}
@@ -119,17 +121,16 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, n string, crash string) {
+func runN(t *testing.T, n, crash, crashCoord string) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
 	ts.submitJob()
-	pid := proc.GenPid()
-	a := proc.MakeProc(pid, "bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash})
+	a := proc.MakeProc("bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash, crashCoord})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
-	ok, err := ts.WaitExit(pid)
+	ok, err := ts.WaitExit(a.Pid)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "OK", ok, "WaitExit")
 
@@ -139,17 +140,21 @@ func runN(t *testing.T, n string, crash string) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, "1", "NO")
+	runN(t, "1", "NO", "NO")
 }
 
 func TestTwo(t *testing.T) {
-	runN(t, "2", "NO")
+	runN(t, "2", "NO", "NO")
 }
 
-func TestMany(t *testing.T) {
-	runN(t, "10", "NO")
+func TestCrashTaskOnly(t *testing.T) {
+	runN(t, "1", "YES", "NO")
 }
 
-func TestCrash(t *testing.T) {
-	runN(t, "2", "YES")
+func TestCrashCoordOnly(t *testing.T) {
+	runN(t, "2", "NO", "YES")
+}
+
+func TestCrashTaskAndCoord(t *testing.T) {
+	runN(t, "2", "YES", "YES")
 }

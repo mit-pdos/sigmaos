@@ -17,7 +17,7 @@ type Debug struct {
 var db Debug
 
 func Name(n string) {
-	uldebug := os.Getenv("ULDEBUG")
+	uldebug := os.Getenv("SIGMADEBUG")
 
 	db.mu.Lock()
 	defer db.mu.Unlock()

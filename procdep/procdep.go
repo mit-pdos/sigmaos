@@ -34,7 +34,8 @@ func MakeProcDep(pid, program string, args []string) *ProcDep {
 	t := &ProcDep{}
 	t.Dependencies = MakeDeps(map[string]bool{}, map[string]bool{})
 	t.Dependants = MakeDeps(map[string]bool{}, map[string]bool{})
-	t.Proc = proc.MakeProc(pid, program, args)
+	t.Proc = proc.MakeProc(program, args)
+	t.Pid = pid
 	return t
 }
 

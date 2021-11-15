@@ -22,7 +22,7 @@ import (
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 
 	"ulambda/perf"
 )
@@ -107,7 +107,7 @@ func (st *Stats) StatInfo() *StatInfo {
 func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 	st.pid = pid
 	st.fsl = fsl
-	st.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	st.ProcClnt = procclnt.MakeProcClnt(fsl)
 	st.hz = perf.Hz()
 	runtime.GOMAXPROCS(2) // XXX for KV
 	go st.monitorPID()
@@ -115,14 +115,13 @@ func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
 
 func (st *Stats) MonitorCPUUtil(fsl *fslib.FsLib) {
 	st.fsl = fsl
-	st.ProcClnt = procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap())
+	st.ProcClnt = procclnt.MakeProcClnt(fsl)
 	st.hz = perf.Hz()
 	go st.monitorCPUUtil()
 }
 
 func (st *Stats) spawnMonitor() string {
-	p := proc.MakeProc(proc.GenPid(), "bin/user/monitor", []string{})
-	p.Env = []string{procinit.GetProcLayersString()}
+	p := proc.MakeProc("bin/user/monitor", []string{})
 	p.Type = proc.T_LC
 	st.Spawn(p)
 	return p.Pid

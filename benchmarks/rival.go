@@ -78,7 +78,7 @@ func MakeRival(args []string) (*Rival, error) {
 
 func (r *Rival) spawnSpinner(pid string) {
 	if r.ninep {
-		a := proc.MakeProc(pid, "bin/user/c-spinner", []string{r.dim, r.its})
+		a := proc.MakeProcPid(pid, "bin/user/c-spinner", []string{r.dim, r.its})
 		start := time.Now()
 		err := r.Spawn(a)
 		if err != nil {

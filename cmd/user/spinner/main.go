@@ -9,7 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	s := &Spinner{}
 	db.Name("spinner")
 	s.FsLib = fslib.MakeFsLib("spinner")
-	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
+	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.pid = args[0]
 	s.output = args[1]
 

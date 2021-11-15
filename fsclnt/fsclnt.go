@@ -183,6 +183,22 @@ func (fsc *FsClient) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (
 	return false, nil
 }
 
+// Simulate network partition to server that exports path
+func (fsc *FsClient) Disconnect(path string) error {
+	p := np.Split(path)
+	fid, _ := fsc.mount.resolve(p)
+	if fid == np.NoFid {
+		db.DLPrintf("FSCLNT", "Disconnect: resolve  unknown fid\n")
+		if fsc.mount.hasExited() {
+			return io.EOF
+		}
+		return errors.New("file not found")
+	}
+	clnt := fsc.clnt(fid)
+	clnt.Disconnect()
+	return nil
+}
+
 func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	fsc.mu.Lock()
 	_, ok := fsc.fids[fid]
@@ -350,7 +366,7 @@ func (fsc *FsClient) Remove(name string) error {
 	path := np.Split(name)
 	fid, rest := fsc.mount.resolve(path)
 	if fid == np.NoFid {
-		db.DLPrintf("FSCLNT", "Remove: mount -> unknown fid\n")
+		db.DLPrintf("FSCLNT", "Remove: resolve unknown fid\n")
 		if fsc.mount.hasExited() {
 			return io.EOF
 		}

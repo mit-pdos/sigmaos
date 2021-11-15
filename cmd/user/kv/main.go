@@ -6,23 +6,24 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
 	"ulambda/named"
-	"ulambda/procinit"
+	"ulambda/proc"
+	"ulambda/procclnt"
 )
 
 func main() {
 	linuxsched.ScanTopology()
-	name := named.MEMFS + "/" + procinit.GetPid()
+	name := named.MEMFS + "/" + proc.GetPid()
 	mfs, err := fslibsrv.StartMemFs(name, name)
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	sclnt := procinit.MakeProcClnt(mfs.FsLib, procinit.GetProcLayersMap())
-	sclnt.Started(procinit.GetPid())
+	sclnt := procclnt.MakeProcClnt(mfs.FsLib)
+	sclnt.Started(proc.GetPid())
 
-	mfs.FsServer.GetStats().MakeElastic(mfs.FsLib, procinit.GetPid())
+	mfs.FsServer.GetStats().MakeElastic(mfs.FsLib, proc.GetPid())
 	mfs.Wait()
 	mfs.FsServer.GetStats().Done()
 
-	sclnt.Exited(procinit.GetPid(), "OK")
+	sclnt.Exited(proc.GetPid(), "OK")
 	mfs.FsLib.ShutdownFs(name)
 }

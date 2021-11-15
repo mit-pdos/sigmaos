@@ -9,9 +9,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
-	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Mover struct {
@@ -31,12 +30,12 @@ func MakeMover(args []string) (*Mover, error) {
 	mv.shard = args[0]
 	mv.src = args[1]
 	mv.dst = args[2]
-	mv.FsLib = fslib.MakeFsLib(procinit.GetPid())
-	mv.ProcClnt = procinit.MakeProcClnt(mv.FsLib, procinit.GetProcLayersMap())
+	mv.FsLib = fslib.MakeFsLib(proc.GetPid())
+	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 
-	db.Name(procinit.GetPid())
+	db.Name(proc.GetPid())
 
-	mv.Started(procinit.GetPid())
+	mv.Started(proc.GetPid())
 	return mv, nil
 }
 
@@ -83,18 +82,8 @@ func (mv *Mover) moveShard(shard, src, dst string) error {
 
 func (mv *Mover) removeShard(shard, src string) {
 	d := shardPath(src, shard)
-	mv.ProcessDir(d, func(st *np.Stat) (bool, error) {
-		if st.Name != "statsd" {
-			d := d + "/" + st.Name
-			db.DLPrintf("MV", "RmDir shard %v\n", d)
-			log.Printf("RmDir shard %v\n", d)
-			err := mv.RmDir(d)
-			if err != nil {
-				log.Printf("MV remove %v err %v\n", d, err)
-			}
-		}
-		return false, nil
-	})
+	d = shardTmp(d)
+	mv.RmDir(d)
 }
 
 // func (mv *Mover) closeFid(shard string) {
@@ -129,5 +118,5 @@ func (mv *Mover) Work() {
 }
 
 func (mv *Mover) Exit() {
-	mv.Exited(procinit.GetPid(), "OK")
+	mv.Exited(proc.GetPid(), "OK")
 }

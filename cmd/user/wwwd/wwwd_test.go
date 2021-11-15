@@ -9,7 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
 
@@ -30,16 +30,15 @@ func childdir(pid string) string {
 	return "pids/" + pid + "/pids/" + pid
 }
 
-func spawn(t *testing.T, ts *Tstate, pid string) {
-	a := proc.MakeProc(pid, "bin/user/wwwd", []string{""})
-	a.PidDir = piddir(pid)
+func spawn(t *testing.T, ts *Tstate) string {
+	a := proc.MakeProc("bin/user/wwwd", []string{""})
+	a.PidDir = piddir(a.Pid)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
+	return a.Pid
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	ts := &Tstate{}
 	bin := "../../../"
 	e := realm.MakeTestEnv(bin)
@@ -53,11 +52,10 @@ func makeTstate(t *testing.T) *Tstate {
 	db.Name("wwwd_test")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
 
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	ts.t = t
 
-	ts.pid = proc.GenPid()
-	spawn(t, ts, ts.pid)
+	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(childdir(ts.pid))
 	assert.Equal(t, nil, err)

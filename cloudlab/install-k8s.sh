@@ -19,7 +19,8 @@ sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://pack
 echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 sudo apt-get update
-sudo apt-get install -y kubectl
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
 
 # Install minikube
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -53,7 +54,7 @@ sudo apt-get update
 sudo apt-get install helm
 
 # Configure minikube
-minikube --memory 4096 --cpus 2 start
+#minikube --memory 4096 --cpus 2 start
 
 # Add the helm stable repo
 helm repo add stable https://charts.helm.sh/stable

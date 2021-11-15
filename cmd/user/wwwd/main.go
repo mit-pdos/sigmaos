@@ -14,7 +14,7 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	//"ulambda/realm"
 )
 
@@ -35,7 +35,7 @@ func main() {
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
 
-	www.Started(procinit.GetPid())
+	www.Started(proc.GetPid())
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -50,10 +50,8 @@ func MakeWwwd(tree string) *Wwwd {
 	db.Name("wwwd")
 	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 
-	log.Printf("pid %v piddir %v\n", procinit.GetPid(), procinit.GetPidDir())
-
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	www.ProcClnt = procinit.MakeProcClnt(www.FsLib, procinit.GetProcLayersMap())
+	log.Printf("%v: pid %v piddir %v\n", db.GetName(), proc.GetPid(), proc.GetPidDir())
+	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	err := www.MakeFile("pids/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
 	if err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
@@ -106,9 +104,8 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
-	a := proc.MakeProc(pid, app, append([]string{pid}, args...))
-	a.PidDir = procinit.GetPidDir()
-	a.Env = []string{procinit.GetProcLayersString()}
+	a := proc.MakeProcPid(pid, app, append([]string{pid}, args...))
+	a.PidDir = proc.GetPidDir()
 	err := www.Spawn(a)
 	if err != nil {
 		return "", err
@@ -123,7 +120,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
 	log.Printf("%v: getstatic: %v\n", db.GetName(), args)
-	file := "name/" + procinit.GetPidDir() + args
+	file := "name/" + proc.GetPidDir() + args
 	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
 }
 
@@ -140,7 +137,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	www.Exited(procinit.GetPid(), "OK")
+	www.Exited(proc.GetPid(), "OK")
 	os.Exit(0)
 	return "", nil
 }

@@ -40,10 +40,10 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.e = e
 	ts.cfg = cfg
-	db.Name("sched_test")
+	db.Name("procdep_test")
 
-	ts.FsLib = fslib.MakeFsLibAddr("sched_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClnt(ts.FsLib, procinit.GetProcLayersMap())
+	ts.FsLib = fslib.MakeFsLibAddr("procdep_test", cfg.NamedAddr)
+	ts.ProcClnt = procinit.MakeProcClntInit(ts.FsLib, procinit.GetProcLayersMap(), cfg.NamedAddr)
 	ts.t = t
 	return ts
 }
@@ -60,7 +60,7 @@ func spawnSleeperlWithDep(t *testing.T, ts *Tstate, startDep, exitDep map[string
 
 func spawnSleeperlWithPidDep(t *testing.T, ts *Tstate, pid string, startDep, exitDep map[string]bool) {
 	a := procdep.MakeEmptyProcDep()
-	a.Proc = proc.MakeProc(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
+	a.Proc = proc.MakeProc(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
 	a.Proc.Env = []string{procinit.GetProcLayersString()}
 	a.Dependencies.StartDep = startDep
 	a.Dependencies.ExitDep = exitDep

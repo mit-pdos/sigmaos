@@ -155,7 +155,7 @@ func (s *System) Shutdown() {
 	if len(s.fss3d) != 0 {
 		err := s.RmUnionDir(named.S3)
 		if err != nil {
-			log.Printf("named.S3 shutdown %v\n", err)
+			log.Printf("S3 shutdown %v\n", err)
 		}
 		for _, d := range s.fss3d {
 			d.Wait()

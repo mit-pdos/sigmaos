@@ -76,8 +76,12 @@ func (st *SessionTable) AddFid(id np.Tsession, fid np.Tfid, f *fid.Fid) {
 	db.DLPrintf("SETAB", "addFid %v %v %v", id, fid, f)
 
 	st.mu.Lock()
-	sess := st.sessions[id]
+	sess, ok := st.sessions[id]
 	st.mu.Unlock()
+
+	if !ok {
+		return
+	}
 
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
@@ -85,19 +89,23 @@ func (st *SessionTable) AddFid(id np.Tsession, fid np.Tfid, f *fid.Fid) {
 	sess.fids[fid] = f
 }
 
-func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) fs.FsObj {
+func (st *SessionTable) DelFid(id np.Tsession, fid np.Tfid) (fs.FsObj, bool) {
 	db.DLPrintf("SETAB", "delFid %v %v", id, fid)
 
 	st.mu.Lock()
-	sess := st.sessions[id]
+	sess, ok := st.sessions[id]
 	st.mu.Unlock()
+
+	if !ok {
+		return nil, false
+	}
 
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
 
 	o := sess.fids[fid].ObjU()
 	delete(sess.fids, fid)
-	return o
+	return o, true
 }
 
 func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.FsObj, f *fid.Fid) {

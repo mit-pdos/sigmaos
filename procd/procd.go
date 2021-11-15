@@ -24,7 +24,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
-	"ulambda/procbasev1"
+	"ulambda/procclnt"
 	"ulambda/procinit"
 	usync "ulambda/sync"
 )
@@ -72,7 +72,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	}
 
 	// Set up FilePriorityBags and create name/runq
-	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procbasev1.RUNQ)
+	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procclnt.RUNQ)
 
 	pd.addr = pd.MyAddr()
 	pd.procclnt = procinit.MakeProcClnt(pd.FsLib, procinit.GetProcLayersMap())
@@ -96,7 +96,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 		log.Fatalf("Error MkNod in RunProcd: %v", err)
 	}
 
-	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, procinit.GetPid()), nil, true)
+	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
 	procdStartCond.Destroy()
 
 	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})

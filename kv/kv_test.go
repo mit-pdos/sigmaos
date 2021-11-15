@@ -12,8 +12,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procdep"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
 
@@ -53,8 +52,6 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true, procinit.PROCDEP: true})
-
 	bin := ".."
 	e := realm.MakeTestEnv(bin)
 	cfg, err := e.Boot()
@@ -65,7 +62,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", cfg.NamedAddr)
-	ts.ProcClnt = procinit.MakeProcClntInit(ts.fsl, procinit.GetProcLayersMap(), cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, cfg.NamedAddr)
 
 	err = ts.fsl.Mkdir(named.MEMFS, 07)
 	if err != nil {
@@ -85,10 +82,9 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := procdep.MakeProcDep(proc.GenPid(), "bin/user/memfsd", []string{""})
-	t.Proc.Env = []string{procinit.GetProcLayersString()}
+	t := proc.MakeProc("bin/user/memfsd", []string{""})
 	ts.Spawn(t)
-	return t.Proc.Pid
+	return t.Pid
 }
 
 func (ts *Tstate) startMemFSs(n int) []string {

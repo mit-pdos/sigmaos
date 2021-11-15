@@ -8,7 +8,7 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
-	"ulambda/procinit"
+	"ulambda/proc"
 	usync "ulambda/sync"
 )
 
@@ -34,7 +34,7 @@ func RunDbd() {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, procinit.GetPid()), nil, true)
+	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
 	dbdStartCond.Destroy()
 	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "clone", makeClone("", mfs.Root()))
 	if err != nil {

@@ -12,6 +12,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
+	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/realm"
 	usync "ulambda/sync"
 )
@@ -27,6 +29,7 @@ const (
 )
 
 type Tstate struct {
+	proc.ProcClnt
 	*fslib.FsLib
 	t   *testing.T
 	e   *realm.TestEnv
@@ -45,8 +48,10 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 	db.Name("sync_test")
-
 	ts.FsLib = fslib.MakeFsLibAddr("sync_test", ts.cfg.NamedAddr)
+
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+
 	ts.t = t
 	ts.Mkdir(named.LOCKS, 0777)
 	return ts
@@ -356,4 +361,38 @@ func TestFilePriorityBag(t *testing.T) {
 	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
 	ts.e.Shutdown()
+}
+
+func testLocker(t *testing.T, part string) {
+	const N = 10
+
+	ts := makeTstate(t)
+	pids := []string{}
+
+	// XXX use the same dir independent of machine running proc
+	dir := "name/ux/~ip/outdir"
+	ts.RmDir(dir)
+	err := ts.Mkdir(dir, 0777)
+	assert.Nil(t, err, "mkdir error")
+
+	for i := 0; i < N; i++ {
+		a := proc.MakeProc("bin/user/locker", []string{part, dir})
+		err = ts.Spawn(a)
+		assert.Nil(t, err, "Spawn")
+		pids = append(pids, a.Pid)
+	}
+	for _, pid := range pids {
+		status, err := ts.WaitExit(pid)
+		assert.Nil(t, err, "Exit error")
+		assert.NotEqual(t, "Two holders", status, "Exit status wrong")
+	}
+	ts.e.Shutdown()
+}
+
+func TestLockerNoPart(t *testing.T) {
+	testLocker(t, "NO")
+}
+
+func TestLockerWithPart(t *testing.T) {
+	testLocker(t, "YES")
 }

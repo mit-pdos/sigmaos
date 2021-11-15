@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	"fmt"
 	"io"
 
 	db "ulambda/debug"
@@ -40,12 +41,12 @@ func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 
 // Too stop early, f must return true.  Returns true if stopped early.
 func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, error) {
-	stopped := false
 	var err error
 	fd, err := fl.Open(dir, np.OREAD)
 	if err != nil {
 		return false, err
 	}
+	defer fl.Close(fd)
 	for {
 		dirents, err := fl.Readdir(fd, CHUNKSZ)
 		if err == io.EOF {
@@ -55,14 +56,13 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 			break
 		}
 		for _, st := range dirents {
-			stopped, err = f(st)
-			if stopped {
-				break
+			stop, err := f(st)
+			if stop {
+				return true, err
 			}
 		}
 	}
-	fl.Close(fd)
-	return stopped, err
+	return false, err
 }
 
 func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
@@ -113,4 +113,27 @@ func (fl *FsLib) RmDir(dir string) error {
 		return false, nil
 	})
 	return fl.Remove(dir)
+}
+
+func (fsl *FsLib) SprintfDir(d string) (string, error) {
+	return fsl.sprintfDirIndent(d, "")
+}
+
+func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
+	s := fmt.Sprintf("%v dir %v\n", indent, d)
+	sts, err := fsl.ReadDir(d)
+	if err != nil {
+		return "", err
+	}
+	for _, st := range sts {
+		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Qid.Type)
+		if st.Mode.IsDir() {
+			s1, err := fsl.sprintfDirIndent(d+"/"+st.Name, indent+" ")
+			if err != nil {
+				return s, err
+			}
+			s += s1
+		}
+	}
+	return s, nil
 }

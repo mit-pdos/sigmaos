@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	s := &Sleeper{}
 	db.Name("sleeper")
 	s.FsLib = fslib.MakeFsLib("sleeper")
-	s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
+	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.output = args[1]
 	d, err := time.ParseDuration(args[0])
 	if err != nil {
@@ -55,7 +55,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	db.DLPrintf("SCHEDL", "MakeSleeper: %v\n", args)
 
 	if !s.native {
-		err := s.Started(procinit.GetPid())
+		err := s.Started(proc.GetPid())
 		if err != nil {
 			log.Fatalf("Started: error %v\n", err)
 		}
@@ -63,25 +63,31 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	return s, nil
 }
 
-func (s *Sleeper) waitEvict() {
+func (s *Sleeper) waitEvict(ch chan string) {
 	if !s.native {
-		err := s.WaitEvict(procinit.GetPid())
+		err := s.WaitEvict(proc.GetPid())
 		if err != nil {
 			log.Fatalf("Error WaitEvict: %v", err)
 		}
-		s.Exited(procinit.GetPid(), "EVICTED")
-		os.Exit(0)
+		ch <- "EVICTED"
 	}
 }
 
-func (s *Sleeper) Work() {
-	go s.waitEvict()
+func (s *Sleeper) sleep(ch chan string) {
 	time.Sleep(s.sleepLength)
 	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {
 		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}
+	ch <- "OK"
+}
+
+func (s *Sleeper) Work() {
+	ch := make(chan string)
+	go s.waitEvict(ch)
+	go s.sleep(ch)
+	status := <-ch
 	if !s.native {
-		s.Exited(procinit.GetPid(), "OK")
+		s.Exited(proc.GetPid(), status)
 	}
 }

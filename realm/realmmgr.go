@@ -211,12 +211,12 @@ func (m *RealmMgr) destroyRealms() {
 	}
 }
 
-// Get & alloc a machined to this realm.
-func (m *RealmMgr) allocMachined(realmId string) {
+// Get & alloc a machined to this realm. Retur true if successful
+func (m *RealmMgr) allocMachined(realmId string) bool {
 	// Get a free machined
 	machinedId, ok := <-m.freeMachineds
 	if !ok {
-		return
+		return false
 	}
 
 	// Update the machined's config
@@ -231,6 +231,8 @@ func (m *RealmMgr) allocMachined(realmId string) {
 	rCfg.NMachineds += 1
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+
+	return true
 }
 
 // Get all a realm's procd's stats
@@ -296,7 +298,9 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	if realmCfg.NMachineds < nReplicas() {
 		// Start enough machineds to reach the target replication level
 		for i := realmCfg.NMachineds; i < nReplicas(); i++ {
-			m.allocMachined(realmId)
+			if ok := m.allocMachined(realmId); !ok {
+				log.Fatalf("Error in adjustRealm: not enough machineds to meet minimum replication level")
+			}
 		}
 		return
 	}
@@ -310,10 +314,7 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	avgUtil, procdUtils := m.getRealmUtil(realmId, realmCfg)
 	//	log.Printf("Avg util post: %v, %v", realmCfg, avgUtil)
 	if avgUtil > GROW_CPU_UTIL_THRESHOLD {
-		// XXX: remove when not testing locally
-		if realmCfg.NMachineds < 2 {
-			m.allocMachined(realmId)
-		}
+		m.allocMachined(realmId)
 	} else if avgUtil < SHRINK_CPU_UTIL_THRESHOLD {
 		// If there are replicas to spare
 		if realmCfg.NMachineds > nReplicas() {

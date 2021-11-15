@@ -12,4 +12,4 @@ DIR=$(dirname $0)
 
 mkdir -p $DIR/../benchmarks/results/logs
 
-scp -i $DIR/keys/cloudlab-sigmaos $1:~/ulambda/realmd.out $DIR/../benchmarks/results/logs/$1_${N_REPLICAS}_replicas.out
+scp -i $DIR/keys/cloudlab-sigmaos $1:~/ulambda/machined.out $DIR/../benchmarks/results/logs/$1_${N_REPLICAS}_replicas.out

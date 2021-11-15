@@ -2,8 +2,8 @@
 
 ./start.sh
 
-# Start an extra realmd
-./bin/realm/realmd . $(hostname)-1 &
+# Start an extra machined
+./bin/realm/machined . $(hostname)-1 &
 
 ./bin/user/realm-balance
 

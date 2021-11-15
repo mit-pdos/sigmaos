@@ -43,23 +43,23 @@ func (b *RealmBalanceBenchmark) spawnSpinner() string {
 	return pid
 }
 
-// Check that the test realm has min <= nRealmds <= max realmds assigned to it
-func (b *RealmBalanceBenchmark) checkNRealmds(min int, max int) {
-	log.Printf("Checking num realmds")
-	realmds, err := b.realmFsl.ReadDir(path.Join(realm.REALMS, realm.TEST_RID))
+// Check that the test realm has min <= nMachineds <= max machineds assigned to it
+func (b *RealmBalanceBenchmark) checkNMachineds(min int, max int) {
+	log.Printf("Checking num machineds")
+	machineds, err := b.realmFsl.ReadDir(path.Join(realm.REALMS, realm.TEST_RID))
 	if err != nil {
 		log.Fatalf("Error ReadDir realm-balance main: %v", err)
 	}
-	nRealmds := len(realmds)
-	log.Printf("# realmds: %v", nRealmds)
-	if nRealmds >= min && nRealmds <= max {
-		log.Printf("Correct num realmds: %v <= %v <= %v", min, nRealmds, max)
+	nMachineds := len(machineds)
+	log.Printf("# machineds: %v", nMachineds)
+	if nMachineds >= min && nMachineds <= max {
+		log.Printf("Correct num machineds: %v <= %v <= %v", min, nMachineds, max)
 	} else {
-		log.Fatalf("FAIL: %v realmds, expected %v <= x <= %v", nRealmds, min, max)
+		log.Fatalf("FAIL: %v machineds, expected %v <= x <= %v", nMachineds, min, max)
 	}
 }
 
-// Start enough spinning lambdas to fill two Realmds, check that the test
+// Start enough spinning lambdas to fill two Machineds, check that the test
 // realm's allocation expanded, evict the spinning lambdas, and check the
 // realm's allocation shrank. Then spawn and evict a few more to make sure we
 // can still spawn after shrinking.  Assumes other machines in the cluster have
@@ -84,7 +84,7 @@ func (b *RealmBalanceBenchmark) Run() {
 	log.Printf("Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	b.checkNRealmds(2, 100)
+	b.checkNMachineds(2, 100)
 
 	log.Printf("Evicting %v spinning lambdas", linuxsched.NCores+7*linuxsched.NCores/8)
 	for i := 0; i < int(linuxsched.NCores)+7*int(linuxsched.NCores)/8; i++ {
@@ -95,7 +95,7 @@ func (b *RealmBalanceBenchmark) Run() {
 	log.Printf("Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	b.checkNRealmds(1, 1)
+	b.checkNMachineds(1, 1)
 
 	log.Printf("Starting %v more spinning lambdas", linuxsched.NCores/2)
 	for i := 0; i < int(linuxsched.NCores/2); i++ {
@@ -105,7 +105,7 @@ func (b *RealmBalanceBenchmark) Run() {
 	log.Printf("Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	b.checkNRealmds(1, 100)
+	b.checkNMachineds(1, 100)
 
 	log.Printf("Evicting %v spinning lambdas again", linuxsched.NCores/2)
 	for i := 0; i < int(linuxsched.NCores/2); i++ {
@@ -113,7 +113,7 @@ func (b *RealmBalanceBenchmark) Run() {
 		pids = pids[1:]
 	}
 
-	b.checkNRealmds(1, 1)
+	b.checkNMachineds(1, 1)
 
 	log.Printf("PASS")
 }

@@ -166,9 +166,15 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
+	sts, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
 	assert.Nil(t, err, "Readdir")
-	assert.Equal(t, pid, st[0].Name, "pid")
+
+	// skip ctl entry
+	i := 0
+	if sts[i].Name == "ctl" {
+		i = 1
+	}
+	assert.Equal(t, pid, sts[i].Name, "pid")
 
 	// Make sure the proc hasn't finished yet...
 	checkSleeperResultFalse(t, ts, pid)

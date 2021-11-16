@@ -110,6 +110,10 @@ func runCondWaiters(ts *Tstate, n_waiters, n_conds int, releaseType string) {
 func fileBagConsumer(ts *Tstate, fb *usync.FilePriorityBag, id int, ctr *uint64) {
 	for {
 		_, name, contents, err := fb.Get()
+		if err != nil && err.Error() == "EOF" {
+			// terminate on end of file
+			return
+		}
 		assert.Nil(ts.t, err, "Error consumer get: %v", err)
 		assert.Equal(ts.t, name, string(contents), "Error consumer contents and fname not equal")
 		atomic.AddUint64(ctr, 1)

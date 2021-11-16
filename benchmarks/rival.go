@@ -11,7 +11,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/linuxsched"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Rival struct {
@@ -34,7 +34,7 @@ func MakeRival(args []string) (*Rival, error) {
 
 	r := &Rival{}
 	r.FsLib = fslib.MakeFsLib("rival")
-	r.ProcClnt = procinit.MakeProcClnt(r.FsLib, procinit.GetProcLayersMap())
+	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 
 	sps, err := strconv.Atoi(args[0])
 	r.spawnsPerSec = sps

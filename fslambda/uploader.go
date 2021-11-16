@@ -8,7 +8,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Uploader struct {
@@ -28,7 +28,7 @@ func MakeUploader(args []string, debug bool) (*Uploader, error) {
 	// XXX Should I use a more descriptive uname?
 	fls := fslib.MakeFsLib("uploader")
 	up.FsLib = fls
-	up.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
+	up.ProcClnt = procclnt.MakeProcClnt(fls)
 	up.Started(up.pid)
 	return up, nil
 }

@@ -11,16 +11,11 @@ import (
 	"strings"
 	"time"
 
-	//	"github.com/thanhpk/randstr"
-
 	"ulambda/fslib"
-	"ulambda/perf"
-	//	"ulambda/named"
-	//	"ulambda/namespace"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
-	//	"ulambda/procbase"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
@@ -52,8 +47,7 @@ func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *M
 	m.namedAddr = namedAddr
 	m.resDir = resDir
 	m.FsLib = fsl
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
+	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 	return m
 }
 
@@ -414,7 +408,6 @@ func (m *Microbenchmarks) ProcBaseSpawnWaitExitBenchmark(nTrials int, pidOffset 
 	for i := 0; i < nTrials; i++ {
 		pid := strconv.Itoa(i + pidOffset)
 		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
-		p.Env = []string{procinit.GetProcLayersString()}
 		ps = append(ps, p)
 	}
 
@@ -448,7 +441,7 @@ func (m *Microbenchmarks) ProcBaseLinuxBenchmark(nTrials int, pidOffset int) *Ra
 	for i := 0; i < nTrials; i++ {
 		pid := strconv.Itoa(i + pidOffset)
 		args := []string{pid, fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "native"}
-		env := []string{procinit.GetProcLayersString(), "NAMED=" + strings.Join(m.namedAddr, ",")}
+		env := []string{"NAMED=" + strings.Join(m.namedAddr, ",")}
 		cmd := exec.Command("./bin/user/sleeperl", args...)
 		cmd.Env = env
 		cmd.Stdout = os.Stdout
@@ -487,7 +480,7 @@ func (m *Microbenchmarks) ProcBaseSpawnClientBenchmark(nTrials int, pidOffset in
 		pid := strconv.Itoa(i + pidOffset)
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid, "native"})
-		p.Env = []string{procinit.GetProcLayersString()}
+		p.Env = []string{}
 		ps = append(ps, p)
 	}
 
@@ -525,7 +518,7 @@ func (m *Microbenchmarks) ProcBaseExitedBenchmark(nTrials int, pidOffset int) *R
 		pid := strconv.Itoa(i + pidOffset)
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid, "native"})
-		p.Env = []string{procinit.GetProcLayersString()}
+		p.Env = []string{}
 		ps = append(ps, p)
 	}
 
@@ -563,7 +556,7 @@ func (m *Microbenchmarks) ProcBaseWaitExitBenchmark(nTrials int, pidOffset int) 
 		pid := strconv.Itoa(i + pidOffset)
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid, "native"})
-		p.Env = []string{procinit.GetProcLayersString()}
+		p.Env = []string{}
 		ps = append(ps, p)
 	}
 
@@ -608,7 +601,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 		pid := strconv.Itoa(i + pidOffset)
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
 		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid, "native"})
-		p.Env = []string{procinit.GetProcLayersString()}
+		p.Env = []string{}
 		ps = append(ps, p)
 	}
 

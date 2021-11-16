@@ -8,7 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type Executor struct {
@@ -25,7 +25,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
-	ex.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
+	ex.ProcClnt = procclnt.MakeProcClnt(fls)
 	ex.Started(ex.pid)
 	return ex, nil
 }

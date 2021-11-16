@@ -13,7 +13,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/protclnt"
 	"ulambda/protsrv"
 	"ulambda/repl"
@@ -53,7 +53,7 @@ func MakeChainReplServer(cfg repl.Config, fssrv protsrv.FsServer) *ChainReplServ
 		map[np.Tfid]*fid.Fid{},
 		MakeReplyCache(),
 		fsl,
-		procinit.MakeProcClnt(fsl, procinit.GetProcLayersMap()),
+		procclnt.MakeProcClnt(fsl),
 		protclnt.MakeClnt(),
 	}
 }
@@ -219,7 +219,6 @@ func (rs *ChainReplServer) runDirWatcher() {
 		})
 		<-done
 		attr := proc.MakeProc("bin/user/replica-monitor", []string{config.ConfigPath, config.UnionDirPath})
-		attr.Env = []string{procinit.GetProcLayersString()}
 		rs.Spawn(attr)
 	}
 }

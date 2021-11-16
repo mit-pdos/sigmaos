@@ -7,7 +7,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 const (
@@ -41,7 +41,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
-	orc.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
+	orc.ProcClnt = procclnt.MakeProcClnt(fls)
 	orc.Started(orc.pid)
 	return orc, nil
 }

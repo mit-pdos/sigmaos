@@ -5,7 +5,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/procinit"
 	"ulambda/realm"
 )
 
@@ -21,8 +20,6 @@ func makeMemfsTstate(t *testing.T, name string, checkLogs bool) *Tstate {
 	}
 	ts.e = e
 	ts.cfg = cfg
-
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 
 	replicaName := name
 	db.Name(replicaName + "-test")

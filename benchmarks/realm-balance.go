@@ -8,7 +8,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/linuxsched"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 	"ulambda/realm"
 )
 
@@ -26,8 +26,7 @@ func MakeRealmBalanceBenchmark(realmFsl *fslib.FsLib, fsl *fslib.FsLib) *RealmBa
 	b := &RealmBalanceBenchmark{}
 	b.realmFsl = realmFsl
 	b.FsLib = fsl
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-	b.ProcClnt = procinit.MakeProcClnt(b.FsLib, procinit.GetProcLayersMap())
+	b.ProcClnt = procclnt.MakeProcClnt(b.FsLib)
 	linuxsched.ScanTopology()
 	return b
 }

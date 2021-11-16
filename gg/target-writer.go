@@ -6,7 +6,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 // XXX Rename
@@ -29,7 +29,7 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	tw.targetReduction = args[3]
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
-	tw.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
+	tw.ProcClnt = procclnt.MakeProcClnt(fls)
 	tw.Started(tw.pid)
 	return tw, nil
 }

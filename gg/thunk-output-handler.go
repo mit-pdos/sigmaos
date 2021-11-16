@@ -7,7 +7,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type ThunkOutputHandler struct {
@@ -35,7 +35,7 @@ func mkThunkOutputHandler(pid string, thunkHash string, outputFiles []string) *T
 	toh.outputFiles = outputFiles
 	fls := fslib.MakeFsLib("gg-thunk-output-handler")
 	toh.FsLib = fls
-	toh.ProcClnt = procinit.MakeProcClnt(fls, procinit.GetProcLayersMap())
+	toh.ProcClnt = procclnt.MakeProcClnt(fls)
 	return toh
 }
 

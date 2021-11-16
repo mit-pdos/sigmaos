@@ -15,7 +15,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/proc"
-	"ulambda/procinit"
+	"ulambda/procclnt"
 )
 
 type SpinTestStarter struct {
@@ -79,7 +79,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 
 	if !s.native {
 		s.FsLib = fslib.MakeFsLib("spin-test-starter")
-		s.ProcClnt = procinit.MakeProcClnt(s.FsLib, procinit.GetProcLayersMap())
+		s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	}
 
 	nSpinners, err := strconv.Atoi(args[0])

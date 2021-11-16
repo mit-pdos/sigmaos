@@ -25,7 +25,6 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/procinit"
 	usync "ulambda/sync"
 )
 
@@ -70,8 +69,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
-
 	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
@@ -82,7 +79,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.globalRunq = usync.MakeFilePriorityBag(pd.FsLib, procclnt.RUNQ)
 
 	pd.addr = pd.MyAddr()
-	pd.procclnt = procinit.MakeProcClnt(pd.FsLib, procinit.GetProcLayersMap())
+	pd.procclnt = procclnt.MakeProcClnt(pd.FsLib)
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -106,7 +103,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
 	procdStartCond.Destroy()
 
-	procinit.SetProcLayers(map[string]bool{procinit.PROCBASE: true})
 	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
 
 	pd.Work()

@@ -215,6 +215,8 @@ func TestDirDot(t *testing.T) {
 	b, err := ts.IsDir(dn + "/.")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, b)
+	err = ts.RmDir(dn + "/.")
+	assert.NotEqual(t, nil, err)
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn + "/.")
 	assert.NotEqual(t, nil, err)

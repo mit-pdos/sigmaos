@@ -11,7 +11,6 @@ import (
 	"ulambda/proc"
 	// "ulambda/procbase"
 	"ulambda/procclnt"
-	"ulambda/procidem"
 )
 
 const (
@@ -20,7 +19,6 @@ const (
 
 const ( // Possible stackable layers. PROCBASE is always included by default
 	PROCBASE = "PROCBASE"
-	PROCIDEM = "PROCIDEM"
 )
 
 // Get proc layers from environment variables.
@@ -68,9 +66,6 @@ func makeProcLayersString(layers map[string]bool) string {
 func MakeProcClntBase(fsl *fslib.FsLib, layers map[string]bool, parent, pid string) proc.ProcClnt {
 	var clnt proc.ProcClnt
 	clnt = procclnt.MakeProcClntBase(fsl, parent, pid)
-	if _, ok := layers[PROCIDEM]; ok {
-		clnt = procidem.MakeProcIdemClnt(fsl, clnt)
-	}
 	return clnt
 }
 

@@ -3,12 +3,11 @@ package proc
 import (
 	"os"
 
-	"math/rand"
-	"strconv"
+	"github.com/thanhpk/randstr"
 )
 
 func GenPid() string {
-	return strconv.Itoa(rand.Intn(100000))
+	return randstr.Hex(8)
 }
 
 // Can return "" for test programs that make a procclnt

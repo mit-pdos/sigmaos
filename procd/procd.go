@@ -33,9 +33,15 @@ const (
 	NO_OP_LAMBDA = "no-op-lambda"
 )
 
+const (
+	RUNQLC_PRIORITY = "0"
+	RUNQ_PRIORITY   = "1"
+)
+
 type Procd struct {
 	mu         sync.Mutex
-	runq       *usync.FilePriorityBag
+	localRunq  chan *proc.Proc
+	globalRunq *usync.FilePriorityBag
 	ctlFile    fs.FsObj
 	bin        string
 	nid        uint64
@@ -72,7 +78,8 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	}
 
 	// Set up FilePriorityBags and create name/runq
-	pd.runq = usync.MakeFilePriorityBag(pd.FsLib, procclnt.RUNQ)
+	pd.localRunq = make(chan *proc.Proc)
+	pd.globalRunq = usync.MakeFilePriorityBag(pd.FsLib, procclnt.RUNQ)
 
 	pd.addr = pd.MyAddr()
 	pd.procclnt = procinit.MakeProcClnt(pd.FsLib, procinit.GetProcLayersMap())
@@ -134,6 +141,7 @@ func (pd *Procd) Done() {
 	pd.perf.Teardown()
 	pd.evictProcsL()
 	pd.Exit()
+	close(pd.localRunq)
 }
 
 func (pd *Procd) readDone() bool {
@@ -174,24 +182,57 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 	pd.coresAvail += p.Ncore
 }
 
-func (pd *Procd) getProc() (*proc.Proc, error) {
-	pPriority, pName, b, err := pd.runq.Get()
-	if err != nil {
-		return nil, err
+func getPriority(p *proc.Proc) string {
+	var procPriority string
+	switch p.Type {
+	case proc.T_DEF:
+		procPriority = RUNQ_PRIORITY
+	case proc.T_LC:
+		procPriority = RUNQLC_PRIORITY
+	case proc.T_BE:
+		procPriority = RUNQ_PRIORITY
+	default:
+		log.Fatalf("Error in CtlFile.Write: Unknown proc type %v", p.Type)
 	}
+	return procPriority
+}
 
-	p := proc.MakeEmptyProc()
-	err = json.Unmarshal(b, p)
-	if err != nil {
-		log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)
-		return nil, err
+func (pd *Procd) getProc() (*proc.Proc, error) {
+	var p *proc.Proc
+	var b []byte
+	var ok bool
+	var err error
+	p, ok = <-pd.localRunq
+	if ok { // If we had a proc waiting locally
+		b, err = json.Marshal(p)
+		if err != nil {
+			log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)
+			return nil, err
+		}
+	} else {
+		// XXX for now, if nothing is available locally, spin.
+		return nil, nil
+		// XXX We need a conditional get or something here, else this may block too long
+		//		_, _, b, err := pd.globalRunq.Get()
+		//		if err != nil {
+		//			return nil, err
+		//		}
+		//
+		//		p = proc.MakeEmptyProc()
+		//		err = json.Unmarshal(b, p)
+		//		if err != nil {
+		//			log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)
+		//			return nil, err
+		//		}
 	}
 
 	if pd.satisfiesConstraints(p) {
 		pd.decrementResourcesL(p)
 		return p, nil
 	} else {
-		err = pd.runq.Put(pPriority, pName, b)
+		// XXX This seems a bit inefficient
+		// If it isn't runnable, we put it back on the globalRunq
+		err = pd.globalRunq.Put(getPriority(p), p.Pid, b)
 		if err != nil {
 			log.Fatalf("Error Put in Procd.getProc: %v", err)
 		}

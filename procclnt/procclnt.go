@@ -9,6 +9,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/named"
 	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -70,18 +71,6 @@ func MakeProcClntBase(fsl *fslib.FsLib, piddir, pid string) *ProcBaseClnt {
 func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 	p := gp.GetProc()
 	// Select which queue to put the job in
-	var procPriority string
-	switch p.Type {
-	case proc.T_DEF:
-		procPriority = RUNQ_PRIORITY
-	case proc.T_LC:
-		procPriority = RUNQLC_PRIORITY
-	case proc.T_BE:
-		procPriority = RUNQ_PRIORITY
-	default:
-		log.Fatalf("Error in ProcBaseClnt.Spawn: Unknown proc type %v", p.Type)
-	}
-
 	piddir := proc.PidDir(p.Pid)
 	if err := clnt.Mkdir(piddir, 0777); err != nil {
 		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
@@ -138,9 +127,9 @@ func (clnt *ProcBaseClnt) Spawn(gp proc.GenericProc) error {
 		return err
 	}
 
-	err = clnt.runq.Put(procPriority, p.Pid, b)
+	err = clnt.WriteFile(path.Join("name/procd/~ip", named.PROC_CTL_FILE), b)
 	if err != nil {
-		log.Printf("Error Put in ProcBaseClnt.Spawn: %v", err)
+		log.Printf("Error WriteFile in ProcBaseClnt.Spawn: %v", err)
 		return err
 	}
 

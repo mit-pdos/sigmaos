@@ -32,25 +32,25 @@ const (
 )
 
 const (
-	free_realmds  = "free-realmds"
-	realm_create  = "realm_create"
-	realm_destroy = "realm_destroy"
-	FREE_REALMDS  = named.REALM_MGR + "/" + free_realmds  // Unassigned realmds
-	REALM_CREATE  = named.REALM_MGR + "/" + realm_create  // Realm allocation requests
-	REALM_DESTROY = named.REALM_MGR + "/" + realm_destroy // Realm destruction requests
-	REALMS        = "name/realms"                         // List of realms, with realmds registered under them
-	REALM_CONFIG  = "name/realm-config"                   // Store of realm configs
-	REALMD_CONFIG = "name/realmd-config"                  // Store of realmd configs
-	REALM_NAMEDS  = "name/realm-nameds"                   // Symlinks to realms' nameds
+	free_machineds  = "free-machineds"
+	realm_create    = "realm_create"
+	realm_destroy   = "realm_destroy"
+	FREE_MACHINEDS  = named.REALM_MGR + "/" + free_machineds // Unassigned machineds
+	REALM_CREATE    = named.REALM_MGR + "/" + realm_create   // Realm allocation requests
+	REALM_DESTROY   = named.REALM_MGR + "/" + realm_destroy  // Realm destruction requests
+	REALMS          = "name/realms"                          // List of realms, with machineds registered under them
+	REALM_CONFIG    = "name/realm-config"                    // Store of realm configs
+	MACHINED_CONFIG = "name/machined-config"                 // Store of machined configs
+	REALM_NAMEDS    = "name/realm-nameds"                    // Symlinks to realms' nameds
 )
 
 type RealmMgr struct {
-	nameds       []*exec.Cmd
-	freeRealmds  chan string
-	realmCreate  chan string
-	realmDestroy chan string
-	done         chan bool
-	root         fs.Dir
+	nameds        []*exec.Cmd
+	freeMachineds chan string
+	realmCreate   chan string
+	realmDestroy  chan string
+	done          chan bool
+	root          fs.Dir
 	*config.ConfigClnt
 	*fslib.FsLib
 	*fssrv.FsServer
@@ -58,7 +58,7 @@ type RealmMgr struct {
 
 func MakeRealmMgr(bin string) *RealmMgr {
 	m := &RealmMgr{}
-	m.freeRealmds = make(chan string)
+	m.freeMachineds = make(chan string)
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	m.done = make(chan bool)
@@ -82,7 +82,7 @@ func MakeRealmMgr(bin string) *RealmMgr {
 // Wait until the realmmgr has set its control files up.
 func WaitRealmMgrStart(fsl *fslib.FsLib) {
 	for {
-		if _, err := fsl.Stat(FREE_REALMDS); err == nil {
+		if _, err := fsl.Stat(FREE_MACHINEDS); err == nil {
 			break
 		}
 	}
@@ -105,8 +105,8 @@ func (m *RealmMgr) makeInitFs() {
 	if err := m.Mkdir(REALM_CONFIG, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
-	if err := m.Mkdir(REALMD_CONFIG, 0777); err != nil {
-		log.Fatalf("Error Mkdir REALMD_CONFIG in RealmMgr.makeInitFs: %v", err)
+	if err := m.Mkdir(MACHINED_CONFIG, 0777); err != nil {
+		log.Fatalf("Error Mkdir MACHINED_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.Mkdir(REALM_NAMEDS, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
@@ -127,8 +127,8 @@ func (m *RealmMgr) makeCtlFiles() {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
 	}
 
-	freeRealmds := makeCtlFile(m.freeRealmds, "", m.root)
-	err = dir.MkNod(fssrv.MkCtx(""), m.root, free_realmds, freeRealmds)
+	freeMachineds := makeCtlFile(m.freeMachineds, "", m.root)
+	err = dir.MkNod(fssrv.MkCtx(""), m.root, free_machineds, freeMachineds)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
 	}
@@ -164,31 +164,31 @@ func (m *RealmMgr) createRealms() {
 	}
 }
 
-// Deallocate a realmd from a realm.
-func (m *RealmMgr) deallocRealmd(realmId string, realmdId string) {
-	rdCfg := &RealmdConfig{}
-	rdCfg.Id = realmdId
+// Deallocate a machined from a realm.
+func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
+	rdCfg := &MachinedConfig{}
+	rdCfg.Id = machinedId
 	rdCfg.RealmId = NO_REALM
 
-	// Update the realmd config file.
-	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), rdCfg)
+	// Update the machined config file.
+	m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)
 
-	// Note realmd de-registration
+	// Note machined de-registration
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-	rCfg.NRealmds -= 1
+	rCfg.NMachineds -= 1
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-func (m *RealmMgr) deallocAllRealmds(realmId string) {
+func (m *RealmMgr) deallocAllMachineds(realmId string) {
 	rds, err := m.ReadDir(path.Join(REALMS, realmId))
 	if err != nil {
 		log.Fatalf("Error ReadDir in RealmMgr.deallocRealms: %v", err)
 	}
 
-	for _, realmd := range rds {
-		m.deallocRealmd(realmId, realmd.Name)
+	for _, machined := range rds {
+		m.deallocMachined(realmId, machined.Name)
 	}
 }
 
@@ -200,7 +200,7 @@ func (m *RealmMgr) destroyRealms() {
 		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
 		realmLock.Lock()
 
-		m.deallocAllRealmds(realmId)
+		m.deallocAllMachineds(realmId)
 
 		cfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
@@ -211,26 +211,28 @@ func (m *RealmMgr) destroyRealms() {
 	}
 }
 
-// Get & alloc a realmd to this realm.
-func (m *RealmMgr) allocRealmd(realmId string) {
-	// Get a free realmd
-	realmdId, ok := <-m.freeRealmds
+// Get & alloc a machined to this realm. Retur true if successful
+func (m *RealmMgr) allocMachined(realmId string) bool {
+	// Get a free machined
+	machinedId, ok := <-m.freeMachineds
 	if !ok {
-		return
+		return false
 	}
 
-	// Update the realmd's config
-	rdCfg := &RealmdConfig{}
-	rdCfg.Id = realmdId
+	// Update the machined's config
+	rdCfg := &MachinedConfig{}
+	rdCfg.Id = machinedId
 	rdCfg.RealmId = realmId
-	m.WriteConfig(path.Join(REALMD_CONFIG, realmdId), rdCfg)
+	m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)
 
 	// Update the realm's config
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-	rCfg.NRealmds += 1
+	rCfg.NMachineds += 1
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+
+	return true
 }
 
 // Get all a realm's procd's stats
@@ -257,7 +259,7 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 
 func (m *RealmMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
 	// If the realm is being shut down, the realm config file may not be there
-	// anymore. In this case, another realmd is not needed.
+	// anymore. In this case, another machined is not needed.
 	if _, err := m.Stat(path.Join(REALM_CONFIG, realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
 		return nil, fmt.Errorf("Realm not found")
 	}
@@ -271,9 +273,9 @@ func (m *RealmMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[
 	utilMap := make(map[string]float64)
 	procdStats := m.getRealmProcdStats(cfg.NamedAddr, realmId)
 	avgUtil := 0.0
-	for realmdId, stat := range procdStats {
+	for machinedId, stat := range procdStats {
 		avgUtil += stat.Util
-		utilMap[realmdId] = stat.Util
+		utilMap[machinedId] = stat.Util
 	}
 	avgUtil /= float64(len(procdStats))
 	return avgUtil, utilMap
@@ -293,10 +295,12 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	}
 
 	// If we are below the target replication level
-	if realmCfg.NRealmds < nReplicas() {
-		// Start enough realmds to reach the target replication level
-		for i := realmCfg.NRealmds; i < nReplicas(); i++ {
-			m.allocRealmd(realmId)
+	if realmCfg.NMachineds < nReplicas() {
+		// Start enough machineds to reach the target replication level
+		for i := realmCfg.NMachineds; i < nReplicas(); i++ {
+			if ok := m.allocMachined(realmId); !ok {
+				log.Fatalf("Error in adjustRealm: not enough machineds to meet minimum replication level")
+			}
 		}
 		return
 	}
@@ -310,48 +314,45 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	avgUtil, procdUtils := m.getRealmUtil(realmId, realmCfg)
 	//	log.Printf("Avg util post: %v, %v", realmCfg, avgUtil)
 	if avgUtil > GROW_CPU_UTIL_THRESHOLD {
-		// XXX: remove when not testing locally
-		if realmCfg.NRealmds < 2 {
-			m.allocRealmd(realmId)
-		}
+		m.allocMachined(realmId)
 	} else if avgUtil < SHRINK_CPU_UTIL_THRESHOLD {
 		// If there are replicas to spare
-		if realmCfg.NRealmds > nReplicas() {
+		if realmCfg.NMachineds > nReplicas() {
 			// Find least utilized procd
 			//			min := 100.0
-			//			minRealmdId := ""
-			//			for realmdId, util := range procdUtils {
+			//			minMachinedId := ""
+			//			for machinedId, util := range procdUtils {
 			//				if min > util {
 			//					min = util
-			//					minRealmdId = realmdId
+			//					minMachinedId = machinedId
 			//				}
 			//			}
-			// XXX A hack for now, since we don't have a good way of linking a procd to a realmd
+			// XXX A hack for now, since we don't have a good way of linking a procd to a machined
 			_ = procdUtils
-			realmdIds, err := m.ReadDir(path.Join(REALMS, realmId))
+			machinedIds, err := m.ReadDir(path.Join(REALMS, realmId))
 			if err != nil {
 				log.Printf("Error ReadDir in RealmMgr.adjustRealm: %v", err)
 			}
-			minRealmdId := realmdIds[1].Name
+			minMachinedId := machinedIds[1].Name
 			// Deallocate least utilized procd
-			m.deallocRealmd(realmId, minRealmdId)
+			m.deallocMachined(realmId, minMachinedId)
 		}
 	}
 }
 
-// Balance realmds across realms.
-func (m *RealmMgr) balanceRealmds() {
+// Balance machineds across realms.
+func (m *RealmMgr) balanceMachineds() {
 	for {
 		realms, err := m.ReadDir(REALMS)
 		if err != nil {
-			log.Fatalf("Error ReadDir in RealmMgr.balanceRealmds: %v", err)
+			log.Fatalf("Error ReadDir in RealmMgr.balanceMachineds: %v", err)
 		}
 
 		for _, realm := range realms {
 			realmId := realm.Name
-			// XXX Currently we assume there are always enough realmds for the number
+			// XXX Currently we assume there are always enough machineds for the number
 			// of realms we have. If that assumption is broken, this may deadlock when
-			// a realm is trying to exit & we're trying to assign a realmd to it.
+			// a realm is trying to exit & we're trying to assign a machined to it.
 			realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
 			realmLock.Lock()
 
@@ -367,6 +368,6 @@ func (m *RealmMgr) balanceRealmds() {
 func (m *RealmMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
-	go m.balanceRealmds()
+	go m.balanceMachineds()
 	<-m.done
 }

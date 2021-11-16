@@ -2,7 +2,7 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./setup-machine.sh user@address"
+  echo "Usage: $0 user@address"
   exit 1
 fi
 
@@ -17,6 +17,8 @@ sudo mkfs -t ext4 /dev/nvme0n1p4
 sudo mount /dev/nvme0n1p4 /var/local
 sudo mkdir /var/local/$USER
 sudo chown $USER /var/local/$USER
+
+sudo blkid /dev/nvme0n1p4 | cut -d \" -f2
 
 cd /var/local/$USER
 mkdir kernel

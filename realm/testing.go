@@ -20,7 +20,7 @@ type TestEnv struct {
 	bin      string
 	rid      string
 	realmmgr *exec.Cmd
-	realmd   []*exec.Cmd
+	machined []*exec.Cmd
 	clnt     *RealmClnt
 }
 
@@ -28,7 +28,7 @@ func MakeTestEnv(bin string) *TestEnv {
 	e := &TestEnv{}
 	e.bin = bin
 	e.rid = TEST_RID
-	e.realmd = []*exec.Cmd{}
+	e.machined = []*exec.Cmd{}
 
 	return e
 }
@@ -37,7 +37,7 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 	if err := e.bootRealmMgr(); err != nil {
 		return nil, err
 	}
-	if err := e.BootRealmd(); err != nil {
+	if err := e.BootMachined(); err != nil {
 		return nil, err
 	}
 	clnt := MakeRealmClnt()
@@ -50,11 +50,11 @@ func (e *TestEnv) Shutdown() {
 	// Destroy the realm
 	e.clnt.DestroyRealm(e.rid)
 
-	// Kill the realmd
-	for _, realmd := range e.realmd {
-		kill(realmd)
+	// Kill the machined
+	for _, machined := range e.machined {
+		kill(machined)
 	}
-	e.realmd = []*exec.Cmd{}
+	e.machined = []*exec.Cmd{}
 
 	// Kill the realmmgr
 	kill(e.realmmgr)
@@ -77,10 +77,10 @@ func (e *TestEnv) bootRealmMgr() error {
 	return nil
 }
 
-func (e *TestEnv) BootRealmd() error {
+func (e *TestEnv) BootMachined() error {
 	var err error
-	realmd, err := procd.Run("0", e.bin, "bin/realm/realmd", fslib.Named(), []string{e.bin, proc.GenPid()})
-	e.realmd = append(e.realmd, realmd)
+	machined, err := procd.Run("0", e.bin, "bin/realm/machined", fslib.Named(), []string{e.bin, proc.GenPid()})
+	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err
 	}
@@ -92,6 +92,6 @@ func kill(cmd *exec.Cmd) {
 		log.Fatalf("Error Kill in kill: %v", err)
 	}
 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal") {
-		log.Fatalf("Error realmd Wait in kill: %v", err)
+		log.Fatalf("Error machined Wait in kill: %v", err)
 	}
 }

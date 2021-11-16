@@ -12,6 +12,6 @@ func main() {
 		log.Fatalf("Usage: %v bin id", os.Args[0])
 	}
 
-	r := realm.MakeRealmd(os.Args[1], os.Args[2])
+	r := realm.MakeMachined(os.Args[1], os.Args[2])
 	r.Work()
 }

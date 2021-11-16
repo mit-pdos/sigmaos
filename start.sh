@@ -23,7 +23,7 @@ echo "each realm runs with $N_REPLICAS replicas"
 
 ./bin/realm/realmmgr . &
 sleep 1
-./bin/realm/realmd . $(hostname) &
+./bin/realm/machined . $(hostname) &
 ./bin/realm/create 1000
 
 ./mount.sh

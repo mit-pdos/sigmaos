@@ -1,14 +1,13 @@
 package crash
 
 import (
-	crand "crypto/rand"
-	"math/big"
 	"os"
 	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
+	"ulambda/rand"
 )
 
 //
@@ -16,15 +15,14 @@ import (
 //
 
 func Crasher(fsl *fslib.FsLib) {
-	maxms := big.NewInt(500)
 	go func() {
-		ms, _ := crand.Int(crand.Reader, maxms)
-		time.Sleep(time.Duration(ms.Int64()) * time.Millisecond)
-		max := big.NewInt(1000)
-		rr, _ := crand.Int(crand.Reader, max)
-		if rr.Int64() < 330 {
+		ms := rand.Int64(500)
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+
+		r := rand.Int64(1000)
+		if r < 330 {
 			Crash(fsl)
-		} else if rr.Int64() < 660 {
+		} else if r < 660 {
 			Partition(fsl)
 		}
 
@@ -42,9 +40,8 @@ func Partition(fsl *fslib.FsLib) {
 }
 
 func MaybePartition(fsl *fslib.FsLib) {
-	max := big.NewInt(1000)
-	rr, _ := crand.Int(crand.Reader, max)
-	if rr.Int64() < 330 {
+	r := rand.Int64(1000)
+	if r < 330 {
 		Partition(fsl)
 	}
 }

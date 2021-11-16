@@ -3,11 +3,11 @@ package proc
 import (
 	"os"
 
-	"github.com/thanhpk/randstr"
+	"ulambda/rand"
 )
 
 func GenPid() string {
-	return randstr.Hex(8)
+	return rand.String(8)
 }
 
 // Can return "" for test programs that make a procclnt

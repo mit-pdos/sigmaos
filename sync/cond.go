@@ -2,16 +2,14 @@ package sync
 
 import (
 	"log"
-	"math/rand"
 	"path"
 	"runtime/debug"
-
-	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/rand"
 )
 
 const (
@@ -113,7 +111,7 @@ func (c *Cond) Signal() {
 		if len(wFiles) == 0 {
 			return
 		}
-		i := rand.Intn(len(wFiles))
+		i := rand.Int64(int64(len(wFiles)))
 		waiter = wFiles[i].Name
 		// Make sure we don't remove the broadcast file accidentally
 		if waiter == BROADCAST {
@@ -257,7 +255,7 @@ func (c *Cond) createBcastFile() {
 
 // XXX ephemeral?
 func (c *Cond) createSignalFile() (string, error) {
-	signalFname := randstr.Hex(16)
+	signalFname := rand.String(16)
 	signalPath := path.Join(c.path, signalFname)
 	err := c.MakeFile(signalPath, 0777, np.OWRITE, []byte{})
 	if err != nil {

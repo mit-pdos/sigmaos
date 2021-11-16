@@ -6,11 +6,10 @@ import (
 	"path"
 	"sort"
 
-	"github.com/thanhpk/randstr"
-
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/rand"
 )
 
 const (
@@ -57,7 +56,7 @@ func (fb *FilePriorityBag) Put(priority string, name string, contents []byte) er
 
 	// Add a random suffix to the file name in case of duplicates (but divide by
 	// two since each byte will have two characters)
-	name = name + randstr.Hex(SUFFIX_LEN/2)
+	name = name + rand.String(SUFFIX_LEN/2)
 
 	// XXX Maybe we could avoid doing this every time
 	fb.Mkdir(path.Join(fb.path, priority), 0777)

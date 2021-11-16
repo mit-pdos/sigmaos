@@ -12,7 +12,7 @@ import (
 )
 
 //
-// Runs a MR job.  Assumes directories for running job are setup.
+// Runs a MR job.  Assumes directories for running job are setup (see InitCoordFs())
 //
 
 func main() {

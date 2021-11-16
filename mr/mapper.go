@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"path"
 	"strconv"
-	"time"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -18,6 +16,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 )
 
 type MapT func(string, string) []KeyValue
@@ -40,8 +39,6 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
-	rand.Seed(int64(time.Now().UnixNano()))
-
 	m := &Mapper{}
 	m.mapf = mapf
 	m.crash = args[0]
@@ -52,7 +49,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.nreducetask = n
 	m.input = args[2]
 	m.file = path.Base(m.input)
-	m.rand = strconv.Itoa(rand.Intn(100000))
+	m.rand = rand.String(16)
 	m.fds = make([]int, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)

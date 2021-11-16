@@ -11,7 +11,6 @@ import (
 	"syscall"
 
 	//	"github.com/sasha-s/go-deadlock"
-	"github.com/thanhpk/randstr"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -19,6 +18,7 @@ import (
 	"ulambda/linuxsched"
 	"ulambda/namespace"
 	"ulambda/proc"
+	"ulambda/rand"
 )
 
 // To run kernel processes
@@ -61,7 +61,7 @@ func (p *Proc) init(a *proc.Proc) {
 	p.PidDir = a.PidDir
 	p.Args = a.Args
 	p.Dir = a.Dir
-	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+randstr.Hex(16))
+	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+rand.String(16))
 	env := append(os.Environ(), a.Env...)
 	env = append(env, "NEWROOT="+p.NewRoot)
 	env = append(env, "PROCDIP="+p.pd.addr)

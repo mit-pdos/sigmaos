@@ -212,6 +212,7 @@ func (clnt *ProcBaseClnt) Started(pid string) error {
 // ========== EXITED ==========
 
 // Mark that a proc has exited. If disinherited, clean up proc.
+// This should be called *once* per proc
 func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
@@ -234,7 +235,7 @@ func (clnt *ProcBaseClnt) Exited(pid string, status string) error {
 
 		// parent has abandoned me; clean myself up
 		if err := clnt.RmDir(piddir); err != nil {
-			log.Fatalf("Error RmDir %v in WaitExit: %v", piddir, err)
+			log.Fatalf("Error RmDir %v in Exited: %v", piddir, err)
 		}
 	}
 
@@ -327,7 +328,7 @@ func (clnt *ProcBaseClnt) collectChild(piddir string, l *usync.Lock) string {
 
 	l.Unlock()
 
-	// Remove proc
+	// Remove proc (and lock)
 	if err := clnt.RmDir(piddir); err != nil {
 		log.Fatalf("Error RmDir %v in collectChild: %v", piddir, err)
 	}

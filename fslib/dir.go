@@ -106,9 +106,16 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 
 func (fl *FsLib) RmDir(dir string) error {
 	fl.ProcessDir(dir, func(st *np.Stat) (bool, error) {
-		err := fl.Remove(dir + "/" + st.Name)
-		if err != nil {
-			return true, err
+		if st.Mode.IsDir() {
+			err := fl.RmDir(dir + "/" + st.Name)
+			if err != nil {
+				return true, fmt.Errorf("rmdir %v err %v\n", dir+"/"+st.Name, err)
+			}
+		} else {
+			err := fl.Remove(dir + "/" + st.Name)
+			if err != nil {
+				return true, err
+			}
 		}
 		return false, nil
 	})

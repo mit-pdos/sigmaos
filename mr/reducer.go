@@ -7,11 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"sort"
-	"strconv"
-	"time"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -20,6 +17,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 )
 
 type ReduceT func(string, []string) string
@@ -38,12 +36,11 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
-	rand.Seed(int64(time.Now().UnixNano()))
 	r := &Reducer{}
 	r.crash = args[0]
 	r.input = args[1]
 	r.output = args[2]
-	r.tmp = r.output + strconv.Itoa(rand.Intn(100000))
+	r.tmp = r.output + rand.String(16)
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)

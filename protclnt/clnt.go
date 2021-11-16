@@ -2,10 +2,9 @@ package protclnt
 
 import (
 	"errors"
-	"math/rand"
-	"time"
 
 	np "ulambda/ninep"
+	"ulambda/rand"
 )
 
 type Clnt struct {
@@ -16,8 +15,6 @@ type Clnt struct {
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
-	// Generate a fresh session token
-	rand.Seed(time.Now().UnixNano())
 	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
 	clnt.cm = makeConnMgr(clnt.session, &clnt.seqno)

@@ -189,12 +189,12 @@ func (r *Realmd) tryDestroyRealmL() {
 		}
 
 		// Remove the realm directory
-		if err := r.Remove(path.Join(REALMS, r.cfg.RealmId)); err != nil {
+		if err := r.RmDir(path.Join(REALMS, r.cfg.RealmId)); err != nil {
 			log.Fatalf("Error Remove REALMS in Realmd.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm's named directory
-		if err := r.Remove(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
+		if err := r.RmDir(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
 			log.Fatalf("Error Remove REALMS in Realmd.tryDestroyRealmL: %v", err)
 		}
 

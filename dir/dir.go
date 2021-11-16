@@ -48,6 +48,8 @@ func (dir *DirImpl) String() string {
 	for n, e := range dir.entries {
 		if n != "." {
 			str += fmt.Sprintf("[%v %p]", n, e)
+		} else {
+			str += fmt.Sprintf("[%v]", n)
 		}
 	}
 	str += "}"
@@ -68,7 +70,7 @@ func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.FsObj) error {
 	return nil
 }
 
-func (dir *DirImpl) removeL(name string) error {
+func (dir *DirImpl) unlinkL(name string) error {
 	_, ok := dir.entries[name]
 	if ok {
 		delete(dir.entries, name)
@@ -153,25 +155,30 @@ func (dir *DirImpl) lsL() []*np.Stat {
 	return entries
 }
 
-func (dir *DirImpl) remove(ctx fs.CtxI, name string) error {
-	dir.mu.Lock()
-	defer dir.mu.Unlock()
+func nonemptydir(inode fs.FsObj) bool {
+	switch i := inode.(type) {
+	case *DirImpl:
+		if len(i.entries) > 1 {
+			return true
+		}
+		return false
+	default:
+		return false
+	}
+}
 
+func (dir *DirImpl) remove(name string) error {
 	inode, err := dir.lookupL(name)
 	if err != nil {
 		db.DLPrintf("MEMFS", "remove %v file not found %v", dir, name)
 		return err
 	}
-	switch i := inode.(type) {
-	case *DirImpl:
-		if len(i.entries) > 1 {
-			return fmt.Errorf("remove %v: not empty\n", name)
-		}
-	default:
+	if nonemptydir(inode) {
+		return fmt.Errorf("remove %v: not empty\n", name)
 	}
 	dir.VersionInc()
 	dir.SetMtime(time.Now().Unix())
-	return dir.removeL(name)
+	return dir.unlinkL(name)
 }
 
 func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, error) {
@@ -220,7 +227,6 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	if err != nil {
 		return nil, err
 	}
-
 	db.DLPrintf("MEMFS", "Create %v in %v -> %v\n", name, dir, newi)
 	dir.VersionInc()
 	dir.SetMtime(time.Now().Unix())
@@ -278,15 +284,23 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
 	if err != nil {
 		return err
 	}
-	err = dir.removeL(from)
+
+	// check if to is non-existing, or, if a dir, non-empty
+	inoto, terr := dir.lookupL(to)
+	if terr == nil && nonemptydir(inoto) {
+		return fmt.Errorf("rename %v: not empty\n", to)
+	}
+
+	err = dir.unlinkL(from)
 	if err != nil {
 		log.Fatalf("Rename: remove failed %v %v\n", from, err)
 	}
-	_, err = dir.lookupL(to)
-	if err == nil { // i is valid
+
+	// dir.VersionInc()
+	if terr == nil { // inoto is valid
 		// XXX 9p: it is an error to change the name to that
 		// of an existing file.
-		err = dir.removeL(to)
+		err = dir.remove(to)
 		if err != nil {
 			log.Fatalf("Rename remove failed %v %v\n", to, err)
 		}
@@ -296,6 +310,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
 		log.Fatalf("Rename create %v failed %v\n", to, err)
 		return err
 	}
+	// ino.VersionInc()
 	return nil
 
 }
@@ -310,19 +325,20 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) err
 	if err != nil {
 		return fmt.Errorf("file not found %v", old)
 	}
-	err = dir.removeL(old)
+	err = dir.unlinkL(old)
 	if err != nil {
 		log.Fatalf("Rename %v remove  %v\n", old, err)
 	}
 	_, err = newdir.lookupL(new)
 	if err == nil {
-		err = newdir.removeL(new)
+		err = newdir.remove(new)
 	}
 	err = newdir.createL(ino, new)
 	if err != nil {
 		log.Fatalf("Rename %v createL: %v\n", new, err)
 		return err
 	}
+	// ino.VersionInc()
 	ino.SetParent(newdir)
 	return nil
 }
@@ -341,10 +357,6 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) error {
 	inode.VersionInc()
 	dir.VersionInc()
 
-	err = dir.removeL(n)
-	if err != nil {
-		log.Fatalf("Remove: error %v\n", n)
-	}
-
-	return nil
+	err = dir.remove(n)
+	return err
 }

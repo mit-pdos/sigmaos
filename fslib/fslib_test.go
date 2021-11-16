@@ -144,6 +144,27 @@ func TestRenameAndRemove(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestNonEmpty(t *testing.T) {
+	ts := makeTstate(t)
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	err = ts.Mkdir("name/d2", 0777)
+	assert.Equal(t, nil, err)
+
+	fn := "name/d1/f"
+	d := []byte("hello")
+	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	err = ts.Remove("name/d1")
+	assert.NotNil(t, err, "Remove")
+
+	err = ts.Rename("name/d2", "name/d1")
+	assert.NotNil(t, err, "Rename")
+
+	ts.e.Shutdown()
+}
+
 func TestCopy(t *testing.T) {
 	ts := makeTstate(t)
 	d := []byte("hello")

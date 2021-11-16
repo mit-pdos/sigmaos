@@ -227,7 +227,7 @@ func (c *Cond) Destroy() {
 	}
 
 	// Remove the directory so we don't take on any more waiters
-	err = c.Remove(c.path)
+	err = c.RmDir(c.path)
 	if err != nil {
 		if err.Error() == "EOF" {
 			log.Printf("Error Remove 2 in Cond.Destroy: %v", err)

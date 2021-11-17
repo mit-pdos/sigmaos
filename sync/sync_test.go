@@ -2,6 +2,7 @@ package sync_test
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/realm"
@@ -368,7 +370,7 @@ func TestFilePriorityBag(t *testing.T) {
 }
 
 func testLocker(t *testing.T, part string) {
-	const N = 10
+	const N = 20
 
 	ts := makeTstate(t)
 	pids := []string{}
@@ -377,7 +379,12 @@ func testLocker(t *testing.T, part string) {
 	dir := "name/ux/~ip/outdir"
 	ts.RmDir(dir)
 	err := ts.Mkdir(dir, 0777)
+	err = ts.Mkdir("name/locktest", 0777)
 	assert.Nil(t, err, "mkdir error")
+	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "makefile error")
+	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "makefile error")
 
 	for i := 0; i < N; i++ {
 		a := proc.MakeProc("bin/user/locker", []string{part, dir})
@@ -385,10 +392,10 @@ func testLocker(t *testing.T, part string) {
 		assert.Nil(t, err, "Spawn")
 		pids = append(pids, a.Pid)
 	}
+
 	for _, pid := range pids {
-		status, err := ts.WaitExit(pid)
-		assert.Nil(t, err, "Exit error")
-		assert.NotEqual(t, "Two holders", status, "Exit status wrong")
+		status, _ := ts.WaitExit(pid)
+		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
 	}
 	ts.e.Shutdown()
 }
@@ -397,7 +404,6 @@ func TestLockerNoPart(t *testing.T) {
 	testLocker(t, "NO")
 }
 
-// XXX what the lock spec?
 //func TestLockerWithPart(t *testing.T) {
 //	testLocker(t, "YES")
 //}

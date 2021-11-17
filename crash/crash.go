@@ -39,9 +39,11 @@ func Partition(fsl *fslib.FsLib) {
 	fsl.Disconnect("name")
 }
 
-func MaybePartition(fsl *fslib.FsLib) {
+func MaybePartition(fsl *fslib.FsLib) bool {
 	r := rand.Int64(1000)
 	if r < 330 {
 		Partition(fsl)
+		return true
 	}
+	return false
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -16,9 +17,33 @@ import (
 )
 
 const (
-	N   = 20
+	N   = 100
 	DIR = "name/locktest"
 )
+
+//
+// lock tester
+//
+// start:  cnt = 0, A = 0
+//
+// in loop:
+//  - read file cnt, which contains a counter
+//  - read A
+//  - check A is counter+1 or counter
+//  - write counter+1 to A
+//  - write counter+1 to counter
+//
+//  invariant: A is counter or counter+1
+//
+//  If lock doesn't work, then this invariant breaks (counter and A
+//  and may have no relation).
+//
+//  If holder paritions, looses lock, and but delayed writes to A,
+//  then could violate this invariant
+//
+//  Note: we couldn't use version # as is, since they are per file,
+//  and here we require atomicity across different files.
+//
 
 func main() {
 	if len(os.Args) != 3 {
@@ -29,36 +54,75 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	fsl.Mkdir(DIR, 0777)
-
 	lock := usync.MakeLock(fsl, DIR, "lock", true)
+
+	cnt := DIR + "/cnt"
+	A := os.Args[2] + "/A"
 
 	pclnt.Started(proc.GetPid())
 
+	partitioned := false
 	for i := 0; i < N; i++ {
 		lock.Lock()
-		fn := os.Args[2] + "/" + proc.GetPid()
-		if err := fsl.MakeFile(fn, 0777, np.OWRITE, []byte{}); err != nil {
-			log.Fatalf("makefile %v failed %v\n", fn, err)
+
+		b, _, err := fsl.GetFile(cnt)
+		if err != nil {
+			log.Fatalf("getfile %v failed %v\n", cnt, err)
+		}
+
+		b1, _, err := fsl.GetFile(A)
+		if err != nil {
+			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
+		}
+
+		// open A and then partition
+
+		fd, err := fsl.Open(A, np.OREAD|np.OWRITE)
+		if err != nil {
+			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
 		}
 
 		if os.Args[1] == "YES" {
-			crash.MaybePartition(fsl)
-			delay.Delay(100)
-		}
-
-		if sts, err := fsl.ReadDir(os.Args[2]); err != nil {
-			log.Fatalf("readdir %v failed %v\n", os.Args[2], err)
-		} else {
-			if len(sts) == 2 {
-				log.Printf("%v: len 2 %v\n", db.GetName(), sts)
-				pclnt.Exited(proc.GetPid(), "Two holders")
-				os.Exit(0)
+			if crash.MaybePartition(fsl) {
+				log.Printf("partition\n")
+				partitioned = true
+				delay.Delay(100)
 			}
 		}
-		if err := fsl.Remove(fn); err != nil {
-			log.Fatalf("remove %v failed %v\n", fn, err)
+
+		n, err := strconv.Atoi(string(b))
+		if err != nil {
+			log.Fatalf("strconv %v failed %v\n", cnt, err)
 		}
+
+		n1, err := strconv.Atoi(string(b1))
+		if err != nil {
+			log.Fatalf("strconv %v failed %v\n", A, err)
+		}
+
+		// log.Printf("%v: n %v n1 %v", db.GetName(), n, n1)
+
+		if n != n1 && n+1 != n1 {
+			log.Printf("%v: Wrong n %v n1 %v", db.GetName(), n, n1)
+			pclnt.Exited(proc.GetPid(), "Invariant violated")
+		}
+
+		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))
+		if err != nil {
+			log.Fatalf("setfile %v failed %v\n", A, err)
+		}
+
+		fsl.Close(fd)
+
+		if partitioned {
+			break
+		}
+
+		_, err = fsl.SetFile(cnt, []byte(strconv.Itoa(n+1)), np.NoV)
+		if err != nil {
+			log.Fatalf("setfile %v failed %v\n", cnt, err)
+		}
+
 		lock.Unlock()
 	}
 	pclnt.Exited(proc.GetPid(), "OK")

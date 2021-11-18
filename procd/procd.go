@@ -151,21 +151,6 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 	pd.coresAvail += p.Ncore
 }
 
-func getPriority(p *proc.Proc) string {
-	var procPriority string
-	switch p.Type {
-	case proc.T_DEF:
-		procPriority = RUNQ_PRIORITY
-	case proc.T_LC:
-		procPriority = RUNQLC_PRIORITY
-	case proc.T_BE:
-		procPriority = RUNQ_PRIORITY
-	default:
-		log.Fatalf("Error in CtlFile.Write: Unknown proc type %v", p.Type)
-	}
-	return procPriority
-}
-
 func (pd *Procd) getProc() (*proc.Proc, error) {
 	var p *proc.Proc
 	var ok bool

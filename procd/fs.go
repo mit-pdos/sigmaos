@@ -3,6 +3,7 @@ package procd
 import (
 	"encoding/json"
 	"log"
+	"math"
 
 	"ulambda/dir"
 	"ulambda/fs"
@@ -59,6 +60,26 @@ func (pd *Procd) makeFs() {
 	pd.fs.runq = runq
 }
 
+func (pfs *ProcdFs) getRunqProc(name string) (*proc.Proc, error) {
+	os, _, err := pfs.runq.Lookup(fssrv.MkCtx(""), []string{name})
+	if err != nil {
+		log.Fatalf("Error Lookup in ProcdFs.getRunqProc: %v", err)
+		return nil, err
+	}
+	b, err := os[0].(fs.File).Read(fssrv.MkCtx(""), 0, math.MaxUint32, np.NoV)
+	if err != nil {
+		log.Fatalf("Error Read in ProcdFs.getRunqProc: %v", err)
+		return nil, err
+	}
+	p := proc.MakeEmptyProc()
+	err = json.Unmarshal(b, p)
+	if err != nil {
+		log.Fatalf("Error Unmarshal in ProcdFs.getRunqProc: %v", err)
+		return nil, err
+	}
+	return p, nil
+}
+
 // Publishes a proc as running
 func (pfs *ProcdFs) pubRunning(p *Proc) error {
 	p.FsObj = inode.MakeInode("", np.DMDEVICE, pfs.running)
@@ -100,11 +121,12 @@ func (pfs *ProcdFs) pubSpawned(a *proc.Proc, b []byte) error {
 	return nil
 }
 
-func (pfs *ProcdFs) pubClaimed(p *proc.Proc) error {
+// Remove from the runq. May race with other (work-stealing) procds.
+func (pfs *ProcdFs) claimProc(p *proc.Proc) bool {
 	err := pfs.runq.Remove(fssrv.MkCtx(""), p.Pid)
 	if err != nil {
-		log.Printf("Error ProcdFs.pubClaimed: %v", err)
-		return err
+		log.Printf("Error ProcdFs.claimProc: %v", err)
+		return false
 	}
-	return nil
+	return true
 }

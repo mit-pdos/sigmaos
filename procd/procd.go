@@ -16,6 +16,7 @@ import (
 	"ulambda/linuxsched"
 	"ulambda/named"
 	"ulambda/namespace"
+	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -152,10 +153,9 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	var p *proc.Proc
 	var ok bool
 
-	p, ok = <-pd.localRunq
+	_, ok = <-pd.localRunq
 	if !ok {
 		return nil, nil
 	}
@@ -163,10 +163,27 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	if pd.satisfiesConstraintsL(p) {
-		pd.decrementResourcesL(p)
-		pd.fs.pubClaimed(p)
-		return p, nil
+	fs, err := pd.fs.runq.ReadDir(fssrv.MkCtx(""), 0, 0, np.NoV)
+	if err != nil {
+		log.Fatalf("Error ReadDir in Procd.getProc: %v", err)
+	}
+
+	// Read through procs
+	for _, f := range fs {
+		p, err := pd.fs.getRunqProc(f.Name)
+		// Proc may have been stolen
+		if err != nil {
+			log.Printf("Error getting RunqProc: %v", err)
+			continue
+		}
+		if pd.satisfiesConstraintsL(p) {
+			// Proc may have been stolen
+			if ok := pd.fs.claimProc(p); !ok {
+				continue
+			}
+			pd.decrementResourcesL(p)
+			return p, nil
+		}
 	}
 	return nil, nil
 }

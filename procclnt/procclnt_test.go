@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"path"
 	"sync"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/realm"
@@ -100,7 +102,7 @@ func TestHelloWorld(t *testing.T) {
 
 	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
 	assert.Nil(t, err, "Readdir")
-	assert.Equal(t, 2, len(st), "readdir") // statsd and ctl
+	assert.Equal(t, 4, len(st), "readdir") // statsd and ctl
 
 	ts.e.Shutdown()
 }
@@ -166,7 +168,7 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	sts, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
+	sts, err := ts.ReadDir(path.Join("name/procd", ts.procd(t), named.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
 
 	// skip ctl entry

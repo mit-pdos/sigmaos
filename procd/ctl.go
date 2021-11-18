@@ -32,6 +32,7 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion)
 		log.Fatalf("Couldn't unmarshal proc file in CtlFile.Write: %v, %v", string(b), err)
 	}
 
+	ctl.pd.fs.pubSpawned(p, b)
 	ctl.pd.localRunq <- p
 
 	return np.Tsize(len(b)), nil

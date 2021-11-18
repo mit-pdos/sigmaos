@@ -14,7 +14,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fs"
-	"ulambda/fssrv"
 	"ulambda/linuxsched"
 	"ulambda/namespace"
 	"ulambda/proc"
@@ -75,7 +74,7 @@ func (p *Proc) init(a *proc.Proc) {
 }
 
 func (p *Proc) wait(cmd *exec.Cmd) {
-	defer p.pd.fs.running.Remove(fssrv.MkCtx(""), p.Pid)
+	defer p.pd.fs.pubFinished(p)
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Proc %v finished with error: %v", p.attr, err)

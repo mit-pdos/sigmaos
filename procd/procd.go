@@ -1,7 +1,6 @@
 package procd
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"os"
@@ -12,15 +11,11 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
-	"ulambda/dir"
-	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fssrv"
-	"ulambda/inode"
 	"ulambda/linuxsched"
 	"ulambda/named"
 	"ulambda/namespace"
-	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -36,18 +31,10 @@ const (
 	RUNQ_PRIORITY   = "1"
 )
 
-type ProcdFs struct {
-	root    fs.Dir
-	running fs.Dir
-	runq    fs.Dir
-	ctlFile fs.FsObj
-}
-
 type Procd struct {
 	mu         sync.Mutex
 	fs         *ProcdFs
 	localRunq  chan *proc.Proc
-	globalRunq *usync.FilePriorityBag
 	bin        string
 	nid        uint64
 	done       bool
@@ -76,7 +63,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 
 	// Set up FilePriorityBags and create name/runq
 	pd.localRunq = make(chan *proc.Proc)
-	pd.globalRunq = usync.MakeFilePriorityBag(pd.FsLib, procclnt.RUNQ)
 
 	pd.addr = pd.MyAddr()
 	pd.procclnt = procclnt.MakeProcClnt(pd.FsLib)
@@ -102,18 +88,11 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.Work()
 }
 
-func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+func (pd *Procd) makeProc(a *proc.Proc) *Proc {
 	p := &Proc{}
-	p.FsObj = inode.MakeInode("", np.DMDEVICE, pd.fs.running)
 	p.pd = pd
 	p.init(a)
-	err := dir.MkNod(fssrv.MkCtx(""), pd.fs.running, p.Pid, p)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+	return p
 }
 
 // Evict all procs running in this procd
@@ -143,7 +122,7 @@ func (pd *Procd) readDone() bool {
 // XXX Statsd information?
 // Check if this procd instance is able to satisfy a job's constraints.
 // Trivially true when not benchmarking.
-func (pd *Procd) satisfiesConstraints(p *proc.Proc) bool {
+func (pd *Procd) satisfiesConstraintsL(p *proc.Proc) bool {
 	// Constraints are not checked when testing, as some tests require more cores
 	// than we may have on our test machine.
 	if !pd.perf.RunningBenchmark() {
@@ -189,45 +168,21 @@ func getPriority(p *proc.Proc) string {
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
 	var p *proc.Proc
-	var b []byte
 	var ok bool
-	var err error
+
 	p, ok = <-pd.localRunq
-	if ok { // If we had a proc waiting locally
-		b, err = json.Marshal(p)
-		if err != nil {
-			log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)
-			return nil, err
-		}
-	} else {
-		// XXX for now, if nothing is available locally, spin.
+	if !ok {
 		return nil, nil
-		// XXX We need a conditional get or something here, else this may block too long
-		//		_, _, b, err := pd.globalRunq.Get()
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//
-		//		p = proc.MakeEmptyProc()
-		//		err = json.Unmarshal(b, p)
-		//		if err != nil {
-		//			log.Fatalf("Couldn't unmarshal proc file in Procd.getProc: %v, %v", string(b), err)
-		//			return nil, err
-		//		}
 	}
 
-	if pd.satisfiesConstraints(p) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	if pd.satisfiesConstraintsL(p) {
 		pd.decrementResourcesL(p)
+		pd.fs.pubClaimed(p)
 		return p, nil
-	} else {
-		// XXX This seems a bit inefficient
-		// If it isn't runnable, we put it back on the globalRunq
-		err = pd.globalRunq.Put(getPriority(p), p.Pid, b)
-		if err != nil {
-			log.Fatalf("Error Put in Procd.getProc: %v", err)
-		}
 	}
-
 	return nil, nil
 }
 
@@ -332,14 +287,13 @@ func (pd *Procd) Worker(workerId uint) {
 			}
 			log.Fatalf("Procd GetProc error %v, %v\n", p, err)
 		}
-		// XXX return err from spawn
-		l, err := pd.spawn(p)
+		localProc := pd.makeProc(p)
+		err = pd.fs.pubRunning(localProc)
 		if err != nil {
-			log.Fatalf("Procd spawn error %v\n", err)
+			log.Fatalf("Procd pubRunning error %v\n", err)
 		}
-		ls := []*Proc{l}
-		//		ls = append(ls, consumerLs...)
-		pd.runAll(ls)
+		ps := []*Proc{localProc}
+		pd.runAll(ps)
 	}
 }
 

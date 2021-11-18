@@ -25,10 +25,6 @@ const (
 )
 
 const (
-	RUNQ = "name/runq"
-)
-
-const (
 	// name for dir where procs live. May not refer to name/pids
 	// because proc.PidDir may change it.  A proc refers to itself
 	// using "pids/<pid>", where pid is the proc's PID.
@@ -44,13 +40,7 @@ const (
 	CHILD        = "childs" // directory with children's pids
 )
 
-const (
-	RUNQLC_PRIORITY = "0"
-	RUNQ_PRIORITY   = "1"
-)
-
 type ProcBaseClnt struct {
-	runq *usync.FilePriorityBag
 	*fslib.FsLib
 	pid    string
 	piddir string
@@ -58,7 +48,6 @@ type ProcBaseClnt struct {
 
 func MakeProcClntBase(fsl *fslib.FsLib, piddir, pid string) *ProcBaseClnt {
 	clnt := &ProcBaseClnt{}
-	clnt.runq = usync.MakeFilePriorityBag(fsl, RUNQ)
 	clnt.FsLib = fsl
 	clnt.pid = pid
 	clnt.piddir = piddir

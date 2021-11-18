@@ -37,14 +37,20 @@ const (
 	RUNQ_PRIORITY   = "1"
 )
 
+type ProcdFs struct {
+	root    fs.Dir
+	running fs.Dir
+	runq    fs.Dir
+	ctlFile fs.FsObj
+}
+
 type Procd struct {
 	mu         sync.Mutex
+	fs         *ProcdFs
 	localRunq  chan *proc.Proc
 	globalRunq *usync.FilePriorityBag
-	ctlFile    fs.FsObj
 	bin        string
 	nid        uint64
-	root       fs.Dir
 	done       bool
 	addr       string
 	procs      map[string]bool
@@ -67,7 +73,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 
-	pd.setupFs()
+	pd.makeFs()
 
 	// Set up FilePriorityBags and create name/runq
 	pd.localRunq = make(chan *proc.Proc)
@@ -98,29 +104,48 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 }
 
 // Set up this procd instance's FS
-func (pd *Procd) setupFs() {
+func (pd *Procd) makeFs() {
 	var err error
-	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
+	pd.fs = &ProcdFs{}
+	pd.fs.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 
 	// Set up ctl file
-	pd.ctlFile = makeCtlFile(pd, "", pd.root)
-	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)
+	pd.fs.ctlFile = makeCtlFile(pd, "", pd.fs.root)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.fs.root, named.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err != nil {
 		log.Fatalf("Error MkNod in RunProcd: %v", err)
 	}
+
+	// Set up running dir
+	runningi := inode.MakeInode("", np.DMDIR, pd.fs.root)
+	running := dir.MakeDir(runningi)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.fs.root, named.PROCD_RUNNING, running)
+	if err != nil {
+		log.Fatalf("Error creating running dir: %v", err)
+	}
+	pd.fs.running = running
+
+	// Set up runq dir
+	runqi := inode.MakeInode("", np.DMDIR, pd.fs.root)
+	runq := dir.MakeDir(runqi)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.fs.root, named.PROCD_RUNQ, runq)
+	if err != nil {
+		log.Fatalf("Error creating running dir: %v", err)
+	}
+	pd.fs.runq = runq
 }
 
 func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 	p := &Proc{}
-	p.FsObj = inode.MakeInode("", np.DMDEVICE, pd.root)
+	p.FsObj = inode.MakeInode("", np.DMDEVICE, pd.fs.running)
 	p.pd = pd
 	p.init(a)
-	err := dir.MkNod(fssrv.MkCtx(""), pd.root, p.Pid, p)
+	err := dir.MkNod(fssrv.MkCtx(""), pd.fs.running, p.Pid, p)
 	if err != nil {
 		return nil, err
 	}

@@ -75,7 +75,7 @@ func (p *Proc) init(a *proc.Proc) {
 }
 
 func (p *Proc) wait(cmd *exec.Cmd) {
-	defer p.pd.root.Remove(fssrv.MkCtx(""), p.Pid)
+	defer p.pd.fs.running.Remove(fssrv.MkCtx(""), p.Pid)
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Proc %v finished with error: %v", p.attr, err)

@@ -21,6 +21,8 @@ const (
 	MEMFS         = "name/memfsd/"
 	PIDS          = "name/pids"
 	PROC_CTL_FILE = "ctl"
+	PROCD_RUNNING = "running"
+	PROCD_RUNQ    = "runq"
 )
 
 func MakeInitFs(fsl *fslib.FsLib) error {

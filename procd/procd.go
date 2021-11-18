@@ -58,8 +58,6 @@ type Procd struct {
 }
 
 func RunProcd(bin string, pprofPath string, utilPath string) {
-	var err error
-
 	pd := &Procd{}
 	pd.nid = 0
 	pd.bin = bin
@@ -69,10 +67,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
 
-	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
-	if err != nil {
-		log.Fatalf("MakeSrvFsLib %v\n", err)
-	}
+	pd.setupFs()
 
 	// Set up FilePriorityBags and create name/runq
 	pd.localRunq = make(chan *proc.Proc)
@@ -91,14 +86,8 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	if util {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
-	// Make some directories used by other services.
+	// Make some local directories.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
-	// Set up ctl file
-	pd.ctlFile = makeCtlFile(pd, "", pd.root)
-	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)
-	if err != nil {
-		log.Fatalf("Error MkNod in RunProcd: %v", err)
-	}
 
 	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
 	procdStartCond.Destroy()
@@ -106,6 +95,22 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
 
 	pd.Work()
+}
+
+// Set up this procd instance's FS
+func (pd *Procd) setupFs() {
+	var err error
+	pd.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
+	if err != nil {
+		log.Fatalf("MakeSrvFsLib %v\n", err)
+	}
+
+	// Set up ctl file
+	pd.ctlFile = makeCtlFile(pd, "", pd.root)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.root, named.PROC_CTL_FILE, pd.ctlFile)
+	if err != nil {
+		log.Fatalf("Error MkNod in RunProcd: %v", err)
+	}
 }
 
 func (pd *Procd) spawn(a *proc.Proc) (*Proc, error) {

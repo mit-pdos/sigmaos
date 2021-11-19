@@ -128,7 +128,7 @@ func (pfs *ProcdFs) pubSpawned(a *proc.Proc, b []byte) error {
 		log.Printf("Error ProcdFs.pubSpawned: %v", err)
 		return err
 	}
-	pfs.pd.notifyProcEvent()
+	pfs.pd.spawnChan <- true
 	return nil
 }
 

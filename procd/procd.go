@@ -35,7 +35,7 @@ type claimProcFn func(p *proc.Proc) bool
 type Procd struct {
 	mu         deadlock.Mutex
 	fs         *ProcdFs
-	procEvent  chan bool
+	spawnChan  chan bool
 	bin        string
 	nid        uint64
 	done       bool
@@ -63,7 +63,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.makeFs()
 
 	// Set up FilePriorityBags and create name/runq
-	pd.procEvent = make(chan bool)
+	pd.spawnChan = make(chan bool)
 
 	pd.addr = pd.MyAddr()
 	pd.procclnt = procclnt.MakeProcClnt(pd.FsLib)
@@ -111,10 +111,6 @@ func (pd *Procd) Done() {
 	pd.perf.Teardown()
 	pd.evictProcsL()
 	pd.Exit()
-}
-
-func (pd *Procd) notifyProcEvent() {
-	pd.procEvent <- true
 }
 
 func (pd *Procd) readDone() bool {
@@ -188,18 +184,6 @@ func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claim
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
-
-	// Wait until either there was a spawn or exit, or the timeout expires.
-	select {
-	case _, ok := <-pd.procEvent:
-		// If channel closed, return
-		if !ok {
-			return nil, nil
-		}
-	case <-ticker.C:
-	}
-
 	// First, try to read from the local procdfs
 	p, err := pd.getRunnableProc(pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
 	if p != nil || err != nil {
@@ -279,13 +263,27 @@ func (pd *Procd) setCoreAffinity() {
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 
+func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
+	// Wait until either there was a spawn, or the timeout expires.
+	select {
+	case _, ok := <-pd.spawnChan:
+		// If channel closed, return
+		if !ok {
+			return
+		}
+	case <-ticker.C:
+	}
+}
+
 // Worker runs one lambda at a time
 func (pd *Procd) Worker(workerId uint) {
 	defer pd.group.Done()
+	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
 	for !pd.readDone() {
 		p, err := pd.getProc()
-		// If get failed, try again.
+		// If there were no runnable procs, wait and try again.
 		if err == nil && p == nil {
+			pd.waitSpawnOrTimeout(ticker)
 			continue
 		}
 		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "unknown mount")) {

@@ -251,7 +251,7 @@ func (pd *Procd) runProc(p *Proc) {
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
 
-	// Run the lambda.
+	// Run the proc.
 	p.run(cores)
 
 	// Free resources and dedicated cores.
@@ -279,7 +279,7 @@ func (pd *Procd) setCoreAffinity() {
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 
-// Worker runs one lambda at a time
+// Worker runs one proc a time
 func (pd *Procd) Worker(workerId uint) {
 	defer pd.group.Done()
 	for !pd.readDone() {

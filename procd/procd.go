@@ -235,8 +235,18 @@ func (pd *Procd) runProc(p *Proc) {
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
 
+	// If this proc doesn't require cores, start another worker to take our place
+	// so we can make progress.
+	done := false
+	if p.attr.Ncore == 0 {
+		go pd.worker(&done)
+	}
+
 	// Run the lambda.
 	p.run(cores)
+
+	// Kill the old worker so we don't have too many workers running
+	done = true
 
 	// Free resources and dedicated cores.
 	pd.freeCores(cores)
@@ -276,10 +286,11 @@ func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
 }
 
 // Worker runs one lambda at a time
-func (pd *Procd) Worker(workerId uint) {
+func (pd *Procd) worker(workerDone *bool) {
+	pd.group.Add(1)
 	defer pd.group.Done()
 	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
-	for !pd.readDone() {
+	for !pd.readDone() && (workerDone == nil || !*workerDone) {
 		p, err := pd.getProc()
 		// If there were no runnable procs, wait and try again.
 		if err == nil && p == nil {
@@ -310,20 +321,14 @@ func (pd *Procd) Work() {
 		pd.Serve()
 		pd.Done()
 	}()
-	var NWorkers uint
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks
-	if !pd.perf.RunningBenchmark() && linuxsched.NCores < 20 {
-		NWorkers = 20
-	} else {
-		NWorkers = linuxsched.NCores
-		if pd.perf.RunningBenchmark() {
-			NWorkers -= 1
-		}
+	NWorkers := linuxsched.NCores
+	if pd.perf.RunningBenchmark() {
+		NWorkers -= 1
 	}
 	for i := uint(0); i < NWorkers; i++ {
-		pd.group.Add(1)
-		go pd.Worker(i)
+		go pd.worker(nil)
 	}
 	pd.group.Wait()
 }

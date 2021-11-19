@@ -242,7 +242,7 @@ func TestEarlyExit1(t *testing.T) {
 func TestEarlyExitN(t *testing.T) {
 	ts := makeTstate(t)
 
-	nProcs := 27
+	nProcs := 500
 	var done sync.WaitGroup
 	done.Add(nProcs)
 

@@ -111,16 +111,10 @@ func (pd *Procd) Done() {
 	pd.perf.Teardown()
 	pd.evictProcsL()
 	pd.Exit()
-	close(pd.procEvent)
 }
 
 func (pd *Procd) notifyProcEvent() {
-	//	pd.mu.Lock()
-	//	defer pd.mu.Unlock()
-
-	if !pd.done {
-		pd.procEvent <- true
-	}
+	pd.procEvent <- true
 }
 
 func (pd *Procd) readDone() bool {
@@ -194,7 +188,6 @@ func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claim
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	log.Printf("loop")
 	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
 
 	// Wait until either there was a spawn or exit, or the timeout expires.
@@ -259,10 +252,7 @@ func (pd *Procd) runProc(p *Proc) {
 	cores := pd.allocCores(p.attr.Ncore)
 
 	// Run the lambda.
-	log.Printf("Running %v", p.attr)
 	p.run(cores)
-	log.Printf("Done %v", p.attr)
-	pd.notifyProcEvent()
 
 	// Free resources and dedicated cores.
 	pd.freeCores(cores)

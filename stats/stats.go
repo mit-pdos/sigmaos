@@ -89,6 +89,7 @@ type Stats struct {
 	pid  string
 	hz   int
 	done uint32
+	ch   chan bool
 	fsl  *fslib.FsLib
 	proc.ProcClnt
 }
@@ -97,6 +98,7 @@ func MkStats(parent fs.Dir) *Stats {
 	st := &Stats{}
 	st.FsObj = inode.MakeInode("", np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
+	st.ch = make(chan bool)
 	return st
 }
 
@@ -249,20 +251,22 @@ func (st *Stats) monitorPID() {
 	period1 := 10 // 1000/MS;
 
 	for atomic.LoadUint32(&st.done) != 1 {
-		for i := 0; i < period1; i++ {
+		for i := 0; i < period1 && st.done == 0; i++ {
 			time.Sleep(time.Duration(MS) * time.Millisecond)
 			total1 = perf.GetPIDSample(pid)
 			st.load(total1 - total0)
 			total0 = total1
 		}
-		if st.doMonitor() {
+		if st.done == 0 && st.doMonitor() {
 			st.monitor()
 		}
 	}
+	st.ch <- true
 }
 
 func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
+	<-st.ch
 }
 
 func (st *Stats) Write(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {

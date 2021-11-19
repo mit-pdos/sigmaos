@@ -242,7 +242,7 @@ func (pd *Procd) runProc(p *Proc) {
 		go pd.worker(&done)
 	}
 
-	// Run the lambda.
+	// Run the proc.
 	p.run(cores)
 
 	// Kill the old worker so we don't have too many workers running
@@ -285,7 +285,7 @@ func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
 	}
 }
 
-// Worker runs one lambda at a time
+// Worker runs one proc a time
 func (pd *Procd) worker(workerDone *bool) {
 	pd.group.Add(1)
 	defer pd.group.Done()

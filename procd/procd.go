@@ -7,8 +7,9 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
-	//	"github.com/sasha-s/go-deadlock"
+	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -24,18 +25,17 @@ import (
 )
 
 const (
-	NO_OP_LAMBDA = "no-op-lambda"
+	WORK_STEAL_TIMEOUT_MS = 10
 )
 
-const (
-	RUNQLC_PRIORITY = "0"
-	RUNQ_PRIORITY   = "1"
-)
+type readRunqFn func() ([]*np.Stat, error)
+type readProcFn func(pid string) (*proc.Proc, error)
+type claimProcFn func(p *proc.Proc) bool
 
 type Procd struct {
-	mu         sync.Mutex
+	mu         deadlock.Mutex
 	fs         *ProcdFs
-	localRunq  chan *proc.Proc
+	procEvent  chan bool
 	bin        string
 	nid        uint64
 	done       bool
@@ -63,7 +63,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.makeFs()
 
 	// Set up FilePriorityBags and create name/runq
-	pd.localRunq = make(chan *proc.Proc)
+	pd.procEvent = make(chan bool)
 
 	pd.addr = pd.MyAddr()
 	pd.procclnt = procclnt.MakeProcClnt(pd.FsLib)
@@ -111,7 +111,16 @@ func (pd *Procd) Done() {
 	pd.perf.Teardown()
 	pd.evictProcsL()
 	pd.Exit()
-	close(pd.localRunq)
+	close(pd.procEvent)
+}
+
+func (pd *Procd) notifyProcEvent() {
+	//	pd.mu.Lock()
+	//	defer pd.mu.Unlock()
+
+	if !pd.done {
+		pd.procEvent <- true
+	}
 }
 
 func (pd *Procd) readDone() bool {
@@ -148,29 +157,25 @@ func (pd *Procd) incrementResources(p *proc.Proc) {
 
 	pd.incrementResourcesL(p)
 }
+
 func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 	pd.coresAvail += p.Ncore
 }
 
-func (pd *Procd) getProc() (*proc.Proc, error) {
-	var ok bool
-
-	_, ok = <-pd.localRunq
-	if !ok {
-		return nil, nil
-	}
-
+// Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
+func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	fs, err := pd.fs.runq.ReadDir(fssrv.MkCtx(""), 0, 0, np.NoV)
+	fs, err := readRunq()
 	if err != nil {
-		log.Fatalf("Error ReadDir in Procd.getProc: %v", err)
+		log.Fatalf("Error readRunq in Procd.getRunnableProc: %v", err)
+		return nil, err
 	}
 
 	// Read through procs
 	for _, f := range fs {
-		p, err := pd.fs.getRunqProc(f.Name)
+		p, err := readProc(f.Name)
 		// Proc may have been stolen
 		if err != nil {
 			log.Printf("Error getting RunqProc: %v", err)
@@ -178,13 +183,38 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		}
 		if pd.satisfiesConstraintsL(p) {
 			// Proc may have been stolen
-			if ok := pd.fs.claimProc(p); !ok {
+			if ok := claimProc(p); !ok {
 				continue
 			}
 			pd.decrementResourcesL(p)
 			return p, nil
 		}
 	}
+	return nil, nil
+}
+
+func (pd *Procd) getProc() (*proc.Proc, error) {
+	log.Printf("loop")
+	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
+
+	// Wait until either there was a spawn or exit, or the timeout expires.
+	select {
+	case _, ok := <-pd.procEvent:
+		// If channel closed, return
+		if !ok {
+			return nil, nil
+		}
+	case <-ticker.C:
+	}
+
+	// First, try to read from the local procdfs
+	p, err := pd.getRunnableProc(pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
+	if p != nil || err != nil {
+		return p, err
+	}
+
+	// TODO: Otherwise, try to steal from other procds.
+
 	return nil, nil
 }
 
@@ -219,39 +249,28 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
-func (pd *Procd) runAll(ps []*Proc) {
-	// Register running procs
+func (pd *Procd) runProc(p *Proc) {
+	// Register running proc
 	pd.mu.Lock()
-	for _, p := range ps {
-		pd.procs[p.Pid] = true
-	}
+	pd.procs[p.Pid] = true
 	pd.mu.Unlock()
 
-	var wg sync.WaitGroup
-	for _, p := range ps {
-		wg.Add(1)
-		go func(p *Proc) {
-			defer wg.Done()
+	// Allocate dedicated cores for this lambda to run on.
+	cores := pd.allocCores(p.attr.Ncore)
 
-			// Allocate dedicated cores for this lambda to run on.
-			cores := pd.allocCores(p.attr.Ncore)
+	// Run the lambda.
+	log.Printf("Running %v", p.attr)
+	p.run(cores)
+	log.Printf("Done %v", p.attr)
+	pd.notifyProcEvent()
 
-			// Run the lambda.
-			p.run(cores)
-
-			// Free resources and dedicated cores.
-			pd.incrementResources(p.attr)
-			pd.freeCores(cores)
-
-		}(p)
-	}
-	wg.Wait()
+	// Free resources and dedicated cores.
+	pd.freeCores(cores)
+	pd.incrementResources(p.attr)
 
 	// Deregister running procs
 	pd.mu.Lock()
-	for _, p := range ps {
-		delete(pd.procs, p.Pid)
-	}
+	delete(pd.procs, p.Pid)
 	pd.mu.Unlock()
 }
 
@@ -294,8 +313,7 @@ func (pd *Procd) Worker(workerId uint) {
 		if err != nil {
 			log.Fatalf("Procd pubRunning error %v\n", err)
 		}
-		ps := []*Proc{localProc}
-		pd.runAll(ps)
+		pd.runProc(localProc)
 	}
 }
 

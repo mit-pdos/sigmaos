@@ -32,8 +32,9 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion)
 		log.Fatalf("Couldn't unmarshal proc file in CtlFile.Write: %v, %v", string(b), err)
 	}
 
+	log.Printf("Got spawn request: %v", p)
 	ctl.pd.fs.pubSpawned(p, b)
-	ctl.pd.localRunq <- p
+	log.Printf("Processed spawn request: %v", p)
 
 	return np.Tsize(len(b)), nil
 }

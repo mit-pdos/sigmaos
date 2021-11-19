@@ -60,7 +60,16 @@ func (pd *Procd) makeFs() {
 	pd.fs.runq = runq
 }
 
-func (pfs *ProcdFs) getRunqProc(name string) (*proc.Proc, error) {
+func (pfs *ProcdFs) readRunq() ([]*np.Stat, error) {
+	rq, err := pfs.runq.ReadDir(fssrv.MkCtx(""), 0, 0, np.NoV)
+	if err != nil {
+		log.Fatalf("Error ReadDir in Procd.getProc: %v", err)
+		return nil, err
+	}
+	return rq, nil
+}
+
+func (pfs *ProcdFs) readRunqProc(name string) (*proc.Proc, error) {
 	os, _, err := pfs.runq.Lookup(fssrv.MkCtx(""), []string{name})
 	if err != nil {
 		log.Fatalf("Error Lookup in ProcdFs.getRunqProc: %v", err)
@@ -98,6 +107,7 @@ func (pfs *ProcdFs) pubRunning(p *Proc) error {
 	return nil
 }
 
+// Publishes a proc as done running (NOT running yet)
 func (pfs *ProcdFs) pubFinished(p *Proc) error {
 	err := pfs.running.Remove(fssrv.MkCtx(""), p.Pid)
 	if err != nil {
@@ -118,6 +128,7 @@ func (pfs *ProcdFs) pubSpawned(a *proc.Proc, b []byte) error {
 		log.Printf("Error ProcdFs.pubSpawned: %v", err)
 		return err
 	}
+	pfs.pd.notifyProcEvent()
 	return nil
 }
 

@@ -46,10 +46,10 @@ type ProcClnt struct {
 	*fslib.FsLib
 	pid    string
 	piddir string
-	exited bool
+	exited string
 }
 
-func MakeProcClntBase(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
+func makeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
 	clnt := &ProcClnt{}
 	clnt.FsLib = fsl
 	clnt.pid = pid
@@ -63,7 +63,7 @@ func MakeProcClntBase(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
 func (clnt *ProcClnt) Spawn(gp proc.GenericProc) error {
 	p := gp.GetProc()
 
-	if clnt.hasExited() {
+	if clnt.hasExited() == p.Pid {
 		return fmt.Errorf("Spawn: called after Exited")
 	}
 
@@ -120,7 +120,7 @@ func (clnt *ProcClnt) Spawn(gp proc.GenericProc) error {
 		return err
 	}
 
-	err = clnt.WriteFile(path.Join("name/procd/~ip", named.PROC_CTL_FILE), b)
+	err = clnt.WriteFile(path.Join("procd/~ip", named.PROC_CTL_FILE), b)
 	if err != nil {
 		log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
 		return err
@@ -203,14 +203,16 @@ func (clnt *ProcClnt) Started(pid string) error {
 
 // ========== EXITED ==========
 
-// Mark that a proc has exited. If abandoned, clean up proc.
-// This should be called *once* per proc
+// Mark that a proc has exited. If abandoned, clean up proc.  This
+// should be called *once* per proc, but procd's procclnt may call
+// Exited() for different procs.
 func (clnt *ProcClnt) Exited(pid string, status string) error {
-	if clnt.setExited() {
-		return fmt.Errorf("Spawn: called after Exited")
-	}
-
 	piddir := proc.PidDir(pid)
+
+	if clnt.setExited(pid) == pid {
+		log.Printf("%v: Exited called after exited\n", db.GetName())
+		return fmt.Errorf("Exited: called more than once for pid %v", pid)
+	}
 
 	log.Printf("%v: exited %v\n", db.GetName(), piddir)
 
@@ -339,16 +341,16 @@ func (clnt *ProcClnt) collectChild(piddir string, fn string) string {
 	return status
 }
 
-func (clnt *ProcClnt) hasExited() bool {
+func (clnt *ProcClnt) hasExited() string {
 	clnt.mu.Lock()
 	defer clnt.mu.Unlock()
 	return clnt.exited
 }
 
-func (clnt *ProcClnt) setExited() bool {
+func (clnt *ProcClnt) setExited(pid string) string {
 	clnt.mu.Lock()
 	defer clnt.mu.Unlock()
 	r := clnt.exited
-	clnt.exited = true
+	clnt.exited = pid
 	return r
 }

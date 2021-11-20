@@ -196,7 +196,6 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		if st.Name == pd.FsServer.MyAddr() {
 			return false, nil
 		}
-		log.Printf("name: %v addr %v", st.Name, pd.FsServer.MyAddr())
 		p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
 		if err != nil {
 			log.Fatalf("Error getRunnablePRoc in Procd.getProc: %v", err)

@@ -190,6 +190,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		return p, err
 	}
 
+	// Try to steal from other procds
 	pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
 		// don't process self
 		if st.Name == pd.FsServer.MyAddr() {

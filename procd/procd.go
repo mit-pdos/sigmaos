@@ -190,7 +190,21 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		return p, err
 	}
 
-	// TODO: Otherwise, try to steal from other procds.
+	pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
+		// don't process self
+		if st.Name == pd.FsServer.MyAddr() {
+			return false, nil
+		}
+		log.Printf("name: %v addr %v", st.Name, pd.FsServer.MyAddr())
+		p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
+		if err != nil {
+			log.Fatalf("Error getRunnablePRoc in Procd.getProc: %v", err)
+		}
+		if p != nil {
+			return true, nil
+		}
+		return false, nil
+	})
 
 	return nil, nil
 }

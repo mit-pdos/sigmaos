@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 	"testing"
@@ -241,7 +242,6 @@ func TestEarlyExit1(t *testing.T) {
 
 func TestEarlyExitN(t *testing.T) {
 	ts := makeTstate(t)
-
 	nProcs := 500
 	var done sync.WaitGroup
 	done.Add(nProcs)
@@ -272,6 +272,7 @@ func TestEarlyExitN(t *testing.T) {
 		}()
 	}
 	done.Wait()
+	log.Printf("DONE\n")
 	ts.e.Shutdown()
 }
 
@@ -280,7 +281,7 @@ func TestEarlyExitN(t *testing.T) {
 func TestConcurrentProcs(t *testing.T) {
 	ts := makeTstate(t)
 
-	nProcs := 27
+	nProcs := 8
 	pids := map[string]int{}
 
 	// Make a bunch of fslibs to avoid concurrency issues

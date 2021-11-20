@@ -60,7 +60,7 @@ func (pd *Procd) makeFs() {
 	pd.fs.runq = runq
 }
 
-func (pfs *ProcdFs) readRunq() ([]*np.Stat, error) {
+func (pfs *ProcdFs) readRunq(procdPath string) ([]*np.Stat, error) {
 	rq, err := pfs.runq.ReadDir(fssrv.MkCtx(""), 0, 0, np.NoV)
 	if err != nil {
 		log.Fatalf("Error ReadDir in Procd.getProc: %v", err)
@@ -69,7 +69,7 @@ func (pfs *ProcdFs) readRunq() ([]*np.Stat, error) {
 	return rq, nil
 }
 
-func (pfs *ProcdFs) readRunqProc(name string) (*proc.Proc, error) {
+func (pfs *ProcdFs) readRunqProc(procdPath string, name string) (*proc.Proc, error) {
 	os, _, err := pfs.runq.Lookup(fssrv.MkCtx(""), []string{name})
 	if err != nil {
 		log.Fatalf("Error Lookup in ProcdFs.getRunqProc: %v", err)
@@ -87,6 +87,16 @@ func (pfs *ProcdFs) readRunqProc(name string) (*proc.Proc, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+// Remove from the runq. May race with other (work-stealing) procds.
+func (pfs *ProcdFs) claimProc(procdPath string, p *proc.Proc) bool {
+	err := pfs.runq.Remove(fssrv.MkCtx(""), p.Pid)
+	if err != nil {
+		log.Printf("Error ProcdFs.claimProc: %v", err)
+		return false
+	}
+	return true
 }
 
 // Publishes a proc as running
@@ -130,14 +140,4 @@ func (pfs *ProcdFs) pubSpawned(a *proc.Proc, b []byte) error {
 	}
 	pfs.pd.spawnChan <- true
 	return nil
-}
-
-// Remove from the runq. May race with other (work-stealing) procds.
-func (pfs *ProcdFs) claimProc(p *proc.Proc) bool {
-	err := pfs.runq.Remove(fssrv.MkCtx(""), p.Pid)
-	if err != nil {
-		log.Printf("Error ProcdFs.claimProc: %v", err)
-		return false
-	}
-	return true
 }

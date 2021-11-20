@@ -28,9 +28,9 @@ const (
 	WORK_STEAL_TIMEOUT_MS = 10
 )
 
-type readRunqFn func() ([]*np.Stat, error)
-type readProcFn func(pid string) (*proc.Proc, error)
-type claimProcFn func(p *proc.Proc) bool
+type readRunqFn func(procdPath string) ([]*np.Stat, error)
+type readProcFn func(procdPath string, pid string) (*proc.Proc, error)
+type claimProcFn func(procdPath string, p *proc.Proc) bool
 
 type Procd struct {
 	mu         deadlock.Mutex
@@ -153,11 +153,11 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 }
 
 // Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
-func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
+func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	fs, err := readRunq()
+	fs, err := readRunq(procdPath)
 	if err != nil {
 		log.Fatalf("Error readRunq in Procd.getRunnableProc: %v", err)
 		return nil, err
@@ -165,7 +165,7 @@ func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claim
 
 	// Read through procs
 	for _, f := range fs {
-		p, err := readProc(f.Name)
+		p, err := readProc(procdPath, f.Name)
 		// Proc may have been stolen
 		if err != nil {
 			log.Printf("Error getting RunqProc: %v", err)
@@ -173,7 +173,7 @@ func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claim
 		}
 		if pd.satisfiesConstraintsL(p) {
 			// Proc may have been stolen
-			if ok := claimProc(p); !ok {
+			if ok := claimProc(procdPath, p); !ok {
 				continue
 			}
 			pd.decrementResourcesL(p)
@@ -185,7 +185,7 @@ func (pd *Procd) getRunnableProc(readRunq readRunqFn, readProc readProcFn, claim
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
 	// First, try to read from the local procdfs
-	p, err := pd.getRunnableProc(pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
+	p, err := pd.getRunnableProc("", pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
 	if p != nil || err != nil {
 		return p, err
 	}

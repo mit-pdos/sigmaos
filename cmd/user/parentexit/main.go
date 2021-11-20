@@ -18,7 +18,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage msec pid\n", os.Args[0])
 		os.Exit(1)
 	}
-	fsl := fslib.MakeFsLib(os.Args[0])
+	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pid1 := os.Args[2]
 	a := proc.MakeProcPid(pid1, "bin/user/sleeper", []string{os.Args[1], "name/out_" + pid1})

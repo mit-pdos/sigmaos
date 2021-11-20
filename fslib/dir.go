@@ -3,7 +3,6 @@ package fslib
 import (
 	"fmt"
 	"io"
-	"log"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -114,9 +113,6 @@ func (fl *FsLib) RmDirLarge(dir string) error {
 				return true, fmt.Errorf("rmdir %v err %v\n", dir+"/"+st.Name, err)
 			}
 		} else {
-			if st.Name == "ret-status.#" || st.Name == "ret-status.#" {
-				log.Printf("%v: rm %v\n", db.GetName(), st.Name)
-			}
 			err := fl.Remove(dir + "/" + st.Name)
 			if err != nil {
 				return true, err

@@ -120,7 +120,7 @@ func (clnt *ProcClnt) Spawn(gp proc.GenericProc) error {
 		return err
 	}
 
-	err = clnt.WriteFile(path.Join("procd/~ip", named.PROC_CTL_FILE), b)
+	err = clnt.WriteFile(path.Join(named.PROCDDIR+"/~ip", named.PROC_CTL_FILE), b)
 	if err != nil {
 		log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
 		return err

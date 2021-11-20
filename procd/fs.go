@@ -29,7 +29,7 @@ func (pd *Procd) makeFs() {
 	var err error
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
-	pd.fs.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, "procd")
+	pd.fs.root, pd.FsServer, pd.FsLib, err = fslibsrv.MakeMemFs(named.PROCD, named.PROCDDIR)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

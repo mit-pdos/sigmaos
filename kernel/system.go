@@ -86,7 +86,7 @@ func (s *System) BootFss3d() error {
 
 func (s *System) BootProcd() error {
 	// Create boot cond
-	pid := "procd-" + proc.GenPid()
+	pid := named.PROCDDIR + "-" + proc.GenPid()
 	procdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
 	procdStartCond.Init()
 	var err error

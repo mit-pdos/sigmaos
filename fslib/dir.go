@@ -3,6 +3,7 @@ package fslib
 import (
 	"fmt"
 	"io"
+	"log"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -104,7 +105,8 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	return err
 }
 
-func (fl *FsLib) RmDir(dir string) error {
+// Reads directory incrementally
+func (fl *FsLib) RmDirLarge(dir string) error {
 	fl.ProcessDir(dir, func(st *np.Stat) (bool, error) {
 		if st.Mode.IsDir() {
 			err := fl.RmDir(dir + "/" + st.Name)
@@ -112,6 +114,9 @@ func (fl *FsLib) RmDir(dir string) error {
 				return true, fmt.Errorf("rmdir %v err %v\n", dir+"/"+st.Name, err)
 			}
 		} else {
+			if st.Name == "ret-status.#" || st.Name == "ret-status.#" {
+				log.Printf("%v: rm %v\n", db.GetName(), st.Name)
+			}
 			err := fl.Remove(dir + "/" + st.Name)
 			if err != nil {
 				return true, err
@@ -120,6 +125,22 @@ func (fl *FsLib) RmDir(dir string) error {
 		return false, nil
 	})
 	return fl.Remove(dir)
+}
+
+func (fsl *FsLib) RmDir(dir string) error {
+	sts, err := fsl.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	// log.Printf("%v: rmdir1 %v\n", db.GetName(), dir)
+	for _, st := range sts {
+		if st.Mode.IsDir() {
+			fsl.RmDir(dir + "/" + st.Name)
+		} else {
+			fsl.Remove(dir + "/" + st.Name)
+		}
+	}
+	return fsl.Remove(dir)
 }
 
 func (fsl *FsLib) SprintfDir(d string) (string, error) {

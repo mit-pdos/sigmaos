@@ -438,7 +438,6 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 	}
 	if args.Stat.Name != "" {
 		// update path atomically with rename
-		log.Printf("rename  %v %v\n", f.Path(), args.Stat.Name)
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -561,7 +560,6 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 			return err
 		}
 	}
-	w := false
 	if args.Perm != 0 { // create?
 		if !lo.Perm().IsDir() {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
@@ -573,7 +571,6 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 		}
 		fos.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
-		w = true
 		fos.stats.Path(f.Path())
 		_, r = lo.Open(f.Ctx(), args.Mode)
 		if r != nil {
@@ -584,9 +581,6 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 	case fs.Dir:
 		return np.ErrNotFile
 	case fs.File:
-		if w {
-			log.Printf("write %v\n", names)
-		}
 		rets.Count, r = i.Write(f.Ctx(), args.Offset, args.Data, args.Version)
 		if r != nil {
 			return &np.Rerror{r.Error()}

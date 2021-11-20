@@ -147,8 +147,6 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
-	log.Printf("%v: waitexit %v\n", db.GetName(), piddir)
-
 	if _, err := clnt.Stat(piddir); err != nil {
 		return "", err
 	}
@@ -214,8 +212,6 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 		return fmt.Errorf("Exited: called more than once for pid %v", pid)
 	}
 
-	log.Printf("%v: exited %v\n", db.GetName(), piddir)
-
 	// Abandon any children I may have left.  Do it befoe
 	// writeBackRetStats, since after that call piddir may not
 	// exist.
@@ -234,8 +230,6 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 		// parent has abandoned me; clean myself up
 		clnt.destroyProc(piddir)
 	}
-	log.Printf("%v: exited done %v\n", db.GetName(), piddir)
-
 	return nil
 }
 
@@ -279,7 +273,6 @@ func (clnt *ProcClnt) getRetStat(fn string) string {
 func (clnt *ProcClnt) writeBackRetStats(piddir string, status string) bool {
 	fn := piddir + "/" + RET_STATUS
 	if _, err := clnt.SetFile(fn, []byte(PREFIXSTATUS+status), np.NoV); err != nil {
-		log.Printf("%v: parent abandoned me %v\n", db.GetName(), piddir)
 		// parent has abandoned me
 		return false
 	}
@@ -324,7 +317,6 @@ func (clnt *ProcClnt) abandonChild(piddir string) {
 
 // Remove proc
 func (clnt *ProcClnt) destroyProc(piddir string) {
-	log.Printf("%v: destroy %v\n", db.GetName(), piddir)
 	if err := clnt.RmDir(piddir); err != nil {
 		s, _ := clnt.SprintfDir(piddir)
 		log.Fatalf("%v: Error RmDir %v in collectChild: %v %v", db.GetName(), piddir, err, s)
@@ -332,11 +324,7 @@ func (clnt *ProcClnt) destroyProc(piddir string) {
 }
 
 func (clnt *ProcClnt) collectChild(piddir string, fn string) string {
-	// s, _ := clnt.SprintfDir(piddir)
-	log.Printf("%v: collect %v\n", db.GetName(), piddir)
-
 	status := clnt.getRetStat(fn)
-
 	clnt.destroyProc(piddir)
 	return status
 }

@@ -302,7 +302,6 @@ func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
 
 // Worker runs one proc a time
 func (pd *Procd) worker(workerDone *bool) {
-	pd.group.Add(1)
 	defer pd.group.Done()
 	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
 	for !pd.readDone() && (workerDone == nil || !*workerDone) {
@@ -343,6 +342,8 @@ func (pd *Procd) Work() {
 		NWorkers -= 1
 	}
 	for i := uint(0); i < NWorkers; i++ {
+		pd.group.Add(1)
+
 		go pd.worker(nil)
 	}
 	pd.group.Wait()

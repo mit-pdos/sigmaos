@@ -254,6 +254,7 @@ func (pd *Procd) runProc(p *Proc) {
 	// so we can make progress.
 	done := false
 	if p.attr.Ncore == 0 {
+		pd.group.Add(1)
 		go pd.worker(&done)
 	}
 
@@ -343,7 +344,6 @@ func (pd *Procd) Work() {
 	}
 	for i := uint(0); i < NWorkers; i++ {
 		pd.group.Add(1)
-
 		go pd.worker(nil)
 	}
 	pd.group.Wait()

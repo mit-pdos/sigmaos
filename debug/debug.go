@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"sync"
 )
 
@@ -24,7 +23,7 @@ func Name(n string) {
 	if uldebug != "" {
 		db.debug = true
 	}
-	db.name = n + ":" + strconv.Itoa(os.Getpid())
+	db.name = n
 }
 
 func GetName() string {

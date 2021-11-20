@@ -40,8 +40,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 		return nil, errors.New("MakeSleeper: too few arguments")
 	}
 	s := &Sleeper{}
-	db.Name("sleeper")
-	s.FsLib = fslib.MakeFsLib("sleeper")
+	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid())
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.output = args[1]
 	d, err := time.ParseDuration(args[0])

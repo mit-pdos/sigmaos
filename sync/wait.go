@@ -11,17 +11,21 @@ import (
 	"ulambda/rand"
 )
 
+//
+// Wait variable specialized for one proc (e.g., parent) waiting on
+// another proc (e.g. child).
+//
+// XXX simplify for one waiter?
+//
+
 type Wait struct {
-	path      string // Path to condition variable
-	bcastPath string // Path to broadcast file watched by everyone
-	strict    bool   // If true, kill on error. Otherwise, print to debug
+	path string // Path for wait variable
 	*fslib.FsLib
 }
 
-func MakeWait(fsl *fslib.FsLib, dir string, cond string) *Wait {
+func MakeWait(fsl *fslib.FsLib, dir string, wait string) *Wait {
 	c := &Wait{}
-	c.path = path.Join(dir, cond)
-	c.bcastPath = path.Join(c.path, BROADCAST)
+	c.path = path.Join(dir, wait)
 	c.FsLib = fsl
 	return c
 }
@@ -34,89 +38,44 @@ func (c *Wait) Init() error {
 		db.DLPrintf("WAIT", "MkDir %v err %v", c.path, err)
 		return err
 	}
-	c.createBcastFile()
 	return nil
 }
 
-// Wake up all waiters.
-func (c *Wait) Broadcast() {
-	err := c.Remove(c.bcastPath)
-	if err != nil {
-		if c.strict {
-			log.Fatalf("Error Remove in Wait.Broadcast: %v", err)
-		} else {
-			log.Printf("Error Remove in Wait.Broadcast: %v", err)
-		}
-	}
-	c.createBcastFile()
-}
-
-// Wake up one waiter.
-func (c *Wait) Signal() {
+// Wake up a wait waiter; return number of waiters left
+func (c *Wait) Signal() int {
 	wFiles, err := c.ReadDir(c.path)
 	if err != nil {
 		debug.PrintStack()
-		if c.strict {
-			log.Printf("Error ReadDir %v in Wait.Signal: %v", c.path, err)
-		} else {
-			log.Fatalf("Error ReadDir %v in Wait.Signal: %v", c.path, err)
-		}
+		log.Fatalf("Error ReadDir %v in Wait.Signal: %v", c.path, err)
 	}
 
 	var waiter string
 	for {
 		// If no one was waiting, return
 		if len(wFiles) == 0 {
-			return
+			return 0
 		}
 		i := rand.Int64(int64(len(wFiles)))
 		waiter = wFiles[i].Name
 		// Make sure we don't remove the broadcast file accidentally
-		if waiter == BROADCAST {
-			wFiles = append(wFiles[:i], wFiles[i+1:]...)
-		} else {
-			break
-		}
+		break
 	}
 
 	err = c.Remove(path.Join(c.path, waiter))
 	if err != nil {
-		if c.strict {
-			log.Printf("Error Remove in Wait.Signal: %v", err)
-		} else {
-			log.Fatalf("Error Remove in Wait.Signal: %v", err)
-		}
+		log.Fatalf("Error Remove in Wait.Signal: %v", err)
 	}
+	return len(wFiles) - 1
 }
 
 // Wait.
 func (c *Wait) Wait() error {
-	done := make(chan error, 2)
+	done := make(chan error)
 
 	signalPath, err := c.createSignalFile()
 	if err != nil {
 		return err
 	}
-
-	// Everyone waits on the broadcast file
-	go func() {
-		bcast := make(chan error)
-		err := c.SetRemoveWatch(c.bcastPath, func(p string, err error) {
-			if err != nil {
-				db.DLPrintf("WAIT", "Error RemoveWatch bcast triggered in Wait.Wait: %v", err)
-			}
-			bcast <- err
-		})
-		// If error, don't wait.
-		if err == nil {
-			err = <-bcast
-		} else {
-			db.DLPrintf("WAIT", "Error SetRemoveWatch bcast Wait.Wait: %v", err)
-		}
-
-		c.Remove(signalPath)
-		done <- err
-	}()
 
 	// Each waiter waits on its own signal file
 	go func() {
@@ -136,38 +95,27 @@ func (c *Wait) Wait() error {
 		done <- err
 	}()
 
-	// Wait for either the Signal or Broadcast watch to be triggered
+	// Wait until signal for waking up (or an error)
 	err = <-done
 	return err
 }
 
-// Tear down a Wait variable by waking all waiters.
+// Tear down a Wait variable by waking up all waiters.
+// XXX race between Signal and RmDir: new waiter in between those too
 func (c *Wait) Destroy() {
-	// Wake up all waiters with a broadcast.
-	err := c.Remove(c.bcastPath)
-	if err != nil {
-		debug.PrintStack()
-		if err.Error() == "EOF" {
-			log.Printf("Error Remove 1 in Wait.Destroy: %v", err)
-		} else {
-			if c.strict {
-				log.Fatalf("Error Remove strict 1 in Wait.Destroy: %v", err)
-			} else {
-				log.Printf("Error Remove 1 in Wait.Destroy: %v", err)
-			}
-		}
+	n := c.Signal()
+	if n > 0 {
+		log.Printf("Destroy: more waiters\n")
 	}
-}
-
-// Make a broadcast file to be waited on.
-func (c *Wait) createBcastFile() {
-	err := c.MakeFile(c.bcastPath, 0777, np.OWRITE, []byte{})
+	// Remove the directory so we don't take on any more waiters
+	err := c.RmDir(c.path)
 	if err != nil {
-		if c.strict {
-			log.Fatalf("Error condvar createBcastFile MakeFile: %v", err)
+		if err.Error() == "EOF" {
+			log.Printf("RmDir %v err %v", c.path, err)
 		} else {
-			log.Printf("Error condvar createBcastFile MakeFile: %v", err)
+			log.Printf("RmDir %v err %v", c.path, err)
 		}
+		return
 	}
 }
 

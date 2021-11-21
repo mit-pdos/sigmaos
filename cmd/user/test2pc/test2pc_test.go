@@ -22,7 +22,7 @@ import (
 type Tstate struct {
 	t   *testing.T
 	fsl *fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	ch        chan bool
 	chPresent chan bool
 	mfss      []string

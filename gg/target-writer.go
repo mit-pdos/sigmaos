@@ -5,7 +5,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -16,7 +15,7 @@ type TargetWriter struct {
 	target          string
 	targetReduction string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {

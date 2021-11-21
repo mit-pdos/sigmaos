@@ -53,9 +53,7 @@ func makeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
 // ========== SPAWN ==========
 
 // XXX cleanup on failure
-func (clnt *ProcClnt) Spawn(gp proc.GenericProc) error {
-	p := gp.GetProc()
-
+func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	if clnt.hasExited() == p.Pid {
 		return fmt.Errorf("Spawn: called after Exited")
 	}

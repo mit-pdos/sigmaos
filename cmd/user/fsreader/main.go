@@ -34,7 +34,7 @@ func main() {
 
 type Reader struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	input string
 	pipe  fs.FsObj
 }

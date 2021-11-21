@@ -7,7 +7,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -16,7 +15,7 @@ type Uploader struct {
 	src  string
 	dest string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeUploader(args []string, debug bool) (*Uploader, error) {

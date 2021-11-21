@@ -23,7 +23,7 @@ type Rival struct {
 	dim                string
 	its                string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeRival(args []string) (*Rival, error) {

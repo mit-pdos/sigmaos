@@ -17,7 +17,7 @@ import (
 type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	me     string
 	twopc  *Twopc
 	txn    TxnI

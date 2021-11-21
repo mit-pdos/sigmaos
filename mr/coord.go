@@ -44,7 +44,7 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 
 type Coord struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	crashCoord  string
 	nreducetask int
 	crash       string

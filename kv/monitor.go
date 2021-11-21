@@ -23,7 +23,7 @@ const (
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	kv        string
 	kvmonlock *usync.Lock
 }
@@ -45,21 +45,21 @@ func (mo *Monitor) unlock() {
 	mo.kvmonlock.Unlock()
 }
 
-func spawnBalancer(sched proc.ProcClnt, opcode, pid1 string) string {
+func spawnBalancer(sched *procclnt.ProcClnt, opcode, pid1 string) string {
 	t := proc.MakeProc("bin/user/balancer", []string{opcode, pid1})
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
 }
 
-func SpawnKV(sched proc.ProcClnt) string {
+func SpawnKV(sched *procclnt.ProcClnt) string {
 	t := proc.MakeProc(KV, []string{""})
 	t.Type = proc.T_LC
 	sched.Spawn(t)
 	return t.Pid
 }
 
-func RunBalancer(sched proc.ProcClnt, opcode, pid1 string) {
+func RunBalancer(sched *procclnt.ProcClnt, opcode, pid1 string) {
 	pid2 := spawnBalancer(sched, opcode, pid1)
 	status, err := sched.WaitExit(pid2)
 	if err != nil || status != "OK" {

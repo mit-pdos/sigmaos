@@ -33,7 +33,7 @@ type Tinput struct {
 
 type Part2pc struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	me     string
 	index  string
 	opcode string

@@ -40,7 +40,7 @@ func TestBalance(t *testing.T) {
 type Tstate struct {
 	t   *testing.T
 	fsl *fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
 	rand  *rand.Rand

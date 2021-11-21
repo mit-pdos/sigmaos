@@ -2,7 +2,6 @@ package procclnt_test
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"sync"
 	"testing"
@@ -23,7 +22,7 @@ const (
 )
 
 type Tstate struct {
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	*fslib.FsLib
 	t   *testing.T
 	e   *realm.TestEnv
@@ -272,7 +271,6 @@ func TestEarlyExitN(t *testing.T) {
 		}()
 	}
 	done.Wait()
-	log.Printf("DONE\n")
 	ts.e.Shutdown()
 }
 

@@ -9,7 +9,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -19,7 +18,7 @@ type DirUploader struct {
 	dest      string
 	thunkHash string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeDirUploader(args []string, debug bool) (*DirUploader, error) {

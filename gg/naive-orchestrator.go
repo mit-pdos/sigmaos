@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -27,7 +26,7 @@ type NaiveOrchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error) {

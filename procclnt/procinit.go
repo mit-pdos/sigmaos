@@ -12,7 +12,7 @@ import (
 )
 
 // Called by a sigmaOS process after being spawned
-func MakeProcClnt(fsl *fslib.FsLib) proc.ProcClnt {
+func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	piddir := proc.GetPidDir()
 
 	// XXX resolve mounts to find server?
@@ -33,7 +33,7 @@ func MakeProcClnt(fsl *fslib.FsLib) proc.ProcClnt {
 // Called by tests to fake an initial process
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
-func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) proc.ProcClnt {
+func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 	pid := proc.GenPid()
 	os.Setenv("SIGMAPID", pid)
 

@@ -24,7 +24,7 @@ type ReduceT func(string, []string) string
 
 type Reducer struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	reducef ReduceT
 	crash   string
 	input   string

@@ -26,13 +26,12 @@ const (
 	PIDS = "pids"
 
 	// Files/directories in "pids/<pid>":
-	START_WAIT   = "start-cond."
-	EVICT_WAIT   = "evict-cond."
-	EXIT_WAIT    = "exit-cond."
-	RET_STATUS   = "ret-status."
-	PREFIXSTATUS = "status:"
-	LOCK         = "pid-lock."
-	CHILD        = "childs" // directory with children's pids
+	START_WAIT = "start-cond."
+	EVICT_WAIT = "evict-cond."
+	EXIT_WAIT  = "exit-cond."
+	RET_STATUS = "ret-status."
+	LOCK       = "pid-lock."
+	CHILD      = "childs" // directory with children's pids
 )
 
 type ProcClnt struct {
@@ -123,7 +122,8 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 // ========== WAIT ==========
 
-// Wait until a proc has started. If the proc doesn't exist, return immediately.
+// Parent calls WaitStart() to wait until the child proc has
+// started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid string) error {
 	piddir := proc.PidDir(pid)
 	if _, err := clnt.Stat(piddir); err != nil {
@@ -134,8 +134,10 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 	return nil
 }
 
-// Wait until a proc has exited. If the proc doesn't exist, return immediately.
-// Should be called only by parent
+// Parent calls WaitExited() to wait until child proc has exited. If
+// the proc doesn't exist, return immediately.  After collecting
+// return status, parent cleans up the child and parent removes the
+// child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
@@ -160,7 +162,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 
 }
 
-// Wait for a proc's eviction notice. If the proc doesn't exist, return immediately.
+// Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid string) error {
 	piddir := proc.PidDir(pid)
 	if _, err := clnt.Stat(piddir); err != nil {
@@ -173,7 +175,7 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 
 // ========== STARTED ==========
 
-// Mark that a process has started.
+// Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
 	dir := proc.PidDir(pid)
 	if _, err := clnt.Stat(dir); err != nil {
@@ -193,9 +195,14 @@ func (clnt *ProcClnt) Started(pid string) error {
 
 // ========== EXITED ==========
 
-// Mark that a proc has exited. If abandoned, clean up proc.  This
-// should be called *once* per proc, but procd's procclnt may call
-// Exited() for different procs.
+// Proc pid mark itself as exited. Typically Exited() is called by
+// proc pid, but if the proc crashes, procd calls Exited() on behalf
+// of the failed proc. The exited proc abandons any chidren it may
+// have.  If itself is an abandoned child, then it cleans up itself;
+// otherwise the parent will do it.
+//
+// Exited() should be called *once* per proc, but procd's procclnt may
+// call Exited() for different procs.
 func (clnt *ProcClnt) Exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
@@ -227,9 +234,10 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 
 // ========== EVICT ==========
 
-// Notify a process that it will be evicted.  XXX race between procd's
-// call to evict() and parent/child: between procd stat-ing and
-// Destroy() parent/child may have removed the piddir.
+// Procd notifies a proc that it will be evicted using Evict.  XXX
+// race between procd's call to evict() and parent/child: between
+// procd stat-ing and Destroy() parent/child may have removed the
+// piddir.
 func (clnt *ProcClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
 	if _, err := clnt.Stat(piddir); err != nil {
@@ -258,13 +266,13 @@ func (clnt *ProcClnt) getRetStat(fn string) string {
 		log.Fatalf("%v: GetFile %v err %v", db.GetName(), fn, err)
 	}
 	s := string(b)
-	return strings.TrimPrefix(s, PREFIXSTATUS)
+	return s
 }
 
 // Write back exit status
 func (clnt *ProcClnt) writeBackRetStats(piddir string, status string) bool {
 	fn := piddir + "/" + RET_STATUS
-	if _, err := clnt.SetFile(fn, []byte(PREFIXSTATUS+status), np.NoV); err != nil {
+	if _, err := clnt.SetFile(fn, []byte(status), np.NoV); err != nil {
 		// if failed to write, parent has abandoned me for sure
 		return false
 	}
@@ -299,7 +307,7 @@ func (clnt *ProcClnt) abandonChild(piddir string) {
 	}
 }
 
-// Remove proc
+// Clean up proc
 func (clnt *ProcClnt) destroyProc(piddir string) {
 	if err := clnt.RmDir(piddir); err != nil {
 		s, _ := clnt.SprintfDir(piddir)

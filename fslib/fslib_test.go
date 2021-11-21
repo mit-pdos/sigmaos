@@ -663,6 +663,8 @@ func (ts *Tstate) checkFs() {
 		n = strings.TrimPrefix(n, "job")
 		i, err := strconv.Atoi(n)
 		assert.Nil(ts.t, err, "Atoi")
+		_, ok := files[i]
+		assert.Equal(ts.t, false, ok, "map")
 		files[i] = true
 	}
 	for i := 0; i < NFILE; i++ {

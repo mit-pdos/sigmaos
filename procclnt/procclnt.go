@@ -30,7 +30,6 @@ const (
 	EVICT_WAIT = "evict-cond."
 	EXIT_WAIT  = "exit-cond."
 	RET_STATUS = "ret-status."
-	LOCK       = "pid-lock."
 	CHILD      = "childs" // directory with children's pids
 )
 

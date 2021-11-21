@@ -16,6 +16,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/seccomp"
+	usync "ulambda/sync"
 )
 
 const (
@@ -77,13 +78,13 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		}
 	}
 
-	pStartWait := MakeWait(clnt.FsLib, piddir, START_WAIT)
+	pStartWait := usync.MakeWait(clnt.FsLib, piddir, START_WAIT)
 	pStartWait.Init()
 
-	pExitWait := MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
+	pExitWait := usync.MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
 	pExitWait.Init()
 
-	pEvictWait := MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
+	pEvictWait := usync.MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
 	pEvictWait.Init()
 
 	d := piddir + "/" + CHILD
@@ -128,7 +129,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 	if _, err := clnt.Stat(piddir); err != nil {
 		return err
 	}
-	pStartWait := MakeWait(clnt.FsLib, piddir, START_WAIT)
+	pStartWait := usync.MakeWait(clnt.FsLib, piddir, START_WAIT)
 	pStartWait.Wait()
 	return nil
 }
@@ -143,7 +144,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 
 	// Wait for the process to exit
-	pExitWait := MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
+	pExitWait := usync.MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
 	pExitWait.Wait()
 
 	// Remove pid from my children
@@ -165,7 +166,7 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 	if _, err := clnt.Stat(piddir); err != nil {
 		return err
 	}
-	pEvictWait := MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
+	pEvictWait := usync.MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
 	pEvictWait.Wait()
 	return nil
 }
@@ -178,7 +179,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 	if _, err := clnt.Stat(dir); err != nil {
 		return err
 	}
-	pStartWait := MakeWait(clnt.FsLib, dir, START_WAIT)
+	pStartWait := usync.MakeWait(clnt.FsLib, dir, START_WAIT)
 	pStartWait.Destroy()
 	// Isolate the process namespace
 	newRoot := os.Getenv("NEWROOT")
@@ -215,7 +216,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 
 	if ok {
 		// wakekup parent in case it called WaitExit()
-		pExitWait := MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
+		pExitWait := usync.MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
 		pExitWait.Destroy()
 	} else {
 		// parent has abandoned me; clean myself up
@@ -234,7 +235,7 @@ func (clnt *ProcClnt) Evict(pid string) error {
 	if _, err := clnt.Stat(piddir); err != nil {
 		return err
 	}
-	pEvictWait := MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
+	pEvictWait := usync.MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
 	pEvictWait.Destroy()
 	return nil
 }

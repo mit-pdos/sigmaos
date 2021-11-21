@@ -1,4 +1,4 @@
-package procclnt
+package sync
 
 import (
 	"log"
@@ -11,10 +11,6 @@ import (
 	"ulambda/rand"
 )
 
-const (
-	BROADCAST = ".BROADCAST" // A file watched by everone for broadcasts
-)
-
 type Wait struct {
 	path      string // Path to condition variable
 	bcastPath string // Path to broadcast file watched by everyone
@@ -22,7 +18,6 @@ type Wait struct {
 	*fslib.FsLib
 }
 
-// Strict lock checking is turned on if this is a true condition variable.
 func MakeWait(fsl *fslib.FsLib, dir string, cond string) *Wait {
 	c := &Wait{}
 	c.path = path.Join(dir, cond)
@@ -36,7 +31,7 @@ func MakeWait(fsl *fslib.FsLib, dir string, cond string) *Wait {
 func (c *Wait) Init() error {
 	err := c.Mkdir(c.path, 0777)
 	if err != nil {
-		db.DLPrintf("WAIT", "Error condvar Init MkDir: %v", err)
+		db.DLPrintf("WAIT", "MkDir %v err %v", c.path, err)
 		return err
 	}
 	c.createBcastFile()

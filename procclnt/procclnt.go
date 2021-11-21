@@ -18,13 +18,6 @@ import (
 	"ulambda/seccomp"
 )
 
-type Twait uint32
-
-const (
-	START Twait = 0
-	EXIT  Twait = 1
-)
-
 const (
 	// name for dir where procs live. May not refer to name/pids
 	// because proc.PidDir may change it.  A proc refers to itself

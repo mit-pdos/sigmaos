@@ -162,7 +162,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 
 	// Collect status and remove child
-	status := clnt.collectChild(piddir, piddir+"/"+RET_STATUS)
+	status := clnt.collectChild(piddir)
 
 	return status, nil
 
@@ -273,7 +273,13 @@ func (clnt *ProcClnt) getRetStat(fn string) string {
 func (clnt *ProcClnt) writeBackRetStats(piddir string, status string) bool {
 	fn := piddir + "/" + RET_STATUS
 	if _, err := clnt.SetFile(fn, []byte(PREFIXSTATUS+status), np.NoV); err != nil {
-		// parent has abandoned me
+		// if failed to write, parent has abandoned me for sure
+		return false
+	}
+	f := piddir + "/" + RET_STATUS
+	fc := piddir + "/" + RET_STATUS + "-c"
+	err := clnt.Rename(f, fc)
+	if err != nil { // parent abandoned me
 		return false
 	}
 	return true
@@ -294,24 +300,10 @@ func (clnt *ProcClnt) abandonChildren(piddir string) {
 // Abandon child or collect it, depending on RET_STATUS
 func (clnt *ProcClnt) abandonChild(piddir string) {
 	f := piddir + "/" + RET_STATUS
-	ft := piddir + "/" + RET_STATUS + "#"
-
-	// child writes to status or not (after rename)
-	err := clnt.Rename(f, f+"#")
-	if err != nil {
-		log.Fatalf("%v: abandonChild rename status %v err %v\n", db.GetName(), f, err)
-	}
-	st, err := clnt.Stat(ft)
-	if err != nil {
-		log.Fatalf("%v: abandonChild stat status %v err %v\n", db.GetName(), ft, err)
-	}
-	if st.Length > 0 { // child wrote status and is done, collect it
-		clnt.collectChild(piddir, ft)
-	} else { // abandon child, child will collect itself
-		err := clnt.Remove(ft)
-		if err != nil {
-			log.Fatalf("%v: abandonChild rmfile child %v err %v\n", db.GetName(), f, err)
-		}
+	fp := piddir + "/" + RET_STATUS + "-p"
+	err := clnt.Rename(f, fp)
+	if err != nil { // abandoning child failed, collect it
+		clnt.collectChild(piddir)
 	}
 }
 
@@ -319,12 +311,12 @@ func (clnt *ProcClnt) abandonChild(piddir string) {
 func (clnt *ProcClnt) destroyProc(piddir string) {
 	if err := clnt.RmDir(piddir); err != nil {
 		s, _ := clnt.SprintfDir(piddir)
-		log.Fatalf("%v: Error RmDir %v in collectChild: %v %v", db.GetName(), piddir, err, s)
+		log.Fatalf("%v: RmDir %v err %v %v", db.GetName(), piddir, err, s)
 	}
 }
 
-func (clnt *ProcClnt) collectChild(piddir string, fn string) string {
-	status := clnt.getRetStat(fn)
+func (clnt *ProcClnt) collectChild(piddir string) string {
+	status := clnt.getRetStat(piddir + "/" + RET_STATUS + "-c")
 	clnt.destroyProc(piddir)
 	return status
 }

@@ -28,6 +28,7 @@ const (
 	BROADCAST_REL = "broadcast"
 	SIGNAL_REL    = "signal"
 	FILE_BAG_PATH = "name/filebag"
+	WAIT_PATH     = "name/wait"
 )
 
 type Tstate struct {
@@ -366,6 +367,38 @@ func TestFilePriorityBag(t *testing.T) {
 
 	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
+	ts.e.Shutdown()
+}
+
+func TestWait(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Mkdir(WAIT_PATH, 0777)
+	assert.Nil(ts.t, err, "Mkdir")
+
+	for i := 0; i < 10; i++ {
+		wait := usync.MakeWait(ts.FsLib, WAIT_PATH, "x")
+		wait.Init()
+
+		ch := make(chan bool)
+
+		go func(ch chan bool) {
+			fsl := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
+			wait := usync.MakeWait(fsl, WAIT_PATH, "x")
+			wait.Wait()
+			ch <- true
+		}(ch)
+		go func(ch chan bool) {
+			fsl := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
+			wait := usync.MakeWait(fsl, WAIT_PATH, "x")
+			wait.Destroy()
+			ch <- true
+		}(ch)
+
+		for i := 0; i < 2; i++ {
+			<-ch
+		}
+	}
 	ts.e.Shutdown()
 }
 

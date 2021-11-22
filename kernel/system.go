@@ -17,9 +17,13 @@ type System struct {
 	bin       string
 	namedAddr []string
 	fss3d     []*exec.Cmd
+	fss3dPids []string
 	fsuxd     []*exec.Cmd
+	fsuxdPids []string
 	procd     []*exec.Cmd
+	procdPids []string
 	dbd       []*exec.Cmd
+	dbdPids   []string
 	*fslib.FsLib
 }
 
@@ -65,6 +69,7 @@ func (s *System) BootFsUxd() error {
 	}
 	// Wait for boot
 	fsuxdStartCond.Wait()
+	s.fsuxdPids = append(s.fsuxdPids, pid)
 	return nil
 }
 
@@ -81,6 +86,7 @@ func (s *System) BootFss3d() error {
 	}
 	// Wait for boot
 	fss3dStartCond.Wait()
+	s.fss3dPids = append(s.fss3dPids, pid)
 	return nil
 }
 
@@ -97,6 +103,7 @@ func (s *System) BootProcd() error {
 	}
 	// Wait for boot
 	procdStartCond.Wait()
+	s.procdPids = append(s.procdPids, pid)
 	return nil
 }
 
@@ -113,16 +120,13 @@ func (s *System) BootDbd() error {
 	}
 	// Wait for boot
 	dbdStartCond.Wait()
+	s.dbdPids = append(s.dbdPids, pid)
 	return nil
 }
 
-func (s *System) RmUnionDir(mdir string) error {
-	dirents, err := s.ReadDir(mdir)
-	if err != nil {
-		return err
-	}
-	for _, st := range dirents {
-		err = s.FsLib.ShutdownFs(mdir + "/" + st.Name)
+func (s *System) shutdownAll(mdir string, pids []string) error {
+	for _, pid := range pids {
+		err := s.FsLib.ShutdownFs(path.Join(mdir, pid))
 		if err != nil {
 			log.Printf("shutdown err %v\n", err)
 			return err
@@ -153,7 +157,7 @@ func (s *System) KillOne(srv string) error {
 
 func (s *System) Shutdown() {
 	if len(s.fss3d) != 0 {
-		err := s.RmUnionDir(named.S3)
+		err := s.shutdownAll(named.S3, s.fss3dPids)
 		if err != nil {
 			log.Printf("S3 shutdown %v\n", err)
 		}
@@ -162,7 +166,7 @@ func (s *System) Shutdown() {
 		}
 	}
 	if len(s.fsuxd) != 0 {
-		err := s.RmUnionDir(named.UX)
+		err := s.shutdownAll(named.UX, s.fsuxdPids)
 		if err != nil {
 			log.Printf("Ux shutdown %v\n", err)
 		}
@@ -171,7 +175,7 @@ func (s *System) Shutdown() {
 		}
 	}
 	if len(s.procd) != 0 {
-		err := s.RmUnionDir(named.PROCD)
+		err := s.shutdownAll(named.PROCD, s.procdPids)
 		if err != nil {
 			log.Printf("Procds shutdown %v\n", err)
 		}
@@ -180,7 +184,7 @@ func (s *System) Shutdown() {
 		}
 	}
 	if len(s.dbd) != 0 {
-		err := s.RmUnionDir(named.DB)
+		err := s.shutdownAll(named.DB, s.dbdPids)
 		if err != nil {
 			log.Printf("Db shutdown %v\n", err)
 		}

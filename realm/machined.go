@@ -213,7 +213,6 @@ func (r *Machined) leaveRealm() {
 
 	// Tear down resources
 	r.teardown()
-	log.Printf("Tore down! %v", r.id)
 	// Deregister this machined
 	r.deregister()
 	// Try to destroy a realm (if this is the last machined remaining)

@@ -243,13 +243,15 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 	if len(nameds) == 0 {
 		return stat
 	}
-	procds, err := m.ReadDir(path.Join(REALM_NAMEDS, realmId, nameds[0], named.PROCDDIR))
+	// XXX May fail if this named crashed
+	procds, err := m.ReadDir(path.Join(REALM_NAMEDS, realmId, "named-1", named.PROCDDIR))
 	if err != nil {
 		log.Fatalf("Error ReadDir 2 in RealmMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
-		err := m.ReadFileJson(path.Join(REALM_NAMEDS, realmId, nameds[0], named.PROCDDIR, pd.Name, "statsd"), s)
+		// XXX May fail if this named crashed
+		err := m.ReadFileJson(path.Join(REALM_NAMEDS, realmId, "named-1", named.PROCDDIR, pd.Name, "statsd"), s)
 		if err != nil {
 			log.Fatalf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
 		}

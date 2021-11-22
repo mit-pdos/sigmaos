@@ -28,10 +28,6 @@ const (
 	WORK_STEAL_TIMEOUT_MS = 10
 )
 
-type readRunqFn func(procdPath string) ([]*np.Stat, error)
-type readProcFn func(procdPath string, pid string) (*proc.Proc, error)
-type claimProcFn func(procdPath string, p *proc.Proc) bool
-
 type Procd struct {
 	mu         deadlock.Mutex
 	fs         *ProcdFs
@@ -159,7 +155,6 @@ func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc
 
 	fs, err := readRunq(procdPath)
 	if err != nil {
-		log.Fatalf("Error readRunq in Procd.getRunnableProc: %v", err)
 		return nil, err
 	}
 
@@ -168,7 +163,7 @@ func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc
 		p, err := readProc(procdPath, f.Name)
 		// Proc may have been stolen
 		if err != nil {
-			log.Printf("Error getting RunqProc: %v", err)
+			db.DLPrintf("PROCD", "Error getting RunqProc: %v", err)
 			continue
 		}
 		if pd.satisfiesConstraintsL(p) {
@@ -191,14 +186,21 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 	}
 
 	// Try to steal from other procds
-	pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
+	_, err = pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
 		// don't process self
-		if st.Name == pd.FsServer.MyAddr() {
+		var b []byte
+		b, err = pd.ReadFile(path.Join(named.PROCD, st.Name))
+		if err != nil {
+			return false, nil
+		}
+		addr := string(b)
+		if strings.HasPrefix(addr, pd.FsServer.MyAddr()) {
 			return false, nil
 		}
 		p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
 		if err != nil {
-			log.Fatalf("Error getRunnablePRoc in Procd.getProc: %v", err)
+			db.DLPrintf("PROCD", "Error getRunnableProc in Procd.getProc: %v", err)
+			return false, nil
 		}
 		if p != nil {
 			return true, nil
@@ -206,7 +208,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		return false, nil
 	})
 
-	return nil, nil
+	return p, err
 }
 
 func (pd *Procd) allocCores(n proc.Tcore) []uint {

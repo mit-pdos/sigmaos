@@ -17,6 +17,10 @@ import (
 	"ulambda/proc"
 )
 
+type readRunqFn func(procdPath string) ([]*np.Stat, error)
+type readProcFn func(procdPath string, pid string) (*proc.Proc, error)
+type claimProcFn func(procdPath string, p *proc.Proc) bool
+
 type ProcdFs struct {
 	pd      *Procd
 	root    fs.Dir

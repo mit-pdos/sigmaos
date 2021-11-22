@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslibsrv"
@@ -63,7 +64,7 @@ func (pd *Procd) makeFs() {
 func (pfs *ProcdFs) readRunq(procdPath string) ([]*np.Stat, error) {
 	rq, err := pfs.runq.ReadDir(fssrv.MkCtx(""), 0, 0, np.NoV)
 	if err != nil {
-		log.Fatalf("Error ReadDir in Procd.getProc: %v", err)
+		log.Printf("Error ReadDir in ProcdFs.readRunq: %v", err)
 		return nil, err
 	}
 	return rq, nil
@@ -72,12 +73,12 @@ func (pfs *ProcdFs) readRunq(procdPath string) ([]*np.Stat, error) {
 func (pfs *ProcdFs) readRunqProc(procdPath string, name string) (*proc.Proc, error) {
 	os, _, err := pfs.runq.Lookup(fssrv.MkCtx(""), []string{name})
 	if err != nil {
-		log.Fatalf("Error Lookup in ProcdFs.getRunqProc: %v", err)
+		log.Printf("Error Lookup in ProcdFs.getRunqProc: %v", err)
 		return nil, err
 	}
 	b, err := os[0].(fs.File).Read(fssrv.MkCtx(""), 0, math.MaxUint32, np.NoV)
 	if err != nil {
-		log.Fatalf("Error Read in ProcdFs.getRunqProc: %v", err)
+		log.Printf("Error Read in ProcdFs.getRunqProc: %v", err)
 		return nil, err
 	}
 	p := proc.MakeEmptyProc()
@@ -93,7 +94,7 @@ func (pfs *ProcdFs) readRunqProc(procdPath string, name string) (*proc.Proc, err
 func (pfs *ProcdFs) claimProc(procdPath string, p *proc.Proc) bool {
 	err := pfs.runq.Remove(fssrv.MkCtx(""), p.Pid)
 	if err != nil {
-		log.Printf("Error ProcdFs.claimProc: %v", err)
+		db.DLPrintf("PDFS", "Error ProcdFs.claimProc: %v", err)
 		return false
 	}
 	return true

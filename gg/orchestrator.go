@@ -19,7 +19,7 @@ const (
 
 type ExecutorLauncher interface {
 	FsLambda
-	Spawn(proc.GenericProc) error
+	Spawn(*proc.Proc) error
 	Started(string) error
 }
 
@@ -29,7 +29,7 @@ type Orchestrator struct {
 	targets      []string
 	targetHashes []string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {

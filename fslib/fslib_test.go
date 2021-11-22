@@ -3,6 +3,7 @@ package fslib_test
 import (
 	"log"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -591,7 +592,7 @@ func TestWatchDir(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-func TestConcur(t *testing.T) {
+func TestConcurFile(t *testing.T) {
 	const N = 20
 	ts := makeTstate(t)
 	ch := make(chan int)
@@ -614,5 +615,99 @@ func TestConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
+	ts.e.Shutdown()
+}
+
+const (
+	TODO  = "name/todo"
+	DONE  = "name/done"
+	NFILE = 1000
+)
+
+func (ts *Tstate) initfs() {
+	err := ts.Mkdir(TODO, 07000)
+	assert.Nil(ts.t, err, "Create done")
+	err = ts.Mkdir(DONE, 07000)
+	assert.Nil(ts.t, err, "Create todo")
+}
+
+// Keep renaming files in the todo directory until we failed to rename
+// any file
+func (ts *Tstate) testRename(fsl *fslib.FsLib, t string) int {
+	ok := true
+	i := 0
+	for ok {
+		ok = false
+		sts, err := fsl.ReadDir(TODO)
+		assert.Nil(ts.t, err, "ReadDir")
+		for _, st := range sts {
+			err = fsl.Rename(TODO+"/"+st.Name, DONE+"/"+st.Name+"."+t)
+			if err == nil {
+				i = i + 1
+				ok = true
+			} else {
+				assert.Contains(ts.t, err.Error(), "file not found")
+			}
+		}
+	}
+	return i
+}
+
+func (ts *Tstate) checkFs() {
+	sts, err := ts.ReadDir(DONE)
+	assert.Nil(ts.t, err, "ReadDir")
+	assert.Equal(ts.t, NFILE, len(sts), "checkFs")
+	files := make(map[int]bool)
+	for _, st := range sts {
+		n := strings.TrimSuffix(st.Name, filepath.Ext(st.Name))
+		n = strings.TrimPrefix(n, "job")
+		i, err := strconv.Atoi(n)
+		assert.Nil(ts.t, err, "Atoi")
+		_, ok := files[i]
+		assert.Equal(ts.t, false, ok, "map")
+		files[i] = true
+	}
+	for i := 0; i < NFILE; i++ {
+		assert.Equal(ts.t, true, files[i], "checkFs")
+	}
+}
+
+func TestConcurRename(t *testing.T) {
+	const N = 20
+	ts := makeTstate(t)
+	cont := make(chan bool)
+	done := make(chan int)
+	ts.initfs()
+
+	// start N threads trying to rename files in todo dir
+	for i := 0; i < N; i++ {
+		fsl := fslib.MakeFsLibAddr("thread"+strconv.Itoa(i), ts.cfg.NamedAddr)
+		go func(fsl *fslib.FsLib, t string) {
+			n := 0
+			for c := true; c; {
+				select {
+				case c = <-cont:
+				default:
+					n += ts.testRename(fsl, t)
+				}
+			}
+			done <- n
+		}(fsl, strconv.Itoa(i))
+	}
+
+	// generate files in the todo dir
+	for i := 0; i < NFILE; i++ {
+		err := ts.MakeFile(TODO+"/job"+strconv.Itoa(i), 07000, np.OWRITE, []byte{})
+		assert.Nil(ts.t, err, "Create job")
+	}
+
+	// tell threads we are done with generating files
+	n := 0
+	for i := 0; i < N; i++ {
+		cont <- false
+		n += <-done
+	}
+	assert.Equal(ts.t, NFILE, n, "sum")
+	ts.checkFs()
 	ts.e.Shutdown()
 }

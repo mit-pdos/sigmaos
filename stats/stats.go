@@ -91,7 +91,7 @@ type Stats struct {
 	done uint32
 	ch   chan bool
 	fsl  *fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MkStats(parent fs.Dir) *Stats {

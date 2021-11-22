@@ -39,7 +39,7 @@ type Microbenchmarks struct {
 	namedAddr []string
 	resDir    string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *Microbenchmarks {

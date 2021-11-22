@@ -32,7 +32,7 @@ const (
 
 type Coord struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	opcode    string
 	args      []string
 	ch        chan Tstatus

@@ -40,7 +40,7 @@ func main() {
 
 type BookApp struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	input []string
 	pipe  fs.FsObj
 }

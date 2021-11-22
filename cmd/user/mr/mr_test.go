@@ -50,7 +50,7 @@ func Compare(fsl *fslib.FsLib) {
 }
 
 type Tstate struct {
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	*fslib.FsLib
 	t           *testing.T
 	e           *realm.TestEnv

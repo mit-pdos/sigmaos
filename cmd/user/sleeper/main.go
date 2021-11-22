@@ -29,7 +29,7 @@ func main() {
 
 type Sleeper struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	native      bool
 	sleepLength time.Duration
 	output      string

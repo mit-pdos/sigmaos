@@ -7,7 +7,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -15,7 +14,7 @@ type Executor struct {
 	pid       string
 	thunkHash string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {

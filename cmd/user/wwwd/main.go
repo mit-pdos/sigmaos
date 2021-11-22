@@ -42,7 +42,7 @@ func main() {
 
 type Wwwd struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeWwwd(tree string) *Wwwd {

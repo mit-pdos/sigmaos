@@ -9,7 +9,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
-	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/sync"
 )
@@ -20,7 +19,7 @@ type ReplicaMonitor struct {
 	unionDirPath string
 	configLock   *sync.Lock
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeReplicaMonitor(args []string) *ReplicaMonitor {

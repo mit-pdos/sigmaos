@@ -8,7 +8,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -28,7 +27,7 @@ func main() {
 
 type Spinner struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	pid    string
 	output string
 }

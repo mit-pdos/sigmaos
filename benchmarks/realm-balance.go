@@ -19,7 +19,7 @@ const (
 type RealmBalanceBenchmark struct {
 	realmFsl *fslib.FsLib
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeRealmBalanceBenchmark(realmFsl *fslib.FsLib, fsl *fslib.FsLib) *RealmBalanceBenchmark {

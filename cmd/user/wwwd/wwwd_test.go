@@ -14,7 +14,7 @@ import (
 )
 
 type Tstate struct {
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	*fslib.FsLib
 	t   *testing.T
 	e   *realm.TestEnv

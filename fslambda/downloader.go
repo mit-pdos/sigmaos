@@ -7,7 +7,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -16,7 +15,7 @@ type Downloader struct {
 	src  string
 	dest string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeDownloader(args []string, debug bool) (*Downloader, error) {

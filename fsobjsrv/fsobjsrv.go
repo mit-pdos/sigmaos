@@ -437,6 +437,7 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
+		// update path atomically with rename
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
@@ -479,6 +480,7 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
+		// XXX update oldf.Path and newf.Path?
 		dst := np.Copy(newf.Path())
 		dst = append(dst, args.NewName)
 		fos.wt.WakeupWatch(dst, nil)

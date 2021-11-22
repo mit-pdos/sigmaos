@@ -36,7 +36,7 @@ type ChainReplServer struct {
 	fids       map[np.Tfid]*fid.Fid
 	replyCache *ReplyCache
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	*protclnt.Clnt
 }
 

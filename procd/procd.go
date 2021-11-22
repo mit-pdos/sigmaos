@@ -45,7 +45,7 @@ type Procd struct {
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
 	perf       *perf.Perf
-	procclnt   proc.ProcClnt
+	procclnt   *procclnt.ProcClnt
 	*fslib.FsLib
 	*fssrv.FsServer
 }

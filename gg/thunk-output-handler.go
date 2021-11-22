@@ -6,7 +6,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -17,7 +16,7 @@ type ThunkOutputHandler struct {
 	primaryOutputThunkPid  string
 	outputFiles            []string
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, error) {

@@ -28,7 +28,7 @@ type SpinTestStarter struct {
 	local     bool
 	perfStat  bool
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 }
 
 func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {

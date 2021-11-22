@@ -23,7 +23,7 @@ type MapT func(string, string) []KeyValue
 
 type Mapper struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	mapf        MapT
 	crash       string
 	nreducetask int

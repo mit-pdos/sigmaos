@@ -29,7 +29,7 @@ const (
 
 type Balancer struct {
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	args   []string
 	conf   *Config
 	kvlock *sync.Lock

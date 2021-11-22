@@ -16,7 +16,7 @@ import (
 type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	proc.ProcClnt
+	*procclnt.ProcClnt
 	shard string
 	src   string
 	dst   string

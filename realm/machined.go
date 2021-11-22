@@ -131,7 +131,7 @@ func (r *Machined) register() {
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystemNamedAddr(r.bin, realmCfg.NamedAddr)
+	r.s = kernel.MakeSystem(r.bin, realmCfg.NamedAddr)
 	if err := r.s.Boot(); err != nil {
 		log.Fatalf("Error Boot in Machined.boot: %v", err)
 	}
@@ -213,6 +213,7 @@ func (r *Machined) leaveRealm() {
 
 	// Tear down resources
 	r.teardown()
+	log.Printf("Tore down! %v", r.id)
 	// Deregister this machined
 	r.deregister()
 	// Try to destroy a realm (if this is the last machined remaining)

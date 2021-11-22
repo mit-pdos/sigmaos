@@ -41,7 +41,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.e = e
 	ts.cfg = cfg
-	s := kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
+	s := kernel.MakeSystem(bin, cfg.NamedAddr)
 	ts.s = s
 	ts.FsLib = fslib.MakeFsLibAddr("nps3_test", cfg.NamedAddr)
 	db.Name("nps3_test")

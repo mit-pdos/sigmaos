@@ -23,7 +23,7 @@ type System struct {
 	*fslib.FsLib
 }
 
-func MakeSystemNamedAddr(bin string, namedAddr []string) *System {
+func MakeSystem(bin string, namedAddr []string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = namedAddr

@@ -11,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/linuxsched"
 	"ulambda/named"
 	"ulambda/proc"
@@ -28,6 +29,7 @@ type Tstate struct {
 	t   *testing.T
 	e   *realm.TestEnv
 	cfg *realm.RealmConfig
+	s   *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -41,6 +43,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.e = e
 	ts.cfg = cfg
+	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
 
 	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
@@ -389,5 +392,38 @@ func TestReserveCores(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
+	ts.e.Shutdown()
+}
+
+func TestWorkStealing(t *testing.T) {
+	ts := makeTstate(t)
+
+	ts.s.BootProcd()
+
+	linuxsched.ScanTopology()
+
+	start := time.Now()
+	pid := proc.GenPid()
+	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+
+	pid1 := proc.GenPid()
+	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+
+	status, err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.Equal(t, "OK", status, "WaitExit status")
+
+	status, err = ts.WaitExit(pid1)
+	assert.Nil(t, err, "WaitExit 2")
+	assert.Equal(t, "OK", status, "WaitExit status 2")
+	end := time.Now()
+
+	// Make sure both procs finished
+	checkSleeperResult(t, ts, pid)
+	checkSleeperResult(t, ts, pid1)
+
+	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+
+	ts.s.Shutdown()
 	ts.e.Shutdown()
 }

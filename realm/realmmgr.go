@@ -23,7 +23,7 @@ import (
 const (
 	SCAN_INTERVAL_MS          = 50
 	RESIZE_INTERVAL_MS        = 100
-	GROW_CPU_UTIL_THRESHOLD   = 100
+	GROW_CPU_UTIL_THRESHOLD   = 50
 	SHRINK_CPU_UTIL_THRESHOLD = 25
 )
 
@@ -214,25 +214,26 @@ func (m *RealmMgr) destroyRealms() {
 // Get & alloc a machined to this realm. Retur true if successful
 func (m *RealmMgr) allocMachined(realmId string) bool {
 	// Get a free machined
-	machinedId, ok := <-m.freeMachineds
-	if !ok {
+	select {
+	// If there is a machined available...
+	case machinedId := <-m.freeMachineds:
+		// Update the machined's config
+		rdCfg := &MachinedConfig{}
+		rdCfg.Id = machinedId
+		rdCfg.RealmId = realmId
+		m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)
+
+		// Update the realm's config
+		rCfg := &RealmConfig{}
+		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+		rCfg.NMachineds += 1
+		rCfg.LastResize = time.Now()
+		m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+		return true
+		// If no machined is available...
+	default:
 		return false
 	}
-
-	// Update the machined's config
-	rdCfg := &MachinedConfig{}
-	rdCfg.Id = machinedId
-	rdCfg.RealmId = realmId
-	m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)
-
-	// Update the realm's config
-	rCfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-	rCfg.NMachineds += 1
-	rCfg.LastResize = time.Now()
-	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-
-	return true
 }
 
 // Get all a realm's procd's stats

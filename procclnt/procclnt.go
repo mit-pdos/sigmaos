@@ -103,9 +103,9 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	b, err := json.Marshal(p)
 	if err != nil {
 		// Unlock the waiter file if unmarshal failed
-		pStartWait.Destroy()
-		pExitWait.Destroy()
-		pEvictWait.Destroy()
+		pStartWait.Signal()
+		pExitWait.Signal()
+		pEvictWait.Signal()
 		log.Fatalf("Error marshal: %v", err)
 		return err
 	}
@@ -181,7 +181,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 		return err
 	}
 	pStartWait := usync.MakeWait(clnt.FsLib, dir, START_WAIT)
-	pStartWait.Destroy()
+	pStartWait.Signal()
 	// Isolate the process namespace
 	newRoot := os.Getenv("NEWROOT")
 	if err := namespace.Isolate(newRoot); err != nil {
@@ -223,7 +223,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 	if ok {
 		// wakekup parent in case it called WaitExit()
 		pExitWait := usync.MakeWait(clnt.FsLib, piddir, EXIT_WAIT)
-		pExitWait.Destroy()
+		pExitWait.Signal()
 	} else {
 		// parent has abandoned me; clean myself up
 		clnt.destroyProc(piddir)
@@ -235,7 +235,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 
 // Procd notifies a proc that it will be evicted using Evict.  XXX
 // race between procd's call to evict() and parent/child: between
-// procd stat-ing and Destroy() parent/child may have removed the
+// procd stat-ing and Signal() parent/child may have removed the
 // piddir.
 func (clnt *ProcClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
@@ -243,7 +243,7 @@ func (clnt *ProcClnt) Evict(pid string) error {
 		return err
 	}
 	pEvictWait := usync.MakeWait(clnt.FsLib, piddir, EVICT_WAIT)
-	pEvictWait.Destroy()
+	pEvictWait.Signal()
 	return nil
 }
 

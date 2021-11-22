@@ -8,12 +8,13 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v pid out\n", os.Args[0])
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v out\n", os.Args[0])
 		os.Exit(1)
 	}
 	l, err := MakeSpinner(os.Args[1:])
@@ -28,24 +29,22 @@ func main() {
 type Spinner struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	pid    string
 	output string
 }
 
 func MakeSpinner(args []string) (*Spinner, error) {
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 	s := &Spinner{}
 	db.Name("spinner")
 	s.FsLib = fslib.MakeFsLib("spinner")
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
-	s.pid = args[0]
-	s.output = args[1]
+	s.output = args[0]
 
 	db.DLPrintf("SCHEDL", "MakeSpinner: %v\n", args)
 
-	err := s.Started(s.pid)
+	err := s.Started(proc.GetPid())
 	if err != nil {
 		log.Fatalf("Started: error %v\n", err)
 	}
@@ -53,11 +52,11 @@ func MakeSpinner(args []string) (*Spinner, error) {
 }
 
 func (s *Spinner) waitEvict() {
-	err := s.WaitEvict(s.pid)
+	err := s.WaitEvict(proc.GetPid())
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}
-	s.Exited(s.pid, "EVICTED")
+	s.Exited(proc.GetPid(), "EVICTED")
 	os.Exit(0)
 }
 
@@ -68,5 +67,5 @@ func (s *Spinner) Work() {
 }
 
 func (s *Spinner) Exit() {
-	s.Exited(s.pid, "OK")
+	s.Exited(proc.GetPid(), "OK")
 }

@@ -119,11 +119,6 @@ func (pd *Procd) readDone() bool {
 // Check if this procd instance is able to satisfy a job's constraints.
 // Trivially true when not benchmarking.
 func (pd *Procd) satisfiesConstraintsL(p *proc.Proc) bool {
-	// Constraints are not checked when testing, as some tests require more cores
-	// than we may have on our test machine.
-	if !pd.perf.RunningBenchmark() {
-		return true
-	}
 	// If we have enough cores to run this job...
 	if pd.coresAvail >= p.Ncore {
 		return true
@@ -216,8 +211,8 @@ func (pd *Procd) allocCores(n proc.Tcore) []uint {
 	defer pd.mu.Unlock()
 	cores := []uint{}
 	for i := 0; i < len(pd.coreBitmap); i++ {
-		// If not running a benchmark or lambda asks for 0 cores, run on any core
-		if !pd.perf.RunningBenchmark() || n == proc.C_DEF {
+		// If lambda asks for 0 cores, run on any core
+		if n == proc.C_DEF {
 			cores = append(cores, uint(i))
 		} else {
 			if !pd.coreBitmap[i] {
@@ -282,11 +277,6 @@ func (pd *Procd) setCoreAffinity() {
 	for i := uint(0); i < linuxsched.NCores; i++ {
 		m.Set(i)
 	}
-	// XXX For my current benchmarking setup, core 0 is reserved for ZK.
-	if pd.perf.RunningBenchmark() {
-		m.Clear(0)
-		m.Clear(1)
-	}
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 
@@ -339,10 +329,9 @@ func (pd *Procd) Work() {
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks
-	NWorkers := linuxsched.NCores
-	if pd.perf.RunningBenchmark() {
-		NWorkers -= 1
-	}
+	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
+	// procd is full
+	NWorkers := linuxsched.NCores + 1
 	for i := uint(0); i < NWorkers; i++ {
 		pd.group.Add(1)
 		go pd.worker(nil)

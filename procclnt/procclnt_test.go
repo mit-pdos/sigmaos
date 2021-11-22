@@ -11,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/linuxsched"
 	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -64,16 +65,21 @@ func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pi
 }
 
 func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
-	a := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
-	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
+	spawnSleeperNcore(t, ts, pid, 0, SLEEP_MSECS)
 }
 
 func spawnSleeper(t *testing.T, ts *Tstate) string {
 	pid := proc.GenPid()
 	spawnSleeperWithPid(t, ts, pid)
 	return pid
+}
+
+func spawnSleeperNcore(t *testing.T, ts *Tstate, pid string, ncore proc.Tcore, msecs int) {
+	a := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/out_" + pid})
+	a.Ncore = ncore
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
 func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
@@ -352,6 +358,36 @@ func TestEvict(t *testing.T) {
 
 	// Make sure the proc didn't finish
 	checkSleeperResultFalse(t, ts, pid)
+
+	ts.e.Shutdown()
+}
+
+func TestReserveCores(t *testing.T) {
+	ts := makeTstate(t)
+
+	linuxsched.ScanTopology()
+
+	start := time.Now()
+	pid := proc.GenPid()
+	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+
+	pid1 := proc.GenPid()
+	spawnSleeperNcore(t, ts, pid1, 1, SLEEP_MSECS)
+
+	status, err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.Equal(t, "OK", status, "WaitExit status")
+
+	// Make sure the second proc didn't finish
+	checkSleeperResult(t, ts, pid)
+	checkSleeperResultFalse(t, ts, pid1)
+
+	status, err = ts.WaitExit(pid1)
+	assert.Nil(t, err, "WaitExit 2")
+	assert.Equal(t, "OK", status, "WaitExit status 2")
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
 	ts.e.Shutdown()
 }

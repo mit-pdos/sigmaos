@@ -291,7 +291,16 @@ func (fsc *FsClient) unionMatch(q, name string) bool {
 func (fsc *FsClient) unionScan(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "unionScan: %v %v\n", dirents, q)
 	for _, de := range dirents {
-		if fsc.unionMatch(q, de.Name) {
+		// Read the link
+		_, err := pc.Walk(fid, fid2, []string{de.Name})
+		if err != nil {
+			return nil, err
+		}
+		target, err := fsc.readlink(pc, fid2)
+		if err != nil {
+			return nil, err
+		}
+		if fsc.unionMatch(q, target) {
 			reply, err := pc.Walk(fid, fid2, []string{de.Name})
 			if err != nil {
 				return nil, err

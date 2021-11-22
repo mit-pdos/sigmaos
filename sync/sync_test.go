@@ -2,6 +2,7 @@ package sync_test
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -375,23 +376,24 @@ func TestWait(t *testing.T) {
 
 	err := ts.Mkdir(WAIT_PATH, 0777)
 	assert.Nil(ts.t, err, "Mkdir")
+	fsl0 := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
+	fsl1 := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
+		log.Printf("===")
 		wait := usync.MakeWait(ts.FsLib, WAIT_PATH, "x")
 		wait.Init()
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
-			fsl := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
-			wait := usync.MakeWait(fsl, WAIT_PATH, "x")
-			wait.Wait()
+			wait := usync.MakeWait(fsl0, WAIT_PATH, "x")
+			wait.Signal()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
-			fsl := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
-			wait := usync.MakeWait(fsl, WAIT_PATH, "x")
-			wait.Destroy()
+			wait := usync.MakeWait(fsl1, WAIT_PATH, "x")
+			wait.Wait()
 			ch <- true
 		}(ch)
 

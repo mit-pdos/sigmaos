@@ -4,6 +4,7 @@ import (
 	"log"
 	"path"
 	"runtime/debug"
+	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -30,8 +31,8 @@ func MakeWait(fsl *fslib.FsLib, dir string, wait string) *Wait {
 	return c
 }
 
-// Initialize Wait by creating its sigmaOS state. This should only
-// ever be called once globally.
+// Initialize wait variable by creating its sigmaOS state. This should
+// only ever be called once globally.
 func (c *Wait) Init() error {
 	err := c.Mkdir(c.path, 0777)
 	if err != nil {
@@ -42,7 +43,7 @@ func (c *Wait) Init() error {
 }
 
 // Wake up a wait waiter; return number of waiters left
-func (c *Wait) Signal() int {
+func (c *Wait) signal() int {
 	wFiles, err := c.ReadDir(c.path)
 	if err != nil {
 		debug.PrintStack()
@@ -68,64 +69,52 @@ func (c *Wait) Signal() int {
 	return len(wFiles) - 1
 }
 
-// Wait.
+// Wait on wait variable
 func (c *Wait) Wait() error {
-	done := make(chan error)
-
-	signalPath, err := c.createSignalFile()
+	signalFname := rand.String(16)
+	signalPath := path.Join(c.path, signalFname)
+	// XXX ephemeral?
+	err := c.MakeFile(signalPath, 0777, np.OWRITE, []byte{})
 	if err != nil {
-		return err
-	}
-
-	// Each waiter waits on its own signal file
-	go func() {
-		signal := make(chan error)
-		err := c.SetRemoveWatch(signalPath, func(p string, err error) {
-			if err != nil {
-				db.DLPrintf("WAIT", "Error RemoveWatch bcast triggered in Wait.Wait: %v", err)
-			}
-			signal <- err
-		})
-		// If error, don't wait.
-		if err == nil {
-			err = <-signal
-		} else {
-			db.DLPrintf("WAIT", "Error SetRemoveWatch bcast Wait.Wait: %v", err)
+		if strings.HasPrefix(err.Error(), "file not found") {
+			return nil
 		}
-		done <- err
-	}()
-
-	// Wait until signal for waking up (or an error)
-	err = <-done
+		log.Fatalf("MakeFile %v err %v\n", signalPath, err)
+	}
+	signal := make(chan error)
+	err = c.SetRemoveWatch(signalPath, func(p string, err error) {
+		if err != nil {
+			log.Printf("func %v err %v\n", signalPath, err)
+		}
+		signal <- err
+	})
+	if err == nil {
+		err = <-signal
+	} else {
+		// If error, don't wait.
+		if strings.HasPrefix(err.Error(), "file not found") {
+			return nil
+		}
+		log.Fatalf("SetRemoveWatch %v err %v", signalPath, err)
+	}
 	return err
 }
 
-// Tear down a Wait variable by waking up all waiters.
-// XXX race between Signal and RmDir: new waiter in between those too
-func (c *Wait) Destroy() {
-	n := c.Signal()
+// Signal procs waiting on a wait variable.  XXX race between Signal
+// and RmDir: new waiter in between those too
+func (c *Wait) Signal() {
+	n := c.signal()
 	if n > 0 {
 		log.Printf("Destroy: more waiters\n")
 	}
 	// Remove the directory so we don't take on any more waiters
 	err := c.RmDir(c.path)
 	if err != nil {
-		if err.Error() == "EOF" {
-			log.Printf("RmDir %v err %v", c.path, err)
-		} else {
-			log.Printf("RmDir %v err %v", c.path, err)
+		// procclnt wait may already removed dir containing c.path
+		if strings.HasPrefix(err.Error(), "file not found") {
+			return
 		}
+		log.Printf("Signal: RmDir %v err %v", c.path, err)
 		return
 	}
-}
-
-// XXX ephemeral?
-func (c *Wait) createSignalFile() (string, error) {
-	signalFname := rand.String(16)
-	signalPath := path.Join(c.path, signalFname)
-	err := c.MakeFile(signalPath, 0777, np.OWRITE, []byte{})
-	if err != nil {
-		db.DLPrintf("WAIT", "Error MakeFile Wait.createSignalFile: %v", err)
-	}
-	return signalPath, err
 }

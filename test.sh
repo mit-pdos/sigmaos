@@ -15,6 +15,7 @@ go test $1 ulambda/stats
 go test $1 ulambda/procclnt
 go test $1 ulambda/kv
 go test $1 ulambda/cmd/user/mr
+go test $1 ulambda/realm # Fails due to dropped eviction signals
 
 ./test-kv.sh
 

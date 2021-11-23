@@ -711,3 +711,29 @@ func TestConcurRename(t *testing.T) {
 	ts.checkFs()
 	ts.e.Shutdown()
 }
+
+func TestPipe(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.MakePipe("name/pipe", 0777)
+	assert.Nil(ts.t, err, "MakePipe")
+
+	go func() {
+		fsl := fslib.MakeFsLibAddr("reader", ts.cfg.NamedAddr)
+		fd, err := fsl.Open("name/pipe", np.OREAD)
+		assert.Nil(ts.t, err, "Open")
+		b, err := fsl.Read(fd, 100)
+		assert.Nil(ts.t, err, "Read")
+		assert.Equal(ts.t, "hello", string(b))
+		err = fsl.Close(fd)
+		assert.Nil(ts.t, err, "Close")
+	}()
+	fd, err := ts.Open("name/pipe", np.OWRITE)
+	assert.Nil(ts.t, err, "Open")
+	_, err = ts.Write(fd, []byte("hello"))
+	assert.Nil(ts.t, err, "Close")
+	err = ts.Close(fd)
+	assert.Nil(ts.t, err, "Close")
+
+	ts.e.Shutdown()
+}

@@ -111,7 +111,7 @@ func TestHelloWorld(t *testing.T) {
 
 	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
 	assert.Nil(t, err, "Readdir")
-	assert.Equal(t, 4, len(st), "readdir") // statsd and ctl
+	assert.Equal(t, 5, len(st), "readdir") // statsd and ctl
 
 	ts.e.Shutdown()
 }

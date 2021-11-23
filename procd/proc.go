@@ -74,7 +74,7 @@ func (p *Proc) init(a *proc.Proc) {
 }
 
 func (p *Proc) wait(cmd *exec.Cmd) {
-	defer p.pd.fs.pubFinished(p)
+	defer p.pd.fs.finish(p)
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Proc %v finished with error: %v", p.attr, err)

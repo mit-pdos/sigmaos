@@ -5,17 +5,16 @@ import (
 	"log"
 	"path"
 
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
-func (pd *Procd) readRemoteRunq(procdPath string) ([]*np.Stat, error) {
-	return pd.ReadDir(path.Join(procdPath, named.PROCD_RUNQ))
+func (pd *Procd) readRemoteRunq(procdPath string, queueName string) ([]*np.Stat, error) {
+	return pd.ReadDir(path.Join(procdPath, queueName))
 }
 
-func (pd *Procd) readRemoteRunqProc(procdPath string, pid string) (*proc.Proc, error) {
-	b, err := pd.ReadFile(path.Join(procdPath, named.PROCD_RUNQ, pid))
+func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid string) (*proc.Proc, error) {
+	b, err := pd.ReadFile(path.Join(procdPath, queueName, pid))
 	if err != nil {
 		return nil, err
 	}
@@ -28,8 +27,8 @@ func (pd *Procd) readRemoteRunqProc(procdPath string, pid string) (*proc.Proc, e
 	return p, nil
 }
 
-func (pd *Procd) claimRemoteProc(procdPath string, p *proc.Proc) bool {
-	err := pd.Remove(path.Join(procdPath, named.PROCD_RUNQ, p.Pid))
+func (pd *Procd) claimRemoteProc(procdPath string, queueName string, p *proc.Proc) bool {
+	err := pd.Remove(path.Join(procdPath, queueName, p.Pid))
 	if err != nil {
 		return false
 	}

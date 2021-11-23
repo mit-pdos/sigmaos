@@ -144,18 +144,18 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 }
 
 // Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
-func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
+func (pd *Procd) getRunnableProc(procdPath string, queueName string, readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	fs, err := readRunq(procdPath)
+	fs, err := readRunq(procdPath, queueName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Read through procs
 	for _, f := range fs {
-		p, err := readProc(procdPath, f.Name)
+		p, err := readProc(procdPath, queueName, f.Name)
 		// Proc may have been stolen
 		if err != nil {
 			db.DLPrintf("PROCD", "Error getting RunqProc: %v", err)
@@ -163,7 +163,7 @@ func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc
 		}
 		if pd.satisfiesConstraintsL(p) {
 			// Proc may have been stolen
-			if ok := claimProc(procdPath, p); !ok {
+			if ok := claimProc(procdPath, queueName, p); !ok {
 				continue
 			}
 			pd.decrementResourcesL(p)
@@ -174,36 +174,42 @@ func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	// First, try to read from the local procdfs
-	p, err := pd.getRunnableProc("", pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
-	if p != nil || err != nil {
-		return p, err
+	// First try and get any LC procs, else get a BE proc.
+	runqs := []string{named.PROCD_RUNQ_LC, named.PROCD_RUNQ_BE}
+	for _, runq := range runqs {
+		// First, try to read from the local procdfs
+		p, err := pd.getRunnableProc("", runq, pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
+		if p != nil || err != nil {
+			return p, err
+		}
+
+		// Try to steal from other procds
+		_, err = pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
+			// don't process self
+			var b []byte
+			b, err = pd.ReadFile(path.Join(named.PROCD, st.Name))
+			if err != nil {
+				return false, nil
+			}
+			addr := string(b)
+			if strings.HasPrefix(addr, pd.FsServer.MyAddr()) {
+				return false, nil
+			}
+			p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
+			if err != nil {
+				db.DLPrintf("PROCD", "Error getRunnableProc in Procd.getProc: %v", err)
+				return false, nil
+			}
+			if p != nil {
+				return true, nil
+			}
+			return false, nil
+		})
+		if p != nil || err != nil {
+			return p, err
+		}
 	}
-
-	// Try to steal from other procds
-	_, err = pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
-		// don't process self
-		var b []byte
-		b, err = pd.ReadFile(path.Join(named.PROCD, st.Name))
-		if err != nil {
-			return false, nil
-		}
-		addr := string(b)
-		if strings.HasPrefix(addr, pd.FsServer.MyAddr()) {
-			return false, nil
-		}
-		p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
-		if err != nil {
-			db.DLPrintf("PROCD", "Error getRunnableProc in Procd.getProc: %v", err)
-			return false, nil
-		}
-		if p != nil {
-			return true, nil
-		}
-		return false, nil
-	})
-
-	return p, err
+	return nil, nil
 }
 
 func (pd *Procd) allocCores(n proc.Tcore) []uint {
@@ -314,9 +320,9 @@ func (pd *Procd) worker(workerDone *bool) {
 			log.Fatalf("Procd GetProc error %v, %v\n", p, err)
 		}
 		localProc := pd.makeProc(p)
-		err = pd.fs.pubRunning(localProc)
+		err = pd.fs.running(localProc)
 		if err != nil {
-			log.Fatalf("Procd pubRunning error %v\n", err)
+			log.Fatalf("Procd pub running error %v\n", err)
 		}
 		pd.runProc(localProc)
 	}

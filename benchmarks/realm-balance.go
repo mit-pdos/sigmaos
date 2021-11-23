@@ -22,11 +22,11 @@ type RealmBalanceBenchmark struct {
 	*procclnt.ProcClnt
 }
 
-func MakeRealmBalanceBenchmark(realmFsl *fslib.FsLib, fsl *fslib.FsLib) *RealmBalanceBenchmark {
+func MakeRealmBalanceBenchmark(realmFsl *fslib.FsLib, fsl *fslib.FsLib, namedAddr []string) *RealmBalanceBenchmark {
 	b := &RealmBalanceBenchmark{}
 	b.realmFsl = realmFsl
 	b.FsLib = fsl
-	b.ProcClnt = procclnt.MakeProcClnt(b.FsLib)
+	b.ProcClnt = procclnt.MakeProcClntInit(b.FsLib, namedAddr)
 	linuxsched.ScanTopology()
 	return b
 }
@@ -86,8 +86,11 @@ func (b *RealmBalanceBenchmark) Run() {
 	b.checkNMachineds(2, 100)
 
 	log.Printf("Evicting %v spinning lambdas", linuxsched.NCores+7*linuxsched.NCores/8)
+	cnt := 0
 	for i := 0; i < int(linuxsched.NCores)+7*int(linuxsched.NCores)/8; i++ {
 		b.Evict(pids[0])
+		log.Printf("Evicted #%v %v", cnt, pids[0])
+		cnt += 1
 		pids = pids[1:]
 	}
 

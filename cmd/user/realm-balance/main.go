@@ -11,6 +11,6 @@ func main() {
 	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("microbenchmarks", cfg.NamedAddr)
 
-	b := benchmarks.MakeRealmBalanceBenchmark(fsl1, fsl)
+	b := benchmarks.MakeRealmBalanceBenchmark(fsl1, fsl, cfg.NamedAddr)
 	b.Run()
 }

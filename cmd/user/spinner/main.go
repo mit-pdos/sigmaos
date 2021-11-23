@@ -53,6 +53,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 func (s *Spinner) waitEvict() {
 	err := s.WaitEvict(proc.GetPid())
+	log.Printf("WaitEvict triggered: %v", proc.GetPid())
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}

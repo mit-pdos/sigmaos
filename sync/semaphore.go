@@ -45,7 +45,7 @@ func (c *Semaphore) Down() error {
 		signal <- err
 	})
 	if err == nil {
-		log.Printf("semaphore wait %v\n", c.path)
+		// log.Printf("semaphore wait %v\n", c.path)
 		err = <-signal
 	}
 	// file has been removed (i.e., semaphore has been "incremented")

@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path"
-	// "strings"
 	"sync"
 
 	db "ulambda/debug"
@@ -134,7 +133,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
-	log.Printf("%v: waitexit %v\n", db.GetName(), piddir)
+	// log.Printf("%v: waitexit %v\n", db.GetName(), piddir)
 
 	if _, err := clnt.Stat(piddir); err != nil {
 		return "", err
@@ -146,23 +145,22 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		log.Fatalf("Error Remove %v in WaitExit: %v", f, err)
 	}
 
+	fn := piddir + "/" + RET_STATUS
 	fd, err := clnt.Open(piddir+"/"+RET_STATUS, np.OREAD)
 	if err != nil {
-		log.Fatalf("Error Open %v err %v", RET_STATUS, err)
+		log.Fatalf("Error Open %v err %v", fn, err)
 	}
 
 	b, err := clnt.Read(fd, MAXSTATUS)
 	if err != nil {
-		log.Printf("Read %v err %v", RET_STATUS, err)
+		log.Printf("Read %v err %v", fn, err)
 		return "", err
 	}
 
 	err = clnt.Close(fd)
 	if err != nil {
-		log.Printf("Close %v err %v", RET_STATUS, err)
+		log.Printf("Close %v err %v", fn, err)
 	}
-
-	log.Printf("%v: destroy %v\n", db.GetName(), piddir)
 
 	clnt.destroyProc(piddir)
 
@@ -208,34 +206,35 @@ func (clnt *ProcClnt) Started(pid string) error {
 func (clnt *ProcClnt) Exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
-	log.Printf("%v: exited %v\n", db.GetName(), piddir)
+	// log.Printf("%v: exited %v\n", db.GetName(), piddir)
 
 	if clnt.setExited(pid) == pid {
-		log.Printf("%v: Exited called after exited\n", db.GetName())
+		log.Printf("%v: Exited called after exited %v\n", db.GetName(), piddir)
 		return fmt.Errorf("Exited: called more than once for pid %v", pid)
 	}
 
 	// Abandon any children I may have left.
 	clnt.abandonChildren(piddir)
 
-	fd, err := clnt.Open(piddir+"/"+RET_STATUS, np.OWRITE)
+	fn := piddir + "/" + RET_STATUS
+	fd, err := clnt.Open(fn, np.OWRITE)
 	if err != nil {
 		// parent has abandoned me; clean myself up
-		log.Printf("%v: Error Open %v err %v", db.GetName(), RET_STATUS, err)
+		// log.Printf("%v: Error Open %v err %v", db.GetName(), fn, err)
 		clnt.destroyProc(piddir)
-		return nil
+	} else {
+		_, err = clnt.Write(fd, []byte(status))
+		if err != nil {
+			log.Printf("Write %v err %v", fn, err)
+		}
+
+		err = clnt.Close(fd)
+		if err != nil {
+			log.Printf("Close %v err %v", fn, err)
+		}
 	}
 
-	_, err = clnt.Write(fd, []byte(status))
-	if err != nil {
-		log.Printf("Read %v err %v", RET_STATUS, err)
-		return err
-	}
-
-	err = clnt.Close(fd)
-	if err != nil {
-		log.Printf("Close %v err %v", RET_STATUS, err)
-	}
+	// log.Printf("%v: exited done %v\n", db.GetName(), piddir)
 
 	return nil
 }
@@ -269,14 +268,14 @@ func (clnt *ProcClnt) abandonChildren(piddir string) {
 func (clnt *ProcClnt) abandonChild(piddir string) {
 	f := piddir + "/" + RET_STATUS
 	err := clnt.Remove(f)
-	if err != nil { // abandoning child failed, collect it
+	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", db.GetName(), f, err)
-		// clnt.destroyProc(piddir)
 	}
 }
 
 // Clean up proc
 func (clnt *ProcClnt) destroyProc(piddir string) {
+	// log.Printf("%v: destroy %v\n", db.GetName(), piddir)
 	if err := clnt.RmDir(piddir); err != nil {
 		s, _ := clnt.SprintfDir(piddir)
 		log.Fatalf("%v: RmDir %v err %v %v", db.GetName(), piddir, err, s)

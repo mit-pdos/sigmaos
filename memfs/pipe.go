@@ -3,7 +3,6 @@ package memfs
 import (
 	"fmt"
 	"io"
-	"log"
 	"sync"
 	// "errors"
 
@@ -56,8 +55,6 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	log.Printf("open %p m %v r %v w %v\n", pipe, mode, pipe.nreader, pipe.nwriter)
-
 	if mode == np.OREAD {
 		pipe.nreader += 1
 		pipe.condw.Signal()
@@ -88,7 +85,6 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	log.Printf("%p: pipeclose %v\n", pipe, mode)
 	if mode == np.OREAD {
 		if pipe.nreader < 0 {
 			fmt.Errorf("Pipe already closed for reading\n")

@@ -131,7 +131,7 @@ func (r *Machined) register() {
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystemNamedAddr(r.bin, realmCfg.NamedAddr)
+	r.s = kernel.MakeSystem(r.bin, realmCfg.NamedAddr)
 	if err := r.s.Boot(); err != nil {
 		log.Fatalf("Error Boot in Machined.boot: %v", err)
 	}

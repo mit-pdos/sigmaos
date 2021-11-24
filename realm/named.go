@@ -58,7 +58,7 @@ func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id
 		namedStartCond.Init()
 	}
 
-	cmd, err := procd.Run("0", bin, "/bin/kernel/named", fslib.Named(), args)
+	cmd, err := procd.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		log.Printf("Error running named: %v", err)
 		return nil, err

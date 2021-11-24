@@ -411,14 +411,20 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 	}
 }
 
-// XXX clone fid?
 func (fsc *FsClient) Readlink(fid np.Tfid) (string, error) {
 	db.DLPrintf("FSCLNT", "ReadLink %v\n", fid)
-	_, err := fsc.clnt(fid).Open(fid, np.OREAD)
+	clnt := fsc.clnt(fid)
+	return fsc.readlink(clnt, fid)
+}
+
+// XXX clone fid?
+func (fsc *FsClient) readlink(pc *protclnt.ProtClnt, fid np.Tfid) (string, error) {
+	db.DLPrintf("FSCLNT", "readLink %v\n", fid)
+	_, err := pc.Open(fid, np.OREAD)
 	if err != nil {
 		return "", err
 	}
-	reply, err := fsc.clnt(fid).Read(fid, 0, 1024)
+	reply, err := pc.Read(fid, 0, 1024)
 	if err != nil {
 		return "", err
 	}

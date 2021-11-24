@@ -21,7 +21,8 @@ const (
 	PIDS          = "name/pids"
 	PROC_CTL_FILE = "ctl"
 	PROCD_RUNNING = "running"
-	PROCD_RUNQ    = "runq"
+	PROCD_RUNQ_LC = "runq-lc"
+	PROCD_RUNQ_BE = "runq-be"
 )
 
 func MakeInitFs(fsl *fslib.FsLib) error {

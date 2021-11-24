@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
@@ -32,7 +33,9 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion)
 		log.Fatalf("Couldn't unmarshal proc file in CtlFile.Write: %v, %v", string(b), err)
 	}
 
-	ctl.pd.fs.pubSpawned(p, b)
+	db.DLPrintf("PROCD", "Control file write: %v", p)
+
+	ctl.pd.fs.spawn(p, b)
 
 	return np.Tsize(len(b)), nil
 }

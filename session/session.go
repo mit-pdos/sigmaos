@@ -1,7 +1,6 @@
 package session
 
 import (
-	"log"
 	"sync"
 
 	db "ulambda/debug"
@@ -61,7 +60,7 @@ func (st *SessionTable) LookupFid(id np.Tsession, fid np.Tfid) (*fid.Fid, bool) 
 	st.mu.Unlock()
 
 	if !ok {
-		log.Printf("Nil session in SessionTable.LookupFid: %v %v", id, fid)
+		db.DLPrintf("SETAB", "Nil session in SessionTable.LookupFid: %v %v", id, fid)
 		return nil, false
 	}
 
@@ -116,7 +115,7 @@ func (st *SessionTable) AddEphemeral(id np.Tsession, o fs.FsObj, f *fid.Fid) {
 	st.mu.Unlock()
 
 	if !ok {
-		log.Printf("Nil session in SessionTable.AddEphemeral: %v %v %v", id, o, f)
+		db.DLPrintf("SETAB", "Nil session in SessionTable.AddEphemeral: %v %v %v", id, o, f)
 		return
 	}
 
@@ -134,7 +133,7 @@ func (st *SessionTable) DelEphemeral(id np.Tsession, o fs.FsObj) {
 	st.mu.Unlock()
 
 	if !ok {
-		log.Printf("Nil session in SessionTable.DelEphemeral: %v %v", id, o)
+		db.DLPrintf("SETAB", "Nil session in SessionTable.DelEphemeral: %v %v", id, o)
 		return
 	}
 
@@ -152,7 +151,7 @@ func (st *SessionTable) GetEphemeral(id np.Tsession) map[fs.FsObj]*fid.Fid {
 	e := make(map[fs.FsObj]*fid.Fid)
 
 	if !ok {
-		log.Printf("Nil session in SessionTable.GetEphemeral: %v", id)
+		db.DLPrintf("SETAB", "Nil session in SessionTable.GetEphemeral: %v", id)
 		return e
 	}
 

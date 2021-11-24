@@ -38,7 +38,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	ts.e = e
 	ts.cfg = cfg
-	ts.s = kernel.MakeSystemNamedAddr(bin, cfg.NamedAddr)
+	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
 
 	db.Name("fslib_test")
 	ts.FsLib = fslib.MakeFsLibAddr("fslibtest", cfg.NamedAddr)
@@ -423,7 +423,7 @@ func TestEphemeral(t *testing.T) {
 
 	sts, err := ts.ReadDir(name + "/")
 	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 4, len(sts)) // statsd and ctl
+	assert.Equal(t, 5, len(sts)) // statsd and ctl and running and runqs
 
 	ts.s.KillOne(named.PROCD)
 

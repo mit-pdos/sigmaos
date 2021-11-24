@@ -28,10 +28,6 @@ const (
 	WORK_STEAL_TIMEOUT_MS = 10
 )
 
-type readRunqFn func(procdPath string) ([]*np.Stat, error)
-type readProcFn func(procdPath string, pid string) (*proc.Proc, error)
-type claimProcFn func(procdPath string, p *proc.Proc) bool
-
 type Procd struct {
 	mu         deadlock.Mutex
 	fs         *ProcdFs
@@ -123,11 +119,6 @@ func (pd *Procd) readDone() bool {
 // Check if this procd instance is able to satisfy a job's constraints.
 // Trivially true when not benchmarking.
 func (pd *Procd) satisfiesConstraintsL(p *proc.Proc) bool {
-	// Constraints are not checked when testing, as some tests require more cores
-	// than we may have on our test machine.
-	if !pd.perf.RunningBenchmark() {
-		return true
-	}
 	// If we have enough cores to run this job...
 	if pd.coresAvail >= p.Ncore {
 		return true
@@ -153,27 +144,26 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 }
 
 // Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
-func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
+func (pd *Procd) getRunnableProc(procdPath string, queueName string, readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	fs, err := readRunq(procdPath)
+	fs, err := readRunq(procdPath, queueName)
 	if err != nil {
-		log.Fatalf("Error readRunq in Procd.getRunnableProc: %v", err)
 		return nil, err
 	}
 
 	// Read through procs
 	for _, f := range fs {
-		p, err := readProc(procdPath, f.Name)
+		p, err := readProc(procdPath, queueName, f.Name)
 		// Proc may have been stolen
 		if err != nil {
-			log.Printf("Error getting RunqProc: %v", err)
+			db.DLPrintf("PROCD", "Error getting RunqProc: %v", err)
 			continue
 		}
 		if pd.satisfiesConstraintsL(p) {
 			// Proc may have been stolen
-			if ok := claimProc(procdPath, p); !ok {
+			if ok := claimProc(procdPath, queueName, p); !ok {
 				continue
 			}
 			pd.decrementResourcesL(p)
@@ -184,29 +174,41 @@ func (pd *Procd) getRunnableProc(procdPath string, readRunq readRunqFn, readProc
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
-	// First, try to read from the local procdfs
-	p, err := pd.getRunnableProc("", pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
-	if p != nil || err != nil {
-		return p, err
-	}
+	// First try and get any LC procs, else get a BE proc.
+	runqs := []string{named.PROCD_RUNQ_LC, named.PROCD_RUNQ_BE}
+	for _, runq := range runqs {
+		// First, try to read from the local procdfs
+		p, err := pd.getRunnableProc("", runq, pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
+		if p != nil || err != nil {
+			return p, err
+		}
 
-	// Try to steal from other procds
-	pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
-		// don't process self
-		if st.Name == pd.FsServer.MyAddr() {
+		// Try to steal from other procds
+		_, err = pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
+			// don't process self
+			var b []byte
+			b, err = pd.ReadFile(path.Join(named.PROCD, st.Name))
+			if err != nil {
+				return false, nil
+			}
+			addr := string(b)
+			if strings.HasPrefix(addr, pd.FsServer.MyAddr()) {
+				return false, nil
+			}
+			p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
+			if err != nil {
+				db.DLPrintf("PROCD", "Error getRunnableProc in Procd.getProc: %v", err)
+				return false, nil
+			}
+			if p != nil {
+				return true, nil
+			}
 			return false, nil
+		})
+		if p != nil || err != nil {
+			return p, err
 		}
-		log.Printf("name: %v addr %v", st.Name, pd.FsServer.MyAddr())
-		p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
-		if err != nil {
-			log.Fatalf("Error getRunnablePRoc in Procd.getProc: %v", err)
-		}
-		if p != nil {
-			return true, nil
-		}
-		return false, nil
-	})
-
+	}
 	return nil, nil
 }
 
@@ -215,8 +217,8 @@ func (pd *Procd) allocCores(n proc.Tcore) []uint {
 	defer pd.mu.Unlock()
 	cores := []uint{}
 	for i := 0; i < len(pd.coreBitmap); i++ {
-		// If not running a benchmark or lambda asks for 0 cores, run on any core
-		if !pd.perf.RunningBenchmark() || n == proc.C_DEF {
+		// If lambda asks for 0 cores, run on any core
+		if n == proc.C_DEF {
 			cores = append(cores, uint(i))
 		} else {
 			if !pd.coreBitmap[i] {
@@ -281,11 +283,6 @@ func (pd *Procd) setCoreAffinity() {
 	for i := uint(0); i < linuxsched.NCores; i++ {
 		m.Set(i)
 	}
-	// XXX For my current benchmarking setup, core 0 is reserved for ZK.
-	if pd.perf.RunningBenchmark() {
-		m.Clear(0)
-		m.Clear(1)
-	}
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 
@@ -323,9 +320,9 @@ func (pd *Procd) worker(workerDone *bool) {
 			log.Fatalf("Procd GetProc error %v, %v\n", p, err)
 		}
 		localProc := pd.makeProc(p)
-		err = pd.fs.pubRunning(localProc)
+		err = pd.fs.running(localProc)
 		if err != nil {
-			log.Fatalf("Procd pubRunning error %v\n", err)
+			log.Fatalf("Procd pub running error %v\n", err)
 		}
 		pd.runProc(localProc)
 	}
@@ -338,10 +335,9 @@ func (pd *Procd) Work() {
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks
-	NWorkers := linuxsched.NCores
-	if pd.perf.RunningBenchmark() {
-		NWorkers -= 1
-	}
+	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
+	// procd is full
+	NWorkers := linuxsched.NCores + 1
 	for i := uint(0); i < NWorkers; i++ {
 		pd.group.Add(1)
 		go pd.worker(nil)

@@ -89,7 +89,7 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 		}
 		tree = os[len(os)-1]
 	}
-	fos.add(sess, args.Fid, fid.MakeFidPath(path, tree, ctx))
+	fos.add(sess, args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
 	rets.Qid = tree.(fs.FsObj).Qid()
 	return nil
 }
@@ -133,7 +133,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 		if o == nil {
 			return np.ErrClunked
 		}
-		fos.add(sess, args.NewFid, fid.MakeFidPath(f.Path(), o, f.Ctx()))
+		fos.add(sess, args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
 	} else {
 		o := f.Obj()
 		if o == nil {
@@ -150,7 +150,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 		n := len(args.Wnames) - len(rest)
 		p := append(f.Path(), args.Wnames[:n]...)
 		lo := os[len(os)-1]
-		fos.add(sess, args.NewFid, fid.MakeFidPath(p, lo, f.Ctx()))
+		fos.add(sess, args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
 		rets.Qids = makeQids(os)
 	}
 	return nil
@@ -159,9 +159,16 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 func (fos *FsObjSrv) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	fos.stats.StatInfo().Nclunk.Inc()
-	_, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(sess, args.Fid)
 	if err != nil {
 		return err
+	}
+	o := f.Obj()
+	if o == nil {
+		return np.ErrClunked
+	}
+	if f.Mode() != 0 { // has the fid been opened?
+		o.Close(f.Ctx(), f.Mode())
 	}
 	fos.st.DelFid(sess, args.Fid)
 	return nil
@@ -181,9 +188,10 @@ func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.R
 	}
 	fos.stats.Path(f.Path())
 	no, r := o.Open(f.Ctx(), args.Mode)
-	if err != nil {
+	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
+	f.SetMode(args.Mode)
 	if no != nil {
 		f.SetObj(no)
 		rets.Qid = no.Qid()
@@ -219,7 +227,7 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 
 func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
 	p := np.Copy(dir)
-	nf := fid.MakeFidPath(append(p, name), o, ctx)
+	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
 	if eph {
 		fos.st.AddEphemeral(sess, o, nf)
 	}
@@ -340,6 +348,12 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 		// return &np.Rerror{r.Error()}
 	}
 
+	r = o.Unlink(f.Ctx())
+	if r != nil {
+		log.Printf("Unlink err %v f %v\n", r, f.Path())
+		// return &np.Rerror{r.Error()}
+	}
+
 	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
 	fos.wt.WakeupWatch(f.Path(), f.PathDir())
 
@@ -397,7 +411,11 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
-
+	r = lo.Unlink(f.Ctx())
+	if r != nil {
+		log.Printf("Unlink err %v f %v\n", r, f.Path())
+		return &np.Rerror{r.Error()}
+	}
 	fos.wt.WakeupWatch(fname, dname)
 
 	if lo.Perm().IsEphemeral() {
@@ -437,15 +455,17 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
-		// update path atomically with rename
+		// update name atomically with rename
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		dst := append(f.PathDir(), np.Split(args.Stat.Name)...)
-		db.DLPrintf("9POBJ", "dst %v %v %v\n", dst, f.PathLast(), args.Stat.Name)
+		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
+		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
+		fos.wt.WakeupWatch(dst, np.Dir(dst)) // trigger create watch
+		// XXX check if o is a directory?
+		// fos.wt.WakeupWatchPrefix(f.Path()) // trigger remove watch
 		f.SetPath(dst)
-		fos.wt.WakeupWatch(dst, nil)
 	}
 	// XXX ignore other Wstat for now
 	return nil
@@ -480,10 +500,10 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		// XXX update oldf.Path and newf.Path?
-		dst := np.Copy(newf.Path())
-		dst = append(dst, args.NewName)
-		fos.wt.WakeupWatch(dst, nil)
+		dst := append(np.Copy(newf.Path()), args.NewName)
+		fos.wt.WakeupWatch(dst, np.Dir(dst)) // trigger create watch
+		// fos.wt.WakeupWatchPrefix(oldf.Path()) // trigger remove watch
+		// inc v# of fid with Prefix
 	default:
 		return np.ErrNotDir
 	}

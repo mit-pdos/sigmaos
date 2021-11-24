@@ -14,20 +14,29 @@ type Fid struct {
 	mu   sync.Mutex
 	path []string
 	obj  fs.FsObj
+	m    np.Tmode
 	vers np.TQversion
 	ctx  fs.CtxI
 }
 
-func MakeFidPath(p []string, o fs.FsObj, ctx fs.CtxI) *Fid {
-	return &Fid{sync.Mutex{}, p, o, o.Version(), ctx}
+func MakeFidPath(p []string, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
+	return &Fid{sync.Mutex{}, p, o, m, o.Version(), ctx}
 }
 
 func (f *Fid) String() string {
-	return fmt.Sprintf("p %v", f.path)
+	return fmt.Sprintf("p %v m %v v %v", f.path, f.m, f.vers)
 }
 
 func (f *Fid) Ctx() fs.CtxI {
 	return f.ctx
+}
+
+func (f *Fid) Mode() np.Tmode {
+	return f.m
+}
+
+func (f *Fid) SetMode(m np.Tmode) {
+	f.m = m
 }
 
 func (f *Fid) Path() []string {

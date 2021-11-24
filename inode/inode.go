@@ -109,6 +109,10 @@ func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) error {
 	return nil
 }
 
+func (i *Inode) Unlink(ctx fs.CtxI) error {
+	return nil
+}
+
 func (inode *Inode) Mode() np.Tperm {
 	perm := np.Tperm(0777)
 	if inode.perm.IsDir() {

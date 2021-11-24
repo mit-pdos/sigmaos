@@ -37,6 +37,7 @@ type FsObj interface {
 	Open(CtxI, np.Tmode) (FsObj, error)
 	Close(CtxI, np.Tmode) error // for pipes
 	Stat(CtxI) (*np.Stat, error)
+	Unlink(CtxI) error
 	Parent() Dir
 	SetParent(Dir)
 }

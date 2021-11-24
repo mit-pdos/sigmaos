@@ -712,7 +712,7 @@ func TestConcurRename(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-func TestPipe(t *testing.T) {
+func TestPipeSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.MakePipe("name/pipe", 0777)
@@ -731,9 +731,66 @@ func TestPipe(t *testing.T) {
 	fd, err := ts.Open("name/pipe", np.OWRITE)
 	assert.Nil(ts.t, err, "Open")
 	_, err = ts.Write(fd, []byte("hello"))
-	assert.Nil(ts.t, err, "Close")
+	assert.Nil(ts.t, err, "Write")
 	err = ts.Close(fd)
 	assert.Nil(ts.t, err, "Close")
+
+	ts.e.Shutdown()
+}
+
+func TestPipeClose(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.MakePipe("name/pipe", 0777)
+	assert.Nil(ts.t, err, "MakePipe")
+
+	ch := make(chan bool)
+	go func(ch chan bool) {
+		fsl := fslib.MakeFsLibAddr("reader", ts.cfg.NamedAddr)
+		fd, err := fsl.Open("name/pipe", np.OREAD)
+		assert.Nil(ts.t, err, "Open")
+		for true {
+			b, err := fsl.Read(fd, 100)
+			if err != nil { // writer closed pipe
+				break
+			}
+			assert.Nil(ts.t, err, "Read")
+			assert.Equal(ts.t, "hello", string(b))
+		}
+		err = fsl.Close(fd)
+		assert.Nil(ts.t, err, "Close")
+		ch <- true
+	}(ch)
+	fd, err := ts.Open("name/pipe", np.OWRITE)
+	assert.Nil(ts.t, err, "Open")
+	_, err = ts.Write(fd, []byte("hello"))
+	assert.Nil(ts.t, err, "Write")
+	err = ts.Close(fd)
+	assert.Nil(ts.t, err, "Close")
+
+	<-ch
+
+	ts.e.Shutdown()
+}
+
+func TestPipeRemove(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.MakePipe("name/pipe", 0777)
+	assert.Nil(ts.t, err, "MakePipe")
+
+	ch := make(chan bool)
+	go func(ch chan bool) {
+		fsl := fslib.MakeFsLibAddr("reader", ts.cfg.NamedAddr)
+		_, err := fsl.Open("name/pipe", np.OREAD)
+		assert.NotNil(ts.t, err, "Open")
+		ch <- true
+	}(ch)
+	time.Sleep(500 * time.Millisecond)
+	err = ts.Remove("name/pipe")
+	assert.Nil(ts.t, err, "Remove")
+
+	<-ch
 
 	ts.e.Shutdown()
 }

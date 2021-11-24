@@ -2,6 +2,8 @@ package memfs
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"sync"
 	// "errors"
 
@@ -20,6 +22,7 @@ type Pipe struct {
 	nreader int
 	nwriter int
 	buf     []byte
+	nlink   int
 }
 
 func MakePipe(i fs.FsObj) *Pipe {
@@ -28,6 +31,9 @@ func MakePipe(i fs.FsObj) *Pipe {
 	pipe.condr = sync.NewCond(&pipe.mu)
 	pipe.condw = sync.NewCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
+	pipe.nlink = 1
+	pipe.nreader = 0
+	pipe.nwriter = 0
 	return pipe
 }
 
@@ -50,11 +56,16 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
+	log.Printf("open %p m %v r %v w %v\n", pipe, mode, pipe.nreader, pipe.nwriter)
+
 	if mode == np.OREAD {
 		pipe.nreader += 1
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 {
 			pipe.condr.Wait()
+			if pipe.nlink == 0 {
+				return nil, fmt.Errorf("Pipe removed")
+			}
 		}
 	} else if mode == np.OWRITE {
 		pipe.nwriter += 1
@@ -62,6 +73,10 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 		for pipe.nreader == 0 {
 			db.DLPrintf("MEMFS", "Wait for reader\n")
 			pipe.condw.Wait()
+			if pipe.nlink == 0 {
+				return nil, fmt.Errorf("Pipe removed")
+			}
+
 		}
 	} else {
 		return nil, fmt.Errorf("Pipe open unknown mode %v\n", mode)
@@ -73,6 +88,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
+	log.Printf("%p: pipeclose %v\n", pipe, mode)
 	if mode == np.OREAD {
 		if pipe.nreader < 0 {
 			fmt.Errorf("Pipe already closed for reading\n")
@@ -99,7 +115,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
 			if pipe.nreader <= 0 {
-				return 0, fmt.Errorf("Pipe write w.o. reader\n")
+				return 0, io.EOF
 			}
 			pipe.condw.Wait()
 		}
@@ -120,7 +136,7 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
-			return nil, nil
+			return nil, io.EOF
 		}
 		pipe.condr.Wait()
 	}
@@ -132,4 +148,14 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 	pipe.buf = pipe.buf[max:]
 	pipe.condw.Signal()
 	return d, nil
+}
+
+func (pipe *Pipe) Unlink(ctx fs.CtxI) error {
+	pipe.mu.Lock()
+	defer pipe.mu.Unlock()
+
+	pipe.nlink -= 1
+	pipe.condw.Signal()
+	pipe.condr.Signal()
+	return nil
 }

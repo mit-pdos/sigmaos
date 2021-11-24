@@ -2,7 +2,6 @@ package sync_test
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 	"sync/atomic"

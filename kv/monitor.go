@@ -45,23 +45,23 @@ func (mo *Monitor) unlock() {
 	mo.kvmonlock.Unlock()
 }
 
-func spawnBalancer(sched *procclnt.ProcClnt, opcode, pid1 string) string {
+func spawnBalancer(pclnt *procclnt.ProcClnt, opcode, pid1 string) string {
 	t := proc.MakeProc("bin/user/balancer", []string{opcode, pid1})
 	t.Type = proc.T_LC
-	sched.Spawn(t)
+	pclnt.Spawn(t)
 	return t.Pid
 }
 
-func SpawnKV(sched *procclnt.ProcClnt) string {
+func SpawnKV(pclnt *procclnt.ProcClnt) string {
 	t := proc.MakeProc(KV, []string{""})
 	t.Type = proc.T_LC
-	sched.Spawn(t)
+	pclnt.Spawn(t)
 	return t.Pid
 }
 
-func RunBalancer(sched *procclnt.ProcClnt, opcode, pid1 string) {
-	pid2 := spawnBalancer(sched, opcode, pid1)
-	status, err := sched.WaitExit(pid2)
+func RunBalancer(pclnt *procclnt.ProcClnt, opcode, pid1 string) {
+	pid2 := spawnBalancer(pclnt, opcode, pid1)
+	status, err := pclnt.WaitExit(pid2)
 	if err != nil || status != "OK" {
 		log.Printf("runBalancer: err %v status %v\n", err, status)
 	}

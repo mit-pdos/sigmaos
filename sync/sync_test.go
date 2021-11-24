@@ -371,29 +371,28 @@ func TestFilePriorityBag(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-func TestWait(t *testing.T) {
+func TestSemaphore(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(WAIT_PATH, 0777)
 	assert.Nil(ts.t, err, "Mkdir")
-	fsl0 := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
-	fsl1 := fslib.MakeFsLibAddr("wait0", ts.cfg.NamedAddr)
+	fsl0 := fslib.MakeFsLibAddr("sem0", ts.cfg.NamedAddr)
+	fsl1 := fslib.MakeFsLibAddr("semd1", ts.cfg.NamedAddr)
 
 	for i := 0; i < 100; i++ {
-		log.Printf("===")
-		wait := usync.MakeWait(ts.FsLib, WAIT_PATH, "x")
-		wait.Init()
+		sem := usync.MakeSemaphore(ts.FsLib, WAIT_PATH+"/x")
+		sem.Init()
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
-			wait := usync.MakeWait(fsl0, WAIT_PATH, "x")
-			wait.Signal()
+			sem := usync.MakeSemaphore(fsl0, WAIT_PATH+"/x")
+			sem.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
-			wait := usync.MakeWait(fsl1, WAIT_PATH, "x")
-			wait.Wait()
+			sem := usync.MakeSemaphore(fsl1, WAIT_PATH+"/x")
+			sem.Up()
 			ch <- true
 		}(ch)
 

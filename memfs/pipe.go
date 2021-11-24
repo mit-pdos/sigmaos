@@ -20,6 +20,8 @@ type Pipe struct {
 	condw   *sync.Cond
 	nreader int
 	nwriter int
+	wclosed bool
+	rclosed bool
 	buf     []byte
 	nlink   int
 }
@@ -33,6 +35,8 @@ func MakePipe(i fs.FsObj) *Pipe {
 	pipe.nlink = 1
 	pipe.nreader = 0
 	pipe.nwriter = 0
+	pipe.wclosed = false
+	pipe.rclosed = false
 	return pipe
 }
 
@@ -58,7 +62,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	if mode == np.OREAD {
 		pipe.nreader += 1
 		pipe.condw.Signal()
-		for pipe.nwriter == 0 {
+		for pipe.nwriter == 0 && !pipe.wclosed {
 			pipe.condr.Wait()
 			if pipe.nlink == 0 {
 				return nil, fmt.Errorf("Pipe removed")
@@ -67,7 +71,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	} else if mode == np.OWRITE {
 		pipe.nwriter += 1
 		pipe.condr.Signal()
-		for pipe.nreader == 0 {
+		for pipe.nreader == 0 && !pipe.rclosed {
 			db.DLPrintf("MEMFS", "Wait for reader\n")
 			pipe.condw.Wait()
 			if pipe.nlink == 0 {
@@ -90,9 +94,15 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 			fmt.Errorf("Pipe already closed for reading\n")
 		}
 		pipe.nreader -= 1
+		if pipe.nwriter == 0 {
+			pipe.rclosed = true
+		}
 		pipe.condw.Signal()
 	} else if mode == np.OWRITE {
 		pipe.nwriter -= 1
+		if pipe.nwriter == 0 {
+			pipe.wclosed = true
+		}
 		if pipe.nwriter < 0 {
 			fmt.Errorf("Pipe already closed for writing\n")
 		}

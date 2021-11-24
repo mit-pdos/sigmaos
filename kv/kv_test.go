@@ -82,9 +82,9 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := proc.MakeProc("bin/user/memfsd", []string{""})
-	ts.Spawn(t)
-	return t.Pid
+	p := proc.MakeProc("bin/user/memfsd", []string{""})
+	ts.Spawn(p)
+	return p.Pid
 }
 
 func (ts *Tstate) startMemFSs(n int) []string {
@@ -99,6 +99,7 @@ func (ts *Tstate) startMemFSs(n int) []string {
 func (ts *Tstate) stopMemFS(mfs string) {
 	err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
 	assert.Nil(ts.t, err, "ShutdownFS")
+	ts.WaitExit(mfs)
 }
 
 func (ts *Tstate) stopMemFSs() {
@@ -177,7 +178,9 @@ func TestGetPutSet(t *testing.T) {
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
 
+	log.Printf("stop\n")
 	ts.stopMemFSs()
+	log.Printf("done\n")
 
 	ts.e.Shutdown()
 }

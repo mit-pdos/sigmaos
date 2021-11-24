@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 	"testing"
@@ -89,22 +90,6 @@ func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
 	b, err := ts.ReadFile("name/out_" + pid)
 	assert.NotNil(t, err, "ReadFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
-}
-
-func TestHelloWorld(t *testing.T) {
-	ts := makeTstate(t)
-
-	pid := spawnSleeper(t, ts)
-
-	time.Sleep(SLEEP_MSECS * 1.25 * time.Millisecond)
-
-	checkSleeperResult(t, ts, pid)
-
-	st, err := ts.ReadDir("name/procd/" + ts.procd(t) + "/")
-	assert.Nil(t, err, "Readdir")
-	assert.Equal(t, 4, len(st), "readdir") // statsd and ctl
-
-	ts.e.Shutdown()
 }
 
 func TestWaitExit(t *testing.T) {
@@ -271,6 +256,9 @@ func TestEarlyExitN(t *testing.T) {
 		}()
 	}
 	done.Wait()
+
+	log.Printf("DONE\n")
+
 	ts.e.Shutdown()
 }
 

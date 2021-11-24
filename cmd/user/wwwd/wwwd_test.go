@@ -1,6 +1,7 @@
 package main
 
 import (
+	// "log"
 	"os/exec"
 	"testing"
 
@@ -60,6 +61,8 @@ func makeTstate(t *testing.T) *Tstate {
 	err = ts.WaitStart(childdir(ts.pid))
 	assert.Equal(t, nil, err)
 
+	// ts.Exited(proc.GetPid(), "OK")
+
 	return ts
 }
 
@@ -67,6 +70,7 @@ func (ts *Tstate) waitWww() {
 	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
 	assert.NotEqual(ts.t, nil, err)
 
+	log.Printf("waitexit %v\n", childdir(ts.pid))
 	status, err := ts.WaitExit(childdir(ts.pid))
 	assert.Nil(ts.t, err, "WaitExit error")
 	assert.Equal(ts.t, "OK", status, "Exit status wrong")

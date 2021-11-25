@@ -202,6 +202,23 @@ func TestWaitNonexistentProc(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestCrashProc(t *testing.T) {
+	ts := makeTstate(t)
+
+	a := proc.MakeProc("bin/user/crash", []string{})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+
+	err = ts.WaitStart(a.Pid)
+	assert.Nil(t, err, "WaitStart error")
+
+	status, err := ts.WaitExit(a.Pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.Equal(t, "exit status 2", status, "WaitExit")
+
+	ts.e.Shutdown()
+}
+
 func TestEarlyExit1(t *testing.T) {
 	ts := makeTstate(t)
 

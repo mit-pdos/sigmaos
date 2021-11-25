@@ -71,21 +71,25 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) shutdown() {
+func (ts *Tstate) shutdown(fws []string) {
+	for _, pid := range fws {
+		log.Printf("collect %v\n", pid)
+		ts.WaitExit(pid)
+	}
 	ts.stopMemFSs()
 	ts.e.Shutdown()
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	t := proc.MakeProc("bin/user/memfsd", []string{""})
-	ts.Spawn(t)
-	return t.Pid
+	p := proc.MakeProc("bin/user/memfsd", []string{""})
+	ts.Spawn(p)
+	return p.Pid
 }
 
 func (ts *Tstate) spawnParticipant(index, opcode string) string {
-	t := proc.MakeProc("bin/user/test2pc", []string{index, opcode})
-	ts.Spawn(t)
-	return t.Pid
+	p := proc.MakeProc("bin/user/test2pc", []string{index, opcode})
+	ts.Spawn(p)
+	return p.Pid
 }
 
 func (ts *Tstate) spawnCoord(opcode string, fws []string) string {
@@ -104,7 +108,7 @@ func (ts *Tstate) startParticipants(n int, opcode string) []string {
 		} else {
 			fw = ts.spawnParticipant(strconv.Itoa(r), "")
 		}
-		fws = append(fws, partname(fw))
+		fws = append(fws, fw)
 	}
 	return fws
 }
@@ -122,6 +126,7 @@ func (ts *Tstate) stopMemFSs() {
 	for _, mfs := range ts.mfss {
 		err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
 		assert.Nil(ts.t, err, "Remove")
+		ts.WaitExit(mfs)
 	}
 }
 
@@ -196,7 +201,7 @@ func TestCommit(t *testing.T) {
 
 	ts.testCommit()
 
-	ts.shutdown()
+	ts.shutdown(fws)
 }
 
 func TestAbort(t *testing.T) {
@@ -211,7 +216,7 @@ func TestAbort(t *testing.T) {
 
 	ts.testAbort()
 
-	ts.shutdown()
+	ts.shutdown(fws)
 }
 
 func TestCrash2(t *testing.T) {
@@ -234,7 +239,7 @@ func TestCrash2(t *testing.T) {
 
 	ts.testCommit()
 
-	ts.shutdown()
+	ts.shutdown(fws)
 }
 
 func TestCrash3(t *testing.T) {
@@ -249,7 +254,7 @@ func TestCrash3(t *testing.T) {
 
 	ts.testAbort()
 
-	ts.shutdown()
+	ts.shutdown(fws)
 }
 
 func TestCrash4(t *testing.T) {
@@ -264,5 +269,5 @@ func TestCrash4(t *testing.T) {
 
 	ts.testCommit()
 
-	ts.shutdown()
+	ts.shutdown(fws)
 }

@@ -42,14 +42,10 @@ type Part2pc struct {
 	ti     *Tinput
 }
 
-func partname(pid string) string {
-	return "P" + pid
-}
-
 func MkTest2Participant(args []string) (*Part2pc, error) {
 	p := &Part2pc{}
 	p.done = make(chan bool)
-	p.me = partname(proc.GetPid())
+	p.me = proc.GetPid()
 	p.index = args[0]
 	p.opcode = args[1]
 	db.Name(p.me)

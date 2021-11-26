@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "log"
+	"log"
 	"os/exec"
 	"testing"
 
@@ -67,23 +67,24 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) waitWww() {
-	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
-	assert.NotEqual(ts.t, nil, err)
+	ch := make(chan error)
+	go func() {
+		_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
+		ch <- err
+	}()
 
-	log.Printf("waitexit %v\n", childdir(ts.pid))
 	status, err := ts.WaitExit(childdir(ts.pid))
 	assert.Nil(ts.t, err, "WaitExit error")
 	assert.Equal(ts.t, "OK", status, "Exit status wrong")
+
+	r := <-ch
+	assert.NotEqual(ts.t, nil, r)
 
 	ts.e.Shutdown()
 }
 
 func TestSandbox(t *testing.T) {
 	ts := makeTstate(t)
-
-	_, err := exec.Command("wget", "-qO-", "http://localhost:8080/exit/").Output()
-	assert.NotEqual(t, nil, err)
-
 	ts.waitWww()
 }
 

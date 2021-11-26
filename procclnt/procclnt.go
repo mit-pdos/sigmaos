@@ -68,7 +68,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return err
 	}
 	if clnt.piddir != p.PidDir {
-		log.Printf("%v: spawn clnt %v make piddir %v\n", db.GetName(), clnt.piddir, p.PidDir)
+		log.Printf("%v: spawn child %v make piddir %v\n", db.GetName(), clnt.piddir, p.PidDir)
 		if err := clnt.Mkdir(p.PidDir, 0777); err != nil {
 			log.Fatalf("%v: Spawn new piddir %v err %v\n", db.GetName(), p.PidDir, err)
 			return err

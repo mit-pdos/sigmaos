@@ -59,7 +59,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 		log.Fatalf("Failed to read txni %v\n", err)
 	}
 
-	_, err = twopc.MakeParticipant(p.FsLib, p.me, p, p.opcode)
+	_, err = twopc.MakeParticipant(p.FsLib, p.ProcClnt, p.me, p, p.opcode)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

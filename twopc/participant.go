@@ -32,12 +32,12 @@ func commitName(flw string) string {
 	return TWOPCCOMMITTED + flw
 }
 
-func MakeParticipant(fsl *fslib.FsLib, me string, txn TxnI, opcode string) (*Participant, error) {
+func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn TxnI, opcode string) (*Participant, error) {
 	p := &Participant{}
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
 	p.FsLib = fsl
-	p.ProcClnt = procclnt.MakeProcClnt(fsl)
+	p.ProcClnt = pclnt
 	p.txn = txn
 	p.opcode = opcode
 
@@ -107,15 +107,17 @@ func (p *Participant) restartCoord() {
 		log.Printf("PART clean")
 		return
 	}
-	t := proc.MakeProc("bin/user/twopc-coord", append([]string{"restart"}, p.twopc.Participants...))
-	p.Spawn(t)
+	c := proc.MakeProc("bin/user/twopc-coord", append([]string{"restart"}, p.twopc.Participants...))
+	err := p.Spawn(c)
+	if err != nil {
+		log.Printf("spawn err %v\n", err)
+	}
 
-	//ok, err := p.Wait(pid1)
+	//ok, err := p.WaitExit(c.Pid)
 	//if err != nil {
 	//	log.Printf("PART wait failed\n")
 	//}
-	//log.Printf("PART Coord %v done %v\n", pid1, string(ok))
-
+	//log.Printf("PART Coord %v done %v\n", c.Pid, string(ok))
 }
 
 func (p *Participant) watchCoord(path string, err error) {

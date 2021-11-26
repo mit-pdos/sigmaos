@@ -463,8 +463,7 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
 		fos.wt.WakeupWatch(dst, np.Dir(dst)) // trigger create watch
-		// XXX check if o is a directory?
-		// fos.wt.WakeupWatchPrefix(f.Path()) // trigger remove watch
+		fos.wt.WakeupWatch(f.Path(), nil)    // trigger remove watch
 		f.SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
@@ -502,8 +501,8 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 		}
 		dst := append(np.Copy(newf.Path()), args.NewName)
 		fos.wt.WakeupWatch(dst, np.Dir(dst)) // trigger create watch
-		// fos.wt.WakeupWatchPrefix(oldf.Path()) // trigger remove watch
-		// inc v# of fid with Prefix
+		src := append(np.Copy(oldf.Path()), args.OldName)
+		fos.wt.WakeupWatch(src, nil) // trigger remove watch
 	default:
 		return np.ErrNotDir
 	}

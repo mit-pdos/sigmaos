@@ -51,7 +51,6 @@ func makeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
 
 // ========== SPAWN ==========
 
-// XXX cleanup on failure
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 	// Select which queue to put the job in
@@ -250,7 +249,6 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 // ========== EVICT ==========
 
 // Procd notifies a proc that it will be evicted using Evict.
-// XXX handle piddir not existing
 func (clnt *ProcClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
 	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
@@ -303,8 +301,8 @@ func (clnt *ProcClnt) setExited(pid string) string {
 	return r
 }
 
+// Attempt to cleanup piddir
 func (clnt *ProcClnt) cleanupError(piddir string, err error) error {
-	// attempt to cleanup
 	clnt.removeProc(piddir)
 	return err
 }

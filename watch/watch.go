@@ -126,7 +126,8 @@ func (wt *WatchTable) Release(ws *Watchers, path []string) {
 
 // Wake up watches on file and parent dir
 // XXX maybe support wakeupOne?
-func (wt *WatchTable) WakeupWatch(fn, dir []string) {
+func (wt *WatchTable) WakeupWatch(fn []string) {
+	dir := np.Dir(fn)
 	p := np.Join(fn)
 	p1 := np.Join(dir)
 

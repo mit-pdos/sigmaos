@@ -105,7 +105,7 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
 		o.Parent().Remove(f.Ctx(), f.PathLast())
-		fos.wt.WakeupWatch(f.Path(), f.PathDir())
+		fos.wt.WakeupWatch(f.Path())
 	}
 	fos.wt.DeleteConn(fos)
 	fos.st.DeleteSession(sess)
@@ -231,7 +231,7 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 	if eph {
 		fos.st.AddEphemeral(sess, o, nf)
 	}
-	fos.wt.WakeupWatch(nf.Path(), dir)
+	fos.wt.WakeupWatch(nf.Path())
 	return nf
 }
 
@@ -355,7 +355,7 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 	}
 
 	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
-	fos.wt.WakeupWatch(f.Path(), f.PathDir())
+	fos.wt.WakeupWatch(f.Path())
 
 	if o.Perm().IsEphemeral() {
 		fos.del(sess, args.Fid)
@@ -405,7 +405,6 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	}
 	fos.stats.Path(f.Path())
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
-	dname := np.Dir(fname)
 
 	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {
@@ -416,7 +415,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 		log.Printf("Unlink err %v f %v\n", r, f.Path())
 		return &np.Rerror{r.Error()}
 	}
-	fos.wt.WakeupWatch(fname, dname)
+	fos.wt.WakeupWatch(fname)
 
 	if lo.Perm().IsEphemeral() {
 		fos.st.DelEphemeral(sess, lo)
@@ -462,8 +461,8 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		}
 		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
-		fos.wt.WakeupWatch(dst, np.Dir(dst)) // trigger create watch
-		fos.wt.WakeupWatch(f.Path(), nil)    // trigger remove watch
+		fos.wt.WakeupWatch(dst)      // trigger create watch
+		fos.wt.WakeupWatch(f.Path()) // trigger remove watch
 		f.SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
@@ -500,9 +499,9 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 			return &np.Rerror{err.Error()}
 		}
 		dst := append(np.Copy(newf.Path()), args.NewName)
-		fos.wt.WakeupWatch(dst, np.Dir(dst)) // trigger create watch
+		fos.wt.WakeupWatch(dst) // trigger create watch
 		src := append(np.Copy(oldf.Path()), args.OldName)
-		fos.wt.WakeupWatch(src, nil) // trigger remove watch
+		fos.wt.WakeupWatch(src) // trigger remove watch
 	default:
 		return np.ErrNotDir
 	}

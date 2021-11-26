@@ -126,8 +126,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 func (clnt *ProcClnt) WaitStart(pid string) error {
 	piddir := proc.PidDir(pid)
 	semStart := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+START_WAIT)
-	semStart.Down()
-	return nil
+	return semStart.Down()
 }
 
 // Parent calls WaitExited() to wait until child proc has exited. If
@@ -176,8 +175,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 func (clnt *ProcClnt) WaitEvict(pid string) error {
 	piddir := proc.PidDir(pid)
 	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
-	semEvict.Down()
-	return nil
+	return semEvict.Down()
 }
 
 // ========== STARTED ==========
@@ -186,7 +184,10 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 func (clnt *ProcClnt) Started(pid string) error {
 	dir := proc.PidDir(pid)
 	semStart := usync.MakeSemaphore(clnt.FsLib, dir+"/"+START_WAIT)
-	semStart.Up()
+	err := semStart.Up()
+	if err != nil {
+		return err
+	}
 	// Isolate the process namespace
 	newRoot := os.Getenv("NEWROOT")
 	if err := namespace.Isolate(newRoot); err != nil {
@@ -194,7 +195,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 	}
 	// Load a seccomp filter.
 	seccomp.LoadFilter()
-	return nil
+	return err
 }
 
 // ========== EXITED ==========
@@ -252,8 +253,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 func (clnt *ProcClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
 	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
-	semEvict.Up()
-	return nil
+	return semEvict.Up()
 }
 
 // ========== Helpers ==========

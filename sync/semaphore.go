@@ -3,7 +3,6 @@ package sync
 import (
 	"log"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -27,15 +26,10 @@ func MakeSemaphore(fsl *fslib.FsLib, semaphore string) *Semaphore {
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
 func (c *Semaphore) Init() error {
-	err := c.MakeFile(c.path, 0777, np.OWRITE, []byte{})
-	if err != nil {
-		db.DLPrintf("SEMAPHORE", "MakeFile %v err %v", c.path, err)
-		return err
-	}
-	return nil
+	return c.MakeFile(c.path, 0777, np.OWRITE, []byte{})
 }
 
-// Down semaphore. If file exists (i.e., semaphore = 0), wait.
+// Down semaphore. If not upped yet (i.e., if file exists), block
 func (c *Semaphore) Down() error {
 	signal := make(chan error)
 	err := c.SetRemoveWatch(c.path, func(p string, err error) {
@@ -48,14 +42,14 @@ func (c *Semaphore) Down() error {
 		// log.Printf("semaphore wait %v\n", c.path)
 		err = <-signal
 	}
-	// file has been removed (i.e., semaphore has been "incremented")
-	return err
+	// if err, file has been removed (i.e., semaphore has been
+	// "upped" or file server crashed).
+	// XXX distinguish those cases?
+	return nil
 }
 
-// Up a semaphore variable. Remove semaphore to indicate up has happened.
-func (c *Semaphore) Up() {
-	err := c.Remove(c.path)
-	if err != nil {
-		log.Fatalf("Remove %v err %v\n", c.path, err)
-	}
+// Up a semaphore variable (i.e., remove semaphore to indicate up has
+// happened).
+func (c *Semaphore) Up() error {
+	return c.Remove(c.path)
 }

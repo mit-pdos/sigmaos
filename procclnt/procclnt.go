@@ -53,12 +53,16 @@ func makeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
 
 // XXX cleanup on failure
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-	if clnt.hasExited() == p.Pid {
-		return fmt.Errorf("Spawn: called after Exited")
-	}
 
 	// Select which queue to put the job in
 	piddir := proc.PidDir(p.Pid)
+
+	// log.Printf("%v: %p spawn %v\n", db.GetName(), clnt, piddir)
+
+	if clnt.hasExited() != "" {
+		return fmt.Errorf("Spawn: called after Exited")
+	}
+
 	if err := clnt.Mkdir(piddir, 0777); err != nil {
 		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
 		return err
@@ -133,7 +137,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
-	// log.Printf("%v: waitexit %v\n", db.GetName(), piddir)
+	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
 
 	if _, err := clnt.Stat(piddir); err != nil {
 		return "", err
@@ -206,12 +210,14 @@ func (clnt *ProcClnt) Started(pid string) error {
 func (clnt *ProcClnt) Exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
-	// log.Printf("%v: exited %v\n", db.GetName(), piddir)
-
+	// will catch some unintended misuses: a proc calling exited
+	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
 		log.Printf("%v: Exited called after exited %v\n", db.GetName(), piddir)
 		return fmt.Errorf("Exited: called more than once for pid %v", pid)
 	}
+
+	// log.Printf("%v: exited %v\n", db.GetName(), piddir)
 
 	// Abandon any children I may have left.
 	clnt.abandonChildren(piddir)

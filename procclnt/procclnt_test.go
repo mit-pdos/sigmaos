@@ -219,6 +219,22 @@ func TestCrashProc(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func TestFailSpawn(t *testing.T) {
+	ts := makeTstate(t)
+
+	a := proc.MakeEmptyProc()
+	a.Pid = proc.GenPid()
+	err := ts.Spawn(a)
+	assert.NotNil(t, err, "Spawn")
+	ts.e.Shutdown()
+
+	// child should not exist
+	_, err = ts.Stat(proc.PidDir(a.Pid))
+	assert.NotNil(t, err, "Stat")
+
+	ts.e.Shutdown()
+}
+
 func TestEarlyExit1(t *testing.T) {
 	ts := makeTstate(t)
 

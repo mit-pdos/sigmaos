@@ -286,8 +286,8 @@ func (fsc *FsClient) clunkFid(fid np.Tfid) {
 func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	db.DLPrintf("FSCLNT", "Create %v perm %v\n", path, perm)
 	p := np.Split(path)
-	dir := p[0 : len(p)-1]
-	base := p[len(p)-1]
+	dir := np.Dir(p)
+	base := np.Base(p)
 	fid, err := fsc.walkMany(dir, true, nil)
 	if err != nil {
 		return -1, err
@@ -591,8 +591,8 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, np.TQversion, 
 func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version np.TQversion, data []byte) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
 	p := np.Split(path)
-	dir := p[0 : len(p)-1]
-	base := []string{p[len(p)-1]}
+	dir := np.Dir(p)
+	base := []string{np.Base(p)}
 	fid, rest := fsc.mount.resolve(p)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "SetFile: mount -> unknown fid\n")
@@ -608,7 +608,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 		if strings.HasPrefix(err.Error(), "dir not found") {
 			if perm == 0 {
 				dir = p
-				base = []string{}
+				base = []string{"."}
 			}
 			fid, err = fsc.WalkManyUmount(dir, true, nil)
 			if err != nil {

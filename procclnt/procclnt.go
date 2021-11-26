@@ -70,19 +70,20 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	if clnt.piddir != p.PidDir {
 		log.Printf("%v: spawn child %v make piddir %v\n", db.GetName(), clnt.piddir, p.PidDir)
 		if err := clnt.Mkdir(p.PidDir, 0777); err != nil {
-			log.Fatalf("%v: Spawn new piddir %v err %v\n", db.GetName(), p.PidDir, err)
-			return err
+			log.Printf("%v: Spawn new piddir %v err %v\n", db.GetName(), p.PidDir, err)
+			return clnt.cleanupError(piddir, err)
 		}
 		piddir = p.PidDir + "/" + p.Pid
 		if err := clnt.Mkdir(piddir, 0777); err != nil {
-			log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
-			return err
+			log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
+			return clnt.cleanupError(piddir, err)
 		}
 	}
 
 	err := clnt.MakePipe(piddir+"/"+RET_STATUS, 0777)
 	if err != nil {
-		log.Fatalf("%v: MakePipe %v err %v\n", db.GetName(), RET_STATUS, err)
+		log.Printf("%v: MakePipe %v err %v\n", db.GetName(), RET_STATUS, err)
+		return clnt.cleanupError(piddir, err)
 	}
 
 	semStart := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+START_WAIT)
@@ -93,27 +94,27 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 	d := piddir + "/" + CHILD
 	if err := clnt.Mkdir(d, 0777); err != nil {
-		log.Fatalf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), d, err)
-		return err
+		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), d, err)
+		return clnt.cleanupError(piddir, err)
 	}
 
 	// Add pid to my children
 	f := PIDS + "/" + proc.GetPid() + "/" + CHILD + "/" + p.Pid
 	if err := clnt.MakeFile(f, 0777, np.OWRITE, []byte{}); err != nil {
-		log.Fatalf("%v: Spawn mkfile child %v err %v\n", db.GetName(), f, err)
-		return err
+		log.Printf("%v: Spawn mkfile child %v err %v\n", db.GetName(), f, err)
+		return clnt.cleanupError(piddir, err)
 	}
 
 	b, err := json.Marshal(p)
 	if err != nil {
-		log.Fatalf("Error marshal: %v", err)
-		return err
+		log.Printf("Error marshal: %v", err)
+		return clnt.cleanupError(piddir, err)
 	}
 
 	err = clnt.WriteFile(path.Join(named.PROCDDIR+"/~ip", named.PROC_CTL_FILE), b)
 	if err != nil {
 		log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
-		return err
+		return clnt.cleanupError(piddir, err)
 	}
 
 	return nil
@@ -165,7 +166,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		log.Printf("Close %v err %v", fn, err)
 	}
 
-	clnt.destroyProc(piddir)
+	clnt.removeProc(piddir)
 
 	return string(b), nil
 
@@ -228,7 +229,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 	if err != nil {
 		// parent has abandoned me; clean myself up
 		// log.Printf("%v: Error Open %v err %v", db.GetName(), fn, err)
-		clnt.destroyProc(piddir)
+		clnt.removeProc(piddir)
 	} else {
 		_, err = clnt.Write(fd, []byte(status))
 		if err != nil {
@@ -280,8 +281,8 @@ func (clnt *ProcClnt) abandonChild(piddir string) {
 }
 
 // Clean up proc
-func (clnt *ProcClnt) destroyProc(piddir string) {
-	// log.Printf("%v: destroy %v\n", db.GetName(), piddir)
+func (clnt *ProcClnt) removeProc(piddir string) {
+	// log.Printf("%v: removeProc %v\n", db.GetName(), piddir)
 	if err := clnt.RmDir(piddir); err != nil {
 		s, _ := clnt.SprintfDir(piddir)
 		log.Fatalf("%v: RmDir %v err %v %v", db.GetName(), piddir, err, s)
@@ -300,4 +301,10 @@ func (clnt *ProcClnt) setExited(pid string) string {
 	r := clnt.exited
 	clnt.exited = pid
 	return r
+}
+
+func (clnt *ProcClnt) cleanupError(piddir string, err error) error {
+	// attempt to cleanup
+	clnt.removeProc(piddir)
+	return err
 }

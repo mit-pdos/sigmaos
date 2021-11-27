@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fid"
@@ -201,6 +202,7 @@ func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.R
 	return nil
 }
 
+// XXX race in WatchV: change o between VEq and set Watch
 func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	fos.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
@@ -212,7 +214,7 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	if o == nil {
 		return np.ErrClunked
 	}
-	if args.Version != np.NoV && args.Version != o.Version() {
+	if !np.VEq(args.Version, o.Version) {
 		s := fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())
 		return &np.Rerror{s}
 	}
@@ -595,6 +597,7 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 			return &np.Rerror{r.Error()}
 		}
 	}
+	// time.Sleep(1000 * time.Nanosecond)
 	switch i := lo.(type) {
 	case fs.Dir:
 		return np.ErrNotFile

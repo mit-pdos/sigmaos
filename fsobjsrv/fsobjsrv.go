@@ -214,7 +214,7 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	if o == nil {
 		return np.ErrClunked
 	}
-	if !np.VEq(args.Version, o.Version) {
+	if !np.VEq(args.Version, o.Version()) {
 		s := fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())
 		return &np.Rerror{s}
 	}

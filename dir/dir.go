@@ -203,7 +203,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQv
 	defer dir.mu.Unlock()
 
 	db.DLPrintf("MEMFS", "%v: ReadDir %v\n", ctx, dir)
-	if v != np.NoV && dir.Version() != v {
+	if !np.VEq(v, dir.Version()) {
 		return nil, fmt.Errorf("Version mismatch")
 	}
 	return dir.lsL(), nil

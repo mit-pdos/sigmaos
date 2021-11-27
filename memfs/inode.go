@@ -26,6 +26,6 @@ func MakeInode(uname string, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, e
 	} else if p.IsFile() || p.IsEphemeral() {
 		return MakeFile(i), nil
 	} else {
-		return nil, fmt.Errorf("Unknown type")
+		return nil, fmt.Errorf("MakeInode: Unknown inode type")
 	}
 }

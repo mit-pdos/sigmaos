@@ -42,7 +42,7 @@ func (s *Symlink) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQvers
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if v != np.NoV && s.Version() != v {
+	if !np.VEq(v, s.Version()) {
 		return 0, fmt.Errorf("Version mismatch")
 	}
 	s.target = data
@@ -55,7 +55,7 @@ func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversio
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if v != np.NoV && s.Version() != v {
+	if !np.VEq(v, s.Version()) {
 		return nil, fmt.Errorf("Version mismatch")
 	}
 	if offset >= np.Toffset(len(s.target)) {

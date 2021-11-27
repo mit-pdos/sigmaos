@@ -49,6 +49,10 @@ type TQversion uint32
 
 const NoV TQversion = ^TQversion(0)
 
+func VEq(v1, v2 TQversion) bool {
+	return v1 == NoV || v1 == v2
+}
+
 // A Qid's type field represents the type of a file, the high 8 bits of
 // the file's permission.
 const (

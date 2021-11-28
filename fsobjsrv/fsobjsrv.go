@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	// "time"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fid"
@@ -202,10 +202,10 @@ func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.R
 	return nil
 }
 
-// XXX race in WatchV: change o between VEq and set Watch
 func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	fos.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
+
 	f, err := fos.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -214,22 +214,37 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	if o == nil {
 		return np.ErrClunked
 	}
-	if o.Nlink() == 0 {
-		return np.ErrNotfound
-	}
-	if !np.VEq(args.Version, o.Version()) {
-		return &np.Rerror{fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())}
-	}
 	p := f.Path()
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	// time.Sleep(1000 * time.Nanosecond)
+
+	log.Printf("watch: about to lock %v\n", p)
+
+	// get lock on watch entry for p, so that remove cannot remove
+	// file before watch is set.
 	ws := fos.wt.WatchLookupL(p)
-	//if len(f.Path()) > 0 && f.Path()[0] == "w" {
-	//	log.Printf("set watch %v %v\n", p, o.Nlink())
-	//}
+	defer fos.wt.Release(ws)
+
+	log.Printf("watch: locked %v\n", p)
+
+	if len(f.Path()) > 0 && f.Path()[0] == "w" {
+		log.Printf("watchv %v %v\n", f.Path(), o.Nlink())
+	}
+
+	if o.Nlink() == 0 {
+		return np.ErrNotfound
+	}
+	if !np.VEq(args.Version, o.Version()) {
+
+		return &np.Rerror{fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())}
+	}
+	time.Sleep(1000 * time.Nanosecond)
+
+	log.Printf("WATCH: SLEEP %v\n", p)
+
 	ws.Watch(fos)
+
 	return nil
 }
 
@@ -246,29 +261,33 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
 func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
+	p := append(dir, name)
+	var ws *watch.Watchers
+	if mode&np.OWATCH == np.OWATCH {
+		ws = fos.wt.WatchLookupL(p)
+	}
 	for {
-		p := append(dir, name)
-		var ws *watch.Watchers
-		if mode&np.OWATCH == np.OWATCH {
-			ws = fos.wt.WatchLookupL(p)
-		}
 		o1, err := d.Create(ctx, name, perm, mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
+		log.Printf("creat %v err %v ws %v\n", name, err, ws)
 		if err == nil {
 			if ws != nil {
-				fos.wt.Release(ws, p)
+				fos.wt.Release(ws)
 			}
 			return o1, nil
 		} else {
 			if ws != nil && err.Error() == "Name exists" {
+				log.Printf("creat wait %v\n", name)
 				err := ws.Watch(fos)
 				if err != nil {
+					fos.wt.Release(ws)
 					return nil, err
 				}
-				// try again
+				log.Printf("creat wait try again %v\n", name)
+				// try again; we will hold lock on watchers
 			} else {
 				if ws != nil {
-					fos.wt.Release(ws, p)
+					fos.wt.Release(ws)
 				}
 				return nil, &np.Rerror{err.Error()}
 			}
@@ -302,6 +321,7 @@ func (fos *FsObjSrv) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate)
 	nf := fos.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
 	fos.add(sess, args.Fid, nf)
 	rets.Qid = o1.Qid()
+	log.Printf("create returns %v\n", args)
 	return nil
 }
 
@@ -333,7 +353,60 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 	return r
 }
 
-// XXX is remove obsolete?  (removefile -> remove?)
+func (fos *FsObjSrv) RemoveObj(sess np.Tsession, ctx fs.CtxI, rets *np.Rremove, o fs.FsObj, path []string) *np.Rerror {
+	// XXX make .exit a reserved name
+	log.Printf("RemoveObj %v\n", path)
+
+	// XXX make .exit a reserved name
+	if len(path) == 1 && path[0] == ".exit" { // exit?
+		db.DLPrintf("9POBJ", "Done\n")
+		fos.fssrv.Done()
+		return nil
+	}
+
+	// lock watch entry to make WatchV and Remove interact
+	// correctly
+	dws := fos.wt.WatchLookupL(np.Dir(path))
+	fws := fos.wt.WatchLookupL(path)
+	defer fos.wt.Release(dws)
+	defer fos.wt.Release(fws)
+
+	if path[len(path)-1] == "w" {
+		log.Printf("remove: locked %v\n", path)
+	}
+
+	fos.stats.Path(path)
+
+	r := o.Parent().Remove(ctx, path[len(path)-1])
+	if r != nil {
+		return &np.Rerror{r.Error()}
+	}
+	r = o.Unlink(ctx)
+	if r != nil {
+		log.Printf("Unlink err %v f %v\n", r, path)
+		return &np.Rerror{r.Error()}
+	}
+
+	if path[len(path)-1] == "w" {
+		log.Printf("removed and fire %v\n", path)
+	}
+
+	fws.WakeupWatchL()
+	dws.WakeupWatchL()
+
+	if path[len(path)-1] == "w" {
+		log.Printf("remove: wakeups done\n")
+	}
+	if o.Perm().IsEphemeral() {
+		fos.st.DelEphemeral(sess, o)
+	}
+
+	if path[len(path)-1] == "w" {
+		log.Printf("remove: about to release\n")
+	}
+	return nil
+}
+
 func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
 	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(sess, args.Fid)
@@ -344,31 +417,41 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 	if o == nil {
 		return np.ErrClunked
 	}
-	if len(f.Path()) == 0 { // exit?
-		db.DLPrintf("9POBJ", "Done\n")
-		fos.fssrv.Done()
-		return nil
-	}
-	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	r := o.Parent().Remove(f.Ctx(), f.PathLast())
-	if r != nil {
-		log.Printf("remove err %v f %v\n", r, f.Path())
-		// return &np.Rerror{r.Error()}
-	}
 
-	r = o.Unlink(f.Ctx())
-	if r != nil {
-		log.Printf("Unlink err %v f %v\n", r, f.Path())
-		// return &np.Rerror{r.Error()}
-	}
+	return fos.RemoveObj(sess, f.Ctx(), rets, o, f.Path())
 
-	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
-	fos.wt.WakeupWatch(f.Path())
+	// if len(f.Path()) == 0 { // exit?
+	// 	db.DLPrintf("9POBJ", "Done\n")
+	// 	fos.fssrv.Done()
+	// 	return nil
+	// }
+	// db.DLPrintf("9POBJ", "Remove f %v\n", f)
 
-	if o.Perm().IsEphemeral() {
-		fos.del(sess, args.Fid)
-	}
-	return nil
+	// // lock watch entry to make WatchV and Remove interact
+	// // correctly
+	// dws, fws := fos.wt.WatchLookupTwoL(fname)
+	// defer fos.wt.Release(dws)
+	// defer fos.wt.Release(fws)
+
+	// r := o.Parent().Remove(f.Ctx(), f.PathLast())
+	// if r != nil {
+	// 	log.Printf("remove err %v f %v\n", r, f.Path())
+	// 	// return &np.Rerror{r.Error()}
+	// }
+
+	// r = o.Unlink(f.Ctx())
+	// if r != nil {
+	// 	log.Printf("Unlink err %v f %v\n", r, f.Path())
+	// 	// return &np.Rerror{r.Error()}
+	// }
+
+	// db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
+	// ws.WakeupWatchL()
+
+	// if o.Perm().IsEphemeral() {
+	// 	fos.del(sess, args.Fid)
+	// }
+	// return nil
 }
 
 func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Rerror) {
@@ -399,12 +482,29 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 		return np.ErrClunked
 	}
 	lo := o
+
+	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
+
 	// XXX make .exit a reserved name
 	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil
 	}
+
+	log.Printf("remove %v\n", fname)
+
+	// lock watch entry to make WatchV and Remove interact
+	// correctly
+	dws := fos.wt.WatchLookupL(np.Dir(fname))
+	fws := fos.wt.WatchLookupL(fname)
+	defer fos.wt.Release(dws)
+	defer fos.wt.Release(fws)
+
+	if fname[len(fname)-1] == "w" {
+		log.Printf("remove: locked %v\n", fname)
+	}
+
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
@@ -412,7 +512,6 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 		}
 	}
 	fos.stats.Path(f.Path())
-	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
 
 	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {
@@ -420,18 +519,26 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	}
 	r = lo.Unlink(f.Ctx())
 	if r != nil {
-		log.Printf("Unlink err %v f %v\n", r, f.Path())
+		log.Printf("Unlink err %v f %v\n", r, fname)
 		return &np.Rerror{r.Error()}
 	}
 
-	//if fname[len(fname)-1] == "w" {
-	//	log.Printf("removed and fire %v\n", f.Path())
-	//}
+	if fname[len(fname)-1] == "w" {
+		log.Printf("removed and fire %v\n", fname)
+	}
 
-	fos.wt.WakeupWatch(fname)
+	fws.WakeupWatchL()
+	dws.WakeupWatchL()
 
+	if fname[len(fname)-1] == "w" {
+		log.Printf("remove: wakeups done\n")
+	}
 	if lo.Perm().IsEphemeral() {
 		fos.st.DelEphemeral(sess, lo)
+	}
+
+	if fname[len(fname)-1] == "w" {
+		log.Printf("remove: about to release\n")
 	}
 	return nil
 }

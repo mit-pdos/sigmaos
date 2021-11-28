@@ -214,15 +214,21 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	if o == nil {
 		return np.ErrClunked
 	}
+	if o.Nlink() == 0 {
+		return np.ErrNotfound
+	}
 	if !np.VEq(args.Version, o.Version()) {
-		s := fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())
-		return &np.Rerror{s}
+		return &np.Rerror{fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())}
 	}
 	p := f.Path()
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
+	// time.Sleep(1000 * time.Nanosecond)
 	ws := fos.wt.WatchLookupL(p)
+	//if len(f.Path()) > 0 && f.Path()[0] == "w" {
+	//	log.Printf("set watch %v %v\n", p, o.Nlink())
+	//}
 	ws.Watch(fos)
 	return nil
 }
@@ -417,6 +423,11 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 		log.Printf("Unlink err %v f %v\n", r, f.Path())
 		return &np.Rerror{r.Error()}
 	}
+
+	//if fname[len(fname)-1] == "w" {
+	//	log.Printf("removed and fire %v\n", f.Path())
+	//}
+
 	fos.wt.WakeupWatch(fname)
 
 	if lo.Perm().IsEphemeral() {

@@ -470,7 +470,7 @@ func (fsc *FsClient) SetDirWatch(path string, f Watch) error {
 
 func (fsc *FsClient) SetRemoveWatch(path string, f Watch) error {
 	p := np.Split(path)
-	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), f)
+	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}

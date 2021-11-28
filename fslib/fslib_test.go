@@ -402,7 +402,67 @@ func TestCounter(t *testing.T) {
 
 	assert.Equal(t, N, n)
 
-	ts.s.Shutdown()
+	ts.e.Shutdown()
+}
+
+// Test race: write returns successfully after rename, but read sees
+// an old value,
+func TestSetRenameGet(t *testing.T) {
+	const N = 100_000
+
+	ts := makeTstate(t)
+
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	fn := "name/d1/f"
+	fn1 := "name/d1/f1"
+	d := []byte(strconv.Itoa(0))
+	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	start := make(chan bool)
+	ch := make(chan int)
+	go func() {
+		fsl := fslib.MakeFsLibAddr("fsl1", ts.cfg.NamedAddr)
+		for i := 1; i < N; {
+			d := []byte(strconv.Itoa(i))
+			_, err = fsl.SetFile(fn, d, np.NoV)
+			if err == nil {
+				i++
+			} else {
+				ch <- i - 1
+				<-start
+			}
+		}
+		ch <- N - 1
+	}()
+
+	race := false
+	for true {
+		err = ts.Rename(fn, fn1)
+		assert.Equal(t, nil, err)
+
+		d1, err := ts.ReadFile(fn1)
+		n, err := strconv.Atoi(string(d1))
+		assert.Equal(t, nil, err)
+
+		m := <-ch
+
+		if n != m {
+			log.Printf("%v %v\n", m, n)
+			race = true
+		}
+		if m == N-1 {
+			break
+		}
+
+		err = ts.Rename(fn1, fn)
+		assert.Equal(t, nil, err)
+
+		start <- true
+	}
+	assert.Equal(ts.t, true, race, "SetRenameGet")
+
 	ts.e.Shutdown()
 }
 
@@ -530,7 +590,7 @@ func TestLockAfterConnClose(t *testing.T) {
 	ts.e.Shutdown()
 }
 
-func TestWatchRemove(t *testing.T) {
+func TestWatchRemoveSeq(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/w"
@@ -588,6 +648,57 @@ func TestWatchDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	<-ch
+
+	ts.e.Shutdown()
+}
+
+// Test race: write returns successfully after rename, but read sees
+// an old value,
+func TestWatchRemoveConcur(t *testing.T) {
+	const N = 100 // 10_000
+
+	ts := makeTstate(t)
+	fn := "name/w"
+
+	ch := make(chan error)
+	done := make(chan bool)
+	go func() {
+		fsl := fslib.MakeFsLibAddr("fsl1", ts.cfg.NamedAddr)
+		for i := 1; i < N; {
+			err := fsl.MakeFile(fn, 0777, np.OWRITE, nil)
+			// assert.Equal(t, nil, err)
+			if err != nil {
+				log.Fatalf("Makefile %v err %v\n", fn, err)
+			}
+			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
+				log.Printf("watch cb %v err %v\n", i, r)
+				ch <- r
+			})
+			if err == nil {
+				log.Printf("wait for watch\n")
+				r := <-ch
+				if r == nil {
+					i += 1
+				}
+				log.Printf("%v\n", i)
+			} else {
+				log.Printf("SetRemoveWatch %v err %v\n", i, err)
+			}
+		}
+		log.Printf("done\n")
+		done <- true
+	}()
+
+	stop := false
+	for !stop {
+		select {
+		case <-done:
+			stop = true
+		default:
+			time.Sleep(1 * time.Millisecond)
+			ts.Remove(fn) // remove may fail
+		}
+	}
 
 	ts.e.Shutdown()
 }

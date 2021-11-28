@@ -23,7 +23,6 @@ type Pipe struct {
 	wclosed bool
 	rclosed bool
 	buf     []byte
-	nlink   int
 }
 
 func MakePipe(i fs.FsObj) *Pipe {
@@ -32,7 +31,6 @@ func MakePipe(i fs.FsObj) *Pipe {
 	pipe.condr = sync.NewCond(&pipe.mu)
 	pipe.condw = sync.NewCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
-	pipe.nlink = 1
 	pipe.nreader = 0
 	pipe.nwriter = 0
 	pipe.wclosed = false
@@ -64,7 +62,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
 			pipe.condr.Wait()
-			if pipe.nlink == 0 {
+			if pipe.Nlink() == 0 {
 				return nil, fmt.Errorf("Pipe removed")
 			}
 		}
@@ -74,7 +72,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 		for pipe.nreader == 0 && !pipe.rclosed {
 			db.DLPrintf("MEMFS", "Wait for reader\n")
 			pipe.condw.Wait()
-			if pipe.nlink == 0 {
+			if pipe.Nlink() == 0 {
 				return nil, fmt.Errorf("Pipe removed")
 			}
 
@@ -160,7 +158,7 @@ func (pipe *Pipe) Unlink(ctx fs.CtxI) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	pipe.nlink -= 1
+	pipe.DecNlink()
 	pipe.condw.Signal()
 	pipe.condr.Signal()
 	return nil

@@ -2,10 +2,12 @@ package inode
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 	"unsafe"
 
+	db "ulambda/debug"
 	fs "ulambda/fs"
 	np "ulambda/ninep"
 )
@@ -20,6 +22,7 @@ type Inode struct {
 	mtime   int64
 	parent  fs.Dir
 	owner   string
+	nlink   int
 }
 
 func MakeInode(owner string, p np.Tperm, parent fs.Dir) *Inode {
@@ -29,6 +32,7 @@ func MakeInode(owner string, p np.Tperm, parent fs.Dir) *Inode {
 	i.parent = parent
 	i.owner = owner
 	i.version = np.TQversion(1)
+	i.nlink = 1
 	return &i
 }
 
@@ -79,6 +83,20 @@ func (inode *Inode) VersionInc() {
 	inode.version += 1
 }
 
+func (inode *Inode) Nlink() int {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
+	return inode.nlink
+}
+
+func (inode *Inode) DecNlink() {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+
+	inode.nlink--
+}
+
 func (inode *Inode) SetParent(p fs.Dir) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
@@ -110,6 +128,10 @@ func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) error {
 }
 
 func (i *Inode) Unlink(ctx fs.CtxI) error {
+	i.nlink -= 1
+	if i.nlink < 0 {
+		log.Printf("%v: nlink < 0\n", db.GetName())
+	}
 	return nil
 }
 

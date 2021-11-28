@@ -34,6 +34,8 @@ type FsObj interface {
 	SetMtime(int64)
 	Mtime() int64
 	Size() np.Tlength
+	Nlink() int
+	DecNlink()
 	Open(CtxI, np.Tmode) (FsObj, error)
 	Close(CtxI, np.Tmode) error // for pipes
 	Stat(CtxI) (*np.Stat, error)

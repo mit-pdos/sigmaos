@@ -23,6 +23,7 @@ var (
 
 	// ulambda
 	ErrNotSupported = &Rerror{"not supported"}
+	ErrInval        = &Rerror{"invalid argument"}
 	ErrUnknownMsg   = &Rerror{"unknown message"}
 	ErrNotDir       = &Rerror{"not a directory"}
 	ErrNotFile      = &Rerror{"not a file"}

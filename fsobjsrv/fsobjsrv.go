@@ -593,6 +593,17 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 	return nil
 }
 
+func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid, *fid.Fid) {
+	if d1.Inum() < d2.Inum() {
+		return oldf, newf
+	} else if d1.Inum() == d2.Inum() { // would have used wstat instead of renameat
+		log.Fatalf("lockOrder")
+		return oldf, newf
+	} else {
+		return newf, oldf
+	}
+}
+
 func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	fos.stats.StatInfo().Nrenameat.Inc()
 	oldf, err := fos.lookup(sess, args.OldFid)
@@ -618,16 +629,31 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 		if !ok {
 			return np.ErrNotDir
 		}
+		if oo.Inum() == no.Inum() {
+			return np.ErrInval
+		}
+		f1, f2 := lockOrder(oo, oldf, no, newf)
+		d1ws := fos.wt.WatchLookupL(f1.Path())
+		d2ws := fos.wt.WatchLookupL(f2.Path())
+		defer fos.wt.Release(d1ws)
+		defer fos.wt.Release(d2ws)
+
 		src := append(np.Copy(oldf.Path()), args.OldName)
 		dst := append(np.Copy(newf.Path()), args.NewName)
-		log.Printf("rename %v to %v\n", src, dst)
-		// XXX get watch first then rename and wakeup
+		srcws := fos.wt.WatchLookupL(src)
+		dstws := fos.wt.WatchLookupL(dst)
+		defer fos.wt.Release(srcws)
+		defer fos.wt.Release(dstws)
+
 		err := d1.Renameat(oldf.Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
+
 			return &np.Rerror{err.Error()}
 		}
-		fos.wt.WakeupWatch(dst) // trigger create watch
-		fos.wt.WakeupWatch(src) // trigger remove watch
+		dstws.WakeupWatchL() // trigger create watch
+		srcws.WakeupWatchL() // trigger remove watch
+		d1ws.WakeupWatchL()  // trigger one dir watch
+		d2ws.WakeupWatchL()  // trigger the other dir watch
 	default:
 		return np.ErrNotDir
 	}

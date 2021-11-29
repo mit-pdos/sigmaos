@@ -296,7 +296,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
 		log.Fatalf("Rename: remove failed %v %v\n", from, err)
 	}
 
-	// dir.VersionInc()
+	dir.VersionInc()
 	if terr == nil { // inoto is valid
 		// XXX 9p: it is an error to change the name to that
 		// of an existing file.
@@ -310,7 +310,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
 		log.Fatalf("Rename create %v failed %v\n", to, err)
 		return err
 	}
-	// ino.VersionInc()
+	ino.VersionInc()
 	return nil
 
 }

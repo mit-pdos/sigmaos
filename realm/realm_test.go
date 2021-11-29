@@ -40,6 +40,11 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 
+	err = ts.e.BootMachined()
+	if err != nil {
+		t.Fatalf("Boot Machined 2: %v", err)
+	}
+
 	db.Name("realm_test")
 	ts.realmFsl = fslib.MakeFsLibAddr("realm_test", fslib.Named())
 	ts.FsLib = fslib.MakeFsLibAddr("realm_test", cfg.NamedAddr)
@@ -72,7 +77,10 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 		log.Fatalf("Error ReadDir realm-balance main: %v", err)
 	}
 	nMachineds := len(machineds)
-	assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
+	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
+	if !ok {
+		time.Sleep(100 * time.Second)
+	}
 }
 
 // Start enough spinning lambdas to fill two Machineds, check that the test
@@ -82,6 +90,7 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 // the same number of cores.
 func TestRealmGrowShrink(t *testing.T) {
 	ts := makeTstate(t)
+
 	log.Printf("Starting %v spinning lambdas", linuxsched.NCores)
 	pids := []string{}
 	for i := 0; i < int(linuxsched.NCores); i++ {

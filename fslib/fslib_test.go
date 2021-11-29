@@ -44,9 +44,9 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) Shutdown() {
-	time.Sleep(100 * time.Millisecond)
 	err := ts.ShutdownFs(named.NAMED)
 	assert.Nil(ts.t, err, "Shutdown")
+	ts.memfs.Wait()
 }
 
 func TestRemoveSimple(t *testing.T) {

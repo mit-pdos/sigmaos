@@ -32,7 +32,7 @@ func mkWatchers(path string) *Watchers {
 	return w
 }
 
-// Caller should hold ws lock
+// Caller should hold ws lock on return caller has ws lock again
 func (ws *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
 	log.Printf("%p: watch wait %v\n", ws, ws.path)
 
@@ -42,17 +42,13 @@ func (ws *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
 
 	log.Printf("%v: watch done waiting %v\n", ws, ws.path)
 
-	db.DLPrintf("WATCH", "Watch done waiting %v\n", w)
+	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", ws, ws.path)
 
 	if npc.Closed() {
 		// XXX Bettter error message?
 		return &np.Rerror{"Closed by client"}
 	}
 	return nil
-}
-
-func (ws *Watchers) NoWaiters() bool {
-	return len(ws.watchers) == 0
 }
 
 func (ws *Watchers) WakeupWatchL() {
@@ -115,14 +111,14 @@ func (wt *WatchTable) WatchLookupL(path []string) *Watchers {
 
 	wt.Lock()
 
-	log.Printf("watchookupL %p locked [%v]\n", wt, p)
+	log.Printf("watchlookupL %p locked [%v]\n", wt, p)
 
 	ws, ok := wt.watchers[p]
 	if !ok {
 		ws = mkWatchers(p)
 		wt.watchers[p] = ws
 	}
-	ws.nref++ /// ws won't be deleted from table
+	ws.nref++ /// ensure ws won't be deleted from table
 
 	log.Printf("watchlookupL: try to lock %p [%v]\n", ws, ws)
 

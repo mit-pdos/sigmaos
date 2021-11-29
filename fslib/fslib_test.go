@@ -569,32 +569,6 @@ func TestWatchDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestLock(t *testing.T) {
-	const N = 20
-
-	ts := makeTstate(t)
-	ch := make(chan int)
-	acquired := false
-	for i := 0; i < N; i++ {
-		go func(i int) {
-			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
-			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-			assert.Equal(t, nil, err)
-			assert.Equal(t, false, acquired)
-			acquired = true
-			ch <- i
-		}(i)
-	}
-	for i := 0; i < N; i++ {
-		<-ch
-		// log.Printf("%d acquired lock\n", j)
-		acquired = false
-		err := ts.Remove("name/lock")
-		assert.Equal(t, nil, err)
-	}
-	ts.Shutdown()
-}
-
 func TestLock1(t *testing.T) {
 	ts := makeTstate(t)
 	ch := make(chan int)
@@ -621,6 +595,32 @@ func TestLock1(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestLockN(t *testing.T) {
+	const N = 20
+
+	ts := makeTstate(t)
+	ch := make(chan int)
+	acquired := false
+	for i := 0; i < N; i++ {
+		go func(i int) {
+			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
+			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+			assert.Equal(t, nil, err)
+			assert.Equal(t, false, acquired)
+			acquired = true
+			ch <- i
+		}(i)
+	}
+	for i := 0; i < N; i++ {
+		<-ch
+		// log.Printf("%d acquired lock\n", j)
+		acquired = false
+		err := ts.Remove("name/lock")
+		assert.Equal(t, nil, err)
+	}
+	ts.Shutdown()
+}
+
 func TestLockAfterConnClose(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -640,8 +640,6 @@ func TestLockAfterConnClose(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	log.Printf("CLOSE CONNECTION\n")
-
 	// Kill fsl2's connection
 	fsl2.Exit()
 
@@ -658,7 +656,7 @@ func TestLockAfterConnClose(t *testing.T) {
 // Test race: write returns successfully after rename, but read sees
 // an old value,
 func TestWatchRemoveConcur(t *testing.T) {
-	const N = 100 // 10_000
+	const N = 10_000
 
 	ts := makeTstate(t)
 	dn := "name/d1"

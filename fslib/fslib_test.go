@@ -44,6 +44,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func (ts *Tstate) Shutdown() {
+	time.Sleep(100 * time.Millisecond)
 	err := ts.ShutdownFs(named.NAMED)
 	assert.Nil(ts.t, err, "Shutdown")
 }
@@ -65,7 +66,7 @@ func TestRemoveSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRemoveNonexistent(t *testing.T) {
+func TestRemoveNonExistent(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/f"

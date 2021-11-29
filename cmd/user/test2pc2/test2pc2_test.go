@@ -372,7 +372,7 @@ func TestTwoConcurrentCrashCoord(t *testing.T) {
 
 	var delays1 []string
 	for i := 0; i < N_PART; i++ {
-		dur := 5 * time.Second
+		dur := 1 * time.Second
 		delays1 = append(delays1, dur.String())
 	}
 

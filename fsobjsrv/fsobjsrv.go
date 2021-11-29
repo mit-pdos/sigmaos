@@ -261,10 +261,9 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 // until another thread deletes it, and retry.
 func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
 	p := append(dir, name)
-	var fws, dws *watch.Watchers
-	dws = fos.wt.WatchLookupL(dir)
+	dws := fos.wt.WatchLookupL(dir)
 	defer fos.wt.Release(dws)
-	fws = fos.wt.WatchLookupL(p)
+	fws := fos.wt.WatchLookupL(p)
 	defer fos.wt.Release(fws)
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
@@ -279,11 +278,11 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string,
 				log.Printf("creat wait %v\n", name)
 				fws.Unlock()
 				err := dws.Watch(fos)
+				fws.Lock() // not necessary if fail, but nicer with defer
 				if err != nil {
 					return nil, err
 				}
 				log.Printf("creat wait try again %v\n", name)
-				fws.Lock()
 				// try again; we will hold lock on watchers
 			} else {
 				return nil, &np.Rerror{err.Error()}
@@ -351,7 +350,7 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 }
 
 func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, rets *np.Rremove, o fs.FsObj, path []string) *np.Rerror {
-	// XXX make .exit a reserved name
+
 	log.Printf("removeObj %v\n", path)
 
 	// XXX make .exit a reserved name
@@ -376,6 +375,7 @@ func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, rets *np.Rremove, 
 
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
+		log.Printf("remove err %v f %v\n", r, path)
 		return &np.Rerror{r.Error()}
 	}
 	r = o.Unlink(ctx)
@@ -506,6 +506,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
+			log.Printf("lookup err %v f %v\n", err, fname)
 			return err
 		}
 	}
@@ -513,6 +514,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 
 	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
 	if r != nil {
+		log.Printf("remove err %v f %v\n", r, fname)
 		return &np.Rerror{r.Error()}
 	}
 	r = lo.Unlink(f.Ctx())
@@ -573,15 +575,18 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 	}
 	if args.Stat.Name != "" {
 		// update name atomically with rename
-		// XXX get watch first then rename and wakeup
+		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
+		log.Printf("rename %v to %v\n", f.Path(), dst)
+		dws := fos.wt.WatchLookupL(f.PathDir())
+		defer fos.wt.Release(dws)
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
 		fos.wt.WakeupWatch(dst)      // trigger create watch
 		fos.wt.WakeupWatch(f.Path()) // trigger remove watch
+		dws.WakeupWatchL()           // trigger dir watch
 		f.SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
@@ -613,14 +618,15 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 		if !ok {
 			return np.ErrNotDir
 		}
+		src := append(np.Copy(oldf.Path()), args.OldName)
+		dst := append(np.Copy(newf.Path()), args.NewName)
+		log.Printf("rename %v to %v\n", src, dst)
 		// XXX get watch first then rename and wakeup
 		err := d1.Renameat(oldf.Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		dst := append(np.Copy(newf.Path()), args.NewName)
 		fos.wt.WakeupWatch(dst) // trigger create watch
-		src := append(np.Copy(oldf.Path()), args.OldName)
 		fos.wt.WakeupWatch(src) // trigger remove watch
 	default:
 		return np.ErrNotDir

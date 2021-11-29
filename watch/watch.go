@@ -67,12 +67,6 @@ func (ws *Watchers) WakeupWatchL() {
 	ws.watchers = make([]*Watch, 0)
 }
 
-func (ws *Watchers) WakeupWatch() {
-	ws.Lock()
-	defer ws.Unlock()
-	ws.WakeupWatchL()
-}
-
 func (ws *Watchers) deleteConn(npc protsrv.Protsrv) {
 	ws.Lock()
 	defer ws.Unlock()
@@ -167,11 +161,9 @@ func (wt *WatchTable) Release(ws *Watchers) {
 // Wake up watches on file and parent dir
 // XXX maybe support wakeupOne?
 func (wt *WatchTable) WakeupWatch(fn []string) {
-	dir := np.Dir(fn)
 	f := np.Join(fn)
-	d := np.Join(dir)
 
-	db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", f, d)
+	db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", f)
 
 	log.Printf("wakeupwatch %p start %v\n", wt, fn)
 
@@ -180,17 +172,17 @@ func (wt *WatchTable) WakeupWatch(fn []string) {
 	log.Printf("wakeupwatch locked %p start %v\n", wt, fn)
 
 	ws, ok := wt.watchers[f]
-	ws1, ok1 := wt.watchers[d]
-
-	wt.Unlock()
 	if ok {
-		log.Printf("%v: wakeupwatch do %v\n", ws, f)
-		ws.WakeupWatch()
+		ws.nref++
 	}
-	if ok1 {
-		log.Printf("%v: wakeupwatch do %v\n", ws1, d)
-		ws1.WakeupWatch()
+	wt.Unlock()
+
+	if ok {
+		ws.Lock()
+		ws.WakeupWatchL()
+		wt.Release(ws)
 	}
+
 	log.Printf("wakeupwatch done %v\n", fn)
 }
 

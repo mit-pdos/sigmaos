@@ -39,17 +39,9 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
-
-	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.s = kernel.MakeSystemAll(bin)
+	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.t = t
 	return ts
 }
@@ -63,10 +55,8 @@ func (ts *Tstate) procd(t *testing.T) string {
 func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pid string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.e = e
-	ts.cfg = cfg
-	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	return ts
 }
 
@@ -123,7 +113,7 @@ func TestWaitExit(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWaitExitParentRetStat(t *testing.T) {
@@ -147,7 +137,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWaitStart(t *testing.T) {
@@ -181,7 +171,7 @@ func TestWaitStart(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 // Should exit immediately
@@ -201,7 +191,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 
 	close(ch)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestCrashProc(t *testing.T) {
@@ -218,7 +208,7 @@ func TestCrashProc(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.Equal(t, "exit status 2", status, "WaitExit")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestFailSpawn(t *testing.T) {
@@ -233,7 +223,7 @@ func TestFailSpawn(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(a.Pid))
 	assert.NotNil(t, err, "Stat")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestEarlyExit1(t *testing.T) {
@@ -264,7 +254,7 @@ func TestEarlyExit1(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(pid1))
 	assert.NotNil(t, err, "Stat")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestEarlyExitN(t *testing.T) {
@@ -302,7 +292,7 @@ func TestEarlyExitN(t *testing.T) {
 
 	log.Printf("DONE\n")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 // Spawn a bunch of procs concurrently, then wait for all of them & check
@@ -356,7 +346,7 @@ func TestConcurrentProcs(t *testing.T) {
 
 	done.Wait()
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) evict(pid string) {
@@ -384,7 +374,7 @@ func TestEvict(t *testing.T) {
 	// Make sure the proc didn't finish
 	checkSleeperResultFalse(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func testLocker(t *testing.T, part string) {
@@ -415,7 +405,7 @@ func testLocker(t *testing.T, part string) {
 		status, _ := ts.WaitExit(pid)
 		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
 	}
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLockerNoPart(t *testing.T) {
@@ -453,7 +443,7 @@ func TestReserveCores(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWorkStealing(t *testing.T) {
@@ -486,5 +476,4 @@ func TestWorkStealing(t *testing.T) {
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
 	ts.s.Shutdown()
-	ts.e.Shutdown()
 }

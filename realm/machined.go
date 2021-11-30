@@ -48,7 +48,7 @@ func MakeMachined(bin string, id string) *Machined {
 	// Set up the machined config
 	r.cfg = &MachinedConfig{}
 	r.cfg.Id = id
-	r.cfg.RealmId = NO_REALM
+	r.cfg.RealmId = kernel.NO_REALM
 
 	// Write the initial config file
 	r.WriteConfig(r.cfgPath, r.cfg)
@@ -65,7 +65,7 @@ func MakeMachined(bin string, id string) *Machined {
 func (r *Machined) markFree() {
 	cfg := &MachinedConfig{}
 	cfg.Id = r.id
-	cfg.RealmId = NO_REALM
+	cfg.RealmId = kernel.NO_REALM
 
 	if err := r.WriteFile(FREE_MACHINEDS, []byte(r.id)); err != nil {
 		log.Fatalf("Error WriteFile in MakeMachined: %v %v", FREE_MACHINEDS, err)
@@ -78,7 +78,7 @@ func (r *Machined) getNextConfig() {
 	for {
 		r.ReadConfig(r.cfgPath, r.cfg)
 		// Make sure we've been assigned to a realm
-		if r.cfg.RealmId != NO_REALM {
+		if r.cfg.RealmId != kernel.NO_REALM {
 			break
 		}
 	}
@@ -115,7 +115,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 		// Start a named instance.
-		if _, err := BootNamed(r.FsLib, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		if _, err := kernel.BootNamed(r.FsLib, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 	}

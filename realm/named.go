@@ -5,29 +5,21 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
-	"strings"
-	"time"
 
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/named"
-	"ulambda/procd"
-	"ulambda/sync"
 )
 
 const (
 	N_REPLICAS = "N_REPLICAS"
 )
 
-const (
-	SLEEP_MS = 100
-)
-
 func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
 	for i, addr := range addrs {
-		cmd, err := BootNamed(fsl, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
+		cmd, err := kernel.BootNamed(fsl, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err
@@ -35,47 +27,6 @@ func BootNamedReplicas(fsl *fslib.FsLib, bin string, addrs []string, realmId str
 		cmds = append(cmds, cmd)
 	}
 	return cmds, nil
-}
-
-// Boot a named and set up the initfs
-func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
-	var args []string
-	if realmId == NO_REALM {
-		args = []string{addr, NO_REALM}
-	} else {
-		args = []string{addr, realmId}
-	}
-	// If we're running replicated...
-	if replicate {
-		args = append(args, strconv.Itoa(id))
-		args = append(args, strings.Join(peers[:id], ","))
-	}
-
-	// If this isn't the root named, create a cond to wait on
-	var namedStartCond *sync.Cond
-	if rootFsl != nil {
-		namedStartCond = sync.MakeCond(rootFsl, path.Join(named.BOOT, addr), nil, true)
-		namedStartCond.Init()
-	}
-
-	cmd, err := procd.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
-	if err != nil {
-		log.Printf("Error running named: %v", err)
-		return nil, err
-	}
-
-	if rootFsl != nil {
-		namedStartCond.Wait()
-	} else {
-		time.Sleep(SLEEP_MS * time.Millisecond)
-	}
-
-	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
-	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
-		log.Printf("MakeInitFs error: %v", err)
-		return nil, err
-	}
-	return cmd, nil
 }
 
 func ShutdownNamedReplicas(addrs []string) {

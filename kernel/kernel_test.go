@@ -1,40 +1,48 @@
 package kernel_test
 
 import (
+	"log"
+	"os/exec"
+	"path"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/named"
 	np "ulambda/ninep"
-	"ulambda/realm"
 )
 
 type Tstate struct {
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
-	s   *kernel.System
+	t     *testing.T
+	s     *kernel.System
+	named *exec.Cmd
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	bin := ".."
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
-
-	ts.FsLib = fslib.MakeFsLibAddr("procd_test", cfg.NamedAddr)
 	ts.t = t
+	bin := ".."
+	named, err := kernel.BootNamed(nil, bin, fslib.NamedAddr(), false, 0, nil, kernel.NO_REALM)
+	assert.Nil(t, err, "BootNamed")
+	ts.named = named
+	ts.s = kernel.MakeSystem(bin, fslib.Named())
+	ts.s.Boot()
+	ts.FsLib = fslib.MakeFsLibAddr("kernel_test", fslib.Named())
 
 	return ts
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.s.Shutdown()
+	err := ts.ShutdownFs(named.NAMED)
+	assert.Nil(ts.t, err, "Shutdown")
+	ts.named.Wait()
 }
 
 func TestSymlink1(t *testing.T) {
@@ -62,7 +70,7 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.e.Shutdown()
+	ts.Shutdown()
 }
 
 func TestSymlink2(t *testing.T) {
@@ -97,7 +105,7 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.e.Shutdown()
+	ts.Shutdown()
 }
 
 func TestSymlink3(t *testing.T) {
@@ -148,5 +156,57 @@ func TestSymlink3(t *testing.T) {
 		return false, nil
 	})
 
-	ts.e.Shutdown()
+	ts.Shutdown()
+}
+
+func TestEphemeral(t *testing.T) {
+	const N = 20
+	ts := makeTstate(t)
+
+	name1 := ts.procdName(t, map[string]bool{})
+
+	var err error
+	err = ts.s.BootProcd()
+	assert.Nil(t, err, "bin/kernel/procd")
+
+	name := ts.procdName(t, map[string]bool{name1: true})
+	b, err := ts.ReadFile(name)
+	assert.Nil(t, err, name)
+	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+
+	sts, err := ts.ReadDir(name + "/")
+	assert.Nil(t, err, name+"/")
+	assert.Equal(t, 5, len(sts)) // statsd and ctl and running and runqs
+
+	ts.s.KillOne(named.PROCD)
+
+	n := 0
+	for n < N {
+		time.Sleep(100 * time.Millisecond)
+		_, err = ts.ReadFile(name1)
+		if err == nil {
+			n += 1
+			log.Printf("retry\n")
+			continue
+		}
+		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+		break
+	}
+	assert.Greater(t, N, n, "Waiting too long")
+
+	ts.Shutdown()
+}
+
+func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
+	sts, err := ts.ReadDir(named.PROCD)
+	stsExcluded := []*np.Stat{}
+	for _, s := range sts {
+		if ok := exclude[path.Join(named.PROCD, s.Name)]; !ok {
+			stsExcluded = append(stsExcluded, s)
+		}
+	}
+	assert.Nil(t, err, named.PROCD)
+	assert.Equal(t, 1, len(stsExcluded))
+	name := path.Join(named.PROCD, stsExcluded[0].Name)
+	return name
 }

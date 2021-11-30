@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/proc"
 	"ulambda/procd"
 )
@@ -71,7 +72,7 @@ func (e *TestEnv) bootRealmMgr() error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(SLEEP_MS * time.Millisecond)
+	time.Sleep(kernel.SLEEP_MS * time.Millisecond)
 	fsl := fslib.MakeFsLib("testenv")
 	WaitRealmMgrStart(fsl)
 	return nil

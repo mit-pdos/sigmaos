@@ -13,12 +13,16 @@ type FsLib struct {
 	*fsclnt.FsClient
 }
 
-func Named() []string {
+func NamedAddr() string {
 	named := os.Getenv("NAMED")
 	if named == "" {
 		log.Fatal("Getenv error: missing NAMED")
 	}
-	nameds := strings.Split(named, ",")
+	return named
+}
+
+func Named() []string {
+	nameds := strings.Split(NamedAddr(), ",")
 	return nameds
 }
 

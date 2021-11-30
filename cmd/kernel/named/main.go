@@ -10,6 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
+	"ulambda/kernel"
 	"ulambda/linuxsched"
 	"ulambda/named"
 	"ulambda/perf"
@@ -46,7 +47,7 @@ func main() {
 	// A realm's named in the global namespace
 	realmId := os.Args[2]
 	var pname string
-	if realmId != realm.NO_REALM {
+	if realmId != kernel.NO_REALM {
 		pname = path.Join(realm.REALM_NAMEDS, realmId)
 	}
 

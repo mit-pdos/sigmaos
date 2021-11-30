@@ -1,40 +1,43 @@
 package kernel_test
 
 import (
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/named"
 	np "ulambda/ninep"
-	"ulambda/realm"
 )
 
 type Tstate struct {
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
-	s   *kernel.System
+	t     *testing.T
+	s     *kernel.System
+	named *exec.Cmd
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	bin := ".."
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
-
-	ts.FsLib = fslib.MakeFsLibAddr("procd_test", cfg.NamedAddr)
 	ts.t = t
+	bin := ".."
+	named, err := kernel.BootNamed(nil, bin, fslib.NamedAddr(), false, 0, nil, kernel.NO_REALM)
+	assert.Nil(t, err, "BootNamed")
+	ts.named = named
+	ts.s = kernel.MakeSystem(bin, fslib.Named())
+	ts.s.Boot()
+	ts.FsLib = fslib.MakeFsLibAddr("kernel_test", fslib.Named())
 
 	return ts
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.s.Shutdown()
+	err := ts.ShutdownFs(named.NAMED)
+	assert.Nil(ts.t, err, "Shutdown")
+	ts.named.Wait()
 }
 
 func TestSymlink1(t *testing.T) {
@@ -62,7 +65,7 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.e.Shutdown()
+	ts.Shutdown()
 }
 
 func TestSymlink2(t *testing.T) {
@@ -97,7 +100,7 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
-	ts.e.Shutdown()
+	ts.Shutdown()
 }
 
 func TestSymlink3(t *testing.T) {
@@ -148,5 +151,5 @@ func TestSymlink3(t *testing.T) {
 		return false, nil
 	})
 
-	ts.e.Shutdown()
+	ts.Shutdown()
 }

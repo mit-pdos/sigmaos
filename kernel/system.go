@@ -4,13 +4,21 @@ import (
 	"log"
 	"os/exec"
 	"path"
+	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procd"
 	"ulambda/sync"
+)
+
+const (
+	NO_REALM = "no-realm"
+	SLEEP_MS = 100
 )
 
 type System struct {
@@ -192,4 +200,45 @@ func (s *System) Shutdown() {
 			d.Wait()
 		}
 	}
+}
+
+// Boot a named and set up the initfs
+func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+	var args []string
+	if realmId == NO_REALM {
+		args = []string{addr, NO_REALM}
+	} else {
+		args = []string{addr, realmId}
+	}
+	// If we're running replicated...
+	if replicate {
+		args = append(args, strconv.Itoa(id))
+		args = append(args, strings.Join(peers[:id], ","))
+	}
+
+	// If this isn't the root named, create a cond to wait on
+	var namedStartCond *sync.Cond
+	if rootFsl != nil {
+		namedStartCond = sync.MakeCond(rootFsl, path.Join(named.BOOT, addr), nil, true)
+		namedStartCond.Init()
+	}
+
+	cmd, err := procd.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
+	if err != nil {
+		log.Printf("Error running named: %v", err)
+		return nil, err
+	}
+
+	if rootFsl != nil {
+		namedStartCond.Wait()
+	} else {
+		time.Sleep(SLEEP_MS * time.Millisecond)
+	}
+
+	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
+	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
+		log.Printf("MakeInitFs error: %v", err)
+		return nil, err
+	}
+	return cmd, nil
 }

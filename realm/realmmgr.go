@@ -15,6 +15,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
+	"ulambda/kernel"
 	"ulambda/named"
 	"ulambda/stats"
 	"ulambda/sync"
@@ -25,10 +26,6 @@ const (
 	RESIZE_INTERVAL_MS        = 100
 	GROW_CPU_UTIL_THRESHOLD   = 50
 	SHRINK_CPU_UTIL_THRESHOLD = 25
-)
-
-const (
-	NO_REALM = "no-realm"
 )
 
 const (
@@ -62,7 +59,7 @@ func MakeRealmMgr(bin string) *RealmMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	m.done = make(chan bool)
-	nameds, err := BootNamedReplicas(nil, bin, fslib.Named(), NO_REALM)
+	nameds, err := BootNamedReplicas(nil, bin, fslib.Named(), kernel.NO_REALM)
 	m.nameds = nameds
 	// Start a named instance.
 	if err != nil {
@@ -168,7 +165,7 @@ func (m *RealmMgr) createRealms() {
 func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
 	rdCfg := &MachinedConfig{}
 	rdCfg.Id = machinedId
-	rdCfg.RealmId = NO_REALM
+	rdCfg.RealmId = kernel.NO_REALM
 
 	// Update the machined config file.
 	m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)

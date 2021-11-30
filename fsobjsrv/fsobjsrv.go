@@ -491,19 +491,26 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
-		// update name atomically with rename
+		// update Name atomically with rename
+
 		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 		log.Printf("rename %v to %v\n", f.Path(), dst)
+
 		dws := fos.wt.WatchLookupL(f.PathDir())
 		defer fos.wt.Release(dws)
+		sws := fos.wt.WatchLookupL(f.Path())
+		defer fos.wt.Release(sws)
+		tws := fos.wt.WatchLookupL(dst)
+		defer fos.wt.Release(tws)
+
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
-		fos.wt.WakeupWatch(dst)      // trigger create watch
-		fos.wt.WakeupWatch(f.Path()) // trigger remove watch
-		dws.WakeupWatchL()           // trigger dir watch
+		tws.WakeupWatchL() // trigger create watch
+		sws.WakeupWatchL() // trigger remove watch
+		dws.WakeupWatchL() // trigger dir watch
 		f.SetPath(dst)
 	}
 	// XXX ignore other Wstat for now

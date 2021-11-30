@@ -158,34 +158,6 @@ func (wt *WatchTable) Release(ws *Watchers) {
 	log.Printf("release done %p:[%v]\n", ws, ws)
 }
 
-// Wake up watches on file and parent dir
-// XXX maybe support wakeupOne?
-func (wt *WatchTable) WakeupWatch(fn []string) {
-	f := np.Join(fn)
-
-	db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", f)
-
-	log.Printf("wakeupwatch %p start %v\n", wt, fn)
-
-	wt.Lock()
-
-	log.Printf("wakeupwatch locked %p start %v\n", wt, fn)
-
-	ws, ok := wt.watchers[f]
-	if ok {
-		ws.nref++
-	}
-	wt.Unlock()
-
-	if ok {
-		ws.Lock()
-		ws.WakeupWatchL()
-		wt.Release(ws)
-	}
-
-	log.Printf("wakeupwatch done %v\n", fn)
-}
-
 // Wakeup threads waiting for a watch on this connection
 func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
 	log.Printf("delete %p conn %p\n", wt, npc)

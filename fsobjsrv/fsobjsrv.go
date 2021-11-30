@@ -347,16 +347,14 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 	return r
 }
 
+// XXX make .exit a reserved name
+func isExit(path []string) bool {
+	return len(path) == 1 && path[0] == ".exit"
+}
+
 func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
 
 	log.Printf("removeObj %v\n", path)
-
-	// XXX make .exit a reserved name
-	if len(path) == 1 && path[0] == ".exit" { // exit?
-		db.DLPrintf("9POBJ", "Done\n")
-		fos.fssrv.Done()
-		return nil
-	}
 
 	// lock watch entry to make WatchV and Remove interact
 	// correctly
@@ -409,41 +407,12 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 	if o == nil {
 		return np.ErrClunked
 	}
-
+	if isExit(f.Path()) {
+		db.DLPrintf("9POBJ", "Done\n")
+		fos.fssrv.Done()
+		return nil
+	}
 	return fos.removeObj(sess, f.Ctx(), o, f.Path())
-
-	// if len(f.Path()) == 0 { // exit?
-	// 	db.DLPrintf("9POBJ", "Done\n")
-	// 	fos.fssrv.Done()
-	// 	return nil
-	// }
-	// db.DLPrintf("9POBJ", "Remove f %v\n", f)
-
-	// // lock watch entry to make WatchV and Remove interact
-	// // correctly
-	// dws, fws := fos.wt.WatchLookupTwoL(fname)
-	// defer fos.wt.Release(dws)
-	// defer fos.wt.Release(fws)
-
-	// r := o.Parent().Remove(f.Ctx(), f.PathLast())
-	// if r != nil {
-	// 	log.Printf("remove err %v f %v\n", r, f.Path())
-	// 	// return &np.Rerror{r.Error()}
-	// }
-
-	// r = o.Unlink(f.Ctx())
-	// if r != nil {
-	// 	log.Printf("Unlink err %v f %v\n", r, f.Path())
-	// 	// return &np.Rerror{r.Error()}
-	// }
-
-	// db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
-	// ws.WakeupWatchL()
-
-	// if o.Perm().IsEphemeral() {
-	// 	fos.del(sess, args.Fid)
-	// }
-	// return nil
 }
 
 func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Rerror) {
@@ -456,13 +425,11 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 		return nil, &np.Rerror{fmt.Errorf("dir not found %v", names).Error()}
 	}
 	return os[len(os)-1], nil
-
 }
 
 // RemoveFile is Remove() but args.Wnames may contain a symlink that
 // hasn't been walked. If so, RemoveFile() will not succeed looking up
 // args.Wnames, and caller should first walk the pathname.
-// XXX use removeObj
 func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	var err *np.Rerror
 	fos.stats.StatInfo().Nremove.Inc()
@@ -474,30 +441,15 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if o == nil {
 		return np.ErrClunked
 	}
-	lo := o
 
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
-
-	// XXX make .exit a reserved name
-	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
+	if isExit(fname) {
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil
 	}
 
-	log.Printf("remove %v\n", fname)
-
-	// lock watch entry to make WatchV and Remove interact
-	// correctly
-	dws := fos.wt.WatchLookupL(np.Dir(fname))
-	fws := fos.wt.WatchLookupL(fname)
-	defer fos.wt.Release(dws)
-	defer fos.wt.Release(fws)
-
-	if fname[len(fname)-1] == "w" {
-		log.Printf("remove: locked %v\n", fname)
-	}
-
+	lo := o
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
@@ -505,37 +457,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 			return err
 		}
 	}
-	fos.stats.Path(f.Path())
-
-	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
-	if r != nil {
-		log.Printf("remove err %v f %v\n", r, fname)
-		return &np.Rerror{r.Error()}
-	}
-	r = lo.Unlink(f.Ctx())
-	if r != nil {
-		log.Printf("Unlink err %v f %v\n", r, fname)
-		return &np.Rerror{r.Error()}
-	}
-
-	if fname[len(fname)-1] == "w" {
-		log.Printf("removed and fire %v\n", fname)
-	}
-
-	fws.WakeupWatchL()
-	dws.WakeupWatchL()
-
-	if fname[len(fname)-1] == "w" {
-		log.Printf("remove: wakeups done\n")
-	}
-	if lo.Perm().IsEphemeral() {
-		fos.st.DelEphemeral(sess, lo)
-	}
-
-	if fname[len(fname)-1] == "w" {
-		log.Printf("remove: about to release\n")
-	}
-	return nil
+	return fos.removeObj(sess, f.Ctx(), lo, fname)
 }
 
 func (fos *FsObjSrv) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
@@ -729,7 +651,6 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 		if !lo.Perm().IsDir() {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
-		// XXX fold wakeup into createObj
 		name := args.Wnames[len(args.Wnames)-1]
 		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
 		if err != nil {

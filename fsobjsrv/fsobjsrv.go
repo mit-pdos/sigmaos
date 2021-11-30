@@ -104,9 +104,7 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	ephemeral := fos.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
-		// XXX use removeObj
-		o.Parent().Remove(f.Ctx(), f.PathLast())
-		fos.wt.WakeupWatch(f.Path())
+		fos.removeObj(sess, f.Ctx(), o, f.Path())
 	}
 	fos.wt.DeleteConn(fos)
 	fos.st.DeleteSession(sess)
@@ -349,7 +347,7 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 	return r
 }
 
-func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, rets *np.Rremove, o fs.FsObj, path []string) *np.Rerror {
+func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
 
 	log.Printf("removeObj %v\n", path)
 
@@ -394,12 +392,9 @@ func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, rets *np.Rremove, 
 	if path[len(path)-1] == "w" {
 		log.Printf("remove: wakeups done\n")
 	}
+
 	if o.Perm().IsEphemeral() {
 		fos.st.DelEphemeral(sess, o)
-	}
-
-	if path[len(path)-1] == "w" {
-		log.Printf("remove: about to release\n")
 	}
 	return nil
 }
@@ -415,7 +410,7 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 		return np.ErrClunked
 	}
 
-	return fos.removeObj(sess, f.Ctx(), rets, o, f.Path())
+	return fos.removeObj(sess, f.Ctx(), o, f.Path())
 
 	// if len(f.Path()) == 0 { // exit?
 	// 	db.DLPrintf("9POBJ", "Done\n")

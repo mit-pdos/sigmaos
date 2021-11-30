@@ -2,7 +2,6 @@ package sync_test
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -10,13 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/named"
-	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/realm"
 	usync "ulambda/sync"
 )
 
@@ -32,30 +27,17 @@ const (
 )
 
 type Tstate struct {
-	*procclnt.ProcClnt
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-
-	bin := ".."
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	db.Name("sync_test")
-	ts.FsLib = fslib.MakeFsLibAddr("sync_test", ts.cfg.NamedAddr)
-
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
-
 	ts.t = t
+	bin := ".."
+	ts.s = kernel.MakeSystemNamed(bin)
+	ts.FsLib = fslib.MakeFsLibAddr("sync_test", fslib.Named())
 	ts.Mkdir(named.LOCKS, 0777)
 	return ts
 }
@@ -124,7 +106,7 @@ func fileBagConsumer(ts *Tstate, fb *usync.FilePriorityBag, id int, ctr *uint64)
 }
 
 func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
-	fsl := fslib.MakeFsLibAddr(fmt.Sprintf("consumer-%v", id), ts.cfg.NamedAddr)
+	fsl := fslib.MakeFsLibAddr(fmt.Sprintf("consumer-%v", id), fslib.Named())
 	fb := usync.MakeFilePriorityBag(fsl, FILE_BAG_PATH)
 
 	for i := 0; i < nFiles; i++ {
@@ -171,7 +153,7 @@ func TestLock1(t *testing.T) {
 		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLock2(t *testing.T) {
@@ -192,7 +174,7 @@ func TestLock2(t *testing.T) {
 		lock2.Unlock()
 	}
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLock3(t *testing.T) {
@@ -229,7 +211,7 @@ func TestLock3(t *testing.T) {
 	done.Wait()
 	assert.Equal(ts.t, N, cnt, "Count doesn't match up")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLock4(t *testing.T) {
@@ -238,8 +220,8 @@ func TestLock4(t *testing.T) {
 	err := ts.Mkdir(LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
-	fsl1 := fslib.MakeFsLibAddr("fslib-1", ts.cfg.NamedAddr)
-	fsl2 := fslib.MakeFsLibAddr("fslib-1", ts.cfg.NamedAddr)
+	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
+	fsl2 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 
 	lock1 := usync.MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
 	//	lock2 := MakeLock(fsl2, LOCK_DIR, LOCK_NAME, true)
@@ -257,7 +239,7 @@ func TestLock4(t *testing.T) {
 
 	lock1.Unlock()
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestOneWaiterBroadcast(t *testing.T) {
@@ -270,7 +252,7 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestOneWaiterSignal(t *testing.T) {
@@ -283,7 +265,7 @@ func TestOneWaiterSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestNWaitersOneCondBroadcast(t *testing.T) {
@@ -296,7 +278,7 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestNWaitersOneCondSignal(t *testing.T) {
@@ -309,7 +291,7 @@ func TestNWaitersOneCondSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestNWaitersNCondsBroadcast(t *testing.T) {
@@ -322,7 +304,7 @@ func TestNWaitersNCondsBroadcast(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestNWaitersNCondsSignal(t *testing.T) {
@@ -335,7 +317,7 @@ func TestNWaitersNCondsSignal(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestFilePriorityBag(t *testing.T) {
@@ -367,7 +349,7 @@ func TestFilePriorityBag(t *testing.T) {
 
 	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestSemaphore(t *testing.T) {
@@ -375,8 +357,8 @@ func TestSemaphore(t *testing.T) {
 
 	err := ts.Mkdir(WAIT_PATH, 0777)
 	assert.Nil(ts.t, err, "Mkdir")
-	fsl0 := fslib.MakeFsLibAddr("sem0", ts.cfg.NamedAddr)
-	fsl1 := fslib.MakeFsLibAddr("semd1", ts.cfg.NamedAddr)
+	fsl0 := fslib.MakeFsLibAddr("sem0", fslib.Named())
+	fsl1 := fslib.MakeFsLibAddr("semd1", fslib.Named())
 
 	for i := 0; i < 100; i++ {
 		sem := usync.MakeSemaphore(ts.FsLib, WAIT_PATH+"/x")
@@ -399,44 +381,5 @@ func TestSemaphore(t *testing.T) {
 			<-ch
 		}
 	}
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
-
-func testLocker(t *testing.T, part string) {
-	const N = 20
-
-	ts := makeTstate(t)
-	pids := []string{}
-
-	// XXX use the same dir independent of machine running proc
-	dir := "name/ux/~ip/outdir"
-	ts.RmDir(dir)
-	err := ts.Mkdir(dir, 0777)
-	err = ts.Mkdir("name/locktest", 0777)
-	assert.Nil(t, err, "mkdir error")
-	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
-	assert.Nil(t, err, "makefile error")
-	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
-	assert.Nil(t, err, "makefile error")
-
-	for i := 0; i < N; i++ {
-		a := proc.MakeProc("bin/user/locker", []string{part, dir})
-		err = ts.Spawn(a)
-		assert.Nil(t, err, "Spawn")
-		pids = append(pids, a.Pid)
-	}
-
-	for _, pid := range pids {
-		status, _ := ts.WaitExit(pid)
-		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
-	}
-	ts.e.Shutdown()
-}
-
-func TestLockerNoPart(t *testing.T) {
-	testLocker(t, "NO")
-}
-
-//func TestLockerWithPart(t *testing.T) {
-//	testLocker(t, "YES")
-//}

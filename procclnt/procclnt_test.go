@@ -385,6 +385,45 @@ func TestEvict(t *testing.T) {
 	ts.e.Shutdown()
 }
 
+func testLocker(t *testing.T, part string) {
+	const N = 20
+
+	ts := makeTstate(t)
+	pids := []string{}
+
+	// XXX use the same dir independent of machine running proc
+	dir := "name/ux/~ip/outdir"
+	ts.RmDir(dir)
+	err := ts.Mkdir(dir, 0777)
+	err = ts.Mkdir("name/locktest", 0777)
+	assert.Nil(t, err, "mkdir error")
+	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "makefile error")
+	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "makefile error")
+
+	for i := 0; i < N; i++ {
+		a := proc.MakeProc("bin/user/locker", []string{part, dir})
+		err = ts.Spawn(a)
+		assert.Nil(t, err, "Spawn")
+		pids = append(pids, a.Pid)
+	}
+
+	for _, pid := range pids {
+		status, _ := ts.WaitExit(pid)
+		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
+	}
+	ts.e.Shutdown()
+}
+
+func TestLockerNoPart(t *testing.T) {
+	testLocker(t, "NO")
+}
+
+//func TestLockerWithPart(t *testing.T) {
+//	testLocker(t, "YES")
+//}
+
 func TestReserveCores(t *testing.T) {
 	ts := makeTstate(t)
 

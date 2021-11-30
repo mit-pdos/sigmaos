@@ -355,45 +355,6 @@ func TestSetRenameGet(t *testing.T) {
 	ts.Shutdown()
 }
 
-// func TestEphemeral(t *testing.T) {
-// 	const N = 20
-// 	ts := makeTstate(t)
-
-// 	name1 := ts.procdName(t, map[string]bool{})
-
-// 	var err error
-// 	err = ts.s.BootProcd()
-// 	assert.Nil(t, err, "bin/kernel/procd")
-
-// 	name := ts.procdName(t, map[string]bool{name1: true})
-// 	b, err := ts.ReadFile(name)
-// 	assert.Nil(t, err, name)
-// 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
-
-// 	sts, err := ts.ReadDir(name + "/")
-// 	assert.Nil(t, err, name+"/")
-// 	assert.Equal(t, 5, len(sts)) // statsd and ctl and running and runqs
-
-// 	ts.s.KillOne(named.PROCD)
-
-// 	n := 0
-// 	for n < N {
-// 		time.Sleep(100 * time.Millisecond)
-// 		_, err = ts.ReadFile(name)
-// 		if err == nil {
-// 			n += 1
-// 			log.Printf("retry\n")
-// 			continue
-// 		}
-// 		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
-// 		break
-// 	}
-// 	assert.Greater(t, N, n, "Waiting too long")
-
-// 	ts.s.Shutdown()
-// 	ts.Shutdown()
-// }
-
 func TestWatchCreate(t *testing.T) {
 	ts := makeTstate(t)
 

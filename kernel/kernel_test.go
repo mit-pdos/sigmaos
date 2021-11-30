@@ -2,7 +2,6 @@ package kernel_test
 
 import (
 	"log"
-	"os/exec"
 	"path"
 	"strings"
 	"testing"
@@ -19,30 +18,21 @@ import (
 
 type Tstate struct {
 	*fslib.FsLib
-	t     *testing.T
-	s     *kernel.System
-	named *exec.Cmd
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	bin := ".."
-	named, err := kernel.BootNamed(nil, bin, fslib.NamedAddr(), false, 0, nil, kernel.NO_REALM)
-	assert.Nil(t, err, "BootNamed")
-	ts.named = named
-	ts.s = kernel.MakeSystem(bin, fslib.Named())
-	ts.s.Boot()
+	ts.s = kernel.MakeSystemAll(bin)
 	ts.FsLib = fslib.MakeFsLibAddr("kernel_test", fslib.Named())
-
 	return ts
 }
 
 func (ts *Tstate) Shutdown() {
 	ts.s.Shutdown()
-	err := ts.ShutdownFs(named.NAMED)
-	assert.Nil(ts.t, err, "Shutdown")
-	ts.named.Wait()
 }
 
 func TestSymlink1(t *testing.T) {

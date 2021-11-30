@@ -24,6 +24,7 @@ const (
 type System struct {
 	bin       string
 	namedAddr []string
+	named     *exec.Cmd
 	fss3d     []*exec.Cmd
 	fss3dPids []string
 	fsuxd     []*exec.Cmd
@@ -43,7 +44,23 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	return s
 }
 
-// Boot a full system
+// Make a system with named
+func MakeSystemAll(bin string) *System {
+	s := &System{}
+	s.bin = bin
+	s.namedAddr = fslib.Named()
+
+	cmd, err := BootNamed(nil, s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+	if err != nil {
+		return nil
+	}
+	s.named = cmd
+	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
+	s.Boot()
+	return s
+}
+
+// Boot a "kernel" without named
 func (s *System) Boot() error {
 	err := s.BootFsUxd()
 	if err != nil {
@@ -200,6 +217,13 @@ func (s *System) Shutdown() {
 		for _, d := range s.dbd {
 			d.Wait()
 		}
+	}
+	if s.named != nil {
+		err := s.ShutdownFs(named.NAMED)
+		if err != nil {
+			log.Printf("Named shutdown %v\n", err)
+		}
+		s.named.Wait()
 	}
 }
 

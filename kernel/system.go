@@ -153,6 +153,7 @@ func (s *System) KillOne(srv string) error {
 			if err == nil {
 				s.procd[0].Wait()
 				s.procd = s.procd[1:]
+				s.procdPids = s.procdPids[1:]
 			} else {
 				log.Fatalf("Procd kill failed %v\n", err)
 			}

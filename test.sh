@@ -12,6 +12,7 @@ go test $1 ulambda/s3
 go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats
+go test $1 ulambda/kernel
 go test $1 ulambda/procclnt
 go test $1 ulambda/kv
 go test $1 ulambda/cmd/user/mr

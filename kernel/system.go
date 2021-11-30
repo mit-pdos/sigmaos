@@ -44,18 +44,24 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	return s
 }
 
-// Make a system with named
-func MakeSystemAll(bin string) *System {
+// Make system with just named
+func MakeSystemNamed(bin string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = fslib.Named()
-
 	cmd, err := BootNamed(nil, s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
 	if err != nil {
 		return nil
 	}
 	s.named = cmd
+	time.Sleep(10 * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
+	return s
+}
+
+// Make a system with all kernel services
+func MakeSystemAll(bin string) *System {
+	s := MakeSystemNamed(bin)
 	s.Boot()
 	return s
 }

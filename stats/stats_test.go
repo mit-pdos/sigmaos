@@ -5,9 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/realm"
+	"ulambda/kernel"
 	"ulambda/stats"
 )
 
@@ -17,26 +16,15 @@ const (
 
 type Tstate struct {
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-
-	db.Name("stats_test")
-	ts.FsLib = fslib.MakeFsLibAddr("statstest", cfg.NamedAddr)
 	ts.t = t
-
+	ts.s = kernel.MakeSystemNamed(bin)
+	ts.FsLib = fslib.MakeFsLibAddr("statstest", fslib.Named())
 	return ts
 }
 
@@ -46,14 +34,14 @@ func TestStatsd(t *testing.T) {
 	st := stats.StatInfo{}
 	err := ts.ReadFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
-	assert.NotEqual(t, stats.Tcounter(0), st.Nread, "Nread")
+	assert.Equal(t, stats.Tcounter(0), st.Nread, "Nread")
 	for i := 0; i < 1000; i++ {
 		_, err := ts.ReadFile("name/statsd")
 		assert.Nil(t, err, "statsd")
 	}
 	err = ts.ReadFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
-	assert.Greater(t, st.Nopen, stats.Tcounter(1000), "statsd")
+	assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }

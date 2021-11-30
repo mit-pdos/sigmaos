@@ -5,11 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
-	"ulambda/realm"
 )
 
 const (
@@ -19,30 +17,20 @@ const (
 
 type Tstate struct {
 	*fslib.FsLib
-	t   *testing.T
-	s   *kernel.System
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-
 	ts.t = t
-
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
-
-	db.Name("fsux_test")
-	ts.FsLib = fslib.MakeFsLibAddr("fsux_test", cfg.NamedAddr)
-
+	ts.s = kernel.MakeSystemAll(bin)
+	ts.FsLib = fslib.MakeFsLibAddr("fsux_test", fslib.Named())
 	return ts
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.s.Shutdown()
 }
 
 func TestRoot(t *testing.T) {
@@ -55,8 +43,7 @@ func TestRoot(t *testing.T) {
 
 	// log.Printf("dirents %v\n", dirents)
 
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.Shutdown()
 }
 
 func TestFile(t *testing.T) {
@@ -72,8 +59,7 @@ func TestFile(t *testing.T) {
 	err = ts.Remove(fn + "f")
 	assert.Equal(t, nil, err)
 
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.Shutdown()
 }
 
 func TestDir(t *testing.T) {
@@ -100,6 +86,5 @@ func TestDir(t *testing.T) {
 	err = ts.Remove(fn + "d1")
 	assert.Equal(t, nil, err)
 
-	ts.s.Shutdown()
-	ts.e.Shutdown()
+	ts.Shutdown()
 }

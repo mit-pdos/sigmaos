@@ -12,6 +12,7 @@ go test $1 ulambda/s3
 go test $1 ulambda/fslib
 go test $1 ulambda/sync
 go test $1 ulambda/stats
+go test $1 ulambda/kernel
 go test $1 ulambda/procclnt
 go test $1 ulambda/kv
 go test $1 ulambda/cmd/user/mr
@@ -23,6 +24,7 @@ go test $1 ulambda/realm # Fails due to dropped eviction signals
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
 
 go test $1 ulambda/cmd/user/test2pc
+go test $1 ulambda/cmd/user/test2pc2
 
 # XXX needs fixing
 # go test $1 -timeout=45m ulambda/replica

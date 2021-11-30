@@ -80,9 +80,15 @@ func (ts *Tstate) shutdown(fws []string) {
 	ts.e.Shutdown()
 }
 
+func (ts *Tstate) cleanup() {
+	err := ts.fsl.Remove(named.MEMFS + "/txni")
+	assert.Nil(ts.t, err, "Remove txni")
+}
+
 func (ts *Tstate) spawnMemFS() string {
 	p := proc.MakeProc("bin/user/memfsd", []string{""})
 	ts.Spawn(p)
+	ts.WaitStart(p.Pid)
 	return p.Pid
 }
 
@@ -134,18 +140,18 @@ func fn(mfs, f string) string {
 	return named.MEMFS + "/" + mfs + "/" + f
 }
 
-func (ts *Tstate) setUpParticipants(opcode string) []string {
-	const N = 3
-
+func (ts *Tstate) setUpMemFSs(N int) {
 	ts.mfss = ts.startMemFSs(N)
+}
 
-	time.Sleep(200 * time.Millisecond)
-
-	err := ts.fsl.MakeFile(fn(ts.mfss[0], "x"), 0777, np.OWRITE, []byte("x"))
+func (ts *Tstate) setUpFiles(mfs0 string, mfs1 string) {
+	err := ts.fsl.MakeFile(fn(mfs0, "x"), 0777, np.OWRITE, []byte("x"))
 	assert.Nil(ts.t, err, "MakeFile")
-	err = ts.fsl.MakeFile(fn(ts.mfss[1], "y"), 0777, np.OWRITE, []byte("y"))
+	err = ts.fsl.MakeFile(fn(mfs1, "y"), 0777, np.OWRITE, []byte("y"))
 	assert.Nil(ts.t, err, "MakeFile")
+}
 
+func (ts *Tstate) setUpParticipants(opcode string, N int) []string {
 	ti := Tinput{}
 	ti.Fns = []string{
 		fn(ts.mfss[0], ""),
@@ -153,10 +159,10 @@ func (ts *Tstate) setUpParticipants(opcode string) []string {
 		fn(ts.mfss[2], ""),
 	}
 
-	err = ts.fsl.MakeFileJson(named.MEMFS+"/txni", 0777, ti)
+	err := ts.fsl.MakeFileJson(named.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
-	fws := ts.startParticipants(N-1, opcode)
+	fws := ts.startParticipants(N, opcode)
 	return fws
 }
 
@@ -191,7 +197,10 @@ func (ts *Tstate) testCommit() {
 
 func TestCommit(t *testing.T) {
 	ts := makeTstate(t)
-	fws := ts.setUpParticipants("")
+	const N = 3
+	ts.setUpMemFSs(N)
+	ts.setUpFiles(ts.mfss[0], ts.mfss[1])
+	fws := ts.setUpParticipants("", N-1)
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -206,7 +215,10 @@ func TestCommit(t *testing.T) {
 
 func TestAbort(t *testing.T) {
 	ts := makeTstate(t)
-	fws := ts.setUpParticipants("crash1")
+	const N = 3
+	ts.setUpMemFSs(N)
+	ts.setUpFiles(ts.mfss[0], ts.mfss[1])
+	fws := ts.setUpParticipants("crash1", N-1)
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -221,7 +233,10 @@ func TestAbort(t *testing.T) {
 
 func TestCrash2(t *testing.T) {
 	ts := makeTstate(t)
-	fws := ts.setUpParticipants("")
+	const N = 3
+	ts.setUpMemFSs(N)
+	ts.setUpFiles(ts.mfss[0], ts.mfss[1])
+	fws := ts.setUpParticipants("", N-1)
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -244,7 +259,10 @@ func TestCrash2(t *testing.T) {
 
 func TestCrash3(t *testing.T) {
 	ts := makeTstate(t)
-	fws := ts.setUpParticipants("")
+	const N = 3
+	ts.setUpMemFSs(N)
+	ts.setUpFiles(ts.mfss[0], ts.mfss[1])
+	fws := ts.setUpParticipants("", N-1)
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -259,7 +277,10 @@ func TestCrash3(t *testing.T) {
 
 func TestCrash4(t *testing.T) {
 	ts := makeTstate(t)
-	fws := ts.setUpParticipants("")
+	const N = 3
+	ts.setUpMemFSs(N)
+	ts.setUpFiles(ts.mfss[0], ts.mfss[1])
+	fws := ts.setUpParticipants("", N-1)
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -270,4 +291,38 @@ func TestCrash4(t *testing.T) {
 	ts.testCommit()
 
 	ts.shutdown(fws)
+}
+
+func TestTwo(t *testing.T) {
+	ts := makeTstate(t)
+	const N = 3
+	ts.setUpMemFSs(N)
+	ts.setUpFiles(ts.mfss[0], ts.mfss[1])
+	fws1 := ts.setUpParticipants("", N-1)
+
+	time.Sleep(500 * time.Millisecond)
+
+	ts.checkCoord(fws1, "")
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testCommit()
+
+	ts.cleanup()
+
+	// Run antoher 2PC
+
+	fws2 := ts.setUpParticipants("", N-1)
+
+	time.Sleep(500 * time.Millisecond)
+
+	ts.checkCoord(fws2, "")
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.testCommit()
+
+	ts.cleanup()
+
+	ts.shutdown(append(fws1, fws2...))
 }

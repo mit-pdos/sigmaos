@@ -2,7 +2,6 @@ package fslib_test
 
 import (
 	"log"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -12,41 +11,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
-	"ulambda/procd"
-	"ulambda/realm"
 )
 
 type Tstate struct {
 	*fslib.FsLib
-	t     *testing.T
-	memfs *exec.Cmd
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	bin := ".."
-	args := []string{np.Join(fslib.Named()), realm.NO_REALM}
-	named, err := procd.Run("named", bin, "/bin/kernel/named", fslib.Named(), args)
-	if err != nil {
-		log.Printf("Error running named: %v", err)
-		return nil
-	}
-	time.Sleep(100 * time.Millisecond)
-	ts.memfs = named
-	db.Name("fslib_test")
+	ts.s = kernel.MakeSystemNamed("..")
 	ts.FsLib = fslib.MakeFsLibAddr("fslibtest", fslib.Named())
 	ts.t = t
 	return ts
-}
-
-func (ts *Tstate) Shutdown() {
-	err := ts.ShutdownFs(named.NAMED)
-	assert.Nil(ts.t, err, "Shutdown")
-	ts.memfs.Wait()
 }
 
 func TestRemoveSimple(t *testing.T) {
@@ -63,7 +45,7 @@ func TestRemoveSimple(t *testing.T) {
 	_, err = ts.Stat(fn)
 	assert.NotEqual(t, nil, err)
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestRemoveNonExistent(t *testing.T) {
@@ -77,7 +59,7 @@ func TestRemoveNonExistent(t *testing.T) {
 	err = ts.Remove("name/this-file-does-not-exist")
 	assert.NotNil(t, err)
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestRemovePath(t *testing.T) {
@@ -96,7 +78,7 @@ func TestRemovePath(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestRename(t *testing.T) {
@@ -117,7 +99,7 @@ func TestRename(t *testing.T) {
 
 	d1, err := ts.ReadFile(fn1)
 	assert.Equal(t, "hello", string(d1))
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestRenameAndRemove(t *testing.T) {
@@ -145,7 +127,7 @@ func TestRenameAndRemove(t *testing.T) {
 
 	err = ts.Remove(fn1)
 	assert.Equal(t, nil, err)
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestNonEmpty(t *testing.T) {
@@ -166,7 +148,7 @@ func TestNonEmpty(t *testing.T) {
 	err = ts.Rename("name/d2", "name/d1")
 	assert.NotNil(t, err, "Rename")
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestCopy(t *testing.T) {
@@ -183,7 +165,7 @@ func TestCopy(t *testing.T) {
 	d1, err := ts.ReadFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestDirSimple(t *testing.T) {
@@ -208,7 +190,7 @@ func TestDirSimple(t *testing.T) {
 	_, err = ts.Stat(dn)
 	assert.NotEqual(t, nil, err)
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestDirDot(t *testing.T) {
@@ -226,7 +208,7 @@ func TestDirDot(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	_, err = ts.Stat("name/.")
 	assert.Equal(t, nil, err)
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
@@ -291,7 +273,7 @@ func TestCounter(t *testing.T) {
 
 	assert.Equal(t, N, n)
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 // Test race: write returns successfully after rename, but read sees
@@ -352,7 +334,7 @@ func TestSetRenameGet(t *testing.T) {
 	}
 	assert.Equal(ts.t, true, race, "SetRenameGet")
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWatchCreate(t *testing.T) {
@@ -373,7 +355,7 @@ func TestWatchCreate(t *testing.T) {
 
 	<-ch
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWatchRemoveSeq(t *testing.T) {
@@ -393,7 +375,7 @@ func TestWatchRemoveSeq(t *testing.T) {
 
 	<-ch
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWatchDir(t *testing.T) {
@@ -414,7 +396,7 @@ func TestWatchDir(t *testing.T) {
 
 	<-ch
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLock1(t *testing.T) {
@@ -440,7 +422,7 @@ func TestLock1(t *testing.T) {
 	}()
 	i := <-ch
 	assert.Equal(t, 0, i)
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLockN(t *testing.T) {
@@ -466,7 +448,7 @@ func TestLockN(t *testing.T) {
 		err := ts.Remove("name/lock")
 		assert.Equal(t, nil, err)
 	}
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestLockAfterConnClose(t *testing.T) {
@@ -498,7 +480,7 @@ func TestLockAfterConnClose(t *testing.T) {
 	err = fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 3")
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 // Test race: write returns successfully after rename, but read sees
@@ -554,7 +536,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 		}
 	}
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestConcurFile(t *testing.T) {
@@ -580,7 +562,7 @@ func TestConcurFile(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 const (
@@ -674,7 +656,7 @@ func TestConcurRename(t *testing.T) {
 	}
 	assert.Equal(ts.t, NFILE, n, "sum")
 	ts.checkFs()
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestPipeSimple(t *testing.T) {
@@ -700,7 +682,7 @@ func TestPipeSimple(t *testing.T) {
 	err = ts.Close(fd)
 	assert.Nil(ts.t, err, "Close")
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestPipeClose(t *testing.T) {
@@ -735,7 +717,7 @@ func TestPipeClose(t *testing.T) {
 
 	<-ch
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestPipeRemove(t *testing.T) {
@@ -757,5 +739,5 @@ func TestPipeRemove(t *testing.T) {
 
 	<-ch
 
-	ts.Shutdown()
+	ts.s.Shutdown()
 }

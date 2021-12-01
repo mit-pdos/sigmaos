@@ -136,7 +136,7 @@ func (wt *WatchTable) Release(ws *Watchers) {
 // make a copy of wt.watchers while holding the lock and then iterate
 // through the copy without holding the lock.  XXX better plan?
 func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
-	log.Printf("delete %p conn %p\n", wt, npc)
+	// log.Printf("delete %p conn %p\n", wt, npc)
 
 	wt.Lock()
 	m := make(map[string]*Watchers)

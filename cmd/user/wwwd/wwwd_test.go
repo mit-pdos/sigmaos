@@ -6,19 +6,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/realm"
 )
 
 type Tstate struct {
 	*procclnt.ProcClnt
 	*fslib.FsLib
+
 	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
+	s   *kernel.System
 	pid string
 }
 
@@ -40,24 +39,14 @@ func spawn(t *testing.T, ts *Tstate) string {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	bin := "../../../"
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-
-	db.Name("wwwd_test")
-	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", cfg.NamedAddr)
-
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.s = kernel.MakeSystemAll("../../../")
+	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.t = t
 
 	ts.pid = spawn(t, ts)
 
-	err = ts.WaitStart(childdir(ts.pid))
+	err := ts.WaitStart(childdir(ts.pid))
 	assert.Equal(t, nil, err)
 
 	// ts.Exited(proc.GetPid(), "OK")
@@ -79,7 +68,7 @@ func (ts *Tstate) waitWww() {
 	r := <-ch
 	assert.NotEqual(ts.t, nil, r)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestSandbox(t *testing.T) {

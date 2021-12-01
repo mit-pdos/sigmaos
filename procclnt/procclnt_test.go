@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -15,9 +16,9 @@ import (
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/realm"
 )
 
 const (
@@ -27,27 +28,17 @@ const (
 type Tstate struct {
 	*procclnt.ProcClnt
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
-	s   *kernel.System
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 
 	bin := ".."
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	ts.s = kernel.MakeSystem(bin, cfg.NamedAddr)
-
-	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.s = kernel.MakeSystemAll(bin)
+	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.t = t
 	return ts
 }
@@ -58,13 +49,11 @@ func (ts *Tstate) procd(t *testing.T) string {
 	return st[0].Name
 }
 
-func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pid string) *Tstate {
+func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.e = e
-	ts.cfg = cfg
-	ts.FsLib = fslib.MakeFsLibAddr("proc_test", ts.cfg.NamedAddr)
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	return ts
 }
 
@@ -121,7 +110,7 @@ func TestWaitExit(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWaitExitParentRetStat(t *testing.T) {
@@ -145,7 +134,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWaitStart(t *testing.T) {
@@ -179,7 +168,7 @@ func TestWaitStart(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 // Should exit immediately
@@ -199,7 +188,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 
 	close(ch)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestCrashProc(t *testing.T) {
@@ -216,7 +205,7 @@ func TestCrashProc(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.Equal(t, "exit status 2", status, "WaitExit")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestFailSpawn(t *testing.T) {
@@ -231,7 +220,7 @@ func TestFailSpawn(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(a.Pid))
 	assert.NotNil(t, err, "Stat")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestEarlyExit1(t *testing.T) {
@@ -262,7 +251,7 @@ func TestEarlyExit1(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(pid1))
 	assert.NotNil(t, err, "Stat")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestEarlyExitN(t *testing.T) {
@@ -300,7 +289,7 @@ func TestEarlyExitN(t *testing.T) {
 
 	log.Printf("DONE\n")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 // Spawn a bunch of procs concurrently, then wait for all of them & check
@@ -329,7 +318,7 @@ func TestConcurrentProcs(t *testing.T) {
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		newts := makeTstateNoBoot(t, ts.cfg, ts.e, pid)
+		newts := makeTstateNoBoot(t, pid)
 		tses = append(tses, newts)
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()
@@ -354,7 +343,7 @@ func TestConcurrentProcs(t *testing.T) {
 
 	done.Wait()
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) evict(pid string) {
@@ -382,8 +371,47 @@ func TestEvict(t *testing.T) {
 	// Make sure the proc didn't finish
 	checkSleeperResultFalse(t, ts, pid)
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
+
+func testLocker(t *testing.T, part string) {
+	const N = 20
+
+	ts := makeTstate(t)
+	pids := []string{}
+
+	// XXX use the same dir independent of machine running proc
+	dir := "name/ux/~ip/outdir"
+	ts.RmDir(dir)
+	err := ts.Mkdir(dir, 0777)
+	err = ts.Mkdir("name/locktest", 0777)
+	assert.Nil(t, err, "mkdir error")
+	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "makefile error")
+	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "makefile error")
+
+	for i := 0; i < N; i++ {
+		a := proc.MakeProc("bin/user/locker", []string{part, dir})
+		err = ts.Spawn(a)
+		assert.Nil(t, err, "Spawn")
+		pids = append(pids, a.Pid)
+	}
+
+	for _, pid := range pids {
+		status, _ := ts.WaitExit(pid)
+		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
+	}
+	ts.s.Shutdown()
+}
+
+func TestLockerNoPart(t *testing.T) {
+	testLocker(t, "NO")
+}
+
+//func TestLockerWithPart(t *testing.T) {
+//	testLocker(t, "YES")
+//}
 
 func TestReserveCores(t *testing.T) {
 	ts := makeTstate(t)
@@ -412,7 +440,7 @@ func TestReserveCores(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestWorkStealing(t *testing.T) {
@@ -445,5 +473,4 @@ func TestWorkStealing(t *testing.T) {
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
 	ts.s.Shutdown()
-	ts.e.Shutdown()
 }

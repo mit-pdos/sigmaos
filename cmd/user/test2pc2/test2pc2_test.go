@@ -9,13 +9,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	// db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/realm"
 	"ulambda/twopc"
 )
 
@@ -23,12 +22,11 @@ type Tstate struct {
 	t   *testing.T
 	fsl *fslib.FsLib
 	*procclnt.ProcClnt
+	s         *kernel.System
 	ch        chan bool
 	chPresent chan bool
 	mfss      []string
 	pid       string
-	e         *realm.TestEnv
-	cfg       *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -38,19 +36,11 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
 
-	bin := "../../../"
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
+	ts.s = kernel.MakeSystemAll("../../../")
+	ts.fsl = fslib.MakeFsLibAddr("fsux_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
 
-	ts.fsl = fslib.MakeFsLibAddr("twopc_test", cfg.NamedAddr)
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, cfg.NamedAddr)
-
-	err = ts.fsl.Mkdir(twopc.DIR2PC, 07)
+	err := ts.fsl.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -80,7 +70,7 @@ func (ts *Tstate) waitParticipants(fws []string) {
 
 func (ts *Tstate) shutdown() {
 	ts.stopMemFSs()
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) cleanup() {

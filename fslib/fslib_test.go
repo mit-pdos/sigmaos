@@ -505,23 +505,19 @@ func TestWatchRemoveConcur(t *testing.T) {
 			if err != nil {
 				log.Fatalf("Makefile %v err %v\n", fn, err)
 			}
-			log.Printf("test: set watch\n")
 			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
-				log.Printf("watch cb %v err %v\n", i, r)
+				// log.Printf("watch cb %v err %v\n", i, r)
 				ch <- r
 			})
 			if err == nil {
-				log.Printf("wait for watch\n")
 				r := <-ch
 				if r == nil {
 					i += 1
 				}
-				log.Printf("%v\n", i)
 			} else {
 				log.Printf("SetRemoveWatch %v err %v\n", i, err)
 			}
 		}
-		log.Printf("done\n")
 		done <- true
 	}()
 

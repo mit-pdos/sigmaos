@@ -14,7 +14,7 @@ go test $1 ulambda/fsclnt
 #
 # test with just named
 #
-go test $1 ulambda/fslib    # XXX after merging watchv1 branch
+go test $1 ulambda/fslib
 go test $1 ulambda/stats
 go test $1 ulambda/sync
 

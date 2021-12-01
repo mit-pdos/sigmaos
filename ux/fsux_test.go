@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	bin = ".."
-	fn  = "name/ux/~ip/"
+	fn = "name/ux/~ip/"
 )
 
 type Tstate struct {
@@ -24,7 +23,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemAll(bin)
+	ts.s = kernel.MakeSystemAll("..")
 	ts.FsLib = fslib.MakeFsLibAddr("fsux_test", fslib.Named())
 	return ts
 }

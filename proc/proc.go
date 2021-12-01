@@ -3,6 +3,7 @@ package proc
 import (
 	"fmt"
 	"path"
+	"strings"
 )
 
 type Ttype uint32
@@ -61,8 +62,8 @@ func MakeProcPid(pid string, program string, args []string) *Proc {
 	return p
 }
 
-func (p *Proc) GetProc() *Proc {
-	return p
+func (p *Proc) IsKernelProc() bool {
+	return strings.Contains(p.Program, "kernel")
 }
 
 func (p *Proc) String() string {

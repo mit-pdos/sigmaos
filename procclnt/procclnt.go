@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"sync"
 
@@ -50,6 +51,14 @@ func makeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
 }
 
 // ========== SPAWN ==========
+
+// XXX Should probably eventually fold this into spawn (but for now, we may want to get the exec.Cmd struct back).
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []string) (*exec.Cmd, error) {
+	if err := clnt.Spawn(p); err != nil {
+		return nil, err
+	}
+	return proc.Run(p.Pid, bin, p.Program, namedAddr, []string{})
+}
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
@@ -104,16 +113,19 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return clnt.cleanupError(piddir, err)
 	}
 
-	b, err := json.Marshal(p)
-	if err != nil {
-		log.Printf("Error marshal: %v", err)
-		return clnt.cleanupError(piddir, err)
-	}
+	// If this is not a kernel proc, spawn it through procd.
+	if !p.IsKernelProc() {
+		b, err := json.Marshal(p)
+		if err != nil {
+			log.Printf("Error marshal: %v", err)
+			return clnt.cleanupError(piddir, err)
+		}
 
-	err = clnt.WriteFile(path.Join(named.PROCDDIR+"/~ip", named.PROC_CTL_FILE), b)
-	if err != nil {
-		log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
-		return clnt.cleanupError(piddir, err)
+		err = clnt.WriteFile(path.Join(named.PROCDDIR+"/~ip", named.PROC_CTL_FILE), b)
+		if err != nil {
+			log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
+			return clnt.cleanupError(piddir, err)
+		}
 	}
 
 	return nil
@@ -221,7 +233,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 	// log.Printf("%v: exited %v\n", db.GetName(), piddir)
 
 	// Abandon any children I may have left.
-	clnt.abandonChildren(piddir)
+	clnt.abandonChildren(pid)
 
 	fn := piddir + "/" + RET_STATUS
 	fd, err := clnt.Open(fn, np.OWRITE)
@@ -255,17 +267,33 @@ func (clnt *ProcClnt) Evict(pid string) error {
 	return semEvict.Up()
 }
 
+// ========== GETCHILDREN ==========
+
+// Return the pids of all children.
+func (clnt *ProcClnt) GetChildren(pid string) ([]string, error) {
+	piddir := proc.PidDir(pid)
+	sts, err := clnt.ReadDir(path.Join(piddir, CHILD))
+	if err != nil {
+		log.Fatalf("ProcClnt.GetChildren ReadDir %v error: %v", pid, err)
+		return nil, err
+	}
+	cpids := []string{}
+	for _, st := range sts {
+		cpids = append(cpids, st.Name)
+	}
+	return cpids, nil
+}
+
 // ========== Helpers ==========
 
 // Remove status from children to indicate we don't care
-func (clnt *ProcClnt) abandonChildren(piddir string) {
-	cpids := piddir + "/" + CHILD
-	sts, err := clnt.ReadDir(cpids)
+func (clnt *ProcClnt) abandonChildren(pid string) {
+	cpids, err := clnt.GetChildren(pid)
 	if err != nil {
-		log.Fatalf("abandonChildren %v err : %v", cpids, err)
+		log.Fatalf("ProcClnt.abandonChildren  %v error: %v", pid, err)
 	}
-	for _, st := range sts {
-		clnt.abandonChild(PIDS + "/" + st.Name)
+	for _, cpid := range cpids {
+		clnt.abandonChild(PIDS + "/" + cpid)
 	}
 }
 

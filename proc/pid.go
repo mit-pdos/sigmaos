@@ -10,6 +10,10 @@ func GenPid() string {
 	return rand.String(8)
 }
 
+func SetPid(pid string) {
+	os.Setenv("SIGMAPID", pid)
+}
+
 // Can return "" for test programs that make a procclnt
 func GetPid() string {
 	return os.Getenv("SIGMAPID")

@@ -10,7 +10,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/proc"
-	"ulambda/procd"
 )
 
 const (
@@ -67,7 +66,7 @@ func (e *TestEnv) Shutdown() {
 func (e *TestEnv) bootRealmMgr() error {
 	// Create boot cond
 	var err error
-	realmmgr, err := procd.Run("0", e.bin, "bin/realm/realmmgr", fslib.Named(), []string{e.bin})
+	realmmgr, err := proc.Run("0", e.bin, "bin/realm/realmmgr", fslib.Named(), []string{e.bin})
 	e.realmmgr = realmmgr
 	if err != nil {
 		return err
@@ -80,7 +79,7 @@ func (e *TestEnv) bootRealmMgr() error {
 
 func (e *TestEnv) BootMachined() error {
 	var err error
-	machined, err := procd.Run("0", e.bin, "bin/realm/machined", fslib.Named(), []string{e.bin, proc.GenPid()})
+	machined, err := proc.Run("0", e.bin, "bin/realm/machined", fslib.Named(), []string{e.bin, proc.GenPid()})
 	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err

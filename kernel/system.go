@@ -12,7 +12,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
-	"ulambda/procd"
+	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
@@ -26,13 +26,10 @@ type System struct {
 	namedAddr []string
 	named     *exec.Cmd
 	fss3d     []*exec.Cmd
-	fss3dPids []string
 	fsuxd     []*exec.Cmd
-	fsuxdPids []string
 	procd     []*exec.Cmd
-	procdPids []string
 	dbd       []*exec.Cmd
-	dbdPids   []string
+	*procclnt.ProcClnt
 	*fslib.FsLib
 }
 
@@ -41,6 +38,8 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	s.bin = bin
 	s.namedAddr = namedAddr
 	s.FsLib = fslib.MakeFsLibAddr("kernel", namedAddr)
+	proc.SetPid("kernel-" + proc.GenPid())
+	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	return s
 }
 
@@ -68,102 +67,59 @@ func MakeSystemAll(bin string) *System {
 
 // Boot a "kernel" without named
 func (s *System) Boot() error {
-	err := s.BootFsUxd()
-	if err != nil {
+	if err := s.BootFsUxd(); err != nil {
 		return err
 	}
-	err = s.BootFss3d()
-	if err != nil {
+	if err := s.BootFss3d(); err != nil {
 		return err
 	}
-	err = s.BootProcd()
-	if err != nil {
+	if err := s.BootProcd(); err != nil {
 		return err
 	}
-	err = s.BootDbd()
-	if err != nil {
+	if err := s.BootDbd(); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *System) BootFsUxd() error {
-	// Create boot cond
-	pid := "fsuxd-" + proc.GenPid()
-	fsuxdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
-	fsuxdStartCond.Init()
-	var err error
-	fsuxd, err := procd.Run(pid, s.bin, "bin/kernel/fsuxd", s.namedAddr, []string{})
-	s.fsuxd = append(s.fsuxd, fsuxd)
+	p := proc.MakeProcPid("fsuxd-"+proc.GenPid(), "bin/kernel/fsuxd", []string{})
+	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
 	if err != nil {
 		return err
 	}
-	// Wait for boot
-	fsuxdStartCond.Wait()
-	s.fsuxdPids = append(s.fsuxdPids, pid)
-	return nil
+	s.fsuxd = append(s.fsuxd, cmd)
+	return s.WaitStart(p.Pid)
 }
 
 func (s *System) BootFss3d() error {
-	// Create boot cond
-	pid := "fss3d-" + proc.GenPid()
-	fss3dStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
-	fss3dStartCond.Init()
-	var err error
-	fss3d, err := procd.Run(pid, s.bin, "bin/kernel/fss3d", s.namedAddr, []string{})
-	s.fss3d = append(s.fss3d, fss3d)
+	p := proc.MakeProcPid("fss3d-"+proc.GenPid(), "bin/kernel/fss3d", []string{})
+	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
 	if err != nil {
 		return err
 	}
-	// Wait for boot
-	fss3dStartCond.Wait()
-	s.fss3dPids = append(s.fss3dPids, pid)
-	return nil
+	s.fss3d = append(s.fss3d, cmd)
+	return s.WaitStart(p.Pid)
 }
 
 func (s *System) BootProcd() error {
-	// Create boot cond
-	pid := named.PROCDDIR + "-" + proc.GenPid()
-	procdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
-	procdStartCond.Init()
-	var err error
-	procd, err := procd.Run(pid, s.bin, "bin/kernel/procd", s.namedAddr, []string{s.bin})
-	s.procd = append(s.procd, procd)
+	p := proc.MakeProcPid("procd-"+proc.GenPid(), "bin/kernel/procd", []string{})
+	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
 	if err != nil {
 		return err
 	}
-	// Wait for boot
-	procdStartCond.Wait()
-	s.procdPids = append(s.procdPids, pid)
-	return nil
+	s.procd = append(s.procd, cmd)
+	return s.WaitStart(p.Pid)
 }
 
 func (s *System) BootDbd() error {
-	// Create dbd cond
-	pid := "dbd-" + proc.GenPid()
-	dbdStartCond := sync.MakeCond(s.FsLib, path.Join(named.BOOT, pid), nil, true)
-	dbdStartCond.Init()
-	var err error
-	dbd, err := procd.Run(pid, s.bin, "bin/kernel/dbd", s.namedAddr, []string{})
-	s.dbd = append(s.dbd, dbd)
+	p := proc.MakeProcPid("dbd-"+proc.GenPid(), "bin/kernel/dbd", []string{})
+	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
 	if err != nil {
 		return err
 	}
-	// Wait for boot
-	dbdStartCond.Wait()
-	s.dbdPids = append(s.dbdPids, pid)
-	return nil
-}
-
-func (s *System) shutdownAll(mdir string, pids []string) error {
-	for _, pid := range pids {
-		err := s.FsLib.ShutdownFs(path.Join(mdir, pid))
-		if err != nil {
-			log.Printf("shutdown err %v\n", err)
-			return err
-		}
-	}
-	return nil
+	s.dbd = append(s.dbd, cmd)
+	return s.WaitStart(p.Pid)
 }
 
 func (s *System) KillOne(srv string) error {
@@ -176,7 +132,6 @@ func (s *System) KillOne(srv string) error {
 			if err == nil {
 				s.procd[0].Wait()
 				s.procd = s.procd[1:]
-				s.procdPids = s.procdPids[1:]
 			} else {
 				log.Fatalf("Procd kill failed %v\n", err)
 			}
@@ -188,41 +143,28 @@ func (s *System) KillOne(srv string) error {
 }
 
 func (s *System) Shutdown() {
-	if len(s.fss3d) != 0 {
-		err := s.shutdownAll(named.S3, s.fss3dPids)
-		if err != nil {
-			log.Printf("S3 shutdown %v\n", err)
-		}
-		for _, d := range s.fss3d {
-			d.Wait()
+	cpids, err := s.GetChildren(proc.GetPid())
+	if err != nil {
+		log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
+	}
+	for _, pid := range cpids {
+		s.Evict(pid)
+		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
+			log.Printf("%v shutdown error %v %v", status, err)
 		}
 	}
-	if len(s.fsuxd) != 0 {
-		err := s.shutdownAll(named.UX, s.fsuxdPids)
-		if err != nil {
-			log.Printf("Ux shutdown %v\n", err)
-		}
-		for _, d := range s.fsuxd {
-			d.Wait()
-		}
+	// Make sure the procs actually exited
+	for _, d := range s.fss3d {
+		d.Wait()
 	}
-	if len(s.procd) != 0 {
-		err := s.shutdownAll(named.PROCD, s.procdPids)
-		if err != nil {
-			log.Printf("Procds shutdown %v\n", err)
-		}
-		for _, d := range s.procd {
-			d.Wait()
-		}
+	for _, d := range s.fsuxd {
+		d.Wait()
 	}
-	if len(s.dbd) != 0 {
-		err := s.shutdownAll(named.DB, s.dbdPids)
-		if err != nil {
-			log.Printf("Db shutdown %v\n", err)
-		}
-		for _, d := range s.dbd {
-			d.Wait()
-		}
+	for _, d := range s.procd {
+		d.Wait()
+	}
+	for _, d := range s.dbd {
+		d.Wait()
 	}
 	if s.named != nil {
 		err := s.ShutdownFs(named.NAMED)
@@ -254,7 +196,7 @@ func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id
 		namedStartCond.Init()
 	}
 
-	cmd, err := procd.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
+	cmd, err := proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		log.Printf("Error running named: %v", err)
 		return nil, err

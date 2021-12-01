@@ -10,7 +10,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/repl"
 )
 
@@ -27,7 +26,7 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib) (*fssrv.FsServer, error
 	srv := makeSrv(root, ip+":0", nil)
 	if np.EndSlash(path) {
 		fsl.Mkdir(path, 0777)
-		err = fsl.PostServiceUnion(srv.MyAddr(), path, proc.GetPid())
+		err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
 	} else {
 		err = fsl.PostService(srv.MyAddr(), path)
 	}
@@ -43,7 +42,7 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 	fsl := fslib.MakeFsLib(name)
 	if len(path) > 0 {
 		fsl.Mkdir(path, 0777)
-		err := fsl.PostServiceUnion(srv.MyAddr(), path, proc.GetPid())
+		err := fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
 		if err != nil {
 			return nil, nil, err
 		}

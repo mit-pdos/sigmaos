@@ -2,7 +2,6 @@ package procclnt
 
 import (
 	"log"
-	"os"
 	"strings"
 
 	"runtime/debug"
@@ -39,8 +38,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
-	pid := proc.GenPid()
-	os.Setenv("SIGMAPID", pid)
+	proc.SetPid(proc.GenPid())
 
 	if err := fsl.MountTree(NamedAddr, named.PROCDDIR, named.PROCDDIR); err != nil {
 		debug.PrintStack()

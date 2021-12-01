@@ -17,12 +17,13 @@ import (
 )
 
 type FsObjSrv struct {
-	mu     sync.Mutex
+	mu     sync.Mutex // to protect closed
 	closed bool
-	fssrv  *fssrv.FsServer
-	wt     *watch.WatchTable
-	st     *session.SessionTable
-	stats  *stats.Stats
+
+	fssrv *fssrv.FsServer
+	wt    *watch.WatchTable
+	st    *session.SessionTable
+	stats *stats.Stats
 }
 
 type ProtServer struct{}
@@ -98,9 +99,6 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 // is responsible for calling this serially, which should
 // is not burden, because it is typically called once.
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
-	fos.mu.Lock()
-	defer fos.mu.Unlock()
-
 	ephemeral := fos.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
@@ -109,7 +107,11 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	fos.wt.DeleteConn(fos)
 	fos.st.DeleteSession(sess)
 	fos.fssrv.GetConnTable().Del(fos)
+
+	fos.mu.Lock()
+	defer fos.mu.Unlock()
 	fos.closed = true
+	log.Printf("detach return\n")
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {

@@ -43,6 +43,7 @@ go test $1 ulambda/cmd/user/test2pc2
 go test $1 ulambda/realm # Fails due to dropped eviction signals
 ./test-kv.sh
 
+# run without realm?
 # XXX needs fixing
 # go test $1 -timeout=45m ulambda/replica
  

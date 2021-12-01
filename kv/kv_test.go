@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/realm"
 )
 
 const NKEYS = 2 // 100
@@ -40,12 +40,11 @@ func TestBalance(t *testing.T) {
 type Tstate struct {
 	t   *testing.T
 	fsl *fslib.FsLib
+	s   *kernel.System
 	*procclnt.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
 	rand  *rand.Rand
-	e     *realm.TestEnv
-	cfg   *realm.RealmConfig
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -53,18 +52,11 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.t = t
 
 	bin := ".."
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
+	ts.s = kernel.MakeSystemAll(bin)
+	ts.fsl = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
 
-	ts.fsl = fslib.MakeFsLibAddr("kv_test", cfg.NamedAddr)
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, cfg.NamedAddr)
-
-	err = ts.fsl.Mkdir(named.MEMFS, 07)
+	err := ts.fsl.Mkdir(named.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -147,7 +139,7 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 
 	ts.clrks = make([]*KvClerk, nclerk)
 	for i := 0; i < nclerk; i++ {
-		ts.clrks[i] = MakeClerk(ts.cfg.NamedAddr)
+		ts.clrks[i] = MakeClerk(fslib.Named())
 	}
 
 	if nclerk > 0 {
@@ -182,7 +174,7 @@ func TestGetPutSet(t *testing.T) {
 	ts.stopMemFSs()
 	log.Printf("done\n")
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func ConcurN(t *testing.T, nclerk int) {
@@ -224,7 +216,7 @@ func ConcurN(t *testing.T, nclerk int) {
 
 	ts.stopMemFSs()
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestConcur0(t *testing.T) {

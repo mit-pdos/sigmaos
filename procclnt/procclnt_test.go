@@ -19,7 +19,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/realm"
 )
 
 const (
@@ -29,10 +28,8 @@ const (
 type Tstate struct {
 	*procclnt.ProcClnt
 	*fslib.FsLib
-	t   *testing.T
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
-	s   *kernel.System
+	t *testing.T
+	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
@@ -52,7 +49,7 @@ func (ts *Tstate) procd(t *testing.T) string {
 	return st[0].Name
 }
 
-func makeTstateNoBoot(t *testing.T, cfg *realm.RealmConfig, e *realm.TestEnv, pid string) *Tstate {
+func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
@@ -321,7 +318,7 @@ func TestConcurrentProcs(t *testing.T) {
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		newts := makeTstateNoBoot(t, ts.cfg, ts.e, pid)
+		newts := makeTstateNoBoot(t, pid)
 		tses = append(tses, newts)
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()

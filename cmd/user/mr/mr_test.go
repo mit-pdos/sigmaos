@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/realm"
 )
 
 const OUTPUT = "../../../mr/par-mr.out"
@@ -53,26 +53,17 @@ type Tstate struct {
 	*procclnt.ProcClnt
 	*fslib.FsLib
 	t           *testing.T
-	e           *realm.TestEnv
-	cfg         *realm.RealmConfig
+	s           *kernel.System
 	nreducetask int
 }
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts := &Tstate{}
-	bin := "../../../"
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-
-	ts.FsLib = fslib.MakeFsLibAddr("mr-wc_test", cfg.NamedAddr)
-
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
 	ts.t = t
+
+	ts.s = kernel.MakeSystemAll("../../../")
+	ts.FsLib = fslib.MakeFsLibAddr("mr-wc_test", fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.nreducetask = nreducetask
 
 	mr.InitCoordFS(ts.FsLib, nreducetask)
@@ -136,7 +127,7 @@ func runN(t *testing.T, n, crash, crashCoord string) {
 
 	ts.checkJob()
 
-	ts.e.Shutdown()
+	ts.s.Shutdown()
 }
 
 func TestOne(t *testing.T) {

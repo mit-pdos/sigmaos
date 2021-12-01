@@ -106,7 +106,6 @@ func (pd *Procd) Done() {
 	pd.done = true
 	pd.perf.Teardown()
 	pd.evictProcsL()
-	pd.Exit()
 }
 
 func (pd *Procd) readDone() bool {

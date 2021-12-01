@@ -8,14 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	//	"ulambda/dbd"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	//"ulambda/realm"
 )
 
 //

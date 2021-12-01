@@ -25,8 +25,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	bin := ".."
-	ts.s = kernel.MakeSystemAll(bin)
+	ts.s = kernel.MakeSystemAll("..")
 	ts.FsLib = fslib.MakeFsLibAddr("kernel_test", fslib.Named())
 	return ts
 }

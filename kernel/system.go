@@ -54,7 +54,7 @@ func MakeSystemNamed(bin string) *System {
 		return nil
 	}
 	s.named = cmd
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
 	return s
 }
@@ -207,6 +207,7 @@ func (s *System) Shutdown() {
 		}
 	}
 	if len(s.procd) != 0 {
+		log.Printf("shutdown procd\n")
 		err := s.shutdownAll(named.PROCD, s.procdPids)
 		if err != nil {
 			log.Printf("Procds shutdown %v\n", err)
@@ -214,6 +215,7 @@ func (s *System) Shutdown() {
 		for _, d := range s.procd {
 			d.Wait()
 		}
+		log.Printf("shutdown procd done\n")
 	}
 	if len(s.dbd) != 0 {
 		err := s.shutdownAll(named.DB, s.dbdPids)

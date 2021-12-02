@@ -2,14 +2,14 @@ package dbd
 
 import (
 	"log"
-	"path"
+	"runtime/debug"
 
 	"ulambda/dir"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
 	"ulambda/proc"
-	usync "ulambda/sync"
+	"ulambda/procclnt"
 )
 
 //
@@ -34,11 +34,23 @@ func RunDbd() {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	dbdStartCond := usync.MakeCond(mfs.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
-	dbdStartCond.Destroy()
+	pc := procclnt.MakeProcClnt(mfs.FsLib)
 	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "clone", makeClone("", mfs.Root()))
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
-	mfs.Wait()
+	if err := pc.Started(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Started: %v", err)
+	}
+	if err := pc.WaitEvict(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error WaitEvict: %v", err)
+	}
+	if err := pc.Exited(proc.GetPid(), "EVICTED"); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Exited: %v", err)
+	}
+
+	//	mfs.Wait()
 }

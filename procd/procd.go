@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -77,8 +78,22 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	// Make some local directories.
 	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 
-	procdStartCond := usync.MakeCond(pd.FsLib, path.Join(named.BOOT, proc.GetPid()), nil, true)
-	procdStartCond.Destroy()
+	if err := pd.procclnt.Started(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Started: %v", err)
+	}
+	go func() {
+		if err := pd.procclnt.WaitEvict(proc.GetPid()); err != nil {
+			debug.PrintStack()
+			log.Fatalf("Error WaitEvict: %v", err)
+		}
+		log.Printf("eviction triggered procd")
+		if err := pd.procclnt.Exited(proc.GetPid(), "EVICTED"); err != nil {
+			debug.PrintStack()
+			log.Fatalf("Error Exited: %v", err)
+		}
+		pd.Done()
+	}()
 
 	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
 

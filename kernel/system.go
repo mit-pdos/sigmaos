@@ -38,8 +38,9 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	s.bin = bin
 	s.namedAddr = namedAddr
 	s.FsLib = fslib.MakeFsLibAddr("kernel", namedAddr)
-	proc.SetPid("kernel-" + proc.GenPid())
-	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
+	_ = s.Mkdir(named.PROCD, 0777)
+	//	proc.SetPid("kernel-" + proc.GenPid())
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
 	return s
 }
 
@@ -55,6 +56,8 @@ func MakeSystemNamed(bin string) *System {
 	s.named = cmd
 	time.Sleep(10 * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
+	_ = s.Mkdir(named.PROCD, 0777)
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
 	return s
 }
 
@@ -103,7 +106,7 @@ func (s *System) BootFss3d() error {
 }
 
 func (s *System) BootProcd() error {
-	p := proc.MakeProcPid("procd-"+proc.GenPid(), "bin/kernel/procd", []string{})
+	p := proc.MakeProcPid("procd-"+proc.GenPid(), "bin/kernel/procd", []string{s.bin})
 	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
 	if err != nil {
 		return err
@@ -147,23 +150,31 @@ func (s *System) Shutdown() {
 	if err != nil {
 		log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
 	}
-	for _, pid := range cpids {
-		s.Evict(pid)
-		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
-			log.Printf("%v shutdown error %v %v", status, err)
-		}
-	}
+	_ = cpids
+	// XXX eviction signals are sometimes dropped at the moment, so just kill processes
+	//	for _, pid := range cpids {
+	//		log.Printf("pid pre: %v", pid)
+	//		s.Evict(pid)
+	//		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
+	//			log.Printf("%v shutdown error %v %v", status, err)
+	//		}
+	//		log.Printf("pid post: %v", pid)
+	//	}
 	// Make sure the procs actually exited
 	for _, d := range s.fss3d {
+		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.fsuxd {
+		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.procd {
+		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.dbd {
+		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	if s.named != nil {

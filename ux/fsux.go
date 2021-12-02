@@ -2,22 +2,24 @@ package fsux
 
 import (
 	"log"
-	"path"
+	"runtime/debug"
 	"sync"
 
 	"ulambda/fsclnt"
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/repl"
-	usync "ulambda/sync"
 	// "ulambda/seccomp"
 )
 
 type FsUx struct {
 	*fssrv.FsServer
+	*fslib.FsLib
 	mu    sync.Mutex
 	mount string
 }
@@ -28,7 +30,19 @@ func RunFsUx(mount string) {
 		log.Fatalf("LocalIP %v %v\n", named.UX, err)
 	}
 	fsux := MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
-	fsux.Serve()
+	pc := procclnt.MakeProcClnt(fsux.FsLib)
+	if err := pc.Started(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Started: %v", err)
+	}
+	if err := pc.WaitEvict(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error WaitEvict: %v", err)
+	}
+	if err := pc.Exited(proc.GetPid(), "EVICTED"); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Exited: %v", err)
+	}
 }
 
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
@@ -40,9 +54,6 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Confi
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	fsux.FsServer = srv
-	if config == nil {
-		fsuxStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, pid), nil, true)
-		fsuxStartCond.Destroy()
-	}
+	fsux.FsLib = fsl
 	return fsux
 }

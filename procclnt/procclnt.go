@@ -26,10 +26,11 @@ const (
 	PIDS = "pids"
 
 	// Files/directories in "pids/<pid>":
-	START_WAIT = "start-sem"
-	EVICT_WAIT = "evict-sem"
-	RET_STATUS = "status-pipe"
-	CHILD      = "childs" // directory with children's pids
+	START_WAIT  = "start-sem"
+	EVICT_WAIT  = "evict-sem"
+	RET_STATUS  = "status-pipe"
+	CHILD       = "childs"      // directory with children's pids
+	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
 
 	MAXSTATUS = 1000
 )
@@ -57,7 +58,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 	if err := clnt.Spawn(p); err != nil {
 		return nil, err
 	}
-	return proc.Run(p.Pid, bin, p.Program, namedAddr, []string{})
+	return proc.Run(p.Pid, bin, p.Program, namedAddr, p.Args)
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
@@ -124,6 +125,11 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		err = clnt.WriteFile(path.Join(named.PROCDDIR+"/~ip", named.PROC_CTL_FILE), b)
 		if err != nil {
 			log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
+			return clnt.cleanupError(piddir, err)
+		}
+	} else {
+		if err := clnt.MakeFile(path.Join(piddir, KERNEL_PROC), 0777, np.OWRITE, []byte{}); err != nil {
+			log.Printf("Error MakeFile in ProcCLnt.Spawn kernel proc: %v", err)
 			return clnt.cleanupError(piddir, err)
 		}
 	}
@@ -200,13 +206,16 @@ func (clnt *ProcClnt) Started(pid string) error {
 	if err != nil {
 		return err
 	}
-	// Isolate the process namespace
-	newRoot := os.Getenv("NEWROOT")
-	if err := namespace.Isolate(newRoot); err != nil {
-		log.Fatalf("Error Isolate in clnt.Started: %v", err)
+	// Only isolate kernel procs
+	if !clnt.isKernelProc(pid) {
+		// Isolate the process namespace
+		newRoot := os.Getenv("NEWROOT")
+		if err := namespace.Isolate(newRoot); err != nil {
+			log.Fatalf("Error Isolate in clnt.Started: %v", err)
+		}
+		// Load a seccomp filter.
+		seccomp.LoadFilter()
 	}
-	// Load a seccomp filter.
-	seccomp.LoadFilter()
 	return err
 }
 
@@ -333,4 +342,10 @@ func (clnt *ProcClnt) setExited(pid string) string {
 func (clnt *ProcClnt) cleanupError(piddir string, err error) error {
 	clnt.removeProc(piddir)
 	return err
+}
+
+func (clnt *ProcClnt) isKernelProc(pid string) bool {
+	piddir := proc.PidDir(pid)
+	_, err := clnt.Stat(path.Join(piddir, KERNEL_PROC))
+	return err == nil
 }

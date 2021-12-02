@@ -3,7 +3,7 @@ package fss3
 import (
 	"context"
 	"log"
-	"path"
+	"runtime/debug"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -15,7 +15,7 @@ import (
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	usync "ulambda/sync"
+	"ulambda/procclnt"
 )
 
 var bucket = "9ps3"
@@ -50,8 +50,17 @@ func RunFss3() {
 		o.UsePathStyle = true
 	})
 
-	fss3dStartCond := usync.MakeCond(fsl, path.Join(named.BOOT, proc.GetPid()), nil, true)
-	fss3dStartCond.Destroy()
-
-	fss3.Serve()
+	pc := procclnt.MakeProcClnt(fsl)
+	if err := pc.Started(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Started: %v", err)
+	}
+	if err := pc.WaitEvict(proc.GetPid()); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error WaitEvict: %v", err)
+	}
+	if err := pc.Exited(proc.GetPid(), "EVICTED"); err != nil {
+		debug.PrintStack()
+		log.Fatalf("Error Exited: %v", err)
+	}
 }

@@ -2,7 +2,6 @@ package procclnt_test
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"sync"
@@ -55,6 +54,14 @@ func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
 	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	return ts
+}
+
+func spawnSpinner(t *testing.T, ts *Tstate) string {
+	pid := proc.GenPid()
+	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/out_" + pid})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	return pid
 }
 
 func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
@@ -287,8 +294,6 @@ func TestEarlyExitN(t *testing.T) {
 	}
 	done.Wait()
 
-	log.Printf("DONE\n")
-
 	ts.s.Shutdown()
 }
 
@@ -471,6 +476,29 @@ func TestWorkStealing(t *testing.T) {
 	checkSleeperResult(t, ts, pid1)
 
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+
+	ts.s.Shutdown()
+}
+
+func TestEvictN(t *testing.T) {
+	ts := makeTstate(t)
+
+	linuxsched.ScanTopology()
+	N := int(linuxsched.NCores)
+
+	pids := []string{}
+	for i := 0; i < N; i++ {
+		pid := spawnSpinner(t, ts)
+		pids = append(pids, pid)
+		go ts.evict(pid)
+	}
+
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+	for i := 0; i < N; i++ {
+		status, err := ts.WaitExit(pids[i])
+		assert.Nil(t, err, "WaitExit")
+		assert.Equal(t, "EVICTED", status, "WaitExit status")
+	}
 
 	ts.s.Shutdown()
 }

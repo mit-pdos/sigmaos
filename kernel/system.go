@@ -152,29 +152,29 @@ func (s *System) Shutdown() {
 	}
 	_ = cpids
 	// XXX eviction signals are sometimes dropped at the moment, so just kill processes
-	//	for _, pid := range cpids {
-	//		log.Printf("pid pre: %v", pid)
-	//		s.Evict(pid)
-	//		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
-	//			log.Printf("%v shutdown error %v %v", status, err)
-	//		}
-	//		log.Printf("pid post: %v", pid)
-	//	}
+	for _, pid := range cpids {
+		log.Printf("pid pre: %v", pid)
+		s.Evict(pid)
+		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
+			log.Printf("%v shutdown error %v %v", status, err)
+		}
+		log.Printf("pid post: %v", pid)
+	}
 	// Make sure the procs actually exited
 	for _, d := range s.fss3d {
-		d.Process.Kill() // XXX remove
+		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.fsuxd {
-		d.Process.Kill() // XXX remove
+		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.procd {
-		d.Process.Kill() // XXX remove
+		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.dbd {
-		d.Process.Kill() // XXX remove
+		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	if s.named != nil {

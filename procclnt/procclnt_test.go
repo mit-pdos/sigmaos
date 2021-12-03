@@ -305,9 +305,6 @@ func TestConcurrentProcs(t *testing.T) {
 	nProcs := 8
 	pids := map[string]int{}
 
-	// Make a bunch of fslibs to avoid concurrency issues
-	tses := []*Tstate{}
-
 	var barrier sync.WaitGroup
 	barrier.Add(nProcs)
 	var started sync.WaitGroup
@@ -323,12 +320,10 @@ func TestConcurrentProcs(t *testing.T) {
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		newts := makeTstateNoBoot(t, pid)
-		tses = append(tses, newts)
 		go func(pid string, started *sync.WaitGroup, i int) {
 			barrier.Done()
 			barrier.Wait()
-			spawnSleeperWithPid(t, tses[i], pid)
+			spawnSleeperWithPid(t, ts, pid)
 			started.Done()
 		}(pid, &started, i)
 	}
@@ -340,7 +335,7 @@ func TestConcurrentProcs(t *testing.T) {
 		go func(pid string, done *sync.WaitGroup, i int) {
 			defer done.Done()
 			ts.WaitExit(pid)
-			checkSleeperResult(t, tses[i], pid)
+			checkSleeperResult(t, ts, pid)
 			_, err := ts.Stat(proc.PidDir(pid))
 			assert.NotNil(t, err, "Stat")
 		}(pid, &done, i)

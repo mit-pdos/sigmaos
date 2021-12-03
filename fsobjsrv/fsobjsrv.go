@@ -111,7 +111,6 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	fos.mu.Lock()
 	defer fos.mu.Unlock()
 	fos.closed = true
-	log.Printf("detach return\n")
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {

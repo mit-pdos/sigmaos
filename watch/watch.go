@@ -148,5 +148,4 @@ func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
 	for _, ws := range m {
 		ws.deleteConn(npc)
 	}
-	log.Printf("delete conn %p done\n", npc)
 }

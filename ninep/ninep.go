@@ -146,7 +146,7 @@ const (
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
 
-	// DMTMP is ephemeral in sigmaP, but *only* applies when a file is open
+	// DMTMP is ephemeral in sigmaP
 	DMTMP Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission

@@ -156,7 +156,7 @@ func (s *System) Shutdown() {
 	for _, pid := range cpids {
 		s.Evict(pid)
 		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
-			log.Printf("%v shutdown error %v %v", status, err)
+			log.Printf("shutdown error %v %v", status, err)
 		}
 	}
 	// Make sure the procs actually exited

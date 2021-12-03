@@ -7,17 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
-	"ulambda/named"
 	"ulambda/perf"
 	"ulambda/realm"
 	"ulambda/replraft"
 	"ulambda/seccomp"
-	"ulambda/sync"
 )
 
 func main() {
@@ -60,25 +57,12 @@ func main() {
 		}
 		peers := strings.Split(os.Args[4], ",")
 		config := replraft.MakeRaftConfig(id, peers)
-		fss, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", config)
+		fss, _, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", config)
 	} else {
-		fss, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
+		fss, _, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
 	}
 
 	seccomp.LoadFilter()
-
-	// Mark self as started if this isn't the initial named
-	isInitNamed := false
-	for _, a := range fslib.Named() {
-		if a == addr {
-			isInitNamed = true
-			break
-		}
-	}
-	if !isInitNamed {
-		namedStartCond := sync.MakeCond(fslib.MakeFsLib("named"), path.Join(named.BOOT, addr), nil, true)
-		namedStartCond.Destroy()
-	}
 
 	fss.Serve()
 }

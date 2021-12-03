@@ -46,7 +46,6 @@ type RealmMgr struct {
 	freeMachineds chan string
 	realmCreate   chan string
 	realmDestroy  chan string
-	done          chan bool
 	root          fs.Dir
 	*config.ConfigClnt
 	*fslib.FsLib
@@ -58,14 +57,13 @@ func MakeRealmMgr(bin string) *RealmMgr {
 	m.freeMachineds = make(chan string)
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
-	m.done = make(chan bool)
 	nameds, err := BootNamedReplicas(nil, bin, fslib.Named(), kernel.NO_REALM)
 	m.nameds = nameds
 	// Start a named instance.
 	if err != nil {
 		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)
 	}
-	m.root, m.FsServer, m.FsLib, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
+	m.root, m.FsServer, m.FsLib, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
@@ -74,25 +72,6 @@ func MakeRealmMgr(bin string) *RealmMgr {
 	m.makeCtlFiles()
 
 	return m
-}
-
-// Wait until the realmmgr has set its control files up.
-func WaitRealmMgrStart(fsl *fslib.FsLib) {
-	for {
-		if _, err := fsl.Stat(FREE_MACHINEDS); err == nil {
-			break
-		}
-	}
-	for {
-		if _, err := fsl.Stat(REALM_CREATE); err == nil {
-			break
-		}
-	}
-	for {
-		if _, err := fsl.Stat(REALM_DESTROY); err == nil {
-			break
-		}
-	}
 }
 
 func (m *RealmMgr) makeInitFs() {
@@ -369,5 +348,5 @@ func (m *RealmMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
 	go m.balanceMachineds()
-	<-m.done
+	m.FsServer.Serve()
 }

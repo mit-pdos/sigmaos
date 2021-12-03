@@ -5,10 +5,8 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
-	"time"
 
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/proc"
 )
 
@@ -46,6 +44,7 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 	return cfg, nil
 }
 
+// TODO: eventually wait on exit signals
 func (e *TestEnv) Shutdown() {
 	// Destroy the realm
 	e.clnt.DestroyRealm(e.rid)
@@ -64,17 +63,13 @@ func (e *TestEnv) Shutdown() {
 }
 
 func (e *TestEnv) bootRealmMgr() error {
-	// Create boot cond
-	var err error
-	realmmgr, err := proc.Run("0", e.bin, "bin/realm/realmmgr", fslib.Named(), []string{e.bin})
-	e.realmmgr = realmmgr
+	p := proc.MakeProcPid("realmmgr-"+proc.GenPid(), "bin/realm/realmmgr", []string{e.bin})
+	cmd, err := e.clnt.SpawnKernelProc(p, e.bin, fslib.Named())
 	if err != nil {
 		return err
 	}
-	time.Sleep(kernel.SLEEP_MS * time.Millisecond)
-	fsl := fslib.MakeFsLib("testenv")
-	WaitRealmMgrStart(fsl)
-	return nil
+	e.realmmgr = cmd
+	return e.clnt.WaitStart(p.Pid)
 }
 
 func (e *TestEnv) BootMachined() error {

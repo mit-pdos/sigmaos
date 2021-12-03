@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/linuxsched"
 	"ulambda/named"
-	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
@@ -63,7 +61,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.spawnChan = make(chan bool)
 
 	pd.addr = pd.MyAddr()
-	pd.procclnt = procclnt.MakeProcClnt(pd.FsLib)
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -75,22 +72,9 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	if util {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
-	// Make some local directories.
-	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
 
-	if err := pd.procclnt.Started(proc.GetPid()); err != nil {
-		debug.PrintStack()
-		log.Fatalf("Error Started: %v", err)
-	}
 	go func() {
-		if err := pd.procclnt.WaitEvict(proc.GetPid()); err != nil {
-			debug.PrintStack()
-			log.Fatalf("Error WaitEvict: %v", err)
-		}
-		if err := pd.procclnt.Exited(proc.GetPid(), "EVICTED"); err != nil {
-			debug.PrintStack()
-			log.Fatalf("Error Exited: %v", err)
-		}
+		pd.Serve()
 		pd.Done()
 	}()
 

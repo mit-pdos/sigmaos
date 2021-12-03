@@ -3,7 +3,6 @@ package kernel
 import (
 	"log"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -13,7 +12,6 @@ import (
 	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/sync"
 )
 
 const (
@@ -183,7 +181,7 @@ func (s *System) Shutdown() {
 }
 
 // Boot a named and set up the initfs
-func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	var args []string
 	if realmId == NO_REALM {
 		args = []string{addr, NO_REALM}
@@ -196,23 +194,27 @@ func BootNamed(rootFsl *fslib.FsLib, bin string, addr string, replicate bool, id
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	// If this isn't the root named, create a cond to wait on
-	var namedStartCond *sync.Cond
-	if rootFsl != nil {
-		namedStartCond = sync.MakeCond(rootFsl, path.Join(named.BOOT, addr), nil, true)
-		namedStartCond.Init()
-	}
-
-	cmd, err := proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
-	if err != nil {
-		log.Printf("Error running named: %v", err)
-		return nil, err
-	}
-
-	if rootFsl != nil {
-		namedStartCond.Wait()
-	} else {
+	// If this isn't a root named, spawn it. Else, just run it directly.
+	var cmd *exec.Cmd
+	var err error
+	if pclnt == nil {
+		cmd, err = proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
+		if err != nil {
+			log.Printf("Error running named: %v", err)
+			return nil, err
+		}
 		time.Sleep(SLEEP_MS * time.Millisecond)
+	} else {
+		p := proc.MakeProcPid("named-"+strconv.Itoa(id), "bin/kernel/named", args)
+		cmd, err = pclnt.SpawnKernelProc(p, bin, fslib.Named())
+		if err != nil {
+			log.Fatalf("Error WaitStart in BootNamed: %v", err)
+			return nil, err
+		}
+		if err = pclnt.WaitStart(p.Pid); err != nil {
+			log.Fatalf("Error WaitStart in BootNamed: %v", err)
+			return nil, err
+		}
 	}
 
 	fsl := fslib.MakeFsLibAddr("realm", []string{addr})

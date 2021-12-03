@@ -12,6 +12,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/named"
+	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
@@ -34,6 +35,7 @@ type Machined struct {
 	realmLock *sync.Lock
 	*config.ConfigClnt
 	*fslib.FsLib
+	*procclnt.ProcClnt
 }
 
 func MakeMachined(bin string, id string) *Machined {
@@ -43,6 +45,7 @@ func MakeMachined(bin string, id string) *Machined {
 	r.bin = bin
 	r.cfgPath = path.Join(MACHINED_CONFIG, id)
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("machined-%v", id))
+	r.ProcClnt = procclnt.MakeProcClntInit(r.FsLib, fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
 
 	// Set up the machined config
@@ -52,8 +55,6 @@ func MakeMachined(bin string, id string) *Machined {
 
 	// Write the initial config file
 	r.WriteConfig(r.cfgPath, r.cfg)
-
-	WaitRealmMgrStart(r.FsLib)
 
 	// Mark self as available for allocation
 	r.markFree()
@@ -115,7 +116,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 		// Start a named instance.
-		if _, err := kernel.BootNamed(r.FsLib, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		if _, err := kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 	}

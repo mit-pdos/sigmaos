@@ -51,7 +51,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
 	n := "pids/" + args[1] + "/server"
-	mfs, err := fslibsrv.StartMemFsFsl(n, ba.FsLib)
+	mfs, err := fslibsrv.StartMemFsFsl(n, ba.FsLib, ba.ProcClnt)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

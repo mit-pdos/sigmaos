@@ -9,6 +9,7 @@ import (
 	"ulambda/config"
 	"ulambda/fslib"
 	"ulambda/named"
+	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
@@ -27,12 +28,14 @@ type RealmConfig struct {
 }
 
 type RealmClnt struct {
+	*procclnt.ProcClnt
 	*fslib.FsLib
 }
 
 func MakeRealmClnt() *RealmClnt {
 	clnt := &RealmClnt{}
 	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
+	clnt.ProcClnt = procclnt.MakeProcClntInit(clnt.FsLib, fslib.Named())
 	return clnt
 }
 

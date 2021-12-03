@@ -10,7 +10,7 @@ import (
 
 func RunMemfsdReplica(args []string, srvAddr string, unionDirPath string, config repl.Config) {
 	name := path.Join(unionDirPath, config.ReplAddr())
-	fss, fsl, err := fslibsrv.MakeReplMemfs(name, srvAddr, name, config)
+	fss, fsl, _, err := fslibsrv.MakeReplMemfs(name, srvAddr, name, config)
 	if err != nil {
 		log.Fatalf("RunMemfdReplica: err %v\n", err)
 	}

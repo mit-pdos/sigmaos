@@ -29,6 +29,7 @@ type Protsrv interface {
 	Renameat(np.Tsession, np.Trenameat, *np.Rrenameat) *np.Rerror
 	GetFile(np.Tsession, np.Tgetfile, *np.Rgetfile) *np.Rerror
 	SetFile(np.Tsession, np.Tsetfile, *np.Rwrite) *np.Rerror
+	Register(np.Tsession, np.Tregister, *np.Ropen) *np.Rerror
 	Detach(np.Tsession)
 	Closed() bool
 }
@@ -110,6 +111,10 @@ func Dispatch(p Protsrv, sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	case np.Tsetfile:
 		reply := &np.Rwrite{}
 		err := p.SetFile(sess, req, reply)
+		return *reply, err
+	case np.Tregister:
+		reply := &np.Ropen{}
+		err := p.Register(sess, req, reply)
 		return *reply, err
 	default:
 		return np.ErrUnknownMsg, nil

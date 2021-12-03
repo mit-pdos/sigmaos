@@ -257,6 +257,10 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 	return fsc.AttachReplicas([]string{server}, path, tree)
 }
 
+func (fsc *FsClient) RegisterLock(path string, v np.TQversion) error {
+	return fsc.pc.RegisterLock(np.Split(path), v)
+}
+
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
 	fid2 := fsc.path(fid)

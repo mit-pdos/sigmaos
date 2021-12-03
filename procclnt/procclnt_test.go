@@ -388,6 +388,7 @@ func testLocker(t *testing.T, part string) {
 	assert.Nil(t, err, "mkdir error")
 	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
+
 	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
@@ -409,9 +410,9 @@ func TestLockerNoPart(t *testing.T) {
 	testLocker(t, "NO")
 }
 
-//func TestLockerWithPart(t *testing.T) {
-//	testLocker(t, "YES")
-//}
+func TestLockerWithPart(t *testing.T) {
+	testLocker(t, "YES")
+}
 
 func TestReserveCores(t *testing.T) {
 	ts := makeTstate(t)

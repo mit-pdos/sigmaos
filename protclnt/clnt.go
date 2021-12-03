@@ -29,6 +29,10 @@ func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }
 
+func (clnt *Clnt) RegisterLock(path []string, v np.TQversion) error {
+	return clnt.cm.registerLock(path, v)
+}
+
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
 	reply, err := clnt.cm.makeCall(server, args)
 	if err != nil {

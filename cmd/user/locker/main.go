@@ -54,7 +54,7 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	lock := usync.MakeLock(fsl, DIR, "lock", true)
+	wlock := usync.MakeDLock(fsl, DIR, "lock", true)
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"
@@ -63,7 +63,7 @@ func main() {
 
 	partitioned := false
 	for i := 0; i < N; i++ {
-		lock.Lock()
+		err := wlock.WeakLock()
 
 		b, _, err := fsl.GetFile(cnt)
 		if err != nil {
@@ -123,7 +123,7 @@ func main() {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}
 
-		lock.Unlock()
+		wlock.Unlock()
 	}
 	pclnt.Exited(proc.GetPid(), "OK")
 }

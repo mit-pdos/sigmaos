@@ -661,3 +661,7 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 	}
 	return nil
 }
+
+func (fos *FsObjSrv) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
+	return nil
+}

@@ -10,10 +10,6 @@ import (
 	"ulambda/stats"
 )
 
-const (
-	bin = ".."
-)
-
 type Tstate struct {
 	*fslib.FsLib
 	t *testing.T
@@ -23,7 +19,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemNamed(bin)
+	ts.s = kernel.MakeSystemNamed("..")
 	ts.FsLib = fslib.MakeFsLibAddr("statstest", fslib.Named())
 	return ts
 }

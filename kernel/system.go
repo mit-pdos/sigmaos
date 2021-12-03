@@ -23,6 +23,7 @@ const (
 
 type System struct {
 	bin       string
+	pid       string
 	namedAddr []string
 	named     *exec.Cmd
 	fss3d     []*exec.Cmd
@@ -41,6 +42,7 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	_ = s.Mkdir(named.PROCD, 0777)
 	//	proc.SetPid("kernel-" + proc.GenPid())
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
+	s.pid = proc.GetPid()
 	return s
 }
 
@@ -54,10 +56,11 @@ func MakeSystemNamed(bin string) *System {
 		return nil
 	}
 	s.named = cmd
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
 	_ = s.Mkdir(named.PROCD, 0777)
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
+	s.pid = proc.GetPid()
 	return s
 }
 
@@ -146,35 +149,28 @@ func (s *System) KillOne(srv string) error {
 }
 
 func (s *System) Shutdown() {
-	cpids, err := s.GetChildren(proc.GetPid())
+	cpids, err := s.GetChildren(s.pid)
 	if err != nil {
 		log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
 	}
-	_ = cpids
-	// XXX eviction signals are sometimes dropped at the moment, so just kill processes
 	for _, pid := range cpids {
-		log.Printf("pid pre: %v", pid)
 		s.Evict(pid)
 		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
 			log.Printf("%v shutdown error %v %v", status, err)
 		}
-		log.Printf("pid post: %v", pid)
 	}
 	// Make sure the procs actually exited
 	for _, d := range s.fss3d {
-		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.fsuxd {
-		//		d.Process.Kill() // XXX remove
 		d.Wait()
+
 	}
 	for _, d := range s.procd {
-		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	for _, d := range s.dbd {
-		//		d.Process.Kill() // XXX remove
 		d.Wait()
 	}
 	if s.named != nil {

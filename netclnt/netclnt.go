@@ -16,6 +16,10 @@ import (
 	"ulambda/npcodec"
 )
 
+const (
+	MAX_TAG_ALLOC_RETRIES = 1000000
+)
+
 //
 // Multiplexes RPCs onto a single network connection to server
 //
@@ -213,6 +217,19 @@ func (nc *NetClnt) allocate(req *RpcT) np.Ttag {
 
 	t := nc.nextTag
 	nc.nextTag += 1
+	retries := 0
+	_, ok := nc.outstanding[t]
+	// Retry until we get an unclaimed tag
+	for ok {
+		retries += 1
+		if retries == MAX_TAG_ALLOC_RETRIES {
+			debug.PrintStack()
+			log.Fatalf("Error: Tried to allocate too many tags at once %v", len(nc.outstanding))
+		}
+		t = nc.nextTag
+		nc.nextTag += 1
+		_, ok = nc.outstanding[t]
+	}
 	nc.outstanding[t] = req
 	return t
 }

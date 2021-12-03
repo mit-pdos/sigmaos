@@ -63,5 +63,5 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 		return nil
 	}
 
-	return makeProcClnt(fsl, "pids", "")
+	return makeProcClnt(fsl, "pids", proc.GetPid())
 }

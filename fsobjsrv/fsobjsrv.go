@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fid"
@@ -18,12 +17,13 @@ import (
 )
 
 type FsObjSrv struct {
-	mu     sync.Mutex
+	mu     sync.Mutex // to protect closed
 	closed bool
-	fssrv  *fssrv.FsServer
-	wt     *watch.WatchTable
-	st     *session.SessionTable
-	stats  *stats.Stats
+
+	fssrv *fssrv.FsServer
+	wt    *watch.WatchTable
+	st    *session.SessionTable
+	stats *stats.Stats
 }
 
 type ProtServer struct{}
@@ -99,19 +99,19 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 // is responsible for calling this serially, which should
 // is not burden, because it is typically called once.
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
-	fos.mu.Lock()
-	defer fos.mu.Unlock()
-
 	ephemeral := fos.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
-		o.Parent().Remove(f.Ctx(), f.PathLast())
-		fos.wt.WakeupWatch(f.Path())
+		fos.removeObj(sess, f.Ctx(), o, f.Path())
 	}
 	fos.wt.DeleteConn(fos)
 	fos.st.DeleteSession(sess)
 	fos.fssrv.GetConnTable().Del(fos)
+
+	fos.mu.Lock()
+	defer fos.mu.Unlock()
 	fos.closed = true
+	log.Printf("detach return\n")
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {
@@ -202,10 +202,10 @@ func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.R
 	return nil
 }
 
-// XXX race in WatchV: change o between VEq and set Watch
 func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	fos.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
+
 	f, err := fos.lookup(sess, args.Fid)
 	if err != nil {
 		return err
@@ -214,22 +214,27 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	if o == nil {
 		return np.ErrClunked
 	}
-	if o.Nlink() == 0 {
-		return np.ErrNotfound
-	}
-	if !np.VEq(args.Version, o.Version()) {
-		return &np.Rerror{fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())}
-	}
 	p := f.Path()
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	// time.Sleep(1000 * time.Nanosecond)
+
+	// get lock on watch entry for p, so that remove cannot remove
+	// file before watch is set.
 	ws := fos.wt.WatchLookupL(p)
-	//if len(f.Path()) > 0 && f.Path()[0] == "w" {
-	//	log.Printf("set watch %v %v\n", p, o.Nlink())
-	//}
+	defer fos.wt.Release(ws)
+
+	if o.Nlink() == 0 {
+		return np.ErrNotfound
+	}
+	if !np.VEq(args.Version, o.Version()) {
+
+		return &np.Rerror{fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())}
+	}
+	// time.Sleep(1000 * time.Nanosecond)
+
 	ws.Watch(fos)
+
 	return nil
 }
 
@@ -239,37 +244,34 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 	if eph {
 		fos.st.AddEphemeral(sess, o, nf)
 	}
-	fos.wt.WakeupWatch(nf.Path())
 	return nf
 }
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
 func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
+	p := append(dir, name)
+	dws := fos.wt.WatchLookupL(dir)
+	defer fos.wt.Release(dws)
+	fws := fos.wt.WatchLookupL(p)
+	defer fos.wt.Release(fws)
 	for {
-		p := append(dir, name)
-		var ws *watch.Watchers
-		if mode&np.OWATCH == np.OWATCH {
-			ws = fos.wt.WatchLookupL(p)
-		}
 		o1, err := d.Create(ctx, name, perm, mode)
 		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
 		if err == nil {
-			if ws != nil {
-				fos.wt.Release(ws, p)
-			}
+			fws.WakeupWatchL()
+			dws.WakeupWatchL()
 			return o1, nil
 		} else {
-			if ws != nil && err.Error() == "Name exists" {
-				err := ws.Watch(fos)
+			if mode&np.OWATCH == np.OWATCH && err.Error() == "Name exists" {
+				fws.Unlock()
+				err := dws.Watch(fos)
+				fws.Lock() // not necessary if fail, but nicer with defer
 				if err != nil {
 					return nil, err
 				}
-				// try again
+				// try again; we will hold lock on watchers
 			} else {
-				if ws != nil {
-					fos.wt.Release(ws, p)
-				}
 				return nil, &np.Rerror{err.Error()}
 			}
 		}
@@ -333,7 +335,44 @@ func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *n
 	return r
 }
 
-// XXX is remove obsolete?  (removefile -> remove?)
+// XXX make .exit a reserved name
+func isExit(path []string) bool {
+	return len(path) == 1 && path[0] == ".exit"
+}
+
+func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
+
+	// log.Printf("removeObj %v\n", path)
+
+	// lock watch entry to make WatchV and Remove interact
+	// correctly
+	dws := fos.wt.WatchLookupL(np.Dir(path))
+	fws := fos.wt.WatchLookupL(path)
+	defer fos.wt.Release(dws)
+	defer fos.wt.Release(fws)
+
+	fos.stats.Path(path)
+
+	r := o.Parent().Remove(ctx, path[len(path)-1])
+	if r != nil {
+		log.Printf("remove err %v f %v\n", r, path)
+		return &np.Rerror{r.Error()}
+	}
+	r = o.Unlink(ctx)
+	if r != nil {
+		log.Printf("Unlink err %v f %v\n", r, path)
+		return &np.Rerror{r.Error()}
+	}
+
+	fws.WakeupWatchL()
+	dws.WakeupWatchL()
+
+	if o.Perm().IsEphemeral() {
+		fos.st.DelEphemeral(sess, o)
+	}
+	return nil
+}
+
 func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
 	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(sess, args.Fid)
@@ -344,31 +383,12 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 	if o == nil {
 		return np.ErrClunked
 	}
-	if len(f.Path()) == 0 { // exit?
+	if isExit(f.Path()) {
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil
 	}
-	db.DLPrintf("9POBJ", "Remove f %v\n", f)
-	r := o.Parent().Remove(f.Ctx(), f.PathLast())
-	if r != nil {
-		log.Printf("remove err %v f %v\n", r, f.Path())
-		// return &np.Rerror{r.Error()}
-	}
-
-	r = o.Unlink(f.Ctx())
-	if r != nil {
-		log.Printf("Unlink err %v f %v\n", r, f.Path())
-		// return &np.Rerror{r.Error()}
-	}
-
-	db.DLPrintf("9POBJ", "Remove f WakeupWatch %v\n", f)
-	fos.wt.WakeupWatch(f.Path())
-
-	if o.Perm().IsEphemeral() {
-		fos.del(sess, args.Fid)
-	}
-	return nil
+	return fos.removeObj(sess, f.Ctx(), o, f.Path())
 }
 
 func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Rerror) {
@@ -381,7 +401,6 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 		return nil, &np.Rerror{fmt.Errorf("dir not found %v", names).Error()}
 	}
 	return os[len(os)-1], nil
-
 }
 
 // RemoveFile is Remove() but args.Wnames may contain a symlink that
@@ -398,42 +417,23 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if o == nil {
 		return np.ErrClunked
 	}
-	lo := o
-	// XXX make .exit a reserved name
-	if len(f.Path()) == 0 && len(args.Wnames) == 1 && args.Wnames[0] == ".exit" { // exit?
+
+	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
+	if isExit(fname) {
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil
 	}
+
+	lo := o
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
+			log.Printf("lookup err %v f %v\n", err, fname)
 			return err
 		}
 	}
-	fos.stats.Path(f.Path())
-	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
-
-	r := lo.Parent().Remove(f.Ctx(), fname[len(fname)-1])
-	if r != nil {
-		return &np.Rerror{r.Error()}
-	}
-	r = lo.Unlink(f.Ctx())
-	if r != nil {
-		log.Printf("Unlink err %v f %v\n", r, f.Path())
-		return &np.Rerror{r.Error()}
-	}
-
-	//if fname[len(fname)-1] == "w" {
-	//	log.Printf("removed and fire %v\n", f.Path())
-	//}
-
-	fos.wt.WakeupWatch(fname)
-
-	if lo.Perm().IsEphemeral() {
-		fos.st.DelEphemeral(sess, lo)
-	}
-	return nil
+	return fos.removeObj(sess, f.Ctx(), lo, fname)
 }
 
 func (fos *FsObjSrv) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
@@ -467,19 +467,40 @@ func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *n
 		return np.ErrClunked
 	}
 	if args.Stat.Name != "" {
-		// update name atomically with rename
+		// update Name atomically with rename
+
+		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
+
+		dws := fos.wt.WatchLookupL(f.PathDir())
+		defer fos.wt.Release(dws)
+		sws := fos.wt.WatchLookupL(f.Path())
+		defer fos.wt.Release(sws)
+		tws := fos.wt.WatchLookupL(dst)
+		defer fos.wt.Release(tws)
+
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
 			return &np.Rerror{err.Error()}
 		}
-		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
-		fos.wt.WakeupWatch(dst)      // trigger create watch
-		fos.wt.WakeupWatch(f.Path()) // trigger remove watch
+		tws.WakeupWatchL() // trigger create watch
+		sws.WakeupWatchL() // trigger remove watch
+		dws.WakeupWatchL() // trigger dir watch
 		f.SetPath(dst)
 	}
 	// XXX ignore other Wstat for now
 	return nil
+}
+
+func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid, *fid.Fid) {
+	if d1.Inum() < d2.Inum() {
+		return oldf, newf
+	} else if d1.Inum() == d2.Inum() { // would have used wstat instead of renameat
+		log.Fatalf("lockOrder")
+		return oldf, newf
+	} else {
+		return newf, oldf
+	}
 }
 
 func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
@@ -507,14 +528,31 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 		if !ok {
 			return np.ErrNotDir
 		}
+		if oo.Inum() == no.Inum() {
+			return np.ErrInval
+		}
+		f1, f2 := lockOrder(oo, oldf, no, newf)
+		d1ws := fos.wt.WatchLookupL(f1.Path())
+		d2ws := fos.wt.WatchLookupL(f2.Path())
+		defer fos.wt.Release(d1ws)
+		defer fos.wt.Release(d2ws)
+
+		src := append(np.Copy(oldf.Path()), args.OldName)
+		dst := append(np.Copy(newf.Path()), args.NewName)
+		srcws := fos.wt.WatchLookupL(src)
+		dstws := fos.wt.WatchLookupL(dst)
+		defer fos.wt.Release(srcws)
+		defer fos.wt.Release(dstws)
+
 		err := d1.Renameat(oldf.Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
+
 			return &np.Rerror{err.Error()}
 		}
-		dst := append(np.Copy(newf.Path()), args.NewName)
-		fos.wt.WakeupWatch(dst) // trigger create watch
-		src := append(np.Copy(oldf.Path()), args.OldName)
-		fos.wt.WakeupWatch(src) // trigger remove watch
+		dstws.WakeupWatchL() // trigger create watch
+		srcws.WakeupWatchL() // trigger remove watch
+		d1ws.WakeupWatchL()  // trigger one dir watch
+		d2ws.WakeupWatchL()  // trigger the other dir watch
 	default:
 		return np.ErrNotDir
 	}

@@ -87,7 +87,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 			debug.PrintStack()
 			log.Fatalf("Error WaitEvict: %v", err)
 		}
-		log.Printf("eviction triggered procd")
 		if err := pd.procclnt.Exited(proc.GetPid(), "EVICTED"); err != nil {
 			debug.PrintStack()
 			log.Fatalf("Error Exited: %v", err)

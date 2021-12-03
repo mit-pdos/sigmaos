@@ -35,8 +35,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	bin := ".."
-	ts.s = kernel.MakeSystemNamed(bin)
+	ts.s = kernel.MakeSystemNamed("..")
 	ts.FsLib = fslib.MakeFsLibAddr("sync_test", fslib.Named())
 	ts.Mkdir(named.LOCKS, 0777)
 	return ts

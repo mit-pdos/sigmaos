@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"log"
 	"sync"
 
 	db "ulambda/debug"
@@ -9,35 +10,37 @@ import (
 )
 
 type Watch struct {
-	npc protsrv.Protsrv
-	ch  chan bool
+	npc  protsrv.Protsrv
+	cond *sync.Cond
 }
 
-func mkWatch(npc protsrv.Protsrv) *Watch {
-	return &Watch{npc, make(chan bool)}
+func mkWatch(npc protsrv.Protsrv, l sync.Locker) *Watch {
+	return &Watch{npc, sync.NewCond(l)}
 }
 
 type Watchers struct {
-	mu       sync.Mutex
+	sync.Mutex
+	path     string // the key in WatchTable
+	nref     int    // updated under table lock
 	watchers []*Watch
 }
 
-func mkWatchers() *Watchers {
+func mkWatchers(path string) *Watchers {
 	w := &Watchers{}
+	w.path = path
 	w.watchers = make([]*Watch, 0)
 	return w
 }
 
-func (w *Watchers) Unlock() {
-	w.mu.Unlock()
-}
+// Caller should hold ws lock on return caller has ws lock again
+func (ws *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
+	w := mkWatch(npc, &ws.Mutex)
+	ws.watchers = append(ws.watchers, w)
+	w.cond.Wait()
 
-func (w *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
-	ws := mkWatch(npc)
-	w.watchers = append(w.watchers, ws)
-	w.mu.Unlock()
-	<-ws.ch
-	db.DLPrintf("WATCH", "Watch done waiting %v\n", w)
+	// log.Printf("%v: watch done waiting %v\n", ws, ws.path)
+
+	db.DLPrintf("WATCH", "Watch done waiting %v %v %v\n", ws, ws.path, npc.Closed())
 
 	if npc.Closed() {
 		// XXX Bettter error message?
@@ -46,28 +49,23 @@ func (w *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
 	return nil
 }
 
-func (ws *Watchers) NoWaiters() bool {
-	return len(ws.watchers) == 0
-}
-
-func (ws *Watchers) wakeupWatch() {
-	defer ws.mu.Unlock()
-	ws.mu.Lock()
+func (ws *Watchers) WakeupWatchL() {
 	for _, w := range ws.watchers {
 		db.DLPrintf("WATCH", "WakeupWatch %v\n", w)
-		w.ch <- true
+		w.cond.Signal()
 	}
+	ws.watchers = make([]*Watch, 0)
 }
 
 func (ws *Watchers) deleteConn(npc protsrv.Protsrv) {
-	defer ws.mu.Unlock()
-	ws.mu.Lock()
+	ws.Lock()
+	defer ws.Unlock()
 
 	tmp := ws.watchers[:0]
 	for _, w := range ws.watchers {
 		if w.npc == npc {
 			db.DLPrintf("WATCH", "Delete watch %v\n", w)
-			w.ch <- true
+			w.cond.Signal()
 		} else {
 			tmp = append(tmp, w)
 		}
@@ -76,8 +74,9 @@ func (ws *Watchers) deleteConn(npc protsrv.Protsrv) {
 }
 
 type WatchTable struct {
-	mu       sync.Mutex
+	sync.Mutex
 	watchers map[string]*Watchers
+	locked   bool
 }
 
 func MkWatchTable() *WatchTable {
@@ -90,73 +89,64 @@ func MkWatchTable() *WatchTable {
 // XXX Normalize paths (e.g., delete extra /) so that matches
 // work for equivalent paths
 func (wt *WatchTable) WatchLookupL(path []string) *Watchers {
-	defer wt.mu.Unlock()
 	p := np.Join(path)
-	wt.mu.Lock()
+
+	wt.Lock()
 	ws, ok := wt.watchers[p]
 	if !ok {
-		p1 := np.Copy(path)
-		p = np.Join(p1)
-		ws = mkWatchers()
+		ws = mkWatchers(p)
 		wt.watchers[p] = ws
 	}
-	ws.mu.Lock()
+	ws.nref++ /// ensure ws won't be deleted from table
+	wt.Unlock()
+
+	ws.Lock()
+
 	return ws
 }
 
 // Release watchers for path. Caller should have watchers locked
 // through WatchLookupL().
-func (wt *WatchTable) Release(ws *Watchers, path []string) {
+func (wt *WatchTable) Release(ws *Watchers) {
 	ws.Unlock()
 
-	defer wt.mu.Unlock()
-	p := np.Join(path)
-	wt.mu.Lock()
-	ws, ok := wt.watchers[p]
+	wt.Lock()
+	defer wt.Unlock()
+
+	ws.nref--
+
+	ws1, ok := wt.watchers[ws.path]
 	if !ok {
 		// Another thread already deleted the entry
 		return
 	}
-	ws.mu.Lock()
-	if ws.NoWaiters() {
-		delete(wt.watchers, p)
-	}
-	ws.Unlock()
-}
 
-// Wake up watches on file and parent dir
-// XXX maybe support wakeupOne?
-func (wt *WatchTable) WakeupWatch(fn []string) {
-	dir := np.Dir(fn)
-	p := np.Join(fn)
-	p1 := np.Join(dir)
+	if ws != ws1 {
+		log.Fatalf("Release\n")
+	}
 
-	db.DLPrintf("WATCH", "WakeupWatch check for %v, %v\n", p, p1)
-
-	wt.mu.Lock()
-	ws, ok := wt.watchers[p]
-	if ok {
-		delete(wt.watchers, p)
-	}
-	ws1, ok1 := wt.watchers[p1]
-	if ok1 {
-		delete(wt.watchers, p1)
-	}
-	wt.mu.Unlock()
-	if ok {
-		ws.wakeupWatch()
-	}
-	if ok1 {
-		ws1.wakeupWatch()
+	if ws.nref == 0 {
+		delete(wt.watchers, ws.path)
 	}
 }
 
-// Wakeup threads waiting for a watch on this connection
+// Wakeup threads waiting for a watch on this connection.  Iterating
+// through wt.wathers doesn't follow lock holder and calling
+// ws.deleteConn() while holding wt lock can result in deadlock, so we
+// make a copy of wt.watchers while holding the lock and then iterate
+// through the copy without holding the lock.  XXX better plan?
 func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
-	wt.mu.Lock()
-	defer wt.mu.Unlock()
+	// log.Printf("delete %p conn %p\n", wt, npc)
 
-	for _, ws := range wt.watchers {
+	wt.Lock()
+	m := make(map[string]*Watchers)
+	for f, ws := range wt.watchers {
+		m[f] = ws
+	}
+	wt.Unlock()
+
+	for _, ws := range m {
 		ws.deleteConn(npc)
 	}
+	log.Printf("delete conn %p done\n", npc)
 }

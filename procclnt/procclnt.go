@@ -108,7 +108,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	}
 
 	// Add pid to my children
-	f := PIDS + "/" + proc.GetPid() + "/" + CHILD + "/" + p.Pid
+	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + p.Pid
 	if err := clnt.MakeFile(f, 0777, np.OWRITE, []byte{}); err != nil {
 		log.Printf("%v: Spawn mkfile child %v err %v\n", db.GetName(), f, err)
 		return clnt.cleanupError(piddir, err)
@@ -161,7 +161,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 
 	// Remove pid from my children
-	f := PIDS + "/" + proc.GetPid() + "/" + CHILD + "/" + path.Base(pid)
+	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
 	if err := clnt.Remove(f); err != nil {
 		log.Fatalf("Error Remove %v in WaitExit: %v", f, err)
 	}

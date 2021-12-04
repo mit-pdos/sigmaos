@@ -53,7 +53,7 @@ func (l *DLock) WeakLock() error {
 		db.DLPrintf("DLOCK", "%v: Stat %v err %v", db.GetName(), st, err)
 		return err
 	}
-	err = l.RegisterLock(fn, st.Qid.Version)
+	err = l.RegisterLock(fn, st.Qid)
 	if err != nil {
 		db.DLPrintf("DLOCK", "%v: RegisterLock %v err %v", db.GetName(), fn, err)
 		return err

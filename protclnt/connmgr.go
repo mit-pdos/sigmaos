@@ -106,11 +106,11 @@ func (cm *ConnMgr) mcast(ch chan error, dst []string, req np.Tmsg) {
 	}
 }
 
-func (cm *ConnMgr) registerLock(path []string, v np.TQversion) error {
+func (cm *ConnMgr) registerLock(path []string, qid np.Tqid) error {
 	ch := make(chan error)
 	cm.mu.Lock()
 	n := 0
-	args := np.Tregister{path, v}
+	args := np.Tregister{path, qid}
 	for addr, _ := range cm.conns {
 		n += 1
 		go cm.mcast(ch, strings.Split(addr, ","), args)

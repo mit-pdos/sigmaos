@@ -257,8 +257,8 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 	return fsc.AttachReplicas([]string{server}, path, tree)
 }
 
-func (fsc *FsClient) RegisterLock(path string, v np.TQversion) error {
-	return fsc.pc.RegisterLock(np.Split(path), v)
+func (fsc *FsClient) RegisterLock(path string, qid np.Tqid) error {
+	return fsc.pc.RegisterLock(np.Split(path), qid)
 }
 
 func (fsc *FsClient) DeregisterLock(path string) error {

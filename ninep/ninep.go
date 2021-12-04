@@ -484,8 +484,8 @@ type Tremovefile struct {
 }
 
 type Tregister struct {
-	Wnames  []string
-	Version TQversion
+	Wnames []string
+	Qid    Tqid
 }
 
 type Tderegister struct {

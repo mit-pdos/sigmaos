@@ -16,12 +16,12 @@ import (
 )
 
 type Dlock struct {
-	fn []string
-	v  np.TQversion
+	fn  []string
+	qid np.Tqid
 }
 
-func makeDlock(dlock []string, v np.TQversion) *Dlock {
-	return &Dlock{dlock, v}
+func makeDlock(dlock []string, qid np.Tqid) *Dlock {
+	return &Dlock{dlock, qid}
 }
 
 type FsServer struct {
@@ -97,7 +97,7 @@ func (fssrv *FsServer) checkDlock() error {
 	if err != nil {
 		return err
 	}
-	if st.Qid.Version != fssrv.dlock.v {
+	if st.Qid != fssrv.dlock.qid {
 		return fmt.Errorf("dlock %v is stale\n", fssrv.dlock.fn)
 	}
 	return nil
@@ -105,7 +105,7 @@ func (fssrv *FsServer) checkDlock() error {
 
 func (fssrv *FsServer) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
 	// log.Printf("%v: reg %v\n", db.GetName(), args)
-	fssrv.dlock = makeDlock(args.Wnames, args.Version)
+	fssrv.dlock = makeDlock(args.Wnames, args.Qid)
 	return nil
 }
 

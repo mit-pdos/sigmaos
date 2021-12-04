@@ -58,7 +58,7 @@ func makeStatDev(root fs.Dir, srv *fssrv.FsServer) error {
 }
 
 func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
 	srv, fsl, err := MakeReplServer(root, addr, path, "named", conf)
 	if err != nil {
 		return nil, nil, err
@@ -86,7 +86,7 @@ func (fs *MemFs) Wait() {
 }
 
 func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib, error) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
 	fsl := fslib.MakeFsLib(name)
 	srv, err := MakeSrv(root, path, fsl)
 	if err != nil {
@@ -96,7 +96,7 @@ func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib,
 }
 
 func MakeMemFsFsl(path string, fsl *fslib.FsLib) (fs.Dir, *fssrv.FsServer, error) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
 	srv, err := MakeSrv(root, path, fsl)
 	if err != nil {
 		return nil, nil, err

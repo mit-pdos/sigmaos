@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	N   = 100
-	DIR = "name/locktest"
+	N     = 100
+	DIR   = "name/locktest"
+	DELAY = 10
 )
 
 //
@@ -84,12 +85,12 @@ func main() {
 
 		if os.Args[1] == "YES" {
 			if crash.MaybePartition(fsl) {
-				log.Printf("partition\n")
+				log.Printf("%v: partition\n", db.GetName())
 				partitioned = true
 			}
 		}
 
-		delay.Delay(10)
+		delay.Delay(DELAY)
 
 		n, err := strconv.Atoi(string(b))
 		if err != nil {

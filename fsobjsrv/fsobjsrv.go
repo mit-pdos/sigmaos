@@ -428,7 +428,6 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
-			log.Printf("lookup err %v f %v\n", err, fname)
 			return err
 		}
 	}

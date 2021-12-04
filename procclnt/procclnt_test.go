@@ -375,7 +375,7 @@ func TestEvict(t *testing.T) {
 }
 
 func testLocker(t *testing.T, part string) {
-	const N = 20
+	const N = 2 // 20
 
 	ts := makeTstate(t)
 	pids := []string{}

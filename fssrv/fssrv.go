@@ -3,6 +3,7 @@ package fssrv
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -25,10 +26,12 @@ func makeDlock(dlock []string, qid np.Tqid) *Dlock {
 }
 
 type FsServer struct {
+	sync.Mutex
+	dlock *Dlock
+
 	protsrv.Protsrv
 	addr  string
 	root  fs.Dir
-	dlock *Dlock
 	mkps  protsrv.MakeProtServer
 	stats *stats.Stats
 	wt    *watch.WatchTable
@@ -54,12 +57,18 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib, mkps protsrv.MakeP
 	return fssrv
 }
 
-func (fsd *FsServer) Serve() {
-	<-fsd.ch
+func (fssrv *FsServer) getDlock() *Dlock {
+	fssrv.Lock()
+	defer fssrv.Unlock()
+	return fssrv.dlock
 }
 
-func (fsd *FsServer) Done() {
-	fsd.ch <- true
+func (fssrv *FsServer) Serve() {
+	<-fssrv.ch
+}
+
+func (fssrv *FsServer) Done() {
+	fssrv.ch <- true
 }
 
 func (fssrv *FsServer) MyAddr() string {
@@ -92,14 +101,18 @@ func (fssrv *FsServer) Connect() protsrv.Protsrv {
 	return fssrv
 }
 
-func (fssrv *FsServer) checkDlock() error {
-	st, err := fssrv.fsl.Stat(np.Join(fssrv.dlock.fn))
+func (fssrv *FsServer) checkDlock(dlock *Dlock) error {
+	st, err := fssrv.fsl.Stat(np.Join(dlock.fn))
 	if err != nil {
 		return err
 	}
-	if st.Qid != fssrv.dlock.qid {
-		return fmt.Errorf("dlock %v is stale\n", fssrv.dlock.fn)
+	if st.Qid != dlock.qid {
+		return fmt.Errorf("dlock %v is stale\n", dlock.fn)
 	}
+	return nil
+}
+
+func (fssrv *FsServer) checkDlock1(dlock *Dlock) error {
 	return nil
 }
 
@@ -110,6 +123,9 @@ func (fssrv *FsServer) Register(sess np.Tsession, args np.Tregister, rets *np.Ro
 }
 
 func (fssrv *FsServer) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
+	fssrv.Lock()
+	defer fssrv.Unlock()
+
 	// log.Printf("%v: dereg %v\n", db.GetName(), args)
 	if fssrv.dlock == nil {
 		return &np.Rerror{fmt.Sprintf("lock %v is stale")}
@@ -119,8 +135,10 @@ func (fssrv *FsServer) Deregister(sess np.Tsession, args np.Tderegister, rets *n
 }
 
 func (fssrv *FsServer) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	if fssrv.dlock != nil {
-		err := fssrv.checkDlock()
+	dlock := fssrv.getDlock()
+	if dlock != nil {
+		err := fssrv.checkDlock(dlock)
+		// err := fssrv.checkDlock1(dlock)
 		if err != nil {
 			log.Printf("checkDlock %v\n", err)
 			return &np.Rerror{err.Error()}

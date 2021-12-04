@@ -94,7 +94,7 @@ func (cm *ConnMgr) disconnect(dst []string) bool {
 	return true
 }
 
-func (cm *ConnMgr) register(ch chan error, dst []string, req np.Tmsg) {
+func (cm *ConnMgr) mcast(ch chan error, dst []string, req np.Tmsg) {
 	if reply, err := cm.makeCall(dst, req); err != nil {
 		ch <- err
 	} else {
@@ -113,7 +113,28 @@ func (cm *ConnMgr) registerLock(path []string, v np.TQversion) error {
 	args := np.Tregister{path, v}
 	for addr, _ := range cm.conns {
 		n += 1
-		go cm.register(ch, strings.Split(addr, ","), args)
+		go cm.mcast(ch, strings.Split(addr, ","), args)
+	}
+	cm.mu.Unlock()
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil {
+			err = r
+		}
+	}
+	return err
+}
+
+// XXX deduplicate
+func (cm *ConnMgr) deregisterLock(path []string) error {
+	ch := make(chan error)
+	cm.mu.Lock()
+	n := 0
+	args := np.Tderegister{path}
+	for addr, _ := range cm.conns {
+		n += 1
+		go cm.mcast(ch, strings.Split(addr, ","), args)
 	}
 	cm.mu.Unlock()
 	var err error

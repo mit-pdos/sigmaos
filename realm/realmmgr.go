@@ -50,7 +50,7 @@ type RealmMgr struct {
 	root          fs.Dir
 	*config.ConfigClnt
 	*fslib.FsLib
-	*fssrv.FsServer
+	fsrv *fssrv.FsServer
 }
 
 func MakeRealmMgr(bin string) *RealmMgr {
@@ -65,7 +65,7 @@ func MakeRealmMgr(bin string) *RealmMgr {
 	if err != nil {
 		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)
 	}
-	m.root, m.FsServer, m.FsLib, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
+	m.root, m.fsrv, m.FsLib, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}

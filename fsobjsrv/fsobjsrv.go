@@ -665,3 +665,8 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 func (fos *FsObjSrv) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
 	return nil
 }
+
+func (fos *FsObjSrv) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
+	log.Printf("reg %v\n", args)
+	return nil
+}

@@ -1,8 +1,13 @@
 package fssrv
 
 import (
+	"fmt"
+	"log"
+
 	"ulambda/fs"
+	"ulambda/fslib"
 	"ulambda/netsrv"
+	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/session"
@@ -10,9 +15,20 @@ import (
 	"ulambda/watch"
 )
 
+type Dlock struct {
+	fn []string
+	v  np.TQversion
+}
+
+func makeDlock(dlock []string, v np.TQversion) *Dlock {
+	return &Dlock{dlock, v}
+}
+
 type FsServer struct {
+	protsrv.Protsrv
 	addr  string
 	root  fs.Dir
+	dlock *Dlock
 	mkps  protsrv.MakeProtServer
 	stats *stats.Stats
 	wt    *watch.WatchTable
@@ -20,11 +36,10 @@ type FsServer struct {
 	ct    *ConnTable
 	srv   *netsrv.NetServer
 	ch    chan bool
+	fsl   *fslib.FsLib
 }
 
-func MakeFsServer(root fs.Dir, addr string,
-	mkps protsrv.MakeProtServer,
-	config repl.Config) *FsServer {
+func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib, mkps protsrv.MakeProtServer, config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.root = root
 	fssrv.addr = addr
@@ -35,6 +50,7 @@ func MakeFsServer(root fs.Dir, addr string,
 	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.ch = make(chan bool)
+	fssrv.fsl = fsl
 	return fssrv
 }
 
@@ -71,9 +87,46 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 }
 
 func (fssrv *FsServer) Connect() protsrv.Protsrv {
-	psrv := fssrv.mkps.MakeProtServer(fssrv)
-	fssrv.ct.Add(psrv)
-	return psrv
+	fssrv.Protsrv = fssrv.mkps.MakeProtServer(fssrv)
+	fssrv.ct.Add(fssrv.Protsrv)
+	return fssrv
+}
+
+func (fssrv *FsServer) checkDlock() error {
+	st, err := fssrv.fsl.Stat(np.Join(fssrv.dlock.fn))
+	if err != nil {
+		return err
+	}
+	if st.Qid.Version != fssrv.dlock.v {
+		return fmt.Errorf("dlock %v is stale\n", fssrv.dlock.fn)
+	}
+	return nil
+}
+
+func (fssrv *FsServer) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
+	// log.Printf("%v: reg %v\n", db.GetName(), args)
+	fssrv.dlock = makeDlock(args.Wnames, args.Version)
+	return nil
+}
+
+func (fssrv *FsServer) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
+	// log.Printf("%v: dereg %v\n", db.GetName(), args)
+	if fssrv.dlock == nil {
+		return &np.Rerror{fmt.Sprintf("lock %v is stale")}
+	}
+	fssrv.dlock = nil
+	return nil
+}
+
+func (fssrv *FsServer) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
+	if fssrv.dlock != nil {
+		err := fssrv.checkDlock()
+		if err != nil {
+			log.Printf("checkDlock %v\n", err)
+			return &np.Rerror{err.Error()}
+		}
+	}
+	return fssrv.Protsrv.Write(sess, args, rets)
 }
 
 type Ctx struct {

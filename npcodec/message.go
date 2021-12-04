@@ -80,6 +80,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Tsetfile{}, nil
 	case np.TTregister:
 		return np.Tregister{}, nil
+	case np.TTderegister:
+		return np.Tderegister{}, nil
 	}
 	return nil, fmt.Errorf("unknown message type: %v", (uint64)(typ))
 }

@@ -1,6 +1,8 @@
 package fslibsrv
 
 import (
+	"log"
+
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
@@ -13,8 +15,8 @@ import (
 	"ulambda/repl"
 )
 
-func makeSrv(root fs.Dir, addr string, config repl.Config) *fssrv.FsServer {
-	srv := fssrv.MakeFsServer(root, addr, fos.MakeProtServer(), config)
+func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, config repl.Config) *fssrv.FsServer {
+	srv := fssrv.MakeFsServer(root, addr, fsl, fos.MakeProtServer(), config)
 	return srv
 }
 
@@ -23,7 +25,7 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib) (*fssrv.FsServer, error
 	if err != nil {
 		return nil, err
 	}
-	srv := makeSrv(root, ip+":0", nil)
+	srv := makeSrv(root, ip+":0", fsl, nil)
 	if np.EndSlash(path) {
 		fsl.Mkdir(path, 0777)
 		err = fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
@@ -38,8 +40,9 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib) (*fssrv.FsServer, error
 
 func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, error) {
 	db.Name(name)
-	srv := makeSrv(root, addr, config)
+	log.Printf("MakeReplServer: %v\n", name)
 	fsl := fslib.MakeFsLib(name)
+	srv := makeSrv(root, addr, fsl, config)
 	if len(path) > 0 {
 		fsl.Mkdir(path, 0777)
 		err := fsl.PostServiceUnion(srv.MyAddr(), path, srv.MyAddr())
@@ -59,6 +62,10 @@ func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fs
 	srv, fsl, err := MakeReplServer(root, addr, path, "named", conf)
 	if err != nil {
 		return nil, nil, err
+	}
+	err = fsl.MountTree(fslib.Named(), "", "name")
+	if err != nil {
+		log.Fatalf("%v: Mount %v error: %v", db.GetName(), fslib.Named(), err)
 	}
 	return srv, fsl, makeStatDev(root, srv)
 }

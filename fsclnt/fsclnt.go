@@ -261,6 +261,10 @@ func (fsc *FsClient) RegisterLock(path string, v np.TQversion) error {
 	return fsc.pc.RegisterLock(np.Split(path), v)
 }
 
+func (fsc *FsClient) DeregisterLock(path string) error {
+	return fsc.pc.DeregisterLock(np.Split(path))
+}
+
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
 	fid2 := fsc.path(fid)

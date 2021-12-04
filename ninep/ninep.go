@@ -225,6 +225,7 @@ const (
 	TTsetfile
 	TTremovefile
 	TTregister
+	TTderegister
 )
 
 func (fct Tfcall) String() string {
@@ -301,6 +302,8 @@ func (fct Tfcall) String() string {
 		return "Tsetfile"
 	case TTregister:
 		return "Tregister"
+	case TTderegister:
+		return "Tderegister"
 	default:
 		return "Tunknown"
 	}
@@ -485,6 +488,10 @@ type Tregister struct {
 	Version TQversion
 }
 
+type Tderegister struct {
+	Wnames []string
+}
+
 type Rremove struct {
 }
 
@@ -592,3 +599,4 @@ func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
 func (Tregister) Type() Tfcall   { return TTregister }
+func (Tderegister) Type() Tfcall { return TTderegister }

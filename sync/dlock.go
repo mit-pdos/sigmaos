@@ -41,7 +41,7 @@ func (l *DLock) WeakLock() error {
 	}
 	if err != nil {
 		if l.strict {
-			debug.PrintStack()
+			// debug.PrintStack()
 			log.Fatalf("%v: MakeFile %v err %v", db.GetName(), fn, err)
 		} else {
 			log.Printf("%v: Makefile %v err %v", db.GetName(), fn, err)
@@ -55,19 +55,27 @@ func (l *DLock) WeakLock() error {
 	}
 	err = l.RegisterLock(fn, st.Qid.Version)
 	if err != nil {
-		db.DLPrintf("DLOCK", "%v: RegisterLock %v err %v", db.GetName(), st, err)
+		db.DLPrintf("DLOCK", "%v: RegisterLock %v err %v", db.GetName(), fn, err)
 		return err
 	}
 	return nil
 }
 
-func (l *DLock) Unlock() {
+func (l *DLock) Unlock() error {
 	fn := path.Join(l.lockDir, l.lockName)
+	defer func() error {
+		err := l.DeregisterLock(fn)
+		if err != nil {
+			db.DLPrintf("DLOCK", "%v: DeregisterLock %v err %v", db.GetName(), fn, err)
+			return err
+		}
+		return err
+	}()
 	err := l.Remove(fn)
 	if err != nil {
 		if err.Error() == "EOF" {
 			db.DLPrintf("DLOCK", "%v: Remove %v err %v", db.GetName(), fn, err)
-			return
+			return err
 		}
 		if l.strict {
 			debug.PrintStack()
@@ -76,6 +84,7 @@ func (l *DLock) Unlock() {
 			db.DLPrintf("DLOCK", "Unlock %v, %v", db.GetName(), fn, err)
 		}
 	}
+	return nil
 }
 
 func lockName(f string) string {

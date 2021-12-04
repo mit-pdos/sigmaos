@@ -86,9 +86,10 @@ func main() {
 			if crash.MaybePartition(fsl) {
 				log.Printf("partition\n")
 				partitioned = true
-				delay.Delay(100)
 			}
 		}
+
+		delay.Delay(10)
 
 		n, err := strconv.Atoi(string(b))
 		if err != nil {
@@ -109,12 +110,16 @@ func main() {
 
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))
 		if err != nil {
-			log.Fatalf("setfile %v failed %v\n", A, err)
+			log.Fatalf("write %v failed %v\n", A, err)
 		}
 
 		fsl.Close(fd)
 
 		if partitioned {
+			err := wlock.Unlock()
+			if err != nil {
+				log.Printf("%v unlock err %v\n", db.GetName(), err)
+			}
 			break
 		}
 

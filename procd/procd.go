@@ -73,11 +73,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 
-	go func() {
-		pd.Serve()
-		pd.Done()
-	}()
-
 	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
 
 	pd.Work()
@@ -329,6 +324,7 @@ func (pd *Procd) Work() {
 	go func() {
 		pd.Serve()
 		pd.Done()
+		pd.FsServer.Done()
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

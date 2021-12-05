@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"sync"
 
 	db "ulambda/debug"
@@ -13,6 +14,7 @@ type Session struct {
 	mu        sync.Mutex
 	fids      map[np.Tfid]*fid.Fid
 	ephemeral map[fs.FsObj]*fid.Fid
+	dlock     *Dlock
 }
 
 type SessionTable struct {
@@ -50,6 +52,13 @@ func (st *SessionTable) DeleteSession(id np.Tsession) {
 	if _, ok := st.sessions[id]; ok {
 		delete(st.sessions, id)
 	}
+}
+
+func (st *SessionTable) Lookup(id np.Tsession) (*Session, bool) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	sess, ok := st.sessions[id]
+	return sess, ok
 }
 
 func (st *SessionTable) LookupFid(id np.Tsession, fid np.Tfid) (*fid.Fid, bool) {
@@ -177,4 +186,75 @@ func (st *SessionTable) IterateFids(fi func(*fid.Fid)) {
 		}
 		session.mu.Unlock()
 	}
+}
+
+func (st *SessionTable) Lock(id np.Tsession, fn []string, qid np.Tqid) error {
+	sess, ok := st.Lookup(id)
+	if !ok {
+		return fmt.Errorf("%v: no sess %v", db.GetName(), id)
+	}
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	if sess.dlock != nil {
+		return fmt.Errorf("%v: lock present already %v", db.GetName(), id)
+	}
+
+	sess.dlock = makeDlock(fn, qid)
+	return nil
+}
+
+func (st *SessionTable) Unlock(id np.Tsession, fn []string) error {
+	sess, ok := st.Lookup(id)
+	if !ok {
+		return fmt.Errorf("%v: Unlock no sess %v", db.GetName(), id)
+	}
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	if sess.dlock == nil {
+		return fmt.Errorf("%v: Unlock no lock %v", db.GetName(), id)
+	}
+
+	if !np.IsPathEq(sess.dlock.fn, fn) {
+		return fmt.Errorf("%v: Unlock lock is for %v not %v", db.GetName(), sess.dlock.fn, fn)
+	}
+
+	sess.dlock = nil
+	return nil
+}
+
+func (st *SessionTable) LockName(id np.Tsession) ([]string, error) {
+	sess, ok := st.Lookup(id)
+	if !ok {
+		return nil, fmt.Errorf("%v: LockName no sess %v", db.GetName(), id)
+	}
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+	if sess.dlock == nil {
+		return nil, nil
+	}
+	return sess.dlock.fn, nil
+}
+
+func (st *SessionTable) CheckLock(id np.Tsession, fn []string, qid np.Tqid) error {
+	sess, ok := st.Lookup(id)
+	if !ok {
+		return fmt.Errorf("%v: CheckLock no sess %v", db.GetName(), id)
+	}
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+
+	if sess.dlock == nil {
+		return fmt.Errorf("%v: CheckLock no lock %v", db.GetName(), id)
+	}
+
+	if !np.IsPathEq(sess.dlock.fn, fn) {
+		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.dlock.fn, fn)
+	}
+	return sess.dlock.Check(qid)
 }

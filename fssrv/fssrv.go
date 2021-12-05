@@ -1,10 +1,9 @@
 package fssrv
 
 import (
-	"fmt"
 	"log"
-	"sync"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -16,19 +15,7 @@ import (
 	"ulambda/watch"
 )
 
-type Dlock struct {
-	fn  []string
-	qid np.Tqid
-}
-
-func makeDlock(dlock []string, qid np.Tqid) *Dlock {
-	return &Dlock{dlock, qid}
-}
-
 type FsServer struct {
-	sync.Mutex
-	dlock *Dlock
-
 	protsrv.Protsrv
 	addr  string
 	root  fs.Dir
@@ -55,12 +42,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib, mkps protsrv.MakeP
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
 	return fssrv
-}
-
-func (fssrv *FsServer) getDlock() *Dlock {
-	fssrv.Lock()
-	defer fssrv.Unlock()
-	return fssrv.dlock
 }
 
 func (fssrv *FsServer) Serve() {
@@ -101,48 +82,42 @@ func (fssrv *FsServer) Connect() protsrv.Protsrv {
 	return fssrv
 }
 
-func (fssrv *FsServer) checkDlock(dlock *Dlock) error {
-	st, err := fssrv.fsl.Stat(np.Join(dlock.fn))
-	if err != nil {
-		return err
-	}
-	if st.Qid != dlock.qid {
-		return fmt.Errorf("dlock %v is stale\n", dlock.fn)
-	}
-	return nil
-}
-
-func (fssrv *FsServer) checkDlock1(dlock *Dlock) error {
-	return nil
-}
-
 func (fssrv *FsServer) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
-	// log.Printf("%v: reg %v\n", db.GetName(), args)
-	fssrv.dlock = makeDlock(args.Wnames, args.Qid)
+	log.Printf("%v: reg %v %v\n", db.GetName(), sess, args)
+	if err := fssrv.st.Lock(sess, args.Wnames, args.Qid); err != nil {
+		return &np.Rerror{err.Error()}
+	}
 	return nil
 }
 
 func (fssrv *FsServer) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
-	fssrv.Lock()
-	defer fssrv.Unlock()
-
-	// log.Printf("%v: dereg %v\n", db.GetName(), args)
-	if fssrv.dlock == nil {
-		return &np.Rerror{fmt.Sprintf("lock %v is stale")}
+	log.Printf("%v: dereg %v %v\n", db.GetName(), sess, args)
+	if err := fssrv.st.Unlock(sess, args.Wnames); err != nil {
+		return &np.Rerror{err.Error()}
 	}
-	fssrv.dlock = nil
 	return nil
 }
 
+func (fssrv *FsServer) checkLock(sess np.Tsession) error {
+	fn, err := fssrv.st.LockName(sess)
+	if err != nil {
+		return err
+	}
+	if fn == nil { // no lock on this session
+		return nil
+	}
+	st, err := fssrv.fsl.Stat(np.Join(fn))
+	if err != nil {
+		return err
+	}
+	return fssrv.st.CheckLock(sess, fn, st.Qid)
+}
+
 func (fssrv *FsServer) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	dlock := fssrv.getDlock()
-	if dlock != nil {
-		err := fssrv.checkDlock(dlock)
-		// err := fssrv.checkDlock1(dlock)
-		if err != nil {
-			log.Printf("checkDlock %v\n", err)
-			return &np.Rerror{err.Error()}
-		}
+	err := fssrv.checkLock(sess)
+	if err != nil {
+		log.Printf("checkDlock %v\n", err)
+		return &np.Rerror{err.Error()}
 	}
 	return fssrv.Protsrv.Write(sess, args, rets)
 }

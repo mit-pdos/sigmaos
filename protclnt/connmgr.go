@@ -99,9 +99,9 @@ func (cm *ConnMgr) mcast(ch chan error, dst []string, req np.Tmsg) {
 		ch <- err
 	} else {
 		if rmsg, ok := reply.(np.Rerror); ok {
-			ch <- nil
-		} else {
 			ch <- errors.New(rmsg.Ename)
+		} else {
+			ch <- nil
 		}
 	}
 }

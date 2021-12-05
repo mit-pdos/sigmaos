@@ -515,7 +515,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 					i += 1
 				}
 			} else {
-				log.Printf("SetRemoveWatch %v err %v\n", i, err)
+				// log.Printf("SetRemoveWatch %v err %v\n", i, err)
 			}
 		}
 		done <- true

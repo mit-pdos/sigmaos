@@ -20,14 +20,16 @@ const (
 )
 
 type System struct {
-	bin       string
-	pid       string
-	namedAddr []string
-	named     *exec.Cmd
-	fss3d     []*exec.Cmd
-	fsuxd     []*exec.Cmd
-	procd     []*exec.Cmd
-	dbd       []*exec.Cmd
+	bin              string
+	pid              string
+	namedAddr        []string
+	named            *exec.Cmd
+	fss3d            []*exec.Cmd
+	fsuxd            []*exec.Cmd
+	procd            []*exec.Cmd
+	procdPids        []string
+	crashedProcdPids map[string]bool
+	dbd              []*exec.Cmd
 	*procclnt.ProcClnt
 	*fslib.FsLib
 }
@@ -37,10 +39,11 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	s.bin = bin
 	s.namedAddr = namedAddr
 	s.FsLib = fslib.MakeFsLibAddr("kernel", namedAddr)
-	_ = s.Mkdir(named.PROCD, 0777)
 	//	proc.SetPid("kernel-" + proc.GenPid())
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
 	s.pid = proc.GetPid()
+	s.procdPids = []string{}
+	s.crashedProcdPids = make(map[string]bool)
 	return s
 }
 
@@ -56,9 +59,10 @@ func MakeSystemNamed(bin string) *System {
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr("kernel", s.namedAddr)
-	_ = s.Mkdir(named.PROCD, 0777)
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
 	s.pid = proc.GetPid()
+	s.procdPids = []string{}
+	s.crashedProcdPids = make(map[string]bool)
 	return s
 }
 
@@ -112,6 +116,7 @@ func (s *System) BootProcd() error {
 	if err != nil {
 		return err
 	}
+	s.procdPids = append(s.procdPids, p.Pid)
 	s.procd = append(s.procd, cmd)
 	return s.WaitStart(p.Pid)
 }
@@ -140,6 +145,8 @@ func (s *System) KillOne(srv string) error {
 				log.Fatalf("Procd kill failed %v\n", err)
 			}
 		}
+		s.crashedProcdPids[s.procdPids[0]] = true
+		s.procdPids = s.procdPids[1:]
 	default:
 		log.Fatalf("Unkown server type in System.KillOne: %v", srv)
 	}
@@ -153,8 +160,10 @@ func (s *System) Shutdown() {
 	}
 	for _, pid := range cpids {
 		s.Evict(pid)
-		if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
-			log.Printf("shutdown error %v %v", status, err)
+		if _, ok := s.crashedProcdPids[pid]; !ok {
+			if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
+				log.Printf("shutdown error %v %v", status, err)
+			}
 		}
 	}
 	// Make sure the procs actually exited
@@ -163,7 +172,6 @@ func (s *System) Shutdown() {
 	}
 	for _, d := range s.fsuxd {
 		d.Wait()
-
 	}
 	for _, d := range s.procd {
 		d.Wait()

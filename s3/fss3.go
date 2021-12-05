@@ -50,4 +50,5 @@ func RunFss3() {
 	})
 
 	srv.Serve()
+	srv.Done()
 }

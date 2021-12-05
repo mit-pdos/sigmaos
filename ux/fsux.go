@@ -29,6 +29,7 @@ func RunFsUx(mount string) {
 	}
 	fsux := MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
+	fsux.Done()
 }
 
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {

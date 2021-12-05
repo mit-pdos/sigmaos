@@ -32,7 +32,6 @@ type Protsrv interface {
 	Register(np.Tsession, np.Tregister, *np.Ropen) *np.Rerror
 	Deregister(np.Tsession, np.Tderegister, *np.Ropen) *np.Rerror
 	Detach(np.Tsession)
-	Closed() bool
 }
 
 type MakeProtServer interface {

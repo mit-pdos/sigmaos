@@ -6,16 +6,15 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/protsrv"
 )
 
 type Watch struct {
-	npc  protsrv.Protsrv
+	sess np.Tsession
 	cond *sync.Cond
 }
 
-func mkWatch(npc protsrv.Protsrv, l sync.Locker) *Watch {
-	return &Watch{npc, sync.NewCond(l)}
+func mkWatch(sess np.Tsession, l sync.Locker) *Watch {
+	return &Watch{sess, sync.NewCond(l)}
 }
 
 type Watchers struct {
@@ -33,20 +32,11 @@ func mkWatchers(path string) *Watchers {
 }
 
 // Caller should hold ws lock on return caller has ws lock again
-func (ws *Watchers) Watch(npc protsrv.Protsrv) *np.Rerror {
-	w := mkWatch(npc, &ws.Mutex)
+func (ws *Watchers) Watch(sess np.Tsession) {
+	w := mkWatch(sess, &ws.Mutex)
 	ws.watchers = append(ws.watchers, w)
 	w.cond.Wait()
-
-	// log.Printf("%v: watch done waiting %v\n", ws, ws.path)
-
-	db.DLPrintf("WATCH", "Watch done waiting %v %v %v\n", ws, ws.path, npc.Closed())
-
-	if npc.Closed() {
-		// XXX Bettter error message?
-		return &np.Rerror{"Closed by client"}
-	}
-	return nil
+	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", ws, ws.path)
 }
 
 func (ws *Watchers) WakeupWatchL() {
@@ -57,13 +47,13 @@ func (ws *Watchers) WakeupWatchL() {
 	ws.watchers = make([]*Watch, 0)
 }
 
-func (ws *Watchers) deleteConn(npc protsrv.Protsrv) {
+func (ws *Watchers) deleteSess(sess np.Tsession) {
 	ws.Lock()
 	defer ws.Unlock()
 
 	tmp := ws.watchers[:0]
 	for _, w := range ws.watchers {
-		if w.npc == npc {
+		if w.sess == sess {
 			db.DLPrintf("WATCH", "Delete watch %v\n", w)
 			w.cond.Signal()
 		} else {
@@ -132,11 +122,11 @@ func (wt *WatchTable) Release(ws *Watchers) {
 
 // Wakeup threads waiting for a watch on this connection.  Iterating
 // through wt.wathers doesn't follow lock holder and calling
-// ws.deleteConn() while holding wt lock can result in deadlock, so we
+// ws.deleteSess() while holding wt lock can result in deadlock, so we
 // make a copy of wt.watchers while holding the lock and then iterate
 // through the copy without holding the lock.  XXX better plan?
-func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
-	// log.Printf("delete %p conn %p\n", wt, npc)
+func (wt *WatchTable) DeleteSess(sess np.Tsession) {
+	// log.Printf("delete %p sess %p\n", wt, sess)
 
 	wt.Lock()
 	m := make(map[string]*Watchers)
@@ -146,6 +136,6 @@ func (wt *WatchTable) DeleteConn(npc protsrv.Protsrv) {
 	wt.Unlock()
 
 	for _, ws := range m {
-		ws.deleteConn(npc)
+		ws.deleteSess(sess)
 	}
 }

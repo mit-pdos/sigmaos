@@ -3,7 +3,6 @@ package fsobjsrv
 import (
 	"fmt"
 	"log"
-	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fid"
@@ -17,9 +16,6 @@ import (
 )
 
 type FsObjSrv struct {
-	mu     sync.Mutex // to protect closed
-	closed bool
-
 	fssrv *fssrv.FsServer
 	wt    *watch.WatchTable
 	st    *session.SessionTable
@@ -62,11 +58,13 @@ func (fos *FsObjSrv) del(sess np.Tsession, fid np.Tfid) {
 	}
 }
 
-func (fos *FsObjSrv) Closed() bool {
-	defer fos.mu.Unlock()
-	fos.mu.Lock()
-
-	return fos.closed
+func (fos *FsObjSrv) watch(ws *watch.Watchers, sess np.Tsession) *np.Rerror {
+	ws.Watch(sess)
+	_, ok := fos.st.Lookup(sess)
+	if !ok {
+		return &np.Rerror{fmt.Sprintf("Session closed %v", sess)}
+	}
+	return nil
 }
 
 func (fos *FsObjSrv) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
@@ -80,6 +78,7 @@ func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.R
 }
 
 func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
+	log.Printf("%v: Attach %v %v\n", db.GetName(), sess, args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
 	tree := root.(fs.FsObj)
@@ -99,18 +98,16 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 // is responsible for calling this serially, which should
 // is not burden, because it is typically called once.
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
+	log.Printf("%v: Detach %v\n", db.GetName(), sess)
 	ephemeral := fos.st.GetEphemeral(sess)
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
+		log.Printf("%v: remove %v sess %v\n", db.GetName(), f.Path(), sess)
 		fos.removeObj(sess, f.Ctx(), o, f.Path())
 	}
-	fos.wt.DeleteConn(fos)
+	fos.wt.DeleteSess(sess)
 	fos.st.DeleteSession(sess)
-	fos.fssrv.GetConnTable().Del(fos)
-
-	fos.mu.Lock()
-	defer fos.mu.Unlock()
-	fos.closed = true
+	fos.fssrv.GetConnTable().Del(fos) // XXX delete sess instead of fos?
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {
@@ -232,8 +229,10 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
-	ws.Watch(fos)
-
+	r := fos.watch(ws, sess)
+	if r != nil {
+		return r
+	}
 	return nil
 }
 
@@ -248,7 +247,7 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
+func (fos *FsObjSrv) createObj(sess np.Tsession, ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
 	p := append(dir, name)
 	dws := fos.wt.WatchLookupL(dir)
 	defer fos.wt.Release(dws)
@@ -264,7 +263,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string,
 		} else {
 			if mode&np.OWATCH == np.OWATCH && err.Error() == "Name exists" {
 				fws.Unlock()
-				err := dws.Watch(fos)
+				err := fos.watch(dws, sess)
 				fws.Lock() // not necessary if fail, but nicer with defer
 				if err != nil {
 					return nil, err
@@ -296,7 +295,7 @@ func (fos *FsObjSrv) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate)
 	}
 
 	d := o.(fs.Dir)
-	o1, r := fos.createObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
+	o1, r := fos.createObj(sess, f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
 	if r != nil {
 		return r
 	}
@@ -632,7 +631,7 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		name := args.Wnames[len(args.Wnames)-1]
-		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
+		lo, err = fos.createObj(sess, f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
 		if err != nil {
 			return err
 		}
@@ -666,6 +665,5 @@ func (fos *FsObjSrv) Register(sess np.Tsession, args np.Tregister, rets *np.Rope
 }
 
 func (fos *FsObjSrv) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
-	log.Printf("reg %v\n", args)
 	return nil
 }

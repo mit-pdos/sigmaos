@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	WORK_STEAL_TIMEOUT_MS = 10
+	WORK_STEAL_TIMEOUT_MS = 100
 )
 
 type Procd struct {

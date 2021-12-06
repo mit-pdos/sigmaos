@@ -124,7 +124,7 @@ func (ts *Tstate) startMemFSs(n int) []string {
 
 func (ts *Tstate) stopMemFSs() {
 	for _, mfs := range ts.mfss {
-		err := ts.fsl.ShutdownFs(named.MEMFS + "/" + mfs)
+		err := ts.Evict(mfs)
 		assert.Nil(ts.t, err, "Remove")
 		ts.WaitExit(mfs)
 	}

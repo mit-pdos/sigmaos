@@ -163,7 +163,8 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	// Remove pid from my children
 	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
 	if err := clnt.Remove(f); err != nil {
-		log.Fatalf("Error Remove %v in WaitExit: %v", f, err)
+		log.Printf("Error Remove %v in WaitExit: %v", f, err)
+		return "", err
 	}
 
 	fn := piddir + "/" + RET_STATUS

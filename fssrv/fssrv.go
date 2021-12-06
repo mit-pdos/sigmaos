@@ -25,6 +25,7 @@ type FsServer struct {
 	ct    *ConnTable
 	srv   *netsrv.NetServer
 	pclnt *procclnt.ProcClnt
+	done  bool
 	ch    chan bool
 }
 
@@ -68,7 +69,10 @@ func (fssrv *FsServer) Done() {
 			log.Printf("Error Exited: %v", err)
 		}
 	} else {
-		fssrv.ch <- true
+		if !fssrv.done {
+			fssrv.done = true
+			fssrv.ch <- true
+		}
 	}
 }
 

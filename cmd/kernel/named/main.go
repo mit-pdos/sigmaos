@@ -65,4 +65,5 @@ func main() {
 	seccomp.LoadFilter()
 
 	fss.Serve()
+	fss.Done()
 }

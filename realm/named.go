@@ -38,7 +38,7 @@ func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
 			log.Fatalf("Error Evict in Realm.ShutdownNamedReplicas: %v", err)
 		}
 		if status, err := pclnt.WaitExit(pid); status != "EVICTED" || err != nil {
-			log.Fatalf("Error WaitExit in Realm.ShutdownNamedReplicas: %v, %v", status, err)
+			log.Printf("Error WaitExit in Realm.ShutdownNamedReplicas: %v, %v", status, err)
 		}
 	}
 }

@@ -23,7 +23,4 @@ func main() {
 	mfs.FsServer.GetStats().MakeElastic(mfs.FsLib, proc.GetPid())
 	mfs.Wait()
 	mfs.FsServer.GetStats().Done()
-
-	sclnt.Exited(proc.GetPid(), "OK")
-	mfs.FsLib.ShutdownFs(name)
 }

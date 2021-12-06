@@ -95,6 +95,7 @@ func (fs *MemFs) Root() fs.Dir {
 
 func (fs *MemFs) Wait() {
 	<-fs.ch
+	fs.Done()
 }
 
 func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, error) {

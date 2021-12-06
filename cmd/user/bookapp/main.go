@@ -70,7 +70,7 @@ func (ba *BookApp) writeResponse(data []byte) string {
 	if err != nil {
 		return fmt.Sprintf("Pipe parse err %v\n", err)
 	}
-	ba.ShutdownFs("name/" + proc.GetPid())
+	ba.Evict(proc.GetPid()) //ShutdownFs("name/" + proc.GetPid())
 	return "OK"
 }
 
@@ -178,6 +178,7 @@ func (ba *BookApp) Work() string {
 
 func (ba *BookApp) Exit(status string) {
 	log.Printf("bookapp exit %v\n", status)
-	ba.ShutdownFs("name/" + proc.GetPid())
+	ba.Evict(proc.GetPid())
+	//	ba.ShutdownFs("name/" + proc.GetPid())
 	ba.Exited(proc.GetPid(), status)
 }

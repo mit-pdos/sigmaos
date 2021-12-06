@@ -8,9 +8,9 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %v bin", os.Args[0])
+	if len(os.Args) < 1 {
+		log.Fatalf("Usage: %v", os.Args[0])
 	}
-	r := realm.MakeRealmMgr(os.Args[1])
+	r := realm.MakeRealmMgr()
 	r.Work()
 }

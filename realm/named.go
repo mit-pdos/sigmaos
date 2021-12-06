@@ -17,22 +17,29 @@ const (
 	N_REPLICAS = "N_REPLICAS"
 )
 
-func BootNamedReplicas(pclnt *procclnt.ProcClnt, bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
+func BootNamedReplicas(pclnt *procclnt.ProcClnt, bin string, addrs []string, realmId string) ([]*exec.Cmd, []string, error) {
 	cmds := []*exec.Cmd{}
+	pids := []string{}
 	for i, addr := range addrs {
-		cmd, err := kernel.BootNamed(pclnt, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
+		cmd, pid, err := kernel.BootNamed(pclnt, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
-			return nil, err
+			return nil, nil, err
 		}
 		cmds = append(cmds, cmd)
+		pids = append(pids, pid)
 	}
-	return cmds, nil
+	return cmds, pids, nil
 }
 
-func ShutdownNamedReplicas(addrs []string) {
-	for _, addr := range addrs {
-		ShutdownNamed(addr)
+func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
+	for _, pid := range pids {
+		if err := pclnt.Evict(pid); err != nil {
+			log.Fatalf("Error Evict in Realm.ShutdownNamedReplicas: %v", err)
+		}
+		if status, err := pclnt.WaitExit(pid); status != "EVICTED" || err != nil {
+			log.Fatalf("Error WaitExit in Realm.ShutdownNamedReplicas: %v, %v", status, err)
+		}
 	}
 }
 

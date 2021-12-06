@@ -115,7 +115,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	}
 
 	// If this is not a kernel proc, spawn it through procd.
-	if !p.IsKernelProc() {
+	if !p.IsKernelProc() && !p.IsRealmProc() {
 		b, err := json.Marshal(p)
 		if err != nil {
 			log.Printf("Error marshal: %v", err)

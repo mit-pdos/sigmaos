@@ -3,7 +3,6 @@ package realm
 import (
 	"fmt"
 	"log"
-	"os/exec"
 	"path"
 	"strings"
 	"time"
@@ -42,7 +41,6 @@ const (
 )
 
 type RealmMgr struct {
-	nameds        []*exec.Cmd
 	freeMachineds chan string
 	realmCreate   chan string
 	realmDestroy  chan string
@@ -52,17 +50,12 @@ type RealmMgr struct {
 	*fssrv.FsServer
 }
 
-func MakeRealmMgr(bin string) *RealmMgr {
+func MakeRealmMgr() *RealmMgr {
 	m := &RealmMgr{}
 	m.freeMachineds = make(chan string)
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
-	nameds, err := BootNamedReplicas(nil, bin, fslib.Named(), kernel.NO_REALM)
-	m.nameds = nameds
-	// Start a named instance.
-	if err != nil {
-		log.Fatalf("Error BootNamed in MakeRealmMgr: %v", err)
-	}
+	var err error
 	m.root, m.FsServer, m.FsLib, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)

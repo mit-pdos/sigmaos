@@ -110,15 +110,19 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		}
 		namedAddrs := genNamedAddrs(1, ip)
 
-		// Update config
+		// Get config
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 		realmCfg.NamedAddr = append(realmCfg.NamedAddr, namedAddrs...)
-		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 		// Start a named instance.
-		if _, err := kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		var pid string
+		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
+		// Update config
+		realmCfg.NamedPids = append(realmCfg.NamedPids, pid)
+		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
+
 	}
 	return initDone
 }
@@ -182,7 +186,7 @@ func (r *Machined) tryDestroyRealmL() {
 	// If this is the last machined, destroy the machined's named
 	if len(rds) == 0 {
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-		ShutdownNamedReplicas(realmCfg.NamedAddr)
+		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedAddr)
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {

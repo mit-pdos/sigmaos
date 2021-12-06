@@ -90,6 +90,5 @@ func (r *Reader) Work() string {
 }
 
 func (r *Reader) Exit(status string) {
-	r.ShutdownFs("name/" + proc.GetPid())
-	r.Exited(proc.GetPid(), status)
+	r.Evict(proc.GetPid())
 }

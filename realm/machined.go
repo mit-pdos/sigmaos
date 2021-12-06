@@ -186,7 +186,7 @@ func (r *Machined) tryDestroyRealmL() {
 	// If this is the last machined, destroy the machined's named
 	if len(rds) == 0 {
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedAddr)
+		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {

@@ -52,7 +52,7 @@ func MakeSystemNamed(bin string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = fslib.Named()
-	cmd, err := BootNamed(nil, s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+	cmd, _, err := BootNamed(nil, s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
 	if err != nil {
 		return nil
 	}
@@ -189,7 +189,7 @@ func (s *System) Shutdown() {
 }
 
 // Boot a named and set up the initfs
-func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
 	var args []string
 	if realmId == NO_REALM {
 		args = []string{addr, NO_REALM}
@@ -204,31 +204,33 @@ func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool
 
 	// If this isn't a root named, spawn it. Else, just run it directly.
 	var cmd *exec.Cmd
+	var pid string
 	var err error
 	if pclnt == nil {
 		cmd, err = proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
 		if err != nil {
 			log.Printf("Error running named: %v", err)
-			return nil, err
+			return nil, "", err
 		}
 		time.Sleep(SLEEP_MS * time.Millisecond)
 	} else {
-		p := proc.MakeProcPid("named-"+strconv.Itoa(id), "bin/kernel/named", args)
+		pid = "named-" + strconv.Itoa(id)
+		p := proc.MakeProcPid(pid, "bin/kernel/named", args)
 		cmd, err = pclnt.SpawnKernelProc(p, bin, fslib.Named())
 		if err != nil {
 			log.Fatalf("Error WaitStart in BootNamed: %v", err)
-			return nil, err
+			return nil, "", err
 		}
 		if err = pclnt.WaitStart(p.Pid); err != nil {
 			log.Fatalf("Error WaitStart in BootNamed: %v", err)
-			return nil, err
+			return nil, "", err
 		}
 	}
 
 	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
 	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
 		log.Printf("MakeInitFs error: %v", err)
-		return nil, err
+		return nil, "", err
 	}
-	return cmd, nil
+	return cmd, pid, nil
 }

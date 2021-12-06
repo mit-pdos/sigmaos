@@ -36,5 +36,4 @@ func RunDbd() {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
 	mfs.Wait()
-	log.Printf("dbd done wait")
 }

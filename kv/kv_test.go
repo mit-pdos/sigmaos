@@ -89,7 +89,7 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFS(mfs string) {
-	err := ts.Evict(mfs) //fsl.ShutdownFs(named.MEMFS + "/" + mfs)
+	err := ts.Evict(mfs)
 	assert.Nil(ts.t, err, "ShutdownFS")
 	ts.WaitExit(mfs)
 }

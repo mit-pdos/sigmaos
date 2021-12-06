@@ -3,6 +3,7 @@ package realm_test
 import (
 	"log"
 	"path"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -82,6 +83,7 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 	nMachineds := len(machineds)
 	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
 	if !ok {
+		debug.PrintStack()
 		time.Sleep(100 * time.Second)
 	}
 }
@@ -94,7 +96,7 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 func TestRealmGrowShrink(t *testing.T) {
 	ts := makeTstate(t)
 
-	N := int(linuxsched.NCores)
+	N := int(linuxsched.NCores) / 2
 
 	log.Printf("Starting %v spinning lambdas", N)
 	pids := []string{}
@@ -118,7 +120,8 @@ func TestRealmGrowShrink(t *testing.T) {
 	log.Printf("Evicting %v spinning lambdas", N+7*N/8)
 	cnt := 0
 	for i := 0; i < N+7*N/8; i++ {
-		ts.Evict(pids[0])
+		err := ts.Evict(pids[0])
+		assert.Nil(ts.t, err, "Evict")
 		log.Printf("Evicted #%v %v", cnt, pids[0])
 		cnt += 1
 		pids = pids[1:]

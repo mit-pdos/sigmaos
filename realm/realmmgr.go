@@ -342,4 +342,5 @@ func (m *RealmMgr) Work() {
 	go m.destroyRealms()
 	go m.balanceMachineds()
 	m.FsServer.Serve()
+	m.FsServer.Done()
 }

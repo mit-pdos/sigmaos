@@ -15,5 +15,5 @@ func RunMemfsdReplica(args []string, srvAddr string, unionDirPath string, config
 		log.Fatalf("RunMemfdReplica: err %v\n", err)
 	}
 	fss.Serve()
-	fsl.ShutdownFs(name)
+	fss.Done()
 }

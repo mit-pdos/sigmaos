@@ -2,12 +2,13 @@ package fssrv
 
 import (
 	"log"
+	"runtime/debug"
 
-	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
-	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/session"
@@ -25,11 +26,15 @@ type FsServer struct {
 	st    *session.SessionTable
 	ct    *ConnTable
 	srv   *netsrv.NetServer
+	pclnt *procclnt.ProcClnt
+	done  bool
 	ch    chan bool
 	fsl   *fslib.FsLib
 }
 
-func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib, mkps protsrv.MakeProtServer, config repl.Config) *FsServer {
+func MakeFsServer(root fs.Dir, addr string,
+	mkps protsrv.MakeProtServer, pclnt *procclnt.ProcClnt,
+	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.root = root
 	fssrv.addr = addr
@@ -39,17 +44,40 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib, mkps protsrv.MakeP
 	fssrv.ct = MkConnTable()
 	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
+	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
 	return fssrv
 }
 
 func (fssrv *FsServer) Serve() {
-	<-fssrv.ch
+	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
+	if fssrv.pclnt != nil {
+		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
+			debug.PrintStack()
+			log.Printf("Error Started: %v", err)
+		}
+		if err := fssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
+			debug.PrintStack()
+			log.Printf("Error WaitEvict: %v", err)
+		}
+	} else {
+		<-fssrv.ch
+	}
 }
 
 func (fssrv *FsServer) Done() {
-	fssrv.ch <- true
+	if fssrv.pclnt != nil {
+		if err := fssrv.pclnt.Exited(proc.GetPid(), "EVICTED"); err != nil {
+			debug.PrintStack()
+			log.Printf("Error Exited: %v", err)
+		}
+	} else {
+		if !fssrv.done {
+			fssrv.done = true
+			fssrv.ch <- true
+		}
+	}
 }
 
 func (fssrv *FsServer) MyAddr() string {

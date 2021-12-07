@@ -79,7 +79,7 @@ func (mo *Monitor) grow() {
 func (mo *Monitor) shrink(kv string) {
 	RunBalancer(mo.ProcClnt, "del", kv)
 	n := named.MEMFS + "/" + kv + "/"
-	err := mo.ShutdownFs(n)
+	err := mo.Evict(kv)
 	if err != nil {
 		log.Printf("shrink: remove %v failed %v\n", n, err)
 	}

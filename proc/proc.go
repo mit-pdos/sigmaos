@@ -66,6 +66,10 @@ func (p *Proc) IsKernelProc() bool {
 	return strings.Contains(p.Program, "kernel")
 }
 
+func (p *Proc) IsRealmProc() bool {
+	return strings.Contains(p.Program, "realm")
+}
+
 func (p *Proc) String() string {
 	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.PidDir, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
 }

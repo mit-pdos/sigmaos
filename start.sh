@@ -21,9 +21,6 @@ fi
 echo "running with NAMED=$NAMED"
 echo "each realm runs with $N_REPLICAS replicas"
 
-./bin/realm/realmmgr . &
-sleep 1
-./bin/realm/machined . $(hostname) &
-./bin/realm/create 1000
+./bin/realm/boot .
 
 ./mount.sh

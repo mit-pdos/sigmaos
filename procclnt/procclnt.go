@@ -115,7 +115,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	}
 
 	// If this is not a kernel proc, spawn it through procd.
-	if !p.IsKernelProc() {
+	if !p.IsKernelProc() && !p.IsRealmProc() {
 		b, err := json.Marshal(p)
 		if err != nil {
 			log.Printf("Error marshal: %v", err)
@@ -163,7 +163,8 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	// Remove pid from my children
 	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
 	if err := clnt.Remove(f); err != nil {
-		log.Fatalf("Error Remove %v in WaitExit: %v", f, err)
+		log.Printf("Error Remove %v in WaitExit: %v", f, err)
+		return "", err
 	}
 
 	fn := piddir + "/" + RET_STATUS

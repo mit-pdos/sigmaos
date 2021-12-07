@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/linuxsched"
 	"ulambda/named"
-	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
@@ -26,7 +24,7 @@ import (
 )
 
 const (
-	WORK_STEAL_TIMEOUT_MS = 10
+	WORK_STEAL_TIMEOUT_MS = 100
 )
 
 type Procd struct {
@@ -62,8 +60,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
 
-	pd.addr = pd.fsrv.MyAddr()
-	pd.procclnt = procclnt.MakeProcClnt(pd.FsLib)
+	pd.addr = pd.MyAddr()
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -75,24 +72,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	if util {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
-	// Make some local directories.
-	os.Mkdir(namespace.NAMESPACE_DIR, 0777)
-
-	if err := pd.procclnt.Started(proc.GetPid()); err != nil {
-		debug.PrintStack()
-		log.Fatalf("Error Started: %v", err)
-	}
-	go func() {
-		if err := pd.procclnt.WaitEvict(proc.GetPid()); err != nil {
-			debug.PrintStack()
-			log.Fatalf("Error WaitEvict: %v", err)
-		}
-		if err := pd.procclnt.Exited(proc.GetPid(), "EVICTED"); err != nil {
-			debug.PrintStack()
-			log.Fatalf("Error Exited: %v", err)
-		}
-		pd.Done()
-	}()
 
 	pd.fsrv.GetStats().MonitorCPUUtil(pd.FsLib)
 
@@ -345,6 +324,7 @@ func (pd *Procd) Work() {
 	go func() {
 		pd.fsrv.Serve()
 		pd.Done()
+		pd.FsServer.Done()
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

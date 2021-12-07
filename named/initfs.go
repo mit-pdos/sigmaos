@@ -41,5 +41,8 @@ func MakeInitFs(fsl *fslib.FsLib) error {
 	if err := fsl.Mkdir(PIDS, 0777); err != nil {
 		return err
 	}
+	if err := fsl.Mkdir(PROCD, 0777); err != nil {
+		return err
+	}
 	return nil
 }

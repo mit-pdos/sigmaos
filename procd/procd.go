@@ -60,7 +60,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
 
-	pd.addr = pd.MyAddr()
+	pd.addr = pd.fsrv.MyAddr()
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -324,7 +324,7 @@ func (pd *Procd) Work() {
 	go func() {
 		pd.fsrv.Serve()
 		pd.Done()
-		pd.FsServer.Done()
+		pd.fsrv.Done()
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

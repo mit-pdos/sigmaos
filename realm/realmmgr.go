@@ -56,7 +56,7 @@ func MakeRealmMgr() *RealmMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.root, m.FsServer, m.FsLib, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
+	m.root, m.fsrv, m.FsLib, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
@@ -341,6 +341,6 @@ func (m *RealmMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
 	go m.balanceMachineds()
-	m.FsServer.Serve()
-	m.FsServer.Done()
+	m.fsrv.Serve()
+	m.fsrv.Done()
 }

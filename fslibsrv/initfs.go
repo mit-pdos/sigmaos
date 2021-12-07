@@ -1,8 +1,6 @@
 package fslibsrv
 
 import (
-	"log"
-
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
@@ -56,7 +54,7 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 		fsl = fslib.MakeFsLib(name)
 		pclnt = procclnt.MakeProcClnt(fsl)
 	}
-	srv := makeSrv(root, addr, pclnt, config)
+	srv := makeSrv(root, addr, fsl, pclnt, config)
 	// If this *was* the init named, we now need to init fsl
 	if isInitNamed {
 		fsl = fslib.MakeFsLib(name)

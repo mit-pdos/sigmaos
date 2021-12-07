@@ -4,9 +4,11 @@ import (
 	"log"
 	"runtime/debug"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/protsrv"
@@ -32,7 +34,7 @@ type FsServer struct {
 	fsl   *fslib.FsLib
 }
 
-func MakeFsServer(root fs.Dir, addr string,
+func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	mkps protsrv.MakeProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}

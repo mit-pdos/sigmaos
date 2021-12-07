@@ -15,6 +15,12 @@ import (
 	"ulambda/watch"
 )
 
+//
+// There is one FsObjSrv per connection, but they share the watch
+// table, session table, and stats.  Each session has its own fid
+// table.
+//
+
 type FsObjSrv struct {
 	fssrv *fssrv.FsServer
 	wt    *watch.WatchTable
@@ -78,7 +84,7 @@ func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.R
 }
 
 func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
-	log.Printf("%v: Attach %v %v\n", db.GetName(), sess, args.Uname)
+	// log.Printf("%v: Attach %v %v\n", db.GetName(), sess, args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
 	tree := root.(fs.FsObj)
@@ -94,9 +100,7 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 	return nil
 }
 
-// Delete ephemeral files created on this connection; caller
-// is responsible for calling this serially, which should
-// is not burden, because it is typically called once.
+// Delete ephemeral files created on a session.
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	log.Printf("%v: Detach %v\n", db.GetName(), sess)
 	ephemeral := fos.st.GetEphemeral(sess)
@@ -107,7 +111,6 @@ func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	}
 	fos.wt.DeleteSess(sess)
 	fos.st.DeleteSession(sess)
-	fos.fssrv.GetConnTable().Del(fos) // XXX delete sess instead of fos?
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {
@@ -339,9 +342,6 @@ func isExit(path []string) bool {
 }
 
 func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
-
-	// log.Printf("removeObj %v\n", path)
-
 	// lock watch entry to make WatchV and Remove interact
 	// correctly
 	dws := fos.wt.WatchLookupL(np.Dir(path))

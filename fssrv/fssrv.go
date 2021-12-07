@@ -18,6 +18,12 @@ import (
 	"ulambda/watch"
 )
 
+//
+// There is one FsServer per memfsd. The FsServer has one ProtSrv per
+// 9p channel (i.e., TCP connection); each channel has one or more
+// sessions (one per client fslib on the same client machine).
+//
+
 type FsServer struct {
 	protsrv.Protsrv
 	addr  string
@@ -26,7 +32,6 @@ type FsServer struct {
 	stats *stats.Stats
 	wt    *watch.WatchTable
 	st    *session.SessionTable
-	ct    *ConnTable
 	srv   *netsrv.NetServer
 	pclnt *procclnt.ProcClnt
 	done  bool
@@ -43,7 +48,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.wt = watch.MkWatchTable()
-	fssrv.ct = MkConnTable()
 	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.pclnt = pclnt
@@ -98,17 +102,12 @@ func (fssrv *FsServer) SessionTable() *session.SessionTable {
 	return fssrv.st
 }
 
-func (fssrv *FsServer) GetConnTable() *ConnTable {
-	return fssrv.ct
-}
-
 func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) {
 	return fssrv.root, MkCtx(uname)
 }
 
 func (fssrv *FsServer) Connect() protsrv.Protsrv {
 	fssrv.Protsrv = fssrv.mkps.MakeProtServer(fssrv)
-	fssrv.ct.Add(fssrv.Protsrv)
 	return fssrv
 }
 

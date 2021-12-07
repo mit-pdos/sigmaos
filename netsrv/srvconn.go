@@ -88,6 +88,7 @@ func (c *SrvConn) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.mu.Lock()
 
+	// log.Printf("close %v\n", c.conn.RemoteAddr())
 	close(c.replies)
 	if !c.closed {
 		// Detach each session which used this channel

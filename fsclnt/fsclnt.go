@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/dlock"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
 )
@@ -27,13 +28,14 @@ type FdState struct {
 }
 
 type FsClient struct {
-	mu    sync.Mutex
+	sync.Mutex
 	fds   []FdState
 	fids  map[np.Tfid]*Path
 	pc    *protclnt.Clnt
 	mount *Mount
 	next  np.Tfid
 	uname string
+	dlock *dlock.Dlock
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -70,21 +72,21 @@ func (fsc *FsClient) Uname() string {
 }
 
 func (fsc *FsClient) clnt(fid np.Tfid) *protclnt.ProtClnt {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	return fsc.fids[fid].pc
 }
 
 func (fsc *FsClient) path(fid np.Tfid) *Path {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 	return fsc.fids[fid]
 }
 
 func (fsc *FsClient) addFid(fid np.Tfid, path *Path) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 	fsc.fids[fid] = path
 }
 
@@ -98,14 +100,14 @@ func (fsc *FsClient) freeFidUnlocked(fid np.Tfid) {
 }
 
 func (fsc *FsClient) freeFid(fid np.Tfid) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 	fsc.freeFidUnlocked(fid)
 }
 
 func (fsc *FsClient) findfd(nfid np.Tfid, m np.Tmode) int {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	for fd, fdst := range fsc.fds {
 		if fdst.fid == np.NoFid {
@@ -121,16 +123,16 @@ func (fsc *FsClient) findfd(nfid np.Tfid, m np.Tmode) int {
 }
 
 func (fsc *FsClient) closefd(fd int) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	fsc.freeFidUnlocked(fsc.fds[fd].fid)
 	fsc.fds[fd].fid = np.NoFid
 }
 
 func (fsc *FsClient) allocFid() np.Tfid {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	fid := fsc.next
 	fsc.next += 1
@@ -138,8 +140,8 @@ func (fsc *FsClient) allocFid() np.Tfid {
 }
 
 func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	if fsc.fds[fd].fid == np.NoFid {
 		return np.NoFid, errors.New("Non-existing")
@@ -159,15 +161,15 @@ func (fsc *FsClient) lookupStL(fd int) (*FdState, error) {
 }
 
 func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 	return fsc.lookupStL(fd)
 }
 
 // Wrote this in the CAS style, unsure if it's overkill
 func (fsc *FsClient) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (bool, error) {
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	if fd < 0 || fd >= len(fsc.fds) {
 		return false, fmt.Errorf("Too big fd %v", fd)
@@ -200,14 +202,20 @@ func (fsc *FsClient) Disconnect(path string) error {
 }
 
 func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
-	fsc.mu.Lock()
+	fsc.Lock()
 	_, ok := fsc.fids[fid]
-	fsc.mu.Unlock()
+	fsc.Unlock()
 	if !ok {
 		return errors.New("Unknown fid")
 	}
 	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
 	fsc.mount.add(np.Split(path), fid)
+	fsc.Lock()
+	dlock := fsc.dlock
+	fsc.Unlock()
+	if dlock != nil {
+		fsc.pc.RegisterLock(dlock.Fn, dlock.Qid)
+	}
 	return nil
 }
 
@@ -246,8 +254,8 @@ func (fsc *FsClient) AttachReplicas(server []string, path, tree string) (np.Tfid
 	}
 	fsc.addFid(fid, ch)
 
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].pc)
 	return fid, nil
@@ -258,10 +266,24 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) RegisterLock(path string, qid np.Tqid) error {
+	fsc.Lock()
+	if fsc.dlock != nil {
+		fsc.Unlock()
+		return fmt.Errorf("%v already locked\n", path)
+	}
+	fsc.dlock = dlock.MakeDlock(np.Split(path), qid)
+	fsc.Unlock()
 	return fsc.pc.RegisterLock(np.Split(path), qid)
 }
 
 func (fsc *FsClient) DeregisterLock(path string) error {
+	fsc.Lock()
+	if fsc.dlock != nil {
+		fsc.Unlock()
+		return fmt.Errorf("%v not locked\n", path)
+	}
+	fsc.dlock = nil
+	fsc.Unlock()
 	return fsc.pc.DeregisterLock(np.Split(path))
 }
 
@@ -496,13 +518,13 @@ func (fsc *FsClient) SetRemoveWatch(path string, f Watch) error {
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
-	fsc.mu.Lock()
+	fsc.Lock()
 	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
-		fsc.mu.Unlock()
+		fsc.Unlock()
 		return nil, err
 	}
-	fsc.mu.Unlock()
+	fsc.Unlock()
 	var reply *np.Rread
 	reply, err = fsc.clnt(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
 	if err != nil {
@@ -524,13 +546,13 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
-	fsc.mu.Lock()
+	fsc.Lock()
 	fdst, err := fsc.lookupStL(fd)
 	if err != nil {
-		fsc.mu.Unlock()
+		fsc.Unlock()
 		return 0, err
 	}
-	fsc.mu.Unlock()
+	fsc.Unlock()
 	var reply *np.Rwrite
 	reply, err = fsc.clnt(fdst.fid).Write(fdst.fid, fdst.offset, data)
 
@@ -553,8 +575,8 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 
 func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
 	db.DLPrintf("FSCLNT", "Lseek %v %v\n", fd, off)
-	fsc.mu.Lock()
-	defer fsc.mu.Unlock()
+	fsc.Lock()
+	defer fsc.Unlock()
 
 	fdst, err := fsc.lookupStL(fd)
 	if err != nil {

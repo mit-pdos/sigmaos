@@ -216,12 +216,8 @@ func TestDlock(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		// XXX force ux to be mounted
-		_, err := fsldl.ReadDir(dirux)
-		assert.Nil(t, err, "Readdir")
-
 		wlock := usync.MakeDLock(fsldl, dirn, "l", true)
-		err = wlock.WeakLock()
+		err := wlock.WeakLock()
 		assert.Nil(t, err, "Weaklock")
 
 		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)

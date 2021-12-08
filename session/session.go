@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/dlock"
 	"ulambda/fid"
 	"ulambda/fs"
 	np "ulambda/ninep"
@@ -14,7 +15,7 @@ type Session struct {
 	mu        sync.Mutex
 	fids      map[np.Tfid]*fid.Fid
 	ephemeral map[fs.FsObj]*fid.Fid
-	dlock     *Dlock
+	dlock     *dlock.Dlock
 }
 
 type SessionTable struct {
@@ -178,7 +179,7 @@ func (st *SessionTable) Lock(id np.Tsession, fn []string, qid np.Tqid) error {
 		return fmt.Errorf("%v: lock present already %v", db.GetName(), id)
 	}
 
-	sess.dlock = makeDlock(fn, qid)
+	sess.dlock = dlock.MakeDlock(fn, qid)
 	return nil
 }
 
@@ -195,8 +196,8 @@ func (st *SessionTable) Unlock(id np.Tsession, fn []string) error {
 		return fmt.Errorf("%v: Unlock no lock %v", db.GetName(), id)
 	}
 
-	if !np.IsPathEq(sess.dlock.fn, fn) {
-		return fmt.Errorf("%v: Unlock lock is for %v not %v", db.GetName(), sess.dlock.fn, fn)
+	if !np.IsPathEq(sess.dlock.Fn, fn) {
+		return fmt.Errorf("%v: Unlock lock is for %v not %v", db.GetName(), sess.dlock.Fn, fn)
 	}
 
 	sess.dlock = nil
@@ -214,7 +215,7 @@ func (st *SessionTable) LockName(id np.Tsession) ([]string, error) {
 	if sess.dlock == nil {
 		return nil, nil
 	}
-	return sess.dlock.fn, nil
+	return sess.dlock.Fn, nil
 }
 
 func (st *SessionTable) CheckLock(id np.Tsession, fn []string, qid np.Tqid) error {
@@ -230,8 +231,8 @@ func (st *SessionTable) CheckLock(id np.Tsession, fn []string, qid np.Tqid) erro
 		return fmt.Errorf("%v: CheckLock no lock %v", db.GetName(), id)
 	}
 
-	if !np.IsPathEq(sess.dlock.fn, fn) {
-		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.dlock.fn, fn)
+	if !np.IsPathEq(sess.dlock.Fn, fn) {
+		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.dlock.Fn, fn)
 	}
 	return sess.dlock.Check(qid)
 }

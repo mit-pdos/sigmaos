@@ -36,10 +36,9 @@ type SrvOp struct {
 }
 
 func MakeRaftReplConn(psrv protsrv.FsServer, conn net.Conn, clerk *Clerk) *RaftReplConn {
-	protsrv := psrv.Connect()
 	r := &RaftReplConn{
 		clerk,
-		psrv, protsrv, conn,
+		psrv, nil, conn, // XXX fixme nil == psrv??
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *SrvOp)}

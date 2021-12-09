@@ -78,11 +78,19 @@ func (npd *Npd) Connect() protsrv.Protsrv {
 	return clnt
 }
 
+func (npd *Npd) Detach(sess np.Tsession) {
+}
+
 func (npd *Npd) SessionTable() *session.SessionTable {
 	if npd.st == nil {
 		npd.st = session.MakeSessionTable()
 	}
 	return npd.st
+}
+
+// FIXME
+func (npd *Npd) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	return nil, nil
 }
 
 func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {

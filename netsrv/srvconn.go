@@ -20,29 +20,24 @@ const (
 
 type SrvConn struct {
 	mu         sync.Mutex
-	fssrv      protsrv.FsServer
 	conn       net.Conn
 	wireCompat bool
-	np         protsrv.Protsrv
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
 	closed     bool
-	sessions   map[np.Tsession]bool
+	protsrv    protsrv.FsServer
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
-	protsrv := srv.fssrv.Connect()
 	c := &SrvConn{sync.Mutex{},
-		srv.fssrv,
 		conn,
 		srv.wireCompat,
-		protsrv,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
 		false,
-		make(map[np.Tsession]bool),
+		srv.fssrv,
 	}
 	go c.writer()
 	go c.reader()
@@ -91,34 +86,19 @@ func (c *SrvConn) close() {
 	// log.Printf("close %v\n", c.conn.RemoteAddr())
 	close(c.replies)
 	if !c.closed {
-		// Detach each session which used this channel
-		for sess, _ := range c.sessions {
-			c.np.Detach(sess)
-		}
+		c.protsrv.Detach(np.NoSession)
 	}
 	c.closed = true
 	c.mu.Unlock()
 }
 
-// Remember which sessions we're handling to detach them when this channel
-// closes.
-func (c *SrvConn) registerSession(sess np.Tsession) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, ok := c.sessions[sess]; !ok {
-		c.sessions[sess] = true
-		c.fssrv.SessionTable().RegisterSession(sess)
-	}
-}
-
 func (c *SrvConn) serve(fc *np.Fcall) {
 	t := fc.Tag
-	c.registerSession(fc.Session)
-	reply, rerror := protsrv.Dispatch(c.np, fc.Session, fc.Msg)
+	reply, rerror := c.protsrv.Dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
+
 	fcall := &np.Fcall{}
 	fcall.Type = reply.Type()
 	fcall.Msg = reply

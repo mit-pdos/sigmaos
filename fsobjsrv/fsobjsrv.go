@@ -5,26 +5,28 @@ import (
 	"log"
 
 	db "ulambda/debug"
+	"ulambda/dlock"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
-	"ulambda/session"
 	"ulambda/stats"
 	"ulambda/watch"
 )
 
 //
-// There is one FsObjSrv per connection, but they share the watch
-// table, session table, and stats.  Each session has its own fid
-// table.
+// There is one FsObjSrv per session, but they share the watch table
+// and stats.  Each session has its own fid table, ephemeral table,
+// and dlock.
 //
 
 type FsObjSrv struct {
 	fssrv *fssrv.FsServer
 	wt    *watch.WatchTable
-	st    *session.SessionTable
+	ft    *fidTable
+	et    *ephemeralTable
+	dlock *dlock.Dlock
 	stats *stats.Stats
 }
 
@@ -38,7 +40,9 @@ func (ps *ProtServer) MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 	fos := &FsObjSrv{}
 	srv := s.(*fssrv.FsServer)
 	fos.fssrv = srv
-	fos.st = srv.SessionTable()
+
+	fos.ft = makeFidTable()
+	fos.et = makeEphemeralTable()
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
@@ -46,7 +50,7 @@ func (ps *ProtServer) MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 }
 
 func (fos *FsObjSrv) lookup(sess np.Tsession, fid np.Tfid) (*fid.Fid, *np.Rerror) {
-	f, ok := fos.st.LookupFid(sess, fid)
+	f, ok := fos.ft.Lookup(fid)
 	if !ok {
 		return nil, np.ErrUnknownfid
 	}
@@ -54,22 +58,18 @@ func (fos *FsObjSrv) lookup(sess np.Tsession, fid np.Tfid) (*fid.Fid, *np.Rerror
 }
 
 func (fos *FsObjSrv) add(sess np.Tsession, fid np.Tfid, f *fid.Fid) {
-	fos.st.AddFid(sess, fid, f)
+	fos.ft.Add(fid, f)
 }
 
 func (fos *FsObjSrv) del(sess np.Tsession, fid np.Tfid) {
-	o, ok := fos.st.DelFid(sess, fid)
+	o, ok := fos.ft.Del(fid)
 	if ok && o.Perm().IsEphemeral() {
-		fos.st.DelEphemeral(sess, o)
+		fos.et.Del(o)
 	}
 }
 
 func (fos *FsObjSrv) watch(ws *watch.Watchers, sess np.Tsession) *np.Rerror {
 	ws.Watch(sess)
-	_, ok := fos.st.Lookup(sess)
-	if !ok {
-		return &np.Rerror{fmt.Sprintf("Session closed %v", sess)}
-	}
 	return nil
 }
 
@@ -103,14 +103,13 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 // Delete ephemeral files created on a session.
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	log.Printf("%v: Detach %v\n", db.GetName(), sess)
-	ephemeral := fos.st.GetEphemeral(sess)
+	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
 		log.Printf("%v: remove %v sess %v\n", db.GetName(), f.Path(), sess)
 		fos.removeObj(sess, f.Ctx(), o, f.Path())
 	}
 	fos.wt.DeleteSess(sess)
-	fos.st.DeleteSession(sess)
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {
@@ -170,7 +169,7 @@ func (fos *FsObjSrv) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *n
 	if f.Mode() != 0 { // has the fid been opened?
 		o.Close(f.Ctx(), f.Mode())
 	}
-	fos.st.DelFid(sess, args.Fid)
+	fos.ft.Del(args.Fid)
 	return nil
 }
 
@@ -243,7 +242,7 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 	p := np.Copy(dir)
 	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
 	if eph {
-		fos.st.AddEphemeral(sess, o, nf)
+		fos.et.Add(o, nf)
 	}
 	return nf
 }
@@ -366,7 +365,7 @@ func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path [
 	dws.WakeupWatchL()
 
 	if o.Perm().IsEphemeral() {
-		fos.st.DelEphemeral(sess, o)
+		fos.et.Del(o)
 	}
 	return nil
 }

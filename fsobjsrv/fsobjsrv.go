@@ -99,7 +99,6 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 
 // Delete ephemeral files created on a session.
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
-	log.Printf("%v: Detach %v\n", db.GetName(), sess)
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {

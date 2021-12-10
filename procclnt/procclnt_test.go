@@ -97,7 +97,7 @@ func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func TestWaitExit(t *testing.T) {
+func TestWaitExitSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	start := time.Now()

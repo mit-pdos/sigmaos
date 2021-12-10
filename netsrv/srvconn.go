@@ -88,8 +88,8 @@ func (c *SrvConn) close() {
 
 	close(c.replies)
 	if !c.closed {
-		for s, _ := range c.sessions {
-			c.protsrv.Detach(s)
+		for sid, _ := range c.sessions {
+			c.protsrv.Detach(sid)
 		}
 	}
 	c.closed = true

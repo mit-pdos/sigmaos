@@ -19,6 +19,12 @@ go test $1 ulambda/stats
 go test $1 ulambda/sync
 
 #
+# test proxy
+#
+
+./proxy/test.sh
+
+#
 # tests kernel (without realms)
 #
 

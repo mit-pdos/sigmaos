@@ -12,6 +12,7 @@ import (
 	"ulambda/procclnt"
 	"ulambda/protsrv"
 	"ulambda/repl"
+	"ulambda/session"
 	"ulambda/stats"
 	"ulambda/watch"
 )
@@ -25,9 +26,9 @@ import (
 type FsServer struct {
 	addr  string
 	root  fs.Dir
-	mkps  protsrv.MakeProtServer
+	mkps  protsrv.MkProtServer
 	stats *stats.Stats
-	st    *sessionTable
+	st    *session.SessionTable
 	wt    *watch.WatchTable
 	srv   *netsrv.NetServer
 	pclnt *procclnt.ProcClnt
@@ -37,14 +38,14 @@ type FsServer struct {
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
-	mkps protsrv.MakeProtServer, pclnt *procclnt.ProcClnt,
+	mkps protsrv.MkProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.st = makeSessionTable(fssrv)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv)
 	fssrv.wt = watch.MkWatchTable()
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.pclnt = pclnt
@@ -125,8 +126,12 @@ func (fssrv *FsServer) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) 
 	return r
 }
 
+func (fssrv *FsServer) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	return fssrv.st.Dispatch(sess, msg)
+}
+
 func (fssrv *FsServer) Detach(sess np.Tsession) {
-	fssrv.st.detach()
+	fssrv.st.Detach()
 }
 
 type Ctx struct {

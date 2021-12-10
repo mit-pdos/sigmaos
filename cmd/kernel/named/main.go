@@ -20,6 +20,8 @@ import (
 func main() {
 	// Usage: <named> address realmId <peerId> <peers> <pprofPath> <utilPath>
 
+	log.Printf("args %v\n", os.Args)
+
 	linuxsched.ScanTopology()
 	// If we're benchmarking, make a flame graph
 	p := perf.MakePerf()

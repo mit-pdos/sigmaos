@@ -30,13 +30,7 @@ type FsObjSrv struct {
 	stats *stats.Stats
 }
 
-type ProtServer struct{}
-
-func MakeProtServer() protsrv.MakeProtServer {
-	return &ProtServer{}
-}
-
-func (ps *ProtServer) MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
+func MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 	fos := &FsObjSrv{}
 	srv := s.(*fssrv.FsServer)
 	fos.fssrv = srv

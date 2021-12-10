@@ -1,11 +1,11 @@
-package fssrv
+package session
 
 import (
 	np "ulambda/ninep"
 )
 
-func (fssrv *FsServer) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	s := fssrv.st.lookupInsert(sess)
+func (st *SessionTable) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	s := st.LookupInsert(sess)
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}

@@ -14,6 +14,29 @@ import (
 	"ulambda/session"
 )
 
+type Npd struct {
+	named []string
+	st    *session.SessionTable
+}
+
+func MakeNpd() *Npd {
+	npd := &Npd{fslib.Named(), nil}
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd)
+	return npd
+}
+
+func (npd *Npd) mkProtServer(fssrv protsrv.FsServer) protsrv.Protsrv {
+	return makeNpConn(npd.named)
+}
+
+func (npd *Npd) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	return npd.st.Dispatch(sess, msg)
+}
+
+func (npd *Npd) Detach(sess np.Tsession) {
+	npd.st.Detach()
+}
+
 //
 // XXX convert to use npobjsrv
 //
@@ -37,10 +60,6 @@ func makeNpConn(named []string) *NpConn {
 	return npc
 }
 
-func (npc *NpConn) Closed() bool {
-	return false
-}
-
 func (npc *NpConn) npch(fid np.Tfid) *protclnt.ProtClnt {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
@@ -61,36 +80,6 @@ func (npc *NpConn) delch(fid np.Tfid) {
 	npc.mu.Lock()
 	defer npc.mu.Unlock()
 	delete(npc.fids, fid)
-}
-
-type Npd struct {
-	named []string
-	st    *session.SessionTable
-}
-
-func MakeNpd() *Npd {
-	return &Npd{fslib.Named(), nil}
-}
-
-// XXX should/is happen only once for the one mount for :1110
-func (npd *Npd) Connect() protsrv.Protsrv {
-	clnt := makeNpConn(npd.named)
-	return clnt
-}
-
-func (npd *Npd) Detach(sess np.Tsession) {
-}
-
-func (npd *Npd) SessionTable() *session.SessionTable {
-	if npd.st == nil {
-		npd.st = session.MakeSessionTable()
-	}
-	return npd.st
-}
-
-// FIXME
-func (npd *Npd) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	return nil, nil
 }
 
 func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {

@@ -33,6 +33,4 @@ type Protsrv interface {
 	Detach(np.Tsession)
 }
 
-type MakeProtServer interface {
-	MakeProtServer(FsServer) Protsrv
-}
+type MkProtServer func(FsServer) Protsrv

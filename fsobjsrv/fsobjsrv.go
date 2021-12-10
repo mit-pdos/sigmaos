@@ -43,7 +43,7 @@ func MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 	return fos
 }
 
-func (fos *FsObjSrv) lookup(sess np.Tsession, fid np.Tfid) (*fid.Fid, *np.Rerror) {
+func (fos *FsObjSrv) lookup(fid np.Tfid) (*fid.Fid, *np.Rerror) {
 	f, ok := fos.ft.Lookup(fid)
 	if !ok {
 		return nil, np.ErrUnknownfid
@@ -51,11 +51,11 @@ func (fos *FsObjSrv) lookup(sess np.Tsession, fid np.Tfid) (*fid.Fid, *np.Rerror
 	return f, nil
 }
 
-func (fos *FsObjSrv) add(sess np.Tsession, fid np.Tfid, f *fid.Fid) {
+func (fos *FsObjSrv) add(fid np.Tfid, f *fid.Fid) {
 	fos.ft.Add(fid, f)
 }
 
-func (fos *FsObjSrv) del(sess np.Tsession, fid np.Tfid) {
+func (fos *FsObjSrv) del(fid np.Tfid) {
 	o, ok := fos.ft.Del(fid)
 	if ok && o.Perm().IsEphemeral() {
 		fos.et.Del(o)
@@ -89,7 +89,7 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 		}
 		tree = os[len(os)-1]
 	}
-	fos.add(sess, args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
+	fos.add(args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
 	rets.Qid = tree.(fs.FsObj).Qid()
 	return nil
 }
@@ -116,7 +116,7 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 
 func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fos.stats.StatInfo().Nwalk.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 		if o == nil {
 			return np.ErrClunked
 		}
-		fos.add(sess, args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
+		fos.add(args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
 	} else {
 		o := f.Obj()
 		if o == nil {
@@ -143,7 +143,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 		n := len(args.Wnames) - len(rest)
 		p := append(f.Path(), args.Wnames[:n]...)
 		lo := os[len(os)-1]
-		fos.add(sess, args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
+		fos.add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
 		rets.Qids = makeQids(os)
 	}
 	return nil
@@ -152,7 +152,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 func (fos *FsObjSrv) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	fos.stats.StatInfo().Nclunk.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (fos *FsObjSrv) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *n
 func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rerror {
 	fos.stats.StatInfo().Nopen.Inc()
 	db.DLPrintf("9POBJ", "Open %v\n", args)
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	fos.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func (fos *FsObjSrv) createObj(sess np.Tsession, ctx fs.CtxI, d fs.Dir, dir []st
 func (fos *FsObjSrv) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fos.stats.StatInfo().Ncreate.Inc()
 	db.DLPrintf("9POBJ", "Create %v\n", args)
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -296,7 +296,7 @@ func (fos *FsObjSrv) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate)
 		return r
 	}
 	nf := fos.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
-	fos.add(sess, args.Fid, nf)
+	fos.add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
 }
@@ -309,7 +309,7 @@ func (fos *FsObjSrv) Flush(sess np.Tsession, args np.Tflush, rets *np.Rflush) *n
 func (fos *FsObjSrv) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rerror {
 	fos.stats.StatInfo().Nread.Inc()
 	db.DLPrintf("9POBJ", "Read %v\n", args)
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func (fos *FsObjSrv) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.R
 func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	fos.stats.StatInfo().Nwrite.Inc()
 	db.DLPrintf("9POBJ", "Write %v\n", args)
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -366,7 +366,7 @@ func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path [
 
 func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
 	fos.stats.StatInfo().Nremove.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -400,7 +400,7 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	var err *np.Rerror
 	fos.stats.StatInfo().Nremove.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -428,7 +428,7 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 
 func (fos *FsObjSrv) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
 	fos.stats.StatInfo().Nstat.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -447,7 +447,7 @@ func (fos *FsObjSrv) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.R
 
 func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fos.stats.StatInfo().Nwstat.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -495,11 +495,11 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 
 func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	fos.stats.StatInfo().Nrenameat.Inc()
-	oldf, err := fos.lookup(sess, args.OldFid)
+	oldf, err := fos.lookup(args.OldFid)
 	if err != nil {
 		return err
 	}
-	newf, err := fos.lookup(sess, args.NewFid)
+	newf, err := fos.lookup(args.NewFid)
 	if err != nil {
 		return err
 	}
@@ -553,7 +553,7 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 // opens it, and reads it.
 func (fos *FsObjSrv) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	fos.stats.StatInfo().Nget.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}
@@ -598,7 +598,7 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 	var r error
 	var err *np.Rerror
 	fos.stats.StatInfo().Nset.Inc()
-	f, err := fos.lookup(sess, args.Fid)
+	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
 	}

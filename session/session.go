@@ -18,15 +18,13 @@ import (
 type session struct {
 	sync.Mutex
 	protsrv protsrv.Protsrv
-	session np.Tsession
 	dlock   *dlock.Dlock
 }
 
-func makeSession(sess np.Tsession, protsrv protsrv.Protsrv) *session {
-	s := &session{}
-	s.session = sess
-	s.protsrv = protsrv
-	return s
+func makeSession(protsrv protsrv.Protsrv) *session {
+	sess := &session{}
+	sess.protsrv = protsrv
+	return sess
 }
 
 type SessionTable struct {
@@ -44,65 +42,65 @@ func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer) *Sessio
 	return st
 }
 
-func (st *SessionTable) lookup(id np.Tsession) (*session, bool) {
+func (st *SessionTable) lookup(sid np.Tsession) (*session, bool) {
 	st.Lock()
 	defer st.Unlock()
-	sess, ok := st.sessions[id]
+	sess, ok := st.sessions[sid]
 	return sess, ok
 }
 
-func (st *SessionTable) LookupInsert(sess np.Tsession) *session {
+func (st *SessionTable) LookupInsert(sid np.Tsession) *session {
 	st.Lock()
 	defer st.Unlock()
 
-	if s, ok := st.sessions[sess]; ok {
-		return s
+	if sess, ok := st.sessions[sid]; ok {
+		return sess
 	}
-	s := makeSession(sess, st.mkps(st.fssrv))
-	st.sessions[sess] = s
-	return s
+	sess := makeSession(st.mkps(st.fssrv))
+	st.sessions[sid] = sess
+	return sess
 }
 
-func (st *SessionTable) Detach(id np.Tsession) error {
-	sess, ok := st.lookup(id)
+func (st *SessionTable) Detach(sid np.Tsession) error {
+	sess, ok := st.lookup(sid)
 	if !ok {
-		return fmt.Errorf("%v: no sess %v", db.GetName(), id)
+		return fmt.Errorf("%v: no sess %v", db.GetName(), sid)
 	}
 
 	st.Lock()
 	defer st.Unlock()
-	sess.protsrv.Detach(id)
+	sess.protsrv.Detach(sid)
 	return nil
 }
 
-func (st *SessionTable) RegisterLock(id np.Tsession, fn []string, qid np.Tqid) error {
-	sess, ok := st.lookup(id)
+func (st *SessionTable) RegisterLock(sid np.Tsession, fn []string, qid np.Tqid) error {
+	sess, ok := st.lookup(sid)
 	if !ok {
-		return fmt.Errorf("%v: no sess %v", db.GetName(), id)
+		return fmt.Errorf("%v: no sess %v", db.GetName(), sid)
 	}
 
 	sess.Lock()
 	defer sess.Unlock()
 
 	if sess.dlock != nil {
-		return fmt.Errorf("%v: lock present already %v", db.GetName(), id)
+		return fmt.Errorf("%v: lock present already %v", db.GetName(), sid)
 	}
 
 	sess.dlock = dlock.MakeDlock(fn, qid)
 	return nil
 }
 
-func (st *SessionTable) DeregisterLock(id np.Tsession, fn []string) error {
-	sess, ok := st.lookup(id)
+func (st *SessionTable) DeregisterLock(sid np.Tsession, fn []string) error {
+	sess, ok := st.lookup(sid)
 	if !ok {
-		return fmt.Errorf("%v: Unlock no sess %v", db.GetName(), id)
+		return fmt.Errorf("%v: Unlock no sess %v", db.GetName(), sid)
 	}
 
 	sess.Lock()
 	defer sess.Unlock()
 
 	if sess.dlock == nil {
-		return fmt.Errorf("%v: Unlock no lock %v", db.GetName(), id)
+		return fmt.Errorf("%v: Unlock no lock %v", db.GetName(), sid)
 	}
 
 	if !np.IsPathEq(sess.dlock.Fn, fn) {
@@ -113,10 +111,10 @@ func (st *SessionTable) DeregisterLock(id np.Tsession, fn []string) error {
 	return nil
 }
 
-func (st *SessionTable) LockName(id np.Tsession) ([]string, error) {
-	sess, ok := st.lookup(id)
+func (st *SessionTable) LockName(sid np.Tsession) ([]string, error) {
+	sess, ok := st.lookup(sid)
 	if !ok {
-		return nil, fmt.Errorf("%v: LockName no sess %v", db.GetName(), id)
+		return nil, fmt.Errorf("%v: LockName no sess %v", db.GetName(), sid)
 	}
 
 	sess.Lock()
@@ -127,17 +125,17 @@ func (st *SessionTable) LockName(id np.Tsession) ([]string, error) {
 	return sess.dlock.Fn, nil
 }
 
-func (st *SessionTable) CheckLock(id np.Tsession, fn []string, qid np.Tqid) error {
-	sess, ok := st.lookup(id)
+func (st *SessionTable) CheckLock(sid np.Tsession, fn []string, qid np.Tqid) error {
+	sess, ok := st.lookup(sid)
 	if !ok {
-		return fmt.Errorf("%v: CheckLock no sess %v", db.GetName(), id)
+		return fmt.Errorf("%v: CheckLock no sess %v", db.GetName(), sid)
 	}
 
 	sess.Lock()
 	defer sess.Unlock()
 
 	if sess.dlock == nil {
-		return fmt.Errorf("%v: CheckLock no lock %v", db.GetName(), id)
+		return fmt.Errorf("%v: CheckLock no lock %v", db.GetName(), sid)
 	}
 
 	if !np.IsPathEq(sess.dlock.Fn, fn) {

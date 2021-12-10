@@ -63,7 +63,10 @@ func (fos *FsObjSrv) del(fid np.Tfid) {
 }
 
 func (fos *FsObjSrv) watch(ws *watch.Watchers, sess np.Tsession) *np.Rerror {
-	ws.Watch(sess)
+	err := ws.Watch(sess)
+	if err != nil {
+		return &np.Rerror{err.Error()}
+	}
 	return nil
 }
 

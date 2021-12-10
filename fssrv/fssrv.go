@@ -131,7 +131,7 @@ func (fssrv *FsServer) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rer
 }
 
 func (fssrv *FsServer) Detach(sess np.Tsession) {
-	fssrv.st.Detach()
+	fssrv.st.Detach(sess)
 }
 
 type Ctx struct {

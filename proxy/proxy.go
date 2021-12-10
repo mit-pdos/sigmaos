@@ -34,7 +34,7 @@ func (npd *Npd) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 }
 
 func (npd *Npd) Detach(sess np.Tsession) {
-	npd.st.Detach()
+	npd.st.Detach(sess)
 }
 
 //

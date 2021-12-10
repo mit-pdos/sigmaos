@@ -27,6 +27,7 @@ type SrvConn struct {
 	replies    chan *np.Fcall
 	closed     bool
 	protsrv    protsrv.FsServer
+	sessions   map[np.Tsession]bool
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
@@ -38,6 +39,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		make(chan *np.Fcall),
 		false,
 		srv.fssrv,
+		make(map[np.Tsession]bool),
 	}
 	go c.writer()
 	go c.reader()
@@ -74,6 +76,7 @@ func (c *SrvConn) reader() {
 			log.Print("reader: unmarshal error: ", err, fcall)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
+			c.sessions[fcall.Session] = true
 			go c.serve(fcall)
 		}
 	}
@@ -83,10 +86,11 @@ func (c *SrvConn) close() {
 	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
 	c.mu.Lock()
 
-	// log.Printf("close %v\n", c.conn.RemoteAddr())
 	close(c.replies)
 	if !c.closed {
-		c.protsrv.Detach(np.NoSession)
+		for s, _ := range c.sessions {
+			c.protsrv.Detach(s)
+		}
 	}
 	c.closed = true
 	c.mu.Unlock()

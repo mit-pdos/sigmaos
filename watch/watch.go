@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -9,12 +10,13 @@ import (
 )
 
 type Watch struct {
-	sess np.Tsession
-	cond *sync.Cond
+	sess   np.Tsession
+	cond   *sync.Cond
+	closed bool
 }
 
 func mkWatch(sess np.Tsession, l sync.Locker) *Watch {
-	return &Watch{sess, sync.NewCond(l)}
+	return &Watch{sess, sync.NewCond(l), false}
 }
 
 type Watchers struct {
@@ -32,11 +34,15 @@ func mkWatchers(path string) *Watchers {
 }
 
 // Caller should hold ws lock on return caller has ws lock again
-func (ws *Watchers) Watch(sess np.Tsession) {
+func (ws *Watchers) Watch(sess np.Tsession) error {
 	w := mkWatch(sess, &ws.Mutex)
 	ws.watchers = append(ws.watchers, w)
 	w.cond.Wait()
-	db.DLPrintf("WATCH", "Watch done waiting %v %v\n", ws, ws.path)
+	db.DLPrintf("WATCH", "Watch done waiting %v p '%v'\n", ws, ws.path)
+	if w.closed {
+		return fmt.Errorf("Session closed %v", sess)
+	}
+	return nil
 }
 
 func (ws *Watchers) WakeupWatchL() {
@@ -54,7 +60,9 @@ func (ws *Watchers) deleteSess(sess np.Tsession) {
 	tmp := ws.watchers[:0]
 	for _, w := range ws.watchers {
 		if w.sess == sess {
+			log.Printf("delete watch %v %v\n", w, sess)
 			db.DLPrintf("WATCH", "Delete watch %v\n", w)
+			w.closed = true
 			w.cond.Signal()
 		} else {
 			tmp = append(tmp, w)
@@ -126,7 +134,7 @@ func (wt *WatchTable) Release(ws *Watchers) {
 // make a copy of wt.watchers while holding the lock and then iterate
 // through the copy without holding the lock.  XXX better plan?
 func (wt *WatchTable) DeleteSess(sess np.Tsession) {
-	// log.Printf("delete %p sess %p\n", wt, sess)
+	// log.Printf("delete %p sess %v\n", wt, sess)
 
 	wt.Lock()
 	m := make(map[string]*Watchers)

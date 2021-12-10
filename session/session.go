@@ -63,14 +63,16 @@ func (st *SessionTable) LookupInsert(sess np.Tsession) *session {
 	return s
 }
 
-// Detach each session
-func (st *SessionTable) Detach() {
+func (st *SessionTable) Detach(id np.Tsession) error {
+	sess, ok := st.lookup(id)
+	if !ok {
+		return fmt.Errorf("%v: no sess %v", db.GetName(), id)
+	}
+
 	st.Lock()
 	defer st.Unlock()
-
-	for s, sess := range st.sessions {
-		sess.protsrv.Detach(s)
-	}
+	sess.protsrv.Detach(id)
+	return nil
 }
 
 func (st *SessionTable) RegisterLock(id np.Tsession, fn []string, qid np.Tqid) error {

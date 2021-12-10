@@ -29,12 +29,12 @@ func (npd *Npd) mkProtServer(fssrv protsrv.FsServer) protsrv.Protsrv {
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	return npd.st.Dispatch(sess, msg)
+func (npd *Npd) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	return npd.st.Dispatch(sid, msg)
 }
 
-func (npd *Npd) Detach(sess np.Tsession) {
-	npd.st.Detach(sess)
+func (npd *Npd) Detach(sid np.Tsession) {
+	npd.st.Detach(sid)
 }
 
 //

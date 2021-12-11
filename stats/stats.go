@@ -67,6 +67,7 @@ type StatInfo struct {
 	Nwrite      Tcounter
 	Nwritev     Tcounter
 	Nremove     Tcounter
+	Nremovefile Tcounter
 	Nstat       Tcounter
 	Nwstat      Tcounter
 	Nrenameat   Tcounter
@@ -112,7 +113,7 @@ func (si *StatInfo) Inc(fct np.Tfcall) {
 	case np.TTremove:
 		si.Nremove.Inc()
 	case np.TTremovefile:
-		si.Nremove.Inc()
+		si.Nremovefile.Inc()
 	case np.TTstat:
 		si.Nstat.Inc()
 	case np.TTwstat:

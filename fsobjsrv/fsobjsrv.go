@@ -53,16 +53,9 @@ func (fos *FsObjSrv) lookup(fid np.Tfid) (*fid.Fid, *np.Rerror) {
 	return f, nil
 }
 
-func (fos *FsObjSrv) add(fid np.Tfid, f *fid.Fid) {
-	fos.ft.Add(fid, f)
-}
-
-func (fos *FsObjSrv) del(fid np.Tfid) {
-	o, ok := fos.ft.Del(fid)
-	if ok && o.Perm().IsEphemeral() {
-		fos.et.Del(o)
-	}
-}
+//func (fos *FsObjSrv) add(fid np.Tfid, f *fid.Fid) {
+//	fos.ft.Add(fid, f)
+//}
 
 func (fos *FsObjSrv) watch(ws *watch.Watchers, sess np.Tsession) *np.Rerror {
 	err := ws.Watch(sess)
@@ -94,7 +87,7 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 		}
 		tree = os[len(os)-1]
 	}
-	fos.add(args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
+	fos.ft.Add(args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
 	rets.Qid = tree.(fs.FsObj).Qid()
 	return nil
 }
@@ -104,7 +97,6 @@ func (fos *FsObjSrv) Detach() {
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v\n", ephemeral)
 	for o, f := range ephemeral {
-		log.Printf("%v: remove %v\n", db.GetName(), f.Path())
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
 	fos.wt.DeleteSess(fos.sid)
@@ -129,7 +121,7 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if o == nil {
 			return np.ErrClunked
 		}
-		fos.add(args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
+		fos.ft.Add(args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
 	} else {
 		o := f.Obj()
 		if o == nil {
@@ -146,7 +138,7 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		n := len(args.Wnames) - len(rest)
 		p := append(f.Path(), args.Wnames[:n]...)
 		lo := os[len(os)-1]
-		fos.add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
+		fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
 		rets.Qids = makeQids(os)
 	}
 	return nil
@@ -294,7 +286,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return r
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
-	fos.add(args.Fid, nf)
+	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
 }

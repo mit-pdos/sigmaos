@@ -60,7 +60,6 @@ func (ws *Watchers) deleteSess(sid np.Tsession) {
 	tmp := ws.watchers[:0]
 	for _, w := range ws.watchers {
 		if w.sid == sid {
-			log.Printf("delete watch %v %v\n", w, sid)
 			db.DLPrintf("WATCH", "Delete watch %v\n", w)
 			w.closed = true
 			w.cond.Signal()

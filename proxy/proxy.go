@@ -282,11 +282,3 @@ func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile
 func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
-
-func (fos *NpConn) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
-	return nil
-}
-
-func (fos *NpConn) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
-	return nil
-}

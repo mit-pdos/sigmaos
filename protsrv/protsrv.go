@@ -28,8 +28,6 @@ type Protsrv interface {
 	Renameat(np.Tsession, np.Trenameat, *np.Rrenameat) *np.Rerror
 	GetFile(np.Tsession, np.Tgetfile, *np.Rgetfile) *np.Rerror
 	SetFile(np.Tsession, np.Tsetfile, *np.Rwrite) *np.Rerror
-	Register(np.Tsession, np.Tregister, *np.Ropen) *np.Rerror
-	Deregister(np.Tsession, np.Tderegister, *np.Ropen) *np.Rerror
 	Detach(np.Tsession)
 }
 

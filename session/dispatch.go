@@ -1,8 +1,6 @@
 package session
 
 import (
-	// "log"
-
 	np "ulambda/ninep"
 )
 
@@ -80,14 +78,6 @@ func (s *Session) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) 
 	case np.Tsetfile:
 		reply := &np.Rwrite{}
 		err := s.protsrv.SetFile(sess, req, reply)
-		return *reply, err
-	case np.Tregister:
-		reply := &np.Ropen{}
-		err := s.protsrv.Register(sess, req, reply)
-		return *reply, err
-	case np.Tderegister:
-		reply := &np.Ropen{}
-		err := s.protsrv.Deregister(sess, req, reply)
 		return *reply, err
 	default:
 		return np.ErrUnknownMsg, nil

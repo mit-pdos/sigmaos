@@ -101,6 +101,7 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 func (fos *FsObjSrv) Detach(sess np.Tsession) {
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
+	// log.Printf("Detach %v %v\n", sess, ephemeral)
 	for o, f := range ephemeral {
 		log.Printf("%v: remove %v sess %v\n", db.GetName(), f.Path(), sess)
 		fos.removeObj(sess, f.Ctx(), o, f.Path())
@@ -652,13 +653,5 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)
 
 	}
-	return nil
-}
-
-func (fos *FsObjSrv) Register(sess np.Tsession, args np.Tregister, rets *np.Ropen) *np.Rerror {
-	return nil
-}
-
-func (fos *FsObjSrv) Deregister(sess np.Tsession, args np.Tderegister, rets *np.Ropen) *np.Rerror {
 	return nil
 }

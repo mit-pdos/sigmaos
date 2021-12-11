@@ -31,7 +31,7 @@ func (npd *Npd) mkProtServer(fssrv protsrv.FsServer, sid np.Tsession) protsrv.Pr
 
 func (npd *Npd) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	sess := npd.st.LookupInsert(sid)
-	return sess.Dispatch(sid, msg)
+	return sess.Dispatch(msg)
 }
 
 func (npd *Npd) Detach(sid np.Tsession) {

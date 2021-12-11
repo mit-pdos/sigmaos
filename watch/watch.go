@@ -10,13 +10,13 @@ import (
 )
 
 type Watch struct {
-	sess   np.Tsession
+	sid    np.Tsession
 	cond   *sync.Cond
 	closed bool
 }
 
-func mkWatch(sess np.Tsession, l sync.Locker) *Watch {
-	return &Watch{sess, sync.NewCond(l), false}
+func mkWatch(sid np.Tsession, l sync.Locker) *Watch {
+	return &Watch{sid, sync.NewCond(l), false}
 }
 
 type Watchers struct {
@@ -34,13 +34,13 @@ func mkWatchers(path string) *Watchers {
 }
 
 // Caller should hold ws lock on return caller has ws lock again
-func (ws *Watchers) Watch(sess np.Tsession) error {
-	w := mkWatch(sess, &ws.Mutex)
+func (ws *Watchers) Watch(sid np.Tsession) error {
+	w := mkWatch(sid, &ws.Mutex)
 	ws.watchers = append(ws.watchers, w)
 	w.cond.Wait()
 	db.DLPrintf("WATCH", "Watch done waiting %v p '%v'\n", ws, ws.path)
 	if w.closed {
-		return fmt.Errorf("Session closed %v", sess)
+		return fmt.Errorf("Session closed %v", sid)
 	}
 	return nil
 }
@@ -53,14 +53,14 @@ func (ws *Watchers) WakeupWatchL() {
 	ws.watchers = make([]*Watch, 0)
 }
 
-func (ws *Watchers) deleteSess(sess np.Tsession) {
+func (ws *Watchers) deleteSess(sid np.Tsession) {
 	ws.Lock()
 	defer ws.Unlock()
 
 	tmp := ws.watchers[:0]
 	for _, w := range ws.watchers {
-		if w.sess == sess {
-			log.Printf("delete watch %v %v\n", w, sess)
+		if w.sid == sid {
+			log.Printf("delete watch %v %v\n", w, sid)
 			db.DLPrintf("WATCH", "Delete watch %v\n", w)
 			w.closed = true
 			w.cond.Signal()
@@ -133,8 +133,8 @@ func (wt *WatchTable) Release(ws *Watchers) {
 // ws.deleteSess() while holding wt lock can result in deadlock, so we
 // make a copy of wt.watchers while holding the lock and then iterate
 // through the copy without holding the lock.  XXX better plan?
-func (wt *WatchTable) DeleteSess(sess np.Tsession) {
-	// log.Printf("delete %p sess %v\n", wt, sess)
+func (wt *WatchTable) DeleteSess(sid np.Tsession) {
+	// log.Printf("delete %p sess %v\n", wt, sid)
 
 	wt.Lock()
 	m := make(map[string]*Watchers)
@@ -144,6 +144,6 @@ func (wt *WatchTable) DeleteSess(sess np.Tsession) {
 	wt.Unlock()
 
 	for _, ws := range m {
-		ws.deleteSess(sess)
+		ws.deleteSess(sid)
 	}
 }

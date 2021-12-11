@@ -4,7 +4,7 @@ import (
 	np "ulambda/ninep"
 )
 
-func (s *Session) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	// log.Printf("dipatch %v %v\n", msg)
 	switch req := msg.(type) {
 	case np.Tversion:

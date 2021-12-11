@@ -140,7 +140,7 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 		}
 		return *reply, nil
 	}
-	return sess.Dispatch(sid, msg)
+	return sess.Dispatch(msg)
 }
 
 func (fssrv *FsServer) Detach(sid np.Tsession) {

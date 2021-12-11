@@ -6,8 +6,7 @@ import (
 	np "ulambda/ninep"
 )
 
-func (st *SessionTable) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	s := st.LookupInsert(sess)
+func (s *Session) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	// log.Printf("dipatch %v %v\n", sess, msg)
 	switch req := msg.(type) {
 	case np.Tversion:

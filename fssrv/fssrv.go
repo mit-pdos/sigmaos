@@ -4,6 +4,7 @@ import (
 	"log"
 	"runtime/debug"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -100,8 +101,8 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 	return fssrv.root, MkCtx(uname)
 }
 
-func (fssrv *FsServer) checkLock(sess np.Tsession) error {
-	fn, err := fssrv.st.LockName(sess)
+func (fssrv *FsServer) checkLock(sess *session.Session) error {
+	fn, err := sess.LockName()
 	if err != nil {
 		return err
 	}
@@ -112,26 +113,38 @@ func (fssrv *FsServer) checkLock(sess np.Tsession) error {
 	if err != nil {
 		return err
 	}
-	return fssrv.st.CheckLock(sess, fn, st.Qid)
+	return sess.CheckLock(fn, st.Qid)
 }
 
-// XXX fix me
-func (fssrv *FsServer) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	err := fssrv.checkLock(sess)
-	if err != nil {
-		log.Printf("checkDlock %v\n", err)
-		return &np.Rerror{err.Error()}
+func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	sess := fssrv.st.LookupInsert(sid)
+	switch req := msg.(type) {
+	case np.Twrite:
+		err := fssrv.checkLock(sess)
+		if err != nil {
+			log.Printf("checkDlock %v\n", err)
+			return nil, &np.Rerror{err.Error()}
+		}
+	case np.Tregister:
+		reply := &np.Ropen{}
+		log.Printf("%v: reg %v %v\n", db.GetName(), sid, req)
+		if err := sess.RegisterLock(sid, req.Wnames, req.Qid); err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		return *reply, nil
+	case np.Tderegister:
+		reply := &np.Ropen{}
+		log.Printf("%v: dereg %v %v\n", db.GetName(), sid, req)
+		if err := sess.DeregisterLock(sid, req.Wnames); err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		return *reply, nil
 	}
-	_, r := fssrv.Dispatch(sess, args)
-	return r
+	return sess.Dispatch(sid, msg)
 }
 
-func (fssrv *FsServer) Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	return fssrv.st.Dispatch(sess, msg)
-}
-
-func (fssrv *FsServer) Detach(sess np.Tsession) {
-	fssrv.st.Detach(sess)
+func (fssrv *FsServer) Detach(sid np.Tsession) {
+	fssrv.st.Detach(sid)
 }
 
 type Ctx struct {

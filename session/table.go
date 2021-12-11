@@ -38,7 +38,7 @@ func (st *SessionTable) LookupInsert(sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv))
+	sess := makeSession(st.mkps(st.fssrv, sid))
 	st.sessions[sid] = sess
 	return sess
 }
@@ -51,7 +51,7 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 
 	st.Lock()
 	defer st.Unlock()
-	sess.protsrv.Detach(sid)
+	sess.protsrv.Detach()
 	return nil
 }
 

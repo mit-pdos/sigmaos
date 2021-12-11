@@ -28,9 +28,10 @@ type FsObjSrv struct {
 	et    *ephemeralTable
 	dlock *dlock.Dlock
 	stats *stats.Stats
+	sid   np.Tsession
 }
 
-func MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
+func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos := &FsObjSrv{}
 	srv := s.(*fssrv.FsServer)
 	fos.fssrv = srv
@@ -39,6 +40,7 @@ func MakeProtServer(s protsrv.FsServer) protsrv.Protsrv {
 	fos.et = makeEphemeralTable()
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
+	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
 }
@@ -70,17 +72,17 @@ func (fos *FsObjSrv) watch(ws *watch.Watchers, sess np.Tsession) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
+func (fos *FsObjSrv) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (fos *FsObjSrv) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.Rerror {
+func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 	return np.ErrUnknownMsg
 }
 
-func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
+func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	// log.Printf("%v: Attach %v %v\n", db.GetName(), sess, args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
@@ -98,15 +100,14 @@ func (fos *FsObjSrv) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach)
 }
 
 // Delete ephemeral files created on a session.
-func (fos *FsObjSrv) Detach(sess np.Tsession) {
+func (fos *FsObjSrv) Detach() {
 	ephemeral := fos.et.Get()
-	db.DLPrintf("9POBJ", "Detach %v %v\n", sess, ephemeral)
-	// log.Printf("Detach %v %v\n", sess, ephemeral)
+	db.DLPrintf("9POBJ", "Detach %v\n", ephemeral)
 	for o, f := range ephemeral {
-		log.Printf("%v: remove %v sess %v\n", db.GetName(), f.Path(), sess)
-		fos.removeObj(sess, f.Ctx(), o, f.Path())
+		log.Printf("%v: remove %v\n", db.GetName(), f.Path())
+		fos.removeObj(f.Ctx(), o, f.Path())
 	}
-	fos.wt.DeleteSess(sess)
+	fos.wt.DeleteSess(fos.sid)
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {
@@ -117,7 +118,7 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
-func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fos.stats.StatInfo().Nwalk.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -152,7 +153,7 @@ func (fos *FsObjSrv) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.R
 	return nil
 }
 
-func (fos *FsObjSrv) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
+func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	fos.stats.StatInfo().Nclunk.Inc()
 	f, err := fos.lookup(args.Fid)
@@ -170,7 +171,7 @@ func (fos *FsObjSrv) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *n
 	return nil
 }
 
-func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rerror {
+func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	fos.stats.StatInfo().Nopen.Inc()
 	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, err := fos.lookup(args.Fid)
@@ -197,7 +198,7 @@ func (fos *FsObjSrv) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.R
 	return nil
 }
 
-func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
+func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	fos.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 
@@ -228,14 +229,14 @@ func (fos *FsObjSrv) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
-	r := fos.watch(ws, sess)
+	r := fos.watch(ws, fos.sid)
 	if r != nil {
 		return r
 	}
 	return nil
 }
 
-func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
+func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
 	p := np.Copy(dir)
 	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
 	if eph {
@@ -246,7 +247,7 @@ func (fos *FsObjSrv) makeFid(sess np.Tsession, ctx fs.CtxI, dir []string, name s
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (fos *FsObjSrv) createObj(sess np.Tsession, ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
+func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
 	p := append(dir, name)
 	dws := fos.wt.WatchLookupL(dir)
 	defer fos.wt.Release(dws)
@@ -262,7 +263,7 @@ func (fos *FsObjSrv) createObj(sess np.Tsession, ctx fs.CtxI, d fs.Dir, dir []st
 		} else {
 			if mode&np.OWATCH == np.OWATCH && err.Error() == "Name exists" {
 				fws.Unlock()
-				err := fos.watch(dws, sess)
+				err := fos.watch(dws, fos.sid)
 				fws.Lock() // not necessary if fail, but nicer with defer
 				if err != nil {
 					return nil, err
@@ -275,7 +276,7 @@ func (fos *FsObjSrv) createObj(sess np.Tsession, ctx fs.CtxI, d fs.Dir, dir []st
 	}
 }
 
-func (fos *FsObjSrv) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	fos.stats.StatInfo().Ncreate.Inc()
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, err := fos.lookup(args.Fid)
@@ -294,22 +295,22 @@ func (fos *FsObjSrv) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate)
 	}
 
 	d := o.(fs.Dir)
-	o1, r := fos.createObj(sess, f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
+	o1, r := fos.createObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
 	if r != nil {
 		return r
 	}
-	nf := fos.makeFid(sess, f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
 	fos.add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
 }
 
-func (fos *FsObjSrv) Flush(sess np.Tsession, args np.Tflush, rets *np.Rflush) *np.Rerror {
+func (fos *FsObjSrv) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	fos.stats.StatInfo().Nflush.Inc()
 	return nil
 }
 
-func (fos *FsObjSrv) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rerror {
+func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	fos.stats.StatInfo().Nread.Inc()
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, err := fos.lookup(args.Fid)
@@ -320,7 +321,7 @@ func (fos *FsObjSrv) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.R
 	return f.Read(args.Offset, args.Count, np.NoV, rets)
 }
 
-func (fos *FsObjSrv) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
+func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	fos.stats.StatInfo().Nwrite.Inc()
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, err := fos.lookup(args.Fid)
@@ -337,7 +338,7 @@ func isExit(path []string) bool {
 	return len(path) == 1 && path[0] == ".exit"
 }
 
-func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
+func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
 	// lock watch entry to make WatchV and Remove interact
 	// correctly
 	dws := fos.wt.WatchLookupL(np.Dir(path))
@@ -367,7 +368,7 @@ func (fos *FsObjSrv) removeObj(sess np.Tsession, ctx fs.CtxI, o fs.FsObj, path [
 	return nil
 }
 
-func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
+func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -382,7 +383,7 @@ func (fos *FsObjSrv) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove)
 		fos.fssrv.Done()
 		return nil
 	}
-	return fos.removeObj(sess, f.Ctx(), o, f.Path())
+	return fos.removeObj(f.Ctx(), o, f.Path())
 }
 
 func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Rerror) {
@@ -400,7 +401,7 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 // RemoveFile is Remove() but args.Wnames may contain a symlink that
 // hasn't been walked. If so, RemoveFile() will not succeed looking up
 // args.Wnames, and caller should first walk the pathname.
-func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	var err *np.Rerror
 	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(args.Fid)
@@ -426,10 +427,10 @@ func (fos *FsObjSrv) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.
 			return err
 		}
 	}
-	return fos.removeObj(sess, f.Ctx(), lo, fname)
+	return fos.removeObj(f.Ctx(), lo, fname)
 }
 
-func (fos *FsObjSrv) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
+func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	fos.stats.StatInfo().Nstat.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -448,7 +449,7 @@ func (fos *FsObjSrv) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.R
 	return nil
 }
 
-func (fos *FsObjSrv) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.Rerror {
+func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	fos.stats.StatInfo().Nwstat.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -496,7 +497,7 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 	}
 }
 
-func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	fos.stats.StatInfo().Nrenameat.Inc()
 	oldf, err := fos.lookup(args.OldFid)
 	if err != nil {
@@ -554,7 +555,7 @@ func (fos *FsObjSrv) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rren
 
 // Special code path for GetFile: in one RPC, GetFile() looks up the file,
 // opens it, and reads it.
-func (fos *FsObjSrv) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	fos.stats.StatInfo().Nget.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -597,7 +598,7 @@ func (fos *FsObjSrv) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfi
 
 // Special code path for SetFile: in one RPC, SetFile() looks up the
 // file, opens/creates it, and writes it.
-func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	var r error
 	var err *np.Rerror
 	fos.stats.StatInfo().Nset.Inc()
@@ -627,11 +628,11 @@ func (fos *FsObjSrv) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		name := args.Wnames[len(args.Wnames)-1]
-		lo, err = fos.createObj(sess, f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
+		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
 		if err != nil {
 			return err
 		}
-		fos.makeFid(sess, f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+		fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
 		fos.stats.Path(f.Path())
 		_, r = lo.Open(f.Ctx(), args.Mode)

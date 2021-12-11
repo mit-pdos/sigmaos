@@ -119,7 +119,6 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 }
 
 func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	fos.stats.StatInfo().Nwalk.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -155,7 +154,6 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
-	fos.stats.StatInfo().Nclunk.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -172,7 +170,6 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	fos.stats.StatInfo().Nopen.Inc()
 	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -183,7 +180,6 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if o == nil {
 		return np.ErrClunked
 	}
-	fos.stats.Path(f.Path())
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return &np.Rerror{r.Error()}
@@ -199,7 +195,6 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
-	fos.stats.StatInfo().Nwatchv.Inc()
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 
 	f, err := fos.lookup(args.Fid)
@@ -277,7 +272,6 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string,
 }
 
 func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	fos.stats.StatInfo().Ncreate.Inc()
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -306,12 +300,10 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
-	fos.stats.StatInfo().Nflush.Inc()
 	return nil
 }
 
 func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	fos.stats.StatInfo().Nread.Inc()
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -322,7 +314,6 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	fos.stats.StatInfo().Nwrite.Inc()
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -369,7 +360,6 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 }
 
 func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -403,7 +393,6 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 // args.Wnames, and caller should first walk the pathname.
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	var err *np.Rerror
-	fos.stats.StatInfo().Nremove.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -431,7 +420,6 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 }
 
 func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
-	fos.stats.StatInfo().Nstat.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -450,7 +438,6 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	fos.stats.StatInfo().Nwstat.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -498,7 +485,6 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 }
 
 func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	fos.stats.StatInfo().Nrenameat.Inc()
 	oldf, err := fos.lookup(args.OldFid)
 	if err != nil {
 		return err
@@ -556,7 +542,6 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 // Special code path for GetFile: in one RPC, GetFile() looks up the file,
 // opens it, and reads it.
 func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
-	fos.stats.StatInfo().Nget.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err
@@ -601,7 +586,6 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	var r error
 	var err *np.Rerror
-	fos.stats.StatInfo().Nset.Inc()
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err

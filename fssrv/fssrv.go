@@ -140,6 +140,7 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 		}
 		return *reply, nil
 	}
+	fssrv.stats.StatInfo().Inc(msg.Type())
 	return sess.Dispatch(msg)
 }
 

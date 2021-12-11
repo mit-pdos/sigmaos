@@ -2,9 +2,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
+	"runtime"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -14,16 +14,13 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v out\n", os.Args[0])
-		os.Exit(1)
+		log.Fatalf("Usage: %v out\n", os.Args[0])
 	}
 	l, err := MakeSpinner(os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
-		os.Exit(1)
+		log.Fatalf("%v: error %v", os.Args[0], err)
 	}
 	l.Work()
-	l.Exit()
 }
 
 type Spinner struct {
@@ -53,7 +50,6 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 func (s *Spinner) waitEvict() {
 	err := s.WaitEvict(proc.GetPid())
-	log.Printf("WaitEvict triggered: %v", proc.GetPid())
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}
@@ -61,12 +57,13 @@ func (s *Spinner) waitEvict() {
 	os.Exit(0)
 }
 
-func (s *Spinner) Work() {
-	go s.waitEvict()
+func (s *Spinner) spin() {
 	for {
+		runtime.Gosched()
 	}
 }
 
-func (s *Spinner) Exit() {
-	s.Exited(proc.GetPid(), "OK")
+func (s *Spinner) Work() {
+	go s.spin()
+	s.waitEvict()
 }

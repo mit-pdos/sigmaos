@@ -49,17 +49,22 @@ func main() {
 	}
 
 	var fss *fssrv.FsServer
+	var err error
 	// Replicate?
 	if len(os.Args) >= 4 {
-		id, err := strconv.Atoi(os.Args[3])
-		if err != nil {
+		id, r := strconv.Atoi(os.Args[3])
+		if r != nil {
 			log.Fatalf("Couldn't convert id string: %v", err)
 		}
 		peers := strings.Split(os.Args[4], ",")
 		config := replraft.MakeRaftConfig(id, peers)
-		fss, _, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", config)
+		fss, _, _, err = fslibsrv.MakeReplMemfs(addr, pname, "named", config)
 	} else {
-		fss, _, _, _ = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
+		fss, _, _, err = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
+	}
+
+	if err != nil {
+		log.Fatalf("%v: err %v\n", os.Args[0], err)
 	}
 
 	seccomp.LoadFilter()

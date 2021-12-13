@@ -27,7 +27,7 @@ func makeClerk(id int, fs protsrv.FsServer, commit <-chan [][]byte, propose chan
 	c.mu = &sync.Mutex{}
 	c.id = id
 	c.fssrv = fs
-	c.np = fs.Connect()
+	// XXX FIXME c.np = fs.Connect()
 	c.opmap = make(map[np.Tsession]map[np.Tseqno]*SrvOp)
 	c.requests = make(chan *SrvOp)
 	c.commit = commit
@@ -75,8 +75,8 @@ func (c *Clerk) propose(op *SrvOp) {
 func (c *Clerk) apply(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
 	// XXX Avoid doing this every time
-	c.fssrv.SessionTable().RegisterSession(fc.Session)
-	reply, rerror := protsrv.Dispatch(c.np, fc.Session, fc.Msg)
+
+	reply, rerror := c.fssrv.Dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}

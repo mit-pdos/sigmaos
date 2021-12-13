@@ -47,10 +47,9 @@ type RelayConn struct {
 }
 
 func (rs *ChainReplServer) MakeConn(psrv protsrv.FsServer, conn net.Conn) repl.Conn {
-	protsrv := psrv.Connect()
 	r := &RelayConn{
 		rs,
-		psrv, protsrv, conn,
+		psrv, nil, conn, // FIXME psrv?
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		rs.ops, make(chan *RelayOp)}
@@ -85,8 +84,7 @@ func (r *RelayConn) reader() {
 func (r *RelayConn) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
 	// XXX Avoid doing this every time
-	r.fssrv.SessionTable().RegisterSession(fc.Session)
-	reply, rerror := protsrv.Dispatch(r.np, fc.Session, fc.Msg)
+	reply, rerror := r.fssrv.Dispatch(fc.Session, fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}

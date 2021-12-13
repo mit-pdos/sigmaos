@@ -97,7 +97,7 @@ func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func TestWaitExit(t *testing.T) {
+func TestWaitExitSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	start := time.Now()
@@ -375,7 +375,7 @@ func TestEvict(t *testing.T) {
 }
 
 func testLocker(t *testing.T, part string) {
-	const N = 20
+	const N = 2 // 20
 
 	ts := makeTstate(t)
 	pids := []string{}
@@ -388,6 +388,7 @@ func testLocker(t *testing.T, part string) {
 	assert.Nil(t, err, "mkdir error")
 	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
+
 	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
@@ -409,9 +410,9 @@ func TestLockerNoPart(t *testing.T) {
 	testLocker(t, "NO")
 }
 
-//func TestLockerWithPart(t *testing.T) {
-//	testLocker(t, "YES")
-//}
+func TestLockerWithPart(t *testing.T) {
+	testLocker(t, "YES")
+}
 
 func TestReserveCores(t *testing.T) {
 	ts := makeTstate(t)

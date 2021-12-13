@@ -4,8 +4,11 @@ import (
 	"log"
 	"runtime/debug"
 
+	db "ulambda/debug"
 	"ulambda/fs"
+	"ulambda/fslib"
 	"ulambda/netsrv"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/protsrv"
@@ -15,34 +18,40 @@ import (
 	"ulambda/watch"
 )
 
+//
+// There is one FsServer per memfsd. The FsServer has one ProtSrv per
+// 9p channel (i.e., TCP connection); each channel has one or more
+// sessions (one per client fslib on the same client machine).
+//
+
 type FsServer struct {
 	addr  string
 	root  fs.Dir
-	mkps  protsrv.MakeProtServer
+	mkps  protsrv.MkProtServer
 	stats *stats.Stats
-	wt    *watch.WatchTable
 	st    *session.SessionTable
-	ct    *ConnTable
+	wt    *watch.WatchTable
 	srv   *netsrv.NetServer
 	pclnt *procclnt.ProcClnt
 	done  bool
 	ch    chan bool
+	fsl   *fslib.FsLib
 }
 
-func MakeFsServer(root fs.Dir, addr string,
-	mkps protsrv.MakeProtServer, pclnt *procclnt.ProcClnt,
+func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
+	mkps protsrv.MkProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv)
 	fssrv.wt = watch.MkWatchTable()
-	fssrv.ct = MkConnTable()
-	fssrv.st = session.MakeSessionTable()
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
+	fssrv.fsl = fsl
 	return fssrv
 }
 
@@ -88,22 +97,55 @@ func (fssrv *FsServer) GetWatchTable() *watch.WatchTable {
 	return fssrv.wt
 }
 
-func (fssrv *FsServer) SessionTable() *session.SessionTable {
-	return fssrv.st
-}
-
-func (fssrv *FsServer) GetConnTable() *ConnTable {
-	return fssrv.ct
-}
-
 func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) {
 	return fssrv.root, MkCtx(uname)
 }
 
-func (fssrv *FsServer) Connect() protsrv.Protsrv {
-	psrv := fssrv.mkps.MakeProtServer(fssrv)
-	fssrv.ct.Add(psrv)
-	return psrv
+func (fssrv *FsServer) checkLock(sess *session.Session) error {
+	fn, err := sess.LockName()
+	if err != nil {
+		return err
+	}
+	if fn == nil { // no lock on this session
+		return nil
+	}
+	st, err := fssrv.fsl.Stat(np.Join(fn))
+	if err != nil {
+		return err
+	}
+	return sess.CheckLock(fn, st.Qid)
+}
+
+func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	sess := fssrv.st.LookupInsert(sid)
+	switch req := msg.(type) {
+	case np.Twrite:
+		err := fssrv.checkLock(sess)
+		if err != nil {
+			log.Printf("checkDlock %v\n", err)
+			return nil, &np.Rerror{err.Error()}
+		}
+	case np.Tregister:
+		reply := &np.Ropen{}
+		log.Printf("%v: reg %v %v\n", db.GetName(), sid, req)
+		if err := sess.RegisterLock(sid, req.Wnames, req.Qid); err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		return *reply, nil
+	case np.Tderegister:
+		reply := &np.Ropen{}
+		log.Printf("%v: dereg %v %v\n", db.GetName(), sid, req)
+		if err := sess.DeregisterLock(sid, req.Wnames); err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		return *reply, nil
+	}
+	fssrv.stats.StatInfo().Inc(msg.Type())
+	return sess.Dispatch(msg)
+}
+
+func (fssrv *FsServer) Detach(sid np.Tsession) {
+	fssrv.st.Detach(sid)
 }
 
 type Ctx struct {

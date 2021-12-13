@@ -422,6 +422,7 @@ func TestLock1(t *testing.T) {
 	}()
 	i := <-ch
 	assert.Equal(t, 0, i)
+
 	ts.s.Shutdown()
 }
 
@@ -457,27 +458,27 @@ func TestLockAfterConnClose(t *testing.T) {
 	lPath := "name/lock-conn-close-test"
 
 	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
-	fsl2 := fslib.MakeFsLibAddr("fslibtest-2", fslib.Named())
 
-	err := fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	err := ts.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 1")
 
 	go func() {
 		// Should wait
-		err := fsl2.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		err := fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.Equal(t, err.Error(), "EOF", "Make lock 2")
 	}()
 
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl2's connection
-	fsl2.Exit()
+	fsl1.Exit()
 
 	// Remove the lock file
-	fsl1.Remove(lPath)
+	ts.Remove(lPath)
+	assert.Equal(t, nil, err)
 
 	// Try to lock again (should succeed)
-	err = fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	err = ts.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 3")
 
 	ts.s.Shutdown()
@@ -515,7 +516,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 					i += 1
 				}
 			} else {
-				log.Printf("SetRemoveWatch %v err %v\n", i, err)
+				// log.Printf("SetRemoveWatch %v err %v\n", i, err)
 			}
 		}
 		done <- true

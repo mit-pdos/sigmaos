@@ -42,7 +42,7 @@ type Procd struct {
 	perf       *perf.Perf
 	procclnt   *procclnt.ProcClnt
 	*fslib.FsLib
-	*fssrv.FsServer
+	fsrv *fssrv.FsServer
 }
 
 func RunProcd(bin string, pprofPath string, utilPath string) {
@@ -60,7 +60,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
 
-	pd.addr = pd.MyAddr()
+	pd.addr = pd.fsrv.MyAddr()
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -73,7 +73,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 
-	pd.FsServer.GetStats().MonitorCPUUtil(pd.FsLib)
+	pd.fsrv.GetStats().MonitorCPUUtil(pd.FsLib)
 
 	pd.Work()
 }
@@ -184,7 +184,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 				return false, nil
 			}
 			addr := string(b)
-			if strings.HasPrefix(addr, pd.FsServer.MyAddr()) {
+			if strings.HasPrefix(addr, pd.fsrv.MyAddr()) {
 				return false, nil
 			}
 			p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
@@ -322,9 +322,9 @@ func (pd *Procd) worker(workerDone *bool) {
 
 func (pd *Procd) Work() {
 	go func() {
-		pd.Serve()
+		pd.fsrv.Serve()
 		pd.Done()
-		pd.FsServer.Done()
+		pd.fsrv.Done()
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

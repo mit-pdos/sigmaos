@@ -135,6 +135,7 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	} else {
 		mfs = SpawnKV(ts.ProcClnt)
 	}
+	ts.WaitStart(mfs)
 	RunBalancer(ts.ProcClnt, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)
@@ -190,7 +191,9 @@ func ConcurN(t *testing.T, nclerk int) {
 	}
 
 	for s := 0; s < NMORE; s++ {
-		ts.mfss = append(ts.mfss, ts.spawnMemFS())
+		mfs := ts.spawnMemFS()
+		ts.mfss = append(ts.mfss, mfs)
+		ts.WaitStart(mfs)
 		RunBalancer(ts.ProcClnt, "add", ts.mfss[len(ts.mfss)-1])
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)

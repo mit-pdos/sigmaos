@@ -67,7 +67,8 @@ func MkNetClnt(addrs []string) (*NetClnt, error) {
 	nc.addrs = addrs
 	err := nc.connect()
 	if err != nil {
-		log.Printf("mkNetClnt: connect failed %v\n", err)
+		debug.PrintStack()
+		log.Printf("%v: mkNetClnt connect failed %v\n", db.GetName(), err)
 		return nil, err
 	}
 	go nc.writer()

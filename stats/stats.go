@@ -53,22 +53,28 @@ func (c *Tcounter) Inc() {
 
 // XXX separate cache lines
 type StatInfo struct {
-	Nwalk     Tcounter
-	Nclunk    Tcounter
-	Nopen     Tcounter
-	Nwatchv   Tcounter
-	Ncreate   Tcounter
-	Nflush    Tcounter
-	Nread     Tcounter
-	Nreadv    Tcounter
-	Nwrite    Tcounter
-	Nwritev   Tcounter
-	Nremove   Tcounter
-	Nstat     Tcounter
-	Nwstat    Tcounter
-	Nrenameat Tcounter
-	Nget      Tcounter
-	Nset      Tcounter
+	Nversion    Tcounter
+	Nauth       Tcounter
+	Nattach     Tcounter
+	Nflush      Tcounter
+	Nwalk       Tcounter
+	Nclunk      Tcounter
+	Nopen       Tcounter
+	Nwatchv     Tcounter
+	Ncreate     Tcounter
+	Nread       Tcounter
+	Nreadv      Tcounter
+	Nwrite      Tcounter
+	Nwritev     Tcounter
+	Nremove     Tcounter
+	Nremovefile Tcounter
+	Nstat       Tcounter
+	Nwstat      Tcounter
+	Nrenameat   Tcounter
+	Nget        Tcounter
+	Nset        Tcounter
+	Nregister   Tcounter
+	Nderegister Tcounter
 
 	Paths map[string]int
 
@@ -80,6 +86,52 @@ func MkStatInfo() *StatInfo {
 	sti := &StatInfo{}
 	sti.Paths = make(map[string]int)
 	return sti
+}
+
+func (si *StatInfo) Inc(fct np.Tfcall) {
+	switch fct {
+	case np.TTversion:
+		si.Nversion.Inc()
+	case np.TTauth:
+		si.Nauth.Inc()
+	case np.TTattach:
+		si.Nattach.Inc()
+	case np.TTflush:
+		si.Nflush.Inc()
+	case np.TTwalk:
+		si.Nwalk.Inc()
+	case np.TTopen:
+		si.Nopen.Inc()
+	case np.TTcreate:
+		si.Ncreate.Inc()
+	case np.TTread:
+		si.Nread.Inc()
+	case np.TTwrite:
+		si.Nwrite.Inc()
+	case np.TTclunk:
+		si.Nclunk.Inc()
+	case np.TTremove:
+		si.Nremove.Inc()
+	case np.TTremovefile:
+		si.Nremovefile.Inc()
+	case np.TTstat:
+		si.Nstat.Inc()
+	case np.TTwstat:
+		si.Nwstat.Inc()
+	case np.TTwatchv:
+		si.Nwatchv.Inc()
+	case np.TTrenameat:
+		si.Nrenameat.Inc()
+	case np.TTgetfile:
+		si.Nget.Inc()
+	case np.TTsetfile:
+		si.Nset.Inc()
+	case np.TTregister:
+		si.Nregister.Inc()
+	case np.TTderegister:
+		si.Nderegister.Inc()
+	default:
+	}
 }
 
 type Stats struct {

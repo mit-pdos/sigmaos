@@ -220,7 +220,7 @@ func TestLock4(t *testing.T) {
 	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
-	fsl2 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
+	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
 	lock1 := usync.MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
 	//	lock2 := MakeLock(fsl2, LOCK_DIR, LOCK_NAME, true)

@@ -1,6 +1,7 @@
 package protclnt
 
 import (
+	"errors"
 	"strings"
 	"sync"
 
@@ -91,4 +92,57 @@ func (cm *ConnMgr) disconnect(dst []string) bool {
 	}
 	conn.Close()
 	return true
+}
+
+func (cm *ConnMgr) mcast(ch chan error, dst []string, req np.Tmsg) {
+	if reply, err := cm.makeCall(dst, req); err != nil {
+		ch <- err
+	} else {
+		if rmsg, ok := reply.(np.Rerror); ok {
+			ch <- errors.New(rmsg.Ename)
+		} else {
+			ch <- nil
+		}
+	}
+}
+
+func (cm *ConnMgr) registerLock(path []string, qid np.Tqid) error {
+	ch := make(chan error)
+	cm.mu.Lock()
+	n := 0
+	args := np.Tregister{path, qid}
+	for addr, _ := range cm.conns {
+		n += 1
+		go cm.mcast(ch, strings.Split(addr, ","), args)
+	}
+	cm.mu.Unlock()
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil {
+			err = r
+		}
+	}
+	return err
+}
+
+// XXX deduplicate
+func (cm *ConnMgr) deregisterLock(path []string) error {
+	ch := make(chan error)
+	cm.mu.Lock()
+	n := 0
+	args := np.Tderegister{path}
+	for addr, _ := range cm.conns {
+		n += 1
+		go cm.mcast(ch, strings.Split(addr, ","), args)
+	}
+	cm.mu.Unlock()
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil {
+			err = r
+		}
+	}
+	return err
 }

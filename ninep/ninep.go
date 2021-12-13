@@ -146,7 +146,7 @@ const (
 	DMMOUNT  Tperm = 0x10000000 // mounted channel
 	DMAUTH   Tperm = 0x08000000 // authentication file
 
-	// DMTMP is ephemeral in sigmaP, but *only* applies when a file is open
+	// DMTMP is ephemeral in sigmaP
 	DMTMP Tperm = 0x04000000 // non-backed-up file
 
 	DMREAD  = 0x4 // mode bit for read permission
@@ -224,6 +224,8 @@ const (
 	TRgetfile
 	TTsetfile
 	TTremovefile
+	TTregister
+	TTderegister
 )
 
 func (fct Tfcall) String() string {
@@ -298,6 +300,10 @@ func (fct Tfcall) String() string {
 		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
+	case TTregister:
+		return "Tregister"
+	case TTderegister:
+		return "Tderegister"
 	default:
 		return "Tunknown"
 	}
@@ -477,6 +483,15 @@ type Tremovefile struct {
 	Wnames []string
 }
 
+type Tregister struct {
+	Wnames []string
+	Qid    Tqid
+}
+
+type Tderegister struct {
+	Wnames []string
+}
+
 type Rremove struct {
 }
 
@@ -583,3 +598,5 @@ func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
+func (Tregister) Type() Tfcall   { return TTregister }
+func (Tderegister) Type() Tfcall { return TTderegister }

@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	N   = 100
-	DIR = "name/locktest"
+	N     = 100
+	DIR   = "name/locktest"
+	DELAY = 10
 )
 
 //
@@ -54,7 +55,7 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	lock := usync.MakeLock(fsl, DIR, "lock", true)
+	wlock := usync.MakeDLock(fsl, DIR, "lock", true)
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"
@@ -63,7 +64,7 @@ func main() {
 
 	partitioned := false
 	for i := 0; i < N; i++ {
-		lock.Lock()
+		err := wlock.WeakLock()
 
 		b, _, err := fsl.GetFile(cnt)
 		if err != nil {
@@ -84,11 +85,12 @@ func main() {
 
 		if os.Args[1] == "YES" {
 			if crash.MaybePartition(fsl) {
-				log.Printf("partition\n")
+				log.Printf("%v: partition\n", db.GetName())
 				partitioned = true
-				delay.Delay(100)
 			}
 		}
+
+		delay.Delay(DELAY)
 
 		n, err := strconv.Atoi(string(b))
 		if err != nil {
@@ -109,12 +111,16 @@ func main() {
 
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))
 		if err != nil {
-			log.Fatalf("setfile %v failed %v\n", A, err)
+			log.Fatalf("write %v failed %v\n", A, err)
 		}
 
 		fsl.Close(fd)
 
 		if partitioned {
+			err := wlock.Unlock()
+			if err != nil {
+				log.Printf("%v unlock err %v\n", db.GetName(), err)
+			}
 			break
 		}
 
@@ -123,7 +129,7 @@ func main() {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}
 
-		lock.Unlock()
+		wlock.Unlock()
 	}
 	pclnt.Exited(proc.GetPid(), "OK")
 }

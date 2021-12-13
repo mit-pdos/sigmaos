@@ -14,6 +14,30 @@ import (
 	"ulambda/session"
 )
 
+type Npd struct {
+	named []string
+	st    *session.SessionTable
+}
+
+func MakeNpd() *Npd {
+	npd := &Npd{fslib.Named(), nil}
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd)
+	return npd
+}
+
+func (npd *Npd) mkProtServer(fssrv protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
+	return makeNpConn(npd.named)
+}
+
+func (npd *Npd) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	sess := npd.st.LookupInsert(sid)
+	return sess.Dispatch(msg)
+}
+
+func (npd *Npd) Detach(sid np.Tsession) {
+	npd.st.Detach(sid)
+}
+
 //
 // XXX convert to use npobjsrv
 //
@@ -35,10 +59,6 @@ func makeNpConn(named []string) *NpConn {
 	npc.fids = make(map[np.Tfid]*protclnt.ProtClnt)
 	npc.named = named
 	return npc
-}
-
-func (npc *NpConn) Closed() bool {
-	return false
 }
 
 func (npc *NpConn) npch(fid np.Tfid) *protclnt.ProtClnt {
@@ -63,39 +83,17 @@ func (npc *NpConn) delch(fid np.Tfid) {
 	delete(npc.fids, fid)
 }
 
-type Npd struct {
-	named []string
-	st    *session.SessionTable
-}
-
-func MakeNpd() *Npd {
-	return &Npd{fslib.Named(), nil}
-}
-
-// XXX should/is happen only once for the one mount for :1110
-func (npd *Npd) Connect() protsrv.Protsrv {
-	clnt := makeNpConn(npd.named)
-	return clnt
-}
-
-func (npd *Npd) SessionTable() *session.SessionTable {
-	if npd.st == nil {
-		npd.st = session.MakeSessionTable()
-	}
-	return npd.st
-}
-
-func (npc *NpConn) Version(sess np.Tsession, args np.Tversion, rets *np.Rversion) *np.Rerror {
+func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
 	return nil
 }
 
-func (npc *NpConn) Auth(sess np.Tsession, args np.Tauth, rets *np.Rauth) *np.Rerror {
+func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 	return np.ErrUnknownMsg
 }
 
-func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *np.Rerror {
+func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	u, err := user.Current()
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -111,7 +109,7 @@ func (npc *NpConn) Attach(sess np.Tsession, args np.Tattach, rets *np.Rattach) *
 	return nil
 }
 
-func (npc *NpConn) Detach(sess np.Tsession) {
+func (npc *NpConn) Detach() {
 	db.DLPrintf("9POBJ", "Detach\n")
 }
 
@@ -141,7 +139,7 @@ func (npc *NpConn) readLink(fid np.Tfid) (string, error) {
 	return string(reply.Data), nil
 }
 
-func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rerror {
+func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	path := args.Wnames
 	// XXX accumulate qids
 	for i := 0; i < MAXSYMLINK; i++ {
@@ -190,7 +188,7 @@ func (npc *NpConn) Walk(sess np.Tsession, args np.Twalk, rets *np.Rwalk) *np.Rer
 	return nil
 }
 
-func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Open(args.Fid, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -199,11 +197,11 @@ func (npc *NpConn) Open(sess np.Tsession, args np.Topen, rets *np.Ropen) *np.Rer
 	return nil
 }
 
-func (npc *NpConn) WatchV(sess np.Tsession, args np.Twatchv, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *np.Rerror {
+func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Create(args.Fid, args.Name, args.Perm, args.Mode)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -212,7 +210,7 @@ func (npc *NpConn) Create(sess np.Tsession, args np.Tcreate, rets *np.Rcreate) *
 	return nil
 }
 
-func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.Rerror {
+func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	err := npc.npch(args.Fid).Clunk(args.Fid)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -221,11 +219,11 @@ func (npc *NpConn) Clunk(sess np.Tsession, args np.Tclunk, rets *np.Rclunk) *np.
 	return nil
 }
 
-func (npc *NpConn) Flush(sess np.Tsession, args np.Tflush, rets *np.Rflush) *np.Rerror {
+func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rerror {
+func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Read(args.Fid, args.Offset, args.Count)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -234,7 +232,7 @@ func (npc *NpConn) Read(sess np.Tsession, args np.Tread, rets *np.Rread) *np.Rer
 	return nil
 }
 
-func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Write(args.Fid, args.Offset, args.Data)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -243,7 +241,7 @@ func (npc *NpConn) Write(sess np.Tsession, args np.Twrite, rets *np.Rwrite) *np.
 	return nil
 }
 
-func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	err := npc.npch(args.Fid).Remove(args.Fid)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -251,11 +249,11 @@ func (npc *NpConn) Remove(sess np.Tsession, args np.Tremove, rets *np.Rremove) *
 	return nil
 }
 
-func (npc *NpConn) RemoveFile(sess np.Tsession, args np.Tremovefile, rets *np.Rremove) *np.Rerror {
+func (npc *NpConn) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rerror {
+func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Stat(args.Fid)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -264,7 +262,7 @@ func (npc *NpConn) Stat(sess np.Tsession, args np.Tstat, rets *np.Rstat) *np.Rer
 	return nil
 }
 
-func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.Rerror {
+func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Wstat(args.Fid, &args.Stat)
 	if err != nil {
 		return &np.Rerror{err.Error()}
@@ -273,14 +271,14 @@ func (npc *NpConn) Wstat(sess np.Tsession, args np.Twstat, rets *np.Rwstat) *np.
 	return nil
 }
 
-func (npc *NpConn) Renameat(sess np.Tsession, args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return np.ErrNotSupported
 }
 
-func (npc *NpConn) GetFile(sess np.Tsession, args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
+func (npc *NpConn) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) SetFile(sess np.Tsession, args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
+func (npc *NpConn) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }

@@ -3,17 +3,21 @@ package kernel_test
 import (
 	"log"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/crash"
+	"ulambda/delay"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
+	usync "ulambda/sync"
 )
 
 type Tstate struct {
@@ -198,4 +202,56 @@ func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
 	assert.Equal(t, 1, len(stsExcluded))
 	name := path.Join(named.PROCD, stsExcluded[0].Name)
 	return name
+}
+
+func TestDlock(t *testing.T) {
+	ts := makeTstate(t)
+	dirn := "name/"
+
+	dirux := "name/ux/~ip/outdir"
+	ts.Mkdir(dirux, 0777)
+	ts.Remove(dirux + "/f")
+
+	fsldl := fslib.MakeFsLibAddr("dlock", fslib.Named())
+
+	ch := make(chan bool)
+	go func() {
+		wlock := usync.MakeDLock(fsldl, dirn, "l", true)
+		err := wlock.WeakLock()
+		assert.Nil(t, err, "Weaklock")
+
+		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
+		assert.Nil(t, err, "Create")
+
+		ch <- true
+
+		log.Printf("partition..\n")
+
+		crash.Partition(fsldl)
+		delay.Delay(10)
+
+		// fsldl lost lock, and ts should have it by now so
+		// this write should fail
+		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
+		assert.NotNil(t, err, "Write")
+
+		fsldl.Close(fd)
+
+		ch <- true
+	}()
+
+	<-ch
+
+	wlock := usync.MakeDLock(ts.FsLib, dirn, "l", true)
+	err := wlock.WeakLock()
+	assert.Nil(t, err, "Weaklock")
+
+	<-ch
+
+	fd, err := ts.Open(dirux+"/f", np.OREAD)
+	assert.Nil(t, err, "Open")
+	b, err := ts.Read(fd, 100)
+	assert.Equal(ts.t, 0, len(b))
+
+	ts.Shutdown()
 }

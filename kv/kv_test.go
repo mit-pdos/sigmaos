@@ -135,6 +135,7 @@ func (ts *Tstate) setup(nclerk int, memfs bool) string {
 	} else {
 		mfs = SpawnKV(ts.ProcClnt)
 	}
+	ts.WaitStart(mfs)
 	RunBalancer(ts.ProcClnt, "add", mfs)
 
 	ts.clrks = make([]*KvClerk, nclerk)

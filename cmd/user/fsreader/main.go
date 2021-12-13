@@ -95,5 +95,5 @@ func (r *Reader) Work() string {
 }
 
 func (r *Reader) Exit(status string) {
-	r.Evict(proc.GetPid())
+	r.Exited(proc.GetPid(), status)
 }

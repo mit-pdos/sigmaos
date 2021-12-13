@@ -113,7 +113,8 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 		return "", err
 	}
 	www.rwResponse(w, pid)
-	return www.WaitExit(pid)
+	str, err := www.WaitExit(pid)
+	return str, err
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {

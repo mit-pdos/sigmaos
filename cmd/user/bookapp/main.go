@@ -51,7 +51,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
 	n := "pids/" + args[1] + "/server"
-	mfs, err := fslibsrv.StartMemFsFsl(n, ba.FsLib, ba.ProcClnt)
+	mfs, err := fslibsrv.MakeMemFsFsl(n, ba.FsLib, ba.ProcClnt)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
@@ -60,7 +60,9 @@ func RunBookApp(args []string) (*BookApp, error) {
 		log.Fatal("Create error: ", err)
 	}
 	ba.input = strings.Split(args[2], "/")
-	ba.Started(proc.GetPid())
+	go func() {
+		mfs.Serve()
+	}()
 
 	return ba, nil
 }
@@ -178,6 +180,5 @@ func (ba *BookApp) Work() string {
 
 func (ba *BookApp) Exit(status string) {
 	log.Printf("bookapp exit %v\n", status)
-	ba.Evict(proc.GetPid())
 	ba.Exited(proc.GetPid(), status)
 }

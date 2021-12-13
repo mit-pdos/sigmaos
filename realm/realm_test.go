@@ -122,7 +122,6 @@ func TestRealmGrowShrink(t *testing.T) {
 	for i := 0; i < N+7*N/8; i++ {
 		err := ts.Evict(pids[0])
 		assert.Nil(ts.t, err, "Evict")
-		log.Printf("Evicted #%v %v", cnt, pids[0])
 		cnt += 1
 		pids = pids[1:]
 	}

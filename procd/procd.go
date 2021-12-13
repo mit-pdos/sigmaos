@@ -13,7 +13,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/fssrv"
+	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
 	"ulambda/named"
 	np "ulambda/ninep"
@@ -42,7 +42,7 @@ type Procd struct {
 	perf       *perf.Perf
 	procclnt   *procclnt.ProcClnt
 	*fslib.FsLib
-	fsrv *fssrv.FsServer
+	*fslibsrv.MemFs
 }
 
 func RunProcd(bin string, pprofPath string, utilPath string) {
@@ -60,7 +60,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
 
-	pd.addr = pd.fsrv.MyAddr()
+	pd.addr = pd.MyAddr()
 
 	pprof := pprofPath != ""
 	if pprof {
@@ -73,7 +73,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 
-	pd.fsrv.GetStats().MonitorCPUUtil(pd.FsLib)
+	pd.MemFs.GetStats().MonitorCPUUtil(pd.FsLib)
 
 	pd.Work()
 }
@@ -184,7 +184,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 				return false, nil
 			}
 			addr := string(b)
-			if strings.HasPrefix(addr, pd.fsrv.MyAddr()) {
+			if strings.HasPrefix(addr, pd.MyAddr()) {
 				return false, nil
 			}
 			p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
@@ -322,9 +322,9 @@ func (pd *Procd) worker(workerDone *bool) {
 
 func (pd *Procd) Work() {
 	go func() {
-		pd.fsrv.Serve()
+		pd.Serve()
 		pd.Done()
-		pd.fsrv.Done()
+		pd.MemFs.Done()
 	}()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks

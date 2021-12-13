@@ -27,7 +27,7 @@ type Book struct {
 
 func RunDbd() {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
-	mfs, err := fslibsrv.StartMemFs(named.DB, "dbd")
+	mfs, _, err := fslibsrv.MakeMemFs(named.DB, "dbd")
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
@@ -35,5 +35,6 @@ func RunDbd() {
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
-	mfs.Wait()
+	mfs.Serve()
+	mfs.Done()
 }

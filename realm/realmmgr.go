@@ -47,7 +47,7 @@ type RealmMgr struct {
 	root          fs.Dir
 	*config.ConfigClnt
 	*fslib.FsLib
-	fsrv *fssrv.FsServer
+	*fslibsrv.MemFs
 }
 
 func MakeRealmMgr() *RealmMgr {
@@ -56,10 +56,11 @@ func MakeRealmMgr() *RealmMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.root, m.fsrv, m.FsLib, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
+	m.MemFs, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
+	m.FsLib = m.MemFs.FsLib
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
 	m.makeCtlFiles()
@@ -84,20 +85,20 @@ func (m *RealmMgr) makeInitFs() {
 
 func (m *RealmMgr) makeCtlFiles() {
 	// Set up control files
-	realmCreate := makeCtlFile(m.realmCreate, "", m.root)
-	err := dir.MkNod(fssrv.MkCtx(""), m.root, realm_create, realmCreate)
+	realmCreate := makeCtlFile(m.realmCreate, "", m.Root())
+	err := dir.MkNod(fssrv.MkCtx(""), m.Root(), realm_create, realmCreate)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 1: %v", err)
 	}
 
-	realmDestroy := makeCtlFile(m.realmDestroy, "", m.root)
-	err = dir.MkNod(fssrv.MkCtx(""), m.root, realm_destroy, realmDestroy)
+	realmDestroy := makeCtlFile(m.realmDestroy, "", m.Root())
+	err = dir.MkNod(fssrv.MkCtx(""), m.Root(), realm_destroy, realmDestroy)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
 	}
 
-	freeMachineds := makeCtlFile(m.freeMachineds, "", m.root)
-	err = dir.MkNod(fssrv.MkCtx(""), m.root, free_machineds, freeMachineds)
+	freeMachineds := makeCtlFile(m.freeMachineds, "", m.Root())
+	err = dir.MkNod(fssrv.MkCtx(""), m.Root(), free_machineds, freeMachineds)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
 	}
@@ -341,6 +342,6 @@ func (m *RealmMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
 	go m.balanceMachineds()
-	m.fsrv.Serve()
-	m.fsrv.Done()
+	m.Serve()
+	m.Done()
 }

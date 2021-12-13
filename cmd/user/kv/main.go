@@ -12,12 +12,13 @@ import (
 func main() {
 	linuxsched.ScanTopology()
 	name := named.MEMFS + "/" + proc.GetPid()
-	mfs, err := fslibsrv.StartMemFs(name, name)
+	mfs, _, err := fslibsrv.MakeMemFs(name, name)
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
 
 	mfs.FsServer.GetStats().MakeElastic(mfs.FsLib, proc.GetPid())
-	mfs.Wait()
+	mfs.Serve()
+	mfs.Done()
 	mfs.FsServer.GetStats().Done()
 }

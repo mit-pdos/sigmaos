@@ -13,17 +13,17 @@ import (
 )
 
 type Consoled struct {
-	*fssrv.FsServer
+	*fslibsrv.MemFs
 }
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	root, srv, _, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
+	mfs, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	cons.FsServer = srv
-	err = dir.MkNod(fssrv.MkCtx(""), root, "console", makeConsole())
+	cons.MemFs = mfs
+	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "console", makeConsole())
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
 	}

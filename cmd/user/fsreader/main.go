@@ -35,6 +35,7 @@ func main() {
 type Reader struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	*fslibsrv.MemFs
 	input string
 	pipe  fs.FsObj
 }
@@ -48,16 +49,20 @@ func MakeReader(args []string) (*Reader, error) {
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	n := "pids/" + args[1] + "/server"
-	mfs, err := fslibsrv.StartMemFsFsl(n, r.FsLib, r.ProcClnt)
+	mfs, err := fslibsrv.MakeMemFsFsl(n, r.FsLib, r.ProcClnt)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
+	r.MemFs = mfs
 	r.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
 	r.input = args[2]
-	r.Started(proc.GetPid())
+	go func() {
+		r.Serve()
+		r.Done()
+	}()
 	return r, nil
 }
 

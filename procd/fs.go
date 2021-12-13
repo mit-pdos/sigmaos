@@ -23,7 +23,6 @@ type claimProcFn func(procdPath string, queueName string, p *proc.Proc) bool
 
 type ProcdFs struct {
 	pd      *Procd
-	root    fs.Dir
 	run     fs.Dir
 	runqs   map[string]fs.Dir
 	ctlFile fs.FsObj
@@ -34,22 +33,23 @@ func (pd *Procd) makeFs() {
 	var err error
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
-	pd.fs.root, pd.fsrv, pd.FsLib, pd.procclnt, err = fslibsrv.MakeMemFs(named.PROCD, named.PROCDDIR)
+	pd.MemFs, pd.procclnt, err = fslibsrv.MakeMemFs(named.PROCD, named.PROCDDIR)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
+	pd.FsLib = pd.MemFs.FsLib
 
 	// Set up ctl file
-	pd.fs.ctlFile = makeCtlFile(pd, "", pd.fs.root)
-	err = dir.MkNod(fssrv.MkCtx(""), pd.fs.root, named.PROC_CTL_FILE, pd.fs.ctlFile)
+	pd.fs.ctlFile = makeCtlFile(pd, "", pd.Root())
+	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), named.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err != nil {
 		log.Fatalf("Error MkNod in RunProcd: %v", err)
 	}
 
 	// Set up running dir
-	runningi := inode.MakeInode("", np.DMDIR, pd.fs.root)
+	runningi := inode.MakeInode("", np.DMDIR, pd.Root())
 	running := dir.MakeDir(runningi)
-	err = dir.MkNod(fssrv.MkCtx(""), pd.fs.root, named.PROCD_RUNNING, running)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), named.PROCD_RUNNING, running)
 	if err != nil {
 		log.Fatalf("Error creating running dir: %v", err)
 	}
@@ -59,9 +59,9 @@ func (pd *Procd) makeFs() {
 	pd.fs.runqs = make(map[string]fs.Dir)
 	runqs := []string{named.PROCD_RUNQ_LC, named.PROCD_RUNQ_BE}
 	for _, q := range runqs {
-		runqi := inode.MakeInode("", np.DMDIR, pd.fs.root)
+		runqi := inode.MakeInode("", np.DMDIR, pd.Root())
 		runq := dir.MakeDir(runqi)
-		err = dir.MkNod(fssrv.MkCtx(""), pd.fs.root, q, runq)
+		err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), q, runq)
 		if err != nil {
 			log.Fatalf("Error creating running dir: %v", err)
 		}

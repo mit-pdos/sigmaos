@@ -93,45 +93,36 @@ func (fs *MemFs) Root() fs.Dir {
 	return fs.root
 }
 
-func (fs *MemFs) Wait() {
-	<-fs.ch
-	fs.Done()
-}
-
-func MakeMemFs(path string, name string) (fs.Dir, *fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, error) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
+func MakeMemFs(path string, name string) (*MemFs, *procclnt.ProcClnt, error) {
 	fsl := fslib.MakeFsLib(name)
 	pclnt := procclnt.MakeProcClnt(fsl)
-	srv, err := MakeSrv(root, path, fsl, pclnt)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-	return root, srv, fsl, pclnt, makeStatDev(root, srv)
+	fs, err := MakeMemFsFsl(path, fsl, pclnt)
+	return fs, pclnt, err
 }
 
-func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (fs.Dir, *fssrv.FsServer, error) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
-	srv, err := MakeSrv(root, path, fsl, pclnt)
-	if err != nil {
-		return nil, nil, err
-	}
-	return root, srv, makeStatDev(root, srv)
-}
-
-func StartMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
+func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
 	fs := &MemFs{}
 	fs.ch = make(chan bool)
-	root, srv, err := MakeMemFsFsl(path, fsl, pclnt)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
+	srv, err := MakeSrv(root, path, fsl, pclnt)
 	if err != nil {
 		return nil, err
 	}
 	fs.FsLib = fsl
 	fs.FsServer = srv
 	fs.root = root
+	return fs, makeStatDev(root, srv)
+}
+
+func StartMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
+	fs, err := MakeMemFsFsl(path, fsl, pclnt)
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
-		srv.Serve()
-		fs.ch <- true
+		fs.Serve()
+		fs.Done()
 	}()
 	return fs, err
 }

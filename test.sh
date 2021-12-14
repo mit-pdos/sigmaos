@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export NAMED=127.0.0.1:1111
+export NAMED=:1111
 
 go clean -testcache
 

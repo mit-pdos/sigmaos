@@ -74,6 +74,10 @@ func (e *TestEnv) Shutdown() {
 	log.Printf("killed realmmgr")
 	e.realmmgr = nil
 
+	for _, addr := range fslib.Named() {
+		ShutdownNamed(addr)
+	}
+
 	//ShutdownNamedReplicas(fslib.Named())
 }
 

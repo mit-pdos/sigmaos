@@ -276,10 +276,29 @@ func TestCounter(t *testing.T) {
 	ts.s.Shutdown()
 }
 
+// Inline Set() so that we can delay the Write() to emulate a delay on
+// the server between open and write.
+func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
+	fd, err := fl.Open(fn, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	time.Sleep(1000 * time.Nanosecond)
+	_, err = fl.Write(fd, d)
+	if err != nil {
+		return err
+	}
+	err = fl.Close(fd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Test race: write returns successfully after rename, but read sees
 // an old value,
 func TestSetRenameGet(t *testing.T) {
-	const N = 100 // 100_000
+	const N = 20_000
 
 	ts := makeTstate(t)
 
@@ -297,7 +316,7 @@ func TestSetRenameGet(t *testing.T) {
 		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
 		for i := 1; i < N; {
 			d := []byte(strconv.Itoa(i))
-			_, err = fsl.SetFile(fn, d, np.NoV)
+			err = writeFile(fsl, fn, d)
 			if err == nil {
 				i++
 			} else {

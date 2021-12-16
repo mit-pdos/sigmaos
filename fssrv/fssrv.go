@@ -4,7 +4,7 @@ import (
 	"log"
 	"runtime/debug"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -55,6 +55,10 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	return fssrv
 }
 
+func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
+	fssrv.fsl = fsl
+}
+
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {
@@ -103,10 +107,10 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 
 func (fssrv *FsServer) checkLock(sess *session.Session) error {
 	fn, err := sess.LockName()
-	if err != nil {
+	if err != nil || fn == nil { // no sess or no lock on sess
 		return err
 	}
-	if fn == nil { // no lock on this session
+	if fn == nil {
 		return nil
 	}
 	st, err := fssrv.fsl.Stat(np.Join(fn))
@@ -120,25 +124,27 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 	sess := fssrv.st.LookupInsert(sid)
 	switch req := msg.(type) {
 	case np.Twrite:
+		// log.Printf("%p: req %v %v\n", fssrv, msg.Type(), req)
 		err := fssrv.checkLock(sess)
 		if err != nil {
-			log.Printf("checkDlock %v\n", err)
 			return nil, &np.Rerror{err.Error()}
 		}
 	case np.Tregister:
 		reply := &np.Ropen{}
-		log.Printf("%v: reg %v %v\n", db.GetName(), sid, req)
+		// log.Printf("%v: %p reg %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.RegisterLock(sid, req.Wnames, req.Qid); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		return *reply, nil
 	case np.Tderegister:
 		reply := &np.Ropen{}
-		log.Printf("%v: dereg %v %v\n", db.GetName(), sid, req)
+		// log.Printf("%v: %p dereg %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.DeregisterLock(sid, req.Wnames); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		return *reply, nil
+	default:
+		// log.Printf("%p: %v %v\n", fssrv, msg.Type(), req)
 	}
 	fssrv.stats.StatInfo().Inc(msg.Type())
 	return sess.Dispatch(msg)

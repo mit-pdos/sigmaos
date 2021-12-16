@@ -2,9 +2,7 @@ package dlock
 
 import (
 	"fmt"
-	"log"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -18,7 +16,7 @@ func MakeDlock(dlock []string, qid np.Tqid) *Dlock {
 }
 
 func (dlock *Dlock) Check(qid np.Tqid) error {
-	log.Printf("%v: check dlock %v %v\n", db.GetName(), dlock.Qid, qid)
+	// log.Printf("%v: check dlock %v %v\n", db.GetName(), dlock.Qid, qid)
 	if qid != dlock.Qid {
 		return fmt.Errorf("dlock %v is stale", dlock.Fn)
 	}

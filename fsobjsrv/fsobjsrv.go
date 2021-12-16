@@ -3,6 +3,7 @@ package fsobjsrv
 import (
 	"fmt"
 	"log"
+	// "time"
 
 	db "ulambda/debug"
 	"ulambda/dlock"
@@ -616,7 +617,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 			return &np.Rerror{r.Error()}
 		}
 	}
-	// time.Sleep(1000 * time.Nanosecond)
 	switch i := lo.(type) {
 	case fs.Dir:
 		return np.ErrNotFile

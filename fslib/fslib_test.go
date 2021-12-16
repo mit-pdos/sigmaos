@@ -15,6 +15,7 @@ import (
 	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
+	usync "ulambda/sync"
 )
 
 type Tstate struct {
@@ -276,10 +277,53 @@ func TestCounter(t *testing.T) {
 	ts.s.Shutdown()
 }
 
+// Inline Set() so that we can delay the Write() to emulate a delay on
+// the server between open and write.
+func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
+	fd, err := fl.Open(fn, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	time.Sleep(1 * time.Millisecond)
+	_, err = fl.Write(fd, d)
+	if err != nil {
+		return err
+	}
+	err = fl.Close(fd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writer(t *testing.T, fsl *fslib.FsLib, ch chan int, start chan bool, fn string) {
+	const N = 1000
+
+	l := usync.MakeDLock(fsl, "name", "l", true)
+	err := l.WeakRLease()
+	assert.Equal(t, nil, err)
+	start <- true
+	for i := 1; i < N; {
+		d := []byte(strconv.Itoa(i))
+		err := writeFile(fsl, fn, d)
+		if err == nil {
+			i++
+		} else {
+			log.Printf("write for %v failed %v\n", i, err)
+			err = l.ReleaseLease()
+			assert.Equal(t, nil, err)
+			ch <- i - 1
+			return
+		}
+	}
+	ch <- N - 1
+
+}
+
 // Test race: write returns successfully after rename, but read sees
 // an old value,
 func TestSetRenameGet(t *testing.T) {
-	const N = 100 // 100_000
+	const N = 100
 
 	ts := makeTstate(t)
 
@@ -291,27 +335,28 @@ func TestSetRenameGet(t *testing.T) {
 	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	start := make(chan bool)
 	ch := make(chan int)
-	go func() {
-		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-		for i := 1; i < N; {
-			d := []byte(strconv.Itoa(i))
-			_, err = fsl.SetFile(fn, d, np.NoV)
-			if err == nil {
-				i++
-			} else {
-				ch <- i - 1
-				<-start
-			}
-		}
-		ch <- N - 1
-	}()
+	start := make(chan bool)
+	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
 
-	race := false
-	for true {
+	for i := 0; i < N; i++ {
+		l := usync.MakeDLock(ts.FsLib, "name", "l", true)
+		err = l.MakeLease()
+
+		go writer(t, fsl, ch, start, fn)
+
+		// wait until writer is running
+		<-start
+
+		// let the writer write for some time
+		time.Sleep(100 * time.Millisecond)
+
+		// Now rename ...
 		err = ts.Rename(fn, fn1)
 		assert.Equal(t, nil, err)
+
+		b := []byte(strconv.Itoa(1))
+		_, err = ts.SetFile("name/l", b, np.NoV)
 
 		d1, err := ts.ReadFile(fn1)
 		n, err := strconv.Atoi(string(d1))
@@ -320,20 +365,16 @@ func TestSetRenameGet(t *testing.T) {
 		m := <-ch
 
 		if n != m {
-			log.Printf("%v %v\n", m, n)
-			race = true
-		}
-		if m == N-1 {
+			assert.Equal(t, n, m)
 			break
 		}
 
-		err = ts.Rename(fn1, fn)
+		err = l.InvalidateLease()
 		assert.Equal(t, nil, err)
 
-		start <- true
+		err = ts.Rename(fn1, fn)
+		assert.Equal(t, nil, err)
 	}
-	assert.Equal(ts.t, true, race, "SetRenameGet")
-
 	ts.s.Shutdown()
 }
 

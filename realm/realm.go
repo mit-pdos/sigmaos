@@ -43,30 +43,30 @@ func MakeRealmClnt() *RealmClnt {
 // Submit a realm creation request to the realm manager, and wait for the
 // request to be handled.
 func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
-	// Create cond var to wait on realm creation/initialization.
-	rStartCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil, true)
-	rStartCond.Init()
+	// Create semaphore to wait on realm creation/initialization.
+	rStartSem := sync.MakeSemaphore(clnt.FsLib, path.Join(named.BOOT, rid))
+	rStartSem.Init()
 
 	if err := clnt.WriteFile(REALM_CREATE, []byte(rid)); err != nil {
 		log.Fatalf("Error WriteFile in RealmClnt.CreateRealm: %v", err)
 	}
 
 	// Wait for the realm to be initialized
-	rStartCond.Wait()
+	rStartSem.Down()
 
 	return GetRealmConfig(clnt.FsLib, rid)
 }
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
 	// Create cond var to wait on realm creation/initialization.
-	rExitCond := sync.MakeCond(clnt.FsLib, path.Join(named.BOOT, rid), nil, true)
-	rExitCond.Init()
+	rExitSem := sync.MakeSemaphore(clnt.FsLib, path.Join(named.BOOT, rid))
+	rExitSem.Init()
 
 	if err := clnt.WriteFile(REALM_DESTROY, []byte(rid)); err != nil {
 		log.Fatalf("Error WriteFile in RealmClnt.DestroyRealm: %v", err)
 	}
 
-	rExitCond.Wait()
+	rExitSem.Down()
 }
 
 // Get a realm's configuration

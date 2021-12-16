@@ -157,8 +157,8 @@ func (r *Machined) joinRealm() chan bool {
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil, true)
-		rStartCond.Destroy()
+		rStartSem := sync.MakeSemaphore(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId))
+		rStartSem.Up()
 	}
 	db.DLPrintf("MACHINED", "Machined %v joined Realm %v", r.id, r.cfg.RealmId)
 	// Watch for changes to the config
@@ -204,8 +204,8 @@ func (r *Machined) tryDestroyRealmL() {
 		}
 
 		// Signal that the realm has been destroyed
-		rExitCond := sync.MakeCond(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId), nil, true)
-		rExitCond.Destroy()
+		rExitSem := sync.MakeSemaphore(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId))
+		rExitSem.Up()
 	}
 }
 

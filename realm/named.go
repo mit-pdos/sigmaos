@@ -21,7 +21,7 @@ func BootNamedReplicas(pclnt *procclnt.ProcClnt, bin string, addrs []string, rea
 	cmds := []*exec.Cmd{}
 	pids := []string{}
 	for i, addr := range addrs {
-		cmd, pid, err := kernel.BootNamed(pclnt, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
+		cmd, pid, _, err := kernel.BootNamed(pclnt, bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, nil, err

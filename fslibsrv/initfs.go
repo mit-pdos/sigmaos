@@ -57,7 +57,10 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 	srv := makeSrv(root, addr, fsl, pclnt, config)
 	// If this *was* the init named, we now need to init fsl
 	if isInitNamed {
+		// Server is running, make an fslib for it, mounting itself
 		fsl = fslib.MakeFsLib(name)
+		// Ensure that srv can call checkLock
+		srv.SetFsl(fsl)
 	}
 	if len(path) > 0 {
 		fsl.Mkdir(path, 0777)

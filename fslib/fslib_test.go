@@ -299,7 +299,7 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 func writer(t *testing.T, fsl *fslib.FsLib, ch chan int, start chan bool, fn string) {
 	const N = 1000
 
-	l := usync.MakeDLock(fsl, "name", "l", true)
+	l := usync.MakeDLock(fsl, "name", "config", true)
 	err := l.WeakRLease()
 	assert.Equal(t, nil, err)
 	start <- true
@@ -339,9 +339,11 @@ func TestSetRenameGet(t *testing.T) {
 	start := make(chan bool)
 	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
 
+	l := usync.MakeDLock(ts.FsLib, "name", "config", true)
+	err = l.MakeLease()
+	assert.Equal(t, nil, err)
+
 	for i := 0; i < N; i++ {
-		l := usync.MakeDLock(ts.FsLib, "name", "l", true)
-		err = l.MakeLease()
 
 		go writer(t, fsl, ch, start, fn)
 
@@ -355,8 +357,9 @@ func TestSetRenameGet(t *testing.T) {
 		err = ts.Rename(fn, fn1)
 		assert.Equal(t, nil, err)
 
+		// invalidates read lease too
 		b := []byte(strconv.Itoa(1))
-		_, err = ts.SetFile("name/l", b, np.NoV)
+		_, err = ts.SetFile("name/config", b, np.NoV)
 
 		d1, err := ts.ReadFile(fn1)
 		n, err := strconv.Atoi(string(d1))
@@ -368,9 +371,6 @@ func TestSetRenameGet(t *testing.T) {
 			assert.Equal(t, n, m)
 			break
 		}
-
-		err = l.InvalidateLease()
-		assert.Equal(t, nil, err)
 
 		err = ts.Rename(fn1, fn)
 		assert.Equal(t, nil, err)

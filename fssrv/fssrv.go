@@ -1,6 +1,7 @@
 package fssrv
 
 import (
+	"fmt"
 	"log"
 	"runtime/debug"
 
@@ -115,7 +116,7 @@ func (fssrv *FsServer) checkLock(sess *session.Session) error {
 	}
 	st, err := fssrv.fsl.Stat(np.Join(fn))
 	if err != nil {
-		return err
+		return fmt.Errorf("checkLease failed %v", err.Error())
 	}
 	return sess.CheckLock(fn, st.Qid)
 }

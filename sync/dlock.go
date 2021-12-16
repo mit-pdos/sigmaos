@@ -61,9 +61,9 @@ func (l *DLock) WeakLock() error {
 	return nil
 }
 
-func (l *DLock) MakeLease() error {
+func (l *DLock) MakeLease(b []byte) error {
 	fn := path.Join(l.lockDir, l.lockName)
-	err := l.MakeFile(fn, 0777|np.DMTMP, np.OWRITE, []byte{})
+	err := l.MakeFile(fn, 0777|np.DMTMP, np.OWRITE, b)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() == "EOF" {
 		db.DLPrintf("DLOCK", "Makefile %v err %v", fn, err)
@@ -81,6 +81,7 @@ func (l *DLock) MakeLease() error {
 	return nil
 }
 
+// XXX remove stat
 func (l *DLock) WeakRLease() error {
 	fn := path.Join(l.lockDir, l.lockName)
 	st, err := l.Stat(path.Join(l.lockDir, l.lockName))

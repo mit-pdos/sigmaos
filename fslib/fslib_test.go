@@ -277,6 +277,9 @@ func TestCounter(t *testing.T) {
 	ts.s.Shutdown()
 }
 
+// Too fail test, set to true
+const FAIL = false
+
 // Inline Set() so that we can delay the Write() to emulate a delay on
 // the server between open and write.
 func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
@@ -296,28 +299,59 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 	return nil
 }
 
-func writer(t *testing.T, fsl *fslib.FsLib, ch chan int, start chan bool, fn string) {
+// Caller has acquired lease
+func writeLease(t *testing.T, fsl *fslib.FsLib, ch chan int, fn string) {
 	const N = 1000
-
-	l := usync.MakeDLock(fsl, "name", "config", true)
-	err := l.WeakRLease()
-	assert.Equal(t, nil, err)
-	start <- true
 	for i := 1; i < N; {
 		d := []byte(strconv.Itoa(i))
 		err := writeFile(fsl, fn, d)
 		if err == nil {
 			i++
 		} else {
-			log.Printf("write for %v failed %v\n", i, err)
-			err = l.ReleaseLease()
-			assert.Equal(t, nil, err)
+			log.Printf("write %v err %v\n", i, err)
 			ch <- i - 1
 			return
 		}
 	}
 	ch <- N - 1
+}
 
+func waitLease(t *testing.T, fsl *fslib.FsLib, l *usync.DLock) ([]byte, error) {
+	ch := make(chan bool)
+	for {
+		b, err := fsl.ReadFileWatch("name/config", func(string, error) {
+			ch <- true
+		})
+		if err != nil {
+			<-ch
+		} else {
+			if FAIL {
+				return b, nil
+			} else {
+				return b, l.WeakRLease()
+			}
+		}
+	}
+}
+
+func writer(t *testing.T, ch chan int, N int, fn string) {
+	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+	l := usync.MakeDLock(fsl, "name", "config", true)
+	cont := true
+	for cont {
+		b, err := waitLease(t, fsl, l)
+		assert.Equal(t, nil, err)
+		n, err := strconv.Atoi(string(b))
+		if n == N {
+			cont = false
+		} else {
+			writeLease(t, fsl, ch, fn)
+		}
+		if !FAIL {
+			err = l.ReleaseLease()
+			assert.Equal(t, nil, err)
+		}
+	}
 }
 
 // Test race: write returns successfully after rename, but read sees
@@ -336,30 +370,25 @@ func TestSetRenameGet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
-	start := make(chan bool)
-	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-
 	l := usync.MakeDLock(ts.FsLib, "name", "config", true)
-	err = l.MakeLease()
-	assert.Equal(t, nil, err)
+
+	go writer(t, ch, N, fn)
 
 	for i := 0; i < N; i++ {
-
-		go writer(t, fsl, ch, start, fn)
-
-		// wait until writer is running
-		<-start
+		b := []byte(strconv.Itoa(i))
+		err = l.MakeLease(b)
+		assert.Equal(t, nil, err)
 
 		// let the writer write for some time
 		time.Sleep(100 * time.Millisecond)
 
-		// Now rename ...
+		// Now rename so noone can open the file
 		err = ts.Rename(fn, fn1)
 		assert.Equal(t, nil, err)
 
-		// invalidates read lease too
-		b := []byte(strconv.Itoa(1))
-		_, err = ts.SetFile("name/config", b, np.NoV)
+		// invalidates read lease if proc already opened
+		err = ts.Remove("name/config")
+		assert.Equal(t, nil, err)
 
 		d1, err := ts.ReadFile(fn1)
 		n, err := strconv.Atoi(string(d1))
@@ -375,6 +404,7 @@ func TestSetRenameGet(t *testing.T) {
 		err = ts.Rename(fn1, fn)
 		assert.Equal(t, nil, err)
 	}
+
 	ts.s.Shutdown()
 }
 

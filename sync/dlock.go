@@ -61,16 +61,64 @@ func (l *DLock) WeakLock() error {
 	return nil
 }
 
-func (l *DLock) Unlock() error {
+func (l *DLock) MakeLease() error {
 	fn := path.Join(l.lockDir, l.lockName)
-	defer func() error {
-		err := l.DeregisterLock(fn)
-		if err != nil {
-			db.DLPrintf("DLOCK", "%v: DeregisterLock %v err %v", db.GetName(), fn, err)
-			return err
+	err := l.MakeFile(fn, 0777|np.DMTMP, np.OWRITE, []byte{})
+	// Sometimes we get "EOF" on shutdown
+	if err != nil && err.Error() == "EOF" {
+		db.DLPrintf("DLOCK", "Makefile %v err %v", fn, err)
+		return err
+	}
+	if err != nil {
+		if l.strict {
+			// debug.PrintStack()
+			log.Fatalf("%v: MakeFile %v err %v", db.GetName(), fn, err)
+		} else {
+			log.Printf("%v: Makefile %v err %v", db.GetName(), fn, err)
 		}
 		return err
-	}()
+	}
+	return nil
+}
+
+func (l *DLock) WeakRLease() error {
+	fn := path.Join(l.lockDir, l.lockName)
+	st, err := l.Stat(path.Join(l.lockDir, l.lockName))
+	if err != nil {
+		// log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
+		return err
+	}
+	err = l.RegisterLock(fn, st.Qid)
+	if err != nil {
+		log.Printf("%v: RegisterLock %v err %v", db.GetName(), fn, err)
+		return err
+	}
+	return nil
+}
+
+func (l *DLock) InvalidateLease() error {
+	fn := path.Join(l.lockDir, l.lockName)
+	err := l.Remove(fn)
+	if err != nil {
+		log.Printf("%v: Remove %v err %v", db.GetName(), fn, err)
+		return err
+	}
+	return nil
+}
+
+func (l *DLock) ReleaseLease() error {
+	fn := path.Join(l.lockDir, l.lockName)
+	err := l.DeregisterLock(fn)
+	if err != nil {
+		log.Printf("%v: DeregisterLock %v err %v", db.GetName(), fn, err)
+		return err
+	}
+	return nil
+}
+
+func (l *DLock) Unlock() error {
+	fn := path.Join(l.lockDir, l.lockName)
+	defer l.ReleaseLease()
 	err := l.Remove(fn)
 	if err != nil {
 		if err.Error() == "EOF" {

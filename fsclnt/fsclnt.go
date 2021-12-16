@@ -278,7 +278,7 @@ func (fsc *FsClient) RegisterLock(path string, qid np.Tqid) error {
 
 func (fsc *FsClient) DeregisterLock(path string) error {
 	fsc.Lock()
-	if fsc.dlock != nil {
+	if fsc.dlock == nil {
 		fsc.Unlock()
 		return fmt.Errorf("%v not locked\n", path)
 	}

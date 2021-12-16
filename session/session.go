@@ -2,7 +2,6 @@ package session
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	db "ulambda/debug"
@@ -35,8 +34,6 @@ func (sess *Session) RegisterLock(sid np.Tsession, fn []string, qid np.Tqid) err
 	if sess.dlock != nil {
 		return fmt.Errorf("%v: lock present already %v", db.GetName(), sid)
 	}
-
-	log.Printf("%v: registerlock %v %v\n", db.GetName(), sid, fn)
 
 	sess.dlock = dlock.MakeDlock(fn, qid)
 	return nil

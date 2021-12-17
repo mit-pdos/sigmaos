@@ -24,15 +24,15 @@ const (
 	KVCONFIG     = KVDIR + "/config"
 	KVCONFIGBK   = KVDIR + "/config#"
 	KVNEXTCONFIG = KVDIR + "/nextconfig"
-	KVLOCK       = "lock"
+	KVLOCK       = KVDIR + "/lock"
 )
 
 type Balancer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	args   []string
-	conf   *Config
-	kvlock *sync.Lock
+	args    []string
+	conf    *Config
+	kvlease *sync.LeasePath
 }
 
 func MakeBalancer(args []string) (*Balancer, error) {
@@ -43,18 +43,18 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.args = args
 	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
-	bl.kvlock = sync.MakeLock(bl.FsLib, KVDIR, KVLOCK, true)
+	bl.kvlease = sync.MakeLeasePath(bl.FsLib, KVLOCK)
 
 	db.Name("balancer")
 
-	bl.kvlock.Lock()
+	bl.kvlease.WaitWLease()
 
 	bl.Started(proc.GetPid())
 	return bl, nil
 }
 
 func (bl *Balancer) unlock() {
-	bl.kvlock.Unlock()
+	bl.kvlease.ReleaseWLease()
 }
 
 func (bl *Balancer) unpostShard(kv, s string) {

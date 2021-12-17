@@ -50,7 +50,7 @@ type Coord struct {
 	crash       string
 	mapperbin   string
 	reducerbin  string
-	lock        *usync.Lock
+	lease       *usync.Lease
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -73,7 +73,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
-	w.lock = usync.MakeLock(w.FsLib, MRDIR, "lock-coord", true)
+	w.lease = usync.MakeLease(w.FsLib, MRDIR+"/lease-coord")
 
 	w.Started(proc.GetPid())
 
@@ -230,14 +230,10 @@ func (w *Coord) phase(dir string, f func(string) string) {
 
 func (w *Coord) Work() {
 	// Try to become the primary coordinator.  Backup coordinators
-	// will be able to acquire the lock if the primary fails.
-	//
-	// XXX network partition may cause two coordinators to be
-	// active.  Since the work of a coordinator is also stored in
-	// named along the lock, the partitioned coordinator probably
-	// will fail anyway because it cannot access named.
-	w.lock.Lock()
-	defer w.lock.Unlock()
+	// will be able to acquire the lease if the primary fails or
+	// is partitioned.
+	w.lease.WaitWLease()
+	defer w.lease.ReleaseWLease()
 
 	w.recover(MDIR)
 	w.recover(RDIR)

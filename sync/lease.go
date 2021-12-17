@@ -19,7 +19,10 @@ import (
 // There are two types of leases: write leases and read leases.  Write
 // leases are for a coordinator to obtain an exclusive lease.  The
 // write lease maybe invalidated anytime, for example, by a network
-// partition.
+// partition, which allows another a new coordinator to get the write
+// lease.  The old coordinator won't be able to perform operations at
+// any server, because its lease will invalid as soon as the new
+// coordinator obtains the write lease.
 //
 // Multiple procs may have a read lease on, for example, a
 // configuration file.  A read lease maybe invalidated by a proc that

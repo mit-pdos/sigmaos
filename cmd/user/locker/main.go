@@ -55,7 +55,7 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := usync.MakeLease(fsl, DIR+"/lock")
+	l := usync.MakeLease(fsl, DIR+"/lease")
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"

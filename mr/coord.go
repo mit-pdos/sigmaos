@@ -50,7 +50,7 @@ type Coord struct {
 	crash       string
 	mapperbin   string
 	reducerbin  string
-	lease       *usync.Lease
+	lease       *usync.LeasePath
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -73,7 +73,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
-	w.lease = usync.MakeLease(w.FsLib, MRDIR+"/lease-coord")
+	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord")
 
 	w.Started(proc.GetPid())
 

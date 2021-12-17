@@ -318,7 +318,7 @@ func write(fsl *fslib.FsLib, ch chan int, fn string) {
 
 func writer(t *testing.T, ch chan int, N int, fn string) {
 	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	l := usync.MakeLease(fsl, "name/config")
+	l := usync.MakeLeasePath(fsl, "name/config")
 	cont := true
 	for cont {
 		b, err := l.WaitRLease()
@@ -352,13 +352,13 @@ func TestSetRenameGet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
-	l := usync.MakeLease(ts.FsLib, "name/config")
+	l := usync.MakeLeasePath(ts.FsLib, "name/config")
 
 	go writer(t, ch, N, fn)
 
 	for i := 0; i < N; i++ {
 		b := []byte(strconv.Itoa(i))
-		err = l.MakeLeaseFile(b)
+		err = l.MakeLeasePath(b)
 		assert.Equal(t, nil, err)
 
 		// Let the writer write for some time

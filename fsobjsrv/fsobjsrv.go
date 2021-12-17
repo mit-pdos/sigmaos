@@ -6,10 +6,10 @@ import (
 	// "time"
 
 	db "ulambda/debug"
-	"ulambda/dlock"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
+	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/stats"
@@ -19,7 +19,7 @@ import (
 //
 // There is one FsObjSrv per session, but they share the watch table
 // and stats.  Each session has its own fid table, ephemeral table,
-// and dlock.
+// and lease.
 //
 
 type FsObjSrv struct {
@@ -27,7 +27,7 @@ type FsObjSrv struct {
 	wt    *watch.WatchTable
 	ft    *fidTable
 	et    *ephemeralTable
-	dlock *dlock.Dlock
+	lease *lease.Lease
 	stats *stats.Stats
 	sid   np.Tsession
 }

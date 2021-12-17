@@ -64,12 +64,12 @@ func (st *SessionTable) CheckLock(sid np.Tsession, fn []string, qid np.Tqid) err
 	sess.Lock()
 	defer sess.Unlock()
 
-	if sess.dlock == nil {
+	if sess.lease == nil {
 		return fmt.Errorf("%v: CheckLock no lock %v", db.GetName(), sid)
 	}
 
-	if !np.IsPathEq(sess.dlock.Fn, fn) {
-		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.dlock.Fn, fn)
+	if !np.IsPathEq(sess.lease.Fn, fn) {
+		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.lease.Fn, fn)
 	}
-	return sess.dlock.Check(qid)
+	return sess.lease.Check(qid)
 }

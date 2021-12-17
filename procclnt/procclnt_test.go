@@ -393,7 +393,7 @@ func testLeaser(t *testing.T, part string) {
 	assert.Nil(t, err, "makefile error")
 
 	for i := 0; i < N; i++ {
-		a := proc.MakeProc("bin/user/locker", []string{part, dir})
+		a := proc.MakeProc("bin/user/leaser", []string{part, dir})
 		err = ts.Spawn(a)
 		assert.Nil(t, err, "Spawn")
 		pids = append(pids, a.Pid)

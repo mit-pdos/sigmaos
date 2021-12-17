@@ -106,8 +106,8 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 	return fssrv.root, MkCtx(uname)
 }
 
-func (fssrv *FsServer) checkLock(sess *session.Session) error {
-	fn, err := sess.LockName()
+func (fssrv *FsServer) checkLease(sess *session.Session) error {
+	fn, err := sess.LeaseName()
 	if err != nil || fn == nil { // no sess or no lock on sess
 		return err
 	}
@@ -118,7 +118,7 @@ func (fssrv *FsServer) checkLock(sess *session.Session) error {
 	if err != nil {
 		return fmt.Errorf("checkLease failed %v", err.Error())
 	}
-	return sess.CheckLock(fn, st.Qid)
+	return sess.CheckLease(fn, st.Qid)
 }
 
 func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
@@ -126,21 +126,21 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 	switch req := msg.(type) {
 	case np.Twrite:
 		// log.Printf("%p: req %v %v\n", fssrv, msg.Type(), req)
-		err := fssrv.checkLock(sess)
+		err := fssrv.checkLease(sess)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-	case np.Tregister:
+	case np.Tlease:
 		reply := &np.Ropen{}
-		// log.Printf("%v: %p reg %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
-		if err := sess.RegisterLock(sid, req.Wnames, req.Qid); err != nil {
+		// log.Printf("%v: %p lease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		if err := sess.Lease(sid, req.Wnames, req.Qid); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		return *reply, nil
-	case np.Tderegister:
+	case np.Tunlease:
 		reply := &np.Ropen{}
-		// log.Printf("%v: %p dereg %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
-		if err := sess.DeregisterLock(sid, req.Wnames); err != nil {
+		// log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		if err := sess.Unlease(sid, req.Wnames); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		return *reply, nil

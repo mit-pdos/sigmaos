@@ -224,8 +224,8 @@ const (
 	TRgetfile
 	TTsetfile
 	TTremovefile
-	TTregister
-	TTderegister
+	TTlease
+	TTunlease
 )
 
 func (fct Tfcall) String() string {
@@ -300,10 +300,10 @@ func (fct Tfcall) String() string {
 		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
-	case TTregister:
-		return "Tregister"
-	case TTderegister:
-		return "Tderegister"
+	case TTlease:
+		return "Tlease"
+	case TTunlease:
+		return "Tunlease"
 	default:
 		return "Tunknown"
 	}
@@ -483,12 +483,12 @@ type Tremovefile struct {
 	Wnames []string
 }
 
-type Tregister struct {
+type Tlease struct {
 	Wnames []string
 	Qid    Tqid
 }
 
-type Tderegister struct {
+type Tunlease struct {
 	Wnames []string
 }
 
@@ -598,5 +598,5 @@ func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
-func (Tregister) Type() Tfcall   { return TTregister }
-func (Tderegister) Type() Tfcall { return TTderegister }
+func (Tlease) Type() Tfcall      { return TTlease }
+func (Tunlease) Type() Tfcall    { return TTunlease }

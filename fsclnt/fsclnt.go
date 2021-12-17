@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/dlock"
+	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
 )
@@ -35,7 +35,7 @@ type FsClient struct {
 	mount *Mount
 	next  np.Tfid
 	uname string
-	dlock *dlock.Dlock
+	lease *lease.Lease
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -211,10 +211,10 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
 	fsc.mount.add(np.Split(path), fid)
 	fsc.Lock()
-	dlock := fsc.dlock
+	lease := fsc.lease
 	fsc.Unlock()
-	if dlock != nil {
-		fsc.pc.RegisterLock(dlock.Fn, dlock.Qid)
+	if lease != nil {
+		fsc.pc.RegisterLease(lease)
 	}
 	return nil
 }
@@ -265,26 +265,26 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 	return fsc.AttachReplicas([]string{server}, path, tree)
 }
 
-func (fsc *FsClient) RegisterLock(path string, qid np.Tqid) error {
+func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
 	fsc.Lock()
-	if fsc.dlock != nil {
+	if fsc.lease != nil {
 		fsc.Unlock()
-		return fmt.Errorf("%v already locked\n", path)
+		return fmt.Errorf("%v already leased\n", l.Fn)
 	}
-	fsc.dlock = dlock.MakeDlock(np.Split(path), qid)
+	fsc.lease = l
 	fsc.Unlock()
-	return fsc.pc.RegisterLock(np.Split(path), qid)
+	return fsc.pc.RegisterLease(l)
 }
 
-func (fsc *FsClient) DeregisterLock(path string) error {
+func (fsc *FsClient) DeregisterLease(path string) error {
 	fsc.Lock()
-	if fsc.dlock == nil {
+	if fsc.lease == nil {
 		fsc.Unlock()
-		return fmt.Errorf("%v not locked\n", path)
+		return fmt.Errorf("%v not leased\n", path)
 	}
-	fsc.dlock = nil
+	fsc.lease = nil
 	fsc.Unlock()
-	return fsc.pc.DeregisterLock(np.Split(path))
+	return fsc.pc.DeregisterLease(np.Split(path))
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {

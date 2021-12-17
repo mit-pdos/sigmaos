@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/dlock"
+	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 )
@@ -18,7 +18,7 @@ import (
 type Session struct {
 	sync.Mutex
 	protsrv protsrv.Protsrv
-	dlock   *dlock.Dlock
+	lease   *lease.Lease
 }
 
 func makeSession(protsrv protsrv.Protsrv) *Session {
@@ -27,53 +27,53 @@ func makeSession(protsrv protsrv.Protsrv) *Session {
 	return sess
 }
 
-func (sess *Session) RegisterLock(sid np.Tsession, fn []string, qid np.Tqid) error {
+func (sess *Session) Lease(sid np.Tsession, fn []string, qid np.Tqid) error {
 	sess.Lock()
 	defer sess.Unlock()
 
-	if sess.dlock != nil {
-		return fmt.Errorf("%v: lock present already %v", db.GetName(), sid)
+	if sess.lease != nil {
+		return fmt.Errorf("%v: lease present already %v", db.GetName(), sid)
 	}
 
-	sess.dlock = dlock.MakeDlock(fn, qid)
+	sess.lease = lease.MakeLease(fn, qid)
 	return nil
 }
 
-func (sess *Session) DeregisterLock(sid np.Tsession, fn []string) error {
+func (sess *Session) Unlease(sid np.Tsession, fn []string) error {
 	sess.Lock()
 	defer sess.Unlock()
 
-	if sess.dlock == nil {
-		return fmt.Errorf("%v: Unlock no lock %v", db.GetName(), sid)
+	if sess.lease == nil {
+		return fmt.Errorf("%v: Lease no lease %v", db.GetName(), sid)
 	}
 
-	if !np.IsPathEq(sess.dlock.Fn, fn) {
-		return fmt.Errorf("%v: Unlock lock is for %v not %v", db.GetName(), sess.dlock.Fn, fn)
+	if !np.IsPathEq(sess.lease.Fn, fn) {
+		return fmt.Errorf("%v: Lease lease is for %v not %v", db.GetName(), sess.lease.Fn, fn)
 	}
 
-	sess.dlock = nil
+	sess.lease = nil
 	return nil
 }
 
-func (sess *Session) CheckLock(fn []string, qid np.Tqid) error {
+func (sess *Session) CheckLease(fn []string, qid np.Tqid) error {
 	sess.Lock()
 	defer sess.Unlock()
 
-	if sess.dlock == nil {
-		return fmt.Errorf("%v: CheckLock no lock", db.GetName())
+	if sess.lease == nil {
+		return fmt.Errorf("%v: CheckLease no lease", db.GetName())
 	}
 
-	if !np.IsPathEq(sess.dlock.Fn, fn) {
-		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.dlock.Fn, fn)
+	if !np.IsPathEq(sess.lease.Fn, fn) {
+		return fmt.Errorf("%v: CheckLease lease is for %v not %v", db.GetName(), sess.lease.Fn, fn)
 	}
-	return sess.dlock.Check(qid)
+	return sess.lease.Check(qid)
 }
 
-func (sess *Session) LockName() ([]string, error) {
+func (sess *Session) LeaseName() ([]string, error) {
 	sess.Lock()
 	defer sess.Unlock()
-	if sess.dlock == nil {
+	if sess.lease == nil {
 		return nil, nil
 	}
-	return sess.dlock.Fn, nil
+	return sess.lease.Fn, nil
 }

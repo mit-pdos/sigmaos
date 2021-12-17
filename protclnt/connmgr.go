@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/lease"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
 )
@@ -106,11 +107,11 @@ func (cm *ConnMgr) mcast(ch chan error, dst []string, req np.Tmsg) {
 	}
 }
 
-func (cm *ConnMgr) registerLock(path []string, qid np.Tqid) error {
+func (cm *ConnMgr) registerLease(lease *lease.Lease) error {
 	ch := make(chan error)
 	cm.mu.Lock()
 	n := 0
-	args := np.Tregister{path, qid}
+	args := np.Tlease{lease.Fn, lease.Qid}
 	for addr, _ := range cm.conns {
 		n += 1
 		go cm.mcast(ch, strings.Split(addr, ","), args)
@@ -127,11 +128,11 @@ func (cm *ConnMgr) registerLock(path []string, qid np.Tqid) error {
 }
 
 // XXX deduplicate
-func (cm *ConnMgr) deregisterLock(path []string) error {
+func (cm *ConnMgr) deregisterLease(path []string) error {
 	ch := make(chan error)
 	cm.mu.Lock()
 	n := 0
-	args := np.Tderegister{path}
+	args := np.Tunlease{path}
 	for addr, _ := range cm.conns {
 		n += 1
 		go cm.mcast(ch, strings.Split(addr, ","), args)

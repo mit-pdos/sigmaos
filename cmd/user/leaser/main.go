@@ -51,11 +51,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage: <partition?> <dir>\n", os.Args[0])
 		os.Exit(1)
 	}
-	fsl := fslib.MakeFsLib("locker-" + proc.GetPid())
+	fsl := fslib.MakeFsLib("leaser-" + proc.GetPid())
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := usync.MakeLease(fsl, DIR+"/lease")
+	l := usync.MakeLeasePath(fsl, DIR+"/lease")
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"

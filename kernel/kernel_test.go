@@ -216,7 +216,7 @@ func TestWLease(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		wlease := usync.MakeLease(fsldl, lease)
+		wlease := usync.MakeLeasePath(fsldl, lease)
 		err := wlease.WaitWLease()
 		assert.Nil(t, err, "WriteLease")
 
@@ -242,7 +242,7 @@ func TestWLease(t *testing.T) {
 
 	<-ch
 
-	wlease := usync.MakeLease(ts.FsLib, lease)
+	wlease := usync.MakeLeasePath(ts.FsLib, lease)
 	err := wlease.WaitWLease()
 	assert.Nil(t, err, "Weaklock")
 

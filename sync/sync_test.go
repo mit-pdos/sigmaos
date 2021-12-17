@@ -20,6 +20,7 @@ const (
 	COND_PATH     = "name/cond"
 	LOCK_DIR      = "name/cond-locks"
 	LOCK_NAME     = "test-lock"
+	LEASENAME     = "name/test-lease"
 	BROADCAST_REL = "broadcast"
 	SIGNAL_REL    = "signal"
 	FILE_BAG_PATH = "name/filebag"
@@ -117,31 +118,29 @@ func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
 	done.Done()
 }
 
-func TestLock1(t *testing.T) {
+func TestLease1(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.Mkdir(LOCK_DIR, 0777)
-	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
-
 	N := 100
-
 	sum := 0
 	current := 0
 	done := make(chan int)
 
-	lock := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME, true)
+	lease := usync.MakeLease(ts.FsLib, LEASENAME)
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			me := false
 			for !me {
-				lock.Lock()
+				err := lease.WaitWLease()
+				assert.Nil(ts.t, err, "WaitWLease")
 				if current == i {
 					current += 1
 					done <- i
 					me = true
 				}
-				lock.Unlock()
+				err = lease.ReleaseWLease()
+				assert.Nil(ts.t, err, "ReleaseWLease")
 			}
 		}(i)
 		sum += i
@@ -155,56 +154,57 @@ func TestLock1(t *testing.T) {
 	ts.s.Shutdown()
 }
 
-func TestLock2(t *testing.T) {
+func TestLease2(t *testing.T) {
 	ts := makeTstate(t)
-
-	err := ts.Mkdir(LOCK_DIR, 0777)
-	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
 	N := 20
 
-	lock1 := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
-	lock2 := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+	lease1 := usync.MakeLease(ts.FsLib, LEASENAME+"-1234")
+	lease2 := usync.MakeLease(ts.FsLib, LEASENAME+"-1234")
 
 	for i := 0; i < N; i++ {
-		lock1.Lock()
-		lock1.Unlock()
-		lock2.Lock()
-		lock2.Unlock()
+		err := lease1.WaitWLease()
+		assert.Nil(ts.t, err, "WaitWLease")
+		err = lease1.ReleaseWLease()
+		assert.Nil(ts.t, err, "ReleaseWLease")
+		err = lease2.WaitWLease()
+		assert.Nil(ts.t, err, "WaitWLease")
+		err = lease2.ReleaseWLease()
+		assert.Nil(ts.t, err, "ReleaseWLease")
 	}
 
 	ts.s.Shutdown()
 }
 
-func TestLock3(t *testing.T) {
+func TestLease3(t *testing.T) {
 	ts := makeTstate(t)
-
-	err := ts.Mkdir(LOCK_DIR, 0777)
-	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
 
 	N := 3000
 	n_threads := 20
 	cnt := 0
 
-	lock := usync.MakeLock(ts.FsLib, LOCK_DIR, LOCK_NAME+"-1234", true)
+	lease := usync.MakeLease(ts.FsLib, LEASENAME+"-1234")
 
 	var done sync.WaitGroup
 	done.Add(n_threads)
 
 	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, lock *usync.Lock, N *int, cnt *int) {
+		go func(done *sync.WaitGroup, lease *usync.Lease, N *int, cnt *int) {
 			defer done.Done()
 			for {
-				lock.Lock()
+				err := lease.WaitWLease()
+				assert.Nil(ts.t, err, "WaitWLease")
 				if *cnt < *N {
 					*cnt += 1
 				} else {
-					lock.Unlock()
+					err = lease.ReleaseWLease()
+					assert.Nil(ts.t, err, "ReleaseWLease")
 					break
 				}
-				lock.Unlock()
+				err = lease.ReleaseWLease()
+				assert.Nil(ts.t, err, "ReleaseWLease")
 			}
-		}(&done, lock, &N, &cnt)
+		}(&done, lease, &N, &cnt)
 	}
 
 	done.Wait()
@@ -213,7 +213,9 @@ func TestLock3(t *testing.T) {
 	ts.s.Shutdown()
 }
 
-func TestLock4(t *testing.T) {
+// Test if an exit of another session doesn't remove ephemeral files
+// of another session.
+func TestLease4(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
@@ -222,22 +224,21 @@ func TestLock4(t *testing.T) {
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
-	lock1 := usync.MakeLock(fsl1, LOCK_DIR, LOCK_NAME, true)
-	//	lock2 := MakeLock(fsl2, LOCK_DIR, LOCK_NAME, true)
+	lease1 := usync.MakeLease(fsl1, LEASENAME)
 
 	// Establish a connection
 	_, err = fsl2.ReadDir(LOCK_DIR)
-
 	assert.Nil(ts.t, err, "ReadDir")
 
-	lock1.Lock()
+	err = lease1.WaitWLease()
+	assert.Nil(ts.t, err, "WaitWLease")
 
 	fsl2.Exit()
 
 	time.Sleep(2 * time.Second)
 
-	lock1.Unlock()
-
+	err = lease1.ReleaseWLease()
+	assert.Nil(ts.t, err, "ReleaseWLease")
 	ts.s.Shutdown()
 }
 

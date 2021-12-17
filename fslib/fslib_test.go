@@ -330,7 +330,7 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 			write(fsl, ch, fn)
 		}
 		if !FAIL {
-			err = l.ReleaseLease()
+			err = l.ReleaseRLease()
 			assert.Equal(t, nil, err)
 		}
 	}
@@ -358,7 +358,7 @@ func TestSetRenameGet(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		b := []byte(strconv.Itoa(i))
-		err = l.MakeLease(b)
+		err = l.MakeLeaseFile(b)
 		assert.Equal(t, nil, err)
 
 		// Let the writer write for some time
@@ -368,8 +368,8 @@ func TestSetRenameGet(t *testing.T) {
 		err = ts.Rename(fn, fn1)
 		assert.Equal(t, nil, err)
 
-		// Invalidate read lease if proc already opened
-		err = ts.Remove("name/config")
+		// Invalidate any read lease if proc already opened
+		err = l.Invalidate()
 		assert.Equal(t, nil, err)
 
 		d1, err := ts.ReadFile(fn1)

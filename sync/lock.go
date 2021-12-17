@@ -4,6 +4,7 @@ import (
 	"log"
 	"path"
 	"runtime/debug"
+	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -74,4 +75,8 @@ func (l *Lock) Unlock() {
 			db.DLPrintf("LOCK", "Error Lock.Unlock: %v, %v", path.Join(l.lockDir, l.lockName), err)
 		}
 	}
+}
+
+func lockName(f string) string {
+	return strings.ReplaceAll(f, "/", "-")
 }

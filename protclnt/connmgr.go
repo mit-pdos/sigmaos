@@ -120,7 +120,10 @@ func (cm *ConnMgr) registerLease(lease *lease.Lease) error {
 	var err error
 	for i := 0; i < n; i++ {
 		r := <-ch
-		if r != nil {
+		// Ignore EOF, since we cannot talk to that server
+		// anymore.  We may try to reconnect and then we will
+		// register again.
+		if r != nil && r.Error() != "EOF" {
 			err = r
 		}
 	}
@@ -141,7 +144,7 @@ func (cm *ConnMgr) deregisterLease(path []string) error {
 	var err error
 	for i := 0; i < n; i++ {
 		r := <-ch
-		if r != nil {
+		if r != nil && r.Error() != "EOF" {
 			err = r
 		}
 	}

@@ -2,6 +2,7 @@ package kv
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"hash/fnv"
 	"log"
 	"math/big"
@@ -12,6 +13,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	usync "ulambda/sync"
 )
 
 func key2shard(key string) int {
@@ -31,24 +33,19 @@ func nrand() uint64 {
 type KvClerk struct {
 	fsl   *fslib.FsLib
 	uname string
+	lease *usync.LeasePath
 	conf  Config
-	ch    chan bool
 	nget  int
 }
 
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
-	kc.ch = make(chan bool)
 	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
 	db.Name(kc.uname)
 	kc.fsl = fslib.MakeFsLibAddr(kc.uname, namedAddr)
+	kc.lease = usync.MakeLeasePath(kc.fsl, KVCONFIG)
 	kc.readConfig()
 	return kc
-}
-
-func (kc *KvClerk) watchConfig(path string, err error) {
-	db.DLPrintf("CLERK", "watch fired %v\n", path)
-	kc.ch <- true
 }
 
 func (kc *KvClerk) Exit() {
@@ -56,36 +53,27 @@ func (kc *KvClerk) Exit() {
 }
 
 // XXX atomic read
-func (kc *KvClerk) readConfig() {
-	for {
-		err := kc.fsl.ReadFileJson(KVCONFIG, &kc.conf)
-		if err == nil {
-			break
-		}
-		err = kc.fsl.ReadFileJsonWatch(KVCONFIG, &kc.conf, kc.watchConfig)
+func (kc *KvClerk) readConfig() error {
+	b, err := kc.lease.WaitRLease()
+	if err != nil {
+		log.Printf("readConfig: err %v\n", err)
+		return err
+	}
+	json.Unmarshal(b, &kc.conf)
+	// log.Printf("%v: readConfig %v\n", db.GetName(), kc.conf)
+	return nil
+}
+
+func (kc *KvClerk) doRetry(err error) bool {
+	if err.Error() == "EOF" || // XXX maybe useful when KVs fail
+		err.Error() == "Version mismatch" || // XXX maybe useful open/read
+		strings.HasPrefix(err.Error(), "stale lease") ||
+		strings.HasPrefix(err.Error(), "checkLease failed") {
+		// log.Printf("doRetry error %v\n", err)
+		err = kc.lease.ReleaseRLease()
 		if err != nil {
-			<-kc.ch
-		} else {
-			log.Fatalf("CLERK: Watch %v error %v\n", KVCONFIG, err)
+			return false
 		}
-	}
-	db.DLPrintf("CLERK", "readConfig %v\n", kc.conf)
-}
-
-func error2shard(error string) string {
-	kv := ""
-	if strings.HasPrefix(error, "file not found") {
-		i := strings.LastIndex(error, " ")
-		kv = error[i+1:]
-	}
-	return kv
-}
-
-func doRetry(err error) bool {
-	shard := error2shard(err.Error())
-	if err.Error() == "EOF" || err.Error() == "Version mismatch" ||
-		strings.HasPrefix(shard, "shard") ||
-		err.Error() == "cluncked by server" {
 		return true
 	}
 	return false
@@ -101,8 +89,11 @@ func (kc *KvClerk) Set(k, v string) error {
 			return err
 		}
 		db.DLPrintf("CLERK", "Set: %v %v %v\n", fn, err, shard)
-		if doRetry(err) {
-			kc.readConfig()
+		if kc.doRetry(err) {
+			err = kc.readConfig()
+			if err != nil {
+				return err
+			}
 		} else {
 			return err
 		}
@@ -119,7 +110,7 @@ func (kc *KvClerk) Put(k, v string) error {
 			return err
 		}
 		db.DLPrintf("CLERK", "Put: %v %v %v\n", fn, err, shard)
-		if doRetry(err) {
+		if kc.doRetry(err) {
 			kc.readConfig()
 		} else {
 			return err
@@ -137,8 +128,11 @@ func (kc *KvClerk) Get(k string) (string, error) {
 			kc.nget += 1
 			return string(b), err
 		}
-		if doRetry(err) {
-			kc.readConfig()
+		if kc.doRetry(err) {
+			err = kc.readConfig()
+			if err != nil {
+				return string(b), err
+			}
 		} else {
 			return string(b), err
 		}

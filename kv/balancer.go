@@ -24,15 +24,16 @@ const (
 	KVCONFIG     = KVDIR + "/config"
 	KVCONFIGBK   = KVDIR + "/config#"
 	KVNEXTCONFIG = KVDIR + "/nextconfig"
-	KVLOCK       = KVDIR + "/lock"
+	KVLEASE      = KVDIR + "/lease"
 )
 
 type Balancer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	args    []string
-	conf    *Config
-	kvlease *sync.LeasePath
+	args     []string
+	conf     *Config
+	ballease *sync.LeasePath
+	lease    *sync.LeasePath
 }
 
 func MakeBalancer(args []string) (*Balancer, error) {
@@ -43,18 +44,18 @@ func MakeBalancer(args []string) (*Balancer, error) {
 	bl.args = args
 	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
-	bl.kvlease = sync.MakeLeasePath(bl.FsLib, KVLOCK)
-
+	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVLEASE)
+	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG)
 	db.Name("balancer")
 
-	bl.kvlease.WaitWLease()
+	bl.ballease.WaitWLease()
 
 	bl.Started(proc.GetPid())
 	return bl, nil
 }
 
 func (bl *Balancer) unlock() {
-	bl.kvlease.ReleaseWLease()
+	bl.ballease.ReleaseWLease()
 }
 
 func (bl *Balancer) unpostShard(kv, s string) {
@@ -135,7 +136,7 @@ func (bl *Balancer) Balance() {
 
 	log.Printf("BAL conf %v next shards: %v\n", bl.conf, nextShards)
 
-	err = bl.Rename(KVCONFIG, KVCONFIGBK)
+	err = bl.lease.RenameTo(KVCONFIGBK)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
 	}
@@ -161,7 +162,8 @@ func (bl *Balancer) Balance() {
 		db.DLPrintf("BAL", "BAL: MakeFile %v err %v\n", KVNEXTCONFIG, err)
 	}
 
-	err = bl.Rename(KVNEXTCONFIG, KVCONFIG)
+	err = bl.lease.MakeLeaseFileFrom(KVNEXTCONFIG)
+	// err = bl.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)

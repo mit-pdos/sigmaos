@@ -358,7 +358,7 @@ func TestSetRenameGet(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		b := []byte(strconv.Itoa(i))
-		err = l.MakeLeasePath(b)
+		err = l.MakeLeaseFile(b)
 		assert.Equal(t, nil, err)
 
 		// Let the writer write for some time

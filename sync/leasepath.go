@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 
 	db "ulambda/debug"
@@ -94,7 +96,7 @@ func (l *LeasePath) ReleaseWLease() error {
 //
 
 // Make the lease file
-func (l *LeasePath) MakeLeasePath(b []byte) error {
+func (l *LeasePath) MakeLeaseFile(b []byte) error {
 	err := l.MakeFile(l.leaseName, 0777|np.DMTMP, np.OWRITE, b)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() == "EOF" {
@@ -103,6 +105,24 @@ func (l *LeasePath) MakeLeasePath(b []byte) error {
 	}
 	if err != nil {
 		log.Printf("%v: RegisterLock %v err %v", db.GetName(), l.leaseName, err)
+		return err
+	}
+	return nil
+}
+
+func (l *LeasePath) MakeLeaseFileJson(i interface{}) error {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error %v", err)
+	}
+	return l.MakeLeaseFile(b)
+}
+
+// Make the lease file
+func (l *LeasePath) MakeLeaseFileFrom(from string) error {
+	err := l.Rename(from, l.leaseName)
+	if err != nil {
+		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, l.leaseName, err)
 		return err
 	}
 	return nil
@@ -125,7 +145,7 @@ func (l *LeasePath) registerRLease() error {
 func (l *LeasePath) WaitRLease() ([]byte, error) {
 	ch := make(chan bool)
 	for {
-		b, err := l.ReadFileWatch("name/config", func(string, error) {
+		b, err := l.ReadFileWatch(l.leaseName, func(string, error) {
 			ch <- true
 		})
 		if err != nil {
@@ -150,6 +170,16 @@ func (l *LeasePath) Invalidate() error {
 	err := l.Remove(l.leaseName)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v", db.GetName(), l.leaseName, err)
+		return err
+	}
+	return nil
+}
+
+// Invalidate a lease by remove the lease file
+func (l *LeasePath) RenameTo(to string) error {
+	err := l.Rename(l.leaseName, to)
+	if err != nil {
+		log.Printf("%v: Rename %v to %v err %v", db.GetName(), l.leaseName, to, err)
 		return err
 	}
 	return nil

@@ -124,7 +124,7 @@ func (fssrv *FsServer) checkLease(sess *session.Session) error {
 func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	sess := fssrv.st.LookupInsert(sid)
 	switch req := msg.(type) {
-	case np.Twrite:
+	case np.Twrite, np.Tsetfile, np.Tgetfile:
 		// log.Printf("%p: req %v %v\n", fssrv, msg.Type(), req)
 		err := fssrv.checkLease(sess)
 		if err != nil {

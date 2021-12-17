@@ -55,7 +55,7 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	wlock := usync.MakeDLock(fsl, DIR, "lock", true)
+	l := usync.MakeLease(fsl, DIR+"/lock")
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"
@@ -64,7 +64,7 @@ func main() {
 
 	partitioned := false
 	for i := 0; i < N; i++ {
-		err := wlock.WeakLock()
+		err := l.WaitWLease()
 
 		b, _, err := fsl.GetFile(cnt)
 		if err != nil {
@@ -117,7 +117,7 @@ func main() {
 		fsl.Close(fd)
 
 		if partitioned {
-			err := wlock.Unlock()
+			err := l.ReleaseWLease()
 			if err != nil {
 				log.Printf("%v unlock err %v\n", db.GetName(), err)
 			}
@@ -129,7 +129,7 @@ func main() {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}
 
-		wlock.Unlock()
+		l.ReleaseWLease()
 	}
 	pclnt.Exited(proc.GetPid(), "OK")
 }

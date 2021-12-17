@@ -299,8 +299,8 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 	return nil
 }
 
-// Caller has acquired lease
-func writeLease(t *testing.T, fsl *fslib.FsLib, ch chan int, fn string) {
+// Caller must have acquired lease
+func write(fsl *fslib.FsLib, ch chan int, fn string) {
 	const N = 1000
 	for i := 1; i < N; {
 		d := []byte(strconv.Itoa(i))
@@ -316,36 +316,18 @@ func writeLease(t *testing.T, fsl *fslib.FsLib, ch chan int, fn string) {
 	ch <- N - 1
 }
 
-func waitLease(t *testing.T, fsl *fslib.FsLib, l *usync.DLock) ([]byte, error) {
-	ch := make(chan bool)
-	for {
-		b, err := fsl.ReadFileWatch("name/config", func(string, error) {
-			ch <- true
-		})
-		if err != nil {
-			<-ch
-		} else {
-			if FAIL {
-				return b, nil
-			} else {
-				return b, l.WeakRLease()
-			}
-		}
-	}
-}
-
 func writer(t *testing.T, ch chan int, N int, fn string) {
 	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	l := usync.MakeDLock(fsl, "name", "config", true)
+	l := usync.MakeLease(fsl, "name/config")
 	cont := true
 	for cont {
-		b, err := waitLease(t, fsl, l)
+		b, err := l.WaitRLease()
 		assert.Equal(t, nil, err)
 		n, err := strconv.Atoi(string(b))
 		if n == N {
 			cont = false
 		} else {
-			writeLease(t, fsl, ch, fn)
+			write(fsl, ch, fn)
 		}
 		if !FAIL {
 			err = l.ReleaseLease()
@@ -354,8 +336,8 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 	}
 }
 
-// Test race: write returns successfully after rename, but read sees
-// an old value,
+// Open a file, rename it, write to open file, and read renamed file.
+// Without leases the write will not be observed by reader.
 func TestSetRenameGet(t *testing.T) {
 	const N = 100
 
@@ -370,7 +352,7 @@ func TestSetRenameGet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
-	l := usync.MakeDLock(ts.FsLib, "name", "config", true)
+	l := usync.MakeLease(ts.FsLib, "name/config")
 
 	go writer(t, ch, N, fn)
 
@@ -379,14 +361,14 @@ func TestSetRenameGet(t *testing.T) {
 		err = l.MakeLease(b)
 		assert.Equal(t, nil, err)
 
-		// let the writer write for some time
+		// Let the writer write for some time
 		time.Sleep(100 * time.Millisecond)
 
 		// Now rename so noone can open the file
 		err = ts.Rename(fn, fn1)
 		assert.Equal(t, nil, err)
 
-		// invalidates read lease if proc already opened
+		// Invalidate read lease if proc already opened
 		err = ts.Remove("name/config")
 		assert.Equal(t, nil, err)
 

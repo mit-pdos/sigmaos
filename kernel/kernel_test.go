@@ -204,9 +204,9 @@ func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
 	return name
 }
 
-func TestDlock(t *testing.T) {
+func TestWLease(t *testing.T) {
 	ts := makeTstate(t)
-	dirn := "name/"
+	lease := "name/l"
 
 	dirux := "name/ux/~ip/outdir"
 	ts.Mkdir(dirux, 0777)
@@ -216,9 +216,9 @@ func TestDlock(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		wlock := usync.MakeDLock(fsldl, dirn, "l", true)
-		err := wlock.WeakLock()
-		assert.Nil(t, err, "Weaklock")
+		wlease := usync.MakeLease(fsldl, lease)
+		err := wlease.WaitWLease()
+		assert.Nil(t, err, "WriteLease")
 
 		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
 		assert.Nil(t, err, "Create")
@@ -242,8 +242,8 @@ func TestDlock(t *testing.T) {
 
 	<-ch
 
-	wlock := usync.MakeDLock(ts.FsLib, dirn, "l", true)
-	err := wlock.WeakLock()
+	wlease := usync.MakeLease(ts.FsLib, lease)
+	err := wlease.WaitWLease()
 	assert.Nil(t, err, "Weaklock")
 
 	<-ch

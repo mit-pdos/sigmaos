@@ -374,7 +374,7 @@ func TestEvict(t *testing.T) {
 	ts.s.Shutdown()
 }
 
-func testLocker(t *testing.T, part string) {
+func testLeaser(t *testing.T, part string) {
 	const N = 2 // 20
 
 	ts := makeTstate(t)
@@ -406,12 +406,12 @@ func testLocker(t *testing.T, part string) {
 	ts.s.Shutdown()
 }
 
-func TestLockerNoPart(t *testing.T) {
-	testLocker(t, "NO")
+func TestLeaserNoPart(t *testing.T) {
+	testLeaser(t, "NO")
 }
 
-func TestLockerWithPart(t *testing.T) {
-	testLocker(t, "YES")
+func TestLeaserWithPart(t *testing.T) {
+	testLeaser(t, "YES")
 }
 
 func TestReserveCores(t *testing.T) {

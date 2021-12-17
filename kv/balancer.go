@@ -58,24 +58,6 @@ func (bl *Balancer) unlock() {
 	bl.ballease.ReleaseWLease()
 }
 
-func (bl *Balancer) unpostShard(kv, s string) {
-	fn := shardPath(kv, s)
-	// db.DLPrintf("BAL", "unpostShard: %v\n", fn)
-	err := bl.Rename(fn, shardTmp(fn))
-	if err != nil {
-		log.Printf("BAL %v Rename failed %v\n", fn, err)
-	}
-}
-
-// Unpost shards that are moving
-func (bl *Balancer) unpostShards(nextShards []string) {
-	for i, kvd := range bl.conf.Shards {
-		if kvd != nextShards[i] {
-			bl.unpostShard(kvd, strconv.Itoa(i))
-		}
-	}
-}
-
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
@@ -141,10 +123,6 @@ func (bl *Balancer) Balance() {
 		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
 	}
 
-	if bl.conf.N > 0 {
-		bl.unpostShards(nextShards)
-	}
-
 	if bl.conf.N == 0 {
 		bl.initShards(nextShards)
 	} else {
@@ -163,7 +141,6 @@ func (bl *Balancer) Balance() {
 	}
 
 	err = bl.lease.MakeLeaseFileFrom(KVNEXTCONFIG)
-	// err = bl.Rename(KVNEXTCONFIG, KVCONFIG)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: rename %v -> %v: error %v\n",
 			KVNEXTCONFIG, KVCONFIG, err)

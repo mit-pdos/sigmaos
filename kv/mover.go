@@ -59,7 +59,6 @@ func shardTmp(shardp string) string {
 // Move shard from src to dst
 func (mv *Mover) moveShard(shard, src, dst string) error {
 	s := shardPath(src, shard)
-	s = shardTmp(s)
 	d := shardPath(dst, shard)
 	d1 := shardTmp(d)
 	err := mv.Mkdir(d1, 0777)
@@ -82,38 +81,14 @@ func (mv *Mover) moveShard(shard, src, dst string) error {
 
 func (mv *Mover) removeShard(shard, src string) {
 	d := shardPath(src, shard)
-	d = shardTmp(d)
 	mv.RmDir(d)
 }
-
-// func (mv *Mover) closeFid(shard string) {
-// 	db.DLPrintf("MV", "closeFids shard %v\n", shard)
-// 	mv.ConnTable().IterateFids(func(f *npo.Fid) {
-// 		p1 := np.Join(f.Path())
-// 		uname := f.Ctx().Uname()
-// 		if strings.HasPrefix(uname, "clerk") && strings.HasPrefix(p1, shard) {
-// 			db.DLPrintf("MV", "CloseFid: mark closed %v %v\n", uname, p1)
-// 			f.Close()
-// 		}
-// 	})
-// }
-
-// // Close fids for which i will not be responsible, signaling to
-// // clients to failover to another server.
-// func (mv *Mover) closeFids() {
-// 	for s, kvd := range mv.conf2.Shards {
-// 		if kvd != mv.kv && mv.conf.Shards[s] == mv.kv {
-// 			mv.closeFid("shard" + strconv.Itoa(s))
-// 		}
-// 	}
-// }
 
 func (mv *Mover) Work() {
 	log.Printf("MV shard %v from %v to %v\n", mv.shard, mv.src, mv.dst)
 	if err := mv.moveShard(mv.shard, mv.src, mv.dst); err != nil {
 		log.Printf("MV moveShards %v %v err %v\n", mv.src, mv.dst, err)
 	}
-
 	mv.removeShard(mv.shard, mv.src)
 }
 

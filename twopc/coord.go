@@ -27,17 +27,17 @@ const (
 	TWOPCCOMMIT    = DIR2PC + "/twopccommit"
 	TWOPCPREPARED  = DIR2PC + "/prepared/"
 	TWOPCCOMMITTED = DIR2PC + "/committed/"
-	TWOPCLOCK      = "lock"
+	TWOPCLEASE     = DIR2PC + "/lease"
 )
 
 type Coord struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	opcode    string
-	args      []string
-	ch        chan Tstatus
-	twopc     *Twopc
-	twopclock *sync.Lock
+	opcode string
+	args   []string
+	ch     chan Tstatus
+	twopc  *Twopc
+	lease  *sync.LeasePath
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -54,10 +54,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
-	cd.twopclock = sync.MakeLock(cd.FsLib, DIR2PC, TWOPCLOCK, true)
+	cd.lease = sync.MakeLeasePath(cd.FsLib, TWOPCLEASE)
 
-	// Grab TWOPCLOCK before starting coord
-	cd.twopclock.Lock()
+	// Grab LEASE before starting coord
+	cd.lease.WaitWLease()
 
 	log.Printf("COORD lock %v\n", args)
 
@@ -78,7 +78,7 @@ func (cd *Coord) exit() {
 		log.Printf("Remove %v failed %v\n", COORD, err)
 	}
 
-	cd.twopclock.Unlock()
+	cd.lease.ReleaseWLease()
 }
 
 func (cd *Coord) restart() {

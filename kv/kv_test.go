@@ -60,7 +60,7 @@ func makeTstate(t *testing.T, auto string, nclerk int) *Tstate {
 }
 
 func (ts *Tstate) setup(auto string, nclerk int) {
-	ts.bal = ts.spawnBalancer("manual")
+	ts.bal = ts.spawnBalancer(auto)
 	ts.WaitStart(ts.bal)
 
 	// add 1 so that we can put to initialize
@@ -204,7 +204,6 @@ func concurN(t *testing.T, nclerk int) {
 	time.Sleep(100 * time.Millisecond)
 
 	ts.stopMemFSs()
-
 	ts.s.Shutdown()
 }
 
@@ -220,8 +219,27 @@ func TestConcurN(t *testing.T) {
 	concurN(t, NCLERK)
 }
 
-//func TestAuto(t *testing.T) {
-// runtime.GOMAXPROCS(2) // XXX for KV
+func TestAuto(t *testing.T) {
+	// runtime.GOMAXPROCS(2) // XXX for KV
 
-//	ts := makeTstate(t, "auto", nclerk)
-//}
+	nclerk := NCLERK
+
+	ts := makeTstate(t, "auto", nclerk)
+
+	ch := make(chan bool)
+	for i := 0; i < nclerk; i++ {
+		go ts.clerk(i, ch)
+	}
+
+	time.Sleep(30 * time.Second)
+
+	log.Printf("Wait for clerks\n")
+
+	for i := 0; i < nclerk; i++ {
+		ch <- true
+	}
+
+	ts.stopMemFSs()
+	ts.s.Shutdown()
+
+}

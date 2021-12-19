@@ -2,9 +2,7 @@ package kv
 
 import (
 	"log"
-	"os"
 	"sync"
-	"time"
 
 	"ulambda/fslib"
 	"ulambda/named"
@@ -18,21 +16,16 @@ const (
 	MINLOAD float64 = 40.0
 )
 
-const MS = 100 // 100 ms
-
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	ch chan bool
 }
 
 func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	mo := &Monitor{}
 	mo.FsLib = fslib
 	mo.ProcClnt = pclnt
-	mo.ch = make(chan bool)
-	go mo.monitor()
 	return mo
 }
 
@@ -41,22 +34,6 @@ func SpawnMemFS(pclnt *procclnt.ProcClnt) string {
 	p.Type = proc.T_LC
 	pclnt.Spawn(p)
 	return p.Pid
-}
-
-func (mo *Monitor) monitor() {
-	for true {
-		select {
-		case <-mo.ch:
-			return
-		default:
-			time.Sleep(time.Duration(MS) * time.Millisecond)
-			mo.doMonitor()
-		}
-	}
-}
-
-func (mo *Monitor) Done() {
-	mo.ch <- true
 }
 
 func (mo *Monitor) grow() {
@@ -78,25 +55,7 @@ func (mo *Monitor) shrink(kv string) {
 }
 
 // XXX Use load too?
-func (mo *Monitor) doMonitor() {
-	var conf *Config
-	for true {
-		c, err := readConfig(mo.FsLib, KVCONFIG)
-		if err != nil {
-			log.Printf("readConfig: err %v\n", err)
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-		conf = c
-		break
-	}
-
-	now := time.Now().UnixNano()
-	if (now-conf.Ctime)/1_000_000_000 < 1 {
-		log.Printf("Monitor: skip\n")
-		return
-	}
-
+func (mo *Monitor) doMonitor(conf *Config) {
 	kvs := makeKvs(conf.Shards)
 	log.Printf("Monitor config %v\n", kvs)
 
@@ -110,8 +69,7 @@ func (mo *Monitor) doMonitor() {
 		sti := stats.StatInfo{}
 		err := mo.ReadFileJson(kvd, &sti)
 		if err != nil {
-			log.Printf("ReadFileJson failed %v\n", err)
-			os.Exit(1)
+			log.Printf("ReadFileJson %v failed %v\n", kvd, err)
 		}
 		n += 1
 		util += sti.Util
@@ -120,7 +78,7 @@ func (mo *Monitor) doMonitor() {
 			lowkv = kv
 			lowload = sti.Load
 		}
-		log.Printf("path %v\n", sti.SortPath()[0:3])
+		log.Printf("path %v\n", sti.SortPath())
 	}
 	util = util / float64(n)
 	log.Printf("monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)

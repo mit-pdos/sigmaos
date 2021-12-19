@@ -46,10 +46,11 @@ type Balancer struct {
 	ballease *sync.LeasePath
 	lease    *sync.LeasePath
 	mo       *Monitor
+	ch       chan bool
 }
 
 func RunBalancer(auto string) {
-	log.Printf("run balancer\n")
+	log.Printf("run balancer %v\n", auto)
 
 	bl := &Balancer{}
 	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
@@ -82,13 +83,15 @@ func RunBalancer(auto string) {
 
 	if auto == "auto" {
 		bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
+		bl.ch = make(chan bool)
+		go bl.monitor()
 	}
 
 	mfs.Serve()
 	mfs.Done()
 
 	if bl.mo != nil {
-		bl.mo.Done()
+		bl.Done()
 	}
 
 	log.Printf("balancer exited\n")
@@ -121,6 +124,23 @@ func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 
 func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
 	return nil, nil
+}
+
+func (bl *Balancer) monitor() {
+	const MS = 1000
+	for true {
+		select {
+		case <-bl.ch:
+			return
+		default:
+			time.Sleep(time.Duration(MS) * time.Millisecond)
+			bl.mo.doMonitor(bl.conf)
+		}
+	}
+}
+
+func (bl *Balancer) Done() {
+	bl.ch <- true
 }
 
 // Make intial shard directories

@@ -2,7 +2,6 @@ package kv
 
 import (
 	"log"
-	"math/rand"
 	"strconv"
 	"testing"
 	"time"
@@ -11,7 +10,6 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -44,33 +42,58 @@ type Tstate struct {
 	*procclnt.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
-	rand  *rand.Rand
+	bal   string
 }
 
-func makeTstate(t *testing.T) *Tstate {
+func makeTstate(t *testing.T, nclerk int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
 	bin := ".."
 	ts.s = kernel.MakeSystemAll(bin)
-	ts.fsl = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
+	ts.fsl = fslib.MakeFsLibAddr("kv_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
 
-	err := ts.fsl.Mkdir(named.MEMFS, 07)
-	if err != nil {
-		t.Fatalf("Mkdir kv %v\n", err)
-	}
-	err = ts.fsl.Mkdir(KVDIR, 07)
-	if err != nil {
-		t.Fatalf("Mkdir kv %v\n", err)
-	}
-	conf := MakeConfig(0)
-	err = ts.fsl.MakeFileJson(KVCONFIG, 0777, *conf)
-	if err != nil {
-		log.Fatalf("Cannot make file  %v %v\n", KVCONFIG, err)
-	}
-	ts.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	ts.setup(nclerk)
+
 	return ts
+}
+
+func (ts *Tstate) setup(nclerk int) {
+	ts.bal = ts.spawnBalancer()
+	ts.WaitStart(ts.bal)
+
+	// add 1 so that we can put to initialize
+	mfs := ts.spawnMemFS()
+	ts.WaitStart(mfs)
+
+	err := BalancerOp(ts.fsl, "add", mfs)
+	assert.Nil(ts.t, err, "BalancerOp")
+
+	ts.clrks = make([]*KvClerk, nclerk)
+	for i := 0; i < nclerk; i++ {
+		ts.clrks[i] = MakeClerk(fslib.Named())
+	}
+
+	if nclerk > 0 {
+		for i := uint64(0); i < NKEYS; i++ {
+			err := ts.clrks[0].Put(key(i), key(i))
+			assert.Nil(ts.t, err, "Put")
+		}
+	}
+	ts.mfss = append(ts.mfss, mfs)
+}
+
+func (ts *Tstate) spawnBalancer() string {
+	p := proc.MakeProc("bin/user/balancer", []string{""})
+	ts.Spawn(p)
+	return p.Pid
+}
+
+func (ts *Tstate) stopFS(fs string) {
+	err := ts.Evict(fs)
+	assert.Nil(ts.t, err, "ShutdownFS")
+	ts.WaitExit(fs)
 }
 
 func (ts *Tstate) spawnMemFS() string {
@@ -88,16 +111,11 @@ func (ts *Tstate) startMemFSs(n int) []string {
 	return mfss
 }
 
-func (ts *Tstate) stopMemFS(mfs string) {
-	err := ts.Evict(mfs)
-	assert.Nil(ts.t, err, "ShutdownFS")
-	ts.WaitExit(mfs)
-}
-
 func (ts *Tstate) stopMemFSs() {
 	for _, mfs := range ts.mfss {
-		ts.stopMemFS(mfs)
+		ts.stopFS(mfs)
 	}
+	ts.stopFS(ts.bal)
 }
 
 func key(k uint64) string {
@@ -127,34 +145,8 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
-func (ts *Tstate) setup(nclerk int, memfs bool) string {
-	// add 1 so that we can put to initialize
-	mfs := ""
-	if memfs {
-		mfs = ts.spawnMemFS()
-	} else {
-		mfs = SpawnKV(ts.ProcClnt)
-	}
-	ts.WaitStart(mfs)
-	RunBalancer(ts.ProcClnt, "add", mfs)
-
-	ts.clrks = make([]*KvClerk, nclerk)
-	for i := 0; i < nclerk; i++ {
-		ts.clrks[i] = MakeClerk(fslib.Named())
-	}
-
-	if nclerk > 0 {
-		for i := uint64(0); i < NKEYS; i++ {
-			err := ts.clrks[0].Put(key(i), key(i))
-			assert.Nil(ts.t, err, "Put")
-		}
-	}
-	return mfs
-}
-
 func TestGetPutSet(t *testing.T) {
-	ts := makeTstate(t)
-	ts.mfss = append(ts.mfss, ts.setup(1, true))
+	ts := makeTstate(t, 1)
 
 	_, err := ts.clrks[0].Get(key(NKEYS + 1))
 	assert.NotEqual(ts.t, err, nil, "Get")
@@ -178,12 +170,10 @@ func TestGetPutSet(t *testing.T) {
 	ts.s.Shutdown()
 }
 
-func ConcurN(t *testing.T, nclerk int) {
+func concurN(t *testing.T, nclerk int) {
 	const NMORE = 10
 
-	ts := makeTstate(t)
-
-	ts.mfss = append(ts.mfss, ts.setup(nclerk, true))
+	ts := makeTstate(t, nclerk)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -194,14 +184,17 @@ func ConcurN(t *testing.T, nclerk int) {
 		mfs := ts.spawnMemFS()
 		ts.mfss = append(ts.mfss, mfs)
 		ts.WaitStart(mfs)
-		RunBalancer(ts.ProcClnt, "add", ts.mfss[len(ts.mfss)-1])
+		log.Printf("add\n")
+		err := BalancerOp(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
+		assert.Nil(ts.t, err, "BalancerOp")
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		RunBalancer(ts.ProcClnt, "del", ts.mfss[len(ts.mfss)-1])
-		ts.stopMemFS(ts.mfss[len(ts.mfss)-1])
+		err := BalancerOp(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
+		assert.Nil(ts.t, err, "BalancerOp")
+		ts.stopFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
@@ -223,13 +216,13 @@ func ConcurN(t *testing.T, nclerk int) {
 }
 
 func TestConcur0(t *testing.T) {
-	ConcurN(t, 0)
+	concurN(t, 0)
 }
 
 func TestConcur1(t *testing.T) {
-	ConcurN(t, 1)
+	concurN(t, 1)
 }
 
 func TestConcurN(t *testing.T) {
-	ConcurN(t, NCLERK)
+	concurN(t, NCLERK)
 }

@@ -27,5 +27,5 @@ func main() {
 		log.Fatalf("Cannot make file  %v %v\n", kv.KVCONFIG, err)
 	}
 	pid := kv.SpawnKV(sclnt)
-	kv.RunBalancer(sclnt, "add", pid)
+	kv.BalancerOp(fsl, "add", pid)
 }

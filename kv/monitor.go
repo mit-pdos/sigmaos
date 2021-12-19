@@ -59,25 +59,17 @@ func SpawnKV(pclnt *procclnt.ProcClnt) string {
 	return t.Pid
 }
 
-func RunBalancer(pclnt *procclnt.ProcClnt, opcode, pid1 string) {
-	pid2 := spawnBalancer(pclnt, opcode, pid1)
-	status, err := pclnt.WaitExit(pid2)
-	if err != nil || status != "OK" {
-		log.Printf("runBalancer: err %v status %v\n", err, status)
-	}
-}
-
 func (mo *Monitor) grow() {
 	pid1 := SpawnKV(mo.ProcClnt)
 	err := mo.ProcClnt.WaitStart(pid1)
 	if err != nil {
 		log.Printf("runBalancer: err %v\n", err)
 	}
-	RunBalancer(mo.ProcClnt, "add", pid1)
+	BalancerOp(mo.FsLib, "add", pid1)
 }
 
 func (mo *Monitor) shrink(kv string) {
-	RunBalancer(mo.ProcClnt, "del", kv)
+	BalancerOp(mo.FsLib, "del", kv)
 	n := named.MEMFS + "/" + kv + "/"
 	err := mo.Evict(kv)
 	if err != nil {

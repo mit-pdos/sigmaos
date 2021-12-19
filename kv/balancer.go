@@ -1,61 +1,117 @@
 package kv
 
 //
-// Shard balancer.
+// A balancer, which acts as a coordinator for the sharded KV service.
+// A KV service deployment may have several balancer: one primary and
+// several backups.
 //
 
 import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"ulambda/atomic"
 	db "ulambda/debug"
+	"ulambda/dir"
+	"ulambda/fs"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
+	"ulambda/fssrv"
+	"ulambda/inode"
+	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/sync"
 )
 
 const (
-	NSHARD       = 10
-	KVDIR        = "name/kv"
-	KVCONFIG     = KVDIR + "/config"
-	KVCONFIGBK   = KVDIR + "/config#"
-	KVNEXTCONFIG = KVDIR + "/nextconfig"
-	KVLEASE      = KVDIR + "/lease"
+	NSHARD        = 10
+	KVDIR         = "name/kv"
+	KVCONFIG      = KVDIR + "/config"
+	KVCONFIGBK    = KVDIR + "/config#"
+	KVNEXTCONFIG  = KVDIR + "/nextconfig"
+	KVLEASE       = KVDIR + "/lease"
+	KVBALANCER    = KVDIR + "/balancer"
+	KVBALANCERCTL = KVDIR + "/balancer/ctl"
 )
 
 type Balancer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	args     []string
 	conf     *Config
 	ballease *sync.LeasePath
 	lease    *sync.LeasePath
 }
 
-func MakeBalancer(args []string) (*Balancer, error) {
-	if len(args) < 2 {
-		return nil, fmt.Errorf("MakeBalancer: too few arguments %v\n", args)
-	}
+func RunBalancer() {
+	log.Printf("run balancer\n")
+
 	bl := &Balancer{}
-	bl.args = args
 	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
+
+	// may fail if already exist
+	bl.Mkdir(named.MEMFS, 07)
+	bl.Mkdir(KVDIR, 07)
+	bl.MakeFileJson(KVCONFIG, 0777, *MakeConfig(0))
+
 	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVLEASE)
 	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG)
+
 	db.Name("balancer")
 
 	bl.ballease.WaitWLease()
 
-	bl.Started(proc.GetPid())
-	return bl, nil
+	// this balancer is the primary one; post its services
+	mfs, _, err := fslibsrv.MakeMemFs(KVBALANCER, "balancer")
+	if err != nil {
+		log.Fatalf("StartMemFs %v\n", err)
+	}
+	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "ctl", makeCtl("balancer", mfs.Root(), bl))
+	if err != nil {
+		log.Fatalf("MakeNod clone failed %v\n", err)
+	}
+
+	// XXX recovery if previous balancer crashed during a reconfiguration
+	// maybe restart movers.
+
+	mfs.Serve()
+	mfs.Done()
+
+	log.Printf("balancer exited\n")
 }
 
-func (bl *Balancer) unlock() {
-	bl.ballease.ReleaseWLease()
+func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
+	s := opcode + " " + mfs
+	err := fsl.WriteFile(KVBALANCERCTL, []byte(s))
+	return err
+}
+
+type Ctl struct {
+	fs.FsObj
+	bl *Balancer
+}
+
+func makeCtl(uname string, parent fs.Dir, bl *Balancer) fs.FsObj {
+	i := inode.MakeInode(uname, np.DMDEVICE, parent)
+	return &Ctl{i, bl}
+}
+
+func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+	words := strings.Fields(string(b))
+	if len(words) != 2 {
+		return 0, fmt.Errorf("Invalid arguments")
+	}
+	c.bl.balance(words[0], words[1])
+	return np.Tsize(len(b)), nil
+}
+
+func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+	return nil, nil
 }
 
 // Make intial shard directories
@@ -89,10 +145,8 @@ func (bl *Balancer) runMovers(nextShards []string) {
 	}
 }
 
-func (bl *Balancer) Balance() {
+func (bl *Balancer) balance(opcode, mfs string) {
 	var err error
-
-	defer bl.unlock() // release lock acquired in MakeBalancer()
 
 	// db.DLPrintf("BAL", "Balancer: %v\n", bl.args)
 
@@ -101,16 +155,16 @@ func (bl *Balancer) Balance() {
 		log.Fatalf("readConfig: err %v\n", err)
 	}
 
-	log.Printf("BAL Balancer: %v %v\n", bl.args, bl.conf)
+	log.Printf("BAL Balancer: %v %v %v\n", opcode, mfs, bl.conf)
 
 	var nextShards []string
-	switch bl.args[0] {
+	switch opcode {
 	case "add":
 		// XXX call balanceAdd repeatedly for each bl.args[1:]
-		nextShards = balanceAdd(bl.conf, bl.args[1])
+		nextShards = balanceAdd(bl.conf, mfs)
 	case "del":
 		// XXX call balanceDel repeatedly for each bl.args[1:]
-		nextShards = balanceDel(bl.conf, bl.args[1])
+		nextShards = balanceDel(bl.conf, mfs)
 	default:
 	}
 
@@ -150,8 +204,4 @@ func (bl *Balancer) Balance() {
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Remove %v err %v\n", KVCONFIGBK, err)
 	}
-}
-
-func (bl *Balancer) Exit() {
-	bl.Exited(proc.GetPid(), "OK")
 }

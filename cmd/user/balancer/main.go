@@ -8,9 +8,9 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %v\n", os.Args[0])
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: [auto] %v\n", os.Args[0])
 		os.Exit(1)
 	}
-	kv.RunBalancer()
+	kv.RunBalancer(os.Args[1])
 }

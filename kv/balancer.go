@@ -45,9 +45,10 @@ type Balancer struct {
 	conf     *Config
 	ballease *sync.LeasePath
 	lease    *sync.LeasePath
+	mo       *Monitor
 }
 
-func RunBalancer() {
+func RunBalancer(auto string) {
 	log.Printf("run balancer\n")
 
 	bl := &Balancer{}
@@ -79,8 +80,16 @@ func RunBalancer() {
 	// XXX recovery if previous balancer crashed during a reconfiguration
 	// maybe restart movers.
 
+	if auto == "auto" {
+		bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
+	}
+
 	mfs.Serve()
 	mfs.Done()
+
+	if bl.mo != nil {
+		bl.mo.Done()
+	}
 
 	log.Printf("balancer exited\n")
 }

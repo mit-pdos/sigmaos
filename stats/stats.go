@@ -15,21 +15,12 @@ import (
 	"time"
 	"unsafe"
 
-	"ulambda/debug"
 	"ulambda/fs"
-	"ulambda/fslib"
 	"ulambda/inode"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
-	"ulambda/proc"
-	"ulambda/procclnt"
 
 	"ulambda/perf"
-)
-
-const (
-	MAXLOAD float64 = 85.0
-	MINLOAD float64 = 40.0
 )
 
 const STATS = true
@@ -141,16 +132,12 @@ type Stats struct {
 	pid  string
 	hz   int
 	done uint32
-	ch   chan bool
-	fsl  *fslib.FsLib
-	*procclnt.ProcClnt
 }
 
 func MkStats(parent fs.Dir) *Stats {
 	st := &Stats{}
 	st.FsObj = inode.MakeInode("", np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
-	st.ch = make(chan bool)
 	return st
 }
 
@@ -158,38 +145,9 @@ func (st *Stats) StatInfo() *StatInfo {
 	return st.sti
 }
 
-func (st *Stats) MakeElastic(fsl *fslib.FsLib, pid string) {
-	st.pid = pid
-	st.fsl = fsl
-	st.ProcClnt = procclnt.MakeProcClnt(fsl)
-	st.hz = perf.Hz()
-	runtime.GOMAXPROCS(2) // XXX for KV
-	go st.monitorPID()
-}
-
-func (st *Stats) MonitorCPUUtil(fsl *fslib.FsLib) {
-	st.fsl = fsl
-	st.ProcClnt = procclnt.MakeProcClnt(fsl)
+func (st *Stats) MonitorCPUUtil() {
 	st.hz = perf.Hz()
 	go st.monitorCPUUtil()
-}
-
-func (st *Stats) spawnMonitor() string {
-	p := proc.MakeProc("bin/user/monitor", []string{})
-	p.Type = proc.T_LC
-	st.Spawn(p)
-	return p.Pid
-}
-
-func (st *Stats) monitor() {
-	t0 := time.Now().UnixNano()
-	pid := st.spawnMonitor()
-	status, err := st.WaitExit(pid)
-	if err != nil || status != "OK" {
-		log.Printf("monitor: err %v status %v \n", err, status)
-	}
-	t1 := time.Now().UnixNano()
-	log.Printf("mon: %v\n", t1-t0)
 }
 
 const (
@@ -229,6 +187,7 @@ func (st *Stats) loadCPUUtil(idle, total uint64) {
 	util := 100.0 * (1.0 - float64(idle)/float64(total))
 
 	nthread := float64(runtime.NumGoroutine())
+	// log.Printf("loadCPUUtil %v %v nthread %v\n", idle, total, nthread)
 
 	st.sti.Load[0] *= EXP_0
 	st.sti.Load[0] += (1 - EXP_0) * nthread
@@ -238,15 +197,6 @@ func (st *Stats) loadCPUUtil(idle, total uint64) {
 	st.sti.Load[2] += (1 - EXP_2) * nthread
 
 	st.sti.Util = util
-}
-
-// XXX too simplistic?
-func isDelay(load Tload) bool {
-	return load[0] > load[1] && load[1] > load[2]
-}
-
-func noDelay(load Tload) bool {
-	return load[0] < load[1] && load[1] < load[2]
 }
 
 func (st *Stats) monitorCPUUtil() {
@@ -282,43 +232,8 @@ func (st *Stats) monitorCPUUtil() {
 	}
 }
 
-func (st *Stats) doMonitor() bool {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	log.Printf("%v: u %.1f l %v\n", debug.GetName(), st.sti.Util, st.sti.Load)
-	if st.sti.Util >= MAXLOAD && isDelay(st.sti.Load) {
-		return true
-	}
-	if st.sti.Util < MINLOAD && noDelay(st.sti.Load) {
-		return true
-	}
-	return false
-}
-
-func (st *Stats) monitorPID() {
-	total0 := uint64(0)
-	total1 := uint64(0)
-	pid := os.Getpid()
-	total0 = perf.GetPIDSample(pid)
-	period1 := 10 // 1000/MS;
-
-	for atomic.LoadUint32(&st.done) != 1 {
-		for i := 0; i < period1 && st.done == 0; i++ {
-			time.Sleep(time.Duration(MS) * time.Millisecond)
-			total1 = perf.GetPIDSample(pid)
-			st.load(total1 - total0)
-			total0 = total1
-		}
-		if st.done == 0 && st.doMonitor() {
-			st.monitor()
-		}
-	}
-	st.ch <- true
-}
-
 func (st *Stats) Done() {
 	atomic.StoreUint32(&st.done, 1)
-	<-st.ch
 }
 
 func (st *Stats) Write(ctx fs.CtxI, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {

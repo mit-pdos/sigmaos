@@ -73,7 +73,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
 	}
 
-	pd.MemFs.GetStats().MonitorCPUUtil(pd.FsLib)
+	pd.MemFs.GetStats().MonitorCPUUtil()
 
 	pd.Work()
 }

@@ -53,6 +53,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
+	fssrv.stats.MonitorCPUUtil()
 	return fssrv
 }
 
@@ -86,8 +87,10 @@ func (fssrv *FsServer) Done() {
 		if !fssrv.done {
 			fssrv.done = true
 			fssrv.ch <- true
+
 		}
 	}
+	fssrv.stats.Done()
 }
 
 func (fssrv *FsServer) MyAddr() string {

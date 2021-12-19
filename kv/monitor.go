@@ -6,61 +6,61 @@ import (
 	"sync"
 	"time"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/stats"
-	usync "ulambda/sync"
 )
 
 const (
-	KV        = "bin/user/kv"
-	KVMONLOCK = "monlock"
+	MAXLOAD float64 = 85.0
+	MINLOAD float64 = 40.0
 )
+
+const MS = 100 // 100 ms
 
 type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	kv        string
-	kvmonlock *usync.Lock
+	ch chan bool
 }
 
-func MakeMonitor(args []string) (*Monitor, error) {
+func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	mo := &Monitor{}
-	mo.FsLib = fslib.MakeFsLib("monitor")
-	mo.ProcClnt = procclnt.MakeProcClnt(mo.FsLib)
-	mo.kvmonlock = usync.MakeLock(mo.FsLib, KVDIR, KVMONLOCK, true)
-	db.Name(proc.GetPid())
-
-	mo.kvmonlock.Lock()
-
-	mo.Started(proc.GetPid())
-	return mo, nil
+	mo.FsLib = fslib
+	mo.ProcClnt = pclnt
+	mo.ch = make(chan bool)
+	go mo.monitor()
+	return mo
 }
 
-func (mo *Monitor) unlock() {
-	mo.kvmonlock.Unlock()
+func SpawnMemFS(pclnt *procclnt.ProcClnt) string {
+	p := proc.MakeProc("bin/user/memfsd", []string{""})
+	p.Type = proc.T_LC
+	pclnt.Spawn(p)
+	return p.Pid
 }
 
-func spawnBalancer(pclnt *procclnt.ProcClnt, opcode, pid1 string) string {
-	t := proc.MakeProc("bin/user/balancer", []string{opcode, pid1})
-	t.Type = proc.T_LC
-	pclnt.Spawn(t)
-	return t.Pid
+func (mo *Monitor) monitor() {
+	for true {
+		select {
+		case <-mo.ch:
+			return
+		default:
+			time.Sleep(time.Duration(MS) * time.Millisecond)
+			mo.doMonitor()
+		}
+	}
 }
 
-func SpawnKV(pclnt *procclnt.ProcClnt) string {
-	t := proc.MakeProc(KV, []string{""})
-	t.Type = proc.T_LC
-	pclnt.Spawn(t)
-	return t.Pid
+func (mo *Monitor) Done() {
+	mo.ch <- true
 }
 
 func (mo *Monitor) grow() {
-	pid1 := SpawnKV(mo.ProcClnt)
+	pid1 := SpawnMemFS(mo.ProcClnt)
 	err := mo.ProcClnt.WaitStart(pid1)
 	if err != nil {
 		log.Printf("runBalancer: err %v\n", err)
@@ -78,9 +78,7 @@ func (mo *Monitor) shrink(kv string) {
 }
 
 // XXX Use load too?
-func (mo *Monitor) Work() {
-	defer mo.unlock() // release lock acquired in MakeMonitor()
-
+func (mo *Monitor) doMonitor() {
 	var conf *Config
 	for true {
 		c, err := readConfig(mo.FsLib, KVCONFIG)
@@ -126,14 +124,10 @@ func (mo *Monitor) Work() {
 	}
 	util = util / float64(n)
 	log.Printf("monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)
-	if util >= stats.MAXLOAD {
+	if util >= MAXLOAD {
 		mo.grow()
 	}
-	if util < stats.MINLOAD && len(kvs.set) > 1 {
+	if util < MINLOAD && len(kvs.set) > 1 {
 		mo.shrink(lowkv)
 	}
-}
-
-func (mo *Monitor) Exit() {
-	mo.Exited(proc.GetPid(), "OK")
 }

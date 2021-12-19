@@ -1,7 +1,9 @@
 package stats_test
 
 import (
+	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -38,6 +40,15 @@ func TestStatsd(t *testing.T) {
 	err = ts.ReadFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 	assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
+
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+
+	for i := 0; i < 10; i++ {
+		log.Printf("util %v load %v\n", st.Util, st.Load)
+		time.Sleep(1000 * time.Millisecond)
+		//assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
+	}
 
 	ts.s.Shutdown()
 }

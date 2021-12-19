@@ -45,7 +45,7 @@ type Tstate struct {
 	bal   string
 }
 
-func makeTstate(t *testing.T, nclerk int) *Tstate {
+func makeTstate(t *testing.T, auto string, nclerk int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
@@ -54,17 +54,17 @@ func makeTstate(t *testing.T, nclerk int) *Tstate {
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
 
-	ts.setup(nclerk)
+	ts.setup(auto, nclerk)
 
 	return ts
 }
 
-func (ts *Tstate) setup(nclerk int) {
-	ts.bal = ts.spawnBalancer()
+func (ts *Tstate) setup(auto string, nclerk int) {
+	ts.bal = ts.spawnBalancer("manual")
 	ts.WaitStart(ts.bal)
 
 	// add 1 so that we can put to initialize
-	mfs := ts.spawnMemFS()
+	mfs := SpawnMemFS(ts.ProcClnt)
 	ts.WaitStart(mfs)
 
 	err := BalancerOp(ts.fsl, "add", mfs)
@@ -84,8 +84,8 @@ func (ts *Tstate) setup(nclerk int) {
 	ts.mfss = append(ts.mfss, mfs)
 }
 
-func (ts *Tstate) spawnBalancer() string {
-	p := proc.MakeProc("bin/user/balancer", []string{""})
+func (ts *Tstate) spawnBalancer(auto string) string {
+	p := proc.MakeProc("bin/user/balancer", []string{auto})
 	ts.Spawn(p)
 	return p.Pid
 }
@@ -96,16 +96,10 @@ func (ts *Tstate) stopFS(fs string) {
 	ts.WaitExit(fs)
 }
 
-func (ts *Tstate) spawnMemFS() string {
-	p := proc.MakeProc("bin/user/memfsd", []string{""})
-	ts.Spawn(p)
-	return p.Pid
-}
-
 func (ts *Tstate) startMemFSs(n int) []string {
 	mfss := make([]string, 0)
 	for r := 0; r < n; r++ {
-		mfs := ts.spawnMemFS()
+		mfs := SpawnMemFS(ts.ProcClnt)
 		mfss = append(mfss, mfs)
 	}
 	return mfss
@@ -146,7 +140,7 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts := makeTstate(t, 1)
+	ts := makeTstate(t, "manual", 1)
 
 	_, err := ts.clrks[0].Get(key(NKEYS + 1))
 	assert.NotEqual(ts.t, err, nil, "Get")
@@ -173,7 +167,7 @@ func TestGetPutSet(t *testing.T) {
 func concurN(t *testing.T, nclerk int) {
 	const NMORE = 10
 
-	ts := makeTstate(t, nclerk)
+	ts := makeTstate(t, "manual", nclerk)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -181,10 +175,9 @@ func concurN(t *testing.T, nclerk int) {
 	}
 
 	for s := 0; s < NMORE; s++ {
-		mfs := ts.spawnMemFS()
+		mfs := SpawnMemFS(ts.ProcClnt)
 		ts.mfss = append(ts.mfss, mfs)
 		ts.WaitStart(mfs)
-		log.Printf("add\n")
 		err := BalancerOp(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
 		assert.Nil(ts.t, err, "BalancerOp")
 		// do some puts/gets
@@ -226,3 +219,9 @@ func TestConcur1(t *testing.T) {
 func TestConcurN(t *testing.T) {
 	concurN(t, NCLERK)
 }
+
+//func TestAuto(t *testing.T) {
+// runtime.GOMAXPROCS(2) // XXX for KV
+
+//	ts := makeTstate(t, "auto", nclerk)
+//}

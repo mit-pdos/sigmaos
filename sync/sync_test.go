@@ -126,7 +126,7 @@ func TestLease1(t *testing.T) {
 	current := 0
 	done := make(chan int)
 
-	lease := usync.MakeLease(ts.FsLib, LEASENAME)
+	lease := usync.MakeLeasePath(ts.FsLib, LEASENAME)
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
@@ -159,8 +159,8 @@ func TestLease2(t *testing.T) {
 
 	N := 20
 
-	lease1 := usync.MakeLease(ts.FsLib, LEASENAME+"-1234")
-	lease2 := usync.MakeLease(ts.FsLib, LEASENAME+"-1234")
+	lease1 := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234")
+	lease2 := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234")
 
 	for i := 0; i < N; i++ {
 		err := lease1.WaitWLease()
@@ -183,13 +183,13 @@ func TestLease3(t *testing.T) {
 	n_threads := 20
 	cnt := 0
 
-	lease := usync.MakeLease(ts.FsLib, LEASENAME+"-1234")
+	lease := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234")
 
 	var done sync.WaitGroup
 	done.Add(n_threads)
 
 	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, lease *usync.Lease, N *int, cnt *int) {
+		go func(done *sync.WaitGroup, lease *usync.LeasePath, N *int, cnt *int) {
 			defer done.Done()
 			for {
 				err := lease.WaitWLease()
@@ -224,7 +224,7 @@ func TestLease4(t *testing.T) {
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
-	lease1 := usync.MakeLease(fsl1, LEASENAME)
+	lease1 := usync.MakeLeasePath(fsl1, LEASENAME)
 
 	// Establish a connection
 	_, err = fsl2.ReadDir(LOCK_DIR)

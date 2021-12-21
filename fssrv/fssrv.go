@@ -157,7 +157,7 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 		}
 		return *reply, nil
 	default:
-		// log.Printf("%p: %v %v\n", fssrv, msg.Type(), req)
+		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
 	}
 	fssrv.stats.StatInfo().Inc(msg.Type())
 	return sess.Dispatch(msg)

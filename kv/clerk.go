@@ -44,7 +44,10 @@ func MakeClerk(namedAddr []string) *KvClerk {
 	db.Name(kc.uname)
 	kc.fsl = fslib.MakeFsLibAddr(kc.uname, namedAddr)
 	kc.lease = usync.MakeLeasePath(kc.fsl, KVCONFIG)
-	kc.readConfig()
+	err := kc.readConfig()
+	if err != nil {
+		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
+	}
 	return kc
 }
 
@@ -56,7 +59,7 @@ func (kc *KvClerk) Exit() {
 func (kc *KvClerk) readConfig() error {
 	b, err := kc.lease.WaitRLease()
 	if err != nil {
-		log.Printf("readConfig: err %v\n", err)
+		log.Printf("%v: clerk readConfig: err %v\n", db.GetName(), err)
 		return err
 	}
 	json.Unmarshal(b, &kc.conf)
@@ -131,6 +134,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 		if kc.doRetry(err) {
 			err = kc.readConfig()
 			if err != nil {
+				log.Printf("%v: Get readConfig err %v\n", db.GetName(), err)
 				return string(b), err
 			}
 		} else {
@@ -140,7 +144,10 @@ func (kc *KvClerk) Get(k string) (string, error) {
 }
 
 func (kc *KvClerk) KVs() []string {
-	kc.readConfig()
+	err := kc.readConfig()
+	if err != nil {
+		log.Printf("%v: KVs readConfig err %v\n", db.GetName(), err)
+	}
 	kcs := makeKvs(kc.conf.Shards)
 	return kcs.mkKvs()
 }

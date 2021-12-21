@@ -3,6 +3,7 @@ package kv
 import (
 	"log"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,10 +43,10 @@ type Tstate struct {
 	*procclnt.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
-	bal   string
+	bals  []string
 }
 
-func makeTstate(t *testing.T, auto string, nclerk int) *Tstate {
+func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
@@ -54,20 +55,25 @@ func makeTstate(t *testing.T, auto string, nclerk int) *Tstate {
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
 
-	ts.setup(auto, nclerk)
+	ts.setup(auto, nclerk, crash)
 
 	return ts
 }
 
-func (ts *Tstate) setup(auto string, nclerk int) {
-	ts.bal = ts.spawnBalancer(auto)
-	ts.WaitStart(ts.bal)
+func (ts *Tstate) setup(auto string, nclerk int, crash string) {
+	const N = 10
+
+	for i := 0; i < N; i++ {
+		b := ts.spawnBalancer(auto, crash)
+		// ts.WaitStart(b)   // XXX
+		ts.bals = append(ts.bals, b)
+	}
 
 	// add 1 so that we can put to initialize
 	mfs := SpawnMemFS(ts.ProcClnt)
 	ts.WaitStart(mfs)
 
-	err := BalancerOp(ts.fsl, "add", mfs)
+	err := ts.balancerOp("add", mfs)
 	assert.Nil(ts.t, err, "BalancerOp")
 
 	ts.clrks = make([]*KvClerk, nclerk)
@@ -84,8 +90,8 @@ func (ts *Tstate) setup(auto string, nclerk int) {
 	ts.mfss = append(ts.mfss, mfs)
 }
 
-func (ts *Tstate) spawnBalancer(auto string) string {
-	p := proc.MakeProc("bin/user/balancer", []string{auto})
+func (ts *Tstate) spawnBalancer(auto string, crash string) string {
+	p := proc.MakeProc("bin/user/balancer", []string{auto, crash})
 	ts.Spawn(p)
 	return p.Pid
 }
@@ -106,10 +112,13 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFSs() {
+	for _, b := range ts.bals {
+		log.Printf("evict %v\n", b)
+		ts.stopFS(b)
+	}
 	for _, mfs := range ts.mfss {
 		ts.stopFS(mfs)
 	}
-	ts.stopFS(ts.bal)
 }
 
 func key(k uint64) string {
@@ -139,8 +148,23 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
 }
 
+func (ts *Tstate) balancerOp(opcode, mfs string) error {
+	for true {
+		err := BalancerOp(ts.FsLib, opcode, mfs)
+		if err == nil {
+			return err
+		}
+		if err.Error() == "EOF" || strings.HasPrefix(err.Error(), "file not found") {
+			time.Sleep(100 * time.Millisecond)
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
 func TestGetPutSet(t *testing.T) {
-	ts := makeTstate(t, "manual", 1)
+	ts := makeTstate(t, "manual", 1, "NO")
 
 	_, err := ts.clrks[0].Get(key(NKEYS + 1))
 	assert.NotEqual(ts.t, err, nil, "Get")
@@ -164,10 +188,10 @@ func TestGetPutSet(t *testing.T) {
 	ts.s.Shutdown()
 }
 
-func concurN(t *testing.T, nclerk int) {
+func concurN(t *testing.T, nclerk int, crash string) {
 	const NMORE = 10
 
-	ts := makeTstate(t, "manual", nclerk)
+	ts := makeTstate(t, "manual", nclerk, crash)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
@@ -178,14 +202,14 @@ func concurN(t *testing.T, nclerk int) {
 		mfs := SpawnMemFS(ts.ProcClnt)
 		ts.mfss = append(ts.mfss, mfs)
 		ts.WaitStart(mfs)
-		err := BalancerOp(ts.fsl, "add", ts.mfss[len(ts.mfss)-1])
+		err := ts.balancerOp("add", ts.mfss[len(ts.mfss)-1])
 		assert.Nil(ts.t, err, "BalancerOp")
 		// do some puts/gets
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		err := BalancerOp(ts.fsl, "del", ts.mfss[len(ts.mfss)-1])
+		err := ts.balancerOp("del", ts.mfss[len(ts.mfss)-1])
 		assert.Nil(ts.t, err, "BalancerOp")
 		ts.stopFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
@@ -207,24 +231,34 @@ func concurN(t *testing.T, nclerk int) {
 	ts.s.Shutdown()
 }
 
-func TestConcur0(t *testing.T) {
-	concurN(t, 0)
+func TestConcurOK0(t *testing.T) {
+	concurN(t, 0, "NO")
 }
 
-func TestConcur1(t *testing.T) {
-	concurN(t, 1)
+func TestConcurOK1(t *testing.T) {
+	concurN(t, 1, "NO")
 }
 
-func TestConcurN(t *testing.T) {
-	concurN(t, NCLERK)
+func TestConcurOKN(t *testing.T) {
+	concurN(t, NCLERK, "NO")
+}
+
+func TestConcurFail0(t *testing.T) {
+	concurN(t, 0, "YES")
+}
+
+func TestConcurFail1(t *testing.T) {
+	concurN(t, 1, "YES")
+}
+
+func TestConcurFailN(t *testing.T) {
+	concurN(t, NCLERK, "YES")
 }
 
 func TestAuto(t *testing.T) {
 	// runtime.GOMAXPROCS(2) // XXX for KV
-
 	nclerk := NCLERK
-
-	ts := makeTstate(t, "auto", nclerk)
+	ts := makeTstate(t, "auto", nclerk, "NO")
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {

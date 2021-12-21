@@ -1,6 +1,7 @@
 package crash
 
 import (
+	"log"
 	"os"
 	"time"
 
@@ -20,6 +21,7 @@ func Crasher(fsl *fslib.FsLib) {
 		time.Sleep(time.Duration(ms) * time.Millisecond)
 
 		r := rand.Int64(1000)
+		log.Printf("m = %v r = %v\n", ms, r)
 		if r < 330 {
 			Crash(fsl)
 		} else if r < 660 {
@@ -30,12 +32,12 @@ func Crasher(fsl *fslib.FsLib) {
 }
 
 func Crash(fsl *fslib.FsLib) {
-	db.DPrintf("%v: CRASH %v\n", db.GetName(), proc.GetPid())
+	log.Printf("%v: FAIL CRASH %v\n", db.GetName(), proc.GetPid())
 	os.Exit(1)
 }
 
 func Partition(fsl *fslib.FsLib) {
-	db.DPrintf("%v: PARTITION %v\n", db.GetName(), proc.GetPid())
+	log.Printf("%v: FAIL PARTITION %v\n", db.GetName(), proc.GetPid())
 	fsl.Disconnect("name")
 }
 

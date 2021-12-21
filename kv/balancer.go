@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"ulambda/atomic"
+	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
@@ -49,8 +50,8 @@ type Balancer struct {
 	ch       chan bool
 }
 
-func RunBalancer(auto string) {
-	log.Printf("run balancer %v\n", auto)
+func RunBalancer(auto, docrash string) {
+	log.Printf("run balancer %v %v %v\n", proc.GetPid(), auto, docrash)
 
 	bl := &Balancer{}
 	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
@@ -66,10 +67,8 @@ func RunBalancer(auto string) {
 
 	db.Name("balancer")
 
-	bl.ballease.WaitWLease()
-
-	// this balancer is the primary one; post its services
-	mfs, _, err := fslibsrv.MakeMemFs(KVBALANCER, "balancer")
+	// start server but don't publish
+	mfs, _, err := fslibsrv.MakeMemFs("", "balancer")
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
@@ -78,23 +77,46 @@ func RunBalancer(auto string) {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
 
-	// XXX recovery if previous balancer crashed during a reconfiguration
-	// maybe restart movers.
+	ch := make(chan bool)
+	go func() {
+		mfs.Serve()
+		ch <- true
+	}()
 
-	if auto == "auto" {
-		bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
-		bl.ch = make(chan bool)
-		go bl.monitor()
+	bl.ballease.WaitWLease()
+
+	log.Printf("%v: primary\n", db.GetName())
+
+	select {
+	case <-ch:
+		// done
+	default:
+		bl.recover()
+
+		if docrash == "YES" {
+			crash.Crasher(bl.FsLib)
+		}
+
+		// we are primary, post the balancer
+		mfs.Post(KVBALANCER)
+
+		if auto == "auto" {
+			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
+			bl.ch = make(chan bool)
+			go bl.monitor()
+		}
+
+		// run until we are told to stop
+		<-ch
 	}
 
-	mfs.Serve()
 	mfs.Done()
 
 	if bl.mo != nil {
 		bl.Done()
 	}
 
-	log.Printf("balancer exited\n")
+	log.Printf("balancer exited %v\n", proc.GetPid())
 }
 
 func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
@@ -143,6 +165,20 @@ func (bl *Balancer) Done() {
 	bl.ch <- true
 }
 
+func (bl *Balancer) recover() {
+	var err error
+	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
+	if err == nil {
+		log.Printf("recovery: nothing to do %v\n", bl.conf)
+		return
+	}
+	err = bl.lease.MakeLeaseFileFrom(KVCONFIGBK)
+	if err != nil {
+		db.DLPrintf("BAL", "BAL: Rename from %v err %v\n", KVCONFIGBK, err)
+	}
+	log.Printf("recovery: restored config form %v\n", KVCONFIGBK)
+}
+
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
@@ -181,7 +217,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err != nil {
-		log.Fatalf("readConfig: err %v\n", err)
+		log.Fatalf("%v: readConfig: err %v\n", db.GetName(), err)
 	}
 
 	log.Printf("BAL Balancer: %v %v %v\n", opcode, mfs, bl.conf)

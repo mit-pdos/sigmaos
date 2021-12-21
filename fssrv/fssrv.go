@@ -61,6 +61,15 @@ func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
 	fssrv.fsl = fsl
 }
 
+func (fssrv *FsServer) Post(path string) error {
+	if np.EndSlash(path) {
+		fssrv.fsl.Mkdir(path, 0777)
+		return fssrv.fsl.PostServiceUnion(fssrv.MyAddr(), path, fssrv.MyAddr())
+	} else {
+		return fssrv.fsl.PostService(fssrv.MyAddr(), path)
+	}
+}
+
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {

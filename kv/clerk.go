@@ -67,6 +67,7 @@ func (kc *KvClerk) readConfig() error {
 	return nil
 }
 
+// XXX error checking in one place and more uniform
 func (kc *KvClerk) doRetry(err error) bool {
 	if err.Error() == "EOF" || // XXX maybe useful when KVs fail
 		err.Error() == "Version mismatch" || // XXX maybe useful open/read

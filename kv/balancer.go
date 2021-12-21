@@ -48,13 +48,15 @@ type Balancer struct {
 	lease    *sync.LeasePath
 	mo       *Monitor
 	ch       chan bool
+	docrash  string
 }
 
 func RunBalancer(auto, docrash string) {
 	log.Printf("run balancer %v %v %v\n", proc.GetPid(), auto, docrash)
 
 	bl := &Balancer{}
-	bl.FsLib = fslib.MakeFsLib(proc.GetPid())
+	bl.docrash = docrash
+	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 
 	// may fail if already exist
@@ -64,8 +66,6 @@ func RunBalancer(auto, docrash string) {
 
 	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVLEASE)
 	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG)
-
-	db.Name("balancer")
 
 	// start server but don't publish
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer")
@@ -85,7 +85,7 @@ func RunBalancer(auto, docrash string) {
 
 	bl.ballease.WaitWLease()
 
-	log.Printf("%v: primary %v\n", db.GetName(), proc.GetPid())
+	log.Printf("%v: primary\n", db.GetName())
 
 	select {
 	case <-ch:
@@ -93,7 +93,7 @@ func RunBalancer(auto, docrash string) {
 	default:
 		bl.recover()
 
-		if docrash == "YES" {
+		if bl.docrash == "YES" {
 			crash.Crasher(bl.FsLib, 5)
 		}
 
@@ -116,7 +116,7 @@ func RunBalancer(auto, docrash string) {
 		bl.Done()
 	}
 
-	log.Printf("balancer exited %v\n", proc.GetPid())
+	log.Printf("balancer exited %v\n", db.GetName())
 }
 
 func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
@@ -170,14 +170,14 @@ func (bl *Balancer) recover() {
 	var err error
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err == nil {
-		log.Printf("%v: recovery: nothing to do %v\n", proc.GetPid(), bl.conf)
+		log.Printf("%v: recovery: nothing to do %v\n", db.GetName(), bl.conf)
 		return
 	}
 	err = bl.lease.MakeLeaseFileFrom(KVCONFIGBK)
 	if err != nil {
-		db.DLPrintf("BAL", "BAL: Rename from %v err %v\n", KVCONFIGBK, err)
+		log.Fatalf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), KVCONFIGBK, err)
 	}
-	log.Printf("%v: recovery: restored config form %v\n", proc.GetPid(), KVCONFIGBK)
+	log.Printf("%v: recovery: restored config form %v\n", db.GetName(), KVCONFIGBK)
 }
 
 // Make intial shard directories
@@ -191,22 +191,53 @@ func (bl *Balancer) initShards(nextShards []string) {
 	}
 }
 
-func (bl *Balancer) spawnMover(s, src, dst string) string {
-	t := proc.MakeProc("bin/user/mover", []string{s, src, dst})
+func (bl *Balancer) spawnProc(args []string) string {
+	t := proc.MakeProc(args[0], args[1:])
 	bl.Spawn(t)
 	return t.Pid
 }
 
-func (bl *Balancer) runMovers(nextShards []string) {
+func (bl *Balancer) runProc(args []string) (string, error) {
+	pid := bl.spawnProc(args)
+	status, err := bl.WaitExit(pid)
+	return status, err
+}
+
+func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool) error {
+	for true {
+		status, err := bl.runProc(args)
+		if retryf(err, status) {
+			log.Printf("%v: proc %v err %v status %v\n", db.GetName(), args, err, status)
+		} else {
+			return nil
+		}
+	}
+	return nil
+}
+
+// XXX run in parallel?
+func (bl *Balancer) runMovers(nextShards []string) []string {
+	moved := []string{}
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
-			pid1 := bl.spawnMover(strconv.Itoa(i), kvd, nextShards[i])
-			status, err := bl.WaitExit(pid1)
-			if err != nil || status != "OK" {
-				log.Printf("mover %v failed err %v status %v\n", kvd,
-					err, status)
-			}
+			shard := strconv.Itoa(i)
+			s := shardPath(kvd, shard)
+			moved = append(moved, s)
+			bl.runProcRetry([]string{"bin/user/kv-mover", shard, kvd, nextShards[i], bl.docrash}, func(err error, status string) bool {
+				return err != nil || status != "OK"
+			})
 		}
+	}
+	return moved
+}
+
+func (bl *Balancer) runDeleters(moved []string) {
+	for _, sharddir := range moved {
+		bl.runProcRetry([]string{"bin/user/kv-deleter", sharddir, bl.docrash},
+			func(err error, status string) bool {
+				ok := strings.HasPrefix(status, "file not found")
+				return err != nil || (status != "OK" && !ok)
+			})
 	}
 }
 
@@ -226,10 +257,10 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err != nil {
-		log.Fatalf("%v: readConfig: err %v\n", proc.GetPid(), err)
+		log.Fatalf("%v: readConfig: err %v\n", db.GetName(), err)
 	}
 
-	log.Printf("%v: BAL Balancer: %v %v %v\n", proc.GetPid(), opcode, mfs, bl.conf)
+	log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
 	var nextShards []string
 	switch opcode {
@@ -248,24 +279,25 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	db.DLPrintf("BAL", "Balancer conf %v next shards: %v \n", bl.conf, nextShards)
 
-	log.Printf("%v: BAL conf %v next shards: %v\n", proc.GetPid(), bl.conf, nextShards)
+	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
 	err = bl.lease.RenameTo(KVCONFIGBK)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
 	}
 
+	var moved []string
 	if bl.conf.N == 0 {
 		bl.initShards(nextShards)
 	} else {
-		bl.runMovers(nextShards)
+		moved = bl.runMovers(nextShards)
 	}
 
 	bl.conf.N += 1
 	bl.conf.Shards = nextShards
 	bl.conf.Ctime = time.Now().UnixNano()
 
-	log.Printf("%v: new %v\n", proc.GetPid(), bl.conf)
+	log.Printf("%v: new %v\n", db.GetName(), bl.conf)
 
 	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
@@ -278,6 +310,11 @@ func (bl *Balancer) balance(opcode, mfs string) {
 			KVNEXTCONFIG, KVCONFIG, err)
 		return
 	}
+
+	if bl.conf.N > 1 {
+		bl.runDeleters(moved)
+	}
+
 	err = bl.Remove(KVCONFIGBK)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Remove %v err %v\n", KVCONFIGBK, err)

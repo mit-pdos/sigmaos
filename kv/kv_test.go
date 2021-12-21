@@ -65,7 +65,6 @@ func (ts *Tstate) setup(auto string, nclerk int, crash string) {
 
 	for i := 0; i < N; i++ {
 		b := ts.spawnBalancer(auto, crash)
-		// ts.WaitStart(b)   // XXX
 		ts.bals = append(ts.bals, b)
 	}
 
@@ -93,6 +92,7 @@ func (ts *Tstate) setup(auto string, nclerk int, crash string) {
 func (ts *Tstate) spawnBalancer(auto string, crash string) string {
 	p := proc.MakeProc("bin/user/balancer", []string{auto, crash})
 	ts.Spawn(p)
+	ts.WaitStart(p.Pid)
 	return p.Pid
 }
 
@@ -166,7 +166,8 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 		if err == nil {
 			return err
 		}
-		if err.Error() == "EOF" || strings.HasPrefix(err.Error(), "file not found") {
+		// XXX error checking in one place and more uniform
+		if err.Error() == "EOF" || strings.HasPrefix(err.Error(), "file not found") || strings.HasPrefix(err.Error(), "umount: unknown mount") {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			return err

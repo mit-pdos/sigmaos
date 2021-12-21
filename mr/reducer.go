@@ -49,7 +49,7 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.Started(proc.GetPid())
 
 	if r.crash == "YES" {
-		crash.Crasher(r.FsLib)
+		crash.Crasher(r.FsLib, 500)
 		delay.SetDelayRPC(3)
 	}
 

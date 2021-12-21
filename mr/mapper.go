@@ -80,7 +80,7 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.Started(proc.GetPid())
 
 	if m.crash == "YES" {
-		crash.Crasher(m.FsLib)
+		crash.Crasher(m.FsLib, 500)
 		delay.SetDelayRPC(100)
 	}
 

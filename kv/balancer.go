@@ -94,7 +94,7 @@ func RunBalancer(auto, docrash string) {
 		bl.recover()
 
 		if docrash == "YES" {
-			crash.Crasher(bl.FsLib)
+			crash.Crasher(bl.FsLib, 5)
 		}
 
 		// we are primary, post the balancer
@@ -135,6 +135,7 @@ func makeCtl(uname string, parent fs.Dir, bl *Balancer) fs.FsObj {
 	return &Ctl{i, bl}
 }
 
+// XXX call balance() repeatedly for each server
 func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
@@ -209,6 +210,15 @@ func (bl *Balancer) runMovers(nextShards []string) {
 	}
 }
 
+func (bl *Balancer) present(mfs string) bool {
+	for _, s := range bl.conf.Shards {
+		if s == mfs {
+			return true
+		}
+	}
+	return false
+}
+
 func (bl *Balancer) balance(opcode, mfs string) {
 	var err error
 
@@ -224,10 +234,14 @@ func (bl *Balancer) balance(opcode, mfs string) {
 	var nextShards []string
 	switch opcode {
 	case "add":
-		// XXX call balanceAdd repeatedly for each bl.args[1:]
+		if bl.present(mfs) {
+			return
+		}
 		nextShards = balanceAdd(bl.conf, mfs)
 	case "del":
-		// XXX call balanceDel repeatedly for each bl.args[1:]
+		if !bl.present(mfs) {
+			return
+		}
 		nextShards = balanceDel(bl.conf, mfs)
 	default:
 	}

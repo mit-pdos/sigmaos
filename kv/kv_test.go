@@ -202,6 +202,7 @@ func TestGetPutSet(t *testing.T) {
 
 func concurN(t *testing.T, nclerk int, crash string) {
 	const NMORE = 10
+	const TIME = 100 // 500
 
 	ts := makeTstate(t, "manual", nclerk, crash)
 
@@ -217,7 +218,7 @@ func concurN(t *testing.T, nclerk int, crash string) {
 		err := ts.balancerOp("add", ts.mfss[len(ts.mfss)-1])
 		assert.Nil(ts.t, err, "BalancerOp")
 		// do some puts/gets
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(TIME * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
@@ -226,7 +227,7 @@ func concurN(t *testing.T, nclerk int, crash string) {
 		ts.stopFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
 		// do some puts/gets
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(TIME * time.Millisecond)
 	}
 
 	log.Printf("Wait for clerks\n")

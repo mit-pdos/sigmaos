@@ -78,7 +78,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	w.Started(proc.GetPid())
 
 	if w.crashCoord == "YES" {
-		crash.Crasher(w.FsLib)
+		crash.Crasher(w.FsLib, 500)
 	}
 
 	return w, nil

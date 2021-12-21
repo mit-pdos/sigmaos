@@ -18,10 +18,10 @@ import (
 func Crasher(fsl *fslib.FsLib) {
 	go func() {
 		ms := rand.Int64(500)
+		log.Printf("ms %v\n", ms)
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-
 		r := rand.Int64(1000)
-		log.Printf("m = %v r = %v\n", ms, r)
+		log.Printf("r = %v\n", ms, r)
 		if r < 330 {
 			Crash(fsl)
 		} else if r < 660 {

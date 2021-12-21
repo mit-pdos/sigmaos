@@ -85,7 +85,7 @@ func RunBalancer(auto, docrash string) {
 
 	bl.ballease.WaitWLease()
 
-	log.Printf("%v: primary\n", db.GetName())
+	log.Printf("%v: primary %v\n", db.GetName(), proc.GetPid())
 
 	select {
 	case <-ch:
@@ -169,14 +169,14 @@ func (bl *Balancer) recover() {
 	var err error
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err == nil {
-		log.Printf("recovery: nothing to do %v\n", bl.conf)
+		log.Printf("%v: recovery: nothing to do %v\n", proc.GetPid(), bl.conf)
 		return
 	}
 	err = bl.lease.MakeLeaseFileFrom(KVCONFIGBK)
 	if err != nil {
 		db.DLPrintf("BAL", "BAL: Rename from %v err %v\n", KVCONFIGBK, err)
 	}
-	log.Printf("recovery: restored config form %v\n", KVCONFIGBK)
+	log.Printf("%v: recovery: restored config form %v\n", proc.GetPid(), KVCONFIGBK)
 }
 
 // Make intial shard directories
@@ -184,10 +184,9 @@ func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		dst := shardPath(kvd, strconv.Itoa(s))
 		db.DLPrintf("BAL", "Init shard dir %v\n", dst)
-		err := bl.Mkdir(dst, 0777)
-		if err != nil {
-			log.Fatalf("BAL mkdir %v err %v\n", dst, err)
-		}
+		// Mkdir may fail because balancer crashed during config 0
+		// so ignore error
+		bl.Mkdir(dst, 0777)
 	}
 }
 
@@ -217,10 +216,10 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err != nil {
-		log.Fatalf("%v: readConfig: err %v\n", db.GetName(), err)
+		log.Fatalf("%v: readConfig: err %v\n", proc.GetPid(), err)
 	}
 
-	log.Printf("BAL Balancer: %v %v %v\n", opcode, mfs, bl.conf)
+	log.Printf("%v: BAL Balancer: %v %v %v\n", proc.GetPid(), opcode, mfs, bl.conf)
 
 	var nextShards []string
 	switch opcode {
@@ -235,7 +234,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	db.DLPrintf("BAL", "Balancer conf %v next shards: %v \n", bl.conf, nextShards)
 
-	log.Printf("BAL conf %v next shards: %v\n", bl.conf, nextShards)
+	log.Printf("%v: BAL conf %v next shards: %v\n", proc.GetPid(), bl.conf, nextShards)
 
 	err = bl.lease.RenameTo(KVCONFIGBK)
 	if err != nil {
@@ -252,7 +251,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 	bl.conf.Shards = nextShards
 	bl.conf.Ctime = time.Now().UnixNano()
 
-	log.Printf("new %v\n", bl.conf)
+	log.Printf("%v: new %v\n", proc.GetPid(), bl.conf)
 
 	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {

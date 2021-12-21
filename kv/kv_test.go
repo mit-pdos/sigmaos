@@ -112,10 +112,22 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFSs() {
+	ch := make(chan bool)
+	// balancers may not run in order of bals, and blocked waiting
+	// for Wlease, while the primary keeps running, because it is
+	// later in the list.
 	for _, b := range ts.bals {
 		log.Printf("evict %v\n", b)
-		ts.stopFS(b)
+		go func(b string) {
+			ts.stopFS(b)
+			ch <- true
+		}(b)
 	}
+	log.Printf("wait for balancers\n")
+	for i := 0; i < len(ts.bals); i++ {
+		<-ch
+	}
+	log.Printf("balancers done\n")
 	for _, mfs := range ts.mfss {
 		ts.stopFS(mfs)
 	}

@@ -66,7 +66,7 @@ func (mv *Mover) moveShard(shard, src, dst string) error {
 	if err != nil && !strings.HasPrefix(err.Error(), "Name exists") {
 		return err
 	}
-	db.DLPrintf("MV", "Copy shard from %v to %v\n", s, d1)
+	db.DLPrintf("MV", "%v: Copy shard from %v to %v\n", proc.GetPid(), s, d1)
 	err = mv.CopyDir(s, d1)
 	if err != nil {
 		return err

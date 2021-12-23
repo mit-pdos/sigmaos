@@ -24,6 +24,13 @@ const (
 	CLAIMED  = "-claimed"
 	TIP      = "-tip"
 	DONE     = "-done"
+
+	// time interval (ms) for when a failure might happen. If too
+	// frequent and they don't finish ever. XXX determine
+	// dynamically
+	CRASHMAPPER  = 8000
+	CRASHREDUCER = 8000
+	CRASHCOORD   = 4000
 )
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
@@ -78,7 +85,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	w.Started(proc.GetPid())
 
 	if w.crashCoord == "YES" {
-		crash.Crasher(w.FsLib, 500)
+		crash.Crasher(w.FsLib, CRASHCOORD)
 	}
 
 	return w, nil
@@ -160,20 +167,20 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.ok == "OK" {
 		// mark task as done
-		db.DPrintf("task done %v\n", res.task)
+		log.Printf("%v: task done %v\n", db.GetName(), res.task)
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
 		err := w.Rename(s, d)
 		if err != nil {
 			// an earlier instance already succeeded
-			log.Printf("getTask: rename %v to %v err %v\n", s, d, err)
+			log.Printf("%v: rename %v to %v err %v\n", db.GetName(), s, d, err)
 		}
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
 		db.DPrintf("task %v failed %v\n", res.task, res.ok)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
-			log.Fatalf("doWork: rename to %v err %v\n", to, err)
+			log.Fatalf("%v: rename to %v err %v\n", db.GetName(), to, err)
 		}
 	}
 }
@@ -207,7 +214,7 @@ func (w *Coord) recover(dir string) {
 		if w.Rename(dir+TIP+"/"+st.Name, to) != nil {
 			// an old, disconnected coord may do this too,
 			// if one of its tasks fails
-			log.Printf("recover: rename to %v err %v\n", to, err)
+			log.Printf("%v: rename to %v err %v\n", db.GetName(), to, err)
 		}
 	}
 }
@@ -239,7 +246,7 @@ func (w *Coord) Work() {
 	w.recover(RDIR)
 
 	w.phase(MDIR, w.mapper)
-	db.DPrintf("Reduce phase\n")
+	log.Printf("%v: Reduce phase\n", db.GetName())
 	w.phase(RDIR, w.reducer)
 
 	w.Exited(proc.GetPid(), "OK")

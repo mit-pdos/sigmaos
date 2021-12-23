@@ -32,7 +32,7 @@ type Reducer struct {
 	tmp     string
 }
 
-func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
+func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
@@ -44,12 +44,11 @@ func MakeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
-	db.DPrintf("MakeReducer %v\n", args)
 
 	r.Started(proc.GetPid())
 
 	if r.crash == "YES" {
-		crash.Crasher(r.FsLib, 500)
+		crash.Crasher(r.FsLib, CRASHREDUCER)
 		delay.SetDelayRPC(3)
 	}
 
@@ -109,7 +108,7 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 
-	db.DPrintf("doReduce %v %v\n", r.input, r.output)
+	log.Printf("%v: doReduce %v %v\n", db.GetName(), r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
@@ -121,16 +120,14 @@ func (r *Reducer) doReduce() error {
 		return false, nil
 	})
 	if err != nil {
-		db.DPrintf("doReduce: ProcessDir %v err %v\n", r.input, err)
-		return nil
+		return fmt.Errorf("%v: ProcessDir %v err %v\n", db.GetName(), r.input, err)
 	}
-	db.DPrintf("doReduce %v process %d files\n", r.input, n)
 
 	sort.Sort(ByKey(kva))
 
 	fd, err := r.Create(r.tmp, 0777, np.OWRITE)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v: create %v err %v\n", db.GetName(), r.tmp, err)
 	}
 	defer r.Close(fd)
 	i := 0
@@ -147,25 +144,27 @@ func (r *Reducer) doReduce() error {
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
-			return err
+			return fmt.Errorf("%v: write %v err %v\n", db.GetName(), r.tmp, err)
 		}
 		i = j
 	}
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		log.Fatalf("%v: rename %v -> %v failed %v\n", db.GetName(), r.tmp, r.output, err)
+		return fmt.Errorf("%v: rename %v -> %v err %v\n", db.GetName(), r.tmp, r.output, err)
 	}
 	return nil
 }
 
-func (r *Reducer) Work() {
-	err := r.doReduce()
+func RunReducer(reducef ReduceT, args []string) {
+	r, err := makeReducer(reducef, args)
 	if err != nil {
-		log.Printf("doReduce error %v", err)
+		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-}
-
-func (r *Reducer) Exit() {
-	r.Exited(proc.GetPid(), "OK")
+	err = r.doReduce()
+	if err == nil {
+		r.Exited(proc.GetPid(), "OK")
+	} else {
+		r.Exited(proc.GetPid(), err.Error())
+	}
 }

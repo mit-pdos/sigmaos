@@ -31,11 +31,10 @@ type Mapper struct {
 	file        string
 	fds         []int
 	rand        string
-	//	fd     int
 }
 
 // XXX create in a temporary file and then rename
-func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
+func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
@@ -53,43 +52,50 @@ func MakeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.fds = make([]int, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)
-	db.DPrintf("MakeMapper %v\n", args)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 
+	m.Started(proc.GetPid())
+
+	if m.crash == "YES" {
+		crash.Crasher(m.FsLib, CRASHMAPPER)
+		delay.SetDelayRPC(100)
+	}
+	return m, nil
+}
+
+func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
 	d := "name/ux/~ip/m-" + m.file
 	m.Mkdir(d, 0777)
 
-	//  when using fsreader:
-	//
-	//      m.fd, err = m.Open(m.input, np.OREAD)
-	//      if err != nil {
-	//              return nil, fmt.Errorf("Makemapper: unknown %v\n", m.input)
-	//      }
-
 	// Create the output files
+	var err error
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output file
 		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
 		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
 		if err != nil {
-			return nil, fmt.Errorf("MakeMapper: cannot create %v err %v\n", oname, err)
+			return fmt.Errorf("%v: create %v err %v\n", db.GetName(), oname, err)
 		}
 	}
-	m.Started(proc.GetPid())
-
-	if m.crash == "YES" {
-		crash.Crasher(m.FsLib, 500)
-		delay.SetDelayRPC(100)
-	}
-
-	return m, nil
+	return nil
 }
 
-func (m *Mapper) Map(txt string) {
+func (m *Mapper) closefds() error {
+	for r := 0; r < m.nreducetask; r++ {
+		err := m.Close(m.fds[r])
+		if err != nil {
+			return fmt.Errorf("%v: close %v err %v\n", db.GetName(), m.fds[r], err)
+		}
+	}
+	return nil
+}
+
+func (m *Mapper) mapper(txt string) error {
 	kvs := m.mapf(m.input, txt)
-	// log.Printf("Map %v: kvs = %v\n", m.input, kvs)
+
+	// log.Printf("%v: Map %v: kvs = %v\n", db.GetName(), m.input, kvs)
 
 	// split
 	skvs := make([][]KeyValue, m.nreducetask)
@@ -101,7 +107,7 @@ func (m *Mapper) Map(txt string) {
 	for r := 0; r < m.nreducetask; r++ {
 		b, err := json.Marshal(skvs[r])
 		if err != nil {
-			log.Fatal("doMap marshal error", err)
+			fmt.Errorf("%v: marshal error", db.GetName(), err)
 		}
 		lbuf := make([]byte, binary.MaxVarintLen64)
 		binary.PutVarint(lbuf, int64(len(b)))
@@ -109,70 +115,37 @@ func (m *Mapper) Map(txt string) {
 		if err != nil {
 			// maybe another worker finished earlier
 			// XXX handle partial writing of intermediate files
-			log.Printf("doMap write error %v %v\n", r, err)
-			return
+			return fmt.Errorf("doMap write error %v %v\n", r, err)
 		}
 		_, err = m.Write(m.fds[r], b)
 		if err != nil {
-			log.Printf("doMap write error %v %v\n", r, err)
-			return
+			return fmt.Errorf("%v: write %v err %v\n", db.GetName(), r, err)
 		}
 	}
+	return nil
 }
 
 func (m *Mapper) doMap() error {
 	b, err := m.ReadFile(m.input)
 	if err != nil {
-		log.Fatalf("Error ReadFile in Mapper.doMap: %v", err)
+		log.Fatalf("%v: read %v err %v", db.GetName(), m.input, err)
 	}
 	txt := string(b)
-	m.Map(txt)
-
-	//
-	//  When using fsreader:
-	//
-	//	rest := ""
-	//	for {
-	//		b, err := m.Read(m.fd, memfs.PIPESZ)
-	//		if err != nil || len(b) == 0 {
-	//			db.DLPrintf("MAPPER", "Read %v %v", m.input, err)
-	//			m.Map(rest)
-	//			break
-	//		}
-	//
-	//		// backup up if in the middle of word
-	//		txt := string(b)
-	//		for i := len(txt) - 1; i >= 0; i-- {
-	//			if txt[i] == ' ' {
-	//				t := rest
-	//				rest = txt[i+1:]
-	//				txt = t + txt[0:i]
-	//				break
-	//			}
-	//		}
-	//
-	//		m.Map(txt)
-	//	}
-	//	err := m.Close(m.fd)
-	//	if err != nil {
-	//		log.Printf("close failed %v\n", err)
-	//	}
+	err = m.mapper(txt)
+	if err != nil {
+		return err
+	}
 
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")
 	if err != nil {
-		return err
+		return fmt.Errorf("%v: stat %v err %v\n", db.GetName(), "name/ux/~ip", err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		err = m.Close(m.fds[r])
-		if err != nil {
-			log.Printf("Close failed %v %v\n", m.fds[r], err)
-			return err
-		}
 		fn := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
-			log.Fatalf("%v: rename %v -> %v failed %v\n", db.GetName(),
+			return fmt.Errorf("%v: rename %v -> %v err %v\n", db.GetName(),
 				fn+m.rand, fn, err)
 		}
 
@@ -191,21 +164,27 @@ func (m *Mapper) doMap() error {
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink(target, name, 0777)
 		if err != nil {
-			db.DPrintf("Mapper: cannot create symlink %v %v\n", name, err)
-			return err
+			return fmt.Errorf("%v: symlink %v err %v\n", db.GetName(), name, err)
 		}
 	}
 	return nil
 }
 
-func (m *Mapper) Work() {
-	err := m.doMap()
+func RunMapper(mapf MapT, args []string) {
+	m, err := makeMapper(mapf, args)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-
-}
-
-func (m *Mapper) Exit() {
-	m.Exited(proc.GetPid(), "OK")
+	err = m.initMapper()
+	if err != nil {
+		m.Exited(proc.GetPid(), err.Error())
+		return
+	}
+	err = m.doMap()
+	if err == nil {
+		m.Exited(proc.GetPid(), "OK")
+	} else {
+		m.Exited(proc.GetPid(), err.Error())
+	}
 }

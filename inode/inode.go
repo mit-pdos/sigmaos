@@ -3,6 +3,7 @@ package inode
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 	"unsafe"
@@ -131,6 +132,7 @@ func (i *Inode) Unlink(ctx fs.CtxI) error {
 	i.nlink -= 1
 	if i.nlink < 0 {
 		log.Printf("%v: nlink < 0\n", db.GetName())
+		debug.PrintStack()
 	}
 	return nil
 }

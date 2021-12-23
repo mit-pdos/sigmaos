@@ -136,7 +136,7 @@ func (fssrv *FsServer) checkLease(sess *session.Session) error {
 func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	sess := fssrv.st.LookupInsert(sid)
 	switch req := msg.(type) {
-	case np.Twrite, np.Tsetfile, np.Tgetfile, np.Tremove, np.Twstat, np.Tremovefile, np.Tcreate, np.Trenameat:
+	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
 		// log.Printf("%p: req %v %v\n", fssrv, msg.Type(), req)
 		err := fssrv.checkLease(sess)
 		if err != nil {

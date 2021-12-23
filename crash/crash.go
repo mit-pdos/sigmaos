@@ -17,17 +17,18 @@ import (
 
 func Crasher(fsl *fslib.FsLib, freq int64) {
 	go func() {
-		ms := rand.Int64(freq)
-		log.Printf("ms %v\n", ms)
-		time.Sleep(time.Duration(ms) * time.Millisecond)
-		r := rand.Int64(1000)
-		log.Printf("r = %v\n", r)
-		if r < 330 {
-			Crash(fsl)
-		} else if r < 660 {
-			Partition(fsl)
+		for true {
+			ms := rand.Int64(freq)
+			log.Printf("%v: ms %v\n", db.GetName(), ms)
+			time.Sleep(time.Duration(ms) * time.Millisecond)
+			r := rand.Int64(1000)
+			log.Printf("%v: r = %v\n", db.GetName(), r)
+			if r < 330 {
+				Crash(fsl)
+			} else if r < 660 {
+				Partition(fsl)
+			}
 		}
-
 	}()
 }
 
@@ -39,6 +40,7 @@ func Crash(fsl *fslib.FsLib) {
 func Partition(fsl *fslib.FsLib) {
 	log.Printf("%v: FAIL PARTITION %v\n", db.GetName(), proc.GetPid())
 	fsl.Disconnect("name")
+	time.Sleep(time.Duration(5) * time.Millisecond)
 }
 
 func MaybePartition(fsl *fslib.FsLib) bool {

@@ -15,8 +15,11 @@ import (
 	"ulambda/procclnt"
 )
 
-const NKEYS = 2 // 100
-const NCLERK = 10
+const (
+	NKEYS     = 2 // 100
+	NCLERK    = 10
+	NBALANCER = 3
+)
 
 func TestBalance(t *testing.T) {
 	conf := &Config{}
@@ -43,7 +46,7 @@ type Tstate struct {
 	*procclnt.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
-	bals  []string
+	bals  []*BalCtl
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
@@ -54,21 +57,55 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
 	ts.s = kernel.MakeSystemAll(bin)
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
-
+	ts.bals = make([]*BalCtl, NBALANCER)
+	for i := 0; i < NBALANCER; i++ {
+		ts.bals[i] = &BalCtl{ts.fsl, ts.ProcClnt, "", true, make(chan bool)}
+	}
 	ts.setup(auto, nclerk, crash)
 
 	return ts
 }
 
-func (ts *Tstate) setup(auto string, nclerk int, crash string) {
-	const N = 10
+type BalCtl struct {
+	*fslib.FsLib
+	*procclnt.ProcClnt
+	pid  string
+	cont bool
+	ch   chan bool
+}
 
-	for i := 0; i < N; i++ {
-		b := ts.spawnBalancer(auto, crash)
-		ts.bals = append(ts.bals, b)
+func (bl *BalCtl) fork(auto string, crash string) {
+	p := proc.MakeProc("bin/user/balancer", []string{auto, crash})
+	bl.Spawn(p)
+	bl.WaitStart(p.Pid)
+	bl.pid = p.Pid
+}
+
+func (bl *BalCtl) run(auto, crash string) {
+	for bl.cont {
+		log.Printf("bal fork %p\n", bl)
+		bl.fork(auto, crash)
+		log.Printf("bal %p forked %v\n", bl, bl.pid)
+		status, err := bl.WaitExit(bl.pid)
+		log.Printf("bal %v exited %v err %v\n", bl.pid, status, err)
 	}
+	bl.ch <- true
+}
 
-	// add 1 so that we can put to initialize
+func (bl *BalCtl) stop(ch chan bool) error {
+	bl.cont = false
+	err := bl.Evict(bl.pid)
+	<-bl.ch
+	ch <- true
+	return err
+}
+
+func (ts *Tstate) setup(auto string, nclerk int, crash string) {
+	ts.startBalancers(auto, crash)
+
+	log.Printf("start kv\n")
+
+	// add 1 kv so that we can put to initialize
 	mfs := SpawnMemFS(ts.ProcClnt)
 	ts.WaitStart(mfs)
 
@@ -89,11 +126,29 @@ func (ts *Tstate) setup(auto string, nclerk int, crash string) {
 	ts.mfss = append(ts.mfss, mfs)
 }
 
-func (ts *Tstate) spawnBalancer(auto string, crash string) string {
-	p := proc.MakeProc("bin/user/balancer", []string{auto, crash})
-	ts.Spawn(p)
-	ts.WaitStart(p.Pid)
-	return p.Pid
+func (ts *Tstate) startBalancers(auto, crash string) {
+	for _, b := range ts.bals {
+		go b.run(auto, crash)
+	}
+}
+
+func (ts *Tstate) stopBalancers() {
+	// balancers may not run in order of bals, and blocked waiting
+	// for Wlease, while the primary keeps running, because it is
+	// later in the list.
+	ch := make(chan bool)
+	for _, b := range ts.bals {
+		log.Printf("evict %v\n", b.pid)
+		go func(b *BalCtl) {
+			err := b.stop(ch)
+			assert.Nil(ts.t, err, "stop")
+		}(b)
+	}
+	log.Printf("wait for balancers\n")
+	for range ts.bals {
+		<-ch
+	}
+	log.Printf("balancers done\n")
 }
 
 func (ts *Tstate) stopFS(fs string) {
@@ -112,22 +167,6 @@ func (ts *Tstate) startMemFSs(n int) []string {
 }
 
 func (ts *Tstate) stopMemFSs() {
-	ch := make(chan bool)
-	// balancers may not run in order of bals, and blocked waiting
-	// for Wlease, while the primary keeps running, because it is
-	// later in the list.
-	for _, b := range ts.bals {
-		log.Printf("evict %v\n", b)
-		go func(b string) {
-			ts.stopFS(b)
-			ch <- true
-		}(b)
-	}
-	log.Printf("wait for balancers\n")
-	for i := 0; i < len(ts.bals); i++ {
-		<-ch
-	}
-	log.Printf("balancers done\n")
 	for _, mfs := range ts.mfss {
 		ts.stopFS(mfs)
 	}
@@ -194,9 +233,8 @@ func TestGetPutSet(t *testing.T) {
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
 
-	log.Printf("stop\n")
+	ts.stopBalancers()
 	ts.stopMemFSs()
-	log.Printf("done\n")
 
 	ts.s.Shutdown()
 }
@@ -241,7 +279,13 @@ func concurN(t *testing.T, nclerk int, crash string) {
 
 	time.Sleep(100 * time.Millisecond)
 
+	log.Printf("stop\n")
+
+	ts.stopBalancers()
 	ts.stopMemFSs()
+
+	log.Printf("done\n")
+
 	ts.s.Shutdown()
 }
 
@@ -287,6 +331,7 @@ func TestAuto(t *testing.T) {
 		ch <- true
 	}
 
+	ts.stopBalancers()
 	ts.stopMemFSs()
 	ts.s.Shutdown()
 

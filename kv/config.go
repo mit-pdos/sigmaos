@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -10,15 +11,20 @@ import (
 type Config struct {
 	N      int
 	Shards []string // slice mapping shard # to server
+	Moved  []string // shards to be deleted because they moved
 	Ctime  int64    // XXX use ctime of config file?
 }
 
+func (cf *Config) String() string {
+	return fmt.Sprintf("{N %v, Shards %v, Moved %v}", cf.N, cf.Shards, cf.Moved)
+}
+
 func MakeConfig(n int) *Config {
-	cf := &Config{n, make([]string, NSHARD), 0}
+	cf := &Config{n, make([]string, NSHARD), []string{}, 0}
 	return cf
 }
 
-func (cf *Config) present(n string) bool {
+func (cf *Config) Present(n string) bool {
 	for _, s := range cf.Shards {
 		if s == n {
 			return true

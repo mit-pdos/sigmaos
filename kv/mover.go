@@ -25,7 +25,7 @@ func MakeMover(docrash string) (*Mover, error) {
 	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 	if docrash == "YES" {
-		crash.Crasher(mv.FsLib, 5)
+		crash.Crasher(mv.FsLib, 10)
 	}
 	mv.Started(proc.GetPid())
 	return mv, nil
@@ -58,7 +58,14 @@ func (mv *Mover) moveShard(shard, src, dst string) error {
 	// partially copied files into it; remove it and start over.
 	mv.RmDir(d1)
 
-	err := mv.Mkdir(d1, 0777)
+	// The previous mover might have crashed right after rename
+	// below. If so, we are done and reuse d.
+	_, err := mv.Stat(d)
+	if err == nil {
+		return nil
+	}
+
+	err = mv.Mkdir(d1, 0777)
 	if err != nil {
 		log.Printf("%v: Mkdir %v err %v\n", db.GetName(), d1, err)
 		return err

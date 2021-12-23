@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"fmt"
+	"log"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -10,7 +11,7 @@ import (
 func (fsl *FsLib) PostService(srvaddr, srvname string) error {
 	err := fsl.Remove(srvname)
 	if err != nil {
-		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", srvname, err)
+		log.Printf("%v: Remove failed %v %v\n", db.GetName(), srvname, err)
 	}
 	err = fsl.Symlink(srvaddr+":pubkey", srvname, 0777|np.DMTMP)
 	return err
@@ -31,7 +32,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvname, server string) error {
 	}
 	err = fsl.Remove(p)
 	if err != nil {
-		db.DLPrintf("FSCLNT", "Remove failed %v %v\n", p, err)
+		log.Printf("%v: Remove failed %v %v\n", db.GetName(), p, err)
 	}
 	err = fsl.Symlink(srvaddr+":pubkey", p, 0777|np.DMTMP)
 	return err

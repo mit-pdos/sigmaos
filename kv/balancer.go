@@ -62,13 +62,12 @@ func RunBalancer(auto, docrash string) {
 	// may fail if already exist
 	bl.Mkdir(named.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
-	bl.MakeFileJson(KVCONFIG, 0777, *MakeConfig(0))
 
 	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVLEASE)
 	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG)
 
 	// start server but don't publish
-	mfs, _, err := fslibsrv.MakeMemFs("", "balancer")
+	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
@@ -77,6 +76,7 @@ func RunBalancer(auto, docrash string) {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
 
+	// start server and write ch when server is done
 	ch := make(chan bool)
 	go func() {
 		mfs.Serve()
@@ -93,12 +93,17 @@ func RunBalancer(auto, docrash string) {
 	default:
 		bl.recover()
 
+		go bl.monitorMyself(ch)
+
 		if bl.docrash == "YES" {
-			crash.Crasher(bl.FsLib, 5)
+			crash.Crasher(bl.FsLib, 400)
 		}
 
 		// we are primary, post the balancer
-		mfs.Post(KVBALANCER)
+		err := mfs.Post(KVBALANCER)
+		if err != nil {
+			log.Fatalf("%v: failed to post\n", db.GetName())
+		}
 
 		if auto == "auto" {
 			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
@@ -116,7 +121,7 @@ func RunBalancer(auto, docrash string) {
 		bl.Done()
 	}
 
-	log.Printf("balancer exited %v\n", db.GetName())
+	log.Printf("%v: balancer exited\n", db.GetName())
 }
 
 func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
@@ -135,7 +140,7 @@ func makeCtl(uname string, parent fs.Dir, bl *Balancer) fs.FsObj {
 	return &Ctl{i, bl}
 }
 
-// XXX call balance() repeatedly for each server
+// XXX call balance() repeatedly for each server passed in to write
 func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
@@ -166,18 +171,54 @@ func (bl *Balancer) Done() {
 	bl.ch <- true
 }
 
+// check if i am still primary; if not, terminate myself
+func (bl *Balancer) monitorMyself(ch chan bool) {
+	for true {
+		time.Sleep(time.Duration(100) * time.Millisecond)
+		_, err := readConfig(bl.FsLib, KVCONFIG)
+		if err != nil {
+			if err.Error() == "EOF" ||
+				strings.HasPrefix(err.Error(), "stale lease") {
+				// we are disconnected
+				log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
+
+				ch <- true
+			}
+		}
+	}
+}
+
+// Remove shardirs that balancer didn't get to because it crashed
+// after committing to new config, but before deleting the moved
+// shards.
+func (bl *Balancer) cleanup() {
+	log.Printf("cleanup %v\n", bl.conf.Moved)
+	bl.runDeleters(bl.conf.Moved)
+}
+
 func (bl *Balancer) recover() {
 	var err error
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err == nil {
-		log.Printf("%v: recovery: nothing to do %v\n", db.GetName(), bl.conf)
+		log.Printf("%v: recovery: use %v\n", db.GetName(), bl.conf)
+		bl.cleanup()
 		return
 	}
+
+	// roll back to old conf
 	err = bl.lease.MakeLeaseFileFrom(KVCONFIGBK)
 	if err != nil {
-		log.Fatalf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), KVCONFIGBK, err)
+		log.Printf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), KVCONFIGBK, err)
+		// this must be the first recovery of the balancer;
+		// otherwise, there would be a either a config or
+		// backup config.
+		err = bl.lease.MakeLeaseFileJson(*MakeConfig(0))
+		if err != nil {
+			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
+		}
+	} else {
+		log.Printf("%v: recovery: restored config form %v\n", db.GetName(), KVCONFIGBK)
 	}
-	log.Printf("%v: recovery: restored config form %v\n", db.GetName(), KVCONFIGBK)
 }
 
 // Make intial shard directories
@@ -241,19 +282,8 @@ func (bl *Balancer) runDeleters(moved []string) {
 	}
 }
 
-func (bl *Balancer) present(mfs string) bool {
-	for _, s := range bl.conf.Shards {
-		if s == mfs {
-			return true
-		}
-	}
-	return false
-}
-
 func (bl *Balancer) balance(opcode, mfs string) {
 	var err error
-
-	// db.DLPrintf("BAL", "Balancer: %v\n", bl.args)
 
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
 	if err != nil {
@@ -265,19 +295,17 @@ func (bl *Balancer) balance(opcode, mfs string) {
 	var nextShards []string
 	switch opcode {
 	case "add":
-		if bl.present(mfs) {
+		if bl.conf.Present(mfs) {
 			return
 		}
 		nextShards = balanceAdd(bl.conf, mfs)
 	case "del":
-		if !bl.present(mfs) {
+		if !bl.conf.Present(mfs) {
 			return
 		}
 		nextShards = balanceDel(bl.conf, mfs)
 	default:
 	}
-
-	db.DLPrintf("BAL", "Balancer conf %v next shards: %v \n", bl.conf, nextShards)
 
 	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
@@ -295,6 +323,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	bl.conf.N += 1
 	bl.conf.Shards = nextShards
+	bl.conf.Moved = moved
 	bl.conf.Ctime = time.Now().UnixNano()
 
 	log.Printf("%v: new %v\n", db.GetName(), bl.conf)
@@ -311,9 +340,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 		return
 	}
 
-	if bl.conf.N > 1 {
-		bl.runDeleters(moved)
-	}
+	bl.runDeleters(moved)
 
 	err = bl.Remove(KVCONFIGBK)
 	if err != nil {

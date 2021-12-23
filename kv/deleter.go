@@ -24,7 +24,7 @@ func MakeDeleter(docrash string) (*Deleter, error) {
 	mv.FsLib = fslib.MakeFsLib("deleter-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 	if docrash == "YES" {
-		crash.Crasher(mv.FsLib, 5)
+		crash.Crasher(mv.FsLib, 10)
 	}
 	mv.Started(proc.GetPid())
 	return mv, nil

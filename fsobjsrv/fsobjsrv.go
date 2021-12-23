@@ -332,6 +332,8 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
+	// log.Printf("%v: %v remove %v\n", db.GetName(), ctx, path)
+
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
 		log.Printf("remove err %v f %v\n", r, path)

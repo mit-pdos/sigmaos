@@ -13,6 +13,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	usync "ulambda/sync"
 )
 
@@ -32,7 +33,6 @@ func nrand() uint64 {
 
 type KvClerk struct {
 	fsl   *fslib.FsLib
-	uname string
 	lease *usync.LeasePath
 	conf  Config
 	nget  int
@@ -40,9 +40,7 @@ type KvClerk struct {
 
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
-	kc.uname = "clerk/" + strconv.FormatUint(nrand(), 16)
-	db.Name(kc.uname)
-	kc.fsl = fslib.MakeFsLibAddr(kc.uname, namedAddr)
+	kc.fsl = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
 	kc.lease = usync.MakeLeasePath(kc.fsl, KVCONFIG)
 	err := kc.readConfig()
 	if err != nil {

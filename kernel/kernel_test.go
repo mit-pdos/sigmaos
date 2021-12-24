@@ -231,8 +231,11 @@ func TestWLease(t *testing.T) {
 		delay.Delay(10)
 
 		// fsldl lost lock, and ts should have it by now so
-		// this write should fail
+		// this write and read should fail
 		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
+		assert.NotNil(t, err, "Write")
+
+		_, err = fsldl.Read(fd, 100)
 		assert.NotNil(t, err, "Write")
 
 		fsldl.Close(fd)

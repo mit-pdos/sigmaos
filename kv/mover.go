@@ -7,7 +7,6 @@ import (
 	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/named"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -31,27 +30,12 @@ func MakeMover(docrash string) (*Mover, error) {
 	return mv, nil
 }
 
-func shardDir(kvd string) string {
-	return named.MEMFS + "/" + kvd
-}
-
-func shardPath(kvd, shard string) string {
-	return named.MEMFS + "/" + kvd + "/shard" + shard
-}
-
-func keyPath(kvd, shard string, k string) string {
-	d := shardPath(kvd, shard)
-	return d + "/" + k
-}
-
 func shardTmp(shardp string) string {
 	return shardp + "#"
 }
 
 // Move shard from src to dst
-func (mv *Mover) moveShard(shard, src, dst string) error {
-	s := shardPath(src, shard)
-	d := shardPath(dst, shard)
+func (mv *Mover) moveShard(s, d string) error {
 	d1 := shardTmp(d)
 
 	// An aborted view change may have created the directory and
@@ -85,11 +69,11 @@ func (mv *Mover) moveShard(shard, src, dst string) error {
 	return nil
 }
 
-func (mv *Mover) Move(shard, src, dst string) {
-	log.Printf("MV shard%v from %v to %v\n", shard, src, dst)
-	err := mv.moveShard(shard, src, dst)
+func (mv *Mover) Move(src, dst string) {
+	log.Printf("MV from %v to %v\n", src, dst)
+	err := mv.moveShard(src, dst)
 	if err != nil {
-		log.Printf("MV moveShards shard%v %v %v err %v\n", shard, src, dst, err)
+		log.Printf("MV moveShards %v %v err %v\n", src, dst, err)
 	}
 	if err != nil {
 		mv.Exited(proc.GetPid(), err.Error())

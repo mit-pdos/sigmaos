@@ -51,6 +51,10 @@ type Balancer struct {
 	docrash  string
 }
 
+func shardPath(kvd, shard string) string {
+	return named.MEMFS + "/" + kvd + "/shard" + shard
+}
+
 func RunBalancer(auto, docrash string) {
 	log.Printf("run balancer %v %v %v\n", proc.GetPid(), auto, docrash)
 
@@ -263,8 +267,9 @@ func (bl *Balancer) runMovers(nextShards []string) []string {
 		if kvd != nextShards[i] {
 			shard := strconv.Itoa(i)
 			s := shardPath(kvd, shard)
+			d := shardPath(nextShards[i], shard)
 			moved = append(moved, s)
-			bl.runProcRetry([]string{"bin/user/kv-mover", shard, kvd, nextShards[i], bl.docrash}, func(err error, status string) bool {
+			bl.runProcRetry([]string{"bin/user/kv-mover", s, d, bl.docrash}, func(err error, status string) bool {
 				return err != nil || status != "OK"
 			})
 		}

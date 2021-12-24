@@ -24,6 +24,11 @@ func key2shard(key string) int {
 	return shard
 }
 
+func keyPath(kvd, shard string, k string) string {
+	d := shardPath(kvd, shard)
+	return d + "/" + k
+}
+
 func nrand() uint64 {
 	max := big.NewInt(int64(1) << 62)
 	bigx, _ := rand.Int(rand.Reader, max)

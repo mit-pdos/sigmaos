@@ -9,16 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/coordmgr"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
 const (
-	NKEYS     = 2 // 100
-	NCLERK    = 10
-	NBALANCER = 3
+	NKEYS  = 2 // 100
+	NCLERK = 10
 )
 
 func TestBalance(t *testing.T) {
@@ -46,7 +45,7 @@ type Tstate struct {
 	*procclnt.ProcClnt
 	clrks []*KvClerk
 	mfss  []string
-	bals  []*BalCtl
+	cm    *coordmgr.CoordMgr
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
@@ -57,59 +56,22 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
 	ts.s = kernel.MakeSystemAll(bin)
 	ts.fsl = fslib.MakeFsLibAddr("kv_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
-	ts.bals = make([]*BalCtl, NBALANCER)
-	for i := 0; i < NBALANCER; i++ {
-		ts.bals[i] = &BalCtl{ts.fsl, ts.ProcClnt, "", true, make(chan bool)}
-	}
-	ts.setup(auto, nclerk, crash)
+	ts.cm = coordmgr.StartCoords(ts.fsl, ts.ProcClnt, "bin/user/balancer", []string{auto, crash})
+
+	ts.setup(nclerk)
 
 	return ts
 }
 
-type BalCtl struct {
-	*fslib.FsLib
-	*procclnt.ProcClnt
-	pid  string
-	cont bool
-	ch   chan bool
-}
-
-func (bl *BalCtl) fork(auto string, crash string) {
-	p := proc.MakeProc("bin/user/balancer", []string{auto, crash})
-	bl.Spawn(p)
-	bl.WaitStart(p.Pid)
-	bl.pid = p.Pid
-}
-
-func (bl *BalCtl) run(auto, crash string) {
-	for bl.cont {
-		log.Printf("bal fork %p\n", bl)
-		bl.fork(auto, crash)
-		log.Printf("bal %p forked %v\n", bl, bl.pid)
-		status, err := bl.WaitExit(bl.pid)
-		log.Printf("bal %v exited %v err %v\n", bl.pid, status, err)
-	}
-	bl.ch <- true
-}
-
-func (bl *BalCtl) stop(ch chan bool) error {
-	bl.cont = false
-	err := bl.Evict(bl.pid)
-	<-bl.ch
-	ch <- true
-	return err
-}
-
-func (ts *Tstate) setup(auto string, nclerk int, crash string) {
-	ts.startBalancers(auto, crash)
-
+func (ts *Tstate) setup(nclerk int) {
 	log.Printf("start kv\n")
 
 	// add 1 kv so that we can put to initialize
 	mfs := SpawnMemFS(ts.ProcClnt)
-	ts.WaitStart(mfs)
+	err := ts.WaitStart(mfs)
+	assert.Nil(ts.t, err, "Start mfs")
 
-	err := ts.balancerOp("add", mfs)
+	err = ts.balancerOp("add", mfs)
 	assert.Nil(ts.t, err, "BalancerOp")
 
 	ts.clrks = make([]*KvClerk, nclerk)
@@ -126,29 +88,10 @@ func (ts *Tstate) setup(auto string, nclerk int, crash string) {
 	ts.mfss = append(ts.mfss, mfs)
 }
 
-func (ts *Tstate) startBalancers(auto, crash string) {
-	for _, b := range ts.bals {
-		go b.run(auto, crash)
-	}
-}
-
-func (ts *Tstate) stopBalancers() {
-	// balancers may not run in order of bals, and blocked waiting
-	// for Wlease, while the primary keeps running, because it is
-	// later in the list.
-	ch := make(chan bool)
-	for _, b := range ts.bals {
-		log.Printf("evict %v\n", b.pid)
-		go func(b *BalCtl) {
-			err := b.stop(ch)
-			assert.Nil(ts.t, err, "stop")
-		}(b)
-	}
-	log.Printf("wait for balancers\n")
-	for range ts.bals {
-		<-ch
-	}
-	log.Printf("balancers done\n")
+func (ts *Tstate) done() {
+	ts.cm.StopCoords()
+	ts.stopMemFSs()
+	ts.s.Shutdown()
 }
 
 func (ts *Tstate) stopFS(fs string) {
@@ -233,10 +176,7 @@ func TestGetPutSet(t *testing.T) {
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
 
-	ts.stopBalancers()
-	ts.stopMemFSs()
-
-	ts.s.Shutdown()
+	ts.done()
 }
 
 func concurN(t *testing.T, nclerk int, crash string) {
@@ -281,7 +221,7 @@ func concurN(t *testing.T, nclerk int, crash string) {
 
 	log.Printf("stop\n")
 
-	ts.stopBalancers()
+	ts.cm.StopCoords()
 	ts.stopMemFSs()
 
 	log.Printf("done\n")
@@ -331,8 +271,5 @@ func TestAuto(t *testing.T) {
 		ch <- true
 	}
 
-	ts.stopBalancers()
-	ts.stopMemFSs()
-	ts.s.Shutdown()
-
+	ts.done()
 }

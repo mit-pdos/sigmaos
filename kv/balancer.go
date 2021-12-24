@@ -35,7 +35,6 @@ const (
 	KVCONFIG      = KVDIR + "/config"
 	KVCONFIGBK    = KVDIR + "/config#"
 	KVNEXTCONFIG  = KVDIR + "/nextconfig"
-	KVLEASE       = KVDIR + "/lease"
 	KVBALANCER    = KVDIR + "/balancer"
 	KVBALANCERCTL = KVDIR + "/balancer/ctl"
 )
@@ -67,8 +66,8 @@ func RunBalancer(auto, docrash string) {
 	bl.Mkdir(named.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
-	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVLEASE)
-	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG)
+	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVBALANCER, np.DMSYMLINK)
+	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG, 0)
 
 	// start server but don't publish
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
@@ -87,7 +86,7 @@ func RunBalancer(auto, docrash string) {
 		ch <- true
 	}()
 
-	bl.ballease.WaitWLease()
+	bl.ballease.WaitWLease(fslib.MakeTarget(mfs.MyAddr()))
 
 	log.Printf("%v: primary\n", db.GetName())
 
@@ -101,12 +100,6 @@ func RunBalancer(auto, docrash string) {
 
 		if bl.docrash == "YES" {
 			crash.Crasher(bl.FsLib, 400)
-		}
-
-		// we are primary, post the balancer
-		err := mfs.Post(KVBALANCER)
-		if err != nil {
-			log.Fatalf("%v: failed to post\n", db.GetName())
 		}
 
 		if auto == "auto" {

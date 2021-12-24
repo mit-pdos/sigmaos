@@ -109,7 +109,7 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 	fs.FsServer = srv
 	fs.root = root
 	if len(path) > 0 {
-		err = srv.Post(path)
+		err = fsl.Post(srv.MyAddr(), path)
 	}
 	return fs, err
 }

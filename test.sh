@@ -41,7 +41,6 @@ pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
 go test $1 ulambda/cmd/user/test2pc
 go test $1 ulambda/cmd/user/test2pc2
 
-
 #
 # test with realms
 #

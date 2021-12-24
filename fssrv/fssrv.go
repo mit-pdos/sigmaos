@@ -5,7 +5,6 @@ import (
 	"log"
 	"runtime/debug"
 
-	// db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -61,15 +60,6 @@ func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
 	fssrv.fsl = fsl
 }
 
-func (fssrv *FsServer) Post(path string) error {
-	if np.EndSlash(path) {
-		fssrv.fsl.Mkdir(path, 0777)
-		return fssrv.fsl.PostServiceUnion(fssrv.MyAddr(), path, fssrv.MyAddr())
-	} else {
-		return fssrv.fsl.PostService(fssrv.MyAddr(), path)
-	}
-}
-
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {
@@ -120,10 +110,10 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 
 func (fssrv *FsServer) checkLease(sess *session.Session) error {
 	fn, err := sess.LeaseName()
-	if err != nil || fn == nil { // no sess or no lock on sess
+	if err != nil {
 		return err
 	}
-	if fn == nil {
+	if fn == nil { // no lease on sess
 		return nil
 	}
 	st, err := fssrv.fsl.Stat(np.Join(fn))
@@ -137,7 +127,7 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 	sess := fssrv.st.LookupInsert(sid)
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
-		// log.Printf("%p: req %v %v\n", fssrv, msg.Type(), req)
+		// log.Printf("%p: checkLease %v %v\n", fssrv, msg.Type(), req)
 		err := fssrv.checkLease(sess)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}

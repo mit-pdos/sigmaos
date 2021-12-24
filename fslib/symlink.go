@@ -19,13 +19,13 @@ func (fl *FsLib) SymlinkReplica(targets []string, link string, lperm np.Tperm) e
 	return fl.Close(fd)
 }
 
-func (fl *FsLib) Symlink(target string, link string, lperm np.Tperm) error {
+func (fl *FsLib) Symlink(target []byte, link string, lperm np.Tperm) error {
 	lperm = lperm | np.DMSYMLINK
 	fd, err := fl.Create(link, lperm, np.OWRITE)
 	if err != nil {
 		return err
 	}
-	_, err = fl.Write(fd, []byte(target))
+	_, err = fl.Write(fd, target)
 	if err != nil {
 		return err
 	}

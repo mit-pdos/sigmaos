@@ -121,18 +121,18 @@ func fileBagProducer(ts *Tstate, id, nFiles int, done *sync.WaitGroup) {
 func TestLease1(t *testing.T) {
 	ts := makeTstate(t)
 
-	N := 100
+	N := 20
 	sum := 0
 	current := 0
 	done := make(chan int)
 
-	lease := usync.MakeLeasePath(ts.FsLib, LEASENAME)
+	lease := usync.MakeLeasePath(ts.FsLib, LEASENAME, 0)
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			me := false
 			for !me {
-				err := lease.WaitWLease()
+				err := lease.WaitWLease([]byte{})
 				assert.Nil(ts.t, err, "WaitWLease")
 				if current == i {
 					current += 1
@@ -159,15 +159,15 @@ func TestLease2(t *testing.T) {
 
 	N := 20
 
-	lease1 := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234")
-	lease2 := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234")
+	lease1 := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234", 0)
+	lease2 := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234", 0)
 
 	for i := 0; i < N; i++ {
-		err := lease1.WaitWLease()
+		err := lease1.WaitWLease([]byte{})
 		assert.Nil(ts.t, err, "WaitWLease")
 		err = lease1.ReleaseWLease()
 		assert.Nil(ts.t, err, "ReleaseWLease")
-		err = lease2.WaitWLease()
+		err = lease2.WaitWLease([]byte{})
 		assert.Nil(ts.t, err, "WaitWLease")
 		err = lease2.ReleaseWLease()
 		assert.Nil(ts.t, err, "ReleaseWLease")
@@ -183,7 +183,7 @@ func TestLease3(t *testing.T) {
 	n_threads := 20
 	cnt := 0
 
-	lease := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234")
+	lease := usync.MakeLeasePath(ts.FsLib, LEASENAME+"-1234", 0)
 
 	var done sync.WaitGroup
 	done.Add(n_threads)
@@ -192,7 +192,7 @@ func TestLease3(t *testing.T) {
 		go func(done *sync.WaitGroup, lease *usync.LeasePath, N *int, cnt *int) {
 			defer done.Done()
 			for {
-				err := lease.WaitWLease()
+				err := lease.WaitWLease([]byte{})
 				assert.Nil(ts.t, err, "WaitWLease")
 				if *cnt < *N {
 					*cnt += 1
@@ -224,13 +224,13 @@ func TestLease4(t *testing.T) {
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
-	lease1 := usync.MakeLeasePath(fsl1, LEASENAME)
+	lease1 := usync.MakeLeasePath(fsl1, LEASENAME, 0)
 
 	// Establish a connection
 	_, err = fsl2.ReadDir(LOCK_DIR)
 	assert.Nil(ts.t, err, "ReadDir")
 
-	err = lease1.WaitWLease()
+	err = lease1.WaitWLease([]byte{})
 	assert.Nil(ts.t, err, "WaitWLease")
 
 	fsl2.Exit()

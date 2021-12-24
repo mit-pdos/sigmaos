@@ -80,7 +80,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
-	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord")
+	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
 
 	w.Started(proc.GetPid())
 
@@ -239,7 +239,7 @@ func (w *Coord) Work() {
 	// Try to become the primary coordinator.  Backup coordinators
 	// will be able to acquire the lease if the primary fails or
 	// is partitioned.
-	w.lease.WaitWLease()
+	w.lease.WaitWLease([]byte{})
 	defer w.lease.ReleaseWLease()
 
 	w.recover(MDIR)

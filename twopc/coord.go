@@ -54,10 +54,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
-	cd.lease = sync.MakeLeasePath(cd.FsLib, TWOPCLEASE)
+	cd.lease = sync.MakeLeasePath(cd.FsLib, TWOPCLEASE, 0)
 
 	// Grab LEASE before starting coord
-	cd.lease.WaitWLease()
+	cd.lease.WaitWLease([]byte{})
 
 	log.Printf("COORD lock %v\n", args)
 

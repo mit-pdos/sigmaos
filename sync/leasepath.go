@@ -40,12 +40,14 @@ import (
 type LeasePath struct {
 	leaseName string // pathname for the lease file
 	*fslib.FsLib
+	perm np.Tperm
 }
 
-func MakeLeasePath(fsl *fslib.FsLib, lName string) *LeasePath {
+func MakeLeasePath(fsl *fslib.FsLib, lName string, perm np.Tperm) *LeasePath {
 	l := &LeasePath{}
 	l.leaseName = lName
 	l.FsLib = fsl
+	l.perm = perm
 	return l
 }
 
@@ -55,17 +57,20 @@ func MakeLeasePath(fsl *fslib.FsLib, lName string) *LeasePath {
 
 // Wait to obtain a write lease
 // XXX cleanup on failure
-func (l *LeasePath) WaitWLease() error {
-	err := l.MakeFile(l.leaseName, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-	// Sometimes we get "EOF" on shutdown
-	if err != nil && err.Error() == "EOF" {
-		db.DLPrintf("DLOCK", "Makefile %v err %v", l.leaseName, err)
-		return err
-	}
+// XXX create and write atomic
+func (l *LeasePath) WaitWLease(b []byte) error {
+	fd, err := l.Create(l.leaseName, l.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
 		log.Printf("%v: Makefile %v err %v", db.GetName(), l.leaseName, err)
 		return err
 	}
+	_, err = l.Write(fd, b)
+	if err != nil {
+		log.Printf("%v: write %v err %v", db.GetName(), l.leaseName, err)
+		return err
+	}
+	l.Close(fd)
+
 	st, err := l.Stat(l.leaseName)
 	if err != nil {
 		log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
@@ -73,20 +78,21 @@ func (l *LeasePath) WaitWLease() error {
 	}
 	err = l.RegisterLease(lease.MakeLease(np.Split(l.leaseName), st.Qid))
 	if err != nil {
-		log.Printf("%v: RegisterLock %v err %v", db.GetName(), l.leaseName, err)
+		log.Printf("%v: RegisterLease %v err %v", db.GetName(), l.leaseName, err)
 		return err
 	}
 	return nil
 }
 
 func (l *LeasePath) ReleaseWLease() error {
-	defer l.ReleaseRLease()
-	err := l.Remove(l.leaseName)
+	err := l.ReleaseRLease()
 	if err != nil {
-		if err.Error() == "EOF" {
-			db.DLPrintf("DLOCK", "%v: Remove %v err %v", db.GetName(), l.leaseName, err)
-			return err
-		}
+		return err
+	}
+	err = l.Remove(l.leaseName)
+	if err != nil {
+		log.Printf("%v: Remove %v err %v", db.GetName(), l.leaseName, err)
+		return err
 	}
 	return nil
 }
@@ -159,7 +165,7 @@ func (l *LeasePath) WaitRLease() ([]byte, error) {
 func (l *LeasePath) ReleaseRLease() error {
 	err := l.DeregisterLease(l.leaseName)
 	if err != nil {
-		log.Printf("%v: DeregisterLock %v err %v", db.GetName(), l.leaseName, err)
+		log.Printf("%v: DeregisterLease %v err %v", db.GetName(), l.leaseName, err)
 		return err
 	}
 	return nil

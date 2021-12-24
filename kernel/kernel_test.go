@@ -55,7 +55,7 @@ func TestSymlink1(t *testing.T) {
 
 	// Create a symlink
 	linkPath := "name/symlink-test"
-	err = ts.Symlink(targetPath, linkPath, 0777)
+	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
@@ -90,7 +90,7 @@ func TestSymlink2(t *testing.T) {
 	linkPath := linkDir + "/symlink-test"
 	err = ts.Mkdir(linkDir, 0777)
 	assert.Nil(t, err, "Creating link dir")
-	err = ts.Symlink(targetPath, linkPath, 0777)
+	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
@@ -130,7 +130,7 @@ func TestSymlink3(t *testing.T) {
 	linkPath := linkDir + "/link"
 	err = ts.Mkdir(linkDir, 0777)
 	assert.Nil(t, err, "Creating link dir")
-	err = ts.Symlink(targetPath, linkPath, 0777)
+	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
 
 	fsl := fslib.MakeFsLibAddr("abcd", fslib.Named())
@@ -216,8 +216,8 @@ func TestWLease(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		wlease := usync.MakeLeasePath(fsldl, lease)
-		err := wlease.WaitWLease()
+		wlease := usync.MakeLeasePath(fsldl, lease, 0)
+		err := wlease.WaitWLease([]byte{})
 		assert.Nil(t, err, "WriteLease")
 
 		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
@@ -245,8 +245,8 @@ func TestWLease(t *testing.T) {
 
 	<-ch
 
-	wlease := usync.MakeLeasePath(ts.FsLib, lease)
-	err := wlease.WaitWLease()
+	wlease := usync.MakeLeasePath(ts.FsLib, lease, 0)
+	err := wlease.WaitWLease([]byte{})
 	assert.Nil(t, err, "Weaklock")
 
 	<-ch

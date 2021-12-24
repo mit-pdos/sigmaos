@@ -162,7 +162,7 @@ func (m *Mapper) doMap() error {
 		m.Remove(name)
 
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
-		err = m.Symlink(target, name, 0777)
+		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
 			return fmt.Errorf("%v: symlink %v err %v\n", db.GetName(), name, err)
 		}

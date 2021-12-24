@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	db "ulambda/debug"
@@ -148,8 +149,11 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 }
 
 func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string, error) {
-	// XXX change how we readlink
+	// XXX change how we readlink; getfile?
 	target, err := fsc.Readlink(fid)
+	if len(target) == 0 {
+		log.Printf("readlink %v %v\n", string(target), err)
+	}
 	if err != nil {
 		return nil, err
 	}

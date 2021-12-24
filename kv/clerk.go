@@ -46,7 +46,7 @@ type KvClerk struct {
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.fsl = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
-	kc.lease = usync.MakeLeasePath(kc.fsl, KVCONFIG)
+	kc.lease = usync.MakeLeasePath(kc.fsl, KVCONFIG, 0)
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)

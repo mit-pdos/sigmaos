@@ -55,7 +55,7 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := usync.MakeLeasePath(fsl, DIR+"/lease")
+	l := usync.MakeLeasePath(fsl, DIR+"/lease", 0)
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"
@@ -64,7 +64,7 @@ func main() {
 
 	partitioned := false
 	for i := 0; i < N; i++ {
-		err := l.WaitWLease()
+		err := l.WaitWLease([]byte{})
 
 		b, _, err := fsl.GetFile(cnt)
 		if err != nil {

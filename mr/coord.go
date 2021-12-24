@@ -30,7 +30,7 @@ const (
 	// dynamically
 	CRASHMAPPER  = 8000
 	CRASHREDUCER = 8000
-	CRASHCOORD   = 4000
+	CRASHCOORD   = 10000
 )
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {

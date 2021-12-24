@@ -107,7 +107,7 @@ func (m *Mapper) mapper(txt string) error {
 	for r := 0; r < m.nreducetask; r++ {
 		b, err := json.Marshal(skvs[r])
 		if err != nil {
-			fmt.Errorf("%v: marshal error", db.GetName(), err)
+			fmt.Errorf("%v: marshal error %v", db.GetName(), err)
 		}
 		lbuf := make([]byte, binary.MaxVarintLen64)
 		binary.PutVarint(lbuf, int64(len(b)))

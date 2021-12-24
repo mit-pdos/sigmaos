@@ -1,4 +1,4 @@
-package main
+package mr_test
 
 import (
 	"bytes"
@@ -9,20 +9,18 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"ulambda/coordmgr"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/mr"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
-const OUTPUT = "../../../mr/par-mr.out"
+const OUTPUT = "par-mr.out"
 
 func Compare(fsl *fslib.FsLib) {
-	cmd := exec.Command("sort", "../../../mr/seq-mr.out")
+	cmd := exec.Command("sort", "seq-mr.out")
 	var out1 bytes.Buffer
 	cmd.Stdout = &out1
 	err := cmd.Run()
@@ -61,7 +59,7 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 
-	ts.s = kernel.MakeSystemAll("../../../")
+	ts.s = kernel.MakeSystemAll("..")
 	ts.FsLib = fslib.MakeFsLibAddr("mr-wc_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.nreducetask = nreducetask
@@ -73,9 +71,9 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) submitJob() {
+func (ts *Tstate) prepareJob() {
 	// Put names of input files in name/mr/m
-	files, err := ioutil.ReadDir("../../../input/")
+	files, err := ioutil.ReadDir("../input/")
 	if err != nil {
 		log.Fatalf("Readdir %v\n", err)
 	}
@@ -112,18 +110,15 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, n, crash, crashCoord string) {
+func runN(t *testing.T, crash, crashCoord string) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
-	ts.submitJob()
-	a := proc.MakeProc("bin/user/mr", []string{n, strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash, crashCoord})
-	err := ts.Spawn(a)
-	assert.Nil(t, err, "Spawn")
+	ts.prepareJob()
 
-	ok, err := ts.WaitExit(a.Pid)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "OK", ok, "WaitExit")
+	cm := coordmgr.StartCoords(ts.FsLib, ts.ProcClnt, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash, crashCoord})
+
+	cm.Wait()
 
 	ts.checkJob()
 
@@ -131,21 +126,17 @@ func runN(t *testing.T, n, crash, crashCoord string) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, "1", "NO", "NO")
-}
-
-func TestTwo(t *testing.T) {
-	runN(t, "2", "NO", "NO")
+	runN(t, "NO", "NO")
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, "1", "YES", "NO")
+	runN(t, "YES", "NO")
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, "2", "NO", "YES")
+	runN(t, "NO", "YES")
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, "2", "YES", "YES")
+	runN(t, "YES", "YES")
 }

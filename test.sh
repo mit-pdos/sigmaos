@@ -33,7 +33,7 @@ go test $1 ulambda/ux
 go test $1 ulambda/s3
 go test $1 ulambda/procclnt
 go test $1 ulambda/kv
-go test $1 ulambda/cmd/user/mr
+go test $1 ulambda/mr
 
 # wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd

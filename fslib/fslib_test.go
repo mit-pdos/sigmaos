@@ -245,16 +245,20 @@ func TestCounter(t *testing.T) {
 			ntrial := 0
 			for {
 				ntrial += 1
-				b, v, err := ts.GetFile("name/cnt")
+				fd, err := ts.Open("name/cnt", np.ORDWR)
+				assert.Equal(t, nil, err)
+				b, err := ts.Read(fd, 1000)
 				assert.Equal(t, nil, err)
 				n, err := strconv.Atoi(string(b))
 				assert.Equal(t, nil, err)
 				n += 1
 				b = []byte(strconv.Itoa(n))
-				_, err = ts.SetFile("name/cnt", b, v)
+				_, err = ts.Write(fd, b)
 				if err != nil && err.Error() == "Version mismatch" {
 					continue
 				}
+				assert.Equal(t, nil, err)
+				err = ts.Close(fd)
 				assert.Equal(t, nil, err)
 				break
 			}
@@ -265,9 +269,7 @@ func TestCounter(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
-	fd, err = ts.Open("name/cnt", np.ORDWR)
-	assert.Equal(t, nil, err)
-	b, err = ts.Read(fd, 100)
+	b, err = ts.GetFile("name/cnt")
 	assert.Equal(t, nil, err)
 	n, err := strconv.Atoi(string(b))
 	assert.Equal(t, nil, err)

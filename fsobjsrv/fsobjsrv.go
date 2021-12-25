@@ -534,8 +534,9 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 	return nil
 }
 
-// Special code path for GetFile: in one RPC, GetFile() looks up the file,
-// opens it, and reads it.
+// Special code path for GetFile: in one RPC, GetFile() looks up the
+// file, opens it, and reads it.  If an setfile executes between
+// open() and read(), an getfile returns an error.
 func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -558,13 +559,11 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if r != nil {
 		return &np.Rerror{r.Error()}
 	}
-	v := lo.Version()
 	switch i := lo.(type) {
 	case fs.Dir:
 		return np.ErrNotFile
 	case fs.File:
-		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), v)
-		rets.Version = v
+		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), lo.Version())
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}
@@ -577,7 +576,8 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 }
 
 // Special code path for SetFile: in one RPC, SetFile() looks up the
-// file, opens/creates it, and writes it.
+// file, opens/creates it, and writes it.  If another setfile executes
+// between open() and write(), an setfile returns an error.
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	var r error
 	var err *np.Rerror
@@ -623,7 +623,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	case fs.Dir:
 		return np.ErrNotFile
 	case fs.File:
-		rets.Count, r = i.Write(f.Ctx(), args.Offset, args.Data, args.Version)
+		rets.Count, r = i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}

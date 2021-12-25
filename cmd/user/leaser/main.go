@@ -66,12 +66,12 @@ func main() {
 	for i := 0; i < N; i++ {
 		err := l.WaitWLease([]byte{})
 
-		b, _, err := fsl.GetFile(cnt)
+		b, err := fsl.GetFile(cnt)
 		if err != nil {
 			log.Fatalf("getfile %v failed %v\n", cnt, err)
 		}
 
-		b1, _, err := fsl.GetFile(A)
+		b1, err := fsl.GetFile(A)
 		if err != nil {
 			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
 		}
@@ -124,7 +124,7 @@ func main() {
 			break
 		}
 
-		_, err = fsl.SetFile(cnt, []byte(strconv.Itoa(n+1)), np.NoV)
+		_, err = fsl.SetFile(cnt, []byte(strconv.Itoa(n+1)))
 		if err != nil {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}

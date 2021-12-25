@@ -155,7 +155,7 @@ func (fb *FilePriorityBag) nextFileL() (string, string, error) {
 func (fb *FilePriorityBag) removeFileL(priority string, name string) []byte {
 	fpath := path.Join(fb.path, priority, name)
 
-	contents, _, err := fb.GetFile(fpath)
+	contents, err := fb.GetFile(fpath)
 	if err != nil {
 		log.Fatalf("Error GetFile in FilePriorityBag.removeFileL: %v", err)
 	}

@@ -91,7 +91,7 @@ func (kc *KvClerk) Set(k, v string) error {
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
 		// log.Printf("set %v\n", fn)
-		_, err := kc.fsl.SetFile(fn, []byte(v), np.NoV)
+		_, err := kc.fsl.SetFile(fn, []byte(v))
 		if err == nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (kc *KvClerk) Get(k string) (string, error) {
 	shard := key2shard(k)
 	for {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		b, _, err := kc.fsl.GetFile(fn)
+		b, err := kc.fsl.GetFile(fn)
 		db.DLPrintf("CLERK", "Get: %v %v\n", fn, err)
 		if err == nil {
 			kc.nget += 1

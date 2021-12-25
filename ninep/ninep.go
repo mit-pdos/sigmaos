@@ -132,6 +132,8 @@ const (
 	// invoke the closure when a client creates or removes the
 	// file.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
+	// OVERSION is for atomic read-and-write
+	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
 )
 
 func (m Tmode) String() string {
@@ -550,18 +552,16 @@ type Tgetfile struct {
 }
 
 type Rgetfile struct {
-	Version TQversion
-	Data    []byte
+	Data []byte
 }
 
 type Tsetfile struct {
-	Fid     Tfid
-	Mode    Tmode
-	Perm    Tperm
-	Version TQversion
-	Offset  Toffset
-	Wnames  []string
-	Data    []byte
+	Fid    Tfid
+	Mode   Tmode
+	Perm   Tperm
+	Offset Toffset
+	Wnames []string
+	Data   []byte
 }
 
 func (Tversion) Type() Tfcall    { return TTversion }

@@ -150,7 +150,6 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) lookupStL(fd int) (*FdState, error) {
-
 	if fd < 0 || fd >= len(fsc.fds) {
 		return nil, fmt.Errorf("Too big fd %v", fd)
 	}
@@ -520,6 +519,9 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
 	fsc.Lock()
 	fdst, err := fsc.lookupStL(fd)
+	//p := fsc.fids[fdst.fid]
+	//version := p.lastqid().Version
+	//v := fdst.mode&np.OVERSION == np.OVERSION
 	if err != nil {
 		fsc.Unlock()
 		return nil, err
@@ -586,16 +588,16 @@ func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
 	return nil
 }
 
-func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, np.TQversion, error) {
+func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest := fsc.mount.resolve(p)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
 		if fsc.mount.hasExited() {
-			return nil, np.NoV, io.EOF
+			return nil, io.EOF
 		}
-		return nil, np.NoV, errors.New("file not found")
+		return nil, errors.New("file not found")
 
 	}
 	reply, err := fsc.clnt(fid).GetFile(fid, rest, mode, 0, 0)
@@ -604,21 +606,21 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, np.TQversion, 
 		if strings.HasPrefix(err.Error(), "dir not found") {
 			fid, err = fsc.WalkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
-				return nil, np.NoV, err
+				return nil, err
 			}
 			reply, err = fsc.clnt(fid).GetFile(fid, []string{}, mode, 0, 0)
 			if err != nil {
-				return nil, np.NoV, err
+				return nil, err
 			}
 		} else {
-			return nil, np.NoV, err
+			return nil, err
 		}
 	}
-	return reply.Data, reply.Version, err
+	return reply.Data, err
 }
 
 // Create or write file (if perm = 0).
-func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version np.TQversion, data []byte) (np.Tsize, error) {
+func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []byte) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	dir := np.Dir(p)
@@ -632,7 +634,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 		return 0, errors.New("file not found")
 
 	}
-	reply, err := fsc.clnt(fid).SetFile(fid, rest, mode, perm, 0, version, data)
+	reply, err := fsc.clnt(fid).SetFile(fid, rest, mode, perm, 0, data)
 	if err != nil {
 		// force automounting, but only on dir error
 		if strings.HasPrefix(err.Error(), "dir not found") {
@@ -644,7 +646,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, version 
 			if err != nil {
 				return 0, err
 			}
-			reply, err = fsc.clnt(fid).SetFile(fid, base, mode, perm, 0, version, data)
+			reply, err = fsc.clnt(fid).SetFile(fid, base, mode, perm, 0, data)
 			if err != nil {
 				return 0, err
 			}

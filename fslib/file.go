@@ -47,16 +47,16 @@ func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
 	return fl.readFile(fname, 0x0, f)
 }
 
-func (fl *FsLib) GetFile(fname string) ([]byte, np.TQversion, error) {
+func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 	return fl.FsClient.GetFile(fname, np.OREAD)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, version np.TQversion) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, 0, version, data)
+func (fl *FsLib) SetFile(fname string, data []byte) (np.Tsize, error) {
+	return fl.FsClient.SetFile(fname, np.OWRITE, 0, data)
 }
 
 func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, mode|np.OWRITE, perm, np.NoV, data)
+	return fl.FsClient.SetFile(fname, mode|np.OWRITE, perm, data)
 }
 
 // XXX chunk
@@ -95,7 +95,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	fdsrc, err := fl.OpenWatch(src, np.OREAD, nil)
+	fdsrc, err := fl.Open(src, np.OREAD)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 }
 
 func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
-	b, _, err := fl.GetFile(name)
+	b, err := fl.GetFile(name)
 	if err != nil {
 		return err
 	}
@@ -153,6 +153,6 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data, np.NoV)
+	_, err = fl.SetFile(fname, data)
 	return err
 }

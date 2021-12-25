@@ -51,26 +51,26 @@ func (mv *Mover) moveShard(s, d string) error {
 
 	err = mv.Mkdir(d1, 0777)
 	if err != nil {
-		log.Printf("%v: Mkdir %v err %v\n", db.GetName(), d1, err)
+		//log.Printf("%v: Mkdir %v err %v\n", db.GetName(), d1, err)
 		return err
 	}
 	db.DLPrintf("MV", "%v: Copy shard from %v to %v\n", db.GetName(), s, d1)
 	err = mv.CopyDir(s, d1)
 	if err != nil {
-		log.Printf("%v: CopyDir shard%v to %v err %v\n", db.GetName(), s, d1, err)
+		//log.Printf("%v: CopyDir shard%v to %v err %v\n", db.GetName(), s, d1, err)
 		return err
 	}
-	log.Printf("%v: Copy shard%v to %v done\n", db.GetName(), s, d1)
+	// log.Printf("%v: Copy shard%v to %v done\n", db.GetName(), s, d1)
 	err = mv.Rename(d1, d)
 	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v\n", db.GetName(), d1, d, err)
+		//log.Printf("%v: Rename %v to %v err %v\n", db.GetName(), d1, d, err)
 		return err
 	}
 	return nil
 }
 
 func (mv *Mover) Move(src, dst string) {
-	log.Printf("MV from %v to %v\n", src, dst)
+	// log.Printf("MV from %v to %v\n", src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
 		log.Printf("MV moveShards %v %v err %v\n", src, dst, err)

@@ -117,8 +117,6 @@ func RunBalancer(auto, docrash string) {
 	if bl.mo != nil {
 		bl.Done()
 	}
-
-	log.Printf("%v: balancer exited\n", db.GetName())
 }
 
 func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
@@ -177,7 +175,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 			if err.Error() == "EOF" ||
 				strings.HasPrefix(err.Error(), "stale lease") {
 				// we are disconnected
-				log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
+				//log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
 
 				ch <- true
 			}
@@ -245,7 +243,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool)
 	for true {
 		status, err := bl.runProc(args)
 		if retryf(err, status) {
-			log.Printf("%v: proc %v err %v status %v\n", db.GetName(), args, err, status)
+			// log.Printf("%v: proc %v err %v status %v\n", db.GetName(), args, err, status)
 		} else {
 			return nil
 		}
@@ -288,7 +286,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 		log.Fatalf("%v: readConfig: err %v\n", db.GetName(), err)
 	}
 
-	log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
+	// log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
 	var nextShards []string
 	switch opcode {
@@ -305,7 +303,7 @@ func (bl *Balancer) balance(opcode, mfs string) {
 	default:
 	}
 
-	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
+	// log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
 	err = bl.lease.RenameTo(KVCONFIGBK)
 	if err != nil {

@@ -19,7 +19,7 @@ func Crasher(fsl *fslib.FsLib, freq int64) {
 	go func() {
 		for true {
 			ms := rand.Int64(freq)
-			log.Printf("%v: ms %v\n", db.GetName(), ms)
+			// log.Printf("%v: ms %v\n", db.GetName(), ms)
 			time.Sleep(time.Duration(ms) * time.Millisecond)
 			r := rand.Int64(1000)
 			// log.Printf("%v: r = %v\n", db.GetName(), r)

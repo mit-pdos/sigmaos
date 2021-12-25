@@ -72,8 +72,12 @@ func (kc *KvClerk) readConfig() error {
 
 // XXX error checking in one place and more uniform
 func (kc *KvClerk) doRetry(err error) bool {
+	if err.Error() == "Version mismatch" {
+		log.Printf("VERSION MISMATCH\n")
+	}
+
 	if err.Error() == "EOF" || // XXX maybe useful when KVs fail
-		err.Error() == "Version mismatch" || // XXX maybe useful open/read
+		err.Error() == "Version mismatch" ||
 		strings.HasPrefix(err.Error(), "stale lease") ||
 		strings.HasPrefix(err.Error(), "checkLease failed") {
 		// log.Printf("doRetry error %v\n", err)

@@ -219,12 +219,8 @@ func concurN(t *testing.T, nclerk int, crash string) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	log.Printf("stop\n")
-
 	ts.cm.StopCoords()
 	ts.stopMemFSs()
-
-	log.Printf("done\n")
 
 	ts.s.Shutdown()
 }

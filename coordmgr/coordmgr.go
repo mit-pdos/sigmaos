@@ -52,9 +52,9 @@ func (c *coord) spawn() {
 }
 
 func (c *coord) run(i int, start chan bool, done chan procret) {
-	log.Printf("spawn %p coord %v\n", c, c.bin)
+	//log.Printf("spawn %p coord %v\n", c, c.bin)
 	c.spawn()
-	log.Printf("coord %p forked %v\n", c, c.pid)
+	//log.Printf("coord %p forked %v\n", c, c.pid)
 	start <- true
 	status, err := c.WaitExit(c.pid)
 	log.Printf("coord %v exited %v err %v\n", c.pid, status, err)
@@ -108,14 +108,14 @@ func (cm *CoordMgr) StopCoords() error {
 	var err error
 	for _, c := range cm.coords {
 		go func(c *coord) {
-			log.Printf("evict %v\n", c.pid)
+			// log.Printf("evict %v\n", c.pid)
 			r := c.Evict(c.pid)
 			if r != nil {
 				err = r
 			}
 		}(c)
 	}
-	log.Printf("wait for coordinators\n")
+	// log.Printf("wait for coordinators\n")
 	<-cm.ch
 	log.Printf("done coordinators\n")
 	return err

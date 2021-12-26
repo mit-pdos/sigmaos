@@ -12,10 +12,6 @@ import (
 	"ulambda/realm"
 )
 
-const (
-	bin = ".."
-)
-
 type Tstate struct {
 	*fslib.FsLib
 	t   *testing.T
@@ -26,19 +22,9 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-
 	ts.t = t
-
-	e := realm.MakeTestEnv(bin)
-	cfg, err := e.Boot()
-	if err != nil {
-		t.Fatalf("Boot %v\n", err)
-	}
-	ts.e = e
-	ts.cfg = cfg
-	s := kernel.MakeSystem(bin, cfg.NamedAddr)
-	ts.s = s
-	ts.FsLib = fslib.MakeFsLibAddr("db_test", cfg.NamedAddr)
+	ts.s = kernel.MakeSystemAll("..")
+	ts.FsLib = fslib.MakeFsLibAddr("db_test", fslib.Named())
 	db.Name("db_test")
 	return ts
 }
@@ -61,5 +47,4 @@ func TestQuery(t *testing.T) {
 	assert.Equal(t, "Odyssey", books[0].Title)
 
 	ts.s.Shutdown()
-	ts.e.Shutdown()
 }

@@ -116,7 +116,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 
 		// Start a named instance.
 		var pid string
-		if _, pid, _, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		if _, pid, _, err = kernel.RunNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 		// Update config

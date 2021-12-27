@@ -49,6 +49,42 @@ func TestRemoveSimple(t *testing.T) {
 	ts.s.Shutdown()
 }
 
+func testConnect(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	fd, err := ts.Create(fn, 0777, np.OWRITE)
+	assert.Equal(t, nil, err)
+	_, err = ts.Write(fd, d)
+	assert.Equal(t, nil, err)
+
+	ts.Disconnect("name")
+	time.Sleep(100 * time.Millisecond)
+	log.Printf("disconnected\n")
+
+	// EOF
+	_, err = ts.Write(fd, d)
+	assert.Equal(t, "EOF", err.Error())
+	err = ts.Close(fd)
+	assert.Equal(t, "EOF", err.Error())
+
+	log.Printf("connect\n")
+
+	fd, err = ts.Open(fn, np.OREAD)
+	assert.Equal(t, nil, err)
+
+	log.Printf("connect again\n")
+
+	fd, err = ts.Open(fn, np.OREAD)
+	assert.Equal(t, nil, err)
+
+	//err = ts.Close(fd)
+	//assert.Equal(t, nil, err)
+
+	ts.s.Shutdown()
+}
+
 func TestRemoveNonExistent(t *testing.T) {
 	ts := makeTstate(t)
 

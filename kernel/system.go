@@ -39,7 +39,6 @@ func MakeSystem(bin string, namedAddr []string) *System {
 	s.bin = bin
 	s.namedAddr = namedAddr
 	s.FsLib = fslib.MakeFsLibAddr("kernel", namedAddr)
-	//	proc.SetPid("kernel-" + proc.GenPid())
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
 	s.pid = proc.GetPid()
 	s.procdPids = []string{}
@@ -52,23 +51,26 @@ func MakeSystemNamed(bin string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = fslib.Named()
-	cmd, _, fsl, err := BootNamed(nil, s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+	cmd, fsl, err := BootNamed(s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
 	if err != nil {
 		return nil
 	}
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
-	s.pid = proc.GetPid()
 	s.procdPids = []string{}
 	s.crashedProcdPids = make(map[string]bool)
 	return s
 }
 
-// Make a system with all kernel services
+// Make a system with all kernel services. To do so we need a procclnt
+// too.
 func MakeSystemAll(bin string) *System {
+	// start Named
+	// s := MakeSystem()
 	s := MakeSystemNamed(bin)
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
+	s.pid = proc.GetPid()
 	s.Boot()
 	return s
 }
@@ -155,15 +157,17 @@ func (s *System) KillOne(srv string) error {
 }
 
 func (s *System) Shutdown() {
-	cpids, err := s.GetChildren(s.pid)
-	if err != nil {
-		log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
-	}
-	for _, pid := range cpids {
-		s.Evict(pid)
-		if _, ok := s.crashedProcdPids[pid]; !ok {
-			if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
-				log.Printf("shutdown error %v %v", status, err)
+	if s.ProcClnt != nil {
+		cpids, err := s.GetChildren(s.pid)
+		if err != nil {
+			log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
+		}
+		for _, pid := range cpids {
+			s.Evict(pid)
+			if _, ok := s.crashedProcdPids[pid]; !ok {
+				if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
+					log.Printf("shutdown error %v %v", status, err)
+				}
 			}
 		}
 	}
@@ -190,42 +194,48 @@ func (s *System) Shutdown() {
 }
 
 // Boot a named and set up the initfs
-func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, *fslib.FsLib, error) {
-	var args []string
-	if realmId == NO_REALM {
-		args = []string{addr, NO_REALM}
-	} else {
-		args = []string{addr, realmId}
-	}
+func BootNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, *fslib.FsLib, error) {
+	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {
 		args = append(args, strconv.Itoa(id))
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	// If this isn't a root named, spawn it. Else, just run it directly.
-	var cmd *exec.Cmd
-	var pid string
-	var err error
-	if pclnt == nil {
-		cmd, err = proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
-		if err != nil {
-			log.Printf("Error running named: %v", err)
-			return nil, "", nil, err
-		}
-		time.Sleep(SLEEP_MS * time.Millisecond)
-	} else {
-		pid = "named-" + strconv.Itoa(id)
-		p := proc.MakeProcPid(pid, "bin/kernel/named", args)
-		cmd, err = pclnt.SpawnKernelProc(p, bin, fslib.Named())
-		if err != nil {
-			log.Fatalf("Error WaitStart in BootNamed: %v", err)
-			return nil, "", nil, err
-		}
-		if err = pclnt.WaitStart(p.Pid); err != nil {
-			log.Fatalf("Error WaitStart in BootNamed: %v", err)
-			return nil, "", nil, err
-		}
+	cmd, err := proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
+	if err != nil {
+		log.Printf("Error running named: %v", err)
+		return nil, nil, err
+	}
+	time.Sleep(SLEEP_MS * time.Millisecond)
+
+	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
+	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
+		log.Printf("MakeInitFs error: %v", err)
+		return nil, fsl, err
+	}
+	return cmd, fsl, nil
+}
+
+// Run a named as a proc
+func RunNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, *fslib.FsLib, error) {
+	args := []string{addr, realmId}
+	// If we're running replicated...
+	if replicate {
+		args = append(args, strconv.Itoa(id))
+		args = append(args, strings.Join(peers[:id], ","))
+	}
+
+	pid := "named-" + strconv.Itoa(id)
+	p := proc.MakeProcPid(pid, "bin/kernel/named", args)
+	cmd, err := pclnt.SpawnKernelProc(p, bin, fslib.Named())
+	if err != nil {
+		log.Fatalf("Error WaitStart in RunNamed: %v", err)
+		return nil, "", nil, err
+	}
+	if err = pclnt.WaitStart(p.Pid); err != nil {
+		log.Fatalf("Error WaitStart in RunNamed: %v", err)
+		return nil, "", nil, err
 	}
 
 	fsl := fslib.MakeFsLibAddr("realm", []string{addr})

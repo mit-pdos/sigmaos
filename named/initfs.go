@@ -14,7 +14,6 @@ const (
 	PROCD         = "name/" + PROCDDIR + "/"
 	S3            = "name/s3/"
 	UX            = "name/ux/"
-	FS            = "name/fs"
 	DB            = "name/db/"
 	REALM_MGR     = "name/realmmgr"
 	MEMFS         = "name/memfsd/"
@@ -33,9 +32,6 @@ func MakeInitFs(fsl *fslib.FsLib) error {
 		return err
 	}
 	if err := fsl.Mkdir(BOOT, 0777); err != nil {
-		return err
-	}
-	if err := fsl.Mkdir(FS, 0777); err != nil {
 		return err
 	}
 	if err := fsl.Mkdir(PIDS, 0777); err != nil {

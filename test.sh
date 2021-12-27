@@ -35,7 +35,8 @@ go test $1 ulambda/procclnt
 go test $1 ulambda/kv
 go test $1 ulambda/mr
 
-# wwwd_test requires mariadb running
+# dbd_test and wwwd_test requires mariadb running
+pgrep mariadb >/dev/null && go test $1 ulambda/dbd
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
 
 go test $1 ulambda/cmd/user/test2pc

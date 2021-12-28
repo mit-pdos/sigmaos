@@ -22,7 +22,6 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/inode"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -51,7 +50,7 @@ type Balancer struct {
 }
 
 func shardPath(kvd, shard string) string {
-	return named.MEMFS + "/" + kvd + "/shard" + shard
+	return np.MEMFS + "/" + kvd + "/shard" + shard
 }
 
 func RunBalancer(auto, docrash string) {
@@ -63,7 +62,7 @@ func RunBalancer(auto, docrash string) {
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 
 	// may fail if already exist
-	bl.Mkdir(named.MEMFS, 07)
+	bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
 	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVBALANCER, np.DMSYMLINK)

@@ -21,15 +21,16 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemAll("..")
-	ts.FsLib = fslib.MakeFsLibAddr("fsux_test", fslib.Named())
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("fsux_test", "..")
+	assert.Nil(t, err, "Start")
 	return ts
 }
 
 func (ts *Tstate) Shutdown() {
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestRoot(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
@@ -27,7 +27,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting locks err %v\n", db.GetName(), err)
 	}
-	if err := fsl.MountTree(fslib.Named(), named.PROCDDIR, named.PROCDDIR); err != nil {
+	if err := fsl.MountTree(fslib.Named(), np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting procd err %v\n", db.GetName(), err)
 	}
@@ -40,7 +40,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 	proc.SetPid(proc.GenPid())
 
-	if err := fsl.MountTree(NamedAddr, named.PROCDDIR, named.PROCDDIR); err != nil {
+	if err := fsl.MountTree(NamedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting procd err %v\n", db.GetName(), err)
 	}

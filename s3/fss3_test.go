@@ -14,10 +14,6 @@ import (
 	np "ulambda/ninep"
 )
 
-const (
-	bin = ".."
-)
-
 type Tstate struct {
 	*fslib.FsLib
 	t    *testing.T
@@ -26,11 +22,16 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemAll(bin)
-	ts.FsLib = fslib.MakeFsLibAddr("nps3_test", fslib.Named())
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("nps3_test", "..")
+	assert.Nil(t, err, "Start")
 	return ts
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestOne(t *testing.T) {
@@ -41,7 +42,7 @@ func TestOne(t *testing.T) {
 
 	assert.Equal(t, 1, len(dirents))
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestTwo(t *testing.T) {
@@ -57,7 +58,7 @@ func TestTwo(t *testing.T) {
 
 	assert.Equal(t, 2, len(dirents))
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestUnionSimple(t *testing.T) {
@@ -71,7 +72,7 @@ func TestUnionSimple(t *testing.T) {
 
 	assert.Equal(t, 5, len(dirents))
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestUnionDir(t *testing.T) {
@@ -85,7 +86,7 @@ func TestUnionDir(t *testing.T) {
 
 	assert.Equal(t, 8, len(dirents))
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestUnionFile(t *testing.T) {
@@ -115,7 +116,7 @@ func TestUnionFile(t *testing.T) {
 	}
 	assert.Equal(ts.t, int(st.Length), n)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestStat(t *testing.T) {
@@ -132,7 +133,7 @@ func TestStat(t *testing.T) {
 	a := strings.Split(st.Name, ":")[0]
 	assert.Equal(t, addr, a)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func (ts *Tstate) s3Name(t *testing.T) string {
@@ -156,7 +157,7 @@ func TestSymlinkFile(t *testing.T) {
 	_, err = ts.ReadFile(fn)
 	assert.Nil(t, err, "ReadFile")
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestSymlinkDir(t *testing.T) {
@@ -172,5 +173,5 @@ func TestSymlinkDir(t *testing.T) {
 	assert.Nil(t, err, "ReadDir")
 	assert.Equal(t, 5, len(dirents))
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"ulambda/coordmgr"
 	"ulambda/fslib"
 	"ulambda/kernel"
@@ -56,11 +58,11 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.t = t
-
-	ts.s = kernel.MakeSystemAll("..")
-	ts.FsLib = fslib.MakeFsLibAddr("mr-wc_test", fslib.Named())
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("mr-wc-test", "..")
+	assert.Nil(t, err, "Start")
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.nreducetask = nreducetask
 
@@ -122,7 +124,7 @@ func runN(t *testing.T, crash, crashCoord string) {
 
 	ts.checkJob()
 
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestOne(t *testing.T) {

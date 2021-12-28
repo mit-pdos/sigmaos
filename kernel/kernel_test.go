@@ -15,7 +15,6 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/named"
 	np "ulambda/ninep"
 	usync "ulambda/sync"
 )
@@ -27,15 +26,16 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemAll("..")
-	ts.FsLib = fslib.MakeFsLibAddr("kernel_test", fslib.Named())
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("kernel_test", "..")
+	assert.Nil(t, err, "Start")
 	return ts
 }
 
 func (ts *Tstate) Shutdown() {
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestSymlink1(t *testing.T) {
@@ -171,7 +171,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 5, len(sts)) // statsd and ctl and running and runqs
 
-	ts.s.KillOne(named.PROCD)
+	ts.s.KillOne(np.PROCD)
 
 	n := 0
 	for n < N {
@@ -191,16 +191,16 @@ func TestEphemeral(t *testing.T) {
 }
 
 func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
-	sts, err := ts.ReadDir(named.PROCD)
+	sts, err := ts.ReadDir(np.PROCD)
 	stsExcluded := []*np.Stat{}
 	for _, s := range sts {
-		if ok := exclude[path.Join(named.PROCD, s.Name)]; !ok {
+		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
 			stsExcluded = append(stsExcluded, s)
 		}
 	}
-	assert.Nil(t, err, named.PROCD)
+	assert.Nil(t, err, np.PROCD)
 	assert.Equal(t, 1, len(stsExcluded))
-	name := path.Join(named.PROCD, stsExcluded[0].Name)
+	name := path.Join(np.PROCD, stsExcluded[0].Name)
 	return name
 }
 

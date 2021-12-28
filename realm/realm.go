@@ -8,7 +8,7 @@ import (
 
 	"ulambda/config"
 	"ulambda/fslib"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/procclnt"
 	"ulambda/sync"
 )
@@ -44,7 +44,7 @@ func MakeRealmClnt() *RealmClnt {
 // request to be handled.
 func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	// Create semaphore to wait on realm creation/initialization.
-	rStartSem := sync.MakeSemaphore(clnt.FsLib, path.Join(named.BOOT, rid))
+	rStartSem := sync.MakeSemaphore(clnt.FsLib, path.Join(np.BOOT, rid))
 	rStartSem.Init()
 
 	if err := clnt.WriteFile(REALM_CREATE, []byte(rid)); err != nil {
@@ -59,7 +59,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 
 func (clnt *RealmClnt) DestroyRealm(rid string) {
 	// Create cond var to wait on realm creation/initialization.
-	rExitSem := sync.MakeSemaphore(clnt.FsLib, path.Join(named.BOOT, rid))
+	rExitSem := sync.MakeSemaphore(clnt.FsLib, path.Join(np.BOOT, rid))
 	rExitSem.Init()
 
 	if err := clnt.WriteFile(REALM_DESTROY, []byte(rid)); err != nil {

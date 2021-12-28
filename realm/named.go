@@ -9,7 +9,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/procclnt"
 )
 
@@ -20,7 +20,7 @@ const (
 func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
 	for i, addr := range addrs {
-		cmd, _, err := kernel.BootNamed(bin, addr, len(addrs) > 1, i+1, addrs, realmId)
+		cmd, err := kernel.BootNamed(bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err
@@ -44,13 +44,13 @@ func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
 func ShutdownNamed(namedAddr string) {
 	fsl := fslib.MakeFsLibAddr("realm", []string{namedAddr})
 	// Shutdown named last
-	err := fsl.ShutdownFs(named.NAMED)
+	err := fsl.ShutdownFs(np.NAMED)
 	if err != nil {
 		// XXX sometimes we get EOF..
 		if err.Error() == "EOF" {
-			log.Printf("Remove %v shutdown %v\n", named.NAMED, err)
+			log.Printf("Remove %v shutdown %v\n", np.NAMED, err)
 		} else {
-			log.Fatalf("Remove %v shutdown %v\n", named.NAMED, err)
+			log.Fatalf("Remove %v shutdown %v\n", np.NAMED, err)
 		}
 	}
 }

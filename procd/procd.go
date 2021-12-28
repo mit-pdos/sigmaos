@@ -15,7 +15,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
@@ -167,7 +166,7 @@ func (pd *Procd) getRunnableProc(procdPath string, queueName string, readRunq re
 
 func (pd *Procd) getProc() (*proc.Proc, error) {
 	// First try and get any LC procs, else get a BE proc.
-	runqs := []string{named.PROCD_RUNQ_LC, named.PROCD_RUNQ_BE}
+	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	for _, runq := range runqs {
 		// First, try to read from the local procdfs
 		p, err := pd.getRunnableProc("", runq, pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
@@ -176,10 +175,10 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		}
 
 		// Try to steal from other procds
-		_, err = pd.ProcessDir(named.PROCD, func(st *np.Stat) (bool, error) {
+		_, err = pd.ProcessDir(np.PROCD, func(st *np.Stat) (bool, error) {
 			// don't process self
 			var b []byte
-			b, err = pd.ReadFile(path.Join(named.PROCD, st.Name))
+			b, err = pd.ReadFile(path.Join(np.PROCD, st.Name))
 			if err != nil {
 				return false, nil
 			}
@@ -187,7 +186,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 			if strings.HasPrefix(addr, pd.MyAddr()) {
 				return false, nil
 			}
-			p, err = pd.getRunnableProc(path.Join(named.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
+			p, err = pd.getRunnableProc(path.Join(np.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
 			if err != nil {
 				db.DLPrintf("PROCD", "Error getRunnableProc in Procd.getProc: %v", err)
 				return false, nil

@@ -7,7 +7,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/rand"
 )
@@ -35,7 +34,7 @@ func MakeCond(fsl *fslib.FsLib, condpath string, lock *Lock, strict bool) *Cond 
 	c.strict = strict
 	c.FsLib = fsl
 
-	c.dirLock = MakeLock(fsl, named.LOCKS, path.Join(c.path, DIR_LOCK), lock != nil)
+	c.dirLock = MakeLock(fsl, np.LOCKS, path.Join(c.path, DIR_LOCK), lock != nil)
 
 	return c
 }

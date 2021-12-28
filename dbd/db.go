@@ -6,7 +6,7 @@ import (
 	"ulambda/dir"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
-	"ulambda/named"
+	np "ulambda/ninep"
 )
 
 //
@@ -27,7 +27,7 @@ type Book struct {
 
 func RunDbd() {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
-	mfs, _, err := fslibsrv.MakeMemFs(named.DB, "dbd")
+	mfs, _, err := fslibsrv.MakeMemFs(np.DB, "dbd")
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}

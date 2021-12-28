@@ -11,7 +11,7 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/procclnt"
 	"ulambda/sync"
 )
@@ -84,7 +84,7 @@ func (r *Machined) getNextConfig() {
 		}
 	}
 	// Update the realm lock
-	r.realmLock = sync.MakeLock(r.FsLib, named.LOCKS, REALM_LOCK+r.cfg.RealmId, true)
+	r.realmLock = sync.MakeLock(r.FsLib, np.LOCKS, REALM_LOCK+r.cfg.RealmId, true)
 }
 
 // If we need more named replicas, help initialize a realm by starting another
@@ -116,7 +116,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 
 		// Start a named instance.
 		var pid string
-		if _, pid, _, err = kernel.RunNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		if _, pid, err = kernel.RunNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 		// Update config
@@ -136,7 +136,7 @@ func (r *Machined) register() {
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystem(r.bin, realmCfg.NamedAddr)
+	r.s = kernel.MakeSystem(r.bin, r.FsLib, realmCfg.NamedAddr)
 	if err := r.s.Boot(); err != nil {
 		log.Fatalf("Error Boot in Machined.boot: %v", err)
 	}
@@ -157,7 +157,7 @@ func (r *Machined) joinRealm() chan bool {
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartSem := sync.MakeSemaphore(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId))
+		rStartSem := sync.MakeSemaphore(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
 		rStartSem.Up()
 	}
 	db.DLPrintf("MACHINED", "Machined %v joined Realm %v", r.id, r.cfg.RealmId)
@@ -167,7 +167,7 @@ func (r *Machined) joinRealm() chan bool {
 
 func (r *Machined) teardown() {
 	// Tear down realm resources
-	r.s.Shutdown()
+	r.s.Shutdown(r.FsLib)
 }
 
 func (r *Machined) deregister() {
@@ -204,7 +204,7 @@ func (r *Machined) tryDestroyRealmL() {
 		}
 
 		// Signal that the realm has been destroyed
-		rExitSem := sync.MakeSemaphore(r.FsLib, path.Join(named.BOOT, r.cfg.RealmId))
+		rExitSem := sync.MakeSemaphore(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
 		rExitSem.Up()
 	}
 }

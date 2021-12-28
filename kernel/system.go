@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"ulambda/fslib"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -31,15 +31,13 @@ type System struct {
 	crashedProcdPids map[string]bool
 	dbd              []*exec.Cmd
 	*procclnt.ProcClnt
-	*fslib.FsLib
 }
 
-func MakeSystem(bin string, namedAddr []string) *System {
+func MakeSystem(bin string, fsl *fslib.FsLib, namedAddr []string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = namedAddr
-	s.FsLib = fslib.MakeFsLibAddr("kernel", namedAddr)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(fsl, namedAddr)
 	s.pid = proc.GetPid()
 	s.procdPids = []string{}
 	s.crashedProcdPids = make(map[string]bool)
@@ -51,28 +49,29 @@ func MakeSystemNamed(bin string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = fslib.Named()
-	cmd, fsl, err := BootNamed(s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+	cmd, err := BootNamed(s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
 	if err != nil {
 		return nil
 	}
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
-	s.FsLib = fsl
 	s.procdPids = []string{}
 	s.crashedProcdPids = make(map[string]bool)
 	return s
 }
 
-// Make a system with all kernel services. To do so we need a procclnt
-// too.
-func MakeSystemAll(bin string) *System {
-	// start Named
-	// s := MakeSystem()
+func MakeSystemAll(uname, bin string) (*System, *fslib.FsLib, error) {
 	s := MakeSystemNamed(bin)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
+	fsl := fslib.MakeFsLibAddr(uname, fslib.Named())
+	err := s.Start(fsl)
+	return s, fsl, err
+}
+
+// Start kernel services
+func (s *System) Start(fsl *fslib.FsLib) error {
+	s.ProcClnt = procclnt.MakeProcClntInit(fsl, s.namedAddr)
 	s.pid = proc.GetPid()
-	s.Boot()
-	return s
+	return s.Boot()
 }
 
 // Boot a "kernel" without named
@@ -136,7 +135,7 @@ func (s *System) BootDbd() error {
 func (s *System) KillOne(srv string) error {
 	var err error
 	switch srv {
-	case named.PROCD:
+	case np.PROCD:
 		if len(s.procd) > 0 {
 			log.Printf("kill %v\n", -s.procd[0].Process.Pid)
 			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
@@ -156,7 +155,7 @@ func (s *System) KillOne(srv string) error {
 	return nil
 }
 
-func (s *System) Shutdown() {
+func (s *System) Shutdown(fsl *fslib.FsLib) {
 	if s.ProcClnt != nil {
 		cpids, err := s.GetChildren(s.pid)
 		if err != nil {
@@ -185,7 +184,7 @@ func (s *System) Shutdown() {
 		d.Wait()
 	}
 	if s.named != nil {
-		err := s.ShutdownFs(named.NAMED)
+		err := fsl.ShutdownFs(np.NAMED)
 		if err != nil {
 			log.Printf("Named shutdown %v\n", err)
 		}
@@ -193,8 +192,8 @@ func (s *System) Shutdown() {
 	}
 }
 
-// Boot a named and set up the initfs
-func BootNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, *fslib.FsLib, error) {
+// Boot a named
+func BootNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {
@@ -205,20 +204,15 @@ func BootNamed(bin string, addr string, replicate bool, id int, peers []string, 
 	cmd, err := proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
 	if err != nil {
 		log.Printf("Error running named: %v", err)
-		return nil, nil, err
+		return nil, err
 	}
 	time.Sleep(SLEEP_MS * time.Millisecond)
 
-	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
-	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
-		log.Printf("MakeInitFs error: %v", err)
-		return nil, fsl, err
-	}
-	return cmd, fsl, nil
+	return cmd, nil
 }
 
 // Run a named as a proc
-func RunNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, *fslib.FsLib, error) {
+func RunNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
 	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {
@@ -231,17 +225,11 @@ func RunNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool,
 	cmd, err := pclnt.SpawnKernelProc(p, bin, fslib.Named())
 	if err != nil {
 		log.Fatalf("Error WaitStart in RunNamed: %v", err)
-		return nil, "", nil, err
+		return nil, "", err
 	}
 	if err = pclnt.WaitStart(p.Pid); err != nil {
 		log.Fatalf("Error WaitStart in RunNamed: %v", err)
-		return nil, "", nil, err
+		return nil, "", err
 	}
-
-	fsl := fslib.MakeFsLibAddr("realm", []string{addr})
-	if err := named.MakeInitFs(fsl); err != nil && !strings.Contains(err.Error(), "Name exists") {
-		log.Printf("MakeInitFs error: %v", err)
-		return nil, "", fsl, err
-	}
-	return cmd, pid, fsl, nil
+	return cmd, pid, nil
 }

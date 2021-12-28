@@ -38,15 +38,16 @@ func spawn(t *testing.T, ts *Tstate) string {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	var err error
 	ts := &Tstate{}
-	ts.s = kernel.MakeSystemAll("../../../")
+	ts.t = t
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("wwwd_test", "../../../")
+	assert.Nil(t, err, "Start")
 	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", fslib.Named())
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
-	ts.t = t
-
 	ts.pid = spawn(t, ts)
 
-	err := ts.WaitStart(childdir(ts.pid))
+	err = ts.WaitStart(childdir(ts.pid))
 	assert.Equal(t, nil, err)
 
 	// ts.Exited(proc.GetPid(), "OK")
@@ -68,7 +69,7 @@ func (ts *Tstate) waitWww() {
 	r := <-ch
 	assert.NotEqual(ts.t, nil, r)
 
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestSandbox(t *testing.T) {

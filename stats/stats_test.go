@@ -26,6 +26,10 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
+func (ts Tstate) shutdown() {
+	ts.s.Shutdown(ts.FsLib)
+}
+
 func TestStatsd(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -50,5 +54,5 @@ func TestStatsd(t *testing.T) {
 		//assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
 	}
 
-	ts.s.Shutdown()
+	ts.shutdown()
 }

@@ -12,7 +12,6 @@ import (
 	"ulambda/fssrv"
 	"ulambda/inode"
 	"ulambda/memfs"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
@@ -33,7 +32,7 @@ func (pd *Procd) makeFs() {
 	var err error
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
-	pd.MemFs, pd.procclnt, err = fslibsrv.MakeMemFs(named.PROCD, named.PROCDDIR)
+	pd.MemFs, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
 	if err != nil {
 		log.Fatalf("%v: MakeMemFs %v\n", db.GetName(), err)
 	}
@@ -41,7 +40,7 @@ func (pd *Procd) makeFs() {
 
 	// Set up ctl file
 	pd.fs.ctlFile = makeCtlFile(pd, "", pd.Root())
-	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), named.PROC_CTL_FILE, pd.fs.ctlFile)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err != nil {
 		log.Fatalf("Error MkNod in RunProcd: %v", err)
 	}
@@ -49,7 +48,7 @@ func (pd *Procd) makeFs() {
 	// Set up running dir
 	runningi := inode.MakeInode("", np.DMDIR, pd.Root())
 	running := dir.MakeDir(runningi)
-	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), named.PROCD_RUNNING, running)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), np.PROCD_RUNNING, running)
 	if err != nil {
 		log.Fatalf("Error creating running dir: %v", err)
 	}
@@ -57,7 +56,7 @@ func (pd *Procd) makeFs() {
 
 	// Set up runq dir
 	pd.fs.runqs = make(map[string]fs.Dir)
-	runqs := []string{named.PROCD_RUNQ_LC, named.PROCD_RUNQ_BE}
+	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	for _, q := range runqs {
 		runqi := inode.MakeInode("", np.DMDIR, pd.Root())
 		runq := dir.MakeDir(runqi)
@@ -141,9 +140,9 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	var runq fs.Dir
 	switch {
 	case a.Ncore > 0:
-		runq = pfs.runqs[named.PROCD_RUNQ_LC]
+		runq = pfs.runqs[np.PROCD_RUNQ_LC]
 	default:
-		runq = pfs.runqs[named.PROCD_RUNQ_BE]
+		runq = pfs.runqs[np.PROCD_RUNQ_BE]
 	}
 	ino := inode.MakeInode("", 0, runq)
 	f := memfs.MakeFile(ino)

@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"ulambda/fslib"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/stats"
@@ -47,7 +47,7 @@ func (mo *Monitor) grow() {
 
 func (mo *Monitor) shrink(kv string) {
 	BalancerOp(mo.FsLib, "del", kv)
-	n := named.MEMFS + "/" + kv + "/"
+	n := np.MEMFS + "/" + kv + "/"
 	err := mo.Evict(kv)
 	if err != nil {
 		log.Printf("shrink: remove %v failed %v\n", n, err)
@@ -65,7 +65,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload stats.Tload
 	n := 0
 	for kv, _ := range kvs.set {
-		kvd := named.MEMFS + "/" + kv + "/statsd"
+		kvd := np.MEMFS + "/" + kv + "/statsd"
 		sti := stats.StatInfo{}
 		err := mo.ReadFileJson(kvd, &sti)
 		if err != nil {

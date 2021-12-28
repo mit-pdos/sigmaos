@@ -11,7 +11,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -71,7 +70,7 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 
 	log.Printf("%v: Part2pc i %v op %v delay %v\n", p.me, p.index, p.opcode, p.delay)
 	p.ti = &Tinput{}
-	err = p.ReadFileJson(named.MEMFS+"/txni", p.ti)
+	err = p.ReadFileJson(np.MEMFS+"/txni", p.ti)
 	if err != nil {
 		log.Fatalf("Failed to read txni %v\n", err)
 	}

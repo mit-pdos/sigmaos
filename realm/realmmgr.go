@@ -15,7 +15,7 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/kernel"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/stats"
 	"ulambda/sync"
 )
@@ -31,13 +31,13 @@ const (
 	free_machineds  = "free-machineds"
 	realm_create    = "realm_create"
 	realm_destroy   = "realm_destroy"
-	FREE_MACHINEDS  = named.REALM_MGR + "/" + free_machineds // Unassigned machineds
-	REALM_CREATE    = named.REALM_MGR + "/" + realm_create   // Realm allocation requests
-	REALM_DESTROY   = named.REALM_MGR + "/" + realm_destroy  // Realm destruction requests
-	REALMS          = "name/realms"                          // List of realms, with machineds registered under them
-	REALM_CONFIG    = "name/realm-config"                    // Store of realm configs
-	MACHINED_CONFIG = "name/machined-config"                 // Store of machined configs
-	REALM_NAMEDS    = "name/realm-nameds"                    // Symlinks to realms' nameds
+	FREE_MACHINEDS  = np.REALM_MGR + "/" + free_machineds // Unassigned machineds
+	REALM_CREATE    = np.REALM_MGR + "/" + realm_create   // Realm allocation requests
+	REALM_DESTROY   = np.REALM_MGR + "/" + realm_destroy  // Realm destruction requests
+	REALMS          = "name/realms"                       // List of realms, with machineds registered under them
+	REALM_CONFIG    = "name/realm-config"                 // Store of realm configs
+	MACHINED_CONFIG = "name/machined-config"              // Store of machined configs
+	REALM_NAMEDS    = "name/realm-nameds"                 // Symlinks to realms' nameds
 )
 
 type RealmMgr struct {
@@ -56,7 +56,7 @@ func MakeRealmMgr() *RealmMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, _, err = fslibsrv.MakeMemFs(named.REALM_MGR, "realmmgr")
+	m.MemFs, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
@@ -110,7 +110,7 @@ func (m *RealmMgr) createRealms() {
 		// Get a realm creation request
 		realmId := <-m.realmCreate
 
-		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
+		realmLock := sync.MakeLock(m.FsLib, np.LOCKS, REALM_LOCK+realmId, true)
 		realmLock.Lock()
 
 		// Unmarshal the realm config file.
@@ -167,7 +167,7 @@ func (m *RealmMgr) destroyRealms() {
 		// Get a realm creation request
 		realmId := <-m.realmDestroy
 
-		realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
+		realmLock := sync.MakeLock(m.FsLib, np.LOCKS, REALM_LOCK+realmId, true)
 		realmLock.Lock()
 
 		m.deallocAllMachineds(realmId)
@@ -214,14 +214,14 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 		return stat
 	}
 	// XXX May fail if this named crashed
-	procds, err := m.ReadDir(path.Join(REALM_NAMEDS, realmId, "~ip", named.PROCDDIR))
+	procds, err := m.ReadDir(path.Join(REALM_NAMEDS, realmId, "~ip", np.PROCDREL))
 	if err != nil {
 		log.Fatalf("Error ReadDir 2 in RealmMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
 		// XXX May fail if this named crashed
-		err := m.ReadFileJson(path.Join(REALM_NAMEDS, realmId, "~ip", named.PROCDDIR, pd.Name, "statsd"), s)
+		err := m.ReadFileJson(path.Join(REALM_NAMEDS, realmId, "~ip", np.PROCDREL, pd.Name, "statsd"), s)
 		if err != nil {
 			log.Fatalf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
 		}
@@ -326,7 +326,7 @@ func (m *RealmMgr) balanceMachineds() {
 			// XXX Currently we assume there are always enough machineds for the number
 			// of realms we have. If that assumption is broken, this may deadlock when
 			// a realm is trying to exit & we're trying to assign a machined to it.
-			realmLock := sync.MakeLock(m.FsLib, named.LOCKS, REALM_LOCK+realmId, true)
+			realmLock := sync.MakeLock(m.FsLib, np.LOCKS, REALM_LOCK+realmId, true)
 			realmLock.Lock()
 
 			m.adjustRealm(realmId)

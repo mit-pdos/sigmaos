@@ -9,7 +9,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/repl"
@@ -26,7 +25,7 @@ type FsUx struct {
 func RunFsUx(mount string) {
 	ip, err := fsclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("LocalIP %v %v\n", named.UX, err)
+		log.Fatalf("LocalIP %v %v\n", np.UX, err)
 	}
 	fsux := MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
@@ -37,7 +36,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Confi
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	root := makeDir([]string{mount}, np.DMDIR, nil)
-	srv, fsl, _, err := fslibsrv.MakeReplServer(root, addr, named.UX, "ux", config)
+	srv, fsl, _, err := fslibsrv.MakeReplServer(root, addr, np.UX, "ux", config)
 	if err != nil {
 		log.Fatalf("%v: MakeReplServer %v\n", db.GetName(), err)
 	}

@@ -14,7 +14,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -32,14 +31,17 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	var err error
 	ts := &Tstate{}
-
-	bin := ".."
-	ts.s = kernel.MakeSystemAll(bin)
-	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	ts.t = t
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("kernel_test", "..")
+	assert.Nil(t, err, "Start")
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
 	return ts
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.s.Shutdown(ts.FsLib)
 }
 
 func (ts *Tstate) procd(t *testing.T) string {
@@ -117,7 +119,7 @@ func TestWaitExitSimple(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestWaitExitParentRetStat(t *testing.T) {
@@ -141,7 +143,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestWaitStart(t *testing.T) {
@@ -158,7 +160,7 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	sts, err := ts.ReadDir(path.Join("name/procd", ts.procd(t), named.PROCD_RUNNING))
+	sts, err := ts.ReadDir(path.Join("name/procd", ts.procd(t), np.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
 
 	// skip ctl entry
@@ -175,7 +177,7 @@ func TestWaitStart(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 // Should exit immediately
@@ -195,7 +197,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 
 	close(ch)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestCrashProc(t *testing.T) {
@@ -212,7 +214,7 @@ func TestCrashProc(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.Equal(t, "exit status 2", status, "WaitExit")
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestFailSpawn(t *testing.T) {
@@ -227,7 +229,7 @@ func TestFailSpawn(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(a.Pid))
 	assert.NotNil(t, err, "Stat")
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestEarlyExit1(t *testing.T) {
@@ -258,7 +260,7 @@ func TestEarlyExit1(t *testing.T) {
 	_, err = ts.Stat(proc.PidDir(pid1))
 	assert.NotNil(t, err, "Stat")
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestEarlyExitN(t *testing.T) {
@@ -294,7 +296,7 @@ func TestEarlyExitN(t *testing.T) {
 	}
 	done.Wait()
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 // Spawn a bunch of procs concurrently, then wait for all of them & check
@@ -343,7 +345,7 @@ func TestConcurrentProcs(t *testing.T) {
 
 	done.Wait()
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func (ts *Tstate) evict(pid string) {
@@ -371,7 +373,7 @@ func TestEvict(t *testing.T) {
 	// Make sure the proc didn't finish
 	checkSleeperResultFalse(t, ts, pid)
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func testLeaser(t *testing.T, part string) {
@@ -403,7 +405,7 @@ func testLeaser(t *testing.T, part string) {
 		status, _ := ts.WaitExit(pid)
 		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
 	}
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestLeaserNoPart(t *testing.T) {
@@ -441,7 +443,7 @@ func TestReserveCores(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestWorkStealing(t *testing.T) {
@@ -473,7 +475,7 @@ func TestWorkStealing(t *testing.T) {
 
 	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }
 
 func TestEvictN(t *testing.T) {
@@ -496,5 +498,5 @@ func TestEvictN(t *testing.T) {
 		assert.Equal(t, "EVICTED", status, "WaitExit status")
 	}
 
-	ts.s.Shutdown()
+	ts.Shutdown()
 }

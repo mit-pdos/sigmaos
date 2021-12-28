@@ -11,7 +11,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/named"
 	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -122,7 +121,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 			return clnt.cleanupError(piddir, err)
 		}
 
-		err = clnt.WriteFile(path.Join(named.PROCDDIR+"/~ip", named.PROC_CTL_FILE), b)
+		err = clnt.WriteFile(path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE), b)
 		if err != nil {
 			log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
 			return clnt.cleanupError(piddir, err)

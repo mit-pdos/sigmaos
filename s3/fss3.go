@@ -12,7 +12,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
-	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
 )
@@ -38,7 +37,7 @@ func RunFss3() {
 	if err != nil {
 		log.Fatalf("%v: MakeSrv %v\n", db.GetName(), err)
 	}
-	fsl.Post(srv.MyAddr(), named.S3)
+	fsl.Post(srv.MyAddr(), np.S3)
 
 	fss3.FsServer = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),

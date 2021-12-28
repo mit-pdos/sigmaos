@@ -60,6 +60,10 @@ func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
 	fssrv.fsl = fsl
 }
 
+func (fssrv *FsServer) Root() fs.Dir {
+	return fssrv.root
+}
+
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {

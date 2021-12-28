@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/realm"
@@ -21,11 +20,11 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemAll("..")
-	ts.FsLib = fslib.MakeFsLibAddr("db_test", fslib.Named())
-	db.Name("db_test")
+	ts.s, ts.FsLib, err = kernel.MakeSystemAll("db_test", "..")
+	assert.Nil(t, err, "Start")
 	return ts
 }
 
@@ -46,5 +45,5 @@ func TestQuery(t *testing.T) {
 	assert.Nil(t, err, "Unmarshal")
 	assert.Equal(t, "Odyssey", books[0].Title)
 
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.FsLib)
 }

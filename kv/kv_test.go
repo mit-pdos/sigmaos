@@ -49,12 +49,11 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
+	var err error
 	ts := &Tstate{}
 	ts.t = t
-
-	bin := ".."
-	ts.s = kernel.MakeSystemAll(bin)
-	ts.fsl = fslib.MakeFsLibAddr("kv_test", fslib.Named())
+	ts.s, ts.fsl, err = kernel.MakeSystemAll("kv_test", "..")
+	assert.Nil(t, err, "Start")
 	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
 	ts.cm = coordmgr.StartCoords(ts.fsl, ts.ProcClnt, "bin/user/balancer", []string{auto, crash})
 
@@ -91,7 +90,7 @@ func (ts *Tstate) setup(nclerk int) {
 func (ts *Tstate) done() {
 	ts.cm.StopCoords()
 	ts.stopMemFSs()
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.fsl)
 }
 
 func (ts *Tstate) stopFS(fs string) {
@@ -222,7 +221,7 @@ func concurN(t *testing.T, nclerk int, crash string) {
 	ts.cm.StopCoords()
 	ts.stopMemFSs()
 
-	ts.s.Shutdown()
+	ts.s.Shutdown(ts.fsl)
 }
 
 func TestConcurOK0(t *testing.T) {

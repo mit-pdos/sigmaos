@@ -9,7 +9,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/named"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procidem"
 	"ulambda/procinit"
@@ -31,7 +31,7 @@ func MakeProcdMonitor(args []string) *ProcdMonitor {
 	m := &ProcdMonitor{}
 	m.pid = args[0]
 	m.FsLib = fslib.MakeFsLib(m.pid)
-	m.l = sync.MakeLock(m.FsLib, named.LOCKS, PROCIDEM_LOCK, true)
+	m.l = sync.MakeLock(m.FsLib, np.LOCKS, PROCIDEM_LOCK, true)
 	m.ProcClnt = procinit.MakeProcClnt(m.FsLib, procinit.GetProcLayersMap())
 	db.Name(m.pid)
 
@@ -53,7 +53,7 @@ func (m *ProcdMonitor) waitEvict() {
 func (m *ProcdMonitor) watchProcds() {
 	log.Printf("ProcdMonitor %v set watch", m)
 	done := make(chan bool)
-	err := m.SetDirWatch(named.PROCD, func(p string, err error) {
+	err := m.SetDirWatch(np.PROCD, func(p string, err error) {
 		if err != nil && err.Error() == "EOF" {
 			return
 		} else if err != nil {
@@ -89,7 +89,7 @@ func (m *ProcdMonitor) getProc(procdIP string, pid string) *procidem.ProcIdem {
 
 // Get a list of the failed procds.
 func (m *ProcdMonitor) getFailedProcds() []string {
-	remaining, err := m.ReadDir(named.PROCD)
+	remaining, err := m.ReadDir(np.PROCD)
 	if err != nil {
 		log.Fatalf("Error ReadDir 1 in ProcdMonitor.getFailedProcds: %v", err)
 	}

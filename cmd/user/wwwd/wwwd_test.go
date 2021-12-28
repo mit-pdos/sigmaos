@@ -6,18 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/proc"
-	"ulambda/procclnt"
 )
 
 type Tstate struct {
-	*procclnt.ProcClnt
-	*fslib.FsLib
-
+	*kernel.System
 	t   *testing.T
-	s   *kernel.System
 	pid string
 }
 
@@ -41,10 +36,7 @@ func makeTstate(t *testing.T) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("wwwd_test", "../../../")
-	assert.Nil(t, err, "Start")
-	ts.FsLib = fslib.MakeFsLibAddr("wwwd_test", fslib.Named())
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
+	ts.System = kernel.MakeSystemAll("wwwd_test", "../../../")
 	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(childdir(ts.pid))
@@ -69,7 +61,7 @@ func (ts *Tstate) waitWww() {
 	r := <-ch
 	assert.NotEqual(ts.t, nil, r)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.Shutdown()
 }
 
 func TestSandbox(t *testing.T) {

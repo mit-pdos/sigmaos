@@ -9,19 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procclnt"
 	"ulambda/twopc"
 )
 
 type Tstate struct {
-	t   *testing.T
-	fsl *fslib.FsLib
-	*procclnt.ProcClnt
-	s         *kernel.System
+	*kernel.System
+	t         *testing.T
 	ch        chan bool
 	chPresent chan bool
 	mfss      []string
@@ -29,28 +25,26 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
-	ts.s, ts.fsl, err = kernel.MakeSystemAll("fsux_test", "../../../")
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
+	ts.System = kernel.MakeSystemAll("fsux_test", "../../../")
 
-	err = ts.fsl.Mkdir(twopc.DIR2PC, 07)
+	err := ts.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.fsl.Mkdir(twopc.TWOPCPREPARED, 0777)
+	err = ts.Mkdir(twopc.TWOPCPREPARED, 0777)
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCPREPARED, err)
 	}
-	err = ts.fsl.Mkdir(twopc.TWOPCCOMMITTED, 0777)
+	err = ts.Mkdir(twopc.TWOPCCOMMITTED, 0777)
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
-	err = ts.fsl.Mkdir(np.MEMFS, 07)
+	err = ts.Mkdir(np.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -64,11 +58,11 @@ func (ts *Tstate) shutdown(fws []string) {
 		ts.WaitExit(pid)
 	}
 	ts.stopMemFSs()
-	ts.s.Shutdown(ts.FsLib)
+	ts.Shutdown()
 }
 
 func (ts *Tstate) cleanup() {
-	err := ts.fsl.Remove(np.MEMFS + "/txni")
+	err := ts.Remove(np.MEMFS + "/txni")
 	assert.Nil(ts.t, err, "Remove txni")
 }
 
@@ -132,9 +126,9 @@ func (ts *Tstate) setUpMemFSs(N int) {
 }
 
 func (ts *Tstate) setUpFiles(mfs0 string, mfs1 string) {
-	err := ts.fsl.MakeFile(fn(mfs0, "x"), 0777, np.OWRITE, []byte("x"))
+	err := ts.MakeFile(fn(mfs0, "x"), 0777, np.OWRITE, []byte("x"))
 	assert.Nil(ts.t, err, "MakeFile")
-	err = ts.fsl.MakeFile(fn(mfs1, "y"), 0777, np.OWRITE, []byte("y"))
+	err = ts.MakeFile(fn(mfs1, "y"), 0777, np.OWRITE, []byte("y"))
 	assert.Nil(ts.t, err, "MakeFile")
 }
 
@@ -146,7 +140,7 @@ func (ts *Tstate) setUpParticipants(opcode string, N int) []string {
 		fn(ts.mfss[2], ""),
 	}
 
-	err := ts.fsl.MakeFileJson(np.MEMFS+"/txni", 0777, ti)
+	err := ts.MakeFileJson(np.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
 	fws := ts.startParticipants(N, opcode)
@@ -165,19 +159,19 @@ func (ts *Tstate) checkCoord(fws []string, opcode string) {
 }
 
 func (ts *Tstate) testAbort() {
-	b, err := ts.fsl.ReadFile(fn(ts.mfss[0], "x"))
+	b, err := ts.ReadFile(fn(ts.mfss[0], "x"))
 	assert.Nil(ts.t, err, "ReadFile")
 	assert.Equal(ts.t, b, []byte("x"))
 
-	b, err = ts.fsl.ReadFile(fn(ts.mfss[2], "y"))
+	b, err = ts.ReadFile(fn(ts.mfss[2], "y"))
 	assert.NotEqual(ts.t, nil, "ReadFile")
 }
 
 func (ts *Tstate) testCommit() {
-	b, err := ts.fsl.ReadFile(fn(ts.mfss[0], "x"))
+	b, err := ts.ReadFile(fn(ts.mfss[0], "x"))
 	assert.NotEqual(ts.t, nil, "ReadFile")
 
-	b, err = ts.fsl.ReadFile(fn(ts.mfss[2], "y"))
+	b, err = ts.ReadFile(fn(ts.mfss[2], "y"))
 	assert.Nil(ts.t, err, "ReadFile")
 	assert.Equal(ts.t, b, []byte("y"))
 }

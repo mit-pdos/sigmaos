@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 )
@@ -15,22 +14,15 @@ const (
 )
 
 type Tstate struct {
-	*fslib.FsLib
 	t *testing.T
-	s *kernel.System
+	*kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("fsux_test", "..")
-	assert.Nil(t, err, "Start")
+	ts.System = kernel.MakeSystemAll("fsux_test", "..")
 	return ts
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestRoot(t *testing.T) {

@@ -9,14 +9,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"ulambda/coordmgr"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/mr"
 	np "ulambda/ninep"
-	"ulambda/procclnt"
 )
 
 const OUTPUT = "par-mr.out"
@@ -50,23 +47,18 @@ func Compare(fsl *fslib.FsLib) {
 }
 
 type Tstate struct {
-	*procclnt.ProcClnt
-	*fslib.FsLib
+	*kernel.System
 	t           *testing.T
-	s           *kernel.System
 	nreducetask int
 }
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("mr-wc-test", "..")
-	assert.Nil(t, err, "Start")
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
+	ts.System = kernel.MakeSystemAll("mr-wc-test", "..")
 	ts.nreducetask = nreducetask
 
-	mr.InitCoordFS(ts.FsLib, nreducetask)
+	mr.InitCoordFS(ts.System.FsLib, nreducetask)
 
 	os.Remove(OUTPUT)
 
@@ -124,7 +116,7 @@ func runN(t *testing.T, crash, crashCoord string) {
 
 	ts.checkJob()
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.Shutdown()
 }
 
 func TestOne(t *testing.T) {

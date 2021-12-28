@@ -24,24 +24,15 @@ const (
 )
 
 type Tstate struct {
-	*procclnt.ProcClnt
-	*fslib.FsLib
+	*kernel.System
 	t *testing.T
-	s *kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("kernel_test", "..")
-	assert.Nil(t, err, "Start")
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
+	ts.System = kernel.MakeSystemAll("kernel_test", "..")
 	return ts
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.s.Shutdown(ts.FsLib)
 }
 
 func (ts *Tstate) procd(t *testing.T) string {
@@ -449,7 +440,7 @@ func TestReserveCores(t *testing.T) {
 func TestWorkStealing(t *testing.T) {
 	ts := makeTstate(t)
 
-	ts.s.BootProcd()
+	ts.BootProcd()
 
 	linuxsched.ScanTopology()
 

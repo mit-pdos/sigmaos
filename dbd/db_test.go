@@ -6,25 +6,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/realm"
 )
 
 type Tstate struct {
-	*fslib.FsLib
-	t   *testing.T
-	s   *kernel.System
-	e   *realm.TestEnv
-	cfg *realm.RealmConfig
+	*kernel.System
+	t *testing.T
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("db_test", "..")
-	assert.Nil(t, err, "Start")
+	ts.System = kernel.MakeSystemAll("db_test", "..")
 	return ts
 }
 
@@ -45,5 +38,5 @@ func TestQuery(t *testing.T) {
 	assert.Nil(t, err, "Unmarshal")
 	assert.Equal(t, "Odyssey", books[0].Title)
 
-	ts.s.Shutdown(ts.FsLib)
+	ts.Shutdown()
 }

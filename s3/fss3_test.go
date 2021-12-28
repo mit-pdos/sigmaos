@@ -9,29 +9,21 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fsclnt"
-	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 )
 
 type Tstate struct {
-	*fslib.FsLib
+	*kernel.System
 	t    *testing.T
-	s    *kernel.System
 	nps3 *Fss3
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("nps3_test", "..")
-	assert.Nil(t, err, "Start")
+	ts.System = kernel.MakeSystemAll("nps3_test", "..")
 	return ts
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestOne(t *testing.T) {
@@ -49,7 +41,7 @@ func TestTwo(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d()
+	ts.BootFss3d()
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -65,7 +57,7 @@ func TestUnionSimple(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d()
+	ts.BootFss3d()
 
 	dirents, err := ts.ReadDir("name/s3/~ip/")
 	assert.Nil(t, err, "ReadDir")
@@ -79,7 +71,7 @@ func TestUnionDir(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d()
+	ts.BootFss3d()
 
 	dirents, err := ts.ReadDir("name/s3/~ip/input")
 	assert.Nil(t, err, "ReadDir")
@@ -93,7 +85,7 @@ func TestUnionFile(t *testing.T) {
 	ts := makeTstate(t)
 
 	// Make a second one
-	ts.s.BootFss3d()
+	ts.BootFss3d()
 
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)

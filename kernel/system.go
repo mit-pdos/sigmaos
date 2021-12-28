@@ -20,6 +20,8 @@ const (
 )
 
 type System struct {
+	*fslib.FsLib
+	*procclnt.ProcClnt
 	bin              string
 	pid              string
 	namedAddr        []string
@@ -30,41 +32,46 @@ type System struct {
 	procdPids        []string
 	crashedProcdPids map[string]bool
 	dbd              []*exec.Cmd
-	*procclnt.ProcClnt
 }
 
-func MakeSystem(bin string, fsl *fslib.FsLib, namedAddr []string) *System {
+func makeSystemBase(namedAddr []string, bin string) *System {
 	s := &System{}
 	s.bin = bin
 	s.namedAddr = namedAddr
-	s.ProcClnt = procclnt.MakeProcClntInit(fsl, namedAddr)
-	s.pid = proc.GetPid()
 	s.procdPids = []string{}
 	s.crashedProcdPids = make(map[string]bool)
+	return s
+}
+
+func MakeSystem(bin string, fsl *fslib.FsLib, namedAddr []string) *System {
+	s := makeSystemBase(namedAddr, bin)
+	s.FsLib = fsl
+	s.ProcClnt = procclnt.MakeProcClntInit(fsl, namedAddr)
+	s.pid = proc.GetPid()
 	return s
 }
 
 // Make system with just named
-func MakeSystemNamed(bin string) *System {
-	s := &System{}
-	s.bin = bin
-	s.namedAddr = fslib.Named()
-	cmd, err := BootNamed(s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+func MakeSystemNamed(uname, bin string) *System {
+	s := makeSystemBase(fslib.Named(), bin)
+	cmd, err := RunNamed(s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
 	if err != nil {
-		return nil
+		log.Fatalf("RunNamed err %v\n", err)
 	}
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
-	s.procdPids = []string{}
-	s.crashedProcdPids = make(map[string]bool)
+	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return s
 }
 
-func MakeSystemAll(uname, bin string) (*System, *fslib.FsLib, error) {
-	s := MakeSystemNamed(bin)
-	fsl := fslib.MakeFsLibAddr(uname, fslib.Named())
-	err := s.Start(fsl)
-	return s, fsl, err
+// Make a system w. Named and other kernel services
+func MakeSystemAll(uname, bin string) *System {
+	s := MakeSystemNamed(uname, bin)
+	err := s.Start(s.FsLib)
+	if err != nil {
+		log.Fatalf("Start err %v\n", err)
+	}
+	return s
 }
 
 // Start kernel services
@@ -155,7 +162,7 @@ func (s *System) KillOne(srv string) error {
 	return nil
 }
 
-func (s *System) Shutdown(fsl *fslib.FsLib) {
+func (s *System) Shutdown() {
 	if s.ProcClnt != nil {
 		cpids, err := s.GetChildren(s.pid)
 		if err != nil {
@@ -184,7 +191,7 @@ func (s *System) Shutdown(fsl *fslib.FsLib) {
 		d.Wait()
 	}
 	if s.named != nil {
-		err := fsl.ShutdownFs(np.NAMED)
+		err := s.ShutdownFs(np.NAMED)
 		if err != nil {
 			log.Printf("Named shutdown %v\n", err)
 		}
@@ -193,7 +200,7 @@ func (s *System) Shutdown(fsl *fslib.FsLib) {
 }
 
 // Boot a named
-func BootNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func RunNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {
@@ -212,7 +219,7 @@ func BootNamed(bin string, addr string, replicate bool, id int, peers []string, 
 }
 
 // Run a named as a proc
-func RunNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
 	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {

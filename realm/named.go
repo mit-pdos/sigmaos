@@ -20,7 +20,7 @@ const (
 func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd, error) {
 	cmds := []*exec.Cmd{}
 	for i, addr := range addrs {
-		cmd, err := kernel.BootNamed(bin, addr, len(addrs) > 1, i+1, addrs, realmId)
+		cmd, err := kernel.RunNamed(bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
 			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err

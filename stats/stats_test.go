@@ -7,27 +7,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/stats"
 )
 
 type Tstate struct {
-	*fslib.FsLib
 	t *testing.T
-	s *kernel.System
+	*kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemNamed("..")
-	ts.FsLib = fslib.MakeFsLibAddr("statstest", fslib.Named())
+	ts.System = kernel.MakeSystemNamed("statstest", "..")
 	return ts
-}
-
-func (ts Tstate) shutdown() {
-	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestStatsd(t *testing.T) {
@@ -54,5 +47,5 @@ func TestStatsd(t *testing.T) {
 		//assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
 	}
 
-	ts.shutdown()
+	ts.Shutdown()
 }

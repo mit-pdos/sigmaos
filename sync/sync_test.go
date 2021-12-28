@@ -28,22 +28,16 @@ const (
 )
 
 type Tstate struct {
-	*fslib.FsLib
 	t *testing.T
-	s *kernel.System
+	*kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.s = kernel.MakeSystemNamed("..")
-	ts.FsLib = fslib.MakeFsLibAddr("sync_test", fslib.Named())
+	ts.System = kernel.MakeSystemNamed("sync_test", "..")
 	ts.Mkdir(np.LOCKS, 0777)
 	return ts
-}
-
-func (ts Tstate) shutdown() {
-	ts.s.Shutdown(ts.FsLib)
 }
 
 func condWaiter(ts *Tstate, c *usync.Cond, done chan int, id int, signal bool) {
@@ -155,7 +149,7 @@ func TestLease1(t *testing.T) {
 		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestLease2(t *testing.T) {
@@ -177,7 +171,7 @@ func TestLease2(t *testing.T) {
 		assert.Nil(ts.t, err, "ReleaseWLease")
 	}
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestLease3(t *testing.T) {
@@ -214,7 +208,7 @@ func TestLease3(t *testing.T) {
 	done.Wait()
 	assert.Equal(ts.t, N, cnt, "Count doesn't match up")
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 // Test if an exit of another session doesn't remove ephemeral files
@@ -243,7 +237,7 @@ func TestLease4(t *testing.T) {
 
 	err = lease1.ReleaseWLease()
 	assert.Nil(ts.t, err, "ReleaseWLease")
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestOneWaiterBroadcast(t *testing.T) {
@@ -256,7 +250,7 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestOneWaiterSignal(t *testing.T) {
@@ -269,7 +263,7 @@ func TestOneWaiterSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestNWaitersOneCondBroadcast(t *testing.T) {
@@ -282,7 +276,7 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestNWaitersOneCondSignal(t *testing.T) {
@@ -295,7 +289,7 @@ func TestNWaitersOneCondSignal(t *testing.T) {
 	n_conds := 1
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestNWaitersNCondsBroadcast(t *testing.T) {
@@ -308,7 +302,7 @@ func TestNWaitersNCondsBroadcast(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, BROADCAST_REL)
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestNWaitersNCondsSignal(t *testing.T) {
@@ -321,7 +315,7 @@ func TestNWaitersNCondsSignal(t *testing.T) {
 	n_conds := 20
 	runCondWaiters(ts, n_waiters, n_conds, SIGNAL_REL)
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestFilePriorityBag(t *testing.T) {
@@ -353,7 +347,7 @@ func TestFilePriorityBag(t *testing.T) {
 
 	assert.Equal(ts.t, int(ctr), n_files, "File count is off")
 
-	ts.shutdown()
+	ts.Shutdown()
 }
 
 func TestSemaphore(t *testing.T) {
@@ -385,5 +379,5 @@ func TestSemaphore(t *testing.T) {
 			<-ch
 		}
 	}
-	ts.shutdown()
+	ts.Shutdown()
 }

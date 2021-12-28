@@ -9,19 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procclnt"
 	"ulambda/twopc"
 )
 
 type Tstate struct {
-	t   *testing.T
-	fsl *fslib.FsLib
-	*procclnt.ProcClnt
-	s         *kernel.System
+	*kernel.System
+	t         *testing.T
 	ch        chan bool
 	chPresent chan bool
 	mfss      []string
@@ -29,28 +25,26 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
-	ts.s, ts.fsl, err = kernel.MakeSystemAll("fsux_test", "../../../")
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
+	ts.System = kernel.MakeSystemAll("fsux_test", "../../../")
 
-	err = ts.fsl.Mkdir(twopc.DIR2PC, 07)
+	err := ts.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.fsl.Mkdir(twopc.TWOPCPREPARED, 0777)
+	err = ts.Mkdir(twopc.TWOPCPREPARED, 0777)
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCPREPARED, err)
 	}
-	err = ts.fsl.Mkdir(twopc.TWOPCCOMMITTED, 0777)
+	err = ts.Mkdir(twopc.TWOPCCOMMITTED, 0777)
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
-	err = ts.fsl.Mkdir(np.MEMFS, 07)
+	err = ts.Mkdir(np.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
@@ -67,11 +61,11 @@ func (ts *Tstate) waitParticipants(fws []string) {
 
 func (ts *Tstate) shutdown() {
 	ts.stopMemFSs()
-	ts.s.Shutdown(ts.fsl)
+	ts.Shutdown()
 }
 
 func (ts *Tstate) cleanup() {
-	err := ts.fsl.Remove(np.MEMFS + "/txni")
+	err := ts.Remove(np.MEMFS + "/txni")
 	assert.Nil(ts.t, err, "Remove txni")
 }
 
@@ -138,7 +132,7 @@ func (ts *Tstate) setUpMemFSs(N int) {
 func (ts *Tstate) setUpFiles(nPart int) {
 	for i := 0; i < nPart; i++ {
 		iStr := strconv.Itoa(i)
-		err := ts.fsl.MakeFile(fn(ts.mfss[0], iStr), 0777, np.OWRITE, []byte(iStr))
+		err := ts.MakeFile(fn(ts.mfss[0], iStr), 0777, np.OWRITE, []byte(iStr))
 		assert.Nil(ts.t, err, "MakeFile")
 	}
 }
@@ -151,7 +145,7 @@ func (ts *Tstate) setUpParticipants(opcode string, val string, delays []string, 
 		ti.Vals = append(ti.Vals, val)
 	}
 
-	err := ts.fsl.MakeFileJson(np.MEMFS+"/txni", 0777, ti)
+	err := ts.MakeFileJson(np.MEMFS+"/txni", 0777, ti)
 	assert.Nil(ts.t, err, "MakeFile")
 
 	fws := ts.startParticipants(N, opcode, delays)
@@ -172,7 +166,7 @@ func (ts *Tstate) checkCoord(fws []string, opcode string) {
 func (ts *Tstate) testAbort(N int) {
 	for i := 0; i < N; i++ {
 		iStr := strconv.Itoa(i)
-		b, err := ts.fsl.ReadFile(fn(ts.mfss[0], iStr))
+		b, err := ts.ReadFile(fn(ts.mfss[0], iStr))
 		assert.Nil(ts.t, err, "ReadFile")
 		assert.Equal(ts.t, iStr, string(b), "Equal")
 	}
@@ -183,7 +177,7 @@ func (ts *Tstate) testCommit(N int) {
 	var cur string
 	for i := 0; i < N; i++ {
 		iStr := strconv.Itoa(i)
-		b, err := ts.fsl.ReadFile(fn(ts.mfss[0], iStr))
+		b, err := ts.ReadFile(fn(ts.mfss[0], iStr))
 		assert.Nil(ts.t, err, "ReadFile")
 		cur = string(b)
 		if i > 0 {

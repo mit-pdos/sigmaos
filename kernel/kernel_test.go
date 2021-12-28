@@ -20,22 +20,15 @@ import (
 )
 
 type Tstate struct {
-	*fslib.FsLib
 	t *testing.T
-	s *kernel.System
+	*kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.FsLib, err = kernel.MakeSystemAll("kernel_test", "..")
-	assert.Nil(t, err, "Start")
+	ts.System = kernel.MakeSystemAll("kernel_test", "..")
 	return ts
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.s.Shutdown(ts.FsLib)
 }
 
 func TestSymlink1(t *testing.T) {
@@ -159,7 +152,7 @@ func TestEphemeral(t *testing.T) {
 	name1 := ts.procdName(t, map[string]bool{})
 
 	var err error
-	err = ts.s.BootProcd()
+	err = ts.BootProcd()
 	assert.Nil(t, err, "bin/kernel/procd")
 
 	name := ts.procdName(t, map[string]bool{name1: true})
@@ -171,7 +164,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 5, len(sts)) // statsd and ctl and running and runqs
 
-	ts.s.KillOne(np.PROCD)
+	ts.KillOne(np.PROCD)
 
 	n := 0
 	for n < N {

@@ -12,7 +12,6 @@ import (
 	"ulambda/coordmgr"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/procclnt"
 )
 
 const (
@@ -39,23 +38,18 @@ func TestBalance(t *testing.T) {
 }
 
 type Tstate struct {
-	t   *testing.T
-	fsl *fslib.FsLib
-	s   *kernel.System
-	*procclnt.ProcClnt
+	*kernel.System
+	t     *testing.T
 	clrks []*KvClerk
 	mfss  []string
 	cm    *coordmgr.CoordMgr
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
-	var err error
 	ts := &Tstate{}
 	ts.t = t
-	ts.s, ts.fsl, err = kernel.MakeSystemAll("kv_test", "..")
-	assert.Nil(t, err, "Start")
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.fsl, fslib.Named())
-	ts.cm = coordmgr.StartCoords(ts.fsl, ts.ProcClnt, "bin/user/balancer", []string{auto, crash})
+	ts.System = kernel.MakeSystemAll("kv_test", "..")
+	ts.cm = coordmgr.StartCoords(ts.System.FsLib, ts.System.ProcClnt, "bin/user/balancer", []string{auto, crash})
 
 	ts.setup(nclerk)
 
@@ -90,7 +84,7 @@ func (ts *Tstate) setup(nclerk int) {
 func (ts *Tstate) done() {
 	ts.cm.StopCoords()
 	ts.stopMemFSs()
-	ts.s.Shutdown(ts.fsl)
+	ts.Shutdown()
 }
 
 func (ts *Tstate) stopFS(fs string) {
@@ -221,7 +215,7 @@ func concurN(t *testing.T, nclerk int, crash string) {
 	ts.cm.StopCoords()
 	ts.stopMemFSs()
 
-	ts.s.Shutdown(ts.fsl)
+	ts.Shutdown()
 }
 
 func TestConcurOK0(t *testing.T) {

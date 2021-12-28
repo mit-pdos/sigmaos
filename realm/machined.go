@@ -27,6 +27,8 @@ type MachinedConfig struct {
 }
 
 type Machined struct {
+	*fslib.FsLib
+	*procclnt.ProcClnt
 	id        string
 	bin       string
 	cfgPath   string
@@ -34,8 +36,6 @@ type Machined struct {
 	s         *kernel.System
 	realmLock *sync.Lock
 	*config.ConfigClnt
-	*fslib.FsLib
-	*procclnt.ProcClnt
 }
 
 func MakeMachined(bin string, id string) *Machined {
@@ -69,7 +69,7 @@ func (r *Machined) markFree() {
 	cfg.RealmId = kernel.NO_REALM
 
 	if err := r.WriteFile(FREE_MACHINEDS, []byte(r.id)); err != nil {
-		log.Fatalf("Error WriteFile in MakeMachined: %v %v", FREE_MACHINEDS, err)
+		log.Fatalf("Error WriteFile in markFree: %v %v", FREE_MACHINEDS, err)
 	}
 }
 
@@ -136,7 +136,7 @@ func (r *Machined) register() {
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystem(r.bin, r.FsLib, realmCfg.NamedAddr)
+	r.s = kernel.MakeSystem("realm", r.bin, realmCfg.NamedAddr)
 	if err := r.s.Boot(); err != nil {
 		log.Fatalf("Error Boot in Machined.boot: %v", err)
 	}

@@ -43,14 +43,6 @@ func makeSystemBase(namedAddr []string, bin string) *System {
 	return s
 }
 
-func MakeSystem(bin string, fsl *fslib.FsLib, namedAddr []string) *System {
-	s := makeSystemBase(namedAddr, bin)
-	s.FsLib = fsl
-	s.ProcClnt = procclnt.MakeProcClntInit(fsl, namedAddr)
-	s.pid = proc.GetPid()
-	return s
-}
-
 // Make system with just named
 func MakeSystemNamed(uname, bin string) *System {
 	s := makeSystemBase(fslib.Named(), bin)
@@ -67,18 +59,13 @@ func MakeSystemNamed(uname, bin string) *System {
 // Make a system w. Named and other kernel services
 func MakeSystemAll(uname, bin string) *System {
 	s := MakeSystemNamed(uname, bin)
-	err := s.Start(s.FsLib)
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
+	s.pid = proc.GetPid()
+	err := s.Boot()
 	if err != nil {
 		log.Fatalf("Start err %v\n", err)
 	}
 	return s
-}
-
-// Start kernel services
-func (s *System) Start(fsl *fslib.FsLib) error {
-	s.ProcClnt = procclnt.MakeProcClntInit(fsl, s.namedAddr)
-	s.pid = proc.GetPid()
-	return s.Boot()
 }
 
 // Boot a "kernel" without named
@@ -216,6 +203,14 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 	time.Sleep(SLEEP_MS * time.Millisecond)
 
 	return cmd, nil
+}
+
+func MakeSystem(uname, bin string, namedAddr []string) *System {
+	s := makeSystemBase(namedAddr, bin)
+	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
+	s.pid = proc.GetPid()
+	return s
 }
 
 // Run a named as a proc

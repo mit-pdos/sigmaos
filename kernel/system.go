@@ -207,7 +207,7 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 
 func MakeSystem(uname, bin string, namedAddr []string) *System {
 	s := makeSystemBase(namedAddr, bin)
-	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
+	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
 	s.pid = proc.GetPid()
 	return s

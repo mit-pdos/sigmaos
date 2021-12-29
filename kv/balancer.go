@@ -244,7 +244,11 @@ func (bl *Balancer) runProc(args []string) (string, error) {
 func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool) error {
 	for true {
 		status, err := bl.runProc(args)
-		if err != nil && strings.HasSuffix(err.Error(), "EOF") {
+		if err != nil {
+			log.Printf("%v: runProc %v err %v status %v\n", db.GetName(), args, err, status)
+		}
+		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
+			strings.HasPrefix(err.Error(), "EOF")) {
 			log.Fatalf("%v: runProc err %v\n", db.GetName(), err)
 		}
 		if retryf(err, status) {

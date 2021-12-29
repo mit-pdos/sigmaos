@@ -143,7 +143,9 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 		}
 		// XXX error checking in one place and more uniform
 		if err.Error() == "EOF" ||
-			strings.HasPrefix(err.Error(), "file not found") {
+			strings.HasPrefix(err.Error(), "file not found") ||
+			strings.HasPrefix(err.Error(), "unknown mount") ||
+			strings.HasPrefix(err.Error(), "Unable to connect") {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			return err

@@ -226,14 +226,17 @@ func (bl *Balancer) initShards(nextShards []string) {
 	}
 }
 
-func (bl *Balancer) spawnProc(args []string) string {
+func (bl *Balancer) spawnProc(args []string) (string, error) {
 	t := proc.MakeProc(args[0], args[1:])
-	bl.Spawn(t)
-	return t.Pid
+	err := bl.Spawn(t)
+	return t.Pid, err
 }
 
 func (bl *Balancer) runProc(args []string) (string, error) {
-	pid := bl.spawnProc(args)
+	pid, err := bl.spawnProc(args)
+	if err != nil {
+		return "", err
+	}
 	status, err := bl.WaitExit(pid)
 	return status, err
 }
@@ -241,6 +244,9 @@ func (bl *Balancer) runProc(args []string) (string, error) {
 func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool) error {
 	for true {
 		status, err := bl.runProc(args)
+		if err != nil && strings.HasSuffix(err.Error(), "EOF") {
+			log.Fatalf("%v: runProc err %v\n", db.GetName(), err)
+		}
 		if retryf(err, status) {
 			// log.Printf("%v: proc %v err %v status %v\n", db.GetName(), args, err, status)
 		} else {

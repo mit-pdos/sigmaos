@@ -68,30 +68,30 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	// log.Printf("%v: %p spawn %v\n", db.GetName(), clnt, piddir)
 
 	if clnt.hasExited() != "" {
-		return fmt.Errorf("Spawn: called after Exited")
+		return fmt.Errorf("Spawn error called after Exited")
 	}
 
 	if err := clnt.Mkdir(piddir, 0777); err != nil {
-		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
+		log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
 		return err
 	}
 	if clnt.piddir != p.PidDir {
 		log.Printf("%v: spawn child %v make piddir %v\n", db.GetName(), clnt.piddir, p.PidDir)
 		if err := clnt.Mkdir(p.PidDir, 0777); err != nil {
 			log.Printf("%v: Spawn new piddir %v err %v\n", db.GetName(), p.PidDir, err)
-			return clnt.cleanupError(piddir, err)
+			return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 		}
 		piddir = p.PidDir + "/" + p.Pid
 		if err := clnt.Mkdir(piddir, 0777); err != nil {
 			log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), piddir, err)
-			return clnt.cleanupError(piddir, err)
+			return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 		}
 	}
 
 	err := clnt.MakePipe(piddir+"/"+RET_STATUS, 0777)
 	if err != nil {
 		log.Printf("%v: MakePipe %v err %v\n", db.GetName(), RET_STATUS, err)
-		return clnt.cleanupError(piddir, err)
+		return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 	}
 
 	semStart := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+START_WAIT)
@@ -103,7 +103,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	d := piddir + "/" + CHILD
 	if err := clnt.Mkdir(d, 0777); err != nil {
 		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), d, err)
-		return clnt.cleanupError(piddir, err)
+		return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 	}
 
 	// Add pid to my children
@@ -117,19 +117,20 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	if !p.IsKernelProc() && !p.IsRealmProc() {
 		b, err := json.Marshal(p)
 		if err != nil {
-			log.Printf("Error marshal: %v", err)
-			return clnt.cleanupError(piddir, err)
+			log.Printf("%v: marshal err %v", db.GetName(), err)
+			return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 		}
-
-		err = clnt.WriteFile(path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE), b)
+		fn := path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE)
+		err = clnt.WriteFile(fn, b)
 		if err != nil {
-			log.Printf("Error WriteFile in ProcClnt.Spawn: %v", err)
-			return clnt.cleanupError(piddir, err)
+			log.Printf("%v: WriteFile %v err %v", db.GetName(), fn, err)
+			return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
-		if err := clnt.MakeFile(path.Join(piddir, KERNEL_PROC), 0777, np.OWRITE, []byte{}); err != nil {
-			log.Printf("Error MakeFile in ProcCLnt.Spawn kernel proc: %v", err)
-			return clnt.cleanupError(piddir, err)
+		fn := path.Join(piddir, KERNEL_PROC)
+		if err := clnt.MakeFile(fn, 0777, np.OWRITE, []byte{}); err != nil {
+			log.Printf("%v: MakeFile %v err %v", db.GetName(), fn, err)
+			return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 		}
 	}
 
@@ -143,7 +144,11 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 func (clnt *ProcClnt) WaitStart(pid string) error {
 	piddir := proc.PidDir(pid)
 	semStart := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+START_WAIT)
-	return semStart.Down()
+	err := semStart.Down()
+	if err != nil {
+		return fmt.Errorf("WaitStart error %v", err)
+	}
+	return nil
 }
 
 // Parent calls WaitExited() to wait until child proc has exited. If
@@ -156,31 +161,33 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
 
 	if _, err := clnt.Stat(piddir); err != nil {
-		return "", err
+		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
 	// Remove pid from my children
 	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
 	if err := clnt.Remove(f); err != nil {
 		log.Printf("Error Remove %v in WaitExit: %v", f, err)
-		return "", err
+		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
 	fn := piddir + "/" + RET_STATUS
 	fd, err := clnt.Open(piddir+"/"+RET_STATUS, np.OREAD)
 	if err != nil {
-		log.Fatalf("Error Open %v err %v", fn, err)
+		log.Printf("Error Open %v err %v", fn, err)
+		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
 	b, err := clnt.Read(fd, MAXSTATUS)
 	if err != nil {
 		log.Printf("Read %v err %v", fn, err)
-		return "", err
+		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
 	err = clnt.Close(fd)
 	if err != nil {
 		log.Printf("Close %v err %v", fn, err)
+		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
 	clnt.removeProc(piddir)
@@ -193,7 +200,11 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 func (clnt *ProcClnt) WaitEvict(pid string) error {
 	piddir := proc.PidDir(pid)
 	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
-	return semEvict.Down()
+	err := semEvict.Down()
+	if err != nil {
+		return fmt.Errorf("WaitEvict error %v", err)
+	}
+	return nil
 }
 
 // ========== STARTED ==========
@@ -204,19 +215,20 @@ func (clnt *ProcClnt) Started(pid string) error {
 	semStart := usync.MakeSemaphore(clnt.FsLib, dir+"/"+START_WAIT)
 	err := semStart.Up()
 	if err != nil {
-		return err
+		return fmt.Errorf("Started error %v", err)
 	}
 	// Only isolate kernel procs
 	if !clnt.isKernelProc(pid) {
 		// Isolate the process namespace
 		newRoot := os.Getenv("NEWROOT")
 		if err := namespace.Isolate(newRoot); err != nil {
-			log.Fatalf("Error Isolate in clnt.Started: %v", err)
+			log.Printf("Error Isolate in clnt.Started: %v", err)
+			return fmt.Errorf("Started error %v", err)
 		}
 		// Load a seccomp filter.
 		seccomp.LoadFilter()
 	}
-	return err
+	return nil
 }
 
 // ========== EXITED ==========
@@ -236,29 +248,37 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
 		log.Printf("%v: Exited called after exited %v\n", db.GetName(), piddir)
-		return fmt.Errorf("Exited: called more than once for pid %v", pid)
+		return fmt.Errorf("Exited error called more than once for pid %v", pid)
 	}
 
 	// log.Printf("%v: exited %v\n", db.GetName(), piddir)
 
 	// Abandon any children I may have left.
-	clnt.abandonChildren(pid)
+	err := clnt.abandonChildren(pid)
+	if err != nil {
+		return fmt.Errorf("Exited error %v", err)
+	}
 
 	fn := piddir + "/" + RET_STATUS
 	fd, err := clnt.Open(fn, np.OWRITE)
 	if err != nil {
 		// parent has abandoned me; clean myself up
 		// log.Printf("%v: Error Open %v err %v", db.GetName(), fn, err)
-		clnt.removeProc(piddir)
+		r := clnt.removeProc(piddir)
+		if r != nil {
+			return fmt.Errorf("Exited error %v", r)
+		}
 	} else {
 		_, err = clnt.Write(fd, []byte(status))
 		if err != nil {
 			log.Printf("Write %v err %v", fn, err)
+			return fmt.Errorf("Exited error %v", err)
 		}
 
 		err = clnt.Close(fd)
 		if err != nil {
 			log.Printf("Close %v err %v", fn, err)
+			return fmt.Errorf("Exited error %v", err)
 		}
 	}
 
@@ -273,7 +293,11 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 func (clnt *ProcClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
 	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
-	return semEvict.Up()
+	err := semEvict.Up()
+	if err != nil {
+		return fmt.Errorf("Evict error %v", err)
+	}
+	return nil
 }
 
 // ========== GETCHILDREN ==========
@@ -283,7 +307,7 @@ func (clnt *ProcClnt) GetChildren(pid string) ([]string, error) {
 	piddir := proc.PidDir(pid)
 	sts, err := clnt.ReadDir(path.Join(piddir, CHILD))
 	if err != nil {
-		log.Fatalf("ProcClnt.GetChildren ReadDir %v error: %v", pid, err)
+		log.Printf("%v: GetChildren %v error: %v", db.GetName(), pid, err)
 		return nil, err
 	}
 	cpids := []string{}
@@ -296,32 +320,42 @@ func (clnt *ProcClnt) GetChildren(pid string) ([]string, error) {
 // ========== Helpers ==========
 
 // Remove status from children to indicate we don't care
-func (clnt *ProcClnt) abandonChildren(pid string) {
+func (clnt *ProcClnt) abandonChildren(pid string) error {
 	cpids, err := clnt.GetChildren(pid)
 	if err != nil {
-		log.Fatalf("ProcClnt.abandonChildren  %v error: %v", pid, err)
+		log.Printf("%v: abandonChildren  %v error: %v", db.GetName(), pid, err)
+		return err
 	}
+
 	for _, cpid := range cpids {
-		clnt.abandonChild(PIDS + "/" + cpid)
+		r := clnt.abandonChild(PIDS + "/" + cpid)
+		if r != nil && err != nil {
+			err = r
+		}
 	}
+	return err
 }
 
 // Abandon child
-func (clnt *ProcClnt) abandonChild(piddir string) {
+func (clnt *ProcClnt) abandonChild(piddir string) error {
 	f := piddir + "/" + RET_STATUS
 	err := clnt.Remove(f)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", db.GetName(), f, err)
+		return err
 	}
+	return nil
 }
 
 // Clean up proc
-func (clnt *ProcClnt) removeProc(piddir string) {
+func (clnt *ProcClnt) removeProc(piddir string) error {
 	// log.Printf("%v: removeProc %v\n", db.GetName(), piddir)
 	if err := clnt.RmDir(piddir); err != nil {
 		s, _ := clnt.SprintfDir(piddir)
-		log.Fatalf("%v: RmDir %v err %v %v", db.GetName(), piddir, err, s)
+		log.Printf("%v: RmDir %v err %v %v", db.GetName(), piddir, err, s)
+		return err
 	}
+	return nil
 }
 
 func (clnt *ProcClnt) hasExited() string {

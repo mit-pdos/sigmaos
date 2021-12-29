@@ -183,8 +183,12 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	err = m.doMap()
 	if err == nil {
-		m.Exited(proc.GetPid(), "OK")
+		err = m.Exited(proc.GetPid(), "OK")
 	} else {
-		m.Exited(proc.GetPid(), err.Error())
+		err = m.Exited(proc.GetPid(), err.Error())
+	}
+	if err != nil {
+		log.Printf("%v: exited %v\n", db.GetName(), err)
+		os.Exit(1)
 	}
 }

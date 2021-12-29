@@ -186,7 +186,7 @@ func (s *System) Shutdown() {
 	}
 }
 
-// Boot a named
+// Run a named (but not as a proc)
 func RunNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
 	args := []string{addr, realmId}
 	// If we're running replicated...

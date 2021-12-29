@@ -80,9 +80,9 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
-	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
-
 	w.Started(proc.GetPid())
+
+	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
 
 	if w.crashCoord == "YES" {
 		crash.Crasher(w.FsLib, CRASHCOORD)
@@ -94,7 +94,10 @@ func MakeCoord(args []string) (*Coord, error) {
 func (w *Coord) mapper(task string) string {
 	input := INPUTDIR + task
 	a := proc.MakeProc(w.mapperbin, []string{w.crash, strconv.Itoa(w.nreducetask), input})
-	w.Spawn(a)
+	err := w.Spawn(a)
+	if err != nil {
+		return err.Error()
+	}
 	ok, err := w.WaitExit(a.Pid)
 	if err != nil {
 		return err.Error()
@@ -106,7 +109,10 @@ func (w *Coord) reducer(task string) string {
 	in := RDIR + TIP + "/" + task
 	out := ROUT + task
 	a := proc.MakeProc(w.reducerbin, []string{w.crash, in, out})
-	w.Spawn(a)
+	err := w.Spawn(a)
+	if err != nil {
+		return err.Error()
+	}
 	ok, err := w.WaitExit(a.Pid)
 	if err != nil {
 		return err.Error()
@@ -114,32 +120,39 @@ func (w *Coord) reducer(task string) string {
 	return ok
 }
 
-func (w *Coord) claimEntry(dir string, st *np.Stat) string {
+func (w *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := w.Rename(from, dir+TIP+"/"+st.Name); err != nil {
+		if err.Error() == "EOF" { // all errors, except not found?
+			return "", err
+		}
 		// another coord claimed the task
-		return ""
+		return "", nil
 	}
-	return st.Name
+	return st.Name, nil
 }
 
-func (w *Coord) getTask(dir string) string {
+func (w *Coord) getTask(dir string) (string, error) {
 	t := ""
 	stopped, err := w.ProcessDir(dir, func(st *np.Stat) (bool, error) {
-		t = w.claimEntry(dir, st)
-		if t == "" {
+		t1, err := w.claimEntry(dir, st)
+		if err != nil {
+			return false, err
+		}
+		if t1 == "" {
 			return false, nil
 		}
+		t = t1
 		return true, nil
 
 	})
 	if err != nil {
-		log.Fatalf("Readdir getTask %v err %v\n", dir, err)
+		return "", err
 	}
 	if stopped {
-		return t
+		return t, nil
 	}
-	return ""
+	return "", nil
 }
 
 type Ttask struct {
@@ -150,7 +163,10 @@ type Ttask struct {
 func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int {
 	n := 0
 	for {
-		t := w.getTask(dir)
+		t, err := w.getTask(dir)
+		if err != nil {
+			log.Fatalf("getTask %v err %v\n", dir, err)
+		}
 		if t == "" {
 			break
 		}
@@ -249,5 +265,8 @@ func (w *Coord) Work() {
 	log.Printf("%v: Reduce phase\n", db.GetName())
 	w.phase(RDIR, w.reducer)
 
-	w.Exited(proc.GetPid(), "OK")
+	err := w.Exited(proc.GetPid(), "OK")
+	if err != nil {
+		log.Printf("%v: exited %v\n", db.GetName(), err)
+	}
 }

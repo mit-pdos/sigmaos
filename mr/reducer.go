@@ -163,8 +163,13 @@ func RunReducer(reducef ReduceT, args []string) {
 	}
 	err = r.doReduce()
 	if err == nil {
-		r.Exited(proc.GetPid(), "OK")
+		err = r.Exited(proc.GetPid(), "OK")
 	} else {
-		r.Exited(proc.GetPid(), err.Error())
+		err = r.Exited(proc.GetPid(), err.Error())
 	}
+	if err != nil {
+		log.Printf("%v: exited %v\n", db.GetName(), err)
+		os.Exit(1)
+	}
+
 }

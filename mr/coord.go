@@ -84,8 +84,6 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
 
-	log.Printf("%v: start\n", db.GetName())
-
 	if w.crashCoord == "YES" {
 		crash.Crasher(w.FsLib, CRASHCOORD)
 	}
@@ -269,8 +267,5 @@ func (w *Coord) Work() {
 	log.Printf("%v: Reduce phase\n", db.GetName())
 	w.phase(RDIR, w.reducer)
 
-	err := w.Exited(proc.GetPid(), "OK")
-	if err != nil {
-		log.Printf("%v: exited %v\n", db.GetName(), err)
-	}
+	w.Exited(proc.GetPid(), "OK")
 }

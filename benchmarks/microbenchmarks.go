@@ -492,9 +492,7 @@ func (m *Microbenchmarks) ProcBaseSpawnClientBenchmark(nTrials int, pidOffset in
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
-		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
-			log.Fatalf("Error exited: %v", err)
-		}
+		m.Exited(ps[i].Pid, "OK")
 		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
 			log.Fatalf("Error WaitExit: %v %v", status, err)
 		}
@@ -528,9 +526,7 @@ func (m *Microbenchmarks) ProcBaseExitedBenchmark(nTrials int, pidOffset int) *R
 		}
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
-		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
-			log.Fatalf("Error exited: %v", err)
-		}
+		m.Exited(ps[i].Pid, "OK")
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
 		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
@@ -564,9 +560,7 @@ func (m *Microbenchmarks) ProcBaseWaitExitBenchmark(nTrials int, pidOffset int) 
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
 		}
-		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
-			log.Fatalf("Error exited: %v", err)
-		}
+		m.Exited(ps[i].Pid, "OK")
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
@@ -611,9 +605,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 		if err := m.Spawn(ps[i]); err != nil {
 			log.Fatalf("Error spawning: %v", err)
 		}
-		if err := m.Exited(ps[i].Pid, "OK"); err != nil {
-			log.Fatalf("Error exited: %v", err)
-		}
+		m.Exited(ps[i].Pid, "OK")
 		if status, err := m.WaitExit(ps[i].Pid); status != "OK" || err != nil {
 			log.Fatalf("Error WaitExit: %v %v", status, err)
 		}

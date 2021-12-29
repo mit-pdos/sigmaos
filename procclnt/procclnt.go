@@ -37,9 +37,9 @@ const (
 type ProcClnt struct {
 	mu sync.Mutex
 	*fslib.FsLib
-	pid    string
-	piddir string
-	exited string
+	pid      string
+	piddir   string
+	isExited string
 }
 
 func makeProcClnt(fsl *fslib.FsLib, piddir, pid string) *ProcClnt {
@@ -241,7 +241,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 //
 // Exited() should be called *once* per proc, but procd's procclnt may
 // call Exited() for different procs.
-func (clnt *ProcClnt) Exited(pid string, status string) error {
+func (clnt *ProcClnt) exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
 	// will catch some unintended misuses: a proc calling exited
@@ -285,6 +285,15 @@ func (clnt *ProcClnt) Exited(pid string, status string) error {
 	// log.Printf("%v: exited done %v\n", db.GetName(), piddir)
 
 	return nil
+}
+
+// If exited() fails, invoke os.Exit(1) to indicate to procd that proc
+// failed
+func (clnt *ProcClnt) Exited(pid string, status string) {
+	err := clnt.exited(pid, status)
+	if err != nil {
+		os.Exit(1)
+	}
 }
 
 // ========== EVICT ==========
@@ -361,14 +370,14 @@ func (clnt *ProcClnt) removeProc(piddir string) error {
 func (clnt *ProcClnt) hasExited() string {
 	clnt.mu.Lock()
 	defer clnt.mu.Unlock()
-	return clnt.exited
+	return clnt.isExited
 }
 
 func (clnt *ProcClnt) setExited(pid string) string {
 	clnt.mu.Lock()
 	defer clnt.mu.Unlock()
-	r := clnt.exited
-	clnt.exited = pid
+	r := clnt.isExited
+	clnt.isExited = pid
 	return r
 }
 

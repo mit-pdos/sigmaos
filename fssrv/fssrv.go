@@ -82,10 +82,7 @@ func (fssrv *FsServer) Serve() {
 
 func (fssrv *FsServer) Done() {
 	if fssrv.pclnt != nil {
-		if err := fssrv.pclnt.Exited(proc.GetPid(), "EVICTED"); err != nil {
-			debug.PrintStack()
-			log.Printf("Error Exited: %v", err)
-		}
+		fssrv.pclnt.Exited(proc.GetPid(), "EVICTED")
 	} else {
 		if !fssrv.done {
 			fssrv.done = true

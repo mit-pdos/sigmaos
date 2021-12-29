@@ -75,14 +75,13 @@ func TestConnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	log.Printf("disconnected\n")
 
-	// EOF
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, "EOF", err.Error())
 	err = ts.Close(fd)
 	assert.Equal(t, "EOF", err.Error())
 
 	fd, err = ts.Open(fn, np.OREAD)
-	assert.Equal(t, "umount: unknown mount []", err.Error())
+	assert.Equal(t, "EOF", err.Error())
 
 	ts.Shutdown()
 }

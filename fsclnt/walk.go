@@ -21,11 +21,14 @@ func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, w Watch) (np.Tfid,
 	var fid np.Tfid
 	for {
 		f, err := fsc.walkMany(p, resolve, w)
-		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", p, f, err)
+		db.DLPrintf("FSCLNT", "walkManyUmount %v -> %v %v\n", p, f, err)
 		if err == io.EOF {
 			p := fsc.path(f)
 			if p == nil { // schedd triggers this; don't know why
 				return np.NoFid, err
+			}
+			if len(p.cname) == 0 { // nothing to umount
+				return f, err
 			}
 			fid2, e := fsc.mount.umount(p.cname)
 			if e != nil {

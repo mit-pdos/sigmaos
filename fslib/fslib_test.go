@@ -61,7 +61,7 @@ func TestRemoveSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func testConnect(t *testing.T) {
+func TestConnect(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/f"
@@ -81,18 +81,8 @@ func testConnect(t *testing.T) {
 	err = ts.Close(fd)
 	assert.Equal(t, "EOF", err.Error())
 
-	log.Printf("connect\n")
-
 	fd, err = ts.Open(fn, np.OREAD)
-	assert.Equal(t, nil, err)
-
-	log.Printf("connect again\n")
-
-	fd, err = ts.Open(fn, np.OREAD)
-	assert.Equal(t, nil, err)
-
-	//err = ts.Close(fd)
-	//assert.Equal(t, nil, err)
+	assert.Equal(t, "umount: unknown mount []", err.Error())
 
 	ts.Shutdown()
 }

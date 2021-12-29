@@ -662,7 +662,7 @@ func (fsc *FsClient) ShutdownFs(name string) error {
 	path := np.Split(name)
 	fid, err := fsc.walkMany(path, true, nil)
 	if err != nil {
-		return fmt.Errorf("ShutdownFs walkMany %v error %v\n", path, err)
+		return fmt.Errorf("ShutdownFs walkMany %v error %v", path, err)
 	}
 	err = fsc.clnt(fid).RemoveFile(fid, []string{".exit"})
 	if err != nil {

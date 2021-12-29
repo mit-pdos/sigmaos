@@ -28,9 +28,9 @@ const (
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
-	CRASHMAPPER  = 8000
-	CRASHREDUCER = 8000
-	CRASHCOORD   = 10000
+	CRASHMAPPER  = 10000
+	CRASHREDUCER = 10000
+	CRASHCOORD   = 20000
 )
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
@@ -83,6 +83,8 @@ func MakeCoord(args []string) (*Coord, error) {
 	w.Started(proc.GetPid())
 
 	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
+
+	log.Printf("%v: start\n", db.GetName())
 
 	if w.crashCoord == "YES" {
 		crash.Crasher(w.FsLib, CRASHCOORD)
@@ -257,6 +259,8 @@ func (w *Coord) Work() {
 	// is partitioned.
 	w.lease.WaitWLease([]byte{})
 	defer w.lease.ReleaseWLease()
+
+	log.Printf("%v: primary\n", db.GetName())
 
 	w.recover(MDIR)
 	w.recover(RDIR)

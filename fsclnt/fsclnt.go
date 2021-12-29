@@ -461,10 +461,10 @@ func (fsc *FsClient) readlink(pc *protclnt.ProtClnt, fid np.Tfid) (string, error
 	return string(reply.Data), nil
 }
 
-func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, f Watch) (int, error) {
+func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, w Watch) (int, error) {
 	db.DLPrintf("FSCLNT", "Open %v %v\n", path, mode)
 	p := np.Split(path)
-	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), f)
+	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), w)
 	if err != nil {
 		return -1, err
 	}
@@ -481,7 +481,7 @@ func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
 	return fsc.OpenWatch(path, mode, nil)
 }
 
-func (fsc *FsClient) SetDirWatch(path string, f Watch) error {
+func (fsc *FsClient) SetDirWatch(path string, w Watch) error {
 	db.DLPrintf("FSCLNT", "SetDirWatch %v\n", path)
 	p := np.Split(path)
 	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), nil)
@@ -492,25 +492,25 @@ func (fsc *FsClient) SetDirWatch(path string, f Watch) error {
 		version := fsc.path(fid).lastqid().Version
 		err := fsc.clnt(fid).Watch(fid, nil, version)
 		db.DLPrintf("FSCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
-		f(path, err)
+		w(path, err)
 	}()
 	return nil
 }
 
-func (fsc *FsClient) SetRemoveWatch(path string, f Watch) error {
+func (fsc *FsClient) SetRemoveWatch(path string, w Watch) error {
 	p := np.Split(path)
 	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}
-	if f == nil {
+	if w == nil {
 		return os.ErrInvalid
 	}
 	go func() {
 		version := fsc.path(fid).lastqid().Version
 		err := fsc.clnt(fid).Watch(fid, nil, version)
 		db.DLPrintf("FSCLNT", "SetRemoveWatch: Watch returns %v %v\n", path, err)
-		f(path, err)
+		w(path, err)
 	}()
 	return nil
 }

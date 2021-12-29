@@ -17,10 +17,10 @@ const (
 	MAXSYMLINK = 4
 )
 
-func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, f Watch) (np.Tfid, error) {
+func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, w Watch) (np.Tfid, error) {
 	var fid np.Tfid
 	for {
-		f, err := fsc.walkMany(p, resolve, f)
+		f, err := fsc.walkMany(p, resolve, w)
 		db.DLPrintf("FSCLNT", "walkMany %v -> %v %v\n", p, f, err)
 		if err == io.EOF {
 			p := fsc.path(f)
@@ -43,9 +43,9 @@ func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, f Watch) (np.Tfid,
 	return fid, nil
 }
 
-func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, error) {
+func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, error) {
 	for i := 0; i < MAXSYMLINK; i++ {
-		fid, todo, err := fsc.walkOne(path, f)
+		fid, todo, err := fsc.walkOne(path, w)
 		if err != nil {
 			return fid, err
 		}
@@ -68,7 +68,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, f Watch) (np.Tfid, er
 
 // Walk to parent directory, and check if name is there.  If it is, return entry.
 // Otherwise, set watch based on directory's version number
-func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watch) (*np.Rwalk, error) {
+func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watch) (*np.Rwalk, error) {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
 	fid3 := fsc.allocFid()
 	dir := r[0 : len(r)-1]
@@ -89,12 +89,12 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, f Watc
 		err := pc.Watch(fid3, []string{r[len(r)-1]}, version)
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
 		fsc.clunkFid(fid3)
-		f(np.Join(p), err)
+		w(np.Join(p), err)
 	}(fsc.clnt(fid3), fsc.path(fid3).lastqid().Version)
 	return nil, nil
 }
 
-func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
+func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, error) {
 	fid, rest := fsc.mount.resolve(path)
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "walkOne: mount -> unknown fid\n")
@@ -124,9 +124,9 @@ func (fsc *FsClient) walkOne(path []string, f Watch) (np.Tfid, int, error) {
 	} else {
 		reply, err = fsc.clnt(fid1).Walk(fid1, fid2, rest)
 		if err != nil {
-			if f != nil && strings.HasPrefix(err.Error(), "file not found") {
+			if w != nil && strings.HasPrefix(err.Error(), "file not found") {
 				var err1 error
-				reply, err1 = fsc.setWatch(fid1, fid2, path, rest, f)
+				reply, err1 = fsc.setWatch(fid1, fid2, path, rest, w)
 				if err1 != nil {
 					// couldn't walk to parent dir
 					return np.NoFid, 0, err1

@@ -34,7 +34,7 @@ func (c *Semaphore) Down() error {
 	signal := make(chan error)
 	err := c.SetRemoveWatch(c.path, func(p string, err error) {
 		if err != nil {
-			log.Printf("func %v err %v\n", c.path, err)
+			log.Printf("watch %v err %v\n", c.path, err)
 		}
 		signal <- err
 	})

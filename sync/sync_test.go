@@ -240,7 +240,7 @@ func TestLease4(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestOneWaiterBroadcast(t *testing.T) {
+func testOneWaiterBroadcast(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
@@ -253,7 +253,7 @@ func TestOneWaiterBroadcast(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestOneWaiterSignal(t *testing.T) {
+func testOneWaiterSignal(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
@@ -266,7 +266,7 @@ func TestOneWaiterSignal(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestNWaitersOneCondBroadcast(t *testing.T) {
+func testNWaitersOneCondBroadcast(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(LOCK_DIR, 0777)
@@ -279,7 +279,7 @@ func TestNWaitersOneCondBroadcast(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestNWaitersOneCondSignal(t *testing.T) {
+func testNWaitersOneCondSignal(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Mkdir(LOCK_DIR, 0777)

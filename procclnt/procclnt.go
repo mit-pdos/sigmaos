@@ -299,6 +299,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) {
 func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
 	err := clnt.exited(pid, status)
 	if err != nil {
+		// XXX maybe remove any state left of proc?
 		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
 	}
 }

@@ -125,7 +125,7 @@ func (pfs *ProcdFs) running(p *Proc) error {
 	return nil
 }
 
-// Publishes a proc as done running (NOT running yet)
+// Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *Proc) error {
 	err := pfs.run.Remove(fssrv.MkCtx(""), p.Pid)
 	if err != nil {

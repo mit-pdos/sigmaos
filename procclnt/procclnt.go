@@ -164,17 +164,10 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
-	// Remove pid from my children
-	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
-	if err := clnt.Remove(f); err != nil {
-		log.Printf("Error Remove %v in WaitExit: %v", f, err)
-		return "", fmt.Errorf("WaitExit error %v", err)
-	}
-
 	fn := piddir + "/" + RET_STATUS
 	fd, err := clnt.Open(piddir+"/"+RET_STATUS, np.OREAD)
 	if err != nil {
-		log.Printf("Error Open %v err %v", fn, err)
+		log.Printf("%v: Open %v err %v", db.GetName(), fn, err)
 		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
@@ -190,6 +183,15 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
+	// Remove pid from my children now its status has been
+	// collected We don't need to abandon it.
+	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
+	if err := clnt.Remove(f); err != nil {
+		log.Printf("Error Remove %v in WaitExit: %v", f, err)
+		return "", fmt.Errorf("WaitExit error %v", err)
+	}
+
+	// XXX what happens if we crash here; who will collect? procd?
 	clnt.removeProc(piddir)
 
 	return string(b), nil
@@ -233,14 +235,14 @@ func (clnt *ProcClnt) Started(pid string) error {
 
 // ========== EXITED ==========
 
-// Proc pid mark itself as exited. Typically Exited() is called by
-// proc pid, but if the proc crashes, procd calls Exited() on behalf
+// Proc pid mark itself as exited. Typically exited() is called by
+// proc pid, but if the proc crashes, procd calls exited() on behalf
 // of the failed proc. The exited proc abandons any chidren it may
 // have.  If itself is an abandoned child, then it cleans up itself;
 // otherwise the parent will do it.
 //
-// Exited() should be called *once* per proc, but procd's procclnt may
-// call Exited() for different procs.
+// exited() should be called *once* per proc, but procd's procclnt may
+// call exited() for different procs.
 func (clnt *ProcClnt) exited(pid string, status string) error {
 	piddir := proc.PidDir(pid)
 
@@ -263,7 +265,7 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 	fd, err := clnt.Open(fn, np.OWRITE)
 	if err != nil {
 		// parent has abandoned me; clean myself up
-		// log.Printf("%v: Error Open %v err %v", db.GetName(), fn, err)
+		log.Printf("%v: Error Open %v err %v", db.GetName(), fn, err)
 		r := clnt.removeProc(piddir)
 		if r != nil {
 			return fmt.Errorf("Exited error %v", r)
@@ -274,15 +276,12 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 			log.Printf("Write %v err %v", fn, err)
 			return fmt.Errorf("Exited error %v", err)
 		}
-
 		err = clnt.Close(fd)
 		if err != nil {
 			log.Printf("Close %v err %v", fn, err)
 			return fmt.Errorf("Exited error %v", err)
 		}
 	}
-
-	// log.Printf("%v: exited done %v\n", db.GetName(), piddir)
 
 	return nil
 }
@@ -292,7 +291,15 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 func (clnt *ProcClnt) Exited(pid string, status string) {
 	err := clnt.exited(pid, status)
 	if err != nil {
+		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
 		os.Exit(1)
+	}
+}
+
+func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
+	err := clnt.exited(pid, status)
+	if err != nil {
+		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
 	}
 }
 

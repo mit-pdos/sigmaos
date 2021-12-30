@@ -57,7 +57,7 @@ func (c *coord) run(i int, start chan bool, done chan procret) {
 	//log.Printf("coord %p forked %v\n", c, c.pid)
 	start <- true
 	status, err := c.WaitExit(c.pid)
-	log.Printf("coord %v exited %v err %v\n", c.pid, status, err)
+	//log.Printf("coord %v exited %v err %v\n", c.pid, status, err)
 	done <- procret{i, err, status}
 }
 

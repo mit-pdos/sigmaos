@@ -2,6 +2,7 @@ package coordmgr
 
 import (
 	"log"
+	"strconv"
 
 	"ulambda/fslib"
 	"ulambda/proc"
@@ -29,9 +30,10 @@ type CoordMgr struct {
 type coord struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	pid  string
-	bin  string
-	args []string
+	pid   string
+	bin   string
+	args  []string
+	crash int
 }
 
 type procret struct {
@@ -40,12 +42,13 @@ type procret struct {
 	status string
 }
 
-func makeCoord(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string) *coord {
-	return &coord{fsl, pclnt, "", bin, args}
+func makeCoord(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int) *coord {
+	return &coord{fsl, pclnt, "", bin, args, crash}
 }
 
 func (c *coord) spawn() {
 	p := proc.MakeProc(c.bin, c.args)
+	p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	c.Spawn(p)
 	c.WaitStart(p.Pid)
 	c.pid = p.Pid
@@ -61,12 +64,12 @@ func (c *coord) run(i int, start chan bool, done chan procret) {
 	done <- procret{i, err, status}
 }
 
-func StartCoords(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string) *CoordMgr {
+func StartCoords(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int) *CoordMgr {
 	cm := &CoordMgr{}
 	cm.ch = make(chan bool)
 	cm.coords = make([]*coord, NCOORD)
 	for i := 0; i < NCOORD; i++ {
-		cm.coords[i] = makeCoord(fsl, pclnt, bin, args)
+		cm.coords[i] = makeCoord(fsl, pclnt, bin, args, crash)
 	}
 	done := make(chan procret)
 	for i, c := range cm.coords {

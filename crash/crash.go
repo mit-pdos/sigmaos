@@ -3,6 +3,7 @@ package crash
 import (
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	db "ulambda/debug"
@@ -15,10 +16,23 @@ import (
 // Crash/partition testing
 //
 
-func Crasher(fsl *fslib.FsLib, freq int64) {
+func GetEnv() int64 {
+	crash := os.Getenv("SIGMACRASH")
+	n, err := strconv.Atoi(crash)
+	if err != nil {
+		n = 0
+	}
+	return int64(n)
+}
+
+func Crasher(fsl *fslib.FsLib) {
+	crash := GetEnv()
+	if crash == 0 {
+		return
+	}
 	go func() {
 		for true {
-			ms := rand.Int64(freq)
+			ms := rand.Int64(crash)
 			// log.Printf("%v: ms %v\n", db.GetName(), ms)
 			time.Sleep(time.Duration(ms) * time.Millisecond)
 			r := rand.Int64(1000)

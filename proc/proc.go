@@ -62,6 +62,10 @@ func MakeProcPid(pid string, program string, args []string) *Proc {
 	return p
 }
 
+func (p *Proc) AppendEnv(name, val string) {
+	p.Env = append(p.Env, name+"="+val)
+}
+
 func (p *Proc) IsKernelProc() bool {
 	return strings.Contains(p.Program, "kernel")
 }

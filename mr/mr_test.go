@@ -16,7 +16,15 @@ import (
 	np "ulambda/ninep"
 )
 
-const OUTPUT = "par-mr.out"
+const (
+	OUTPUT = "par-mr.out"
+
+	// time interval (ms) for when a failure might happen. If too
+	// frequent and they don't finish ever. XXX determine
+	// dynamically
+	CRASHTASK  = 10000
+	CRASHCOORD = 20000
+)
 
 func Compare(fsl *fslib.FsLib) {
 	cmd := exec.Command("sort", "seq-mr.out")
@@ -104,13 +112,13 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, crash, crashCoord string) {
+func runN(t *testing.T, crashtask, crashcoord int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
 	ts.prepareJob()
 
-	cm := coordmgr.StartCoords(ts.FsLib, ts.ProcClnt, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", crash, crashCoord})
+	cm := coordmgr.StartCoords(ts.FsLib, ts.ProcClnt, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
 	cm.Wait()
 
@@ -120,17 +128,17 @@ func runN(t *testing.T, crash, crashCoord string) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, "NO", "NO")
+	runN(t, 0, 0)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, "YES", "NO")
+	runN(t, CRASHTASK, 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, "NO", "YES")
+	runN(t, 0, CRASHCOORD)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, "YES", "YES")
+	runN(t, CRASHTASK, CRASHCOORD)
 }

@@ -17,6 +17,8 @@ import (
 const (
 	NKEYS  = 2 // 100
 	NCLERK = 10
+
+	CRASHBALANCER = 400
 )
 
 func TestBalance(t *testing.T) {
@@ -45,11 +47,11 @@ type Tstate struct {
 	cm    *coordmgr.CoordMgr
 }
 
-func makeTstate(t *testing.T, auto string, nclerk int, crash string) *Tstate {
+func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("kv_test", "..")
-	ts.cm = coordmgr.StartCoords(ts.System.FsLib, ts.System.ProcClnt, "bin/user/balancer", []string{auto, crash})
+	ts.cm = coordmgr.StartCoords(ts.System.FsLib, ts.System.ProcClnt, "bin/user/balancer", []string{auto}, crash)
 
 	ts.setup(nclerk)
 
@@ -155,7 +157,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts := makeTstate(t, "manual", 1, "NO")
+	ts := makeTstate(t, "manual", 1, 0)
 
 	_, err := ts.clrks[0].Get(key(NKEYS + 1))
 	assert.NotEqual(ts.t, err, nil, "Get")
@@ -175,7 +177,7 @@ func TestGetPutSet(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk int, crash string) {
+func concurN(t *testing.T, nclerk int, crash int) {
 	const NMORE = 10
 	const TIME = 100 // 500
 
@@ -222,33 +224,33 @@ func concurN(t *testing.T, nclerk int, crash string) {
 }
 
 func TestConcurOK0(t *testing.T) {
-	concurN(t, 0, "NO")
+	concurN(t, 0, 0)
 }
 
 func TestConcurOK1(t *testing.T) {
-	concurN(t, 1, "NO")
+	concurN(t, 1, 0)
 }
 
 func TestConcurOKN(t *testing.T) {
-	concurN(t, NCLERK, "NO")
+	concurN(t, NCLERK, 0)
 }
 
 func TestConcurFail0(t *testing.T) {
-	concurN(t, 0, "YES")
+	concurN(t, 0, CRASHBALANCER)
 }
 
 func TestConcurFail1(t *testing.T) {
-	concurN(t, 1, "YES")
+	concurN(t, 1, CRASHBALANCER)
 }
 
 func TestConcurFailN(t *testing.T) {
-	concurN(t, NCLERK, "YES")
+	concurN(t, NCLERK, CRASHBALANCER)
 }
 
 func TestAuto(t *testing.T) {
 	// runtime.GOMAXPROCS(2) // XXX for KV
 	nclerk := NCLERK
-	ts := makeTstate(t, "auto", nclerk, "NO")
+	ts := makeTstate(t, "auto", nclerk, 0)
 
 	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {

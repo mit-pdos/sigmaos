@@ -19,13 +19,11 @@ type Deleter struct {
 	*procclnt.ProcClnt
 }
 
-func MakeDeleter(docrash string) (*Deleter, error) {
+func MakeDeleter() (*Deleter, error) {
 	mv := &Deleter{}
 	mv.FsLib = fslib.MakeFsLib("deleter-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
-	if docrash == "YES" {
-		crash.Crasher(mv.FsLib, 10)
-	}
+	crash.Crasher(mv.FsLib)
 	mv.Started(proc.GetPid())
 	return mv, nil
 }

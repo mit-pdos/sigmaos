@@ -19,13 +19,11 @@ type Mover struct {
 	*procclnt.ProcClnt
 }
 
-func MakeMover(docrash string) (*Mover, error) {
+func MakeMover() (*Mover, error) {
 	mv := &Mover{}
 	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
-	if docrash == "YES" {
-		crash.Crasher(mv.FsLib, 10)
-	}
+	crash.Crasher(mv.FsLib)
 	mv.Started(proc.GetPid())
 	return mv, nil
 }

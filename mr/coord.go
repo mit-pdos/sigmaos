@@ -24,13 +24,6 @@ const (
 	CLAIMED  = "-claimed"
 	TIP      = "-tip"
 	DONE     = "-done"
-
-	// time interval (ms) for when a failure might happen. If too
-	// frequent and they don't finish ever. XXX determine
-	// dynamically
-	CRASHMAPPER  = 10000
-	CRASHREDUCER = 10000
-	CRASHCOORD   = 20000
 )
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
@@ -52,16 +45,15 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 type Coord struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	crashCoord  string
 	nreducetask int
-	crash       string
+	crash       int
 	mapperbin   string
 	reducerbin  string
 	lease       *usync.LeasePath
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) != 5 {
+	if len(args) != 4 {
 		return nil, errors.New("MakeCoord: too few arguments")
 	}
 	w := &Coord{}
@@ -75,8 +67,12 @@ func MakeCoord(args []string) (*Coord, error) {
 	w.nreducetask = n
 	w.mapperbin = args[1]
 	w.reducerbin = args[2]
-	w.crash = args[3]
-	w.crashCoord = args[4]
+
+	c, err := strconv.Atoi(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[3])
+	}
+	w.crash = c
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
@@ -84,16 +80,17 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
 
-	if w.crashCoord == "YES" {
-		crash.Crasher(w.FsLib, CRASHCOORD)
-	}
+	crash.Crasher(w.FsLib)
 
 	return w, nil
 }
 
 func (w *Coord) mapper(task string) string {
 	input := INPUTDIR + task
-	a := proc.MakeProc(w.mapperbin, []string{w.crash, strconv.Itoa(w.nreducetask), input})
+	a := proc.MakeProc(w.mapperbin, []string{strconv.Itoa(w.nreducetask), input})
+	if w.crash > 0 {
+		a.AppendEnv("SIGMACRASH", strconv.Itoa(w.crash))
+	}
 	err := w.Spawn(a)
 	if err != nil {
 		return err.Error()
@@ -108,7 +105,10 @@ func (w *Coord) mapper(task string) string {
 func (w *Coord) reducer(task string) string {
 	in := RDIR + TIP + "/" + task
 	out := ROUT + task
-	a := proc.MakeProc(w.reducerbin, []string{w.crash, in, out})
+	a := proc.MakeProc(w.reducerbin, []string{in, out})
+	if w.crash > 0 {
+		a.AppendEnv("SIGMACRASH", strconv.Itoa(w.crash))
+	}
 	err := w.Spawn(a)
 	if err != nil {
 		return err.Error()

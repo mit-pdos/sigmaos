@@ -36,6 +36,8 @@ const (
 	KVNEXTCONFIG  = KVDIR + "/nextconfig"
 	KVBALANCER    = KVDIR + "/balancer"
 	KVBALANCERCTL = KVDIR + "/balancer/ctl"
+
+	CRASHHELPER = 10
 )
 
 type Balancer struct {
@@ -46,20 +48,20 @@ type Balancer struct {
 	lease    *sync.LeasePath
 	mo       *Monitor
 	ch       chan bool
-	docrash  string
+	crash    int64
 }
 
 func shardPath(kvd, shard string) string {
 	return np.MEMFS + "/" + kvd + "/shard" + shard
 }
 
-func RunBalancer(auto, docrash string) {
-	log.Printf("run balancer %v %v %v\n", proc.GetPid(), auto, docrash)
+func RunBalancer(auto string) {
+	log.Printf("run balancer %v %v\n", proc.GetPid(), auto)
 
 	bl := &Balancer{}
-	bl.docrash = docrash
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
+	bl.crash = crash.GetEnv()
 
 	// may fail if already exist
 	bl.Mkdir(np.MEMFS, 07)
@@ -68,7 +70,7 @@ func RunBalancer(auto, docrash string) {
 	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVBALANCER, np.DMSYMLINK)
 	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG, 0)
 
-	// start server but don't publish
+	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
@@ -97,9 +99,7 @@ func RunBalancer(auto, docrash string) {
 
 		go bl.monitorMyself(ch)
 
-		if bl.docrash == "YES" {
-			crash.Crasher(bl.FsLib, 400)
-		}
+		crash.Crasher(bl.FsLib)
 
 		if auto == "auto" {
 			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
@@ -227,9 +227,12 @@ func (bl *Balancer) initShards(nextShards []string) {
 }
 
 func (bl *Balancer) spawnProc(args []string) (string, error) {
-	t := proc.MakeProc(args[0], args[1:])
-	err := bl.Spawn(t)
-	return t.Pid, err
+	p := proc.MakeProc(args[0], args[1:])
+	if bl.crash > 0 {
+		p.AppendEnv("SIGMACRASH", strconv.Itoa(CRASHHELPER))
+	}
+	err := bl.Spawn(p)
+	return p.Pid, err
 }
 
 func (bl *Balancer) runProc(args []string) (string, error) {
@@ -269,7 +272,7 @@ func (bl *Balancer) runMovers(nextShards []string) []string {
 			s := shardPath(kvd, shard)
 			d := shardPath(nextShards[i], shard)
 			moved = append(moved, s)
-			bl.runProcRetry([]string{"bin/user/kv-mover", s, d, bl.docrash}, func(err error, status string) bool {
+			bl.runProcRetry([]string{"bin/user/kv-mover", s, d}, func(err error, status string) bool {
 				return err != nil || status != "OK"
 			})
 		}
@@ -279,7 +282,7 @@ func (bl *Balancer) runMovers(nextShards []string) []string {
 
 func (bl *Balancer) runDeleters(moved []string) {
 	for _, sharddir := range moved {
-		bl.runProcRetry([]string{"bin/user/kv-deleter", sharddir, bl.docrash},
+		bl.runProcRetry([]string{"bin/user/kv-deleter", sharddir},
 			func(err error, status string) bool {
 				ok := strings.HasPrefix(status, "file not found")
 				return err != nil || (status != "OK" && !ok)

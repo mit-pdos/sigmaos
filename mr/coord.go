@@ -85,9 +85,8 @@ func MakeCoord(args []string) (*Coord, error) {
 	return w, nil
 }
 
-func (w *Coord) mapper(task string) string {
-	input := INPUTDIR + task
-	a := proc.MakeProc(w.mapperbin, []string{strconv.Itoa(w.nreducetask), input})
+func (w *Coord) task(bin string, args []string) string {
+	a := proc.MakeProc(bin, args)
 	if w.crash > 0 {
 		a.AppendEnv("SIGMACRASH", strconv.Itoa(w.crash))
 	}
@@ -102,22 +101,15 @@ func (w *Coord) mapper(task string) string {
 	return ok
 }
 
+func (w *Coord) mapper(task string) string {
+	input := INPUTDIR + task
+	return w.task(w.mapperbin, []string{strconv.Itoa(w.nreducetask), input})
+}
+
 func (w *Coord) reducer(task string) string {
 	in := RDIR + TIP + "/" + task
 	out := ROUT + task
-	a := proc.MakeProc(w.reducerbin, []string{in, out})
-	if w.crash > 0 {
-		a.AppendEnv("SIGMACRASH", strconv.Itoa(w.crash))
-	}
-	err := w.Spawn(a)
-	if err != nil {
-		return err.Error()
-	}
-	ok, err := w.WaitExit(a.Pid)
-	if err != nil {
-		return err.Error()
-	}
-	return ok
+	return w.task(w.reducerbin, []string{in, out})
 }
 
 func (w *Coord) claimEntry(dir string, st *np.Stat) (string, error) {

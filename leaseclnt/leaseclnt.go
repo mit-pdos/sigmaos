@@ -11,6 +11,11 @@ import (
 	np "ulambda/ninep"
 )
 
+// for test
+const (
+	LEASE_DIR = "name/lease"
+)
+
 //
 // Support for leases, which consists of pathname and a Qid of that
 // pathname. A proc can register a lease with all servers it has an

@@ -13,6 +13,7 @@ import (
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
+	"ulambda/semclnt"
 	"ulambda/sync"
 )
 
@@ -157,7 +158,7 @@ func (r *Machined) joinRealm() chan bool {
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
-		rStartSem := sync.MakeSemaphore(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
+		rStartSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
 		rStartSem.Up()
 	}
 	db.DLPrintf("MACHINED", "Machined %v joined Realm %v", r.id, r.cfg.RealmId)
@@ -204,7 +205,7 @@ func (r *Machined) tryDestroyRealmL() {
 		}
 
 		// Signal that the realm has been destroyed
-		rExitSem := sync.MakeSemaphore(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
+		rExitSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
 		rExitSem.Up()
 	}
 }

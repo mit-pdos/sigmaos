@@ -15,7 +15,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/seccomp"
-	usync "ulambda/sync"
+	"ulambda/semclnt"
 )
 
 const (
@@ -94,10 +94,10 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 	}
 
-	semStart := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+START_WAIT)
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+START_WAIT)
 	semStart.Init()
 
-	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
+	semEvict := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+EVICT_WAIT)
 	semEvict.Init()
 
 	d := piddir + "/" + CHILD
@@ -143,7 +143,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid string) error {
 	piddir := proc.PidDir(pid)
-	semStart := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+START_WAIT)
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+START_WAIT)
 	err := semStart.Down()
 	if err != nil {
 		return fmt.Errorf("WaitStart error %v", err)
@@ -201,7 +201,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid string) error {
 	piddir := proc.PidDir(pid)
-	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
+	semEvict := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+EVICT_WAIT)
 	err := semEvict.Down()
 	if err != nil {
 		return fmt.Errorf("WaitEvict error %v", err)
@@ -214,7 +214,7 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
 	dir := proc.PidDir(pid)
-	semStart := usync.MakeSemaphore(clnt.FsLib, dir+"/"+START_WAIT)
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, dir+"/"+START_WAIT)
 	err := semStart.Up()
 	if err != nil {
 		return fmt.Errorf("Started error %v", err)
@@ -309,7 +309,7 @@ func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
 // Procd notifies a proc that it will be evicted using Evict.
 func (clnt *ProcClnt) Evict(pid string) error {
 	piddir := proc.PidDir(pid)
-	semEvict := usync.MakeSemaphore(clnt.FsLib, piddir+"/"+EVICT_WAIT)
+	semEvict := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+EVICT_WAIT)
 	err := semEvict.Up()
 	if err != nil {
 		return fmt.Errorf("Evict error %v", err)

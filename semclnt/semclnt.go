@@ -1,4 +1,4 @@
-package sync
+package semclnt
 
 import (
 	"log"
@@ -11,13 +11,13 @@ import (
 // Binary semaphore
 //
 
-type Semaphore struct {
+type SemClnt struct {
 	path string // Path for semaphore variable
 	*fslib.FsLib
 }
 
-func MakeSemaphore(fsl *fslib.FsLib, semaphore string) *Semaphore {
-	c := &Semaphore{}
+func MakeSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
+	c := &SemClnt{}
 	c.path = semaphore
 	c.FsLib = fsl
 	return c
@@ -25,12 +25,12 @@ func MakeSemaphore(fsl *fslib.FsLib, semaphore string) *Semaphore {
 
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
-func (c *Semaphore) Init() error {
+func (c *SemClnt) Init() error {
 	return c.MakeFile(c.path, 0777, np.OWRITE, []byte{})
 }
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
-func (c *Semaphore) Down() error {
+func (c *SemClnt) Down() error {
 	signal := make(chan error)
 	err := c.SetRemoveWatch(c.path, func(p string, err error) {
 		if err != nil {
@@ -50,6 +50,6 @@ func (c *Semaphore) Down() error {
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has
 // happened).
-func (c *Semaphore) Up() error {
+func (c *SemClnt) Up() error {
 	return c.Remove(c.path)
 }

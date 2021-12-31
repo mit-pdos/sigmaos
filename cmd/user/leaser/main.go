@@ -18,7 +18,6 @@ import (
 
 const (
 	N     = 100
-	DIR   = "name/locktest"
 	DELAY = 10
 )
 
@@ -55,9 +54,9 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := leaseclnt.MakeLeaseClnt(fsl, DIR+"/lease", 0)
+	l := leaseclnt.MakeLeaseClnt(fsl, leaseclnt.LEASE_DIR+"/lease", 0)
 
-	cnt := DIR + "/cnt"
+	cnt := leaseclnt.LEASE_DIR + "/cnt"
 	A := os.Args[2] + "/A"
 
 	pclnt.Started(proc.GetPid())

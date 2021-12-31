@@ -10,11 +10,9 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/leaseclnt"
-	np "ulambda/ninep"
 )
 
 const (
-	LEASE_DIR = "name/lease"
 	LEASENAME = "name/test-lease"
 )
 
@@ -27,7 +25,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemNamed("sync_test", "..")
-	ts.Mkdir(np.LOCKS, 0777)
+	ts.Mkdir(leaseclnt.LEASE_DIR, 0777)
 	return ts
 }
 
@@ -131,16 +129,13 @@ func TestLease3(t *testing.T) {
 func TestLease4(t *testing.T) {
 	ts := makeTstate(t)
 
-	err := ts.Mkdir(LEASE_DIR, 0777)
-	assert.Nil(ts.t, err, "Mkdir name/locks: %v", err)
-
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
 	lease1 := leaseclnt.MakeLeaseClnt(fsl1, LEASENAME, 0)
 
 	// Establish a connection
-	_, err = fsl2.ReadDir(LEASE_DIR)
+	_, err := fsl2.ReadDir(leaseclnt.LEASE_DIR)
 	assert.Nil(ts.t, err, "ReadDir")
 
 	err = lease1.WaitWLease([]byte{})

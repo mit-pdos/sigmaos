@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	NKEYS  = 2 // 100
+	NKEYS  = 100
 	NCLERK = 10
 
 	CRASHBALANCER = 400

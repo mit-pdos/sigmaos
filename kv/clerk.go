@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	// "time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -77,8 +76,14 @@ func (kc *KvClerk) doRetry(err error) bool {
 	}
 
 	if err.Error() == "EOF" || // XXX maybe useful when KVs fail
+		// XX unused?
 		err.Error() == "Version mismatch" ||
+		// shard dir hasn't been create yet (config 0) or hasn't
+		// moved yet
+		strings.HasPrefix(err.Error(), "file not found shard") ||
+		// lease ran out
 		strings.HasPrefix(err.Error(), "stale lease") ||
+		// lease ran out  XXX one error?
 		strings.HasPrefix(err.Error(), "checkLease failed") {
 		// log.Printf("doRetry error %v\n", err)
 		err = kc.lease.ReleaseRLease()

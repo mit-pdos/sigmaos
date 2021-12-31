@@ -290,7 +290,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
 	fid2 := fsc.path(fid)
 	if fid2 == nil {
-		return np.NoFid, errors.New("unknown file")
+		return np.NoFid, errors.New("file not found")
 	}
 	path := fid2.copyPath()
 	fid1 := fsc.allocFid()

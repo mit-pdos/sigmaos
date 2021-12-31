@@ -104,7 +104,7 @@ func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, error) {
 		if fsc.mount.hasExited() {
 			return np.NoFid, 0, io.EOF
 		}
-		return np.NoFid, 0, errors.New("unknown file")
+		return np.NoFid, 0, errors.New("file not found")
 	}
 	db.DLPrintf("FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	fid1, err := fsc.clone(fid)

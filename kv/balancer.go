@@ -22,10 +22,10 @@ import (
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/inode"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/sync"
 )
 
 const (
@@ -44,8 +44,8 @@ type Balancer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	conf     *Config
-	ballease *sync.LeasePath
-	lease    *sync.LeasePath
+	ballease *leaseclnt.LeaseClnt
+	lease    *leaseclnt.LeaseClnt
 	mo       *Monitor
 	ch       chan bool
 	crash    int64
@@ -67,8 +67,8 @@ func RunBalancer(auto string) {
 	bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
-	bl.ballease = sync.MakeLeasePath(bl.FsLib, KVBALANCER, np.DMSYMLINK)
-	bl.lease = sync.MakeLeasePath(bl.FsLib, KVCONFIG, 0)
+	bl.ballease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
+	bl.lease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVCONFIG, 0)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())

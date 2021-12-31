@@ -15,8 +15,8 @@ import (
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
-	usync "ulambda/sync"
 )
 
 type Tstate struct {
@@ -209,7 +209,7 @@ func TestWLease(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		wlease := usync.MakeLeasePath(fsldl, lease, 0)
+		wlease := leaseclnt.MakeLeaseClnt(fsldl, lease, 0)
 		err := wlease.WaitWLease([]byte{})
 		assert.Nil(t, err, "WriteLease")
 
@@ -238,7 +238,7 @@ func TestWLease(t *testing.T) {
 
 	<-ch
 
-	wlease := usync.MakeLeasePath(ts.FsLib, lease, 0)
+	wlease := leaseclnt.MakeLeaseClnt(ts.FsLib, lease, 0)
 	err := wlease.WaitWLease([]byte{})
 	assert.Nil(t, err, "Weaklock")
 

@@ -1,4 +1,4 @@
-package sync
+package leaseclnt
 
 import (
 	"encoding/json"
@@ -19,17 +19,17 @@ import (
 // lease).  If the Qid is unchanged from the registered lease, they
 // allow the operation; otherwise, they reject the operation.
 //
-// Procs uses LeasePath to interact with leases, which they can use in
+// Procs uses LeaseClnt to interact with leases, which they can use in
 // two in two ways: write leases and read leases.  Write leases are
-// for, for example, coordinators to obtain an exclusive LeasePath so
+// for, for example, coordinators to obtain an exclusive LeaseClnt so
 // that only one coorditor is active.  The write lease maybe
 // invalidated anytime, for example, by a network partition, which
-// allows another a new coordinator to get the LeasePath.  The old
+// allows another a new coordinator to get the LeaseClnt.  The old
 // coordinator won't be able to perform operations at any server,
 // because its lease will invalid as soon as the new coordinator
 // obtains the write lease.
 //
-// Multiple procs may have a read lease on, for example, a LeasePath
+// Multiple procs may have a read lease on, for example, a LeaseClnt
 // that represents a configuration file.  A read lease maybe
 // invalidated by a proc that modifies the configuration file,
 // signaling to the reader they should reread the configuration
@@ -37,14 +37,14 @@ import (
 // servers because the read lease is invalid.
 //
 
-type LeasePath struct {
+type LeaseClnt struct {
 	leaseName string // pathname for the lease file
 	*fslib.FsLib
 	perm np.Tperm
 }
 
-func MakeLeasePath(fsl *fslib.FsLib, lName string, perm np.Tperm) *LeasePath {
-	l := &LeasePath{}
+func MakeLeaseClnt(fsl *fslib.FsLib, lName string, perm np.Tperm) *LeaseClnt {
+	l := &LeaseClnt{}
 	l.leaseName = lName
 	l.FsLib = fsl
 	l.perm = perm
@@ -58,7 +58,7 @@ func MakeLeasePath(fsl *fslib.FsLib, lName string, perm np.Tperm) *LeasePath {
 // Wait to obtain a write lease
 // XXX cleanup on failure
 // XXX create and write atomic
-func (l *LeasePath) WaitWLease(b []byte) error {
+func (l *LeaseClnt) WaitWLease(b []byte) error {
 	fd, err := l.Create(l.leaseName, l.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
 		log.Printf("%v: Makefile %v err %v", db.GetName(), l.leaseName, err)
@@ -84,7 +84,7 @@ func (l *LeasePath) WaitWLease(b []byte) error {
 	return nil
 }
 
-func (l *LeasePath) ReleaseWLease() error {
+func (l *LeaseClnt) ReleaseWLease() error {
 	err := l.ReleaseRLease()
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (l *LeasePath) ReleaseWLease() error {
 //
 
 // Make the lease file
-func (l *LeasePath) MakeLeaseFile(b []byte) error {
+func (l *LeaseClnt) MakeLeaseFile(b []byte) error {
 	err := l.MakeFile(l.leaseName, 0777|np.DMTMP, np.OWRITE, b)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() == "EOF" {
@@ -116,7 +116,7 @@ func (l *LeasePath) MakeLeaseFile(b []byte) error {
 	return nil
 }
 
-func (l *LeasePath) MakeLeaseFileJson(i interface{}) error {
+func (l *LeaseClnt) MakeLeaseFileJson(i interface{}) error {
 	b, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
@@ -125,7 +125,7 @@ func (l *LeasePath) MakeLeaseFileJson(i interface{}) error {
 }
 
 // Make the lease file
-func (l *LeasePath) MakeLeaseFileFrom(from string) error {
+func (l *LeaseClnt) MakeLeaseFileFrom(from string) error {
 	err := l.Rename(from, l.leaseName)
 	if err != nil {
 		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, l.leaseName, err)
@@ -134,7 +134,7 @@ func (l *LeasePath) MakeLeaseFileFrom(from string) error {
 	return nil
 }
 
-func (l *LeasePath) registerRLease() error {
+func (l *LeaseClnt) registerRLease() error {
 	st, err := l.Stat(l.leaseName)
 	if err != nil {
 		// log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
@@ -148,7 +148,7 @@ func (l *LeasePath) registerRLease() error {
 	return nil
 }
 
-func (l *LeasePath) WaitRLease() ([]byte, error) {
+func (l *LeaseClnt) WaitRLease() ([]byte, error) {
 	ch := make(chan bool)
 	for {
 		b, err := l.ReadFileWatch(l.leaseName, func(string, error) {
@@ -162,7 +162,7 @@ func (l *LeasePath) WaitRLease() ([]byte, error) {
 	}
 }
 
-func (l *LeasePath) ReleaseRLease() error {
+func (l *LeaseClnt) ReleaseRLease() error {
 	err := l.DeregisterLease(l.leaseName)
 	if err != nil {
 		log.Printf("%v: DeregisterLease %v err %v", db.GetName(), l.leaseName, err)
@@ -172,7 +172,7 @@ func (l *LeasePath) ReleaseRLease() error {
 }
 
 // Invalidate a lease by remove the lease file
-func (l *LeasePath) Invalidate() error {
+func (l *LeaseClnt) Invalidate() error {
 	err := l.Remove(l.leaseName)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v", db.GetName(), l.leaseName, err)
@@ -182,7 +182,7 @@ func (l *LeasePath) Invalidate() error {
 }
 
 // Invalidate a lease by remove the lease file
-func (l *LeasePath) RenameTo(to string) error {
+func (l *LeaseClnt) RenameTo(to string) error {
 	err := l.Rename(l.leaseName, to)
 	if err != nil {
 		log.Printf("%v: Rename %v to %v err %v", db.GetName(), l.leaseName, to, err)

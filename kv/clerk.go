@@ -12,9 +12,9 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	usync "ulambda/sync"
 )
 
 func key2shard(key string) int {
@@ -38,7 +38,7 @@ func nrand() uint64 {
 
 type KvClerk struct {
 	fsl   *fslib.FsLib
-	lease *usync.LeasePath
+	lease *leaseclnt.LeaseClnt
 	conf  Config
 	nget  int
 }
@@ -46,7 +46,7 @@ type KvClerk struct {
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.fsl = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
-	kc.lease = usync.MakeLeasePath(kc.fsl, KVCONFIG, 0)
+	kc.lease = leaseclnt.MakeLeaseClnt(kc.fsl, KVCONFIG, 0)
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)

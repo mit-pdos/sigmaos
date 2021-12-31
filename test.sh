@@ -16,6 +16,7 @@ go test $1 ulambda/fsclnt
 #
 go test $1 ulambda/fslib
 go test $1 ulambda/stats
+go test $1 ulambda/leaseclnt
 go test $1 ulambda/sync
 
 #

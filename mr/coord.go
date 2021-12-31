@@ -9,10 +9,10 @@ import (
 	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	usync "ulambda/sync"
 )
 
 const (
@@ -49,7 +49,7 @@ type Coord struct {
 	crash       int
 	mapperbin   string
 	reducerbin  string
-	lease       *usync.LeasePath
+	lease       *leaseclnt.LeaseClnt
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -78,7 +78,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.Started(proc.GetPid())
 
-	w.lease = usync.MakeLeasePath(w.FsLib, MRDIR+"/lease-coord", 0)
+	w.lease = leaseclnt.MakeLeaseClnt(w.FsLib, MRDIR+"/lease-coord", 0)
 
 	crash.Crasher(w.FsLib)
 

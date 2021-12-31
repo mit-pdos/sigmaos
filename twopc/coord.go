@@ -13,10 +13,10 @@ import (
 	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/sync"
 )
 
 const (
@@ -37,7 +37,7 @@ type Coord struct {
 	args   []string
 	ch     chan Tstatus
 	twopc  *Twopc
-	lease  *sync.LeasePath
+	lease  *leaseclnt.LeaseClnt
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -54,7 +54,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
-	cd.lease = sync.MakeLeasePath(cd.FsLib, TWOPCLEASE, 0)
+	cd.lease = leaseclnt.MakeLeaseClnt(cd.FsLib, TWOPCLEASE, 0)
 
 	// Grab LEASE before starting coord
 	cd.lease.WaitWLease([]byte{})

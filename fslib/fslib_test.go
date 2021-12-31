@@ -13,9 +13,9 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/leaseclnt"
 	"ulambda/named"
 	np "ulambda/ninep"
-	usync "ulambda/sync"
 )
 
 type Tstate struct {
@@ -357,7 +357,7 @@ func write(fsl *fslib.FsLib, ch chan int, fn string) {
 
 func writer(t *testing.T, ch chan int, N int, fn string) {
 	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	l := usync.MakeLeasePath(fsl, "name/config", 0)
+	l := leaseclnt.MakeLeaseClnt(fsl, "name/config", 0)
 	cont := true
 	for cont {
 		b, err := l.WaitRLease()
@@ -391,7 +391,7 @@ func TestSetRenameGet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
-	l := usync.MakeLeasePath(ts.FsLib, "name/config", 0)
+	l := leaseclnt.MakeLeaseClnt(ts.FsLib, "name/config", 0)
 
 	go writer(t, ch, N, fn)
 

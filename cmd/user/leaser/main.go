@@ -10,10 +10,10 @@ import (
 	db "ulambda/debug"
 	"ulambda/delay"
 	"ulambda/fslib"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	usync "ulambda/sync"
 )
 
 const (
@@ -55,7 +55,7 @@ func main() {
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := usync.MakeLeasePath(fsl, DIR+"/lease", 0)
+	l := leaseclnt.MakeLeaseClnt(fsl, DIR+"/lease", 0)
 
 	cnt := DIR + "/cnt"
 	A := os.Args[2] + "/A"

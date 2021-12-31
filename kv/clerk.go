@@ -39,7 +39,7 @@ type KvClerk struct {
 	fsl   *fslib.FsLib
 	lease *leaseclnt.LeaseClnt
 	conf  Config
-	nget  int
+	nop   int
 }
 
 func MakeClerk(namedAddr []string) *KvClerk {
@@ -76,7 +76,7 @@ func (kc *KvClerk) doRetry(err error) bool {
 	}
 
 	if err.Error() == "EOF" || // XXX maybe useful when KVs fail
-		// XX unused?
+		// XXX unused?
 		err.Error() == "Version mismatch" ||
 		// shard dir hasn't been create yet (config 0) or hasn't
 		// moved yet
@@ -95,65 +95,66 @@ func (kc *KvClerk) doRetry(err error) bool {
 	return false
 }
 
-func (kc *KvClerk) Set(k, v string) error {
-	shard := key2shard(k)
-	for {
-		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		// log.Printf("set %v\n", fn)
-		_, err := kc.fsl.SetFile(fn, []byte(v))
-		if err == nil {
-			return err
-		}
-		db.DLPrintf("CLERK", "Set: %v %v %v\n", fn, err, shard)
-		if kc.doRetry(err) {
-			err = kc.readConfig()
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
+type opT int
+
+const (
+	GET opT = 0
+	PUT opT = 1
+	SET opT = 2
+)
+
+type op struct {
+	kind opT
+	b    []byte
+	k    string
+	err  error
 }
 
-func (kc *KvClerk) Put(k, v string) error {
-	shard := key2shard(k)
+func (kc *KvClerk) doop(o *op) {
+	shard := key2shard(o.k)
 	for {
-		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		// log.Printf("put %v\n", fn)
-		_, err := kc.fsl.PutFile(fn, []byte(v), 0777, np.OWRITE)
-		if err == nil {
-			return err
+		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), o.k)
+		switch o.kind {
+		case GET:
+			o.b, o.err = kc.fsl.GetFile(fn)
+		case PUT:
+			_, o.err = kc.fsl.PutFile(fn, o.b, 0777, np.OWRITE)
+		case SET:
+			_, o.err = kc.fsl.SetFile(fn, o.b)
 		}
-		db.DLPrintf("CLERK", "Put: %v %v %v\n", fn, err, shard)
-		if kc.doRetry(err) {
-			kc.readConfig()
+		db.DLPrintf("CLERK", "%v: %v %v\n", o.kind, fn, o.err)
+		if o.err == nil {
+			kc.nop += 1
+			return
+		}
+		if kc.doRetry(o.err) {
+			o.err = kc.readConfig()
+			if o.err != nil {
+				log.Printf("%v: %v readConfig err %v\n", db.GetName(), o.kind, o.err)
+				return
+			}
 		} else {
-			return err
+			return
 		}
 	}
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {
-	shard := key2shard(k)
-	for {
-		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), k)
-		b, err := kc.fsl.GetFile(fn)
-		db.DLPrintf("CLERK", "Get: %v %v\n", fn, err)
-		if err == nil {
-			kc.nget += 1
-			return string(b), err
-		}
-		if kc.doRetry(err) {
-			err = kc.readConfig()
-			if err != nil {
-				log.Printf("%v: Get readConfig err %v\n", db.GetName(), err)
-				return string(b), err
-			}
-		} else {
-			return string(b), err
-		}
-	}
+	op := &op{GET, []byte{}, k, nil}
+	kc.doop(op)
+	return string(op.b), op.err
+}
+
+func (kc *KvClerk) Set(k, v string) error {
+	op := &op{SET, []byte(v), k, nil}
+	kc.doop(op)
+	return op.err
+}
+
+func (kc *KvClerk) Put(k, v string) error {
+	op := &op{PUT, []byte(v), k, nil}
+	kc.doop(op)
+	return op.err
 }
 
 func (kc *KvClerk) KVs() []string {

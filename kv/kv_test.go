@@ -133,8 +133,8 @@ func (ts *Tstate) clerk(c int, ch chan bool) {
 	for !done {
 		done = ts.getKeys(c, ch)
 	}
-	log.Printf("nget %v\n", ts.clrks[c].nget)
-	assert.NotEqual(ts.t, 0, ts.clrks[c].nget)
+	log.Printf("nop %v\n", ts.clrks[c].nop)
+	assert.NotEqual(ts.t, 0, ts.clrks[c].nop)
 }
 
 func (ts *Tstate) balancerOp(opcode, mfs string) error {

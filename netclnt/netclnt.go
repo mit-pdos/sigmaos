@@ -208,7 +208,7 @@ func (nc *NetClnt) connectL() error {
 		return nil
 	}
 	db.DLPrintf("NETCLNT", "No successful connections %v\n", nc.addrs)
-	return fmt.Errorf("Unable to connect")
+	return fmt.Errorf("unable to connect")
 }
 
 func (nc *NetClnt) allocate(req *RpcT) np.Ttag {

@@ -300,7 +300,7 @@ func (pd *Procd) worker(workerDone *bool) {
 			pd.waitSpawnOrTimeout(ticker)
 			continue
 		}
-		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "unknown mount")) {
+		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "no mount")) {
 			continue
 		}
 		if err != nil {

@@ -21,7 +21,7 @@ var (
 	ErrBaddir       = &Rerror{"bad directory in wstat"}
 	ErrWalknodir    = &Rerror{"walk in non-directory"}
 
-	// ulambda
+	// sigma
 	ErrNotSupported = &Rerror{"not supported"}
 	ErrInval        = &Rerror{"invalid argument"}
 	ErrUnknownMsg   = &Rerror{"unknown message"}

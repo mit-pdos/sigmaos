@@ -115,7 +115,7 @@ func (w *Coord) reducer(task string) string {
 func (w *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := w.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		if err.Error() == "EOF" { // all errors, except not found?
+		if err.Error() == "EOF" { // partitioned?  (XXX other errors than EOF?)
 			return "", err
 		}
 		// another coord claimed the task

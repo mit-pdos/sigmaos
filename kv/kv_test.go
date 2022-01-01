@@ -62,11 +62,12 @@ func (ts *Tstate) setup(nclerk int) {
 	log.Printf("start kv\n")
 
 	// add 1 kv so that we can put to initialize
-	mfs := SpawnMemFS(ts.ProcClnt)
+	grp := GRP + "0"
+	mfs := SpawnKv(ts.ProcClnt, grp)
 	err := ts.WaitStart(mfs)
 	assert.Nil(ts.t, err, "Start mfs")
 
-	err = ts.balancerOp("add", mfs)
+	err = ts.balancerOp("add", grp)
 	assert.Nil(ts.t, err, "BalancerOp")
 
 	ts.clrks = make([]*KvClerk, nclerk)
@@ -93,15 +94,6 @@ func (ts *Tstate) stopFS(fs string) {
 	err := ts.Evict(fs)
 	assert.Nil(ts.t, err, "ShutdownFS")
 	ts.WaitExit(fs)
-}
-
-func (ts *Tstate) startMemFSs(n int) []string {
-	mfss := make([]string, 0)
-	for r := 0; r < n; r++ {
-		mfs := SpawnMemFS(ts.ProcClnt)
-		mfss = append(mfss, mfs)
-	}
-	return mfss
 }
 
 func (ts *Tstate) stopMemFSs() {
@@ -188,17 +180,19 @@ func concurN(t *testing.T, nclerk int, crash int) {
 	}
 
 	for s := 0; s < NMORE; s++ {
-		mfs := SpawnMemFS(ts.ProcClnt)
+		grp := GRP + strconv.Itoa(s+1)
+		mfs := SpawnKv(ts.ProcClnt, grp)
 		ts.mfss = append(ts.mfss, mfs)
 		ts.WaitStart(mfs)
-		err := ts.balancerOp("add", ts.mfss[len(ts.mfss)-1])
+		err := ts.balancerOp("add", grp)
 		assert.Nil(ts.t, err, "BalancerOp")
 		// do some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
 
 	for s := 0; s < NMORE; s++ {
-		err := ts.balancerOp("del", ts.mfss[len(ts.mfss)-1])
+		grp := GRP + strconv.Itoa(len(ts.mfss)-1)
+		err := ts.balancerOp("del", grp)
 		assert.Nil(ts.t, err, "BalancerOp")
 		ts.stopFS(ts.mfss[len(ts.mfss)-1])
 		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]

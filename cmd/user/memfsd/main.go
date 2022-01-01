@@ -11,7 +11,6 @@ import (
 
 func main() {
 	linuxsched.ScanTopology()
-	// started as a ulambda
 	name := np.MEMFS + "/" + proc.GetPid()
 	mfs, _, err := fslibsrv.MakeMemFs(name, name)
 	if err != nil {

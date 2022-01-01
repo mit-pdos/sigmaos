@@ -29,6 +29,7 @@ func MakeDeleter() (*Deleter, error) {
 }
 
 func (dl *Deleter) Delete(sharddir string) {
+	log.Printf("delete %v\n", sharddir)
 	err := dl.RmDir(sharddir)
 	if err != nil {
 		log.Printf("%v: rmdir %v err %v\n", db.GetName(), sharddir, err)

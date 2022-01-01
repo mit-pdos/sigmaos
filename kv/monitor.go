@@ -2,6 +2,7 @@ package kv
 
 import (
 	"log"
+	"strconv"
 	"sync"
 
 	"ulambda/fslib"
@@ -20,6 +21,7 @@ type Monitor struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	group int
 }
 
 func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
@@ -29,15 +31,15 @@ func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	return mo
 }
 
-func SpawnMemFS(pclnt *procclnt.ProcClnt) string {
-	p := proc.MakeProc("bin/user/memfsd", []string{""})
+func SpawnKv(pclnt *procclnt.ProcClnt, group string) string {
+	p := proc.MakeProc("bin/user/kvd", []string{group})
 	p.Type = proc.T_LC
 	pclnt.Spawn(p)
 	return p.Pid
 }
 
 func (mo *Monitor) grow() {
-	pid1 := SpawnMemFS(mo.ProcClnt)
+	pid1 := SpawnKv(mo.ProcClnt, GRP+strconv.Itoa(mo.group))
 	err := mo.ProcClnt.WaitStart(pid1)
 	if err != nil {
 		log.Printf("runBalancer: err %v\n", err)

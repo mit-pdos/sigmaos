@@ -68,7 +68,7 @@ func (mv *Mover) moveShard(s, d string) error {
 }
 
 func (mv *Mover) Move(src, dst string) {
-	// log.Printf("MV from %v to %v\n", src, dst)
+	log.Printf("MV from %v to %v\n", src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
 		log.Printf("MV moveShards %v %v err %v\n", src, dst, err)

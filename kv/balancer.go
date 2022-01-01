@@ -44,7 +44,7 @@ type Balancer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	conf     *Config
-	ballease *leaseclnt.LeaseClnt
+	balLease *leaseclnt.LeaseClnt
 	lease    *leaseclnt.LeaseClnt
 	mo       *Monitor
 	ch       chan bool
@@ -67,7 +67,7 @@ func RunBalancer(auto string) {
 	bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
-	bl.ballease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
+	bl.balLease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
 	bl.lease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVCONFIG, 0)
 
 	// start server but don't publish its existence
@@ -87,7 +87,7 @@ func RunBalancer(auto string) {
 		ch <- true
 	}()
 
-	bl.ballease.WaitWLease(fslib.MakeTarget(mfs.MyAddr()))
+	bl.balLease.WaitWLease(fslib.MakeTarget(mfs.MyAddr()))
 
 	log.Printf("%v: primary\n", db.GetName())
 
@@ -211,7 +211,7 @@ func (bl *Balancer) recover() {
 			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
 		}
 	} else {
-		log.Printf("%v: recovery: restored config form %v\n", db.GetName(), KVCONFIGBK)
+		log.Printf("%v: recovery: restored config from %v\n", db.GetName(), KVCONFIGBK)
 	}
 }
 

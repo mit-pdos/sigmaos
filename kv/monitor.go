@@ -7,8 +7,8 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/group"
+	"ulambda/groupmgr"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/stats"
 )
@@ -32,20 +32,13 @@ func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	return mo
 }
 
-func SpawnKv(pclnt *procclnt.ProcClnt, group string) string {
-	p := proc.MakeProc("bin/user/kvd", []string{group})
-	p.Type = proc.T_LC
-	pclnt.Spawn(p)
-	return p.Pid
+func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string) *groupmgr.GroupMgr {
+	return groupmgr.Start(fsl, pclnt, 1, "bin/user/kvd", []string{grp}, 0)
 }
 
 func (mo *Monitor) grow() {
-	pid1 := SpawnKv(mo.ProcClnt, group.GRP+strconv.Itoa(mo.group))
-	err := mo.ProcClnt.WaitStart(pid1)
-	if err != nil {
-		log.Printf("runBalancer: err %v\n", err)
-	}
-	BalancerOp(mo.FsLib, "add", pid1)
+	SpawnGrp(mo.FsLib, mo.ProcClnt, strconv.Itoa(mo.group))
+	BalancerOp(mo.FsLib, "add", group.GRP+strconv.Itoa(mo.group))
 }
 
 func (mo *Monitor) shrink(kv string) {

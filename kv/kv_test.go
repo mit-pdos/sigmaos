@@ -43,17 +43,17 @@ func TestBalance(t *testing.T) {
 
 type Tstate struct {
 	*kernel.System
-	t     *testing.T
-	clrks []*KvClerk
-	mfss  []string
-	gm    *groupmgr.GroupMgr
+	t       *testing.T
+	clrks   []*KvClerk
+	mfsgrps []*groupmgr.GroupMgr
+	gmbal   *groupmgr.GroupMgr
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("kv_test", "..")
-	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{auto}, crash)
+	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{auto}, crash)
 
 	ts.setup(nclerk)
 
@@ -64,12 +64,9 @@ func (ts *Tstate) setup(nclerk int) {
 	log.Printf("start kv\n")
 
 	// add 1 kv so that we can put to initialize
-	grp := group.GRP + "0"
-	mfs := SpawnKv(ts.ProcClnt, grp)
-	err := ts.WaitStart(mfs)
-	assert.Nil(ts.t, err, "Start mfs")
-
-	err = ts.balancerOp("add", grp)
+	gn := group.GRP + "0"
+	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn)
+	err := ts.balancerOp("add", gn)
 	assert.Nil(ts.t, err, "BalancerOp")
 
 	ts.clrks = make([]*KvClerk, nclerk)
@@ -83,12 +80,12 @@ func (ts *Tstate) setup(nclerk int) {
 			assert.Nil(ts.t, err, "Put")
 		}
 	}
-	ts.mfss = append(ts.mfss, mfs)
+	ts.mfsgrps = append(ts.mfsgrps, grp)
 }
 
 func (ts *Tstate) done() {
-	ts.gm.Stop()
-	ts.stopMemFSs()
+	ts.gmbal.Stop()
+	ts.stopMemfsgrps()
 	ts.Shutdown()
 }
 
@@ -98,9 +95,9 @@ func (ts *Tstate) stopFS(fs string) {
 	ts.WaitExit(fs)
 }
 
-func (ts *Tstate) stopMemFSs() {
-	for _, mfs := range ts.mfss {
-		ts.stopFS(mfs)
+func (ts *Tstate) stopMemfsgrps() {
+	for _, gm := range ts.mfsgrps {
+		gm.Stop()
 	}
 }
 
@@ -183,9 +180,8 @@ func concurN(t *testing.T, nclerk int, crash int) {
 
 	for s := 0; s < NMORE; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
-		mfs := SpawnKv(ts.ProcClnt, grp)
-		ts.mfss = append(ts.mfss, mfs)
-		ts.WaitStart(mfs)
+		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp)
+		ts.mfsgrps = append(ts.mfsgrps, gm)
 		err := ts.balancerOp("add", grp)
 		assert.Nil(ts.t, err, "BalancerOp")
 		// do some puts/gets
@@ -193,11 +189,11 @@ func concurN(t *testing.T, nclerk int, crash int) {
 	}
 
 	for s := 0; s < NMORE; s++ {
-		grp := group.GRP + strconv.Itoa(len(ts.mfss)-1)
+		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
 		err := ts.balancerOp("del", grp)
 		assert.Nil(ts.t, err, "BalancerOp")
-		ts.stopFS(ts.mfss[len(ts.mfss)-1])
-		ts.mfss = ts.mfss[0 : len(ts.mfss)-1]
+		ts.mfsgrps[len(ts.mfsgrps)-1].Stop()
+		ts.mfsgrps = ts.mfsgrps[0 : len(ts.mfsgrps)-1]
 		// do some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
@@ -212,9 +208,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.gm.Stop()
-	ts.stopMemFSs()
-
+	ts.gmbal.Stop()
 	ts.Shutdown()
 }
 

@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/coordmgr"
 	"ulambda/fslib"
 	"ulambda/group"
+	"ulambda/groupmgr"
 	"ulambda/kernel"
 )
 
@@ -46,14 +46,14 @@ type Tstate struct {
 	t     *testing.T
 	clrks []*KvClerk
 	mfss  []string
-	cm    *coordmgr.CoordMgr
+	gm    *groupmgr.GroupMgr
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("kv_test", "..")
-	ts.cm = coordmgr.StartCoords(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{auto}, crash)
+	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{auto}, crash)
 
 	ts.setup(nclerk)
 
@@ -87,7 +87,7 @@ func (ts *Tstate) setup(nclerk int) {
 }
 
 func (ts *Tstate) done() {
-	ts.cm.StopCoords()
+	ts.gm.Stop()
 	ts.stopMemFSs()
 	ts.Shutdown()
 }
@@ -212,7 +212,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ts.cm.StopCoords()
+	ts.gm.Stop()
 	ts.stopMemFSs()
 
 	ts.Shutdown()

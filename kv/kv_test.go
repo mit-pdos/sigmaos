@@ -209,6 +209,9 @@ func concurN(t *testing.T, nclerk int, crash int) {
 	time.Sleep(100 * time.Millisecond)
 
 	ts.gmbal.Stop()
+
+	ts.mfsgrps[0].Stop()
+
 	ts.Shutdown()
 }
 

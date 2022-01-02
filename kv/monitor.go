@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"ulambda/fslib"
+	"ulambda/group"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -39,7 +40,7 @@ func SpawnKv(pclnt *procclnt.ProcClnt, group string) string {
 }
 
 func (mo *Monitor) grow() {
-	pid1 := SpawnKv(mo.ProcClnt, GRP+strconv.Itoa(mo.group))
+	pid1 := SpawnKv(mo.ProcClnt, group.GRP+strconv.Itoa(mo.group))
 	err := mo.ProcClnt.WaitStart(pid1)
 	if err != nil {
 		log.Printf("runBalancer: err %v\n", err)

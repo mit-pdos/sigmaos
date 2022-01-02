@@ -21,6 +21,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
+	"ulambda/group"
 	"ulambda/inode"
 	"ulambda/leaseclnt"
 	np "ulambda/ninep"
@@ -52,7 +53,7 @@ type Balancer struct {
 }
 
 func shardPath(kvd, shard string) string {
-	return np.MEMFS + "/" + kvd + "/shard" + shard
+	return group.GRPDIR + "/" + kvd + "/shard" + shard
 }
 
 func RunBalancer(auto string) {
@@ -64,7 +65,7 @@ func RunBalancer(auto string) {
 	bl.crash = crash.GetEnv()
 
 	// may fail if already exist
-	bl.Mkdir(np.MEMFS, 07)
+	// bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
 	bl.balLease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)

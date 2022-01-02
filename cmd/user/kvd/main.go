@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/kv"
+	"ulambda/group"
 )
 
 func main() {
@@ -12,5 +12,5 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v <grp>\n", os.Args[0])
 		os.Exit(1)
 	}
-	kv.RunKv(os.Args[1])
+	group.RunMember(os.Args[1])
 }

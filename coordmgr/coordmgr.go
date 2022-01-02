@@ -17,10 +17,6 @@ import (
 // returns with an OK status).
 //
 
-const (
-	NCOORD = 3
-)
-
 type CoordMgr struct {
 	stop   bool
 	coords []*coord
@@ -64,11 +60,11 @@ func (c *coord) run(i int, start chan bool, done chan procret) {
 	done <- procret{i, err, status}
 }
 
-func StartCoords(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int) *CoordMgr {
+func StartCoords(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, crash int) *CoordMgr {
 	cm := &CoordMgr{}
 	cm.ch = make(chan bool)
-	cm.coords = make([]*coord, NCOORD)
-	for i := 0; i < NCOORD; i++ {
+	cm.coords = make([]*coord, n)
+	for i := 0; i < n; i++ {
 		cm.coords[i] = makeCoord(fsl, pclnt, bin, args, crash)
 	}
 	done := make(chan procret)
@@ -77,12 +73,11 @@ func StartCoords(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []
 		go c.run(i, start, done)
 		<-start
 	}
-	go cm.manager(done)
+	go cm.manager(done, n)
 	return cm
 }
 
-func (cm *CoordMgr) manager(done chan procret) {
-	n := NCOORD
+func (cm *CoordMgr) manager(done chan procret, n int) {
 	for n > 0 {
 		st := <-done
 		if cm.stop {

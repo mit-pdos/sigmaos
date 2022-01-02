@@ -11,12 +11,14 @@ import (
 
 	"ulambda/coordmgr"
 	"ulambda/fslib"
+	"ulambda/group"
 	"ulambda/kernel"
 )
 
 const (
-	NKEYS  = 100
-	NCLERK = 10
+	NKEYS     = 100
+	NCLERK    = 10
+	NBALANCER = 3
 
 	CRASHBALANCER = 400
 )
@@ -51,7 +53,7 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("kv_test", "..")
-	ts.cm = coordmgr.StartCoords(ts.System.FsLib, ts.System.ProcClnt, "bin/user/balancer", []string{auto}, crash)
+	ts.cm = coordmgr.StartCoords(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{auto}, crash)
 
 	ts.setup(nclerk)
 
@@ -62,7 +64,7 @@ func (ts *Tstate) setup(nclerk int) {
 	log.Printf("start kv\n")
 
 	// add 1 kv so that we can put to initialize
-	grp := GRP + "0"
+	grp := group.GRP + "0"
 	mfs := SpawnKv(ts.ProcClnt, grp)
 	err := ts.WaitStart(mfs)
 	assert.Nil(ts.t, err, "Start mfs")
@@ -180,7 +182,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 	}
 
 	for s := 0; s < NMORE; s++ {
-		grp := GRP + strconv.Itoa(s+1)
+		grp := group.GRP + strconv.Itoa(s+1)
 		mfs := SpawnKv(ts.ProcClnt, grp)
 		ts.mfss = append(ts.mfss, mfs)
 		ts.WaitStart(mfs)
@@ -191,7 +193,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 	}
 
 	for s := 0; s < NMORE; s++ {
-		grp := GRP + strconv.Itoa(len(ts.mfss)-1)
+		grp := group.GRP + strconv.Itoa(len(ts.mfss)-1)
 		err := ts.balancerOp("del", grp)
 		assert.Nil(ts.t, err, "BalancerOp")
 		ts.stopFS(ts.mfss[len(ts.mfss)-1])

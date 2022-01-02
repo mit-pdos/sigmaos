@@ -84,7 +84,7 @@ func (kc *KvClerk) doRetry(err error) bool {
 		// lease ran out
 		strings.HasPrefix(err.Error(), "stale lease") ||
 		// lease ran out  XXX one error?
-		strings.HasPrefix(err.Error(), "checkLease failed") {
+		strings.HasPrefix(err.Error(), "lease not found") {
 		// log.Printf("doRetry error %v\n", err)
 		err = kc.lease.ReleaseRLease()
 		if err != nil {

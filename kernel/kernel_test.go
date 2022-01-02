@@ -205,7 +205,7 @@ func TestWLease(t *testing.T) {
 	ts.Mkdir(dirux, 0777)
 	ts.Remove(dirux + "/f")
 
-	fsldl := fslib.MakeFsLibAddr("dlock", fslib.Named())
+	fsldl := fslib.MakeFsLibAddr("wlease", fslib.Named())
 
 	ch := make(chan bool)
 	go func() {

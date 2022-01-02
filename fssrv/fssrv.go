@@ -119,7 +119,7 @@ func (fssrv *FsServer) checkLease(sess *session.Session) error {
 	}
 	st, err := fssrv.fsl.Stat(np.Join(fn))
 	if err != nil {
-		return fmt.Errorf("checkLease failed %v", err.Error())
+		return fmt.Errorf("lease not found %v", err.Error())
 	}
 	return sess.CheckLease(fn, st.Qid)
 }

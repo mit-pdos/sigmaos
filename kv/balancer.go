@@ -50,6 +50,7 @@ type Balancer struct {
 	mo       *Monitor
 	ch       chan bool
 	crash    int64
+	isBusy   bool
 }
 
 func shardPath(kvd, shard string) string {
@@ -70,6 +71,7 @@ func RunBalancer(auto string) {
 
 	bl.balLease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
 	bl.lease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVCONFIG, 0)
+	bl.isBusy = true
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
@@ -97,6 +99,8 @@ func RunBalancer(auto string) {
 		// done
 	default:
 		bl.recover()
+
+		bl.isBusy = false
 
 		go bl.monitorMyself(ch)
 
@@ -136,13 +140,14 @@ func makeCtl(uname string, parent fs.Dir, bl *Balancer) fs.FsObj {
 }
 
 // XXX call balance() repeatedly for each server passed in to write
+// XXX assumes one client that retries
 func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
 		return 0, fmt.Errorf("Invalid arguments")
 	}
-	c.bl.balance(words[0], words[1])
-	return np.Tsize(len(b)), nil
+	err := c.bl.balance(words[0], words[1])
+	return np.Tsize(len(b)), err
 }
 
 func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
@@ -291,7 +296,7 @@ func (bl *Balancer) runDeleters(moved []string) {
 	}
 }
 
-func (bl *Balancer) balance(opcode, mfs string) {
+func (bl *Balancer) balance(opcode, mfs string) error {
 	var err error
 
 	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
@@ -301,26 +306,35 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	// log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
+	if bl.isBusy {
+		return fmt.Errorf("retry")
+	}
+
 	var nextShards []string
 	switch opcode {
 	case "add":
 		if bl.conf.Present(mfs) {
-			return
+			return nil
 		}
 		nextShards = balanceAdd(bl.conf, mfs)
 	case "del":
 		if !bl.conf.Present(mfs) {
-			return
+			return nil
 		}
 		nextShards = balanceDel(bl.conf, mfs)
 	default:
 	}
 
+	bl.isBusy = true
+	defer func() {
+		bl.isBusy = false
+	}()
+
 	// log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
 	err = bl.lease.RenameTo(KVCONFIGBK)
 	if err != nil {
-		db.DLPrintf("BAL", "BAL: Rename to %v err %v\n", KVCONFIGBK, err)
+		log.Printf("%v: Rename to %v err %v\n", db.GetName(), KVCONFIGBK, err)
 	}
 
 	var moved []string
@@ -339,20 +353,21 @@ func (bl *Balancer) balance(opcode, mfs string) {
 
 	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
-		db.DLPrintf("BAL", "BAL: MakeFile %v err %v\n", KVNEXTCONFIG, err)
+		log.Printf("%v: MakeFile %v err %v\n", db.GetName(), KVNEXTCONFIG, err)
+		// XXX maybe crash
 	}
 
 	err = bl.lease.MakeLeaseFileFrom(KVNEXTCONFIG)
 	if err != nil {
-		db.DLPrintf("BAL", "BAL: rename %v -> %v: error %v\n",
-			KVNEXTCONFIG, KVCONFIG, err)
-		return
+		log.Printf("%v: rename %v -> %v: error %v\n", db.GetName(), KVNEXTCONFIG, KVCONFIG, err)
+		// XXX maybe crash
 	}
 
 	bl.runDeleters(moved)
 
 	err = bl.Remove(KVCONFIGBK)
 	if err != nil {
-		db.DLPrintf("BAL", "BAL: Remove %v err %v\n", KVCONFIGBK, err)
+		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVCONFIGBK, err)
 	}
+	return nil
 }

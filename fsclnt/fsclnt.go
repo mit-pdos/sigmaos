@@ -29,13 +29,13 @@ type FdState struct {
 
 type FsClient struct {
 	sync.Mutex
-	fds   []FdState
-	fids  map[np.Tfid]*Path
-	pc    *protclnt.Clnt
-	mount *Mount
-	next  np.Tfid
-	uname string
-	lease *lease.Lease
+	fds    []FdState
+	fids   map[np.Tfid]*Path
+	pc     *protclnt.Clnt
+	mount  *Mount
+	next   np.Tfid
+	uname  string
+	leases map[string]*lease.Lease
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -46,6 +46,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
 	fsc.next = 0
+	fsc.leases = make(map[string]*lease.Lease)
 	return fsc
 }
 
@@ -209,11 +210,12 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	}
 	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
 	fsc.mount.add(np.Split(path), fid)
+
 	fsc.Lock()
-	lease := fsc.lease
-	fsc.Unlock()
-	if lease != nil {
-		fsc.pc.RegisterLease(lease)
+	defer fsc.Unlock()
+	for _, l := range fsc.leases {
+		// XXX may already be registered; ignore error
+		fsc.pc.RegisterLease(l)
 	}
 	return nil
 }
@@ -266,24 +268,29 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 
 func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
 	fsc.Lock()
-	if fsc.lease != nil {
+	fn := np.Join(l.Fn)
+	log.Printf("%v: reg %v\n", db.GetName(), fn)
+	if _, ok := fsc.leases[fn]; ok {
 		fsc.Unlock()
-		return fmt.Errorf("%v already leased\n", l.Fn)
+		return fmt.Errorf("%v already leased", fn)
 	}
-	fsc.lease = l
+	fsc.leases[fn] = l
 	fsc.Unlock()
 	return fsc.pc.RegisterLease(l)
 }
 
 func (fsc *FsClient) DeregisterLease(path string) error {
+	log.Printf("%v: dereg %v\n", db.GetName(), path)
 	fsc.Lock()
-	if fsc.lease == nil {
+	if _, ok := fsc.leases[path]; !ok {
 		fsc.Unlock()
 		return fmt.Errorf("%v not leased\n", path)
 	}
-	fsc.lease = nil
+	delete(fsc.leases, path)
 	fsc.Unlock()
-	return fsc.pc.DeregisterLease(np.Split(path))
+	err := fsc.pc.DeregisterLease(np.Split(path))
+	log.Printf("%v: dereg %v err %v\n", db.GetName(), path, err)
+	return err
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {

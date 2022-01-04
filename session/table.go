@@ -54,22 +54,3 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 	sess.protsrv.Detach()
 	return nil
 }
-
-func (st *SessionTable) CheckLock(sid np.Tsession, fn []string, qid np.Tqid) error {
-	sess, ok := st.lookup(sid)
-	if !ok {
-		return fmt.Errorf("%v: CheckLock no sess %v", db.GetName(), sid)
-	}
-
-	sess.Lock()
-	defer sess.Unlock()
-
-	if sess.lease == nil {
-		return fmt.Errorf("%v: CheckLock no lock %v", db.GetName(), sid)
-	}
-
-	if !np.IsPathEq(sess.lease.Fn, fn) {
-		return fmt.Errorf("%v: CheckLock lock is for %v not %v", db.GetName(), sess.lease.Fn, fn)
-	}
-	return sess.lease.Check(qid)
-}

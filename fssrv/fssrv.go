@@ -1,10 +1,10 @@
 package fssrv
 
 import (
-	"fmt"
 	"log"
 	"runtime/debug"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -109,40 +109,25 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 	return fssrv.root, MkCtx(uname)
 }
 
-func (fssrv *FsServer) checkLease(sess *session.Session) error {
-	fn, err := sess.LeaseName()
-	if err != nil {
-		return err
-	}
-	if fn == nil { // no lease on sess
-		return nil
-	}
-	st, err := fssrv.fsl.Stat(np.Join(fn))
-	if err != nil {
-		return fmt.Errorf("lease not found %v", err.Error())
-	}
-	return sess.CheckLease(fn, st.Qid)
-}
-
 func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	sess := fssrv.st.LookupInsert(sid)
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
 		// log.Printf("%p: checkLease %v %v\n", fssrv, msg.Type(), req)
-		err := fssrv.checkLease(sess)
+		err := sess.CheckLeases(fssrv.fsl)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 	case np.Tlease:
 		reply := &np.Ropen{}
-		// log.Printf("%v: %p lease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		log.Printf("%v: %p lease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.Lease(sid, req.Wnames, req.Qid); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		return *reply, nil
 	case np.Tunlease:
 		reply := &np.Ropen{}
-		// log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.Unlease(sid, req.Wnames); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}

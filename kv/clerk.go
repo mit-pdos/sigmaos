@@ -11,6 +11,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/group"
 	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -36,16 +37,18 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	fsl   *fslib.FsLib
-	lease *leaseclnt.LeaseClnt
-	conf  Config
-	nop   int
+	fsl       *fslib.FsLib
+	balLease  *leaseclnt.LeaseClnt
+	grpLeases map[string]*leaseclnt.LeaseClnt
+	blConf    Config
+	nop       int
 }
 
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.fsl = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
-	kc.lease = leaseclnt.MakeLeaseClnt(kc.fsl, KVCONFIG, 0)
+	kc.balLease = leaseclnt.MakeLeaseClnt(kc.fsl, KVCONFIG, 0)
+	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
@@ -59,13 +62,13 @@ func (kc *KvClerk) Exit() {
 
 // XXX atomic read
 func (kc *KvClerk) readConfig() error {
-	b, err := kc.lease.WaitRLease()
+	b, err := kc.balLease.WaitRLease()
 	if err != nil {
 		log.Printf("%v: clerk readConfig: err %v\n", db.GetName(), err)
 		return err
 	}
-	json.Unmarshal(b, &kc.conf)
-	// log.Printf("%v: readConfig %v\n", db.GetName(), kc.conf)
+	json.Unmarshal(b, &kc.blConf)
+	log.Printf("%v: readConfig %v\n", db.GetName(), kc.blConf)
 	return nil
 }
 
@@ -86,13 +89,35 @@ func (kc *KvClerk) doRetry(err error) bool {
 		// lease ran out  XXX one error?
 		strings.HasPrefix(err.Error(), "lease not found") {
 		// log.Printf("doRetry error %v\n", err)
-		err = kc.lease.ReleaseRLease()
+
+		// XXX release grp lease for certain errors
+		// err = kc.balLease.ReleaseRLease()
+
+		err = kc.balLease.ReleaseRLease()
 		if err != nil {
 			return false
 		}
 		return true
 	}
 	return false
+}
+
+func (kc *KvClerk) lease(grp string) error {
+	gc := group.GrpConf{}
+	if _, ok := kc.grpLeases[grp]; ok {
+		return nil
+	}
+	fn := group.GrpConfPath(grp)
+	l := leaseclnt.MakeLeaseClnt(kc.fsl, fn, 0)
+	b, err := l.WaitRLease()
+	if err != nil {
+		log.Printf("%v: lease %v err %v\n", db.GetName(), grp, err)
+		return err
+	}
+	kc.grpLeases[grp] = l
+	json.Unmarshal(b, &gc)
+	log.Printf("%v: grp lease %v gc %v\n", db.GetName(), grp, gc)
+	return nil
 }
 
 type opT int
@@ -113,7 +138,14 @@ type op struct {
 func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
-		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), o.k)
+		o.err = kc.lease(kc.blConf.Shards[shard])
+		if o.err != nil {
+			// XXX what if info is wrong; kvgroup has been removed
+			// readConfig() and retry
+			log.Printf("%v: kc.lease %v err %v\n", db.GetName(), kc.blConf.Shards[shard], o.err)
+			continue
+		}
+		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
 		switch o.kind {
 		case GET:
 			o.b, o.err = kc.fsl.GetFile(fn)
@@ -122,18 +154,22 @@ func (kc *KvClerk) doop(o *op) {
 		case SET:
 			_, o.err = kc.fsl.SetFile(fn, o.b)
 		}
-		db.DLPrintf("CLERK", "%v: %v %v\n", o.kind, fn, o.err)
+		log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
 		if o.err == nil {
 			kc.nop += 1
 			return
 		}
 		if kc.doRetry(o.err) {
+			log.Printf("%v: retry %v\n", db.GetName(), o.err)
+			// XXX never get Wrelease; already have it.
 			o.err = kc.readConfig()
 			if o.err != nil {
 				log.Printf("%v: %v readConfig err %v\n", db.GetName(), o.kind, o.err)
 				return
 			}
+			log.Printf("%v: retry now\n", db.GetName())
 		} else {
+			log.Printf("%v: no retry\n", db.GetName())
 			return
 		}
 	}
@@ -162,6 +198,6 @@ func (kc *KvClerk) KVs() []string {
 	if err != nil {
 		log.Printf("%v: KVs readConfig err %v\n", db.GetName(), err)
 	}
-	kcs := makeKvs(kc.conf.Shards)
+	kcs := makeKvs(kc.blConf.Shards)
 	return kcs.mkKvs()
 }

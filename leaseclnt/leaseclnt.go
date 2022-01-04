@@ -111,11 +111,10 @@ func (l *LeaseClnt) MakeLeaseFile(b []byte) error {
 	err := l.MakeFile(l.leaseName, 0777|np.DMTMP, np.OWRITE, b)
 	// Sometimes we get "EOF" on shutdown
 	if err != nil && err.Error() == "EOF" {
-		db.DLPrintf("DLOCK", "Makefile %v err %v", l.leaseName, err)
 		return err
 	}
 	if err != nil {
-		log.Printf("%v: RegisterLock %v err %v", db.GetName(), l.leaseName, err)
+		log.Printf("%v: MakeFile %v err %v", db.GetName(), l.leaseName, err)
 		return err
 	}
 	return nil
@@ -147,7 +146,7 @@ func (l *LeaseClnt) registerRLease() error {
 	}
 	err = l.RegisterLease(lease.MakeLease(np.Split(l.leaseName), st.Qid))
 	if err != nil {
-		log.Printf("%v: RegisterLock %v err %v", db.GetName(), l.leaseName, err)
+		log.Printf("%v: registerRLease %v err %v", db.GetName(), l.leaseName, err)
 		return err
 	}
 	return nil
@@ -156,12 +155,15 @@ func (l *LeaseClnt) registerRLease() error {
 func (l *LeaseClnt) WaitRLease() ([]byte, error) {
 	ch := make(chan bool)
 	for {
+		log.Printf("%v: file watch %v\n", db.GetName(), l.leaseName)
 		b, err := l.ReadFileWatch(l.leaseName, func(string, error) {
 			ch <- true
 		})
 		if err != nil {
+			log.Printf("%v: file watch wait %v\n", db.GetName(), l.leaseName)
 			<-ch
 		} else {
+			log.Printf("%v: file watch return %v\n", db.GetName(), l.leaseName)
 			return b, l.registerRLease()
 		}
 	}

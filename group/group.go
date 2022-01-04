@@ -29,7 +29,7 @@ const (
 	CTL       = "ctl"
 )
 
-func grpconf(grp string) string {
+func GrpConfPath(grp string) string {
 	return GRPDIR + "/" + grp + GRPCONF
 
 }
@@ -45,7 +45,7 @@ type Group struct {
 	crash     int64
 	primLease *leaseclnt.LeaseClnt
 	lease     *leaseclnt.LeaseClnt
-	conf      *kvConf
+	conf      *GrpConf
 }
 
 func RunMember(grp string) {
@@ -57,7 +57,7 @@ func RunMember(grp string) {
 	mg.Mkdir(GRPDIR, 07)
 
 	mg.primLease = leaseclnt.MakeLeaseClnt(mg.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
-	mg.lease = leaseclnt.MakeLeaseClnt(mg.FsLib, grpconf(grp), 0)
+	mg.lease = leaseclnt.MakeLeaseClnt(mg.FsLib, GrpConfPath(grp), 0)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "kv-"+proc.GetPid())
@@ -92,7 +92,7 @@ func RunMember(grp string) {
 
 func (mg *Group) recover(grp string) {
 	var err error
-	mg.conf, err = readGroupConf(mg.FsLib, grpconf(grp))
+	mg.conf, err = readGroupConf(mg.FsLib, GrpConfPath(grp))
 	if err == nil {
 		log.Printf("%v: recovery: use %v\n", db.GetName(), mg.conf)
 		return
@@ -105,7 +105,7 @@ func (mg *Group) recover(grp string) {
 		// this must be the first recovery of the kv group;
 		// otherwise, there would be a either a config or
 		// backup config.
-		err = mg.lease.MakeLeaseFileJson(kvConf{"kv-" + proc.GetPid(), []string{}})
+		err = mg.lease.MakeLeaseFileJson(GrpConf{"kv-" + proc.GetPid(), []string{}})
 		if err != nil {
 			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
 		}
@@ -118,13 +118,13 @@ func (mg *Group) op(opcode, kv string) {
 	log.Printf("%v: opcode %v kv %v\n", db.GetName(), opcode, kv)
 }
 
-type kvConf struct {
+type GrpConf struct {
 	primary string
 	backups []string
 }
 
-func readGroupConf(fsl *fslib.FsLib, conffile string) (*kvConf, error) {
-	conf := kvConf{}
+func readGroupConf(fsl *fslib.FsLib, conffile string) (*GrpConf, error) {
+	conf := GrpConf{}
 	err := fsl.ReadFileJson(conffile, &conf)
 	if err != nil {
 		return nil, err

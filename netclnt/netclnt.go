@@ -197,14 +197,14 @@ func (nc *NetClnt) connectL() error {
 	for _, addr := range nc.addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
-			db.DLPrintf("NETCLNT", "NetClntect to %v err %v\n", addr, err)
+			db.DLPrintf("NETCLNT", "NetClnt to %v err %v\n", addr, err)
 
 			continue
 		}
 		nc.conn = c
 		nc.br = bufio.NewReaderSize(c, Msglen)
 		nc.bw = bufio.NewWriterSize(c, Msglen)
-		db.DLPrintf("NETCLNT", "NetClntect %v -> %v bw:%p, br:%p\n", c.LocalAddr(), addr, nc.bw, nc.br)
+		db.DLPrintf("NETCLNT", "NetClnt %v -> %v bw:%p, br:%p\n", c.LocalAddr(), addr, nc.bw, nc.br)
 		return nil
 	}
 	db.DLPrintf("NETCLNT", "No successful connections %v\n", nc.addrs)
@@ -327,7 +327,7 @@ func (nc *NetClnt) writer() {
 				log.Fatal(err)
 				return
 			}
-			db.DLPrintf("NETCLNT", "Writer: NetClntection error to %v: %v", nc.Dst(), err)
+			db.DLPrintf("NETCLNT", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
 		} else {
 			err = bw.Flush()
 			if err != nil {
@@ -358,7 +358,7 @@ func (nc *NetClnt) reader() {
 		db.DLPrintf("NETCLNT", "Reader: ReadFrame from %v br:%p\n", nc.Dst(), br)
 		// On connection error, retry
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
-			db.DLPrintf("NETCLNT", "Reader: NetClntection error to %v\n", nc.Dst())
+			db.DLPrintf("NETCLNT", "Reader: NetClnt error to %v\n", nc.Dst())
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection
 			br, bw, err = nc.getBufio()

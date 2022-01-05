@@ -3,6 +3,7 @@ package kv
 import (
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"hash/fnv"
 	"log"
 	"math/big"
@@ -14,6 +15,11 @@ import (
 	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procclnt"
+)
+
+const (
+	NKEYS = 100
 )
 
 func key2shard(key string) int {
@@ -36,7 +42,8 @@ func nrand() uint64 {
 }
 
 type KvClerk struct {
-	fsl   *fslib.FsLib
+	*fslib.FsLib
+	*procclnt.ProcClnt
 	lease *leaseclnt.LeaseClnt
 	conf  Config
 	nop   int
@@ -44,8 +51,9 @@ type KvClerk struct {
 
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
-	kc.fsl = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
-	kc.lease = leaseclnt.MakeLeaseClnt(kc.fsl, KVCONFIG, 0)
+	kc.FsLib = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
+	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
+	kc.lease = leaseclnt.MakeLeaseClnt(kc.FsLib, KVCONFIG, 0)
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
@@ -53,8 +61,50 @@ func MakeClerk(namedAddr []string) *KvClerk {
 	return kc
 }
 
-func (kc *KvClerk) Exit() {
-	kc.fsl.Exit()
+func key(k uint64) string {
+	return "key" + strconv.FormatUint(k, 16)
+}
+
+func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
+	for i := uint64(0); i < NKEYS; i++ {
+		v, err := kc.Get(key(i))
+		select {
+		case <-ch:
+			return true, nil
+		default:
+			if err != nil {
+				return false, fmt.Errorf("%v: Get %v err %v\n", db.GetName(), key(i), err)
+			}
+			if key(i) != v {
+				return false, fmt.Errorf("%v: Get %v wrong val %v\n", db.GetName(), key(i), v)
+			}
+		}
+	}
+	return false, nil
+}
+
+func (kc *KvClerk) waitEvict(ch chan bool) {
+	err := kc.WaitEvict(proc.GetPid())
+	if err != nil {
+		log.Fatalf("Error WaitEvict: %v", err)
+	}
+	ch <- true
+}
+
+func (kc *KvClerk) Run() {
+	kc.Started(proc.GetPid())
+	ch := make(chan bool)
+	done := false
+	var err error
+	go kc.waitEvict(ch)
+	for !done {
+		done, err = kc.getKeys(ch)
+		if err != nil {
+			kc.Exited(proc.GetPid(), err.Error())
+		}
+	}
+	log.Printf("nop %v\n", kc.nop)
+	kc.Exited(proc.GetPid(), "OK")
 }
 
 // XXX atomic read
@@ -116,11 +166,11 @@ func (kc *KvClerk) doop(o *op) {
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), o.k)
 		switch o.kind {
 		case GET:
-			o.b, o.err = kc.fsl.GetFile(fn)
+			o.b, o.err = kc.GetFile(fn)
 		case PUT:
-			_, o.err = kc.fsl.PutFile(fn, o.b, 0777, np.OWRITE)
+			_, o.err = kc.PutFile(fn, o.b, 0777, np.OWRITE)
 		case SET:
-			_, o.err = kc.fsl.SetFile(fn, o.b)
+			_, o.err = kc.SetFile(fn, o.b)
 		}
 		db.DLPrintf("CLERK", "%v: %v %v\n", o.kind, fn, o.err)
 		if o.err == nil {

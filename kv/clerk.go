@@ -51,9 +51,9 @@ type KvClerk struct {
 	nop       int
 }
 
-func MakeClerk(namedAddr []string) *KvClerk {
+func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
-	kc.FsLib = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
+	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
 	kc.balLease = leaseclnt.MakeLeaseClnt(kc.FsLib, KVCONFIG, 0)
 	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)

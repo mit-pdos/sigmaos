@@ -70,7 +70,7 @@ func (ts *Tstate) setup(nclerk int) {
 	err := ts.balancerOp("add", gn)
 	assert.Nil(ts.t, err, "BalancerOp")
 
-	ts.clrk = MakeClerk(fslib.Named())
+	ts.clrk = MakeClerk("kv_test", fslib.Named())
 	if nclerk > 0 {
 		for i := uint64(0); i < NKEYS; i++ {
 			err := ts.clrk.Put(key(i), key(i))

@@ -45,7 +45,6 @@ func nrand() uint64 {
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	lease     *leaseclnt.LeaseClnt
 	balLease  *leaseclnt.LeaseClnt
 	grpLeases map[string]*leaseclnt.LeaseClnt
 	blConf    Config
@@ -55,7 +54,7 @@ type KvClerk struct {
 func MakeClerk(namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fslib.MakeFsLibAddr("clerk-"+proc.GetPid(), namedAddr)
-	kc.balLease = leaseclnt.MakeLeaseClnt(kc.fsl, KVCONFIG, 0)
+	kc.balLease = leaseclnt.MakeLeaseClnt(kc.FsLib, KVCONFIG, 0)
 	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	err := kc.readConfig()
@@ -159,7 +158,7 @@ func (kc *KvClerk) lease(grp string) error {
 		return nil
 	}
 	fn := group.GrpConfPath(grp)
-	l := leaseclnt.MakeLeaseClnt(kc.fsl, fn, 0)
+	l := leaseclnt.MakeLeaseClnt(kc.FsLib, fn, 0)
 	b, err := l.WaitRLease()
 	if err != nil {
 		log.Printf("%v: lease %v err %v\n", db.GetName(), grp, err)

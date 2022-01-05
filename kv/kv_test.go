@@ -2,7 +2,6 @@ package kv
 
 import (
 	"log"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -13,12 +12,12 @@ import (
 	"ulambda/group"
 	"ulambda/groupmgr"
 	"ulambda/kernel"
+	"ulambda/proc"
 )
 
 const (
-	NKEYS     = 100
-	NCLERK    = 10
 	NBALANCER = 3
+	NCLERK    = 10
 
 	CRASHBALANCER = 400
 )
@@ -44,9 +43,10 @@ func TestBalance(t *testing.T) {
 type Tstate struct {
 	*kernel.System
 	t       *testing.T
-	clrks   []*KvClerk
+	clrk    *KvClerk
 	mfsgrps []*groupmgr.GroupMgr
 	gmbal   *groupmgr.GroupMgr
+	clrks   []string
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
@@ -69,14 +69,10 @@ func (ts *Tstate) setup(nclerk int) {
 	err := ts.balancerOp("add", gn)
 	assert.Nil(ts.t, err, "BalancerOp")
 
-	ts.clrks = make([]*KvClerk, nclerk)
-	for i := 0; i < nclerk; i++ {
-		ts.clrks[i] = MakeClerk(fslib.Named())
-	}
-
+	ts.clrk = MakeClerk(fslib.Named())
 	if nclerk > 0 {
 		for i := uint64(0); i < NKEYS; i++ {
-			err := ts.clrks[0].Put(key(i), key(i))
+			err := ts.clrk.Put(key(i), key(i))
 			assert.Nil(ts.t, err, "Put")
 		}
 	}
@@ -91,7 +87,7 @@ func (ts *Tstate) done() {
 
 func (ts *Tstate) stopFS(fs string) {
 	err := ts.Evict(fs)
-	assert.Nil(ts.t, err, "ShutdownFS")
+	assert.Nil(ts.t, err, "stopFS")
 	ts.WaitExit(fs)
 }
 
@@ -101,31 +97,22 @@ func (ts *Tstate) stopMemfsgrps() {
 	}
 }
 
-func key(k uint64) string {
-	return "key" + strconv.FormatUint(k, 16)
+func (ts *Tstate) stopClerks() {
+	for _, ck := range ts.clrks {
+		err := ts.Evict(ck)
+		assert.Nil(ts.t, err, "stopClerks")
+		status, err := ts.WaitExit(ck)
+		assert.Nil(ts.t, err, "WaitExit")
+		assert.Equal(ts.t, "OK", status)
+	}
 }
 
-func (ts *Tstate) getKeys(c int, ch chan bool) bool {
-	for i := uint64(0); i < NKEYS; i++ {
-		v, err := ts.clrks[c].Get(key(i))
-		select {
-		case <-ch:
-			return true
-		default:
-			assert.Nil(ts.t, err, "Get "+key(i))
-			assert.Equal(ts.t, key(i), v, "Get")
-		}
-	}
-	return false
-}
-
-func (ts *Tstate) clerk(c int, ch chan bool) {
-	done := false
-	for !done {
-		done = ts.getKeys(c, ch)
-	}
-	log.Printf("nop %v\n", ts.clrks[c].nop)
-	assert.NotEqual(ts.t, 0, ts.clrks[c].nop)
+func (ts *Tstate) startClerk() string {
+	p := proc.MakeProc("bin/user/kv-clerk", []string{""})
+	ts.Spawn(p)
+	err := ts.WaitStart(p.Pid)
+	assert.Nil(ts.t, err, "WaitStart")
+	return p.Pid
 }
 
 func (ts *Tstate) balancerOp(opcode, mfs string) error {
@@ -150,17 +137,17 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 func TestGetPutSet(t *testing.T) {
 	ts := makeTstate(t, "manual", 1, 0)
 
-	_, err := ts.clrks[0].Get(key(NKEYS + 1))
+	_, err := ts.clrk.Get(key(NKEYS + 1))
 	assert.NotEqual(ts.t, err, nil, "Get")
 
-	err = ts.clrks[0].Set(key(NKEYS+1), key(NKEYS+1))
+	err = ts.clrk.Set(key(NKEYS+1), key(NKEYS+1))
 	assert.NotEqual(ts.t, err, nil, "Set")
 
-	err = ts.clrks[0].Set(key(0), key(0))
+	err = ts.clrk.Set(key(0), key(0))
 	assert.Nil(ts.t, err, "Set")
 
 	for i := uint64(0); i < NKEYS; i++ {
-		v, err := ts.clrks[0].Get(key(i))
+		v, err := ts.clrk.Get(key(i))
 		assert.Nil(ts.t, err, "Get "+key(i))
 		assert.Equal(ts.t, key(i), v, "Get")
 	}
@@ -174,9 +161,9 @@ func concurN(t *testing.T, nclerk int, crash int) {
 
 	ts := makeTstate(t, "manual", nclerk, crash)
 
-	ch := make(chan bool)
 	for i := 0; i < nclerk; i++ {
-		go ts.clerk(i, ch)
+		pid := ts.startClerk()
+		ts.clrks = append(ts.clrks, pid)
 	}
 
 	for s := 0; s < NMORE; s++ {
@@ -199,11 +186,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 		time.Sleep(TIME * time.Millisecond)
 	}
 
-	log.Printf("Wait for clerks\n")
-
-	for i := 0; i < nclerk; i++ {
-		ch <- true
-	}
+	ts.stopClerks()
 
 	log.Printf("Done waiting for clerks\n")
 
@@ -240,23 +223,23 @@ func TestConcurFailN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER)
 }
 
-func TestAuto(t *testing.T) {
-	// runtime.GOMAXPROCS(2) // XXX for KV
-	nclerk := NCLERK
-	ts := makeTstate(t, "auto", nclerk, 0)
+// func TestAuto(t *testing.T) {
+// 	// runtime.GOMAXPROCS(2) // XXX for KV
+// 	nclerk := NCLERK
+// 	ts := makeTstate(t, "auto", nclerk, 0)
 
-	ch := make(chan bool)
-	for i := 0; i < nclerk; i++ {
-		go ts.clerk(i, ch)
-	}
+// 	ch := make(chan bool)
+// 	for i := 0; i < nclerk; i++ {
+// 		go ts.clerk(i, ch)
+// 	}
 
-	time.Sleep(30 * time.Second)
+// 	time.Sleep(30 * time.Second)
 
-	log.Printf("Wait for clerks\n")
+// 	log.Printf("Wait for clerks\n")
 
-	for i := 0; i < nclerk; i++ {
-		ch <- true
-	}
+// 	for i := 0; i < nclerk; i++ {
+// 		ch <- true
+// 	}
 
-	ts.done()
-}
+// 	ts.done()
+// }

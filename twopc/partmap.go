@@ -54,6 +54,8 @@ func (fw *FlwsMap) setStatusWatches(dir string, f fsclnt.Watch) {
 		if err == nil {
 			log.Fatalf("COORD: set status watch failed %v", err)
 		}
+		// XXX error could be something else than "file not found",
+		// in which case we want to fail?
 	}
 }
 

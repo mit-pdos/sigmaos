@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -159,9 +160,11 @@ func (l *LeaseClnt) WaitRLease() ([]byte, error) {
 		b, err := l.ReadFileWatch(l.leaseName, func(string, error) {
 			ch <- true
 		})
-		if err != nil {
+		if err != nil && strings.HasPrefix(err.Error(), "file not found") {
 			log.Printf("%v: file watch wait %v\n", db.GetName(), l.leaseName)
 			<-ch
+		} else if err != nil {
+			return nil, err
 		} else {
 			log.Printf("%v: file watch return %v\n", db.GetName(), l.leaseName)
 			return b, l.registerRLease()

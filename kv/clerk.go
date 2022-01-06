@@ -95,7 +95,9 @@ func (kc *KvClerk) waitEvict(ch chan bool) {
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}
+	log.Printf("%v: evicted\n", db.GetName())
 	ch <- true
+	log.Printf("%v: evicted return\n", db.GetName())
 }
 
 func (kc *KvClerk) Run() {
@@ -110,7 +112,7 @@ func (kc *KvClerk) Run() {
 			kc.Exited(proc.GetPid(), err.Error())
 		}
 	}
-	log.Printf("nop %v\n", kc.nop)
+	log.Printf("%v: done nop %v\n", db.GetName(), kc.nop)
 	kc.Exited(proc.GetPid(), "OK")
 }
 
@@ -158,7 +160,6 @@ func (kc *KvClerk) doRetry(err error) (bool, error) {
 		} else {
 			s := kc.grpre.FindStringSubmatch(err.Error())
 			if s != nil {
-				log.Printf("%v: s = %v\n", db.GetName(), s)
 				err := kc.release("grp-" + s[1])
 				if err != nil {
 					return false, nil
@@ -220,11 +221,19 @@ type op struct {
 
 func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
+	retry := false
 	for {
 		o.err = kc.lease(kc.blConf.Shards[shard])
 		if o.err != nil {
-			log.Printf("%v: kc.lease %v err %v\n", db.GetName(), kc.blConf.Shards[shard], o.err)
-			continue
+			retry, o.err = kc.doRetry(o.err)
+			if o.err != nil {
+				return
+			}
+			if !retry {
+				log.Printf("%v: no retry\n", db.GetName())
+				return
+			}
+
 		}
 		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
 		switch o.kind {
@@ -240,7 +249,6 @@ func (kc *KvClerk) doop(o *op) {
 			kc.nop += 1
 			return
 		}
-		retry := false
 		retry, o.err = kc.doRetry(o.err)
 		if o.err != nil {
 			return

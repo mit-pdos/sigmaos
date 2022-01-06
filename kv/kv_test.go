@@ -107,10 +107,13 @@ func (ts *Tstate) stopMemfsgrps() {
 }
 
 func (ts *Tstate) stopClerks() {
+	log.Printf("clerks to evict %v\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
+		log.Printf("evict clerk %v\n", ck)
 		err := ts.Evict(ck)
 		assert.Nil(ts.t, err, "stopClerks")
 		status, err := ts.WaitExit(ck)
+		log.Printf("evict clerk waitexit %v status %v err %v\n", ck, status, err)
 		assert.Nil(ts.t, err, "WaitExit")
 		assert.Equal(ts.t, "OK", status)
 	}
@@ -197,15 +200,21 @@ func concurN(t *testing.T, nclerk int, crash int) {
 
 	ts.stopClerks()
 
-	log.Printf("Done waiting for clerks\n")
+	log.Printf("done waiting for clerks\n")
 
 	time.Sleep(100 * time.Millisecond)
 
 	ts.gmbal.Stop()
 
+	log.Printf("done waiting for balancer\n")
+
 	ts.mfsgrps[0].Stop()
 
+	log.Printf("done waiting for kv 0\n")
+
 	ts.Shutdown()
+
+	log.Printf("done shutdown kv 0\n")
 }
 
 func TestConcurOK0(t *testing.T) {

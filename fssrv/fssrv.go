@@ -4,7 +4,7 @@ import (
 	"log"
 	"runtime/debug"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -120,14 +120,14 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 		}
 	case np.Tlease:
 		reply := &np.Ropen{}
-		log.Printf("%v: %p lease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		// log.Printf("%v: %p lease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.Lease(sid, req.Wnames, req.Qid); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		return *reply, nil
 	case np.Tunlease:
 		reply := &np.Ropen{}
-		log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		// log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.Unlease(sid, req.Wnames); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}

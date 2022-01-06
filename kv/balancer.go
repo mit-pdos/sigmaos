@@ -304,7 +304,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 		log.Fatalf("%v: readConfig: err %v\n", db.GetName(), err)
 	}
 
-	// log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
+	log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
 	if bl.isBusy {
 		return fmt.Errorf("retry")
@@ -330,7 +330,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 		bl.isBusy = false
 	}()
 
-	// log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
+	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
 	err = bl.lease.RenameTo(KVCONFIGBK)
 	if err != nil {

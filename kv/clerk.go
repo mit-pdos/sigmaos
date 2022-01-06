@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"log"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -49,6 +50,7 @@ type KvClerk struct {
 	grpLeases map[string]*leaseclnt.LeaseClnt
 	blConf    Config
 	nop       int
+	grpre     *regexp.Regexp
 }
 
 func MakeClerk(name string, namedAddr []string) *KvClerk {
@@ -57,6 +59,8 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.balLease = leaseclnt.MakeLeaseClnt(kc.FsLib, KVCONFIG, 0)
 	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
+	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9])-conf`)
+
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
@@ -123,7 +127,7 @@ func (kc *KvClerk) readConfig() error {
 }
 
 // XXX error checking in one place and more uniform
-func (kc *KvClerk) doRetry(err error) bool {
+func (kc *KvClerk) doRetry(err error) (bool, error) {
 	if err.Error() == "Version mismatch" {
 		log.Printf("VERSION MISMATCH\n")
 	}
@@ -140,16 +144,45 @@ func (kc *KvClerk) doRetry(err error) bool {
 		strings.HasPrefix(err.Error(), "lease not found") {
 		// log.Printf("doRetry error %v\n", err)
 
-		// XXX release grp lease for certain errors
-		// err = kc.balLease.ReleaseRLease()
-
-		err = kc.balLease.ReleaseRLease()
-		if err != nil {
-			return false
+		if strings.Contains(err.Error(), KVCONFIG) {
+			log.Printf("%v: release lease %v err %v\n", db.GetName(), KVCONFIG, err)
+			err := kc.balLease.ReleaseRLease()
+			if err != nil {
+				return false, err
+			}
+			err = kc.readConfig()
+			if err != nil {
+				log.Printf("%v: readConfig err %v\n", db.GetName(), err)
+				return false, err
+			}
+		} else {
+			s := kc.grpre.FindStringSubmatch(err.Error())
+			if s != nil {
+				log.Printf("%v: s = %v\n", db.GetName(), s)
+				err := kc.release("grp-" + s[1])
+				if err != nil {
+					return false, nil
+				}
+			}
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
+}
+
+func (kc *KvClerk) release(grp string) error {
+	l, ok := kc.grpLeases[grp]
+	if !ok {
+		return fmt.Errorf("release lease %v not found", grp)
+	}
+	log.Printf("%v: release grp %v\n", db.GetName(), grp)
+	err := l.ReleaseRLease()
+	if err != nil {
+		return err
+	}
+
+	delete(kc.grpLeases, grp)
+	return nil
 }
 
 func (kc *KvClerk) lease(grp string) error {
@@ -190,8 +223,6 @@ func (kc *KvClerk) doop(o *op) {
 	for {
 		o.err = kc.lease(kc.blConf.Shards[shard])
 		if o.err != nil {
-			// XXX what if info is wrong; kvgroup has been removed
-			// readConfig() and retry
 			log.Printf("%v: kc.lease %v err %v\n", db.GetName(), kc.blConf.Shards[shard], o.err)
 			continue
 		}
@@ -209,19 +240,16 @@ func (kc *KvClerk) doop(o *op) {
 			kc.nop += 1
 			return
 		}
-		if kc.doRetry(o.err) {
-			log.Printf("%v: retry %v\n", db.GetName(), o.err)
-			// XXX never get Wrelease; already have it.
-			o.err = kc.readConfig()
-			if o.err != nil {
-				log.Printf("%v: %v readConfig err %v\n", db.GetName(), o.kind, o.err)
-				return
-			}
-			log.Printf("%v: retry now\n", db.GetName())
-		} else {
+		retry := false
+		retry, o.err = kc.doRetry(o.err)
+		if o.err != nil {
+			return
+		}
+		if !retry {
 			log.Printf("%v: no retry\n", db.GetName())
 			return
 		}
+		log.Printf("%v: retry %v %v\n", db.GetName(), o.kind, o.err)
 	}
 }
 

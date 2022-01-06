@@ -18,7 +18,7 @@ func MakeLease(lease []string, qid np.Tqid) *Lease {
 func (lease *Lease) Check(qid np.Tqid) error {
 	// log.Printf("%v: check lease %v %v\n", db.GetName(), lease.Qid, qid)
 	if qid != lease.Qid {
-		return fmt.Errorf("stale lease %v", lease.Fn)
+		return fmt.Errorf("stale lease %v", np.Join(lease.Fn))
 	}
 	return nil
 }

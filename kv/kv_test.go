@@ -2,6 +2,7 @@ package kv
 
 import (
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -39,6 +40,13 @@ func TestBalance(t *testing.T) {
 	conf.Shards = shards
 	shards = balanceDel(conf, "c")
 	log.Printf("balance %v\n", shards)
+}
+
+func TestRegex(t *testing.T) {
+	grpre := regexp.MustCompile(`name/group/grp-([0-9])-conf`)
+	s := grpre.FindStringSubmatch("file not found /name/group/grp-9-conf")
+	assert.NotNil(t, s, "Find")
+	log.Printf("%v", s[1])
 }
 
 type Tstate struct {

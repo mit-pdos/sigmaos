@@ -15,6 +15,12 @@ import (
 	"ulambda/protclnt"
 )
 
+//
+// Sigma file system API.  A sigma proc typically has one fsclnt
+// through which it interacts with all the file servers in a sigma
+// deployment.
+//
+
 const (
 	MAXFD = 20
 )
@@ -29,13 +35,13 @@ type FdState struct {
 
 type FsClient struct {
 	sync.Mutex
-	fds    []FdState
-	fids   map[np.Tfid]*Path
-	pc     *protclnt.Clnt
-	mount  *Mount
-	next   np.Tfid
-	uname  string
-	leases map[string]*lease.Lease
+	fds   []FdState
+	fids  map[np.Tfid]*Path
+	pc    *protclnt.Clnt
+	mount *Mount
+	next  np.Tfid
+	uname string
+	lm    *lease.LeaseMap
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -46,7 +52,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
 	fsc.next = 0
-	fsc.leases = make(map[string]*lease.Lease)
+	fsc.lm = lease.MakeLeaseMap()
 	return fsc
 }
 
@@ -211,9 +217,7 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
 	fsc.mount.add(np.Split(path), fid)
 
-	fsc.Lock()
-	defer fsc.Unlock()
-	for _, l := range fsc.leases {
+	for _, l := range fsc.lm.Leases() {
 		err := fsc.pc.RegisterLease(l)
 		if err != nil {
 			return err
@@ -269,29 +273,20 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
-	fsc.Lock()
-	fn := np.Join(l.Fn)
 	// log.Printf("%v: reg %v\n", db.GetName(), fn)
-	if _, ok := fsc.leases[fn]; ok {
-		fsc.Unlock()
-		return fmt.Errorf("%v already leased", fn)
+	if err := fsc.lm.Add(l); err != nil {
+		return err
 	}
-	fsc.leases[fn] = l
-	fsc.Unlock()
 	return fsc.pc.RegisterLease(l)
 }
 
 func (fsc *FsClient) DeregisterLease(path string) error {
 	// log.Printf("%v: dereg %v\n", db.GetName(), path)
-	fsc.Lock()
-	if _, ok := fsc.leases[path]; !ok {
-		fsc.Unlock()
-		return fmt.Errorf("%v not leased\n", path)
+	p := np.Split(path)
+	if err := fsc.lm.Del(p); err != nil {
+		return err
 	}
-	delete(fsc.leases, path)
-	fsc.Unlock()
-	err := fsc.pc.DeregisterLease(np.Split(path))
-	// log.Printf("%v: dereg %v err %v\n", db.GetName(), path, err)
+	err := fsc.pc.DeregisterLease(p)
 	return err
 }
 

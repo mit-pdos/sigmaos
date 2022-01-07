@@ -2,7 +2,6 @@ package protclnt
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -18,58 +17,14 @@ const (
 	Msglen = 64 * 1024
 )
 
-type LeaseMap struct {
-	sync.Mutex
-	leases map[string]*lease.Lease
-}
-
-func MakeLeaseMap() *LeaseMap {
-	lm := &LeaseMap{}
-	lm.leases = make(map[string]*lease.Lease)
-	return lm
-}
-
-func (lm *LeaseMap) Add(l *lease.Lease) error {
-	lm.Lock()
-	defer lm.Unlock()
-
-	fn := np.Join(l.Fn)
-	if _, ok := lm.leases[fn]; ok {
-		return fmt.Errorf("%v already leased", fn)
-	}
-	lm.leases[fn] = l
-	return nil
-}
-
-func (lm *LeaseMap) Present(path []string) bool {
-	lm.Lock()
-	defer lm.Unlock()
-
-	fn := np.Join(path)
-	_, ok := lm.leases[fn]
-	return ok
-}
-
-func (lm *LeaseMap) Del(path []string) error {
-	lm.Lock()
-	defer lm.Unlock()
-
-	fn := np.Join(path)
-	if _, ok := lm.leases[fn]; !ok {
-		return fmt.Errorf("%v no lease", fn)
-	}
-	delete(lm.leases, fn)
-	return nil
-}
-
 type conn struct {
 	nc *netclnt.NetClnt
-	lm *LeaseMap
+	lm *lease.LeaseMap
 }
 
 func makeConn(nc *netclnt.NetClnt) *conn {
 	c := &conn{}
-	c.lm = MakeLeaseMap()
+	c.lm = lease.MakeLeaseMap()
 	c.nc = nc
 	return c
 }

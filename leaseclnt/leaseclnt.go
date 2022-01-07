@@ -142,7 +142,7 @@ func (l *LeaseClnt) MakeLeaseFileFrom(from string) error {
 func (l *LeaseClnt) registerRLease() error {
 	st, err := l.Stat(l.leaseName)
 	if err != nil {
-		// log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
+		log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
 		return err
 	}
 	err = l.RegisterLease(lease.MakeLease(np.Split(l.leaseName), st.Qid))
@@ -156,17 +156,17 @@ func (l *LeaseClnt) registerRLease() error {
 func (l *LeaseClnt) WaitRLease() ([]byte, error) {
 	ch := make(chan bool)
 	for {
-		log.Printf("%v: file watch %v\n", db.GetName(), l.leaseName)
+		// log.Printf("%v: file watch %v\n", db.GetName(), l.leaseName)
 		b, err := l.ReadFileWatch(l.leaseName, func(string, error) {
 			ch <- true
 		})
 		if err != nil && strings.HasPrefix(err.Error(), "file not found") {
-			log.Printf("%v: file watch wait %v\n", db.GetName(), l.leaseName)
+			// log.Printf("%v: file watch wait %v\n", db.GetName(), l.leaseName)
 			<-ch
 		} else if err != nil {
 			return nil, err
 		} else {
-			log.Printf("%v: file watch return %v\n", db.GetName(), l.leaseName)
+			// log.Printf("%v: file watch return %v\n", db.GetName(), l.leaseName)
 			return b, l.registerRLease()
 		}
 	}

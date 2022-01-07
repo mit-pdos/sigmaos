@@ -214,8 +214,10 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	fsc.Lock()
 	defer fsc.Unlock()
 	for _, l := range fsc.leases {
-		// XXX may already be registered; ignore error
-		fsc.pc.RegisterLease(l)
+		err := fsc.pc.RegisterLease(l)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -269,7 +271,7 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
 	fsc.Lock()
 	fn := np.Join(l.Fn)
-	log.Printf("%v: reg %v\n", db.GetName(), fn)
+	// log.Printf("%v: reg %v\n", db.GetName(), fn)
 	if _, ok := fsc.leases[fn]; ok {
 		fsc.Unlock()
 		return fmt.Errorf("%v already leased", fn)
@@ -280,7 +282,7 @@ func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
 }
 
 func (fsc *FsClient) DeregisterLease(path string) error {
-	log.Printf("%v: dereg %v\n", db.GetName(), path)
+	// log.Printf("%v: dereg %v\n", db.GetName(), path)
 	fsc.Lock()
 	if _, ok := fsc.leases[path]; !ok {
 		fsc.Unlock()
@@ -289,7 +291,7 @@ func (fsc *FsClient) DeregisterLease(path string) error {
 	delete(fsc.leases, path)
 	fsc.Unlock()
 	err := fsc.pc.DeregisterLease(np.Split(path))
-	log.Printf("%v: dereg %v err %v\n", db.GetName(), path, err)
+	// log.Printf("%v: dereg %v err %v\n", db.GetName(), path, err)
 	return err
 }
 

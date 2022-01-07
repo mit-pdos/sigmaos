@@ -338,7 +338,8 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 	return nil
 }
 
-// Caller must have acquired lease
+// Caller must have acquired lease and keeps writing
+// until lease is invalidated.
 func write(fsl *fslib.FsLib, ch chan int, fn string) {
 	const N = 1000
 	for i := 1; i < N; {
@@ -363,10 +364,9 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 		b, err := l.WaitRLease()
 		assert.Equal(t, nil, err)
 		n, err := strconv.Atoi(string(b))
-		if n == N {
+		write(fsl, ch, fn)
+		if n == N-1 {
 			cont = false
-		} else {
-			write(fsl, ch, fn)
 		}
 		if !FAIL {
 			err = l.ReleaseRLease()

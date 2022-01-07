@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	db "ulambda/debug"
+	// db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/lease"
 	np "ulambda/ninep"
@@ -19,45 +19,28 @@ import (
 type Session struct {
 	sync.Mutex
 	protsrv protsrv.Protsrv
-	leases  map[string]*lease.Lease
+	lm      *lease.LeaseMap
 }
 
 func makeSession(protsrv protsrv.Protsrv) *Session {
 	sess := &Session{}
 	sess.protsrv = protsrv
-	sess.leases = make(map[string]*lease.Lease)
+	sess.lm = lease.MakeLeaseMap()
 	return sess
 }
 
-func (sess *Session) Lease(sid np.Tsession, fn []string, qid np.Tqid) error {
-	sess.Lock()
-	defer sess.Unlock()
-
-	f := np.Join(fn)
-	if _, ok := sess.leases[f]; ok {
-		return fmt.Errorf("%v: lease present already %v", db.GetName(), sid)
-	}
-	sess.leases[f] = lease.MakeLease(fn, qid)
-	return nil
+func (sess *Session) Lease(fn []string, qid np.Tqid) error {
+	return sess.lm.Add(lease.MakeLease(fn, qid))
 }
 
-func (sess *Session) Unlease(sid np.Tsession, fn []string) error {
-	sess.Lock()
-	defer sess.Unlock()
-
-	f := np.Join(fn)
-	if _, ok := sess.leases[f]; !ok {
-		return fmt.Errorf("%v: Lease no lease %v", db.GetName(), sid)
-	}
-	delete(sess.leases, f)
-	return nil
+func (sess *Session) Unlease(fn []string) error {
+	return sess.lm.Del(fn)
 }
 
 func (sess *Session) CheckLeases(fsl *fslib.FsLib) error {
-	sess.Lock()
-	defer sess.Unlock()
-
-	for fn, l := range sess.leases {
+	leases := sess.lm.Leases()
+	for _, l := range leases {
+		fn := np.Join(l.Fn)
 		st, err := fsl.Stat(fn)
 		if err != nil {
 			return fmt.Errorf("lease not found %v err %v", fn, err.Error())

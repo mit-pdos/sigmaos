@@ -86,7 +86,5 @@ func (lm *LeaseMap) Leases() []*Lease {
 	for _, l := range lm.leases {
 		leases = append(leases, l)
 	}
-	log.Printf("leases %v\n", leases)
 	return leases
-
 }

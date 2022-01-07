@@ -20,6 +20,23 @@ import (
 	"ulambda/procclnt"
 )
 
+//
+// Clerk for sharded kv service, which repeatedly performs key
+// lookups.  The clerk acquires a lease for the configuration file of
+// the balancer, which maps shards to kv groups.  If the balancer adds
+// or removes a kv group, the clerk will not be able to perform
+// operations at any kv group until it reacquires the configuration
+// lease, bringing it up to date. The leases avoids the risk that
+// clerk performs an operation at a kv group that doesn't hold the
+// shard anymore (or is in the process of moving a shard)
+//
+// The clerk also acquires leases for each kv group it interacts with.
+// If the kv group changes, the clerk cannot perform any operation at
+// that kv group until it has the new configuration for that group.
+// This lease avoids the risk that the clerk performs an operation at
+// a KV server that isn't te primary anymore.
+//
+
 const (
 	NKEYS = 100
 )
@@ -43,6 +60,10 @@ func nrand() uint64 {
 	return x
 }
 
+func key(k uint64) string {
+	return "key" + strconv.FormatUint(k, 16)
+}
+
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -51,6 +72,7 @@ type KvClerk struct {
 	blConf    Config
 	nop       int
 	grpre     *regexp.Regexp
+	eofre     *regexp.Regexp
 }
 
 func MakeClerk(name string, namedAddr []string) *KvClerk {
@@ -60,6 +82,7 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9])-conf`)
+	kc.eofre = regexp.MustCompile(`name/group/grp-([0-9])/shard`)
 
 	err := kc.readConfig()
 	if err != nil {
@@ -68,8 +91,14 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	return kc
 }
 
-func key(k uint64) string {
-	return "key" + strconv.FormatUint(k, 16)
+func (kc *KvClerk) waitEvict(ch chan bool) {
+	err := kc.WaitEvict(proc.GetPid())
+	if err != nil {
+		log.Fatalf("Error WaitEvict: %v", err)
+	}
+	log.Printf("%v: evicted\n", db.GetName())
+	ch <- true
+	log.Printf("%v: evicted return\n", db.GetName())
 }
 
 func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
@@ -88,16 +117,6 @@ func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
 		}
 	}
 	return false, nil
-}
-
-func (kc *KvClerk) waitEvict(ch chan bool) {
-	err := kc.WaitEvict(proc.GetPid())
-	if err != nil {
-		log.Fatalf("Error WaitEvict: %v", err)
-	}
-	log.Printf("%v: evicted\n", db.GetName())
-	ch <- true
-	log.Printf("%v: evicted return\n", db.GetName())
 }
 
 func (kc *KvClerk) Run() {
@@ -129,12 +148,11 @@ func (kc *KvClerk) readConfig() error {
 }
 
 // XXX error checking in one place and more uniform
-func (kc *KvClerk) doRetry(err error) (bool, error) {
+func (kc *KvClerk) doRetry(err error, fn string) (bool, error) {
 	if err.Error() == "Version mismatch" {
 		log.Printf("VERSION MISMATCH\n")
 	}
-
-	if err.Error() == "EOF" || // XXX maybe useful when KVs fail
+	if err.Error() == "EOF" || // has grp been removed from config/
 		// XXX unused?
 		err.Error() == "Version mismatch" ||
 		// shard dir hasn't been create yet (config 0) or hasn't
@@ -146,6 +164,21 @@ func (kc *KvClerk) doRetry(err error) (bool, error) {
 		strings.HasPrefix(err.Error(), "lease not found") {
 		// log.Printf("doRetry error %v\n", err)
 
+		if err.Error() == "EOF" {
+			// has balencer removed a kv group and we dont' know yet?
+			s := kc.eofre.FindStringSubmatch(fn)
+			if s != nil {
+				// release lease, because otherwise we cannot read config
+				log.Printf("%v: doRetry EOF %v\n", db.GetName(), s[1])
+				err := kc.releaseLease("grp-" + s[1])
+				if err != nil {
+					return false, nil
+				}
+			}
+
+		}
+
+		// release lease for bal conf and reread conf?
 		if strings.Contains(err.Error(), KVCONFIG) {
 			log.Printf("%v: release lease %v err %v\n", db.GetName(), KVCONFIG, err)
 			err := kc.balLease.ReleaseRLease()
@@ -158,9 +191,10 @@ func (kc *KvClerk) doRetry(err error) (bool, error) {
 				return false, err
 			}
 		} else {
+			// release lease for kv group?
 			s := kc.grpre.FindStringSubmatch(err.Error())
 			if s != nil {
-				err := kc.release("grp-" + s[1])
+				err := kc.releaseLease("grp-" + s[1])
 				if err != nil {
 					return false, nil
 				}
@@ -168,10 +202,10 @@ func (kc *KvClerk) doRetry(err error) (bool, error) {
 		}
 		return true, nil
 	}
-	return false, nil
+	return false, err
 }
 
-func (kc *KvClerk) release(grp string) error {
+func (kc *KvClerk) releaseLease(grp string) error {
 	l, ok := kc.grpLeases[grp]
 	if !ok {
 		return fmt.Errorf("release lease %v not found", grp)
@@ -181,12 +215,11 @@ func (kc *KvClerk) release(grp string) error {
 	if err != nil {
 		return err
 	}
-
 	delete(kc.grpLeases, grp)
 	return nil
 }
 
-func (kc *KvClerk) lease(grp string) error {
+func (kc *KvClerk) acquireLease(grp string) error {
 	gc := group.GrpConf{}
 	if _, ok := kc.grpLeases[grp]; ok {
 		return nil
@@ -219,46 +252,43 @@ type op struct {
 	err  error
 }
 
+func (o *op) do(fsl *fslib.FsLib, fn string) {
+	switch o.kind {
+	case GET:
+		o.b, o.err = fsl.GetFile(fn)
+	case PUT:
+		_, o.err = fsl.PutFile(fn, o.b, 0777, np.OWRITE)
+	case SET:
+		_, o.err = fsl.SetFile(fn, o.b)
+	}
+	log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
+}
+
 func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
-	retry := false
-	for {
-		o.err = kc.lease(kc.blConf.Shards[shard])
+	retry := true
+	for retry {
+		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
+		o.err = kc.acquireLease(kc.blConf.Shards[shard])
 		if o.err != nil {
-			retry, o.err = kc.doRetry(o.err)
+			// no lease on kv group (or bal conf)?
+			retry, o.err = kc.doRetry(o.err, fn)
 			if o.err != nil {
 				return
 			}
-			if !retry {
-				log.Printf("%v: no retry\n", db.GetName())
-				return
-			}
-
 		}
-		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
-		switch o.kind {
-		case GET:
-			o.b, o.err = kc.GetFile(fn)
-		case PUT:
-			_, o.err = kc.PutFile(fn, o.b, 0777, np.OWRITE)
-		case SET:
-			_, o.err = kc.SetFile(fn, o.b)
-		}
-		log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
-		if o.err == nil {
+		o.do(kc.FsLib, fn)
+		if o.err == nil { // success?
 			kc.nop += 1
 			return
 		}
-		retry, o.err = kc.doRetry(o.err)
+		// invalid lease for kv group or bal conf?
+		retry, o.err = kc.doRetry(o.err, fn)
 		if o.err != nil {
 			return
 		}
-		if !retry {
-			log.Printf("%v: no retry\n", db.GetName())
-			return
-		}
-		log.Printf("%v: retry %v %v\n", db.GetName(), o.kind, o.err)
 	}
+	log.Printf("%v: no retry %v\n", db.GetName(), o.k)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

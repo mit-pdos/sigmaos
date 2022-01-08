@@ -101,7 +101,7 @@ func (mg *Group) recover(grp string) {
 	fn := grpconfbk(grp)
 	err = mg.lease.MakeLeaseFileFrom(fn)
 	if err != nil {
-		log.Printf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), fn, err)
+		//log.Printf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), fn, err)
 		// this must be the first recovery of the kv group;
 		// otherwise, there would be a either a config or
 		// backup config.

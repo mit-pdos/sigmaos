@@ -163,7 +163,7 @@ func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string
 	i := len(path) - todo
 	rest := path[i:]
 	if IsRemoteTarget(target) {
-		log.Printf("%v: automount %v %v\n", db.GetName(), path[:i], target)
+		// log.Printf("%v: automount %v %v\n", db.GetName(), path[:i], target)
 		trest, err := fsc.autoMount(target, path[:i])
 		if err != nil {
 			return nil, err

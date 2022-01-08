@@ -27,5 +27,4 @@ var (
 	ErrUnknownMsg   = &Rerror{"unknown message"}
 	ErrNotDir       = &Rerror{"not a directory"}
 	ErrNotFile      = &Rerror{"not a file"}
-	ErrClunked      = &Rerror{"clunked by server"}
 )

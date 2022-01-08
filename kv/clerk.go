@@ -261,7 +261,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
+	// log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) doop(o *op) {

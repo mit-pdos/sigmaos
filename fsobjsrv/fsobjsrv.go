@@ -119,15 +119,9 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
 		o := f.Obj()
-		if o == nil {
-			return np.ErrClunked
-		}
 		fos.ft.Add(args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
 	} else {
 		o := f.Obj()
-		if o == nil {
-			return np.ErrClunked
-		}
 		if !o.Perm().IsDir() {
 			return np.ErrNotfound
 		}
@@ -152,9 +146,6 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 		return err
 	}
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	if f.Mode() != 0 { // has the fid been opened?
 		o.Close(f.Ctx(), f.Mode())
 	}
@@ -170,9 +161,6 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return &np.Rerror{r.Error()}
@@ -195,9 +183,6 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 		return err
 	}
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	p := f.Path()
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
@@ -272,10 +257,6 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
-
 	names := []string{args.Name}
 	if !o.Perm().IsDir() {
 		return &np.Rerror{fmt.Sprintf("Not a directory")}
@@ -360,9 +341,6 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 		return err
 	}
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	if isExit(f.Path()) {
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
@@ -393,10 +371,6 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 		return err
 	}
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
-
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
 	if isExit(fname) {
 		db.DLPrintf("9POBJ", "Done\n")
@@ -421,9 +395,6 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "Stat %v\n", f)
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	st, r := o.Stat(f.Ctx())
 	if r != nil {
 		return &np.Rerror{r.Error()}
@@ -439,9 +410,6 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
 
@@ -490,13 +458,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 	}
 	db.DLPrintf("9POBJ", "Renameat %v %v %v\n", oldf, newf, args)
 	oo := oldf.Obj()
-	if oo == nil {
-		return np.ErrClunked
-	}
 	no := newf.Obj()
-	if oo == nil {
-		return np.ErrClunked
-	}
 	switch d1 := oo.(type) {
 	case fs.Dir:
 		d2, ok := no.(fs.Dir)
@@ -544,9 +506,6 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	lo := o
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
@@ -587,9 +546,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	names := args.Wnames
 	lo := o
 	if args.Perm != 0 { // create?

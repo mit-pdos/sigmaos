@@ -2,7 +2,6 @@ package protclnt
 
 import (
 	"errors"
-	"log"
 	"strings"
 	"sync"
 
@@ -48,13 +47,12 @@ type result struct {
 }
 
 func (conn *conn) aSend(ch chan result, dst []string, req np.Tmsg, s np.Tsession, seq *np.Tseqno) {
-	log.Printf("aSend %v %v\n", dst, req)
 	if reply, err := conn.send(req, s, seq); err != nil {
-		log.Printf("aSend %v %v err %v\n", dst, req, err)
+		// log.Printf("aSend %v %v err %v\n", dst, req, err)
 		ch <- result{conn, err}
 	} else {
 		if rmsg, ok := reply.(np.Rerror); ok {
-			log.Printf("aSend err %v %v err %v\n", dst, req, rmsg.Ename)
+			// log.Printf("aSend err %v %v err %v\n", dst, req, rmsg.Ename)
 			ch <- result{conn, errors.New(rmsg.Ename)}
 		} else {
 			ch <- result{conn, nil}
@@ -140,7 +138,7 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 	ch := make(chan result)
 	cm.mu.Lock()
 
-	log.Printf("%v: mcast %v %v %v\n", db.GetName(), len(cm.conns), req.Type(), req)
+	// log.Printf("%v: mcast %v %v %v\n", db.GetName(), len(cm.conns), req.Type(), req)
 
 	n := 0
 	for addr, conn := range cm.conns {
@@ -174,7 +172,6 @@ func (cm *ConnMgr) registerLease(lease *lease.Lease) error {
 		},
 		func(res result) error {
 			if res.err == nil {
-				log.Printf("add %p %v\n", res.conn, lease)
 				return res.conn.lm.Add(lease)
 			}
 			return nil

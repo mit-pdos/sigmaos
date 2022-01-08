@@ -78,9 +78,6 @@ func (f *Fid) SetObj(o fs.FsObj) {
 
 func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Rerror) {
 	o := f.Obj()
-	if o == nil {
-		return 0, np.ErrClunked
-	}
 	var err error
 	sz := np.Tsize(0)
 	switch i := o.(type) {
@@ -118,9 +115,6 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 
 func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
 	o := f.Obj()
-	if o == nil {
-		return np.ErrClunked
-	}
 	switch i := o.(type) {
 	case fs.Dir:
 		return f.readDir(o, off, count, v, rets)

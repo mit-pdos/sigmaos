@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"log"
 	"math/big"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -91,20 +92,20 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	return kc
 }
 
-func (kc *KvClerk) waitEvict(ch chan bool) {
+func (kc *KvClerk) waitEvict(ch chan error) {
 	err := kc.WaitEvict(proc.GetPid())
 	if err != nil {
-		log.Fatalf("Error WaitEvict: %v", err)
+		log.Printf("Error WaitEvict: %v", err)
 	}
-	ch <- true
+	ch <- err
 }
 
-func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
+func (kc *KvClerk) getKeys(ch chan error) (bool, error) {
 	for i := uint64(0); i < NKEYS; i++ {
 		v, err := kc.Get(key(i))
 		select {
-		case <-ch:
-			return true, nil
+		case r := <-ch:
+			return true, r
 		default:
 			if err != nil {
 				return false, fmt.Errorf("%v: Get %v err %v\n", db.GetName(), key(i), err)
@@ -119,18 +120,26 @@ func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
 
 func (kc *KvClerk) Run() {
 	kc.Started(proc.GetPid())
-	ch := make(chan bool)
+	ch := make(chan error)
 	done := false
 	var err error
 	go kc.waitEvict(ch)
 	for !done {
 		done, err = kc.getKeys(ch)
 		if err != nil {
-			kc.Exited(proc.GetPid(), err.Error())
+			break
 		}
 	}
-	log.Printf("%v: done nop %v\n", db.GetName(), kc.nop)
-	kc.Exited(proc.GetPid(), "OK")
+	log.Printf("%v: done nop %v err %v\n", db.GetName(), kc.nop, err)
+	s := "OK"
+	if err != nil {
+		s = err.Error()
+	}
+	err = kc.ExitedErr(proc.GetPid(), s)
+	if err != nil {
+		log.Printf("%v: exited failed\n", err)
+		os.Exit(1)
+	}
 }
 
 // XXX atomic read

@@ -296,6 +296,14 @@ func (clnt *ProcClnt) Exited(pid string, status string) {
 	}
 }
 
+func (clnt *ProcClnt) ExitedErr(pid string, status string) error {
+	err := clnt.exited(pid, status)
+	if err != nil {
+		log.Printf("%v: exitederr %v err %v\n", db.GetName(), pid, err)
+	}
+	return err
+}
+
 func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
 	err := clnt.exited(pid, status)
 	if err != nil {

@@ -3,6 +3,7 @@ package semclnt
 import (
 	"log"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -43,9 +44,12 @@ func (c *SemClnt) Down() error {
 		err = <-signal
 	}
 	// if err, file has been removed (i.e., semaphore has been
-	// "upped" or file server crashed).
+	// "upped" or file server crashed or lease expired).
 	// XXX distinguish those cases?
-	return nil
+	if err != nil {
+		log.Printf("%v: down err %v\n", db.GetName(), err)
+	}
+	return err
 }
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has

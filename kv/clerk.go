@@ -96,9 +96,7 @@ func (kc *KvClerk) waitEvict(ch chan bool) {
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}
-	log.Printf("%v: evicted\n", db.GetName())
 	ch <- true
-	log.Printf("%v: evicted return\n", db.GetName())
 }
 
 func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
@@ -143,7 +141,7 @@ func (kc *KvClerk) readConfig() error {
 		return err
 	}
 	json.Unmarshal(b, &kc.blConf)
-	log.Printf("%v: readConfig %v\n", db.GetName(), kc.blConf)
+	//log.Printf("%v: readConfig %v\n", db.GetName(), kc.blConf)
 	return nil
 }
 
@@ -169,7 +167,6 @@ func (kc *KvClerk) doRetry(err error, fn string) (bool, error) {
 			s := kc.eofre.FindStringSubmatch(fn)
 			if s != nil {
 				// release lease, because otherwise we cannot read config
-				log.Printf("%v: doRetry EOF %v\n", db.GetName(), s[1])
 				err := kc.releaseLease("grp-" + s[1])
 				if err != nil {
 					return false, nil
@@ -180,14 +177,12 @@ func (kc *KvClerk) doRetry(err error, fn string) (bool, error) {
 
 		// release lease for bal conf and reread conf?
 		if strings.Contains(err.Error(), KVCONFIG) {
-			log.Printf("%v: release lease %v err %v\n", db.GetName(), KVCONFIG, err)
 			err := kc.balLease.ReleaseRLease()
 			if err != nil {
 				return false, err
 			}
 			err = kc.readConfig()
 			if err != nil {
-				log.Printf("%v: readConfig err %v\n", db.GetName(), err)
 				return false, err
 			}
 		} else {
@@ -210,7 +205,7 @@ func (kc *KvClerk) releaseLease(grp string) error {
 	if !ok {
 		return fmt.Errorf("release lease %v not found", grp)
 	}
-	log.Printf("%v: release grp %v\n", db.GetName(), grp)
+	//log.Printf("%v: release grp %v\n", db.GetName(), grp)
 	err := l.ReleaseRLease()
 	if err != nil {
 		return err
@@ -233,7 +228,7 @@ func (kc *KvClerk) acquireLease(grp string) error {
 	}
 	kc.grpLeases[grp] = l
 	json.Unmarshal(b, &gc)
-	log.Printf("%v: grp lease %v gc %v\n", db.GetName(), grp, gc)
+	//log.Printf("%v: grp lease %v gc %v\n", db.GetName(), grp, gc)
 	return nil
 }
 
@@ -288,7 +283,7 @@ func (kc *KvClerk) doop(o *op) {
 			return
 		}
 	}
-	log.Printf("%v: no retry %v\n", db.GetName(), o.k)
+	//log.Printf("%v: no retry %v\n", db.GetName(), o.k)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

@@ -80,22 +80,13 @@ func (ks *KvSet) del(old []string) {
 	}
 }
 
-func (ks *KvSet) first() string {
-	memfs := ""
-	for k := range ks.set {
-		memfs = k
-		break
-	}
-	return memfs
-}
-
-func (ks *KvSet) high() (string, int) {
+func (ks *KvSet) high(notkv string) (string, int) {
 	h := ""
 	n := 0
-	for k := range ks.set {
-		if ks.set[k] > n {
+	for k, v := range ks.set {
+		if v > n && k != notkv {
 			h = k
-			n = ks.set[k]
+			n = v
 		}
 	}
 	return h, n
@@ -104,13 +95,17 @@ func (ks *KvSet) high() (string, int) {
 func (ks *KvSet) low() (string, int) {
 	l := ""
 	n := NSHARD
-	for k := range ks.set {
-		if ks.set[k] < n && k != "" {
+	for k, v := range ks.set {
+		if v < n && k != "" {
 			l = k
-			n = ks.set[k]
+			n = v
 		}
 	}
 	return l, n
+}
+
+func (ks *KvSet) nshards(kv string) int {
+	return ks.set[kv]
 }
 
 func readKVs(fsl *fslib.FsLib) *KvSet {
@@ -129,25 +124,21 @@ func readKVs(fsl *fslib.FsLib) *KvSet {
 	return nil
 }
 
-func assign(conf *Config, nextShards []string, hkv string, n, t int, newkv string) {
-	m := 0
-	for i, kv := range conf.Shards {
+// assign to t shards from hkv to newkv
+func assign(conf *Config, nextShards []string, hkv string, t int, newkv string) []string {
+	for i, kv := range nextShards {
 		if kv == hkv {
-			if m < n {
-				nextShards[i] = hkv
-				m += 1
-			} else {
-				nextShards[i] = newkv
-				t -= 1
-				if t <= 0 {
-					break
-				}
+			nextShards[i] = newkv
+			t -= 1
+			if t <= 0 {
+				break
 			}
 		}
 	}
+	return nextShards
 }
 
-func balanceAdd(conf *Config, newkv string) []string {
+func AddKv(conf *Config, newkv string) []string {
 	nextShards := make([]string, NSHARD)
 	kvs := makeKvs(conf.Shards)
 	l := len(kvs.mkKvs()) + 1
@@ -158,58 +149,54 @@ func balanceAdd(conf *Config, newkv string) []string {
 		}
 		return nextShards
 	}
-
 	for i, kv := range conf.Shards {
 		nextShards[i] = kv
 	}
 	kvs.set[newkv] = 0
 	n := (NSHARD + l - 1) / l
-
-	for {
-		hkv, h := kvs.high()
-		if h-n <= 0 {
-			break
+	// log.Printf("add: n = %v\n", n)
+	for i := 0; i < n; {
+		hkv, h := kvs.high(newkv)
+		t := 1
+		if h-n >= 1 {
+			t = h - n
 		}
-		t := h - n
-		assign(conf, nextShards, hkv, n, t, newkv)
+		// log.Printf("n = %v h = %v t = %v %v->%v\n", n, h, t, hkv, newkv)
+		nextShards = assign(conf, nextShards, hkv, t, newkv)
 		kvs.set[hkv] -= t
 		kvs.set[newkv] += t
+		i += t
 	}
-
-	// give newkv at least one shard
-	if kvs.set[newkv] == 0 {
-		hkv, h := kvs.high()
-		if h > 1 {
-			assign(conf, nextShards, hkv, n-1, 1, newkv)
-		}
-	}
-
 	return nextShards
 }
 
-func balanceDel(conf *Config, delkv string) []string {
+func DelKv(conf *Config, delkv string) []string {
 	nextShards := make([]string, NSHARD)
 	kvs := makeKvs(conf.Shards)
+	n := kvs.nshards(delkv)
 	kvs.del([]string{delkv})
+
 	l := len(kvs.mkKvs())
-	n := (NSHARD + l - 1) / l
+	p := n / l
+	n1 := (NSHARD + l - 1) / l
+	// log.Printf("del: n = %v p = %v n1 = %v\n", n, p, n1)
 	for i, kv := range conf.Shards {
 		nextShards[i] = kv
 	}
-	for {
+	for i := n; i > 0; {
 		lkv, l := kvs.low()
-		if n-l <= 0 {
-			break
+		t := p
+		if i < p {
+			t = i
+
 		}
-		t1 := n - l
-		for i, kv := range nextShards {
-			nextShards[i] = kv
-			if kv == delkv && t1 > 0 {
-				nextShards[i] = lkv
-				t1 -= 1
-			}
+		if l+t > n1 {
+			t = 1
 		}
-		kvs.set[lkv] += n - l
+		// log.Printf("i = %v l = %v t = %v %v->%v\n", i, l, t, delkv, lkv)
+		nextShards = assign(conf, nextShards, delkv, t, lkv)
+		kvs.set[lkv] += t
+		i -= t
 	}
 	return nextShards
 }

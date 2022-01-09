@@ -24,22 +24,33 @@ const (
 	CRASHBALANCER = 400
 )
 
+func checkKvs(t *testing.T, kvs *KvSet, n int) {
+	for _, v := range kvs.set {
+		if v != n {
+			assert.Equal(t, v, n+1, "checkKvs")
+		}
+	}
+}
+
 func TestBalance(t *testing.T) {
 	conf := &Config{}
 	for i := 0; i < NSHARD; i++ {
 		conf.Shards = append(conf.Shards, "")
 	}
-	shards := balanceAdd(conf, "a")
-	log.Printf("balance %v\n", shards)
-	conf.Shards = shards
-	shards = balanceAdd(conf, "b")
-	log.Printf("balance %v\n", shards)
-	conf.Shards = shards
-	shards = balanceAdd(conf, "c")
-	log.Printf("balance %v\n", shards)
-	conf.Shards = shards
-	shards = balanceDel(conf, "c")
-	log.Printf("balance %v\n", shards)
+	for k := 0; k < NKV; k++ {
+		shards := AddKv(conf, strconv.Itoa(k))
+		conf.Shards = shards
+		kvs := makeKvs(conf.Shards)
+		//log.Printf("balance %v %v\n", shards, kvs)
+		checkKvs(t, kvs, NSHARD/(k+1))
+	}
+	for k := NKV - 1; k > 0; k-- {
+		shards := DelKv(conf, strconv.Itoa(k))
+		conf.Shards = shards
+		kvs := makeKvs(conf.Shards)
+		//log.Printf("balance %v %v\n", shards, kvs)
+		checkKvs(t, kvs, NSHARD/k)
+	}
 }
 
 func TestRegex(t *testing.T) {
@@ -168,7 +179,6 @@ func TestGetPutSet(t *testing.T) {
 }
 
 func concurN(t *testing.T, nclerk int, crash int) {
-	const NMORE = 10
 	const TIME = 100 // 500
 
 	ts := makeTstate(t, "manual", nclerk, crash)
@@ -178,7 +188,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 		ts.clrks = append(ts.clrks, pid)
 	}
 
-	for s := 0; s < NMORE; s++ {
+	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
 		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp)
 		ts.mfsgrps = append(ts.mfsgrps, gm)
@@ -188,7 +198,7 @@ func concurN(t *testing.T, nclerk int, crash int) {
 		time.Sleep(TIME * time.Millisecond)
 	}
 
-	for s := 0; s < NMORE; s++ {
+	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
 		err := ts.balancerOp("del", grp)
 		assert.Nil(ts.t, err, "BalancerOp")

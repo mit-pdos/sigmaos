@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	NSHARD        = 10
+	NKV           = 10
+	NSHARD        = 10 * NKV
 	KVDIR         = "name/kv"
 	KVCONFIG      = KVDIR + "/config"
 	KVCONFIGBK    = KVDIR + "/config#"
@@ -316,12 +317,12 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 		if bl.conf.Present(mfs) {
 			return nil
 		}
-		nextShards = balanceAdd(bl.conf, mfs)
+		nextShards = AddKv(bl.conf, mfs)
 	case "del":
 		if !bl.conf.Present(mfs) {
 			return nil
 		}
-		nextShards = balanceDel(bl.conf, mfs)
+		nextShards = DelKv(bl.conf, mfs)
 	default:
 	}
 

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -38,7 +39,8 @@ import (
 //
 
 const (
-	NKEYS = 100
+	NKEYS  = 100
+	WAITMS = 100
 )
 
 func key2shard(key string) int {
@@ -158,20 +160,24 @@ func (kc *KvClerk) readConfig() error {
 
 // XXX error checking in one place and more uniform
 func (kc *KvClerk) doRetry(err error, fn string) (bool, error) {
+	// XXX unused?
 	if err.Error() == "Version mismatch" {
-		log.Printf("VERSION MISMATCH\n")
+		log.Fatalf("%v: VERSION MISMATCH\n", db.GetName())
 	}
-	if err.Error() == "EOF" || // has grp been removed from config/
-		// XXX unused?
-		err.Error() == "Version mismatch" ||
-		// shard dir hasn't been create yet (config 0) or hasn't
-		// moved yet
-		strings.HasPrefix(err.Error(), "file not found shard") ||
-		// lease ran out
+
+	// Shard dir hasn't been create yet (config 0) or hasn't
+	// moved yet. XXX make sleep time dynamic?
+	if strings.HasPrefix(err.Error(), "file not found shard") {
+		time.Sleep(WAITMS * time.Millisecond)
+		return true, nil
+	}
+
+	// has grp been removed from config/
+	if err.Error() == "EOF" ||
+		// or lease ran out
 		strings.HasPrefix(err.Error(), "stale lease") ||
-		// lease ran out  XXX one error?
+		// or lease isn't found  XXX one error?
 		strings.HasPrefix(err.Error(), "lease not found") {
-		// log.Printf("doRetry error %v\n", err)
 
 		if err.Error() == "EOF" {
 			// has balencer removed a kv group and we dont' know yet?
@@ -267,7 +273,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
+	log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) doop(o *op) {

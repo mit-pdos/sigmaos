@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	NKV           = 10
+	NKV           = 3 // 10
 	NSHARD        = 10 * NKV
 	KVDIR         = "name/kv"
 	KVCONFIG      = KVDIR + "/config"
@@ -193,8 +193,8 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 // after committing to new config, but before deleting the moved
 // shards.
 func (bl *Balancer) cleanup() {
-	log.Printf("cleanup %v\n", bl.conf.Moved)
-	bl.runDeleters(bl.conf.Moved)
+	log.Printf("cleanup %v\n", bl.conf.Moves)
+	bl.runDeleters(bl.conf.Moves)
 }
 
 func (bl *Balancer) recover() {
@@ -270,30 +270,43 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool)
 	return nil
 }
 
-// XXX run in parallel?
-func (bl *Balancer) runMovers(nextShards []string) []string {
-	moved := []string{}
+func (mvs Moves) moved() []string {
+	srcs := []string{}
+	for _, m := range mvs {
+		srcs = append(srcs, m.Src)
+	}
+	return srcs
+}
+
+func (bl *Balancer) computeMoves(nextShards []string) Moves {
+	moves := Moves{}
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
 			shard := strconv.Itoa(i)
 			s := shardPath(kvd, shard)
 			d := shardPath(nextShards[i], shard)
-			moved = append(moved, s)
-			bl.runProcRetry([]string{"bin/user/kv-mover", s, d}, func(err error, status string) bool {
-				return err != nil || status != "OK"
-			})
+			moves = append(moves, &Move{s, d})
 		}
 	}
-	return moved
+	return moves
 }
 
-func (bl *Balancer) runDeleters(moved []string) {
-	for _, sharddir := range moved {
-		bl.runProcRetry([]string{"bin/user/kv-deleter", sharddir},
+func (bl *Balancer) runDeleters(moves Moves) {
+	for _, m := range moves {
+		bl.runProcRetry([]string{"bin/user/kv-deleter", m.Src},
 			func(err error, status string) bool {
 				ok := strings.HasPrefix(status, "file not found")
 				return err != nil || (status != "OK" && !ok)
 			})
+	}
+}
+
+// XXX run in parallel?
+func (bl *Balancer) runMovers(moves Moves) {
+	for _, m := range moves {
+		bl.runProcRetry([]string{"bin/user/kv-mover", m.Src, m.Dst}, func(err error, status string) bool {
+			return err != nil || status != "OK"
+		})
 	}
 }
 
@@ -338,16 +351,16 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 		log.Printf("%v: Rename to %v err %v\n", db.GetName(), KVCONFIGBK, err)
 	}
 
-	var moved []string
+	var moves Moves // moves to next config
 	if bl.conf.N == 0 {
 		bl.initShards(nextShards)
 	} else {
-		moved = bl.runMovers(nextShards)
+		moves = bl.computeMoves(nextShards)
 	}
 
 	bl.conf.N += 1
 	bl.conf.Shards = nextShards
-	bl.conf.Moved = moved
+	bl.conf.Moves = moves
 	bl.conf.Ctime = time.Now().UnixNano()
 
 	log.Printf("%v: new %v\n", db.GetName(), bl.conf)
@@ -364,7 +377,9 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 		// XXX maybe crash
 	}
 
-	bl.runDeleters(moved)
+	bl.runMovers(moves)
+
+	bl.runDeleters(moves)
 
 	err = bl.Remove(KVCONFIGBK)
 	if err != nil {

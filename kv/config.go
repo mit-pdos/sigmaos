@@ -8,19 +8,35 @@ import (
 	"ulambda/fslib"
 )
 
+type Move struct {
+	Src string
+	Dst string
+}
+
+type Moves []*Move
+
+func (mvs Moves) String() string {
+	s := "["
+	for _, m := range mvs {
+		s += fmt.Sprintf("%v -> %v", m.Src, m.Dst)
+	}
+	s += "]"
+	return s
+}
+
 type Config struct {
 	N      int
 	Shards []string // slice mapping shard # to server
-	Moved  []string // shards to be deleted because they moved
+	Moves  Moves    // shards to be deleted because they moved
 	Ctime  int64    // XXX use ctime of config file?
 }
 
 func (cf *Config) String() string {
-	return fmt.Sprintf("{N %v, Shards %v, Moved %v}", cf.N, cf.Shards, cf.Moved)
+	return fmt.Sprintf("{N %v, Shards %v, Moves %v}", cf.N, cf.Shards, cf.Moves)
 }
 
 func MakeConfig(n int) *Config {
-	cf := &Config{n, make([]string, NSHARD), []string{}, 0}
+	cf := &Config{n, make([]string, NSHARD), Moves{}, 0}
 	return cf
 }
 

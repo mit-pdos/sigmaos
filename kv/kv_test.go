@@ -21,7 +21,7 @@ const (
 	NBALANCER = 3
 	NCLERK    = 10
 
-	CRASHBALANCER = 400
+	CRASHBALANCER = 1600
 )
 
 func checkKvs(t *testing.T, kvs *KvSet, n int) {

@@ -2,6 +2,7 @@ package semclnt
 
 import (
 	"log"
+	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -46,7 +47,7 @@ func (c *SemClnt) Down() error {
 	// if err, file has been removed (i.e., semaphore has been
 	// "upped" or file server crashed or lease expired).
 	// XXX distinguish those cases?
-	if err != nil {
+	if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
 		log.Printf("%v: down err %v\n", db.GetName(), err)
 	}
 	return err

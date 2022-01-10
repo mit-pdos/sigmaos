@@ -24,6 +24,7 @@ const (
 	CLAIMED  = "-claimed"
 	TIP      = "-tip"
 	DONE     = "-done"
+	NCOORD   = 3
 )
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {

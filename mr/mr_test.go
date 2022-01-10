@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	"ulambda/coordmgr"
 	"ulambda/fslib"
+	"ulambda/groupmgr"
 	"ulambda/kernel"
 	"ulambda/mr"
 	np "ulambda/ninep"
@@ -118,7 +118,7 @@ func runN(t *testing.T, crashtask, crashcoord int) {
 
 	ts.prepareJob()
 
-	cm := coordmgr.StartCoords(ts.FsLib, ts.ProcClnt, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
 	cm.Wait()
 

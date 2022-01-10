@@ -40,7 +40,7 @@ import (
 
 const (
 	NKEYS  = 100
-	WAITMS = 100
+	WAITMS = 50
 )
 
 func key2shard(key string) int {

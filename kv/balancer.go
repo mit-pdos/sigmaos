@@ -30,12 +30,12 @@ import (
 )
 
 const (
-	NKV           = 3 // 10
+	NKV           = 10
 	NSHARD        = 10 * NKV
 	KVDIR         = "name/kv"
-	KVCONFIG      = KVDIR + "/config"
-	KVCONFIGBK    = KVDIR + "/config#"
-	KVNEXTCONFIG  = KVDIR + "/nextconfig"
+	KVCONFIG      = KVDIR + "/config"      // ephemeral file with current config
+	KVNEXTCONFIG  = KVDIR + "/nextconfig"  // the persistent next configuration
+	KVNEXTBK      = KVDIR + "/nextconfig#" // temporary copy
 	KVBALANCER    = KVDIR + "/balancer"
 	KVBALANCERCTL = KVDIR + "/balancer/ctl"
 
@@ -189,36 +189,32 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
-// Remove shardirs that balancer didn't get to because it crashed
-// after committing to new config, but before deleting the moved
-// shards.
-func (bl *Balancer) cleanup() {
-	log.Printf("cleanup %v\n", bl.conf.Moves)
+// Restore sharddirs by finishing moves and deletes, and create config
+// file.   XXX we could restore in parallel with serving clerk ops
+func (bl *Balancer) restore() {
+	log.Printf("restore to %v\n", bl.conf)
+	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
+	err := bl.lease.MakeLeaseFileJson(*bl.conf)
+	if err != nil {
+		log.Fatalf("%v: restore err %v\n", db.GetName(), err)
+	}
 }
 
 func (bl *Balancer) recover() {
 	var err error
-	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
+	bl.conf, err = readConfig(bl.FsLib, KVNEXTCONFIG)
 	if err == nil {
-		log.Printf("%v: recovery: use %v\n", db.GetName(), bl.conf)
-		bl.cleanup()
-		return
-	}
-
-	// roll back to old conf
-	err = bl.lease.MakeLeaseFileFrom(KVCONFIGBK)
-	if err != nil {
-		log.Printf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), KVCONFIGBK, err)
+		bl.restore()
+	} else {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
 		// backup config.
-		err = bl.lease.MakeLeaseFileJson(*MakeConfig(0))
+		bl.conf = MakeConfig(0)
+		err = bl.lease.MakeLeaseFileJson(*bl.conf)
 		if err != nil {
-			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
+			log.Fatalf("%v: initial config err %v\n", db.GetName(), err)
 		}
-	} else {
-		log.Printf("%v: recovery: restored config from %v\n", db.GetName(), KVCONFIGBK)
 	}
 }
 
@@ -311,13 +307,6 @@ func (bl *Balancer) runMovers(moves Moves) {
 }
 
 func (bl *Balancer) balance(opcode, mfs string) error {
-	var err error
-
-	bl.conf, err = readConfig(bl.FsLib, KVCONFIG)
-	if err != nil {
-		log.Fatalf("%v: readConfig: err %v\n", db.GetName(), err)
-	}
-
 	log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
 	if bl.isBusy {
@@ -346,12 +335,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 
 	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
-	err = bl.lease.RenameTo(KVCONFIGBK)
-	if err != nil {
-		log.Printf("%v: Rename to %v err %v\n", db.GetName(), KVCONFIGBK, err)
-	}
-
-	var moves Moves // moves to next config
+	var moves Moves
 	if bl.conf.N == 0 {
 		bl.initShards(nextShards)
 	} else {
@@ -365,25 +349,33 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 
 	log.Printf("%v: new %v\n", db.GetName(), bl.conf)
 
-	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
+	// If balancer crashes, before here, we have the old
+	// KVNEXTCONFIG.  If the balancer crash after, we have the new
+	// KVNEXTCONFIG.
+	err := atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
 		log.Printf("%v: MakeFile %v err %v\n", db.GetName(), KVNEXTCONFIG, err)
 		// XXX maybe crash
 	}
 
-	err = bl.lease.MakeLeaseFileFrom(KVNEXTCONFIG)
+	// Announce new KVNEXTCONFIG to world: copy KVNEXTCONFIG to
+	// KVNEXBK and make lease from copy (removing the copy too).
+	err = bl.Remove(KVNEXTBK)
 	if err != nil {
-		log.Printf("%v: rename %v -> %v: error %v\n", db.GetName(), KVNEXTCONFIG, KVCONFIG, err)
+		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)
+	}
+	err = bl.CopyFile(KVNEXTCONFIG, KVNEXTBK)
+	if err != nil {
+		log.Fatalf("%v: copy %v to %v err %v\n", db.GetName(), KVNEXTCONFIG, KVNEXTBK, err)
+	}
+	err = bl.lease.MakeLeaseFileFrom(KVNEXTBK)
+	if err != nil {
+		log.Printf("%v: makeleasefrom %v err %v\n", db.GetName(), KVNEXTBK, err)
 		// XXX maybe crash
 	}
 
 	bl.runMovers(moves)
-
 	bl.runDeleters(moves)
 
-	err = bl.Remove(KVCONFIGBK)
-	if err != nil {
-		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVCONFIGBK, err)
-	}
 	return nil
 }

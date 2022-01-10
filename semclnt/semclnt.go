@@ -44,13 +44,15 @@ func (c *SemClnt) Down() error {
 		// log.Printf("semaphore wait %v\n", c.path)
 		err = <-signal
 	}
-	// if err, file has been removed (i.e., semaphore has been
-	// "upped" or file server crashed or lease expired).
-	// XXX distinguish those cases?
+	// If err, file has been removed (i.e., semaphore has been
+	// "upped" or file server crashed or lease expired);
+	// distinguish between those cases.
 	if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
 		log.Printf("%v: down err %v\n", db.GetName(), err)
+		return err
+	} else {
+		return nil
 	}
-	return err
 }
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has

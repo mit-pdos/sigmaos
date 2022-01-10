@@ -54,10 +54,11 @@ func TestBalance(t *testing.T) {
 }
 
 func TestRegex(t *testing.T) {
-	grpre := regexp.MustCompile(`name/group/grp-([0-9])-conf`)
+	grpre := regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
 	s := grpre.FindStringSubmatch("file not found /name/group/grp-9-conf")
 	assert.NotNil(t, s, "Find")
-	log.Printf("%v", s[1])
+	s = grpre.FindStringSubmatch("file not found /name/group/grp-10-conf")
+	assert.NotNil(t, s, "Find")
 }
 
 type Tstate struct {

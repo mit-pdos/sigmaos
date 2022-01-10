@@ -7,7 +7,6 @@ import (
 	"hash/fnv"
 	"log"
 	"math/big"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -82,8 +81,8 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.balLease = leaseclnt.MakeLeaseClnt(kc.FsLib, KVCONFIG, 0)
 	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
-	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9])-conf`)
-	kc.eofre = regexp.MustCompile(`name/group/grp-([0-9])/shard`)
+	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
+	kc.eofre = regexp.MustCompile(`name/group/grp-([0-9]+)/shard`)
 
 	err := kc.readConfig()
 	if err != nil {
@@ -92,26 +91,27 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	return kc
 }
 
-func (kc *KvClerk) waitEvict(ch chan error) {
+func (kc *KvClerk) waitEvict(ch chan bool) {
 	err := kc.WaitEvict(proc.GetPid())
 	if err != nil {
 		log.Printf("Error WaitEvict: %v", err)
 	}
-	ch <- err
+	ch <- true
 }
 
-func (kc *KvClerk) getKeys(ch chan error) (bool, error) {
+func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
 	for i := uint64(0); i < NKEYS; i++ {
 		v, err := kc.Get(key(i))
 		select {
-		case r := <-ch:
-			return true, r
+		case <-ch:
+			// ignore error from Get()
+			return true, nil
 		default:
 			if err != nil {
-				return false, fmt.Errorf("%v: Get %v err %v\n", db.GetName(), key(i), err)
+				return false, fmt.Errorf("%v: Get %v err %v", db.GetName(), key(i), err)
 			}
 			if key(i) != v {
-				return false, fmt.Errorf("%v: Get %v wrong val %v\n", db.GetName(), key(i), v)
+				return false, fmt.Errorf("%v: Get %v wrong val %v", db.GetName(), key(i), v)
 			}
 		}
 	}
@@ -120,7 +120,7 @@ func (kc *KvClerk) getKeys(ch chan error) (bool, error) {
 
 func (kc *KvClerk) Run() {
 	kc.Started(proc.GetPid())
-	ch := make(chan error)
+	ch := make(chan bool)
 	done := false
 	var err error
 	go kc.waitEvict(ch)
@@ -130,23 +130,25 @@ func (kc *KvClerk) Run() {
 			break
 		}
 	}
-	log.Printf("%v: done nop %v err %v\n", db.GetName(), kc.nop, err)
+	log.Printf("%v: done nop %v done %v err %v\n", db.GetName(), kc.nop, done, err)
 	s := "OK"
 	if err != nil {
 		s = err.Error()
 	}
-	err = kc.ExitedErr(proc.GetPid(), s)
-	if err != nil {
-		log.Printf("%v: exited failed\n", err)
-		os.Exit(1)
-	}
+
+	// We want exited() to not fail because of invalid leases
+	// (e.g., we may still have a lease for a kv group that
+	// doesn't exist anymore. Since we don't need leases anymore,
+	// deregister the ones we have.
+	kc.DeregisterLeases()
+	kc.Exited(proc.GetPid(), s)
 }
 
 // XXX atomic read
 func (kc *KvClerk) readConfig() error {
 	b, err := kc.balLease.WaitRLease()
 	if err != nil {
-		log.Printf("%v: clerk readConfig: err %v\n", db.GetName(), err)
+		log.Printf("%v: readConfig: err %v\n", db.GetName(), err)
 		return err
 	}
 	json.Unmarshal(b, &kc.blConf)
@@ -178,10 +180,10 @@ func (kc *KvClerk) doRetry(err error, fn string) (bool, error) {
 				// release lease, because otherwise we cannot read config
 				err := kc.releaseLease("grp-" + s[1])
 				if err != nil {
+					log.Printf("%v: release lease err %v\n", db.GetName(), err)
 					return false, nil
 				}
 			}
-
 		}
 
 		// release lease for bal conf and reread conf?

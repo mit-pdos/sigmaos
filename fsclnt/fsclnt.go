@@ -281,13 +281,20 @@ func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
 }
 
 func (fsc *FsClient) DeregisterLease(path string) error {
-	// log.Printf("%v: dereg %v\n", db.GetName(), path)
+	//log.Printf("%v: dereg %v\n", db.GetName(), path)
 	p := np.Split(path)
 	if err := fsc.lm.Del(p); err != nil {
 		return err
 	}
 	err := fsc.pc.DeregisterLease(p)
 	return err
+}
+
+func (fsc *FsClient) DeregisterLeases() error {
+	for _, l := range fsc.lm.Leases() {
+		fsc.DeregisterLease(np.Join(l.Fn))
+	}
+	return nil
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {

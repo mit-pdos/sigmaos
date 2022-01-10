@@ -320,12 +320,3 @@ func (kc *KvClerk) Put(k, v string) error {
 	kc.doop(op)
 	return op.err
 }
-
-func (kc *KvClerk) KVs() []string {
-	err := kc.readConfig()
-	if err != nil {
-		log.Printf("%v: KVs readConfig err %v\n", db.GetName(), err)
-	}
-	kcs := makeKvs(kc.blConf.Shards)
-	return kcs.mkKvs()
-}

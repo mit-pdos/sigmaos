@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -115,6 +116,6 @@ func (gm *GroupMgr) Stop() error {
 	}
 	// log.Printf("wait for members\n")
 	<-gm.ch
-	log.Printf("done members\n")
+	log.Printf("%v: done members\n", db.GetName())
 	return err
 }

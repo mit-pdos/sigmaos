@@ -146,83 +146,12 @@ func (kc *KvClerk) Run() {
 	kc.Exited(proc.GetPid(), s)
 }
 
-// XXX atomic read
-func (kc *KvClerk) readConfig() error {
-	b, err := kc.balLease.WaitRLease()
-	if err != nil {
-		log.Printf("%v: readConfig: err %v\n", db.GetName(), err)
-		return err
-	}
-	json.Unmarshal(b, &kc.blConf)
-	//log.Printf("%v: readConfig %v\n", db.GetName(), kc.blConf)
-	return nil
-}
-
-// XXX error checking in one place and more uniform
-func (kc *KvClerk) doRetry(err error, fn string) (bool, error) {
-	// XXX unused?
-	if err.Error() == "Version mismatch" {
-		log.Fatalf("%v: VERSION MISMATCH\n", db.GetName())
-	}
-
-	// Shard dir hasn't been create yet (config 0) or hasn't
-	// moved yet. XXX make sleep time dynamic?
-	if strings.HasPrefix(err.Error(), "file not found shard") {
-		time.Sleep(WAITMS * time.Millisecond)
-		return true, nil
-	}
-
-	// has grp been removed from config/
-	if err.Error() == "EOF" ||
-		// or lease ran out
-		strings.HasPrefix(err.Error(), "stale lease") ||
-		// or lease isn't found  XXX one error?
-		strings.HasPrefix(err.Error(), "lease not found") {
-
-		if err.Error() == "EOF" {
-			// has balencer removed a kv group and we dont' know yet?
-			s := kc.eofre.FindStringSubmatch(fn)
-			if s != nil {
-				// release lease, because otherwise we cannot read config
-				err := kc.releaseLease("grp-" + s[1])
-				if err != nil {
-					log.Printf("%v: release lease err %v\n", db.GetName(), err)
-					return false, nil
-				}
-			}
-		}
-
-		// release lease for bal conf and reread conf?
-		if strings.Contains(err.Error(), KVCONFIG) {
-			err := kc.balLease.ReleaseRLease()
-			if err != nil {
-				return false, err
-			}
-			err = kc.readConfig()
-			if err != nil {
-				return false, err
-			}
-		} else {
-			// release lease for kv group?
-			s := kc.grpre.FindStringSubmatch(err.Error())
-			if s != nil {
-				err := kc.releaseLease("grp-" + s[1])
-				if err != nil {
-					return false, nil
-				}
-			}
-		}
-		return true, nil
-	}
-	return false, err
-}
-
 func (kc *KvClerk) releaseLease(grp string) error {
 	l, ok := kc.grpLeases[grp]
 	if !ok {
 		return fmt.Errorf("release lease %v not found", grp)
 	}
-	//log.Printf("%v: release grp %v\n", db.GetName(), grp)
+	log.Printf("%v: release grp %v\n", db.GetName(), grp)
 	err := l.ReleaseRLease()
 	if err != nil {
 		return err
@@ -249,6 +178,136 @@ func (kc *KvClerk) acquireLease(grp string) error {
 	return nil
 }
 
+// XXX atomic read
+func (kc *KvClerk) readConfig() error {
+	b, err := kc.balLease.WaitRLease()
+	if err != nil {
+		log.Printf("%v: readConfig: err %v\n", db.GetName(), err)
+		return err
+	}
+	json.Unmarshal(b, &kc.blConf)
+	log.Printf("%v: readConfig %v\n", db.GetName(), kc.blConf)
+	return nil
+}
+
+// Try fix err by releasing group lease
+func (kc KvClerk) releaseGrp(err error) error {
+	s := kc.grpre.FindStringSubmatch(err.Error())
+	if s != nil {
+		return kc.releaseLease("grp-" + s[1])
+	}
+	return err
+}
+
+// Read config, and retry if we have a stale group lease
+func (kc KvClerk) retryReadConfig() error {
+	for {
+		err := kc.readConfig()
+		if err == nil {
+			return nil
+		}
+
+		err = kc.releaseGrp(err)
+		if err == nil {
+			log.Printf("%v: retry readConfig\n", db.GetName())
+			continue
+		}
+
+		// bail out; some other problem
+		return err
+	}
+}
+
+// Try to fix err by refreshing config lease and rereading it
+func (kc KvClerk) refreshConfig(err error) error {
+	for {
+		// release lease, just in case we will still have one
+		kc.balLease.ReleaseRLease()
+
+		err = kc.retryReadConfig()
+		if err == nil {
+			return nil
+		}
+
+		if strings.Contains(err.Error(), "not found config") {
+			log.Printf("%v: retry refreshConfig %v\n", db.GetName(), err)
+			continue
+		}
+
+		// maybe we couldn't get lease or read config because
+		// we have stale a grp lease lease; check and retry if
+		// so.
+		err = kc.releaseGrp(err)
+		if err == nil {
+			log.Printf("%v: retry refreshConfig\n", db.GetName())
+			continue
+		}
+
+		// bail out; some other problem
+		return err
+	}
+}
+
+// Try to fix err by refreshing leases
+func (kc *KvClerk) refreshLeases(err error) error {
+	// first check if refreshing group lease is sufficient to retry
+	err = kc.releaseGrp(err)
+	if err != nil {
+		// try refreshing config is sufficient to fix error
+		// involving KVCONFIG or if EOF to a kv group.
+		if strings.Contains(err.Error(), KVCONFIG) ||
+			err.Error() == "EOF" {
+			err = kc.refreshConfig(err)
+		}
+	}
+	return err
+}
+
+// Try to fix err; if return is nil, retry.
+func (kc *KvClerk) fixRetry(err error) error {
+	log.Printf("%v: fixRetry err %v\n", db.GetName(), err)
+
+	// Shard dir hasn't been create yet (config 0) or hasn't moved
+	// yet, so wait a bit, and retry.  XXX make sleep time
+	// dynamic?
+	if strings.HasPrefix(err.Error(), "file not found shard") {
+		time.Sleep(WAITMS * time.Millisecond)
+		return nil
+	}
+
+	// Maybe refreshing leases will help in fixing error
+	return kc.refreshLeases(err)
+}
+
+// Do an operation, but it may fail for several reasons (stale config
+// lease, stale group leae). If an error, try to fix the error, and on
+// success, retry.
+func (kc *KvClerk) doop(o *op) {
+	shard := key2shard(o.k)
+	for {
+		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
+		o.err = kc.acquireLease(kc.blConf.Shards[shard])
+		if o.err != nil {
+			o.err = kc.fixRetry(o.err)
+			if o.err != nil {
+				return
+			}
+			// try again to acquire group lease
+			continue
+		}
+		o.do(kc.FsLib, fn)
+		if o.err == nil { // success?
+			kc.nop += 1
+			return
+		}
+		o.err = kc.fixRetry(o.err)
+		if o.err != nil {
+			return
+		}
+	}
+	//log.Printf("%v: no retry %v\n", db.GetName(), o.k)
+}
+
 type opT int
 
 const (
@@ -273,34 +332,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
-}
-
-func (kc *KvClerk) doop(o *op) {
-	shard := key2shard(o.k)
-	retry := true
-	for retry {
-		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
-		o.err = kc.acquireLease(kc.blConf.Shards[shard])
-		if o.err != nil {
-			// no lease on kv group (or bal conf)?
-			retry, o.err = kc.doRetry(o.err, fn)
-			if o.err != nil {
-				return
-			}
-		}
-		o.do(kc.FsLib, fn)
-		if o.err == nil { // success?
-			kc.nop += 1
-			return
-		}
-		// invalid lease for kv group or bal conf?
-		retry, o.err = kc.doRetry(o.err, fn)
-		if o.err != nil {
-			return
-		}
-	}
-	//log.Printf("%v: no retry %v\n", db.GetName(), o.k)
+	// log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

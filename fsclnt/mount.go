@@ -38,7 +38,7 @@ func (mnt *Mount) add(path []string, fid np.Tfid) error {
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if np.IsPathEq(path, p.path) {
-			return fmt.Errorf("existing mount %v\n", p.path)
+			return fmt.Errorf("existing mount %v", p.path)
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)

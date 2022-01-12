@@ -253,8 +253,6 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 		return fmt.Errorf("Exited error called more than once for pid %v", pid)
 	}
 
-	// log.Printf("%v: exited %v\n", db.GetName(), piddir)
-
 	// Abandon any children I may have left.
 	err := clnt.abandonChildren(pid)
 	if err != nil {
@@ -265,7 +263,7 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 	fd, err := clnt.Open(fn, np.OWRITE)
 	if err != nil {
 		// parent has abandoned me; clean myself up
-		// log.Printf("%v: Error Open %v err %v", db.GetName(), fn, err)
+		// log.Printf("%v: Error Open %v err %v\n", db.GetName(), fn, err)
 		r := clnt.removeProc(piddir)
 		if r != nil {
 			return fmt.Errorf("Exited error %v", r)

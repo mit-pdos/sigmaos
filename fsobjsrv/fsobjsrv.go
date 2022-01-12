@@ -101,6 +101,7 @@ func (fos *FsObjSrv) Detach() {
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
 	fos.wt.DeleteSess(fos.sid)
+	fos.ft.ClunkOpen()
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {

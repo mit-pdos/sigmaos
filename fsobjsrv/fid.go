@@ -42,3 +42,15 @@ func (ft *fidTable) Del(fid np.Tfid) (fs.FsObj, bool) {
 	delete(ft.fids, fid)
 	return o, true
 }
+
+func (ft *fidTable) ClunkOpen() {
+	ft.Lock()
+	defer ft.Unlock()
+
+	for fid, f := range ft.fids {
+		o := ft.fids[fid].ObjU()
+		if f.Mode() != 0 { // has the fid been opened?
+			o.Close(f.Ctx(), f.Mode())
+		}
+	}
+}

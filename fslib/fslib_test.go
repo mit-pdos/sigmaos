@@ -830,3 +830,23 @@ func TestPipeRemove(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestPipeCrash(t *testing.T) {
+	ts := makeTstate(t)
+	err := ts.MakePipe("name/pipe", 0777)
+	assert.Nil(ts.t, err, "MakePipe")
+
+	go func() {
+		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
+		_, err := fsl.Open("name/pipe", np.OWRITE)
+		assert.Nil(ts.t, err, "Open")
+		time.Sleep(200 * time.Millisecond)
+		// simulate thread crashing
+		fsl.Exit()
+	}()
+	fd, err := ts.Open("name/pipe", np.OREAD)
+	assert.Nil(ts.t, err, "Open")
+	_, err = ts.Read(fd, 100)
+	assert.NotNil(ts.t, err, "read")
+	ts.Shutdown()
+}

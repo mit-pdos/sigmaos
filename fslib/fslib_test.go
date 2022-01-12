@@ -831,7 +831,7 @@ func TestPipeRemove(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestPipeCrash(t *testing.T) {
+func TestPipeCrash0(t *testing.T) {
 	ts := makeTstate(t)
 	err := ts.MakePipe("name/pipe", 0777)
 	assert.Nil(ts.t, err, "MakePipe")
@@ -848,5 +848,41 @@ func TestPipeCrash(t *testing.T) {
 	assert.Nil(ts.t, err, "Open")
 	_, err = ts.Read(fd, 100)
 	assert.NotNil(ts.t, err, "read")
+	ts.Shutdown()
+}
+
+func TestPipeCrash1(t *testing.T) {
+	ts := makeTstate(t)
+	err := ts.MakePipe("name/pipe", 0777)
+	assert.Nil(ts.t, err, "MakePipe")
+
+	fsl1 := fslib.MakeFsLibAddr("w1", fslib.Named())
+	go func() {
+		// blocks
+		_, err := fsl1.Open("name/pipe", np.OWRITE)
+		assert.NotNil(ts.t, err, "Open")
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+
+	// simulate crash of w1
+	fsl1.Exit()
+
+	// start up second write to pipe
+	go func() {
+		fsl2 := fslib.MakeFsLibAddr("w2", fslib.Named())
+		// the pipe has been closed for writing due to crash;
+		// this open should fail.
+		_, err := fsl2.Open("name/pipe", np.OWRITE)
+		assert.NotNil(ts.t, err, "Open")
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+
+	fd, err := ts.Open("name/pipe", np.OREAD)
+	assert.Nil(ts.t, err, "Open")
+	_, err = ts.Read(fd, 100)
+	assert.NotNil(ts.t, err, "read")
+
 	ts.Shutdown()
 }

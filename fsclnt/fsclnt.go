@@ -215,7 +215,10 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 		return errors.New("Unknown fid")
 	}
 	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
-	fsc.mount.add(np.Split(path), fid)
+	err := fsc.mount.add(np.Split(path), fid)
+	if err != nil {
+		log.Printf("%v: mount %v err %v\n", db.GetName(), path, err)
+	}
 
 	for _, l := range fsc.lm.Leases() {
 		err := fsc.pc.RegisterLease(l)
@@ -273,8 +276,8 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 }
 
 func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
-	// log.Printf("%v: reg %v\n", db.GetName(), fn)
 	if err := fsc.lm.Add(l); err != nil {
+		log.Printf("%v: reg %v\n", db.GetName(), l.Fn)
 		return err
 	}
 	return fsc.pc.RegisterLease(l)

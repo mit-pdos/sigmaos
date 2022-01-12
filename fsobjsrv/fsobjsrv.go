@@ -95,13 +95,13 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 // Delete ephemeral files created on a session.
 func (fos *FsObjSrv) Detach() {
+	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v\n", ephemeral)
 	for o, f := range ephemeral {
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
 	fos.wt.DeleteSess(fos.sid)
-	fos.ft.ClunkOpen()
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {
@@ -161,12 +161,15 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 		return err
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
+
+	// open may block so set it here, but undo on failue
+	f.SetMode(args.Mode)
 	o := f.Obj()
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
+		f.SetMode(0)
 		return &np.Rerror{r.Error()}
 	}
-	f.SetMode(args.Mode)
 	if no != nil {
 		f.SetObj(no)
 		rets.Qid = no.Qid()

@@ -58,6 +58,9 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
+		if pipe.rclosed {
+			return nil, fmt.Errorf("Pipe close for reading")
+		}
 		pipe.nreader += 1
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
@@ -67,6 +70,9 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 			}
 		}
 	} else if mode == np.OWRITE {
+		if pipe.wclosed {
+			return nil, fmt.Errorf("Pipe close for writing")
+		}
 		pipe.nwriter += 1
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {

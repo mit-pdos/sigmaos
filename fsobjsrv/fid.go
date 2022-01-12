@@ -47,6 +47,7 @@ func (ft *fidTable) ClunkOpen() {
 	ft.Lock()
 	defer ft.Unlock()
 
+	// log.Printf("clunkOpen: %v\n", ft.fids)
 	for fid, f := range ft.fids {
 		o := ft.fids[fid].ObjU()
 		if f.Mode() != 0 { // has the fid been opened?

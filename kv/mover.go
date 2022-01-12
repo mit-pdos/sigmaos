@@ -23,9 +23,9 @@ func MakeMover() (*Mover, error) {
 	mv := &Mover{}
 	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
+	err := mv.Started(proc.GetPid())
 	crash.Crasher(mv.FsLib)
-	mv.Started(proc.GetPid())
-	return mv, nil
+	return mv, err
 }
 
 func shardTmp(shardp string) string {

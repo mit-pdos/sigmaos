@@ -24,8 +24,8 @@ func MakeDeleter() (*Deleter, error) {
 	mv.FsLib = fslib.MakeFsLib("deleter-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 	crash.Crasher(mv.FsLib)
-	mv.Started(proc.GetPid())
-	return mv, nil
+	err := mv.Started(proc.GetPid())
+	return mv, err
 }
 
 func (dl *Deleter) Delete(sharddir string) {

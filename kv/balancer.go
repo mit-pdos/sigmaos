@@ -231,10 +231,14 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnProc(args []string) (string, error) {
 	p := proc.MakeProc(args[0], args[1:])
+	log.Printf("%v: spawn pid %v\n", db.GetName(), p.Pid)
 	if bl.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(CRASHHELPER))
 	}
 	err := bl.Spawn(p)
+	if err != nil {
+		log.Printf("%v: spawn pid %v err %v\n", db.GetName(), p.Pid, err)
+	}
 	return p.Pid, err
 }
 
@@ -243,6 +247,7 @@ func (bl *Balancer) runProc(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.Printf("%v: proc %v wait %v\n", db.GetName(), args, pid)
 	status, err := bl.WaitExit(pid)
 	return status, err
 }
@@ -258,7 +263,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool)
 			log.Fatalf("%v: runProc err %v\n", db.GetName(), err)
 		}
 		if retryf(err, status) {
-			// log.Printf("%v: proc %v err %v status %v\n", db.GetName(), args, err, status)
+			log.Printf("%v: retry proc %v err %v status %v\n", db.GetName(), args, err, status)
 		} else {
 			return nil
 		}
@@ -287,31 +292,58 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	return moves
 }
 
+// Run deleters in parallel
 func (bl *Balancer) runDeleters(moves Moves) {
+	log.Printf("%v: start deleting %v\n", db.GetName(), len(moves))
+	ch := make(chan bool)
 	for _, m := range moves {
-		bl.runProcRetry([]string{"bin/user/kv-deleter", m.Src},
-			func(err error, status string) bool {
-				ok := strings.HasPrefix(status, "file not found")
-				return err != nil || (status != "OK" && !ok)
-			})
+		go func(m *Move) {
+			bl.runProcRetry([]string{"bin/user/kv-deleter", m.Src},
+				func(err error, status string) bool {
+					ok := strings.HasPrefix(status, "file not found")
+					return err != nil || (status != "OK" && !ok)
+				})
+			log.Printf("%v: delete %v done\n", db.GetName(), m)
+			ch <- true
+		}(m)
 	}
+	for range moves {
+		<-ch
+	}
+	log.Printf("%v: deleters done\n", db.GetName())
 }
 
-// XXX run in parallel?
+// Run movers in parallel
 func (bl *Balancer) runMovers(moves Moves) {
-	for _, m := range moves {
-		bl.runProcRetry([]string{"bin/user/kv-mover", m.Src, m.Dst}, func(err error, status string) bool {
-			return err != nil || status != "OK"
-		})
+	log.Printf("%v: start moving %v\n", db.GetName(), len(moves))
+	tmp := make(Moves, len(moves))
+	copy(tmp, moves)
+	ch := make(chan int)
+	for i, m := range moves {
+		go func(m *Move, i int) {
+			bl.runProcRetry([]string{"bin/user/kv-mover", m.Src, m.Dst}, func(err error, status string) bool {
+				return err != nil || status != "OK"
+			})
+			log.Printf("%v: move %v done\n", db.GetName(), m)
+			ch <- i
+		}(m, i)
 	}
+	m := 0
+	for range moves {
+		i := <-ch
+		tmp[i] = nil
+		m += 1
+		log.Printf("%v: movers done %d/%v %v\n", db.GetName(), i, m, tmp)
+	}
+	log.Printf("%v: movers all done\n", db.GetName())
 }
 
 func (bl *Balancer) balance(opcode, mfs string) error {
-	log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
-
 	if bl.isBusy {
 		return fmt.Errorf("retry")
 	}
+
+	log.Printf("%v: BAL Balancer: %v %v %v %v\n", db.GetName(), opcode, mfs, bl.conf, bl.isBusy)
 
 	var nextShards []string
 	switch opcode {

@@ -7,6 +7,7 @@ import (
 	// "errors"
 
 	db "ulambda/debug"
+	"ulambda/dispatch"
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
@@ -16,8 +17,8 @@ const PIPESZ = 8192
 type Pipe struct {
 	fs.FsObj
 	mu      sync.Mutex
-	condr   *sync.Cond
-	condw   *sync.Cond
+	condr   dispatch.Cond
+	condw   dispatch.Cond
 	nreader int
 	nwriter int
 	wclosed bool
@@ -28,8 +29,8 @@ type Pipe struct {
 func MakePipe(i fs.FsObj) *Pipe {
 	pipe := &Pipe{}
 	pipe.FsObj = i
-	pipe.condr = sync.NewCond(&pipe.mu)
-	pipe.condw = sync.NewCond(&pipe.mu)
+	pipe.condr = dispatch.MakeCond(&pipe.mu)
+	pipe.condw = dispatch.MakeCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
 	pipe.nreader = 0
 	pipe.nwriter = 0

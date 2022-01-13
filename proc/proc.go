@@ -30,14 +30,16 @@ func PidDir(pid string) string {
 }
 
 type Proc struct {
-	Pid     string   // SigmaOS PID
-	PidDir  string   // SigmaOS PID pathname
-	Program string   // Program to run
-	Dir     string   // Unix working directory for the process
-	Args    []string // Args
-	Env     []string // Environment variables
-	Type    Ttype    // Type
-	Ncore   Tcore    // Number of cores requested
+	Pid          string   // SigmaOS PID
+	PidDir       string   // SigmaOS PID pathname
+	ParentPid    string   // SigmaOS PID pathname
+	ParentPidDir string   // SigmaOS PID pathname
+	Program      string   // Program to run
+	Dir          string   // Unix working directory for the process
+	Args         []string // Args
+	Env          []string // Environment variables
+	Type         Ttype    // Type
+	Ncore        Tcore    // Number of cores requested
 }
 
 func MakeEmptyProc() *Proc {
@@ -49,6 +51,8 @@ func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
 	p.PidDir = "pids"
+	p.ParentPid = GetPid()
+	p.ParentPidDir = GetPidDir()
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF

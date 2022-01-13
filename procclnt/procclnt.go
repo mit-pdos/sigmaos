@@ -28,7 +28,7 @@ const (
 	START_WAIT  = "start-sem"
 	EVICT_WAIT  = "evict-sem"
 	RET_STATUS  = "status-pipe"
-	CHILD       = "childs"      // directory with children's pids
+	CHILD       = "children"    // directory with children's pids
 	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
 
 	MAXSTATUS = 1000

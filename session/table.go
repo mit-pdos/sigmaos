@@ -24,7 +24,7 @@ func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer) *Sessio
 	return st
 }
 
-func (st *SessionTable) lookup(sid np.Tsession) (*Session, bool) {
+func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	st.Lock()
 	defer st.Unlock()
 	sess, ok := st.sessions[sid]
@@ -44,7 +44,7 @@ func (st *SessionTable) LookupInsert(sid np.Tsession) *Session {
 }
 
 func (st *SessionTable) Detach(sid np.Tsession) error {
-	sess, ok := st.lookup(sid)
+	sess, ok := st.Lookup(sid)
 	if !ok {
 		return fmt.Errorf("%v: no sess %v", db.GetName(), sid)
 	}

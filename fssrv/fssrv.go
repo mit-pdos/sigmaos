@@ -1,10 +1,12 @@
 package fssrv
 
 import (
+	"fmt"
 	"log"
 	"runtime/debug"
 
 	// db "ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/dispatch"
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -112,7 +114,20 @@ func (fssrv *FsServer) AttachTree(uname string, aname string) (fs.Dir, fs.CtxI) 
 }
 
 func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	sess := fssrv.st.LookupInsert(sid)
+	// On attach, register the new session. Otherwise, try and return an old session
+	var sess *session.Session
+	var ok bool
+	switch msg.(type) {
+	case np.Tattach:
+		sess = fssrv.st.LookupInsert(sid)
+	default:
+		sess, ok = fssrv.st.Lookup(sid)
+		// If the session doesn't exist, return an error
+		if !ok {
+			return nil, &np.Rerror{fmt.Sprintf("%v: no sess %v", db.GetName(), sid)}
+		}
+	}
+	// Process the request
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
 		// log.Printf("%p: checkLease %v %v\n", fssrv, msg.Type(), req)

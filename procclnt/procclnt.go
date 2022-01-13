@@ -61,8 +61,6 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
-
-	// Select which queue to put the job in
 	piddir := proc.PidDir(p.Pid)
 
 	// log.Printf("%v: %p spawn %v\n", db.GetName(), clnt, piddir)
@@ -106,12 +104,14 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return clnt.cleanupError(piddir, fmt.Errorf("Spawn error %v", err))
 	}
 
-	// Add pid to my children
+	// Add symlink to child
 	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + p.Pid
-	if err := clnt.MakeFile(f, 0777, np.OWRITE, []byte{}); err != nil {
-		log.Printf("%v: Spawn mkfile child %v err %v\n", db.GetName(), f, err)
+	if err := clnt.Symlink([]byte(piddir), f, 0777); err != nil {
+		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), f, err)
 		return clnt.cleanupError(piddir, err)
 	}
+
+	//	log.Printf("Spawning %v, expected len %v, symlink len %v")
 
 	// If this is not a kernel proc, spawn it through procd.
 	if !p.IsKernelProc() && !p.IsRealmProc() {
@@ -142,7 +142,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid string) error {
-	piddir := proc.PidDir(pid)
+	piddir := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + pid
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+START_WAIT)
 	err := semStart.Down()
 	if err != nil {
@@ -151,12 +151,12 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 	return nil
 }
 
-// Parent calls WaitExited() to wait until child proc has exited. If
+// Parent calls WaitExit() to wait until child proc has exited. If
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent cleans up the child and parent removes the
 // child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
-	piddir := proc.PidDir(pid)
+	piddir := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + pid
 
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
 
@@ -183,6 +183,14 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		return "", fmt.Errorf("WaitExit error %v", err)
 	}
 
+	// Read the child link
+	b1, err := clnt.ReadFile(piddir)
+	if err != nil {
+		log.Printf("Read link err %v %v", piddir, err)
+		return "", fmt.Errorf("WaitExit error %v", err)
+	}
+	link := string(b1)
+
 	// Remove pid from my children now its status has been
 	// collected We don't need to abandon it.
 	f := PIDS + "/" + clnt.pid + "/" + CHILD + "/" + path.Base(pid)
@@ -192,7 +200,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 
 	// XXX what happens if we crash here; who will collect? procd?
-	clnt.removeProc(piddir)
+	clnt.removeProc(link)
 
 	return string(b), nil
 
@@ -200,7 +208,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid string) error {
-	piddir := proc.PidDir(pid)
+	piddir := proc.GetPidDir()
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+EVICT_WAIT)
 	err := semEvict.Down()
 	if err != nil {
@@ -213,8 +221,8 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
-	dir := proc.PidDir(pid)
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, dir+"/"+START_WAIT)
+	piddir := proc.GetPidDir()
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+START_WAIT)
 	err := semStart.Up()
 	if err != nil {
 		return fmt.Errorf("Started error %v", err)

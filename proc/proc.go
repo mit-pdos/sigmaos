@@ -19,27 +19,16 @@ const (
 	C_DEF Tcore = 0
 )
 
-func PidDir(pid string) string {
-	piddir := path.Dir(pid)
-	if piddir == "." {
-		piddir = "pids/" + pid
-	} else {
-		piddir = pid
-	}
-	return piddir
-}
-
 type Proc struct {
-	Pid          string   // SigmaOS PID
-	PidDir       string   // SigmaOS PID pathname
-	ParentPid    string   // SigmaOS PID pathname
-	ParentPidDir string   // SigmaOS PID pathname
-	Program      string   // Program to run
-	Dir          string   // Unix working directory for the process
-	Args         []string // Args
-	Env          []string // Environment variables
-	Type         Ttype    // Type
-	Ncore        Tcore    // Number of cores requested
+	Pid       string   // SigmaOS PID
+	ProcDir   string   // SigmaOS directory to store this proc's state
+	ParentDir string   // SigmaOS parent proc directory
+	Program   string   // Program to run
+	Dir       string   // Unix working directory for the process
+	Args      []string // Args
+	env       []string // Environment variables
+	Type      Ttype    // Type
+	Ncore     Tcore    // Number of cores requested
 }
 
 func MakeEmptyProc() *Proc {
@@ -50,9 +39,8 @@ func MakeEmptyProc() *Proc {
 func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
-	p.PidDir = "pids"
-	p.ParentPid = GetPid()
-	p.ParentPidDir = GetPidDir()
+	p.ProcDir = path.Join("pids", p.Pid) // TODO: make relative to ~procd
+	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
@@ -63,11 +51,26 @@ func MakeProc(program string, args []string) *Proc {
 func MakeProcPid(pid string, program string, args []string) *Proc {
 	p := MakeProc(program, args)
 	p.Pid = pid
+	p.ProcDir = path.Join("pids", p.Pid) // TODO: make relative to ~procd
+	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
 	return p
 }
 
 func (p *Proc) AppendEnv(name, val string) {
-	p.Env = append(p.Env, name+"="+val)
+	p.env = append(p.env, name+"="+val)
+}
+
+func (p *Proc) GetEnv(procdIp, newRoot string) []string {
+	env := []string{}
+	for _, envvar := range p.env {
+		env = append(env, envvar)
+	}
+	env = append(env, SIGMANEWROOT+"="+newRoot)
+	env = append(env, SIGMAPROCDIP+"="+procdIp)
+	env = append(env, SIGMAPID+"="+p.Pid)
+	env = append(env, SIGMAPROCDIR+"="+p.ProcDir)
+	env = append(env, SIGMAPARENTDIR+"="+p.ParentDir)
+	return env
 }
 
 func (p *Proc) IsKernelProc() bool {
@@ -79,5 +82,5 @@ func (p *Proc) IsRealmProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v Dir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.PidDir, p.Program, p.Dir, p.Args, p.Env, p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.ProcDir, p.ParentDir, p.Program, p.Dir, p.Args, p.GetEnv("NOPROCDIP", "NONEWROOT"), p.Type, p.Ncore)
 }

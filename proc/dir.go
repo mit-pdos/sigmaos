@@ -1,4 +1,4 @@
-package procclnt
+package proc
 
 /*
  * Proc Directory structure:
@@ -10,7 +10,7 @@ package procclnt
  * |  |  |
  * |  |  |- pids
  * |  |     |
- * |  |     |- 1000
+ * |  |     |- 1000 // Proc mounts this directory as procdir
  * |  |         |
  * |  |         |- start-sem
  * |  |         |- evict-sem
@@ -30,10 +30,24 @@ package procclnt
  * |            |- parent -> /procd/x.x.x.x/pids/1000/children/1001 // Mount of subdir of parent proc.
  * |            |- ...
  * |
- * |- pids // Only for kernel procs such as s3, ux, procd, ...
+ * |- kernel-pids // Only for kernel procs such as s3, ux, procd, ...
  *    |
  *    |- fsux-2000
  *       |
  *       |- kernel-proc // Only present if this is a kernel proc.
  *       |- ... // Same directory structure as regular procs
  */
+
+const (
+	// name for dir where procs live. May not refer to name/pids
+	// because proc.PidDir may change it.  A proc refers to itself
+	// using "pids/<pid>", where pid is the proc's PID.
+	PIDS = "pids" // TODO: make this explicitly kernel PIDs only
+
+	// Files/directories in "pids/<pid>":
+	START_SEM   = "start-sem"
+	EVICT_SEM   = "evict-sem"
+	RET_STATUS  = "status-pipe"
+	CHILDREN    = "children"    // directory with children's pids and symlinks
+	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
+)

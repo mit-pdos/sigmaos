@@ -96,6 +96,7 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 // Delete ephemeral files created on a session.
 func (fos *FsObjSrv) Detach() {
 	fos.ft.ClunkOpen()
+	fos.et.Detach()
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v\n", ephemeral)
 	for o, f := range ephemeral {
@@ -213,13 +214,15 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
+// If ephemeral table add failed (meaning that the session had already been detached), return false.
+func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) (*fid.Fid, bool) {
 	p := np.Copy(dir)
 	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
+	success := true
 	if eph {
-		fos.et.Add(o, nf)
+		success = fos.et.Add(o, nf)
 	}
-	return nf
+	return nf, success
 }
 
 // Create name in dir. If OWATCH is set and name already exits, wait
@@ -271,7 +274,12 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if r != nil {
 		return r
 	}
-	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	nf, success := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	if !success {
+		// If this is an ephemeral file and the session already detached, remove.
+		fos.removeObj(nf.Ctx(), o1, nf.Path())
+		return &np.Rerror{fmt.Sprintf("Already detached")}
+	}
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -571,7 +579,12 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if err != nil {
 			return err
 		}
-		fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+		nf, success := fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+		if !success {
+			// If this is an ephemeral file and the session already detached, remove.
+			fos.removeObj(nf.Ctx(), lo, nf.Path())
+			return &np.Rerror{fmt.Sprintf("Already detached")}
+		}
 	} else {
 		fos.stats.Path(f.Path())
 		_, r = lo.Open(f.Ctx(), args.Mode)
@@ -590,7 +603,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return nil
 	default:
 		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)
-
 	}
 	return nil
 }

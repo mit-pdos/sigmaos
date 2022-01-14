@@ -7,7 +7,6 @@ import (
 
 	// db "ulambda/debug"
 	db "ulambda/debug"
-	"ulambda/dispatch"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -56,7 +55,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
 	fssrv.stats.MonitorCPUUtil()
-	dispatch.SetMakeCondF()
 	return fssrv
 }
 

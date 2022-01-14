@@ -6,18 +6,17 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/dispatch"
 	np "ulambda/ninep"
 )
 
 type Watch struct {
 	sid    np.Tsession
-	cond   dispatch.Cond
+	cond   *sync.Cond
 	closed bool
 }
 
 func mkWatch(sid np.Tsession, l sync.Locker) *Watch {
-	return &Watch{sid, dispatch.MakeCond(l), false}
+	return &Watch{sid, sync.NewCond(l), false}
 }
 
 type Watchers struct {

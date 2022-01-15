@@ -94,12 +94,12 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
+		pipe.nreader -= 1
+		if pipe.nreader == 0 {
+			pipe.rclosed = true
+		}
 		if pipe.nreader < 0 {
 			fmt.Errorf("Pipe already closed for reading\n")
-		}
-		pipe.nreader -= 1
-		if pipe.nwriter == 0 {
-			pipe.rclosed = true
 		}
 		pipe.condw.Signal()
 	} else if mode == np.OWRITE {

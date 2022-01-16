@@ -136,13 +136,13 @@ func (wt *WatchTable) DeleteSess(sid np.Tsession) {
 	// log.Printf("delete %p sess %v\n", wt, sid)
 
 	wt.Lock()
-	m := make(map[string]*Watchers)
-	for f, ws := range wt.watchers {
-		m[f] = ws
+	t := make([]*Watchers, 0, len(wt.watchers))
+	for _, ws := range wt.watchers {
+		t = append(t, ws)
 	}
 	wt.Unlock()
 
-	for _, ws := range m {
+	for _, ws := range t {
 		ws.deleteSess(sid)
 	}
 }

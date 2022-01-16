@@ -9,27 +9,19 @@ import (
 
 type ephemeralTable struct {
 	sync.Mutex
-	detached  bool // Marks whether or not the session has already detached.
 	ephemeral map[fs.FsObj]*fid.Fid
 }
 
 func makeEphemeralTable() *ephemeralTable {
 	ft := &ephemeralTable{}
-	ft.detached = false
 	ft.ephemeral = make(map[fs.FsObj]*fid.Fid)
 	return ft
 }
 
-// If the session already detached, do nothing & return false. Otherwise, add
-// to the ephemeral table.
-func (et *ephemeralTable) Add(o fs.FsObj, f *fid.Fid) bool {
+func (et *ephemeralTable) Add(o fs.FsObj, f *fid.Fid) {
 	et.Lock()
 	defer et.Unlock()
-	if et.detached {
-		return false
-	}
 	et.ephemeral[o] = f
-	return true
 }
 
 func (et *ephemeralTable) Del(o fs.FsObj) {
@@ -50,10 +42,4 @@ func (et *ephemeralTable) Get() map[fs.FsObj]*fid.Fid {
 	}
 
 	return e
-}
-
-func (et *ephemeralTable) Detach() {
-	et.Lock()
-	defer et.Unlock()
-	et.detached = true
 }

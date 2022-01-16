@@ -96,9 +96,9 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 // Delete ephemeral files created on a session.
 func (fos *FsObjSrv) Detach() {
 	fos.ft.ClunkOpen()
-	fos.et.Detach()
 	ephemeral := fos.et.Get()
-	db.DLPrintf("9POBJ", "Detach %v\n", ephemeral)
+	db.DLPrintf("9POBJ", "Detach %v %v\n", fos.sid, ephemeral)
+	// log.Printf("%v detach %v ephemeral %v\n", db.GetName(), fos.sid, ephemeral)
 	for o, f := range ephemeral {
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
@@ -166,8 +166,10 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	// open may block so set it here, but undo on failue
 	f.SetMode(args.Mode)
 	o := f.Obj()
+	//log.Printf("%v: %v %v open mode to %v\n", db.GetName(), f.Ctx().Uname(), f.Path(), args.Mode)
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
+		// log.Printf("%v: %v %v back to 0\n", db.GetName(), f.Ctx().Uname(), f.Path())
 		f.SetMode(0)
 		return &np.Rerror{r.Error()}
 	}
@@ -214,27 +216,23 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-// If ephemeral table add failed (meaning that the session had already been detached), return false.
-func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) (*fid.Fid, bool) {
+func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
 	p := np.Copy(dir)
 	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
-	success := true
 	if eph {
-		success = fos.et.Add(o, nf)
+		fos.et.Add(o, nf)
 	}
-	return nf, success
+	return nf
 }
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
-	p := append(dir, name)
-	dws := fos.wt.WatchLookupL(dir)
-	defer fos.wt.Release(dws)
-	fws := fos.wt.WatchLookupL(p)
-	defer fos.wt.Release(fws)
+func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watchers, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
+
+		//log.Printf("%v %v Create %v %v %v ephemeral %v\n", db.GetName(), ctx.Uname(), name, o1, err, perm.IsEphemeral())
+
 		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
 		if err == nil {
 			fws.WakeupWatchL()
@@ -256,6 +254,17 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dir []string, name string,
 	}
 }
 
+func (fos *FsObjSrv) AcquireWatches(dir []string, file string) (*watch.Watchers, *watch.Watchers) {
+	dws := fos.wt.WatchLookupL(dir)
+	fws := fos.wt.WatchLookupL(append(dir, file))
+	return dws, fws
+}
+
+func (fos *FsObjSrv) ReleaseWatches(dws, fws *watch.Watchers) {
+	fos.wt.Release(dws)
+	fos.wt.Release(fws)
+}
+
 func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, err := fos.lookup(args.Fid)
@@ -270,16 +279,15 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	}
 
 	d := o.(fs.Dir)
-	o1, r := fos.createObj(f.Ctx(), d, f.Path(), names[0], args.Perm, args.Mode)
+	dws, fws := fos.AcquireWatches(f.Path(), names[0])
+	defer fos.ReleaseWatches(dws, fws)
+
+	o1, r := fos.createObj(f.Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
 	if r != nil {
+		//log.Printf("%v %v createObj %v err %v\n", db.GetName(), f.Ctx().Uname(), names[0], r)
 		return r
 	}
-	nf, success := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
-	if !success {
-		// If this is an ephemeral file and the session already detached, remove.
-		fos.removeObj(nf.Ctx(), o1, nf.Path())
-		return &np.Rerror{fmt.Sprintf("Already detached")}
-	}
+	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -325,7 +333,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	// log.Printf("%v: %v remove %v\n", db.GetName(), ctx, path)
+	//log.Printf("%v: %v remove %v\n", db.GetName(), ctx, path)
 
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
@@ -342,6 +350,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 	dws.WakeupWatchL()
 
 	if o.Perm().IsEphemeral() {
+		// log.Printf("%v del %v %v ephemeral %v\n", db.GetName(), path, fos.sid, fos.et.ephemeral)
 		fos.et.Del(o)
 	}
 	return nil
@@ -575,16 +584,14 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
 		}
 		name := args.Wnames[len(args.Wnames)-1]
-		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dname, name, args.Perm, args.Mode)
+		dws, fws := fos.AcquireWatches(dname, name)
+		defer fos.ReleaseWatches(dws, fws)
+
+		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dws, fws, name, args.Perm, args.Mode)
 		if err != nil {
 			return err
 		}
-		nf, success := fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
-		if !success {
-			// If this is an ephemeral file and the session already detached, remove.
-			fos.removeObj(nf.Ctx(), lo, nf.Path())
-			return &np.Rerror{fmt.Sprintf("Already detached")}
-		}
+		fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
 		fos.stats.Path(f.Path())
 		_, r = lo.Open(f.Ctx(), args.Mode)

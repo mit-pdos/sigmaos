@@ -101,7 +101,7 @@ func TestWaitExitSimple(t *testing.T) {
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(proc.PidDir(pid))
+	_, err = ts.Stat(path.Join(proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -125,7 +125,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(proc.PidDir(pid))
+	_, err = ts.Stat(path.Join(proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -217,7 +217,7 @@ func TestFailSpawn(t *testing.T) {
 	assert.NotNil(t, err, "Spawn")
 
 	// child should not exist
-	_, err = ts.Stat(proc.PidDir(a.Pid))
+	_, err = ts.Stat(path.Join(proc.PIDS, a.Pid))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -237,7 +237,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, "OK", status, "WaitExit")
 
 	// Child should be still running
-	_, err = ts.Stat(proc.PidDir(pid1))
+	_, err = ts.Stat(path.Join(proc.PIDS, pid1))
 	assert.Nil(t, err, "Stat")
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
@@ -248,7 +248,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(proc.PidDir(pid1))
+	_, err = ts.Stat(path.Join(proc.PIDS, pid1))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -280,7 +280,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(proc.PidDir(pid1))
+			_, err = ts.Stat(path.Join(proc.PIDS, pid1))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}()
@@ -329,7 +329,7 @@ func TestConcurrentProcs(t *testing.T) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
-			_, err := ts.Stat(proc.PidDir(pid))
+			_, err := ts.Stat(path.Join(proc.PIDS, pid))
 			assert.NotNil(t, err, "Stat")
 		}(pid, &done, i)
 	}

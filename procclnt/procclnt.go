@@ -57,11 +57,15 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return fmt.Errorf("Spawn error called after Exited")
 	}
 
-	if err := clnt.makeProcDir(p.Pid, procdir, isKernelProc); err != nil {
+	if err := clnt.MakeProcDir(p.Pid, procdir, isKernelProc); err != nil {
 		return err
 	}
 
 	if err := clnt.addChild(p.Pid, procdir); err != nil {
+		return err
+	}
+
+	if err := clnt.linkChild(p.Pid, procdir); err != nil {
 		return err
 	}
 

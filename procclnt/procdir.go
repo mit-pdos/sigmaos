@@ -13,7 +13,7 @@ import (
 
 // For documentation on dir structure, see ulambda/proc/dir.go
 
-func (clnt *ProcClnt) makeProcDir(pid, procdir string, isKernelProc bool) error {
+func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error {
 	if err := clnt.Mkdir(procdir, 0777); err != nil {
 		log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), procdir, err)
 		return err
@@ -70,14 +70,16 @@ func (clnt *ProcClnt) addChild(pid, procdir string) error {
 		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
+	return nil
+}
 
+func (clnt *ProcClnt) linkChild(pid, procdir string) error {
 	// Add symlink to child
 	link := proc.GetChildProcDir(pid)
 	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
 		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
 		return clnt.cleanupError(pid, procdir, err)
 	}
-
 	return nil
 }
 

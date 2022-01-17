@@ -65,6 +65,7 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	for _, envvar := range p.env {
 		env = append(env, envvar)
 	}
+	env = append(env, SIGMAKERNELPROC+"="+fmt.Sprintf("%v", p.IsKernelProc()))
 	env = append(env, SIGMANEWROOT+"="+newRoot)
 	env = append(env, SIGMAPROCDIP+"="+procdIp)
 	env = append(env, SIGMAPID+"="+p.Pid)

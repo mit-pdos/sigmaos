@@ -15,18 +15,18 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error {
 	if err := clnt.Mkdir(procdir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), procdir, err)
+		log.Printf("%v: MakeProcDir mkdir pid %v err %v\n", db.GetName(), procdir, err)
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)
 	if err := clnt.Mkdir(childrenDir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir childrens %v err %v\n", db.GetName(), childrenDir, err)
+		log.Printf("%v: MakeProcDir mkdir childrens %v err %v\n", db.GetName(), childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 	if isKernelProc {
 		kprocFPath := path.Join(procdir, proc.KERNEL_PROC)
 		if err := clnt.MakeFile(kprocFPath, 0777, np.OWRITE, []byte{}); err != nil {
-			log.Printf("%v: MakeFile %v err %v", db.GetName(), kprocFPath, err)
+			log.Printf("%v: MakeProcDir MakeFile %v err %v", db.GetName(), kprocFPath, err)
 			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 	}
@@ -73,10 +73,10 @@ func (clnt *ProcClnt) addChild(pid, procdir string) error {
 	return nil
 }
 
-func (clnt *ProcClnt) linkChild(pid, procdir string) error {
+func (clnt *ProcClnt) linkIntoParentDir(pid, procdir string) error {
 	// Add symlink to child
-	link := proc.GetChildProcDir(pid)
-	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
+	link := path.Join(proc.GetParentDir(), proc.PROCDIR)
+	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil {
 		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
 		return clnt.cleanupError(pid, procdir, err)
 	}

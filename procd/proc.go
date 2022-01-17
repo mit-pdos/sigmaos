@@ -91,13 +91,19 @@ func (p *Proc) run(cores []uint) error {
 		stderr = os.Stderr
 	}
 
+	// Make the proc's procdir
+	err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsKernelProc())
+	if err != nil {
+		log.Printf("Err procd MakeProcDir: %v", err)
+	}
+
 	cmd := exec.Command(p.pd.bin+"/"+p.Program, args...)
 	cmd.Env = p.Env
 	cmd.Dir = p.Dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	namespace.SetupProc(cmd)
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		log.Printf("Procd run error: %v, %v\n", p.attr, err)
 		return err

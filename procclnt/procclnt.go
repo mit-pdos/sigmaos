@@ -44,6 +44,12 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 		return nil, err
 	}
 
+	// Make the proc's procdir
+	err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsKernelProc())
+	if err != nil {
+		log.Printf("Err SpawnKernelProc MakeProcDir: %v", err)
+	}
+
 	return proc.RunKernelProc(p, bin, namedAddr)
 }
 
@@ -57,15 +63,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return fmt.Errorf("Spawn error called after Exited")
 	}
 
-	if err := clnt.MakeProcDir(p.Pid, procdir, isKernelProc); err != nil {
-		return err
-	}
-
 	if err := clnt.addChild(p.Pid, procdir); err != nil {
-		return err
-	}
-
-	if err := clnt.linkChild(p.Pid, procdir); err != nil {
 		return err
 	}
 
@@ -73,10 +71,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	childDir := path.Dir(proc.GetChildProcDir(p.Pid))
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	semStart.Init()
-
-	if err := clnt.makeProcSignals(p.Pid, procdir); err != nil {
-		return err
-	}
 
 	//	log.Printf("Spawning %v, expected len %v, symlink len %v")
 
@@ -185,6 +179,19 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
+	procdir := proc.GetProcDir()
+
+	// Link self into parent dir
+	if err := clnt.linkIntoParentDir(pid, procdir); err != nil {
+		return err
+	}
+
+	// Make signals for parent
+	if err := clnt.makeProcSignals(pid, procdir); err != nil {
+		return err
+	}
+
+	// Mark self as started
 	parentDir := proc.GetParentDir()
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))
 	err := semStart.Up()

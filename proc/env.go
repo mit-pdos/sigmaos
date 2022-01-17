@@ -8,11 +8,12 @@ import (
 
 // Environment variables which every proc expects to have.
 const (
-	SIGMANEWROOT   = "SIGMANEWROOT"
-	SIGMAPROCDIP   = "SIGMAPROCDIP"
-	SIGMAPID       = "SIGMAPID"
-	SIGMAPROCDIR   = "SIGMAPROCDIR"
-	SIGMAPARENTDIR = "SIGMAPARENTDIR"
+	SIGMAKERNELPROC = "SIGMAKERNELPROC"
+	SIGMANEWROOT    = "SIGMANEWROOT"
+	SIGMAPROCDIP    = "SIGMAPROCDIP"
+	SIGMAPID        = "SIGMAPID"
+	SIGMAPROCDIR    = "SIGMAPROCDIR"
+	SIGMAPARENTDIR  = "SIGMAPARENTDIR"
 )
 
 func GenPid() string {
@@ -54,6 +55,10 @@ func GetParentDir() string {
 
 func GetNewRoot() string {
 	return os.Getenv(SIGMANEWROOT)
+}
+
+func GetIsKernelProc() bool {
+	return os.Getenv(SIGMAKERNELPROC) == "true"
 }
 
 func FakeProcEnv(pid, procdip, procdir, parentdir string) {

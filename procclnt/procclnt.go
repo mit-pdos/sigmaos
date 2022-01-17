@@ -222,7 +222,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 //
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
-func (clnt *ProcClnt) exited(procdir string, pid string, status string) error {
+func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, status string) error {
 	// will catch some unintended misuses: a proc calling exited
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
@@ -236,7 +236,7 @@ func (clnt *ProcClnt) exited(procdir string, pid string, status string) error {
 		return fmt.Errorf("Exited error %v", err)
 	}
 
-	pipePath := path.Join(proc.GetParentDir(), proc.RET_STATUS)
+	pipePath := path.Join(parentdir, proc.RET_STATUS)
 	fd, err := clnt.Open(pipePath, np.OWRITE)
 	if err != nil {
 		// parent has abandoned me; clean myself up
@@ -265,16 +265,16 @@ func (clnt *ProcClnt) exited(procdir string, pid string, status string) error {
 // failed
 func (clnt *ProcClnt) Exited(pid string, status string) {
 	procdir := proc.GetProcDir()
-	err := clnt.exited(procdir, pid, status)
+	err := clnt.exited(procdir, proc.GetParentDir(), pid, status)
 	if err != nil {
 		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
 		os.Exit(1)
 	}
 }
 
-func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
+func (clnt *ProcClnt) ExitedProcd(pid string, parentdir string, status string) {
 	procdir := path.Join(proc.PIDS, pid)
-	err := clnt.exited(procdir, pid, status)
+	err := clnt.exited(procdir, parentdir, pid, status)
 	if err != nil {
 		// XXX maybe remove any state left of proc?
 		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)

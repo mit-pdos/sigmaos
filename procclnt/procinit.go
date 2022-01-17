@@ -56,18 +56,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
 	}
-	d := proc.GetProcDir()
-	if err := fsl.Mkdir(d, 0777); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), d, err)
-		return nil
-	}
-	d = path.Join(proc.GetProcDir(), proc.CHILDREN)
-	if err := fsl.Mkdir(d, 0777); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: MakeProcClntInit childs %v err %v\n", db.GetName(), d, err)
-		return nil
-	}
-
-	return makeProcClnt(fsl, proc.GetPid())
+	clnt := makeProcClnt(fsl, pid)
+	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
+	return clnt
 }

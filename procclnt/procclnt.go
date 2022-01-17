@@ -78,8 +78,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	semStart.Init()
 
-	//	log.Printf("Spawning %v, expected len %v, symlink len %v")
-
 	// If this is not a kernel proc, spawn it through procd.
 	if !isKernelProc {
 		b, err := json.Marshal(p)

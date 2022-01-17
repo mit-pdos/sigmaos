@@ -49,6 +49,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	procdir := p.ProcDir
+	isKernelProc := p.IsKernelProc() || p.IsRealmProc()
 
 	// log.Printf("%v: %p spawn %v\n", db.GetName(), clnt, procdir)
 
@@ -56,27 +57,12 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return fmt.Errorf("Spawn error called after Exited")
 	}
 
-	if err := clnt.Mkdir(procdir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), procdir, err)
+	if err := clnt.makeProcDir(p.Pid, procdir, isKernelProc); err != nil {
 		return err
 	}
 
-	err := clnt.MakePipe(path.Join(procdir, proc.RET_STATUS), 0777)
-	if err != nil {
-		log.Printf("%v: MakePipe %v err %v\n", db.GetName(), proc.RET_STATUS, err)
-		return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
-	}
-
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.START_SEM))
-	semStart.Init()
-
-	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
-	semEvict.Init()
-
-	grandchildDir := path.Join(procdir, proc.CHILDREN)
-	if err := clnt.Mkdir(grandchildDir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), grandchildDir, err)
-		return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
+	if err := clnt.makeProcStatusSignals(p.Pid, procdir); err != nil {
+		return err
 	}
 
 	//	log.Printf("Spawning %v, expected len %v, symlink len %v")
@@ -84,7 +70,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	clnt.addChild(p.Pid, procdir)
 
 	// If this is not a kernel proc, spawn it through procd.
-	if !p.IsKernelProc() && !p.IsRealmProc() {
+	if !isKernelProc {
 		b, err := json.Marshal(p)
 		if err != nil {
 			log.Printf("%v: marshal err %v", db.GetName(), err)
@@ -94,12 +80,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		err = clnt.WriteFile(fn, b)
 		if err != nil {
 			log.Printf("%v: WriteFile %v err %v", db.GetName(), fn, err)
-			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
-		}
-	} else {
-		fn := path.Join(procdir, proc.KERNEL_PROC)
-		if err := clnt.MakeFile(fn, 0777, np.OWRITE, []byte{}); err != nil {
-			log.Printf("%v: MakeFile %v err %v", db.GetName(), fn, err)
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 	}

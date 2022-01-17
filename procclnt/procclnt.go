@@ -79,21 +79,9 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 
-	// Directory which holds link to child procdir
-	childProcDir := path.Join(proc.GetProcDir(), proc.CHILDREN, p.Pid)
-	if err := clnt.Mkdir(childProcDir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childProcDir, err)
-		return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
-	}
-
-	// Add symlink to child
-	link := proc.GetChildProcDir(p.Pid)
-	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
-		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
-		return clnt.cleanupError(p.Pid, procdir, err)
-	}
-
 	//	log.Printf("Spawning %v, expected len %v, symlink len %v")
+
+	clnt.addChild(p.Pid, procdir)
 
 	// If this is not a kernel proc, spawn it through procd.
 	if !p.IsKernelProc() && !p.IsRealmProc() {
@@ -116,6 +104,41 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		}
 	}
 
+	return nil
+}
+
+func (clnt *ProcClnt) addChild(pid, procdir string) error {
+	// Directory which holds link to child procdir
+	childDir := path.Dir(proc.GetChildProcDir(pid))
+	if err := clnt.Mkdir(childDir, 0777); err != nil {
+		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childDir, err)
+		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
+	}
+
+	// Add symlink to child
+	link := proc.GetChildProcDir(pid)
+	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
+		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
+		return clnt.cleanupError(pid, procdir, err)
+	}
+
+	return nil
+}
+
+func (clnt *ProcClnt) removeChild(pid string) error {
+	procdir := proc.GetChildProcDir(pid)
+	// Remove link.
+	if err := clnt.Remove(procdir); err != nil {
+		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
+		return fmt.Errorf("removeChild link error %v", err)
+	}
+
+	// Remove pid from my children now its status has been
+	// collected we don't need to abandon it.
+	if err := clnt.Remove(path.Dir(procdir)); err != nil {
+		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
+		return fmt.Errorf("removeChild dir error %v", err)
+	}
 	return nil
 }
 
@@ -173,18 +196,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 	link := string(b1)
 
-	// Remove link.
-	if err := clnt.Remove(procdir); err != nil {
-		log.Printf("Error Remove %v in WaitExit: %v", procdir, err)
-		return "", fmt.Errorf("WaitExit error 6 %v", err)
-	}
-
-	// Remove pid from my children now its status has been
-	// collected We don't need to abandon it.
-	if err := clnt.Remove(path.Dir(procdir)); err != nil {
-		log.Printf("Error Remove %v in WaitExit: %v", procdir, err)
-		return "", fmt.Errorf("WaitExit error 6 %v", err)
-	}
+	clnt.removeChild(pid)
 
 	// XXX what happens if we crash here; who will collect? procd?
 	clnt.removeProc(link)
@@ -394,10 +406,7 @@ func (clnt *ProcClnt) setExited(pid string) string {
 
 // Attempt to cleanup procdir
 func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
-	// Remove symlink
-	clnt.Remove(proc.GetChildProcDir(pid))
-	// Remove dir containing symlink
-	clnt.Remove(path.Dir(proc.GetChildProcDir(pid)))
+	clnt.removeChild(pid)
 	clnt.removeProc(procdir)
 	return err
 }

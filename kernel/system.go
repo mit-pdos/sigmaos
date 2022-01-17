@@ -156,7 +156,7 @@ func (s *System) Shutdown() {
 			log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
 		}
 		for _, pid := range cpids {
-			s.Evict(pid)
+			s.EvictProcd(pid)
 			if _, ok := s.crashedProcdPids[pid]; !ok {
 				if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
 					log.Printf("shutdown error %v %v", status, err)

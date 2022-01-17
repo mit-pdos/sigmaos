@@ -100,12 +100,17 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 // ========== WAIT ==========
 
-// Parent calls WaitStart() to wait until the child proc has
-// started. If the proc doesn't exist, return immediately.
-func (clnt *ProcClnt) WaitStart(pid string) error {
+func (clnt *ProcClnt) waitStart(pid string) error {
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	err := semStart.Down()
+	return err
+}
+
+// Parent calls WaitStart() to wait until the child proc has
+// started. If the proc doesn't exist, return immediately.
+func (clnt *ProcClnt) WaitStart(pid string) error {
+	err := clnt.waitStart(pid)
 	if err != nil {
 		return fmt.Errorf("WaitStart error %v", err)
 	}
@@ -117,6 +122,11 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 // return status, parent cleans up the child and parent removes the
 // child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
+	// Make sure the process already started & its directory structure has been created.
+	if err := clnt.waitStart(pid); err != nil {
+		return "", fmt.Errorf("WaitExit error 0 %v %v", err, pid)
+	}
+
 	procdir := proc.GetChildProcDir(pid)
 
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, procdir)

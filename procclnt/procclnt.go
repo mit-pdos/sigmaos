@@ -229,7 +229,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 	}
 
 	// Abandon any children I may have left.
-	err := clnt.abandonChildren(pid)
+	err := clnt.abandonChildren(procdir)
 	if err != nil {
 		return fmt.Errorf("Exited error %v", err)
 	}
@@ -306,11 +306,10 @@ func (clnt *ProcClnt) EvictProcd(pid string) error {
 // ========== GETCHILDREN ==========
 
 // Return the pids of all children.
-func (clnt *ProcClnt) GetChildren(pid string) ([]string, error) {
-	procdir := path.Join(proc.PIDS, pid)
+func (clnt *ProcClnt) GetChildren(procdir string) ([]string, error) {
 	sts, err := clnt.ReadDir(path.Join(procdir, proc.CHILDREN))
 	if err != nil {
-		log.Printf("%v: GetChildren %v error: %v", db.GetName(), pid, err)
+		log.Printf("%v: GetChildren %v error: %v", db.GetName(), procdir, err)
 		return nil, err
 	}
 	cpids := []string{}
@@ -323,10 +322,10 @@ func (clnt *ProcClnt) GetChildren(pid string) ([]string, error) {
 // ========== Helpers ==========
 
 // Remove status from children to indicate we don't care
-func (clnt *ProcClnt) abandonChildren(pid string) error {
-	cpids, err := clnt.GetChildren(pid)
+func (clnt *ProcClnt) abandonChildren(procdir string) error {
+	cpids, err := clnt.GetChildren(procdir)
 	if err != nil {
-		log.Printf("%v: abandonChildren  %v error: %v", db.GetName(), pid, err)
+		log.Printf("%v: abandonChildren  %v error: %v", db.GetName(), procdir, err)
 		return err
 	}
 

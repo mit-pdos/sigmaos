@@ -151,7 +151,7 @@ func (s *System) KillOne(srv string) error {
 
 func (s *System) Shutdown() {
 	if s.ProcClnt != nil {
-		cpids, err := s.GetChildren(s.pid)
+		cpids, err := s.GetChildren(proc.GetProcDir())
 		if err != nil {
 			log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
 		}

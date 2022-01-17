@@ -42,7 +42,8 @@ const (
 	// name for dir where procs live. May not refer to name/pids
 	// because proc.PidDir may change it.  A proc refers to itself
 	// using "pids/<pid>", where pid is the proc's PID.
-	PIDS = "pids" // TODO: make this explicitly kernel PIDs only
+	PIDS    = "pids" // TODO: make this explicitly kernel PIDs only
+	PROCDIR = "procdir"
 
 	// Files/directories in "pids/<pid>":
 	START_SEM   = "start-sem"

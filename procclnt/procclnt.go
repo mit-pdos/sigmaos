@@ -44,7 +44,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 		return nil, err
 	}
 
-	return proc.Run(p.Pid, bin, p.Program, namedAddr, p.Args)
+	return proc.RunKernelProc(p, bin, namedAddr)
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
@@ -148,33 +148,33 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, procdir)
 
 	if _, err := clnt.Stat(procdir); err != nil {
-		return "", fmt.Errorf("WaitExit error %v", err)
+		return "", fmt.Errorf("WaitExit error 1 %v %v", err, procdir)
 	}
 
 	pipePath := path.Join(procdir, proc.RET_STATUS)
 	fd, err := clnt.Open(pipePath, np.OREAD)
 	if err != nil {
 		log.Printf("%v: Open %v err %v", db.GetName(), pipePath, err)
-		return "", fmt.Errorf("WaitExit error %v", err)
+		return "", fmt.Errorf("WaitExit error 2 %v", err)
 	}
 
 	b, err := clnt.Read(fd, MAXSTATUS)
 	if err != nil {
 		log.Printf("Read %v err %v", pipePath, err)
-		return "", fmt.Errorf("WaitExit error %v", err)
+		return "", fmt.Errorf("WaitExit error 3 %v", err)
 	}
 
 	err = clnt.Close(fd)
 	if err != nil {
 		log.Printf("Close %v err %v", pipePath, err)
-		return "", fmt.Errorf("WaitExit error %v", err)
+		return "", fmt.Errorf("WaitExit error 4 %v", err)
 	}
 
 	// Read the child link
 	b1, err := clnt.ReadFile(procdir)
 	if err != nil {
 		log.Printf("Read link err %v %v", procdir, err)
-		return "", fmt.Errorf("WaitExit error %v", err)
+		return "", fmt.Errorf("WaitExit error 5 %v", err)
 	}
 	link := string(b1)
 
@@ -182,7 +182,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	// collected We don't need to abandon it.
 	if err := clnt.Remove(procdir); err != nil {
 		log.Printf("Error Remove %v in WaitExit: %v", procdir, err)
-		return "", fmt.Errorf("WaitExit error %v", err)
+		return "", fmt.Errorf("WaitExit error 6 %v", err)
 	}
 
 	// XXX what happens if we crash here; who will collect? procd?
@@ -207,7 +207,6 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
 	procdir := proc.GetProcDir()
-	log.Printf("Piddir: %v", procdir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.START_SEM))
 	err := semStart.Up()
 	if err != nil {

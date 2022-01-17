@@ -28,6 +28,14 @@ func GetPid() string {
 	return os.Getenv(SIGMAPID)
 }
 
+func SetProcdIp(procdIp string) {
+	os.Setenv(SIGMAPROCDIP, procdIp)
+}
+
+func GetProcdIp() string {
+	return os.Getenv(SIGMAPROCDIP)
+}
+
 func SetProcDir(procdir string) {
 	os.Setenv(SIGMAPROCDIR, procdir)
 }
@@ -42,4 +50,10 @@ func SetParentDir(procdir string) {
 
 func GetParentDir() string {
 	return os.Getenv(SIGMAPARENTDIR)
+}
+
+func FakeProcEnv(pid, procdip, procdir, parentdir string) {
+	SetPid(pid)
+	SetProcDir(procdir)
+	SetParentDir(parentdir)
 }

@@ -20,9 +20,13 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// XXX resolve mounts to find server?
 	tree := strings.TrimPrefix(procdir, "name/")
 
-	if err := fsl.MountTree(fslib.Named(), tree, proc.PIDS); err != nil {
+	if err := fsl.MountTree(fslib.Named(), tree, proc.PROCDIR); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, proc.PIDS, err)
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, proc.PROCDIR, err)
+	}
+	if err := fsl.MountTree(fslib.Named(), proc.PIDS, proc.PIDS); err != nil {
+		debug.PrintStack()
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
 	}
 	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
 		debug.PrintStack()
@@ -39,7 +43,8 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
-	proc.SetPid(proc.GenPid())
+	pid := proc.GenPid()
+	proc.FakeProcEnv(pid, "NO_PROCD_IP", path.Join(proc.PIDS, pid), "")
 
 	if err := fsl.MountTree(NamedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
@@ -51,13 +56,13 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
 	}
-	d := path.Join(proc.PIDS, proc.GetPid())
+	d := proc.GetProcDir()
 	if err := fsl.Mkdir(d, 0777); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), d, err)
 		return nil
 	}
-	d = path.Join(proc.PIDS, proc.GetPid(), proc.CHILDREN)
+	d = path.Join(proc.GetProcDir(), proc.CHILDREN)
 	if err := fsl.Mkdir(d, 0777); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: MakeProcClntInit childs %v err %v\n", db.GetName(), d, err)

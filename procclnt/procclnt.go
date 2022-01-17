@@ -165,7 +165,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 
 // Proc pid waits for eviction notice from procd.
 func (clnt *ProcClnt) WaitEvict(pid string) error {
-	procdir := proc.GetProcDir()
+	procdir := proc.PROCDIR
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Down()
 	if err != nil {
@@ -178,10 +178,10 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
-	procdir := proc.GetProcDir()
+	procdir := proc.PROCDIR
 
 	// Link self into parent dir
-	if err := clnt.linkIntoParentDir(pid, procdir); err != nil {
+	if err := clnt.linkChildIntoParentDir(pid, procdir); err != nil {
 		return err
 	}
 
@@ -190,7 +190,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 	semEvict.Init()
 
 	// Mark self as started
-	parentDir := proc.GetParentDir()
+	parentDir := proc.PARENTDIR
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))
 	err := semStart.Up()
 	if err != nil {
@@ -262,8 +262,8 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 // If exited() fails, invoke os.Exit(1) to indicate to procd that proc
 // failed
 func (clnt *ProcClnt) Exited(pid string, status string) {
-	procdir := proc.GetProcDir()
-	err := clnt.exited(procdir, proc.GetParentDir(), pid, status)
+	procdir := proc.PROCDIR
+	err := clnt.exited(procdir, proc.PARENTDIR, pid, status)
 	if err != nil {
 		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
 		os.Exit(1)

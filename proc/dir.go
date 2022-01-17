@@ -30,7 +30,7 @@ import (
  * |        |
  * |        |- 1001
  * |            |
- * |            |- parent -> /procd/x.x.x.x/pids/1000/children/1001 // Mount of subdir of parent proc.
+ * |            |- parentdir -> /procd/x.x.x.x/pids/1000/children/1001 // Mount of subdir of parent proc.
  * |            |- ...
  * |
  * |- kernel-pids // Only for kernel procs such as s3, ux, procd, ...
@@ -45,8 +45,9 @@ const (
 	// name for dir where procs live. May not refer to name/pids
 	// because proc.PidDir may change it.  A proc refers to itself
 	// using "pids/<pid>", where pid is the proc's PID.
-	PIDS    = "pids" // TODO: make this explicitly kernel PIDs only
-	PROCDIR = "procdir"
+	PIDS      = "pids" // TODO: make this explicitly kernel PIDs only
+	PROCDIR   = "procdir"
+	PARENTDIR = "parentdir"
 
 	// Files/directories in "pids/<pid>":
 	START_SEM   = "start-sem"
@@ -57,9 +58,9 @@ const (
 )
 
 func GetChildProcDir(cpid string) string {
-	return path.Join(GetProcDir(), CHILDREN, cpid, PROCDIR)
+	return path.Join(PROCDIR, CHILDREN, cpid, PROCDIR)
 }
 
 func GetChildStatusPath(cpid string) string {
-	return path.Join(GetProcDir(), CHILDREN, cpid, RET_STATUS)
+	return path.Join(PROCDIR, CHILDREN, cpid, RET_STATUS)
 }

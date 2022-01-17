@@ -18,16 +18,21 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	procdir := proc.GetProcDir()
 
 	// XXX resolve mounts to find server?
+	// Mount procdir
 	tree := strings.TrimPrefix(procdir, "name/")
-
 	if err := fsl.MountTree(fslib.Named(), tree, proc.PROCDIR); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, proc.PROCDIR, err)
 	}
-	if err := fsl.MountTree(fslib.Named(), proc.PIDS, proc.PIDS); err != nil {
+
+	// Mount parentdir
+	parentdir := proc.GetParentDir()
+	tree = strings.TrimPrefix(parentdir, "name/")
+	if err := fsl.MountTree(fslib.Named(), tree, proc.PARENTDIR); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, proc.PARENTDIR, err)
 	}
+
 	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting locks err %v\n", db.GetName(), err)
@@ -56,7 +61,15 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 		debug.PrintStack()
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
 	}
+
 	clnt := makeProcClnt(fsl, pid)
 	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
+
+	tree := strings.TrimPrefix(proc.GetProcDir(), "name/")
+	if err := fsl.MountTree(fslib.Named(), tree, proc.PROCDIR); err != nil {
+		debug.PrintStack()
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, proc.PROCDIR, err)
+	}
+
 	return clnt
 }

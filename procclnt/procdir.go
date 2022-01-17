@@ -32,6 +32,18 @@ func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error 
 	return nil
 }
 
+// ========== SYMLINKS ==========
+
+func (clnt *ProcClnt) linkChildIntoParentDir(pid, procdir string) error {
+	// Add symlink to child
+	link := path.Join(proc.PARENTDIR, proc.PROCDIR)
+	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil {
+		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
+		return clnt.cleanupError(pid, procdir, err)
+	}
+	return nil
+}
+
 // ========== HELPERS ==========
 
 // Attempt to cleanup procdir
@@ -42,8 +54,7 @@ func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
 }
 
 func (clnt *ProcClnt) isKernelProc(pid string) bool {
-	procdir := proc.GetProcDir()
-	_, err := clnt.Stat(path.Join(procdir, proc.KERNEL_PROC))
+	_, err := clnt.Stat(path.Join(proc.PROCDIR, proc.KERNEL_PROC))
 	return err == nil
 }
 
@@ -56,16 +67,6 @@ func (clnt *ProcClnt) addChild(pid, procdir string) error {
 	if err := clnt.Mkdir(childDir, 0777); err != nil {
 		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
-	}
-	return nil
-}
-
-func (clnt *ProcClnt) linkIntoParentDir(pid, procdir string) error {
-	// Add symlink to child
-	link := path.Join(proc.GetParentDir(), proc.PROCDIR)
-	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil {
-		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
-		return clnt.cleanupError(pid, procdir, err)
 	}
 	return nil
 }

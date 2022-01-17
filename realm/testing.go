@@ -104,7 +104,8 @@ func (e *TestEnv) bootRealmMgr() error {
 
 func (e *TestEnv) BootMachined() error {
 	var err error
-	machined, err := proc.Run("0", e.bin, "bin/realm/machined", fslib.Named(), []string{e.bin, proc.GenPid()})
+	p := proc.MakeProcPid("0", "/bin/realm/machined", []string{e.bin, proc.GenPid()})
+	machined, err := proc.RunKernelProc(p, e.bin, fslib.Named())
 	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err

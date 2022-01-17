@@ -17,10 +17,10 @@ import (
  * |  |     |- 1000 // Proc mounts this directory as procdir
  * |  |         |
  * |  |         |- evict-sem
- * |  |         |- status-pipe
  * |  |         |- children
  * |  |            |- 1001 // Child mounts this directory as procdir/parent
  * |  |               |- start-sem
+ * |  |               |- status-pipe
  * |  |               |- procdir -> /procd/y.y.y.y/pids/1001 // Symlink to child's procdir.
  * |  |                  |- ...
  * |  |
@@ -58,4 +58,8 @@ const (
 
 func GetChildProcDir(cpid string) string {
 	return path.Join(GetProcDir(), CHILDREN, cpid, PROCDIR)
+}
+
+func GetChildStatusPath(cpid string) string {
+	return path.Join(GetProcDir(), CHILDREN, cpid, RET_STATUS)
 }

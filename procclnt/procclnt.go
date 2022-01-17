@@ -67,6 +67,12 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return err
 	}
 
+	err := clnt.MakePipe(proc.GetChildStatusPath(p.Pid), 0777)
+	if err != nil {
+		log.Printf("%v: MakePipe %v err %v\n", db.GetName(), proc.RET_STATUS, err)
+		return clnt.cleanupError(p.Pid, proc.GetChildStatusPath(p.Pid), fmt.Errorf("Spawn error %v", err))
+	}
+
 	// Create a semaphore to indicate a proc has started.
 	childDir := path.Dir(proc.GetChildProcDir(p.Pid))
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
@@ -116,11 +122,6 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 // return status, parent cleans up the child and parent removes the
 // child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
-	// Make sure the process already started & its directory structure has been created.
-	if err := clnt.waitStart(pid); err != nil {
-		return "", fmt.Errorf("WaitExit error 0 %v %v", err, pid)
-	}
-
 	procdir := proc.GetChildProcDir(pid)
 
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, procdir)
@@ -129,7 +130,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		return "", fmt.Errorf("WaitExit error 1 %v %v", err, procdir)
 	}
 
-	pipePath := path.Join(procdir, proc.RET_STATUS)
+	pipePath := proc.GetChildStatusPath(pid)
 	fd, err := clnt.Open(pipePath, np.OREAD)
 	if err != nil {
 		log.Printf("%v: Open %v err %v", db.GetName(), pipePath, err)
@@ -186,10 +187,9 @@ func (clnt *ProcClnt) Started(pid string) error {
 		return err
 	}
 
-	// Make signals for parent
-	if err := clnt.makeProcSignals(pid, procdir); err != nil {
-		return err
-	}
+	// Create eviction signal
+	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+	semEvict.Init()
 
 	// Mark self as started
 	parentDir := proc.GetParentDir()
@@ -236,7 +236,7 @@ func (clnt *ProcClnt) exited(procdir string, pid string, status string) error {
 		return fmt.Errorf("Exited error %v", err)
 	}
 
-	pipePath := path.Join(procdir, proc.RET_STATUS)
+	pipePath := path.Join(proc.GetParentDir(), proc.RET_STATUS)
 	fd, err := clnt.Open(pipePath, np.OWRITE)
 	if err != nil {
 		// parent has abandoned me; clean myself up
@@ -333,7 +333,7 @@ func (clnt *ProcClnt) abandonChildren(pid string) error {
 	}
 
 	for _, cpid := range cpids {
-		r := clnt.abandonChild(path.Join(proc.PIDS, cpid))
+		r := clnt.abandonChild(cpid)
 		if r != nil && err != nil {
 			err = r
 		}
@@ -342,8 +342,8 @@ func (clnt *ProcClnt) abandonChildren(pid string) error {
 }
 
 // Abandon child
-func (clnt *ProcClnt) abandonChild(procdir string) error {
-	f := path.Join(procdir, proc.RET_STATUS)
+func (clnt *ProcClnt) abandonChild(pid string) error {
+	f := proc.GetChildStatusPath(pid)
 	err := clnt.Remove(f)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", db.GetName(), f, err)

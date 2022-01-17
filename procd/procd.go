@@ -87,7 +87,7 @@ func (pd *Procd) makeProc(a *proc.Proc) *Proc {
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
 	for pid, _ := range pd.procs {
-		pd.procclnt.Evict(pid)
+		pd.procclnt.EvictProcd(pid)
 	}
 }
 

@@ -60,18 +60,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), procdir, err)
 		return err
 	}
-	//	if clnt.procdir != p.PidDir {
-	//		log.Printf("%v: spawn child %v make procdir %v\n", db.GetName(), clnt.procdir, p.PidDir)
-	//		if err := clnt.Mkdir(p.PidDir, 0777); err != nil {
-	//			log.Printf("%v: Spawn new procdir %v err %v\n", db.GetName(), p.PidDir, err)
-	//			return clnt.cleanupError(procdir, fmt.Errorf("Spawn error %v", err))
-	//		}
-	//		procdir = p.PidDir + "/" + p.Pid
-	//		if err := clnt.Mkdir(procdir, 0777); err != nil {
-	//			log.Printf("%v: Spawn mkdir pid %v err %v\n", db.GetName(), procdir, err)
-	//			return clnt.cleanupError(procdir, fmt.Errorf("Spawn error %v", err))
-	//		}
-	//	}
 
 	err := clnt.MakePipe(path.Join(procdir, proc.RET_STATUS), 0777)
 	if err != nil {
@@ -92,7 +80,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	}
 
 	// Add symlink to child
-	link := path.Join(proc.PIDS, clnt.pid, proc.CHILDREN, p.Pid)
+	link := proc.GetChildProcDir(p.Pid)
 	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil {
 		log.Printf("%v: Spawn Symlink child %v err %v\n", db.GetName(), link, err)
 		return clnt.cleanupError(p.Pid, procdir, err)
@@ -129,7 +117,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid string) error {
-	procdir := path.Join(proc.GetProcDir(), proc.CHILDREN, pid)
+	procdir := proc.GetChildProcDir(pid)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.START_SEM))
 	err := semStart.Down()
 	if err != nil {
@@ -143,7 +131,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 // return status, parent cleans up the child and parent removes the
 // child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
-	procdir := path.Join(proc.GetProcDir(), proc.CHILDREN, pid)
+	procdir := proc.GetChildProcDir(pid)
 
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, procdir)
 
@@ -286,14 +274,6 @@ func (clnt *ProcClnt) Exited(pid string, status string) {
 	}
 }
 
-//func (clnt *ProcClnt) ExitedErr(pid string, status string) error {
-//	err := clnt.exited(pid, status)
-//	if err != nil {
-//		log.Printf("%v: exitederr %v err %v\n", db.GetName(), pid, err)
-//	}
-//	return err
-//}
-
 func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
 	procdir := path.Join(proc.PIDS, pid)
 	err := clnt.exited(procdir, pid, status)
@@ -305,15 +285,26 @@ func (clnt *ProcClnt) ExitedProcd(pid string, status string) {
 
 // ========== EVICT ==========
 
-// Procd notifies a proc that it will be evicted using Evict.
-func (clnt *ProcClnt) Evict(pid string) error {
-	procdir := path.Join(proc.GetProcDir(), proc.CHILDREN, pid)
+// Notifies a proc that it will be evicted using Evict.
+func (clnt *ProcClnt) evict(procdir string) error {
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	err := semEvict.Up()
 	if err != nil {
 		return fmt.Errorf("Evict error %v", err)
 	}
 	return nil
+}
+
+// Called by parent.
+func (clnt *ProcClnt) Evict(pid string) error {
+	procdir := proc.GetChildProcDir(pid)
+	return clnt.evict(procdir)
+}
+
+// Called by procd.
+func (clnt *ProcClnt) EvictProcd(pid string) error {
+	procdir := path.Join(proc.PIDS, pid)
+	return clnt.evict(procdir)
 }
 
 // ========== GETCHILDREN ==========
@@ -391,7 +382,7 @@ func (clnt *ProcClnt) setExited(pid string) string {
 // Attempt to cleanup procdir
 func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
 	// Remove symlink
-	clnt.Remove(path.Join(proc.GetProcDir(), proc.CHILDREN, pid))
+	clnt.Remove(proc.GetChildProcDir(pid))
 	clnt.removeProc(procdir)
 	return err
 }

@@ -1,5 +1,9 @@
 package proc
 
+import (
+	"path"
+)
+
 /*
  * Proc Directory structure:
  *
@@ -52,3 +56,7 @@ const (
 	CHILDREN    = "children"    // directory with children's pids and symlinks
 	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
 )
+
+func GetChildProcDir(cpid string) string {
+	return path.Join(GetProcDir(), CHILDREN, cpid)
+}

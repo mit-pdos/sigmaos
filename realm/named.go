@@ -32,7 +32,7 @@ func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd,
 
 func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
 	for _, pid := range pids {
-		if err := pclnt.Evict(pid); err != nil {
+		if err := pclnt.EvictProcd(pid); err != nil {
 			log.Fatalf("Error Evict in Realm.ShutdownNamedReplicas: %v", err)
 		}
 		if status, err := pclnt.WaitExit(pid); status != "EVICTED" || err != nil {

@@ -122,12 +122,11 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 // return status, parent cleans up the child and parent removes the
 // child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
-	procdir := proc.GetChildProcDir(pid)
-
+	childDir := path.Dir(proc.GetChildProcDir(pid))
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, procdir)
 
-	if _, err := clnt.Stat(procdir); err != nil {
-		return "", fmt.Errorf("WaitExit error 1 %v %v", err, procdir)
+	if _, err := clnt.Stat(childDir); err != nil {
+		return "", fmt.Errorf("WaitExit error 1 %v %v", err, childDir)
 	}
 
 	pipePath := proc.GetChildStatusPath(pid)
@@ -150,6 +149,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 
 	// Read the child link
+	procdir := proc.GetChildProcDir(pid)
 	b1, err := clnt.ReadFile(procdir)
 	if err != nil {
 		log.Printf("Read link err %v %v", procdir, err)

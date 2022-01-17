@@ -83,5 +83,5 @@ func (p *Proc) IsRealmProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v ParentDir:%v Program:%v ProcDir:%v ParentDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.ProcDir, p.ParentDir, p.Program, p.Dir, p.Args, p.GetEnv("NOPROCDIP", "NONEWROOT"), p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, p.Dir, p.Args, p.GetEnv("NOPROCDIP", "NONEWROOT"), p.Type, p.Ncore)
 }

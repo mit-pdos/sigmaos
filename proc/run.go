@@ -9,12 +9,12 @@ import (
 )
 
 // To run kernel procs
-func Run(pid, bin, name string, namedAddr []string, args []string) (*exec.Cmd, error) {
+func RunKernelProc(p *Proc, bin string, namedAddr []string) (*exec.Cmd, error) {
 	env := []string{}
+	env = append(p.GetEnv("NONE", "NONE")) // TODO: remove NONE
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
-	env = append(env, SIGMAPID+"="+pid)
 
-	cmd := exec.Command(path.Join(bin, name), args...)
+	cmd := exec.Command(path.Join(bin, p.Program), p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout

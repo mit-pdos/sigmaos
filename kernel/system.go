@@ -197,7 +197,9 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	cmd, err := proc.Run("named-"+strconv.Itoa(id), bin, "/bin/kernel/named", fslib.Named(), args)
+	p := proc.MakeProcPid("named-"+strconv.Itoa(id), "/bin/kernel/named", args)
+
+	cmd, err := proc.RunKernelProc(p, bin, fslib.Named())
 	if err != nil {
 		log.Printf("Error running named: %v", err)
 		return nil, err

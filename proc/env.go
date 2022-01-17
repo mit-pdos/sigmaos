@@ -52,6 +52,10 @@ func GetParentDir() string {
 	return os.Getenv(SIGMAPARENTDIR)
 }
 
+func GetNewRoot() string {
+	return os.Getenv(SIGMANEWROOT)
+}
+
 func FakeProcEnv(pid, procdip, procdir, parentdir string) {
 	SetPid(pid)
 	SetProcDir(procdir)

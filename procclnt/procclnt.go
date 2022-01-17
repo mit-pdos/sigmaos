@@ -215,7 +215,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 	// Only isolate kernel procs
 	if !clnt.isKernelProc(pid) {
 		// Isolate the process namespace
-		newRoot := os.Getenv("NEWROOT")
+		newRoot := proc.GetNewRoot()
 		if err := namespace.Isolate(newRoot); err != nil {
 			log.Printf("Error Isolate in clnt.Started: %v", err)
 			return fmt.Errorf("Started error %v", err)

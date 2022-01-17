@@ -16,12 +16,11 @@ import (
  * |  |     |
  * |  |     |- 1000 // Proc mounts this directory as procdir
  * |  |         |
- * |  |         |- start-sem
  * |  |         |- evict-sem
  * |  |         |- status-pipe
  * |  |         |- children
  * |  |            |- 1001 // Child mounts this directory as procdir/parent
- * |  |               |- run-sem
+ * |  |               |- start-sem
  * |  |               |- procdir -> /procd/y.y.y.y/pids/1001 // Symlink to child's procdir.
  * |  |                  |- ...
  * |  |

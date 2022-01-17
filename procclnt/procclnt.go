@@ -61,13 +61,20 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return err
 	}
 
-	if err := clnt.makeProcStatusSignals(p.Pid, procdir); err != nil {
+	if err := clnt.addChild(p.Pid, procdir); err != nil {
+		return err
+	}
+
+	// Create a semaphore to indicate a proc has started.
+	childDir := path.Dir(proc.GetChildProcDir(p.Pid))
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
+	semStart.Init()
+
+	if err := clnt.makeProcSignals(p.Pid, procdir); err != nil {
 		return err
 	}
 
 	//	log.Printf("Spawning %v, expected len %v, symlink len %v")
-
-	clnt.addChild(p.Pid, procdir)
 
 	// If this is not a kernel proc, spawn it through procd.
 	if !isKernelProc {
@@ -92,8 +99,8 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid string) error {
-	procdir := proc.GetChildProcDir(pid)
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.START_SEM))
+	childDir := path.Dir(proc.GetChildProcDir(pid))
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	err := semStart.Down()
 	if err != nil {
 		return fmt.Errorf("WaitStart error %v", err)
@@ -164,8 +171,8 @@ func (clnt *ProcClnt) WaitEvict(pid string) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started(pid string) error {
-	procdir := proc.GetProcDir()
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.START_SEM))
+	parentDir := proc.GetParentDir()
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))
 	err := semStart.Up()
 	if err != nil {
 		return fmt.Errorf("Started error %v", err)
@@ -347,17 +354,4 @@ func (clnt *ProcClnt) setExited(pid string) string {
 	r := clnt.isExited
 	clnt.isExited = pid
 	return r
-}
-
-// Attempt to cleanup procdir
-func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
-	clnt.removeChild(pid)
-	clnt.removeProc(procdir)
-	return err
-}
-
-func (clnt *ProcClnt) isKernelProc(pid string) bool {
-	procdir := proc.GetProcDir()
-	_, err := clnt.Stat(path.Join(procdir, proc.KERNEL_PROC))
-	return err == nil
 }

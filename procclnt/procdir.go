@@ -33,19 +33,31 @@ func (clnt *ProcClnt) makeProcDir(pid, procdir string, isKernelProc bool) error 
 	return nil
 }
 
-func (clnt *ProcClnt) makeProcStatusSignals(pid, procdir string) error {
+func (clnt *ProcClnt) makeProcSignals(pid, procdir string) error {
 	err := clnt.MakePipe(path.Join(procdir, proc.RET_STATUS), 0777)
 	if err != nil {
 		log.Printf("%v: MakePipe %v err %v\n", db.GetName(), proc.RET_STATUS, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.START_SEM))
-	semStart.Init()
-
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	semEvict.Init()
 	return nil
+}
+
+// ========== HELPERS ==========
+
+// Attempt to cleanup procdir
+func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
+	clnt.removeChild(pid)
+	clnt.removeProc(procdir)
+	return err
+}
+
+func (clnt *ProcClnt) isKernelProc(pid string) bool {
+	procdir := proc.GetProcDir()
+	_, err := clnt.Stat(path.Join(procdir, proc.KERNEL_PROC))
+	return err == nil
 }
 
 // ========== CHILDREN ==========
@@ -72,6 +84,7 @@ func (clnt *ProcClnt) addChild(pid, procdir string) error {
 // Remove a child from the current proc
 func (clnt *ProcClnt) removeChild(pid string) error {
 	procdir := proc.GetChildProcDir(pid)
+	childdir := path.Dir(procdir)
 	// Remove link.
 	if err := clnt.Remove(procdir); err != nil {
 		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
@@ -80,7 +93,7 @@ func (clnt *ProcClnt) removeChild(pid string) error {
 
 	// Remove pid from my children now its status has been
 	// collected we don't need to abandon it.
-	if err := clnt.Remove(path.Dir(procdir)); err != nil {
+	if err := clnt.RmDir(childdir); err != nil {
 		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
 		return fmt.Errorf("removeChild dir error %v", err)
 	}

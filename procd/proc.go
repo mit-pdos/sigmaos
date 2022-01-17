@@ -43,7 +43,7 @@ func (p *Proc) init(a *proc.Proc) {
 	p.Args = a.Args
 	p.Dir = a.Dir
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+rand.String(16))
-	p.Env = append(os.Environ(), a.GetEnv(p.NewRoot, p.pd.addr)...)
+	p.Env = append(os.Environ(), a.GetEnv(p.pd.addr, p.NewRoot)...)
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p
 	p.attr = a

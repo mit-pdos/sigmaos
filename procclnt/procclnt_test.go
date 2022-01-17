@@ -99,7 +99,6 @@ func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
 
 func TestWaitExitSimple(t *testing.T) {
 	ts := makeTstate(t)
-	time.Sleep(100 * time.Second)
 
 	start := time.Now()
 

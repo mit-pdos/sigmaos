@@ -75,6 +75,13 @@ func spawnSleeperNcore(t *testing.T, ts *Tstate, pid string, ncore proc.Tcore, m
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
+func spawnSpawner(t *testing.T, ts *Tstate, childPid string, msecs int) string {
+	p := proc.MakeProc("bin/user/spawner", []string{"false", childPid, "bin/user/sleeper", fmt.Sprintf("%dms", msecs), "name/out_" + childPid})
+	err := ts.Spawn(p)
+	assert.Nil(t, err, "Spawn")
+	return p.Pid
+}
+
 func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
 	res := true
 	b, err := ts.ReadFile("name/out_" + pid)
@@ -92,6 +99,7 @@ func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
 
 func TestWaitExitSimple(t *testing.T) {
 	ts := makeTstate(t)
+	time.Sleep(100 * time.Second)
 
 	start := time.Now()
 
@@ -133,6 +141,34 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
 	checkSleeperResult(t, ts, pid)
+
+	ts.Shutdown()
+}
+
+func TestWaitExitParentAbandons(t *testing.T) {
+	ts := makeTstate(t)
+
+	start := time.Now()
+
+	cPid := proc.GenPid()
+	pid := spawnSpawner(t, ts, cPid, SLEEP_MSECS)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(pid)
+	assert.Equal(t, "OK", status, "WaitExit status error")
+	assert.Nil(t, err, "WaitExit error")
+	// Wait for the child to run & finish
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+
+	// cleaned up
+	_, err = ts.Stat(path.Join(proc.PIDS, pid))
+	assert.NotNil(t, err, "Stat")
+
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
+
+	checkSleeperResult(t, ts, cPid)
 
 	ts.Shutdown()
 }

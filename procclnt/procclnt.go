@@ -73,9 +73,16 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
 	semEvict.Init()
 
-	childDir := path.Join(procdir, proc.CHILDREN)
-	if err := clnt.Mkdir(childDir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childDir, err)
+	grandchildDir := path.Join(procdir, proc.CHILDREN)
+	if err := clnt.Mkdir(grandchildDir, 0777); err != nil {
+		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), grandchildDir, err)
+		return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
+	}
+
+	// Directory which holds link to child procdir
+	childProcDir := path.Join(proc.GetProcDir(), proc.CHILDREN, p.Pid)
+	if err := clnt.Mkdir(childProcDir, 0777); err != nil {
+		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childProcDir, err)
 		return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 
@@ -166,9 +173,15 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	}
 	link := string(b1)
 
+	// Remove link.
+	if err := clnt.Remove(procdir); err != nil {
+		log.Printf("Error Remove %v in WaitExit: %v", procdir, err)
+		return "", fmt.Errorf("WaitExit error 6 %v", err)
+	}
+
 	// Remove pid from my children now its status has been
 	// collected We don't need to abandon it.
-	if err := clnt.Remove(procdir); err != nil {
+	if err := clnt.Remove(path.Dir(procdir)); err != nil {
 		log.Printf("Error Remove %v in WaitExit: %v", procdir, err)
 		return "", fmt.Errorf("WaitExit error 6 %v", err)
 	}
@@ -383,6 +396,8 @@ func (clnt *ProcClnt) setExited(pid string) string {
 func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
 	// Remove symlink
 	clnt.Remove(proc.GetChildProcDir(pid))
+	// Remove dir containing symlink
+	clnt.Remove(path.Dir(proc.GetChildProcDir(pid)))
 	clnt.removeProc(procdir)
 	return err
 }

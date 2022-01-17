@@ -58,5 +58,5 @@ const (
 )
 
 func GetChildProcDir(cpid string) string {
-	return path.Join(GetProcDir(), CHILDREN, cpid)
+	return path.Join(GetProcDir(), CHILDREN, cpid, PROCDIR)
 }

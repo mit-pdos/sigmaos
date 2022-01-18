@@ -92,7 +92,7 @@ func (p *Proc) run(cores []uint) error {
 	}
 
 	// Make the proc's procdir
-	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsKernelProc()); err != nil {
+	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
 		log.Printf("Err procd MakeProcDir: %v", err)
 	}
 

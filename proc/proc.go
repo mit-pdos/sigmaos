@@ -65,7 +65,7 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	for _, envvar := range p.env {
 		env = append(env, envvar)
 	}
-	env = append(env, SIGMAKERNELPROC+"="+fmt.Sprintf("%v", p.IsKernelProc()))
+	env = append(env, SIGMAPRIVILEGEDPROC+"="+fmt.Sprintf("%v", p.IsPrivilegedProc()))
 	env = append(env, SIGMANEWROOT+"="+newRoot)
 	env = append(env, SIGMAPROCDIP+"="+procdIp)
 	env = append(env, SIGMAPID+"="+p.Pid)
@@ -74,12 +74,8 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	return env
 }
 
-func (p *Proc) IsKernelProc() bool {
-	return strings.Contains(p.Program, "kernel")
-}
-
-func (p *Proc) IsRealmProc() bool {
-	return strings.Contains(p.Program, "realm")
+func (p *Proc) IsPrivilegedProc() bool {
+	return strings.Contains(p.Program, "kernel") || strings.Contains(p.Program, "realm")
 }
 
 func (p *Proc) String() string {

@@ -46,7 +46,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 	}
 
 	// Make the proc's procdir
-	err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsKernelProc())
+	err := clnt.MakeProcDir(p.Pid, p.ProcDir, p.IsPrivilegedProc())
 	if err != nil {
 		log.Printf("Err SpawnKernelProc MakeProcDir: %v", err)
 	}
@@ -56,7 +56,6 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	procdir := p.ProcDir
-	isKernelProc := p.IsKernelProc() || p.IsRealmProc()
 
 	// log.Printf("%v: %p spawn %v\n", db.GetName(), clnt, procdir)
 
@@ -79,8 +78,8 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	semStart.Init()
 
-	// If this is not a kernel proc, spawn it through procd.
-	if !isKernelProc {
+	// If this is not a privileged proc, spawn it through procd.
+	if !p.IsPrivilegedProc() {
 		b, err := json.Marshal(p)
 		if err != nil {
 			log.Printf("%v: marshal err %v", db.GetName(), err)

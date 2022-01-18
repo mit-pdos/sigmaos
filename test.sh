@@ -48,7 +48,7 @@ go test $1 ulambda/cmd/user/test2pc2
 # test with realms
 #
 
-go test $1 ulambda/realm # Fails due to dropped eviction signals
+go test $1 ulambda/realm
 
 # run without realm?
 # XXX needs fixing

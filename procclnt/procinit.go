@@ -56,11 +56,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 		log.Fatalf("%v: Fatal error mounting procd err %v\n", db.GetName(), err)
 	}
 
-	// Make a pid directory for this initial proc
-	if err := fsl.MountTree(NamedAddr, proc.PIDS, proc.PIDS); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
-	}
+	MountPids(fsl, NamedAddr)
 
 	clnt := makeProcClnt(fsl, pid)
 	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
@@ -72,4 +68,14 @@ func MakeProcClntInit(fsl *fslib.FsLib, NamedAddr []string) *ProcClnt {
 	}
 
 	return clnt
+}
+
+func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
+	// Make a pid directory for this initial proc
+	if err := fsl.MountTree(namedAddr, proc.PIDS, proc.PIDS); err != nil {
+		debug.PrintStack()
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
+		return err
+	}
+	return nil
 }

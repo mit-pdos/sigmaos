@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime/debug"
 	"sync"
 
 	db "ulambda/debug"
@@ -193,7 +194,8 @@ func (clnt *ProcClnt) Started(pid string) error {
 	parentDir := proc.PARENTDIR
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))
 	err := semStart.Up()
-	if err != nil {
+	// File may not be found if parent exited first.
+	if err != nil && err.Error() != "file not found "+proc.START_SEM {
 		return fmt.Errorf("Started error %v", err)
 	}
 	// Only isolate kernel procs
@@ -354,7 +356,8 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 	// log.Printf("%v: removeProc %v\n", db.GetName(), procdir)
 	if err := clnt.RmDir(procdir); err != nil {
 		s, _ := clnt.SprintfDir(procdir)
-		log.Printf("%v: RmDir %v err %v %v", db.GetName(), procdir, err, s)
+		debug.PrintStack()
+		log.Printf("%v: RmDir %v err %v \n%v", db.GetName(), procdir, err, s)
 		return err
 	}
 	return nil

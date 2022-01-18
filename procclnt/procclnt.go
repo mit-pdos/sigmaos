@@ -118,8 +118,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 
 // Parent calls WaitExit() to wait until child proc has exited. If
 // the proc doesn't exist, return immediately.  After collecting
-// return status, parent cleans up the child and parent removes the
-// child from its list of children.
+// return status, parent removes the child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, procdir)
@@ -147,19 +146,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		return "", fmt.Errorf("WaitExit error 4 %v", err)
 	}
 
-	// Read the child link
-	procdir := proc.GetChildProcDir(pid)
-	b1, err := clnt.ReadFile(procdir)
-	if err != nil {
-		log.Printf("Read link err %v %v", procdir, err)
-		return "", fmt.Errorf("WaitExit error 5 %v", err)
-	}
-	link := string(b1)
-
 	clnt.removeChild(pid)
-
-	// XXX what happens if we crash here; who will collect? procd?
-	clnt.removeProc(link)
 
 	return string(b), nil
 }
@@ -217,8 +204,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 // Proc pid mark itself as exited. Typically exited() is called by
 // proc pid, but if the proc crashes, procd calls exited() on behalf
 // of the failed proc. The exited proc abandons any chidren it may
-// have.  If itself is an abandoned child, then it cleans up itself;
-// otherwise the parent will do it.
+// have. The exited proc cleans itself up.
 //
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
@@ -236,16 +222,15 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 		return fmt.Errorf("Exited error %v", err)
 	}
 
+	// clean myself up
+	r := clnt.removeProc(procdir)
+	if r != nil {
+		return fmt.Errorf("Exited error %v", r)
+	}
+
 	pipePath := path.Join(parentdir, proc.RET_STATUS)
 	fd, err := clnt.Open(pipePath, np.OWRITE)
-	if err != nil {
-		// parent has abandoned me; clean myself up
-		// log.Printf("%v: Error Open %v err %v\n", db.GetName(), fn, err)
-		r := clnt.removeProc(procdir)
-		if r != nil {
-			return fmt.Errorf("Exited error %v", r)
-		}
-	} else {
+	if err == nil {
 		_, err = clnt.Write(fd, []byte(status))
 		if err != nil {
 			log.Printf("Write %v err %v", pipePath, err)

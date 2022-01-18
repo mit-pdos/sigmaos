@@ -109,7 +109,7 @@ func TestWaitExitSimple(t *testing.T) {
 
 	// cleaned up
 	_, err = ts.Stat(path.Join(proc.PIDS, pid))
-	assert.NotNil(t, err, "Stat")
+	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 
 	end := time.Now()
 

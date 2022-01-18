@@ -92,8 +92,7 @@ func (p *Proc) run(cores []uint) error {
 	}
 
 	// Make the proc's procdir
-	err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsKernelProc())
-	if err != nil {
+	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsKernelProc()); err != nil {
 		log.Printf("Err procd MakeProcDir: %v", err)
 	}
 
@@ -103,7 +102,7 @@ func (p *Proc) run(cores []uint) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	namespace.SetupProc(cmd)
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		log.Printf("Procd run error: %v, %v\n", p.attr, err)
 		return err

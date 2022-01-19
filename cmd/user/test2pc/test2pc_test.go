@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/groupmgr"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -23,6 +24,10 @@ type Tstate struct {
 	mfss      []string
 	pid       string
 }
+
+const (
+	NCOORD = 3
+)
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
@@ -248,10 +253,14 @@ func TestCrash3(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	ts.checkCoord(fws, "crash3")
+	args := []string{"restart"}
+	args = append(args, fws...)
+	gmcoord := groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NCOORD, "bin/user/twopc-coord", args, 0)
 
 	time.Sleep(100 * time.Millisecond)
 
 	ts.testAbort()
+	gmcoord.Stop()
 
 	ts.shutdown(fws)
 }

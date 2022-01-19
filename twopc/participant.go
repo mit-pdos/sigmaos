@@ -9,8 +9,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/leaseclnt"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -18,6 +18,7 @@ type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	lease  *leaseclnt.LeaseClnt
 	me     string
 	twopc  *Twopc
 	txn    TxnI
@@ -38,6 +39,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn 
 	p.me = me
 	p.FsLib = fsl
 	p.ProcClnt = pclnt
+	p.lease = leaseclnt.MakeLeaseClnt(p.FsLib, TWOPCLEASE, 0)
 	p.txn = txn
 	p.opcode = opcode
 
@@ -46,8 +48,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn 
 	}
 
 	// set watch for twopcprep, indicating a transaction
-	_, err := p.readTwopcWatch(TWOPCPREP, p.watchTwopcPrep)
-	if err != nil {
+	if _, err := p.readTwopcWatch(TWOPCPREP, p.watchTwopcPrep); err != nil {
 		db.DLPrintf("PART", "MakeParticipant set watch on %v (err %v)\n", TWOPCPREP, err)
 	}
 
@@ -99,25 +100,23 @@ func (p *Participant) watchTwopcCommit(path string, err error) {
 	p.commit()
 }
 
-// XXX maybe check if one is already running?
 func (p *Participant) restartCoord() {
 	log.Printf("PART %v restartCoord: COORD crashed %v\n", p.me, p.twopc)
-	p.twopc = clean(p.FsLib)
-	if p.twopc == nil {
-		log.Printf("PART clean")
-		return
+
+	if err := p.lease.ReleaseRLease(); err != nil {
+		log.Fatalf("Error ReleaseRLease restartCoord: %v", err)
 	}
-	c := proc.MakeProc("bin/user/twopc-coord", append([]string{"restart"}, p.twopc.Participants...))
-	err := p.Spawn(c)
-	if err != nil {
-		log.Printf("spawn err %v\n", err)
+	// Grab LEASE again
+	if b, err := p.lease.WaitRLease(); err != nil {
+		log.Fatalf("Error Rlease wait restartCoord: %v, %v", b, err)
 	}
 
-	//ok, err := p.WaitExit(c.Pid)
-	//if err != nil {
-	//	log.Printf("PART wait failed\n")
-	//}
-	//log.Printf("PART Coord %v done %v\n", c.Pid, string(ok))
+	p.twopc = clean(p.FsLib)
+
+	// set watch for twopcprep, indicating a transaction
+	if _, err := p.readTwopcWatch(TWOPCPREP, p.watchTwopcPrep); err != nil {
+		db.DLPrintf("PART", "MakeParticipant set watch on %v (err %v)\n", TWOPCPREP, err)
+	}
 }
 
 func (p *Participant) watchCoord(path string, err error) {
@@ -147,6 +146,10 @@ func (p *Participant) watchCoord(path string, err error) {
 
 func (p *Participant) prepare() {
 	p.mu.Lock()
+	// Grab lease before preparing
+	if b, err := p.lease.WaitRLease(); err != nil {
+		log.Fatalf("Error Rlease wait: %v, %v", b, err)
+	}
 
 	var err error
 
@@ -209,5 +212,12 @@ func (p *Participant) commit() {
 	}
 
 	p.committed()
+
+	// Release lease.
+	err := p.lease.ReleaseRLease()
+	if err != nil {
+		log.Fatalf("Error Rlease release: %v", err)
+	}
+
 	p.txn.Done()
 }

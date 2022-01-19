@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 
@@ -46,12 +47,16 @@ type Wwwd struct {
 func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
 	db.Name("wwwd")
-	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
+	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
+	www.FsLib = fslib.MakeFsLib("www")
+	// In order to automount children, we need to at least mount /pids.
+	if err := procclnt.MountPids(www.FsLib, fslib.Named()); err != nil {
+		log.Fatalf("wwwd err mount pids %v", err)
+	}
 
-	log.Printf("%v: pid %v piddir %v\n", db.GetName(), proc.GetPid(), proc.GetPidDir())
+	log.Printf("%v: pid %v procdir %v\n", db.GetName(), proc.GetPid(), proc.GetProcDir())
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
-	err := www.MakeFile("pids/hello.html", 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n"))
-	if err != nil {
+	if err := www.MakeFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
 	return www
@@ -80,10 +85,13 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 }
 
 func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
-	fn := proc.PidDir(pid) + "/server/pipe"
+	fn := proc.GetChildProcDir(pid) + "/server/pipe"
 	fd, err := www.Open(fn, np.OREAD)
 	if err != nil {
-		log.Printf("wwwd: open %v failed %v\n", fn, err)
+		//		st, err2 := www.SprintfDir(proc.GetChildProcDir(pid))
+		p := path.Join(proc.GetChildProcDir(pid))
+		st, err2 := www.ReadDir(p)
+		log.Printf("wwwd: open %v failed %v\n%v:%v\n%v", fn, err, p, err2, st)
 		return
 	}
 	for {
@@ -103,7 +111,6 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, app, append([]string{pid}, args...))
-	a.PidDir = proc.GetPidDir()
 	err := www.Spawn(a)
 	if err != nil {
 		return "", err
@@ -119,7 +126,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
 	log.Printf("%v: getstatic: %v\n", db.GetName(), args)
-	file := "name/" + proc.GetPidDir() + args
+	file := path.Join(np.TMP, args)
 	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
 }
 

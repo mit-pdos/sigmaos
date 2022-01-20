@@ -46,6 +46,7 @@ const (
 	// because proc.PidDir may change it.  A proc refers to itself
 	// using "pids/<pid>", where pid is the proc's PID.
 	PIDS      = "pids" // TODO: make this explicitly kernel PIDs only
+	KPIDS     = "kpids"
 	PROCDIR   = "procdir"
 	PARENTDIR = "parentdir"
 

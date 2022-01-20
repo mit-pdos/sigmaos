@@ -77,5 +77,10 @@ func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
 		return err
 	}
+	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
+		debug.PrintStack()
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.KPIDS, proc.KPIDS, err)
+		return err
+	}
 	return nil
 }

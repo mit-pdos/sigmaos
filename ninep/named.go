@@ -18,6 +18,8 @@ const (
 	MEMFS         = "name/memfsd/"
 	PIDSREL       = "pids"
 	PIDS          = "name/" + PIDSREL
+	KPIDSREL      = "kpids"
+	KPIDS         = "name/" + KPIDSREL
 	PROC_CTL_FILE = "ctl"
 	PROCD_RUNNING = "running"
 	PROCD_RUNQ_LC = "runq-lc"

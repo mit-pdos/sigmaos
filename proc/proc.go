@@ -39,21 +39,29 @@ func MakeEmptyProc() *Proc {
 func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
-	p.ProcDir = path.Join("pids", p.Pid) // TODO: make relative to ~procd
-	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
 	p.Ncore = C_DEF
+	p.setProcDirs()
 	return p
 }
 
 func MakeProcPid(pid string, program string, args []string) *Proc {
 	p := MakeProc(program, args)
 	p.Pid = pid
-	p.ProcDir = path.Join("pids", p.Pid) // TODO: make relative to ~procd
-	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
+	p.setProcDirs()
 	return p
+}
+
+func (p *Proc) setProcDirs() {
+	if p.IsPrivilegedProc() {
+		p.ProcDir = path.Join(KPIDS, p.Pid)
+		p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
+	} else {
+		p.ProcDir = path.Join(PIDS, p.Pid) // TODO: make relative to ~procd
+		p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
+	}
 }
 
 func (p *Proc) AppendEnv(name, val string) {

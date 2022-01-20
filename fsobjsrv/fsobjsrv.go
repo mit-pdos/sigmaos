@@ -79,7 +79,7 @@ func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	// log.Printf("%v: Attach %v %v\n", db.GetName(), sess, args.Uname)
 	path := np.Split(args.Aname)
-	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname)
+	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname, fos.sid)
 	tree := root.(fs.FsObj)
 	if args.Aname != "" {
 		os, rest, err := root.Lookup(ctx, path)
@@ -148,8 +148,9 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 		return err
 	}
 	o := f.Obj()
-	if f.Mode() != 0 { // has the fid been opened?
+	if f.IsOpen() { // has the fid been opened?
 		o.Close(f.Ctx(), f.Mode())
+		f.Close()
 	}
 	fos.ft.Del(args.Fid)
 	return nil
@@ -163,16 +164,14 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
 
-	// open may block so set it here, but undo on failue
-	f.SetMode(args.Mode)
 	o := f.Obj()
 	//log.Printf("%v: %v %v open mode to %v\n", db.GetName(), f.Ctx().Uname(), f.Path(), args.Mode)
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		// log.Printf("%v: %v %v back to 0\n", db.GetName(), f.Ctx().Uname(), f.Path())
-		f.SetMode(0)
 		return &np.Rerror{r.Error()}
 	}
+	f.SetMode(args.Mode)
 	if no != nil {
 		f.SetObj(no)
 		rets.Qid = no.Qid()

@@ -837,7 +837,7 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.t, err, "MakePipe")
 
 	go func() {
-		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
+		fsl := fslib.MakeFsLibAddr("writer", fslib.Named())
 		_, err := fsl.Open("name/pipe", np.OWRITE)
 		assert.Nil(ts.t, err, "Open")
 		time.Sleep(200 * time.Millisecond)

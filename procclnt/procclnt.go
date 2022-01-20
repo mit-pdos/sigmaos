@@ -143,6 +143,9 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid string) error {
 	piddir := proc.PidDir(pid)
+
+	log.Printf("%v: %p waitstart %v\n", db.GetName(), clnt, piddir)
+
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+START_WAIT)
 	err := semStart.Down()
 	if err != nil {
@@ -158,7 +161,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
-	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
+	log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
 
 	if _, err := clnt.Stat(piddir); err != nil {
 		return "", fmt.Errorf("WaitExit error %v", err)
@@ -176,7 +179,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 		log.Printf("Read %v err %v", fn, err)
 		return "", fmt.Errorf("WaitExit error %v", err)
 	}
-
+	log.Printf("%v: Read %v %v err %v", db.GetName(), fn, string(b), err)
 	err = clnt.Close(fd)
 	if err != nil {
 		log.Printf("Close %v err %v", fn, err)
@@ -260,15 +263,22 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 	}
 
 	fn := piddir + "/" + RET_STATUS
+	log.Printf("%v: Open pipe %v\n", db.GetName(), fn)
 	fd, err := clnt.Open(fn, np.OWRITE)
 	if err != nil {
-		// parent has abandoned me; clean myself up
-		// log.Printf("%v: Error Open %v err %v\n", db.GetName(), fn, err)
+		// the pipe doesn't exist, because parent has
+		// abandoned me, or procd opens the pipe that already
+		// has been closed for writing (e.g., the child opened
+		// the pipe but subsequently crashed). in both cases,
+		// clean up the child.
+
+		log.Printf("%v: Error Open %v err %v\n", db.GetName(), fn, err)
 		r := clnt.removeProc(piddir)
 		if r != nil {
 			return fmt.Errorf("Exited error %v", r)
 		}
 	} else {
+		log.Printf("%v: write pipe %v\n", db.GetName(), fn)
 		_, err = clnt.Write(fd, []byte(status))
 		if err != nil {
 			log.Printf("Write %v err %v", fn, err)

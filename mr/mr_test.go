@@ -118,7 +118,7 @@ func runN(t *testing.T, crashtask, crashcoord int) {
 
 	ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
 	cm.Wait()
 

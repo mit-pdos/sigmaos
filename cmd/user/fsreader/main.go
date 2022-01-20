@@ -38,6 +38,7 @@ type Reader struct {
 	*fslibsrv.MemFs
 	input string
 	pipe  fs.FsObj
+	ctx   fs.CtxI
 }
 
 func MakeReader(args []string) (*Reader, error) {
@@ -54,7 +55,8 @@ func MakeReader(args []string) (*Reader, error) {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	r.MemFs = mfs
-	r.pipe, err = mfs.Root().Create(fssrv.MkCtx("", 0, nil), "pipe", np.DMNAMEDPIPE, 0)
+	r.ctx = fssrv.MkCtx("", 0, mfs.GetSessCondTable())
+	r.pipe, err = mfs.Root().Create(r.ctx, "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
@@ -71,11 +73,11 @@ func MakeReader(args []string) (*Reader, error) {
 // pipe, and can pick up the exit status "File not found".
 func (r *Reader) Work() string {
 	db.DLPrintf("Reader", "Reader: work\n")
-	_, err := r.pipe.Open(nil, np.OWRITE)
+	_, err := r.pipe.Open(r.ctx, np.OWRITE)
 	if err != nil {
 		log.Fatal("Open error: ", err)
 	}
-	defer r.pipe.Close(nil, np.OWRITE)
+	defer r.pipe.Close(r.ctx, np.OWRITE)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
 		return "File not found"
@@ -85,7 +87,7 @@ func (r *Reader) Work() string {
 		if len(data) == 0 || err != nil {
 			break
 		}
-		_, err = r.pipe.(fs.File).Write(nil, 0, data, np.NoV)
+		_, err = r.pipe.(fs.File).Write(r.ctx, 0, data, np.NoV)
 		if err != nil {
 			log.Fatal(err)
 		}

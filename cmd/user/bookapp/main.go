@@ -43,6 +43,7 @@ type BookApp struct {
 	*procclnt.ProcClnt
 	input []string
 	pipe  fs.FsObj
+	ctx   fs.CtxI
 }
 
 func RunBookApp(args []string) (*BookApp, error) {
@@ -55,7 +56,8 @@ func RunBookApp(args []string) (*BookApp, error) {
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	ba.pipe, err = mfs.Root().Create(fssrv.MkCtx("", 0, nil), "pipe", np.DMNAMEDPIPE, 0)
+	ba.ctx = fssrv.MkCtx("", 0, mfs.GetSessCondTable())
+	ba.pipe, err = mfs.Root().Create(ba.ctx, "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}
@@ -68,7 +70,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 }
 
 func (ba *BookApp) writeResponse(data []byte) string {
-	_, err := ba.pipe.(fs.File).Write(nil, 0, data, np.NoV)
+	_, err := ba.pipe.(fs.File).Write(ba.ctx, 0, data, np.NoV)
 	if err != nil {
 		return fmt.Sprintf("Pipe parse err %v\n", err)
 	}
@@ -160,11 +162,11 @@ func (ba *BookApp) doSave(key string, title string) string {
 
 func (ba *BookApp) Work() string {
 	log.Printf("work %v\n", ba.input)
-	_, err := ba.pipe.Open(nil, np.OWRITE)
+	_, err := ba.pipe.Open(ba.ctx, np.OWRITE)
 	if err != nil {
 		return fmt.Sprintf("Open err %v\n", err)
 	}
-	defer ba.pipe.Close(nil, np.OWRITE)
+	defer ba.pipe.Close(ba.ctx, np.OWRITE)
 
 	switch ba.input[0] {
 	case "view":

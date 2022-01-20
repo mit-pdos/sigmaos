@@ -65,6 +65,10 @@ func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
 	fssrv.fsl = fsl
 }
 
+func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
+	return fssrv.sct
+}
+
 func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
 }

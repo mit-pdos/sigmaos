@@ -11,16 +11,17 @@ import (
 )
 
 type Fid struct {
-	mu   sync.Mutex
-	path []string
-	obj  fs.FsObj
-	m    np.Tmode
-	vers np.TQversion
-	ctx  fs.CtxI
+	mu     sync.Mutex
+	path   []string
+	obj    fs.FsObj
+	isOpen bool
+	m      np.Tmode
+	vers   np.TQversion
+	ctx    fs.CtxI
 }
 
 func MakeFidPath(p []string, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
-	return &Fid{sync.Mutex{}, p, o, m, o.Version(), ctx}
+	return &Fid{sync.Mutex{}, p, o, false, m, o.Version(), ctx}
 }
 
 func (f *Fid) String() string {
@@ -36,7 +37,12 @@ func (f *Fid) Mode() np.Tmode {
 }
 
 func (f *Fid) SetMode(m np.Tmode) {
+	f.isOpen = true
 	f.m = m
+}
+
+func (f *Fid) IsOpen() bool {
+	return f.isOpen
 }
 
 func (f *Fid) Path() []string {
@@ -64,6 +70,7 @@ func (f *Fid) Close() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.obj = nil
+	f.isOpen = false
 }
 
 func (f *Fid) Obj() fs.FsObj {

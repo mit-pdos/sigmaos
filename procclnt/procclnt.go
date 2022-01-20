@@ -284,6 +284,12 @@ func (clnt *ProcClnt) Evict(pid string) error {
 	return clnt.evict(procdir)
 }
 
+// Called by realm to evict another machine's named.
+func (clnt *ProcClnt) EvictKernelProc(pid string) error {
+	procdir := path.Join(proc.KPIDS, pid)
+	return clnt.evict(procdir)
+}
+
 // Called by procd.
 func (clnt *ProcClnt) EvictProcd(pid string) error {
 	procdir := path.Join(proc.PIDS, pid)

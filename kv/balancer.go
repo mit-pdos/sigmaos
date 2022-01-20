@@ -79,7 +79,8 @@ func RunBalancer(auto string) {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "ctl", makeCtl("balancer", mfs.Root(), bl))
+	ctx := fssrv.MkCtx("balancer", 0, nil)
+	err = dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}
@@ -135,8 +136,8 @@ type Ctl struct {
 	bl *Balancer
 }
 
-func makeCtl(uname string, parent fs.Dir, bl *Balancer) fs.FsObj {
-	i := inode.MakeInode(uname, np.DMDEVICE, parent)
+func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
+	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
 	return &Ctl{i, bl}
 }
 
@@ -295,20 +296,25 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 // Run deleters in parallel
 func (bl *Balancer) runDeleters(moves Moves) {
 	log.Printf("%v: start deleting %v\n", db.GetName(), len(moves))
-	ch := make(chan bool)
-	for _, m := range moves {
-		go func(m *Move) {
+	tmp := make(Moves, len(moves))
+	ch := make(chan int)
+	for i, m := range moves {
+		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-deleter", m.Src},
 				func(err error, status string) bool {
 					ok := strings.HasPrefix(status, "file not found")
 					return err != nil || (status != "OK" && !ok)
 				})
-			log.Printf("%v: delete %v done\n", db.GetName(), m)
-			ch <- true
-		}(m)
+			log.Printf("%v: delete %v/%v done\n", db.GetName(), i, m)
+			ch <- i
+		}(m, i)
 	}
+	m := 0
 	for range moves {
-		<-ch
+		i := <-ch
+		tmp[i] = nil
+		m += 1
+		log.Printf("%v: deleter done %v %v\n", db.GetName(), m, tmp)
 	}
 	log.Printf("%v: deleters done\n", db.GetName())
 }
@@ -324,7 +330,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 			bl.runProcRetry([]string{"bin/user/kv-mover", m.Src, m.Dst}, func(err error, status string) bool {
 				return err != nil || status != "OK"
 			})
-			log.Printf("%v: move %v done\n", db.GetName(), m)
+			log.Printf("%v: move %v/%v done\n", db.GetName(), i, m)
 			ch <- i
 		}(m, i)
 	}
@@ -333,7 +339,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 		i := <-ch
 		tmp[i] = nil
 		m += 1
-		log.Printf("%v: movers done %d/%v %v\n", db.GetName(), i, m, tmp)
+		log.Printf("%v: movers done %v %v\n", db.GetName(), m, tmp)
 	}
 	log.Printf("%v: movers all done\n", db.GetName())
 }
@@ -386,12 +392,11 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 	// KVNEXTCONFIG.
 	err := atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
-		log.Printf("%v: MakeFile %v err %v\n", db.GetName(), KVNEXTCONFIG, err)
-		// XXX maybe crash
+		log.Fatalf("%v: MakeFile %v err %v\n", db.GetName(), KVNEXTCONFIG, err)
 	}
 
 	// Announce new KVNEXTCONFIG to world: copy KVNEXTCONFIG to
-	// KVNEXBK and make lease from copy (removing the copy too).
+	// KVNEXTBK and make lease from copy (removing the copy too).
 	err = bl.Remove(KVNEXTBK)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)

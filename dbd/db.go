@@ -31,7 +31,7 @@ func RunDbd() {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "clone", makeClone("", mfs.Root()))
+	err = dir.MkNod(fssrv.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root()))
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)
 	}

@@ -39,16 +39,16 @@ func (pd *Procd) makeFs() {
 	pd.FsLib = pd.MemFs.FsLib
 
 	// Set up ctl file
-	pd.fs.ctlFile = makeCtlFile(pd, "", pd.Root())
-	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
+	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
+	err = dir.MkNod(fssrv.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err != nil {
 		log.Fatalf("Error MkNod in RunProcd: %v", err)
 	}
 
 	// Set up running dir
-	runningi := inode.MakeInode("", np.DMDIR, pd.Root())
+	runningi := inode.MakeInode(nil, np.DMDIR, pd.Root())
 	running := dir.MakeDir(runningi)
-	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), np.PROCD_RUNNING, running)
+	err = dir.MkNod(fssrv.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
 	if err != nil {
 		log.Fatalf("Error creating running dir: %v", err)
 	}
@@ -58,9 +58,9 @@ func (pd *Procd) makeFs() {
 	pd.fs.runqs = make(map[string]fs.Dir)
 	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	for _, q := range runqs {
-		runqi := inode.MakeInode("", np.DMDIR, pd.Root())
+		runqi := inode.MakeInode(nil, np.DMDIR, pd.Root())
 		runq := dir.MakeDir(runqi)
-		err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), q, runq)
+		err = dir.MkNod(fssrv.MkCtx("", 0, nil), pd.Root(), q, runq)
 		if err != nil {
 			log.Fatalf("Error creating running dir: %v", err)
 		}
@@ -69,7 +69,7 @@ func (pd *Procd) makeFs() {
 }
 
 func (pfs *ProcdFs) readRunq(procdPath string, queueName string) ([]*np.Stat, error) {
-	rq, err := pfs.runqs[queueName].ReadDir(fssrv.MkCtx(""), 0, 0, np.NoV)
+	rq, err := pfs.runqs[queueName].ReadDir(fssrv.MkCtx("", 0, nil), 0, 0, np.NoV)
 	if err != nil {
 		log.Printf("Error ReadDir in ProcdFs.readRunq: %v", err)
 		return nil, err
@@ -78,12 +78,12 @@ func (pfs *ProcdFs) readRunq(procdPath string, queueName string) ([]*np.Stat, er
 }
 
 func (pfs *ProcdFs) readRunqProc(procdPath string, queueName string, name string) (*proc.Proc, error) {
-	os, _, err := pfs.runqs[queueName].Lookup(fssrv.MkCtx(""), []string{name})
+	os, _, err := pfs.runqs[queueName].Lookup(fssrv.MkCtx("", 0, nil), []string{name})
 	if err != nil {
 		log.Printf("Error Lookup in ProcdFs.getRunqProc: %v", err)
 		return nil, err
 	}
-	b, err := os[0].(fs.File).Read(fssrv.MkCtx(""), 0, math.MaxUint32, np.NoV)
+	b, err := os[0].(fs.File).Read(fssrv.MkCtx("", 0, nil), 0, math.MaxUint32, np.NoV)
 	if err != nil {
 		log.Printf("Error Read in ProcdFs.getRunqProc: %v", err)
 		return nil, err
@@ -99,7 +99,7 @@ func (pfs *ProcdFs) readRunqProc(procdPath string, queueName string, name string
 
 // Remove from the runq. May race with other (work-stealing) procds.
 func (pfs *ProcdFs) claimProc(procdPath string, queueName string, p *proc.Proc) bool {
-	err := pfs.runqs[queueName].Remove(fssrv.MkCtx(""), p.Pid)
+	err := pfs.runqs[queueName].Remove(fssrv.MkCtx("", 0, nil), p.Pid)
 	if err != nil {
 		db.DLPrintf("PDFS", "Error ProcdFs.claimProc: %v", err)
 		return false
@@ -109,15 +109,15 @@ func (pfs *ProcdFs) claimProc(procdPath string, queueName string, p *proc.Proc) 
 
 // Publishes a proc as running
 func (pfs *ProcdFs) running(p *Proc) error {
-	p.FsObj = inode.MakeInode("", np.DMDEVICE, pfs.run)
+	p.FsObj = inode.MakeInode(nil, np.DMDEVICE, pfs.run)
 	f := memfs.MakeFile(p.FsObj)
 	// Make sure we write the proc description before we publish it.
 	b, err := json.Marshal(p.attr)
 	if err != nil {
 		log.Fatalf("Error Marshalling proc in ProcdFs.running: %v", err)
 	}
-	f.Write(fssrv.MkCtx(""), 0, b, np.NoV)
-	err = dir.MkNod(fssrv.MkCtx(""), pfs.run, p.Pid, p)
+	f.Write(fssrv.MkCtx("", 0, nil), 0, b, np.NoV)
+	err = dir.MkNod(fssrv.MkCtx("", 0, nil), pfs.run, p.Pid, p)
 	if err != nil {
 		log.Printf("Error ProcdFs.run: %v", err)
 		return err
@@ -127,7 +127,7 @@ func (pfs *ProcdFs) running(p *Proc) error {
 
 // Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *Proc) error {
-	err := pfs.run.Remove(fssrv.MkCtx(""), p.Pid)
+	err := pfs.run.Remove(fssrv.MkCtx("", 0, nil), p.Pid)
 	if err != nil {
 		log.Printf("Error ProcdFs.finish: %v", err)
 		return err
@@ -144,11 +144,11 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	default:
 		runq = pfs.runqs[np.PROCD_RUNQ_BE]
 	}
-	ino := inode.MakeInode("", 0, runq)
+	ino := inode.MakeInode(nil, 0, runq)
 	f := memfs.MakeFile(ino)
 	// Make sure we write the proc description before we publish it.
-	f.Write(fssrv.MkCtx(""), 0, b, np.NoV)
-	err := dir.MkNod(fssrv.MkCtx(""), runq, a.Pid, f)
+	f.Write(fssrv.MkCtx("", 0, nil), 0, b, np.NoV)
+	err := dir.MkNod(fssrv.MkCtx("", 0, nil), runq, a.Pid, f)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err

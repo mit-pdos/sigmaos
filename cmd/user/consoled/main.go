@@ -23,7 +23,7 @@ func makeConsoled() *Consoled {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	cons.MemFs = mfs
-	err = dir.MkNod(fssrv.MkCtx(""), mfs.Root(), "console", makeConsole())
+	err = dir.MkNod(fssrv.MkCtx("", 0, nil), mfs.Root(), "console", makeConsole())
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
 	}

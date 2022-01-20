@@ -136,7 +136,7 @@ type Stats struct {
 
 func MkStats(parent fs.Dir) *Stats {
 	st := &Stats{}
-	st.FsObj = inode.MakeInode("", np.DMDEVICE, parent)
+	st.FsObj = inode.MakeInode(nil, np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
 	return st
 }

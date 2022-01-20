@@ -26,12 +26,16 @@ type Inode struct {
 	nlink   int
 }
 
-func MakeInode(owner string, p np.Tperm, parent fs.Dir) *Inode {
+func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 	i := Inode{}
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
-	i.owner = owner
+	if ctx == nil {
+		i.owner = ""
+	} else {
+		i.owner = ctx.Uname()
+	}
 	i.version = np.TQversion(1)
 	i.nlink = 1
 	return &i

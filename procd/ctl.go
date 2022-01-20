@@ -17,8 +17,8 @@ type CtlFile struct {
 	fs.FsObj
 }
 
-func makeCtlFile(pd *Procd, uname string, parent fs.Dir) *CtlFile {
-	i := inode.MakeInode(uname, 0, parent)
+func makeCtlFile(pd *Procd, ctx fs.CtxI, parent fs.Dir) *CtlFile {
+	i := inode.MakeInode(ctx, 0, parent)
 	return &CtlFile{pd, i}
 }
 

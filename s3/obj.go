@@ -37,7 +37,7 @@ type Obj struct {
 
 func (fss3 *Fss3) makeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
 	o := &Obj{}
-	o.Inode = inode.MakeInode("", t, d)
+	o.Inode = inode.MakeInode(nil, t, d)
 	o.fss3 = fss3
 	o.key = key
 	return o

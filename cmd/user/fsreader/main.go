@@ -54,7 +54,7 @@ func MakeReader(args []string) (*Reader, error) {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	r.MemFs = mfs
-	r.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
+	r.pipe, err = mfs.Root().Create(fssrv.MkCtx("", 0, nil), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}

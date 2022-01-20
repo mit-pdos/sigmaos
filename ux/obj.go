@@ -23,7 +23,7 @@ type Obj struct {
 
 func makeObj(path []string, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
-	o.Inode = inode.MakeInode("", t, d)
+	o.Inode = inode.MakeInode(nil, t, d)
 	o.path = path
 	return o
 }

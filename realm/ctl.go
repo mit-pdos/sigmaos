@@ -13,8 +13,8 @@ type CtlFile struct {
 	fs.FsObj
 }
 
-func makeCtlFile(queue chan string, uname string, parent fs.Dir) *CtlFile {
-	i := inode.MakeInode(uname, 0, parent)
+func makeCtlFile(queue chan string, ctx fs.CtxI, parent fs.Dir) *CtlFile {
+	i := inode.MakeInode(ctx, 0, parent)
 	return &CtlFile{queue, i}
 }
 

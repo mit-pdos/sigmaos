@@ -143,8 +143,8 @@ type GroupCtl struct {
 	mg *Group
 }
 
-func makeGroupCtl(uname string, parent fs.Dir, kv *Group) fs.FsObj {
-	i := inode.MakeInode(uname, np.DMDEVICE, parent)
+func makeGroupCtl(ctx fs.CtxI, parent fs.Dir, kv *Group) fs.FsObj {
+	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
 	return &GroupCtl{i, kv}
 }
 

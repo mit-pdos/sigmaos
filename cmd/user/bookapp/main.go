@@ -55,7 +55,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	ba.pipe, err = mfs.Root().Create(fssrv.MkCtx(""), "pipe", np.DMNAMEDPIPE, 0)
+	ba.pipe, err = mfs.Root().Create(fssrv.MkCtx("", 0, nil), "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)
 	}

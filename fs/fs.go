@@ -2,12 +2,15 @@ package fs
 
 import (
 	np "ulambda/ninep"
+	"ulambda/sesscond"
 )
 
 type MakeDirF func(FsObj) FsObj
 
 type CtxI interface {
 	Uname() string
+	SessionId() np.Tsession
+	SessCondTable() *sesscond.SessCondTable
 }
 
 type Dir interface {

@@ -19,8 +19,8 @@ type Clone struct {
 	fs.FsObj
 }
 
-func makeClone(uname string, parent fs.Dir) fs.FsObj {
-	i := inode.MakeInode(uname, np.DMDEVICE, parent)
+func makeClone(ctx fs.CtxI, parent fs.Dir) fs.FsObj {
+	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
 	return &Clone{i}
 }
 
@@ -48,12 +48,12 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	log.Printf("Connected to db\n")
 
 	s := &Session{}
-	s.Inode = inode.MakeInode("", 0, nil)
+	s.Inode = inode.MakeInode(nil, 0, nil)
 	s.id = strconv.Itoa(int(s.Inode.Inum()))
 	s.db = db
 
 	// create directory for session
-	di := inode.MakeInode("", np.DMDIR, c.Parent())
+	di := inode.MakeInode(nil, np.DMDIR, c.Parent())
 	d := dir.MakeDir(di)
 	err = dir.MkNod(ctx, c.Parent(), s.id, d)
 	if err != nil {
@@ -67,7 +67,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	// make query file
 	q := &Query{}
 	q.db = db
-	q.Inode = inode.MakeInode("", 0, d)
+	q.Inode = inode.MakeInode(nil, 0, d)
 	dir.MkNod(ctx, d, "query", q)
 	dir.MkNod(ctx, d, "data", q)
 

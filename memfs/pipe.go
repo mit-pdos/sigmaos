@@ -3,12 +3,14 @@ package memfs
 import (
 	"fmt"
 	"io"
+	"log"
 	"sync"
 	// "errors"
 
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
+	"ulambda/sesscond"
 )
 
 const PIPESZ = 8192
@@ -16,8 +18,8 @@ const PIPESZ = 8192
 type Pipe struct {
 	fs.FsObj
 	mu      sync.Mutex
-	condr   *sync.Cond
-	condw   *sync.Cond
+	condr   *sesscond.SessCond
+	condw   *sesscond.SessCond
 	nreader int
 	nwriter int
 	wclosed bool
@@ -25,11 +27,11 @@ type Pipe struct {
 	buf     []byte
 }
 
-func MakePipe(i fs.FsObj) *Pipe {
+func MakePipe(ctx fs.CtxI, i fs.FsObj) *Pipe {
 	pipe := &Pipe{}
 	pipe.FsObj = i
-	pipe.condr = sync.NewCond(&pipe.mu)
-	pipe.condw = sync.NewCond(&pipe.mu)
+	pipe.condr = ctx.SessCondTable().MakeSessCond(&pipe.mu)
+	pipe.condw = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
 	pipe.nreader = 0
 	pipe.nwriter = 0
@@ -59,32 +61,50 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 
 	if mode == np.OREAD {
 		if pipe.rclosed {
-			return nil, fmt.Errorf("Pipe close for reading")
+			return nil, fmt.Errorf("%v: pipe close for reading", ctx.Uname())
 		}
 		pipe.nreader += 1
+		log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
-			pipe.condr.Wait()
+			// pipe.condr.Wait()
+			err := pipe.condr.Wait(ctx.SessionId())
+			if err != nil {
+				pipe.nreader -= 1
+				if pipe.nreader == 0 {
+					pipe.rclosed = true
+				}
+				return nil, err
+			}
 			if pipe.Nlink() == 0 {
-				return nil, fmt.Errorf("Pipe removed")
+				return nil, fmt.Errorf("pipe removed")
 			}
 		}
 	} else if mode == np.OWRITE {
 		if pipe.wclosed {
-			return nil, fmt.Errorf("Pipe close for writing")
+			return nil, fmt.Errorf("pipe close for writing")
 		}
 		pipe.nwriter += 1
+		log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {
 			db.DLPrintf("MEMFS", "Wait for reader\n")
-			pipe.condw.Wait()
+			err := pipe.condw.Wait(ctx.SessionId())
+			if err != nil {
+				pipe.nwriter -= 1
+				if pipe.nwriter == 0 {
+					pipe.wclosed = true
+				}
+				return nil, err
+			}
+			// pipe.condw.Wait()
 			if pipe.Nlink() == 0 {
-				return nil, fmt.Errorf("Pipe removed")
+				return nil, fmt.Errorf("pipe removed")
 			}
 
 		}
 	} else {
-		return nil, fmt.Errorf("Pipe open unknown mode %v\n", mode)
+		return nil, fmt.Errorf("pipe open unknown mode %v\n", mode)
 	}
 	return nil, nil
 }
@@ -93,13 +113,14 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
+	log.Printf("%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
 	if mode == np.OREAD {
 		pipe.nreader -= 1
 		if pipe.nreader == 0 {
 			pipe.rclosed = true
 		}
 		if pipe.nreader < 0 {
-			fmt.Errorf("Pipe already closed for reading\n")
+			fmt.Errorf("pipe already closed for reading\n")
 		}
 		pipe.condw.Signal()
 	} else if mode == np.OWRITE {
@@ -108,11 +129,11 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 			pipe.wclosed = true
 		}
 		if pipe.nwriter < 0 {
-			fmt.Errorf("Pipe already closed for writing\n")
+			fmt.Errorf("pipe already closed for writing\n")
 		}
 		pipe.condr.Signal()
 	} else {
-		return fmt.Errorf("Pipe open close mode %v\n", mode)
+		return fmt.Errorf("pipe open close mode %v\n", mode)
 	}
 	return nil
 }
@@ -121,13 +142,18 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
+	log.Printf("%v: write pipe\n", ctx.Uname())
 	n := len(d)
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
 			if pipe.nreader <= 0 {
 				return 0, io.EOF
 			}
-			pipe.condw.Wait()
+			err := pipe.condw.Wait(ctx.SessionId())
+			if err != nil {
+				return 0, err
+			}
+			// pipe.condw.Wait()
 		}
 		max := len(d)
 		if max >= PIPESZ-len(pipe.buf) {
@@ -144,11 +170,16 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
+	log.Printf("%v: read pipe\n", ctx.Uname())
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
 			return nil, io.EOF
 		}
-		pipe.condr.Wait()
+		err := pipe.condr.Wait(ctx.SessionId())
+		if err != nil {
+			return nil, err
+		}
+		// pipe.condr.Wait()
 	}
 	max := int(n)
 	if max >= len(pipe.buf) {

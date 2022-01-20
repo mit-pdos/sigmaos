@@ -13,8 +13,8 @@ import (
 	"ulambda/npcodec"
 )
 
-type makeInodeF func(string, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, error)
-type makeRootInodeF func(fs.MakeDirF, string, np.Tperm) (fs.FsObj, error)
+type makeInodeF func(fs.CtxI, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, error)
+type makeRootInodeF func(fs.MakeDirF, fs.CtxI, np.Tperm) (fs.FsObj, error)
 type genPathF func() np.Tpath
 
 var makeInode makeInodeF
@@ -61,7 +61,7 @@ func (dir *DirImpl) String() string {
 func MkRootDir(f makeInodeF, r makeRootInodeF, p genPathF) fs.Dir {
 	makeInode = f
 	genPath = p
-	i, _ := r(MakeDirF, "", np.DMDIR)
+	i, _ := r(MakeDirF, nil, np.DMDIR)
 	return MakeDir(i)
 }
 
@@ -226,7 +226,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	if IsCurrentDir(name) {
 		return nil, errors.New("Cannot create name")
 	}
-	newi, err := makeInode(ctx.Uname(), perm, m, dir)
+	newi, err := makeInode(ctx, perm, m, dir)
 	if err != nil {
 		return nil, err
 	}

@@ -13,24 +13,39 @@ import (
 	"ulambda/proc"
 )
 
+// Right now mounts don't resolve to find the server. So, get the server addr
+// from the path for now.
+func splitMountServerAddrPath(fsl *fslib.FsLib, dpath string) ([]string, string) {
+	p := strings.Split(dpath, "/")
+	for i := len(p) - 1; i >= 0; i-- {
+		if strings.Contains(p[i], ":") {
+			return []string{p[i]}, path.Join(p[i+1:]...)
+		}
+	}
+	return fslib.Named(), dpath
+}
+
+func mountDir(fsl *fslib.FsLib, dpath string, mountPoint string) {
+	tree := strings.TrimPrefix(dpath, "name/")
+	addr, splitPath := splitMountServerAddrPath(fsl, tree)
+	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
+		if mountPoint == proc.PARENTDIR {
+			log.Printf("%v: Error mounting %v/%v as %v err %v\n", db.GetName(), addr, splitPath, mountPoint, err)
+		} else {
+			debug.PrintStack()
+			log.Fatalf("%v: Fatal error mounting %v/%v as %v err %v\n", db.GetName(), addr, splitPath, mountPoint, err)
+		}
+	}
+}
+
 // Called by a sigmaOS process after being spawned
 func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
-	procdir := proc.GetProcDir()
-
 	// XXX resolve mounts to find server?
 	// Mount procdir
-	tree := strings.TrimPrefix(procdir, "name/")
-	if err := fsl.MountTree(fslib.Named(), tree, proc.PROCDIR); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), tree, proc.PROCDIR, err)
-	}
+	mountDir(fsl, proc.GetProcDir(), proc.PROCDIR)
 
 	// Mount parentdir. May fail if parent already exited.
-	parentdir := proc.GetParentDir()
-	tree = strings.TrimPrefix(parentdir, "name/")
-	if err := fsl.MountTree(fslib.Named(), tree, proc.PARENTDIR); err != nil {
-		log.Printf("%v: Error mounting %v as %v err %v\n", db.GetName(), tree, proc.PARENTDIR, err)
-	}
+	mountDir(fsl, proc.GetParentDir(), proc.PARENTDIR)
 
 	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
 		debug.PrintStack()
@@ -48,7 +63,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(fsl *fslib.FsLib, namedAddr []string) *ProcClnt {
 	pid := proc.GenPid()
-	proc.FakeProcEnv(pid, "NO_PROCD_IP", path.Join(proc.PIDS, pid), "")
+	proc.FakeProcEnv(pid, "", path.Join(proc.PIDS, pid), "")
 
 	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()

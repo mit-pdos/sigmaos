@@ -257,8 +257,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) {
 	}
 }
 
-func (clnt *ProcClnt) ExitedProcd(pid string, parentdir string, status string) {
-	procdir := path.Join(proc.PIDS, pid)
+func (clnt *ProcClnt) ExitedProcd(pid string, procdir string, parentdir string, status string) {
 	err := clnt.exited(procdir, parentdir, pid, status)
 	if err != nil {
 		// XXX maybe remove any state left of proc?
@@ -318,7 +317,7 @@ func (clnt *ProcClnt) GetChildren(procdir string) ([]string, error) {
 func (clnt *ProcClnt) abandonChildren(procdir string) error {
 	cpids, err := clnt.GetChildren(procdir)
 	if err != nil {
-		log.Printf("%v: abandonChildren  %v error: %v", db.GetName(), procdir, err)
+		log.Printf("%v: abandonChildren %v error: %v", db.GetName(), procdir, err)
 		return err
 	}
 

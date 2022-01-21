@@ -69,6 +69,14 @@ func (pd *Procd) makeFs() {
 		}
 		pd.fs.runqs[q] = runq
 	}
+
+	// Set up pids dir
+	pidsi := inode.MakeInode("", np.DMDIR, pd.Root())
+	pids := dir.MakeDir(pidsi)
+	err = dir.MkNod(fssrv.MkCtx(""), pd.Root(), proc.PIDS, pids)
+	if err != nil {
+		log.Fatalf("Error creating pids dir: %v", err)
+	}
 }
 
 func (pfs *ProcdFs) readRunq(procdPath string, queueName string) ([]*np.Stat, error) {

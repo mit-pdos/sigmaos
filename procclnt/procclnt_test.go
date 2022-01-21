@@ -108,7 +108,7 @@ func TestWaitExitSimple(t *testing.T) {
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(proc.PIDS, pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 
 	end := time.Now()
@@ -132,7 +132,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(proc.PIDS, pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -160,7 +160,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(proc.PIDS, pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -256,9 +256,8 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.Equal(t, "OK", status, "WaitExit")
 
-	// Child should be still running
-	_, err = ts.Stat(path.Join(proc.PIDS, pid1))
-	assert.Nil(t, err, "Stat")
+	// Child should not have terminated yet.
+	checkSleeperResultFalse(t, ts, pid1)
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
@@ -268,7 +267,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(path.Join(proc.PIDS, pid1))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -300,7 +299,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(path.Join(proc.PIDS, pid1))
+			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}()
@@ -349,7 +348,7 @@ func TestConcurrentProcs(t *testing.T) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
-			_, err := ts.Stat(path.Join(proc.PIDS, pid))
+			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 			assert.NotNil(t, err, "Stat")
 		}(pid, &done, i)
 	}

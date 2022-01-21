@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path"
 	"strings"
+
+	np "ulambda/ninep"
 )
 
 type Ttype uint32
@@ -39,28 +41,30 @@ func MakeEmptyProc() *Proc {
 func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
+	p.setProcDir("")
+	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
 	p.Ncore = C_DEF
-	p.setProcDirs()
 	return p
 }
 
 func MakeProcPid(pid string, program string, args []string) *Proc {
 	p := MakeProc(program, args)
 	p.Pid = pid
-	p.setProcDirs()
+	p.setProcDir("")
+	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
 	return p
 }
 
-func (p *Proc) setProcDirs() {
+func (p *Proc) setProcDir(procdIp string) {
 	if p.IsPrivilegedProc() {
 		p.ProcDir = path.Join(KPIDS, p.Pid)
-		p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
 	} else {
-		p.ProcDir = path.Join(PIDS, p.Pid) // TODO: make relative to ~procd
-		p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
+		if procdIp != "" {
+			p.ProcDir = path.Join(np.PROCD, procdIp, PIDS, p.Pid) // TODO: make relative to ~procd
+		}
 	}
 }
 
@@ -69,6 +73,9 @@ func (p *Proc) AppendEnv(name, val string) {
 }
 
 func (p *Proc) GetEnv(procdIp, newRoot string) []string {
+	// Set the procdir based on procdIp
+	p.setProcDir(procdIp)
+
 	env := []string{}
 	for _, envvar := range p.env {
 		env = append(env, envvar)
@@ -87,5 +94,5 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, p.Dir, p.Args, p.GetEnv("NOPROCDIP", "NONEWROOT"), p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, p.Dir, p.Args, p.GetEnv("", ""), p.Type, p.Ncore)
 }

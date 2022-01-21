@@ -61,8 +61,9 @@ func GetIsPrivilegedProc() bool {
 	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
 }
 
-func FakeProcEnv(pid, procdip, procdir, parentdir string) {
+func FakeProcEnv(pid, procdIp, procdir, parentdir string) {
 	SetPid(pid)
+	SetProcdIp(procdIp)
 	SetProcDir(procdir)
 	SetParentDir(parentdir)
 }

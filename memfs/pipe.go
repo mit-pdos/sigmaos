@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sync"
+	// "sync"
 	// "errors"
+
+	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -17,7 +19,8 @@ const PIPESZ = 8192
 
 type Pipe struct {
 	fs.FsObj
-	mu      sync.Mutex
+	// mu      sync.Mutex
+	mu      deadlock.Mutex
 	condr   *sesscond.SessCond
 	condw   *sesscond.SessCond
 	nreader int
@@ -60,8 +63,8 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
-		if pipe.rclosed {
-			return nil, fmt.Errorf("%v: pipe close for reading", ctx.Uname())
+		if pipe.rclosed || pipe.Nlink() <= 0 {
+			return nil, fmt.Errorf("%v: pipe closed for reading", ctx.Uname())
 		}
 		pipe.nreader += 1
 		log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
@@ -81,8 +84,8 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 			}
 		}
 	} else if mode == np.OWRITE {
-		if pipe.wclosed {
-			return nil, fmt.Errorf("pipe close for writing")
+		if pipe.wclosed || pipe.Nlink() <= 0 {
+			return nil, fmt.Errorf("pipe closed for writing")
 		}
 		pipe.nwriter += 1
 		log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)

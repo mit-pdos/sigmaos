@@ -24,7 +24,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemNamed("sync_test", "..")
+	ts.System = kernel.MakeSystemNamed("leaseclnt_test", "..")
 	ts.Mkdir(leaseclnt.LEASE_DIR, 0777)
 	return ts
 }

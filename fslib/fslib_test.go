@@ -562,7 +562,7 @@ func TestLockAfterConnClose(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	// Kill fsl2's connection
+	// Kill fsl1's connection
 	fsl1.Exit()
 
 	// Remove the lock file

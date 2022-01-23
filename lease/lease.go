@@ -46,7 +46,7 @@ func (lm *LeaseMap) Add(l *Lease) error {
 	defer lm.Unlock()
 
 	if l == nil {
-		log.Fatalf("%v: Add nil lease\n", db.GetName(), l)
+		log.Fatalf("%v: Add nil lease\n", db.GetName())
 	}
 
 	fn := np.Join(l.Fn)

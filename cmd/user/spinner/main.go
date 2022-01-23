@@ -4,10 +4,12 @@ import (
 	"errors"
 	"log"
 	"os"
+	"path"
 	"runtime"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -26,7 +28,7 @@ func main() {
 type Spinner struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	output string
+	outdir string
 }
 
 func MakeSpinner(args []string) (*Spinner, error) {
@@ -37,9 +39,14 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	db.Name("spinner")
 	s.FsLib = fslib.MakeFsLib("spinner")
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
-	s.output = args[0]
+	s.outdir = args[0]
 
 	db.DLPrintf("SCHEDL", "MakeSpinner: %v\n", args)
+	log.Printf("MakeSpinner: %v %v\n", args, proc.GetPid())
+
+	if err := s.MakeFile(path.Join(s.outdir, proc.GetPid()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
+		log.Fatalf("MakeFile error: %v", err)
+	}
 
 	err := s.Started(proc.GetPid())
 	if err != nil {

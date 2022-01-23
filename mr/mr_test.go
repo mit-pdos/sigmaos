@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"testing"
+	"time"
 
 	"ulambda/fslib"
 	"ulambda/groupmgr"
@@ -18,12 +19,14 @@ import (
 
 const (
 	OUTPUT = "par-mr.out"
+	NCOORD = 5
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
 	CRASHTASK  = 10000
 	CRASHCOORD = 20000
+	CRASHPROCD = 1000
 )
 
 func Compare(fsl *fslib.FsLib) {
@@ -112,13 +115,25 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, crashtask, crashcoord int) {
+func runN(t *testing.T, crashtask, crashcoord, crashprocd int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
+
+	if crashprocd > 0 {
+		ts.BootProcd()
+	}
 
 	ts.prepareJob()
 
 	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
+
+	if crashprocd > 0 {
+		time.Sleep(CRASHCOORD * time.Millisecond)
+		err := ts.KillOne(np.PROCD)
+		if err != nil {
+			log.Fatalf("Error non-nil kill procd: %v", err)
+		}
+	}
 
 	cm.Wait()
 
@@ -128,17 +143,21 @@ func runN(t *testing.T, crashtask, crashcoord int) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, 0, 0)
+	runN(t, 0, 0, 0)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0)
+	runN(t, CRASHTASK, 0, 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD)
+	runN(t, 0, CRASHCOORD, 0)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD)
+	runN(t, CRASHTASK, CRASHCOORD, 0)
+}
+
+func TestCrashProcd(t *testing.T) {
+	runN(t, 0, 0, CRASHPROCD)
 }

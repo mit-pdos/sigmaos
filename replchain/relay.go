@@ -84,10 +84,13 @@ func (r *RelayConn) reader() {
 func (r *RelayConn) serve(fc *np.Fcall) *np.Fcall {
 	t := fc.Tag
 	// XXX Avoid doing this every time
-	reply, rerror := r.fssrv.Dispatch(fc.Session, fc.Msg)
-	if rerror != nil {
-		reply = *rerror
-	}
+
+	// XXX fix me
+	var reply np.Tmsg
+	//reply, rerror := r.fssrv.Process(fc.Session, fc.Msg)
+	//if rerror != nil {
+	//	reply = *rerror
+	//}
 	fcall := &np.Fcall{}
 	fcall.Type = reply.Type()
 	fcall.Msg = reply

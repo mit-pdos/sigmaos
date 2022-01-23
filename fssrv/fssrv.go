@@ -1,12 +1,10 @@
 package fssrv
 
 import (
-	"fmt"
 	"log"
 	"runtime/debug"
 
 	// db "ulambda/debug"
-	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -51,8 +49,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv)
-	fssrv.sct = sesscond.MakeSessCondTable()
-	fssrv.wt = watch.MkWatchTable()
+	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
+	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
@@ -118,21 +116,8 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 	return fssrv.root, MkCtx(uname, sessid, fssrv.sct)
 }
 
-func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	// On attach, register the new session. Otherwise, try and return an old session
-	var sess *session.Session
-	var ok bool
-	switch msg.(type) {
-	case np.Tattach:
-		sess = fssrv.st.LookupInsert(sid)
-	default:
-		sess, ok = fssrv.st.Lookup(sid)
-		// If the session doesn't exist, return an error
-		if !ok {
-			return nil, &np.Rerror{fmt.Sprintf("%v: no sess %v", db.GetName(), sid)}
-		}
-	}
-	// Process the request
+// register lease, unregister lease, and check lease
+func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
 		// log.Printf("%p: checkLease %v %v\n", fssrv, msg.Type(), req)
@@ -142,28 +127,85 @@ func (fssrv *FsServer) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerr
 		}
 	case np.Tlease:
 		reply := &np.Ropen{}
-		// log.Printf("%v: %p lease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
+		// log.Printf("%v: %p reglease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.Lease(req.Wnames, req.Qid); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-		return *reply, nil
+		return reply, nil
 	case np.Tunlease:
 		reply := &np.Ropen{}
 		// log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
 		if err := sess.Unlease(req.Wnames); err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-		return *reply, nil
+		return reply, nil
 	default:
 		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
 	}
-	fssrv.stats.StatInfo().Inc(msg.Type())
-	return sess.Dispatch(msg)
+	return nil, nil
 }
 
-func (fssrv *FsServer) Detach(sid np.Tsession) {
+func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fcall) {
+	fcall := &np.Fcall{}
+	fcall.Type = reply.Type()
+	fcall.Msg = reply
+	fcall.Tag = t
+	replies <- fcall
+}
+
+func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
+	sess := fssrv.st.Alloc(fc.Session)
+	reply, rerror := fssrv.fenceSession(sess, fc.Msg)
+	if rerror != nil {
+		reply = rerror
+	}
+	if reply != nil {
+		fssrv.sendReply(fc.Tag, reply, replies)
+		return
+	}
+	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	go fssrv.serve(sess, fc, replies)
+}
+
+func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
+	sess, ok := fssrv.st.Lookup(sid)
+	if !ok {
+		log.Fatalf("CloseSession unknown session %v\n", sid)
+	}
+
+	log.Printf("CloseSession: %v wait for no threads in progress b %v %v\n", sid, sess.Nblocked, sess.Nthread)
+
+	// Several threads maybe waiting in a sesscond. DeleteSess
+	// will unblock them so that they can bail out.
 	fssrv.sct.DeleteSess(sid)
+
+	// Wait until nthread == 0
+	sess.Lock()
+	sess.WaitTotalZero()
+	sess.Unlock()
+
+	// Detach the session to remove ephemeral files and close open fids.
 	fssrv.st.Detach(sid)
+
+	log.Printf("%v: CloseSession: no threads in progress b %v %v\n", sid, sess.Nblocked, sess.Nthread)
+
+	// close the reply channel, so that conn writer() terminates
+	close(replies)
+}
+
+// Serialize thread that serve a request for the same session.
+// Threads may block in sesscond.Wait() and give up sess lock
+// temporarily.  XXX doesn't guarantee the order in which received
+func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+	sess.Lock()
+	sess.Inc()
+	reply, rerror := sess.Dispatch(fc.Msg)
+	if rerror != nil {
+		reply = *rerror
+	}
+	fssrv.sendReply(fc.Tag, reply, replies)
+	sess.Dec()
+	sess.Unlock()
 }
 
 type Ctx struct {

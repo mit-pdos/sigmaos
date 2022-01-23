@@ -5,8 +5,6 @@ import (
 	"log"
 	"net"
 	"runtime/debug"
-	"strings"
-	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -19,27 +17,23 @@ const (
 )
 
 type SrvConn struct {
-	mu         sync.Mutex
 	conn       net.Conn
 	wireCompat bool
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
-	closed     bool
 	protsrv    protsrv.FsServer
-	sessions   map[np.Tsession]bool
+	sessid     np.Tsession
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
-	c := &SrvConn{sync.Mutex{},
-		conn,
+	c := &SrvConn{conn,
 		srv.wireCompat,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
-		false,
 		srv.fssrv,
-		make(map[np.Tsession]bool),
+		0,
 	}
 	go c.writer()
 	go c.reader()
@@ -60,7 +54,7 @@ func (c *SrvConn) reader() {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
 			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", c.Src(), err)
-			c.close()
+			c.protsrv.CloseSession(c.sessid, c.replies)
 			return
 		}
 		var fcall *np.Fcall
@@ -76,41 +70,13 @@ func (c *SrvConn) reader() {
 			log.Print("reader: unmarshal error: ", err, fcall)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
-			c.sessions[fcall.Session] = true
-			go c.serve(fcall)
+			if c.sessid == 0 {
+				c.sessid = fcall.Session
+			} else if c.sessid != fcall.Session {
+				log.Fatal("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
+			}
+			c.protsrv.Process(fcall, c.replies)
 		}
-	}
-}
-
-func (c *SrvConn) close() {
-	db.DLPrintf("9PCHAN", "Close: %v", c.conn.RemoteAddr())
-	c.mu.Lock()
-
-	close(c.replies)
-	if !c.closed {
-		for sid, _ := range c.sessions {
-			c.protsrv.Detach(sid)
-		}
-	}
-	c.closed = true
-	c.mu.Unlock()
-}
-
-func (c *SrvConn) serve(fc *np.Fcall) {
-	t := fc.Tag
-	reply, rerror := c.protsrv.Dispatch(fc.Session, fc.Msg)
-	if rerror != nil {
-		reply = *rerror
-	}
-
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
-	fcall.Tag = t
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if !c.closed {
-		c.replies <- fcall
 	}
 }
 
@@ -130,17 +96,12 @@ func (c *SrvConn) writer() {
 		}
 		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)
 		if err != nil {
-			log.Print(err)
-			// If exit the thread if the connection is broken
-			if strings.Contains(err.Error(), "WriteFrame error") {
-				return
-			}
+			log.Printf("writer err %v\n", err)
 		} else {
 			err = c.bw.Flush()
 			if err != nil {
 				stacktrace := debug.Stack()
-				db.DLPrintf("NETSRV", "%v\nWriter: Flush error ", string(stacktrace), err)
-				return
+				log.Printf("writer flush err %v err", err, string(stacktrace), err)
 			}
 		}
 	}

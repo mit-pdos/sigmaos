@@ -29,12 +29,25 @@ func (npd *Npd) mkProtServer(fssrv protsrv.FsServer, sid np.Tsession) protsrv.Pr
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) Dispatch(sid np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	sess := npd.st.LookupInsert(sid)
-	return sess.Dispatch(msg)
+func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
+	t := fc.Tag
+	sess := npd.st.Alloc(fc.Session)
+	reply, rerror := sess.Dispatch(fc.Msg)
+	if rerror != nil {
+		reply = *rerror
+	}
+	fcall := &np.Fcall{}
+	fcall.Type = reply.Type()
+	fcall.Msg = reply
+	fcall.Tag = t
+	replies <- fcall
 }
 
-func (npd *Npd) Detach(sid np.Tsession) {
+func (npd *Npd) Process(fcall *np.Fcall, replies chan *np.Fcall) {
+	go npd.serve(fcall, replies)
+}
+
+func (npd *Npd) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	npd.st.Detach(sid)
 }
 

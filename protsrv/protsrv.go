@@ -5,8 +5,8 @@ import (
 )
 
 type FsServer interface {
-	Dispatch(sess np.Tsession, msg np.Tmsg) (np.Tmsg, *np.Rerror)
-	Detach(np.Tsession)
+	Process(*np.Fcall, chan *np.Fcall)
+	CloseSession(np.Tsession, chan *np.Fcall)
 }
 
 type Protsrv interface {

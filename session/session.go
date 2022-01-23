@@ -2,7 +2,10 @@ package session
 
 import (
 	"fmt"
+	"log"
 	"sync"
+
+	"github.com/sasha-s/go-deadlock"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
@@ -17,15 +20,21 @@ import (
 //
 
 type Session struct {
-	sync.Mutex
-	protsrv protsrv.Protsrv
-	lm      *lease.LeaseMap
+	deadlock.Mutex // to serialize requests of a session
+	cond           *sync.Cond
+	Nthread        int
+	Nblocked       int
+	protsrv        protsrv.Protsrv
+	lm             *lease.LeaseMap
+	sid            np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession) *Session {
 	sess := &Session{}
 	sess.protsrv = protsrv
+	sess.cond = sync.NewCond(&sess.Mutex)
 	sess.lm = lease.MakeLeaseMap()
+	sess.sid = sid
 	return sess
 }
 
@@ -51,4 +60,20 @@ func (sess *Session) CheckLeases(fsl *fslib.FsLib) error {
 		}
 	}
 	return nil
+}
+
+func (sess *Session) Inc() {
+	sess.Nthread += 1
+}
+
+func (sess *Session) Dec() {
+	sess.Nthread -= 1
+	sess.cond.Signal()
+}
+
+func (sess *Session) WaitTotalZero() {
+	for sess.Nthread > 0 {
+		log.Printf("%v: wait T nthread %v nblocked %v\n", sess.sid, sess.Nthread, sess.Nblocked)
+		sess.cond.Wait()
+	}
 }

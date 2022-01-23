@@ -4,7 +4,6 @@ import (
 	"log"
 	"sync"
 
-	db "ulambda/debug"
 	"ulambda/fid"
 	"ulambda/fs"
 	np "ulambda/ninep"
@@ -49,7 +48,6 @@ func (ft *fidTable) ClunkOpen() {
 	ft.Lock()
 	defer ft.Unlock()
 
-	log.Printf("%v: Clunkopen: %v\n", db.GetName(), ft.fids)
 	for fid, f := range ft.fids {
 		o := ft.fids[fid].ObjU()
 		if f.IsOpen() { // has the fid been opened?

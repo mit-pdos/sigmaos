@@ -2,7 +2,10 @@ package session
 
 import (
 	"fmt"
-	"sync"
+	"log"
+	// "sync"
+
+	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -10,7 +13,7 @@ import (
 )
 
 type SessionTable struct {
-	sync.Mutex
+	deadlock.Mutex
 	mkps     protsrv.MkProtServer
 	fssrv    protsrv.FsServer
 	sessions map[np.Tsession]*Session
@@ -31,14 +34,14 @@ func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *SessionTable) LookupInsert(sid np.Tsession) *Session {
+func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	st.Lock()
 	defer st.Unlock()
 
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid))
+	sess := makeSession(st.mkps(st.fssrv, sid), sid)
 	st.sessions[sid] = sess
 	return sess
 }
@@ -48,9 +51,27 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 	if !ok {
 		return fmt.Errorf("%v: no sess %v", db.GetName(), sid)
 	}
-
-	st.Lock()
-	defer st.Unlock()
 	sess.protsrv.Detach()
 	return nil
+}
+
+// Returned from wait: acquire sess lock
+func (st *SessionTable) WaitDone(sessid np.Tsession) {
+	if sess, ok := st.Lookup(sessid); ok {
+		sess.Lock()
+		sess.Nblocked -= 1
+		sess.cond.Signal()
+	} else {
+		log.Fatalf("LockSession: no lock for %v\n", sessid)
+	}
+}
+
+// About to wait: release sess lock
+func (st *SessionTable) WaitStart(sessid np.Tsession) {
+	if sess, ok := st.Lookup(sessid); ok {
+		sess.Nblocked += 1
+		sess.Unlock()
+	} else {
+		log.Fatalf("UnlockSession: no lock for %v\n", sessid)
+	}
 }

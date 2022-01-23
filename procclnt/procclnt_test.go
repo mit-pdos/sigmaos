@@ -12,6 +12,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/groupmgr"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
@@ -51,7 +52,7 @@ func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
 
 func spawnSpinner(t *testing.T, ts *Tstate) string {
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/out_" + pid})
+	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return pid
@@ -507,6 +508,66 @@ func TestEvictN(t *testing.T) {
 		assert.Nil(t, err, "WaitExit")
 		assert.Equal(t, "EVICTED", status, "WaitExit status")
 	}
+
+	ts.Shutdown()
+}
+
+func getNChildren(ts *Tstate) int {
+	c, err := ts.GetChildren(proc.GetProcDir())
+	assert.Nil(ts.t, err, "getnchildren")
+	return len(c)
+}
+
+func TestMaintainReplicationCrashProcd(t *testing.T) {
+	ts := makeTstate(t)
+
+	N_REPL := 3
+	OUTDIR := "name/spinner-ephs"
+
+	// Start a couple new procds.
+	err := ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 1")
+	err = ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 2")
+
+	// Count number of children.
+	nChildren := getNChildren(ts)
+
+	err = ts.Mkdir(OUTDIR, 0777)
+	assert.Nil(t, err, "Mkdir")
+
+	// Start a bunch of replicated spinner procs.
+	sm := groupmgr.Start(ts.FsLib, ts.ProcClnt, N_REPL, "bin/user/spinner", []string{OUTDIR}, 0)
+	nChildren += N_REPL
+
+	// Wait for them to spawn.
+	time.Sleep(1 * time.Second)
+
+	// Make sure they spawned correctly.
+	st, err := ts.ReadDir(OUTDIR)
+	assert.Nil(t, err, "readdir1")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
+	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
+
+	err = ts.KillOne(np.PROCD)
+	assert.Nil(t, err, "kill procd")
+
+	// Wait for them to respawn.
+	time.Sleep(2 * time.Second)
+
+	// Make sure they spawned correctly.
+	st, err = ts.ReadDir(OUTDIR)
+	assert.Nil(t, err, "readdir1")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
+
+	time.Sleep(100)
+
+	// cleaned up
+	//	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+	//	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
+
+	sm.Stop()
 
 	ts.Shutdown()
 }

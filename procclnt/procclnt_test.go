@@ -519,7 +519,7 @@ func getNChildren(ts *Tstate) int {
 	return len(c)
 }
 
-func TestMaintainReplicationCrashProcd(t *testing.T) {
+func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	ts := makeTstate(t)
 
 	N_REPL := 3

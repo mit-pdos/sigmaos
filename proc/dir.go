@@ -17,10 +17,11 @@ import (
  * |  |     |- 1000 // Proc mounts this directory as procdir
  * |  |         |
  * |  |         |- evict-sem
+ * |  |         |- exit-sem
  * |  |         |- children
  * |  |            |- 1001 // Child mounts this directory as procdir/parent
  * |  |               |- start-sem
- * |  |               |- status-pipe
+ * |  |               |- exit-status
  * |  |               |- procdir -> /procd/y.y.y.y/pids/1001 // Symlink to child's procdir.
  * |  |                  |- ...
  * |  |
@@ -52,16 +53,13 @@ const (
 
 	// Files/directories in "pids/<pid>":
 	START_SEM   = "start-sem"
+	EXIT_SEM    = "exit-sem"
 	EVICT_SEM   = "evict-sem"
-	RET_STATUS  = "status-pipe"
+	EXIT_STATUS = "exit-status"
 	CHILDREN    = "children"    // directory with children's pids and symlinks
 	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
 )
 
 func GetChildProcDir(cpid string) string {
 	return path.Join(PROCDIR, CHILDREN, cpid, PROCDIR)
-}
-
-func GetChildStatusPath(cpid string) string {
-	return path.Join(PROCDIR, CHILDREN, cpid, RET_STATUS)
 }

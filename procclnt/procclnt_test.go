@@ -108,7 +108,8 @@ func TestWaitExitSimple(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
-	// cleaned up
+	// cleaned up (may take a bit)
+	time.Sleep(500 * time.Millisecond)
 	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 

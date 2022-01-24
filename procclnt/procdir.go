@@ -82,8 +82,6 @@ func (clnt *ProcClnt) removeChild(pid string) error {
 		return fmt.Errorf("removeChild link error %v", err)
 	}
 
-	// Remove pid from my children now its status has been
-	// collected we don't need to abandon it.
 	if err := clnt.RmDir(childdir); err != nil {
 		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
 		return fmt.Errorf("removeChild dir error %v", err)

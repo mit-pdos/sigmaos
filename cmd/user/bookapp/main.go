@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	// db "ulambda/debug"
+	"ulambda/ctx"
 	"ulambda/dbd"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -56,7 +56,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
-	ba.ctx = fssrv.MkCtx("", 0, mfs.GetSessCondTable())
+	ba.ctx = ctx.MkCtx("", 0, mfs.GetSessCondTable())
 	ba.pipe, err = mfs.Root().Create(ba.ctx, "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)

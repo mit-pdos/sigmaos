@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 
 	// db "ulambda/debug"
+	"ulambda/ctx"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -120,7 +121,7 @@ func (fssrv *FsServer) GetWatchTable() *watch.WatchTable {
 }
 
 func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession) (fs.Dir, fs.CtxI) {
-	return fssrv.root, MkCtx(uname, sessid, fssrv.sct)
+	return fssrv.root, ctx.MkCtx(uname, sessid, fssrv.sct)
 }
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {

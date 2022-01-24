@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
+	"ulambda/ctx"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
 )
 
@@ -23,7 +23,7 @@ func makeConsoled() *Consoled {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	cons.MemFs = mfs
-	err = dir.MkNod(fssrv.MkCtx("", 0, nil), mfs.Root(), "console", makeConsole())
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "console", makeConsole())
 	if err != nil {
 		log.Fatalf("MakeNod failed %v\n", err)
 	}

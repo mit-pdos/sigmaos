@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"ulambda/config"
+	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/stats"
@@ -86,19 +86,19 @@ func (m *RealmMgr) makeInitFs() {
 func (m *RealmMgr) makeCtlFiles() {
 	// Set up control files
 	realmCreate := makeCtlFile(m.realmCreate, nil, m.Root())
-	err := dir.MkNod(fssrv.MkCtx("", 0, nil), m.Root(), realm_create, realmCreate)
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_create, realmCreate)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 1: %v", err)
 	}
 
 	realmDestroy := makeCtlFile(m.realmDestroy, nil, m.Root())
-	err = dir.MkNod(fssrv.MkCtx("", 0, nil), m.Root(), realm_destroy, realmDestroy)
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_destroy, realmDestroy)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
 	}
 
 	freeMachineds := makeCtlFile(m.freeMachineds, nil, m.Root())
-	err = dir.MkNod(fssrv.MkCtx("", 0, nil), m.Root(), free_machineds, freeMachineds)
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), free_machineds, freeMachineds)
 	if err != nil {
 		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
 	}

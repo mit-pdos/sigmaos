@@ -15,12 +15,12 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/crash"
+	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	"ulambda/group"
 	"ulambda/inode"
 	"ulambda/leaseclnt"
@@ -79,7 +79,7 @@ func RunBalancer(auto string) {
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
-	ctx := fssrv.MkCtx("balancer", 0, nil)
+	ctx := ctx.MkCtx("balancer", 0, nil)
 	err = dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err != nil {
 		log.Fatalf("MakeNod clone failed %v\n", err)

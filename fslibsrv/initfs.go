@@ -1,6 +1,7 @@
 package fslibsrv
 
 import (
+	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
@@ -63,7 +64,7 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 }
 
 func makeStatDev(root fs.Dir, srv *fssrv.FsServer) error {
-	return dir.MkNod(fssrv.MkCtx("", 0, nil), root, "statsd", srv.GetStats())
+	return dir.MkNod(ctx.MkCtx("", 0, nil), root, "statsd", srv.GetStats())
 }
 
 func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, error) {

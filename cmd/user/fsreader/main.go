@@ -6,11 +6,11 @@ import (
 	"log"
 	"os"
 
+	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -55,7 +55,7 @@ func MakeReader(args []string) (*Reader, error) {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}
 	r.MemFs = mfs
-	r.ctx = fssrv.MkCtx("", 0, mfs.GetSessCondTable())
+	r.ctx = ctx.MkCtx("", 0, mfs.GetSessCondTable())
 	r.pipe, err = mfs.Root().Create(r.ctx, "pipe", np.DMNAMEDPIPE, 0)
 	if err != nil {
 		log.Fatal("Create error: ", err)

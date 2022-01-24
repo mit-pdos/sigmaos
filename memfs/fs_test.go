@@ -9,23 +9,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/ctx"
 	"ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
-
-type Ctx struct {
-	uname string
-}
-
-func MkCtx(uname string) *Ctx {
-	return &Ctx{uname}
-}
-
-func (ctx *Ctx) Uname() string {
-	return ctx.uname
-}
 
 type TestState struct {
 	t     *testing.T
@@ -37,7 +26,7 @@ func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
 	ts.rooti = dir.MkRootDir(MakeInode, MakeRootInode, GenPath)
-	ts.ctx = MkCtx("")
+	ts.ctx = ctx.MkCtx("", 0, nil)
 	return ts
 }
 

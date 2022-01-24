@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"ulambda/ctx"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	"ulambda/kernel"
@@ -79,7 +80,7 @@ var InitDir = []string{np.LOCKSREL, np.TMPREL, np.BOOTREL, np.PIDSREL, np.PROCDR
 func initfs(fss *fssrv.FsServer) error {
 	r := fss.Root()
 	for _, n := range InitDir {
-		_, err := r.Create(fssrv.MkCtx("", 0, nil), n, 0777|np.DMDIR, np.OREAD)
+		_, err := r.Create(ctx.MkCtx("", 0, nil), n, 0777|np.DMDIR, np.OREAD)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 aaa*
 bin/
 *.sw*
+*.bk
 *.pem
 measurements
 ec2_measurements

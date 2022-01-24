@@ -103,7 +103,8 @@ func (wt *WatchTable) release(ws *Watch) bool {
 }
 
 // Release watch for path. Caller should have watch locked through
-// WatchLookupL().
+// WatchLookupL().  If no thread is using the watch anymore, free the
+// sess cond associated with the watch.
 func (wt *WatchTable) Release(ws *Watch) {
 	ws.Unlock()
 	del := wt.release(ws)

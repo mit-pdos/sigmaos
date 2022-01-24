@@ -17,14 +17,14 @@ import (
 )
 
 //
-// There is one FsObjSrv per session, but they share the watch table
+// There is one FsObjSrv per session, but they share the watch table,
 // and stats.  Each session has its own fid table, ephemeral table,
-// and lease.
+// and lease table.
 //
 
 type FsObjSrv struct {
 	fssrv *fssrv.FsServer
-	wt    *watch.WatchTable
+	wt    *watch.WatchTable // shared across sessions
 	ft    *fidTable
 	et    *ephemeralTable
 	lease *lease.Lease

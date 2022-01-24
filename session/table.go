@@ -55,8 +55,7 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 	return nil
 }
 
-// Returned from wait: acquire sess lock
-func (st *SessionTable) WaitDone(sessid np.Tsession) {
+func (st *SessionTable) SessLock(sessid np.Tsession) {
 	if sess, ok := st.Lookup(sessid); ok {
 		sess.Lock()
 		sess.Nblocked -= 1
@@ -66,8 +65,7 @@ func (st *SessionTable) WaitDone(sessid np.Tsession) {
 	}
 }
 
-// About to wait: release sess lock
-func (st *SessionTable) WaitStart(sessid np.Tsession) {
+func (st *SessionTable) SessUnlock(sessid np.Tsession) {
 	if sess, ok := st.Lookup(sessid); ok {
 		sess.Nblocked += 1
 		sess.Unlock()

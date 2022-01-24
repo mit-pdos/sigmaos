@@ -70,7 +70,6 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 		log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
-			// pipe.condr.Wait()
 			err := pipe.condr.Wait(ctx.SessionId())
 			if err != nil {
 				pipe.nreader -= 1
@@ -100,7 +99,6 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 				}
 				return nil, err
 			}
-			// pipe.condw.Wait()
 			if pipe.Nlink() == 0 {
 				return nil, fmt.Errorf("pipe removed")
 			}
@@ -156,7 +154,6 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 			if err != nil {
 				return 0, err
 			}
-			// pipe.condw.Wait()
 		}
 		max := len(d)
 		if max >= PIPESZ-len(pipe.buf) {
@@ -182,7 +179,6 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 		if err != nil {
 			return nil, err
 		}
-		// pipe.condr.Wait()
 	}
 	max := int(n)
 	if max >= len(pipe.buf) {

@@ -20,9 +20,13 @@ import (
 )
 
 //
-// There is one FsServer per memfsd. The FsServer has one ProtSrv per
-// 9p channel (i.e., TCP connection); each channel has one or more
-// sessions (one per client fslib on the same client machine).
+// There is one FsServer per server. The FsServer has one ProtSrv per
+// 9p channel (i.e., TCP connection). Each channel may multiplex
+// several users/clients.
+//
+// FsServer has a table with all sess conds in use so that it can
+// unblock threads that are waiting in a sess cond when a session
+// closes.
 //
 
 type FsServer struct {
@@ -71,6 +75,8 @@ func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
 }
 
+// The server using fssrv is ready to take requests. Keep serving
+// until fssrv is told to stop using Done().
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {
@@ -87,6 +93,7 @@ func (fssrv *FsServer) Serve() {
 	}
 }
 
+// The server using fssrv is done; exit.
 func (fssrv *FsServer) Done() {
 	if fssrv.pclnt != nil {
 		fssrv.pclnt.Exited(proc.GetPid(), "EVICTED")
@@ -116,7 +123,21 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 	return fssrv.root, MkCtx(uname, sessid, fssrv.sct)
 }
 
-// register lease, unregister lease, and check lease
+func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
+	sess := fssrv.st.Alloc(fc.Session)
+	reply, rerror := fssrv.fenceSession(sess, fc.Msg)
+	if rerror != nil {
+		reply = rerror
+	}
+	if reply != nil {
+		fssrv.sendReply(fc.Tag, reply, replies)
+		return
+	}
+	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	go fssrv.serve(sess, fc, replies)
+}
+
+// Register lease, unregister lease, and check lease
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
@@ -153,18 +174,19 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 	replies <- fcall
 }
 
-func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
-	sess := fssrv.st.Alloc(fc.Session)
-	reply, rerror := fssrv.fenceSession(sess, fc.Msg)
+// Serialize thread that serve a request for the same session.
+// Threads may block in sesscond.Wait() and give up sess lock
+// temporarily.  XXX doesn't guarantee the order in which received
+func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+	sess.Lock()
+	sess.Inc()
+	reply, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
-		reply = rerror
+		reply = *rerror
 	}
-	if reply != nil {
-		fssrv.sendReply(fc.Tag, reply, replies)
-		return
-	}
-	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	go fssrv.serve(sess, fc, replies)
+	fssrv.sendReply(fc.Tag, reply, replies)
+	sess.Dec()
+	sess.Unlock()
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
@@ -181,7 +203,7 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Wait until nthread == 0
 	sess.Lock()
-	sess.WaitTotalZero()
+	sess.WaitNthreadZero()
 	sess.Unlock()
 
 	// Detach the session to remove ephemeral files and close open fids.
@@ -191,41 +213,4 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// close the reply channel, so that conn writer() terminates
 	close(replies)
-}
-
-// Serialize thread that serve a request for the same session.
-// Threads may block in sesscond.Wait() and give up sess lock
-// temporarily.  XXX doesn't guarantee the order in which received
-func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
-	sess.Lock()
-	sess.Inc()
-	reply, rerror := sess.Dispatch(fc.Msg)
-	if rerror != nil {
-		reply = *rerror
-	}
-	fssrv.sendReply(fc.Tag, reply, replies)
-	sess.Dec()
-	sess.Unlock()
-}
-
-type Ctx struct {
-	uname  string
-	sessid np.Tsession
-	sct    *sesscond.SessCondTable
-}
-
-func MkCtx(uname string, sessid np.Tsession, sct *sesscond.SessCondTable) *Ctx {
-	return &Ctx{uname, sessid, sct}
-}
-
-func (ctx *Ctx) Uname() string {
-	return ctx.uname
-}
-
-func (ctx *Ctx) SessionId() np.Tsession {
-	return ctx.sessid
-}
-
-func (ctx *Ctx) SessCondTable() *sesscond.SessCondTable {
-	return ctx.sct
 }

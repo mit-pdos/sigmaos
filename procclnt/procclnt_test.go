@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"strconv"
 	"sync"
@@ -256,7 +257,7 @@ func TestEarlyExit1(t *testing.T) {
 
 func TestEarlyExitN(t *testing.T) {
 	ts := makeTstate(t)
-	nProcs := 500
+	nProcs := 100
 	var done sync.WaitGroup
 	done.Add(nProcs)
 
@@ -281,11 +282,13 @@ func TestEarlyExitN(t *testing.T) {
 
 			// .. and cleaned up
 			_, err = ts.Stat(proc.PidDir(pid1))
-			assert.NotNil(t, err, "Stat")
+			assert.NotNil(t, err, "Stat "+pid1)
 			done.Done()
 		}()
 	}
 	done.Wait()
+
+	log.Printf("done test\n")
 
 	ts.Shutdown()
 }

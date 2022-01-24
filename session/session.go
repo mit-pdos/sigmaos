@@ -18,9 +18,12 @@ import (
 // A session identifies a client across TCP connections.  For each
 // session, sigmaos has a protsrv.
 //
+// The sess lock is to serialize requests on a session.  The calls in
+// this file assume the calling threads holds the sess lock.
+//
 
 type Session struct {
-	deadlock.Mutex // to serialize requests of a session
+	deadlock.Mutex // to serialize requests on a session
 	cond           *sync.Cond
 	Nthread        int
 	Nblocked       int
@@ -71,7 +74,7 @@ func (sess *Session) Dec() {
 	sess.cond.Signal()
 }
 
-func (sess *Session) WaitTotalZero() {
+func (sess *Session) WaitNthreadZero() {
 	for sess.Nthread > 0 {
 		log.Printf("%v: wait T nthread %v nblocked %v\n", sess.sid, sess.Nthread, sess.Nblocked)
 		sess.cond.Wait()

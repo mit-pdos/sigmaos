@@ -20,14 +20,17 @@ import (
 //
 
 type cond struct {
-	deadlock.Mutex
-	isClosed bool
-	c        *sync.Cond
+	deadlock.Mutex // to atomically release sess lock and sc lock before waiting on c
+	isClosed       bool
+	c              *sync.Cond
 }
 
+// Sess cond has one cond per session.  The lock is, for example, a
+// pipe lock or watch lock, which SessCond releases in Wait() and
+// re-acquires before returning out of Wait().
 type SessCond struct {
 	// lock  *sync.Mutex
-	lock  *deadlock.Mutex // e.g., pipe lock, watch lock
+	lock  *deadlock.Mutex
 	st    *session.SessionTable
 	nref  int // under sct lock
 	conds map[np.Tsession]*cond
@@ -41,6 +44,9 @@ func makeSessCond(st *session.SessionTable, lock *deadlock.Mutex) *SessCond {
 	return sc
 }
 
+// A session has been closed: wake up threads associated with this
+// session. Grab c lock to ensure that wakeup isn't missed while a
+// thread is about enter wait (and releasing sess and sc lock).
 func (sc *SessCond) closed(sessid np.Tsession) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
@@ -64,17 +70,17 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 	return c
 }
 
-// Caller should hold sess lock and sc lock and will receive them back
-// on return. Wait release sess lock, so that other threads on the
-// session can run.
+// Caller should hold sess and sc lock and will receive them back on
+// return. Wait releases sess lock, so that other threads on the
+// session can run.  c.Lock ensure atomicity of releasing sess and sc
+// lock and going to sleep.
 func (sc *SessCond) Wait(sessid np.Tsession) error {
 	c := sc.alloc(sessid)
 	c.Lock()
 
-	// release sc lock and sess lock; c.Lock ensure atomicity of
-	// releasing and going to sleep.
+	// release sc lock and sess lock
 	sc.lock.Unlock()
-	sc.st.WaitStart(sessid)
+	sc.st.SessUnlock(sessid)
 
 	c.c.Wait()
 
@@ -83,7 +89,7 @@ func (sc *SessCond) Wait(sessid np.Tsession) error {
 	c.Unlock()
 
 	// reacquire sess lock and sc lock
-	sc.st.WaitDone(sessid)
+	sc.st.SessLock(sessid)
 	sc.lock.Lock()
 
 	if closed {
@@ -160,13 +166,16 @@ func (sct *SessCondTable) toSlice() []*SessCond {
 	return t
 }
 
-// Close all sess conds, which wakes up waiting threads.  They will
-// delete their sess conds from sct, so we need a lock around
-// sct.conds.  But, DeleteSess violates lock order: lock sc.lock first
-// (e.g., watch on directory), then sct.lock (if file watch must
-// create sess cond in sct).  So, make copy first, then close()
-// entries.  Threads many add new sc conds while bailing out (e.g., to
-// remove an emphemeral file), but threads shouldn't wait.
+// Close all sess conds for sessid, which wakes up waiting threads.  A
+// thread may delete a sess cond from sct, if the thread is the last
+// user.  So we need, a lock around sct.conds.  But, DeleteSess
+// violates lock order, which is lock sc.lock first (e.g., watch on
+// directory), then acquire sct.lock (if file watch must create sess
+// cond in sct).  To avoid order violation, DeleteSess makes copy
+// first, then close() sess conds.  Threads many add new sess conds to
+// sct while bailing out (e.g., to remove an emphemeral file), but
+// threads shouldn't wait on these sess conds, so we don't have to
+// close those.
 func (sct *SessCondTable) DeleteSess(sessid np.Tsession) {
 	t := sct.toSlice()
 	//log.Printf("%v: delete sess %v\n", sessid, t)

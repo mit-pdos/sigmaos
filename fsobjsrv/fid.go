@@ -1,7 +1,6 @@
 package fsobjsrv
 
 import (
-	"log"
 	"sync"
 
 	"ulambda/fid"
@@ -51,7 +50,6 @@ func (ft *fidTable) ClunkOpen() {
 	for fid, f := range ft.fids {
 		o := ft.fids[fid].ObjU()
 		if f.IsOpen() { // has the fid been opened?
-			log.Printf("Clunkopen: %v close: %v\n", f.Ctx().Uname(), f.Path())
 			o.Close(f.Ctx(), f.Mode())
 		}
 	}

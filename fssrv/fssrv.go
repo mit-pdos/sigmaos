@@ -196,11 +196,11 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 		log.Fatalf("CloseSession unknown session %v\n", sid)
 	}
 
-	log.Printf("CloseSession: %v wait for no threads in progress b %v %v\n", sid, sess.Nblocked, sess.Nthread)
-
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
 	fssrv.sct.DeleteSess(sid)
+
+	log.Printf("%v: CloseSession: wait threads b %v t %v\n", sid, sess.Nblocked, sess.Nthread)
 
 	// Wait until nthread == 0
 	sess.Lock()
@@ -209,8 +209,6 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Detach the session to remove ephemeral files and close open fids.
 	fssrv.st.Detach(sid)
-
-	log.Printf("%v: CloseSession: no threads in progress b %v %v\n", sid, sess.Nblocked, sess.Nthread)
 
 	// close the reply channel, so that conn writer() terminates
 	close(replies)

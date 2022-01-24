@@ -144,7 +144,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 func (clnt *ProcClnt) WaitStart(pid string) error {
 	piddir := proc.PidDir(pid)
 
-	log.Printf("%v: %p waitstart %v\n", db.GetName(), clnt, piddir)
+	// log.Printf("%v: %p waitstart %v\n", db.GetName(), clnt, piddir)
 
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, piddir+"/"+START_WAIT)
 	err := semStart.Down()
@@ -161,7 +161,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	piddir := proc.PidDir(pid)
 
-	log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
+	// log.Printf("%v: %p waitexit %v\n", db.GetName(), clnt, piddir)
 
 	if _, err := clnt.Stat(piddir); err != nil {
 		return "", fmt.Errorf("WaitExit error %v", err)
@@ -265,7 +265,7 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 	}
 
 	fn := piddir + "/" + RET_STATUS
-	log.Printf("%v: Open pipe %v\n", db.GetName(), fn)
+	// log.Printf("%v: Open pipe %v\n", db.GetName(), fn)
 	fd, err := clnt.Open(fn, np.OWRITE)
 	if err != nil {
 		// the pipe doesn't exist, because parent has
@@ -274,13 +274,13 @@ func (clnt *ProcClnt) exited(pid string, status string) error {
 		// the pipe but subsequently crashed). in both cases,
 		// clean up the child.
 
-		log.Printf("%v: Error Open %v err %v\n", db.GetName(), fn, err)
+		// log.Printf("%v: Error Open %v err %v\n", db.GetName(), fn, err)
 		r := clnt.removeProc(piddir)
 		if r != nil {
 			return fmt.Errorf("Exited error %v", r)
 		}
 	} else {
-		log.Printf("%v: write pipe %v\n", db.GetName(), fn)
+		// log.Printf("%v: write pipe %v\n", db.GetName(), fn)
 		_, err = clnt.Write(fd, []byte(status))
 		if err != nil {
 			log.Printf("Write %v err %v", fn, err)
@@ -361,7 +361,6 @@ func (clnt *ProcClnt) abandonChildren(pid string) error {
 		log.Printf("%v: abandonChildren  %v error: %v", db.GetName(), pid, err)
 		return err
 	}
-	log.Printf("%v: children cpids %v\n", db.GetName(), cpids)
 	for _, cpid := range cpids {
 		r := clnt.abandonChild(PIDS + "/" + cpid)
 		if r != nil && err != nil {
@@ -374,7 +373,7 @@ func (clnt *ProcClnt) abandonChildren(pid string) error {
 // Abandon child
 func (clnt *ProcClnt) abandonChild(piddir string) error {
 	f := piddir + "/" + RET_STATUS
-	log.Printf("%v: abandonChild %v\n", db.GetName(), f)
+	// log.Printf("%v: abandonChild %v\n", db.GetName(), f)
 	err := clnt.Remove(f)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", db.GetName(), f, err)

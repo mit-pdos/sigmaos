@@ -3,7 +3,6 @@ package memfs
 import (
 	"fmt"
 	"io"
-	"log"
 	// "sync"
 	// "errors"
 
@@ -67,7 +66,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 			return nil, fmt.Errorf("%v: pipe closed for reading", ctx.Uname())
 		}
 		pipe.nreader += 1
-		log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
+		//log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
 			err := pipe.condr.Wait(ctx.SessionId())
@@ -87,7 +86,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 			return nil, fmt.Errorf("pipe closed for writing")
 		}
 		pipe.nwriter += 1
-		log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
+		// log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {
 			db.DLPrintf("MEMFS", "Wait for reader\n")
@@ -114,7 +113,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	log.Printf("%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
+	//log.Printf("%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
 	if mode == np.OREAD {
 		pipe.nreader -= 1
 		if pipe.nreader == 0 {
@@ -143,7 +142,6 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	log.Printf("%v: write pipe\n", ctx.Uname())
 	n := len(d)
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
@@ -170,7 +168,6 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	log.Printf("%v: read pipe\n", ctx.Uname())
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
 			return nil, io.EOF

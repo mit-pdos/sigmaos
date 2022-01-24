@@ -554,17 +554,23 @@ func TestMaintainReplicationCrashProcd(t *testing.T) {
 	assert.Nil(t, err, "kill procd")
 
 	// Wait for them to respawn.
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
+
+	// Make sure they spawned correctly.
+	st, err = ts.ReadDir(OUTDIR)
+	assert.Nil(t, err, "readdir1")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+
+	err = ts.KillOne(np.PROCD)
+	assert.Nil(t, err, "kill procd")
+
+	// Wait for them to respawn.
+	time.Sleep(1 * time.Second)
 
 	// Make sure they spawned correctly.
 	st, err = ts.ReadDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
-	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
-
-	// cleaned up
-	//	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-	//	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 
 	sm.Stop()
 

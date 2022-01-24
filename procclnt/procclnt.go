@@ -119,7 +119,8 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	// Make sure the child proc has exited.
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(pid), proc.EXIT_SEM))
 	if err := semExit.Down(); err != nil {
-		log.Fatalf("Error WaitExit semExit.Down: %v", err)
+		log.Printf("Error WaitExit semExit.Down: %v", err)
+		return "", fmt.Errorf("Error semExit.Down: %v", err)
 	}
 
 	childDir := path.Dir(proc.GetChildProcDir(pid))

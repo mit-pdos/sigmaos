@@ -1,5 +1,6 @@
 aaa*
 bin/
+*.bk
 *.sw*
 *.pem
 measurements

@@ -84,7 +84,6 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
 	if !ok {
 		debug.PrintStack()
-		time.Sleep(100 * time.Second)
 	}
 }
 

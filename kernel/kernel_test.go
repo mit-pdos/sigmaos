@@ -162,7 +162,7 @@ func TestEphemeral(t *testing.T) {
 
 	sts, err := ts.ReadDir(name + "/")
 	assert.Nil(t, err, name+"/")
-	assert.Equal(t, 5, len(sts)) // statsd and ctl and running and runqs
+	assert.Equal(t, 6, len(sts)) // statsd and ctl and running and runqs
 
 	ts.KillOne(np.PROCD)
 

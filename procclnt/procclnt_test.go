@@ -13,6 +13,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/groupmgr"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
@@ -52,7 +53,7 @@ func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
 
 func spawnSpinner(t *testing.T, ts *Tstate) string {
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/out_" + pid})
+	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return pid
@@ -74,6 +75,13 @@ func spawnSleeperNcore(t *testing.T, ts *Tstate, pid string, ncore proc.Tcore, m
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
+}
+
+func spawnSpawner(t *testing.T, ts *Tstate, childPid string, msecs int) string {
+	p := proc.MakeProc("bin/user/spawner", []string{"false", childPid, "bin/user/sleeper", fmt.Sprintf("%dms", msecs), "name/out_" + childPid})
+	err := ts.Spawn(p)
+	assert.Nil(t, err, "Spawn")
+	return p.Pid
 }
 
 func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
@@ -101,9 +109,10 @@ func TestWaitExitSimple(t *testing.T) {
 	assert.Nil(t, err, "WaitExit error")
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
-	// cleaned up
-	_, err = ts.Stat(proc.PidDir(pid))
-	assert.NotNil(t, err, "Stat")
+	// cleaned up (may take a bit)
+	time.Sleep(500 * time.Millisecond)
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 
 	end := time.Now()
 
@@ -126,7 +135,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.Equal(t, "OK", status, "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(proc.PidDir(pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -134,6 +143,34 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
 	checkSleeperResult(t, ts, pid)
+
+	ts.Shutdown()
+}
+
+func TestWaitExitParentAbandons(t *testing.T) {
+	ts := makeTstate(t)
+
+	start := time.Now()
+
+	cPid := proc.GenPid()
+	pid := spawnSpawner(t, ts, cPid, SLEEP_MSECS)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(pid)
+	assert.Equal(t, "OK", status, "WaitExit status error")
+	assert.Nil(t, err, "WaitExit error")
+	// Wait for the child to run & finish
+	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
+
+	// cleaned up
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+	assert.NotNil(t, err, "Stat")
+
+	end := time.Now()
+
+	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
+
+	checkSleeperResult(t, ts, cPid)
 
 	ts.Shutdown()
 }
@@ -209,21 +246,6 @@ func TestCrashProc(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestFailSpawn(t *testing.T) {
-	ts := makeTstate(t)
-
-	a := proc.MakeEmptyProc()
-	a.Pid = proc.GenPid()
-	err := ts.Spawn(a)
-	assert.NotNil(t, err, "Spawn")
-
-	// child should not exist
-	_, err = ts.Stat(proc.PidDir(a.Pid))
-	assert.NotNil(t, err, "Stat")
-
-	ts.Shutdown()
-}
-
 func TestEarlyExit1(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -237,9 +259,8 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.Equal(t, "OK", status, "WaitExit")
 
-	// Child should be still running
-	_, err = ts.Stat(proc.PidDir(pid1))
-	assert.Nil(t, err, "Stat")
+	// Child should not have terminated yet.
+	checkSleeperResultFalse(t, ts, pid1)
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
@@ -249,7 +270,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(proc.PidDir(pid1))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -281,8 +302,8 @@ func TestEarlyExitN(t *testing.T) {
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(proc.PidDir(pid1))
-			assert.NotNil(t, err, "Stat "+pid1)
+			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1))
+			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}()
 	}
@@ -332,7 +353,7 @@ func TestConcurrentProcs(t *testing.T) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
-			_, err := ts.Stat(proc.PidDir(pid))
+			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 			assert.NotNil(t, err, "Stat")
 		}(pid, &done, i)
 	}
@@ -491,6 +512,70 @@ func TestEvictN(t *testing.T) {
 		assert.Nil(t, err, "WaitExit")
 		assert.Equal(t, "EVICTED", status, "WaitExit status")
 	}
+
+	ts.Shutdown()
+}
+
+func getNChildren(ts *Tstate) int {
+	c, err := ts.GetChildren(proc.GetProcDir())
+	assert.Nil(ts.t, err, "getnchildren")
+	return len(c)
+}
+
+func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
+	ts := makeTstate(t)
+
+	N_REPL := 3
+	OUTDIR := "name/spinner-ephs"
+
+	// Start a couple new procds.
+	err := ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 1")
+	err = ts.BootProcd()
+	assert.Nil(t, err, "BootProcd 2")
+
+	// Count number of children.
+	nChildren := getNChildren(ts)
+
+	err = ts.Mkdir(OUTDIR, 0777)
+	assert.Nil(t, err, "Mkdir")
+
+	// Start a bunch of replicated spinner procs.
+	sm := groupmgr.Start(ts.FsLib, ts.ProcClnt, N_REPL, "bin/user/spinner", []string{OUTDIR}, 0)
+	nChildren += N_REPL
+
+	// Wait for them to spawn.
+	time.Sleep(1 * time.Second)
+
+	// Make sure they spawned correctly.
+	st, err := ts.ReadDir(OUTDIR)
+	assert.Nil(t, err, "readdir1")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
+	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
+
+	err = ts.KillOne(np.PROCD)
+	assert.Nil(t, err, "kill procd")
+
+	// Wait for them to respawn.
+	time.Sleep(1 * time.Second)
+
+	// Make sure they spawned correctly.
+	st, err = ts.ReadDir(OUTDIR)
+	assert.Nil(t, err, "readdir1")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+
+	err = ts.KillOne(np.PROCD)
+	assert.Nil(t, err, "kill procd")
+
+	// Wait for them to respawn.
+	time.Sleep(1 * time.Second)
+
+	// Make sure they spawned correctly.
+	st, err = ts.ReadDir(OUTDIR)
+	assert.Nil(t, err, "readdir1")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+
+	sm.Stop()
 
 	ts.Shutdown()
 }

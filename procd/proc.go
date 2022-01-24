@@ -24,7 +24,6 @@ type Proc struct {
 	mu      sync.Mutex
 	Program string
 	Pid     string
-	PidDir  string
 	Args    []string
 	Env     []string
 	Dir     string
@@ -41,16 +40,10 @@ type Proc struct {
 func (p *Proc) init(a *proc.Proc) {
 	p.Program = a.Program
 	p.Pid = a.Pid
-	p.PidDir = a.PidDir
 	p.Args = a.Args
 	p.Dir = a.Dir
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+rand.String(16))
-	env := append(os.Environ(), a.Env...)
-	env = append(env, "NEWROOT="+p.NewRoot)
-	env = append(env, "PROCDIP="+p.pd.addr)
-	env = append(env, "SIGMAPID="+p.Pid)
-	env = append(env, "SIGMAPIDDIR="+p.PidDir)
-	p.Env = env
+	p.Env = append(os.Environ(), a.GetEnv(p.pd.addr, p.NewRoot)...)
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p
 	p.attr = a
@@ -62,7 +55,7 @@ func (p *Proc) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Proc %v finished with error: %v", p.attr, err)
-		p.pd.procclnt.ExitedProcd(p.Pid, err.Error())
+		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, err.Error())
 		return
 	}
 
@@ -96,6 +89,11 @@ func (p *Proc) run(cores []uint) error {
 		args = p.Args
 		stdout = os.Stdout
 		stderr = os.Stderr
+	}
+
+	// Make the proc's procdir
+	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
+		log.Printf("Err procd MakeProcDir: %v", err)
 	}
 
 	cmd := exec.Command(p.pd.bin+"/"+p.Program, args...)

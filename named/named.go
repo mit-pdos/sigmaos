@@ -75,7 +75,7 @@ func Run(args []string) {
 	fss.Done()
 }
 
-var InitDir = []string{np.LOCKSREL, np.TMPREL, np.BOOTREL, np.PIDSREL, np.PROCDREL}
+var InitDir = []string{np.LOCKSREL, np.TMPREL, np.BOOTREL, np.PIDSREL, np.KPIDSREL, np.PROCDREL}
 
 func initfs(fss *fssrv.FsServer) error {
 	r := fss.Root()

@@ -16,17 +16,8 @@ type Tstate struct {
 	pid string
 }
 
-func piddir(pid string) string {
-	return "pids/" + pid + "/pids/"
-}
-
-func childdir(pid string) string {
-	return "pids/" + pid + "/pids/" + pid
-}
-
 func spawn(t *testing.T, ts *Tstate) string {
 	a := proc.MakeProc("bin/user/wwwd", []string{""})
-	a.PidDir = piddir(a.Pid)
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return a.Pid
@@ -39,7 +30,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.System = kernel.MakeSystemAll("wwwd_test", "../../../")
 	ts.pid = spawn(t, ts)
 
-	err = ts.WaitStart(childdir(ts.pid))
+	err = ts.WaitStart(ts.pid)
 	assert.Equal(t, nil, err)
 
 	// ts.Exited(proc.GetPid(), "OK")
@@ -54,7 +45,7 @@ func (ts *Tstate) waitWww() {
 		ch <- err
 	}()
 
-	status, err := ts.WaitExit(childdir(ts.pid))
+	status, err := ts.WaitExit(ts.pid)
 	assert.Nil(ts.t, err, "WaitExit error")
 	assert.Equal(ts.t, "OK", status, "Exit status wrong")
 

@@ -9,11 +9,13 @@ import (
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
+	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/procclnt"
 )
 
 type readRunqFn func(procdPath string, queueName string) ([]*np.Stat, error)
@@ -37,6 +39,7 @@ func (pd *Procd) makeFs() {
 		log.Fatalf("%v: MakeMemFs %v\n", db.GetName(), err)
 	}
 	pd.FsLib = pd.MemFs.FsLib
+	procclnt.MountPids(pd.FsLib, fslib.Named())
 
 	// Set up ctl file
 	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
@@ -65,6 +68,14 @@ func (pd *Procd) makeFs() {
 			log.Fatalf("Error creating running dir: %v", err)
 		}
 		pd.fs.runqs[q] = runq
+	}
+
+	// Set up pids dir
+	pidsi := inode.MakeInode(nil, np.DMDIR, pd.Root())
+	pids := dir.MakeDir(pidsi)
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
+	if err != nil {
+		log.Fatalf("Error creating pids dir: %v", err)
 	}
 }
 

@@ -49,7 +49,7 @@ func MakeReader(args []string) (*Reader, error) {
 	r := &Reader{}
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
-	n := "pids/" + args[1] + "/server"
+	n := proc.PROCDIR + "/server"
 	mfs, err := fslibsrv.MakeMemFsFsl(n, r.FsLib, r.ProcClnt)
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
@@ -63,7 +63,6 @@ func MakeReader(args []string) (*Reader, error) {
 	r.input = args[2]
 	go func() {
 		r.Serve()
-		r.Done()
 	}()
 	return r, nil
 }

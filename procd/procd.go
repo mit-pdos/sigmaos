@@ -87,7 +87,7 @@ func (pd *Procd) makeProc(a *proc.Proc) *Proc {
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
 	for pid, _ := range pd.procs {
-		pd.procclnt.Evict(pid)
+		pd.procclnt.EvictProcd(pid)
 	}
 }
 
@@ -177,13 +177,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		// Try to steal from other procds
 		_, err = pd.ProcessDir(np.PROCD, func(st *np.Stat) (bool, error) {
 			// don't process self
-			var b []byte
-			b, err = pd.ReadFile(path.Join(np.PROCD, st.Name))
-			if err != nil {
-				return false, nil
-			}
-			addr := string(b)
-			if strings.HasPrefix(addr, pd.MyAddr()) {
+			if strings.HasPrefix(st.Name, pd.MyAddr()) {
 				return false, nil
 			}
 			p, err = pd.getRunnableProc(path.Join(np.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)

@@ -204,14 +204,14 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 		return fmt.Errorf("Exited error called more than once for pid %v", pid)
 	}
 
-	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
-	if err := semExit.Up(); err != nil {
-		log.Fatalf("exited semExit up error: %v, %v", pid, err)
-	}
-
 	// May return an error if parent already exited.
 	if err := clnt.MakeFile(path.Join(parentdir, proc.EXIT_STATUS), 0777, np.OWRITE, []byte(status)); err != nil {
 		log.Printf("exited error (parent already exited) MakeFile: %v", err)
+	}
+
+	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
+	if err := semExit.Up(); err != nil {
+		log.Fatalf("exited semExit up error: %v, %v", pid, err)
 	}
 
 	// clean myself up

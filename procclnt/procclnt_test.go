@@ -562,8 +562,6 @@ func TestMaintainReplicationCrashProcd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
 	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
 
-	time.Sleep(100)
-
 	// cleaned up
 	//	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 	//	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))

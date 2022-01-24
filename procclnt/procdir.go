@@ -50,7 +50,11 @@ func (clnt *ProcClnt) linkChildIntoParentDir(pid, procdir string) error {
 // Attempt to cleanup procdir
 func (clnt *ProcClnt) cleanupError(pid, procdir string, err error) error {
 	clnt.removeChild(pid)
-	clnt.removeProc(procdir)
+	// May be called by spawning parent proc, without knowing what the procdir is
+	// yet.
+	if len(procdir) > 0 {
+		clnt.removeProc(procdir)
+	}
 	return err
 }
 

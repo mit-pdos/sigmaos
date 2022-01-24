@@ -26,7 +26,7 @@ const (
 	// dynamically
 	CRASHTASK  = 10000
 	CRASHCOORD = 20000
-	CRASHPROCD = "1s"
+	CRASHPROCD = "7s"
 )
 
 func Compare(fsl *fslib.FsLib) {
@@ -115,7 +115,7 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, crashtask, crashcoord int, crashprocd string) {
+func runN(t *testing.T, crashtask, crashcoord int, crashprocd string, maxcrashprocd int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
@@ -127,19 +127,45 @@ func runN(t *testing.T, crashtask, crashcoord int, crashprocd string) {
 
 	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
+	done := make(chan bool)
 	if crashprocd != "" {
-		d, err := time.ParseDuration(crashprocd)
-		if err != nil {
-			log.Fatalf("Error parse duration, %v", err)
-		}
-		time.Sleep(d)
-		err = ts.KillOne(np.PROCD)
-		if err != nil {
-			log.Fatalf("Error non-nil kill procd: %v", err)
-		}
+		go func() {
+			defer func() { done <- true }()
+			crashcnt := 0
+			d, err := time.ParseDuration(crashprocd)
+			if err != nil {
+				log.Fatalf("Error parse duration, %v", err)
+			}
+			ticker := time.NewTicker(d)
+			for {
+				if crashcnt > maxcrashprocd {
+					<-done
+					return
+				}
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+				}
+				err = ts.KillOne(np.PROCD)
+				if err != nil {
+					log.Fatalf("Error non-nil kill procd: %v", err)
+				}
+				err = ts.BootProcd()
+				if err != nil {
+					log.Fatalf("Error spawn procd")
+				}
+				crashcnt += 1
+			}
+		}()
 	}
 
 	cm.Wait()
+
+	if crashprocd != "" {
+		done <- true
+		<-done
+	}
 
 	ts.checkJob()
 
@@ -147,21 +173,26 @@ func runN(t *testing.T, crashtask, crashcoord int, crashprocd string) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, 0, 0, "")
+	runN(t, 0, 0, "", 0)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, "")
+	runN(t, CRASHTASK, 0, "", 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, "")
+	runN(t, 0, CRASHCOORD, "", 0)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, "")
+	runN(t, CRASHTASK, CRASHCOORD, "", 0)
 }
 
-func TestCrashProcd(t *testing.T) {
-	runN(t, 0, 0, CRASHPROCD)
+func TestCrashProcdOnce(t *testing.T) {
+	runN(t, 0, 0, CRASHPROCD, 1)
+}
+
+func TestCrashProcdN(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, CRASHPROCD, N)
 }

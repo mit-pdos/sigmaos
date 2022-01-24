@@ -192,6 +192,11 @@ func TestCrashProcdOnce(t *testing.T) {
 	runN(t, 0, 0, CRASHPROCD, 1)
 }
 
+func TestCrashProcd2(t *testing.T) {
+	N := 2
+	runN(t, 0, 0, CRASHPROCD, N)
+}
+
 func TestCrashProcdN(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, CRASHPROCD, N)

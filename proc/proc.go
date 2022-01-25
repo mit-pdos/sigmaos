@@ -28,7 +28,7 @@ type Proc struct {
 	Program   string   // Program to run
 	Dir       string   // Unix working directory for the process
 	Args      []string // Args
-	env       []string // Environment variables
+	Env       []string // Environment variables
 	Type      Ttype    // Type
 	Ncore     Tcore    // Number of cores requested
 }
@@ -69,7 +69,7 @@ func (p *Proc) setProcDir(procdIp string) {
 }
 
 func (p *Proc) AppendEnv(name, val string) {
-	p.env = append(p.env, name+"="+val)
+	p.Env = append(p.Env, name+"="+val)
 }
 
 func (p *Proc) GetEnv(procdIp, newRoot string) []string {
@@ -77,7 +77,7 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	p.setProcDir(procdIp)
 
 	env := []string{}
-	for _, envvar := range p.env {
+	for _, envvar := range p.Env {
 		env = append(env, envvar)
 	}
 	env = append(env, SIGMAPRIVILEGEDPROC+"="+fmt.Sprintf("%v", p.IsPrivilegedProc()))

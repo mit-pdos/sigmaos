@@ -36,7 +36,7 @@ func TestSemClnt(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		sem := semclnt.MakeSemClnt(ts.FsLib, WAIT_PATH+"/x")
-		sem.Init()
+		sem.Init(0)
 
 		ch := make(chan bool)
 

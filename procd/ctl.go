@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path"
 
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/semclnt"
 )
 
 type CtlFile struct {
@@ -34,6 +36,10 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion)
 	}
 
 	db.DLPrintf("PROCD", "Control file write: %v", p)
+
+	// Create an ephemeral semaphore to indicate a proc has started.
+	semStart := semclnt.MakeSemClnt(ctl.pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
+	semStart.Init(np.DMTMP)
 
 	ctl.pd.fs.spawn(p, b)
 

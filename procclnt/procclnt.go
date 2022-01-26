@@ -68,11 +68,6 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return err
 	}
 
-	// Create a semaphore to indicate a proc has started.
-	childDir := path.Dir(proc.GetChildProcDir(p.Pid))
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
-	semStart.Init()
-
 	// If this is not a privileged proc, spawn it through procd.
 	if !p.IsPrivilegedProc() {
 		b, err := json.Marshal(p)
@@ -86,6 +81,12 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 			log.Printf("%v: WriteFile %v err %v", db.GetName(), fn, err)
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
+	} else {
+		// Create a semaphore to indicate a proc has started if this is a kernel
+		// proc. Otherwise, procd will create the semaphore.
+		childDir := path.Dir(proc.GetChildProcDir(p.Pid))
+		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
+		semStart.Init(0)
 	}
 
 	return nil
@@ -160,11 +161,11 @@ func (clnt *ProcClnt) Started(pid string) error {
 
 	// Create exit signal
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
-	semExit.Init()
+	semExit.Init(0)
 
 	// Create eviction signal
 	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
-	semEvict.Init()
+	semEvict.Init(0)
 
 	// Mark self as started
 	parentDir := proc.PARENTDIR

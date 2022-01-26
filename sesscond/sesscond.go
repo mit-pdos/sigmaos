@@ -20,9 +20,9 @@ import (
 //
 
 type cond struct {
-	deadlock.Mutex // to atomically release sess lock and sc lock before waiting on c
-	isClosed       bool
-	c              *sync.Cond
+	sync.Locker // to atomically release sess lock and sc lock before waiting on c
+	isClosed    bool
+	c           *sync.Cond
 }
 
 // Sess cond has one cond per session.  The lock is, for example, a
@@ -30,13 +30,13 @@ type cond struct {
 // re-acquires before returning out of Wait().
 type SessCond struct {
 	// lock  *sync.Mutex
-	lock  *deadlock.Mutex
+	lock  sync.Locker
 	st    *session.SessionTable
 	nref  int // under sct lock
 	conds map[np.Tsession]*cond
 }
 
-func makeSessCond(st *session.SessionTable, lock *deadlock.Mutex) *SessCond {
+func makeSessCond(st *session.SessionTable, lock sync.Locker) *SessCond {
 	sc := &SessCond{}
 	sc.lock = lock
 	sc.st = st
@@ -65,7 +65,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 		return c
 	}
 	c := &cond{}
-	c.c = sync.NewCond(&c.Mutex)
+	c.c = sync.NewCond(c.Locker)
 	sc.conds[sessid] = c
 	return c
 }
@@ -134,7 +134,7 @@ func MakeSessCondTable(st *session.SessionTable) *SessCondTable {
 	return t
 }
 
-func (sct *SessCondTable) MakeSessCond(lock *deadlock.Mutex) *SessCond {
+func (sct *SessCondTable) MakeSessCond(lock sync.Locker) *SessCond {
 	sct.Lock()
 	defer sct.Unlock()
 

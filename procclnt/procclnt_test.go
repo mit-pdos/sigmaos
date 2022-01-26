@@ -309,8 +309,6 @@ func TestEarlyExitN(t *testing.T) {
 	}
 	done.Wait()
 
-	log.Printf("done test\n")
-
 	ts.Shutdown()
 }
 

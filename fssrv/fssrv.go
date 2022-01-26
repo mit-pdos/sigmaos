@@ -135,6 +135,8 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 		return
 	}
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	// New thread about to start
+	sess.IncThreads()
 	go fssrv.serve(sess, fc, replies)
 }
 
@@ -179,14 +181,13 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 // Threads may block in sesscond.Wait() and give up sess lock
 // temporarily.  XXX doesn't guarantee the order in which received
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+	defer sess.DecThreads()
 	sess.Lock()
-	sess.Inc()
 	reply, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
 	fssrv.sendReply(fc.Tag, reply, replies)
-	sess.Dec()
 	sess.Unlock()
 }
 
@@ -202,10 +203,10 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	sess.Lock()
 
-	log.Printf("%v: CloseSession: wait threads b %v t %v\n", sid, sess.Nblocked, sess.Nthread)
+	log.Printf("%v: CloseSession\n", sid)
 
 	// Wait until nthread == 0
-	sess.WaitNthreadZero()
+	sess.WaitThreads()
 	sess.Unlock()
 
 	// Detach the session to remove ephemeral files and close open fids.

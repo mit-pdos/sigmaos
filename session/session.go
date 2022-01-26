@@ -2,7 +2,6 @@ package session
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/sasha-s/go-deadlock"
@@ -25,8 +24,7 @@ import (
 type Session struct {
 	deadlock.Mutex // to serialize requests on a session
 	cond           *sync.Cond
-	Nthread        int
-	Nblocked       int
+	threads        sync.WaitGroup
 	protsrv        protsrv.Protsrv
 	lm             *lease.LeaseMap
 	sid            np.Tsession
@@ -65,18 +63,14 @@ func (sess *Session) CheckLeases(fsl *fslib.FsLib) error {
 	return nil
 }
 
-func (sess *Session) Inc() {
-	sess.Nthread += 1
+func (sess *Session) IncThreads() {
+	sess.threads.Add(1)
 }
 
-func (sess *Session) Dec() {
-	sess.Nthread -= 1
-	sess.cond.Signal()
+func (sess *Session) DecThreads() {
+	sess.threads.Done()
 }
 
-func (sess *Session) WaitNthreadZero() {
-	for sess.Nthread > 0 {
-		log.Printf("%v: wait T nthread %v nblocked %v\n", sess.sid, sess.Nthread, sess.Nblocked)
-		sess.cond.Wait()
-	}
+func (sess *Session) WaitThreads() {
+	sess.threads.Wait()
 }

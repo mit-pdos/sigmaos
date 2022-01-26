@@ -58,7 +58,6 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 func (st *SessionTable) SessLock(sessid np.Tsession) {
 	if sess, ok := st.Lookup(sessid); ok {
 		sess.Lock()
-		sess.Nblocked -= 1
 		sess.cond.Signal()
 	} else {
 		log.Fatalf("LockSession: no lock for %v\n", sessid)
@@ -67,7 +66,6 @@ func (st *SessionTable) SessLock(sessid np.Tsession) {
 
 func (st *SessionTable) SessUnlock(sessid np.Tsession) {
 	if sess, ok := st.Lookup(sessid); ok {
-		sess.Nblocked += 1
 		sess.Unlock()
 	} else {
 		log.Fatalf("UnlockSession: no lock for %v\n", sessid)

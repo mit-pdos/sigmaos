@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"log"
 	"net"
-	"runtime/debug"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -96,12 +95,11 @@ func (c *SrvConn) writer() {
 		}
 		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)
 		if err != nil {
-			log.Printf("writer err %v\n", err)
+			log.Printf("%v: writer err %v\n", db.GetName(), err)
 		} else {
 			err = c.bw.Flush()
 			if err != nil {
-				stacktrace := debug.Stack()
-				log.Printf("writer flush err %v err", err, string(stacktrace), err)
+				log.Printf("%v: flush %v %v err %v", db.GetName(), fcall, err)
 			}
 		}
 	}

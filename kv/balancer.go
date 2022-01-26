@@ -39,8 +39,7 @@ const (
 	KVBALANCER    = KVDIR + "/balancer"
 	KVBALANCERCTL = KVDIR + "/balancer/ctl"
 
-	// CRASHHELPER = 100
-	CRASHHELPER = 0
+	CRASHHELPER = 100
 )
 
 type Balancer struct {

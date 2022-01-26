@@ -2,7 +2,6 @@ package procclnt_test
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"sync"

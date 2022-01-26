@@ -213,7 +213,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
 	if err := semExit.Up(); err != nil {
-		log.Fatalf("exited semExit up error: %v, %v", pid, err)
+		log.Printf("%v: exited semExit up error: %v, %v, %v", db.GetName(), procdir, pid, err)
 	}
 
 	// clean myself up

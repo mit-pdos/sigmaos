@@ -4,8 +4,8 @@ import (
 	"log"
 	"runtime/debug"
 
-	// db "ulambda/debug"
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -83,11 +83,11 @@ func (fssrv *FsServer) Serve() {
 	if fssrv.pclnt != nil {
 		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("Error Started: %v", err)
+			log.Printf("%v: Error Started: %v", db.GetName(), err)
 		}
 		if err := fssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("Error WaitEvict: %v", err)
+			log.Printf("%v: Error WaitEvict: %v", db.GetName(), err)
 		}
 	} else {
 		<-fssrv.ch
@@ -200,10 +200,11 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	// will unblock them so that they can bail out.
 	fssrv.sct.DeleteSess(sid)
 
+	sess.Lock()
+
 	log.Printf("%v: CloseSession: wait threads b %v t %v\n", sid, sess.Nblocked, sess.Nthread)
 
 	// Wait until nthread == 0
-	sess.Lock()
 	sess.WaitNthreadZero()
 	sess.Unlock()
 
@@ -212,4 +213,6 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// close the reply channel, so that conn writer() terminates
 	close(replies)
+
+	log.Printf("%v: CloseSession: done\n", sid)
 }

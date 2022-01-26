@@ -39,7 +39,8 @@ const (
 	KVBALANCER    = KVDIR + "/balancer"
 	KVBALANCERCTL = KVDIR + "/balancer/ctl"
 
-	CRASHHELPER = 100
+	// CRASHHELPER = 100
+	CRASHHELPER = 0
 )
 
 type Balancer struct {
@@ -59,7 +60,7 @@ func shardPath(kvd, shard string) string {
 }
 
 func RunBalancer(auto string) {
-	log.Printf("run balancer %v %v\n", proc.GetPid(), auto)
+	log.Printf("run balancer %v %v %v\n", proc.GetPid(), auto, crash.GetEnv())
 
 	bl := &Balancer{}
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
@@ -260,6 +261,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool)
 			log.Printf("%v: runProc %v err %v status %v\n", db.GetName(), args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
+			strings.HasPrefix(err.Error(), "Missing return status") ||
 			strings.HasPrefix(err.Error(), "EOF")) {
 			log.Fatalf("%v: runProc err %v\n", db.GetName(), err)
 		}

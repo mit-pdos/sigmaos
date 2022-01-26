@@ -296,11 +296,13 @@ func (clnt *ProcClnt) GetChildren(procdir string) ([]string, error) {
 func (clnt *ProcClnt) removeProc(procdir string) error {
 	// Children may try to write in symlinks & exit statuses while the rmdir is
 	// happening. In order to avoid causing errors (such as removing a non-empty
-	// dir) temporarily rename so children can't find the dir.
+	// dir) temporarily rename so children can't find the dir. The dir may be
+	// missing already if a proc died while exiting, and this is a procd trying
+	// to exit on its behalf.
 	src := path.Join(procdir, proc.CHILDREN)
 	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
 	if err := clnt.Rename(src, dst); err != nil {
-		log.Fatalf("Error rename removeProc %v -> %v : %v", src, dst, err)
+		log.Printf("%v: Error rename removeProc %v -> %v : %v", db.GetName(), src, dst, err)
 	}
 	if err := clnt.RmDir(procdir); err != nil {
 		s, _ := clnt.SprintfDir(procdir)

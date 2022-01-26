@@ -61,7 +61,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 func (ts *Tstate) spawnSpinner() string {
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/out_" + pid})
+	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
 	a.Ncore = proc.Tcore(1)
 	err := ts.Spawn(a)
 	if err != nil {

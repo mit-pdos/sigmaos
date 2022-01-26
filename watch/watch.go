@@ -2,17 +2,17 @@ package watch
 
 import (
 	"log"
-	// "sync"
+	"sync"
 
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 
 	np "ulambda/ninep"
 	"ulambda/sesscond"
 )
 
 type Watch struct {
-	// sync.Mutex
-	deadlock.Mutex
+	sync.Mutex
+	//deadlock.Mutex
 	sc   *sesscond.SessCond
 	path string // the key in WatchTable
 	nref int    // updated under table lock
@@ -39,8 +39,8 @@ func (ws *Watch) WakeupWatchL() {
 }
 
 type WatchTable struct {
-	deadlock.Mutex
-	// sync.Mutex
+	//	deadlock.Mutex
+	sync.Mutex
 	watches map[string]*Watch
 	sct     *sesscond.SessCondTable
 }

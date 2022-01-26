@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -27,7 +27,7 @@ const (
 )
 
 type Procd struct {
-	mu         deadlock.Mutex
+	mu         sync.Mutex
 	fs         *ProcdFs
 	spawnChan  chan bool
 	bin        string

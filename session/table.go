@@ -3,9 +3,9 @@ package session
 import (
 	"fmt"
 	"log"
-	// "sync"
+	"sync"
 
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -13,7 +13,8 @@ import (
 )
 
 type SessionTable struct {
-	deadlock.Mutex
+	sync.Mutex
+	//	deadlock.Mutex
 	mkps     protsrv.MkProtServer
 	fssrv    protsrv.FsServer
 	sessions map[np.Tsession]*Session

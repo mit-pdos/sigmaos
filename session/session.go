@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 
 	// db "ulambda/debug"
 	"ulambda/fslib"
@@ -22,12 +22,12 @@ import (
 //
 
 type Session struct {
-	deadlock.Mutex // to serialize requests on a session
-	cond           *sync.Cond
-	threads        sync.WaitGroup
-	protsrv        protsrv.Protsrv
-	lm             *lease.LeaseMap
-	sid            np.Tsession
+	sync.Mutex // to serialize requests on a session
+	cond       *sync.Cond
+	threads    sync.WaitGroup
+	protsrv    protsrv.Protsrv
+	lm         *lease.LeaseMap
+	sid        np.Tsession
 }
 
 func makeSession(protsrv protsrv.Protsrv, sid np.Tsession) *Session {

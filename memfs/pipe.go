@@ -3,10 +3,10 @@ package memfs
 import (
 	"fmt"
 	"io"
-	// "sync"
+	"sync"
 	// "errors"
 
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -18,8 +18,8 @@ const PIPESZ = 8192
 
 type Pipe struct {
 	fs.FsObj
-	// mu      sync.Mutex
-	mu      deadlock.Mutex
+	mu sync.Mutex
+	//mu      deadlock.Mutex
 	condr   *sesscond.SessCond
 	condw   *sesscond.SessCond
 	nreader int

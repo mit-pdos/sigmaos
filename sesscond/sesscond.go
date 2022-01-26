@@ -6,7 +6,7 @@ import (
 	"sync"
 	// "errors"
 
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 
 	// db "ulambda/debug"
 	np "ulambda/ninep"
@@ -65,6 +65,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 		return c
 	}
 	c := &cond{}
+	c.Locker = &sync.Mutex{}
 	c.c = sync.NewCond(c.Locker)
 	sc.conds[sessid] = c
 	return c
@@ -120,8 +121,8 @@ func (sc *SessCond) Broadcast() {
 }
 
 type SessCondTable struct {
-	deadlock.Mutex
-	// sync.Mutex
+	//	deadlock.Mutex
+	sync.Mutex
 	conds  map[*SessCond]bool
 	st     *session.SessionTable
 	closed bool

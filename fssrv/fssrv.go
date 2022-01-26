@@ -201,13 +201,10 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	// will unblock them so that they can bail out.
 	fssrv.sct.DeleteSess(sid)
 
-	sess.Lock()
-
 	log.Printf("%v: CloseSession\n", sid)
 
 	// Wait until nthread == 0
 	sess.WaitThreads()
-	sess.Unlock()
 
 	// Detach the session to remove ephemeral files and close open fids.
 	fssrv.st.Detach(sid)

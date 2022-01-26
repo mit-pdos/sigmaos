@@ -199,6 +199,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
 func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, status string) error {
+
 	// will catch some unintended misuses: a proc calling exited
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
@@ -242,6 +243,9 @@ func (clnt *ProcClnt) ExitedProcd(pid string, procdir string, parentdir string, 
 		// XXX maybe remove any state left of proc?
 		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
 	}
+	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentdir, proc.START_SEM))
+	semStart.Up()
 }
 
 // ========== EVICT ==========

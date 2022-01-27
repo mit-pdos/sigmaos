@@ -7,14 +7,12 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"path"
 	"strings"
 
 	// db "ulambda/debug"
-	"ulambda/ctx"
 	"ulambda/dbd"
-	"ulambda/fs"
 	"ulambda/fslib"
-	"ulambda/fslibsrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -41,9 +39,8 @@ func main() {
 type BookApp struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	input []string
-	pipe  fs.FsObj
-	ctx   fs.CtxI
+	input  []string
+	pipefd int
 }
 
 func RunBookApp(args []string) (*BookApp, error) {
@@ -51,26 +48,14 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba := &BookApp{}
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
-	n := proc.PROCDIR + "/server"
-	mfs, err := fslibsrv.MakeMemFsFsl(n, ba.FsLib, ba.ProcClnt)
-	if err != nil {
-		log.Fatalf("MakeSrvFsLib %v\n", err)
-	}
-	ba.ctx = ctx.MkCtx("", 0, mfs.GetSessCondTable())
-	ba.pipe, err = mfs.Root().Create(ba.ctx, "pipe", np.DMNAMEDPIPE, 0)
-	if err != nil {
-		log.Fatal("Create error: ", err)
-	}
 	ba.input = strings.Split(args[2], "/")
-	go func() {
-		mfs.Serve()
-	}()
+	ba.Started(proc.GetPid())
 
 	return ba, nil
 }
 
 func (ba *BookApp) writeResponse(data []byte) string {
-	_, err := ba.pipe.(fs.File).Write(ba.ctx, 0, data, np.NoV)
+	_, err := ba.Write(ba.pipefd, data)
 	if err != nil {
 		return fmt.Sprintf("Pipe parse err %v\n", err)
 	}
@@ -162,11 +147,12 @@ func (ba *BookApp) doSave(key string, title string) string {
 
 func (ba *BookApp) Work() string {
 	log.Printf("work %v\n", ba.input)
-	_, err := ba.pipe.Open(ba.ctx, np.OWRITE)
+	fd, err := ba.Open(path.Join(proc.PARENTDIR, proc.SHARED)+"/", np.OWRITE)
 	if err != nil {
 		return fmt.Sprintf("Open err %v\n", err)
 	}
-	defer ba.pipe.Close(ba.ctx, np.OWRITE)
+	ba.pipefd = fd
+	defer ba.Close(fd)
 
 	switch ba.input[0] {
 	case "view":

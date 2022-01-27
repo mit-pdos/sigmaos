@@ -76,12 +76,18 @@ func (clnt *ProcClnt) isKernelProc(pid string) bool {
 // ========== CHILDREN ==========
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(pid, procdir string) error {
+func (clnt *ProcClnt) addChild(pid, procdir, shared string) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	if err := clnt.Mkdir(childDir, 0777); err != nil {
 		log.Printf("%v: Spawn mkdir childs %v err %v\n", db.GetName(), childDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
+	}
+	// Link in shared state from parent, if desired.
+	if len(shared) > 0 {
+		if err := clnt.Symlink([]byte(shared), path.Join(childDir, proc.SHARED), 0777); err != nil {
+			log.Printf("%v: Error addChild Symlink: %v", db.GetName(), err)
+		}
 	}
 	return nil
 }

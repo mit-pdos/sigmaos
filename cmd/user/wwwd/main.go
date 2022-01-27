@@ -11,10 +11,16 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
+)
+
+const (
+	SERVER = "server"
 )
 
 //
@@ -34,7 +40,9 @@ func main() {
 	http.HandleFunc("/book/", www.makeHandler(doBook))
 	http.HandleFunc("/exit/", www.makeHandler(doExit))
 
-	www.Started(proc.GetPid())
+	go func() {
+		www.Serve()
+	}()
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -42,6 +50,9 @@ func main() {
 type Wwwd struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	*fslibsrv.MemFs
+	localSrvpath  string
+	globalSrvpath string
 }
 
 func MakeWwwd(tree string) *Wwwd {
@@ -58,6 +69,21 @@ func MakeWwwd(tree string) *Wwwd {
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	if err := www.MakeFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
+	}
+
+	www.localSrvpath = path.Join(proc.PROCDIR, SERVER)
+	www.globalSrvpath = path.Join(proc.GetProcDir(), SERVER)
+
+	mfsPath := "name/wwwd-server"
+	mfs, err := fslibsrv.MakeMemFsFsl(mfsPath, www.FsLib, www.ProcClnt)
+	if err != nil {
+		log.Fatalf("%v: MakeSrvFsLib %v\n", db.GetName(), err)
+	}
+	www.MemFs = mfs
+
+	err = www.Symlink([]byte(mfsPath), www.localSrvpath, 0777)
+	if err != nil {
+		log.Fatalf("Error symlink memfs wwwd: %v", err)
 	}
 	return www
 }
@@ -84,33 +110,54 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 	}
 }
 
-func (www *Wwwd) rwResponse(w http.ResponseWriter, pid string) {
-	fn := proc.GetChildProcDir(pid) + "/server/pipe"
-	fd, err := www.Open(fn, np.OREAD)
+func (www *Wwwd) makePipe() string {
+	// Make the pipe in the server.
+	pipeName := rand.String(16)
+	pipePath := path.Join(www.localSrvpath, pipeName)
+	if err := www.MakePipe(pipePath, 0777); err != nil {
+		log.Fatalf("%v: Error MakePipe %v", db.GetName(), err)
+	}
+	return pipeName
+}
+
+func (www *Wwwd) removePipe(pipeName string) {
+	pipePath := path.Join(www.localSrvpath, pipeName)
+	if err := www.Remove(pipePath); err != nil {
+		log.Fatalf("%v: Error Remove pipe %v", db.GetName(), err)
+	}
+}
+
+func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
+	pipePath := path.Join(www.globalSrvpath, pipeName)
+	// Read from the pipe.
+	fd, err := www.Open(pipePath, np.OREAD)
 	if err != nil {
-		//		st, err2 := www.SprintfDir(proc.GetChildProcDir(pid))
-		p := path.Join(proc.GetChildProcDir(pid))
-		st, err2 := www.ReadDir(p)
-		log.Printf("wwwd: open %v failed %v\n%v:%v\n%v", fn, err, p, err2, st)
+		log.Printf("wwwd: open %v failed %v", pipePath, err)
 		return
 	}
+	defer www.Close(fd)
 	for {
 		b, err := www.Read(fd, memfs.PIPESZ)
 		if err != nil || len(b) == 0 {
 			break
 		}
-		// log.Printf("wwwd: write %v\n", string(b))
+		//		log.Printf("wwwd: write %v\n", string(b))
 		_, err = w.Write(b)
 		if err != nil {
 			break
 		}
 	}
-	defer www.Close(fd)
+	www.removePipe(pipeName)
 }
 
 func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
+	// Create a pipe for the child to write to.
+	pipeName := www.makePipe()
+
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, app, append([]string{pid}, args...))
+	// Set the shared link to point to the pipe
+	a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	err := www.Spawn(a)
 	if err != nil {
 		return "", err
@@ -119,7 +166,12 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	if err != nil {
 		return "", err
 	}
-	www.rwResponse(w, pid)
+	// Read from the pipe in another thread. This way, if the child crashes or
+	// terminates normally, we'll catch it with WaitExit and remove the pipe so
+	// we don't block forever.
+	go func() {
+		www.rwResponse(w, pipeName)
+	}()
 	str, err := www.WaitExit(pid)
 	return str, err
 }
@@ -143,7 +195,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	www.Exited(proc.GetPid(), "OK")
+	www.Done()
 	os.Exit(0)
 	return "", nil
 }

@@ -22,15 +22,16 @@ const (
 )
 
 type Proc struct {
-	Pid       string   // SigmaOS PID
-	ProcDir   string   // SigmaOS directory to store this proc's state
-	ParentDir string   // SigmaOS parent proc directory
-	Program   string   // Program to run
-	Dir       string   // Unix working directory for the process
-	Args      []string // Args
-	Env       []string // Environment variables
-	Type      Ttype    // Type
-	Ncore     Tcore    // Number of cores requested
+	Pid          string   // SigmaOS PID
+	ProcDir      string   // SigmaOS directory to store this proc's state
+	ParentDir    string   // SigmaOS parent proc directory
+	Program      string   // Program to run
+	Dir          string   // Unix working directory for the process
+	Args         []string // Args
+	Env          []string // Environment variables
+	Type         Ttype    // Type
+	Ncore        Tcore    // Number of cores requested
+	sharedTarget string   // Target of shared state
 }
 
 func MakeEmptyProc() *Proc {
@@ -87,6 +88,14 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	env = append(env, SIGMAPROCDIR+"="+p.ProcDir)
 	env = append(env, SIGMAPARENTDIR+"="+p.ParentDir)
 	return env
+}
+
+func (p *Proc) SetShared(target string) {
+	p.sharedTarget = target
+}
+
+func (p *Proc) GetShared() string {
+	return p.sharedTarget
 }
 
 func (p *Proc) IsPrivilegedProc() bool {

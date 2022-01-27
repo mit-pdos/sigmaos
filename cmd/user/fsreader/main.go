@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 
-	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
-	"ulambda/fslibsrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -18,8 +17,8 @@ import (
 )
 
 //
-// Creates a named pipe in name/<name>/pipe (name is os.Args[1]), reads a
-// data from input (os.Args[2])), and writes it to the named pipe.
+// Reads data from input (os.Args[2])), and writes it to the named pipe found
+// at proc.PARENTDIR/proc.SHARED
 //
 
 func main() {
@@ -35,63 +34,49 @@ func main() {
 type Reader struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	*fslibsrv.MemFs
-	input string
-	pipe  fs.FsObj
-	ctx   fs.CtxI
+	input  string
+	output string
+	ctx    fs.CtxI
 }
 
 func MakeReader(args []string) (*Reader, error) {
 	if len(args) != 3 {
 		return nil, errors.New("MakeReader: too few arguments")
 	}
-	log.Printf("MakeReader: %v\n", args)
+	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
+	db.Name("fsreader-" + proc.GetPid())
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
-	n := proc.PROCDIR + "/server"
-	mfs, err := fslibsrv.MakeMemFsFsl(n, r.FsLib, r.ProcClnt)
-	if err != nil {
-		log.Fatalf("MakeSrvFsLib %v\n", err)
-	}
-	r.MemFs = mfs
-	r.ctx = ctx.MkCtx("", 0, mfs.GetSessCondTable())
-	r.pipe, err = mfs.Root().Create(r.ctx, "pipe", np.DMNAMEDPIPE, 0)
-	if err != nil {
-		log.Fatal("Create error: ", err)
-	}
 	r.input = args[2]
-	go func() {
-		r.Serve()
-	}()
+	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"
+	r.Started(proc.GetPid())
 	return r, nil
 }
 
-// Open r.pipe before opening r.input so that when open r.input fails
-// we will close r.pipe causing the reader to stop waiting on the
-// pipe, and can pick up the exit status "File not found".
 func (r *Reader) Work() string {
 	db.DLPrintf("Reader", "Reader: work\n")
-	_, err := r.pipe.Open(r.ctx, np.OWRITE)
+	// Open the pipe.
+	pipefd, err := r.Open(r.output, np.OWRITE)
 	if err != nil {
-		log.Fatal("Open error: ", err)
+		log.Fatal("%v: Open error: ", db.GetName(), err)
 	}
-	defer r.pipe.Close(r.ctx, np.OWRITE)
+	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
 		return "File not found"
 	}
+	defer r.Close(fd)
 	for {
 		data, err := r.Read(fd, memfs.PIPESZ)
 		if len(data) == 0 || err != nil {
 			break
 		}
-		_, err = r.pipe.(fs.File).Write(r.ctx, 0, data, np.NoV)
+		_, err = r.Write(pipefd, data)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("%v: Error pipe Write: %v", db.GetName(), err)
 		}
 	}
-	r.Close(fd)
 	return "OK"
 }
 

@@ -64,7 +64,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		return fmt.Errorf("Spawn error called after Exited")
 	}
 
-	if err := clnt.addChild(p.Pid, procdir); err != nil {
+	if err := clnt.addChild(p.Pid, procdir, p.GetShared()); err != nil {
 		return err
 	}
 

@@ -22,6 +22,7 @@ import (
  * |  |            |- 1001 // Child mounts this directory as procdir/parent
  * |  |               |- start-sem
  * |  |               |- exit-status
+ * |  |               |- shared -> link/to/parent/shared/state // Symlink to shared state of parent's choosing, if desired.
  * |  |               |- procdir -> /procd/y.y.y.y/pids/1001 // Symlink to child's procdir.
  * |  |                  |- ...
  * |  |
@@ -52,6 +53,7 @@ const (
 	PARENTDIR = "parentdir"
 
 	// Files/directories in "pids/<pid>":
+	SHARED      = "shared"
 	START_SEM   = "start-sem"
 	EXIT_SEM    = "exit-sem"
 	EVICT_SEM   = "evict-sem"

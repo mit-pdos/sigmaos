@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	MAXSYMLINK = 4
+	MAXSYMLINK = 8
 )
 
 func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, w Watch) (np.Tfid, error) {

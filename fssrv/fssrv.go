@@ -201,8 +201,6 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	// will unblock them so that they can bail out.
 	fssrv.sct.DeleteSess(sid)
 
-	log.Printf("%v: CloseSession\n", sid)
-
 	// Wait until nthread == 0
 	sess.WaitThreads()
 
@@ -211,6 +209,4 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// close the reply channel, so that conn writer() terminates
 	close(replies)
-
-	log.Printf("%v: CloseSession: done\n", sid)
 }

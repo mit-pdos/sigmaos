@@ -127,11 +127,12 @@ func (si *StatInfo) Inc(fct np.Tfcall) {
 
 type Stats struct {
 	fs.FsObj
-	mu   sync.Mutex // protects some fields of StatInfo
-	sti  *StatInfo
-	pid  string
-	hz   int
-	done uint32
+	mu            sync.Mutex // protects some fields of StatInfo
+	sti           *StatInfo
+	pid           string
+	hz            int
+	monitoringCPU bool
+	done          uint32
 }
 
 func MkStats(parent fs.Dir) *Stats {
@@ -147,7 +148,11 @@ func (st *Stats) StatInfo() *StatInfo {
 
 func (st *Stats) MonitorCPUUtil() {
 	st.hz = perf.Hz()
-	go st.monitorCPUUtil()
+	// Don't duplicate work
+	if !st.monitoringCPU {
+		st.monitoringCPU = true
+		go st.monitorCPUUtil()
+	}
 }
 
 const (

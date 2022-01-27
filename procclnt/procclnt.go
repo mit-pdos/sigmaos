@@ -159,14 +159,6 @@ func (clnt *ProcClnt) Started(pid string) error {
 		return err
 	}
 
-	// Create exit signal
-	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
-	semExit.Init(0)
-
-	// Create eviction signal
-	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
-	semEvict.Init(0)
-
 	// Mark self as started
 	parentDir := proc.PARENTDIR
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))

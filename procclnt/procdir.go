@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/semclnt"
 )
 
 // For documentation on dir structure, see ulambda/proc/dir.go
@@ -29,6 +30,15 @@ func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error 
 			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 	}
+
+	// Create exit signal
+	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
+	semExit.Init(0)
+
+	// Create eviction signal
+	semEvict := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EVICT_SEM))
+	semEvict.Init(0)
+
 	return nil
 }
 

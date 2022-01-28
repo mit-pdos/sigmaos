@@ -12,10 +12,10 @@ import (
 
 	"ulambda/crash"
 	"ulambda/delay"
+	"ulambda/fenceclnt"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 )
 
@@ -197,21 +197,21 @@ func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
 	return name
 }
 
-func TestWLease(t *testing.T) {
+func TestFenceW(t *testing.T) {
 	ts := makeTstate(t)
-	lease := "name/l"
+	fence := "name/l"
 
 	dirux := "name/ux/~ip/outdir"
 	ts.Mkdir(dirux, 0777)
 	ts.Remove(dirux + "/f")
 
-	fsldl := fslib.MakeFsLibAddr("wlease", fslib.Named())
+	fsldl := fslib.MakeFsLibAddr("wfence", fslib.Named())
 
 	ch := make(chan bool)
 	go func() {
-		wlease := leaseclnt.MakeLeaseClnt(fsldl, lease, 0)
-		err := wlease.WaitWLease([]byte{})
-		assert.Nil(t, err, "WriteLease")
+		wfence := fenceclnt.MakeFenceClnt(fsldl, fence, 0)
+		err := wfence.AcquireFenceW([]byte{})
+		assert.Nil(t, err, "WriteFence")
 
 		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
 		assert.Nil(t, err, "Create")
@@ -238,8 +238,8 @@ func TestWLease(t *testing.T) {
 
 	<-ch
 
-	wlease := leaseclnt.MakeLeaseClnt(ts.FsLib, lease, 0)
-	err := wlease.WaitWLease([]byte{})
+	wfence := fenceclnt.MakeFenceClnt(ts.FsLib, fence, 0)
+	err := wfence.AcquireFenceW([]byte{})
 	assert.Nil(t, err, "Weaklock")
 
 	<-ch

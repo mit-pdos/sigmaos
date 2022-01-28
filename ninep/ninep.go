@@ -47,6 +47,7 @@ type Tpath uint64
 type Qtype uint8
 type TQversion uint32
 
+const NoPath Tpath = ^Tpath(0)
 const NoV TQversion = ^TQversion(0)
 
 func VEq(v1, v2 TQversion) bool {
@@ -106,6 +107,17 @@ type Tqid struct {
 
 func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
+}
+
+// If qid is stale, return error; otherwise nil.  If qid.Path is
+// smaller, then we have a newer incarnation of the same file.  If it
+// is the same file but qid.Version is smaller, then we have seen a
+// newer version of the same file.
+func (q *Tqid) IsStale(qid Tqid) bool {
+	if qid.Path < q.Path || (qid.Path == q.Path && qid.Version < q.Version) {
+		return true
+	}
+	return false
 }
 
 type Tmode uint8
@@ -226,8 +238,8 @@ const (
 	TRgetfile
 	TTsetfile
 	TTremovefile
-	TTlease
-	TTunlease
+	TTfence
+	TTunfence
 )
 
 func (fct Tfcall) String() string {
@@ -302,10 +314,10 @@ func (fct Tfcall) String() string {
 		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
-	case TTlease:
-		return "Tlease"
-	case TTunlease:
-		return "Tunlease"
+	case TTfence:
+		return "Tfence"
+	case TTunfence:
+		return "Tunfence"
 	default:
 		return "Tunknown"
 	}
@@ -485,12 +497,13 @@ type Tremovefile struct {
 	Wnames []string
 }
 
-type Tlease struct {
+type Tfence struct {
 	Wnames []string
 	Qid    Tqid
+	New    bool
 }
 
-type Tunlease struct {
+type Tunfence struct {
 	Wnames []string
 }
 
@@ -598,5 +611,5 @@ func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
-func (Tlease) Type() Tfcall      { return TTlease }
-func (Tunlease) Type() Tfcall    { return TTunlease }
+func (Tfence) Type() Tfcall      { return TTfence }
+func (Tunfence) Type() Tfcall    { return TTunfence }

@@ -11,11 +11,11 @@ import (
 
 	"ulambda/crash"
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -43,8 +43,8 @@ type Group struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	crash     int64
-	primLease *leaseclnt.LeaseClnt
-	lease     *leaseclnt.LeaseClnt
+	primFence *fenceclnt.FenceClnt
+	fence     *fenceclnt.FenceClnt
 	conf      *GrpConf
 }
 
@@ -56,8 +56,8 @@ func RunMember(grp string) {
 
 	mg.Mkdir(GRPDIR, 07)
 
-	mg.primLease = leaseclnt.MakeLeaseClnt(mg.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
-	mg.lease = leaseclnt.MakeLeaseClnt(mg.FsLib, GrpConfPath(grp), 0)
+	mg.primFence = fenceclnt.MakeFenceClnt(mg.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
+	mg.fence = fenceclnt.MakeFenceClnt(mg.FsLib, GrpConfPath(grp), 0)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "kv-"+proc.GetPid())
@@ -72,7 +72,7 @@ func RunMember(grp string) {
 		ch <- true
 	}()
 
-	mg.primLease.WaitWLease(fslib.MakeTarget(mfs.MyAddr()))
+	mg.primFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
 
 	log.Printf("%v: primary %v\n", db.GetName(), grp)
 
@@ -99,13 +99,13 @@ func (mg *Group) recover(grp string) {
 	}
 	// roll back to old conf
 	fn := grpconfbk(grp)
-	err = mg.lease.MakeLeaseFileFrom(fn)
+	err = mg.fence.MakeFenceFileFrom(fn)
 	if err != nil {
-		//log.Printf("%v: MakeLeaseFileFrom %v err %v\n", db.GetName(), fn, err)
+		//log.Printf("%v: MakeFenceFileFrom %v err %v\n", db.GetName(), fn, err)
 		// this must be the first recovery of the kv group;
 		// otherwise, there would be a either a config or
 		// backup config.
-		err = mg.lease.MakeLeaseFileJson(GrpConf{"kv-" + proc.GetPid(), []string{}})
+		err = mg.fence.MakeFenceFileJson(GrpConf{"kv-" + proc.GetPid(), []string{}})
 		if err != nil {
 			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
 		}

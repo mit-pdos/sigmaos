@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/lease"
+	"ulambda/fence"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
 )
@@ -18,12 +18,12 @@ const (
 
 type conn struct {
 	nc *netclnt.NetClnt
-	lm *lease.LeaseMap
+	fm *fence.FenceTable
 }
 
 func makeConn(nc *netclnt.NetClnt) *conn {
 	c := &conn{}
-	c.lm = lease.MakeLeaseMap()
+	c.fm = fence.MakeFenceTable()
 	c.nc = nc
 	return c
 }
@@ -164,30 +164,32 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 	return err
 }
 
-func (cm *ConnMgr) registerLease(lease *lease.Lease) error {
-	req := np.Tlease{lease.Fn, lease.Qid}
+func (cm *ConnMgr) registerFence(fence *fence.Fence, new bool) error {
+	p := np.Split(fence.Path)
+	req := np.Tfence{p, fence.Qid, new}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
-			return !conn.lm.Present(lease.Fn)
+			return !new || !conn.fm.Present(fence.Path)
 		},
 		func(res result) error {
-			if res.err == nil {
-				return res.conn.lm.Add(lease)
+			if res.err == nil && new {
+				return res.conn.fm.Add(fence.Path, fence.Qid)
 			}
-			return nil
+			return res.err
 		})
 	return err
 }
 
-func (cm *ConnMgr) deregisterLease(path []string) error {
-	req := np.Tunlease{path}
+func (cm *ConnMgr) deregisterFence(path []string) error {
+	p := np.Join(path)
+	req := np.Tunfence{path}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
-			return conn.lm.Present(path)
+			return conn.fm.Present(p)
 		},
 		func(res result) error {
 			if res.err == nil {
-				return res.conn.lm.Del(path)
+				return res.conn.fm.Del(p)
 			}
 			return nil
 		})

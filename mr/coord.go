@@ -8,8 +8,8 @@ import (
 
 	"ulambda/crash"
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -50,7 +50,7 @@ type Coord struct {
 	crash       int
 	mapperbin   string
 	reducerbin  string
-	lease       *leaseclnt.LeaseClnt
+	fence       *fenceclnt.FenceClnt
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -79,7 +79,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.Started(proc.GetPid())
 
-	w.lease = leaseclnt.MakeLeaseClnt(w.FsLib, MRDIR+"/lease-coord", 0)
+	w.fence = fenceclnt.MakeFenceClnt(w.FsLib, MRDIR+"/fence-coord", 0)
 
 	crash.Crasher(w.FsLib)
 
@@ -246,10 +246,10 @@ func (w *Coord) phase(dir string, f func(string) string) {
 
 func (w *Coord) Work() {
 	// Try to become the primary coordinator.  Backup coordinators
-	// will be able to acquire the lease if the primary fails or
+	// will be able to acquire the fence if the primary fails or
 	// is partitioned.
-	w.lease.WaitWLease([]byte{})
-	defer w.lease.ReleaseWLease()
+	w.fence.AcquireFenceW([]byte{})
+	defer w.fence.ReleaseFence()
 
 	log.Printf("%v: primary\n", db.GetName())
 

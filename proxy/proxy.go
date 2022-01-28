@@ -21,7 +21,7 @@ type Npd struct {
 
 func MakeNpd() *Npd {
 	npd := &Npd{fslib.Named(), nil}
-	npd.st = session.MakeSessionTable(npd.mkProtServer, npd)
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil)
 	return npd
 }
 

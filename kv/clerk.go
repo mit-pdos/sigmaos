@@ -13,9 +13,9 @@ import (
 	"time"
 
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/group"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -23,18 +23,18 @@ import (
 
 //
 // Clerk for sharded kv service, which repeatedly performs key
-// lookups.  The clerk acquires a lease for the configuration file of
+// lookups.  The clerk acquires a fence for the configuration file of
 // the balancer, which maps shards to kv groups.  If the balancer adds
 // or removes a kv group, the clerk will not be able to perform
 // operations at any kv group until it reacquires the configuration
-// lease, bringing it up to date. The leases avoids the risk that
+// fence, bringing it up to date. The fences avoids the risk that
 // clerk performs an operation at a kv group that doesn't hold the
 // shard anymore (or is in the process of moving a shard)
 //
-// The clerk also acquires leases for each kv group it interacts with.
+// The clerk also acquires fences for each kv group it interacts with.
 // If the kv group changes, the clerk cannot perform any operation at
 // that kv group until it has the new configuration for that group.
-// This lease avoids the risk that the clerk performs an operation at
+// This fence avoids the risk that the clerk performs an operation at
 // a KV server that isn't te primary anymore.
 //
 
@@ -69,8 +69,8 @@ func key(k uint64) string {
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	balLease  *leaseclnt.LeaseClnt
-	grpLeases map[string]*leaseclnt.LeaseClnt
+	balFence  *fenceclnt.FenceClnt
+	grpFences map[string]*fenceclnt.FenceClnt
 	blConf    Config
 	nop       int
 	grpre     *regexp.Regexp
@@ -80,8 +80,8 @@ type KvClerk struct {
 func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
-	kc.balLease = leaseclnt.MakeLeaseClnt(kc.FsLib, KVCONFIG, 0)
-	kc.grpLeases = make(map[string]*leaseclnt.LeaseClnt)
+	kc.balFence = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0)
+	kc.grpFences = make(map[string]*fenceclnt.FenceClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
 	kc.eofre = regexp.MustCompile(`name/group/grp-([0-9]+)/shard`)
@@ -138,49 +138,49 @@ func (kc *KvClerk) Run() {
 		s = err.Error()
 	}
 
-	// We want exited() to not fail because of invalid leases
-	// (e.g., we may still have a lease for a kv group that
-	// doesn't exist anymore. Since we don't need leases anymore,
+	// We want exited() to not fail because of invalid fences
+	// (e.g., we may still have a fence for a kv group that
+	// doesn't exist anymore. Since we don't need fences anymore,
 	// deregister the ones we have.
-	kc.DeregisterLeases()
+	kc.DeregisterFences()
 	kc.Exited(proc.GetPid(), s)
 }
 
-func (kc *KvClerk) releaseLease(grp string) error {
-	l, ok := kc.grpLeases[grp]
+func (kc *KvClerk) releaseFence(grp string) error {
+	l, ok := kc.grpFences[grp]
 	if !ok {
-		return fmt.Errorf("release lease %v not found", grp)
+		return fmt.Errorf("refence fence %v not found", grp)
 	}
-	log.Printf("%v: release grp %v\n", db.GetName(), grp)
-	err := l.ReleaseRLease()
+	log.Printf("%v: refence grp %v\n", db.GetName(), grp)
+	err := l.ReleaseFence()
 	if err != nil {
 		return err
 	}
-	delete(kc.grpLeases, grp)
+	delete(kc.grpFences, grp)
 	return nil
 }
 
-func (kc *KvClerk) acquireLease(grp string) error {
+func (kc *KvClerk) acquireFence(grp string) error {
 	gc := group.GrpConf{}
-	if _, ok := kc.grpLeases[grp]; ok {
+	if _, ok := kc.grpFences[grp]; ok {
 		return nil
 	}
 	fn := group.GrpConfPath(grp)
-	l := leaseclnt.MakeLeaseClnt(kc.FsLib, fn, 0)
-	b, err := l.WaitRLease()
+	l := fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
+	b, err := l.AcquireFenceR()
 	if err != nil {
-		log.Printf("%v: lease %v err %v\n", db.GetName(), grp, err)
+		log.Printf("%v: fence %v err %v\n", db.GetName(), grp, err)
 		return err
 	}
-	kc.grpLeases[grp] = l
+	kc.grpFences[grp] = l
 	json.Unmarshal(b, &gc)
-	//log.Printf("%v: grp lease %v gc %v\n", db.GetName(), grp, gc)
+	//log.Printf("%v: grp fence %v gc %v\n", db.GetName(), grp, gc)
 	return nil
 }
 
 // XXX atomic read
 func (kc *KvClerk) readConfig() error {
-	b, err := kc.balLease.WaitRLease()
+	b, err := kc.balFence.AcquireFenceR()
 	if err != nil {
 		log.Printf("%v: readConfig: err %v\n", db.GetName(), err)
 		return err
@@ -190,16 +190,16 @@ func (kc *KvClerk) readConfig() error {
 	return nil
 }
 
-// Try fix err by releasing group lease
-func (kc KvClerk) releaseGrp(err error) error {
+// Try fix err by releasing group fence
+func (kc KvClerk) refenceGrp(err error) error {
 	s := kc.grpre.FindStringSubmatch(err.Error())
 	if s != nil {
-		return kc.releaseLease("grp-" + s[1])
+		return kc.releaseFence("grp-" + s[1])
 	}
 	return err
 }
 
-// Read config, and retry if we have a stale group lease
+// Read config, and retry if we have a stale group fence
 func (kc KvClerk) retryReadConfig() error {
 	for {
 		err := kc.readConfig()
@@ -207,7 +207,7 @@ func (kc KvClerk) retryReadConfig() error {
 			return nil
 		}
 
-		err = kc.releaseGrp(err)
+		err = kc.refenceGrp(err)
 		if err == nil {
 			log.Printf("%v: retry readConfig\n", db.GetName())
 			continue
@@ -218,11 +218,11 @@ func (kc KvClerk) retryReadConfig() error {
 	}
 }
 
-// Try to fix err by refreshing config lease and rereading it
+// Try to fix err by refreshing config fence and rereading it
 func (kc KvClerk) refreshConfig(err error) error {
 	for {
-		// release lease, just in case we will still have one
-		kc.balLease.ReleaseRLease()
+		// refence fence, just in case we will still have one
+		kc.balFence.ReleaseFence()
 
 		err = kc.retryReadConfig()
 		if err == nil {
@@ -234,10 +234,10 @@ func (kc KvClerk) refreshConfig(err error) error {
 			continue
 		}
 
-		// maybe we couldn't get lease or read config because
-		// we have stale a grp lease lease; check and retry if
+		// maybe we couldn't get fence or read config because
+		// we have stale a grp fence fence; check and retry if
 		// so.
-		err = kc.releaseGrp(err)
+		err = kc.refenceGrp(err)
 		if err == nil {
 			log.Printf("%v: retry refreshConfig\n", db.GetName())
 			continue
@@ -248,10 +248,10 @@ func (kc KvClerk) refreshConfig(err error) error {
 	}
 }
 
-// Try to fix err by refreshing leases
-func (kc *KvClerk) refreshLeases(err error) error {
-	// first check if refreshing group lease is sufficient to retry
-	err = kc.releaseGrp(err)
+// Try to fix err by refreshing fences
+func (kc *KvClerk) refreshFences(err error) error {
+	// first check if refreshing group fence is sufficient to retry
+	err = kc.refenceGrp(err)
 	if err != nil {
 		// try refreshing config is sufficient to fix error
 		// involving KVCONFIG or if EOF to a kv group.
@@ -275,24 +275,24 @@ func (kc *KvClerk) fixRetry(err error) error {
 		return nil
 	}
 
-	// Maybe refreshing leases will help in fixing error
-	return kc.refreshLeases(err)
+	// Maybe refreshing fences will help in fixing error
+	return kc.refreshFences(err)
 }
 
 // Do an operation, but it may fail for several reasons (stale config
-// lease, stale group leae). If an error, try to fix the error, and on
+// fence, stale group leae). If an error, try to fix the error, and on
 // success, retry.
 func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
 		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
-		o.err = kc.acquireLease(kc.blConf.Shards[shard])
+		o.err = kc.acquireFence(kc.blConf.Shards[shard])
 		if o.err != nil {
 			o.err = kc.fixRetry(o.err)
 			if o.err != nil {
 				return
 			}
-			// try again to acquire group lease
+			// try again to acquire group fence
 			continue
 		}
 		o.do(kc.FsLib, fn)

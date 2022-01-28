@@ -18,12 +18,12 @@ import (
 	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
+	"ulambda/fenceclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/group"
 	"ulambda/inode"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -46,8 +46,8 @@ type Balancer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	conf     *Config
-	balLease *leaseclnt.LeaseClnt
-	lease    *leaseclnt.LeaseClnt
+	balFence *fenceclnt.FenceClnt
+	fence    *fenceclnt.FenceClnt
 	mo       *Monitor
 	ch       chan bool
 	crash    int64
@@ -70,8 +70,8 @@ func RunBalancer(auto string) {
 	// bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
-	bl.balLease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
-	bl.lease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVCONFIG, 0)
+	bl.balFence = fenceclnt.MakeFenceClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
+	bl.fence = fenceclnt.MakeFenceClnt(bl.FsLib, KVCONFIG, 0)
 	bl.isBusy = true
 
 	// start server but don't publish its existence
@@ -92,7 +92,7 @@ func RunBalancer(auto string) {
 		ch <- true
 	}()
 
-	bl.balLease.WaitWLease(fslib.MakeTarget(mfs.MyAddr()))
+	bl.balFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
 
 	log.Printf("%v: primary\n", db.GetName())
 
@@ -180,7 +180,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
 			if err.Error() == "EOF" ||
-				strings.HasPrefix(err.Error(), "stale lease") {
+				strings.HasPrefix(err.Error(), "stale fence") {
 				// we are disconnected
 				//log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
 
@@ -196,7 +196,7 @@ func (bl *Balancer) restore() {
 	log.Printf("restore to %v\n", bl.conf)
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
-	err := bl.lease.MakeLeaseFileJson(*bl.conf)
+	err := bl.fence.MakeFenceFileJson(*bl.conf)
 	if err != nil {
 		log.Fatalf("%v: restore err %v\n", db.GetName(), err)
 	}
@@ -212,7 +212,7 @@ func (bl *Balancer) recover() {
 		// otherwise, there would be a either a config or
 		// backup config.
 		bl.conf = MakeConfig(0)
-		err = bl.lease.MakeLeaseFileJson(*bl.conf)
+		err = bl.fence.MakeFenceFileJson(*bl.conf)
 		if err != nil {
 			log.Fatalf("%v: initial config err %v\n", db.GetName(), err)
 		}
@@ -397,7 +397,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 	}
 
 	// Announce new KVNEXTCONFIG to world: copy KVNEXTCONFIG to
-	// KVNEXTBK and make lease from copy (removing the copy too).
+	// KVNEXTBK and make fence from copy (removing the copy too).
 	err = bl.Remove(KVNEXTBK)
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)
@@ -406,9 +406,9 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 	if err != nil {
 		log.Fatalf("%v: copy %v to %v err %v\n", db.GetName(), KVNEXTCONFIG, KVNEXTBK, err)
 	}
-	err = bl.lease.MakeLeaseFileFrom(KVNEXTBK)
+	err = bl.fence.MakeFenceFileFrom(KVNEXTBK)
 	if err != nil {
-		log.Printf("%v: makeleasefrom %v err %v\n", db.GetName(), KVNEXTBK, err)
+		log.Printf("%v: makefencefrom %v err %v\n", db.GetName(), KVNEXTBK, err)
 		// XXX maybe crash
 	}
 

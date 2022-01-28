@@ -3,7 +3,7 @@ package protclnt
 import (
 	"errors"
 
-	"ulambda/lease"
+	"ulambda/fence"
 	np "ulambda/ninep"
 	"ulambda/rand"
 )
@@ -30,12 +30,12 @@ func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }
 
-func (clnt *Clnt) RegisterLease(lease *lease.Lease) error {
-	return clnt.cm.registerLease(lease)
+func (clnt *Clnt) RegisterFence(fence *fence.Fence, new bool) error {
+	return clnt.cm.registerFence(fence, new)
 }
 
-func (clnt *Clnt) DeregisterLease(path []string) error {
-	return clnt.cm.deregisterLease(path)
+func (clnt *Clnt) DeregisterFence(path []string) error {
+	return clnt.cm.deregisterFence(path)
 }
 
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {

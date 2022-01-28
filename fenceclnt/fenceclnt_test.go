@@ -1,4 +1,4 @@
-package leaseclnt_test
+package fenceclnt_test
 
 import (
 	"sync"
@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/leaseclnt"
 )
 
 const (

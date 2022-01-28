@@ -6,6 +6,7 @@ import (
 
 	"ulambda/ctx"
 	db "ulambda/debug"
+	"ulambda/fence"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -31,18 +32,19 @@ import (
 //
 
 type FsServer struct {
-	addr  string
-	root  fs.Dir
-	mkps  protsrv.MkProtServer
-	stats *stats.Stats
-	st    *session.SessionTable
-	sct   *sesscond.SessCondTable
-	wt    *watch.WatchTable
-	srv   *netsrv.NetServer
-	pclnt *procclnt.ProcClnt
-	done  bool
-	ch    chan bool
-	fsl   *fslib.FsLib
+	addr       string
+	root       fs.Dir
+	mkps       protsrv.MkProtServer
+	stats      *stats.Stats
+	st         *session.SessionTable
+	sct        *sesscond.SessCondTable
+	wt         *watch.WatchTable
+	seenFences *fence.FenceTable
+	srv        *netsrv.NetServer
+	pclnt      *procclnt.ProcClnt
+	done       bool
+	ch         chan bool
+	fsl        *fslib.FsLib
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
@@ -53,7 +55,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv)
+	fssrv.seenFences = fence.MakeFenceTable()
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.seenFences)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
@@ -140,28 +143,47 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	go fssrv.serve(sess, fc, replies)
 }
 
-// Register lease, unregister lease, and check lease
+// Register and unregister fences, and check fresness of fences before
+// processing a request.
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
-		// log.Printf("%p: checkLease %v %v\n", fssrv, msg.Type(), req)
-		err := sess.CheckLeases(fssrv.fsl)
+		// Check that all fences for this session are not stale
+		err := sess.CheckFences(fssrv.fsl)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-	case np.Tlease:
-		reply := &np.Ropen{}
-		// log.Printf("%v: %p reglease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
-		if err := sess.Lease(req.Wnames, req.Qid); err != nil {
+	case np.Tfence:
+		log.Printf("%p: Fence %v %v %v\n", fssrv, sess.Sid, msg.Type(), req)
+
+		// Record the fence in the seenFances table. If we
+		// already seen a more recent fence for req.Wnames,
+		// return an error.
+		err := fssrv.seenFences.Register(req)
+		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
+		// Fence was present in seenFences and not out stale,
+		// or was not present. Now mark that all ops on this
+		// sess must be checked against the most recently-seen
+		// fence for req.Wnames in seenFences.  Another sess
+		// may register a more recent fence in seenFences in
+		// the future, and then ops on this session should
+		// fail.
+		sess.Fence(req)
+		reply := &np.Ropen{}
 		return reply, nil
-	case np.Tunlease:
-		reply := &np.Ropen{}
-		// log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
-		if err := sess.Unlease(req.Wnames); err != nil {
+	case np.Tunfence:
+		log.Printf("%p: Unfence %v %v %v\n", fssrv, sess.Sid, msg.Type(), req)
+		err := fssrv.seenFences.Unregister(req.Wnames)
+		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
+		err = sess.Unfence(req.Wnames)
+		if err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		reply := &np.Ropen{}
 		return reply, nil
 	default:
 		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
@@ -196,6 +218,8 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	if !ok {
 		log.Fatalf("CloseSession unknown session %v\n", sid)
 	}
+
+	// XXX remove fence from sess, so that fence maybe free from seen table
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.

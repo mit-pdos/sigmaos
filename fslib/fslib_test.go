@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/leaseclnt"
 	"ulambda/named"
 	np "ulambda/ninep"
 )
@@ -316,9 +316,6 @@ func TestCounter(t *testing.T) {
 	ts.Shutdown()
 }
 
-// Too fail test, set to true
-const FAIL = false
-
 // Inline Set() so that we can delay the Write() to emulate a delay on
 // the server between open and write.
 func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
@@ -338,8 +335,8 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 	return nil
 }
 
-// Caller must have acquired lease and keeps writing
-// until lease is invalidated.
+// Caller must have acquired fence and keeps writing until open fails
+// or write fails because stale fence
 func write(fsl *fslib.FsLib, ch chan int, fn string) {
 	const N = 1000
 	for i := 1; i < N; {
@@ -358,25 +355,25 @@ func write(fsl *fslib.FsLib, ch chan int, fn string) {
 
 func writer(t *testing.T, ch chan int, N int, fn string) {
 	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	l := leaseclnt.MakeLeaseClnt(fsl, "name/config", 0)
+	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0)
 	cont := true
 	for cont {
-		b, err := l.WaitRLease()
+		// Wait for fence to exist, indicating a new
+		// iteration.
+		b, err := f.AcquireFenceR()
 		assert.Equal(t, nil, err)
 		n, err := strconv.Atoi(string(b))
 		write(fsl, ch, fn)
 		if n == N-1 {
 			cont = false
 		}
-		if !FAIL {
-			err = l.ReleaseRLease()
-			assert.Equal(t, nil, err)
-		}
+		err = f.ReleaseFence()
+		assert.Equal(t, nil, err)
 	}
 }
 
 // Open a file, rename it, write to open file, and read renamed file.
-// Without leases the write will not be observed by reader.
+// Without fences the write will not be observed by reader.
 func TestSetRenameGet(t *testing.T) {
 	const N = 100
 
@@ -391,25 +388,31 @@ func TestSetRenameGet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
-	l := leaseclnt.MakeLeaseClnt(ts.FsLib, "name/config", 0)
+	f := fenceclnt.MakeFenceClnt(ts.FsLib, "name/config", 0)
+
+	// Make new fence with iteration number
+	err = f.AcquireFenceW([]byte(strconv.Itoa(0)))
+	assert.Equal(t, nil, err)
 
 	go writer(t, ch, N, fn)
 
 	for i := 0; i < N; i++ {
-		b := []byte(strconv.Itoa(i))
-		err = l.MakeLeaseFile(b)
-		assert.Equal(t, nil, err)
 
 		// Let the writer write for some time
 		time.Sleep(100 * time.Millisecond)
 
-		// Now rename so noone can open the file
+		// Now rename so writer cannot open the file
 		err = ts.Rename(fn, fn1)
 		assert.Equal(t, nil, err)
 
-		// Invalidate any read lease if proc already opened
-		err = l.Invalidate()
+		// Update the fence to next iteration so that any
+		// writer operation will fail, if writer opened before
+		// rename.
+		err = f.SetFenceFile([]byte(strconv.Itoa(i + 1)))
 		assert.Equal(t, nil, err)
+
+		// check that writer didn't get its write in
+		// after rename/setfencefile
 
 		d1, err := ts.ReadFile(fn1)
 		n, err := strconv.Atoi(string(d1))
@@ -422,9 +425,14 @@ func TestSetRenameGet(t *testing.T) {
 			break
 		}
 
+		// Rename back and do another iteration of testing
 		err = ts.Rename(fn1, fn)
 		assert.Equal(t, nil, err)
+
 	}
+
+	err = f.ReleaseFence()
+	assert.Equal(t, nil, err)
 
 	ts.Shutdown()
 }

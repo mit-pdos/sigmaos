@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	LEASENAME = "name/test-lease"
+	FENCENAME = "name/test-fence"
 )
 
 type Tstate struct {
@@ -24,12 +24,12 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemNamed("leaseclnt_test", "..")
-	ts.Mkdir(leaseclnt.LEASE_DIR, 0777)
+	ts.System = kernel.MakeSystemNamed("fenceclnt_test", "..")
+	ts.Mkdir(fenceclnt.FENCE_DIR, 0777)
 	return ts
 }
 
-func TestLease1(t *testing.T) {
+func TestFence1(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := 20
@@ -37,21 +37,21 @@ func TestLease1(t *testing.T) {
 	current := 0
 	done := make(chan int)
 
-	lease := leaseclnt.MakeLeaseClnt(ts.FsLib, LEASENAME, 0)
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0)
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			me := false
 			for !me {
-				err := lease.WaitWLease([]byte{})
-				assert.Nil(ts.t, err, "WaitWLease")
+				err := fence.AcquireFenceW([]byte{})
+				assert.Nil(ts.t, err, "AcquieFenceW")
 				if current == i {
 					current += 1
 					done <- i
 					me = true
 				}
-				err = lease.ReleaseWLease()
-				assert.Nil(ts.t, err, "ReleaseWLease")
+				err = fence.ReleaseFence()
+				assert.Nil(ts.t, err, "ReleaseFence")
 			}
 		}(i)
 		sum += i
@@ -65,23 +65,23 @@ func TestLease1(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestLease2(t *testing.T) {
+func TestFence2(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := 20
 
-	lease1 := leaseclnt.MakeLeaseClnt(ts.FsLib, LEASENAME+"-1234", 0)
-	lease2 := leaseclnt.MakeLeaseClnt(ts.FsLib, LEASENAME+"-1234", 0)
+	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0)
+	fence2 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0)
 
 	for i := 0; i < N; i++ {
-		err := lease1.WaitWLease([]byte{})
-		assert.Nil(ts.t, err, "WaitWLease")
-		err = lease1.ReleaseWLease()
-		assert.Nil(ts.t, err, "ReleaseWLease")
-		err = lease2.WaitWLease([]byte{})
-		assert.Nil(ts.t, err, "WaitWLease")
-		err = lease2.ReleaseWLease()
-		assert.Nil(ts.t, err, "ReleaseWLease")
+		err := fence1.AcquireFenceW([]byte{})
+		assert.Nil(ts.t, err, "AcquireFenceW")
+		err = fence1.ReleaseFence()
+		assert.Nil(ts.t, err, "ReleaseFence")
+		err = fence2.AcquireFenceW([]byte{})
+		assert.Nil(ts.t, err, "AcquireFenceW")
+		err = fence2.ReleaseFence()
+		assert.Nil(ts.t, err, "ReleaseFence")
 	}
 
 	ts.Shutdown()
@@ -94,28 +94,28 @@ func TestLease3(t *testing.T) {
 	n_threads := 20
 	cnt := 0
 
-	lease := leaseclnt.MakeLeaseClnt(ts.FsLib, LEASENAME+"-1234", 0)
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0)
 
 	var done sync.WaitGroup
 	done.Add(n_threads)
 
 	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, lease *leaseclnt.LeaseClnt, N *int, cnt *int) {
+		go func(done *sync.WaitGroup, fence *fenceclnt.FenceClnt, N *int, cnt *int) {
 			defer done.Done()
 			for {
-				err := lease.WaitWLease([]byte{})
-				assert.Nil(ts.t, err, "WaitWLease")
+				err := fence.AcquireFenceW([]byte{})
+				assert.Nil(ts.t, err, "AcquireFence")
 				if *cnt < *N {
 					*cnt += 1
 				} else {
-					err = lease.ReleaseWLease()
-					assert.Nil(ts.t, err, "ReleaseWLease")
+					err = fence.ReleaseFence()
+					assert.Nil(ts.t, err, "ReleaseFence")
 					break
 				}
-				err = lease.ReleaseWLease()
-				assert.Nil(ts.t, err, "ReleaseWLease")
+				err = fence.ReleaseFence()
+				assert.Nil(ts.t, err, "ReleaseFence")
 			}
-		}(&done, lease, &N, &cnt)
+		}(&done, fence, &N, &cnt)
 	}
 
 	done.Wait()
@@ -126,26 +126,26 @@ func TestLease3(t *testing.T) {
 
 // Test if an exit of another session doesn't remove ephemeral files
 // of another session.
-func TestLease4(t *testing.T) {
+func TestFence4(t *testing.T) {
 	ts := makeTstate(t)
 
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
-	lease1 := leaseclnt.MakeLeaseClnt(fsl1, LEASENAME, 0)
+	fence1 := fenceclnt.MakeFenceClnt(fsl1, FENCENAME, 0)
 
 	// Establish a connection
-	_, err := fsl2.ReadDir(leaseclnt.LEASE_DIR)
+	_, err := fsl2.ReadDir(fenceclnt.FENCE_DIR)
 	assert.Nil(ts.t, err, "ReadDir")
 
-	err = lease1.WaitWLease([]byte{})
-	assert.Nil(ts.t, err, "WaitWLease")
+	err = fence1.AcquireFenceW([]byte{})
+	assert.Nil(ts.t, err, "AcquireFenceW")
 
 	fsl2.Exit()
 
 	time.Sleep(2 * time.Second)
 
-	err = lease1.ReleaseWLease()
-	assert.Nil(ts.t, err, "ReleaseWLease")
+	err = fence1.ReleaseFence()
+	assert.Nil(ts.t, err, "ReleaseFence")
 	ts.Shutdown()
 }

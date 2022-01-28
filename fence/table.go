@@ -69,7 +69,7 @@ func (fm *FenceTable) Unregister(path []string) error {
 
 	fn := np.Join(path)
 	if e, ok := fm.fences[fn]; !ok {
-		return fmt.Errorf("unknown fence", fn)
+		return fmt.Errorf("unknown fence %v", fn)
 	} else {
 		e.nref -= 1
 		if e.nref == 0 {

@@ -9,8 +9,8 @@ import (
 	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/delay"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -50,20 +50,20 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage: <partition?> <dir>\n", os.Args[0])
 		os.Exit(1)
 	}
-	fsl := fslib.MakeFsLib("leaser-" + proc.GetPid())
+	fsl := fslib.MakeFsLib("fencer-" + proc.GetPid())
 
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := leaseclnt.MakeLeaseClnt(fsl, leaseclnt.LEASE_DIR+"/lease", 0)
+	l := fenceclnt.MakeFenceClnt(fsl, fenceclnt.FENCE_DIR+"/fence", 0)
 
-	cnt := leaseclnt.LEASE_DIR + "/cnt"
+	cnt := fenceclnt.FENCE_DIR + "/cnt"
 	A := os.Args[2] + "/A"
 
 	pclnt.Started(proc.GetPid())
 
 	partitioned := false
 	for i := 0; i < N; i++ {
-		err := l.WaitWLease([]byte{})
+		err := l.AcquireFenceW([]byte{})
 
 		b, err := fsl.GetFile(cnt)
 		if err != nil {
@@ -116,7 +116,7 @@ func main() {
 		fsl.Close(fd)
 
 		if partitioned {
-			err := l.ReleaseWLease()
+			err := l.ReleaseFence()
 			if err != nil {
 				log.Printf("%v unlock err %v\n", db.GetName(), err)
 			}
@@ -128,7 +128,7 @@ func main() {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}
 
-		l.ReleaseWLease()
+		l.ReleaseFence()
 	}
 	pclnt.Exited(proc.GetPid(), "OK")
 }

@@ -388,7 +388,7 @@ func TestEvict(t *testing.T) {
 	ts.Shutdown()
 }
 
-func testLeaser(t *testing.T, part string) {
+func testFencer(t *testing.T, part string) {
 	const N = 2 // 20
 
 	ts := makeTstate(t)
@@ -407,7 +407,7 @@ func testLeaser(t *testing.T, part string) {
 	assert.Nil(t, err, "makefile error")
 
 	for i := 0; i < N; i++ {
-		a := proc.MakeProc("bin/user/leaser", []string{part, dir})
+		a := proc.MakeProc("bin/user/fencer", []string{part, dir})
 		err = ts.Spawn(a)
 		assert.Nil(t, err, "Spawn")
 		pids = append(pids, a.Pid)
@@ -420,12 +420,12 @@ func testLeaser(t *testing.T, part string) {
 	ts.Shutdown()
 }
 
-func TestLeaserNoPart(t *testing.T) {
-	testLeaser(t, "NO")
+func TestFencerNoPart(t *testing.T) {
+	testFencer(t, "NO")
 }
 
-func TestLeaserWithPart(t *testing.T) {
-	testLeaser(t, "YES")
+func TestFencerWithPart(t *testing.T) {
+	testFencer(t, "YES")
 }
 
 func TestReserveCores(t *testing.T) {

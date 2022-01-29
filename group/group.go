@@ -44,20 +44,18 @@ type Group struct {
 	*procclnt.ProcClnt
 	crash     int64
 	primFence *fenceclnt.FenceClnt
-	fence     *fenceclnt.FenceClnt
 	conf      *GrpConf
 }
 
 func RunMember(grp string) {
-	mg := &Group{}
-	mg.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid())
-	mg.ProcClnt = procclnt.MakeProcClnt(mg.FsLib)
-	mg.crash = crash.GetEnv()
+	g := &Group{}
+	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid())
+	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
+	g.crash = crash.GetEnv()
 
-	mg.Mkdir(GRPDIR, 07)
+	g.Mkdir(GRPDIR, 07)
 
-	mg.primFence = fenceclnt.MakeFenceClnt(mg.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
-	mg.fence = fenceclnt.MakeFenceClnt(mg.FsLib, GrpConfPath(grp), 0)
+	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "kv-"+proc.GetPid())
@@ -72,7 +70,7 @@ func RunMember(grp string) {
 		ch <- true
 	}()
 
-	mg.primFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	g.primFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
 
 	log.Printf("%v: primary %v\n", db.GetName(), grp)
 
@@ -81,7 +79,7 @@ func RunMember(grp string) {
 		// finally primary, but done
 	default:
 		// run until we are told to stop
-		mg.recover(grp)
+		g.recover(grp)
 		<-ch
 	}
 
@@ -90,31 +88,31 @@ func RunMember(grp string) {
 	mfs.Done()
 }
 
-func (mg *Group) recover(grp string) {
+func (g *Group) recover(grp string) {
 	var err error
-	mg.conf, err = readGroupConf(mg.FsLib, GrpConfPath(grp))
+	g.conf, err = readGroupConf(g.FsLib, GrpConfPath(grp))
 	if err == nil {
-		log.Printf("%v: recovery: use %v\n", db.GetName(), mg.conf)
+		log.Printf("%v: recovery: use %v\n", db.GetName(), g.conf)
 		return
 	}
-	// roll back to old conf
+	// no conf, roll back to old conf
 	fn := grpconfbk(grp)
-	err = mg.fence.MakeFenceFileFrom(fn)
+	err = g.ReadFileJson(fn, g.conf)
 	if err != nil {
 		//log.Printf("%v: MakeFenceFileFrom %v err %v\n", db.GetName(), fn, err)
 		// this must be the first recovery of the kv group;
 		// otherwise, there would be a either a config or
 		// backup config.
-		err = mg.fence.MakeFenceFileJson(GrpConf{"kv-" + proc.GetPid(), []string{}})
+		err = g.MakeFileJson(fn, 0777, GrpConf{"kv-" + proc.GetPid(), []string{}})
 		if err != nil {
 			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
 		}
 	} else {
-		log.Printf("%v: recovery: restored config from %v\n", db.GetName(), fn)
+		log.Printf("%v: recovery: restored config %v from %v\n", db.GetName(), g.conf, fn)
 	}
 }
 
-func (mg *Group) op(opcode, kv string) {
+func (g *Group) op(opcode, kv string) {
 	log.Printf("%v: opcode %v kv %v\n", db.GetName(), opcode, kv)
 }
 
@@ -140,7 +138,7 @@ func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 
 type GroupCtl struct {
 	fs.FsObj
-	mg *Group
+	g *Group
 }
 
 func makeGroupCtl(ctx fs.CtxI, parent fs.Dir, kv *Group) fs.FsObj {
@@ -153,7 +151,7 @@ func (c *GroupCtl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) 
 	if len(words) != 2 {
 		return 0, fmt.Errorf("Invalid arguments")
 	}
-	c.mg.op(words[0], words[1])
+	c.g.op(words[0], words[1])
 	return np.Tsize(len(b)), nil
 }
 

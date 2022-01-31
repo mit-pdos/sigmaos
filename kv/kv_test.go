@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
@@ -54,10 +55,16 @@ func TestBalance(t *testing.T) {
 }
 
 func TestRegex(t *testing.T) {
+	// grp re
 	grpre := regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
 	s := grpre.FindStringSubmatch("file not found /name/group/grp-9-conf")
 	assert.NotNil(t, s, "Find")
 	s = grpre.FindStringSubmatch("file not found /name/group/grp-10-conf")
+	assert.NotNil(t, s, "Find")
+
+	// idf re
+	idfre := regexp.MustCompile(`stale ([0-9]+)`)
+	s = idfre.FindStringSubmatch("stale 13450299701090436378")
 	assert.NotNil(t, s, "Find")
 }
 
@@ -82,7 +89,7 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
 }
 
 func (ts *Tstate) setup(nclerk int) {
-	log.Printf("start kv\n")
+	log.Printf("%v: start kv\n", db.GetName())
 
 	// add 1 kv so that we can put to initialize
 	gn := group.GRP + "0"

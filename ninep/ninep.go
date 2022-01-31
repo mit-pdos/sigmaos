@@ -22,6 +22,7 @@ type Tgid uint32
 // Augmentations
 type Tsession uint64
 type Tseqno uint64
+type Tfenceid uint64
 
 // Atomically increment pointer and return result
 func (n *Tseqno) Next() Tseqno {
@@ -49,6 +50,7 @@ type TQversion uint32
 
 const NoPath Tpath = ^Tpath(0)
 const NoV TQversion = ^TQversion(0)
+const NoFence Tfenceid = ^Tfenceid(0)
 
 func VEq(v1, v2 TQversion) bool {
 	return v1 == NoV || v1 == v2
@@ -109,12 +111,11 @@ func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
 }
 
-// If qid is stale, return error; otherwise nil.  If qid.Path is
-// smaller, then we have a newer incarnation of the same file.  If it
-// is the same file but qid.Version is smaller, then we have seen a
-// newer version of the same file.
-func (q *Tqid) IsStale(qid Tqid) bool {
-	if qid.Path < q.Path || (qid.Path == q.Path && qid.Version < q.Version) {
+// If qid is fresh in relation to q, return true, otherwise false.  If
+// q.Path == qid.Path, then it is the same file.  If it is is the same
+// file and qid.Version is equal or larger, then qid is fresh.
+func (q *Tqid) IsFresh(qid Tqid) bool {
+	if qid.Path == q.Path && qid.Version >= q.Version {
 		return true
 	}
 	return false
@@ -238,6 +239,8 @@ const (
 	TRgetfile
 	TTsetfile
 	TTremovefile
+	TTmkfence
+	TRmkfence
 	TTfence
 	TTunfence
 )
@@ -314,6 +317,10 @@ func (fct Tfcall) String() string {
 		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
+	case TTmkfence:
+		return "Tmkfence"
+	case TRmkfence:
+		return "Rmkfence"
 	case TTfence:
 		return "Tfence"
 	case TTunfence:
@@ -497,14 +504,22 @@ type Tremovefile struct {
 	Wnames []string
 }
 
+type Tmkfence struct {
+	Fid Tfid
+}
+
+type Rmkfence struct {
+	Fence Tfenceid
+}
+
 type Tfence struct {
-	Wnames []string
-	Qid    Tqid
-	New    bool
+	Fence Tfenceid
+	Qid   Tqid
+	Last  Tqid
 }
 
 type Tunfence struct {
-	Wnames []string
+	Fence Tfenceid
 }
 
 type Rremove struct {
@@ -611,5 +626,7 @@ func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
+func (Tmkfence) Type() Tfcall    { return TTmkfence }
+func (Rmkfence) Type() Tfcall    { return TRmkfence }
 func (Tfence) Type() Tfcall      { return TTfence }
 func (Tunfence) Type() Tfcall    { return TTunfence }

@@ -6,10 +6,10 @@ import (
 	// "time"
 
 	db "ulambda/debug"
+	"ulambda/fence"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
-	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/stats"
@@ -23,13 +23,13 @@ import (
 //
 
 type FsObjSrv struct {
-	fssrv *fssrv.FsServer
-	wt    *watch.WatchTable // shared across sessions
-	ft    *fidTable
-	et    *ephemeralTable
-	lease *lease.Lease
-	stats *stats.Stats
-	sid   np.Tsession
+	fssrv      *fssrv.FsServer
+	wt         *watch.WatchTable // shared across sessions
+	ft         *fidTable
+	et         *ephemeralTable
+	seenFences *fence.FenceTable
+	stats      *stats.Stats
+	sid        np.Tsession
 }
 
 func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
@@ -41,6 +41,7 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos.et = makeEphemeralTable()
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
+	fos.seenFences = srv.GetSeenFences()
 	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
@@ -282,6 +283,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return r
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	fos.seenFences.UpdateFence(nf.Path(), o1.Qid())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -585,7 +587,8 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if err != nil {
 			return err
 		}
-		fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+		nf := fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+		fos.seenFences.UpdateFence(nf.Path(), lo.Qid())
 	} else {
 		fos.stats.Path(f.Path())
 		_, r = lo.Open(f.Ctx(), args.Mode)
@@ -605,5 +608,15 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	default:
 		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)
 	}
+	return nil
+}
+
+func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
+	f, err := fos.lookup(args.Fid)
+	if err != nil {
+		return err
+	}
+	rets.Fence = fos.seenFences.MkFence(f.Path())
+	log.Printf("mkfence f %v -> %v\n", f, rets.Fence)
 	return nil
 }

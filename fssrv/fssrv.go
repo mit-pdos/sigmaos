@@ -75,6 +75,10 @@ func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
 	return fssrv.sct
 }
 
+func (fssrv *FsServer) GetSeenFences() *fence.FenceTable {
+	return fssrv.seenFences
+}
+
 func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
 }
@@ -154,32 +158,33 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 			return nil, &np.Rerror{err.Error()}
 		}
 	case np.Tfence:
-		log.Printf("%p: Fence %v %v %v\n", fssrv, sess.Sid, msg.Type(), req)
-
-		// Record the fence in the seenFances table. If we
-		// already seen a more recent fence for req.Wnames,
-		// return an error.
+		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.seenFences.Register(req)
 		if err != nil {
+			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)
 			return nil, &np.Rerror{err.Error()}
 		}
 		// Fence was present in seenFences and not out stale,
 		// or was not present. Now mark that all ops on this
 		// sess must be checked against the most recently-seen
-		// fence for req.Wnames in seenFences.  Another sess
+		// fence for req.FenceId in seenFences.  Another sess
 		// may register a more recent fence in seenFences in
 		// the future, and then ops on this session should
 		// fail.
-		sess.Fence(req)
+		err = sess.Fence(req)
+		if err != nil {
+			log.Printf("%v: Fence sess %v %v err %v\n", db.GetName(), sess.Sid, req, err)
+			return nil, &np.Rerror{err.Error()}
+		}
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Tunfence:
-		log.Printf("%p: Unfence %v %v %v\n", fssrv, sess.Sid, msg.Type(), req)
-		err := fssrv.seenFences.Unregister(req.Wnames)
+		log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
+		err := fssrv.seenFences.Unregister(req.Fence)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-		err = sess.Unfence(req.Wnames)
+		err = sess.Unfence(req.Fence)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}

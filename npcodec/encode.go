@@ -74,8 +74,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid, np.Tfenceid,
+			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid, *np.Tfenceid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -205,7 +205,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			log.Fatal("Unknown type")
+			log.Fatal("encode: Unknown type")
 		}
 	}
 
@@ -219,7 +219,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid, *np.Tfenceid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}

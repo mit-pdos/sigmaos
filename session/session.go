@@ -42,15 +42,15 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, fm *fence.FenceTable)
 }
 
 func (sess *Session) Fence(req np.Tfence) error {
-	if req.New {
-		return sess.myFences.Add(np.Join(req.Wnames), req.Qid)
+	if req.Qid == req.Last {
+		return sess.myFences.Add(req.Fence, req.Qid)
 	} else {
-		return sess.myFences.Update(np.Join(req.Wnames), req.Qid)
+		return sess.myFences.Update(req.Fence, req.Qid)
 	}
 }
 
-func (sess *Session) Unfence(fn []string) error {
-	return sess.myFences.Del(np.Join(fn))
+func (sess *Session) Unfence(idf np.Tfenceid) error {
+	return sess.myFences.Del(idf)
 }
 
 func (sess *Session) CheckFences(fsl *fslib.FsLib) error {

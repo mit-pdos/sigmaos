@@ -69,27 +69,30 @@ func key(k uint64) string {
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	balFence  *fenceclnt.FenceClnt
-	grpFences map[string]*fenceclnt.FenceClnt
+	balFclnt  *fenceclnt.FenceClnt
+	grpFclnts map[np.Tfenceid]*fenceclnt.FenceClnt
+	fenceids  map[string]np.Tfenceid
 	blConf    Config
 	nop       int
 	grpre     *regexp.Regexp
-	eofre     *regexp.Regexp
+	idfre     *regexp.Regexp
 }
 
 func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
-	kc.balFence = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0)
-	kc.grpFences = make(map[string]*fenceclnt.FenceClnt)
+	kc.balFclnt = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0)
+	kc.grpFclnts = make(map[np.Tfenceid]*fenceclnt.FenceClnt)
+	kc.fenceids = make(map[string]np.Tfenceid)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
-	kc.eofre = regexp.MustCompile(`name/group/grp-([0-9]+)/shard`)
-
+	kc.idfre = regexp.MustCompile(`stale ([0-9]+)`)
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
 	}
+	// we have fenceid now
+	kc.fenceids[kc.balFclnt.Name()] = kc.balFclnt.Fence().Fence
 	return kc
 }
 
@@ -147,40 +150,59 @@ func (kc *KvClerk) Run() {
 }
 
 func (kc *KvClerk) releaseFence(grp string) error {
-	l, ok := kc.grpFences[grp]
+	idf, ok := kc.fenceids[grp]
 	if !ok {
-		return fmt.Errorf("refence fence %v not found", grp)
+		return fmt.Errorf("release fenceid %v not found", grp)
 	}
-	log.Printf("%v: refence grp %v\n", db.GetName(), grp)
-	err := l.ReleaseFence()
+	f, ok := kc.grpFclnts[idf]
+	if !ok {
+		return fmt.Errorf("release fclnt %v not found", grp)
+	}
+	log.Printf("%v: release grp %v\n", db.GetName(), grp)
+	err := f.ReleaseFence()
 	if err != nil {
 		return err
 	}
-	delete(kc.grpFences, grp)
 	return nil
 }
 
+// Dynamically allocate a FenceClnt if we haven't seen this grp before.
 func (kc *KvClerk) acquireFence(grp string) error {
-	gc := group.GrpConf{}
-	if _, ok := kc.grpFences[grp]; ok {
-		return nil
+	var fc *fenceclnt.FenceClnt
+	first := true
+	if idf, ok := kc.fenceids[grp]; ok {
+		first = false
+		fc, ok = kc.grpFclnts[idf]
+		if !ok {
+			log.Fatalf("FATAL refence fclnt %v not found", grp)
+		}
+		if fc.Fence() != nil {
+			// we have acquired a fence
+			return nil
+		}
+	} else {
+		fn := group.GrpConfPath(grp)
+		fc = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
 	}
-	fn := group.GrpConfPath(grp)
-	l := fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
-	b, err := l.AcquireFenceR()
+	b, err := fc.AcquireFenceR()
 	if err != nil {
 		log.Printf("%v: fence %v err %v\n", db.GetName(), grp, err)
 		return err
 	}
-	kc.grpFences[grp] = l
+	gc := group.GrpConf{}
 	json.Unmarshal(b, &gc)
-	//log.Printf("%v: grp fence %v gc %v\n", db.GetName(), grp, gc)
+	log.Printf("%v: grp fence %v gc %v\n", db.GetName(), grp, gc)
+	if first {
+		kc.fenceids[grp] = fc.Fence().Fence
+		kc.grpFclnts[fc.Fence().Fence] = fc
+	}
 	return nil
 }
 
 // XXX atomic read
 func (kc *KvClerk) readConfig() error {
-	b, err := kc.balFence.AcquireFenceR()
+	log.Printf("%v: start readConfig %v\n", db.GetName(), kc.blConf)
+	b, err := kc.balFclnt.AcquireFenceR()
 	if err != nil {
 		log.Printf("%v: readConfig: err %v\n", db.GetName(), err)
 		return err
@@ -191,8 +213,20 @@ func (kc *KvClerk) readConfig() error {
 }
 
 // Try fix err by releasing group fence
-func (kc KvClerk) refenceGrp(err error) error {
-	s := kc.grpre.FindStringSubmatch(err.Error())
+func (kc KvClerk) releaseGrp(err error) error {
+	s := kc.idfre.FindStringSubmatch(err.Error())
+	if s != nil {
+		log.Printf("releaseGrp idf %v\n", s[1])
+		idf, err := strconv.ParseUint(s[1], 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		f, ok := kc.grpFclnts[np.Tfenceid(idf)]
+		if ok {
+			return f.ReleaseFence()
+		}
+	}
+	s = kc.grpre.FindStringSubmatch(err.Error())
 	if s != nil {
 		return kc.releaseFence("grp-" + s[1])
 	}
@@ -206,10 +240,15 @@ func (kc KvClerk) retryReadConfig() error {
 		if err == nil {
 			return nil
 		}
-
-		err = kc.refenceGrp(err)
+		err = kc.releaseGrp(err)
 		if err == nil {
 			log.Printf("%v: retry readConfig\n", db.GetName())
+			continue
+		}
+
+		// maybe retryReadConfig failed with a stale error
+		if strings.HasPrefix(err.Error(), "stale") {
+			log.Printf("%v: retry refreshConfig %v\n", db.GetName(), err)
 			continue
 		}
 
@@ -222,7 +261,7 @@ func (kc KvClerk) retryReadConfig() error {
 func (kc KvClerk) refreshConfig(err error) error {
 	for {
 		// refence fence, just in case we will still have one
-		kc.balFence.ReleaseFence()
+		kc.balFclnt.ReleaseFence()
 
 		err = kc.retryReadConfig()
 		if err == nil {
@@ -235,9 +274,8 @@ func (kc KvClerk) refreshConfig(err error) error {
 		}
 
 		// maybe we couldn't get fence or read config because
-		// we have stale a grp fence fence; check and retry if
-		// so.
-		err = kc.refenceGrp(err)
+		// we have stale grp fence; check and retry if so.
+		err = kc.releaseGrp(err)
 		if err == nil {
 			log.Printf("%v: retry refreshConfig\n", db.GetName())
 			continue
@@ -251,12 +289,15 @@ func (kc KvClerk) refreshConfig(err error) error {
 // Try to fix err by refreshing fences
 func (kc *KvClerk) refreshFences(err error) error {
 	// first check if refreshing group fence is sufficient to retry
-	err = kc.refenceGrp(err)
+	err = kc.releaseGrp(err)
 	if err != nil {
 		// try refreshing config is sufficient to fix error
 		// involving KVCONFIG or if EOF to a kv group.
+		log.Printf("refresh config? %v\n", err)
 		if strings.Contains(err.Error(), KVCONFIG) ||
+			strings.HasPrefix(err.Error(), "stale") ||
 			err.Error() == "EOF" {
+			log.Printf("refresh config %v\n", err)
 			err = kc.refreshConfig(err)
 		}
 	}
@@ -267,7 +308,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 func (kc *KvClerk) fixRetry(err error) error {
 	log.Printf("%v: fixRetry err %v\n", db.GetName(), err)
 
-	// Shard dir hasn't been create yet (config 0) or hasn't moved
+	// Shard dir hasn't been created yet (config 0) or hasn't moved
 	// yet, so wait a bit, and retry.  XXX make sleep time
 	// dynamic?
 	if strings.HasPrefix(err.Error(), "file not found shard") {
@@ -286,6 +327,7 @@ func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
 		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
+		log.Printf("acquire: %v\n", kc.blConf.Shards[shard])
 		o.err = kc.acquireFence(kc.blConf.Shards[shard])
 		if o.err != nil {
 			o.err = kc.fixRetry(o.err)
@@ -332,7 +374,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
+	log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

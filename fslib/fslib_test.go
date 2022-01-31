@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/named"
@@ -333,108 +332,6 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 		return err
 	}
 	return nil
-}
-
-// Caller must have acquired fence and keeps writing until open fails
-// or write fails because stale fence
-func write(fsl *fslib.FsLib, ch chan int, fn string) {
-	const N = 1000
-	for i := 1; i < N; {
-		d := []byte(strconv.Itoa(i))
-		err := writeFile(fsl, fn, d)
-		if err == nil {
-			i++
-		} else {
-			// log.Printf("write %v err %v\n", i, err)
-			ch <- i - 1
-			return
-		}
-	}
-	ch <- N - 1
-}
-
-func writer(t *testing.T, ch chan int, N int, fn string) {
-	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0)
-	cont := true
-	for cont {
-		// Wait for fence to exist, indicating a new
-		// iteration.
-		b, err := f.AcquireFenceR()
-		assert.Equal(t, nil, err)
-		n, err := strconv.Atoi(string(b))
-		write(fsl, ch, fn)
-		if n == N-1 {
-			cont = false
-		}
-		err = f.ReleaseFence()
-		assert.Equal(t, nil, err)
-	}
-}
-
-// Open a file, rename it, write to open file, and read renamed file.
-// Without fences the write will not be observed by reader.
-func TestSetRenameGet(t *testing.T) {
-	const N = 100
-
-	ts := makeTstate(t)
-
-	err := ts.Mkdir("name/d1", 0777)
-	assert.Equal(t, nil, err)
-	fn := "name/d1/f"
-	fn1 := "name/d1/f1"
-	d := []byte(strconv.Itoa(0))
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
-	assert.Equal(t, nil, err)
-
-	ch := make(chan int)
-	f := fenceclnt.MakeFenceClnt(ts.FsLib, "name/config", 0)
-
-	// Make new fence with iteration number
-	err = f.AcquireFenceW([]byte(strconv.Itoa(0)))
-	assert.Equal(t, nil, err)
-
-	go writer(t, ch, N, fn)
-
-	for i := 0; i < N; i++ {
-
-		// Let the writer write for some time
-		time.Sleep(100 * time.Millisecond)
-
-		// Now rename so writer cannot open the file
-		err = ts.Rename(fn, fn1)
-		assert.Equal(t, nil, err)
-
-		// Update the fence to next iteration so that any
-		// writer operation will fail, if writer opened before
-		// rename.
-		err = f.SetFenceFile([]byte(strconv.Itoa(i + 1)))
-		assert.Equal(t, nil, err)
-
-		// check that writer didn't get its write in
-		// after rename/setfencefile
-
-		d1, err := ts.ReadFile(fn1)
-		n, err := strconv.Atoi(string(d1))
-		assert.Equal(t, nil, err)
-
-		m := <-ch
-
-		if n != m {
-			assert.Equal(t, n, m)
-			break
-		}
-
-		// Rename back and do another iteration of testing
-		err = ts.Rename(fn1, fn)
-		assert.Equal(t, nil, err)
-
-	}
-
-	err = f.ReleaseFence()
-	assert.Equal(t, nil, err)
-
-	ts.Shutdown()
 }
 
 func TestWatchCreate(t *testing.T) {

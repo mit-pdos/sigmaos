@@ -7,14 +7,14 @@ import (
 )
 
 type Fence struct {
-	Path string
-	Qid  np.Tqid
+	Fence np.Tfenceid
+	Qid   np.Tqid
 }
 
 func (f *Fence) String() string {
-	return fmt.Sprintf("p %v qid %v", f.Path, f.Qid)
+	return fmt.Sprintf("idf %v qid %v", f.Fence, f.Qid)
 }
 
-func MakeFence(path string, qid np.Tqid) *Fence {
-	return &Fence{path, qid}
+func MakeFence(fence np.Tfenceid, qid np.Tqid) *Fence {
+	return &Fence{fence, qid}
 }

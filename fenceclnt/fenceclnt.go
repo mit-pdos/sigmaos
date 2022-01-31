@@ -1,8 +1,6 @@
 package fenceclnt
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"strings"
 
@@ -50,135 +48,120 @@ type FenceClnt struct {
 	*fslib.FsLib
 	perm np.Tperm
 	mode np.Tmode
+	f    *fence.Fence
 }
 
 func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm) *FenceClnt {
-	f := &FenceClnt{}
-	f.fenceName = name
-	f.FsLib = fsl
-	f.perm = perm
-	return f
+	fc := &FenceClnt{}
+	fc.fenceName = name
+	fc.FsLib = fsl
+	fc.perm = perm
+	return fc
 }
 
-func (f *FenceClnt) registerFence(mode np.Tmode) error {
-	f.mode = mode
-	st, err := f.Stat(f.fenceName)
+func (fc *FenceClnt) Fence() *fence.Fence {
+	return fc.f
+}
+
+func (fc *FenceClnt) Name() string {
+	return fc.fenceName
+}
+
+func (fc *FenceClnt) registerFence(mode np.Tmode) error {
+	fence, err := fc.MakeFence(fc.fenceName, mode)
 	if err != nil {
-		log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
+		log.Printf("%v: MakeFence %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
-	err = f.RegisterFence(fence.MakeFence(f.fenceName, st.Qid))
+	log.Printf("%v: MakeFence %v fence %v", db.GetName(), fc.fenceName, fence)
+	if fc.f == nil {
+		fc.mode = mode
+		err = fc.RegisterFence(fence, fence.Qid)
+	} else {
+		err = fc.UpdateFence(fence, fc.f.Qid)
+	}
 	if err != nil {
-		log.Printf("%v: registerRFence %v err %v", db.GetName(), f.fenceName, err)
+		log.Printf("%v: registerFence %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
+	fc.f = fence
 	return nil
 }
-
-func (f *FenceClnt) updateFence() error {
-	st, err := f.Stat(f.fenceName)
-	if err != nil {
-		log.Printf("%v: Stat %v err %v", db.GetName(), st, err)
-		return err
-	}
-	err = f.UpdateFence(fence.MakeFence(f.fenceName, st.Qid))
-	if err != nil {
-		log.Printf("%v: registerRFence %v err %v", db.GetName(), f.fenceName, err)
-		return err
-	}
-	return nil
-}
-
-//
-// Acquire fences for writing
-//
 
 // Wait to obtain a write fence and initialize the file with b
 // XXX cleanup on failure
 // XXX create and write atomic
-func (f *FenceClnt) AcquireFenceW(b []byte) error {
-	fd, err := f.Create(f.fenceName, f.perm|np.DMTMP, np.OWRITE|np.OWATCH)
+func (fc *FenceClnt) AcquireFenceW(b []byte) error {
+	fd, err := fc.Create(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
-		log.Printf("%v: Makefile %v err %v", db.GetName(), f.fenceName, err)
+		log.Printf("%v: Create %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
-	_, err = f.Write(fd, b)
+
+	_, err = fc.Write(fd, b)
 	if err != nil {
-		log.Printf("%v: write %v err %v", db.GetName(), f.fenceName, err)
+		log.Printf("%v: Write %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
-	f.Close(fd)
-	return f.registerFence(np.OWRITE)
+	fc.Close(fd)
+	return fc.registerFence(np.OWRITE)
 }
 
-func (f *FenceClnt) ReleaseFence() error {
-	if f.mode == np.OWRITE {
-		err := f.Remove(f.fenceName)
+func (fc *FenceClnt) ReleaseFence() error {
+	// First deregister fence
+	if fc.f == nil {
+		log.Fatalf("%v: FATAL ReleaseFence %v\n", db.GetName(), fc.fenceName)
+	}
+	err := fc.DeregisterFence(fc.f.Fence)
+	if err != nil {
+		return err
+	}
+	fc.f = nil
+	// Then, remove file so that the next acquirer can run
+	if fc.mode == np.OWRITE {
+		err := fc.Remove(fc.fenceName)
 		if err != nil {
-			log.Printf("%v: Remove %v err %v", db.GetName(), f.fenceName, err)
+			log.Printf("%v: Remove %v err %v", db.GetName(), fc.fenceName, err)
 			return err
 		}
 	}
-	return f.DeregisterFence(f.fenceName)
-}
-
-// Make the fence file
-func (f *FenceClnt) MakeFenceFile(b []byte) error {
-	err := f.MakeFile(f.fenceName, 0777|np.DMTMP, np.OWRITE, b)
-	if err != nil {
-		log.Printf("%v: MakeFenceFile %v err %v", db.GetName(), f.fenceName, err)
-		return err
-	}
-	// XXX notify fence has changed
 	return nil
 }
 
 // Update the fence file
-func (f *FenceClnt) SetFenceFile(b []byte) error {
-	_, err := f.SetFile(f.fenceName, b)
+func (fc *FenceClnt) SetFenceFile(b []byte) error {
+	_, err := fc.SetFile(fc.fenceName, b)
 	if err != nil {
-		log.Printf("%v: SetFenceFile %v err %v", db.GetName(), f.fenceName, err)
+		log.Printf("%v: SetFenceFile %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
-	return f.updateFence()
+	return fc.registerFence(0)
 }
 
-func (f *FenceClnt) MakeFenceFileJson(i interface{}) error {
-	b, err := json.Marshal(i)
+func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
+	err := fc.Rename(from, fc.fenceName)
 	if err != nil {
-		return fmt.Errorf("Marshal error %v", err)
-	}
-	return f.MakeFenceFile(b)
-}
-
-func (f *FenceClnt) MakeFenceFileFrom(from string) error {
-	err := f.Rename(from, f.fenceName)
-	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, f.fenceName, err)
+		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, fc.fenceName, err)
 		return err
 	}
-	return f.updateFence()
+	return fc.registerFence(0)
 }
 
-//
-// Acquire fence in "read" mode
-//
-
-func (f *FenceClnt) AcquireFenceR() ([]byte, error) {
+func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
 	ch := make(chan bool)
 	for {
-		// log.Printf("%v: file watch %v\n", db.GetName(), f.fenceName)
-		b, err := f.ReadFileWatch(f.fenceName, func(string, error) {
+		// log.Printf("%v: file watch %v\n", db.GetName(), fc.fenceName)
+		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
 			ch <- true
 		})
 		if err != nil && strings.HasPrefix(err.Error(), "file not found") {
-			// log.Printf("%v: file watch wait %v\n", db.GetName(), f.fenceName)
+			// log.Printf("%v: file watch wait %v\n", db.GetName(), fc.fenceName)
 			<-ch
 		} else if err != nil {
 			return nil, err
 		} else {
-			// log.Printf("%v: file watch return %v\n", db.GetName(), f.fenceName)
-			return b, f.registerFence(np.OREAD)
+			// log.Printf("%v: file watch return %v\n", db.GetName(), fc.fenceName)
+			return b, fc.registerFence(np.OREAD)
 		}
 	}
 }

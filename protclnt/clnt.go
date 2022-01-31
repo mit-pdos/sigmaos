@@ -30,12 +30,12 @@ func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }
 
-func (clnt *Clnt) RegisterFence(fence *fence.Fence, new bool) error {
-	return clnt.cm.registerFence(fence, new)
+func (clnt *Clnt) RegisterFence(fence *fence.Fence, last np.Tqid) error {
+	return clnt.cm.registerFence(fence, last)
 }
 
-func (clnt *Clnt) DeregisterFence(path []string) error {
-	return clnt.cm.deregisterFence(path)
+func (clnt *Clnt) DeregisterFence(idf np.Tfenceid) error {
+	return clnt.cm.deregisterFence(idf)
 }
 
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
@@ -282,6 +282,19 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm n
 		return nil, err
 	}
 	msg, ok := reply.(np.Rwrite)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (pclnt *ProtClnt) MkFence(fid np.Tfid) (*np.Rmkfence, error) {
+	args := np.Tmkfence{fid}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rmkfence)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}

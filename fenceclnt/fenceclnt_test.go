@@ -1,6 +1,7 @@
 package fenceclnt_test
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	np "ulambda/ninep"
 )
 
 const (
@@ -44,7 +46,7 @@ func TestFence1(t *testing.T) {
 			me := false
 			for !me {
 				err := fence.AcquireFenceW([]byte{})
-				assert.Nil(ts.t, err, "AcquieFenceW")
+				assert.Nil(ts.t, err, "AcquireFenceW")
 				if current == i {
 					current += 1
 					done <- i
@@ -87,6 +89,7 @@ func TestFence2(t *testing.T) {
 	ts.Shutdown()
 }
 
+// n threads help to increase cnt to N
 func TestLease3(t *testing.T) {
 	ts := makeTstate(t)
 
@@ -147,5 +150,169 @@ func TestFence4(t *testing.T) {
 
 	err = fence1.ReleaseFence()
 	assert.Nil(ts.t, err, "ReleaseFence")
+	ts.Shutdown()
+}
+
+// Inline Set() so that we can delay the Write() to emulate a delay on
+// the server between open and write.
+func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
+	fd, err := fl.Open(fn, np.OWRITE)
+	if err != nil {
+		return err
+	}
+	time.Sleep(10 * time.Millisecond)
+	_, err = fl.Write(fd, d)
+	if err != nil {
+		return err
+	}
+	err = fl.Close(fd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Caller must have acquired fence and keeps writing until open fails
+// or write fails because stale fence
+func write(fsl *fslib.FsLib, ch chan int, fn string) {
+	const N = 1000
+	for i := 1; i < N; {
+		d := []byte(strconv.Itoa(i))
+		err := writeFile(fsl, fn, d)
+		if err == nil {
+			i++
+		} else {
+			// log.Printf("write %v err %v\n", i, err)
+			ch <- i - 1
+			return
+		}
+	}
+	ch <- N - 1
+}
+
+func writer(t *testing.T, ch chan int, N int, fn string) {
+	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
+	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0)
+	cont := true
+	for cont {
+		// Wait for fence to exist, indicating a new
+		// iteration.
+		b, err := f.AcquireFenceR()
+		assert.Equal(t, nil, err)
+		n, err := strconv.Atoi(string(b))
+		write(fsl, ch, fn)
+		if n == N-1 {
+			cont = false
+		}
+		err = f.ReleaseFence()
+		assert.Equal(t, nil, err)
+	}
+}
+
+// Test fences with two fsclnts. One makes a write fence for an epoch
+// file. The other fsclnt opens another file and writes to it under a
+// read fence.  If the first fsclnt changes the fence (incrementing
+// the epoch) between the second fsclnt one opening and writing the
+// other file, the write should fail with stale error.
+func TestSetRenameGet(t *testing.T) {
+	const N = 100
+
+	ts := makeTstate(t)
+
+	err := ts.Mkdir("name/d1", 0777)
+	assert.Equal(t, nil, err)
+	fn := "name/d1/f"
+	fn1 := "name/d1/f1"
+	d := []byte(strconv.Itoa(0))
+	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	ch := make(chan int)
+	f := fenceclnt.MakeFenceClnt(ts.FsLib, "name/config", 0)
+
+	// Make new fence with iteration number
+	err = f.AcquireFenceW([]byte(strconv.Itoa(0)))
+	assert.Equal(t, nil, err)
+
+	go writer(t, ch, N, fn)
+
+	for i := 0; i < N; i++ {
+
+		// Let the writer write for some time
+		time.Sleep(100 * time.Millisecond)
+
+		// Now rename so writer cannot open the file
+		err = ts.Rename(fn, fn1)
+		assert.Equal(t, nil, err)
+
+		// Update the fence to next iteration so that any
+		// writer operation under read fence will fail, if
+		// writer opened before rename/SetFenceFile.
+		err = f.SetFenceFile([]byte(strconv.Itoa(i + 1)))
+		assert.Equal(t, nil, err)
+
+		// check that writer didn't get its write in after
+		// setfencefile
+
+		d1, err := ts.ReadFile(fn1)
+		n, err := strconv.Atoi(string(d1))
+		assert.Equal(t, nil, err)
+
+		m := <-ch
+
+		if n != m {
+			assert.Equal(t, n, m)
+			break
+		}
+
+		// Rename back and do another iteration of testing
+		err = ts.Rename(fn1, fn)
+		assert.Equal(t, nil, err)
+	}
+
+	err = f.ReleaseFence()
+	assert.Equal(t, nil, err)
+
+	ts.Shutdown()
+}
+
+func primary(t *testing.T, ch chan bool, i int) {
+	n := strconv.Itoa(i)
+	fsl := fslib.MakeFsLibAddr("fsl"+n, fslib.Named())
+	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0)
+
+	err := f.AcquireFenceW([]byte{})
+	assert.Nil(t, err, "AcquireFenceW")
+
+	err = f.SetFenceFile([]byte(n))
+	assert.Nil(t, err, "SetFenceFile")
+
+	fn := "name/f"
+	d := []byte(n)
+	err = fsl.MakeFile(fn, 0777, np.OWRITE, d)
+
+	err = f.MakeFenceFileFrom(fn)
+	assert.Nil(t, err, "MakeFenceFileFrom")
+
+	fsl.Exit() // crash
+
+	ch <- true
+}
+
+func TestCrashPrimary(t *testing.T) {
+	ts := makeTstate(t)
+	N := 3
+
+	ch := make(chan bool)
+
+	for i := 0; i < N; i++ {
+		go primary(ts.t, ch, 0)
+		go primary(ts.t, ch, 1)
+	}
+
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+
 	ts.Shutdown()
 }

@@ -11,6 +11,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ulambda/atomic"
@@ -43,15 +44,32 @@ const (
 )
 
 type Balancer struct {
+	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	conf     *Config
-	balFence *fenceclnt.FenceClnt
-	fence    *fenceclnt.FenceClnt
-	mo       *Monitor
-	ch       chan bool
-	crash    int64
-	isBusy   bool
+	conf      *Config
+	balFclnt  *fenceclnt.FenceClnt
+	confFclnt *fenceclnt.FenceClnt
+	mo        *Monitor
+	ch        chan bool
+	crash     int64
+	isBusy    bool
+}
+
+func (bl *Balancer) testAndSet() bool {
+	bl.Lock()
+	defer bl.Unlock()
+	b := bl.isBusy
+	if !bl.isBusy {
+		bl.isBusy = true
+	}
+	return b
+}
+
+func (bl *Balancer) setBusy(b bool) {
+	bl.Lock()
+	defer bl.Unlock()
+	bl.isBusy = b
 }
 
 func shardPath(kvd, shard string) string {
@@ -70,9 +88,10 @@ func RunBalancer(auto string) {
 	// bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
-	bl.balFence = fenceclnt.MakeFenceClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
-	bl.fence = fenceclnt.MakeFenceClnt(bl.FsLib, KVCONFIG, 0)
-	bl.isBusy = true
+	bl.balFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
+	bl.confFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVCONFIG, 0)
+
+	bl.setBusy(true)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
@@ -92,7 +111,10 @@ func RunBalancer(auto string) {
 		ch <- true
 	}()
 
-	bl.balFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	err = bl.balFclnt.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	if err != nil {
+		log.Fatalf("%v: AcquireFenceW %v\n", db.GetName(), err)
+	}
 
 	log.Printf("%v: primary\n", db.GetName())
 
@@ -102,7 +124,7 @@ func RunBalancer(auto string) {
 	default:
 		bl.recover()
 
-		bl.isBusy = false
+		bl.setBusy(false)
 
 		go bl.monitorMyself(ch)
 
@@ -190,16 +212,29 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
+func (bl *Balancer) PublishConfig() {
+	err := bl.Remove(KVNEXTBK)
+	if err != nil {
+		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)
+	}
+	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
+	if err != nil {
+		log.Fatalf("%v: MakeFile %v err %v\n", db.GetName(), KVNEXTBK, err)
+	}
+
+	err = bl.confFclnt.MakeFenceFileFrom(KVNEXTBK)
+	if err != nil {
+		log.Fatalf("%v: restore err %v\n", db.GetName(), err)
+	}
+}
+
 // Restore sharddirs by finishing moves and deletes, and create config
 // file.   XXX we could restore in parallel with serving clerk ops
 func (bl *Balancer) restore() {
 	log.Printf("restore to %v\n", bl.conf)
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
-	err := bl.fence.MakeFenceFileJson(*bl.conf)
-	if err != nil {
-		log.Fatalf("%v: restore err %v\n", db.GetName(), err)
-	}
+	bl.PublishConfig()
 }
 
 func (bl *Balancer) recover() {
@@ -212,10 +247,7 @@ func (bl *Balancer) recover() {
 		// otherwise, there would be a either a config or
 		// backup config.
 		bl.conf = MakeConfig(0)
-		err = bl.fence.MakeFenceFileJson(*bl.conf)
-		if err != nil {
-			log.Fatalf("%v: initial config err %v\n", db.GetName(), err)
-		}
+		bl.PublishConfig()
 	}
 }
 
@@ -346,9 +378,12 @@ func (bl *Balancer) runMovers(moves Moves) {
 }
 
 func (bl *Balancer) balance(opcode, mfs string) error {
-	if bl.isBusy {
+	if bl.testAndSet() {
 		return fmt.Errorf("retry")
 	}
+	defer func() {
+		bl.setBusy(false)
+	}()
 
 	log.Printf("%v: BAL Balancer: %v %v %v %v\n", db.GetName(), opcode, mfs, bl.conf, bl.isBusy)
 
@@ -366,11 +401,6 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 		nextShards = DelKv(bl.conf, mfs)
 	default:
 	}
-
-	bl.isBusy = true
-	defer func() {
-		bl.isBusy = false
-	}()
 
 	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
@@ -398,19 +428,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 
 	// Announce new KVNEXTCONFIG to world: copy KVNEXTCONFIG to
 	// KVNEXTBK and make fence from copy (removing the copy too).
-	err = bl.Remove(KVNEXTBK)
-	if err != nil {
-		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)
-	}
-	err = bl.CopyFile(KVNEXTCONFIG, KVNEXTBK)
-	if err != nil {
-		log.Fatalf("%v: copy %v to %v err %v\n", db.GetName(), KVNEXTCONFIG, KVNEXTBK, err)
-	}
-	err = bl.fence.MakeFenceFileFrom(KVNEXTBK)
-	if err != nil {
-		log.Printf("%v: makefencefrom %v err %v\n", db.GetName(), KVNEXTBK, err)
-		// XXX maybe crash
-	}
+	bl.PublishConfig()
 
 	bl.runMovers(moves)
 	bl.runDeleters(moves)

@@ -44,6 +44,7 @@ type Group struct {
 	*procclnt.ProcClnt
 	crash     int64
 	primFence *fenceclnt.FenceClnt
+	confFence *fenceclnt.FenceClnt
 	conf      *GrpConf
 }
 
@@ -56,6 +57,7 @@ func RunMember(grp string) {
 	g.Mkdir(GRPDIR, 07)
 
 	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
+	g.confFence = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "kv-"+proc.GetPid())
@@ -99,11 +101,11 @@ func (g *Group) recover(grp string) {
 	fn := grpconfbk(grp)
 	err = g.ReadFileJson(fn, g.conf)
 	if err != nil {
-		//log.Printf("%v: MakeFenceFileFrom %v err %v\n", db.GetName(), fn, err)
+		log.Printf("%v: MakeFenceFileFrom %v err %v\n", db.GetName(), fn, err)
 		// this must be the first recovery of the kv group;
 		// otherwise, there would be a either a config or
 		// backup config.
-		err = g.MakeFileJson(fn, 0777, GrpConf{"kv-" + proc.GetPid(), []string{}})
+		err = g.MakeFileJson(GrpConfPath(grp), 0777|np.DMTMP, GrpConf{"kv-" + proc.GetPid(), []string{}})
 		if err != nil {
 			log.Fatalf("%v: recover failed to create initial config\n", db.GetName())
 		}

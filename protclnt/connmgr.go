@@ -164,32 +164,31 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 	return err
 }
 
-func (cm *ConnMgr) registerFence(fence *fence.Fence, new bool) error {
-	p := np.Split(fence.Path)
-	req := np.Tfence{p, fence.Qid, new}
+func (cm *ConnMgr) registerFence(fence *fence.Fence, old np.Tqid) error {
+	new := fence.Qid == old
+	req := np.Tfence{fence.Fence, fence.Qid, old}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
-			return !new || !conn.fm.Present(fence.Path)
+			return !new || !conn.fm.Present(fence.Fence)
 		},
 		func(res result) error {
 			if res.err == nil && new {
-				return res.conn.fm.Add(fence.Path, fence.Qid)
+				return res.conn.fm.Add(fence.Fence, fence.Qid)
 			}
 			return res.err
 		})
 	return err
 }
 
-func (cm *ConnMgr) deregisterFence(path []string) error {
-	p := np.Join(path)
-	req := np.Tunfence{path}
+func (cm *ConnMgr) deregisterFence(idf np.Tfenceid) error {
+	req := np.Tunfence{idf}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
-			return conn.fm.Present(p)
+			return conn.fm.Present(idf)
 		},
 		func(res result) error {
 			if res.err == nil {
-				return res.conn.fm.Del(p)
+				return res.conn.fm.Del(idf)
 			}
 			return nil
 		})

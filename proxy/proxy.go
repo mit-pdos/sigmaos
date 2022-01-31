@@ -295,3 +295,7 @@ func (npc *NpConn) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 func (npc *NpConn) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
+
+func (npc *NpConn) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
+	return nil
+}

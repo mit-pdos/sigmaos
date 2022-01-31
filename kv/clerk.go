@@ -70,29 +70,23 @@ type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	balFclnt  *fenceclnt.FenceClnt
-	grpFclnts map[np.Tfenceid]*fenceclnt.FenceClnt
-	fenceids  map[string]np.Tfenceid
+	grpFclnts map[string]*fenceclnt.FenceClnt
 	blConf    Config
 	nop       int
 	grpre     *regexp.Regexp
-	idfre     *regexp.Regexp
 }
 
 func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
 	kc.balFclnt = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0)
-	kc.grpFclnts = make(map[np.Tfenceid]*fenceclnt.FenceClnt)
-	kc.fenceids = make(map[string]np.Tfenceid)
+	kc.grpFclnts = make(map[string]*fenceclnt.FenceClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
-	kc.grpre = regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
-	kc.idfre = regexp.MustCompile(`stale ([0-9]+)`)
+	kc.grpre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
 	err := kc.readConfig()
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
 	}
-	// we have fenceid now
-	kc.fenceids[kc.balFclnt.Name()] = kc.balFclnt.Fence().Fence
 	return kc
 }
 
@@ -150,11 +144,7 @@ func (kc *KvClerk) Run() {
 }
 
 func (kc *KvClerk) releaseFence(grp string) error {
-	idf, ok := kc.fenceids[grp]
-	if !ok {
-		return fmt.Errorf("release fenceid %v not found", grp)
-	}
-	f, ok := kc.grpFclnts[idf]
+	f, ok := kc.grpFclnts[grp]
 	if !ok {
 		return fmt.Errorf("release fclnt %v not found", grp)
 	}
@@ -168,22 +158,16 @@ func (kc *KvClerk) releaseFence(grp string) error {
 
 // Dynamically allocate a FenceClnt if we haven't seen this grp before.
 func (kc *KvClerk) acquireFence(grp string) error {
-	var fc *fenceclnt.FenceClnt
-	first := true
-	if idf, ok := kc.fenceids[grp]; ok {
-		first = false
-		fc, ok = kc.grpFclnts[idf]
-		if !ok {
-			log.Fatalf("FATAL refence fclnt %v not found", grp)
-		}
+	if fc, ok := kc.grpFclnts[grp]; ok {
 		if fc.Fence() != nil {
 			// we have acquired a fence
 			return nil
 		}
 	} else {
 		fn := group.GrpConfPath(grp)
-		fc = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
+		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
 	}
+	fc := kc.grpFclnts[grp]
 	b, err := fc.AcquireFenceR()
 	if err != nil {
 		log.Printf("%v: fence %v err %v\n", db.GetName(), grp, err)
@@ -192,10 +176,6 @@ func (kc *KvClerk) acquireFence(grp string) error {
 	gc := group.GrpConf{}
 	json.Unmarshal(b, &gc)
 	log.Printf("%v: grp fence %v gc %v\n", db.GetName(), grp, gc)
-	if first {
-		kc.fenceids[grp] = fc.Fence().Fence
-		kc.grpFclnts[fc.Fence().Fence] = fc
-	}
 	return nil
 }
 
@@ -214,19 +194,7 @@ func (kc *KvClerk) readConfig() error {
 
 // Try fix err by releasing group fence
 func (kc KvClerk) releaseGrp(err error) error {
-	s := kc.idfre.FindStringSubmatch(err.Error())
-	if s != nil {
-		log.Printf("releaseGrp idf %v\n", s[1])
-		idf, err := strconv.ParseUint(s[1], 10, 64)
-		if err != nil {
-			panic(err)
-		}
-		f, ok := kc.grpFclnts[np.Tfenceid(idf)]
-		if ok {
-			return f.ReleaseFence()
-		}
-	}
-	s = kc.grpre.FindStringSubmatch(err.Error())
+	s := kc.grpre.FindStringSubmatch(err.Error())
 	if s != nil {
 		return kc.releaseFence("grp-" + s[1])
 	}

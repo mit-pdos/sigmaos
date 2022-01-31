@@ -56,15 +56,10 @@ func TestBalance(t *testing.T) {
 
 func TestRegex(t *testing.T) {
 	// grp re
-	grpre := regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
-	s := grpre.FindStringSubmatch("file not found /name/group/grp-9-conf")
+	grpre := regexp.MustCompile(`group/grp-([0-9]+)-conf`)
+	s := grpre.FindStringSubmatch("file not found group/grp-9-conf")
 	assert.NotNil(t, s, "Find")
-	s = grpre.FindStringSubmatch("file not found /name/group/grp-10-conf")
-	assert.NotNil(t, s, "Find")
-
-	// idf re
-	idfre := regexp.MustCompile(`stale ([0-9]+)`)
-	s = idfre.FindStringSubmatch("stale 13450299701090436378")
+	s = grpre.FindStringSubmatch("file not found group/grp-10-conf")
 	assert.NotNil(t, s, "Find")
 }
 

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	db "ulambda/debug"
-	"ulambda/fence"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -46,9 +45,10 @@ const (
 type FenceClnt struct {
 	fenceName string // pathname for the fence file
 	*fslib.FsLib
-	perm np.Tperm
-	mode np.Tmode
-	f    *fence.Fence
+	perm    np.Tperm
+	mode    np.Tmode
+	f       *np.Tfence
+	lastSeq np.Tseqno
 }
 
 func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm) *FenceClnt {
@@ -59,7 +59,7 @@ func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm) *FenceClnt {
 	return fc
 }
 
-func (fc *FenceClnt) Fence() *fence.Fence {
+func (fc *FenceClnt) Fence() *np.Tfence {
 	return fc.f
 }
 
@@ -68,23 +68,28 @@ func (fc *FenceClnt) Name() string {
 }
 
 func (fc *FenceClnt) registerFence(mode np.Tmode) error {
+	log.Printf("%v: registerFence %v %v\n", db.GetName(), fc.fenceName, fc.f)
 	fence, err := fc.MakeFence(fc.fenceName, mode)
 	if err != nil {
 		log.Printf("%v: MakeFence %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
 	log.Printf("%v: MakeFence %v fence %v", db.GetName(), fc.fenceName, fence)
+	if fc.lastSeq > fence.Seqno {
+		log.Fatalf("%v: FATAL MakeFence bad fence %v last seq %v\n", db.GetName(), fence, fc.lastSeq)
+	}
 	if fc.f == nil {
 		fc.mode = mode
-		err = fc.RegisterFence(fence, fence.Qid)
+		err = fc.RegisterFence(fence)
 	} else {
-		err = fc.UpdateFence(fence, fc.f.Qid)
+		err = fc.UpdateFence(fence)
 	}
 	if err != nil {
 		log.Printf("%v: registerFence %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
-	fc.f = fence
+	fc.lastSeq = fence.Seqno
+	fc.f = &fence
 	return nil
 }
 
@@ -112,7 +117,7 @@ func (fc *FenceClnt) ReleaseFence() error {
 	if fc.f == nil {
 		log.Fatalf("%v: FATAL ReleaseFence %v\n", db.GetName(), fc.fenceName)
 	}
-	err := fc.DeregisterFence(fc.f.Fence)
+	err := fc.DeregisterFence(*fc.f)
 	if err != nil {
 		return err
 	}
@@ -126,25 +131,6 @@ func (fc *FenceClnt) ReleaseFence() error {
 		}
 	}
 	return nil
-}
-
-// Update the fence file
-func (fc *FenceClnt) SetFenceFile(b []byte) error {
-	_, err := fc.SetFile(fc.fenceName, b)
-	if err != nil {
-		log.Printf("%v: SetFenceFile %v err %v", db.GetName(), fc.fenceName, err)
-		return err
-	}
-	return fc.registerFence(0)
-}
-
-func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
-	err := fc.Rename(from, fc.fenceName)
-	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, fc.fenceName, err)
-		return err
-	}
-	return fc.registerFence(0)
 }
 
 func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
@@ -164,4 +150,26 @@ func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
 			return b, fc.registerFence(np.OREAD)
 		}
 	}
+}
+
+//
+// Changing the content of a fence file will also increase the fence's seqno
+//
+
+func (fc *FenceClnt) SetFenceFile(b []byte) error {
+	_, err := fc.SetFile(fc.fenceName, b)
+	if err != nil {
+		log.Printf("%v: SetFenceFile %v err %v", db.GetName(), fc.fenceName, err)
+		return err
+	}
+	return fc.registerFence(0)
+}
+
+func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
+	err := fc.Rename(from, fc.fenceName)
+	if err != nil {
+		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, fc.fenceName, err)
+		return err
+	}
+	return fc.registerFence(0)
 }

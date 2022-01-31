@@ -283,7 +283,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return r
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
-	fos.seenFences.UpdateFence(nf.Path(), o1.Qid())
+	fos.seenFences.UpdateFence(nf.Path())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -444,6 +444,8 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
+		log.Printf("%v: rename update fence %v\n", db.GetName(), dst)
+		fos.seenFences.UpdateFence(dst)
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
 		dws.WakeupWatchL() // trigger dir watch
@@ -503,6 +505,8 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 
 			return &np.Rerror{err.Error()}
 		}
+		log.Printf("%v: rename update fence %v\n", db.GetName(), dst)
+		fos.seenFences.UpdateFence(dst)
 		dstws.WakeupWatchL() // trigger create watch
 		srcws.WakeupWatchL() // trigger remove watch
 		d1ws.WakeupWatchL()  // trigger one dir watch
@@ -565,6 +569,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	o := f.Obj()
 	names := args.Wnames
 	lo := o
+	fname := append(f.Path(), names[0:len(args.Wnames)]...)
 	if args.Perm != 0 { // create?
 		names = names[0 : len(args.Wnames)-1]
 	}
@@ -587,10 +592,9 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if err != nil {
 			return err
 		}
-		nf := fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
-		fos.seenFences.UpdateFence(nf.Path(), lo.Qid())
+		f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
-		fos.stats.Path(f.Path())
+		fos.stats.Path(fname)
 		_, r = lo.Open(f.Ctx(), args.Mode)
 		if r != nil {
 			return &np.Rerror{r.Error()}
@@ -604,6 +608,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}
+		fos.seenFences.UpdateFence(fname)
 		return nil
 	default:
 		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)

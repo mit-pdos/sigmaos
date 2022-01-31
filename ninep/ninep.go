@@ -19,14 +19,12 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 
-// Augmentations
+//
+// Augmentated types for sigmaOS
+//
+
 type Tsession uint64
 type Tseqno uint64
-
-type Tfenceid struct {
-	Path     string // path at hosting server
-	Serverid uint64
-}
 
 // Atomically increment pointer and return result
 func (n *Tseqno) Next() Tseqno {
@@ -34,11 +32,33 @@ func (n *Tseqno) Next() Tseqno {
 	return Tseqno(next)
 }
 
+type Tfenceid struct {
+	Path     string // path at hosting server
+	ServerId uint64 // XXX public key of server?
+}
+
+type Tfence struct {
+	FenceId Tfenceid
+	Seqno   Tseqno
+}
+
+func (f *Tfence) String() string {
+	return fmt.Sprintf("idf %v seqno %v", f.FenceId, f.Seqno)
+}
+
+func MakeFence(idf Tfenceid, seq Tseqno) *Tfence {
+	return &Tfence{idf, seq}
+}
+
 // NoSession signifies the fcall came from a wire-compatible peer
 const NoSession Tsession = ^Tsession(0)
 
 // NoSeqno signifies the fcall came from a wire-compatible peer
 const NoSeqno Tseqno = ^Tseqno(0)
+
+//
+//  End augmentated types
+//
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
@@ -114,10 +134,10 @@ func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
 }
 
-// If qid is fresh in relation to q, return true, otherwise false.  If
-// q.Path == qid.Path, then it is the same file.  If it is is the same
-// file and qid.Version is equal or larger, then qid is fresh.
-func (q *Tqid) IsFresh(qid Tqid) bool {
+// If qid is newer than q, return true, otherwise false.  If q.Path ==
+// qid.Path, then it is the same file.  If it is is the same file and
+// qid.Version is equal or larger, then qid is newer.
+func (q *Tqid) IsNewer(qid Tqid) bool {
 	if qid.Path == q.Path && qid.Version >= q.Version {
 		return true
 	}
@@ -244,7 +264,7 @@ const (
 	TTremovefile
 	TTmkfence
 	TRmkfence
-	TTfence
+	TTregfence
 	TTunfence
 )
 
@@ -324,8 +344,8 @@ func (fct Tfcall) String() string {
 		return "Tmkfence"
 	case TRmkfence:
 		return "Rmkfence"
-	case TTfence:
-		return "Tfence"
+	case TTregfence:
+		return "Tregfence"
 	case TTunfence:
 		return "Tunfence"
 	default:
@@ -508,21 +528,21 @@ type Tremovefile struct {
 }
 
 type Tmkfence struct {
-	Fid Tfid
+	Fid   Tfid
+	Seqno Tseqno
 }
 
 type Rmkfence struct {
-	Fence Tfenceid
+	Fence Tfence
 }
 
-type Tfence struct {
-	Fence Tfenceid
-	Qid   Tqid
-	Last  Tqid
+type Tregfence struct {
+	Fence Tfence
+	New   bool
 }
 
 type Tunfence struct {
-	Fence Tfenceid
+	Fence Tfence
 }
 
 type Rremove struct {
@@ -631,5 +651,5 @@ func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
 func (Tmkfence) Type() Tfcall    { return TTmkfence }
 func (Rmkfence) Type() Tfcall    { return TRmkfence }
-func (Tfence) Type() Tfcall      { return TTfence }
+func (Tregfence) Type() Tfcall   { return TTregfence }
 func (Tunfence) Type() Tfcall    { return TTunfence }

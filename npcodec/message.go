@@ -82,8 +82,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Tmkfence{}, nil
 	case np.TRmkfence:
 		return np.Rmkfence{}, nil
-	case np.TTfence:
-		return np.Tfence{}, nil
+	case np.TTregfence:
+		return np.Tregfence{}, nil
 	case np.TTunfence:
 		return np.Tunfence{}, nil
 	}

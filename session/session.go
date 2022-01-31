@@ -41,12 +41,9 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, fm *fence.FenceTable)
 	return sess
 }
 
-func (sess *Session) Fence(req np.Tfence) error {
-	if req.Qid == req.Last {
-		return sess.myFences.Add(req.Fence, req.Qid)
-	} else {
-		return sess.myFences.Update(req.Fence, req.Qid)
-	}
+func (sess *Session) Fence(req np.Tregfence) error {
+	sess.myFences.Insert(req.Fence)
+	return nil
 }
 
 func (sess *Session) Unfence(idf np.Tfenceid) error {
@@ -58,8 +55,8 @@ func (sess *Session) CheckFences(fsl *fslib.FsLib) error {
 	if len(fences) > 0 {
 		log.Printf("%v: CheckFences %v\n", sess.Sid, fences)
 	}
-	for _, myf := range fences {
-		err := sess.seenFences.Check(myf)
+	for _, f := range fences {
+		err := sess.seenFences.IsRecent(f)
 		if err != nil {
 			return err
 		}

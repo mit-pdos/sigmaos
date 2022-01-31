@@ -181,14 +181,21 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Tfenceid:
-			if err := e.encode(v.Path, v.Serverid); err != nil {
+			if err := e.encode(v.Path, v.ServerId); err != nil {
 				return err
 			}
 		case *np.Tfenceid:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-
+		case np.Tfence:
+			if err := e.encode(v.FenceId, v.Seqno); err != nil {
+				return err
+			}
+		case *np.Tfence:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
 		case np.FcallWireCompat:
 			if err := e.encode(v.Type, v.Tag, v.Msg); err != nil {
 				return err
@@ -336,7 +343,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 				return err
 			}
 		case *np.Tfenceid:
-			if err := d.decode(&v.Path, &v.Serverid); err != nil {
+			if err := d.decode(&v.Path, &v.ServerId); err != nil {
+				return err
+			}
+		case *np.Tfence:
+			if err := d.decode(&v.FenceId, &v.Seqno); err != nil {
 				return err
 			}
 		case *np.FcallWireCompat:

@@ -1,6 +1,8 @@
 package fenceclnt_test
 
 import (
+	"log"
+
 	"strconv"
 	"sync"
 	"testing"
@@ -34,7 +36,7 @@ func makeTstate(t *testing.T) *Tstate {
 func TestFence1(t *testing.T) {
 	ts := makeTstate(t)
 
-	N := 20
+	N := 2 // 20
 	sum := 0
 	current := 0
 	done := make(chan int)
@@ -182,7 +184,7 @@ func write(fsl *fslib.FsLib, ch chan int, fn string) {
 		if err == nil {
 			i++
 		} else {
-			// log.Printf("write %v err %v\n", i, err)
+			log.Printf("write %v err %v\n", i, err)
 			ch <- i - 1
 			return
 		}
@@ -199,11 +201,14 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 		// iteration.
 		b, err := f.AcquireFenceR()
 		assert.Equal(t, nil, err)
+
 		n, err := strconv.Atoi(string(b))
 		write(fsl, ch, fn)
+
 		if n == N-1 {
 			cont = false
 		}
+
 		err = f.ReleaseFence()
 		assert.Equal(t, nil, err)
 	}

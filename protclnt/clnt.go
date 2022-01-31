@@ -3,7 +3,6 @@ package protclnt
 import (
 	"errors"
 
-	"ulambda/fence"
 	np "ulambda/ninep"
 	"ulambda/rand"
 )
@@ -30,12 +29,12 @@ func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }
 
-func (clnt *Clnt) RegisterFence(fence *fence.Fence, last np.Tqid) error {
-	return clnt.cm.registerFence(fence, last)
+func (clnt *Clnt) RegisterFence(fence np.Tfence, new bool) error {
+	return clnt.cm.registerFence(fence, new)
 }
 
-func (clnt *Clnt) DeregisterFence(idf np.Tfenceid) error {
-	return clnt.cm.deregisterFence(idf)
+func (clnt *Clnt) DeregisterFence(fence np.Tfence) error {
+	return clnt.cm.deregisterFence(fence)
 }
 
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
@@ -289,7 +288,7 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm n
 }
 
 func (pclnt *ProtClnt) MkFence(fid np.Tfid) (*np.Rmkfence, error) {
-	args := np.Tmkfence{fid}
+	args := np.Tmkfence{fid, np.NoSeqno}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err

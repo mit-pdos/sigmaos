@@ -151,26 +151,25 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 // processing a request.
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
-	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
+	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
 		// Check that all fences for this session are not stale
 		err := sess.CheckFences(fssrv.fsl)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-	case np.Tfence:
+	case np.Tregfence:
 		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.seenFences.Register(req)
 		if err != nil {
 			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)
 			return nil, &np.Rerror{err.Error()}
 		}
-		// Fence was present in seenFences and not out stale,
-		// or was not present. Now mark that all ops on this
-		// sess must be checked against the most recently-seen
-		// fence for req.FenceId in seenFences.  Another sess
-		// may register a more recent fence in seenFences in
-		// the future, and then ops on this session should
-		// fail.
+		// Fence was present in seenFences and not stale, or
+		// was not present. Now mark that all ops on this sess
+		// must be checked against the most recently-seen
+		// fence in seenFences.  Another sess may register a
+		// more recent fence in seenFences in the future, and
+		// then ops on this session should fail.
 		err = sess.Fence(req)
 		if err != nil {
 			log.Printf("%v: Fence sess %v %v err %v\n", db.GetName(), sess.Sid, req, err)
@@ -184,13 +183,13 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-		err = sess.Unfence(req.Fence)
+		err = sess.Unfence(req.Fence.FenceId)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 		reply := &np.Ropen{}
 		return reply, nil
-	default:
+	default: // Topen, Tmkfence
 		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
 	}
 	return nil, nil

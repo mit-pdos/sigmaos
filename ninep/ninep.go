@@ -22,7 +22,11 @@ type Tgid uint32
 // Augmentations
 type Tsession uint64
 type Tseqno uint64
-type Tfenceid uint64
+
+type Tfenceid struct {
+	Path     string // path at hosting server
+	Serverid uint64
+}
 
 // Atomically increment pointer and return result
 func (n *Tseqno) Next() Tseqno {
@@ -50,7 +54,6 @@ type TQversion uint32
 
 const NoPath Tpath = ^Tpath(0)
 const NoV TQversion = ^TQversion(0)
-const NoFence Tfenceid = ^Tfenceid(0)
 
 func VEq(v1, v2 TQversion) bool {
 	return v1 == NoV || v1 == v2

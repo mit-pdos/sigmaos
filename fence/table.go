@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	np "ulambda/ninep"
-	"ulambda/rand"
 )
 
 //
@@ -22,13 +21,11 @@ type entry struct {
 
 type FenceTable struct {
 	sync.Mutex
-	fenceids map[string]np.Tfenceid
-	fences   map[np.Tfenceid]*entry
+	fences map[np.Tfenceid]*entry
 }
 
 func MakeFenceTable() *FenceTable {
 	fm := &FenceTable{}
-	fm.fenceids = make(map[string]np.Tfenceid)
 	fm.fences = make(map[np.Tfenceid]*entry)
 	return fm
 }
@@ -40,12 +37,7 @@ func (fm *FenceTable) MkFence(path []string) np.Tfenceid {
 	defer fm.Unlock()
 
 	fn := np.Join(path)
-	if idf, ok := fm.fenceids[fn]; ok {
-		return idf
-	}
-	idf := np.Tfenceid(rand.Uint64())
-	fm.fenceids[fn] = idf
-	log.Printf("new fence for %v %v\n", path, idf)
+	idf := np.Tfenceid{fn, 0}
 	return idf
 }
 
@@ -89,10 +81,7 @@ func (fm *FenceTable) UpdateFence(path []string, qid np.Tqid) {
 	fm.Lock()
 	defer fm.Unlock()
 
-	idf, ok := fm.fenceids[np.Join(path)]
-	if !ok {
-		return
-	}
+	idf := np.Tfenceid{np.Join(path), 0}
 	if f, ok := fm.fences[idf]; ok {
 		log.Printf("UpdateFence: update fenceid %v/%v %v to %v\n", path, idf, f, qid)
 		fm.fences[idf].qid = qid

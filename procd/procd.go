@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
@@ -239,7 +240,7 @@ func (pd *Procd) runProc(p *Proc) {
 
 	// If this proc doesn't require cores, start another worker to take our place
 	// so we can make progress.
-	done := false
+	done := int32(0)
 	if p.attr.Ncore == 0 {
 		pd.group.Add(1)
 		go pd.worker(&done)
@@ -249,7 +250,7 @@ func (pd *Procd) runProc(p *Proc) {
 	p.run(cores)
 
 	// Kill the old worker so we don't have too many workers running
-	done = true
+	atomic.StoreInt32(&done, 1)
 
 	// Free resources and dedicated cores.
 	pd.freeCores(cores)
@@ -284,10 +285,10 @@ func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
 }
 
 // Worker runs one proc a time
-func (pd *Procd) worker(workerDone *bool) {
+func (pd *Procd) worker(done *int32) {
 	defer pd.group.Done()
 	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
-	for !pd.readDone() && (workerDone == nil || !*workerDone) {
+	for !pd.readDone() && (done == nil || atomic.LoadInt32(done) == 0) {
 		p, err := pd.getProc()
 		// If there were no runnable procs, wait and try again.
 		if err == nil && p == nil {

@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"strconv"
 	"sync"
@@ -11,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/kernel"
@@ -390,7 +390,10 @@ func TestEvict(t *testing.T) {
 }
 
 func testFencer(t *testing.T, part string) {
-	const N = 2 // 20
+	const (
+		N         = 20
+		FENCE_DIR = "name/fence"
+	)
 
 	ts := makeTstate(t)
 	pids := []string{}
@@ -399,16 +402,16 @@ func testFencer(t *testing.T, part string) {
 	dir := "name/ux/~ip/outdir"
 	ts.RmDir(dir)
 	err := ts.Mkdir(dir, 0777)
-	err = ts.Mkdir(fenceclnt.FENCE_DIR, 0777)
+	err = ts.Mkdir(FENCE_DIR, 0777)
 	assert.Nil(t, err, "mkdir error")
-	err = ts.MakeFile(fenceclnt.FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	err = ts.MakeFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
 	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
 	for i := 0; i < N; i++ {
-		a := proc.MakeProc("bin/user/fencer", []string{part, dir})
+		a := proc.MakeProc("bin/user/fencer", []string{part, FENCE_DIR, dir})
 		err = ts.Spawn(a)
 		assert.Nil(t, err, "Spawn")
 		pids = append(pids, a.Pid)
@@ -416,6 +419,7 @@ func testFencer(t *testing.T, part string) {
 
 	for _, pid := range pids {
 		status, _ := ts.WaitExit(pid)
+		log.Printf("status %v\n", status)
 		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
 	}
 	ts.Shutdown()

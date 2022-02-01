@@ -42,22 +42,22 @@ const (
 //  then could violate this invariant
 //
 //  Note: we couldn't use version # as is, since they are per file,
-//  and here we require atomicity across different files.
+//  and here we require atomicity across two files on different
+//  servers.
 //
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "%v: Usage: <partition?> <dir>\n", os.Args[0])
+	if len(os.Args) != 4 {
+		fmt.Fprintf(os.Stderr, "%v: Usage: <partition?> <dir1> <dir2>\n", os.Args[0])
 		os.Exit(1)
 	}
 	fsl := fslib.MakeFsLib("fencer-" + proc.GetPid())
-
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := fenceclnt.MakeFenceClnt(fsl, fenceclnt.FENCE_DIR+"/fence", 0)
+	l := fenceclnt.MakeFenceClnt(fsl, os.Args[2]+"/fence", 0)
 
-	cnt := fenceclnt.FENCE_DIR + "/cnt"
-	A := os.Args[2] + "/A"
+	cnt := os.Args[2] + "/cnt"
+	A := os.Args[3] + "/A"
 
 	pclnt.Started(proc.GetPid())
 
@@ -110,9 +110,13 @@ func main() {
 
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))
 		if err != nil {
+			// most likely write failed with stale error, but
+			// we cannot talk to named anymore to report that,
+			// so just give up.
 			log.Fatalf("write %v failed %v\n", A, err)
 		}
 
+		// the write may succeed because there is no new fence holder just yet
 		fsl.Close(fd)
 
 		if partitioned {

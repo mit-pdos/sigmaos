@@ -22,6 +22,7 @@ import (
 //
 
 const (
+	FENCE_DIR = "name/fence"
 	FENCENAME = "name/test-fence"
 )
 

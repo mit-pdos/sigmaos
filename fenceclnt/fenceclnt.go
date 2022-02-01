@@ -9,11 +9,6 @@ import (
 	np "ulambda/ninep"
 )
 
-// for test
-const (
-	FENCE_DIR = "name/fence"
-)
-
 //
 // Support for fences, which consists of fenceid and sequence number.
 // A proc can fence all servers it has an open session with by

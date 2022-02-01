@@ -35,7 +35,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemNamed("fenceclnt_test", "..")
-	ts.Mkdir(fenceclnt.FENCE_DIR, 0777)
+	ts.Mkdir(FENCE_DIR, 0777)
 	return ts
 }
 
@@ -146,7 +146,7 @@ func TestFence4(t *testing.T) {
 	fence1 := fenceclnt.MakeFenceClnt(fsl1, FENCENAME, 0)
 
 	// Establish a connection
-	_, err := fsl2.ReadDir(fenceclnt.FENCE_DIR)
+	_, err := fsl2.ReadDir(FENCE_DIR)
 	assert.Nil(ts.t, err, "ReadDir")
 
 	err = fence1.AcquireFenceW([]byte{})

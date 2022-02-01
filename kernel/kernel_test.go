@@ -218,13 +218,13 @@ func TestFenceW(t *testing.T) {
 
 		ch <- true
 
-		log.Printf("partition..\n")
+		log.Printf("partition from named..\n")
 
 		crash.Partition(fsldl)
 		delay.Delay(10)
 
 		// fsldl lost lock, and ts should have it by now so
-		// this write and read should fail
+		// this write and read to ux server should fail
 		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
 		assert.NotNil(t, err, "Write")
 

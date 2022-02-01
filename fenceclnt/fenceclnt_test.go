@@ -16,6 +16,11 @@ import (
 	np "ulambda/ninep"
 )
 
+//
+// Fence tests with only named. Other basic tests in kernel and
+// procclnt.
+//
+
 const (
 	FENCENAME = "name/test-fence"
 )

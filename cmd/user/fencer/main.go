@@ -22,7 +22,7 @@ const (
 )
 
 //
-// lock tester
+// fence tester
 //
 // start:  cnt = 0, A = 0
 //
@@ -35,10 +35,10 @@ const (
 //
 //  invariant: A is counter or counter+1
 //
-//  If lock doesn't work, then this invariant breaks (counter and A
+//  If fence doesn't work, then this invariant breaks (counter and A
 //  and may have no relation).
 //
-//  If holder paritions, looses lock, and but delayed writes to A,
+//  If holder paritions, looses fence, but delayed writes to A,
 //  then could violate this invariant
 //
 //  Note: we couldn't use version # as is, since they are per file,
@@ -75,7 +75,7 @@ func main() {
 			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
 		}
 
-		// open A and then partition
+		// open A and then maybe partition from named
 
 		fd, err := fsl.Open(A, np.OREAD|np.OWRITE)
 		if err != nil {
@@ -118,7 +118,7 @@ func main() {
 		if partitioned {
 			err := l.ReleaseFence()
 			if err != nil {
-				log.Printf("%v unlock err %v\n", db.GetName(), err)
+				log.Printf("%v release err %v\n", db.GetName(), err)
 			}
 			break
 		}

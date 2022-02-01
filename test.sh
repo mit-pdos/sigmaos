@@ -30,9 +30,9 @@ go test $1 ulambda/sync
 # tests kernel (without realms)
 #
 
-go test $1 ulambda/kernel
 go test $1 ulambda/ux
 go test $1 ulambda/s3
+go test $1 ulambda/kernel
 go test $1 ulambda/procclnt
 go test $1 ulambda/group
 go test $1 ulambda/kv

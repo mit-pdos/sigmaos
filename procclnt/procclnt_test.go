@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/kernel"
@@ -398,9 +399,9 @@ func testFencer(t *testing.T, part string) {
 	dir := "name/ux/~ip/outdir"
 	ts.RmDir(dir)
 	err := ts.Mkdir(dir, 0777)
-	err = ts.Mkdir("name/locktest", 0777)
+	err = ts.Mkdir(fenceclnt.FENCE_DIR, 0777)
 	assert.Nil(t, err, "mkdir error")
-	err = ts.MakeFile("name/locktest/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	err = ts.MakeFile(fenceclnt.FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
 	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))

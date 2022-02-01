@@ -216,20 +216,19 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 
 // Test fences with two fsclnts. One makes a write fence for an epoch
 // file. The other fsclnt opens another file and writes to it under a
-// read fence.  If the first fsclnt changes the fence (incrementing
-// the epoch) between the second fsclnt one opening and writing the
-// other file, the write should fail with stale error.
+// read fence for the epoch file.  If the first fsclnt changes the
+// fence (incrementing the epoch) between the second fsclnt opening
+// and writing the other file, the write should fail with stale error,
+// because the read fence isn't valid anymore.
 func TestSetRenameGet(t *testing.T) {
 	const N = 100
 
 	ts := makeTstate(t)
 
-	err := ts.Mkdir("name/d1", 0777)
-	assert.Equal(t, nil, err)
-	fn := "name/d1/f"
-	fn1 := "name/d1/f1"
+	fn := "name/f"
+	fn1 := "name/f1"
 	d := []byte(strconv.Itoa(0))
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)

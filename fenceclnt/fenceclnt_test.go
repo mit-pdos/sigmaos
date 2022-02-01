@@ -36,7 +36,7 @@ func makeTstate(t *testing.T) *Tstate {
 func TestFence1(t *testing.T) {
 	ts := makeTstate(t)
 
-	N := 2 // 20
+	N := 20
 	sum := 0
 	current := 0
 	done := make(chan int)

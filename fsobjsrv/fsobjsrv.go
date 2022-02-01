@@ -616,6 +616,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
+// XXX allow client to specify seqno and update it.
 func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {

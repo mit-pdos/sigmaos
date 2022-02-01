@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -31,7 +32,8 @@ func MakeFenceTable() *FenceTable {
 	return fm
 }
 
-// Make a fence.  XXX when to delete?
+// Server that holds the fence file uses MkFence to make a fence.  XXX
+// Can we ever delete the fence?
 func (fm *FenceTable) MkFence(path []string) np.Tfence {
 	fm.Lock()
 	defer fm.Unlock()
@@ -49,8 +51,8 @@ func (fm *FenceTable) MkFence(path []string) np.Tfence {
 	return fence
 }
 
-// A new acquisition of a file that may have a fence associated with
-// it.  If so, update fence.
+// A new acquisition of a file or a modification of a file that may
+// have a fence associated with it. If so, increase seqno of fence.
 func (fm *FenceTable) UpdateFence(path []string) {
 	fm.Lock()
 	defer fm.Unlock()
@@ -60,20 +62,21 @@ func (fm *FenceTable) UpdateFence(path []string) {
 		e.fence.Seqno += 1
 		log.Printf("UpdateFence: updated seqno %v %v\n", idf, e)
 	} else {
-		log.Printf("UpdateFence: no fenceid %v/%v\n", path, idf)
+		// log.Printf("UpdateFence: no fenceid %v/%v\n", path, idf)
 	}
 }
 
-// If no fence exists for this fence id, register it.  If the fence
-// exists but newer, update the fence.  If requests updates the fence
-// with new qid, the last qid should match currently registered.
+// Client registers a fence at this server. The registration may a new
+// or an update. If no fence exists for this fence id, register it.
+// If the fence exists but newer, update the fence.  If this is a new
+// registration increase refcnt; unregister will decrement it.
 func (fm *FenceTable) Register(req np.Tregfence) error {
 	fm.Lock()
 	defer fm.Unlock()
 
 	idf := req.Fence.FenceId
 	if e, ok := fm.fences[idf]; ok {
-		log.Printf("Register: fence %v %v\n", idf, req)
+		log.Printf("%v: Register: fence %v %v\n", db.GetName(), idf, req)
 		if req.Fence.Seqno < e.fence.Seqno {
 			return fmt.Errorf("stale %v", idf)
 		}
@@ -107,6 +110,7 @@ func (fm *FenceTable) Unregister(fence np.Tfence) error {
 	return nil
 }
 
+// Check if supplied fence is recent.
 func (fm *FenceTable) IsRecent(fence np.Tfence) error {
 	fm.Lock()
 	defer fm.Unlock()
@@ -120,6 +124,11 @@ func (fm *FenceTable) IsRecent(fence np.Tfence) error {
 	}
 	return fmt.Errorf("unknown fence %v\n", fence.FenceId)
 }
+
+//
+// Code below is used by a sesion and fsclnt to keep track of its
+// fences.
+//
 
 func (fm *FenceTable) Fences() []np.Tfence {
 	fm.Lock()

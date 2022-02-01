@@ -15,14 +15,16 @@ const (
 )
 
 //
-// XXX FIX ME
-//
-// Support for fences, which consists of pathname and a Qid of that
-// pathname. A proc can fence all servers it has an open session with.
-// When receiving an operation, the servers check if the fence is
-// still valid (by checking the Qid of the file in the fence).  If the
-// Qid is unchanged from the registered fence, they allow the
-// operation; otherwise, they reject the operation.
+// Support for fences, which consists of fenceid and sequence number.
+// A proc can fence all servers it has an open session with by
+// registering the fence on each session.  When receiving an
+// operation, the servers check if the registered fence is still valid
+// by checking that the seqno in equal or larger than the last seen
+// fence for that fenceid on any session. If valid the server applies
+// the op, otherwise, it returns stale fence.  The key problem that
+// fence avoid is an old primary that writes to a file after a new
+// primary has taken over.  The old primary's write will fail because
+// its fence has a lower sequence number than the new primary's fence.
 //
 // Procs uses FenceClnt to interact with fences, which they can use in
 // two in two ways: write fences and read fences.  Write fences are
@@ -36,10 +38,13 @@ const (
 //
 // Multiple procs may have a read fence on, for example, a FenceClnt
 // that represents a configuration file.  A read fence maybe
-// invalidated by a proc that modifies the configuration file,
-// signaling to the reader they should reread the configuration
-// file. Operations in flight to any server will be rejected by those
-// servers because the read fence is invalid.
+// invalidated by a proc that has acquired the write fence for the
+// configuration file by writing to the file, which increases the
+// sequence number of the fence at the server holding the file.  The
+// writer can then ask for a new fence from the server and reregister
+// it on all its session.  Operations by readers will subsequently
+// fail with stale fence error, signaling to readers that they should
+// reread the configuration file.
 //
 
 type FenceClnt struct {
@@ -67,8 +72,12 @@ func (fc *FenceClnt) Name() string {
 	return fc.fenceName
 }
 
+// XXX register/update may fail because another client has seen a more
+// recent seqno, which the server may have not told us about because
+// it lost that info due to it crashing. in that case, tell the server
+// to use that more recent seqno (if the fence was acquired in write
+// mode, which means this client is the current fence holder).
 func (fc *FenceClnt) registerFence(mode np.Tmode) error {
-	log.Printf("%v: registerFence %v %v\n", db.GetName(), fc.fenceName, fc.f)
 	fence, err := fc.MakeFence(fc.fenceName, mode)
 	if err != nil {
 		log.Printf("%v: MakeFence %v err %v", db.GetName(), fc.fenceName, err)
@@ -82,6 +91,8 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 		fc.mode = mode
 		err = fc.RegisterFence(fence)
 	} else {
+		// The fence holder has updated the file associated
+		// with the fence; all servers about the new fence.
 		err = fc.UpdateFence(fence)
 	}
 	if err != nil {
@@ -93,9 +104,10 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 	return nil
 }
 
-// Wait to obtain a write fence and initialize the file with b
-// XXX cleanup on failure
-// XXX create and write atomic
+// Acquire a write fence, which may block, and initialize the file
+// with b.  Tell servers to fence our operations.
+//
+// XXX cleanup on failure XXX create and write atomic
 func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 	fd, err := fc.Create(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
@@ -110,6 +122,27 @@ func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 	}
 	fc.Close(fd)
 	return fc.registerFence(np.OWRITE)
+}
+
+// Acquire a read fence, which may block until a writer has created
+// the file.  Tell servers to fence our operations.
+func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
+	ch := make(chan bool)
+	for {
+		// log.Printf("%v: file watch %v\n", db.GetName(), fc.fenceName)
+		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
+			ch <- true
+		})
+		if err != nil && strings.HasPrefix(err.Error(), "file not found") {
+			// log.Printf("%v: file watch wait %v\n", db.GetName(), fc.fenceName)
+			<-ch
+		} else if err != nil {
+			return nil, err
+		} else {
+			// log.Printf("%v: file watch return %v\n", db.GetName(), fc.fenceName)
+			return b, fc.registerFence(np.OREAD)
+		}
+	}
 }
 
 func (fc *FenceClnt) ReleaseFence() error {
@@ -133,27 +166,10 @@ func (fc *FenceClnt) ReleaseFence() error {
 	return nil
 }
 
-func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
-	ch := make(chan bool)
-	for {
-		// log.Printf("%v: file watch %v\n", db.GetName(), fc.fenceName)
-		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
-			ch <- true
-		})
-		if err != nil && strings.HasPrefix(err.Error(), "file not found") {
-			// log.Printf("%v: file watch wait %v\n", db.GetName(), fc.fenceName)
-			<-ch
-		} else if err != nil {
-			return nil, err
-		} else {
-			// log.Printf("%v: file watch return %v\n", db.GetName(), fc.fenceName)
-			return b, fc.registerFence(np.OREAD)
-		}
-	}
-}
-
 //
-// Changing the content of a fence file will also increase the fence's seqno
+// A few writer operations that a fence writer can perform. They will
+// increase the fence's seqno, and registerFence will update servers
+// to use the new fence.
 //
 
 func (fc *FenceClnt) SetFenceFile(b []byte) error {

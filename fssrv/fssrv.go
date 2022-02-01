@@ -152,7 +152,9 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
 	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
-		// Check that all fences for this session are not stale
+		// Check that all fences that this session registered
+		// are recent.  Another session may have registered a
+		// more recent one in seenFences.
 		err := sess.CheckFences(fssrv.fsl)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}

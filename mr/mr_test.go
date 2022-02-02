@@ -28,7 +28,7 @@ const (
 	// dynamically
 	CRASHTASK  = 10000
 	CRASHCOORD = 20000
-	CRASHSRV   = 700000
+	CRASHSRV   = 1000000
 )
 
 func Compare(fsl *fslib.FsLib) {
@@ -121,6 +121,7 @@ func (ts *Tstate) checkJob() {
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)
 	time.Sleep(time.Duration(r) * time.Microsecond)
+	log.Printf("Crashing a %v after %v", srv, time.Duration(r)*time.Microsecond)
 	// Make sure not too many crashes happen at once by taking a lock (we always
 	// want >= 1 server to be up).
 	l.Lock()

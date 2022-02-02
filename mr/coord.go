@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path"
 	"strconv"
+	"strings"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -24,6 +26,7 @@ const (
 	CLAIMED  = "-claimed"
 	TIP      = "-tip"
 	DONE     = "-done"
+	RESTART  = "restart"
 	NCOORD   = 3
 )
 
@@ -173,6 +176,15 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 	return n
 }
 
+func (w *Coord) restartMappers(files []string) {
+	for _, f := range files {
+		n := path.Join(MDIR, f)
+		if _, err := w.PutFile(n, []byte(n), 0777, np.OWRITE); err != nil {
+			log.Fatalf("PutFile %v err %v\n", n, err)
+		}
+	}
+}
+
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.ok == "OK" {
 		// mark task as done
@@ -228,20 +240,34 @@ func (w *Coord) recover(dir string) {
 	}
 }
 
-func (w *Coord) phase(dir string, f func(string) string) {
+func (w *Coord) lostMapperOutput(ok string) []string {
+	lost := strings.TrimPrefix(ok, RESTART+"=")
+	return strings.Split(lost, ",")
+}
+
+func (w *Coord) phase(dir string, f func(string) string) bool {
 	ch := make(chan Ttask)
 	straggler := false
 	for n := w.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
 		w.processResult(dir, res)
 		if res.ok != "OK" {
-			n += w.startTasks(dir, ch, f)
+			// If we're reducing and can't find some mapper output, a ux may have
+			// crashed. So, restart those map tasks.
+			if dir == RDIR && strings.Contains(res.ok, RESTART) {
+				lost := w.lostMapperOutput(res.ok)
+				w.restartMappers(lost)
+				return false
+			} else {
+				n += w.startTasks(dir, ch, f)
+			}
 		}
 		if n == 2 && !straggler { // XXX percentage of total computation
 			straggler = true
 			w.stragglers(dir, ch, f)
 		}
 	}
+	return true
 }
 
 func (w *Coord) Work() {
@@ -256,9 +282,16 @@ func (w *Coord) Work() {
 	w.recover(MDIR)
 	w.recover(RDIR)
 
-	w.phase(MDIR, w.mapper)
-	log.Printf("%v: Reduce phase\n", db.GetName())
-	w.phase(RDIR, w.reducer)
+	for {
+		w.phase(MDIR, w.mapper)
+		log.Printf("%v: Reduce phase\n", db.GetName())
+		// If reduce phase is unsuccessful, we lost some mapper output. Restart
+		// those mappers.
+		success := w.phase(RDIR, w.reducer)
+		if success {
+			break
+		}
+	}
 
 	w.Exited(proc.GetPid(), "OK")
 }

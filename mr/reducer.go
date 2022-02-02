@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -59,6 +60,7 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	fd, err := r.Open(d, np.OREAD)
 	if err != nil {
 		// another reducer already completed; nothing to be done
+		log.Printf("reducer Open %v err %v", d, err)
 		db.DPrintf("Open %v err %v", d, err)
 		return nil, err
 	}
@@ -103,13 +105,17 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 
 func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
+	lostMaps := []string{}
 
 	log.Printf("%v: doReduce %v %v\n", db.GetName(), r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
 		if err != nil {
-			return true, err
+			// If error is true, then either another reducer already did the job (the
+			// input dir is missing) or the server holding the mapper's output
+			// crashed (in which case we need to restart that mapper).
+			lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
 		}
 		kva = append(kva, tkva...)
 		n += 1
@@ -117,6 +123,10 @@ func (r *Reducer) doReduce() error {
 	})
 	if err != nil {
 		return fmt.Errorf("%v: ProcessDir %v err %v\n", db.GetName(), r.input, err)
+	}
+
+	if len(lostMaps) > 0 {
+		return fmt.Errorf("%v=%v", RESTART, strings.Join(lostMaps, ","))
 	}
 
 	sort.Sort(ByKey(kva))
@@ -158,6 +168,7 @@ func RunReducer(reducef ReduceT, args []string) {
 		os.Exit(1)
 	}
 	err = r.doReduce()
+	log.Printf("Reducer reduce result: %v", err)
 	if err == nil {
 		r.Exited(proc.GetPid(), "OK")
 	} else {

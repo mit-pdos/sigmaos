@@ -194,7 +194,8 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {
-		log.Fatalf("CloseSession unknown session %v\n", sid)
+		debug.PrintStack()
+		log.Fatalf("%v: CloseSession unknown session %v\n", db.GetName(), sid)
 	}
 
 	// Several threads maybe waiting in a sesscond. DeleteSess

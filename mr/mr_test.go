@@ -28,7 +28,7 @@ const (
 	// dynamically
 	CRASHTASK  = 10000
 	CRASHCOORD = 20000
-	CRASHPROCD = 700000
+	CRASHSRV   = 700000
 )
 
 func Compare(fsl *fslib.FsLib) {
@@ -117,7 +117,26 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, crashtask, crashcoord, crashprocd int) {
+// Crash a server, then start a new one of the same type.
+func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
+	r := rand.Intn(randMax)
+	time.Sleep(time.Duration(r) * time.Microsecond)
+	// Make sure not too many crashes happen at once by taking a lock (we always
+	// want >= 1 server to be up).
+	l.Lock()
+	err := ts.KillOne(srv)
+	if err != nil {
+		log.Fatalf("Error non-nil kill procd: %v", err)
+	}
+	err = ts.BootProcd()
+	if err != nil {
+		log.Fatalf("Error spawn procd")
+	}
+	l.Unlock()
+	crashchan <- true
+}
+
+func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
@@ -130,32 +149,17 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd int) {
 	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
 	crashchan := make(chan bool)
-	if crashprocd > 0 {
-		crashlock := &sync.Mutex{}
+	if crashprocd > 0 || crashux > 0 {
+		l := &sync.Mutex{}
 		for i := 0; i < crashprocd; i++ {
 			// Sleep for a random time, then crash a server.
-			go func() {
-				time.Sleep(time.Duration(i) * CRASHPROCD * time.Microsecond)
-				r := rand.Intn(CRASHPROCD)
-				time.Sleep(time.Duration(r) * time.Microsecond)
-				crashlock.Lock()
-				err := ts.KillOne(np.PROCD)
-				if err != nil {
-					log.Fatalf("Error non-nil kill procd: %v", err)
-				}
-				err = ts.BootProcd()
-				if err != nil {
-					log.Fatalf("Error spawn procd")
-				}
-				crashlock.Unlock()
-				crashchan <- true
-			}()
+			go ts.crashServer(np.PROCD, (i+1)*CRASHSRV, l, crashchan)
 		}
 	}
 
 	cm.Wait()
 
-	if crashprocd > 0 {
+	if crashprocd > 0 || crashux > 0 {
 		for i := 0; i < crashprocd; i++ {
 			<-crashchan
 		}
@@ -167,31 +171,36 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd int) {
 }
 
 func TestOne(t *testing.T) {
-	runN(t, 0, 0, 0)
+	runN(t, 0, 0, 0, 0)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, 0)
+	runN(t, CRASHTASK, 0, 0, 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, 0)
+	runN(t, 0, CRASHCOORD, 0, 0)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, 0)
+	runN(t, CRASHTASK, CRASHCOORD, 0, 0)
 }
 
-func TestCrashProcdOnce(t *testing.T) {
-	runN(t, 0, 0, 1)
+func TestCrashProcd1(t *testing.T) {
+	runN(t, 0, 0, 1, 0)
 }
 
 func TestCrashProcd2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, N)
+	runN(t, 0, 0, N, 0)
 }
 
 func TestCrashProcdN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N)
+	runN(t, 0, 0, N, 0)
+}
+
+func TestCrashUx1(t *testing.T) {
+	N := 1
+	runN(t, 0, 0, 0, N)
 }

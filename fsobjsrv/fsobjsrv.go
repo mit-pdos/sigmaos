@@ -329,7 +329,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	//log.Printf("%v: %v remove %v\n", db.GetName(), ctx.Uname(), path)
+	// log.Printf("%v: %v remove %v in %v\n", db.GetName(), ctx.Uname(), path, np.Dir(path))
 
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
@@ -444,7 +444,6 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
-		log.Printf("%v: rename update fence %v\n", db.GetName(), dst)
 		fos.seenFences.UpdateFence(dst)
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
@@ -459,7 +458,7 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 	if d1.Inum() < d2.Inum() {
 		return oldf, newf
 	} else if d1.Inum() == d2.Inum() { // would have used wstat instead of renameat
-		log.Fatalf("lockOrder")
+		log.Fatalf("FATAL lockOrder")
 		return oldf, newf
 	} else {
 		return newf, oldf
@@ -505,7 +504,6 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 
 			return &np.Rerror{err.Error()}
 		}
-		log.Printf("%v: rename update fence %v\n", db.GetName(), dst)
 		fos.seenFences.UpdateFence(dst)
 		dstws.WakeupWatchL() // trigger create watch
 		srcws.WakeupWatchL() // trigger remove watch
@@ -549,7 +547,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 		}
 		return nil
 	default:
-		log.Fatalf("GetFile: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL GetFile: obj type %T isn't Dir or File\n", o)
 
 	}
 	return nil
@@ -611,7 +609,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		fos.seenFences.UpdateFence(fname)
 		return nil
 	default:
-		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL SetFile: obj type %T isn't Dir or File\n", o)
 	}
 	return nil
 }
@@ -623,6 +621,6 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 		return err
 	}
 	rets.Fence = fos.seenFences.MkFence(f.Path())
-	log.Printf("mkfence f %v -> %v\n", f, rets.Fence)
+	// log.Printf("mkfence f %v -> %v\n", f, rets.Fence)
 	return nil
 }

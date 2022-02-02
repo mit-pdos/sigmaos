@@ -151,7 +151,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 // processing a request.
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
-	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
+	case np.Tcreate, np.Tread, np.Twrite, np.Tremove, np.Tremovefile, np.Tstat, np.Twstat, np.Trenameat, np.Tgetfile, np.Tsetfile:
 		// Check that all fences that this session registered
 		// are recent.  Another session may have registered a
 		// more recent one in seenFences.
@@ -191,7 +191,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		}
 		reply := &np.Ropen{}
 		return reply, nil
-	default: // Topen, Tmkfence
+	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
 		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
 	}
 	return nil, nil
@@ -222,7 +222,11 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {
-		log.Fatalf("CloseSession unknown session %v\n", sid)
+		// client start TCP connection, but then failed before sending
+		// any messages.
+		log.Printf("Warning: CloseSession unknown session %v\n", sid)
+		close(replies)
+		return
 	}
 
 	// XXX remove fence from sess, so that fence maybe free from seen table

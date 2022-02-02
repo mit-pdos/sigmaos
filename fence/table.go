@@ -5,7 +5,6 @@ import (
 	"log"
 	"sync"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -60,7 +59,7 @@ func (fm *FenceTable) UpdateFence(path []string) {
 	idf := np.Tfenceid{np.Join(path), 0}
 	if e, ok := fm.fences[idf]; ok {
 		e.fence.Seqno += 1
-		log.Printf("UpdateFence: updated seqno %v %v\n", idf, e)
+		// log.Printf("UpdateFence: updated seqno %v %v\n", idf, e)
 	} else {
 		// log.Printf("UpdateFence: no fenceid %v/%v\n", path, idf)
 	}
@@ -76,7 +75,7 @@ func (fm *FenceTable) Register(req np.Tregfence) error {
 
 	idf := req.Fence.FenceId
 	if e, ok := fm.fences[idf]; ok {
-		log.Printf("%v: Register: fence %v %v\n", db.GetName(), idf, req)
+		// log.Printf("%v: Register: fence %v req %v\n", db.GetName(), idf, req)
 		if req.Fence.Seqno < e.fence.Seqno {
 			return fmt.Errorf("stale %v", idf)
 		}
@@ -117,7 +116,6 @@ func (fm *FenceTable) IsRecent(fence np.Tfence) error {
 
 	if e, ok := fm.fences[fence.FenceId]; ok {
 		if fence.Seqno < e.fence.Seqno {
-			log.Printf("stale %v\n", fence)
 			return fmt.Errorf("stale fence %v", fence)
 		}
 		return nil

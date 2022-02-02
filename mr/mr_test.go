@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,7 +28,7 @@ const (
 	// dynamically
 	CRASHTASK  = 10000
 	CRASHCOORD = 20000
-	CRASHPROCD = "7s"
+	CRASHPROCD = 700000
 )
 
 func Compare(fsl *fslib.FsLib) {
@@ -115,11 +117,11 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-func runN(t *testing.T, crashtask, crashcoord int, crashprocd string, maxcrashprocd int) {
+func runN(t *testing.T, crashtask, crashcoord, crashprocd int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
-	if crashprocd != "" {
+	if crashprocd > 0 {
 		ts.BootProcd()
 	}
 
@@ -127,27 +129,17 @@ func runN(t *testing.T, crashtask, crashcoord int, crashprocd string, maxcrashpr
 
 	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
-	done := make(chan bool)
-	if crashprocd != "" {
-		go func() {
-			defer func() { done <- true }()
-			crashcnt := 0
-			d, err := time.ParseDuration(crashprocd)
-			if err != nil {
-				log.Fatalf("Error parse duration, %v", err)
-			}
-			ticker := time.NewTicker(d)
-			for {
-				if crashcnt > maxcrashprocd {
-					<-done
-					return
-				}
-				select {
-				case <-done:
-					return
-				case <-ticker.C:
-				}
-				err = ts.KillOne(np.PROCD)
+	crashchan := make(chan bool)
+	if crashprocd > 0 {
+		crashlock := &sync.Mutex{}
+		for i := 0; i < crashprocd; i++ {
+			// Sleep for a random time, then crash a server.
+			go func() {
+				time.Sleep(time.Duration(i) * CRASHPROCD * time.Microsecond)
+				r := rand.Intn(CRASHPROCD)
+				time.Sleep(time.Duration(r) * time.Microsecond)
+				crashlock.Lock()
+				err := ts.KillOne(np.PROCD)
 				if err != nil {
 					log.Fatalf("Error non-nil kill procd: %v", err)
 				}
@@ -155,16 +147,18 @@ func runN(t *testing.T, crashtask, crashcoord int, crashprocd string, maxcrashpr
 				if err != nil {
 					log.Fatalf("Error spawn procd")
 				}
-				crashcnt += 1
-			}
-		}()
+				crashlock.Unlock()
+				crashchan <- true
+			}()
+		}
 	}
 
 	cm.Wait()
 
-	if crashprocd != "" {
-		done <- true
-		<-done
+	if crashprocd > 0 {
+		for i := 0; i < crashprocd; i++ {
+			<-crashchan
+		}
 	}
 
 	ts.checkJob()
@@ -173,31 +167,31 @@ func runN(t *testing.T, crashtask, crashcoord int, crashprocd string, maxcrashpr
 }
 
 func TestOne(t *testing.T) {
-	runN(t, 0, 0, "", 0)
+	runN(t, 0, 0, 0)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, "", 0)
+	runN(t, CRASHTASK, 0, 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, "", 0)
+	runN(t, 0, CRASHCOORD, 0)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, "", 0)
+	runN(t, CRASHTASK, CRASHCOORD, 0)
 }
 
 func TestCrashProcdOnce(t *testing.T) {
-	runN(t, 0, 0, CRASHPROCD, 1)
+	runN(t, 0, 0, 1)
 }
 
 func TestCrashProcd2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, CRASHPROCD, N)
+	runN(t, 0, 0, N)
 }
 
 func TestCrashProcdN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, CRASHPROCD, N)
+	runN(t, 0, 0, N)
 }

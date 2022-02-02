@@ -1,6 +1,7 @@
 package fenceclnt
 
 import (
+	"encoding/json"
 	"log"
 	"strings"
 
@@ -59,7 +60,7 @@ func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm) *FenceClnt {
 	return fc
 }
 
-func (fc *FenceClnt) Fence() *np.Tfence {
+func (fc *FenceClnt) IsFenced() *np.Tfence {
 	return fc.f
 }
 
@@ -183,4 +184,23 @@ func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
 		return err
 	}
 	return fc.registerFence(0)
+}
+
+//
+// Convenience function
+//
+
+func (fc *FenceClnt) AcquireConfig(v interface{}) error {
+	//log.Printf("%v: start AcquireConfig %v\n", db.GetName(), fc.Name())
+	b, err := fc.AcquireFenceR()
+	if err != nil {
+		log.Printf("%v: AcquireConfig %v err %v\n", db.GetName(), fc.Name(), err)
+		return err
+	}
+	err = json.Unmarshal(b, v)
+	if err != nil {
+		return err
+	}
+	//log.Printf("%v: AcquireConfig %v %v\n", db.GetName(), fc.Name(), v)
+	return nil
 }

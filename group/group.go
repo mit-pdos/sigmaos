@@ -85,7 +85,7 @@ func RunMember(grp string) {
 		<-ch
 	}
 
-	log.Printf("%v: done %v\n", db.GetName(), grp)
+	log.Printf("%v: group done %v\n", db.GetName(), grp)
 
 	mfs.Done()
 }

@@ -160,7 +160,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 			return nil, &np.Rerror{err.Error()}
 		}
 	case np.Tregfence:
-		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
+		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.seenFences.Register(req)
 		if err != nil {
 			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)

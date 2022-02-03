@@ -128,7 +128,7 @@ func (kc *KvClerk) Run() {
 			break
 		}
 	}
-	log.Printf("%v: done nop %v done %v err %v\n", db.GetName(), kc.nop, done, err)
+	// log.Printf("%v: done nop %v done %v err %v\n", db.GetName(), kc.nop, done, err)
 	s := "OK"
 	if err != nil {
 		s = err.Error()
@@ -147,7 +147,7 @@ func (kc *KvClerk) releaseFence(grp string) error {
 	if !ok {
 		return fmt.Errorf("release fclnt %v not found", grp)
 	}
-	log.Printf("%v: release grp %v\n", db.GetName(), grp)
+	// log.Printf("%v: release grp %v\n", db.GetName(), grp)
 	err := f.ReleaseFence()
 	if err != nil {
 		return err
@@ -244,11 +244,9 @@ func (kc *KvClerk) refreshFences(err error) error {
 	if err != nil {
 		// try refreshing config is sufficient to fix error
 		// involving KVCONFIG or if EOF to a kv group.
-		log.Printf("refresh config? %v\n", err)
 		if strings.Contains(err.Error(), KVCONFIG) ||
 			strings.HasPrefix(err.Error(), "stale") ||
 			err.Error() == "EOF" {
-			log.Printf("refresh config %v\n", err)
 			err = kc.refreshConfig(err)
 		}
 	}
@@ -257,7 +255,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	log.Printf("%v: fixRetry err %v\n", db.GetName(), err)
+	// log.Printf("%v: fixRetry err %v\n", db.GetName(), err)
 
 	// Shard dir hasn't been created yet (config 0) or hasn't moved
 	// yet, so wait a bit, and retry.  XXX make sleep time
@@ -324,7 +322,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
+	// log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

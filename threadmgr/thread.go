@@ -34,12 +34,18 @@ func (t *Thread) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	t.opC <- makeOp(fc, replies)
 }
 
-// Called when an operation is going to sleep (or has terminated).
-func (t *Thread) Sleep() {
+// Called when an operation is going to sleep (or has terminated). If the op
+// has terminated, c will be nil.  This function assumes that there is only
+// ever one goroutine waiting on each cond.
+func (t *Thread) Sleep(c *sync.Cond) {
 	t.sleepC <- true
+	if c != nil {
+		c.Wait()
+	}
 }
 
-// Called when an operation is going to be woken up.
+// Called when an operation is going to be woken up. This function
+// assumes that there is only ever one goroutine waiting on each cond.
 func (t *Thread) Wake(c *sync.Cond) {
 	t.nwake += 1
 	if t.nwake >= MAX_NWAKE {
@@ -60,7 +66,7 @@ func (t *Thread) processOps() {
 		// Process the operation.
 		go func() {
 			t.pfn(op.fc, op.replies)
-			t.Sleep()
+			t.Sleep(nil)
 		}()
 		// Wait for it to sleep or complete.
 		t.wait()

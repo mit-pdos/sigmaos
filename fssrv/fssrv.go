@@ -55,9 +55,9 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv)
-	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.tm = threadmgr.MakeThreadMgr(fssrv.Process)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.tm)
+	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.pclnt = pclnt

@@ -11,6 +11,7 @@ import (
 	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
+	"ulambda/threadmgr"
 )
 
 //
@@ -22,18 +23,17 @@ import (
 //
 
 type Session struct {
-	sync.Mutex // to serialize requests on a session
-	cond       *sync.Cond
-	threads    sync.WaitGroup
-	protsrv    protsrv.Protsrv
-	lm         *lease.LeaseMap
-	sid        np.Tsession
+	thread  *threadmgr.Thread
+	threads sync.WaitGroup
+	protsrv protsrv.Protsrv
+	lm      *lease.LeaseMap
+	sid     np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, t *threadmgr.Thread) *Session {
 	sess := &Session{}
+	sess.thread = t
 	sess.protsrv = protsrv
-	sess.cond = sync.NewCond(&sess.Mutex)
 	sess.lm = lease.MakeLeaseMap()
 	sess.sid = sid
 	return sess

@@ -10,21 +10,24 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
+	"ulambda/threadmgr"
 )
 
 type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
+	tm       *threadmgr.ThreadMgr
 	mkps     protsrv.MkProtServer
 	fssrv    protsrv.FsServer
 	sessions map[np.Tsession]*Session
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer) *SessionTable {
+func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv
 	st.mkps = mkps
+	st.tm = tm
 	return st
 }
 
@@ -42,7 +45,7 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid)
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.tm.AddThread())
 	st.sessions[sid] = sess
 	return sess
 }
@@ -56,19 +59,11 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 	return nil
 }
 
-func (st *SessionTable) SessLock(sessid np.Tsession) {
-	if sess, ok := st.Lookup(sessid); ok {
-		sess.Lock()
-		sess.cond.Signal()
+func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.Thread {
+	if sess, ok := st.Lookup(sid); ok {
+		return sess.thread
 	} else {
-		log.Fatalf("LockSession: no lock for %v\n", sessid)
+		log.Fatalf("SessThread: no thread for %v\n", sid)
 	}
-}
-
-func (st *SessionTable) SessUnlock(sessid np.Tsession) {
-	if sess, ok := st.Lookup(sessid); ok {
-		sess.Unlock()
-	} else {
-		log.Fatalf("UnlockSession: no lock for %v\n", sessid)
-	}
+	return nil
 }

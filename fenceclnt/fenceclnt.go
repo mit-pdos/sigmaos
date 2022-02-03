@@ -11,36 +11,84 @@ import (
 )
 
 //
-// Support for fences, which consists of fenceid and sequence number.
-// A proc can fence all servers it has an open session with by
-// registering the fence on each session.  When receiving an
-// operation, the servers check if the registered fence is still valid
-// by checking that the seqno in equal or larger than the last seen
-// fence for that fenceid on any session. If valid the server applies
-// the op, otherwise, it returns stale fence.  The key problem that
-// fence avoid is an old primary that writes to a file after a new
-// primary has taken over.  The old primary's write will fail because
-// its fence has a lower sequence number than the new primary's fence.
+// The fence interface for procs.  A proc uses a fence to block its
+// requests to servers when its fence has become stale.  The use case
+// is a proc that was a primary but has been surplanted by a new
+// primary, but it doesn't know about the new primary (e.g., due to a
+// network partition).  The fence ensures that servers will deny
+// requests by the proc after it isn't the primary anymore.
 //
-// Procs uses FenceClnt to interact with fences, which they can use in
-// two in two ways: write fences and read fences.  Write fences are
-// for, for example, coordinators to obtain an exclusive FenceClnt so
-// that only one coorditor is active.  The write fence maybe
-// invalidated anytime, for example, by a network partition, which
-// allows another a new coordinator to get the FenceClnt.  The old
-// coordinator won't be able to perform operations at any server,
-// because its fence will invalid as soon as the new coordinator
-// obtains the write fence.
+// Procs name a fence using a pathname for the file associated with
+// the fence.  Internally, a fence object consists of a sequence
+// number and a fenceid, which is a tuple containing the pathname at
+// the server holding the fence file and a server id.  The server
+// increases the seqno associated with the fence pathname when a proc
+// creates a new file for that pathname or when a proc modifies the
+// file.  The fence interface fences all requests of a proc to servers
+// by asking the server hosting the fence file for a fence object and
+// asking fsclnt to register that fence object; fsclnt registers the
+// fence on all open sessions to servers and will register the fence
+// on future sessions that the proc opens when it mounts a new server.
 //
-// Multiple procs may have a read fence on, for example, a FenceClnt
-// that represents a configuration file.  A read fence maybe
-// invalidated by a proc that has acquired the write fence for the
-// configuration file by writing to the file, which increases the
-// sequence number of the fence at the server holding the file.  The
-// writer can then ask for a new fence from the server and reregister
-// it on all its session.  Operations by readers will subsequently
-// fail with stale fence error, signaling to readers that they should
-// reread the configuration file.
+// When a proc issues a request on any session, the receiving server
+// checks if the registered fence for that session is still valid by
+// checking that the seqno is equal or larger than the last seen fence
+// for that fenceid on any of the server's sessions. If valid the
+// server serves the request, otherwise, it returns a stale-fence
+// error.
+//
+// Procs use the fence interface in two major ways: as write fences
+// and read fences.  Write fences are intended for a proc that will
+// modify the file associated with the fence and read fences are
+// intended for procs that will read the file file.  The read fence
+// will alert the reader when the file is modified by a proc that has
+// the write fence for the file.  Procs can obtain Write fences in two
+// ways: 1) AcquireFenceW(), which exclusively creates an ephemeral
+// file for writing, blocking if another proc already created it until
+// that proc crashes; 2) OpenFenceFrom(), which opens an existing
+// fence file with the new content from the file <from>.  A proc
+// obtains a read fence by calling AcquireFenceR(), which opens a
+// fence file, potentially blocking until it exists.
+//
+// An intended use case is electing a primary.  Candidate procs invoke
+// AcquireFenceW(), and one will succeed and becomes the primary.  If
+// it crashes, one of the other candidates will succeed, and be the
+// primary.  The typical content of the fence file is the pathname for
+// the primary.  Backups obtain a read fence for the fence file by
+// calling AcquireFenceR().  If there is no primary, they will
+// block. Once there is a primary, AcquireFenceR() succeeds and they
+// know about the new primary.  The reason to use a fence is that if a
+// new primary changes the content of the fence file, then procs
+// holding a read fence will observe a stale-fence error, and invoke
+// AcquireFenceR() again to learn about the new primary. (Note the
+// backup may still be able to talk to the old primary so we cannot
+// rely on a connection error to alert a backup.)
+//
+// The second use case is maintaining a configuration file for a
+// service.  This file typically exists during the life-time of the
+// service. The primary obtains a write fence for this file using
+// OpenFenceFrom(), updating the file atomically with the content of
+// file <from> (e.g., a new configuration).  Procs that are clients of
+// the service use AcquireFenceR() to obtain a read fence for the
+// file.  Whenever the primary updates the fence file, the server
+// increases the seqno number, and the primary asks for a new fence
+// and updates the registered ones.  Client procs will observe a
+// stale-fence error, and can then release the fence and obtain a new
+// one.
+//
+// A replicated service can combine these two use cases. One fence
+// file to elect a primary and one for the configuration. A proc uses
+// the first fence file to become a primary, then do some recovery
+// work, including constructing a new configuration to reflect the
+// recovered service, which it posts through a second fence file.
+//
+// Fences are not like locks: a fence holder can lose a fence at any
+// time (i.e., before the holder releases it).  The read/write usages
+// also doesn't correspond to read/write mode of locks: in fact, it is
+// common for one proc to have a write fence for a file and another
+// proc having a read fence for the same file at the same time.
+// Similar to locks, however, it is the application's responsibility
+// to use fences correctly.
 //
 
 type FenceClnt struct {
@@ -118,6 +166,15 @@ func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 	}
 	fc.Close(fd)
 	return fc.registerFence(np.OWRITE)
+}
+
+func (fc *FenceClnt) OpenFenceFrom(from string) error {
+	err := fc.Rename(from, fc.fenceName)
+	if err != nil {
+		log.Printf("%v: Rename %v to %v err %v", db.GetName(), from, fc.fenceName, err)
+		return err
+	}
+	return fc.registerFence(0)
 }
 
 // Acquire a read fence, which may block until a writer has created

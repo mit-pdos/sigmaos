@@ -217,7 +217,7 @@ func (bl *Balancer) PublishConfig() {
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFile %v err %v\n", db.GetName(), KVNEXTBK, err)
 	}
-	err = bl.confFclnt.MakeFenceFileFrom(KVNEXTBK)
+	err = bl.confFclnt.OpenFenceFrom(KVNEXTBK)
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFenceFileFrom err %v\n", db.GetName(), err)
 	}

@@ -22,16 +22,17 @@ const (
 type System struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	bin              string
-	pid              string
-	namedAddr        []string
-	named            *exec.Cmd
-	fss3d            []*exec.Cmd
-	fsuxd            []*exec.Cmd
-	procd            []*exec.Cmd
-	procdPids        []string
-	crashedProcdPids map[string]bool
-	dbd              []*exec.Cmd
+	bin         string
+	pid         string
+	namedAddr   []string
+	named       *exec.Cmd
+	fss3d       []*exec.Cmd
+	fsuxd       []*exec.Cmd
+	procd       []*exec.Cmd
+	procdPids   []string
+	fsuxdPids   []string
+	crashedPids map[string]bool
+	dbd         []*exec.Cmd
 }
 
 func makeSystemBase(namedAddr []string, bin string) *System {
@@ -39,7 +40,8 @@ func makeSystemBase(namedAddr []string, bin string) *System {
 	s.bin = bin
 	s.namedAddr = namedAddr
 	s.procdPids = []string{}
-	s.crashedProcdPids = make(map[string]bool)
+	s.fsuxdPids = []string{}
+	s.crashedPids = make(map[string]bool)
 	return s
 }
 
@@ -92,6 +94,7 @@ func (s *System) BootFsUxd() error {
 		return err
 	}
 	s.fsuxd = append(s.fsuxd, cmd)
+	s.fsuxdPids = append(s.fsuxdPids, p.Pid)
 	return s.WaitStart(p.Pid)
 }
 
@@ -133,7 +136,6 @@ func (s *System) KillOne(srv string) error {
 		if len(s.procd) > 0 {
 			log.Printf("kill %v\n", -s.procd[0].Process.Pid)
 			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
-			//			err = s.procd[0].Process.Kill()
 			if err == nil {
 				s.procd[0].Wait()
 				s.procd = s.procd[1:]
@@ -141,8 +143,19 @@ func (s *System) KillOne(srv string) error {
 				log.Fatalf("Procd kill failed %v\n", err)
 			}
 		}
-		s.crashedProcdPids[s.procdPids[0]] = true
+		s.crashedPids[s.procdPids[0]] = true
 		s.procdPids = s.procdPids[1:]
+	case np.UX:
+		log.Printf("kill %v\n", -s.fsuxd[0].Process.Pid)
+		err = syscall.Kill(-s.fsuxd[0].Process.Pid, syscall.SIGKILL)
+		if err == nil {
+			s.fsuxd[0].Wait()
+			s.fsuxd = s.fsuxd[1:]
+			s.crashedPids[s.fsuxdPids[0]] = true
+			s.fsuxdPids = s.fsuxdPids[1:]
+		} else {
+			log.Fatalf("Ux kill failed %v\n", err)
+		}
 	default:
 		log.Fatalf("Unkown server type in System.KillOne: %v", srv)
 	}
@@ -157,7 +170,7 @@ func (s *System) Shutdown() {
 		}
 		for _, pid := range cpids {
 			s.Evict(pid)
-			if _, ok := s.crashedProcdPids[pid]; !ok {
+			if _, ok := s.crashedPids[pid]; !ok {
 				if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
 					log.Printf("shutdown error %v %v", status, err)
 				}

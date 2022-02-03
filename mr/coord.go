@@ -279,10 +279,9 @@ func (w *Coord) Work() {
 
 	log.Printf("%v: primary\n", db.GetName())
 
-	w.recover(MDIR)
-	w.recover(RDIR)
-
 	for {
+		w.recover(MDIR)
+		w.recover(RDIR)
 		w.phase(MDIR, w.mapper)
 		log.Printf("%v: Reduce phase\n", db.GetName())
 		// If reduce phase is unsuccessful, we lost some mapper output. Restart

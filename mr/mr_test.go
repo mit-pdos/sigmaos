@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/kernel"
@@ -71,6 +72,8 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts.System = kernel.MakeSystemAll("mr-wc-test", "..")
 	ts.nreducetask = nreducetask
 
+	db.Name("mr-wc-test")
+
 	mr.InitCoordFS(ts.System.FsLib, nreducetask)
 
 	os.Remove(OUTPUT)
@@ -117,7 +120,7 @@ func (ts *Tstate) checkJob() {
 	Compare(ts.FsLib)
 }
 
-// Crash a server, then start a new one of the same type.
+// Crash a server of a certain type, then crash a server of that type.
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)
 	time.Sleep(time.Duration(r) * time.Microsecond)
@@ -125,13 +128,24 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	// Make sure not too many crashes happen at once by taking a lock (we always
 	// want >= 1 server to be up).
 	l.Lock()
+	switch srv {
+	case np.PROCD:
+		err := ts.BootProcd()
+		if err != nil {
+			log.Fatalf("Error spawn procd")
+		}
+	case np.UX:
+		err := ts.BootFsUxd()
+		if err != nil {
+			log.Fatalf("Error spawn uxd")
+		}
+	default:
+		log.Fatalf("%v: Unrecognized service type", db.GetName())
+	}
+	log.Printf("Kill one %v", srv)
 	err := ts.KillOne(srv)
 	if err != nil {
 		log.Fatalf("Error non-nil kill procd: %v", err)
-	}
-	err = ts.BootProcd()
-	if err != nil {
-		log.Fatalf("Error spawn procd")
 	}
 	l.Unlock()
 	crashchan <- true
@@ -141,33 +155,31 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
-	if crashprocd > 0 {
-		ts.BootProcd()
-	}
-
 	ts.prepareJob()
 
 	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
 
 	crashchan := make(chan bool)
-	if crashprocd > 0 || crashux > 0 {
-		l := &sync.Mutex{}
-		for i := 0; i < crashprocd; i++ {
-			// Sleep for a random time, then crash a server.
-			go ts.crashServer(np.PROCD, (i+1)*CRASHSRV, l, crashchan)
-		}
+	l1 := &sync.Mutex{}
+	for i := 0; i < crashprocd; i++ {
+		// Sleep for a random time, then crash a server.
+		go ts.crashServer(np.PROCD, (i+1)*CRASHSRV, l1, crashchan)
+	}
+	l2 := &sync.Mutex{}
+	for i := 0; i < crashux; i++ {
+		// Sleep for a random time, then crash a server.
+		go ts.crashServer(np.UX, (i+1)*CRASHSRV, l2, crashchan)
 	}
 
 	cm.Wait()
 
-	if crashprocd > 0 || crashux > 0 {
-		for i := 0; i < crashprocd; i++ {
-			<-crashchan
-		}
+	for i := 0; i < crashprocd+crashux; i++ {
+		<-crashchan
 	}
 
 	ts.checkJob()
 
+	log.Printf("About to shut down")
 	ts.Shutdown()
 }
 
@@ -204,4 +216,19 @@ func TestCrashProcdN(t *testing.T) {
 func TestCrashUx1(t *testing.T) {
 	N := 1
 	runN(t, 0, 0, 0, N)
+}
+
+func TestCrashUx2(t *testing.T) {
+	N := 2
+	runN(t, 0, 0, 0, N)
+}
+
+func TestCrashUx5(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, 0, N)
+}
+
+func TestCrashProcdUx5(t *testing.T) {
+	N := 5
+	runN(t, 0, 0, N, N)
 }

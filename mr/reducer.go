@@ -60,7 +60,6 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	fd, err := r.Open(d, np.OREAD)
 	if err != nil {
 		// another reducer already completed; nothing to be done
-		log.Printf("reducer Open %v err %v", d, err)
 		db.DPrintf("Open %v err %v", d, err)
 		return nil, err
 	}
@@ -168,7 +167,6 @@ func RunReducer(reducef ReduceT, args []string) {
 		os.Exit(1)
 	}
 	err = r.doReduce()
-	log.Printf("Reducer reduce result: %v", err)
 	if err == nil {
 		r.Exited(proc.GetPid(), "OK")
 	} else {

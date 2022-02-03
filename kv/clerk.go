@@ -2,7 +2,6 @@ package kv
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"log"
@@ -83,7 +82,7 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.grpFclnts = make(map[string]*fenceclnt.FenceClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.grpre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
-	err := kc.readConfig()
+	err := kc.balFclnt.AcquireConfig(&kc.blConf)
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
 	}
@@ -159,7 +158,7 @@ func (kc *KvClerk) releaseFence(grp string) error {
 // Dynamically allocate a FenceClnt if we haven't seen this grp before.
 func (kc *KvClerk) acquireFence(grp string) error {
 	if fc, ok := kc.grpFclnts[grp]; ok {
-		if fc.Fence() != nil {
+		if fc.IsFenced() != nil {
 			// we have acquired a fence
 			return nil
 		}
@@ -167,28 +166,12 @@ func (kc *KvClerk) acquireFence(grp string) error {
 		fn := group.GrpConfPath(grp)
 		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
 	}
-	fc := kc.grpFclnts[grp]
-	b, err := fc.AcquireFenceR()
-	if err != nil {
-		log.Printf("%v: fence %v err %v\n", db.GetName(), grp, err)
-		return err
-	}
 	gc := group.GrpConf{}
-	json.Unmarshal(b, &gc)
-	log.Printf("%v: grp fence %v gc %v\n", db.GetName(), grp, gc)
-	return nil
-}
-
-// XXX atomic read
-func (kc *KvClerk) readConfig() error {
-	log.Printf("%v: start readConfig %v\n", db.GetName(), kc.blConf)
-	b, err := kc.balFclnt.AcquireFenceR()
+	err := kc.grpFclnts[grp].AcquireConfig(&gc)
 	if err != nil {
-		log.Printf("%v: readConfig: err %v\n", db.GetName(), err)
 		return err
 	}
-	json.Unmarshal(b, &kc.blConf)
-	log.Printf("%v: readConfig %v\n", db.GetName(), kc.blConf)
+	// XXX do something with gc
 	return nil
 }
 
@@ -204,7 +187,7 @@ func (kc KvClerk) releaseGrp(err error) error {
 // Read config, and retry if we have a stale group fence
 func (kc KvClerk) retryReadConfig() error {
 	for {
-		err := kc.readConfig()
+		err := kc.balFclnt.AcquireConfig(&kc.blConf)
 		if err == nil {
 			return nil
 		}
@@ -295,7 +278,6 @@ func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
 		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
-		log.Printf("acquire: %v\n", kc.blConf.Shards[shard])
 		o.err = kc.acquireFence(kc.blConf.Shards[shard])
 		if o.err != nil {
 			o.err = kc.fixRetry(o.err)

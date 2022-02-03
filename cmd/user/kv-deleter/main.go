@@ -8,14 +8,14 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "%v: <dir>\n", os.Args[0])
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "%v: <n> <dir>\n", os.Args[0])
 		os.Exit(1)
 	}
-	dl, err := kv.MakeDeleter()
+	dl, err := kv.MakeDeleter(os.Args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	dl.Delete(os.Args[1])
+	dl.Delete(os.Args[2])
 }

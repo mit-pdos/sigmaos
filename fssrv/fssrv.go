@@ -17,6 +17,7 @@ import (
 	"ulambda/sesscond"
 	"ulambda/session"
 	"ulambda/stats"
+	"ulambda/threadmgr"
 	"ulambda/watch"
 )
 
@@ -37,6 +38,7 @@ type FsServer struct {
 	stats *stats.Stats
 	st    *session.SessionTable
 	sct   *sesscond.SessCondTable
+	tm    *threadmgr.ThreadMgr
 	wt    *watch.WatchTable
 	srv   *netsrv.NetServer
 	pclnt *procclnt.ProcClnt
@@ -55,6 +57,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
+	fssrv.tm = threadmgr.MakeThreadMgr(fssrv.Process)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
 	fssrv.pclnt = pclnt

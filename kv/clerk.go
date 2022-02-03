@@ -128,7 +128,7 @@ func (kc *KvClerk) Run() {
 			break
 		}
 	}
-	// log.Printf("%v: done nop %v done %v err %v\n", db.GetName(), kc.nop, done, err)
+	log.Printf("%v: done nop %v done %v err %v\n", db.GetName(), kc.nop, done, err)
 	s := "OK"
 	if err != nil {
 		s = err.Error()

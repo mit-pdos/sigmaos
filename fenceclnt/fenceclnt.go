@@ -79,7 +79,7 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 		log.Printf("%v: MakeFence %v err %v", db.GetName(), fc.fenceName, err)
 		return err
 	}
-	log.Printf("%v: MakeFence %v fence %v", db.GetName(), fc.fenceName, fence)
+	// log.Printf("%v: MakeFence %v fence %v", db.GetName(), fc.fenceName, fence)
 	if fc.lastSeq > fence.Seqno {
 		log.Fatalf("%v: FATAL MakeFence bad fence %v last seq %v\n", db.GetName(), fence, fc.lastSeq)
 	}

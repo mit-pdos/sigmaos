@@ -76,8 +76,6 @@ func shardPath(kvd, shard string) string {
 }
 
 func RunBalancer(crashhelper string, auto string) {
-	log.Printf("%v: balancer crash %v crashhelper %v auto %v\n", proc.GetPid(), crash.GetEnv(), crashhelper, auto)
-
 	bl := &Balancer{}
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
@@ -203,7 +201,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 		if err != nil {
 			if err.Error() == "EOF" {
 				// we are disconnected
-				log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
+				// log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
 				ch <- true
 			}
 		}
@@ -282,7 +280,7 @@ func (bl *Balancer) runProc(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("%v: proc %v wait %v\n", db.GetName(), args, pid)
+	// log.Printf("%v: proc %v wait %v\n", db.GetName(), args, pid)
 	status, err := bl.WaitExit(pid)
 	return status, err
 }
@@ -331,7 +329,6 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 }
 
 func (bl *Balancer) checkMoves(moves Moves) {
-	log.Printf("%v: check moves %v\n", db.GetName(), len(moves))
 	for _, m := range moves {
 		fn := m.Dst
 		_, err := bl.Stat(fn)
@@ -343,17 +340,16 @@ func (bl *Balancer) checkMoves(moves Moves) {
 
 // Run deleters in parallel
 func (bl *Balancer) runDeleters(moves Moves) {
-	log.Printf("%v: start deleting %v\n", db.GetName(), len(moves))
 	tmp := make(Moves, len(moves))
 	ch := make(chan int)
 	for i, m := range moves {
 		go func(m *Move, i int) {
-			err, status := bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src},
+			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src},
 				func(err error, status string) bool {
 					ok := strings.HasPrefix(status, "file not found")
 					return err != nil || (status != "OK" && !ok)
 				})
-			log.Printf("%v: delete %v/%v done err %v status %v\n", db.GetName(), i, m, err, status)
+			// log.Printf("%v: delete %v/%v done err %v status %v\n", db.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
 	}
@@ -369,16 +365,15 @@ func (bl *Balancer) runDeleters(moves Moves) {
 
 // Run movers in parallel
 func (bl *Balancer) runMovers(moves Moves) {
-	log.Printf("%v: start moving %v\n", db.GetName(), len(moves))
 	tmp := make(Moves, len(moves))
 	copy(tmp, moves)
 	ch := make(chan int)
 	for i, m := range moves {
 		go func(m *Move, i int) {
-			err, status := bl.runProcRetry([]string{"bin/user/kv-mover", strconv.Itoa(bl.conf.N), m.Src, m.Dst}, func(err error, status string) bool {
+			bl.runProcRetry([]string{"bin/user/kv-mover", strconv.Itoa(bl.conf.N), m.Src, m.Dst}, func(err error, status string) bool {
 				return err != nil || status != "OK"
 			})
-			log.Printf("%v: move %v m %v done err %v status %v\n", db.GetName(), i, m, err, status)
+			// log.Printf("%v: move %v m %v done err %v status %v\n", db.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
 	}
@@ -394,12 +389,11 @@ func (bl *Balancer) runMovers(moves Moves) {
 
 func (bl *Balancer) balance(opcode, mfs string) error {
 	if bl.testAndSetRecovering() {
-		log.Printf("%v: force client to retry\n", db.GetName())
 		return fmt.Errorf("retry")
 	}
 	defer bl.setRecovering(false)
 
-	log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
+	// log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
 	var nextShards []string
 	switch opcode {
@@ -416,7 +410,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 	default:
 	}
 
-	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
+	// log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
 	var moves Moves
 	if bl.conf.N == 0 {

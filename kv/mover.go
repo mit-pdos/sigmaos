@@ -67,7 +67,7 @@ func (mv *Mover) moveShard(s, d string) error {
 		//log.Printf("%v: Mkdir %v err %v\n", db.GetName(), d1, err)
 		return err
 	}
-	log.Printf("%v: Copy shard from %v to %v\n", db.GetName(), s, d1)
+	// log.Printf("%v: Copy shard from %v to %v\n", db.GetName(), s, d1)
 	err = mv.CopyDir(s, d1)
 	if err != nil {
 		//log.Printf("%v: CopyDir shard%v to %v err %v\n", db.GetName(), s, d1, err)

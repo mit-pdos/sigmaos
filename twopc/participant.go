@@ -7,9 +7,9 @@ import (
 
 	"ulambda/atomic"
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
 )
@@ -18,7 +18,7 @@ type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	lease  *leaseclnt.LeaseClnt
+	fclnt  *fenceclnt.FenceClnt
 	me     string
 	twopc  *Twopc
 	txn    TxnI
@@ -39,7 +39,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn 
 	p.me = me
 	p.FsLib = fsl
 	p.ProcClnt = pclnt
-	p.lease = leaseclnt.MakeLeaseClnt(p.FsLib, TWOPCLEASE, 0)
+	p.fclnt = fenceclnt.MakeFenceClnt(p.FsLib, TWOPCFENCE, 0)
 	p.txn = txn
 	p.opcode = opcode
 
@@ -103,12 +103,12 @@ func (p *Participant) watchTwopcCommit(path string, err error) {
 func (p *Participant) restartCoord() {
 	log.Printf("PART %v restartCoord: COORD crashed %v\n", p.me, p.twopc)
 
-	if err := p.lease.ReleaseRLease(); err != nil {
-		log.Fatalf("Error ReleaseRLease restartCoord: %v", err)
+	if err := p.fclnt.ReleaseFence(); err != nil {
+		log.Fatalf("Error ReleaseFence restartCoord: %v", err)
 	}
-	// Grab LEASE again
-	if b, err := p.lease.WaitRLease(); err != nil {
-		log.Fatalf("Error Rlease wait restartCoord: %v, %v", b, err)
+	// Grab fence again
+	if b, err := p.fclnt.AcquireFenceR(); err != nil {
+		log.Fatalf("Error AcquireFenceR  restartCoord: %v, %v", b, err)
 	}
 
 	p.twopc = clean(p.FsLib)
@@ -146,9 +146,9 @@ func (p *Participant) watchCoord(path string, err error) {
 
 func (p *Participant) prepare() {
 	p.mu.Lock()
-	// Grab lease before preparing
-	if b, err := p.lease.WaitRLease(); err != nil {
-		log.Fatalf("Error Rlease wait: %v, %v", b, err)
+	// Grab fence before preparing
+	if b, err := p.fclnt.AcquireFenceR(); err != nil {
+		log.Fatalf("Error AcquireFenceR wait: %v, %v", b, err)
 	}
 
 	var err error
@@ -213,8 +213,8 @@ func (p *Participant) commit() {
 
 	p.committed()
 
-	// Release lease.
-	err := p.lease.ReleaseRLease()
+	// Release fence
+	err := p.fclnt.ReleaseFence()
 	if err != nil {
 		log.Fatalf("Error Rlease release: %v", err)
 	}

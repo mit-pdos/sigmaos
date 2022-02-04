@@ -25,7 +25,7 @@ func MakeFidPath(p []string, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
 }
 
 func (f *Fid) String() string {
-	return fmt.Sprintf("p %v o? %v m %v v %v", f.path, f.isOpen, f.m, f.vers)
+	return fmt.Sprintf("p %v o? %v %v v %v", f.path, f.isOpen, f.m, f.vers)
 }
 
 func (f *Fid) Ctx() fs.CtxI {

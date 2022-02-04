@@ -78,10 +78,14 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Rgetfile{}, nil
 	case np.TTsetfile:
 		return np.Tsetfile{}, nil
-	case np.TTlease:
-		return np.Tlease{}, nil
-	case np.TTunlease:
-		return np.Tunlease{}, nil
+	case np.TTmkfence:
+		return np.Tmkfence{}, nil
+	case np.TRmkfence:
+		return np.Rmkfence{}, nil
+	case np.TTregfence:
+		return np.Tregfence{}, nil
+	case np.TTunfence:
+		return np.Tunfence{}, nil
 	}
 	return nil, fmt.Errorf("unknown message type: %v", (uint64)(typ))
 }

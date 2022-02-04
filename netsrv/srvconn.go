@@ -105,7 +105,7 @@ func (c *SrvConn) writer() {
 		} else {
 			err = c.bw.Flush()
 			if err != nil {
-				log.Printf("%v: flush %v %v err %v", db.GetName(), fcall, err)
+				log.Printf("%v: flush %v err %v", db.GetName(), fcall, err)
 			}
 		}
 	}

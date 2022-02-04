@@ -19,7 +19,10 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 
-// Augmentations
+//
+// Augmentated types for sigmaOS
+//
+
 type Tsession uint64
 type Tseqno uint64
 
@@ -29,11 +32,33 @@ func (n *Tseqno) Next() Tseqno {
 	return Tseqno(next)
 }
 
+type Tfenceid struct {
+	Path     string // path at hosting server
+	ServerId uint64 // XXX public key of server?
+}
+
+type Tfence struct {
+	FenceId Tfenceid
+	Seqno   Tseqno
+}
+
+func (f *Tfence) String() string {
+	return fmt.Sprintf("idf %v seqno %v", f.FenceId, f.Seqno)
+}
+
+func MakeFence(idf Tfenceid, seq Tseqno) *Tfence {
+	return &Tfence{idf, seq}
+}
+
 // NoSession signifies the fcall came from a wire-compatible peer
 const NoSession Tsession = ^Tsession(0)
 
 // NoSeqno signifies the fcall came from a wire-compatible peer
 const NoSeqno Tseqno = ^Tseqno(0)
+
+//
+//  End augmentated types
+//
 
 // NoTag is the tag for Tversion and Rversion requests.
 const NoTag Ttag = ^Ttag(0)
@@ -47,6 +72,7 @@ type Tpath uint64
 type Qtype uint8
 type TQversion uint32
 
+const NoPath Tpath = ^Tpath(0)
 const NoV TQversion = ^TQversion(0)
 
 func VEq(v1, v2 TQversion) bool {
@@ -108,6 +134,16 @@ func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
 }
 
+// If qid is newer than q, return true, otherwise false.  If q.Path ==
+// qid.Path, then it is the same file.  If it is is the same file and
+// qid.Version is equal or larger, then qid is newer.
+func (q *Tqid) IsNewer(qid Tqid) bool {
+	if qid.Path == q.Path && qid.Version >= q.Version {
+		return true
+	}
+	return false
+}
+
 type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages
@@ -125,14 +161,18 @@ const (
 	// sigmaP extensions/hacks:
 	//
 
-	// A client uses OWATCH to block at the server until a file is
-	// removed.  OWATCH with Tcreate will retry the create, and
-	// provides an atomic way to lock a file, with remove()
-	// releasing the lock.  OWATCH with Open() and a closure will
-	// invoke the closure when a client creates or removes the
-	// file.
+	// A client uses OWATCH to block at the server until a
+	// file/directiory is create or removed, or a directory
+	// changes.  OWATCH with Tcreate will retry the create, and
+	// provides an atomic way to create a file, with remove()
+	// allowing the next create to succeed.  OWATCH with Open()
+	// and a closure will invoke the closure when a client creates
+	// or removes the file.  OWATCH on open for a direct directory
+	// and a closure will invoke the closure if the directory
+	// changes.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
-	// OVERSION is for atomic read-and-write
+
+	// XXX OVERSION is for atomic read-and-write, but unused for now.
 	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
 )
 
@@ -226,8 +266,10 @@ const (
 	TRgetfile
 	TTsetfile
 	TTremovefile
-	TTlease
-	TTunlease
+	TTmkfence
+	TRmkfence
+	TTregfence
+	TTunfence
 )
 
 func (fct Tfcall) String() string {
@@ -302,10 +344,14 @@ func (fct Tfcall) String() string {
 		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
-	case TTlease:
-		return "Tlease"
-	case TTunlease:
-		return "Tunlease"
+	case TTmkfence:
+		return "Tmkfence"
+	case TRmkfence:
+		return "Rmkfence"
+	case TTregfence:
+		return "Tregfence"
+	case TTunfence:
+		return "Tunfence"
 	default:
 		return "Tunknown"
 	}
@@ -485,13 +531,22 @@ type Tremovefile struct {
 	Wnames []string
 }
 
-type Tlease struct {
-	Wnames []string
-	Qid    Tqid
+type Tmkfence struct {
+	Fid   Tfid
+	Seqno Tseqno
 }
 
-type Tunlease struct {
-	Wnames []string
+type Rmkfence struct {
+	Fence Tfence
+}
+
+type Tregfence struct {
+	Fence Tfence
+	New   bool
+}
+
+type Tunfence struct {
+	Fence Tfence
 }
 
 type Rremove struct {
@@ -598,5 +653,7 @@ func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
-func (Tlease) Type() Tfcall      { return TTlease }
-func (Tunlease) Type() Tfcall    { return TTunlease }
+func (Tmkfence) Type() Tfcall    { return TTmkfence }
+func (Rmkfence) Type() Tfcall    { return TRmkfence }
+func (Tregfence) Type() Tfcall   { return TTregfence }
+func (Tunfence) Type() Tfcall    { return TTunfence }

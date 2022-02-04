@@ -6,10 +6,10 @@ import (
 	// "time"
 
 	db "ulambda/debug"
+	"ulambda/fence"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
-	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/stats"
@@ -23,13 +23,13 @@ import (
 //
 
 type FsObjSrv struct {
-	fssrv *fssrv.FsServer
-	wt    *watch.WatchTable // shared across sessions
-	ft    *fidTable
-	et    *ephemeralTable
-	lease *lease.Lease
-	stats *stats.Stats
-	sid   np.Tsession
+	fssrv      *fssrv.FsServer
+	wt         *watch.WatchTable // shared across sessions
+	ft         *fidTable
+	et         *ephemeralTable
+	seenFences *fence.FenceTable
+	stats      *stats.Stats
+	sid        np.Tsession
 }
 
 func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
@@ -41,6 +41,7 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos.et = makeEphemeralTable()
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
+	fos.seenFences = srv.GetSeenFences()
 	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
@@ -282,6 +283,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return r
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	fos.seenFences.UpdateFence(nf.Path())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -327,7 +329,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	//log.Printf("%v: %v remove %v\n", db.GetName(), ctx.Uname(), path)
+	// log.Printf("%v: %v remove %v in %v\n", db.GetName(), ctx.Uname(), path, np.Dir(path))
 
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
@@ -442,6 +444,7 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
+		fos.seenFences.UpdateFence(dst)
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
 		dws.WakeupWatchL() // trigger dir watch
@@ -455,7 +458,7 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 	if d1.Inum() < d2.Inum() {
 		return oldf, newf
 	} else if d1.Inum() == d2.Inum() { // would have used wstat instead of renameat
-		log.Fatalf("lockOrder")
+		log.Fatalf("FATAL lockOrder")
 		return oldf, newf
 	} else {
 		return newf, oldf
@@ -501,6 +504,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 
 			return &np.Rerror{err.Error()}
 		}
+		fos.seenFences.UpdateFence(dst)
 		dstws.WakeupWatchL() // trigger create watch
 		srcws.WakeupWatchL() // trigger remove watch
 		d1ws.WakeupWatchL()  // trigger one dir watch
@@ -543,7 +547,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 		}
 		return nil
 	default:
-		log.Fatalf("GetFile: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL GetFile: obj type %T isn't Dir or File\n", o)
 
 	}
 	return nil
@@ -563,6 +567,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	o := f.Obj()
 	names := args.Wnames
 	lo := o
+	fname := append(f.Path(), names[0:len(args.Wnames)]...)
 	if args.Perm != 0 { // create?
 		names = names[0 : len(args.Wnames)-1]
 	}
@@ -585,9 +590,9 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if err != nil {
 			return err
 		}
-		fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+		f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
-		fos.stats.Path(f.Path())
+		fos.stats.Path(fname)
 		_, r = lo.Open(f.Ctx(), args.Mode)
 		if r != nil {
 			return &np.Rerror{r.Error()}
@@ -601,9 +606,21 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}
+		fos.seenFences.UpdateFence(fname)
 		return nil
 	default:
-		log.Fatalf("SetFile: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL SetFile: obj type %T isn't Dir or File\n", o)
 	}
+	return nil
+}
+
+// XXX allow client to specify seqno and update it.
+func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
+	f, err := fos.lookup(args.Fid)
+	if err != nil {
+		return err
+	}
+	rets.Fence = fos.seenFences.MkFence(f.Path())
+	// log.Printf("mkfence f %v -> %v\n", f, rets.Fence)
 	return nil
 }

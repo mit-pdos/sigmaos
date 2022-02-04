@@ -10,6 +10,27 @@ import (
 	"ulambda/sesscond"
 )
 
+//
+// A table of watches so that client can wait until a file is created
+// or removed, or a directory changes (see OWATCH).
+//
+// Servers also use them to locks a pathname before
+// manipulating/creating a file or directory.  When a server starts an
+// operation it calls WatchLookupL, which allocates an watch in the
+// table and locks the watch. Then, it does it work, and releases the
+// watch at the end.  If the releasing thread is the last thread using
+// the watch, then the thread removes the watch from the table.
+// Thread acquire watches in the following order: first the parent
+// directory, then the file or child directory.
+//
+// If a server thread wants to wait on a watch it calls Watch(), which
+// atomically puts the server thread on the waiting list for the watch
+// and unlocks the watch.  Another server thread may call Wakeup,
+// which causes the waiting thread to resume after acquiring the lock
+// on the watch.  This locking plan is modeled after condition
+// variables to ensure watches don't suffer from lost wakeups.
+//
+
 type Watch struct {
 	sync.Mutex
 	//deadlock.Mutex

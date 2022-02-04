@@ -28,6 +28,7 @@ type Protsrv interface {
 	Renameat(np.Trenameat, *np.Rrenameat) *np.Rerror
 	GetFile(np.Tgetfile, *np.Rgetfile) *np.Rerror
 	SetFile(np.Tsetfile, *np.Rwrite) *np.Rerror
+	MkFence(np.Tmkfence, *np.Rmkfence) *np.Rerror
 	Detach()
 }
 

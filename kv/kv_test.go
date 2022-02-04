@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
@@ -22,6 +23,7 @@ const (
 	NCLERK    = 10
 
 	CRASHBALANCER = 3200
+	CRASHHELPER   = "100"
 )
 
 func checkKvs(t *testing.T, kvs *KvSet, n int) {
@@ -54,10 +56,11 @@ func TestBalance(t *testing.T) {
 }
 
 func TestRegex(t *testing.T) {
-	grpre := regexp.MustCompile(`name/group/grp-([0-9]+)-conf`)
-	s := grpre.FindStringSubmatch("file not found /name/group/grp-9-conf")
+	// grp re
+	grpre := regexp.MustCompile(`group/grp-([0-9]+)-conf`)
+	s := grpre.FindStringSubmatch("file not found group/grp-9-conf")
 	assert.NotNil(t, s, "Find")
-	s = grpre.FindStringSubmatch("file not found /name/group/grp-10-conf")
+	s = grpre.FindStringSubmatch("file not found group/grp-10-conf")
 	assert.NotNil(t, s, "Find")
 }
 
@@ -70,11 +73,11 @@ type Tstate struct {
 	clrks   []string
 }
 
-func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
+func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("kv_test", "..")
-	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{auto}, crash)
+	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, crash)
 
 	ts.setup(nclerk)
 
@@ -82,7 +85,7 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash int) *Tstate {
 }
 
 func (ts *Tstate) setup(nclerk int) {
-	log.Printf("start kv\n")
+	log.Printf("%v: start kv\n", db.GetName())
 
 	// add 1 kv so that we can put to initialize
 	gn := group.GRP + "0"
@@ -159,7 +162,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts := makeTstate(t, "manual", 1, 0)
+	ts := makeTstate(t, "manual", 1, 0, "0")
 
 	_, err := ts.clrk.Get(key(NKEYS + 1))
 	assert.NotEqual(ts.t, err, nil, "Get")
@@ -179,10 +182,10 @@ func TestGetPutSet(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk int, crash int) {
+func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
 	const TIME = 100 // 500
 
-	ts := makeTstate(t, "manual", nclerk, crash)
+	ts := makeTstate(t, "manual", nclerk, crash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()
@@ -229,27 +232,39 @@ func concurN(t *testing.T, nclerk int, crash int) {
 }
 
 func TestConcurOK0(t *testing.T) {
-	concurN(t, 0, 0)
+	concurN(t, 0, 0, "0")
 }
 
 func TestConcurOK1(t *testing.T) {
-	concurN(t, 1, 0)
+	concurN(t, 1, 0, "0")
 }
 
 func TestConcurOKN(t *testing.T) {
-	concurN(t, NCLERK, 0)
+	concurN(t, NCLERK, 0, "0")
 }
 
-func TestConcurFail0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER)
+func TestConcurFailBal0(t *testing.T) {
+	concurN(t, 0, CRASHBALANCER, "0")
 }
 
-func TestConcurFail1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER)
+func TestConcurFailBal1(t *testing.T) {
+	concurN(t, 1, CRASHBALANCER, "0")
 }
 
-func TestConcurFailN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER)
+func TestConcurFailBalN(t *testing.T) {
+	concurN(t, NCLERK, CRASHBALANCER, "0")
+}
+
+func TestConcurFailAll0(t *testing.T) {
+	concurN(t, 0, CRASHBALANCER, CRASHHELPER)
+}
+
+func TestConcurFailAll1(t *testing.T) {
+	concurN(t, 1, CRASHBALANCER, CRASHHELPER)
+}
+
+func TestConcurFailAllN(t *testing.T) {
+	concurN(t, NCLERK, CRASHBALANCER, CRASHHELPER)
 }
 
 // func TestAuto(t *testing.T) {

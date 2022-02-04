@@ -1,14 +1,12 @@
 package session
 
 import (
-	"fmt"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	// db "ulambda/debug"
+	"ulambda/fence"
 	"ulambda/fslib"
-	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 )
@@ -26,36 +24,37 @@ type Session struct {
 	cond       *sync.Cond
 	threads    sync.WaitGroup
 	protsrv    protsrv.Protsrv
-	lm         *lease.LeaseMap
-	sid        np.Tsession
+	seenFences *fence.FenceTable
+	myFences   *fence.FenceTable
+	Sid        np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, fm *fence.FenceTable) *Session {
 	sess := &Session{}
 	sess.protsrv = protsrv
 	sess.cond = sync.NewCond(&sess.Mutex)
-	sess.lm = lease.MakeLeaseMap()
-	sess.sid = sid
+	sess.Sid = sid
+	sess.seenFences = fm
+	sess.myFences = fence.MakeFenceTable()
 	return sess
 }
 
-func (sess *Session) Lease(fn []string, qid np.Tqid) error {
-	return sess.lm.Add(lease.MakeLease(fn, qid))
+func (sess *Session) Fence(req np.Tregfence) error {
+	sess.myFences.Insert(req.Fence)
+	return nil
 }
 
-func (sess *Session) Unlease(fn []string) error {
-	return sess.lm.Del(fn)
+func (sess *Session) Unfence(idf np.Tfenceid) error {
+	return sess.myFences.Del(idf)
 }
 
-func (sess *Session) CheckLeases(fsl *fslib.FsLib) error {
-	leases := sess.lm.Leases()
-	for _, l := range leases {
-		fn := np.Join(l.Fn)
-		st, err := fsl.Stat(fn)
-		if err != nil {
-			return fmt.Errorf("lease not found %v err %v", fn, err.Error())
-		}
-		err = l.Check(st.Qid)
+func (sess *Session) CheckFences(fsl *fslib.FsLib) error {
+	fences := sess.myFences.Fences()
+	//if len(fences) > 0 {
+	//	log.Printf("%v: CheckFences %v\n", sess.Sid, fences)
+	//}
+	for _, f := range fences {
+		err := sess.seenFences.IsRecent(f)
 		if err != nil {
 			return err
 		}

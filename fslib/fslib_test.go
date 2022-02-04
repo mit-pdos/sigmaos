@@ -13,7 +13,6 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/leaseclnt"
 	"ulambda/named"
 	np "ulambda/ninep"
 )
@@ -316,9 +315,6 @@ func TestCounter(t *testing.T) {
 	ts.Shutdown()
 }
 
-// Too fail test, set to true
-const FAIL = false
-
 // Inline Set() so that we can delay the Write() to emulate a delay on
 // the server between open and write.
 func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
@@ -336,97 +332,6 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 		return err
 	}
 	return nil
-}
-
-// Caller must have acquired lease and keeps writing
-// until lease is invalidated.
-func write(fsl *fslib.FsLib, ch chan int, fn string) {
-	const N = 1000
-	for i := 1; i < N; {
-		d := []byte(strconv.Itoa(i))
-		err := writeFile(fsl, fn, d)
-		if err == nil {
-			i++
-		} else {
-			// log.Printf("write %v err %v\n", i, err)
-			ch <- i - 1
-			return
-		}
-	}
-	ch <- N - 1
-}
-
-func writer(t *testing.T, ch chan int, N int, fn string) {
-	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	l := leaseclnt.MakeLeaseClnt(fsl, "name/config", 0)
-	cont := true
-	for cont {
-		b, err := l.WaitRLease()
-		assert.Equal(t, nil, err)
-		n, err := strconv.Atoi(string(b))
-		write(fsl, ch, fn)
-		if n == N-1 {
-			cont = false
-		}
-		if !FAIL {
-			err = l.ReleaseRLease()
-			assert.Equal(t, nil, err)
-		}
-	}
-}
-
-// Open a file, rename it, write to open file, and read renamed file.
-// Without leases the write will not be observed by reader.
-func TestSetRenameGet(t *testing.T) {
-	const N = 100
-
-	ts := makeTstate(t)
-
-	err := ts.Mkdir("name/d1", 0777)
-	assert.Equal(t, nil, err)
-	fn := "name/d1/f"
-	fn1 := "name/d1/f1"
-	d := []byte(strconv.Itoa(0))
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
-	assert.Equal(t, nil, err)
-
-	ch := make(chan int)
-	l := leaseclnt.MakeLeaseClnt(ts.FsLib, "name/config", 0)
-
-	go writer(t, ch, N, fn)
-
-	for i := 0; i < N; i++ {
-		b := []byte(strconv.Itoa(i))
-		err = l.MakeLeaseFile(b)
-		assert.Equal(t, nil, err)
-
-		// Let the writer write for some time
-		time.Sleep(100 * time.Millisecond)
-
-		// Now rename so noone can open the file
-		err = ts.Rename(fn, fn1)
-		assert.Equal(t, nil, err)
-
-		// Invalidate any read lease if proc already opened
-		err = l.Invalidate()
-		assert.Equal(t, nil, err)
-
-		d1, err := ts.ReadFile(fn1)
-		n, err := strconv.Atoi(string(d1))
-		assert.Equal(t, nil, err)
-
-		m := <-ch
-
-		if n != m {
-			assert.Equal(t, n, m)
-			break
-		}
-
-		err = ts.Rename(fn1, fn)
-		assert.Equal(t, nil, err)
-	}
-
-	ts.Shutdown()
 }
 
 func TestWatchCreate(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
+	"ulambda/fence"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 )
@@ -15,16 +16,18 @@ import (
 type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
-	mkps     protsrv.MkProtServer
-	fssrv    protsrv.FsServer
-	sessions map[np.Tsession]*Session
+	mkps       protsrv.MkProtServer
+	fssrv      protsrv.FsServer
+	sessions   map[np.Tsession]*Session
+	seenFences *fence.FenceTable
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer) *SessionTable {
+func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, fm *fence.FenceTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv
 	st.mkps = mkps
+	st.seenFences = fm
 	return st
 }
 
@@ -42,7 +45,7 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid)
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.seenFences)
 	st.sessions[sid] = sess
 	return sess
 }

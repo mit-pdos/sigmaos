@@ -12,8 +12,8 @@ import (
 
 	"ulambda/atomic"
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -27,7 +27,7 @@ const (
 	TWOPCCOMMIT    = DIR2PC + "/twopccommit"
 	TWOPCPREPARED  = DIR2PC + "/prepared/"
 	TWOPCCOMMITTED = DIR2PC + "/committed/"
-	TWOPCLEASE     = DIR2PC + "/lease"
+	TWOPCFENCE     = DIR2PC + "/fence"
 )
 
 type Coord struct {
@@ -37,7 +37,7 @@ type Coord struct {
 	args   []string
 	ch     chan Tstatus
 	twopc  *Twopc
-	lease  *leaseclnt.LeaseClnt
+	fclnt  *fenceclnt.FenceClnt
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -54,10 +54,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
-	cd.lease = leaseclnt.MakeLeaseClnt(cd.FsLib, TWOPCLEASE, 0)
+	cd.fclnt = fenceclnt.MakeFenceClnt(cd.FsLib, TWOPCFENCE, 0)
 
-	// Grab LEASE before starting coord
-	cd.lease.WaitWLease([]byte{})
+	// Grab fence before starting coord
+	cd.fclnt.AcquireFenceW([]byte{})
 
 	log.Printf("COORD lock %v\n", args)
 
@@ -78,7 +78,7 @@ func (cd *Coord) exit() {
 		log.Printf("Remove %v failed %v\n", COORD, err)
 	}
 
-	cd.lease.ReleaseWLease()
+	cd.fclnt.ReleaseFence()
 }
 
 func (cd *Coord) restart() {

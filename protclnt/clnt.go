@@ -3,7 +3,6 @@ package protclnt
 import (
 	"errors"
 
-	"ulambda/lease"
 	np "ulambda/ninep"
 	"ulambda/rand"
 )
@@ -30,12 +29,12 @@ func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }
 
-func (clnt *Clnt) RegisterLease(lease *lease.Lease) error {
-	return clnt.cm.registerLease(lease)
+func (clnt *Clnt) RegisterFence(fence np.Tfence, new bool) error {
+	return clnt.cm.registerFence(fence, new)
 }
 
-func (clnt *Clnt) DeregisterLease(path []string) error {
-	return clnt.cm.deregisterLease(path)
+func (clnt *Clnt) DeregisterFence(fence np.Tfence) error {
+	return clnt.cm.deregisterFence(fence)
 }
 
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
@@ -282,6 +281,19 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm n
 		return nil, err
 	}
 	msg, ok := reply.(np.Rwrite)
+	if !ok {
+		return nil, errors.New("Not correct reply msg")
+	}
+	return &msg, err
+}
+
+func (pclnt *ProtClnt) MkFence(fid np.Tfid) (*np.Rmkfence, error) {
+	args := np.Tmkfence{fid, np.NoSeqno}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rmkfence)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}

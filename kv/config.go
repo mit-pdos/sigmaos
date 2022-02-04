@@ -19,7 +19,7 @@ func (mvs Moves) String() string {
 	s := "["
 	for _, m := range mvs {
 		if m != nil {
-			s += fmt.Sprintf("%v -> %v", m.Src, m.Dst)
+			s += fmt.Sprintf("%v -> %v,", m.Src, m.Dst)
 		}
 	}
 	s += "]"

@@ -11,6 +11,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ulambda/atomic"
@@ -18,12 +19,12 @@ import (
 	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
+	"ulambda/fenceclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/group"
 	"ulambda/inode"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -38,51 +39,67 @@ const (
 	KVNEXTBK      = KVDIR + "/nextconfig#" // temporary copy
 	KVBALANCER    = KVDIR + "/balancer"
 	KVBALANCERCTL = KVDIR + "/balancer/ctl"
-
-	CRASHHELPER = 100
 )
 
 type Balancer struct {
+	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	conf     *Config
-	balLease *leaseclnt.LeaseClnt
-	lease    *leaseclnt.LeaseClnt
-	mo       *Monitor
-	ch       chan bool
-	crash    int64
-	isBusy   bool
+	conf         *Config
+	balFclnt     *fenceclnt.FenceClnt
+	confFclnt    *fenceclnt.FenceClnt
+	mo           *Monitor
+	ch           chan bool
+	crash        int64
+	crashhelper  string
+	isRecovering bool
+}
+
+func (bl *Balancer) testAndSetRecovering() bool {
+	bl.Lock()
+	defer bl.Unlock()
+	b := bl.isRecovering
+	if !bl.isRecovering {
+		bl.isRecovering = true
+	}
+	return b
+}
+
+func (bl *Balancer) setRecovering(b bool) {
+	bl.Lock()
+	defer bl.Unlock()
+	bl.isRecovering = b
 }
 
 func shardPath(kvd, shard string) string {
 	return group.GRPDIR + "/" + kvd + "/shard" + shard
 }
 
-func RunBalancer(auto string) {
-	log.Printf("run balancer %v %v %v\n", proc.GetPid(), auto, crash.GetEnv())
-
+func RunBalancer(crashhelper string, auto string) {
 	bl := &Balancer{}
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 	bl.crash = crash.GetEnv()
+	bl.crashhelper = crashhelper
 
 	// may fail if already exist
 	// bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
-	bl.balLease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
-	bl.lease = leaseclnt.MakeLeaseClnt(bl.FsLib, KVCONFIG, 0)
-	bl.isBusy = true
+	bl.balFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK)
+	bl.confFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVCONFIG, 0)
+
+	bl.setRecovering(true)
 
 	// start server but don't publish its existence
 	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
 	if err != nil {
-		log.Fatalf("StartMemFs %v\n", err)
+		log.Fatalf("FATAL StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, nil)
 	err = dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err != nil {
-		log.Fatalf("MakeNod clone failed %v\n", err)
+		log.Fatalf("FATAL MakeNod clone failed %v\n", err)
 	}
 
 	// start server and write ch when server is done
@@ -92,7 +109,10 @@ func RunBalancer(auto string) {
 		ch <- true
 	}()
 
-	bl.balLease.WaitWLease(fslib.MakeTarget(mfs.MyAddr()))
+	err = bl.balFclnt.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	if err != nil {
+		log.Fatalf("FATAL %v: AcquireFenceW %v\n", db.GetName(), err)
+	}
 
 	log.Printf("%v: primary\n", db.GetName())
 
@@ -102,7 +122,7 @@ func RunBalancer(auto string) {
 	default:
 		bl.recover()
 
-		bl.isBusy = false
+		bl.setRecovering(false)
 
 		go bl.monitorMyself(ch)
 
@@ -179,27 +199,43 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
-			if err.Error() == "EOF" ||
-				strings.HasPrefix(err.Error(), "stale lease") {
+			if err.Error() == "EOF" {
 				// we are disconnected
-				//log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
-
+				// log.Printf("%v: monitorMyself err %v\n", db.GetName(), err)
 				ch <- true
 			}
 		}
 	}
 }
 
+func (bl *Balancer) PublishConfig() {
+	err := bl.Remove(KVNEXTBK)
+	if err != nil {
+		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)
+	}
+	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
+	if err != nil {
+		log.Fatalf("FATAL %v: MakeFile %v err %v\n", db.GetName(), KVNEXTBK, err)
+	}
+	err = bl.confFclnt.OpenFenceFrom(KVNEXTBK)
+	if err != nil {
+		log.Fatalf("FATAL %v: MakeFenceFileFrom err %v\n", db.GetName(), err)
+	}
+}
+
 // Restore sharddirs by finishing moves and deletes, and create config
 // file.   XXX we could restore in parallel with serving clerk ops
 func (bl *Balancer) restore() {
-	log.Printf("restore to %v\n", bl.conf)
+	// Increase epoch, even if the config is the same as before,
+	// so that helpers and clerks realize there is new balancer.
+	bl.conf.N += 1
+	log.Printf("%v: restore to %v\n", db.GetName(), bl.conf)
+
+	// first republish next config, which we just read into
+	// bl.conf, to obtain the kvconfig fence and bump its seqno
+	bl.PublishConfig()
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
-	err := bl.lease.MakeLeaseFileJson(*bl.conf)
-	if err != nil {
-		log.Fatalf("%v: restore err %v\n", db.GetName(), err)
-	}
 }
 
 func (bl *Balancer) recover() {
@@ -212,10 +248,7 @@ func (bl *Balancer) recover() {
 		// otherwise, there would be a either a config or
 		// backup config.
 		bl.conf = MakeConfig(0)
-		err = bl.lease.MakeLeaseFileJson(*bl.conf)
-		if err != nil {
-			log.Fatalf("%v: initial config err %v\n", db.GetName(), err)
-		}
+		bl.PublishConfig()
 	}
 }
 
@@ -223,19 +256,18 @@ func (bl *Balancer) recover() {
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
 		dst := shardPath(kvd, strconv.Itoa(s))
-		db.DLPrintf("BAL", "Init shard dir %v\n", dst)
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
-		bl.Mkdir(dst, 0777)
+		if err := bl.Mkdir(dst, 0777); err != nil {
+			log.Printf("%v: warning mkdir %v err %v\n", db.GetName(), dst, err)
+		}
 	}
 }
 
 func (bl *Balancer) spawnProc(args []string) (string, error) {
 	p := proc.MakeProc(args[0], args[1:])
-	log.Printf("%v: spawn pid %v\n", db.GetName(), p.Pid)
-	if bl.crash > 0 {
-		p.AppendEnv("SIGMACRASH", strconv.Itoa(CRASHHELPER))
-	}
+	log.Printf("%v: spawn pid %v %v\n", db.GetName(), p.Pid, bl.crashhelper)
+	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
 		log.Printf("%v: spawn pid %v err %v\n", db.GetName(), p.Pid, err)
@@ -248,29 +280,31 @@ func (bl *Balancer) runProc(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("%v: proc %v wait %v\n", db.GetName(), args, pid)
+	// log.Printf("%v: proc %v wait %v\n", db.GetName(), args, pid)
 	status, err := bl.WaitExit(pid)
 	return status, err
 }
 
-func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool) error {
+func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool) (error, string) {
+	status := ""
+	var err error
 	for true {
-		status, err := bl.runProc(args)
+		status, err = bl.runProc(args)
 		if err != nil {
 			log.Printf("%v: runProc %v err %v status %v\n", db.GetName(), args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
 			strings.HasPrefix(err.Error(), "EOF")) {
-			log.Fatalf("%v: runProc err %v\n", db.GetName(), err)
+			log.Fatalf("FATAL %v: runProc err %v\n", db.GetName(), err)
 		}
 		if retryf(err, status) {
 			log.Printf("%v: retry proc %v err %v status %v\n", db.GetName(), args, err, status)
 		} else {
-			return nil
+			break
 		}
 	}
-	return nil
+	return err, status
 }
 
 func (mvs Moves) moved() []string {
@@ -294,19 +328,28 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	return moves
 }
 
+func (bl *Balancer) checkMoves(moves Moves) {
+	for _, m := range moves {
+		fn := m.Dst
+		_, err := bl.Stat(fn)
+		if err != nil {
+			log.Printf("%v: fn isn't there %v\n", db.GetName(), fn)
+		}
+	}
+}
+
 // Run deleters in parallel
 func (bl *Balancer) runDeleters(moves Moves) {
-	log.Printf("%v: start deleting %v\n", db.GetName(), len(moves))
 	tmp := make(Moves, len(moves))
 	ch := make(chan int)
 	for i, m := range moves {
 		go func(m *Move, i int) {
-			bl.runProcRetry([]string{"bin/user/kv-deleter", m.Src},
+			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src},
 				func(err error, status string) bool {
 					ok := strings.HasPrefix(status, "file not found")
 					return err != nil || (status != "OK" && !ok)
 				})
-			log.Printf("%v: delete %v/%v done\n", db.GetName(), i, m)
+			// log.Printf("%v: delete %v/%v done err %v status %v\n", db.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
 	}
@@ -322,16 +365,15 @@ func (bl *Balancer) runDeleters(moves Moves) {
 
 // Run movers in parallel
 func (bl *Balancer) runMovers(moves Moves) {
-	log.Printf("%v: start moving %v\n", db.GetName(), len(moves))
 	tmp := make(Moves, len(moves))
 	copy(tmp, moves)
 	ch := make(chan int)
 	for i, m := range moves {
 		go func(m *Move, i int) {
-			bl.runProcRetry([]string{"bin/user/kv-mover", m.Src, m.Dst}, func(err error, status string) bool {
+			bl.runProcRetry([]string{"bin/user/kv-mover", strconv.Itoa(bl.conf.N), m.Src, m.Dst}, func(err error, status string) bool {
 				return err != nil || status != "OK"
 			})
-			log.Printf("%v: move %v/%v done\n", db.GetName(), i, m)
+			// log.Printf("%v: move %v m %v done err %v status %v\n", db.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
 	}
@@ -346,11 +388,12 @@ func (bl *Balancer) runMovers(moves Moves) {
 }
 
 func (bl *Balancer) balance(opcode, mfs string) error {
-	if bl.isBusy {
+	if bl.testAndSetRecovering() {
 		return fmt.Errorf("retry")
 	}
+	defer bl.setRecovering(false)
 
-	log.Printf("%v: BAL Balancer: %v %v %v %v\n", db.GetName(), opcode, mfs, bl.conf, bl.isBusy)
+	// log.Printf("%v: BAL Balancer: %v %v %v\n", db.GetName(), opcode, mfs, bl.conf)
 
 	var nextShards []string
 	switch opcode {
@@ -367,12 +410,7 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 	default:
 	}
 
-	bl.isBusy = true
-	defer func() {
-		bl.isBusy = false
-	}()
-
-	log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
+	// log.Printf("%v: BAL conf %v next shards: %v\n", db.GetName(), bl.conf, nextShards)
 
 	var moves Moves
 	if bl.conf.N == 0 {
@@ -393,26 +431,17 @@ func (bl *Balancer) balance(opcode, mfs string) error {
 	// KVNEXTCONFIG.
 	err := atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
-		log.Fatalf("%v: MakeFile %v err %v\n", db.GetName(), KVNEXTCONFIG, err)
+		log.Fatalf("FATAL %v: MakeFile %v err %v\n", db.GetName(), KVNEXTCONFIG, err)
 	}
 
 	// Announce new KVNEXTCONFIG to world: copy KVNEXTCONFIG to
-	// KVNEXTBK and make lease from copy (removing the copy too).
-	err = bl.Remove(KVNEXTBK)
-	if err != nil {
-		log.Printf("%v: Remove %v err %v\n", db.GetName(), KVNEXTBK, err)
-	}
-	err = bl.CopyFile(KVNEXTCONFIG, KVNEXTBK)
-	if err != nil {
-		log.Fatalf("%v: copy %v to %v err %v\n", db.GetName(), KVNEXTCONFIG, KVNEXTBK, err)
-	}
-	err = bl.lease.MakeLeaseFileFrom(KVNEXTBK)
-	if err != nil {
-		log.Printf("%v: makeleasefrom %v err %v\n", db.GetName(), KVNEXTBK, err)
-		// XXX maybe crash
-	}
+	// KVNEXTBK and make fence from copy (removing the copy too).
+	bl.PublishConfig()
 
 	bl.runMovers(moves)
+
+	bl.checkMoves(moves)
+
 	bl.runDeleters(moves)
 
 	return nil

@@ -6,6 +6,7 @@ import (
 
 	"ulambda/ctx"
 	db "ulambda/debug"
+	"ulambda/fence"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -31,18 +32,19 @@ import (
 //
 
 type FsServer struct {
-	addr  string
-	root  fs.Dir
-	mkps  protsrv.MkProtServer
-	stats *stats.Stats
-	st    *session.SessionTable
-	sct   *sesscond.SessCondTable
-	wt    *watch.WatchTable
-	srv   *netsrv.NetServer
-	pclnt *procclnt.ProcClnt
-	done  bool
-	ch    chan bool
-	fsl   *fslib.FsLib
+	addr       string
+	root       fs.Dir
+	mkps       protsrv.MkProtServer
+	stats      *stats.Stats
+	st         *session.SessionTable
+	sct        *sesscond.SessCondTable
+	wt         *watch.WatchTable
+	seenFences *fence.FenceTable
+	srv        *netsrv.NetServer
+	pclnt      *procclnt.ProcClnt
+	done       bool
+	ch         chan bool
+	fsl        *fslib.FsLib
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
@@ -53,7 +55,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv)
+	fssrv.seenFences = fence.MakeFenceTable()
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.seenFences)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
@@ -70,6 +73,10 @@ func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
 
 func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
 	return fssrv.sct
+}
+
+func (fssrv *FsServer) GetSeenFences() *fence.FenceTable {
+	return fssrv.seenFences
 }
 
 func (fssrv *FsServer) Root() fs.Dir {
@@ -140,30 +147,51 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	go fssrv.serve(sess, fc, replies)
 }
 
-// Register lease, unregister lease, and check lease
+// Register and unregister fences, and check fresness of fences before
+// processing a request.
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	switch req := msg.(type) {
-	case np.Tsetfile, np.Tgetfile, np.Tcreate, np.Topen, np.Twrite, np.Tread, np.Tremove, np.Tremovefile, np.Trenameat, np.Twstat:
-		// log.Printf("%p: checkLease %v %v\n", fssrv, msg.Type(), req)
-		err := sess.CheckLeases(fssrv.fsl)
+	case np.Tcreate, np.Tread, np.Twrite, np.Tremove, np.Tremovefile, np.Tstat, np.Twstat, np.Trenameat, np.Tgetfile, np.Tsetfile:
+		// Check that all fences that this session registered
+		// are recent.  Another session may have registered a
+		// more recent one in seenFences.
+		err := sess.CheckFences(fssrv.fsl)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-	case np.Tlease:
-		reply := &np.Ropen{}
-		// log.Printf("%v: %p reglease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
-		if err := sess.Lease(req.Wnames, req.Qid); err != nil {
+	case np.Tregfence:
+		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
+		err := fssrv.seenFences.Register(req)
+		if err != nil {
+			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)
 			return nil, &np.Rerror{err.Error()}
 		}
-		return reply, nil
-	case np.Tunlease:
-		reply := &np.Ropen{}
-		// log.Printf("%v: %p unlease %v %v %v\n", db.GetName(), fssrv, sid, msg.Type(), req)
-		if err := sess.Unlease(req.Wnames); err != nil {
+		// Fence was present in seenFences and not stale, or
+		// was not present. Now mark that all ops on this sess
+		// must be checked against the most recently-seen
+		// fence in seenFences.  Another sess may register a
+		// more recent fence in seenFences in the future, and
+		// then ops on this session should fail.
+		err = sess.Fence(req)
+		if err != nil {
+			log.Printf("%v: Fence sess %v %v err %v\n", db.GetName(), sess.Sid, req, err)
 			return nil, &np.Rerror{err.Error()}
 		}
+		reply := &np.Ropen{}
 		return reply, nil
-	default:
+	case np.Tunfence:
+		// log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
+		err := fssrv.seenFences.Unregister(req.Fence)
+		if err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		err = sess.Unfence(req.Fence.FenceId)
+		if err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		reply := &np.Ropen{}
+		return reply, nil
+	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
 		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
 	}
 	return nil, nil
@@ -195,8 +223,14 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {
 		debug.PrintStack()
-		log.Fatalf("%v: CloseSession unknown session %v\n", db.GetName(), sid)
+		// client start TCP connection, but then failed before sending
+		// any messages.
+		log.Printf("Warning: CloseSession unknown session %v\n", sid)
+		close(replies)
+		return
 	}
+
+	// XXX remove fence from sess, so that fence maybe free from seen table
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.

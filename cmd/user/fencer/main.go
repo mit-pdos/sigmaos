@@ -9,8 +9,8 @@ import (
 	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/delay"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
-	"ulambda/leaseclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -22,7 +22,7 @@ const (
 )
 
 //
-// lock tester
+// fence tester
 //
 // start:  cnt = 0, A = 0
 //
@@ -35,35 +35,35 @@ const (
 //
 //  invariant: A is counter or counter+1
 //
-//  If lock doesn't work, then this invariant breaks (counter and A
+//  If fence doesn't work, then this invariant breaks (counter and A
 //  and may have no relation).
 //
-//  If holder paritions, looses lock, and but delayed writes to A,
+//  If holder paritions, looses fence, but delayed writes to A,
 //  then could violate this invariant
 //
 //  Note: we couldn't use version # as is, since they are per file,
-//  and here we require atomicity across different files.
+//  and here we require atomicity across two files on different
+//  servers.
 //
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "%v: Usage: <partition?> <dir>\n", os.Args[0])
+	if len(os.Args) != 4 {
+		fmt.Fprintf(os.Stderr, "%v: Usage: <partition?> <dir1> <dir2>\n", os.Args[0])
 		os.Exit(1)
 	}
-	fsl := fslib.MakeFsLib("leaser-" + proc.GetPid())
-
+	fsl := fslib.MakeFsLib("fencer-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := leaseclnt.MakeLeaseClnt(fsl, leaseclnt.LEASE_DIR+"/lease", 0)
+	l := fenceclnt.MakeFenceClnt(fsl, os.Args[2]+"/fence", 0)
 
-	cnt := leaseclnt.LEASE_DIR + "/cnt"
-	A := os.Args[2] + "/A"
+	cnt := os.Args[2] + "/cnt"
+	A := os.Args[3] + "/A"
 
 	pclnt.Started(proc.GetPid())
 
 	partitioned := false
 	for i := 0; i < N; i++ {
-		err := l.WaitWLease([]byte{})
+		err := l.AcquireFenceW([]byte{})
 
 		b, err := fsl.GetFile(cnt)
 		if err != nil {
@@ -75,7 +75,7 @@ func main() {
 			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
 		}
 
-		// open A and then partition
+		// open A and then maybe partition from named
 
 		fd, err := fsl.Open(A, np.OREAD|np.OWRITE)
 		if err != nil {
@@ -110,15 +110,19 @@ func main() {
 
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))
 		if err != nil {
+			// most likely write failed with stale error, but
+			// we cannot talk to named anymore to report that,
+			// so just give up.
 			log.Fatalf("write %v failed %v\n", A, err)
 		}
 
+		// the write may succeed because there is no new fence holder just yet
 		fsl.Close(fd)
 
 		if partitioned {
-			err := l.ReleaseWLease()
+			err := l.ReleaseFence()
 			if err != nil {
-				log.Printf("%v unlock err %v\n", db.GetName(), err)
+				log.Printf("%v release err %v\n", db.GetName(), err)
 			}
 			break
 		}
@@ -128,7 +132,7 @@ func main() {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}
 
-		l.ReleaseWLease()
+		l.ReleaseFence()
 	}
 	pclnt.Exited(proc.GetPid(), "OK")
 }

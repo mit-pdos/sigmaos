@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/lease"
+	"ulambda/fence"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
 )
@@ -41,7 +41,7 @@ type FsClient struct {
 	mount *Mount
 	next  np.Tfid
 	uname string
-	lm    *lease.LeaseMap
+	fm    *fence.FenceTable
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -52,7 +52,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
 	fsc.next = 0
-	fsc.lm = lease.MakeLeaseMap()
+	fsc.fm = fence.MakeFenceTable()
 	return fsc
 }
 
@@ -220,8 +220,8 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 		log.Printf("%v: mount %v err %v\n", db.GetName(), path, err)
 	}
 
-	for _, l := range fsc.lm.Leases() {
-		err := fsc.pc.RegisterLease(l)
+	for _, f := range fsc.fm.Fences() {
+		err := fsc.pc.RegisterFence(f, true)
 		if err != nil {
 			return err
 		}
@@ -275,27 +275,57 @@ func (fsc *FsClient) Attach(server, path, tree string) (np.Tfid, error) {
 	return fsc.AttachReplicas([]string{server}, path, tree)
 }
 
-func (fsc *FsClient) RegisterLease(l *lease.Lease) error {
-	if err := fsc.lm.Add(l); err != nil {
-		log.Printf("%v: reg %v\n", db.GetName(), l.Fn)
-		return err
+func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
+	p := np.Split(path)
+	fid, err := fsc.WalkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return np.Tfence{}, err
 	}
-	return fsc.pc.RegisterLease(l)
+	_, err = fsc.clnt(fid).Open(fid, mode)
+	if err != nil {
+		return np.Tfence{}, err
+	}
+	defer fsc.clunkFid(fid)
+	reply, err := fsc.clnt(fid).MkFence(fid)
+	if err != nil {
+		log.Printf("%v: MkFence %v err %v\n", db.GetName(), fid, err)
+		return np.Tfence{}, err
+	}
+	return reply.Fence, nil
 }
 
-func (fsc *FsClient) DeregisterLease(path string) error {
-	//log.Printf("%v: dereg %v\n", db.GetName(), path)
-	p := np.Split(path)
-	if err := fsc.lm.Del(p); err != nil {
-		return err
+// XXX not thread safe
+func (fsc *FsClient) RegisterFence(f np.Tfence) error {
+	if ok := fsc.fm.Present(f.FenceId); ok {
+		return fmt.Errorf("fence %v already present\n", f)
 	}
-	err := fsc.pc.DeregisterLease(p)
+	err := fsc.pc.RegisterFence(f, true)
+	if err == nil {
+		fsc.fm.Insert(f)
+	}
 	return err
 }
 
-func (fsc *FsClient) DeregisterLeases() error {
-	for _, l := range fsc.lm.Leases() {
-		fsc.DeregisterLease(np.Join(l.Fn))
+func (fsc *FsClient) UpdateFence(f np.Tfence) error {
+	if ok := fsc.fm.Present(f.FenceId); !ok {
+		log.Printf("%v: update fence %v not present\n", db.GetName(), f)
+		return fmt.Errorf("unknown fence %v\n", f)
+	}
+	return fsc.pc.RegisterFence(f, false)
+}
+
+func (fsc *FsClient) DeregisterFence(f np.Tfence) error {
+	if err := fsc.fm.Del(f.FenceId); err != nil {
+		log.Printf("%v: dereg %v err %v\n", db.GetName(), f, err)
+		return err
+	}
+	err := fsc.pc.DeregisterFence(f)
+	return err
+}
+
+func (fsc *FsClient) DeregisterFences() error {
+	for _, f := range fsc.fm.Fences() {
+		fsc.DeregisterFence(f)
 	}
 	return nil
 }

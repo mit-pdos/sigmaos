@@ -161,14 +161,18 @@ const (
 	// sigmaP extensions/hacks:
 	//
 
-	// A client uses OWATCH to block at the server until a file is
-	// removed.  OWATCH with Tcreate will retry the create, and
-	// provides an atomic way to lock a file, with remove()
-	// releasing the lock.  OWATCH with Open() and a closure will
-	// invoke the closure when a client creates or removes the
-	// file.
+	// A client uses OWATCH to block at the server until a
+	// file/directiory is create or removed, or a directory
+	// changes.  OWATCH with Tcreate will retry the create, and
+	// provides an atomic way to create a file, with remove()
+	// allowing the next create to succeed.  OWATCH with Open()
+	// and a closure will invoke the closure when a client creates
+	// or removes the file.  OWATCH on open for a direct directory
+	// and a closure will invoke the closure if the directory
+	// changes.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
-	// OVERSION is for atomic read-and-write
+
+	// XXX OVERSION is for atomic read-and-write, but unused for now.
 	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
 )
 

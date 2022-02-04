@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -49,7 +50,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.rand = rand.String(16)
 	m.fds = make([]int, m.nreducetask)
 
-	m.FsLib = fslib.MakeFsLib("mapper-" + m.input)
+	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 
 	m.Started(proc.GetPid())
@@ -160,6 +161,10 @@ func (m *Mapper) doMap() error {
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
+			// May be due to partition
+			if err == io.EOF {
+				log.Fatalf("%v: FATAL symlink %v err %v\n", db.GetName(), name, err)
+			}
 			// If the reducer successfully completed, the reducer dir won't be found.
 			// In that case, we don't want to mark the mapper as "failed", since this
 			// will loop infinitely.

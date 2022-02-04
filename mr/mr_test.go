@@ -179,7 +179,6 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.checkJob()
 
-	log.Printf("About to shut down")
 	ts.Shutdown()
 }
 

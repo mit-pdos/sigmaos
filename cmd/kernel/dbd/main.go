@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) != 1 {
-		log.Fatalf("Usage: dbd")
+		log.Fatalf("FATAL Usage: dbd")
 	}
 	dbd.RunDbd()
 }

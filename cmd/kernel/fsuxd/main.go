@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) != 1 {
-		log.Fatalf("Usage: fsux")
+		log.Fatalf("FATAL Usage: fsux")
 	}
 	fsux.RunFsUx("/tmp")
 }

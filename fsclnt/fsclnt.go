@@ -101,7 +101,7 @@ func (fsc *FsClient) addFid(fid np.Tfid, path *Path) {
 func (fsc *FsClient) freeFidUnlocked(fid np.Tfid) {
 	_, ok := fsc.fids[fid]
 	if !ok {
-		log.Fatalf("%v: freeFid: fid %v unknown\n", fsc.uname, fid)
+		log.Fatalf("FATAL %v: freeFid: fid %v unknown\n", fsc.uname, fid)
 	}
 	delete(fsc.fids, fid)
 }

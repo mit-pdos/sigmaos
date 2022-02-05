@@ -41,9 +41,9 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	if err != nil {
 		return nil, err
 	}
-	pingErr := db.Ping()
-	if pingErr != nil {
-		log.Fatal(pingErr)
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("FATAL open err %v\n", err)
 	}
 	log.Printf("Connected to db\n")
 
@@ -57,11 +57,11 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	d := dir.MakeDir(di)
 	err = dir.MkNod(ctx, c.Parent(), s.id, d)
 	if err != nil {
-		log.Fatalf("MkNod err %v\n", err)
+		log.Fatalf("FATAL MkNod err %v\n", err)
 	}
 	err = dir.MkNod(ctx, d, "ctl", s) // put ctl file into session dir
 	if err != nil {
-		log.Fatalf("MkNod err %v\n", err)
+		log.Fatalf("FATAL MkNod err %v\n", err)
 	}
 
 	// make query file

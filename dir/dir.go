@@ -296,7 +296,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
 
 	err = dir.unlinkL(from)
 	if err != nil {
-		log.Fatalf("Rename: remove failed %v %v\n", from, err)
+		log.Fatalf("FATAL Rename: remove failed %v %v\n", from, err)
 	}
 
 	dir.VersionInc()
@@ -305,12 +305,12 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) error {
 		// of an existing file.
 		err = dir.remove(to)
 		if err != nil {
-			log.Fatalf("Rename remove failed %v %v\n", to, err)
+			log.Fatalf("FATAL Rename remove failed %v %v\n", to, err)
 		}
 	}
 	err = dir.createL(ino, to)
 	if err != nil {
-		log.Fatalf("Rename create %v failed %v\n", to, err)
+		log.Fatalf("FATAL Rename create %v failed %v\n", to, err)
 		return err
 	}
 	ino.VersionInc()
@@ -330,7 +330,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) err
 	}
 	err = dir.unlinkL(old)
 	if err != nil {
-		log.Fatalf("Rename %v remove  %v\n", old, err)
+		log.Fatalf("FATAL Rename %v remove  %v\n", old, err)
 	}
 	_, err = newdir.lookupL(new)
 	if err == nil {
@@ -338,7 +338,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) err
 	}
 	err = newdir.createL(ino, new)
 	if err != nil {
-		log.Fatalf("Rename %v createL: %v\n", new, err)
+		log.Fatalf("FATAL Rename %v createL: %v\n", new, err)
 		return err
 	}
 	// ino.VersionInc()

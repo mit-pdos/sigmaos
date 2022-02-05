@@ -18,7 +18,7 @@ func MakeFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) 
 	err := fsl.MakeFile(tmpPath, perm, np.OWRITE, data)
 	if err != nil {
 		debug.PrintStack()
-		log.Fatalf("Error in MakeFileAtomic %v: %v", fname, err)
+		log.Fatalf("FATAL Error in MakeFileAtomic %v: %v", fname, err)
 		return err
 	}
 	err = fsl.Rename(tmpPath, fname)
@@ -33,7 +33,7 @@ func MakeFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) 
 func MakeFileJsonAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
-		return fmt.Errorf("Marshal error %v", err)
+		return fmt.Errorf("FATAL Marshal error %v", err)
 	}
 	return MakeFileAtomic(fsl, fname, perm, data)
 }

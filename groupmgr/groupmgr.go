@@ -87,6 +87,9 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 			gm.stop = true
 			n--
 		} else { // restart member i
+			if gm.members[st.member].bin == "bin/user/kvd" {
+				log.Fatalf("%v: FATAL kvd failed\n", db.GetName())
+			}
 			start := make(chan bool)
 			go gm.members[st.member].run(st.member, start, done)
 			<-start

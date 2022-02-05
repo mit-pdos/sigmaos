@@ -1,0 +1,103 @@
+package fences
+
+import (
+	"fmt"
+	"log"
+	"sync"
+
+	db "ulambda/debug"
+	np "ulambda/ninep"
+)
+
+//
+// Map of fences indexed by pathname of fence at server.  Use
+// by fssrv to keep trac of the most recent fence seen.
+//
+
+type RecentTable struct {
+	sync.Mutex
+	fences map[string]np.Tfence
+}
+
+func MakeRecentTable() *RecentTable {
+	rft := &RecentTable{}
+	rft.fences = make(map[string]np.Tfence)
+	return rft
+}
+
+// Return the most recent fence. If none, make it.
+func (rft *RecentTable) MkFence(path []string) np.Tfence {
+	rft.Lock()
+	defer rft.Unlock()
+
+	p := np.Join(path)
+	if f, ok := rft.fences[p]; ok {
+		return f
+	}
+
+	idf := np.Tfenceid{p, 0}
+	fence := np.Tfence{idf, 1}
+	rft.fences[p] = fence
+
+	return fence
+}
+
+// A new acquisition of a file or a modification of a file that may
+// have a fence associated with it. If so, increase seqno of fence.
+func (rft *RecentTable) UpdateSeqno(path []string) {
+	rft.Lock()
+	defer rft.Unlock()
+
+	p := np.Join(path)
+	log.Printf("%v: UpdateSeqno: fence %v\n", db.GetName(), p)
+	if f, ok := rft.fences[p]; ok {
+		f.Seqno += 1
+		rft.fences[p] = f
+	}
+}
+
+// If no fence exists for this fence id, store it as most recent
+// fence.  If the fence exists but newer, update the fence.  If the
+// fence is stale, return error.
+func (rft *RecentTable) UpdateFence(fence np.Tfence) error {
+	rft.Lock()
+	defer rft.Unlock()
+
+	p := fence.FenceId.Path
+	if f, ok := rft.fences[p]; ok {
+		log.Printf("%v: UpdateFence: fence %v new %v\n", db.GetName(), p, fence)
+		if fence.Seqno < f.Seqno {
+			return fmt.Errorf("stale %v", p)
+		}
+	}
+	rft.fences[p] = fence
+	return nil
+}
+
+// Remove fence. Client better be sure that there no procs exists that
+// rely on the fence.
+func (rft *RecentTable) RmFence(path []string) error {
+	rft.Lock()
+	defer rft.Unlock()
+
+	p := np.Join(path)
+	if _, ok := rft.fences[p]; !ok {
+		return fmt.Errorf("unknown fence %v", p)
+	}
+	delete(rft.fences, p)
+	return nil
+}
+
+// Check if supplied fence is recent.
+func (rft *RecentTable) IsRecent(fence np.Tfence) error {
+	rft.Lock()
+	defer rft.Unlock()
+
+	if f, ok := rft.fences[fence.FenceId.Path]; ok {
+		if fence.Seqno < f.Seqno {
+			return fmt.Errorf("stale fence %v", fence)
+		}
+		return nil
+	}
+	return fmt.Errorf("unknown fence %v\n", fence.FenceId)
+}

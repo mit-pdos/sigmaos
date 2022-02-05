@@ -542,7 +542,6 @@ type Rmkfence struct {
 
 type Tregfence struct {
 	Fence Tfence
-	New   bool
 }
 
 type Tunfence struct {

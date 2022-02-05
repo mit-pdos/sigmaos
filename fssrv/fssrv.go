@@ -6,7 +6,7 @@ import (
 
 	"ulambda/ctx"
 	db "ulambda/debug"
-	"ulambda/fence"
+	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -32,19 +32,19 @@ import (
 //
 
 type FsServer struct {
-	addr       string
-	root       fs.Dir
-	mkps       protsrv.MkProtServer
-	stats      *stats.Stats
-	st         *session.SessionTable
-	sct        *sesscond.SessCondTable
-	wt         *watch.WatchTable
-	seenFences *fence.FenceTable
-	srv        *netsrv.NetServer
-	pclnt      *procclnt.ProcClnt
-	done       bool
-	ch         chan bool
-	fsl        *fslib.FsLib
+	addr  string
+	root  fs.Dir
+	mkps  protsrv.MkProtServer
+	stats *stats.Stats
+	st    *session.SessionTable
+	sct   *sesscond.SessCondTable
+	wt    *watch.WatchTable
+	rft   *fences.RecentTable
+	srv   *netsrv.NetServer
+	pclnt *procclnt.ProcClnt
+	done  bool
+	ch    chan bool
+	fsl   *fslib.FsLib
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
@@ -55,8 +55,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.seenFences = fence.MakeFenceTable()
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.seenFences)
+	fssrv.rft = fences.MakeRecentTable()
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
@@ -75,8 +75,8 @@ func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
 	return fssrv.sct
 }
 
-func (fssrv *FsServer) GetSeenFences() *fence.FenceTable {
-	return fssrv.seenFences
+func (fssrv *FsServer) GetRecentFences() *fences.RecentTable {
+	return fssrv.rft
 }
 
 func (fssrv *FsServer) Root() fs.Dir {
@@ -154,24 +154,24 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 	case np.Tcreate, np.Tread, np.Twrite, np.Tremove, np.Tremovefile, np.Tstat, np.Twstat, np.Trenameat, np.Tgetfile, np.Tsetfile:
 		// Check that all fences that this session registered
 		// are recent.  Another session may have registered a
-		// more recent one in seenFences.
+		// more recent one in the recent fences table
 		err := sess.CheckFences(fssrv.fsl)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
 	case np.Tregfence:
-		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
-		err := fssrv.seenFences.Register(req)
+		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
+		err := fssrv.rft.UpdateFence(req.Fence)
 		if err != nil {
 			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)
 			return nil, &np.Rerror{err.Error()}
 		}
-		// Fence was present in seenFences and not stale, or
-		// was not present. Now mark that all ops on this sess
-		// must be checked against the most recently-seen
-		// fence in seenFences.  Another sess may register a
-		// more recent fence in seenFences in the future, and
-		// then ops on this session should fail.
+		// Fence was present in recent fences table and not
+		// stale, or was not present. Now mark that all ops on
+		// this sess must be checked against the most
+		// recently-seen fence in rft.  Another sess may
+		// register a more recent fence in rft in the future,
+		// and then ops on this session should fail.
 		err = sess.Fence(req)
 		if err != nil {
 			log.Printf("%v: Fence sess %v %v err %v\n", db.GetName(), sess.Sid, req, err)
@@ -180,12 +180,8 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Tunfence:
-		// log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
-		err := fssrv.seenFences.Unregister(req.Fence)
-		if err != nil {
-			return nil, &np.Rerror{err.Error()}
-		}
-		err = sess.Unfence(req.Fence.FenceId)
+		log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
+		err := sess.Unfence(req.Fence.FenceId)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}

@@ -171,7 +171,9 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		// this sess must be checked against the most
 		// recently-seen fence in rft.  Another sess may
 		// register a more recent fence in rft in the future,
-		// and then ops on this session should fail.
+		// and then ops on this session should fail.  Fence
+		// may be called many times on sess, because client
+		// may register a more recent fence.
 		err = sess.Fence(req)
 		if err != nil {
 			log.Printf("%v: Fence sess %v %v err %v\n", db.GetName(), sess.Sid, req, err)

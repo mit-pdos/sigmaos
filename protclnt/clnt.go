@@ -37,6 +37,10 @@ func (clnt *Clnt) DeregisterFence(fence np.Tfence) error {
 	return clnt.cm.deregisterFence(fence)
 }
 
+func (clnt *Clnt) RmFence(fence np.Tfence) error {
+	return clnt.cm.rmFence(fence)
+}
+
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
 	reply, err := clnt.cm.makeCall(server, args)
 	if err != nil {

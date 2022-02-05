@@ -185,6 +185,14 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		}
 		reply := &np.Ropen{}
 		return reply, nil
+	case np.Trmfence:
+		// log.Printf("%p: Rmfence %v %v\n", fssrv, sess.Sid, req)
+		err := fssrv.rft.RmFence(req.Fence)
+		if err != nil {
+			return nil, &np.Rerror{err.Error()}
+		}
+		reply := &np.Ropen{}
+		return reply, nil
 	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
 		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
 	}

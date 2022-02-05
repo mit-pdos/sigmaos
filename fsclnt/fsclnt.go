@@ -330,6 +330,13 @@ func (fsc *FsClient) DeregisterFences() error {
 	return nil
 }
 
+func (fsc *FsClient) RmFence(f np.Tfence) error {
+	if ok := fsc.fm.Present(f.FenceId); !ok {
+		return fmt.Errorf("unknown fence %v\n", f)
+	}
+	return fsc.pc.RmFence(f)
+}
+
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
 	fid2 := fsc.path(fid)

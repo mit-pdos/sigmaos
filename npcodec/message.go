@@ -86,6 +86,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 		return np.Tregfence{}, nil
 	case np.TTunfence:
 		return np.Tunfence{}, nil
+	case np.TTrmfence:
+		return np.Trmfence{}, nil
 	}
 	return nil, fmt.Errorf("unknown message type: %v", (uint64)(typ))
 }

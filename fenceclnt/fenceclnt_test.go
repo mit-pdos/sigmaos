@@ -316,13 +316,42 @@ func TestCrashPrimary(t *testing.T) {
 	ch := make(chan bool)
 
 	for i := 0; i < N; i++ {
-		go primary(ts.t, ch, 0)
-		go primary(ts.t, ch, 1)
+		go primary(ts.t, ch, i)
 	}
 
 	for i := 0; i < N; i++ {
 		<-ch
 	}
+
+	ts.Shutdown()
+}
+
+func TestRemoveFence(t *testing.T) {
+	ts := makeTstate(t)
+
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0)
+
+	err := fence.AcquireFenceW([]byte{})
+	assert.Nil(ts.t, err, "AcquireFenceW")
+
+	f, err := fence.Fence()
+	assert.Nil(ts.t, err, "Fence")
+
+	err = fence.ReleaseFence()
+	assert.Nil(ts.t, err, "ReleaseFence")
+
+	err = fence.RemoveFence()
+	assert.Nil(ts.t, err, "RmFence")
+
+	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0)
+
+	err = fence1.AcquireFenceW([]byte{})
+	assert.Nil(ts.t, err, "AcquireFenceW")
+
+	g, err := fence1.Fence()
+	assert.Nil(ts.t, err, "Fence")
+
+	assert.Equal(ts.t, f.Seqno, g.Seqno, "AcquireFenceW")
 
 	ts.Shutdown()
 }

@@ -2,6 +2,7 @@ package fenceclnt
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 
@@ -117,6 +118,13 @@ func (fc *FenceClnt) Name() string {
 	return fc.fenceName
 }
 
+func (fc *FenceClnt) Fence() (np.Tfence, error) {
+	if fc.f == nil {
+		return np.Tfence{}, fmt.Errorf("Fence: not acquired %v\n", fc.fenceName)
+	}
+	return *fc.f, nil
+}
+
 // XXX register/update may fail because another client has seen a more
 // recent seqno, which the server may have not told us about because
 // it lost that info due to it crashing. in that case, tell the server
@@ -221,6 +229,24 @@ func (fc *FenceClnt) ReleaseFence() error {
 		}
 	}
 	return nil
+}
+
+// Remove fence.  The caller better sure there is no client relying on
+// server checking this fence.  The caller must have unregistered the
+// fence.
+func (fc *FenceClnt) RemoveFence() error {
+	if fc.f != nil {
+		log.Fatalf("%v: FATAL RmFence %v\n", db.GetName(), fc.fenceName)
+	}
+	err := fc.AcquireFenceW([]byte{})
+	if err != nil {
+		return err
+	}
+	err = fc.RmFence(*fc.f)
+	if err != nil {
+		return err
+	}
+	return fc.ReleaseFence()
 }
 
 //

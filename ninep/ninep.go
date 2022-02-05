@@ -270,6 +270,7 @@ const (
 	TRmkfence
 	TTregfence
 	TTunfence
+	TTrmfence
 )
 
 func (fct Tfcall) String() string {
@@ -352,6 +353,8 @@ func (fct Tfcall) String() string {
 		return "Tregfence"
 	case TTunfence:
 		return "Tunfence"
+	case TTrmfence:
+		return "Trmfence"
 	default:
 		return "Tunknown"
 	}
@@ -531,23 +534,6 @@ type Tremovefile struct {
 	Wnames []string
 }
 
-type Tmkfence struct {
-	Fid   Tfid
-	Seqno Tseqno
-}
-
-type Rmkfence struct {
-	Fence Tfence
-}
-
-type Tregfence struct {
-	Fence Tfence
-}
-
-type Tunfence struct {
-	Fence Tfence
-}
-
 type Rremove struct {
 }
 
@@ -618,6 +604,27 @@ type Tsetfile struct {
 	Data   []byte
 }
 
+type Tmkfence struct {
+	Fid   Tfid
+	Seqno Tseqno
+}
+
+type Rmkfence struct {
+	Fence Tfence
+}
+
+type Tregfence struct {
+	Fence Tfence
+}
+
+type Tunfence struct {
+	Fence Tfence
+}
+
+type Trmfence struct {
+	Fence Tfence
+}
+
 func (Tversion) Type() Tfcall    { return TTversion }
 func (Rversion) Type() Tfcall    { return TRversion }
 func (Tauth) Type() Tfcall       { return TTauth }
@@ -656,3 +663,4 @@ func (Tmkfence) Type() Tfcall    { return TTmkfence }
 func (Rmkfence) Type() Tfcall    { return TRmkfence }
 func (Tregfence) Type() Tfcall   { return TTregfence }
 func (Tunfence) Type() Tfcall    { return TTunfence }
+func (Trmfence) Type() Tfcall    { return TTrmfence }

@@ -194,3 +194,15 @@ func (cm *ConnMgr) deregisterFence(fence np.Tfence) error {
 		})
 	return err
 }
+
+func (cm *ConnMgr) rmFence(fence np.Tfence) error {
+	req := np.Trmfence{fence}
+	err := cm.mcastReq(req,
+		func(conn *conn) bool {
+			return conn.fm.Present(fence.FenceId)
+		},
+		func(res result) error {
+			return nil
+		})
+	return err
+}

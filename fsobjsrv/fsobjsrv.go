@@ -621,6 +621,6 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 		return err
 	}
 	rets.Fence = fos.rft.MkFence(f.Path())
-	// log.Printf("mkfence f %v -> %v\n", f, rets.Fence)
+	// log.Printf("mkfence f %v -> %v\n", f.Path, rets.Fence)
 	return nil
 }

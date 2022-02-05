@@ -1,7 +1,6 @@
 package session
 
 import (
-	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
@@ -51,9 +50,9 @@ func (sess *Session) Unfence(idf np.Tfenceid) error {
 
 func (sess *Session) CheckFences(fsl *fslib.FsLib) error {
 	fences := sess.myFences.Fences()
-	if len(fences) > 0 {
-		log.Printf("%v: CheckFences %v\n", sess.Sid, fences)
-	}
+	//if len(fences) > 0 {
+	//	log.Printf("%v: CheckFences %v\n", sess.Sid, fences)
+	//}
 	for _, f := range fences {
 		err := sess.rft.IsRecent(f)
 		if err != nil {

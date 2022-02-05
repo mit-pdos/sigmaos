@@ -2,10 +2,8 @@ package fences
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -49,7 +47,7 @@ func (rft *RecentTable) UpdateSeqno(path []string) {
 	defer rft.Unlock()
 
 	p := np.Join(path)
-	log.Printf("%v: UpdateSeqno: fence %v\n", db.GetName(), p)
+	// log.Printf("%v: UpdateSeqno: fence %v\n", db.GetName(), p)
 	if f, ok := rft.fences[p]; ok {
 		f.Seqno += 1
 		rft.fences[p] = f
@@ -65,7 +63,7 @@ func (rft *RecentTable) UpdateFence(fence np.Tfence) error {
 
 	p := fence.FenceId.Path
 	if f, ok := rft.fences[p]; ok {
-		log.Printf("%v: UpdateFence: fence %v new %v\n", db.GetName(), p, fence)
+		// log.Printf("%v: UpdateFence: fence %v new %v\n", db.GetName(), p, fence)
 		if fence.Seqno < f.Seqno {
 			return fmt.Errorf("stale %v", p)
 		}

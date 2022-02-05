@@ -160,7 +160,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 			return nil, &np.Rerror{err.Error()}
 		}
 	case np.Tregfence:
-		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
+		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.rft.UpdateFence(req.Fence)
 		if err != nil {
 			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)
@@ -180,7 +180,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Tunfence:
-		log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
+		// log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
 		err := sess.Unfence(req.Fence.FenceId)
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}

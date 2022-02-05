@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fence"
+	"ulambda/fences"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
 )
@@ -41,7 +41,7 @@ type FsClient struct {
 	mount *Mount
 	next  np.Tfid
 	uname string
-	fm    *fence.FenceTable
+	fm    *fences.FenceTable
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -52,7 +52,7 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
 	fsc.next = 0
-	fsc.fm = fence.MakeFenceTable()
+	fsc.fm = fences.MakeFenceTable()
 	return fsc
 }
 

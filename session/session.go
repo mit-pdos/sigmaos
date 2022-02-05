@@ -5,7 +5,7 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	"ulambda/fence"
+	"ulambda/fences"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
@@ -24,18 +24,18 @@ type Session struct {
 	cond       *sync.Cond
 	threads    sync.WaitGroup
 	protsrv    protsrv.Protsrv
-	seenFences *fence.FenceTable
-	myFences   *fence.FenceTable
+	rft        *fences.RecentTable
+	myFences   *fences.FenceTable
 	Sid        np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, fm *fence.FenceTable) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable) *Session {
 	sess := &Session{}
 	sess.protsrv = protsrv
 	sess.cond = sync.NewCond(&sess.Mutex)
 	sess.Sid = sid
-	sess.seenFences = fm
-	sess.myFences = fence.MakeFenceTable()
+	sess.rft = rft
+	sess.myFences = fences.MakeFenceTable()
 	return sess
 }
 
@@ -54,7 +54,7 @@ func (sess *Session) CheckFences(fsl *fslib.FsLib) error {
 	//	log.Printf("%v: CheckFences %v\n", sess.Sid, fences)
 	//}
 	for _, f := range fences {
-		err := sess.seenFences.IsRecent(f)
+		err := sess.rft.IsRecent(f)
 		if err != nil {
 			return err
 		}

@@ -6,7 +6,7 @@ import (
 	// "time"
 
 	db "ulambda/debug"
-	"ulambda/fence"
+	"ulambda/fences"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
@@ -23,13 +23,13 @@ import (
 //
 
 type FsObjSrv struct {
-	fssrv      *fssrv.FsServer
-	wt         *watch.WatchTable // shared across sessions
-	ft         *fidTable
-	et         *ephemeralTable
-	seenFences *fence.FenceTable
-	stats      *stats.Stats
-	sid        np.Tsession
+	fssrv *fssrv.FsServer
+	wt    *watch.WatchTable // shared across sessions
+	ft    *fidTable
+	et    *ephemeralTable
+	rft   *fences.RecentTable // shared across sessions
+	stats *stats.Stats
+	sid   np.Tsession
 }
 
 func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
@@ -41,7 +41,7 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos.et = makeEphemeralTable()
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
-	fos.seenFences = srv.GetSeenFences()
+	fos.rft = srv.GetRecentFences()
 	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
@@ -283,7 +283,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return r
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
-	fos.seenFences.UpdateFence(nf.Path())
+	fos.rft.UpdateSeqno(nf.Path())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -444,7 +444,7 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return &np.Rerror{err.Error()}
 		}
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
-		fos.seenFences.UpdateFence(dst)
+		fos.rft.UpdateSeqno(dst)
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
 		dws.WakeupWatchL() // trigger dir watch
@@ -504,7 +504,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 
 			return &np.Rerror{err.Error()}
 		}
-		fos.seenFences.UpdateFence(dst)
+		fos.rft.UpdateSeqno(dst)
 		dstws.WakeupWatchL() // trigger create watch
 		srcws.WakeupWatchL() // trigger remove watch
 		d1ws.WakeupWatchL()  // trigger one dir watch
@@ -606,7 +606,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		if r != nil {
 			return &np.Rerror{r.Error()}
 		}
-		fos.seenFences.UpdateFence(fname)
+		fos.rft.UpdateSeqno(fname)
 		return nil
 	default:
 		log.Fatalf("FATAL SetFile: obj type %T isn't Dir or File\n", o)
@@ -620,7 +620,7 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 	if err != nil {
 		return err
 	}
-	rets.Fence = fos.seenFences.MkFence(f.Path())
+	rets.Fence = fos.rft.MkFence(f.Path())
 	// log.Printf("mkfence f %v -> %v\n", f, rets.Fence)
 	return nil
 }

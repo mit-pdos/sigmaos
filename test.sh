@@ -36,7 +36,7 @@ go test $1 ulambda/kernel
 go test $1 ulambda/procclnt
 # run this procclnt test again from a script to grep the output from
 # fencers for correctness
-./fence/test.sh
+./fences/test.sh
 
 go test $1 ulambda/group
 go test $1 ulambda/kv

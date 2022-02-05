@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fence"
+	"ulambda/fences"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
 )
@@ -18,12 +18,12 @@ const (
 
 type conn struct {
 	nc *netclnt.NetClnt
-	fm *fence.FenceTable
+	fm *fences.FenceTable
 }
 
 func makeConn(nc *netclnt.NetClnt) *conn {
 	c := &conn{}
-	c.fm = fence.MakeFenceTable()
+	c.fm = fences.MakeFenceTable()
 	c.nc = nc
 	return c
 }
@@ -165,7 +165,7 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 }
 
 func (cm *ConnMgr) registerFence(fence np.Tfence, new bool) error {
-	req := np.Tregfence{fence, new}
+	req := np.Tregfence{fence}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
 			return !new || !conn.fm.Present(fence.FenceId)

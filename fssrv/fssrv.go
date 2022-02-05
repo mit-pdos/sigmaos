@@ -174,11 +174,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		// and then ops on this session should fail.  Fence
 		// may be called many times on sess, because client
 		// may register a more recent fence.
-		err = sess.Fence(req)
-		if err != nil {
-			log.Printf("%v: Fence sess %v %v err %v\n", db.GetName(), sess.Sid, req, err)
-			return nil, &np.Rerror{err.Error()}
-		}
+		sess.Fence(req)
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Tunfence:

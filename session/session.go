@@ -39,9 +39,8 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTab
 	return sess
 }
 
-func (sess *Session) Fence(req np.Tregfence) error {
+func (sess *Session) Fence(req np.Tregfence) {
 	sess.myFences.Insert(req.Fence)
-	return nil
 }
 
 func (sess *Session) Unfence(idf np.Tfenceid) error {

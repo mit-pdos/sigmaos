@@ -23,6 +23,7 @@ type Thread struct {
 
 func makeThread(pfn ProcessFn) *Thread {
 	t := &Thread{}
+	t.Mutex = &sync.Mutex{}
 	t.opC = make(chan *Op)
 	t.sleepC = make(chan bool)
 	t.wakeC = make(chan *sync.Cond, MAX_NWAKE)

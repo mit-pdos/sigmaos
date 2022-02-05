@@ -16,31 +16,29 @@ import (
 //
 // sesscond wraps cond vars so that if a session terminates, it can
 // wakeup threads that are associated with that session.  Each cond
-// var is represented as several cond vars, one per session.
+// var is represented as several cond vars, one per goroutine using it.
 //
 
 type cond struct {
-	sync.Locker // to atomically release sess lock and sc lock before waiting on c
-	isClosed    bool
-	c           *sync.Cond
+	isClosed bool
+	c        *sync.Cond
 }
 
 // Sess cond has one cond per session.  The lock is, for example, a
 // pipe lock or watch lock, which SessCond releases in Wait() and
 // re-acquires before returning out of Wait().
 type SessCond struct {
-	// lock  *sync.Mutex
 	lock  sync.Locker
 	st    *session.SessionTable
 	nref  int // under sct lock
-	conds map[np.Tsession]*cond
+	conds map[np.Tsession][]*cond
 }
 
 func makeSessCond(st *session.SessionTable, lock sync.Locker) *SessCond {
 	sc := &SessCond{}
 	sc.lock = lock
 	sc.st = st
-	sc.conds = make(map[np.Tsession]*cond)
+	sc.conds = make(map[np.Tsession][]*cond)
 	return sc
 }
 
@@ -51,47 +49,38 @@ func (sc *SessCond) closed(sessid np.Tsession) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	// log.Printf("cond %p: close %v %v\n", sc, sessid, sc.conds)
-	if c, ok := sc.conds[sessid]; ok {
+	if condlist, ok := sc.conds[sessid]; ok {
 		// log.Printf("%p: sess %v closed\n", sc, sessid)
-		c.Lock()
-		c.isClosed = true
-		c.c.Broadcast()
-		c.Unlock()
+		for _, c := range condlist {
+			c.isClosed = true
+			// TODO: inseart threadmgr wakeups
+			c.c.Signal()
+		}
 	}
+	// XXX should I delete?
+	delete(sc.conds, sessid)
 }
 
 func (sc *SessCond) alloc(sessid np.Tsession) *cond {
-	if c, ok := sc.conds[sessid]; ok {
-		return c
+	if _, ok := sc.conds[sessid]; !ok {
+		sc.conds[sessid] = []*cond{}
 	}
 	c := &cond{}
-	c.Locker = &sync.Mutex{}
-	c.c = sync.NewCond(c.Locker)
-	sc.conds[sessid] = c
+	c.c = sync.NewCond(sc.lock)
+	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
 }
 
-// Caller should hold sess and sc lock and will receive them back on
-// return. Wait releases sess lock, so that other threads on the
-// session can run.  c.Lock ensure atomicity of releasing sess and sc
-// lock and going to sleep.
+// Caller should hold sc lock and will receive it back on return. Wait releases
+// sess lock, so that other threads on the session can run. sc.lock ensures
+// atomicity of releasing sc lock and going to sleep.
 func (sc *SessCond) Wait(sessid np.Tsession) error {
 	c := sc.alloc(sessid)
-	c.Lock()
 
-	// release sc lock and sess lock
-	sc.lock.Unlock()
-	sc.st.SessUnlock(sessid)
-
+	// TODO: threadmgr sleep here
 	c.c.Wait()
 
 	closed := c.isClosed
-
-	c.Unlock()
-
-	// reacquire sess lock and sc lock
-	sc.st.SessLock(sessid)
-	sc.lock.Lock()
 
 	if closed {
 		log.Printf("wait sess closed %v\n", sessid)
@@ -100,23 +89,26 @@ func (sc *SessCond) Wait(sessid np.Tsession) error {
 	return nil
 }
 
+// Caller should hold sc lock.
 func (sc *SessCond) Signal() {
-	for _, c := range sc.conds {
+	for _, condlist := range sc.conds {
 		// acquire c.lock() to ensure signal doesn't happen
 		// between releasing sc or sess lock and going to
 		// sleep.
-		c.Lock()
-		c.c.Signal()
-		c.Unlock()
+		for _, c := range condlist {
+			// TODO: threadmgr wakeups
+			c.c.Signal()
+		}
 	}
 }
 
+// Caller should hold sc lock.
 func (sc *SessCond) Broadcast() {
-	for _, c := range sc.conds {
-		// See comment above
-		c.Lock()
-		c.c.Broadcast()
-		c.Unlock()
+	for _, condlist := range sc.conds {
+		for _, c := range condlist {
+			// TODO: threadmgr wakeups
+			c.c.Signal()
+		}
 	}
 }
 

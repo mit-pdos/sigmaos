@@ -185,13 +185,11 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 // temporarily.  XXX doesn't guarantee the order in which received
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	defer sess.DecThreads()
-	sess.Lock()
 	reply, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
 	fssrv.sendReply(fc.Tag, reply, replies)
-	sess.Unlock()
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {

@@ -97,11 +97,11 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 	fs := &MemFs{}
 	fs.ch = make(chan bool)
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
-	srv, err := MakeSrv(root, fsl, pclnt)
-	if err != nil {
-		return nil, err
+	srv, error := MakeSrv(root, fsl, pclnt)
+	if error != nil {
+		return nil, error
 	}
-	err = makeStatDev(root, srv)
+	err := makeStatDev(root, srv)
 	if err != nil {
 		return fs, err
 	}
@@ -109,9 +109,9 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 	fs.FsServer = srv
 	fs.root = root
 	if len(path) > 0 {
-		err = fsl.Post(srv.MyAddr(), path)
+		error = fsl.Post(srv.MyAddr(), path)
 	}
-	return fs, err
+	return fs, error
 }
 
 func StartMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {

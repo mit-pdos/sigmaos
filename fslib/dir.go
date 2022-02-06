@@ -41,7 +41,6 @@ func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 
 // Too stop early, f must return true.  Returns true if stopped early.
 func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, error) {
-	var err error
 	fd, err := fl.Open(dir, np.OREAD)
 	if err != nil {
 		return false, err

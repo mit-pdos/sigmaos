@@ -47,7 +47,7 @@ func mkWatch(sct *sesscond.SessCondTable, path string) *Watch {
 }
 
 // Caller should hold ws lock on return caller has ws lock again
-func (ws *Watch) Watch(sessid np.Tsession) error {
+func (ws *Watch) Watch(sessid np.Tsession) *np.Err {
 	err := ws.sc.Wait(sessid)
 	if err != nil {
 		log.Printf("Watch done waiting %v p '%v' err %v\n", ws, ws.path, err)

@@ -75,7 +75,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 // return. Wait releases sess lock, so that other threads on the
 // session can run.  c.Lock ensure atomicity of releasing sess and sc
 // lock and going to sleep.
-func (sc *SessCond) Wait(sessid np.Tsession) error {
+func (sc *SessCond) Wait(sessid np.Tsession) *np.Err {
 	c := sc.alloc(sessid)
 	c.Lock()
 
@@ -95,7 +95,7 @@ func (sc *SessCond) Wait(sessid np.Tsession) error {
 
 	if closed {
 		log.Printf("wait sess closed %v\n", sessid)
-		return fmt.Errorf("session closed %v", sessid)
+		return np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", sessid))
 	}
 	return nil
 }

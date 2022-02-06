@@ -124,15 +124,15 @@ func (i *Inode) Size() np.Tlength {
 	return 0
 }
 
-func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
+func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 	return nil, nil
 }
 
-func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) error {
+func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
 
-func (i *Inode) Unlink(ctx fs.CtxI) error {
+func (i *Inode) Unlink(ctx fs.CtxI) *np.Err {
 	i.nlink -= 1
 	if i.nlink < 0 {
 		log.Printf("%v: nlink < 0\n", db.GetName())
@@ -149,7 +149,7 @@ func (inode *Inode) Mode() np.Tperm {
 	return perm
 }
 
-func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, error) {
+func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 

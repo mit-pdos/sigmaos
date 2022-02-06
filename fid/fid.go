@@ -83,9 +83,9 @@ func (f *Fid) SetObj(o fs.FsObj) {
 	f.obj = o
 }
 
-func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Rerror) {
+func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	o := f.Obj()
-	var err error
+	var err *np.Err
 	sz := np.Tsize(0)
 	switch i := o.(type) {
 	case fs.File:
@@ -95,11 +95,7 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Rer
 	default:
 		log.Fatalf("FATAL Write: obj type %T isn't Dir or File\n", o)
 	}
-	var r *np.Rerror
-	if err != nil {
-		r = &np.Rerror{err.Error()}
-	}
-	return sz, r
+	return sz, err
 }
 
 func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {

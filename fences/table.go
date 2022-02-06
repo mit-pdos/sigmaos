@@ -1,7 +1,6 @@
 package fences
 
 import (
-	"fmt"
 	"sync"
 
 	np "ulambda/ninep"
@@ -47,7 +46,7 @@ func (ft *FenceTable) Del(idf np.Tfenceid) error {
 		delete(ft.fences, idf)
 		return nil
 	}
-	return fmt.Errorf("fence not present %v", idf)
+	return np.MkErr(np.TErrUnknownFence, idf)
 }
 
 func (ft *FenceTable) Present(idf np.Tfenceid) bool {

@@ -2,7 +2,6 @@ package memfs
 
 import (
 	"fmt"
-	"io"
 	"sync"
 	// "errors"
 
@@ -46,7 +45,7 @@ func (p *Pipe) Size() np.Tlength {
 	return np.Tlength(len(p.buf))
 }
 
-func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
+func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	st, err := p.FsObj.Stat(ctx)
@@ -57,13 +56,13 @@ func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
+func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
 		if pipe.rclosed || pipe.Nlink() <= 0 {
-			return nil, fmt.Errorf("%v: pipe closed for reading", ctx.Uname())
+			return nil, np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
 		//log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
@@ -78,12 +77,12 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 				return nil, err
 			}
 			if pipe.Nlink() == 0 {
-				return nil, fmt.Errorf("pipe removed")
+				return nil, np.MkErr(np.TErrNotfound, "pipe")
 			}
 		}
 	} else if mode == np.OWRITE {
 		if pipe.wclosed || pipe.Nlink() <= 0 {
-			return nil, fmt.Errorf("pipe closed for writing")
+			return nil, np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
 		// log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
@@ -99,17 +98,17 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, error) {
 				return nil, err
 			}
 			if pipe.Nlink() == 0 {
-				return nil, fmt.Errorf("pipe removed")
+				return nil, np.MkErr(np.TErrNotfound, "pipe")
 			}
 
 		}
 	} else {
-		return nil, fmt.Errorf("pipe open unknown mode %v\n", mode)
+		return nil, np.MkErr(np.TErrInval, fmt.Sprintf("mode %v", mode))
 	}
 	return nil, nil
 }
 
-func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
+func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -120,7 +119,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 			pipe.rclosed = true
 		}
 		if pipe.nreader < 0 {
-			fmt.Errorf("pipe already closed for reading\n")
+			np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.condw.Signal()
 	} else if mode == np.OWRITE {
@@ -129,16 +128,16 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) error {
 			pipe.wclosed = true
 		}
 		if pipe.nwriter < 0 {
-			fmt.Errorf("pipe already closed for writing\n")
+			np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.condr.Signal()
 	} else {
-		return fmt.Errorf("pipe open close mode %v\n", mode)
+		return np.MkErr(np.TErrInval, fmt.Sprintf("mode %v", mode))
 	}
 	return nil
 }
 
-func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, error) {
+func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
@@ -146,7 +145,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
 			if pipe.nreader <= 0 {
-				return 0, io.EOF
+				return 0, np.MkErr(np.TErrEOF, "pipe")
 			}
 			err := pipe.condw.Wait(ctx.SessionId())
 			if err != nil {
@@ -164,13 +163,13 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 	return np.Tsize(n), nil
 }
 
-func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
-			return nil, io.EOF
+			return nil, np.MkErr(np.TErrEOF, "pipe")
 		}
 		err := pipe.condr.Wait(ctx.SessionId())
 		if err != nil {
@@ -187,7 +186,7 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 	return d, nil
 }
 
-func (pipe *Pipe) Unlink(ctx fs.CtxI) error {
+func (pipe *Pipe) Unlink(ctx fs.CtxI) *np.Err {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 

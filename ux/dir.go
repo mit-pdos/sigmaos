@@ -1,7 +1,6 @@
 package fsux
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -20,11 +19,11 @@ func makeDir(path []string, t np.Tperm, p *Dir) *Dir {
 	return d
 }
 
-func (d *Dir) uxReadDir() ([]*np.Stat, error) {
+func (d *Dir) uxReadDir() ([]*np.Stat, *np.Err) {
 	var sts []*np.Stat
 	dirents, err := ioutil.ReadDir(d.Path())
 	if err != nil {
-		return nil, err
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	for _, e := range dirents {
 		st := &np.Stat{}
@@ -41,7 +40,7 @@ func (d *Dir) uxReadDir() ([]*np.Stat, error) {
 	return sts, nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, off, cnt)
 	dirents, err := d.uxReadDir()
 	if err != nil {
@@ -51,21 +50,20 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 }
 
 // XXX close
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	p := np.Join(append(d.path, name))
 	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
-	var err error
 	if perm.IsDir() {
-		err = os.Mkdir(p, os.FileMode(perm&0777))
-		if err != nil {
-			return nil, err
+		error := os.Mkdir(p, os.FileMode(perm&0777))
+		if error != nil {
+			return nil, np.MkErr(np.TErrError, error)
 		}
 		d1 := makeDir(append(d.path, name), 0, d)
 		return d1, nil
 	} else {
-		file, err := os.OpenFile(p, uxFlags(m)|os.O_CREATE, os.FileMode(perm&0777))
-		if err != nil {
-			return nil, err
+		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE, os.FileMode(perm&0777))
+		if error != nil {
+			return nil, np.MkErr(np.TErrError, error)
 		}
 		f := makeFile(append(d.path, name), 0, d)
 		if file != nil {
@@ -75,18 +73,18 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
-	fi, err := os.Stat(np.Join(d.path))
-	if err != nil {
-		return nil, nil, err
+	fi, error := os.Stat(np.Join(d.path))
+	if error != nil {
+		return nil, nil, np.MkErr(np.TErrError, error)
 	}
 	if !fi.IsDir() {
-		return nil, nil, fmt.Errorf("Not a directory")
+		return nil, nil, np.MkErr(np.TErrNotDir, d.path)
 	}
-	fi, err = os.Stat(np.Join(append(d.path, p[0])))
-	if err != nil {
-		return nil, nil, fmt.Errorf("file not found")
+	fi, error = os.Stat(np.Join(append(d.path, p[0])))
+	if error != nil {
+		return nil, nil, np.MkErr(np.TErrNotfound, p[0])
 	}
 	if len(p) == 1 {
 		if fi.IsDir() {
@@ -102,28 +100,28 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	}
 }
 
-func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	return 0, fmt.Errorf("not supported")
+func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+	return 0, np.MkErr(np.TErrNotSupported, nil)
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
-	return fmt.Errorf("not supported")
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
+	return np.MkErr(np.TErrNotSupported, nil)
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) error {
+func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
 	err := os.Remove(d.Path() + "/" + name)
-	return err
+	return np.MkErr(np.TErrError, err)
 }
 
 // XXX update cached file obj?
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) error {
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	oldPath := d.Path() + "/" + from
 	newPath := d.Path() + "/" + to
 	db.DLPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return err
+		return np.MkErr(np.TErrError, err)
 	}
 	return nil
 }

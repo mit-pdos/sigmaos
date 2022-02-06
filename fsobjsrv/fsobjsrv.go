@@ -47,18 +47,18 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	return fos
 }
 
-func (fos *FsObjSrv) lookup(fid np.Tfid) (*fid.Fid, *np.Rerror) {
+func (fos *FsObjSrv) lookup(fid np.Tfid) (*fid.Fid, *np.Err) {
 	f, ok := fos.ft.Lookup(fid)
 	if !ok {
-		return nil, np.ErrUnknownfid
+		return nil, np.MkErr(np.TErrUnknownfid, fid)
 	}
 	return f, nil
 }
 
-func (fos *FsObjSrv) watch(ws *watch.Watch, sess np.Tsession) *np.Rerror {
+func (fos *FsObjSrv) watch(ws *watch.Watch, sess np.Tsession) *np.Err {
 	err := ws.Watch(sess)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err
 	}
 	return nil
 }
@@ -113,7 +113,7 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
@@ -142,7 +142,7 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	o := f.Obj()
 	if f.IsOpen() { // has the fid been opened?
@@ -157,7 +157,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
 
@@ -182,7 +182,7 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	o := f.Obj()
 	p := f.Path()
@@ -204,9 +204,9 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
-	r := fos.watch(ws, fos.sid)
-	if r != nil {
-		return r
+	err = fos.watch(ws, fos.sid)
+	if err != nil {
+		return err.Rerror()
 	}
 	return nil
 }
@@ -222,7 +222,7 @@ func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj,
 
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
-func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Rerror) {
+func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Err) {
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
 
@@ -234,7 +234,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 			dws.WakeupWatchL()
 			return o1, nil
 		} else {
-			if mode&np.OWATCH == np.OWATCH && err.Error() == "Name exists" {
+			if mode&np.OWATCH == np.OWATCH && err.Err() == np.TErrExists {
 				fws.Unlock()
 				err := fos.watch(dws, fos.sid)
 				fws.Lock() // not necessary if fail, but nicer with defer
@@ -243,7 +243,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 				}
 				// try again; we will hold lock on watchers
 			} else {
-				return nil, &np.Rerror{err.Error()}
+				return nil, err
 			}
 		}
 	}
@@ -264,7 +264,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "f %v\n", f)
 	o := f.Obj()
@@ -277,10 +277,10 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	dws, fws := fos.AcquireWatches(f.Path(), names[0])
 	defer fos.ReleaseWatches(dws, fws)
 
-	o1, r := fos.createObj(f.Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
-	if r != nil {
+	o1, err := fos.createObj(f.Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
+	if err != nil {
 		//log.Printf("%v %v createObj %v err %v\n", db.GetName(), f.Ctx().Uname(), names[0], r)
-		return r
+		return err.Rerror()
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
 	fos.rft.UpdateSeqno(nf.Path())
@@ -297,7 +297,7 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DLPrintf("9POBJ", "Read %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
 	return f.Read(args.Offset, args.Count, np.NoV, rets)
@@ -307,11 +307,13 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
-	var r *np.Rerror
-	rets.Count, r = f.Write(args.Offset, args.Data, np.NoV)
-	return r
+	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
+	if err != nil {
+		return err.Rerror()
+	}
+	return nil
 }
 
 // XXX make .exit a reserved name
@@ -355,7 +357,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	o := f.Obj()
 	if isExit(f.Path()) {
@@ -366,14 +368,14 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	return fos.removeObj(f.Ctx(), o, f.Path())
 }
 
-func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Rerror) {
+func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Err) {
 	if !o.Perm().IsDir() {
-		return nil, np.ErrNotfound
+		return nil, np.MkErr(np.TErrNotDir, o)
 	}
 	d := o.(fs.Dir)
 	os, rest, err := d.Lookup(ctx, names)
 	if err != nil || len(rest) != 0 {
-		return nil, &np.Rerror{fmt.Errorf("dir not found %v", names).Error()}
+		return nil, np.MkErr(np.TErrNotfound, names)
 	}
 	return os[len(os)-1], nil
 }
@@ -382,10 +384,10 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 // hasn't been walked. If so, RemoveFile() will not succeed looking up
 // args.Wnames, and caller should first walk the pathname.
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
-	var err *np.Rerror
+	var err *np.Err
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	o := f.Obj()
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
@@ -399,7 +401,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
-			return err
+			return err.Rerror()
 		}
 	}
 	return fos.removeObj(f.Ctx(), lo, fname)
@@ -408,7 +410,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "Stat %v\n", f)
 	o := f.Obj()
@@ -423,7 +425,7 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
 	o := f.Obj()
@@ -468,11 +470,11 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	oldf, err := fos.lookup(args.OldFid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	newf, err := fos.lookup(args.NewFid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "Renameat %v %v %v\n", oldf, newf, args)
 	oo := oldf.Obj()
@@ -521,7 +523,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
@@ -529,7 +531,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
-			return err
+			return err.Rerror()
 		}
 	}
 	fos.stats.Path(f.Path())
@@ -557,11 +559,10 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 // file, opens/creates it, and writes it.  If another setfile executes
 // between open() and write(), an setfile returns an error.
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
-	var r error
-	var err *np.Rerror
+	var err *np.Err
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
@@ -575,7 +576,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if len(names) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, names)
 		if err != nil {
-			return err
+			return err.Rerror()
 		}
 	}
 	if args.Perm != 0 { // create?
@@ -588,23 +589,23 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 
 		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dws, fws, name, args.Perm, args.Mode)
 		if err != nil {
-			return err
+			return err.Rerror()
 		}
 		f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
 		fos.stats.Path(fname)
-		_, r = lo.Open(f.Ctx(), args.Mode)
-		if r != nil {
-			return &np.Rerror{r.Error()}
+		_, err = lo.Open(f.Ctx(), args.Mode)
+		if err != nil {
+			return err.Rerror()
 		}
 	}
 	switch i := lo.(type) {
 	case fs.Dir:
 		return np.ErrNotFile
 	case fs.File:
-		rets.Count, r = i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
-		if r != nil {
-			return &np.Rerror{r.Error()}
+		rets.Count, err = i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
+		if err != nil {
+			return err.Rerror()
 		}
 		fos.rft.UpdateSeqno(fname)
 		return nil
@@ -618,7 +619,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
-		return err
+		return err.Rerror()
 	}
 	rets.Fence = fos.rft.MkFence(f.Path())
 	// log.Printf("mkfence f %v -> %v\n", f.Path, rets.Fence)

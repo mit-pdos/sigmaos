@@ -1,7 +1,6 @@
 package memfs
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -27,7 +26,7 @@ func (s *Symlink) Size() np.Tlength {
 	return np.Tlength(len(s.target))
 }
 
-func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, error) {
+func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	st, err := s.FsObj.Stat(ctx)
@@ -38,12 +37,12 @@ func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	return st, nil
 }
 
-func (s *Symlink) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+func (s *Symlink) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if !np.VEq(v, s.Version()) {
-		return 0, fmt.Errorf("Version mismatch")
+		return 0, np.MkErr(np.TErrVersion, s.Version())
 	}
 	s.target = data
 	s.VersionInc()
@@ -51,12 +50,12 @@ func (s *Symlink) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQvers
 	return np.Tsize(len(data)), nil
 }
 
-func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if !np.VEq(v, s.Version()) {
-		return nil, fmt.Errorf("Version mismatch")
+		return nil, np.MkErr(np.TErrVersion, s.Version())
 	}
 	if offset >= np.Toffset(len(s.target)) {
 		return nil, nil

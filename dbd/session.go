@@ -2,7 +2,6 @@ package dbd
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"strconv"
 
@@ -36,10 +35,10 @@ type Query struct {
 	rows *sql.Rows
 }
 
-func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
+func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	db, err := sql.Open("mysql", "sigma:sigmaos@/books")
 	if err != nil {
-		return nil, err
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	err = db.Ping()
 	if err != nil {
@@ -74,36 +73,36 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, error) {
 	return s, nil
 }
 
-func (s *Session) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+func (s *Session) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	if off > 0 {
 		return nil, nil
 	}
 	return []byte(s.id), nil
 }
 
-func (s *Session) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
-	return 0, fmt.Errorf("not supported")
+func (s *Session) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+	return 0, np.MkErr(np.TErrNotSupported, nil)
 }
 
 // XXX wait on close before processing data?
-func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	rows, err := q.db.Query(string(b))
 	if err != nil {
-		return 0, err
+		return 0, np.MkErr(np.TErrError, err)
 	}
 	q.rows = rows
 	return np.Tsize(len(b)), nil
 }
 
 // XXX incremental read
-func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	if off > 0 {
 		return nil, nil
 	}
 	defer q.rows.Close()
 	columns, err := q.rows.Columns()
 	if err != nil {
-		return nil, err
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	count := len(columns)
 	table := make([]map[string]interface{}, 0)
@@ -130,10 +129,10 @@ func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 	}
 	b, err := json.Marshal(table)
 	if np.Tsize(len(b)) > cnt {
-		return nil, fmt.Errorf("too large")
+		np.MkErr(np.TErrInval, "too large")
 	}
 	if err != nil {
-		return nil, err
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	return b, nil
 }

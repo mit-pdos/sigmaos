@@ -2,7 +2,6 @@ package fss3
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -60,9 +59,9 @@ func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 	return name, m, !ok
 }
 
-func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, error) {
+func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DLPrintf("FSS3", "Stat Dir: %v\n", d)
-	var err error
+	var err *np.Err
 	d.mu.Lock()
 	read := d.isRead
 	d.mu.Unlock()
@@ -72,7 +71,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, error) {
 	return d.stat(), err
 }
 
-func (d *Dir) s3ReadDirL() error {
+func (d *Dir) s3ReadDirL() *np.Err {
 	key := np.Join(d.key)
 	maxKeys := 0
 	params := &s3.ListObjectsV2Input{
@@ -88,7 +87,7 @@ func (d *Dir) s3ReadDirL() error {
 	for p.HasMorePages() {
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			return fmt.Errorf("bad offset")
+			return np.MkErr(np.TErrBadoffset, key)
 		}
 		for _, obj := range page.Contents {
 			db.DLPrintf("FSS3", "Key: %v\n", *obj.Key)
@@ -108,10 +107,10 @@ func (d *Dir) s3ReadDirL() error {
 	return nil
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
+func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
 	if !d.Perm().IsDir() {
-		return nil, nil, fmt.Errorf("Not a directory")
+		return nil, nil, np.MkErr(np.TErrNotDir, d)
 	}
 	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
 	if err != nil {
@@ -119,7 +118,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	}
 	o1, ok := d.lookupDirent(p[0])
 	if !ok {
-		return nil, nil, fmt.Errorf("file not found")
+		return nil, nil, np.MkErr(np.TErrNotfound, p[0])
 	}
 	if len(p) == 1 {
 		return []fs.FsObj{o1}, nil, nil
@@ -128,7 +127,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, error) {
 	}
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	var dirents []*np.Stat
 	db.DLPrintf("FSS3", "readDir: %v\n", d)
 	d.mu.Lock()
@@ -152,7 +151,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 // them, because stat-ing an entry that is a directory would read that
 // subdir too.  Thus, a stat of the root would compute the file
 // system.
-func (d *Dir) fakeStat(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, error) {
+func (d *Dir) fakeStat(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	var dirents []*np.Stat
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -164,14 +163,14 @@ func (d *Dir) fakeStat(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 }
 
 // sub directories will be implicitly created; fake write
-func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	return np.Tsize(len(b)), nil
 }
 
 // XXX directories don't fully work: there is a fake directory, when
 // trying to read it we get an error.  Maybe create . or .. in the
 // directory args.Name, to force the directory into existence
-func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, error) {
+func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	if perm.IsDir() {
 		o1 := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
 		return o1, nil
@@ -183,25 +182,25 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 	_, err := d.fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
-		return nil, err
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	// XXX ignored perm, only files not directories
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	_, ok := d.dirents[name]
 	if ok {
-		return nil, fmt.Errorf("Name exists")
+		return nil, np.MkErr(np.TErrExists, name)
 	}
 	o1 := d.Obj.fss3.makeObj(np.Split(key), 0, d)
 	d.dirents[name] = o1.(*Obj)
 	return o1, nil
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) error {
-	return fmt.Errorf("not supported")
+func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
+	return np.MkErr(np.TErrNotSupported, "Renameat")
 }
 
-func (d *Dir) Remove(ctx fs.CtxI, name string) error {
+func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	key := np.Join(d.key) + "/" + name
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
@@ -209,7 +208,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) error {
 	}
 	_, err := d.fss3.client.DeleteObject(context.TODO(), input)
 	if err != nil {
-		return err
+		return np.MkErr(np.TErrError, err)
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -217,6 +216,6 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) error {
 	return nil
 }
 
-func (d *Dir) Rename(ctx fs.CtxI, from, to string) error {
-	return fmt.Errorf("not supported")
+func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
+	return np.MkErr(np.TErrNotSupported, "Rename")
 }

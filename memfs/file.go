@@ -1,7 +1,6 @@
 package memfs
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -28,7 +27,7 @@ func (f *File) Size() np.Tlength {
 	return np.Tlength(len(f.data))
 }
 
-func (f *File) Stat(ctx fs.CtxI) (*np.Stat, error) {
+func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	st, err := f.FsObj.Stat(ctx)
@@ -43,12 +42,12 @@ func (f *File) LenOff() np.Toffset {
 	return np.Toffset(len(f.data))
 }
 
-func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	if !np.VEq(v, f.Version()) {
-		return 0, fmt.Errorf("Version mismatch")
+		return 0, np.MkErr(np.TErrVersion, f.Version())
 	}
 
 	f.VersionInc()
@@ -73,12 +72,12 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 	return cnt, nil
 }
 
-func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, error) {
+func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	if !np.VEq(v, f.Version()) {
-		return nil, fmt.Errorf("Version mismatch")
+		return nil, np.MkErr(np.TErrVersion, f.Version())
 	}
 
 	if offset >= f.LenOff() {

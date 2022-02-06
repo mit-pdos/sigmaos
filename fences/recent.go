@@ -1,7 +1,6 @@
 package fences
 
 import (
-	"fmt"
 	"sync"
 
 	np "ulambda/ninep"
@@ -66,7 +65,7 @@ func (rft *RecentTable) UpdateFence(fence np.Tfence) error {
 	if f, ok := rft.fences[p]; ok {
 		// log.Printf("%v: UpdateFence: fence %v new %v\n", db.GetName(), p, fence)
 		if fence.Seqno < f.Seqno {
-			return fmt.Errorf("stale %v", p)
+			return np.MkErr(np.TErrStale, p)
 		}
 	}
 	rft.fences[p] = fence
@@ -82,11 +81,11 @@ func (rft *RecentTable) RmFence(fence np.Tfence) error {
 	p := fence.FenceId.Path
 	if f, ok := rft.fences[p]; ok {
 		if fence.Seqno < f.Seqno {
-			return fmt.Errorf("stale fence %v", fence)
+			return np.MkErr(np.TErrStale, fence)
 		}
 		delete(rft.fences, p)
 	} else {
-		return fmt.Errorf("unknown fence %v", p)
+		return np.MkErr(np.TErrUnknownFence, p)
 	}
 	return nil
 }
@@ -98,9 +97,9 @@ func (rft *RecentTable) IsRecent(fence np.Tfence) error {
 
 	if f, ok := rft.fences[fence.FenceId.Path]; ok {
 		if fence.Seqno < f.Seqno {
-			return fmt.Errorf("stale fence %v", fence)
+			return np.MkErr(np.TErrStale, fence)
 		}
 		return nil
 	}
-	return fmt.Errorf("unknown fence %v\n", fence.FenceId)
+	return np.MkErr(np.TErrUnknownFence, fence.FenceId)
 }

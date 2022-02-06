@@ -49,7 +49,7 @@ func Run(args []string) {
 	}
 
 	var fss *fssrv.FsServer
-	var err error
+	var err *np.Err
 	// Replicate?
 	if len(args) >= 4 {
 		id, r := strconv.Atoi(args[3])
@@ -63,6 +63,7 @@ func Run(args []string) {
 		fss, _, _, err = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
 	}
 
+	log.Printf("err %v\n", err)
 	if err != nil {
 		log.Fatalf("%v: err %v\n", args[0], err)
 	}

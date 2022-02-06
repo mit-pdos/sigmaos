@@ -1,7 +1,6 @@
 package memfs
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -18,7 +17,7 @@ type pathT struct {
 	path np.Tpath
 }
 
-func MakeRootInode(f fs.MakeDirF, ctx fs.CtxI, perm np.Tperm) (fs.FsObj, error) {
+func MakeRootInode(f fs.MakeDirF, ctx fs.CtxI, perm np.Tperm) (fs.FsObj, *np.Err) {
 	makeDir = f
 	path = &pathT{}
 	path.path = np.Tpath(time.Now().Unix())
@@ -32,7 +31,7 @@ func GenPath() np.Tpath {
 	return path.path
 }
 
-func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, error) {
+func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, *np.Err) {
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
 		return makeDir(i), nil
@@ -43,6 +42,6 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, er
 	} else if p.IsFile() || p.IsEphemeral() {
 		return MakeFile(i), nil
 	} else {
-		return nil, fmt.Errorf("MakeInode: Unknown inode type")
+		return nil, np.MkErr(np.TErrInval, p)
 	}
 }

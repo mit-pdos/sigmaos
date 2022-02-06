@@ -1,13 +1,11 @@
 package session
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	db "ulambda/debug"
 	"ulambda/fences"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
@@ -53,7 +51,7 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 func (st *SessionTable) Detach(sid np.Tsession) error {
 	sess, ok := st.Lookup(sid)
 	if !ok {
-		return fmt.Errorf("%v: no sess %v", db.GetName(), sid)
+		return np.MkErr(np.TErrInvalidSession, sid)
 	}
 	sess.protsrv.Detach()
 	return nil
@@ -64,7 +62,7 @@ func (st *SessionTable) SessLock(sessid np.Tsession) {
 		sess.Lock()
 		sess.cond.Signal()
 	} else {
-		log.Fatalf("LockSession: no lock for %v\n", sessid)
+		log.Fatalf("FATAL LockSession: no lock for %v\n", sessid)
 	}
 }
 
@@ -72,6 +70,6 @@ func (st *SessionTable) SessUnlock(sessid np.Tsession) {
 	if sess, ok := st.Lookup(sessid); ok {
 		sess.Unlock()
 	} else {
-		log.Fatalf("UnlockSession: no lock for %v\n", sessid)
+		log.Fatalf("FATAL UnlockSession: no lock for %v\n", sessid)
 	}
 }

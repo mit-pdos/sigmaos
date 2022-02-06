@@ -14,18 +14,18 @@ type CtxI interface {
 }
 
 type Dir interface {
-	Lookup(CtxI, []string) ([]FsObj, []string, error)
-	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, error)
-	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, error)
-	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
-	Remove(CtxI, string) error
-	Rename(CtxI, string, string) error
-	Renameat(CtxI, string, Dir, string) error
+	Lookup(CtxI, []string) ([]FsObj, []string, *np.Err)
+	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *np.Err)
+	ReadDir(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]*np.Stat, *np.Err)
+	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
+	Remove(CtxI, string) *np.Err
+	Rename(CtxI, string, string) *np.Err
+	Renameat(CtxI, string, Dir, string) *np.Err
 }
 
 type File interface {
-	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, error)
-	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, error)
+	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, *np.Err)
+	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
 }
 
 type FsObj interface {
@@ -39,10 +39,10 @@ type FsObj interface {
 	Size() np.Tlength
 	Nlink() int
 	DecNlink()
-	Open(CtxI, np.Tmode) (FsObj, error)
-	Close(CtxI, np.Tmode) error // for pipes
-	Stat(CtxI) (*np.Stat, error)
-	Unlink(CtxI) error
+	Open(CtxI, np.Tmode) (FsObj, *np.Err)
+	Close(CtxI, np.Tmode) *np.Err // for pipes
+	Stat(CtxI) (*np.Stat, *np.Err)
+	Unlink(CtxI) *np.Err
 	Parent() Dir
 	SetParent(Dir)
 }

@@ -10,6 +10,7 @@ import (
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/memfs"
+	np "ulambda/ninep"
 	"ulambda/procclnt"
 	"ulambda/repl"
 )
@@ -63,15 +64,15 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 	return srv, fsl, pclnt, nil
 }
 
-func makeStatDev(root fs.Dir, srv *fssrv.FsServer) error {
+func makeStatDev(root fs.Dir, srv *fssrv.FsServer) *np.Err {
 	return dir.MkNod(ctx.MkCtx("", 0, nil), root, "statsd", srv.GetStats())
 }
 
-func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, error) {
+func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, *np.Err) {
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
 	srv, fsl, pclnt, err := MakeReplServer(root, addr, path, "named", conf)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, np.MkErr(np.TErrError, err)
 	}
 	return srv, fsl, pclnt, makeStatDev(root, srv)
 }

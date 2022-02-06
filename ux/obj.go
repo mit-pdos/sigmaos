@@ -1,7 +1,6 @@
 package fsux
 
 import (
-	"fmt"
 	"os"
 	"sync"
 	"syscall"
@@ -76,17 +75,17 @@ func (o *Obj) Size() np.Tlength {
 	return o.sz
 }
 
-func (o *Obj) stat() (*np.Stat, error) {
+func (o *Obj) stat() (*np.Stat, *np.Err) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
 	fileinfo, err := os.Stat(o.Path())
 	if err != nil {
-		return nil, err
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	ustat, ok := fileinfo.Sys().(*syscall.Stat_t)
 	if !ok {
-		return nil, fmt.Errorf("Not a syscall.Stat_t")
+		return nil, np.MkErr(np.TErrError, "Not a syscall.Stat_t")
 	}
 	o.ino = ustat.Ino
 	o.sz = np.Tlength(ustat.Size)
@@ -109,7 +108,7 @@ func (o *Obj) stat() (*np.Stat, error) {
 	return st, nil
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, error) {
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DLPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	return o.stat()
 }

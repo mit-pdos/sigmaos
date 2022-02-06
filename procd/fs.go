@@ -100,10 +100,10 @@ func (pfs *ProcdFs) readRunqProc(procdPath string, queueName string, name string
 		return nil, err
 	}
 	p := proc.MakeEmptyProc()
-	err = json.Unmarshal(b, p)
-	if err != nil {
-		log.Fatalf("Error Unmarshal in ProcdFs.getRunqProc: %v", err)
-		return nil, err
+	error := json.Unmarshal(b, p)
+	if error != nil {
+		log.Fatalf("FATAL Error Unmarshal in ProcdFs.getRunqProc: %v", err)
+		return nil, np.MkErr(np.TErrError, error)
 	}
 	return p, nil
 }
@@ -125,7 +125,7 @@ func (pfs *ProcdFs) running(p *Proc) error {
 	// Make sure we write the proc description before we publish it.
 	b, err := json.Marshal(p.attr)
 	if err != nil {
-		log.Fatalf("Error Marshalling proc in ProcdFs.running: %v", err)
+		log.Fatalf("FATAL Error Marshalling proc in ProcdFs.running: %v", err)
 	}
 	f.Write(ctx.MkCtx("", 0, nil), 0, b, np.NoV)
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), pfs.run, p.Pid, p)

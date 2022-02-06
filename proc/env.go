@@ -12,6 +12,7 @@ const (
 	SIGMANEWROOT        = "SIGMANEWROOT"
 	SIGMAPROCDIP        = "SIGMAPROCDIP"
 	SIGMAPID            = "SIGMAPID"
+	SIGMAPROGRAM        = "SIGMAPROGRAM"
 	SIGMAPROCDIR        = "SIGMAPROCDIR"
 	SIGMAPARENTDIR      = "SIGMAPARENTDIR"
 )
@@ -27,6 +28,14 @@ func SetPid(pid string) {
 // Can return "" for test programs that make a procclnt
 func GetPid() string {
 	return os.Getenv(SIGMAPID)
+}
+
+func GetProgram() string {
+	return os.Getenv(SIGMAPROGRAM)
+}
+
+func SetProgram(program string) {
+	os.Setenv(SIGMAPROGRAM, program)
 }
 
 func SetProcdIp(procdIp string) {
@@ -61,8 +70,9 @@ func GetIsPrivilegedProc() bool {
 	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
 }
 
-func FakeProcEnv(pid, procdIp, procdir, parentdir string) {
+func FakeProcEnv(pid, program, procdIp, procdir, parentdir string) {
 	SetPid(pid)
+	SetProgram(program)
 	SetProcdIp(procdIp)
 	SetProcDir(procdir)
 	SetParentDir(parentdir)

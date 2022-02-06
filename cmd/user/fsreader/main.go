@@ -45,7 +45,6 @@ func MakeReader(args []string) (*Reader, error) {
 	}
 	log.Printf("MakeReader %v: %v\n", proc.GetPid(), args)
 	r := &Reader{}
-	db.Name("fsreader-" + proc.GetPid())
 	r.FsLib = fslib.MakeFsLib("fsreader")
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	r.input = args[2]
@@ -59,7 +58,7 @@ func (r *Reader) Work() string {
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, np.OWRITE)
 	if err != nil {
-		log.Fatal("%v: Open error: ", db.GetName(), err)
+		log.Fatal("%v: Open error: ", proc.GetProgram(), err)
 	}
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, np.OREAD)
@@ -74,7 +73,7 @@ func (r *Reader) Work() string {
 		}
 		_, err = r.Write(pipefd, data)
 		if err != nil {
-			log.Fatal("%v: Error pipe Write: %v", db.GetName(), err)
+			log.Fatal("%v: Error pipe Write: %v", proc.GetProgram(), err)
 		}
 	}
 	return "OK"

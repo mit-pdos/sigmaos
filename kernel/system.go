@@ -22,7 +22,7 @@ const (
 type System struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	bin         string
+	bindir      string
 	pid         string
 	namedAddr   []string
 	named       *exec.Cmd
@@ -35,9 +35,9 @@ type System struct {
 	dbd         []*exec.Cmd
 }
 
-func makeSystemBase(namedAddr []string, bin string) *System {
+func makeSystemBase(namedAddr []string, bindir string) *System {
 	s := &System{}
-	s.bin = bin
+	s.bindir = bindir
 	s.namedAddr = namedAddr
 	s.procdPids = []string{}
 	s.fsuxdPids = []string{}
@@ -48,7 +48,7 @@ func makeSystemBase(namedAddr []string, bin string) *System {
 // Make system with just named
 func MakeSystemNamed(uname, bin string) *System {
 	s := makeSystemBase(fslib.Named(), bin)
-	cmd, err := RunNamed(s.bin, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+	cmd, err := RunNamed(s.bindir, fslib.NamedAddr(), false, 0, nil, NO_REALM)
 	if err != nil {
 		log.Fatalf("RunNamed err %v\n", err)
 	}
@@ -61,11 +61,11 @@ func MakeSystemNamed(uname, bin string) *System {
 // Make a system w. Named and other kernel services
 func MakeSystemAll(uname, bin string) *System {
 	s := MakeSystemNamed(uname, bin)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, s.namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, s.namedAddr)
 	s.pid = proc.GetPid()
 	err := s.Boot()
 	if err != nil {
-		log.Fatalf("Start err %v\n", err)
+		log.Fatalf("FATAL Start err %v\n", err)
 	}
 	return s
 }
@@ -89,7 +89,7 @@ func (s *System) Boot() error {
 
 func (s *System) BootFsUxd() error {
 	p := proc.MakeProcPid("fsuxd-"+proc.GenPid(), "bin/kernel/fsuxd", []string{})
-	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
+	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (s *System) BootFsUxd() error {
 
 func (s *System) BootFss3d() error {
 	p := proc.MakeProcPid("fss3d-"+proc.GenPid(), "bin/kernel/fss3d", []string{})
-	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
+	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
 	}
@@ -109,8 +109,8 @@ func (s *System) BootFss3d() error {
 }
 
 func (s *System) BootProcd() error {
-	p := proc.MakeProcPid("procd-"+proc.GenPid(), "bin/kernel/procd", []string{s.bin})
-	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
+	p := proc.MakeProcPid("procd-"+proc.GenPid(), "bin/kernel/procd", []string{s.bindir})
+	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (s *System) BootProcd() error {
 
 func (s *System) BootDbd() error {
 	p := proc.MakeProcPid("dbd-"+proc.GenPid(), "bin/kernel/dbd", []string{})
-	cmd, err := s.SpawnKernelProc(p, s.bin, s.namedAddr)
+	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
 	}
@@ -225,13 +225,13 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 func MakeSystem(uname, bin string, namedAddr []string) *System {
 	s := makeSystemBase(namedAddr, bin)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, namedAddr)
 	s.pid = proc.GetPid()
 	return s
 }
 
 // Run a named as a proc
-func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
 	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {
@@ -241,7 +241,7 @@ func BootNamed(pclnt *procclnt.ProcClnt, bin string, addr string, replicate bool
 
 	pid := "named-" + strconv.Itoa(id)
 	p := proc.MakeProcPid(pid, "bin/kernel/named", args)
-	cmd, err := pclnt.SpawnKernelProc(p, bin, fslib.Named())
+	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {
 		log.Fatalf("Error WaitStart in RunNamed: %v", err)
 		return nil, "", err

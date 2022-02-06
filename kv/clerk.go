@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/group"
@@ -84,7 +83,7 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.grpre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
 	err := kc.balFclnt.AcquireConfig(&kc.blConf)
 	if err != nil {
-		log.Printf("%v: MakeClerk readConfig err %v\n", db.GetName(), err)
+		log.Printf("%v: MakeClerk readConfig err %v\n", proc.GetProgram(), err)
 	}
 	return kc
 }
@@ -106,10 +105,10 @@ func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
 			return true, nil
 		default:
 			if err != nil {
-				return false, fmt.Errorf("%v: Get %v err %v", db.GetName(), key(i), err)
+				return false, fmt.Errorf("%v: Get %v err %v", proc.GetProgram(), key(i), err)
 			}
 			if key(i) != v {
-				return false, fmt.Errorf("%v: Get %v wrong val %v", db.GetName(), key(i), v)
+				return false, fmt.Errorf("%v: Get %v wrong val %v", proc.GetProgram(), key(i), v)
 			}
 		}
 	}
@@ -128,7 +127,7 @@ func (kc *KvClerk) Run() {
 			break
 		}
 	}
-	log.Printf("%v: done nop %v done %v err %v\n", db.GetName(), kc.nop, done, err)
+	log.Printf("%v: done nop %v done %v err %v\n", proc.GetProgram(), kc.nop, done, err)
 	s := "OK"
 	if err != nil {
 		s = err.Error()
@@ -147,7 +146,7 @@ func (kc *KvClerk) releaseFence(grp string) error {
 	if !ok {
 		return fmt.Errorf("release fclnt %v not found", grp)
 	}
-	// log.Printf("%v: release grp %v\n", db.GetName(), grp)
+	// log.Printf("%v: release grp %v\n", proc.GetProgram(), grp)
 	err := f.ReleaseFence()
 	if err != nil {
 		return err
@@ -193,13 +192,13 @@ func (kc KvClerk) retryReadConfig() error {
 		}
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: retry readConfig\n", db.GetName())
+			log.Printf("%v: retry readConfig\n", proc.GetProgram())
 			continue
 		}
 
 		// maybe retryReadConfig failed with a stale error
 		if strings.HasPrefix(err.Error(), "stale") {
-			log.Printf("%v: retry refreshConfig %v\n", db.GetName(), err)
+			log.Printf("%v: retry refreshConfig %v\n", proc.GetProgram(), err)
 			continue
 		}
 
@@ -220,7 +219,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 		}
 
 		if strings.Contains(err.Error(), "not found config") {
-			log.Printf("%v: retry refreshConfig %v\n", db.GetName(), err)
+			log.Printf("%v: retry refreshConfig %v\n", proc.GetProgram(), err)
 			continue
 		}
 
@@ -228,7 +227,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 		// we have stale grp fence; check and retry if so.
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: retry refreshConfig\n", db.GetName())
+			log.Printf("%v: retry refreshConfig\n", proc.GetProgram())
 			continue
 		}
 
@@ -255,7 +254,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	// log.Printf("%v: fixRetry err %v\n", db.GetName(), err)
+	// log.Printf("%v: fixRetry err %v\n", proc.GetProgram(), err)
 
 	// Shard dir hasn't been created yet (config 0) or hasn't moved
 	// yet, so wait a bit, and retry.  XXX make sleep time
@@ -295,7 +294,7 @@ func (kc *KvClerk) doop(o *op) {
 			return
 		}
 	}
-	//log.Printf("%v: no retry %v\n", db.GetName(), o.k)
+	//log.Printf("%v: no retry %v\n", proc.GetProgram(), o.k)
 }
 
 type opT int
@@ -322,7 +321,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", db.GetName(), o.kind, fn, o.err)
+	// log.Printf("%v: op %v fn %v err %v\n", proc.GetProgram(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

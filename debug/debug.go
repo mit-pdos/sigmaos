@@ -4,46 +4,23 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
+
+	"ulambda/proc"
 )
 
-type Debug struct {
-	mu    sync.Mutex
-	debug bool
-	name  string
-}
-
-var db Debug
-
-func Name(n string) {
+func isDebug() bool {
 	uldebug := os.Getenv("SIGMADEBUG")
-
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	if uldebug != "" {
-		db.debug = true
-	}
-	db.name = n
-}
-
-func GetName() string {
-	return db.name
+	return uldebug != ""
 }
 
 func DPrintf(format string, v ...interface{}) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
-	if db.debug {
-		log.Printf("%v: %v", os.Args[0], fmt.Sprintf(format, v...))
+	if isDebug() {
+		log.Printf("%v: %v", proc.GetProgram(), fmt.Sprintf(format, v...))
 	}
 }
 
 func DLPrintf(label string, format string, v ...interface{}) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
-	if db.debug {
-		log.Printf("%v %v %v", db.name, label, fmt.Sprintf(format, v...))
+	if isDebug() {
+		log.Printf("%v %v %v", proc.GetProgram(), label, fmt.Sprintf(format, v...))
 	}
 }

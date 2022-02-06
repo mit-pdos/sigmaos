@@ -14,6 +14,7 @@ import (
 	"ulambda/delay"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/proc"
 )
 
 const (
@@ -67,7 +68,7 @@ func MkNetClnt(addrs []string) (*NetClnt, error) {
 	nc.addrs = addrs
 	err := nc.connect()
 	if err != nil {
-		log.Printf("%v: mkNetClnt connect %v err %v\n", db.GetName(), addrs, err)
+		log.Printf("%v: mkNetClnt connect %v err %v\n", proc.GetProgram(), addrs, err)
 		return nil, err
 	}
 	go nc.writer()

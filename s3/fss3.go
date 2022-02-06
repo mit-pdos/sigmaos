@@ -8,11 +8,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -35,7 +35,7 @@ func RunFss3() {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	srv, err := fslibsrv.MakeSrv(root, fsl, pclnt)
 	if err != nil {
-		log.Fatalf("%v: MakeSrv %v\n", db.GetName(), err)
+		log.Fatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)
 	}
 	fsl.Post(srv.MyAddr(), np.S3)
 

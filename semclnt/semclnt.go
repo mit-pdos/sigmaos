@@ -4,9 +4,9 @@ import (
 	"log"
 	"strings"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 //
@@ -48,7 +48,7 @@ func (c *SemClnt) Down() error {
 	// "upped" or file server crashed or lease expired);
 	// distinguish between those cases.
 	if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
-		log.Printf("%v: down err %v\n", db.GetName(), err)
+		log.Printf("%v: down err %v\n", proc.GetProgram(), err)
 		return err
 	} else {
 		return nil

@@ -4,7 +4,6 @@ import (
 	"log"
 	"sync"
 
-	db "ulambda/debug"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
@@ -38,7 +37,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Confi
 	root := makeDir([]string{mount}, np.DMDIR, nil)
 	srv, fsl, _, err := fslibsrv.MakeReplServer(root, addr, np.UX, "ux", config)
 	if err != nil {
-		log.Fatalf("%v: MakeReplServer %v\n", db.GetName(), err)
+		log.Fatalf("%v: MakeReplServer %v\n", proc.GetProgram(), err)
 	}
 	fsux.FsServer = srv
 	fsux.FsLib = fsl

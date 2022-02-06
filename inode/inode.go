@@ -8,9 +8,9 @@ import (
 	"time"
 	"unsafe"
 
-	db "ulambda/debug"
 	fs "ulambda/fs"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type Tinum uint64
@@ -135,7 +135,7 @@ func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 func (i *Inode) Unlink(ctx fs.CtxI) *np.Err {
 	i.nlink -= 1
 	if i.nlink < 0 {
-		log.Printf("%v: nlink < 0\n", db.GetName())
+		log.Printf("%v: nlink < 0\n", proc.GetProgram())
 		debug.PrintStack()
 	}
 	return nil

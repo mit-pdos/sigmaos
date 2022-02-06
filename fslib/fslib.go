@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	db "ulambda/debug"
 	"ulambda/fsclnt"
+	"ulambda/proc"
 )
 
 type FsLib struct {
@@ -27,7 +27,6 @@ func Named() []string {
 }
 
 func MakeFsLibBase(uname string) *FsLib {
-	db.Name(uname)
 	return &FsLib{fsclnt.MakeFsClient(uname)}
 }
 
@@ -44,7 +43,7 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(server, "", "name")
 	if err != nil {
-		log.Fatalf("FATAL %v: Mount %v error: %v", db.GetName(), server, err)
+		log.Fatalf("FATAL %v: Mount %v error: %v", proc.GetProgram(), server, err)
 	}
 	return fl
 }

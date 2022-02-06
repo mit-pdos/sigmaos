@@ -12,7 +12,6 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/crash"
-	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -101,7 +100,7 @@ func RunMember(grp string) {
 
 	g.primFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
 
-	log.Printf("%v: primary %v\n", db.GetName(), grp)
+	log.Printf("%v: primary %v\n", proc.GetProgram(), grp)
 
 	select {
 	case <-ch:
@@ -112,7 +111,7 @@ func RunMember(grp string) {
 		<-ch
 	}
 
-	log.Printf("%v: group done %v\n", db.GetName(), grp)
+	log.Printf("%v: group done %v\n", proc.GetProgram(), grp)
 
 	mfs.Done()
 }
@@ -121,15 +120,15 @@ func (g *Group) PublishConfig(grp string) {
 	bk := grpConfNxtBk(grp)
 	err := g.Remove(bk)
 	if err != nil {
-		log.Printf("%v: Remove %v err %v\n", db.GetName(), bk, err)
+		log.Printf("%v: Remove %v err %v\n", proc.GetProgram(), bk, err)
 	}
 	err = atomic.MakeFileJsonAtomic(g.FsLib, bk, 0777, *g.conf)
 	if err != nil {
-		log.Fatalf("FATAL %v: MakeFile %v err %v\n", db.GetName(), bk, err)
+		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetProgram(), bk, err)
 	}
 	err = g.confFclnt.OpenFenceFrom(bk)
 	if err != nil {
-		log.Fatalf("FATAL %v: MakeFenceFileFrom err %v\n", db.GetName(), err)
+		log.Fatalf("FATAL %v: MakeFenceFileFrom err %v\n", proc.GetProgram(), err)
 	}
 }
 
@@ -157,7 +156,7 @@ func (g *Group) op(opcode, kv string) error {
 	}
 	defer g.setRecovering(false)
 
-	log.Printf("%v: opcode %v kv %v\n", db.GetName(), opcode, kv)
+	log.Printf("%v: opcode %v kv %v\n", proc.GetProgram(), opcode, kv)
 	return nil
 }
 

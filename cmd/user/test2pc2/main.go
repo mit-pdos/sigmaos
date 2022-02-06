@@ -64,7 +64,6 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 	}
 	p.delay = delay
 	p.randstr = randstr.Hex(16)
-	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
 	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 

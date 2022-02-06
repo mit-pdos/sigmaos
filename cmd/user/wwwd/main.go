@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/memfs"
@@ -57,7 +56,6 @@ type Wwwd struct {
 
 func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
-	db.Name("wwwd")
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 	www.FsLib = fslib.MakeFsLib("www")
 	// In order to automount children, we need to at least mount /pids.
@@ -65,7 +63,7 @@ func MakeWwwd(tree string) *Wwwd {
 		log.Fatalf("wwwd err mount pids %v", err)
 	}
 
-	log.Printf("%v: pid %v procdir %v\n", db.GetName(), proc.GetPid(), proc.GetProcDir())
+	log.Printf("%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	if err := www.MakeFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
@@ -77,7 +75,7 @@ func MakeWwwd(tree string) *Wwwd {
 	mfsPath := "name/wwwd-server"
 	mfs, err := fslibsrv.MakeMemFsFsl(mfsPath, www.FsLib, www.ProcClnt)
 	if err != nil {
-		log.Fatalf("%v: MakeSrvFsLib %v\n", db.GetName(), err)
+		log.Fatalf("%v: MakeSrvFsLib %v\n", proc.GetProgram(), err)
 	}
 	www.MemFs = mfs
 
@@ -115,7 +113,7 @@ func (www *Wwwd) makePipe() string {
 	pipeName := rand.String(16)
 	pipePath := path.Join(www.localSrvpath, pipeName)
 	if err := www.MakePipe(pipePath, 0777); err != nil {
-		log.Fatalf("%v: Error MakePipe %v", db.GetName(), err)
+		log.Fatalf("%v: Error MakePipe %v", proc.GetProgram(), err)
 	}
 	return pipeName
 }
@@ -123,7 +121,7 @@ func (www *Wwwd) makePipe() string {
 func (www *Wwwd) removePipe(pipeName string) {
 	pipePath := path.Join(www.localSrvpath, pipeName)
 	if err := www.Remove(pipePath); err != nil {
-		log.Fatalf("%v: Error Remove pipe %v", db.GetName(), err)
+		log.Fatalf("%v: Error Remove pipe %v", proc.GetProgram(), err)
 	}
 }
 
@@ -177,7 +175,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 }
 
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
-	log.Printf("%v: getstatic: %v\n", db.GetName(), args)
+	log.Printf("%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
 	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
 }

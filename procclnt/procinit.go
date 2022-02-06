@@ -7,7 +7,6 @@ import (
 
 	"runtime/debug"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -30,10 +29,10 @@ func mountDir(fsl *fslib.FsLib, dpath string, mountPoint string) {
 	addr, splitPath := splitMountServerAddrPath(fsl, tree)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
-			log.Printf("%v: Error mounting %v/%v as %v err %v\n", db.GetName(), addr, splitPath, mountPoint, err)
+			log.Printf("%v: Error mounting %v/%v as %v err %v\n", proc.GetProgram(), addr, splitPath, mountPoint, err)
 		} else {
 			debug.PrintStack()
-			log.Fatalf("%v: Fatal error mounting %v/%v as %v err %v\n", db.GetName(), addr, splitPath, mountPoint, err)
+			log.Fatalf("%v: Fatal error mounting %v/%v as %v err %v\n", proc.GetProgram(), addr, splitPath, mountPoint, err)
 		}
 	}
 }
@@ -49,11 +48,11 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 
 	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting locks err %v\n", db.GetName(), err)
+		log.Fatalf("%v: Fatal error mounting locks err %v\n", proc.GetProgram(), err)
 	}
 	if err := fsl.MountTree(fslib.Named(), np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting procd err %v\n", db.GetName(), err)
+		log.Fatalf("%v: Fatal error mounting procd err %v\n", proc.GetProgram(), err)
 	}
 	return makeProcClnt(fsl, proc.GetPid())
 }
@@ -61,13 +60,13 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // Called by tests to fake an initial process
 // XXX deduplicate with Spawn()
 // XXX deduplicate with MakeProcClnt()
-func MakeProcClntInit(fsl *fslib.FsLib, namedAddr []string) *ProcClnt {
+func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcClnt {
 	pid := proc.GenPid()
-	proc.FakeProcEnv(pid, "", path.Join(proc.PIDS, pid), "")
+	proc.FakeProcEnv(pid, uname, "", path.Join(proc.PIDS, pid), "")
 
 	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting procd err %v\n", db.GetName(), err)
+		log.Fatalf("%v: Fatal error mounting procd err %v\n", proc.GetProgram(), err)
 	}
 
 	MountPids(fsl, namedAddr)
@@ -79,7 +78,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, namedAddr []string) *ProcClnt {
 	if err := fsl.MountTree(namedAddr, tree, proc.PROCDIR); err != nil {
 		debug.PrintStack()
 		s, _ := fsl.SprintfDir("pids")
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n%v", db.GetName(), tree, proc.PROCDIR, err, s)
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n%v", proc.GetProgram(), tree, proc.PROCDIR, err, s)
 	}
 
 	return clnt
@@ -89,12 +88,12 @@ func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
 	// Make a pid directory for this initial proc
 	if err := fsl.MountTree(namedAddr, proc.PIDS, proc.PIDS); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.PIDS, proc.PIDS, err)
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", proc.GetProgram(), proc.PIDS, proc.PIDS, err)
 		return err
 	}
 	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", db.GetName(), proc.KPIDS, proc.KPIDS, err)
+		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n", proc.GetProgram(), proc.KPIDS, proc.KPIDS, err)
 		return err
 	}
 	return nil

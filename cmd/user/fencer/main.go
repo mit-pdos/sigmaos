@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"ulambda/crash"
-	db "ulambda/debug"
 	"ulambda/delay"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
@@ -84,7 +83,7 @@ func main() {
 
 		if os.Args[1] == "YES" {
 			if crash.MaybePartition(fsl) {
-				log.Printf("%v: partition\n", db.GetName())
+				log.Printf("%v: partition\n", proc.GetProgram())
 				partitioned = true
 			}
 		}
@@ -101,10 +100,10 @@ func main() {
 			log.Fatalf("strconv %v failed %v\n", A, err)
 		}
 
-		// log.Printf("%v: n %v n1 %v", db.GetName(), n, n1)
+		// log.Printf("%v: n %v n1 %v", proc.GetProgram(), n, n1)
 
 		if n != n1 && n+1 != n1 {
-			log.Printf("%v: Wrong n %v n1 %v", db.GetName(), n, n1)
+			log.Printf("%v: Wrong n %v n1 %v", proc.GetProgram(), n, n1)
 			pclnt.Exited(proc.GetPid(), "Invariant violated")
 		}
 
@@ -122,7 +121,7 @@ func main() {
 		if partitioned {
 			err := l.ReleaseFence()
 			if err != nil {
-				log.Printf("%v release err %v\n", db.GetName(), err)
+				log.Printf("%v release err %v\n", proc.GetProgram(), err)
 			}
 			break
 		}

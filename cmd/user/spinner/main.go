@@ -36,7 +36,6 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		return nil, errors.New("MakeSpinner: too few arguments")
 	}
 	s := &Spinner{}
-	db.Name("spinner")
 	s.FsLib = fslib.MakeFsLib("spinner")
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.outdir = args[0]

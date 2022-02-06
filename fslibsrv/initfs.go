@@ -2,7 +2,6 @@ package fslibsrv
 
 import (
 	"ulambda/ctx"
-	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fsclnt"
@@ -30,7 +29,6 @@ func MakeSrv(root fs.Dir, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*fssrv.Fs
 }
 
 func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, error) {
-	db.Name(name)
 	var fsl *fslib.FsLib
 	var pclnt *procclnt.ProcClnt
 	isInitNamed := false

@@ -13,6 +13,7 @@ func RunKernelProc(p *Proc, bin string, namedAddr []string) (*exec.Cmd, error) {
 	env := []string{}
 	env = append(p.GetEnv("NONE", "NONE")) // TODO: remove NONE
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
+	env = append(env, "SIGMAPROGRAM="+p.Program)
 
 	cmd := exec.Command(path.Join(bin, p.Program), p.Args...)
 	// Create a process group ID to kill all children if necessary.

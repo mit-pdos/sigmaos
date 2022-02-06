@@ -188,20 +188,20 @@ func (w *Coord) restartMappers(files []string) {
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.ok == "OK" {
 		// mark task as done
-		log.Printf("%v: task done %v\n", db.GetName(), res.task)
+		log.Printf("%v: task done %v\n", proc.GetProgram(), res.task)
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
 		err := w.Rename(s, d)
 		if err != nil {
 			// an earlier instance already succeeded
-			log.Printf("%v: rename %v to %v err %v\n", db.GetName(), s, d, err)
+			log.Printf("%v: rename %v to %v err %v\n", proc.GetProgram(), s, d, err)
 		}
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
 		db.DPrintf("task %v failed %v\n", res.task, res.ok)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
-			log.Fatalf("%v: rename to %v err %v\n", db.GetName(), to, err)
+			log.Fatalf("%v: rename to %v err %v\n", proc.GetProgram(), to, err)
 		}
 	}
 }
@@ -215,7 +215,7 @@ func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) string) {
 	for _, st := range sts {
 		n += 1
 		go func() {
-			log.Printf("%v: start straggler task %v\n", db.GetName(), st.Name)
+			log.Printf("%v: start straggler task %v\n", proc.GetProgram(), st.Name)
 			ok := f(st.Name)
 			ch <- Ttask{st.Name, ok}
 		}()
@@ -230,12 +230,12 @@ func (w *Coord) recover(dir string) {
 
 	// just treat all tasks in progress as failed; too aggressive, but correct.
 	for _, st := range sts {
-		log.Printf("%v: recover %v\n", db.GetName(), st.Name)
+		log.Printf("%v: recover %v\n", proc.GetProgram(), st.Name)
 		to := dir + "/" + st.Name
 		if w.Rename(dir+TIP+"/"+st.Name, to) != nil {
 			// an old, disconnected coord may do this too,
 			// if one of its tasks fails
-			log.Printf("%v: rename to %v err %v\n", db.GetName(), to, err)
+			log.Printf("%v: rename to %v err %v\n", proc.GetProgram(), to, err)
 		}
 	}
 }
@@ -277,13 +277,13 @@ func (w *Coord) Work() {
 	w.fence.AcquireFenceW([]byte{})
 	defer w.fence.ReleaseFence()
 
-	log.Printf("%v: primary\n", db.GetName())
+	log.Printf("%v: primary\n", proc.GetProgram())
 
 	for {
 		w.recover(MDIR)
 		w.recover(RDIR)
 		w.phase(MDIR, w.mapper)
-		log.Printf("%v: Reduce phase\n", db.GetName())
+		log.Printf("%v: Reduce phase\n", proc.GetProgram())
 		// If reduce phase is unsuccessful, we lost some mapper output. Restart
 		// those mappers.
 		success := w.phase(RDIR, w.reducer)

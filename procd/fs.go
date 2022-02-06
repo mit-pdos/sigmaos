@@ -36,7 +36,7 @@ func (pd *Procd) makeFs() {
 	pd.fs.pd = pd
 	pd.MemFs, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
 	if err != nil {
-		log.Fatalf("%v: MakeMemFs %v\n", db.GetName(), err)
+		log.Fatalf("%v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
 	pd.FsLib = pd.MemFs.FsLib
 	procclnt.MountPids(pd.FsLib, fslib.Named())

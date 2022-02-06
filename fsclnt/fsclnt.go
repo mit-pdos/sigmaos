@@ -12,6 +12,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fences"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/protclnt"
 )
 
@@ -217,7 +218,7 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
 	err := fsc.mount.add(np.Split(path), fid)
 	if err != nil {
-		log.Printf("%v: mount %v err %v\n", db.GetName(), path, err)
+		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, err)
 	}
 
 	for _, f := range fsc.fm.Fences() {
@@ -288,7 +289,7 @@ func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 	defer fsc.clunkFid(fid)
 	reply, err := fsc.clnt(fid).MkFence(fid)
 	if err != nil {
-		log.Printf("%v: MkFence %v err %v\n", db.GetName(), fid, err)
+		log.Printf("%v: MkFence %v err %v\n", proc.GetProgram(), fid, err)
 		return np.Tfence{}, err
 	}
 	return reply.Fence, nil
@@ -308,7 +309,7 @@ func (fsc *FsClient) RegisterFence(f np.Tfence) error {
 
 func (fsc *FsClient) UpdateFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); !ok {
-		log.Printf("%v: update fence %v not present\n", db.GetName(), f)
+		log.Printf("%v: update fence %v not present\n", proc.GetProgram(), f)
 		return fmt.Errorf("unknown fence %v\n", f)
 	}
 	return fsc.pc.RegisterFence(f, false)
@@ -316,7 +317,7 @@ func (fsc *FsClient) UpdateFence(f np.Tfence) error {
 
 func (fsc *FsClient) DeregisterFence(f np.Tfence) error {
 	if err := fsc.fm.Del(f.FenceId); err != nil {
-		log.Printf("%v: dereg %v err %v\n", db.GetName(), f, err)
+		log.Printf("%v: dereg %v err %v\n", proc.GetProgram(), f, err)
 		return err
 	}
 	err := fsc.pc.DeregisterFence(f)

@@ -5,7 +5,6 @@ import (
 	"runtime/debug"
 
 	"ulambda/ctx"
-	db "ulambda/debug"
 	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -90,11 +89,11 @@ func (fssrv *FsServer) Serve() {
 	if fssrv.pclnt != nil {
 		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error Started: %v", db.GetName(), err)
+			log.Printf("%v: Error Started: %v", proc.GetProgram(), err)
 		}
 		if err := fssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error WaitEvict: %v", db.GetName(), err)
+			log.Printf("%v: Error WaitEvict: %v", proc.GetProgram(), err)
 		}
 	} else {
 		<-fssrv.ch
@@ -159,11 +158,12 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
+		log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
 	case np.Tregfence:
 		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.rft.UpdateFence(req.Fence)
 		if err != nil {
-			log.Printf("%v: Fence %v %v err %v\n", db.GetName(), sess.Sid, req, err)
+			log.Printf("%v: Fence %v %v err %v\n", proc.GetProgram(), sess.Sid, req, err)
 			return nil, &np.Rerror{err.Error()}
 		}
 		// Fence was present in recent fences table and not
@@ -194,7 +194,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
-		// log.Printf("%v: %p %v %v\n", db.GetName(), fssrv, msg.Type(), req)
+		log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
 	}
 	return nil, nil
 }

@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"ulambda/crash"
-	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/proc"
@@ -33,7 +32,7 @@ func MakeMover(N string) (*Mover, error) {
 	crash.Crasher(mv.FsLib)
 	err = mv.fclnt.AcquireConfig(&mv.blConf)
 	if err != nil {
-		log.Printf("%v: fence %v err %v\n", db.GetName(), mv.fclnt.Name(), err)
+		log.Printf("%v: fence %v err %v\n", proc.GetProgram(), mv.fclnt.Name(), err)
 		return nil, err
 	}
 	if N != strconv.Itoa(mv.blConf.N) {
@@ -58,35 +57,35 @@ func (mv *Mover) moveShard(s, d string) error {
 	// below. If so, we are done and reuse d.
 	_, err := mv.Stat(d)
 	if err == nil {
-		log.Printf("%v: moveShard conf %v reuse %v\n", db.GetName(), mv.blConf.N, d)
+		log.Printf("%v: moveShard conf %v reuse %v\n", proc.GetProgram(), mv.blConf.N, d)
 		return nil
 	}
 
 	err = mv.Mkdir(d1, 0777)
 	if err != nil {
-		//log.Printf("%v: Mkdir %v err %v\n", db.GetName(), d1, err)
+		//log.Printf("%v: Mkdir %v err %v\n", proc.GetProgram(), d1, err)
 		return err
 	}
-	// log.Printf("%v: Copy shard from %v to %v\n", db.GetName(), s, d1)
+	// log.Printf("%v: Copy shard from %v to %v\n", proc.GetProgram(), s, d1)
 	err = mv.CopyDir(s, d1)
 	if err != nil {
-		//log.Printf("%v: CopyDir shard%v to %v err %v\n", db.GetName(), s, d1, err)
+		//log.Printf("%v: CopyDir shard%v to %v err %v\n", proc.GetProgram(), s, d1, err)
 		return err
 	}
-	// log.Printf("%v: Copy shard%v to %v done\n", db.GetName(), s, d1)
+	// log.Printf("%v: Copy shard%v to %v done\n", proc.GetProgram(), s, d1)
 	err = mv.Rename(d1, d)
 	if err != nil {
-		//log.Printf("%v: Rename %v to %v err %v\n", db.GetName(), d1, d, err)
+		//log.Printf("%v: Rename %v to %v err %v\n", proc.GetProgram(), d1, d, err)
 		return err
 	}
 	return nil
 }
 
 func (mv *Mover) Move(src, dst string) {
-	// log.Printf("%v: MV conf %v from %v to %v\n", db.GetName(), mv.blConf.N, src, dst)
+	// log.Printf("%v: MV conf %v from %v to %v\n", proc.GetProgram(), mv.blConf.N, src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
-		log.Printf("%v: MV conf %v from %v to %v err %v\n", db.GetName(), mv.blConf.N, src, dst, err)
+		log.Printf("%v: MV conf %v from %v to %v err %v\n", proc.GetProgram(), mv.blConf.N, src, dst, err)
 	}
 	if err != nil {
 		mv.Exited(proc.GetPid(), err.Error())

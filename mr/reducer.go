@@ -106,7 +106,7 @@ func (r *Reducer) doReduce() error {
 	kva := []KeyValue{}
 	lostMaps := []string{}
 
-	log.Printf("%v: doReduce %v %v\n", db.GetName(), r.input, r.output)
+	log.Printf("%v: doReduce %v %v\n", proc.GetProgram(), r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
@@ -121,7 +121,7 @@ func (r *Reducer) doReduce() error {
 		return false, nil
 	})
 	if err != nil {
-		return fmt.Errorf("%v: ProcessDir %v err %v\n", db.GetName(), r.input, err)
+		return fmt.Errorf("%v: ProcessDir %v err %v\n", proc.GetProgram(), r.input, err)
 	}
 
 	if len(lostMaps) > 0 {
@@ -132,7 +132,7 @@ func (r *Reducer) doReduce() error {
 
 	fd, err := r.Create(r.tmp, 0777, np.OWRITE)
 	if err != nil {
-		return fmt.Errorf("%v: create %v err %v\n", db.GetName(), r.tmp, err)
+		return fmt.Errorf("%v: create %v err %v\n", proc.GetProgram(), r.tmp, err)
 	}
 	defer r.Close(fd)
 	i := 0
@@ -149,13 +149,13 @@ func (r *Reducer) doReduce() error {
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
-			return fmt.Errorf("%v: write %v err %v\n", db.GetName(), r.tmp, err)
+			return fmt.Errorf("%v: write %v err %v\n", proc.GetProgram(), r.tmp, err)
 		}
 		i = j
 	}
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		return fmt.Errorf("%v: rename %v -> %v err %v\n", db.GetName(), r.tmp, r.output, err)
+		return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetProgram(), r.tmp, r.output, err)
 	}
 	return nil
 }

@@ -36,7 +36,7 @@ type RealmClnt struct {
 func MakeRealmClnt() *RealmClnt {
 	clnt := &RealmClnt{}
 	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
-	clnt.ProcClnt = procclnt.MakeProcClntInit(clnt.FsLib, fslib.Named())
+	clnt.ProcClnt = procclnt.MakeProcClntInit(clnt.FsLib, "realm-clnt", fslib.Named())
 	return clnt
 }
 

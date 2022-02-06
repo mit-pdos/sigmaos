@@ -4,7 +4,6 @@ import (
 	"log"
 	"strconv"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -88,7 +87,7 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 			n--
 		} else { // restart member i
 			if gm.members[st.member].bin == "bin/user/kvd" {
-				log.Fatalf("%v: FATAL kvd failed\n", db.GetName())
+				log.Fatalf("%v: FATAL kvd failed\n", proc.GetProgram())
 			}
 			start := make(chan bool)
 			go gm.members[st.member].run(st.member, start, done)
@@ -119,6 +118,6 @@ func (gm *GroupMgr) Stop() error {
 	}
 	// log.Printf("wait for members\n")
 	<-gm.ch
-	log.Printf("%v: done members\n", db.GetName())
+	log.Printf("%v: done members\n", proc.GetProgram())
 	return err
 }

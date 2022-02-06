@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/namespace"
 	np "ulambda/ninep"
@@ -41,7 +40,7 @@ func makeProcClnt(fsl *fslib.FsLib, pid string) *ProcClnt {
 // ========== SPAWN ==========
 
 // XXX Should probably eventually fold this into spawn (but for now, we may want to get the exec.Cmd struct back).
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []string) (*exec.Cmd, error) {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bindir string, namedAddr []string) (*exec.Cmd, error) {
 	if err := clnt.Spawn(p); err != nil {
 		return nil, err
 	}
@@ -52,13 +51,13 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bin string, namedAddr []stri
 		log.Printf("Err SpawnKernelProc MakeProcDir: %v", err)
 	}
 
-	return proc.RunKernelProc(p, bin, namedAddr)
+	return proc.RunKernelProc(p, bindir, namedAddr)
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	procdir := p.ProcDir
 
-	// log.Printf("%v: %p spawn %v\n", db.GetName(), clnt, procdir)
+	log.Printf("%v: %p spawn %v\n", proc.GetProgram(), clnt, procdir)
 
 	if clnt.hasExited() != "" {
 		return fmt.Errorf("Spawn error called after Exited")
@@ -72,13 +71,13 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	if !p.IsPrivilegedProc() {
 		b, err := json.Marshal(p)
 		if err != nil {
-			log.Printf("%v: marshal err %v", db.GetName(), err)
+			log.Printf("%v: marshal err %v", proc.GetProgram(), err)
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 		fn := path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE)
 		err = clnt.WriteFile(fn, b)
 		if err != nil {
-			log.Printf("%v: WriteFile %v err %v", db.GetName(), fn, err)
+			log.Printf("%v: WriteFile %v err %v", proc.GetProgram(), fn, err)
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
@@ -196,7 +195,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 	// will catch some unintended misuses: a proc calling exited
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
-		log.Printf("%v: Exited called after exited %v\n", db.GetName(), procdir)
+		log.Printf("%v: Exited called after exited %v\n", proc.GetProgram(), procdir)
 		return fmt.Errorf("Exited error called more than once for pid %v", pid)
 	}
 
@@ -207,7 +206,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(procdir, proc.EXIT_SEM))
 	if err := semExit.Up(); err != nil {
-		log.Printf("%v: exited semExit up error: %v, %v, %v", db.GetName(), procdir, pid, err)
+		log.Printf("%v: exited semExit up error: %v, %v, %v", proc.GetProgram(), procdir, pid, err)
 	}
 
 	// clean myself up
@@ -225,7 +224,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) {
 	procdir := proc.PROCDIR
 	err := clnt.exited(procdir, proc.PARENTDIR, pid, status)
 	if err != nil {
-		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
+		log.Printf("%v: exited %v err %v\n", proc.GetProgram(), pid, err)
 		os.Exit(1)
 	}
 }
@@ -234,7 +233,7 @@ func (clnt *ProcClnt) ExitedProcd(pid string, procdir string, parentdir string, 
 	err := clnt.exited(procdir, parentdir, pid, status)
 	if err != nil {
 		// XXX maybe remove any state left of proc?
-		log.Printf("%v: exited %v err %v\n", db.GetName(), pid, err)
+		log.Printf("%v: exited %v err %v\n", proc.GetProgram(), pid, err)
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentdir, proc.START_SEM))
@@ -277,7 +276,7 @@ func (clnt *ProcClnt) EvictProcd(pid string) error {
 func (clnt *ProcClnt) GetChildren(procdir string) ([]string, error) {
 	sts, err := clnt.ReadDir(path.Join(procdir, proc.CHILDREN))
 	if err != nil {
-		log.Printf("%v: GetChildren %v error: %v", db.GetName(), procdir, err)
+		log.Printf("%v: GetChildren %v error: %v", proc.GetProgram(), procdir, err)
 		return nil, err
 	}
 	cpids := []string{}
@@ -299,12 +298,12 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 	src := path.Join(procdir, proc.CHILDREN)
 	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
 	if err := clnt.Rename(src, dst); err != nil {
-		log.Printf("%v: Error rename removeProc %v -> %v : %v", db.GetName(), src, dst, err)
+		log.Printf("%v: Error rename removeProc %v -> %v : %v", proc.GetProgram(), src, dst, err)
 	}
 	if err := clnt.RmDir(procdir); err != nil {
 		s, _ := clnt.SprintfDir(procdir)
 		debug.PrintStack()
-		log.Printf("%v: RmDir %v err %v \n%v", db.GetName(), procdir, err, s)
+		log.Printf("%v: RmDir %v err %v \n%v", proc.GetProgram(), procdir, err, s)
 		return err
 	}
 	return nil

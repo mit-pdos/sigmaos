@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/repl"
 	"ulambda/ux"
@@ -36,7 +35,6 @@ func MakeFsUxReplica(args []string, srvAddr string, unionDirPath string, config 
 	if err != nil {
 		log.Fatalf("PostService %v error: %v", r.name, err)
 	}
-	db.Name(r.name)
 	return r
 }
 

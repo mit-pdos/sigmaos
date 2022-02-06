@@ -1,6 +1,7 @@
 package fsux
 
 import (
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,7 @@ func TestRoot(t *testing.T) {
 
 	assert.NotEqual(t, 0, len(dirents))
 
-	// log.Printf("dirents %v\n", dirents)
+	log.Printf("dirents %v\n", dirents)
 
 	ts.Shutdown()
 }

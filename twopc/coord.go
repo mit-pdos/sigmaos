@@ -45,9 +45,6 @@ func MakeCoord(args []string) (*Coord, error) {
 
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
-
-	db.Name("coord")
-
 	cd := &Coord{}
 	cd.opcode = args[0]
 	cd.args = args[1:]

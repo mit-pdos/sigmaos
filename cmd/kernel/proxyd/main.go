@@ -1,8 +1,8 @@
 package main
 
 import (
-	db "ulambda/debug"
 	"ulambda/netsrv"
+	"ulambda/proc"
 	"ulambda/proxy"
 )
 
@@ -21,7 +21,7 @@ func makeProxyd() *Proxyd {
 }
 
 func main() {
-	db.Name("proxy")
+	proc.SetProgram("proxy")
 	pd := makeProxyd()
 	<-pd.done
 }

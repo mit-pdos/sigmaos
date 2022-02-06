@@ -47,7 +47,6 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.me = proc.GetPid()
 	p.index = args[0]
 	p.opcode = args[1]
-	db.Name(p.me)
 	p.FsLib = fslib.MakeFsLib(p.me)
 	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 

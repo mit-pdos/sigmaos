@@ -9,6 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 // XXX TODO: handle network partition; maybe notify client
@@ -40,9 +41,9 @@ func (l *Lock) Lock() {
 	if err != nil {
 		if l.strict {
 			debug.PrintStack()
-			log.Fatalf("%v: Error MakeFile in Lock.Lock: %v, %v", db.GetName(), path.Join(l.lockDir, l.lockName), err)
+			log.Fatalf("%v: Error MakeFile in Lock.Lock: %v, %v", proc.GetProgram(), path.Join(l.lockDir, l.lockName), err)
 		} else {
-			log.Printf("%v: Error MakeFile in Lock.Lock: %v, %v", db.GetName(), path.Join(l.lockDir, l.lockName), err)
+			log.Printf("%v: Error MakeFile in Lock.Lock: %v, %v", proc.GetProgram(), path.Join(l.lockDir, l.lockName), err)
 		}
 		return
 	}

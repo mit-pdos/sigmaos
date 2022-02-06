@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/proc"
 	"ulambda/protsrv"
 )
 
@@ -101,11 +102,11 @@ func (c *SrvConn) writer() {
 		}
 		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)
 		if err != nil {
-			log.Printf("%v: writer err %v\n", db.GetName(), err)
+			log.Printf("%v: writer err %v\n", proc.GetProgram(), err)
 		} else {
 			err = c.bw.Flush()
 			if err != nil {
-				log.Printf("%v: flush %v err %v", db.GetName(), fcall, err)
+				log.Printf("%v: flush %v err %v", proc.GetProgram(), fcall, err)
 			}
 		}
 	}

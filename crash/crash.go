@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/rand"
@@ -33,10 +32,10 @@ func Crasher(fsl *fslib.FsLib) {
 	go func() {
 		for true {
 			ms := rand.Int64(crash)
-			// log.Printf("%v: ms %v\n", db.GetName(), ms)
+			// log.Printf("%v: ms %v\n", proc.GetProgram(), ms)
 			time.Sleep(time.Duration(ms) * time.Millisecond)
 			r := rand.Int64(1000)
-			// log.Printf("%v: r = %v\n", db.GetName(), r)
+			// log.Printf("%v: r = %v\n", proc.GetProgram(), r)
 			if r < 330 {
 				Crash(fsl)
 			} else if r < 660 {
@@ -47,12 +46,12 @@ func Crasher(fsl *fslib.FsLib) {
 }
 
 func Crash(fsl *fslib.FsLib) {
-	log.Printf("%v: FAIL CRASH %v\n", db.GetName(), proc.GetPid())
+	log.Printf("%v: FAIL CRASH %v\n", proc.GetProgram(), proc.GetPid())
 	os.Exit(1)
 }
 
 func Partition(fsl *fslib.FsLib) {
-	log.Printf("%v: FAIL PARTITION %v\n", db.GetName(), proc.GetPid())
+	log.Printf("%v: FAIL PARTITION %v\n", proc.GetProgram(), proc.GetPid())
 	fsl.Disconnect("name")
 	time.Sleep(time.Duration(5) * time.Millisecond)
 }

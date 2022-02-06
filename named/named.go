@@ -14,6 +14,7 @@ import (
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/perf"
+	"ulambda/proc"
 	"ulambda/realm"
 	"ulambda/replraft"
 	"ulambda/seccomp"
@@ -63,9 +64,8 @@ func Run(args []string) {
 		fss, _, _, err = fslibsrv.MakeReplMemfs(addr, pname, "named", nil)
 	}
 
-	log.Printf("err %v\n", err)
 	if err != nil {
-		log.Fatalf("%v: err %v\n", args[0], err)
+		log.Fatalf("FATAL %v: err %v\n", proc.GetProgram(), err)
 	}
 
 	seccomp.LoadFilter()

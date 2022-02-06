@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"ulambda/crash"
-	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/proc"
@@ -33,22 +32,22 @@ func MakeDeleter(N string) (*Deleter, error) {
 	dl.fclnt = fenceclnt.MakeFenceClnt(dl.FsLib, KVCONFIG, 0)
 	err = dl.fclnt.AcquireConfig(&dl.blConf)
 	if err != nil {
-		log.Printf("%v: fence %v err %v\n", db.GetName(), dl.fclnt.Name(), err)
+		log.Printf("%v: fence %v err %v\n", proc.GetProgram(), dl.fclnt.Name(), err)
 		return nil, err
 	}
-	log.Printf("%v: bal config %v\n", db.GetName(), dl.blConf.N)
+	log.Printf("%v: bal config %v\n", proc.GetProgram(), dl.blConf.N)
 	if N != strconv.Itoa(dl.blConf.N) {
-		log.Printf("%v: wrong config %v\n", db.GetName(), N)
+		log.Printf("%v: wrong config %v\n", proc.GetProgram(), N)
 		return nil, fmt.Errorf("wrong config %v\n", N)
 	}
 	return dl, err
 }
 
 func (dl *Deleter) Delete(sharddir string) {
-	// log.Printf("%v: conf %v delete %v\n", db.GetName(), dl.blConf.N, sharddir)
+	// log.Printf("%v: conf %v delete %v\n", proc.GetProgram(), dl.blConf.N, sharddir)
 	err := dl.RmDir(sharddir)
 	if err != nil {
-		log.Printf("%v: conf %v rmdir %v err %v\n", db.GetName(), dl.blConf.N, sharddir, err)
+		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetProgram(), dl.blConf.N, sharddir, err)
 		dl.Exited(proc.GetPid(), err.Error())
 	} else {
 		dl.Exited(proc.GetPid(), "OK")

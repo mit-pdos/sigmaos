@@ -2,8 +2,6 @@ package procd
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"path"
 
 	db "ulambda/debug"
@@ -24,15 +22,15 @@ func makeCtlFile(pd *Procd, ctx fs.CtxI, parent fs.Dir) *CtlFile {
 	return &CtlFile{pd, i}
 }
 
-func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	return nil, fmt.Errorf("not supported")
+func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	return nil, np.MkErr(np.TErrNotSupported, "Read")
 }
 
-func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	p := proc.MakeEmptyProc()
 	err := json.Unmarshal(b, p)
 	if err != nil {
-		log.Fatalf("Couldn't unmarshal proc file in CtlFile.Write: %v, %v", string(b), err)
+		np.MkErr(np.TErrInval, "Proc")
 	}
 
 	db.DLPrintf("PROCD", "Control file write: %v", p)

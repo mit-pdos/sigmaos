@@ -98,25 +98,28 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 	return sz, err
 }
 
-func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
+func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
 	var dirents []*np.Stat
-	var err error
 	if o.Size() > 0 && off >= np.Toffset(o.Size()) {
 		dirents = []*np.Stat{}
 	} else {
+		var err *np.Err
 		d := o.(fs.Dir)
 		dirents, err = d.ReadDir(f.ctx, off, count, v)
+		if err != nil {
+			return err
+		}
 
 	}
-	b, err := npcodec.Dir2Byte(off, count, dirents)
-	if err != nil {
-		return &np.Rerror{err.Error()}
+	b, error := npcodec.Dir2Byte(off, count, dirents)
+	if error != nil {
+		return np.MkErr(np.TErrError, error)
 	}
 	rets.Data = b
 	return nil
 }
 
-func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Rerror {
+func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
 	o := f.Obj()
 	switch i := o.(type) {
 	case fs.Dir:
@@ -124,7 +127,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 	case fs.File:
 		b, err := i.Read(f.ctx, off, count, v)
 		if err != nil {
-			return &np.Rerror{err.Error()}
+			return err
 		}
 		rets.Data = b
 		return nil

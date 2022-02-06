@@ -70,7 +70,7 @@ func (fos *FsObjSrv) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
-	return np.ErrUnknownMsg
+	return np.MkErr(np.TErrNotSupported, "Auth").Rerror()
 }
 
 func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
@@ -122,7 +122,7 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		o := f.Obj()
 		if !o.Perm().IsDir() {
-			return np.ErrNotfound
+			return np.MkErr(np.TErrNotfound, args.Wnames).Rerror()
 		}
 		d := o.(fs.Dir)
 		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
@@ -196,11 +196,11 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	defer fos.wt.Release(ws)
 
 	if o.Nlink() == 0 {
-		return np.ErrNotfound
+		return np.MkErr(np.TErrNotfound, f.Path).Rerror()
 	}
 	if !np.VEq(args.Version, o.Version()) {
 
-		return &np.Rerror{fmt.Sprintf("Version mismatch %v %v %v", f.Path(), args.Version, o.Version())}
+		return np.MkErr(np.TErrVersion, f.Path).Rerror()
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
@@ -483,10 +483,10 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 	case fs.Dir:
 		d2, ok := no.(fs.Dir)
 		if !ok {
-			return np.ErrNotDir
+			return np.MkErr(np.TErrNotDir, newf.Path()).Rerror()
 		}
 		if oo.Inum() == no.Inum() {
-			return np.ErrInval
+			return np.MkErr(np.TErrInval, newf.Path()).Rerror()
 		}
 		f1, f2 := lockOrder(oo, oldf, no, newf)
 		d1ws := fos.wt.WatchLookupL(f1.Path())
@@ -512,7 +512,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		d1ws.WakeupWatchL()  // trigger one dir watch
 		d2ws.WakeupWatchL()  // trigger the other dir watch
 	default:
-		return np.ErrNotDir
+		return np.MkErr(np.TErrNotDir, oldf.Path()).Rerror()
 	}
 	return nil
 }
@@ -541,7 +541,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	}
 	switch i := lo.(type) {
 	case fs.Dir:
-		return np.ErrNotFile
+		return np.MkErr(np.TErrNotFile, f.Path()).Rerror()
 	case fs.File:
 		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), lo.Version())
 		if r != nil {
@@ -601,7 +601,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	}
 	switch i := lo.(type) {
 	case fs.Dir:
-		return np.ErrNotFile
+		return np.MkErr(np.TErrNotFile, f.Path()).Rerror()
 	case fs.File:
 		rets.Count, err = i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
 		if err != nil {

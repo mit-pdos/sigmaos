@@ -103,7 +103,7 @@ func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
 }
 
 func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
-	return np.ErrUnknownMsg
+	return np.MkErr(np.TErrNotSupported, "Auth").Rerror()
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
@@ -158,7 +158,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	for i := 0; i < MAXSYMLINK; i++ {
 		reply, err := npc.npch(args.Fid).Walk(args.Fid, args.NewFid, path)
 		if err != nil {
-			return np.ErrNotfound
+			return np.MkErr(np.TErrNotfound, path).Rerror()
 		}
 		if len(reply.Qids) == 0 { // clone args.Fid?
 			npc.addch(args.NewFid, npc.npch(args.Fid))
@@ -175,13 +175,13 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 			target, err := npc.readLink(args.NewFid)
 			if err != nil {
-				return np.ErrUnknownfid
+				return np.MkErr(np.TErrUnknownfid, path).Rerror()
 			}
 			// XXX assumes symlink is final component of walk
 			if fsclnt.IsRemoteTarget(target) {
 				qid, err = npc.autoMount(args.NewFid, target, path[todo:])
 				if err != nil {
-					return np.ErrUnknownfid
+					return np.MkErr(np.TErrUnknownfid, path).Rerror()
 				}
 				reply.Qids[len(reply.Qids)-1] = qid
 				path = path[todo:]
@@ -285,7 +285,7 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 }
 
 func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	return np.ErrNotSupported
+	return np.MkErr(np.TErrNotSupported, args).Rerror()
 }
 
 func (npc *NpConn) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {

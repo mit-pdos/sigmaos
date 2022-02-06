@@ -83,6 +83,6 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		err := s.protsrv.MkFence(req, reply)
 		return *reply, err
 	default:
-		return np.ErrUnknownMsg, nil
+		return nil, np.MkErr(np.TErrUnknownMsg, msg).Rerror()
 	}
 }

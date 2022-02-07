@@ -111,7 +111,10 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
 	err := os.Remove(d.Path() + "/" + name)
-	return np.MkErr(np.TErrError, err)
+	if err != nil {
+		np.MkErr(np.TErrError, err)
+	}
+	return nil
 }
 
 // XXX update cached file obj?

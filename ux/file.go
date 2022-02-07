@@ -37,7 +37,10 @@ func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 		return 0, np.MkErr(np.TErrError, err)
 	}
 	n, err := f.file.Write(b)
-	return np.Tsize(n), np.MkErr(np.TErrError, err)
+	if err != nil {
+		return 0, np.MkErr(np.TErrError, err)
+	}
+	return np.Tsize(n), nil
 }
 
 func (f *File) uxRead(off int64, cnt int) ([]byte, *np.Err) {

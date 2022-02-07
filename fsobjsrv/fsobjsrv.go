@@ -11,7 +11,7 @@ import (
 	"ulambda/fs"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
-	"ulambda/proc"
+	// "ulambda/proc"
 	"ulambda/protsrv"
 	"ulambda/stats"
 	"ulambda/watch"

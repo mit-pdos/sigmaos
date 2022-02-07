@@ -2,7 +2,6 @@ package ninep
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -146,6 +145,5 @@ func IsDirNotFound(err string, path []string) bool {
 		p := Split(strings.TrimPrefix(err, "file not found "))
 		b = len(p) > 1
 	}
-	log.Printf("IsDirNotFound err %v b %v\n", err, b)
 	return b
 }

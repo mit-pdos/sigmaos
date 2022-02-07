@@ -458,12 +458,10 @@ func (fsc *FsClient) Remove(name string) error {
 	// symlink.
 	err := fsc.clnt(fid).RemoveFile(fid, rest)
 	if err != nil {
-		log.Printf("remove file err %v\n", err)
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
 		// for a server; retry with resolving name.
 		if np.IsDirNotFound(err.Error(), path) {
-			log.Printf("retry %v\n", path)
 			fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -697,7 +695,6 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 		// have been because name contained a symbolic link
 		// for a server; retry with resolving name.
 		if np.IsDirNotFound(err.Error(), p) {
-			log.Printf("setfile retry %v\n", p)
 			if perm == 0 {
 				dir = p
 				base = []string{"."}

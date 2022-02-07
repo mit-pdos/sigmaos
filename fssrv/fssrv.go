@@ -95,7 +95,6 @@ func (fssrv *FsServer) Serve() {
 			debug.PrintStack()
 			log.Printf("%v: Error WaitEvict: %v", proc.GetProgram(), err)
 		}
-		log.Printf("%v: evicted\n", proc.GetProgram())
 	} else {
 		<-fssrv.ch
 	}

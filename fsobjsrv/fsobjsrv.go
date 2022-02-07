@@ -75,7 +75,7 @@ func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	log.Printf("%v: Attach %v\n", proc.GetProgram(), args.Uname)
+	// log.Printf("%v: Attach %v\n", proc.GetProgram(), args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname, fos.sid)
 	tree := root.(fs.FsObj)
@@ -336,7 +336,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
+	// log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
 
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
@@ -569,7 +569,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
-	log.Printf("SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
 	names := args.Wnames
 	lo := o
@@ -610,7 +609,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	case fs.File:
 		n, err := i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
 		if err != nil {
-			log.Printf("write %v\n", err)
 			return err.Rerror()
 		}
 		rets.Count = n

@@ -85,8 +85,6 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper st
 }
 
 func (ts *Tstate) setup(nclerk int) {
-	log.Printf("%v: start kv\n", db.GetName())
-
 	// add 1 kv so that we can put to initialize
 	gn := group.GRP + "0"
 	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn)

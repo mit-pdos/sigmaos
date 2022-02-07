@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/kernel"
 	"ulambda/mr"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 const (
@@ -71,8 +71,6 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("mr-wc-test", "..")
 	ts.nreducetask = nreducetask
-
-	db.Name("mr-wc-test")
 
 	mr.InitCoordFS(ts.System.FsLib, nreducetask)
 
@@ -140,7 +138,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 			log.Fatalf("Error spawn uxd")
 		}
 	default:
-		log.Fatalf("%v: Unrecognized service type", db.GetName())
+		log.Fatalf("%v: Unrecognized service type", proc.GetProgram())
 	}
 	log.Printf("Kill one %v", srv)
 	err := ts.KillOne(srv)

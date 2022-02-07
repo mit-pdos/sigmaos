@@ -21,7 +21,7 @@ func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid stri
 	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
-		log.Fatalf("Error Unmarshal in Procd.readRemoteProc: %v", err)
+		log.Fatalf("FATAL Error Unmarshal in Procd.readRemoteProc: %v", err)
 		return nil, err
 	}
 	return p, nil

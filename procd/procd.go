@@ -289,26 +289,26 @@ func (pd *Procd) worker(done *int32) {
 	defer pd.group.Done()
 	ticker := time.NewTicker(WORK_STEAL_TIMEOUT_MS * time.Millisecond)
 	for !pd.readDone() && (done == nil || atomic.LoadInt32(done) == 0) {
-		p, err := pd.getProc()
+		p, error := pd.getProc()
 		// If there were no runnable procs, wait and try again.
-		if err == nil && p == nil {
+		if error == nil && p == nil {
 			pd.waitSpawnOrTimeout(ticker)
 			continue
 		}
-		if err != nil && (err == io.EOF || strings.Contains(err.Error(), "no mount")) {
+		if error != nil && (error == io.EOF || strings.Contains(error.Error(), "no mount")) {
 			continue
 		}
-		if err != nil {
-			if strings.Contains(err.Error(), "file not found "+usync.COND) {
-				db.DLPrintf("PROCD", "cond file not found: %v", err)
+		if error != nil {
+			if strings.Contains(error.Error(), "file not found "+usync.COND) {
+				db.DLPrintf("PROCD", "cond file not found: %v", error)
 				return
 			}
-			log.Fatalf("Procd GetProc error %v, %v\n", p, err)
+			log.Fatalf("FATAL Procd GetProc error %v, %v\n", p, error)
 		}
 		localProc := pd.makeProc(p)
-		err = pd.fs.running(localProc)
+		err := pd.fs.running(localProc)
 		if err != nil {
-			log.Fatalf("Procd pub running error %v\n", err)
+			log.Fatalf("FATAL Procd pub running error %v %T\n", err, err)
 		}
 		pd.runProc(localProc)
 	}

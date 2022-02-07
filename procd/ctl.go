@@ -2,6 +2,7 @@ package procd
 
 import (
 	"encoding/json"
+	"fmt"
 	"path"
 
 	db "ulambda/debug"
@@ -30,7 +31,7 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion)
 	p := proc.MakeEmptyProc()
 	err := json.Unmarshal(b, p)
 	if err != nil {
-		np.MkErr(np.TErrInval, "Proc")
+		np.MkErr(np.TErrInval, fmt.Sprintf("Unmarshal %v", err))
 	}
 
 	db.DLPrintf("PROCD", "Control file write: %v", p)

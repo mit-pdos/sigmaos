@@ -2,6 +2,7 @@ package procd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 
@@ -46,7 +47,7 @@ func (pd *Procd) makeFs() {
 	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err != nil {
-		log.Fatalf("Error MkNod in RunProcd: %v", err)
+		log.Fatalf("FATAL Error MkNod in RunProcd: %v", err)
 	}
 
 	// Set up running dir
@@ -54,7 +55,7 @@ func (pd *Procd) makeFs() {
 	running := dir.MakeDir(runningi)
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
 	if err != nil {
-		log.Fatalf("Error creating running dir: %v", err)
+		log.Fatalf("FATAL Error creating running dir: %v", err)
 	}
 	pd.fs.run = running
 
@@ -66,7 +67,7 @@ func (pd *Procd) makeFs() {
 		runq := dir.MakeDir(runqi)
 		err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
 		if err != nil {
-			log.Fatalf("Error creating running dir: %v", err)
+			log.Fatalf("FATAL Error creating running dir: %v", err)
 		}
 		pd.fs.runqs[q] = runq
 	}
@@ -76,7 +77,7 @@ func (pd *Procd) makeFs() {
 	pids := dir.MakeDir(pidsi)
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
 	if err != nil {
-		log.Fatalf("Error creating pids dir: %v", err)
+		log.Fatalf("FATAL Error creating pids dir: %v", err)
 	}
 }
 
@@ -120,15 +121,18 @@ func (pfs *ProcdFs) claimProc(procdPath string, queueName string, p *proc.Proc) 
 }
 
 // Publishes a proc as running
-func (pfs *ProcdFs) running(p *Proc) error {
+func (pfs *ProcdFs) running(p *Proc) *np.Err {
 	p.FsObj = inode.MakeInode(nil, np.DMDEVICE, pfs.run)
 	f := memfs.MakeFile(p.FsObj)
 	// Make sure we write the proc description before we publish it.
-	b, err := json.Marshal(p.attr)
-	if err != nil {
-		log.Fatalf("FATAL Error Marshalling proc in ProcdFs.running: %v", err)
+	b, error := json.Marshal(p.attr)
+	if error != nil {
+		return np.MkErr(np.TErrError, fmt.Sprintf("running marshal err %v", error))
 	}
-	f.Write(ctx.MkCtx("", 0, nil), 0, b, np.NoV)
+	_, err := f.Write(ctx.MkCtx("", 0, nil), 0, b, np.NoV)
+	if err != nil {
+		return err
+	}
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), pfs.run, p.Pid, p)
 	if err != nil {
 		log.Printf("Error ProcdFs.run: %v", err)

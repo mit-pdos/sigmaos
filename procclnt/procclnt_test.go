@@ -30,10 +30,12 @@ type Tstate struct {
 	t *testing.T
 }
 
+const program = "procclnt_test"
+
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemAll("kernel_test", "..")
+	ts.System = kernel.MakeSystemAll(program, "..")
 	return ts
 }
 
@@ -46,8 +48,8 @@ func (ts *Tstate) procd(t *testing.T) string {
 func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.FsLib = fslib.MakeFsLibAddr("procclnt_test", fslib.Named())
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, fslib.Named())
+	ts.FsLib = fslib.MakeFsLibAddr(program, fslib.Named())
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, program, fslib.Named())
 	return ts
 }
 

@@ -166,7 +166,7 @@ func (s *System) Shutdown() {
 	if s.ProcClnt != nil {
 		cpids, err := s.GetChildren(proc.GetProcDir())
 		if err != nil {
-			log.Fatalf("Error GetChildren in System.Shutdown: %v", err)
+			log.Fatalf("FATAL GetChildren in System.Shutdown: %v", err)
 		}
 		for _, pid := range cpids {
 			s.Evict(pid)

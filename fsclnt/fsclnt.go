@@ -458,9 +458,12 @@ func (fsc *FsClient) Remove(name string) error {
 	// symlink.
 	err := fsc.clnt(fid).RemoveFile(fid, rest)
 	if err != nil {
-		// There must have been a symlink in rest
-		// force automounting, but only on dir error
-		if strings.HasPrefix(err.Error(), "dir not found") {
+		log.Printf("remove file err %v\n", err)
+		// If server could only partially resolve name, it may
+		// have been because name contained a symbolic link
+		// for a server; retry with resolving name.
+		if np.IsDirNotFound(err.Error(), path) {
+			log.Printf("retry %v\n", path)
 			fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -654,8 +657,10 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 	}
 	reply, err := fsc.clnt(fid).GetFile(fid, rest, mode, 0, 0)
 	if err != nil {
-		// force automounting, but only on dir error
-		if strings.HasPrefix(err.Error(), "dir not found") {
+		// If server could only partially resolve name, it may
+		// have been because name contained a symbolic link
+		// for a server; retry with resolving name.
+		if np.IsDirNotFound(err.Error(), p) {
 			fid, err = fsc.WalkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return nil, err
@@ -688,8 +693,11 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 	}
 	reply, err := fsc.clnt(fid).SetFile(fid, rest, mode, perm, 0, data)
 	if err != nil {
-		// force automounting, but only on dir error
-		if strings.HasPrefix(err.Error(), "dir not found") {
+		// If server could only partially resolve name, it may
+		// have been because name contained a symbolic link
+		// for a server; retry with resolving name.
+		if np.IsDirNotFound(err.Error(), p) {
+			log.Printf("setfile retry %v\n", p)
 			if perm == 0 {
 				dir = p
 				base = []string{"."}

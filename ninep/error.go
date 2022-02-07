@@ -2,6 +2,8 @@ package ninep
 
 import (
 	"fmt"
+	"log"
+	"strings"
 )
 
 type Terror int8
@@ -136,4 +138,14 @@ func (err *Err) Error() string {
 
 func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
+}
+
+func IsDirNotFound(err string, path []string) bool {
+	b := false
+	if strings.HasPrefix(err, "file not found") {
+		p := Split(strings.TrimPrefix(err, "file not found "))
+		b = len(p) > 1
+	}
+	log.Printf("IsDirNotFound err %v b %v\n", err, b)
+	return b
 }

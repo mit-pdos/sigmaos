@@ -95,6 +95,7 @@ func (fssrv *FsServer) Serve() {
 			debug.PrintStack()
 			log.Printf("%v: Error WaitEvict: %v", proc.GetProgram(), err)
 		}
+		log.Printf("%v: evicted\n", proc.GetProgram())
 	} else {
 		<-fssrv.ch
 	}
@@ -158,7 +159,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		if err != nil {
 			return nil, &np.Rerror{err.Error()}
 		}
-		log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
+		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
 	case np.Tregfence:
 		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.rft.UpdateFence(req.Fence)
@@ -194,7 +195,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
-		log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
+		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
 	}
 	return nil, nil
 }

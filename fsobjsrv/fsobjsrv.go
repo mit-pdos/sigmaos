@@ -301,7 +301,11 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
-	return f.Read(args.Offset, args.Count, np.NoV, rets)
+	err = f.Read(args.Offset, args.Count, np.NoV, rets)
+	if err != nil {
+		return err.Rerror()
+	}
+	return nil
 }
 
 func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
@@ -332,7 +336,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	// log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
+	log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
 
 	r := o.Parent().Remove(ctx, path[len(path)-1])
 	if r != nil {
@@ -376,7 +380,7 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsOb
 	d := o.(fs.Dir)
 	os, rest, err := d.Lookup(ctx, names)
 	if err != nil || len(rest) != 0 {
-		return nil, np.MkErr(np.TErrNotfound, names)
+		return nil, np.MkErr(np.TErrNotfound, np.Join(names))
 	}
 	return os[len(os)-1], nil
 }
@@ -560,12 +564,12 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 // file, opens/creates it, and writes it.  If another setfile executes
 // between open() and write(), an setfile returns an error.
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
-	var err *np.Err
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
+	log.Printf("SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
 	names := args.Wnames
 	lo := o
@@ -595,7 +599,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
 	} else {
 		fos.stats.Path(fname)
-		_, err = lo.Open(f.Ctx(), args.Mode)
+		_, err := lo.Open(f.Ctx(), args.Mode)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -604,10 +608,12 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	case fs.Dir:
 		return np.MkErr(np.TErrNotFile, f.Path()).Rerror()
 	case fs.File:
-		rets.Count, err = i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
+		n, err := i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
 		if err != nil {
+			log.Printf("write %v\n", err)
 			return err.Rerror()
 		}
+		rets.Count = n
 		fos.rft.UpdateSeqno(fname)
 		return nil
 	default:

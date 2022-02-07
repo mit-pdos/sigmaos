@@ -125,7 +125,7 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	if err != nil {
 		db.DLPrintf("MEMFS", "dir %v: file not found %v", dir, path[0])
 		dir.mu.Unlock()
-		return nil, nil, err
+		return nil, path, err
 	}
 	inodes = append(inodes, inode)
 	switch i := inode.(type) {
@@ -191,13 +191,7 @@ func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, *n
 	if len(path) == 0 {
 		return nil, nil, nil
 	}
-	db.DLPrintf("MEMFS", "lookup: %v\n", path)
-	inodes, rest, err := dir.namei(ctx, path, inodes)
-	if err == nil {
-		return inodes, rest, err
-	} else {
-		return nil, rest, err // XXX was nil?
-	}
+	return dir.namei(ctx, path, inodes)
 }
 
 func (dir *DirImpl) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {

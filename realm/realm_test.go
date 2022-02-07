@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/linuxsched"
 	"ulambda/proc"
@@ -46,11 +45,11 @@ func makeTstate(t *testing.T) *Tstate {
 		t.Fatalf("Boot Machined 2: %v", err)
 	}
 
-	db.Name("realm_test")
-	ts.realmFsl = fslib.MakeFsLibAddr("realm_test", fslib.Named())
-	ts.FsLib = fslib.MakeFsLibAddr("realm_test", cfg.NamedAddr)
+	program := "realm_test"
+	ts.realmFsl = fslib.MakeFsLibAddr(program, fslib.Named())
+	ts.FsLib = fslib.MakeFsLibAddr(program, cfg.NamedAddr)
 
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, program, cfg.NamedAddr)
 
 	linuxsched.ScanTopology()
 

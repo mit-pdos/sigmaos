@@ -344,7 +344,7 @@ func TestWatchCreate(t *testing.T) {
 	})
 	assert.NotEqual(t, nil, err)
 	if err != nil {
-		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+		assert.True(t, np.IsErrNotfound(err))
 	}
 
 	err = ts.MakeFile(fn, 0777, np.OWRITE, nil)
@@ -587,7 +587,7 @@ func (ts *Tstate) testRename(fsl *fslib.FsLib, t string) int {
 				i = i + 1
 				ok = true
 			} else {
-				assert.Contains(ts.t, err.Error(), "file not found")
+				assert.True(ts.t, np.IsErrNotfound(err))
 			}
 		}
 	}

@@ -139,10 +139,13 @@ func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
 }
 
-func IsDirNotFound(err string) bool {
+func IsErrNotfound(err error) bool {
+	return strings.Contains(err.Error(), TErrNotfound.String())
+}
+func IsDirNotFound(err error) bool {
 	b := false
-	if strings.HasPrefix(err, "file not found") {
-		p := Split(strings.TrimPrefix(err, "file not found "))
+	if IsErrNotfound(err) {
+		p := Split(strings.TrimPrefix(err.Error(), TErrNotfound.String()))
 		b = len(p) > 1
 	}
 	return b

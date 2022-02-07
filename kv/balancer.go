@@ -91,12 +91,12 @@ func RunBalancer(crashhelper string, auto string) {
 	bl.setRecovering(true)
 
 	// start server but don't publish its existence
-	mfs, _, err := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
-	if err != nil {
-		log.Fatalf("FATAL StartMemFs %v\n", err)
+	mfs, _, error := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
+	if error != nil {
+		log.Fatalf("FATAL StartMemFs %v\n", error)
 	}
 	ctx := ctx.MkCtx("balancer", 0, nil)
-	err = dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
+	err := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err != nil {
 		log.Fatalf("FATAL MakeNod clone failed %v\n", err)
 	}
@@ -108,9 +108,9 @@ func RunBalancer(crashhelper string, auto string) {
 		ch <- true
 	}()
 
-	err = bl.balFclnt.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
-	if err != nil {
-		log.Fatalf("FATAL %v: AcquireFenceW %v\n", proc.GetProgram(), err)
+	error = bl.balFclnt.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	if error != nil {
+		log.Fatalf("FATAL %v: AcquireFenceW %v\n", proc.GetProgram(), error)
 	}
 
 	log.Printf("%v: primary\n", proc.GetProgram())
@@ -162,17 +162,20 @@ func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
 
 // XXX call balance() repeatedly for each server passed in to write
 // XXX assumes one client that retries
-func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, error) {
+func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	words := strings.Fields(string(b))
 	if len(words) != 2 {
-		return 0, fmt.Errorf("Invalid arguments")
+		return 0, np.MkErr(np.TErrInval, words)
 	}
-	err := c.bl.balance(words[0], words[1])
-	return np.Tsize(len(b)), err
+	error := c.bl.balance(words[0], words[1])
+	if error != nil {
+		return 0, np.MkErr(np.TErrError, error)
+	}
+	return np.Tsize(len(b)), nil
 }
 
-func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
-	return nil, nil
+func (c *Ctl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	return nil, np.MkErr(np.TErrNotSupported, "Read")
 }
 
 func (bl *Balancer) monitor() {
@@ -295,7 +298,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool)
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
 			strings.HasPrefix(err.Error(), "EOF")) {
-			log.Fatalf("FATAL %v: runProc err %v\n", proc.GetProgram(), err)
+			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetProgram(), err)
 		}
 		if retryf(err, status) {
 			log.Printf("%v: retry proc %v err %v status %v\n", proc.GetProgram(), args, err, status)

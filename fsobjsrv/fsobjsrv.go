@@ -585,7 +585,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	}
 	if args.Perm != 0 { // create?
 		if !lo.Perm().IsDir() {
-			return &np.Rerror{fmt.Errorf("dir not found %v", args.Wnames).Error()}
+			return np.MkErr(np.TErrNotfound, np.Join(args.Wnames)).Rerror()
 		}
 		name := args.Wnames[len(args.Wnames)-1]
 		dws, fws := fos.AcquireWatches(dname, name)

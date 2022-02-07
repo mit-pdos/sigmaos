@@ -57,8 +57,6 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bindir string, namedAddr []s
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	procdir := p.ProcDir
 
-	log.Printf("%v: %p spawn %v\n", proc.GetProgram(), clnt, procdir)
-
 	if clnt.hasExited() != "" {
 		return fmt.Errorf("Spawn error called after Exited")
 	}

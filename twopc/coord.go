@@ -42,7 +42,6 @@ type Coord struct {
 
 func MakeCoord(args []string) (*Coord, error) {
 	if len(args) < 2 {
-
 		return nil, fmt.Errorf("MakeCoord: too few arguments %v\n", args)
 	}
 	cd := &Coord{}

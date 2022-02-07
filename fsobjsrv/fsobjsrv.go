@@ -1,7 +1,6 @@
 package fsobjsrv
 
 import (
-	"fmt"
 	"log"
 	// "time"
 
@@ -82,7 +81,7 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	if args.Aname != "" {
 		os, rest, err := root.Lookup(ctx, path)
 		if len(rest) > 0 || err != nil {
-			return &np.Rerror{err.Error()}
+			return err.Rerror()
 		}
 		tree = os[len(os)-1]
 	}
@@ -123,12 +122,12 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		o := f.Obj()
 		if !o.Perm().IsDir() {
-			return np.MkErr(np.TErrNotfound, args.Wnames).Rerror()
+			return np.MkErr(np.TErrNotfound, np.Join(args.Wnames)).Rerror()
 		}
 		d := o.(fs.Dir)
 		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
 		if err != nil {
-			return &np.Rerror{err.Error()}
+			return err.Rerror()
 		}
 		n := len(args.Wnames) - len(rest)
 		p := append(f.Path(), args.Wnames[:n]...)
@@ -166,7 +165,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	// log.Printf("%v: %v open %v mode %v\n", proc.GetProgram(), f.Ctx().Uname(), f.Path(), args.Mode)
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
-		return &np.Rerror{r.Error()}
+		return r.Rerror()
 	}
 	f.SetMode(args.Mode)
 	if no != nil {
@@ -197,11 +196,11 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	defer fos.wt.Release(ws)
 
 	if o.Nlink() == 0 {
-		return np.MkErr(np.TErrNotfound, f.Path).Rerror()
+		return np.MkErr(np.TErrNotfound, np.Join(f.Path())).Rerror()
 	}
 	if !np.VEq(args.Version, o.Version()) {
 
-		return np.MkErr(np.TErrVersion, f.Path).Rerror()
+		return np.MkErr(np.TErrVersion, np.Join(f.Path())).Rerror()
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
@@ -271,9 +270,8 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	o := f.Obj()
 	names := []string{args.Name}
 	if !o.Perm().IsDir() {
-		return &np.Rerror{fmt.Sprintf("Not a directory")}
+		return np.MkErr(np.TErrNotDir, np.Join(f.Path())).Rerror()
 	}
-
 	d := o.(fs.Dir)
 	dws, fws := fos.AcquireWatches(f.Path(), names[0])
 	defer fos.ReleaseWatches(dws, fws)
@@ -338,15 +336,13 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	// log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
 
-	r := o.Parent().Remove(ctx, path[len(path)-1])
-	if r != nil {
-		log.Printf("remove err %v f %v\n", r, path)
-		return &np.Rerror{r.Error()}
+	err := o.Parent().Remove(ctx, path[len(path)-1])
+	if err != nil {
+		return err.Rerror()
 	}
-	r = o.Unlink(ctx)
-	if r != nil {
-		log.Printf("Unlink err %v f %v\n", r, path)
-		return &np.Rerror{r.Error()}
+	err = o.Unlink(ctx)
+	if err != nil {
+		return err.Rerror()
 	}
 
 	fws.WakeupWatchL()
@@ -421,7 +417,7 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	o := f.Obj()
 	st, r := o.Stat(f.Ctx())
 	if r != nil {
-		return &np.Rerror{r.Error()}
+		return r.Rerror()
 	}
 	rets.Stat = *st
 	return nil
@@ -448,7 +444,7 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 
 		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
 		if err != nil {
-			return &np.Rerror{err.Error()}
+			return err.Rerror()
 		}
 		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
 		fos.rft.UpdateSeqno(dst)
@@ -509,7 +505,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		err := d1.Renameat(oldf.Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
 
-			return &np.Rerror{err.Error()}
+			return err.Rerror()
 		}
 		fos.rft.UpdateSeqno(dst)
 		dstws.WakeupWatchL() // trigger create watch
@@ -542,7 +538,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	fos.stats.Path(f.Path())
 	_, r := lo.Open(f.Ctx(), args.Mode)
 	if r != nil {
-		return &np.Rerror{r.Error()}
+		return r.Rerror()
 	}
 	switch i := lo.(type) {
 	case fs.Dir:
@@ -550,7 +546,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	case fs.File:
 		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), lo.Version())
 		if r != nil {
-			return &np.Rerror{r.Error()}
+			return r.Rerror()
 		}
 		return nil
 	default:

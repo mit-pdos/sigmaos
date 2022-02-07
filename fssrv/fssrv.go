@@ -224,10 +224,8 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {
-		debug.PrintStack()
 		// client start TCP connection, but then failed before sending
 		// any messages.
-		log.Printf("Warning: CloseSession unknown session %v\n", sid)
 		close(replies)
 		return
 	}

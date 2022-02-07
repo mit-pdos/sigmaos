@@ -461,7 +461,7 @@ func (fsc *FsClient) Remove(name string) error {
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
 		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err.Error(), path) {
+		if np.IsDirNotFound(err.Error()) {
 			fid, err = fsc.WalkManyUmount(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err
@@ -658,7 +658,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
 		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err.Error(), p) {
+		if np.IsDirNotFound(err.Error()) {
 			fid, err = fsc.WalkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return nil, err
@@ -694,7 +694,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
 		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err.Error(), p) {
+		if np.IsDirNotFound(err.Error()) {
 			if perm == 0 {
 				dir = p
 				base = []string{"."}

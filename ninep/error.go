@@ -139,7 +139,7 @@ func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
 }
 
-func IsDirNotFound(err string, path []string) bool {
+func IsDirNotFound(err string) bool {
 	b := false
 	if strings.HasPrefix(err, "file not found") {
 		p := Split(strings.TrimPrefix(err, "file not found "))

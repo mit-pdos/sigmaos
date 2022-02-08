@@ -310,7 +310,7 @@ func (fsc *FsClient) RegisterFence(f np.Tfence) error {
 func (fsc *FsClient) UpdateFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); !ok {
 		log.Printf("%v: update fence %v not present\n", proc.GetProgram(), f)
-		return fmt.Errorf("unknown fence %v\n", f)
+		return fmt.Errorf("unknown fence %v", f)
 	}
 	return fsc.pc.RegisterFence(f, false)
 }
@@ -333,7 +333,7 @@ func (fsc *FsClient) DeregisterFences() error {
 
 func (fsc *FsClient) RmFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); !ok {
-		return fmt.Errorf("unknown fence %v\n", f)
+		return fmt.Errorf("unknown fence %v", f)
 	}
 	return fsc.pc.RmFence(f)
 }

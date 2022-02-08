@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -161,7 +160,7 @@ func (m *Mapper) doMap() error {
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
 			// May be due to partition
-			if err == io.EOF {
+			if np.IsErrEOF(err) {
 				log.Fatalf("%v: FATAL symlink %v err %v\n", proc.GetProgram(), name, err)
 			}
 			// If the reducer successfully completed, the reducer dir won't be found.

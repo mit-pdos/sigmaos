@@ -63,7 +63,7 @@ func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path []stri
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (clnt *Clnt) MakeProtClnt(server []string) *ProtClnt {
@@ -106,7 +106,7 @@ func (pclnt *ProtClnt) Flush(tag np.Ttag) error {
 	if !ok {
 		return errors.New("Not correct reply msg")
 	}
-	return err
+	return nil
 }
 
 func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk, error) {
@@ -119,7 +119,7 @@ func (pclnt *ProtClnt) Walk(fid np.Tfid, nfid np.Tfid, path []string) (*np.Rwalk
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.Tmode) (*np.Rcreate, error) {
@@ -132,7 +132,7 @@ func (pclnt *ProtClnt) Create(fid np.Tfid, name string, perm np.Tperm, mode np.T
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Remove(fid np.Tfid) error {
@@ -145,7 +145,7 @@ func (pclnt *ProtClnt) Remove(fid np.Tfid) error {
 	if !ok {
 		return errors.New("Not correct reply msg")
 	}
-	return err
+	return nil
 }
 
 func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames []string) error {
@@ -158,7 +158,7 @@ func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames []string) error {
 	if !ok {
 		return errors.New("Not correct reply msg")
 	}
-	return err
+	return nil
 }
 
 func (pclnt *ProtClnt) Clunk(fid np.Tfid) error {
@@ -171,7 +171,7 @@ func (pclnt *ProtClnt) Clunk(fid np.Tfid) error {
 	if !ok {
 		return errors.New("Not correct reply msg")
 	}
-	return err
+	return nil
 }
 
 func (pclnt *ProtClnt) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
@@ -184,7 +184,7 @@ func (pclnt *ProtClnt) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, error) {
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Watch(fid np.Tfid, path []string, version np.TQversion) error {
@@ -197,7 +197,7 @@ func (pclnt *ProtClnt) Watch(fid np.Tfid, path []string, version np.TQversion) e
 	if !ok {
 		return errors.New("Not correct reply msg")
 	}
-	return err
+	return nil
 }
 
 func (pclnt *ProtClnt) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.Rread, error) {
@@ -210,7 +210,7 @@ func (pclnt *ProtClnt) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.R
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.Rwrite, error) {
@@ -223,20 +223,20 @@ func (pclnt *ProtClnt) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.R
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Stat(fid np.Tfid) (*np.Rstat, error) {
 	args := np.Tstat{fid}
 	reply, err := pclnt.Call(args)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	msg, ok := reply.(np.Rstat)
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
@@ -249,7 +249,7 @@ func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, error) {
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string) (*np.Rrenameat, error) {
@@ -262,7 +262,7 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, cnt np.Tsize) (*np.Rgetfile, error) {
@@ -275,7 +275,7 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, offset np.Toffset, data []byte) (*np.Rwrite, error) {
@@ -288,7 +288,7 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm n
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }
 
 func (pclnt *ProtClnt) MkFence(fid np.Tfid) (*np.Rmkfence, error) {
@@ -301,5 +301,5 @@ func (pclnt *ProtClnt) MkFence(fid np.Tfid) (*np.Rmkfence, error) {
 	if !ok {
 		return nil, errors.New("Not correct reply msg")
 	}
-	return &msg, err
+	return &msg, nil
 }

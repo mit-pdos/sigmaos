@@ -6,6 +6,7 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 type ConfigClnt struct {
@@ -22,12 +23,12 @@ func MakeConfigClnt(fsl *fslib.FsLib) *ConfigClnt {
 func (clnt *ConfigClnt) WatchConfig(path string) chan bool {
 	done := make(chan bool)
 	err := clnt.SetRemoveWatch(path, func(path string, err error) {
-		if err != nil && err.Error() != "EOF" {
+		if err != nil && np.IsErrEOF(err) {
 			log.Fatalf("Error Watch in ConfigClnt.WatchConfig: %v", err)
 		}
 		done <- true
 	})
-	if err != nil && err.Error() != "EOF" {
+	if err != nil && np.IsErrEOF(err) {
 		debug.PrintStack()
 		log.Fatalf("Error SetRemoveWatch in ConfigClnt.WatchConfig: %v", err)
 	}

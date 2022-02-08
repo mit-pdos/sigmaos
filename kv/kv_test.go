@@ -14,6 +14,7 @@ import (
 	"ulambda/group"
 	"ulambda/groupmgr"
 	"ulambda/kernel"
+	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
@@ -146,7 +147,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 			return err
 		}
 		// XXX error checking in one place and more uniform
-		if err.Error() == "EOF" ||
+		if np.IsErrEOF(err) ||
 			strings.HasPrefix(err.Error(), "file not found") ||
 			strings.HasPrefix(err.Error(), "Error retry") ||
 			strings.HasPrefix(err.Error(), "unable to connect") {

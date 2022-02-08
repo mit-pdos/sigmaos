@@ -201,7 +201,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
-			if err.Error() == "EOF" {
+			if np.IsErrEOF(err) {
 				// we are disconnected
 				// log.Printf("%v: monitorMyself err %v\n", proc.GetProgram(), err)
 				ch <- true
@@ -297,7 +297,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			strings.HasPrefix(err.Error(), "EOF")) {
+			np.IsErrEOF(err)) {
 			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetProgram(), err)
 		}
 		if retryf(err, status) {

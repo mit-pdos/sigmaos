@@ -22,7 +22,7 @@ func (fsc *FsClient) WalkManyUmount(p []string, resolve bool, w Watch) (np.Tfid,
 	for {
 		f, err := fsc.walkMany(p, resolve, w)
 		db.DLPrintf("FSCLNT", "walkManyUmount %v -> %v %v\n", p, f, err)
-		if err == io.EOF {
+		if err != nil && np.IsErrEOF(err) {
 			p := fsc.path(f)
 			if p == nil { // schedd triggers this; don't know why
 				return np.NoFid, err

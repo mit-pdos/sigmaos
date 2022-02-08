@@ -2,6 +2,7 @@ package protclnt
 
 import (
 	"errors"
+	"log"
 	"strings"
 	"sync"
 
@@ -103,7 +104,7 @@ func (cm *ConnMgr) allocConn(addrs []string) (*conn, error) {
 		return nil, err
 	}
 	cm.conns[key] = makeConn(nc)
-	return cm.conns[key], err
+	return cm.conns[key], nil
 }
 
 func (cm *ConnMgr) lookupConn(addrs []string) (*conn, bool) {
@@ -157,7 +158,8 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 		// Ignore EOF, since we cannot talk to that server
 		// anymore.  We may try to reconnect and then we will
 		// register again.
-		if res.err != nil && res.err.Error() != "EOF" {
+		if res.err != nil && !np.IsErrEOF(res.err) {
+			log.Printf("mcastReq set err %v\n", res.err)
 			err = res.err
 		}
 	}

@@ -32,7 +32,7 @@ const (
 
 type Reply struct {
 	fc  *np.Fcall
-	err error
+	err *np.Err
 }
 
 type RpcT struct {
@@ -60,16 +60,16 @@ type NetClnt struct {
 	outstanding map[np.Ttag]*RpcT
 }
 
-func MkNetClnt(addrs []string) (*NetClnt, error) {
+func MkNetClnt(addrs []string) (*NetClnt, *np.Err) {
 	db.DLPrintf("NETCLNT", "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.requests = make(chan *RpcT)
 	nc.outstanding = make(map[np.Ttag]*RpcT)
 	nc.addrs = addrs
-	err := nc.connect()
-	if err != nil {
-		log.Printf("%v: mkNetClnt connect %v err %v\n", proc.GetProgram(), addrs, err)
-		return nil, err
+	error := nc.connect()
+	if error != nil {
+		log.Printf("%v: mkNetClnt connect %v err %v\n", proc.GetProgram(), addrs, error)
+		return nil, np.MkErr(np.TErrNet, error)
 	}
 	go nc.writer()
 	go nc.reader()
@@ -250,7 +250,7 @@ func (nc *NetClnt) drainRequests() {
 	}
 }
 
-func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
+func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 	db.DLPrintf("NETCLNT", "RPC %v to %v\n", fc, nc.Dst())
 	rpc := mkRpcT(fc)
 	t := nc.allocate(rpc)
@@ -269,7 +269,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
 
 	if closed {
 		db.DLPrintf("NETCLNT", "Error ch to %v closed\n", nc.Dst())
-		return nil, io.EOF
+		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
 	nc.requests <- rpc
 
@@ -278,7 +278,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, error) {
 	reply, ok := <-rpc.replych
 	if !ok {
 		db.DLPrintf("NETCLNT", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
-		return nil, io.EOF
+		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
 	db.DLPrintf("NETCLNT", "RPC reply %v %v\n", reply.fc, reply.err)
 	return reply.fc, reply.err

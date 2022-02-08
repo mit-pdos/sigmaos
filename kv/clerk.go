@@ -245,7 +245,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 		// involving KVCONFIG or if EOF to a kv group.
 		if strings.Contains(err.Error(), KVCONFIG) ||
 			strings.HasPrefix(err.Error(), "stale") ||
-			err.Error() == "EOF" {
+			np.IsErrEOF(err) {
 			err = kc.refreshConfig(err)
 		}
 	}

@@ -75,12 +75,13 @@ func TestConnect(t *testing.T) {
 	log.Printf("disconnected\n")
 
 	_, err = ts.Write(fd, d)
-	assert.Equal(t, "EOF", err.Error())
+	assert.True(t, np.IsErrEOF(err))
+
 	err = ts.Close(fd)
-	assert.Equal(t, "EOF", err.Error())
+	assert.True(t, np.IsErrEOF(err))
 
 	fd, err = ts.Open(fn, np.OREAD)
-	assert.Equal(t, "EOF", err.Error())
+	assert.True(t, np.IsErrEOF(err))
 
 	ts.Shutdown()
 }
@@ -462,7 +463,7 @@ func TestLockAfterConnClose(t *testing.T) {
 	go func() {
 		// Should wait
 		err := fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-		assert.Equal(t, err.Error(), "EOF", "Make lock 2")
+		assert.True(t, np.IsErrEOF(err), "Make lock 2")
 	}()
 
 	time.Sleep(500 * time.Millisecond)

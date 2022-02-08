@@ -48,7 +48,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 	defer fl.Close(fd)
 	for {
 		dirents, err := fl.Readdir(fd, CHUNKSZ)
-		if err == io.EOF {
+		if err != nil && np.IsErrEOF(err) {
 			break
 		}
 		if err != nil {
@@ -73,7 +73,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
 	for {
 		dents, err := fl.Readdir(fd, CHUNKSZ)
 		db.DLPrintf("FSLIB", "readdir: %v %v\n", dents, err)
-		if err == io.EOF {
+		if err != nil && np.IsErrEOF(err) {
 			break
 		}
 		if err != nil {

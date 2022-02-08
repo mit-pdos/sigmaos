@@ -32,7 +32,8 @@ const (
 	NKV           = 10
 	NSHARD        = 10 * NKV
 	KVDIR         = "name/kv"
-	KVCONFIG      = KVDIR + "/config"      // ephemeral file with current config
+	KVCONF        = "config"
+	KVCONFIG      = KVDIR + "/" + KVCONF   // file with current config
 	KVNEXTCONFIG  = KVDIR + "/nextconfig"  // the persistent next configuration
 	KVNEXTBK      = KVDIR + "/nextconfig#" // temporary copy
 	KVBALANCER    = KVDIR + "/balancer"

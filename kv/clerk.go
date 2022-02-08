@@ -218,7 +218,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 			return nil
 		}
 
-		if strings.Contains(err.Error(), "not found config") {
+		if np.IsErrNotfound(err) && strings.Contains(np.ErrNotfoundPath(err), KVCONF) {
 			log.Printf("%v: retry refreshConfig %v\n", proc.GetProgram(), err)
 			continue
 		}
@@ -243,7 +243,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 	if err != nil {
 		// try refreshing config is sufficient to fix error
 		// involving KVCONFIG or if EOF to a kv group.
-		if strings.Contains(err.Error(), KVCONFIG) ||
+		if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrNotfoundPath(err), KVCONF) ||
 			np.IsErrStale(err) ||
 			np.IsErrEOF(err) {
 			err = kc.refreshConfig(err)

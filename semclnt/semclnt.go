@@ -46,7 +46,6 @@ func (c *SemClnt) Down() error {
 	// If err, file has been removed (i.e., semaphore has been
 	// "upped" or file server crashed or lease expired);
 	// distinguish between those cases.
-	// if err != nil && !strings.HasPrefix(err.Error(), "file not found") {
 	if err != nil && !np.IsErrNotfound(err) {
 		log.Printf("%v: down err %v\n", proc.GetProgram(), err)
 		return err

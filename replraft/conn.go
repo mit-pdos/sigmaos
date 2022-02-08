@@ -83,8 +83,8 @@ func (c *RaftReplConn) writer() {
 			db.DLPrintf("REPLRAFT", "%v -> %v Writer: WriteFrame error: %v", c.Src(), c.Dst(), err)
 			continue
 		}
-		err = c.bw.Flush()
-		if err != nil {
+		error := c.bw.Flush()
+		if error != nil {
 			db.DLPrintf("REPLRAFT", "%v -> %v Writer: Flush error: %v", c.Src(), c.Dst(), err)
 			continue
 		}

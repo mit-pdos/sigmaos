@@ -30,10 +30,10 @@ func Marshal(v interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) error {
-	frame, err := Marshal(fcall)
-	if err != nil {
-		return fmt.Errorf("marshal error: %v", err)
+func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
+	frame, error := Marshal(fcall)
+	if error != nil {
+		return np.MkErr(np.TErrBadFcall, error.Error())
 	}
 	dataBuf := false
 	var data []byte
@@ -57,14 +57,10 @@ func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) error {
 	default:
 	}
 	if dataBuf {
-		err = WriteFrameAndBuf(b, frame, data)
+		return WriteFrameAndBuf(b, frame, data)
 	} else {
-		err = WriteFrame(b, frame)
+		return WriteFrame(b, frame)
 	}
-	if err != nil {
-		return fmt.Errorf("WriteFrame error: %v", err)
-	}
-	return nil
 }
 
 type encoder struct {

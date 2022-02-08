@@ -110,8 +110,8 @@ func (r *RelayConn) writer() {
 			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.Src(), r.Dst(), err)
 			continue
 		}
-		err = r.bw.Flush()
-		if err != nil {
+		error := r.bw.Flush()
+		if error != nil {
 			db.DLPrintf("RSRV", "%v -> %v Writer: Flush error: %v", r.Src(), r.Dst(), err)
 			continue
 		}

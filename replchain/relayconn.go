@@ -55,8 +55,8 @@ func (rc *RelayNetConn) Send(frame []byte) error {
 		db.DLPrintf("RTCP", "WriteFrame error %v\n", err)
 		return err
 	}
-	err = rc.bw.Flush()
-	if err != nil {
+	error := rc.bw.Flush()
+	if error != nil {
 		db.DLPrintf("RTCP", "Flush error %v\n", err)
 		return err
 	}

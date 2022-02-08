@@ -288,9 +288,9 @@ func (nc *NetClnt) writer() {
 	// Need to make sure requests are drained so the requests channel can be safely closed
 	defer nc.drainRequests()
 
-	br, bw, err := nc.getBufio()
-	if err != nil {
-		db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
+	br, bw, error := nc.getBufio()
+	if error != nil {
+		db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", error)
 		nc.Close()
 		return
 	}
@@ -300,17 +300,17 @@ func (nc *NetClnt) writer() {
 			return
 		}
 		// Get the bw for the latest connection
-		br, bw, err = nc.getBufio()
+		br, bw, error = nc.getBufio()
 		// If none was available, close the conn
-		if err != nil {
-			db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
+		if error != nil {
+			db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", error)
 			nc.Close()
 			return
 		}
 		db.DLPrintf("NETCLNT", "Writer: %v -> %v %v, %p\n", nc.Src(), nc.Dst(), rpc.req, bw)
-		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
+		err := npcodec.MarshalFcallToWriter(rpc.req, bw)
 		if err != nil {
-			if strings.Contains(err.Error(), "marshal error") {
+			if err.Code() == np.TErrBadFcall {
 				nc.mu.Lock()
 				if !nc.closed {
 					rpc.replych <- &Reply{nil, err}
@@ -318,20 +318,21 @@ func (nc *NetClnt) writer() {
 				nc.mu.Unlock()
 			}
 			// Retry sends on network error
-			if strings.Contains(err.Error(), "EOF") {
+			// if np.IsErrEOF(err) {
+			if err.Code() == np.TErrNet && err.Obj == "EOF" {
 				db.DLPrintf("NETCLNT", "Writer: NetClntection error to %v\n", nc.Dst())
 				nc.resetConnection(br, bw)
 				continue
 			}
 			// If exit the thread if the connection is broken
-			if strings.Contains(err.Error(), "WriteFrame error") {
+			if err.Code() == np.TErrNet {
 				log.Fatal(err)
 				return
 			}
 			db.DLPrintf("NETCLNT", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
 		} else {
-			err = bw.Flush()
-			if err != nil {
+			error := bw.Flush()
+			if error != nil {
 				if strings.Contains(err.Error(), "connection reset by peer") {
 					nc.resetConnection(br, bw)
 				} else {
@@ -358,14 +359,16 @@ func (nc *NetClnt) reader() {
 		frame, err := npcodec.ReadFrame(br)
 		db.DLPrintf("NETCLNT", "Reader: ReadFrame from %v br:%p\n", nc.Dst(), br)
 		// On connection error, retry
+		// XXX write in terms of np.Err?
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
 			db.DLPrintf("NETCLNT", "Reader: NetClnt error to %v\n", nc.Dst())
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection
-			br, bw, err = nc.getBufio()
+			var error error
+			br, bw, error = nc.getBufio()
 			// If none was available, close the conn
-			if err != nil {
-				db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", err)
+			if error != nil {
+				db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", error)
 				nc.Close()
 				return
 			}

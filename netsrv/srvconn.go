@@ -64,16 +64,17 @@ func (c *SrvConn) reader() {
 			return
 		}
 		var fcall *np.Fcall
+		var error error
 		if c.wireCompat {
 			fcallWC := &np.FcallWireCompat{}
-			err = npcodec.Unmarshal(frame, fcallWC)
+			error = npcodec.Unmarshal(frame, fcallWC)
 			fcall = fcallWC.ToInternal()
 		} else {
 			fcall = &np.Fcall{}
-			err = npcodec.Unmarshal(frame, fcall)
+			error = npcodec.Unmarshal(frame, fcall)
 		}
-		if err != nil {
-			log.Print("reader: unmarshal error: ", err, fcall)
+		if error != nil {
+			log.Print("reader: bad fcall: ", np.MkErr(np.TErrBadFcall, error.Error()), fcall)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			if c.sessid == 0 {
@@ -93,7 +94,7 @@ func (c *SrvConn) writer() {
 			return
 		}
 		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
-		var err error
+		var err *np.Err
 		var writableFcall np.WritableFcall
 		if c.wireCompat {
 			writableFcall = fcall.ToWireCompatible()
@@ -104,8 +105,8 @@ func (c *SrvConn) writer() {
 		if err != nil {
 			log.Printf("%v: writer err %v\n", proc.GetProgram(), err)
 		} else {
-			err = c.bw.Flush()
-			if err != nil {
+			error := c.bw.Flush()
+			if error != nil {
 				log.Printf("%v: flush %v err %v", proc.GetProgram(), fcall, err)
 			}
 		}

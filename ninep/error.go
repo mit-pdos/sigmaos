@@ -44,6 +44,8 @@ const (
 	TErrExists
 	TErrClosed
 	TErrEOF
+	TErrBadFcall
+	TErrNet
 	TErrError // propagate error
 )
 
@@ -113,6 +115,10 @@ func (err Terror) String() string {
 		return "exists"
 	case TErrEOF:
 		return "EOF"
+	case TErrBadFcall:
+		return "bad fcall"
+	case TErrNet:
+		return "network error"
 	case TErrError:
 		return "Error"
 	default:
@@ -160,6 +166,10 @@ func IsDirNotFound(error error) bool {
 
 func IsErrExists(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrExists.String())
+}
+
+func IsErrEOF(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrEOF.String())
 }
 
 //

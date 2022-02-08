@@ -1,11 +1,13 @@
 package ninep
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 )
 
-type Terror int8
+type Terror uint8
 
 const (
 	TErrBadattach Terror = iota + 1
@@ -119,33 +121,85 @@ func (err Terror) String() string {
 }
 
 type Err struct {
-	err Terror
-	obj string
+	ErrCode Terror
+	Obj     string
 }
 
 func MkErr(err Terror, obj interface{}) *Err {
 	return &Err{err, fmt.Sprintf("%v", obj)}
 }
 
-func (err *Err) Err() Terror {
-	return err.err
+func (err *Err) Code() Terror {
+	return err.ErrCode
 }
 
 func (err *Err) Error() string {
-	return fmt.Sprintf("%v %v", err.err, err.obj)
+	return fmt.Sprintf("%v %v", err.ErrCode, err.Obj)
+}
+
+func (err *Err) String() string {
+	return err.Error()
 }
 
 func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
 }
 
-func IsErrNotfound(err error) bool {
-	return strings.Contains(err.Error(), TErrNotfound.String())
+func IsErrNotfound(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrNotfound.String())
 }
-func IsDirNotFound(err error) bool {
+
+func IsDirNotFound(error error) bool {
 	b := false
-	if IsErrNotfound(err) {
-		p := Split(strings.TrimPrefix(err.Error(), TErrNotfound.String()))
+	if IsErrNotfound(error) {
+		p := Split(strings.TrimPrefix(error.Error(), TErrNotfound.String()))
+		b = len(p) > 1
+	}
+	return b
+}
+
+func IsErrExists(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrExists.String())
+}
+
+//
+// JSON versions
+//
+
+func (err *Err) RerrorJson() *Rerror {
+	data, error := json.Marshal(*err)
+	if error != nil {
+		log.Fatalf("FATAL Rerror err %v\n", error)
+	}
+	return &Rerror{string(data)}
+}
+
+func Decode(error error) *Err {
+	err := &Err{}
+	r := json.Unmarshal([]byte(error.Error()), err)
+	if r != nil {
+		log.Printf("cannot unmarshal = %v\n", error.Error())
+		return nil
+	}
+	return err
+}
+
+func IsErrNotfoundJson(error error) bool {
+	err := Decode(error)
+	if err == nil {
+		return false
+	}
+	return err.Code() == TErrNotfound
+}
+
+func IsDirNotFoundJson(error error) bool {
+	b := false
+	err := Decode(error)
+	if err == nil {
+		return b
+	}
+	if err.Code() == TErrNotfound {
+		p := Split(err.Obj)
 		b = len(p) > 1
 	}
 	return b

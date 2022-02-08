@@ -234,7 +234,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 			dws.WakeupWatchL()
 			return o1, nil
 		} else {
-			if mode&np.OWATCH == np.OWATCH && err.Err() == np.TErrExists {
+			if mode&np.OWATCH == np.OWATCH && err.Code() == np.TErrExists {
 				fws.Unlock()
 				err := fos.watch(dws, fos.sid)
 				fws.Lock() // not necessary if fail, but nicer with defer

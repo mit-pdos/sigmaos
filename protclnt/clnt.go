@@ -41,14 +41,14 @@ func (clnt *Clnt) RmFence(fence np.Tfence) error {
 	return clnt.cm.rmFence(fence)
 }
 
-func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, error) {
+func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, *np.Err) {
 	reply, err := clnt.cm.makeCall(server, args)
 	if err != nil {
 		return nil, err
 	}
 	rmsg, ok := reply.(np.Rerror)
 	if ok {
-		return nil, errors.New(rmsg.Ename)
+		return nil, np.Error2Err(rmsg.Ename)
 	}
 	return reply, nil
 }
@@ -67,13 +67,13 @@ func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path []stri
 }
 
 func (clnt *Clnt) MakeProtClnt(server []string) *ProtClnt {
-	protclnt := &ProtClnt{server, clnt.cm}
+	protclnt := &ProtClnt{server, clnt}
 	return protclnt
 }
 
 type ProtClnt struct {
 	server []string
-	cm     *ConnMgr
+	clnt   *Clnt
 }
 
 func (pclnt *ProtClnt) Server() []string {
@@ -81,19 +81,11 @@ func (pclnt *ProtClnt) Server() []string {
 }
 
 func (pclnt *ProtClnt) Disconnect() {
-	pclnt.cm.disconnect(pclnt.server)
+	pclnt.clnt.cm.disconnect(pclnt.server)
 }
 
-func (pclnt *ProtClnt) Call(args np.Tmsg) (np.Tmsg, error) {
-	reply, err := pclnt.cm.makeCall(pclnt.server, args)
-	if err != nil {
-		return nil, err
-	}
-	rmsg, ok := reply.(np.Rerror)
-	if ok {
-		return nil, errors.New(rmsg.Ename)
-	}
-	return reply, nil
+func (pclnt *ProtClnt) Call(args np.Tmsg) (np.Tmsg, *np.Err) {
+	return pclnt.clnt.CallServer(pclnt.server, args)
 }
 
 func (pclnt *ProtClnt) Flush(tag np.Ttag) error {

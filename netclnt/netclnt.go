@@ -325,7 +325,7 @@ func (nc *NetClnt) writer() {
 			}
 			// If exit the thread if the connection is broken
 			if err.Code() == np.TErrNet {
-				log.Fatal(err)
+				log.Fatalf("FATAL MarshallFcallToWriter %v\n", err)
 				return
 			}
 			db.DLPrintf("NETCLNT", "Writer: NetClnt error to %v: %v", nc.Dst(), err)

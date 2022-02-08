@@ -187,6 +187,19 @@ func IsErrRetry(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }
 
+func Error2Err(error string) *Err {
+	err := &Err{TErrError, error}
+	for c := TErrBadattach; c <= TErrError; c++ {
+		if strings.HasPrefix(error, c.String()) {
+			err.ErrCode = c
+			err.Obj = strings.TrimPrefix(error, c.String()+" ")
+			return err
+		}
+	}
+	log.Printf("cannot decode = %v err %v\n", error, err)
+	return err
+}
+
 //
 // JSON versions
 //

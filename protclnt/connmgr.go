@@ -29,7 +29,7 @@ func makeConn(nc *netclnt.NetClnt) *conn {
 	return c
 }
 
-func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno) (np.Tmsg, error) {
+func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno) (np.Tmsg, *np.Err) {
 	reqfc := &np.Fcall{}
 	reqfc.Type = req.Type()
 	reqfc.Msg = req
@@ -89,7 +89,7 @@ func (cm *ConnMgr) exit() {
 }
 
 // XXX Make array
-func (cm *ConnMgr) allocConn(addrs []string) (*conn, error) {
+func (cm *ConnMgr) allocConn(addrs []string) (*conn, *np.Err) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -115,7 +115,7 @@ func (cm *ConnMgr) lookupConn(addrs []string) (*conn, bool) {
 	return conn, ok
 }
 
-func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, error) {
+func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, *np.Err) {
 	conn, err := cm.allocConn(dst)
 	if err != nil {
 		return nil, err

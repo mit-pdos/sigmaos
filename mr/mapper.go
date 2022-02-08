@@ -159,7 +159,6 @@ func (m *Mapper) doMap() error {
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
-			log.Printf("mapper err %v\n", err)
 			// May be due to partition
 			if np.IsErrEOF(err) {
 				log.Fatalf("%v: FATA/L symlink %v err %v\n", proc.GetProgram(), name, err)

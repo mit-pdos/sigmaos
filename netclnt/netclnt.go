@@ -2,7 +2,6 @@ package netclnt
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -66,10 +65,10 @@ func MkNetClnt(addrs []string) (*NetClnt, *np.Err) {
 	nc.requests = make(chan *RpcT)
 	nc.outstanding = make(map[np.Ttag]*RpcT)
 	nc.addrs = addrs
-	error := nc.connect()
-	if error != nil {
-		log.Printf("%v: mkNetClnt connect %v err %v\n", proc.GetProgram(), addrs, error)
-		return nil, np.MkErr(np.TErrNet, error)
+	err := nc.connect()
+	if err != nil {
+		log.Printf("%v: mkNetClnt connect %v err %v\n", proc.GetProgram(), addrs, err)
+		return nil, err
 	}
 	go nc.writer()
 	go nc.reader()
@@ -187,14 +186,14 @@ func (nc *NetClnt) getBufio() (*bufio.Reader, *bufio.Writer, error) {
 	return nc.br, nc.bw, nil
 }
 
-func (nc *NetClnt) connect() error {
+func (nc *NetClnt) connect() *np.Err {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
 	return nc.connectL()
 }
 
-func (nc *NetClnt) connectL() error {
+func (nc *NetClnt) connectL() *np.Err {
 	for _, addr := range nc.addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -209,7 +208,7 @@ func (nc *NetClnt) connectL() error {
 		return nil
 	}
 	db.DLPrintf("NETCLNT", "No successful connections %v\n", nc.addrs)
-	return fmt.Errorf("unable to connect")
+	return np.MkErr(np.TErrEOF, "no connection")
 }
 
 func (nc *NetClnt) allocate(req *RpcT) np.Ttag {

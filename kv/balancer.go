@@ -7,7 +7,6 @@ package kv
 //
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -167,9 +166,9 @@ func (c *Ctl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 	if len(words) != 2 {
 		return 0, np.MkErr(np.TErrInval, words)
 	}
-	error := c.bl.balance(words[0], words[1])
-	if error != nil {
-		return 0, np.MkErr(np.TErrError, error)
+	err := c.bl.balance(words[0], words[1])
+	if err != nil {
+		return 0, err
 	}
 	return np.Tsize(len(b)), nil
 }
@@ -389,9 +388,9 @@ func (bl *Balancer) runMovers(moves Moves) {
 	log.Printf("%v: movers all done\n", proc.GetProgram())
 }
 
-func (bl *Balancer) balance(opcode, mfs string) error {
+func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	if bl.testAndSetRecovering() {
-		return fmt.Errorf("retry")
+		return np.MkErr(np.TErrRetry, "busy")
 	}
 	defer bl.setRecovering(false)
 

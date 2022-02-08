@@ -159,9 +159,10 @@ func (m *Mapper) doMap() error {
 		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
+			log.Printf("mapper err %v\n", err)
 			// May be due to partition
 			if np.IsErrEOF(err) {
-				log.Fatalf("%v: FATAL symlink %v err %v\n", proc.GetProgram(), name, err)
+				log.Fatalf("%v: FATA/L symlink %v err %v\n", proc.GetProgram(), name, err)
 			}
 			// If the reducer successfully completed, the reducer dir won't be found.
 			// In that case, we don't want to mark the mapper as "failed", since this

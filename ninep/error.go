@@ -42,11 +42,12 @@ const (
 	TErrUnknownFence
 	TErrInvalidSession
 	TErrExists
-	TErrClosed
-	TErrEOF
+	TErrClosed // for pipes
+	TErrEOF    // EOF or cannot connect
 	TErrBadFcall
 	TErrNet
-	TErrError // propagate error
+	TErrRetry
+	TErrError // to propagate non-sigma errors
 )
 
 func (err Terror) String() string {
@@ -119,6 +120,8 @@ func (err Terror) String() string {
 		return "bad fcall"
 	case TErrNet:
 		return "network error"
+	case TErrRetry:
+		return "retry"
 	case TErrError:
 		return "Error"
 	default:
@@ -170,6 +173,14 @@ func IsErrExists(error error) bool {
 
 func IsErrEOF(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrEOF.String())
+}
+
+func IsErrStale(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrStale.String())
+}
+
+func IsErrRetry(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }
 
 //

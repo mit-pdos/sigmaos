@@ -4,7 +4,6 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -148,9 +147,8 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 		}
 		// XXX error checking in one place and more uniform
 		if np.IsErrEOF(err) ||
-			strings.HasPrefix(err.Error(), "file not found") ||
-			strings.HasPrefix(err.Error(), "Error retry") ||
-			strings.HasPrefix(err.Error(), "unable to connect") {
+			np.IsErrNotfound(err) ||
+			np.IsErrRetry(err) {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			return err

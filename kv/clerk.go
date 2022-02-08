@@ -244,7 +244,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 		// try refreshing config is sufficient to fix error
 		// involving KVCONFIG or if EOF to a kv group.
 		if strings.Contains(err.Error(), KVCONFIG) ||
-			strings.HasPrefix(err.Error(), "stale") ||
+			np.IsErrStale(err) ||
 			np.IsErrEOF(err) {
 			err = kc.refreshConfig(err)
 		}

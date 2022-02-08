@@ -175,7 +175,7 @@ func TestEphemeral(t *testing.T) {
 			log.Printf("retry\n")
 			continue
 		}
-		assert.Equal(t, true, strings.HasPrefix(err.Error(), "file not found"))
+		assert.True(t, np.IsErrNotfound(err))
 		break
 	}
 	assert.Greater(t, N, n, "Waiting too long")

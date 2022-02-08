@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -197,7 +196,8 @@ func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
 		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
 			ch <- true
 		})
-		if err != nil && strings.HasPrefix(err.Error(), "file not found") {
+		// if err != nil && strings.HasPrefix(err.Error(), "file not found") {
+		if err != nil && np.IsErrNotfound(err) {
 			// log.Printf("%v: file watch wait %v\n", proc.GetProgram(), fc.fenceName)
 			<-ch
 		} else if err != nil {

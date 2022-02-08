@@ -127,7 +127,7 @@ func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, error) {
 	} else {
 		reply, err = fsc.clnt(fid1).Walk(fid1, fid2, rest)
 		if err != nil {
-			if w != nil && strings.HasPrefix(err.Error(), "file not found") {
+			if w != nil && np.IsErrNotfound(err) {
 				var err1 error
 				reply, err1 = fsc.setWatch(fid1, fid2, path, rest, w)
 				if err1 != nil {

@@ -4,7 +4,6 @@ import (
 	"log"
 	"path"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 

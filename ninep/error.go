@@ -158,6 +158,10 @@ func IsErrNotfound(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrNotfound.String())
 }
 
+func ErrNotfoundPath(error error) string {
+	return strings.TrimPrefix(error.Error(), TErrNotfound.String()+" ")
+}
+
 func IsDirNotFound(error error) bool {
 	b := false
 	if IsErrNotfound(error) {

@@ -197,7 +197,7 @@ func (kc KvClerk) retryReadConfig() error {
 		}
 
 		// maybe retryReadConfig failed with a stale error
-		if strings.HasPrefix(err.Error(), "stale") {
+		if np.IsErrStale(err) {
 			log.Printf("%v: retry refreshConfig %v\n", proc.GetProgram(), err)
 			continue
 		}
@@ -259,7 +259,8 @@ func (kc *KvClerk) fixRetry(err error) error {
 	// Shard dir hasn't been created yet (config 0) or hasn't moved
 	// yet, so wait a bit, and retry.  XXX make sleep time
 	// dynamic?
-	if strings.HasPrefix(err.Error(), "file not found shard") {
+
+	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrNotfoundPath(err), "shard") {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}

@@ -485,7 +485,7 @@ func TestLockAfterConnClose(t *testing.T) {
 // Test race: write returns successfully after rename, but read sees
 // an old value,
 func TestWatchRemoveConcur(t *testing.T) {
-	const N = 10_000
+	const N = 5_000
 
 	ts := makeTstate(t)
 	dn := "name/d1"
@@ -500,10 +500,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
 		for i := 1; i < N; {
 			err := fsl.MakeFile(fn, 0777, np.OWRITE, nil)
-			// assert.Equal(t, nil, err)
-			if err != nil {
-				log.Fatalf("Makefile %v err %v\n", fn, err)
-			}
+			assert.Equal(t, nil, err)
 			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
 				// log.Printf("watch cb %v err %v\n", i, r)
 				ch <- r

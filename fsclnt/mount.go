@@ -113,7 +113,7 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 	return np.NoFid, path
 }
 
-func (mnt *Mount) umount(path []string) (np.Tfid, error) {
+func (mnt *Mount) umount(path []string) (np.Tfid, *np.Err) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
@@ -126,5 +126,5 @@ func (mnt *Mount) umount(path []string) (np.Tfid, error) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, fmt.Errorf("file not found no mount %v", path)
+	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("umount %v\n", path))
 }

@@ -38,7 +38,6 @@ func (fl *FsLib) MountTree(server []string, tree, mount string) error {
 	}
 }
 
-// XXX not mounting "name" in named is a hack
 func MakeFsLibAddr(uname string, server []string) *FsLib {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(server, "", "name")

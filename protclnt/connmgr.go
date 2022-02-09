@@ -1,7 +1,6 @@
 package protclnt
 
 import (
-	"errors"
 	"log"
 	"strings"
 	"sync"
@@ -44,7 +43,7 @@ func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno) (np.T
 
 type result struct {
 	conn *conn
-	err  error
+	err  *np.Err
 }
 
 func (conn *conn) aSend(ch chan result, dst []string, req np.Tmsg, s np.Tsession, seq *np.Tseqno) {
@@ -54,7 +53,7 @@ func (conn *conn) aSend(ch chan result, dst []string, req np.Tmsg, s np.Tsession
 	} else {
 		if rmsg, ok := reply.(np.Rerror); ok {
 			// log.Printf("aSend err %v %v err %v\n", dst, req, rmsg.Ename)
-			ch <- result{conn, errors.New(rmsg.Ename)}
+			ch <- result{conn, np.Error2Err(rmsg.Ename)}
 		} else {
 			ch <- result{conn, nil}
 		}
@@ -135,7 +134,7 @@ func (cm *ConnMgr) disconnect(dst []string) bool {
 // Multicasts a req on connections of cm. Caller specifies (1) ok
 // func, which returns whether to send or not on a given conn, and (2)
 // r to process the reply to a send.
-func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) error) error {
+func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) error) *np.Err {
 	ch := make(chan result)
 	cm.mu.Lock()
 
@@ -150,7 +149,7 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 	}
 	cm.mu.Unlock()
 
-	var err error
+	var err *np.Err
 	for i := 0; i < n; i++ {
 		res := <-ch
 		r(res)
@@ -166,7 +165,7 @@ func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) err
 	return err
 }
 
-func (cm *ConnMgr) registerFence(fence np.Tfence, new bool) error {
+func (cm *ConnMgr) registerFence(fence np.Tfence, new bool) *np.Err {
 	req := np.Tregfence{fence}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
@@ -182,7 +181,7 @@ func (cm *ConnMgr) registerFence(fence np.Tfence, new bool) error {
 	return err
 }
 
-func (cm *ConnMgr) deregisterFence(fence np.Tfence) error {
+func (cm *ConnMgr) deregisterFence(fence np.Tfence) *np.Err {
 	req := np.Tunfence{fence}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {

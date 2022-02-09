@@ -39,6 +39,10 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, t *threadmgr.Thread) 
 	return sess
 }
 
+func (sess *Session) GetThread() *threadmgr.Thread {
+	return sess.thread
+}
+
 func (sess *Session) Lease(fn []string, qid np.Tqid) error {
 	return sess.lm.Add(lease.MakeLease(fn, qid))
 }

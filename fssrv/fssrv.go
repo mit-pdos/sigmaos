@@ -55,7 +55,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.tm = threadmgr.MakeThreadMgr(fssrv.Process)
+	fssrv.tm = threadmgr.MakeThreadMgr(fssrv.process)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.tm)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
@@ -129,6 +129,13 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
+	// New thread about to start
+	sess.IncThreads()
+	sess.GetThread().Process(fc, replies)
+}
+
+func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+	sess := fssrv.st.Alloc(fc.Session)
 	reply, rerror := fssrv.fenceSession(sess, fc.Msg)
 	if rerror != nil {
 		reply = rerror
@@ -138,9 +145,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 		return
 	}
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	// New thread about to start
-	sess.IncThreads()
-	go fssrv.serve(sess, fc, replies)
+	fssrv.serve(sess, fc, replies)
 }
 
 // Register lease, unregister lease, and check lease

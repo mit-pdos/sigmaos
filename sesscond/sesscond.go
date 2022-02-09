@@ -11,6 +11,7 @@ import (
 	// db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/session"
+	"ulambda/threadmgr"
 )
 
 //
@@ -21,6 +22,7 @@ import (
 
 type cond struct {
 	isClosed bool
+	thread   *threadmgr.Thread
 	c        *sync.Cond
 }
 
@@ -48,16 +50,15 @@ func makeSessCond(st *session.SessionTable, lock sync.Locker) *SessCond {
 func (sc *SessCond) closed(sessid np.Tsession) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
+
 	// log.Printf("cond %p: close %v %v\n", sc, sessid, sc.conds)
 	if condlist, ok := sc.conds[sessid]; ok {
 		// log.Printf("%p: sess %v closed\n", sc, sessid)
 		for _, c := range condlist {
 			c.isClosed = true
-			// TODO: inseart threadmgr wakeups
-			c.c.Signal()
+			c.thread.Wake(c.c)
 		}
 	}
-	// XXX should I delete?
 	delete(sc.conds, sessid)
 }
 
@@ -66,6 +67,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 		sc.conds[sessid] = []*cond{}
 	}
 	c := &cond{}
+	c.thread = sc.st.SessThread(sessid)
 	c.c = sync.NewCond(sc.lock)
 	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
@@ -77,8 +79,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 func (sc *SessCond) Wait(sessid np.Tsession) error {
 	c := sc.alloc(sessid)
 
-	// TODO: threadmgr sleep here
-	c.c.Wait()
+	c.thread.Sleep(c.c)
 
 	closed := c.isClosed
 
@@ -91,24 +92,24 @@ func (sc *SessCond) Wait(sessid np.Tsession) error {
 
 // Caller should hold sc lock.
 func (sc *SessCond) Signal() {
-	for _, condlist := range sc.conds {
+	for sid, condlist := range sc.conds {
 		// acquire c.lock() to ensure signal doesn't happen
 		// between releasing sc or sess lock and going to
 		// sleep.
 		for _, c := range condlist {
-			// TODO: threadmgr wakeups
-			c.c.Signal()
+			c.thread.Wake(c.c)
 		}
+		delete(sc.conds, sid)
 	}
 }
 
 // Caller should hold sc lock.
 func (sc *SessCond) Broadcast() {
-	for _, condlist := range sc.conds {
+	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
-			// TODO: threadmgr wakeups
-			c.c.Signal()
+			c.thread.Wake(c.c)
 		}
+		delete(sc.conds, sid)
 	}
 }
 

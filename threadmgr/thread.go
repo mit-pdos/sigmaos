@@ -1,7 +1,6 @@
 package threadmgr
 
 import (
-	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"

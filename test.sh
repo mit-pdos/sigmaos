@@ -18,7 +18,6 @@ go test $1 ulambda/fslib
 go test $1 ulambda/stats
 go test $1 ulambda/leaseclnt
 go test $1 ulambda/semclnt
-go test $1 ulambda/sync
 
 #
 # test proxy

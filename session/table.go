@@ -67,3 +67,7 @@ func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.Thread {
 	}
 	return nil
 }
+
+func (st *SessionTable) KillSessThread(sid np.Tsession) {
+	st.tm.RemoveThread(st.SessThread(sid))
+}

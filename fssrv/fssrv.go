@@ -211,6 +211,9 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	// Wait until nthread == 0
 	sess.WaitThreads()
 
+	// Stop sess thread.
+	fssrv.st.KillSessThread(sid)
+
 	// Detach the session to remove ephemeral files and close open fids.
 	fssrv.st.Detach(sid)
 

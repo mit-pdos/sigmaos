@@ -92,7 +92,6 @@ func (t *Thread) run() {
 		// Check if we have pending wakeups or new ops.
 		for len(t.ops) == 0 && len(t.wakeups) == 0 {
 			if t.done {
-				log.Printf("Thread done")
 				return
 			}
 
@@ -152,7 +151,6 @@ func (t *Thread) start() {
 func (t *Thread) stop() {
 	t.Lock()
 	defer t.Unlock()
-	log.Fatalf("STOPPING THREAD ==========================")
 	t.done = true
 	t.cond.Signal()
 }

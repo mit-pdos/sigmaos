@@ -129,13 +129,6 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
-	// New thread about to start
-	sess.IncThreads()
-	sess.GetThread().Process(fc, replies)
-}
-
-func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
-	sess := fssrv.st.Alloc(fc.Session)
 	reply, rerror := fssrv.fenceSession(sess, fc.Msg)
 	if rerror != nil {
 		reply = rerror
@@ -144,6 +137,13 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 		fssrv.sendReply(fc.Tag, reply, replies)
 		return
 	}
+	// New thread about to start
+	sess.IncThreads()
+	sess.GetThread().Process(fc, replies)
+}
+
+func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	fssrv.serve(sess, fc, replies)
 }

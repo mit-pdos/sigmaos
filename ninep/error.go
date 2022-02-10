@@ -30,7 +30,7 @@ const (
 	TErrBaddir
 	TErrWalknodir
 
-	// sigma
+	// sigma protocol errors
 	TErrNotSupported
 	TErrInval
 	TErrUnknownMsg
@@ -48,6 +48,9 @@ const (
 	TErrNet
 	TErrRetry
 	TErrError // to propagate non-sigma errors
+
+	// sigma OS errors
+	TErrBadFd
 )
 
 func (err Terror) String() string {
@@ -124,6 +127,11 @@ func (err Terror) String() string {
 		return "retry"
 	case TErrError:
 		return "Error"
+
+	// sigma OS errors
+	case TErrBadFd:
+		return "Bad fd"
+
 	default:
 		return "unknown error"
 	}

@@ -156,10 +156,10 @@ func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
 
 func (fsc *FsClient) lookupStL(fd int) (*FdState, error) {
 	if fd < 0 || fd >= len(fsc.fds) {
-		return nil, fmt.Errorf("Too big fd %v", fd)
+		return nil, np.MkErr(np.TErrBadFd, fd)
 	}
 	if fsc.fds[fd].fid == np.NoFid {
-		return nil, fmt.Errorf("Non-existing fd %v", fd)
+		return nil, np.MkErr(np.TErrBadFd, fd)
 	}
 	return &fsc.fds[fd], nil
 }
@@ -176,10 +176,10 @@ func (fsc *FsClient) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (
 	defer fsc.Unlock()
 
 	if fd < 0 || fd >= len(fsc.fds) {
-		return false, fmt.Errorf("Too big fd %v", fd)
+		return false, np.MkErr(np.TErrBadFd, fd)
 	}
 	if fsc.fds[fd].fid == np.NoFid {
-		return false, fmt.Errorf("Non-existing fd %v", fd)
+		return false, np.MkErr(np.TErrBadFd, fd)
 	}
 	fdst := &fsc.fds[fd]
 	if fdst.offset == oldOff {

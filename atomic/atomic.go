@@ -24,7 +24,7 @@ func MakeFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) 
 	err = fsl.Rename(tmpPath, fname)
 	if err != nil {
 		debug.PrintStack()
-		log.Fatalf("Error in MakeFileAtomic rename %v -> %v: %v", tmpPath, fname, err)
+		log.Fatalf("FATAL Error in MakeFileAtomic rename %v -> %v: %v", tmpPath, fname, err)
 		return err
 	}
 	return err

@@ -47,7 +47,7 @@ func (clnt *ProcClnt) linkChildIntoParentDir(pid, procdir string) error {
 	// Add symlink to child
 	link := path.Join(proc.PARENTDIR, proc.PROCDIR)
 	// May return file not found if parent exited.
-	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil && err.Error() != "file not found" {
+	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil && !np.IsErrNotfound(err) {
 		log.Printf("%v: Spawn Symlink child %v err %v\n", proc.GetProgram(), link, err)
 		return clnt.cleanupError(pid, procdir, err)
 	}

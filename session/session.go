@@ -43,11 +43,11 @@ func (sess *Session) Fence(req np.Tregfence) {
 	sess.myFences.Insert(req.Fence)
 }
 
-func (sess *Session) Unfence(idf np.Tfenceid) error {
+func (sess *Session) Unfence(idf np.Tfenceid) *np.Err {
 	return sess.myFences.Del(idf)
 }
 
-func (sess *Session) CheckFences(fsl *fslib.FsLib) error {
+func (sess *Session) CheckFences(fsl *fslib.FsLib) *np.Err {
 	fences := sess.myFences.Fences()
 	//if len(fences) > 0 {
 	//	log.Printf("%v: CheckFences %v\n", sess.Sid, fences)

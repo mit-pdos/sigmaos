@@ -216,6 +216,7 @@ func (fc *FenceClnt) ReleaseFence() error {
 	}
 	err := fc.DeregisterFence(*fc.f)
 	if err != nil {
+		log.Printf("%v: deregister %v err %v\n", proc.GetProgram(), fc.fenceName, err)
 		return err
 	}
 	fc.f = nil

@@ -187,7 +187,7 @@ func IsErrRetry(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }
 
-func Error2Err(error string) *Err {
+func Rerror2Err(error string) *Err {
 	err := &Err{TErrError, error}
 	for c := TErrBadattach; c <= TErrError; c++ {
 		if strings.HasPrefix(error, c.String()) {

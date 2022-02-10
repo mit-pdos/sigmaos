@@ -31,11 +31,11 @@ func (clnt *Clnt) RegisterFence(fence np.Tfence, new bool) *np.Err {
 	return clnt.cm.registerFence(fence, new)
 }
 
-func (clnt *Clnt) DeregisterFence(fence np.Tfence) error {
+func (clnt *Clnt) DeregisterFence(fence np.Tfence) *np.Err {
 	return clnt.cm.deregisterFence(fence)
 }
 
-func (clnt *Clnt) RmFence(fence np.Tfence) error {
+func (clnt *Clnt) RmFence(fence np.Tfence) *np.Err {
 	return clnt.cm.rmFence(fence)
 }
 
@@ -46,7 +46,7 @@ func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, *np.Err) {
 	}
 	rmsg, ok := reply.(np.Rerror)
 	if ok {
-		return nil, np.Error2Err(rmsg.Ename)
+		return nil, np.Rerror2Err(rmsg.Ename)
 	}
 	return reply, nil
 }

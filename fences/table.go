@@ -38,7 +38,7 @@ func (ft *FenceTable) Insert(f np.Tfence) {
 	ft.fences[f.FenceId] = f
 }
 
-func (ft *FenceTable) Del(idf np.Tfenceid) error {
+func (ft *FenceTable) Del(idf np.Tfenceid) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
 

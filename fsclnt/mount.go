@@ -31,14 +31,14 @@ func makeMount() *Mount {
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *Mount) add(path []string, fid np.Tfid) error {
+func (mnt *Mount) add(path []string, fid np.Tfid) *np.Err {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if np.IsPathEq(path, p.path) {
-			return fmt.Errorf("existing mount %v", p.path)
+			return np.MkErr(np.TErrExists, fmt.Sprintf("mount %v", p.path))
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)

@@ -156,7 +156,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		// more recent one in the recent fences table
 		err := sess.CheckFences(fssrv.fsl)
 		if err != nil {
-			return nil, &np.Rerror{err.Error()}
+			return nil, err.Rerror()
 		}
 		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
 	case np.Tregfence:
@@ -164,7 +164,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		err := fssrv.rft.UpdateFence(req.Fence)
 		if err != nil {
 			log.Printf("%v: Fence %v %v err %v\n", proc.GetProgram(), sess.Sid, req, err)
-			return nil, &np.Rerror{err.Error()}
+			return nil, err.Rerror()
 		}
 		// Fence was present in recent fences table and not
 		// stale, or was not present. Now mark that all ops on
@@ -181,7 +181,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		// log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
 		err := sess.Unfence(req.Fence.FenceId)
 		if err != nil {
-			return nil, &np.Rerror{err.Error()}
+			return nil, err.Rerror()
 		}
 		reply := &np.Ropen{}
 		return reply, nil
@@ -189,7 +189,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		// log.Printf("%p: Rmfence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.rft.RmFence(req.Fence)
 		if err != nil {
-			return nil, &np.Rerror{err.Error()}
+			return nil, err.Rerror()
 		}
 		reply := &np.Ropen{}
 		return reply, nil

@@ -57,7 +57,7 @@ func (rft *RecentTable) UpdateSeqno(path []string) {
 // fence.  If the fence exists but newer, update the fence.  If the
 // fence is stale, return error.  XXX check that clnt is allowed to
 // update fence (e.g., same user id as for existing fence?)
-func (rft *RecentTable) UpdateFence(fence np.Tfence) error {
+func (rft *RecentTable) UpdateFence(fence np.Tfence) *np.Err {
 	rft.Lock()
 	defer rft.Unlock()
 
@@ -74,7 +74,7 @@ func (rft *RecentTable) UpdateFence(fence np.Tfence) error {
 
 // Remove fence. Client better be sure that there no procs exists that
 // rely on the fence.  XXX check that clnt is allowed to remove fence.
-func (rft *RecentTable) RmFence(fence np.Tfence) error {
+func (rft *RecentTable) RmFence(fence np.Tfence) *np.Err {
 	rft.Lock()
 	defer rft.Unlock()
 
@@ -91,7 +91,7 @@ func (rft *RecentTable) RmFence(fence np.Tfence) error {
 }
 
 // Check if supplied fence is recent.
-func (rft *RecentTable) IsRecent(fence np.Tfence) error {
+func (rft *RecentTable) IsRecent(fence np.Tfence) *np.Err {
 	rft.Lock()
 	defer rft.Unlock()
 

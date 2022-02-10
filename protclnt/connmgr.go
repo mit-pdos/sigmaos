@@ -53,7 +53,7 @@ func (conn *conn) aSend(ch chan result, dst []string, req np.Tmsg, s np.Tsession
 	} else {
 		if rmsg, ok := reply.(np.Rerror); ok {
 			// log.Printf("aSend err %v %v err %v\n", dst, req, rmsg.Ename)
-			ch <- result{conn, np.Error2Err(rmsg.Ename)}
+			ch <- result{conn, np.Rerror2Err(rmsg.Ename)}
 		} else {
 			ch <- result{conn, nil}
 		}
@@ -134,7 +134,7 @@ func (cm *ConnMgr) disconnect(dst []string) bool {
 // Multicasts a req on connections of cm. Caller specifies (1) ok
 // func, which returns whether to send or not on a given conn, and (2)
 // r to process the reply to a send.
-func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) error) *np.Err {
+func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) *np.Err) *np.Err {
 	ch := make(chan result)
 	cm.mu.Lock()
 
@@ -171,7 +171,7 @@ func (cm *ConnMgr) registerFence(fence np.Tfence, new bool) *np.Err {
 		func(conn *conn) bool {
 			return !new || !conn.fm.Present(fence.FenceId)
 		},
-		func(res result) error {
+		func(res result) *np.Err {
 			if res.err == nil && new {
 				res.conn.fm.Insert(fence)
 				return nil
@@ -187,7 +187,7 @@ func (cm *ConnMgr) deregisterFence(fence np.Tfence) *np.Err {
 		func(conn *conn) bool {
 			return conn.fm.Present(fence.FenceId)
 		},
-		func(res result) error {
+		func(res result) *np.Err {
 			if res.err == nil {
 				return res.conn.fm.Del(fence.FenceId)
 			}
@@ -196,13 +196,13 @@ func (cm *ConnMgr) deregisterFence(fence np.Tfence) *np.Err {
 	return err
 }
 
-func (cm *ConnMgr) rmFence(fence np.Tfence) error {
+func (cm *ConnMgr) rmFence(fence np.Tfence) *np.Err {
 	req := np.Trmfence{fence}
 	err := cm.mcastReq(req,
 		func(conn *conn) bool {
 			return conn.fm.Present(fence.FenceId)
 		},
-		func(res result) error {
+		func(res result) *np.Err {
 			return nil
 		})
 	return err

@@ -313,21 +313,24 @@ func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 // XXX not thread safe
 func (fsc *FsClient) RegisterFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); ok {
-		return fmt.Errorf("fence %v already present\n", f)
+		return np.MkErr(np.TErrExists, f.FenceId)
 	}
-	err := fsc.pc.RegisterFence(f, true)
-	if err == nil {
-		fsc.fm.Insert(f)
+	if err := fsc.pc.RegisterFence(f, true); err != nil {
+		return err
 	}
-	return err
+	fsc.fm.Insert(f)
+	return nil
 }
 
 func (fsc *FsClient) UpdateFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); !ok {
 		log.Printf("%v: update fence %v not present\n", proc.GetProgram(), f)
-		return fmt.Errorf("unknown fence %v", f)
+		return np.MkErr(np.TErrUnknownFence, f.FenceId)
 	}
-	return fsc.pc.RegisterFence(f, false)
+	if err := fsc.pc.RegisterFence(f, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (fsc *FsClient) DeregisterFence(f np.Tfence) error {
@@ -335,8 +338,10 @@ func (fsc *FsClient) DeregisterFence(f np.Tfence) error {
 		log.Printf("%v: dereg %v err %v\n", proc.GetProgram(), f, err)
 		return err
 	}
-	err := fsc.pc.DeregisterFence(f)
-	return err
+	if err := fsc.pc.DeregisterFence(f); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (fsc *FsClient) DeregisterFences() error {
@@ -350,7 +355,10 @@ func (fsc *FsClient) RmFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); !ok {
 		return fmt.Errorf("unknown fence %v", f)
 	}
-	return fsc.pc.RmFence(f)
+	if err := fsc.pc.RmFence(f); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, *np.Err) {

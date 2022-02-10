@@ -1,7 +1,6 @@
 package fsclnt
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -199,7 +198,7 @@ func (fsc *FsClient) Disconnect(path string) error {
 		if fsc.mnt.hasExited() {
 			return np.MkErr(np.TErrEOF, path)
 		}
-		return errors.New("file not found")
+		return np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
 	clnt := fsc.clnt(fid)
 	clnt.Disconnect()
@@ -681,8 +680,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 		if fsc.mnt.hasExited() {
 			return nil, np.MkErr(np.TErrEOF, path)
 		}
-		return nil, errors.New("file not found")
-
+		return nil, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
 	reply, err := fsc.clnt(fid).GetFile(fid, rest, mode, 0, 0)
 	if err != nil {
@@ -717,8 +715,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 		if fsc.mnt.hasExited() {
 			return 0, np.MkErr(np.TErrEOF, path)
 		}
-		return 0, errors.New("file not found")
-
+		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
 	reply, err := fsc.clnt(fid).SetFile(fid, rest, mode, perm, 0, data)
 	if err != nil {

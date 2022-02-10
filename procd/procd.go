@@ -1,7 +1,6 @@
 package procd
 
 import (
-	"io"
 	"log"
 	"os"
 	"path"
@@ -295,7 +294,7 @@ func (pd *Procd) worker(done *int32) {
 			pd.waitSpawnOrTimeout(ticker)
 			continue
 		}
-		if error != nil && (error == io.EOF || strings.Contains(error.Error(), "no mount")) {
+		if error != nil && (np.IsErrEOF(error) || strings.Contains(error.Error(), "no mount")) {
 			continue
 		}
 		if error != nil {

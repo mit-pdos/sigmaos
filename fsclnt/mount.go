@@ -126,5 +126,5 @@ func (mnt *Mount) umount(path []string) (np.Tfid, *np.Err) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("umount %v\n", path))
+	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v\n", path))
 }

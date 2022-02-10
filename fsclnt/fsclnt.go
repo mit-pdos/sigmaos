@@ -3,7 +3,6 @@ package fsclnt
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 	"sync"
@@ -198,7 +197,7 @@ func (fsc *FsClient) Disconnect(path string) error {
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "Disconnect: resolve  unknown fid\n")
 		if fsc.mnt.hasExited() {
-			return io.EOF
+			return np.MkErr(np.TErrEOF, path)
 		}
 		return errors.New("file not found")
 	}
@@ -221,8 +220,7 @@ func (fsc *FsClient) mount(fid np.Tfid, path string) *np.Err {
 	}
 
 	for _, f := range fsc.fm.Fences() {
-		err := fsc.pc.RegisterFence(f, true)
-		if err != nil {
+		if err := fsc.pc.RegisterFence(f, true); err != nil {
 			return err
 		}
 	}
@@ -480,7 +478,7 @@ func (fsc *FsClient) Remove(name string) error {
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "Remove: resolve unknown fid\n")
 		if fsc.mnt.hasExited() {
-			return io.EOF
+			return np.MkErr(np.TErrEOF, path)
 		}
 		return np.MkErr(np.TErrNotfound, path)
 	}
@@ -678,7 +676,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
 		if fsc.mnt.hasExited() {
-			return nil, io.EOF
+			return nil, np.MkErr(np.TErrEOF, path)
 		}
 		return nil, errors.New("file not found")
 
@@ -714,7 +712,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 	if fid == np.NoFid {
 		db.DLPrintf("FSCLNT", "SetFile: mount -> unknown fid\n")
 		if fsc.mnt.hasExited() {
-			return 0, io.EOF
+			return 0, np.MkErr(np.TErrEOF, path)
 		}
 		return 0, errors.New("file not found")
 

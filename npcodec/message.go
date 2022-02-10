@@ -8,7 +8,7 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/message.go
 
-func newMsg(typ np.Tfcall) (np.Tmsg, error) {
+func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 	switch typ {
 	case np.TTversion:
 		return np.Tversion{}, nil
@@ -89,5 +89,5 @@ func newMsg(typ np.Tfcall) (np.Tmsg, error) {
 	case np.TTrmfence:
 		return np.Trmfence{}, nil
 	}
-	return nil, fmt.Errorf("unknown message type: %v", (uint64)(typ))
+	return nil, np.MkErr(np.TErrBadFcall, fmt.Sprintf("unknown type: %v", (uint64)(typ)))
 }

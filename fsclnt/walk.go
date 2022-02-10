@@ -335,9 +335,9 @@ func (fsc *FsClient) unionLookup(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, q str
 		if len(reply.Data) == 0 {
 			return nil, np.MkErr(np.TErrNotfound, "union")
 		}
-		dirents, error := npcodec.Byte2Dir(reply.Data)
-		if error != nil {
-			return nil, np.MkErr(np.TErrError, error)
+		dirents, err := npcodec.Byte2Dir(reply.Data)
+		if err != nil {
+			return nil, err
 		}
 		reply1, err := fsc.unionScan(pc, fid, fid2, dirents, q)
 		if err != nil {

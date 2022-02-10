@@ -36,7 +36,11 @@ func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
 	if len(data) == 0 {
 		return nil, io.EOF
 	}
-	return npcodec.Byte2Dir(data)
+	if dents, err := npcodec.Byte2Dir(data); err != nil {
+		return nil, err
+	} else {
+		return dents, nil
+	}
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.

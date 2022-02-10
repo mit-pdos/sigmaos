@@ -64,17 +64,16 @@ func (c *SrvConn) reader() {
 			return
 		}
 		var fcall *np.Fcall
-		var error error
 		if c.wireCompat {
 			fcallWC := &np.FcallWireCompat{}
-			error = npcodec.Unmarshal(frame, fcallWC)
+			err = npcodec.Unmarshal(frame, fcallWC)
 			fcall = fcallWC.ToInternal()
 		} else {
 			fcall = &np.Fcall{}
-			error = npcodec.Unmarshal(frame, fcall)
+			err = npcodec.Unmarshal(frame, fcall)
 		}
-		if error != nil {
-			log.Print("reader: bad fcall: ", np.MkErr(np.TErrBadFcall, error.Error()), fcall)
+		if err != nil {
+			log.Print("reader: bad fcall: ", err)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			if c.sessid == 0 {

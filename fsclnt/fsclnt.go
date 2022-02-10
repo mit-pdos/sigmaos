@@ -350,7 +350,7 @@ func (fsc *FsClient) DeregisterFences() error {
 
 func (fsc *FsClient) RmFence(f np.Tfence) error {
 	if ok := fsc.fm.Present(f.FenceId); !ok {
-		return fmt.Errorf("unknown fence %v", f)
+		return np.MkErr(np.TErrUnknownFence, f.FenceId)
 	}
 	if err := fsc.pc.RmFence(f); err != nil {
 		return err
@@ -747,7 +747,7 @@ func (fsc *FsClient) ShutdownFs(name string) error {
 	path := np.Split(name)
 	fid, err := fsc.walkMany(path, true, nil)
 	if err != nil {
-		return fmt.Errorf("ShutdownFs walkMany %v error %v", path, err)
+		return err
 	}
 	err = fsc.clnt(fid).RemoveFile(fid, []string{".exit"})
 	if err != nil {

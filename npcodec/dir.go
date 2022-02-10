@@ -15,7 +15,7 @@ func DirSize(dir []*np.Stat) np.Tlength {
 }
 
 // Marshall part  of a directory [offset, cnt)
-func Dir2Byte(offset np.Toffset, cnt np.Tsize, dir []*np.Stat) ([]byte, error) {
+func Dir2Byte(offset np.Toffset, cnt np.Tsize, dir []*np.Stat) ([]byte, *np.Err) {
 	var buf []byte
 
 	if offset >= np.Toffset(DirSize(dir)) {
@@ -46,18 +46,16 @@ func Dir2Byte(offset np.Toffset, cnt np.Tsize, dir []*np.Stat) ([]byte, error) {
 	return buf, nil
 }
 
-func Byte2Dir(data []byte) ([]*np.Stat, error) {
-	var err error
+func Byte2Dir(data []byte) ([]*np.Stat, *np.Err) {
 	dirents := []*np.Stat{}
 	for len(data) > 0 {
 		st := np.Stat{}
-		err = Unmarshal(data, &st)
-		if err != nil {
+		if err := Unmarshal(data, &st); err != nil {
 			return dirents, err
 		}
 		dirents = append(dirents, &st)
 		sz := np.Tsize(SizeNp(st))
 		data = data[sz:]
 	}
-	return dirents, err
+	return dirents, nil
 }

@@ -16,12 +16,12 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
 
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v interface{}) *np.Err {
 	dec := &decoder{bytes.NewReader(data)}
 	return dec.decode(v)
 }
 
-func Marshal(v interface{}) ([]byte, error) {
+func Marshal(v interface{}) ([]byte, *np.Err) {
 	var b bytes.Buffer
 	enc := &encoder{&b}
 	if err := enc.encode(v); err != nil {
@@ -67,13 +67,13 @@ type encoder struct {
 	wr io.Writer
 }
 
-func (e *encoder) encode(vs ...interface{}) error {
+func (e *encoder) encode(vs ...interface{}) *np.Err {
 	for _, v := range vs {
 		switch v := v.(type) {
 		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
 			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 		case []byte:
 			// XXX Bail out early to serialize separately
@@ -83,16 +83,16 @@ func (e *encoder) encode(vs ...interface{}) error {
 			}
 
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 		case string:
 			if err := binary.Write(e.wr, binary.LittleEndian, uint16(len(v))); err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 
 			_, err := io.WriteString(e.wr, v)
 			if err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 		case *string:
 			if err := e.encode(*v); err != nil {
@@ -217,7 +217,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			log.Fatal("encode: Unknown type")
+			return np.MkErr(np.TErrBadFcall, "Unknown type")
 		}
 	}
 
@@ -228,12 +228,12 @@ type decoder struct {
 	rd io.Reader
 }
 
-func (d *decoder) decode(vs ...interface{}) error {
+func (d *decoder) decode(vs ...interface{}) *np.Err {
 	for _, v := range vs {
 		switch v := v.(type) {
 		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 		case *[]byte:
 			var l uint32
@@ -252,7 +252,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 			// more powerful than we need, since we're just serializing an array of
 			// bytes, after al.
 			if _, err := d.rd.Read(*v); err != nil && !(err == io.EOF && l == 0) {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 
 		case *string:
@@ -267,11 +267,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			n, err := io.ReadFull(d.rd, b)
 			if err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 
 			if n != int(l) {
-				return fmt.Errorf("unexpected string length")
+				return np.MkErr(np.TErrBadFcall, "bad string")
 			}
 			*v = string(b)
 		case *[]string:
@@ -325,7 +325,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			b := make([]byte, l)
 			if _, err := io.ReadFull(d.rd, b); err != nil {
-				return err
+				return np.MkErr(np.TErrNet, err)
 			}
 
 			elements, err := fields9p(v)
@@ -486,11 +486,11 @@ func SizeNp(vs ...interface{}) uint32 {
 // writing. We are using a lot of reflection here for fairly static
 // serialization but we can replace this in the future with generated code if
 // performance is an issue.
-func fields9p(v interface{}) ([]interface{}, error) {
+func fields9p(v interface{}) ([]interface{}, *np.Err) {
 	rv := reflect.Indirect(reflect.ValueOf(v))
 
 	if rv.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("cannot extract fields from non-struct: %v", rv)
+		return nil, np.MkErr(np.TErrBadFcall, "cannot extract fields from non-struct")
 	}
 
 	var elements []interface{}

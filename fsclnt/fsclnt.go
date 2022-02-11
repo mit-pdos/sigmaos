@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 
 	db "ulambda/debug"
 	"ulambda/fences"
@@ -16,40 +15,30 @@ import (
 //
 // Sigma file system API.  A sigma proc typically has one fsclnt
 // through which it interacts with all the file servers in a sigma
-// deployment.
+// deployment.  Alternatively (and not tested), a kernel could have
+// one fsclnt for all its procs, but then the servers must trust the
+// kernel to ensure that a proc uses only its fids; this allows many
+// procs to use a single TCP connection to a server.
 //
-
-const (
-	MAXFD = 20
-)
 
 type Watch func(string, error)
 
-type FdState struct {
-	offset np.Toffset
-	fid    np.Tfid
-	mode   np.Tmode
-}
-
 type FsClient struct {
-	sync.Mutex
-	fds   []FdState
-	fids  map[np.Tfid]*Path
+	fds   *FdTable
+	fids  *FidMap
 	pc    *protclnt.Clnt
-	mnt   *Mount
-	next  np.Tfid
+	mnt   *MntTable
 	uname string
 	fm    *fences.FenceTable
 }
 
 func MakeFsClient(uname string) *FsClient {
 	fsc := &FsClient{}
-	fsc.fds = make([]FdState, 0, MAXFD)
-	fsc.fids = make(map[np.Tfid]*Path)
-	fsc.mnt = makeMount()
+	fsc.fds = mkFdTable()
+	fsc.fids = mkFidMap()
+	fsc.mnt = makeMntTable()
 	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
-	fsc.next = 0
 	fsc.fm = fences.MakeFenceTable()
 	return fsc
 }
@@ -66,127 +55,12 @@ func (fsc *FsClient) Exit() {
 func (fsc *FsClient) String() string {
 	str := fmt.Sprintf("Fsclnt table:\n")
 	str += fmt.Sprintf("fds %v\n", fsc.fds)
-	for k, v := range fsc.fids {
-		str += fmt.Sprintf("fid %v chan %v\n", k, v)
-	}
+	str += fmt.Sprintf("fids %v\n", fsc.fids)
 	return str
 }
 
 func (fsc *FsClient) Uname() string {
 	return fsc.uname
-}
-
-func (fsc *FsClient) clnt(fid np.Tfid) *protclnt.ProtClnt {
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	return fsc.fids[fid].pc
-}
-
-func (fsc *FsClient) path(fid np.Tfid) *Path {
-	fsc.Lock()
-	defer fsc.Unlock()
-	return fsc.fids[fid]
-}
-
-func (fsc *FsClient) addFid(fid np.Tfid, path *Path) {
-	fsc.Lock()
-	defer fsc.Unlock()
-	fsc.fids[fid] = path
-}
-
-// XXX maybe close channel?
-func (fsc *FsClient) freeFidUnlocked(fid np.Tfid) {
-	_, ok := fsc.fids[fid]
-	if !ok {
-		log.Fatalf("FATAL %v: freeFid: fid %v unknown\n", fsc.uname, fid)
-	}
-	delete(fsc.fids, fid)
-}
-
-func (fsc *FsClient) freeFid(fid np.Tfid) {
-	fsc.Lock()
-	defer fsc.Unlock()
-	fsc.freeFidUnlocked(fid)
-}
-
-func (fsc *FsClient) findfd(nfid np.Tfid, m np.Tmode) int {
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	for fd, fdst := range fsc.fds {
-		if fdst.fid == np.NoFid {
-			fsc.fds[fd].offset = 0
-			fsc.fds[fd].fid = nfid
-			fsc.fds[fd].mode = m
-			return fd
-		}
-	}
-	// no free one
-	fsc.fds = append(fsc.fds, FdState{0, nfid, m})
-	return len(fsc.fds) - 1
-}
-
-func (fsc *FsClient) closefd(fd int) {
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	fsc.freeFidUnlocked(fsc.fds[fd].fid)
-	fsc.fds[fd].fid = np.NoFid
-}
-
-func (fsc *FsClient) allocFid() np.Tfid {
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	fid := fsc.next
-	fsc.next += 1
-	return fid
-}
-
-func (fsc *FsClient) lookup(fd int) (np.Tfid, error) {
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	if fsc.fds[fd].fid == np.NoFid {
-		return np.NoFid, np.MkErr(np.TErrUnknownfid, "lookup")
-	}
-	return fsc.fds[fd].fid, nil
-}
-
-func (fsc *FsClient) lookupStL(fd int) (*FdState, error) {
-	if fd < 0 || fd >= len(fsc.fds) {
-		return nil, np.MkErr(np.TErrBadFd, fd)
-	}
-	if fsc.fds[fd].fid == np.NoFid {
-		return nil, np.MkErr(np.TErrBadFd, fd)
-	}
-	return &fsc.fds[fd], nil
-}
-
-func (fsc *FsClient) lookupSt(fd int) (*FdState, error) {
-	fsc.Lock()
-	defer fsc.Unlock()
-	return fsc.lookupStL(fd)
-}
-
-// Wrote this in the CAS style, unsure if it's overkill
-func (fsc *FsClient) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (bool, error) {
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	if fd < 0 || fd >= len(fsc.fds) {
-		return false, np.MkErr(np.TErrBadFd, fd)
-	}
-	if fsc.fds[fd].fid == np.NoFid {
-		return false, np.MkErr(np.TErrBadFd, fd)
-	}
-	fdst := &fsc.fds[fd]
-	if fdst.offset == oldOff {
-		fdst.offset = newOff
-		return true, nil
-	}
-	return false, nil
 }
 
 // Simulate network partition to server that exports path
@@ -200,19 +74,16 @@ func (fsc *FsClient) Disconnect(path string) error {
 		}
 		return np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
-	clnt := fsc.clnt(fid)
-	clnt.Disconnect()
+	fsc.fids.clnt(fid).Disconnect()
 	return nil
 }
 
 func (fsc *FsClient) mount(fid np.Tfid, path string) *np.Err {
-	fsc.Lock()
-	_, ok := fsc.fids[fid]
-	fsc.Unlock()
-	if !ok {
+	p := fsc.fids.lookup(fid)
+	if p == nil {
 		return np.MkErr(np.TErrUnknownfid, "mount")
 	}
-	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.clnt(fid))
+	db.DLPrintf("FSCLNT", "Mount %v at %v %v\n", fid, path, fsc.fids.clnt(fid))
 	error := fsc.mnt.add(np.Split(path), fid)
 	if error != nil {
 		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, error)
@@ -234,15 +105,16 @@ func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
 }
 
 func (fsc *FsClient) Close(fd int) error {
-	fid, error := fsc.lookup(fd)
+	fid, error := fsc.fds.lookup(fd)
 	if error != nil {
 		return error
 	}
-	err := fsc.clnt(fid).Clunk(fid)
+	err := fsc.fids.clnt(fid).Clunk(fid)
 	if err != nil {
 		return err
 	}
-	fsc.closefd(fd)
+	fsc.fids.freeFid(fid)
+	fsc.fds.closefd(fd)
 	return nil
 }
 
@@ -255,24 +127,16 @@ func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string, tre
 	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
 }
 
-func (fsc *FsClient) detachChannel(fid np.Tfid) {
-	fsc.freeFid(fid)
-}
-
 // XXX a version that finds server based on pathname?
 func (fsc *FsClient) attachReplicas(server []string, path, tree string) (np.Tfid, *np.Err) {
 	p := np.Split(path)
-	fid := fsc.allocFid()
+	fid := fsc.fids.allocFid()
 	ch, err := fsc.attachChannel(fid, server, p, np.Split(tree))
 	if err != nil {
 		return np.NoFid, err
 	}
-	fsc.addFid(fid, ch)
-
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	db.DLPrintf("FSCLNT", "Attach -> fid %v %v %v\n", fid, fsc.fids[fid], fsc.fids[fid].pc)
+	fsc.fids.addFid(fid, ch)
+	db.DLPrintf("FSCLNT", "Attach -> fid %v %v\n", fid, fsc.fids.lookup(fid))
 	return fid, nil
 }
 
@@ -294,12 +158,12 @@ func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 	if err != nil {
 		return np.Tfence{}, err
 	}
-	_, err = fsc.clnt(fid).Open(fid, mode)
+	_, err = fsc.fids.clnt(fid).Open(fid, mode)
 	if err != nil {
 		return np.Tfence{}, err
 	}
 	defer fsc.clunkFid(fid)
-	reply, err := fsc.clnt(fid).MkFence(fid)
+	reply, err := fsc.fids.clnt(fid).MkFence(fid)
 	if err != nil {
 		log.Printf("%v: MkFence %v err %v\n", proc.GetProgram(), fid, err)
 		return np.Tfence{}, err
@@ -359,29 +223,29 @@ func (fsc *FsClient) RmFence(f np.Tfence) error {
 }
 
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, *np.Err) {
-	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.path(fid))
-	fid2 := fsc.path(fid)
+	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.fids.path(fid))
+	fid2 := fsc.fids.path(fid)
 	if fid2 == nil {
 		return np.NoFid, np.MkErr(np.TErrNotfound, "clone")
 	}
 	path := fid2.copyPath()
-	fid1 := fsc.allocFid()
+	fid1 := fsc.fids.allocFid()
 	_, err := fid2.pc.Walk(fid, fid1, nil)
 	if err != nil {
 		// XXX free fid
 		return np.NoFid, err
 	}
-	db.DLPrintf("FSCLNT", "clone: %v %v -> %v\n", fid, fsc.path(fid), fid1)
-	fsc.addFid(fid1, path)
+	db.DLPrintf("FSCLNT", "clone: %v %v -> %v\n", fid, fsc.fids.lookup(fid), fid1)
+	fsc.fids.addFid(fid1, path)
 	return fid1, nil
 }
 
 func (fsc *FsClient) clunkFid(fid np.Tfid) {
-	err := fsc.clnt(fid).Clunk(fid)
+	err := fsc.fids.clnt(fid).Clunk(fid)
 	if err != nil {
 		db.DLPrintf("FSCLNT", "clunkFid clunk failed %v\n", err)
 	}
-	fsc.freeFid(fid)
+	fsc.fids.freeFid(fid)
 }
 
 func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
@@ -393,12 +257,12 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	if err != nil {
 		return -1, err
 	}
-	reply, err := fsc.clnt(fid).Create(fid, base, perm, mode)
+	reply, err := fsc.fids.clnt(fid).Create(fid, base, perm, mode)
 	if err != nil {
 		return -1, err
 	}
-	fsc.path(fid).add(base, reply.Qid)
-	fd := fsc.findfd(fid, mode)
+	fsc.fids.path(fid).add(base, reply.Qid)
+	fd := fsc.fds.findfd(fid, mode)
 	return fd, nil
 }
 
@@ -429,7 +293,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 	}
 	st := &np.Stat{}
 	st.Name = npath[len(npath)-1]
-	_, err = fsc.clnt(fid).Wstat(fid, st)
+	_, err = fsc.fids.clnt(fid).Wstat(fid, st)
 	if err != nil {
 		return err
 	}
@@ -453,10 +317,10 @@ func (fsc *FsClient) renameat(old, new string) *np.Err {
 		return err
 	}
 	defer fsc.clunkFid(fid1)
-	if fsc.clnt(fid) != fsc.clnt(fid1) {
+	if fsc.fids.clnt(fid) != fsc.fids.clnt(fid1) {
 		return np.MkErr(np.TErrInval, "paths at different servers")
 	}
-	if _, err = fsc.clnt(fid).Renameat(fid, o, fid1, n); err != nil {
+	if _, err = fsc.fids.clnt(fid).Renameat(fid, o, fid1, n); err != nil {
 		return err
 	}
 	return nil
@@ -468,7 +332,7 @@ func (fsc *FsClient) Umount(path []string) error {
 	if err != nil {
 		return err
 	}
-	fsc.detachChannel(fid2)
+	fsc.fids.freeFid(fid2)
 	return nil
 }
 
@@ -487,7 +351,7 @@ func (fsc *FsClient) Remove(name string) error {
 	// Optimistcally remove obj without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	err := fsc.clnt(fid).RemoveFile(fid, rest)
+	err := fsc.fids.clnt(fid).RemoveFile(fid, rest)
 	if err != nil {
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
@@ -497,7 +361,7 @@ func (fsc *FsClient) Remove(name string) error {
 			if err != nil {
 				return err
 			}
-			err = fsc.clnt(fid).Remove(fid)
+			err = fsc.fids.clnt(fid).Remove(fid)
 		}
 	}
 	if err != nil {
@@ -512,14 +376,14 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 	target, rest := fsc.mnt.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) {
 		st := &np.Stat{}
-		st.Name = strings.Join(fsc.clnt(target).Server(), ",")
+		st.Name = strings.Join(fsc.fids.clnt(target).Server(), ",")
 		return st, nil
 	} else {
 		fid, err := fsc.walkMany(np.Split(name), np.EndSlash(name), nil)
 		if err != nil {
 			return nil, err
 		}
-		reply, err := fsc.clnt(fid).Stat(fid)
+		reply, err := fsc.fids.clnt(fid).Stat(fid)
 		if err != nil {
 			return nil, err
 		}
@@ -549,12 +413,12 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, w Watch) (int, error)
 	if err != nil {
 		return -1, err
 	}
-	_, err = fsc.clnt(fid).Open(fid, mode)
+	_, err = fsc.fids.clnt(fid).Open(fid, mode)
 	if err != nil {
 		return -1, err
 	}
 	// XXX check reply.Qid?
-	fd := fsc.findfd(fid, mode)
+	fd := fsc.fds.findfd(fid, mode)
 	return fd, nil
 }
 
@@ -570,8 +434,8 @@ func (fsc *FsClient) SetDirWatch(path string, w Watch) error {
 		return err
 	}
 	go func() {
-		version := fsc.path(fid).lastqid().Version
-		err := fsc.clnt(fid).Watch(fid, nil, version)
+		version := fsc.fids.path(fid).lastqid().Version
+		err := fsc.fids.clnt(fid).Watch(fid, nil, version)
 		db.DLPrintf("FSCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
 		w(path, err)
 	}()
@@ -588,8 +452,8 @@ func (fsc *FsClient) SetRemoveWatch(path string, w Watch) error {
 		return np.MkErr(np.TErrInval, "watch")
 	}
 	go func() {
-		version := fsc.path(fid).lastqid().Version
-		if err := fsc.clnt(fid).Watch(fid, nil, version); err != nil {
+		version := fsc.fids.path(fid).lastqid().Version
+		if err := fsc.fids.clnt(fid).Watch(fid, nil, version); err != nil {
 			db.DLPrintf("FSCLNT", "SetRemoveWatch: Watch returns %v %v\n", path, err)
 			w(path, err)
 		} else {
@@ -602,17 +466,14 @@ func (fsc *FsClient) SetRemoveWatch(path string, w Watch) error {
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
-	fsc.Lock()
-	fdst, error := fsc.lookupStL(fd)
+	fdst, error := fsc.fds.lookupSt(fd)
 	//p := fsc.fids[fdst.fid]
 	//version := p.lastqid().Version
 	//v := fdst.mode&np.OVERSION == np.OVERSION
 	if error != nil {
-		fsc.Unlock()
 		return nil, error
 	}
-	fsc.Unlock()
-	reply, err := fsc.clnt(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
+	reply, err := fsc.fids.clnt(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
 	if err != nil {
 		return nil, err
 	}
@@ -620,11 +481,11 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	// Can't reuse the fdst without looking it up again, since the fdst may
 	// have changed and now point to the wrong location. So instead, try and CAS
 	// the new offset
-	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(len(reply.Data))); !ok; {
+	for ok, err := fsc.fds.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(len(reply.Data))); !ok; {
 		if err != nil {
 			return nil, err
 		}
-		fdst, _ = fsc.lookupSt(fd)
+		fdst, _ = fsc.fds.lookupSt(fd)
 	}
 	db.DLPrintf("FSCLNT", "Read %v -> %v %v\n", fd, reply, err)
 	return reply.Data, nil
@@ -632,15 +493,11 @@ func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
-	fsc.Lock()
-	fdst, error := fsc.lookupStL(fd)
+	fdst, error := fsc.fds.lookupSt(fd)
 	if error != nil {
-		fsc.Unlock()
 		return 0, error
 	}
-	fsc.Unlock()
-
-	reply, err := fsc.clnt(fdst.fid).Write(fdst.fid, fdst.offset, data)
+	reply, err := fsc.fids.clnt(fdst.fid).Write(fdst.fid, fdst.offset, data)
 	if err != nil {
 		return 0, err
 	}
@@ -648,11 +505,11 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	// Can't reuse the fdst without looking it up again, since the fdst may
 	// have changed and now point to the wrong location. So instead, try and CAS
 	// the new offset
-	for ok, err := fsc.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(reply.Count)); !ok; {
+	for ok, err := fsc.fds.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(reply.Count)); !ok; {
 		if err != nil {
 			return 0, err
 		}
-		fdst, _ = fsc.lookupSt(fd)
+		fdst, _ = fsc.fds.lookupSt(fd)
 	}
 
 	return reply.Count, nil
@@ -660,14 +517,10 @@ func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 
 func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
 	db.DLPrintf("FSCLNT", "Lseek %v %v\n", fd, off)
-	fsc.Lock()
-	defer fsc.Unlock()
-
-	fdst, error := fsc.lookupStL(fd)
-	if error != nil {
-		return error
+	err := fsc.fds.setOffset(fd, off)
+	if err != nil {
+		return err
 	}
-	fdst.offset = off
 	return nil
 }
 
@@ -682,7 +535,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 		}
 		return nil, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
-	reply, err := fsc.clnt(fid).GetFile(fid, rest, mode, 0, 0)
+	reply, err := fsc.fids.clnt(fid).GetFile(fid, rest, mode, 0, 0)
 	if err != nil {
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
@@ -692,7 +545,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			reply, err = fsc.clnt(fid).GetFile(fid, []string{}, mode, 0, 0)
+			reply, err = fsc.fids.clnt(fid).GetFile(fid, []string{}, mode, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -717,7 +570,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 		}
 		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
-	reply, err := fsc.clnt(fid).SetFile(fid, rest, mode, perm, 0, data)
+	reply, err := fsc.fids.clnt(fid).SetFile(fid, rest, mode, perm, 0, data)
 	if err != nil {
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link
@@ -731,7 +584,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 			if err != nil {
 				return 0, err
 			}
-			reply, err = fsc.clnt(fid).SetFile(fid, base, mode, perm, 0, data)
+			reply, err = fsc.fids.clnt(fid).SetFile(fid, base, mode, perm, 0, data)
 			if err != nil {
 				return 0, err
 			}
@@ -749,7 +602,7 @@ func (fsc *FsClient) ShutdownFs(name string) error {
 	if err != nil {
 		return err
 	}
-	err = fsc.clnt(fid).RemoveFile(fid, []string{".exit"})
+	err = fsc.fids.clnt(fid).RemoveFile(fid, []string{".exit"})
 	if err != nil {
 		return err
 	}

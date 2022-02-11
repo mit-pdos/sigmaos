@@ -20,7 +20,7 @@ func (fsc *FsClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid,
 		f, err := fsc.walkMany(p, resolve, w)
 		db.DLPrintf("FSCLNT", "walkManyUmount %v -> %v %v\n", p, f, err)
 		if err != nil && np.IsErrEOF(err) {
-			p := fsc.path(f)
+			p := fsc.fids.path(f)
 			if p == nil { // schedd triggers this; don't know why
 				return np.NoFid, err
 			}
@@ -31,7 +31,7 @@ func (fsc *FsClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid,
 			if e != nil {
 				return f, e
 			}
-			fsc.detachChannel(fid2)
+			fsc.fids.freeFid(fid2)
 			continue
 		}
 		if err != nil {
@@ -49,7 +49,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 		if err != nil {
 			return fid, err
 		}
-		qid := fsc.path(fid).lastqid()
+		qid := fsc.fids.path(fid).lastqid()
 
 		// if todo == 0 and !resolve, don't resolve symlinks, so
 		// that the client can remove a symlink
@@ -70,16 +70,16 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 // Otherwise, set watch based on directory's version number
 func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watch) (*np.Rwalk, *np.Err) {
 	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
-	fid3 := fsc.allocFid()
+	fid3 := fsc.fids.allocFid()
 	dir := r[0 : len(r)-1]
-	reply, err := fsc.clnt(fid1).Walk(fid1, fid3, dir)
+	reply, err := fsc.fids.clnt(fid1).Walk(fid1, fid3, dir)
 	if err != nil {
 		return nil, err
 	}
-	fsc.addFid(fid3, fsc.path(fid1).copyPath())
-	fsc.path(fid3).addn(reply.Qids, dir)
+	fsc.fids.addFid(fid3, fsc.fids.path(fid1).copyPath())
+	fsc.fids.path(fid3).addn(reply.Qids, dir)
 
-	reply, err = fsc.clnt(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
+	reply, err = fsc.fids.clnt(fid3).Walk(fid3, fid2, []string{r[len(r)-1]})
 	if err == nil {
 		return reply, nil
 	}
@@ -90,7 +90,7 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watc
 		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
 		fsc.clunkFid(fid3)
 		w(np.Join(p), err)
-	}(fsc.clnt(fid3), fsc.path(fid3).lastqid().Version)
+	}(fsc.fids.clnt(fid3), fsc.fids.path(fid3).lastqid().Version)
 	return nil, nil
 }
 
@@ -109,12 +109,12 @@ func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
 		return fid, 0, err
 	}
 	defer fsc.clunkFid(fid1)
-	fid2 := fsc.allocFid()
+	fid2 := fsc.fids.allocFid()
 	first, union := IsUnion(rest)
 	var reply *np.Rwalk
 	todo := 0
 	if union {
-		reply, err = fsc.walkUnion(fsc.clnt(fid1), fid1, fid2,
+		reply, err = fsc.walkUnion(fsc.fids.clnt(fid1), fid1, fid2,
 			first, rest[len(first)])
 		rest = rest[len(first)+1:]
 		todo = len(rest)
@@ -122,7 +122,7 @@ func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
 			return np.NoFid, 0, err
 		}
 	} else {
-		reply, err = fsc.clnt(fid1).Walk(fid1, fid2, rest)
+		reply, err = fsc.fids.clnt(fid1).Walk(fid1, fid2, rest)
 		if err != nil {
 			if w != nil && np.IsErrNotfound(err) {
 				var err1 *np.Err
@@ -143,14 +143,14 @@ func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
 		todo = len(rest) - len(reply.Qids)
 		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)
 	}
-	fsc.addFid(fid2, fsc.path(fid1).copyPath())
-	fsc.path(fid2).addn(reply.Qids, rest)
+	fsc.fids.addFid(fid2, fsc.fids.path(fid1).copyPath())
+	fsc.fids.path(fid2).addn(reply.Qids, rest)
 	return fid2, todo, nil
 }
 
 func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string, *np.Err) {
 	// XXX change how we readlink; getfile?
-	clnt := fsc.clnt(fid)
+	clnt := fsc.fids.clnt(fid)
 	target, err := fsc.readlink(clnt, fid)
 	if len(target) == 0 {
 		log.Printf("readlink %v %v\n", string(target), err)
@@ -263,12 +263,12 @@ func IsUnion(path []string) ([]string, bool) {
 
 func (fsc *FsClient) walkUnion(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, *np.Err) {
 	db.DLPrintf("FSCLNT", "Walk union: %v %v\n", dir, q)
-	fid3 := fsc.allocFid()
+	fid3 := fsc.fids.allocFid()
 	reply, err := pc.Walk(fid, fid3, dir)
 	if err != nil {
 		return nil, err
 	}
-	reply, err = fsc.unionLookup(fsc.clnt(fid), fid3, fid2, q)
+	reply, err = fsc.unionLookup(fsc.fids.clnt(fid), fid3, fid2, q)
 	if err != nil {
 		return nil, err
 	}

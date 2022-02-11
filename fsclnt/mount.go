@@ -17,21 +17,21 @@ func (p *Point) String() string {
 	return fmt.Sprintf("{%v, %v}", p.path, p.fid)
 }
 
-type Mount struct {
+type MntTable struct {
 	mu     sync.Mutex
 	mounts []*Point
 	exited bool
 }
 
-func makeMount() *Mount {
-	mnt := &Mount{}
+func makeMntTable() *MntTable {
+	mnt := &MntTable{}
 	mnt.mounts = make([]*Point, 0)
 	return mnt
 }
 
 // add path, in order of longest path first. if the path
 // already exits, return error
-func (mnt *Mount) add(path []string, fid np.Tfid) *np.Err {
+func (mnt *MntTable) add(path []string, fid np.Tfid) *np.Err {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
@@ -78,7 +78,7 @@ func matchexact(mp []string, path []string) bool {
 	return true
 }
 
-func (mnt *Mount) exit() {
+func (mnt *MntTable) exit() {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
@@ -87,14 +87,14 @@ func (mnt *Mount) exit() {
 
 // XXX Right now, we return EOF once we've "exited". Perhaps it makes more
 // sense to return "unknown mount" or something along those lines.
-func (mnt *Mount) hasExited() bool {
+func (mnt *MntTable) hasExited() bool {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
 	return mnt.exited
 }
 
-func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
+func (mnt *MntTable) resolve(path []string) (np.Tfid, []string) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
@@ -113,7 +113,7 @@ func (mnt *Mount) resolve(path []string) (np.Tfid, []string) {
 	return np.NoFid, path
 }
 
-func (mnt *Mount) umount(path []string) (np.Tfid, *np.Err) {
+func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 

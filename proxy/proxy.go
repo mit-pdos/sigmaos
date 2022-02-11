@@ -12,6 +12,7 @@ import (
 	"ulambda/protclnt"
 	"ulambda/protsrv"
 	"ulambda/session"
+	"ulambda/threadmgr"
 )
 
 type Npd struct {
@@ -21,7 +22,8 @@ type Npd struct {
 
 func MakeNpd() *Npd {
 	npd := &Npd{fslib.Named(), nil}
-	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil)
+	tm := threadmgr.MakeThreadMgrTable(npd.Process)
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm)
 	return npd
 }
 

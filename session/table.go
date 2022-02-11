@@ -9,23 +9,26 @@ import (
 	"ulambda/fences"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
+	"ulambda/threadmgr"
 )
 
 type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
+	tm           *threadmgr.ThreadMgrTable
 	mkps         protsrv.MkProtServer
 	fssrv        protsrv.FsServer
 	sessions     map[np.Tsession]*Session
 	recentFences *fences.RecentTable
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, rt *fences.RecentTable) *SessionTable {
+func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, rt *fences.RecentTable, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv
 	st.mkps = mkps
 	st.recentFences = rt
+	st.tm = tm
 	return st
 }
 
@@ -43,7 +46,7 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.recentFences)
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.recentFences, st.tm.AddThread())
 	st.sessions[sid] = sess
 	return sess
 }
@@ -57,19 +60,18 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 	return nil
 }
 
-func (st *SessionTable) SessLock(sessid np.Tsession) {
-	if sess, ok := st.Lookup(sessid); ok {
-		sess.Lock()
-		sess.cond.Signal()
+func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.ThreadMgr {
+	if sess, ok := st.Lookup(sid); ok {
+		return sess.threadmgr
 	} else {
-		log.Fatalf("FATAL LockSession: no lock for %v\n", sessid)
+		log.Fatalf("FATAL SessThread: no thread for %v\n", sid)
 	}
+	return nil
 }
 
-func (st *SessionTable) SessUnlock(sessid np.Tsession) {
-	if sess, ok := st.Lookup(sessid); ok {
-		sess.Unlock()
-	} else {
-		log.Fatalf("FATAL UnlockSession: no lock for %v\n", sessid)
-	}
+func (st *SessionTable) KillSessThread(sid np.Tsession) {
+	t := st.SessThread(sid)
+	st.Lock()
+	defer st.Unlock()
+	st.tm.RemoveThread(t)
 }

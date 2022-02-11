@@ -17,6 +17,7 @@ import (
 	"ulambda/sesscond"
 	"ulambda/session"
 	"ulambda/stats"
+	"ulambda/threadmgr"
 	"ulambda/watch"
 )
 
@@ -37,6 +38,7 @@ type FsServer struct {
 	stats *stats.Stats
 	st    *session.SessionTable
 	sct   *sesscond.SessCondTable
+	tm    *threadmgr.ThreadMgrTable
 	wt    *watch.WatchTable
 	rft   *fences.RecentTable
 	srv   *netsrv.NetServer
@@ -55,7 +57,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft)
+	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
@@ -140,10 +143,15 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 		fssrv.sendReply(fc.Tag, reply, replies)
 		return
 	}
-	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	// New thread about to start
 	sess.IncThreads()
-	go fssrv.serve(sess, fc, replies)
+	sess.GetThread().Process(fc, replies)
+}
+
+func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+	sess := fssrv.st.Alloc(fc.Session)
+	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	fssrv.serve(sess, fc, replies)
 }
 
 // Register and unregister fences, and check fresness of fences before
@@ -212,13 +220,11 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 // temporarily.  XXX doesn't guarantee the order in which received
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	defer sess.DecThreads()
-	sess.Lock()
 	reply, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
 	fssrv.sendReply(fc.Tag, reply, replies)
-	sess.Unlock()
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
@@ -238,6 +244,9 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Wait until nthread == 0
 	sess.WaitThreads()
+
+	// Stop sess thread.
+	fssrv.st.KillSessThread(sid)
 
 	// Detach the session to remove ephemeral files and close open fids.
 	fssrv.st.Detach(sid)

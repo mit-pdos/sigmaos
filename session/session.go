@@ -9,6 +9,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
+	"ulambda/threadmgr"
 )
 
 //
@@ -16,23 +17,22 @@ import (
 // session, sigmaos has a protsrv.
 //
 // The sess lock is to serialize requests on a session.  The calls in
-// this file assume the calling threads holds the sess lock.
+// this file assume the calling wg holds the sess lock.
 //
 
 type Session struct {
-	sync.Mutex // to serialize requests on a session
-	cond       *sync.Cond
-	threads    sync.WaitGroup
-	protsrv    protsrv.Protsrv
-	rft        *fences.RecentTable
-	myFences   *fences.FenceTable
-	Sid        np.Tsession
+	threadmgr *threadmgr.ThreadMgr
+	wg        sync.WaitGroup
+	protsrv   protsrv.Protsrv
+	rft       *fences.RecentTable
+	myFences  *fences.FenceTable
+	Sid       np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
+	sess.threadmgr = t
 	sess.protsrv = protsrv
-	sess.cond = sync.NewCond(&sess.Mutex)
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
@@ -41,6 +41,10 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTab
 
 func (sess *Session) Fence(req np.Tregfence) {
 	sess.myFences.Insert(req.Fence)
+}
+
+func (sess *Session) GetThread() *threadmgr.ThreadMgr {
+	return sess.threadmgr
 }
 
 func (sess *Session) Unfence(idf np.Tfenceid) *np.Err {
@@ -62,13 +66,13 @@ func (sess *Session) CheckFences(fsl *fslib.FsLib) *np.Err {
 }
 
 func (sess *Session) IncThreads() {
-	sess.threads.Add(1)
+	sess.wg.Add(1)
 }
 
 func (sess *Session) DecThreads() {
-	sess.threads.Done()
+	sess.wg.Done()
 }
 
 func (sess *Session) WaitThreads() {
-	sess.threads.Wait()
+	sess.wg.Wait()
 }

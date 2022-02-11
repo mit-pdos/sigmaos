@@ -294,11 +294,12 @@ func (pd *Procd) worker(done *int32) {
 			pd.waitSpawnOrTimeout(ticker)
 			continue
 		}
-		if error != nil && (np.IsErrEOF(error) || strings.Contains(error.Error(), "no mount")) {
+		if error != nil && (np.IsErrEOF(error) ||
+			(np.IsErrNotfound(error) && strings.Contains(np.ErrNotfoundPath(error), "no mount"))) {
 			continue
 		}
 		if error != nil {
-			if strings.Contains(error.Error(), "file not found "+usync.COND) {
+			if np.IsErrNotfound(error) && strings.Contains(np.ErrNotfoundPath(error), usync.COND) {
 				db.DLPrintf("PROCD", "cond file not found: %v", error)
 				return
 			}

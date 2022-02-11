@@ -16,13 +16,13 @@ import (
 type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
-	tm       *threadmgr.ThreadMgr
+	tm       *threadmgr.ThreadTable
 	mkps     protsrv.MkProtServer
 	fssrv    protsrv.FsServer
 	sessions map[np.Tsession]*Session
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr) *SessionTable {
+func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv

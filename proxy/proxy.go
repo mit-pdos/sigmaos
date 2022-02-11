@@ -22,7 +22,7 @@ type Npd struct {
 
 func MakeNpd() *Npd {
 	npd := &Npd{fslib.Named(), nil}
-	tm := threadmgr.MakeThreadMgr(npd.Process)
+	tm := threadmgr.MakeThreadTable(npd.Process)
 	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, tm)
 	return npd
 }

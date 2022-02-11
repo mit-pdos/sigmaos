@@ -107,15 +107,15 @@ func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	u, err := user.Current()
-	if err != nil {
-		return &np.Rerror{err.Error()}
+	u, error := user.Current()
+	if error != nil {
+		return &np.Rerror{error.Error()}
 	}
 	npc.uname = u.Uid
 
 	reply, err := npc.clnt.Attach(npc.named, npc.uname, args.Fid, []string{""})
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.Rerror()
 	}
 	npc.addch(args.Fid, npc.clnt.MakeProtClnt(npc.named))
 	rets.Qid = reply.Qid

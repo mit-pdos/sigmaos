@@ -262,7 +262,7 @@ func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 		return -1, err
 	}
 	fsc.fids.path(fid).add(base, reply.Qid)
-	fd := fsc.fds.findfd(fid, mode)
+	fd := fsc.fds.allocFd(fid, mode)
 	return fd, nil
 }
 
@@ -418,7 +418,7 @@ func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, w Watch) (int, error)
 		return -1, err
 	}
 	// XXX check reply.Qid?
-	fd := fsc.fds.findfd(fid, mode)
+	fd := fsc.fds.allocFd(fid, mode)
 	return fd, nil
 }
 
@@ -466,52 +466,33 @@ func (fsc *FsClient) SetRemoveWatch(path string, w Watch) error {
 
 func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
-	fdst, error := fsc.fds.lookupSt(fd)
+	fid, off, error := fsc.fds.lookupOff(fd)
 	//p := fsc.fids[fdst.fid]
 	//version := p.lastqid().Version
 	//v := fdst.mode&np.OVERSION == np.OVERSION
 	if error != nil {
 		return nil, error
 	}
-	reply, err := fsc.fids.clnt(fdst.fid).Read(fdst.fid, fdst.offset, cnt)
+	reply, err := fsc.fids.clnt(fid).Read(fid, off, cnt)
 	if err != nil {
 		return nil, err
 	}
-
-	// Can't reuse the fdst without looking it up again, since the fdst may
-	// have changed and now point to the wrong location. So instead, try and CAS
-	// the new offset
-	for ok, err := fsc.fds.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(len(reply.Data))); !ok; {
-		if err != nil {
-			return nil, err
-		}
-		fdst, _ = fsc.fds.lookupSt(fd)
-	}
+	fsc.fds.incOff(fd, np.Toffset(len(reply.Data)))
 	db.DLPrintf("FSCLNT", "Read %v -> %v %v\n", fd, reply, err)
 	return reply.Data, nil
 }
 
 func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
-	fdst, error := fsc.fds.lookupSt(fd)
+	fid, off, error := fsc.fds.lookupOff(fd)
 	if error != nil {
 		return 0, error
 	}
-	reply, err := fsc.fids.clnt(fdst.fid).Write(fdst.fid, fdst.offset, data)
+	reply, err := fsc.fids.clnt(fid).Write(fid, off, data)
 	if err != nil {
 		return 0, err
 	}
-
-	// Can't reuse the fdst without looking it up again, since the fdst may
-	// have changed and now point to the wrong location. So instead, try and CAS
-	// the new offset
-	for ok, err := fsc.fds.stOffsetCAS(fd, fdst.offset, fdst.offset+np.Toffset(reply.Count)); !ok; {
-		if err != nil {
-			return 0, err
-		}
-		fdst, _ = fsc.fds.lookupSt(fd)
-	}
-
+	fsc.fds.incOff(fd, np.Toffset(reply.Count))
 	return reply.Count, nil
 }
 

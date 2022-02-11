@@ -27,7 +27,7 @@ func mkFdTable() *FdTable {
 	return fdt
 }
 
-func (fdt *FdTable) findfd(nfid np.Tfid, m np.Tmode) int {
+func (fdt *FdTable) allocFd(nfid np.Tfid, m np.Tmode) int {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -51,17 +51,8 @@ func (fdt *FdTable) closefd(fd int) {
 	fdt.fds[fd].fid = np.NoFid
 }
 
-func (fdt *FdTable) lookup(fd int) (np.Tfid, *np.Err) {
-	fdt.Lock()
-	defer fdt.Unlock()
-
-	if fdt.fds[fd].fid == np.NoFid {
-		return np.NoFid, np.MkErr(np.TErrUnknownfid, "lookup")
-	}
-	return fdt.fds[fd].fid, nil
-}
-
-func (fdt *FdTable) lookupStL(fd int) (*FdState, *np.Err) {
+// Caller must have locked fdt
+func (fdt *FdTable) lookupL(fd int) (*FdState, *np.Err) {
 	if fd < 0 || fd >= len(fdt.fds) {
 		return nil, np.MkErr(np.TErrBadFd, fd)
 	}
@@ -71,44 +62,48 @@ func (fdt *FdTable) lookupStL(fd int) (*FdState, *np.Err) {
 	return &fdt.fds[fd], nil
 }
 
-func (fdt *FdTable) lookupSt(fd int) (*FdState, *np.Err) {
+func (fdt *FdTable) lookup(fd int) (np.Tfid, *np.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 
-	fdst, err := fdt.lookupStL(fd)
+	st, err := fdt.lookupL(fd)
 	if err != nil {
-		return nil, err
+		return np.NoFid, err
 	}
-	return fdst, nil
+	return st.fid, nil
+}
+
+func (fdt *FdTable) lookupOff(fd int) (np.Tfid, np.Toffset, *np.Err) {
+	fdt.Lock()
+	defer fdt.Unlock()
+
+	st, err := fdt.lookupL(fd)
+	if err != nil {
+		return np.NoFid, 0, err
+	}
+	return st.fid, st.offset, nil
 }
 
 func (fdt *FdTable) setOffset(fd int, off np.Toffset) *np.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 
-	fdst, err := fdt.lookupStL(fd)
+	st, err := fdt.lookupL(fd)
 	if err != nil {
 		return err
 	}
-	fdst.offset = off
+	st.offset = off
 	return nil
 }
 
-// Wrote this in the CAS style, unsure if it's overkill
-func (fdt *FdTable) stOffsetCAS(fd int, oldOff np.Toffset, newOff np.Toffset) (bool, *np.Err) {
+func (fdt *FdTable) incOff(fd int, off np.Toffset) *np.Err {
 	fdt.Lock()
 	defer fdt.Unlock()
 
-	if fd < 0 || fd >= len(fdt.fds) {
-		return false, np.MkErr(np.TErrBadFd, fd)
+	st, err := fdt.lookupL(fd)
+	if err != nil {
+		return err
 	}
-	if fdt.fds[fd].fid == np.NoFid {
-		return false, np.MkErr(np.TErrBadFd, fd)
-	}
-	fdst := &fdt.fds[fd]
-	if fdst.offset == oldOff {
-		fdst.offset = newOff
-		return true, nil
-	}
-	return false, nil
+	st.offset += off
+	return nil
 }

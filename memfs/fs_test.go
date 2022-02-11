@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/ctx"
-	"ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	np "ulambda/ninep"
@@ -45,7 +44,6 @@ func (ts *TestState) initfs() {
 		assert.Nil(ts.t, err, "Walk job")
 
 	}
-	debug.Name("memfs")
 }
 
 func (ts *TestState) testRename(t int) {

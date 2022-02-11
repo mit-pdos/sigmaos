@@ -35,7 +35,7 @@ func MakeDeleter(N string) (*Deleter, error) {
 		log.Printf("%v: fence %v err %v\n", proc.GetProgram(), dl.fclnt.Name(), err)
 		return nil, err
 	}
-	log.Printf("%v: bal config %v\n", proc.GetProgram(), dl.blConf.N)
+	// log.Printf("%v: bal config %v\n", proc.GetProgram(), dl.blConf.N)
 	if N != strconv.Itoa(dl.blConf.N) {
 		log.Printf("%v: wrong config %v\n", proc.GetProgram(), N)
 		return nil, fmt.Errorf("wrong config %v\n", N)

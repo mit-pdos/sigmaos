@@ -6,26 +6,26 @@ import (
 
 type ProcessFn func(fc *np.Fcall, replies chan *np.Fcall)
 
-type ThreadTable struct {
+type ThreadMgrTable struct {
 	pfn     ProcessFn
 	threads map[*Thread]bool
 }
 
-func MakeThreadTable(pfn ProcessFn) *ThreadTable {
-	tm := &ThreadTable{}
+func MakeThreadMgrTable(pfn ProcessFn) *ThreadMgrTable {
+	tm := &ThreadMgrTable{}
 	tm.pfn = pfn
 	tm.threads = make(map[*Thread]bool)
 	return tm
 }
 
-func (tm *ThreadTable) AddThread() *Thread {
+func (tm *ThreadMgrTable) AddThread() *Thread {
 	new := makeThread(tm.pfn)
 	tm.threads[new] = true
 	new.start()
 	return new
 }
 
-func (tm *ThreadTable) RemoveThread(t *Thread) {
+func (tm *ThreadMgrTable) RemoveThread(t *Thread) {
 	t.stop()
 	delete(tm.threads, t)
 }

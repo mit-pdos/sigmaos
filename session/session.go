@@ -19,28 +19,28 @@ import (
 // session, sigmaos has a protsrv.
 //
 // The sess lock is to serialize requests on a session.  The calls in
-// this file assume the calling threads holds the sess lock.
+// this file assume the calling wg holds the sess lock.
 //
 
 type Session struct {
-	thread  *threadmgr.Thread
-	threads sync.WaitGroup
-	protsrv protsrv.Protsrv
-	lm      *lease.LeaseMap
-	sid     np.Tsession
+	threadmgr *threadmgr.ThreadMgr
+	wg        sync.WaitGroup
+	protsrv   protsrv.Protsrv
+	lm        *lease.LeaseMap
+	sid       np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, t *threadmgr.Thread) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
-	sess.thread = t
+	sess.threadmgr = t
 	sess.protsrv = protsrv
 	sess.lm = lease.MakeLeaseMap()
 	sess.sid = sid
 	return sess
 }
 
-func (sess *Session) GetThread() *threadmgr.Thread {
-	return sess.thread
+func (sess *Session) GetThread() *threadmgr.ThreadMgr {
+	return sess.threadmgr
 }
 
 func (sess *Session) Lease(fn []string, qid np.Tqid) error {
@@ -68,13 +68,13 @@ func (sess *Session) CheckLeases(fsl *fslib.FsLib) error {
 }
 
 func (sess *Session) IncThreads() {
-	sess.threads.Add(1)
+	sess.wg.Add(1)
 }
 
 func (sess *Session) DecThreads() {
-	sess.threads.Done()
+	sess.wg.Done()
 }
 
 func (sess *Session) WaitThreads() {
-	sess.threads.Wait()
+	sess.wg.Wait()
 }

@@ -59,9 +59,9 @@ func (st *SessionTable) Detach(sid np.Tsession) error {
 	return nil
 }
 
-func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.Thread {
+func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.ThreadMgr {
 	if sess, ok := st.Lookup(sid); ok {
-		return sess.thread
+		return sess.threadmgr
 	} else {
 		log.Fatalf("SessThread: no thread for %v\n", sid)
 	}

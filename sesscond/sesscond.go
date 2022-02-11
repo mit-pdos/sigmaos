@@ -21,9 +21,9 @@ import (
 //
 
 type cond struct {
-	isClosed bool
-	thread   *threadmgr.Thread
-	c        *sync.Cond
+	isClosed  bool
+	threadmgr *threadmgr.ThreadMgr
+	c         *sync.Cond
 }
 
 // Sess cond has one cond per session.  The lock is, for example, a
@@ -56,7 +56,7 @@ func (sc *SessCond) closed(sessid np.Tsession) {
 		// log.Printf("%p: sess %v closed\n", sc, sessid)
 		for _, c := range condlist {
 			c.isClosed = true
-			c.thread.Wake(c.c)
+			c.threadmgr.Wake(c.c)
 		}
 	}
 	delete(sc.conds, sessid)
@@ -67,7 +67,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 		sc.conds[sessid] = []*cond{}
 	}
 	c := &cond{}
-	c.thread = sc.st.SessThread(sessid)
+	c.threadmgr = sc.st.SessThread(sessid)
 	c.c = sync.NewCond(sc.lock)
 	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
@@ -79,7 +79,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 func (sc *SessCond) Wait(sessid np.Tsession) error {
 	c := sc.alloc(sessid)
 
-	c.thread.Sleep(c.c)
+	c.threadmgr.Sleep(c.c)
 
 	closed := c.isClosed
 
@@ -97,7 +97,7 @@ func (sc *SessCond) Signal() {
 		// between releasing sc or sess lock and going to
 		// sleep.
 		for _, c := range condlist {
-			c.thread.Wake(c.c)
+			c.threadmgr.Wake(c.c)
 		}
 		delete(sc.conds, sid)
 	}
@@ -107,7 +107,7 @@ func (sc *SessCond) Signal() {
 func (sc *SessCond) Broadcast() {
 	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
-			c.thread.Wake(c.c)
+			c.threadmgr.Wake(c.c)
 		}
 		delete(sc.conds, sid)
 	}

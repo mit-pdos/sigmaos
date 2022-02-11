@@ -173,7 +173,7 @@ func (nc *NetClnt) resetConnection(br *bufio.Reader, bw *bufio.Writer) {
 	}
 }
 
-func (nc *NetClnt) getBufio() (*bufio.Reader, *bufio.Writer, error) {
+func (nc *NetClnt) getBufio() (*bufio.Reader, *bufio.Writer, *np.Err) {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
@@ -287,9 +287,9 @@ func (nc *NetClnt) writer() {
 	// Need to make sure requests are drained so the requests channel can be safely closed
 	defer nc.drainRequests()
 
-	br, bw, error := nc.getBufio()
-	if error != nil {
-		db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", error)
+	br, bw, err := nc.getBufio()
+	if err != nil {
+		db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
 		nc.Close()
 		return
 	}
@@ -299,15 +299,15 @@ func (nc *NetClnt) writer() {
 			return
 		}
 		// Get the bw for the latest connection
-		br, bw, error = nc.getBufio()
+		br, bw, err = nc.getBufio()
 		// If none was available, close the conn
-		if error != nil {
-			db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", error)
+		if err != nil {
+			db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
 			nc.Close()
 			return
 		}
 		db.DLPrintf("NETCLNT", "Writer: %v -> %v %v, %p\n", nc.Src(), nc.Dst(), rpc.req, bw)
-		err := npcodec.MarshalFcallToWriter(rpc.req, bw)
+		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
 		if err != nil {
 			if err.Code() == np.TErrBadFcall {
 				nc.mu.Lock()
@@ -332,7 +332,7 @@ func (nc *NetClnt) writer() {
 		} else {
 			error := bw.Flush()
 			if error != nil {
-				if strings.Contains(err.Error(), "connection reset by peer") {
+				if strings.Contains(error.Error(), "connection reset by peer") {
 					nc.resetConnection(br, bw)
 				} else {
 					stacktrace := debug.Stack()

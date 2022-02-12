@@ -8,18 +8,17 @@ import (
 	"ulambda/atomic"
 	"ulambda/config"
 	db "ulambda/debug"
+	"ulambda/fenceclnt"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
 	"ulambda/semclnt"
-	"ulambda/sync"
 )
 
 const (
 	DEFAULT_MACHINED_PRIORITY = "0"
-	REALM_LOCK                = "realm-lock."
 )
 
 type MachinedConfig struct {
@@ -30,12 +29,12 @@ type MachinedConfig struct {
 type Machined struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	id        string
-	bin       string
-	cfgPath   string
-	cfg       *MachinedConfig
-	s         *kernel.System
-	realmLock *sync.Lock
+	id      string
+	bin     string
+	cfgPath string
+	cfg     *MachinedConfig
+	s       *kernel.System
+	fence   *fenceclnt.FenceClnt
 	*config.ConfigClnt
 }
 
@@ -85,7 +84,7 @@ func (r *Machined) getNextConfig() {
 		}
 	}
 	// Update the realm lock
-	r.realmLock = sync.MakeLock(r.FsLib, np.LOCKS, REALM_LOCK+r.cfg.RealmId, true)
+	r.fence = fenceclnt.MakeFenceClnt(r.FsLib, path.Join(REALM_FENCES, r.cfg.RealmId), 0777)
 }
 
 // If we need more named replicas, help initialize a realm by starting another
@@ -145,8 +144,8 @@ func (r *Machined) boot(realmCfg *RealmConfig) {
 
 // Join a realm
 func (r *Machined) joinRealm() chan bool {
-	r.realmLock.Lock()
-	defer r.realmLock.Unlock()
+	r.fence.AcquireFenceW(nil)
+	defer r.fence.ReleaseFence()
 
 	// Try to initalize this realm if it hasn't been initialized already.
 	initDone := r.tryAddNamedReplicaL()
@@ -212,8 +211,8 @@ func (r *Machined) tryDestroyRealmL() {
 
 // Leave a realm
 func (r *Machined) leaveRealm() {
-	r.realmLock.Lock()
-	defer r.realmLock.Unlock()
+	r.fence.AcquireFenceW(nil)
+	defer r.fence.ReleaseFence()
 
 	db.DLPrintf("MACHINED", "Machined %v leaving Realm %v", r.id, r.cfg.RealmId)
 

@@ -5,19 +5,20 @@ import (
 	"log"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"ulambda/config"
 	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
+	"ulambda/fenceclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/stats"
-	"ulambda/sync"
 )
 
 const (
@@ -38,13 +39,16 @@ const (
 	REALM_CONFIG    = "name/realm-config"                 // Store of realm configs
 	MACHINED_CONFIG = "name/machined-config"              // Store of machined configs
 	REALM_NAMEDS    = "name/realm-nameds"                 // Symlinks to realms' nameds
+	REALM_FENCES    = "name/realm-fences"                 // Symlinks to realms' nameds
 )
 
 type RealmMgr struct {
+	sync.Mutex
 	freeMachineds chan string
 	realmCreate   chan string
 	realmDestroy  chan string
 	root          fs.Dir
+	fences        map[string]*fenceclnt.FenceClnt
 	*config.ConfigClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
@@ -64,6 +68,7 @@ func MakeRealmMgr() *RealmMgr {
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
 	m.makeCtlFiles()
+	m.fences = make(map[string]*fenceclnt.FenceClnt)
 
 	return m
 }
@@ -80,6 +85,9 @@ func (m *RealmMgr) makeInitFs() {
 	}
 	if err := m.Mkdir(REALM_NAMEDS, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
+	}
+	if err := m.Mkdir(REALM_FENCES, 0777); err != nil {
+		log.Fatalf("Error Mkdir REALM_FENCES in RealmMgr.makeInitFs: %v", err)
 	}
 }
 
@@ -110,8 +118,14 @@ func (m *RealmMgr) createRealms() {
 		// Get a realm creation request
 		realmId := <-m.realmCreate
 
-		realmLock := sync.MakeLock(m.FsLib, np.LOCKS, REALM_LOCK+realmId, true)
-		realmLock.Lock()
+		m.Lock()
+		m.fences[realmId] = fenceclnt.MakeFenceClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
+		fence := m.fences[realmId]
+		m.Unlock()
+
+		if err := fence.AcquireFenceW(nil); err != nil {
+			log.Printf("Error Realmmgr Acquire fence: %v", err)
+		}
 
 		// Unmarshal the realm config file.
 		cfg := &RealmConfig{}
@@ -130,7 +144,9 @@ func (m *RealmMgr) createRealms() {
 		// Make the realm config file.
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
-		realmLock.Unlock()
+		if err := fence.ReleaseFence(); err != nil {
+			log.Printf("Error Realmmgr Release fence: %v", err)
+		}
 	}
 }
 
@@ -167,8 +183,13 @@ func (m *RealmMgr) destroyRealms() {
 		// Get a realm creation request
 		realmId := <-m.realmDestroy
 
-		realmLock := sync.MakeLock(m.FsLib, np.LOCKS, REALM_LOCK+realmId, true)
-		realmLock.Lock()
+		m.Lock()
+		fence := m.fences[realmId]
+		m.Unlock()
+
+		if err := fence.AcquireFenceW(nil); err != nil {
+			log.Printf("Error Realmmgr Acquire fence: %v", err)
+		}
 
 		m.deallocAllMachineds(realmId)
 
@@ -177,7 +198,13 @@ func (m *RealmMgr) destroyRealms() {
 		cfg.Shutdown = true
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
-		realmLock.Unlock()
+		if err := fence.ReleaseFence(); err != nil {
+			log.Printf("Error Realmmgr Release fence: %v", err)
+		}
+
+		m.Lock()
+		delete(m.fences, realmId)
+		m.Unlock()
 	}
 }
 
@@ -323,15 +350,28 @@ func (m *RealmMgr) balanceMachineds() {
 
 		for _, realm := range realms {
 			realmId := realm.Name
+
+			m.Lock()
+			fence, ok := m.fences[realmId]
+			m.Unlock()
+
+			// If realm has already been destroyed, move along
+			if !ok {
+				continue
+			}
+
 			// XXX Currently we assume there are always enough machineds for the number
 			// of realms we have. If that assumption is broken, this may deadlock when
 			// a realm is trying to exit & we're trying to assign a machined to it.
-			realmLock := sync.MakeLock(m.FsLib, np.LOCKS, REALM_LOCK+realmId, true)
-			realmLock.Lock()
+			if err := fence.AcquireFenceW(nil); err != nil {
+				log.Printf("Error Realmmgr Acquire fence: %v", err)
+			}
 
 			m.adjustRealm(realmId)
 
-			realmLock.Unlock()
+			if err := fence.ReleaseFence(); err != nil {
+				log.Printf("Error Realmmgr Release fence: %v", err)
+			}
 		}
 
 		time.Sleep(SCAN_INTERVAL_MS * time.Millisecond)

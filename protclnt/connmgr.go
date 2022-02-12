@@ -1,7 +1,6 @@
 package protclnt
 
 import (
-	"log"
 	"strings"
 	"sync"
 
@@ -39,25 +38,6 @@ func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno) (np.T
 		return nil, err
 	}
 	return repfc.Msg, nil
-}
-
-type result struct {
-	conn *conn
-	err  *np.Err
-}
-
-func (conn *conn) aSend(ch chan result, dst []string, req np.Tmsg, s np.Tsession, seq *np.Tseqno) {
-	if reply, err := conn.send(req, s, seq); err != nil {
-		// log.Printf("aSend %v %v err %v\n", dst, req, err)
-		ch <- result{conn, err}
-	} else {
-		if rmsg, ok := reply.(np.Rerror); ok {
-			// log.Printf("aSend err %v %v err %v\n", dst, req, rmsg.Ename)
-			ch <- result{conn, np.Rerror2Err(rmsg.Ename)}
-		} else {
-			ch <- result{conn, nil}
-		}
-	}
 }
 
 // XXX SessMgr?
@@ -129,81 +109,4 @@ func (cm *ConnMgr) disconnect(dst []string) bool {
 	}
 	conn.nc.Close()
 	return true
-}
-
-// Multicasts a req on connections of cm. Caller specifies (1) ok
-// func, which returns whether to send or not on a given conn, and (2)
-// r to process the reply to a send.
-func (cm *ConnMgr) mcastReq(req np.Tmsg, ok func(*conn) bool, r func(result) *np.Err) *np.Err {
-	ch := make(chan result)
-	cm.mu.Lock()
-
-	// log.Printf("%v: mcast %v %v %v\n", db.GetName(), len(cm.conns), req.Type(), req)
-
-	n := 0
-	for addr, conn := range cm.conns {
-		if ok(conn) {
-			n += 1
-			go conn.aSend(ch, strings.Split(addr, ","), req, cm.session, cm.seqno)
-		}
-	}
-	cm.mu.Unlock()
-
-	var err *np.Err
-	for i := 0; i < n; i++ {
-		res := <-ch
-		r(res)
-
-		// Ignore EOF, since we cannot talk to that server
-		// anymore.  We may try to reconnect and then we will
-		// register again.
-		if res.err != nil && !np.IsErrEOF(res.err) {
-			log.Printf("mcastReq set err %v\n", res.err)
-			err = res.err
-		}
-	}
-	return err
-}
-
-func (cm *ConnMgr) registerFence(fence np.Tfence, new bool) *np.Err {
-	req := np.Tregfence{fence}
-	err := cm.mcastReq(req,
-		func(conn *conn) bool {
-			return !new || !conn.fm.Present(fence.FenceId)
-		},
-		func(res result) *np.Err {
-			if res.err == nil && new {
-				res.conn.fm.Insert(fence)
-				return nil
-			}
-			return res.err
-		})
-	return err
-}
-
-func (cm *ConnMgr) deregisterFence(fence np.Tfence) *np.Err {
-	req := np.Tunfence{fence}
-	err := cm.mcastReq(req,
-		func(conn *conn) bool {
-			return conn.fm.Present(fence.FenceId)
-		},
-		func(res result) *np.Err {
-			if res.err == nil {
-				return res.conn.fm.Del(fence.FenceId)
-			}
-			return nil
-		})
-	return err
-}
-
-func (cm *ConnMgr) rmFence(fence np.Tfence) *np.Err {
-	req := np.Trmfence{fence}
-	err := cm.mcastReq(req,
-		func(conn *conn) bool {
-			return conn.fm.Present(fence.FenceId)
-		},
-		func(res result) *np.Err {
-			return nil
-		})
-	return err
 }

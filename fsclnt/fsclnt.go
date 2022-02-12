@@ -88,12 +88,6 @@ func (fsc *FsClient) mount(fid np.Tfid, path string) *np.Err {
 	if error != nil {
 		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, error)
 	}
-
-	for _, f := range fsc.fm.Fences() {
-		if err := fsc.pc.RegisterFence(f, true); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -172,51 +166,37 @@ func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 }
 
 // XXX not thread safe
-func (fsc *FsClient) RegisterFence(f np.Tfence) error {
-	if ok := fsc.fm.Present(f.FenceId); ok {
-		return np.MkErr(np.TErrExists, f.FenceId)
-	}
-	if err := fsc.pc.RegisterFence(f, true); err != nil {
+func (fsc *FsClient) RegisterFence(f np.Tfence, path string) error {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
 		return err
 	}
-	fsc.fm.Insert(f)
-	return nil
-}
-
-func (fsc *FsClient) UpdateFence(f np.Tfence) error {
-	if ok := fsc.fm.Present(f.FenceId); !ok {
-		log.Printf("%v: update fence %v not present\n", proc.GetProgram(), f)
-		return np.MkErr(np.TErrUnknownFence, f.FenceId)
-	}
-	if err := fsc.pc.RegisterFence(f, false); err != nil {
+	if err := fsc.fids.clnt(fid).RegisterFence(f, fid); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (fsc *FsClient) DeregisterFence(f np.Tfence) error {
-	if err := fsc.fm.Del(f.FenceId); err != nil {
-		log.Printf("%v: dereg %v err %v\n", proc.GetProgram(), f, err)
+func (fsc *FsClient) DeregisterFence(f np.Tfence, path string) error {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
 		return err
 	}
-	if err := fsc.pc.DeregisterFence(f); err != nil {
+	if err := fsc.fids.clnt(fid).DeregisterFence(f); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (fsc *FsClient) DeregisterFences() error {
-	for _, f := range fsc.fm.Fences() {
-		fsc.DeregisterFence(f)
+func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return err
 	}
-	return nil
-}
-
-func (fsc *FsClient) RmFence(f np.Tfence) error {
-	if ok := fsc.fm.Present(f.FenceId); !ok {
-		return np.MkErr(np.TErrUnknownFence, f.FenceId)
-	}
-	if err := fsc.pc.RmFence(f); err != nil {
+	if err := fsc.fids.clnt(fid).RmFence(f); err != nil {
 		return err
 	}
 	return nil

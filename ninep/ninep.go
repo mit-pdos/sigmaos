@@ -614,6 +614,7 @@ type Rmkfence struct {
 }
 
 type Tregfence struct {
+	Fid   Tfid
 	Fence Tfence
 }
 

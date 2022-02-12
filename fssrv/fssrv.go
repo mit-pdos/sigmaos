@@ -168,7 +168,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		}
 		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
 	case np.Tregfence:
-		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
+		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.rft.UpdateFence(req.Fence)
 		if err != nil {
 			log.Printf("%v: Fence %v %v err %v\n", proc.GetProgram(), sess.Sid, req, err)
@@ -186,7 +186,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Tunfence:
-		// log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
+		log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
 		err := sess.Unfence(req.Fence.FenceId)
 		if err != nil {
 			return nil, err.Rerror()
@@ -194,7 +194,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Trmfence:
-		// log.Printf("%p: Rmfence %v %v\n", fssrv, sess.Sid, req)
+		log.Printf("%p: Rmfence %v %v\n", fssrv, sess.Sid, req)
 		err := fssrv.rft.RmFence(req.Fence)
 		if err != nil {
 			return nil, err.Rerror()

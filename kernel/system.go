@@ -210,7 +210,7 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	p := proc.MakeProcPid("named-"+strconv.Itoa(id), "/bin/kernel/named", args)
+	p := proc.MakeProcPid("pid-"+strconv.Itoa(id), "/bin/kernel/named", args)
 
 	cmd, err := proc.RunKernelProc(p, bin, fslib.Named())
 	if err != nil {
@@ -239,7 +239,7 @@ func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate b
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	pid := "named-" + strconv.Itoa(id)
+	pid := "pid-" + strconv.Itoa(id)
 	p := proc.MakeProcPid(pid, "bin/kernel/named", args)
 	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {

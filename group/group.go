@@ -30,6 +30,10 @@ const (
 	CTL          = "ctl"
 )
 
+func GrpDir(grp string) string {
+	return GRPDIR + "/" + grp
+}
+
 func GrpConfPath(grp string) string {
 	return GRPDIR + "/" + grp + GRPCONF
 
@@ -79,8 +83,9 @@ func RunMember(grp string) {
 
 	g.Mkdir(GRPDIR, 07)
 
-	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK)
-	g.confFclnt = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0)
+	srvs := []string{GrpDir(grp)}
+	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK, srvs)
+	g.confFclnt = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0, srvs)
 
 	g.setRecovering(true)
 

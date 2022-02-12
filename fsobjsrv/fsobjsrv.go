@@ -74,7 +74,7 @@ func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	// log.Printf("%v: Attach %v\n", proc.GetProgram(), args.Uname)
+	// log.Printf("%v: Attach %v\n", proc.GetName(), args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname, fos.sid)
 	tree := root.(fs.FsObj)
@@ -92,11 +92,11 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 // Delete ephemeral files created on this session.
 func (fos *FsObjSrv) Detach() {
-	// log.Printf("%v: %v Clunkopen: %v\n", proc.GetProgram(), fos.sid, fos.ft.fids)
+	// log.Printf("%v: %v Clunkopen: %v\n", proc.GetName(), fos.sid, fos.ft.fids)
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v %v\n", fos.sid, ephemeral)
-	// log.Printf("%v detach %v ephemeral %v\n", proc.GetProgram(), fos.sid, ephemeral)
+	// log.Printf("%v detach %v ephemeral %v\n", proc.GetName(), fos.sid, ephemeral)
 	for o, f := range ephemeral {
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
@@ -162,7 +162,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "f %v\n", f)
 
 	o := f.Obj()
-	// log.Printf("%v: %v open %v mode %v\n", proc.GetProgram(), f.Ctx().Uname(), f.Path(), args.Mode)
+	// log.Printf("%v: %v open %v mode %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args.Mode)
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return r.Rerror()
@@ -226,7 +226,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
 
-		//log.Printf("%v %v %v Create %v %v %v ephemeral %v\n", proc.GetProgram(), fos.sid, ctx.Uname(), name, o1, err, perm.IsEphemeral())
+		//log.Printf("%v %v %v Create %v %v %v ephemeral %v\n", proc.GetName(), fos.sid, ctx.Uname(), name, o1, err, perm.IsEphemeral())
 
 		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
 		if err == nil {
@@ -278,7 +278,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 
 	o1, err := fos.createObj(f.Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
 	if err != nil {
-		//log.Printf("%v %v createObj %v err %v\n", proc.GetProgram(), f.Ctx().Uname(), names[0], r)
+		//log.Printf("%v %v createObj %v err %v\n", proc.GetName(), f.Ctx().Uname(), names[0], r)
 		return err.Rerror()
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
@@ -334,7 +334,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	// log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
+	// log.Printf("%v: %v remove %v in %v\n", proc.GetName(), ctx.Uname(), path, np.Dir(path))
 
 	err := o.Parent().Remove(ctx, path[len(path)-1])
 	if err != nil {
@@ -349,7 +349,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 	dws.WakeupWatchL()
 
 	if o.Perm().IsEphemeral() {
-		// log.Printf("%v del %v %v ephemeral %v\n", proc.GetProgram(), path, fos.sid, fos.et.ephemeral)
+		// log.Printf("%v del %v %v ephemeral %v\n", proc.GetName(), path, fos.sid, fos.et.ephemeral)
 		fos.et.Del(o)
 	}
 	return nil

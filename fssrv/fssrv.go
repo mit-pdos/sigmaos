@@ -92,11 +92,11 @@ func (fssrv *FsServer) Serve() {
 	if fssrv.pclnt != nil {
 		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error Started: %v", proc.GetProgram(), err)
+			log.Printf("%v: Error Started: %v", proc.GetName(), err)
 		}
 		if err := fssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error WaitEvict: %v", proc.GetProgram(), err)
+			log.Printf("%v: Error WaitEvict: %v", proc.GetName(), err)
 		}
 	} else {
 		<-fssrv.ch
@@ -166,12 +166,12 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		if err != nil {
 			return nil, err.Rerror()
 		}
-		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
+		// log.Printf("%v: %v %v %v\n", proc.GetName(), sess.Sid, msg.Type(), req)
 	case np.Tregfence:
-		log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
+		log.Printf("%v: Fence %v %v\n", proc.GetName(), sess.Sid, req)
 		err := fssrv.rft.UpdateFence(req.Fence)
 		if err != nil {
-			log.Printf("%v: Fence %v %v err %v\n", proc.GetProgram(), sess.Sid, req, err)
+			log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), sess.Sid, req, err)
 			return nil, err.Rerror()
 		}
 		// Fence was present in recent fences table and not
@@ -186,7 +186,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Tunfence:
-		log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
+		log.Printf("%v: Unfence %v %v\n", proc.GetName(), sess.Sid, req)
 		err := sess.Unfence(req.Fence.FenceId)
 		if err != nil {
 			return nil, err.Rerror()
@@ -194,7 +194,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	case np.Trmfence:
-		log.Printf("%p: Rmfence %v %v\n", fssrv, sess.Sid, req)
+		log.Printf("%v: Rmfence %v %v\n", proc.GetName(), sess.Sid, req)
 		err := fssrv.rft.RmFence(req.Fence)
 		if err != nil {
 			return nil, err.Rerror()
@@ -202,7 +202,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 		reply := &np.Ropen{}
 		return reply, nil
 	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
-		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
+		// log.Printf("%v: %v %v %v\n", proc.GetName(), sess.Sid, msg.Type(), req)
 	}
 	return nil, nil
 }

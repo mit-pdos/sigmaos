@@ -77,13 +77,13 @@ type KvClerk struct {
 func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc := &KvClerk{}
 	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
-	kc.balFclnt = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0)
+	kc.balFclnt = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0, []string{KVDIR})
 	kc.grpFclnts = make(map[string]*fenceclnt.FenceClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.grpre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
 	err := kc.balFclnt.AcquireConfig(&kc.blConf)
 	if err != nil {
-		log.Printf("%v: MakeClerk readConfig err %v\n", proc.GetProgram(), err)
+		log.Printf("%v: MakeClerk readConfig err %v\n", proc.GetName(), err)
 	}
 	return kc
 }
@@ -105,10 +105,10 @@ func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
 			return true, nil
 		default:
 			if err != nil {
-				return false, fmt.Errorf("%v: Get %v err %v", proc.GetProgram(), key(i), err)
+				return false, fmt.Errorf("%v: Get %v err %v", proc.GetName(), key(i), err)
 			}
 			if key(i) != v {
-				return false, fmt.Errorf("%v: Get %v wrong val %v", proc.GetProgram(), key(i), v)
+				return false, fmt.Errorf("%v: Get %v wrong val %v", proc.GetName(), key(i), v)
 			}
 		}
 	}
@@ -127,17 +127,12 @@ func (kc *KvClerk) Run() {
 			break
 		}
 	}
-	log.Printf("%v: done nop %v done %v err %v\n", proc.GetProgram(), kc.nop, done, err)
+	log.Printf("%v: done nop %v done %v err %v\n", proc.GetName(), kc.nop, done, err)
 	s := "OK"
 	if err != nil {
 		s = err.Error()
 	}
 
-	// We want exited() to not fail because of invalid fences
-	// (e.g., we may still have a fence for a kv group that
-	// doesn't exist anymore. Since we don't need fences anymore,
-	// deregister the ones we have.
-	kc.DeregisterFences()
 	kc.Exited(proc.GetPid(), s)
 }
 
@@ -146,7 +141,7 @@ func (kc *KvClerk) releaseFence(grp string) error {
 	if !ok {
 		return fmt.Errorf("release fclnt %v not found", grp)
 	}
-	// log.Printf("%v: release grp %v\n", proc.GetProgram(), grp)
+	// log.Printf("%v: release grp %v\n", proc.GetName(), grp)
 	err := f.ReleaseFence()
 	if err != nil {
 		return err
@@ -163,7 +158,7 @@ func (kc *KvClerk) acquireFence(grp string) error {
 		}
 	} else {
 		fn := group.GrpConfPath(grp)
-		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0)
+		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0, []string{group.GrpDir(grp)})
 	}
 	gc := group.GrpConf{}
 	err := kc.grpFclnts[grp].AcquireConfig(&gc)
@@ -192,13 +187,13 @@ func (kc KvClerk) retryReadConfig() error {
 		}
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: retry readConfig\n", proc.GetProgram())
+			log.Printf("%v: retry readConfig\n", proc.GetName())
 			continue
 		}
 
 		// maybe retryReadConfig failed with a stale error
 		if np.IsErrStale(err) {
-			log.Printf("%v: retry refreshConfig %v\n", proc.GetProgram(), err)
+			log.Printf("%v: retry refreshConfig %v\n", proc.GetName(), err)
 			continue
 		}
 
@@ -219,7 +214,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 		}
 
 		if np.IsErrNotfound(err) && strings.Contains(np.ErrNotfoundPath(err), KVCONF) {
-			log.Printf("%v: retry refreshConfig %v\n", proc.GetProgram(), err)
+			log.Printf("%v: retry refreshConfig %v\n", proc.GetName(), err)
 			continue
 		}
 
@@ -227,7 +222,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 		// we have stale grp fence; check and retry if so.
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: retry refreshConfig\n", proc.GetProgram())
+			log.Printf("%v: retry refreshConfig\n", proc.GetName())
 			continue
 		}
 
@@ -254,7 +249,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	// log.Printf("%v: fixRetry err %v\n", proc.GetProgram(), err)
+	// log.Printf("%v: fixRetry err %v\n", proc.GetName(), err)
 
 	// Shard dir hasn't been created yet (config 0) or hasn't moved
 	// yet, so wait a bit, and retry.  XXX make sleep time
@@ -295,7 +290,7 @@ func (kc *KvClerk) doop(o *op) {
 			return
 		}
 	}
-	//log.Printf("%v: no retry %v\n", proc.GetProgram(), o.k)
+	//log.Printf("%v: no retry %v\n", proc.GetName(), o.k)
 }
 
 type opT int
@@ -322,7 +317,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", proc.GetProgram(), o.kind, fn, o.err)
+	// log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string) (string, error) {

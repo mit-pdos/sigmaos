@@ -128,9 +128,11 @@ func (kc *KvClerk) Run() {
 		}
 	}
 	log.Printf("%v: done nop %v done %v err %v\n", proc.GetProgram(), kc.nop, done, err)
-	s := "OK"
+	var status *proc.Status
 	if err != nil {
-		s = err.Error()
+		status = proc.MakeStatusErr(err.Error())
+	} else {
+		status = proc.MakeStatus(proc.StatusOK)
 	}
 
 	// We want exited() to not fail because of invalid fences
@@ -138,7 +140,7 @@ func (kc *KvClerk) Run() {
 	// doesn't exist anymore. Since we don't need fences anymore,
 	// deregister the ones we have.
 	kc.DeregisterFences()
-	kc.Exited(proc.GetPid(), s)
+	kc.Exited(proc.GetPid(), status)
 }
 
 func (kc *KvClerk) releaseFence(grp string) error {

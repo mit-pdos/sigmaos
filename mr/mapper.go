@@ -179,13 +179,13 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	err = m.initMapper()
 	if err != nil {
-		m.Exited(proc.GetPid(), err.Error())
+		m.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 		return
 	}
 	err = m.doMap()
 	if err == nil {
-		m.Exited(proc.GetPid(), "OK")
+		m.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 	} else {
-		m.Exited(proc.GetPid(), err.Error())
+		m.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	}
 }

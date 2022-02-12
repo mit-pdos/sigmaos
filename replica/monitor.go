@@ -9,6 +9,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/sync"
 )
@@ -66,5 +67,5 @@ func (m *ReplicaMonitor) Work() {
 }
 
 func (m *ReplicaMonitor) Exit() {
-	m.Exited(m.pid, "OK")
+	m.Exited(m.pid, proc.MakeStatus(proc.StatusOK))
 }

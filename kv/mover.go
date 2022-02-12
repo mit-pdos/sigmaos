@@ -88,8 +88,8 @@ func (mv *Mover) Move(src, dst string) {
 		log.Printf("%v: MV conf %v from %v to %v err %v\n", proc.GetProgram(), mv.blConf.N, src, dst, err)
 	}
 	if err != nil {
-		mv.Exited(proc.GetPid(), err.Error())
+		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	} else {
-		mv.Exited(proc.GetPid(), "OK")
+		mv.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 	}
 }

@@ -168,8 +168,8 @@ func RunReducer(reducef ReduceT, args []string) {
 	}
 	err = r.doReduce()
 	if err == nil {
-		r.Exited(proc.GetPid(), "OK")
+		r.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 	} else {
-		r.Exited(proc.GetPid(), err.Error())
+		r.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	}
 }

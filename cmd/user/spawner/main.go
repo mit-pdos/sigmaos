@@ -64,5 +64,5 @@ func (s *Spawner) Work() {
 	if s.shouldWaitExit {
 		s.WaitExit(s.childPid)
 	}
-	s.Exited(proc.GetPid(), "OK")
+	s.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 }

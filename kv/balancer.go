@@ -277,18 +277,18 @@ func (bl *Balancer) spawnProc(args []string) (string, error) {
 	return p.Pid, err
 }
 
-func (bl *Balancer) runProc(args []string) (string, error) {
+func (bl *Balancer) runProc(args []string) (*proc.Status, error) {
 	pid, err := bl.spawnProc(args)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// log.Printf("%v: proc %v wait %v\n", proc.GetProgram(), args, pid)
 	status, err := bl.WaitExit(pid)
 	return status, err
 }
 
-func (bl *Balancer) runProcRetry(args []string, retryf func(error, string) bool) (error, string) {
-	status := ""
+func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status) bool) (error, *proc.Status) {
+	var status *proc.Status
 	var err error
 	for true {
 		status, err = bl.runProc(args)
@@ -347,9 +347,9 @@ func (bl *Balancer) runDeleters(moves Moves) {
 	for i, m := range moves {
 		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src},
-				func(err error, status string) bool {
-					ok := strings.HasPrefix(status, "file not found")
-					return err != nil || (status != "OK" && !ok)
+				func(err error, status *proc.Status) bool {
+					ok := strings.HasPrefix(status.Info(), "file not found")
+					return err != nil || (!status.IsStatusOK() && !ok)
 				})
 			// log.Printf("%v: delete %v/%v done err %v status %v\n", proc.GetProgram(), i, m, err, status)
 			ch <- i
@@ -372,8 +372,8 @@ func (bl *Balancer) runMovers(moves Moves) {
 	ch := make(chan int)
 	for i, m := range moves {
 		go func(m *Move, i int) {
-			bl.runProcRetry([]string{"bin/user/kv-mover", strconv.Itoa(bl.conf.N), m.Src, m.Dst}, func(err error, status string) bool {
-				return err != nil || status != "OK"
+			bl.runProcRetry([]string{"bin/user/kv-mover", strconv.Itoa(bl.conf.N), m.Src, m.Dst}, func(err error, status *proc.Status) bool {
+				return err != nil || !status.IsStatusOK()
 			})
 			// log.Printf("%v: move %v m %v done err %v status %v\n", proc.GetProgram(), i, m, err, status)
 			ch <- i

@@ -171,7 +171,7 @@ func (s *System) Shutdown() {
 		for _, pid := range cpids {
 			s.Evict(pid)
 			if _, ok := s.crashedPids[pid]; !ok {
-				if status, err := s.WaitExit(pid); status != "EVICTED" || err != nil {
+				if status, err := s.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					log.Printf("shutdown error %v %v", status, err)
 				}
 			}

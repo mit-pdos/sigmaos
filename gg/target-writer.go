@@ -34,7 +34,7 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 }
 
 func (tw *TargetWriter) Exit() {
-	tw.Exited(tw.pid, "OK")
+	tw.Exited(tw.pid, nil)
 }
 
 func (tw *TargetWriter) Work() {

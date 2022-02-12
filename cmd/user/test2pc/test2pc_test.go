@@ -154,12 +154,12 @@ func (ts *Tstate) setUpParticipants(opcode string, N int) []string {
 
 func (ts *Tstate) checkCoord(fws []string, opcode string) {
 	pid := ts.spawnCoord(opcode, fws)
-	ok, err := ts.WaitExit(pid)
+	status, err := ts.WaitExit(pid)
 	assert.Nil(ts.t, err, "WaitStart")
 	if !strings.HasPrefix(opcode, "crash") {
-		assert.Equal(ts.t, "OK", string(ok))
+		assert.True(ts.t, status.IsStatusOK(), "exit status coord")
 	} else {
-		log.Printf("COORD exited %v %v\n", err, string(ok))
+		log.Printf("COORD exited %v %v\n", err, string(status))
 	}
 }
 

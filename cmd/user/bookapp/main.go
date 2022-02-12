@@ -54,13 +54,13 @@ func RunBookApp(args []string) (*BookApp, error) {
 	return ba, nil
 }
 
-func (ba *BookApp) writeResponse(data []byte) string {
+func (ba *BookApp) writeResponse(data []byte) *proc.Status {
 	_, err := ba.Write(ba.pipefd, data)
 	if err != nil {
-		return fmt.Sprintf("Pipe parse err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Pipe parse err %v\n", err))
 	}
 	ba.Evict(proc.GetPid())
-	return "OK"
+	return proc.MakeStatus(proc.StatusOK)
 }
 
 func (ba *BookApp) query(q string) ([]byte, error) {
@@ -81,44 +81,44 @@ func (ba *BookApp) query(q string) ([]byte, error) {
 	return b, nil
 }
 
-func (ba *BookApp) doView() string {
+func (ba *BookApp) doView() *proc.Status {
 	b, err := ba.query("select * from book;")
 	if err != nil {
-		return fmt.Sprintf("Query err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err))
 	}
 
 	var books []dbd.Book
 	err = json.Unmarshal(b, &books)
 	if err != nil {
-		return fmt.Sprintf("Marshall err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Marshall err %v\n", err))
 	}
 
 	t, err := template.New("test").Parse(`<h1>Books</h1><ul>{{range .}}<li><a href="http://localhost:8080/edit/{{.Title}}">{{.Title}}</a> by {{.Author}}</li> {{end}}</ul>`)
 	if err != nil {
-		return fmt.Sprintf("Template parse err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Template parse err %v\n", err))
 	}
 
 	var data bytes.Buffer
 	err = t.Execute(&data, books)
 	if err != nil {
-		return fmt.Sprintf("Template err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Template err %v\n", err))
 	}
 
 	log.Printf("bookapp: html %v\n", string(data.Bytes()))
 	return ba.writeResponse(data.Bytes())
 }
 
-func (ba *BookApp) doEdit(key string) string {
+func (ba *BookApp) doEdit(key string) *proc.Status {
 	q := fmt.Sprintf("select * from book where title=\"%v\";", key)
 	b, err := ba.query(q)
 	if err != nil {
-		return fmt.Sprintf("Query err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err))
 	}
 
 	var books []dbd.Book
 	err = json.Unmarshal(b, &books)
 	if err != nil {
-		return fmt.Sprintf("Marshall err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Marshall err %v\n", err))
 	}
 
 	t, err := template.New("edit").Parse(`<h1>Editing {{.Title}}</h1>
@@ -129,27 +129,27 @@ func (ba *BookApp) doEdit(key string) string {
 	var data bytes.Buffer
 	err = t.Execute(&data, books[0])
 	if err != nil {
-		return fmt.Sprintf("Template err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Template err %v\n", err))
 	}
 
 	log.Printf("bookapp: html %v\n", string(data.Bytes()))
 	return ba.writeResponse(data.Bytes())
 }
 
-func (ba *BookApp) doSave(key string, title string) string {
+func (ba *BookApp) doSave(key string, title string) *proc.Status {
 	q := fmt.Sprintf("update book SET title=\"%v\" where title=\"%v\";", title, key)
 	_, err := ba.query(q)
 	if err != nil {
-		return fmt.Sprintf("Query err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Query err %v\n", err))
 	}
-	return fmt.Sprintf("Redirect %v", "/book/view/")
+	return proc.MakeStatusErr(fmt.Sprintf("Redirect %v", "/book/view/"))
 }
 
-func (ba *BookApp) Work() string {
+func (ba *BookApp) Work() *proc.Status {
 	log.Printf("work %v\n", ba.input)
 	fd, err := ba.Open(path.Join(proc.PARENTDIR, proc.SHARED)+"/", np.OWRITE)
 	if err != nil {
-		return fmt.Sprintf("Open err %v\n", err)
+		return proc.MakeStatusErr(fmt.Sprintf("Open err %v\n", err))
 	}
 	ba.pipefd = fd
 	defer ba.Close(fd)
@@ -162,11 +162,11 @@ func (ba *BookApp) Work() string {
 	case "save":
 		return ba.doSave(ba.input[1], os.Args[3])
 	default:
-		return "File not found"
+		return proc.MakeStatusErr("File not found")
 	}
 }
 
-func (ba *BookApp) Exit(status string) {
+func (ba *BookApp) Exit(status *proc.Status) {
 	log.Printf("bookapp exit %v\n", status)
 	ba.Exited(proc.GetPid(), status)
 }

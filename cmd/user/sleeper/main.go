@@ -62,27 +62,27 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	return s, nil
 }
 
-func (s *Sleeper) waitEvict(ch chan string) {
+func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 	if !s.native {
 		err := s.WaitEvict(proc.GetPid())
 		if err != nil {
 			log.Fatalf("Error WaitEvict: %v", err)
 		}
-		ch <- "EVICTED"
+		ch <- proc.MakeStatus(proc.StatusEvicted)
 	}
 }
 
-func (s *Sleeper) sleep(ch chan string) {
+func (s *Sleeper) sleep(ch chan *proc.Status) {
 	time.Sleep(s.sleepLength)
 	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {
 		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}
-	ch <- "OK"
+	ch <- proc.MakeStatus(proc.StatusOK)
 }
 
 func (s *Sleeper) Work() {
-	ch := make(chan string)
+	ch := make(chan *proc.Status)
 	go s.waitEvict(ch)
 	go s.sleep(ch)
 	status := <-ch

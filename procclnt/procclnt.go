@@ -110,7 +110,7 @@ func (clnt *ProcClnt) WaitStart(pid string) error {
 // Parent calls WaitExit() to wait until child proc has exited. If
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent removes the child from its list of children.
-func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
+func (clnt *ProcClnt) WaitExit(pid string) (*proc.Status, error) {
 	// Must wait for child to fill in return status pipe.
 	clnt.waitStart(pid)
 
@@ -118,19 +118,25 @@ func (clnt *ProcClnt) WaitExit(pid string) (string, error) {
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(pid), proc.EXIT_SEM))
 	if err := semExit.Down(); err != nil {
 		log.Printf("Error WaitExit semExit.Down: %v", err)
-		return "", fmt.Errorf("Error semExit.Down: %v", err)
+		return nil, fmt.Errorf("Error semExit.Down: %v", err)
 	}
 
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	b, err := clnt.ReadFile(path.Join(childDir, proc.EXIT_STATUS))
 	if err != nil {
 		log.Printf("Missing return status, procd must have crashed: %v, %v", pid, err)
-		return "", fmt.Errorf("Missing return status, procd must have crashed: %v", err)
+		return nil, fmt.Errorf("Missing return status, procd must have crashed: %v", err)
 	}
 
 	clnt.removeChild(pid)
 
-	return string(b), nil
+	status := &proc.Status{}
+	if err := json.Unmarshal(b, status); err != nil {
+		log.Printf("%v: waitexit unmarshal err %v", proc.GetProgram(), err)
+		return nil, err
+	}
+
+	return status, nil
 }
 
 // Proc pid waits for eviction notice from procd.
@@ -187,7 +193,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 //
 // exited() should be called *once* per proc, but procd's procclnt may
 // call exited() for different procs.
-func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, status string) error {
+func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, status *proc.Status) error {
 
 	// will catch some unintended misuses: a proc calling exited
 	// twice or procd calling exited twice.
@@ -196,8 +202,13 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 		return fmt.Errorf("Exited error called more than once for pid %v", pid)
 	}
 
+	b, err := json.Marshal(status)
+	if err != nil {
+		log.Printf("%v: exited marshal err %v", proc.GetProgram(), err)
+		return err
+	}
 	// May return an error if parent already exited.
-	if err := clnt.MakeFile(path.Join(parentdir, proc.EXIT_STATUS), 0777, np.OWRITE, []byte(status)); err != nil {
+	if err := clnt.MakeFile(path.Join(parentdir, proc.EXIT_STATUS), 0777, np.OWRITE, b); err != nil {
 		log.Printf("exited error (parent already exited) MakeFile: %v", err)
 	}
 
@@ -217,7 +228,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 
 // If exited() fails, invoke os.Exit(1) to indicate to procd that proc
 // failed
-func (clnt *ProcClnt) Exited(pid string, status string) {
+func (clnt *ProcClnt) Exited(pid string, status *proc.Status) {
 	procdir := proc.PROCDIR
 	err := clnt.exited(procdir, proc.PARENTDIR, pid, status)
 	if err != nil {
@@ -226,7 +237,7 @@ func (clnt *ProcClnt) Exited(pid string, status string) {
 	}
 }
 
-func (clnt *ProcClnt) ExitedProcd(pid string, procdir string, parentdir string, status string) {
+func (clnt *ProcClnt) ExitedProcd(pid string, procdir string, parentdir string, status *proc.Status) {
 	err := clnt.exited(procdir, parentdir, pid, status)
 	if err != nil {
 		// XXX maybe remove any state left of proc?

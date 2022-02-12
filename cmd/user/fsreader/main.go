@@ -53,7 +53,7 @@ func MakeReader(args []string) (*Reader, error) {
 	return r, nil
 }
 
-func (r *Reader) Work() string {
+func (r *Reader) Work() *proc.Status {
 	db.DLPrintf("Reader", "Reader: work\n")
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, np.OWRITE)
@@ -63,7 +63,7 @@ func (r *Reader) Work() string {
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
-		return "File not found"
+		return proc.MakeStatusErr("File not found")
 	}
 	defer r.Close(fd)
 	for {
@@ -76,9 +76,9 @@ func (r *Reader) Work() string {
 			log.Fatal("%v: Error pipe Write: %v", proc.GetProgram(), err)
 		}
 	}
-	return "OK"
+	return proc.MakeStatus(proc.StatusOK)
 }
 
-func (r *Reader) Exit(status string) {
+func (r *Reader) Exit(status *proc.Status) {
 	r.Exited(proc.GetPid(), status)
 }

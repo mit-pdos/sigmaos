@@ -55,7 +55,7 @@ func (p *Proc) wait(cmd *exec.Cmd) {
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("Proc %v finished with error: %v", p.attr, err)
-		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, err.Error())
+		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error()))
 		return
 	}
 

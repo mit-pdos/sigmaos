@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	db "ulambda/debug"
-	"ulambda/fences"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/protclnt"
@@ -29,7 +28,6 @@ type FsClient struct {
 	pc    *protclnt.Clnt
 	mnt   *MntTable
 	uname string
-	fm    *fences.FenceTable
 }
 
 func MakeFsClient(uname string) *FsClient {
@@ -39,7 +37,6 @@ func MakeFsClient(uname string) *FsClient {
 	fsc.mnt = makeMntTable()
 	fsc.pc = protclnt.MakeClnt()
 	fsc.uname = uname
-	fsc.fm = fences.MakeFenceTable()
 	return fsc
 }
 

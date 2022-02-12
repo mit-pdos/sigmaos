@@ -46,10 +46,6 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// Mount parentdir. May fail if parent already exited.
 	mountDir(fsl, proc.GetParentDir(), proc.PARENTDIR)
 
-	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: FATAL error mounting locks err %v\n", proc.GetProgram(), err)
-	}
 	if err := fsl.MountTree(fslib.Named(), np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: FATAL error mounting procd err %v\n", proc.GetProgram(), err)

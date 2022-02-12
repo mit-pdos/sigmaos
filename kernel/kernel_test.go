@@ -208,7 +208,7 @@ func TestFenceW(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		wfence := fenceclnt.MakeFenceClnt(fsldl, fence, 0)
+		wfence := fenceclnt.MakeFenceClnt(fsldl, fence, 0, []string{dirux})
 		err := wfence.AcquireFenceW([]byte{})
 		assert.Nil(t, err, "WriteFence")
 
@@ -227,6 +227,8 @@ func TestFenceW(t *testing.T) {
 		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
 		assert.NotNil(t, err, "Write")
 
+		log.Printf("err %v\n", err)
+
 		_, err = fsldl.Read(fd, 100)
 		assert.NotNil(t, err, "Write")
 
@@ -237,9 +239,9 @@ func TestFenceW(t *testing.T) {
 
 	<-ch
 
-	wfence := fenceclnt.MakeFenceClnt(ts.FsLib, fence, 0)
+	wfence := fenceclnt.MakeFenceClnt(ts.FsLib, fence, 0, []string{dirux})
 	err := wfence.AcquireFenceW([]byte{})
-	assert.Nil(t, err, "Weaklock")
+	assert.Nil(t, err, "WriteFence")
 
 	<-ch
 

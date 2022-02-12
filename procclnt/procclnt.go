@@ -273,8 +273,8 @@ func (clnt *ProcClnt) EvictKernelProc(pid string) error {
 }
 
 // Called by procd.
-func (clnt *ProcClnt) EvictProcd(pid string) error {
-	procdir := path.Join(proc.PIDS, pid)
+func (clnt *ProcClnt) EvictProcd(procdIp string, pid string) error {
+	procdir := path.Join(np.PROCD, procdIp, proc.PIDS, pid)
 	return clnt.evict(procdir)
 }
 

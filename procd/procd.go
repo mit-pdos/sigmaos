@@ -19,7 +19,6 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	usync "ulambda/sync"
 )
 
 const (
@@ -299,7 +298,7 @@ func (pd *Procd) worker(done *int32) {
 			continue
 		}
 		if error != nil {
-			if np.IsErrNotfound(error) && strings.Contains(np.ErrNotfoundPath(error), usync.COND) {
+			if np.IsErrNotfound(error) {
 				db.DLPrintf("PROCD", "cond file not found: %v", error)
 				return
 			}

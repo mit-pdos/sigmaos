@@ -119,7 +119,7 @@ func (m *RealmMgr) createRealms() {
 		realmId := <-m.realmCreate
 
 		m.Lock()
-		m.fences[realmId] = fenceclnt.MakeFenceClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
+		m.fences[realmId] = fenceclnt.MakeFenceClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777, []string{REALM_FENCES})
 		fence := m.fences[realmId]
 		m.Unlock()
 

@@ -309,11 +309,10 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 		log.Printf("%v: Error rename removeProc %v -> %v : %v", proc.GetProgram(), src, dst, err)
 	}
 	err := clnt.RmDir(procdir)
-	// May have to retry a few times if writing child already opened dir.
-	for {
-		if err == nil {
-			break
-		}
+	maxRetries := 2
+	// May have to retry a few times if writing child already opened dir. We
+	// should only have to retry once at most.
+	for i := 0; i < maxRetries && err != nil; i++ {
 		s, _ := clnt.SprintfDir(procdir)
 		debug.PrintStack()
 		log.Printf("%v: RmDir %v err %v \n%v", proc.GetProgram(), procdir, err, s)

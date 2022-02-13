@@ -319,7 +319,7 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 		// Retry
 		err = clnt.RmDir(procdir)
 	}
-	return nil
+	return err
 }
 
 func (clnt *ProcClnt) hasExited() string {

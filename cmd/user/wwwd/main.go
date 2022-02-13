@@ -86,7 +86,7 @@ func MakeWwwd(tree string) *Wwwd {
 	return www
 }
 
-func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (string, error)) http.HandlerFunc {
+func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, string) (*proc.Status, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
@@ -97,10 +97,10 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		if status == "File not found" {
+		if status.IsStatusErr() && status.Info() == "File not found" {
 			http.NotFound(w, r)
-		} else if strings.HasPrefix(status, "Redirect") {
-			t := strings.Split(status, " ")
+		} else if status.IsStatusErr() && strings.HasPrefix(status.Info(), "Redirect") {
+			t := strings.Split(status.Info(), " ")
 			if len(t) > 1 {
 				http.Redirect(w, r, t[1], http.StatusFound)
 			}
@@ -148,7 +148,7 @@ func (www *Wwwd) rwResponse(w http.ResponseWriter, pipeName string) {
 	www.removePipe(pipeName)
 }
 
-func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (string, error) {
+func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, args []string) (*proc.Status, error) {
 	// Create a pipe for the child to write to.
 	pipeName := www.makePipe()
 
@@ -158,11 +158,11 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	err := www.Spawn(a)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	err = www.WaitStart(pid)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// Read from the pipe in another thread. This way, if the child crashes or
 	// terminates normally, we'll catch it with WaitExit and remove the pipe so
@@ -170,17 +170,17 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	go func() {
 		www.rwResponse(w, pipeName)
 	}()
-	str, err := www.WaitExit(pid)
-	return str, err
+	status, err := www.WaitExit(pid)
+	return status, err
 }
 
-func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	log.Printf("%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
 	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
 }
 
-func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	log.Printf("dobook: %v\n", args)
 	// XXX maybe pass all form key/values to app
 	//r.ParseForm()
@@ -192,8 +192,8 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (str
 	return www.spawnApp("bin/user/bookapp", w, r, []string{args, title})
 }
 
-func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (string, error) {
+func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	www.Done()
 	os.Exit(0)
-	return "", nil
+	return nil, nil
 }

@@ -115,7 +115,7 @@ func (fssrv *FsServer) Serve() {
 // The server using fssrv is done; exit.
 func (fssrv *FsServer) Done() {
 	if fssrv.pclnt != nil {
-		fssrv.pclnt.Exited(proc.GetPid(), "EVICTED")
+		fssrv.pclnt.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusEvicted))
 	} else {
 		if !fssrv.done {
 			fssrv.done = true

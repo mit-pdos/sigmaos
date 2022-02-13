@@ -35,7 +35,7 @@ type member struct {
 type procret struct {
 	member int
 	err    error
-	status string
+	status *proc.Status
 }
 
 func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int) *member {
@@ -82,7 +82,7 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 		st := <-done
 		if gm.stop {
 			n--
-		} else if st.err == nil && st.status == "OK" { // done?
+		} else if st.err == nil && st.status.IsStatusOK() { // done?
 			gm.stop = true
 			n--
 		} else { // restart member i

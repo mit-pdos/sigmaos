@@ -8,7 +8,6 @@ import (
 	"ulambda/atomic"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/sync"
 )
 
 const (

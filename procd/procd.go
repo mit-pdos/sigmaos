@@ -19,7 +19,6 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	usync "ulambda/sync"
 )
 
 const (
@@ -87,7 +86,7 @@ func (pd *Procd) makeProc(a *proc.Proc) *Proc {
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
 	for pid, _ := range pd.procs {
-		pd.procclnt.EvictProcd(pid)
+		pd.procclnt.EvictProcd(pd.addr, pid)
 	}
 }
 
@@ -299,7 +298,7 @@ func (pd *Procd) worker(done *int32) {
 			continue
 		}
 		if error != nil {
-			if np.IsErrNotfound(error) && strings.Contains(np.ErrNotfoundPath(error), usync.COND) {
+			if np.IsErrNotfound(error) {
 				db.DLPrintf("PROCD", "cond file not found: %v", error)
 				return
 			}

@@ -128,12 +128,13 @@ func (kc *KvClerk) Run() {
 		}
 	}
 	log.Printf("%v: done nop %v done %v err %v\n", proc.GetName(), kc.nop, done, err)
-	s := "OK"
+	var status *proc.Status
 	if err != nil {
-		s = err.Error()
+		status = proc.MakeStatusErr(err.Error())
+	} else {
+		status = proc.MakeStatus(proc.StatusOK)
 	}
-
-	kc.Exited(proc.GetPid(), s)
+	kc.Exited(proc.GetPid(), status)
 }
 
 func (kc *KvClerk) releaseFence(grp string) error {

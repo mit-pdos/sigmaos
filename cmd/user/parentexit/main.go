@@ -25,11 +25,11 @@ func main() {
 	a := proc.MakeProcPid(pid1, "bin/user/sleeper", []string{os.Args[1], "name/out_" + pid1})
 	err := pclnt.Spawn(a)
 	if err != nil {
-		pclnt.Exited(proc.GetPid(), err.Error())
+		pclnt.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	}
 	err = pclnt.WaitStart(pid1)
 	if err != nil {
-		pclnt.Exited(proc.GetPid(), err.Error())
+		pclnt.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	}
-	pclnt.Exited(proc.GetPid(), "OK")
+	pclnt.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 }

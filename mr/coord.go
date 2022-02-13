@@ -89,28 +89,28 @@ func MakeCoord(args []string) (*Coord, error) {
 	return w, nil
 }
 
-func (w *Coord) task(bin string, args []string) string {
+func (w *Coord) task(bin string, args []string) (*proc.Status, error) {
 	a := proc.MakeProc(bin, args)
 	if w.crash > 0 {
 		a.AppendEnv("SIGMACRASH", strconv.Itoa(w.crash))
 	}
 	err := w.Spawn(a)
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
-	ok, err := w.WaitExit(a.Pid)
+	status, err := w.WaitExit(a.Pid)
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
-	return ok
+	return status, nil
 }
 
-func (w *Coord) mapper(task string) string {
+func (w *Coord) mapper(task string) (*proc.Status, error) {
 	input := INPUTDIR + task
 	return w.task(w.mapperbin, []string{strconv.Itoa(w.nreducetask), input})
 }
 
-func (w *Coord) reducer(task string) string {
+func (w *Coord) reducer(task string) (*proc.Status, error) {
 	in := RDIR + TIP + "/" + task
 	out := ROUT + task
 	return w.task(w.reducerbin, []string{in, out})
@@ -152,11 +152,12 @@ func (w *Coord) getTask(dir string) (string, error) {
 }
 
 type Ttask struct {
-	task string
-	ok   string
+	task   string
+	status *proc.Status
+	err    error
 }
 
-func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int {
+func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Status, error)) int {
 	n := 0
 	for {
 		t, err := w.getTask(dir)
@@ -169,8 +170,8 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) string) int
 		n += 1
 		go func() {
 			db.DPrintf("start task %v\n", t)
-			ok := f(t)
-			ch <- Ttask{t, ok}
+			status, err := f(t)
+			ch <- Ttask{t, status, err}
 		}()
 	}
 	return n
@@ -186,7 +187,7 @@ func (w *Coord) restartMappers(files []string) {
 }
 
 func (w *Coord) processResult(dir string, res Ttask) {
-	if res.ok == "OK" {
+	if res.err == nil && res.status.IsStatusOK() {
 		// mark task as done
 		log.Printf("%v: task done %v\n", proc.GetProgram(), res.task)
 		s := dir + TIP + "/" + res.task
@@ -199,14 +200,14 @@ func (w *Coord) processResult(dir string, res Ttask) {
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
-		db.DPrintf("task %v failed %v\n", res.task, res.ok)
+		db.DPrintf("task %v failed %v err %v\n", res.task, res.status, res.err)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
 			log.Fatalf("%v: rename to %v err %v\n", proc.GetProgram(), to, err)
 		}
 	}
 }
 
-func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) string) {
+func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Status, error)) {
 	sts, err := w.ReadDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
 		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
@@ -216,8 +217,8 @@ func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) string) {
 		n += 1
 		go func() {
 			log.Printf("%v: start straggler task %v\n", proc.GetProgram(), st.Name)
-			ok := f(st.Name)
-			ch <- Ttask{st.Name, ok}
+			status, err := f(st.Name)
+			ch <- Ttask{st.Name, status, err}
 		}()
 	}
 }
@@ -245,17 +246,17 @@ func (w *Coord) lostMapperOutput(ok string) []string {
 	return strings.Split(lost, ",")
 }
 
-func (w *Coord) phase(dir string, f func(string) string) bool {
+func (w *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 	ch := make(chan Ttask)
 	straggler := false
 	for n := w.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
 		w.processResult(dir, res)
-		if res.ok != "OK" {
+		if !res.status.IsStatusOK() {
 			// If we're reducing and can't find some mapper output, a ux may have
 			// crashed. So, restart those map tasks.
-			if dir == RDIR && strings.Contains(res.ok, RESTART) {
-				lost := w.lostMapperOutput(res.ok)
+			if dir == RDIR && strings.Contains(res.status.Info(), RESTART) {
+				lost := w.lostMapperOutput(res.status.Info())
 				w.restartMappers(lost)
 				return false
 			} else {
@@ -292,5 +293,5 @@ func (w *Coord) Work() {
 		}
 	}
 
-	w.Exited(proc.GetPid(), "OK")
+	w.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 }

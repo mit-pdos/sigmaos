@@ -3,8 +3,6 @@ package ninep
 // if name ends in "/", it is a directory for that service
 const (
 	NAMED         = "name"
-	LOCKSREL      = "locks"
-	LOCKS         = "name/" + LOCKSREL
 	BOOTREL       = "boot"
 	BOOT          = "name/" + BOOTREL
 	TMPREL        = "tmp"
@@ -16,8 +14,6 @@ const (
 	DB            = "name/db/"
 	REALM_MGR     = "name/realmmgr"
 	MEMFS         = "name/memfsd/"
-	PIDSREL       = "pids"
-	PIDS          = "name/" + PIDSREL
 	KPIDSREL      = "kpids"
 	KPIDS         = "name/" + KPIDSREL
 	PROC_CTL_FILE = "ctl"

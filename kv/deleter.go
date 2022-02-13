@@ -49,8 +49,8 @@ func (dl *Deleter) Delete(sharddir string) {
 	err := dl.RmDir(sharddir)
 	if err != nil {
 		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetName(), dl.blConf.N, sharddir, err)
-		dl.Exited(proc.GetPid(), err.Error())
+		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	} else {
-		dl.Exited(proc.GetPid(), "OK")
+		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 	}
 }

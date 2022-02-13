@@ -8,16 +8,16 @@ import (
 	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fslib"
-	np "ulambda/ninep"
+	//	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/sync"
 )
 
 type ReplicaMonitor struct {
 	pid          string
 	configPath   string
 	unionDirPath string
-	configLock   *sync.Lock
+	//	configLock   *sync.Lock
 	*fslib.FsLib
 	*procclnt.ProcClnt
 }
@@ -31,7 +31,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	// Set up fslib
 	fsl := fslib.MakeFsLib("memfs-replica-monitor")
 	m.FsLib = fsl
-	m.configLock = sync.MakeLock(fsl, np.LOCKS, m.configPath, true)
+	//	m.configLock = sync.MakeLock(fsl, np.LOCKS, m.configPath, true)
 	m.ProcClnt = procclnt.MakeProcClnt(fsl)
 	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
@@ -59,12 +59,12 @@ func (m *ReplicaMonitor) updateConfig() {
 func (m *ReplicaMonitor) Work() {
 	m.Started(m.pid)
 	// Get exclusive access to the config file.
-	if ok := m.configLock.TryLock(); ok {
-		m.updateConfig()
-		m.configLock.Unlock()
-	}
+	//	if ok := m.configLock.TryLock(); ok {
+	m.updateConfig()
+	//	m.configLock.Unlock()
+	//	}
 }
 
 func (m *ReplicaMonitor) Exit() {
-	m.Exited(m.pid, "OK")
+	m.Exited(m.pid, proc.MakeStatus(proc.StatusOK))
 }

@@ -109,7 +109,7 @@ func TestWaitExitSimple(t *testing.T) {
 	pid := spawnSleeper(t, ts)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
-	assert.Equal(t, "OK", status, "Exit status wrong")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
@@ -134,7 +134,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
-	assert.Equal(t, "OK", status, "Exit status wrong")
+	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
 	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
@@ -159,7 +159,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	assert.Equal(t, "OK", status, "WaitExit status error")
+	assert.True(t, status.IsStatusOK(), "WaitExit status error")
 	assert.Nil(t, err, "WaitExit error")
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
@@ -243,7 +243,8 @@ func TestCrashProc(t *testing.T) {
 
 	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, "exit status 2", status, "WaitExit")
+	assert.True(t, status.IsStatusErr(), "Status not err")
+	assert.Equal(t, "exit status 2", status.Info(), "WaitExit")
 
 	ts.Shutdown()
 }
@@ -259,7 +260,7 @@ func TestEarlyExit1(t *testing.T) {
 	// Wait for parent to finish
 	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, "OK", status, "WaitExit")
+	assert.True(t, status.IsStatusOK(), "WaitExit")
 
 	// Child should not have terminated yet.
 	checkSleeperResultFalse(t, ts, pid1)
@@ -294,7 +295,7 @@ func TestEarlyExitN(t *testing.T) {
 			// Wait for parent to finish
 			status, err := ts.WaitExit(a.Pid)
 			assert.Nil(t, err, "WaitExit")
-			assert.Equal(t, "OK", status, "WaitExit")
+			assert.True(t, status.IsStatusOK(), "WaitExit")
 
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
@@ -379,7 +380,7 @@ func TestEvict(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, "EVICTED", status, "WaitExit status")
+	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "Didn't evict early enough.")
@@ -420,9 +421,9 @@ func testFencer(t *testing.T, part string) {
 	}
 
 	for _, pid := range pids {
-		status, _ := ts.WaitExit(pid)
+		status, err := ts.WaitExit(pid)
 		log.Printf("status %v\n", status)
-		assert.NotEqual(t, "Invariant violated", status, "Exit status wrong")
+		assert.True(t, err != nil || !status.IsStatusErr() || status.Info() != "Invariant violated", "Exit status wrong")
 	}
 	ts.Shutdown()
 }
@@ -449,7 +450,7 @@ func TestReserveCores(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, "OK", status, "WaitExit status")
+	assert.True(t, status.IsStatusOK(), "WaitExit status")
 
 	// Make sure the second proc didn't finish
 	checkSleeperResult(t, ts, pid)
@@ -457,7 +458,7 @@ func TestReserveCores(t *testing.T) {
 
 	status, err = ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit 2")
-	assert.Equal(t, "OK", status, "WaitExit status 2")
+	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
@@ -481,11 +482,11 @@ func TestWorkStealing(t *testing.T) {
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
-	assert.Equal(t, "OK", status, "WaitExit status")
+	assert.True(t, status.IsStatusOK(), "WaitExit status")
 
 	status, err = ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit 2")
-	assert.Equal(t, "OK", status, "WaitExit status 2")
+	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 	end := time.Now()
 
 	// Make sure both procs finished
@@ -514,7 +515,7 @@ func TestEvictN(t *testing.T) {
 	for i := 0; i < N; i++ {
 		status, err := ts.WaitExit(pids[i])
 		assert.Nil(t, err, "WaitExit")
-		assert.Equal(t, "EVICTED", status, "WaitExit status")
+		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
 	}
 
 	ts.Shutdown()

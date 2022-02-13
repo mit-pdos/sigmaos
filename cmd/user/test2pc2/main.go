@@ -112,5 +112,5 @@ func (p *Part2pc) Work() {
 	db.DLPrintf("TEST2PC", "Work\n")
 	<-p.done
 	db.DLPrintf("TEST2PC", "exit\n")
-	p.Exited(proc.GetPid(), "OK")
+	p.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 }

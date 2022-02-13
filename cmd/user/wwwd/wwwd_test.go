@@ -47,7 +47,7 @@ func (ts *Tstate) waitWww() {
 
 	status, err := ts.WaitExit(ts.pid)
 	assert.Nil(ts.t, err, "WaitExit error")
-	assert.Equal(ts.t, "EVICTED", status, "Exit status wrong")
+	assert.True(ts.t, status.IsStatusEvicted(), "Exit status wrong")
 
 	r := <-ch
 	assert.NotEqual(ts.t, nil, r)

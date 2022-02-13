@@ -46,10 +46,6 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 	// Mount parentdir. May fail if parent already exited.
 	mountDir(fsl, proc.GetParentDir(), proc.PARENTDIR)
 
-	if err := fsl.MountTree(fslib.Named(), "locks", "name/locks"); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: FATAL error mounting locks err %v\n", proc.GetProgram(), err)
-	}
 	if err := fsl.MountTree(fslib.Named(), np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: FATAL error mounting procd err %v\n", proc.GetProgram(), err)
@@ -62,7 +58,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcClnt {
 	pid := proc.GenPid()
-	proc.FakeProcEnv(pid, uname, "", path.Join(proc.PIDS, pid), "")
+	proc.FakeProcEnv(pid, uname, "", path.Join(proc.KPIDS, pid), "")
 
 	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
@@ -86,11 +82,6 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 
 func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
 	// Make a pid directory for this initial proc
-	if err := fsl.MountTree(namedAddr, proc.PIDS, proc.PIDS); err != nil {
-		debug.PrintStack()
-		log.Fatalf("%v: FATAL error mounting %v as %v err %v\n", proc.GetProgram(), proc.PIDS, proc.PIDS, err)
-		return err
-	}
 	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
 		debug.PrintStack()
 		log.Fatalf("%v: FATAL error mounting %v as %v err %v\n", proc.GetProgram(), proc.KPIDS, proc.KPIDS, err)

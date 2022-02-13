@@ -143,61 +143,6 @@ func (fsc *FsClient) AttachReplicas(server []string, path, tree string) (np.Tfid
 	}
 }
 
-func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
-	p := np.Split(path)
-	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return np.Tfence{}, err
-	}
-	_, err = fsc.fids.clnt(fid).Open(fid, mode)
-	if err != nil {
-		return np.Tfence{}, err
-	}
-	defer fsc.clunkFid(fid)
-	reply, err := fsc.fids.clnt(fid).MkFence(fid)
-	if err != nil {
-		log.Printf("%v: MkFence %v err %v\n", proc.GetProgram(), fid, err)
-		return np.Tfence{}, err
-	}
-	return reply.Fence, nil
-}
-
-func (fsc *FsClient) RegisterFence(f np.Tfence, path string) error {
-	p := np.Split(path)
-	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
-	if err := fsc.fids.clnt(fid).RegisterFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (fsc *FsClient) DeregisterFence(f np.Tfence, path string) error {
-	p := np.Split(path)
-	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
-	if err := fsc.fids.clnt(fid).DeregisterFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
-	p := np.Split(path)
-	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
-	if err := fsc.fids.clnt(fid).RmFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, *np.Err) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.fids.path(fid))
 	fid2 := fsc.fids.path(fid)
@@ -337,6 +282,7 @@ func (fsc *FsClient) Remove(name string) error {
 			if err != nil {
 				return err
 			}
+			// defer fsc.clunkFid(fid)
 			err = fsc.fids.clnt(fid).Remove(fid)
 		}
 	}
@@ -359,6 +305,7 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 		if err != nil {
 			return nil, err
 		}
+		// defer fsc.clunkFid(fid)
 		reply, err := fsc.fids.clnt(fid).Stat(fid)
 		if err != nil {
 			return nil, err
@@ -502,6 +449,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
+			// defer fsc.clunkFid(fid)
 			reply, err = fsc.fids.clnt(fid).GetFile(fid, []string{}, mode, 0, 0)
 			if err != nil {
 				return nil, err
@@ -541,6 +489,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 			if err != nil {
 				return 0, err
 			}
+			// defer fsc.clunkFid(fid)
 			reply, err = fsc.fids.clnt(fid).SetFile(fid, base, mode, perm, 0, data)
 			if err != nil {
 				return 0, err
@@ -552,6 +501,63 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 	return reply.Count, nil
 }
 
+func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return np.Tfence{}, err
+	}
+	_, err = fsc.fids.clnt(fid).Open(fid, mode)
+	if err != nil {
+		return np.Tfence{}, err
+	}
+	defer fsc.clunkFid(fid)
+	reply, err := fsc.fids.clnt(fid).MkFence(fid)
+	if err != nil {
+		log.Printf("%v: MkFence %v err %v\n", proc.GetProgram(), fid, err)
+		return np.Tfence{}, err
+	}
+	return reply.Fence, nil
+}
+
+func (fsc *FsClient) RegisterFence(f np.Tfence, path string) error {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return err
+	}
+	if err := fsc.fids.clnt(fid).RegisterFence(f, fid); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fsc *FsClient) DeregisterFence(f np.Tfence, path string) error {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return err
+	}
+	defer fsc.clunkFid(fid)
+	if err := fsc.fids.clnt(fid).DeregisterFence(f, fid); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
+	p := np.Split(path)
+	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
+	if err != nil {
+		return err
+	}
+	defer fsc.clunkFid(fid)
+	if err := fsc.fids.clnt(fid).RmFence(f, fid); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (fsc *FsClient) ShutdownFs(name string) error {
 	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
 	path := np.Split(name)
@@ -559,6 +565,7 @@ func (fsc *FsClient) ShutdownFs(name string) error {
 	if err != nil {
 		return err
 	}
+	// defer fsc.clunkFid(fid)
 	err = fsc.fids.clnt(fid).RemoveFile(fid, []string{".exit"})
 	if err != nil {
 		return err

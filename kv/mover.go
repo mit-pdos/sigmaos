@@ -28,9 +28,13 @@ func MakeMover(N string, src, dst string) (*Mover, error) {
 	mv := &Mover{}
 	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
-	mv.fclnt = fenceclnt.MakeFenceClnt(mv.FsLib, KVCONFIG, 0, []string{KVDIR, src, path.Dir(dst)})
+
 	err := mv.Started(proc.GetPid())
 	crash.Crasher(mv.FsLib)
+
+	// Use Dir for src and dst, because the shard dirs may not exist
+	mv.fclnt = fenceclnt.MakeFenceClnt(mv.FsLib, KVCONFIG, 0, []string{KVDIR})
+
 	err = mv.fclnt.AcquireConfig(&mv.blConf)
 	if err != nil {
 		log.Printf("%v: AcquireConfig %v err %v\n", proc.GetName(), mv.fclnt.Name(), err)
@@ -50,10 +54,6 @@ func shardTmp(shardp string) string {
 func (mv *Mover) moveShard(s, d string) error {
 	d1 := shardTmp(d)
 
-	// An aborted view change may have created the directory and
-	// partially copied files into it; remove it and start over.
-	mv.RmDir(d1)
-
 	// The previous mover might have crashed right after rename
 	// below. If so, we are done and reuse d.
 	_, err := mv.Stat(d)
@@ -61,6 +61,15 @@ func (mv *Mover) moveShard(s, d string) error {
 		log.Printf("%v: moveShard conf %v reuse %v\n", proc.GetName(), mv.blConf.N, d)
 		return nil
 	}
+
+	// + "/" to force grp-0 to be resolved and path.Dir(d) because d doesn't exist yet
+	if err := mv.fclnt.FencePaths([]string{s, path.Dir(d) + "/"}); err != nil {
+		return err
+	}
+
+	// An aborted view change may have created the directory and
+	// partially copied files into it; remove it and start over.
+	mv.RmDir(d1)
 
 	err = mv.Mkdir(d1, 0777)
 	if err != nil {

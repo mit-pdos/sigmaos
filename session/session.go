@@ -1,12 +1,12 @@
 package session
 
 import (
+	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
 
 	"ulambda/fences"
-	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/threadmgr"
@@ -39,23 +39,23 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTab
 	return sess
 }
 
-func (sess *Session) Fence(req np.Tregfence) {
-	sess.myFences.Insert(req.Fence)
+func (sess *Session) Fence(pn []string, fence np.Tfence) {
+	sess.myFences.Insert(pn, fence)
 }
 
 func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 	return sess.threadmgr
 }
 
-func (sess *Session) Unfence(idf np.Tfenceid) *np.Err {
-	return sess.myFences.Del(idf)
+func (sess *Session) Unfence(path []string, idf np.Tfenceid) *np.Err {
+	return sess.myFences.Del(path, idf)
 }
 
-func (sess *Session) CheckFences(fsl *fslib.FsLib) *np.Err {
-	fences := sess.myFences.Fences()
-	//if len(fences) > 0 {
-	//	log.Printf("%v: CheckFences %v\n", sess.Sid, fences)
-	//}
+func (sess *Session) CheckFences(path []string) *np.Err {
+	fences := sess.myFences.Fences(path)
+	if len(fences) > 0 {
+		log.Printf("%v: CheckFences %v %v\n", sess.Sid, path, fences)
+	}
 	for _, f := range fences {
 		err := sess.rft.IsRecent(f)
 		if err != nil {

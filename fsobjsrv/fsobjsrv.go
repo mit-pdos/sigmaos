@@ -266,7 +266,11 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "f %v\n", f)
+	db.DLPrintf("9POBJ", "Create f %v\n", f)
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 	o := f.Obj()
 	names := []string{args.Name}
 	if !o.Perm().IsDir() {
@@ -310,6 +314,10 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DLPrintf("9POBJ", "Write %v\n", args)
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
+		return err.Rerror()
+	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
 		return err.Rerror()
 	}
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
@@ -360,6 +368,10 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 	o := f.Obj()
 	if isExit(f.Path()) {
 		db.DLPrintf("9POBJ", "Done\n")
@@ -397,6 +409,10 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 		fos.fssrv.Done()
 		return nil
 	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 
 	lo := o
 	if len(args.Wnames) > 0 {
@@ -432,6 +448,11 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	o := f.Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
+
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(f.PathDir()); err != nil {
+			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.PathDir(), err)
+			return err.Rerror()
+		}
 
 		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 
@@ -489,6 +510,16 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		if oo.Inum() == no.Inum() {
 			return np.MkErr(np.TErrInval, newf.Path()).Rerror()
 		}
+
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.PathDir()); err != nil {
+			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
+			return err.Rerror()
+		}
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.PathDir()); err != nil {
+			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
+			return err.Rerror()
+		}
+
 		f1, f2 := lockOrder(oo, oldf, no, newf)
 		d1ws := fos.wt.WatchLookupL(f1.Path())
 		d2ws := fos.wt.WatchLookupL(f2.Path())
@@ -658,7 +689,7 @@ func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 	// future, and then ops on this session should fail.  Fence
 	// may be called many times on sess, because client may
 	// register a more recent fence.
-	fos.fssrv.Sess(fos.sid).Fence(args)
+	fos.fssrv.Sess(fos.sid).Fence(f.Path(), args.Fence)
 	return nil
 }
 
@@ -668,7 +699,7 @@ func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
 		return err.Rerror()
 	}
 	log.Printf("%v: Unfence %v %v\n", proc.GetName(), f.Path(), args)
-	err = fos.fssrv.Sess(fos.sid).Unfence(args.Fence.FenceId)
+	err = fos.fssrv.Sess(fos.sid).Unfence(f.Path(), args.Fence.FenceId)
 	if err != nil {
 		return err.Rerror()
 	}

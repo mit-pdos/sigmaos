@@ -9,6 +9,7 @@ import (
 	"ulambda/crash"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -31,7 +32,7 @@ func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 	dl.ProcClnt = procclnt.MakeProcClnt(dl.FsLib)
 	crash.Crasher(dl.FsLib)
 	err := dl.Started(proc.GetPid())
-	dl.fclnt = fenceclnt.MakeFenceClnt(dl.FsLib, KVCONFIG, 0, []string{KVDIR, sharddir})
+	dl.fclnt = fenceclnt.MakeFenceClnt(dl.FsLib, KVCONFIG, 0, []string{KVDIR})
 	err = dl.fclnt.AcquireConfig(&dl.blConf)
 	if err != nil {
 		log.Printf("%v: fence %v err %v\n", proc.GetName(), dl.fclnt.Name(), err)
@@ -46,8 +47,19 @@ func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 
 func (dl *Deleter) Delete(sharddir string) {
 	log.Printf("%v: conf %v delete %v\n", proc.GetName(), dl.blConf.N, sharddir)
-	err := dl.RmDir(sharddir)
-	if err != nil {
+
+	if _, err := dl.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
+		log.Printf("%v: Delete conf %v already deleted %v\n", proc.GetName(), dl.blConf.N, sharddir)
+		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+		return
+	}
+
+	if err := dl.fclnt.FencePaths([]string{sharddir}); err != nil {
+		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
+		return
+	}
+
+	if err := dl.RmDir(sharddir); err != nil {
 		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetName(), dl.blConf.N, sharddir, err)
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
 	} else {

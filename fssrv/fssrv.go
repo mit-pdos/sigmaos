@@ -85,6 +85,15 @@ func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
 }
 
+func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
+	sess, ok := fssrv.st.Lookup(sid)
+	if !ok {
+		log.Fatalf("FATAL %v: no sess %v\n", proc.GetName(), sid)
+		return nil
+	}
+	return sess
+}
+
 // The server using fssrv is ready to take requests. Keep serving
 // until fssrv is told to stop using Done().
 func (fssrv *FsServer) Serve() {
@@ -157,7 +166,7 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 // Register and unregister fences, and check fresness of fences before
 // processing a request.
 func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	switch req := msg.(type) {
+	switch msg.(type) {
 	case np.Tcreate, np.Tread, np.Twrite, np.Tremove, np.Tremovefile, np.Tstat, np.Twstat, np.Trenameat, np.Tgetfile, np.Tsetfile:
 		// Check that all fences that this session registered
 		// are recent.  Another session may have registered a
@@ -167,41 +176,7 @@ func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg
 			return nil, err.Rerror()
 		}
 		// log.Printf("%v: %v %v %v\n", proc.GetName(), sess.Sid, msg.Type(), req)
-	case np.Tregfence:
-		log.Printf("%v: Fence %v %v\n", proc.GetName(), sess.Sid, req)
-		err := fssrv.rft.UpdateFence(req.Fence)
-		if err != nil {
-			log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), sess.Sid, req, err)
-			return nil, err.Rerror()
-		}
-		// Fence was present in recent fences table and not
-		// stale, or was not present. Now mark that all ops on
-		// this sess must be checked against the most
-		// recently-seen fence in rft.  Another sess may
-		// register a more recent fence in rft in the future,
-		// and then ops on this session should fail.  Fence
-		// may be called many times on sess, because client
-		// may register a more recent fence.
-		sess.Fence(req)
-		reply := &np.Ropen{}
-		return reply, nil
-	case np.Tunfence:
-		log.Printf("%v: Unfence %v %v\n", proc.GetName(), sess.Sid, req)
-		err := sess.Unfence(req.Fence.FenceId)
-		if err != nil {
-			return nil, err.Rerror()
-		}
-		reply := &np.Ropen{}
-		return reply, nil
-	case np.Trmfence:
-		log.Printf("%v: Rmfence %v %v\n", proc.GetName(), sess.Sid, req)
-		err := fssrv.rft.RmFence(req.Fence)
-		if err != nil {
-			return nil, err.Rerror()
-		}
-		reply := &np.Ropen{}
-		return reply, nil
-	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
+	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence, Tregfence,	Tunfence, Trmfence
 		// log.Printf("%v: %v %v %v\n", proc.GetName(), sess.Sid, msg.Type(), req)
 	}
 	return nil, nil

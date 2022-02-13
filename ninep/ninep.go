@@ -619,10 +619,12 @@ type Tregfence struct {
 }
 
 type Tunfence struct {
+	Fid   Tfid
 	Fence Tfence
 }
 
 type Trmfence struct {
+	Fid   Tfid
 	Fence Tfence
 }
 

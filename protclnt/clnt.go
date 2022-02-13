@@ -295,8 +295,8 @@ func (pclnt *ProtClnt) RegisterFence(fence np.Tfence, fid np.Tfid) *np.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) DeregisterFence(fence np.Tfence) *np.Err {
-	args := np.Tunfence{fence}
+func (pclnt *ProtClnt) DeregisterFence(fence np.Tfence, fid np.Tfid) *np.Err {
+	args := np.Tunfence{fid, fence}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
@@ -308,8 +308,8 @@ func (pclnt *ProtClnt) DeregisterFence(fence np.Tfence) *np.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) RmFence(fence np.Tfence) *np.Err {
-	args := np.Trmfence{fence}
+func (pclnt *ProtClnt) RmFence(fence np.Tfence, fid np.Tfid) *np.Err {
+	args := np.Trmfence{fid, fence}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err

@@ -162,7 +162,6 @@ func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 	return reply.Fence, nil
 }
 
-// XXX not thread safe
 func (fsc *FsClient) RegisterFence(f np.Tfence, path string) error {
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
@@ -181,7 +180,7 @@ func (fsc *FsClient) DeregisterFence(f np.Tfence, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := fsc.fids.clnt(fid).DeregisterFence(f); err != nil {
+	if err := fsc.fids.clnt(fid).DeregisterFence(f, fid); err != nil {
 		return err
 	}
 	return nil
@@ -193,7 +192,7 @@ func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := fsc.fids.clnt(fid).RmFence(f); err != nil {
+	if err := fsc.fids.clnt(fid).RmFence(f, fid); err != nil {
 		return err
 	}
 	return nil

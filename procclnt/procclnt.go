@@ -308,11 +308,17 @@ func (clnt *ProcClnt) removeProc(procdir string) error {
 	if err := clnt.Rename(src, dst); err != nil {
 		log.Printf("%v: Error rename removeProc %v -> %v : %v", proc.GetProgram(), src, dst, err)
 	}
-	if err := clnt.RmDir(procdir); err != nil {
+	err := clnt.RmDir(procdir)
+	// May have to retry a few times if writing child already opened dir.
+	for {
+		if err == nil {
+			break
+		}
 		s, _ := clnt.SprintfDir(procdir)
 		debug.PrintStack()
 		log.Printf("%v: RmDir %v err %v \n%v", proc.GetProgram(), procdir, err, s)
-		return err
+		// Retry
+		err = clnt.RmDir(procdir)
 	}
 	return nil
 }

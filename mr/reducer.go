@@ -102,7 +102,7 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	return kva, nil
 }
 
-func (r *Reducer) doReduce() error {
+func (r *Reducer) doReduce() *proc.Status {
 	kva := []KeyValue{}
 	lostMaps := []string{}
 
@@ -121,18 +121,18 @@ func (r *Reducer) doReduce() error {
 		return false, nil
 	})
 	if err != nil {
-		return fmt.Errorf("%v: ProcessDir %v err %v\n", proc.GetProgram(), r.input, err)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: ProcessDir %v err %v\n", proc.GetProgram(), r.input, err), nil)
 	}
 
 	if len(lostMaps) > 0 {
-		return fmt.Errorf("%v=%v", RESTART, strings.Join(lostMaps, ","))
+		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 
 	sort.Sort(ByKey(kva))
 
 	fd, err := r.Create(r.tmp, 0777, np.OWRITE)
 	if err != nil {
-		return fmt.Errorf("%v: create %v err %v\n", proc.GetProgram(), r.tmp, err)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: create %v err %v\n", proc.GetProgram(), r.tmp, err), nil)
 	}
 	defer r.Close(fd)
 	i := 0
@@ -149,15 +149,15 @@ func (r *Reducer) doReduce() error {
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
-			return fmt.Errorf("%v: write %v err %v\n", proc.GetProgram(), r.tmp, err)
+			return proc.MakeStatusErr(fmt.Sprintf("%v: write %v err %v\n", proc.GetProgram(), r.tmp, err), nil)
 		}
 		i = j
 	}
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetProgram(), r.tmp, r.output, err)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetProgram(), r.tmp, r.output, err), nil)
 	}
-	return nil
+	return proc.MakeStatus(proc.StatusOK)
 }
 
 func RunReducer(reducef ReduceT, args []string) {
@@ -166,10 +166,6 @@ func RunReducer(reducef ReduceT, args []string) {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	err = r.doReduce()
-	if err == nil {
-		r.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
-	} else {
-		r.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
-	}
+	status := r.doReduce()
+	r.Exited(proc.GetPid(), status)
 }

@@ -104,7 +104,7 @@ func main() {
 
 		if n != n1 && n+1 != n1 {
 			log.Printf("%v: Wrong n %v n1 %v", proc.GetProgram(), n, n1)
-			pclnt.Exited(proc.GetPid(), proc.MakeStatusErr("Invariant violated"))
+			pclnt.Exited(proc.GetPid(), proc.MakeStatusErr("Invariant violated", nil))
 		}
 
 		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))

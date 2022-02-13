@@ -348,7 +348,7 @@ func (bl *Balancer) runDeleters(moves Moves) {
 		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src},
 				func(err error, status *proc.Status) bool {
-					ok := strings.HasPrefix(status.Info(), "file not found")
+					ok := strings.HasPrefix(status.Msg(), "file not found")
 					return err != nil || (!status.IsStatusOK() && !ok)
 				})
 			// log.Printf("%v: delete %v/%v done err %v status %v\n", proc.GetProgram(), i, m, err, status)

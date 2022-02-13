@@ -63,7 +63,7 @@ func (r *Reader) Work() *proc.Status {
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, np.OREAD)
 	if err != nil {
-		return proc.MakeStatusErr("File not found")
+		return proc.MakeStatusErr("File not found", nil)
 	}
 	defer r.Close(fd)
 	for {

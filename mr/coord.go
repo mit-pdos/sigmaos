@@ -6,7 +6,6 @@ import (
 	"log"
 	"path"
 	"strconv"
-	"strings"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -241,11 +240,6 @@ func (w *Coord) recover(dir string) {
 	}
 }
 
-func (w *Coord) lostMapperOutput(ok string) []string {
-	lost := strings.TrimPrefix(ok, RESTART+"=")
-	return strings.Split(lost, ",")
-}
-
 func (w *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 	ch := make(chan Ttask)
 	straggler := false
@@ -255,9 +249,9 @@ func (w *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 		if !res.status.IsStatusOK() {
 			// If we're reducing and can't find some mapper output, a ux may have
 			// crashed. So, restart those map tasks.
-			if dir == RDIR && strings.Contains(res.status.Info(), RESTART) {
-				lost := w.lostMapperOutput(res.status.Info())
-				w.restartMappers(lost)
+			if dir == RDIR && res.status.Msg() == RESTART {
+				lostMappers := res.status.Data().([]string)
+				w.restartMappers(lostMappers)
 				return false
 			} else {
 				n += w.startTasks(dir, ch, f)

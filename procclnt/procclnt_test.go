@@ -244,7 +244,7 @@ func TestCrashProc(t *testing.T) {
 	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusErr(), "Status not err")
-	assert.Equal(t, "exit status 2", status.Info(), "WaitExit")
+	assert.Equal(t, "exit status 2", status.Msg(), "WaitExit")
 
 	ts.Shutdown()
 }
@@ -423,7 +423,7 @@ func testFencer(t *testing.T, part string) {
 	for _, pid := range pids {
 		status, err := ts.WaitExit(pid)
 		log.Printf("status %v\n", status)
-		assert.True(t, err != nil || !status.IsStatusErr() || status.Info() != "Invariant violated", "Exit status wrong")
+		assert.True(t, err != nil || !status.IsStatusErr() || status.Msg() != "Invariant violated", "Exit status wrong")
 	}
 	ts.Shutdown()
 }

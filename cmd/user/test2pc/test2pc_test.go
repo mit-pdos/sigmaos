@@ -159,7 +159,7 @@ func (ts *Tstate) checkCoord(fws []string, opcode string) {
 	if !strings.HasPrefix(opcode, "crash") {
 		assert.True(ts.t, status.IsStatusOK(), "exit status coord")
 	} else {
-		log.Printf("COORD exited %v %v\n", err, string(status))
+		log.Printf("COORD exited %v %v\n", err, status)
 	}
 }
 

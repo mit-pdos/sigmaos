@@ -50,7 +50,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
-	cd.fclnt = fenceclnt.MakeFenceClnt(cd.FsLib, TWOPCFENCE, 0)
+	cd.fclnt = fenceclnt.MakeFenceClnt(cd.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
 
 	// Grab fence before starting coord
 	cd.fclnt.AcquireFenceW([]byte{})

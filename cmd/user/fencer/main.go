@@ -53,10 +53,10 @@ func main() {
 	fsl := fslib.MakeFsLib("fencer-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	l := fenceclnt.MakeFenceClnt(fsl, os.Args[2]+"/fence", 0)
-
 	cnt := os.Args[2] + "/cnt"
 	A := os.Args[3] + "/A"
+
+	l := fenceclnt.MakeFenceClnt(fsl, os.Args[2]+"/fence", 0, []string{cnt, A})
 
 	pclnt.Started(proc.GetPid())
 

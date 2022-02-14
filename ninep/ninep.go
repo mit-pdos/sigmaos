@@ -617,14 +617,17 @@ type Rmkfence struct {
 }
 
 type Tregfence struct {
+	Fid   Tfid
 	Fence Tfence
 }
 
 type Tunfence struct {
+	Fid   Tfid
 	Fence Tfence
 }
 
 type Trmfence struct {
+	Fid   Tfid
 	Fence Tfence
 }
 

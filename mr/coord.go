@@ -81,7 +81,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.Started(proc.GetPid())
 
-	w.fence = fenceclnt.MakeFenceClnt(w.FsLib, MRDIR+"/fence-coord", 0)
+	w.fence = fenceclnt.MakeFenceClnt(w.FsLib, MRDIR+"/fence-coord", 0, []string{MRDIR})
 
 	crash.Crasher(w.FsLib)
 

@@ -99,13 +99,15 @@ type FenceClnt struct {
 	mode    np.Tmode
 	f       *np.Tfence
 	lastSeq np.Tseqno
+	paths   []string
 }
 
-func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm) *FenceClnt {
+func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm, paths []string) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.fenceName = name
 	fc.FsLib = fsl
 	fc.perm = perm
+	fc.paths = paths
 	return fc
 }
 
@@ -122,6 +124,26 @@ func (fc *FenceClnt) Fence() (np.Tfence, error) {
 		return np.Tfence{}, fmt.Errorf("Fence: not acquired %v\n", fc.fenceName)
 	}
 	return *fc.f, nil
+}
+
+func (fc *FenceClnt) registerPaths(fence np.Tfence, paths []string) error {
+	for _, p := range paths {
+		err := fc.RegisterFence(fence, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (fc *FenceClnt) deregisterPaths(fence np.Tfence) error {
+	for _, p := range fc.paths {
+		err := fc.DeregisterFence(fence, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // XXX register/update may fail because another client has seen a more
@@ -141,12 +163,8 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 	}
 	if fc.f == nil {
 		fc.mode = mode
-		err = fc.RegisterFence(fence)
-	} else {
-		// The fence holder has updated the file associated
-		// with the fence; all servers about the new fence.
-		err = fc.UpdateFence(fence)
 	}
+	err = fc.registerPaths(fence, fc.paths)
 	if err != nil {
 		log.Printf("%v: registerFence %v err %v", proc.GetProgram(), fc.fenceName, err)
 		return err
@@ -214,7 +232,7 @@ func (fc *FenceClnt) ReleaseFence() error {
 	if fc.f == nil {
 		log.Fatalf("%v: FATAL ReleaseFence %v\n", proc.GetProgram(), fc.fenceName)
 	}
-	err := fc.DeregisterFence(*fc.f)
+	err := fc.deregisterPaths(*fc.f)
 	if err != nil {
 		log.Printf("%v: deregister %v err %v\n", proc.GetProgram(), fc.fenceName, err)
 		return err
@@ -242,11 +260,25 @@ func (fc *FenceClnt) RemoveFence() error {
 	if err != nil {
 		return err
 	}
-	err = fc.RmFence(*fc.f)
+	err = fc.RmFence(*fc.f, fc.fenceName)
 	if err != nil {
 		return err
 	}
 	return fc.ReleaseFence()
+}
+
+func (fc *FenceClnt) FencePaths(paths []string) error {
+	fence, err := fc.Fence()
+	if err != nil {
+		return err
+	}
+	err = fc.registerPaths(fence, paths)
+	if err != nil {
+		log.Printf("%v: registerFence %v err %v", proc.GetProgram(), fc.fenceName, err)
+		return err
+	}
+	fc.paths = append(fc.paths, paths...)
+	return nil
 }
 
 //

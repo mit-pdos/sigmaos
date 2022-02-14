@@ -47,7 +47,7 @@ func TestFence1(t *testing.T) {
 	current := 0
 	done := make(chan int)
 
-	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0)
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
 
 	for i := 0; i < N; i++ {
 		go func(i int) {
@@ -56,12 +56,14 @@ func TestFence1(t *testing.T) {
 				err := fence.AcquireFenceW([]byte{})
 				assert.Nil(ts.t, err, "AcquireFenceW")
 				if current == i {
-					current += 1
-					done <- i
 					me = true
 				}
 				err = fence.ReleaseFence()
 				assert.Nil(ts.t, err, "ReleaseFence")
+				if me {
+					current += 1
+					done <- i
+				}
 			}
 		}(i)
 		sum += i
@@ -80,8 +82,8 @@ func TestFence2(t *testing.T) {
 
 	N := 20
 
-	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0)
-	fence2 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0)
+	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
+	fence2 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
 
 	for i := 0; i < N; i++ {
 		err := fence1.AcquireFenceW([]byte{})
@@ -105,7 +107,7 @@ func TestLease3(t *testing.T) {
 	n_threads := 20
 	cnt := 0
 
-	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0)
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
 
 	var done sync.WaitGroup
 	done.Add(n_threads)
@@ -143,7 +145,7 @@ func TestFence4(t *testing.T) {
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
 
-	fence1 := fenceclnt.MakeFenceClnt(fsl1, FENCENAME, 0)
+	fence1 := fenceclnt.MakeFenceClnt(fsl1, FENCENAME, 0, []string{np.NAMED})
 
 	// Establish a connection
 	_, err := fsl2.ReadDir(FENCE_DIR)
@@ -200,7 +202,7 @@ func write(fsl *fslib.FsLib, ch chan int, fn string) {
 
 func writer(t *testing.T, ch chan int, N int, fn string) {
 	fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
-	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0)
+	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0, []string{np.NAMED})
 	cont := true
 	for cont {
 		// Wait for fence to exist, indicating a new
@@ -238,7 +240,7 @@ func TestSetRenameGet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
-	f := fenceclnt.MakeFenceClnt(ts.FsLib, "name/config", 0)
+	f := fenceclnt.MakeFenceClnt(ts.FsLib, "name/config", 0, []string{np.NAMED})
 
 	// Make new fence with iteration number
 	err = f.AcquireFenceW([]byte(strconv.Itoa(0)))
@@ -289,7 +291,7 @@ func TestSetRenameGet(t *testing.T) {
 func primary(t *testing.T, ch chan bool, i int) {
 	n := strconv.Itoa(i)
 	fsl := fslib.MakeFsLibAddr("fsl"+n, fslib.Named())
-	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0)
+	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0, []string{np.NAMED})
 
 	err := f.AcquireFenceW([]byte{})
 	assert.Nil(t, err, "AcquireFenceW")
@@ -329,7 +331,7 @@ func TestCrashPrimary(t *testing.T) {
 func TestRemoveFence(t *testing.T) {
 	ts := makeTstate(t)
 
-	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0)
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
 
 	err := fence.AcquireFenceW([]byte{})
 	assert.Nil(ts.t, err, "AcquireFenceW")
@@ -343,7 +345,7 @@ func TestRemoveFence(t *testing.T) {
 	err = fence.RemoveFence()
 	assert.Nil(ts.t, err, "RmFence")
 
-	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0)
+	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
 
 	err = fence1.AcquireFenceW([]byte{})
 	assert.Nil(ts.t, err, "AcquireFenceW")

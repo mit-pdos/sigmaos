@@ -12,9 +12,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: <n> <src> <dst>\n", os.Args[0])
 		os.Exit(1)
 	}
-	mv, err := kv.MakeMover(os.Args[1])
+	mv, err := kv.MakeMover(os.Args[1], os.Args[2], os.Args[3])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
+		fmt.Fprintf(os.Stderr, "%v: error %v\n", os.Args[0], err)
 		os.Exit(1)
 	}
 	mv.Move(os.Args[2], os.Args[3])

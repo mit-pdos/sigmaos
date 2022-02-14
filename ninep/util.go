@@ -43,6 +43,22 @@ func IsPathEq(p1, p2 []string) bool {
 	return true
 }
 
+// is c a child of p?
+func IsParent(p, c []string) bool {
+	if len(p) == 0 { // p is root directory
+		return true
+	}
+	for i := range p {
+		if i >= len(c) {
+			return false
+		}
+		if p[i] != c[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func Dir(path []string) []string {
 	if len(path) < 1 {
 		return []string{}

@@ -125,7 +125,7 @@ func (ts *Tstate) stopClerks() {
 		err := ts.Evict(ck)
 		assert.Nil(ts.t, err, "stopClerks")
 		status, err := ts.WaitExit(ck)
-		log.Printf("evict clerk waitexit %v status %v err %v\n", ck, status, err)
+		log.Printf("%v: evict clerk waitexit %v status %v err %v\n", proc.GetName(), ck, status, err)
 		assert.Nil(ts.t, err, "WaitExit")
 		assert.True(ts.t, status.IsStatusOK(), "Exit status")
 	}

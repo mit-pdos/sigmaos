@@ -34,6 +34,10 @@ func GetProgram() string {
 	return os.Getenv(SIGMAPROGRAM)
 }
 
+func GetName() string {
+	return GetProgram() + "-" + GetPid()
+}
+
 func SetProgram(program string) {
 	os.Setenv(SIGMAPROGRAM, program)
 }

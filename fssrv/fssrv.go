@@ -85,6 +85,15 @@ func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
 }
 
+func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
+	sess, ok := fssrv.st.Lookup(sid)
+	if !ok {
+		log.Fatalf("FATAL %v: no sess %v\n", proc.GetName(), sid)
+		return nil
+	}
+	return sess
+}
+
 // The server using fssrv is ready to take requests. Keep serving
 // until fssrv is told to stop using Done().
 func (fssrv *FsServer) Serve() {
@@ -92,11 +101,11 @@ func (fssrv *FsServer) Serve() {
 	if fssrv.pclnt != nil {
 		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error Started: %v", proc.GetProgram(), err)
+			log.Printf("%v: Error Started: %v", proc.GetName(), err)
 		}
 		if err := fssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error WaitEvict: %v", proc.GetProgram(), err)
+			log.Printf("%v: Error WaitEvict: %v", proc.GetName(), err)
 		}
 	} else {
 		<-fssrv.ch
@@ -135,17 +144,6 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
-	// Detaches always get processed, regardless of fences.
-	if fc.GetType() != np.TTdetach {
-		reply, rerror := fssrv.fenceSession(sess, fc.Msg)
-		if rerror != nil {
-			reply = rerror
-		}
-		if reply != nil {
-			fssrv.sendReply(fc.Tag, reply, replies)
-			return
-		}
-	}
 	// New thread about to start
 	sess.IncThreads()
 	sess.GetThread().Process(fc, replies)
@@ -155,59 +153,6 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	fssrv.serve(sess, fc, replies)
-}
-
-// Register and unregister fences, and check fresness of fences before
-// processing a request.
-func (fssrv *FsServer) fenceSession(sess *session.Session, msg np.Tmsg) (np.Tmsg, *np.Rerror) {
-	switch req := msg.(type) {
-	case np.Tcreate, np.Tread, np.Twrite, np.Tremove, np.Tremovefile, np.Tstat, np.Twstat, np.Trenameat, np.Tgetfile, np.Tsetfile:
-		// Check that all fences that this session registered
-		// are recent.  Another session may have registered a
-		// more recent one in the recent fences table
-		err := sess.CheckFences(fssrv.fsl)
-		if err != nil {
-			return nil, err.Rerror()
-		}
-		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
-	case np.Tregfence:
-		// log.Printf("%p: Fence %v %v\n", fssrv, sess.Sid, req)
-		err := fssrv.rft.UpdateFence(req.Fence)
-		if err != nil {
-			log.Printf("%v: Fence %v %v err %v\n", proc.GetProgram(), sess.Sid, req, err)
-			return nil, err.Rerror()
-		}
-		// Fence was present in recent fences table and not
-		// stale, or was not present. Now mark that all ops on
-		// this sess must be checked against the most
-		// recently-seen fence in rft.  Another sess may
-		// register a more recent fence in rft in the future,
-		// and then ops on this session should fail.  Fence
-		// may be called many times on sess, because client
-		// may register a more recent fence.
-		sess.Fence(req)
-		reply := &np.Ropen{}
-		return reply, nil
-	case np.Tunfence:
-		// log.Printf("%p: Unfence %v %v\n", fssrv, sess.Sid, req)
-		err := sess.Unfence(req.Fence.FenceId)
-		if err != nil {
-			return nil, err.Rerror()
-		}
-		reply := &np.Ropen{}
-		return reply, nil
-	case np.Trmfence:
-		// log.Printf("%p: Rmfence %v %v\n", fssrv, sess.Sid, req)
-		err := fssrv.rft.RmFence(req.Fence)
-		if err != nil {
-			return nil, err.Rerror()
-		}
-		reply := &np.Ropen{}
-		return reply, nil
-	default: // Tversion, Tauth, Tflush, Twalk, Tclunk, Topen, Tmkfence
-		// log.Printf("%v: %v %v %v\n", proc.GetProgram(), sess.Sid, msg.Type(), req)
-	}
-	return nil, nil
 }
 
 func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fcall) {

@@ -9,6 +9,7 @@ import (
 	"ulambda/crash"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -23,31 +24,43 @@ type Deleter struct {
 	blConf Config
 }
 
-func MakeDeleter(N string) (*Deleter, error) {
+// XXX KV group from which we are deleting
+
+func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 	dl := &Deleter{}
 	dl.FsLib = fslib.MakeFsLib("deleter-" + proc.GetPid())
 	dl.ProcClnt = procclnt.MakeProcClnt(dl.FsLib)
 	crash.Crasher(dl.FsLib)
 	err := dl.Started(proc.GetPid())
-	dl.fclnt = fenceclnt.MakeFenceClnt(dl.FsLib, KVCONFIG, 0)
+	dl.fclnt = fenceclnt.MakeFenceClnt(dl.FsLib, KVCONFIG, 0, []string{KVDIR})
 	err = dl.fclnt.AcquireConfig(&dl.blConf)
 	if err != nil {
-		log.Printf("%v: fence %v err %v\n", proc.GetProgram(), dl.fclnt.Name(), err)
+		log.Printf("%v: fence %v err %v\n", proc.GetName(), dl.fclnt.Name(), err)
 		return nil, err
 	}
-	// log.Printf("%v: bal config %v\n", proc.GetProgram(), dl.blConf.N)
 	if N != strconv.Itoa(dl.blConf.N) {
-		log.Printf("%v: wrong config %v\n", proc.GetProgram(), N)
+		log.Printf("%v: wrong config %v\n", proc.GetName(), N)
 		return nil, fmt.Errorf("wrong config %v\n", N)
 	}
 	return dl, err
 }
 
 func (dl *Deleter) Delete(sharddir string) {
-	// log.Printf("%v: conf %v delete %v\n", proc.GetProgram(), dl.blConf.N, sharddir)
-	err := dl.RmDir(sharddir)
-	if err != nil {
-		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetProgram(), dl.blConf.N, sharddir, err)
+	log.Printf("%v: conf %v delete %v\n", proc.GetName(), dl.blConf.N, sharddir)
+
+	if _, err := dl.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
+		log.Printf("%v: Delete conf %v already deleted %v\n", proc.GetName(), dl.blConf.N, sharddir)
+		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+		return
+	}
+
+	if err := dl.fclnt.FencePaths([]string{sharddir}); err != nil {
+		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
+		return
+	}
+
+	if err := dl.RmDir(sharddir); err != nil {
+		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetName(), dl.blConf.N, sharddir, err)
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 	} else {
 		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))

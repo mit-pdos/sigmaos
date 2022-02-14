@@ -27,18 +27,6 @@ func (clnt *Clnt) Exit() {
 	clnt.cm.exit()
 }
 
-func (clnt *Clnt) RegisterFence(fence np.Tfence, new bool) *np.Err {
-	return clnt.cm.registerFence(fence, new)
-}
-
-func (clnt *Clnt) DeregisterFence(fence np.Tfence) *np.Err {
-	return clnt.cm.deregisterFence(fence)
-}
-
-func (clnt *Clnt) RmFence(fence np.Tfence) *np.Err {
-	return clnt.cm.rmFence(fence)
-}
-
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, *np.Err) {
 	reply, err := clnt.cm.makeCall(server, args)
 	if err != nil {
@@ -292,4 +280,43 @@ func (pclnt *ProtClnt) MkFence(fid np.Tfid) (*np.Rmkfence, *np.Err) {
 		return nil, np.MkErr(np.TErrBadFcall, "Rmkfence")
 	}
 	return &msg, nil
+}
+
+func (pclnt *ProtClnt) RegisterFence(fence np.Tfence, fid np.Tfid) *np.Err {
+	args := np.Tregfence{fid, fence}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Ropen)
+	if !ok {
+		return np.MkErr(np.TErrBadFcall, "RegisterFence")
+	}
+	return nil
+}
+
+func (pclnt *ProtClnt) DeregisterFence(fence np.Tfence, fid np.Tfid) *np.Err {
+	args := np.Tunfence{fid, fence}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Ropen)
+	if !ok {
+		return np.MkErr(np.TErrBadFcall, "DeregisterFence")
+	}
+	return nil
+}
+
+func (pclnt *ProtClnt) RmFence(fence np.Tfence, fid np.Tfid) *np.Err {
+	args := np.Trmfence{fid, fence}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Ropen)
+	if !ok {
+		return np.MkErr(np.TErrBadFcall, "DeregisterFence")
+	}
+	return nil
 }

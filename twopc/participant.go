@@ -39,7 +39,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn 
 	p.me = me
 	p.FsLib = fsl
 	p.ProcClnt = pclnt
-	p.fclnt = fenceclnt.MakeFenceClnt(p.FsLib, TWOPCFENCE, 0)
+	p.fclnt = fenceclnt.MakeFenceClnt(p.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
 	p.txn = txn
 	p.opcode = opcode
 

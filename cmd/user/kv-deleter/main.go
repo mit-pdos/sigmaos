@@ -12,7 +12,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: <n> <dir>\n", os.Args[0])
 		os.Exit(1)
 	}
-	dl, err := kv.MakeDeleter(os.Args[1])
+	dl, err := kv.MakeDeleter(os.Args[1], os.Args[2])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

@@ -27,3 +27,11 @@ func TestSplit(t *testing.T) {
 	assert.Equal(t, 4, len(s))
 	assert.Equal(t, s[3], "b.txt")
 }
+
+func TestIsParent(t *testing.T) {
+	assert.True(t, IsParent([]string{}, []string{"a"}))
+	assert.False(t, IsParent([]string{"a"}, []string{"b"}))
+	assert.True(t, IsParent([]string{"a"}, []string{"a", "b"}))
+	assert.False(t, IsParent([]string{"a", "c"}, []string{"a", "b"}))
+	assert.False(t, IsParent([]string{"a", "c"}, []string{"a"}))
+}

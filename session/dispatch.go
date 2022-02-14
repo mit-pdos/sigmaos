@@ -82,6 +82,18 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rmkfence{}
 		err := s.protsrv.MkFence(req, reply)
 		return *reply, err
+	case np.Trmfence:
+		reply := &np.Ropen{}
+		err := s.protsrv.RmFence(req, reply)
+		return *reply, err
+	case np.Tregfence:
+		reply := &np.Ropen{}
+		err := s.protsrv.RegFence(req, reply)
+		return *reply, err
+	case np.Tunfence:
+		reply := &np.Ropen{}
+		err := s.protsrv.UnFence(req, reply)
+		return *reply, err
 	case np.Tdetach:
 		s.protsrv.Detach()
 		return nil, nil

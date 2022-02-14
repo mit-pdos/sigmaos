@@ -84,7 +84,7 @@ func (r *Machined) getNextConfig() {
 		}
 	}
 	// Update the realm lock
-	r.fence = fenceclnt.MakeFenceClnt(r.FsLib, path.Join(REALM_FENCES, r.cfg.RealmId), 0777)
+	r.fence = fenceclnt.MakeFenceClnt(r.FsLib, path.Join(REALM_FENCES, r.cfg.RealmId), 0777, []string{REALM_FENCES})
 }
 
 // If we need more named replicas, help initialize a realm by starting another

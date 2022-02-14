@@ -10,7 +10,7 @@ import (
 	"ulambda/fs"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
-	// "ulambda/proc"
+	"ulambda/proc"
 	"ulambda/protsrv"
 	"ulambda/stats"
 	"ulambda/watch"
@@ -74,7 +74,7 @@ func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	// log.Printf("%v: Attach %v\n", proc.GetProgram(), args.Uname)
+	// log.Printf("%v: Attach %v\n", proc.GetName(), args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname, fos.sid)
 	tree := root.(fs.FsObj)
@@ -97,11 +97,11 @@ func (fos *FsObjSrv) Detach() {
 	// will unblock them so that they can bail out.
 	fos.fssrv.GetSessCondTable().DeleteSess(fos.sid)
 
-	// log.Printf("%v: %v Clunkopen: %v\n", proc.GetProgram(), fos.sid, fos.ft.fids)
+	// log.Printf("%v: %v Clunkopen: %v\n", proc.GetName(), fos.sid, fos.ft.fids)
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
 	db.DLPrintf("9POBJ", "Detach %v %v\n", fos.sid, ephemeral)
-	// log.Printf("%v detach %v ephemeral %v\n", proc.GetProgram(), fos.sid, ephemeral)
+	// log.Printf("%v detach %v ephemeral %v\n", proc.GetName(), fos.sid, ephemeral)
 	for o, f := range ephemeral {
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
@@ -167,7 +167,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "f %v\n", f)
 
 	o := f.Obj()
-	// log.Printf("%v: %v open %v mode %v\n", proc.GetProgram(), f.Ctx().Uname(), f.Path(), args.Mode)
+	// log.Printf("%v: %v open %v mode %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args.Mode)
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return r.Rerror()
@@ -231,7 +231,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
 
-		//log.Printf("%v %v %v Create %v %v %v ephemeral %v\n", proc.GetProgram(), fos.sid, ctx.Uname(), name, o1, err, perm.IsEphemeral())
+		//log.Printf("%v %v %v Create %v %v %v ephemeral %v\n", proc.GetName(), fos.sid, ctx.Uname(), name, o1, err, perm.IsEphemeral())
 
 		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
 		if err == nil {
@@ -271,7 +271,11 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "f %v\n", f)
+	db.DLPrintf("9POBJ", "Create f %v\n", f)
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 	o := f.Obj()
 	names := []string{args.Name}
 	if !o.Perm().IsDir() {
@@ -283,7 +287,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 
 	o1, err := fos.createObj(f.Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
 	if err != nil {
-		//log.Printf("%v %v createObj %v err %v\n", proc.GetProgram(), f.Ctx().Uname(), names[0], r)
+		//log.Printf("%v %v createObj %v err %v\n", proc.GetName(), f.Ctx().Uname(), names[0], r)
 		return err.Rerror()
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
@@ -317,6 +321,10 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()
@@ -339,7 +347,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	// log.Printf("%v: %v remove %v in %v\n", proc.GetProgram(), ctx.Uname(), path, np.Dir(path))
+	// log.Printf("%v: %v remove %v in %v\n", proc.GetName(), ctx.Uname(), path, np.Dir(path))
 
 	err := o.Parent().Remove(ctx, path[len(path)-1])
 	if err != nil {
@@ -354,7 +362,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 	dws.WakeupWatchL()
 
 	if o.Perm().IsEphemeral() {
-		// log.Printf("%v del %v %v ephemeral %v\n", proc.GetProgram(), path, fos.sid, fos.et.ephemeral)
+		// log.Printf("%v del %v %v ephemeral %v\n", proc.GetName(), path, fos.sid, fos.et.ephemeral)
 		fos.et.Del(o)
 	}
 	return nil
@@ -363,6 +371,10 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
+		return err.Rerror()
+	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
 		return err.Rerror()
 	}
 	o := f.Obj()
@@ -402,6 +414,10 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 		fos.fssrv.Done()
 		return nil
 	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 
 	lo := o
 	if len(args.Wnames) > 0 {
@@ -437,6 +453,11 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	o := f.Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
+
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(f.PathDir()); err != nil {
+			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.PathDir(), err)
+			return err.Rerror()
+		}
 
 		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
 
@@ -494,6 +515,16 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		if oo.Inum() == no.Inum() {
 			return np.MkErr(np.TErrInval, newf.Path()).Rerror()
 		}
+
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.PathDir()); err != nil {
+			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
+			return err.Rerror()
+		}
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.PathDir()); err != nil {
+			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
+			return err.Rerror()
+		}
+
 		f1, f2 := lockOrder(oo, oldf, no, newf)
 		d1ws := fos.wt.WatchLookupL(f1.Path())
 		d2ws := fos.wt.WatchLookupL(f2.Path())
@@ -629,5 +660,53 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 	}
 	rets.Fence = fos.rft.MkFence(f.Path())
 	// log.Printf("mkfence f %v -> %v\n", f.Path, rets.Fence)
+	return nil
+}
+
+func (fos *FsObjSrv) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
+	f, err := fos.lookup(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	log.Printf("%v: rmfence %v %v\n", proc.GetName(), f.Path, args.Fence)
+	err = fos.rft.RmFence(args.Fence)
+	if err != nil {
+		return err.Rerror()
+	}
+	return nil
+}
+
+func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
+	f, err := fos.lookup(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	log.Printf("%v: RegFence %v %v\n", proc.GetName(), f.Path(), args)
+	err = fos.rft.UpdateFence(args.Fence)
+	if err != nil {
+		log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), fos.sid, args, err)
+		return err.Rerror()
+	}
+	// Fence was present in recent fences table and not stale, or
+	// was not present. Now mark that all ops on this sess must be
+	// checked against the most recently-seen fence in rft.
+	// Another sess may register a more recent fence in rft in the
+	// future, and then ops on this session should fail.  Fence
+	// may be called many times on sess, because client may
+	// register a more recent fence.
+	fos.fssrv.Sess(fos.sid).Fence(f.Path(), args.Fence)
+	return nil
+}
+
+func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
+	f, err := fos.lookup(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	log.Printf("%v: Unfence %v %v\n", proc.GetName(), f.Path(), args)
+	err = fos.fssrv.Sess(fos.sid).Unfence(f.Path(), args.Fence.FenceId)
+	if err != nil {
+		return err.Rerror()
+	}
 	return nil
 }

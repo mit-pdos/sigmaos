@@ -72,6 +72,7 @@ type KvClerk struct {
 	blConf    Config
 	nop       int
 	grpre     *regexp.Regexp
+	grpconfre *regexp.Regexp
 }
 
 func MakeClerk(name string, namedAddr []string) *KvClerk {
@@ -80,7 +81,8 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.balFclnt = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0, []string{KVDIR})
 	kc.grpFclnts = make(map[string]*fenceclnt.FenceClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
-	kc.grpre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
+	kc.grpconfre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
+	kc.grpre = regexp.MustCompile(`grp-([0-9]+)`)
 	err := kc.balFclnt.AcquireConfig(&kc.blConf)
 	if err != nil {
 		log.Printf("%v: MakeClerk readConfig err %v\n", proc.GetName(), err)
@@ -158,9 +160,11 @@ func (kc *KvClerk) acquireFence(grp string) error {
 			return nil
 		}
 	} else {
-		// XXX need to also get balfence to this group
 		fn := group.GrpConfPath(grp)
-		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0, []string{group.GrpDir(grp)})
+		paths := []string{group.GrpDir(grp)}
+		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0, paths)
+		// Fence new group also with balancer config fence
+		kc.balFclnt.FencePaths(paths)
 	}
 	gc := group.GrpConf{}
 	err := kc.grpFclnts[grp].AcquireConfig(&gc)
@@ -171,10 +175,38 @@ func (kc *KvClerk) acquireFence(grp string) error {
 	return nil
 }
 
+// Remove group from fenced paths in bal fclnt?
+func (kc KvClerk) removeGrp(err error) error {
+	log.Printf("removeGrp %v\n", err)
+	if np.IsErrNotfound(err) {
+		s := kc.grpre.FindStringSubmatch(np.ErrNotfoundPath(err))
+		if s != nil {
+			log.Printf("removeGrp %v %v\n", np.ErrNotfoundPath(err), s)
+			if kvs, r := readKVs(kc.FsLib); r == nil {
+				if !kvs.present(s[0]) {
+					if _, ok := kc.grpFclnts[s[0]]; ok {
+						delete(kc.grpFclnts, s[0])
+					}
+					paths := []string{group.GrpDir(s[0])}
+					log.Printf("remove %v\n", paths)
+					kc.balFclnt.RemovePaths(paths)
+					if r == nil {
+						return nil
+					}
+				}
+			} else {
+				log.Printf("%v: ReadFileJson %v err %v\n", proc.GetName(), KVCONFIG, r)
+			}
+		}
+	}
+	return err
+}
+
 // Try fix err by releasing group fence
 func (kc KvClerk) releaseGrp(err error) error {
-	s := kc.grpre.FindStringSubmatch(err.Error())
+	s := kc.grpconfre.FindStringSubmatch(err.Error())
 	if s != nil {
+		log.Printf("s == %v\n", s)
 		return kc.releaseFence("grp-" + s[1])
 	}
 	return err
@@ -187,15 +219,20 @@ func (kc KvClerk) retryReadConfig() error {
 		if err == nil {
 			return nil
 		}
+		err = kc.removeGrp(err)
+		if err == nil {
+			log.Printf("%v: removeGrp readConfig\n", proc.GetName())
+			continue
+		}
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: retry readConfig\n", proc.GetName())
+			log.Printf("%v: releaseGrp readConfig\n", proc.GetName())
 			continue
 		}
 
 		// maybe retryReadConfig failed with a stale error
 		if np.IsErrStale(err) {
-			log.Printf("%v: retry refreshConfig %v\n", proc.GetName(), err)
+			log.Printf("%v: stale readConfig %v\n", proc.GetName(), err)
 			continue
 		}
 
@@ -273,6 +310,7 @@ func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
 		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
+		log.Printf("%v: doop %v\n", proc.GetName(), fn)
 		o.err = kc.acquireFence(kc.blConf.Shards[shard])
 		if o.err != nil {
 			o.err = kc.fixRetry(o.err)

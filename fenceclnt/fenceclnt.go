@@ -104,7 +104,7 @@ type FenceClnt struct {
 	mode    np.Tmode
 	f       *np.Tfence
 	lastSeq np.Tseqno
-	paths   []string
+	paths   map[string]bool
 }
 
 func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm, paths []string) *FenceClnt {
@@ -112,7 +112,10 @@ func MakeFenceClnt(fsl *fslib.FsLib, name string, perm np.Tperm, paths []string)
 	fc.fenceName = name
 	fc.FsLib = fsl
 	fc.perm = perm
-	fc.paths = paths
+	fc.paths = make(map[string]bool)
+	for _, p := range paths {
+		fc.paths[p] = true
+	}
 	return fc
 }
 
@@ -131,24 +134,17 @@ func (fc *FenceClnt) Fence() (np.Tfence, error) {
 	return *fc.f, nil
 }
 
-func (fc *FenceClnt) registerPaths(fence np.Tfence, paths []string) error {
-	for _, p := range paths {
-		err := fc.RegisterFence(fence, p)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
+// deregister as many paths as possible, because we want release the fence
 func (fc *FenceClnt) deregisterPaths(fence np.Tfence) error {
-	for _, p := range fc.paths {
-		err := fc.DeregisterFence(fence, p)
-		if err != nil {
-			return err
+	var err error
+	for p, _ := range fc.paths {
+		r := fc.DeregisterFence(fence, p)
+		if r != nil {
+			err = r
 		}
+
 	}
-	return nil
+	return err
 }
 
 // XXX register/update may fail because another client has seen a more
@@ -159,20 +155,22 @@ func (fc *FenceClnt) deregisterPaths(fence np.Tfence) error {
 func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 	fence, err := fc.MakeFence(fc.fenceName, mode)
 	if err != nil {
-		log.Printf("%v: MakeFence %v err %v", proc.GetProgram(), fc.fenceName, err)
+		log.Printf("%v: MakeFence %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
-	// log.Printf("%v: MakeFence %v fence %v", proc.GetProgram(), fc.fenceName, fence)
+	// log.Printf("%v: MakeFence %v fence %v", proc.GetName(), fc.fenceName, fence)
 	if fc.lastSeq > fence.Seqno {
-		log.Fatalf("%v: FATAL MakeFence bad fence %v last seq %v\n", proc.GetProgram(), fence, fc.lastSeq)
+		log.Fatalf("%v: FATAL MakeFence bad fence %v last seq %v\n", proc.GetName(), fence, fc.lastSeq)
 	}
 	if fc.f == nil {
 		fc.mode = mode
 	}
-	err = fc.registerPaths(fence, fc.paths)
-	if err != nil {
-		log.Printf("%v: registerFence %v err %v", proc.GetProgram(), fc.fenceName, err)
-		return err
+	for p, _ := range fc.paths {
+		err := fc.RegisterFence(fence, p)
+		if err != nil {
+			log.Printf("%v: RegisterFence %v err %v", proc.GetName(), fc.fenceName, err)
+			return err
+		}
 	}
 	fc.lastSeq = fence.Seqno
 	fc.f = &fence
@@ -187,13 +185,13 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 	fd, err := fc.Create(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
-		log.Printf("%v: Create %v err %v", proc.GetProgram(), fc.fenceName, err)
+		log.Printf("%v: Create %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
 
 	_, err = fc.Write(fd, b)
 	if err != nil {
-		log.Printf("%v: Write %v err %v", proc.GetProgram(), fc.fenceName, err)
+		log.Printf("%v: Write %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
 	fc.Close(fd)
@@ -204,7 +202,7 @@ func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 func (fc *FenceClnt) OpenFenceFrom(from string) error {
 	err := fc.Rename(from, fc.fenceName)
 	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v", proc.GetProgram(), from, fc.fenceName, err)
+		log.Printf("%v: Rename %v to %v err %v", proc.GetName(), from, fc.fenceName, err)
 		return err
 	}
 	return fc.registerFence(0)
@@ -215,43 +213,45 @@ func (fc *FenceClnt) OpenFenceFrom(from string) error {
 func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
 	ch := make(chan bool)
 	for {
-		// log.Printf("%v: file watch %v\n", proc.GetProgram(), fc.fenceName)
+		// log.Printf("%v: file watch %v\n", proc.GetName(), fc.fenceName)
 		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
 			ch <- true
 		})
 		if err != nil && np.IsErrNotfound(err) {
-			// log.Printf("%v: file watch wait %v\n", proc.GetProgram(), fc.fenceName)
+			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
 			<-ch
 		} else if err != nil {
 			return nil, err
 		} else {
-			// log.Printf("%v: file watch return %v\n", proc.GetProgram(), fc.fenceName)
+			// log.Printf("%v: file watch return %v\n", proc.GetName(), fc.fenceName)
 			return b, fc.registerFence(np.OREAD)
 		}
 	}
 }
 
-// Release fence, which deregisters it.
+// Release fence, which deregisters it from as many servers as
+// possible. If a server has failed, we return the error at the end,
+// so the caller can acquire the fence again and repair (e.g.,
+// removing a path).
 func (fc *FenceClnt) ReleaseFence() error {
 	// First deregister fence
 	if fc.f == nil {
-		log.Fatalf("%v: FATAL ReleaseFence %v\n", proc.GetProgram(), fc.fenceName)
+		log.Fatalf("%v: FATAL ReleaseFence %v\n", proc.GetName(), fc.fenceName)
 	}
 	err := fc.deregisterPaths(*fc.f)
 	if err != nil {
-		log.Printf("%v: deregister %v err %v\n", proc.GetProgram(), fc.fenceName, err)
-		return err
+		log.Printf("%v: deregister %v err %v\n", proc.GetName(), fc.fenceName, err)
 	}
 	fc.f = nil
 	// Then, remove file so that the next acquirer can run
 	if fc.mode == np.OWRITE {
 		err := fc.Remove(fc.fenceName)
 		if err != nil {
-			log.Printf("%v: Remove %v err %v", proc.GetProgram(), fc.fenceName, err)
+			log.Printf("%v: Remove %v err %v", proc.GetName(), fc.fenceName, err)
 			return err
 		}
 	}
-	return nil
+	return err
 }
 
 // Remove fence.  The caller better sure there is no client relying on
@@ -259,7 +259,7 @@ func (fc *FenceClnt) ReleaseFence() error {
 // fence.
 func (fc *FenceClnt) RemoveFence() error {
 	if fc.f != nil {
-		log.Fatalf("%v: FATAL RmFence %v\n", proc.GetProgram(), fc.fenceName)
+		log.Fatalf("%v: FATAL RmFence %v\n", proc.GetName(), fc.fenceName)
 	}
 	err := fc.AcquireFenceW([]byte{})
 	if err != nil {
@@ -277,12 +277,23 @@ func (fc *FenceClnt) FencePaths(paths []string) error {
 	if err != nil {
 		return err
 	}
-	err = fc.registerPaths(fence, paths)
-	if err != nil {
-		log.Printf("%v: registerFence %v err %v", proc.GetProgram(), fc.fenceName, err)
-		return err
+	for _, p := range paths {
+		err := fc.RegisterFence(fence, p)
+		if err != nil {
+			log.Printf("%v: RegisterFence %v err %v", proc.GetName(), fc.fenceName, err)
+			return err
+		}
+		fc.paths[p] = true
 	}
-	fc.paths = append(fc.paths, paths...)
+	return nil
+}
+
+func (fc *FenceClnt) RemovePaths(paths []string) error {
+	log.Printf("Paths remove %v %v\n", fc.paths, paths)
+	for _, p := range paths {
+		delete(fc.paths, p)
+	}
+	log.Printf("Paths left %v\n", fc.paths)
 	return nil
 }
 
@@ -295,7 +306,7 @@ func (fc *FenceClnt) FencePaths(paths []string) error {
 func (fc *FenceClnt) SetFenceFile(b []byte) error {
 	_, err := fc.SetFile(fc.fenceName, b)
 	if err != nil {
-		log.Printf("%v: SetFenceFile %v err %v", proc.GetProgram(), fc.fenceName, err)
+		log.Printf("%v: SetFenceFile %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
 	return fc.registerFence(0)
@@ -304,7 +315,7 @@ func (fc *FenceClnt) SetFenceFile(b []byte) error {
 func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
 	err := fc.Rename(from, fc.fenceName)
 	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v", proc.GetProgram(), from, fc.fenceName, err)
+		log.Printf("%v: Rename %v to %v err %v", proc.GetName(), from, fc.fenceName, err)
 		return err
 	}
 	return fc.registerFence(0)
@@ -315,16 +326,16 @@ func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
 //
 
 func (fc *FenceClnt) AcquireConfig(v interface{}) error {
-	//log.Printf("%v: start AcquireConfig %v\n", proc.GetProgram(), fc.Name())
+	log.Printf("%v: start AcquireConfig %v\n", proc.GetName(), fc.Name())
 	b, err := fc.AcquireFenceR()
 	if err != nil {
-		log.Printf("%v: AcquireConfig %v err %v\n", proc.GetProgram(), fc.Name(), err)
+		log.Printf("%v: AcquireConfig %v err %v\n", proc.GetName(), fc.Name(), err)
 		return err
 	}
 	err = json.Unmarshal(b, v)
 	if err != nil {
 		return err
 	}
-	//log.Printf("%v: AcquireConfig %v %v\n", proc.GetProgram(), fc.Name(), v)
+	log.Printf("%v: AcquireConfig %v %v\n", proc.GetName(), fc.Name(), v)
 	return nil
 }

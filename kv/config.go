@@ -3,7 +3,6 @@ package kv
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"ulambda/fslib"
 )
@@ -78,6 +77,11 @@ func makeKvs(shards []string) *KvSet {
 	return ks
 }
 
+func (ks *KvSet) present(kv string) bool {
+	_, ok := ks.set[kv]
+	return ok
+}
+
 func (ks *KvSet) mkKvs() []string {
 	kvs := make([]string, 0, len(ks.set))
 	for kv, _ := range ks.set {
@@ -126,20 +130,14 @@ func (ks *KvSet) nshards(kv string) int {
 	return ks.set[kv]
 }
 
-func readKVs(fsl *fslib.FsLib) *KvSet {
-	for true {
-		conf, err := readConfig(fsl, KVCONFIG)
-		if err != nil {
-			// balancer may be at work
-			log.Printf("readKVs: err %v\n", err)
-			time.Sleep(1000 * time.Millisecond)
-			continue
-		}
-		kvs := makeKvs(conf.Shards)
-		log.Printf("Monitor config %v\n", kvs)
-		return kvs
+func readKVs(fsl *fslib.FsLib) (*KvSet, error) {
+	conf, err := readConfig(fsl, KVCONFIG)
+	if err != nil {
+		log.Printf("readKVs: err %v\n", err)
+		return nil, err
 	}
-	return nil
+	kvs := makeKvs(conf.Shards)
+	return kvs, nil
 }
 
 // assign to t shards from hkv to newkv

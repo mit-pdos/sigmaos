@@ -55,11 +55,11 @@ func (f *Fid) SetPath(p []string) {
 }
 
 func (f *Fid) PathLast() string {
-	return f.path[len(f.path)-1]
+	return np.Base(f.path)
 }
 
 func (f *Fid) PathDir() []string {
-	return f.path[:len(f.path)-1]
+	return np.Dir(f.path)
 }
 
 func (f *Fid) ObjU() fs.FsObj {

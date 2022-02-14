@@ -158,6 +158,7 @@ func (kc *KvClerk) acquireFence(grp string) error {
 			return nil
 		}
 	} else {
+		// need to also get balfence to this group
 		fn := group.GrpConfPath(grp)
 		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0, []string{group.GrpDir(grp)})
 	}

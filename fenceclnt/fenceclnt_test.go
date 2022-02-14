@@ -100,7 +100,7 @@ func TestFence2(t *testing.T) {
 }
 
 // n threads help to increase cnt to N
-func TestLease3(t *testing.T) {
+func TestFence3(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := 3000

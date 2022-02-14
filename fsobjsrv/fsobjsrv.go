@@ -307,6 +307,10 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return err.Rerror()
+	}
 	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
 	err = f.Read(args.Offset, args.Count, np.NoV, rets)
 	if err != nil {
@@ -517,11 +521,11 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		}
 
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.PathDir()); err != nil {
-			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
+			log.Printf("%v %v Renameat CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
 			return err.Rerror()
 		}
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.PathDir()); err != nil {
-			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
+			log.Printf("%v %v Renameat CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
 			return err.Rerror()
 		}
 
@@ -565,20 +569,26 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
 	lo := o
+	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
 		if err != nil {
 			return err.Rerror()
 		}
 	}
-	fos.stats.Path(f.Path())
+	log.Printf("%v GetFile %v CheckFence %v\n", proc.GetName(), f.Ctx().Uname(), fname)
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), fname, err)
+		return err.Rerror()
+	}
+	fos.stats.Path(fname)
 	_, r := lo.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return r.Rerror()
 	}
 	switch i := lo.(type) {
 	case fs.Dir:
-		return np.MkErr(np.TErrNotFile, f.Path()).Rerror()
+		return np.MkErr(np.TErrNotFile, fname).Rerror()
 	case fs.File:
 		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), lo.Version())
 		if r != nil {
@@ -615,6 +625,13 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 			return err.Rerror()
 		}
 	}
+
+	log.Printf("%v: SetFile %v CheckFence %v\n", proc.GetName(), f.Ctx().Uname(), dname)
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(dname); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), dname, err)
+		return err.Rerror()
+	}
+
 	if args.Perm != 0 { // create?
 		if !lo.Perm().IsDir() {
 			return np.MkErr(np.TErrNotfound, np.Join(args.Wnames)).Rerror()
@@ -681,7 +698,7 @@ func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	log.Printf("%v: RegFence %v %v\n", proc.GetName(), f.Path(), args)
+	log.Printf("%v %v: RegFence %v %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args)
 	err = fos.rft.UpdateFence(args.Fence)
 	if err != nil {
 		log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), fos.sid, args, err)

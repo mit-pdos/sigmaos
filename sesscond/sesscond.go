@@ -7,7 +7,6 @@ import (
 	// "errors"
 
 	//	"github.com/sasha-s/go-deadlock"
-	"runtime/debug"
 
 	// db "ulambda/debug"
 	np "ulambda/ninep"
@@ -95,7 +94,6 @@ func (sc *SessCond) Signal() {
 func (sc *SessCond) Broadcast() {
 	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
-			debug.PrintStack()
 			c.threadmgr.Wake(c.c)
 			sc.addWakingCond(sid, c)
 		}

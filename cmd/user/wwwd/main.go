@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"strings"
 
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
@@ -97,13 +96,11 @@ func (www *Wwwd) makeHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		if status.IsStatusErr() && status.Info() == "File not found" {
+		if status.IsStatusErr() && status.Msg() == "File not found" {
 			http.NotFound(w, r)
-		} else if status.IsStatusErr() && strings.HasPrefix(status.Info(), "Redirect") {
-			t := strings.Split(status.Info(), " ")
-			if len(t) > 1 {
-				http.Redirect(w, r, t[1], http.StatusFound)
-			}
+		} else if status.IsStatusErr() && status.Msg() == "Redirect" {
+			redirectUrl := status.Data().(string)
+			http.Redirect(w, r, redirectUrl, http.StatusFound)
 		}
 	}
 }

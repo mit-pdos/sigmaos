@@ -130,7 +130,7 @@ func (kc *KvClerk) Run() {
 	log.Printf("%v: done nop %v done %v err %v\n", proc.GetName(), kc.nop, done, err)
 	var status *proc.Status
 	if err != nil {
-		status = proc.MakeStatusErr(err.Error())
+		status = proc.MakeStatusErr(err.Error(), nil)
 	} else {
 		status = proc.MakeStatus(proc.StatusOK)
 	}

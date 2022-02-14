@@ -26,16 +26,17 @@ func (status Tstatus) String() string {
 }
 
 type Status struct {
-	StatusCode Tstatus
-	StatusInfo string
+	StatusCode    Tstatus
+	StatusMessage string
+	StatusData    interface{}
 }
 
 func MakeStatus(code Tstatus) *Status {
-	return &Status{code, ""}
+	return &Status{code, "", nil}
 }
 
-func MakeStatusErr(info string) *Status {
-	return &Status{StatusErr, info}
+func MakeStatusErr(msg string, data interface{}) *Status {
+	return &Status{StatusErr, msg, data}
 }
 
 func (s *Status) IsStatusOK() bool {
@@ -50,10 +51,14 @@ func (s *Status) IsStatusErr() bool {
 	return s.StatusCode == StatusErr
 }
 
-func (s *Status) Info() string {
-	return s.StatusInfo
+func (s *Status) Msg() string {
+	return s.StatusMessage
+}
+
+func (s *Status) Data() interface{} {
+	return s.StatusData
 }
 
 func (s *Status) String() string {
-	return fmt.Sprintf("&{ statuscode:%v info:%v }", s.StatusCode, s.StatusInfo)
+	return fmt.Sprintf("&{ statuscode:%v msg:%v data:%v }", s.StatusCode, s.StatusMessage, s.StatusData)
 }

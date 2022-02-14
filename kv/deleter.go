@@ -46,7 +46,6 @@ func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 }
 
 func (dl *Deleter) Delete(sharddir string) {
-<<<<<<< HEAD
 	log.Printf("%v: conf %v delete %v\n", proc.GetName(), dl.blConf.N, sharddir)
 
 	if _, err := dl.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
@@ -56,20 +55,13 @@ func (dl *Deleter) Delete(sharddir string) {
 	}
 
 	if err := dl.fclnt.FencePaths([]string{sharddir}); err != nil {
-		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
+		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
 	if err := dl.RmDir(sharddir); err != nil {
 		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetName(), dl.blConf.N, sharddir, err)
-		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error()))
-=======
-	// log.Printf("%v: conf %v delete %v\n", proc.GetProgram(), dl.blConf.N, sharddir)
-	err := dl.RmDir(sharddir)
-	if err != nil {
-		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetProgram(), dl.blConf.N, sharddir, err)
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
->>>>>>> master
 	} else {
 		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 	}

@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	GRPDIR       = "name/group"
+	GRPDIR       = "name/group/"
 	GRP          = "grp-"
 	GRPCONF      = "-conf"
 	GRPCONFNXT   = "-conf-next"
@@ -31,20 +31,20 @@ const (
 )
 
 func GrpDir(grp string) string {
-	return GRPDIR + "/" + grp
+	return GRPDIR + grp + "/"
 }
 
 func GrpConfPath(grp string) string {
-	return GRPDIR + "/" + grp + GRPCONF
+	return GRPDIR + grp + GRPCONF
 
 }
 
 func grpConfNxt(grp string) string {
-	return GRPDIR + "/" + grp + GRPCONFNXT
+	return GRPDIR + grp + GRPCONFNXT
 }
 
 func grpConfNxtBk(grp string) string {
-	return GRPDIR + "/" + grp + GRPCONFNXTBK
+	return GRPDIR + grp + GRPCONFNXTBK
 
 }
 

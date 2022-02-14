@@ -31,13 +31,13 @@ import (
 const (
 	NKV           = 10
 	NSHARD        = 10 * NKV
-	KVDIR         = "name/kv"
+	KVDIR         = "name/kv/"
 	KVCONF        = "config"
-	KVCONFIG      = KVDIR + "/" + KVCONF   // file with current config
-	KVNEXTCONFIG  = KVDIR + "/nextconfig"  // the persistent next configuration
-	KVNEXTBK      = KVDIR + "/nextconfig#" // temporary copy
-	KVBALANCER    = KVDIR + "/balancer"
-	KVBALANCERCTL = KVDIR + "/balancer/ctl"
+	KVCONFIG      = KVDIR + KVCONF        // file with current config
+	KVNEXTCONFIG  = KVDIR + "nextconfig"  // the persistent next configuration
+	KVNEXTBK      = KVDIR + "nextconfig#" // temporary copy
+	KVBALANCER    = KVDIR + "balancer"
+	KVBALANCERCTL = KVDIR + "balancer/ctl"
 )
 
 type Balancer struct {

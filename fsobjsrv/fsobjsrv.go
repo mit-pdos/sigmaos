@@ -521,11 +521,11 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		}
 
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.PathDir()); err != nil {
-			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
+			log.Printf("%v %v Renameat CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
 			return err.Rerror()
 		}
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.PathDir()); err != nil {
-			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
+			log.Printf("%v %v Renameat CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
 			return err.Rerror()
 		}
 

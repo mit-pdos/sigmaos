@@ -16,7 +16,7 @@ import (
 // use case is a proc that was a primary but has been surplanted by a
 // new primary, but the old one doesn't know about the new primary
 // (e.g., due to a network partition).  The fence ensures that servers
-// will deny requests by the proc after it isn't the primary anymore.
+// will deny requests by the proc that isn't the primary anymore.
 //
 // Procs name a fence using a pathname for the file associated with
 // the fence.  Internally, a fence object consists of a sequence
@@ -24,18 +24,23 @@ import (
 // the server holding the fence file and a server id.  The server
 // increases the seqno associated with the fence pathname when a proc
 // creates a new file for that pathname or when a proc modifies the
-// file.  The fence interface fences all requests of a proc to servers
-// by asking the server hosting the fence file for a fence object and
-// asking fsclnt to register that fence object; fsclnt registers the
-// fence on all open sessions to servers and will register the fence
-// on future sessions that the proc opens when it mounts a new server.
+// file.
 //
-// When a proc issues a request on any session, the receiving server
-// checks if the registered fence for that session is still valid by
-// checking that the seqno is equal or larger than the last seen fence
-// for that fenceid on any of the server's sessions. If valid the
-// server serves the request, otherwise, it returns a stale-fence
-// error.
+// Procs specify which server should be fenced by specifying a
+// pathnames for servers when making the fenceclnt.  This pathname is
+// typically a directory at the server, and the server fences all ops
+// on this directory and its children.  This design allows a server to
+// have fenced and non-fenced directories.  The fenceclnt asks the
+// server hosting the fence file for a fence object and registers the
+// fence at each of the servers.  Procs can add new servers using
+// FencePaths().
+//
+// When a proc issues a request, the receiving server checks if the
+// proc has registered a fence for the object(s) in the request. If
+// so, it checks if the fence is still valid by checking that the
+// seqno is equal or larger than the last seen fence for that fenceid
+// from any proc. If valid the server serves the request, otherwise,
+// it returns a stale-fence error.
 //
 // Procs use the fence interface in two major ways: as write fences
 // and read fences.  Write fences are intended for a proc that will
@@ -52,17 +57,17 @@ import (
 // When a writing proc updates a fence file, it is its job to ask for
 // a new fence from the server and updates its registered fences.
 //
-// An intended use case is electing a primary.  Candidate procs invoke
-// AcquireFenceW(), and one will succeed and become the primary.  If
-// it crashes, one of the other candidates will succeed, and be the
-// next primary.  The typical content of the fence file is the
-// pathname for the primary.  Backups obtain a read fence for the
-// fence file by calling AcquireFenceR().  If there is no primary,
-// they will block. Once there is a primary, AcquireFenceR() succeeds
-// and they know about the new primary.  If a new primary is elected
-// and registers an updated fence, procs holding a read fence will
-// observe a stale-fence error. They can then invoke AcquireFenceR()
-// again to learn about the new primary.
+// An intended use case for fenceclnt is electing a primary.
+// Candidate procs invoke AcquireFenceW(), and one will succeed and
+// become the primary.  If it crashes, one of the other candidates
+// will succeed, and be the next primary.  The typical content of the
+// fence file is the pathname for the primary.  Backups obtain a read
+// fence for the fence file by calling AcquireFenceR().  If there is
+// no primary, they will block. Once there is a primary,
+// AcquireFenceR() succeeds and they know about the new primary.  If a
+// new primary is elected and registers an updated fence, procs
+// holding a read fence will observe a stale-fence error. They can
+// then invoke AcquireFenceR() again to learn about the new primary.
 //
 // Another use case is maintaining a configuration file for a service
 // (e.g., a mapping from shards to servers).  This file typically

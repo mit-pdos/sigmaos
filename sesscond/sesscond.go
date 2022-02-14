@@ -7,6 +7,7 @@ import (
 	// "errors"
 
 	//	"github.com/sasha-s/go-deadlock"
+	"runtime/debug"
 
 	// db "ulambda/debug"
 	np "ulambda/ninep"
@@ -30,10 +31,11 @@ type cond struct {
 // pipe lock or watch lock, which SessCond releases in Wait() and
 // re-acquires before returning out of Wait().
 type SessCond struct {
-	lock  sync.Locker
-	st    *session.SessionTable
-	nref  int // under sct lock
-	conds map[np.Tsession][]*cond
+	lock        sync.Locker
+	st          *session.SessionTable
+	nref        int // under sct lock
+	conds       map[np.Tsession][]*cond
+	wakingConds map[np.Tsession]map[*cond]bool // Conds pending wakeup (which also may need to be alerted that the session has closed)
 }
 
 func makeSessCond(st *session.SessionTable, lock sync.Locker) *SessCond {
@@ -41,25 +43,8 @@ func makeSessCond(st *session.SessionTable, lock sync.Locker) *SessCond {
 	sc.lock = lock
 	sc.st = st
 	sc.conds = make(map[np.Tsession][]*cond)
+	sc.wakingConds = make(map[np.Tsession]map[*cond]bool)
 	return sc
-}
-
-// A session has been closed: wake up threads associated with this
-// session. Grab c lock to ensure that wakeup isn't missed while a
-// thread is about enter wait (and releasing sess and sc lock).
-func (sc *SessCond) closed(sessid np.Tsession) {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
-
-	// log.Printf("cond %p: close %v %v\n", sc, sessid, sc.conds)
-	if condlist, ok := sc.conds[sessid]; ok {
-		// log.Printf("%p: sess %v closed\n", sc, sessid)
-		for _, c := range condlist {
-			c.isClosed = true
-			c.threadmgr.Wake(c.c)
-		}
-	}
-	delete(sc.conds, sessid)
 }
 
 func (sc *SessCond) alloc(sessid np.Tsession) *cond {
@@ -81,6 +66,8 @@ func (sc *SessCond) Wait(sessid np.Tsession) *np.Err {
 
 	c.threadmgr.Sleep(c.c)
 
+	sc.removeWakingCond(sessid, c)
+
 	closed := c.isClosed
 
 	if closed {
@@ -98,6 +85,7 @@ func (sc *SessCond) Signal() {
 		// sleep.
 		for _, c := range condlist {
 			c.threadmgr.Wake(c.c)
+			sc.addWakingCond(sid, c)
 		}
 		delete(sc.conds, sid)
 	}
@@ -107,9 +95,49 @@ func (sc *SessCond) Signal() {
 func (sc *SessCond) Broadcast() {
 	for sid, condlist := range sc.conds {
 		for _, c := range condlist {
+			debug.PrintStack()
 			c.threadmgr.Wake(c.c)
+			sc.addWakingCond(sid, c)
 		}
 		delete(sc.conds, sid)
+	}
+}
+
+// Keep track of conds which are waiting to be woken up, since their session
+// may close in the interim.
+func (sc *SessCond) addWakingCond(sid np.Tsession, c *cond) {
+	if _, ok := sc.wakingConds[sid]; !ok {
+		sc.wakingConds[sid] = make(map[*cond]bool)
+	}
+	sc.wakingConds[sid][c] = true
+}
+
+func (sc *SessCond) removeWakingCond(sid np.Tsession, c *cond) {
+	delete(sc.wakingConds[sid], c)
+	if len(sc.wakingConds[sid]) == 0 {
+		delete(sc.wakingConds, sid)
+	}
+}
+
+// A session has been closed: wake up threads associated with this
+// session. Grab c lock to ensure that wakeup isn't missed while a
+// thread is about enter wait (and releasing sess and sc lock).
+func (sc *SessCond) closed(sessid np.Tsession) {
+	sc.lock.Lock()
+	defer sc.lock.Unlock()
+
+	// log.Printf("cond %p: close %v %v\n", sc, sessid, sc.conds)
+	if condlist, ok := sc.conds[sessid]; ok {
+		// log.Printf("%p: sess %v closed\n", sc, sessid)
+		for _, c := range condlist {
+			c.threadmgr.Wake(c.c)
+			sc.addWakingCond(sessid, c)
+		}
+		delete(sc.conds, sessid)
+	}
+	// Mark all this session's waking conds as closed.
+	for c, _ := range sc.wakingConds[sessid] {
+		c.isClosed = true
 	}
 }
 

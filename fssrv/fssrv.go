@@ -135,13 +135,16 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
-	reply, rerror := fssrv.fenceSession(sess, fc.Msg)
-	if rerror != nil {
-		reply = rerror
-	}
-	if reply != nil {
-		fssrv.sendReply(fc.Tag, reply, replies)
-		return
+	// Detaches always get processed, regardless of fences.
+	if fc.GetType() != np.TTdetach {
+		reply, rerror := fssrv.fenceSession(sess, fc.Msg)
+		if rerror != nil {
+			reply = rerror
+		}
+		if reply != nil {
+			fssrv.sendReply(fc.Tag, reply, replies)
+			return
+		}
 	}
 	// New thread about to start
 	sess.IncThreads()
@@ -221,10 +224,13 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	defer sess.DecThreads()
 	reply, rerror := sess.Dispatch(fc.Msg)
-	if rerror != nil {
-		reply = *rerror
+	// Detaches aren't replied to since they're generated at the server.
+	if fc.GetType() != np.TTdetach {
+		if rerror != nil {
+			reply = *rerror
+		}
+		fssrv.sendReply(fc.Tag, reply, replies)
 	}
-	fssrv.sendReply(fc.Tag, reply, replies)
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
@@ -238,18 +244,15 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// XXX remove fence from sess, so that fence maybe free from seen table
 
-	// Several threads maybe waiting in a sesscond. DeleteSess
-	// will unblock them so that they can bail out.
-	fssrv.sct.DeleteSess(sid)
-
-	// Wait until nthread == 0
+	// Wait until nthread == 0. Detach is guaranteed to have been processed since
+	// it was enqueued by the reader function before calling CloseSession
+	// (incrementing nthread). We need to process Detaches (and sess cond closes)
+	// through the session thread manager since they generate wakeups and need to
+	// be properly serialized (especially for replication).
 	sess.WaitThreads()
 
 	// Stop sess thread.
 	fssrv.st.KillSessThread(sid)
-
-	// Detach the session to remove ephemeral files and close open fids.
-	fssrv.st.Detach(sid)
 
 	// close the reply channel, so that conn writer() terminates
 	close(replies)

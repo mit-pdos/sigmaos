@@ -92,6 +92,11 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 // Delete ephemeral files created on this session.
 func (fos *FsObjSrv) Detach() {
+
+	// Several threads maybe waiting in a sesscond. DeleteSess
+	// will unblock them so that they can bail out.
+	fos.fssrv.GetSessCondTable().DeleteSess(fos.sid)
+
 	// log.Printf("%v: %v Clunkopen: %v\n", proc.GetProgram(), fos.sid, fos.ft.fids)
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()

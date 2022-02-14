@@ -59,6 +59,15 @@ func (c *SrvConn) reader() {
 			// so the session has not been added to the session table. If this is the
 			// case, don't close the session (there is nothing to close).
 			if c.sessid != 0 {
+				// Set up the detach fcall
+				dFcall := &np.Fcall{}
+				dFcall.Type = np.TTdetach
+				dFcall.Tag = 0
+				dFcall.Session = c.sessid
+				dFcall.Seqno = 0
+				dFcall.Msg = np.Tdetach{}
+				// Detach the session to remove ephemeral files and close open fids.
+				c.protsrv.Process(dFcall, c.replies)
 				c.protsrv.CloseSession(c.sessid, c.replies)
 			}
 			return

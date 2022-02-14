@@ -50,7 +50,7 @@ func (npd *Npd) Process(fcall *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (npd *Npd) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
-	npd.st.Detach(sid)
+	// XXX Actually call detach if we make it do something at some point.
 }
 
 //

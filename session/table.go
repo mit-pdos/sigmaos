@@ -51,15 +51,6 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	return sess
 }
 
-func (st *SessionTable) Detach(sid np.Tsession) error {
-	sess, ok := st.Lookup(sid)
-	if !ok {
-		return np.MkErr(np.TErrInvalidSession, sid)
-	}
-	sess.protsrv.Detach()
-	return nil
-}
-
 func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.ThreadMgr {
 	if sess, ok := st.Lookup(sid); ok {
 		return sess.threadmgr

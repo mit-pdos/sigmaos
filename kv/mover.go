@@ -32,7 +32,6 @@ func MakeMover(N string, src, dst string) (*Mover, error) {
 	err := mv.Started(proc.GetPid())
 	crash.Crasher(mv.FsLib)
 
-	// Use Dir for src and dst, because the shard dirs may not exist
 	mv.fclnt = fenceclnt.MakeFenceClnt(mv.FsLib, KVCONFIG, 0, []string{KVDIR})
 
 	err = mv.fclnt.AcquireConfig(&mv.blConf)
@@ -55,14 +54,19 @@ func (mv *Mover) moveShard(s, d string) error {
 	d1 := shardTmp(d)
 
 	// The previous mover might have crashed right after rename
-	// below. If so, we are done and reuse d.
+	// below. If so, we are done.
 	_, err := mv.Stat(d)
 	if err == nil {
-		log.Printf("%v: moveShard conf %v reuse %v\n", proc.GetName(), mv.blConf.N, d)
+		log.Printf("%v: moveShard conf %v exists %v\n", proc.GetName(), mv.blConf.N, d)
 		return nil
 	}
 
-	// + "/" to force grp-0 to be resolved and path.Dir(d) because d doesn't exist yet
+	// Fence writes to server holding d.  Also alert s about the
+	// new config so that fenced writes from clerks so s will
+	// fail.
+	//
+	// + "/" to force grp-0 to be resolved and path.Dir(d) because
+	// d doesn't exist yet.
 	if err := mv.fclnt.FencePaths([]string{s, path.Dir(d) + "/"}); err != nil {
 		return err
 	}

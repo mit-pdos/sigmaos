@@ -211,6 +211,8 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
+// Publish new KVCONFIG through OpenFenceFrom(). Afterwards our writes
+// to the server holding KVCONFIG are fenced with a new fence.
 func (bl *Balancer) PublishConfig() {
 	err := bl.Remove(KVNEXTBK)
 	if err != nil {
@@ -227,15 +229,15 @@ func (bl *Balancer) PublishConfig() {
 }
 
 // Restore sharddirs by finishing moves and deletes, and create config
-// file.   XXX we could restore in parallel with serving clerk ops
+// file.
 func (bl *Balancer) restore() {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.N += 1
 	log.Printf("%v: restore to %v\n", proc.GetName(), bl.conf)
 
-	// first republish next config, which we just read into
-	// bl.conf, to obtain the kvconfig fence and bump its seqno
+	// first republish next config, which the caller read into
+	// bl.conf, to obtain the kvconfig fence and bump its seqno.
 	bl.PublishConfig()
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)

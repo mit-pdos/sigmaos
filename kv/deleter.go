@@ -48,12 +48,15 @@ func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 func (dl *Deleter) Delete(sharddir string) {
 	log.Printf("%v: conf %v delete %v\n", proc.GetName(), dl.blConf.N, sharddir)
 
+	// If sharddir isn't found, then an earlier delete succeeded;
+	// we are done.
 	if _, err := dl.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
-		log.Printf("%v: Delete conf %v already deleted %v\n", proc.GetName(), dl.blConf.N, sharddir)
+		log.Printf("%v: Delete conf %v not found %v\n", proc.GetName(), dl.blConf.N, sharddir)
 		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 		return
 	}
 
+	// Fence my writes to server holding sharddir
 	if err := dl.fclnt.FencePaths([]string{sharddir}); err != nil {
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 		return

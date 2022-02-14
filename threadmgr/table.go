@@ -7,25 +7,37 @@ import (
 type ProcessFn func(fc *np.Fcall, replies chan *np.Fcall)
 
 type ThreadMgrTable struct {
-	pfn         ProcessFn
-	threadmgrss map[*ThreadMgr]bool
+	pfn        ProcessFn
+	threadmgrs map[*ThreadMgr]bool
+	replicated bool
 }
 
-func MakeThreadMgrTable(pfn ProcessFn) *ThreadMgrTable {
+func MakeThreadMgrTable(pfn ProcessFn, replicated bool) *ThreadMgrTable {
 	tm := &ThreadMgrTable{}
 	tm.pfn = pfn
-	tm.threadmgrss = make(map[*ThreadMgr]bool)
+	tm.threadmgrs = make(map[*ThreadMgr]bool)
+	tm.replicated = replicated
 	return tm
 }
 
 func (tm *ThreadMgrTable) AddThread() *ThreadMgr {
-	new := makeThreadMgr(tm.pfn)
-	tm.threadmgrss[new] = true
-	new.start()
+	var new *ThreadMgr
+	if tm.replicated && len(tm.threadmgrs) > 0 {
+		for t, _ := range tm.threadmgrs {
+			new = t
+			break
+		}
+	} else {
+		new = makeThreadMgr(tm.pfn)
+		tm.threadmgrs[new] = true
+		new.start()
+	}
 	return new
 }
 
 func (tm *ThreadMgrTable) RemoveThread(t *ThreadMgr) {
-	t.stop()
-	delete(tm.threadmgrss, t)
+	if !tm.replicated {
+		t.stop()
+		delete(tm.threadmgrs, t)
+	}
 }

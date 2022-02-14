@@ -57,7 +57,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process)
+	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, config != nil)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)

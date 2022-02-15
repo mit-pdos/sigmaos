@@ -289,11 +289,9 @@ func (fc *FenceClnt) FencePaths(paths []string) error {
 }
 
 func (fc *FenceClnt) RemovePaths(paths []string) error {
-	log.Printf("Paths remove %v %v\n", fc.paths, paths)
 	for _, p := range paths {
 		delete(fc.paths, p)
 	}
-	log.Printf("Paths left %v\n", fc.paths)
 	return nil
 }
 

@@ -326,7 +326,7 @@ func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
 //
 
 func (fc *FenceClnt) AcquireConfig(v interface{}) error {
-	log.Printf("%v: start AcquireConfig %v\n", proc.GetName(), fc.Name())
+	// log.Printf("%v: start AcquireConfig %v\n", proc.GetName(), fc.Name())
 	b, err := fc.AcquireFenceR()
 	if err != nil {
 		log.Printf("%v: AcquireConfig %v err %v\n", proc.GetName(), fc.Name(), err)
@@ -336,6 +336,6 @@ func (fc *FenceClnt) AcquireConfig(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("%v: AcquireConfig %v %v\n", proc.GetName(), fc.Name(), v)
+	// log.Printf("%v: AcquireConfig %v %v\n", proc.GetName(), fc.Name(), v)
 	return nil
 }

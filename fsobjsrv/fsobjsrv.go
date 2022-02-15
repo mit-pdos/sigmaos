@@ -576,7 +576,6 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 			return err.Rerror()
 		}
 	}
-	log.Printf("%v GetFile %v CheckFence %v\n", proc.GetName(), f.Ctx().Uname(), fname)
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
 		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), fname, err)
 		return err.Rerror()
@@ -626,7 +625,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		}
 	}
 
-	log.Printf("%v: SetFile %v CheckFence %v\n", proc.GetName(), f.Ctx().Uname(), dname)
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(dname); err != nil {
 		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), dname, err)
 		return err.Rerror()
@@ -681,11 +679,11 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 }
 
 func (fos *FsObjSrv) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	_, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
-	log.Printf("%v: rmfence %v %v\n", proc.GetName(), f.Path, args.Fence)
+	// log.Printf("%v: rmfence %v %v\n", proc.GetName(), f.Path, args.Fence)
 	err = fos.rft.RmFence(args.Fence)
 	if err != nil {
 		return err.Rerror()
@@ -698,7 +696,7 @@ func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	log.Printf("%v %v: RegFence %v %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args)
+	// log.Printf("%v %v: RegFence %v %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args)
 	err = fos.rft.UpdateFence(args.Fence)
 	if err != nil {
 		log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), fos.sid, args, err)
@@ -720,7 +718,7 @@ func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	log.Printf("%v: Unfence %v %v\n", proc.GetName(), f.Path(), args)
+	// log.Printf("%v: Unfence %v %v\n", proc.GetName(), f.Path(), args)
 	err = fos.fssrv.Sess(fos.sid).Unfence(f.Path(), args.Fence.FenceId)
 	if err != nil {
 		return err.Rerror()

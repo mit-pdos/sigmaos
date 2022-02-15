@@ -177,18 +177,15 @@ func (kc *KvClerk) acquireFence(grp string) error {
 
 // Remove group from fenced paths in bal fclnt?
 func (kc KvClerk) removeGrp(err error) error {
-	log.Printf("removeGrp %v\n", err)
 	if np.IsErrNotfound(err) {
 		s := kc.grpre.FindStringSubmatch(np.ErrNotfoundPath(err))
 		if s != nil {
-			log.Printf("removeGrp %v %v\n", np.ErrNotfoundPath(err), s)
 			if kvs, r := readKVs(kc.FsLib); r == nil {
 				if !kvs.present(s[0]) {
 					if _, ok := kc.grpFclnts[s[0]]; ok {
 						delete(kc.grpFclnts, s[0])
 					}
 					paths := []string{group.GrpDir(s[0])}
-					log.Printf("remove %v\n", paths)
 					kc.balFclnt.RemovePaths(paths)
 					if r == nil {
 						return nil
@@ -206,7 +203,6 @@ func (kc KvClerk) removeGrp(err error) error {
 func (kc KvClerk) releaseGrp(err error) error {
 	s := kc.grpconfre.FindStringSubmatch(err.Error())
 	if s != nil {
-		log.Printf("s == %v\n", s)
 		return kc.releaseFence("grp-" + s[1])
 	}
 	return err
@@ -310,7 +306,6 @@ func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
 		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
-		log.Printf("%v: doop %v\n", proc.GetName(), fn)
 		o.err = kc.acquireFence(kc.blConf.Shards[shard])
 		if o.err != nil {
 			o.err = kc.fixRetry(o.err)

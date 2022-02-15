@@ -271,7 +271,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnProc(args []string) (string, error) {
 	p := proc.MakeProc(args[0], args[1:])
-	log.Printf("%v: spawn pid %v %v\n", proc.GetName(), p.Pid, bl.crashhelper)
+	// log.Printf("%v: spawn pid %v %v\n", proc.GetName(), p.Pid, bl.crashhelper)
 	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
@@ -363,7 +363,7 @@ func (bl *Balancer) runDeleters(moves Moves) {
 		i := <-ch
 		tmp[i] = nil
 		m += 1
-		log.Printf("%v: deleter done %v %v\n", proc.GetName(), m, tmp)
+		// log.Printf("%v: deleter done %v %v\n", proc.GetName(), m, tmp)
 	}
 	log.Printf("%v: deleters done\n", proc.GetName())
 }
@@ -387,7 +387,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 		i := <-ch
 		tmp[i] = nil
 		m += 1
-		log.Printf("%v: movers done %v %v\n", proc.GetName(), m, tmp)
+		// log.Printf("%v: mover done %v %v\n", proc.GetName(), m, tmp)
 	}
 	log.Printf("%v: movers all done\n", proc.GetName())
 }

@@ -298,6 +298,10 @@ func (npc *NpConn) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
+	return nil
+}
+
 func (npc *NpConn) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 	return nil
 }

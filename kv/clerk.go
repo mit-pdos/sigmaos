@@ -2,6 +2,8 @@ package kv
 
 import (
 	"crypto/rand"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"log"
@@ -53,15 +55,15 @@ func keyPath(kvd, shard string, k string) string {
 	return d + "/" + k
 }
 
+func Key(k uint64) string {
+	return "key" + strconv.FormatUint(k, 16)
+}
+
 func nrand() uint64 {
 	max := big.NewInt(int64(1) << 62)
 	bigx, _ := rand.Int(rand.Reader, max)
 	x := bigx.Uint64()
 	return x
-}
-
-func key(k uint64) string {
-	return "key" + strconv.FormatUint(k, 16)
 }
 
 type KvClerk struct {
@@ -70,7 +72,6 @@ type KvClerk struct {
 	balFclnt  *fenceclnt.FenceClnt
 	grpFclnts map[string]*fenceclnt.FenceClnt
 	blConf    Config
-	nop       int
 	grpre     *regexp.Regexp
 	grpconfre *regexp.Regexp
 }
@@ -88,55 +89,6 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 		log.Printf("%v: MakeClerk readConfig err %v\n", proc.GetName(), err)
 	}
 	return kc
-}
-
-func (kc *KvClerk) waitEvict(ch chan bool) {
-	err := kc.WaitEvict(proc.GetPid())
-	if err != nil {
-		log.Printf("Error WaitEvict: %v", err)
-	}
-	ch <- true
-}
-
-func (kc *KvClerk) getKeys(ch chan bool) (bool, error) {
-	for i := uint64(0); i < NKEYS; i++ {
-		v, err := kc.Get(key(i))
-		select {
-		case <-ch:
-			// ignore error from Get()
-			return true, nil
-		default:
-			if err != nil {
-				return false, fmt.Errorf("%v: Get %v err %v", proc.GetName(), key(i), err)
-			}
-			if key(i) != v {
-				return false, fmt.Errorf("%v: Get %v wrong val %v", proc.GetName(), key(i), v)
-			}
-		}
-	}
-	return false, nil
-}
-
-func (kc *KvClerk) Run() {
-	kc.Started(proc.GetPid())
-	ch := make(chan bool)
-	done := false
-	var err error
-	go kc.waitEvict(ch)
-	for !done {
-		done, err = kc.getKeys(ch)
-		if err != nil {
-			break
-		}
-	}
-	log.Printf("%v: done nop %v done %v err %v\n", proc.GetName(), kc.nop, done, err)
-	var status *proc.Status
-	if err != nil {
-		status = proc.MakeStatusErr(err.Error(), nil)
-	} else {
-		status = proc.MakeStatus(proc.StatusOK)
-	}
-	kc.Exited(proc.GetPid(), status)
 }
 
 func (kc *KvClerk) releaseFence(grp string) error {
@@ -317,7 +269,6 @@ func (kc *KvClerk) doop(o *op) {
 		}
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
-			kc.nop += 1
 			return
 		}
 		o.err = kc.fixRetry(o.err)
@@ -340,6 +291,7 @@ type op struct {
 	kind opT
 	b    []byte
 	k    string
+	off  np.Toffset
 	err  error
 }
 
@@ -350,25 +302,44 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case PUT:
 		_, o.err = fsl.PutFile(fn, o.b, 0777, np.OWRITE)
 	case SET:
-		_, o.err = fsl.SetFile(fn, o.b)
+		_, o.err = fsl.SetFile(fn, o.b, o.off)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
+	log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(k string) (string, error) {
-	op := &op{GET, []byte{}, k, nil}
+func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {
+	op := &op{GET, []byte{}, k, off, nil}
 	kc.doop(op)
-	return string(op.b), op.err
+	return op.b, op.err
 }
 
-func (kc *KvClerk) Set(k, v string) error {
-	op := &op{SET, []byte(v), k, nil}
+func (kc *KvClerk) Set(k string, b []byte, off np.Toffset) error {
+	op := &op{SET, b, k, off, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) Put(k, v string) error {
-	op := &op{PUT, []byte(v), k, nil}
+func (kc *KvClerk) Append(k string, b []byte) error {
+	op := &op{SET, b, k, np.NoOffset, nil}
+	kc.doop(op)
+	return op.err
+}
+
+func (kc *KvClerk) Put(k string, b []byte) error {
+	op := &op{PUT, b, k, 0, nil}
+	kc.doop(op)
+	return op.err
+}
+
+func (kc *KvClerk) AppendJson(k string, v interface{}) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("Marshal error %v", err)
+	}
+	lbuf := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutVarint(lbuf, int64(len(b)))
+	b = append(lbuf[0:n], b...)
+	op := &op{SET, b, k, np.NoOffset, nil}
 	kc.doop(op)
 	return op.err
 }

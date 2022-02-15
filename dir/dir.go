@@ -128,19 +128,19 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 		return nil, path, err
 	}
 	inodes = append(inodes, inode)
+	if len(path) == 1 { // done?
+		db.DLPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, inodes)
+		dir.mu.Unlock()
+		return inodes, nil, nil
+	}
 	switch i := inode.(type) {
 	case *DirImpl:
-		if len(path) == 1 { // done?
-			db.DLPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, inodes)
-			dir.mu.Unlock()
-			return inodes, nil, nil
-		}
 		dir.mu.Unlock() // for "."
 		return i.namei(ctx, path[1:], inodes)
 	default:
 		db.DLPrintf("MEMFS", "namei %T %v %v -> %v %v", i, path, dir, inodes, path[1:])
 		dir.mu.Unlock()
-		return inodes, path[1:], nil
+		return inodes, path[1:], np.MkErr(np.TErrNotDir, path[0])
 	}
 }
 

@@ -78,6 +78,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Rgetfile{}, nil
 	case np.TTsetfile:
 		return np.Tsetfile{}, nil
+	case np.TTputfile:
+		return np.Tputfile{}, nil
 	case np.TTmkfence:
 		return np.Tmkfence{}, nil
 	case np.TRmkfence:

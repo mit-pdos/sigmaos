@@ -390,9 +390,11 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	return fos.removeObj(f.Ctx(), o, f.Path())
 }
 
-func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, o fs.FsObj, names []string) (fs.FsObj, *np.Err) {
+func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) (fs.FsObj, *np.Err) {
+	o := f.Obj()
 	if !o.Perm().IsDir() {
-		return nil, np.MkErr(np.TErrNotDir, o)
+		log.Printf("%v: lookupObj not a dir %v %v\n", proc.GetName(), o.Perm(), names)
+		return nil, np.MkErr(np.TErrNotDir, f.Path())
 	}
 	d := o.(fs.Dir)
 	os, rest, err := d.Lookup(ctx, names)
@@ -425,7 +427,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 
 	lo := o
 	if len(args.Wnames) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
+		lo, err = fos.lookupObj(f.Ctx(), f, args.Wnames)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -569,9 +571,9 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
 	o := f.Obj()
 	lo := o
-	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
+	fname := append(f.Path(), args.Wnames...)
 	if len(args.Wnames) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), o, args.Wnames)
+		lo, err = fos.lookupObj(f.Ctx(), f, args.Wnames)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -589,7 +591,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	case fs.Dir:
 		return np.MkErr(np.TErrNotFile, fname).Rerror()
 	case fs.File:
-		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), lo.Version())
+		rets.Data, r = i.Read(f.Ctx(), args.Offset, np.Tsize(lo.Size()), np.NoV)
 		if r != nil {
 			return r.Rerror()
 		}
@@ -602,24 +604,65 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 }
 
 // Special code path for SetFile: in one RPC, SetFile() looks up the
-// file, opens/creates it, and writes it.  If another setfile executes
-// between open() and write(), an setfile returns an error.
+// file, opens it, and writes it.
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "SetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
-	o := f.Obj()
-	names := args.Wnames
-	lo := o
-	fname := append(f.Path(), names[0:len(args.Wnames)]...)
-	if args.Perm != 0 { // create?
-		names = names[0 : len(args.Wnames)-1]
+	// log.Printf("%v: SetFile o %v args %v (%v)\n", proc.GetName(), f, args, len(args.Wnames))
+	lo := f.Obj()
+	fname := append(f.Path(), args.Wnames...)
+	if len(args.Wnames) > 0 {
+		lo, err = fos.lookupObj(f.Ctx(), f, args.Wnames)
+		if err != nil {
+			return err.Rerror()
+		}
 	}
-	dname := append(f.Path(), names[0:len(args.Wnames)-1]...)
+
+	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
+		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), fname, err)
+		return err.Rerror()
+	}
+
+	fos.stats.Path(fname)
+	_, err = lo.Open(f.Ctx(), args.Mode)
+	if err != nil {
+		return err.Rerror()
+	}
+	switch i := lo.(type) {
+	case fs.Dir:
+		return np.MkErr(np.TErrNotFile, f.Path()).Rerror()
+	case fs.File:
+		n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
+		if err != nil {
+			return err.Rerror()
+		}
+		rets.Count = n
+		fos.rft.UpdateSeqno(fname)
+		return nil
+	default:
+		log.Fatalf("FATAL SetFile: obj type %T isn't Dir or File\n", f)
+	}
+	return nil
+}
+
+// Special code path for PutFile: in one RPC, PutFile() looks up the
+// file, creates it, and writes it.
+func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
+	f, err := fos.lookup(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	db.DLPrintf("9POBJ", "PutFile o %v args %v (%v)\n", f, args, len(args.Wnames))
+	// log.Printf("%v: PutFile o %v args %v (%v)\n", proc.GetName(), f, args, len(args.Wnames))
+	lo := f.Obj()
+	fname := append(f.Path(), args.Wnames...)
+	names := args.Wnames[0 : len(args.Wnames)-1]
+	dname := append(f.Path(), names...)
 	if len(names) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), o, names)
+		lo, err = fos.lookupObj(f.Ctx(), f, names)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -630,31 +673,24 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 
-	if args.Perm != 0 { // create?
-		if !lo.Perm().IsDir() {
-			return np.MkErr(np.TErrNotfound, np.Join(args.Wnames)).Rerror()
-		}
-		name := args.Wnames[len(args.Wnames)-1]
-		dws, fws := fos.AcquireWatches(dname, name)
-		defer fos.ReleaseWatches(dws, fws)
-
-		lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dws, fws, name, args.Perm, args.Mode)
-		if err != nil {
-			return err.Rerror()
-		}
-		f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
-	} else {
-		fos.stats.Path(fname)
-		_, err := lo.Open(f.Ctx(), args.Mode)
-		if err != nil {
-			return err.Rerror()
-		}
+	if !lo.Perm().IsDir() {
+		return np.MkErr(np.TErrNotfound, dname).Rerror()
 	}
+	name := args.Wnames[len(args.Wnames)-1]
+	dws, fws := fos.AcquireWatches(dname, name)
+	defer fos.ReleaseWatches(dws, fws)
+
+	lo, err = fos.createObj(f.Ctx(), lo.(fs.Dir), dws, fws, name, args.Perm, args.Mode)
+	if err != nil {
+		return err.Rerror()
+	}
+	f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+
 	switch i := lo.(type) {
 	case fs.Dir:
 		return np.MkErr(np.TErrNotFile, f.Path()).Rerror()
 	case fs.File:
-		n, err := i.Write(f.Ctx(), args.Offset, args.Data, lo.Version())
+		n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -662,7 +698,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		fos.rft.UpdateSeqno(fname)
 		return nil
 	default:
-		log.Fatalf("FATAL SetFile: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL PutFile: obj type %T isn't Dir or File\n", f)
 	}
 	return nil
 }

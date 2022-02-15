@@ -64,6 +64,7 @@ type StatInfo struct {
 	Nrenameat   Tcounter
 	Nget        Tcounter
 	Nset        Tcounter
+	Nput        Tcounter
 	Nmkfence    Tcounter
 	Nregfence   Tcounter
 	Nunfence    Tcounter
@@ -118,6 +119,8 @@ func (si *StatInfo) Inc(fct np.Tfcall) {
 		si.Nget.Inc()
 	case np.TTsetfile:
 		si.Nset.Inc()
+	case np.TTputfile:
+		si.Nput.Inc()
 	case np.TTmkfence:
 		si.Nmkfence.Inc()
 	case np.TTregfence:

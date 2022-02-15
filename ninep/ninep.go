@@ -266,6 +266,7 @@ const (
 	TTgetfile
 	TRgetfile
 	TTsetfile
+	TTputfile
 	TTremovefile
 	TTmkfence
 	TRmkfence
@@ -347,6 +348,8 @@ func (fct Tfcall) String() string {
 		return "Rgetfile"
 	case TTsetfile:
 		return "Tsetfile"
+	case TTputfile:
+		return "Tputfile"
 	case TTmkfence:
 		return "Tmkfence"
 	case TRmkfence:
@@ -602,6 +605,14 @@ type Rgetfile struct {
 type Tsetfile struct {
 	Fid    Tfid
 	Mode   Tmode
+	Offset Toffset
+	Wnames []string
+	Data   []byte
+}
+
+type Tputfile struct {
+	Fid    Tfid
+	Mode   Tmode
 	Perm   Tperm
 	Offset Toffset
 	Wnames []string
@@ -669,6 +680,7 @@ func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
+func (Tputfile) Type() Tfcall    { return TTputfile }
 func (Tmkfence) Type() Tfcall    { return TTmkfence }
 func (Rmkfence) Type() Tfcall    { return TRmkfence }
 func (Tregfence) Type() Tfcall   { return TTregfence }

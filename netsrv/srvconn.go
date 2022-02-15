@@ -82,7 +82,7 @@ func (c *SrvConn) reader() {
 			err = npcodec.Unmarshal(frame, fcall)
 		}
 		if err != nil {
-			log.Print("reader: bad fcall: ", err)
+			log.Print("%v: reader: bad fcall: ", proc.GetName(), err)
 		} else {
 			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
 			if c.sessid == 0 {

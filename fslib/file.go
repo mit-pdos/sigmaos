@@ -52,11 +52,11 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, 0, data, off)
+	return fl.FsClient.SetFile(fname, np.OWRITE, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, mode|np.OWRITE, perm, data, 0)
+	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
 // XXX chunk

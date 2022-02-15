@@ -189,6 +189,22 @@ func TestNonEmpty(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestSetAppend(t *testing.T) {
+	ts := makeTstate(t)
+	d := []byte("1234")
+	fn := "name/f"
+
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+	l, err := ts.SetFile(fn, d, np.Toffset(len(d)))
+	assert.Equal(t, nil, err)
+	assert.Equal(t, np.Tsize(len(d)), l)
+	b, err := ts.ReadFile(fn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, len(d)*2, len(b))
+	ts.Shutdown()
+}
+
 func TestCopy(t *testing.T) {
 	ts := makeTstate(t)
 	d := []byte("hello")

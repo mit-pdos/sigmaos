@@ -462,7 +462,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 }
 
 // Create or write file (if perm = 0).
-func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []byte) (np.Tsize, error) {
+func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	dir := np.Dir(p)
@@ -475,7 +475,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, perm np.Tperm, data []b
 		}
 		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
-	reply, err := fsc.fids.clnt(fid).SetFile(fid, rest, mode, perm, 0, data)
+	reply, err := fsc.fids.clnt(fid).SetFile(fid, rest, mode, perm, off, data)
 	if err != nil {
 		// If server could only partially resolve name, it may
 		// have been because name contained a symbolic link

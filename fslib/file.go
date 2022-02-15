@@ -51,12 +51,12 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 	return fl.FsClient.GetFile(fname, np.OREAD)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, 0, data)
+func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {
+	return fl.FsClient.SetFile(fname, np.OWRITE, 0, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, mode|np.OWRITE, perm, data)
+	return fl.FsClient.SetFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
 // XXX chunk
@@ -153,6 +153,6 @@ func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data)
+	_, err = fl.SetFile(fname, data, 0)
 	return err
 }

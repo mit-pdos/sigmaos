@@ -304,7 +304,7 @@ func (fc *FenceClnt) RemovePaths(paths []string) error {
 //
 
 func (fc *FenceClnt) SetFenceFile(b []byte) error {
-	_, err := fc.SetFile(fc.fenceName, b)
+	_, err := fc.SetFile(fc.fenceName, b, 0)
 	if err != nil {
 		log.Printf("%v: SetFenceFile %v err %v", proc.GetName(), fc.fenceName, err)
 		return err

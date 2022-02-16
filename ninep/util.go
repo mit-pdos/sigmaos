@@ -72,3 +72,16 @@ func Base(path []string) string {
 	}
 	return path[len(path)-1]
 }
+
+func IsUnionElem(elem string) bool {
+	return strings.HasPrefix(elem, "~")
+}
+
+func IsUnion(path []string) ([]string, bool) {
+	for i, c := range path {
+		if IsUnionElem(c) {
+			return path[:i], true
+		}
+	}
+	return nil, false
+}

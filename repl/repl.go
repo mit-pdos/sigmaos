@@ -1,21 +1,17 @@
 package repl
 
 import (
-	"net"
-
-	"ulambda/protsrv"
+	np "ulambda/ninep"
+	"ulambda/threadmgr"
 )
 
 type Config interface {
-	MakeServer(protsrv.FsServer) Server
 	ReplAddr() string
 	String() string
-}
-
-type Conn interface {
+	MakeServer(tm *threadmgr.ThreadMgr) Server
 }
 
 type Server interface {
-	Init()
-	MakeConn(protsrv.FsServer, net.Conn) Conn
+	Start()
+	Process(fc *np.Fcall, replies chan *np.Fcall)
 }

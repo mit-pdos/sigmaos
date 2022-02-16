@@ -8,34 +8,40 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/protsrv"
+	"ulambda/threadmgr"
 )
+
+type Op struct {
+	request   *np.Fcall
+	reply     *np.Fcall
+	replyC    chan *np.Fcall
+	startTime time.Time
+}
 
 type Clerk struct {
 	mu       *sync.Mutex
 	id       int
-	fssrv    protsrv.FsServer
-	np       protsrv.Protsrv
-	opmap    map[np.Tsession]map[np.Tseqno]*SrvOp
-	requests chan *SrvOp
+	tm       *threadmgr.ThreadMgr
+	opmap    map[np.Tsession]map[np.Tseqno]*Op
+	requests chan *Op
 	commit   <-chan [][]byte
 	proposeC chan<- []byte
 }
 
-func makeClerk(id int, fs protsrv.FsServer, commit <-chan [][]byte, propose chan<- []byte) *Clerk {
+func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan [][]byte, propose chan<- []byte) *Clerk {
 	c := &Clerk{}
 	c.mu = &sync.Mutex{}
 	c.id = id
-	c.fssrv = fs
-	// XXX FIXME c.np = fs.Connect()
-	c.opmap = make(map[np.Tsession]map[np.Tseqno]*SrvOp)
-	c.requests = make(chan *SrvOp)
+	c.tm = tm
+	c.opmap = make(map[np.Tsession]map[np.Tseqno]*Op)
+	c.requests = make(chan *Op)
 	c.commit = commit
 	c.proposeC = propose
 	return c
 }
 
-func (c *Clerk) request(op *SrvOp) {
+// Put above process
+func (c *Clerk) request(op *Op) {
 	c.requests <- op
 }
 
@@ -53,61 +59,42 @@ func (c *Clerk) serve() {
 				}
 				db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
 				// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
-				c.printOpTiming(req)
-				go func() {
-					rep := c.apply(req)
-					db.DLPrintf("REPLRAFT", "Reply %v\n", rep)
-					// go c.reply(rep)
-					c.reply(rep)
-				}()
+				c.printOpTiming(req, frame)
+				c.apply(req)
 			}
 		}
 	}
 }
 
-func (c *Clerk) propose(op *SrvOp) {
+func (c *Clerk) propose(op *Op) {
 	db.DLPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
 	c.registerOp(op)
-	c.proposeC <- op.frame
-}
-
-func (c *Clerk) apply(fc *np.Fcall) *np.Fcall {
-	t := fc.Tag
-	// XXX Avoid doing this every time
-
-	// XXX fix me
-	var reply np.Tmsg
-	// reply, rerror := c.fssrv.Dispatch(fc.Session, fc.Msg)
-	//if rerror != nil {
-	//	reply = *rerror
-	//}
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
-	fcall.Session = fc.Session
-	fcall.Seqno = fc.Seqno
-	fcall.Tag = t
-	return fcall
-}
-
-func (c *Clerk) reply(rep *np.Fcall) {
-	op := c.getOp(rep)
-	if op == nil {
-		return
+	frame, err := npcodec.Marshal(op.request)
+	if err != nil {
+		log.Fatalf("FATAL: marshal op in replraft.Clerk.Propose: %v", err)
 	}
-
-	op.reply = rep
-	op.replyC <- op
+	c.proposeC <- frame
 }
 
-func (c *Clerk) registerOp(op *SrvOp) {
+func (c *Clerk) apply(fc *np.Fcall) {
+	var replies chan *np.Fcall = nil
+	// Get the associated reply channel if this op was generated on this server.
+	op := c.getOp(fc)
+	if op != nil {
+		replies = op.replyC
+	}
+	// Process the op on a single thread.
+	c.tm.Process(fc, replies)
+}
+
+func (c *Clerk) registerOp(op *Op) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	m, ok := c.opmap[op.request.Session]
 	if !ok {
-		m = make(map[np.Tseqno]*SrvOp)
+		m = make(map[np.Tseqno]*Op)
 		c.opmap[op.request.Session] = m
 	}
 	if _, ok := m[op.request.Seqno]; ok {
@@ -116,26 +103,32 @@ func (c *Clerk) registerOp(op *SrvOp) {
 	m[op.request.Seqno] = op
 }
 
-func (c *Clerk) getOp(rep *np.Fcall) *SrvOp {
+// Get the full op struct associated with an fcall.
+func (c *Clerk) getOp(fc *np.Fcall) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if m, ok := c.opmap[rep.Session]; ok {
-		if op, ok := m[rep.Seqno]; ok {
-			delete(m, rep.Seqno)
-			return op
+	var op *Op
+	if m, ok := c.opmap[fc.Session]; ok {
+		if o, ok := m[fc.Seqno]; ok {
+			delete(m, fc.Seqno)
+			op = o
+		}
+		if len(m) == 0 {
+			delete(c.opmap, fc.Session)
 		}
 	}
-	return nil
+	return op
 }
 
-func (c *Clerk) printOpTiming(rep *np.Fcall) {
+// Print how much time an op spent in raft.
+func (c *Clerk) printOpTiming(rep *np.Fcall, frame []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if m, ok := c.opmap[rep.Session]; ok {
 		if op, ok := m[rep.Seqno]; ok {
-			log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(op.frame))
+			log.Printf("In-raft op time: %v us %v bytes", time.Now().Sub(op.startTime).Microseconds(), len(frame))
 		}
 	}
 }

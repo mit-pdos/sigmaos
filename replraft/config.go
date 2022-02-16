@@ -6,8 +6,8 @@ import (
 	"net"
 	"strconv"
 
-	"ulambda/protsrv"
 	"ulambda/repl"
+	"ulambda/threadmgr"
 )
 
 const (
@@ -32,8 +32,8 @@ func MakeRaftConfig(id int, peerAddrs []string) *RaftConfig {
 	return rc
 }
 
-func (rc *RaftConfig) MakeServer(fs protsrv.FsServer) repl.Server {
-	return MakeRaftReplServer(rc.id, rc.peerAddrs, fs)
+func (rc *RaftConfig) MakeServer(tm *threadmgr.ThreadMgr) repl.Server {
+	return MakeRaftReplServer(rc.id, rc.peerAddrs, tm)
 }
 
 func (rc *RaftConfig) ReplAddr() string {

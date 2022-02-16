@@ -4,6 +4,8 @@ import (
 	"log"
 	"runtime/debug"
 
+	"strings"
+
 	"ulambda/ctx"
 	"ulambda/fences"
 	"ulambda/fs"
@@ -57,11 +59,11 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, config != nil)
+	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, strings.Contains(proc.GetName(), "named")) //config != nil)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
-	fssrv.srv = netsrv.MakeReplicatedNetServer(fssrv, addr, false, config)
+	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
 	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
@@ -169,8 +171,10 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	defer sess.DecThreads()
 	reply, rerror := sess.Dispatch(fc.Msg)
-	// Detaches aren't replied to since they're generated at the server.
-	if fc.GetType() != np.TTdetach {
+	// Replies may be nil if this is a detach (detaches aren't replied to since
+	// they're generated at the server) or if this is a replicated op generated
+	// by a clerk. In both cases, a reply is not needed.
+	if replies != nil {
 		if rerror != nil {
 			reply = *rerror
 		}

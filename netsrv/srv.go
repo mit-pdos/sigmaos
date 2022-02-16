@@ -7,35 +7,26 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/protsrv"
-	"ulambda/repl"
 )
 
 type NetServer struct {
 	addr       string
 	fssrv      protsrv.FsServer
 	wireCompat bool
-	replicated bool
-	replSrv    repl.Server
 }
 
-func MakeNetServer(address string, fssrv protsrv.FsServer) *NetServer {
-	return MakeReplicatedNetServer(fssrv, address, false, nil)
+func MakeNetServer(fssrv protsrv.FsServer, address string) *NetServer {
+	return makeNetServer(fssrv, address, false)
 }
 
 func MakeNetServerWireCompatible(address string, fssrv protsrv.FsServer) *NetServer {
-	return MakeReplicatedNetServer(fssrv, address, true, nil)
+	return makeNetServer(fssrv, address, true)
 }
 
-func MakeReplicatedNetServer(fs protsrv.FsServer, address string, wireCompat bool, config repl.Config) *NetServer {
+func makeNetServer(fs protsrv.FsServer, address string, wireCompat bool) *NetServer {
 	srv := &NetServer{"",
 		fs,
-		wireCompat, config != nil,
-		nil,
-	}
-	if srv.replicated {
-		db.DLPrintf("RSRV", "starting replicated server: %v\n", config)
-		srv.replSrv = config.MakeServer(fs)
-		srv.replSrv.Init()
+		wireCompat,
 	}
 	// Create and start the main server listener
 	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
@@ -61,15 +52,10 @@ func (srv *NetServer) runsrv(l net.Listener) {
 			log.Fatal("Accept error: ", err)
 		}
 
-		if !srv.replicated {
-			MakeSrvConn(srv, conn)
-		} else {
-			db.DLPrintf("9PCHAN", "replsrv conn from %v -> %v\n", conn.RemoteAddr(), l.Addr())
-			srv.replSrv.MakeConn(srv.fssrv, conn)
-		}
+		MakeSrvConn(srv, conn)
 	}
 }
 
 func (srv *NetServer) String() string {
-	return fmt.Sprintf("{ addr: %v replicated: %v config: %v }", srv.addr, srv.replicated, srv.replSrv)
+	return fmt.Sprintf("{ addr: %v }", srv.addr)
 }

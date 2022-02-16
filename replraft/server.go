@@ -1,12 +1,10 @@
 package replraft
 
 import (
-	"net"
-
 	raft "go.etcd.io/etcd/raft/v3"
 
-	"ulambda/protsrv"
-	"ulambda/repl"
+	np "ulambda/ninep"
+	"ulambda/threadmgr"
 )
 
 type RaftReplServer struct {
@@ -15,7 +13,7 @@ type RaftReplServer struct {
 	clerk   *Clerk
 }
 
-func MakeRaftReplServer(id int, peerAddrs []string, fs protsrv.FsServer) *RaftReplServer {
+func MakeRaftReplServer(id int, peerAddrs []string, tm *threadmgr.ThreadMgr) *RaftReplServer {
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
 	for i := range peerAddrs {
@@ -24,14 +22,18 @@ func MakeRaftReplServer(id int, peerAddrs []string, fs protsrv.FsServer) *RaftRe
 	commitC := make(chan [][]byte)
 	proposeC := make(chan []byte)
 	srv.node = makeRaftNode(id, peers, peerAddrs, commitC, proposeC)
-	srv.clerk = makeClerk(id, fs, commitC, proposeC)
-	go srv.clerk.serve()
+	srv.clerk = makeClerk(id, tm, commitC, proposeC)
 	return srv
 }
 
-func (srv *RaftReplServer) Init() {
+func (srv *RaftReplServer) Start() {
+	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) MakeConn(psrv protsrv.FsServer, conn net.Conn) repl.Conn {
-	return MakeRaftReplConn(psrv, conn, srv.clerk)
+func (srv *RaftReplServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
+	op := &Op{}
+	op.request = fc
+	op.reply = nil
+	op.replyC = replies
+	srv.clerk.request(op)
 }

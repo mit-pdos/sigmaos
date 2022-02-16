@@ -125,7 +125,7 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	if err != nil {
 		db.DLPrintf("MEMFS", "dir %v: file not found %v", dir, path[0])
 		dir.mu.Unlock()
-		return nil, path, err
+		return inodes, path, err
 	}
 	inodes = append(inodes, inode)
 	if len(path) == 1 { // done?
@@ -140,7 +140,7 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	default:
 		db.DLPrintf("MEMFS", "namei %T %v %v -> %v %v", i, path, dir, inodes, path[1:])
 		dir.mu.Unlock()
-		return inodes, path[0:], np.MkErr(np.TErrNotDir, path[0])
+		return inodes, path, np.MkErr(np.TErrNotDir, path[0])
 	}
 }
 

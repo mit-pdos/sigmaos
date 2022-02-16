@@ -47,6 +47,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, todo, err := fsc.walkOne(path, w)
 		if err != nil {
+			log.Printf("walkOne err %v %v %v\n", err, path, w)
 			return fid, err
 		}
 		qid := fsc.fids.path(fid).lastqid()
@@ -55,6 +56,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 		// that the client can remove a symlink
 		if qid.Type&np.QTSYMLINK == np.QTSYMLINK && (todo > 0 ||
 			(todo == 0 && resolve)) {
+			log.Printf("walksymlink %v %v\n", path, w)
 			path, err = fsc.walkSymlink(fid, path, todo)
 			if err != nil {
 				return fid, err
@@ -110,7 +112,7 @@ func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
 	}
 	defer fsc.clunkFid(fid1)
 	fid2 := fsc.fids.allocFid()
-	first, union := IsUnion(rest)
+	first, union := np.IsUnion(rest)
 	var reply *np.Rwalk
 	todo := 0
 	if union {
@@ -250,15 +252,6 @@ func (fsc *FsClient) autoMount(target string, path []string) ([]string, *np.Err)
 		return nil, err
 	}
 	return rest, nil
-}
-
-func IsUnion(path []string) ([]string, bool) {
-	for i, c := range path {
-		if strings.HasPrefix(c, "~") {
-			return path[:i], true
-		}
-	}
-	return nil, false
 }
 
 func (fsc *FsClient) walkUnion(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, *np.Err) {

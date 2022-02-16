@@ -127,13 +127,14 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		o := f.Obj()
 		if !o.Perm().IsDir() {
-			return np.MkErr(np.TErrNotfound, np.Join(args.Wnames)).Rerror()
+			return np.MkErr(np.TErrNotDir, np.Join(f.Path())).Rerror()
 		}
 		d := o.(fs.Dir)
 		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
-		if err != nil {
+		if err != nil && !np.IsMaybeSpecialElem(err) {
 			return err.Rerror()
 		}
+		// let the client decide what to do with rest
 		n := len(args.Wnames) - len(rest)
 		p := append(f.Path(), args.Wnames[:n]...)
 		lo := os[len(os)-1]
@@ -377,6 +378,7 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	log.Printf("%v: %v remove %v\n", proc.GetName(), f.Ctx().Uname(), f.Path())
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
 		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
 		return err.Rerror()
@@ -394,12 +396,13 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) (fs.FsOb
 	o := f.Obj()
 	if !o.Perm().IsDir() {
 		log.Printf("%v: lookupObj not a dir %v %v\n", proc.GetName(), o.Perm(), names)
-		return nil, np.MkErr(np.TErrNotDir, f.Path())
+		return nil, np.MkErr(np.TErrNotDir, np.Base(f.Path()))
 	}
 	d := o.(fs.Dir)
 	os, rest, err := d.Lookup(ctx, names)
-	if err != nil || len(rest) != 0 {
-		return nil, np.MkErr(np.TErrNotfound, np.Join(names))
+	if err != nil {
+		log.Printf("err lookupobj %v %v\n", err, rest)
+		return nil, err
 	}
 	return os[len(os)-1], nil
 }
@@ -413,6 +416,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 	if err != nil {
 		return err.Rerror()
 	}
+	// log.Printf("%v: %v removefile %v %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args.Wnames)
 	o := f.Obj()
 	fname := append(f.Path(), args.Wnames[0:len(args.Wnames)]...)
 	if isExit(fname) {
@@ -674,7 +678,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	}
 
 	if !lo.Perm().IsDir() {
-		return np.MkErr(np.TErrNotfound, dname).Rerror()
+		return np.MkErr(np.TErrNotDir, dname).Rerror()
 	}
 	name := args.Wnames[len(args.Wnames)-1]
 	dws, fws := fos.AcquireWatches(dname, name)

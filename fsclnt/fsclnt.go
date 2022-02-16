@@ -274,15 +274,12 @@ func (fsc *FsClient) Remove(name string) error {
 	// symlink.
 	err := fsc.fids.clnt(fid).RemoveFile(fid, rest)
 	if err != nil {
-		// If server could only partially resolve name, it may
-		// have been because name contained a symbolic link
-		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err) {
+		if np.IsMaybeSpecialElem(err) {
 			fid, err = fsc.walkManyUmount(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err
 			}
-			// defer fsc.clunkFid(fid)
+			defer fsc.clunkFid(fid)
 			err = fsc.fids.clnt(fid).Remove(fid)
 		}
 	}
@@ -305,7 +302,7 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 		if err != nil {
 			return nil, err
 		}
-		// defer fsc.clunkFid(fid)
+		defer fsc.clunkFid(fid)
 		reply, err := fsc.fids.clnt(fid).Stat(fid)
 		if err != nil {
 			return nil, err
@@ -439,17 +436,17 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 		}
 		return nil, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
+	// Optimistcally GetFile without doing a pathname
+	// walk; this may fail if rest contains an automount
+	// symlink.
 	reply, err := fsc.fids.clnt(fid).GetFile(fid, rest, mode, 0, 0)
 	if err != nil {
-		// If server could only partially resolve name, it may
-		// have been because name contained a symbolic link
-		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err) {
+		if np.IsMaybeSpecialElem(err) {
 			fid, err = fsc.walkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return nil, err
 			}
-			// defer fsc.clunkFid(fid)
+			defer fsc.clunkFid(fid)
 			reply, err = fsc.fids.clnt(fid).GetFile(fid, []string{}, mode, 0, 0)
 			if err != nil {
 				return nil, err
@@ -473,20 +470,19 @@ func (fsc *FsClient) PutFile(path string, mode np.Tmode, perm np.Tperm, data []b
 		}
 		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
+	// Optimistcally PutFile without doing a pathname
+	// walk; this may fail if rest contains an automount
+	// symlink.
 	reply, err := fsc.fids.clnt(fid).PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		// If server could only partially resolve name, it may
-		// have been because name contained a symbolic link
-		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err) {
-			log.Printf("retry putfile %v\n", path)
+		if np.IsMaybeSpecialElem(err) {
 			dir := np.Dir(p)
 			base := []string{np.Base(p)}
 			fid, err = fsc.walkManyUmount(dir, true, nil)
 			if err != nil {
 				return 0, err
 			}
-			// defer fsc.clunkFid(fid)
+			defer fsc.clunkFid(fid)
 			reply, err = fsc.fids.clnt(fid).PutFile(fid, base, mode, perm, off, data)
 			if err != nil {
 				return 0, err
@@ -510,18 +506,17 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, data []byte, off np.Tof
 		}
 		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
+	// Optimistcally SetFile without doing a pathname
+	// walk; this may fail if rest contains an automount
+	// symlink.
 	reply, err := fsc.fids.clnt(fid).SetFile(fid, rest, mode, off, data)
 	if err != nil {
-		// If server could only partially resolve name, it may
-		// have been because name contained a symbolic link
-		// for a server; retry with resolving name.
-		if np.IsDirNotFound(err) {
-			log.Printf("retry setfile %v\n", path)
+		if np.IsMaybeSpecialElem(err) {
 			fid, err = fsc.walkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err
 			}
-			// defer fsc.clunkFid(fid)
+			defer fsc.clunkFid(fid)
 			reply, err = fsc.fids.clnt(fid).SetFile(fid, []string{}, mode, off, data)
 			if err != nil {
 				return 0, err
@@ -597,7 +592,7 @@ func (fsc *FsClient) ShutdownFs(name string) error {
 	if err != nil {
 		return err
 	}
-	// defer fsc.clunkFid(fid)
+	defer fsc.clunkFid(fid)
 	err = fsc.fids.clnt(fid).RemoveFile(fid, []string{".exit"})
 	if err != nil {
 		return err

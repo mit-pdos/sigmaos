@@ -195,6 +195,16 @@ func IsErrRetry(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }
 
+func IsErrNotDir(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrNotDir.String())
+}
+
+// Maybe the error is because of a symlink or ~
+func IsMaybeSpecialElem(error error) bool {
+	return IsErrNotDir(error) ||
+		(IsErrNotfound(error) && IsUnionElem(ErrNotfoundPath(error)))
+}
+
 func Rerror2Err(error string) *Err {
 	err := &Err{TErrError, error}
 	for c := TErrBadattach; c <= TErrError; c++ {

@@ -88,7 +88,7 @@ func (s *System) Boot() error {
 }
 
 func (s *System) BootFsUxd() error {
-	p := proc.MakeProcPid("fsuxd-"+proc.GenPid(), "bin/kernel/fsuxd", []string{})
+	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fsuxd", []string{})
 	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (s *System) BootFsUxd() error {
 }
 
 func (s *System) BootFss3d() error {
-	p := proc.MakeProcPid("fss3d-"+proc.GenPid(), "bin/kernel/fss3d", []string{})
+	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fss3d", []string{})
 	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (s *System) BootFss3d() error {
 }
 
 func (s *System) BootProcd() error {
-	p := proc.MakeProcPid("procd-"+proc.GenPid(), "bin/kernel/procd", []string{s.bindir})
+	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/procd", []string{s.bindir})
 	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (s *System) BootProcd() error {
 }
 
 func (s *System) BootDbd() error {
-	p := proc.MakeProcPid("dbd-"+proc.GenPid(), "bin/kernel/dbd", []string{})
+	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/dbd", []string{})
 	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
 	if err != nil {
 		return err

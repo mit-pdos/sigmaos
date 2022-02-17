@@ -2,11 +2,8 @@ package fsclnt
 
 import (
 	"log"
-	"strings"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/npcodec"
 	"ulambda/protclnt"
 )
 
@@ -14,13 +11,16 @@ const (
 	MAXSYMLINK = 8
 )
 
+// walkManyUmount walks p using walkMany, but if it returns an EOF err
+// (e.g., server is not responding), it unmounts the server and starts
+// over again, perhaps switching to another replica.
 func (fsc *FsClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	var fid np.Tfid
 	for {
 		f, err := fsc.walkMany(p, resolve, w)
-		db.DLPrintf("FSCLNT", "walkManyUmount %v -> %v %v\n", p, f, err)
 		if err != nil && np.IsErrEOF(err) {
 			p := fsc.fids.path(f)
+			// XXX schedd doesn't exist anymore; fix?
 			if p == nil { // schedd triggers this; don't know why
 				return np.NoFid, err
 			}
@@ -43,12 +43,31 @@ func (fsc *FsClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid,
 	return fid, nil
 }
 
+// Walks path.  It uses walkOne() to walk on the server that has the
+// longest-match in the mount.  That server may fail or succeed
+// resolving the path, or return at the path element that is a union
+// or symlink. In the latter case, walkMany() uses walkUnion() and
+// walkSymlink to resolve that element. walkUnion() typically ends in
+// a symlink. So in both cases, walkSymlink will automount a new
+// server and update the mount table. If succesful, walkMany() starts
+// over again, but likely with a longer match in the mount table.
+// XXX clunking fid?
 func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, todo, err := fsc.walkOne(path, w)
 		if err != nil {
-			log.Printf("walkOne err %v %v %v\n", err, path, w)
 			return fid, err
+		}
+
+		// fid maybe points to symlink or directory that contains ~
+		i := len(path) - todo
+		if todo > 0 && np.IsUnionElem(path[i]) {
+			fid, todo, err = fsc.walkUnion(fid, path, todo)
+			if err != nil {
+				log.Printf("walk union %v %v err %v\n", fsc.fids.lookup(fid), path, err)
+				return fid, err
+			}
+			// this may have produced a symlink qid
 		}
 		qid := fsc.fids.path(fid).lastqid()
 
@@ -56,14 +75,14 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 		// that the client can remove a symlink
 		if qid.Type&np.QTSYMLINK == np.QTSYMLINK && (todo > 0 ||
 			(todo == 0 && resolve)) {
-			log.Printf("walksymlink %v %v\n", path, w)
 			path, err = fsc.walkSymlink(fid, path, todo)
 			if err != nil {
+				log.Printf("walk link %v %v err %v\n", fsc.fids.lookup(fid), path, err)
 				return fid, err
 			}
-		} else {
-			return fid, err
+			continue
 		}
+		return fid, err
 	}
 	return np.NoFid, np.MkErr(np.TErrNotfound, "too many symlink cycles")
 }
@@ -71,7 +90,6 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 // Walk to parent directory, and check if name is there.  If it is, return entry.
 // Otherwise, set watch based on directory's version number
 func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watch) (*np.Rwalk, *np.Err) {
-	db.DLPrintf("FSCLNT", "Watch %v %v\n", p, r)
 	fid3 := fsc.fids.allocFid()
 	dir := r[0 : len(r)-1]
 	reply, err := fsc.fids.clnt(fid1).Walk(fid1, fid3, dir)
@@ -87,258 +105,56 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watc
 	}
 
 	go func(pc *protclnt.ProtClnt, version np.TQversion) {
-		db.DLPrintf("FSCLNT", "Watch set %v %v %v\n", p, r[len(r)-1], version)
 		err := pc.Watch(fid3, []string{r[len(r)-1]}, version)
-		db.DLPrintf("FSCLNT", "Watch returns %v %v\n", p, err)
 		fsc.clunkFid(fid3)
 		w(np.Join(p), err)
 	}(fsc.fids.clnt(fid3), fsc.fids.path(fid3).lastqid().Version)
 	return nil, nil
 }
 
+// Resolves path until it runs into a symlink, union element, or an
+// error.
 func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
 	fid, rest := fsc.mnt.resolve(path)
 	if fid == np.NoFid {
-		db.DLPrintf("FSCLNT", "walkOne: mount -> unknown fid\n")
 		if fsc.mnt.hasExited() {
 			return np.NoFid, 0, np.MkErr(np.TErrEOF, "mount")
 		}
 		return np.NoFid, 0, np.MkErr(np.TErrNotfound, "mount")
 	}
-	db.DLPrintf("FSCLNT", "walkOne: mount -> %v %v\n", fid, rest)
 	fid1, err := fsc.clone(fid)
 	if err != nil {
 		return fid, 0, err
 	}
 	defer fsc.clunkFid(fid1)
 	fid2 := fsc.fids.allocFid()
-	first, union := np.IsUnion(rest)
-	var reply *np.Rwalk
-	todo := 0
-	if union {
-		reply, err = fsc.walkUnion(fsc.fids.clnt(fid1), fid1, fid2,
-			first, rest[len(first)])
-		rest = rest[len(first)+1:]
-		todo = len(rest)
+	reply, err := fsc.fids.clnt(fid1).Walk(fid1, fid2, rest)
+	if err != nil {
+		if w != nil && np.IsErrNotfound(err) {
+			var err1 *np.Err
+			reply, err1 = fsc.setWatch(fid1, fid2, path, rest, w)
+			if err1 != nil {
+				// couldn't walk to parent dir
+				return np.NoFid, 0, err1
+			}
+			if err1 == nil && reply == nil {
+				// entry is still not in parent dir
+				return np.NoFid, 0, err
+			}
+			// entry now exists
+		} else {
+			return np.NoFid, 0, err
+		}
+	}
+	todo := len(rest) - len(reply.Qids)
+	if len(reply.Qids) == 0 {
+		fid2, err = fsc.clone(fid1)
 		if err != nil {
 			return np.NoFid, 0, err
 		}
 	} else {
-		reply, err = fsc.fids.clnt(fid1).Walk(fid1, fid2, rest)
-		if err != nil {
-			if w != nil && np.IsErrNotfound(err) {
-				var err1 *np.Err
-				reply, err1 = fsc.setWatch(fid1, fid2, path, rest, w)
-				if err1 != nil {
-					// couldn't walk to parent dir
-					return np.NoFid, 0, err1
-				}
-				if err1 == nil && reply == nil {
-					// entry is still not in parent dir
-					return np.NoFid, 0, err
-				}
-				// entry now exists
-			} else {
-				return np.NoFid, 0, err
-			}
-		}
-		todo = len(rest) - len(reply.Qids)
-		db.DLPrintf("FSCLNT", "walkOne rest %v -> %v %v", rest, reply.Qids, todo)
+		fsc.fids.addFid(fid2, fsc.fids.path(fid1).copyPath())
+		fsc.fids.path(fid2).addn(reply.Qids, rest)
 	}
-	fsc.fids.addFid(fid2, fsc.fids.path(fid1).copyPath())
-	fsc.fids.path(fid2).addn(reply.Qids, rest)
 	return fid2, todo, nil
-}
-
-func (fsc *FsClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string, *np.Err) {
-	// XXX change how we readlink; getfile?
-	clnt := fsc.fids.clnt(fid)
-	target, err := fsc.readlink(clnt, fid)
-	if len(target) == 0 {
-		log.Printf("readlink %v %v\n", string(target), err)
-	}
-	if err != nil {
-		return nil, err
-	}
-	i := len(path) - todo
-	rest := path[i:]
-	if IsRemoteTarget(target) {
-		// log.Printf("%v: automount %v %v\n", db.GetName(), path[:i], target)
-		trest, err := fsc.autoMount(target, path[:i])
-		if err != nil {
-			return nil, err
-		}
-		db.DLPrintf("FSCLNT", "rest = %v trest %v (%v)\n", rest, trest, len(trest))
-		path = append(path[:i], append(trest, rest...)...)
-	} else {
-		path = append(np.Split(target), rest...)
-	}
-	return path, nil
-}
-
-// Replicated: >1 of IPv6/IPv4, separated by a '\n'
-// IPv6: [::]:port:pubkey:name
-// IPv4: host:port:pubkey[:path]
-func IsRemoteTarget(target string) bool {
-	targets := strings.Split(target, "\n")
-	if strings.HasPrefix(targets[0], "[") {
-		parts := strings.SplitN(targets[0], ":", 6)
-		return len(parts) >= 5
-	} else { // IPv4
-		parts := strings.SplitN(targets[0], ":", 4)
-		return len(parts) >= 3
-	}
-}
-
-// Remote targets separated by '\n'
-func IsReplicated(target string) bool {
-	return IsRemoteTarget(target) && strings.Contains(target, "\n")
-}
-
-// XXX pubkey is unused
-func SplitTarget(target string) (string, []string) {
-	var server string
-	var rest []string
-
-	if strings.HasPrefix(target, "[") { // IPv6: [::]:port:pubkey:name
-		parts := strings.SplitN(target, ":", 5)
-		server = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + parts[3]
-		if len(parts[4:]) > 0 && parts[4] != "" {
-			rest = np.Split(parts[4])
-		}
-	} else { // IPv4
-		parts := strings.SplitN(target, ":", 4)
-		server = parts[0] + ":" + parts[1]
-		if len(parts[3:]) > 0 && parts[3] != "" {
-			rest = np.Split(parts[3])
-		}
-	}
-	return server, rest
-}
-
-func SplitTargetReplicated(target string) ([]string, []string) {
-	target = strings.TrimSpace(target)
-	targets := strings.Split(target, "\n")
-	servers := []string{}
-	rest := []string{}
-	for _, t := range targets {
-		serv, r := SplitTarget(t)
-		rest = r
-		servers = append(servers, serv)
-	}
-	return servers, rest
-}
-
-func (fsc *FsClient) autoMount(target string, path []string) ([]string, *np.Err) {
-	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
-	var rest []string
-	var fid np.Tfid
-	var err *np.Err
-	if IsReplicated(target) {
-		servers, r := SplitTargetReplicated(target)
-		rest = r
-		fid, err = fsc.attachReplicas(servers, np.Join(path), "")
-	} else {
-		server, r := SplitTarget(target)
-		rest = r
-		fid, err = fsc.attach(server, np.Join(path), "")
-	}
-	if err != nil {
-		db.DLPrintf("FSCLNT", "Attach error: %v", err)
-		return nil, err
-	}
-	err = fsc.mount(fid, np.Join(path))
-	if err != nil {
-		return nil, err
-	}
-	return rest, nil
-}
-
-func (fsc *FsClient) walkUnion(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dir []string, q string) (*np.Rwalk, *np.Err) {
-	db.DLPrintf("FSCLNT", "Walk union: %v %v\n", dir, q)
-	fid3 := fsc.fids.allocFid()
-	reply, err := pc.Walk(fid, fid3, dir)
-	if err != nil {
-		return nil, err
-	}
-	reply, err = fsc.unionLookup(fsc.fids.clnt(fid), fid3, fid2, q)
-	if err != nil {
-		return nil, err
-	}
-	db.DLPrintf("FSCLNT", "unionLookup -> %v %v", fid2, reply.Qids)
-	return reply, nil
-}
-
-func (fsc *FsClient) unionMatch(q, name string) bool {
-	db.DLPrintf("FSCLNT", "unionMatch %v %v\n", q, name)
-	switch q {
-	case "~any":
-		return true
-	case "~ip":
-		ip, err := LocalIP()
-		if err != nil {
-			return false
-		}
-		parts := strings.Split(ip, ":")
-		if parts[0] == ip {
-			return true
-		}
-		return false
-	default:
-		return true
-	}
-	return true
-}
-
-func (fsc *FsClient) unionScan(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (*np.Rwalk, *np.Err) {
-	db.DLPrintf("FSCLNT", "unionScan: %v %v\n", dirents, q)
-	for _, de := range dirents {
-		// Read the link
-		_, err := pc.Walk(fid, fid2, []string{de.Name})
-		if err != nil {
-			return nil, err
-		}
-		target, err := fsc.readlink(pc, fid2)
-		if err != nil {
-			return nil, err
-		}
-		if fsc.unionMatch(q, target) {
-			reply, err := pc.Walk(fid, fid2, []string{de.Name})
-			if err != nil {
-				return nil, err
-			}
-			return reply, nil
-		}
-	}
-	return nil, nil
-}
-
-func (fsc *FsClient) unionLookup(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, q string) (*np.Rwalk, *np.Err) {
-	db.DLPrintf("FSCLNT", "unionLookup: %v %v %v\n", fid, fid2, q)
-	_, err := pc.Open(fid, np.OREAD)
-	if err != nil {
-		return nil, err
-	}
-	off := np.Toffset(0)
-	for {
-		reply, err := pc.Read(fid, off, 1024)
-		if err != nil {
-			return nil, err
-		}
-		if len(reply.Data) == 0 {
-			return nil, np.MkErr(np.TErrNotfound, "union")
-		}
-		dirents, err := npcodec.Byte2Dir(reply.Data)
-		if err != nil {
-			return nil, err
-		}
-		reply1, err := fsc.unionScan(pc, fid, fid2, dirents, q)
-		if err != nil {
-			return nil, err
-		}
-		if reply1 != nil {
-			return reply1, nil
-		}
-		off += 1024
-	}
 }

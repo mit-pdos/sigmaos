@@ -201,8 +201,11 @@ func IsErrNotDir(error error) bool {
 
 // Maybe the error is because of a symlink or ~
 func IsMaybeSpecialElem(error error) bool {
-	return IsErrNotDir(error) ||
-		(IsErrNotfound(error) && IsUnionElem(ErrNotfoundPath(error)))
+	return IsErrNotDir(error) || IsErrUnionElem(error)
+}
+
+func IsErrUnionElem(error error) bool {
+	return IsErrNotfound(error) && IsUnionElem(ErrNotfoundPath(error))
 }
 
 func Rerror2Err(error string) *Err {

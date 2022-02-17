@@ -98,7 +98,6 @@ func (mnt *MntTable) resolve(path []string) (np.Tfid, []string) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
-	db.DLPrintf("FSCLNT", "resolve %v %v\n", mnt.mounts, path)
 	if mnt.exited {
 		db.DLPrintf("FSCLNT", "resolve %v %v failed: mount exited \n", mnt.mounts, path)
 		return np.NoFid, path

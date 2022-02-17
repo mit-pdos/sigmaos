@@ -96,7 +96,7 @@ func (mv *Mover) moveShard(s, d string) error {
 }
 
 func (mv *Mover) Move(src, dst string) {
-	log.Printf("%v: MV conf %v from %v to %v\n", proc.GetName(), mv.blConf.N, src, dst)
+	// log.Printf("%v: MV conf %v from %v to %v\n", proc.GetName(), mv.blConf.N, src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
 		log.Printf("%v: MV conf %v from %v to %v err %v\n", proc.GetName(), mv.blConf.N, src, dst, err)

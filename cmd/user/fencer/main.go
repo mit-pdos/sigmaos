@@ -126,7 +126,7 @@ func main() {
 			break
 		}
 
-		_, err = fsl.SetFile(cnt, []byte(strconv.Itoa(n+1)))
+		_, err = fsl.SetFile(cnt, []byte(strconv.Itoa(n+1)), 0)
 		if err != nil {
 			log.Fatalf("setfile %v failed %v\n", cnt, err)
 		}

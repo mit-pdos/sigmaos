@@ -256,8 +256,21 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, offset np.Toffset, data []byte) (*np.Rwrite, *np.Err) {
-	args := np.Tsetfile{fid, mode, perm, offset, path, data}
+func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, data []byte) (*np.Rwrite, *np.Err) {
+	args := np.Tsetfile{fid, mode, offset, path, data}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rwrite)
+	if !ok {
+		return nil, np.MkErr(np.TErrBadFcall, "Rwrite")
+	}
+	return &msg, nil
+}
+
+func (pclnt *ProtClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, offset np.Toffset, data []byte) (*np.Rwrite, *np.Err) {
+	args := np.Tputfile{fid, mode, perm, offset, path, data}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err

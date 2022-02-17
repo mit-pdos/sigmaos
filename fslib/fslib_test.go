@@ -2,7 +2,6 @@ package fslib_test
 
 import (
 	"log"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -46,13 +45,7 @@ func TestInitFs(t *testing.T) {
 	ts := makeTstate(t)
 	sts, err := ts.ReadDir("name/")
 	assert.Equal(t, nil, err)
-	m := make(map[string]bool)
-	for _, st := range sts {
-		m[st.Name] = true
-	}
-	for _, n := range named.InitDir {
-		assert.Equal(t, true, m[n])
-	}
+	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 	ts.Shutdown()
 }
 
@@ -202,6 +195,22 @@ func TestNonEmpty(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestSetAppend(t *testing.T) {
+	ts := makeTstate(t)
+	d := []byte("1234")
+	fn := "name/f"
+
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+	l, err := ts.SetFile(fn, d, np.Toffset(len(d)))
+	assert.Equal(t, nil, err)
+	assert.Equal(t, np.Tsize(len(d)), l)
+	b, err := ts.ReadFile(fn)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, len(d)*2, len(b))
+	ts.Shutdown()
+}
+
 func TestCopy(t *testing.T) {
 	ts := makeTstate(t)
 	d := []byte("hello")
@@ -260,20 +269,6 @@ func TestDirDot(t *testing.T) {
 	_, err = ts.Stat("name/.")
 	assert.Equal(t, nil, err)
 	ts.Shutdown()
-}
-
-func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
-	sts, err := ts.ReadDir(np.PROCD)
-	stsExcluded := []*np.Stat{}
-	for _, s := range sts {
-		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
-			stsExcluded = append(stsExcluded, s)
-		}
-	}
-	assert.Nil(t, err, np.PROCD)
-	assert.Equal(t, 1, len(stsExcluded))
-	name := path.Join(np.PROCD, stsExcluded[0].Name)
-	return name
 }
 
 func TestCounter(t *testing.T) {
@@ -799,6 +794,86 @@ func TestPipeCrash1(t *testing.T) {
 	assert.Nil(ts.t, err, "Open")
 	_, err = ts.Read(fd, 100)
 	assert.NotNil(ts.t, err, "read")
+
+	ts.Shutdown()
+}
+
+func TestSymlink(t *testing.T) {
+	ts := makeTstate(t)
+
+	dn := "name/d"
+	err := ts.Mkdir(dn, 0777)
+	assert.Nil(ts.t, err, "dir")
+
+	err = ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	sts, err := ts.ReadDir("name/namedself/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"d", "namedself"}), "dir")
+
+	ts.Shutdown()
+}
+
+func TestUnionDir(t *testing.T) {
+	ts := makeTstate(t)
+
+	dn := "name/d"
+	err := ts.Mkdir(dn, 0777)
+	assert.Nil(ts.t, err, "dir")
+
+	err = ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/d/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+	err = ts.Symlink(fslib.MakeTarget(":2222"), "name/d/namedself1", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	sts, err := ts.ReadDir("name/d/~ip/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"d"}), "dir")
+
+	sts, err = ts.ReadDir("name/d/~ip/d/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"namedself0", "namedself1"}), "dir")
+
+	ts.Shutdown()
+}
+
+func TestUnionRoot(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+	err = ts.Symlink(fslib.MakeTarget("xxx"), "name/namedself1", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	sts, err := ts.ReadDir("name/~ip/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"namedself0", "namedself1"}), "dir")
+
+	ts.Shutdown()
+}
+
+func TestUnionSymlink(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	dn := "name/d"
+	err = ts.Mkdir(dn, 0777)
+	assert.Nil(ts.t, err, "dir")
+	err = ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/d/namedself1", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	sts, err := ts.ReadDir("name/~ip/d/namedself1/")
+	assert.Equal(t, nil, err)
+	log.Printf("sts %v\n", sts)
+	assert.True(t, fslib.Present(sts, []string{"statsd", "d", "namedself0"}), "root wrong")
+
+	sts, err = ts.ReadDir("name/~ip/d/namedself1/d/")
+	assert.Equal(t, nil, err)
+	log.Printf("sts %v\n", sts)
+	assert.True(t, fslib.Present(sts, []string{"namedself1"}), "d wrong")
 
 	ts.Shutdown()
 }

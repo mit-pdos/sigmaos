@@ -46,7 +46,7 @@ func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 }
 
 func (dl *Deleter) Delete(sharddir string) {
-	log.Printf("%v: conf %v delete %v\n", proc.GetName(), dl.blConf.N, sharddir)
+	// log.Printf("%v: conf %v delete %v\n", proc.GetName(), dl.blConf.N, sharddir)
 
 	// If sharddir isn't found, then an earlier delete succeeded;
 	// we are done.

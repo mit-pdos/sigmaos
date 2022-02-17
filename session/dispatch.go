@@ -78,6 +78,10 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rwrite{}
 		err := s.protsrv.SetFile(req, reply)
 		return *reply, err
+	case np.Tputfile:
+		reply := &np.Rwrite{}
+		err := s.protsrv.PutFile(req, reply)
+		return *reply, err
 	case np.Tmkfence:
 		reply := &np.Rmkfence{}
 		err := s.protsrv.MkFence(req, reply)

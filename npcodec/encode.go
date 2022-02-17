@@ -58,6 +58,10 @@ func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 		msg := fcall.GetMsg().(np.Tsetfile)
 		data = msg.Data
 		dataBuf = true
+	case np.TTputfile:
+		msg := fcall.GetMsg().(np.Tputfile)
+		data = msg.Data
+		dataBuf = true
 	default:
 	}
 	if dataBuf {

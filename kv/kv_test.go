@@ -61,6 +61,9 @@ func TestRegex(t *testing.T) {
 	assert.NotNil(t, s, "Find")
 	s = grpre.FindStringSubmatch("file not found group/grp-10-conf")
 	assert.NotNil(t, s, "Find")
+	re := regexp.MustCompile(`grp-([0-9]+)`)
+	s = re.FindStringSubmatch("grp-10")
+	assert.NotNil(t, s, "Find")
 }
 
 type Tstate struct {
@@ -80,7 +83,7 @@ func (ts *Tstate) Shutdown() {
 	}
 }
 
-func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) *Tstate {
+func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
 	ts.t = t
 	ts.System = kernel.MakeSystemAll("kv_test", "..", 0)
@@ -91,26 +94,25 @@ func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper st
 	}
 	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, crash)
 
-	ts.setup(nclerk)
-
-	return ts
+	clrk := ts.setup(nclerk)
+	return ts, clrk
 }
 
-func (ts *Tstate) setup(nclerk int) {
-	// add 1 kv so that we can put to initialize
+func (ts *Tstate) setup(nclerk int) *KvClerk {
+	// Create first shard group
 	gn := group.GRP + "0"
 	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn)
 	err := ts.balancerOp("add", gn)
 	assert.Nil(ts.t, err, "BalancerOp")
-
-	ts.clrk = MakeClerk("kv_test", fslib.Named())
-	if nclerk > 0 {
-		for i := uint64(0); i < NKEYS; i++ {
-			err := ts.clrk.Put(key(i), key(i))
-			assert.Nil(ts.t, err, "Put")
-		}
-	}
 	ts.mfsgrps = append(ts.mfsgrps, grp)
+
+	// Create keys
+	clrk := MakeClerk("kv_test", fslib.Named())
+	for i := uint64(0); i < NKEYS; i++ {
+		err := clrk.Put(Key(i), []byte{})
+		assert.Nil(ts.t, err, "Put")
+	}
+	return clrk
 }
 
 func (ts *Tstate) done() {
@@ -171,21 +173,20 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts := makeTstate(t, "manual", 1, 0, "0")
+	ts, clrk := makeTstate(t, "manual", 1, 0, "0")
 
-	_, err := ts.clrk.Get(key(NKEYS + 1))
+	_, err := clrk.Get(Key(NKEYS+1), 0)
 	assert.NotEqual(ts.t, err, nil, "Get")
 
-	err = ts.clrk.Set(key(NKEYS+1), key(NKEYS+1))
+	err = clrk.Set(Key(NKEYS+1), []byte(Key(NKEYS+1)), 0)
 	assert.NotEqual(ts.t, err, nil, "Set")
 
-	err = ts.clrk.Set(key(0), key(0))
+	err = clrk.Set(Key(0), []byte(Key(0)), 0)
 	assert.Nil(ts.t, err, "Set")
 
 	for i := uint64(0); i < NKEYS; i++ {
-		v, err := ts.clrk.Get(key(i))
-		assert.Nil(ts.t, err, "Get "+key(i))
-		assert.Equal(ts.t, key(i), v, "Get")
+		_, err := clrk.Get(Key(i), 0)
+		assert.Nil(ts.t, err, "Get "+Key(i))
 	}
 
 	ts.done()
@@ -194,7 +195,7 @@ func TestGetPutSet(t *testing.T) {
 func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
 	const TIME = 100 // 500
 
-	ts := makeTstate(t, "manual", nclerk, crash, crashhelper)
+	ts, _ := makeTstate(t, "manual", nclerk, crash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()

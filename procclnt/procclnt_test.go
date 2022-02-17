@@ -193,13 +193,7 @@ func TestWaitStart(t *testing.T) {
 	// Check if proc exists
 	sts, err := ts.ReadDir(path.Join("name/procd", ts.procd(t), np.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
-
-	// skip ctl entry
-	i := 0
-	if sts[i].Name == "ctl" {
-		i = 1
-	}
-	assert.Equal(t, pid, sts[i].Name, "pid")
+	assert.True(t, fslib.Present(sts, []string{pid}), "pid")
 
 	// Make sure the proc hasn't finished yet...
 	checkSleeperResultFalse(t, ts, pid)

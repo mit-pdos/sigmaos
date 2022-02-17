@@ -22,8 +22,12 @@ func Unmarshal(data []byte, v interface{}) *np.Err {
 }
 
 func Marshal(v interface{}) ([]byte, *np.Err) {
+	return marshal(false, v)
+}
+
+func marshal(bailOut bool, v interface{}) ([]byte, *np.Err) {
 	var b bytes.Buffer
-	enc := &encoder{&b}
+	enc := &encoder{bailOut, &b}
 	if err := enc.encode(v); err != nil {
 		return nil, err
 	}
@@ -31,7 +35,7 @@ func Marshal(v interface{}) ([]byte, *np.Err) {
 }
 
 func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
-	frame, error := Marshal(fcall)
+	frame, error := marshal(true, fcall)
 	if error != nil {
 		return np.MkErr(np.TErrBadFcall, error.Error())
 	}
@@ -64,7 +68,8 @@ func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 }
 
 type encoder struct {
-	wr io.Writer
+	bailOut bool // Optionally bail out when marshalling buffers
+	wr      io.Writer
 }
 
 func (e *encoder) encode(vs ...interface{}) *np.Err {
@@ -77,7 +82,9 @@ func (e *encoder) encode(vs ...interface{}) *np.Err {
 			}
 		case []byte:
 			// XXX Bail out early to serialize separately
-			return nil
+			if e.bailOut {
+				return nil
+			}
 			if err := e.encode(uint32(len(v))); err != nil {
 				return err
 			}

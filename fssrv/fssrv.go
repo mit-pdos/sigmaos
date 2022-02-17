@@ -179,12 +179,12 @@ func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fca
 // Threads may block in sesscond.Wait() and give up sess lock
 // temporarily.  XXX doesn't guarantee the order in which received
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
-	defer sess.DecThreads()
 	reply, rerror := sess.Dispatch(fc.Msg)
 	// Replies may be nil if this is a detach (detaches aren't replied to since
 	// they're generated at the server) or if this is a replicated op generated
 	// by a clerk. In both cases, a reply is not needed.
 	if replies != nil {
+		defer sess.DecThreads()
 		if rerror != nil {
 			reply = *rerror
 		}

@@ -59,7 +59,7 @@ func (c *Clerk) serve() {
 				}
 				db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
 				// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
-				c.printOpTiming(req, frame)
+				//				c.printOpTiming(req, frame)
 				c.apply(req)
 			}
 		}

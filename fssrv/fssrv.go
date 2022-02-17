@@ -67,9 +67,9 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 		fssrv.replSrv = nil
 	} else {
 		fssrv.replSrv = config.MakeServer(fssrv.tm.AddThread())
+		fssrv.replSrv.Start()
+		log.Printf("Starting repl server")
 	}
-	log.Printf("Starting repl server")
-	fssrv.replSrv.Start()
 	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl

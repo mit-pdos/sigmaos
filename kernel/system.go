@@ -16,8 +16,10 @@ import (
 
 const (
 	NO_REALM = "no-realm"
-	SLEEP_MS = 100
+	SLEEP_MS = 1000
 )
+
+var N_BOOTED int = 0
 
 type System struct {
 	*fslib.FsLib
@@ -47,10 +49,12 @@ func makeSystemBase(namedAddr []string, bindir string) *System {
 
 // Make system with just named
 func MakeSystemNamed(uname, bin string) *System {
+	N_BOOTED = N_BOOTED + 1
 	s := makeSystemBase(fslib.Named(), bin)
-	cmd, err := RunNamed(s.bindir, fslib.NamedAddr(), false, 0, nil, NO_REALM)
+	log.Printf("%v %v", fslib.Named(), N_BOOTED-1)
+	cmd, err := RunNamed(s.bindir, fslib.Named()[N_BOOTED-1], len(fslib.Named()) > 1, N_BOOTED, fslib.Named(), NO_REALM)
 	if err != nil {
-		log.Fatalf("RunNamed err %v\n", err)
+		log.Fatalf("FATAL RunNamed err %v\n", err)
 	}
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
@@ -198,6 +202,7 @@ func (s *System) Shutdown() {
 			s.named.Process.Kill()
 		}
 		s.named.Wait()
+		N_BOOTED = N_BOOTED - 1
 	}
 }
 

@@ -4,8 +4,6 @@ import (
 	"log"
 	"runtime/debug"
 
-	"strings"
-
 	"ulambda/ctx"
 	"ulambda/fences"
 	"ulambda/fs"
@@ -34,20 +32,21 @@ import (
 //
 
 type FsServer struct {
-	addr  string
-	root  fs.Dir
-	mkps  protsrv.MkProtServer
-	stats *stats.Stats
-	st    *session.SessionTable
-	sct   *sesscond.SessCondTable
-	tm    *threadmgr.ThreadMgrTable
-	wt    *watch.WatchTable
-	rft   *fences.RecentTable
-	srv   *netsrv.NetServer
-	pclnt *procclnt.ProcClnt
-	done  bool
-	ch    chan bool
-	fsl   *fslib.FsLib
+	addr    string
+	root    fs.Dir
+	mkps    protsrv.MkProtServer
+	stats   *stats.Stats
+	st      *session.SessionTable
+	sct     *sesscond.SessCondTable
+	tm      *threadmgr.ThreadMgrTable
+	wt      *watch.WatchTable
+	rft     *fences.RecentTable
+	srv     *netsrv.NetServer
+	replSrv repl.Server
+	pclnt   *procclnt.ProcClnt
+	done    bool
+	ch      chan bool
+	fsl     *fslib.FsLib
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
@@ -59,11 +58,18 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, strings.Contains(proc.GetName(), "named")) //config != nil)
+	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, config != nil)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
+	if config == nil {
+		fssrv.replSrv = nil
+	} else {
+		fssrv.replSrv = config.MakeServer(fssrv.tm.AddThread())
+	}
+	log.Printf("Starting repl server")
+	fssrv.replSrv.Start()
 	fssrv.pclnt = pclnt
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
@@ -148,7 +154,11 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
 	// New thread about to start
 	sess.IncThreads()
-	sess.GetThread().Process(fc, replies)
+	if fssrv.replSrv == nil {
+		sess.GetThread().Process(fc, replies)
+	} else {
+		fssrv.replSrv.Process(fc, replies)
+	}
 }
 
 func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {

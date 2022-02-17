@@ -134,11 +134,15 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		if err != nil && !np.IsMaybeSpecialElem(err) {
 			return err.Rerror()
 		}
+
 		// let the client decide what to do with rest
 		n := len(args.Wnames) - len(rest)
 		p := append(f.Path(), args.Wnames[:n]...)
-		lo := os[len(os)-1]
-		fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
+
+		if len(os) > 0 {
+			lo := os[len(os)-1]
+			fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
+		}
 		rets.Qids = makeQids(os)
 	}
 	return nil
@@ -395,13 +399,11 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) (fs.FsObj, *np.Err) {
 	o := f.Obj()
 	if !o.Perm().IsDir() {
-		log.Printf("%v: lookupObj not a dir %v %v\n", proc.GetName(), o.Perm(), names)
 		return nil, np.MkErr(np.TErrNotDir, np.Base(f.Path()))
 	}
 	d := o.(fs.Dir)
-	os, rest, err := d.Lookup(ctx, names)
+	os, _, err := d.Lookup(ctx, names)
 	if err != nil {
-		log.Printf("err lookupobj %v %v\n", err, rest)
 		return nil, err
 	}
 	return os[len(os)-1], nil

@@ -55,7 +55,7 @@ func (c *Clerk) serve() {
 			for _, frame := range committedReqs {
 				req := &np.Fcall{}
 				if err := npcodec.Unmarshal(frame, req); err != nil {
-					log.Fatalf("Error unmarshalling req in Clerk.serve: %v", err)
+					log.Fatalf("FATAL Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				}
 				db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
 				// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...

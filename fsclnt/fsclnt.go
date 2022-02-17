@@ -257,7 +257,6 @@ func (fsc *FsClient) Umount(path []string) error {
 	return nil
 }
 
-// XXX free fid?
 func (fsc *FsClient) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)

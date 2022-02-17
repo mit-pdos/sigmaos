@@ -147,11 +147,6 @@ func (fc *FenceClnt) deregisterPaths(fence np.Tfence) error {
 	return err
 }
 
-// XXX register/update may fail because another client has seen a more
-// recent seqno, which the server may have not told us about because
-// it lost that info due to it crashing. in that case, tell the server
-// to use that more recent seqno (if the fence was acquired in write
-// mode, which means this client is the current fence holder).
 func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 	fence, err := fc.MakeFence(fc.fenceName, mode)
 	if err != nil {

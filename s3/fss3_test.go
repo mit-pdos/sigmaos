@@ -9,21 +9,34 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fsclnt"
+	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 )
 
 type Tstate struct {
 	*kernel.System
-	t    *testing.T
-	nps3 *Fss3
+	t        *testing.T
+	replicas []*kernel.System
 }
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemAll("nps3_test", "..")
+	ts.System = kernel.MakeSystemAll("nps3_test", "..", 0)
+	ts.replicas = []*kernel.System{}
+	// Start additional replicas
+	for i := 0; i < len(fslib.Named())-1; i++ {
+		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
+	}
 	return ts
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.System.Shutdown()
+	for _, r := range ts.replicas {
+		r.Shutdown()
+	}
 }
 
 func TestOne(t *testing.T) {

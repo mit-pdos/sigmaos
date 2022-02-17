@@ -27,7 +27,15 @@ const (
 
 type Tstate struct {
 	*kernel.System
-	t *testing.T
+	t        *testing.T
+	replicas []*kernel.System
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.System.Shutdown()
+	for _, r := range ts.replicas {
+		r.Shutdown()
+	}
 }
 
 const program = "procclnt_test"
@@ -35,7 +43,12 @@ const program = "procclnt_test"
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemAll(program, "..")
+	ts.System = kernel.MakeSystemAll(program, "..", 0)
+	ts.replicas = []*kernel.System{}
+	// Start additional replicas
+	for i := 0; i < len(fslib.Named())-1; i++ {
+		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
+	}
 	return ts
 }
 

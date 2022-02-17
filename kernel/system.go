@@ -19,8 +19,6 @@ const (
 	SLEEP_MS = 1000
 )
 
-var N_BOOTED int = 0
-
 type System struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -47,12 +45,12 @@ func makeSystemBase(namedAddr []string, bindir string) *System {
 	return s
 }
 
-// Make system with just named
-func MakeSystemNamed(uname, bin string) *System {
-	N_BOOTED = N_BOOTED + 1
+// Make system with just named. replicaId is used to index into the
+// fslib.Named() slice and select an address for this named.
+func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	s := makeSystemBase(fslib.Named(), bin)
-	log.Printf("%v %v", fslib.Named(), N_BOOTED-1)
-	cmd, err := RunNamed(s.bindir, fslib.Named()[N_BOOTED-1], len(fslib.Named()) > 1, N_BOOTED, fslib.Named(), NO_REALM)
+	// replicaId needs to be 1-indexed for replication library.
+	cmd, err := RunNamed(s.bindir, fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
 		log.Fatalf("FATAL RunNamed err %v\n", err)
 	}
@@ -62,9 +60,9 @@ func MakeSystemNamed(uname, bin string) *System {
 	return s
 }
 
-// Make a system w. Named and other kernel services
-func MakeSystemAll(uname, bin string) *System {
-	s := MakeSystemNamed(uname, bin)
+// Make a system with Named and other kernel services
+func MakeSystemAll(uname, bin string, replicaId int) *System {
+	s := MakeSystemNamed(uname, bin, replicaId)
 	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, s.namedAddr)
 	s.pid = proc.GetPid()
 	err := s.Boot()
@@ -202,7 +200,6 @@ func (s *System) Shutdown() {
 			s.named.Process.Kill()
 		}
 		s.named.Wait()
-		N_BOOTED = N_BOOTED - 1
 	}
 }
 

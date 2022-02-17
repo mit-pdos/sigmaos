@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -17,6 +18,7 @@ import (
 
 type Tstate struct {
 	*kernel.System
+	replicas  []*kernel.System
 	t         *testing.T
 	ch        chan bool
 	chPresent chan bool
@@ -24,12 +26,24 @@ type Tstate struct {
 	pid       string
 }
 
+func (ts *Tstate) Shutdown() {
+	ts.System.Shutdown()
+	for _, r := range ts.replicas {
+		r.Shutdown()
+	}
+}
+
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
 	ts.ch = make(chan bool)
 	ts.chPresent = make(chan bool)
-	ts.System = kernel.MakeSystemAll("fsux_test", "../../../")
+	ts.System = kernel.MakeSystemAll("fsux_test", "../../../", 0)
+	ts.replicas = []*kernel.System{}
+	// Start additional replicas
+	for i := 0; i < len(fslib.Named())-1; i++ {
+		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
+	}
 
 	err := ts.Mkdir(twopc.DIR2PC, 07)
 	if err != nil {

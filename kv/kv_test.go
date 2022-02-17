@@ -65,17 +65,30 @@ func TestRegex(t *testing.T) {
 
 type Tstate struct {
 	*kernel.System
-	t       *testing.T
-	clrk    *KvClerk
-	mfsgrps []*groupmgr.GroupMgr
-	gmbal   *groupmgr.GroupMgr
-	clrks   []string
+	t        *testing.T
+	clrk     *KvClerk
+	mfsgrps  []*groupmgr.GroupMgr
+	gmbal    *groupmgr.GroupMgr
+	clrks    []string
+	replicas []*kernel.System
+}
+
+func (ts *Tstate) Shutdown() {
+	ts.System.Shutdown()
+	for _, r := range ts.replicas {
+		r.Shutdown()
+	}
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemAll("kv_test", "..")
+	ts.System = kernel.MakeSystemAll("kv_test", "..", 0)
+	ts.replicas = []*kernel.System{}
+	// Start additional replicas
+	for i := 0; i < len(fslib.Named())-1; i++ {
+		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
+	}
 	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, crash)
 
 	ts.setup(nclerk)

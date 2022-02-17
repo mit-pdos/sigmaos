@@ -33,11 +33,11 @@ func (ts *Tstate) Shutdown() {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemNamed("fslibtest", "..")
+	ts.System = kernel.MakeSystemNamed("fslibtest", "..", 0)
 	ts.replicas = []*kernel.System{}
 	// Start additional replicas
 	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", ".."))
+		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
 	}
 	return ts
 }

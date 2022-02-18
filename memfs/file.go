@@ -60,6 +60,7 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 	}
 	if offset >= f.LenOff() { // passed end of file?
 		n := f.LenOff() - offset
+
 		f.data = append(f.data, make([]byte, n)...)
 		f.data = append(f.data, data...)
 		return cnt, nil
@@ -82,10 +83,10 @@ func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) 
 	if !np.VEq(v, f.Version()) {
 		return nil, np.MkErr(np.TErrVersion, f.Version())
 	}
-
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {
+		// XXX overflow?
 		end := offset + np.Toffset(n)
 		if end >= f.LenOff() {
 			end = f.LenOff()

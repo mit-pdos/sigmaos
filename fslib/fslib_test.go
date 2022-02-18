@@ -14,6 +14,7 @@ import (
 	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/stats"
 )
 
 type Tstate struct {
@@ -853,7 +854,7 @@ func TestUnionRoot(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestUnionSymlink(t *testing.T) {
+func TestUnionSymlinkRead(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
@@ -867,13 +868,81 @@ func TestUnionSymlink(t *testing.T) {
 
 	sts, err := ts.ReadDir("name/~ip/d/namedself1/")
 	assert.Equal(t, nil, err)
-	log.Printf("sts %v\n", sts)
 	assert.True(t, fslib.Present(sts, []string{"statsd", "d", "namedself0"}), "root wrong")
 
 	sts, err = ts.ReadDir("name/~ip/d/namedself1/d/")
 	assert.Equal(t, nil, err)
 	log.Printf("sts %v\n", sts)
 	assert.True(t, fslib.Present(sts, []string{"namedself1"}), "d wrong")
+
+	ts.Shutdown()
+}
+
+func TestUnionSymlinkPut(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	b := []byte("hello")
+	fn := "name/~ip/namedself0/f"
+	err = ts.MakeFile(fn, 0777, np.OWRITE, b)
+	assert.Equal(t, nil, err)
+
+	fn1 := "name/~ip/namedself0/g"
+	err = ts.MakeFile(fn1, 0777, np.OWRITE, b)
+	assert.Equal(t, nil, err)
+
+	sts, err := ts.ReadDir("name/~ip/namedself0/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"statsd", "f", "g"}), "root wrong")
+
+	d, err := ts.GetFile("name/~ip/namedself0/f")
+	assert.Nil(ts.t, err, "GetFile")
+	assert.Equal(ts.t, b, d, "GetFile")
+
+	d, err = ts.GetFile("name/~ip/namedself0/g")
+	assert.Nil(ts.t, err, "GetFile")
+	assert.Equal(ts.t, b, d, "GetFile")
+
+	ts.Shutdown()
+}
+
+func TestSetFileSymlink(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	st := stats.StatInfo{}
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+	nwalk := st.Nwalk
+
+	d = []byte("byebye")
+	n, err := ts.SetFile("name/namedself0/f", d, 0)
+	assert.Nil(ts.t, err, "SetFile")
+	assert.Equal(ts.t, np.Tsize(len(d)), n, "SetFile")
+
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+
+	assert.NotEqual(ts.t, nwalk, st.Nwalk, "setfile")
+	nwalk = st.Nwalk
+
+	b, err := ts.GetFile("name/namedself0/f")
+	assert.Nil(ts.t, err, "GetFile")
+	assert.Equal(ts.t, d, b, "GetFile")
+
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+
+	assert.Equal(ts.t, nwalk, st.Nwalk, "getfile")
 
 	ts.Shutdown()
 }

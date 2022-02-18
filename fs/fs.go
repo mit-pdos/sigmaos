@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"log"
+
 	np "ulambda/ninep"
 	"ulambda/sesscond"
 )
@@ -45,4 +47,16 @@ type FsObj interface {
 	Unlink(CtxI) *np.Err
 	Parent() Dir
 	SetParent(Dir)
+}
+
+func Obj2File(o FsObj, fname []string) (File, *np.Err) {
+	switch i := o.(type) {
+	case Dir:
+		return nil, np.MkErr(np.TErrNotFile, fname)
+	case File:
+		return i, nil
+	default:
+		log.Fatalf("FATAL Obj2File: obj type %T isn't Dir or File\n", o)
+	}
+	return nil, nil
 }

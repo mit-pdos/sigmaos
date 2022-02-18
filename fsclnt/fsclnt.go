@@ -424,7 +424,7 @@ func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
 	return nil
 }
 
-func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
+func (fsc *FsClient) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest := fsc.mnt.resolve(p)
@@ -438,7 +438,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 	// Optimistcally GetFile without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	reply, err := fsc.fids.clnt(fid).GetFile(fid, rest, mode, 0, 0)
+	reply, err := fsc.fids.clnt(fid).GetFile(fid, rest, mode, off, cnt)
 	if err != nil {
 		if np.IsMaybeSpecialElem(err) {
 			fid, err = fsc.walkManyUmount(p, np.EndSlash(path), nil)
@@ -446,7 +446,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode) ([]byte, error) {
 				return nil, err
 			}
 			defer fsc.clunkFid(fid)
-			reply, err = fsc.fids.clnt(fid).GetFile(fid, []string{}, mode, 0, 0)
+			reply, err = fsc.fids.clnt(fid).GetFile(fid, []string{}, mode, off, cnt)
 			if err != nil {
 				return nil, err
 			}

@@ -69,6 +69,9 @@ const NoTag Ttag = ^Ttag(0)
 const NoFid Tfid = ^Tfid(0)
 const NoOffset Toffset = ^Toffset(0)
 
+// If need more than MaxGetSet, use Open/Read/Close interface
+const MAXGETSET Tsize = 1_000_000
+
 type Tpath uint64
 type Qtype uint8
 type TQversion uint32

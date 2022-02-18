@@ -19,12 +19,14 @@ func makeFidTable() *fidTable {
 	return ft
 }
 
-func (ft *fidTable) Lookup(fid np.Tfid) (*fid.Fid, bool) {
+func (ft *fidTable) Lookup(fid np.Tfid) (*fid.Fid, *np.Err) {
 	ft.Lock()
 	defer ft.Unlock()
-
 	f, ok := ft.fids[fid]
-	return f, ok
+	if !ok {
+		return nil, np.MkErr(np.TErrUnknownfid, f)
+	}
+	return f, nil
 }
 
 func (ft *fidTable) Add(fid np.Tfid, f *fid.Fid) {

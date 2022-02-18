@@ -19,6 +19,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/reader"
 )
 
 //
@@ -282,9 +283,10 @@ func (kc *KvClerk) doop(o *op) {
 type opT int
 
 const (
-	GET opT = 0
-	PUT opT = 1
-	SET opT = 2
+	GETVAL opT = iota + 1
+	PUT
+	SET
+	GETRD
 )
 
 type op struct {
@@ -292,41 +294,50 @@ type op struct {
 	b    []byte
 	k    string
 	off  np.Toffset
+	rdr  *reader.Reader
 	err  error
 }
 
 func (o *op) do(fsl *fslib.FsLib, fn string) {
 	switch o.kind {
-	case GET:
+	case GETVAL:
 		o.b, o.err = fsl.GetFile(fn)
+	case GETRD:
+		o.rdr, o.err = reader.MakeReader(fsl, fn)
 	case PUT:
 		_, o.err = fsl.PutFile(fn, o.b, 0777, np.OWRITE)
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.off)
 	}
-	log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
+	// log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {
-	op := &op{GET, []byte{}, k, off, nil}
+	op := &op{GETVAL, []byte{}, k, off, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
 }
 
+func (kc *KvClerk) GetReader(k string) (*reader.Reader, error) {
+	op := &op{GETRD, []byte{}, k, 0, nil, nil}
+	kc.doop(op)
+	return op.rdr, op.err
+}
+
 func (kc *KvClerk) Set(k string, b []byte, off np.Toffset) error {
-	op := &op{SET, b, k, off, nil}
+	op := &op{SET, b, k, off, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 func (kc *KvClerk) Append(k string, b []byte) error {
-	op := &op{SET, b, k, np.NoOffset, nil}
+	op := &op{SET, b, k, np.NoOffset, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 func (kc *KvClerk) Put(k string, b []byte) error {
-	op := &op{PUT, b, k, 0, nil}
+	op := &op{PUT, b, k, 0, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -339,7 +350,7 @@ func (kc *KvClerk) AppendJson(k string, v interface{}) error {
 	lbuf := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutVarint(lbuf, int64(len(b)))
 	b = append(lbuf[0:n], b...)
-	op := &op{SET, b, k, np.NoOffset, nil}
+	op := &op{SET, b, k, np.NoOffset, nil, nil}
 	kc.doop(op)
 	return op.err
 }

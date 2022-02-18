@@ -48,7 +48,7 @@ func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
 }
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FsClient.GetFile(fname, np.OREAD)
+	return fl.FsClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {
@@ -59,7 +59,7 @@ func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode
 	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
-// XXX chunk
+// XXX chunk  XXX deprecate in favor of put/set
 func (fl *FsLib) WriteFile(fname string, data []byte) error {
 	fd, err := fl.Open(fname, np.OWRITE)
 	if err != nil {
@@ -76,7 +76,6 @@ func (fl *FsLib) WriteFile(fname string, data []byte) error {
 	return nil
 }
 
-// XXX chunk
 func (fl *FsLib) MakeFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) error {
 	_, err := fl.PutFile(fname, data, perm, mode)
 	return err

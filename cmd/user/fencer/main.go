@@ -66,19 +66,19 @@ func main() {
 
 		b, err := fsl.GetFile(cnt)
 		if err != nil {
-			log.Fatalf("getfile %v failed %v\n", cnt, err)
+			log.Fatalf("FATAL getfile %v failed %v\n", cnt, err)
 		}
 
 		b1, err := fsl.GetFile(A)
 		if err != nil {
-			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
+			log.Fatalf("FATAL %v getfile %v failed %v\n", i, A, err)
 		}
 
 		// open A and then maybe partition from named
 
 		fd, err := fsl.Open(A, np.OREAD|np.OWRITE)
 		if err != nil {
-			log.Fatalf("%v getfile %v failed %v\n", i, A, err)
+			log.Fatalf("FATAL %v getfile %v failed %v\n", i, A, err)
 		}
 
 		if os.Args[1] == "YES" {

@@ -48,7 +48,7 @@ func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
 }
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FsClient.GetFile(fname, np.OREAD)
+	return fl.FsClient.GetFile(fname, np.OREAD, 0, np.NoSize)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {

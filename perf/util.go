@@ -61,7 +61,8 @@ func MakePerf() *Perf {
 	p.cores = map[string]bool{}
 	p.utilChan = make(chan bool, 1)
 	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT)
+	log.Printf("Notify")
+	signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT)
 	go func() {
 		<-sigc
 		p.Teardown()

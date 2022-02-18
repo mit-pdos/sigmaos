@@ -14,6 +14,7 @@ import (
 	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
+	"ulambda/stats"
 )
 
 type Tstate struct {
@@ -874,6 +875,45 @@ func TestUnionSymlink(t *testing.T) {
 	assert.Equal(t, nil, err)
 	log.Printf("sts %v\n", sts)
 	assert.True(t, fslib.Present(sts, []string{"namedself1"}), "d wrong")
+
+	ts.Shutdown()
+}
+
+func TestPutFileSymlink(t *testing.T) {
+	ts := makeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	st := stats.StatInfo{}
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+	nwalk := st.Nwalk
+
+	d = []byte("byebye")
+	n, err := ts.SetFile("name/namedself0/f", d, 0)
+	assert.Nil(ts.t, err, "SetFile")
+	assert.Equal(ts.t, np.Tsize(len(d)), n, "SetFile")
+
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+
+	assert.NotEqual(ts.t, nwalk, st.Nwalk, "setfile")
+	nwalk = st.Nwalk
+
+	b, err := ts.GetFile("name/namedself0/f")
+	assert.Nil(ts.t, err, "GetFile")
+	assert.Equal(ts.t, d, b, "GetFile")
+
+	err = ts.ReadFileJson("name/statsd", &st)
+	assert.Nil(t, err, "statsd")
+
+	assert.Equal(ts.t, nwalk, st.Nwalk, "getfile")
 
 	ts.Shutdown()
 }

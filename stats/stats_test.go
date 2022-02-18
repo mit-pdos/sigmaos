@@ -1,7 +1,6 @@
 package stats_test
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -52,13 +51,13 @@ func TestStatsd(t *testing.T) {
 	assert.Nil(t, err, "statsd")
 	assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
 
-	err = ts.ReadFileJson("name/statsd", &st)
-	assert.Nil(t, err, "statsd")
-
-	for i := 0; i < 10; i++ {
-		log.Printf("util %v load %v\n", st.Util, st.Load)
-		time.Sleep(1000 * time.Millisecond)
-		//assert.Equal(t, st.Nopen, stats.Tcounter(1000), "statsd")
+	last := float64(0.0)
+	for i := 0; i < 5; i++ {
+		err = ts.ReadFileJson("name/statsd", &st)
+		assert.Nil(t, err, "statsd")
+		assert.NotEqual(t, last, st.Util, "util")
+		last = st.Util
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	ts.Shutdown()

@@ -47,22 +47,6 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	return fos
 }
 
-func (fos *FsObjSrv) lookup(fid np.Tfid) (*fid.Fid, *np.Err) {
-	f, ok := fos.ft.Lookup(fid)
-	if !ok {
-		return nil, np.MkErr(np.TErrUnknownfid, fid)
-	}
-	return f, nil
-}
-
-func (fos *FsObjSrv) watch(ws *watch.Watch, sess np.Tsession) *np.Err {
-	err := ws.Watch(sess)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (fos *FsObjSrv) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
@@ -133,14 +117,13 @@ func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names []string) (fs.
 }
 
 func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
 	if len(args.Wnames) == 0 { // clone args.Fid?
-		o := f.Obj()
-		fos.ft.Add(args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
+		fos.ft.Add(args.NewFid, fid.MakeFidPath(f.Path(), f.Obj(), 0, f.Ctx()))
 	} else {
 		os, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
 		if err != nil && !np.IsMaybeSpecialElem(err) {
@@ -162,7 +145,7 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	db.DLPrintf("9POBJ", "Clunk %v\n", args)
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -177,7 +160,7 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 
 func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "Open %v\n", args)
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -202,7 +185,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	db.DLPrintf("9POBJ", "Watchv %v\n", args)
 
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -226,7 +209,7 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
-	err = fos.watch(ws, fos.sid)
+	err = ws.Watch(fos.sid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -258,7 +241,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 		} else {
 			if mode&np.OWATCH == np.OWATCH && err.Code() == np.TErrExists {
 				fws.Unlock()
-				err := fos.watch(dws, fos.sid)
+				err := dws.Watch(fos.sid)
 				fws.Lock() // not necessary if fail, but nicer with defer
 				if err != nil {
 					return nil, err
@@ -284,7 +267,7 @@ func (fos *FsObjSrv) ReleaseWatches(dws, fws *watch.Watch) {
 
 func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	db.DLPrintf("9POBJ", "Create %v\n", args)
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -320,7 +303,7 @@ func (fos *FsObjSrv) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 
 func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	db.DLPrintf("9POBJ", "Read %v\n", args)
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -338,7 +321,7 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 
 func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	db.DLPrintf("9POBJ", "Write %v\n", args)
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -390,7 +373,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 }
 
 func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -413,7 +396,7 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 // args.Wnames, and caller should first walk the pathname.
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
 	var err *np.Err
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -441,7 +424,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 }
 
 func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -456,7 +439,7 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -506,11 +489,11 @@ func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid
 }
 
 func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	oldf, err := fos.lookup(args.OldFid)
+	oldf, err := fos.ft.Lookup(args.OldFid)
 	if err != nil {
 		return err.Rerror()
 	}
-	newf, err := fos.lookup(args.NewFid)
+	newf, err := fos.ft.Lookup(args.NewFid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -569,13 +552,12 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 // file, opens it, and reads it.  If an setfile executes between
 // open() and read(), an getfile returns an error.
 func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "GetFile o %v args %v (%v)\n", f, args, len(args.Wnames))
-	o := f.Obj()
-	lo := o
+	lo := f.Obj()
 	fname := append(f.Path(), args.Wnames...)
 	if len(args.Wnames) > 0 {
 		lo, err = fos.lookupObjLast(f.Ctx(), f, args.Wnames)
@@ -602,7 +584,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 		}
 		return nil
 	default:
-		log.Fatalf("FATAL GetFile: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL GetFile: obj type %T isn't Dir or File\n", lo)
 
 	}
 	return nil
@@ -611,7 +593,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 // Special code path for SetFile: in one RPC, SetFile() looks up the
 // file, opens it, and writes it.
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -656,7 +638,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 // Special code path for PutFile: in one RPC, PutFile() looks up the
 // file, creates it, and writes it.
 func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -709,7 +691,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 }
 
 func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -719,7 +701,7 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 }
 
 func (fos *FsObjSrv) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
-	_, err := fos.lookup(args.Fid)
+	_, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -732,7 +714,7 @@ func (fos *FsObjSrv) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
 }
 
 func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -754,7 +736,7 @@ func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 }
 
 func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
-	f, err := fos.lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}

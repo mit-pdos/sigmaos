@@ -301,17 +301,23 @@ func (fos *FsObjSrv) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	db.DLPrintf("9POBJ", "Read %v\n", args)
-	f, err := fos.ft.Lookup(args.Fid)
+func (fos *FsObjSrv) lookupFence(fid np.Tfid) (*fid.Fid, *np.Err) {
+	f, err := fos.ft.Lookup(fid)
 	if err != nil {
-		return err.Rerror()
+		return nil, err
 	}
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
 		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
+		return nil, err
+	}
+	return f, nil
+}
+
+func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
+	f, err := fos.lookupFence(args.Fid)
+	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "ReadFid %v %v\n", args, f)
 	err = f.Read(args.Offset, args.Count, np.NoV, rets)
 	if err != nil {
 		return err.Rerror()
@@ -320,13 +326,8 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	db.DLPrintf("9POBJ", "Write %v\n", args)
-	f, err := fos.ft.Lookup(args.Fid)
+	f, err := fos.lookupFence(args.Fid)
 	if err != nil {
-		return err.Rerror()
-	}
-	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
-		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
 		return err.Rerror()
 	}
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
@@ -373,22 +374,17 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 }
 
 func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	f, err := fos.ft.Lookup(args.Fid)
+	f, err := fos.lookupFence(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	log.Printf("%v: %v remove %v\n", proc.GetName(), f.Ctx().Uname(), f.Path())
-	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
-		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
-		return err.Rerror()
-	}
-	o := f.Obj()
 	if isExit(f.Path()) {
 		db.DLPrintf("9POBJ", "Done\n")
 		fos.fssrv.Done()
 		return nil
 	}
-	return fos.removeObj(f.Ctx(), o, f.Path())
+	return fos.removeObj(f.Ctx(), f.Obj(), f.Path())
 }
 
 // RemoveFile is Remove() but args.Wnames may contain a symlink that
@@ -439,7 +435,7 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	f, err := fos.ft.Lookup(args.Fid)
+	f, err := fos.lookupFence(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}

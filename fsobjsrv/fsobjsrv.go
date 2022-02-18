@@ -314,7 +314,7 @@ func (fos *FsObjSrv) lookupFence(fid np.Tfid) (*fid.Fid, *np.Err) {
 }
 
 func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	f, err := fos.lookupFence(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}

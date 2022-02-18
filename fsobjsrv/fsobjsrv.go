@@ -115,6 +115,23 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
+func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) ([]fs.FsObj, []string, *np.Err) {
+	o := f.Obj()
+	if !o.Perm().IsDir() {
+		return nil, nil, np.MkErr(np.TErrNotDir, np.Base(f.Path()))
+	}
+	d := o.(fs.Dir)
+	return d.Lookup(ctx, names)
+}
+
+func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names []string) (fs.FsObj, *np.Err) {
+	os, _, err := fos.lookupObj(ctx, f, names)
+	if err != nil {
+		return nil, err
+	}
+	return os[len(os)-1], nil
+}
+
 func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	f, err := fos.lookup(args.Fid)
 	if err != nil {
@@ -125,12 +142,7 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		o := f.Obj()
 		fos.ft.Add(args.NewFid, fid.MakeFidPath(f.Path(), o, 0, f.Ctx()))
 	} else {
-		o := f.Obj()
-		if !o.Perm().IsDir() {
-			return np.MkErr(np.TErrNotDir, np.Join(f.Path())).Rerror()
-		}
-		d := o.(fs.Dir)
-		os, rest, err := d.Lookup(f.Ctx(), args.Wnames)
+		os, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
 		if err != nil && !np.IsMaybeSpecialElem(err) {
 			return err.Rerror()
 		}
@@ -396,19 +408,6 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	return fos.removeObj(f.Ctx(), o, f.Path())
 }
 
-func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) (fs.FsObj, *np.Err) {
-	o := f.Obj()
-	if !o.Perm().IsDir() {
-		return nil, np.MkErr(np.TErrNotDir, np.Base(f.Path()))
-	}
-	d := o.(fs.Dir)
-	os, _, err := d.Lookup(ctx, names)
-	if err != nil {
-		return nil, err
-	}
-	return os[len(os)-1], nil
-}
-
 // RemoveFile is Remove() but args.Wnames may contain a symlink that
 // hasn't been walked. If so, RemoveFile() will not succeed looking up
 // args.Wnames, and caller should first walk the pathname.
@@ -433,7 +432,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 
 	lo := o
 	if len(args.Wnames) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), f, args.Wnames)
+		lo, err = fos.lookupObjLast(f.Ctx(), f, args.Wnames)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -579,7 +578,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	lo := o
 	fname := append(f.Path(), args.Wnames...)
 	if len(args.Wnames) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), f, args.Wnames)
+		lo, err = fos.lookupObjLast(f.Ctx(), f, args.Wnames)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -621,7 +620,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	lo := f.Obj()
 	fname := append(f.Path(), args.Wnames...)
 	if len(args.Wnames) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), f, args.Wnames)
+		lo, err = fos.lookupObjLast(f.Ctx(), f, args.Wnames)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -668,7 +667,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	names := args.Wnames[0 : len(args.Wnames)-1]
 	dname := append(f.Path(), names...)
 	if len(names) > 0 {
-		lo, err = fos.lookupObj(f.Ctx(), f, names)
+		lo, err = fos.lookupObjLast(f.Ctx(), f, names)
 		if err != nil {
 			return err.Rerror()
 		}

@@ -868,7 +868,6 @@ func TestUnionSymlink(t *testing.T) {
 
 	sts, err := ts.ReadDir("name/~ip/d/namedself1/")
 	assert.Equal(t, nil, err)
-	log.Printf("sts %v\n", sts)
 	assert.True(t, fslib.Present(sts, []string{"statsd", "d", "namedself0"}), "root wrong")
 
 	sts, err = ts.ReadDir("name/~ip/d/namedself1/d/")

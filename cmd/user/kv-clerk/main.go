@@ -87,7 +87,7 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 		}
 		val := Value{}
 		if err := json.Unmarshal(v, &val); err != nil {
-			log.Printf("unmarshal err %v\n", err)
+			log.Printf("%v: unmarshal err %v\n", proc.GetName(), err)
 			return err
 		}
 		if val.Pid != proc.GetPid() {

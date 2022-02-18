@@ -55,9 +55,6 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 
 	cnt := np.Tsize(len(data))
 	sz := np.Toffset(len(data))
-	if offset == np.NoOffset {
-		offset = f.LenOff()
-	}
 	if offset >= f.LenOff() { // passed end of file?
 		n := f.LenOff() - offset
 		f.data = append(f.data, make([]byte, n)...)

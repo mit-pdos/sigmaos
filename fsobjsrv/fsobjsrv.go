@@ -515,9 +515,10 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 }
 
 //
-// Requests that combine walk, open, and operation in a single
-// RPC. They may fail because args.Wnames may contains a special path
-// element; in that, case the client must walk args.Wnames.
+// Requests that combine walk, open, and do operation in a single RPC,
+// which also avoids clunking. They may fail because args.Wnames may
+// contains a special path element; in that, case the client must walk
+// args.Wnames.
 //
 
 func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string) (*fid.Fid, []string, fs.FsObj, *np.Err) {
@@ -540,7 +541,7 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string) (*fid.Fid, []
 	return f, fname, lo, nil
 }
 
-func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, mode np.Tmode) (*fid.Fid, []string, fs.File, *np.Err) {
+func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, mode np.Tmode) (fs.CtxI, []string, fs.File, *np.Err) {
 	f, fname, lo, err := fos.lookupWalkFence(fid, wnames)
 	if err != nil {
 		return nil, nil, nil, err
@@ -554,7 +555,7 @@ func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, mode np.T
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return f, fname, i, nil
+	return f.Ctx(), fname, i, nil
 }
 
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
@@ -567,12 +568,15 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 }
 
 func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
-	f, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Mode)
+	if args.Count > np.MAXGETSET {
+		return np.MkErr(np.TErrInval, "too large").Rerror()
+	}
+	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "GetFile f %v args %v %v\n", f, args, fname)
-	rets.Data, err = i.Read(f.Ctx(), args.Offset, args.Count, np.NoV)
+	db.DLPrintf("9POBJ", "GetFile f %v args %v %v\n", ctx, args, fname)
+	rets.Data, err = i.Read(ctx, args.Offset, args.Count, np.NoV)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -580,11 +584,14 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 }
 
 func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
-	f, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Mode)
+	if np.Tsize(len(args.Data)) > np.MAXGETSET {
+		return np.MkErr(np.TErrInval, "too large").Rerror()
+	}
+	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
-	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
+	n, err := i.Write(ctx, args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -594,6 +601,9 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 }
 
 func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
+	if np.Tsize(len(args.Data)) > np.MAXGETSET {
+		return np.MkErr(np.TErrInval, "too large").Rerror()
+	}
 	// walk to directory
 	f, dname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames[0:len(args.Wnames)-1])
 	if err != nil {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kv"
-	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
@@ -66,27 +64,29 @@ type Value struct {
 
 func check(kc *kv.KvClerk, i, ntest uint64) error {
 	n := uint64(0)
-	b, err := kc.Get(kv.Key(i), 0)
+	rdr, err := kc.GetReader(kv.Key(i))
 	if err != nil {
 		return err
 	}
-	rdr := bytes.NewReader(b)
 	for {
-		l, err := binary.ReadVarint(rdr)
+		sz, err := binary.ReadVarint(rdr)
 		if err != nil && err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Printf("rdr err %v\n", err)
-			return err
+			log.Fatal("%v: ReadVarint err %v", proc.GetName(), err)
 		}
-		v := make([]byte, np.Tsize(l))
-		if _, err := rdr.Read(v); err != nil {
-			log.Printf("rdr val err %v\n", err)
+		data := make([]byte, sz)
+		l, err := rdr.Read(data)
+		if l != len(data) {
+			log.Fatalf("FATAL %v missing data %v %v\n", proc.GetName(), l, len(data))
+		}
+		if err != nil {
+			log.Printf("%v: Read err %v\n", proc.GetName(), err)
 			return err
 		}
 		val := Value{}
-		if err := json.Unmarshal(v, &val); err != nil {
+		if err := json.Unmarshal(data, &val); err != nil {
 			log.Printf("%v: unmarshal err %v\n", proc.GetName(), err)
 			return err
 		}
@@ -114,6 +114,7 @@ func test(kc *kv.KvClerk, ntest uint64) error {
 			return fmt.Errorf("%v: Append %v err %v", proc.GetName(), kv.Key(i), err)
 		}
 		if err := check(kc, i, ntest); err != nil {
+			log.Printf("check failed %v\n", err)
 			return err
 		}
 	}

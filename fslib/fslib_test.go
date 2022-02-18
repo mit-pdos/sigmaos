@@ -854,7 +854,7 @@ func TestUnionRoot(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestUnionSymlink(t *testing.T) {
+func TestUnionSymlinkRead(t *testing.T) {
 	ts := makeTstate(t)
 
 	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
@@ -878,7 +878,37 @@ func TestUnionSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestPutFileSymlink(t *testing.T) {
+func TestUnionSymlinkPut(t *testing.T) {
+	ts := makeTstate(t)
+
+	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
+	assert.Nil(ts.t, err, "Symlink")
+
+	b := []byte("hello")
+	fn := "name/~ip/namedself0/f"
+	err = ts.MakeFile(fn, 0777, np.OWRITE, b)
+	assert.Equal(t, nil, err)
+
+	fn1 := "name/~ip/namedself0/g"
+	err = ts.MakeFile(fn1, 0777, np.OWRITE, b)
+	assert.Equal(t, nil, err)
+
+	sts, err := ts.ReadDir("name/~ip/namedself0/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"statsd", "f", "g"}), "root wrong")
+
+	d, err := ts.GetFile("name/~ip/namedself0/f")
+	assert.Nil(ts.t, err, "GetFile")
+	assert.Equal(ts.t, b, d, "GetFile")
+
+	d, err = ts.GetFile("name/~ip/namedself0/g")
+	assert.Nil(ts.t, err, "GetFile")
+	assert.Equal(ts.t, b, d, "GetFile")
+
+	ts.Shutdown()
+}
+
+func TestSetFileSymlink(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/f"

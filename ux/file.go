@@ -43,7 +43,11 @@ func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 	return np.Tsize(n), nil
 }
 
-func (f *File) uxRead(off int64, cnt int) ([]byte, *np.Err) {
+func (f *File) uxRead(off int64, cnt np.Tsize) ([]byte, *np.Err) {
+	sz := f.Obj.Size()
+	if np.Tlength(cnt) >= sz {
+		cnt = np.Tsize(sz)
+	}
 	b := make([]byte, cnt)
 	_, err := f.file.Seek(off, 0)
 	if err != nil {
@@ -61,7 +65,7 @@ func (f *File) uxRead(off int64, cnt int) ([]byte, *np.Err) {
 
 func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	db.DLPrintf("UXD", "%v: Read: %v off %v cnt %v\n", ctx, f, off, cnt)
-	b, err := f.uxRead(int64(off), int(cnt))
+	b, err := f.uxRead(int64(off), cnt)
 	if err != nil {
 		return nil, err
 	}

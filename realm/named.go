@@ -7,9 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"ulambda/fslib"
 	"ulambda/kernel"
-	np "ulambda/ninep"
 	"ulambda/procclnt"
 )
 
@@ -34,20 +32,6 @@ func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
 	for _, pid := range pids {
 		if err := pclnt.EvictKernelProc(pid); err != nil {
 			log.Fatalf("Error Evict in Realm.ShutdownNamedReplicas: %v", err)
-		}
-	}
-}
-
-func ShutdownNamed(namedAddr string) {
-	fsl := fslib.MakeFsLibAddr("realm", []string{namedAddr})
-	// Shutdown named last
-	err := fsl.ShutdownFs(np.NAMED)
-	if err != nil {
-		// XXX sometimes we get EOF..
-		if err.Error() == "EOF" {
-			log.Printf("Remove %v shutdown %v\n", np.NAMED, err)
-		} else {
-			log.Fatalf("Remove %v shutdown %v\n", np.NAMED, err)
 		}
 	}
 }

@@ -105,8 +105,8 @@ func (m *Mapper) mapper(txt string) error {
 			fmt.Errorf("%v: marshal error %v", proc.GetProgram(), err)
 		}
 		lbuf := make([]byte, binary.MaxVarintLen64)
-		binary.PutVarint(lbuf, int64(len(b)))
-		_, err = m.Write(m.fds[r], lbuf)
+		n := binary.PutVarint(lbuf, int64(len(b)))
+		_, err = m.Write(m.fds[r], lbuf[0:n])
 		if err != nil {
 			// maybe another worker finished earlier
 			// XXX handle partial writing of intermediate files

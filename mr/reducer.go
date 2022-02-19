@@ -1,11 +1,11 @@
 package mr
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -19,6 +19,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
+	"ulambda/reader"
 )
 
 type ReduceT func(string, []string) string
@@ -57,26 +58,24 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 
 	d := r.input + "/" + file + "/"
 	db.DPrintf("reduce %v\n", d)
-	fd, err := r.Open(d, np.OREAD)
+	rdr, err := reader.MakeReader(r.FsLib, d)
 	if err != nil {
 		// another reducer already completed; nothing to be done
-		db.DPrintf("Open %v err %v", d, err)
+		db.DPrintf("MakeReader %v err %v", d, err)
 		return nil, err
 	}
-	defer r.Close(fd)
-	data, err := r.Read(fd, binary.MaxVarintLen64)
-	if err != nil {
-		log.Fatal(err)
-	}
-	rdr := bytes.NewReader(data)
-	l, err := binary.ReadVarint(rdr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for l > 0 {
-		data, err = r.Read(fd, np.Tsize(l))
+	for {
+		l, err := binary.ReadVarint(rdr)
+		if err != nil && err == io.EOF {
+			break
+		}
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("FATAL %v: ReadVarint err %v\n", proc.GetName(), err)
+		}
+		data := make([]byte, l)
+		_, err = rdr.Read(data)
+		if err != nil {
+			log.Fatalf("FATAL %v Read err %v\n", proc.GetName(), err)
 		}
 		kvs := []KeyValue{}
 		err = json.Unmarshal(data, &kvs)
@@ -85,19 +84,6 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 		}
 		db.DLPrintf("REDUCE", "reduce %v: kva %v\n", file, len(kvs))
 		kva = append(kva, kvs...)
-
-		data, err = r.Read(fd, binary.MaxVarintLen64)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if len(data) == 0 {
-			break
-		}
-		rdr = bytes.NewReader(data)
-		l, err = binary.ReadVarint(rdr)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 	return kva, nil
 }

@@ -505,12 +505,12 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, data []byte, off np.Tof
 		}
 		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
-	// Optimistcally SetFile without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink.
+	// Optimistcally SetFile without doing a pathname walk; this
+	// may fail if rest contains an automount symlink.
+	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	reply, err := fsc.fids.clnt(fid).SetFile(fid, rest, mode, off, data)
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
 			fid, err = fsc.walkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err

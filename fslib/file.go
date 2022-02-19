@@ -59,23 +59,6 @@ func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode
 	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
-// XXX chunk  XXX deprecate in favor of put/set
-func (fl *FsLib) WriteFile1(fname string, data []byte) error {
-	fd, err := fl.Open(fname, np.OWRITE)
-	if err != nil {
-		return err
-	}
-	_, err = fl.Write(fd, data)
-	if err != nil {
-		return err
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (fl *FsLib) MakeFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) error {
 	_, err := fl.PutFile(fname, data, perm, mode)
 	return err

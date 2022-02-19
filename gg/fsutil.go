@@ -18,7 +18,7 @@ type FsLambda interface {
 	IsDir(name string) (bool, error)
 	MakeFile(string, np.Tperm, np.Tmode, []byte) error
 	ReadFile(string) ([]byte, error)
-	WriteFile(string, []byte) error
+	SetFile(string, []byte, np.Toffset) (np.Tsize, error)
 	Stat(string) (*np.Stat, error)
 	Name() string
 }
@@ -219,7 +219,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 				}
 			} else {
 				db.DPrintf("%v file already exists [%v]\n", fslambda.Name(), dstPath)
-				err = fslambda.WriteFile(dstPath, contents)
+				_, err = fslambda.SetFile(dstPath, contents, 0)
 				if err != nil {
 					// XXX This only occurs if someone else has written the file since we
 					// last checked if it existed. Since it isn't a reduction (by the

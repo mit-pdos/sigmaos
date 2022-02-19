@@ -147,7 +147,7 @@ func RunBalancer(crashhelper string, auto string) {
 
 func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
 	s := opcode + " " + mfs
-	err := fsl.WriteFile(KVBALANCERCTL, []byte(s))
+	_, err := fsl.SetFile(KVBALANCERCTL, []byte(s), 0)
 	return err
 }
 

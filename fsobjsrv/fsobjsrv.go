@@ -337,11 +337,6 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-// XXX make .exit a reserved name
-func isExit(path []string) bool {
-	return len(path) == 1 && path[0] == ".exit"
-}
-
 func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
 	// lock watch entry to make WatchV and Remove interact
 	// correctly

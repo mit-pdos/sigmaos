@@ -60,7 +60,7 @@ func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode
 }
 
 // XXX chunk  XXX deprecate in favor of put/set
-func (fl *FsLib) WriteFile(fname string, data []byte) error {
+func (fl *FsLib) WriteFile1(fname string, data []byte) error {
 	fd, err := fl.Open(fname, np.OWRITE)
 	if err != nil {
 		return err

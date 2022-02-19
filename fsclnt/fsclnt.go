@@ -583,21 +583,3 @@ func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
 	}
 	return nil
 }
-
-func (fsc *FsClient) ShutdownFs(name string) error {
-	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
-	path := np.Split(name)
-	fid, err := fsc.walkMany(path, true, nil)
-	if err != nil {
-		return err
-	}
-	defer fsc.clunkFid(fid)
-	err = fsc.fids.clnt(fid).RemoveFile(fid, []string{".exit"})
-	if err != nil {
-		return err
-	}
-	if err := fsc.Umount(path); err != nil {
-		return err
-	}
-	return nil
-}

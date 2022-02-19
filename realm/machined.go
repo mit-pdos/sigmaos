@@ -68,8 +68,8 @@ func (r *Machined) markFree() {
 	cfg.Id = r.id
 	cfg.RealmId = kernel.NO_REALM
 
-	if err := r.WriteFile(FREE_MACHINEDS, []byte(r.id)); err != nil {
-		log.Fatalf("Error WriteFile in markFree: %v %v", FREE_MACHINEDS, err)
+	if _, err := r.SetFile(FREE_MACHINEDS, []byte(r.id), 0); err != nil {
+		log.Fatalf("Error SetFile in markFree: %v %v", FREE_MACHINEDS, err)
 	}
 }
 

@@ -108,12 +108,16 @@ func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) ([]fs.Fs
 	return d.Lookup(ctx, names)
 }
 
-func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names []string) (fs.FsObj, *np.Err) {
+func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names []string, resolve bool) (fs.FsObj, *np.Err) {
 	os, _, err := fos.lookupObj(ctx, f, names)
 	if err != nil {
 		return nil, err
 	}
-	return os[len(os)-1], nil
+	lo := os[len(os)-1]
+	if lo.Perm().IsSymlink() && resolve {
+		return nil, np.MkErr(np.TErrNotDir, names[len(names)-1])
+	}
+	return lo, nil
 }
 
 func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
@@ -516,7 +520,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 // args.Wnames.
 //
 
-func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string) (*fid.Fid, []string, fs.FsObj, *np.Err) {
+func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string, resolve bool) (*fid.Fid, []string, fs.FsObj, *np.Err) {
 	f, err := fos.ft.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
@@ -524,7 +528,7 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string) (*fid.Fid, []
 	lo := f.Obj()
 	fname := append(f.Path(), wnames...)
 	if len(wnames) > 0 {
-		lo, err = fos.lookupObjLast(f.Ctx(), f, wnames)
+		lo, err = fos.lookupObjLast(f.Ctx(), f, wnames, resolve)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -536,8 +540,8 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string) (*fid.Fid, []
 	return f, fname, lo, nil
 }
 
-func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, mode np.Tmode) (fs.CtxI, []string, fs.File, *np.Err) {
-	f, fname, lo, err := fos.lookupWalkFence(fid, wnames)
+func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, resolve bool, mode np.Tmode) (fs.CtxI, []string, fs.File, *np.Err) {
+	f, fname, lo, err := fos.lookupWalkFence(fid, wnames, resolve)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -554,7 +558,7 @@ func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, mode np.T
 }
 
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
-	f, fname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames)
+	f, fname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames, args.Resolve)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -566,7 +570,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if args.Count > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Mode)
+	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -582,7 +586,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Mode)
+	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -600,7 +604,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
 	// walk to directory
-	f, dname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames[0:len(args.Wnames)-1])
+	f, dname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames[0:len(args.Wnames)-1], false)
 	if err != nil {
 		return err.Rerror()
 	}

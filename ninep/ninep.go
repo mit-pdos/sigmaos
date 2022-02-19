@@ -540,8 +540,9 @@ type Tremove struct {
 }
 
 type Tremovefile struct {
-	Fid    Tfid
-	Wnames []string
+	Fid     Tfid
+	Wnames  []string
+	Resolve bool
 }
 
 type Rremove struct {
@@ -594,11 +595,12 @@ type Trenameat struct {
 type Rrenameat struct{}
 
 type Tgetfile struct {
-	Fid    Tfid
-	Mode   Tmode
-	Offset Toffset
-	Count  Tsize
-	Wnames []string
+	Fid     Tfid
+	Mode    Tmode
+	Offset  Toffset
+	Count   Tsize
+	Wnames  []string
+	Resolve bool
 }
 
 type Rgetfile struct {
@@ -606,11 +608,12 @@ type Rgetfile struct {
 }
 
 type Tsetfile struct {
-	Fid    Tfid
-	Mode   Tmode
-	Offset Toffset
-	Wnames []string
-	Data   []byte
+	Fid     Tfid
+	Mode    Tmode
+	Offset  Toffset
+	Wnames  []string
+	Resolve bool
+	Data    []byte
 }
 
 type Tputfile struct {

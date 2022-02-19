@@ -8,10 +8,6 @@ import (
 	np "ulambda/ninep"
 )
 
-// XXX Picking a small chunk size really kills throughput
-//const CHUNKSZ = 8192
-const CHUNKSZ = 10000000
-
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
 	return fl.FsClient.ReadSeqNo()
 }
@@ -23,7 +19,7 @@ func (fl *FsLib) readFile(fname string, m np.Tmode, f fsclnt.Watch) ([]byte, err
 	}
 	c := []byte{}
 	for {
-		b, err := fl.Read(fd, CHUNKSZ)
+		b, err := fl.Read(fd, fl.chunkSz)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +84,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	}
 	defer fl.Close(fddst)
 	for {
-		b, err := fl.Read(fdsrc, CHUNKSZ)
+		b, err := fl.Read(fdsrc, fl.chunkSz)
 		if err != nil {
 			return err
 		}

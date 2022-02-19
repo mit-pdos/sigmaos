@@ -18,10 +18,11 @@ type Fid struct {
 	m      np.Tmode
 	vers   np.TQversion
 	ctx    fs.CtxI
+	cursor int // for directories
 }
 
 func MakeFidPath(p []string, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
-	return &Fid{sync.Mutex{}, p, o, false, m, o.Version(), ctx}
+	return &Fid{sync.Mutex{}, p, o, false, m, o.Version(), ctx, 0}
 }
 
 func (f *Fid) String() string {
@@ -105,16 +106,17 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 	} else {
 		var err *np.Err
 		d := o.(fs.Dir)
-		dirents, err = d.ReadDir(f.ctx, off, count, v)
+		dirents, err = d.ReadDir(f.ctx, f.cursor, count, v)
 		if err != nil {
 			return err
 		}
 
 	}
-	b, error := npcodec.Dir2Byte(off, count, dirents)
+	b, n, error := npcodec.Dir2Byte(count, dirents)
 	if error != nil {
 		return np.MkErr(np.TErrError, error)
 	}
+	f.cursor += n
 	rets.Data = b
 	return nil
 }

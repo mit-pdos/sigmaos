@@ -3,6 +3,7 @@ package fslib_test
 import (
 	"log"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -269,6 +270,34 @@ func TestDirDot(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	_, err = ts.Stat("name/.")
 	assert.Equal(t, nil, err)
+	ts.Shutdown()
+}
+
+func TestPageDir(t *testing.T) {
+	ts := makeTstate(t)
+	dn := "name/dir/"
+	err := ts.Mkdir(dn, 0777)
+	assert.Equal(t, nil, err)
+	ts.SetChunkSz(np.Tsize(512))
+	n := 100
+	names := make([]string, 0)
+	for i := 0; i < n; i++ {
+		name := strconv.Itoa(i)
+		names = append(names, name)
+		err := ts.MakeFile(dn+name, 0777, np.OWRITE, []byte(name))
+		assert.Equal(t, nil, err)
+	}
+	sort.SliceStable(names, func(i, j int) bool {
+		return names[i] < names[j]
+	})
+	i := 0
+	ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
+		assert.Equal(t, names[i], st.Name)
+		i += 1
+		return false, nil
+
+	})
+	assert.Equal(t, i, n)
 	ts.Shutdown()
 }
 

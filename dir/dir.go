@@ -3,6 +3,7 @@ package dir
 import (
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -106,14 +107,14 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = npcodec.DirSize(dir.lsL())
+	st.Length = npcodec.DirSize(dir.lsL(0))
 	return st, nil
 }
 
 func (dir *DirImpl) Size() np.Tlength {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return npcodec.DirSize(dir.lsL())
+	return npcodec.DirSize(dir.lsL(0))
 }
 
 func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.FsObj, []string, *np.Err) {
@@ -144,7 +145,7 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.F
 	}
 }
 
-func (dir *DirImpl) lsL() []*np.Stat {
+func (dir *DirImpl) lsL(cursor int) []*np.Stat {
 	entries := []*np.Stat{}
 	for k, v := range dir.entries {
 		if k == "." {
@@ -154,7 +155,11 @@ func (dir *DirImpl) lsL() []*np.Stat {
 		st.Name = k
 		entries = append(entries, st)
 	}
-	return entries
+	// sort dir by st.Name
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Name < entries[j].Name
+	})
+	return entries[cursor:]
 }
 
 func nonemptydir(inode fs.FsObj) bool {
@@ -194,7 +199,9 @@ func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, *n
 	return dir.namei(ctx, path, inodes)
 }
 
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+// XXX don't return more than n bytes of dir entries, since any more
+// won't be sent to client anyway.
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -202,7 +209,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQv
 	if !np.VEq(v, dir.Version()) {
 		return nil, np.MkErr(np.TErrVersion, dir.Inum())
 	}
-	return dir.lsL(), nil
+	return dir.lsL(cursor), nil
 }
 
 // XXX ax WriteDir from fs.Dir

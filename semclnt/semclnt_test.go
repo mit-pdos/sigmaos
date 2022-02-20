@@ -6,44 +6,19 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/semclnt"
+	"ulambda/test"
 )
 
 const (
 	WAIT_PATH = "name/wait"
 )
 
-type Tstate struct {
-	t *testing.T
-	*kernel.System
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemNamed("semclnt_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
 func TestSemClnt(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.Mkdir(WAIT_PATH, 0777)
-	assert.Nil(ts.t, err, "Mkdir")
+	assert.Nil(ts.T, err, "Mkdir")
 	fsl0 := fslib.MakeFsLibAddr("sem0", fslib.Named())
 	fsl1 := fslib.MakeFsLibAddr("semd1", fslib.Named())
 

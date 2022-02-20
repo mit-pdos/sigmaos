@@ -42,7 +42,7 @@ func TestReader1(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("abcdefg")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	rdr, err := reader.MakeReader(ts.FsLib, fn)
@@ -67,7 +67,7 @@ func TestReader2(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("a")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	rdr, err := reader.MakeReader(ts.FsLib, fn)
@@ -88,12 +88,13 @@ func TestReaderLarge(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/f"
-	sz := 2*reader.CHUNKSZ + 1
+	ts.SetChunkSz(4096)
+	sz := int(2*ts.GetChunkSz()) + 1
 	d := make([]byte, sz)
 	for i := 0; i < sz; i++ {
 		d[i] = byte(i)
 	}
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	rdr, err := reader.MakeReader(ts.FsLib, fn)

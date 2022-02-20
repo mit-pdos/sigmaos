@@ -2,12 +2,11 @@ package reader
 
 import (
 	"io"
+	"log"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
-
-const CHUNKSZ = 4096
 
 type Reader struct {
 	fl  *fslib.FsLib
@@ -28,7 +27,7 @@ func (rd *Reader) ReadByte() (byte, error) {
 
 func (rd *Reader) Read(p []byte) (int, error) {
 	for len(p) > len(rd.buf) && !rd.eof {
-		b, err := rd.fl.Read(rd.fd, CHUNKSZ)
+		b, err := rd.fl.Read(rd.fd, rd.fl.GetChunkSz())
 		if err != nil {
 			rd.fl.Close(rd.fd)
 			return -1, err
@@ -46,6 +45,7 @@ func (rd *Reader) Read(p []byte) (int, error) {
 	if len(rd.buf) < max {
 		max = len(rd.buf)
 	}
+	// XXX maybe don't copy: p = rd.buf[0:max]
 	copy(p, rd.buf)
 	rd.buf = rd.buf[max:]
 	return max, nil

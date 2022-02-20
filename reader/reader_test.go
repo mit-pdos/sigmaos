@@ -3,7 +3,6 @@ package reader_test
 import (
 	"io"
 	"testing"
-	"ulambda/reader"
 
 	"github.com/stretchr/testify/assert"
 
@@ -45,7 +44,7 @@ func TestReader1(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	rdr, err := reader.MakeReader(ts.FsLib, fn)
+	rdr, err := ts.MakeReader(fn)
 
 	v := make([]byte, 1)
 	for _, b := range d {
@@ -70,7 +69,7 @@ func TestReader2(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	rdr, err := reader.MakeReader(ts.FsLib, fn)
+	rdr, err := ts.MakeReader(fn)
 
 	v := make([]byte, 2)
 	n, err := rdr.Read(v)
@@ -97,7 +96,7 @@ func TestReaderLarge(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	rdr, err := reader.MakeReader(ts.FsLib, fn)
+	rdr, err := ts.MakeReader(fn)
 
 	n := 0
 	for {

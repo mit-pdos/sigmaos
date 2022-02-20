@@ -1,91 +1,68 @@
 package reader
 
 import (
-	"encoding/json"
 	"io"
 
 	"ulambda/fsclnt"
-	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
 type Reader struct {
-	fl  *fslib.FsLib
-	fd  int
-	buf []byte
-	eof bool
+	fc      *fsclnt.FsClient
+	fd      int
+	buf     []byte
+	eof     bool
+	chunksz np.Tsize
 }
 
-func (rd *Reader) ReadByte() (byte, error) {
+func (rdr *Reader) ReadByte() (byte, error) {
 	d := make([]byte, 1)
-	_, err := rd.Read(d)
+	_, err := rdr.Read(d)
 	if err != nil {
-		rd.fl.Close(rd.fd)
+		rdr.fc.Close(rdr.fd)
 		return 0, err
 	}
 	return d[0], nil
 }
 
-func (rd *Reader) Read(p []byte) (int, error) {
-	for len(p) > len(rd.buf) && !rd.eof {
-		b, err := rd.fl.Read(rd.fd, rd.fl.GetChunkSz())
+func (rdr *Reader) Read(p []byte) (int, error) {
+	for len(p) > len(rdr.buf) && !rdr.eof {
+		b, err := rdr.fc.Read(rdr.fd, rdr.chunksz)
 		if err != nil {
-			rd.fl.Close(rd.fd)
+			rdr.fc.Close(rdr.fd)
 			return -1, err
 		}
 		if len(b) == 0 {
-			rd.eof = true
+			rdr.eof = true
 		}
-		rd.buf = append(rd.buf, b...)
+		rdr.buf = append(rdr.buf, b...)
 	}
-	if len(rd.buf) == 0 {
-		rd.fl.Close(rd.fd)
+	if len(rdr.buf) == 0 {
+		rdr.fc.Close(rdr.fd)
 		return 0, io.EOF
 	}
 	max := len(p)
-	if len(rd.buf) < max {
-		max = len(rd.buf)
+	if len(rdr.buf) < max {
+		max = len(rdr.buf)
 	}
-	// XXX maybe don't copy: p = rd.buf[0:max]
-	copy(p, rd.buf)
-	rd.buf = rd.buf[max:]
+	// XXX maybe don't copy: p = rdr.buf[0:max]
+	copy(p, rdr.buf)
+	rdr.buf = rdr.buf[max:]
 	return max, nil
 }
 
-func (rd *Reader) Close() error {
-	return rd.fl.Close(rd.fd)
+func (rdr *Reader) GetData() ([]byte, error) {
+	return rdr.fc.Read(rdr.fd, np.MAXGETSET)
 }
 
-func MakeReader(fl *fslib.FsLib, path string) (*Reader, error) {
-	fd, err := fl.Open(path, np.OREAD)
+func (rdr *Reader) Close() error {
+	return rdr.fc.Close(rdr.fd)
+}
+
+func MakeReaderWatch(fc *fsclnt.FsClient, path string, f fsclnt.Watch, chunksz np.Tsize) (*Reader, error) {
+	fd, err := fc.Open(path, np.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	return &Reader{fl, fd, make([]byte, 0), false}, nil
-}
-
-func MakeReaderWatch(fl *fslib.FsLib, path string, f fsclnt.Watch) (*Reader, error) {
-	fd, err := fl.OpenWatch(path, np.OREAD, f)
-	if err != nil {
-		return nil, err
-	}
-	return &Reader{fl, fd, make([]byte, 0), false}, nil
-}
-
-func GetFileWatch(fl *fslib.FsLib, path string, f fsclnt.Watch) ([]byte, error) {
-	rdr, err := MakeReaderWatch(fl, path, f)
-	if err != nil {
-		return nil, err
-	}
-	defer rdr.Close()
-	b, err := rdr.fl.Read(rdr.fd, np.MAXGETSET)
-	return b, err
-}
-
-func GetFileJsonWatch(fl *fslib.FsLib, name string, i interface{}, f fsclnt.Watch) error {
-	b, err := GetFileWatch(fl, name, f)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, i)
+	return &Reader{fc, fd, make([]byte, 0), false, chunksz}, nil
 }

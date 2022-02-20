@@ -4,11 +4,39 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"ulambda/fsclnt"
 	np "ulambda/ninep"
+	"ulambda/reader"
 )
 
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
 	return fl.FsClient.ReadSeqNo()
+}
+
+func (fl *FsLib) MakeReader(path string) (*reader.Reader, error) {
+	return reader.MakeReaderWatch(fl.FsClient, path, nil, fl.chunkSz)
+}
+
+func (fl *FsLib) MakeReaderWatch(path string, f fsclnt.Watch) (*reader.Reader, error) {
+	return reader.MakeReaderWatch(fl.FsClient, path, f, fl.chunkSz)
+}
+
+func (fl *FsLib) GetFileWatch(path string, f fsclnt.Watch) ([]byte, error) {
+	rdr, err := reader.MakeReaderWatch(fl.FsClient, path, f, fl.chunkSz)
+	if err != nil {
+		return nil, err
+	}
+	defer rdr.Close()
+	b, err := rdr.GetData()
+	return b, err
+}
+
+func (fl *FsLib) GetFileJsonWatch(name string, i interface{}, f fsclnt.Watch) error {
+	b, err := fl.GetFileWatch(name, f)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, i)
 }
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {

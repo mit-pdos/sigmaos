@@ -12,7 +12,6 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
-	"ulambda/reader"
 )
 
 type Participant struct {
@@ -73,7 +72,7 @@ func (p *Participant) watchTwopcPrep(path string, err error) {
 
 func (p *Participant) readTwopcWatch(conffile string, f fsclnt.Watch) (*Twopc, error) {
 	twopc := Twopc{}
-	err := reader.GetFileJsonWatch(p.FsLib, conffile, &twopc, f)
+	err := p.GetFileJsonWatch(conffile, &twopc, f)
 	return &twopc, err
 }
 

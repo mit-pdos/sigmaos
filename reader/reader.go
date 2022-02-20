@@ -59,10 +59,6 @@ func (rdr *Reader) Close() error {
 	return rdr.fc.Close(rdr.fd)
 }
 
-func MakeReaderWatch(fc *fsclnt.FsClient, path string, f fsclnt.Watch, chunksz np.Tsize) (*Reader, error) {
-	fd, err := fc.Open(path, np.OREAD)
-	if err != nil {
-		return nil, err
-	}
+func MakeReader(fc *fsclnt.FsClient, fd int, chunksz np.Tsize) (*Reader, error) {
 	return &Reader{fc, fd, make([]byte, 0), false, chunksz}, nil
 }

@@ -9,38 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fsclnt"
-	"ulambda/fslib"
-	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/test"
 )
 
-type Tstate struct {
-	*kernel.System
-	t        *testing.T
-	replicas []*kernel.System
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("nps3_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
 func TestOne(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	dirents, err := ts.ReadDir("name/s3/")
 	assert.Nil(t, err, "ReadDir")
@@ -51,7 +25,7 @@ func TestOne(t *testing.T) {
 }
 
 func TestTwo(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a second one
 	ts.BootFss3d()
@@ -67,7 +41,7 @@ func TestTwo(t *testing.T) {
 }
 
 func TestUnionSimple(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a second one
 	ts.BootFss3d()
@@ -81,7 +55,7 @@ func TestUnionSimple(t *testing.T) {
 }
 
 func TestUnionDir(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a second one
 	ts.BootFss3d()
@@ -95,7 +69,7 @@ func TestUnionDir(t *testing.T) {
 }
 
 func TestUnionFile(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a second one
 	ts.BootFss3d()
@@ -119,13 +93,13 @@ func TestUnionFile(t *testing.T) {
 		}
 		n += len(data)
 	}
-	assert.Equal(ts.t, int(st.Length), n)
+	assert.Equal(ts.T, int(st.Length), n)
 
 	ts.Shutdown()
 }
 
 func TestStat(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)
@@ -141,18 +115,18 @@ func TestStat(t *testing.T) {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) s3Name(t *testing.T) string {
+func s3Name(ts *test.Tstate) string {
 	sts, err := ts.ReadDir("name/s3/")
-	assert.Nil(t, err, "name/s3")
-	assert.Equal(t, 1, len(sts))
+	assert.Nil(ts.T, err, "name/s3")
+	assert.Equal(ts.T, 1, len(sts))
 	name := "name/s3" + "/" + sts[0].Name
 	return name
 }
 
 func TestSymlinkFile(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
-	dn := ts.s3Name(t)
+	dn := s3Name(ts)
 	fn := dn + "/b.txt"
 
 	_, err := ts.GetFile(fn)
@@ -166,9 +140,9 @@ func TestSymlinkFile(t *testing.T) {
 }
 
 func TestSymlinkDir(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
-	dn := ts.s3Name(t)
+	dn := s3Name(ts)
 
 	b, err := ts.GetFile(dn)
 	assert.Nil(t, err, "GetFile")

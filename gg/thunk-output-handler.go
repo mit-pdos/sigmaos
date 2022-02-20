@@ -85,7 +85,7 @@ func (toh *ThunkOutputHandler) propagateResultUpstream() {
 	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {
 		outputPath := ggRemoteReductions(outputFile)
-		toh.WriteFile(outputPath, []byte(reduction))
+		toh.SetFile(outputPath, []byte(reduction), 0)
 	}
 }
 

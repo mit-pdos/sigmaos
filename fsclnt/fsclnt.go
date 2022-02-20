@@ -505,12 +505,12 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, data []byte, off np.Tof
 		}
 		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
 	}
-	// Optimistcally SetFile without doing a pathname
-	// walk; this may fail if rest contains an automount
-	// symlink.
+	// Optimistcally SetFile without doing a pathname walk; this
+	// may fail if rest contains an automount symlink.
+	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	reply, err := fsc.fids.clnt(fid).SetFile(fid, rest, mode, off, data)
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
 			fid, err = fsc.walkManyUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err
@@ -579,24 +579,6 @@ func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
 	}
 	defer fsc.clunkFid(fid)
 	if err := fsc.fids.clnt(fid).RmFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (fsc *FsClient) ShutdownFs(name string) error {
-	db.DLPrintf("FSCLNT", "ShutdownFs %v\n", name)
-	path := np.Split(name)
-	fid, err := fsc.walkMany(path, true, nil)
-	if err != nil {
-		return err
-	}
-	defer fsc.clunkFid(fid)
-	err = fsc.fids.clnt(fid).RemoveFile(fid, []string{".exit"})
-	if err != nil {
-		return err
-	}
-	if err := fsc.Umount(path); err != nil {
 		return err
 	}
 	return nil

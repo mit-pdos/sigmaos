@@ -20,6 +20,7 @@ func (rd *Reader) ReadByte() (byte, error) {
 	d := make([]byte, 1)
 	_, err := rd.Read(d)
 	if err != nil {
+		rd.fl.Close(rd.fd)
 		return 0, err
 	}
 	return d[0], nil
@@ -29,6 +30,7 @@ func (rd *Reader) Read(p []byte) (int, error) {
 	for len(p) > len(rd.buf) && !rd.eof {
 		b, err := rd.fl.Read(rd.fd, CHUNKSZ)
 		if err != nil {
+			rd.fl.Close(rd.fd)
 			return -1, err
 		}
 		if len(b) == 0 {

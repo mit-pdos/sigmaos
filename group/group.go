@@ -180,7 +180,7 @@ func readGroupConf(fsl *fslib.FsLib, conffile string) (*GrpConf, error) {
 
 func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	s := opcode + " " + kv
-	err := fsl.WriteFile(primary+"/"+CTL, []byte(s))
+	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), 0)
 	return err
 }
 

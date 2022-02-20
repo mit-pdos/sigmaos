@@ -193,12 +193,8 @@ func (s *System) Shutdown() {
 		d.Wait()
 	}
 	if s.named != nil {
-		err := s.ShutdownFs(np.NAMED)
-		if err != nil {
-			log.Printf("Named shutdown %v\n", err)
-			// forcefully kill it so that test terminates
-			s.named.Process.Kill()
-		}
+		// kill it so that test terminates
+		s.named.Process.Kill()
 		s.named.Wait()
 	}
 }

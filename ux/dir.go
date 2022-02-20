@@ -3,6 +3,7 @@ package fsux
 import (
 	"io/ioutil"
 	"os"
+	"sort"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -19,7 +20,7 @@ func makeDir(path []string, t np.Tperm, p *Dir) *Dir {
 	return d
 }
 
-func (d *Dir) uxReadDir() ([]*np.Stat, *np.Err) {
+func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 	var sts []*np.Stat
 	dirents, err := ioutil.ReadDir(d.Path())
 	if err != nil {
@@ -36,13 +37,16 @@ func (d *Dir) uxReadDir() ([]*np.Stat, *np.Err) {
 		st.Mode = st.Mode | np.Tperm(0777)
 		sts = append(sts, st)
 	}
+	sort.SliceStable(sts, func(i, j int) bool {
+		return sts[i].Name < sts[j].Name
+	})
 	db.DLPrintf("UXD", "%v: uxReadDir %v\n", d, sts)
-	return sts, nil
+	return sts[cursor:], nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, off, cnt)
-	dirents, err := d.uxReadDir()
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
+	dirents, err := d.uxReadDir(cursor)
 	if err != nil {
 		return nil, err
 	}

@@ -8,10 +8,6 @@ import (
 	np "ulambda/ninep"
 )
 
-// XXX Picking a small chunk size really kills throughput
-//const CHUNKSZ = 8192
-const CHUNKSZ = 10000000
-
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
 	return fl.FsClient.ReadSeqNo()
 }
@@ -23,7 +19,7 @@ func (fl *FsLib) readFile(fname string, m np.Tmode, f fsclnt.Watch) ([]byte, err
 	}
 	c := []byte{}
 	for {
-		b, err := fl.Read(fd, CHUNKSZ)
+		b, err := fl.Read(fd, fl.chunkSz)
 		if err != nil {
 			return nil, err
 		}
@@ -59,23 +55,6 @@ func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode
 	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
-// XXX chunk  XXX deprecate in favor of put/set
-func (fl *FsLib) WriteFile(fname string, data []byte) error {
-	fd, err := fl.Open(fname, np.OWRITE)
-	if err != nil {
-		return err
-	}
-	_, err = fl.Write(fd, data)
-	if err != nil {
-		return err
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (fl *FsLib) MakeFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) error {
 	_, err := fl.PutFile(fname, data, perm, mode)
 	return err
@@ -105,7 +84,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	}
 	defer fl.Close(fddst)
 	for {
-		b, err := fl.Read(fdsrc, CHUNKSZ)
+		b, err := fl.Read(fdsrc, fl.chunkSz)
 		if err != nil {
 			return err
 		}

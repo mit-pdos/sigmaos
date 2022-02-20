@@ -2,6 +2,7 @@ package fss3
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -127,7 +128,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	}
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	var dirents []*np.Stat
 	db.DLPrintf("FSS3", "readDir: %v\n", d)
 	d.mu.Lock()
@@ -142,9 +143,12 @@ func (d *Dir) ReadDir(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion)
 		}
 		dirents = append(dirents, st)
 	}
+	sort.SliceStable(dirents, func(i, j int) bool {
+		return dirents[i].Name < dirents[j].Name
+	})
 
 	d.sz = npcodec.DirSize(dirents)
-	return dirents, nil
+	return dirents[cursor:], nil
 }
 
 // Just read the names of the entries without stat-ing each of one

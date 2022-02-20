@@ -72,9 +72,9 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 		fn := path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE)
-		err = clnt.WriteFile(fn, b)
+		_, err = clnt.SetFile(fn, b, 0)
 		if err != nil {
-			log.Printf("%v: WriteFile %v err %v", proc.GetName(), fn, err)
+			log.Printf("%v: SetFile %v err %v", proc.GetName(), fn, err)
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {

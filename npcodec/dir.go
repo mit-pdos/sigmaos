@@ -1,8 +1,6 @@
 package npcodec
 
 import (
-	"sort"
-
 	np "ulambda/ninep"
 )
 
@@ -14,36 +12,27 @@ func DirSize(dir []*np.Stat) np.Tlength {
 	return np.Tlength(sz)
 }
 
-// Marshall part  of a directory [offset, cnt)
-func Dir2Byte(offset np.Toffset, cnt np.Tsize, dir []*np.Stat) ([]byte, *np.Err) {
+func Dir2Byte(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 	var buf []byte
 
-	if offset >= np.Toffset(DirSize(dir)) {
-		return nil, nil
+	if len(dir) == 0 {
+		return nil, 0, nil
 	}
-
-	// sort dir by st.Name
-	sort.SliceStable(dir, func(i, j int) bool {
-		return dir[i].Name < dir[j].Name
-	})
-
-	off := np.Toffset(0)
+	n := 0
 	for _, st := range dir {
 		sz := np.Tsize(SizeNp(*st))
 		if cnt < sz {
 			break
 		}
-		if off >= offset {
-			b, err := Marshal(*st)
-			if err != nil {
-				return nil, err
-			}
-			buf = append(buf, b...)
-			cnt -= sz
+		b, err := Marshal(*st)
+		if err != nil {
+			return nil, n, err
 		}
-		off += np.Toffset(sz)
+		buf = append(buf, b...)
+		cnt -= sz
+		n += 1
 	}
-	return buf, nil
+	return buf, n, nil
 }
 
 func Byte2Dir(data []byte) ([]*np.Stat, *np.Err) {

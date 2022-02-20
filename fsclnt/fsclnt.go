@@ -508,7 +508,7 @@ func (fsc *FsClient) PutFile(path string, mode np.Tmode, perm np.Tperm, data []b
 	// symlink.
 	reply, err := fsc.fids.clnt(fid).PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
 			dir := np.Dir(p)
 			base := []string{np.Base(p)}
 			fid, err = fsc.walkManyUmount(dir, true, nil)

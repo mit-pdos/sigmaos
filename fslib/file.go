@@ -30,16 +30,6 @@ func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte
 	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
-func (fl *FsLib) GetFileWatch(path string, f fsclnt.Watch) ([]byte, error) {
-	rdr, err := fl.OpenReaderWatch(path, f)
-	if err != nil {
-		return nil, err
-	}
-	defer rdr.Close()
-	b, err := rdr.GetData()
-	return b, err
-}
-
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {
 	b, err := fl.GetFile(name)
 	if err != nil {
@@ -66,14 +56,6 @@ func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
 	return err
 }
 
-func (fl *FsLib) GetFileJsonWatch(name string, i interface{}, f fsclnt.Watch) error {
-	b, err := fl.GetFileWatch(name, f)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, i)
-}
-
 //
 // Open readers
 //
@@ -92,6 +74,24 @@ func (fl *FsLib) OpenReaderWatch(path string, f fsclnt.Watch) (*reader.Reader, e
 		return nil, err
 	}
 	return reader.MakeReader(fl.FsClient, fd, fl.chunkSz)
+}
+
+func (fl *FsLib) GetFileWatch(path string, f fsclnt.Watch) ([]byte, error) {
+	rdr, err := fl.OpenReaderWatch(path, f)
+	if err != nil {
+		return nil, err
+	}
+	defer rdr.Close()
+	b, err := rdr.GetData()
+	return b, err
+}
+
+func (fl *FsLib) GetFileJsonWatch(name string, i interface{}, f fsclnt.Watch) error {
+	b, err := fl.GetFileWatch(name, f)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, i)
 }
 
 //

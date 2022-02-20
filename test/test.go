@@ -20,14 +20,26 @@ func (ts *Tstate) Shutdown() {
 	}
 }
 
-func MakeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.T = t
-	ts.System = kernel.MakeSystemNamed("fslibtest", "..", 0)
+func (ts *Tstate) startReplicas() {
 	ts.replicas = []*kernel.System{}
 	// Start additional replicas
 	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
+		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("test", "..", i+1))
 	}
+}
+
+func MakeTstate(t *testing.T) *Tstate {
+	ts := &Tstate{}
+	ts.T = t
+	ts.System = kernel.MakeSystemNamed("test", "..", 0)
+	ts.startReplicas()
+	return ts
+}
+
+func MakeTstateAll(t *testing.T) *Tstate {
+	ts := &Tstate{}
+	ts.T = t
+	ts.System = kernel.MakeSystemAll("test", "..", 0)
+	ts.startReplicas()
 	return ts
 }

@@ -5,42 +5,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fslib"
-	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/test"
 )
 
 const (
 	fn = "name/ux/~ip/"
 )
 
-type Tstate struct {
-	t *testing.T
-	*kernel.System
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("fsux_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
 func TestRoot(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	dirents, err := ts.ReadDir("name/ux/~ip/")
 	assert.Nil(t, err, "ReadDir")
@@ -51,7 +25,7 @@ func TestRoot(t *testing.T) {
 }
 
 func TestFile(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	d := []byte("hello")
 	_, err := ts.PutFile(fn+"f", 0777, np.OWRITE, d)
@@ -67,7 +41,7 @@ func TestFile(t *testing.T) {
 }
 
 func TestDir(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	err := ts.Mkdir(fn+"d1", 0777)
 	assert.Equal(t, nil, err)

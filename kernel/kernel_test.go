@@ -14,37 +14,12 @@ import (
 	"ulambda/fenceclnt"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/test"
 )
 
-type Tstate struct {
-	t *testing.T
-	*kernel.System
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("kernel_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
 func TestSymlink1(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a target file
 	targetPath := "name/ux/~ip/symlink-test-file"
@@ -90,7 +65,7 @@ func TestSymlink1(t *testing.T) {
 }
 
 func TestSymlink2(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a target file
 	targetDirPath := "name/ux/~ip/dir1"
@@ -125,7 +100,7 @@ func TestSymlink2(t *testing.T) {
 }
 
 func TestSymlink3(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	uxs, err := ts.ReadDir("name/ux")
 	assert.Nil(t, err, "Error reading ux dir")
@@ -177,15 +152,15 @@ func TestSymlink3(t *testing.T) {
 
 func TestEphemeral(t *testing.T) {
 	const N = 20
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
-	name1 := ts.procdName(t, map[string]bool{})
+	name1 := procdName(ts, map[string]bool{})
 
 	var err error
 	err = ts.BootProcd()
 	assert.Nil(t, err, "bin/kernel/procd")
 
-	name := ts.procdName(t, map[string]bool{name1: true})
+	name := procdName(ts, map[string]bool{name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
@@ -213,7 +188,7 @@ func TestEphemeral(t *testing.T) {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
+func procdName(ts *test.Tstate, exclude map[string]bool) string {
 	sts, err := ts.ReadDir(np.PROCD)
 	stsExcluded := []*np.Stat{}
 	for _, s := range sts {
@@ -221,14 +196,14 @@ func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
 			stsExcluded = append(stsExcluded, s)
 		}
 	}
-	assert.Nil(t, err, np.PROCD)
-	assert.Equal(t, 1, len(stsExcluded))
+	assert.Nil(ts.T, err, np.PROCD)
+	assert.Equal(ts.T, 1, len(stsExcluded))
 	name := path.Join(np.PROCD, stsExcluded[0].Name)
 	return name
 }
 
 func TestFenceW(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 	fence := "name/l"
 
 	dirux := "name/ux/~ip/outdir"
@@ -278,7 +253,7 @@ func TestFenceW(t *testing.T) {
 	fd, err := ts.Open(dirux+"/f", np.OREAD)
 	assert.Nil(t, err, "Open")
 	b, err := ts.Read(fd, 100)
-	assert.Equal(ts.t, 0, len(b))
+	assert.Equal(ts.T, 0, len(b))
 
 	ts.Shutdown()
 }

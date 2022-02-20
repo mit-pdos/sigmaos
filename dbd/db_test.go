@@ -6,23 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/kernel"
+	"ulambda/test"
 )
 
-type Tstate struct {
-	*kernel.System
-	t *testing.T
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("db_test", "..", 0)
-	return ts
-}
-
 func TestQuery(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	q := []byte("select * from book where author='Homer';")
 	b, err := ts.GetFile(DBD + "clone")

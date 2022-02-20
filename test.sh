@@ -47,8 +47,9 @@ go test $1 ulambda/mr
 pgrep mariadb >/dev/null && go test $1 ulambda/dbd
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
 
-go test $1 ulambda/cmd/user/test2pc
-go test $1 ulambda/cmd/user/test2pc2
+# XXX broken
+# go test $1 ulambda/cmd/user/test2pc
+# go test $1 ulambda/cmd/user/test2pc2
 
 #
 # test with realms

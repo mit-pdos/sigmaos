@@ -121,7 +121,7 @@ func (m *Mapper) mapper(txt string) error {
 }
 
 func (m *Mapper) doMap() error {
-	b, err := m.ReadFile(m.input)
+	b, err := m.GetFile(m.input)
 	if err != nil {
 		log.Fatalf("%v: read %v err %v", proc.GetProgram(), m.input, err)
 	}

@@ -42,7 +42,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 	db.DLPrintf("SCHEDL", "MakeSpinner: %v\n", args)
 
-	if err := s.MakeFile(path.Join(s.outdir, proc.GetPid()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
+	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
 		log.Fatalf("MakeFile error: %v", err)
 	}
 

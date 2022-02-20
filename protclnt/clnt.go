@@ -126,8 +126,8 @@ func (pclnt *ProtClnt) Remove(fid np.Tfid) *np.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames []string) *np.Err {
-	args := np.Tremovefile{fid, wnames}
+func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames []string, resolve bool) *np.Err {
+	args := np.Tremovefile{fid, wnames, resolve}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
@@ -243,8 +243,8 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, cnt np.Tsize) (*np.Rgetfile, *np.Err) {
-	args := np.Tgetfile{fid, mode, offset, cnt, path}
+func (pclnt *ProtClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool) (*np.Rgetfile, *np.Err) {
+	args := np.Tgetfile{fid, mode, offset, cnt, path, resolve}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -256,8 +256,8 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, offset
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, data []byte) (*np.Rwrite, *np.Err) {
-	args := np.Tsetfile{fid, mode, offset, path, data}
+func (pclnt *ProtClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, offset np.Toffset, data []byte, resolve bool) (*np.Rwrite, *np.Err) {
+	args := np.Tsetfile{fid, mode, offset, path, resolve, data}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err

@@ -130,7 +130,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 // Register this machined as part of a realm.
 func (r *Machined) register() {
 	// Register this machined as belonging to this realm.
-	if err := atomic.MakeFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId, r.id), 0777, []byte{}); err != nil {
+	if err := atomic.PutFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId, r.id), 0777, []byte{}); err != nil {
 		log.Fatalf("Error MakeFileAtomic in Machined.register: %v", err)
 	}
 }

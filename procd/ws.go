@@ -14,7 +14,7 @@ func (pd *Procd) readRemoteRunq(procdPath string, queueName string) ([]*np.Stat,
 }
 
 func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid string) (*proc.Proc, error) {
-	b, err := pd.ReadFile(path.Join(procdPath, queueName, pid))
+	b, err := pd.GetFile(path.Join(procdPath, queueName, pid))
 	if err != nil {
 		return nil, err
 	}

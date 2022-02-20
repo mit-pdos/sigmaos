@@ -35,10 +35,6 @@ func (fl *FsLib) readFile(fname string, m np.Tmode, f fsclnt.Watch) ([]byte, err
 	return c, nil
 }
 
-func (fl *FsLib) ReadFile(fname string) ([]byte, error) {
-	return fl.readFile(fname, 0x0, nil)
-}
-
 func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
 	return fl.readFile(fname, 0x0, f)
 }
@@ -51,13 +47,8 @@ func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, e
 	return fl.FsClient.SetFile(fname, np.OWRITE, data, off)
 }
 
-func (fl *FsLib) PutFile(fname string, data []byte, perm np.Tperm, mode np.Tmode) (np.Tsize, error) {
+func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) (np.Tsize, error) {
 	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
-}
-
-func (fl *FsLib) MakeFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) error {
-	_, err := fl.PutFile(fname, data, perm, mode)
-	return err
 }
 
 func (fl *FsLib) CreateFile(fname string, perm np.Tperm, mode np.Tmode) (int, error) {
@@ -102,7 +93,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	return nil
 }
 
-func (fl *FsLib) ReadFileJson(name string, i interface{}) error {
+func (fl *FsLib) GetFileJson(name string, i interface{}) error {
 	b, err := fl.GetFile(name)
 	if err != nil {
 		return err
@@ -118,15 +109,16 @@ func (fl *FsLib) ReadFileJsonWatch(name string, i interface{}, f fsclnt.Watch) e
 	return json.Unmarshal(b, i)
 }
 
-func (fl *FsLib) MakeFileJson(fname string, perm np.Tperm, i interface{}) error {
+func (fl *FsLib) PutFileJson(fname string, perm np.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	return fl.MakeFile(fname, perm, np.OWRITE, data)
+	_, err = fl.PutFile(fname, perm, np.OWRITE, data)
+	return err
 }
 
-func (fl *FsLib) WriteFileJson(fname string, i interface{}) error {
+func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)

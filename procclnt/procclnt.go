@@ -122,7 +122,7 @@ func (clnt *ProcClnt) WaitExit(pid string) (*proc.Status, error) {
 	}
 
 	childDir := path.Dir(proc.GetChildProcDir(pid))
-	b, err := clnt.ReadFile(path.Join(childDir, proc.EXIT_STATUS))
+	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
 	if err != nil {
 		log.Printf("Missing return status, procd must have crashed: %v, %v", pid, err)
 		return nil, fmt.Errorf("Missing return status, procd must have crashed: %v", err)
@@ -209,7 +209,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 	}
 	// May return an error if parent already exited.
 	fn := path.Join(parentdir, proc.EXIT_STATUS)
-	if err := clnt.MakeFile(fn, 0777, np.OWRITE, b); err != nil {
+	if _, err := clnt.PutFile(fn, 0777, np.OWRITE, b); err != nil {
 		log.Printf("%v: exited error (parent already exited) MakeFile %v err %v", proc.GetName(), fn, err)
 	}
 

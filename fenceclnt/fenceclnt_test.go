@@ -249,7 +249,7 @@ func TestSetRenameGet(t *testing.T) {
 	fn := "name/f"
 	fn1 := "name/f1"
 	d := []byte(strconv.Itoa(0))
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
@@ -279,7 +279,7 @@ func TestSetRenameGet(t *testing.T) {
 		// check that writer didn't get its write in after
 		// setfencefile
 
-		d1, err := ts.ReadFile(fn1)
+		d1, err := ts.GetFile(fn1)
 		n, err := strconv.Atoi(string(d1))
 		assert.Equal(t, nil, err)
 
@@ -314,7 +314,7 @@ func primary(t *testing.T, ch chan bool, i int) {
 
 	fn := "name/f"
 	d := []byte(n)
-	err = fsl.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = fsl.PutFile(fn, 0777, np.OWRITE, d)
 
 	err = f.MakeFenceFileFrom(fn)
 	assert.Nil(t, err, "MakeFenceFileFrom")

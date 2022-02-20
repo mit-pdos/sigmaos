@@ -89,16 +89,17 @@ func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
 	return dirents, nil
 }
 
+// XXX should use Reader
 func (fl *FsLib) CopyDir(src, dst string) error {
 	_, err := fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
 		s := src + "/" + st.Name
 		d := dst + "/" + st.Name
 		// db.DLPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
-		b, err := fl.ReadFile(s)
+		b, err := fl.GetFile(s)
 		if err != nil {
 			return true, err
 		}
-		err = fl.MakeFile(d, 0777, np.OWRITE, b)
+		_, err = fl.PutFile(d, 0777, np.OWRITE, b)
 		if err != nil {
 			return true, err
 		}

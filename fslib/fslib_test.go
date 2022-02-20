@@ -56,7 +56,7 @@ func TestRemoveSimple(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove(fn)
@@ -99,7 +99,7 @@ func TestRemoveNonExistent(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove("name/this-file-does-not-exist")
@@ -115,10 +115,10 @@ func TestRemovePath(t *testing.T) {
 	assert.Equal(t, nil, err)
 	fn := "name/d1/f"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn)
+	d1, err := ts.GetFile(fn)
 	assert.Equal(t, "hello", string(d1))
 
 	err = ts.Remove(fn)
@@ -137,13 +137,13 @@ func TestRename(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn1)
+	d1, err := ts.GetFile(fn1)
 	assert.Equal(t, "hello", string(d1))
 	ts.Shutdown()
 }
@@ -158,13 +158,13 @@ func TestRenameAndRemove(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn1)
+	d1, err := ts.GetFile(fn1)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "hello", string(d1))
 
@@ -185,7 +185,7 @@ func TestNonEmpty(t *testing.T) {
 
 	fn := "name/d1/f"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove("name/d1")
@@ -202,12 +202,12 @@ func TestSetAppend(t *testing.T) {
 	d := []byte("1234")
 	fn := "name/f"
 
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 	l, err := ts.SetFile(fn, d, np.Toffset(len(d)))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, np.Tsize(len(d)), l)
-	b, err := ts.ReadFile(fn)
+	b, err := ts.GetFile(fn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(d)*2, len(b))
 	ts.Shutdown()
@@ -218,13 +218,13 @@ func TestCopy(t *testing.T) {
 	d := []byte("hello")
 	src := "name/f"
 	dst := "name/g"
-	err := ts.MakeFile(src, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(src, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.CopyFile(src, dst)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(dst)
+	d1, err := ts.GetFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
 	ts.Shutdown()
@@ -240,7 +240,7 @@ func TestDirSimple(t *testing.T) {
 	assert.Equal(t, true, b)
 
 	d := []byte("hello")
-	err = ts.MakeFile(dn+"/f", 0777, np.OWRITE, d)
+	_, err = ts.PutFile(dn+"/f", 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	sts, err := ts.ReadDir(dn)
@@ -284,7 +284,7 @@ func TestPageDir(t *testing.T) {
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)
 		names = append(names, name)
-		err := ts.MakeFile(dn+name, 0777, np.OWRITE, []byte(name))
+		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
 	sort.SliceStable(names, func(i, j int) bool {
@@ -386,7 +386,7 @@ func TestWatchCreate(t *testing.T) {
 		assert.True(t, np.IsErrNotfound(err))
 	}
 
-	err = ts.MakeFile(fn, 0777, np.OWRITE, nil)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -398,7 +398,7 @@ func TestWatchRemoveSeq(t *testing.T) {
 	ts := makeTstate(t)
 
 	fn := "name/w"
-	err := ts.MakeFile(fn, 0777, np.OWRITE, nil)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
@@ -427,7 +427,7 @@ func TestWatchDir(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 
-	err = ts.MakeFile(fn+"/x", 0777, np.OWRITE, nil)
+	_, err = ts.PutFile(fn+"/x", 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -441,11 +441,11 @@ func TestLock1(t *testing.T) {
 	ts.Mkdir("name/locks", 0777)
 
 	// Lock the file
-	err := ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	_, err := ts.PutFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
 	go func() {
-		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		_, err := fsl.PutFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.Nil(t, err, "MakeFile")
 		ch <- 0
 	}()
@@ -471,7 +471,7 @@ func TestLockN(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
-			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+			_, err := fsl.PutFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -495,12 +495,12 @@ func TestLockAfterConnClose(t *testing.T) {
 
 	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
 
-	err := ts.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	_, err := ts.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 1")
 
 	go func() {
 		// Should wait
-		err := fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		_, err := fsl1.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.True(t, np.IsErrEOF(err), "Make lock 2")
 	}()
 
@@ -514,7 +514,7 @@ func TestLockAfterConnClose(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// Try to lock again (should succeed)
-	err = ts.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	_, err = ts.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 3")
 
 	ts.Shutdown()
@@ -537,7 +537,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 	go func() {
 		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
 		for i := 1; i < N; {
-			err := fsl.MakeFile(fn, 0777, np.OWRITE, nil)
+			_, err := fsl.PutFile(fn, 0777, np.OWRITE, nil)
 			assert.Equal(t, nil, err)
 			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
 				// log.Printf("watch cb %v err %v\n", i, r)
@@ -578,9 +578,9 @@ func TestConcurFile(t *testing.T) {
 			for j := 0; j < 1000; j++ {
 				fn := "name/f" + strconv.Itoa(i)
 				data := []byte(fn)
-				err := ts.MakeFile(fn, 0777, np.OWRITE, data)
+				_, err := ts.PutFile(fn, 0777, np.OWRITE, data)
 				assert.Equal(t, nil, err)
-				d, err := ts.ReadFile(fn)
+				d, err := ts.GetFile(fn)
 				assert.Equal(t, nil, err)
 				assert.Equal(t, len(data), len(d))
 				err = ts.Remove(fn)
@@ -674,7 +674,7 @@ func TestConcurRename(t *testing.T) {
 
 	// generate files in the todo dir
 	for i := 0; i < NFILE; i++ {
-		err := ts.MakeFile(TODO+"/job"+strconv.Itoa(i), 07000, np.OWRITE, []byte{})
+		_, err := ts.PutFile(TODO+"/job"+strconv.Itoa(i), 07000, np.OWRITE, []byte{})
 		assert.Nil(ts.t, err, "Create job")
 	}
 
@@ -915,11 +915,11 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	b := []byte("hello")
 	fn := "name/~ip/namedself0/f"
-	err = ts.MakeFile(fn, 0777, np.OWRITE, b)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
 	fn1 := "name/~ip/namedself0/g"
-	err = ts.MakeFile(fn1, 0777, np.OWRITE, b)
+	_, err = ts.PutFile(fn1, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
 	sts, err := ts.ReadDir("name/~ip/namedself0/")
@@ -942,14 +942,14 @@ func TestSetFileSymlink(t *testing.T) {
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
 	assert.Nil(ts.t, err, "Symlink")
 
 	st := stats.StatInfo{}
-	err = ts.ReadFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk
 
@@ -958,7 +958,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.t, err, "SetFile")
 	assert.Equal(ts.t, np.Tsize(len(d)), n, "SetFile")
 
-	err = ts.ReadFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 
 	assert.NotEqual(ts.t, nwalk, st.Nwalk, "setfile")
@@ -968,7 +968,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.t, err, "GetFile")
 	assert.Equal(ts.t, d, b, "GetFile")
 
-	err = ts.ReadFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.t, nwalk, st.Nwalk, "getfile")

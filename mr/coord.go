@@ -179,7 +179,7 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 func (w *Coord) restartMappers(files []string) {
 	for _, f := range files {
 		n := path.Join(MDIR, f)
-		if _, err := w.PutFile(n, []byte(n), 0777, np.OWRITE); err != nil {
+		if _, err := w.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			log.Fatalf("PutFile %v err %v\n", n, err)
 		}
 	}

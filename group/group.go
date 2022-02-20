@@ -126,7 +126,7 @@ func (g *Group) PublishConfig(grp string) {
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", proc.GetProgram(), bk, err)
 	}
-	err = atomic.MakeFileJsonAtomic(g.FsLib, bk, 0777, *g.conf)
+	err = atomic.PutFileJsonAtomic(g.FsLib, bk, 0777, *g.conf)
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetProgram(), bk, err)
 	}
@@ -171,7 +171,7 @@ type GrpConf struct {
 
 func readGroupConf(fsl *fslib.FsLib, conffile string) (*GrpConf, error) {
 	conf := GrpConf{}
-	err := fsl.ReadFileJson(conffile, &conf)
+	err := fsl.GetFileJson(conffile, &conf)
 	if err != nil {
 		return nil, err
 	}

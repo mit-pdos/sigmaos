@@ -54,10 +54,10 @@ func TestFile(t *testing.T) {
 	ts := makeTstate(t)
 
 	d := []byte("hello")
-	err := ts.MakeFile(fn+"f", 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn+"f", 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn + "f")
+	d1, err := ts.GetFile(fn + "f")
 	assert.Equal(t, string(d), string(d1))
 
 	err = ts.Remove(fn + "f")
@@ -78,10 +78,10 @@ func TestDir(t *testing.T) {
 
 	assert.Equal(t, 0, len(dirents))
 
-	err = ts.MakeFile(fn+"d1/f", 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn+"d1/f", 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn + "d1/f")
+	d1, err := ts.GetFile(fn + "d1/f")
 	assert.Equal(t, string(d), string(d1))
 
 	err = ts.Remove(fn + "d1/f")

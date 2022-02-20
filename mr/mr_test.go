@@ -102,7 +102,7 @@ func (ts *Tstate) prepareJob() {
 		// remove mapper output directory from previous run
 		ts.RmDir("name/ux/~ip/m-" + f.Name())
 		n := mr.MDIR + "/" + f.Name()
-		if _, err := ts.PutFile(n, []byte(n), 0777, np.OWRITE); err != nil {
+		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			log.Fatalf("PutFile %v err %v\n", n, err)
 		}
 	}
@@ -118,7 +118,7 @@ func (ts *Tstate) checkJob() {
 	// XXX run as a proc?
 	for i := 0; i < ts.nreducetask; i++ {
 		r := strconv.Itoa(i)
-		data, err := ts.ReadFile(mr.ROUT + r)
+		data, err := ts.GetFile(mr.ROUT + r)
 		if err != nil {
 			log.Fatalf("ReadFile %v err %v\n", r, err)
 		}

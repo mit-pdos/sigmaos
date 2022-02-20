@@ -50,12 +50,12 @@ func TestSymlink1(t *testing.T) {
 	targetPath := "name/ux/~ip/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
-	err := ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err := ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
-	b, err := ts.ReadFile(targetPath)
-	assert.Nil(t, err, "Creating symlink target")
+	b, err := ts.GetFile(targetPath)
+	assert.Nil(t, err, "GetFile symlink target")
 	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
 	// Create a symlink
@@ -64,9 +64,27 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
-	b, err = ts.ReadFile(linkPath + "/")
+	b, err = ts.GetFile(linkPath + "/")
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
+
+	// Write symlink contents
+	w := []byte("overwritten!!")
+	_, err = ts.SetFile(linkPath+"/", w, 0)
+	assert.Nil(t, err, "Writing linked file")
+	assert.Equal(t, contents, string(b), "File contents don't match")
+
+	// Read target file
+	b, err = ts.GetFile(targetPath)
+	assert.Nil(t, err, "GetFile symlink target")
+	assert.Equal(t, string(w), string(b), "File contents don't match after reading target")
+
+	// Remove the target of the symlink
+	err = ts.Remove(linkPath + "/")
+	assert.Nil(t, err, "remove linked file")
+
+	_, err = ts.GetFile(targetPath)
+	assert.NotNil(t, err, "symlink target")
 
 	ts.Shutdown()
 }
@@ -82,11 +100,11 @@ func TestSymlink2(t *testing.T) {
 	ts.Remove(targetDirPath)
 	err := ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
-	b, err := ts.ReadFile(targetPath)
+	b, err := ts.GetFile(targetPath)
 	assert.Nil(t, err, "Creating symlink target")
 	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
@@ -99,7 +117,7 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
-	b, err = ts.ReadFile(linkPath + "/")
+	b, err = ts.GetFile(linkPath + "/")
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -122,11 +140,11 @@ func TestSymlink3(t *testing.T) {
 	ts.Remove(targetDirPath)
 	err = ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
-	b, err := ts.ReadFile(targetPath)
+	b, err := ts.GetFile(targetPath)
 	assert.Nil(t, err, "Creating symlink target")
 	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
@@ -144,7 +162,7 @@ func TestSymlink3(t *testing.T) {
 		fd, err := fsl.Open(linkPath+"/", np.OREAD)
 		assert.Nil(t, err, "Opening")
 		// Read symlink contents again
-		b, err = fsl.ReadFile(linkPath + "/")
+		b, err = fsl.GetFile(linkPath + "/")
 		assert.Nil(t, err, "Reading linked file")
 		assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -168,7 +186,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, "bin/kernel/procd")
 
 	name := ts.procdName(t, map[string]bool{name1: true})
-	b, err := ts.ReadFile(name)
+	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
@@ -181,7 +199,7 @@ func TestEphemeral(t *testing.T) {
 	n := 0
 	for n < N {
 		time.Sleep(100 * time.Millisecond)
-		_, err = ts.ReadFile(name1)
+		_, err = ts.GetFile(name1)
 		if err == nil {
 			n += 1
 			log.Printf("retry\n")

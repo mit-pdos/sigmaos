@@ -52,7 +52,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)
 	p.ti = &Tinput{}
-	err := p.ReadFileJson(np.MEMFS+"/txni", p.ti)
+	err := p.GetFileJson(np.MEMFS+"/txni", p.ti)
 	if err != nil {
 		log.Fatalf("Failed to read txni %v\n", err)
 	}
@@ -69,11 +69,11 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 }
 
 func (p *Part2pc) copyFile(fn1, fn2 string) error {
-	b, err := p.ReadFile(fn1)
+	b, err := p.GetFile(fn1)
 	if err != nil {
 		log.Fatalf("ReadFile %v err %v\n", fn1, err)
 	}
-	err = p.MakeFile(fn2, 0777, np.OWRITE, b)
+	_, err = p.PutFile(fn2, 0777, np.OWRITE, b)
 	if err != nil {
 		log.Fatalf("MakeFile %v err %v\n", fn2, err)
 	}

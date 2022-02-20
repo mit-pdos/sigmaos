@@ -2,7 +2,6 @@ package reader
 
 import (
 	"io"
-	"log"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"

@@ -101,16 +101,16 @@ func spawnSpawner(t *testing.T, ts *Tstate, childPid string, msecs int) string {
 
 func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
 	res := true
-	b, err := ts.ReadFile("name/out_" + pid)
-	res = assert.Nil(t, err, "ReadFile") && res
+	b, err := ts.GetFile("name/out_" + pid)
+	res = assert.Nil(t, err, "GetFile") && res
 	res = assert.Equal(t, string(b), "hello", "Output") && res
 
 	return res
 }
 
 func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
-	b, err := ts.ReadFile("name/out_" + pid)
-	assert.NotNil(t, err, "ReadFile")
+	b, err := ts.GetFile("name/out_" + pid)
+	assert.NotNil(t, err, "GetFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
@@ -275,8 +275,8 @@ func TestEarlyExit1(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// Child should have exited
-	b, err := ts.ReadFile("name/out_" + pid1)
-	assert.Nil(t, err, "ReadFile")
+	b, err := ts.GetFile("name/out_" + pid1)
+	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
@@ -307,8 +307,8 @@ func TestEarlyExitN(t *testing.T) {
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 			// Child should have exited
-			b, err := ts.ReadFile("name/out_" + pid1)
-			assert.Nil(t, err, "ReadFile")
+			b, err := ts.GetFile("name/out_" + pid1)
+			assert.Nil(t, err, "GetFile")
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
@@ -414,10 +414,10 @@ func testFencer(t *testing.T, part string) {
 	err := ts.Mkdir(dir, 0777)
 	err = ts.Mkdir(FENCE_DIR, 0777)
 	assert.Nil(t, err, "mkdir error")
-	err = ts.MakeFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = ts.PutFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
-	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = ts.PutFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
 	for i := 0; i < N; i++ {

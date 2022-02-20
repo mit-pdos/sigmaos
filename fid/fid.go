@@ -110,7 +110,6 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 		if err != nil {
 			return err
 		}
-
 	}
 	b, n, error := npcodec.Dir2Byte(count, dirents)
 	if error != nil {

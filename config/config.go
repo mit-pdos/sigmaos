@@ -39,7 +39,7 @@ func (clnt *ConfigClnt) WatchConfig(path string) chan bool {
 // becomes available.
 func (clnt *ConfigClnt) ReadConfig(path string, cfg interface{}) {
 	for {
-		err := clnt.ReadFileJson(path, cfg)
+		err := clnt.GetFileJson(path, cfg)
 		if err == nil {
 			break
 		}
@@ -51,7 +51,7 @@ func (clnt *ConfigClnt) ReadConfig(path string, cfg interface{}) {
 // Write cfg into path
 func (clnt *ConfigClnt) WriteConfig(path string, cfg interface{}) {
 	// Make the realm config file.
-	if err := atomic.MakeFileJsonAtomic(clnt.FsLib, path, 0777, cfg); err != nil {
+	if err := atomic.PutFileJsonAtomic(clnt.FsLib, path, 0777, cfg); err != nil {
 		debug.PrintStack()
 		log.Fatalf("Error MakeFileJsonAtomic in ConfigClnt.WriteConfig: %v", err)
 	}

@@ -19,6 +19,10 @@ func (fl *FsLib) SetChunkSz(sz np.Tsize) {
 	fl.chunkSz = sz
 }
 
+func (fl *FsLib) GetChunkSz() np.Tsize {
+	return fl.chunkSz
+}
+
 func NamedAddr() string {
 	named := os.Getenv("NAMED")
 	if named == "" {

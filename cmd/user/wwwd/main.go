@@ -64,7 +64,7 @@ func MakeWwwd(tree string) *Wwwd {
 
 	log.Printf("%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
 	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
-	if err := www.MakeFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
+	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
 

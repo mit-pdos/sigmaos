@@ -155,12 +155,12 @@ func TestSymlinkFile(t *testing.T) {
 	dn := ts.s3Name(t)
 	fn := dn + "/b.txt"
 
-	_, err := ts.ReadFile(fn)
-	assert.Nil(t, err, "ReadFile")
+	_, err := ts.GetFile(fn)
+	assert.Nil(t, err, "GetFile")
 
 	fn = dn + "//b.txt"
-	_, err = ts.ReadFile(fn)
-	assert.Nil(t, err, "ReadFile")
+	_, err = ts.GetFile(fn)
+	assert.Nil(t, err, "GetFile")
 
 	ts.Shutdown()
 }
@@ -170,8 +170,8 @@ func TestSymlinkDir(t *testing.T) {
 
 	dn := ts.s3Name(t)
 
-	b, err := ts.ReadFile(dn)
-	assert.Nil(t, err, "ReadFile")
+	b, err := ts.GetFile(dn)
+	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
 	dirents, err := ts.ReadDir(dn + "/")

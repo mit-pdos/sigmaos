@@ -17,7 +17,7 @@ type Tstate struct {
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.t = t
-	ts.System = kernel.MakeSystemAll("db_test", "..")
+	ts.System = kernel.MakeSystemAll("db_test", "..", 0)
 	return ts
 }
 
@@ -25,12 +25,12 @@ func TestQuery(t *testing.T) {
 	ts := makeTstate(t)
 
 	q := []byte("select * from book where author='Homer';")
-	b, err := ts.ReadFile(DBD + "clone")
-	assert.Nil(t, err, "ReadFile")
+	b, err := ts.GetFile(DBD + "clone")
+	assert.Nil(t, err, "GetFile")
 	sid := string(b)
-	err = ts.WriteFile(DBD+sid+"/query", q)
+	_, err = ts.SetFile(DBD+sid+"/query", q, 0)
 	assert.Nil(t, err, "WriteFile")
-	b, err = ts.ReadFile(DBD + sid + "/data")
+	b, err = ts.GetFile(DBD + sid + "/data")
 	assert.Nil(t, err, "Read data")
 
 	var books []Book

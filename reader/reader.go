@@ -1,8 +1,10 @@
 package reader
 
 import (
+	"encoding/json"
 	"io"
 
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -60,4 +62,30 @@ func MakeReader(fl *fslib.FsLib, path string) (*Reader, error) {
 		return nil, err
 	}
 	return &Reader{fl, fd, make([]byte, 0), false}, nil
+}
+
+func MakeReaderWatch(fl *fslib.FsLib, path string, f fsclnt.Watch) (*Reader, error) {
+	fd, err := fl.OpenWatch(path, np.OREAD, f)
+	if err != nil {
+		return nil, err
+	}
+	return &Reader{fl, fd, make([]byte, 0), false}, nil
+}
+
+func GetFileWatch(fl *fslib.FsLib, path string, f fsclnt.Watch) ([]byte, error) {
+	rdr, err := MakeReaderWatch(fl, path, f)
+	if err != nil {
+		return nil, err
+	}
+	defer rdr.Close()
+	b, err := rdr.fl.Read(rdr.fd, np.MAXGETSET)
+	return b, err
+}
+
+func GetFileJsonWatch(fl *fslib.FsLib, name string, i interface{}, f fsclnt.Watch) error {
+	b, err := GetFileWatch(fl, name, f)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, i)
 }

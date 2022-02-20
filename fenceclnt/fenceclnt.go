@@ -8,6 +8,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/reader"
 )
 
 //
@@ -209,7 +210,7 @@ func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
 	ch := make(chan bool)
 	for {
 		// log.Printf("%v: file watch %v\n", proc.GetName(), fc.fenceName)
-		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
+		b, err := reader.GetFileWatch(fc.FsLib, fc.fenceName, func(string, error) {
 			ch <- true
 		})
 		if err != nil && np.IsErrNotfound(err) {

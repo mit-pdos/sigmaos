@@ -6,6 +6,7 @@ import (
 
 	"ulambda/fsclnt"
 	"ulambda/fslib"
+	"ulambda/reader"
 )
 
 type FlwsMap struct {
@@ -50,7 +51,7 @@ func (fw *FlwsMap) setStatusWatches(dir string, f fsclnt.Watch) {
 		fn := dir + flw
 		// set watch for existence of fn, which indicates fn
 		// has prepared/committed
-		_, err := fw.ReadFileWatch(fn, f)
+		_, err := reader.GetFileWatch(fw.FsLib, fn, f)
 		if err == nil {
 			log.Fatalf("COORD: set status watch failed %v", err)
 		}

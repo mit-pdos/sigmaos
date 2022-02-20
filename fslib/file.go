@@ -4,39 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ulambda/fsclnt"
 	np "ulambda/ninep"
 )
 
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
 	return fl.FsClient.ReadSeqNo()
-}
-
-func (fl *FsLib) readFile(fname string, m np.Tmode, f fsclnt.Watch) ([]byte, error) {
-	fd, err := fl.OpenWatch(fname, np.OREAD|m, f)
-	if err != nil {
-		return nil, err
-	}
-	c := []byte{}
-	for {
-		b, err := fl.Read(fd, fl.chunkSz)
-		if err != nil {
-			return nil, err
-		}
-		if len(b) == 0 {
-			break
-		}
-		c = append(c, b...)
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
-func (fl *FsLib) ReadFileWatch(fname string, f fsclnt.Watch) ([]byte, error) {
-	return fl.readFile(fname, 0x0, f)
 }
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
@@ -95,14 +67,6 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {
 	b, err := fl.GetFile(name)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, i)
-}
-
-func (fl *FsLib) ReadFileJsonWatch(name string, i interface{}, f fsclnt.Watch) error {
-	b, err := fl.ReadFileWatch(name, f)
 	if err != nil {
 		return err
 	}

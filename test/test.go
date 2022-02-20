@@ -43,3 +43,11 @@ func MakeTstateAll(t *testing.T) *Tstate {
 	ts.startReplicas()
 	return ts
 }
+
+func MakeTstateAllBin(t *testing.T, bin string) *Tstate {
+	ts := &Tstate{}
+	ts.T = t
+	ts.System = kernel.MakeSystemAll("test", bin, 0)
+	ts.startReplicas()
+	return ts
+}

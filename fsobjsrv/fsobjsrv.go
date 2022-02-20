@@ -546,9 +546,12 @@ func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, resolve b
 		return nil, nil, nil, err
 	}
 	fos.stats.Path(fname)
-	_, r := lo.Open(f.Ctx(), mode)
-	if r != nil {
+	no, err := lo.Open(f.Ctx(), mode)
+	if err != nil {
 		return nil, nil, nil, err
+	}
+	if no != nil {
+		lo = no
 	}
 	i, err := fs.Obj2File(lo, fname)
 	if err != nil {

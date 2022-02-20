@@ -41,7 +41,11 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 		return sts[i].Name < sts[j].Name
 	})
 	db.DLPrintf("UXD", "%v: uxReadDir %v\n", d, sts)
-	return sts[cursor:], nil
+	if cursor > len(sts) {
+		return nil, nil
+	} else {
+		return sts[cursor:], nil
+	}
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {

@@ -159,7 +159,11 @@ func (dir *DirImpl) lsL(cursor int) []*np.Stat {
 	sort.SliceStable(entries, func(i, j int) bool {
 		return entries[i].Name < entries[j].Name
 	})
-	return entries[cursor:]
+	if cursor > len(entries) {
+		return nil
+	} else {
+		return entries[cursor:]
+	}
 }
 
 func nonemptydir(inode fs.FsObj) bool {

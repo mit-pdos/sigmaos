@@ -127,7 +127,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		log.Fatalf("FATAL Read: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL Read: obj %v type %T isn't Dir or File\n", o, o)
 		return nil
 	}
 }

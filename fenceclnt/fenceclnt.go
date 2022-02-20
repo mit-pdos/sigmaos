@@ -178,18 +178,18 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 //
 // XXX cleanup on failure XXX create and write atomic
 func (fc *FenceClnt) AcquireFenceW(b []byte) error {
-	fd, err := fc.Create(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
+	wrt, err := fc.CreateWriter(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
 		log.Printf("%v: Create %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
 
-	_, err = fc.Write(fd, b)
+	_, err = wrt.Write(b)
 	if err != nil {
 		log.Printf("%v: Write %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
-	fc.Close(fd)
+	wrt.Close()
 	return fc.registerFence(np.OWRITE)
 }
 

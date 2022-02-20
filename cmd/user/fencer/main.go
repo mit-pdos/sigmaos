@@ -76,7 +76,7 @@ func main() {
 
 		// open A and then maybe partition from named
 
-		fd, err := fsl.Open(A, np.OREAD|np.OWRITE)
+		wrt, err := fsl.OpenWriter(A, np.OREAD|np.OWRITE)
 		if err != nil {
 			log.Fatalf("FATAL %v getfile %v failed %v\n", i, A, err)
 		}
@@ -107,7 +107,7 @@ func main() {
 			pclnt.Exited(proc.GetPid(), proc.MakeStatusErr("Invariant violated", nil))
 		}
 
-		_, err = fsl.Write(fd, []byte(strconv.Itoa(n+1)))
+		_, err = wrt.Write([]byte(strconv.Itoa(n + 1)))
 		if err != nil {
 			// most likely write failed with stale error, but
 			// we cannot talk to named anymore to report that,
@@ -116,7 +116,7 @@ func main() {
 		}
 
 		// the write may succeed because there is no new fence holder just yet
-		fsl.Close(fd)
+		wrt.Close()
 
 		if partitioned {
 			err := l.ReleaseFence()

@@ -14,10 +14,10 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/groupmgr"
-	"ulambda/kernel"
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/test"
 )
 
 const (
@@ -61,29 +61,14 @@ func Compare(fsl *fslib.FsLib) {
 }
 
 type Tstate struct {
-	*kernel.System
-	replicas    []*kernel.System
-	t           *testing.T
+	*test.Tstate
 	nreducetask int
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
 }
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("mr-wc-test", "..", 0)
+	ts.Tstate = test.MakeTstateAll(t)
 	ts.nreducetask = nreducetask
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
 
 	mr.InitCoordFS(ts.System.FsLib, nreducetask)
 

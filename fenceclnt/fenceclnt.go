@@ -206,22 +206,12 @@ func (fc *FenceClnt) OpenFenceFrom(from string) error {
 // Acquire a read fence, which may block until a writer has created
 // the file.  Tell servers to fence our operations.
 func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
-	ch := make(chan bool)
-	for {
-		// log.Printf("%v: file watch %v\n", proc.GetName(), fc.fenceName)
-		b, err := fc.GetFileWatch(fc.fenceName, func(string, error) {
-			ch <- true
-		})
-		if err != nil && np.IsErrNotfound(err) {
-			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
-			<-ch
-		} else if err != nil {
-			return nil, err
-		} else {
-			// log.Printf("%v: file watch return %v\n", proc.GetName(), fc.fenceName)
-			return b, fc.registerFence(np.OREAD)
-		}
+	b, err := fc.GetFileWatch(fc.fenceName)
+	if err != nil {
+		return nil, err
 	}
+	// log.Printf("%v: file watch return %v\n", proc.GetName(), fc.fenceName)
+	return b, fc.registerFence(np.OREAD)
 }
 
 // Release fence, which deregisters it from as many servers as

@@ -72,7 +72,7 @@ func (p *Participant) watchTwopcPrep(path string, err error) {
 
 func (p *Participant) readTwopcWatch(conffile string, f fsclnt.Watch) (*Twopc, error) {
 	twopc := Twopc{}
-	err := p.GetFileJsonWatch(conffile, &twopc, f)
+	err := p.GetFileJsonWatch(conffile, &twopc)
 	return &twopc, err
 }
 

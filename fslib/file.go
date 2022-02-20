@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ulambda/fsclnt"
 	np "ulambda/ninep"
 	"ulambda/reader"
 	"ulambda/writer"
@@ -68,16 +67,29 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	return reader.MakeReader(fl.FsClient, fd, fl.chunkSz)
 }
 
-func (fl *FsLib) OpenReaderWatch(path string, f fsclnt.Watch) (*reader.Reader, error) {
-	fd, err := fl.OpenWatch(path, np.OREAD, f)
-	if err != nil {
-		return nil, err
+func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
+	ch := make(chan bool)
+	fd := -1
+	for {
+		fd1, err := fl.OpenWatch(path, np.OREAD, func(string, error) {
+			ch <- true
+		})
+
+		if err != nil && np.IsErrNotfound(err) {
+			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
+			<-ch
+		} else if err != nil {
+			return nil, err
+		} else { // success; file is opened
+			fd = fd1
+			break
+		}
 	}
 	return reader.MakeReader(fl.FsClient, fd, fl.chunkSz)
 }
 
-func (fl *FsLib) GetFileWatch(path string, f fsclnt.Watch) ([]byte, error) {
-	rdr, err := fl.OpenReaderWatch(path, f)
+func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
+	rdr, err := fl.OpenReaderWatch(path)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +98,8 @@ func (fl *FsLib) GetFileWatch(path string, f fsclnt.Watch) ([]byte, error) {
 	return b, err
 }
 
-func (fl *FsLib) GetFileJsonWatch(name string, i interface{}, f fsclnt.Watch) error {
-	b, err := fl.GetFileWatch(name, f)
+func (fl *FsLib) GetFileJsonWatch(name string, i interface{}) error {
+	b, err := fl.GetFileWatch(name)
 	if err != nil {
 		return err
 	}

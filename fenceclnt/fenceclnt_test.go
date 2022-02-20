@@ -12,8 +12,8 @@ import (
 
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/test"
 )
 
 //
@@ -26,34 +26,8 @@ const (
 	FENCENAME = "name/test-fence"
 )
 
-type Tstate struct {
-	t *testing.T
-	*kernel.System
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemNamed("fenceclnt_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	ts.Mkdir(FENCE_DIR, 0777)
-	return ts
-}
-
 func TestFence1(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	N := 20
 	sum := 0
@@ -67,12 +41,12 @@ func TestFence1(t *testing.T) {
 			me := false
 			for !me {
 				err := fence.AcquireFenceW([]byte{})
-				assert.Nil(ts.t, err, "AcquireFenceW")
+				assert.Nil(ts.T, err, "AcquireFenceW")
 				if current == i {
 					me = true
 				}
 				err = fence.ReleaseFence()
-				assert.Nil(ts.t, err, "ReleaseFence")
+				assert.Nil(ts.T, err, "ReleaseFence")
 				if me {
 					current += 1
 					done <- i
@@ -84,14 +58,14 @@ func TestFence1(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		next := <-done
-		assert.Equal(ts.t, i, next, "Next (%v) not equal to expected (%v)", next, i)
+		assert.Equal(ts.T, i, next, "Next (%v) not equal to expected (%v)", next, i)
 	}
 
 	ts.Shutdown()
 }
 
 func TestFence2(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	N := 20
 
@@ -100,13 +74,13 @@ func TestFence2(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		err := fence1.AcquireFenceW([]byte{})
-		assert.Nil(ts.t, err, "AcquireFenceW")
+		assert.Nil(ts.T, err, "AcquireFenceW")
 		err = fence1.ReleaseFence()
-		assert.Nil(ts.t, err, "ReleaseFence")
+		assert.Nil(ts.T, err, "ReleaseFence")
 		err = fence2.AcquireFenceW([]byte{})
-		assert.Nil(ts.t, err, "AcquireFenceW")
+		assert.Nil(ts.T, err, "AcquireFenceW")
 		err = fence2.ReleaseFence()
-		assert.Nil(ts.t, err, "ReleaseFence")
+		assert.Nil(ts.T, err, "ReleaseFence")
 	}
 
 	ts.Shutdown()
@@ -114,7 +88,7 @@ func TestFence2(t *testing.T) {
 
 // n threads help to increase cnt to N
 func TestFence3(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	N := 3000
 	n_threads := 20
@@ -130,22 +104,22 @@ func TestFence3(t *testing.T) {
 			defer done.Done()
 			for {
 				err := fence.AcquireFenceW([]byte{})
-				assert.Nil(ts.t, err, "AcquireFence")
+				assert.Nil(ts.T, err, "AcquireFence")
 				if *cnt < *N {
 					*cnt += 1
 				} else {
 					err = fence.ReleaseFence()
-					assert.Nil(ts.t, err, "ReleaseFence")
+					assert.Nil(ts.T, err, "ReleaseFence")
 					break
 				}
 				err = fence.ReleaseFence()
-				assert.Nil(ts.t, err, "ReleaseFence")
+				assert.Nil(ts.T, err, "ReleaseFence")
 			}
 		}(&done, fence, &N, &cnt)
 	}
 
 	done.Wait()
-	assert.Equal(ts.t, N, cnt, "Count doesn't match up")
+	assert.Equal(ts.T, N, cnt, "Count doesn't match up")
 
 	ts.Shutdown()
 }
@@ -153,7 +127,7 @@ func TestFence3(t *testing.T) {
 // Test if an exit of another session doesn't remove ephemeral files
 // of another session.
 func TestFence4(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
 	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
@@ -161,18 +135,18 @@ func TestFence4(t *testing.T) {
 	fence1 := fenceclnt.MakeFenceClnt(fsl1, FENCENAME, 0, []string{np.NAMED})
 
 	// Establish a connection
-	_, err := fsl2.ReadDir(FENCE_DIR)
-	assert.Nil(ts.t, err, "ReadDir")
+	err := fsl2.Mkdir(FENCE_DIR, 07)
+	assert.Nil(ts.T, err, "ReadDir")
 
 	err = fence1.AcquireFenceW([]byte{})
-	assert.Nil(ts.t, err, "AcquireFenceW")
+	assert.Nil(ts.T, err, "AcquireFenceW")
 
 	fsl2.Exit()
 
 	time.Sleep(2 * time.Second)
 
 	err = fence1.ReleaseFence()
-	assert.Nil(ts.t, err, "ReleaseFence")
+	assert.Nil(ts.T, err, "ReleaseFence")
 	ts.Shutdown()
 }
 
@@ -244,7 +218,7 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 func TestSetRenameGet(t *testing.T) {
 	const N = 100
 
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/f"
 	fn1 := "name/f1"
@@ -325,13 +299,13 @@ func primary(t *testing.T, ch chan bool, i int) {
 }
 
 func TestCrashPrimary(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	N := 3
 
 	ch := make(chan bool)
 
 	for i := 0; i < N; i++ {
-		go primary(ts.t, ch, i)
+		go primary(ts.T, ch, i)
 	}
 
 	for i := 0; i < N; i++ {
@@ -342,31 +316,31 @@ func TestCrashPrimary(t *testing.T) {
 }
 
 func TestRemoveFence(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
 
 	err := fence.AcquireFenceW([]byte{})
-	assert.Nil(ts.t, err, "AcquireFenceW")
+	assert.Nil(ts.T, err, "AcquireFenceW")
 
 	f, err := fence.Fence()
-	assert.Nil(ts.t, err, "Fence")
+	assert.Nil(ts.T, err, "Fence")
 
 	err = fence.ReleaseFence()
-	assert.Nil(ts.t, err, "ReleaseFence")
+	assert.Nil(ts.T, err, "ReleaseFence")
 
 	err = fence.RemoveFence()
-	assert.Nil(ts.t, err, "RmFence")
+	assert.Nil(ts.T, err, "RmFence")
 
 	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
 
 	err = fence1.AcquireFenceW([]byte{})
-	assert.Nil(ts.t, err, "AcquireFenceW")
+	assert.Nil(ts.T, err, "AcquireFenceW")
 
 	g, err := fence1.Fence()
-	assert.Nil(ts.t, err, "Fence")
+	assert.Nil(ts.T, err, "Fence")
 
-	assert.Equal(ts.t, f.Seqno, g.Seqno, "AcquireFenceW")
+	assert.Equal(ts.T, f.Seqno, g.Seqno, "AcquireFenceW")
 
 	ts.Shutdown()
 }

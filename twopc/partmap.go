@@ -45,12 +45,13 @@ func (fw *FlwsMap) len() int {
 	return len(fw.flws)
 }
 
+// XXX maybe should be OpenWatch(fn, f)?
 func (fw *FlwsMap) setStatusWatches(dir string, f fsclnt.Watch) {
 	for flw, _ := range fw.flws {
 		fn := dir + flw
 		// set watch for existence of fn, which indicates fn
 		// has prepared/committed
-		_, err := fw.GetFileWatch(fn, f)
+		_, err := fw.GetFileWatch(fn)
 		if err == nil {
 			log.Fatalf("COORD: set status watch failed %v", err)
 		}

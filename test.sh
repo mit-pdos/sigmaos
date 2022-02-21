@@ -5,6 +5,12 @@ export NAMED=:1111
 go clean -testcache
 
 #
+# test some support package
+#
+
+go test $1 ulambda/linuxsched
+
+#
 # tests without servers
 #
 go test $1 ulambda/ninep

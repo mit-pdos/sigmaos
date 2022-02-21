@@ -153,7 +153,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, crashcoord)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

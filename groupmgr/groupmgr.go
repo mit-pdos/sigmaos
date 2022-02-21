@@ -60,7 +60,8 @@ func (m *member) run(i int, start chan bool, done chan procret) {
 	done <- procret{i, err, status}
 }
 
-func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, crash int) *GroupMgr {
+// ncrash = number of group members which may crash.
+func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, ncrash, crash int) *GroupMgr {
 	gm := &GroupMgr{}
 	gm.ch = make(chan bool)
 	gm.members = make([]*member, n)

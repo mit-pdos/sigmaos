@@ -33,7 +33,7 @@ func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, 3, "bin/user/kvd", []string{grp}, 0)
+	return groupmgr.Start(fsl, pclnt, 3, "bin/user/kvd", []string{grp}, 2, 0)
 }
 
 func (mo *Monitor) grow() {

@@ -269,7 +269,7 @@ func TestCrash3(t *testing.T) {
 	ts.checkCoord(fws, "crash3")
 	args := []string{"restart"}
 	args = append(args, fws...)
-	gmcoord := groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NCOORD, "bin/user/twopc-coord", args, 0)
+	gmcoord := groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NCOORD, "bin/user/twopc-coord", args, NCOORD, 0)
 
 	time.Sleep(100 * time.Millisecond)
 

@@ -102,7 +102,7 @@ func RunMember(grp string) {
 		ch <- true
 	}()
 
-	g.primFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	g.primFence.AcquireFenceW(fslib.MakeTarget([]string{mfs.MyAddr()}))
 
 	log.Printf("%v: primary %v\n", proc.GetProgram(), grp)
 

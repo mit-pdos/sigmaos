@@ -109,7 +109,7 @@ func RunBalancer(crashhelper string, auto string) {
 		ch <- true
 	}()
 
-	error = bl.balFclnt.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	error = bl.balFclnt.AcquireFenceW(fslib.MakeTarget([]string{mfs.MyAddr()}))
 	if error != nil {
 		log.Fatalf("FATAL %v: AcquireFenceW %v\n", proc.GetName(), error)
 	}

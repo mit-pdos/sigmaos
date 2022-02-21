@@ -695,6 +695,7 @@ func TestPipeSimple(t *testing.T) {
 	err := ts.MakePipe("name/pipe", 0777)
 	assert.Nil(ts.t, err, "MakePipe")
 
+	done := make(chan bool)
 	go func() {
 		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
 		fd, err := fsl.Open("name/pipe", np.OREAD)
@@ -704,6 +705,7 @@ func TestPipeSimple(t *testing.T) {
 		assert.Equal(ts.t, "hello", string(b))
 		err = fsl.Close(fd)
 		assert.Nil(ts.t, err, "Close")
+		done <- true
 	}()
 	fd, err := ts.Open("name/pipe", np.OWRITE)
 	assert.Nil(ts.t, err, "Open")
@@ -711,6 +713,7 @@ func TestPipeSimple(t *testing.T) {
 	assert.Nil(ts.t, err, "Write")
 	err = ts.Close(fd)
 	assert.Nil(ts.t, err, "Close")
+	<-done
 
 	ts.Shutdown()
 }

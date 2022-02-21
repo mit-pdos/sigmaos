@@ -66,7 +66,7 @@ func (ts *TestState) testRename(t int) {
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)
 		if err != nil {
-			assert.Contains(ts.t, err.Error(), "file not found")
+			assert.True(ts.t, np.IsErrNotfound(err))
 		}
 	}
 }

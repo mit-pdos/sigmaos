@@ -18,7 +18,7 @@ type Consoled struct {
 
 func makeConsoled() *Consoled {
 	cons := &Consoled{}
-	mfs, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
+	mfs, _, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
 	if err != nil {
 		log.Fatalf("MakeSrvFsLib %v\n", err)
 	}

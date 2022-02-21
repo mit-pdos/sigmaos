@@ -60,11 +60,10 @@ func MakeRealmMgr() *RealmMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
+	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
-	m.FsLib = m.MemFs.FsLib
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
 	m.makeCtlFiles()

@@ -19,7 +19,6 @@ func MakeRaftConfig(id int, peerAddrs []string) *RaftConfig {
 	for _, addr := range peerAddrs {
 		rc.peerAddrs = append(rc.peerAddrs, addr)
 	}
-
 	return rc
 }
 

@@ -34,18 +34,16 @@ type ProcdFs struct {
 func (pd *Procd) makeFs() {
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
-	mfs, pclnt, error := fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
-	if error != nil {
-		log.Fatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), error)
+	var err error
+	pd.MemFs, pd.FsLib, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
+	if err != nil {
+		log.Fatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
-	pd.MemFs = mfs
-	pd.FsLib = pd.MemFs.FsLib
-	pd.procclnt = pclnt
 	procclnt.MountPids(pd.FsLib, fslib.Named())
 
 	// Set up ctl file
 	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err != nil {
 		log.Fatalf("FATAL Error MkNod in RunProcd: %v", err)
 	}

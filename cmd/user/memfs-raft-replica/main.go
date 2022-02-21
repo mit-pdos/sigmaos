@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"ulambda/groupmgr"
 	"ulambda/replica"
 	"ulambda/replraft"
 )
@@ -18,7 +17,7 @@ func main() {
 	}
 	args := os.Args[1:]
 
-	id, err := strconv.Atoi(os.Getenv(groupmgr.GROUPIDX))
+	id, err := strconv.Atoi("INVALID")
 	if err != nil {
 		log.Fatalf("id conversion error: %v", err)
 	}

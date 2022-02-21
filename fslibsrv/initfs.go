@@ -86,11 +86,11 @@ func (fs *MemFs) Root() fs.Dir {
 	return fs.root
 }
 
-func MakeMemFs(path string, name string) (*MemFs, *procclnt.ProcClnt, error) {
+func MakeMemFs(path string, name string) (*MemFs, *fslib.FsLib, *procclnt.ProcClnt, error) {
 	fsl := fslib.MakeFsLib(name)
 	pclnt := procclnt.MakeProcClnt(fsl)
 	fs, err := MakeMemFsFsl(path, fsl, pclnt)
-	return fs, pclnt, err
+	return fs, fsl, pclnt, err
 }
 
 func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
@@ -112,23 +112,4 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 		error = fsl.Post(srv.MyAddr(), path)
 	}
 	return fs, error
-}
-
-func StartMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
-	fs, err := MakeMemFsFsl(path, fsl, pclnt)
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		fs.Serve()
-		fs.Done()
-	}()
-	return fs, err
-}
-
-func StartMemFs(path string, name string) (*MemFs, error) {
-	fsl := fslib.MakeFsLib(name)
-	pclnt := procclnt.MakeProcClnt(fsl)
-	return StartMemFsFsl(path, fsl, pclnt)
 }

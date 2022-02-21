@@ -92,12 +92,12 @@ func RunBalancer(crashhelper string, auto string) {
 	bl.setRecovering(true)
 
 	// start server but don't publish its existence
-	mfs, _, error := fslibsrv.MakeMemFs("", "balancer-"+proc.GetPid())
-	if error != nil {
-		log.Fatalf("FATAL StartMemFs %v\n", error)
+	mfs, err := fslibsrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
+	if err != nil {
+		log.Fatalf("FATAL StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, nil)
-	err := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
+	err = dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err != nil {
 		log.Fatalf("FATAL MakeNod clone failed %v\n", err)
 	}
@@ -109,9 +109,9 @@ func RunBalancer(crashhelper string, auto string) {
 		ch <- true
 	}()
 
-	error = bl.balFclnt.AcquireFenceW(fslib.MakeTarget([]string{mfs.MyAddr()}))
-	if error != nil {
-		log.Fatalf("FATAL %v: AcquireFenceW %v\n", proc.GetName(), error)
+	err = bl.balFclnt.AcquireFenceW(fslib.MakeTarget([]string{mfs.MyAddr()}))
+	if err != nil {
+		log.Fatalf("FATAL %v: AcquireFenceW %v\n", proc.GetName(), err)
 	}
 
 	log.Printf("%v: primary\n", proc.GetName())

@@ -24,6 +24,8 @@ import (
 const (
 	GRPDIR       = "name/group/"
 	GRP          = "grp-"
+	GRPPRIM      = "-primary"
+	GRPPEER      = "-peer-fence"
 	GRPCONF      = "-conf"
 	GRPCONFNXT   = "-conf-next"
 	GRPCONFNXTBK = GRPCONFNXT + "#"
@@ -36,7 +38,6 @@ func GrpDir(grp string) string {
 
 func GrpConfPath(grp string) string {
 	return GRPDIR + grp + GRPCONF
-
 }
 
 func grpConfNxt(grp string) string {
@@ -45,7 +46,18 @@ func grpConfNxt(grp string) string {
 
 func grpConfNxtBk(grp string) string {
 	return GRPDIR + grp + GRPCONFNXTBK
+}
 
+func grpSymlink(grp string) string {
+	return GRPDIR + "/" + grp
+}
+
+func grpPrimFPath(grp string) string {
+	return GRPDIR + grp + GRPPRIM
+}
+
+func grpPeerFPath(grp string) string {
+	return GRPDIR + grp + GRPPEER
 }
 
 type Group struct {
@@ -54,6 +66,7 @@ type Group struct {
 	*procclnt.ProcClnt
 	crash        int64
 	primFence    *fenceclnt.FenceClnt
+	peerFence    *fenceclnt.FenceClnt
 	confFclnt    *fenceclnt.FenceClnt
 	conf         *GrpConf
 	isRecovering bool
@@ -84,13 +97,21 @@ func RunMember(grp string) {
 	g.Mkdir(GRPDIR, 07)
 
 	srvs := []string{GrpDir(grp)}
-	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK, srvs)
+	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPrimFPath(grp), 0, srvs)
+	g.peerFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPeerFPath(grp), 0, srvs)
 	g.confFclnt = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0, srvs)
 
 	g.setRecovering(true)
 
+	// Under fence: get peers, start server and add self to list of peers, update list of peers.
+	g.peerFence.AcquireFenceW([]byte{})
+	//	peerAddrs, replAddrs := g.getPeerAddrs(grp)
+	//	replAddrs = append(replAddrs, ":0")
+	//	g.writeGroupSymlink(peers)
+	g.peerFence.ReleaseFence()
+
 	// start server but don't publish its existence
-	mfs, _, err := fslibsrv.MakeMemFs("", "kv-"+proc.GetPid())
+	mfs, err := fslibsrv.MakeMemFsFsl("", g.FsLib, g.ProcClnt)
 	if err != nil {
 		log.Fatalf("StartMemFs %v\n", err)
 	}
@@ -102,7 +123,7 @@ func RunMember(grp string) {
 		ch <- true
 	}()
 
-	g.primFence.AcquireFenceW(fslib.MakeTarget([]string{mfs.MyAddr()}))
+	g.primFence.AcquireFenceW([]byte(mfs.MyAddr()))
 
 	log.Printf("%v: primary %v\n", proc.GetProgram(), grp)
 

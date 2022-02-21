@@ -26,11 +26,7 @@ func (fsl *FsLib) PostServiceUnion(srvaddr, srvpath, server string) error {
 	p := srvpath + "/" + server
 	dir, err := fsl.IsDir(srvpath)
 	if err != nil {
-		err := fsl.Mkdir(srvpath, 0777)
-		if err != nil {
-			return err
-		}
-		dir = true
+		return err
 	}
 	if !dir {
 		return fmt.Errorf("Not a directory")

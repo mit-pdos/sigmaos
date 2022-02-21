@@ -66,7 +66,7 @@ func makeStatDev(root fs.Dir, srv *fssrv.FsServer) *np.Err {
 	return dir.MkNod(ctx.MkCtx("", 0, nil), root, "statsd", srv.GetStats())
 }
 
-func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, *np.Err) {
+func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, *np.Err) {
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
 	srv, fsl, pclnt, err := MakeReplServer(root, addr, path, name, conf)
 	if err != nil {

@@ -50,7 +50,7 @@ func (m *ReplicaMonitor) updateConfig() {
 		new += r.Name + "\n"
 	}
 	m.Remove(m.configPath)
-	err = atomic.MakeFileAtomic(m.FsLib, m.configPath, 0777, []byte(strings.TrimSpace(new)))
+	err = atomic.PutFileAtomic(m.FsLib, m.configPath, 0777, []byte(strings.TrimSpace(new)))
 	if err != nil {
 		log.Fatalf("Error writing new config file: %v", err)
 	}

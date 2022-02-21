@@ -147,7 +147,7 @@ func (toh *ThunkOutputHandler) getNewThunks(thunkOutput []string, outputFiles ma
 
 func (toh *ThunkOutputHandler) readThunkOutputs() []string {
 	outputThunksPath := ggRemoteBlobs(toh.thunkHash + THUNK_OUTPUTS_SUFFIX)
-	contents, err := toh.ReadFile(outputThunksPath)
+	contents, err := toh.GetFile(outputThunksPath)
 	if err != nil {
 		log.Fatalf("Error reading thunk outputs [%v]: %v\n", outputThunksPath, err)
 	}

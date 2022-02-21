@@ -52,7 +52,7 @@ func (cf *Config) Present(n string) bool {
 
 func readConfig(fsl *fslib.FsLib, conffile string) (*Config, error) {
 	conf := Config{}
-	err := fsl.ReadFileJson(conffile, &conf)
+	err := fsl.GetFileJson(conffile, &conf)
 	if err != nil {
 		return nil, err
 	}

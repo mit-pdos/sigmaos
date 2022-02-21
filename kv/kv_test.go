@@ -12,9 +12,9 @@ import (
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
-	"ulambda/kernel"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/test"
 )
 
 const (
@@ -67,31 +67,16 @@ func TestRegex(t *testing.T) {
 }
 
 type Tstate struct {
-	*kernel.System
-	t        *testing.T
-	clrk     *KvClerk
-	mfsgrps  []*groupmgr.GroupMgr
-	gmbal    *groupmgr.GroupMgr
-	clrks    []string
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
+	*test.Tstate
+	clrk    *KvClerk
+	mfsgrps []*groupmgr.GroupMgr
+	gmbal   *groupmgr.GroupMgr
+	clrks   []string
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("kv_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
+	ts.Tstate = test.MakeTstateAll(t)
 	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, crash)
 
 	clrk := ts.setup(nclerk)
@@ -103,14 +88,14 @@ func (ts *Tstate) setup(nclerk int) *KvClerk {
 	gn := group.GRP + "0"
 	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn)
 	err := ts.balancerOp("add", gn)
-	assert.Nil(ts.t, err, "BalancerOp")
+	assert.Nil(ts.T, err, "BalancerOp")
 	ts.mfsgrps = append(ts.mfsgrps, grp)
 
 	// Create keys
 	clrk := MakeClerk("kv_test", fslib.Named())
 	for i := uint64(0); i < NKEYS; i++ {
 		err := clrk.Put(Key(i), []byte{})
-		assert.Nil(ts.t, err, "Put")
+		assert.Nil(ts.T, err, "Put")
 	}
 	return clrk
 }
@@ -123,7 +108,7 @@ func (ts *Tstate) done() {
 
 func (ts *Tstate) stopFS(fs string) {
 	err := ts.Evict(fs)
-	assert.Nil(ts.t, err, "stopFS")
+	assert.Nil(ts.T, err, "stopFS")
 	ts.WaitExit(fs)
 }
 
@@ -138,11 +123,11 @@ func (ts *Tstate) stopClerks() {
 	for _, ck := range ts.clrks {
 		log.Printf("evict clerk %v\n", ck)
 		err := ts.Evict(ck)
-		assert.Nil(ts.t, err, "stopClerks")
+		assert.Nil(ts.T, err, "stopClerks")
 		status, err := ts.WaitExit(ck)
 		log.Printf("%v: evict clerk waitexit %v status %v err %v\n", proc.GetName(), ck, status, err)
-		assert.Nil(ts.t, err, "WaitExit")
-		assert.True(ts.t, status.IsStatusOK(), "Exit status: %v", status)
+		assert.Nil(ts.T, err, "WaitExit")
+		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
 	}
 }
 
@@ -150,7 +135,7 @@ func (ts *Tstate) startClerk() string {
 	p := proc.MakeProc("bin/user/kv-clerk", []string{""})
 	ts.Spawn(p)
 	err := ts.WaitStart(p.Pid)
-	assert.Nil(ts.t, err, "WaitStart")
+	assert.Nil(ts.T, err, "WaitStart")
 	return p.Pid
 }
 
@@ -176,17 +161,17 @@ func TestGetPutSet(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 1, 0, "0")
 
 	_, err := clrk.Get(Key(NKEYS+1), 0)
-	assert.NotEqual(ts.t, err, nil, "Get")
+	assert.NotEqual(ts.T, err, nil, "Get")
 
 	err = clrk.Set(Key(NKEYS+1), []byte(Key(NKEYS+1)), 0)
-	assert.NotEqual(ts.t, err, nil, "Set")
+	assert.NotEqual(ts.T, err, nil, "Set")
 
 	err = clrk.Set(Key(0), []byte(Key(0)), 0)
-	assert.Nil(ts.t, err, "Set")
+	assert.Nil(ts.T, err, "Set")
 
 	for i := uint64(0); i < NKEYS; i++ {
 		_, err := clrk.Get(Key(i), 0)
-		assert.Nil(ts.t, err, "Get "+Key(i))
+		assert.Nil(ts.T, err, "Get "+Key(i))
 	}
 
 	ts.done()
@@ -207,7 +192,7 @@ func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
 		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp)
 		ts.mfsgrps = append(ts.mfsgrps, gm)
 		err := ts.balancerOp("add", grp)
-		assert.Nil(ts.t, err, "BalancerOp")
+		assert.Nil(ts.T, err, "BalancerOp")
 		// do some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
@@ -215,7 +200,7 @@ func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
 	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
 		err := ts.balancerOp("del", grp)
-		assert.Nil(ts.t, err, "BalancerOp")
+		assert.Nil(ts.T, err, "BalancerOp")
 		ts.mfsgrps[len(ts.mfsgrps)-1].Stop()
 		ts.mfsgrps = ts.mfsgrps[0 : len(ts.mfsgrps)-1]
 		// do some puts/gets

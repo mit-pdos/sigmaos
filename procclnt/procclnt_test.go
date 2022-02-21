@@ -14,59 +14,25 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/groupmgr"
-	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/procclnt"
+	"ulambda/test"
 )
 
 const (
 	SLEEP_MSECS = 2000
 )
 
-type Tstate struct {
-	*kernel.System
-	t        *testing.T
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
 const program = "procclnt_test"
 
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll(program, "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
-func (ts *Tstate) procd(t *testing.T) string {
+func procd(ts *test.Tstate) string {
 	st, err := ts.ReadDir("name/procd")
-	assert.Nil(t, err, "Readdir")
+	assert.Nil(ts.T, err, "Readdir")
 	return st[0].Name
 }
 
-func makeTstateNoBoot(t *testing.T, pid string) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.FsLib = fslib.MakeFsLibAddr(program, fslib.Named())
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, program, fslib.Named())
-	return ts
-}
-
-func spawnSpinner(t *testing.T, ts *Tstate) string {
+func spawnSpinner(t *testing.T, ts *test.Tstate) string {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
 	err := ts.Spawn(a)
@@ -74,17 +40,17 @@ func spawnSpinner(t *testing.T, ts *Tstate) string {
 	return pid
 }
 
-func spawnSleeperWithPid(t *testing.T, ts *Tstate, pid string) {
+func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid string) {
 	spawnSleeperNcore(t, ts, pid, 0, SLEEP_MSECS)
 }
 
-func spawnSleeper(t *testing.T, ts *Tstate) string {
+func spawnSleeper(t *testing.T, ts *test.Tstate) string {
 	pid := proc.GenPid()
 	spawnSleeperWithPid(t, ts, pid)
 	return pid
 }
 
-func spawnSleeperNcore(t *testing.T, ts *Tstate, pid string, ncore proc.Tcore, msecs int) {
+func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid string, ncore proc.Tcore, msecs int) {
 	a := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/out_" + pid})
 	a.Ncore = ncore
 	err := ts.Spawn(a)
@@ -92,30 +58,30 @@ func spawnSleeperNcore(t *testing.T, ts *Tstate, pid string, ncore proc.Tcore, m
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
-func spawnSpawner(t *testing.T, ts *Tstate, childPid string, msecs int) string {
+func spawnSpawner(t *testing.T, ts *test.Tstate, childPid string, msecs int) string {
 	p := proc.MakeProc("bin/user/spawner", []string{"false", childPid, "bin/user/sleeper", fmt.Sprintf("%dms", msecs), "name/out_" + childPid})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.Pid
 }
 
-func checkSleeperResult(t *testing.T, ts *Tstate, pid string) bool {
+func checkSleeperResult(t *testing.T, ts *test.Tstate, pid string) bool {
 	res := true
-	b, err := ts.ReadFile("name/out_" + pid)
-	res = assert.Nil(t, err, "ReadFile") && res
+	b, err := ts.GetFile("name/out_" + pid)
+	res = assert.Nil(t, err, "GetFile") && res
 	res = assert.Equal(t, string(b), "hello", "Output") && res
 
 	return res
 }
 
-func checkSleeperResultFalse(t *testing.T, ts *Tstate, pid string) {
-	b, err := ts.ReadFile("name/out_" + pid)
-	assert.NotNil(t, err, "ReadFile")
+func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid string) {
+	b, err := ts.GetFile("name/out_" + pid)
+	assert.NotNil(t, err, "GetFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
 func TestWaitExitSimple(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
 
@@ -139,7 +105,7 @@ func TestWaitExitSimple(t *testing.T) {
 }
 
 func TestWaitExitParentRetStat(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
 
@@ -163,7 +129,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 }
 
 func TestWaitExitParentAbandons(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
 
@@ -191,7 +157,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 }
 
 func TestWaitStart(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
 
@@ -204,7 +170,7 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	sts, err := ts.ReadDir(path.Join("name/procd", ts.procd(t), np.PROCD_RUNNING))
+	sts, err := ts.ReadDir(path.Join("name/procd", procd(ts), np.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
 	assert.True(t, fslib.Present(sts, []string{pid}), "pid")
 
@@ -220,7 +186,7 @@ func TestWaitStart(t *testing.T) {
 
 // Should exit immediately
 func TestWaitNonexistentProc(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	ch := make(chan bool)
 
@@ -239,7 +205,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 }
 
 func TestCrashProc(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	a := proc.MakeProc("bin/user/crash", []string{})
 	err := ts.Spawn(a)
@@ -257,7 +223,7 @@ func TestCrashProc(t *testing.T) {
 }
 
 func TestEarlyExit1(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	pid1 := proc.GenPid()
 	a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1})
@@ -275,8 +241,8 @@ func TestEarlyExit1(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// Child should have exited
-	b, err := ts.ReadFile("name/out_" + pid1)
-	assert.Nil(t, err, "ReadFile")
+	b, err := ts.GetFile("name/out_" + pid1)
+	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
@@ -287,7 +253,7 @@ func TestEarlyExit1(t *testing.T) {
 }
 
 func TestEarlyExitN(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 	nProcs := 500
 	var done sync.WaitGroup
 	done.Add(nProcs)
@@ -307,8 +273,8 @@ func TestEarlyExitN(t *testing.T) {
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 			// Child should have exited
-			b, err := ts.ReadFile("name/out_" + pid1)
-			assert.Nil(t, err, "ReadFile")
+			b, err := ts.GetFile("name/out_" + pid1)
+			assert.Nil(t, err, "GetFile")
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
@@ -325,7 +291,7 @@ func TestEarlyExitN(t *testing.T) {
 // Spawn a bunch of procs concurrently, then wait for all of them & check
 // their result
 func TestConcurrentProcs(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	nProcs := 8
 	pids := map[string]int{}
@@ -371,19 +337,19 @@ func TestConcurrentProcs(t *testing.T) {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) evict(pid string) {
+func evict(ts *test.Tstate, pid string) {
 	time.Sleep(SLEEP_MSECS / 2 * time.Millisecond)
 	err := ts.Evict(pid)
-	assert.Nil(ts.t, err, "evict")
+	assert.Nil(ts.T, err, "evict")
 }
 
 func TestEvict(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
 	pid := spawnSleeper(t, ts)
 
-	go ts.evict(pid)
+	go evict(ts, pid)
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
@@ -405,7 +371,7 @@ func testFencer(t *testing.T, part string) {
 		FENCE_DIR = "name/fence"
 	)
 
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 	pids := []string{}
 
 	// XXX use the same dir independent of machine running proc
@@ -414,10 +380,10 @@ func testFencer(t *testing.T, part string) {
 	err := ts.Mkdir(dir, 0777)
 	err = ts.Mkdir(FENCE_DIR, 0777)
 	assert.Nil(t, err, "mkdir error")
-	err = ts.MakeFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = ts.PutFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
-	err = ts.MakeFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = ts.PutFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
 
 	for i := 0; i < N; i++ {
@@ -444,7 +410,7 @@ func TestFencerWithPart(t *testing.T) {
 }
 
 func TestReserveCores(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	linuxsched.ScanTopology()
 
@@ -474,7 +440,7 @@ func TestReserveCores(t *testing.T) {
 }
 
 func TestWorkStealing(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	ts.BootProcd()
 
@@ -506,7 +472,7 @@ func TestWorkStealing(t *testing.T) {
 }
 
 func TestEvictN(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	linuxsched.ScanTopology()
 	N := int(linuxsched.NCores)
@@ -515,7 +481,7 @@ func TestEvictN(t *testing.T) {
 	for i := 0; i < N; i++ {
 		pid := spawnSpinner(t, ts)
 		pids = append(pids, pid)
-		go ts.evict(pid)
+		go evict(ts, pid)
 	}
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
@@ -528,14 +494,14 @@ func TestEvictN(t *testing.T) {
 	ts.Shutdown()
 }
 
-func getNChildren(ts *Tstate) int {
+func getNChildren(ts *test.Tstate) int {
 	c, err := ts.GetChildren(proc.GetProcDir())
-	assert.Nil(ts.t, err, "getnchildren")
+	assert.Nil(ts.T, err, "getnchildren")
 	return len(c)
 }
 
 func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	N_REPL := 3
 	OUTDIR := "name/spinner-ephs"

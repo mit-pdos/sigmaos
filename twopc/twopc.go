@@ -46,7 +46,7 @@ func makeTwopc(tid int, ps []string) *Twopc {
 
 func readTwopc(fsl *fslib.FsLib, twopcfile string) *Twopc {
 	twopc := Twopc{}
-	err := fsl.ReadFileJson(twopcfile, &twopc)
+	err := fsl.GetFileJson(twopcfile, &twopc)
 	if err != nil {
 		return nil
 	}

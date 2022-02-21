@@ -59,7 +59,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	db.DLPrintf("COORD", "New coord %v", args)
 
-	if err := cd.MakeFile(COORD, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
+	if _, err := cd.PutFile(COORD, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
@@ -122,7 +122,7 @@ func (cd *Coord) rmStatusFiles(dir string) {
 func (cd *Coord) watchStatus(p string, err error) {
 	db.DLPrintf("COORD", "watchStatus %v\n", p)
 	status := TABORT
-	b, err := cd.ReadFile(p)
+	b, err := cd.GetFile(p)
 	if err != nil {
 		db.DLPrintf("COORD", "watchStatus ReadFile %v err %v\n", p, b)
 	}
@@ -140,7 +140,7 @@ func (cd *Coord) watchFlw(p string, err error) {
 func (cd *Coord) prepare(nextFws *FlwsMap) (bool, int) {
 	nextFws.setStatusWatches(TWOPCPREPARED, cd.watchStatus)
 
-	err := atomic.MakeFileJsonAtomic(cd.FsLib, TWOPCPREP, 0777, *cd.twopc)
+	err := atomic.PutFileJsonAtomic(cd.FsLib, TWOPCPREP, 0777, *cd.twopc)
 	if err != nil {
 		db.DLPrintf("COORD", "COORD: MakeFileJsonAtomic %v err %v\n",
 			TWOPCCOMMIT, err)
@@ -182,7 +182,7 @@ func (cd *Coord) commit(fws *FlwsMap, ndone int, ok bool) {
 		db.DLPrintf("COORD", "Abort to %v\n", cd.twopc)
 	}
 
-	if err := cd.WriteFileJson(TWOPCPREP, *cd.twopc); err != nil {
+	if err := cd.SetFileJson(TWOPCPREP, *cd.twopc); err != nil {
 		db.DLPrintf("COORD", "Write %v err %v\n", TWOPCPREP, err)
 		return
 	}

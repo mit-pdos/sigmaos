@@ -12,39 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
-	"ulambda/kernel"
 	"ulambda/named"
 	np "ulambda/ninep"
 	"ulambda/stats"
+	"ulambda/test"
 )
 
-type Tstate struct {
-	t *testing.T
-	*kernel.System
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemNamed("fslibtest", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
 func TestInitFs(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	sts, err := ts.ReadDir("name/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
@@ -52,11 +27,11 @@ func TestInitFs(t *testing.T) {
 }
 
 func TestRemoveSimple(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove(fn)
@@ -69,7 +44,7 @@ func TestRemoveSimple(t *testing.T) {
 }
 
 func TestConnect(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/f"
 	d := []byte("hello")
@@ -95,11 +70,11 @@ func TestConnect(t *testing.T) {
 }
 
 func TestRemoveNonExistent(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove("name/this-file-does-not-exist")
@@ -109,16 +84,16 @@ func TestRemoveNonExistent(t *testing.T) {
 }
 
 func TestRemovePath(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.Mkdir("name/d1", 0777)
 	assert.Equal(t, nil, err)
 	fn := "name/d1/f"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn)
+	d1, err := ts.GetFile(fn)
 	assert.Equal(t, "hello", string(d1))
 
 	err = ts.Remove(fn)
@@ -128,7 +103,7 @@ func TestRemovePath(t *testing.T) {
 }
 
 func TestRename(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	err := ts.Mkdir("name/d1", 0777)
 	assert.Equal(t, nil, err)
 	err = ts.Mkdir("name/d2", 0777)
@@ -137,19 +112,19 @@ func TestRename(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn1)
+	d1, err := ts.GetFile(fn1)
 	assert.Equal(t, "hello", string(d1))
 	ts.Shutdown()
 }
 
 func TestRenameAndRemove(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	err := ts.Mkdir("name/d1", 0777)
 	assert.Equal(t, nil, err)
 	err = ts.Mkdir("name/d2", 0777)
@@ -158,13 +133,13 @@ func TestRenameAndRemove(t *testing.T) {
 	fn := "name/d1/f"
 	fn1 := "name/d2/g"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Rename(fn, fn1)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(fn1)
+	d1, err := ts.GetFile(fn1)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "hello", string(d1))
 
@@ -177,7 +152,7 @@ func TestRenameAndRemove(t *testing.T) {
 }
 
 func TestNonEmpty(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	err := ts.Mkdir("name/d1", 0777)
 	assert.Equal(t, nil, err)
 	err = ts.Mkdir("name/d2", 0777)
@@ -185,7 +160,7 @@ func TestNonEmpty(t *testing.T) {
 
 	fn := "name/d1/f"
 	d := []byte("hello")
-	err = ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.Remove("name/d1")
@@ -198,40 +173,40 @@ func TestNonEmpty(t *testing.T) {
 }
 
 func TestSetAppend(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	d := []byte("1234")
 	fn := "name/f"
 
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 	l, err := ts.SetFile(fn, d, np.Toffset(len(d)))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, np.Tsize(len(d)), l)
-	b, err := ts.ReadFile(fn)
+	b, err := ts.GetFile(fn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, len(d)*2, len(b))
 	ts.Shutdown()
 }
 
 func TestCopy(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	d := []byte("hello")
 	src := "name/f"
 	dst := "name/g"
-	err := ts.MakeFile(src, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(src, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	err = ts.CopyFile(src, dst)
 	assert.Equal(t, nil, err)
 
-	d1, err := ts.ReadFile(dst)
+	d1, err := ts.GetFile(dst)
 	assert.Equal(t, "hello", string(d1))
 
 	ts.Shutdown()
 }
 
 func TestDirSimple(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	dn := "name/d"
 	err := ts.Mkdir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -240,7 +215,7 @@ func TestDirSimple(t *testing.T) {
 	assert.Equal(t, true, b)
 
 	d := []byte("hello")
-	err = ts.MakeFile(dn+"/f", 0777, np.OWRITE, d)
+	_, err = ts.PutFile(dn+"/f", 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	sts, err := ts.ReadDir(dn)
@@ -256,7 +231,7 @@ func TestDirSimple(t *testing.T) {
 }
 
 func TestDirDot(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	dn := "name/dir0"
 	err := ts.Mkdir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -274,7 +249,7 @@ func TestDirDot(t *testing.T) {
 }
 
 func TestPageDir(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	dn := "name/dir/"
 	err := ts.Mkdir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -284,7 +259,7 @@ func TestPageDir(t *testing.T) {
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)
 		names = append(names, name)
-		err := ts.MakeFile(dn+name, 0777, np.OWRITE, []byte(name))
+		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
 	sort.SliceStable(names, func(i, j int) bool {
@@ -301,16 +276,14 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestCounter(t *testing.T) {
+// XXX no versions for now
+func testCounter(t *testing.T) {
 	const N = 10
 
-	ts := makeTstate(t)
-	fd, err := ts.CreateFile("name/cnt", 0777|np.DMTMP, np.OWRITE)
-	assert.Equal(t, nil, err)
+	ts := test.MakeTstate(t)
+
 	b := []byte(strconv.Itoa(0))
-	_, err = ts.Write(fd, b)
-	assert.Equal(t, nil, err)
-	err = ts.Close(fd)
+	_, err := ts.PutFile("name/cnt", 0777|np.DMTMP, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan int)
@@ -374,11 +347,11 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 }
 
 func TestWatchCreate(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/w"
 	ch := make(chan bool)
-	_, err := ts.ReadFileWatch(fn, func(string, error) {
+	_, err := ts.OpenWatch(fn, np.OREAD, func(string, error) {
 		ch <- true
 	})
 	assert.NotEqual(t, nil, err)
@@ -386,7 +359,7 @@ func TestWatchCreate(t *testing.T) {
 		assert.True(t, np.IsErrNotfound(err))
 	}
 
-	err = ts.MakeFile(fn, 0777, np.OWRITE, nil)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -395,10 +368,10 @@ func TestWatchCreate(t *testing.T) {
 }
 
 func TestWatchRemoveSeq(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/w"
-	err := ts.MakeFile(fn, 0777, np.OWRITE, nil)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
@@ -415,7 +388,7 @@ func TestWatchRemoveSeq(t *testing.T) {
 }
 
 func TestWatchDir(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/d1"
 	err := ts.Mkdir(fn, 0777)
@@ -427,7 +400,7 @@ func TestWatchDir(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 
-	err = ts.MakeFile(fn+"/x", 0777, np.OWRITE, nil)
+	_, err = ts.PutFile(fn+"/x", 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
 
 	<-ch
@@ -436,16 +409,16 @@ func TestWatchDir(t *testing.T) {
 }
 
 func TestLock1(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	ch := make(chan int)
 	ts.Mkdir("name/locks", 0777)
 
 	// Lock the file
-	err := ts.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	_, err := ts.PutFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
 	go func() {
-		err := fsl.MakeFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		_, err := fsl.PutFile("name/locks/test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.Nil(t, err, "MakeFile")
 		ch <- 0
 	}()
@@ -465,13 +438,13 @@ func TestLock1(t *testing.T) {
 func TestLockN(t *testing.T) {
 	const N = 20
 
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	ch := make(chan int)
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
-			err := fsl.MakeFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+			_, err := fsl.PutFile("name/lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -489,18 +462,18 @@ func TestLockN(t *testing.T) {
 }
 
 func TestLockAfterConnClose(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	lPath := "name/lock-conn-close-test"
 
 	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
 
-	err := ts.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	_, err := ts.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 1")
 
 	go func() {
 		// Should wait
-		err := fsl1.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		_, err := fsl1.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 		assert.True(t, np.IsErrEOF(err), "Make lock 2")
 	}()
 
@@ -514,7 +487,7 @@ func TestLockAfterConnClose(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// Try to lock again (should succeed)
-	err = ts.MakeFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	_, err = ts.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 	assert.Nil(t, err, "Make lock 3")
 
 	ts.Shutdown()
@@ -525,7 +498,7 @@ func TestLockAfterConnClose(t *testing.T) {
 func TestWatchRemoveConcur(t *testing.T) {
 	const N = 5_000
 
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	dn := "name/d1"
 	err := ts.Mkdir(dn, 0777)
 	assert.Equal(t, nil, err)
@@ -537,7 +510,7 @@ func TestWatchRemoveConcur(t *testing.T) {
 	go func() {
 		fsl := fslib.MakeFsLibAddr("fsl1", fslib.Named())
 		for i := 1; i < N; {
-			err := fsl.MakeFile(fn, 0777, np.OWRITE, nil)
+			_, err := fsl.PutFile(fn, 0777, np.OWRITE, nil)
 			assert.Equal(t, nil, err)
 			err = ts.SetRemoveWatch(fn, func(fn string, r error) {
 				// log.Printf("watch cb %v err %v\n", i, r)
@@ -571,16 +544,16 @@ func TestWatchRemoveConcur(t *testing.T) {
 
 func TestConcurFile(t *testing.T) {
 	const N = 20
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	ch := make(chan int)
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			for j := 0; j < 1000; j++ {
 				fn := "name/f" + strconv.Itoa(i)
 				data := []byte(fn)
-				err := ts.MakeFile(fn, 0777, np.OWRITE, data)
+				_, err := ts.PutFile(fn, 0777, np.OWRITE, data)
 				assert.Equal(t, nil, err)
-				d, err := ts.ReadFile(fn)
+				d, err := ts.GetFile(fn)
 				assert.Equal(t, nil, err)
 				assert.Equal(t, len(data), len(d))
 				err = ts.Remove(fn)
@@ -601,60 +574,60 @@ const (
 	NFILE = 1000
 )
 
-func (ts *Tstate) initfs() {
+func initfs(ts *test.Tstate) {
 	err := ts.Mkdir(TODO, 07000)
-	assert.Nil(ts.t, err, "Create done")
+	assert.Nil(ts.T, err, "Create done")
 	err = ts.Mkdir(DONE, 07000)
-	assert.Nil(ts.t, err, "Create todo")
+	assert.Nil(ts.T, err, "Create todo")
 }
 
 // Keep renaming files in the todo directory until we failed to rename
 // any file
-func (ts *Tstate) testRename(fsl *fslib.FsLib, t string) int {
+func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string) int {
 	ok := true
 	i := 0
 	for ok {
 		ok = false
 		sts, err := fsl.ReadDir(TODO)
-		assert.Nil(ts.t, err, "ReadDir")
+		assert.Nil(ts.T, err, "ReadDir")
 		for _, st := range sts {
 			err = fsl.Rename(TODO+"/"+st.Name, DONE+"/"+st.Name+"."+t)
 			if err == nil {
 				i = i + 1
 				ok = true
 			} else {
-				assert.True(ts.t, np.IsErrNotfound(err))
+				assert.True(ts.T, np.IsErrNotfound(err))
 			}
 		}
 	}
 	return i
 }
 
-func (ts *Tstate) checkFs() {
+func checkFs(ts *test.Tstate) {
 	sts, err := ts.ReadDir(DONE)
-	assert.Nil(ts.t, err, "ReadDir")
-	assert.Equal(ts.t, NFILE, len(sts), "checkFs")
+	assert.Nil(ts.T, err, "ReadDir")
+	assert.Equal(ts.T, NFILE, len(sts), "checkFs")
 	files := make(map[int]bool)
 	for _, st := range sts {
 		n := strings.TrimSuffix(st.Name, filepath.Ext(st.Name))
 		n = strings.TrimPrefix(n, "job")
 		i, err := strconv.Atoi(n)
-		assert.Nil(ts.t, err, "Atoi")
+		assert.Nil(ts.T, err, "Atoi")
 		_, ok := files[i]
-		assert.Equal(ts.t, false, ok, "map")
+		assert.Equal(ts.T, false, ok, "map")
 		files[i] = true
 	}
 	for i := 0; i < NFILE; i++ {
-		assert.Equal(ts.t, true, files[i], "checkFs")
+		assert.Equal(ts.T, true, files[i], "checkFs")
 	}
 }
 
 func TestConcurRename(t *testing.T) {
 	const N = 20
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	cont := make(chan bool)
 	done := make(chan int)
-	ts.initfs()
+	initfs(ts)
 
 	// start N threads trying to rename files in todo dir
 	for i := 0; i < N; i++ {
@@ -665,7 +638,7 @@ func TestConcurRename(t *testing.T) {
 				select {
 				case c = <-cont:
 				default:
-					n += ts.testRename(fsl, t)
+					n += testRename(ts, fsl, t)
 				}
 			}
 			done <- n
@@ -674,8 +647,8 @@ func TestConcurRename(t *testing.T) {
 
 	// generate files in the todo dir
 	for i := 0; i < NFILE; i++ {
-		err := ts.MakeFile(TODO+"/job"+strconv.Itoa(i), 07000, np.OWRITE, []byte{})
-		assert.Nil(ts.t, err, "Create job")
+		_, err := ts.PutFile(TODO+"/job"+strconv.Itoa(i), 07000, np.OWRITE, []byte{})
+		assert.Nil(ts.T, err, "Create job")
 	}
 
 	// tell threads we are done with generating files
@@ -684,69 +657,70 @@ func TestConcurRename(t *testing.T) {
 		cont <- false
 		n += <-done
 	}
-	assert.Equal(ts.t, NFILE, n, "sum")
-	ts.checkFs()
+	assert.Equal(ts.T, NFILE, n, "sum")
+	checkFs(ts)
 	ts.Shutdown()
 }
 
 func TestPipeSimple(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.MakePipe("name/pipe", 0777)
-	assert.Nil(ts.t, err, "MakePipe")
+	assert.Nil(ts.T, err, "MakePipe")
 
-	done := make(chan bool)
+	ch := make(chan bool)
 	go func() {
 		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
 		fd, err := fsl.Open("name/pipe", np.OREAD)
-		assert.Nil(ts.t, err, "Open")
+		assert.Nil(ts.T, err, "Open")
 		b, err := fsl.Read(fd, 100)
-		assert.Nil(ts.t, err, "Read")
-		assert.Equal(ts.t, "hello", string(b))
+		assert.Nil(ts.T, err, "Read")
+		assert.Equal(ts.T, "hello", string(b))
 		err = fsl.Close(fd)
-		assert.Nil(ts.t, err, "Close")
-		done <- true
+		assert.Nil(ts.T, err, "Close")
+		ch <- true
 	}()
 	fd, err := ts.Open("name/pipe", np.OWRITE)
-	assert.Nil(ts.t, err, "Open")
+	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Write(fd, []byte("hello"))
-	assert.Nil(ts.t, err, "Write")
+	assert.Nil(ts.T, err, "Write")
 	err = ts.Close(fd)
-	assert.Nil(ts.t, err, "Close")
-	<-done
+	assert.Nil(ts.T, err, "Close")
+
+	<-ch
 
 	ts.Shutdown()
 }
 
 func TestPipeClose(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.MakePipe("name/pipe", 0777)
-	assert.Nil(ts.t, err, "MakePipe")
+	assert.Nil(ts.T, err, "MakePipe")
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
 		fd, err := fsl.Open("name/pipe", np.OREAD)
-		assert.Nil(ts.t, err, "Open")
+		assert.Nil(ts.T, err, "Open")
 		for true {
 			b, err := fsl.Read(fd, 100)
 			if err != nil { // writer closed pipe
 				break
 			}
-			assert.Nil(ts.t, err, "Read")
-			assert.Equal(ts.t, "hello", string(b))
+			assert.Nil(ts.T, err, "Read")
+			assert.Equal(ts.T, "hello", string(b))
 		}
 		err = fsl.Close(fd)
-		assert.Nil(ts.t, err, "Close")
+		assert.Nil(ts.T, err, "Close")
 		ch <- true
 	}(ch)
 	fd, err := ts.Open("name/pipe", np.OWRITE)
-	assert.Nil(ts.t, err, "Open")
+	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Write(fd, []byte("hello"))
-	assert.Nil(ts.t, err, "Write")
+	assert.Nil(ts.T, err, "Write")
 	err = ts.Close(fd)
-	assert.Nil(ts.t, err, "Close")
+	assert.Nil(ts.T, err, "Close")
 
 	<-ch
 
@@ -754,21 +728,21 @@ func TestPipeClose(t *testing.T) {
 }
 
 func TestPipeRemove(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.MakePipe("name/pipe", 0777)
-	assert.Nil(ts.t, err, "MakePipe")
+	assert.Nil(ts.T, err, "MakePipe")
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		fsl := fslib.MakeFsLibAddr("reader", fslib.Named())
 		_, err := fsl.Open("name/pipe", np.OREAD)
-		assert.NotNil(ts.t, err, "Open")
+		assert.NotNil(ts.T, err, "Open")
 		ch <- true
 	}(ch)
 	time.Sleep(500 * time.Millisecond)
 	err = ts.Remove("name/pipe")
-	assert.Nil(ts.t, err, "Remove")
+	assert.Nil(ts.T, err, "Remove")
 
 	<-ch
 
@@ -776,35 +750,35 @@ func TestPipeRemove(t *testing.T) {
 }
 
 func TestPipeCrash0(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	err := ts.MakePipe("name/pipe", 0777)
-	assert.Nil(ts.t, err, "MakePipe")
+	assert.Nil(ts.T, err, "MakePipe")
 
 	go func() {
 		fsl := fslib.MakeFsLibAddr("writer", fslib.Named())
 		_, err := fsl.Open("name/pipe", np.OWRITE)
-		assert.Nil(ts.t, err, "Open")
+		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
 		fsl.Exit()
 	}()
 	fd, err := ts.Open("name/pipe", np.OREAD)
-	assert.Nil(ts.t, err, "Open")
+	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Read(fd, 100)
-	assert.NotNil(ts.t, err, "read")
+	assert.NotNil(ts.T, err, "read")
 	ts.Shutdown()
 }
 
 func TestPipeCrash1(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 	err := ts.MakePipe("name/pipe", 0777)
-	assert.Nil(ts.t, err, "MakePipe")
+	assert.Nil(ts.T, err, "MakePipe")
 
 	fsl1 := fslib.MakeFsLibAddr("w1", fslib.Named())
 	go func() {
 		// blocks
 		_, err := fsl1.Open("name/pipe", np.OWRITE)
-		assert.NotNil(ts.t, err, "Open")
+		assert.NotNil(ts.T, err, "Open")
 	}()
 
 	time.Sleep(200 * time.Millisecond)
@@ -818,28 +792,28 @@ func TestPipeCrash1(t *testing.T) {
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.
 		_, err := fsl2.Open("name/pipe", np.OWRITE)
-		assert.NotNil(ts.t, err, "Open")
+		assert.NotNil(ts.T, err, "Open")
 	}()
 
 	time.Sleep(200 * time.Millisecond)
 
 	fd, err := ts.Open("name/pipe", np.OREAD)
-	assert.Nil(ts.t, err, "Open")
+	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Read(fd, 100)
-	assert.NotNil(ts.t, err, "read")
+	assert.NotNil(ts.T, err, "read")
 
 	ts.Shutdown()
 }
 
 func TestSymlink(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	dn := "name/d"
 	err := ts.Mkdir(dn, 0777)
-	assert.Nil(ts.t, err, "dir")
+	assert.Nil(ts.T, err, "dir")
 
 	err = ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.ReadDir("name/namedself/")
 	assert.Equal(t, nil, err)
@@ -849,16 +823,16 @@ func TestSymlink(t *testing.T) {
 }
 
 func TestUnionDir(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	dn := "name/d"
 	err := ts.Mkdir(dn, 0777)
-	assert.Nil(ts.t, err, "dir")
+	assert.Nil(ts.T, err, "dir")
 
 	err = ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/d/namedself0", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 	err = ts.Symlink(fslib.MakeTarget(":2222"), "name/d/namedself1", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.ReadDir("name/d/~ip/")
 	assert.Equal(t, nil, err)
@@ -872,12 +846,12 @@ func TestUnionDir(t *testing.T) {
 }
 
 func TestUnionRoot(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 	err = ts.Symlink(fslib.MakeTarget("xxx"), "name/namedself1", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.ReadDir("name/~ip/")
 	assert.Equal(t, nil, err)
@@ -887,16 +861,16 @@ func TestUnionRoot(t *testing.T) {
 }
 
 func TestUnionSymlinkRead(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	dn := "name/d"
 	err = ts.Mkdir(dn, 0777)
-	assert.Nil(ts.t, err, "dir")
+	assert.Nil(ts.T, err, "dir")
 	err = ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/d/namedself1", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	sts, err := ts.ReadDir("name/~ip/d/namedself1/")
 	assert.Equal(t, nil, err)
@@ -911,18 +885,18 @@ func TestUnionSymlinkRead(t *testing.T) {
 }
 
 func TestUnionSymlinkPut(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	err := ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	b := []byte("hello")
 	fn := "name/~ip/namedself0/f"
-	err = ts.MakeFile(fn, 0777, np.OWRITE, b)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
 	fn1 := "name/~ip/namedself0/g"
-	err = ts.MakeFile(fn1, 0777, np.OWRITE, b)
+	_, err = ts.PutFile(fn1, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
 	sts, err := ts.ReadDir("name/~ip/namedself0/")
@@ -930,51 +904,51 @@ func TestUnionSymlinkPut(t *testing.T) {
 	assert.True(t, fslib.Present(sts, []string{"statsd", "f", "g"}), "root wrong")
 
 	d, err := ts.GetFile("name/~ip/namedself0/f")
-	assert.Nil(ts.t, err, "GetFile")
-	assert.Equal(ts.t, b, d, "GetFile")
+	assert.Nil(ts.T, err, "GetFile")
+	assert.Equal(ts.T, b, d, "GetFile")
 
 	d, err = ts.GetFile("name/~ip/namedself0/g")
-	assert.Nil(ts.t, err, "GetFile")
-	assert.Equal(ts.t, b, d, "GetFile")
+	assert.Nil(ts.T, err, "GetFile")
+	assert.Equal(ts.T, b, d, "GetFile")
 
 	ts.Shutdown()
 }
 
 func TestSetFileSymlink(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstate(t)
 
 	fn := "name/f"
 	d := []byte("hello")
-	err := ts.MakeFile(fn, 0777, np.OWRITE, d)
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
 	ts.Symlink(fslib.MakeTarget(fslib.NamedAddr()), "name/namedself0", 0777|np.DMTMP)
-	assert.Nil(ts.t, err, "Symlink")
+	assert.Nil(ts.T, err, "Symlink")
 
 	st := stats.StatInfo{}
-	err = ts.ReadFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk
 
 	d = []byte("byebye")
 	n, err := ts.SetFile("name/namedself0/f", d, 0)
-	assert.Nil(ts.t, err, "SetFile")
-	assert.Equal(ts.t, np.Tsize(len(d)), n, "SetFile")
+	assert.Nil(ts.T, err, "SetFile")
+	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 
-	err = ts.ReadFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 
-	assert.NotEqual(ts.t, nwalk, st.Nwalk, "setfile")
+	assert.NotEqual(ts.T, nwalk, st.Nwalk, "setfile")
 	nwalk = st.Nwalk
 
 	b, err := ts.GetFile("name/namedself0/f")
-	assert.Nil(ts.t, err, "GetFile")
-	assert.Equal(ts.t, d, b, "GetFile")
+	assert.Nil(ts.T, err, "GetFile")
+	assert.Equal(ts.T, d, b, "GetFile")
 
-	err = ts.ReadFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/statsd", &st)
 	assert.Nil(t, err, "statsd")
 
-	assert.Equal(ts.t, nwalk, st.Nwalk, "getfile")
+	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
 
 	ts.Shutdown()
 }

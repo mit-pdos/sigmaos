@@ -63,7 +63,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	for kv, _ := range kvs.set {
 		kvd := np.MEMFS + "/" + kv + "/statsd"
 		sti := stats.StatInfo{}
-		err := mo.ReadFileJson(kvd, &sti)
+		err := mo.GetFileJson(kvd, &sti)
 		if err != nil {
 			log.Printf("ReadFileJson %v failed %v\n", kvd, err)
 		}

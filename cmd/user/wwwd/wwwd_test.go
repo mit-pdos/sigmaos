@@ -6,13 +6,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/kernel"
 	"ulambda/proc"
+	"ulambda/test"
 )
 
 type Tstate struct {
-	*kernel.System
-	t   *testing.T
+	*test.Tstate
 	pid string
 }
 
@@ -26,8 +25,7 @@ func spawn(t *testing.T, ts *Tstate) string {
 func makeTstate(t *testing.T) *Tstate {
 	var err error
 	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("wwwd_test", "../../../")
+	ts.Tstate = test.MakeTstateAllBin(t, "../../..")
 	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(ts.pid)
@@ -46,11 +44,11 @@ func (ts *Tstate) waitWww() {
 	}()
 
 	status, err := ts.WaitExit(ts.pid)
-	assert.Nil(ts.t, err, "WaitExit error")
-	assert.True(ts.t, status.IsStatusEvicted(), "Exit status wrong")
+	assert.Nil(ts.T, err, "WaitExit error")
+	assert.True(ts.T, status.IsStatusEvicted(), "Exit status wrong")
 
 	r := <-ch
-	assert.NotEqual(ts.t, nil, r)
+	assert.NotEqual(ts.T, nil, r)
 
 	ts.Shutdown()
 }

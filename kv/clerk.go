@@ -303,9 +303,9 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case GETVAL:
 		o.b, o.err = fsl.GetFile(fn)
 	case GETRD:
-		o.rdr, o.err = reader.MakeReader(fsl, fn)
+		o.rdr, o.err = fsl.OpenReader(fn)
 	case PUT:
-		_, o.err = fsl.PutFile(fn, o.b, 0777, np.OWRITE)
+		_, o.err = fsl.PutFile(fn, 0777, np.OWRITE, o.b)
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.off)
 	}

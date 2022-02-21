@@ -14,6 +14,8 @@ go test $1 ulambda/fsclnt
 #
 # test with just named
 #
+go test $1 ulambda/reader
+go test $1 ulambda/writer
 go test $1 ulambda/stats
 go test $1 ulambda/fslib
 go test $1 ulambda/fenceclnt
@@ -45,8 +47,9 @@ go test $1 ulambda/mr
 pgrep mariadb >/dev/null && go test $1 ulambda/dbd
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
 
-go test $1 ulambda/cmd/user/test2pc
-go test $1 ulambda/cmd/user/test2pc2
+# XXX broken
+# go test $1 ulambda/cmd/user/test2pc
+# go test $1 ulambda/cmd/user/test2pc2
 
 #
 # test with realms

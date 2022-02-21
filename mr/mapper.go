@@ -16,6 +16,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
+	"ulambda/writer"
 )
 
 type MapT func(string, string) []KeyValue
@@ -27,7 +28,7 @@ type Mapper struct {
 	nreducetask int
 	input       string
 	file        string
-	fds         []int
+	fds         []*writer.Writer
 	rand        string
 }
 
@@ -46,7 +47,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.input = args[1]
 	m.file = path.Base(m.input)
 	m.rand = rand.String(16)
-	m.fds = make([]int, m.nreducetask)
+	m.fds = make([]*writer.Writer, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
@@ -69,7 +70,7 @@ func (m *Mapper) initMapper() error {
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output file
 		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
-		m.fds[r], err = m.CreateFile(oname, 0777, np.OWRITE)
+		m.fds[r], err = m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetProgram(), oname, err)
 		}
@@ -79,7 +80,7 @@ func (m *Mapper) initMapper() error {
 
 func (m *Mapper) closefds() error {
 	for r := 0; r < m.nreducetask; r++ {
-		err := m.Close(m.fds[r])
+		err := m.fds[r].Close()
 		if err != nil {
 			return fmt.Errorf("%v: close %v err %v\n", proc.GetProgram(), m.fds[r], err)
 		}
@@ -106,13 +107,13 @@ func (m *Mapper) mapper(txt string) error {
 		}
 		lbuf := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutVarint(lbuf, int64(len(b)))
-		_, err = m.Write(m.fds[r], lbuf[0:n])
+		_, err = m.fds[r].Write(lbuf[0:n])
 		if err != nil {
 			// maybe another worker finished earlier
 			// XXX handle partial writing of intermediate files
 			return fmt.Errorf("doMap write error %v %v\n", r, err)
 		}
-		_, err = m.Write(m.fds[r], b)
+		_, err = m.fds[r].Write(b)
 		if err != nil {
 			return fmt.Errorf("%v: write %v err %v\n", proc.GetProgram(), r, err)
 		}
@@ -121,7 +122,7 @@ func (m *Mapper) mapper(txt string) error {
 }
 
 func (m *Mapper) doMap() error {
-	b, err := m.ReadFile(m.input)
+	b, err := m.GetFile(m.input)
 	if err != nil {
 		log.Fatalf("%v: read %v err %v", proc.GetProgram(), m.input, err)
 	}

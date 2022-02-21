@@ -113,7 +113,7 @@ func (m *Microbenchmarks) PutFileBenchmark(nTrials int) *RawResults {
 	for i := 0; i < nTrials; i++ {
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
-		if _, err := m.PutFile(fNames[i], b, 0777, np.OWRITE); err != nil {
+		if _, err := m.PutFile(fNames[i], 0777, np.OWRITE, b); err != nil {
 			log.Fatalf("Error PutFile in Microbenchmarks.PutFileBenchmark: %v", err)
 		}
 		end := time.Now()
@@ -406,7 +406,7 @@ func (m *Microbenchmarks) ProcBasePprofBenchmark(nTrials int, pidOffset int) *Ra
 
 func (m *Microbenchmarks) makeFile(fpath string, size int) {
 	b := genData(size)
-	if err := m.MakeFile(fpath, 0777, np.OWRITE, b); err != nil {
+	if _, err := m.PutFile(fpath, 0777, np.OWRITE, b); err != nil {
 		log.Fatalf("Error MakeFile Microbenchmarks.makeFile: %v", err)
 	}
 }

@@ -27,7 +27,8 @@ func MakeSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
 func (c *SemClnt) Init(perm np.Tperm) error {
-	return c.MakeFile(c.path, 0777|perm, np.OWRITE, []byte{})
+	_, err := c.PutFile(c.path, 0777|perm, np.OWRITE, []byte{})
+	return err
 }
 
 // Down semaphore. If not upped yet (i.e., if file exists), block

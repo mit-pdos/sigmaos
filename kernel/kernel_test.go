@@ -14,48 +14,23 @@ import (
 	"ulambda/fenceclnt"
 	"ulambda/fsclnt"
 	"ulambda/fslib"
-	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/test"
 )
 
-type Tstate struct {
-	t *testing.T
-	*kernel.System
-	replicas []*kernel.System
-}
-
-func (ts *Tstate) Shutdown() {
-	ts.System.Shutdown()
-	for _, r := range ts.replicas {
-		r.Shutdown()
-	}
-}
-
-func makeTstate(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.t = t
-	ts.System = kernel.MakeSystemAll("kernel_test", "..", 0)
-	ts.replicas = []*kernel.System{}
-	// Start additional replicas
-	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
-	}
-	return ts
-}
-
 func TestSymlink1(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a target file
 	targetPath := "name/ux/~ip/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
-	err := ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err := ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
-	b, err := ts.ReadFile(targetPath)
-	assert.Nil(t, err, "Creating symlink target")
+	b, err := ts.GetFile(targetPath)
+	assert.Nil(t, err, "GetFile symlink target")
 	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
 	// Create a symlink
@@ -64,15 +39,33 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
-	b, err = ts.ReadFile(linkPath + "/")
+	b, err = ts.GetFile(linkPath + "/")
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
+
+	// Write symlink contents
+	w := []byte("overwritten!!")
+	_, err = ts.SetFile(linkPath+"/", w, 0)
+	assert.Nil(t, err, "Writing linked file")
+	assert.Equal(t, contents, string(b), "File contents don't match")
+
+	// Read target file
+	b, err = ts.GetFile(targetPath)
+	assert.Nil(t, err, "GetFile symlink target")
+	assert.Equal(t, string(w), string(b), "File contents don't match after reading target")
+
+	// Remove the target of the symlink
+	err = ts.Remove(linkPath + "/")
+	assert.Nil(t, err, "remove linked file")
+
+	_, err = ts.GetFile(targetPath)
+	assert.NotNil(t, err, "symlink target")
 
 	ts.Shutdown()
 }
 
 func TestSymlink2(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	// Make a target file
 	targetDirPath := "name/ux/~ip/dir1"
@@ -82,11 +75,11 @@ func TestSymlink2(t *testing.T) {
 	ts.Remove(targetDirPath)
 	err := ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
-	b, err := ts.ReadFile(targetPath)
+	b, err := ts.GetFile(targetPath)
 	assert.Nil(t, err, "Creating symlink target")
 	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
@@ -99,7 +92,7 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
-	b, err = ts.ReadFile(linkPath + "/")
+	b, err = ts.GetFile(linkPath + "/")
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -107,7 +100,7 @@ func TestSymlink2(t *testing.T) {
 }
 
 func TestSymlink3(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
 	uxs, err := ts.ReadDir("name/ux")
 	assert.Nil(t, err, "Error reading ux dir")
@@ -122,11 +115,11 @@ func TestSymlink3(t *testing.T) {
 	ts.Remove(targetDirPath)
 	err = ts.Mkdir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
-	err = ts.MakeFile(targetPath, 0777, np.OWRITE, []byte(contents))
+	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
 
 	// Read target file
-	b, err := ts.ReadFile(targetPath)
+	b, err := ts.GetFile(targetPath)
 	assert.Nil(t, err, "Creating symlink target")
 	assert.Equal(t, string(b), contents, "File contents don't match after reading target")
 
@@ -144,7 +137,7 @@ func TestSymlink3(t *testing.T) {
 		fd, err := fsl.Open(linkPath+"/", np.OREAD)
 		assert.Nil(t, err, "Opening")
 		// Read symlink contents again
-		b, err = fsl.ReadFile(linkPath + "/")
+		b, err = fsl.GetFile(linkPath + "/")
 		assert.Nil(t, err, "Reading linked file")
 		assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -159,16 +152,16 @@ func TestSymlink3(t *testing.T) {
 
 func TestEphemeral(t *testing.T) {
 	const N = 20
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 
-	name1 := ts.procdName(t, map[string]bool{})
+	name1 := procdName(ts, map[string]bool{})
 
 	var err error
 	err = ts.BootProcd()
 	assert.Nil(t, err, "bin/kernel/procd")
 
-	name := ts.procdName(t, map[string]bool{name1: true})
-	b, err := ts.ReadFile(name)
+	name := procdName(ts, map[string]bool{name1: true})
+	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
@@ -181,7 +174,7 @@ func TestEphemeral(t *testing.T) {
 	n := 0
 	for n < N {
 		time.Sleep(100 * time.Millisecond)
-		_, err = ts.ReadFile(name1)
+		_, err = ts.GetFile(name1)
 		if err == nil {
 			n += 1
 			log.Printf("retry\n")
@@ -195,7 +188,7 @@ func TestEphemeral(t *testing.T) {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
+func procdName(ts *test.Tstate, exclude map[string]bool) string {
 	sts, err := ts.ReadDir(np.PROCD)
 	stsExcluded := []*np.Stat{}
 	for _, s := range sts {
@@ -203,14 +196,14 @@ func (ts *Tstate) procdName(t *testing.T, exclude map[string]bool) string {
 			stsExcluded = append(stsExcluded, s)
 		}
 	}
-	assert.Nil(t, err, np.PROCD)
-	assert.Equal(t, 1, len(stsExcluded))
+	assert.Nil(ts.T, err, np.PROCD)
+	assert.Equal(ts.T, 1, len(stsExcluded))
 	name := path.Join(np.PROCD, stsExcluded[0].Name)
 	return name
 }
 
 func TestFenceW(t *testing.T) {
-	ts := makeTstate(t)
+	ts := test.MakeTstateAll(t)
 	fence := "name/l"
 
 	dirux := "name/ux/~ip/outdir"
@@ -260,7 +253,7 @@ func TestFenceW(t *testing.T) {
 	fd, err := ts.Open(dirux+"/f", np.OREAD)
 	assert.Nil(t, err, "Open")
 	b, err := ts.Read(fd, 100)
-	assert.Equal(ts.t, 0, len(b))
+	assert.Equal(ts.T, 0, len(b))
 
 	ts.Shutdown()
 }

@@ -74,7 +74,7 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 
 func (s *Sleeper) sleep(ch chan *proc.Status) {
 	time.Sleep(s.sleepLength)
-	err := s.MakeFile(s.output, 0777, np.OWRITE, []byte("hello"))
+	_, err := s.PutFile(s.output, 0777, np.OWRITE, []byte("hello"))
 	if err != nil {
 		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}

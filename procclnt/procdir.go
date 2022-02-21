@@ -24,7 +24,7 @@ func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error 
 	}
 	if isKernelProc {
 		kprocFPath := path.Join(procdir, proc.KERNEL_PROC)
-		if err := clnt.MakeFile(kprocFPath, 0777, np.OWRITE, []byte{}); err != nil {
+		if _, err := clnt.PutFile(kprocFPath, 0777, np.OWRITE, []byte{}); err != nil {
 			log.Printf("%v: MakeProcDir MakeFile %v err %v", proc.GetProgram(), kprocFPath, err)
 			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}

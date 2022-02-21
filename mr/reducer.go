@@ -19,7 +19,6 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
-	"ulambda/reader"
 )
 
 type ReduceT func(string, []string) string
@@ -58,7 +57,7 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 
 	d := r.input + "/" + file + "/"
 	db.DPrintf("reduce %v\n", d)
-	rdr, err := reader.MakeReader(r.FsLib, d)
+	rdr, err := r.OpenReader(d)
 	if err != nil {
 		// another reducer already completed; nothing to be done
 		db.DPrintf("MakeReader %v err %v", d, err)

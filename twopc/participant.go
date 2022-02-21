@@ -43,7 +43,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn 
 	p.txn = txn
 	p.opcode = opcode
 
-	if err := p.MakeFile(DIR2PC+"/"+p.me, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
+	if _, err := p.PutFile(DIR2PC+"/"+p.me, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
@@ -72,7 +72,7 @@ func (p *Participant) watchTwopcPrep(path string, err error) {
 
 func (p *Participant) readTwopcWatch(conffile string, f fsclnt.Watch) (*Twopc, error) {
 	twopc := Twopc{}
-	err := p.ReadFileJsonWatch(conffile, &twopc, f)
+	err := p.GetFileJsonWatch(conffile, &twopc)
 	return &twopc, err
 }
 
@@ -80,7 +80,7 @@ func (p *Participant) readTwopcWatch(conffile string, f fsclnt.Watch) (*Twopc, e
 func (p *Participant) prepared(status string) {
 	fn := prepareName(p.me)
 	db.DLPrintf("PART", "Prepared %v\n", fn)
-	err := atomic.MakeFileAtomic(p.FsLib, fn, 0777, []byte(status))
+	err := atomic.PutFileAtomic(p.FsLib, fn, 0777, []byte(status))
 	if err != nil {
 		db.DLPrintf("PART", "Prepared: make file %v failed %v\n", fn, err)
 	}
@@ -89,7 +89,7 @@ func (p *Participant) prepared(status string) {
 func (p *Participant) committed() {
 	fn := commitName(p.me)
 	db.DLPrintf("PART", "Committed %v\n", fn)
-	err := p.MakeFile(fn, 0777, np.OWRITE, []byte("OK"))
+	_, err := p.PutFile(fn, 0777, np.OWRITE, []byte("OK"))
 	if err != nil {
 		db.DLPrintf("PART", "Committed: make file %v failed %v\n", fn, err)
 	}

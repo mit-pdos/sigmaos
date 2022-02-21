@@ -178,18 +178,18 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 //
 // XXX cleanup on failure XXX create and write atomic
 func (fc *FenceClnt) AcquireFenceW(b []byte) error {
-	fd, err := fc.Create(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
+	wrt, err := fc.CreateWriter(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
 		log.Printf("%v: Create %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
 
-	_, err = fc.Write(fd, b)
+	_, err = wrt.Write(b)
 	if err != nil {
 		log.Printf("%v: Write %v err %v", proc.GetName(), fc.fenceName, err)
 		return err
 	}
-	fc.Close(fd)
+	wrt.Close()
 	return fc.registerFence(np.OWRITE)
 }
 
@@ -206,22 +206,12 @@ func (fc *FenceClnt) OpenFenceFrom(from string) error {
 // Acquire a read fence, which may block until a writer has created
 // the file.  Tell servers to fence our operations.
 func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
-	ch := make(chan bool)
-	for {
-		// log.Printf("%v: file watch %v\n", proc.GetName(), fc.fenceName)
-		b, err := fc.ReadFileWatch(fc.fenceName, func(string, error) {
-			ch <- true
-		})
-		if err != nil && np.IsErrNotfound(err) {
-			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
-			<-ch
-		} else if err != nil {
-			return nil, err
-		} else {
-			// log.Printf("%v: file watch return %v\n", proc.GetName(), fc.fenceName)
-			return b, fc.registerFence(np.OREAD)
-		}
+	b, err := fc.GetFileWatch(fc.fenceName)
+	if err != nil {
+		return nil, err
 	}
+	// log.Printf("%v: file watch return %v\n", proc.GetName(), fc.fenceName)
+	return b, fc.registerFence(np.OREAD)
 }
 
 // Release fence, which deregisters it from as many servers as

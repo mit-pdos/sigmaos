@@ -36,13 +36,13 @@ type Query struct {
 }
 
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	db, err := sql.Open("mysql", "sigma:sigmaos@/books")
-	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+	db, error := sql.Open("mysql", "sigma:sigmaos@/books")
+	if error != nil {
+		return nil, np.MkErr(np.TErrError, error)
 	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("FATAL open err %v\n", err)
+	error = db.Ping()
+	if error != nil {
+		log.Fatalf("FATAL open err %v\n", error)
 	}
 	log.Printf("Connected to db\n")
 
@@ -54,9 +54,9 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	// create directory for session
 	di := inode.MakeInode(nil, np.DMDIR, c.Parent())
 	d := dir.MakeDir(di)
-	err = dir.MkNod(ctx, c.Parent(), s.id, d)
+	err := dir.MkNod(ctx, c.Parent(), s.id, d)
 	if err != nil {
-		log.Fatalf("FATAL MkNod err %v\n", err)
+		log.Fatalf("FATAL MkNod d %v err %v\n", d, err)
 	}
 	err = dir.MkNod(ctx, d, "ctl", s) // put ctl file into session dir
 	if err != nil {

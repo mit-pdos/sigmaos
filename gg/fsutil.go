@@ -16,8 +16,8 @@ type FsLambda interface {
 	Mkdir(path string, perm np.Tperm) error
 	ReadDir(dir string) ([]*np.Stat, error)
 	IsDir(name string) (bool, error)
-	MakeFile(string, np.Tperm, np.Tmode, []byte) error
-	ReadFile(string) ([]byte, error)
+	PutFile(string, np.Tperm, np.Tmode, []byte) (np.Tsize, error)
+	GetFile(string) ([]byte, error)
 	SetFile(string, []byte, np.Toffset) (np.Tsize, error)
 	Stat(string) (*np.Stat, error)
 	Name() string
@@ -137,7 +137,7 @@ func setUpRemoteDirs(fslambda FsLambda) {
 
 func downloadFile(fslambda FsLambda, src string, dest string) {
 	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
-	contents, err := fslambda.ReadFile(src)
+	contents, err := fslambda.GetFile(src)
 	if err != nil {
 		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
 	}
@@ -176,11 +176,11 @@ func copyRemoteDirTree(fslambda FsLambda, src string, dest string) {
 
 func copyRemoteFile(fslambda FsLambda, src string, dest string) {
 	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
-	contents, err := fslambda.ReadFile(src)
+	contents, err := fslambda.GetFile(src)
 	if err != nil {
 		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
 	}
-	err = fslambda.MakeFile(dest, 0777, np.OWRITE, contents)
+	_, err = fslambda.PutFile(dest, 0777, np.OWRITE, contents)
 	if err != nil {
 		log.Printf("%v Couldn't write remote file [%v]: %v\n", fslambda.Name(), dest, err)
 	}
@@ -208,7 +208,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 			if err != nil {
 				db.DPrintf("%v mkfile dir uploader [%v]\n", fslambda.Name(), dstPath)
 				// XXX Perms?
-				err = fslambda.MakeFile(dstPath, 0777, np.OWRITE, contents)
+				_, err = fslambda.PutFile(dstPath, 0777, np.OWRITE, contents)
 				if err != nil {
 					// XXX This only occurs if someone else has written the file since we
 					// last checked if it existed. Since it isn't a reduction (by the
@@ -243,7 +243,7 @@ func getInputDependencies(fslambda FsLambda, targetHash string, srcDir string) [
 	var f []byte
 	var err error
 	if isRemote(srcDir) {
-		f, err = fslambda.ReadFile(dependenciesFilePath)
+		f, err = fslambda.GetFile(dependenciesFilePath)
 	} else {
 		f, err = ioutil.ReadFile(dependenciesFilePath)
 	}
@@ -264,7 +264,7 @@ func getInputDependencies(fslambda FsLambda, targetHash string, srcDir string) [
 func getExitDependencies(fslambda FsLambda, targetHash string) []string {
 	dependencies := []string{}
 	dependenciesFilePath := ggRemoteBlobs(targetHash + EXIT_DEPENDENCIES_SUFFIX)
-	f, err := fslambda.ReadFile(dependenciesFilePath)
+	f, err := fslambda.GetFile(dependenciesFilePath)
 	if err != nil {
 		db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
 		return dependencies
@@ -281,7 +281,7 @@ func getExitDependencies(fslambda FsLambda, targetHash string) []string {
 
 func getReductionResult(fslambda FsLambda, hash string) string {
 	resultPath := ggRemoteReductions(hash)
-	result, err := fslambda.ReadFile(resultPath)
+	result, err := fslambda.GetFile(resultPath)
 	if err != nil {
 		log.Fatalf("%v Error reading reduction[%v]: %v\n", fslambda.Name(), resultPath, err)
 	}
@@ -291,7 +291,7 @@ func getReductionResult(fslambda FsLambda, hash string) string {
 func getTargetHash(fslambda FsLambda, dir string, target string) string {
 	// XXX support non-placeholders
 	targetPath := path.Join(dir, target)
-	f, err := fslambda.ReadFile(targetPath)
+	f, err := fslambda.GetFile(targetPath)
 	contents := string(f)
 	if err != nil {
 		log.Fatalf("Error reading target [%v]: %v\n", target, err)

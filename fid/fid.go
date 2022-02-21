@@ -100,17 +100,10 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 }
 
 func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
-	var dirents []*np.Stat
-	if o.Size() > 0 && off >= np.Toffset(o.Size()) {
-		dirents = []*np.Stat{}
-	} else {
-		var err *np.Err
-		d := o.(fs.Dir)
-		dirents, err = d.ReadDir(f.ctx, f.cursor, count, v)
-		if err != nil {
-			return err
-		}
-
+	d := o.(fs.Dir)
+	dirents, err := d.ReadDir(f.ctx, f.cursor, count, v)
+	if err != nil {
+		return err
 	}
 	b, n, error := npcodec.Dir2Byte(count, dirents)
 	if error != nil {
@@ -134,7 +127,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		log.Fatalf("FATAL Read: obj type %T isn't Dir or File\n", o)
+		log.Fatalf("FATAL Read: obj %v type %T isn't Dir or File\n", o, o)
 		return nil
 	}
 }

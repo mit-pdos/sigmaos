@@ -64,7 +64,7 @@ func (ba *BookApp) writeResponse(data []byte) *proc.Status {
 }
 
 func (ba *BookApp) query(q string) ([]byte, error) {
-	b, err := ba.ReadFile(dbd.DBD + "clone")
+	b, err := ba.GetFile(dbd.DBD + "clone")
 	if err != nil {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
@@ -74,7 +74,8 @@ func (ba *BookApp) query(q string) ([]byte, error) {
 		return nil, fmt.Errorf("Query err %v\n", err)
 	}
 
-	b, err = ba.ReadFile(dbd.DBD + sid + "/data")
+	// XXX maybe the caller should use Reader
+	b, err = ba.GetFile(dbd.DBD + sid + "/data")
 	if err != nil {
 		return nil, fmt.Errorf("Query response err %v\n", err)
 	}

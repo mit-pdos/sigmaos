@@ -46,13 +46,9 @@ func MakeDirF(i fs.FsObj) fs.FsObj {
 }
 
 func (dir *DirImpl) String() string {
-	str := fmt.Sprintf("%p Dir{entries: ", dir)
+	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.FsObj, dir.FsObj)
 	for n, e := range dir.entries {
-		if n != "." {
-			str += fmt.Sprintf("[%v %p]", n, e)
-		} else {
-			str += fmt.Sprintf("[%v]", n)
-		}
+		str += fmt.Sprintf("[%v %p]", n, e)
 	}
 	str += "}"
 	return str
@@ -62,7 +58,7 @@ func MkRootDir(f makeInodeF, r makeRootInodeF, p genPathF) fs.Dir {
 	makeInode = f
 	genPath = p
 	i, _ := r(MakeDirF, nil, np.DMDIR)
-	return MakeDir(i)
+	return i.(fs.Dir)
 }
 
 func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.FsObj) *np.Err {
@@ -159,7 +155,11 @@ func (dir *DirImpl) lsL(cursor int) []*np.Stat {
 	sort.SliceStable(entries, func(i, j int) bool {
 		return entries[i].Name < entries[j].Name
 	})
-	return entries[cursor:]
+	if cursor > len(entries) {
+		return nil
+	} else {
+		return entries[cursor:]
+	}
 }
 
 func nonemptydir(inode fs.FsObj) bool {

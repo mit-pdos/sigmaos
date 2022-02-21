@@ -218,7 +218,7 @@ func (bl *Balancer) PublishConfig() {
 	if err != nil {
 		log.Printf("%v: Remove %v err %v\n", proc.GetName(), KVNEXTBK, err)
 	}
-	err = atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
+	err = atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVNEXTBK, err)
 	}
@@ -434,7 +434,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	// If balancer crashes, before here, we have the old
 	// KVNEXTCONFIG.  If the balancer crash after, we have the new
 	// KVNEXTCONFIG.
-	err := atomic.MakeFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
+	err := atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf)
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVNEXTCONFIG, err)
 	}

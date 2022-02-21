@@ -97,9 +97,9 @@ func RunBalancer(crashhelper string, auto string) {
 		log.Fatalf("FATAL StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, nil)
-	err = dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
-	if err != nil {
-		log.Fatalf("FATAL MakeNod clone failed %v\n", err)
+	err1 := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
+	if err1 != nil {
+		log.Fatalf("FATAL MakeNod clone failed %v\n", err1)
 	}
 
 	// start server and write ch when server is done

@@ -59,9 +59,9 @@ func Run(args []string) {
 		}
 		peers := strings.Split(args[4], ",")
 		config := replraft.MakeRaftConfig(id, peers)
-		fss, _, _, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config)
+		fss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config)
 	} else {
-		fss, _, _, err = fslibsrv.MakeReplMemFs(addr, pname, "named", nil)
+		fss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", nil)
 	}
 
 	if err != nil {
@@ -76,7 +76,7 @@ func Run(args []string) {
 	fss.Done()
 }
 
-var InitDir = []string{np.TMPREL, np.BOOTREL, np.KPIDSREL, np.PROCDREL}
+var InitDir = []string{np.TMPREL, np.BOOTREL, np.KPIDSREL, np.PROCDREL, np.UXREL, np.S3REL, np.DBREL}
 
 func initfs(fss *fssrv.FsServer) error {
 	r := fss.Root()

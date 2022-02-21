@@ -33,11 +33,10 @@ func RunFss3() {
 	root := fss3.makeDir([]string{}, np.DMDIR, nil)
 	fsl := fslib.MakeFsLib("fss3d")
 	pclnt := procclnt.MakeProcClnt(fsl)
-	srv, err := fslibsrv.MakeSrv(root, fsl, pclnt)
+	srv, err := fslibsrv.MakeSrv(root, np.S3, fsl, pclnt)
 	if err != nil {
 		log.Fatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)
 	}
-	fsl.Post(srv.MyAddr(), np.S3)
 
 	fss3.FsServer = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),

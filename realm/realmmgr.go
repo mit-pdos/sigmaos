@@ -135,11 +135,6 @@ func (m *RealmMgr) createRealms() {
 			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 
-		// Make a directory for this realm's nameds.
-		if err := m.Mkdir(path.Join(REALM_NAMEDS, realmId), 0777); err != nil {
-			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
-		}
-
 		// Make the realm config file.
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 

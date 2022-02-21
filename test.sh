@@ -9,6 +9,7 @@ go clean -testcache
 #
 
 go test $1 ulambda/linuxsched
+go test $1 ulambda/perf
 
 #
 # tests without servers

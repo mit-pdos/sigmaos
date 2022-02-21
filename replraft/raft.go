@@ -90,21 +90,23 @@ func (n *RaftNode) start(peers []raft.Peer) {
 		}
 	}
 
-	go n.serveRaft()
-	go n.serveChannels()
-}
-
-func (n *RaftNode) serveRaft() {
 	addr := n.peerAddrs[n.id-1]
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Error listen: %v", err)
 	}
+	// Set the actual addr.
+	n.peerAddrs[n.id-1] = l.Addr().String()
 
+	go n.serveRaft(l)
+	go n.serveChannels()
+}
+
+func (n *RaftNode) serveRaft(l net.Listener) {
 	db.DLPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
 
 	srv := &http.Server{Handler: apiHandler(n)}
-	err = srv.Serve(l)
+	err := srv.Serve(l)
 	if err != nil {
 		log.Fatalf("Error server: %v", err)
 	}

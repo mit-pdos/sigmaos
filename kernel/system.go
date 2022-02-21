@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"log"
+	"net"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -15,8 +16,9 @@ import (
 )
 
 const (
-	NO_REALM = "no-realm"
-	SLEEP_MS = 1000
+	NO_REALM         = "no-realm"
+	SLEEP_MS         = 200
+	REPL_PORT_OFFSET = 100
 )
 
 type System struct {
@@ -69,6 +71,14 @@ func MakeSystemAll(uname, bin string, replicaId int) *System {
 	if err != nil {
 		log.Fatalf("FATAL Start err %v\n", err)
 	}
+	return s
+}
+
+func MakeSystem(uname, bin string, namedAddr []string) *System {
+	s := makeSystemBase(namedAddr, bin)
+	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, namedAddr)
+	s.pid = proc.GetPid()
 	return s
 }
 
@@ -199,17 +209,25 @@ func (s *System) Shutdown() {
 	}
 }
 
-// Run a named (but not as a proc)
-func RunNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId string) *proc.Proc {
 	args := []string{addr, realmId}
 	// If we're running replicated...
 	if replicate {
+		// Add an offset to the peers' port addresses.
+		peers := []string{}
+		for _, peer := range pe {
+			peers = append(peers, addReplPortOffset(peer))
+		}
 		args = append(args, strconv.Itoa(id))
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	p := proc.MakeProcPid("pid-"+strconv.Itoa(id), "/bin/kernel/named", args)
+	return proc.MakeProcPid("pid-"+strconv.Itoa(id), "/bin/kernel/named", args)
+}
 
+// Run a named (but not as a proc)
+func RunNamed(bin string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, error) {
+	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := proc.RunKernelProc(p, bin, fslib.Named())
 	if err != nil {
 		log.Printf("Error running named: %v", err)
@@ -220,25 +238,9 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 	return cmd, nil
 }
 
-func MakeSystem(uname, bin string, namedAddr []string) *System {
-	s := makeSystemBase(namedAddr, bin)
-	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, namedAddr)
-	s.pid = proc.GetPid()
-	return s
-}
-
 // Run a named as a proc
 func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
-	args := []string{addr, realmId}
-	// If we're running replicated...
-	if replicate {
-		args = append(args, strconv.Itoa(id))
-		args = append(args, strings.Join(peers[:id], ","))
-	}
-
-	pid := "pid-" + strconv.Itoa(id)
-	p := proc.MakeProcPid(pid, "bin/kernel/named", args)
+	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {
 		log.Fatalf("Error WaitStart in RunNamed: %v", err)
@@ -248,5 +250,20 @@ func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate b
 		log.Fatalf("Error WaitStart in RunNamed: %v", err)
 		return nil, "", err
 	}
-	return cmd, pid, nil
+	return cmd, p.Pid, nil
+}
+
+func addReplPortOffset(peerAddr string) string {
+	// Compute replica address as peerAddr + REPL_PORT_OFFSET
+	host, port, err := net.SplitHostPort(peerAddr)
+	if err != nil {
+		log.Fatalf("Error splitting host port: %v", err)
+	}
+	portI, err := strconv.Atoi(port)
+	if err != nil {
+		log.Fatalf("Error conv port: %v", err)
+	}
+	newPort := strconv.Itoa(portI + REPL_PORT_OFFSET)
+
+	return host + ":" + newPort
 }

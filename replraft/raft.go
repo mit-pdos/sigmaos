@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	db "ulambda/debug"
+	"ulambda/proc"
 )
 
 const (
@@ -74,8 +76,18 @@ func (n *RaftNode) start(peers []raft.Peer) {
 		n.postNodeId()
 		n.node = raft.RestartNode(n.config)
 	}
+	// Make sure the logging dir exists
+	os.Mkdir("/tmp/raftlogs/", 0777)
+	logPath := "/tmp/raftlogs/" + proc.GetPid()
+	log.Printf("Raft logs being written to: %v", logPath)
+	logCfg := zap.NewDevelopmentConfig()
+	logCfg.OutputPaths = []string{logPath}
+	logger, err := logCfg.Build()
+	if err != nil {
+		log.Fatalf("FATAL Couldn't build logger: %v", err)
+	}
 	n.transport = &rafthttp.Transport{
-		Logger:      zap.NewExample(),
+		Logger:      logger,
 		ID:          types.ID(n.id),
 		ClusterID:   CLUSTER_ID,
 		Raft:        n,

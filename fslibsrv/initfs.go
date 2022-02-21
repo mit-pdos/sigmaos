@@ -68,7 +68,7 @@ func makeStatDev(root fs.Dir, srv *fssrv.FsServer) *np.Err {
 
 func MakeReplMemfs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, *np.Err) {
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
-	srv, fsl, pclnt, err := MakeReplServer(root, addr, path, "named", conf)
+	srv, fsl, pclnt, err := MakeReplServer(root, addr, path, name, conf)
 	if err != nil {
 		return nil, nil, nil, np.MkErr(np.TErrError, err)
 	}

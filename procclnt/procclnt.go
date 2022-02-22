@@ -14,7 +14,7 @@ import (
 	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/seccomp"
+	// "ulambda/seccomp"
 	"ulambda/semclnt"
 )
 
@@ -179,7 +179,7 @@ func (clnt *ProcClnt) Started(pid string) error {
 			return fmt.Errorf("Started error %v", err)
 		}
 		// Load a seccomp filter.
-		seccomp.LoadFilter()
+		// seccomp.LoadFilter()
 	}
 	return nil
 }

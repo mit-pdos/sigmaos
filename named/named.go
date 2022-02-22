@@ -17,7 +17,7 @@ import (
 	"ulambda/proc"
 	"ulambda/realm"
 	"ulambda/replraft"
-	"ulambda/seccomp"
+	// "ulambda/seccomp"
 )
 
 func Run(args []string) {
@@ -68,7 +68,7 @@ func Run(args []string) {
 		log.Fatalf("FATAL %v: err %v\n", proc.GetProgram(), err)
 	}
 
-	seccomp.LoadFilter()
+	// seccomp.LoadFilter()
 
 	initfs(fss)
 

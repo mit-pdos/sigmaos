@@ -55,28 +55,27 @@ type Wwwd struct {
 
 func MakeWwwd(tree string) *Wwwd {
 	www := &Wwwd{}
+
+	var err error
+	mfsPath := "name/wwwd-server"
+	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(mfsPath, "www")
+	if err != nil {
+		log.Fatalf("%v: MakeSrvFsLib %v\n", proc.GetProgram(), err)
+	}
+
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
-	www.FsLib = fslib.MakeFsLib("www")
 	// In order to automount children, we need to at least mount /pids.
 	if err := procclnt.MountPids(www.FsLib, fslib.Named()); err != nil {
 		log.Fatalf("wwwd err mount pids %v", err)
 	}
 
 	log.Printf("%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
-	www.ProcClnt = procclnt.MakeProcClnt(www.FsLib)
 	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
 		log.Fatalf("wwwd MakeFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, SERVER)
 	www.globalSrvpath = path.Join(proc.GetProcDir(), SERVER)
-
-	mfsPath := "name/wwwd-server"
-	mfs, err := fslibsrv.MakeMemFsFsl(mfsPath, www.FsLib, www.ProcClnt)
-	if err != nil {
-		log.Fatalf("%v: MakeSrvFsLib %v\n", proc.GetProgram(), err)
-	}
-	www.MemFs = mfs
 
 	err = www.Symlink([]byte(mfsPath), www.localSrvpath, 0777)
 	if err != nil {

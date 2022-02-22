@@ -43,6 +43,7 @@ type FsServer struct {
 	rft     *fences.RecentTable
 	srv     *netsrv.NetServer
 	replSrv repl.Server
+	rc      *repl.ReplyCache
 	pclnt   *procclnt.ProcClnt
 	done    bool
 	ch      chan bool
@@ -66,6 +67,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	if config == nil {
 		fssrv.replSrv = nil
 	} else {
+		fssrv.rc = repl.MakeReplyCache()
 		fssrv.replSrv = config.MakeServer(fssrv.tm.AddThread())
 		fssrv.replSrv.Start()
 		log.Printf("Starting repl server")
@@ -157,7 +159,12 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	if fssrv.replSrv == nil {
 		sess.GetThread().Process(fc, replies)
 	} else {
-		fssrv.replSrv.Process(fc, replies)
+		// If this fcall has already been seen, use the cached reply.
+		if reply, ok := fssrv.rc.Get(fc); ok {
+			fssrv.sendReply(fc, reply, replies)
+		} else {
+			fssrv.replSrv.Process(fc, replies)
+		}
 	}
 }
 
@@ -167,11 +174,15 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 	fssrv.serve(sess, fc, replies)
 }
 
-func (fsssrv *FsServer) sendReply(t np.Ttag, reply np.Tmsg, replies chan *np.Fcall) {
+func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
+	// Store the reply in the reply cache if this is a replicated server.
+	if fssrv.replSrv != nil {
+		fssrv.rc.Put(request, reply)
+	}
 	fcall := &np.Fcall{}
 	fcall.Type = reply.Type()
 	fcall.Msg = reply
-	fcall.Tag = t
+	fcall.Tag = request.Tag
 	replies <- fcall
 }
 
@@ -188,7 +199,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 		if rerror != nil {
 			reply = *rerror
 		}
-		fssrv.sendReply(fc.Tag, reply, replies)
+		fssrv.sendReply(fc, reply, replies)
 	}
 }
 

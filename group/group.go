@@ -13,17 +13,22 @@ import (
 	"ulambda/crash"
 	"ulambda/fenceclnt"
 	"ulambda/fs"
+	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/replraft"
 )
 
 const (
 	GRPDIR       = "name/group/"
 	GRP          = "grp-"
+	GRPPRIM      = "-primary"
+	GRPPEER      = "-peer-fence"
+	GRPRAFTCONF  = "-raft-conf"
 	GRPCONF      = "-conf"
 	GRPCONFNXT   = "-conf-next"
 	GRPCONFNXTBK = GRPCONFNXT + "#"
@@ -36,7 +41,6 @@ func GrpDir(grp string) string {
 
 func GrpConfPath(grp string) string {
 	return GRPDIR + grp + GRPCONF
-
 }
 
 func grpConfNxt(grp string) string {
@@ -45,7 +49,23 @@ func grpConfNxt(grp string) string {
 
 func grpConfNxtBk(grp string) string {
 	return GRPDIR + grp + GRPCONFNXTBK
+}
 
+func grpRaftAddrs(grp string) string {
+	return GRPDIR + grp + GRPRAFTCONF
+}
+
+func grpPrimFPath(grp string) string {
+	return GRPDIR + grp + GRPPRIM
+}
+
+func grpPeerFPath(grp string) string {
+	return GRPDIR + grp + GRPPEER
+}
+
+type ReplicaAddrs struct {
+	SigmaAddrs   []string
+	RaftsrvAddrs []string
 }
 
 type Group struct {
@@ -54,6 +74,7 @@ type Group struct {
 	*procclnt.ProcClnt
 	crash        int64
 	primFence    *fenceclnt.FenceClnt
+	peerFence    *fenceclnt.FenceClnt
 	confFclnt    *fenceclnt.FenceClnt
 	conf         *GrpConf
 	isRecovering bool
@@ -83,17 +104,42 @@ func RunMember(grp string) {
 
 	g.Mkdir(GRPDIR, 07)
 
-	srvs := []string{GrpDir(grp)}
-	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, GRPDIR+"/"+grp, np.DMSYMLINK, srvs)
+	srvs := []string{GRPDIR}
+	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPrimFPath(grp), 0, srvs)
+	g.peerFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPeerFPath(grp), 0, srvs)
 	g.confFclnt = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0, srvs)
 
 	g.setRecovering(true)
 
-	// start server but don't publish its existence
-	mfs, _, err := fslibsrv.MakeMemFs("", "kv-"+proc.GetPid())
+	// Under fence: get peers, start server and add self to list of peers, update list of peers.
+	g.peerFence.AcquireFenceW([]byte{})
+	replicaAddrs := g.readReplicaAddrs(grp)
+
+	ip, err := fsclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("StartMemFs %v\n", err)
+		log.Fatalf("FATAL group ip %v\n", err)
 	}
+
+	replicaAddrs.RaftsrvAddrs = append(replicaAddrs.RaftsrvAddrs, ip+":0")
+	id := len(replicaAddrs.RaftsrvAddrs)
+
+	raftConfig := replraft.MakeRaftConfig(id, replicaAddrs.RaftsrvAddrs)
+
+	// start server but don't publish its existence
+	mfs, err1 := fslibsrv.MakeReplMemFsFsl(replicaAddrs.RaftsrvAddrs[id-1], "", g.FsLib, g.ProcClnt, raftConfig)
+	if err1 != nil {
+		log.Fatalf("FATAL StartMemFs %v\n", err1)
+	}
+
+	// Get the final repl addr
+	replicaAddrs.RaftsrvAddrs[id-1] = raftConfig.ReplAddr()
+	replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, mfs.MyAddr())
+
+	g.writeReplicaAddrs(grp, replicaAddrs)
+
+	// Add symlink
+	atomic.PutFileAtomic(g.FsLib, GrpDir(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))
+	g.peerFence.ReleaseFence()
 
 	// start server and write ch when server is done
 	ch := make(chan bool)
@@ -102,7 +148,7 @@ func RunMember(grp string) {
 		ch <- true
 	}()
 
-	g.primFence.AcquireFenceW(fslib.MakeTarget(mfs.MyAddr()))
+	g.primFence.AcquireFenceW([]byte(mfs.MyAddr()))
 
 	log.Printf("%v: primary %v\n", proc.GetProgram(), grp)
 
@@ -118,6 +164,22 @@ func RunMember(grp string) {
 	log.Printf("%v: group done %v\n", proc.GetProgram(), grp)
 
 	mfs.Done()
+}
+
+func (g *Group) readReplicaAddrs(grp string) *ReplicaAddrs {
+	ra := &ReplicaAddrs{}
+	err := g.GetFileJson(grpRaftAddrs(grp), ra)
+	if err != nil {
+		log.Printf("Error GetFileJson: %v", err)
+	}
+	return ra
+}
+
+func (g *Group) writeReplicaAddrs(grp string, ra *ReplicaAddrs) {
+	err := atomic.PutFileJsonAtomic(g.FsLib, grpRaftAddrs(grp), 0777, ra)
+	if err != nil {
+		log.Fatalf("FATAL Error writeReplicaAddrs %v", err)
+	}
 }
 
 func (g *Group) PublishConfig(grp string) {

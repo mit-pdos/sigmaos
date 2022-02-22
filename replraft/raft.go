@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	db "ulambda/debug"
+	"ulambda/proc"
 )
 
 const (
@@ -74,8 +76,18 @@ func (n *RaftNode) start(peers []raft.Peer) {
 		n.postNodeId()
 		n.node = raft.RestartNode(n.config)
 	}
+	// Make sure the logging dir exists
+	os.Mkdir("/tmp/raftlogs/", 0777)
+	logPath := "/tmp/raftlogs/" + proc.GetPid()
+	log.Printf("Raft logs being written to: %v", logPath)
+	logCfg := zap.NewDevelopmentConfig()
+	logCfg.OutputPaths = []string{logPath}
+	logger, err := logCfg.Build()
+	if err != nil {
+		log.Fatalf("FATAL Couldn't build logger: %v", err)
+	}
 	n.transport = &rafthttp.Transport{
-		Logger:      zap.NewExample(),
+		Logger:      logger,
 		ID:          types.ID(n.id),
 		ClusterID:   CLUSTER_ID,
 		Raft:        n,
@@ -90,21 +102,23 @@ func (n *RaftNode) start(peers []raft.Peer) {
 		}
 	}
 
-	go n.serveRaft()
-	go n.serveChannels()
-}
-
-func (n *RaftNode) serveRaft() {
 	addr := n.peerAddrs[n.id-1]
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Error listen: %v", err)
 	}
+	// Set the actual addr.
+	n.peerAddrs[n.id-1] = l.Addr().String()
 
+	go n.serveRaft(l)
+	go n.serveChannels()
+}
+
+func (n *RaftNode) serveRaft(l net.Listener) {
 	db.DLPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
 
 	srv := &http.Server{Handler: apiHandler(n)}
-	err = srv.Serve(l)
+	err := srv.Serve(l)
 	if err != nil {
 		log.Fatalf("Error server: %v", err)
 	}

@@ -34,28 +34,26 @@ type ProcdFs struct {
 func (pd *Procd) makeFs() {
 	pd.fs = &ProcdFs{}
 	pd.fs.pd = pd
-	mfs, pclnt, error := fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
-	if error != nil {
-		log.Fatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), error)
+	var err error
+	pd.MemFs, pd.FsLib, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
+	if err != nil {
+		log.Fatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
-	pd.MemFs = mfs
-	pd.FsLib = pd.MemFs.FsLib
-	pd.procclnt = pclnt
 	procclnt.MountPids(pd.FsLib, fslib.Named())
 
 	// Set up ctl file
 	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
-	if err != nil {
-		log.Fatalf("FATAL Error MkNod in RunProcd: %v", err)
+	err1 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
+	if err1 != nil {
+		log.Fatalf("FATAL Error MkNod in RunProcd: %v", err1)
 	}
 
 	// Set up running dir
 	runningi := inode.MakeInode(nil, np.DMDIR, pd.Root())
 	running := dir.MakeDir(runningi)
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
-	if err != nil {
-		log.Fatalf("FATAL Error creating running dir: %v", err)
+	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
+	if err1 != nil {
+		log.Fatalf("FATAL Error creating running dir: %v", err1)
 	}
 	pd.fs.run = running
 
@@ -65,9 +63,9 @@ func (pd *Procd) makeFs() {
 	for _, q := range runqs {
 		runqi := inode.MakeInode(nil, np.DMDIR, pd.Root())
 		runq := dir.MakeDir(runqi)
-		err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
-		if err != nil {
-			log.Fatalf("FATAL Error creating running dir: %v", err)
+		err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
+		if err1 != nil {
+			log.Fatalf("FATAL Error creating running dir: %v", err1)
 		}
 		pd.fs.runqs[q] = runq
 	}
@@ -75,9 +73,9 @@ func (pd *Procd) makeFs() {
 	// Set up pids dir
 	pidsi := inode.MakeInode(nil, np.DMDIR, pd.Root())
 	pids := dir.MakeDir(pidsi)
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
-	if err != nil {
-		log.Fatalf("FATAL Error creating pids dir: %v", err)
+	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
+	if err1 != nil {
+		log.Fatalf("FATAL Error creating pids dir: %v", err1)
 	}
 }
 

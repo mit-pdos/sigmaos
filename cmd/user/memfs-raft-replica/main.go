@@ -7,37 +7,47 @@ import (
 	"strconv"
 	"strings"
 
-	"ulambda/fsclnt"
-	"ulambda/fslib"
 	"ulambda/replica"
 	"ulambda/replraft"
 )
 
 func main() {
-	if len(os.Args) < 5 {
-		log.Fatalf("Usage: %v pid id peerAddrs union-dir-path", os.Args[0])
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: %v baseAddr", os.Args[0])
 	}
 	args := os.Args[1:]
 
-	id, err := strconv.Atoi(args[1])
+	id, err := strconv.Atoi("INVALID")
 	if err != nil {
 		log.Fatalf("id conversion error: %v", err)
 	}
+	// Raft expects ids to be 1-indexed, but groupmgr 0-indexes them.
+	id = id + 1
 
-	peers := strings.Split(args[2], ",")
+	baseAddr := args[0]
 
-	unionDirPath := args[3]
-	ip, err := fsclnt.LocalIP()
-	if err != nil {
-		log.Fatalf("%v: no IP %v\n", args, err)
+	// Find the base port of the replica group.
+	idx := strings.Index(baseAddr, ":")
+	if idx < 0 {
+		log.Fatalf("FATAL Invalid base addr: %v", baseAddr)
 	}
-	srvAddr := ip + ":0"
+	host := baseAddr[:idx]
+	basePort, err := strconv.Atoi(baseAddr[idx+1:])
+	if err != nil {
+		log.Fatalf("Invalid port num: %v", err)
+	}
+
+	// generate the list of peer addresses.
+	peers := []string{}
+	for i := 0; i < id; i++ {
+		peers = append(peers, host+":"+strconv.Itoa(basePort+i))
+	}
+	log.Printf("peers: %v id: %v", len(peers), id)
 
 	config := replraft.MakeRaftConfig(id, peers)
 
-	fsl := fslib.MakeFsLib(fmt.Sprintf("memfs-raft-replica-%v", id))
-	fsl.Mkdir(unionDirPath, 0777)
+	name := fmt.Sprintf("memfs-raft-replica-%v", id)
 
 	// Start the replica server
-	replica.RunMemfsdReplica(args, srvAddr, unionDirPath, config)
+	replica.RunMemfsdReplica(name, config)
 }

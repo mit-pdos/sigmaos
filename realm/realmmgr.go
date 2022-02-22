@@ -60,11 +60,10 @@ func MakeRealmMgr() *RealmMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
+	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
 	if err != nil {
 		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
-	m.FsLib = m.MemFs.FsLib
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
 	m.makeCtlFiles()
@@ -133,11 +132,6 @@ func (m *RealmMgr) createRealms() {
 
 		// Make a directory for this realm.
 		if err := m.Mkdir(path.Join(REALMS, realmId), 0777); err != nil {
-			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
-		}
-
-		// Make a directory for this realm's nameds.
-		if err := m.Mkdir(path.Join(REALM_NAMEDS, realmId), 0777); err != nil {
 			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 

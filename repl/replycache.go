@@ -1,34 +1,36 @@
-package replchain
+package repl
 
 import (
+	"sync"
+
 	np "ulambda/ninep"
 )
 
-type Reply struct {
-	fcall *np.Fcall
-	frame []byte
-}
-
 type ReplyCache struct {
-	entries map[np.Tsession]map[np.Tseqno]*Reply
+	sync.Mutex
+	entries map[np.Tsession]map[np.Tseqno]np.Tmsg
 }
 
 func MakeReplyCache() *ReplyCache {
 	rc := &ReplyCache{}
-	rc.entries = map[np.Tsession]map[np.Tseqno]*Reply{}
+	rc.entries = map[np.Tsession]map[np.Tseqno]np.Tmsg{}
 	return rc
 }
 
-func (rc *ReplyCache) Put(request *np.Fcall, reply *np.Fcall, replyFrame []byte) {
+func (rc *ReplyCache) Put(request *np.Fcall, reply np.Tmsg) {
+	rc.Lock()
+	defer rc.Unlock()
 	if _, ok := rc.entries[request.Session]; !ok {
-		rc.entries[request.Session] = map[np.Tseqno]*Reply{}
+		rc.entries[request.Session] = map[np.Tseqno]np.Tmsg{}
 	}
-	rc.entries[request.Session][request.Seqno] = &Reply{reply, replyFrame}
+	rc.entries[request.Session][request.Seqno] = reply
 }
 
 // XXX Will need to handle entries which are "too old" eventually once we
 // start evicting entries from the cache.
-func (rc *ReplyCache) Get(request *np.Fcall) (*Reply, bool) {
+func (rc *ReplyCache) Get(request *np.Fcall) (np.Tmsg, bool) {
+	rc.Lock()
+	defer rc.Unlock()
 	if sessionMap, ok := rc.entries[request.Session]; !ok {
 		return nil, false
 	} else {

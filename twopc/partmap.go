@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	"ulambda/fslib"
 )
 
@@ -46,7 +46,7 @@ func (fw *FlwsMap) len() int {
 }
 
 // XXX maybe should be OpenWatch(fn, f)?
-func (fw *FlwsMap) setStatusWatches(dir string, f fsclnt.Watch) {
+func (fw *FlwsMap) setStatusWatches(dir string, f fidclnt.Watch) {
 	for flw, _ := range fw.flws {
 		fn := dir + flw
 		// set watch for existence of fn, which indicates fn
@@ -60,7 +60,7 @@ func (fw *FlwsMap) setStatusWatches(dir string, f fsclnt.Watch) {
 	}
 }
 
-func (fw *FlwsMap) setFlwsWatches(f fsclnt.Watch) {
+func (fw *FlwsMap) setFlwsWatches(f fidclnt.Watch) {
 	for flw, _ := range fw.flws {
 		// set watch for KV, in case it crashes during 2PC
 		err := fw.SetRemoveWatch(DIR2PC+"/"+flw, f)

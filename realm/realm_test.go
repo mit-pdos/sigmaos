@@ -75,9 +75,9 @@ func (ts *Tstate) spawnSpinner() string {
 // Check that the test realm has min <= nMachineds <= max machineds assigned to it
 func (ts *Tstate) checkNMachineds(min int, max int) {
 	log.Printf("Checking num machineds")
-	machineds, err := ts.realmFsl.ReadDir(path.Join(realm.REALMS, realm.TEST_RID))
+	machineds, err := ts.realmFsl.GetDir(path.Join(realm.REALMS, realm.TEST_RID))
 	if err != nil {
-		log.Fatalf("Error ReadDir realm-balance main: %v", err)
+		log.Fatalf("Error GetDir realm-balance main: %v", err)
 	}
 	nMachineds := len(machineds)
 	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)

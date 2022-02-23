@@ -68,6 +68,7 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 	if err != nil {
 		return err
 	}
+	defer rdr.Close()
 	for {
 		sz, err := binary.ReadVarint(rdr)
 		if err != nil && err == io.EOF {

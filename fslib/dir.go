@@ -2,9 +2,7 @@ package fslib
 
 import (
 	"fmt"
-	"io"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -27,65 +25,48 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 	return st.Mode.IsDir(), nil
 }
 
-func (fl *FsLib) Readdir(fd int, n np.Tsize) ([]*np.Stat, error) {
-	data, err := fl.Read(fd, n)
-	db.DLPrintf("FSLIB", "Readdir: read -> %d %v\n", len(data), err)
-	if err != nil {
-		return nil, err
-	}
-	if len(data) == 0 {
-		return nil, io.EOF
-	}
-	if dents, err := npcodec.Byte2Dir(data); err != nil {
-		return nil, err
-	} else {
-		return dents, nil
-	}
-}
-
 // Too stop early, f must return true.  Returns true if stopped early.
 func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, error) {
-	fd, err := fl.Open(dir, np.OREAD)
+	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return false, err
 	}
-	defer fl.Close(fd)
+	defer rdr.Close()
 	for {
-		dirents, err := fl.Readdir(fd, fl.chunkSz)
-		if err != nil && err == io.EOF {
+		st := &np.Stat{}
+		err := npcodec.UnmarshalReader(rdr, st)
+		if err != nil && np.IsErrEOF(err) {
 			break
 		}
 		if err != nil {
-			break
+			return false, err
 		}
-		for _, st := range dirents {
-			stop, err := f(st)
-			if stop {
-				return true, err
-			}
+		stop, error := f(st)
+		if stop {
+			return true, error
 		}
 	}
 	return false, err
 }
 
-func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, error) {
-	fd, err := fl.Open(dir, np.OREAD)
+func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
+	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return nil, err
 	}
+	defer rdr.Close()
 	dirents := []*np.Stat{}
 	for {
-		dents, err := fl.Readdir(fd, fl.chunkSz)
-		db.DLPrintf("FSLIB", "readdir: %v %T%v\n", dents, err, err)
+		st := &np.Stat{}
+		err := npcodec.UnmarshalReader(rdr, st)
 		if err != nil && np.IsErrEOF(err) {
 			break
 		}
 		if err != nil {
 			return nil, err
 		}
-		dirents = append(dirents, dents...)
+		dirents = append(dirents, st)
 	}
-	fl.Close(fd)
 	return dirents, nil
 }
 
@@ -128,7 +109,7 @@ func (fl *FsLib) RmDirLarge(dir string) error {
 }
 
 func (fsl *FsLib) RmDir(dir string) error {
-	sts, err := fsl.ReadDir(dir)
+	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return err
 	}
@@ -149,7 +130,7 @@ func (fsl *FsLib) SprintfDir(d string) (string, error) {
 
 func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
 	s := fmt.Sprintf("%v dir %v\n", indent, d)
-	sts, err := fsl.ReadDir(d)
+	sts, err := fsl.GetDir(d)
 	if err != nil {
 		return "", err
 	}

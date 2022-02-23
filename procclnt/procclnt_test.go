@@ -27,7 +27,7 @@ const (
 const program = "procclnt_test"
 
 func procd(ts *test.Tstate) string {
-	st, err := ts.ReadDir("name/procd")
+	st, err := ts.GetDir("name/procd")
 	assert.Nil(ts.T, err, "Readdir")
 	return st[0].Name
 }
@@ -170,7 +170,7 @@ func TestWaitStart(t *testing.T) {
 	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "WaitStart waited too long")
 
 	// Check if proc exists
-	sts, err := ts.ReadDir(path.Join("name/procd", procd(ts), np.PROCD_RUNNING))
+	sts, err := ts.GetDir(path.Join("name/procd", procd(ts), np.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
 	assert.True(t, fslib.Present(sts, []string{pid}), "pid")
 
@@ -526,7 +526,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Make sure they spawned correctly.
-	st, err := ts.ReadDir(OUTDIR)
+	st, err := ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	assert.Equal(t, nChildren, getNChildren(ts), "wrong num children")
@@ -538,7 +538,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Make sure they spawned correctly.
-	st, err = ts.ReadDir(OUTDIR)
+	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
 
@@ -549,7 +549,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Make sure they spawned correctly.
-	st, err = ts.ReadDir(OUTDIR)
+	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
 

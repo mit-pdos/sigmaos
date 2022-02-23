@@ -21,6 +21,11 @@ func Unmarshal(data []byte, v interface{}) *np.Err {
 	return dec.decode(v)
 }
 
+func UnmarshalReader(rdr io.Reader, v interface{}) *np.Err {
+	dec := &decoder{rdr}
+	return dec.decode(v)
+}
+
 func Marshal(v interface{}) ([]byte, *np.Err) {
 	return marshal(false, v)
 }
@@ -244,7 +249,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 		switch v := v.(type) {
 		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrEOF, err)
 			}
 		case *[]byte:
 			var l uint32
@@ -263,7 +268,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 			// more powerful than we need, since we're just serializing an array of
 			// bytes, after al.
 			if _, err := d.rd.Read(*v); err != nil && !(err == io.EOF && l == 0) {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrEOF, err)
 			}
 
 		case *string:
@@ -336,7 +341,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 
 			b := make([]byte, l)
 			if _, err := io.ReadFull(d.rd, b); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrEOF, err)
 			}
 
 			elements, err := fields9p(v)

@@ -19,7 +19,7 @@ func TestReader1(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	rdr, err := ts.OpenReader(fn)
-
+	assert.Equal(t, nil, err)
 	v := make([]byte, 1)
 	for _, b := range d {
 		n, err := rdr.Read(v)
@@ -30,7 +30,7 @@ func TestReader1(t *testing.T) {
 	n, err := rdr.Read(v)
 	assert.Equal(ts.T, io.EOF, err)
 	assert.Equal(ts.T, 0, n)
-
+	rdr.Close()
 	ts.Shutdown()
 }
 
@@ -43,7 +43,7 @@ func TestReader2(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	rdr, err := ts.OpenReader(fn)
-
+	assert.Equal(t, nil, err)
 	v := make([]byte, 2)
 	n, err := rdr.Read(v)
 	assert.Equal(ts.T, nil, err)
@@ -52,7 +52,7 @@ func TestReader2(t *testing.T) {
 	n, err = rdr.Read(v)
 	assert.Equal(ts.T, io.EOF, err)
 	assert.Equal(ts.T, 0, n)
-
+	rdr.Close()
 	ts.Shutdown()
 }
 
@@ -70,7 +70,7 @@ func TestReaderLarge(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	rdr, err := ts.OpenReader(fn)
-
+	assert.Equal(t, nil, err)
 	n := 0
 	for {
 		v := make([]byte, 9)
@@ -85,5 +85,6 @@ func TestReaderLarge(t *testing.T) {
 		}
 	}
 	assert.Equal(ts.T, sz, n)
+	rdr.Close()
 	ts.Shutdown()
 }

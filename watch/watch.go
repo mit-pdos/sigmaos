@@ -50,7 +50,7 @@ func mkWatch(sct *sesscond.SessCondTable, path string) *Watch {
 func (ws *Watch) Watch(sessid np.Tsession) *np.Err {
 	err := ws.sc.Wait(sessid)
 	if err != nil {
-		log.Printf("Watch done waiting %v p '%v' err %v\n", ws, ws.path, err)
+		log.Printf("Watch done waiting '%v' err %v\n", ws.path, err)
 	}
 	return err
 }

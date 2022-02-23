@@ -16,8 +16,8 @@ const (
 func TestRoot(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	dirents, err := ts.ReadDir("name/ux/~ip/")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir("name/ux/~ip/")
+	assert.Nil(t, err, "GetDir")
 
 	assert.NotEqual(t, 0, len(dirents))
 
@@ -47,8 +47,8 @@ func TestDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	d := []byte("hello")
 
-	dirents, err := ts.ReadDir(fn + "d1")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir(fn + "d1")
+	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 0, len(dirents))
 

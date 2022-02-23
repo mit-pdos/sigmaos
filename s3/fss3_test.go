@@ -16,8 +16,8 @@ import (
 func TestOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	dirents, err := ts.ReadDir("name/s3/")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir("name/s3/")
+	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 1, len(dirents))
 
@@ -32,8 +32,8 @@ func TestTwo(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	dirents, err := ts.ReadDir("name/s3")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir("name/s3")
+	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 2, len(dirents))
 
@@ -46,8 +46,8 @@ func TestUnionSimple(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.ReadDir("name/s3/~ip/")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir("name/s3/~ip/")
+	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 5, len(dirents))
 
@@ -60,8 +60,8 @@ func TestUnionDir(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.ReadDir("name/s3/~ip/input")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir("name/s3/~ip/input")
+	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 8, len(dirents))
 
@@ -116,7 +116,7 @@ func TestStat(t *testing.T) {
 }
 
 func s3Name(ts *test.Tstate) string {
-	sts, err := ts.ReadDir("name/s3/")
+	sts, err := ts.GetDir("name/s3/")
 	assert.Nil(ts.T, err, "name/s3")
 	assert.Equal(ts.T, 1, len(sts))
 	name := "name/s3" + "/" + sts[0].Name
@@ -148,8 +148,8 @@ func TestSymlinkDir(t *testing.T) {
 	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
-	dirents, err := ts.ReadDir(dn + "/")
-	assert.Nil(t, err, "ReadDir")
+	dirents, err := ts.GetDir(dn + "/")
+	assert.Nil(t, err, "GetDir")
 	assert.Equal(t, 5, len(dirents))
 
 	ts.Shutdown()

@@ -83,7 +83,7 @@ func (m *Microbenchmarks) setup(dir string) {
 }
 
 func (m *Microbenchmarks) teardown(dir string) {
-	fs, err := m.ReadDir(dir)
+	fs, err := m.GetDir(dir)
 	if err != nil {
 		log.Fatalf("Error ReadDir in Microbenchmarks.teardown: %v", err)
 	}

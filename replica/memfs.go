@@ -8,7 +8,7 @@ import (
 )
 
 func RunMemfsdReplica(name string, config repl.Config) {
-	fss, _, _, err := fslibsrv.MakeReplMemFs("INVALID", "", name, config)
+	fss, err := fslibsrv.MakeReplMemFs("INVALID", "", name, config)
 	if err != nil {
 		log.Fatalf("RunMemfdReplica: err %v\n", err)
 	}

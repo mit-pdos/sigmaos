@@ -91,7 +91,7 @@ func (r *Machined) getNextConfig() {
 // named replica for it. Return true when all named replicas have been
 // initialized.
 func (r *Machined) tryAddNamedReplicaL() bool {
-	rds, err := r.ReadDir(path.Join(REALMS, r.cfg.RealmId))
+	rds, err := r.GetDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
 		log.Fatalf("Error ReadDir in Machined.tryInitRealmL: %v", err)
 	}
@@ -178,9 +178,9 @@ func (r *Machined) deregister() {
 }
 
 func (r *Machined) tryDestroyRealmL() {
-	rds, err := r.ReadDir(path.Join(REALMS, r.cfg.RealmId))
+	rds, err := r.GetDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
-		log.Fatalf("Error ReadDir in Machined.tryDestroyRealmL: %v", err)
+		log.Fatalf("Error GetDir in Machined.tryDestroyRealmL: %v", err)
 	}
 
 	// If this is the last machined, destroy the machined's named

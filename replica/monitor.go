@@ -38,7 +38,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 }
 
 func (m *ReplicaMonitor) updateConfig() {
-	replicas, err := m.ReadDir(m.unionDirPath)
+	replicas, err := m.GetDir(m.unionDirPath)
 	if err != nil {
 		log.Fatalf("Error reading union dir in monitor: %v", err)
 	}

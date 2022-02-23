@@ -27,7 +27,7 @@ func mkFlwsMap(fsl *fslib.FsLib, f []string) *FlwsMap {
 
 func mkFlwsMapStatus(fsl *fslib.FsLib, dir string) *FlwsMap {
 	fw := mkFlwsMap(fsl, nil)
-	sts, err := fw.ReadDir(dir)
+	sts, err := fw.GetDir(dir)
 	if err != nil {
 		return nil
 	}

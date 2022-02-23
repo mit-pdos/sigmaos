@@ -6,7 +6,7 @@ import (
 	"ulambda/protclnt"
 )
 
-func (fsc *FsClient) walkUnion(fid np.Tfid, path []string, todo int) (np.Tfid, int, *np.Err) {
+func (fsc *FidClient) walkUnion(fid np.Tfid, path []string, todo int) (np.Tfid, int, *np.Err) {
 	fid2 := fsc.fids.allocFid()
 	i := len(path) - todo
 	err := fsc.unionLookup(fid, fid2, path[i])
@@ -16,7 +16,7 @@ func (fsc *FsClient) walkUnion(fid np.Tfid, path []string, todo int) (np.Tfid, i
 	return fid2, todo - 1, nil
 }
 
-func (fsc *FsClient) unionMatch(q, name string) bool {
+func (fsc *FidClient) unionMatch(q, name string) bool {
 	switch q {
 	case "~any":
 		return true
@@ -37,7 +37,7 @@ func (fsc *FsClient) unionMatch(q, name string) bool {
 	return true
 }
 
-func (fsc *FsClient) unionScan(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (bool, *np.Err) {
+func (fsc *FidClient) unionScan(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dirents []*np.Stat, q string) (bool, *np.Err) {
 	for _, de := range dirents {
 		// Read the link
 		fid3 := fsc.fids.allocFid()
@@ -63,7 +63,7 @@ func (fsc *FsClient) unionScan(pc *protclnt.ProtClnt, fid, fid2 np.Tfid, dirents
 	return false, nil
 }
 
-func (fsc *FsClient) unionLookup(fid, fid2 np.Tfid, q string) *np.Err {
+func (fsc *FidClient) unionLookup(fid, fid2 np.Tfid, q string) *np.Err {
 	pc := fsc.fids.clnt(fid)
 	_, err := pc.Open(fid, np.OREAD)
 	if err != nil {

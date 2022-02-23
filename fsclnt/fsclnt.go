@@ -12,56 +12,45 @@ import (
 )
 
 //
-// Sigma file system API.  A sigma proc typically has one fsclnt
-// through which it interacts with all the file servers in a sigma
-// deployment.  Alternatively (and not tested), a kernel could have
-// one fsclnt for all its procs, but then the servers must trust the
-// kernel to ensure that a proc uses only its fids; this allows many
-// procs to use a single TCP connection to a server.
-//
+// Sigma file system API at the level of fids. A proc has one
+// FidClient through which it interacts with all the file servers in a
+// sigma deployment.  The FidClient API is wrapped by FdClient using
+// file descriptors to allow sharing of a FidClient among several
+// procs.
 
 type Watch func(string, error)
 
-type FsClient struct {
-	fds   *FdTable
-	fids  *FidMap
-	pc    *protclnt.Clnt
-	mnt   *MntTable
-	uname string
+type FidClient struct {
+	fids *FidMap
+	pc   *protclnt.Clnt
+	mnt  *MntTable
 }
 
-func MakeFsClient(uname string) *FsClient {
-	fsc := &FsClient{}
-	fsc.fds = mkFdTable()
+func MakeFidClient() *FidClient {
+	fsc := &FidClient{}
 	fsc.fids = mkFidMap()
 	fsc.mnt = makeMntTable()
 	fsc.pc = protclnt.MakeClnt()
-	fsc.uname = uname
 	return fsc
 }
 
-func (fsc *FsClient) ReadSeqNo() np.Tseqno {
+func (fsc *FidClient) ReadSeqNo() np.Tseqno {
 	return fsc.pc.ReadSeqNo()
 }
 
-func (fsc *FsClient) Exit() {
+func (fsc *FidClient) Exit() {
 	fsc.mnt.exit()
 	fsc.pc.Exit()
 }
 
-func (fsc *FsClient) String() string {
-	str := fmt.Sprintf("Fsclnt table:\n")
-	str += fmt.Sprintf("fds %v\n", fsc.fds)
+func (fsc *FidClient) String() string {
+	str := fmt.Sprintf("Fsclnt fid table:\n")
 	str += fmt.Sprintf("fids %v\n", fsc.fids)
 	return str
 }
 
-func (fsc *FsClient) Uname() string {
-	return fsc.uname
-}
-
 // Simulate network partition to server that exports path
-func (fsc *FsClient) Disconnect(path string) error {
+func (fsc *FidClient) Disconnect(path string) error {
 	p := np.Split(path)
 	fid, _ := fsc.mnt.resolve(p)
 	if fid == np.NoFid {
@@ -75,7 +64,7 @@ func (fsc *FsClient) Disconnect(path string) error {
 	return nil
 }
 
-func (fsc *FsClient) mount(fid np.Tfid, path string) *np.Err {
+func (fsc *FidClient) mount(fid np.Tfid, path string) *np.Err {
 	p := fsc.fids.lookup(fid)
 	if p == nil {
 		return np.MkErr(np.TErrUnknownfid, "mount")
@@ -88,41 +77,36 @@ func (fsc *FsClient) mount(fid np.Tfid, path string) *np.Err {
 	return nil
 }
 
-func (fsc *FsClient) Mount(fid np.Tfid, path string) error {
+func (fsc *FidClient) Mount(fid np.Tfid, path string) error {
 	if err := fsc.mount(fid, path); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (fsc *FsClient) Close(fd int) error {
-	fid, error := fsc.fds.lookup(fd)
-	if error != nil {
-		return error
-	}
+func (fsc *FidClient) Close(fid np.Tfid) error {
 	err := fsc.fids.clnt(fid).Clunk(fid)
 	if err != nil {
 		return err
 	}
 	fsc.fids.freeFid(fid)
-	fsc.fds.closefd(fd)
 	return nil
 }
 
-func (fsc *FsClient) attachChannel(fid np.Tfid, server []string, p []string, tree []string) (*Path, *np.Err) {
-	reply, err := fsc.pc.Attach(server, fsc.Uname(), fid, tree)
+func (fsc *FidClient) attachChannel(fid np.Tfid, uname string, server []string, p []string, tree []string) (*Path, *np.Err) {
+	reply, err := fsc.pc.Attach(server, uname, fid, tree)
 	if err != nil {
 		return nil, err
 	}
 	ch := fsc.pc.MakeProtClnt(server)
-	return makePath(ch, p, []np.Tqid{reply.Qid}), nil
+	return makePath(ch, uname, p, []np.Tqid{reply.Qid}), nil
 }
 
 // XXX a version that finds server based on pathname?
-func (fsc *FsClient) attachReplicas(server []string, path, tree string) (np.Tfid, *np.Err) {
+func (fsc *FidClient) attachReplicas(uname string, server []string, path, tree string) (np.Tfid, *np.Err) {
 	p := np.Split(path)
 	fid := fsc.fids.allocFid()
-	ch, err := fsc.attachChannel(fid, server, p, np.Split(tree))
+	ch, err := fsc.attachChannel(fid, uname, server, p, np.Split(tree))
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -131,19 +115,19 @@ func (fsc *FsClient) attachReplicas(server []string, path, tree string) (np.Tfid
 	return fid, nil
 }
 
-func (fsc *FsClient) attach(server, path, tree string) (np.Tfid, *np.Err) {
-	return fsc.attachReplicas([]string{server}, path, tree)
+func (fsc *FidClient) attach(uname string, server, path, tree string) (np.Tfid, *np.Err) {
+	return fsc.attachReplicas(uname, []string{server}, path, tree)
 }
 
-func (fsc *FsClient) AttachReplicas(server []string, path, tree string) (np.Tfid, error) {
-	if fid, err := fsc.attachReplicas(server, path, tree); err != nil {
+func (fsc *FidClient) AttachReplicas(uname string, server []string, path, tree string) (np.Tfid, error) {
+	if fid, err := fsc.attachReplicas(uname, server, path, tree); err != nil {
 		return np.NoFid, err
 	} else {
 		return fid, nil
 	}
 }
 
-func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, *np.Err) {
+func (fsc *FidClient) clone(fid np.Tfid) (np.Tfid, *np.Err) {
 	db.DLPrintf("FSCLNT", "clone: %v %v\n", fid, fsc.fids.path(fid))
 	fid2 := fsc.fids.path(fid)
 	if fid2 == nil {
@@ -161,7 +145,7 @@ func (fsc *FsClient) clone(fid np.Tfid) (np.Tfid, *np.Err) {
 	return fid1, nil
 }
 
-func (fsc *FsClient) clunkFid(fid np.Tfid) {
+func (fsc *FidClient) clunkFid(fid np.Tfid) {
 	err := fsc.fids.clnt(fid).Clunk(fid)
 	if err != nil {
 		db.DLPrintf("FSCLNT", "clunkFid clunk failed %v\n", err)
@@ -169,27 +153,26 @@ func (fsc *FsClient) clunkFid(fid np.Tfid) {
 	fsc.fids.freeFid(fid)
 }
 
-func (fsc *FsClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
+func (fsc *FidClient) Create(path string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "Create %v perm %v\n", path, perm)
 	p := np.Split(path)
 	dir := np.Dir(p)
 	base := np.Base(p)
 	fid, err := fsc.walkMany(dir, true, nil)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	reply, err := fsc.fids.clnt(fid).Create(fid, base, perm, mode)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	fsc.fids.path(fid).add(base, reply.Qid)
-	fd := fsc.fds.allocFd(fid, mode)
-	return fd, nil
+	return fid, nil
 }
 
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
-func (fsc *FsClient) Rename(old string, new string) error {
+func (fsc *FidClient) Rename(old string, new string) error {
 	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
@@ -222,7 +205,7 @@ func (fsc *FsClient) Rename(old string, new string) error {
 }
 
 // Rename across directories of a single server using Renameat
-func (fsc *FsClient) renameat(old, new string) *np.Err {
+func (fsc *FidClient) renameat(old, new string) *np.Err {
 	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
@@ -247,7 +230,7 @@ func (fsc *FsClient) renameat(old, new string) *np.Err {
 	return nil
 }
 
-func (fsc *FsClient) Umount(path []string) error {
+func (fsc *FidClient) Umount(path []string) error {
 	db.DLPrintf("FSCLNT", "Umount %v\n", path)
 	fid2, err := fsc.mnt.umount(path)
 	if err != nil {
@@ -257,7 +240,7 @@ func (fsc *FsClient) Umount(path []string) error {
 	return nil
 }
 
-func (fsc *FsClient) Remove(name string) error {
+func (fsc *FidClient) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
 	fid, rest := fsc.mnt.resolve(path)
@@ -288,7 +271,7 @@ func (fsc *FsClient) Remove(name string) error {
 	return nil
 }
 
-func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
+func (fsc *FidClient) Stat(name string) (*np.Stat, error) {
 	db.DLPrintf("FSCLNT", "Stat %v\n", name)
 	path := np.Split(name)
 	target, rest := fsc.mnt.resolve(path)
@@ -311,7 +294,7 @@ func (fsc *FsClient) Stat(name string) (*np.Stat, error) {
 }
 
 // XXX clone fid?
-func (fsc *FsClient) readlink(pc *protclnt.ProtClnt, fid np.Tfid) (string, *np.Err) {
+func (fsc *FidClient) readlink(pc *protclnt.ProtClnt, fid np.Tfid) (string, *np.Err) {
 	db.DLPrintf("FSCLNT", "readLink %v\n", fid)
 	_, err := pc.Open(fid, np.OREAD)
 	if err != nil {
@@ -325,27 +308,26 @@ func (fsc *FsClient) readlink(pc *protclnt.ProtClnt, fid np.Tfid) (string, *np.E
 	return string(reply.Data), nil
 }
 
-func (fsc *FsClient) OpenWatch(path string, mode np.Tmode, w Watch) (int, error) {
+func (fsc *FidClient) OpenWatch(path string, mode np.Tmode, w Watch) (np.Tfid, error) {
 	db.DLPrintf("FSCLNT", "Open %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), w)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	_, err = fsc.fids.clnt(fid).Open(fid, mode)
 	if err != nil {
-		return -1, err
+		return np.NoFid, err
 	}
 	// XXX check reply.Qid?
-	fd := fsc.fds.allocFd(fid, mode)
-	return fd, nil
+	return fid, nil
 }
 
-func (fsc *FsClient) Open(path string, mode np.Tmode) (int, error) {
+func (fsc *FidClient) Open(path string, mode np.Tmode) (np.Tfid, error) {
 	return fsc.OpenWatch(path, mode, nil)
 }
 
-func (fsc *FsClient) SetDirWatch(path string, w Watch) error {
+func (fsc *FidClient) SetDirWatch(path string, w Watch) error {
 	db.DLPrintf("FSCLNT", "SetDirWatch %v\n", path)
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
@@ -361,7 +343,7 @@ func (fsc *FsClient) SetDirWatch(path string, w Watch) error {
 	return nil
 }
 
-func (fsc *FsClient) SetRemoveWatch(path string, w Watch) error {
+func (fsc *FidClient) SetRemoveWatch(path string, w Watch) error {
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -383,48 +365,29 @@ func (fsc *FsClient) SetRemoveWatch(path string, w Watch) error {
 	return nil
 }
 
-func (fsc *FsClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
-	db.DLPrintf("FSCLNT", "Read %v %v\n", fd, cnt)
-	fid, off, error := fsc.fds.lookupOff(fd)
+func (fsc *FidClient) Read(fid np.Tfid, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+	db.DLPrintf("FSCLNT", "Read %v %v\n", fid, cnt)
 	//p := fsc.fids[fdst.fid]
 	//version := p.lastqid().Version
 	//v := fdst.mode&np.OVERSION == np.OVERSION
-	if error != nil {
-		return nil, error
-	}
 	reply, err := fsc.fids.clnt(fid).Read(fid, off, cnt)
 	if err != nil {
 		return nil, err
 	}
-	fsc.fds.incOff(fd, np.Toffset(len(reply.Data)))
-	db.DLPrintf("FSCLNT", "Read %v -> %v %v\n", fd, reply, err)
+	db.DLPrintf("FSCLNT", "Read %v -> %v %v\n", fid, reply, err)
 	return reply.Data, nil
 }
 
-func (fsc *FsClient) Write(fd int, data []byte) (np.Tsize, error) {
-	db.DLPrintf("FSCLNT", "Write %v %v\n", fd, len(data))
-	fid, off, error := fsc.fds.lookupOff(fd)
-	if error != nil {
-		return 0, error
-	}
+func (fsc *FidClient) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, error) {
+	db.DLPrintf("FSCLNT", "Write %v %v\n", fid, len(data))
 	reply, err := fsc.fids.clnt(fid).Write(fid, off, data)
 	if err != nil {
 		return 0, err
 	}
-	fsc.fds.incOff(fd, np.Toffset(reply.Count))
 	return reply.Count, nil
 }
 
-func (fsc *FsClient) Lseek(fd int, off np.Toffset) error {
-	db.DLPrintf("FSCLNT", "Lseek %v %v\n", fd, off)
-	err := fsc.fds.setOffset(fd, off)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (fsc *FsClient) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
+func (fsc *FidClient) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest := fsc.mnt.resolve(p)
@@ -458,7 +421,7 @@ func (fsc *FsClient) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.
 }
 
 // Write file
-func (fsc *FsClient) SetFile(path string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
+func (fsc *FidClient) SetFile(path string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest := fsc.mnt.resolve(p)
@@ -492,7 +455,7 @@ func (fsc *FsClient) SetFile(path string, mode np.Tmode, data []byte, off np.Tof
 }
 
 // Create file
-func (fsc *FsClient) PutFile(path string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
+func (fsc *FidClient) PutFile(path string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "PutFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest := fsc.mnt.resolve(p)
@@ -527,7 +490,7 @@ func (fsc *FsClient) PutFile(path string, mode np.Tmode, perm np.Tperm, data []b
 	return reply.Count, nil
 }
 
-func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
+func (fsc *FidClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -546,7 +509,7 @@ func (fsc *FsClient) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 	return reply.Fence, nil
 }
 
-func (fsc *FsClient) RegisterFence(f np.Tfence, path string) error {
+func (fsc *FidClient) RegisterFence(f np.Tfence, path string) error {
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -558,7 +521,7 @@ func (fsc *FsClient) RegisterFence(f np.Tfence, path string) error {
 	return nil
 }
 
-func (fsc *FsClient) DeregisterFence(f np.Tfence, path string) error {
+func (fsc *FidClient) DeregisterFence(f np.Tfence, path string) error {
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -571,7 +534,7 @@ func (fsc *FsClient) DeregisterFence(f np.Tfence, path string) error {
 	return nil
 }
 
-func (fsc *FsClient) RmFence(f np.Tfence, path string) error {
+func (fsc *FidClient) RmFence(f np.Tfence, path string) error {
 	p := np.Split(path)
 	fid, err := fsc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {

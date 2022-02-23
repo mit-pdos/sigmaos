@@ -6,22 +6,24 @@ import (
 )
 
 type Writer struct {
-	fc      *fsclnt.FsClient
-	fd      int
+	fc      *fsclnt.FidClient
+	fid     np.Tfid
 	buf     []byte
+	off     np.Toffset
 	eof     bool
 	chunksz np.Tsize
 }
 
 func (wrt *Writer) Write(p []byte) (int, error) {
-	n, err := wrt.fc.Write(wrt.fd, p)
+	n, err := wrt.fc.Write(wrt.fid, wrt.off, p)
+	wrt.off += np.Toffset(n)
 	return int(n), err
 }
 
 func (wrt *Writer) Close() error {
-	return wrt.fc.Close(wrt.fd)
+	return wrt.fc.Close(wrt.fid)
 }
 
-func MakeWriter(fc *fsclnt.FsClient, fd int, chunksz np.Tsize) (*Writer, error) {
-	return &Writer{fc, fd, make([]byte, 0), false, chunksz}, nil
+func MakeWriter(fc *fsclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Writer, error) {
+	return &Writer{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
 }

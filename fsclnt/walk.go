@@ -14,7 +14,7 @@ const (
 // walkManyUmount walks p using walkMany, but if it returns an EOF err
 // (e.g., server is not responding), it unmounts the server and starts
 // over again, perhaps switching to another replica.
-func (fsc *FsClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
+func (fsc *FidClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	var fid np.Tfid
 	for {
 		f, err := fsc.walkMany(p, resolve, w)
@@ -52,7 +52,7 @@ func (fsc *FsClient) walkManyUmount(p []string, resolve bool, w Watch) (np.Tfid,
 // server and update the mount table. If succesful, walkMany() starts
 // over again, but likely with a longer match in the mount table.
 // XXX clunking fid?
-func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
+func (fsc *FidClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, todo, err := fsc.walkOne(path, w)
 		if err != nil {
@@ -89,7 +89,7 @@ func (fsc *FsClient) walkMany(path []string, resolve bool, w Watch) (np.Tfid, *n
 
 // Walk to parent directory, and check if name is there.  If it is, return entry.
 // Otherwise, set watch based on directory's version number
-func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watch) (*np.Rwalk, *np.Err) {
+func (fsc *FidClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watch) (*np.Rwalk, *np.Err) {
 	fid3 := fsc.fids.allocFid()
 	dir := r[0 : len(r)-1]
 	reply, err := fsc.fids.clnt(fid1).Walk(fid1, fid3, dir)
@@ -114,7 +114,7 @@ func (fsc *FsClient) setWatch(fid1, fid2 np.Tfid, p []string, r []string, w Watc
 
 // Resolves path until it runs into a symlink, union element, or an
 // error.
-func (fsc *FsClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
+func (fsc *FidClient) walkOne(path []string, w Watch) (np.Tfid, int, *np.Err) {
 	fid, rest := fsc.mnt.resolve(path)
 	if fid == np.NoFid {
 		if fsc.mnt.hasExited() {

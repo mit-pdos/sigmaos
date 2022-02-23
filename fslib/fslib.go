@@ -5,13 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"ulambda/fsclnt"
+	"ulambda/fd"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
 type FsLib struct {
-	*fsclnt.FsClient
+	*fd.FdClient
 	chunkSz np.Tsize
 }
 
@@ -38,11 +38,11 @@ func Named() []string {
 
 func MakeFsLibBase(uname string) *FsLib {
 	// Picking a small chunk size really kills throughput
-	return &FsLib{fsclnt.MakeFsClient(uname), np.Tsize(10_000_000)}
+	return &FsLib{fd.MakeFdClient(nil, uname), np.Tsize(10_000_000)}
 }
 
 func (fl *FsLib) MountTree(server []string, tree, mount string) error {
-	if fd, err := fl.AttachReplicas(server, "", tree); err == nil {
+	if fd, err := fl.AttachReplicas(fl.Uname(), server, "", tree); err == nil {
 		return fl.Mount(fd, mount)
 	} else {
 		return err

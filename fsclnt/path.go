@@ -12,13 +12,15 @@ type Path struct {
 	pc    *protclnt.ProtClnt
 	cname []string
 	qids  []np.Tqid
+	uname string
 }
 
-func makePath(pc *protclnt.ProtClnt, n []string, qs []np.Tqid) *Path {
+func makePath(pc *protclnt.ProtClnt, uname string, n []string, qs []np.Tqid) *Path {
 	p := &Path{}
 	p.pc = pc
 	p.cname = n
 	p.qids = qs
+	p.uname = uname
 	return p
 }
 
@@ -31,7 +33,7 @@ func (p *Path) String() string {
 func (p *Path) copyPath() *Path {
 	qids := make([]np.Tqid, len(p.qids))
 	copy(qids, p.qids)
-	return makePath(p.pc, p.cname, qids)
+	return makePath(p.pc, p.uname, p.cname, qids)
 }
 
 func (p *Path) add(name string, q np.Tqid) {

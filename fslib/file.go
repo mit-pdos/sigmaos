@@ -10,7 +10,7 @@ import (
 )
 
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
-	return fl.FsClient.ReadSeqNo()
+	return fl.FidClient.ReadSeqNo()
 }
 
 //
@@ -18,15 +18,15 @@ func (fl *FsLib) ReadSeqNo() np.Tseqno {
 //
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FsClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
+	return fl.FidClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {
-	return fl.FsClient.SetFile(fname, np.OWRITE, data, off)
+	return fl.FidClient.SetFile(fname, np.OWRITE, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) (np.Tsize, error) {
-	return fl.FsClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
+	return fl.FidClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {
@@ -64,7 +64,7 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return reader.MakeReader(fl.FsClient, fd, fl.chunkSz)
+	return fl.MakeReader(fd, fl.chunkSz)
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
@@ -85,7 +85,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			break
 		}
 	}
-	return reader.MakeReader(fl.FsClient, fd, fl.chunkSz)
+	return fl.MakeReader(fd, fl.chunkSz)
 }
 
 func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
@@ -115,7 +115,7 @@ func (fl *FsLib) CreateWriter(fname string, perm np.Tperm, mode np.Tmode) (*writ
 	if err != nil {
 		return nil, err
 	}
-	return writer.MakeWriter(fl.FsClient, fd, fl.chunkSz)
+	return fl.MakeWriter(fd, fl.chunkSz)
 }
 
 func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error) {
@@ -123,7 +123,7 @@ func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error)
 	if err != nil {
 		return nil, err
 	}
-	return writer.MakeWriter(fl.FsClient, fd, fl.chunkSz)
+	return fl.MakeWriter(fd, fl.chunkSz)
 }
 
 //

@@ -207,7 +207,7 @@ func (w *Coord) processResult(dir string, res Ttask) {
 }
 
 func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Status, error)) {
-	sts, err := w.ReadDir(dir + TIP) // XXX handle one entry at the time?
+	sts, err := w.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
 		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
 	}
@@ -223,7 +223,7 @@ func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Stat
 }
 
 func (w *Coord) recover(dir string) {
-	sts, err := w.ReadDir(dir + TIP) // XXX handle one entry at the time?
+	sts, err := w.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
 		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
 	}

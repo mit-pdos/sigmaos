@@ -20,7 +20,7 @@ import (
 
 func TestInitFs(t *testing.T) {
 	ts := test.MakeTstate(t)
-	sts, err := ts.ReadDir("name/")
+	sts, err := ts.GetDir("name/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
 	ts.Shutdown()
@@ -218,7 +218,7 @@ func TestDirSimple(t *testing.T) {
 	_, err = ts.PutFile(dn+"/f", 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.ReadDir(dn)
+	sts, err := ts.GetDir(dn)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 1, len(sts))
 	assert.Equal(t, "f", sts[0].Name)
@@ -588,8 +588,8 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string) int {
 	i := 0
 	for ok {
 		ok = false
-		sts, err := fsl.ReadDir(TODO)
-		assert.Nil(ts.T, err, "ReadDir")
+		sts, err := fsl.GetDir(TODO)
+		assert.Nil(ts.T, err, "GetDir")
 		for _, st := range sts {
 			err = fsl.Rename(TODO+"/"+st.Name, DONE+"/"+st.Name+"."+t)
 			if err == nil {
@@ -604,8 +604,8 @@ func testRename(ts *test.Tstate, fsl *fslib.FsLib, t string) int {
 }
 
 func checkFs(ts *test.Tstate) {
-	sts, err := ts.ReadDir(DONE)
-	assert.Nil(ts.T, err, "ReadDir")
+	sts, err := ts.GetDir(DONE)
+	assert.Nil(ts.T, err, "GetDir")
 	assert.Equal(ts.T, NFILE, len(sts), "checkFs")
 	files := make(map[int]bool)
 	for _, st := range sts {
@@ -815,7 +815,7 @@ func TestSymlink(t *testing.T) {
 	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), "name/namedself", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.ReadDir("name/namedself/")
+	sts, err := ts.GetDir("name/namedself/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, []string{"d", "namedself"}), "dir")
 
@@ -834,11 +834,11 @@ func TestUnionDir(t *testing.T) {
 	err = ts.Symlink(fslib.MakeTarget([]string{":2222"}), "name/d/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.ReadDir("name/d/~ip/")
+	sts, err := ts.GetDir("name/d/~ip/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, []string{"d"}), "dir")
 
-	sts, err = ts.ReadDir("name/d/~ip/d/")
+	sts, err = ts.GetDir("name/d/~ip/d/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, []string{"namedself0", "namedself1"}), "dir")
 
@@ -853,7 +853,7 @@ func TestUnionRoot(t *testing.T) {
 	err = ts.Symlink(fslib.MakeTarget([]string{"xxx"}), "name/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.ReadDir("name/~ip/")
+	sts, err := ts.GetDir("name/~ip/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, []string{"namedself0", "namedself1"}), "dir")
 
@@ -872,11 +872,11 @@ func TestUnionSymlinkRead(t *testing.T) {
 	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), "name/d/namedself1", 0777|np.DMTMP)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.ReadDir("name/~ip/d/namedself1/")
+	sts, err := ts.GetDir("name/~ip/d/namedself1/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, []string{"statsd", "d", "namedself0"}), "root wrong")
 
-	sts, err = ts.ReadDir("name/~ip/d/namedself1/d/")
+	sts, err = ts.GetDir("name/~ip/d/namedself1/d/")
 	assert.Equal(t, nil, err)
 	log.Printf("sts %v\n", sts)
 	assert.True(t, fslib.Present(sts, []string{"namedself1"}), "d wrong")
@@ -899,7 +899,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 	_, err = ts.PutFile(fn1, 0777, np.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.ReadDir("name/~ip/namedself0/")
+	sts, err := ts.GetDir("name/~ip/namedself0/")
 	assert.Equal(t, nil, err)
 	assert.True(t, fslib.Present(sts, []string{"statsd", "f", "g"}), "root wrong")
 

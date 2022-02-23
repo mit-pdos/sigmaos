@@ -162,9 +162,9 @@ func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
 }
 
 func (m *RealmMgr) deallocAllMachineds(realmId string) {
-	rds, err := m.ReadDir(path.Join(REALMS, realmId))
+	rds, err := m.GetDir(path.Join(REALMS, realmId))
 	if err != nil {
-		log.Fatalf("Error ReadDir in RealmMgr.deallocRealms: %v", err)
+		log.Fatalf("Error GetDir in RealmMgr.deallocRealms: %v", err)
 	}
 
 	for _, machined := range rds {
@@ -235,9 +235,9 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 		return stat
 	}
 	// XXX May fail if this named crashed
-	procds, err := m.ReadDir(path.Join(REALM_NAMEDS, realmId, "~ip", np.PROCDREL))
+	procds, err := m.GetDir(path.Join(REALM_NAMEDS, realmId, "~ip", np.PROCDREL))
 	if err != nil {
-		log.Fatalf("Error ReadDir 2 in RealmMgr.getRealmProcdStats: %v", err)
+		log.Fatalf("Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
@@ -323,9 +323,9 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 			//			}
 			// XXX A hack for now, since we don't have a good way of linking a procd to a machined
 			_ = procdUtils
-			machinedIds, err := m.ReadDir(path.Join(REALMS, realmId))
+			machinedIds, err := m.GetDir(path.Join(REALMS, realmId))
 			if err != nil {
-				log.Printf("Error ReadDir in RealmMgr.adjustRealm: %v", err)
+				log.Printf("Error GetDir in RealmMgr.adjustRealm: %v", err)
 			}
 			minMachinedId := machinedIds[1].Name
 			// Deallocate least utilized procd
@@ -337,9 +337,9 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 // Balance machineds across realms.
 func (m *RealmMgr) balanceMachineds() {
 	for {
-		realms, err := m.ReadDir(REALMS)
+		realms, err := m.GetDir(REALMS)
 		if err != nil {
-			log.Fatalf("Error ReadDir in RealmMgr.balanceMachineds: %v", err)
+			log.Fatalf("Error GetDir in RealmMgr.balanceMachineds: %v", err)
 		}
 
 		for _, realm := range realms {

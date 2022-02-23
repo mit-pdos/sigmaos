@@ -14,7 +14,7 @@ import (
 // Interfaces
 type FsLambda interface {
 	Mkdir(path string, perm np.Tperm) error
-	ReadDir(dir string) ([]*np.Stat, error)
+	GetDir(dir string) ([]*np.Stat, error)
 	IsDir(name string) (bool, error)
 	PutFile(string, np.Tperm, np.Tmode, []byte) (np.Tsize, error)
 	GetFile(string) ([]byte, error)
@@ -155,7 +155,7 @@ func downloadFile(fslambda FsLambda, src string, dest string) {
 // Recursively copy a remote directory tree
 func copyRemoteDirTree(fslambda FsLambda, src string, dest string) {
 	mkdirOpt(fslambda, dest)
-	entries, err := fslambda.ReadDir(src)
+	entries, err := fslambda.GetDir(src)
 	if err != nil {
 		log.Printf("%v Error reading dir %v: %v\n", fslambda.Name(), src, err)
 	}

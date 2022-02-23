@@ -63,6 +63,7 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 		db.DPrintf("MakeReader %v err %v", d, err)
 		return nil, err
 	}
+	defer rdr.Close()
 	for {
 		l, err := binary.ReadVarint(rdr)
 		if err != nil && err == io.EOF {

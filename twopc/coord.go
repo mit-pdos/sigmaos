@@ -106,7 +106,7 @@ func (cd *Coord) restart() {
 }
 
 func (cd *Coord) rmStatusFiles(dir string) {
-	sts, err := cd.ReadDir(dir)
+	sts, err := cd.GetDir(dir)
 	if err != nil {
 		log.Fatalf("COORD: ReadDir commit error %v\n", err)
 	}

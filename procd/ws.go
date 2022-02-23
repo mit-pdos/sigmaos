@@ -10,7 +10,7 @@ import (
 )
 
 func (pd *Procd) readRemoteRunq(procdPath string, queueName string) ([]*np.Stat, error) {
-	return pd.ReadDir(path.Join(procdPath, queueName))
+	return pd.GetDir(path.Join(procdPath, queueName))
 }
 
 func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid string) (*proc.Proc, error) {

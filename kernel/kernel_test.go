@@ -102,7 +102,7 @@ func TestSymlink2(t *testing.T) {
 func TestSymlink3(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	uxs, err := ts.ReadDir("name/ux")
+	uxs, err := ts.GetDir("name/ux")
 	assert.Nil(t, err, "Error reading ux dir")
 
 	uxip := uxs[0].Name
@@ -165,7 +165,7 @@ func TestEphemeral(t *testing.T) {
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
 
-	sts, err := ts.ReadDir(name + "/")
+	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
 	assert.Equal(t, 6, len(sts)) // statsd and ctl and running and runqs
 
@@ -189,7 +189,7 @@ func TestEphemeral(t *testing.T) {
 }
 
 func procdName(ts *test.Tstate, exclude map[string]bool) string {
-	sts, err := ts.ReadDir(np.PROCD)
+	sts, err := ts.GetDir(np.PROCD)
 	stsExcluded := []*np.Stat{}
 	for _, s := range sts {
 		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {

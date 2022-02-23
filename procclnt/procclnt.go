@@ -283,7 +283,7 @@ func (clnt *ProcClnt) EvictProcd(procdIp string, pid string) error {
 
 // Return the pids of all children.
 func (clnt *ProcClnt) GetChildren(procdir string) ([]string, error) {
-	sts, err := clnt.ReadDir(path.Join(procdir, proc.CHILDREN))
+	sts, err := clnt.GetDir(path.Join(procdir, proc.CHILDREN))
 	if err != nil {
 		log.Printf("%v: GetChildren %v error: %v", proc.GetName(), procdir, err)
 		return nil, err

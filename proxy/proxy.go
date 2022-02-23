@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
@@ -128,10 +128,10 @@ func (npc *NpConn) Detach() {
 	db.DLPrintf("9POBJ", "Detach\n")
 }
 
-// XXX avoid duplication with fsclnt
+// XXX avoid duplication with fidclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
 	db.DPrintf("automount %v to %v\n", target, path)
-	server, _ := fsclnt.SplitTarget(target)
+	server, _ := fidclnt.SplitTarget(target)
 	reply, err := npc.clnt.Attach([]string{server}, npc.uname, newfid, []string{""})
 	if err != nil {
 		return np.Tqid{}, err
@@ -140,7 +140,7 @@ func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.T
 	return reply.Qid, nil
 }
 
-// XXX avoid duplication with fsclnt
+// XXX avoid duplication with fidclnt
 func (npc *NpConn) readLink(fid np.Tfid) (string, error) {
 	_, err := npc.npch(fid).Open(fid, np.OREAD)
 	if err != nil {
@@ -180,7 +180,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				return np.MkErr(np.TErrUnknownfid, path).Rerror()
 			}
 			// XXX assumes symlink is final component of walk
-			if fsclnt.IsRemoteTarget(target) {
+			if fidclnt.IsRemoteTarget(target) {
 				qid, err = npc.autoMount(args.NewFid, target, path[todo:])
 				if err != nil {
 					return np.MkErr(np.TErrUnknownfid, path).Rerror()

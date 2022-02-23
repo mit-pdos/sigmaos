@@ -1,9 +1,9 @@
-package fd
+package fdclnt
 
 import (
 	"fmt"
 
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	np "ulambda/ninep"
 	"ulambda/reader"
 	"ulambda/writer"
@@ -21,15 +21,15 @@ import (
 //
 
 type FdClient struct {
-	*fsclnt.FidClient
+	*fidclnt.FidClient
 	fds   *FdTable
 	uname string // the principal associated with this FdClient
 }
 
-func MakeFdClient(fsc *fsclnt.FidClient, uname string) *FdClient {
+func MakeFdClient(fsc *fidclnt.FidClient, uname string) *FdClient {
 	fdc := &FdClient{}
 	if fsc == nil {
-		fdc.FidClient = fsclnt.MakeFidClient()
+		fdc.FidClient = fidclnt.MakeFidClient()
 	} else {
 		fdc.FidClient = fsc
 	}
@@ -70,7 +70,7 @@ func (fdc *FdClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 	return fd, nil
 }
 
-func (fdc *FdClient) OpenWatch(path string, mode np.Tmode, w fsclnt.Watch) (int, error) {
+func (fdc *FdClient) OpenWatch(path string, mode np.Tmode, w fidclnt.Watch) (int, error) {
 	fid, err := fdc.FidClient.OpenWatch(path, mode, w)
 	if err != nil {
 		return -1, err

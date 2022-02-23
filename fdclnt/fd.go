@@ -1,4 +1,4 @@
-package fd
+package fdclnt
 
 import (
 	"sync"

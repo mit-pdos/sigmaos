@@ -1,4 +1,4 @@
-package fsclnt
+package fidclnt
 
 import (
 	"log"

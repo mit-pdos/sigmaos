@@ -1,12 +1,12 @@
 package writer
 
 import (
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	np "ulambda/ninep"
 )
 
 type Writer struct {
-	fc      *fsclnt.FidClient
+	fc      *fidclnt.FidClient
 	fid     np.Tfid
 	buf     []byte
 	off     np.Toffset
@@ -24,6 +24,6 @@ func (wrt *Writer) Close() error {
 	return wrt.fc.Close(wrt.fid)
 }
 
-func MakeWriter(fc *fsclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Writer, error) {
+func MakeWriter(fc *fidclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Writer, error) {
 	return &Writer{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
 }

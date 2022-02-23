@@ -12,8 +12,8 @@ import (
 	"ulambda/atomic"
 	"ulambda/crash"
 	"ulambda/fenceclnt"
+	"ulambda/fidclnt"
 	"ulambda/fs"
-	"ulambda/fsclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
@@ -115,7 +115,7 @@ func RunMember(grp string) {
 	g.peerFence.AcquireFenceW([]byte{})
 	replicaAddrs := g.readReplicaAddrs(grp)
 
-	ip, err := fsclnt.LocalIP()
+	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("FATAL group ip %v\n", err)
 	}

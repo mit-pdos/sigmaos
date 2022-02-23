@@ -3,12 +3,12 @@ package reader
 import (
 	"io"
 
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	np "ulambda/ninep"
 )
 
 type Reader struct {
-	fc      *fsclnt.FidClient
+	fc      *fidclnt.FidClient
 	fid     np.Tfid
 	buf     []byte
 	off     np.Toffset
@@ -58,6 +58,6 @@ func (rdr *Reader) Close() error {
 	return rdr.fc.Close(rdr.fid)
 }
 
-func MakeReader(fc *fsclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Reader, error) {
+func MakeReader(fc *fidclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Reader, error) {
 	return &Reader{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
 }

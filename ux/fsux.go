@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/fssrv"
@@ -22,7 +22,7 @@ type FsUx struct {
 }
 
 func RunFsUx(mount string) {
-	ip, err := fsclnt.LocalIP()
+	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("LocalIP %v %v\n", np.UX, err)
 	}

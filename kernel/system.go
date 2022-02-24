@@ -56,6 +56,8 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	if err != nil {
 		log.Fatalf("FATAL RunNamed err %v\n", err)
 	}
+	proc.SetProgram(uname)
+	proc.SetPid(proc.GenPid())
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())

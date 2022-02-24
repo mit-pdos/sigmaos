@@ -8,7 +8,7 @@ import (
 )
 
 type Reader struct {
-	fc      *fidclnt.FidClient
+	fc      *fidclnt.FidClnt
 	fid     np.Tfid
 	buf     []byte
 	off     np.Toffset
@@ -51,13 +51,21 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 }
 
 func (rdr *Reader) GetData() ([]byte, error) {
-	return rdr.fc.Read(rdr.fid, 0, np.MAXGETSET)
+	b, err := rdr.fc.Read(rdr.fid, 0, np.MAXGETSET)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func (rdr *Reader) Close() error {
-	return rdr.fc.Close(rdr.fid)
+	err := rdr.fc.Clunk(rdr.fid)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func MakeReader(fc *fidclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Reader, error) {
+func MakeReader(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) (*Reader, error) {
 	return &Reader{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
 }

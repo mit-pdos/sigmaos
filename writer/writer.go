@@ -6,7 +6,7 @@ import (
 )
 
 type Writer struct {
-	fc      *fidclnt.FidClient
+	fc      *fidclnt.FidClnt
 	fid     np.Tfid
 	buf     []byte
 	off     np.Toffset
@@ -16,14 +16,21 @@ type Writer struct {
 
 func (wrt *Writer) Write(p []byte) (int, error) {
 	n, err := wrt.fc.Write(wrt.fid, wrt.off, p)
+	if err != nil {
+		return 0, nil
+	}
 	wrt.off += np.Toffset(n)
-	return int(n), err
+	return int(n), nil
 }
 
 func (wrt *Writer) Close() error {
-	return wrt.fc.Close(wrt.fid)
+	err := wrt.fc.Clunk(wrt.fid)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func MakeWriter(fc *fidclnt.FidClient, fid np.Tfid, chunksz np.Tsize) (*Writer, error) {
+func MakeWriter(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) (*Writer, error) {
 	return &Writer{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
 }

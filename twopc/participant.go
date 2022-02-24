@@ -8,9 +8,9 @@ import (
 	"ulambda/atomic"
 	db "ulambda/debug"
 	"ulambda/fenceclnt"
-	"ulambda/fidclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/pathclnt"
 	"ulambda/procclnt"
 )
 
@@ -70,7 +70,7 @@ func (p *Participant) watchTwopcPrep(path string, err error) {
 	}
 }
 
-func (p *Participant) readTwopcWatch(conffile string, f fidclnt.Watch) (*Twopc, error) {
+func (p *Participant) readTwopcWatch(conffile string, f pathclnt.Watch) (*Twopc, error) {
 	twopc := Twopc{}
 	err := p.GetFileJsonWatch(conffile, &twopc)
 	return &twopc, err

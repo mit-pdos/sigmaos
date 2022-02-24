@@ -3,6 +3,7 @@ package fslib
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	np "ulambda/ninep"
 	"ulambda/reader"
@@ -10,7 +11,7 @@ import (
 )
 
 func (fl *FsLib) ReadSeqNo() np.Tseqno {
-	return fl.FidClient.ReadSeqNo()
+	return fl.FidClnt.ReadSeqNo()
 }
 
 //
@@ -18,15 +19,15 @@ func (fl *FsLib) ReadSeqNo() np.Tseqno {
 //
 
 func (fl *FsLib) GetFile(fname string) ([]byte, error) {
-	return fl.FidClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
+	return fl.FdClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
 }
 
 func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {
-	return fl.FidClient.SetFile(fname, np.OWRITE, data, off)
+	return fl.FdClient.SetFile(fname, np.OWRITE, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) (np.Tsize, error) {
-	return fl.FidClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
+	return fl.FdClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
 }
 
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {
@@ -79,23 +80,35 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
 			<-ch
 		} else if err != nil {
+			log.Printf("openwatch err %v\n", err)
 			return nil, err
 		} else { // success; file is opened
 			fd = fd1
 			break
 		}
 	}
-	return fl.MakeReader(fd, fl.chunkSz)
+	rdr, error := fl.MakeReader(fd, fl.chunkSz)
+	if error != nil {
+		log.Printf("make reader %v\n", error)
+		return nil, error
+	}
+	return rdr, nil
+
 }
 
 func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
 	rdr, err := fl.OpenReaderWatch(path)
 	if err != nil {
+		log.Printf("openread watch %v\n", err)
 		return nil, err
 	}
 	defer rdr.Close()
-	b, err := rdr.GetData()
-	return b, err
+	b, error := rdr.GetData()
+	if error != nil {
+		log.Printf("get data %v %T\n", error, error)
+		return nil, error
+	}
+	return b, nil
 }
 
 func (fl *FsLib) GetFileJsonWatch(name string, i interface{}) error {
@@ -115,7 +128,11 @@ func (fl *FsLib) CreateWriter(fname string, perm np.Tperm, mode np.Tmode) (*writ
 	if err != nil {
 		return nil, err
 	}
-	return fl.MakeWriter(fd, fl.chunkSz)
+	wrt, err := fl.MakeWriter(fd, fl.chunkSz)
+	if err != nil {
+		return nil, err
+	}
+	return wrt, nil
 }
 
 func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error) {
@@ -123,7 +140,11 @@ func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error)
 	if err != nil {
 		return nil, err
 	}
-	return fl.MakeWriter(fd, fl.chunkSz)
+	wrt, err := fl.MakeWriter(fd, fl.chunkSz)
+	if err != nil {
+		return nil, err
+	}
+	return wrt, nil
 }
 
 //

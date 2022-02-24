@@ -1,4 +1,4 @@
-package fidclnt
+package pathclnt
 
 import (
 	"log"
@@ -9,27 +9,25 @@ import (
 	"ulambda/proc"
 )
 
-func (fsc *FidClient) walkSymlink(fid np.Tfid, path []string, todo int) ([]string, *np.Err) {
+func (fsc *PathClnt) walkSymlink(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
 	// XXX change how we readlink; getfile?
-	ch := fsc.fids.lookup(fid)
-	target, err := fsc.readlink(ch.pc, fid)
+	target, err := fsc.FidClnt.Readlink(fid)
 	if len(target) == 0 {
 		log.Printf("readlink %v %v\n", string(target), err)
 	}
 	if err != nil {
 		return nil, err
 	}
-	i := len(path) - todo
-	rest := path[i:]
+	var path []string
 	if IsRemoteTarget(target) {
-		trest, err := fsc.autoMount(ch.uname, target, path[:i])
+		trest, err := fsc.autoMount(fsc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
-			log.Printf("%v: automount %v %v err %v\n", proc.GetName(), path[:i], target, err)
+			log.Printf("%v: automount %v %v err %v\n", proc.GetName(), resolved, target, err)
 			return nil, err
 		}
-		path = append(path[:i], append(trest, rest...)...)
+		path = append(resolved, append(trest, left...)...)
 	} else {
-		path = append(np.Split(target), rest...)
+		path = append(np.Split(target), left...)
 	}
 	return path, nil
 }
@@ -87,7 +85,7 @@ func SplitTargetReplicated(target string) ([]string, []string) {
 	return servers, rest
 }
 
-func (fsc *FidClient) autoMount(uname string, target string, path []string) ([]string, *np.Err) {
+func (fsc *PathClnt) autoMount(uname string, target string, path []string) ([]string, *np.Err) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
 	var rest []string
 	var fid np.Tfid
@@ -95,11 +93,11 @@ func (fsc *FidClient) autoMount(uname string, target string, path []string) ([]s
 	if IsReplicated(target) {
 		servers, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = fsc.attachReplicas(uname, servers, np.Join(path), "")
+		fid, err = fsc.Attach(uname, servers, np.Join(path), "")
 	} else {
 		server, r := SplitTarget(target)
 		rest = r
-		fid, err = fsc.attach(uname, server, np.Join(path), "")
+		fid, err = fsc.Attach(uname, []string{server}, np.Join(path), "")
 	}
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)

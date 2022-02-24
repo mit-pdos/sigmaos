@@ -3,11 +3,11 @@ package fidclnt
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/protclnt"
 )
 
 type FidMap struct {
@@ -49,32 +49,21 @@ func (fm *FidMap) lookup(fid np.Tfid) *Path {
 	return nil
 }
 
-func (fm *FidMap) clnt(fid np.Tfid) *protclnt.ProtClnt {
+func (fm *FidMap) insert(fid np.Tfid, path *Path) {
 	fm.Lock()
 	defer fm.Unlock()
 
-	return fm.fids[fid].pc
-}
-
-func (fm *FidMap) path(fid np.Tfid) *Path {
-	fm.Lock()
-	defer fm.Unlock()
-	return fm.fids[fid]
-}
-
-func (fm *FidMap) addFid(fid np.Tfid, path *Path) {
-	fm.Lock()
-	defer fm.Unlock()
 	fm.fids[fid] = path
 }
 
-func (fm *FidMap) freeFid(fid np.Tfid) {
+func (fm *FidMap) free(fid np.Tfid) {
 	fm.Lock()
 	defer fm.Unlock()
 
 	_, ok := fm.fids[fid]
 	if !ok {
-		log.Fatalf("FATAL %v: freeFid: fid %v unknown\n", proc.GetProgram(), fid)
+		debug.PrintStack()
+		log.Fatalf("FATAL %v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
 	}
 	delete(fm.fids, fid)
 }

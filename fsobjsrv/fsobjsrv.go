@@ -126,24 +126,18 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
-	if len(args.Wnames) == 0 { // clone args.Fid?
-		fos.ft.Add(args.NewFid, fid.MakeFidPath(f.Path(), f.Obj(), 0, f.Ctx()))
-	} else {
-		os, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
-		if err != nil && !np.IsMaybeSpecialElem(err) {
-			return err.Rerror()
-		}
-
-		// let the client decide what to do with rest
-		n := len(args.Wnames) - len(rest)
-		p := append(f.Path(), args.Wnames[:n]...)
-
-		if len(os) > 0 {
-			lo := os[len(os)-1]
-			fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
-		}
-		rets.Qids = makeQids(os)
+	os, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
+	if err != nil && !np.IsMaybeSpecialElem(err) {
+		return err.Rerror()
 	}
+	// let the client decide what to do with rest
+	n := len(args.Wnames) - len(rest)
+	p := append(f.Path(), args.Wnames[:n]...)
+	rets.Qids = makeQids(os)
+	if len(os) == 0 { // cloning f into args.NewFid in ft
+		os = append(os, f.Obj())
+	}
+	fos.ft.Add(args.NewFid, fid.MakeFidPath(p, os[len(os)-1], 0, f.Ctx()))
 	return nil
 }
 

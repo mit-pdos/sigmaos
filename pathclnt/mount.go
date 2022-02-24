@@ -1,4 +1,4 @@
-package fidclnt
+package pathclnt
 
 import (
 	"fmt"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"ulambda/fidclnt"
 	"ulambda/fslib"
+	"ulambda/pathclnt"
 )
 
 type FlwsMap struct {
@@ -46,7 +46,7 @@ func (fw *FlwsMap) len() int {
 }
 
 // XXX maybe should be OpenWatch(fn, f)?
-func (fw *FlwsMap) setStatusWatches(dir string, f fidclnt.Watch) {
+func (fw *FlwsMap) setStatusWatches(dir string, f pathclnt.Watch) {
 	for flw, _ := range fw.flws {
 		fn := dir + flw
 		// set watch for existence of fn, which indicates fn
@@ -60,7 +60,7 @@ func (fw *FlwsMap) setStatusWatches(dir string, f fidclnt.Watch) {
 	}
 }
 
-func (fw *FlwsMap) setFlwsWatches(f fidclnt.Watch) {
+func (fw *FlwsMap) setFlwsWatches(f pathclnt.Watch) {
 	for flw, _ := range fw.flws {
 		// set watch for KV, in case it crashes during 2PC
 		err := fw.SetRemoveWatch(DIR2PC+"/"+flw, f)

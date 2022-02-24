@@ -6,18 +6,19 @@ import (
 	"reflect"
 	"unsafe"
 
+	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/memfs"
 )
 
 type Snapshot struct {
-	Imap map[uintptr][]byte
+	Imap map[uintptr]ObjSnapshot
 	Root uintptr
 }
 
 func MakeSnapshot() *Snapshot {
 	s := &Snapshot{}
-	s.Imap = make(map[uintptr][]byte)
+	s.Imap = make(map[uintptr]ObjSnapshot)
 	s.Root = 0
 	return s
 }
@@ -33,15 +34,20 @@ func (s *Snapshot) Serialize(root fs.FsObj) []byte {
 
 func (s *Snapshot) serialize(o fs.FsObj) uintptr {
 	var ptr uintptr
-	var b []byte
+	var snap ObjSnapshot
 	switch o.(type) {
 	case *memfs.File:
 		f := o.(*memfs.File)
 		ptr = uintptr(unsafe.Pointer(f))
+		snap = MakeObjSnapshot(Tfile, f.Snapshot())
+	case *dir.DirImpl:
+		d := o.(*dir.DirImpl)
+		ptr = uintptr(unsafe.Pointer(d))
+		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.serialize))
 	default:
 		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
 	}
 	// TODO: get byte representation
-	s.Imap[ptr] = b
+	s.Imap[ptr] = snap
 	return ptr
 }

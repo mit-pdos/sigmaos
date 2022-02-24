@@ -363,3 +363,7 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
 	err = dir.remove(n)
 	return err
 }
+
+func (dir *DirImpl) Snapshot(fn fs.SnapshotF) []byte {
+	return makeDirSnapshot(fn, dir)
+}

@@ -3,9 +3,8 @@ package inode
 import (
 	"encoding/json"
 	"log"
-	"unsafe"
+	//	"unsafe"
 
-	"ulambda/dir"
 	np "ulambda/ninep"
 )
 
@@ -25,7 +24,7 @@ func makeSnapshot(inode *Inode) []byte {
 	i.Mtime = 0 // TODO: decide what to do about time.
 	// Since we traverse down the tree, we assume the parent must have already
 	// been snapshotted.
-	i.Parent = uintptr(unsafe.Pointer(inode.parent.(*dir.DirImpl)))
+	i.Parent = 0 // uintptr(unsafe.Pointer(inode.parent.(*dir.DirImpl))) // TODO: How do I get the raw pointer from an interface?
 	i.Owner = inode.owner
 	i.Nlink = inode.nlink
 

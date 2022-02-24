@@ -7,6 +7,7 @@ import (
 	"ulambda/sesscond"
 )
 
+type SnapshotF func(FsObj) uintptr
 type MakeDirF func(FsObj) FsObj
 
 type CtxI interface {

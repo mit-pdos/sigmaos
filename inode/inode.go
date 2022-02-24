@@ -165,3 +165,7 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	stat.Muid = ""
 	return stat, nil
 }
+
+func (inode *Inode) Snapshot() []byte {
+	return makeSnapshot(inode)
+}

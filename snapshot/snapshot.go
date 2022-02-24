@@ -48,6 +48,9 @@ func (s *Snapshot) snapshot(o fs.FsObj) uintptr {
 		f := o.(*memfs.Symlink)
 		ptr = uintptr(unsafe.Pointer(f))
 		snap = MakeObjSnapshot(Tsymlink, f.Snapshot())
+	case *memfs.Pipe:
+		// TODO: plan for snapshotting pipes.
+		log.Fatalf("FATAL Tried to snapshot a pipe.")
 	default:
 		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
 	}

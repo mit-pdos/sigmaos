@@ -47,8 +47,8 @@ func MakeDirF(i fs.FsObj) fs.FsObj {
 
 func (dir *DirImpl) String() string {
 	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.FsObj, dir.FsObj)
-	for n, e := range dir.entries {
-		str += fmt.Sprintf("[%v %p]", n, e)
+	for n, _ := range dir.entries {
+		str += fmt.Sprintf("[%v]", n)
 	}
 	str += "}"
 	return str
@@ -189,9 +189,6 @@ func (dir *DirImpl) remove(name string) *np.Err {
 }
 
 func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, *np.Err) {
-	dir.mu.Lock()
-	db.DLPrintf("MEMFS", "%v: Lookup %v %v\n", ctx, dir, path)
-	dir.mu.Unlock()
 	inodes := []fs.FsObj{}
 	if len(path) == 0 {
 		return nil, nil, nil

@@ -23,8 +23,8 @@ func MakeSnapshot() *Snapshot {
 	return s
 }
 
-func (s *Snapshot) Serialize(root fs.FsObj) []byte {
-	s.Root = s.serialize(root)
+func (s *Snapshot) Snapshot(root fs.FsObj) []byte {
+	s.Root = s.snapshot(root)
 	b, err := json.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
@@ -32,7 +32,7 @@ func (s *Snapshot) Serialize(root fs.FsObj) []byte {
 	return b
 }
 
-func (s *Snapshot) serialize(o fs.FsObj) uintptr {
+func (s *Snapshot) snapshot(o fs.FsObj) uintptr {
 	var ptr uintptr
 	var snap ObjSnapshot
 	switch o.(type) {
@@ -43,7 +43,7 @@ func (s *Snapshot) serialize(o fs.FsObj) uintptr {
 	case *dir.DirImpl:
 		d := o.(*dir.DirImpl)
 		ptr = uintptr(unsafe.Pointer(d))
-		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.serialize))
+		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.snapshot))
 	default:
 		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
 	}

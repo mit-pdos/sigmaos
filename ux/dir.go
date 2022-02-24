@@ -90,6 +90,9 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	if !fi.IsDir() {
 		return nil, nil, np.MkErr(np.TErrNotDir, d.path)
 	}
+	if len(p) == 0 {
+		return nil, nil, nil
+	}
 	fi, error = os.Stat(np.Join(append(d.path, p[0])))
 	if error != nil {
 		return nil, nil, np.MkErr(np.TErrNotfound, p[0])

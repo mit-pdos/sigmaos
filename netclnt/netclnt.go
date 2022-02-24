@@ -250,7 +250,7 @@ func (nc *NetClnt) drainRequests() {
 }
 
 func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
-	db.DLPrintf("NETCLNT", "RPC %v to %v\n", fc, nc.Dst())
+	db.DLPrintf("RPC", "%v: req %v to %v\n", proc.GetName(), fc, nc.Dst())
 	rpc := mkRpcT(fc)
 	t := nc.allocate(rpc)
 	rpc.req.Tag = t
@@ -279,7 +279,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 		db.DLPrintf("NETCLNT", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
 		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
-	db.DLPrintf("NETCLNT", "RPC reply %v %v\n", reply.fc, reply.err)
+	db.DLPrintf("RPC", "%v: reply %v %v\n", proc.GetName(), reply.fc, reply.err)
 	return reply.fc, reply.err
 }
 
@@ -306,7 +306,6 @@ func (nc *NetClnt) writer() {
 			nc.Close()
 			return
 		}
-		db.DLPrintf("NETCLNT", "Writer: %v -> %v %v, %p\n", nc.Src(), nc.Dst(), rpc.req, bw)
 		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
 		if err != nil {
 			if err.Code() == np.TErrBadFcall {
@@ -354,9 +353,7 @@ func (nc *NetClnt) reader() {
 		return
 	}
 	for {
-		db.DLPrintf("NETCLNT", "Reader: about to ReadFrame from %v br:%p\n", nc.Dst(), br)
 		frame, err := npcodec.ReadFrame(br)
-		db.DLPrintf("NETCLNT", "Reader: ReadFrame from %v br:%p\n", nc.Dst(), br)
 		// On connection error, retry
 		// XXX write in terms of np.Err?
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
@@ -384,7 +381,6 @@ func (nc *NetClnt) reader() {
 		} else {
 			rpc, ok := nc.lookupDel(fcall.Tag)
 			if ok {
-				db.DLPrintf("NETCLNT", "Reader: from %v %v\n", nc.Dst(), fcall)
 				nc.mu.Lock()
 				if !nc.closed {
 					rpc.replych <- &Reply{fcall, nil}

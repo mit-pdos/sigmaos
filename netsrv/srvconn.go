@@ -85,7 +85,7 @@ func (c *SrvConn) reader() {
 		if err != nil {
 			log.Print("%v: reader: bad fcall: ", proc.GetName(), err)
 		} else {
-			db.DLPrintf("9PCHAN", "Reader sv req: %v\n", fcall)
+			db.DLPrintf("RPC", "%v: srv req %v\n", proc.GetName(), fcall)
 			if c.sessid == 0 {
 				c.sessid = fcall.Session
 			} else if c.sessid != fcall.Session {
@@ -102,7 +102,7 @@ func (c *SrvConn) writer() {
 		if !ok {
 			return
 		}
-		db.DLPrintf("9PCHAN", "Writer rep: %v\n", fcall)
+		db.DLPrintf("RPC", "%v: reply %v\n", proc.GetName(), fcall)
 		var err *np.Err
 		var writableFcall np.WritableFcall
 		if c.wireCompat {

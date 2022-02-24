@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	fs "ulambda/fs"
+	"ulambda/fs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
@@ -168,4 +168,8 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 
 func (inode *Inode) Snapshot() []byte {
 	return makeSnapshot(inode)
+}
+
+func RestoreInode(f fs.RestoreF, b []byte) fs.FsObj {
+	return restoreInode(f, b)
 }

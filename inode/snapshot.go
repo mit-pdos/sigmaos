@@ -5,6 +5,7 @@ import (
 	"log"
 	//	"unsafe"
 
+	"ulambda/fs"
 	np "ulambda/ninep"
 )
 
@@ -33,4 +34,20 @@ func makeSnapshot(inode *Inode) []byte {
 		log.Fatalf("Error marshalling inode snapshot: %v", err)
 	}
 	return b
+}
+
+func restoreInode(fn fs.RestoreF, b []byte) fs.FsObj {
+	i := &InodeSnapshot{}
+	err := json.Unmarshal(b, i)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal inode in restoreInode: %v", err)
+	}
+	inode := &Inode{}
+	inode.perm = i.Perm
+	inode.version = i.Version
+	inode.mtime = i.Mtime
+	inode.parent = fn(i.Parent).(fs.Dir)
+	inode.owner = i.Owner
+	inode.nlink = i.Nlink
+	return inode
 }

@@ -7,8 +7,9 @@ import (
 	"ulambda/sesscond"
 )
 
-type SnapshotF func(FsObj) uintptr
 type MakeDirF func(FsObj) FsObj
+type SnapshotF func(FsObj) uintptr
+type RestoreF func(uintptr) FsObj
 
 type CtxI interface {
 	Uname() string

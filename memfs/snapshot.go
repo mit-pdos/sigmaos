@@ -20,6 +20,18 @@ func makeFileSnapshot(f *File) []byte {
 	return encode(fs)
 }
 
+type SymlinkSnapshot struct {
+	InodeSnap []byte
+	Target    []byte
+}
+
+func makeSymlinkSnapshot(s *Symlink) []byte {
+	fs := &SymlinkSnapshot{}
+	fs.InodeSnap = s.FsObj.(*inode.Inode).Snapshot()
+	fs.Target = s.target
+	return encode(fs)
+}
+
 func encode(o interface{}) []byte {
 	b, err := json.Marshal(o)
 	if err != nil {

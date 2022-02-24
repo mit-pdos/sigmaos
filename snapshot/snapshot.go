@@ -36,18 +36,21 @@ func (s *Snapshot) snapshot(o fs.FsObj) uintptr {
 	var ptr uintptr
 	var snap ObjSnapshot
 	switch o.(type) {
-	case *memfs.File:
-		f := o.(*memfs.File)
-		ptr = uintptr(unsafe.Pointer(f))
-		snap = MakeObjSnapshot(Tfile, f.Snapshot())
 	case *dir.DirImpl:
 		d := o.(*dir.DirImpl)
 		ptr = uintptr(unsafe.Pointer(d))
 		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.snapshot))
+	case *memfs.File:
+		f := o.(*memfs.File)
+		ptr = uintptr(unsafe.Pointer(f))
+		snap = MakeObjSnapshot(Tfile, f.Snapshot())
+	case *memfs.Symlink:
+		f := o.(*memfs.Symlink)
+		ptr = uintptr(unsafe.Pointer(f))
+		snap = MakeObjSnapshot(Tsymlink, f.Snapshot())
 	default:
 		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
 	}
-	// TODO: get byte representation
 	s.Imap[ptr] = snap
 	return ptr
 }

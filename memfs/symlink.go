@@ -66,3 +66,7 @@ func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversio
 func (s *Symlink) Snapshot() []byte {
 	return makeSymlinkSnapshot(s)
 }
+
+func RestoreSymlink(fn fs.RestoreF, b []byte) fs.FsObj {
+	return restoreSymlink(fn, b)
+}

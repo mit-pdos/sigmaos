@@ -99,3 +99,7 @@ func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) 
 func (f *File) Snapshot() []byte {
 	return makeFileSnapshot(f)
 }
+
+func RestoreFile(fn fs.RestoreF, b []byte) fs.FsObj {
+	return restoreFile(fn, b)
+}

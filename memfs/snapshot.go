@@ -5,6 +5,7 @@ import (
 	"log"
 	"runtime/debug"
 
+	"ulambda/fs"
 	"ulambda/inode"
 )
 
@@ -20,6 +21,18 @@ func makeFileSnapshot(f *File) []byte {
 	return encode(fs)
 }
 
+func restoreFile(fn fs.RestoreF, b []byte) fs.FsObj {
+	fs := &FileSnapshot{}
+	err := json.Unmarshal(b, fs)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal file in restoreFile: %v", err)
+	}
+	f := &File{}
+	f.FsObj = inode.RestoreInode(fn, fs.InodeSnap)
+	f.data = fs.Data
+	return f
+}
+
 type SymlinkSnapshot struct {
 	InodeSnap []byte
 	Target    []byte
@@ -30,6 +43,18 @@ func makeSymlinkSnapshot(s *Symlink) []byte {
 	fs.InodeSnap = s.FsObj.(*inode.Inode).Snapshot()
 	fs.Target = s.target
 	return encode(fs)
+}
+
+func restoreSymlink(fn fs.RestoreF, b []byte) fs.FsObj {
+	fs := &SymlinkSnapshot{}
+	err := json.Unmarshal(b, fs)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal file in restoreFile: %v", err)
+	}
+	f := &Symlink{}
+	f.FsObj = inode.RestoreInode(fn, fs.InodeSnap)
+	f.target = fs.Target
+	return f
 }
 
 func encode(o interface{}) []byte {

@@ -32,6 +32,8 @@ func (s *Snapshot) Snapshot(root fs.FsObj) []byte {
 	return b
 }
 
+// XXX Do we ever snapshot the same object twice? I don't think so, because I
+// believe the structure is a proper tree?
 func (s *Snapshot) snapshot(o fs.FsObj) uintptr {
 	var ptr uintptr
 	var snap ObjSnapshot

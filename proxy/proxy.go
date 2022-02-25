@@ -54,7 +54,7 @@ func (npd *Npd) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 }
 
 //
-// XXX convert to use npobjsrv
+// XXX convert to use npobjsrv, fidclnt, pathclnt
 //
 
 const MAXSYMLINK = 20

@@ -2,9 +2,7 @@ package fidclnt
 
 import (
 	"fmt"
-	"log"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
 )
@@ -154,10 +152,8 @@ func (fidc *FidClnt) Read(fid np.Tfid, off np.Toffset, cnt np.Tsize) ([]byte, *n
 	//v := fdst.mode&np.OVERSION == np.OVERSION
 	reply, err := fidc.fids.lookup(fid).pc.Read(fid, off, cnt)
 	if err != nil {
-		log.Printf("fidc read %v\n", err)
 		return nil, err
 	}
-	db.DLPrintf("FSCLNT", "Read %v -> %v %v\n", fid, reply, err)
 	return reply.Data, nil
 }
 

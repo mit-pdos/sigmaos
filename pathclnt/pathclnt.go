@@ -109,7 +109,7 @@ func (pathc *PathClnt) Mount(fid np.Tfid, path string) error {
 }
 
 func (pathc *PathClnt) Create(path string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
-	db.DLPrintf("FSCLNT", "Create %v perm %v\n", path, perm)
+	db.DLPrintf("PATHCLNT", "Create %v perm %v\n", path, perm)
 	p := np.Split(path)
 	dir := np.Dir(p)
 	base := np.Base(p)
@@ -127,7 +127,7 @@ func (pathc *PathClnt) Create(path string, perm np.Tperm, mode np.Tmode) (np.Tfi
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
 func (pathc *PathClnt) Rename(old string, new string) error {
-	db.DLPrintf("FSCLNT", "Rename %v %v\n", old, new)
+	db.DLPrintf("PATHCLNT", "Rename %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
 
@@ -160,7 +160,7 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 
 // Rename across directories of a single server using Renameat
 func (pathc *PathClnt) renameat(old, new string) *np.Err {
-	db.DLPrintf("FSCLNT", "Renameat %v %v\n", old, new)
+	db.DLPrintf("PATHCLNT", "Renameat %v %v\n", old, new)
 	opath := np.Split(old)
 	npath := np.Split(new)
 	o := opath[len(opath)-1]
@@ -179,7 +179,7 @@ func (pathc *PathClnt) renameat(old, new string) *np.Err {
 }
 
 func (pathc *PathClnt) Umount(path []string) error {
-	db.DLPrintf("FSCLNT", "Umount %v\n", path)
+	db.DLPrintf("PATHCLNT", "Umount %v\n", path)
 	fid2, err := pathc.mnt.umount(path)
 	if err != nil {
 		return err
@@ -189,7 +189,7 @@ func (pathc *PathClnt) Umount(path []string) error {
 }
 
 func (pathc *PathClnt) Remove(name string) error {
-	db.DLPrintf("FSCLNT", "Remove %v\n", name)
+	db.DLPrintf("PATHCLNT", "Remove %v\n", name)
 	path := np.Split(name)
 	fid, rest, err := pathc.mnt.resolve(path)
 	if err != nil {
@@ -216,7 +216,7 @@ func (pathc *PathClnt) Remove(name string) error {
 }
 
 func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
-	db.DLPrintf("FSCLNT", "Stat %v\n", name)
+	db.DLPrintf("PATHCLNT", "Stat %v\n", name)
 	path := np.Split(name)
 	// XXX ignore err?
 	target, rest, _ := pathc.mnt.resolve(path)
@@ -239,7 +239,7 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 }
 
 func (pathc *PathClnt) OpenWatch(path string, mode np.Tmode, w Watch) (np.Tfid, error) {
-	db.DLPrintf("FSCLNT", "Open %v %v\n", path, mode)
+	db.DLPrintf("PATHCLNT", "Open %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), w)
 	if err != nil {
@@ -257,7 +257,7 @@ func (pathc *PathClnt) Open(path string, mode np.Tmode) (np.Tfid, error) {
 }
 
 func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
-	db.DLPrintf("FSCLNT", "SetDirWatch %v\n", path)
+	db.DLPrintf("PATHCLNT", "SetDirWatch %v\n", path)
 	p := np.Split(path)
 	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -266,7 +266,7 @@ func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
 	go func() {
 		version := pathc.FidClnt.Lookup(fid).Version()
 		err := pathc.FidClnt.Watch(fid, nil, version)
-		db.DLPrintf("FSCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
+		db.DLPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
 		w(path, err)
 	}()
 	return nil
@@ -294,7 +294,7 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 }
 
 func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
-	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
+	db.DLPrintf("PATHCLNT", "GetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest, err := pathc.mnt.resolve(p)
 	if err != nil {
@@ -324,7 +324,7 @@ func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt n
 
 // Write file
 func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
-	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
+	db.DLPrintf("PATHCLNT", "SetFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest, err := pathc.mnt.resolve(p)
 	if err != nil {
@@ -354,7 +354,7 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 
 // Create file
 func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
-	db.DLPrintf("FSCLNT", "PutFile %v %v\n", path, mode)
+	db.DLPrintf("PATHCLNT", "PutFile %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, rest, err := pathc.mnt.resolve(p)
 	if err != nil {

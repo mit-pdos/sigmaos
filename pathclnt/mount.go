@@ -92,7 +92,6 @@ func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 	defer mnt.mu.Unlock()
 
 	if mnt.exited {
-		db.DLPrintf("FSCLNT", "resolve %v %v failed: mount exited \n", mnt.mounts, path)
 		return np.NoFid, path, np.MkErr(np.TErrEOF, path)
 	}
 
@@ -109,12 +108,10 @@ func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
-	db.DLPrintf("FSCLNT", "umount %v\n", path)
 	for i, p := range mnt.mounts {
 		ok := matchexact(p.path, path)
 		if ok {
 			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			db.DLPrintf("FSCLNT", "umount -> %v\n", mnt.mounts)
 			return p.fid, nil
 		}
 	}

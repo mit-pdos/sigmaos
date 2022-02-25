@@ -73,7 +73,10 @@ func (pathc *PathClnt) MakeWriter(fid np.Tfid, chunksz np.Tsize) (*writer.Writer
 
 func (pathc *PathClnt) mount(fid np.Tfid, path string) *np.Err {
 	if err := pathc.mnt.add(np.Split(path), fid); err != nil {
-		return err
+		// Another thread may already have mounted path; don't return an error
+		// XXX detach session
+		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, err)
+		return nil
 	}
 	return nil
 }

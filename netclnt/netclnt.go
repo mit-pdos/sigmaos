@@ -279,7 +279,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 		db.DLPrintf("NETCLNT", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
 		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
-	db.DLPrintf("RPC", "reply %v %v\n", reply.fc, reply.err)
+	db.DLPrintf("RPC", "rep %v\n", reply.fc)
 	return reply.fc, reply.err
 }
 

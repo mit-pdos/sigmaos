@@ -19,6 +19,13 @@ type Toffset uint64
 type Tlength uint64
 type Tgid uint32
 
+func (fid Tfid) String() string {
+	if fid == NoFid {
+		return "-1"
+	}
+	return fmt.Sprintf("fid %d", fid)
+}
+
 //
 // Augmentated types for sigmaOS
 //
@@ -405,6 +412,10 @@ func MakeFcall(msg Tmsg, sess Tsession, seqno Tseqno) *Fcall {
 	return &Fcall{msg.Type(), 0, sess, seqno, msg}
 }
 
+func (fc *Fcall) String() string {
+	return fmt.Sprintf("%v t %v s %v seq %v msg %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg)
+}
+
 func (fcall *Fcall) GetType() Tfcall {
 	return fcall.Type
 }
@@ -426,15 +437,27 @@ type Tversion struct {
 	Version string
 }
 
+func (m Tversion) String() string {
+	return fmt.Sprintf("{msize %v version %v}", m.Msize, m.Version)
+}
+
 type Rversion struct {
 	Msize   Tsize
 	Version string
+}
+
+func (m Rversion) String() string {
+	return fmt.Sprintf("{msize %v version %v}", m.Msize, m.Version)
 }
 
 type Tauth struct {
 	Afid   Tfid
 	Unames []string
 	Anames []string
+}
+
+func (m Tauth) String() string {
+	return fmt.Sprintf("{afid %v u %v a %v}", m.Afid, m.Unames, m.Anames)
 }
 
 type Rauth struct {
@@ -446,6 +469,10 @@ type Tattach struct {
 	Afid  Tfid
 	Uname string
 	Aname string
+}
+
+func (m Tattach) String() string {
+	return fmt.Sprintf("{%v a %v u %v a %v}", m.Fid, m.Afid, m.Uname, m.Aname)
 }
 
 type Rattach struct {
@@ -512,8 +539,8 @@ type Rread struct {
 	Data []byte
 }
 
-func (rr *Rread) String() {
-	fmt.Sprintf("data %d\n", len(rr.Data))
+func (rr Rread) String() string {
+	return fmt.Sprintf("{len %d}", len(rr.Data))
 }
 
 type Twrite struct {
@@ -522,8 +549,8 @@ type Twrite struct {
 	Data   []byte
 }
 
-func (tw *Twrite) String() {
-	fmt.Sprintf("%v %v data %d\n", tw.Fid, tw.Offset, len(tw.Data))
+func (tw Twrite) String() string {
+	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
 }
 
 type Rwrite struct {
@@ -609,6 +636,10 @@ type Rgetfile struct {
 	Data []byte
 }
 
+func (m Rgetfile) String() string {
+	return fmt.Sprintf("{len %v}", len(m.Data))
+}
+
 type Tsetfile struct {
 	Fid     Tfid
 	Mode    Tmode
@@ -618,6 +649,10 @@ type Tsetfile struct {
 	Data    []byte
 }
 
+func (m Tsetfile) String() string {
+	return fmt.Sprintf("{%v off %v p %v r %v len %v}", m.Fid, m.Offset, m.Wnames, m.Resolve, len(m.Data))
+}
+
 type Tputfile struct {
 	Fid    Tfid
 	Mode   Tmode
@@ -625,6 +660,10 @@ type Tputfile struct {
 	Offset Toffset
 	Wnames []string
 	Data   []byte
+}
+
+func (m Tputfile) String() string {
+	return fmt.Sprintf("{%v off %v p %v len %v}", m.Fid, m.Offset, m.Wnames, len(m.Data))
 }
 
 type Tmkfence struct {

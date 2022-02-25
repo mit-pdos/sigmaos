@@ -58,7 +58,7 @@ func (fos *FsObjSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
-	// log.Printf("%v: Attach %v\n", proc.GetName(), args.Uname)
+	db.DLPrintf("FSOBJ", "Attach %v\n", args.Uname)
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname, fos.sid)
 	tree := root.(fs.FsObj)
@@ -81,11 +81,9 @@ func (fos *FsObjSrv) Detach() {
 	// will unblock them so that they can bail out.
 	fos.fssrv.GetSessCondTable().DeleteSess(fos.sid)
 
-	// log.Printf("%v: %v Clunkopen: %v\n", proc.GetName(), fos.sid, fos.ft.fids)
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
-	db.DLPrintf("9POBJ", "Detach %v %v\n", fos.sid, ephemeral)
-	// log.Printf("%v detach %v ephemeral %v\n", proc.GetName(), fos.sid, ephemeral)
+	db.DLPrintf("FSOBJ", "Detach %v %v %v\n", fos.sid, ephemeral, fos.ft.fids)
 	for o, f := range ephemeral {
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
@@ -125,7 +123,7 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "Walk o %v args %v (%v)\n", f, args, len(args.Wnames))
+	db.DLPrintf("FSOBJ", "%v: Walk o %v args %v (%v)\n", f.Ctx().Uname(), f, args, len(args.Wnames))
 	os, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
 	if err != nil && !np.IsMaybeSpecialElem(err) {
 		return err.Rerror()
@@ -142,11 +140,11 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	db.DLPrintf("9POBJ", "Clunk %v\n", args)
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
+	db.DLPrintf("FSOBJ", "%v: Clunk %v\n", f.Ctx().Uname(), f)
 	o := f.Obj()
 	if f.IsOpen() { // has the fid been opened?
 		o.Close(f.Ctx(), f.Mode())
@@ -157,15 +155,13 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	db.DLPrintf("9POBJ", "Open %v\n", args)
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "f %v\n", f)
+	db.DLPrintf("FSOBJ", "%v: f %v %v\n", f.Ctx().Uname(), f, args)
 
 	o := f.Obj()
-	// log.Printf("%v: %v open %v mode %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args.Mode)
 	no, r := o.Open(f.Ctx(), args.Mode)
 	if r != nil {
 		return r.Rerror()
@@ -181,12 +177,11 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 }
 
 func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
-	db.DLPrintf("9POBJ", "Watchv %v\n", args)
-
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
+	db.DLPrintf("FSOBJ", "%v: Watchv %v\n", f.Ctx().Uname(), args)
 	o := f.Obj()
 	p := f.Path()
 	if len(args.Path) > 0 {
@@ -228,10 +223,7 @@ func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj,
 func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Err) {
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
-
-		//log.Printf("%v %v %v Create %v %v %v ephemeral %v\n", proc.GetName(), fos.sid, ctx.Uname(), name, o1, err, perm.IsEphemeral())
-
-		db.DLPrintf("9POBJ", "Create %v %v %v ephemeral %v\n", name, o1, err, perm.IsEphemeral())
+		db.DLPrintf("FSOBJ", "%v: Create %v %v %v ephemeral %v\n", ctx.Uname(), name, o1, err, perm.IsEphemeral())
 		if err == nil {
 			fws.WakeupWatchL()
 			dws.WakeupWatchL()
@@ -264,14 +256,12 @@ func (fos *FsObjSrv) ReleaseWatches(dws, fws *watch.Watch) {
 }
 
 func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	db.DLPrintf("9POBJ", "Create %v\n", args)
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "Create f %v\n", f)
+	db.DLPrintf("FSOBJ", "%v: Create f %v\n", f.Ctx().Uname(), f)
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
-		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
 		return err.Rerror()
 	}
 	o := f.Obj()
@@ -285,7 +275,6 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 
 	o1, err := fos.createObj(f.Ctx(), d, dws, fws, names[0], args.Perm, args.Mode)
 	if err != nil {
-		//log.Printf("%v %v createObj %v err %v\n", proc.GetName(), f.Ctx().Uname(), names[0], r)
 		return err.Rerror()
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
@@ -305,7 +294,6 @@ func (fos *FsObjSrv) lookupFence(fid np.Tfid) (*fid.Fid, *np.Err) {
 		return nil, err
 	}
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
-		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), err)
 		return nil, err
 	}
 	return f, nil
@@ -346,7 +334,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 
 	fos.stats.Path(path)
 
-	// log.Printf("%v: %v remove %v in %v\n", proc.GetName(), ctx.Uname(), path, np.Dir(path))
+	db.DLPrintf("FSOBJ", "%v: remove %v in %v\n", ctx.Uname(), path, np.Dir(path))
 
 	err := o.Parent().Remove(ctx, path[len(path)-1])
 	if err != nil {
@@ -361,7 +349,6 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerro
 	dws.WakeupWatchL()
 
 	if o.Perm().IsEphemeral() {
-		// log.Printf("%v del %v %v ephemeral %v\n", proc.GetName(), path, fos.sid, fos.et.ephemeral)
 		fos.et.Del(o)
 	}
 	return nil
@@ -374,7 +361,7 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	log.Printf("%v: %v remove %v\n", proc.GetName(), f.Ctx().Uname(), f.Path())
+	db.DLPrintf("FSOBJ", "%v: remove %v\n", f.Ctx().Uname(), f.Path())
 	return fos.removeObj(f.Ctx(), f.Obj(), f.Path())
 }
 
@@ -383,7 +370,7 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "Stat %v\n", f)
+	db.DLPrintf("FSOBJ", "%v: Stat %v\n", f.Ctx().Uname(), f)
 	o := f.Obj()
 	st, r := o.Stat(f.Ctx())
 	if r != nil {
@@ -402,13 +389,12 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "Wstat %v %v\n", f, args)
+	db.DLPrintf("FSOBJ", "%v: Wstat %v %v\n", f.Ctx().Uname(), f, args)
 	o := f.Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
 
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(f.PathDir()); err != nil {
-			log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), f.PathDir(), err)
 			return err.Rerror()
 		}
 
@@ -425,7 +411,6 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		if err != nil {
 			return err.Rerror()
 		}
-		db.DLPrintf("9POBJ", "updateFid %v %v\n", f.PathLast(), dst)
 		fos.rft.UpdateSeqno(dst)
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
@@ -456,7 +441,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "Renameat %v %v %v\n", oldf, newf, args)
+	db.DLPrintf("FSOBJ", "%v: renameat %v %v %v\n", oldf.Ctx().Uname(), oldf, newf, args)
 	oo := oldf.Obj()
 	no := newf.Obj()
 	switch d1 := oo.(type) {
@@ -470,11 +455,9 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		}
 
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.PathDir()); err != nil {
-			log.Printf("%v %v Renameat CheckFences %v err %v\n", proc.GetName(), oldf.Ctx().Uname(), oldf.PathDir(), err)
 			return err.Rerror()
 		}
 		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.PathDir()); err != nil {
-			log.Printf("%v %v Renameat CheckFences %v err %v\n", proc.GetName(), newf.Ctx().Uname(), newf.PathDir(), err)
 			return err.Rerror()
 		}
 
@@ -528,7 +511,6 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string, resolve bool)
 		}
 	}
 	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
-		log.Printf("%v %v CheckFences %v err %v\n", proc.GetName(), f.Ctx().Uname(), fname, err)
 		return nil, nil, nil, err
 	}
 	return f, fname, lo, nil
@@ -559,7 +541,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 	if err != nil {
 		return err.Rerror()
 	}
-	// log.Printf("%v: %v removefile %v\n", proc.GetName(), f.Ctx().Uname(), fname)
+	db.DLPrintf("FSOBJ", "%v: removefile %v\n", f.Ctx().Uname(), fname)
 	return fos.removeObj(f.Ctx(), lo, fname)
 }
 
@@ -571,7 +553,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("9POBJ", "GetFile f %v args %v %v\n", ctx, args, fname)
+	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", ctx, args, fname)
 	rets.Data, err = i.Read(ctx, args.Offset, args.Count, np.NoV)
 	if err != nil {
 		return err.Rerror()
@@ -607,8 +589,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	}
 	fname := append(f.Path(), args.Wnames...)
 
-	db.DLPrintf("9POBJ", "PutFile o %v args %v (%v)\n", f, args, dname)
-	// log.Printf("%v: PutFile o %v args %v (%v)\n", proc.GetName(), f, args, dname)
+	db.DLPrintf("FSOBJ", "%v: PutFile o %v args %v (%v)\n", f.Ctx().Uname(), f, args, dname)
 
 	if !lo.Perm().IsDir() {
 		return np.MkErr(np.TErrNotDir, dname).Rerror()
@@ -645,16 +626,16 @@ func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
 		return err.Rerror()
 	}
 	rets.Fence = fos.rft.MkFence(f.Path())
-	// log.Printf("mkfence f %v -> %v\n", f.Path, rets.Fence)
+	db.DLPrintf("FSOBJ", "%v: mkfence f %v -> %v\n", f.Ctx().Uname(), f.Path, rets.Fence)
 	return nil
 }
 
 func (fos *FsObjSrv) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
-	_, err := fos.ft.Lookup(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
-	// log.Printf("%v: rmfence %v %v\n", proc.GetName(), f.Path, args.Fence)
+	db.DLPrintf("FSOBJ", "%v: rmfence %v %v\n", f.Ctx().Uname(), f.Path(), args.Fence)
 	err = fos.rft.RmFence(args.Fence)
 	if err != nil {
 		return err.Rerror()
@@ -667,7 +648,7 @@ func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	// log.Printf("%v %v: RegFence %v %v\n", proc.GetName(), f.Ctx().Uname(), f.Path(), args)
+	db.DLPrintf("FSOBJ", "%v: RegFence %v %v\n", f.Ctx().Uname(), f.Path(), args)
 	err = fos.rft.UpdateFence(args.Fence)
 	if err != nil {
 		log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), fos.sid, args, err)
@@ -689,7 +670,7 @@ func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	// log.Printf("%v: Unfence %v %v\n", proc.GetName(), f.Path(), args)
+	db.DLPrintf("FSOBJ", "%v: Unfence %v %v\n", f.Ctx().Uname(), f.Path(), args)
 	err = fos.fssrv.Sess(fos.sid).Unfence(f.Path(), args.Fence.FenceId)
 	if err != nil {
 		return err.Rerror()

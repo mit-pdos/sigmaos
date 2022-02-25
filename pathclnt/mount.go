@@ -2,6 +2,7 @@ package pathclnt
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	np "ulambda/ninep"
@@ -17,7 +18,7 @@ func (p *Point) String() string {
 }
 
 type MntTable struct {
-	mu     sync.Mutex
+	sync.Mutex
 	mounts []*Point
 	exited bool
 }
@@ -31,8 +32,8 @@ func makeMntTable() *MntTable {
 // add path, in order of longest path first. if the path
 // already exits, return error
 func (mnt *MntTable) add(path []string, fid np.Tfid) *np.Err {
-	mnt.mu.Lock()
-	defer mnt.mu.Unlock()
+	mnt.Lock()
+	defer mnt.Unlock()
 
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
@@ -78,8 +79,8 @@ func matchexact(mp []string, path []string) bool {
 }
 
 func (mnt *MntTable) exit() {
-	mnt.mu.Lock()
-	defer mnt.mu.Unlock()
+	mnt.Lock()
+	defer mnt.Unlock()
 
 	mnt.exited = true
 }
@@ -87,8 +88,8 @@ func (mnt *MntTable) exit() {
 // XXX Right now, we return EOF once we've "exited". Perhaps it makes more
 // sense to return "unknown mount" or something along those lines.
 func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
-	mnt.mu.Lock()
-	defer mnt.mu.Unlock()
+	mnt.Lock()
+	defer mnt.Unlock()
 
 	if mnt.exited {
 		return np.NoFid, path, np.MkErr(np.TErrEOF, path)
@@ -104,8 +105,8 @@ func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 }
 
 func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
-	mnt.mu.Lock()
-	defer mnt.mu.Unlock()
+	mnt.Lock()
+	defer mnt.Unlock()
 
 	for i, p := range mnt.mounts {
 		ok := matchexact(p.path, path)
@@ -115,4 +116,16 @@ func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
 		}
 	}
 	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v\n", path))
+}
+
+func (mnt *MntTable) close() error {
+	// Forbid any more (auto)mounting
+	mnt.exit()
+
+	// now iterate over mount points and umount them (without
+	// holding mnt lock).  XXX do the actually work.
+	for p := range mnt.mounts {
+		log.Printf("mnt p %v\n", p)
+	}
+	return nil
 }

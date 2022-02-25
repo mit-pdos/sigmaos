@@ -59,6 +59,12 @@ func (pathc *PathClnt) GetChunkSz() np.Tsize {
 	return pathc.chunkSz
 }
 
+// Close the path client, umounting any mounted file system and
+// closing session to them.
+func (pathc *PathClnt) Shutdown() error {
+	return pathc.mnt.close()
+}
+
 // Simulate network partition to server that exports path
 func (pathc *PathClnt) Disconnect(path string) error {
 	p := np.Split(path)

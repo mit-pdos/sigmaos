@@ -52,3 +52,7 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 func MakeFsLib(uname string) *FsLib {
 	return MakeFsLibAddr(uname, Named())
 }
+
+func (fl *FsLib) Shutdown() error {
+	return fl.PathClnt.Shutdown()
+}

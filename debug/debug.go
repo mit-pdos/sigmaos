@@ -8,19 +8,19 @@ import (
 	"ulambda/proc"
 )
 
-func isDebug() bool {
-	uldebug := os.Getenv("SIGMADEBUG")
-	return uldebug != ""
+// XXX maybe a list of levels?
+func debug() string {
+	return os.Getenv("SIGMADEBUG")
 }
 
 func DPrintf(format string, v ...interface{}) {
-	if isDebug() {
-		log.Printf("%v: %v", proc.GetProgram(), fmt.Sprintf(format, v...))
+	if debug() != "" {
+		log.Printf("%v: %v", proc.GetName(), fmt.Sprintf(format, v...))
 	}
 }
 
 func DLPrintf(label string, format string, v ...interface{}) {
-	if isDebug() {
-		log.Printf("%v %v %v", proc.GetProgram(), label, fmt.Sprintf(format, v...))
+	if debug() == label {
+		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
 	}
 }

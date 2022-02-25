@@ -62,12 +62,9 @@ func (pathc *PathClnt) GetChunkSz() np.Tsize {
 // Simulate network partition to server that exports path
 func (pathc *PathClnt) Disconnect(path string) error {
 	p := np.Split(path)
-	fid, _ := pathc.mnt.resolve(p)
-	if fid == np.NoFid {
-		if pathc.mnt.hasExited() {
-			return np.MkErr(np.TErrEOF, path)
-		}
-		return np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
+	fid, _, err := pathc.mnt.resolve(p)
+	if err != nil {
+		return err
 	}
 	pathc.FidClnt.Lookup(fid).Disconnect()
 	return nil
@@ -194,18 +191,14 @@ func (pathc *PathClnt) Umount(path []string) error {
 func (pathc *PathClnt) Remove(name string) error {
 	db.DLPrintf("FSCLNT", "Remove %v\n", name)
 	path := np.Split(name)
-	fid, rest := pathc.mnt.resolve(path)
-	if fid == np.NoFid {
-		db.DLPrintf("FSCLNT", "Remove: resolve unknown fid\n")
-		if pathc.mnt.hasExited() {
-			return np.MkErr(np.TErrEOF, path)
-		}
-		return np.MkErr(np.TErrNotfound, path)
+	fid, rest, err := pathc.mnt.resolve(path)
+	if err != nil {
+		return err
 	}
 	// Optimistcally remove obj without doing a pathname
 	// walk; this may fail if rest contains an automount
 	// symlink.
-	err := pathc.FidClnt.RemoveFile(fid, rest, np.EndSlash(name))
+	err = pathc.FidClnt.RemoveFile(fid, rest, np.EndSlash(name))
 	if err != nil {
 		if np.IsMaybeSpecialElem(err) {
 			fid, err = pathc.walkManyUmount(path, np.EndSlash(name), nil)
@@ -225,7 +218,8 @@ func (pathc *PathClnt) Remove(name string) error {
 func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	db.DLPrintf("FSCLNT", "Stat %v\n", name)
 	path := np.Split(name)
-	target, rest := pathc.mnt.resolve(path)
+	// XXX ignore err?
+	target, rest, _ := pathc.mnt.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) {
 		st := &np.Stat{}
 		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Server(), ",")
@@ -302,13 +296,9 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt np.Tsize) ([]byte, error) {
 	db.DLPrintf("FSCLNT", "GetFile %v %v\n", path, mode)
 	p := np.Split(path)
-	fid, rest := pathc.mnt.resolve(p)
-	if fid == np.NoFid {
-		db.DLPrintf("FSCLNT", "GetFile: mount -> unknown fid\n")
-		if pathc.mnt.hasExited() {
-			return nil, np.MkErr(np.TErrEOF, path)
-		}
-		return nil, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
+	fid, rest, err := pathc.mnt.resolve(p)
+	if err != nil {
+		return nil, err
 	}
 	// Optimistcally GetFile without doing a pathname
 	// walk; this may fail if rest contains an automount
@@ -336,13 +326,9 @@ func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt n
 func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "SetFile %v %v\n", path, mode)
 	p := np.Split(path)
-	fid, rest := pathc.mnt.resolve(p)
-	if fid == np.NoFid {
-		db.DLPrintf("FSCLNT", "SetFile: mount -> unknown fid\n")
-		if pathc.mnt.hasExited() {
-			return 0, np.MkErr(np.TErrEOF, path)
-		}
-		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
+	fid, rest, err := pathc.mnt.resolve(p)
+	if err != nil {
+		return 0, err
 	}
 	// Optimistcally SetFile without doing a pathname walk; this
 	// may fail if rest contains an automount symlink.
@@ -370,13 +356,9 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data []byte, off np.Toffset) (np.Tsize, error) {
 	db.DLPrintf("FSCLNT", "PutFile %v %v\n", path, mode)
 	p := np.Split(path)
-	fid, rest := pathc.mnt.resolve(p)
-	if fid == np.NoFid {
-		db.DLPrintf("FSCLNT", "PutFile: mount -> unknown fid\n")
-		if pathc.mnt.hasExited() {
-			return 0, np.MkErr(np.TErrEOF, path)
-		}
-		return 0, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount for %v\n", path))
+	fid, rest, err := pathc.mnt.resolve(p)
+	if err != nil {
+		return 0, err
 	}
 	// Optimistcally PutFile without doing a pathname
 	// walk; this may fail if rest contains an automount

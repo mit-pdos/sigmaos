@@ -108,12 +108,9 @@ func (pathc *PathClnt) setWatch(fid1 np.Tfid, p []string, r []string, w Watch) (
 // Resolves path until it runs into a symlink, union element, or an
 // error.
 func (pathc *PathClnt) walkOne(path []string, w Watch) (np.Tfid, []string, *np.Err) {
-	fid, rest := pathc.mnt.resolve(path)
-	if fid == np.NoFid {
-		if pathc.mnt.hasExited() {
-			return np.NoFid, path, np.MkErr(np.TErrEOF, "mount")
-		}
-		return np.NoFid, path, np.MkErr(np.TErrNotfound, "mount")
+	fid, rest, err := pathc.mnt.resolve(path)
+	if err != nil {
+		return np.NoFid, nil, err
 	}
 	fid2, left, err := pathc.FidClnt.Walk(fid, rest)
 	if err != nil {

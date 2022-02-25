@@ -87,29 +87,22 @@ func (mnt *MntTable) exit() {
 
 // XXX Right now, we return EOF once we've "exited". Perhaps it makes more
 // sense to return "unknown mount" or something along those lines.
-func (mnt *MntTable) hasExited() bool {
-	mnt.mu.Lock()
-	defer mnt.mu.Unlock()
-
-	return mnt.exited
-}
-
-func (mnt *MntTable) resolve(path []string) (np.Tfid, []string) {
+func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 	mnt.mu.Lock()
 	defer mnt.mu.Unlock()
 
 	if mnt.exited {
 		db.DLPrintf("FSCLNT", "resolve %v %v failed: mount exited \n", mnt.mounts, path)
-		return np.NoFid, path
+		return np.NoFid, path, np.MkErr(np.TErrEOF, path)
 	}
 
 	for _, p := range mnt.mounts {
 		ok, rest := match(p.path, path)
 		if ok {
-			return p.fid, rest
+			return p.fid, rest, nil
 		}
 	}
-	return np.NoFid, path
+	return np.NoFid, path, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v\n", path))
 }
 
 func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {

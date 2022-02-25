@@ -250,7 +250,7 @@ func (nc *NetClnt) drainRequests() {
 }
 
 func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
-	db.DLPrintf("RPC", "%v: req %v to %v\n", proc.GetName(), fc, nc.Dst())
+	db.DLPrintf("RPC", "req %v to %v\n", fc, nc.Dst())
 	rpc := mkRpcT(fc)
 	t := nc.allocate(rpc)
 	rpc.req.Tag = t
@@ -279,7 +279,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 		db.DLPrintf("NETCLNT", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
 		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
-	db.DLPrintf("RPC", "%v: reply %v %v\n", proc.GetName(), reply.fc, reply.err)
+	db.DLPrintf("RPC", "reply %v %v\n", reply.fc, reply.err)
 	return reply.fc, reply.err
 }
 

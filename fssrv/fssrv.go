@@ -179,9 +179,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 	if fssrv.replSrv != nil {
 		fssrv.rc.Put(request, reply)
 	}
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
+	fcall := np.MakeFcall(reply, 0, 0)
 	fcall.Tag = request.Tag
 	replies <- fcall
 }

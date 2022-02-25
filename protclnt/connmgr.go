@@ -28,11 +28,7 @@ func makeConn(nc *netclnt.NetClnt) *conn {
 }
 
 func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno) (np.Tmsg, *np.Err) {
-	reqfc := &np.Fcall{}
-	reqfc.Type = req.Type()
-	reqfc.Msg = req
-	reqfc.Session = session
-	reqfc.Seqno = seqno.Next()
+	reqfc := np.MakeFcall(req, session, *seqno)
 	repfc, err := conn.nc.RPC(reqfc)
 	if err != nil {
 		return nil, err

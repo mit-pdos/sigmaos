@@ -411,6 +411,10 @@ type Fcall struct {
 	Msg     Tmsg
 }
 
+func MakeFcall(msg Tmsg, sess Tsession, seqno Tseqno) *Fcall {
+	return &Fcall{msg.Type(), 0, sess, seqno, msg}
+}
+
 func (fcall *Fcall) GetType() Tfcall {
 	return fcall.Type
 }
@@ -518,10 +522,18 @@ type Rread struct {
 	Data []byte
 }
 
+func (rr *Rread) String() {
+	fmt.Sprintf("data %d\n", len(rr.Data))
+}
+
 type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
 	Data   []byte
+}
+
+func (tw *Twrite) String() {
+	fmt.Sprintf("%v %v data %d\n", tw.Fid, tw.Offset, len(tw.Data))
 }
 
 type Rwrite struct {

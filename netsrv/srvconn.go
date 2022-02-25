@@ -49,23 +49,18 @@ func (c *SrvConn) Dst() string {
 }
 
 func (c *SrvConn) reader() {
-	db.DLPrintf("9PCHAN", "Reader conn from %v\n", c.Src())
+	db.DLPrintf("NETSRV", "Reader conn from %v\n", c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			db.DLPrintf("9PCHAN", "Peer %v closed/erred %v\n", c.Src(), err)
+			db.DLPrintf("NETSRV", "Peer %v closed/erred %v\n", c.Src(), err)
 
 			// If the sessid hasn't been set, we haven't received any valid ops yet,
 			// so the session has not been added to the session table. If this is the
 			// case, don't close the session (there is nothing to close).
 			if c.sessid != 0 {
 				// Set up the detach fcall
-				dFcall := &np.Fcall{}
-				dFcall.Type = np.TTdetach
-				dFcall.Tag = 0
-				dFcall.Session = c.sessid
-				dFcall.Seqno = 0
-				dFcall.Msg = np.Tdetach{}
+				dFcall := np.MakeFcall(np.Tdetach{}, c.sessid, 0)
 				// Detach the session to remove ephemeral files and close open fids.
 				// Set replies to nil to indicate that we don't need a response.
 				c.protsrv.Process(dFcall, nil)
@@ -85,7 +80,7 @@ func (c *SrvConn) reader() {
 		if err != nil {
 			log.Print("%v: reader: bad fcall: ", proc.GetName(), err)
 		} else {
-			db.DLPrintf("RPC", "%v: srv req %v\n", proc.GetName(), fcall)
+			db.DLPrintf("NETSRV", "srv req %v\n", fcall)
 			if c.sessid == 0 {
 				c.sessid = fcall.Session
 			} else if c.sessid != fcall.Session {
@@ -102,7 +97,7 @@ func (c *SrvConn) writer() {
 		if !ok {
 			return
 		}
-		db.DLPrintf("RPC", "%v: reply %v\n", proc.GetName(), fcall)
+		db.DLPrintf("NETSRV", "srv rep %v\n", fcall)
 		var err *np.Err
 		var writableFcall np.WritableFcall
 		if c.wireCompat {

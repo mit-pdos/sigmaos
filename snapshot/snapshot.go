@@ -86,6 +86,6 @@ func (s *Snapshot) restore(ptr uintptr) fs.FsObj {
 		return memfs.RestoreSymlink(s.restore, snap.Data)
 	default:
 		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
+		return nil
 	}
-	return nil
 }

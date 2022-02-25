@@ -367,7 +367,7 @@ func TestWatchCreate(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchRemoveSeq(t *testing.T) {
+func TestWatchRemoveOne(t *testing.T) {
 	ts := test.MakeTstate(t)
 
 	fn := "name/w"

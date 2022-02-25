@@ -138,16 +138,6 @@ func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
 }
 
-// If qid is newer than q, return true, otherwise false.  If q.Path ==
-// qid.Path, then it is the same file.  If it is is the same file and
-// qid.Version is equal or larger, then qid is newer.
-func (q *Tqid) IsNewer(qid Tqid) bool {
-	if qid.Path == q.Path && qid.Version >= q.Version {
-		return true
-	}
-	return false
-}
-
 type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages

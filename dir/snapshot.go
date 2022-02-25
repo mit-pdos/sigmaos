@@ -27,3 +27,17 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	}
 	return b
 }
+
+func restore(fn fs.RestoreF, b []byte) fs.FsObj {
+	ds := &DirSnapshot{}
+	err := json.Unmarshal(b, ds)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal file in restoreSymlink: %v", err)
+	}
+	d := &DirImpl{}
+	d.FsObj = inode.RestoreInode(fn, ds.InodeSnap)
+	for name, ptr := range ds.Entries {
+		d.entries[name] = fn(ptr)
+	}
+	return d
+}

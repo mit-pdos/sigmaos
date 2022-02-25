@@ -49,7 +49,7 @@ func restoreSymlink(fn fs.RestoreF, b []byte) fs.FsObj {
 	fs := &SymlinkSnapshot{}
 	err := json.Unmarshal(b, fs)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal file in restoreFile: %v", err)
+		log.Fatalf("FATAL error unmarshal file in restoreSymlink: %v", err)
 	}
 	f := &Symlink{}
 	f.FsObj = inode.RestoreInode(fn, fs.InodeSnap)

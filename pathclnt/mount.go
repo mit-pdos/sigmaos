@@ -2,7 +2,6 @@ package pathclnt
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	np "ulambda/ninep"
@@ -124,8 +123,6 @@ func (mnt *MntTable) close() error {
 
 	// now iterate over mount points and umount them (without
 	// holding mnt lock).  XXX do the actually work.
-	for p := range mnt.mounts {
-		log.Printf("mnt p %v\n", p)
-	}
+
 	return nil
 }

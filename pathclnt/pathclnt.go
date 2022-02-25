@@ -29,15 +29,15 @@ type PathClnt struct {
 }
 
 func MakePathClnt(fidc *fidclnt.FidClnt, sz np.Tsize) *PathClnt {
-	fsc := &PathClnt{}
-	fsc.mnt = makeMntTable()
-	fsc.chunkSz = sz
+	pathc := &PathClnt{}
+	pathc.mnt = makeMntTable()
+	pathc.chunkSz = sz
 	if fidc == nil {
-		fsc.FidClnt = fidclnt.MakeFidClnt()
+		pathc.FidClnt = fidclnt.MakeFidClnt()
 	} else {
-		fsc.FidClnt = fidc
+		pathc.FidClnt = fidc
 	}
-	return fsc
+	return pathc
 }
 
 func (pathc *PathClnt) String() string {

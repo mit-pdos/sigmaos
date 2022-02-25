@@ -9,9 +9,9 @@ import (
 	"ulambda/proc"
 )
 
-func (fsc *PathClnt) walkSymlink(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
+func (pathc *PathClnt) walkSymlink(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
 	// XXX change how we readlink; getfile?
-	target, err := fsc.readlink(fid)
+	target, err := pathc.readlink(fid)
 	if len(target) == 0 {
 		log.Printf("readlink %v %v\n", string(target), err)
 	}
@@ -20,7 +20,7 @@ func (fsc *PathClnt) walkSymlink(fid np.Tfid, resolved, left []string) ([]string
 	}
 	var path []string
 	if IsRemoteTarget(target) {
-		trest, err := fsc.autoMount(fsc.FidClnt.Lookup(fid).Uname(), target, resolved)
+		trest, err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
 			log.Printf("%v: automount %v %v err %v\n", proc.GetName(), resolved, target, err)
 			return nil, err
@@ -85,7 +85,7 @@ func SplitTargetReplicated(target string) ([]string, []string) {
 	return servers, rest
 }
 
-func (fsc *PathClnt) autoMount(uname string, target string, path []string) ([]string, *np.Err) {
+func (pathc *PathClnt) autoMount(uname string, target string, path []string) ([]string, *np.Err) {
 	db.DLPrintf("FSCLNT", "automount %v to %v\n", target, path)
 	var rest []string
 	var fid np.Tfid
@@ -93,17 +93,17 @@ func (fsc *PathClnt) autoMount(uname string, target string, path []string) ([]st
 	if IsReplicated(target) {
 		servers, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = fsc.Attach(uname, servers, np.Join(path), "")
+		fid, err = pathc.Attach(uname, servers, np.Join(path), "")
 	} else {
 		server, r := SplitTarget(target)
 		rest = r
-		fid, err = fsc.Attach(uname, []string{server}, np.Join(path), "")
+		fid, err = pathc.Attach(uname, []string{server}, np.Join(path), "")
 	}
 	if err != nil {
 		db.DLPrintf("FSCLNT", "Attach error: %v", err)
 		return nil, err
 	}
-	err = fsc.mount(fid, np.Join(path))
+	err = pathc.mount(fid, np.Join(path))
 	if err != nil {
 		return nil, err
 	}

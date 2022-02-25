@@ -12,14 +12,16 @@ import (
 )
 
 type Snapshot struct {
-	Imap map[uintptr]ObjSnapshot
-	Root uintptr
+	Imap         map[uintptr]ObjSnapshot
+	Root         uintptr
+	restoreCache map[uintptr]fs.FsObj
 }
 
 func MakeSnapshot() *Snapshot {
 	s := &Snapshot{}
 	s.Imap = make(map[uintptr]ObjSnapshot)
 	s.Root = 0
+	s.restoreCache = make(map[uintptr]fs.FsObj)
 	return s
 }
 
@@ -58,4 +60,32 @@ func (s *Snapshot) snapshot(o fs.FsObj) uintptr {
 	}
 	s.Imap[ptr] = snap
 	return ptr
+}
+
+func Restore(b []byte) fs.FsObj {
+	s := MakeSnapshot()
+	err := json.Unmarshal(b, s)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
+	}
+	root := s.restore(s.Root)
+	return root
+}
+
+func (s *Snapshot) restore(ptr uintptr) fs.FsObj {
+	if obj, ok := s.restoreCache[ptr]; ok {
+		return obj
+	}
+	snap := s.Imap[ptr]
+	switch snap.Type {
+	case Tdir:
+		return dir.Restore(s.restore, snap.Data)
+	case Tfile:
+		return memfs.RestoreFile(s.restore, snap.Data)
+	case Tsymlink:
+		return memfs.RestoreSymlink(s.restore, snap.Data)
+	default:
+		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
+	}
+	return nil
 }

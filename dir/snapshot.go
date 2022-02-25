@@ -32,7 +32,7 @@ func restore(fn fs.RestoreF, b []byte) fs.FsObj {
 	ds := &DirSnapshot{}
 	err := json.Unmarshal(b, ds)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal file in restoreSymlink: %v", err)
+		log.Fatalf("FATAL error unmarshal file in restoreDir: %v", err)
 	}
 	d := &DirImpl{}
 	d.FsObj = inode.RestoreInode(fn, ds.InodeSnap)

@@ -31,6 +31,6 @@ func (wrt *Writer) Close() error {
 	return nil
 }
 
-func MakeWriter(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) (*Writer, error) {
-	return &Writer{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
+func MakeWriter(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) *Writer {
+	return &Writer{fc, fid, make([]byte, 0), 0, false, chunksz}
 }

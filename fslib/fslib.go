@@ -12,15 +12,6 @@ import (
 
 type FsLib struct {
 	*fdclnt.FdClient
-	chunkSz np.Tsize
-}
-
-func (fl *FsLib) SetChunkSz(sz np.Tsize) {
-	fl.chunkSz = sz
-}
-
-func (fl *FsLib) GetChunkSz() np.Tsize {
-	return fl.chunkSz
 }
 
 func NamedAddr() string {
@@ -38,7 +29,7 @@ func Named() []string {
 
 func MakeFsLibBase(uname string) *FsLib {
 	// Picking a small chunk size really kills throughput
-	return &FsLib{fdclnt.MakeFdClient(nil, uname), np.Tsize(10_000_000)}
+	return &FsLib{fdclnt.MakeFdClient(nil, uname, np.Tsize(10_000_000))}
 }
 
 func (fl *FsLib) MountTree(server []string, tree, mount string) error {

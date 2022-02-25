@@ -31,9 +31,9 @@ type FdClient struct {
 	uname string // the principal associated with this FdClient
 }
 
-func MakeFdClient(fsc *fidclnt.FidClnt, uname string) *FdClient {
+func MakeFdClient(fsc *fidclnt.FidClnt, uname string, sz np.Tsize) *FdClient {
 	fdc := &FdClient{}
-	fdc.PathClnt = pathclnt.MakePathClnt(fsc)
+	fdc.PathClnt = pathclnt.MakePathClnt(fsc, sz)
 	fdc.fds = mkFdTable()
 	fdc.uname = uname
 	return fdc
@@ -85,18 +85,18 @@ func (fdc *FdClient) Open(path string, mode np.Tmode) (int, error) {
 	return fdc.OpenWatch(path, mode, nil)
 }
 
-func (fdc *FdClient) MakeReader(fd int, chunksz np.Tsize) (*reader.Reader, error) {
+func (fdc *FdClient) MakeReader(fd int, chunksz np.Tsize) *reader.Reader {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	return fdc.PathClnt.MakeReader(fid, chunksz)
 }
 
-func (fdc *FdClient) MakeWriter(fd int, chunksz np.Tsize) (*writer.Writer, error) {
+func (fdc *FdClient) MakeWriter(fd int, chunksz np.Tsize) *writer.Writer {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	return fdc.PathClnt.MakeWriter(fid, chunksz)
 }

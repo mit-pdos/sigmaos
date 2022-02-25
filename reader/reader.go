@@ -66,6 +66,6 @@ func (rdr *Reader) Close() error {
 	return nil
 }
 
-func MakeReader(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) (*Reader, error) {
-	return &Reader{fc, fid, make([]byte, 0), 0, false, chunksz}, nil
+func MakeReader(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) *Reader {
+	return &Reader{fc, fid, make([]byte, 0), 0, false, chunksz}
 }

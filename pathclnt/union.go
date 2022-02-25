@@ -4,6 +4,7 @@ import (
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/reader"
 )
 
 func (pathc *PathClnt) walkUnion(fid np.Tfid, path []string) (np.Tfid, []string, *np.Err) {
@@ -35,25 +36,22 @@ func (pathc *PathClnt) unionMatch(q, name string) bool {
 	return true
 }
 
-func (pathc *PathClnt) unionScan(fid np.Tfid, dirents []*np.Stat, q string) (np.Tfid, *np.Err) {
-	for _, de := range dirents {
-		// Read the link
-		fid2, _, err := pathc.FidClnt.Walk(fid, []string{de.Name})
+func (pathc *PathClnt) unionScan(fid np.Tfid, de *np.Stat, q string) (np.Tfid, *np.Err) {
+	fid2, _, err := pathc.FidClnt.Walk(fid, []string{de.Name})
+	if err != nil {
+		return np.NoFid, err
+	}
+	defer pathc.FidClnt.Clunk(fid2)
+	target, err := pathc.readlink(fid2)
+	if err != nil {
+		return np.NoFid, err
+	}
+	if pathc.unionMatch(q, target) {
+		fid3, _, err := pathc.FidClnt.Walk(fid2, []string{de.Name})
 		if err != nil {
 			return np.NoFid, err
 		}
-		defer pathc.FidClnt.Clunk(fid2)
-		target, err := pathc.FidClnt.Readlink(fid2)
-		if err != nil {
-			return np.NoFid, err
-		}
-		if pathc.unionMatch(q, target) {
-			fid3, _, err := pathc.FidClnt.Walk(fid2, []string{de.Name})
-			if err != nil {
-				return np.NoFid, err
-			}
-			return fid3, nil
-		}
+		return fid3, nil
 	}
 	return np.NoFid, nil
 }
@@ -63,27 +61,24 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 	if err != nil {
 		return np.NoFid, err
 	}
-	off := np.Toffset(0)
+	rdr := reader.MakeReader(pathc.FidClnt, fid, pathc.chunkSz)
+	defer rdr.Close()
 	for {
-		data, err := pathc.FidClnt.Read(fid, off, 1024)
+		de := &np.Stat{}
+		err := npcodec.UnmarshalReader(rdr, de)
+		if err != nil && np.IsErrEOF(err) {
+			break
+		}
 		if err != nil {
 			return np.NoFid, err
 		}
-		if len(data) == 0 {
-			return np.NoFid, np.MkErr(np.TErrNotfound, q)
-		}
-		dirents, err := npcodec.Byte2Dir(data)
+		fid2, err := pathc.unionScan(fid, de, q)
 		if err != nil {
 			return np.NoFid, err
 		}
-		fid2, err := pathc.unionScan(fid, dirents, q)
-		if err != nil {
-			return np.NoFid, err
-		}
-		if fid2 != np.NoFid {
+		if fid2 != np.NoFid { // success
 			return fid2, nil
 		}
-		off += 1024
 	}
 	return np.NoFid, nil
 }

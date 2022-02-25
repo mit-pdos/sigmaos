@@ -65,7 +65,7 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fl.MakeReader(fd, fl.chunkSz)
+	return fl.MakeReader(fd, fl.GetChunkSz()), nil
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
@@ -87,11 +87,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			break
 		}
 	}
-	rdr, error := fl.MakeReader(fd, fl.chunkSz)
-	if error != nil {
-		log.Printf("make reader %v\n", error)
-		return nil, error
-	}
+	rdr := fl.MakeReader(fd, fl.GetChunkSz())
 	return rdr, nil
 
 }
@@ -128,10 +124,7 @@ func (fl *FsLib) CreateWriter(fname string, perm np.Tperm, mode np.Tmode) (*writ
 	if err != nil {
 		return nil, err
 	}
-	wrt, err := fl.MakeWriter(fd, fl.chunkSz)
-	if err != nil {
-		return nil, err
-	}
+	wrt := fl.MakeWriter(fd, fl.GetChunkSz())
 	return wrt, nil
 }
 
@@ -140,10 +133,7 @@ func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error)
 	if err != nil {
 		return nil, err
 	}
-	wrt, err := fl.MakeWriter(fd, fl.chunkSz)
-	if err != nil {
-		return nil, err
-	}
+	wrt := fl.MakeWriter(fd, fl.GetChunkSz())
 	return wrt, nil
 }
 
@@ -151,6 +141,7 @@ func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error)
 // Util
 //
 
+// XXX use reader/writer interfaces
 func (fl *FsLib) CopyFile(src, dst string) error {
 	st, err := fl.Stat(src)
 	if err != nil {
@@ -167,7 +158,7 @@ func (fl *FsLib) CopyFile(src, dst string) error {
 	}
 	defer fl.Close(fddst)
 	for {
-		b, err := fl.Read(fdsrc, fl.chunkSz)
+		b, err := fl.Read(fdsrc, fl.GetChunkSz())
 		if err != nil {
 			return err
 		}

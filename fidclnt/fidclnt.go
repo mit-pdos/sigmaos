@@ -148,20 +148,6 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
 	return &reply.Stat, nil
 }
 
-// XXX clone fid?
-func (fidc *FidClnt) Readlink(fid np.Tfid) (string, *np.Err) {
-	_, err := fidc.fids.lookup(fid).pc.Open(fid, np.OREAD)
-	if err != nil {
-		return "", err
-	}
-	reply, err := fidc.fids.lookup(fid).pc.Read(fid, 0, 1024)
-	if err != nil {
-		return "", err
-	}
-	// XXX close fid
-	return string(reply.Data), nil
-}
-
 func (fidc *FidClnt) Read(fid np.Tfid, off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 	//p := fidc.fids[fdst.fid]
 	//version := p.lastqid().Version

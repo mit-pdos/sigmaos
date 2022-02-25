@@ -11,7 +11,7 @@ import (
 
 func (fsc *PathClnt) walkSymlink(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
 	// XXX change how we readlink; getfile?
-	target, err := fsc.FidClnt.Readlink(fid)
+	target, err := fsc.readlink(fid)
 	if len(target) == 0 {
 		log.Printf("readlink %v %v\n", string(target), err)
 	}

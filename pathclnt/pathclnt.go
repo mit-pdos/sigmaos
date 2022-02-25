@@ -24,12 +24,14 @@ type Watch func(string, error)
 
 type PathClnt struct {
 	*fidclnt.FidClnt
-	mnt *MntTable
+	mnt     *MntTable
+	chunkSz np.Tsize
 }
 
-func MakePathClnt(fidc *fidclnt.FidClnt) *PathClnt {
+func MakePathClnt(fidc *fidclnt.FidClnt, sz np.Tsize) *PathClnt {
 	fsc := &PathClnt{}
 	fsc.mnt = makeMntTable()
+	fsc.chunkSz = sz
 	if fidc == nil {
 		fsc.FidClnt = fidclnt.MakeFidClnt()
 	} else {
@@ -38,15 +40,23 @@ func MakePathClnt(fidc *fidclnt.FidClnt) *PathClnt {
 	return fsc
 }
 
+func (pathc *PathClnt) String() string {
+	str := fmt.Sprintf("Pathclnt mount table:\n")
+	str += fmt.Sprintf("%v\n", pathc.mnt)
+	return str
+}
+
 func (pathc *PathClnt) Exit() {
 	pathc.mnt.exit()
 	pathc.FidClnt.Exit()
 }
 
-func (pathc *PathClnt) String() string {
-	str := fmt.Sprintf("Pathclnt mount table:\n")
-	str += fmt.Sprintf("%v\n", pathc.mnt)
-	return str
+func (pathc *PathClnt) SetChunkSz(sz np.Tsize) {
+	pathc.chunkSz = sz
+}
+
+func (pathc *PathClnt) GetChunkSz() np.Tsize {
+	return pathc.chunkSz
 }
 
 // Simulate network partition to server that exports path
@@ -63,12 +73,25 @@ func (pathc *PathClnt) Disconnect(path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid np.Tfid, chunksz np.Tsize) (*reader.Reader, error) {
+func (pathc *PathClnt) MakeReader(fid np.Tfid, chunksz np.Tsize) *reader.Reader {
 	return reader.MakeReader(pathc.FidClnt, fid, chunksz)
 }
 
-func (pathc *PathClnt) MakeWriter(fid np.Tfid, chunksz np.Tsize) (*writer.Writer, error) {
+func (pathc *PathClnt) MakeWriter(fid np.Tfid, chunksz np.Tsize) *writer.Writer {
 	return writer.MakeWriter(pathc.FidClnt, fid, chunksz)
+}
+
+func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
+	_, err := pathc.FidClnt.Open(fid, np.OREAD)
+	if err != nil {
+		return "", err
+	}
+	rdr := reader.MakeReader(pathc.FidClnt, fid, pathc.chunkSz)
+	b, error := rdr.GetData()
+	if error != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func (pathc *PathClnt) mount(fid np.Tfid, path string) *np.Err {

@@ -25,7 +25,7 @@ func mkFidMap() *FidMap {
 func (fm *FidMap) String() string {
 	str := ""
 	for k, v := range fm.fids {
-		str += fmt.Sprintf("fid %v chan %v\n", k, v)
+		str += fmt.Sprintf("%v chan %v\n", k, v)
 	}
 	return str
 }

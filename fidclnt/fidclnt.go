@@ -51,11 +51,11 @@ func (fidc *FidClnt) Free(fid np.Tfid) {
 	fidc.fids.free(fid)
 }
 
-func (fidc *FidClnt) Lookup(fid np.Tfid) *Path {
+func (fidc *FidClnt) Lookup(fid np.Tfid) *Channel {
 	return fidc.fids.lookup(fid)
 }
 
-func (fidc *FidClnt) Insert(fid np.Tfid, path *Path) {
+func (fidc *FidClnt) Insert(fid np.Tfid, path *Channel) {
 	fidc.fids.insert(fid, path)
 }
 
@@ -76,7 +76,7 @@ func (fidc *FidClnt) Attach(uname string, server []string, path, tree string) (n
 		return np.NoFid, err
 	}
 	ch := fidc.pc.MakeProtClnt(server)
-	fidc.fids.insert(fid, makePath(ch, uname, np.Split(path), []np.Tqid{reply.Qid}))
+	fidc.fids.insert(fid, makeChannel(ch, uname, np.Split(path), []np.Tqid{reply.Qid}))
 	return fid, nil
 }
 

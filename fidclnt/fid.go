@@ -13,12 +13,12 @@ import (
 type FidMap struct {
 	sync.Mutex
 	next np.Tfid
-	fids map[np.Tfid]*Path
+	fids map[np.Tfid]*Channel
 }
 
 func mkFidMap() *FidMap {
 	fm := &FidMap{}
-	fm.fids = make(map[np.Tfid]*Path)
+	fm.fids = make(map[np.Tfid]*Channel)
 	return fm
 }
 
@@ -39,7 +39,7 @@ func (fm *FidMap) allocFid() np.Tfid {
 	return fid
 }
 
-func (fm *FidMap) lookup(fid np.Tfid) *Path {
+func (fm *FidMap) lookup(fid np.Tfid) *Channel {
 	fm.Lock()
 	defer fm.Unlock()
 
@@ -49,7 +49,7 @@ func (fm *FidMap) lookup(fid np.Tfid) *Path {
 	return nil
 }
 
-func (fm *FidMap) insert(fid np.Tfid, path *Path) {
+func (fm *FidMap) insert(fid np.Tfid, path *Channel) {
 	fm.Lock()
 	defer fm.Unlock()
 

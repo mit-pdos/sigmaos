@@ -3,6 +3,7 @@ package pathclnt
 import (
 	"log"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -97,9 +98,13 @@ func (pathc *PathClnt) setWatch(fid1 np.Tfid, p []string, r []string, w Watch) (
 	if err == nil {
 		return fid2, nil
 	}
+	if fid2 != np.NoFid { // Walk returns fd where it stops
+		pathc.FidClnt.Clunk(fid2)
+	}
 	go func(version np.TQversion) {
 		err := pathc.FidClnt.Watch(fid3, np.Dir(r), version)
 		pathc.FidClnt.Clunk(fid3)
+		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
 		w(np.Join(p), err)
 	}(pathc.FidClnt.Lookup(fid3).Version())
 	return np.NoFid, nil

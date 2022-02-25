@@ -268,6 +268,7 @@ func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
 		err := pathc.FidClnt.Watch(fid, nil, version)
 		db.DLPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
 		w(path, err)
+		pathc.Clunk(fid)
 	}()
 	return nil
 }
@@ -288,7 +289,8 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 		} else {
 			w(path, nil)
 		}
-
+		db.DLPrintf("PATHCLNT", "SetRemoveWatch: Watch returns %v %v\n", path, err)
+		pathc.Clunk(fid)
 	}()
 	return nil
 }
@@ -390,11 +392,11 @@ func (pathc *PathClnt) MakeFence(path string, mode np.Tmode) (np.Tfence, error) 
 	if err != nil {
 		return np.Tfence{}, err
 	}
+	defer pathc.FidClnt.Clunk(fid)
 	_, err = pathc.FidClnt.Open(fid, mode)
 	if err != nil {
 		return np.Tfence{}, err
 	}
-	defer pathc.FidClnt.Clunk(fid)
 	fence, err := pathc.FidClnt.MkFence(fid)
 	if err != nil {
 		log.Printf("%v: MkFence %v err %v\n", proc.GetProgram(), fid, err)
@@ -409,6 +411,7 @@ func (pathc *PathClnt) RegisterFence(f np.Tfence, path string) error {
 	if err != nil {
 		return err
 	}
+	defer pathc.FidClnt.Clunk(fid)
 	if err := pathc.FidClnt.RegisterFence(f, fid); err != nil {
 		return err
 	}

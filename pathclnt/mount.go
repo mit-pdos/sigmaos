@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 

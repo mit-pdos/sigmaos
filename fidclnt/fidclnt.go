@@ -24,7 +24,7 @@ func MakeFidClnt() *FidClnt {
 }
 
 func (fidc *FidClnt) String() string {
-	str := fmt.Sprintf("Fsclnt fid table:\n%v", fidc.fids)
+	str := fmt.Sprintf("Fsclnt fid table %p:\n%v", fidc, fidc.fids)
 	return str
 }
 

@@ -96,6 +96,7 @@ func (pathc *PathClnt) mount(fid np.Tfid, path string) *np.Err {
 		// Another thread may already have mounted path; don't return an error
 		// XXX detach session
 		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, err)
+		pathc.Clunk(fid)
 		return nil
 	}
 	return nil

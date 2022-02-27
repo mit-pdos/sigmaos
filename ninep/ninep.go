@@ -408,8 +408,12 @@ type Fcall struct {
 	Msg     Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno Tseqno) *Fcall {
-	return &Fcall{msg.Type(), 0, sess, seqno, msg}
+func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno) *Fcall {
+	if seqno == nil {
+		return &Fcall{msg.Type(), 0, sess, 0, msg}
+	} else {
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), msg}
+	}
 }
 
 func (fc *Fcall) String() string {

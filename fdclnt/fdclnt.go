@@ -2,7 +2,6 @@ package fdclnt
 
 import (
 	"fmt"
-	"log"
 
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
@@ -74,7 +73,6 @@ func (fdc *FdClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, err
 func (fdc *FdClient) OpenWatch(path string, mode np.Tmode, w pathclnt.Watch) (int, error) {
 	fid, err := fdc.PathClnt.OpenWatch(path, mode, w)
 	if err != nil {
-		log.Printf("openwatch %v\n", err)
 		return -1, err
 	}
 	fd := fdc.fds.allocFd(fid, mode)

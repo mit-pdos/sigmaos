@@ -80,7 +80,6 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
 			<-ch
 		} else if err != nil {
-			log.Printf("openwatch err %v\n", err)
 			return nil, err
 		} else { // success; file is opened
 			fd = fd1

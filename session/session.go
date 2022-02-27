@@ -1,13 +1,14 @@
 package session
 
 import (
-	// "log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	db "ulambda/debug"
 	"ulambda/fences"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/protsrv"
 	"ulambda/threadmgr"
 )
@@ -59,6 +60,7 @@ func (sess *Session) CheckFences(path []string) *np.Err {
 	for _, f := range fences {
 		err := sess.rft.IsRecent(f)
 		if err != nil {
+			db.DLPrintf("FENCE", "%v: fence %v err %v\n", proc.GetName(), path, err)
 			return err
 		}
 	}

@@ -38,9 +38,7 @@ func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 	if rerror != nil {
 		reply = *rerror
 	}
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
+	fcall := np.MakeFcall(reply, 0, nil)
 	fcall.Tag = t
 	replies <- fcall
 }

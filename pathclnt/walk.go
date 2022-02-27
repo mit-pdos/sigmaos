@@ -5,6 +5,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 const (
@@ -31,7 +32,6 @@ func (pathc *PathClnt) walkManyUmount(path []string, resolve bool, w Watch) (np.
 				return fid, e
 			}
 			pathc.FidClnt.Free(fid2)
-			pathc.FidClnt.Clone(fid)
 			// try again
 			continue
 		}
@@ -61,7 +61,6 @@ func (pathc *PathClnt) walkMany(path []string, resolve bool, w Watch) (np.Tfid, 
 		if len(left) > 0 && np.IsUnionElem(left[0]) {
 			fid, left, err = pathc.walkUnion(fid, left)
 			if err != nil {
-				log.Printf("walk union %v %v err %v\n", pathc.FidClnt.Lookup(fid), path, err)
 				return fid, err
 			}
 			// this may have produced a symlink qid
@@ -75,7 +74,6 @@ func (pathc *PathClnt) walkMany(path []string, resolve bool, w Watch) (np.Tfid, 
 			resolved := len(path) - len(left)
 			path, err = pathc.walkSymlink(fid, path[0:resolved], left)
 			if err != nil {
-				log.Printf("walk link %v %v err %v\n", pathc.FidClnt.Lookup(fid), path, err)
 				return fid, err
 			}
 			// start over again
@@ -96,10 +94,11 @@ func (pathc *PathClnt) setWatch(fid1 np.Tfid, p []string, r []string, w Watch) (
 	}
 	fid2, _, err := pathc.FidClnt.Walk(fid3, []string{np.Base(r)})
 	if err == nil {
+		pathc.FidClnt.Clunk(fid3)
 		return fid2, nil
 	}
-	if fid2 != np.NoFid { // Walk returns fd where it stops
-		pathc.FidClnt.Clunk(fid2)
+	if fid2 != fid3 { // Walk returns fd where it stops
+		log.Fatalf("FATAL setWatch %v %v\n", fid2, fid3)
 	}
 	go func(version np.TQversion) {
 		err := pathc.FidClnt.Watch(fid3, np.Dir(r), version)
@@ -111,7 +110,8 @@ func (pathc *PathClnt) setWatch(fid1 np.Tfid, p []string, r []string, w Watch) (
 }
 
 // Resolves path until it runs into a symlink, union element, or an
-// error.
+// error. walkOne returns the fid walked too, unless it couldn't even
+// find starting a mount point.
 func (pathc *PathClnt) walkOne(path []string, w Watch) (np.Tfid, []string, *np.Err) {
 	fid, rest, err := pathc.mnt.resolve(path)
 	if err != nil {
@@ -133,7 +133,7 @@ func (pathc *PathClnt) walkOne(path []string, w Watch) (np.Tfid, []string, *np.E
 			left = nil
 			// entry now exists
 		} else {
-			return np.NoFid, path, err
+			return fid2, path, err
 		}
 	}
 	return fid2, left, nil

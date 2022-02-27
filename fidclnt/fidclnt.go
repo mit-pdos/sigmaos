@@ -77,12 +77,14 @@ func (fidc *FidClnt) Attach(uname string, server []string, path, tree string) (n
 	return fid, nil
 }
 
+// Walk returns the fid it walked to (which maybe fid) and the
+// remaining path left to be walked (which maybe the original path).
 func (fidc *FidClnt) Walk(fid np.Tfid, path []string) (np.Tfid, []string, *np.Err) {
 	nfid := fidc.allocFid()
 	reply, err := fidc.Lookup(fid).pc.Walk(fid, nfid, path)
 	if err != nil {
 		fidc.freeFid(nfid)
-		return np.NoFid, path, err
+		return fid, path, err
 	}
 	channel := fidc.Lookup(fid).Copy()
 	channel.AddN(reply.Qids, path)

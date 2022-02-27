@@ -5,7 +5,6 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 const (

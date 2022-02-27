@@ -206,7 +206,6 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	if !ok {
 		// client start TCP connection, but then failed before sending
 		// any messages.
-		close(replies)
 		return
 	}
 
@@ -221,7 +220,4 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Stop sess thread.
 	fssrv.st.KillSessThread(sid)
-
-	// close the reply channel, so that conn writer() terminates
-	close(replies)
 }

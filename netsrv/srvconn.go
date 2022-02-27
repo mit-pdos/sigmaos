@@ -66,6 +66,10 @@ func (c *SrvConn) reader() {
 				c.protsrv.Process(dFcall, nil)
 				c.protsrv.CloseSession(c.sessid, c.replies)
 			}
+
+			// close the reply channel, so that conn writer() terminates
+			db.DLPrintf("NETSRV", "Reader: close replies for %v\n", c.Src())
+			close(c.replies)
 			return
 		}
 		var fcall *np.Fcall
@@ -95,6 +99,8 @@ func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
 		if !ok {
+			db.DLPrintf("NETSRV", "writer: close conn from %v\n", c.Src())
+			c.conn.Close()
 			return
 		}
 		db.DLPrintf("NETSRV", "srv rep %v\n", fcall)

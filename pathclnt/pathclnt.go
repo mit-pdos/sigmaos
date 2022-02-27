@@ -60,7 +60,7 @@ func (pathc *PathClnt) GetChunkSz() np.Tsize {
 }
 
 // Close the path client, umounting any mounted file system and
-// closing session to them.
+// closing session to them.  XXX not implemented
 func (pathc *PathClnt) Shutdown() error {
 	return pathc.mnt.close()
 }

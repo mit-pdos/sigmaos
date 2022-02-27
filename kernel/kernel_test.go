@@ -12,9 +12,9 @@ import (
 	"ulambda/crash"
 	"ulambda/delay"
 	"ulambda/fenceclnt"
-	"ulambda/fsclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/pathclnt"
 	"ulambda/test"
 )
 
@@ -163,7 +163,7 @@ func TestEphemeral(t *testing.T) {
 	name := procdName(ts, map[string]bool{name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
-	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))
 
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")

@@ -394,6 +394,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 }
 
 func (pathc *PathClnt) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
+	db.DLPrintf("PATHCLNT", "MakeFence %v %v\n", path, mode)
 	p := np.Split(path)
 	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -413,6 +414,7 @@ func (pathc *PathClnt) MakeFence(path string, mode np.Tmode) (np.Tfence, error) 
 }
 
 func (pathc *PathClnt) RegisterFence(f np.Tfence, path string) error {
+	db.DLPrintf("PATHCLNT", "RegisterFence %v %v\n", f, path)
 	p := np.Split(path)
 	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -426,6 +428,7 @@ func (pathc *PathClnt) RegisterFence(f np.Tfence, path string) error {
 }
 
 func (pathc *PathClnt) DeregisterFence(f np.Tfence, path string) error {
+	db.DLPrintf("PATHCLNT", "DeregisterFence %v %v\n", f, path)
 	p := np.Split(path)
 	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {
@@ -439,6 +442,7 @@ func (pathc *PathClnt) DeregisterFence(f np.Tfence, path string) error {
 }
 
 func (pathc *PathClnt) RmFence(f np.Tfence, path string) error {
+	db.DLPrintf("PATHCLNT", "RmFence %v %v\n", f, path)
 	p := np.Split(path)
 	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
 	if err != nil {

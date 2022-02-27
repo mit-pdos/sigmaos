@@ -9,7 +9,11 @@ import (
 	"ulambda/proc"
 )
 
-// XXX maybe a list of levels?
+//
+// Debug output is controled by SIGMADEBUG environment variable, which
+// can be a list of labels (e.g., "RPC;PATHCLNT").
+//
+
 func debugLabels() map[string]bool {
 	m := make(map[string]bool)
 	s := os.Getenv("SIGMADEBUG")
@@ -23,6 +27,7 @@ func debugLabels() map[string]bool {
 	return m
 }
 
+// Deprecated; use DLPrintf
 func DPrintf(format string, v ...interface{}) {
 	m := debugLabels()
 	if len(m) != 0 {

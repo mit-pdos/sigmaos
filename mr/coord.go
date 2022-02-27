@@ -168,7 +168,7 @@ func (w *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 		}
 		n += 1
 		go func() {
-			db.DPrintf("start task %v\n", t)
+			db.DLPrintf("MR", "start task %v\n", t)
 			status, err := f(t)
 			ch <- Ttask{t, status, err}
 		}()
@@ -199,7 +199,7 @@ func (w *Coord) processResult(dir string, res Ttask) {
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
-		db.DPrintf("task %v failed %v err %v\n", res.task, res.status, res.err)
+		db.DLPrintf("MR", "task %v failed %v err %v\n", res.task, res.status, res.err)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
 			log.Fatalf("%v: rename to %v err %v\n", proc.GetProgram(), to, err)
 		}

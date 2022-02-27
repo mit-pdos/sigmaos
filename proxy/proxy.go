@@ -130,7 +130,7 @@ func (npc *NpConn) Detach() {
 
 // XXX avoid duplication with fidclnt
 func (npc *NpConn) autoMount(newfid np.Tfid, target string, path []string) (np.Tqid, error) {
-	db.DPrintf("automount %v to %v\n", target, path)
+	db.DLPrintf("PROXY", "automount %v to %v\n", target, path)
 	server, _ := pathclnt.SplitTarget(target)
 	reply, err := npc.clnt.Attach([]string{server}, npc.uname, newfid, []string{""})
 	if err != nil {
@@ -170,7 +170,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		qid := reply.Qids[len(reply.Qids)-1]
 		if qid.Type&np.QTSYMLINK == np.QTSYMLINK {
 			todo := len(path) - len(reply.Qids)
-			db.DPrintf("symlink %v %v\n", todo, path)
+			db.DLPrintf("PROXY", "symlink %v %v\n", todo, path)
 
 			// args.Newfid is fid for symlink
 			npc.addch(args.NewFid, npc.npch(args.Fid))
@@ -187,7 +187,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				}
 				reply.Qids[len(reply.Qids)-1] = qid
 				path = path[todo:]
-				db.DPrintf("automounted: %v -> %v, %v\n", args.NewFid,
+				db.DLPrintf("PROXY", "automounted: %v -> %v, %v\n", args.NewFid,
 					target, path)
 				*rets = *reply
 				break

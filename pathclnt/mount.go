@@ -100,7 +100,7 @@ func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 			return p.fid, rest, nil
 		}
 	}
-	return np.NoFid, path, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v\n", path))
+	return np.NoFid, path, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v", path))
 }
 
 func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
@@ -114,7 +114,7 @@ func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
 			return p.fid, nil
 		}
 	}
-	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v\n", path))
+	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v", path))
 }
 
 func (mnt *MntTable) close() error {

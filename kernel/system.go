@@ -148,7 +148,7 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case np.PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("kill %v\n", -s.procd[0].Process.Pid)
+			log.Printf("kill %v %v\n", -s.procd[0].Process.Pid, s.procdPids[0])
 			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
 			if err == nil {
 				s.procd[0].Wait()

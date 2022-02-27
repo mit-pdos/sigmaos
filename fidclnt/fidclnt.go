@@ -165,7 +165,7 @@ func (fidc *FidClnt) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, 
 }
 
 func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, cnt np.Tsize, resolve bool) ([]byte, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, false)
+	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, resolve)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 }
 
 func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, data []byte, resolve bool) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, data, false)
+	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, data, resolve)
 	if err != nil {
 		return 0, err
 	}

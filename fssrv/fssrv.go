@@ -180,31 +180,37 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 }
 
 func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
-	// Reply cache needs to be accesed under the replication layer in order to
-	// handle duplicate requests. These may occur if, for example:
-	//
-	// 1. A client connects to replica A and issues a request.
-	// 2. Replica A pushes the request through raft.
-	// 3. Before responding to the client, replica A crashes.
-	// 4. The client connects to replica B, and retries the request *before*
-	//    replica B hears about the request through raft.
-	// 5. Replica B pushes the request through raft.
-	// 6. Replica B now receives the same request twice through raft's apply
-	//    channel, and will try to execute the request twice.
-	//
-	// In order to handle this, we can use the reply cache to deduplicate
-	// requests. Since requests execute sequentially, one of the requests will
-	// register itself first in the reply cache. The other request then just has
-	// to wait on the reply future in order to send the reply. This can happen
-	// asynchronously since it doesn't affect server state, and the asynchrony is
-	// necessary in order to allow other ops on the thread to make progress. We
-	// coulld optionally use sessconds, but they're kind of overkill since we
-	// don't care about ordering in this case.
-	if replyFuture, ok := fssrv.rc.Get(fc); ok {
-		go func() {
-			fssrv.sendReply(fc, replyFuture.Await(), replies)
-		}()
-		return
+	if fssrv.replSrv != nil {
+		// Reply cache needs to live under the replication layer in order to
+		// handle duplicate requests. These may occur if, for example:
+		//
+		// 1. A client connects to replica A and issues a request.
+		// 2. Replica A pushes the request through raft.
+		// 3. Before responding to the client, replica A crashes.
+		// 4. The client connects to replica B, and retries the request *before*
+		//    replica B hears about the request through raft.
+		// 5. Replica B pushes the request through raft.
+		// 6. Replica B now receives the same request twice through raft's apply
+		//    channel, and will try to execute the request twice.
+		//
+		// In order to handle this, we can use the reply cache to deduplicate
+		// requests. Since requests execute sequentially, one of the requests will
+		// register itself first in the reply cache. The other request then just
+		// has to wait on the reply future in order to send the reply. This can
+		// happen asynchronously since it doesn't affect server state, and the
+		// asynchrony is
+		// necessary in order to allow other ops on the thread to make progress. We
+		// coulld optionally use sessconds, but they're kind of overkill since we
+		// don't care about ordering in this case.
+		if replyFuture, ok := fssrv.rc.Get(fc); ok {
+			go func() {
+				fssrv.sendReply(fc, replyFuture.Await(), replies)
+			}()
+			return
+		}
+		// If this request has not been registered with the reply cache yet, register
+		// it.
+		fssrv.rc.Register(fc)
 	}
 	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())

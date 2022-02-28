@@ -198,10 +198,9 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 		// register itself first in the reply cache. The other request then just
 		// has to wait on the reply future in order to send the reply. This can
 		// happen asynchronously since it doesn't affect server state, and the
-		// asynchrony is
-		// necessary in order to allow other ops on the thread to make progress. We
-		// coulld optionally use sessconds, but they're kind of overkill since we
-		// don't care about ordering in this case.
+		// asynchrony is necessary in order to allow other ops on the thread to
+		// make progress. We coulld optionally use sessconds, but they're kind of
+		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
 			go func() {
 				fssrv.sendReply(fc, replyFuture.Await(), replies)

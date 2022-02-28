@@ -18,6 +18,7 @@ import (
 type Snapshot struct {
 	Imap         map[unsafe.Pointer]ObjSnapshot
 	Root         unsafe.Pointer
+	Rft          []byte
 	restoreCache map[unsafe.Pointer]fs.FsObj
 }
 
@@ -38,7 +39,8 @@ func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadm
 	}
 	// TODO: Snapshot the session table.
 	// TODO: Snapshot the thread manager table.
-	// TODO: Snapshot the recent fence table.
+	// Snapshot the recent fence table.
+	s.Rft = rft.Snapshot()
 	// TODO: Snapshot the reply cache.
 	return b
 }

@@ -9,10 +9,10 @@ import (
 )
 
 /*
- * The ThreadMgr struct ensures that only one operation on the thread is being run
- * at any one time. It assumes that any condition variables which are passed
- * into it are only being used/slept on by one goroutine. It relies on the
- * locking behavior of sessconds in the layer above it to ensure that there
+ * The ThreadMgr struct ensures that only one operation on the thread is being
+ * run at any one time. It assumes that any condition variables which are
+ * passed into it are only being used/slept on by one goroutine. It relies on
+ * the locking behavior of sessconds in the layer above it to ensure that there
  * aren't any sleep/wake races. Sessconds' locking behavior should be changed
  * with care.
  */

@@ -159,19 +159,8 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	if fssrv.replSrv == nil {
 		sess.GetThread().Process(fc, replies)
 	} else {
-		// If this fcall has already been seen, use the cached reply.
-		if reply, ok := fssrv.rc.Get(fc); ok {
-			fssrv.sendReply(fc, reply, replies)
-		} else {
-			fssrv.replSrv.Process(fc, replies)
-		}
+		fssrv.replSrv.Process(fc, replies)
 	}
-}
-
-func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
-	sess := fssrv.st.Alloc(fc.Session)
-	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	fssrv.serve(sess, fc, replies)
 }
 
 func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
@@ -179,28 +168,62 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 	if fssrv.replSrv != nil {
 		fssrv.rc.Put(request, reply)
 	}
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
-	fcall.Tag = request.Tag
-	replies <- fcall
+	// The replies channel may be nil if this is a replicated op which came
+	// through raft. In this case, a reply is not needed.
+	if replies != nil {
+		fcall := &np.Fcall{}
+		fcall.Type = reply.Type()
+		fcall.Msg = reply
+		fcall.Tag = request.Tag
+		replies <- fcall
+	}
 }
 
-// Serialize thread that serve a request for the same session.
-// Threads may block in sesscond.Wait() and give up sess lock
-// temporarily.  XXX doesn't guarantee the order in which received
+func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+	// Reply cache needs to be accesed under the replication layer in order to
+	// handle duplicate requests. These may occur if, for example:
+	//
+	// 1. A client connects to replica A and issues a request.
+	// 2. Replica A pushes the request through raft.
+	// 3. Before responding to the client, replica A crashes.
+	// 4. The client connects to replica B, and retries the request *before*
+	//    replica B hears about the request through raft.
+	// 5. Replica B pushes the request through raft.
+	// 6. Replica B now receives the same request twice through raft's apply
+	//    channel, and will try to execute the request twice.
+	//
+	// In order to handle this, we can use the reply cache to deduplicate
+	// requests. Since requests execute sequentially, one of the requests will
+	// register itself first in the reply cache. The other request then just has
+	// to wait on the reply future in order to send the reply. This can happen
+	// asynchronously since it doesn't affect server state, and the asynchrony is
+	// necessary in order to allow other ops on the thread to make progress. We
+	// coulld optionally use sessconds, but they're kind of overkill since we
+	// don't care about ordering in this case.
+	if replyFuture, ok := fssrv.rc.Get(fc); ok {
+		go func() {
+			fssrv.sendReply(fc, replyFuture.Await(), replies)
+		}()
+		return
+	}
+	sess := fssrv.st.Alloc(fc.Session)
+	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	fssrv.serve(sess, fc, replies)
+}
+
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	reply, rerror := sess.Dispatch(fc.Msg)
-	// Replies may be nil if this is a detach (detaches aren't replied to since
-	// they're generated at the server) or if this is a replicated op generated
-	// by a clerk. In both cases, a reply is not needed.
-	if replies != nil {
+	// We decrement the number of waiting threads if this request was made to
+	// this server (it didn't come through raft), which will only be the case
+	// when replies is not nil or the fcall is of type Detach (in which case
+	// replies will be nil, since detaches are generated at the server).
+	if replies != nil || fc.GetMsg().Type() == np.TTdetach {
 		defer sess.DecThreads()
-		if rerror != nil {
-			reply = *rerror
-		}
-		fssrv.sendReply(fc, reply, replies)
 	}
+	if rerror != nil {
+		reply = *rerror
+	}
+	fssrv.sendReply(fc, reply, replies)
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {

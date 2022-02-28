@@ -55,8 +55,6 @@ func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.Session
 	return b
 }
 
-// XXX Do we ever snapshot the same object twice? I don't think so, because I
-// believe the structure is a proper tree?
 func (s *Snapshot) snapshotFsTree(o fs.FsObj) unsafe.Pointer {
 	var ptr unsafe.Pointer
 	var snap ObjSnapshot

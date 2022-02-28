@@ -16,6 +16,7 @@ type CtxI interface {
 	Uname() string
 	SessionId() np.Tsession
 	SessCondTable() *sesscond.SessCondTable
+	Snapshot() []byte
 }
 
 type Dir interface {

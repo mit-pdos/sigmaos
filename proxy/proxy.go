@@ -317,3 +317,7 @@ func (npc *NpConn) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 func (npc *NpConn) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
 	return nil
 }
+
+func (npc *NpConn) Snapshot() []byte {
+	return nil
+}

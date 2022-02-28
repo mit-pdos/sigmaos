@@ -63,7 +63,7 @@ func (c *SrvConn) reader() {
 				dFcall := np.MakeFcall(np.Tdetach{}, c.sessid, nil)
 				// Detach the session to remove ephemeral files and close open fids.
 				// Set replies to nil to indicate that we don't need a response.
-				c.protsrv.Process(dFcall, nil)
+				c.protsrv.Process(dFcall, c.replies)
 				c.protsrv.CloseSession(c.sessid, c.replies)
 			}
 
@@ -98,7 +98,8 @@ func (c *SrvConn) reader() {
 func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
-		if !ok {
+		// Fcall will be nil when processing detaches.
+		if !ok || fcall.GetMsg().Type() == np.TRdetach {
 			db.DLPrintf("NETSRV", "writer: close conn from %v\n", c.Src())
 			c.conn.Close()
 			return

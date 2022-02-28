@@ -189,7 +189,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 // temporarily.  XXX doesn't guarantee the order in which received
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	reply, rerror := sess.Dispatch(fc.Msg)
-	if replies != nil || fc.GetMsg().Type() == np.TTdetach {
+	if replies != nil {
 		defer sess.DecThreads()
 	}
 	// Replies may be nil if this is a detach (detaches aren't replied to since

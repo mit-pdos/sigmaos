@@ -274,6 +274,7 @@ const (
 	TTunfence
 	TTrmfence
 	TTdetach
+	TRdetach
 )
 
 func (fct Tfcall) String() string {
@@ -697,6 +698,9 @@ type Trmfence struct {
 type Tdetach struct {
 }
 
+type Rdetach struct {
+}
+
 func (Tversion) Type() Tfcall    { return TTversion }
 func (Rversion) Type() Tfcall    { return TRversion }
 func (Tauth) Type() Tfcall       { return TTauth }
@@ -738,3 +742,4 @@ func (Tregfence) Type() Tfcall   { return TTregfence }
 func (Tunfence) Type() Tfcall    { return TTunfence }
 func (Trmfence) Type() Tfcall    { return TTrmfence }
 func (Tdetach) Type() Tfcall     { return TTdetach }
+func (Rdetach) Type() Tfcall     { return TRdetach }

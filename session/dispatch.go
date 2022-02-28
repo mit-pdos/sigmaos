@@ -99,8 +99,9 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		err := s.protsrv.UnFence(req, reply)
 		return *reply, err
 	case np.Tdetach:
+		reply := &np.Rdetach{}
 		s.protsrv.Detach()
-		return nil, nil
+		return *reply, nil
 	default:
 		return nil, np.MkErr(np.TErrUnknownMsg, msg).Rerror()
 	}

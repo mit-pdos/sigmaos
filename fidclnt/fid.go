@@ -1,31 +1,31 @@
-package fsclnt
+package fidclnt
 
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/protclnt"
 )
 
 type FidMap struct {
 	sync.Mutex
 	next np.Tfid
-	fids map[np.Tfid]*Path
+	fids map[np.Tfid]*Channel
 }
 
 func mkFidMap() *FidMap {
 	fm := &FidMap{}
-	fm.fids = make(map[np.Tfid]*Path)
+	fm.fids = make(map[np.Tfid]*Channel)
 	return fm
 }
 
 func (fm *FidMap) String() string {
 	str := ""
 	for k, v := range fm.fids {
-		str += fmt.Sprintf("fid %v chan %v\n", k, v)
+		str += fmt.Sprintf("%v chan %v\n", k, v)
 	}
 	return str
 }
@@ -39,7 +39,7 @@ func (fm *FidMap) allocFid() np.Tfid {
 	return fid
 }
 
-func (fm *FidMap) lookup(fid np.Tfid) *Path {
+func (fm *FidMap) lookup(fid np.Tfid) *Channel {
 	fm.Lock()
 	defer fm.Unlock()
 
@@ -49,32 +49,21 @@ func (fm *FidMap) lookup(fid np.Tfid) *Path {
 	return nil
 }
 
-func (fm *FidMap) clnt(fid np.Tfid) *protclnt.ProtClnt {
+func (fm *FidMap) insert(fid np.Tfid, path *Channel) {
 	fm.Lock()
 	defer fm.Unlock()
 
-	return fm.fids[fid].pc
-}
-
-func (fm *FidMap) path(fid np.Tfid) *Path {
-	fm.Lock()
-	defer fm.Unlock()
-	return fm.fids[fid]
-}
-
-func (fm *FidMap) addFid(fid np.Tfid, path *Path) {
-	fm.Lock()
-	defer fm.Unlock()
 	fm.fids[fid] = path
 }
 
-func (fm *FidMap) freeFid(fid np.Tfid) {
+func (fm *FidMap) free(fid np.Tfid) {
 	fm.Lock()
 	defer fm.Unlock()
 
 	_, ok := fm.fids[fid]
 	if !ok {
-		log.Fatalf("FATAL %v: freeFid: fid %v unknown\n", proc.GetProgram(), fid)
+		debug.PrintStack()
+		log.Fatalf("FATAL %v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
 	}
 	delete(fm.fids, fid)
 }

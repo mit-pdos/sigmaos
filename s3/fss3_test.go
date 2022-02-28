@@ -8,8 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	np "ulambda/ninep"
+	"ulambda/pathclnt"
 	"ulambda/test"
 )
 
@@ -105,7 +106,7 @@ func TestStat(t *testing.T) {
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
-	addr, err := fsclnt.LocalIP()
+	addr, err := fidclnt.LocalIP()
 	assert.Nil(t, err, "LocalIP")
 	st, err = ts.Stat("name/s3/~ip")
 	assert.Nil(t, err, "Stat~")
@@ -146,7 +147,7 @@ func TestSymlinkDir(t *testing.T) {
 
 	b, err := ts.GetFile(dn)
 	assert.Nil(t, err, "GetFile")
-	assert.Equal(t, true, fsclnt.IsRemoteTarget(string(b)))
+	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))
 
 	dirents, err := ts.GetDir(dn + "/")
 	assert.Nil(t, err, "GetDir")

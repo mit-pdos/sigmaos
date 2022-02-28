@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "ulambda/debug"
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/realm"
@@ -81,7 +81,7 @@ func killReplica(ts *Tstate, replica *Replica) {
 
 func allocReplicas(ts *Tstate, n int) []*Replica {
 	replicas := make([]*Replica, n)
-	ip, err := fsclnt.LocalIP()
+	ip, err := fidclnt.LocalIP()
 	assert.Nil(ts.t, err, "Failed to get local ip")
 	for i, _ := range replicas {
 		portstr := strconv.Itoa(PORT_OFFSET + i)

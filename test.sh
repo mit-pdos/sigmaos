@@ -46,13 +46,13 @@ go test $1 ulambda/procclnt
 # fencers for correctness
 ./fences/test.sh
 
-go test $1 ulambda/group
-go test $1 ulambda/kv
-go test $1 ulambda/mr
-
 # dbd_test and wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test $1 ulambda/dbd
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
+
+go test $1 ulambda/group
+go test $1 ulambda/mr
+go test $1 ulambda/kv
 
 # XXX broken
 # go test $1 ulambda/cmd/user/test2pc

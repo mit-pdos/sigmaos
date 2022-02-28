@@ -56,11 +56,11 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	kva := []KeyValue{}
 
 	d := r.input + "/" + file + "/"
-	db.DPrintf("reduce %v\n", d)
+	db.DLPrintf("MR", "reduce %v\n", d)
 	rdr, err := r.OpenReader(d)
 	if err != nil {
 		// another reducer already completed; nothing to be done
-		db.DPrintf("MakeReader %v err %v", d, err)
+		db.DLPrintf("MR", "MakeReader %v err %v", d, err)
 		return nil, err
 	}
 	defer rdr.Close()

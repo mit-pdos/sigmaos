@@ -66,7 +66,11 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 	gm.ch = make(chan bool)
 	gm.members = make([]*member, n)
 	for i := 0; i < n; i++ {
-		gm.members[i] = makeMember(fsl, pclnt, bin, args, crash)
+		crashMember := crash
+		if i+1 > ncrash {
+			crashMember = 0
+		}
+		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember)
 	}
 	done := make(chan procret)
 	for i, m := range gm.members {
@@ -88,7 +92,9 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 			n--
 		} else { // restart member i
 			if gm.members[st.member].bin == "bin/user/kvd" {
-				log.Fatalf("%v: FATAL kvd failed %v\n", proc.GetProgram(), gm.members[st.member].pid)
+				// For now, we don't restart kvds
+				log.Printf("=== %v: kvd failed %v\n", proc.GetProgram(), gm.members[st.member].pid)
+				continue
 			}
 			start := make(chan bool)
 			go gm.members[st.member].run(st.member, start, done)

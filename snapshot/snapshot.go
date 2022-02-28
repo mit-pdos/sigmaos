@@ -51,7 +51,6 @@ func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.Session
 	s.Rft = rft.Snapshot()
 	// Snapshot the reply cache.
 	s.Rc = rc.Snapshot()
-	// TODO: snapshot stats.
 	return b
 }
 

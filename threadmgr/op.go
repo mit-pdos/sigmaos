@@ -5,9 +5,9 @@ import (
 )
 
 type Op struct {
-	fc      *np.Fcall
+	Fc      *np.Fcall
 	replies chan *np.Fcall
-	n       uint64 // Order in which this op was received.
+	N       uint64 // Order in which this op was received.
 }
 
 func makeOp(fc *np.Fcall, replies chan *np.Fcall, n uint64) *Op {

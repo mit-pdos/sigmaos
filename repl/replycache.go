@@ -9,7 +9,7 @@ import (
 type ReplyFuture struct {
 	sync.Mutex
 	*sync.Cond
-	reply np.Tmsg
+	Reply np.Tmsg
 }
 
 func MakeReplyFuture() *ReplyFuture {
@@ -26,14 +26,14 @@ func (f *ReplyFuture) Await() np.Tmsg {
 	if f.Cond != nil {
 		f.Wait()
 	}
-	return f.reply
+	return f.Reply
 }
 
 // Wake waiters for a reply.
 func (f *ReplyFuture) Complete(msg np.Tmsg) {
 	f.Lock()
 	defer f.Unlock()
-	f.reply = msg
+	f.Reply = msg
 	// Mark that a reply has been received, so no one tries to wait in the
 	// future.
 	if f.Cond != nil {

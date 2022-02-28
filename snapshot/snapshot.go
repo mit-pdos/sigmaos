@@ -18,7 +18,9 @@ import (
 type Snapshot struct {
 	Imap         map[unsafe.Pointer]ObjSnapshot
 	Root         unsafe.Pointer
+	Tm           []byte
 	Rft          []byte
+	Rc           []byte
 	restoreCache map[unsafe.Pointer]fs.FsObj
 }
 
@@ -32,29 +34,31 @@ func MakeSnapshot() *Snapshot {
 
 func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
-	s.Root = s.snapshot(root)
+	s.Root = s.snapshotFsTree(root)
 	b, err := json.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
 	// TODO: Snapshot the session table.
-	// TODO: Snapshot the thread manager table.
+	// Snapshot the thread manager table.
+	s.Tm = tm.Snapshot()
 	// Snapshot the recent fence table.
 	s.Rft = rft.Snapshot()
-	// TODO: Snapshot the reply cache.
+	// Snapshot the reply cache.
+	s.Rc = rc.Snapshot()
 	return b
 }
 
 // XXX Do we ever snapshot the same object twice? I don't think so, because I
 // believe the structure is a proper tree?
-func (s *Snapshot) snapshot(o fs.FsObj) unsafe.Pointer {
+func (s *Snapshot) snapshotFsTree(o fs.FsObj) unsafe.Pointer {
 	var ptr unsafe.Pointer
 	var snap ObjSnapshot
 	switch o.(type) {
 	case *dir.DirImpl:
 		d := o.(*dir.DirImpl)
 		ptr = unsafe.Pointer(d)
-		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.snapshot))
+		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.snapshotFsTree))
 	case *memfs.File:
 		f := o.(*memfs.File)
 		ptr = unsafe.Pointer(f)

@@ -41,6 +41,10 @@ func makeThreadMgr(pfn ProcessFn) *ThreadMgr {
 	return t
 }
 
+func (t *ThreadMgr) GetExecuting() map[*Op]bool {
+	return t.executing
+}
+
 // Enqueue a new op to be processed.
 func (t *ThreadMgr) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	t.Lock()
@@ -123,7 +127,7 @@ func (t *ThreadMgr) run() {
 			// block).
 			go func() {
 				// Execute the op.
-				t.pfn(op.fc, op.replies)
+				t.pfn(op.Fc, op.replies)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
 				// Mark the op as no longer executing.

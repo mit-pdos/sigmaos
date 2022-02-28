@@ -34,6 +34,7 @@ type Protsrv interface {
 	RegFence(np.Tregfence, *np.Ropen) *np.Rerror
 	UnFence(np.Tunfence, *np.Ropen) *np.Rerror
 	Detach()
+	Snapshot() []byte
 }
 
 type MkProtServer func(FsServer, np.Tsession) Protsrv

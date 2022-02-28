@@ -12,12 +12,15 @@ import (
 	"ulambda/memfs"
 	"ulambda/repl"
 	"ulambda/session"
+	"ulambda/stats"
 	"ulambda/threadmgr"
 )
 
 type Snapshot struct {
 	Imap         map[unsafe.Pointer]ObjSnapshot
 	Root         unsafe.Pointer
+	Sts          []byte
+	St           []byte
 	Tm           []byte
 	Rft          []byte
 	Rc           []byte
@@ -32,20 +35,23 @@ func MakeSnapshot() *Snapshot {
 	return s
 }
 
-func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
+func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
 	s.Root = s.snapshotFsTree(root)
 	b, err := json.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
-	// TODO: Snapshot the session table.
+	s.Sts = sts.Snapshot()
+	// Snapshot the session table.
+	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
 	s.Tm = tm.Snapshot()
 	// Snapshot the recent fence table.
 	s.Rft = rft.Snapshot()
 	// Snapshot the reply cache.
 	s.Rc = rc.Snapshot()
+	// TODO: snapshot stats.
 	return b
 }
 

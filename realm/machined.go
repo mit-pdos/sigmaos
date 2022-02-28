@@ -9,7 +9,7 @@ import (
 	"ulambda/config"
 	db "ulambda/debug"
 	"ulambda/fenceclnt"
-	"ulambda/fsclnt"
+	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
@@ -104,7 +104,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 
 	// If we need to add a named replica, do so
 	if len(rds) < nReplicas() {
-		ip, err := fsclnt.LocalIP()
+		ip, err := fidclnt.LocalIP()
 		if err != nil {
 			log.Fatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
 		}

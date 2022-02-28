@@ -66,8 +66,8 @@ func (pclnt *ProtClnt) Server() []string {
 	return pclnt.server
 }
 
-func (pclnt *ProtClnt) Disconnect() {
-	pclnt.clnt.cm.disconnect(pclnt.server)
+func (pclnt *ProtClnt) Disconnect() *np.Err {
+	return pclnt.clnt.cm.disconnect(pclnt.server)
 }
 
 func (pclnt *ProtClnt) Call(args np.Tmsg) (np.Tmsg, *np.Err) {

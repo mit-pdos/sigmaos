@@ -1,4 +1,4 @@
-package fsclnt
+package fdclnt
 
 import (
 	"sync"
@@ -11,7 +11,7 @@ const (
 )
 
 type FdState struct {
-	offset np.Toffset
+	offset np.Toffset // unused for now
 	fid    np.Tfid
 	mode   np.Tmode
 }

@@ -6,8 +6,8 @@ import (
 
 	"ulambda/ctx"
 	"ulambda/dir"
+	"ulambda/fidclnt"
 	"ulambda/fs"
-	"ulambda/fsclnt"
 	"ulambda/fslib"
 	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
@@ -23,7 +23,7 @@ func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcCln
 }
 
 func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*fssrv.FsServer, error) {
-	ip, err := fsclnt.LocalIP()
+	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		return nil, err
 	}

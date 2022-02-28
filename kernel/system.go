@@ -56,6 +56,8 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	if err != nil {
 		log.Fatalf("FATAL RunNamed err %v\n", err)
 	}
+	proc.SetProgram(uname)
+	proc.SetPid(proc.GenPid())
 	s.named = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
@@ -146,7 +148,7 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case np.PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("kill %v\n", -s.procd[0].Process.Pid)
+			log.Printf("kill %v %v\n", -s.procd[0].Process.Pid, s.procdPids[0])
 			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
 			if err == nil {
 				s.procd[0].Wait()

@@ -367,7 +367,7 @@ func TestWatchCreate(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWatchRemoveSeq(t *testing.T) {
+func TestWatchRemoveOne(t *testing.T) {
 	ts := test.MakeTstate(t)
 
 	fn := "name/w"
@@ -949,6 +949,32 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")
+
+	ts.Shutdown()
+}
+
+func TestOpenRemoveRead(t *testing.T) {
+	ts := test.MakeTstate(t)
+
+	fn := "name/f"
+	d := []byte("hello")
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	rdr, err := ts.OpenReader(fn)
+	assert.Equal(t, nil, err)
+
+	err = ts.Remove(fn)
+	assert.Equal(t, nil, err)
+
+	b, err := rdr.GetData()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, d, b, "data")
+
+	rdr.Close()
+
+	_, err = ts.Stat(fn)
+	assert.NotNil(t, err, "stat")
 
 	ts.Shutdown()
 }

@@ -1,7 +1,6 @@
 package stats_test
 
 import (
-	"log"
 	"testing"
 	"time"
 

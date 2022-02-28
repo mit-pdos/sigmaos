@@ -179,9 +179,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 	if fssrv.replSrv != nil {
 		fssrv.rc.Put(request, reply)
 	}
-	fcall := &np.Fcall{}
-	fcall.Type = reply.Type()
-	fcall.Msg = reply
+	fcall := np.MakeFcall(reply, 0, nil)
 	fcall.Tag = request.Tag
 	replies <- fcall
 }
@@ -210,7 +208,6 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	if !ok {
 		// client start TCP connection, but then failed before sending
 		// any messages.
-		close(replies)
 		return
 	}
 
@@ -225,7 +222,4 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Stop sess thread.
 	fssrv.st.KillSessThread(sid)
-
-	// close the reply channel, so that conn writer() terminates
-	close(replies)
 }

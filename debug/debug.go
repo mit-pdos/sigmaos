@@ -4,23 +4,40 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"ulambda/proc"
 )
 
-func isDebug() bool {
-	uldebug := os.Getenv("SIGMADEBUG")
-	return uldebug != ""
+//
+// Debug output is controled by SIGMADEBUG environment variable, which
+// can be a list of labels (e.g., "RPC;PATHCLNT").
+//
+
+func debugLabels() map[string]bool {
+	m := make(map[string]bool)
+	s := os.Getenv("SIGMADEBUG")
+	if s == "" {
+		return m
+	}
+	labels := strings.Split(s, ";")
+	for _, l := range labels {
+		m[l] = true
+	}
+	return m
 }
 
+// Deprecated; use DLPrintf
 func DPrintf(format string, v ...interface{}) {
-	if isDebug() {
-		log.Printf("%v: %v", proc.GetProgram(), fmt.Sprintf(format, v...))
+	m := debugLabels()
+	if len(m) != 0 {
+		log.Printf("%v: %v", proc.GetName(), fmt.Sprintf(format, v...))
 	}
 }
 
 func DLPrintf(label string, format string, v ...interface{}) {
-	if isDebug() {
-		log.Printf("%v %v %v", proc.GetProgram(), label, fmt.Sprintf(format, v...))
+	m := debugLabels()
+	if _, ok := m[label]; ok {
+		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
 	}
 }

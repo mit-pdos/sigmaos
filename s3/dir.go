@@ -113,6 +113,9 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	if !d.Perm().IsDir() {
 		return nil, nil, np.MkErr(np.TErrNotDir, d)
 	}
+	if len(p) == 0 {
+		return nil, nil, nil
+	}
 	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
 	if err != nil {
 		return nil, nil, err

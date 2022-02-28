@@ -98,8 +98,11 @@ func (fssrv *FsServer) Root() fs.Dir {
 }
 
 func (fssrv *FsServer) Snapshot() []byte {
+	if fssrv.replSrv == nil {
+		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
+	}
 	snap := snapshot.MakeSnapshot()
-	return snap.Snapshot(fssrv.root.(*dir.DirImpl))
+	return snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tm, fssrv.rft, fssrv.rc)
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {

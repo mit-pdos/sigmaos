@@ -7,8 +7,12 @@ import (
 	"unsafe"
 
 	"ulambda/dir"
+	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/memfs"
+	"ulambda/repl"
+	"ulambda/session"
+	"ulambda/threadmgr"
 )
 
 type Snapshot struct {
@@ -25,12 +29,17 @@ func MakeSnapshot() *Snapshot {
 	return s
 }
 
-func (s *Snapshot) Snapshot(root fs.FsObj) []byte {
+func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
+	// Snapshot the FS tree.
 	s.Root = s.snapshot(root)
 	b, err := json.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
+	// TODO: Snapshot the session table.
+	// TODO: Snapshot the thread manager table.
+	// TODO: Snapshot the recent fence table.
+	// TODO: Snapshot the reply cache.
 	return b
 }
 

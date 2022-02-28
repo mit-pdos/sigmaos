@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 
 	"ulambda/ctx"
+	"ulambda/dir"
 	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -16,6 +17,7 @@ import (
 	"ulambda/repl"
 	"ulambda/sesscond"
 	"ulambda/session"
+	"ulambda/snapshot"
 	"ulambda/stats"
 	"ulambda/threadmgr"
 	"ulambda/watch"
@@ -93,6 +95,11 @@ func (fssrv *FsServer) GetRecentFences() *fences.RecentTable {
 
 func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
+}
+
+func (fssrv *FsServer) Snapshot() []byte {
+	snap := snapshot.MakeSnapshot()
+	return snap.Snapshot(fssrv.root.(*dir.DirImpl))
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {

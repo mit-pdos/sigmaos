@@ -12,3 +12,12 @@ func (rft *RecentTable) Snapshot() []byte {
 	}
 	return b
 }
+
+func Restore(b []byte) *RecentTable {
+	rft := &RecentTable{}
+	err := json.Unmarshal(b, rft.fences)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal fences in restore: %v", err)
+	}
+	return rft
+}

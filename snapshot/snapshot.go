@@ -42,6 +42,7 @@ func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.Session
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
+	// Snapshot stats.
 	s.Sts = sts.Snapshot()
 	// Snapshot the session table.
 	s.St = st.Snapshot()
@@ -80,14 +81,21 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) unsafe.Pointer {
 	return ptr
 }
 
-func Restore(b []byte) fs.FsObj {
+func Restore(b []byte) (fs.FsObj, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
 	s := MakeSnapshot()
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
 	}
 	root := s.restoreFsTree(s.Root)
-	return root
+	// Restore stats.
+	sts := stats.Restore(s.restoreFsTree, s.Sts)
+	// TODO: Restore the session table.
+	// TODO: Restore the thread manager table.
+	// Restore the recent fence table.
+	rft := fences.Restore(s.Rft)
+	// TODO: Restore the reply cache.
+	return root, sts, nil, nil, rft, nil
 }
 
 func (s *Snapshot) restoreFsTree(ptr unsafe.Pointer) fs.FsObj {

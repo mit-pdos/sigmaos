@@ -24,6 +24,8 @@ type ThreadMgr struct {
 	done      bool
 	ops       []*Op        // List of (new) ops to process.
 	wakeups   []*sync.Cond // List of conds (goroutines/ops) that need to wake up.
+	executing map[*Op]bool // Map of currently executing ops.
+	numops    uint64       // Number of ops processed or currently processing.
 	pfn       ProcessFn
 }
 
@@ -34,6 +36,7 @@ func makeThreadMgr(pfn ProcessFn) *ThreadMgr {
 	t.cond = sync.NewCond(t.Locker)
 	t.ops = []*Op{}
 	t.wakeups = []*sync.Cond{}
+	t.executing = make(map[*Op]bool)
 	t.pfn = pfn
 	return t
 }
@@ -43,7 +46,10 @@ func (t *ThreadMgr) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	t.Lock()
 	defer t.Unlock()
 
-	t.ops = append(t.ops, makeOp(fc, replies))
+	t.numops++
+	op := makeOp(fc, replies, t.numops)
+	t.ops = append(t.ops, op)
+	t.executing[op] = true
 
 	// Signal that there are new ops to be processed.
 	t.newOpCond.Signal()
@@ -120,6 +126,8 @@ func (t *ThreadMgr) run() {
 				t.pfn(op.fc, op.replies)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
+				// Mark the op as no longer executing.
+				delete(t.executing, op)
 				// Notify the ThreadMgr that the op has completed.
 				t.cond.Signal()
 				// Unlock to allow the ThreadMgr to make progress.

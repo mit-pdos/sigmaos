@@ -72,7 +72,6 @@ type Group struct {
 	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	crash        int64
 	primFence    *fenceclnt.FenceClnt
 	peerFence    *fenceclnt.FenceClnt
 	confFclnt    *fenceclnt.FenceClnt
@@ -100,7 +99,7 @@ func RunMember(grp string) {
 	g := &Group{}
 	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
-	g.crash = crash.GetEnv()
+	crash.Crasher(g.FsLib)
 
 	g.Mkdir(GRPDIR, 07)
 

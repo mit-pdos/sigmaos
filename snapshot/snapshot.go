@@ -87,22 +87,22 @@ func Restore(b []byte) fs.FsObj {
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
 	}
-	root := s.restore(s.Root)
+	root := s.restoreFsTree(s.Root)
 	return root
 }
 
-func (s *Snapshot) restore(ptr unsafe.Pointer) fs.FsObj {
+func (s *Snapshot) restoreFsTree(ptr unsafe.Pointer) fs.FsObj {
 	if obj, ok := s.restoreCache[ptr]; ok {
 		return obj
 	}
 	snap := s.Imap[ptr]
 	switch snap.Type {
 	case Tdir:
-		return dir.Restore(s.restore, snap.Data)
+		return dir.Restore(s.restoreFsTree, snap.Data)
 	case Tfile:
-		return memfs.RestoreFile(s.restore, snap.Data)
+		return memfs.RestoreFile(s.restoreFsTree, snap.Data)
 	case Tsymlink:
-		return memfs.RestoreSymlink(s.restore, snap.Data)
+		return memfs.RestoreSymlink(s.restoreFsTree, snap.Data)
 	default:
 		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
 		return nil

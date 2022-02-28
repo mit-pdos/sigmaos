@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"reflect"
+	"unsafe"
 
 	"ulambda/fs"
 	np "ulambda/ninep"
@@ -13,7 +14,7 @@ type InodeSnapshot struct {
 	Perm    np.Tperm
 	Version np.TQversion
 	Mtime   int64
-	Parent  uintptr
+	Parent  unsafe.Pointer
 	Owner   string
 	Nlink   int
 }
@@ -25,7 +26,7 @@ func makeSnapshot(inode *Inode) []byte {
 	i.Mtime = 0 // TODO: decide what to do about time.
 	// Since we traverse down the tree, we assume the parent must have already
 	// been snapshotted.
-	i.Parent = reflect.ValueOf(inode.parent).Pointer()
+	i.Parent = unsafe.Pointer(reflect.ValueOf(inode.parent).Pointer())
 	i.Owner = inode.owner
 	i.Nlink = inode.nlink
 

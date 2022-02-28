@@ -12,16 +12,16 @@ import (
 )
 
 type Snapshot struct {
-	Imap         map[uintptr]ObjSnapshot
-	Root         uintptr
-	restoreCache map[uintptr]fs.FsObj
+	Imap         map[unsafe.Pointer]ObjSnapshot
+	Root         unsafe.Pointer
+	restoreCache map[unsafe.Pointer]fs.FsObj
 }
 
 func MakeSnapshot() *Snapshot {
 	s := &Snapshot{}
-	s.Imap = make(map[uintptr]ObjSnapshot)
-	s.Root = 0
-	s.restoreCache = make(map[uintptr]fs.FsObj)
+	s.Imap = make(map[unsafe.Pointer]ObjSnapshot)
+	s.Root = nil
+	s.restoreCache = make(map[unsafe.Pointer]fs.FsObj)
 	return s
 }
 
@@ -36,21 +36,21 @@ func (s *Snapshot) Snapshot(root fs.FsObj) []byte {
 
 // XXX Do we ever snapshot the same object twice? I don't think so, because I
 // believe the structure is a proper tree?
-func (s *Snapshot) snapshot(o fs.FsObj) uintptr {
-	var ptr uintptr
+func (s *Snapshot) snapshot(o fs.FsObj) unsafe.Pointer {
+	var ptr unsafe.Pointer
 	var snap ObjSnapshot
 	switch o.(type) {
 	case *dir.DirImpl:
 		d := o.(*dir.DirImpl)
-		ptr = uintptr(unsafe.Pointer(d))
+		ptr = unsafe.Pointer(d)
 		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.snapshot))
 	case *memfs.File:
 		f := o.(*memfs.File)
-		ptr = uintptr(unsafe.Pointer(f))
+		ptr = unsafe.Pointer(f)
 		snap = MakeObjSnapshot(Tfile, f.Snapshot())
 	case *memfs.Symlink:
 		f := o.(*memfs.Symlink)
-		ptr = uintptr(unsafe.Pointer(f))
+		ptr = unsafe.Pointer(f)
 		snap = MakeObjSnapshot(Tsymlink, f.Snapshot())
 	case *memfs.Pipe:
 		// TODO: plan for snapshotting pipes.
@@ -72,7 +72,7 @@ func Restore(b []byte) fs.FsObj {
 	return root
 }
 
-func (s *Snapshot) restore(ptr uintptr) fs.FsObj {
+func (s *Snapshot) restore(ptr unsafe.Pointer) fs.FsObj {
 	if obj, ok := s.restoreCache[ptr]; ok {
 		return obj
 	}

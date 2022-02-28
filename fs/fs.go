@@ -2,14 +2,15 @@ package fs
 
 import (
 	"log"
+	"unsafe"
 
 	np "ulambda/ninep"
 	"ulambda/sesscond"
 )
 
 type MakeDirF func(FsObj) FsObj
-type SnapshotF func(FsObj) uintptr
-type RestoreF func(uintptr) FsObj
+type SnapshotF func(FsObj) unsafe.Pointer
+type RestoreF func(unsafe.Pointer) FsObj
 
 type CtxI interface {
 	Uname() string

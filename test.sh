@@ -38,10 +38,10 @@ go test $1 ulambda/semclnt
 # tests kernel (without realms)
 #
 
+go test $1 ulambda/procclnt
 go test $1 ulambda/ux
 go test $1 ulambda/s3
 go test $1 ulambda/kernel
-go test $1 ulambda/procclnt
 # run this procclnt test again from a script to grep the output from
 # fencers for correctness
 ./fences/test.sh

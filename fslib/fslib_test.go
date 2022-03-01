@@ -64,7 +64,7 @@ func TestConnect(t *testing.T) {
 	assert.True(t, np.IsErrEOF(err))
 
 	fd, err = ts.Open(fn, np.OREAD)
-	assert.True(t, np.IsErrEOF(err))
+	assert.True(t, np.IsErrNotfound(err))
 
 	ts.Shutdown()
 }
@@ -351,13 +351,15 @@ func TestWatchCreate(t *testing.T) {
 
 	fn := "name/w"
 	ch := make(chan bool)
-	_, err := ts.OpenWatch(fn, np.OREAD, func(string, error) {
+	fd, err := ts.OpenWatch(fn, np.OREAD, func(string, error) {
 		ch <- true
 	})
 	assert.NotEqual(t, nil, err)
-	if err != nil {
-		assert.True(t, np.IsErrNotfound(err))
-	}
+	assert.Equal(t, -1, fd, err)
+	assert.True(t, np.IsErrNotfound(err))
+
+	// give Watch goroutine to start
+	time.Sleep(100 * time.Millisecond)
 
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
@@ -375,9 +377,14 @@ func TestWatchRemoveOne(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.SetRemoveWatch(fn, func(string, error) {
+	err = ts.SetRemoveWatch(fn, func(path string, err error) {
+		assert.Equal(t, nil, err, path)
 		ch <- true
 	})
+	assert.Equal(t, nil, err)
+
+	// give Watch goroutine to start
+	time.Sleep(100 * time.Millisecond)
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
@@ -395,10 +402,14 @@ func TestWatchDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ch := make(chan bool)
-	err = ts.SetDirWatch(fn, func(string, error) {
+	err = ts.SetDirWatch(fn, func(path string, err error) {
+		assert.Equal(t, nil, err, path)
 		ch <- true
 	})
 	assert.Equal(t, nil, err)
+
+	// give Watch goroutine to start
+	time.Sleep(100 * time.Millisecond)
 
 	_, err = ts.PutFile(fn+"/x", 0777, np.OWRITE, nil)
 	assert.Equal(t, nil, err)
@@ -474,13 +485,13 @@ func TestLockAfterConnClose(t *testing.T) {
 	go func() {
 		// Should wait
 		_, err := fsl1.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-		assert.True(t, np.IsErrEOF(err), "Make lock 2")
+		assert.NotNil(t, err, "Make lock 2")
 	}()
 
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	fsl1.Exit()
+	fsl1.Disconnect(lPath)
 
 	// Remove the lock file
 	ts.Remove(lPath)
@@ -493,8 +504,6 @@ func TestLockAfterConnClose(t *testing.T) {
 	ts.Shutdown()
 }
 
-// Test race: write returns successfully after rename, but read sees
-// an old value,
 func TestWatchRemoveConcur(t *testing.T) {
 	const N = 5_000
 
@@ -760,7 +769,7 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		fsl.Exit()
+		fsl.Disconnect("name/pipe")
 	}()
 	fd, err := ts.Open("name/pipe", np.OREAD)
 	assert.Nil(ts.T, err, "Open")
@@ -784,7 +793,7 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	fsl1.Exit()
+	fsl1.Disconnect("name/pipe")
 
 	// start up second write to pipe
 	go func() {
@@ -805,7 +814,24 @@ func TestPipeCrash1(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSymlink(t *testing.T) {
+func TestSymlinkPath(t *testing.T) {
+	ts := test.MakeTstate(t)
+
+	dn := "name/d"
+	err := ts.Mkdir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+
+	err = ts.Symlink([]byte("name/"), "name/namedself", 0777|np.DMTMP)
+	assert.Nil(ts.T, err, "Symlink")
+
+	sts, err := ts.GetDir("name/namedself/")
+	assert.Equal(t, nil, err)
+	assert.True(t, fslib.Present(sts, []string{"d", "namedself"}), "dir")
+
+	ts.Shutdown()
+}
+
+func TestSymlinkRemote(t *testing.T) {
 	ts := test.MakeTstate(t)
 
 	dn := "name/d"

@@ -51,11 +51,15 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 }
 
 func (rdr *Reader) GetData() ([]byte, error) {
-	b, err := rdr.fc.Read(rdr.fid, 0, np.MAXGETSET)
+	b, err := rdr.GetDataErr()
 	if err != nil {
 		return nil, err
 	}
 	return b, nil
+}
+
+func (rdr *Reader) GetDataErr() ([]byte, *np.Err) {
+	return rdr.fc.Read(rdr.fid, 0, np.MAXGETSET)
 }
 
 func (rdr *Reader) Close() error {

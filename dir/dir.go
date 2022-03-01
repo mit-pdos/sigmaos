@@ -189,11 +189,10 @@ func (dir *DirImpl) remove(name string) *np.Err {
 }
 
 func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, *np.Err) {
-	inodes := []fs.FsObj{}
 	if len(path) == 0 {
 		return nil, nil, nil
 	}
-	return dir.namei(ctx, path, inodes)
+	return dir.namei(ctx, path, nil)
 }
 
 // XXX don't return more than n bytes of dir entries, since any more

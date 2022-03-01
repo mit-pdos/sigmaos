@@ -1,7 +1,5 @@
 package memfs
 
-// Run go test ulambda/memfs
-
 import (
 	"strconv"
 	"sync"

@@ -157,12 +157,9 @@ func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
 	if err != nil {
 		return err
 	}
+	defer fl.Close(fd)
 	time.Sleep(10 * time.Millisecond)
 	_, err = fl.Write(fd, d)
-	if err != nil {
-		return err
-	}
-	err = fl.Close(fd)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ go test $1 ulambda/perf
 #
 go test $1 ulambda/ninep
 go test $1 ulambda/memfs
-go test $1 ulambda/fsclnt
+go test $1 ulambda/pathclnt
 
 #
 # test with just named

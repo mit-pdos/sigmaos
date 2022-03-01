@@ -108,6 +108,23 @@ func (d *Dir) s3ReadDirL() *np.Err {
 	return nil
 }
 
+func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []string, *np.Err) {
+	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
+	if err != nil {
+		return nil, nil, err
+	}
+	o1, ok := d.lookupDirent(p[0])
+	if !ok {
+		return inodes, nil, np.MkErr(np.TErrNotfound, p[0])
+	}
+	inodes = append(inodes, d)
+	if len(p) == 1 {
+		return inodes, nil, nil
+	} else {
+		return o1.(*Dir).namei(ctx, p[1:], inodes)
+	}
+}
+
 func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
 	if !d.Perm().IsDir() {
@@ -116,19 +133,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	if len(p) == 0 {
 		return nil, nil, nil
 	}
-	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
-	if err != nil {
-		return nil, nil, err
-	}
-	o1, ok := d.lookupDirent(p[0])
-	if !ok {
-		return nil, nil, np.MkErr(np.TErrNotfound, p[0])
-	}
-	if len(p) == 1 {
-		return []fs.FsObj{o1}, nil, nil
-	} else {
-		return o1.(*Dir).Lookup(ctx, p[1:])
-	}
+	return d.namei(ctx, p, []fs.FsObj{})
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {

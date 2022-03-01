@@ -46,11 +46,6 @@ func (pathc *PathClnt) String() string {
 	return str
 }
 
-func (pathc *PathClnt) Exit() {
-	pathc.mnt.exit()
-	pathc.FidClnt.Exit()
-}
-
 func (pathc *PathClnt) SetChunkSz(sz np.Tsize) {
 	pathc.chunkSz = sz
 }
@@ -90,8 +85,8 @@ func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
 		return "", err
 	}
 	rdr := reader.MakeReader(pathc.FidClnt, fid, pathc.chunkSz)
-	b, error := rdr.GetData()
-	if error != nil {
+	b, err := rdr.GetDataErr()
+	if err != nil {
 		return "", err
 	}
 	return string(b), nil
@@ -120,7 +115,7 @@ func (pathc *PathClnt) Create(path string, perm np.Tperm, mode np.Tmode) (np.Tfi
 	p := np.Split(path)
 	dir := np.Dir(p)
 	base := np.Base(p)
-	fid, err := pathc.walkMany(dir, true, nil)
+	fid, err := pathc.walkPathUmount(dir, true, nil)
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -152,10 +147,11 @@ func (pathc *PathClnt) Rename(old string, new string) error {
 			return nil
 		}
 	}
-	fid, err := pathc.walkMany(opath, np.EndSlash(old), nil)
+	fid, err := pathc.walkPathUmount(opath, np.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
+	defer pathc.FidClnt.Clunk(fid)
 	st := &np.Stat{}
 	st.Name = npath[len(npath)-1]
 	err = pathc.FidClnt.Wstat(fid, st)
@@ -172,12 +168,12 @@ func (pathc *PathClnt) renameat(old, new string) *np.Err {
 	npath := np.Split(new)
 	o := opath[len(opath)-1]
 	n := npath[len(npath)-1]
-	fid, err := pathc.walkMany(opath[:len(opath)-1], np.EndSlash(old), nil)
+	fid, err := pathc.walkPathUmount(opath[:len(opath)-1], np.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid)
-	fid1, err := pathc.walkMany(npath[:len(npath)-1], np.EndSlash(old), nil)
+	fid1, err := pathc.walkPathUmount(npath[:len(npath)-1], np.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
@@ -187,11 +183,9 @@ func (pathc *PathClnt) renameat(old, new string) *np.Err {
 
 func (pathc *PathClnt) Umount(path []string) error {
 	db.DLPrintf("PATHCLNT", "Umount %v\n", path)
-	fid2, err := pathc.mnt.umount(path)
-	if err != nil {
+	if err := pathc.mnt.umount(pathc.FidClnt, path); err != nil {
 		return err
 	}
-	pathc.FidClnt.Free(fid2)
 	return nil
 }
 
@@ -208,7 +202,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	err = pathc.FidClnt.RemoveFile(fid, rest, np.EndSlash(name))
 	if err != nil {
 		if np.IsMaybeSpecialElem(err) {
-			fid, err = pathc.walkManyUmount(path, np.EndSlash(name), nil)
+			fid, err = pathc.walkPathUmount(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err
 			}
@@ -232,7 +226,7 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Server(), ",")
 		return st, nil
 	} else {
-		fid, err := pathc.walkMany(np.Split(name), np.EndSlash(name), nil)
+		fid, err := pathc.walkPathUmount(np.Split(name), np.EndSlash(name), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -248,7 +242,7 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 func (pathc *PathClnt) OpenWatch(path string, mode np.Tmode, w Watch) (np.Tfid, error) {
 	db.DLPrintf("PATHCLNT", "Open %v %v\n", path, mode)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), w)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), w)
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -266,7 +260,7 @@ func (pathc *PathClnt) Open(path string, mode np.Tmode) (np.Tfid, error) {
 func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
 	db.DLPrintf("PATHCLNT", "SetDirWatch %v\n", path)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}
@@ -274,15 +268,20 @@ func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
 		version := pathc.FidClnt.Lookup(fid).Version()
 		err := pathc.FidClnt.Watch(fid, nil, version)
 		db.DLPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
-		w(path, err)
+		if err == nil {
+			w(path, nil)
+		} else {
+			w(path, err)
+		}
 		pathc.Clunk(fid)
 	}()
 	return nil
 }
 
 func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
+	db.DLPrintf("PATHCLNT", "SetRemoveWatch %v\n", path)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}
@@ -291,12 +290,13 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 	}
 	go func() {
 		version := pathc.FidClnt.Lookup(fid).Version()
-		if err := pathc.FidClnt.Watch(fid, nil, version); err != nil {
-			w(path, err)
-		} else {
-			w(path, nil)
-		}
+		err := pathc.FidClnt.Watch(fid, nil, version)
 		db.DLPrintf("PATHCLNT", "SetRemoveWatch: Watch returns %v %v\n", path, err)
+		if err == nil {
+			w(path, nil)
+		} else {
+			w(path, err)
+		}
 		pathc.Clunk(fid)
 	}()
 	return nil
@@ -315,7 +315,7 @@ func (pathc *PathClnt) GetFile(path string, mode np.Tmode, off np.Toffset, cnt n
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, np.EndSlash(path))
 	if err != nil {
 		if np.IsMaybeSpecialElem(err) {
-			fid, err = pathc.walkManyUmount(p, np.EndSlash(path), nil)
+			fid, err = pathc.walkPathUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return nil, err
 			}
@@ -345,7 +345,7 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, np.EndSlash(path))
 	if err != nil {
 		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
-			fid, err = pathc.walkManyUmount(p, np.EndSlash(path), nil)
+			fid, err = pathc.walkPathUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err
 			}
@@ -377,7 +377,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
 			dir := np.Dir(p)
 			base := []string{np.Base(p)}
-			fid, err = pathc.walkManyUmount(dir, true, nil)
+			fid, err = pathc.walkPathUmount(dir, true, nil)
 			if err != nil {
 				return 0, err
 			}
@@ -396,7 +396,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 func (pathc *PathClnt) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
 	db.DLPrintf("PATHCLNT", "MakeFence %v %v\n", path, mode)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return np.Tfence{}, err
 	}
@@ -416,7 +416,7 @@ func (pathc *PathClnt) MakeFence(path string, mode np.Tmode) (np.Tfence, error) 
 func (pathc *PathClnt) RegisterFence(f np.Tfence, path string) error {
 	db.DLPrintf("PATHCLNT", "RegisterFence %v %v\n", f, path)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}
@@ -430,7 +430,7 @@ func (pathc *PathClnt) RegisterFence(f np.Tfence, path string) error {
 func (pathc *PathClnt) DeregisterFence(f np.Tfence, path string) error {
 	db.DLPrintf("PATHCLNT", "DeregisterFence %v %v\n", f, path)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}
@@ -444,7 +444,7 @@ func (pathc *PathClnt) DeregisterFence(f np.Tfence, path string) error {
 func (pathc *PathClnt) RmFence(f np.Tfence, path string) error {
 	db.DLPrintf("PATHCLNT", "RmFence %v %v\n", f, path)
 	p := np.Split(path)
-	fid, err := pathc.walkManyUmount(p, np.EndSlash(path), nil)
+	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
 	if err != nil {
 		return err
 	}

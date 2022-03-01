@@ -9,21 +9,19 @@ import (
 	"ulambda/proc"
 )
 
-func (pathc *PathClnt) walkSymlink(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
+func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
 	// XXX change how we readlink; getfile?
 	target, err := pathc.readlink(fid)
-	if len(target) == 0 {
-		log.Printf("readlink %v %v\n", string(target), err)
-	}
+	db.DLPrintf("WALK", "walksymlink1 %v target %v err %v\n", fid, target, err)
 	if err != nil {
-		return nil, err
+		return left, err
 	}
 	var path []string
 	if IsRemoteTarget(target) {
 		trest, err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
 			log.Printf("%v: automount %v %v err %v\n", proc.GetName(), resolved, target, err)
-			return nil, err
+			return left, err
 		}
 		path = append(resolved, append(trest, left...)...)
 	} else {

@@ -83,7 +83,7 @@ func (pathc *PathClnt) walkPath(path []string, resolve bool, w Watch) (np.Tfid, 
 			// Note: fid can be the one returned by walkMount
 			return fid, nil, nil
 		}
-		return np.NoFid, left, np.MkErr(np.TErrNotfound, left)
+		return np.NoFid, left, np.MkErr(np.TErrNotfound, np.Join(left))
 	}
 	return np.NoFid, path, np.MkErr(np.TErrNotfound, "too many symlink cycles")
 }

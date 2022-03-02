@@ -104,6 +104,7 @@ func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 	return np.NoFid, path, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v", path))
 }
 
+// XXX maybe also umount mount points that have path as a prefix
 func (mnt *MntTable) umount(fidc *fidclnt.FidClnt, path []string) *np.Err {
 	mnt.Lock()
 	defer mnt.Unlock()

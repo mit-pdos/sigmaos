@@ -20,7 +20,7 @@ const (
 func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for {
 		fid, left, err := pathc.walkPath(path, resolve, w)
-		db.DLPrintf("WALK", "walkMany %v -> (%v, %v)\n", path, fid, err)
+		db.DLPrintf("WALK", "walkMany %v -> (%v, %v, %v)\n", path, fid, left, err)
 		if err != nil && np.IsErrEOF(err) {
 			done := len(path) - len(left)
 			db.DLPrintf("WALK", "walkManyUmount: umount %v\n", path[0:done])
@@ -70,7 +70,7 @@ func (pathc *PathClnt) walkPath(path []string, resolve bool, w Watch) (np.Tfid, 
 		retry, left, err := pathc.walkSymlink(fid, path, left, resolve)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, path, err
+			return np.NoFid, left, err
 		}
 		db.DLPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
 		if retry {

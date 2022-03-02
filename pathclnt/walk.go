@@ -11,24 +11,24 @@ const (
 	MAXSYMLINK = 8
 )
 
-// walkManyUmount walks path and, on success, returns the fd walked
-// to; it is the caller's responsibility to clunk the fd.  If it
-// encounters an EOF err (e.g., server is not responding), it unmounts
+// walPathUmount walks path and, on success, returns the fd walked to;
+// it is the caller's responsibility to clunk the fd.  If it
+// encounters an EOF err (e.g., server is not responding), it umounts
 // the path it walked to, and starts over again, perhaps switching to
 // another replica.  (Note: TestMaintainReplicationLevelCrashProcd
 // test the fail-over case.)
 func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for {
 		fid, left, err := pathc.walkPath(path, resolve, w)
-		db.DLPrintf("WALK", "walkMany %v -> (%v, %v, %v)\n", path, fid, left, err)
+		db.DLPrintf("WALK", "walkPath %v -> (%v, %v, %v)\n", path, fid, left, err)
 		if err != nil && np.IsErrEOF(err) {
 			done := len(path) - len(left)
-			db.DLPrintf("WALK", "walkManyUmount: umount %v\n", path[0:done])
+			db.DLPrintf("WALK", "walkPathUmount: umount %v\n", path[0:done])
 			if e := pathc.mnt.umount(pathc.FidClnt, path[0:done]); e != nil {
 				return np.NoFid, e
 			}
 			// try again
-			db.DLPrintf("WALK", "walkManyUmount: try again p %v r %v\n", path, resolve)
+			db.DLPrintf("WALK", "walkPathUmount: try again p %v r %v\n", path, resolve)
 			continue
 		}
 		if err != nil {
@@ -43,11 +43,11 @@ func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.
 // walkPath first walks the mount table, finding the server with the
 // longest-match, and then uses walkOne() to walk at that server. The
 // server may fail to resolve, succeed resolving, or return the path
-// element that is a union or symlink. In the latter case, walkMany()
+// element that is a union or symlink. In the latter case, walkPath()
 // uses walkUnion() and walkSymlink to resolve that
 // element. walkUnion() typically ends in a symlink.  walkSymlink will
 // automount a new server and update the mount table. If succesful,
-// walkMany() starts over again, but likely with a longer match in the
+// walkPath() starts over again, but likely with a longer match in the
 // mount table.  Each of the walk*() returns an fid, which on error is
 // the same as the argument; and the caller is responsible for
 // clunking it.
@@ -191,7 +191,7 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p []string, r []string, w Watch) (n
 	go func(version np.TQversion) {
 		err := pathc.FidClnt.Watch(fid1, np.Dir(r), version)
 		pathc.FidClnt.Clunk(fid1)
-		db.DLPrintf("WALK", "setWatch: Watch returns %v %v\n", p, err)
+		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
 		w(np.Join(p), err)
 	}(pathc.FidClnt.Lookup(fid1).Version())
 	return np.NoFid, nil

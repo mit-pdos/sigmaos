@@ -146,6 +146,7 @@ func (kc KvClerk) removeGrp(err error) error {
 				}
 			} else {
 				log.Printf("%v: ReadFileJson %v err %v\n", proc.GetName(), KVCONFIG, r)
+				return r
 			}
 		}
 	}

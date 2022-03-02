@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	MAXLOAD  float64 = 85.0
-	MINLOAD  float64 = 40.0
-	CRASHKVD         = 40000
+	MAXLOAD        float64 = 85.0
+	MINLOAD        float64 = 40.0
+	CRASHKVD               = 40000
+	KVD_NO_REPL    int     = 0
+	KVD_REPL_LEVEL         = 3
 )
 
 type Monitor struct {
@@ -34,7 +36,7 @@ func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, 3, "bin/user/kvd", []string{grp}, 0, CRASHKVD)
+	return groupmgr.Start(fsl, pclnt, KVD_NO_REPL, "bin/user/kvd", []string{grp}, 0, CRASHKVD)
 }
 
 func (mo *Monitor) grow() {

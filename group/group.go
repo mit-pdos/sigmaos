@@ -6,6 +6,8 @@ package group
 
 import (
 	"log"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -110,6 +112,11 @@ func RunMember(grp string) {
 
 	g.setRecovering(true)
 
+	replicated, err := strconv.ParseBool(os.Getenv("SIGMAREPL"))
+	if err != nil {
+		log.Fatalf("FATAL invalid sigmarepl: %v", err)
+	}
+
 	// Under fence: get peers, start server and add self to list of peers, update list of peers.
 	g.peerFence.AcquireFenceW([]byte{})
 	replicaAddrs := g.readReplicaAddrs(grp)
@@ -122,7 +129,10 @@ func RunMember(grp string) {
 	replicaAddrs.RaftsrvAddrs = append(replicaAddrs.RaftsrvAddrs, ip+":0")
 	id := len(replicaAddrs.RaftsrvAddrs)
 
-	raftConfig := replraft.MakeRaftConfig(id, replicaAddrs.RaftsrvAddrs)
+	var raftConfig *replraft.RaftConfig = nil
+	if replicated {
+		raftConfig = replraft.MakeRaftConfig(id, replicaAddrs.RaftsrvAddrs)
+	}
 
 	// start server but don't publish its existence
 	mfs, err1 := fslibsrv.MakeReplMemFsFsl(replicaAddrs.RaftsrvAddrs[id-1], "", g.FsLib, g.ProcClnt, raftConfig)
@@ -131,10 +141,12 @@ func RunMember(grp string) {
 	}
 
 	// Get the final repl addr
-	replicaAddrs.RaftsrvAddrs[id-1] = raftConfig.ReplAddr()
 	replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, mfs.MyAddr())
 
-	g.writeReplicaAddrs(grp, replicaAddrs)
+	if replicated {
+		replicaAddrs.RaftsrvAddrs[id-1] = raftConfig.ReplAddr()
+		g.writeReplicaAddrs(grp, replicaAddrs)
+	}
 
 	// Add symlink
 	atomic.PutFileAtomic(g.FsLib, GrpDir(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))

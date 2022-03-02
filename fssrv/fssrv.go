@@ -14,6 +14,7 @@ import (
 	"ulambda/procclnt"
 	"ulambda/protsrv"
 	"ulambda/repl"
+	"ulambda/replraft"
 	"ulambda/sesscond"
 	"ulambda/session"
 	"ulambda/stats"
@@ -64,7 +65,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
-	if config == nil {
+	if config == nil || config.(*replraft.RaftConfig) == nil {
 		fssrv.replSrv = nil
 	} else {
 		fssrv.rc = repl.MakeReplyCache()

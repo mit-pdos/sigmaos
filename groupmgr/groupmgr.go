@@ -30,6 +30,7 @@ type member struct {
 	bin   string
 	args  []string
 	crash int
+	repl  bool
 }
 
 type procret struct {
@@ -38,13 +39,14 @@ type procret struct {
 	status *proc.Status
 }
 
-func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int) *member {
-	return &member{fsl, pclnt, "", bin, args, crash}
+func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, repl bool) *member {
+	return &member{fsl, pclnt, "", bin, args, crash, repl}
 }
 
 func (m *member) spawn() {
 	p := proc.MakeProc(m.bin, m.args)
 	p.AppendEnv("SIGMACRASH", strconv.Itoa(m.crash))
+	p.AppendEnv("SIGMAREPL", strconv.FormatBool(m.repl))
 	m.Spawn(p)
 	m.WaitStart(p.Pid)
 	m.pid = p.Pid
@@ -60,17 +62,24 @@ func (m *member) run(i int, start chan bool, done chan procret) {
 	done <- procret{i, err, status}
 }
 
+// If n == 0, run only one member, unreplicated.
 // ncrash = number of group members which may crash.
 func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, ncrash, crash int) *GroupMgr {
+	var N int
+	if n > 0 {
+		N = n
+	} else {
+		N = 1
+	}
 	gm := &GroupMgr{}
 	gm.ch = make(chan bool)
-	gm.members = make([]*member, n)
-	for i := 0; i < n; i++ {
+	gm.members = make([]*member, N)
+	for i := 0; i < N; i++ {
 		crashMember := crash
 		if i+1 > ncrash {
 			crashMember = 0
 		}
-		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember)
+		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n > 0)
 	}
 	done := make(chan procret)
 	for i, m := range gm.members {
@@ -78,7 +87,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		go m.run(i, start, done)
 		<-start
 	}
-	go gm.manager(done, n)
+	go gm.manager(done, N)
 	return gm
 }
 

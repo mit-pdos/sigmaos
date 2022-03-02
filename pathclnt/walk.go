@@ -72,7 +72,7 @@ func (pathc *PathClnt) walkPath(path []string, resolve bool, w Watch) (np.Tfid, 
 			pathc.FidClnt.Clunk(fid)
 			return np.NoFid, path, err
 		}
-		db.DLPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, path, left, err)
+		db.DLPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
 		if retry {
 			// On success walkSymlink returns new path to walk
 			path = left

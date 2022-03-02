@@ -2,7 +2,7 @@
 
 ./bin/kernel/named :1111 no-realm &
 
-echo "=== RUN PROXY"
+echo "=== RUN Proxy"
 
 sleep 1
 
@@ -21,9 +21,9 @@ fi
 
 cat /mnt/9p/statsd | grep Nwalk > /dev/null
 if [ $? -eq 0 ]; then
-   echo "--- PASS: PROXY"
+   echo "--- PASS: Proxy"
 else
-   echo "--- FAIL PROXY"
+   echo "--- FAIL Proxy"
 fi
 
 ./stop.sh

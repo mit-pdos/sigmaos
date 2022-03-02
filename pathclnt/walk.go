@@ -42,11 +42,11 @@ func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.
 // it returns NoFid and the rest of path that it wasn't able to walk.
 // walkPath first walks the mount table, finding the server with the
 // longest-match, and then uses walkOne() to walk at that server. The
-// server may fail to resolve, succeed resolving, or return the path
-// element that is a union or symlink. In the latter case, walkPath()
-// uses walkUnion() and walkSymlink to resolve that
-// element. walkUnion() typically ends in a symlink.  walkSymlink will
-// automount a new server and update the mount table. If succesful,
+// server may fail to walk, finish walking, or return the path element
+// that is a union or symlink. In the latter case, walkPath() uses
+// walkUnion() and walkSymlink to resolve that element. walkUnion()
+// typically ends in a symlink.  walkSymlink will automount a new
+// server and update the mount table. If succesfully automounted,
 // walkPath() starts over again, but likely with a longer match in the
 // mount table.  Each of the walk*() returns an fid, which on error is
 // the same as the argument; and the caller is responsible for
@@ -106,7 +106,9 @@ func (pathc *PathClnt) walkMount(path []string) (np.Tfid, []string, *np.Err) {
 }
 
 // Walk path at fid's server until the server runs into a symlink,
-// union element, or an error. walkOne returns the fid walked too.
+// union element, or an error. walkOne returns the fid walked too.  If
+// file is not found, set watch on the directory, waiting until the
+// file is created.
 func (pathc *PathClnt) walkOne(fid np.Tfid, path []string, w Watch) (np.Tfid, []string, *np.Err) {
 	db.DLPrintf("WALK", "walkOne %v left %v\n", fid, path)
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
@@ -136,7 +138,7 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path []string, w Watch) (np.Tfid, []
 	return fid1, left, nil
 }
 
-// Does fid point to a directory that contains ~?  If, resolve union
+// Does fid point to a directory that contains ~?  If so, resolve ~
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid np.Tfid, path []string) (np.Tfid, []string, *np.Err) {
 	if len(path) > 0 && np.IsUnionElem(path[0]) {
@@ -173,8 +175,10 @@ func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left []string, resolve boo
 	return false, left, nil
 }
 
-// Walk to parent directory, and check if name is there.  If it is, return entry.
-// Otherwise, set watch based on directory's version number
+// Walk to parent directory, and check if name is there.  If it is,
+// return entry.  Otherwise, set watch based on directory's version
+// number If the directory is modified between Walk and Watch(), the
+// versions numbers won't match and Watch will return an error.
 func (pathc *PathClnt) setWatch(fid np.Tfid, p []string, r []string, w Watch) (np.Tfid, *np.Err) {
 	fid1, _, err := pathc.FidClnt.Walk(fid, np.Dir(r))
 	if err != nil {

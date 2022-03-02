@@ -61,6 +61,8 @@ func TestRegex(t *testing.T) {
 	assert.NotNil(t, s, "Find")
 	s = grpre.FindStringSubmatch("file not found group/grp-10-conf")
 	assert.NotNil(t, s, "Find")
+	s = grpre.FindStringSubmatch("file not found group/grp-10-conf (no mount)")
+	assert.NotNil(t, s, "Find")
 	re := regexp.MustCompile(`grp-([0-9]+)`)
 	s = re.FindStringSubmatch("grp-10")
 	assert.NotNil(t, s, "Find")

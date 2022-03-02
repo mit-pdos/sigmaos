@@ -91,12 +91,13 @@ func Restore(pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *stats.Stats, *sessio
 	// Restore stats.
 	sts := stats.Restore(s.restoreFsTree, s.Sts)
 	// TODO: Restore the session table.
-	// TODO: Restore the thread manager table.
+	// Restore the thread manager table.
 	tmt := threadmgr.Restore(pfn, b)
 	// Restore the recent fence table.
 	rft := fences.Restore(s.Rft)
-	// TODO: Restore the reply cache.
-	return root, sts, nil, tmt, rft, nil
+	// Restore the reply cache.
+	rc := repl.Restore(s.Rc)
+	return root, sts, nil, tmt, rft, rc
 }
 
 func (s *Snapshot) restoreFsTree(ptr unsafe.Pointer) fs.FsObj {

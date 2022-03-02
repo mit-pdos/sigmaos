@@ -8,7 +8,6 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/proc"
 	"ulambda/protsrv"
 )
 
@@ -82,7 +81,7 @@ func (c *SrvConn) reader() {
 			err = npcodec.Unmarshal(frame, fcall)
 		}
 		if err != nil {
-			log.Print("%v: reader: bad fcall: ", proc.GetName(), err)
+			db.DLPrintf("NETSRV", "reader: bad fcall: ", err)
 		} else {
 			db.DLPrintf("NETSRV", "srv req %v\n", fcall)
 			if c.sessid == 0 {
@@ -105,21 +104,18 @@ func (c *SrvConn) writer() {
 			return
 		}
 		db.DLPrintf("NETSRV", "srv rep %v\n", fcall)
-		var err *np.Err
 		var writableFcall np.WritableFcall
 		if c.wireCompat {
 			writableFcall = fcall.ToWireCompatible()
 		} else {
 			writableFcall = fcall
 		}
-		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)
-		if err != nil {
-			log.Printf("%v: writer err %v\n", proc.GetProgram(), err)
-		} else {
-			error := c.bw.Flush()
-			if error != nil {
-				log.Printf("%v: flush %v err %v", proc.GetProgram(), fcall, err)
-			}
+		if err := npcodec.MarshalFcallToWriter(writableFcall, c.bw); err != nil {
+			db.DLPrintf("NETSRV", "writer err %v\n", err)
+			continue
+		}
+		if error := c.bw.Flush(); error != nil {
+			db.DLPrintf("NETSRV", "flush %v err %v", fcall, error)
 		}
 	}
 }

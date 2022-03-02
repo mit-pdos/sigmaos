@@ -117,7 +117,7 @@ func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []s
 	if !ok {
 		return inodes, nil, np.MkErr(np.TErrNotfound, p[0])
 	}
-	inodes = append(inodes, d)
+	inodes = append(inodes, o1)
 	if len(p) == 1 {
 		return inodes, nil, nil
 	} else {
@@ -127,13 +127,13 @@ func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []s
 
 func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
-	if !d.Perm().IsDir() {
-		return nil, nil, np.MkErr(np.TErrNotDir, d)
-	}
 	if len(p) == 0 {
 		return nil, nil, nil
 	}
-	return d.namei(ctx, p, []fs.FsObj{})
+	if !d.Perm().IsDir() {
+		return nil, nil, np.MkErr(np.TErrNotDir, d)
+	}
+	return d.namei(ctx, p, nil)
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {

@@ -17,3 +17,14 @@ func (tmt *ThreadMgrTable) Snapshot() []byte {
 	}
 	return b
 }
+
+func Restore(pfn ProcessFn, b []byte) *ThreadMgrTable {
+	tmt := MakeThreadMgrTable(pfn, true)
+	// Make a thread (there will only ever be one since we're running replicated)
+	tm := tmt.AddThread()
+	err := json.Unmarshal(b, tm.executing)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal threadmgr in restore: %v", err)
+	}
+	return tmt
+}

@@ -81,8 +81,32 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
+func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []string, *np.Err) {
+	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
+	fi, error := os.Stat(np.Join(append(d.path, p[0])))
+	if error != nil {
+		return inodes, nil, np.MkErr(np.TErrNotfound, p[0])
+	}
+	if len(p) == 1 {
+		if fi.IsDir() {
+			d1 := makeDir(append(d.path, p[0]), np.DMDIR, d)
+			return append(inodes, d1), nil, nil
+		} else {
+			f := makeFile(append(d.path, p[0]), np.Tperm(0), d)
+			return append(inodes, f), nil, nil
+		}
+	} else {
+		d1 := makeDir(append(d.path, p[0]), np.DMDIR, d)
+		inodes = append(inodes, d1)
+		return d1.namei(ctx, p[1:], inodes)
+	}
+}
+
 func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
+	if len(p) == 0 {
+		return nil, nil, nil
+	}
 	fi, error := os.Stat(np.Join(d.path))
 	if error != nil {
 		return nil, nil, np.MkErr(np.TErrError, error)
@@ -90,25 +114,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	if !fi.IsDir() {
 		return nil, nil, np.MkErr(np.TErrNotDir, d.path)
 	}
-	if len(p) == 0 {
-		return nil, nil, nil
-	}
-	fi, error = os.Stat(np.Join(append(d.path, p[0])))
-	if error != nil {
-		return nil, nil, np.MkErr(np.TErrNotfound, p[0])
-	}
-	if len(p) == 1 {
-		if fi.IsDir() {
-			d1 := makeDir(append(d.path, p[0]), np.DMDIR, d)
-			return []fs.FsObj{d1}, nil, nil
-		} else {
-			f := makeFile(append(d.path, p[0]), np.Tperm(0), d)
-			return []fs.FsObj{f}, nil, nil
-		}
-	} else {
-		d1 := makeDir(append(d.path, p[0]), np.DMDIR, d)
-		return d1.Lookup(ctx, p[1:])
-	}
+	return d.namei(ctx, p, nil)
 }
 
 func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {

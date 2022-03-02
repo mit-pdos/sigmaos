@@ -1,11 +1,9 @@
 package semclnt
 
 import (
-	"log"
-
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 //
@@ -27,6 +25,7 @@ func MakeSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
 func (c *SemClnt) Init(perm np.Tperm) error {
+	db.DLPrintf("SEMCLNT", "Semaphore init %v\n", c.path)
 	_, err := c.PutFile(c.path, 0777|perm, np.OWRITE, []byte{})
 	return err
 }
@@ -36,21 +35,22 @@ func (c *SemClnt) Down() error {
 	signal := make(chan error)
 	err := c.SetRemoveWatch(c.path, func(p string, err error) {
 		if err != nil {
-			log.Printf("watch %v err %v\n", c.path, err)
+			db.DLPrintf("SEMCLNT", "watch %v err %v\n", c.path, err)
 		}
 		signal <- err
 	})
 	if err == nil {
-		// log.Printf("semaphore wait %v\n", c.path)
+		db.DLPrintf("SEMCLNT", "semaphore wait %v\n", c.path)
 		err = <-signal
 	}
 	// If err, file has been removed (i.e., semaphore has been
 	// "upped" or file server crashed or lease expired);
 	// distinguish between those cases.
 	if err != nil && !np.IsErrNotfound(err) {
-		log.Printf("%v: down err %v\n", proc.GetProgram(), err)
+		db.DLPrintf("SEMCLNT", "down %v err %v\n", c.path, err)
 		return err
 	} else {
+		db.DLPrintf("SEMCLNT", "down %v err %v\n", c.path, err)
 		return nil
 	}
 }

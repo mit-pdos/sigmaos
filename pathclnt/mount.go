@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	db "ulambda/debug"
+	"ulambda/fidclnt"
 	np "ulambda/ninep"
 )
 
@@ -42,27 +44,26 @@ func (mnt *MntTable) add(path []string, fid np.Tfid) *np.Err {
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
 			mnt.mounts = append(mnt.mounts[:i], mnts...)
+			db.DLPrintf("MOUNT", "Mount %v %v\n", fid, path)
 			return nil
 		}
 	}
+	db.DLPrintf("MOUNT", "Mount %v %v\n", fid, path)
 	mnt.mounts = append(mnt.mounts, point)
 	return nil
 }
 
-// prefix match
+// prefix match and return postfix
 func match(mp []string, path []string) (bool, []string) {
-	rest := path
-	for _, s := range mp {
-		if len(rest) == 0 {
-			return false, rest
+	for i, s := range mp {
+		if i >= len(path) {
+			return false, nil
 		}
-		if s == rest[0] {
-			rest = rest[1:]
-		} else {
-			return false, rest
+		if s != path[i] {
+			return false, path[i:]
 		}
 	}
-	return true, rest
+	return true, path[len(mp):]
 }
 
 func matchexact(mp []string, path []string) bool {
@@ -95,15 +96,16 @@ func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 	}
 
 	for _, p := range mnt.mounts {
-		ok, rest := match(p.path, path)
+		ok, left := match(p.path, path)
 		if ok {
-			return p.fid, rest, nil
+			return p.fid, left, nil
 		}
 	}
 	return np.NoFid, path, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v", path))
 }
 
-func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
+// XXX maybe also umount mount points that have path as a prefix
+func (mnt *MntTable) umount(fidc *fidclnt.FidClnt, path []string) *np.Err {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -111,10 +113,12 @@ func (mnt *MntTable) umount(path []string) (np.Tfid, *np.Err) {
 		ok := matchexact(p.path, path)
 		if ok {
 			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			return p.fid, nil
+			db.DLPrintf("MOUNT", "umount %v %v\n", path, p.fid)
+			fidc.Free(p.fid)
+			return nil
 		}
 	}
-	return np.NoFid, np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v", path))
+	return np.MkErr(np.TErrNotfound, fmt.Sprintf("no mount %v", path))
 }
 
 func (mnt *MntTable) close() error {

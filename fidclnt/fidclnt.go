@@ -28,6 +28,10 @@ func (fidc *FidClnt) String() string {
 	return str
 }
 
+func (fidc *FidClnt) Len() int {
+	return len(fidc.fids.fids)
+}
+
 func (fidc *FidClnt) ReadSeqNo() np.Tseqno {
 	return fidc.pc.ReadSeqNo()
 }
@@ -57,6 +61,9 @@ func (fidc *FidClnt) Insert(fid np.Tfid, path *Channel) {
 }
 
 func (fidc *FidClnt) Clunk(fid np.Tfid) *np.Err {
+	//if fid == np.NoFid {
+	//	return nil
+	//}
 	err := fidc.fids.lookup(fid).pc.Clunk(fid)
 	if err != nil {
 		return err

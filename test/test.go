@@ -3,6 +3,8 @@ package test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"ulambda/fslib"
 	"ulambda/kernel"
 )
@@ -18,6 +20,7 @@ func (ts *Tstate) Shutdown() {
 	for _, r := range ts.replicas {
 		r.Shutdown()
 	}
+	assert.True(ts.T, ts.PathClnt.FidClnt.Len() < 10, ts.PathClnt.FidClnt)
 }
 
 func (ts *Tstate) startReplicas() {

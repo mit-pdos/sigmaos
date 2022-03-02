@@ -44,11 +44,11 @@ func (mnt *MntTable) add(path []string, fid np.Tfid) *np.Err {
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
 			mnt.mounts = append(mnt.mounts[:i], mnts...)
-			db.DLPrintf("PATHCLNT", "Mount %v %v\n", fid, path)
+			db.DLPrintf("MOUNT", "Mount %v %v\n", fid, path)
 			return nil
 		}
 	}
-	db.DLPrintf("PATHCLNT", "Mount %v %v\n", fid, path)
+	db.DLPrintf("MOUNT", "Mount %v %v\n", fid, path)
 	mnt.mounts = append(mnt.mounts, point)
 	return nil
 }
@@ -112,7 +112,7 @@ func (mnt *MntTable) umount(fidc *fidclnt.FidClnt, path []string) *np.Err {
 		ok := matchexact(p.path, path)
 		if ok {
 			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-			db.DLPrintf("PATHCLNT", "umount %v %v\n", path, p.fid)
+			db.DLPrintf("MOUNT", "umount %v %v\n", path, p.fid)
 			fidc.Free(p.fid)
 			return nil
 		}

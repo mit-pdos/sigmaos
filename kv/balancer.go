@@ -16,6 +16,7 @@ import (
 	"ulambda/atomic"
 	"ulambda/crash"
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fenceclnt"
 	"ulambda/fs"
@@ -216,7 +217,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 func (bl *Balancer) PublishConfig() {
 	err := bl.Remove(KVNEXTBK)
 	if err != nil {
-		log.Printf("%v: Remove %v err %v\n", proc.GetName(), KVNEXTBK, err)
+		db.DLPrintf("KVBAL", "Remove %v err %v\n", KVNEXTBK, err)
 	}
 	err = atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
 	if err != nil {
@@ -234,7 +235,7 @@ func (bl *Balancer) restore() {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.N += 1
-	log.Printf("%v: restore to %v\n", proc.GetName(), bl.conf)
+	db.DLPrintf("KVBAL", "restore to %v\n", bl.conf)
 
 	// first republish next config, which the caller read into
 	// bl.conf, to obtain the kvconfig fence and bump its seqno.
@@ -264,18 +265,17 @@ func (bl *Balancer) initShards(nextShards []string) {
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.Mkdir(dst, 0777); err != nil {
-			log.Printf("%v: warning mkdir %v err %v\n", proc.GetName(), dst, err)
+			db.DLPrintf("KVBAL", "warning mkdir %v err %v\n", dst, err)
 		}
 	}
 }
 
 func (bl *Balancer) spawnProc(args []string) (string, error) {
 	p := proc.MakeProc(args[0], args[1:])
-	// log.Printf("%v: spawn pid %v %v\n", proc.GetName(), p.Pid, bl.crashhelper)
 	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
-		log.Printf("%v: spawn pid %v err %v\n", proc.GetName(), p.Pid, err)
+		db.DLPrintf("KVBAL", "spawn pid %v err %v\n", p.Pid, err)
 	}
 	return p.Pid, err
 }
@@ -296,7 +296,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 	for true {
 		status, err = bl.runProc(args)
 		if err != nil {
-			log.Printf("%v: runProc %v err %v status %v\n", proc.GetName(), args, err, status)
+			db.DLPrintf("KVBAL", "runProc %v err %v status %v\n", args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
@@ -304,7 +304,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
-			log.Printf("%v: retry proc %v err %v status %v\n", proc.GetName(), args, err, status)
+			db.DLPrintf("KVBAL", "retry proc %v err %v status %v\n", args, err, status)
 		} else {
 			break
 		}
@@ -365,7 +365,7 @@ func (bl *Balancer) runDeleters(moves Moves) {
 		m += 1
 		// log.Printf("%v: deleter done %v %v\n", proc.GetName(), m, tmp)
 	}
-	log.Printf("%v: deleters done\n", proc.GetName())
+	db.DLPrintf("KVBAL", "deleters done\n")
 }
 
 // Run movers in parallel
@@ -389,7 +389,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 		m += 1
 		// log.Printf("%v: mover done %v %v\n", proc.GetName(), m, tmp)
 	}
-	log.Printf("%v: movers all done\n", proc.GetName())
+	db.DLPrintf("KVBAL", "movers all done\n")
 }
 
 func (bl *Balancer) balance(opcode, mfs string) *np.Err {
@@ -429,7 +429,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.Moves = moves
 	bl.conf.Ctime = time.Now().UnixNano()
 
-	log.Printf("%v: new %v\n", proc.GetName(), bl.conf)
+	db.DLPrintf("KVBAL1", "New config %v\n", bl.conf)
 
 	// If balancer crashes, before here, we have the old
 	// KVNEXTCONFIG.  If the balancer crash after, we have the new

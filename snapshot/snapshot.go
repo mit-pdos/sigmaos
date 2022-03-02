@@ -10,6 +10,7 @@ import (
 	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/memfs"
+	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/session"
 	"ulambda/stats"
@@ -81,7 +82,7 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) unsafe.Pointer {
 	return ptr
 }
 
-func Restore(pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
+func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
 	s := MakeSnapshot()
 	err := json.Unmarshal(b, s)
 	if err != nil {
@@ -90,14 +91,15 @@ func Restore(pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *stats.Stats, *sessio
 	root := s.restoreFsTree(s.Root)
 	// Restore stats.
 	sts := stats.Restore(s.restoreFsTree, s.Sts)
-	// TODO: Restore the session table.
 	// Restore the thread manager table.
 	tmt := threadmgr.Restore(pfn, b)
 	// Restore the recent fence table.
-	rft := fences.Restore(s.Rft)
+	rft := fences.RestoreRecentTable(s.Rft)
+	// Restore the session table.
+	st := session.RestoreTable(nil /* TODO: Get mkps */, nil, nil /* TODO: get fssrv */, rft, tmt, s.St)
 	// Restore the reply cache.
 	rc := repl.Restore(s.Rc)
-	return root, sts, nil, tmt, rft, rc
+	return root, sts, st, tmt, rft, rc
 }
 
 func (s *Snapshot) restoreFsTree(ptr unsafe.Pointer) fs.FsObj {

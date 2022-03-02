@@ -37,6 +37,7 @@ type FsServer struct {
 	addr    string
 	root    fs.Dir
 	mkps    protsrv.MkProtServer
+	rps     protsrv.RestoreProtServer
 	stats   *stats.Stats
 	st      *session.SessionTable
 	sct     *sesscond.SessCondTable
@@ -53,7 +54,7 @@ type FsServer struct {
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
-	mkps protsrv.MkProtServer, pclnt *procclnt.ProcClnt,
+	mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.root = root

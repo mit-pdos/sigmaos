@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	np "ulambda/ninep"
+	"ulambda/protsrv"
 )
 
 type FsObjSrvSnapshot struct {
@@ -38,4 +39,8 @@ func (fos *FsObjSrv) Snapshot() []byte {
 		log.Fatalf("FATAL Error snapshot encoding fsobjsrv: %v", err)
 	}
 	return b
+}
+
+func Restore(b []byte) protsrv.Protsrv {
+	return nil
 }

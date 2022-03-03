@@ -116,9 +116,13 @@ func (fsl *FsLib) RmDir(dir string) error {
 	// log.Printf("%v: rmdir1 %v\n", db.GetName(), dir)
 	for _, st := range sts {
 		if st.Mode.IsDir() {
-			fsl.RmDir(dir + "/" + st.Name)
+			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
+				return err
+			}
 		} else {
-			fsl.Remove(dir + "/" + st.Name)
+			if err := fsl.Remove(dir + "/" + st.Name); err != nil {
+				return err
+			}
 		}
 	}
 	return fsl.Remove(dir)

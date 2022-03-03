@@ -65,7 +65,7 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fl.MakeReader(fd, fl.GetChunkSz()), nil
+	return fl.MakeReader(fd, path, fl.GetChunkSz()), nil
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
@@ -86,7 +86,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			break
 		}
 	}
-	rdr := fl.MakeReader(fd, fl.GetChunkSz())
+	rdr := fl.MakeReader(fd, path, fl.GetChunkSz())
 	return rdr, nil
 
 }

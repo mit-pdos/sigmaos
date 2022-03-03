@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/group"
@@ -310,7 +311,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.off)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
+	db.DLPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {

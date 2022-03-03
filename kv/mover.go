@@ -2,12 +2,12 @@ package kv
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"sync"
 
 	"ulambda/crash"
+	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/proc"
@@ -36,7 +36,7 @@ func MakeMover(N string, src, dst string) (*Mover, error) {
 
 	err = mv.fclnt.AcquireConfig(&mv.blConf)
 	if err != nil {
-		log.Printf("%v: AcquireConfig %v err %v\n", proc.GetName(), mv.fclnt.Name(), err)
+		db.DLPrintf("KVMV_ERR", "AcquireConfig %v err %v\n", mv.fclnt.Name(), err)
 		return nil, err
 	}
 	if N != strconv.Itoa(mv.blConf.N) {
@@ -57,7 +57,7 @@ func (mv *Mover) moveShard(s, d string) error {
 	// below. If so, we are done.
 	_, err := mv.Stat(d)
 	if err == nil {
-		log.Printf("%v: moveShard conf %v exists %v\n", proc.GetName(), mv.blConf.N, d)
+		db.DLPrintf("KVMV_ERR", "moveShard conf %v exists %v\n", mv.blConf.N, d)
 		return nil
 	}
 
@@ -77,29 +77,29 @@ func (mv *Mover) moveShard(s, d string) error {
 
 	err = mv.Mkdir(d1, 0777)
 	if err != nil {
-		//log.Printf("%v: Mkdir %v err %v\n", proc.GetName(), d1, err)
+		db.DLPrintf("KVMV_ERR", "Mkdir %v err %v\n", d1, err)
 		return err
 	}
 	// log.Printf("%v: Copy shard from %v to %v\n", proc.GetName(), s, d1)
 	err = mv.CopyDir(s, d1)
 	if err != nil {
-		//log.Printf("%v: CopyDir shard%v to %v err %v\n", proc.GetName(), s, d1, err)
+		db.DLPrintf("KVMV_ERR", "CopyDir shard%v to %v err %v\n", s, d1, err)
 		return err
 	}
 	// log.Printf("%v: Copy shard%v to %v done\n", proc.GetName(), s, d1)
 	err = mv.Rename(d1, d)
 	if err != nil {
-		//log.Printf("%v: Rename %v to %v err %v\n", proc.GetName(), d1, d, err)
+		db.DLPrintf("KVMV_ERR", "Rename %v to %v err %v\n", d1, d, err)
 		return err
 	}
 	return nil
 }
 
 func (mv *Mover) Move(src, dst string) {
-	// log.Printf("%v: MV conf %v from %v to %v\n", proc.GetName(), mv.blConf.N, src, dst)
+	db.DLPrintf("KVMV", "conf %v: mv from %v to %v\n", mv.blConf.N, src, dst)
 	err := mv.moveShard(src, dst)
 	if err != nil {
-		log.Printf("%v: MV conf %v from %v to %v err %v\n", proc.GetName(), mv.blConf.N, src, dst, err)
+		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.blConf.N, src, dst, err)
 	}
 	if err != nil {
 		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))

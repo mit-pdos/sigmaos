@@ -83,8 +83,8 @@ func (fos *FsObjSrv) Detach() {
 
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
-	db.DLPrintf("FSOBJ", "Detach %v %v %v\n", fos.sid, ephemeral, fos.ft.fids)
 	for o, f := range ephemeral {
+		db.DLPrintf("FSOBJ", "Detach %v\n", f.Path())
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
 }

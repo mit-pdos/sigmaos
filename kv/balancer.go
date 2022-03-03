@@ -217,7 +217,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 func (bl *Balancer) PublishConfig() {
 	err := bl.Remove(KVNEXTBK)
 	if err != nil {
-		db.DLPrintf("KVBAL", "Remove %v err %v\n", KVNEXTBK, err)
+		db.DLPrintf("KVBAL_ERR", "Remove %v err %v\n", KVNEXTBK, err)
 	}
 	err = atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
 	if err != nil {
@@ -265,7 +265,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.Mkdir(dst, 0777); err != nil {
-			db.DLPrintf("KVBAL", "warning mkdir %v err %v\n", dst, err)
+			db.DLPrintf("KVBAL_ERR", "warning mkdir %v err %v\n", dst, err)
 		}
 	}
 }
@@ -275,7 +275,7 @@ func (bl *Balancer) spawnProc(args []string) (string, error) {
 	p.AppendEnv("SIGMACRASH", bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
-		db.DLPrintf("KVBAL", "spawn pid %v err %v\n", p.Pid, err)
+		db.DLPrintf("KVBAL_ERR", "spawn pid %v err %v\n", p.Pid, err)
 	}
 	return p.Pid, err
 }
@@ -296,7 +296,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 	for true {
 		status, err = bl.runProc(args)
 		if err != nil {
-			db.DLPrintf("KVBAL", "runProc %v err %v status %v\n", args, err, status)
+			db.DLPrintf("KVBAL_ERR", "runProc %v err %v status %v\n", args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
@@ -304,7 +304,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
-			db.DLPrintf("KVBAL", "retry proc %v err %v status %v\n", args, err, status)
+			db.DLPrintf("KVBAL_ERR", "retry proc %v err %v status %v\n", args, err, status)
 		} else {
 			break
 		}
@@ -429,7 +429,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.Moves = moves
 	bl.conf.Ctime = time.Now().UnixNano()
 
-	db.DLPrintf("KVBAL1", "New config %v\n", bl.conf)
+	db.DLPrintf("KVBAL", "New config %v\n", bl.conf)
 
 	// If balancer crashes, before here, we have the old
 	// KVNEXTCONFIG.  If the balancer crash after, we have the new

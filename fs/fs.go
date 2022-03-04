@@ -2,15 +2,14 @@ package fs
 
 import (
 	"log"
-	"unsafe"
 
 	np "ulambda/ninep"
 	"ulambda/sesscond"
 )
 
 type MakeDirF func(FsObj) FsObj
-type SnapshotF func(FsObj) unsafe.Pointer
-type RestoreF func(unsafe.Pointer) FsObj
+type SnapshotF func(FsObj) uint64
+type RestoreF func(uint64) FsObj
 
 type CtxI interface {
 	Uname() string
@@ -20,6 +19,7 @@ type CtxI interface {
 }
 
 type Dir interface {
+	FsObj
 	Lookup(CtxI, []string) ([]FsObj, []string, *np.Err)
 	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *np.Err)
 	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *np.Err)
@@ -33,6 +33,8 @@ type File interface {
 	Read(CtxI, np.Toffset, np.Tsize, np.TQversion) ([]byte, *np.Err)
 	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
 }
+
+//type Tinum uint64
 
 type FsObj interface {
 	Inum() uint64
@@ -51,6 +53,7 @@ type FsObj interface {
 	Unlink(CtxI) *np.Err
 	Parent() Dir
 	SetParent(Dir)
+	Snapshot(SnapshotF) []byte
 }
 
 func Obj2File(o FsObj, fname []string) (File, *np.Err) {

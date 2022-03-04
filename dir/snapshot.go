@@ -3,7 +3,6 @@ package dir
 import (
 	"encoding/json"
 	"log"
-	"unsafe"
 
 	"ulambda/fs"
 	"ulambda/inode"
@@ -12,15 +11,19 @@ import (
 // TODO: are there issues with locking?
 type DirSnapshot struct {
 	InodeSnap []byte
-	Entries   map[string]unsafe.Pointer
+	Entries   map[string]uint64
 }
 
 func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds := &DirSnapshot{}
-	ds.InodeSnap = d.FsObj.(*inode.Inode).Snapshot()
-	ds.Entries = make(map[string]unsafe.Pointer)
+	ds.InodeSnap = d.FsObj.Snapshot(fn)
+	ds.Entries = make(map[string]uint64)
 	for n, e := range d.entries {
-		ds.Entries[n] = fn(e)
+		if n == "." {
+			ds.Entries[n] = d.Inum()
+		} else {
+			ds.Entries[n] = fn(e)
+		}
 	}
 	b, err := json.Marshal(ds)
 	if err != nil {
@@ -38,7 +41,11 @@ func restore(fn fs.RestoreF, b []byte) fs.FsObj {
 	d := &DirImpl{}
 	d.FsObj = inode.RestoreInode(fn, ds.InodeSnap)
 	for name, ptr := range ds.Entries {
-		d.entries[name] = fn(ptr)
+		if name == "." {
+			d.entries[name] = d
+		} else {
+			d.entries[name] = fn(ptr)
+		}
 	}
 	return d
 }

@@ -702,3 +702,7 @@ func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
 	}
 	return nil
 }
+
+func (fos *FsObjSrv) Snapshot() []byte {
+	return fos.snapshot()
+}

@@ -96,7 +96,7 @@ func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) 
 	}
 }
 
-func (f *File) Snapshot() []byte {
+func (f *File) Snapshot(fn fs.SnapshotF) []byte {
 	return makeFileSnapshot(f)
 }
 

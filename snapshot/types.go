@@ -6,4 +6,5 @@ const (
 	Tdir Tsnapshot = iota
 	Tfile
 	Tsymlink
+	Tstats
 )

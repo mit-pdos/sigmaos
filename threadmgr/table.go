@@ -41,3 +41,7 @@ func (tm *ThreadMgrTable) RemoveThread(t *ThreadMgr) {
 		delete(tm.threadmgrs, t)
 	}
 }
+
+func (tmt *ThreadMgrTable) Snapshot() []byte {
+	return tmt.snapshot()
+}

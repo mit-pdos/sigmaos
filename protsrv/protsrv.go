@@ -38,4 +38,4 @@ type Protsrv interface {
 }
 
 type MkProtServer func(FsServer, np.Tsession) Protsrv
-type RestoreProtServer func([]byte) Protsrv
+type RestoreProtServer func(FsServer, []byte) Protsrv

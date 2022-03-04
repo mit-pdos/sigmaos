@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"reflect"
-	"unsafe"
 
 	"ulambda/dir"
 	"ulambda/fences"
@@ -18,21 +17,21 @@ import (
 )
 
 type Snapshot struct {
-	Imap         map[unsafe.Pointer]ObjSnapshot
-	Root         unsafe.Pointer
+	Imap         map[uint64]ObjSnapshot
+	Root         uint64
 	Sts          []byte
 	St           []byte
 	Tm           []byte
 	Rft          []byte
 	Rc           []byte
-	restoreCache map[unsafe.Pointer]fs.FsObj
+	restoreCache map[uint64]fs.FsObj
 }
 
 func MakeSnapshot() *Snapshot {
 	s := &Snapshot{}
-	s.Imap = make(map[unsafe.Pointer]ObjSnapshot)
-	s.Root = nil
-	s.restoreCache = make(map[unsafe.Pointer]fs.FsObj)
+	s.Imap = make(map[uint64]ObjSnapshot)
+	s.Root = 0
+	s.restoreCache = make(map[uint64]fs.FsObj)
 	return s
 }
 
@@ -43,8 +42,8 @@ func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.Session
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
-	// Snapshot stats.
-	s.Sts = sts.Snapshot()
+	// XXX do this as part of FS tree? Snapshot stats.
+	//	s.Sts = sts.Snapshot()
 	// Snapshot the session table.
 	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
@@ -56,30 +55,24 @@ func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.Session
 	return b
 }
 
-func (s *Snapshot) snapshotFsTree(o fs.FsObj) unsafe.Pointer {
-	var ptr unsafe.Pointer
-	var snap ObjSnapshot
+func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
+	log.Printf("Snapshotting %v", o.Inum())
+	var stype Tsnapshot
 	switch o.(type) {
 	case *dir.DirImpl:
-		d := o.(*dir.DirImpl)
-		ptr = unsafe.Pointer(d)
-		snap = MakeObjSnapshot(Tdir, d.Snapshot(s.snapshotFsTree))
+		stype = Tdir
 	case *memfs.File:
-		f := o.(*memfs.File)
-		ptr = unsafe.Pointer(f)
-		snap = MakeObjSnapshot(Tfile, f.Snapshot())
+		stype = Tfile
 	case *memfs.Symlink:
-		f := o.(*memfs.Symlink)
-		ptr = unsafe.Pointer(f)
-		snap = MakeObjSnapshot(Tsymlink, f.Snapshot())
-	case *memfs.Pipe:
-		// TODO: plan for snapshotting pipes.
-		log.Fatalf("FATAL Tried to snapshot a pipe.")
+		stype = Tsymlink
+	case *stats.Stats:
+		stype = Tstats
 	default:
 		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
 	}
-	s.Imap[ptr] = snap
-	return ptr
+
+	s.Imap[o.Inum()] = MakeObjSnapshot(stype, o.Snapshot(s.snapshotFsTree))
+	return o.Inum()
 }
 
 func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
@@ -88,6 +81,7 @@ func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
 	}
+	s.restoreCache[0] = nil
 	root := s.restoreFsTree(s.Root)
 	// Restore stats.
 	sts := stats.Restore(s.restoreFsTree, s.Sts)
@@ -102,11 +96,11 @@ func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (
 	return root, sts, st, tmt, rft, rc
 }
 
-func (s *Snapshot) restoreFsTree(ptr unsafe.Pointer) fs.FsObj {
-	if obj, ok := s.restoreCache[ptr]; ok {
+func (s *Snapshot) restoreFsTree(inum uint64) fs.FsObj {
+	if obj, ok := s.restoreCache[inum]; ok {
 		return obj
 	}
-	snap := s.Imap[ptr]
+	snap := s.Imap[inum]
 	switch snap.Type {
 	case Tdir:
 		return dir.Restore(s.restoreFsTree, snap.Data)

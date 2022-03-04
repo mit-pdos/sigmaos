@@ -63,7 +63,7 @@ func (s *Symlink) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversio
 	return s.target, nil
 }
 
-func (s *Symlink) Snapshot() []byte {
+func (s *Symlink) Snapshot(fn fs.SnapshotF) []byte {
 	return makeSymlinkSnapshot(s)
 }
 

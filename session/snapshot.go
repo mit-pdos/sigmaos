@@ -61,7 +61,7 @@ func RestoreSession(sid np.Tsession, rps protsrv.RestoreProtServer, rt *fences.R
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal session in restore: %v", err)
 	}
-	fos := rps(ss.ProtsrvSnap)
+	fos := rps(nil, ss.ProtsrvSnap)
 	sess := makeSession(fos, sid, rt, tm.AddThread())
 	myFences := fences.RestoreFenceTable(ss.FencesSnap)
 	sess.myFences = myFences

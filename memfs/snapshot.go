@@ -16,7 +16,7 @@ type FileSnapshot struct {
 
 func makeFileSnapshot(f *File) []byte {
 	fs := &FileSnapshot{}
-	fs.InodeSnap = f.FsObj.(*inode.Inode).Snapshot()
+	fs.InodeSnap = f.FsObj.Snapshot(nil)
 	fs.Data = f.data
 	return encode(fs)
 }
@@ -40,7 +40,7 @@ type SymlinkSnapshot struct {
 
 func makeSymlinkSnapshot(s *Symlink) []byte {
 	fs := &SymlinkSnapshot{}
-	fs.InodeSnap = s.FsObj.(*inode.Inode).Snapshot()
+	fs.InodeSnap = s.FsObj.Snapshot(nil)
 	fs.Target = s.target
 	return encode(fs)
 }

@@ -3,14 +3,12 @@ package stats
 import (
 	"encoding/json"
 	"log"
-	"reflect"
-	"unsafe"
 
 	"ulambda/fs"
 )
 
 type StatsSnapshot struct {
-	Obj  unsafe.Pointer
+	Obj  uint64
 	Info *StatInfo
 }
 
@@ -18,9 +16,9 @@ func MakeStatsSnapshot() *StatsSnapshot {
 	return &StatsSnapshot{}
 }
 
-func (stats *Stats) Snapshot() []byte {
+func (stats *Stats) snapshot() []byte {
 	ss := MakeStatsSnapshot()
-	ss.Obj = unsafe.Pointer(reflect.ValueOf(stats.FsObj).Pointer())
+	ss.Obj = stats.Inum()
 	ss.Info = stats.sti
 	b, err := json.Marshal(ss)
 	if err != nil {

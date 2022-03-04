@@ -19,7 +19,6 @@ import (
 type Snapshot struct {
 	Imap         map[uint64]ObjSnapshot
 	Root         uint64
-	Sts          []byte
 	St           []byte
 	Tm           []byte
 	Rft          []byte
@@ -35,15 +34,13 @@ func MakeSnapshot() *Snapshot {
 	return s
 }
 
-func (s *Snapshot) Snapshot(root fs.FsObj, sts *stats.Stats, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
+func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
 	s.Root = s.snapshotFsTree(root)
 	b, err := json.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
-	// XXX do this as part of FS tree? Snapshot stats.
-	//	s.Sts = sts.Snapshot()
 	// Snapshot the session table.
 	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
@@ -70,12 +67,11 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
 	default:
 		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
 	}
-
 	s.Imap[o.Inum()] = MakeObjSnapshot(stype, o.Snapshot(s.snapshotFsTree))
 	return o.Inum()
 }
 
-func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
+func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
 	s := MakeSnapshot()
 	err := json.Unmarshal(b, s)
 	if err != nil {
@@ -83,8 +79,6 @@ func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (
 	}
 	s.restoreCache[0] = nil
 	root := s.restoreFsTree(s.Root)
-	// Restore stats.
-	sts := stats.Restore(s.restoreFsTree, s.Sts)
 	// Restore the thread manager table.
 	tmt := threadmgr.Restore(pfn, b)
 	// Restore the recent fence table.
@@ -93,7 +87,7 @@ func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (
 	st := session.RestoreTable(nil /* TODO: Get mkps */, nil, nil /* TODO: get fssrv */, rft, tmt, s.St)
 	// Restore the reply cache.
 	rc := repl.Restore(s.Rc)
-	return root, sts, st, tmt, rft, rc
+	return root, st, tmt, rft, rc
 }
 
 func (s *Snapshot) restoreFsTree(inum uint64) fs.FsObj {
@@ -108,6 +102,8 @@ func (s *Snapshot) restoreFsTree(inum uint64) fs.FsObj {
 		return memfs.RestoreFile(s.restoreFsTree, snap.Data)
 	case Tsymlink:
 		return memfs.RestoreSymlink(s.restoreFsTree, snap.Data)
+	case Tstats:
+		return stats.Restore(s.restoreFsTree, snap.Data)
 	default:
 		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
 		return nil

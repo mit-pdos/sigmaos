@@ -71,7 +71,7 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
 	return o.Inum()
 }
 
-func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
+func Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, pfn threadmgr.ProcessFn, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
 	s := MakeSnapshot()
 	err := json.Unmarshal(b, s)
 	if err != nil {
@@ -84,7 +84,7 @@ func Restore(rps protsrv.RestoreProtServer, pfn threadmgr.ProcessFn, b []byte) (
 	// Restore the recent fence table.
 	rft := fences.RestoreRecentTable(s.Rft)
 	// Restore the session table.
-	st := session.RestoreTable(nil /* TODO: Get mkps */, rps, nil /* TODO: get fssrv */, rft, tmt, s.St)
+	st := session.RestoreTable(mkps, rps, fssrv, rft, tmt, s.St)
 	// Restore the reply cache.
 	rc := repl.Restore(s.Rc)
 	return root, st, tmt, rft, rc

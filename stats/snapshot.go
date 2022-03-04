@@ -5,11 +5,12 @@ import (
 	"log"
 
 	"ulambda/fs"
+	"ulambda/inode"
 )
 
 type StatsSnapshot struct {
-	Obj  uint64
-	Info *StatInfo
+	InodeSnap []byte
+	Info      *StatInfo
 }
 
 func MakeStatsSnapshot() *StatsSnapshot {
@@ -18,7 +19,7 @@ func MakeStatsSnapshot() *StatsSnapshot {
 
 func (stats *Stats) snapshot() []byte {
 	ss := MakeStatsSnapshot()
-	ss.Obj = stats.Inum()
+	ss.InodeSnap = stats.FsObj.Snapshot(nil)
 	ss.Info = stats.sti
 	b, err := json.Marshal(ss)
 	if err != nil {
@@ -34,7 +35,7 @@ func Restore(fn fs.RestoreF, b []byte) *Stats {
 		log.Fatalf("FATAL error unmarshal stats in restore: %v", err)
 	}
 	stats := &Stats{}
-	stats.FsObj = fn(ss.Obj)
+	stats.FsObj = inode.RestoreInode(fn, ss.InodeSnap)
 	stats.sti = ss.Info
 	return stats
 }

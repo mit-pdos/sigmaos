@@ -8,7 +8,6 @@ import (
 	"ulambda/inode"
 )
 
-// TODO: are there issues with locking?
 type DirSnapshot struct {
 	InodeSnap []byte
 	Entries   map[string]uint64

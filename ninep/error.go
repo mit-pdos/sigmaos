@@ -30,7 +30,11 @@ const (
 	TErrBaddir
 	TErrWalknodir
 
+	//
 	// sigma protocol errors
+	//
+
+	TErrUnreachable
 	TErrNotSupported
 	TErrInval
 	TErrUnknownMsg
@@ -43,13 +47,16 @@ const (
 	TErrInvalidSession
 	TErrExists
 	TErrClosed // for pipes
-	TErrEOF    // EOF or cannot connect
+	TErrEOF    // EOF or cannot connect   (Unreachable)
 	TErrBadFcall
-	TErrNet
+	TErrNet // redundant
 	TErrRetry
 	TErrError // to propagate non-sigma errors
 
+	//
 	// sigma OS errors
+	//
+
 	TErrBadFd
 )
 
@@ -95,6 +102,8 @@ func (err Terror) String() string {
 		return "walk in non-directory"
 
 	// sigma
+	case TErrUnreachable:
+		return "Unreachable"
 	case TErrNotSupported:
 		return "not supported"
 	case TErrInval:
@@ -162,12 +171,30 @@ func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
 }
 
+// SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrNotfound.String())
 }
 
-func ErrNotfoundPath(error error) string {
-	return strings.TrimPrefix(error.Error(), TErrNotfound.String()+" ")
+// SigmaOS server couldn't reach a server
+func IsErrUnreachable(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrUnreachable.String())
+}
+
+// A file is unavailable: either a server on the file's path is
+// unreachable or the file is not found
+func IsErrUnavailable(error error) bool {
+	return IsErrUnreachable(error) || IsErrNotfound(error)
+}
+
+func ErrPath(error error) string {
+	if IsErrNotfound(error) {
+		return strings.TrimPrefix(error.Error(), TErrNotfound.String()+" ")
+	} else if IsErrUnreachable(error) {
+		return strings.TrimPrefix(error.Error(), TErrUnreachable.String()+" ")
+	} else {
+		return ""
+	}
 }
 
 func IsDirNotFound(error error) bool {
@@ -205,7 +232,7 @@ func IsMaybeSpecialElem(error error) bool {
 }
 
 func IsErrUnionElem(error error) bool {
-	return IsErrNotfound(error) && IsUnionElem(ErrNotfoundPath(error))
+	return IsErrNotfound(error) && IsUnionElem(ErrPath(error))
 }
 
 func Rerror2Err(error string) *Err {

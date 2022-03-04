@@ -132,7 +132,7 @@ func (kc *KvClerk) acquireFence(grp string) error {
 // Remove group from fenced paths in bal fclnt?
 func (kc KvClerk) removeGrp(err error) error {
 	if np.IsErrNotfound(err) {
-		s := kc.grpre.FindStringSubmatch(np.ErrNotfoundPath(err))
+		s := kc.grpre.FindStringSubmatch(np.ErrPath(err))
 		if s != nil {
 			if kvs, r := readKVs(kc.FsLib); r == nil {
 				if !kvs.present(s[0]) {
@@ -203,7 +203,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 			return nil
 		}
 
-		if np.IsErrNotfound(err) && strings.Contains(np.ErrNotfoundPath(err), KVCONF) {
+		if np.IsErrNotfound(err) && strings.Contains(np.ErrPath(err), KVCONF) {
 			log.Printf("%v: retry refreshConfig %v\n", proc.GetName(), err)
 			continue
 		}
@@ -228,7 +228,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 	if err != nil {
 		// try refreshing config is sufficient to fix error
 		// involving KVCONFIG or if EOF to a kv group.
-		if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrNotfoundPath(err), KVCONF) ||
+		if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), KVCONF) ||
 			np.IsErrStale(err) ||
 			np.IsErrEOF(err) {
 			err = kc.refreshConfig(err)
@@ -245,7 +245,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 	// yet, so wait a bit, and retry.  XXX make sleep time
 	// dynamic?
 
-	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrNotfoundPath(err), "shard") {
+	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}

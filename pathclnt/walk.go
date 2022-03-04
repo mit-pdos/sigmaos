@@ -85,7 +85,7 @@ func (pathc *PathClnt) walkPath(path []string, resolve bool, w Watch) (np.Tfid, 
 		}
 		return np.NoFid, left, np.MkErr(np.TErrNotfound, np.Join(left))
 	}
-	return np.NoFid, path, np.MkErr(np.TErrNotfound, "too many symlink cycles")
+	return np.NoFid, path, np.MkErr(np.TErrUnreachable, "too many symlink cycles")
 }
 
 // Walk the mount table, and clone the found fid; the caller is

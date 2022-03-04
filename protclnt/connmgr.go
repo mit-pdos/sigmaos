@@ -101,7 +101,7 @@ func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, *np.Err) {
 func (cm *ConnMgr) disconnect(dst []string) *np.Err {
 	conn, ok := cm.lookupConn(dst)
 	if !ok {
-		return np.MkErr(np.TErrNotfound, np.Join(dst))
+		return np.MkErr(np.TErrUnreachable, np.Join(dst))
 	}
 	conn.nc.Close()
 	return nil

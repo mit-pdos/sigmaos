@@ -64,7 +64,7 @@ func TestConnect(t *testing.T) {
 	assert.True(t, np.IsErrEOF(err))
 
 	fd, err = ts.Open(fn, np.OREAD)
-	assert.True(t, np.IsErrNotfound(err))
+	assert.True(t, np.IsErrUnreachable(err))
 
 	ts.Shutdown()
 }

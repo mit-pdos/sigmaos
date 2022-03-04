@@ -294,7 +294,7 @@ func (pd *Procd) worker(done *int32) {
 			continue
 		}
 		if error != nil && (np.IsErrEOF(error) ||
-			(np.IsErrNotfound(error) && strings.Contains(np.ErrNotfoundPath(error), "no mount"))) {
+			(np.IsErrUnreachable(error) && strings.Contains(np.ErrPath(error), "no mount"))) {
 			continue
 		}
 		if error != nil {

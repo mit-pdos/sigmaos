@@ -158,7 +158,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	for i := 0; i < MAXSYMLINK; i++ {
 		reply, err := npc.npch(args.Fid).Walk(args.Fid, args.NewFid, path)
 		if err != nil {
-			return np.MkErr(np.TErrNotfound, path).Rerror()
+			return err.Rerror()
 		}
 		if len(reply.Qids) == 0 { // clone args.Fid?
 			npc.addch(args.NewFid, npc.npch(args.Fid))

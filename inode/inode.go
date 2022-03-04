@@ -5,19 +5,19 @@ import (
 	"log"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"ulambda/fs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
-type Tinum uint64
 type Tversion uint32
 
 type Inode struct {
 	mu      sync.Mutex
+	inum    uint64
 	perm    np.Tperm
 	version np.TQversion
 	mtime   int64
@@ -26,8 +26,14 @@ type Inode struct {
 	nlink   int
 }
 
+var nextInum uint64 = 0
+
 func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
-	i := Inode{}
+	i := &Inode{}
+	// This may be overly defensive, but setting an inode's inum as it's address
+	// seems risky, as the go GC moves objects and may accidentally make two
+	// objects have the same address.
+	i.inum = atomic.AddUint64(&nextInum, 1)
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
@@ -38,7 +44,7 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 	}
 	i.version = np.TQversion(1)
 	i.nlink = 1
-	return &i
+	return i
 }
 
 func (inode *Inode) String() string {
@@ -47,8 +53,7 @@ func (inode *Inode) String() string {
 }
 
 func (inode *Inode) Inum() uint64 {
-	id := uintptr(unsafe.Pointer(inode))
-	return uint64(id)
+	return inode.inum
 }
 
 func (inode *Inode) qidL() np.Tqid {
@@ -166,7 +171,7 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	return stat, nil
 }
 
-func (inode *Inode) Snapshot() []byte {
+func (inode *Inode) Snapshot(fn fs.SnapshotF) []byte {
 	return makeSnapshot(inode)
 }
 

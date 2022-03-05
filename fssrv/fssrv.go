@@ -34,40 +34,44 @@ import (
 //
 
 type FsServer struct {
-	addr    string
-	root    fs.Dir
-	mkps    protsrv.MkProtServer
-	rps     protsrv.RestoreProtServer
-	stats   *stats.Stats
-	st      *session.SessionTable
-	sct     *sesscond.SessCondTable
-	tm      *threadmgr.ThreadMgrTable
-	wt      *watch.WatchTable
-	rft     *fences.RecentTable
-	srv     *netsrv.NetServer
-	replSrv repl.Server
-	rc      *repl.ReplyCache
-	pclnt   *procclnt.ProcClnt
-	done    bool
-	ch      chan bool
-	fsl     *fslib.FsLib
+	addr       string
+	root       fs.Dir
+	mkps       protsrv.MkProtServer
+	rps        protsrv.RestoreProtServer
+	stats      *stats.Stats
+	snap       *snapshot.Dev
+	st         *session.SessionTable
+	sct        *sesscond.SessCondTable
+	tm         *threadmgr.ThreadMgrTable
+	wt         *watch.WatchTable
+	rft        *fences.RecentTable
+	srv        *netsrv.NetServer
+	replSrv    repl.Server
+	rc         *repl.ReplyCache
+	pclnt      *procclnt.ProcClnt
+	done       bool
+	replicated bool
+	ch         chan bool
+	fsl        *fslib.FsLib
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
+	fssrv.replicated = config != nil
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
+	fssrv.snap = snapshot.MakeDev(fssrv, nil, fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, config != nil)
+	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
-	if config == nil {
+	if !fssrv.replicated {
 		fssrv.replSrv = nil
 	} else {
 		fssrv.rc = repl.MakeReplyCache()
@@ -99,7 +103,7 @@ func (fssrv *FsServer) Root() fs.Dir {
 }
 
 func (fssrv *FsServer) Snapshot() []byte {
-	if fssrv.replSrv == nil {
+	if !fssrv.replicated {
 		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
 	snap := snapshot.MakeSnapshot()
@@ -167,7 +171,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
 	// New thread about to start
 	sess.IncThreads()
-	if fssrv.replSrv == nil {
+	if !fssrv.replicated {
 		sess.GetThread().Process(fc, replies)
 	} else {
 		fssrv.replSrv.Process(fc, replies)
@@ -176,7 +180,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 
 func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
 	// Store the reply in the reply cache if this is a replicated server.
-	if fssrv.replSrv != nil {
+	if fssrv.replicated {
 		fssrv.rc.Put(request, reply)
 	}
 	// The replies channel may be nil if this is a replicated op which came
@@ -191,7 +195,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 }
 
 func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
-	if fssrv.replSrv != nil {
+	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:
 		//

@@ -53,6 +53,11 @@ func (npd *Npd) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	// XXX Actually call detach if we make it do something at some point.
 }
 
+func (npd *Npd) Snapshot() []byte {
+	// XXX Actually call detach if we make it do something at some point.
+	return nil
+}
+
 //
 // XXX convert to use npobjsrv
 //

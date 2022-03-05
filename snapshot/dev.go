@@ -23,7 +23,6 @@ func MakeDev(srv protsrv.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
 }
 
 func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	log.Printf("Sent snapshot")
 	b := dev.srv.Snapshot()
 	if len(b) > int(np.MAXGETSET) {
 		log.Fatalf("FATAL snapshot too big: %v bytes", len(b))

@@ -11,7 +11,16 @@ import (
 	"ulambda/test"
 )
 
-func TestSnapshotSimple(t *testing.T) {
+func spawnMemfs(ts *test.Tstate, pid string) {
+	p := proc.MakeProcPid(pid, "bin/user/memfsd", []string{"dummy"})
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err, "Spawn")
+
+	err = ts.WaitStart(pid)
+	assert.Nil(ts.T, err, "WaitStart")
+}
+
+func TestTakeSnapshotSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	err := ts.Mkdir(np.MEMFS, 0777)
@@ -19,12 +28,7 @@ func TestSnapshotSimple(t *testing.T) {
 
 	// Spawn a dummy-replicated memfs
 	pid := "12345"
-	p := proc.MakeProcPid(pid, "bin/user/memfsd", []string{"dummy"})
-	err = ts.Spawn(p)
-	assert.Nil(t, err, "Spawn")
-
-	err = ts.WaitStart(pid)
-	assert.Nil(t, err, "WaitStart")
+	spawnMemfs(ts, pid)
 
 	// Read its snapshot file.
 	b, err := ts.GetFile(path.Join(np.MEMFS, pid, "snapshot"))

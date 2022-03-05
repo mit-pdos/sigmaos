@@ -185,7 +185,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 	}
 	// The replies channel may be nil if this is a replicated op which came
 	// through raft. In this case, a reply is not needed.
-	if replies != nil {
+	if replies != nil && request.GetMsg().Type() != np.TTdetach {
 		fcall := &np.Fcall{}
 		fcall.Type = reply.Type()
 		fcall.Msg = reply
@@ -237,7 +237,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil or the fcall is of type Detach (in which case
 	// replies will be nil, since detaches are generated at the server).
-	if replies != nil || fc.GetMsg().Type() == np.TTdetach {
+	if replies != nil {
 		defer sess.DecThreads()
 	}
 	if rerror != nil {

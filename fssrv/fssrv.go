@@ -64,7 +64,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.stats = stats.MkStats(fssrv.root)
-	fssrv.snap = snapshot.MakeDev(fssrv, nil, fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
 	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
@@ -74,6 +73,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	if !fssrv.replicated {
 		fssrv.replSrv = nil
 	} else {
+		fssrv.snap = snapshot.MakeDev(fssrv, nil, fssrv.root)
 		fssrv.rc = repl.MakeReplyCache()
 		fssrv.replSrv = config.MakeServer(fssrv.tm.AddThread())
 		fssrv.replSrv.Start()

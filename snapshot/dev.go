@@ -3,6 +3,7 @@ package snapshot
 import (
 	"log"
 
+	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
@@ -16,7 +17,9 @@ type Dev struct {
 
 func MakeDev(srv protsrv.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
 	i := inode.MakeInode(ctx, 0, root)
-	return &Dev{i, srv}
+	dev := &Dev{i, srv}
+	dir.MkNod(ctx, root, "snapshot", dev)
+	return dev
 }
 
 func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {

@@ -16,6 +16,8 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/realm"
+	"ulambda/repl"
+	"ulambda/repldummy"
 	"ulambda/replraft"
 	// "ulambda/seccomp"
 )
@@ -53,12 +55,17 @@ func Run(args []string) {
 	var err *np.Err
 	// Replicate?
 	if len(args) >= 4 {
-		id, r := strconv.Atoi(args[3])
-		if r != nil {
-			log.Fatalf("Couldn't convert id string: %v", err)
+		var config repl.Config = nil
+		if args[3] == "dummy" {
+			config = repldummy.MakeConfig()
+		} else {
+			id, r := strconv.Atoi(args[3])
+			if r != nil {
+				log.Fatalf("Couldn't convert id string: %v", err)
+			}
+			peers := strings.Split(args[4], ",")
+			config = replraft.MakeRaftConfig(id, peers)
 		}
-		peers := strings.Split(args[4], ",")
-		config := replraft.MakeRaftConfig(id, peers)
 		fss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config)
 	} else {
 		fss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", nil)

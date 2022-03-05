@@ -7,4 +7,5 @@ const (
 	Tfile
 	Tsymlink
 	Tstats
+	Tsnapshotdev
 )

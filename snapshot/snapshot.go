@@ -53,7 +53,6 @@ func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadm
 }
 
 func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
-	log.Printf("Snapshotting %v", o.Inum())
 	var stype Tsnapshot
 	switch o.(type) {
 	case *dir.DirImpl:
@@ -64,8 +63,10 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
 		stype = Tsymlink
 	case *stats.Stats:
 		stype = Tstats
+	case *Dev:
+		stype = Tsnapshotdev
 	default:
-		log.Fatalf("Unknown FsObj type in serde.Snapshot.serialize: %v", reflect.TypeOf(o))
+		log.Fatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(o))
 	}
 	s.Imap[o.Inum()] = MakeObjSnapshot(stype, o.Snapshot(s.snapshotFsTree))
 	return o.Inum()

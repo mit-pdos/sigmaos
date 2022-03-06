@@ -22,7 +22,7 @@ func makeTstate(t *testing.T, crash int) *Tstate {
 	return ts
 }
 
-func TestOne(t *testing.T) {
+func TestStartStopGroup(t *testing.T) {
 	ts := makeTstate(t, 0)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")

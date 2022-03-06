@@ -34,7 +34,7 @@ func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, *np.Err) {
 	}
 	rmsg, ok := reply.(np.Rerror)
 	if ok {
-		return nil, np.Rerror2Err(rmsg.Ename)
+		return nil, np.String2Err(rmsg.Ename)
 	}
 	return reply, nil
 }

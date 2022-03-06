@@ -1,7 +1,6 @@
 package ninep
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -235,7 +234,7 @@ func IsErrUnionElem(error error) bool {
 	return IsErrNotfound(error) && IsUnionElem(ErrPath(error))
 }
 
-func Rerror2Err(error string) *Err {
+func String2Err(error string) *Err {
 	err := &Err{TErrError, error}
 	for c := TErrBadattach; c <= TErrError; c++ {
 		if strings.HasPrefix(error, c.String()) {
@@ -246,47 +245,4 @@ func Rerror2Err(error string) *Err {
 	}
 	log.Printf("cannot decode = %v err %v\n", error, err)
 	return err
-}
-
-//
-// JSON versions
-//
-
-func (err *Err) RerrorJson() *Rerror {
-	data, error := json.Marshal(*err)
-	if error != nil {
-		log.Fatalf("FATAL Rerror err %v\n", error)
-	}
-	return &Rerror{string(data)}
-}
-
-func Decode(error error) *Err {
-	err := &Err{}
-	r := json.Unmarshal([]byte(error.Error()), err)
-	if r != nil {
-		log.Printf("cannot unmarshal = %v\n", error.Error())
-		return nil
-	}
-	return err
-}
-
-func IsErrNotfoundJson(error error) bool {
-	err := Decode(error)
-	if err == nil {
-		return false
-	}
-	return err.Code() == TErrNotfound
-}
-
-func IsDirNotFoundJson(error error) bool {
-	b := false
-	err := Decode(error)
-	if err == nil {
-		return b
-	}
-	if err.Code() == TErrNotfound {
-		p := Split(err.Obj)
-		b = len(p) > 1
-	}
-	return b
 }

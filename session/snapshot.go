@@ -55,14 +55,14 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid np.Tsession, rps protsrv.RestoreProtServer, rt *fences.RecentTable, tm *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid np.Tsession, rps protsrv.RestoreProtServer, rt *fences.RecentTable, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal session in restore: %v", err)
 	}
 	fos := rps(nil, ss.ProtsrvSnap)
-	sess := makeSession(fos, sid, rt, tm.AddThread())
+	sess := makeSession(fos, sid, rt, tmt.AddThread())
 	myFences := fences.RestoreFenceTable(ss.FencesSnap)
 	sess.myFences = myFences
 	return sess

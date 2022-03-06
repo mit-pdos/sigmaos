@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -149,10 +150,9 @@ func (fc *FenceClnt) deregisterPaths(fence np.Tfence) error {
 func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 	fence, err := fc.MakeFence(fc.fenceName, mode)
 	if err != nil {
-		log.Printf("%v: MakeFence %v err %v", proc.GetName(), fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "MakeFence %v err %v", fc.fenceName, err)
 		return err
 	}
-	// log.Printf("%v: MakeFence %v fence %v", proc.GetName(), fc.fenceName, fence)
 	if fc.lastSeq > fence.Seqno {
 		log.Fatalf("%v: FATAL MakeFence bad fence %v last seq %v\n", proc.GetName(), fence, fc.lastSeq)
 	}
@@ -162,7 +162,7 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 	for p, _ := range fc.paths {
 		err := fc.RegisterFence(fence, p)
 		if err != nil {
-			log.Printf("%v: RegisterFence %v err %v", proc.GetName(), fc.fenceName, err)
+			db.DLPrintf("FENCECLNT_ERR", "RegisterFence %v err %v", fc.fenceName, err)
 			return err
 		}
 	}
@@ -179,13 +179,13 @@ func (fc *FenceClnt) registerFence(mode np.Tmode) error {
 func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 	wrt, err := fc.CreateWriter(fc.fenceName, fc.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
-		log.Printf("%v: Create %v err %v", proc.GetName(), fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "Create %v err %v", fc.fenceName, err)
 		return err
 	}
 
 	_, err = wrt.Write(b)
 	if err != nil {
-		log.Printf("%v: Write %v err %v", proc.GetName(), fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "Write %v err %v", fc.fenceName, err)
 		return err
 	}
 	wrt.Close()
@@ -196,7 +196,7 @@ func (fc *FenceClnt) AcquireFenceW(b []byte) error {
 func (fc *FenceClnt) OpenFenceFrom(from string) error {
 	err := fc.Rename(from, fc.fenceName)
 	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v", proc.GetName(), from, fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "Rename %v to %v err %v", from, fc.fenceName, err)
 		return err
 	}
 	return fc.registerFence(0)
@@ -209,7 +209,6 @@ func (fc *FenceClnt) AcquireFenceR() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// log.Printf("%v: file watch return %v\n", proc.GetName(), fc.fenceName)
 	return b, fc.registerFence(np.OREAD)
 }
 
@@ -224,14 +223,14 @@ func (fc *FenceClnt) ReleaseFence() error {
 	}
 	err := fc.deregisterPaths(*fc.f)
 	if err != nil {
-		log.Printf("%v: deregisterPaths %v err %v\n", proc.GetName(), fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "deregisterPaths %v err %v\n", fc.fenceName, err)
 	}
 	fc.f = nil
 	// Then, remove file so that the next acquirer can run
 	if fc.mode == np.OWRITE {
 		err := fc.Remove(fc.fenceName)
 		if err != nil {
-			log.Printf("%v: Remove %v err %v", proc.GetName(), fc.fenceName, err)
+			db.DLPrintf("FENCECLNT_ERR", "Remove %v err %v", fc.fenceName, err)
 			return err
 		}
 	}
@@ -264,7 +263,7 @@ func (fc *FenceClnt) FencePaths(paths []string) error {
 	for _, p := range paths {
 		err := fc.RegisterFence(fence, p)
 		if err != nil {
-			log.Printf("%v: RegisterFence %v err %v", proc.GetName(), fc.fenceName, err)
+			db.DLPrintf("FENCECLNT_ERR", "RegisterFence %v err %v", fc.fenceName, err)
 			return err
 		}
 		fc.paths[p] = true
@@ -288,7 +287,7 @@ func (fc *FenceClnt) RemovePaths(paths []string) error {
 func (fc *FenceClnt) SetFenceFile(b []byte) error {
 	_, err := fc.SetFile(fc.fenceName, b, 0)
 	if err != nil {
-		log.Printf("%v: SetFenceFile %v err %v", proc.GetName(), fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "SetFenceFile %v err %v", fc.fenceName, err)
 		return err
 	}
 	return fc.registerFence(0)
@@ -297,7 +296,7 @@ func (fc *FenceClnt) SetFenceFile(b []byte) error {
 func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
 	err := fc.Rename(from, fc.fenceName)
 	if err != nil {
-		log.Printf("%v: Rename %v to %v err %v", proc.GetName(), from, fc.fenceName, err)
+		db.DLPrintf("FENCECLNT_ERR", "Rename %v to %v err %v", from, fc.fenceName, err)
 		return err
 	}
 	return fc.registerFence(0)
@@ -308,16 +307,14 @@ func (fc *FenceClnt) MakeFenceFileFrom(from string) error {
 //
 
 func (fc *FenceClnt) AcquireConfig(v interface{}) error {
-	// log.Printf("%v: start AcquireConfig %v\n", proc.GetName(), fc.Name())
 	b, err := fc.AcquireFenceR()
 	if err != nil {
-		log.Printf("%v: AcquireConfig %v err %v\n", proc.GetName(), fc.Name(), err)
+		db.DLPrintf("FENCECLNT_ERR", "AcquireConfig %v err %v\n", fc.Name(), err)
 		return err
 	}
 	err = json.Unmarshal(b, v)
 	if err != nil {
 		return err
 	}
-	// log.Printf("%v: AcquireConfig %v %v\n", proc.GetName(), fc.Name(), v)
 	return nil
 }

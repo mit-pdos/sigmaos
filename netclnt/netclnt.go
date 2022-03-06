@@ -13,7 +13,6 @@ import (
 	"ulambda/delay"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/proc"
 )
 
 const (
@@ -67,7 +66,7 @@ func MkNetClnt(addrs []string) (*NetClnt, *np.Err) {
 	nc.addrs = addrs
 	err := nc.connect()
 	if err != nil {
-		log.Printf("%v: mkNetClnt connect %v err %v\n", proc.GetProgram(), addrs, err)
+		db.DLPrintf("NETCLNT_ERR", "mkNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
 	}
 	go nc.writer()
@@ -197,7 +196,7 @@ func (nc *NetClnt) connectL() *np.Err {
 	for _, addr := range nc.addrs {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
-			db.DLPrintf("NETCLNT", "NetClnt to %v err %v\n", addr, err)
+			db.DLPrintf("NETCLNT_ERR", "NetClnt to %v err %v\n", addr, err)
 
 			continue
 		}
@@ -207,7 +206,7 @@ func (nc *NetClnt) connectL() *np.Err {
 		db.DLPrintf("NETCLNT", "NetClnt %v -> %v bw:%p, br:%p\n", c.LocalAddr(), addr, nc.bw, nc.br)
 		return nil
 	}
-	db.DLPrintf("NETCLNT", "No successful connections %v\n", nc.addrs)
+	db.DLPrintf("NETCLNT_ERR", "No successful connections %v\n", nc.addrs)
 	return np.MkErr(np.TErrEOF, "no connection")
 }
 
@@ -267,7 +266,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 	nc.mu.Unlock()
 
 	if closed {
-		db.DLPrintf("NETCLNT", "Error ch to %v closed\n", nc.Dst())
+		db.DLPrintf("NETCLNT_ERR", "Error ch to %v closed\n", nc.Dst())
 		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
 	nc.requests <- rpc
@@ -276,7 +275,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 
 	reply, ok := <-rpc.replych
 	if !ok {
-		db.DLPrintf("NETCLNT", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
+		db.DLPrintf("NETCLNT_ERR", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
 		return nil, np.MkErr(np.TErrEOF, nc.Dst())
 	}
 	db.DLPrintf("RPC", "rep %v\n", reply.fc)
@@ -289,7 +288,7 @@ func (nc *NetClnt) writer() {
 
 	br, bw, err := nc.getBufio()
 	if err != nil {
-		db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
+		db.DLPrintf("NETCLNT_ERR", "Writer: no viable connections: %v", err)
 		nc.Close()
 		return
 	}
@@ -302,7 +301,7 @@ func (nc *NetClnt) writer() {
 		br, bw, err = nc.getBufio()
 		// If none was available, close the conn
 		if err != nil {
-			db.DLPrintf("NETCLNT", "Writer: no viable connections: %v", err)
+			db.DLPrintf("NETCLNT_ERR", "Writer: no viable connections: %v", err)
 			nc.Close()
 			return
 		}
@@ -318,7 +317,7 @@ func (nc *NetClnt) writer() {
 			// Retry sends on network error
 			// if np.IsErrEOF(err) {
 			if err.Code() == np.TErrNet && err.Obj == "EOF" {
-				db.DLPrintf("NETCLNT", "Writer: NetClntection error to %v\n", nc.Dst())
+				db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error to %v\n", nc.Dst())
 				nc.resetConnection(br, bw)
 				continue
 			}
@@ -327,7 +326,7 @@ func (nc *NetClnt) writer() {
 				log.Fatalf("FATAL MarshallFcallToWriter %v\n", err)
 				return
 			}
-			db.DLPrintf("NETCLNT", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
+			db.DLPrintf("NETCLNT_ERR", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
 		} else {
 			error := bw.Flush()
 			if error != nil {
@@ -335,7 +334,7 @@ func (nc *NetClnt) writer() {
 					nc.resetConnection(br, bw)
 				} else {
 					stacktrace := debug.Stack()
-					db.DLPrintf("NETCLNT", "%v\nFlush error %v\n", string(stacktrace), err)
+					db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), err)
 					return
 				}
 			}
@@ -348,7 +347,7 @@ func (nc *NetClnt) reader() {
 	br, bw, err := nc.getBufio()
 	// If none was available, close the conn
 	if err != nil {
-		db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", err)
+		db.DLPrintf("NETCLNT_ERR", "Reader: no viable connections: %v", err)
 		nc.Close()
 		return
 	}
@@ -357,27 +356,27 @@ func (nc *NetClnt) reader() {
 		// On connection error, retry
 		// XXX write in terms of np.Err?
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
-			db.DLPrintf("NETCLNT", "Reader: NetClnt error to %v\n", nc.Dst())
+			db.DLPrintf("NETCLNT_ERR", "Reader: NetClnt error to %v\n", nc.Dst())
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection
 			var error error
 			br, bw, error = nc.getBufio()
 			// If none was available, close the conn
 			if error != nil {
-				db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", error)
+				db.DLPrintf("NETCLNT_ERR", "Reader: no viable connections: %v", error)
 				nc.Close()
 				return
 			}
 			continue
 		}
 		if err != nil {
-			db.DLPrintf("NETCLNT", "Reader: ReadFrame error %v\n", err)
+			db.DLPrintf("NETCLNT_ERR", "Reader: ReadFrame error %v\n", err)
 			nc.Close()
 			return
 		}
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {
-			db.DLPrintf("NETCLNT", "Reader: Unmarshal error %v\n", err)
+			db.DLPrintf("NETCLNT_ERR", "Reader: Unmarshal error %v\n", err)
 		} else {
 			rpc, ok := nc.lookupDel(fcall.Tag)
 			if ok {

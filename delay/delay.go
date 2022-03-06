@@ -4,7 +4,6 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/proc"
 	"ulambda/rand"
 )
 

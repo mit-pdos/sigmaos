@@ -142,7 +142,6 @@ func (fc *FenceClnt) deregisterPaths(fence np.Tfence) error {
 		if r != nil {
 			err = r
 		}
-
 	}
 	return err
 }
@@ -225,7 +224,7 @@ func (fc *FenceClnt) ReleaseFence() error {
 	}
 	err := fc.deregisterPaths(*fc.f)
 	if err != nil {
-		log.Printf("%v: deregister %v err %v\n", proc.GetName(), fc.fenceName, err)
+		log.Printf("%v: deregisterPaths %v err %v\n", proc.GetName(), fc.fenceName, err)
 	}
 	fc.f = nil
 	// Then, remove file so that the next acquirer can run

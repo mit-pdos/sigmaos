@@ -147,12 +147,12 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 		if err == nil {
 			return err
 		}
-		// XXX error checking in one place and more uniform
-		if np.IsErrEOF(err) ||
-			np.IsErrNotfound(err) ||
+		if np.IsErrEOF(err) || np.IsErrUnreachable(err) ||
 			np.IsErrRetry(err) {
+			log.Printf("balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
+			log.Printf("balancer op err %v\n", err)
 			return err
 		}
 	}

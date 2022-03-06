@@ -12,11 +12,11 @@ package kv
 // shards. The balancer computes the new mapping and the moves that
 // the balancer must perform to get to the new mapping in KVNEXTBK.
 // After creating KVNEXTBK (which isn't an atomic operation), the
-// balancer atomically renames it to KVCONFNEXT (using rename).  Then,
-// the balancer copies KVCONFNEXT to KVCONF atomically; at this point,
-// clerks may do new puts/gets using the new config, in parallel with
-// the moves.  If the shard hasn't been copies yet to a new group, the
-// clerk will wait and retry.
+// balancer atomically renames it to KVCONFNEXT.  Then, the balancer
+// copies KVCONFNEXT to KVCONF atomically; at this point, clerks may
+// do new puts/gets using the new config, in parallel with the moves.
+// If the shard hasn't been copied yet to a group responsible for the
+// shard in the new config, the clerk will wait and retry.
 //
 // If the balancer crashes, the new primary recovers from KVCONFNEXT,
 // which is either the old one or the new one. In both cases, it

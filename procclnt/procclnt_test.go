@@ -80,7 +80,7 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid string) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func TestWaitExitSimple(t *testing.T) {
+func TestWaitExitOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
@@ -101,6 +101,33 @@ func TestWaitExitSimple(t *testing.T) {
 
 	checkSleeperResult(t, ts, pid)
 
+	ts.Shutdown()
+}
+
+func TestWaitExitN(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	nProcs := 100
+	var done sync.WaitGroup
+	done.Add(nProcs)
+
+	for i := 0; i < nProcs; i++ {
+		go func() {
+			pid := spawnSleeper(t, ts)
+			status, err := ts.WaitExit(pid)
+			assert.Nil(t, err, "WaitExit error")
+			assert.True(t, status.IsStatusOK(), "Exit status wrong %v", status)
+
+			// cleaned up (may take a bit)
+			time.Sleep(500 * time.Millisecond)
+			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
+
+			checkSleeperResult(t, ts, pid)
+
+			done.Done()
+		}()
+	}
+	done.Wait()
 	ts.Shutdown()
 }
 

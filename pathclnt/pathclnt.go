@@ -94,11 +94,15 @@ func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
 
 func (pathc *PathClnt) mount(fid np.Tfid, path string) *np.Err {
 	if err := pathc.mnt.add(np.Split(path), fid); err != nil {
-		// Another thread may already have mounted path; don't return an error
-		// XXX detach session
-		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, err)
-		pathc.Clunk(fid)
-		return nil
+		if err.Code() == np.TErrExists {
+			// Another thread may already have mounted
+			// path; clunk the fid and don't return an
+			// error.
+			pathc.Clunk(fid)
+			return nil
+		} else {
+			return err
+		}
 	}
 	return nil
 }

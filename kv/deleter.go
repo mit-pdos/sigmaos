@@ -2,7 +2,6 @@ package kv
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 
@@ -15,7 +14,11 @@ import (
 	"ulambda/procclnt"
 )
 
+//
+// Delete a shard
+//
 // XXX cmd line utility rmdir
+//
 
 type Deleter struct {
 	mu sync.Mutex
@@ -24,8 +27,6 @@ type Deleter struct {
 	fclnt  *fenceclnt.FenceClnt
 	blConf Config
 }
-
-// XXX KV group from which we are deleting
 
 func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 	dl := &Deleter{}
@@ -36,11 +37,11 @@ func MakeDeleter(N string, sharddir string) (*Deleter, error) {
 	dl.fclnt = fenceclnt.MakeFenceClnt(dl.FsLib, KVCONFIG, 0, []string{KVDIR})
 	err = dl.fclnt.AcquireConfig(&dl.blConf)
 	if err != nil {
-		log.Printf("%v: fence %v err %v\n", proc.GetName(), dl.fclnt.Name(), err)
+		db.DLPrintf("KVDEL_ERR", "fence %v err %v\n", dl.fclnt.Name(), err)
 		return nil, err
 	}
 	if N != strconv.Itoa(dl.blConf.N) {
-		log.Printf("%v: wrong config %v\n", proc.GetName(), N)
+		db.DLPrintf("KVDEL_ERR", "wrong config %v\n", N)
 		return nil, fmt.Errorf("wrong config %v\n", N)
 	}
 	return dl, err
@@ -52,7 +53,7 @@ func (dl *Deleter) Delete(sharddir string) {
 	// If sharddir isn't found, then an earlier delete succeeded;
 	// we are done.
 	if _, err := dl.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
-		log.Printf("%v: Delete conf %v not found %v\n", proc.GetName(), dl.blConf.N, sharddir)
+		db.DLPrintf("KVDEL_ERR", "Delete conf %v not found %v\n", dl.blConf.N, sharddir)
 		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
 		return
 	}
@@ -64,7 +65,7 @@ func (dl *Deleter) Delete(sharddir string) {
 	}
 
 	if err := dl.RmDir(sharddir); err != nil {
-		log.Printf("%v: conf %v rmdir %v err %v\n", proc.GetName(), dl.blConf.N, sharddir, err)
+		db.DLPrintf("KVDEL_ERR", "conf %v rmdir %v err %v\n", dl.blConf.N, sharddir, err)
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 	} else {
 		dl.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))

@@ -8,6 +8,7 @@ type FsServer interface {
 	Process(*np.Fcall, chan *np.Fcall)
 	CloseSession(np.Tsession, chan *np.Fcall)
 	Snapshot() []byte
+	Restore([]byte)
 }
 
 type Protsrv interface {

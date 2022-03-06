@@ -54,8 +54,10 @@ func (npd *Npd) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 }
 
 func (npd *Npd) Snapshot() []byte {
-	// XXX Actually call detach if we make it do something at some point.
 	return nil
+}
+
+func (npd *Npd) Restore(b []byte) {
 }
 
 //

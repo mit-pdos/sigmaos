@@ -110,6 +110,12 @@ func (fssrv *FsServer) Snapshot() []byte {
 	return snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tm, fssrv.rft, fssrv.rc)
 }
 
+func (fssrv *FsServer) Restore(b []byte) {
+	if !fssrv.replicated {
+		log.Fatal("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
+	}
+}
+
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {

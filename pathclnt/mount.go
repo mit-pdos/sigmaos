@@ -85,14 +85,12 @@ func (mnt *MntTable) exit() {
 	mnt.exited = true
 }
 
-// XXX Right now, we return EOF once we've "exited". Perhaps it makes more
-// sense to return "unknown mount" or something along those lines.
 func (mnt *MntTable) resolve(path []string) (np.Tfid, []string, *np.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
 	if mnt.exited {
-		return np.NoFid, path, np.MkErr(np.TErrEOF, np.Join(path))
+		return np.NoFid, path, np.MkErr(np.TErrUnreachable, np.Join(path))
 	}
 
 	for _, p := range mnt.mounts {

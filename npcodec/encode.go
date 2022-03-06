@@ -87,7 +87,7 @@ func (e *encoder) encode(vs ...interface{}) *np.Err {
 		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
 			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrUnreachable, err)
 			}
 		case []byte:
 			// XXX Bail out early to serialize separately
@@ -99,16 +99,16 @@ func (e *encoder) encode(vs ...interface{}) *np.Err {
 			}
 
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrUnreachable, err)
 			}
 		case string:
 			if err := binary.Write(e.wr, binary.LittleEndian, uint16(len(v))); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrUnreachable, err)
 			}
 
 			_, err := io.WriteString(e.wr, v)
 			if err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrUnreachable, err)
 			}
 		case *string:
 			if err := e.encode(*v); err != nil {
@@ -283,7 +283,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 
 			n, err := io.ReadFull(d.rd, b)
 			if err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return np.MkErr(np.TErrUnreachable, err)
 			}
 
 			if n != int(l) {

@@ -316,13 +316,13 @@ func (nc *NetClnt) writer() {
 			}
 			// Retry sends on network error
 			// if np.IsErrEOF(err) {
-			if err.Code() == np.TErrNet && err.Obj == "EOF" {
+			if err.Code() == np.TErrUnreachable && err.Obj == "EOF" {
 				db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error to %v\n", nc.Dst())
 				nc.resetConnection(br, bw)
 				continue
 			}
-			// If exit the thread if the connection is broken
-			if err.Code() == np.TErrNet {
+			// Exit the thread if the connection is broken
+			if err.Code() == np.TErrUnreachable {
 				log.Fatalf("FATAL MarshallFcallToWriter %v\n", err)
 				return
 			}

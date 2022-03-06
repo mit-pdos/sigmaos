@@ -48,7 +48,6 @@ const (
 	TErrClosed // for pipes
 	TErrEOF    // EOF or cannot connect   (Unreachable)
 	TErrBadFcall
-	TErrNet // redundant
 	TErrRetry
 	TErrError // to propagate non-sigma errors
 
@@ -129,14 +128,12 @@ func (err Terror) String() string {
 		return "EOF"
 	case TErrBadFcall:
 		return "bad fcall"
-	case TErrNet:
-		return "network error"
-	case TErrRetry:
-		return "retry"
 	case TErrError:
 		return "Error"
 
 	// sigma OS errors
+	case TErrRetry:
+		return "retry"
 	case TErrBadFd:
 		return "Bad fd"
 

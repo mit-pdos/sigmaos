@@ -2,8 +2,44 @@ package kv
 
 //
 // A balancer, which acts as a coordinator for the sharded KV service.
-// A KV service deployment may have several balancer: one primary and
+// A KV service deployment has several balancers: one primary and
 // several backups.
+//
+// When a client adds/removes a shard, the balancer updates KVCONF,
+// which has the mapping from shards to groups in the following steps.
+// This sequence of steps is carefully orchestrated to allow clerk
+// operations to be performed in parallel with the balancer moving
+// shards. The balancer computes the new mapping and the moves that
+// the balancer must perform to get to the new mapping in KVNEXTBK.
+// After creating KVNEXTBK (which isn't an atomic operation), the
+// balancer atomically renames it to KVCONFNEXT (using rename).  Then,
+// the balancer copies KVCONFNEXT to KVCONF atomically; at this point,
+// clerks may do new puts/gets using the new config, in parallel with
+// the moves.  If the shard hasn't been copies yet to a new group, the
+// clerk will wait and retry.
+//
+// If the balancer crashes, the new primary recovers from KVCONFNEXT,
+// which is either the old one or the new one. In both cases, it
+// copies KVCONFNEXT to KVCONF atomically, and restarts the moves.  If
+// the KVCONF already contained KVCONFNEXT, it will now again, and the
+// restarted moves won't have any affect: the moves checks if the
+// destination shard already exists, and, if so, declares success.  If
+// the balancer crashed after creating KVCONFNEXT but before updating
+// KVCONF, this will update KVCONF, and restart the moves.
+//
+// Once the moves succeed, the balancer rewrites KVNEXTCONFIG without
+// moves so that on a crash the balancer doesn't redo the moves.
+// Because once the balancer indicates success for adding/removing a
+// group, the balancer may be unable to redo moves, because the caller
+// may shutdown a group that is involved in the moves. Since there is
+// no reason to redo the moves (they have succeeded), the balancer set
+// Moves to nil in KVNEXTCONFIG.  This write is safe: we either end up
+// with the old KVNEXTCONFIG (without the caller shutting down a
+// group) or with without the moves.
+//
+// If the balancer isn't the primary anymore (e.g., it is partitioned
+// and another balancer has becomeprimary), any its writes will fail,
+// because its fences are stale.
 //
 
 import (
@@ -45,30 +81,28 @@ type Balancer struct {
 	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	conf         *Config
-	balFclnt     *fenceclnt.FenceClnt
-	confFclnt    *fenceclnt.FenceClnt
-	mo           *Monitor
-	ch           chan bool
-	crash        int64
-	crashhelper  string
-	isRecovering bool
+	conf        *Config
+	balFclnt    *fenceclnt.FenceClnt
+	confFclnt   *fenceclnt.FenceClnt
+	mo          *Monitor
+	ch          chan bool
+	crash       int64
+	crashhelper string
+	isBusy      bool // in config change?
 }
 
-func (bl *Balancer) testAndSetRecovering() bool {
+func (bl *Balancer) testAndSetIsBusy() bool {
 	bl.Lock()
 	defer bl.Unlock()
-	b := bl.isRecovering
-	if !bl.isRecovering {
-		bl.isRecovering = true
-	}
+	b := bl.isBusy
+	bl.isBusy = true
 	return b
 }
 
-func (bl *Balancer) setRecovering(b bool) {
+func (bl *Balancer) clearIsBusy() {
 	bl.Lock()
 	defer bl.Unlock()
-	bl.isRecovering = b
+	bl.isBusy = false
 }
 
 func shardPath(kvd, shard string) string {
@@ -77,20 +111,21 @@ func shardPath(kvd, shard string) string {
 
 func RunBalancer(crashhelper string, auto string) {
 	bl := &Balancer{}
+
+	// reject requests for changes until after recovery
+	bl.isBusy = true
+
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 	bl.crash = crash.GetEnv()
 	bl.crashhelper = crashhelper
 
 	// may fail if already exist
-	// bl.Mkdir(np.MEMFS, 07)
 	bl.Mkdir(KVDIR, 07)
 
 	srvs := []string{KVDIR}
 	bl.balFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK, srvs)
 	bl.confFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVCONFIG, 0, srvs)
-
-	bl.setRecovering(true)
 
 	// start server but don't publish its existence
 	mfs, err := fslibsrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
@@ -115,7 +150,7 @@ func RunBalancer(crashhelper string, auto string) {
 		log.Fatalf("FATAL %v: AcquireFenceW %v\n", proc.GetName(), err)
 	}
 
-	log.Printf("%v: primary\n", proc.GetName())
+	db.DLPrintf("BAL", "primary %v\n", proc.GetName())
 
 	select {
 	case <-ch:
@@ -123,7 +158,7 @@ func RunBalancer(crashhelper string, auto string) {
 	default:
 		bl.recover()
 
-		bl.setRecovering(false)
+		bl.clearIsBusy()
 
 		go bl.monitorMyself(ch)
 
@@ -212,14 +247,11 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
-// Publish new KVCONFIG through OpenFenceFrom(). Afterwards our writes
-// to the server holding KVCONFIG are fenced with a new fence.
+// Publish new KVCONFIG through OpenFenceFrom(). Afterwards balancer
+// writes to the server holding KVCONFIG are fenced with a new fence.
 func (bl *Balancer) PublishConfig() {
-	err := bl.Remove(KVNEXTBK)
-	if err != nil {
-		db.DLPrintf("KVBAL_ERR", "Remove %v err %v\n", KVNEXTBK, err)
-	}
-	err = atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
+	bl.Remove(KVNEXTBK) // clean up KVNEXTBK, if it exists
+	err := atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTBK, 0777, *bl.conf)
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVNEXTBK, err)
 	}
@@ -231,7 +263,8 @@ func (bl *Balancer) PublishConfig() {
 
 // Restore sharddirs by finishing moves and deletes, and create config
 // file.
-func (bl *Balancer) restore() {
+func (bl *Balancer) restore(conf *Config) {
+	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.N += 1
@@ -245,10 +278,9 @@ func (bl *Balancer) restore() {
 }
 
 func (bl *Balancer) recover() {
-	var err error
-	bl.conf, err = readConfig(bl.FsLib, KVNEXTCONFIG)
+	conf, err := readConfig(bl.FsLib, KVNEXTCONFIG)
 	if err == nil {
-		bl.restore()
+		bl.restore(conf)
 	} else {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
@@ -285,7 +317,6 @@ func (bl *Balancer) runProc(args []string) (*proc.Status, error) {
 	if err != nil {
 		return nil, err
 	}
-	// log.Printf("%v: proc %v wait %v\n", proc.GetName(), args, pid)
 	status, err := bl.WaitExit(pid)
 	return status, err
 }
@@ -304,7 +335,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
-			db.DLPrintf("KVBAL_ERR", "retry proc %v err %v status %v\n", args, err, status)
+			db.DLPrintf("KVBAL_ERR", "retry %v err %v status %v\n", args, err, status)
 		} else {
 			break
 		}
@@ -349,11 +380,10 @@ func (bl *Balancer) runDeleters(moves Moves) {
 	ch := make(chan int)
 	for i, m := range moves {
 		go func(m *Move, i int) {
-			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src},
-				func(err error, status *proc.Status) bool {
-					ok := strings.HasPrefix(status.Msg(), "file not found")
-					return err != nil || (!status.IsStatusOK() && !ok)
-				})
+			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src}, func(err error, status *proc.Status) bool {
+				retry := err != nil || (!status.IsStatusOK() && !np.IsErrNotfound(status))
+				return retry
+			})
 			// log.Printf("%v: delete %v/%v done err %v status %v\n", proc.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
@@ -393,12 +423,10 @@ func (bl *Balancer) runMovers(moves Moves) {
 }
 
 func (bl *Balancer) balance(opcode, mfs string) *np.Err {
-	if bl.testAndSetRecovering() {
+	if bl.testAndSetIsBusy() {
 		return np.MkErr(np.TErrRetry, "busy")
 	}
-	defer bl.setRecovering(false)
-
-	// log.Printf("%v: BAL Balancer: %v %v %v\n", proc.GetName(), opcode, mfs, bl.conf)
+	defer bl.clearIsBusy()
 
 	var nextShards []string
 	switch opcode {
@@ -427,7 +455,6 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.N += 1
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
-	bl.conf.Ctime = time.Now().UnixNano()
 
 	db.DLPrintf("KVBAL", "New config %v\n", bl.conf)
 
@@ -448,6 +475,11 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.checkMoves(moves)
 
 	bl.runDeleters(moves)
+
+	bl.conf.Moves = Moves{}
+	if err := atomic.PutFileJsonAtomic(bl.FsLib, KVNEXTCONFIG, 0777, *bl.conf); err != nil {
+		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVNEXTCONFIG, err)
+	}
 
 	return nil
 }

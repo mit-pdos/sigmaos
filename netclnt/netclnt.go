@@ -2,7 +2,6 @@ package netclnt
 
 import (
 	"bufio"
-	"io"
 	"log"
 	"net"
 	"runtime/debug"
@@ -207,7 +206,7 @@ func (nc *NetClnt) connectL() *np.Err {
 		return nil
 	}
 	db.DLPrintf("NETCLNT_ERR", "No successful connections %v\n", nc.addrs)
-	return np.MkErr(np.TErrEOF, "no connection")
+	return np.MkErr(np.TErrUnreachable, "no connection")
 }
 
 func (nc *NetClnt) allocate(req *RpcT) np.Ttag {
@@ -267,7 +266,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 
 	if closed {
 		db.DLPrintf("NETCLNT_ERR", "Error ch to %v closed\n", nc.Dst())
-		return nil, np.MkErr(np.TErrEOF, nc.Dst())
+		return nil, np.MkErr(np.TErrUnreachable, nc.Dst())
 	}
 	nc.requests <- rpc
 
@@ -276,7 +275,7 @@ func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
 	reply, ok := <-rpc.replych
 	if !ok {
 		db.DLPrintf("NETCLNT_ERR", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
-		return nil, np.MkErr(np.TErrEOF, nc.Dst())
+		return nil, np.MkErr(np.TErrUnreachable, nc.Dst())
 	}
 	db.DLPrintf("RPC", "rep %v\n", reply.fc)
 	return reply.fc, reply.err
@@ -355,7 +354,7 @@ func (nc *NetClnt) reader() {
 		frame, err := npcodec.ReadFrame(br)
 		// On connection error, retry
 		// XXX write in terms of np.Err?
-		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
+		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			db.DLPrintf("NETCLNT_ERR", "Reader: NetClnt error to %v\n", nc.Dst())
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection

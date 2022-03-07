@@ -21,7 +21,7 @@ func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.
 	for {
 		fid, left, err := pathc.walkPath(path, resolve, w)
 		db.DLPrintf("WALK", "walkPath %v -> (%v, %v, %v)\n", path, fid, left, err)
-		if err != nil && np.IsErrEOF(err) {
+		if err != nil && np.IsErrUnreachable(err) {
 			done := len(path) - len(left)
 			db.DLPrintf("WALK", "walkPathUmount: umount %v\n", path[0:done])
 			if e := pathc.mnt.umount(pathc.FidClnt, path[0:done]); e != nil {

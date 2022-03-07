@@ -348,7 +348,7 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, np.EndSlash(path))
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
 			fid, err = pathc.walkPathUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err
@@ -378,7 +378,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 	// symlink.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
 			dir := np.Dir(p)
 			base := []string{np.Base(p)}
 			fid, err = pathc.walkPathUmount(dir, true, nil)

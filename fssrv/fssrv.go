@@ -39,7 +39,7 @@ type FsServer struct {
 	mkps       protsrv.MkProtServer
 	rps        protsrv.RestoreProtServer
 	stats      *stats.Stats
-	snap       *snapshot.Dev
+	snapDev    *snapshot.Dev
 	st         *session.SessionTable
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
@@ -49,7 +49,7 @@ type FsServer struct {
 	replSrv    repl.Server
 	rc         *repl.ReplyCache
 	pclnt      *procclnt.ProcClnt
-	Snap       *snapshot.Snapshot
+	snap       *snapshot.Snapshot
 	done       bool
 	replicated bool
 	ch         chan bool
@@ -75,7 +75,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	if !fssrv.replicated {
 		fssrv.replSrv = nil
 	} else {
-		fssrv.snap = snapshot.MakeDev(fssrv, nil, fssrv.root)
+		fssrv.snapDev = snapshot.MakeDev(fssrv, nil, fssrv.root)
 		fssrv.rc = repl.MakeReplyCache()
 		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())
 		fssrv.replSrv.Start()
@@ -105,11 +105,12 @@ func (fssrv *FsServer) Root() fs.Dir {
 }
 
 func (fssrv *FsServer) Snapshot() []byte {
+	log.Printf("Snapshot %v", proc.GetPid())
 	if !fssrv.replicated {
 		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
-	snap := snapshot.MakeSnapshot(fssrv)
-	return snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc)
+	fssrv.snap = snapshot.MakeSnapshot(fssrv)
+	return fssrv.snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc)
 }
 
 func (fssrv *FsServer) Restore(b []byte) {
@@ -117,12 +118,13 @@ func (fssrv *FsServer) Restore(b []byte) {
 		log.Fatal("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
 	}
 	// Store snapshot for later use during restore.
-	fssrv.Snap = snapshot.MakeSnapshot(fssrv)
+	fssrv.snap = snapshot.MakeSnapshot(fssrv)
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
 	var root fs.FsObj
-	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.Snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.process, fssrv.rc, b)
+	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.process, fssrv.rc, b)
 	fssrv.root = root.(fs.Dir)
+
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
@@ -176,6 +178,10 @@ func (fssrv *FsServer) GetStats() *stats.Stats {
 
 func (fssrv *FsServer) GetWatchTable() *watch.WatchTable {
 	return fssrv.wt
+}
+
+func (fssrv *FsServer) GetSnapshotter() *snapshot.Snapshot {
+	return fssrv.snap
 }
 
 func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession) (fs.Dir, fs.CtxI) {

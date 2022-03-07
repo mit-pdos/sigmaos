@@ -144,7 +144,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	// cleaned up
 	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-	assert.NotNil(t, err, "Stat")
+	assert.NotNil(t, err, "Stat %v", path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 
 	end := time.Now()
 
@@ -355,7 +355,7 @@ func TestConcurrentProcs(t *testing.T) {
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
 			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-			assert.NotNil(t, err, "Stat", err)
+			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 		}(pid, &done, i)
 	}
 

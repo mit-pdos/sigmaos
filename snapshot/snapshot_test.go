@@ -23,7 +23,6 @@ func spawnMemfs(ts *test.Tstate, pid string) {
 	p := proc.MakeProcPid(pid, "bin/user/memfsd", []string{"dummy"})
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Spawn")
-
 	err = ts.WaitStart(pid)
 	assert.Nil(ts.T, err, "WaitStart")
 }
@@ -31,7 +30,6 @@ func spawnMemfs(ts *test.Tstate, pid string) {
 func killMemfs(ts *test.Tstate, pid string) {
 	err := ts.Evict(pid)
 	assert.Nil(ts.T, err, "Evict")
-
 	status, err := ts.WaitExit(pid)
 	assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status")
 }
@@ -47,6 +45,8 @@ func takeSnapshot(ts *test.Tstate, pid string) []byte {
 
 func restoreSnapshot(ts *test.Tstate, pid string, b []byte) {
 	p := path.Join(np.MEMFS, pid, "snapshot")
+	// Restore needs to happen from a fresh fslib, otherwise state like fids may
+	// be missing during future walks.
 	fsl := fslib.MakeFsLib("snapshot-restore")
 	sz, err := fsl.SetFile(p, b, 0)
 	assert.Nil(ts.T, err, "Write snapshot")

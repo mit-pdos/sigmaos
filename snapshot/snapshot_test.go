@@ -36,7 +36,7 @@ func killMemfs(ts *test.Tstate, pid string) {
 	assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status")
 }
 
-func getSnapshot(ts *test.Tstate, pid string) []byte {
+func takeSnapshot(ts *test.Tstate, pid string) []byte {
 	p := path.Join(np.MEMFS, pid, "snapshot")
 	// Read its snapshot file.
 	b, err := ts.GetFile(p)
@@ -45,9 +45,10 @@ func getSnapshot(ts *test.Tstate, pid string) []byte {
 	return b
 }
 
-func putSnapshot(ts *test.Tstate, pid string, b []byte) {
+func restoreSnapshot(ts *test.Tstate, pid string, b []byte) {
 	p := path.Join(np.MEMFS, pid, "snapshot")
-	sz, err := ts.SetFile(p, b, 0)
+	fsl := fslib.MakeFsLib("snapshot-restore")
+	sz, err := fsl.SetFile(p, b, 0)
 	assert.Nil(ts.T, err, "Write snapshot")
 	assert.Equal(ts.T, sz, np.Tsize(len(b)), "Snapshot write wrong size")
 }
@@ -96,7 +97,7 @@ func TestMakeSnapshotSimple(t *testing.T) {
 	pid := "replica-a"
 	spawnMemfs(ts, pid)
 
-	getSnapshot(ts, pid)
+	takeSnapshot(ts, pid)
 
 	ts.Shutdown()
 }
@@ -111,8 +112,8 @@ func TestRestoreSimple(t *testing.T) {
 	pid := "replica-a"
 	spawnMemfs(ts, pid)
 
-	b := getSnapshot(ts, pid)
-	putSnapshot(ts, pid, b)
+	b := takeSnapshot(ts, pid)
+	restoreSnapshot(ts, pid, b)
 
 	ts.Shutdown()
 }
@@ -139,16 +140,16 @@ func TestRestoreStateSimple(t *testing.T) {
 	putFiles(ts, N_FILES)
 
 	// Check the state is there.
-	checkFiles(ts, REPLICA_SYMLINK, N_FILES)
+	checkFiles(ts, path.Join(np.MEMFS, pid1), N_FILES)
 
 	// Read the snapshot from replica a
-	b := getSnapshot(ts, pid1)
+	b := takeSnapshot(ts, pid1)
 
 	// Kill the first replica (so future requests hit the second replica).
 	killMemfs(ts, pid1)
 
 	// Write the snapshot to replica b
-	putSnapshot(ts, pid2, b)
+	restoreSnapshot(ts, pid2, b)
 
 	// Check that the files exist on replica b
 	checkFiles(ts, path.Join(np.MEMFS, pid2), N_FILES)

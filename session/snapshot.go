@@ -24,13 +24,13 @@ func (st *SessionTable) Snapshot() []byte {
 
 func RestoreTable(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, rt *fences.RecentTable, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
 	sessions := make(map[np.Tsession][]byte)
-	err := json.Unmarshal(b, sessions)
+	err := json.Unmarshal(b, &sessions)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal session table in restore: %v", err)
 	}
 	st := MakeSessionTable(mkps, fssrv, rt, tm)
 	for session, b := range sessions {
-		st.sessions[session] = RestoreSession(session, rps, rt, tm, b)
+		st.sessions[session] = RestoreSession(session, fssrv, rps, rt, tm, b)
 	}
 	return st
 }
@@ -55,13 +55,13 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid np.Tsession, rps protsrv.RestoreProtServer, rt *fences.RecentTable, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid np.Tsession, fssrv protsrv.FsServer, rps protsrv.RestoreProtServer, rt *fences.RecentTable, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal session in restore: %v", err)
 	}
-	fos := rps(nil, ss.ProtsrvSnap)
+	fos := rps(fssrv, ss.ProtsrvSnap)
 	sess := makeSession(fos, sid, rt, tmt.AddThread())
 	myFences := fences.RestoreFenceTable(ss.FencesSnap)
 	sess.myFences = myFences

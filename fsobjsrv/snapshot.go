@@ -50,7 +50,7 @@ func Restore(srv protsrv.FsServer, b []byte) protsrv.Protsrv {
 	}
 	fos := MakeProtServer(fssrv, foss.Sid).(*FsObjSrv)
 	for f, b := range foss.Fid {
-		fos.ft.fids[f] = fid.Restore( /*fn*/ nil, fssrv.GetSessCondTable(), b)
+		fos.ft.fids[f] = fid.Restore(fssrv.Snap.RestoreFsTree, fssrv.GetSessCondTable(), b)
 	}
 	return fos
 }

@@ -9,7 +9,7 @@ import (
 type ReplyFuture struct {
 	sync.Mutex
 	*sync.Cond
-	reply np.Tmsg
+	reply *np.Fcall
 }
 
 func MakeReplyFuture() *ReplyFuture {
@@ -19,7 +19,7 @@ func MakeReplyFuture() *ReplyFuture {
 }
 
 // Wait for a reply.
-func (f *ReplyFuture) Await() np.Tmsg {
+func (f *ReplyFuture) Await() *np.Fcall {
 	f.Lock()
 	defer f.Unlock()
 	// Potentially wait for a blocked op to complete.
@@ -30,10 +30,10 @@ func (f *ReplyFuture) Await() np.Tmsg {
 }
 
 // Wake waiters for a reply.
-func (f *ReplyFuture) Complete(msg np.Tmsg) {
+func (f *ReplyFuture) Complete(fc *np.Fcall) {
 	f.Lock()
 	defer f.Unlock()
-	f.reply = msg
+	f.reply = fc
 	// Mark that a reply has been received, so no one tries to wait in the
 	// future.
 	if f.Cond != nil {
@@ -63,7 +63,7 @@ func (rc *ReplyCache) Register(request *np.Fcall) {
 }
 
 // Expects that the request has already been registered.
-func (rc *ReplyCache) Put(request *np.Fcall, reply np.Tmsg) {
+func (rc *ReplyCache) Put(request *np.Fcall, reply *np.Fcall) {
 	rc.Lock()
 	defer rc.Unlock()
 	rc.entries[request.Session][request.Seqno].Complete(reply)
@@ -79,5 +79,21 @@ func (rc *ReplyCache) Get(request *np.Fcall) (*ReplyFuture, bool) {
 	} else {
 		rf, ok := sessionMap[request.Seqno]
 		return rf, ok
+	}
+}
+
+// Merge two reply caches.
+func (rc *ReplyCache) Merge(rc2 *ReplyCache) {
+	for sess, m := range rc2.entries {
+		if _, ok := rc.entries[sess]; !ok {
+			rc.entries[sess] = map[np.Tseqno]*ReplyFuture{}
+		}
+		for seqno, entry := range m {
+			rf := MakeReplyFuture()
+			if entry.reply != nil {
+				rf.Complete(entry.reply)
+			}
+			rc.entries[sess][seqno] = rf
+		}
 	}
 }

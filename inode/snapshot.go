@@ -49,7 +49,10 @@ func restoreInode(fn fs.RestoreF, b []byte) fs.FsObj {
 	inode.perm = i.Perm
 	inode.version = i.Version
 	inode.mtime = i.Mtime
-	inode.parent = fn(i.Parent).(fs.Dir)
+	parent := fn(i.Parent)
+	if parent != nil {
+		inode.parent = parent.(fs.Dir)
+	}
 	inode.owner = i.Owner
 	inode.nlink = i.Nlink
 	return inode

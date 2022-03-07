@@ -5,16 +5,25 @@ import (
 	"log"
 
 	np "ulambda/ninep"
+	"ulambda/npcodec"
 )
 
 func (rc *ReplyCache) Snapshot() []byte {
-	entries := make(map[np.Tsession]map[np.Tseqno]np.Tmsg)
+	entries := make(map[np.Tsession]map[np.Tseqno][]byte)
 	for sess, m := range rc.entries {
 		for seqno, rf := range m {
 			if _, ok := entries[sess]; !ok {
-				entries[sess] = make(map[np.Tseqno]np.Tmsg)
+				entries[sess] = make(map[np.Tseqno][]byte)
 			}
-			entries[sess][seqno] = rf.reply
+			var b []byte
+			var err1 *np.Err
+			if rf.reply != nil {
+				b, err1 = npcodec.Marshal(rf.reply)
+				if err1 != nil {
+					log.Fatalf("FATAL Error marshal np.Fcall in ReplyCache.Snapshot: %v, %v", err1, rf.reply)
+				}
+			}
+			entries[sess][seqno] = b
 		}
 	}
 	b, err := json.Marshal(entries)
@@ -25,20 +34,29 @@ func (rc *ReplyCache) Snapshot() []byte {
 }
 
 func Restore(b []byte) *ReplyCache {
-	entries := make(map[np.Tsession]map[np.Tseqno]np.Tmsg)
-	err := json.Unmarshal(b, entries)
+	entries := make(map[np.Tsession]map[np.Tseqno][]byte)
+	err := json.Unmarshal(b, &entries)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal ReplyCache in restore: %v", err)
 	}
 	rc := MakeReplyCache()
 	for sess, m := range entries {
-		for seqno, msg := range m {
-			if _, ok := entries[sess]; !ok {
+		for seqno, b := range m {
+			if _, ok := rc.entries[sess]; !ok {
 				rc.entries[sess] = make(map[np.Tseqno]*ReplyFuture)
 			}
+
+			fc := &np.Fcall{}
+			if len(b) > 0 {
+				err1 := npcodec.Unmarshal(b, fc)
+				if err1 != nil {
+					log.Fatalf("FATAL Error unmarshal np.Fcall in ReplyCache.Restore: %v, %v", err1, string(b))
+				}
+			}
+
 			rf := MakeReplyFuture()
-			if msg != nil {
-				rf.Complete(msg)
+			if fc != nil {
+				rf.Complete(fc)
 			}
 			rc.entries[sess][seqno] = rf
 		}

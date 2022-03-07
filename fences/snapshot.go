@@ -17,7 +17,7 @@ func (rft *RecentTable) Snapshot() []byte {
 
 func RestoreRecentTable(b []byte) *RecentTable {
 	rft := &RecentTable{}
-	err := json.Unmarshal(b, rft.fences)
+	err := json.Unmarshal(b, &rft.fences)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal fences in restore: %v", err)
 	}
@@ -73,7 +73,7 @@ func (ft *FenceTable) Snapshot() []byte {
 
 func RestoreFenceTable(b []byte) *FenceTable {
 	fencedDirs := make(map[string][]byte)
-	err := json.Unmarshal(b, fencedDirs)
+	err := json.Unmarshal(b, &fencedDirs)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal fencedDirs in restore: %v", err)
 	}

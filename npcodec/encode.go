@@ -405,7 +405,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 				return err
 			}
 		default:
-			log.Fatal("Decode: unknown type")
+			log.Fatal("Decode: unknown type: %v", reflect.TypeOf(v))
 		}
 	}
 

@@ -19,10 +19,9 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds.Entries = make(map[string]uint64)
 	for n, e := range d.entries {
 		if n == "." {
-			ds.Entries[n] = d.Inum()
-		} else {
-			ds.Entries[n] = fn(e)
+			continue
 		}
+		ds.Entries[n] = fn(e)
 	}
 	b, err := json.Marshal(ds)
 	if err != nil {
@@ -31,20 +30,15 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	return b
 }
 
-func restore(fn fs.RestoreF, b []byte) fs.FsObj {
+func restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.FsObj {
 	ds := &DirSnapshot{}
 	err := json.Unmarshal(b, ds)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in restoreDir: %v", err)
 	}
-	d := &DirImpl{}
 	d.FsObj = inode.RestoreInode(fn, ds.InodeSnap)
 	for name, ptr := range ds.Entries {
-		if name == "." {
-			d.entries[name] = d
-		} else {
-			d.entries[name] = fn(ptr)
-		}
+		d.entries[name] = fn(ptr)
 	}
 	return d
 }

@@ -6,15 +6,20 @@ import (
 	"sort"
 
 	np "ulambda/ninep"
+	"ulambda/npcodec"
 )
 
 type OpSnapshot struct {
-	Fc *np.Fcall
+	Fc []byte
 	N  uint64
 }
 
 func MakeOpSnapshot(fc *np.Fcall, n uint64) *OpSnapshot {
-	return &OpSnapshot{fc, n}
+	b, err := npcodec.Marshal(fc)
+	if err != nil {
+		log.Fatalf("FATAL error marshalling fcall in MakeOpSnapshot: %v", err)
+	}
+	return &OpSnapshot{b, n}
 }
 
 func (tmt *ThreadMgrTable) snapshot() []byte {
@@ -47,12 +52,17 @@ func Restore(pfn ProcessFn, b []byte) *ThreadMgrTable {
 	// Make a thread (there will only ever be one since we're running replicated)
 	tm := tmt.AddThread()
 	opss := []*OpSnapshot{}
-	err := json.Unmarshal(b, opss)
+	err := json.Unmarshal(b, &opss)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal threadmgr in restore: %v", err)
+		log.Fatalf("FATAL error unmarshal threadmgr in restore: %v, \n%v", err, string(b))
 	}
 	for _, op := range opss {
-		tm.executing[makeOp(op.Fc, nil, op.N)] = true
+		fc := &np.Fcall{}
+		err1 := npcodec.Unmarshal(op.Fc, fc)
+		if err1 != nil {
+			log.Fatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
+		}
+		tm.executing[makeOp(fc, nil, op.N)] = true
 	}
 	return tmt
 }

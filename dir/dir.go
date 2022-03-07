@@ -368,6 +368,6 @@ func (dir *DirImpl) Snapshot(fn fs.SnapshotF) []byte {
 	return makeDirSnapshot(fn, dir)
 }
 
-func Restore(fn fs.RestoreF, b []byte) fs.FsObj {
-	return restore(fn, b)
+func Restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.FsObj {
+	return restore(d, fn, b)
 }

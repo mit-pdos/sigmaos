@@ -42,13 +42,14 @@ type FsServer struct {
 	snap       *snapshot.Dev
 	st         *session.SessionTable
 	sct        *sesscond.SessCondTable
-	tm         *threadmgr.ThreadMgrTable
+	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
 	rft        *fences.RecentTable
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
 	rc         *repl.ReplyCache
 	pclnt      *procclnt.ProcClnt
+	Snap       *snapshot.Snapshot
 	done       bool
 	replicated bool
 	ch         chan bool
@@ -63,10 +64,11 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
+	fssrv.rps = rps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
+	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
@@ -75,7 +77,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	} else {
 		fssrv.snap = snapshot.MakeDev(fssrv, nil, fssrv.root)
 		fssrv.rc = repl.MakeReplyCache()
-		fssrv.replSrv = config.MakeServer(fssrv.tm.AddThread())
+		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())
 		fssrv.replSrv.Start()
 		log.Printf("Starting repl server")
 	}
@@ -106,14 +108,21 @@ func (fssrv *FsServer) Snapshot() []byte {
 	if !fssrv.replicated {
 		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
-	snap := snapshot.MakeSnapshot()
-	return snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tm, fssrv.rft, fssrv.rc)
+	snap := snapshot.MakeSnapshot(fssrv)
+	return snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc)
 }
 
 func (fssrv *FsServer) Restore(b []byte) {
 	if !fssrv.replicated {
 		log.Fatal("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
 	}
+	// Store snapshot for later use during restore.
+	fssrv.Snap = snapshot.MakeSnapshot(fssrv)
+	// XXX How do we install the sct and wt? How do we sunset old state when
+	// installing a snapshot on a running server?
+	var root fs.FsObj
+	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.Snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.process, fssrv.rc, b)
+	fssrv.root = root.(fs.Dir)
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
@@ -185,17 +194,20 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
+	fcall := &np.Fcall{}
+	// XXX Remove in master branch, just needed in this branch to pass tests.
+	if reply != nil {
+		fcall.Type = reply.Type()
+	}
+	fcall.Msg = reply
+	fcall.Tag = request.Tag
 	// Store the reply in the reply cache if this is a replicated server.
 	if fssrv.replicated {
-		fssrv.rc.Put(request, reply)
+		fssrv.rc.Put(request, fcall)
 	}
 	// The replies channel may be nil if this is a replicated op which came
 	// through raft. In this case, a reply is not needed.
 	if replies != nil && request.GetMsg().Type() != np.TTdetach {
-		fcall := &np.Fcall{}
-		fcall.Type = reply.Type()
-		fcall.Msg = reply
-		fcall.Tag = request.Tag
 		replies <- fcall
 	}
 }
@@ -224,7 +236,7 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
 			go func() {
-				fssrv.sendReply(fc, replyFuture.Await(), replies)
+				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), replies)
 			}()
 			return
 		}

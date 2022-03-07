@@ -52,7 +52,7 @@ func (c *SrvConn) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			db.DLPrintf("NETSRV", "Peer %v closed/erred %v\n", c.Src(), err)
+			db.DLPrintf("NETSRV_ERR", "Peer %v closed/erred %v\n", c.Src(), err)
 
 			// If the sessid hasn't been set, we haven't received any valid ops yet,
 			// so the session has not been added to the session table. If this is the
@@ -78,7 +78,7 @@ func (c *SrvConn) reader() {
 			fcall, err = npcodec.UnmarshalFcall(frame)
 		}
 		if err != nil {
-			db.DLPrintf("NETSRV", "reader: bad fcall: ", err)
+			db.DLPrintf("NETSRV_ERR", "reader: bad fcall: ", err)
 		} else {
 			db.DLPrintf("NETSRV", "srv req %v\n", fcall)
 			if c.sessid == 0 {
@@ -108,11 +108,11 @@ func (c *SrvConn) writer() {
 			writableFcall = fcall
 		}
 		if err := npcodec.MarshalFcall(writableFcall, c.bw); err != nil {
-			db.DLPrintf("NETSRV", "writer err %v\n", err)
+			db.DLPrintf("NETSRV_ERR", "writer err %v\n", err)
 			continue
 		}
 		if error := c.bw.Flush(); error != nil {
-			db.DLPrintf("NETSRV", "flush %v err %v", fcall, error)
+			db.DLPrintf("NETSRV_ERR", "flush %v err %v", fcall, error)
 		}
 	}
 }

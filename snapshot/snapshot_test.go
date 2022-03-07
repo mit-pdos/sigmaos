@@ -74,10 +74,10 @@ func putFiles(ts *test.Tstate, n int) {
 	}
 }
 
-func checkFiles(ts *test.Tstate, n int) {
+func checkFiles(ts *test.Tstate, basePath string, n int) {
 	for i := 0; i < n; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.GetFile(path.Join(REPLICA_SYMLINK, i_str))
+		b, err := ts.GetFile(path.Join(basePath, i_str))
 		assert.Nil(ts.T, err, "Getfile:")
 		if err != nil {
 			log.Printf(err.Error())
@@ -139,7 +139,7 @@ func TestRestoreStateSimple(t *testing.T) {
 	putFiles(ts, N_FILES)
 
 	// Check the state is there.
-	checkFiles(ts, N_FILES)
+	checkFiles(ts, REPLICA_SYMLINK, N_FILES)
 
 	// Read the snapshot from replica a
 	b := getSnapshot(ts, pid1)
@@ -149,7 +149,9 @@ func TestRestoreStateSimple(t *testing.T) {
 
 	// Write the snapshot to replica b
 	putSnapshot(ts, pid2, b)
-	checkFiles(ts, N_FILES)
+
+	// Check that the files exist on replica b
+	checkFiles(ts, path.Join(np.MEMFS, pid2), N_FILES)
 
 	ts.Shutdown()
 }

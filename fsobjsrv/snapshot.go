@@ -50,11 +50,11 @@ func Restore(srv protsrv.FsServer, b []byte) protsrv.Protsrv {
 	}
 	fos := MakeProtServer(fssrv, foss.Sid).(*FsObjSrv)
 	for f, b := range foss.Fid {
-		fos.ft.fids[f] = fid.Restore(fssrv.Snap.RestoreFsTree, fssrv.GetSessCondTable(), b)
+		fos.ft.fids[f] = fid.Restore(fssrv.GetSnapshotter().RestoreFsTree, fssrv.GetSessCondTable(), b)
 	}
 	for ptr, b := range foss.Ephemeral {
-		o := fssrv.Snap.RestoreFsTree(ptr)
-		fos.et.ephemeral[o] = fid.Restore(fssrv.Snap.RestoreFsTree, fssrv.GetSessCondTable(), b)
+		o := fssrv.GetSnapshotter().RestoreFsTree(ptr)
+		fos.et.ephemeral[o] = fid.Restore(fssrv.GetSnapshotter().RestoreFsTree, fssrv.GetSessCondTable(), b)
 	}
 	return fos
 }

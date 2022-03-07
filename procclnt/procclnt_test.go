@@ -2,7 +2,6 @@ package procclnt_test
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"sync"
@@ -422,7 +421,6 @@ func testFencer(t *testing.T, part string) {
 
 	for _, pid := range pids {
 		status, err := ts.WaitExit(pid)
-		log.Printf("status %v\n", status)
 		assert.True(t, err != nil || !status.IsStatusErr() || status.Msg() != "Invariant violated", "Exit status wrong")
 	}
 	ts.Shutdown()

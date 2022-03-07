@@ -14,7 +14,10 @@ func ReadFrame(rd io.Reader) ([]byte, *np.Err) {
 	var len uint32
 
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		return nil, np.MkErr(np.TErrUnreachable, err.Error())
+		if err == io.EOF {
+			return nil, np.MkErr(np.TErrEOF, err)
+		}
+		return nil, np.MkErr(np.TErrUnreachable, err)
 	}
 	len = len - 4
 	if len <= 0 {
@@ -23,7 +26,7 @@ func ReadFrame(rd io.Reader) ([]byte, *np.Err) {
 	msg := make([]byte, len)
 	n, err := io.ReadFull(rd, msg)
 	if n != int(len) {
-		return nil, np.MkErr(np.TErrUnreachable, err.Error())
+		return nil, np.MkErr(np.TErrUnreachable, err)
 	}
 	return msg, nil
 }
@@ -65,22 +68,6 @@ func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *np.Err {
 	return WriteRawBuffer(wr, buf)
 }
 
-func UnmarshalFcall(frame []byte) (*np.Fcall, *np.Err) {
-	fcall := &np.Fcall{}
-	if err := unmarshal(frame, fcall); err != nil {
-		return nil, err
-	}
-	return fcall, nil
-}
-
-func UnmarshalFcallWireCompat(frame []byte) (*np.Fcall, *np.Err) {
-	fcallWC := &np.FcallWireCompat{}
-	if err := unmarshal(frame, fcallWC); err != nil {
-		return nil, err
-	}
-	return fcallWC.ToInternal(), nil
-}
-
 func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 	frame, error := marshal1(true, fcall)
 	if error != nil {
@@ -119,5 +106,25 @@ func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
 }
 
 func MarshalFcallByte(fcall *np.Fcall) ([]byte, *np.Err) {
-	return marshal(fcall)
+	if b, error := marshal(fcall); error != nil {
+		return nil, np.MkErr(np.TErrBadFcall, error)
+	} else {
+		return b, nil
+	}
+}
+
+func UnmarshalFcall(frame []byte) (*np.Fcall, *np.Err) {
+	fcall := &np.Fcall{}
+	if err := unmarshal(frame, fcall); err != nil {
+		return nil, np.MkErr(np.TErrBadFcall, err)
+	}
+	return fcall, nil
+}
+
+func UnmarshalFcallWireCompat(frame []byte) (*np.Fcall, *np.Err) {
+	fcallWC := &np.FcallWireCompat{}
+	if err := unmarshal(frame, fcallWC); err != nil {
+		return nil, np.MkErr(np.TErrBadFcall, err)
+	}
+	return fcallWC.ToInternal(), nil
 }

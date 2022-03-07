@@ -28,7 +28,7 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 		}
 		b, err := marshal(*st)
 		if err != nil {
-			return nil, n, err
+			return nil, n, np.MkErr(np.TErrError, err)
 		}
 		buf = append(buf, b...)
 		cnt -= sz
@@ -39,8 +39,11 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 
 func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *np.Err) {
 	st := np.Stat{}
-	if err := unmarshalReader(rdr, &st); err != nil {
-		return nil, err
+	if error := unmarshalReader(rdr, &st); error != nil {
+		if error == io.EOF {
+			return nil, np.MkErr(np.TErrEOF, "unmarshall")
+		}
+		return nil, np.MkErr(np.TErrError, error)
 	}
 	return &st, nil
 }

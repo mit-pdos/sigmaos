@@ -1,10 +1,12 @@
 package npcodec
 
 import (
+	"io"
+
 	np "ulambda/ninep"
 )
 
-func DirSize(dir []*np.Stat) np.Tlength {
+func MarshalSizeDir(dir []*np.Stat) np.Tlength {
 	sz := uint32(0)
 	for _, st := range dir {
 		sz += SizeNp(*st)
@@ -12,7 +14,7 @@ func DirSize(dir []*np.Stat) np.Tlength {
 	return np.Tlength(sz)
 }
 
-func Dir2Byte(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
+func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -35,16 +37,10 @@ func Dir2Byte(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 	return buf, n, nil
 }
 
-func Byte2Dir(data []byte) ([]*np.Stat, *np.Err) {
-	dirents := []*np.Stat{}
-	for len(data) > 0 {
-		st := np.Stat{}
-		if err := Unmarshal(data, &st); err != nil {
-			return dirents, err
-		}
-		dirents = append(dirents, &st)
-		sz := np.Tsize(SizeNp(st))
-		data = data[sz:]
+func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *np.Err) {
+	st := np.Stat{}
+	if err := unmarshalReader(rdr, &st); err != nil {
+		return nil, err
 	}
-	return dirents, nil
+	return &st, nil
 }

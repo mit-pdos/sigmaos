@@ -155,7 +155,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 		return dirents[i].Name < dirents[j].Name
 	})
 
-	d.sz = npcodec.DirSize(dirents)
+	d.sz = npcodec.MarshalSizeDir(dirents)
 	return dirents[cursor:], nil
 }
 

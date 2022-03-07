@@ -56,8 +56,7 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 	}
 	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	for {
-		de := &np.Stat{}
-		err := npcodec.UnmarshalReader(rdr, de)
+		de, err := npcodec.UnmarshalDirEnt(rdr)
 		if err != nil && np.IsErrEOF(err) {
 			break
 		}

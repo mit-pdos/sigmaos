@@ -17,10 +17,10 @@ import (
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
 
 func Unmarshal(data []byte, v interface{}) *np.Err {
-	return UnmarshalReader(bytes.NewReader(data), v)
+	return unmarshalReader(bytes.NewReader(data), v)
 }
 
-func UnmarshalReader(rdr io.Reader, v interface{}) *np.Err {
+func unmarshalReader(rdr io.Reader, v interface{}) *np.Err {
 	dec := &decoder{rdr}
 	return dec.decode(v)
 }

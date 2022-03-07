@@ -33,8 +33,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 	}
 	defer rdr.Close()
 	for {
-		st := &np.Stat{}
-		err := npcodec.UnmarshalReader(rdr, st)
+		st, err := npcodec.UnmarshalDirEnt(rdr)
 		if err != nil && np.IsErrEOF(err) {
 			break
 		}
@@ -57,8 +56,7 @@ func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
 	defer rdr.Close()
 	dirents := []*np.Stat{}
 	for {
-		st := &np.Stat{}
-		err := npcodec.UnmarshalReader(rdr, st)
+		st, err := npcodec.UnmarshalDirEnt(rdr)
 		if err != nil && np.IsErrEOF(err) {
 			break
 		}

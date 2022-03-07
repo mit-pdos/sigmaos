@@ -105,9 +105,9 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 	if err != nil {
 		return err
 	}
-	b, n, error := npcodec.Dir2Byte(count, dirents)
-	if error != nil {
-		return np.MkErr(np.TErrError, error)
+	b, n, err := npcodec.MarshalDir(count, dirents)
+	if err != nil {
+		return err
 	}
 	f.cursor += n
 	rets.Data = b

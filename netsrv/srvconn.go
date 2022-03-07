@@ -73,12 +73,9 @@ func (c *SrvConn) reader() {
 		}
 		var fcall *np.Fcall
 		if c.wireCompat {
-			fcallWC := &np.FcallWireCompat{}
-			err = npcodec.Unmarshal(frame, fcallWC)
-			fcall = fcallWC.ToInternal()
+			fcall, err = npcodec.UnmarshalFcallWireCompat(frame)
 		} else {
-			fcall = &np.Fcall{}
-			err = npcodec.Unmarshal(frame, fcall)
+			fcall, err = npcodec.UnmarshalFcall(frame)
 		}
 		if err != nil {
 			db.DLPrintf("NETSRV", "reader: bad fcall: ", err)
@@ -110,7 +107,7 @@ func (c *SrvConn) writer() {
 		} else {
 			writableFcall = fcall
 		}
-		if err := npcodec.MarshalFcallToWriter(writableFcall, c.bw); err != nil {
+		if err := npcodec.MarshalFcall(writableFcall, c.bw); err != nil {
 			db.DLPrintf("NETSRV", "writer err %v\n", err)
 			continue
 		}

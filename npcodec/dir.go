@@ -26,7 +26,7 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 		if cnt < sz {
 			break
 		}
-		b, err := Marshal(*st)
+		b, err := marshal(*st)
 		if err != nil {
 			return nil, n, err
 		}

@@ -1,7 +1,6 @@
 package npcodec
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -16,20 +15,11 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
 
-func Unmarshal(data []byte, v interface{}) *np.Err {
-	return unmarshalReader(bytes.NewReader(data), v)
+func marshal(v interface{}) ([]byte, *np.Err) {
+	return marshal1(false, v)
 }
 
-func unmarshalReader(rdr io.Reader, v interface{}) *np.Err {
-	dec := &decoder{rdr}
-	return dec.decode(v)
-}
-
-func Marshal(v interface{}) ([]byte, *np.Err) {
-	return marshal(false, v)
-}
-
-func marshal(bailOut bool, v interface{}) ([]byte, *np.Err) {
+func marshal1(bailOut bool, v interface{}) ([]byte, *np.Err) {
 	var b bytes.Buffer
 	enc := &encoder{bailOut, &b}
 	if err := enc.encode(v); err != nil {
@@ -38,41 +28,13 @@ func marshal(bailOut bool, v interface{}) ([]byte, *np.Err) {
 	return b.Bytes(), nil
 }
 
-func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
-	frame, error := marshal(true, fcall)
-	if error != nil {
-		return np.MkErr(np.TErrBadFcall, error.Error())
-	}
-	dataBuf := false
-	var data []byte
-	switch fcall.GetType() {
-	case np.TTwrite:
-		msg := fcall.GetMsg().(np.Twrite)
-		data = msg.Data
-		dataBuf = true
-	case np.TRread:
-		msg := fcall.GetMsg().(np.Rread)
-		data = msg.Data
-		dataBuf = true
-	case np.TRgetfile:
-		msg := fcall.GetMsg().(np.Rgetfile)
-		data = msg.Data
-		dataBuf = true
-	case np.TTsetfile:
-		msg := fcall.GetMsg().(np.Tsetfile)
-		data = msg.Data
-		dataBuf = true
-	case np.TTputfile:
-		msg := fcall.GetMsg().(np.Tputfile)
-		data = msg.Data
-		dataBuf = true
-	default:
-	}
-	if dataBuf {
-		return WriteFrameAndBuf(b, frame, data)
-	} else {
-		return WriteFrame(b, frame)
-	}
+func unmarshal(data []byte, v interface{}) *np.Err {
+	return unmarshalReader(bytes.NewReader(data), v)
+}
+
+func unmarshalReader(rdr io.Reader, v interface{}) *np.Err {
+	dec := &decoder{rdr}
+	return dec.decode(v)
 }
 
 type encoder struct {

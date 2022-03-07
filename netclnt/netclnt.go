@@ -304,7 +304,7 @@ func (nc *NetClnt) writer() {
 			nc.Close()
 			return
 		}
-		err = npcodec.MarshalFcallToWriter(rpc.req, bw)
+		err = npcodec.MarshalFcall(rpc.req, bw)
 		if err != nil {
 			if err.Code() == np.TErrBadFcall {
 				nc.mu.Lock()
@@ -373,8 +373,7 @@ func (nc *NetClnt) reader() {
 			nc.Close()
 			return
 		}
-		fcall := &np.Fcall{}
-		if err := npcodec.Unmarshal(frame, fcall); err != nil {
+		if fcall, err := npcodec.UnmarshalFcall(frame); err != nil {
 			db.DLPrintf("NETCLNT_ERR", "Reader: Unmarshal error %v\n", err)
 		} else {
 			rpc, ok := nc.lookupDel(fcall.Tag)

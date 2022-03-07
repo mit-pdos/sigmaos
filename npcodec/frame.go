@@ -1,6 +1,7 @@
 package npcodec
 
 import (
+	"bufio"
 	"encoding/binary"
 	"io"
 
@@ -62,4 +63,61 @@ func WriteFrameAndBuf(wr io.Writer, frame []byte, buf []byte) *np.Err {
 		return np.MkErr(np.TErrUnreachable, error.Error())
 	}
 	return WriteRawBuffer(wr, buf)
+}
+
+func UnmarshalFcall(frame []byte) (*np.Fcall, *np.Err) {
+	fcall := &np.Fcall{}
+	if err := unmarshal(frame, fcall); err != nil {
+		return nil, err
+	}
+	return fcall, nil
+}
+
+func UnmarshalFcallWireCompat(frame []byte) (*np.Fcall, *np.Err) {
+	fcallWC := &np.FcallWireCompat{}
+	if err := unmarshal(frame, fcallWC); err != nil {
+		return nil, err
+	}
+	return fcallWC.ToInternal(), nil
+}
+
+func MarshalFcall(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
+	frame, error := marshal1(true, fcall)
+	if error != nil {
+		return np.MkErr(np.TErrBadFcall, error.Error())
+	}
+	dataBuf := false
+	var data []byte
+	switch fcall.GetType() {
+	case np.TTwrite:
+		msg := fcall.GetMsg().(np.Twrite)
+		data = msg.Data
+		dataBuf = true
+	case np.TRread:
+		msg := fcall.GetMsg().(np.Rread)
+		data = msg.Data
+		dataBuf = true
+	case np.TRgetfile:
+		msg := fcall.GetMsg().(np.Rgetfile)
+		data = msg.Data
+		dataBuf = true
+	case np.TTsetfile:
+		msg := fcall.GetMsg().(np.Tsetfile)
+		data = msg.Data
+		dataBuf = true
+	case np.TTputfile:
+		msg := fcall.GetMsg().(np.Tputfile)
+		data = msg.Data
+		dataBuf = true
+	default:
+	}
+	if dataBuf {
+		return WriteFrameAndBuf(b, frame, data)
+	} else {
+		return WriteFrame(b, frame)
+	}
+}
+
+func MarshalFcallByte(fcall *np.Fcall) ([]byte, *np.Err) {
+	return marshal(fcall)
 }

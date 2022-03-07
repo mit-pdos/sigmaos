@@ -56,6 +56,8 @@ func Restore(pfn ProcessFn, b []byte) *ThreadMgrTable {
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal threadmgr in restore: %v, \n%v", err, string(b))
 	}
+	// List of ops currently executing.
+	executing := []*Op{}
 	for _, op := range opss {
 		fc := &np.Fcall{}
 		err1 := npcodec.Unmarshal(op.Fc, fc)
@@ -63,6 +65,13 @@ func Restore(pfn ProcessFn, b []byte) *ThreadMgrTable {
 			log.Fatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}
 		tm.executing[makeOp(fc, nil, op.N)] = true
+		executing = append(executing, makeOp(fc, nil, op.N))
 	}
+	// Make sure to chop off the last op (which will be the snapshot op).
+	executing = executing[:len(executing)-1]
+	tm.numops = uint64(len(executing))
+	// Preprend any pending ops to replay.
+	tm.ops = append(executing, tm.ops...)
+	tm.newOpCond.Signal()
 	return tmt
 }

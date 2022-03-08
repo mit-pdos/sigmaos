@@ -72,7 +72,7 @@ func (m *Mapper) initMapper() error {
 		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
 		m.fds[r], err = m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
-			return fmt.Errorf("%v: create %v err %v\n", proc.GetProgram(), oname, err)
+			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 		}
 	}
 	return nil
@@ -82,7 +82,7 @@ func (m *Mapper) closefds() error {
 	for r := 0; r < m.nreducetask; r++ {
 		err := m.fds[r].Close()
 		if err != nil {
-			return fmt.Errorf("%v: close %v err %v\n", proc.GetProgram(), m.fds[r], err)
+			return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.fds[r], err)
 		}
 	}
 	return nil
@@ -91,7 +91,7 @@ func (m *Mapper) closefds() error {
 func (m *Mapper) mapper(txt string) error {
 	kvs := m.mapf(m.input, txt)
 
-	// log.Printf("%v: Map %v: kvs = %v\n", proc.GetProgram(), m.input, kvs)
+	// log.Printf("%v: Map %v: kvs = %v\n", proc.GetName(), m.input, kvs)
 
 	// split
 	skvs := make([][]KeyValue, m.nreducetask)
@@ -103,7 +103,7 @@ func (m *Mapper) mapper(txt string) error {
 	for r := 0; r < m.nreducetask; r++ {
 		b, err := json.Marshal(skvs[r])
 		if err != nil {
-			fmt.Errorf("%v: marshal error %v", proc.GetProgram(), err)
+			fmt.Errorf("%v: marshal error %v", proc.GetName(), err)
 		}
 		lbuf := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutVarint(lbuf, int64(len(b)))
@@ -115,7 +115,7 @@ func (m *Mapper) mapper(txt string) error {
 		}
 		_, err = m.fds[r].Write(b)
 		if err != nil {
-			return fmt.Errorf("%v: write %v err %v\n", proc.GetProgram(), r, err)
+			return fmt.Errorf("%v: write %v err %v\n", proc.GetName(), r, err)
 		}
 	}
 	return nil
@@ -124,7 +124,7 @@ func (m *Mapper) mapper(txt string) error {
 func (m *Mapper) doMap() error {
 	b, err := m.GetFile(m.input)
 	if err != nil {
-		log.Fatalf("%v: read %v err %v", proc.GetProgram(), m.input, err)
+		log.Fatalf("%v: read %v err %v", proc.GetName(), m.input, err)
 	}
 	txt := string(b)
 	err = m.mapper(txt)
@@ -135,13 +135,13 @@ func (m *Mapper) doMap() error {
 	// Inform reducer where to find map output
 	st, err := m.Stat("name/ux/~ip")
 	if err != nil {
-		return fmt.Errorf("%v: stat %v err %v\n", proc.GetProgram(), "name/ux/~ip", err)
+		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), "name/ux/~ip", err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
 		fn := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
-			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetProgram(),
+			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(),
 				fn+m.rand, fn, err)
 		}
 
@@ -164,9 +164,9 @@ func (m *Mapper) doMap() error {
 				// If the reducer successfully completed, the reducer dir won't be found.
 				// In that case, we don't want to mark the mapper as "failed", since this
 				// will loop infinitely.
-				log.Printf("%v: symlink %v err %v\n", proc.GetProgram(), name, err)
+				log.Printf("%v: symlink %v err %v\n", proc.GetName(), name, err)
 			}
-			log.Fatalf("%v: FATA/L symlink %v err %v\n", proc.GetProgram(), name, err)
+			log.Fatalf("%v: FATA/L symlink %v err %v\n", proc.GetName(), name, err)
 		}
 	}
 	return nil

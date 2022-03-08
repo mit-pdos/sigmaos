@@ -92,7 +92,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	kva := []KeyValue{}
 	lostMaps := []string{}
 
-	log.Printf("%v: doReduce %v %v\n", proc.GetProgram(), r.input, r.output)
+	log.Printf("%v: doReduce %v %v\n", proc.GetName(), r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
@@ -107,7 +107,7 @@ func (r *Reducer) doReduce() *proc.Status {
 		return false, nil
 	})
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: ProcessDir %v err %v\n", proc.GetProgram(), r.input, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: ProcessDir %v err %v\n", proc.GetName(), r.input, err), nil)
 	}
 
 	if len(lostMaps) > 0 {
@@ -118,7 +118,7 @@ func (r *Reducer) doReduce() *proc.Status {
 
 	fd, err := r.Create(r.tmp, 0777, np.OWRITE)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: create %v err %v\n", proc.GetProgram(), r.tmp, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: create %v err %v\n", proc.GetName(), r.tmp, err), nil)
 	}
 	defer r.Close(fd)
 	i := 0
@@ -135,13 +135,13 @@ func (r *Reducer) doReduce() *proc.Status {
 		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
 		_, err = r.Write(fd, []byte(b))
 		if err != nil {
-			return proc.MakeStatusErr(fmt.Sprintf("%v: write %v err %v\n", proc.GetProgram(), r.tmp, err), nil)
+			return proc.MakeStatusErr(fmt.Sprintf("%v: write %v err %v\n", proc.GetName(), r.tmp, err), nil)
 		}
 		i = j
 	}
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetProgram(), r.tmp, r.output, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
 	}
 	return proc.MakeStatus(proc.StatusOK)
 }

@@ -238,7 +238,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
-			if np.IsErrEOF(err) {
+			if np.IsErrUnreachable(err) {
 				// we are disconnected
 				// log.Printf("%v: monitorMyself err %v\n", proc.GetName(), err)
 				ch <- true
@@ -268,7 +268,7 @@ func (bl *Balancer) restore(conf *Config) {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.N += 1
-	db.DLPrintf("KVBAL", "restore to %v\n", bl.conf)
+	db.DLPrintf("KVBAL0", "restore to %v\n", bl.conf)
 
 	// first republish next config, which the caller read into
 	// bl.conf, to obtain the kvconfig fence and bump its seqno.
@@ -331,7 +331,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			np.IsErrEOF(err)) {
+			np.IsErrUnreachable(err)) {
 			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
@@ -443,8 +443,6 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	default:
 	}
 
-	// log.Printf("%v: BAL conf %v next shards: %v\n", proc.GetName(), bl.conf, nextShards)
-
 	var moves Moves
 	if bl.conf.N == 0 {
 		bl.initShards(nextShards)
@@ -456,7 +454,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 
-	db.DLPrintf("KVBAL", "New config %v\n", bl.conf)
+	db.DLPrintf("KVBAL0", "New config %v\n", bl.conf)
 
 	// If balancer crashes, before here, we have the old
 	// KVNEXTCONFIG.  If the balancer crash after, we have the new

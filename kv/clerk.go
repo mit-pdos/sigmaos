@@ -228,8 +228,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 	if err != nil {
 		// try refreshing config is sufficient to fix error
 		if np.IsErrUnreachable(err) && strings.HasPrefix(np.ErrPath(err), KVCONF) ||
-			np.IsErrStale(err) ||
-			np.IsErrEOF(err) {
+			np.IsErrStale(err) {
 			err = kc.refreshConfig(err)
 		}
 	}

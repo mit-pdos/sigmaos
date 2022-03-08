@@ -14,9 +14,6 @@ func ReadFrame(rd io.Reader) ([]byte, *np.Err) {
 	var len uint32
 
 	if err := binary.Read(rd, binary.LittleEndian, &len); err != nil {
-		if err == io.EOF {
-			return nil, np.MkErr(np.TErrEOF, err)
-		}
 		return nil, np.MkErr(np.TErrUnreachable, err)
 	}
 	len = len - 4

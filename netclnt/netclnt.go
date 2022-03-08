@@ -355,7 +355,7 @@ func (nc *NetClnt) reader() {
 		// On connection error, retry
 		// XXX write in terms of np.Err?
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
-			db.DLPrintf("NETCLNT_ERR", "Reader: NetClnt error to %v\n", nc.Dst())
+			db.DLPrintf("NETCLNT_ERR", "Reader: NetClnt error %v to %v\n", err, nc.Dst())
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection
 			var error error

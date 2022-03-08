@@ -314,7 +314,6 @@ func (nc *NetClnt) writer() {
 				nc.mu.Unlock()
 			}
 			// Retry sends on network error
-			// if np.IsErrEOF(err) {
 			if err.Code() == np.TErrUnreachable && err.Obj == "EOF" {
 				db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error to %v\n", nc.Dst())
 				nc.resetConnection(br, bw)
@@ -353,8 +352,7 @@ func (nc *NetClnt) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(br)
 		// On connection error, retry
-		// XXX write in terms of np.Err?
-		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
+		if err != nil && err.Code() == np.TErrUnreachable && strings.Contains(err.Obj, "connection reset by peer") {
 			db.DLPrintf("NETCLNT_ERR", "Reader: NetClnt error %v to %v\n", err, nc.Dst())
 			nc.resetConnection(br, bw)
 			// Get the br for the latest connection

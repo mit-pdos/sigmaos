@@ -74,7 +74,7 @@ func MkWatchTable(sct *sesscond.SessCondTable) *WatchTable {
 }
 
 func (wt *WatchTable) allocWatch(path np.Path) *Watch {
-	p := path.Join()
+	p := path.String()
 
 	wt.Lock()
 	defer wt.Unlock()

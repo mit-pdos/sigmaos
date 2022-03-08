@@ -89,17 +89,17 @@ func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) (np.
 	if IsReplicated(target) {
 		servers, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = pathc.Attach(uname, servers, path.Join(), "")
+		fid, err = pathc.Attach(uname, servers, path.String(), "")
 	} else {
 		server, r := SplitTarget(target)
 		rest = r
-		fid, err = pathc.Attach(uname, []string{server}, path.Join(), "")
+		fid, err = pathc.Attach(uname, []string{server}, path.String(), "")
 	}
 	if err != nil {
 		db.DLPrintf("PATHCLNT", "Attach error: %v", err)
 		return nil, err
 	}
-	err = pathc.mount(fid, path.Join())
+	err = pathc.mount(fid, path.String())
 	if err != nil {
 		return nil, err
 	}

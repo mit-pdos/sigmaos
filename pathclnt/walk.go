@@ -83,7 +83,7 @@ func (pathc *PathClnt) walkPath(path np.Path, resolve bool, w Watch) (np.Tfid, n
 			// Note: fid can be the one returned by walkMount
 			return fid, nil, nil
 		}
-		return np.NoFid, left, np.MkErr(np.TErrNotfound, left.Join())
+		return np.NoFid, left, np.MkErr(np.TErrNotfound, left)
 	}
 	return np.NoFid, path, np.MkErr(np.TErrUnreachable, "too many symlink cycles")
 }
@@ -196,7 +196,7 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p np.Path, r np.Path, w Watch) (np.
 		err := pathc.FidClnt.Watch(fid1, r.Dir(), version)
 		pathc.FidClnt.Clunk(fid1)
 		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
-		w(p.Join(), err)
+		w(p.String(), err)
 	}(pathc.FidClnt.Lookup(fid1).Version())
 	return np.NoFid, nil
 }

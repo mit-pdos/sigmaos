@@ -194,11 +194,11 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	defer fos.wt.Release(ws)
 
 	if o.Nlink() == 0 {
-		return np.MkErr(np.TErrNotfound, f.Path().Join()).Rerror()
+		return np.MkErr(np.TErrNotfound, f.Path()).Rerror()
 	}
 	if !np.VEq(args.Version, o.Version()) {
 
-		return np.MkErr(np.TErrVersion, f.Path().Join()).Rerror()
+		return np.MkErr(np.TErrVersion, f.Path()).Rerror()
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
@@ -267,7 +267,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	o := f.Obj()
 	names := np.Path{args.Name}
 	if !o.Perm().IsDir() {
-		return np.MkErr(np.TErrNotDir, f.Path().Join()).Rerror()
+		return np.MkErr(np.TErrNotDir, f.Path()).Rerror()
 	}
 	d := o.(fs.Dir)
 	dws, fws := fos.AcquireWatches(f.Path(), names[0])

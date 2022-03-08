@@ -18,7 +18,7 @@ func Split(p string) Path {
 	return path
 }
 
-func (path Path) Join() string {
+func (path Path) String() string {
 	s := strings.Join(path, "/")
 	return s
 }

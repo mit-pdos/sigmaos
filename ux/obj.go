@@ -28,7 +28,7 @@ func makeObj(path np.Path, t np.Tperm, d *Dir) *Obj {
 }
 
 func (o *Obj) Path() string {
-	p := o.path.Join()
+	p := o.path.String()
 	if len(o.path) == 0 {
 		p = "."
 	}

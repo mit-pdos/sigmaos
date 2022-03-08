@@ -59,7 +59,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 
 // XXX close
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	p := d.path.Append(name).Join()
+	p := d.path.Append(name).String()
 	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
 	if perm.IsDir() {
 		error := os.Mkdir(p, os.FileMode(perm&0777))
@@ -83,7 +83,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 
 func (d *Dir) namei(ctx fs.CtxI, p np.Path, inodes []fs.FsObj) ([]fs.FsObj, np.Path, *np.Err) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
-	fi, error := os.Stat(d.path.Append(p[0]).Join())
+	fi, error := os.Stat(d.path.Append(p[0]).String())
 	if error != nil {
 		return inodes, nil, np.MkErr(np.TErrNotfound, p[0])
 	}
@@ -107,7 +107,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, np.Path, *np.Err) {
 	if len(p) == 0 {
 		return nil, nil, nil
 	}
-	fi, error := os.Stat(d.path.Join())
+	fi, error := os.Stat(d.path.String())
 	if error != nil {
 		return nil, nil, np.MkErrError(error)
 	}

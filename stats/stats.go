@@ -266,7 +266,7 @@ func (st *Stats) Path(path np.Path) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
-	p := path.Join()
+	p := path.String()
 	if _, ok := st.sti.Paths[p]; !ok {
 		st.sti.Paths[p] = 0
 	}

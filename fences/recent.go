@@ -27,7 +27,7 @@ func (rft *RecentTable) MkFence(path np.Path) np.Tfence {
 	rft.Lock()
 	defer rft.Unlock()
 
-	p := path.Join()
+	p := path.String()
 	if f, ok := rft.fences[p]; ok {
 		return f
 	}
@@ -45,7 +45,7 @@ func (rft *RecentTable) UpdateSeqno(path np.Path) {
 	rft.Lock()
 	defer rft.Unlock()
 
-	p := path.Join()
+	p := path.String()
 	// log.Printf("%v: UpdateSeqno: fence %v\n", db.GetName(), p)
 	if f, ok := rft.fences[p]; ok {
 		f.Seqno += 1

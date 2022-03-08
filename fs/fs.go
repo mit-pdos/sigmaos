@@ -52,7 +52,7 @@ type FsObj interface {
 func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {
 	switch i := o.(type) {
 	case Dir:
-		return nil, np.MkErr(np.TErrNotFile, fname.Join())
+		return nil, np.MkErr(np.TErrNotFile, fname)
 	case File:
 		return i, nil
 	default:

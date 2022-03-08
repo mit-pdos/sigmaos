@@ -73,7 +73,7 @@ func (ft *FenceTable) Insert(path np.Path, f np.Tfence) {
 	ft.Lock()
 	defer ft.Unlock()
 
-	pn := path.Join()
+	pn := path.String()
 	e, ok := ft.fencedDirs[pn]
 	if !ok {
 		e = makeEntry()
@@ -86,7 +86,7 @@ func (ft *FenceTable) Del(path np.Path, idf np.Tfenceid) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
-	pn := path.Join()
+	pn := path.String()
 	if e, ok := ft.fencedDirs[pn]; ok {
 		n, err := e.del(idf)
 		if err != nil {
@@ -104,7 +104,7 @@ func (ft *FenceTable) Present(path np.Path, idf np.Tfenceid) bool {
 	ft.Lock()
 	defer ft.Unlock()
 
-	pn := path.Join()
+	pn := path.String()
 	if e, ok := ft.fencedDirs[pn]; ok {
 		return e.present(idf)
 	}

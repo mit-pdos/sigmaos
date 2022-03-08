@@ -73,7 +73,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 }
 
 func (d *Dir) s3ReadDirL() *np.Err {
-	key := d.key.Join()
+	key := d.key.String()
 	maxKeys := 0
 	params := &s3.ListObjectsV2Input{
 		Bucket: &bucket,
@@ -187,7 +187,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		o1 := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
 		return o1, nil
 	}
-	key := d.key.Append(name).Join()
+	key := d.key.Append(name).String()
 	input := &s3.PutObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
@@ -213,7 +213,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
-	key := d.key.Join() + "/" + name
+	key := d.key.Append(name).String()
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &key,

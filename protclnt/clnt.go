@@ -40,7 +40,7 @@ func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, *np.Err) {
 }
 
 func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path np.Path) (*np.Rattach, *np.Err) {
-	args := np.Tattach{fid, np.NoFid, uname, path.Join()}
+	args := np.Tattach{fid, np.NoFid, uname, path.String()}
 	reply, err := clnt.CallServer(server, args)
 	if err != nil {
 		return nil, err

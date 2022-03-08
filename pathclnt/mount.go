@@ -39,7 +39,7 @@ func (mnt *MntTable) add(path np.Path, fid np.Tfid) *np.Err {
 	point := &Point{path, fid}
 	for i, p := range mnt.mounts {
 		if path.Eq(p.path) {
-			return np.MkErr(np.TErrExists, fmt.Sprintf("%v (mount)", p.path.Join()))
+			return np.MkErr(np.TErrExists, fmt.Sprintf("%v (mount)", p.path))
 		}
 		if len(path) > len(p.path) {
 			mnts := append([]*Point{point}, mnt.mounts[i:]...)
@@ -90,7 +90,7 @@ func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
 	defer mnt.Unlock()
 
 	if mnt.exited {
-		return np.NoFid, path, np.MkErr(np.TErrUnreachable, path.Join())
+		return np.NoFid, path, np.MkErr(np.TErrUnreachable, path)
 	}
 
 	for _, p := range mnt.mounts {
@@ -99,7 +99,7 @@ func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
 			return p.fid, left, nil
 		}
 	}
-	return np.NoFid, path, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path.Join()))
+	return np.NoFid, path, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 // XXX maybe also umount mount points that have path as a prefix
@@ -116,7 +116,7 @@ func (mnt *MntTable) umount(fidc *fidclnt.FidClnt, path np.Path) *np.Err {
 			return nil
 		}
 	}
-	return np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path.Join()))
+	return np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) close() error {

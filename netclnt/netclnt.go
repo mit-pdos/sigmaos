@@ -360,9 +360,7 @@ func (nc *NetClnt) reader() {
 		if err != nil {
 			if strings.Contains(err.Error(), "connection reset by peer") || err.Obj == "EOF" {
 				db.DLPrintf("NETCLNT", "Reader: NetClnt error to %v\n", nc.Dst())
-				log.Printf("%v reader reset ", proc.GetName())
 				nc.resetConnection(br, bw)
-				log.Printf("%v reader done reset ", proc.GetName())
 				// Get the br for the latest connection
 				br1, bw1, error := nc.getBufio()
 
@@ -379,7 +377,6 @@ func (nc *NetClnt) reader() {
 				continue
 			} else {
 				db.DLPrintf("NETCLNT", "Reader: ReadFrame error %v\n", err)
-				log.Printf("%v not an eof: %v", proc.GetName(), err)
 				nc.Close()
 				return
 			}

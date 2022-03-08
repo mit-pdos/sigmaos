@@ -23,12 +23,12 @@ func MakeConfigClnt(fsl *fslib.FsLib) *ConfigClnt {
 func (clnt *ConfigClnt) WatchConfig(path string) chan bool {
 	done := make(chan bool)
 	err := clnt.SetRemoveWatch(path, func(path string, err error) {
-		if err != nil && np.IsErrEOF(err) {
+		if err != nil && np.IsErrUnreachable(err) {
 			log.Fatalf("Error Watch in ConfigClnt.WatchConfig: %v", err)
 		}
 		done <- true
 	})
-	if err != nil && np.IsErrEOF(err) {
+	if err != nil && np.IsErrUnreachable(err) {
 		debug.PrintStack()
 		log.Fatalf("Error SetRemoveWatch in ConfigClnt.WatchConfig: %v", err)
 	}

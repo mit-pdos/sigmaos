@@ -74,7 +74,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fs
 		srv, err = makeReplServerFsl(root, addr, path, nil, nil, conf)
 	}
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, np.MkErrError(err)
 	}
 	// If this *was* the init named, we now need to init fsl
 	if isInitNamed {

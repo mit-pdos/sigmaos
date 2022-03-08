@@ -24,7 +24,7 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 	var sts []*np.Stat
 	dirents, err := ioutil.ReadDir(d.Path())
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, np.MkErrError(err)
 	}
 	for _, e := range dirents {
 		st := &np.Stat{}
@@ -64,14 +64,14 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if perm.IsDir() {
 		error := os.Mkdir(p, os.FileMode(perm&0777))
 		if error != nil {
-			return nil, np.MkErr(np.TErrError, error)
+			return nil, np.MkErrError(error)
 		}
 		d1 := makeDir(append(d.path, name), 0, d)
 		return d1, nil
 	} else {
 		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE, os.FileMode(perm&0777))
 		if error != nil {
-			return nil, np.MkErr(np.TErrError, error)
+			return nil, np.MkErrError(error)
 		}
 		f := makeFile(append(d.path, name), 0, d)
 		if file != nil {
@@ -109,7 +109,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
 	}
 	fi, error := os.Stat(np.Join(d.path))
 	if error != nil {
-		return nil, nil, np.MkErr(np.TErrError, error)
+		return nil, nil, np.MkErrError(error)
 	}
 	if !fi.IsDir() {
 		return nil, nil, np.MkErr(np.TErrNotDir, d.path)
@@ -129,7 +129,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
 	err := os.Remove(d.Path() + "/" + name)
 	if err != nil {
-		np.MkErr(np.TErrError, err)
+		np.MkErrError(err)
 	}
 	return nil
 }
@@ -141,7 +141,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	db.DLPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return np.MkErr(np.TErrError, err)
+		return np.MkErrError(err)
 	}
 	return nil
 }

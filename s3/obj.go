@@ -89,7 +89,7 @@ func (o *Obj) readHead() *np.Err {
 	}
 	result, err := o.fss3.client.HeadObject(context.TODO(), input)
 	if err != nil {
-		return np.MkErr(np.TErrError, err)
+		return np.MkErrError(err)
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -117,7 +117,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
 	}
 	result, err := o.fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, np.MkErrError(err)
 	}
 	// Check if contentRange, lists the length of the object, and perhaps
 	// update the length we know about.
@@ -165,7 +165,7 @@ func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([
 			break
 		}
 		if err != nil {
-			return nil, np.MkErr(np.TErrError, err)
+			return nil, np.MkErrError(err)
 		}
 	}
 	return b, nil
@@ -192,7 +192,7 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 	}
 	data, error := ioutil.ReadAll(r)
 	if error != nil {
-		return 0, np.MkErr(np.TErrError, error)
+		return 0, np.MkErrError(error)
 	}
 	if int(off) < len(data) { // prefix of data?
 		b1 := append(data[:off], b...)
@@ -214,7 +214,7 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 	}
 	_, error = o.fss3.client.PutObject(context.TODO(), input)
 	if error != nil {
-		return 0, np.MkErr(np.TErrError, error)
+		return 0, np.MkErrError(error)
 	}
 	return np.Tsize(len(b)), nil
 }

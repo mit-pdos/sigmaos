@@ -38,7 +38,7 @@ type Query struct {
 func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	db, error := sql.Open("mysql", "sigma:sigmaos@/books")
 	if error != nil {
-		return nil, np.MkErr(np.TErrError, error)
+		return nil, np.MkErrError(error)
 	}
 	error = db.Ping()
 	if error != nil {
@@ -88,7 +88,7 @@ func (s *Session) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (
 func (q *Query) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	rows, err := q.db.Query(string(b))
 	if err != nil {
-		return 0, np.MkErr(np.TErrError, err)
+		return 0, np.MkErrError(err)
 	}
 	q.rows = rows
 	return np.Tsize(len(b)), nil
@@ -102,7 +102,7 @@ func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 	defer q.rows.Close()
 	columns, err := q.rows.Columns()
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, np.MkErrError(err)
 	}
 	count := len(columns)
 	table := make([]map[string]interface{}, 0)
@@ -132,7 +132,7 @@ func (q *Query) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) 
 		np.MkErr(np.TErrInval, "too large")
 	}
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, np.MkErrError(err)
 	}
 	return b, nil
 }

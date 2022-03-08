@@ -194,7 +194,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 	_, err := d.fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, np.MkErrError(err)
 	}
 	// XXX ignored perm, only files not directories
 	d.mu.Lock()
@@ -220,7 +220,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	}
 	_, err := d.fss3.client.DeleteObject(context.TODO(), input)
 	if err != nil {
-		return np.MkErr(np.TErrError, err)
+		return np.MkErrError(err)
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()

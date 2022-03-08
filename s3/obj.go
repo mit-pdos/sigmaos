@@ -30,12 +30,12 @@ type Obj struct {
 	*inode.Inode
 	mu     sync.Mutex
 	fss3   *Fss3
-	key    []string
+	key    np.Path
 	sz     np.Tlength
 	isRead bool
 }
 
-func (fss3 *Fss3) makeObj(key []string, t np.Tperm, d *Dir) fs.FsObj {
+func (fss3 *Fss3) makeObj(key np.Path, t np.Tperm, d *Dir) fs.FsObj {
 	o := &Obj{}
 	o.Inode = inode.MakeInode(nil, t, d)
 	o.fss3 = fss3
@@ -82,7 +82,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 }
 
 func (o *Obj) readHead() *np.Err {
-	key := np.Join(o.key)
+	key := o.key.Join()
 	input := &s3.HeadObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
@@ -103,7 +103,7 @@ func (o *Obj) readHead() *np.Err {
 // Read object from s3. If off == -1, read whole object; otherwise,
 // read a region.
 func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
-	key := np.Join(o.key)
+	key := o.key.Join()
 	region := ""
 	if off != -1 {
 		n := off + cnt
@@ -185,7 +185,7 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
 func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	db.DLPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
-	key := np.Join(o.key)
+	key := o.key.Join()
 	r, err := o.s3Read(-1, 0)
 	if err != nil {
 		return 0, err

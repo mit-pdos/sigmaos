@@ -114,11 +114,11 @@ func (pathc *PathClnt) Mount(fid np.Tfid, path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Create(path string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
-	db.DLPrintf("PATHCLNT", "Create %v perm %v\n", path, perm)
-	p := np.Split(path)
-	dir := np.Dir(p)
-	base := np.Base(p)
+func (pathc *PathClnt) Create(p string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
+	db.DLPrintf("PATHCLNT", "Create %v perm %v\n", p, perm)
+	path := np.Split(p)
+	dir := path.Dir()
+	base := path.Base()
 	fid, err := pathc.walkPathUmount(dir, true, nil)
 	if err != nil {
 		return np.NoFid, err
@@ -379,8 +379,8 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
 		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
-			dir := np.Dir(p)
-			base := []string{np.Base(p)}
+			dir := p.Dir()
+			base := np.Path{p.Base()}
 			fid, err = pathc.walkPathUmount(dir, true, nil)
 			if err != nil {
 				return 0, err

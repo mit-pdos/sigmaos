@@ -262,15 +262,15 @@ func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) (
 	return b, nil
 }
 
-func (st *Stats) Path(p []string) {
+func (st *Stats) Path(path np.Path) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
-	path := np.Join(p)
-	if _, ok := st.sti.Paths[path]; !ok {
-		st.sti.Paths[path] = 0
+	p := path.Join()
+	if _, ok := st.sti.Paths[p]; !ok {
+		st.sti.Paths[p] = 0
 	}
-	st.sti.Paths[path] += 1
+	st.sti.Paths[p] += 1
 }
 
 type pair struct {

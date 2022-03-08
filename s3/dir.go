@@ -19,7 +19,7 @@ type Dir struct {
 	dirents map[string]fs.FsObj
 }
 
-func (fss3 *Fss3) makeDir(key []string, t np.Tperm, p *Dir) *Dir {
+func (fss3 *Fss3) makeDir(key np.Path, t np.Tperm, p *Dir) *Dir {
 	o := fss3.makeObj(key, t, p)
 	dir := &Dir{}
 	dir.Obj = o.(*Obj)
@@ -73,7 +73,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 }
 
 func (d *Dir) s3ReadDirL() *np.Err {
-	key := np.Join(d.key)
+	key := d.key.Join()
 	maxKeys := 0
 	params := &s3.ListObjectsV2Input{
 		Bucket: &bucket,
@@ -108,7 +108,7 @@ func (d *Dir) s3ReadDirL() *np.Err {
 	return nil
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []string, *np.Err) {
+func (d *Dir) namei(ctx fs.CtxI, p np.Path, inodes []fs.FsObj) ([]fs.FsObj, np.Path, *np.Err) {
 	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
 	if err != nil {
 		return nil, nil, err
@@ -125,7 +125,7 @@ func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []s
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
+func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, np.Path, *np.Err) {
 	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil
@@ -187,7 +187,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		o1 := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
 		return o1, nil
 	}
-	key := np.Join(append(d.key, name))
+	key := d.key.Append(name).Join()
 	input := &s3.PutObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
@@ -213,7 +213,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
-	key := np.Join(d.key) + "/" + name
+	key := d.key.Join() + "/" + name
 	input := &s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &key,

@@ -30,7 +30,7 @@ type Fss3 struct {
 
 func RunFss3() {
 	fss3 := &Fss3{}
-	root := fss3.makeDir([]string{}, np.DMDIR, nil)
+	root := fss3.makeDir(np.Path{}, np.DMDIR, nil)
 	fsl := fslib.MakeFsLib("fss3d")
 	pclnt := procclnt.MakeProcClnt(fsl)
 	srv, err := fslibsrv.MakeSrv(root, np.S3, fsl, pclnt)

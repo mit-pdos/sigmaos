@@ -12,7 +12,7 @@ import (
 
 type Fid struct {
 	mu     sync.Mutex
-	path   []string
+	path   np.Path
 	obj    fs.FsObj
 	isOpen bool
 	m      np.Tmode
@@ -21,7 +21,7 @@ type Fid struct {
 	cursor int // for directories
 }
 
-func MakeFidPath(p []string, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
+func MakeFidPath(p np.Path, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
 	return &Fid{sync.Mutex{}, p, o, false, m, o.Version(), ctx, 0}
 }
 
@@ -46,21 +46,20 @@ func (f *Fid) IsOpen() bool {
 	return f.isOpen
 }
 
-func (f *Fid) Path() []string {
+func (f *Fid) Path() np.Path {
 	return f.path
 }
 
-func (f *Fid) SetPath(p []string) {
-	f.path = p
-
+func (f *Fid) SetPath(path np.Path) {
+	f.path = path
 }
 
-func (f *Fid) PathLast() string {
-	return np.Base(f.path)
+func (f *Fid) PathBase() string {
+	return f.path.Base()
 }
 
-func (f *Fid) PathDir() []string {
-	return np.Dir(f.path)
+func (f *Fid) PathDir() np.Path {
+	return f.path.Dir()
 }
 
 func (f *Fid) ObjU() fs.FsObj {

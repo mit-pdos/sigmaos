@@ -113,7 +113,7 @@ func (dir *DirImpl) Size() np.Tlength {
 	return npcodec.MarshalSizeDir(dir.lsL(0))
 }
 
-func (dir *DirImpl) namei(ctx fs.CtxI, path []string, inodes []fs.FsObj) ([]fs.FsObj, []string, *np.Err) {
+func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, inodes []fs.FsObj) ([]fs.FsObj, np.Path, *np.Err) {
 	var inode fs.FsObj
 	var err *np.Err
 
@@ -188,7 +188,7 @@ func (dir *DirImpl) remove(name string) *np.Err {
 	return dir.unlinkL(name)
 }
 
-func (dir *DirImpl) Lookup(ctx fs.CtxI, path []string) ([]fs.FsObj, []string, *np.Err) {
+func (dir *DirImpl) Lookup(ctx fs.CtxI, path np.Path) ([]fs.FsObj, np.Path, *np.Err) {
 	if len(path) == 0 {
 		return nil, nil, nil
 	}

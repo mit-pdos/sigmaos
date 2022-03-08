@@ -14,7 +14,7 @@ type Dir struct {
 	*Obj
 }
 
-func makeDir(path []string, t np.Tperm, p *Dir) *Dir {
+func makeDir(path np.Path, t np.Tperm, p *Dir) *Dir {
 	d := &Dir{}
 	d.Obj = makeObj(path, t, p)
 	return d
@@ -59,7 +59,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 
 // XXX close
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	p := np.Join(append(d.path, name))
+	p := d.path.Append(name).Join()
 	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
 	if perm.IsDir() {
 		error := os.Mkdir(p, os.FileMode(perm&0777))
@@ -81,9 +81,9 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []string, *np.Err) {
+func (d *Dir) namei(ctx fs.CtxI, p np.Path, inodes []fs.FsObj) ([]fs.FsObj, np.Path, *np.Err) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
-	fi, error := os.Stat(np.Join(append(d.path, p[0])))
+	fi, error := os.Stat(d.path.Append(p[0]).Join())
 	if error != nil {
 		return inodes, nil, np.MkErr(np.TErrNotfound, p[0])
 	}
@@ -102,12 +102,12 @@ func (d *Dir) namei(ctx fs.CtxI, p []string, inodes []fs.FsObj) ([]fs.FsObj, []s
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p []string) ([]fs.FsObj, []string, *np.Err) {
+func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, np.Path, *np.Err) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil
 	}
-	fi, error := os.Stat(np.Join(d.path))
+	fi, error := os.Stat(d.path.Join())
 	if error != nil {
 		return nil, nil, np.MkErrError(error)
 	}

@@ -97,16 +97,16 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
-func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names []string) ([]fs.FsObj, []string, *np.Err) {
+func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, np.Path, *np.Err) {
 	o := f.Obj()
 	if !o.Perm().IsDir() {
-		return nil, nil, np.MkErr(np.TErrNotDir, np.Base(f.Path()))
+		return nil, nil, np.MkErr(np.TErrNotDir, f.Path().Base())
 	}
 	d := o.(fs.Dir)
 	return d.Lookup(ctx, names)
 }
 
-func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names []string, resolve bool) (fs.FsObj, *np.Err) {
+func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
 	os, _, err := fos.lookupObj(ctx, f, names)
 	if err != nil {
 		return nil, err
@@ -194,11 +194,11 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	defer fos.wt.Release(ws)
 
 	if o.Nlink() == 0 {
-		return np.MkErr(np.TErrNotfound, np.Join(f.Path())).Rerror()
+		return np.MkErr(np.TErrNotfound, f.Path().Join()).Rerror()
 	}
 	if !np.VEq(args.Version, o.Version()) {
 
-		return np.MkErr(np.TErrVersion, np.Join(f.Path())).Rerror()
+		return np.MkErr(np.TErrVersion, f.Path().Join()).Rerror()
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
@@ -209,8 +209,8 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir []string, name string, o fs.FsObj, eph bool) *fid.Fid {
-	p := np.Copy(dir)
+func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, eph bool) *fid.Fid {
+	p := dir.Copy()
 	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
 	if eph {
 		fos.et.Add(o, nf)
@@ -244,7 +244,7 @@ func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, nam
 	}
 }
 
-func (fos *FsObjSrv) AcquireWatches(dir []string, file string) (*watch.Watch, *watch.Watch) {
+func (fos *FsObjSrv) AcquireWatches(dir np.Path, file string) (*watch.Watch, *watch.Watch) {
 	dws := fos.wt.WatchLookupL(dir)
 	fws := fos.wt.WatchLookupL(append(dir, file))
 	return dws, fws
@@ -265,9 +265,9 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return err.Rerror()
 	}
 	o := f.Obj()
-	names := []string{args.Name}
+	names := np.Path{args.Name}
 	if !o.Perm().IsDir() {
-		return np.MkErr(np.TErrNotDir, np.Join(f.Path())).Rerror()
+		return np.MkErr(np.TErrNotDir, f.Path().Join()).Rerror()
 	}
 	d := o.(fs.Dir)
 	dws, fws := fos.AcquireWatches(f.Path(), names[0])
@@ -323,18 +323,18 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path []string) *np.Rerror {
+func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 	// lock watch entry to make WatchV and Remove interact
 	// correctly
 
-	dws := fos.wt.WatchLookupL(np.Dir(path))
+	dws := fos.wt.WatchLookupL(path.Dir())
 	fws := fos.wt.WatchLookupL(path)
 	defer fos.wt.Release(dws)
 	defer fos.wt.Release(fws)
 
 	fos.stats.Path(path)
 
-	db.DLPrintf("FSOBJ", "%v: remove %v in %v\n", ctx.Uname(), path, np.Dir(path))
+	db.DLPrintf("FSOBJ", "%v: remove %v in %v\n", ctx.Uname(), path, path.Dir())
 
 	err := o.Parent().Remove(ctx, path[len(path)-1])
 	if err != nil {
@@ -398,7 +398,7 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 			return err.Rerror()
 		}
 
-		dst := append(np.Copy(f.PathDir()), np.Split(args.Stat.Name)...)
+		dst := f.PathDir().Copy().AppendPath(np.Split(args.Stat.Name))
 
 		dws := fos.wt.WatchLookupL(f.PathDir())
 		defer fos.wt.Release(dws)
@@ -407,7 +407,7 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		tws := fos.wt.WatchLookupL(dst)
 		defer fos.wt.Release(tws)
 
-		err := o.Parent().Rename(f.Ctx(), f.PathLast(), args.Stat.Name)
+		err := o.Parent().Rename(f.Ctx(), f.PathBase(), args.Stat.Name)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -467,8 +467,8 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		defer fos.wt.Release(d1ws)
 		defer fos.wt.Release(d2ws)
 
-		src := append(np.Copy(oldf.Path()), args.OldName)
-		dst := append(np.Copy(newf.Path()), args.NewName)
+		src := oldf.Path().Copy().Append(args.OldName)
+		dst := newf.Path().Copy().Append(args.NewName)
 		srcws := fos.wt.WatchLookupL(src)
 		dstws := fos.wt.WatchLookupL(dst)
 		defer fos.wt.Release(srcws)
@@ -497,7 +497,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 // args.Wnames.
 //
 
-func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string, resolve bool) (*fid.Fid, []string, fs.FsObj, *np.Err) {
+func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames np.Path, resolve bool) (*fid.Fid, np.Path, fs.FsObj, *np.Err) {
 	f, err := fos.ft.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
@@ -516,7 +516,7 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames []string, resolve bool)
 	return f, fname, lo, nil
 }
 
-func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames []string, resolve bool, mode np.Tmode) (fs.CtxI, []string, fs.File, *np.Err) {
+func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (fs.CtxI, np.Path, fs.File, *np.Err) {
 	f, fname, lo, err := fos.lookupWalkFence(fid, wnames, resolve)
 	if err != nil {
 		return nil, nil, nil, err

@@ -75,7 +75,7 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 			break
 		}
 		if err != nil {
-			log.Fatal("%v: ReadVarint err %v", proc.GetName(), err)
+			log.Fatalf("%v: ReadVarint err %v", proc.GetName(), err)
 		}
 		data := make([]byte, sz)
 		l, err := rdr.Read(data)
@@ -103,7 +103,7 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 		n += 1
 	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest %v %v %v %v %v", proc.GetName(), ntest, n, kv.Key(i), rdr.Path())
+		return fmt.Errorf("%v: wrong ntest %v %v %v %v", proc.GetName(), ntest, n, kv.Key(i), rdr.Path())
 	}
 	return nil
 }

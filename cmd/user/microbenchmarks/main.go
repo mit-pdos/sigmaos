@@ -41,6 +41,6 @@ func main() {
 	}
 
 	if err := ioutil.WriteFile(fpath, b, 0666); err != nil {
-		log.Fatal("Error WriteFile in microbenchmarks.main: %v", err)
+		log.Fatalf("Error WriteFile in microbenchmarks.main: %v", err)
 	}
 }

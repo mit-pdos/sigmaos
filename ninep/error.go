@@ -46,7 +46,6 @@ const (
 	TErrInvalidSession
 	TErrExists
 	TErrClosed // for pipes
-	TErrEOF    // EOF or cannot connect   (Unreachable)
 	TErrBadFcall
 	TErrRetry
 	TErrError // to propagate non-sigma errors
@@ -124,11 +123,9 @@ func (err Terror) String() string {
 		return "invalid session"
 	case TErrExists:
 		return "exists"
-	case TErrEOF:
-		return "EOF"
 	case TErrBadFcall:
 		return "bad fcall"
-	case TErrError:
+	case TErrError: // to pass error through
 		return "Error"
 
 	// sigma OS errors
@@ -145,15 +142,22 @@ func (err Terror) String() string {
 type Err struct {
 	ErrCode Terror
 	Obj     string
+	Err     error
 }
 
 func MkErr(err Terror, obj interface{}) *Err {
-	return &Err{err, fmt.Sprintf("%v", obj)}
+	return &Err{err, fmt.Sprintf("%v", obj), nil}
+}
+
+func MkErrError(error error) *Err {
+	return &Err{TErrError, "", error}
 }
 
 func (err *Err) Code() Terror {
 	return err.ErrCode
 }
+
+func (err *Err) Unwrap() error { return err.Err }
 
 func (err *Err) Error() string {
 	return fmt.Sprintf("%v %v", err.ErrCode, err.Obj)
@@ -206,10 +210,6 @@ func IsErrExists(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrExists.String())
 }
 
-func IsErrEOF(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrEOF.String())
-}
-
 func IsErrStale(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrStale.String())
 }
@@ -232,7 +232,7 @@ func IsErrUnionElem(error error) bool {
 }
 
 func String2Err(error string) *Err {
-	err := &Err{TErrError, error}
+	err := &Err{TErrError, error, nil}
 	for c := TErrBadattach; c <= TErrError; c++ {
 		if strings.HasPrefix(error, c.String()) {
 			err.ErrCode = c

@@ -1,10 +1,17 @@
 package ninep
 
 import (
+	"errors"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestEOF(t *testing.T) {
+	err := MkErrError(io.EOF)
+	assert.True(t, errors.Is(err, io.EOF))
+}
 
 func TestString(t *testing.T) {
 	qt := Qtype(QTSYMLINK | QTTMP)

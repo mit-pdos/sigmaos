@@ -1,7 +1,9 @@
 package fslib
 
 import (
+	"errors"
 	"fmt"
+	"io"
 
 	np "ulambda/ninep"
 	"ulambda/npcodec"
@@ -34,7 +36,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 	defer rdr.Close()
 	for {
 		st, err := npcodec.UnmarshalDirEnt(rdr)
-		if err != nil && np.IsErrEOF(err) {
+		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -45,7 +47,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 			return true, error
 		}
 	}
-	return false, err
+	return false, nil
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
@@ -57,7 +59,7 @@ func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
 	dirents := []*np.Stat{}
 	for {
 		st, err := npcodec.UnmarshalDirEnt(rdr)
-		if err != nil && np.IsErrEOF(err) {
+		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

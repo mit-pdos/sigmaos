@@ -58,10 +58,10 @@ func TestConnect(t *testing.T) {
 	log.Printf("disconnected\n")
 
 	_, err = ts.Write(fd, d)
-	assert.True(t, np.IsErrEOF(err))
+	assert.True(t, np.IsErrUnreachable(err))
 
 	err = ts.Close(fd)
-	assert.True(t, np.IsErrEOF(err))
+	assert.True(t, np.IsErrUnreachable(err))
 
 	fd, err = ts.Open(fn, np.OREAD)
 	assert.True(t, np.IsErrUnreachable(err))

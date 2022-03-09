@@ -66,6 +66,7 @@ func (rc *ReplyCache) Register(request *np.Fcall) {
 func (rc *ReplyCache) Put(request *np.Fcall, reply *np.Fcall) {
 	rc.Lock()
 	defer rc.Unlock()
+
 	rc.entries[request.Session][request.Seqno].Complete(reply)
 }
 
@@ -74,6 +75,7 @@ func (rc *ReplyCache) Put(request *np.Fcall, reply *np.Fcall) {
 func (rc *ReplyCache) Get(request *np.Fcall) (*ReplyFuture, bool) {
 	rc.Lock()
 	defer rc.Unlock()
+
 	if sessionMap, ok := rc.entries[request.Session]; !ok {
 		return nil, false
 	} else {

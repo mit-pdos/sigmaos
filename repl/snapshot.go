@@ -54,11 +54,11 @@ func Restore(b []byte) *ReplyCache {
 				}
 			}
 
-			rf := MakeReplyFuture()
-			if fc != nil {
+			if len(b) > 0 {
+				rf := MakeReplyFuture()
 				rf.Complete(fc)
+				rc.entries[sess][seqno] = rf
 			}
-			rc.entries[sess][seqno] = rf
 		}
 	}
 	return rc

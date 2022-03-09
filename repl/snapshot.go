@@ -47,7 +47,7 @@ func Restore(b []byte) *ReplyCache {
 			}
 
 			fc, err1 := npcodec.UnmarshalFcall(b)
-			if err1 != nil {
+			if len(b) != 0 && err1 != nil {
 				log.Fatalf("FATAL Error unmarshal np.Fcall in ReplyCache.Restore: %v, %v", err1, string(b))
 			}
 

@@ -40,7 +40,7 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 	sort.SliceStable(sts, func(i, j int) bool {
 		return sts[i].Name < sts[j].Name
 	})
-	db.DLPrintf("UXD", "%v: uxReadDir %v\n", d, sts)
+	db.DLPrintf("UXD", "%v: uxReadDir %v\n", d, len(sts)-cursor)
 	if cursor > len(sts) {
 		return nil, nil
 	} else {
@@ -57,7 +57,6 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	return dirents, nil
 }
 
-// XXX close
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	p := d.path.Append(name).String()
 	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)

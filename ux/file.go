@@ -30,6 +30,15 @@ func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return nil, nil
 }
 
+func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
+	db.DLPrintf("UXD", "%v: Close fd for path %v\n", ctx, f.Path())
+	err := f.file.Close()
+	if err != nil {
+		return np.MkErr(np.TErrError, err)
+	}
+	return nil
+}
+
 func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 	db.DLPrintf("UXD", "%v: WriteFile: off %v cnt %v %v\n", f, off, len(b), f.file)
 	_, err := f.file.Seek(off, 0)

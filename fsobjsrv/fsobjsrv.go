@@ -145,9 +145,8 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "%v: Clunk %v\n", f.Ctx().Uname(), f)
-	o := f.Obj()
 	if f.IsOpen() { // has the fid been opened?
-		o.Close(f.Ctx(), f.Mode())
+		f.Obj().Close(f.Ctx(), f.Mode())
 		f.Close()
 	}
 	fos.ft.Del(args.Fid)
@@ -516,7 +515,7 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames np.Path, resolve bool) 
 	return f, fname, lo, nil
 }
 
-func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (fs.CtxI, np.Path, fs.File, *np.Err) {
+func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.File, *np.Err) {
 	f, fname, lo, err := fos.lookupWalkFence(fid, wnames, resolve)
 	if err != nil {
 		return nil, nil, nil, err
@@ -531,9 +530,10 @@ func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames np.Path, resolve bo
 	}
 	i, err := fs.Obj2File(lo, fname)
 	if err != nil {
+		lo.Close(f.Ctx(), mode)
 		return nil, nil, nil, err
 	}
-	return f.Ctx(), fname, i, nil
+	return f, fname, i, nil
 }
 
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
@@ -549,13 +549,16 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if args.Count > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", ctx, args, fname)
-	rets.Data, err = i.Read(ctx, args.Offset, args.Count, np.NoV)
+	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", f.Ctx(), args, fname)
+	rets.Data, err = i.Read(f.Ctx(), args.Offset, args.Count, np.NoV)
 	if err != nil {
+		return err.Rerror()
+	}
+	if err := f.Obj().Close(f.Ctx(), args.Mode); err != nil {
 		return err.Rerror()
 	}
 	return nil
@@ -565,12 +568,15 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	ctx, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
-	n, err := i.Write(ctx, args.Offset, args.Data, np.NoV)
+	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 	if err != nil {
+		return err.Rerror()
+	}
+	if err := f.Obj().Close(f.Ctx(), args.Mode); err != nil {
 		return err.Rerror()
 	}
 	rets.Count = n
@@ -608,6 +614,10 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
+	if err != nil {
+		return err.Rerror()
+	}
+	err = lo.Close(f.Ctx(), args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}

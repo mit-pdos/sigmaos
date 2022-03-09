@@ -18,7 +18,7 @@ import (
 )
 
 func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) *fssrv.FsServer {
-	srv := fssrv.MakeFsServer(root, addr, fsl, fos.MakeProtServer, pclnt, config)
+	srv := fssrv.MakeFsServer(root, addr, fsl, fos.MakeProtServer, fos.Restore, pclnt, config)
 	return srv
 }
 

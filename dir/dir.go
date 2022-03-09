@@ -359,3 +359,11 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
 	err = dir.remove(n)
 	return err
 }
+
+func (dir *DirImpl) Snapshot(fn fs.SnapshotF) []byte {
+	return makeDirSnapshot(fn, dir)
+}
+
+func Restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.FsObj {
+	return restore(d, fn, b)
+}

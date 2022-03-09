@@ -31,16 +31,16 @@ type cond struct {
 // re-acquires before returning out of Wait().
 type SessCond struct {
 	lock        sync.Locker
-	st          *session.SessionTable
+	sct         *SessCondTable
 	nref        int // under sct lock
 	conds       map[np.Tsession][]*cond
 	wakingConds map[np.Tsession]map[*cond]bool // Conds pending wakeup (which also may need to be alerted that the session has closed)
 }
 
-func makeSessCond(st *session.SessionTable, lock sync.Locker) *SessCond {
+func makeSessCond(sct *SessCondTable, lock sync.Locker) *SessCond {
 	sc := &SessCond{}
+	sc.sct = sct
 	sc.lock = lock
-	sc.st = st
 	sc.conds = make(map[np.Tsession][]*cond)
 	sc.wakingConds = make(map[np.Tsession]map[*cond]bool)
 	return sc
@@ -51,7 +51,7 @@ func (sc *SessCond) alloc(sessid np.Tsession) *cond {
 		sc.conds[sessid] = []*cond{}
 	}
 	c := &cond{}
-	c.threadmgr = sc.st.SessThread(sessid)
+	c.threadmgr = sc.sct.St.SessThread(sessid)
 	c.c = sync.NewCond(sc.lock)
 	sc.conds[sessid] = append(sc.conds[sessid], c)
 	return c
@@ -143,14 +143,14 @@ type SessCondTable struct {
 	//	deadlock.Mutex
 	sync.Mutex
 	conds  map[*SessCond]bool
-	st     *session.SessionTable
+	St     *session.SessionTable
 	closed bool
 }
 
 func MakeSessCondTable(st *session.SessionTable) *SessCondTable {
 	t := &SessCondTable{}
 	t.conds = make(map[*SessCond]bool)
-	t.st = st
+	t.St = st
 	return t
 }
 
@@ -158,7 +158,7 @@ func (sct *SessCondTable) MakeSessCond(lock sync.Locker) *SessCond {
 	sct.Lock()
 	defer sct.Unlock()
 
-	sc := makeSessCond(sct.st, lock)
+	sc := makeSessCond(sct, lock)
 	sct.conds[sc] = true
 	sc.nref++
 	return sc

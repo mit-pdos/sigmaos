@@ -2,6 +2,7 @@ package memfs
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	// "errors"
 
@@ -193,5 +194,10 @@ func (pipe *Pipe) Unlink(ctx fs.CtxI) *np.Err {
 	pipe.DecNlink()
 	pipe.condw.Signal()
 	pipe.condr.Signal()
+	return nil
+}
+
+func (pipe *Pipe) Snapshot(fn fs.SnapshotF) []byte {
+	log.Fatalf("FATAL tried to snapshot pipe")
 	return nil
 }

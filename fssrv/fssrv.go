@@ -2,9 +2,11 @@ package fssrv
 
 import (
 	"log"
+	"reflect"
 	"runtime/debug"
 
 	"ulambda/ctx"
+	"ulambda/dir"
 	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -14,9 +16,9 @@ import (
 	"ulambda/procclnt"
 	"ulambda/protsrv"
 	"ulambda/repl"
-	"ulambda/replraft"
 	"ulambda/sesscond"
 	"ulambda/session"
+	"ulambda/snapshot"
 	"ulambda/stats"
 	"ulambda/threadmgr"
 	"ulambda/watch"
@@ -33,43 +35,50 @@ import (
 //
 
 type FsServer struct {
-	addr    string
-	root    fs.Dir
-	mkps    protsrv.MkProtServer
-	stats   *stats.Stats
-	st      *session.SessionTable
-	sct     *sesscond.SessCondTable
-	tm      *threadmgr.ThreadMgrTable
-	wt      *watch.WatchTable
-	rft     *fences.RecentTable
-	srv     *netsrv.NetServer
-	replSrv repl.Server
-	rc      *repl.ReplyCache
-	pclnt   *procclnt.ProcClnt
-	done    bool
-	ch      chan bool
-	fsl     *fslib.FsLib
+	addr       string
+	root       fs.Dir
+	mkps       protsrv.MkProtServer
+	rps        protsrv.RestoreProtServer
+	stats      *stats.Stats
+	snapDev    *snapshot.Dev
+	st         *session.SessionTable
+	sct        *sesscond.SessCondTable
+	tmt        *threadmgr.ThreadMgrTable
+	wt         *watch.WatchTable
+	rft        *fences.RecentTable
+	srv        *netsrv.NetServer
+	replSrv    repl.Server
+	rc         *repl.ReplyCache
+	pclnt      *procclnt.ProcClnt
+	snap       *snapshot.Snapshot
+	done       bool
+	replicated bool
+	ch         chan bool
+	fsl        *fslib.FsLib
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
-	mkps protsrv.MkProtServer, pclnt *procclnt.ProcClnt,
+	mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
+	fssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	fssrv.root = root
 	fssrv.addr = addr
 	fssrv.mkps = mkps
+	fssrv.rps = rps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.tm = threadmgr.MakeThreadMgrTable(fssrv.process, config != nil)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tm)
+	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
-	if config == nil || config.(*replraft.RaftConfig) == nil {
+	if !fssrv.replicated {
 		fssrv.replSrv = nil
 	} else {
+		fssrv.snapDev = snapshot.MakeDev(fssrv, nil, fssrv.root)
 		fssrv.rc = repl.MakeReplyCache()
-		fssrv.replSrv = config.MakeServer(fssrv.tm.AddThread())
+		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())
 		fssrv.replSrv.Start()
 		log.Printf("Starting repl server")
 	}
@@ -94,6 +103,30 @@ func (fssrv *FsServer) GetRecentFences() *fences.RecentTable {
 
 func (fssrv *FsServer) Root() fs.Dir {
 	return fssrv.root
+}
+
+func (fssrv *FsServer) Snapshot() []byte {
+	log.Printf("Snapshot %v", proc.GetPid())
+	if !fssrv.replicated {
+		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
+	}
+	fssrv.snap = snapshot.MakeSnapshot(fssrv)
+	return fssrv.snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc)
+}
+
+func (fssrv *FsServer) Restore(b []byte) {
+	if !fssrv.replicated {
+		log.Fatal("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
+	}
+	// Store snapshot for later use during restore.
+	fssrv.snap = snapshot.MakeSnapshot(fssrv)
+	// XXX How do we install the sct and wt? How do we sunset old state when
+	// installing a snapshot on a running server?
+	var root fs.FsObj
+	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
+	fssrv.sct.St = fssrv.st
+	fssrv.root = root.(fs.Dir)
+
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
@@ -149,6 +182,10 @@ func (fssrv *FsServer) GetWatchTable() *watch.WatchTable {
 	return fssrv.wt
 }
 
+func (fssrv *FsServer) GetSnapshotter() *snapshot.Snapshot {
+	return fssrv.snap
+}
+
 func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession) (fs.Dir, fs.CtxI) {
 	return fssrv.root, ctx.MkCtx(uname, sessid, fssrv.sct)
 }
@@ -157,51 +194,80 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	sess := fssrv.st.Alloc(fc.Session)
 	// New thread about to start
 	sess.IncThreads()
-	if fssrv.replSrv == nil {
+	if !fssrv.replicated {
 		sess.GetThread().Process(fc, replies)
 	} else {
-		// If this fcall has already been seen, use the cached reply.
-		if reply, ok := fssrv.rc.Get(fc); ok {
-			fssrv.sendReply(fc, reply, replies)
-		} else {
-			fssrv.replSrv.Process(fc, replies)
-		}
+		fssrv.replSrv.Process(fc, replies)
+	}
+}
+
+func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
+	fcall := np.MakeFcall(reply, 0, nil)
+	fcall.Session = request.Session
+	fcall.Seqno = request.Seqno
+	fcall.Tag = request.Tag
+	// Store the reply in the reply cache if this is a replicated server.
+	if fssrv.replicated {
+		fssrv.rc.Put(request, fcall)
+	}
+	// The replies channel may be nil if this is a replicated op which came
+	// through raft. In this case, a reply is not needed.
+	if replies != nil {
+		replies <- fcall
 	}
 }
 
 func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+	if fssrv.replicated {
+		// Reply cache needs to live under the replication layer in order to
+		// handle duplicate requests. These may occur if, for example:
+		//
+		// 1. A client connects to replica A and issues a request.
+		// 2. Replica A pushes the request through raft.
+		// 3. Before responding to the client, replica A crashes.
+		// 4. The client connects to replica B, and retries the request *before*
+		//    replica B hears about the request through raft.
+		// 5. Replica B pushes the request through raft.
+		// 6. Replica B now receives the same request twice through raft's apply
+		//    channel, and will try to execute the request twice.
+		//
+		// In order to handle this, we can use the reply cache to deduplicate
+		// requests. Since requests execute sequentially, one of the requests will
+		// register itself first in the reply cache. The other request then just
+		// has to wait on the reply future in order to send the reply. This can
+		// happen asynchronously since it doesn't affect server state, and the
+		// asynchrony is necessary in order to allow other ops on the thread to
+		// make progress. We coulld optionally use sessconds, but they're kind of
+		// overkill since we don't care about ordering in this case.
+		if replyFuture, ok := fssrv.rc.Get(fc); ok {
+			go func() {
+				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), replies)
+			}()
+			return
+		}
+		// If this request has not been registered with the reply cache yet, register
+		// it.
+		fssrv.rc.Register(fc)
+	}
 	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	fssrv.serve(sess, fc, replies)
 }
 
-func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
-	// Store the reply in the reply cache if this is a replicated server.
-	if fssrv.replSrv != nil {
-		fssrv.rc.Put(request, reply)
-	}
-	fcall := np.MakeFcall(reply, 0, nil)
-	fcall.Tag = request.Tag
-	replies <- fcall
-}
-
-// Serialize thread that serve a request for the same session.
-// Threads may block in sesscond.Wait() and give up sess lock
-// temporarily.  XXX doesn't guarantee the order in which received
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	reply, rerror := sess.Dispatch(fc.Msg)
+	// We decrement the number of waiting threads if this request was made to
+	// this server (it didn't come through raft), which will only be the case
+	// when replies is not nil
 	if replies != nil {
 		defer sess.DecThreads()
 	}
-	// Replies may be nil if this is a detach (detaches aren't replied to since
-	// they're generated at the server) or if this is a replicated op generated
-	// by a clerk. In both cases, a reply is not needed.
-	if replies != nil {
-		if rerror != nil {
-			reply = *rerror
-		}
-		fssrv.sendReply(fc, reply, replies)
+	if rerror != nil {
+		reply = *rerror
 	}
+	// Send reply will drop the reply if the replies channel is nil, but it will
+	// make sure to insert the reply into the reply cache.
+	fssrv.sendReply(fc, reply, replies)
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {

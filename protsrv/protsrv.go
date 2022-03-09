@@ -7,6 +7,8 @@ import (
 type FsServer interface {
 	Process(*np.Fcall, chan *np.Fcall)
 	CloseSession(np.Tsession, chan *np.Fcall)
+	Snapshot() []byte
+	Restore([]byte)
 }
 
 type Protsrv interface {
@@ -34,6 +36,8 @@ type Protsrv interface {
 	RegFence(np.Tregfence, *np.Ropen) *np.Rerror
 	UnFence(np.Tunfence, *np.Ropen) *np.Rerror
 	Detach()
+	Snapshot() []byte
 }
 
 type MkProtServer func(FsServer, np.Tsession) Protsrv
+type RestoreProtServer func(FsServer, []byte) Protsrv

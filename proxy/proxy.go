@@ -51,6 +51,13 @@ func (npd *Npd) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 	// XXX Actually call detach if we make it do something at some point.
 }
 
+func (npd *Npd) Snapshot() []byte {
+	return nil
+}
+
+func (npd *Npd) Restore(b []byte) {
+}
+
 //
 // XXX convert to use npobjsrv, fidclnt, pathclnt
 //
@@ -313,5 +320,9 @@ func (npc *NpConn) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
+	return nil
+}
+
+func (npc *NpConn) Snapshot() []byte {
 	return nil
 }

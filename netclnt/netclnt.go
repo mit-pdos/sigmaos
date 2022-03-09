@@ -2,7 +2,6 @@ package netclnt
 
 import (
 	"bufio"
-	"io"
 	"log"
 	"net"
 	"runtime/debug"
@@ -198,7 +197,6 @@ func (nc *NetClnt) connectL() *np.Err {
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
 			db.DLPrintf("NETCLNT", "NetClnt to %v err %v\n", addr, err)
-
 			continue
 		}
 		nc.conn = c
@@ -356,24 +354,29 @@ func (nc *NetClnt) reader() {
 		frame, err := npcodec.ReadFrame(br)
 		// On connection error, retry
 		// XXX write in terms of np.Err?
-		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset by peer")) {
-			db.DLPrintf("NETCLNT", "Reader: NetClnt error to %v\n", nc.Dst())
-			nc.resetConnection(br, bw)
-			// Get the br for the latest connection
-			var error error
-			br, bw, error = nc.getBufio()
-			// If none was available, close the conn
-			if error != nil {
-				db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", error)
+		if err != nil {
+			if strings.Contains(err.Error(), "connection reset by peer") || err.Obj == "EOF" {
+				db.DLPrintf("NETCLNT", "Reader: NetClnt error to %v\n", nc.Dst())
+				nc.resetConnection(br, bw)
+				// Get the br for the latest connection
+				br1, bw1, error := nc.getBufio()
+
+				// Do assignment separately, because if we pre-declare an error var,
+				// "error != nil" will invariably return true because of typed nil.
+				br = br1
+				bw = bw1
+				// If none was available, close the conn
+				if error != nil {
+					db.DLPrintf("NETCLNT", "Reader: no viable connections: %v", error)
+					nc.Close()
+					return
+				}
+				continue
+			} else {
+				db.DLPrintf("NETCLNT", "Reader: ReadFrame error %v\n", err)
 				nc.Close()
 				return
 			}
-			continue
-		}
-		if err != nil {
-			db.DLPrintf("NETCLNT", "Reader: ReadFrame error %v\n", err)
-			nc.Close()
-			return
 		}
 		fcall := &np.Fcall{}
 		if err := npcodec.Unmarshal(frame, fcall); err != nil {

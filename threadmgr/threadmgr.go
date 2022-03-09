@@ -9,10 +9,10 @@ import (
 )
 
 /*
- * The ThreadMgr struct ensures that only one operation on the thread is being run
- * at any one time. It assumes that any condition variables which are passed
- * into it are only being used/slept on by one goroutine. It relies on the
- * locking behavior of sessconds in the layer above it to ensure that there
+ * The ThreadMgr struct ensures that only one operation on the thread is being
+ * run at any one time. It assumes that any condition variables which are
+ * passed into it are only being used/slept on by one goroutine. It relies on
+ * the locking behavior of sessconds in the layer above it to ensure that there
  * aren't any sleep/wake races. Sessconds' locking behavior should be changed
  * with care.
  */
@@ -24,6 +24,8 @@ type ThreadMgr struct {
 	done      bool
 	ops       []*Op        // List of (new) ops to process.
 	wakeups   []*sync.Cond // List of conds (goroutines/ops) that need to wake up.
+	executing map[*Op]bool // Map of currently executing ops.
+	numops    uint64       // Number of ops processed or currently processing.
 	pfn       ProcessFn
 }
 
@@ -34,8 +36,26 @@ func makeThreadMgr(pfn ProcessFn) *ThreadMgr {
 	t.cond = sync.NewCond(t.Locker)
 	t.ops = []*Op{}
 	t.wakeups = []*sync.Cond{}
+	t.executing = make(map[*Op]bool)
 	t.pfn = pfn
 	return t
+}
+
+func (t *ThreadMgr) GetExecuting() map[*Op]bool {
+	return t.executing
+}
+
+func (t *ThreadMgr) replayOps(ops []*Op) {
+	t.Lock()
+	defer t.Unlock()
+
+	for _, op := range ops {
+		t.executing[op] = true
+	}
+	t.numops += uint64(len(ops))
+	// Preprend any pending ops to replay.
+	t.ops = append(ops, t.ops...)
+	t.newOpCond.Signal()
 }
 
 // Enqueue a new op to be processed.
@@ -43,7 +63,10 @@ func (t *ThreadMgr) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	t.Lock()
 	defer t.Unlock()
 
-	t.ops = append(t.ops, makeOp(fc, replies))
+	t.numops++
+	op := makeOp(fc, replies, t.numops)
+	t.ops = append(t.ops, op)
+	t.executing[op] = true
 
 	// Signal that there are new ops to be processed.
 	t.newOpCond.Signal()
@@ -117,9 +140,11 @@ func (t *ThreadMgr) run() {
 			// block).
 			go func() {
 				// Execute the op.
-				t.pfn(op.fc, op.replies)
+				t.pfn(op.Fc, op.replies)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
+				// Mark the op as no longer executing.
+				delete(t.executing, op)
 				// Notify the ThreadMgr that the op has completed.
 				t.cond.Signal()
 				// Unlock to allow the ThreadMgr to make progress.

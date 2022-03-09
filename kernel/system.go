@@ -245,11 +245,11 @@ func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate b
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {
-		log.Fatalf("Error WaitStart in RunNamed: %v", err)
+		log.Fatalf("Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
 	if err = pclnt.WaitStart(p.Pid); err != nil {
-		log.Fatalf("Error WaitStart in RunNamed: %v", err)
+		log.Fatalf("Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
 	return cmd, p.Pid, nil

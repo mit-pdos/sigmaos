@@ -123,6 +123,7 @@ func (fssrv *FsServer) Restore(b []byte) {
 	// installing a snapshot on a running server?
 	var root fs.FsObj
 	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.process, fssrv.rc, b)
+	fssrv.sct.St = fssrv.st
 	fssrv.root = root.(fs.Dir)
 
 }

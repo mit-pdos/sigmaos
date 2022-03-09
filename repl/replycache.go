@@ -75,7 +75,6 @@ func (rc *ReplyCache) Put(request *np.Fcall, reply *np.Fcall) {
 func (rc *ReplyCache) Get(request *np.Fcall) (*ReplyFuture, bool) {
 	rc.Lock()
 	defer rc.Unlock()
-
 	if sessionMap, ok := rc.entries[request.Session]; !ok {
 		return nil, false
 	} else {

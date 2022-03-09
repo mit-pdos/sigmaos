@@ -6,17 +6,20 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/semclnt"
 	"ulambda/test"
 )
 
 const (
 	REPLICA_SYMLINK = "name/symlink"
+	MUTEX_PATH      = REPLICA_SYMLINK + "/mutex"
 )
 
 func spawnMemfs(ts *test.Tstate, pid string) {
@@ -75,10 +78,10 @@ func putFiles(ts *test.Tstate, n int) {
 	}
 }
 
-func checkFiles(ts *test.Tstate, basePath string, n int) {
+func checkFiles(ts *test.Tstate, n int) {
 	for i := 0; i < n; i++ {
 		i_str := strconv.Itoa(i)
-		b, err := ts.GetFile(path.Join(basePath, i_str))
+		b, err := ts.GetFile(path.Join(REPLICA_SYMLINK, i_str))
 		assert.Nil(ts.T, err, "Getfile:")
 		if err != nil {
 			log.Printf(err.Error())
@@ -121,7 +124,7 @@ func TestRestoreSimple(t *testing.T) {
 func TestRestoreStateSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	N_FILES := 1
+	N_FILES := 100
 
 	err := ts.Mkdir(np.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
@@ -140,7 +143,7 @@ func TestRestoreStateSimple(t *testing.T) {
 	putFiles(ts, N_FILES)
 
 	// Check the state is there.
-	checkFiles(ts, path.Join(np.MEMFS, pid1), N_FILES)
+	checkFiles(ts, N_FILES)
 
 	// Read the snapshot from replica a
 	b := takeSnapshot(ts, pid1)
@@ -152,7 +155,72 @@ func TestRestoreStateSimple(t *testing.T) {
 	restoreSnapshot(ts, pid2, b)
 
 	// Check that the files exist on replica b
-	checkFiles(ts, path.Join(np.MEMFS, pid2), N_FILES)
+	checkFiles(ts, N_FILES)
+
+	ts.Shutdown()
+}
+
+func TestRestoreBlockingOpSimple(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	err := ts.Mkdir(np.MEMFS, 0777)
+	assert.Nil(t, err, "Mkdir")
+
+	// Spawn a dummy-replicated memfs
+	pid1 := "replica-a"
+	spawnMemfs(ts, pid1)
+
+	// Spawn another one
+	pid2 := "replica-b"
+	spawnMemfs(ts, pid2)
+
+	symlinkReplicas(ts, []string{pid1, pid2})
+
+	sem1 := semclnt.MakeSemClnt(ts.FsLib, MUTEX_PATH)
+	sem1.Init(0777)
+
+	fsl2 := fslib.MakeFsLib("blocking-cli-2")
+	sem2 := semclnt.MakeSemClnt(fsl2, MUTEX_PATH)
+	done := make(chan bool)
+
+	go func() {
+		err := sem2.Down()
+		assert.Nil(ts.T, err, "Sem down")
+		done <- true
+	}()
+
+	// Make sure to wait long enough for the other client to block server-side.
+	time.Sleep(1 * time.Second)
+
+	// Read the snapshot from replica a
+	b := takeSnapshot(ts, pid1)
+
+	// Write the snapshot to replica b
+	restoreSnapshot(ts, pid2, b)
+
+	// Kill the first replica (so pending requests hit the second replica).
+	killMemfs(ts, pid1)
+
+	// Wait long enough for the second client's blocking request to hit the
+	// second replica.
+	time.Sleep(1 * time.Second)
+
+	// Ensure the client hasn't unblocked yet.
+	ok := true
+	select {
+	case <-done:
+		ok = false
+	default:
+	}
+
+	assert.True(ts.T, ok, "Didn't wait at second server")
+
+	err1 := sem1.Up()
+	assert.Nil(ts.T, err1, "Sem up")
+
+	ok = <-done
+
+	assert.True(ts.T, ok, "Didn't release from second server")
 
 	ts.Shutdown()
 }

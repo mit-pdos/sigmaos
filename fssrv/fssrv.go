@@ -122,7 +122,7 @@ func (fssrv *FsServer) Restore(b []byte) {
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
 	var root fs.FsObj
-	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.process, fssrv.rc, b)
+	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
 	fssrv.sct.St = fssrv.st
 	fssrv.root = root.(fs.Dir)
 

@@ -47,10 +47,11 @@ func (tmt *ThreadMgrTable) snapshot() []byte {
 	return b
 }
 
-func Restore(pfn ProcessFn, b []byte) *ThreadMgrTable {
+func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	tmt := MakeThreadMgrTable(pfn, true)
+	// Add the existing thread manager for the restoring thread.
+	tmt.threadmgrs[tm] = true
 	// Make a thread (there will only ever be one since we're running replicated)
-	tm := tmt.AddThread()
 	opss := []*OpSnapshot{}
 	err := json.Unmarshal(b, &opss)
 	if err != nil {
@@ -64,14 +65,13 @@ func Restore(pfn ProcessFn, b []byte) *ThreadMgrTable {
 		if err1 != nil {
 			log.Fatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}
-		tm.executing[makeOp(fc, nil, op.N)] = true
 		executing = append(executing, makeOp(fc, nil, op.N))
 	}
 	// Make sure to chop off the last op (which will be the snapshot op).
 	executing = executing[:len(executing)-1]
-	tm.numops = uint64(len(executing))
-	// Preprend any pending ops to replay.
-	tm.ops = append(executing, tm.ops...)
-	tm.newOpCond.Signal()
+
+	// Replay blocked ops to recreate server-side state (e.g. sessconds)
+	tm.replayOps(executing)
+
 	return tmt
 }

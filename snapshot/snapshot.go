@@ -74,7 +74,7 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
 	return o.Inum()
 }
 
-func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
+func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
@@ -82,7 +82,7 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	s.restoreCache[0] = nil
 	root := s.RestoreFsTree(s.Root)
 	// Restore the thread manager table and any in-flight ops.
-	tmt := threadmgr.Restore(pfn, s.Tmt)
+	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the recent fence table.
 	rft := fences.RestoreRecentTable(s.Rft)
 	// Restore the session table.

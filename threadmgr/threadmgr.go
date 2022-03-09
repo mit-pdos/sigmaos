@@ -1,8 +1,11 @@
 package threadmgr
 
 import (
+	"log"
 	"sync"
 
+	"strings"
+	"ulambda/proc"
 	//	"github.com/sasha-s/go-deadlock"
 
 	np "ulambda/ninep"
@@ -43,6 +46,20 @@ func makeThreadMgr(pfn ProcessFn) *ThreadMgr {
 
 func (t *ThreadMgr) GetExecuting() map[*Op]bool {
 	return t.executing
+}
+
+func (t *ThreadMgr) replayOps(ops []*Op) {
+	t.Lock()
+	defer t.Unlock()
+
+	for _, op := range ops {
+		t.executing[op] = true
+		log.Printf("Going to replay %v", op.Fc)
+	}
+	t.numops += uint64(len(ops))
+	// Preprend any pending ops to replay.
+	t.ops = append(ops, t.ops...)
+	t.newOpCond.Signal()
 }
 
 // Enqueue a new op to be processed.
@@ -126,8 +143,15 @@ func (t *ThreadMgr) run() {
 			// Process the op. Run the next op in a new goroutine (which may sleep or
 			// block).
 			go func() {
+				if strings.Contains(proc.GetPid(), "replica-") && op.Fc.GetMsg().Type() != np.TTsetfile {
+					log.Printf("%v Process %v", proc.GetPid(), op.Fc)
+				}
+
 				// Execute the op.
 				t.pfn(op.Fc, op.replies)
+				if strings.Contains(proc.GetPid(), "replica-") && op.Fc.GetMsg().Type() != np.TTsetfile {
+					log.Printf("%v Done process %v", proc.GetPid(), op.Fc)
+				}
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
 				// Mark the op as no longer executing.

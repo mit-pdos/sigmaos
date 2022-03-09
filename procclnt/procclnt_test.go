@@ -353,6 +353,7 @@ func TestConcurrentProcs(t *testing.T) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
+			time.Sleep(100 * time.Millisecond)
 			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 		}(pid, &done, i)

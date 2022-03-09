@@ -2,9 +2,9 @@ package procclnt
 
 import (
 	"fmt"
-	"log"
 	"path"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/semclnt"
@@ -14,18 +14,18 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error {
 	if err := clnt.Mkdir(procdir, 0777); err != nil {
-		log.Printf("%v: MakeProcDir mkdir pid %v err %v\n", proc.GetProgram(), procdir, err)
+		db.DLPrintf("PROCCLNT_ERR", "MakeProcDir mkdir pid %v err %v\n", procdir, err)
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)
 	if err := clnt.Mkdir(childrenDir, 0777); err != nil {
-		log.Printf("%v: MakeProcDir mkdir childrens %v err %v\n", proc.GetProgram(), childrenDir, err)
+		db.DLPrintf("PROCCLNT_ERR", "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 	if isKernelProc {
 		kprocFPath := path.Join(procdir, proc.KERNEL_PROC)
 		if _, err := clnt.PutFile(kprocFPath, 0777, np.OWRITE, []byte{}); err != nil {
-			log.Printf("%v: MakeProcDir MakeFile %v err %v", proc.GetProgram(), kprocFPath, err)
+			db.DLPrintf("PROCCLNT_ERR", "MakeProcDir MakeFile %v err %v", kprocFPath, err)
 			return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 	}
@@ -47,8 +47,8 @@ func (clnt *ProcClnt) linkChildIntoParentDir(pid, procdir string) error {
 	// Add symlink to child
 	link := path.Join(proc.PARENTDIR, proc.PROCDIR)
 	// May return file not found if parent exited.
-	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil && !np.IsErrNotfound(err) {
-		log.Printf("%v: Spawn Symlink child %v err %v\n", proc.GetProgram(), link, err)
+	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil && !np.IsErrUnavailable(err) {
+		db.DLPrintf("PROCCLNT_ERR", "Spawn Symlink child %v err %v\n", link, err)
 		return clnt.cleanupError(pid, procdir, err)
 	}
 	return nil
@@ -79,13 +79,13 @@ func (clnt *ProcClnt) addChild(pid, procdir, shared string) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	if err := clnt.Mkdir(childDir, 0777); err != nil {
-		log.Printf("%v: Spawn mkdir childs %v err %v\n", proc.GetProgram(), childDir, err)
+		db.DLPrintf("PROCCLNT_ERR", "Spawn mkdir childs %v err %v\n", childDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
 	// Link in shared state from parent, if desired.
 	if len(shared) > 0 {
 		if err := clnt.Symlink([]byte(shared), path.Join(childDir, proc.SHARED), 0777); err != nil {
-			log.Printf("%v: Error addChild Symlink: %v", proc.GetProgram(), err)
+			db.DLPrintf("PROCCLNT_ERR", "Error addChild Symlink: %v", err)
 		}
 	}
 	return nil
@@ -97,12 +97,12 @@ func (clnt *ProcClnt) removeChild(pid string) error {
 	childdir := path.Dir(procdir)
 	// Remove link.
 	if err := clnt.Remove(procdir); err != nil {
-		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
+		db.DLPrintf("PROCCLNT_ERR", "Error Remove %v in removeChild: %v", procdir, err)
 		return fmt.Errorf("removeChild link error %v", err)
 	}
 
 	if err := clnt.RmDir(childdir); err != nil {
-		log.Printf("Error Remove %v in removeChild: %v", procdir, err)
+		db.DLPrintf("PROCCLNT_ERR", "Error Remove %v in removeChild: %v", procdir, err)
 		return fmt.Errorf("removeChild dir error %v", err)
 	}
 	return nil

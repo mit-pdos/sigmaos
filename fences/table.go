@@ -56,24 +56,24 @@ func MakeFenceTable() *FenceTable {
 	return ft
 }
 
-func (ft *FenceTable) Fences(path []string) []np.Tfence {
+func (ft *FenceTable) Fences(path np.Path) []np.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
 	fences := make([]np.Tfence, 0)
 	for pn, e := range ft.fencedDirs {
-		if np.IsParent(np.Split(pn), path) {
+		if path.IsParent(np.Split(pn)) {
 			fences = append(fences, e.getFences()...)
 		}
 	}
 	return fences
 }
 
-func (ft *FenceTable) Insert(path []string, f np.Tfence) {
+func (ft *FenceTable) Insert(path np.Path, f np.Tfence) {
 	ft.Lock()
 	defer ft.Unlock()
 
-	pn := np.Join(path)
+	pn := path.String()
 	e, ok := ft.fencedDirs[pn]
 	if !ok {
 		e = makeEntry()
@@ -82,11 +82,11 @@ func (ft *FenceTable) Insert(path []string, f np.Tfence) {
 	e.insert(f)
 }
 
-func (ft *FenceTable) Del(path []string, idf np.Tfenceid) *np.Err {
+func (ft *FenceTable) Del(path np.Path, idf np.Tfenceid) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
-	pn := np.Join(path)
+	pn := path.String()
 	if e, ok := ft.fencedDirs[pn]; ok {
 		n, err := e.del(idf)
 		if err != nil {
@@ -100,11 +100,11 @@ func (ft *FenceTable) Del(path []string, idf np.Tfenceid) *np.Err {
 	return np.MkErr(np.TErrUnknownFence, idf)
 }
 
-func (ft *FenceTable) Present(path []string, idf np.Tfenceid) bool {
+func (ft *FenceTable) Present(path np.Path, idf np.Tfenceid) bool {
 	ft.Lock()
 	defer ft.Unlock()
 
-	pn := np.Join(path)
+	pn := path.String()
 	if e, ok := ft.fencedDirs[pn]; ok {
 		return e.present(idf)
 	}

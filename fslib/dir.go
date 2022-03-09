@@ -1,7 +1,9 @@
 package fslib
 
 import (
+	"errors"
 	"fmt"
+	"io"
 
 	np "ulambda/ninep"
 	"ulambda/npcodec"
@@ -33,9 +35,8 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 	}
 	defer rdr.Close()
 	for {
-		st := &np.Stat{}
-		err := npcodec.UnmarshalReader(rdr, st)
-		if err != nil && np.IsErrEOF(err) {
+		st, err := npcodec.UnmarshalDirEnt(rdr)
+		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -46,7 +47,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 			return true, error
 		}
 	}
-	return false, err
+	return false, nil
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
@@ -57,9 +58,8 @@ func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
 	defer rdr.Close()
 	dirents := []*np.Stat{}
 	for {
-		st := &np.Stat{}
-		err := npcodec.UnmarshalReader(rdr, st)
-		if err != nil && np.IsErrEOF(err) {
+		st, err := npcodec.UnmarshalDirEnt(rdr)
+		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -116,9 +116,13 @@ func (fsl *FsLib) RmDir(dir string) error {
 	// log.Printf("%v: rmdir1 %v\n", db.GetName(), dir)
 	for _, st := range sts {
 		if st.Mode.IsDir() {
-			fsl.RmDir(dir + "/" + st.Name)
+			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
+				return err
+			}
 		} else {
-			fsl.Remove(dir + "/" + st.Name)
+			if err := fsl.Remove(dir + "/" + st.Name); err != nil {
+				return err
+			}
 		}
 	}
 	return fsl.Remove(dir)

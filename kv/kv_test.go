@@ -61,6 +61,8 @@ func TestRegex(t *testing.T) {
 	assert.NotNil(t, s, "Find")
 	s = grpre.FindStringSubmatch("file not found group/grp-10-conf")
 	assert.NotNil(t, s, "Find")
+	s = grpre.FindStringSubmatch("file not found group/grp-10-conf (no mount)")
+	assert.NotNil(t, s, "Find")
 	re := regexp.MustCompile(`grp-([0-9]+)`)
 	s = re.FindStringSubmatch("grp-10")
 	assert.NotNil(t, s, "Find")
@@ -145,12 +147,11 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 		if err == nil {
 			return err
 		}
-		// XXX error checking in one place and more uniform
-		if np.IsErrEOF(err) ||
-			np.IsErrNotfound(err) ||
-			np.IsErrRetry(err) {
+		if np.IsErrUnreachable(err) || np.IsErrRetry(err) {
+			log.Printf("balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
+			log.Printf("balancer op err %v\n", err)
 			return err
 		}
 	}

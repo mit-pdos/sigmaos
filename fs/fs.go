@@ -20,7 +20,7 @@ type CtxI interface {
 
 type Dir interface {
 	FsObj
-	Lookup(CtxI, []string) ([]FsObj, []string, *np.Err)
+	Lookup(CtxI, np.Path) ([]FsObj, np.Path, *np.Err)
 	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *np.Err)
 	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *np.Err)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
@@ -56,7 +56,7 @@ type FsObj interface {
 	Snapshot(SnapshotF) []byte
 }
 
-func Obj2File(o FsObj, fname []string) (File, *np.Err) {
+func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {
 	switch i := o.(type) {
 	case Dir:
 		return nil, np.MkErr(np.TErrNotFile, fname)

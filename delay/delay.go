@@ -4,7 +4,6 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/proc"
 	"ulambda/rand"
 )
 
@@ -36,7 +35,7 @@ func Delay(maxms int64) {
 	if totalDelay-lastTotal > 1000 {
 		lastTotal = totalDelay
 	}
-	db.DPrintf("DELAY %v tot %vms\n", proc.GetPid(), totalDelay)
+	db.DLPrintf("DELAY", "DELAY to %vms\n", totalDelay)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 }

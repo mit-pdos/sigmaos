@@ -71,7 +71,7 @@ func (r *RelayConn) reader() {
 		}
 		db.DLPrintf("RSRV", "%v relay reader read frame from %v\n", r.Dst(), r.Src())
 		fcall := &np.Fcall{}
-		if err := npcodec.Unmarshal(frame, fcall); err != nil {
+		if fcall, err := npcodec.UnmarshalFcall(frame); err != nil {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", r.Dst(), err)
 			// TODO: enqueue op with empty reply
 		} else {
@@ -252,7 +252,7 @@ func (rs *ChainReplServer) relayWriter() {
 		}
 
 		ack := &np.Fcall{}
-		if err := npcodec.Unmarshal(frame, ack); err != nil {
+		if ack, err := npcodec.UnmarshalFcall(frame); err != nil {
 			log.Printf("Error unmarshalling in relayWriter: %v", err)
 			log.Printf("Frame: %v, len: %v", frame, len(frame))
 		} else {
@@ -373,7 +373,7 @@ func (rs *ChainReplServer) logOp(request *np.Fcall, reply *np.Fcall) {
 		if err != nil {
 			log.Printf("Error reading log file in logOp: %v", err)
 		}
-		frame, err := npcodec.Marshal(request)
+		frame, err := npcodec.MarshalFcallByte(request)
 		if err != nil {
 			log.Printf("Error marshalling request in logOp: %v", err)
 		}

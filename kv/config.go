@@ -29,7 +29,6 @@ type Config struct {
 	N      int
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
-	Ctime  int64    // XXX use ctime of config file?
 }
 
 func (cf *Config) String() string {
@@ -37,7 +36,7 @@ func (cf *Config) String() string {
 }
 
 func MakeConfig(n int) *Config {
-	cf := &Config{n, make([]string, NSHARD), Moves{}, 0}
+	cf := &Config{n, make([]string, NSHARD), Moves{}}
 	return cf
 }
 

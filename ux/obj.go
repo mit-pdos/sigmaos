@@ -14,13 +14,13 @@ import (
 type Obj struct {
 	*inode.Inode
 	mu   sync.Mutex
-	path []string
+	path np.Path
 	ino  uint64 // Unix inode
 	sz   np.Tlength
 	init bool
 }
 
-func makeObj(path []string, t np.Tperm, d *Dir) *Obj {
+func makeObj(path np.Path, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
 	o.Inode = inode.MakeInode(nil, t, d)
 	o.path = path
@@ -28,7 +28,7 @@ func makeObj(path []string, t np.Tperm, d *Dir) *Obj {
 }
 
 func (o *Obj) Path() string {
-	p := np.Join(o.path)
+	p := o.path.String()
 	if len(o.path) == 0 {
 		p = "."
 	}

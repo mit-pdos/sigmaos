@@ -1,10 +1,17 @@
 package ninep
 
 import (
+	"errors"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestEOF(t *testing.T) {
+	err := MkErrError(io.EOF)
+	assert.True(t, errors.Is(err, io.EOF))
+}
 
 func TestString(t *testing.T) {
 	qt := Qtype(QTSYMLINK | QTTMP)
@@ -29,9 +36,9 @@ func TestSplit(t *testing.T) {
 }
 
 func TestIsParent(t *testing.T) {
-	assert.True(t, IsParent([]string{}, []string{"a"}))
-	assert.False(t, IsParent([]string{"a"}, []string{"b"}))
-	assert.True(t, IsParent([]string{"a"}, []string{"a", "b"}))
-	assert.False(t, IsParent([]string{"a", "c"}, []string{"a", "b"}))
-	assert.False(t, IsParent([]string{"a", "c"}, []string{"a"}))
+	assert.True(t, Path{"a"}.IsParent(Path{}))
+	assert.False(t, Path{"b"}.IsParent(Path{"a"}))
+	assert.True(t, Path{"a", "b"}.IsParent(Path{"a"}))
+	assert.False(t, Path{"a", "b"}.IsParent(Path{"a", "c"}))
+	assert.False(t, Path{"a"}.IsParent(Path{"a", "c"}))
 }

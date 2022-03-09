@@ -83,12 +83,12 @@ func (fdc *FdClient) Open(path string, mode np.Tmode) (int, error) {
 	return fdc.OpenWatch(path, mode, nil)
 }
 
-func (fdc *FdClient) MakeReader(fd int, chunksz np.Tsize) *reader.Reader {
+func (fdc *FdClient) MakeReader(fd int, path string, chunksz np.Tsize) *reader.Reader {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return nil
 	}
-	return fdc.PathClnt.MakeReader(fid, chunksz)
+	return fdc.PathClnt.MakeReader(fid, path, chunksz)
 }
 
 func (fdc *FdClient) MakeWriter(fd int, chunksz np.Tsize) *writer.Writer {

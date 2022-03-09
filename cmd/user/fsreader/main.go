@@ -58,7 +58,7 @@ func (r *Reader) Work() *proc.Status {
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, np.OWRITE)
 	if err != nil {
-		log.Fatal("%v: Open error: ", proc.GetProgram(), err)
+		log.Fatalf("%v: Open error: %v", proc.GetProgram(), err)
 	}
 	defer r.Close(pipefd)
 	fd, err := r.Open(r.input, np.OREAD)
@@ -73,7 +73,7 @@ func (r *Reader) Work() *proc.Status {
 		}
 		_, err = r.Write(pipefd, data)
 		if err != nil {
-			log.Fatal("%v: Error pipe Write: %v", proc.GetProgram(), err)
+			log.Fatalf("%v: Error pipe Write: %v", proc.GetProgram(), err)
 		}
 	}
 	return proc.MakeStatus(proc.StatusOK)

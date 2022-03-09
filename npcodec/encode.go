@@ -1,9 +1,9 @@
 package npcodec
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,21 +16,11 @@ import (
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs
 
-func Unmarshal(data []byte, v interface{}) *np.Err {
-	dec := &decoder{bytes.NewReader(data)}
-	return dec.decode(v)
+func marshal(v interface{}) ([]byte, error) {
+	return marshal1(false, v)
 }
 
-func UnmarshalReader(rdr io.Reader, v interface{}) *np.Err {
-	dec := &decoder{rdr}
-	return dec.decode(v)
-}
-
-func Marshal(v interface{}) ([]byte, *np.Err) {
-	return marshal(false, v)
-}
-
-func marshal(bailOut bool, v interface{}) ([]byte, *np.Err) {
+func marshal1(bailOut bool, v interface{}) ([]byte, error) {
 	var b bytes.Buffer
 	enc := &encoder{bailOut, &b}
 	if err := enc.encode(v); err != nil {
@@ -39,41 +29,13 @@ func marshal(bailOut bool, v interface{}) ([]byte, *np.Err) {
 	return b.Bytes(), nil
 }
 
-func MarshalFcallToWriter(fcall np.WritableFcall, b *bufio.Writer) *np.Err {
-	frame, error := marshal(true, fcall)
-	if error != nil {
-		return np.MkErr(np.TErrBadFcall, error.Error())
-	}
-	dataBuf := false
-	var data []byte
-	switch fcall.GetType() {
-	case np.TTwrite:
-		msg := fcall.GetMsg().(np.Twrite)
-		data = msg.Data
-		dataBuf = true
-	case np.TRread:
-		msg := fcall.GetMsg().(np.Rread)
-		data = msg.Data
-		dataBuf = true
-	case np.TRgetfile:
-		msg := fcall.GetMsg().(np.Rgetfile)
-		data = msg.Data
-		dataBuf = true
-	case np.TTsetfile:
-		msg := fcall.GetMsg().(np.Tsetfile)
-		data = msg.Data
-		dataBuf = true
-	case np.TTputfile:
-		msg := fcall.GetMsg().(np.Tputfile)
-		data = msg.Data
-		dataBuf = true
-	default:
-	}
-	if dataBuf {
-		return WriteFrameAndBuf(b, frame, data)
-	} else {
-		return WriteFrame(b, frame)
-	}
+func unmarshal(data []byte, v interface{}) error {
+	return unmarshalReader(bytes.NewReader(data), v)
+}
+
+func unmarshalReader(rdr io.Reader, v interface{}) error {
+	dec := &decoder{rdr}
+	return dec.decode(v)
 }
 
 type encoder struct {
@@ -81,13 +43,13 @@ type encoder struct {
 	wr      io.Writer
 }
 
-func (e *encoder) encode(vs ...interface{}) *np.Err {
+func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
 		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
 			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return err
 			}
 		case []byte:
 			// XXX Bail out early to serialize separately
@@ -99,16 +61,16 @@ func (e *encoder) encode(vs ...interface{}) *np.Err {
 			}
 
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return err
 			}
 		case string:
 			if err := binary.Write(e.wr, binary.LittleEndian, uint16(len(v))); err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return err
 			}
 
 			_, err := io.WriteString(e.wr, v)
 			if err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return err
 			}
 		case *string:
 			if err := e.encode(*v); err != nil {
@@ -233,7 +195,7 @@ func (e *encoder) encode(vs ...interface{}) *np.Err {
 				return err
 			}
 		default:
-			return np.MkErr(np.TErrBadFcall, "Unknown type")
+			return errors.New("Unknown type")
 		}
 	}
 
@@ -244,12 +206,12 @@ type decoder struct {
 	rd io.Reader
 }
 
-func (d *decoder) decode(vs ...interface{}) *np.Err {
+func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
 		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
-				return np.MkErr(np.TErrEOF, err)
+				return err
 			}
 		case *[]byte:
 			var l uint32
@@ -268,7 +230,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 			// more powerful than we need, since we're just serializing an array of
 			// bytes, after al.
 			if _, err := d.rd.Read(*v); err != nil && !(err == io.EOF && l == 0) {
-				return np.MkErr(np.TErrEOF, err)
+				return err
 			}
 
 		case *string:
@@ -283,11 +245,11 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 
 			n, err := io.ReadFull(d.rd, b)
 			if err != nil {
-				return np.MkErr(np.TErrNet, err)
+				return err
 			}
 
 			if n != int(l) {
-				return np.MkErr(np.TErrBadFcall, "bad string")
+				return errors.New("bad string")
 			}
 			*v = string(b)
 		case *[]string:
@@ -341,7 +303,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 
 			b := make([]byte, l)
 			if _, err := io.ReadFull(d.rd, b); err != nil {
-				return np.MkErr(np.TErrEOF, err)
+				return err
 			}
 
 			elements, err := fields9p(v)
@@ -405,7 +367,7 @@ func (d *decoder) decode(vs ...interface{}) *np.Err {
 				return err
 			}
 		default:
-			log.Fatal("Decode: unknown type: %v", reflect.TypeOf(v))
+			errors.New("unknown type")
 		}
 	}
 

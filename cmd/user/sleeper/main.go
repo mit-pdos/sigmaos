@@ -56,7 +56,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	if !s.native {
 		err := s.Started(proc.GetPid())
 		if err != nil {
-			log.Fatalf("Started: error %v\n", err)
+			log.Fatalf("%v: Started: error %v\n", proc.GetName(), err)
 		}
 	}
 	return s, nil

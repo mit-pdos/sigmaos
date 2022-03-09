@@ -23,11 +23,11 @@ func MakeRecentTable() *RecentTable {
 }
 
 // Return the most recent fence. If none, make it.
-func (rft *RecentTable) MkFence(path []string) np.Tfence {
+func (rft *RecentTable) MkFence(path np.Path) np.Tfence {
 	rft.Lock()
 	defer rft.Unlock()
 
-	p := np.Join(path)
+	p := path.String()
 	if f, ok := rft.fences[p]; ok {
 		return f
 	}
@@ -41,11 +41,11 @@ func (rft *RecentTable) MkFence(path []string) np.Tfence {
 
 // A new acquisition of a file or a modification of a file that may
 // have a fence associated with it. If so, increase seqno of fence.
-func (rft *RecentTable) UpdateSeqno(path []string) {
+func (rft *RecentTable) UpdateSeqno(path np.Path) {
 	rft.Lock()
 	defer rft.Unlock()
 
-	p := np.Join(path)
+	p := path.String()
 	// log.Printf("%v: UpdateSeqno: fence %v\n", db.GetName(), p)
 	if f, ok := rft.fences[p]; ok {
 		f.Seqno += 1

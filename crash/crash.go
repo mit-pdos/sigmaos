@@ -46,12 +46,12 @@ func Crasher(fsl *fslib.FsLib) {
 }
 
 func Crash(fsl *fslib.FsLib) {
-	log.Printf("%v: crash CRASH %v\n", proc.GetProgram(), proc.GetPid())
+	log.Printf("%v: crash CRASH\n", proc.GetName())
 	os.Exit(1)
 }
 
 func Partition(fsl *fslib.FsLib) {
-	log.Printf("%v: crash PARTITION %v\n", proc.GetProgram(), proc.GetPid())
+	log.Printf("%v: crash PARTITION\n", proc.GetName())
 	fsl.Disconnect("name")
 	time.Sleep(time.Duration(5) * time.Millisecond)
 }

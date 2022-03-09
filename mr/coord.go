@@ -118,7 +118,7 @@ func (w *Coord) reducer(task string) (*proc.Status, error) {
 func (w *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := w.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		if np.IsErrEOF(err) { // partitioned?  (XXX other errors than EOF?)
+		if np.IsErrUnreachable(err) { // partitioned?  (XXX other errors than EOF?)
 			return "", err
 		}
 		// another coord claimed the task
@@ -188,20 +188,20 @@ func (w *Coord) restartMappers(files []string) {
 func (w *Coord) processResult(dir string, res Ttask) {
 	if res.err == nil && res.status.IsStatusOK() {
 		// mark task as done
-		log.Printf("%v: task done %v\n", proc.GetProgram(), res.task)
+		log.Printf("%v: task done %v\n", proc.GetName(), res.task)
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
 		err := w.Rename(s, d)
 		if err != nil {
 			// an earlier instance already succeeded
-			log.Printf("%v: rename %v to %v err %v\n", proc.GetProgram(), s, d, err)
+			log.Printf("%v: rename %v to %v err %v\n", proc.GetName(), s, d, err)
 		}
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
 		db.DLPrintf("MR", "task %v failed %v err %v\n", res.task, res.status, res.err)
 		if err := w.Rename(dir+TIP+"/"+res.task, to); err != nil {
-			log.Fatalf("%v: rename to %v err %v\n", proc.GetProgram(), to, err)
+			log.Fatalf("%v: rename to %v err %v\n", proc.GetName(), to, err)
 		}
 	}
 }
@@ -209,13 +209,13 @@ func (w *Coord) processResult(dir string, res Ttask) {
 func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Status, error)) {
 	sts, err := w.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
-		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
+		log.Fatalf("%v: FATAL stragglers ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
 	}
 	n := 0
 	for _, st := range sts {
 		n += 1
 		go func() {
-			log.Printf("%v: start straggler task %v\n", proc.GetProgram(), st.Name)
+			db.DLPrintf("start straggler task %v\n", st.Name)
 			status, err := f(st.Name)
 			ch <- Ttask{st.Name, status, err}
 		}()
@@ -225,17 +225,17 @@ func (w *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Stat
 func (w *Coord) recover(dir string) {
 	sts, err := w.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
-		log.Fatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
+		log.Fatalf("%v: FATAL recover: ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
 	}
 
 	// just treat all tasks in progress as failed; too aggressive, but correct.
 	for _, st := range sts {
-		log.Printf("%v: recover %v\n", proc.GetProgram(), st.Name)
+		log.Printf("%v: recover %v\n", proc.GetName(), st.Name)
 		to := dir + "/" + st.Name
 		if w.Rename(dir+TIP+"/"+st.Name, to) != nil {
 			// an old, disconnected coord may do this too,
 			// if one of its tasks fails
-			log.Printf("%v: rename to %v err %v\n", proc.GetProgram(), to, err)
+			log.Printf("%v: rename to %v err %v\n", proc.GetName(), to, err)
 		}
 	}
 }
@@ -272,13 +272,13 @@ func (w *Coord) Work() {
 	w.fence.AcquireFenceW([]byte{})
 	defer w.fence.ReleaseFence()
 
-	log.Printf("%v: primary\n", proc.GetProgram())
+	log.Printf("%v: primary\n", proc.GetName())
 
 	for {
 		w.recover(MDIR)
 		w.recover(RDIR)
 		w.phase(MDIR, w.mapper)
-		log.Printf("%v: Reduce phase\n", proc.GetProgram())
+		log.Printf("%v: Reduce phase\n", proc.GetName())
 		// If reduce phase is unsuccessful, we lost some mapper output. Restart
 		// those mappers.
 		success := w.phase(RDIR, w.reducer)

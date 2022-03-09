@@ -13,6 +13,7 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/crash"
+	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fidclnt"
 	"ulambda/fs"
@@ -74,31 +75,30 @@ type Group struct {
 	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	primFence    *fenceclnt.FenceClnt
-	peerFence    *fenceclnt.FenceClnt
-	confFclnt    *fenceclnt.FenceClnt
-	conf         *GrpConf
-	isRecovering bool
+	primFence *fenceclnt.FenceClnt
+	peerFence *fenceclnt.FenceClnt
+	confFclnt *fenceclnt.FenceClnt
+	conf      *GrpConf
+	isBusy    bool
 }
 
-func (g *Group) testAndSetRecovering() bool {
+func (g *Group) testAndSetBusy() bool {
 	g.Lock()
 	defer g.Unlock()
-	b := g.isRecovering
-	if !g.isRecovering {
-		g.isRecovering = true
-	}
+	b := g.isBusy
+	g.isBusy = true
 	return b
 }
 
-func (g *Group) setRecovering(b bool) {
+func (g *Group) clearBusy() {
 	g.Lock()
 	defer g.Unlock()
-	g.isRecovering = b
+	g.isBusy = false
 }
 
 func RunMember(grp string) {
 	g := &Group{}
+	g.isBusy = true
 	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
 	crash.Crasher(g.FsLib)
@@ -109,8 +109,6 @@ func RunMember(grp string) {
 	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPrimFPath(grp), 0, srvs)
 	g.peerFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPeerFPath(grp), 0, srvs)
 	g.confFclnt = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0, srvs)
-
-	g.setRecovering(true)
 
 	replicated, err := strconv.ParseBool(os.Getenv("SIGMAREPL"))
 	if err != nil {
@@ -181,7 +179,7 @@ func (g *Group) readReplicaAddrs(grp string) *ReplicaAddrs {
 	ra := &ReplicaAddrs{}
 	err := g.GetFileJson(grpRaftAddrs(grp), ra)
 	if err != nil {
-		log.Printf("Error GetFileJson: %v", err)
+		db.DLPrintf("GRP_ERR", "Error GetFileJson: %v", err)
 	}
 	return ra
 }
@@ -197,7 +195,7 @@ func (g *Group) PublishConfig(grp string) {
 	bk := grpConfNxtBk(grp)
 	err := g.Remove(bk)
 	if err != nil {
-		log.Printf("%v: Remove %v err %v\n", proc.GetProgram(), bk, err)
+		db.DLPrintf("GRP_ERR", "Remove %v err %v\n", bk, err)
 	}
 	err = atomic.PutFileJsonAtomic(g.FsLib, bk, 0777, *g.conf)
 	if err != nil {
@@ -228,10 +226,10 @@ func (g *Group) recover(grp string) {
 }
 
 func (g *Group) op(opcode, kv string) *np.Err {
-	if g.testAndSetRecovering() {
+	if g.testAndSetBusy() {
 		return np.MkErr(np.TErrRetry, "busy")
 	}
-	defer g.setRecovering(false)
+	defer g.clearBusy()
 
 	log.Printf("%v: opcode %v kv %v\n", proc.GetProgram(), opcode, kv)
 	return nil

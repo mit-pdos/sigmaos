@@ -178,7 +178,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	ts.Shutdown()
 }
 
-func TestOne(t *testing.T) {
+func TestMR(t *testing.T) {
 	runN(t, 0, 0, 0, 0)
 }
 

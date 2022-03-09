@@ -73,8 +73,8 @@ func MkWatchTable(sct *sesscond.SessCondTable) *WatchTable {
 	return wt
 }
 
-func (wt *WatchTable) allocWatch(path []string) *Watch {
-	p := np.Join(path)
+func (wt *WatchTable) allocWatch(path np.Path) *Watch {
+	p := path.String()
 
 	wt.Lock()
 	defer wt.Unlock()
@@ -92,7 +92,7 @@ func (wt *WatchTable) allocWatch(path []string) *Watch {
 // Returns locked Watch
 // XXX Normalize paths (e.g., delete extra /) so that matches
 // work for equivalent paths
-func (wt *WatchTable) WatchLookupL(path []string) *Watch {
+func (wt *WatchTable) WatchLookupL(path np.Path) *Watch {
 	ws := wt.allocWatch(path)
 	ws.Lock()
 	return ws

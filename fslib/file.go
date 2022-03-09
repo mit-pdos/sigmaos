@@ -3,7 +3,6 @@ package fslib
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	np "ulambda/ninep"
 	"ulambda/reader"
@@ -65,7 +64,7 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fl.MakeReader(fd, fl.GetChunkSz()), nil
+	return fl.MakeReader(fd, path, fl.GetChunkSz()), nil
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
@@ -86,7 +85,7 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 			break
 		}
 	}
-	rdr := fl.MakeReader(fd, fl.GetChunkSz())
+	rdr := fl.MakeReader(fd, path, fl.GetChunkSz())
 	return rdr, nil
 
 }
@@ -94,13 +93,11 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
 	rdr, err := fl.OpenReaderWatch(path)
 	if err != nil {
-		log.Printf("openread watch %v\n", err)
 		return nil, err
 	}
 	defer rdr.Close()
 	b, error := rdr.GetData()
 	if error != nil {
-		log.Printf("get data %v %T\n", error, error)
 		return nil, error
 	}
 	return b, nil

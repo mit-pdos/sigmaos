@@ -71,8 +71,8 @@ func (pathc *PathClnt) Disconnect(path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) MakeReader(fid np.Tfid, chunksz np.Tsize) *reader.Reader {
-	return reader.MakeReader(pathc.FidClnt, fid, chunksz)
+func (pathc *PathClnt) MakeReader(fid np.Tfid, path string, chunksz np.Tsize) *reader.Reader {
+	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
 func (pathc *PathClnt) MakeWriter(fid np.Tfid, chunksz np.Tsize) *writer.Writer {
@@ -84,7 +84,7 @@ func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
 	if err != nil {
 		return "", err
 	}
-	rdr := reader.MakeReader(pathc.FidClnt, fid, pathc.chunkSz)
+	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	b, err := rdr.GetDataErr()
 	if err != nil {
 		return "", err
@@ -94,11 +94,15 @@ func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
 
 func (pathc *PathClnt) mount(fid np.Tfid, path string) *np.Err {
 	if err := pathc.mnt.add(np.Split(path), fid); err != nil {
-		// Another thread may already have mounted path; don't return an error
-		// XXX detach session
-		log.Printf("%v: mount %v err %v\n", proc.GetProgram(), path, err)
-		pathc.Clunk(fid)
-		return nil
+		if err.Code() == np.TErrExists {
+			// Another thread may already have mounted
+			// path; clunk the fid and don't return an
+			// error.
+			pathc.Clunk(fid)
+			return nil
+		} else {
+			return err
+		}
 	}
 	return nil
 }
@@ -110,11 +114,11 @@ func (pathc *PathClnt) Mount(fid np.Tfid, path string) error {
 	return nil
 }
 
-func (pathc *PathClnt) Create(path string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
-	db.DLPrintf("PATHCLNT", "Create %v perm %v\n", path, perm)
-	p := np.Split(path)
-	dir := np.Dir(p)
-	base := np.Base(p)
+func (pathc *PathClnt) Create(p string, perm np.Tperm, mode np.Tmode) (np.Tfid, error) {
+	db.DLPrintf("PATHCLNT", "Create %v perm %v\n", p, perm)
+	path := np.Split(p)
+	dir := path.Dir()
+	base := path.Base()
 	fid, err := pathc.walkPathUmount(dir, true, nil)
 	if err != nil {
 		return np.NoFid, err
@@ -344,7 +348,7 @@ func (pathc *PathClnt) SetFile(path string, mode np.Tmode, data []byte, off np.T
 	// XXX On EOF try another replica for TestMaintainReplicationLevelCrashProcd
 	cnt, err := pathc.FidClnt.SetFile(fid, rest, mode, off, data, np.EndSlash(path))
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
 			fid, err = pathc.walkPathUmount(p, np.EndSlash(path), nil)
 			if err != nil {
 				return 0, err
@@ -374,9 +378,9 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 	// symlink.
 	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data)
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) || np.IsErrEOF(err) {
-			dir := np.Dir(p)
-			base := []string{np.Base(p)}
+		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
+			dir := p.Dir()
+			base := np.Path{p.Base()}
 			fid, err = pathc.walkPathUmount(dir, true, nil)
 			if err != nil {
 				return 0, err

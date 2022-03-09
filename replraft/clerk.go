@@ -53,14 +53,14 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs {
-				req := &np.Fcall{}
-				if err := npcodec.Unmarshal(frame, req); err != nil {
+				if req, err := npcodec.UnmarshalFcall(frame); err != nil {
 					log.Fatalf("FATAL Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
+				} else {
+					db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
+					// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
+					//				c.printOpTiming(req, frame)
+					c.apply(req)
 				}
-				db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
-				// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
-				//				c.printOpTiming(req, frame)
-				c.apply(req)
 			}
 		}
 	}
@@ -70,7 +70,7 @@ func (c *Clerk) propose(op *Op) {
 	db.DLPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
 	c.registerOp(op)
-	frame, err := npcodec.Marshal(op.request)
+	frame, err := npcodec.MarshalFcallByte(op.request)
 	if err != nil {
 		log.Fatalf("FATAL: marshal op in replraft.Clerk.Propose: %v", err)
 	}

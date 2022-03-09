@@ -1,7 +1,6 @@
 package ninep
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -30,7 +29,11 @@ const (
 	TErrBaddir
 	TErrWalknodir
 
+	//
 	// sigma protocol errors
+	//
+
+	TErrUnreachable
 	TErrNotSupported
 	TErrInval
 	TErrUnknownMsg
@@ -43,13 +46,14 @@ const (
 	TErrInvalidSession
 	TErrExists
 	TErrClosed // for pipes
-	TErrEOF    // EOF or cannot connect
 	TErrBadFcall
-	TErrNet
 	TErrRetry
 	TErrError // to propagate non-sigma errors
 
+	//
 	// sigma OS errors
+	//
+
 	TErrBadFd
 )
 
@@ -95,6 +99,8 @@ func (err Terror) String() string {
 		return "walk in non-directory"
 
 	// sigma
+	case TErrUnreachable:
+		return "Unreachable"
 	case TErrNotSupported:
 		return "not supported"
 	case TErrInval:
@@ -117,18 +123,14 @@ func (err Terror) String() string {
 		return "invalid session"
 	case TErrExists:
 		return "exists"
-	case TErrEOF:
-		return "EOF"
 	case TErrBadFcall:
 		return "bad fcall"
-	case TErrNet:
-		return "network error"
-	case TErrRetry:
-		return "retry"
-	case TErrError:
+	case TErrError: // to pass error through
 		return "Error"
 
 	// sigma OS errors
+	case TErrRetry:
+		return "retry"
 	case TErrBadFd:
 		return "Bad fd"
 
@@ -140,18 +142,25 @@ func (err Terror) String() string {
 type Err struct {
 	ErrCode Terror
 	Obj     string
+	Err     error
 }
 
 func MkErr(err Terror, obj interface{}) *Err {
-	return &Err{err, fmt.Sprintf("%v", obj)}
+	return &Err{err, fmt.Sprintf("%v", obj), nil}
+}
+
+func MkErrError(error error) *Err {
+	return &Err{TErrError, "", error}
 }
 
 func (err *Err) Code() Terror {
 	return err.ErrCode
 }
 
+func (err *Err) Unwrap() error { return err.Err }
+
 func (err *Err) Error() string {
-	return fmt.Sprintf("%v %v", err.ErrCode, err.Obj)
+	return fmt.Sprintf("%v %v %v", err.ErrCode, err.Obj, err.Err)
 }
 
 func (err *Err) String() string {
@@ -162,12 +171,30 @@ func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
 }
 
+// SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrNotfound.String())
 }
 
-func ErrNotfoundPath(error error) string {
-	return strings.TrimPrefix(error.Error(), TErrNotfound.String()+" ")
+// SigmaOS server couldn't reach a server
+func IsErrUnreachable(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrUnreachable.String())
+}
+
+// A file is unavailable: either a server on the file's path is
+// unreachable or the file is not found
+func IsErrUnavailable(error error) bool {
+	return IsErrUnreachable(error) || IsErrNotfound(error)
+}
+
+func ErrPath(error error) string {
+	if IsErrNotfound(error) {
+		return strings.TrimPrefix(error.Error(), TErrNotfound.String()+" ")
+	} else if IsErrUnreachable(error) {
+		return strings.TrimPrefix(error.Error(), TErrUnreachable.String()+" ")
+	} else {
+		return ""
+	}
 }
 
 func IsDirNotFound(error error) bool {
@@ -181,10 +208,6 @@ func IsDirNotFound(error error) bool {
 
 func IsErrExists(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrExists.String())
-}
-
-func IsErrEOF(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrEOF.String())
 }
 
 func IsErrStale(error error) bool {
@@ -205,11 +228,11 @@ func IsMaybeSpecialElem(error error) bool {
 }
 
 func IsErrUnionElem(error error) bool {
-	return IsErrNotfound(error) && IsUnionElem(ErrNotfoundPath(error))
+	return IsErrNotfound(error) && IsUnionElem(ErrPath(error))
 }
 
-func Rerror2Err(error string) *Err {
-	err := &Err{TErrError, error}
+func String2Err(error string) *Err {
+	err := &Err{TErrError, error, nil}
 	for c := TErrBadattach; c <= TErrError; c++ {
 		if strings.HasPrefix(error, c.String()) {
 			err.ErrCode = c
@@ -219,47 +242,4 @@ func Rerror2Err(error string) *Err {
 	}
 	log.Printf("cannot decode = %v err %v\n", error, err)
 	return err
-}
-
-//
-// JSON versions
-//
-
-func (err *Err) RerrorJson() *Rerror {
-	data, error := json.Marshal(*err)
-	if error != nil {
-		log.Fatalf("FATAL Rerror err %v\n", error)
-	}
-	return &Rerror{string(data)}
-}
-
-func Decode(error error) *Err {
-	err := &Err{}
-	r := json.Unmarshal([]byte(error.Error()), err)
-	if r != nil {
-		log.Printf("cannot unmarshal = %v\n", error.Error())
-		return nil
-	}
-	return err
-}
-
-func IsErrNotfoundJson(error error) bool {
-	err := Decode(error)
-	if err == nil {
-		return false
-	}
-	return err.Code() == TErrNotfound
-}
-
-func IsDirNotFoundJson(error error) bool {
-	b := false
-	err := Decode(error)
-	if err == nil {
-		return b
-	}
-	if err.Code() == TErrNotfound {
-		p := Split(err.Obj)
-		b = len(p) > 1
-	}
-	return b
 }

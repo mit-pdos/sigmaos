@@ -2,7 +2,6 @@ package procclnt_test
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"sync"
@@ -80,7 +79,7 @@ func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid string) {
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
 
-func TestWaitExitSimple(t *testing.T) {
+func TestWaitExitOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	start := time.Now()
@@ -104,6 +103,33 @@ func TestWaitExitSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestWaitExitN(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	nProcs := 100
+	var done sync.WaitGroup
+	done.Add(nProcs)
+
+	for i := 0; i < nProcs; i++ {
+		go func() {
+			pid := spawnSleeper(t, ts)
+			status, err := ts.WaitExit(pid)
+			assert.Nil(t, err, "WaitExit error")
+			assert.True(t, status.IsStatusOK(), "Exit status wrong %v", status)
+
+			// cleaned up (may take a bit)
+			time.Sleep(500 * time.Millisecond)
+			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
+
+			checkSleeperResult(t, ts, pid)
+
+			done.Done()
+		}()
+	}
+	done.Wait()
+	ts.Shutdown()
+}
+
 func TestWaitExitParentRetStat(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -117,7 +143,7 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	// cleaned up
 	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-	assert.NotNil(t, err, "Stat")
+	assert.NotNil(t, err, "Stat %v", path.Join(np.PROCD, "~ip", proc.PIDS, pid))
 
 	end := time.Now()
 
@@ -328,7 +354,7 @@ func TestConcurrentProcs(t *testing.T) {
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
 			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-			assert.NotNil(t, err, "Stat")
+			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
 		}(pid, &done, i)
 	}
 
@@ -395,7 +421,6 @@ func testFencer(t *testing.T, part string) {
 
 	for _, pid := range pids {
 		status, err := ts.WaitExit(pid)
-		log.Printf("status %v\n", status)
 		assert.True(t, err != nil || !status.IsStatusErr() || status.Msg() != "Invariant violated", "Exit status wrong")
 	}
 	ts.Shutdown()

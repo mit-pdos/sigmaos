@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/group"
@@ -130,8 +131,8 @@ func (kc *KvClerk) acquireFence(grp string) error {
 
 // Remove group from fenced paths in bal fclnt?
 func (kc KvClerk) removeGrp(err error) error {
-	if np.IsErrNotfound(err) {
-		s := kc.grpre.FindStringSubmatch(np.ErrNotfoundPath(err))
+	if np.IsErrUnreachable(err) {
+		s := kc.grpre.FindStringSubmatch(np.ErrPath(err))
 		if s != nil {
 			if kvs, r := readKVs(kc.FsLib); r == nil {
 				if !kvs.present(s[0]) {
@@ -146,6 +147,7 @@ func (kc KvClerk) removeGrp(err error) error {
 				}
 			} else {
 				log.Printf("%v: ReadFileJson %v err %v\n", proc.GetName(), KVCONFIG, r)
+				return r
 			}
 		}
 	}
@@ -201,7 +203,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 			return nil
 		}
 
-		if np.IsErrNotfound(err) && strings.Contains(np.ErrNotfoundPath(err), KVCONF) {
+		if np.IsErrUnreachable(err) && strings.Contains(np.ErrPath(err), KVCONF) {
 			log.Printf("%v: retry refreshConfig %v\n", proc.GetName(), err)
 			continue
 		}
@@ -225,10 +227,7 @@ func (kc *KvClerk) refreshFences(err error) error {
 	err = kc.releaseGrp(err)
 	if err != nil {
 		// try refreshing config is sufficient to fix error
-		// involving KVCONFIG or if EOF to a kv group.
-		if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrNotfoundPath(err), KVCONF) ||
-			np.IsErrStale(err) ||
-			np.IsErrEOF(err) {
+		if np.IsErrUnreachable(err) || np.IsErrStale(err) {
 			err = kc.refreshConfig(err)
 		}
 	}
@@ -243,7 +242,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 	// yet, so wait a bit, and retry.  XXX make sleep time
 	// dynamic?
 
-	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrNotfoundPath(err), "shard") {
+	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
@@ -309,7 +308,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.off)
 	}
-	// log.Printf("%v: op %v fn %v err %v\n", proc.GetName(), o.kind, fn, o.err)
+	db.DLPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {

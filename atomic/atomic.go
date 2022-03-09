@@ -27,7 +27,7 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 		log.Fatalf("FATAL Error in MakeFileAtomic rename %v -> %v: %v", tmpPath, fname, err)
 		return err
 	}
-	return err
+	return nil
 }
 
 func PutFileJsonAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, i interface{}) error {

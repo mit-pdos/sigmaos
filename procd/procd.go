@@ -1,6 +1,8 @@
 package procd
 
 import (
+	"errors"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -293,8 +295,8 @@ func (pd *Procd) worker(done *int32) {
 			pd.waitSpawnOrTimeout(ticker)
 			continue
 		}
-		if error != nil && (np.IsErrEOF(error) ||
-			(np.IsErrNotfound(error) && strings.Contains(np.ErrNotfoundPath(error), "no mount"))) {
+		if error != nil && (errors.Is(error, io.EOF) ||
+			(np.IsErrUnreachable(error) && strings.Contains(np.ErrPath(error), "no mount"))) {
 			continue
 		}
 		if error != nil {

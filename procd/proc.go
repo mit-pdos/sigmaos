@@ -54,14 +54,14 @@ func (p *Proc) wait(cmd *exec.Cmd) {
 	defer p.pd.fs.finish(p)
 	err := cmd.Wait()
 	if err != nil {
-		log.Printf("Proc %v finished with error: %v", p.attr, err)
+		db.DLPrintf("PROCD_ERR", "Proc %v finished with error: %v\n", p.attr, err)
 		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
 	err = namespace.Destroy(p.NewRoot)
 	if err != nil {
-		log.Printf("Error namespace destroy: %v", err)
+		db.DLPrintf("PROCD_ERR", "Error namespace destroy: %v", err)
 	}
 
 	// Notify schedd that the process exited
@@ -93,7 +93,7 @@ func (p *Proc) run(cores []uint) error {
 
 	// Make the proc's procdir
 	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
-		log.Printf("Err procd MakeProcDir: %v", err)
+		db.DLPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
 	}
 
 	cmd := exec.Command(p.pd.bin+"/"+p.Program, args...)
@@ -104,7 +104,7 @@ func (p *Proc) run(cores []uint) error {
 	namespace.SetupProc(cmd)
 	err := cmd.Start()
 	if err != nil {
-		log.Printf("Procd run error: %v, %v\n", p.attr, err)
+		db.DLPrintf("PROCD_ERR", "Procd run error: %v, %v\n", p.attr, err)
 		return err
 	}
 

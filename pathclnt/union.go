@@ -1,6 +1,9 @@
 package pathclnt
 
 import (
+	"errors"
+	"io"
+
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
@@ -54,11 +57,10 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 	if err != nil {
 		return np.NoFid, err
 	}
-	rdr := reader.MakeReader(pathc.FidClnt, fid, pathc.chunkSz)
+	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
 	for {
-		de := &np.Stat{}
-		err := npcodec.UnmarshalReader(rdr, de)
-		if err != nil && np.IsErrEOF(err) {
+		de, err := npcodec.UnmarshalDirEnt(rdr)
+		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

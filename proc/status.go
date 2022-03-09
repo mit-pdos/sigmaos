@@ -55,6 +55,10 @@ func (s *Status) Msg() string {
 	return s.StatusMessage
 }
 
+func (s *Status) Error() string {
+	return s.StatusMessage
+}
+
 func (s *Status) Data() interface{} {
 	return s.StatusData
 }

@@ -11,24 +11,24 @@ const (
 	MAXSYMLINK = 8
 )
 
-// walkManyUmount walks path and, on success, returns the fd walked
-// to; it is the caller's responsibility to clunk the fd.  If it
-// encounters an EOF err (e.g., server is not responding), it unmounts
+// walPathUmount walks path and, on success, returns the fd walked to;
+// it is the caller's responsibility to clunk the fd.  If it
+// encounters an EOF err (e.g., server is not responding), it umounts
 // the path it walked to, and starts over again, perhaps switching to
 // another replica.  (Note: TestMaintainReplicationLevelCrashProcd
 // test the fail-over case.)
-func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.Tfid, *np.Err) {
+func (pathc *PathClnt) walkPathUmount(path np.Path, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for {
 		fid, left, err := pathc.walkPath(path, resolve, w)
-		db.DLPrintf("WALK", "walkMany %v -> (%v, %v, %v)\n", path, fid, left, err)
-		if err != nil && np.IsErrEOF(err) {
+		db.DLPrintf("WALK", "walkPath %v -> (%v, %v, %v)\n", path, fid, left, err)
+		if err != nil && np.IsErrUnreachable(err) {
 			done := len(path) - len(left)
-			db.DLPrintf("WALK", "walkManyUmount: umount %v\n", path[0:done])
+			db.DLPrintf("WALK", "walkPathUmount: umount %v\n", path[0:done])
 			if e := pathc.mnt.umount(pathc.FidClnt, path[0:done]); e != nil {
 				return np.NoFid, e
 			}
 			// try again
-			db.DLPrintf("WALK", "walkManyUmount: try again p %v r %v\n", path, resolve)
+			db.DLPrintf("WALK", "walkPathUmount: try again p %v r %v\n", path, resolve)
 			continue
 		}
 		if err != nil {
@@ -42,16 +42,16 @@ func (pathc *PathClnt) walkPathUmount(path []string, resolve bool, w Watch) (np.
 // it returns NoFid and the rest of path that it wasn't able to walk.
 // walkPath first walks the mount table, finding the server with the
 // longest-match, and then uses walkOne() to walk at that server. The
-// server may fail to resolve, succeed resolving, or return the path
-// element that is a union or symlink. In the latter case, walkMany()
-// uses walkUnion() and walkSymlink to resolve that
-// element. walkUnion() typically ends in a symlink.  walkSymlink will
-// automount a new server and update the mount table. If succesful,
-// walkMany() starts over again, but likely with a longer match in the
+// server may fail to walk, finish walking, or return the path element
+// that is a union or symlink. In the latter case, walkPath() uses
+// walkUnion() and walkSymlink to resolve that element. walkUnion()
+// typically ends in a symlink.  walkSymlink will automount a new
+// server and update the mount table. If succesfully automounted,
+// walkPath() starts over again, but likely with a longer match in the
 // mount table.  Each of the walk*() returns an fid, which on error is
 // the same as the argument; and the caller is responsible for
 // clunking it.
-func (pathc *PathClnt) walkPath(path []string, resolve bool, w Watch) (np.Tfid, []string, *np.Err) {
+func (pathc *PathClnt) walkPath(path np.Path, resolve bool, w Watch) (np.Tfid, np.Path, *np.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, left, err := pathc.walkMount(path)
 		if err != nil {
@@ -85,13 +85,13 @@ func (pathc *PathClnt) walkPath(path []string, resolve bool, w Watch) (np.Tfid, 
 		}
 		return np.NoFid, left, np.MkErr(np.TErrNotfound, left)
 	}
-	return np.NoFid, path, np.MkErr(np.TErrNotfound, "too many symlink cycles")
+	return np.NoFid, path, np.MkErr(np.TErrUnreachable, "too many symlink cycles")
 }
 
 // Walk the mount table, and clone the found fid; the caller is
 // responsible for clunking it. Return the fid and the remaining part
 // of the path that must be walked.
-func (pathc *PathClnt) walkMount(path []string) (np.Tfid, []string, *np.Err) {
+func (pathc *PathClnt) walkMount(path np.Path) (np.Tfid, np.Path, *np.Err) {
 	fid, left, err := pathc.mnt.resolve(path)
 	if err != nil {
 		return np.NoFid, left, err
@@ -106,8 +106,10 @@ func (pathc *PathClnt) walkMount(path []string) (np.Tfid, []string, *np.Err) {
 }
 
 // Walk path at fid's server until the server runs into a symlink,
-// union element, or an error. walkOne returns the fid walked too.
-func (pathc *PathClnt) walkOne(fid np.Tfid, path []string, w Watch) (np.Tfid, []string, *np.Err) {
+// union element, or an error. walkOne returns the fid walked too.  If
+// file is not found, set watch on the directory, waiting until the
+// file is created.
+func (pathc *PathClnt) walkOne(fid np.Tfid, path np.Path, w Watch) (np.Tfid, np.Path, *np.Err) {
 	db.DLPrintf("WALK", "walkOne %v left %v\n", fid, path)
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
 	if err != nil { // fid1 == fid
@@ -136,9 +138,9 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path []string, w Watch) (np.Tfid, []
 	return fid1, left, nil
 }
 
-// Does fid point to a directory that contains ~?  If, resolve union
+// Does fid point to a directory that contains ~?  If so, resolve ~
 // and return fid for result.
-func (pathc *PathClnt) walkUnion(fid np.Tfid, path []string) (np.Tfid, []string, *np.Err) {
+func (pathc *PathClnt) walkUnion(fid np.Tfid, path np.Path) (np.Tfid, np.Path, *np.Err) {
 	if len(path) > 0 && np.IsUnionElem(path[0]) {
 		db.DLPrintf("WALK", "walkUnion %v path %v\n", fid, path)
 		fid1, err := pathc.unionLookup(fid, path[0])
@@ -154,7 +156,7 @@ func (pathc *PathClnt) walkUnion(fid np.Tfid, path []string) (np.Tfid, []string,
 
 // Is fid a symlink?  If so, walk it (incl. automounting) and return
 // whether caller should retry.
-func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left []string, resolve bool) (bool, []string, *np.Err) {
+func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left np.Path, resolve bool) (bool, np.Path, *np.Err) {
 	qid := pathc.FidClnt.Lookup(fid).Lastqid()
 
 	// if len(left) == 0 and !resolve, don't resolve
@@ -173,14 +175,16 @@ func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left []string, resolve boo
 	return false, left, nil
 }
 
-// Walk to parent directory, and check if name is there.  If it is, return entry.
-// Otherwise, set watch based on directory's version number
-func (pathc *PathClnt) setWatch(fid np.Tfid, p []string, r []string, w Watch) (np.Tfid, *np.Err) {
-	fid1, _, err := pathc.FidClnt.Walk(fid, np.Dir(r))
+// Walk to parent directory, and check if name is there.  If it is,
+// return entry.  Otherwise, set watch based on directory's version
+// number If the directory is modified between Walk and Watch(), the
+// versions numbers won't match and Watch will return an error.
+func (pathc *PathClnt) setWatch(fid np.Tfid, p np.Path, r np.Path, w Watch) (np.Tfid, *np.Err) {
+	fid1, _, err := pathc.FidClnt.Walk(fid, r.Dir())
 	if err != nil {
 		return np.NoFid, err
 	}
-	fid2, _, err := pathc.FidClnt.Walk(fid1, []string{np.Base(r)})
+	fid2, _, err := pathc.FidClnt.Walk(fid1, np.Path{r.Base()})
 	if err == nil {
 		pathc.FidClnt.Clunk(fid1)
 		return fid2, nil
@@ -189,10 +193,10 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p []string, r []string, w Watch) (n
 		log.Fatalf("FATAL setWatch %v %v\n", fid2, fid1)
 	}
 	go func(version np.TQversion) {
-		err := pathc.FidClnt.Watch(fid1, np.Dir(r), version)
+		err := pathc.FidClnt.Watch(fid1, r.Dir(), version)
 		pathc.FidClnt.Clunk(fid1)
-		db.DLPrintf("WALK", "setWatch: Watch returns %v %v\n", p, err)
-		w(np.Join(p), err)
+		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
+		w(p.String(), err)
 	}(pathc.FidClnt.Lookup(fid1).Version())
 	return np.NoFid, nil
 }

@@ -18,7 +18,7 @@ func (rc *ReplyCache) Snapshot() []byte {
 			var b []byte
 			var err1 *np.Err
 			if rf.reply != nil {
-				b, err1 = npcodec.Marshal(rf.reply)
+				b, err1 = npcodec.MarshalFcallByte(rf.reply)
 				if err1 != nil {
 					log.Fatalf("FATAL Error marshal np.Fcall in ReplyCache.Snapshot: %v, %v", err1, rf.reply)
 				}
@@ -46,15 +46,12 @@ func Restore(b []byte) *ReplyCache {
 				rc.entries[sess] = make(map[np.Tseqno]*ReplyFuture)
 			}
 
-			fc := &np.Fcall{}
-			if len(b) > 0 {
-				err1 := npcodec.Unmarshal(b, fc)
-				if err1 != nil {
-					log.Fatalf("FATAL Error unmarshal np.Fcall in ReplyCache.Restore: %v, %v", err1, string(b))
-				}
+			fc, err1 := npcodec.UnmarshalFcall(b)
+			if err1 != nil {
+				log.Fatalf("FATAL Error unmarshal np.Fcall in ReplyCache.Restore: %v, %v", err1, string(b))
 			}
 
-			if len(b) > 0 {
+			if fc != nil {
 				rf := MakeReplyFuture()
 				rf.Complete(fc)
 				rc.entries[sess][seqno] = rf

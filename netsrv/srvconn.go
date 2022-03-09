@@ -8,7 +8,6 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/proc"
 	"ulambda/protsrv"
 )
 
@@ -53,7 +52,7 @@ func (c *SrvConn) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			db.DLPrintf("NETSRV", "Peer %v closed/erred %v\n", c.Src(), err)
+			db.DLPrintf("NETSRV_ERR", "Peer %v closed/erred %v\n", c.Src(), err)
 
 			// If the sessid hasn't been set, we haven't received any valid ops yet,
 			// so the session has not been added to the session table. If this is the
@@ -74,15 +73,12 @@ func (c *SrvConn) reader() {
 		}
 		var fcall *np.Fcall
 		if c.wireCompat {
-			fcallWC := &np.FcallWireCompat{}
-			err = npcodec.Unmarshal(frame, fcallWC)
-			fcall = fcallWC.ToInternal()
+			fcall, err = npcodec.UnmarshalFcallWireCompat(frame)
 		} else {
-			fcall = &np.Fcall{}
-			err = npcodec.Unmarshal(frame, fcall)
+			fcall, err = npcodec.UnmarshalFcall(frame)
 		}
 		if err != nil {
-			log.Print("%v: reader: bad fcall: ", proc.GetName(), err)
+			db.DLPrintf("NETSRV_ERR", "reader: bad fcall: ", err)
 		} else {
 			db.DLPrintf("NETSRV", "srv req %v\n", fcall)
 			if c.sessid == 0 {
@@ -105,21 +101,18 @@ func (c *SrvConn) writer() {
 			return
 		}
 		db.DLPrintf("NETSRV", "srv rep %v\n", fcall)
-		var err *np.Err
 		var writableFcall np.WritableFcall
 		if c.wireCompat {
 			writableFcall = fcall.ToWireCompatible()
 		} else {
 			writableFcall = fcall
 		}
-		err = npcodec.MarshalFcallToWriter(writableFcall, c.bw)
-		if err != nil {
-			log.Printf("%v: writer err %v\n", proc.GetProgram(), err)
-		} else {
-			error := c.bw.Flush()
-			if error != nil {
-				log.Printf("%v: flush %v err %v", proc.GetProgram(), fcall, err)
-			}
+		if err := npcodec.MarshalFcall(writableFcall, c.bw); err != nil {
+			db.DLPrintf("NETSRV_ERR", "writer err %v\n", err)
+			continue
+		}
+		if error := c.bw.Flush(); error != nil {
+			db.DLPrintf("NETSRV_ERR", "flush %v err %v", fcall, error)
 		}
 	}
 }

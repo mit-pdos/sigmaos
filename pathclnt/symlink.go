@@ -7,14 +7,14 @@ import (
 	np "ulambda/ninep"
 )
 
-func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left []string) ([]string, *np.Err) {
+func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *np.Err) {
 	// XXX change how we readlink; getfile?
 	target, err := pathc.readlink(fid)
 	db.DLPrintf("WALK", "walksymlink1 %v target %v err %v\n", fid, target, err)
 	if err != nil {
 		return left, err
 	}
-	var path []string
+	var path np.Path
 	if IsRemoteTarget(target) {
 		trest, err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
@@ -48,9 +48,9 @@ func IsReplicated(target string) bool {
 }
 
 // XXX pubkey is unused
-func SplitTarget(target string) (string, []string) {
+func SplitTarget(target string) (string, np.Path) {
 	var server string
-	var rest []string
+	var rest np.Path
 
 	if strings.HasPrefix(target, "[") { // IPv6: [::]:port:pubkey:name
 		parts := strings.SplitN(target, ":", 5)
@@ -68,11 +68,11 @@ func SplitTarget(target string) (string, []string) {
 	return server, rest
 }
 
-func SplitTargetReplicated(target string) ([]string, []string) {
+func SplitTargetReplicated(target string) (np.Path, np.Path) {
 	target = strings.TrimSpace(target)
 	targets := strings.Split(target, "\n")
-	servers := []string{}
-	rest := []string{}
+	servers := np.Path{}
+	rest := np.Path{}
 	for _, t := range targets {
 		serv, r := SplitTarget(t)
 		rest = r
@@ -81,25 +81,25 @@ func SplitTargetReplicated(target string) ([]string, []string) {
 	return servers, rest
 }
 
-func (pathc *PathClnt) autoMount(uname string, target string, path []string) ([]string, *np.Err) {
+func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) (np.Path, *np.Err) {
 	db.DLPrintf("PATHCLNT", "automount %v to %v\n", target, path)
-	var rest []string
+	var rest np.Path
 	var fid np.Tfid
 	var err *np.Err
 	if IsReplicated(target) {
 		servers, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = pathc.Attach(uname, servers, np.Join(path), "")
+		fid, err = pathc.Attach(uname, servers, path.String(), "")
 	} else {
 		server, r := SplitTarget(target)
 		rest = r
-		fid, err = pathc.Attach(uname, []string{server}, np.Join(path), "")
+		fid, err = pathc.Attach(uname, []string{server}, path.String(), "")
 	}
 	if err != nil {
 		db.DLPrintf("PATHCLNT", "Attach error: %v", err)
 		return nil, err
 	}
-	err = pathc.mount(fid, np.Join(path))
+	err = pathc.mount(fid, path.String())
 	if err != nil {
 		return nil, err
 	}

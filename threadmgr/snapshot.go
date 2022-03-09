@@ -15,7 +15,7 @@ type OpSnapshot struct {
 }
 
 func MakeOpSnapshot(fc *np.Fcall, n uint64) *OpSnapshot {
-	b, err := npcodec.Marshal(fc)
+	b, err := npcodec.MarshalFcallByte(fc)
 	if err != nil {
 		log.Fatalf("FATAL error marshalling fcall in MakeOpSnapshot: %v", err)
 	}
@@ -60,8 +60,7 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	// List of ops currently executing.
 	executing := []*Op{}
 	for _, op := range opss {
-		fc := &np.Fcall{}
-		err1 := npcodec.Unmarshal(op.Fc, fc)
+		fc, err1 := npcodec.UnmarshalFcall(op.Fc)
 		if err1 != nil {
 			log.Fatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}

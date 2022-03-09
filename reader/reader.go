@@ -9,11 +9,16 @@ import (
 
 type Reader struct {
 	fc      *fidclnt.FidClnt
+	path    string
 	fid     np.Tfid
 	buf     []byte
 	off     np.Toffset
 	eof     bool
 	chunksz np.Tsize
+}
+
+func (rdr *Reader) Path() string {
+	return rdr.path
 }
 
 func (rdr *Reader) ReadByte() (byte, error) {
@@ -70,6 +75,6 @@ func (rdr *Reader) Close() error {
 	return nil
 }
 
-func MakeReader(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) *Reader {
-	return &Reader{fc, fid, make([]byte, 0), 0, false, chunksz}
+func MakeReader(fc *fidclnt.FidClnt, path string, fid np.Tfid, chunksz np.Tsize) *Reader {
+	return &Reader{fc, path, fid, make([]byte, 0), 0, false, chunksz}
 }

@@ -75,7 +75,7 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 			break
 		}
 		if err != nil {
-			log.Fatal("%v: ReadVarint err %v", proc.GetName(), err)
+			log.Fatalf("%v: ReadVarint err %v", proc.GetName(), err)
 		}
 		data := make([]byte, sz)
 		l, err := rdr.Read(data)
@@ -95,15 +95,15 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 			continue
 		}
 		if val.Key != kv.Key(i) {
-			return fmt.Errorf("%v: wrong key %v %v", proc.GetName(), kv.Key(i), val.Key)
+			return fmt.Errorf("%v: wrong key %v %v %v", proc.GetName(), kv.Key(i), val.Key, kv.Key(i))
 		}
 		if val.N != n {
-			return fmt.Errorf("%v: wrong N %v %v", proc.GetName(), n, val.N)
+			return fmt.Errorf("%v: wrong N %v %v %v %v", proc.GetName(), n, val.N, kv.Key(i), rdr.Path())
 		}
 		n += 1
 	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest %v %v", proc.GetName(), ntest, n)
+		return fmt.Errorf("%v: wrong ntest %v %v %v %v", proc.GetName(), ntest, n, kv.Key(i), rdr.Path())
 	}
 	return nil
 }

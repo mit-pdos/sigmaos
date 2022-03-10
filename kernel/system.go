@@ -59,7 +59,7 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	}
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
-	s.named = makeSubsystem(cmd, "init-named")
+	s.named = makeSubsystem(cmd, nil)
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return s
@@ -108,7 +108,7 @@ func (s *System) BootFsUxd() error {
 	if err != nil {
 		return err
 	}
-	s.fsuxd = append(s.fsuxd, makeSubsystem(cmd, p.Pid))
+	s.fsuxd = append(s.fsuxd, makeSubsystem(cmd, p))
 	return s.WaitStart(p.Pid)
 }
 
@@ -118,7 +118,7 @@ func (s *System) BootFss3d() error {
 	if err != nil {
 		return err
 	}
-	s.fss3d = append(s.fss3d, makeSubsystem(cmd, p.Pid))
+	s.fss3d = append(s.fss3d, makeSubsystem(cmd, p))
 	return s.WaitStart(p.Pid)
 }
 
@@ -128,7 +128,7 @@ func (s *System) BootProcd() error {
 	if err != nil {
 		return err
 	}
-	s.procd = append(s.procd, makeSubsystem(cmd, p.Pid))
+	s.procd = append(s.procd, makeSubsystem(cmd, p))
 	return s.WaitStart(p.Pid)
 }
 
@@ -138,7 +138,7 @@ func (s *System) BootDbd() error {
 	if err != nil {
 		return err
 	}
-	s.dbd = append(s.dbd, makeSubsystem(cmd, p.Pid))
+	s.dbd = append(s.dbd, makeSubsystem(cmd, p))
 	return s.WaitStart(p.Pid)
 }
 
@@ -147,11 +147,11 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case np.PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("kill %v\n", -s.procd[0].cmd.Process.Pid, s.procd[0].pid)
+			log.Printf("kill %v\n", -s.procd[0].cmd.Process.Pid, s.procd[0].p.Pid)
 			err = syscall.Kill(-s.procd[0].cmd.Process.Pid, syscall.SIGKILL)
 			if err == nil {
 				s.procd[0].cmd.Wait()
-				s.crashedPids[s.procd[0].pid] = true
+				s.crashedPids[s.procd[0].p.Pid] = true
 				s.procd = s.procd[1:]
 			} else {
 				log.Fatalf("Procd kill failed %v\n", err)
@@ -162,7 +162,7 @@ func (s *System) KillOne(srv string) error {
 		err = syscall.Kill(-s.fsuxd[0].cmd.Process.Pid, syscall.SIGKILL)
 		if err == nil {
 			s.fsuxd[0].cmd.Wait()
-			s.crashedPids[s.fsuxd[0].pid] = true
+			s.crashedPids[s.fsuxd[0].p.Pid] = true
 			s.fsuxd = s.fsuxd[1:]
 		} else {
 			log.Fatalf("Ux kill failed %v\n", err)

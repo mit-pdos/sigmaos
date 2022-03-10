@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	NO_PID           = "no-realm"
 	NO_REALM         = "no-realm"
 	SLEEP_MS         = 200
 	REPL_PORT_OFFSET = 100
@@ -27,22 +28,22 @@ type System struct {
 	bindir      string
 	pid         string
 	namedAddr   []string
-	named       *exec.Cmd
-	fss3d       []*exec.Cmd
-	fsuxd       []*exec.Cmd
-	procd       []*exec.Cmd
-	procdPids   []string
-	fsuxdPids   []string
+	named       *Subsystem
+	fss3d       []*Subsystem
+	fsuxd       []*Subsystem
+	procd       []*Subsystem
+	dbd         []*Subsystem
 	crashedPids map[string]bool
-	dbd         []*exec.Cmd
 }
 
 func makeSystemBase(namedAddr []string, bindir string) *System {
 	s := &System{}
 	s.bindir = bindir
 	s.namedAddr = namedAddr
-	s.procdPids = []string{}
-	s.fsuxdPids = []string{}
+	s.procd = []*Subsystem{}
+	s.fsuxd = []*Subsystem{}
+	s.fss3d = []*Subsystem{}
+	s.dbd = []*Subsystem{}
 	s.crashedPids = make(map[string]bool)
 	return s
 }
@@ -58,7 +59,7 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	}
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
-	s.named = cmd
+	s.named = makeSubsystem(cmd, "init-named")
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return s
@@ -107,8 +108,7 @@ func (s *System) BootFsUxd() error {
 	if err != nil {
 		return err
 	}
-	s.fsuxd = append(s.fsuxd, cmd)
-	s.fsuxdPids = append(s.fsuxdPids, p.Pid)
+	s.fsuxd = append(s.fsuxd, makeSubsystem(cmd, p.Pid))
 	return s.WaitStart(p.Pid)
 }
 
@@ -118,7 +118,7 @@ func (s *System) BootFss3d() error {
 	if err != nil {
 		return err
 	}
-	s.fss3d = append(s.fss3d, cmd)
+	s.fss3d = append(s.fss3d, makeSubsystem(cmd, p.Pid))
 	return s.WaitStart(p.Pid)
 }
 
@@ -128,8 +128,7 @@ func (s *System) BootProcd() error {
 	if err != nil {
 		return err
 	}
-	s.procdPids = append(s.procdPids, p.Pid)
-	s.procd = append(s.procd, cmd)
+	s.procd = append(s.procd, makeSubsystem(cmd, p.Pid))
 	return s.WaitStart(p.Pid)
 }
 
@@ -139,7 +138,7 @@ func (s *System) BootDbd() error {
 	if err != nil {
 		return err
 	}
-	s.dbd = append(s.dbd, cmd)
+	s.dbd = append(s.dbd, makeSubsystem(cmd, p.Pid))
 	return s.WaitStart(p.Pid)
 }
 
@@ -148,25 +147,23 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case np.PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("kill %v %v\n", -s.procd[0].Process.Pid, s.procdPids[0])
-			err = syscall.Kill(-s.procd[0].Process.Pid, syscall.SIGKILL)
+			log.Printf("kill %v\n", -s.procd[0].cmd.Process.Pid, s.procd[0].pid)
+			err = syscall.Kill(-s.procd[0].cmd.Process.Pid, syscall.SIGKILL)
 			if err == nil {
-				s.procd[0].Wait()
+				s.procd[0].cmd.Wait()
+				s.crashedPids[s.procd[0].pid] = true
 				s.procd = s.procd[1:]
 			} else {
 				log.Fatalf("Procd kill failed %v\n", err)
 			}
 		}
-		s.crashedPids[s.procdPids[0]] = true
-		s.procdPids = s.procdPids[1:]
 	case np.UX:
-		log.Printf("kill %v\n", -s.fsuxd[0].Process.Pid)
-		err = syscall.Kill(-s.fsuxd[0].Process.Pid, syscall.SIGKILL)
+		log.Printf("kill %v\n", -s.fsuxd[0].cmd.Process.Pid)
+		err = syscall.Kill(-s.fsuxd[0].cmd.Process.Pid, syscall.SIGKILL)
 		if err == nil {
-			s.fsuxd[0].Wait()
+			s.fsuxd[0].cmd.Wait()
+			s.crashedPids[s.fsuxd[0].pid] = true
 			s.fsuxd = s.fsuxd[1:]
-			s.crashedPids[s.fsuxdPids[0]] = true
-			s.fsuxdPids = s.fsuxdPids[1:]
 		} else {
 			log.Fatalf("Ux kill failed %v\n", err)
 		}
@@ -193,21 +190,21 @@ func (s *System) Shutdown() {
 	}
 	// Make sure the procs actually exited
 	for _, d := range s.fss3d {
-		d.Wait()
+		d.cmd.Wait()
 	}
 	for _, d := range s.fsuxd {
-		d.Wait()
+		d.cmd.Wait()
 	}
 	for _, d := range s.procd {
-		d.Wait()
+		d.cmd.Wait()
 	}
 	for _, d := range s.dbd {
-		d.Wait()
+		d.cmd.Wait()
 	}
 	if s.named != nil {
 		// kill it so that test terminates
-		s.named.Process.Kill()
-		s.named.Wait()
+		s.named.cmd.Process.Kill()
+		s.named.cmd.Wait()
 	}
 }
 

@@ -144,7 +144,7 @@ func (fos *FsObjSrv) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "%v: Clunk %v\n", f.Ctx().Uname(), f)
+	db.DLPrintf("FSOBJ", "%v: Clunk %v %v\n", f.Ctx().Uname(), args.Fid, f)
 	if f.IsOpen() { // has the fid been opened?
 		f.Obj().Close(f.Ctx(), f.Mode())
 		f.Close()
@@ -180,12 +180,12 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "%v: Watchv %v\n", f.Ctx().Uname(), args)
 	o := f.Obj()
 	p := f.Path()
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
+	db.DLPrintf("FSOBJ", "%v: Watchv v %v %v\n", f.Ctx().Uname(), o.Version(), args)
 
 	// get lock on watch entry for p, so that remove cannot remove
 	// file before watch is set.
@@ -333,8 +333,11 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror
 
 	fos.stats.Path(path)
 
-	db.DLPrintf("FSOBJ", "%v: remove %v in %v\n", ctx.Uname(), path, path.Dir())
+	db.DLPrintf("FSOBJ", "%v: removeObj %v in %v\n", ctx.Uname(), path, path.Dir())
 
+	// Call before Remove(), because after remove o's underlying
+	// object may not exist anymore.
+	ephemeral := o.Perm().IsEphemeral()
 	err := o.Parent().Remove(ctx, path[len(path)-1])
 	if err != nil {
 		return err.Rerror()
@@ -347,7 +350,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror
 	fws.WakeupWatchL()
 	dws.WakeupWatchL()
 
-	if o.Perm().IsEphemeral() {
+	if ephemeral {
 		fos.et.Del(o)
 	}
 	return nil
@@ -360,7 +363,7 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "%v: remove %v\n", f.Ctx().Uname(), f.Path())
+	db.DLPrintf("FSOBJ", "%v: Remove %v\n", f.Ctx().Uname(), f.Path())
 	return fos.removeObj(f.Ctx(), f.Obj(), f.Path())
 }
 
@@ -541,7 +544,7 @@ func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerro
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "%v: removefile %v\n", f.Ctx().Uname(), fname)
+	db.DLPrintf("FSOBJ", "%v: RemoveFile %v\n", f.Ctx().Uname(), fname)
 	return fos.removeObj(f.Ctx(), lo, fname)
 }
 

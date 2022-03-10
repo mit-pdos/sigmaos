@@ -62,14 +62,14 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	d := "name/ux/~ip/m-" + m.file
+	d := np.UX + "/~ip/m-" + m.file
 	m.MkDir(d, 0777)
 
 	// Create the output files
 	var err error
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output file
-		oname := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
+		oname := np.UX + "/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
 		m.fds[r], err = m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
@@ -133,12 +133,12 @@ func (m *Mapper) doMap() error {
 	}
 
 	// Inform reducer where to find map output
-	st, err := m.Stat("name/ux/~ip")
+	st, err := m.Stat(np.UX + "/~ip")
 	if err != nil {
-		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), "name/ux/~ip", err)
+		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), np.UX+"/~ip", err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := "name/ux/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
+		fn := np.UX + "/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
 			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(),
@@ -157,7 +157,7 @@ func (m *Mapper) doMap() error {
 		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
-		target := "name/ux/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
+		target := np.UX + "/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
 			if np.IsErrNotfound(err) {

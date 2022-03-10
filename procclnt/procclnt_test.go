@@ -402,7 +402,7 @@ func testFencer(t *testing.T, part string) {
 	pids := []string{}
 
 	// XXX use the same dir independent of machine running proc
-	dir := "name/ux/~ip/outdir"
+	dir := np.UX + "/~ip/outdir"
 	ts.RmDir(dir)
 	err := ts.MkDir(dir, 0777)
 	err = ts.MkDir(FENCE_DIR, 0777)

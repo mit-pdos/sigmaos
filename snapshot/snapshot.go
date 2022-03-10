@@ -8,6 +8,7 @@ import (
 	"ulambda/dir"
 	"ulambda/fences"
 	"ulambda/fs"
+	"ulambda/inode"
 	"ulambda/memfs"
 	"ulambda/protsrv"
 	"ulambda/repl"
@@ -24,6 +25,7 @@ type Snapshot struct {
 	Tmt          []byte
 	Rft          []byte
 	Rc           []byte
+	NextInum     uint64
 	restoreCache map[uint64]fs.FsObj
 }
 
@@ -51,6 +53,8 @@ func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadm
 	if err != nil {
 		log.Fatalf("Error marshalling snapshot: %v", err)
 	}
+	// Store the next inum
+	s.NextInum = inode.NextInum
 	return b
 }
 
@@ -80,6 +84,9 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
 	}
 	s.restoreCache[0] = nil
+	// Restore the next inum
+	inode.NextInum = s.NextInum
+	// Restore the fs tree
 	root := s.RestoreFsTree(s.Root)
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)

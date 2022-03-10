@@ -26,14 +26,14 @@ type Inode struct {
 	nlink   int
 }
 
-var nextInum uint64 = 0
+var NextInum uint64 = 0
 
 func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
 	// This may be overly defensive, but setting an inode's inum as it's address
 	// seems risky, as the go GC moves objects and may accidentally make two
 	// objects have the same address.
-	i.inum = atomic.AddUint64(&nextInum, 1)
+	i.inum = atomic.AddUint64(&NextInum, 1)
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent

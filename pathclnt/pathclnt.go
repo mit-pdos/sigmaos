@@ -295,7 +295,7 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 	go func() {
 		version := pathc.FidClnt.Lookup(fid).Version()
 		err := pathc.FidClnt.Watch(fid, nil, version)
-		db.DLPrintf("PATHCLNT", "SetRemoveWatch: Watch returns %v %v\n", path, err)
+		db.DLPrintf("PATHCLNT", "SetRemoveWatch: Watch %v v %v err %v\n", path, version, err)
 		if err == nil {
 			w(path, nil)
 		} else {

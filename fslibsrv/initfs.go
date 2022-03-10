@@ -56,7 +56,7 @@ func makeStatDev(root fs.Dir, srv *fssrv.FsServer) *np.Err {
 }
 
 func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *np.Err) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
 	for _, a := range fslib.Named() {
@@ -86,7 +86,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fs
 }
 
 func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*fssrv.FsServer, *np.Err) {
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	srv, err := makeReplServerFsl(root, addr, path, fsl, pclnt, conf)
 	if err != nil {
 		log.Fatalf("Error makeReplMemfsFsl: err")
@@ -113,7 +113,7 @@ func MakeMemFs(path string, name string) (*MemFs, *fslib.FsLib, *procclnt.ProcCl
 
 func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*MemFs, error) {
 	fs := &MemFs{}
-	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode, memfs.GenPath)
+	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	srv, err := MakeSrv(root, path, fsl, pclnt)
 	if err != nil {
 		return nil, err

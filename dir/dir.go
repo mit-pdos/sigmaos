@@ -15,10 +15,8 @@ import (
 
 type makeInodeF func(fs.CtxI, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, *np.Err)
 type makeRootInodeF func(fs.MakeDirF, fs.CtxI, np.Tperm) (fs.FsObj, *np.Err)
-type genPathF func() np.Tpath
 
 var makeInode makeInodeF
-var genPath genPathF
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
 // "." too
@@ -54,9 +52,8 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func MkRootDir(f makeInodeF, r makeRootInodeF, p genPathF) fs.Dir {
+func MkRootDir(f makeInodeF, r makeRootInodeF) fs.Dir {
 	makeInode = f
-	genPath = p
 	i, _ := r(MakeDirF, nil, np.DMDIR)
 	return i.(fs.Dir)
 }

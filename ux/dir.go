@@ -120,20 +120,26 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 	return 0, np.MkErr(np.TErrNotSupported, nil)
 }
 
-func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
-	return np.MkErr(np.TErrNotSupported, nil)
+func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
+	oldPath := d.Path() + "/" + from
+	newPath := dd.(*Dir).Path() + "/" + to
+	db.DLPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
+	err := os.Rename(oldPath, newPath)
+	if err != nil {
+		return np.MkErrError(err)
+	}
+	return nil
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
 	err := os.Remove(d.Path() + "/" + name)
 	if err != nil {
-		np.MkErrError(err)
+		return np.MkErrError(err)
 	}
 	return nil
 }
 
-// XXX update cached file obj?
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	oldPath := d.Path() + "/" + from
 	newPath := d.Path() + "/" + to

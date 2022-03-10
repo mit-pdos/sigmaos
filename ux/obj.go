@@ -1,30 +1,56 @@
 package fsux
 
 import (
+	"log"
 	"os"
 	"sync"
 	"syscall"
 
 	db "ulambda/debug"
 	"ulambda/fs"
-	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
-type Obj struct {
-	*inode.Inode
-	mu   sync.Mutex
-	path np.Path
-	ino  uint64 // Unix inode
-	sz   np.Tlength
-	init bool
+func ustat(path np.Path) (*syscall.Stat_t, *np.Err) {
+	fileinfo, err := os.Stat(path.String())
+	if err != nil {
+		return nil, np.MkErr(np.TErrError, err)
+	}
+	ustat, ok := fileinfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil, np.MkErr(np.TErrError, "Not a syscall.Stat_t")
+	}
+	return ustat, nil
 }
 
-func makeObj(path np.Path, t np.Tperm, d *Dir) *Obj {
+type Obj struct {
+	mu      sync.Mutex
+	path    np.Path
+	ino     uint64 // Unix inode
+	version np.TQversion
+}
+
+func makeObj(path np.Path) (*Obj, *np.Err) {
 	o := &Obj{}
-	o.Inode = inode.MakeInode(nil, t, d)
+	// o.Inode = inode.MakeInode(nil, t, d)
+	if err := o.init(path); err != nil {
+		return nil, err
+	}
+	return o, nil
+}
+
+// Collect enough info to make a qid and set sz
+func (o *Obj) init(path np.Path) *np.Err {
+	ustat, err := ustat(path)
+	if err != nil {
+		return err
+	}
 	o.path = path
-	return o
+	o.ino = ustat.Ino
+	s, _ := ustat.Mtim.Unix()
+	// XXX maybe use xattr? or at least nsec since 1970
+	o.version = np.TQversion(s)
+	return nil
 }
 
 func (o *Obj) Path() string {
@@ -54,61 +80,103 @@ func uxFlags(m np.Tmode) int {
 }
 
 func (o *Obj) Inum() uint64 {
-	if !o.init {
-		o.stat()
-	}
 	return o.ino
 }
 
+func (o *Obj) Version() np.TQversion {
+	return o.version
+}
+
+func (o *Obj) VersionInc() {
+}
+
 func (o *Obj) Qid() np.Tqid {
-	if !o.init {
-		o.stat()
-	}
 	return np.MakeQid(np.Qtype(o.Perm()>>np.QTYPESHIFT),
-		np.TQversion(0), np.Tpath(o.ino))
+		np.TQversion(o.version), np.Tpath(o.ino))
 }
 
 func (o *Obj) Size() np.Tlength {
-	if !o.init {
-		o.stat()
+	ustat, err := ustat(o.path)
+	if err != nil {
+		return 0
 	}
-	return o.sz
+	return np.Tlength(ustat.Size)
 }
 
-func (o *Obj) stat() (*np.Stat, *np.Err) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
+// convert ux perms into np perm; maybe symlink?
+func (o *Obj) Perm() np.Tperm {
+	fi, error := os.Stat(o.path.String())
+	if error != nil {
+		log.Fatalf("Perm %v err %v\n", o.path, error)
+	}
+	if fi.IsDir() {
+		return np.DMDIR
+	}
+	return 0
+}
 
-	fileinfo, err := os.Stat(o.Path())
+func (o *Obj) Parent() fs.Dir {
+	dir := o.path.Dir()
+	d, err := makeDir(dir)
 	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		log.Fatalf("Parent %v err %v\n", dir, err)
 	}
-	ustat, ok := fileinfo.Sys().(*syscall.Stat_t)
-	if !ok {
-		return nil, np.MkErr(np.TErrError, "Not a syscall.Stat_t")
-	}
-	o.ino = ustat.Ino
-	o.sz = np.Tlength(ustat.Size)
-	o.init = true
+	return d
+}
 
+// XXX not important??
+func (o *Obj) SetParent(p fs.Dir) {
+	return
+}
+
+// XXX what do to? is nlink still necessary even
+func (o *Obj) Nlink() int {
+	return 1
+}
+
+func (o *Obj) DecNlink() {
+	// nothing to do
+}
+
+func (o *Obj) Mtime() int64 {
+	ustat, err := ustat(o.path)
+	if err != nil {
+		log.Fatalf("Mtime %v err %v\n", o.path, err)
+	}
+	s, _ := ustat.Mtim.Unix()
+	return int64(s)
+}
+
+// Linux will do this
+func (o *Obj) SetMtime(m int64) {
+}
+
+func (o *Obj) Snapshot(fs.SnapshotF) []byte {
+	return nil
+}
+
+func (o *Obj) Unlink(ctx fs.CtxI) *np.Err {
+	return nil
+}
+
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+	db.DLPrintf("UXD", "%v: Stat %v\n", ctx, o)
+	ustat, err := ustat(o.path)
+	if err != nil {
+		return nil, err
+	}
 	st := &np.Stat{}
 	if len(o.path) > 0 {
 		st.Name = o.path[len(o.path)-1]
 	} else {
 		st.Name = "" // root
 	}
-	st.Mode = o.Inode.Perm() | np.Tperm(0777)
+	st.Mode = o.Perm() | np.Tperm(0777)
 	st.Qid = o.Qid()
 	st.Uid = ""
 	st.Gid = ""
-	st.Length = o.sz
+	st.Length = np.Tlength(ustat.Size)
 	s, _ := ustat.Mtim.Unix()
 	st.Mtime = uint32(s)
-
 	return st, nil
-}
-
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DLPrintf("UXD", "%v: Stat %v\n", ctx, o)
-	return o.stat()
 }

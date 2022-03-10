@@ -14,10 +14,14 @@ type File struct {
 	file *os.File
 }
 
-func makeFile(path []string, t np.Tperm, p *Dir) *File {
+func makeFile(path []string) (*File, *np.Err) {
 	f := &File{}
-	f.Obj = makeObj(path, t, p)
-	return f
+	o, err := makeObj(path)
+	if err != nil {
+		return nil, err
+	}
+	f.Obj = o
+	return f, nil
 }
 
 func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {

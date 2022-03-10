@@ -59,7 +59,8 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	}
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
-	s.named = makeSubsystem(cmd, nil)
+	s.named = makeSubsystem(nil, nil)
+	s.named.cmd = cmd
 	time.Sleep(SLEEP_MS * time.Millisecond)
 	s.FsLib = fslib.MakeFsLibAddr(uname, fslib.Named())
 	return s
@@ -104,42 +105,30 @@ func (s *System) Boot() error {
 
 func (s *System) BootFsUxd() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fsuxd", []string{})
-	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
-	if err != nil {
-		return err
-	}
-	s.fsuxd = append(s.fsuxd, makeSubsystem(cmd, p))
-	return s.WaitStart(p.Pid)
+	ss := makeSubsystem(s.ProcClnt, p)
+	s.fsuxd = append(s.fsuxd, ss)
+	return ss.Run(s.bindir, s.namedAddr)
 }
 
 func (s *System) BootFss3d() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fss3d", []string{})
-	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
-	if err != nil {
-		return err
-	}
-	s.fss3d = append(s.fss3d, makeSubsystem(cmd, p))
-	return s.WaitStart(p.Pid)
+	ss := makeSubsystem(s.ProcClnt, p)
+	s.fsuxd = append(s.fss3d, ss)
+	return ss.Run(s.bindir, s.namedAddr)
 }
 
 func (s *System) BootProcd() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/procd", []string{s.bindir})
-	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
-	if err != nil {
-		return err
-	}
-	s.procd = append(s.procd, makeSubsystem(cmd, p))
-	return s.WaitStart(p.Pid)
+	ss := makeSubsystem(s.ProcClnt, p)
+	s.fsuxd = append(s.procd, ss)
+	return ss.Run(s.bindir, s.namedAddr)
 }
 
 func (s *System) BootDbd() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/dbd", []string{})
-	cmd, err := s.SpawnKernelProc(p, s.bindir, s.namedAddr)
-	if err != nil {
-		return err
-	}
-	s.dbd = append(s.dbd, makeSubsystem(cmd, p))
-	return s.WaitStart(p.Pid)
+	ss := makeSubsystem(s.ProcClnt, p)
+	s.fsuxd = append(s.dbd, ss)
+	return ss.Run(s.bindir, s.namedAddr)
 }
 
 func (s *System) KillOne(srv string) error {

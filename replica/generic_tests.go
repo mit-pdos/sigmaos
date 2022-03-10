@@ -101,7 +101,7 @@ func writeConfig(ts *Tstate, replicas []*Replica) {
 }
 
 func setupUnionDir(ts *Tstate) {
-	err := ts.Mkdir(ts.unionDirPath9p, 0777)
+	err := ts.MkDir(ts.unionDirPath9p, 0777)
 	assert.Nil(ts.t, err, "Failed to create union dir")
 }
 

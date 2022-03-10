@@ -2,23 +2,23 @@ package ninep
 
 // if name ends in "/", it is a directory for that service
 const (
-	NAMED         = "name"
+	NAMED         = "name/"
 	BOOTREL       = "boot"
-	BOOT          = "name/" + BOOTREL
+	BOOT          = NAMED + BOOTREL
 	TMPREL        = "tmp"
-	TMP           = "name/" + TMPREL
+	TMP           = NAMED + TMPREL
 	PROCDREL      = "procd"
-	PROCD         = "name/" + PROCDREL + "/"
+	PROCD         = NAMED + PROCDREL + "/"
 	S3REL         = "s3"
-	S3            = "name/" + S3REL + "/"
+	S3            = NAMED + S3REL + "/"
 	UXREL         = "ux"
-	UX            = "name/" + UXREL + "/"
+	UX            = NAMED + UXREL + "/"
 	DBREL         = "db"
-	DB            = "name/" + DBREL + "/"
+	DB            = NAMED + DBREL + "/"
 	REALM_MGR     = "name/realmmgr"
 	MEMFS         = "name/memfsd/"
 	KPIDSREL      = "kpids"
-	KPIDS         = "name/" + KPIDSREL
+	KPIDS         = NAMED + KPIDSREL
 	PROC_CTL_FILE = "ctl"
 	PROCD_RUNNING = "running"
 	PROCD_RUNQ_LC = "runq-lc"

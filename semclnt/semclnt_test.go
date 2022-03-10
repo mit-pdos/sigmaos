@@ -18,7 +18,7 @@ const (
 func TestSemClntSimple(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	err := ts.Mkdir(WAIT_PATH, 0777)
+	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	fsl0 := fslib.MakeFsLibAddr("sem0", fslib.Named())
 
@@ -51,7 +51,7 @@ func TestSemClntSimple(t *testing.T) {
 func TestSemClnt(t *testing.T) {
 	ts := test.MakeTstate(t)
 
-	err := ts.Mkdir(WAIT_PATH, 0777)
+	err := ts.MkDir(WAIT_PATH, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	fsl0 := fslib.MakeFsLibAddr("sem0", fslib.Named())
 	fsl1 := fslib.MakeFsLibAddr("semd1", fslib.Named())

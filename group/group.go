@@ -103,7 +103,7 @@ func RunMember(grp string) {
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
 	crash.Crasher(g.FsLib)
 
-	g.Mkdir(GRPDIR, 07)
+	g.MkDir(GRPDIR, 07)
 
 	srvs := []string{GRPDIR}
 	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPrimFPath(grp), 0, srvs)

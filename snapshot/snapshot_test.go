@@ -93,7 +93,7 @@ func checkFiles(ts *test.Tstate, n int) {
 func TestMakeSnapshotSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.Mkdir(np.MEMFS, 0777)
+	err := ts.MkDir(np.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -108,7 +108,7 @@ func TestMakeSnapshotSimple(t *testing.T) {
 func TestRestoreSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.Mkdir(np.MEMFS, 0777)
+	err := ts.MkDir(np.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -126,7 +126,7 @@ func TestRestoreStateSimple(t *testing.T) {
 
 	N_FILES := 100
 
-	err := ts.Mkdir(np.MEMFS, 0777)
+	err := ts.MkDir(np.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
@@ -163,7 +163,7 @@ func TestRestoreStateSimple(t *testing.T) {
 func TestRestoreBlockingOpSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	err := ts.Mkdir(np.MEMFS, 0777)
+	err := ts.MkDir(np.MEMFS, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs

@@ -73,7 +73,7 @@ func TestSymlink2(t *testing.T) {
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
-	err := ts.Mkdir(targetDirPath, 0777)
+	err := ts.MkDir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
 	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
@@ -86,7 +86,7 @@ func TestSymlink2(t *testing.T) {
 	// Create a symlink
 	linkDir := "name/dir2"
 	linkPath := linkDir + "/symlink-test"
-	err = ts.Mkdir(linkDir, 0777)
+	err = ts.MkDir(linkDir, 0777)
 	assert.Nil(t, err, "Creating link dir")
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
@@ -113,7 +113,7 @@ func TestSymlink3(t *testing.T) {
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
-	err = ts.Mkdir(targetDirPath, 0777)
+	err = ts.MkDir(targetDirPath, 0777)
 	assert.Nil(t, err, "Creating symlink target dir")
 	_, err = ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
 	assert.Nil(t, err, "Creating symlink target")
@@ -126,7 +126,7 @@ func TestSymlink3(t *testing.T) {
 	// Create a symlink
 	linkDir := "name/ldir"
 	linkPath := linkDir + "/link"
-	err = ts.Mkdir(linkDir, 0777)
+	err = ts.MkDir(linkDir, 0777)
 	assert.Nil(t, err, "Creating link dir")
 	err = ts.Symlink([]byte(targetPath), linkPath, 0777)
 	assert.Nil(t, err, "Creating link")
@@ -207,7 +207,7 @@ func TestFenceW(t *testing.T) {
 	fence := "name/l"
 
 	dirux := "name/ux/~ip/outdir"
-	ts.Mkdir(dirux, 0777)
+	ts.MkDir(dirux, 0777)
 	ts.Remove(dirux + "/f")
 
 	fsldl := fslib.MakeFsLibAddr("wfence", fslib.Named())

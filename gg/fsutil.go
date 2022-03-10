@@ -13,7 +13,7 @@ import (
 
 // Interfaces
 type FsLambda interface {
-	Mkdir(path string, perm np.Tperm) error
+	MkDir(path string, perm np.Tperm) error
 	GetDir(dir string) ([]*np.Stat, error)
 	IsDir(name string) (bool, error)
 	PutFile(string, np.Tperm, np.Tmode, []byte) (np.Tsize, error)
@@ -119,7 +119,7 @@ func mkdirOpt(fslambda FsLambda, path string) {
 	if err != nil {
 		db.DPrintf("Mkdir [%v]\n", path)
 		// XXX Perms?
-		err = fslambda.Mkdir(path, np.DMDIR)
+		err = fslambda.MkDir(path, np.DMDIR)
 		if err != nil {
 			log.Fatalf("Couldn't mkdir %v: %v", path, err)
 		}

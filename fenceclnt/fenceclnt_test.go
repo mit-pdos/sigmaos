@@ -135,7 +135,7 @@ func TestFence4(t *testing.T) {
 	fence1 := fenceclnt.MakeFenceClnt(fsl1, FENCENAME, 0, []string{np.NAMED})
 
 	// Establish a connection
-	err := fsl2.Mkdir(FENCE_DIR, 07)
+	err := fsl2.MkDir(FENCE_DIR, 07)
 	assert.Nil(ts.T, err, "ReadDir")
 
 	err = fence1.AcquireFenceW([]byte{})

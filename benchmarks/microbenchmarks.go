@@ -77,7 +77,7 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 }
 
 func (m *Microbenchmarks) setup(dir string) {
-	if err := m.Mkdir(dir, 0777); err != nil {
+	if err := m.MkDir(dir, 0777); err != nil {
 		log.Fatalf("Error Mkdir Microbenchmarks.setup: %v", err)
 	}
 }

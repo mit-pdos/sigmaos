@@ -13,12 +13,12 @@ import (
 // For documentation on dir structure, see ulambda/proc/dir.go
 
 func (clnt *ProcClnt) MakeProcDir(pid, procdir string, isKernelProc bool) error {
-	if err := clnt.Mkdir(procdir, 0777); err != nil {
+	if err := clnt.MkDir(procdir, 0777); err != nil {
 		db.DLPrintf("PROCCLNT_ERR", "MakeProcDir mkdir pid %v err %v\n", procdir, err)
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)
-	if err := clnt.Mkdir(childrenDir, 0777); err != nil {
+	if err := clnt.MkDir(childrenDir, 0777); err != nil {
 		db.DLPrintf("PROCCLNT_ERR", "MakeProcDir mkdir childrens %v err %v\n", childrenDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}
@@ -78,7 +78,7 @@ func (clnt *ProcClnt) isKernelProc(pid string) bool {
 func (clnt *ProcClnt) addChild(pid, procdir, shared string) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(pid))
-	if err := clnt.Mkdir(childDir, 0777); err != nil {
+	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DLPrintf("PROCCLNT_ERR", "Spawn mkdir childs %v err %v\n", childDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
 	}

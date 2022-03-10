@@ -121,7 +121,7 @@ func RunBalancer(crashhelper string, auto string) {
 	bl.crashhelper = crashhelper
 
 	// may fail if already exist
-	bl.Mkdir(KVDIR, 07)
+	bl.MkDir(KVDIR, 07)
 
 	srvs := []string{KVDIR}
 	bl.balFclnt = fenceclnt.MakeFenceClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK, srvs)
@@ -296,7 +296,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 		dst := shardPath(kvd, strconv.Itoa(s))
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
-		if err := bl.Mkdir(dst, 0777); err != nil {
+		if err := bl.MkDir(dst, 0777); err != nil {
 			db.DLPrintf("KVBAL_ERR", "warning mkdir %v err %v\n", dst, err)
 		}
 	}

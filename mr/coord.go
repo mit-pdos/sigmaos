@@ -31,7 +31,7 @@ const (
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	for _, n := range []string{MRDIR, MDIR, RDIR, MDIR + CLAIMED, RDIR + CLAIMED, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
-		if err := fsl.Mkdir(n, 0777); err != nil {
+		if err := fsl.MkDir(n, 0777); err != nil {
 			log.Fatalf("Mkdir %v\n", err)
 		}
 	}
@@ -39,7 +39,7 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	// input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := RDIR + "/" + strconv.Itoa(r)
-		if err := fsl.Mkdir(n, 0777); err != nil {
+		if err := fsl.MkDir(n, 0777); err != nil {
 			log.Fatalf("Mkdir %v err %v\n", n, err)
 		}
 	}

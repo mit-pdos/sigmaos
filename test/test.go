@@ -7,6 +7,7 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/kernel"
+	np "ulambda/ninep"
 )
 
 type Tstate struct {
@@ -29,6 +30,17 @@ func (ts *Tstate) startReplicas() {
 	// Start additional replicas
 	for i := 0; i < len(fslib.Named())-1; i++ {
 		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("test", "..", i+1))
+	}
+}
+
+func MakeTstatePath(t *testing.T, path string) *Tstate {
+	if path == np.NAMED {
+		return MakeTstate(t)
+	} else {
+		ts := MakeTstateAll(t)
+		ts.RmDir(path)
+		ts.MkDir(path, 0777)
+		return ts
 	}
 }
 

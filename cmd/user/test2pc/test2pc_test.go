@@ -50,20 +50,20 @@ func makeTstate(t *testing.T) *Tstate {
 		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("fslibtest", "..", i+1))
 	}
 
-	err := ts.Mkdir(twopc.DIR2PC, 07)
+	err := ts.MkDir(twopc.DIR2PC, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}
-	err = ts.Mkdir(twopc.TWOPCPREPARED, 0777)
+	err = ts.MkDir(twopc.TWOPCPREPARED, 0777)
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCPREPARED, err)
 	}
-	err = ts.Mkdir(twopc.TWOPCCOMMITTED, 0777)
+	err = ts.MkDir(twopc.TWOPCCOMMITTED, 0777)
 	if err != nil {
 		t.Fatalf("MkDir %v failed %v\n", twopc.TWOPCCOMMITTED, err)
 	}
 
-	err = ts.Mkdir(np.MEMFS, 07)
+	err = ts.MkDir(np.MEMFS, 07)
 	if err != nil {
 		t.Fatalf("Mkdir kv %v\n", err)
 	}

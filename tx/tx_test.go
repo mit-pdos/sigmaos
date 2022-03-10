@@ -59,7 +59,7 @@ func runMemfs(ts *Tstate) string {
 
 func setupEnv(ts *Tstate) string {
 	// Set up memfs state
-	err := ts.Mkdir(named.MEMFS, 0777)
+	err := ts.MkDir(named.MEMFS, 0777)
 	assert.Nil(ts.t, err, "mkdir memfs")
 	pid1 := runMemfs(ts)
 
@@ -70,10 +70,10 @@ func setupEnv(ts *Tstate) string {
 	assert.Nil(ts.t, err, "MakeFile 2")
 
 	// Set up tx state
-	err = ts.Mkdir(TX_LOCK_DIR, 0777)
+	err = ts.MkDir(TX_LOCK_DIR, 0777)
 	assert.Nil(ts.t, err, "mkdir txlock")
 
-	err = ts.Mkdir(TX_STATE_DIR, 0777)
+	err = ts.MkDir(TX_STATE_DIR, 0777)
 	assert.Nil(ts.t, err, "mkdir txstate")
 
 	return pid1

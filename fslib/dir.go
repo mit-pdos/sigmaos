@@ -9,7 +9,7 @@ import (
 	"ulambda/npcodec"
 )
 
-func (fl *FsLib) Mkdir(path string, perm np.Tperm) error {
+func (fl *FsLib) MkDir(path string, perm np.Tperm) error {
 	perm = perm | np.DMDIR
 	fd, err := fl.Create(path, perm, np.OREAD)
 	if err != nil {
@@ -109,11 +109,17 @@ func (fl *FsLib) RmDirLarge(dir string) error {
 }
 
 func (fsl *FsLib) RmDir(dir string) error {
+	if err := fsl.RmDirEntries(dir); err != nil {
+		return err
+	}
+	return fsl.Remove(dir)
+}
+
+func (fsl *FsLib) RmDirEntries(dir string) error {
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return err
 	}
-	// log.Printf("%v: rmdir1 %v\n", db.GetName(), dir)
 	for _, st := range sts {
 		if st.Mode.IsDir() {
 			if err := fsl.RmDir(dir + "/" + st.Name); err != nil {
@@ -125,7 +131,7 @@ func (fsl *FsLib) RmDir(dir string) error {
 			}
 		}
 	}
-	return fsl.Remove(dir)
+	return nil
 }
 
 func (fsl *FsLib) SprintfDir(d string) (string, error) {

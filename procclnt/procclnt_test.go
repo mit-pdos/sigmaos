@@ -404,8 +404,8 @@ func testFencer(t *testing.T, part string) {
 	// XXX use the same dir independent of machine running proc
 	dir := "name/ux/~ip/outdir"
 	ts.RmDir(dir)
-	err := ts.Mkdir(dir, 0777)
-	err = ts.Mkdir(FENCE_DIR, 0777)
+	err := ts.MkDir(dir, 0777)
+	err = ts.MkDir(FENCE_DIR, 0777)
 	assert.Nil(t, err, "mkdir error")
 	_, err = ts.PutFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "makefile error")
@@ -541,7 +541,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	// Count number of children.
 	nChildren := getNChildren(ts)
 
-	err = ts.Mkdir(OUTDIR, 0777)
+	err = ts.MkDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	// Start a bunch of replicated spinner procs.

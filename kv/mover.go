@@ -75,7 +75,7 @@ func (mv *Mover) moveShard(s, d string) error {
 	// partially copied files into it; remove it and start over.
 	mv.RmDir(d1)
 
-	err = mv.Mkdir(d1, 0777)
+	err = mv.MkDir(d1, 0777)
 	if err != nil {
 		db.DLPrintf("KVMV_ERR", "Mkdir %v err %v\n", d1, err)
 		return err

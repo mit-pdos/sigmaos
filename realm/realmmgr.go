@@ -73,19 +73,19 @@ func MakeRealmMgr() *RealmMgr {
 }
 
 func (m *RealmMgr) makeInitFs() {
-	if err := m.Mkdir(REALMS, 0777); err != nil {
+	if err := m.MkDir(REALMS, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALMS in RealmMgr.makeInitFs: %v", err)
 	}
-	if err := m.Mkdir(REALM_CONFIG, 0777); err != nil {
+	if err := m.MkDir(REALM_CONFIG, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
-	if err := m.Mkdir(MACHINED_CONFIG, 0777); err != nil {
+	if err := m.MkDir(MACHINED_CONFIG, 0777); err != nil {
 		log.Fatalf("Error Mkdir MACHINED_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
-	if err := m.Mkdir(REALM_NAMEDS, 0777); err != nil {
+	if err := m.MkDir(REALM_NAMEDS, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
 	}
-	if err := m.Mkdir(REALM_FENCES, 0777); err != nil {
+	if err := m.MkDir(REALM_FENCES, 0777); err != nil {
 		log.Fatalf("Error Mkdir REALM_FENCES in RealmMgr.makeInitFs: %v", err)
 	}
 }
@@ -131,7 +131,7 @@ func (m *RealmMgr) createRealms() {
 		cfg.Rid = realmId
 
 		// Make a directory for this realm.
-		if err := m.Mkdir(path.Join(REALMS, realmId), 0777); err != nil {
+		if err := m.MkDir(path.Join(REALMS, realmId), 0777); err != nil {
 			log.Fatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 

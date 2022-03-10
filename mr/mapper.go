@@ -63,7 +63,7 @@ func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
 	d := "name/ux/~ip/m-" + m.file
-	m.Mkdir(d, 0777)
+	m.MkDir(d, 0777)
 
 	// Create the output files
 	var err error

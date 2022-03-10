@@ -16,19 +16,19 @@ type FileSnapshot struct {
 
 func makeFileSnapshot(f *File) []byte {
 	fs := &FileSnapshot{}
-	fs.InodeSnap = f.FsObj.Snapshot(nil)
+	fs.InodeSnap = f.Inode.Snapshot(nil)
 	fs.Data = f.data
 	return encode(fs)
 }
 
-func restoreFile(fn fs.RestoreF, b []byte) fs.FsObj {
+func restoreFile(fn fs.RestoreF, b []byte) fs.Inode {
 	fs := &FileSnapshot{}
 	err := json.Unmarshal(b, fs)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in restoreFile: %v", err)
 	}
 	f := &File{}
-	f.FsObj = inode.RestoreInode(fn, fs.InodeSnap)
+	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
 	f.data = fs.Data
 	return f
 }
@@ -40,19 +40,19 @@ type SymlinkSnapshot struct {
 
 func makeSymlinkSnapshot(s *Symlink) []byte {
 	fs := &SymlinkSnapshot{}
-	fs.InodeSnap = s.FsObj.Snapshot(nil)
+	fs.InodeSnap = s.Inode.Snapshot(nil)
 	fs.Target = s.target
 	return encode(fs)
 }
 
-func restoreSymlink(fn fs.RestoreF, b []byte) fs.FsObj {
+func restoreSymlink(fn fs.RestoreF, b []byte) fs.Inode {
 	fs := &SymlinkSnapshot{}
 	err := json.Unmarshal(b, fs)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in restoreSymlink: %v", err)
 	}
 	f := &Symlink{}
-	f.FsObj = inode.RestoreInode(fn, fs.InodeSnap)
+	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
 	f.target = fs.Target
 	return f
 }

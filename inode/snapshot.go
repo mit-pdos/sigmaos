@@ -39,7 +39,7 @@ func makeSnapshot(inode *Inode) []byte {
 	return b
 }
 
-func restoreInode(fn fs.RestoreF, b []byte) fs.FsObj {
+func restoreInode(fn fs.RestoreF, b []byte) fs.Inode {
 	i := &InodeSnapshot{}
 	err := json.Unmarshal(b, i)
 	if err != nil {

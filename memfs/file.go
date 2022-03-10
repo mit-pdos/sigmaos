@@ -9,14 +9,14 @@ import (
 )
 
 type File struct {
-	fs.FsObj
+	fs.Inode
 	mu   sync.Mutex
 	data []byte
 }
 
-func MakeFile(i fs.FsObj) *File {
+func MakeFile(i fs.Inode) *File {
 	f := &File{}
-	f.FsObj = i
+	f.Inode = i
 	f.data = make([]byte, 0)
 	return f
 }
@@ -30,7 +30,7 @@ func (f *File) Size() np.Tlength {
 func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	st, err := f.FsObj.Stat(ctx)
+	st, err := f.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +100,6 @@ func (f *File) Snapshot(fn fs.SnapshotF) []byte {
 	return makeFileSnapshot(f)
 }
 
-func RestoreFile(fn fs.RestoreF, b []byte) fs.FsObj {
+func RestoreFile(fn fs.RestoreF, b []byte) fs.Inode {
 	return restoreFile(fn, b)
 }

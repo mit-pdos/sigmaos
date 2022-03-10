@@ -11,7 +11,7 @@ import (
 )
 
 type Dev struct {
-	fs.FsObj
+	fs.Inode
 	srv protsrv.FsServer
 }
 
@@ -37,5 +37,5 @@ func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np
 }
 
 func (dev *Dev) Snapshot(fn fs.SnapshotF) []byte {
-	return dev.FsObj.Snapshot(fn)
+	return dev.Inode.Snapshot(fn)
 }

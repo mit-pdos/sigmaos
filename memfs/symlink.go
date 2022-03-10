@@ -9,14 +9,14 @@ import (
 )
 
 type Symlink struct {
-	fs.FsObj
+	fs.Inode
 	mu     sync.Mutex
 	target []byte
 }
 
-func MakeSym(i fs.FsObj) *Symlink {
+func MakeSym(i fs.Inode) *Symlink {
 	s := Symlink{}
-	s.FsObj = i
+	s.Inode = i
 	return &s
 }
 
@@ -29,7 +29,7 @@ func (s *Symlink) Size() np.Tlength {
 func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st, err := s.FsObj.Stat(ctx)
+	st, err := s.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +67,6 @@ func (s *Symlink) Snapshot(fn fs.SnapshotF) []byte {
 	return makeSymlinkSnapshot(s)
 }
 
-func RestoreSymlink(fn fs.RestoreF, b []byte) fs.FsObj {
+func RestoreSymlink(fn fs.RestoreF, b []byte) fs.Inode {
 	return restoreSymlink(fn, b)
 }

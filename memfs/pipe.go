@@ -17,7 +17,7 @@ import (
 const PIPESZ = 8192
 
 type Pipe struct {
-	fs.FsObj
+	fs.Inode
 	mu sync.Mutex
 	//mu      deadlock.Mutex
 	condr   *sesscond.SessCond
@@ -29,9 +29,9 @@ type Pipe struct {
 	buf     []byte
 }
 
-func MakePipe(ctx fs.CtxI, i fs.FsObj) *Pipe {
+func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	pipe := &Pipe{}
-	pipe.FsObj = i
+	pipe.Inode = i
 	pipe.condr = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.condw = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
@@ -49,7 +49,7 @@ func (p *Pipe) Size() np.Tlength {
 func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	st, err := p.FsObj.Stat(ctx)
+	st, err := p.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}

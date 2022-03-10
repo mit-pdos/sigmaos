@@ -15,7 +15,7 @@ import (
 
 type CtlFile struct {
 	pd *Procd
-	fs.FsObj
+	fs.Inode
 }
 
 func makeCtlFile(pd *Procd, ctx fs.CtxI, parent fs.Dir) *CtlFile {

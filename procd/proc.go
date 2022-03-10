@@ -20,7 +20,7 @@ import (
 
 type Proc struct {
 	//	mu deadlock.Mutex
-	fs.FsObj
+	fs.Inode
 	mu      sync.Mutex
 	Program string
 	Pid     string

@@ -175,6 +175,6 @@ func (inode *Inode) Snapshot(fn fs.SnapshotF) []byte {
 	return makeSnapshot(inode)
 }
 
-func RestoreInode(f fs.RestoreF, b []byte) fs.FsObj {
+func RestoreInode(f fs.RestoreF, b []byte) fs.Inode {
 	return restoreInode(f, b)
 }

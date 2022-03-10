@@ -7,10 +7,6 @@ import (
 	"ulambda/sesscond"
 )
 
-type MakeDirF func(FsObj) FsObj
-type SnapshotF func(FsObj) uint64
-type RestoreF func(uint64) FsObj
-
 type CtxI interface {
 	Uname() string
 	SessionId() np.Tsession
@@ -41,7 +37,6 @@ type FsObj interface {
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Version() np.TQversion
-	VersionInc()
 	SetMtime(int64)
 	Mtime() int64
 	Size() np.Tlength

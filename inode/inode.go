@@ -10,8 +10,6 @@ import (
 	np "ulambda/ninep"
 )
 
-type Tversion uint32
-
 type Inode struct {
 	mu      sync.Mutex
 	inum    uint64

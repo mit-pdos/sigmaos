@@ -31,7 +31,7 @@ func makeConsoled() *Consoled {
 }
 
 type Console struct {
-	fs.FsObj
+	fs.Inode
 	stdin  *bufio.Reader
 	stdout *bufio.Writer
 }

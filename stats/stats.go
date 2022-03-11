@@ -132,7 +132,7 @@ func (si *StatInfo) Inc(fct np.Tfcall) {
 }
 
 type Stats struct {
-	fs.FsObj
+	fs.Inode
 	mu            sync.Mutex // protects some fields of StatInfo
 	sti           *StatInfo
 	pid           string
@@ -143,7 +143,7 @@ type Stats struct {
 
 func MkStats(parent fs.Dir) *Stats {
 	st := &Stats{}
-	st.FsObj = inode.MakeInode(nil, np.DMDEVICE, parent)
+	st.Inode = inode.MakeInode(nil, np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
 	return st
 }

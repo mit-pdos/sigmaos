@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	// "errors"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -17,21 +16,21 @@ import (
 const PIPESZ = 8192
 
 type Pipe struct {
-	fs.FsObj
-	mu sync.Mutex
-	//mu      deadlock.Mutex
+	fs.Inode
+	mu      sync.Mutex
 	condr   *sesscond.SessCond
 	condw   *sesscond.SessCond
 	nreader int
 	nwriter int
 	wclosed bool
 	rclosed bool
+	nlink   int
 	buf     []byte
 }
 
-func MakePipe(ctx fs.CtxI, i fs.FsObj) *Pipe {
+func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	pipe := &Pipe{}
-	pipe.FsObj = i
+	pipe.Inode = i
 	pipe.condr = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.condw = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
@@ -39,6 +38,7 @@ func MakePipe(ctx fs.CtxI, i fs.FsObj) *Pipe {
 	pipe.nwriter = 0
 	pipe.wclosed = false
 	pipe.rclosed = false
+	pipe.nlink = 1
 	return pipe
 }
 
@@ -49,7 +49,7 @@ func (p *Pipe) Size() np.Tlength {
 func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	st, err := p.FsObj.Stat(ctx)
+	st, err := p.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
-		if pipe.rclosed || pipe.Nlink() <= 0 {
+		if pipe.rclosed || pipe.nlink <= 0 {
 			return nil, np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
@@ -77,12 +77,12 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 				}
 				return nil, err
 			}
-			if pipe.Nlink() == 0 {
+			if pipe.nlink == 0 {
 				return nil, np.MkErr(np.TErrNotfound, "pipe")
 			}
 		}
 	} else if mode == np.OWRITE {
-		if pipe.wclosed || pipe.Nlink() <= 0 {
+		if pipe.wclosed || pipe.nlink <= 0 {
 			return nil, np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
@@ -98,7 +98,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 				}
 				return nil, err
 			}
-			if pipe.Nlink() == 0 {
+			if pipe.nlink == 0 {
 				return nil, np.MkErr(np.TErrNotfound, "pipe")
 			}
 
@@ -187,14 +187,13 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 	return d, nil
 }
 
-func (pipe *Pipe) Unlink(ctx fs.CtxI) *np.Err {
+func (pipe *Pipe) Unlink() {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	pipe.DecNlink()
+	pipe.nlink -= 1
 	pipe.condw.Signal()
 	pipe.condr.Signal()
-	return nil
 }
 
 func (pipe *Pipe) Snapshot(fn fs.SnapshotF) []byte {

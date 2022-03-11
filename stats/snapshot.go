@@ -19,7 +19,7 @@ func MakeStatsSnapshot() *StatsSnapshot {
 
 func (stats *Stats) snapshot() []byte {
 	ss := MakeStatsSnapshot()
-	ss.InodeSnap = stats.FsObj.Snapshot(nil)
+	ss.InodeSnap = stats.Inode.Snapshot(nil)
 	ss.Info = stats.sti
 	b, err := json.Marshal(ss)
 	if err != nil {
@@ -35,7 +35,7 @@ func Restore(fn fs.RestoreF, b []byte) *Stats {
 		log.Fatalf("FATAL error unmarshal stats in restore: %v", err)
 	}
 	stats := &Stats{}
-	stats.FsObj = inode.RestoreInode(fn, ss.InodeSnap)
+	stats.Inode = inode.RestoreInode(fn, ss.InodeSnap)
 	stats.sti = ss.Info
 	return stats
 }

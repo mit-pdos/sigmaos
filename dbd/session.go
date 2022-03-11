@@ -15,10 +15,10 @@ import (
 )
 
 type Clone struct {
-	fs.FsObj
+	fs.Inode
 }
 
-func makeClone(ctx fs.CtxI, parent fs.Dir) fs.FsObj {
+func makeClone(ctx fs.CtxI, parent fs.Dir) fs.Inode {
 	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
 	return &Clone{i}
 }

@@ -8,7 +8,7 @@ import (
 
 type CtlFile struct {
 	queue chan string
-	fs.FsObj
+	fs.Inode
 }
 
 func makeCtlFile(queue chan string, ctx fs.CtxI, parent fs.Dir) *CtlFile {

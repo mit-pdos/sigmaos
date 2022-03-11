@@ -7,10 +7,6 @@ import (
 	"ulambda/sesscond"
 )
 
-type MakeDirF func(FsObj) FsObj
-type SnapshotF func(FsObj) uint64
-type RestoreF func(uint64) FsObj
-
 type CtxI interface {
 	Uname() string
 	SessionId() np.Tsession
@@ -41,19 +37,10 @@ type FsObj interface {
 	Qid() np.Tqid
 	Perm() np.Tperm
 	Version() np.TQversion
-	VersionInc()
-	SetMtime(int64)
-	Mtime() int64
-	Size() np.Tlength
-	Nlink() int
-	DecNlink()
+	Parent() Dir
 	Open(CtxI, np.Tmode) (FsObj, *np.Err)
 	Close(CtxI, np.Tmode) *np.Err // for pipes
 	Stat(CtxI) (*np.Stat, *np.Err)
-	Unlink(CtxI) *np.Err
-	Parent() Dir
-	SetParent(Dir)
-	Snapshot(SnapshotF) []byte
 }
 
 func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {

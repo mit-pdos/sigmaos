@@ -85,7 +85,7 @@ func (ts *Tstate) prepareJob() {
 	}
 	for _, f := range files {
 		// remove mapper output directory from previous run
-		ts.RmDir("name/ux/~ip/m-" + f.Name())
+		ts.RmDir(np.UX + "/~ip/m-" + f.Name())
 		n := mr.MDIR + "/" + f.Name()
 		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			log.Fatalf("PutFile %v err %v\n", n, err)

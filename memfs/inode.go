@@ -8,12 +8,12 @@ import (
 
 var makeDir fs.MakeDirF
 
-func MakeRootInode(f fs.MakeDirF, ctx fs.CtxI, perm np.Tperm) (fs.FsObj, *np.Err) {
+func MakeRootInode(f fs.MakeDirF, ctx fs.CtxI, perm np.Tperm) (fs.Inode, *np.Err) {
 	makeDir = f
 	return MakeInode(ctx, np.DMDIR, 0, nil)
 }
 
-func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.FsObj, *np.Err) {
+func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.Inode, *np.Err) {
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
 		return makeDir(i), nil

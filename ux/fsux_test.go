@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	fn = "name/ux/~ip/"
+	fn = np.UX + "/~ip/"
 )
 
 func TestRoot(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	dirents, err := ts.GetDir("name/ux/~ip/")
+	dirents, err := ts.GetDir(fn)
 	assert.Nil(t, err, "GetDir")
 
 	assert.NotEqual(t, 0, len(dirents))

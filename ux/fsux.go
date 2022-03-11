@@ -34,10 +34,13 @@ func RunFsUx(mount string) {
 func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
-	root := makeDir([]string{mount}, np.DMDIR, nil)
-	srv, fsl, _, err := fslibsrv.MakeReplServer(root, addr, np.UX, "ux", config)
+	root, err := makeDir([]string{mount})
 	if err != nil {
-		log.Fatalf("%v: MakeReplServer %v\n", proc.GetProgram(), err)
+		log.Fatalf("%v: makeDir %v\n", proc.GetName(), err)
+	}
+	srv, fsl, _, error := fslibsrv.MakeReplServer(root, addr, np.UX, "ux", config)
+	if error != nil {
+		log.Fatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
 	fsux.FsServer = srv
 	fsux.FsLib = fsl

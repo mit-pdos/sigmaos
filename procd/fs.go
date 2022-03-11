@@ -27,7 +27,7 @@ type ProcdFs struct {
 	pd      *Procd
 	run     fs.Dir
 	runqs   map[string]fs.Dir
-	ctlFile fs.FsObj
+	ctlFile fs.Inode
 }
 
 // Set up this procd instance's FS
@@ -120,8 +120,8 @@ func (pfs *ProcdFs) claimProc(procdPath string, queueName string, p *proc.Proc) 
 
 // Publishes a proc as running
 func (pfs *ProcdFs) running(p *Proc) *np.Err {
-	p.FsObj = inode.MakeInode(nil, np.DMDEVICE, pfs.run)
-	f := memfs.MakeFile(p.FsObj)
+	p.Inode = inode.MakeInode(nil, np.DMDEVICE, pfs.run)
+	f := memfs.MakeFile(p.Inode)
 	// Make sure we write the proc description before we publish it.
 	b, error := json.Marshal(p.attr)
 	if error != nil {

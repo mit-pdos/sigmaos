@@ -26,7 +26,7 @@ type Snapshot struct {
 	Rft          []byte
 	Rc           []byte
 	NextInum     uint64
-	restoreCache map[uint64]fs.FsObj
+	restoreCache map[uint64]fs.Inode
 }
 
 func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
@@ -34,11 +34,11 @@ func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
 	s.fssrv = fssrv
 	s.Imap = make(map[uint64]ObjSnapshot)
 	s.Root = 0
-	s.restoreCache = make(map[uint64]fs.FsObj)
+	s.restoreCache = make(map[uint64]fs.Inode)
 	return s
 }
 
-func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
+func (s *Snapshot) Snapshot(root fs.Inode, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
 	s.Root = s.snapshotFsTree(root)
 	// Snapshot the session table.
@@ -58,9 +58,9 @@ func (s *Snapshot) Snapshot(root fs.FsObj, st *session.SessionTable, tm *threadm
 	return b
 }
 
-func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
+func (s *Snapshot) snapshotFsTree(i fs.Inode) uint64 {
 	var stype Tsnapshot
-	switch o.(type) {
+	switch i.(type) {
 	case *dir.DirImpl:
 		stype = Tdir
 	case *memfs.File:
@@ -72,10 +72,10 @@ func (s *Snapshot) snapshotFsTree(o fs.FsObj) uint64 {
 	case *Dev:
 		stype = Tsnapshotdev
 	default:
-		log.Fatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(o))
+		log.Fatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(i))
 	}
-	s.Imap[o.Inum()] = MakeObjSnapshot(stype, o.Snapshot(s.snapshotFsTree))
-	return o.Inum()
+	s.Imap[i.Inum()] = MakeObjSnapshot(stype, i.Snapshot(s.snapshotFsTree))
+	return i.Inum()
 }
 
 func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
@@ -103,32 +103,32 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	return root, st, tmt, rft, rc
 }
 
-func (s *Snapshot) RestoreFsTree(inum uint64) fs.FsObj {
+func (s *Snapshot) RestoreFsTree(inum uint64) fs.Inode {
 	if obj, ok := s.restoreCache[inum]; ok {
 		return obj
 	}
 	snap := s.Imap[inum]
-	var o fs.FsObj
+	var i fs.Inode
 	switch snap.Type {
 	case Tdir:
 		// Make a dir with a nil inode so we don't recurse infinitely when trying
 		// to set parent pointers.
 		d := dir.MakeDir(nil)
 		s.restoreCache[inum] = d
-		o = dir.Restore(d, s.RestoreFsTree, snap.Data)
+		i = dir.Restore(d, s.RestoreFsTree, snap.Data)
 	case Tfile:
-		o = memfs.RestoreFile(s.RestoreFsTree, snap.Data)
+		i = memfs.RestoreFile(s.RestoreFsTree, snap.Data)
 	case Tsymlink:
-		o = memfs.RestoreSymlink(s.RestoreFsTree, snap.Data)
+		i = memfs.RestoreSymlink(s.RestoreFsTree, snap.Data)
 	case Tstats:
-		o = stats.Restore(s.RestoreFsTree, snap.Data)
+		i = stats.Restore(s.RestoreFsTree, snap.Data)
 	case Tsnapshotdev:
-		o = MakeDev(s.fssrv, nil, s.RestoreFsTree(s.Root).(fs.Dir))
+		i = MakeDev(s.fssrv, nil, s.RestoreFsTree(s.Root).(fs.Dir))
 	default:
 		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
-		o = nil
+		i = nil
 	}
 	// Store the object in the restore cache.
-	s.restoreCache[inum] = o
-	return o
+	s.restoreCache[inum] = i
+	return i
 }

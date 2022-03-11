@@ -13,8 +13,8 @@ import (
 	"ulambda/npcodec"
 )
 
-type makeInodeF func(fs.CtxI, np.Tperm, np.Tmode, fs.Dir) (fs.FsObj, *np.Err)
-type makeRootInodeF func(fs.MakeDirF, fs.CtxI, np.Tperm) (fs.FsObj, *np.Err)
+type makeInodeF func(fs.CtxI, np.Tperm, np.Tmode, fs.Dir) (fs.Inode, *np.Err)
+type makeRootInodeF func(fs.MakeDirF, fs.CtxI, np.Tperm) (fs.Inode, *np.Err)
 
 var makeInode makeInodeF
 
@@ -25,26 +25,26 @@ func IsCurrentDir(name string) bool {
 }
 
 type DirImpl struct {
-	fs.FsObj
+	fs.Inode
 	mu      sync.Mutex
-	entries map[string]fs.FsObj
+	entries map[string]fs.Inode
 }
 
-func MakeDir(i fs.FsObj) *DirImpl {
+func MakeDir(i fs.Inode) *DirImpl {
 	d := &DirImpl{}
-	d.FsObj = i
-	d.entries = make(map[string]fs.FsObj)
+	d.Inode = i
+	d.entries = make(map[string]fs.Inode)
 	d.entries["."] = d
 	return d
 }
 
-func MakeDirF(i fs.FsObj) fs.FsObj {
+func MakeDirF(i fs.Inode) fs.Inode {
 	d := MakeDir(i)
 	return d
 }
 
 func (dir *DirImpl) String() string {
-	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.FsObj, dir.FsObj)
+	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
 	for n, _ := range dir.entries {
 		str += fmt.Sprintf("[%v]", n)
 	}
@@ -58,7 +58,7 @@ func MkRootDir(f makeInodeF, r makeRootInodeF) fs.Dir {
 	return i.(fs.Dir)
 }
 
-func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.FsObj) *np.Err {
+func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *np.Err {
 	err := dir.(*DirImpl).CreateDev(ctx, name, np.DMDEVICE, 0, i)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (dir *DirImpl) unlinkL(name string) *np.Err {
 	return np.MkErr(np.TErrNotfound, name)
 }
 
-func (dir *DirImpl) createL(ino fs.FsObj, name string) *np.Err {
+func (dir *DirImpl) createL(ino fs.Inode, name string) *np.Err {
 	_, ok := dir.entries[name]
 	if ok {
 		return np.MkErr(np.TErrExists, name)
@@ -84,7 +84,7 @@ func (dir *DirImpl) createL(ino fs.FsObj, name string) *np.Err {
 	return nil
 }
 
-func (dir *DirImpl) lookupL(name string) (fs.FsObj, *np.Err) {
+func (dir *DirImpl) lookupL(name string) (fs.Inode, *np.Err) {
 	inode, ok := dir.entries[name]
 	if ok {
 		return inode, nil
@@ -96,7 +96,7 @@ func (dir *DirImpl) lookupL(name string) (fs.FsObj, *np.Err) {
 func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	st, err := dir.FsObj.Stat(ctx)
+	st, err := dir.Inode.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	return newi, dir.createL(newi, name)
 }
 
-func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode, i fs.FsObj) *np.Err {
+func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode, i fs.Inode) *np.Err {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
@@ -352,6 +352,7 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
 
 	inode.VersionInc()
 	dir.VersionInc()
+	inode.Unlink()
 
 	err = dir.remove(n)
 	return err
@@ -361,6 +362,6 @@ func (dir *DirImpl) Snapshot(fn fs.SnapshotF) []byte {
 	return makeDirSnapshot(fn, dir)
 }
 
-func Restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.FsObj {
+func Restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.Inode {
 	return restore(d, fn, b)
 }

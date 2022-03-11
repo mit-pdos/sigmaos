@@ -22,7 +22,7 @@ func TestSymlink1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Make a target file
-	targetPath := "name/ux/~ip/symlink-test-file"
+	targetPath := np.UX + "/~ip/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	_, err := ts.PutFile(targetPath, 0777, np.OWRITE, []byte(contents))
@@ -68,7 +68,7 @@ func TestSymlink2(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	// Make a target file
-	targetDirPath := "name/ux/~ip/dir1"
+	targetDirPath := np.UX + "/~ip/dir1"
 	targetPath := targetDirPath + "/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
@@ -102,13 +102,13 @@ func TestSymlink2(t *testing.T) {
 func TestSymlink3(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	uxs, err := ts.GetDir("name/ux")
+	uxs, err := ts.GetDir(np.UX)
 	assert.Nil(t, err, "Error reading ux dir")
 
 	uxip := uxs[0].Name
 
 	// Make a target file
-	targetDirPath := "name/ux/" + uxip + "/tdir"
+	targetDirPath := np.UX + "/" + uxip + "/tdir"
 	targetPath := targetDirPath + "/target"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
@@ -206,7 +206,7 @@ func TestFenceW(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fence := "name/l"
 
-	dirux := "name/ux/~ip/outdir"
+	dirux := np.UX + "/~ip/outdir"
 	ts.MkDir(dirux, 0777)
 	ts.Remove(dirux + "/f")
 

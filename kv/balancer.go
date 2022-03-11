@@ -188,11 +188,11 @@ func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
 }
 
 type Ctl struct {
-	fs.FsObj
+	fs.Inode
 	bl *Balancer
 }
 
-func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
+func makeCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.Inode {
 	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
 	return &Ctl{i, bl}
 }

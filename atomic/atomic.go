@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"runtime/debug"
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -17,13 +16,11 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 	tmpPath := path.Join(np.TMP, tmpName)
 	_, err := fsl.PutFile(tmpPath, perm, np.OWRITE, data)
 	if err != nil {
-		debug.PrintStack()
 		log.Fatalf("FATAL Error in MakeFileAtomic %v: %v", fname, err)
 		return err
 	}
 	err = fsl.Rename(tmpPath, fname)
 	if err != nil {
-		debug.PrintStack()
 		log.Fatalf("FATAL Error in MakeFileAtomic rename %v -> %v: %v", tmpPath, fname, err)
 		return err
 	}

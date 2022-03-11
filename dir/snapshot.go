@@ -15,7 +15,7 @@ type DirSnapshot struct {
 
 func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds := &DirSnapshot{}
-	ds.InodeSnap = d.FsObj.Snapshot(fn)
+	ds.InodeSnap = d.Inode.Snapshot(fn)
 	ds.Entries = make(map[string]uint64)
 	for n, e := range d.entries {
 		if n == "." {
@@ -30,13 +30,13 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	return b
 }
 
-func restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.FsObj {
+func restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.Inode {
 	ds := &DirSnapshot{}
 	err := json.Unmarshal(b, ds)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in restoreDir: %v", err)
 	}
-	d.FsObj = inode.RestoreInode(fn, ds.InodeSnap)
+	d.Inode = inode.RestoreInode(fn, ds.InodeSnap)
 	for name, ptr := range ds.Entries {
 		d.entries[name] = fn(ptr)
 	}

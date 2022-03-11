@@ -30,7 +30,6 @@ func makeSnapshot(inode *Inode) []byte {
 		i.Parent = inode.parent.Inum()
 	}
 	i.Owner = inode.owner
-	i.Nlink = inode.nlink
 
 	b, err := json.Marshal(i)
 	if err != nil {
@@ -54,6 +53,5 @@ func restoreInode(fn fs.RestoreF, b []byte) fs.Inode {
 		inode.parent = parent.(fs.Dir)
 	}
 	inode.owner = i.Owner
-	inode.nlink = i.Nlink
 	return inode
 }

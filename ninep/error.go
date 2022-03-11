@@ -214,6 +214,10 @@ func IsErrStale(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrStale.String())
 }
 
+func IsErrVersion(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrVersion.String())
+}
+
 func IsErrRetry(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }

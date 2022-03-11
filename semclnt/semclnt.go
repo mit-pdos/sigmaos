@@ -43,16 +43,22 @@ func (c *SemClnt) Down() error {
 		db.DLPrintf("SEMCLNT", "semaphore wait %v\n", c.path)
 		err = <-signal
 	}
-	// If err, file has been removed (i.e., semaphore has been
-	// "upped" or file server crashed or lease expired);
-	// distinguish between those cases.
-	if err != nil && !np.IsErrNotfound(err) {
-		db.DLPrintf("SEMCLNT", "down %v err %v\n", c.path, err)
-		return err
-	} else {
-		db.DLPrintf("SEMCLNT", "down %v err %v\n", c.path, err)
+	// If err is because file has been removed, then no error: the
+	// semaphore has been "upped". A file is removed when it isn't
+	// found or SetRemoveWatch erred with version mismatch; the
+	// latter case happens when removed has unliked the file,
+	// increasing version #, but remove hasn't removed the
+	// underlying inode (e.g., because SetRemoveWatch has fid for
+	// the unlinked file)
+	if err != nil && (np.IsErrNotfound(err) || np.IsErrVersion(err)) {
+		db.DLPrintf("SEMCLNT", "down %v ok err %v\n", c.path, err)
 		return nil
 	}
+	if err != nil {
+		db.DLPrintf("SEMCLNT", "down %v err %v\n", c.path, err)
+		return err
+	}
+	return nil
 }
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has

@@ -2,15 +2,12 @@ package inode
 
 import (
 	"fmt"
-	"log"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"ulambda/fs"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 type Tversion uint32
@@ -23,7 +20,6 @@ type Inode struct {
 	mtime   int64
 	parent  fs.Dir
 	owner   string
-	nlink   int
 }
 
 var nextInum uint64 = 0
@@ -43,7 +39,6 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 		i.owner = ctx.Uname()
 	}
 	i.version = np.TQversion(1)
-	i.nlink = 1
 	return i
 }
 
@@ -93,20 +88,6 @@ func (inode *Inode) VersionInc() {
 	inode.version += 1
 }
 
-func (inode *Inode) Nlink() int {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-
-	return inode.nlink
-}
-
-func (inode *Inode) DecNlink() {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-
-	inode.nlink--
-}
-
 func (inode *Inode) SetParent(p fs.Dir) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
@@ -138,11 +119,6 @@ func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 }
 
 func (i *Inode) Unlink() {
-	i.nlink -= 1
-	if i.nlink < 0 {
-		log.Printf("%v: nlink < 0\n", proc.GetProgram())
-		debug.PrintStack()
-	}
 }
 
 func (inode *Inode) Mode() np.Tperm {

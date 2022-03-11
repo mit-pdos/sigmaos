@@ -32,7 +32,6 @@ type Obj struct {
 
 func makeObj(path np.Path) (*Obj, *np.Err) {
 	o := &Obj{}
-	// o.Inode = inode.MakeInode(nil, t, d)
 	if err := o.init(path); err != nil {
 		return nil, err
 	}
@@ -122,11 +121,6 @@ func (o *Obj) Parent() fs.Dir {
 		log.Fatalf("Parent %v err %v\n", dir, err)
 	}
 	return d
-}
-
-// XXX what do to? is nlink still necessary even
-func (o *Obj) Nlink() int {
-	return 1
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

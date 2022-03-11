@@ -38,7 +38,6 @@ type FsObj interface {
 	Perm() np.Tperm
 	Version() np.TQversion
 	Parent() Dir
-	Nlink() int
 	Open(CtxI, np.Tmode) (FsObj, *np.Err)
 	Close(CtxI, np.Tmode) *np.Err // for pipes
 	Stat(CtxI) (*np.Stat, *np.Err)

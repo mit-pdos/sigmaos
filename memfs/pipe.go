@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	// "errors"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -18,14 +17,14 @@ const PIPESZ = 8192
 
 type Pipe struct {
 	fs.Inode
-	mu sync.Mutex
-	//mu      deadlock.Mutex
+	mu      sync.Mutex
 	condr   *sesscond.SessCond
 	condw   *sesscond.SessCond
 	nreader int
 	nwriter int
 	wclosed bool
 	rclosed bool
+	nlink   int
 	buf     []byte
 }
 
@@ -39,6 +38,7 @@ func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	pipe.nwriter = 0
 	pipe.wclosed = false
 	pipe.rclosed = false
+	pipe.nlink = 1
 	return pipe
 }
 
@@ -62,7 +62,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 	defer pipe.mu.Unlock()
 
 	if mode == np.OREAD {
-		if pipe.rclosed || pipe.Nlink() <= 0 {
+		if pipe.rclosed || pipe.nlink <= 0 {
 			return nil, np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
@@ -77,12 +77,12 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 				}
 				return nil, err
 			}
-			if pipe.Nlink() == 0 {
+			if pipe.nlink == 0 {
 				return nil, np.MkErr(np.TErrNotfound, "pipe")
 			}
 		}
 	} else if mode == np.OWRITE {
-		if pipe.wclosed || pipe.Nlink() <= 0 {
+		if pipe.wclosed || pipe.nlink <= 0 {
 			return nil, np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
@@ -98,7 +98,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 				}
 				return nil, err
 			}
-			if pipe.Nlink() == 0 {
+			if pipe.nlink == 0 {
 				return nil, np.MkErr(np.TErrNotfound, "pipe")
 			}
 
@@ -191,7 +191,7 @@ func (pipe *Pipe) Unlink() {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	pipe.DecNlink()
+	pipe.nlink -= 1
 	pipe.condw.Signal()
 	pipe.condr.Signal()
 }

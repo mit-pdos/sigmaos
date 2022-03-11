@@ -57,7 +57,7 @@ func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 }
 
 func (f *File) uxRead(off int64, cnt np.Tsize) ([]byte, *np.Err) {
-	sz := f.Obj.Size()
+	sz := f.Obj.size()
 	if np.Tlength(cnt) >= sz {
 		cnt = np.Tsize(sz)
 	}

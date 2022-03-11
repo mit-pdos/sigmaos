@@ -79,6 +79,14 @@ func uxFlags(m np.Tmode) int {
 	return f
 }
 
+func (o *Obj) size() np.Tlength {
+	ustat, err := ustat(o.path)
+	if err != nil {
+		return 0
+	}
+	return np.Tlength(ustat.Size)
+}
+
 func (o *Obj) Inum() uint64 {
 	return o.ino
 }
@@ -93,14 +101,6 @@ func (o *Obj) VersionInc() {
 func (o *Obj) Qid() np.Tqid {
 	return np.MakeQid(np.Qtype(o.Perm()>>np.QTYPESHIFT),
 		np.TQversion(o.version), np.Tpath(o.ino))
-}
-
-func (o *Obj) Size() np.Tlength {
-	ustat, err := ustat(o.path)
-	if err != nil {
-		return 0
-	}
-	return np.Tlength(ustat.Size)
 }
 
 // convert ux perms into np perm; maybe symlink?
@@ -124,35 +124,9 @@ func (o *Obj) Parent() fs.Dir {
 	return d
 }
 
-// XXX not important??
-func (o *Obj) SetParent(p fs.Dir) {
-	return
-}
-
 // XXX what do to? is nlink still necessary even
 func (o *Obj) Nlink() int {
 	return 1
-}
-
-func (o *Obj) DecNlink() {
-	// nothing to do
-}
-
-func (o *Obj) Mtime() int64 {
-	ustat, err := ustat(o.path)
-	if err != nil {
-		log.Fatalf("Mtime %v err %v\n", o.path, err)
-	}
-	s, _ := ustat.Mtim.Unix()
-	return int64(s)
-}
-
-// Linux will do this
-func (o *Obj) SetMtime(m int64) {
-}
-
-func (o *Obj) Snapshot(fs.SnapshotF) []byte {
-	return nil
 }
 
 func (o *Obj) Unlink(ctx fs.CtxI) *np.Err {

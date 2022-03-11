@@ -137,13 +137,12 @@ func (i *Inode) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
 
-func (i *Inode) Unlink(ctx fs.CtxI) *np.Err {
+func (i *Inode) Unlink() {
 	i.nlink -= 1
 	if i.nlink < 0 {
 		log.Printf("%v: nlink < 0\n", proc.GetProgram())
 		debug.PrintStack()
 	}
-	return nil
 }
 
 func (inode *Inode) Mode() np.Tperm {

@@ -129,10 +129,6 @@ func (o *Obj) Nlink() int {
 	return 1
 }
 
-func (o *Obj) Unlink(ctx fs.CtxI) *np.Err {
-	return nil
-}
-
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DLPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	ustat, err := ustat(o.path)

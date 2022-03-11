@@ -187,14 +187,13 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 	return d, nil
 }
 
-func (pipe *Pipe) Unlink(ctx fs.CtxI) *np.Err {
+func (pipe *Pipe) Unlink() {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
 	pipe.DecNlink()
 	pipe.condw.Signal()
 	pipe.condr.Signal()
-	return nil
 }
 
 func (pipe *Pipe) Snapshot(fn fs.SnapshotF) []byte {

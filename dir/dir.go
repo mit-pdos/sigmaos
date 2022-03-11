@@ -352,6 +352,7 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
 
 	inode.VersionInc()
 	dir.VersionInc()
+	inode.Unlink()
 
 	err = dir.remove(n)
 	return err

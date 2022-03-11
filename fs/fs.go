@@ -39,7 +39,6 @@ type FsObj interface {
 	Version() np.TQversion
 	Parent() Dir
 	Nlink() int
-	Unlink(CtxI) *np.Err
 	Open(CtxI, np.Tmode) (FsObj, *np.Err)
 	Close(CtxI, np.Tmode) *np.Err // for pipes
 	Stat(CtxI) (*np.Stat, *np.Err)

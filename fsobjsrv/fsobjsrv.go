@@ -342,10 +342,6 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror
 	if err != nil {
 		return err.Rerror()
 	}
-	err = o.Unlink(ctx)
-	if err != nil {
-		return err.Rerror()
-	}
 
 	fws.WakeupWatchL()
 	dws.WakeupWatchL()

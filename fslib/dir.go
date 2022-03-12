@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -75,7 +76,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	_, err := fl.ProcessDir(src, func(st *np.Stat) (bool, error) {
 		s := src + "/" + st.Name
 		d := dst + "/" + st.Name
-		// db.DLPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
+		db.DLPrintf("FSLIB", "CopyFile: %v %v\n", s, d)
 		b, err := fl.GetFile(s)
 		if err != nil {
 			return true, err

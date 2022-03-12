@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/reader"
 	"ulambda/writer"
@@ -68,16 +69,18 @@ func (fl *FsLib) OpenReader(path string) (*reader.Reader, error) {
 }
 
 func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
-	ch := make(chan bool)
+	ch := make(chan error)
 	fd := -1
 	for {
-		fd1, err := fl.OpenWatch(path, np.OREAD, func(string, error) {
-			ch <- true
+		fd1, err := fl.OpenWatch(path, np.OREAD, func(path string, err error) {
+			ch <- err
 		})
-
+		db.DLPrintf("FSLIB", "OpenWatch %v err %v\n", path, err)
 		if err != nil && np.IsErrNotfound(err) {
-			// log.Printf("%v: file watch wait %v\n", proc.GetName(), fc.fenceName)
-			<-ch
+			r := <-ch
+			if r != nil {
+				db.DLPrintf("FSLIB", "OpenWatch watch %v err %v\n", path, err)
+			}
 		} else if err != nil {
 			return nil, err
 		} else { // success; file is opened

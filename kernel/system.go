@@ -103,61 +103,57 @@ func (s *System) Boot() error {
 	return nil
 }
 
-func (s *System) BootFsUxd() error {
-	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fsuxd", []string{})
+func (s *System) BootSubsystem(bin string, args []string, list *[]*Subsystem) error {
+	p := proc.MakeProcPid(proc.GenPid(), bin, args)
 	ss := makeSubsystem(s.ProcClnt, p)
-	s.fsuxd = append(s.fsuxd, ss)
+	*list = append(*list, ss)
 	return ss.Run(s.bindir, s.namedAddr)
+}
+
+func (s *System) BootFsUxd() error {
+	return s.BootSubsystem("bin/kernel/fsuxd", []string{}, &s.fsuxd)
 }
 
 func (s *System) BootFss3d() error {
-	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fss3d", []string{})
-	ss := makeSubsystem(s.ProcClnt, p)
-	s.fss3d = append(s.fss3d, ss)
-	return ss.Run(s.bindir, s.namedAddr)
+	return s.BootSubsystem("bin/kernel/fss3d", []string{}, &s.fss3d)
 }
 
 func (s *System) BootProcd() error {
-	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/procd", []string{s.bindir})
-	ss := makeSubsystem(s.ProcClnt, p)
-	s.procd = append(s.procd, ss)
-	return ss.Run(s.bindir, s.namedAddr)
+	return s.BootSubsystem("bin/kernel/procd", []string{s.bindir}, &s.procd)
 }
 
 func (s *System) BootDbd() error {
-	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/dbd", []string{})
-	ss := makeSubsystem(s.ProcClnt, p)
-	s.dbd = append(s.dbd, ss)
-	return ss.Run(s.bindir, s.namedAddr)
+	return s.BootSubsystem("bin/kernel/dbd", []string{}, &s.dbd)
 }
 
 func (s *System) KillOne(srv string) error {
 	var err error
+	var ss *Subsystem
 	switch srv {
 	case np.PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("kill %v %v\n", -s.procd[0].cmd.Process.Pid, s.procd[0].p.Pid)
-			err = syscall.Kill(-s.procd[0].cmd.Process.Pid, syscall.SIGKILL)
-			if err == nil {
-				s.procd[0].cmd.Wait()
-				s.crashedPids[s.procd[0].p.Pid] = true
-				s.procd = s.procd[1:]
-			} else {
-				log.Fatalf("Procd kill failed %v\n", err)
-			}
+			ss = s.procd[0]
+			s.procd = s.procd[1:]
+		} else {
+			log.Printf("Tried to kill procd, nothing to kill")
 		}
 	case np.UX:
-		log.Printf("kill %v\n", -s.fsuxd[0].cmd.Process.Pid)
-		err = syscall.Kill(-s.fsuxd[0].cmd.Process.Pid, syscall.SIGKILL)
-		if err == nil {
-			s.fsuxd[0].cmd.Wait()
-			s.crashedPids[s.fsuxd[0].p.Pid] = true
+		if len(s.fsuxd) > 0 {
+			ss = s.fsuxd[0]
 			s.fsuxd = s.fsuxd[1:]
 		} else {
-			log.Fatalf("Ux kill failed %v\n", err)
+			log.Printf("Tried to kill ux, nothing to kill")
 		}
 	default:
 		log.Fatalf("Unkown server type in System.KillOne: %v", srv)
+	}
+	log.Printf("kill %v %v\n", -ss.cmd.Process.Pid, ss.p.Pid)
+	err = syscall.Kill(-ss.cmd.Process.Pid, syscall.SIGKILL)
+	if err == nil {
+		ss.cmd.Wait()
+		s.crashedPids[ss.p.Pid] = true
+	} else {
+		log.Fatalf("%v kill failed %v\n", srv, err)
 	}
 	return nil
 }

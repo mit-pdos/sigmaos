@@ -287,8 +287,8 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 // because the read fence isn't valid anymore.  This case shows a
 // fence is necessary to make SetRenameGet atomic to ensure that a set
 // to file before a rename doesn't influence the get of the same file
-// after the rename). (The proclnt and kernel package has fence tests
-// with multiple servers)
+// after the rename). (Other packages have tests for leaders and
+// fences with multiple servers)
 func TestFence(t *testing.T) {
 	const N = 100
 

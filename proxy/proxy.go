@@ -217,7 +217,7 @@ func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
+func (npc *NpConn) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 

@@ -30,9 +30,9 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Ropen{}
 		err := s.protsrv.Open(req, reply)
 		return *reply, err
-	case np.Twatchv:
+	case np.Twatch:
 		reply := &np.Ropen{}
-		err := s.protsrv.WatchV(req, reply)
+		err := s.protsrv.Watch(req, reply)
 		return *reply, err
 	case np.Tcreate:
 		reply := &np.Rcreate{}

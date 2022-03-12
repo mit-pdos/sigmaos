@@ -260,7 +260,7 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
-	TTwatchv
+	TTwatch
 	TTrenameat
 	TRrenameat
 	TTgetfile
@@ -337,8 +337,8 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
-	case TTwatchv:
-		return "Twatchv"
+	case TTwatch:
+		return "Twatch"
 	case TTrenameat:
 		return "Trenameat"
 	case TRrenameat:
@@ -510,10 +510,9 @@ type Topen struct {
 	Mode Tmode
 }
 
-type Twatchv struct {
+type Twatch struct {
 	Fid     Tfid
 	Path    []string
-	Mode    Tmode
 	Version TQversion
 }
 
@@ -713,7 +712,7 @@ func (Rerror) Type() Tfcall      { return TRerror }
 func (Twalk) Type() Tfcall       { return TTwalk }
 func (Rwalk) Type() Tfcall       { return TRwalk }
 func (Topen) Type() Tfcall       { return TTopen }
-func (Twatchv) Type() Tfcall     { return TTwatchv }
+func (Twatch) Type() Tfcall      { return TTwatch }
 func (Ropen) Type() Tfcall       { return TRopen }
 func (Tcreate) Type() Tfcall     { return TTcreate }
 func (Rcreate) Type() Tfcall     { return TRcreate }

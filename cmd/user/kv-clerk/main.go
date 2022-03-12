@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync/atomic"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kv"
 	"ulambda/proc"
@@ -29,9 +30,9 @@ func main() {
 func waitEvict(kc *kv.KvClerk) {
 	err := kc.WaitEvict(proc.GetPid())
 	if err != nil {
-		log.Printf("Error WaitEvict: %v", err)
+		db.DLPrintf("KVCLERK", "Error WaitEvict: %v", err)
 	}
-	log.Printf("%v: Evict\n", proc.GetName())
+	db.DLPrintf("KVCLERK", "Evict\n")
 	atomic.StoreInt32(&done, 1)
 }
 

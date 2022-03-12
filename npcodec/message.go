@@ -70,8 +70,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Trenameat{}, nil
 	case np.TRrenameat:
 		return np.Rrenameat{}, nil
-	case np.TTwatchv:
-		return np.Twatchv{}, nil
+	case np.TTwatch:
+		return np.Twatch{}, nil
 	case np.TTgetfile:
 		return np.Tgetfile{}, nil
 	case np.TRgetfile:

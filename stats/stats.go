@@ -51,12 +51,10 @@ type StatInfo struct {
 	Nwalk       Tcounter
 	Nclunk      Tcounter
 	Nopen       Tcounter
-	Nwatchv     Tcounter
+	Nwatch      Tcounter
 	Ncreate     Tcounter
 	Nread       Tcounter
-	Nreadv      Tcounter
 	Nwrite      Tcounter
-	Nwritev     Tcounter
 	Nremove     Tcounter
 	Nremovefile Tcounter
 	Nstat       Tcounter
@@ -111,8 +109,8 @@ func (si *StatInfo) Inc(fct np.Tfcall) {
 		si.Nstat.Inc()
 	case np.TTwstat:
 		si.Nwstat.Inc()
-	case np.TTwatchv:
-		si.Nwatchv.Inc()
+	case np.TTwatch:
+		si.Nwatch.Inc()
 	case np.TTrenameat:
 		si.Nrenameat.Inc()
 	case np.TTgetfile:
@@ -325,7 +323,7 @@ func (st *Stats) stats() []byte {
 }
 
 func (si *StatInfo) String() string {
-	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatchv:%v Ncreate:%v Nflush:%v Nread:%v Nreadv:%v Nwrite:%v Nwritev:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nset:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatchv, si.Ncreate, si.Nflush, si.Nread, si.Nreadv, si.Nwrite, si.Nwritev, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nset, si.Paths, si.Load, si.Util)
+	return fmt.Sprintf("&{ Nwalk:%v Nclunk:%v Nopen:%v Nwatch:%v Ncreate:%v Nflush:%v Nread:%v Nwrite:%v Nremove:%v Nstat:%v Nwstat:%v Nrenameat:%v Nget:%v Nset:%v Paths:%v Load:%v Util:%v }", si.Nwalk, si.Nclunk, si.Nopen, si.Nwatch, si.Ncreate, si.Nflush, si.Nread, si.Nwrite, si.Nremove, si.Nstat, si.Nwstat, si.Nrenameat, si.Nget, si.Nset, si.Paths, si.Load, si.Util)
 }
 
 func (st *Stats) Snapshot(fn fs.SnapshotF) []byte {

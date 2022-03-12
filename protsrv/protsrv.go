@@ -19,7 +19,7 @@ type Protsrv interface {
 	Walk(np.Twalk, *np.Rwalk) *np.Rerror
 	Create(np.Tcreate, *np.Rcreate) *np.Rerror
 	Open(np.Topen, *np.Ropen) *np.Rerror
-	WatchV(np.Twatchv, *np.Ropen) *np.Rerror
+	Watch(np.Twatch, *np.Ropen) *np.Rerror
 	Clunk(np.Tclunk, *np.Rclunk) *np.Rerror
 	Read(np.Tread, *np.Rread) *np.Rerror
 	Write(np.Twrite, *np.Rwrite) *np.Rerror

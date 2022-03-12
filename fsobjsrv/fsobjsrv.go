@@ -179,7 +179,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
+func (fos *FsObjSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
@@ -189,7 +189,7 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	db.DLPrintf("FSOBJ", "%v: Watchv v %v %v\n", f.Ctx().Uname(), o.Qid(), args)
+	db.DLPrintf("FSOBJ", "%v: Watch v %v %v\n", f.Ctx().Uname(), o.Qid(), args)
 
 	// get lock on watch entry for p, so that remove cannot remove
 	// file before watch is set.
@@ -392,18 +392,18 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
 
-		if err := fos.fssrv.Sess(fos.sid).CheckFences(f.PathDir()); err != nil {
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path().Dir()); err != nil {
 			return err.Rerror()
 		}
 
-		dst := f.PathDir().Copy().AppendPath(np.Split(args.Stat.Name))
+		dst := f.Path().Dir().Copy().AppendPath(np.Split(args.Stat.Name))
 
-		dws, sws := fos.AcquireWatches(f.PathDir(), f.PathBase())
+		dws, sws := fos.AcquireWatches(f.Path().Dir(), f.Path().Base())
 		defer fos.ReleaseWatches(dws, sws)
 		tws := fos.wt.WatchLookupL(dst)
 		defer fos.wt.Release(tws)
 
-		err := o.Parent().Rename(f.Ctx(), f.PathBase(), args.Stat.Name)
+		err := o.Parent().Rename(f.Ctx(), f.Path().Base(), args.Stat.Name)
 		if err != nil {
 			return err.Rerror()
 		}
@@ -451,10 +451,10 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 			return np.MkErr(np.TErrInval, newf.Path()).Rerror()
 		}
 
-		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.PathDir()); err != nil {
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.Path().Dir()); err != nil {
 			return err.Rerror()
 		}
-		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.PathDir()); err != nil {
+		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.Path().Dir()); err != nil {
 			return err.Rerror()
 		}
 

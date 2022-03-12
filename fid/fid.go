@@ -54,14 +54,6 @@ func (f *Fid) SetPath(path np.Path) {
 	f.path = path
 }
 
-func (f *Fid) PathBase() string {
-	return f.path.Base()
-}
-
-func (f *Fid) PathDir() np.Path {
-	return f.path.Dir()
-}
-
 func (f *Fid) ObjU() fs.FsObj {
 	return f.obj
 }

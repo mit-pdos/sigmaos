@@ -18,6 +18,10 @@ import (
 	"ulambda/test"
 )
 
+//
+// Tests automounting, ephemeral files, and a fence with two servers.
+//
+
 func TestSymlink1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -150,6 +154,20 @@ func TestSymlink3(t *testing.T) {
 	ts.Shutdown()
 }
 
+func procdName(ts *test.Tstate, exclude map[string]bool) string {
+	sts, err := ts.GetDir(np.PROCD)
+	stsExcluded := []*np.Stat{}
+	for _, s := range sts {
+		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
+			stsExcluded = append(stsExcluded, s)
+		}
+	}
+	assert.Nil(ts.T, err, np.PROCD)
+	assert.Equal(ts.T, 1, len(stsExcluded))
+	name := path.Join(np.PROCD, stsExcluded[0].Name)
+	return name
+}
+
 func TestEphemeral(t *testing.T) {
 	const N = 20
 	ts := test.MakeTstateAll(t)
@@ -188,21 +206,9 @@ func TestEphemeral(t *testing.T) {
 	ts.Shutdown()
 }
 
-func procdName(ts *test.Tstate, exclude map[string]bool) string {
-	sts, err := ts.GetDir(np.PROCD)
-	stsExcluded := []*np.Stat{}
-	for _, s := range sts {
-		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
-			stsExcluded = append(stsExcluded, s)
-		}
-	}
-	assert.Nil(ts.T, err, np.PROCD)
-	assert.Equal(ts.T, 1, len(stsExcluded))
-	name := path.Join(np.PROCD, stsExcluded[0].Name)
-	return name
-}
-
-func TestFenceW(t *testing.T) {
+// Test if a primary cannot write to a fenced server after primary
+// fails
+func TestOldPrimaryOnce(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fence := "name/l"
 
@@ -228,22 +234,21 @@ func TestFenceW(t *testing.T) {
 		crash.Partition(fsldl)
 		delay.Delay(10)
 
-		// fsldl lost lock, and ts should have it by now so
-		// this write and read to ux server should fail
+		// fsldl lost primary status, and ts should have it by
+		// now so this write to ux server should fail
 		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
 		assert.NotNil(t, err, "Write")
-
-		// XXX opened before change, so maybe ok
-		//_, err = fsldl.Read(fd, 100)
-		//assert.NotNil(t, err, "Write")
 
 		fsldl.Close(fd)
 
 		ch <- true
 	}()
 
+	// Wait until other thread is primary
 	<-ch
 
+	// When other thread partitions, we become primary and install
+	// fence.
 	wfence := fenceclnt.MakeFenceClnt(ts.FsLib, fence, 0, []string{dirux})
 	err := wfence.AcquireFenceW([]byte{})
 	assert.Nil(t, err, "WriteFence")

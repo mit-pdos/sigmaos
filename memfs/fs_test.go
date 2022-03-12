@@ -33,10 +33,10 @@ func (ts *TestState) initfs() {
 	assert.Nil(ts.t, err, "Create done")
 	_, err = ts.rooti.Create(ts.ctx, "todo", np.DMDIR|07000, 0)
 	assert.Nil(ts.t, err, "Create todo")
-	is, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
+	_, lo, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
 	assert.Nil(ts.t, err, "Walk todo")
 	for i := 0; i < N; i++ {
-		_, err = is[0].(fs.Dir).Create(ts.ctx, "job"+strconv.Itoa(i), 07000, 0)
+		_, err = lo.(fs.Dir).Create(ts.ctx, "job"+strconv.Itoa(i), 07000, 0)
 		assert.Nil(ts.t, err, "Create job")
 		_, _, err = ts.rooti.Lookup(ts.ctx, []string{"todo", "job" + strconv.Itoa(i)})
 		assert.Nil(ts.t, err, "Walk job")

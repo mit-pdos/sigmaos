@@ -110,7 +110,7 @@ func (dir *DirImpl) Size() np.Tlength {
 	return npcodec.MarshalSizeDir(dir.lsL(0))
 }
 
-func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, inodes []fs.FsObj) ([]fs.FsObj, np.Path, *np.Err) {
+func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	var inode fs.FsObj
 	var err *np.Err
 
@@ -119,22 +119,22 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, inodes []fs.FsObj) ([]fs.Fs
 	if err != nil {
 		db.DLPrintf("MEMFS", "dir %v: file not found %v", dir, path[0])
 		dir.mu.Unlock()
-		return inodes, path, err
+		return qids, dir, path, err
 	}
-	inodes = append(inodes, inode)
+	qids = append(qids, inode.Qid())
 	if len(path) == 1 { // done?
-		db.DLPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, inodes)
+		db.DLPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, qids)
 		dir.mu.Unlock()
-		return inodes, nil, nil
+		return qids, inode, nil, nil
 	}
 	switch i := inode.(type) {
 	case *DirImpl:
 		dir.mu.Unlock() // for "."
-		return i.namei(ctx, path[1:], inodes)
+		return i.namei(ctx, path[1:], qids)
 	default:
-		db.DLPrintf("MEMFS", "namei %T %v %v -> %v %v", i, path, dir, inodes, path[1:])
+		db.DLPrintf("MEMFS", "namei %T %v %v -> %v %v", i, path, dir, qids, path[1:])
 		dir.mu.Unlock()
-		return inodes, path, np.MkErr(np.TErrNotDir, path[0])
+		return qids, inode, path, np.MkErr(np.TErrNotDir, path[0])
 	}
 }
 
@@ -185,9 +185,9 @@ func (dir *DirImpl) remove(name string) *np.Err {
 	return dir.unlinkL(name)
 }
 
-func (dir *DirImpl) Lookup(ctx fs.CtxI, path np.Path) ([]fs.FsObj, np.Path, *np.Err) {
+func (dir *DirImpl) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	if len(path) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	return dir.namei(ctx, path, nil)
 }

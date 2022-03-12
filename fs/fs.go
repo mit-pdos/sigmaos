@@ -16,7 +16,7 @@ type CtxI interface {
 
 type Dir interface {
 	FsObj
-	Lookup(CtxI, np.Path) ([]FsObj, np.Path, *np.Err)
+	Lookup(CtxI, np.Path) ([]np.Tqid, FsObj, np.Path, *np.Err)
 	Create(CtxI, string, np.Tperm, np.Tmode) (FsObj, *np.Err)
 	ReadDir(CtxI, int, np.Tsize, np.TQversion) ([]*np.Stat, *np.Err)
 	WriteDir(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)

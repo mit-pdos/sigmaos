@@ -89,12 +89,12 @@ func (pfs *ProcdFs) readRunq(procdPath string, queueName string) ([]*np.Stat, er
 }
 
 func (pfs *ProcdFs) readRunqProc(procdPath string, queueName string, name string) (*proc.Proc, error) {
-	os, _, err := pfs.runqs[queueName].Lookup(ctx.MkCtx("", 0, nil), []string{name})
+	_, lo, _, err := pfs.runqs[queueName].Lookup(ctx.MkCtx("", 0, nil), []string{name})
 	if err != nil {
 		log.Printf("Error Lookup in ProcdFs.getRunqProc: %v", err)
 		return nil, err
 	}
-	b, err := os[0].(fs.File).Read(ctx.MkCtx("", 0, nil), 0, math.MaxUint32, np.NoV)
+	b, err := lo.(fs.File).Read(ctx.MkCtx("", 0, nil), 0, math.MaxUint32, np.NoV)
 	if err != nil {
 		log.Printf("Error Read in ProcdFs.getRunqProc: %v", err)
 		return nil, err

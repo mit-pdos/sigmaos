@@ -62,15 +62,17 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	path := np.Split(args.Aname)
 	root, ctx := fos.fssrv.AttachTree(args.Uname, args.Aname, fos.sid)
 	tree := root.(fs.FsObj)
+	qid := tree.(fs.FsObj).Qid()
 	if args.Aname != "" {
-		os, rest, err := root.Lookup(ctx, path)
+		qids, lo, rest, err := root.Lookup(ctx, path)
 		if len(rest) > 0 || err != nil {
 			return err.Rerror()
 		}
-		tree = os[len(os)-1]
+		tree = lo
+		qid = qids[len(qids)-1]
 	}
 	fos.ft.Add(args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
-	rets.Qid = tree.(fs.FsObj).Qid()
+	rets.Qid = qid
 	return nil
 }
 
@@ -97,21 +99,20 @@ func makeQids(os []fs.FsObj) []np.Tqid {
 	return qids
 }
 
-func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, np.Path, *np.Err) {
+func (fos *FsObjSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	o := f.Obj()
 	if !o.Perm().IsDir() {
-		return nil, nil, np.MkErr(np.TErrNotDir, f.Path().Base())
+		return nil, nil, nil, np.MkErr(np.TErrNotDir, f.Path().Base())
 	}
 	d := o.(fs.Dir)
 	return d.Lookup(ctx, names)
 }
 
 func (fos *FsObjSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve bool) (fs.FsObj, *np.Err) {
-	os, _, err := fos.lookupObj(ctx, f, names)
+	_, lo, _, err := fos.lookupObj(ctx, f, names)
 	if err != nil {
 		return nil, err
 	}
-	lo := os[len(os)-1]
 	if lo.Perm().IsSymlink() && resolve {
 		return nil, np.MkErr(np.TErrNotDir, names[len(names)-1])
 	}
@@ -124,18 +125,18 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "%v: Walk o %v args %v (%v)\n", f.Ctx().Uname(), f, args, len(args.Wnames))
-	os, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
+	qids, lo, rest, err := fos.lookupObj(f.Ctx(), f, args.Wnames)
 	if err != nil && !np.IsMaybeSpecialElem(err) {
 		return err.Rerror()
 	}
 	// let the client decide what to do with rest
 	n := len(args.Wnames) - len(rest)
 	p := append(f.Path(), args.Wnames[:n]...)
-	rets.Qids = makeQids(os)
-	if len(os) == 0 { // cloning f into args.NewFid in ft
-		os = append(os, f.Obj())
+	rets.Qids = qids
+	if len(qids) == 0 { // cloning f into args.NewFid in ft
+		lo = f.Obj()
 	}
-	fos.ft.Add(args.NewFid, fid.MakeFidPath(p, os[len(os)-1], 0, f.Ctx()))
+	fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
 	return nil
 }
 

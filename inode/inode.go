@@ -75,7 +75,6 @@ func (inode *Inode) Parent() fs.Dir {
 func (inode *Inode) Version() np.TQversion {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
-
 	return inode.version
 }
 

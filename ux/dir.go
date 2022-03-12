@@ -105,47 +105,47 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p np.Path, inodes []fs.FsObj) ([]fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	db.DLPrintf("UXD", "%v: namei %v %v\n", ctx, d, p)
 	fi, error := os.Stat(d.path.Append(p[0]).String())
 	if error != nil {
-		return inodes, nil, np.MkErr(np.TErrNotfound, p[0])
+		return qids, d, d.path, np.MkErr(np.TErrNotfound, p[0])
 	}
 	if len(p) == 1 {
 		if fi.IsDir() {
 			d1, err := makeDir(append(d.path, p[0]))
 			if err != nil {
-				return inodes, d.path, err
+				return qids, d1, d.path, err
 			}
-			return append(inodes, d1), nil, nil
+			return append(qids, d1.Qid()), d1, nil, nil
 		} else {
 			f, err := makeFile(append(d.path, p[0]))
 			if err != nil {
-				return inodes, d.path, err
+				return qids, f, d.path, err
 			}
-			return append(inodes, f), nil, nil
+			return append(qids, f.Qid()), f, nil, nil
 		}
 	} else {
 		d1, err := makeDir(append(d.path, p[0]))
 		if err != nil {
-			return inodes, d.path, err
+			return qids, d, d.path, err
 		}
-		inodes = append(inodes, d1)
-		return d1.namei(ctx, p[1:], inodes)
+		qids = append(qids, d1.Qid())
+		return d1.namei(ctx, p[1:], qids)
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
 	if len(p) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	fi, error := os.Stat(d.path.String())
 	if error != nil {
-		return nil, nil, np.MkErrError(error)
+		return nil, nil, nil, np.MkErrError(error)
 	}
 	if !fi.IsDir() {
-		return nil, nil, np.MkErr(np.TErrNotDir, d.path)
+		return nil, nil, nil, np.MkErr(np.TErrNotDir, d.path)
 	}
 	return d.namei(ctx, p, nil)
 }

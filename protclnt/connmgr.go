@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fences"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
 )
@@ -17,12 +16,10 @@ const (
 
 type conn struct {
 	nc *netclnt.NetClnt
-	fm *fences.FenceTable
 }
 
 func makeConn(nc *netclnt.NetClnt) *conn {
 	c := &conn{}
-	c.fm = fences.MakeFenceTable()
 	c.nc = nc
 	return c
 }

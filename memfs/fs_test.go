@@ -38,28 +38,28 @@ func (ts *TestState) initfs() {
 	for i := 0; i < N; i++ {
 		_, err = lo.(fs.Dir).Create(ts.ctx, "job"+strconv.Itoa(i), 07000, 0)
 		assert.Nil(ts.t, err, "Create job")
-		_, _, err = ts.rooti.Lookup(ts.ctx, []string{"todo", "job" + strconv.Itoa(i)})
+		_, _, _, err = ts.rooti.Lookup(ts.ctx, []string{"todo", "job" + strconv.Itoa(i)})
 		assert.Nil(ts.t, err, "Walk job")
 
 	}
 }
 
 func (ts *TestState) testRename(t int) {
-	is, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
+	qids, lo, _, err := ts.rooti.Lookup(ts.ctx, []string{"todo"})
 	assert.Nil(ts.t, err, "Lookup todo")
-	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
-	d1 := is[0].(fs.Dir)
+	assert.Equal(ts.t, 1, len(qids), "Walked too few inodes")
+	d1 := lo.(fs.Dir)
 
-	is, _, err = ts.rooti.Lookup(ts.ctx, []string{"done"})
+	qids, lo, _, err = ts.rooti.Lookup(ts.ctx, []string{"done"})
 	assert.Nil(ts.t, err, "Lookup done")
-	assert.Equal(ts.t, 1, len(is), "Walked too few inodes")
-	d2 := is[0].(fs.Dir)
+	assert.Equal(ts.t, 1, len(qids), "Walked too few inodes")
+	d2 := lo.(fs.Dir)
 
 	sts, err := d1.ReadDir(ts.ctx, 0, 100, np.NoV)
 	assert.Nil(ts.t, err, "ReadDir")
 	for _, st := range sts {
-		is, _, err := d1.Lookup(ts.ctx, []string{st.Name})
-		if len(is) == 0 {
+		qids, _, _, err := d1.Lookup(ts.ctx, []string{st.Name})
+		if len(qids) == 0 {
 			continue
 		}
 		err = d1.Renameat(ts.ctx, st.Name, d2, st.Name)

@@ -175,11 +175,14 @@ func (clnt *ProcClnt) Started(pid string) error {
 	parentDir := proc.PARENTDIR
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))
 	err := semStart.Up()
+	if err != nil {
+		db.DLPrintf("PROCCLNT_ERR", "Started error %v %v\n", path.Join(parentDir, proc.START_SEM), err)
+	}
 	// File may not be found if parent exited first or isn't reachable
 	if err != nil && !np.IsErrUnavailable(err) {
-		db.DLPrintf("PROCCLNT_ERR", "Started error %v %v\n", path.Join(parentDir, proc.START_SEM), err)
 		return fmt.Errorf("Started error %v", err)
 	}
+
 	// Only isolate kernel procs
 	if !clnt.isKernelProc(pid) {
 		// Isolate the process namespace

@@ -395,10 +395,8 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 
 		dst := f.PathDir().Copy().AppendPath(np.Split(args.Stat.Name))
 
-		dws := fos.wt.WatchLookupL(f.PathDir())
-		defer fos.wt.Release(dws)
-		sws := fos.wt.WatchLookupL(f.Path())
-		defer fos.wt.Release(sws)
+		dws, sws := fos.AcquireWatches(f.PathDir(), f.PathBase())
+		defer fos.ReleaseWatches(dws, sws)
 		tws := fos.wt.WatchLookupL(dst)
 		defer fos.wt.Release(tws)
 
@@ -416,14 +414,15 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
-func lockOrder(d1 fs.FsObj, oldf *fid.Fid, d2 fs.FsObj, newf *fid.Fid) (*fid.Fid, *fid.Fid) {
+// d1 first?
+func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 	if d1.Inum() < d2.Inum() {
-		return oldf, newf
+		return true
 	} else if d1.Inum() == d2.Inum() { // would have used wstat instead of renameat
 		log.Fatalf("FATAL lockOrder")
-		return oldf, newf
+		return false
 	} else {
-		return newf, oldf
+		return false
 	}
 }
 
@@ -456,25 +455,22 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 			return err.Rerror()
 		}
 
-		f1, f2 := lockOrder(oo, oldf, no, newf)
-		d1ws := fos.wt.WatchLookupL(f1.Path())
-		d2ws := fos.wt.WatchLookupL(f2.Path())
-		defer fos.wt.Release(d1ws)
-		defer fos.wt.Release(d2ws)
-
-		src := oldf.Path().Copy().Append(args.OldName)
-		dst := newf.Path().Copy().Append(args.NewName)
-		srcws := fos.wt.WatchLookupL(src)
-		dstws := fos.wt.WatchLookupL(dst)
-		defer fos.wt.Release(srcws)
-		defer fos.wt.Release(dstws)
+		var d1ws, d2ws, srcws, dstws *watch.Watch
+		if srcfirst := lockOrder(oo, no); srcfirst {
+			d1ws, srcws = fos.AcquireWatches(oldf.Path(), args.OldName)
+			d2ws, dstws = fos.AcquireWatches(newf.Path(), args.NewName)
+		} else {
+			d2ws, dstws = fos.AcquireWatches(newf.Path(), args.NewName)
+			d1ws, srcws = fos.AcquireWatches(oldf.Path(), args.OldName)
+		}
+		defer fos.ReleaseWatches(d1ws, srcws)
+		defer fos.ReleaseWatches(d2ws, dstws)
 
 		err := d1.Renameat(oldf.Ctx(), args.OldName, d2, args.NewName)
 		if err != nil {
-
 			return err.Rerror()
 		}
-		fos.rft.UpdateSeqno(dst)
+		fos.rft.UpdateSeqno(newf.Path().Append(args.NewName))
 		dstws.WakeupWatchL() // trigger create watch
 		srcws.WakeupWatchL() // trigger remove watch
 		d1ws.WakeupWatchL()  // trigger one dir watch

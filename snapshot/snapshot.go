@@ -10,6 +10,7 @@ import (
 	"ulambda/fs"
 	"ulambda/inode"
 	"ulambda/memfs"
+	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/session"
@@ -19,22 +20,22 @@ import (
 
 type Snapshot struct {
 	fssrv        protsrv.FsServer
-	Imap         map[uint64]ObjSnapshot
-	Root         uint64
+	Imap         map[np.Tpath]ObjSnapshot
+	Root         np.Tpath
 	St           []byte
 	Tmt          []byte
 	Rft          []byte
 	Rc           []byte
 	NextInum     uint64
-	restoreCache map[uint64]fs.Inode
+	restoreCache map[np.Tpath]fs.Inode
 }
 
 func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
 	s := &Snapshot{}
 	s.fssrv = fssrv
-	s.Imap = make(map[uint64]ObjSnapshot)
-	s.Root = 0
-	s.restoreCache = make(map[uint64]fs.Inode)
+	s.Imap = make(map[np.Tpath]ObjSnapshot)
+	s.Root = np.Tpath(0)
+	s.restoreCache = make(map[np.Tpath]fs.Inode)
 	return s
 }
 
@@ -58,7 +59,7 @@ func (s *Snapshot) Snapshot(root fs.Inode, st *session.SessionTable, tm *threadm
 	return b
 }
 
-func (s *Snapshot) snapshotFsTree(i fs.Inode) uint64 {
+func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	var stype Tsnapshot
 	switch i.(type) {
 	case *dir.DirImpl:
@@ -74,8 +75,8 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) uint64 {
 	default:
 		log.Fatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(i))
 	}
-	s.Imap[i.Inum()] = MakeObjSnapshot(stype, i.Snapshot(s.snapshotFsTree))
-	return i.Inum()
+	s.Imap[i.Qid().Path] = MakeObjSnapshot(stype, i.Snapshot(s.snapshotFsTree))
+	return i.Qid().Path
 }
 
 func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
@@ -103,7 +104,7 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	return root, st, tmt, rft, rc
 }
 
-func (s *Snapshot) RestoreFsTree(inum uint64) fs.Inode {
+func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 	if obj, ok := s.restoreCache[inum]; ok {
 		return obj
 	}

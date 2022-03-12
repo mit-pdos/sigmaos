@@ -12,7 +12,7 @@ import (
 
 type Inode struct {
 	mu      sync.Mutex
-	inum    uint64
+	inum    np.Tpath
 	perm    np.Tperm
 	version np.TQversion
 	mtime   int64
@@ -20,14 +20,14 @@ type Inode struct {
 	owner   string
 }
 
-var NextInum uint64 = 0
+var NextInum = uint64(0)
 
 func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 	i := &Inode{}
 	// This may be overly defensive, but setting an inode's inum as it's address
 	// seems risky, as the go GC moves objects and may accidentally make two
 	// objects have the same address.
-	i.inum = atomic.AddUint64(&NextInum, 1)
+	i.inum = np.Tpath(atomic.AddUint64(&NextInum, 1))
 	i.perm = p
 	i.mtime = time.Now().Unix()
 	i.parent = parent
@@ -45,15 +45,11 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) Inum() uint64 {
-	return inode.inum
-}
-
 func (inode *Inode) qidL() np.Tqid {
 	return np.MakeQid(
 		np.Qtype(inode.perm>>np.QTYPESHIFT),
 		np.TQversion(inode.version),
-		np.Tpath(inode.Inum()))
+		inode.inum)
 }
 
 func (inode *Inode) Qid() np.Tqid {

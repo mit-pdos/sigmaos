@@ -33,10 +33,8 @@ type File interface {
 //type Tinum uint64
 
 type FsObj interface {
-	Inum() uint64
 	Qid() np.Tqid
 	Perm() np.Tperm
-	Version() np.TQversion
 	Parent() Dir
 	Open(CtxI, np.Tmode) (FsObj, *np.Err)
 	Close(CtxI, np.Tmode) *np.Err // for pipes

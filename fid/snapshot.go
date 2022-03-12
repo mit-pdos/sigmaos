@@ -12,10 +12,10 @@ import (
 
 type FidSnapshot struct {
 	Path    []string
-	Obj     uint64
+	Obj     np.Tpath
 	IsOpen  bool
 	M       np.Tmode
-	Vers    np.TQversion
+	Qid     np.Tqid
 	CtxSnap []byte
 	Cursor  int // for directories
 }
@@ -28,9 +28,9 @@ func MakeFidSnapshot() *FidSnapshot {
 func (fid *Fid) Snapshot() []byte {
 	fs := MakeFidSnapshot()
 	fs.Path = fid.path
-	fs.Obj = fid.obj.Inum()
+	fs.Obj = fid.obj.Qid().Path
 	fs.M = fid.m
-	fs.Vers = fid.vers
+	fs.Qid = fid.qid
 	fs.CtxSnap = fid.ctx.Snapshot()
 	fs.Cursor = fid.cursor
 	b, err := json.Marshal(fs)
@@ -51,7 +51,7 @@ func Restore(fn fs.RestoreF, sct *sesscond.SessCondTable, b []byte) *Fid {
 	fid.obj = fn(fsnap.Obj)
 	fid.isOpen = fsnap.IsOpen
 	fid.m = fsnap.M
-	fid.vers = fsnap.Vers
+	fid.qid = fsnap.Qid
 	fid.ctx = ctx.Restore(sct, b)
 	fid.cursor = fsnap.Cursor
 	return fid

@@ -16,17 +16,17 @@ type Fid struct {
 	obj    fs.FsObj
 	isOpen bool
 	m      np.Tmode
-	vers   np.TQversion
+	qid    np.Tqid // the qid of obj at the time of invoking MakeFidPath
 	ctx    fs.CtxI
 	cursor int // for directories
 }
 
-func MakeFidPath(p np.Path, o fs.FsObj, m np.Tmode, ctx fs.CtxI) *Fid {
-	return &Fid{sync.Mutex{}, p, o, false, m, o.Version(), ctx, 0}
+func MakeFidPath(p np.Path, o fs.FsObj, m np.Tmode, ctx fs.CtxI, qid np.Tqid) *Fid {
+	return &Fid{sync.Mutex{}, p, o, false, m, qid, ctx, 0}
 }
 
 func (f *Fid) String() string {
-	return fmt.Sprintf("p %v o? %v %v v %v", f.path, f.isOpen, f.m, f.vers)
+	return fmt.Sprintf("p %v o? %v %v v %v", f.path, f.isOpen, f.m, f.qid)
 }
 
 func (f *Fid) Ctx() fs.CtxI {

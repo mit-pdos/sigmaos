@@ -44,7 +44,7 @@ func (fss3 *Fss3) makeObj(key np.Path, t np.Tperm, d *Dir) fs.FsObj {
 }
 
 func (o *Obj) String() string {
-	s := fmt.Sprintf("%v t %v id %v sz %v %v", o.key, o.Perm(), o.Inum(), o.sz,
+	s := fmt.Sprintf("%v t %v id %v sz %v %v", o.key, o.Perm(), o.Qid(), o.sz,
 		o.Mtime())
 	return s
 }

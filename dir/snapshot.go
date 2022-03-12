@@ -6,17 +6,18 @@ import (
 
 	"ulambda/fs"
 	"ulambda/inode"
+	np "ulambda/ninep"
 )
 
 type DirSnapshot struct {
 	InodeSnap []byte
-	Entries   map[string]uint64
+	Entries   map[string]np.Tpath
 }
 
 func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds := &DirSnapshot{}
 	ds.InodeSnap = d.Inode.Snapshot(fn)
-	ds.Entries = make(map[string]uint64)
+	ds.Entries = make(map[string]np.Tpath)
 	for n, e := range d.entries {
 		if n == "." {
 			continue

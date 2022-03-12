@@ -71,7 +71,7 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 		tree = lo
 		qid = qids[len(qids)-1]
 	}
-	fos.ft.Add(args.Fid, fid.MakeFidPath(path, tree, 0, ctx))
+	fos.ft.Add(args.Fid, fid.MakeFidPath(path, tree, 0, ctx, qid))
 	rets.Qid = qid
 	return nil
 }
@@ -133,10 +133,13 @@ func (fos *FsObjSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	n := len(args.Wnames) - len(rest)
 	p := append(f.Path(), args.Wnames[:n]...)
 	rets.Qids = qids
+	qid := f.Obj().Qid()
 	if len(qids) == 0 { // cloning f into args.NewFid in ft
 		lo = f.Obj()
+	} else {
+		qid = qids[len(qids)-1]
 	}
-	fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx()))
+	fos.ft.Add(args.NewFid, fid.MakeFidPath(p, lo, 0, f.Ctx(), qid))
 	return nil
 }
 
@@ -186,15 +189,15 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	db.DLPrintf("FSOBJ", "%v: Watchv v %v %v\n", f.Ctx().Uname(), o.Version(), args)
+	db.DLPrintf("FSOBJ", "%v: Watchv v %v %v\n", f.Ctx().Uname(), o.Qid(), args)
 
 	// get lock on watch entry for p, so that remove cannot remove
 	// file before watch is set.
 	ws := fos.wt.WatchLookupL(p)
 	defer fos.wt.Release(ws)
 
-	if !np.VEq(args.Version, o.Version()) {
-		return np.MkErr(np.TErrVersion, f.Path()).Rerror()
+	if !np.VEq(args.Version, o.Qid().Version) {
+		return np.MkErr(np.TErrVersion, o.Qid()).Rerror()
 	}
 	// time.Sleep(1000 * time.Nanosecond)
 
@@ -205,9 +208,9 @@ func (fos *FsObjSrv) WatchV(args np.Twatchv, rets *np.Ropen) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, eph bool) *fid.Fid {
+func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, eph bool, qid np.Tqid) *fid.Fid {
 	p := dir.Copy()
-	nf := fid.MakeFidPath(append(p, name), o, 0, ctx)
+	nf := fid.MakeFidPath(append(p, name), o, 0, ctx, qid)
 	if eph {
 		fos.et.Add(o, nf)
 	}
@@ -273,7 +276,7 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral())
+	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral(), o1.Qid())
 	fos.rft.UpdateSeqno(nf.Path())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
@@ -416,9 +419,9 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 
 // d1 first?
 func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
-	if d1.Inum() < d2.Inum() {
+	if d1.Qid().Path < d2.Qid().Path {
 		return true
-	} else if d1.Inum() == d2.Inum() { // would have used wstat instead of renameat
+	} else if d1.Qid().Path == d2.Qid().Path { // would have used wstat instead of renameat
 		log.Fatalf("FATAL lockOrder")
 		return false
 	} else {
@@ -444,7 +447,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		if !ok {
 			return np.MkErr(np.TErrNotDir, newf.Path()).Rerror()
 		}
-		if oo.Inum() == no.Inum() {
+		if oo.Qid().Path == no.Qid().Path {
 			return np.MkErr(np.TErrInval, newf.Path()).Rerror()
 		}
 
@@ -600,7 +603,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral())
+	f = fos.makeFid(f.Ctx(), dname, name, lo, args.Perm.IsEphemeral(), lo.Qid())
 	i, err := fs.Obj2File(lo, fname)
 	if err != nil {
 		return err.Rerror()

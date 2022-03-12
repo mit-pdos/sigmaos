@@ -4,8 +4,8 @@ import (
 	np "ulambda/ninep"
 )
 
-type SnapshotF func(Inode) uint64
-type RestoreF func(uint64) Inode
+type SnapshotF func(Inode) np.Tpath
+type RestoreF func(np.Tpath) Inode
 
 type MakeDirF func(Inode) Inode
 

@@ -199,8 +199,8 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion)
 	defer dir.mu.Unlock()
 
 	db.DLPrintf("MEMFS", "%v: ReadDir %v\n", ctx, dir)
-	if !np.VEq(v, dir.Version()) {
-		return nil, np.MkErr(np.TErrVersion, dir.Inum())
+	if !np.VEq(v, dir.Qid().Version) {
+		return nil, np.MkErr(np.TErrVersion, dir.Qid())
 	}
 	return dir.lsL(cursor), nil
 }
@@ -243,8 +243,8 @@ func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmod
 }
 
 func lockOrdered(olddir *DirImpl, newdir *DirImpl) {
-	id1 := olddir.Inum()
-	id2 := newdir.Inum()
+	id1 := olddir.Qid().Path
+	id2 := newdir.Qid().Path
 	if id1 == id2 {
 		olddir.mu.Lock()
 	} else if id1 < id2 {
@@ -257,8 +257,8 @@ func lockOrdered(olddir *DirImpl, newdir *DirImpl) {
 }
 
 func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
-	id1 := olddir.Inum()
-	id2 := newdir.Inum()
+	id1 := olddir.Qid().Path
+	id2 := newdir.Qid().Path
 	if id1 == id2 {
 		olddir.mu.Unlock()
 	} else if id1 < id2 {

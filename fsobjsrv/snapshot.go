@@ -12,14 +12,14 @@ import (
 
 type FsObjSrvSnapshot struct {
 	Fid       map[np.Tfid][]byte
-	Ephemeral map[uint64][]byte
+	Ephemeral map[np.Tpath][]byte
 	Sid       np.Tsession
 }
 
 func MakeFsObjSrvSnapshot() *FsObjSrvSnapshot {
 	foss := &FsObjSrvSnapshot{}
 	foss.Fid = make(map[np.Tfid][]byte)
-	foss.Ephemeral = make(map[uint64][]byte)
+	foss.Ephemeral = make(map[np.Tpath][]byte)
 	return foss
 }
 
@@ -30,7 +30,7 @@ func (fos *FsObjSrv) snapshot() []byte {
 		foss.Fid[fid] = f.Snapshot()
 	}
 	for o, f := range fos.et.ephemeral {
-		ptr := o.Inum()
+		ptr := o.Qid().Path
 		foss.Ephemeral[ptr] = f.Snapshot()
 	}
 	foss.Sid = fos.sid

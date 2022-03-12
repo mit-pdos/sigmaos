@@ -12,7 +12,7 @@ type InodeSnapshot struct {
 	Perm    np.Tperm
 	Version np.TQversion
 	Mtime   int64
-	Parent  uint64
+	Parent  np.Tpath
 	Owner   string
 	Nlink   int
 }
@@ -27,7 +27,7 @@ func makeSnapshot(inode *Inode) []byte {
 	if inode.parent == nil {
 		i.Parent = 0
 	} else {
-		i.Parent = inode.parent.Inum()
+		i.Parent = inode.parent.Qid().Path
 	}
 	i.Owner = inode.owner
 

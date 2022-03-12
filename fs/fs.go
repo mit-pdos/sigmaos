@@ -30,8 +30,6 @@ type File interface {
 	Write(CtxI, np.Toffset, []byte, np.TQversion) (np.Tsize, *np.Err)
 }
 
-//type Tinum uint64
-
 type FsObj interface {
 	Qid() np.Tqid
 	Perm() np.Tperm

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"log"
 	"math/big"
 	"regexp"
 	"strconv"
@@ -18,7 +17,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/group"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/reader"
 )
@@ -88,7 +86,7 @@ func MakeClerk(name string, namedAddr []string) *KvClerk {
 	kc.grpre = regexp.MustCompile(`grp-([0-9]+)`)
 	err := kc.balFclnt.AcquireConfig(&kc.blConf)
 	if err != nil {
-		log.Printf("%v: MakeClerk readConfig err %v\n", proc.GetName(), err)
+		db.DLPrintf("KVCLERK", "MakeClerk readConfig err %v\n", err)
 	}
 	return kc
 }
@@ -98,7 +96,6 @@ func (kc *KvClerk) releaseFence(grp string) error {
 	if !ok {
 		return fmt.Errorf("release fclnt %v not found", grp)
 	}
-	// log.Printf("%v: release grp %v\n", proc.GetName(), grp)
 	err := f.ReleaseFence()
 	if err != nil {
 		return err
@@ -146,7 +143,7 @@ func (kc KvClerk) removeGrp(err error) error {
 					}
 				}
 			} else {
-				log.Printf("%v: ReadFileJson %v err %v\n", proc.GetName(), KVCONFIG, r)
+				db.DLPrintf("KVCLERK", "ReadFileJson %v err %v\n", KVCONFIG, r)
 				return r
 			}
 		}
@@ -172,18 +169,18 @@ func (kc KvClerk) retryReadConfig() error {
 		}
 		err = kc.removeGrp(err)
 		if err == nil {
-			log.Printf("%v: removeGrp readConfig\n", proc.GetName())
+			db.DLPrintf("KVCLERK", "removeGrp readConfig\n")
 			continue
 		}
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: releaseGrp readConfig\n", proc.GetName())
+			db.DLPrintf("KVCLERK", "releaseGrp readConfig\n")
 			continue
 		}
 
 		// maybe retryReadConfig failed with a stale error
 		if np.IsErrStale(err) {
-			log.Printf("%v: stale readConfig %v\n", proc.GetName(), err)
+			db.DLPrintf("KVCLERK", "stale readConfig %v\n", err)
 			continue
 		}
 
@@ -204,7 +201,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 		}
 
 		if np.IsErrUnreachable(err) && strings.Contains(np.ErrPath(err), KVCONF) {
-			log.Printf("%v: retry refreshConfig %v\n", proc.GetName(), err)
+			db.DLPrintf("KVCLERK", "retry refreshConfig %v\n", err)
 			continue
 		}
 
@@ -212,7 +209,7 @@ func (kc KvClerk) refreshConfig(err error) error {
 		// we have stale grp fence; check and retry if so.
 		err = kc.releaseGrp(err)
 		if err == nil {
-			log.Printf("%v: retry refreshConfig\n", proc.GetName())
+			db.DLPrintf("KVCLERK", "retry refreshConfig\n")
 			continue
 		}
 
@@ -236,7 +233,6 @@ func (kc *KvClerk) refreshFences(err error) error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-	// log.Printf("%v: fixRetry err %v\n", proc.GetName(), err)
 
 	// Shard dir hasn't been created yet (config 0) or hasn't moved
 	// yet, so wait a bit, and retry.  XXX make sleep time
@@ -276,7 +272,6 @@ func (kc *KvClerk) doop(o *op) {
 			return
 		}
 	}
-	//log.Printf("%v: no retry %v\n", proc.GetName(), o.k)
 }
 
 type opT int

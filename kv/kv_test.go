@@ -123,11 +123,9 @@ func (ts *Tstate) stopMemfsgrps() {
 func (ts *Tstate) stopClerks() {
 	log.Printf("clerks to evict %v\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
-		log.Printf("evict clerk %v\n", ck)
 		err := ts.Evict(ck)
 		assert.Nil(ts.T, err, "stopClerks")
 		status, err := ts.WaitExit(ck)
-		log.Printf("%v: evict clerk waitexit %v status %v err %v\n", proc.GetName(), ck, status, err)
 		assert.Nil(ts.T, err, "WaitExit")
 		assert.True(ts.T, status.IsStatusOK(), "Exit status: %v", status)
 	}

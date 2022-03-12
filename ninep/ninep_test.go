@@ -13,6 +13,12 @@ func TestEOF(t *testing.T) {
 	assert.True(t, errors.Is(err, io.EOF))
 }
 
+func TestError(t *testing.T) {
+	for c := TErrBadattach; c <= TErrBadFd; c++ {
+		assert.True(t, c.String() != "unknown error", c)
+	}
+}
+
 func TestString(t *testing.T) {
 	qt := Qtype(QTSYMLINK | QTTMP)
 	assert.Equal(t, qt.String(), "ts")

@@ -43,18 +43,22 @@ const (
 	TErrVersion
 	TErrStale
 	TErrUnknownFence
-	TErrInvalidSession
 	TErrExists
-	TErrClosed // for pipes
+	TErrClosed // for pipes and watch wait
 	TErrBadFcall
-	TErrRetry
-	TErrError // to propagate non-sigma errors
 
 	//
 	// sigma OS errors
 	//
 
+	TErrRetry
 	TErrBadFd
+
+	//
+	// To propagate non-sigma errors.
+	// Must be *last* for String2Err()
+	//
+	TErrError
 )
 
 func (err Terror) String() string {
@@ -119,20 +123,22 @@ func (err Terror) String() string {
 		return "stale fence"
 	case TErrUnknownFence:
 		return "unknown fence"
-	case TErrInvalidSession:
-		return "invalid session"
 	case TErrExists:
 		return "exists"
+	case TErrClosed:
+		return "closed"
 	case TErrBadFcall:
 		return "bad fcall"
-	case TErrError: // to pass error through
-		return "Error"
 
 	// sigma OS errors
 	case TErrRetry:
 		return "retry"
 	case TErrBadFd:
 		return "Bad fd"
+
+	// for passing non-sigma errors through
+	case TErrError:
+		return "Error"
 
 	default:
 		return "unknown error"
@@ -244,6 +250,6 @@ func String2Err(error string) *Err {
 			return err
 		}
 	}
-	log.Printf("cannot decode = %v err %v\n", error, err)
+	log.Fatalf("FATAL: cannot decode = %v err %v\n", error, err)
 	return err
 }

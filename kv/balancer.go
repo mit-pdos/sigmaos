@@ -382,9 +382,9 @@ func (bl *Balancer) runDeleters(moves Moves) {
 		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-deleter", strconv.Itoa(bl.conf.N), m.Src}, func(err error, status *proc.Status) bool {
 				retry := err != nil || (!status.IsStatusOK() && !np.IsErrNotfound(status))
+				db.DLPrintf("KVBAL", "delete %v/%v done err %v status %v\n", i, m, err, status)
 				return retry
 			})
-			// log.Printf("%v: delete %v/%v done err %v status %v\n", proc.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
 	}
@@ -393,7 +393,7 @@ func (bl *Balancer) runDeleters(moves Moves) {
 		i := <-ch
 		tmp[i] = nil
 		m += 1
-		// log.Printf("%v: deleter done %v %v\n", proc.GetName(), m, tmp)
+		db.DLPrintf("KVBAL", "deleter done %v %v\n", m, tmp)
 	}
 	db.DLPrintf("KVBAL", "deleters done\n")
 }
@@ -406,9 +406,9 @@ func (bl *Balancer) runMovers(moves Moves) {
 	for i, m := range moves {
 		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-mover", strconv.Itoa(bl.conf.N), m.Src, m.Dst}, func(err error, status *proc.Status) bool {
+				db.DLPrintf("KVBAL", "move %v m %v err %v status %v\n", i, m, err, status)
 				return err != nil || !status.IsStatusOK()
 			})
-			// log.Printf("%v: move %v m %v done err %v status %v\n", proc.GetName(), i, m, err, status)
 			ch <- i
 		}(m, i)
 	}
@@ -417,7 +417,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 		i := <-ch
 		tmp[i] = nil
 		m += 1
-		// log.Printf("%v: mover done %v %v\n", proc.GetName(), m, tmp)
+		db.DLPrintf("KVBAL", "mover done %v %v\n", m, tmp)
 	}
 	db.DLPrintf("KVBAL", "movers all done\n")
 }

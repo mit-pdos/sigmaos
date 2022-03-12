@@ -86,17 +86,6 @@ func (o *Obj) size() np.Tlength {
 	return np.Tlength(ustat.Size)
 }
 
-func (o *Obj) Inum() uint64 {
-	return o.ino
-}
-
-func (o *Obj) Version() np.TQversion {
-	return o.version
-}
-
-func (o *Obj) VersionInc() {
-}
-
 func (o *Obj) Qid() np.Tqid {
 	return np.MakeQid(np.Qtype(o.Perm()>>np.QTYPESHIFT),
 		np.TQversion(o.version), np.Tpath(o.ino))

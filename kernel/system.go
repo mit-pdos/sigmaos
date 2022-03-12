@@ -136,7 +136,7 @@ func (s *System) KillOne(srv string) error {
 	switch srv {
 	case np.PROCD:
 		if len(s.procd) > 0 {
-			log.Printf("kill %v\n", -s.procd[0].cmd.Process.Pid, s.procd[0].p.Pid)
+			log.Printf("kill %v %v\n", -s.procd[0].cmd.Process.Pid, s.procd[0].p.Pid)
 			err = syscall.Kill(-s.procd[0].cmd.Process.Pid, syscall.SIGKILL)
 			if err == nil {
 				s.procd[0].cmd.Wait()

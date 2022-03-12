@@ -113,21 +113,21 @@ func (s *System) BootFsUxd() error {
 func (s *System) BootFss3d() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/fss3d", []string{})
 	ss := makeSubsystem(s.ProcClnt, p)
-	s.fsuxd = append(s.fss3d, ss)
+	s.fss3d = append(s.fss3d, ss)
 	return ss.Run(s.bindir, s.namedAddr)
 }
 
 func (s *System) BootProcd() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/procd", []string{s.bindir})
 	ss := makeSubsystem(s.ProcClnt, p)
-	s.fsuxd = append(s.procd, ss)
+	s.procd = append(s.procd, ss)
 	return ss.Run(s.bindir, s.namedAddr)
 }
 
 func (s *System) BootDbd() error {
 	p := proc.MakeProcPid(proc.GenPid(), "bin/kernel/dbd", []string{})
 	ss := makeSubsystem(s.ProcClnt, p)
-	s.fsuxd = append(s.dbd, ss)
+	s.dbd = append(s.dbd, ss)
 	return ss.Run(s.bindir, s.namedAddr)
 }
 

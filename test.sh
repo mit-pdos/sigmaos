@@ -65,8 +65,7 @@ go test $1 ulambda/kv
 # test with realms
 #
 
-## XXX broken
-# go test $1 ulambda/realm
+go test $1 ulambda/realm
 
 # run without realm?
 # XXX needs fixing

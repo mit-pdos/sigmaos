@@ -126,7 +126,6 @@ func (m *RealmMgr) createRealms() {
 			log.Printf("Error Realmmgr Acquire fence: %v", err)
 		}
 
-		// Unmarshal the realm config file.
 		cfg := &RealmConfig{}
 		cfg.Rid = realmId
 
@@ -202,7 +201,7 @@ func (m *RealmMgr) destroyRealms() {
 	}
 }
 
-// Get & alloc a machined to this realm. Retur true if successful
+// Get & alloc a machined to this realm. Return true if successful
 func (m *RealmMgr) allocMachined(realmId string) bool {
 	// Get a free machined
 	select {
@@ -221,8 +220,8 @@ func (m *RealmMgr) allocMachined(realmId string) bool {
 		rCfg.LastResize = time.Now()
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 		return true
-		// If no machined is available...
 	default:
+		// If no machined is available...
 		return false
 	}
 }
@@ -235,14 +234,14 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 		return stat
 	}
 	// XXX May fail if this named crashed
-	procds, err := m.GetDir(path.Join(REALM_NAMEDS, realmId, "~ip", np.PROCDREL))
+	procds, err := m.GetDir(path.Join(REALM_NAMEDS, realmId, np.PROCDREL))
 	if err != nil {
 		log.Fatalf("Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
 		// XXX May fail if this named crashed
-		err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, "~ip", np.PROCDREL, pd.Name, "statsd"), s)
+		err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, np.PROCDREL, pd.Name, "statsd"), s)
 		if err != nil {
 			log.Fatalf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
 		}
@@ -271,7 +270,9 @@ func (m *RealmMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[
 		avgUtil += stat.Util
 		utilMap[machinedId] = stat.Util
 	}
-	avgUtil /= float64(len(procdStats))
+	if len(procdStats) > 0 {
+		avgUtil /= float64(len(procdStats))
+	}
 	return avgUtil, utilMap
 }
 
@@ -293,7 +294,7 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 		// Start enough machineds to reach the target replication level
 		for i := realmCfg.NMachineds; i < nReplicas(); i++ {
 			if ok := m.allocMachined(realmId); !ok {
-				log.Fatalf("Error in adjustRealm: not enough machineds to meet minimum replication level")
+				log.Printf("Error in adjustRealm: not enough machineds to meet minimum replication level for realm %v", realmId)
 			}
 		}
 		return

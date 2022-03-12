@@ -199,8 +199,8 @@ func (r *Machined) tryDestroyRealmL() {
 		}
 
 		// Remove the realm's named directory
-		if err := r.RmDir(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
-			log.Fatalf("Error Remove REALMS in Machined.tryDestroyRealmL: %v", err)
+		if err := r.Remove(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
+			log.Fatalf("Error Remove REALM_NAMEDS in Machined.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed

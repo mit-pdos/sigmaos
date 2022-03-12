@@ -192,11 +192,11 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p np.Path, r np.Path, w Watch) (np.
 	if fid2 != fid1 { // Walk returns fd where it stops
 		log.Fatalf("FATAL setWatch %v %v\n", fid2, fid1)
 	}
-	go func(version np.TQversion) {
-		err := pathc.FidClnt.Watch(fid1, r.Dir(), version)
+	go func() {
+		err := pathc.FidClnt.Watch(fid1, r.Dir())
 		pathc.FidClnt.Clunk(fid1)
 		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
 		w(p.String(), err)
-	}(pathc.FidClnt.Lookup(fid1).Version())
+	}()
 	return np.NoFid, nil
 }

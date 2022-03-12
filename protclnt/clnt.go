@@ -165,8 +165,8 @@ func (pclnt *ProtClnt) Open(fid np.Tfid, mode np.Tmode) (*np.Ropen, *np.Err) {
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) Watch(fid np.Tfid, path np.Path, version np.TQversion) *np.Err {
-	args := np.Twatch{fid, path, version}
+func (pclnt *ProtClnt) Watch(fid np.Tfid, path np.Path) *np.Err {
+	args := np.Twatch{fid, path}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err

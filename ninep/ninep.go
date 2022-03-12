@@ -145,6 +145,10 @@ func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
 }
 
+func (q Tqid) String() string {
+	return fmt.Sprintf("{%v v %v p %v}", q.Type, q.Version, q.Path)
+}
+
 type Tmode uint8
 
 // Flags for the mode field in Topen and Tcreate messages
@@ -511,9 +515,8 @@ type Topen struct {
 }
 
 type Twatch struct {
-	Fid     Tfid
-	Path    []string
-	Version TQversion
+	Fid  Tfid
+	Path []string
 }
 
 type Ropen struct {

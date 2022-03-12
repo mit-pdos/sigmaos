@@ -196,7 +196,7 @@ func (fos *FsObjSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	ws := fos.wt.WatchLookupL(p)
 	defer fos.wt.Release(ws)
 
-	if !np.VEq(args.Version, o.Qid().Version) {
+	if !np.VEq(f.Qid().Version, o.Qid().Version) {
 		return np.MkErr(np.TErrVersion, o.Qid()).Rerror()
 	}
 	// time.Sleep(1000 * time.Nanosecond)

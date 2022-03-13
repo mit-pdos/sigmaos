@@ -45,15 +45,13 @@ go test $1 ulambda/s3
 go test $1 ulambda/kernel
 go test $1 ulambda/snapshot
 
-# run this procclnt test again from a script to grep the output from
-# fencers for correctness
-./fences/test.sh
+go test $1 ulambda/group
 
 # dbd_test and wwwd_test requires mariadb running
 pgrep mariadb >/dev/null && go test $1 ulambda/dbd
 pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
 
-go test $1 ulambda/group
+
 go test $1 ulambda/mr
 go test $1 ulambda/kv
 

@@ -3,7 +3,6 @@ package procclnt_test
 import (
 	"fmt"
 	"path"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -390,49 +389,6 @@ func TestEvict(t *testing.T) {
 	checkSleeperResultFalse(t, ts, pid)
 
 	ts.Shutdown()
-}
-
-func testFencer(t *testing.T, part string) {
-	const (
-		N         = 20
-		FENCE_DIR = "name/fence"
-	)
-
-	ts := test.MakeTstateAll(t)
-	pids := []string{}
-
-	// XXX use the same dir independent of machine running proc
-	dir := np.UX + "/~ip/outdir"
-	ts.RmDir(dir)
-	err := ts.MkDir(dir, 0777)
-	err = ts.MkDir(FENCE_DIR, 0777)
-	assert.Nil(t, err, "mkdir error")
-	_, err = ts.PutFile(FENCE_DIR+"/cnt", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
-	assert.Nil(t, err, "makefile error")
-
-	_, err = ts.PutFile(dir+"/A", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
-	assert.Nil(t, err, "makefile error")
-
-	for i := 0; i < N; i++ {
-		a := proc.MakeProc("bin/user/fencer", []string{part, FENCE_DIR, dir})
-		err = ts.Spawn(a)
-		assert.Nil(t, err, "Spawn")
-		pids = append(pids, a.Pid)
-	}
-
-	for _, pid := range pids {
-		status, err := ts.WaitExit(pid)
-		assert.True(t, err != nil || !status.IsStatusErr() || status.Msg() != "Invariant violated", "Exit status wrong")
-	}
-	ts.Shutdown()
-}
-
-func TestFencerNoPart(t *testing.T) {
-	testFencer(t, "NO")
-}
-
-func TestFencerWithPart(t *testing.T) {
-	testFencer(t, "YES")
 }
 
 func TestReserveCores(t *testing.T) {

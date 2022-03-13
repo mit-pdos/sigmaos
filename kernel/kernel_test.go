@@ -1,6 +1,10 @@
 package kernel_test
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"io"
 	"log"
 	"path"
 	"strconv"
@@ -15,6 +19,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
+	"ulambda/proc"
 	"ulambda/test"
 )
 
@@ -259,6 +264,74 @@ func TestOldPrimaryOnce(t *testing.T) {
 	assert.Nil(t, err, "Open")
 	b, err := ts.Read(fd, 100)
 	assert.Equal(ts.T, 0, len(b))
+
+	ts.Shutdown()
+}
+
+func TestOldPrimaryConcur(t *testing.T) {
+	const (
+		N = 2
+	)
+
+	ts := test.MakeTstateAll(t)
+	pids := []string{}
+
+	// XXX use the same dir independent of machine running proc
+	dir := np.UX + "/~ip/outdir/"
+	fn := dir + "out"
+	ts.RmDir(dir)
+	err := ts.MkDir(dir, 0777)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, []byte{})
+	assert.Nil(t, err, "putfile")
+
+	for i := 0; i < N; i++ {
+		last := ""
+		if i == N-1 {
+			last = "last"
+		}
+		p := proc.MakeProc("bin/user/primary", []string{"name/fence", dir, last})
+		err = ts.Spawn(p)
+		assert.Nil(t, err, "Spawn")
+
+		err = ts.WaitStart(p.Pid)
+		assert.Nil(t, err, "WaitStarted")
+
+		pids = append(pids, p.Pid)
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// wait for last one; the other procs cannot communicate exit
+	// status to test because test's procdir is in name/
+	_, err = ts.WaitExit(pids[len(pids)-1])
+	assert.Nil(t, err, "WaitExit")
+
+	b, err := ts.GetFile(fn)
+	assert.Nil(t, err, "GetFile")
+	r := bytes.NewReader(b)
+	m := make(map[string]bool)
+	for {
+		l, err := binary.ReadVarint(r)
+		if err != nil && err == io.EOF {
+			break
+		}
+		data := make([]byte, l)
+		_, err = r.Read(data)
+		assert.Nil(t, err, "read")
+
+		var pid string
+		err = json.Unmarshal(data, &pid)
+		assert.Nil(t, err, "unmarshal")
+
+		log.Printf("pid: %v\n", pid)
+		_, ok := m[pid]
+		assert.False(t, ok, "pid")
+		m[pid] = true
+	}
+	for _, pid := range pids {
+		assert.True(t, m[pid], "pids")
+	}
+	log.Printf("exit\n")
 
 	ts.Shutdown()
 }

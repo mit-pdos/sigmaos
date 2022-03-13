@@ -2,9 +2,9 @@ package fenceclnttest
 
 import (
 	"log"
-	"os"
 	"time"
 
+	"ulambda/atomic"
 	"ulambda/delay"
 	"ulambda/fenceclnt"
 	"ulambda/fslib"
@@ -15,9 +15,14 @@ import (
 )
 
 const (
-	N     = 10
-	DELAY = 10
+	N      = 10
+	DELAY  = 10
+	CONFIG = "-config"
 )
+
+func conffn(fn string) string {
+	return fn + "CONFIG"
+}
 
 func RunPrimary(fence, dir, last string) {
 	pid := proc.GetPid()
@@ -27,14 +32,14 @@ func RunPrimary(fence, dir, last string) {
 	pclnt.Started(pid)
 
 	fn := dir + "/out"
-	f := fenceclnt.MakeFenceClnt(fsl, os.Args[1], 0, []string{dir})
+	f := fenceclnt.MakeFenceClnt(fsl, fence, 0, []string{dir})
 
 	err := f.AcquireFenceW([]byte(pid))
 	if err != nil {
-		log.Fatalf("FATAL %v AcquireFenceW %v failed %v\n", pid, os.Args[1], err)
+		log.Fatalf("FATAL %v AcquireFenceW %v failed %v\n", pid, fence, err)
 	}
 
-	log.Printf("%v: primary %v\n", proc.GetName(), os.Args)
+	log.Printf("%v: primary %v %v %v\n", proc.GetName(), fence, dir, last)
 
 	b, err := writer.JsonRecord(pid)
 	if err != nil {
@@ -45,11 +50,17 @@ func RunPrimary(fence, dir, last string) {
 		log.Fatalf("FATAL %v SetFile b %v failed %v\n", pid, fn, err)
 	}
 
-	if os.Args[3] == "last" {
+	conf := &Config{0, pid}
+	err = atomic.PutFileJsonAtomic(fsl, conffn(fence), 0777, conf)
+	if err != nil {
+		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), conffn(fence), err)
+	}
+
+	if last == "last" {
 		// allow others to write for a while
 		time.Sleep(500 * time.Millisecond)
 	} else {
-		fsl.Disconnect(os.Args[1])
+		fsl.Disconnect(fence)
 
 		// wait a little before starting to write
 		time.Sleep(10 * time.Millisecond)

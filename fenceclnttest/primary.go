@@ -1,7 +1,6 @@
-package main
+package fenceclnttest
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -20,18 +19,13 @@ const (
 	DELAY = 10
 )
 
-func main() {
-	if len(os.Args) != 4 {
-		fmt.Fprintf(os.Stderr, "%v: Usage: <fence> <dir> <last>\n", os.Args[0])
-		os.Exit(1)
-	}
+func RunPrimary(fence, dir, last string) {
 	pid := proc.GetPid()
 	fsl := fslib.MakeFsLib("primary-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
 
 	pclnt.Started(pid)
 
-	dir := os.Args[2]
 	fn := dir + "/out"
 	f := fenceclnt.MakeFenceClnt(fsl, os.Args[1], 0, []string{dir})
 
@@ -64,7 +58,7 @@ func main() {
 		delay.Delay(DELAY)
 
 		for i := 0; i < N; i++ {
-			_, err := fsl.SetFile(fn, []byte(pid), np.NoOffset)
+			_, err := fsl.SetFile(fn, b, np.NoOffset)
 			if err != nil {
 				log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
 			}

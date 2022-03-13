@@ -2,77 +2,15 @@ package leadertest
 
 import (
 	"log"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/crash"
-	"ulambda/delay"
-	"ulambda/fslib"
-	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/test"
 )
-
-// Test if a primary cannot write to a fenced server after primary
-// fails
-func TestOldPrimaryOnce(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	leadername := "name/l"
-
-	dirux := np.UX + "/~ip/outdir"
-	ts.MkDir(dirux, 0777)
-	ts.Remove(dirux + "/f")
-
-	fsldl := fslib.MakeFsLibAddr("leader", fslib.Named())
-
-	ch := make(chan bool)
-	go func() {
-		leader := leaderclnt.MakeLeaderClnt(fsldl, leadername, 0)
-		err := leader.AcquireLeadership([]byte{})
-		assert.Nil(t, err, "AcquireLeadership")
-
-		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
-		assert.Nil(t, err, "Create")
-
-		ch <- true
-
-		log.Printf("partition from named..\n")
-
-		crash.Partition(fsldl)
-		delay.Delay(10)
-
-		// fsldl lost primary status, and ts should have it by
-		// now so this write to ux server should fail
-		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
-		assert.NotNil(t, err, "Write")
-
-		fsldl.Close(fd)
-
-		ch <- true
-	}()
-
-	// Wait until other thread is primary
-	<-ch
-
-	// When other thread partitions, we become primary and install
-	// fence.
-	leader := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0)
-	err := leader.AcquireLeadership([]byte{})
-	assert.Nil(t, err, "AcquireLeadership")
-
-	<-ch
-
-	fd, err := ts.Open(dirux+"/f", np.OREAD)
-	assert.Nil(t, err, "Open")
-	b, err := ts.Read(fd, 100)
-	assert.Equal(ts.T, 0, len(b))
-
-	ts.Shutdown()
-}
 
 func runPrimaries(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
 	const (
@@ -93,7 +31,7 @@ func runPrimaries(t *testing.T, ts *test.Tstate, sec string) (string, []string) 
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("bin/user/leadertest-leader", []string{"name/fence", dir, last, sec})
+		p := proc.MakeProc("bin/user/leadertest-leader", []string{dir, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 

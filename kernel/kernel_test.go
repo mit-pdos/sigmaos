@@ -1,10 +1,6 @@
 package kernel_test
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
-	"io"
 	"log"
 	"path"
 	"strconv"
@@ -270,7 +266,7 @@ func TestOldPrimaryOnce(t *testing.T) {
 
 func TestOldPrimaryConcur(t *testing.T) {
 	const (
-		N = 2
+		N = 10
 	)
 
 	ts := test.MakeTstateAll(t)
@@ -306,28 +302,18 @@ func TestOldPrimaryConcur(t *testing.T) {
 	_, err = ts.WaitExit(pids[len(pids)-1])
 	assert.Nil(t, err, "WaitExit")
 
-	b, err := ts.GetFile(fn)
+	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err, "GetFile")
-	r := bytes.NewReader(b)
 	m := make(map[string]bool)
-	for {
-		l, err := binary.ReadVarint(r)
-		if err != nil && err == io.EOF {
-			break
-		}
-		data := make([]byte, l)
-		_, err = r.Read(data)
-		assert.Nil(t, err, "read")
-
-		var pid string
-		err = json.Unmarshal(data, &pid)
-		assert.Nil(t, err, "unmarshal")
-
+	err = ts.ReadJsonStream(rdr, func() interface{} { return new(string) }, func(i interface{}) error {
+		pid := *i.(*string)
 		log.Printf("pid: %v\n", pid)
 		_, ok := m[pid]
 		assert.False(t, ok, "pid")
 		m[pid] = true
-	}
+		return nil
+	})
+	assert.Nil(t, err, "StreamJson")
 	for _, pid := range pids {
 		assert.True(t, m[pid], "pids")
 	}

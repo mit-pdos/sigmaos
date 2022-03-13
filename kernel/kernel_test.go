@@ -305,8 +305,8 @@ func TestOldPrimaryConcur(t *testing.T) {
 	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err, "GetFile")
 	m := make(map[string]bool)
-	err = ts.ReadJsonStream(rdr, func() interface{} { return new(string) }, func(i interface{}) error {
-		pid := *i.(*string)
+	err = rdr.ReadJsonStream(func() interface{} { return new(string) }, func(a interface{}) error {
+		pid := *a.(*string)
 		log.Printf("pid: %v\n", pid)
 		_, ok := m[pid]
 		assert.False(t, ok, "pid")

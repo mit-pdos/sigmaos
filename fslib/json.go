@@ -1,13 +1,10 @@
 package fslib
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	np "ulambda/ninep"
-	"ulambda/reader"
 )
 
 func (fl *FsLib) GetFileJson(name string, i interface{}) error {
@@ -42,25 +39,4 @@ func (fl *FsLib) GetFileJsonWatch(name string, i interface{}) error {
 		return err
 	}
 	return json.Unmarshal(b, i)
-}
-
-func (fl *FsLib) ReadJsonStream(rdr *reader.Reader, mk func() interface{}, f func(i interface{}) error) error {
-	for {
-		l, err := binary.ReadVarint(rdr)
-		if err != nil && err == io.EOF {
-			break
-		}
-		data := make([]byte, l)
-		if _, err := rdr.Read(data); err != nil {
-			return err
-		}
-		v := mk()
-		if err := json.Unmarshal(data, v); err != nil {
-			return err
-		}
-		if err := f(v); err != nil {
-			return err
-		}
-	}
-	return nil
 }

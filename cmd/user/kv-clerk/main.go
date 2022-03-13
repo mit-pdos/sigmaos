@@ -1,10 +1,7 @@
 package main
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"sync/atomic"
@@ -70,30 +67,10 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 		return err
 	}
 	defer rdr.Close()
-	for {
-		sz, err := binary.ReadVarint(rdr)
-		if err != nil && err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("%v: ReadVarint err %v", proc.GetName(), err)
-		}
-		data := make([]byte, sz)
-		l, err := rdr.Read(data)
-		if l != len(data) {
-			log.Fatalf("FATAL %v missing data %v %v\n", proc.GetName(), l, len(data))
-		}
-		if err != nil {
-			log.Printf("%v: Read err %v\n", proc.GetName(), err)
-			return err
-		}
-		val := Value{}
-		if err := json.Unmarshal(data, &val); err != nil {
-			log.Printf("%v: unmarshal err %v\n", proc.GetName(), err)
-			return err
-		}
+	rdr.ReadJsonStream(func() interface{} { return new(Value) }, func(a interface{}) error {
+		val := a.(*Value)
 		if val.Pid != proc.GetPid() {
-			continue
+			return nil
 		}
 		if val.Key != kv.Key(i) {
 			return fmt.Errorf("%v: wrong key %v %v %v", proc.GetName(), kv.Key(i), val.Key, kv.Key(i))
@@ -102,7 +79,8 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 			return fmt.Errorf("%v: wrong N %v %v %v %v", proc.GetName(), n, val.N, kv.Key(i), rdr.Path())
 		}
 		n += 1
-	}
+		return nil
+	})
 	if n < ntest {
 		return fmt.Errorf("%v: wrong ntest %v %v %v %v", proc.GetName(), ntest, n, kv.Key(i), rdr.Path())
 	}

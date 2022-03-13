@@ -61,8 +61,8 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 		return nil, err
 	}
 	defer rdr.Close()
-	r.ReadJsonStream(rdr, func() interface{} { return new([]KeyValue) }, func(i interface{}) error {
-		kvs := i.(*[]KeyValue)
+	rdr.ReadJsonStream(func() interface{} { return new([]KeyValue) }, func(a interface{}) error {
+		kvs := a.(*[]KeyValue)
 		db.DLPrintf("REDUCE", "reduce %v: kva %v\n", file, kvs)
 		kva = append(kva, *kvs...)
 		return nil

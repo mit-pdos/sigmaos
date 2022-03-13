@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -14,6 +12,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/writer"
 )
 
 const (
@@ -43,15 +42,9 @@ func main() {
 
 	log.Printf("%v: primary %v\n", proc.GetName(), os.Args)
 
-	b, err := json.Marshal(pid)
+	b, err := writer.JsonRecord(pid)
 	if err != nil {
 		log.Fatalf("FATAL %v marshal %v failed %v\n", pid, fn, err)
-	}
-	lb := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(lb, int64(len(b)))
-	_, err = fsl.SetFile(fn, lb[0:n], np.NoOffset)
-	if err != nil {
-		log.Fatalf("FATAL %v SetFile lb %v failed %v\n", pid, fn, err)
 	}
 	_, err = fsl.SetFile(fn, b, np.NoOffset)
 	if err != nil {

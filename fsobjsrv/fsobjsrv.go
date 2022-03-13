@@ -86,7 +86,7 @@ func (fos *FsObjSrv) Detach() {
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
 	for o, f := range ephemeral {
-		db.DLPrintf("FSOBJ", "Detach %v\n", f.Path())
+		db.DLPrintf("FSOBJ0", "Detach %v\n", f.Path())
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
 }
@@ -189,7 +189,7 @@ func (fos *FsObjSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	if len(args.Path) > 0 {
 		p = append(p, args.Path...)
 	}
-	db.DLPrintf("FSOBJ", "%v: Watch v %v %v\n", f.Ctx().Uname(), o.Qid(), args)
+	db.DLPrintf("FSOBJ0", "%v: Watch %v v %v %v\n", f.Ctx().Uname(), f.Path(), o.Qid(), args)
 
 	// get lock on watch entry for p, so that remove cannot remove
 	// file before watch is set.

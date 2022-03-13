@@ -1,8 +1,6 @@
 package mr
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -99,23 +97,9 @@ func (m *Mapper) mapper(txt string) error {
 		r := Khash(kv.Key) % m.nreducetask
 		skvs[r] = append(skvs[r], kv)
 	}
-
 	for r := 0; r < m.nreducetask; r++ {
-		b, err := json.Marshal(skvs[r])
-		if err != nil {
-			fmt.Errorf("%v: marshal error %v", proc.GetName(), err)
-		}
-		lbuf := make([]byte, binary.MaxVarintLen64)
-		n := binary.PutVarint(lbuf, int64(len(b)))
-		_, err = m.fds[r].Write(lbuf[0:n])
-		if err != nil {
-			// maybe another worker finished earlier
-			// XXX handle partial writing of intermediate files
-			return fmt.Errorf("doMap write error %v %v\n", r, err)
-		}
-		_, err = m.fds[r].Write(b)
-		if err != nil {
-			return fmt.Errorf("%v: write %v err %v\n", proc.GetName(), r, err)
+		if err := m.fds[r].WriteJsonRecord(skvs[r]); err != nil {
+			return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 		}
 	}
 	return nil

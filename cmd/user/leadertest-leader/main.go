@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ulambda/fenceclnttest"
+	"ulambda/leadertest"
 )
 
 func main() {
@@ -12,5 +12,5 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v: Usage: <fence> <dir> <last> <sec>\n", os.Args[0])
 		os.Exit(1)
 	}
-	fenceclnttest.RunPrimary(os.Args[1], os.Args[2], os.Args[3])
+	leadertest.RunLeader(os.Args[1], os.Args[2], os.Args[3])
 }

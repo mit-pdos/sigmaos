@@ -1,4 +1,4 @@
-package fenceclnttest
+package leadertest
 
 import (
 	"log"
@@ -10,8 +10,8 @@ import (
 
 	"ulambda/crash"
 	"ulambda/delay"
-	"ulambda/fenceclnt"
 	"ulambda/fslib"
+	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/test"
@@ -21,19 +21,19 @@ import (
 // fails
 func TestOldPrimaryOnce(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	fence := "name/l"
+	leadername := "name/l"
 
 	dirux := np.UX + "/~ip/outdir"
 	ts.MkDir(dirux, 0777)
 	ts.Remove(dirux + "/f")
 
-	fsldl := fslib.MakeFsLibAddr("wfence", fslib.Named())
+	fsldl := fslib.MakeFsLibAddr("leader", fslib.Named())
 
 	ch := make(chan bool)
 	go func() {
-		wfence := fenceclnt.MakeFenceClnt(fsldl, fence, 0, []string{dirux})
-		err := wfence.AcquireFenceW([]byte{})
-		assert.Nil(t, err, "WriteFence")
+		leader := leaderclnt.MakeLeaderClnt(fsldl, leadername, 0)
+		err := leader.AcquireLeadership([]byte{})
+		assert.Nil(t, err, "AcquireLeadership")
 
 		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
 		assert.Nil(t, err, "Create")
@@ -60,9 +60,9 @@ func TestOldPrimaryOnce(t *testing.T) {
 
 	// When other thread partitions, we become primary and install
 	// fence.
-	wfence := fenceclnt.MakeFenceClnt(ts.FsLib, fence, 0, []string{dirux})
-	err := wfence.AcquireFenceW([]byte{})
-	assert.Nil(t, err, "WriteFence")
+	leader := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0)
+	err := leader.AcquireLeadership([]byte{})
+	assert.Nil(t, err, "AcquireLeadership")
 
 	<-ch
 
@@ -93,7 +93,7 @@ func runPrimaries(t *testing.T, ts *test.Tstate, sec string) (string, []string) 
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("bin/user/fencetest-primary", []string{"name/fence", dir, last, sec})
+		p := proc.MakeProc("bin/user/leadertest-leader", []string{"name/fence", dir, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 

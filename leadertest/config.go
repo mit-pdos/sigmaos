@@ -1,4 +1,4 @@
-package fenceclnttest
+package leadertest
 
 type Config struct {
 	N   int

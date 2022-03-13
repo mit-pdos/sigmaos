@@ -1,4 +1,4 @@
-package fenceclnttest
+package leadertest
 
 import (
 	"log"
@@ -6,8 +6,8 @@ import (
 
 	"ulambda/atomic"
 	"ulambda/delay"
-	"ulambda/fenceclnt"
 	"ulambda/fslib"
+	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -24,22 +24,22 @@ func conffn(fn string) string {
 	return fn + "CONFIG"
 }
 
-func RunPrimary(fence, dir, last string) {
+func RunLeader(fence, dir, last string) {
 	pid := proc.GetPid()
-	fsl := fslib.MakeFsLib("primary-" + proc.GetPid())
+	fsl := fslib.MakeFsLib("leader-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
 
 	pclnt.Started(pid)
 
 	fn := dir + "/out"
-	f := fenceclnt.MakeFenceClnt(fsl, fence, 0, []string{dir})
+	f := leaderclnt.MakeLeaderClnt(fsl, fence, 0)
 
-	err := f.AcquireFenceW([]byte(pid))
+	err := f.AcquireLeadership([]byte(pid))
 	if err != nil {
-		log.Fatalf("FATAL %v AcquireFenceW %v failed %v\n", pid, fence, err)
+		log.Fatalf("FATAL %v AcquireLeader %v failed %v\n", pid, fence, err)
 	}
 
-	log.Printf("%v: primary %v %v %v\n", proc.GetName(), fence, dir, last)
+	log.Printf("%v: leader %v %v %v\n", proc.GetName(), fence, dir, last)
 
 	b, err := writer.JsonRecord(pid)
 	if err != nil {

@@ -34,7 +34,7 @@ func RunLeader(fence, dir, last string) {
 	fn := dir + "/out"
 	f := leaderclnt.MakeLeaderClnt(fsl, fence, 0)
 
-	err := f.AcquireLeadership([]byte(pid))
+	err := f.AcquireLeadership()
 	if err != nil {
 		log.Fatalf("FATAL %v AcquireLeader %v failed %v\n", pid, fence, err)
 	}

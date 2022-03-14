@@ -2,9 +2,9 @@ package leadertest
 
 import (
 	"log"
+	"strconv"
 	"time"
 
-	"ulambda/atomic"
 	"ulambda/delay"
 	"ulambda/epochclnt"
 	"ulambda/fslib"
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	N        = 10
+	NWRITE   = 10
 	DELAY    = 10
 	LEADERFN = "name/leader"
 	CONFIG   = LEADERFN + "-config"
@@ -24,7 +24,7 @@ const (
 	EPOCH    = LEADERFN + "-epoch"
 )
 
-func RunLeader(dir, last string) {
+func RunLeader(dir, last, child string) {
 	pid := proc.GetPid()
 	fsl := fslib.MakeFsLib("leader-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
@@ -33,36 +33,58 @@ func RunLeader(dir, last string) {
 
 	fn := dir + "/out"
 	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0)
+	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777, []string{dir})
 
 	err := l.AcquireLeadership()
 	if err != nil {
 		log.Fatalf("FATAL %v AcquireLeader %v failed %v\n", pid, LEADERFN, err)
 	}
 
-	log.Printf("%v: leader %v %v %v\n", proc.GetName(), LEADERFN, dir, last)
-
+	//
 	// Start new Epoch
+	//
 
-	conf := &Config{0, pid}
-	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777, []string{dir})
-	err = atomic.PutFileJsonAtomic(fsl, CONFIGBK, 0777, *conf)
-	if err != nil {
+	conf := &Config{}
+	err = fsl.GetFileJson(EPOCH, conf)
+	if err != nil && !np.IsErrNotfound(err) {
 		log.Fatalf("FATAL %v PutFileAtomic %v failed %v\n", pid, CONFIGBK, err)
 	}
-	err = ec.MakeEpochFileFrom(CONFIGBK)
+	conf.N += 1
+	conf.Leader = pid
+	conf.Pid = pid
+
+	err = ec.MakeEpochFileJson(*conf)
 	if err != nil {
 		log.Fatalf("FATAL %v MakeEpochFileFrom %v failed %v\n", pid, ec.Name(), err)
 	}
 
-	// Write in new epoch
+	log.Printf("%v: leaderfn %v conf %v\n", proc.GetName(), LEADERFN, conf)
 
-	b, err := writer.JsonRecord(pid)
+	//
+	// Write in new epoch
+	//
+
+	b, err := writer.JsonRecord(*conf)
 	if err != nil {
-		log.Fatalf("FATAL %v marshal %v failed %v\n", pid, fn, err)
+		log.Fatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}
 	_, err = fsl.SetFile(fn, b, np.NoOffset)
 	if err != nil {
-		log.Fatalf("FATAL %v SetFile b %v failed %v\n", pid, fn, err)
+		log.Fatalf("FATAL %v SetFile b %v failed %v\n", proc.GetName(), fn, err)
+	}
+
+	if child == "child" {
+		// Create a proc running in the same epoch as leader
+		p := proc.MakeProc("bin/user/leadertest-proc",
+			[]string{EPOCH, dir, strconv.Itoa(conf.N)})
+		if err := pclnt.Spawn(p); err != nil {
+			pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+			return
+		}
+		if err := pclnt.WaitStart(p.Pid); err != nil {
+			pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+			return
+		}
 	}
 
 	if last == "last" {
@@ -78,7 +100,7 @@ func RunLeader(dir, last string) {
 		delay.Delay(DELAY)
 
 		// these writes should fail since new leader will have started new epoch
-		for i := 0; i < N; i++ {
+		for i := 0; i < NWRITE; i++ {
 			_, err := fsl.SetFile(fn, b, np.NoOffset)
 			if err != nil {
 				log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)

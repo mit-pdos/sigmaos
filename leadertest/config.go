@@ -1,6 +1,7 @@
 package leadertest
 
 type Config struct {
-	N   int
-	Pid string
+	N      int
+	Leader string
+	Pid    string
 }

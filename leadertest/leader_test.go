@@ -51,16 +51,21 @@ func runPrimaries(t *testing.T, ts *test.Tstate, sec string) (string, []string) 
 	return fn, pids
 }
 
-func checkPrimaries(t *testing.T, ts *test.Tstate, fn string, pids []string) {
+func check(t *testing.T, ts *test.Tstate, fn string, pids []string) {
 	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err, "GetFile")
 	m := make(map[string]bool)
-	err = rdr.ReadJsonStream(func() interface{} { return new(string) }, func(a interface{}) error {
-		pid := *a.(*string)
-		log.Printf("pid: %v\n", pid)
-		_, ok := m[pid]
-		assert.False(t, ok, "pid")
-		m[pid] = true
+	last := ""
+	err = rdr.ReadJsonStream(func() interface{} { return new(Config) }, func(a interface{}) error {
+		conf := *a.(*Config)
+		log.Printf("conf: %v\n", conf)
+		if last != conf.Leader {
+			assert.Equal(t, conf.Pid, conf.Leader, "new leader")
+			_, ok := m[conf.Leader]
+			assert.False(t, ok, "pid")
+			m[conf.Leader] = true
+			last = conf.Leader
+		}
 		return nil
 	})
 	assert.Nil(t, err, "StreamJson")
@@ -72,7 +77,17 @@ func checkPrimaries(t *testing.T, ts *test.Tstate, fn string, pids []string) {
 func TestOldPrimaryConcur(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fn, pids := runPrimaries(t, ts, "")
-	checkPrimaries(t, ts, fn, pids)
+	check(t, ts, fn, pids)
+
+	log.Printf("exit\n")
+
+	ts.Shutdown()
+}
+
+func TestOldPrimaryProcConcur(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	fn, pids := runPrimaries(t, ts, "child")
+	check(t, ts, fn, pids)
 
 	log.Printf("exit\n")
 

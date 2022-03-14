@@ -1,4 +1,4 @@
-package protclnt
+package session
 
 import (
 	"strings"
@@ -41,7 +41,7 @@ type ConnMgr struct {
 	conns   map[string]*conn
 }
 
-func makeConnMgr(session np.Tsession, seqno *np.Tseqno) *ConnMgr {
+func MakeConnMgr(session np.Tsession, seqno *np.Tseqno) *ConnMgr {
 	cm := &ConnMgr{}
 	cm.conns = make(map[string]*conn)
 	cm.session = session
@@ -49,7 +49,7 @@ func makeConnMgr(session np.Tsession, seqno *np.Tseqno) *ConnMgr {
 	return cm
 }
 
-func (cm *ConnMgr) exit() {
+func (cm *ConnMgr) Exit() {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -87,7 +87,7 @@ func (cm *ConnMgr) lookupConn(addrs []string) (*conn, bool) {
 	return conn, ok
 }
 
-func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, *np.Err) {
+func (cm *ConnMgr) MakeCall(dst []string, req np.Tmsg) (np.Tmsg, *np.Err) {
 	conn, err := cm.allocConn(dst)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, *np.Err) {
 	return conn.send(req, cm.session, cm.seqno)
 }
 
-func (cm *ConnMgr) disconnect(dst []string) *np.Err {
+func (cm *ConnMgr) Disconnect(dst []string) *np.Err {
 	conn, ok := cm.lookupConn(dst)
 	if !ok {
 		return np.MkErr(np.TErrUnreachable, strings.Join(dst, "."))

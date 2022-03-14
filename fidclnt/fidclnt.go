@@ -56,6 +56,10 @@ func (fidc *FidClnt) Lookup(fid np.Tfid) *Channel {
 	return fidc.fids.lookup(fid)
 }
 
+func (fidc *FidClnt) Qid(fid np.Tfid) np.Tqid {
+	return fidc.Lookup(fid).Lastqid()
+}
+
 func (fidc *FidClnt) Insert(fid np.Tfid, path *Channel) {
 	fidc.fids.insert(fid, path)
 }

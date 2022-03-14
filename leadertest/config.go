@@ -1,7 +1,7 @@
 package leadertest
 
 type Config struct {
-	N      int
+	Epoch  string
 	Leader string
 	Pid    string
 }

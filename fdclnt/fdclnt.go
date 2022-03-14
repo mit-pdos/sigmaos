@@ -3,6 +3,7 @@ package fdclnt
 import (
 	"fmt"
 
+	db "ulambda/debug"
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
@@ -61,6 +62,14 @@ func (fdc *FdClient) Close(fd int) error {
 	return nil
 }
 
+func (fdc *FdClient) Qid(fd int) (np.Tqid, error) {
+	fid, error := fdc.fds.lookup(fd)
+	if error != nil {
+		return np.Tqid{}, error
+	}
+	return fdc.PathClnt.Qid(fid), nil
+}
+
 func (fdc *FdClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	fid, err := fdc.PathClnt.Create(path, perm, mode)
 	if err != nil {
@@ -81,6 +90,22 @@ func (fdc *FdClient) OpenWatch(path string, mode np.Tmode, w pathclnt.Watch) (in
 
 func (fdc *FdClient) Open(path string, mode np.Tmode) (int, error) {
 	return fdc.OpenWatch(path, mode, nil)
+}
+
+func (fdc *FdClient) CreateOpen(path string, perm np.Tperm, mode np.Tmode) (int, error) {
+	fd, err := fdc.Create(path, perm, mode)
+	if err != nil && !np.IsErrExists(err) {
+		db.DLPrintf("FDCLNT_ERR", "Create %v err %v", path, err)
+		return -1, err
+	}
+	if err != nil {
+		fd, err = fdc.Open(path, mode)
+		if err != nil {
+			db.DLPrintf("FDCLNT_ERR", "Open %v err %v", path, err)
+			return -1, err
+		}
+	}
+	return fd, nil
 }
 
 func (fdc *FdClient) MakeReader(fd int, path string, chunksz np.Tsize) *reader.Reader {
@@ -123,4 +148,12 @@ func (fdc *FdClient) Write(fd int, data []byte) (np.Tsize, error) {
 	}
 	fdc.fds.incOff(fd, np.Toffset(sz))
 	return sz, nil
+}
+
+func (fdc *FdClient) Seek(fd int, off np.Toffset) error {
+	err := fdc.fds.setOffset(fd, off)
+	if err != nil {
+		return err
+	}
+	return nil
 }

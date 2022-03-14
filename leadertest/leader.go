@@ -2,11 +2,11 @@ package leadertest
 
 import (
 	"log"
-	"strconv"
 	"time"
 
 	"ulambda/delay"
 	"ulambda/epochclnt"
+	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -33,37 +33,29 @@ func RunLeader(dir, last, child string) {
 
 	fn := dir + "/out"
 	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0)
-	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777, []string{dir})
+	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777)
+	fc := fenceclnt1.MakeFenceClnt(fsl, EPOCH, 0777, []string{dir})
 
 	err := l.AcquireLeadership()
 	if err != nil {
-		log.Fatalf("FATAL %v AcquireLeader %v failed %v\n", pid, LEADERFN, err)
+		log.Fatalf("FATAL %v AcquireLeader %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}
-
-	//
-	// Start new Epoch
-	//
-
-	conf := &Config{}
-	err = fsl.GetFileJson(EPOCH, conf)
-	if err != nil && !np.IsErrNotfound(err) {
-		log.Fatalf("FATAL %v PutFileAtomic %v failed %v\n", pid, CONFIGBK, err)
-	}
-	conf.N += 1
-	conf.Leader = pid
-	conf.Pid = pid
-
-	err = ec.MakeEpochFileJson(*conf)
+	epoch, err := ec.AdvanceEpoch()
 	if err != nil {
-		log.Fatalf("FATAL %v MakeEpochFileFrom %v failed %v\n", pid, ec.Name(), err)
+		log.Fatalf("FATAL %v AdvanceEpoch %v failed %v\n", proc.GetName(), ec.Name(), err)
 	}
 
-	log.Printf("%v: leaderfn %v conf %v\n", proc.GetName(), LEADERFN, conf)
+	log.Printf("%v: leader at %v\n", proc.GetName(), epoch)
+
+	err = fc.FenceEpochAt(epoch)
+	if err != nil {
+		log.Fatalf("FATAL %v FenceEpochAt %v %v failed %v\n", proc.GetName(), EPOCH, epoch, err)
+	}
 
 	//
-	// Write in new epoch
+	// Write dir in new epoch
 	//
-
+	conf := &Config{epoch, pid, pid}
 	b, err := writer.JsonRecord(*conf)
 	if err != nil {
 		log.Fatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
@@ -76,7 +68,7 @@ func RunLeader(dir, last, child string) {
 	if child == "child" {
 		// Create a proc running in the same epoch as leader
 		p := proc.MakeProc("bin/user/leadertest-proc",
-			[]string{EPOCH, dir, strconv.Itoa(conf.N)})
+			[]string{EPOCH, dir, epoch})
 		if err := pclnt.Spawn(p); err != nil {
 			pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 			return

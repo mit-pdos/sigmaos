@@ -1,13 +1,11 @@
 package leadertest
 
 import (
-	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"ulambda/delay"
-	"ulambda/epochclnt"
+	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -15,41 +13,25 @@ import (
 	"ulambda/writer"
 )
 
-func RunProc(epoch, dir, N string) {
+func RunProc(epochfn, epoch, dir string) {
 	pid := proc.GetPid()
 	fsl := fslib.MakeFsLib("primary-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
+	fc := fenceclnt1.MakeFenceClnt(fsl, epochfn, 0, []string{dir})
 
 	pclnt.Started(pid)
 
-	n, err := strconv.Atoi(N)
+	fn := dir + "/out"
+
+	log.Printf("%v: epochfn %v epoch %v dir %v\n", proc.GetName(), epochfn, epoch, dir)
+
+	err := fc.FenceEpochAt(epoch)
 	if err != nil {
 		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
-	fn := dir + "/out"
-	ec := epochclnt.MakeEpochClnt(fsl, epoch, 0, []string{dir})
-	log.Printf("%v: epochfn %v dir %v N %v\n", proc.GetName(), epoch, dir, N)
-
-	conf := &Config{}
-	if err := ec.GetFileJson(EPOCH, conf); err != nil {
-		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
-		return
-	}
-	if n != conf.N {
-		pclnt.Exited(pid, proc.MakeStatusErr(fmt.Sprintf("wrong epoch %v %v", n, conf.N), nil))
-		return
-
-	}
-
-	// Fence writes in this epoch
-	if err := ec.FenceOffEpoch(); err != nil {
-		pclnt.Exited(pid, proc.MakeStatusErr(fmt.Sprintf("wrong epoch %v %v", n, conf.N), nil))
-		return
-	}
-
-	conf.Pid = pid
+	conf := &Config{epoch, "", pid}
 
 	// wait a little before starting to write
 	time.Sleep(10 * time.Millisecond)

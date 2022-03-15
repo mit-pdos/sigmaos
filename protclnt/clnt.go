@@ -3,20 +3,20 @@ package protclnt
 import (
 	np "ulambda/ninep"
 	"ulambda/rand"
-	"ulambda/session"
+	"ulambda/sessionclnt"
 )
 
 type Clnt struct {
 	session np.Tsession
 	seqno   np.Tseqno
-	cm      *session.ConnMgr
+	cm      *sessionclnt.SessClnt
 }
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
 	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
-	clnt.cm = session.MakeConnMgr(clnt.session, &clnt.seqno)
+	clnt.cm = sessionclnt.MakeSessClnt(clnt.session, &clnt.seqno)
 	return clnt
 }
 
@@ -29,7 +29,7 @@ func (clnt *Clnt) Exit() {
 }
 
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg) (np.Tmsg, *np.Err) {
-	reply, err := clnt.cm.MakeCall(server, args)
+	reply, err := clnt.cm.RPC(server, args)
 	if err != nil {
 		return nil, err
 	}

@@ -46,6 +46,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Rread{}, nil
 	case np.TTwrite:
 		return np.Twrite{}, nil
+	case np.TTwrite1:
+		return np.Twrite1{}, nil
 	case np.TRwrite:
 		return np.Rwrite{}, nil
 	case np.TTclunk:

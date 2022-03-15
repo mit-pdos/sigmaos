@@ -1,8 +1,6 @@
 package epochclnt
 
 import (
-	"strconv"
-
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -28,8 +26,7 @@ func (ec *EpochClnt) Name() string {
 
 // XXX should use writeV
 func (ec *EpochClnt) AdvanceEpoch() (string, error) {
-	db.DLPrintf("EPOCHCLNT", "AdvanceEpoch")
-	fd, err := ec.CreateOpen(ec.path, ec.perm, np.OWRITE)
+	fd, err := ec.CreateOpen(ec.path, ec.perm, np.ORDWR)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "CreateOpen %v err %v", ec.path, err)
 	}
@@ -39,20 +36,23 @@ func (ec *EpochClnt) AdvanceEpoch() (string, error) {
 		db.DLPrintf("EPOCHCLNT_ERR", "Read %v err %v", ec.path, err)
 		return "", err
 	}
-	n := 0
+	n := np.Tepoch(0)
 	if len(b) > 0 {
-		n, err = strconv.Atoi(string(b))
+		n, err = np.String2Epoch(string(b))
 		if err != nil {
-			db.DLPrintf("EPOCHCLNT_ERR", "Atoi %v err %v", string(b), err)
+			db.DLPrintf("EPOCHCLNT_ERR", "String2Epoch %v err %v", string(b), err)
 			return "", err
 		}
 	}
-	err = ec.Seek(fd, 0)
-	if err != nil {
+	n += 1
+	if err := ec.Seek(fd, 0); err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Seek %v err %v", fd, err)
 		return "", err
 	}
-	epoch := strconv.Itoa(n + 1)
+
+	db.DLPrintf("EPOCHCLNT", "AdvanceEpoch %v %v", ec.path, n)
+
+	epoch := n.String()
 	_, err = ec.Write(fd, []byte(epoch))
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Write %v err %v", ec.path, err)

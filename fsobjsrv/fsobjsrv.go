@@ -162,7 +162,7 @@ func (fos *FsObjSrv) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "%v: f %v %v\n", f.Ctx().Uname(), f, args)
+	db.DLPrintf("FSOBJ", "%v: Open f %v %v\n", f.Ctx().Uname(), f, args)
 
 	o := f.Obj()
 	no, r := o.Open(f.Ctx(), args.Mode)
@@ -303,6 +303,7 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	db.DLPrintf("FSOBJ", "%v: Read f %v args %v\n", f.Ctx().Uname(), f, args)
 	err = f.Read(args.Offset, args.Count, np.NoV, rets)
 	if err != nil {
 		return err.Rerror()
@@ -315,6 +316,19 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
+	if err != nil {
+		return err.Rerror()
+	}
+	return nil
+}
+
+func (fos *FsObjSrv) Write1(args np.Twrite1, rets *np.Rwrite) *np.Rerror {
+	f, err := fos.lookupFence(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	db.DLPrintf("FSOBJ0", "%v: Writev1 %v %v\n", f.Ctx().Uname(), f.Path(), args)
 	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()
@@ -548,7 +562,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", f.Ctx(), args, fname)
+	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
 	rets.Data, err = i.Read(f.Ctx(), args.Offset, args.Count, np.NoV)
 	if err != nil {
 		return err.Rerror()
@@ -567,6 +581,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	db.DLPrintf("FSOBJ0", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
 	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()

@@ -14,11 +14,13 @@ import (
 
 func runPrimaries(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
 	const (
-		N = 10
+		N = 1 // 10
 	)
 	pids := []string{}
 
 	// XXX use the same dir independent of machine running proc
+	ts.RmDir(np.UX + "/" + np.FENCEDIR)
+
 	dir := np.UX + "/~ip/outdir/"
 	fn := dir + "out"
 	ts.RmDir(dir)
@@ -74,7 +76,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []string) {
 	}
 }
 
-func TestOldPrimaryConcur(t *testing.T) {
+func TestOldPrimary(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fn, pids := runPrimaries(t, ts, "")
 	check(t, ts, fn, pids)
@@ -84,7 +86,7 @@ func TestOldPrimaryConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestOldPrimaryProcConcur(t *testing.T) {
+func TestOldProc(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	fn, pids := runPrimaries(t, ts, "child")
 	check(t, ts, fn, pids)

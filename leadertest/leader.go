@@ -26,7 +26,7 @@ const (
 
 func RunLeader(dir, last, child string) {
 	pid := proc.GetPid()
-	fsl := fslib.MakeFsLib("leader-" + proc.GetPid())
+	fsl := fslib.MakeFsLib("leader-" + pid)
 	pclnt := procclnt.MakeProcClnt(fsl)
 
 	pclnt.Started(pid)
@@ -47,7 +47,7 @@ func RunLeader(dir, last, child string) {
 
 	log.Printf("%v: leader at %v\n", proc.GetName(), epoch)
 
-	err = fc.FenceEpochAt(epoch)
+	err = fc.FenceAtEpoch(epoch)
 	if err != nil {
 		log.Fatalf("FATAL %v FenceEpochAt %v %v failed %v\n", proc.GetName(), EPOCH, epoch, err)
 	}

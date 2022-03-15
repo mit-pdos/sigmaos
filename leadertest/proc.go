@@ -25,7 +25,7 @@ func RunProc(epochfn, epoch, dir string) {
 
 	log.Printf("%v: epochfn %v epoch %v dir %v\n", proc.GetName(), epochfn, epoch, dir)
 
-	err := fc.FenceEpochAt(epoch)
+	err := fc.FenceAtEpoch(epoch)
 	if err != nil {
 		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 		return

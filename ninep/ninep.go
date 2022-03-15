@@ -7,6 +7,7 @@ package ninep
 
 import (
 	"fmt"
+	"strconv"
 	"sync/atomic"
 )
 
@@ -57,6 +58,38 @@ func MakeFence(idf Tfenceid, seq Tseqno) *Tfence {
 	return &Tfence{idf, seq}
 }
 
+type Tepoch uint64
+
+func (e Tepoch) String() string {
+	return strconv.FormatUint(uint64(e), 16)
+}
+
+func String2Epoch(epoch string) (Tepoch, error) {
+	e, err := strconv.ParseUint(epoch, 16, 64)
+	if err != nil {
+		return Tepoch(0), err
+	}
+	return Tepoch(e), nil
+}
+
+type Tfenceid1 struct {
+	Path     Tpath
+	ServerId uint64 // XXX public key of server?
+}
+
+type Tfence1 struct {
+	FenceId Tfenceid1
+	Epoch   Tepoch
+}
+
+func (f *Tfence1) String() string {
+	return fmt.Sprintf("idf %v epoch %v", f.FenceId, f.Epoch)
+}
+
+func MakeFence1(idf Tfenceid1, epoch Tepoch) *Tfence1 {
+	return &Tfence1{idf, epoch}
+}
+
 // NoSession signifies the fcall came from a wire-compatible peer
 const NoSession Tsession = ^Tsession(0)
 
@@ -80,6 +113,19 @@ const NoOffset Toffset = ^Toffset(0)
 const MAXGETSET Tsize = 1_000_000
 
 type Tpath uint64
+
+func (p Tpath) String() string {
+	return strconv.FormatUint(uint64(p), 16)
+}
+
+func String2Path(path string) (Tpath, error) {
+	p, err := strconv.ParseUint(path, 16, 64)
+	if err != nil {
+		return Tpath(p), err
+	}
+	return Tpath(p), nil
+}
+
 type Qtype uint8
 type TQversion uint32
 
@@ -255,6 +301,7 @@ const (
 	TTread
 	TRread
 	TTwrite
+	TTwrite1
 	TRwrite
 	TTclunk
 	TRclunk
@@ -321,6 +368,8 @@ func (fct Tfcall) String() string {
 		return "Rread"
 	case TTwrite:
 		return "Twrite"
+	case TTwrite1:
+		return "Twrite1"
 	case TRwrite:
 		return "Rwrite"
 	case TTclunk:
@@ -553,11 +602,22 @@ func (rr Rread) String() string {
 type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
-	Data   []byte
+	Data   []byte // Data must be last
 }
 
 func (tw Twrite) String() string {
 	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
+}
+
+type Twrite1 struct {
+	Fid    Tfid
+	Offset Toffset
+	Fence  Tfence1
+	Data   []byte // Data must be last
+}
+
+func (tw Twrite1) String() string {
+	return fmt.Sprintf("{%v off %v len %d f %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Fence)
 }
 
 type Rwrite struct {
@@ -637,6 +697,11 @@ type Tgetfile struct {
 	Count   Tsize
 	Wnames  []string
 	Resolve bool
+	Fence   Tfence1
+}
+
+func (m Tgetfile) String() string {
+	return fmt.Sprintf("{%v off %v p %v cnt %v e %v}", m.Fid, m.Offset, m.Wnames, m.Count, m.Fence.Epoch)
 }
 
 type Rgetfile struct {
@@ -653,11 +718,12 @@ type Tsetfile struct {
 	Offset  Toffset
 	Wnames  []string
 	Resolve bool
-	Data    []byte
+	Fence   Tfence1
+	Data    []byte // Data must be last
 }
 
 func (m Tsetfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v r %v len %v}", m.Fid, m.Offset, m.Wnames, m.Resolve, len(m.Data))
+	return fmt.Sprintf("{%v off %v p %v r %v len %v e %v}", m.Fid, m.Offset, m.Wnames, m.Resolve, len(m.Data), m.Fence.Epoch)
 }
 
 type Tputfile struct {
@@ -666,11 +732,12 @@ type Tputfile struct {
 	Perm   Tperm
 	Offset Toffset
 	Wnames []string
-	Data   []byte
+	Fence  Tfence1
+	Data   []byte // Data must be last
 }
 
 func (m Tputfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v len %v}", m.Fid, m.Offset, m.Wnames, len(m.Data))
+	return fmt.Sprintf("{%v off %v p %v len %v e %v}", m.Fid, m.Offset, m.Wnames, len(m.Data), m.Fence.Epoch)
 }
 
 type Tmkfence struct {
@@ -722,6 +789,7 @@ func (Rcreate) Type() Tfcall     { return TRcreate }
 func (Tread) Type() Tfcall       { return TTread }
 func (Rread) Type() Tfcall       { return TRread }
 func (Twrite) Type() Tfcall      { return TTwrite }
+func (Twrite1) Type() Tfcall     { return TTwrite1 }
 func (Rwrite) Type() Tfcall      { return TRwrite }
 func (Tclunk) Type() Tfcall      { return TTclunk }
 func (Rclunk) Type() Tfcall      { return TRclunk }

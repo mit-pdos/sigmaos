@@ -292,10 +292,8 @@ const (
 	TTcreate
 	TRcreate
 	TTread
-	TTread1
 	TRread
 	TTwrite
-	TTwrite1
 	TRwrite
 	TTclunk
 	TRclunk
@@ -305,6 +303,13 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
+
+	//
+	// SigmaP
+	//
+
+	TTread1
+	TTwrite1
 	TTwatch
 	TTrenameat
 	TRrenameat
@@ -773,39 +778,44 @@ type Tdetach struct {
 type Rdetach struct {
 }
 
-func (Tversion) Type() Tfcall    { return TTversion }
-func (Rversion) Type() Tfcall    { return TRversion }
-func (Tauth) Type() Tfcall       { return TTauth }
-func (Rauth) Type() Tfcall       { return TRauth }
-func (Tflush) Type() Tfcall      { return TTflush }
-func (Rflush) Type() Tfcall      { return TRflush }
-func (Tattach) Type() Tfcall     { return TTattach }
-func (Rattach) Type() Tfcall     { return TRattach }
-func (Rerror) Type() Tfcall      { return TRerror }
-func (Twalk) Type() Tfcall       { return TTwalk }
-func (Rwalk) Type() Tfcall       { return TRwalk }
-func (Topen) Type() Tfcall       { return TTopen }
-func (Twatch) Type() Tfcall      { return TTwatch }
-func (Ropen) Type() Tfcall       { return TRopen }
-func (Tcreate) Type() Tfcall     { return TTcreate }
-func (Rcreate) Type() Tfcall     { return TRcreate }
-func (Tread) Type() Tfcall       { return TTread }
+func (Tversion) Type() Tfcall { return TTversion }
+func (Rversion) Type() Tfcall { return TRversion }
+func (Tauth) Type() Tfcall    { return TTauth }
+func (Rauth) Type() Tfcall    { return TRauth }
+func (Tflush) Type() Tfcall   { return TTflush }
+func (Rflush) Type() Tfcall   { return TRflush }
+func (Tattach) Type() Tfcall  { return TTattach }
+func (Rattach) Type() Tfcall  { return TRattach }
+func (Rerror) Type() Tfcall   { return TRerror }
+func (Twalk) Type() Tfcall    { return TTwalk }
+func (Rwalk) Type() Tfcall    { return TRwalk }
+func (Topen) Type() Tfcall    { return TTopen }
+func (Twatch) Type() Tfcall   { return TTwatch }
+func (Ropen) Type() Tfcall    { return TRopen }
+func (Tcreate) Type() Tfcall  { return TTcreate }
+func (Rcreate) Type() Tfcall  { return TRcreate }
+func (Tread) Type() Tfcall    { return TTread }
+func (Rread) Type() Tfcall    { return TRread }
+func (Twrite) Type() Tfcall   { return TTwrite }
+func (Rwrite) Type() Tfcall   { return TRwrite }
+func (Tclunk) Type() Tfcall   { return TTclunk }
+func (Rclunk) Type() Tfcall   { return TRclunk }
+func (Tremove) Type() Tfcall  { return TTremove }
+func (Rremove) Type() Tfcall  { return TRremove }
+func (Tstat) Type() Tfcall    { return TTstat }
+func (Rstat) Type() Tfcall    { return TRstat }
+func (Twstat) Type() Tfcall   { return TTwstat }
+func (Rwstat) Type() Tfcall   { return TRwstat }
+
+//
+// sigmaP
+//
+
 func (Tread1) Type() Tfcall      { return TTread1 }
-func (Rread) Type() Tfcall       { return TRread }
-func (Twrite) Type() Tfcall      { return TTwrite }
 func (Twrite1) Type() Tfcall     { return TTwrite1 }
-func (Rwrite) Type() Tfcall      { return TRwrite }
-func (Tclunk) Type() Tfcall      { return TTclunk }
-func (Rclunk) Type() Tfcall      { return TRclunk }
-func (Tremove) Type() Tfcall     { return TTremove }
-func (Tremovefile) Type() Tfcall { return TTremovefile }
-func (Rremove) Type() Tfcall     { return TRremove }
-func (Tstat) Type() Tfcall       { return TTstat }
-func (Rstat) Type() Tfcall       { return TRstat }
-func (Twstat) Type() Tfcall      { return TTwstat }
-func (Rwstat) Type() Tfcall      { return TRwstat }
 func (Trenameat) Type() Tfcall   { return TTrenameat }
 func (Rrenameat) Type() Tfcall   { return TRrenameat }
+func (Tremovefile) Type() Tfcall { return TTremovefile }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }

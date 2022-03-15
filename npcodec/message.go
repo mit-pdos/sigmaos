@@ -42,14 +42,10 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Rcreate{}, nil
 	case np.TTread:
 		return np.Tread{}, nil
-	case np.TTread1:
-		return np.Tread1{}, nil
 	case np.TRread:
 		return np.Rread{}, nil
 	case np.TTwrite:
 		return np.Twrite{}, nil
-	case np.TTwrite1:
-		return np.Twrite1{}, nil
 	case np.TRwrite:
 		return np.Rwrite{}, nil
 	case np.TTclunk:
@@ -58,8 +54,6 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Rclunk{}, nil // no response body
 	case np.TTremove:
 		return np.Tremove{}, nil
-	case np.TTremovefile:
-		return np.Tremovefile{}, nil
 	case np.TRremove:
 		return np.Rremove{}, nil
 	case np.TTstat:
@@ -70,12 +64,18 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Twstat{}, nil
 	case np.TRwstat:
 		return np.Rwstat{}, nil
+	case np.TTwatch:
+		return np.Twatch{}, nil
+	case np.TTread1:
+		return np.Tread1{}, nil
+	case np.TTwrite1:
+		return np.Twrite1{}, nil
 	case np.TTrenameat:
 		return np.Trenameat{}, nil
 	case np.TRrenameat:
 		return np.Rrenameat{}, nil
-	case np.TTwatch:
-		return np.Twatch{}, nil
+	case np.TTremovefile:
+		return np.Tremovefile{}, nil
 	case np.TTgetfile:
 		return np.Tgetfile{}, nil
 	case np.TRgetfile:

@@ -6,6 +6,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fences"
+	"ulambda/fences1"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
@@ -23,13 +24,15 @@ import (
 //
 
 type FsObjSrv struct {
-	fssrv *fssrv.FsServer
-	wt    *watch.WatchTable // shared across sessions
-	ft    *fidTable
-	et    *ephemeralTable
-	rft   *fences.RecentTable // shared across sessions
-	stats *stats.Stats
-	sid   np.Tsession
+	fssrv  *fssrv.FsServer
+	wt     *watch.WatchTable // shared across sessions
+	ft     *fidTable
+	et     *ephemeralTable
+	rft    *fences.RecentTable // shared across sessions
+	rft1   *fences1.FenceTable // shared across sessions
+	fencet *fences1.FenceTable
+	stats  *stats.Stats
+	sid    np.Tsession
 }
 
 func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
@@ -42,6 +45,7 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
 	fos.rft = srv.GetRecentFences()
+	fos.rft1 = srv.GetFenceTable()
 	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
@@ -581,6 +585,11 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+
+	if err := fos.rft1.CheckFence(args.Fence); err != nil {
+		return err.Rerror()
+	}
+
 	db.DLPrintf("FSOBJ0", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
 	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"ulambda/ctx"
 	"ulambda/dir"
 	"ulambda/fences"
+	"ulambda/fences1"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -46,6 +47,7 @@ type FsServer struct {
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
 	rft        *fences.RecentTable
+	rft1       *fences1.FenceTable
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
 	rc         *repl.ReplyCache
@@ -68,6 +70,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.rps = rps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
+	fssrv.rft1 = fences1.MakeFenceTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
@@ -99,6 +102,10 @@ func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
 
 func (fssrv *FsServer) GetRecentFences() *fences.RecentTable {
 	return fssrv.rft
+}
+
+func (fssrv *FsServer) GetFenceTable() *fences1.FenceTable {
+	return fssrv.rft1
 }
 
 func (fssrv *FsServer) Root() fs.Dir {

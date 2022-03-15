@@ -10,6 +10,7 @@ import (
 	"ulambda/crash"
 	"ulambda/delay"
 	"ulambda/epochclnt"
+	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -26,9 +27,13 @@ func becomeLeader(t *testing.T, fsl *fslib.FsLib) {
 	leader := leaderclnt.MakeLeaderClnt(fsl, leadername, 0)
 	err := leader.AcquireLeadership()
 	assert.Nil(t, err, "AcquireLeadership")
-	ec := epochclnt.MakeEpochClnt(fsl, epochname, 0777, []string{dirux})
-	err = ec.SetEpochFile([]byte{})
-	assert.Nil(t, err, "SetEpochFile")
+	ec := epochclnt.MakeEpochClnt(fsl, epochname, 0777)
+	fc := fenceclnt1.MakeFenceClnt(fsl, ec, 0777, []string{dirux})
+	epoch, err := ec.AdvanceEpoch()
+	assert.Nil(t, err, "AdvanceEpoch")
+	log.Printf("leader at %v\n", epoch)
+	err = fc.FenceAtEpoch(epoch)
+	assert.Nil(t, err, "FenceAtEpoch")
 }
 
 // Test if a leader cannot write to a fenced server after leader fails
@@ -37,6 +42,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 	ts.MkDir(dirux, 0777)
 	ts.Remove(dirux + "/f")
+	ts.Remove(dirux + "/g")
 
 	_, err := ts.PutFile(epochname, 0777, np.OWRITE, []byte{})
 	assert.Nil(t, err, "PutFile")
@@ -72,6 +78,10 @@ func TestOldLeaderFail(t *testing.T) {
 
 	// When other thread partitions, we become leader and start new epoch
 	becomeLeader(t, ts.FsLib)
+
+	// Do some op so that server becomes aware of new epoch
+	_, err = ts.PutFile(dirux+"/g", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "PutFile")
 
 	<-ch
 

@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -35,13 +36,14 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) *np.Err {
 	if new.FenceId.Path == 0 {
 		return nil
 	}
-	// log.Printf("%v: CheckFence: new %v %v\n", proc.GetName(), new, ft)
-	if f, ok := ft.fences[new.FenceId.Path]; ok {
+	db.DLPrintf("FENCES", "CheckFence: new %v %v\n", new, ft)
+	p := new.FenceId.Path
+	if f, ok := ft.fences[p]; ok {
 		if new.Epoch < f.Epoch {
 			return np.MkErr(np.TErrStale, new)
 		}
 	}
-	ft.fences[new.FenceId.Path] = new
+	ft.fences[p] = new
 	return nil
 }
 

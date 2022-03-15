@@ -3,6 +3,7 @@ package fidclnt
 import (
 	"fmt"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/protclnt"
 )
@@ -14,12 +15,14 @@ import (
 type FidClnt struct {
 	fids *FidMap
 	pc   *protclnt.Clnt
+	ft   *FenceTable
 }
 
 func MakeFidClnt() *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
 	fidc.pc = protclnt.MakeClnt()
+	fidc.ft = MakeFenceTable()
 	return fidc
 }
 
@@ -30,6 +33,12 @@ func (fidc *FidClnt) String() string {
 
 func (fidc *FidClnt) Len() int {
 	return len(fidc.fids.fids)
+}
+
+func (fidc *FidClnt) FenceDir(path string, f *np.Tfence1) *np.Err {
+	db.DLPrintf("FIDCLNT", "Fence %v %v\n", path, f)
+	return fidc.ft.Insert(path, f)
+
 }
 
 func (fidc *FidClnt) ReadSeqNo() np.Tseqno {
@@ -170,7 +179,8 @@ func (fidc *FidClnt) Read(fid np.Tfid, off np.Toffset, cnt np.Tsize) ([]byte, *n
 }
 
 func (fidc *FidClnt) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.Write(fid, off, data)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	reply, err := fidc.fids.lookup(fid).pc.Write1(fid, off, data, f)
 	if err != nil {
 		return 0, err
 	}
@@ -178,7 +188,8 @@ func (fidc *FidClnt) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, 
 }
 
 func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, cnt np.Tsize, resolve bool) ([]byte, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, resolve)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(path))
+	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, resolve, f)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +197,8 @@ func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 }
 
 func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, data []byte, resolve bool) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, data, resolve)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(path))
+	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, resolve, f, data)
 	if err != nil {
 		return 0, err
 	}
@@ -194,7 +206,8 @@ func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 }
 
 func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, off np.Toffset, data []byte) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.PutFile(fid, path, mode, perm, off, data)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(path))
+	reply, err := fidc.fids.lookup(fid).pc.PutFile(fid, path, mode, perm, off, f, data)
 	if err != nil {
 		return 0, err
 	}

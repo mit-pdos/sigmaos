@@ -25,7 +25,7 @@ func makeFile(path []string) (*File, *np.Err) {
 }
 
 func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	db.DLPrintf("UXD", "%v: Open %v %v path %v\n", ctx, f, m, f.Path())
+	db.DLPrintf("UXD", "%v: Open %v %v path %v flags %v\n", ctx, f, m, f.Path(), uxFlags(m))
 	file, err := os.OpenFile(f.Path(), uxFlags(m), 0)
 	if err != nil {
 		return nil, np.MkErr(np.TErrError, err)
@@ -44,7 +44,7 @@ func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 }
 
 func (f *File) uxWrite(off int64, whence int, b []byte) (np.Tsize, *np.Err) {
-	db.DLPrintf("UXD", "%v: WriteFile: off %v cnt %v %v\n", f, off, len(b), f.file)
+	db.DLPrintf("UXD", "%v: WriteFile: off %v whence %v cnt %v %v\n", f, off, whence, len(b), f.file)
 	_, err := f.file.Seek(off, whence)
 	if err != nil {
 		return 0, np.MkErr(np.TErrError, err)
@@ -86,7 +86,7 @@ func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) (
 }
 
 func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	db.DLPrintf("UXD", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
+	db.DLPrintf("UXD0", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
 	whence := 0
 	if off == np.NoOffset {
 		off = 0

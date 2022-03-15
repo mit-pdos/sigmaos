@@ -86,10 +86,6 @@ func (f *Tfence1) String() string {
 	return fmt.Sprintf("idf %v epoch %v", f.FenceId, f.Epoch)
 }
 
-func MakeFence1(idf Tfenceid1, epoch Tepoch) *Tfence1 {
-	return &Tfence1{idf, epoch}
-}
-
 // NoSession signifies the fcall came from a wire-compatible peer
 const NoSession Tsession = ^Tsession(0)
 

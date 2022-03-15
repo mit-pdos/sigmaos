@@ -12,9 +12,9 @@ import (
 	"ulambda/test"
 )
 
-func runPrimaries(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
+func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
 	const (
-		N = 1 // 10
+		N = 2
 	)
 	pids := []string{}
 
@@ -78,7 +78,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []string) {
 
 func TestOldPrimary(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	fn, pids := runPrimaries(t, ts, "")
+	fn, pids := runLeaders(t, ts, "")
 	check(t, ts, fn, pids)
 
 	log.Printf("exit\n")
@@ -88,7 +88,7 @@ func TestOldPrimary(t *testing.T) {
 
 func TestOldProc(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	fn, pids := runPrimaries(t, ts, "child")
+	fn, pids := runLeaders(t, ts, "child")
 	check(t, ts, fn, pids)
 
 	log.Printf("exit\n")

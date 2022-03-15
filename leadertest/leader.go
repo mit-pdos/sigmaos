@@ -34,7 +34,7 @@ func RunLeader(dir, last, child string) {
 	fn := dir + "/out"
 	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0)
 	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777)
-	fc := fenceclnt1.MakeFenceClnt(fsl, EPOCH, 0777, []string{dir})
+	fc := fenceclnt1.MakeFenceClnt(fsl, ec, 0777, []string{dir})
 
 	err := l.AcquireLeadership()
 	if err != nil {

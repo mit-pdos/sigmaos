@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"ulambda/delay"
+	"ulambda/epochclnt"
 	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -17,7 +18,8 @@ func RunProc(epochfn, epoch, dir string) {
 	pid := proc.GetPid()
 	fsl := fslib.MakeFsLib("primary-" + proc.GetPid())
 	pclnt := procclnt.MakeProcClnt(fsl)
-	fc := fenceclnt1.MakeFenceClnt(fsl, epochfn, 0, []string{dir})
+	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777)
+	fc := fenceclnt1.MakeFenceClnt(fsl, ec, 0, []string{dir})
 
 	pclnt.Started(pid)
 

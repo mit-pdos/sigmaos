@@ -1,16 +1,15 @@
 package fenceclnt1
 
 import (
-	"fmt"
-
 	db "ulambda/debug"
+	"ulambda/epochclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
 type FenceClnt struct {
 	*fslib.FsLib
-	epochfn string // path for epoch file
+	ec      *epochclnt.EpochClnt
 	perm    np.Tperm
 	mode    np.Tmode
 	f       *np.Tfence
@@ -18,10 +17,10 @@ type FenceClnt struct {
 	paths   map[string]bool
 }
 
-func MakeFenceClnt(fsl *fslib.FsLib, epochfn string, perm np.Tperm, paths []string) *FenceClnt {
+func MakeFenceClnt(fsl *fslib.FsLib, ec *epochclnt.EpochClnt, perm np.Tperm, paths []string) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.FsLib = fsl
-	fc.epochfn = epochfn
+	fc.ec = ec
 	fc.perm = perm
 	fc.paths = make(map[string]bool)
 	for _, p := range paths {
@@ -30,36 +29,13 @@ func MakeFenceClnt(fsl *fslib.FsLib, epochfn string, perm np.Tperm, paths []stri
 	return fc
 }
 
-func (fc *FenceClnt) Name() string {
-	return fc.epochfn
-}
-
 func (fc *FenceClnt) FenceAtEpoch(epoch string) error {
-	fd, err := fc.Open(fc.epochfn, np.OWRITE)
+	f, err := fc.ec.GetFence(epoch)
 	if err != nil {
-		db.DLPrintf("FENCECLNT_ERR", "Open %v err %v", fc.epochfn, err)
-		return err
+		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.ec.Name(), err)
 	}
-	b, err := fc.Read(fd, 100)
-	if err != nil {
-		db.DLPrintf("FENCECLNT_ERR", "Read %v err %v", fc.epochfn, err)
-		return err
-	}
-	if string(b) != epoch {
-		db.DLPrintf("FENCECLNT_ERR", "Epoch mismatch %v err %v", fc.epochfn, err)
-		return fmt.Errorf("Epoch mismatch %v %v\n", string(b), epoch)
-	}
-	qid, err := fc.Qid(fd)
-	if err != nil {
-		db.DLPrintf("FENCECLNT_ERR", "FdQid %v err %v", fd, err)
-		return err
-	}
-	e, err := np.String2Epoch(epoch)
-	if err != nil {
-		db.DLPrintf("FENCECLNT_ERR", "String2Epoch %v err %v", epoch, err)
-		return err
-	}
-	fc.fencePaths(np.MakeFence1(np.Tfenceid1{qid.Path, 0}, e))
+
+	fc.fencePaths(&f)
 	return nil
 }
 

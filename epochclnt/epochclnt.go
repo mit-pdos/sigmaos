@@ -1,6 +1,8 @@
 package epochclnt
 
 import (
+	"fmt"
+
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -59,4 +61,38 @@ func (ec *EpochClnt) AdvanceEpoch() (string, error) {
 		return "", err
 	}
 	return epoch, nil
+}
+
+// XXX should use readv  XXX serverid
+func (ec *EpochClnt) GetFence(epoch string) (np.Tfence1, error) {
+	f := np.Tfence1{}
+	fd, err := ec.Open(ec.path, np.OWRITE)
+	if err != nil {
+		db.DLPrintf("EPOCHCLNT_ERR", "Open %v err %v", ec.path, err)
+		return f, err
+	}
+	defer ec.Close(fd)
+	b, err := ec.Read(fd, 100)
+	if err != nil {
+		db.DLPrintf("EPOCHCLNT_ERR", "Read %v err %v", ec.path, err)
+		return f, err
+	}
+	if string(b) != epoch {
+		db.DLPrintf("EPOCHCLNT_ERR", "Epoch mismatch %v err %v", ec.path, err)
+		return f, fmt.Errorf("Epoch mismatch %v %v\n", string(b), epoch)
+	}
+	qid, err := ec.Qid(fd)
+	if err != nil {
+		db.DLPrintf("EPOCHCLNT_ERR", "FdQid %v err %v", fd, err)
+		return f, err
+	}
+	e, err := np.String2Epoch(epoch)
+	if err != nil {
+		db.DLPrintf("EPOCHCLNT_ERR", "String2Epoch %v err %v", epoch, err)
+		return f, err
+	}
+	f.Epoch = e
+	f.FenceId.Path = qid.Path
+	return f, nil
+
 }

@@ -456,3 +456,18 @@ func (pathc *PathClnt) RmFence(f np.Tfence, path string) error {
 	}
 	return nil
 }
+
+func (pathc *PathClnt) PathServer(path string) (string, error) {
+	if _, err := pathc.Stat(path + "/"); err != nil {
+		db.DLPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", path, err)
+		return "", err
+	}
+	p := np.Split(path)
+	_, left, err := pathc.mnt.resolve(p)
+	if err != nil {
+		db.DLPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", path, err)
+		return "", err
+	}
+	p = p[0 : len(p)-len(left)]
+	return p.String(), nil
+}

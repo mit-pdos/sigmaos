@@ -73,7 +73,7 @@ func symlinkReplicas(ts *test.Tstate, pids []string) {
 func putFiles(ts *test.Tstate, n int) {
 	for i := 0; i < n; i++ {
 		i_str := strconv.Itoa(i)
-		_, err := ts.PutFile(path.Join(REPLICA_SYMLINK, i_str), 0777, np.OREAD|np.OWRITE, []byte(i_str))
+		_, err := ts.PutFile(path.Join(REPLICA_SYMLINK, i_str), 0777, np.ORDWR, []byte(i_str))
 		assert.Nil(ts.T, err, "Putfile")
 	}
 }

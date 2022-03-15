@@ -315,6 +315,19 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
+func (fos *FsObjSrv) Read1(args np.Tread1, rets *np.Rread) *np.Rerror {
+	f, err := fos.ft.Lookup(args.Fid)
+	if err != nil {
+		return err.Rerror()
+	}
+	db.DLPrintf("FSOBJ", "%v: Read1 f %v args %v\n", f.Ctx().Uname(), f, args)
+	err = f.Read(args.Offset, args.Count, args.Version, rets)
+	if err != nil {
+		return err.Rerror()
+	}
+	return nil
+}
+
 func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	f, err := fos.lookupFence(args.Fid)
 	if err != nil {
@@ -332,8 +345,8 @@ func (fos *FsObjSrv) Write1(args np.Twrite1, rets *np.Rwrite) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DLPrintf("FSOBJ0", "%v: Writev1 %v %v\n", f.Ctx().Uname(), f.Path(), args)
-	rets.Count, err = f.Write(args.Offset, args.Data, np.NoV)
+	db.DLPrintf("FSOBJ", "%v: Writev1 %v %v\n", f.Ctx().Uname(), f.Path(), args)
+	rets.Count, err = f.Write(args.Offset, args.Data, args.Version)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -590,7 +603,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 
-	db.DLPrintf("FSOBJ0", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
+	db.DLPrintf("FSOBJ", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
 	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()

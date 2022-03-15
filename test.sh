@@ -32,7 +32,7 @@ go test $1 ulambda/semclnt
 # test proxy
 #
 
-./proxy/test.sh
+# ./proxy/test.sh
 
 #
 # tests kernel (without realms)

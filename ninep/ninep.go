@@ -218,9 +218,6 @@ const (
 	// and a closure will invoke the closure if the directory
 	// changes.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
-
-	// XXX OVERSION is for atomic read-and-write, but unused for now.
-	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
 )
 
 func (m Tmode) String() string {
@@ -295,6 +292,7 @@ const (
 	TTcreate
 	TRcreate
 	TTread
+	TTread1
 	TRread
 	TTwrite
 	TTwrite1
@@ -587,6 +585,14 @@ type Tread struct {
 	Count  Tsize
 }
 
+type Tread1 struct {
+	Fid     Tfid
+	Offset  Toffset
+	Count   Tsize
+	Fence   Tfence1
+	Version TQversion
+}
+
 type Rread struct {
 	Data []byte
 }
@@ -606,14 +612,15 @@ func (tw Twrite) String() string {
 }
 
 type Twrite1 struct {
-	Fid    Tfid
-	Offset Toffset
-	Fence  Tfence1
-	Data   []byte // Data must be last
+	Fid     Tfid
+	Offset  Toffset
+	Fence   Tfence1
+	Version TQversion
+	Data    []byte // Data must be last
 }
 
 func (tw Twrite1) String() string {
-	return fmt.Sprintf("{%v off %v len %d f %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Fence)
+	return fmt.Sprintf("{%v off %v len %d f %v v %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Fence, tw.Version)
 }
 
 type Rwrite struct {
@@ -783,6 +790,7 @@ func (Ropen) Type() Tfcall       { return TRopen }
 func (Tcreate) Type() Tfcall     { return TTcreate }
 func (Rcreate) Type() Tfcall     { return TRcreate }
 func (Tread) Type() Tfcall       { return TTread }
+func (Tread1) Type() Tfcall      { return TTread1 }
 func (Rread) Type() Tfcall       { return TRread }
 func (Twrite) Type() Tfcall      { return TTwrite }
 func (Twrite1) Type() Tfcall     { return TTwrite1 }

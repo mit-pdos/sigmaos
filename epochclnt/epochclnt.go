@@ -26,7 +26,6 @@ func (ec *EpochClnt) Name() string {
 	return ec.path
 }
 
-// XXX should use writeV
 func (ec *EpochClnt) AdvanceEpoch() (string, error) {
 	fd, err := ec.CreateOpen(ec.path, ec.perm, np.ORDWR)
 	if err != nil {
@@ -55,7 +54,7 @@ func (ec *EpochClnt) AdvanceEpoch() (string, error) {
 	db.DLPrintf("EPOCHCLNT", "AdvanceEpoch %v %v", ec.path, n)
 
 	epoch := n.String()
-	_, err = ec.Write(fd, []byte(epoch))
+	_, err = ec.WriteV(fd, []byte(epoch))
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Write %v err %v", ec.path, err)
 		return "", err
@@ -63,7 +62,6 @@ func (ec *EpochClnt) AdvanceEpoch() (string, error) {
 	return epoch, nil
 }
 
-// XXX should use readv  XXX serverid
 func (ec *EpochClnt) GetFence(epoch string) (np.Tfence1, error) {
 	f := np.Tfence1{}
 	fd, err := ec.Open(ec.path, np.OWRITE)
@@ -72,7 +70,8 @@ func (ec *EpochClnt) GetFence(epoch string) (np.Tfence1, error) {
 		return f, err
 	}
 	defer ec.Close(fd)
-	b, err := ec.Read(fd, 100)
+
+	b, err := ec.ReadV(fd, 100)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Read %v err %v", ec.path, err)
 		return f, err
@@ -81,16 +80,16 @@ func (ec *EpochClnt) GetFence(epoch string) (np.Tfence1, error) {
 		db.DLPrintf("EPOCHCLNT_ERR", "Epoch mismatch %v err %v", ec.path, err)
 		return f, fmt.Errorf("Epoch mismatch %v %v\n", string(b), epoch)
 	}
-	qid, err := ec.Qid(fd)
-	if err != nil {
-		db.DLPrintf("EPOCHCLNT_ERR", "FdQid %v err %v", fd, err)
-		return f, err
-	}
 	e, err := np.String2Epoch(epoch)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "String2Epoch %v err %v", epoch, err)
 		return f, err
 	}
+	qid, err := ec.Qid(fd)
+	if err != nil {
+		db.DLPrintf("EPOCHCLNT_ERR", "Qid %v err %v", fd, err)
+	}
+
 	f.Epoch = e
 	f.FenceId.Path = qid.Path
 	return f, nil

@@ -295,6 +295,10 @@ func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return np.MkErr(np.TErrNotSupported, args).Rerror()
 }
 
+func (npc *NpConn) Read1(args np.Tread1, rets *np.Rread) *np.Rerror {
+	return np.MkErr(np.TErrNotSupported, args).Rerror()
+}
+
 func (npc *NpConn) Write1(args np.Twrite1, rets *np.Rwrite) *np.Rerror {
 	return np.MkErr(np.TErrNotSupported, args).Rerror()
 }

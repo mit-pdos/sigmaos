@@ -9,8 +9,8 @@ import (
 )
 
 //
-// Map of fences indexed by pathname of fence at server.  Use
-// by fssrv to keep trac of the most recent fence seen.
+// Map of fences indexed by pathname of fence at server.  Use by fssrv
+// to keep track of the most recent fence seen.
 //
 
 type FenceTable struct {

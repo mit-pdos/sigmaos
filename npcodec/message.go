@@ -42,6 +42,8 @@ func newMsg(typ np.Tfcall) (np.Tmsg, *np.Err) {
 		return np.Rcreate{}, nil
 	case np.TTread:
 		return np.Tread{}, nil
+	case np.TTread1:
+		return np.Tread1{}, nil
 	case np.TRread:
 		return np.Rread{}, nil
 	case np.TTwrite:

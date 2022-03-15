@@ -167,20 +167,18 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
 	return &reply.Stat, nil
 }
 
-func (fidc *FidClnt) Read(fid np.Tfid, off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
-	//p := fidc.fids[fdst.fid]
-	//version := p.lastqid().Version
-	//v := fdst.mode&np.OVERSION == np.OVERSION
-	reply, err := fidc.fids.lookup(fid).pc.Read(fid, off, cnt)
+func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	reply, err := fidc.fids.lookup(fid).pc.Read1(fid, off, cnt, f, v)
 	if err != nil {
 		return nil, err
 	}
 	return reply.Data, nil
 }
 
-func (fidc *FidClnt) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, *np.Err) {
+func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	reply, err := fidc.fids.lookup(fid).pc.Write1(fid, off, data, f)
+	reply, err := fidc.fids.lookup(fid).pc.Write1(fid, off, f, v, data)
 	if err != nil {
 		return 0, err
 	}

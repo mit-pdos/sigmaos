@@ -19,7 +19,7 @@ type Writer struct {
 }
 
 func (wrt *Writer) Write(p []byte) (int, error) {
-	n, err := wrt.fc.Write(wrt.fid, wrt.off, p)
+	n, err := wrt.fc.WriteV(wrt.fid, wrt.off, p, np.NoV)
 	if err != nil {
 		return 0, err
 	}

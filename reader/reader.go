@@ -34,7 +34,7 @@ func (rdr *Reader) ReadByte() (byte, error) {
 
 func (rdr *Reader) Read(p []byte) (int, error) {
 	for len(p) > len(rdr.buf) && !rdr.eof {
-		b, err := rdr.fc.Read(rdr.fid, rdr.off, rdr.chunksz)
+		b, err := rdr.fc.ReadV(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
 		if err != nil {
 			return -1, err
 		}
@@ -66,7 +66,7 @@ func (rdr *Reader) GetData() ([]byte, error) {
 }
 
 func (rdr *Reader) GetDataErr() ([]byte, *np.Err) {
-	return rdr.fc.Read(rdr.fid, 0, np.MAXGETSET)
+	return rdr.fc.ReadV(rdr.fid, 0, np.MAXGETSET, np.NoV)
 }
 
 func (rdr *Reader) ReadJsonStream(mk func() interface{}, f func(i interface{}) error) error {

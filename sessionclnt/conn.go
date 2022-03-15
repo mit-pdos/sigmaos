@@ -29,9 +29,13 @@ func makeConn(addrs []string) (*conn, *np.Err) {
 	c.nc = nil
 	c.queue = []*netclnt.Rpc{}
 	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+	err := c.connect()
+	if err != nil {
+		return nil, err
+	}
 	go c.reader()
 	go c.writer()
-	return c, c.connect()
+	return c, nil
 }
 
 func (c *conn) rpc(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
@@ -78,45 +82,67 @@ func (c *conn) connect() *np.Err {
 	return np.MkErr(np.TErrUnreachable, c.addrs)
 }
 
+// If the connection broke, establish a new netclnt connection. If successful,
+// resend outstanding requests.
+func (c *conn) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
+	c.Lock()
+	defer c.Unlock()
+	// Check if another thread already reconnected to the replicas.
+	if oldNc == c.nc {
+		return c.tryReconnectL()
+	}
+	return nil
+}
+
+// Reconnect & resend requests
+func (c *conn) tryReconnectL() *np.Err {
+	err := c.connect()
+	if err != nil {
+		db.DLPrintf("SESSCONN", "Error %v SessionConn reconnecting to %v\n", err, c.addrs)
+		return err
+	}
+	// Resend outstanding requests.
+	c.resendOutstanding()
+	return nil
+}
+
 func (c *conn) reader() {
 	for {
 		// Get the current netclnt connection (which may change if the server
 		// becomes unavailable and the writer thread connects to a new replica).
 		c.Lock()
-		if c.closed {
+		closed := c.closed
+		c.Unlock()
+
+		if closed {
 			return
 		}
 		nc := c.nc
-		c.Unlock()
 
 		// Receive the next reply.
 		reply, err := nc.Recv()
 		if err != nil {
-			// If the connection broke, establish a new netclnt.
-			c.Lock()
-			// Check if the writer thread already reconnected to the replicas.
-			if nc == c.nc {
-				err := c.connect()
-				if err != nil {
-					// If no replicas are available, kill all remaining requests.
-					log.Printf("Error %v SessionConn connecting to %v", err, c.addrs)
-					c.close()
-					return
-				}
+			// Try to connect to the next replica
+			err := c.tryReconnect(nc)
+			if err != nil {
+				// If we can't reconnect to any of the replicas, close the session.
+				c.close()
+				return
 			}
-			// Resend outstanding requests.
-			c.resendOutstanding()
-			c.Unlock()
+			// If the connection broke, establish a new netclnt.
 			continue
 		}
+		c.Lock()
 		rpc := c.outstanding[reply.Seqno]
 		delete(c.outstanding, reply.Seqno)
+		c.Unlock()
 		rpc.ReplyC <- &netclnt.Reply{reply, err}
 	}
 }
 
 func (c *conn) writer() {
 	c.Lock()
+	defer c.Unlock()
 	for {
 		var req *netclnt.Rpc
 		// Wait until we have an RPC request.
@@ -130,16 +156,13 @@ func (c *conn) writer() {
 		req, c.queue = c.queue[0], c.queue[1:]
 		err := c.nc.Send(req)
 		if err != nil {
-			db.DLPrintf("SESSIONCONN", "Error %v RPC to %v\n", err, c.nc.Dst())
+			db.DLPrintf("SESSCONN", "Error %v RPC to %v\n", err, c.nc.Dst())
 			log.Printf("Error %v SessionConn couldn't RPC to %v", err, c.nc.Dst())
-			err := c.connect()
+			err := c.tryReconnectL()
 			if err != nil {
-				log.Printf("Error %v SessionConn connecting to %v", err, c.addrs)
 				c.close()
 				return
 			}
-			// Resend outstanding requests.
-			c.resendOutstanding()
 		}
 	}
 }
@@ -147,8 +170,10 @@ func (c *conn) writer() {
 // Caller holds lock.
 func (c *conn) resendOutstanding() {
 	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
-	for i, o := range c.outstanding {
-		outstanding[i] = o
+	idx := 0
+	for _, o := range c.outstanding {
+		outstanding[idx] = o
+		idx++
 	}
 	sort.Slice(outstanding, func(i, j int) bool {
 		return outstanding[i].Req.Seqno < outstanding[j].Req.Seqno

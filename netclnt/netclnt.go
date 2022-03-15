@@ -132,7 +132,6 @@ func (nc *NetClnt) write(rpc *Rpc) *np.Err {
 		// XXX Connection reset by peer?
 		if err.Code() == np.TErrUnreachable {
 			db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error to %v\n", nc.Dst())
-			log.Printf("Unreachable in netclnt.writer %v\n", err)
 			nc.Close()
 			return np.MkErr(np.TErrUnreachable, nc.Dst())
 		} else {
@@ -144,12 +143,12 @@ func (nc *NetClnt) write(rpc *Rpc) *np.Err {
 			// XXX Get rid of contains
 			if strings.Contains(error.Error(), "connection reset by peer") {
 				stacktrace := debug.Stack()
-				log.Printf("%v\nFlush error %v\n", string(stacktrace), err)
+				db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), err)
 				nc.Close()
 				return np.MkErr(np.TErrUnreachable, nc.Dst())
 			} else {
 				stacktrace := debug.Stack()
-				log.Fatalf("FATAL %v\nFlush error 2 %v\n", string(stacktrace), err)
+				log.Fatalf("FATAL %v\nFlush error unexpected error type! %v\n", string(stacktrace), err)
 				db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), err)
 				return np.MkErr(np.TErrUnreachable, nc.Dst())
 			}
@@ -162,7 +161,6 @@ func (nc *NetClnt) read() (*np.Fcall, *np.Err) {
 	frame, err := npcodec.ReadFrame(nc.br)
 	if err != nil {
 		db.DLPrintf("NETCLNT_ERR", "Reader: ReadFrame error %v to %v\n", err, nc.Dst())
-		log.Printf("ReadFrame error in netclnt.reader error %v\n", err)
 		nc.Close()
 		return nil, np.MkErr(np.TErrUnreachable, nc.Dst())
 	}

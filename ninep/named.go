@@ -26,5 +26,7 @@ const (
 	PROCD_RUNQ_LC = "runq-lc"
 	PROCD_RUNQ_BE = "runq-be"
 
-	FENCEDIR = ".fence"
+	FENCEDIR = ".fence/"
+
+	UXEXPORT = "/tmp/ulambda"
 )

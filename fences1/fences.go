@@ -1,11 +1,11 @@
 package fences1
 
 import (
+	"encoding/json"
 	"log"
 	"sync"
 
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 //
@@ -35,7 +35,7 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) *np.Err {
 	if new.FenceId.Path == 0 {
 		return nil
 	}
-	log.Printf("%v: CheckFence: new %v %v\n", proc.GetName(), new, ft)
+	// log.Printf("%v: CheckFence: new %v %v\n", proc.GetName(), new, ft)
 	if f, ok := ft.fences[new.FenceId.Path]; ok {
 		if new.Epoch < f.Epoch {
 			return np.MkErr(np.TErrStale, new)
@@ -43,4 +43,21 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) *np.Err {
 	}
 	ft.fences[new.FenceId.Path] = new
 	return nil
+}
+
+func (ft *FenceTable) Snapshot() []byte {
+	b, err := json.Marshal(ft.fences)
+	if err != nil {
+		log.Fatalf("FATAL Error snapshot encoding fence table: %v", err)
+	}
+	return b
+}
+
+func RestoreRecentTable(b []byte) *FenceTable {
+	ft := &FenceTable{}
+	err := json.Unmarshal(b, &ft.fences)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal fences in restore: %v", err)
+	}
+	return ft
 }

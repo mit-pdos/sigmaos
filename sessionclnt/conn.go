@@ -169,7 +169,6 @@ func (c *conn) writer() {
 		err := c.nc.Send(req)
 		if err != nil {
 			db.DLPrintf("SESSCONN", "Error %v RPC to %v\n", err, c.nc.Dst())
-			log.Printf("Error %v SessionConn couldn't RPC to %v", err, c.nc.Dst())
 			err := c.tryReconnectL()
 			if err != nil {
 				c.close()

@@ -13,7 +13,7 @@ import (
 	"ulambda/writer"
 )
 
-func RunProc(epochfn, epochstr, dir string) {
+func RunProc(epochstr, dir string) {
 	pid := proc.GetPid()
 
 	fsl := fslib.MakeFsLib("primary-" + pid)
@@ -24,15 +24,15 @@ func RunProc(epochfn, epochstr, dir string) {
 		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 	}
 
-	fc := fenceclnt1.MakeEpochFenceClnt(fsl, epochfn, 0, []string{dir})
+	fc := fenceclnt1.MakeLeaderFenceClnt(fsl, LEADERFN)
 
 	pclnt.Started(pid)
 
 	fn := dir + "/out"
 
-	log.Printf("%v: epochfn %v epoch %v dir %v\n", proc.GetName(), epochfn, epoch, dir)
+	log.Printf("%v: epoch %v dir %v\n", proc.GetName(), epoch, dir)
 
-	if err := fc.FenceAtEpoch(epoch); err != nil {
+	if err := fc.FenceAtEpoch(epoch, []string{dir}); err != nil {
 		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}

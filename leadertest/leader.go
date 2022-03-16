@@ -29,9 +29,9 @@ func RunLeader(dir, last, child string) {
 	pclnt.Started(pid)
 
 	fn := dir + "/out"
-	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0777, []string{dir})
+	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0777)
 
-	epoch, err := l.AcquireFencedEpoch(nil)
+	epoch, err := l.AcquireFencedEpoch(nil, []string{dir})
 	if err != nil {
 		log.Fatalf("FATAL %v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}

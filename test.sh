@@ -43,7 +43,7 @@ go test $1 ulambda/ux
 # go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run InitFs
 go test $1 ulambda/s3
 go test $1 ulambda/kernel
-go test $1 ulambda/epochclnt
+go test $1 ulambda/leaderclnt
 go test $1 ulambda/leadertest
 go test $1 ulambda/snapshot
 

@@ -17,48 +17,37 @@ type FenceClnt struct {
 	paths   map[string]bool
 }
 
-func MakeFenceClnt(fsl *fslib.FsLib, ec *epochclnt.EpochClnt, perm np.Tperm, paths []string) *FenceClnt {
+func MakeFenceClnt(fsl *fslib.FsLib, ec *epochclnt.EpochClnt) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.FsLib = fsl
 	fc.ec = ec
-	fc.perm = perm
-	fc.paths = make(map[string]bool)
-	for _, p := range paths {
-		fc.paths[p] = true
-	}
 	return fc
 }
 
-func MakeEpochFenceClnt(fsl *fslib.FsLib, epochfn string, perm np.Tperm, paths []string) *FenceClnt {
+func MakeLeaderFenceClnt(fsl *fslib.FsLib, leaderfn string) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.FsLib = fsl
-	fc.ec = epochclnt.MakeEpochClnt(fsl, epochfn, 0777)
-	fc.perm = perm
-	fc.paths = make(map[string]bool)
-	for _, p := range paths {
-		fc.paths[p] = true
-	}
+	fc.ec = epochclnt.MakeEpochClnt(fsl, leaderfn, 0777)
 	return fc
 }
 
-func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch) error {
+func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	f, err := fc.ec.GetFence(epoch)
 	if err != nil {
 		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.ec.Name(), err)
 	}
 
-	fc.fencePaths(&f)
+	fc.fencePaths(&f, paths)
 	return nil
 }
 
-func (fc *FenceClnt) fencePaths(fence *np.Tfence1) error {
-	for p, _ := range fc.paths {
+func (fc *FenceClnt) fencePaths(fence *np.Tfence1, paths []string) error {
+	for _, p := range paths {
 		err := fc.registerFence(p, fence)
 		if err != nil {
 			db.DLPrintf("FENCECLNT_ERR", "fencePath %v err %v", p, err)
 			return err
 		}
-		fc.paths[p] = true
 	}
 	return nil
 }

@@ -16,13 +16,12 @@ type LeaderClnt struct {
 	fc      *fenceclnt1.FenceClnt
 }
 
-func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm, dirs []string) *LeaderClnt {
+func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *LeaderClnt {
 	l := &LeaderClnt{}
 	l.FsLib = fsl
-	l.epochfn = leaderfn + "-epoch"
 	l.e = electclnt.MakeElectClnt(fsl, leaderfn, 0)
-	l.ec = epochclnt.MakeEpochClnt(fsl, l.epochfn, perm)
-	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.ec, perm, dirs)
+	l.ec = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
+	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.ec)
 	return l
 }
 
@@ -34,7 +33,7 @@ func (l *LeaderClnt) EpochPath() string {
 // proc may steal our leadership (e.g., after we are partioned) and
 // start a higher epoch.  Note epoch doesn't take effect until we
 // perform a fenced operation (e.g., a read/write).
-func (l *LeaderClnt) AcquireFencedEpoch(leader []byte) (np.Tepoch, error) {
+func (l *LeaderClnt) AcquireFencedEpoch(leader []byte, dirs []string) (np.Tepoch, error) {
 	if err := l.e.AcquireLeadership(leader); err != nil {
 		return np.NoEpoch, err
 	}
@@ -42,7 +41,7 @@ func (l *LeaderClnt) AcquireFencedEpoch(leader []byte) (np.Tepoch, error) {
 	if err != nil {
 		return np.NoEpoch, err
 	}
-	if err := l.fc.FenceAtEpoch(epoch); err != nil {
+	if err := l.fc.FenceAtEpoch(epoch, dirs); err != nil {
 		return np.NoEpoch, err
 	}
 	return epoch, nil

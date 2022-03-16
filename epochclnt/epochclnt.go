@@ -14,10 +14,10 @@ type EpochClnt struct {
 	perm np.Tperm
 }
 
-func MakeEpochClnt(fsl *fslib.FsLib, path string, perm np.Tperm) *EpochClnt {
+func MakeEpochClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *EpochClnt {
 	ec := &EpochClnt{}
 	ec.FsLib = fsl
-	ec.path = path
+	ec.path = leaderfn + "-epoch"
 	ec.perm = perm
 	return ec
 }

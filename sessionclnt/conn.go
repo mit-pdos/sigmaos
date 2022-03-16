@@ -1,7 +1,6 @@
 package sessionclnt
 
 import (
-	"log"
 	"sort"
 	"sync"
 

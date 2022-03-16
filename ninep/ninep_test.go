@@ -14,7 +14,7 @@ func TestEOF(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	for c := TErrBadattach; c <= TErrBadFd; c++ {
+	for c := TErrBadattach; c <= TErrError; c++ {
 		assert.True(t, c.String() != "unknown error", c)
 	}
 }

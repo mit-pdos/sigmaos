@@ -27,7 +27,7 @@ func (ec *EpochClnt) Name() string {
 }
 
 func (ec *EpochClnt) AdvanceEpoch() (np.Tepoch, error) {
-	fd, err := ec.CreateOpen(ec.path, ec.perm, np.ORDWR)
+	fd, err := ec.CreateOpen(ec.path, ec.perm&0xFF, np.ORDWR)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "CreateOpen %v err %v", ec.path, err)
 	}

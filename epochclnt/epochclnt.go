@@ -61,6 +61,18 @@ func (ec *EpochClnt) AdvanceEpoch() (np.Tepoch, error) {
 	return n, nil
 }
 
+func (ec *EpochClnt) GetEpoch() (np.Tepoch, error) {
+	b, err := ec.GetFile(ec.path)
+	if err != nil {
+		return np.NoEpoch, err
+	}
+	e, err := np.String2Epoch(string(b))
+	if err != nil {
+		return np.NoEpoch, err
+	}
+	return e, nil
+}
+
 func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence1, error) {
 	f := np.Tfence1{}
 	fd, err := ec.Open(ec.path, np.OWRITE)
@@ -83,7 +95,6 @@ func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence1, error) {
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Qid %v err %v", fd, err)
 	}
-
 	f.Epoch = epoch
 	f.FenceId.Path = qid.Path
 	return f, nil

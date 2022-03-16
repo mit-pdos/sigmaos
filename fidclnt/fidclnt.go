@@ -38,7 +38,6 @@ func (fidc *FidClnt) Len() int {
 func (fidc *FidClnt) FenceDir(path string, f *np.Tfence1) *np.Err {
 	db.DLPrintf("FIDCLNT", "Fence %v %v\n", path, f)
 	return fidc.ft.Insert(path, f)
-
 }
 
 func (fidc *FidClnt) ReadSeqNo() np.Tseqno {

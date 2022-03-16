@@ -9,7 +9,7 @@ import (
 
 type FenceClnt struct {
 	*fslib.FsLib
-	ec      *epochclnt.EpochClnt
+	*epochclnt.EpochClnt
 	perm    np.Tperm
 	mode    np.Tmode
 	f       *np.Tfence
@@ -20,25 +20,28 @@ type FenceClnt struct {
 func MakeFenceClnt(fsl *fslib.FsLib, ec *epochclnt.EpochClnt) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.FsLib = fsl
-	fc.ec = ec
+	fc.EpochClnt = ec
 	return fc
 }
 
 func MakeLeaderFenceClnt(fsl *fslib.FsLib, leaderfn string) *FenceClnt {
 	fc := &FenceClnt{}
 	fc.FsLib = fsl
-	fc.ec = epochclnt.MakeEpochClnt(fsl, leaderfn, 0777)
+	fc.EpochClnt = epochclnt.MakeEpochClnt(fsl, leaderfn, 0777)
 	return fc
 }
 
 func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
-	f, err := fc.ec.GetFence(epoch)
+	f, err := fc.GetFence(epoch)
 	if err != nil {
-		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.ec.Name(), err)
+		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.Name(), err)
 	}
 	db.DLPrintf("FENCECLNT", "FenceAtEpoch %v %v", epoch, paths)
-	fc.fencePaths(&f, paths)
-	return nil
+	return fc.fencePaths(&f, paths)
+}
+
+func (fc *FenceClnt) ReadEpoch() (np.Tepoch, error) {
+	return fc.GetEpoch()
 }
 
 func (fc *FenceClnt) fencePaths(fence *np.Tfence1, paths []string) error {

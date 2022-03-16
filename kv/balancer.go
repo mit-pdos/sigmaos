@@ -47,6 +47,8 @@ const (
 	KVBALANCERCTL = KVDIR + "balancer/ctl"
 )
 
+var FENCEDDIRS = []string{KVDIR}
+
 type Balancer struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -92,7 +94,6 @@ func RunBalancer(crashChild string, auto string) {
 	// may fail if already exist
 	bl.MkDir(KVDIR, 07)
 
-	srvs := []string{KVDIR}
 	bl.lc = leaderclnt.MakeLeaderClnt(bl.FsLib, KVBALANCER, np.DMSYMLINK|077)
 
 	// start server but don't publish its existence
@@ -113,7 +114,7 @@ func RunBalancer(crashChild string, auto string) {
 		ch <- true
 	}()
 
-	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), srvs)
+	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), FENCEDDIRS)
 	if err != nil {
 		log.Fatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}
@@ -244,7 +245,7 @@ func (bl *Balancer) recover(epoch np.Tepoch) {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
 		// backup config.
-		bl.conf = MakeConfig(epoch, 0)
+		bl.conf = MakeConfig(epoch)
 		bl.PublishConfig()
 	}
 }
@@ -365,7 +366,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 	for i, m := range moves {
 		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-mover", bl.conf.Epoch.String(), m.Src, m.Dst}, func(err error, status *proc.Status) bool {
-				db.DLPrintf("KVBAL", "move %v m %v err %v status %v\n", i, m, err, status)
+				db.DLPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()
 			})
 			ch <- i
@@ -378,7 +379,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 		m += 1
 		db.DLPrintf("KVBAL", "mover done %v %v\n", m, tmp)
 	}
-	db.DLPrintf("KVBAL", "movers all done\n")
+	db.DLPrintf("KVBAL", "%v: movers all done\n", bl.conf.Epoch)
 }
 
 func (bl *Balancer) balance(opcode, mfs string) *np.Err {
@@ -403,13 +404,19 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	}
 
 	var moves Moves
-	if bl.conf.N == 0 {
+	if bl.conf.Epoch == 1 {
 		bl.initShards(nextShards)
 	} else {
 		moves = bl.computeMoves(nextShards)
 	}
 
-	bl.conf.N += 1
+	epoch, err := bl.lc.EnterNextEpoch(FENCEDDIRS)
+	if err != nil {
+		db.DLPrintf("KVBAL_ERR", "EnterNextEpoch fail %v\n", err)
+		return np.MkErr(np.TErrError, err)
+	}
+
+	bl.conf.Epoch = epoch
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 

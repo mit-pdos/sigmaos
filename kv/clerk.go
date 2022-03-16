@@ -87,23 +87,12 @@ func (kc KvClerk) switchConfig() error {
 	for _, kvd := range kvs {
 		dirs = append(dirs, group.GRPDIR+"/"+kvd)
 	}
-	dirs = append(dirs, KVDIR)
 	if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 		db.DLPrintf("KVCLERK", "FenceAtEpoch %v failed %v\n", dirs, err)
 		return err
 	}
-	db.DLPrintf("KVCLERK", "Fenced dirs %v\n", dirs)
+	db.DLPrintf("KVCLERK", "%v: Fenced dirs %v\n", kc.conf.Epoch, dirs)
 	return nil
-
-	// maybe retryReadConfig failed with a stale error
-	//if np.IsErrStale(err) {
-	//	db.DLPrintf("KVCLERK", "stale readConfig %v\n", err)
-	//	continue
-	//}
-	// if np.IsErrUnreachable(err) && strings.Contains(np.ErrPath(err), KVCONF) {
-
-	// bail out; some other problem
-	// return err
 }
 
 // Try to fix err; if return is nil, retry.
@@ -114,12 +103,18 @@ func (kc *KvClerk) fixRetry(err error) error {
 	// dynamic?
 
 	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
+		db.DLPrintf("KVCLERK", "Wait for shard %v\n", np.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
+	if np.IsErrStale(err) || np.IsErrUnreachable(err) {
+		db.DLPrintf("KVCLERK", "fixRetry %v\n", err)
+		return kc.switchConfig()
+	}
 
-	// Maybe refreshing config will help fixing error
-	return kc.switchConfig()
+	// if && strings.Contains(np.ErrPath(err), KVCONF) {
+	//}
+	return err
 }
 
 // Do an operation. If an error, try to fix the error (e.g., rereading
@@ -127,7 +122,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 func (kc *KvClerk) doop(o *op) {
 	shard := key2shard(o.k)
 	for {
-		db.DLPrintf("KVCLERK", "o %v conf %v\n", o, kc.conf)
+		db.DLPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
 		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?

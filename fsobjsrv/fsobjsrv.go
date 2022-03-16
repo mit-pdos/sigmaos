@@ -599,6 +599,11 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
+
+	if err := fos.rft1.CheckFence(args.Fence); err != nil {
+		return err.Rerror()
+	}
+
 	rets.Data, err = i.Read(f.Ctx(), args.Offset, args.Count, np.NoV)
 	if err != nil {
 		return err.Rerror()

@@ -10,9 +10,9 @@ import (
 
 type LeaderClnt struct {
 	*fslib.FsLib
+	*epochclnt.EpochClnt
 	epochfn string
 	e       *electclnt.ElectClnt
-	ec      *epochclnt.EpochClnt
 	fc      *fenceclnt1.FenceClnt
 }
 
@@ -20,8 +20,8 @@ func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *LeaderCln
 	l := &LeaderClnt{}
 	l.FsLib = fsl
 	l.e = electclnt.MakeElectClnt(fsl, leaderfn, perm)
-	l.ec = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
-	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.ec)
+	l.EpochClnt = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
+	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.EpochClnt)
 	return l
 }
 
@@ -37,7 +37,13 @@ func (l *LeaderClnt) AcquireFencedEpoch(leader []byte, dirs []string) (np.Tepoch
 	if err := l.e.AcquireLeadership(leader); err != nil {
 		return np.NoEpoch, err
 	}
-	epoch, err := l.ec.AdvanceEpoch()
+	return l.EnterNextEpoch(dirs)
+}
+
+// Enter next epoch.  If the leader is partitioned and another leader
+// has taken over, this fails.
+func (l *LeaderClnt) EnterNextEpoch(dirs []string) (np.Tepoch, error) {
+	epoch, err := l.AdvanceEpoch()
 	if err != nil {
 		return np.NoEpoch, err
 	}

@@ -23,16 +23,13 @@ func MakeFenceTable() *FenceTable {
 	return ft
 }
 
+// if already exist, just update
 func (ft *FenceTable) Insert(path string, f *np.Tfence1) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
-	_, ok := ft.fencedDirs[path]
-	if !ok {
-		ft.fencedDirs[path] = f
-		return nil
-	}
-	return np.MkErr(np.TErrInval, path)
+	ft.fencedDirs[path] = f
+	return nil
 }
 
 func (ft *FenceTable) Lookup(path np.Path) *np.Tfence1 {

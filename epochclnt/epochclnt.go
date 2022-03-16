@@ -30,6 +30,7 @@ func (ec *EpochClnt) AdvanceEpoch() (np.Tepoch, error) {
 	fd, err := ec.CreateOpen(ec.path, ec.perm&0xFF, np.ORDWR)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "CreateOpen %v err %v", ec.path, err)
+		return np.NoEpoch, err
 	}
 	defer ec.Close(fd)
 	b, err := ec.Read(fd, 100)

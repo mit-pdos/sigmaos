@@ -36,7 +36,7 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	if err != nil {
 		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.ec.Name(), err)
 	}
-
+	db.DLPrintf("FENCECLNT", "FenceAtEpoch %v %v", epoch, paths)
 	fc.fencePaths(&f, paths)
 	return nil
 }

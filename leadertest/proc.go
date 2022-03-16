@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"ulambda/delay"
-	"ulambda/epochclnt"
 	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -14,12 +13,18 @@ import (
 	"ulambda/writer"
 )
 
-func RunProc(epochfn, epoch, dir string) {
+func RunProc(epochfn, epochstr, dir string) {
 	pid := proc.GetPid()
-	fsl := fslib.MakeFsLib("primary-" + proc.GetPid())
+
+	fsl := fslib.MakeFsLib("primary-" + pid)
 	pclnt := procclnt.MakeProcClnt(fsl)
-	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777)
-	fc := fenceclnt1.MakeFenceClnt(fsl, ec, 0, []string{dir})
+
+	epoch, err := np.String2Epoch(epochstr)
+	if err != nil {
+		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+	}
+
+	fc := fenceclnt1.MakeEpochFenceClnt(fsl, epochfn, 0, []string{dir})
 
 	pclnt.Started(pid)
 
@@ -27,13 +32,12 @@ func RunProc(epochfn, epoch, dir string) {
 
 	log.Printf("%v: epochfn %v epoch %v dir %v\n", proc.GetName(), epochfn, epoch, dir)
 
-	err := fc.FenceAtEpoch(epoch)
-	if err != nil {
+	if err := fc.FenceAtEpoch(epoch); err != nil {
 		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
-	conf := &Config{epoch, "", pid}
+	conf := &Config{epochstr, "", pid}
 
 	// wait a little before starting to write
 	time.Sleep(10 * time.Millisecond)

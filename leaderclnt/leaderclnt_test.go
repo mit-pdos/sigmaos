@@ -1,143 +1,83 @@
 package leaderclnt_test
 
 import (
-	"sync"
+	"log"
+	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/crash"
+	"ulambda/delay"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
+	np "ulambda/ninep"
 	"ulambda/test"
 )
 
 const (
-	LEADERNAME = "name/leader"
+	leadername = "name/leader"
+	epochname  = leadername + "-epoch"
+	dirux      = np.UX + "/~ip/outdir"
 )
 
-func TestAcquireRelease(t *testing.T) {
-	ts := test.MakeTstate(t)
+// Test if a leader cannot write to a fenced server after leader fails
+func TestOldLeaderFail(t *testing.T) {
+	ts := test.MakeTstateAll(t)
 
-	N := 20
+	ts.MkDir(dirux, 0777)
+	ts.Remove(dirux + "/f")
+	ts.Remove(dirux + "/g")
 
-	leader1 := leaderclnt.MakeLeaderClnt(ts.FsLib, LEADERNAME, 0)
-	leader2 := leaderclnt.MakeLeaderClnt(ts.FsLib, LEADERNAME, 0)
+	_, err := ts.PutFile(epochname, 0777, np.OWRITE, []byte{})
+	assert.Nil(t, err, "PutFile")
 
-	for i := 0; i < N; i++ {
-		err := leader1.AcquireLeadership()
-		assert.Nil(ts.T, err, "AcquireLeadership")
-		err = leader1.ReleaseLeadership()
-		assert.Nil(ts.T, err, "ReleaseLeadership")
-		err = leader2.AcquireLeadership()
-		assert.Nil(ts.T, err, "AcquireLeadership")
-		err = leader2.ReleaseLeadership()
-		assert.Nil(ts.T, err, "ReleaseLeadership")
-	}
+	fsl := fslib.MakeFsLibAddr("leader", fslib.Named())
 
-	ts.Shutdown()
-}
+	ch := make(chan bool)
+	go func() {
+		l := leaderclnt.MakeLeaderClnt(fsl, leadername, 0777, []string{dirux})
+		_, err := l.AcquireFencedEpoch()
+		assert.Nil(t, err, "BecomeLeaderEpoch")
 
-// n thread become try to become a leader and on success add 1 to shared file
-func TestLeaderConcur(t *testing.T) {
-	ts := test.MakeTstate(t)
+		fd, err := fsl.Create(dirux+"/f", 0777, np.OWRITE)
+		assert.Nil(t, err, "Create")
 
-	N := 3000
-	n_threads := 20
-	cnt := 0
+		ch <- true
 
-	leader := leaderclnt.MakeLeaderClnt(ts.FsLib, LEADERNAME, 0)
+		log.Printf("partition from named..\n")
 
-	var done sync.WaitGroup
-	done.Add(n_threads)
+		crash.Partition(fsl)
+		delay.Delay(10)
 
-	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, leader *leaderclnt.LeaderClnt, N *int, cnt *int) {
-			defer done.Done()
-			for {
-				err := leader.AcquireLeadership()
-				assert.Nil(ts.T, err, "AcquireLeader")
-				if *cnt < *N {
-					*cnt += 1
-				} else {
-					err = leader.ReleaseLeadership()
-					assert.Nil(ts.T, err, "ReleaseLeadership")
-					break
-				}
-				err = leader.ReleaseLeadership()
-				assert.Nil(ts.T, err, "ReleaseLeadership")
-			}
-		}(&done, leader, &N, &cnt)
-	}
+		// fsl lost primary status, and ts should have it by
+		// now so this write to ux server should fail
+		_, err = fsl.Write(fd, []byte(strconv.Itoa(1)))
+		assert.NotNil(t, err, "Write")
 
-	done.Wait()
-	assert.Equal(ts.T, N, cnt, "Count doesn't match up")
+		fsl.Close(fd)
 
-	ts.Shutdown()
-}
+		ch <- true
+	}()
 
-// n thread become leader in turn and add 1
-func TestLeaderInTurn(t *testing.T) {
-	ts := test.MakeTstate(t)
+	// Wait until other thread is primary
+	<-ch
 
-	N := 20
-	sum := 0
-	current := 0
-	done := make(chan int)
+	l := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0777, []string{dirux})
+	// When other thread partitions, we become leader and start new epoch
+	_, err = l.AcquireFencedEpoch()
+	assert.Nil(t, err, "BecomeLeaderEpoch")
 
-	leader := leaderclnt.MakeLeaderClnt(ts.FsLib, LEADERNAME, 0)
+	// Do some op so that server becomes aware of new epoch
+	_, err = ts.PutFile(dirux+"/g", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
+	assert.Nil(t, err, "PutFile")
 
-	for i := 0; i < N; i++ {
-		go func(i int) {
-			me := false
-			for !me {
-				err := leader.AcquireLeadership()
-				assert.Nil(ts.T, err, "AcquireLeadership")
-				if current == i {
-					me = true
-				}
-				err = leader.ReleaseLeadership()
-				assert.Nil(ts.T, err, "ReleaseLeadership")
-				if me {
-					current += 1
-					done <- i
-				}
-			}
-		}(i)
-		sum += i
-	}
+	<-ch
 
-	for i := 0; i < N; i++ {
-		next := <-done
-		assert.Equal(ts.T, i, next, "Next (%v) not equal to expected (%v)", next, i)
-	}
+	fd, err := ts.Open(dirux+"/f", np.OREAD)
+	assert.Nil(t, err, "Open")
+	b, err := ts.Read(fd, 100)
+	assert.Equal(ts.T, 0, len(b))
 
-	ts.Shutdown()
-}
-
-// Test if an exit of another session doesn't remove an ephemeral
-// leader of another session.
-func TestEphemeralLeader(t *testing.T) {
-	ts := test.MakeTstate(t)
-
-	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
-	fsl2 := fslib.MakeFsLibAddr("fslib-2", fslib.Named())
-
-	leader1 := leaderclnt.MakeLeaderClnt(fsl1, LEADERNAME, 0)
-
-	err := leader1.AcquireLeadership()
-	assert.Nil(ts.T, err, "AcquireLeadership")
-
-	// Establish a connection
-	_, err = fsl2.GetFile(LEADERNAME)
-	assert.Nil(ts.T, err, "GetFile")
-
-	// Terminate connection
-	fsl2.Exit()
-
-	time.Sleep(2 * time.Second)
-
-	err = leader1.ReleaseLeadership()
-	assert.Nil(ts.T, err, "ReleaseLeadership")
 	ts.Shutdown()
 }

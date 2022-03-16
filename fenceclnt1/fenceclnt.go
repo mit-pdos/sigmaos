@@ -29,7 +29,19 @@ func MakeFenceClnt(fsl *fslib.FsLib, ec *epochclnt.EpochClnt, perm np.Tperm, pat
 	return fc
 }
 
-func (fc *FenceClnt) FenceAtEpoch(epoch string) error {
+func MakeEpochFenceClnt(fsl *fslib.FsLib, epochfn string, perm np.Tperm, paths []string) *FenceClnt {
+	fc := &FenceClnt{}
+	fc.FsLib = fsl
+	fc.ec = epochclnt.MakeEpochClnt(fsl, epochfn, 0777)
+	fc.perm = perm
+	fc.paths = make(map[string]bool)
+	for _, p := range paths {
+		fc.paths[p] = true
+	}
+	return fc
+}
+
+func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch) error {
 	f, err := fc.ec.GetFence(epoch)
 	if err != nil {
 		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.ec.Name(), err)

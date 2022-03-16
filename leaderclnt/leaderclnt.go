@@ -1,43 +1,49 @@
 package leaderclnt
 
 import (
-	db "ulambda/debug"
+	"ulambda/electclnt"
+	"ulambda/epochclnt"
+	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
 type LeaderClnt struct {
 	*fslib.FsLib
-	path string // pathname for the leader-election file
-	fd   int
-	perm np.Tperm
-	mode np.Tmode
+	epochfn string
+	e       *electclnt.ElectClnt
+	ec      *epochclnt.EpochClnt
+	fc      *fenceclnt1.FenceClnt
 }
 
-func MakeLeaderClnt(fsl *fslib.FsLib, path string, perm np.Tperm) *LeaderClnt {
+func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm, dirs []string) *LeaderClnt {
 	l := &LeaderClnt{}
-	l.path = path
 	l.FsLib = fsl
-	l.perm = perm
+	l.epochfn = leaderfn + "-epoch"
+	l.e = electclnt.MakeElectClnt(fsl, leaderfn, 0)
+	l.ec = epochclnt.MakeEpochClnt(fsl, l.epochfn, perm)
+	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.ec, perm, dirs)
 	return l
 }
 
-func (l *LeaderClnt) AcquireLeadership() error {
-	fd, err := l.Create(l.path, l.perm|np.DMTMP, np.OWRITE|np.OWATCH)
-	if err != nil {
-		db.DLPrintf("LEADER_ERR", "Create %v err %v", l.path, err)
-		return err
-	}
-	l.fd = fd
-	return nil
+func (l *LeaderClnt) EpochPath() string {
+	return l.epochfn
 }
 
-func (l *LeaderClnt) ReleaseLeadership() error {
-	l.Close(l.fd)
-	err := l.Remove(l.path)
-	if err != nil {
-		db.DLPrintf("LEADER_ERR", "Remove %v err %v", l.path, err)
-		return err
+// Become leader for an epoch and fence op for that epoch.  Another
+// proc may steal our leadership (e.g., after we are partioned) and
+// start a higher epoch.  Note epoch doesn't take effect until we
+// perform a fenced operation (e.g., a read/write).
+func (l *LeaderClnt) AcquireFencedEpoch() (np.Tepoch, error) {
+	if err := l.e.AcquireLeadership(); err != nil {
+		return np.NoEpoch, err
 	}
-	return nil
+	epoch, err := l.ec.AdvanceEpoch()
+	if err != nil {
+		return np.NoEpoch, err
+	}
+	if err := l.fc.FenceAtEpoch(epoch); err != nil {
+		return np.NoEpoch, err
+	}
+	return epoch, nil
 }

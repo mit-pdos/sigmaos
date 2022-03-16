@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"ulambda/delay"
-	"ulambda/epochclnt"
-	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -21,7 +19,6 @@ const (
 	LEADERFN = "name/leader"
 	CONFIG   = LEADERFN + "-config"
 	CONFIGBK = LEADERFN + "-config#"
-	EPOCH    = LEADERFN + "-epoch"
 )
 
 func RunLeader(dir, last, child string) {
@@ -32,30 +29,19 @@ func RunLeader(dir, last, child string) {
 	pclnt.Started(pid)
 
 	fn := dir + "/out"
-	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0)
-	ec := epochclnt.MakeEpochClnt(fsl, EPOCH, 0777)
-	fc := fenceclnt1.MakeFenceClnt(fsl, ec, 0777, []string{dir})
+	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0777, []string{dir})
 
-	err := l.AcquireLeadership()
+	epoch, err := l.AcquireFencedEpoch()
 	if err != nil {
-		log.Fatalf("FATAL %v AcquireLeader %v failed %v\n", proc.GetName(), LEADERFN, err)
-	}
-	epoch, err := ec.AdvanceEpoch()
-	if err != nil {
-		log.Fatalf("FATAL %v AdvanceEpoch %v failed %v\n", proc.GetName(), ec.Name(), err)
+		log.Fatalf("FATAL %v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}
 
 	log.Printf("%v: leader at %v\n", proc.GetName(), epoch)
 
-	err = fc.FenceAtEpoch(epoch)
-	if err != nil {
-		log.Fatalf("FATAL %v FenceEpochAt %v %v failed %v\n", proc.GetName(), EPOCH, epoch, err)
-	}
-
 	//
 	// Write dir in new epoch
 	//
-	conf := &Config{epoch, pid, pid}
+	conf := &Config{epoch.String(), pid, pid}
 	b, err := writer.JsonRecord(*conf)
 	if err != nil {
 		log.Fatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
@@ -68,7 +54,7 @@ func RunLeader(dir, last, child string) {
 	if child == "child" {
 		// Create a proc running in the same epoch as leader
 		p := proc.MakeProc("bin/user/leadertest-proc",
-			[]string{EPOCH, dir, epoch})
+			[]string{l.EpochPath(), dir, epoch.String()})
 		if err := pclnt.Spawn(p); err != nil {
 			pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 			return

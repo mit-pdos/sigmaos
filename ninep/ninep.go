@@ -60,6 +60,8 @@ func MakeFence(idf Tfenceid, seq Tseqno) *Tfence {
 
 type Tepoch uint64
 
+const NoEpoch Tepoch = ^Tepoch(0)
+
 func (e Tepoch) String() string {
 	return strconv.FormatUint(uint64(e), 16)
 }

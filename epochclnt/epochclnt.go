@@ -26,7 +26,7 @@ func (ec *EpochClnt) Name() string {
 	return ec.path
 }
 
-func (ec *EpochClnt) AdvanceEpoch() (string, error) {
+func (ec *EpochClnt) AdvanceEpoch() (np.Tepoch, error) {
 	fd, err := ec.CreateOpen(ec.path, ec.perm, np.ORDWR)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "CreateOpen %v err %v", ec.path, err)
@@ -35,34 +35,33 @@ func (ec *EpochClnt) AdvanceEpoch() (string, error) {
 	b, err := ec.Read(fd, 100)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Read %v err %v", ec.path, err)
-		return "", err
+		return np.NoEpoch, err
 	}
 	n := np.Tepoch(0)
 	if len(b) > 0 {
 		n, err = np.String2Epoch(string(b))
 		if err != nil {
 			db.DLPrintf("EPOCHCLNT_ERR", "String2Epoch %v err %v", string(b), err)
-			return "", err
+			return np.NoEpoch, err
 		}
 	}
 	n += 1
 	if err := ec.Seek(fd, 0); err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Seek %v err %v", fd, err)
-		return "", err
+		return np.NoEpoch, err
 	}
 
 	db.DLPrintf("EPOCHCLNT", "AdvanceEpoch %v %v", ec.path, n)
 
-	epoch := n.String()
-	_, err = ec.WriteV(fd, []byte(epoch))
+	_, err = ec.WriteV(fd, []byte(n.String()))
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Write %v err %v", ec.path, err)
-		return "", err
+		return np.NoEpoch, err
 	}
-	return epoch, nil
+	return n, nil
 }
 
-func (ec *EpochClnt) GetFence(epoch string) (np.Tfence1, error) {
+func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence1, error) {
 	f := np.Tfence1{}
 	fd, err := ec.Open(ec.path, np.OWRITE)
 	if err != nil {
@@ -76,21 +75,16 @@ func (ec *EpochClnt) GetFence(epoch string) (np.Tfence1, error) {
 		db.DLPrintf("EPOCHCLNT_ERR", "Read %v err %v", ec.path, err)
 		return f, err
 	}
-	if string(b) != epoch {
+	if string(b) != epoch.String() {
 		db.DLPrintf("EPOCHCLNT_ERR", "Epoch mismatch %v err %v", ec.path, err)
 		return f, fmt.Errorf("Epoch mismatch %v %v\n", string(b), epoch)
-	}
-	e, err := np.String2Epoch(epoch)
-	if err != nil {
-		db.DLPrintf("EPOCHCLNT_ERR", "String2Epoch %v err %v", epoch, err)
-		return f, err
 	}
 	qid, err := ec.Qid(fd)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Qid %v err %v", fd, err)
 	}
 
-	f.Epoch = e
+	f.Epoch = epoch
 	f.FenceId.Path = qid.Path
 	return f, nil
 

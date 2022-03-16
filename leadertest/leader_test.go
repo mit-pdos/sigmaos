@@ -14,7 +14,7 @@ import (
 
 func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
 	const (
-		N = 2
+		N = 10
 	)
 	pids := []string{}
 

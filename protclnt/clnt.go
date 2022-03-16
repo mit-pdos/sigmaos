@@ -126,6 +126,19 @@ func (pclnt *ProtClnt) Remove(fid np.Tfid) *np.Err {
 	return nil
 }
 
+func (pclnt *ProtClnt) Remove1(fid np.Tfid, f *np.Tfence1) *np.Err {
+	args := np.Tremove1{fid, *f}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return err
+	}
+	_, ok := reply.(np.Rremove)
+	if !ok {
+		return np.MkErr(np.TErrBadFcall, "Rremove")
+	}
+	return nil
+}
+
 func (pclnt *ProtClnt) RemoveFile(fid np.Tfid, wnames np.Path, resolve bool) *np.Err {
 	args := np.Tremovefile{fid, wnames, resolve}
 	reply, err := pclnt.Call(args)
@@ -256,8 +269,21 @@ func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, *np.Err) {
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string) (*np.Rrenameat, *np.Err) {
-	args := np.Trenameat{oldfid, oldname, newfid, newname}
+func (pclnt *ProtClnt) Wstat1(fid np.Tfid, st *np.Stat, f *np.Tfence1) (*np.Rwstat, *np.Err) {
+	args := np.Twstat1{fid, 0, *st, *f}
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.(np.Rwstat)
+	if !ok {
+		return nil, np.MkErr(np.TErrBadFcall, "Rwstat")
+	}
+	return &msg, nil
+}
+
+func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string, f *np.Tfence1) (*np.Rrenameat, *np.Err) {
+	args := np.Trenameat{oldfid, oldname, newfid, newname, *f}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err

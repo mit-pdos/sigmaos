@@ -397,6 +397,14 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	return fos.removeObj(f.Ctx(), f.Obj(), f.Path())
 }
 
+func (fos *FsObjSrv) Remove1(args np.Tremove1, rets *np.Rremove) *np.Rerror {
+	if err := fos.rft1.CheckFence(args.Fence); err != nil {
+		return err.Rerror()
+	}
+	remove := np.Tremove{args.Fid}
+	return fos.Remove(remove, rets)
+}
+
 func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
@@ -449,6 +457,14 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	}
 	// XXX ignore other Wstat for now
 	return nil
+}
+
+func (fos *FsObjSrv) Wstat1(args np.Twstat1, rets *np.Rwstat) *np.Rerror {
+	if err := fos.rft1.CheckFence(args.Fence); err != nil {
+		return err.Rerror()
+	}
+	tstat := np.Twstat{args.Fid, args.Size, args.Stat}
+	return fos.Wstat(tstat, rets)
 }
 
 // d1 first?

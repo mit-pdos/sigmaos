@@ -139,20 +139,23 @@ func (fidc *FidClnt) Watch(fid np.Tfid, path []string) *np.Err {
 }
 
 func (fidc *FidClnt) Wstat(fid np.Tfid, st *np.Stat) *np.Err {
-	_, err := fidc.fids.lookup(fid).pc.Wstat(fid, st)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	_, err := fidc.fids.lookup(fid).pc.Wstat1(fid, st, f)
 	return err
 }
 
 func (fidc *FidClnt) Renameat(fid np.Tfid, o string, fid1 np.Tfid, n string) *np.Err {
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	if fidc.fids.lookup(fid).pc != fidc.fids.lookup(fid1).pc {
 		return np.MkErr(np.TErrInval, "paths at different servers")
 	}
-	_, err := fidc.fids.lookup(fid).pc.Renameat(fid, o, fid1, n)
+	_, err := fidc.fids.lookup(fid).pc.Renameat(fid, o, fid1, n, f)
 	return err
 }
 
 func (fidc *FidClnt) Remove(fid np.Tfid) *np.Err {
-	return fidc.fids.lookup(fid).pc.Remove(fid)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	return fidc.fids.lookup(fid).pc.Remove1(fid, f)
 }
 
 func (fidc *FidClnt) RemoveFile(fid np.Tfid, wnames []string, resolve bool) *np.Err {

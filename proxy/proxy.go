@@ -291,6 +291,14 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	return nil
 }
 
+func (npc *NpConn) Wstat1(args np.Twstat1, rets *np.Rwstat) *np.Rerror {
+	return np.MkErr(np.TErrNotSupported, args).Rerror()
+}
+
+func (npc *NpConn) Remove1(args np.Tremove1, rets *np.Rremove) *np.Rerror {
+	return np.MkErr(np.TErrNotSupported, args).Rerror()
+}
+
 func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
 	return np.MkErr(np.TErrNotSupported, args).Rerror()
 }

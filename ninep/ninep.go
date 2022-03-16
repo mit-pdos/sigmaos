@@ -312,6 +312,8 @@ const (
 
 	TTread1
 	TTwrite1
+	TTwstat1
+	TTremove1
 	TTwatch
 	TTrenameat
 	TRrenameat
@@ -393,6 +395,8 @@ func (fct Tfcall) String() string {
 		return "Rwstat"
 	case TTwatch:
 		return "Twatch"
+	case TTwstat1:
+		return "Tstat1"
 	case TTrenameat:
 		return "Trenameat"
 	case TRrenameat:
@@ -645,6 +649,11 @@ type Tremove struct {
 	Fid Tfid
 }
 
+type Tremove1 struct {
+	Fid   Tfid
+	Fence Tfence1
+}
+
 type Tremovefile struct {
 	Fid     Tfid
 	Wnames  []string
@@ -689,6 +698,13 @@ type Twstat struct {
 	Stat Stat
 }
 
+type Twstat1 struct {
+	Fid   Tfid
+	Size  uint16 // extra Size, see stat(5)
+	Stat  Stat
+	Fence Tfence1
+}
+
 type Rwstat struct{}
 
 type Trenameat struct {
@@ -696,6 +712,7 @@ type Trenameat struct {
 	OldName string
 	NewFid  Tfid
 	NewName string
+	Fence   Tfence1
 }
 
 type Rrenameat struct{}
@@ -803,6 +820,7 @@ func (Rwrite) Type() Tfcall   { return TRwrite }
 func (Tclunk) Type() Tfcall   { return TTclunk }
 func (Rclunk) Type() Tfcall   { return TRclunk }
 func (Tremove) Type() Tfcall  { return TTremove }
+func (Tremove1) Type() Tfcall { return TTremove1 }
 func (Rremove) Type() Tfcall  { return TRremove }
 func (Tstat) Type() Tfcall    { return TTstat }
 func (Rstat) Type() Tfcall    { return TRstat }
@@ -815,6 +833,7 @@ func (Rwstat) Type() Tfcall   { return TRwstat }
 
 func (Tread1) Type() Tfcall      { return TTread1 }
 func (Twrite1) Type() Tfcall     { return TTwrite1 }
+func (Twstat1) Type() Tfcall     { return TTwstat1 }
 func (Trenameat) Type() Tfcall   { return TTrenameat }
 func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tremovefile) Type() Tfcall { return TTremovefile }

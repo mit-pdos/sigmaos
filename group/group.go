@@ -42,6 +42,10 @@ func GrpDir(grp string) string {
 	return GRPDIR + grp + "/"
 }
 
+func GrpSym(grp string) string {
+	return GRPDIR + grp
+}
+
 func GrpConfPath(grp string) string {
 	return GRPDIR + grp + GRPCONF
 }
@@ -147,7 +151,7 @@ func RunMember(grp string) {
 	}
 
 	// Add symlink
-	atomic.PutFileAtomic(g.FsLib, GrpDir(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))
+	atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))
 	g.peerFence.ReleaseFence()
 
 	// start server and write ch when server is done

@@ -109,10 +109,14 @@ func (c *conn) tryReconnectL() *np.Err {
 // Complete an RPC and send a response.
 func (c *conn) completeRpc(reply *np.Fcall, err *np.Err) {
 	c.Lock()
-	rpc := c.outstanding[reply.Seqno]
+	rpc, ok := c.outstanding[reply.Seqno]
 	delete(c.outstanding, reply.Seqno)
 	c.Unlock()
-	rpc.ReplyC <- &netclnt.Reply{reply, err}
+	// the outstanding request map may have been cleared if the conn is closing,
+	// in which case rpc will be nil.
+	if ok {
+		rpc.ReplyC <- &netclnt.Reply{reply, err}
+	}
 }
 
 func (c *conn) reader() {

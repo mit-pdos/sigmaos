@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"runtime/debug"
-	"strings"
 	"sync"
 
 	db "ulambda/debug"
@@ -140,18 +139,10 @@ func (nc *NetClnt) write(rpc *Rpc) *np.Err {
 	} else {
 		error := nc.bw.Flush()
 		if error != nil {
-			// XXX Get rid of contains
-			if strings.Contains(error.Error(), "connection reset by peer") {
-				stacktrace := debug.Stack()
-				db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), err)
-				nc.Close()
-				return np.MkErr(np.TErrUnreachable, nc.Dst())
-			} else {
-				stacktrace := debug.Stack()
-				log.Fatalf("FATAL %v\nFlush error unexpected error type! %v\n", string(stacktrace), err)
-				db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), err)
-				return np.MkErr(np.TErrUnreachable, nc.Dst())
-			}
+			stacktrace := debug.Stack()
+			db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), error)
+			nc.Close()
+			return np.MkErr(np.TErrUnreachable, nc.Dst())
 		}
 	}
 	return nil

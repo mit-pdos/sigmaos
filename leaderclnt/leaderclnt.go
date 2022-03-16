@@ -19,7 +19,7 @@ type LeaderClnt struct {
 func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *LeaderClnt {
 	l := &LeaderClnt{}
 	l.FsLib = fsl
-	l.e = electclnt.MakeElectClnt(fsl, leaderfn, 0)
+	l.e = electclnt.MakeElectClnt(fsl, leaderfn, perm)
 	l.ec = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
 	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.ec)
 	return l

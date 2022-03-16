@@ -70,9 +70,6 @@ func (nc *NetClnt) Dst() string {
 }
 
 func (nc *NetClnt) Src() string {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
 	return nc.conn.LocalAddr().String()
 }
 
@@ -112,11 +109,12 @@ func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
 	delay.MaybeDelayRPC()
 
 	nc.mu.Lock()
-	if nc.closed {
+	closed := nc.closed
+	nc.mu.Unlock()
+	if closed {
 		db.DLPrintf("NETCLNT_ERR", "Error ch to %v closed\n", nc.Dst())
 		return np.MkErr(np.TErrUnreachable, nc.Dst())
 	}
-	nc.mu.Unlock()
 	return nc.write(rpc)
 }
 

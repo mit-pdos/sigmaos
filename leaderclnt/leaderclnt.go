@@ -34,8 +34,8 @@ func (l *LeaderClnt) EpochPath() string {
 // proc may steal our leadership (e.g., after we are partioned) and
 // start a higher epoch.  Note epoch doesn't take effect until we
 // perform a fenced operation (e.g., a read/write).
-func (l *LeaderClnt) AcquireFencedEpoch() (np.Tepoch, error) {
-	if err := l.e.AcquireLeadership(); err != nil {
+func (l *LeaderClnt) AcquireFencedEpoch(leader []byte) (np.Tepoch, error) {
+	if err := l.e.AcquireLeadership(leader); err != nil {
 		return np.NoEpoch, err
 	}
 	epoch, err := l.ec.AdvanceEpoch()

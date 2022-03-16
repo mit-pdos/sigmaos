@@ -268,7 +268,7 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 func (c *Coord) Work() {
 	// Try to become the leading coordinator.  If we get
 	// partitioned, we cannot write the todo directories either.
-	c.electclnt.AcquireLeadership()
+	c.electclnt.AcquireLeadership(nil)
 
 	log.Printf("%v: leader\n", proc.GetName())
 

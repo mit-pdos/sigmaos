@@ -37,7 +37,7 @@ func TestOldLeaderFail(t *testing.T) {
 	ch := make(chan bool)
 	go func() {
 		l := leaderclnt.MakeLeaderClnt(fsl, leadername, 0777, []string{dirux})
-		_, err := l.AcquireFencedEpoch()
+		_, err := l.AcquireFencedEpoch(nil)
 		assert.Nil(t, err, "BecomeLeaderEpoch")
 
 		fd, err := fsl.Create(dirux+"/f", 0777, np.OWRITE)
@@ -65,7 +65,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 	l := leaderclnt.MakeLeaderClnt(ts.FsLib, leadername, 0777, []string{dirux})
 	// When other thread partitions, we become leader and start new epoch
-	_, err = l.AcquireFencedEpoch()
+	_, err = l.AcquireFencedEpoch(nil)
 	assert.Nil(t, err, "BecomeLeaderEpoch")
 
 	// Do some op so that server becomes aware of new epoch

@@ -15,6 +15,7 @@ package kv
 //
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -329,7 +330,7 @@ func (bl *Balancer) checkMoves(moves Moves) {
 		fn := m.Dst
 		_, err := bl.Stat(fn)
 		if err != nil {
-			log.Printf("%v: fn isn't there %v\n", proc.GetName(), fn)
+			log.Printf("%v: stat %v err %v\n", proc.GetName(), fn, err)
 		}
 	}
 }
@@ -413,6 +414,10 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	epoch, err := bl.lc.EnterNextEpoch(FENCEDDIRS)
 	if err != nil {
 		db.DLPrintf("KVBAL_ERR", "EnterNextEpoch fail %v\n", err)
+		var nperr *np.Err
+		if errors.As(err, &nperr) {
+			return nperr
+		}
 		return np.MkErr(np.TErrError, err)
 	}
 
@@ -420,7 +425,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 
-	db.DLPrintf("KVBAL", "New config %v\n", bl.conf)
+	db.DLPrintf("KVBAL0", "New config %v\n", bl.conf)
 
 	// If balancer crashes, before here, KVCONFIG has the old
 	// config; otherwise, the new conf.

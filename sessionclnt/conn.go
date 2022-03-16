@@ -106,6 +106,15 @@ func (c *conn) tryReconnectL() *np.Err {
 	return nil
 }
 
+// Complete an RPC and send a response.
+func (c *conn) completeRpc(reply *np.Fcall, err *np.Err) {
+	c.Lock()
+	rpc := c.outstanding[reply.Seqno]
+	delete(c.outstanding, reply.Seqno)
+	c.Unlock()
+	rpc.ReplyC <- &netclnt.Reply{reply, err}
+}
+
 func (c *conn) reader() {
 	for {
 		// Get the current netclnt connection (which may change if the server
@@ -132,11 +141,7 @@ func (c *conn) reader() {
 			// If the connection broke, establish a new netclnt.
 			continue
 		}
-		c.Lock()
-		rpc := c.outstanding[reply.Seqno]
-		delete(c.outstanding, reply.Seqno)
-		c.Unlock()
-		rpc.ReplyC <- &netclnt.Reply{reply, err}
+		c.completeRpc(reply, err)
 	}
 }
 
@@ -181,7 +186,6 @@ func (c *conn) resendOutstanding() {
 	// Append outstanding requests that need to be resent to the front of the
 	// queue.
 	c.queue = append(outstanding, c.queue...)
-	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 	// Signal that there are queued requests ready to be processed.
 	c.Signal()
 }

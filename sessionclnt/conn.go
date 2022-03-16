@@ -114,7 +114,8 @@ func (c *conn) completeRpc(reply *np.Fcall, err *np.Err) {
 	c.Unlock()
 	// the outstanding request map may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
-	if ok {
+	if ok && !rpc.Done {
+		rpc.Done = true
 		rpc.ReplyC <- &netclnt.Reply{reply, err}
 	}
 }
@@ -139,7 +140,9 @@ func (c *conn) reader() {
 			err := c.tryReconnect(nc)
 			if err != nil {
 				// If we can't reconnect to any of the replicas, close the session.
+				c.Lock()
 				c.close()
+				c.Unlock()
 				return
 			}
 			// If the connection broke, establish a new netclnt.
@@ -195,16 +198,20 @@ func (c *conn) resendOutstanding() {
 }
 
 func (c *conn) close() {
-	c.Lock()
-	defer c.Unlock()
 	c.nc.Close()
 	c.closed = true
 	for _, o := range c.queue {
-		close(o.ReplyC)
+		if !o.Done {
+			o.Done = true
+			close(o.ReplyC)
+		}
 	}
 	// Kill outstanding requests.
 	for _, o := range c.outstanding {
-		close(o.ReplyC)
+		if !o.Done {
+			o.Done = true
+			close(o.ReplyC)
+		}
 	}
 	c.queue = []*netclnt.Rpc{}
 	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)

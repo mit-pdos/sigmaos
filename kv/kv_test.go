@@ -94,7 +94,8 @@ func (ts *Tstate) setup(nclerk int) *KvClerk {
 	ts.mfsgrps = append(ts.mfsgrps, grp)
 
 	// Create keys
-	clrk := MakeClerk("kv_test", fslib.Named())
+	clrk, err := MakeClerk("kv_test", fslib.Named())
+	assert.Nil(ts.T, err, "MakeClerk")
 	for i := uint64(0); i < NKEYS; i++ {
 		err := clrk.Put(Key(i), []byte{})
 		assert.Nil(ts.T, err, "Put")

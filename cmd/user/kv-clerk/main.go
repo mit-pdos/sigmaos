@@ -19,7 +19,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", os.Args[0])
 		os.Exit(1)
 	}
-	clk := kv.MakeClerk("clerk-"+proc.GetPid(), fslib.Named())
+	clk, err := kv.MakeClerk("clerk-"+proc.GetPid(), fslib.Named())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v err %v\n", os.Args[0], err)
+		os.Exit(1)
+	}
 	clk.Started(proc.GetPid())
 	run(clk)
 }

@@ -48,6 +48,8 @@ func (sc *SessClnt) Exit() {
 // Return an existing conn if there is one, else allocate a new one. Caller
 // holds lock.
 func (sc *SessClnt) allocConn(addrs []string) (*conn, *np.Err) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
 	key := connKey(addrs)
 	if conn, ok := sc.conns[key]; ok {

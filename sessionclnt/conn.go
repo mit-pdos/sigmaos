@@ -195,8 +195,13 @@ func (c *conn) close() {
 	defer c.Unlock()
 	c.nc.Close()
 	c.closed = true
+	for _, o := range c.queue {
+		close(o.ReplyC)
+	}
 	// Kill outstanding requests.
 	for _, o := range c.outstanding {
 		close(o.ReplyC)
 	}
+	c.queue = []*netclnt.Rpc{}
+	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 }

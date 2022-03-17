@@ -42,6 +42,7 @@ type FsServer struct {
 	stats      *stats.Stats
 	snapDev    *snapshot.Dev
 	st         *session.SessionTable
+	sm         *session.SessionMgr
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
@@ -70,6 +71,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.rft = fences.MakeRecentTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
+	fssrv.sm = session.MakeSessionMgr(fssrv.Process)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)

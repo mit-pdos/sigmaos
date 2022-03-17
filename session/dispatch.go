@@ -1,6 +1,8 @@
 package session
 
 import (
+	"log"
+
 	np "ulambda/ninep"
 )
 
@@ -101,7 +103,9 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	case np.Tdetach:
 		reply := &np.Rdetach{}
 		// If the leader proposed this detach message.
+		log.Printf("lid:%v propid:%v", req.LeadId, req.PropId)
 		if req.LeadId == req.PropId {
+			log.Printf("lid:%v propid:%v detach!", req.LeadId, req.PropId)
 			s.protsrv.Detach()
 		}
 		return *reply, nil

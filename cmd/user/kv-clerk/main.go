@@ -90,7 +90,7 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 		log.Printf("ReadJsonStream: err %v\n", err)
 	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest for %v: expected %v observed %v", proc.GetName(), rdr.Path(), ntest, kv.Key(i))
+		return fmt.Errorf("%v: wrong ntest for %v: expected %v observed %v", proc.GetName(), rdr.Path(), ntest, n)
 	}
 	return nil
 }

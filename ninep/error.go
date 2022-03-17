@@ -138,7 +138,7 @@ func (err Terror) String() string {
 
 	// for passing non-sigma errors through
 	case TErrError:
-		return "Error"
+		return "Non-sigma error"
 
 	default:
 		return "unknown error"

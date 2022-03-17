@@ -216,6 +216,14 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
+// Done with deleters and movers; update config before indicating to
+// caller that we are done.
+func (bl *Balancer) clearMoves() {
+	bl.conf.Moves = Moves{}
+	db.DLPrintf("KVBAL0", "Update config %v\n", bl.conf)
+	bl.PublishConfig()
+}
+
 // Publish config atomically
 func (bl *Balancer) PublishConfig() {
 	err := atomic.PutFileJsonAtomic(bl.FsLib, KVCONFIG, 0777, *bl.conf)
@@ -231,10 +239,11 @@ func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.Epoch = epoch
-	db.DLPrintf("KVBAL", "restore to %v\n", bl.conf)
+	db.DLPrintf("KVBAL0", "restore to %v\n", bl.conf)
 	bl.PublishConfig()
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
+	bl.clearMoves()
 }
 
 func (bl *Balancer) recover(epoch np.Tepoch) {
@@ -436,10 +445,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 
 	bl.runDeleters(moves)
 
-	// Done with deleters and movers; update config before
-	// indicating to caller that we are done.
-	bl.conf.Moves = Moves{}
-	bl.PublishConfig()
+	bl.clearMoves()
 
 	return nil
 }

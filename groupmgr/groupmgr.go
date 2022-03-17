@@ -53,12 +53,12 @@ func (m *member) spawn() {
 }
 
 func (m *member) run(i int, start chan bool, done chan procret) {
-	//log.Printf("spawn %p member %v\n", c, m.bin)
+	// log.Printf("spawn %d member %v\n", i, m.bin)
 	m.spawn()
-	//log.Printf("member %p forked %v\n", c, m.pid)
+	// log.Printf("member %d forked %v\n", i, m.pid)
 	start <- true
 	status, err := m.WaitExit(m.pid)
-	//log.Printf("member %v exited %v err %v\n", m.pid, status, err)
+	// log.Printf("member %v exited %v err %v\n", m.pid, status, err)
 	done <- procret{i, err, status}
 }
 

@@ -2,7 +2,8 @@ package sessionclnt
 
 import (
 	"strings"
-	"sync"
+	//	"sync"
+	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/netclnt"
@@ -20,7 +21,7 @@ const (
  * - Lift re-sending code into this package.
  */
 type SessClnt struct {
-	mu      sync.Mutex
+	mu      deadlock.Mutex
 	session np.Tsession
 	seqno   *np.Tseqno
 	conns   map[string]*conn // XXX Is a SessClnt ever used to talk to multiple servers?
@@ -37,6 +38,7 @@ func MakeSessClnt(session np.Tsession, seqno *np.Tseqno) *SessClnt {
 func (sc *SessClnt) Exit() {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+	db.DLPrintf("SESSCLNT", "Exit\n")
 
 	for addr, conn := range sc.conns {
 		db.DLPrintf("SESSCLNT", "exit close connection to %v\n", addr)
@@ -64,6 +66,7 @@ func (sc *SessClnt) allocConn(addrs []string) (*conn, *np.Err) {
 }
 
 func (sc *SessClnt) RPC(addrs []string, req np.Tmsg) (np.Tmsg, *np.Err) {
+	db.DLPrintf("SESSCLNT", "RPC %v to %v\n", req, addrs)
 	// Get or establish connection
 	conn, err := sc.allocConn(addrs)
 	if err != nil {
@@ -100,6 +103,7 @@ func (sc *SessClnt) atomicSend(conn *conn, req np.Tmsg) (*netclnt.Rpc, *np.Err) 
 }
 
 func (sc *SessClnt) Disconnect(addrs []string) *np.Err {
+	db.DLPrintf("SESSCLNT", "Disconnect %v\n", addrs)
 	key := connKey(addrs)
 	sc.mu.Lock()
 	conn, ok := sc.conns[key]

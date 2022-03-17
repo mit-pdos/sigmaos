@@ -15,11 +15,6 @@ const (
 	Msglen = 64 * 1024
 )
 
-/*
- * TODO
- * - Send heartbeats.
- * - Lift re-sending code into this package.
- */
 type SessClnt struct {
 	mu    deadlock.Mutex
 	sid   np.Tsession

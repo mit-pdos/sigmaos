@@ -21,7 +21,7 @@ const (
 	NBALANCER = 3
 	NCLERK    = 10
 
-	CRASHBALANCER = 3200
+	CRASHBALANCER = 1600
 	CRASHHELPER   = "100"
 )
 
@@ -144,7 +144,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 	for true {
 		err := BalancerOp(ts.FsLib, opcode, mfs)
 		if err == nil {
-			return err
+			return nil
 		}
 		if np.IsErrUnreachable(err) || np.IsErrRetry(err) {
 			log.Printf("balancer op wait err %v\n", err)

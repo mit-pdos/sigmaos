@@ -24,11 +24,14 @@ func MakeFenceTable() *FenceTable {
 }
 
 // if already exist, just update
-func (ft *FenceTable) Insert(path string, f *np.Tfence1) *np.Err {
+func (ft *FenceTable) Insert(p string, f *np.Tfence1) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
-	ft.fencedDirs[path] = f
+	path := np.Split(p) // cleans up p
+
+	db.DLPrintf("FIDCLNT", "Insert fence %v %v\n", path, f)
+	ft.fencedDirs[path.String()] = f
 	return nil
 }
 

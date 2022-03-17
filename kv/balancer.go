@@ -17,7 +17,6 @@ package kv
 import (
 	"errors"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -120,7 +119,7 @@ func RunBalancer(crashChild string, auto string) {
 		log.Fatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}
 
-	db.DLPrintf("KVBAL", "primary %v for epoch %v\n", proc.GetName(), epoch)
+	db.DLPrintf("KVBAL0", "primary %v for epoch %v\n", proc.GetName(), epoch)
 
 	select {
 	case <-ch:
@@ -254,7 +253,7 @@ func (bl *Balancer) recover(epoch np.Tepoch) {
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
-		dst := shardPath(kvd, strconv.Itoa(s))
+		dst := shardPath(kvd, shard(s))
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.MkDir(dst, 0777); err != nil {
@@ -316,7 +315,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	moves := Moves{}
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
-			shard := strconv.Itoa(i)
+			shard := shard(i)
 			s := shardPath(kvd, shard)
 			d := shardPath(nextShards[i], shard)
 			moves = append(moves, &Move{s, d})

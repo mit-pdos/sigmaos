@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"fmt"
 	"log"
 	"path"
 	"sync"
@@ -24,23 +25,22 @@ type Mover struct {
 	epochstr string
 }
 
-func JoinEpoch(fsl *fslib.FsLib, epochstr string, dirs []string) error {
+func JoinEpoch(fsl *fslib.FsLib, label, epochstr string, dirs []string) error {
 	epoch, err := np.String2Epoch(epochstr)
 	if err != nil {
 		return err
 	}
 	fclnt := fenceclnt1.MakeLeaderFenceClnt(fsl, KVBALANCER)
 	if err := fclnt.FenceAtEpoch(epoch, dirs); err != nil {
-		return err
+		return fmt.Errorf("FenceAtEpoch %v err %v", KVCONFIG, err)
 	}
 	// reads are fenced
 	config := Config{}
 	if err := fsl.GetFileJson(KVCONFIG, &config); err != nil {
-		db.DLPrintf("KVMV_ERR", "GetFileJson %v err %v\n", KVCONFIG, err)
-		return err
+		return fmt.Errorf("GetFileJson %v err %v", KVCONFIG, err)
 	}
 	if config.Epoch != epoch {
-		return err
+		return fmt.Errorf("Newer config %v", config.Epoch)
 	}
 	return nil
 }
@@ -56,7 +56,7 @@ func MakeMover(epochstr, src, dst string) (*Mover, error) {
 	}
 	crash.Crasher(mv.FsLib)
 
-	if err := JoinEpoch(mv.FsLib, epochstr, []string{KVDIR, path.Dir(src), path.Dir(dst)}); err != nil {
+	if err := JoinEpoch(mv.FsLib, "KVMV", epochstr, []string{KVDIR, path.Dir(src), path.Dir(dst)}); err != nil {
 		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}

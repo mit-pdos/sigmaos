@@ -29,22 +29,27 @@ func MakeFenceTable() *FenceTable {
 // fence.  If the fence exists but newer, update the fence.  If the
 // fence is stale, return error.  XXX check that clnt is allowed to
 // update fence
-func (ft *FenceTable) CheckFence(new np.Tfence1) *np.Err {
+func (ft *FenceTable) CheckFence(new np.Tfence1) (bool, *np.Err) {
 	ft.Lock()
 	defer ft.Unlock()
 
+	update := false
 	if new.FenceId.Path == 0 {
-		return nil
+		return update, nil
 	}
 	db.DLPrintf("FENCES", "CheckFence: new %v %v\n", new, ft)
 	p := new.FenceId.Path
 	if f, ok := ft.fences[p]; ok {
 		if new.Epoch < f.Epoch {
-			return np.MkErr(np.TErrStale, new)
+			db.DLPrintf("FENCES_ERR", "Stale fence %v\n", new)
+			return update, np.MkErr(np.TErrStale, new)
+		}
+		if new.Epoch > f.Epoch {
+			update = true
 		}
 	}
 	ft.fences[p] = new
-	return nil
+	return update, nil
 }
 
 func (ft *FenceTable) Snapshot() []byte {

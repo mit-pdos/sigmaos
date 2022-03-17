@@ -163,7 +163,7 @@ func RunMember(grp string) {
 
 	g.primFence.AcquireFenceW([]byte(mfs.MyAddr()))
 
-	log.Printf("%v: primary %v\n", proc.GetProgram(), grp)
+	log.Printf("%v: primary %v\n", proc.GetName(), grp)
 
 	select {
 	case <-ch:

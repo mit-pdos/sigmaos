@@ -78,6 +78,7 @@ func (fos *FsObjSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 // Delete ephemeral files created on this session.
 func (fos *FsObjSrv) Detach() {
+	db.DLPrintf("FSOBJ", "Detach %v eph %v\n", fos.sid, fos.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
@@ -222,7 +223,7 @@ func (fos *FsObjSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, 
 func (fos *FsObjSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Err) {
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
-		db.DLPrintf("FSOBJ", "%v: Create %v %v %v ephemeral %v\n", ctx.Uname(), name, o1, err, perm.IsEphemeral())
+		db.DLPrintf("FSOBJ", "%v: Create %v %v %v ephemeral %v %v\n", ctx.Uname(), name, o1, err, perm.IsEphemeral(), fos.sid)
 		if err == nil {
 			fws.WakeupWatchL()
 			dws.WakeupWatchL()

@@ -15,6 +15,7 @@ import (
 type conn struct {
 	deadlock.Mutex
 	*sync.Cond
+	sid         np.Tsession
 	closed      bool
 	addrs       []string
 	nc          *netclnt.NetClnt
@@ -22,8 +23,9 @@ type conn struct {
 	outstanding map[np.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
 }
 
-func makeConn(addrs []string) (*conn, *np.Err) {
+func makeConn(sid np.Tsession, addrs []string) (*conn, *np.Err) {
 	c := &conn{}
+	c.sid = sid
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
@@ -68,19 +70,19 @@ func (c *conn) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 }
 
 func (c *conn) connect() *np.Err {
-	db.DLPrintf("SESSCONN", "Connect to %v\n", c.addrs)
+	db.DLPrintf("SESSCONN", "%v Connect to %v\n", c.sid, c.addrs)
 	for _, addr := range c.addrs {
 		nc, err := netclnt.MakeNetClnt(addr)
 		// If this replica is unreachable, try another one.
 		if err != nil {
 			continue
 		}
-		db.DLPrintf("SESSCONN", "Successful connection to %v out of %v\n", addr, c.addrs)
+		db.DLPrintf("SESSCONN", "%v Successful connection to %v out of %v\n", c.sid, addr, c.addrs)
 		// If the replica is reachable, save this conn.
 		c.nc = nc
 		return nil
 	}
-	db.DLPrintf("SESSCONN", "Unable to connect to %v\n", c.addrs)
+	db.DLPrintf("SESSCONN", "%v Unable to connect to %v\n", c.sid, c.addrs)
 	// No replica is reachable.
 	return np.MkErr(np.TErrUnreachable, c.addrs)
 }
@@ -101,7 +103,7 @@ func (c *conn) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 func (c *conn) tryReconnectL() *np.Err {
 	err := c.connect()
 	if err != nil {
-		db.DLPrintf("SESSCONN", "Error %v SessionConn reconnecting to %v\n", err, c.addrs)
+		db.DLPrintf("SESSCONN", "%v Error %v SessionConn reconnecting to %v\n", c.sid, err, c.addrs)
 		return err
 	}
 	// Resend outstanding requests.
@@ -118,7 +120,7 @@ func (c *conn) completeRpc(reply *np.Fcall, err *np.Err) {
 	// the outstanding request map may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
 	if ok && !rpc.Done {
-		db.DLPrintf("SESSCONN", "Complete rpc req %v reply %v from %v\n", rpc.Req, reply, c.addrs)
+		db.DLPrintf("SESSCONN", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
 		rpc.Done = true
 		rpc.ReplyC <- &netclnt.Reply{reply, err}
 	}
@@ -172,7 +174,7 @@ func (c *conn) writer() {
 		req, c.queue = c.queue[0], c.queue[1:]
 		err := c.nc.Send(req)
 		if err != nil {
-			db.DLPrintf("SESSCONN", "Error %v RPC to %v\n", err, c.nc.Dst())
+			db.DLPrintf("SESSCONN", "%v Error %v RPC to %v\n", c.sid, err, c.nc.Dst())
 			err := c.tryReconnectL()
 			if err != nil {
 				c.close()
@@ -184,7 +186,7 @@ func (c *conn) writer() {
 
 // Caller holds lock.
 func (c *conn) resendOutstanding() {
-	db.DLPrintf("SESSCONN", "Resend outstanding requests to %v\n", c.addrs)
+	db.DLPrintf("SESSCONN", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
 	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
 	idx := 0
 	for _, o := range c.outstanding {
@@ -202,7 +204,7 @@ func (c *conn) resendOutstanding() {
 }
 
 func (c *conn) close() {
-	db.DLPrintf("SESSCONN", "Close conn to %v\n", c.addrs)
+	db.DLPrintf("SESSCONN", "%v Close conn to %v\n", c.sid, c.addrs)
 	c.nc.Close()
 	c.closed = true
 	for _, o := range c.queue {

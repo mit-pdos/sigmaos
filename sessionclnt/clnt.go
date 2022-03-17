@@ -21,16 +21,16 @@ const (
  * - Lift re-sending code into this package.
  */
 type SessClnt struct {
-	mu      deadlock.Mutex
-	session np.Tsession
-	seqno   *np.Tseqno
-	conns   map[string]*conn // XXX Is a SessClnt ever used to talk to multiple servers?
+	mu    deadlock.Mutex
+	sid   np.Tsession
+	seqno *np.Tseqno
+	conns map[string]*conn // XXX Is a SessClnt ever used to talk to multiple servers?
 }
 
 func MakeSessClnt(session np.Tsession, seqno *np.Tseqno) *SessClnt {
 	sc := &SessClnt{}
 	sc.conns = make(map[string]*conn)
-	sc.session = session
+	sc.sid = session
 	sc.seqno = seqno
 	return sc
 }
@@ -57,7 +57,7 @@ func (sc *SessClnt) allocConn(addrs []string) (*conn, *np.Err) {
 	if conn, ok := sc.conns[key]; ok {
 		return conn, nil
 	}
-	conn, err := makeConn(addrs)
+	conn, err := makeConn(sc.sid, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -66,23 +66,23 @@ func (sc *SessClnt) allocConn(addrs []string) (*conn, *np.Err) {
 }
 
 func (sc *SessClnt) RPC(addrs []string, req np.Tmsg) (np.Tmsg, *np.Err) {
-	db.DLPrintf("SESSCLNT", "RPC %v to %v\n", req, addrs)
+	db.DLPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
 	// Get or establish connection
 	conn, err := sc.allocConn(addrs)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "Unable to send request to %v\n", err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to alloc conn for req %v err %v to %v\n", req, err, addrs)
 		return nil, err
 	}
 	rpc, err := sc.atomicSend(conn, req)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "Unable to send request to %v\n", err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to send req %v err %v to %v\n", sc.sid, req, err, addrs)
 		return nil, err
 	}
 
 	// Reliably receive a response from one of the replicas.
 	reply, err := conn.recv(rpc)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "Unable to recv response from %v\n", err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to recv response to req %v err %v from %v\n", sc.sid, req, err, addrs)
 		return nil, err
 	}
 	return reply, nil
@@ -93,7 +93,7 @@ func (sc *SessClnt) atomicSend(conn *conn, req np.Tmsg) (*netclnt.Rpc, *np.Err) 
 	// Take the lock to ensure requests are sent in order of seqno.
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	rpc := netclnt.MakeRpc(np.MakeFcall(req, sc.session, sc.seqno))
+	rpc := netclnt.MakeRpc(np.MakeFcall(req, sc.sid, sc.seqno))
 	// Reliably send the RPC to a replica. If the replica becomes unavailable,
 	// this request will be resent.
 	if err := conn.send(rpc); err != nil {
@@ -103,7 +103,7 @@ func (sc *SessClnt) atomicSend(conn *conn, req np.Tmsg) (*netclnt.Rpc, *np.Err) 
 }
 
 func (sc *SessClnt) Disconnect(addrs []string) *np.Err {
-	db.DLPrintf("SESSCLNT", "Disconnect %v\n", addrs)
+	db.DLPrintf("SESSCLNT", "%v Disconnect %v\n", sc.sid, addrs)
 	key := connKey(addrs)
 	sc.mu.Lock()
 	conn, ok := sc.conns[key]

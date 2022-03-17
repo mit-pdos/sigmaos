@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 
+	db "ulambda/debug"
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
 )
@@ -17,6 +18,7 @@ type Reader struct {
 	off     np.Toffset
 	eof     bool
 	chunksz np.Tsize
+	fenced  bool
 }
 
 func (rdr *Reader) Path() string {
@@ -34,8 +36,15 @@ func (rdr *Reader) ReadByte() (byte, error) {
 
 func (rdr *Reader) Read(p []byte) (int, error) {
 	for len(p) > len(rdr.buf) && !rdr.eof {
-		b, err := rdr.fc.ReadV(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
+		var b []byte
+		var err *np.Err
+		if rdr.fenced {
+			b, err = rdr.fc.ReadV(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
+		} else {
+			b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
+		}
 		if err != nil {
+			db.DLPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
 			return -1, err
 		}
 		if len(b) == 0 {
@@ -98,6 +107,10 @@ func (rdr *Reader) Close() error {
 	return nil
 }
 
+func (rdr *Reader) Unfence() {
+	rdr.fenced = false
+}
+
 func MakeReader(fc *fidclnt.FidClnt, path string, fid np.Tfid, chunksz np.Tsize) *Reader {
-	return &Reader{fc, path, fid, make([]byte, 0), 0, false, chunksz}
+	return &Reader{fc, path, fid, make([]byte, 0), 0, false, chunksz, true}
 }

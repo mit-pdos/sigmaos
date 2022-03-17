@@ -70,23 +70,27 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 	if err != nil {
 		return err
 	}
+	rdr.Unfence()
 	defer rdr.Close()
-	rdr.ReadJsonStream(func() interface{} { return new(Value) }, func(a interface{}) error {
+	err = rdr.ReadJsonStream(func() interface{} { return new(Value) }, func(a interface{}) error {
 		val := a.(*Value)
 		if val.Pid != proc.GetPid() {
 			return nil
 		}
 		if val.Key != kv.Key(i) {
-			return fmt.Errorf("%v: wrong key %v %v %v", proc.GetName(), kv.Key(i), val.Key, kv.Key(i))
+			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), kv.Key(i), val.Key)
 		}
 		if val.N != n {
-			return fmt.Errorf("%v: wrong N %v %v %v %v", proc.GetName(), n, val.N, kv.Key(i), rdr.Path())
+			return fmt.Errorf("%v: wrong N for %v: expected %v observed %v", proc.GetName(), rdr.Path(), n, val.N)
 		}
 		n += 1
 		return nil
 	})
+	if err != nil {
+		log.Printf("ReadJsonStream: err %v\n", err)
+	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest %v %v %v %v", proc.GetName(), ntest, n, kv.Key(i), rdr.Path())
+		return fmt.Errorf("%v: wrong ntest for %v: expected %v observed %v", proc.GetName(), rdr.Path(), ntest, kv.Key(i))
 	}
 	return nil
 }

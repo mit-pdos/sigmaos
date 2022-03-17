@@ -1,10 +1,13 @@
 package fenceclnt1
 
 import (
+	"log"
+
 	db "ulambda/debug"
 	"ulambda/epochclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 type FenceClnt struct {
@@ -59,6 +62,9 @@ func (fc *FenceClnt) registerFence(path string, fence *np.Tfence1) error {
 	// maybe stat to register fence?
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
+	}
+	if _, err := fc.GetDir(path + "/"); err != nil {
+		log.Printf("%v: WARNING getdir %v err %v\n", proc.GetName(), path, err)
 	}
 	return nil
 }

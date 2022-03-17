@@ -204,7 +204,7 @@ func (pclnt *ProtClnt) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.R
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) Read1(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence1, v np.TQversion) (*np.Rread, *np.Err) {
+func (pclnt *ProtClnt) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence1, v np.TQversion) (*np.Rread, *np.Err) {
 	args := np.Tread1{fid, offset, cnt, *f, v}
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -230,7 +230,7 @@ func (pclnt *ProtClnt) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.R
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) Write1(fid np.Tfid, offset np.Toffset, f *np.Tfence1, v np.TQversion, data []byte) (*np.Rwrite, *np.Err) {
+func (pclnt *ProtClnt) WriteV(fid np.Tfid, offset np.Toffset, f *np.Tfence1, v np.TQversion, data []byte) (*np.Rwrite, *np.Err) {
 	args := np.Twrite1{fid, offset, *f, v, data}
 	reply, err := pclnt.Call(args)
 	if err != nil {

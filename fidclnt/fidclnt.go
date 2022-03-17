@@ -68,6 +68,10 @@ func (fidc *FidClnt) Qid(fid np.Tfid) np.Tqid {
 	return fidc.Lookup(fid).Lastqid()
 }
 
+func (fidc *FidClnt) Path(fid np.Tfid) np.Path {
+	return fidc.Lookup(fid).Path()
+}
+
 func (fidc *FidClnt) Insert(fid np.Tfid, path *Channel) {
 	fidc.fids.insert(fid, path)
 }
@@ -171,7 +175,15 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
 
 func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	reply, err := fidc.fids.lookup(fid).pc.Read1(fid, off, cnt, f, v)
+	reply, err := fidc.fids.lookup(fid).pc.ReadV(fid, off, cnt, f, v)
+	if err != nil {
+		return nil, err
+	}
+	return reply.Data, nil
+}
+
+func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	reply, err := fidc.fids.lookup(fid).pc.ReadV(fid, off, cnt, &np.Tfence1{}, v)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +192,7 @@ func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQver
 
 func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	reply, err := fidc.fids.lookup(fid).pc.Write1(fid, off, f, v, data)
+	reply, err := fidc.fids.lookup(fid).pc.WriteV(fid, off, f, v, data)
 	if err != nil {
 		return 0, err
 	}

@@ -40,6 +40,11 @@ func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan [][]byte, propose 
 	return c
 }
 
+// Put above process
+func (c *Clerk) request(op *Op) {
+	c.requests <- op
+}
+
 func (c *Clerk) serve() {
 	for {
 		// TODO: re-propose ops on a ticker
@@ -78,6 +83,10 @@ func (c *Clerk) apply(fc *np.Fcall) {
 	op := c.getOp(fc)
 	if op != nil {
 		replies = op.replyC
+	}
+	// For now, every node can cause a detach to happen
+	if fc.GetType() == np.TTdetach {
+		fc.GetMsg().(*np.Tdetach).LeadId = fc.GetMsg().(*np.Tdetach).PropId
 	}
 	// Process the op on a single thread.
 	c.tm.Process(fc, replies)

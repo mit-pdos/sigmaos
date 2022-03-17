@@ -2,9 +2,9 @@ package kv
 
 import (
 	"crypto/rand"
+	"fmt"
 	"hash/fnv"
 	"math/big"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -40,6 +40,11 @@ func keyPath(kvd, shard string, k string) string {
 	return d + "/" + k
 }
 
+func shard(shard int) string {
+	// return strconv.Itoa(shard)
+	return fmt.Sprintf("%03d", shard)
+}
+
 func Key(k uint64) string {
 	return "key" + strconv.FormatUint(k, 16)
 }
@@ -54,10 +59,8 @@ func nrand() uint64 {
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	fclnt     *fenceclnt1.FenceClnt
-	conf      *Config
-	grpre     *regexp.Regexp
-	grpconfre *regexp.Regexp
+	fclnt *fenceclnt1.FenceClnt
+	conf  *Config
 }
 
 func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
@@ -66,8 +69,6 @@ func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.conf = &Config{}
 	kc.fclnt = fenceclnt1.MakeLeaderFenceClnt(kc.FsLib, KVBALANCER)
-	kc.grpconfre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
-	kc.grpre = regexp.MustCompile(`grp-([0-9]+)`)
 	if err := kc.switchConfig(); err != nil {
 		return nil, err
 	}
@@ -120,10 +121,10 @@ func (kc *KvClerk) fixRetry(err error) error {
 // Do an operation. If an error, try to fix the error (e.g., rereading
 // config), and on success, retry.
 func (kc *KvClerk) doop(o *op) {
-	shard := key2shard(o.k)
+	s := key2shard(o.k)
 	for {
 		db.DLPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
-		fn := keyPath(kc.conf.Shards[shard], strconv.Itoa(shard), o.k)
+		fn := keyPath(kc.conf.Shards[s], shard(s), o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
 			return

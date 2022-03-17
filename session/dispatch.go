@@ -107,6 +107,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		if req.LeadId == req.PropId {
 			log.Printf("lid:%v propid:%v detach!", req.LeadId, req.PropId)
 			s.protsrv.Detach()
+			s.sm.DetachSession(s.Sid)
 		}
 		return *reply, nil
 	default:

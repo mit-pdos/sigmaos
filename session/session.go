@@ -27,13 +27,15 @@ type Session struct {
 	protsrv   protsrv.Protsrv
 	rft       *fences.RecentTable
 	myFences  *fences.FenceTable
+	sm        *SessionMgr
 	Sid       np.Tsession
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable, t *threadmgr.ThreadMgr, sm *SessionMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.protsrv = protsrv
+	sess.sm = sm
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()

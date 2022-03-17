@@ -126,8 +126,8 @@ func (pclnt *ProtClnt) Remove(fid np.Tfid) *np.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) Remove1(fid np.Tfid, f *np.Tfence1) *np.Err {
-	args := np.Tremove1{fid, *f}
+func (pclnt *ProtClnt) Remove1(fid np.Tfid, f np.Tfence1) *np.Err {
+	args := np.Tremove1{fid, f}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return err
@@ -204,8 +204,8 @@ func (pclnt *ProtClnt) Read(fid np.Tfid, offset np.Toffset, cnt np.Tsize) (*np.R
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f *np.Tfence1, v np.TQversion) (*np.Rread, *np.Err) {
-	args := np.Tread1{fid, offset, cnt, *f, v}
+func (pclnt *ProtClnt) ReadV(fid np.Tfid, offset np.Toffset, cnt np.Tsize, f np.Tfence1, v np.TQversion) (*np.Rread, *np.Err) {
+	args := np.Tread1{fid, offset, cnt, f, v}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -230,8 +230,8 @@ func (pclnt *ProtClnt) Write(fid np.Tfid, offset np.Toffset, data []byte) (*np.R
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) WriteV(fid np.Tfid, offset np.Toffset, f *np.Tfence1, v np.TQversion, data []byte) (*np.Rwrite, *np.Err) {
-	args := np.Twrite1{fid, offset, *f, v, data}
+func (pclnt *ProtClnt) WriteV(fid np.Tfid, offset np.Toffset, f np.Tfence1, v np.TQversion, data []byte) (*np.Rwrite, *np.Err) {
+	args := np.Twrite1{fid, offset, f, v, data}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -269,8 +269,8 @@ func (pclnt *ProtClnt) Wstat(fid np.Tfid, st *np.Stat) (*np.Rwstat, *np.Err) {
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) Wstat1(fid np.Tfid, st *np.Stat, f *np.Tfence1) (*np.Rwstat, *np.Err) {
-	args := np.Twstat1{fid, 0, *st, *f}
+func (pclnt *ProtClnt) Wstat1(fid np.Tfid, st *np.Stat, f np.Tfence1) (*np.Rwstat, *np.Err) {
+	args := np.Twstat1{fid, 0, *st, f}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -282,8 +282,8 @@ func (pclnt *ProtClnt) Wstat1(fid np.Tfid, st *np.Stat, f *np.Tfence1) (*np.Rwst
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string, f *np.Tfence1) (*np.Rrenameat, *np.Err) {
-	args := np.Trenameat{oldfid, oldname, newfid, newname, *f}
+func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, newname string, f np.Tfence1) (*np.Rrenameat, *np.Err) {
+	args := np.Trenameat{oldfid, oldname, newfid, newname, f}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -295,8 +295,8 @@ func (pclnt *ProtClnt) Renameat(oldfid np.Tfid, oldname string, newfid np.Tfid, 
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid np.Tfid, path np.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f *np.Tfence1) (*np.Rgetfile, *np.Err) {
-	args := np.Tgetfile{fid, mode, offset, cnt, path, resolve, *f}
+func (pclnt *ProtClnt) GetFile(fid np.Tfid, path np.Path, mode np.Tmode, offset np.Toffset, cnt np.Tsize, resolve bool, f np.Tfence1) (*np.Rgetfile, *np.Err) {
+	args := np.Tgetfile{fid, mode, offset, cnt, path, resolve, f}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -308,8 +308,8 @@ func (pclnt *ProtClnt) GetFile(fid np.Tfid, path np.Path, mode np.Tmode, offset 
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) SetFile(fid np.Tfid, path np.Path, mode np.Tmode, offset np.Toffset, resolve bool, f *np.Tfence1, data []byte) (*np.Rwrite, *np.Err) {
-	args := np.Tsetfile{fid, mode, offset, path, resolve, *f, data}
+func (pclnt *ProtClnt) SetFile(fid np.Tfid, path np.Path, mode np.Tmode, offset np.Toffset, resolve bool, f np.Tfence1, data []byte) (*np.Rwrite, *np.Err) {
+	args := np.Tsetfile{fid, mode, offset, path, resolve, f, data}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
@@ -321,8 +321,8 @@ func (pclnt *ProtClnt) SetFile(fid np.Tfid, path np.Path, mode np.Tmode, offset 
 	return &msg, nil
 }
 
-func (pclnt *ProtClnt) PutFile(fid np.Tfid, path np.Path, mode np.Tmode, perm np.Tperm, offset np.Toffset, f *np.Tfence1, data []byte) (*np.Rwrite, *np.Err) {
-	args := np.Tputfile{fid, mode, perm, offset, path, *f, data}
+func (pclnt *ProtClnt) PutFile(fid np.Tfid, path np.Path, mode np.Tmode, perm np.Tperm, offset np.Toffset, f np.Tfence1, data []byte) (*np.Rwrite, *np.Err) {
+	args := np.Tputfile{fid, mode, perm, offset, path, f, data}
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err

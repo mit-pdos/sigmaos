@@ -38,16 +38,17 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	f, err := fc.GetFence(epoch)
 	if err != nil {
 		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.Name(), err)
+		return err
 	}
-	db.DLPrintf("FENCECLNT", "FenceAtEpoch %v %v", epoch, paths)
-	return fc.fencePaths(&f, paths)
+	return fc.fencePaths(f, paths)
 }
 
 func (fc *FenceClnt) ReadEpoch() (np.Tepoch, error) {
 	return fc.GetEpoch()
 }
 
-func (fc *FenceClnt) fencePaths(fence *np.Tfence1, paths []string) error {
+func (fc *FenceClnt) fencePaths(fence np.Tfence1, paths []string) error {
+	db.DLPrintf("FENCECLNT", "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
 		err := fc.registerFence(p, fence)
 		if err != nil {
@@ -58,13 +59,14 @@ func (fc *FenceClnt) fencePaths(fence *np.Tfence1, paths []string) error {
 	return nil
 }
 
-func (fc *FenceClnt) registerFence(path string, fence *np.Tfence1) error {
+func (fc *FenceClnt) registerFence(path string, fence np.Tfence1) error {
 	// maybe stat to register fence?
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}
 	if _, err := fc.GetDir(path + "/"); err != nil {
 		log.Printf("%v: WARNING getdir %v err %v\n", proc.GetName(), path, err)
+		return err
 	}
 	return nil
 }

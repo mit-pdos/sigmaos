@@ -56,11 +56,10 @@ func MakeMover(epochstr, src, dst string) (*Mover, error) {
 	}
 	crash.Crasher(mv.FsLib)
 
-	if err := JoinEpoch(mv.FsLib, epochstr, []string{KVDIR, src, path.Dir(dst)}); err != nil {
+	if err := JoinEpoch(mv.FsLib, epochstr, []string{KVDIR, path.Dir(src), path.Dir(dst)}); err != nil {
 		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}
-
 	return mv, nil
 }
 
@@ -110,6 +109,7 @@ func (mv *Mover) Move(src, dst string) {
 	if err != nil {
 		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
 	}
+	db.DLPrintf("KVMV0", "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
 	if err != nil {
 		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 	} else {

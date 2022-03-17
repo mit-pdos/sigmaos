@@ -86,7 +86,9 @@ func (c *Clerk) apply(fc *np.Fcall) {
 	}
 	// For now, every node can cause a detach to happen
 	if fc.GetType() == np.TTdetach {
-		fc.GetMsg().(*np.Tdetach).LeadId = fc.GetMsg().(*np.Tdetach).PropId
+		msg := fc.Msg.(np.Tdetach)
+		msg.LeadId = msg.PropId
+		fc.Msg = msg
 	}
 	// Process the op on a single thread.
 	c.tm.Process(fc, replies)

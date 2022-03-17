@@ -275,6 +275,8 @@ const (
 	TTrmfence
 	TTdetach
 	TRdetach
+	TTheartbeat
+	TRheartbeat
 )
 
 func (fct Tfcall) String() string {
@@ -363,6 +365,12 @@ func (fct Tfcall) String() string {
 		return "Trmfence"
 	case TTdetach:
 		return "Tdetach"
+	case TRdetach:
+		return "Rdetach"
+	case TTheartbeat:
+		return "Theartbeat"
+	case TRheartbeat:
+		return "Rheartbeat"
 	default:
 		return "Tunknown"
 	}
@@ -695,9 +703,18 @@ type Trmfence struct {
 }
 
 type Tdetach struct {
+	PropId uint32 // ID of the server proposing detach.
+	LeadId uint32 // ID of the leader when change was proposed (filled in later).
 }
 
 type Rdetach struct {
+}
+
+type Theartbeat struct {
+	Sids []Tsession // List of sessions in this heartbeat.
+}
+
+type Rheartbeat struct {
 }
 
 func (Tversion) Type() Tfcall    { return TTversion }
@@ -742,3 +759,5 @@ func (Tunfence) Type() Tfcall    { return TTunfence }
 func (Trmfence) Type() Tfcall    { return TTrmfence }
 func (Tdetach) Type() Tfcall     { return TTdetach }
 func (Rdetach) Type() Tfcall     { return TRdetach }
+func (Theartbeat) Type() Tfcall  { return TTheartbeat }
+func (Rheartbeat) Type() Tfcall  { return TRheartbeat }

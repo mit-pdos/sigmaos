@@ -100,7 +100,10 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		return *reply, err
 	case np.Tdetach:
 		reply := &np.Rdetach{}
-		s.protsrv.Detach()
+		// If the leader proposed this detach message.
+		if req.LeadId == req.PropId {
+			s.protsrv.Detach()
+		}
 		return *reply, nil
 	default:
 		return nil, np.MkErr(np.TErrUnknownMsg, msg).Rerror()

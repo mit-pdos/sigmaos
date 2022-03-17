@@ -40,11 +40,6 @@ func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan [][]byte, propose 
 	return c
 }
 
-// Put above process
-func (c *Clerk) request(op *Op) {
-	c.requests <- op
-}
-
 func (c *Clerk) serve() {
 	for {
 		// TODO: re-propose ops on a ticker

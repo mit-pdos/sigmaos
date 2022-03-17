@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"path"
 	"sync"
 
 	"ulambda/crash"
@@ -34,7 +35,7 @@ func MakeDeleter(epochstr, sharddir string) (*Deleter, error) {
 	crash.Crasher(dl.FsLib)
 	err := dl.Started(proc.GetPid())
 
-	if err := JoinEpoch(dl.FsLib, epochstr, []string{KVDIR, sharddir}); err != nil {
+	if err := JoinEpoch(dl.FsLib, epochstr, []string{KVDIR, path.Dir(sharddir)}); err != nil {
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}

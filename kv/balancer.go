@@ -239,7 +239,7 @@ func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.Epoch = epoch
-	db.DLPrintf("KVBAL0", "restore to %v\n", bl.conf)
+	db.DLPrintf("KVBAL0", "restore to %v with epoch %v\n", bl.conf, epoch)
 	bl.PublishConfig()
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
@@ -351,7 +351,7 @@ func (bl *Balancer) runDeleters(moves Moves) {
 		go func(m *Move, i int) {
 			bl.runProcRetry([]string{"bin/user/kv-deleter", bl.conf.Epoch.String(), m.Src}, func(err error, status *proc.Status) bool {
 				retry := err != nil || (!status.IsStatusOK() && !np.IsErrNotfound(status))
-				db.DLPrintf("KVBAL", "delete %v/%v done err %v status %v\n", i, m, err, status)
+				db.DLPrintf("KVBAL", "delete %v/%v done err %v status %v\n", i, m.Src, err, status)
 				return retry
 			})
 			ch <- i

@@ -10,11 +10,6 @@ import (
 	np "ulambda/ninep"
 )
 
-// XXX duplicate
-const (
-	Msglen = 64 * 1024
-)
-
 type SessClnt struct {
 	mu    deadlock.Mutex
 	sid   np.Tsession

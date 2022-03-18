@@ -59,12 +59,12 @@ func (t *ThreadMgr) replayOps(ops []*Op) {
 }
 
 // Enqueue a new op to be processed.
-func (t *ThreadMgr) Process(fc *np.Fcall, replies chan *np.Fcall) {
+func (t *ThreadMgr) Process(fc *np.Fcall) {
 	t.Lock()
 	defer t.Unlock()
 
 	t.numops++
-	op := makeOp(fc, replies, t.numops)
+	op := makeOp(fc, t.numops)
 	t.ops = append(t.ops, op)
 	t.executing[op] = true
 
@@ -140,7 +140,7 @@ func (t *ThreadMgr) run() {
 			// block).
 			go func() {
 				// Execute the op.
-				t.pfn(op.Fc, op.replies)
+				t.pfn(op.Fc)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
 				// Mark the op as no longer executing.

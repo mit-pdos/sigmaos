@@ -64,7 +64,7 @@ func RestoreSession(sid np.Tsession, fssrv protsrv.FsServer, rps protsrv.Restore
 	}
 	fos := rps(fssrv, ss.ProtsrvSnap)
 	// TODO: add session manager
-	sess := makeSession(fos, sid, rt, tmt.AddThread(), nil)
+	sess := makeSession(fos, sid, nil, rt, tmt.AddThread(), nil)
 	myFences := fences.RestoreFenceTable(ss.FencesSnap)
 	sess.myFences = myFences
 	return sess

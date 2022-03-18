@@ -29,9 +29,10 @@ type Session struct {
 	myFences  *fences.FenceTable
 	sm        *SessionMgr
 	Sid       np.Tsession
+	Replies   chan *np.Fcall
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable, t *threadmgr.ThreadMgr, sm *SessionMgr) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr, sm *SessionMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.protsrv = protsrv
@@ -39,6 +40,9 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTab
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
+	sess.Replies = replies
+	// Register the new session.
+	sess.sm.RegisterSession(sess.Sid)
 	return sess
 }
 

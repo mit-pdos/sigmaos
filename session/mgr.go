@@ -6,7 +6,6 @@ import (
 	"time"
 
 	np "ulambda/ninep"
-	"ulambda/threadmgr"
 )
 
 const (
@@ -18,11 +17,11 @@ type SessionMgr struct {
 	sync.Mutex
 	sessions   map[np.Tsession]time.Time
 	replyChans map[np.Tsession]chan *np.Fcall
-	pfn        threadmgr.ProcessFn
+	pfn        func(*np.Fcall, chan *np.Fcall)
 	done       bool
 }
 
-func MakeSessionMgr(pfn threadmgr.ProcessFn) *SessionMgr {
+func MakeSessionMgr(pfn func(*np.Fcall, chan *np.Fcall)) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.sessions = make(map[np.Tsession]time.Time)
 	sm.pfn = pfn
@@ -80,7 +79,8 @@ func (sm *SessionMgr) run() {
 		sids := sm.getDetachableSessions()
 		for _, sid := range sids {
 			detach := np.MakeFcall(np.Tdetach{}, sid, nil)
-			sm.pfn(detach, nil)
+			_ = detach
+			//			sm.pfn(detach, nil)
 		}
 	}
 }

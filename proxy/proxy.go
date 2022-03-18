@@ -22,8 +22,8 @@ type Npd struct {
 
 func MakeNpd() *Npd {
 	npd := &Npd{fslib.Named(), nil}
-	tm := threadmgr.MakeThreadMgrTable(npd.Process, false)
-	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm)
+	tm := threadmgr.MakeThreadMgrTable(nil, false)
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm, nil)
 	return npd
 }
 
@@ -33,7 +33,7 @@ func (npd *Npd) mkProtServer(fssrv protsrv.FsServer, sid np.Tsession) protsrv.Pr
 
 func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 	t := fc.Tag
-	sess := npd.st.Alloc(fc.Session)
+	sess := npd.st.Alloc(fc.Session, replies)
 	reply, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror

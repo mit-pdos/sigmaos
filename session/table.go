@@ -30,6 +30,7 @@ func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, rt *fen
 	st.mkps = mkps
 	st.recentFences = rt
 	st.tm = tm
+	st.sm = sm
 	return st
 }
 
@@ -40,14 +41,14 @@ func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(sid np.Tsession) *Session {
+func (st *SessionTable) Alloc(sid np.Tsession, replies chan *np.Fcall) *Session {
 	st.Lock()
 	defer st.Unlock()
 
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.recentFences, st.tm.AddThread(), st.sm)
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, replies, st.recentFences, st.tm.AddThread(), st.sm)
 	st.sessions[sid] = sess
 	return sess
 }

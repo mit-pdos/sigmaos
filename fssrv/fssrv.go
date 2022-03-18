@@ -193,13 +193,13 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 }
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
-	sess := fssrv.st.Alloc(fc.Session)
+	sess := fssrv.st.Alloc(fc.Session, replies)
 	// New thread about to start
 	sess.IncThreads()
 	if !fssrv.replicated {
-		sess.GetThread().Process(fc, replies)
+		sess.GetThread().Process(fc)
 	} else {
-		fssrv.replSrv.Process(fc, replies)
+		fssrv.replSrv.Process(fc)
 	}
 }
 
@@ -219,7 +219,8 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 	}
 }
 
-func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) process(fc *np.Fcall) {
+	sess := fssrv.st.Alloc(fc.Session, nil)
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:
@@ -243,7 +244,7 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
 			go func() {
-				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), replies)
+				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess.Replies)
 			}()
 			return
 		}
@@ -251,17 +252,16 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 		// it.
 		fssrv.rc.Register(fc)
 	}
-	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	fssrv.serve(sess, fc, replies)
+	fssrv.serve(sess, fc)
 }
 
-func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	reply, rerror := sess.Dispatch(fc.Msg)
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil
-	if replies != nil {
+	if sess.Replies != nil {
 		defer sess.DecThreads()
 	}
 	if rerror != nil {
@@ -269,7 +269,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 	}
 	// Send reply will drop the reply if the replies channel is nil, but it will
 	// make sure to insert the reply into the reply cache.
-	fssrv.sendReply(fc, reply, replies)
+	fssrv.sendReply(fc, reply, sess.Replies)
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {

@@ -1,12 +1,18 @@
 package session
 
 import (
-	"log"
-
 	np "ulambda/ninep"
 )
 
 func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	// Register a heartbeat. This should be safe to do even if this is a detach,
+	// since, if it is a detach, the decision to kill the session has already
+	// been made & confirmed (if the leader made the decision), and if the leader
+	// didn't make the decision, the heartbeat which this detach produces won't
+	// be replicated (adding to the leader's timer) anyway. In the worst case, if
+	// we change leadership while a non-leader is trying to detach, the eventual
+	// detach will just be delayed by a bit.
+	s.sm.Heartbeats([]np.Tsession{s.Sid})
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}
@@ -102,13 +108,14 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		return *reply, err
 	case np.Tdetach:
 		reply := &np.Rdetach{}
-		// If the leader proposed this detach message.
-		log.Printf("lid:%v propid:%v", req.LeadId, req.PropId)
+		// If the leader proposed this detach message, accept it.
 		if req.LeadId == req.PropId {
-			log.Printf("lid:%v propid:%v detach!", req.LeadId, req.PropId)
 			s.protsrv.Detach()
 			s.sm.DetachSession(s.Sid)
 		}
+		return *reply, nil
+	case np.Theartbeat:
+		reply := &np.Rheartbeat{}
 		return *reply, nil
 	default:
 		return nil, np.MkErr(np.TErrUnknownMsg, msg).Rerror()

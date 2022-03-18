@@ -285,8 +285,6 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 		return
 	}
 
-	// XXX remove fence from sess, so that fence maybe free from seen table
-
 	// Wait until nthread == 0. Detach is guaranteed to have been processed since
 	// it was enqueued by the reader function before calling CloseSession
 	// (incrementing nthread). We need to process Detaches (and sess cond closes)

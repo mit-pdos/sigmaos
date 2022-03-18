@@ -77,22 +77,30 @@ func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
 
 // Read config, and retry if we have a stale group fence
 func (kc KvClerk) switchConfig() error {
-	err := kc.GetFileJsonWatch(KVCONFIG, kc.conf)
-	if err != nil {
-		db.DLPrintf("KVCLERK", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
-		return err
+	for {
+		err := kc.GetFileJsonWatch(KVCONFIG, kc.conf)
+		if err != nil {
+			db.DLPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
+			return err
+		}
+		db.DLPrintf("KVCLERK0", "Conf %v\n", kc.conf)
+		kvs := makeKvs(kc.conf.Shards).mkKvs()
+		dirs := make([]string, 0, len(kvs)+1)
+		for _, kvd := range kvs {
+			dirs = append(dirs, group.GRPDIR+"/"+kvd)
+		}
+		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
+			if np.IsErrVersion(err) {
+				db.DLPrintf("KVCLERK_ERR", "version mismatch; retry\n")
+				time.Sleep(WAITMS * time.Millisecond)
+				continue
+			}
+
+			db.DLPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
+			return err
+		}
+		break
 	}
-	db.DLPrintf("KVCLERK", "Conf %v\n", kc.conf)
-	kvs := makeKvs(kc.conf.Shards).mkKvs()
-	dirs := make([]string, 0, len(kvs)+1)
-	for _, kvd := range kvs {
-		dirs = append(dirs, group.GRPDIR+"/"+kvd)
-	}
-	if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
-		db.DLPrintf("KVCLERK", "FenceAtEpoch %v failed %v\n", dirs, err)
-		return err
-	}
-	db.DLPrintf("KVCLERK", "%v: Fenced dirs %v\n", kc.conf.Epoch, dirs)
 	return nil
 }
 
@@ -104,12 +112,12 @@ func (kc *KvClerk) fixRetry(err error) error {
 	// dynamic?
 
 	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
-		db.DLPrintf("KVCLERK", "Wait for shard %v\n", np.ErrPath(err))
+		db.DLPrintf("KVCLERK_ERR", "Wait for shard %v\n", np.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
 	if np.IsErrStale(err) || np.IsErrUnreachable(err) {
-		db.DLPrintf("KVCLERK", "fixRetry %v\n", err)
+		db.DLPrintf("KVCLERK_ERR", "fixRetry %v\n", err)
 		return kc.switchConfig()
 	}
 

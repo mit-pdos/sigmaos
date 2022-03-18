@@ -46,6 +46,7 @@ func (st *SessionTable) Alloc(sid np.Tsession, replies chan *np.Fcall) *Session 
 	defer st.Unlock()
 
 	if sess, ok := st.sessions[sid]; ok {
+		sess.maybeSetRepliesC(replies)
 		return sess
 	}
 	sess := makeSession(st.mkps(st.fssrv, sid), sid, replies, st.recentFences, st.tm.AddThread(), st.sm)

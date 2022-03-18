@@ -193,6 +193,7 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 }
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
+	// The replies channel will be set here.
 	sess := fssrv.st.Alloc(fc.Session, replies)
 	// New thread about to start
 	sess.IncThreads()
@@ -220,6 +221,10 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 }
 
 func (fssrv *FsServer) process(fc *np.Fcall) {
+	// If this is a replicated op received through raft (not directly from a
+	// client), the first time Alloc is called will be in this function, so the
+	// reply channel will be set to nil. If it came from the client, the reply
+	// channel will already be set.
 	sess := fssrv.st.Alloc(fc.Session, nil)
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
@@ -244,7 +249,7 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
 			go func() {
-				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess.Replies)
+				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess.GetRepliesC())
 			}()
 			return
 		}
@@ -261,7 +266,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil
-	if sess.Replies != nil {
+	if sess.GetRepliesC() != nil {
 		defer sess.DecThreads()
 	}
 	if rerror != nil {
@@ -269,7 +274,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	}
 	// Send reply will drop the reply if the replies channel is nil, but it will
 	// make sure to insert the reply into the reply cache.
-	fssrv.sendReply(fc, reply, sess.Replies)
+	fssrv.sendReply(fc, reply, sess.GetRepliesC())
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {

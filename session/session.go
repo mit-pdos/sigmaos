@@ -22,6 +22,7 @@ import (
 //
 
 type Session struct {
+	sync.Mutex
 	threadmgr *threadmgr.ThreadMgr
 	wg        sync.WaitGroup
 	protsrv   protsrv.Protsrv
@@ -29,7 +30,7 @@ type Session struct {
 	myFences  *fences.FenceTable
 	sm        *SessionMgr
 	Sid       np.Tsession
-	Replies   chan *np.Fcall
+	replies   chan *np.Fcall
 }
 
 func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr, sm *SessionMgr) *Session {
@@ -40,10 +41,26 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcal
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
-	sess.Replies = replies
+	sess.replies = replies
 	// Register the new session.
 	sess.sm.RegisterSession(sess.Sid)
 	return sess
+}
+
+// Change the replies channel if the new channel is non-nil. This may occur if,
+// for example, a client starts talking to a new replica.
+func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
+	sess.Lock()
+	defer sess.Unlock()
+	if replies != nil {
+		sess.replies = replies
+	}
+}
+
+func (sess *Session) GetRepliesC() chan *np.Fcall {
+	sess.Lock()
+	defer sess.Unlock()
+	return sess.replies
 }
 
 func (sess *Session) Fence(pn []string, fence np.Tfence) {
@@ -60,9 +77,6 @@ func (sess *Session) Unfence(path []string, idf np.Tfenceid) *np.Err {
 
 func (sess *Session) CheckFences(path []string) *np.Err {
 	fences := sess.myFences.Fences(path)
-	//if len(fences) > 0 {
-	//	log.Printf("%v: CheckFences %v %v\n", sess.Sid, path, fences)
-	//}
 	for _, f := range fences {
 		err := sess.rft.IsRecent(f)
 		if err != nil {

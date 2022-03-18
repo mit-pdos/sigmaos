@@ -90,7 +90,7 @@ func (kc KvClerk) switchConfig() error {
 			dirs = append(dirs, group.GRPDIR+"/"+kvd)
 		}
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
-			if np.IsErrVersion(err) {
+			if np.IsErrVersion(err) || np.IsErrStale(err) {
 				db.DLPrintf("KVCLERK_ERR", "version mismatch; retry\n")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
@@ -106,12 +106,10 @@ func (kc KvClerk) switchConfig() error {
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-
-	// Shard dir hasn't been created yet (config 0) or hasn't moved
-	// yet, so wait a bit, and retry.  XXX make sleep time
-	// dynamic?
-
 	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
+		// Shard dir hasn't been created yet (config 0) or hasn't moved
+		// yet, so wait a bit, and retry.  XXX make sleep time
+		// dynamic?
 		db.DLPrintf("KVCLERK_ERR", "Wait for shard %v\n", np.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
@@ -121,8 +119,6 @@ func (kc *KvClerk) fixRetry(err error) error {
 		return kc.switchConfig()
 	}
 
-	// if && strings.Contains(np.ErrPath(err), KVCONF) {
-	//}
 	return err
 }
 

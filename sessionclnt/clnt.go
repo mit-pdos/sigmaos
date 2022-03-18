@@ -47,7 +47,7 @@ func (sc *SessClnt) allocConn(addrs []string) (*conn, *np.Err) {
 	if conn, ok := sc.conns[key]; ok {
 		return conn, nil
 	}
-	conn, err := makeConn(sc.sid, addrs)
+	conn, err := makeConn(sc.sid, sc.seqno, addrs)
 	if err != nil {
 		return nil, err
 	}

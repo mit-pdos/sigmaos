@@ -4,10 +4,12 @@ import (
 	"github.com/sasha-s/go-deadlock"
 	"sort"
 	"sync"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
+	"ulambda/session"
 )
 
 // A connection from a client to a logical server (either one server or a
@@ -16,16 +18,19 @@ type conn struct {
 	deadlock.Mutex
 	*sync.Cond
 	sid         np.Tsession
+	seqno       *np.Tseqno
 	closed      bool
 	addrs       []string
 	nc          *netclnt.NetClnt
 	queue       []*netclnt.Rpc
 	outstanding map[np.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
+	lastMsgTime time.Time
 }
 
-func makeConn(sid np.Tsession, addrs []string) (*conn, *np.Err) {
+func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*conn, *np.Err) {
 	c := &conn{}
 	c.sid = sid
+	c.seqno = seqno
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
@@ -37,6 +42,7 @@ func makeConn(sid np.Tsession, addrs []string) (*conn, *np.Err) {
 	}
 	go c.reader()
 	go c.writer()
+	go c.heartbeats()
 	return c, nil
 }
 
@@ -66,6 +72,9 @@ func (c *conn) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 	if !ok {
 		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
 	}
+	c.Lock()
+	defer c.Unlock()
+	c.lastMsgTime = time.Now()
 	return reply.Fc.Msg, reply.Err
 }
 
@@ -126,18 +135,80 @@ func (c *conn) completeRpc(reply *np.Fcall, err *np.Err) {
 	}
 }
 
+// Caller holds lock.
+func (c *conn) resendOutstanding() {
+	db.DLPrintf("SESSCONN", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
+	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
+	idx := 0
+	for _, o := range c.outstanding {
+		outstanding[idx] = o
+		idx++
+	}
+	sort.Slice(outstanding, func(i, j int) bool {
+		return outstanding[i].Req.Seqno < outstanding[j].Req.Seqno
+	})
+	// Append outstanding requests that need to be resent to the front of the
+	// queue.
+	c.queue = append(outstanding, c.queue...)
+	// Signal that there are queued requests ready to be processed.
+	c.Signal()
+}
+
+func (c *conn) done() bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.closed
+}
+
+// Caller holds lock
+func (c *conn) close() {
+	db.DLPrintf("SESSCONN", "%v Close conn to %v\n", c.sid, c.addrs)
+	c.nc.Close()
+	c.closed = true
+	// Kill pending requests.
+	for _, o := range c.queue {
+		if !o.Done {
+			o.Done = true
+			close(o.ReplyC)
+		}
+	}
+	// Kill outstanding requests.
+	for _, o := range c.outstanding {
+		if !o.Done {
+			o.Done = true
+			close(o.ReplyC)
+		}
+	}
+	c.queue = []*netclnt.Rpc{}
+	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+}
+
+func (c *conn) needsHeartbeat() bool {
+	c.Lock()
+	defer c.Unlock()
+	return time.Now().Sub(c.lastMsgTime) >= session.HEARTBEATMS
+}
+
+func (c *conn) heartbeats() {
+	for !c.done() {
+		// Sleep a bit.
+		time.Sleep(session.HEARTBEATMS * time.Millisecond)
+		if c.needsHeartbeat() {
+			// XXX How soon should I retry if this fails?
+			rpc := netclnt.MakeRpc(np.MakeFcall(np.Theartbeat{[]np.Tsession{c.sid}}, c.sid, c.seqno))
+			c.send(rpc)
+			c.recv(rpc)
+		}
+	}
+}
+
 func (c *conn) reader() {
-	for {
+	for !c.done() {
 		// Get the current netclnt connection (which may change if the server
 		// becomes unavailable and the writer thread connects to a new replica).
 		c.Lock()
-		closed := c.closed
-		c.Unlock()
-
-		if closed {
-			return
-		}
 		nc := c.nc
+		c.Unlock()
 
 		// Receive the next reply.
 		reply, err := nc.Recv()
@@ -182,44 +253,4 @@ func (c *conn) writer() {
 			}
 		}
 	}
-}
-
-// Caller holds lock.
-func (c *conn) resendOutstanding() {
-	db.DLPrintf("SESSCONN", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
-	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
-	idx := 0
-	for _, o := range c.outstanding {
-		outstanding[idx] = o
-		idx++
-	}
-	sort.Slice(outstanding, func(i, j int) bool {
-		return outstanding[i].Req.Seqno < outstanding[j].Req.Seqno
-	})
-	// Append outstanding requests that need to be resent to the front of the
-	// queue.
-	c.queue = append(outstanding, c.queue...)
-	// Signal that there are queued requests ready to be processed.
-	c.Signal()
-}
-
-func (c *conn) close() {
-	db.DLPrintf("SESSCONN", "%v Close conn to %v\n", c.sid, c.addrs)
-	c.nc.Close()
-	c.closed = true
-	for _, o := range c.queue {
-		if !o.Done {
-			o.Done = true
-			close(o.ReplyC)
-		}
-	}
-	// Kill outstanding requests.
-	for _, o := range c.outstanding {
-		if !o.Done {
-			o.Done = true
-			close(o.ReplyC)
-		}
-	}
-	c.queue = []*netclnt.Rpc{}
-	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 }

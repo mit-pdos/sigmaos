@@ -17,14 +17,14 @@ type SessionMgr struct {
 	sync.Mutex
 	sessions   map[np.Tsession]time.Time
 	replyChans map[np.Tsession]chan *np.Fcall
-	pfn        func(*np.Fcall, chan *np.Fcall)
+	process    func(*np.Fcall, chan *np.Fcall)
 	done       bool
 }
 
 func MakeSessionMgr(pfn func(*np.Fcall, chan *np.Fcall)) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.sessions = make(map[np.Tsession]time.Time)
-	sm.pfn = pfn
+	sm.process = pfn
 	go sm.run()
 	return sm
 }
@@ -79,8 +79,7 @@ func (sm *SessionMgr) run() {
 		sids := sm.getDetachableSessions()
 		for _, sid := range sids {
 			detach := np.MakeFcall(np.Tdetach{}, sid, nil)
-			_ = detach
-			//			sm.pfn(detach, nil)
+			sm.process(detach, nil)
 		}
 	}
 }

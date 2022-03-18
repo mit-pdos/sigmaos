@@ -58,17 +58,16 @@ func (c *SrvConn) reader() {
 			// so the session has not been added to the session table. If this is the
 			// case, don't close the session (there is nothing to close).
 			if c.sessid != 0 {
-				// Set up the detach fcall
-				dFcall := np.MakeFcall(np.Tdetach{}, c.sessid, nil)
-				// Detach the session to remove ephemeral files and close open fids.
-				// Set replies to nil to indicate that we don't need a response.
-				c.protsrv.Process(dFcall, c.replies)
+				//				// Set up the detach fcall
+				//				dFcall := np.MakeFcall(np.Tdetach{}, c.sessid, nil)
+				//				// Detach the session to remove ephemeral files and close open fids.
+				//				// Set replies to nil to indicate that we don't need a response.
+				//				c.protsrv.Process(dFcall, c.replies)
 				c.protsrv.CloseSession(c.sessid, c.replies)
 			}
 
 			// close the reply channel, so that conn writer() terminates
 			db.DLPrintf("NETSRV", "Reader: close replies for %v\n", c.Src())
-			close(c.replies)
 			return
 		}
 		var fcall *np.Fcall
@@ -91,12 +90,14 @@ func (c *SrvConn) reader() {
 	}
 }
 
+// XXX SHould we close with other error conditions?
 func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
 		// Fcall will be nil when processing detaches.
 		if !ok || fcall.GetMsg().Type() == np.TRdetach {
 			db.DLPrintf("NETSRV", "writer: close conn from %v\n", c.Src())
+			close(c.replies)
 			c.conn.Close()
 			return
 		}

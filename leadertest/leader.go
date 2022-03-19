@@ -46,7 +46,7 @@ func RunLeader(dir, last, child string) {
 	if err != nil {
 		log.Fatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}
-	_, err = fsl.SetFile(fn, b, np.NoOffset)
+	_, err = fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
 	if err != nil {
 		log.Fatalf("FATAL %v SetFile b %v failed %v\n", proc.GetName(), fn, err)
 	}
@@ -78,7 +78,7 @@ func RunLeader(dir, last, child string) {
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {
-			_, err := fsl.SetFile(fn, b, np.NoOffset)
+			_, err := fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
 			if err != nil {
 				log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
 			}

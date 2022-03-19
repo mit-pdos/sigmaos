@@ -18,6 +18,7 @@ func RunProc(epochstr, dir string) {
 
 	fsl := fslib.MakeFsLib("proc-" + pid)
 	pclnt := procclnt.MakeProcClnt(fsl)
+	pclnt.Started(pid)
 
 	epoch, err := np.String2Epoch(epochstr)
 	if err != nil {
@@ -26,16 +27,14 @@ func RunProc(epochstr, dir string) {
 
 	fc := fenceclnt1.MakeLeaderFenceClnt(fsl, LEADERFN)
 
-	pclnt.Started(pid)
-
-	fn := dir + "/out"
-
 	log.Printf("%v: epoch %v dir %v\n", proc.GetName(), epoch, dir)
 
 	if err := fc.FenceAtEpoch(epoch, []string{dir}); err != nil {
 		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
+
+	fn := dir + "/out"
 
 	conf := &Config{epochstr, "", pid}
 
@@ -52,7 +51,7 @@ func RunProc(epochstr, dir string) {
 	}
 
 	for i := 0; i < NWRITE; i++ {
-		_, err := fsl.SetFile(fn, b, np.NoOffset)
+		_, err := fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
 		if err != nil {
 			log.Printf("%v: SetFile %v failed %v\n", proc.GetName(), fn, err)
 			break

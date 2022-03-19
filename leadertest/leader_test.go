@@ -58,15 +58,20 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []string) {
 	assert.Nil(t, err, "GetFile")
 	m := make(map[string]bool)
 	last := ""
+	e := np.Tepoch(0)
 	err = rdr.ReadJsonStream(func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)
-		if last != conf.Leader {
+		if conf.Leader == "" {
+			assert.Equal(t, conf.Epoch, e.String())
+		} else if last != conf.Leader { // new leader
 			assert.Equal(t, conf.Pid, conf.Leader, "new leader")
 			_, ok := m[conf.Leader]
 			assert.False(t, ok, "pid")
 			m[conf.Leader] = true
 			last = conf.Leader
+			e += 1
+			assert.Equal(t, conf.Epoch, e.String())
 		}
 		return nil
 	})

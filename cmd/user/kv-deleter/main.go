@@ -13,9 +13,9 @@ func main() {
 		os.Exit(1)
 	}
 	dl, err := kv.MakeDeleter(os.Args[1], os.Args[2])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
+	if err == nil {
+		dl.Delete(os.Args[2])
+	} else {
 		os.Exit(1)
 	}
-	dl.Delete(os.Args[2])
 }

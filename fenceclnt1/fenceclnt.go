@@ -1,13 +1,10 @@
 package fenceclnt1
 
 import (
-	"log"
-
 	db "ulambda/debug"
 	"ulambda/epochclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/proc"
 )
 
 type FenceClnt struct {
@@ -34,6 +31,8 @@ func MakeLeaderFenceClnt(fsl *fslib.FsLib, leaderfn string) *FenceClnt {
 	return fc
 }
 
+// Future operations on files in a tree rooted at a path in paths will
+// include a fence at epoch <epoch>.
 func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	f, err := fc.GetFence(epoch)
 	if err != nil {
@@ -59,13 +58,14 @@ func (fc *FenceClnt) fencePaths(fence np.Tfence1, paths []string) error {
 	return nil
 }
 
+// Register fence with fidclnt so that ops on files in the tree rooted
+// at path will include fence.
 func (fc *FenceClnt) registerFence(path string, fence np.Tfence1) error {
-	// maybe stat to register fence?
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}
 	if _, err := fc.GetDir(path + "/"); err != nil {
-		log.Printf("%v: WARNING getdir %v err %v\n", proc.GetName(), path, err)
+		db.DLPrintf("FENCECLNT_ERR", "WARNING getdir %v err %v\n", path, err)
 		return err
 	}
 	return nil

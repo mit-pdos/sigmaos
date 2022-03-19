@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"log"
 	"path"
 	"sync"
 
@@ -33,13 +34,16 @@ func MakeDeleter(epochstr, sharddir string) (*Deleter, error) {
 	dl.FsLib = fslib.MakeFsLib("deleter-" + proc.GetPid())
 	dl.ProcClnt = procclnt.MakeProcClnt(dl.FsLib)
 	crash.Crasher(dl.FsLib)
-	err := dl.Started(proc.GetPid())
+	if err := dl.Started(proc.GetPid()); err != nil {
+		log.Fatalf("%v: couldn't start %v\n", proc.GetName(), err)
+		return nil, err
+	}
 
 	if err := JoinEpoch(dl.FsLib, "KVDEL", epochstr, []string{KVDIR, path.Dir(sharddir)}); err != nil {
 		dl.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}
-	return dl, err
+	return dl, nil
 }
 
 func (dl *Deleter) Delete(sharddir string) {

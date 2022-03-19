@@ -6,7 +6,6 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fences"
-	"ulambda/fences1"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
@@ -24,15 +23,13 @@ import (
 //
 
 type FsObjSrv struct {
-	fssrv  *fssrv.FsServer
-	wt     *watch.WatchTable // shared across sessions
-	ft     *fidTable
-	et     *ephemeralTable
-	rft    *fences.RecentTable // shared across sessions
-	rft1   *fences1.FenceTable // shared across sessions
-	fencet *fences1.FenceTable
-	stats  *stats.Stats
-	sid    np.Tsession
+	fssrv *fssrv.FsServer
+	wt    *watch.WatchTable // shared across sessions
+	ft    *fidTable
+	et    *ephemeralTable
+	rft   *fences.RecentTable // shared across sessions
+	stats *stats.Stats
+	sid   np.Tsession
 }
 
 func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
@@ -45,7 +42,6 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
 	fos.rft = srv.GetRecentFences()
-	fos.rft1 = srv.GetFenceTable()
 	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
@@ -315,19 +311,12 @@ func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) Read1(args np.Tread1, rets *np.Rread) *np.Rerror {
+func (fos *FsObjSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
 	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "%v: Read1 f %v args %v\n", f.Ctx().Uname(), f, args)
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: Read1 new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
 	err = f.Read(args.Offset, args.Count, args.Version, rets)
 	if err != nil {
 		return err.Rerror()
@@ -347,19 +336,12 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (fos *FsObjSrv) Write1(args np.Twrite1, rets *np.Rwrite) *np.Rerror {
+func (fos *FsObjSrv) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	f, err := fos.lookupFence(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "%v: Writev1 %v %v\n", f.Ctx().Uname(), f.Path(), args)
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: Writev1 new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
 	rets.Count, err = f.Write(args.Offset, args.Data, args.Version)
 	if err != nil {
 		return err.Rerror()
@@ -406,18 +388,6 @@ func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	}
 	db.DLPrintf("FSOBJ", "%v: Remove %v\n", f.Ctx().Uname(), f.Path())
 	return fos.removeObj(f.Ctx(), f.Obj(), f.Path())
-}
-
-func (fos *FsObjSrv) Remove1(args np.Tremove1, rets *np.Rremove) *np.Rerror {
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: Remove1 new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
-	remove := np.Tremove{args.Fid}
-	return fos.Remove(remove, rets)
 }
 
 func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
@@ -472,18 +442,6 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	}
 	// XXX ignore other Wstat for now
 	return nil
-}
-
-func (fos *FsObjSrv) Wstat1(args np.Twstat1, rets *np.Rwstat) *np.Rerror {
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: Wstat1 new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
-	tstat := np.Twstat{args.Fid, args.Size, args.Stat}
-	return fos.Wstat(tstat, rets)
 }
 
 // d1 first?
@@ -618,15 +576,6 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "GetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
-
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: GetFile new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
-
 	rets.Data, err = i.Read(f.Ctx(), args.Offset, args.Count, np.NoV)
 	if err != nil {
 		return err.Rerror()
@@ -648,14 +597,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 
 	db.DLPrintf("FSOBJ0", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
 
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: SetFile new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
-
 	if args.Mode&np.OAPPEND == np.OAPPEND && args.Offset != np.NoOffset {
 		return np.MkErr(np.TErrInval, "offset should be np.NoOffset").Rerror()
 
@@ -668,12 +609,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()
-	}
-
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if !ok {
-			log.Printf("RACE %v\n", args.Fence)
-		}
 	}
 
 	if err := f.Obj().Close(f.Ctx(), args.Mode); err != nil {
@@ -696,14 +631,6 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	fname := append(f.Path(), args.Wnames...)
 
 	db.DLPrintf("FSOBJ", "%v: PutFile o %v args %v (%v)\n", f.Ctx().Uname(), f, args, dname)
-
-	if ok, err := fos.rft1.CheckFence(args.Fence); ok || err != nil {
-		if ok {
-			log.Printf("%v: PutFile new fence %v\n", proc.GetName(), args.Fence)
-		} else {
-			return err.Rerror()
-		}
-	}
 
 	if !lo.Perm().IsDir() {
 		return np.MkErr(np.TErrNotDir, dname).Rerror()

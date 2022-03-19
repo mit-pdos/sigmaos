@@ -42,17 +42,17 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rread{}
 		err := s.protsrv.Read(req, reply)
 		return *reply, err
-	case np.Tread1:
+	case np.TreadV:
 		reply := &np.Rread{}
-		err := s.protsrv.Read1(req, reply)
+		err := s.protsrv.ReadV(req, reply)
 		return *reply, err
 	case np.Twrite:
 		reply := &np.Rwrite{}
 		err := s.protsrv.Write(req, reply)
 		return *reply, err
-	case np.Twrite1:
+	case np.TwriteV:
 		reply := &np.Rwrite{}
-		err := s.protsrv.Write1(req, reply)
+		err := s.protsrv.WriteV(req, reply)
 		return *reply, err
 	case np.Tclunk:
 		reply := &np.Rclunk{}
@@ -61,10 +61,6 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	case np.Tremove:
 		reply := &np.Rremove{}
 		err := s.protsrv.Remove(req, reply)
-		return *reply, err
-	case np.Tremove1:
-		reply := &np.Rremove{}
-		err := s.protsrv.Remove1(req, reply)
 		return *reply, err
 	case np.Tremovefile:
 		reply := &np.Rremove{}
@@ -77,10 +73,6 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	case np.Twstat:
 		reply := &np.Rwstat{}
 		err := s.protsrv.Wstat(req, reply)
-		return *reply, err
-	case np.Twstat1:
-		reply := &np.Rwstat{}
-		err := s.protsrv.Wstat1(req, reply)
 		return *reply, err
 	case np.Trenameat:
 		reply := &np.Rrenameat{}

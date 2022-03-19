@@ -8,6 +8,7 @@ go clean -testcache
 # test some support package
 #
 
+go test $1 ulambda/npcodec
 go test $1 ulambda/linuxsched
 go test $1 ulambda/perf
 

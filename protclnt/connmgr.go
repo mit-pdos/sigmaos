@@ -27,8 +27,8 @@ func makeConn(nc *netclnt.NetClnt) *conn {
 	return c
 }
 
-func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno) (np.Tmsg, *np.Err) {
-	reqfc := np.MakeFcall(req, session, seqno)
+func (conn *conn) send(req np.Tmsg, session np.Tsession, seqno *np.Tseqno, f np.Tfence1) (np.Tmsg, *np.Err) {
+	reqfc := np.MakeFcall(req, session, seqno, f)
 	repfc, err := conn.nc.RPC(reqfc)
 	if err != nil {
 		return nil, err
@@ -90,12 +90,12 @@ func (cm *ConnMgr) lookupConn(addrs []string) (*conn, bool) {
 	return conn, ok
 }
 
-func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg) (np.Tmsg, *np.Err) {
+func (cm *ConnMgr) makeCall(dst []string, req np.Tmsg, fence np.Tfence1) (np.Tmsg, *np.Err) {
 	conn, err := cm.allocConn(dst)
 	if err != nil {
 		return nil, err
 	}
-	return conn.send(req, cm.session, cm.seqno)
+	return conn.send(req, cm.session, cm.seqno, fence)
 }
 
 func (cm *ConnMgr) disconnect(dst []string) *np.Err {

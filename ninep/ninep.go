@@ -34,6 +34,12 @@ func (fid Tfid) String() string {
 type Tsession uint64
 type Tseqno uint64
 
+// NoSession signifies the fcall came from a wire-compatible peer
+const NoSession Tsession = ^Tsession(0)
+
+// NoSeqno signifies the fcall came from a wire-compatible peer
+const NoSeqno Tseqno = ^Tseqno(0)
+
 // Atomically increment pointer and return result
 func (n *Tseqno) Next() Tseqno {
 	next := atomic.AddUint64((*uint64)(n), 1)
@@ -84,15 +90,11 @@ type Tfence1 struct {
 	Epoch   Tepoch
 }
 
+var NoFence = Tfence1{}
+
 func (f *Tfence1) String() string {
 	return fmt.Sprintf("idf %v epoch %v", f.FenceId, f.Epoch)
 }
-
-// NoSession signifies the fcall came from a wire-compatible peer
-const NoSession Tsession = ^Tsession(0)
-
-// NoSeqno signifies the fcall came from a wire-compatible peer
-const NoSeqno Tseqno = ^Tseqno(0)
 
 //
 //  End augmentated types
@@ -310,18 +312,16 @@ const (
 	// SigmaP
 	//
 
-	TTread1
-	TTwrite1
-	TTwstat1
-	TTremove1
+	TTreadV
+	TTwriteV
 	TTwatch
 	TTrenameat
 	TRrenameat
+	TTremovefile
 	TTgetfile
 	TRgetfile
 	TTsetfile
 	TTputfile
-	TTremovefile
 	TTmkfence
 	TRmkfence
 	TTregfence
@@ -371,8 +371,6 @@ func (fct Tfcall) String() string {
 		return "Rread"
 	case TTwrite:
 		return "Twrite"
-	case TTwrite1:
-		return "Twrite1"
 	case TRwrite:
 		return "Rwrite"
 	case TTclunk:
@@ -381,8 +379,6 @@ func (fct Tfcall) String() string {
 		return "Rclunk"
 	case TTremove:
 		return "Tremove"
-	case TTremovefile:
-		return "Tremovefile"
 	case TRremove:
 		return "Rremove"
 	case TTstat:
@@ -393,14 +389,19 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
+
+	case TTreadV:
+		return "TreadV"
+	case TTwriteV:
+		return "TwriteV"
 	case TTwatch:
 		return "Twatch"
-	case TTwstat1:
-		return "Tstat1"
 	case TTrenameat:
 		return "Trenameat"
 	case TRrenameat:
 		return "Rrenameat"
+	case TTremovefile:
+		return "Tremovefile"
 	case TTgetfile:
 		return "Tgetfile"
 	case TRgetfile:
@@ -456,6 +457,7 @@ func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
 	fcall.Msg = fcallWC.Msg
 	fcall.Session = NoSession
 	fcall.Seqno = NoSeqno
+	fcall.Fence = NoFence
 	return fcall
 }
 
@@ -464,19 +466,20 @@ type Fcall struct {
 	Tag     Ttag
 	Session Tsession
 	Seqno   Tseqno
+	Fence   Tfence1
 	Msg     Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno) *Fcall {
+func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence1) *Fcall {
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, msg}
+		return &Fcall{msg.Type(), 0, sess, 0, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), msg}
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), f, msg}
 	}
 }
 
 func (fc *Fcall) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v msg %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg)
+	return fmt.Sprintf("%v t %v s %v seq %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg, fc.Fence)
 }
 
 func (fcall *Fcall) GetType() Tfcall {
@@ -596,11 +599,10 @@ type Tread struct {
 	Count  Tsize
 }
 
-type Tread1 struct {
+type TreadV struct {
 	Fid     Tfid
 	Offset  Toffset
 	Count   Tsize
-	Fence   Tfence1
 	Version TQversion
 }
 
@@ -622,16 +624,15 @@ func (tw Twrite) String() string {
 	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
 }
 
-type Twrite1 struct {
+type TwriteV struct {
 	Fid     Tfid
 	Offset  Toffset
-	Fence   Tfence1
 	Version TQversion
 	Data    []byte // Data must be last
 }
 
-func (tw Twrite1) String() string {
-	return fmt.Sprintf("{%v off %v len %d f %v v %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Fence, tw.Version)
+func (tw TwriteV) String() string {
+	return fmt.Sprintf("{%v off %v len %d v %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Version)
 }
 
 type Rwrite struct {
@@ -647,11 +648,6 @@ type Rclunk struct {
 
 type Tremove struct {
 	Fid Tfid
-}
-
-type Tremove1 struct {
-	Fid   Tfid
-	Fence Tfence1
 }
 
 type Tremovefile struct {
@@ -698,13 +694,6 @@ type Twstat struct {
 	Stat Stat
 }
 
-type Twstat1 struct {
-	Fid   Tfid
-	Size  uint16 // extra Size, see stat(5)
-	Stat  Stat
-	Fence Tfence1
-}
-
 type Rwstat struct{}
 
 type Trenameat struct {
@@ -712,7 +701,6 @@ type Trenameat struct {
 	OldName string
 	NewFid  Tfid
 	NewName string
-	Fence   Tfence1
 }
 
 type Rrenameat struct{}
@@ -724,11 +712,10 @@ type Tgetfile struct {
 	Count   Tsize
 	Wnames  []string
 	Resolve bool
-	Fence   Tfence1
 }
 
 func (m Tgetfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v cnt %v e %v}", m.Fid, m.Offset, m.Wnames, m.Count, m.Fence.Epoch)
+	return fmt.Sprintf("{%v off %v p %v cnt %v}", m.Fid, m.Offset, m.Wnames, m.Count)
 }
 
 type Rgetfile struct {
@@ -745,12 +732,11 @@ type Tsetfile struct {
 	Offset  Toffset
 	Wnames  []string
 	Resolve bool
-	Fence   Tfence1
 	Data    []byte // Data must be last
 }
 
 func (m Tsetfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v r %v len %v e %v}", m.Fid, m.Offset, m.Wnames, m.Resolve, len(m.Data), m.Fence.Epoch)
+	return fmt.Sprintf("{%v off %v p %v r %v len %v}", m.Fid, m.Offset, m.Wnames, m.Resolve, len(m.Data))
 }
 
 type Tputfile struct {
@@ -759,12 +745,11 @@ type Tputfile struct {
 	Perm   Tperm
 	Offset Toffset
 	Wnames []string
-	Fence  Tfence1
 	Data   []byte // Data must be last
 }
 
 func (m Tputfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v len %v e %v}", m.Fid, m.Offset, m.Wnames, len(m.Data), m.Fence.Epoch)
+	return fmt.Sprintf("{%v %v p %v off %v p %v len %v}", m.Fid, m.Mode, m.Perm, m.Offset, m.Wnames, len(m.Data))
 }
 
 type Tmkfence struct {
@@ -820,7 +805,6 @@ func (Rwrite) Type() Tfcall   { return TRwrite }
 func (Tclunk) Type() Tfcall   { return TTclunk }
 func (Rclunk) Type() Tfcall   { return TRclunk }
 func (Tremove) Type() Tfcall  { return TTremove }
-func (Tremove1) Type() Tfcall { return TTremove1 }
 func (Rremove) Type() Tfcall  { return TRremove }
 func (Tstat) Type() Tfcall    { return TTstat }
 func (Rstat) Type() Tfcall    { return TRstat }
@@ -831,9 +815,8 @@ func (Rwstat) Type() Tfcall   { return TRwstat }
 // sigmaP
 //
 
-func (Tread1) Type() Tfcall      { return TTread1 }
-func (Twrite1) Type() Tfcall     { return TTwrite1 }
-func (Twstat1) Type() Tfcall     { return TTwstat1 }
+func (TreadV) Type() Tfcall      { return TTreadV }
+func (TwriteV) Type() Tfcall     { return TTwriteV }
 func (Trenameat) Type() Tfcall   { return TTrenameat }
 func (Rrenameat) Type() Tfcall   { return TRrenameat }
 func (Tremovefile) Type() Tfcall { return TTremovefile }
@@ -841,10 +824,12 @@ func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
 func (Tputfile) Type() Tfcall    { return TTputfile }
-func (Tmkfence) Type() Tfcall    { return TTmkfence }
-func (Rmkfence) Type() Tfcall    { return TRmkfence }
-func (Tregfence) Type() Tfcall   { return TTregfence }
-func (Tunfence) Type() Tfcall    { return TTunfence }
-func (Trmfence) Type() Tfcall    { return TTrmfence }
-func (Tdetach) Type() Tfcall     { return TTdetach }
-func (Rdetach) Type() Tfcall     { return TRdetach }
+
+func (Tmkfence) Type() Tfcall  { return TTmkfence }
+func (Rmkfence) Type() Tfcall  { return TRmkfence }
+func (Tregfence) Type() Tfcall { return TTregfence }
+func (Tunfence) Type() Tfcall  { return TTunfence }
+func (Trmfence) Type() Tfcall  { return TTrmfence }
+
+func (Tdetach) Type() Tfcall { return TTdetach }
+func (Rdetach) Type() Tfcall { return TRdetach }

@@ -141,7 +141,7 @@ func (fidc *FidClnt) Watch(fid np.Tfid, path []string) *np.Err {
 
 func (fidc *FidClnt) Wstat(fid np.Tfid, st *np.Stat) *np.Err {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	_, err := fidc.fids.lookup(fid).pc.Wstat1(fid, st, f)
+	_, err := fidc.fids.lookup(fid).pc.WstatF(fid, st, f)
 	return err
 }
 
@@ -156,11 +156,12 @@ func (fidc *FidClnt) Renameat(fid np.Tfid, o string, fid1 np.Tfid, n string) *np
 
 func (fidc *FidClnt) Remove(fid np.Tfid) *np.Err {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	return fidc.fids.lookup(fid).pc.Remove1(fid, f)
+	return fidc.fids.lookup(fid).pc.RemoveF(fid, f)
 }
 
 func (fidc *FidClnt) RemoveFile(fid np.Tfid, wnames []string, resolve bool) *np.Err {
-	return fidc.fids.lookup(fid).pc.RemoveFile(fid, wnames, resolve)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(wnames))
+	return fidc.fids.lookup(fid).pc.RemoveFile(fid, wnames, resolve, f)
 }
 
 func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
@@ -173,7 +174,7 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
 
 func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	reply, err := fidc.fids.lookup(fid).pc.ReadV(fid, off, cnt, f, v)
+	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +182,7 @@ func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQver
 }
 
 func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.ReadV(fid, off, cnt, np.Tfence1{}, v)
+	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.Tfence1{}, v)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +191,7 @@ func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQve
 
 func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
-	reply, err := fidc.fids.lookup(fid).pc.WriteV(fid, off, f, v, data)
+	reply, err := fidc.fids.lookup(fid).pc.WriteVF(fid, off, f, v, data)
 	if err != nil {
 		return 0, err
 	}

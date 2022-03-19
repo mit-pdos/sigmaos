@@ -37,7 +37,6 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) (bool, *np.Err) {
 	if new.FenceId.Path == 0 {
 		return update, nil
 	}
-	db.DLPrintf("FENCES", "CheckFence: new %v %v\n", new, ft)
 	p := new.FenceId.Path
 	if f, ok := ft.fences[p]; ok {
 		if new.Epoch < f.Epoch {

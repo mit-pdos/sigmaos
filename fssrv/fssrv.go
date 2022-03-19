@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fences"
 	"ulambda/fences1"
@@ -102,10 +103,6 @@ func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
 
 func (fssrv *FsServer) GetRecentFences() *fences.RecentTable {
 	return fssrv.rft
-}
-
-func (fssrv *FsServer) GetFenceTable() *fences1.FenceTable {
-	return fssrv.rft1
 }
 
 func (fssrv *FsServer) Root() fs.Dir {
@@ -209,7 +206,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
-	fcall := np.MakeFcall(reply, 0, nil)
+	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
@@ -258,6 +255,20 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 	}
 	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	fssrv.fenceFcall(sess, fc, replies)
+}
+
+func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
+	if ok, err := fssrv.rft1.CheckFence(fc.Fence); ok || err != nil {
+		if ok {
+			db.DLPrintf("FENCES", "fenceFcall %v new fence %v\n", fc.Type, fc.Fence)
+		} else {
+			reply := *err.Rerror()
+			fssrv.sendReply(fc, reply, replies)
+			return
+		}
+	}
 	fssrv.serve(sess, fc, replies)
 }
 

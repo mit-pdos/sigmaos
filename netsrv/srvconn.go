@@ -59,7 +59,7 @@ func (c *SrvConn) reader() {
 			// case, don't close the session (there is nothing to close).
 			if c.sessid != 0 {
 				// Set up the detach fcall
-				dFcall := np.MakeFcall(np.Tdetach{}, c.sessid, nil)
+				dFcall := np.MakeFcall(np.Tdetach{}, c.sessid, nil, np.NoFence)
 				// Detach the session to remove ephemeral files and close open fids.
 				// Set replies to nil to indicate that we don't need a response.
 				c.protsrv.Process(dFcall, c.replies)

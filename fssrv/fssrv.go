@@ -258,18 +258,22 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 	fssrv.fenceFcall(sess, fc, replies)
 }
 
+// Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
+// ops.
 func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
-	if ok, err := fssrv.rft1.CheckFence(fc.Fence); ok || err != nil {
-		if ok {
-			db.DLPrintf("FENCES", "fenceFcall %v new fence %v\n", fc.Type, fc.Fence)
+	if e, err := fssrv.rft1.CheckFence(fc.Fence); err != nil {
+		reply := *err.Rerror()
+		fssrv.sendReply(fc, reply, replies)
+		return
+	} else {
+		if e == nil {
+			fssrv.serve(sess, fc, replies)
 		} else {
-			reply := *err.Rerror()
-			fssrv.sendReply(fc, reply, replies)
-			return
+			defer e.Unlock()
+			fssrv.serve(sess, fc, replies)
 		}
 	}
-	fssrv.serve(sess, fc, replies)
 }
 
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {

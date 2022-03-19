@@ -20,7 +20,7 @@ func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data, 0)
+	_, err = fl.SetFile(fname, data, np.OWRITE, 0)
 	return err
 }
 

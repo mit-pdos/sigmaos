@@ -154,6 +154,7 @@ type op struct {
 	b    []byte
 	k    string
 	off  np.Toffset
+	m    np.Tmode
 	rdr  *reader.Reader
 	err  error
 }
@@ -167,37 +168,37 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case PUT:
 		_, o.err = fsl.PutFile(fn, 0777, np.OWRITE, o.b)
 	case SET:
-		_, o.err = fsl.SetFile(fn, o.b, o.off)
+		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
 	}
 	db.DLPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {
-	op := &op{GETVAL, []byte{}, k, off, nil, nil}
+	op := &op{GETVAL, []byte{}, k, off, np.OREAD, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
 }
 
 func (kc *KvClerk) GetReader(k string) (*reader.Reader, error) {
-	op := &op{GETRD, []byte{}, k, 0, nil, nil}
+	op := &op{GETRD, []byte{}, k, 0, np.OREAD, nil, nil}
 	kc.doop(op)
 	return op.rdr, op.err
 }
 
 func (kc *KvClerk) Set(k string, b []byte, off np.Toffset) error {
-	op := &op{SET, b, k, off, nil, nil}
+	op := &op{SET, b, k, off, np.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 func (kc *KvClerk) Append(k string, b []byte) error {
-	op := &op{SET, b, k, np.NoOffset, nil, nil}
+	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
 func (kc *KvClerk) Put(k string, b []byte) error {
-	op := &op{PUT, b, k, 0, nil, nil}
+	op := &op{PUT, b, k, 0, np.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
@@ -207,7 +208,7 @@ func (kc *KvClerk) AppendJson(k string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	op := &op{SET, b, k, np.NoOffset, nil, nil}
+	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }

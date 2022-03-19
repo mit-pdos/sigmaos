@@ -198,7 +198,7 @@ func TestSetAppend(t *testing.T) {
 
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
-	l, err := ts.SetFile(fn, d, np.Toffset(len(d)))
+	l, err := ts.SetFile(fn, d, np.OAPPEND, np.NoOffset)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, np.Tsize(len(d)), l)
 	b, err := ts.GetFile(fn)
@@ -1001,7 +1001,7 @@ func TestSetFileSymlink(t *testing.T) {
 	nwalk := st.Nwalk
 
 	d = []byte("byebye")
-	n, err := ts.SetFile(path+"namedself0/f", d, 0)
+	n, err := ts.SetFile(path+"namedself0/f", d, np.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile")
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 

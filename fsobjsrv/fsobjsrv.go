@@ -656,6 +656,15 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		}
 	}
 
+	if args.Mode&np.OAPPEND == np.OAPPEND && args.Offset != np.NoOffset {
+		return np.MkErr(np.TErrInval, "offset should be np.NoOffset").Rerror()
+
+	}
+	if args.Offset == np.NoOffset && args.Mode&np.OAPPEND != np.OAPPEND {
+		return np.MkErr(np.TErrInval, "mode shouldbe OAPPEND").Rerror()
+
+	}
+
 	n, err := i.Write(f.Ctx(), args.Offset, args.Data, np.NoV)
 	if err != nil {
 		return err.Rerror()

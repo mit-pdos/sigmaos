@@ -72,7 +72,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
 		}
 		fn := path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE)
-		_, err = clnt.SetFile(fn, b, 0)
+		_, err = clnt.SetFile(fn, b, np.OWRITE, 0)
 		if err != nil {
 			db.DLPrintf("PROCCLNT_ERR", "SetFile %v err %v", fn, err)
 			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))

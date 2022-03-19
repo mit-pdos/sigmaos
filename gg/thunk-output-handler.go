@@ -6,6 +6,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/procclnt"
 )
 
@@ -85,7 +86,7 @@ func (toh *ThunkOutputHandler) propagateResultUpstream() {
 	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {
 		outputPath := ggRemoteReductions(outputFile)
-		toh.SetFile(outputPath, []byte(reduction), 0)
+		toh.SetFile(outputPath, []byte(reduction), np.OWRITE, 0)
 	}
 }
 

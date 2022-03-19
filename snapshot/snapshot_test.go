@@ -51,7 +51,7 @@ func restoreSnapshot(ts *test.Tstate, pid string, b []byte) {
 	// Restore needs to happen from a fresh fslib, otherwise state like fids may
 	// be missing during future walks.
 	fsl := fslib.MakeFsLib("snapshot-restore")
-	sz, err := fsl.SetFile(p, b, 0)
+	sz, err := fsl.SetFile(p, b, np.OWRITE, 0)
 	assert.Nil(ts.T, err, "Write snapshot")
 	assert.Equal(ts.T, sz, np.Tsize(len(b)), "Snapshot write wrong size")
 }

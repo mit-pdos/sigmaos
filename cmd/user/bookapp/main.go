@@ -69,7 +69,7 @@ func (ba *BookApp) query(q string) ([]byte, error) {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
 	sid := string(b)
-	_, err = ba.SetFile(dbd.DBD+sid+"/query", []byte(q), 0)
+	_, err = ba.SetFile(dbd.DBD+sid+"/query", []byte(q), np.OWRITE, 0)
 	if err != nil {
 		return nil, fmt.Errorf("Query err %v\n", err)
 	}

@@ -143,7 +143,7 @@ func (m *Microbenchmarks) SetFileBenchmark(nTrials int, size int) *RawResults {
 	for i := 0; i < nTrials; i++ {
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
-		if _, err := m.SetFile(fpath, b, 0); err != nil {
+		if _, err := m.SetFile(fpath, b, np.OWRITE, 0); err != nil {
 			log.Fatalf("Error SetFile in Microbenchmarks.SetFileBenchmark: %v", err)
 		}
 		end := time.Now()

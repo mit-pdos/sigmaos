@@ -30,6 +30,7 @@ type Session struct {
 	myFences  *fences.FenceTable
 	sm        *SessionMgr
 	Sid       np.Tsession
+	Closed    bool
 	replies   chan *np.Fcall
 }
 

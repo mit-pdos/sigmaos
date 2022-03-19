@@ -204,7 +204,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 	}
 }
 
-func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
+func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
 	fcall := np.MakeFcall(reply, 0, nil)
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
@@ -213,10 +213,15 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan 
 	if fssrv.replicated {
 		fssrv.rc.Put(request, fcall)
 	}
-	// The replies channel may be nil if this is a replicated op which came
-	// through raft. In this case, a reply is not needed.
-	if replies != nil {
-		replies <- fcall
+	// Only send a reply if the session hasn't been closed, or this is a detach
+	// (the last reply to be sent).
+	if !sess.Closed || request.GetType() == np.TTdetach {
+		replies := sess.GetRepliesC()
+		// The replies channel may be nil if this is a replicated op which came
+		// through raft. In this case, a reply is not needed.
+		if replies != nil {
+			replies <- fcall
+		}
 	}
 }
 
@@ -249,7 +254,7 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
 			go func() {
-				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess.GetRepliesC())
+				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 			}()
 			return
 		}
@@ -274,7 +279,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	}
 	// Send reply will drop the reply if the replies channel is nil, but it will
 	// make sure to insert the reply into the reply cache.
-	fssrv.sendReply(fc, reply, sess.GetRepliesC())
+	fssrv.sendReply(fc, reply, sess)
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {

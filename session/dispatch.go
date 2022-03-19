@@ -108,6 +108,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		return *reply, err
 	case np.Tdetach:
 		reply := &np.Rdetach{}
+		s.Closed = true
 		// If the leader proposed this detach message, accept it.
 		if req.LeadId == req.PropId {
 			s.protsrv.Detach()

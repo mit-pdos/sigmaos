@@ -60,13 +60,13 @@ func run(kc *kv.KvClerk) {
 
 type Value struct {
 	Pid string
-	Key string
+	Key kv.Tkey
 	N   uint64
 }
 
-func check(kc *kv.KvClerk, i, ntest uint64) error {
+func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64) error {
 	n := uint64(0)
-	rdr, err := kc.GetReader(kv.Key(i))
+	rdr, err := kc.GetReader(key)
 	if err != nil {
 		return err
 	}
@@ -77,8 +77,8 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 		if val.Pid != proc.GetPid() {
 			return nil
 		}
-		if val.Key != kv.Key(i) {
-			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), kv.Key(i), val.Key)
+		if val.Key != key {
+			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), key, val.Key)
 		}
 		if val.N != n {
 			return fmt.Errorf("%v: wrong N for %v: expected %v observed %v", proc.GetName(), rdr.Path(), n, val.N)
@@ -97,11 +97,12 @@ func check(kc *kv.KvClerk, i, ntest uint64) error {
 
 func test(kc *kv.KvClerk, ntest uint64) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
-		v := Value{proc.GetPid(), kv.Key(i), ntest}
-		if err := kc.AppendJson(kv.Key(i), v); err != nil {
-			return fmt.Errorf("%v: Append %v err %v", proc.GetName(), kv.Key(i), err)
+		key := kv.MkKey(i)
+		v := Value{proc.GetPid(), key, ntest}
+		if err := kc.AppendJson(key, v); err != nil {
+			return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
 		}
-		if err := check(kc, i, ntest); err != nil {
+		if err := check(kc, key, ntest); err != nil {
 			log.Printf("check failed %v\n", err)
 			return err
 		}

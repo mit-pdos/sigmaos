@@ -97,7 +97,7 @@ func (ts *Tstate) setup(nclerk int) *KvClerk {
 	clrk, err := MakeClerk("kv_test", fslib.Named())
 	assert.Nil(ts.T, err, "MakeClerk")
 	for i := uint64(0); i < NKEYS; i++ {
-		err := clrk.Put(Key(i), []byte{})
+		err := clrk.Put(MkKey(i), []byte{})
 		assert.Nil(ts.T, err, "Put")
 	}
 	return clrk
@@ -160,18 +160,19 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 func TestGetPutSet(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 1, 0, "0")
 
-	_, err := clrk.Get(Key(NKEYS+1), 0)
+	_, err := clrk.Get(MkKey(NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
 
-	err = clrk.Set(Key(NKEYS+1), []byte(Key(NKEYS+1)), 0)
+	err = clrk.Set(MkKey(NKEYS+1), []byte(MkKey(NKEYS+1)), 0)
 	assert.NotEqual(ts.T, err, nil, "Set")
 
-	err = clrk.Set(Key(0), []byte(Key(0)), 0)
+	err = clrk.Set(MkKey(0), []byte(MkKey(0)), 0)
 	assert.Nil(ts.T, err, "Set")
 
 	for i := uint64(0); i < NKEYS; i++ {
-		_, err := clrk.Get(Key(i), 0)
-		assert.Nil(ts.T, err, "Get "+Key(i))
+		key := MkKey(i)
+		_, err := clrk.Get(key, 0)
+		assert.Nil(ts.T, err, "Get "+key.String())
 	}
 
 	ts.done()

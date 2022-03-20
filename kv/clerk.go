@@ -28,25 +28,30 @@ const (
 	WAITMS = 50
 )
 
-func key2shard(key string) int {
+type Tkey string
+
+func (k Tkey) String() string {
+	return string(k)
+}
+
+func MkKey(k uint64) Tkey {
+	return Tkey(strconv.FormatUint(k, 16))
+}
+
+func key2shard(key Tkey) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
 	shard := int(h.Sum32() % NSHARD)
 	return shard
 }
 
-func keyPath(kvd, shard string, k string) string {
+func keyPath(kvd, shard string, k Tkey) string {
 	d := shardPath(kvd, shard)
-	return d + "/" + k
+	return d + "/" + k.String()
 }
 
 func shard(shard int) string {
-	// return strconv.Itoa(shard)
 	return fmt.Sprintf("%03d", shard)
-}
-
-func Key(k uint64) string {
-	return "key" + strconv.FormatUint(k, 16)
 }
 
 func nrand() uint64 {
@@ -152,7 +157,7 @@ const (
 type op struct {
 	kind opT
 	b    []byte
-	k    string
+	k    Tkey
 	off  np.Toffset
 	m    np.Tmode
 	rdr  *reader.Reader
@@ -173,37 +178,37 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	db.DLPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {
+func (kc *KvClerk) Get(k Tkey, off np.Toffset) ([]byte, error) {
 	op := &op{GETVAL, []byte{}, k, off, np.OREAD, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
 }
 
-func (kc *KvClerk) GetReader(k string) (*reader.Reader, error) {
+func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
 	op := &op{GETRD, []byte{}, k, 0, np.OREAD, nil, nil}
 	kc.doop(op)
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Set(k string, b []byte, off np.Toffset) error {
+func (kc *KvClerk) Set(k Tkey, b []byte, off np.Toffset) error {
 	op := &op{SET, b, k, off, np.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) Append(k string, b []byte) error {
+func (kc *KvClerk) Append(k Tkey, b []byte) error {
 	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) Put(k string, b []byte) error {
+func (kc *KvClerk) Put(k Tkey, b []byte) error {
 	op := &op{PUT, b, k, 0, np.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) AppendJson(k string, v interface{}) error {
+func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	b, err := writer.JsonRecord(v)
 	if err != nil {
 		return err

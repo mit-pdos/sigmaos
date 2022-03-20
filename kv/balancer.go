@@ -132,7 +132,11 @@ func RunBalancer(crashChild string, auto string) {
 
 		go bl.monitorMyself(ch)
 
-		crash.Crasher(bl.FsLib)
+		// first epoch is used to create a functional system
+		// (e.g., creating shards), so don't crash then.
+		if epoch > 1 {
+			crash.Crasher(bl.FsLib)
+		}
 
 		if auto == "auto" {
 			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
@@ -297,7 +301,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 	for true {
 		status, err = bl.runProc(args)
 		if err != nil {
-			db.DLPrintf("KVBAL_ERR", "runProc %v err %v status %v\n", args, err, status)
+			db.DLPrintf("ALWAYS", "runProc %v err %v status %v\n", args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
@@ -414,8 +418,10 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	}
 
 	var moves Moves
+	docrash := false
 	if bl.conf.Epoch == 1 {
 		bl.initShards(nextShards)
+		docrash = true
 	} else {
 		moves = bl.computeMoves(nextShards)
 	}
@@ -447,6 +453,10 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.runDeleters(moves)
 
 	bl.clearMoves()
+
+	if docrash { // start crashing?
+		crash.Crasher(bl.FsLib)
+	}
 
 	return nil
 }

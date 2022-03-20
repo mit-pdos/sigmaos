@@ -77,8 +77,8 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func shardPath(kvd, shard string) string {
-	return group.GRPDIR + "/" + kvd + "/shard" + shard
+func shardPath(kvd string, shard Tshard) string {
+	return group.GRPDIR + "/" + kvd + "/shard" + shard.String()
 }
 
 func RunBalancer(crashChild string, auto string) {
@@ -256,7 +256,7 @@ func (bl *Balancer) recover(epoch np.Tepoch) {
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
-		dst := shardPath(kvd, shard(s))
+		dst := shardPath(kvd, Tshard(s))
 		// Mkdir may fail because balancer crashed during config 0
 		// so ignore error
 		if err := bl.MkDir(dst, 0777); err != nil {
@@ -318,7 +318,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	moves := Moves{}
 	for i, kvd := range bl.conf.Shards {
 		if kvd != nextShards[i] {
-			shard := shard(i)
+			shard := Tshard(i)
 			s := shardPath(kvd, shard)
 			d := shardPath(nextShards[i], shard)
 			moves = append(moves, &Move{s, d})

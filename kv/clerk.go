@@ -38,20 +38,22 @@ func MkKey(k uint64) Tkey {
 	return Tkey(strconv.FormatUint(k, 16))
 }
 
-func key2shard(key Tkey) int {
+type Tshard int
+
+func (s Tshard) String() string {
+	return fmt.Sprintf("%03d", s)
+}
+
+func key2shard(key Tkey) Tshard {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := int(h.Sum32() % NSHARD)
+	shard := Tshard(h.Sum32() % NSHARD)
 	return shard
 }
 
-func keyPath(kvd, shard string, k Tkey) string {
+func keyPath(kvd string, shard Tshard, k Tkey) string {
 	d := shardPath(kvd, shard)
 	return d + "/" + k.String()
-}
-
-func shard(shard int) string {
-	return fmt.Sprintf("%03d", shard)
 }
 
 func nrand() uint64 {
@@ -133,7 +135,7 @@ func (kc *KvClerk) doop(o *op) {
 	s := key2shard(o.k)
 	for {
 		db.DLPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
-		fn := keyPath(kc.conf.Shards[s], shard(s), o.k)
+		fn := keyPath(kc.conf.Shards[s], s, o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
 			return

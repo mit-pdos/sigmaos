@@ -9,6 +9,11 @@ import (
 	"ulambda/proc"
 )
 
+func init() {
+	// XXX may want to set log.Ldate when not debugging
+	log.SetFlags(log.Ltime | log.Lmicroseconds)
+}
+
 //
 // Debug output is controled by SIGMADEBUG environment variable, which
 // can be a list of labels (e.g., "RPC;PATHCLNT").

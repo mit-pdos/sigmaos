@@ -57,7 +57,8 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 
 	db.DLPrintf("PROCCLNT", "Spawn %v\n", p)
 	if clnt.hasExited() != "" {
-		return fmt.Errorf("Spawn error called after Exited")
+		db.DLPrintf("PROCCLNT_ERR", "Spawn error called after Exited")
+		os.Exit(0)
 	}
 
 	if err := clnt.addChild(p.Pid, procdir, p.GetShared()); err != nil {
@@ -213,7 +214,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid string, statu
 	// twice or procd calling exited twice.
 	if clnt.setExited(pid) == pid {
 		db.DLPrintf("PROCCLNT_ERR", "Exited called after exited %v\n", procdir)
-		return fmt.Errorf("Exited error called more than once for pid %v\n", pid)
+		os.Exit(1)
 	}
 
 	b, err := json.Marshal(status)

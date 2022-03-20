@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fences"
 	"ulambda/fs"
@@ -209,6 +210,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
+	db.DLPrintf("FSSRV", "Request %v start sendReply %v", request, fcall)
 	// Store the reply in the reply cache if this is a replicated server.
 	if fssrv.replicated {
 		fssrv.rc.Put(request, fcall)
@@ -223,6 +225,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 			replies <- fcall
 		}
 	}
+	db.DLPrintf("FSSRV", "Request %v done sendReply %v", request, fcall)
 }
 
 func (fssrv *FsServer) process(fc *np.Fcall) {
@@ -253,11 +256,13 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 		// make progress. We coulld optionally use sessconds, but they're kind of
 		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
+			db.DLPrintf("FSSRV", "Request %v reply in cache", fc)
 			go func() {
 				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 			}()
 			return
 		}
+		db.DLPrintf("FSSRV", "Request %v reply not in cache", fc)
 		// If this request has not been registered with the reply cache yet, register
 		// it.
 		fssrv.rc.Register(fc)
@@ -267,7 +272,9 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 }
 
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
+	db.DLPrintf("FSSRV", "Dispatch request %v", fc)
 	reply, rerror := sess.Dispatch(fc.Msg)
+	db.DLPrintf("FSSRV", "Done dispatch request %v", fc)
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil

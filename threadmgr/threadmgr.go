@@ -5,6 +5,7 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -62,6 +63,8 @@ func (t *ThreadMgr) replayOps(ops []*Op) {
 func (t *ThreadMgr) Process(fc *np.Fcall) {
 	t.Lock()
 	defer t.Unlock()
+
+	db.DLPrintf("THREADMGR", "Enqueue %v", fc)
 
 	t.numops++
 	op := makeOp(fc, t.numops)
@@ -139,8 +142,10 @@ func (t *ThreadMgr) run() {
 			// Process the op. Run the next op in a new goroutine (which may sleep or
 			// block).
 			go func() {
+				db.DLPrintf("THREADMGR", "Run %v", op.Fc)
 				// Execute the op.
 				t.pfn(op.Fc)
+				db.DLPrintf("THREADMGR", "Done running %v", op.Fc)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
 				// Mark the op as no longer executing.
@@ -149,6 +154,7 @@ func (t *ThreadMgr) run() {
 				t.cond.Signal()
 				// Unlock to allow the ThreadMgr to make progress.
 				t.Unlock()
+				db.DLPrintf("THREADMGR", "Complete %v", op.Fc)
 			}()
 			// Wait for the op to sleep or complete.
 			t.cond.Wait()

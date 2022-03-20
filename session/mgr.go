@@ -33,9 +33,6 @@ func MakeSessionMgr(pfn func(*np.Fcall, chan *np.Fcall)) *SessionMgr {
 func (sm *SessionMgr) RegisterSession(sid np.Tsession) {
 	sm.Lock()
 	defer sm.Unlock()
-	if _, ok := sm.sessions[sid]; ok {
-		log.Fatalf("FATAL sessionmgr tried to re-register session %v", sid)
-	}
 	sm.sessions[sid] = time.Now()
 }
 

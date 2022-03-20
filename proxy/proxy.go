@@ -18,12 +18,14 @@ import (
 type Npd struct {
 	named []string
 	st    *session.SessionTable
+	sm    *session.SessionMgr
 }
 
 func MakeNpd() *Npd {
-	npd := &Npd{fslib.Named(), nil}
+	npd := &Npd{fslib.Named(), nil, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
-	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm, nil)
+	npd.sm = session.MakeSessionMgr(npd.Process)
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm, npd.sm)
 	return npd
 }
 
@@ -44,6 +46,7 @@ func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (npd *Npd) Process(fcall *np.Fcall, replies chan *np.Fcall) {
+	npd.sm.RegisterSession(fcall.Session)
 	go npd.serve(fcall, replies)
 }
 

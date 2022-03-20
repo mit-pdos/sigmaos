@@ -391,7 +391,6 @@ func ScanTopology() (*TopologyInfo, error) {
 		return nil, err
 	}
 	NCores = uint(n)
-	fmt.Println("Detected", NCores, "cores.")
 
 	// open the sysfs cpu directory
 	files, err := ioutil.ReadDir("/sys/devices/system/cpu/")

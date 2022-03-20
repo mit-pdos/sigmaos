@@ -572,8 +572,7 @@ type Topen struct {
 }
 
 type Twatch struct {
-	Fid  Tfid
-	Path []string
+	Fid Tfid
 }
 
 type Ropen struct {

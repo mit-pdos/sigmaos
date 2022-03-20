@@ -269,7 +269,7 @@ func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
 		return err
 	}
 	go func() {
-		err := pathc.FidClnt.Watch(fid, nil)
+		err := pathc.FidClnt.Watch(fid)
 		db.DLPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
 		if err == nil {
 			w(path, nil)
@@ -292,7 +292,7 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 		return np.MkErr(np.TErrInval, "watch")
 	}
 	go func() {
-		err := pathc.FidClnt.Watch(fid, nil)
+		err := pathc.FidClnt.Watch(fid)
 		db.DLPrintf("PATHCLNT", "SetRemoveWatch: Watch %v %v err %v\n", fid, path, err)
 		if err == nil {
 			w(path, nil)

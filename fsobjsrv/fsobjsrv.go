@@ -186,9 +186,7 @@ func (fos *FsObjSrv) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 	}
 	o := f.Obj()
 	p := f.Path()
-	if len(args.Path) > 0 {
-		p = append(p, args.Path...)
-	}
+
 	db.DLPrintf("FSOBJ", "%v: Watch %v v %v %v\n", f.Ctx().Uname(), f.Path(), o.Qid(), args)
 
 	// get lock on watch entry for p, so that remove cannot remove

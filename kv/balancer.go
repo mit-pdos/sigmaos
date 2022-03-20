@@ -221,34 +221,23 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
-// Done with deleters and movers; update config before indicating to
-// caller that we are done.
-func (bl *Balancer) clearMoves() {
-	bl.conf.Moves = Moves{}
-	db.DLPrintf("KVBAL", "Update config %v\n", bl.conf)
-	bl.PublishConfig()
-}
-
 // Publish config atomically
-func (bl *Balancer) PublishConfig() {
+func (bl *Balancer) PostConfig() {
 	err := atomic.PutFileJsonAtomic(bl.FsLib, KVCONFIG, 0777, *bl.conf)
 	if err != nil {
 		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVCONFIG, err)
 	}
 }
 
-// Publish new epoch, and Restore sharddirs by finishing moves and
-// deletes.
+// Post new epoch, and finish moves and deletes sharddirs.
 func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.Epoch = epoch
 	db.DLPrintf("KVBAL", "restore to %v with epoch %v\n", bl.conf, epoch)
-	bl.PublishConfig()
-	bl.runMovers(bl.conf.Moves)
-	bl.runDeleters(bl.conf.Moves)
-	bl.clearMoves()
+	bl.PostConfig()
+	bl.doMoves(bl.conf.Moves)
 }
 
 func (bl *Balancer) recover(epoch np.Tepoch) {
@@ -260,7 +249,7 @@ func (bl *Balancer) recover(epoch np.Tepoch) {
 		// otherwise, there would be a either a config or
 		// backup config.
 		bl.conf = MakeConfig(epoch)
-		bl.PublishConfig()
+		bl.PostConfig()
 	}
 }
 
@@ -338,62 +327,41 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	return moves
 }
 
-func (bl *Balancer) checkMoves(moves Moves) {
-	for _, m := range moves {
-		fn := m.Dst
-		_, err := bl.Stat(fn)
-		if err != nil {
-			log.Printf("%v: stat %v err %v\n", proc.GetName(), fn, err)
-		}
-	}
-}
-
-// Run deleters in parallel
-func (bl *Balancer) runDeleters(moves Moves) {
-	tmp := make(Moves, len(moves))
-	ch := make(chan int)
-	for i, m := range moves {
-		go func(m *Move, i int) {
-			bl.runProcRetry([]string{"bin/user/kv-deleter", bl.conf.Epoch.String(), m.Src}, func(err error, status *proc.Status) bool {
+func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
+	if m != nil {
+		bl.runProcRetry([]string{"bin/user/kv-mover", bl.conf.Epoch.String(), m.Src, m.Dst},
+			func(err error, status *proc.Status) bool {
+				db.DLPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
+				return err != nil || !status.IsStatusOK()
+			})
+		bl.runProcRetry([]string{"bin/user/kv-deleter", bl.conf.Epoch.String(), m.Src},
+			func(err error, status *proc.Status) bool {
 				retry := err != nil || (!status.IsStatusOK() && !np.IsErrNotfound(status))
 				db.DLPrintf("KVBAL", "delete %v/%v done err %v status %v\n", i, m.Src, err, status)
 				return retry
 			})
-			ch <- i
-		}(m, i)
 	}
-	m := 0
-	for range moves {
-		i := <-ch
-		tmp[i] = nil
-		m += 1
-		db.DLPrintf("KVBAL", "deleter done %v %v\n", m, tmp)
-	}
-	db.DLPrintf("KVBAL", "deleters done\n")
+
+	ch <- i
 }
 
-// Run movers in parallel
-func (bl *Balancer) runMovers(moves Moves) {
-	tmp := make(Moves, len(moves))
-	copy(tmp, moves)
+// Perform moves in parallel
+func (bl *Balancer) doMoves(moves Moves) {
+	todo := make(Moves, len(moves))
+	copy(todo, moves)
 	ch := make(chan int)
 	for i, m := range moves {
-		go func(m *Move, i int) {
-			bl.runProcRetry([]string{"bin/user/kv-mover", bl.conf.Epoch.String(), m.Src, m.Dst}, func(err error, status *proc.Status) bool {
-				db.DLPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
-				return err != nil || !status.IsStatusOK()
-			})
-			ch <- i
-		}(m, i)
+		go bl.doMove(ch, m, i)
 	}
 	m := 0
 	for range moves {
 		i := <-ch
-		tmp[i] = nil
+		bl.conf.Moves[i] = nil
+		db.DLPrintf("KVBAL", "Cleared move %v %v\n", i, bl.conf)
+		bl.PostConfig()
 		m += 1
-		db.DLPrintf("KVBAL", "mover done %v %v\n", m, tmp)
 	}
-	db.DLPrintf("KVBAL", "%v: movers all done\n", bl.conf.Epoch)
+	db.DLPrintf("KVBAL", "%v: all moves done\n", bl.conf)
 }
 
 func (bl *Balancer) balance(opcode, mfs string) *np.Err {
@@ -444,15 +412,9 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 
 	// If balancer crashes, before here, KVCONFIG has the old
 	// config; otherwise, the new conf.
-	bl.PublishConfig()
+	bl.PostConfig()
 
-	bl.runMovers(moves)
-
-	bl.checkMoves(moves)
-
-	bl.runDeleters(moves)
-
-	bl.clearMoves()
+	bl.doMoves(moves)
 
 	if docrash { // start crashing?
 		crash.Crasher(bl.FsLib)

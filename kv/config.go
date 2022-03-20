@@ -17,7 +17,9 @@ type Moves []*Move
 func (mvs Moves) String() string {
 	s := "["
 	for _, m := range mvs {
-		if m != nil {
+		if m == nil {
+			s += fmt.Sprintf("nil,")
+		} else {
 			s += fmt.Sprintf("%v -> %v,", m.Src, m.Dst)
 		}
 	}

@@ -16,6 +16,7 @@ package kv
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -119,7 +120,7 @@ func RunBalancer(crashChild string, auto string) {
 		log.Fatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}
 
-	db.DLPrintf("KVBAL0", "primary %v for epoch %v\n", proc.GetName(), epoch)
+	db.DLPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
 
 	select {
 	case <-ch:
@@ -220,7 +221,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 // caller that we are done.
 func (bl *Balancer) clearMoves() {
 	bl.conf.Moves = Moves{}
-	db.DLPrintf("KVBAL0", "Update config %v\n", bl.conf)
+	db.DLPrintf("KVBAL", "Update config %v\n", bl.conf)
 	bl.PublishConfig()
 }
 
@@ -239,7 +240,7 @@ func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 	// Increase epoch, even if the config is the same as before,
 	// so that helpers and clerks realize there is new balancer.
 	bl.conf.Epoch = epoch
-	db.DLPrintf("KVBAL0", "restore to %v with epoch %v\n", bl.conf, epoch)
+	db.DLPrintf("KVBAL", "restore to %v with epoch %v\n", bl.conf, epoch)
 	bl.PublishConfig()
 	bl.runMovers(bl.conf.Moves)
 	bl.runDeleters(bl.conf.Moves)
@@ -393,7 +394,7 @@ func (bl *Balancer) runMovers(moves Moves) {
 
 func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	if bl.testAndSetIsBusy() {
-		return np.MkErr(np.TErrRetry, "busy")
+		return np.MkErr(np.TErrRetry, fmt.Sprintf("busy %v", proc.GetName()))
 	}
 	defer bl.clearIsBusy()
 
@@ -433,7 +434,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 
-	db.DLPrintf("KVBAL0", "New config %v\n", bl.conf)
+	db.DLPrintf("KVBAL", "New config %v\n", bl.conf)
 
 	// If balancer crashes, before here, KVCONFIG has the old
 	// config; otherwise, the new conf.

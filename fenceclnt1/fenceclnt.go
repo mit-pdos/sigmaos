@@ -64,9 +64,14 @@ func (fc *FenceClnt) registerFence(path string, fence np.Tfence1) error {
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}
-	if _, err := fc.GetDir(path + "/"); err != nil {
-		db.DLPrintf("FENCECLNT_ERR", "WARNING getdir %v err %v\n", path, err)
-		return err
-	}
+	// Inform servers of fence with new epoch, but unnecessary?
+	// The next op to path (or child) will include the new fence
+	// but now servers will learn about new epoch at the different
+	// times.
+	//
+	//if _, err := fc.GetDir(path + "/"); err != nil {
+	//	db.DLPrintf("FENCECLNT_ERR", "WARNING getdir %v err %v\n", path, err)
+	//	return err
+	//}
 	return nil
 }

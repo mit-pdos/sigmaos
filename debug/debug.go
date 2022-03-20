@@ -9,7 +9,7 @@ import (
 	"ulambda/proc"
 )
 
-const ALWAYS = "ALWAYS"
+const ALWAYS = "STATUS"
 
 //
 // Debug output is controled by SIGMADEBUG environment variable, which

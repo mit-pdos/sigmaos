@@ -1,9 +1,9 @@
 package groupmgr
 
 import (
-	"log"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -102,7 +102,7 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 		} else { // restart member i
 			if gm.members[st.member].bin == "bin/user/kvd" {
 				// For now, we don't restart kvds
-				log.Printf("=== %v: kvd failed %v\n", proc.GetProgram(), gm.members[st.member].pid)
+				db.DLPrintf(db.ALWAYS, "=== %v: kvd failed %v\n", gm.members[st.member].pid)
 				continue
 			}
 			start := make(chan bool)
@@ -134,6 +134,6 @@ func (gm *GroupMgr) Stop() error {
 	}
 	// log.Printf("wait for members\n")
 	<-gm.ch
-	log.Printf("%v: done members\n", proc.GetProgram())
+	db.DLPrintf("GROUPMGR", "done members\n")
 	return err
 }

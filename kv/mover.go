@@ -67,8 +67,8 @@ func shardTmp(shardp string) string {
 	return shardp + "#"
 }
 
-// Move shard from src to dst
-func (mv *Mover) moveShard(s, d string) error {
+// Copy shard from src to dst
+func (mv *Mover) copyShard(s, d string) error {
 	d1 := shardTmp(d)
 
 	// The previous mover might have crashed right after rename
@@ -103,9 +103,28 @@ func (mv *Mover) moveShard(s, d string) error {
 	return nil
 }
 
+func (mv *Mover) delShard(sharddir string) {
+	db.DLPrintf("KVMV", "conf %v delete %v\n", mv.epochstr, sharddir)
+
+	// If sharddir isn't found, then an earlier delete succeeded;
+	// we are done.
+	if _, err := mv.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
+		db.DLPrintf("KVMV_ERR", "Delete conf %v not found %v\n", mv.epochstr, sharddir)
+		mv.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+		return
+	}
+
+	if err := mv.RmDir(sharddir); err != nil {
+		db.DLPrintf("KVMV_ERR", "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
+		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
+	} else {
+		mv.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+	}
+}
+
 func (mv *Mover) Move(src, dst string) {
 	db.DLPrintf("KVMV", "conf %v: mv from %v to %v\n", mv.epochstr, src, dst)
-	err := mv.moveShard(src, dst)
+	err := mv.copyShard(src, dst)
 	if err != nil {
 		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
 	}
@@ -113,6 +132,6 @@ func (mv *Mover) Move(src, dst string) {
 	if err != nil {
 		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
 	} else {
-		mv.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+		mv.delShard(src)
 	}
 }

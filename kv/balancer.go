@@ -221,7 +221,7 @@ func (bl *Balancer) monitorMyself(ch chan bool) {
 	}
 }
 
-// Publish config atomically
+// Post config atomically
 func (bl *Balancer) PostConfig() {
 	err := atomic.PutFileJsonAtomic(bl.FsLib, KVCONFIG, 0777, *bl.conf)
 	if err != nil {
@@ -229,7 +229,7 @@ func (bl *Balancer) PostConfig() {
 	}
 }
 
-// Post new epoch, and finish moves and deletes sharddirs.
+// Post new epoch, and finish moving sharddirs.
 func (bl *Balancer) restore(conf *Config, epoch np.Tepoch) {
 	bl.conf = conf
 	// Increase epoch, even if the config is the same as before,
@@ -333,12 +333,6 @@ func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 			func(err error, status *proc.Status) bool {
 				db.DLPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()
-			})
-		bl.runProcRetry([]string{"bin/user/kv-deleter", bl.conf.Epoch.String(), m.Src},
-			func(err error, status *proc.Status) bool {
-				retry := err != nil || (!status.IsStatusOK() && !np.IsErrNotfound(status))
-				db.DLPrintf("KVBAL", "delete %v/%v done err %v status %v\n", i, m.Src, err, status)
-				return retry
 			})
 	}
 

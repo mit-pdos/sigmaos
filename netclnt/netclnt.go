@@ -13,10 +13,6 @@ import (
 	"ulambda/npcodec"
 )
 
-const (
-	MAX_TAG_ALLOC_RETRIES = 1000000
-)
-
 //
 // Multiplexes RPCs onto a single network connection to server
 //

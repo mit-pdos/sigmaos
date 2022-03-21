@@ -196,6 +196,7 @@ func (c *conn) heartbeats() {
 		if c.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
 			rpc := netclnt.MakeRpc(np.MakeFcall(np.Theartbeat{[]np.Tsession{c.sid}}, c.sid, c.seqno))
+			db.DLPrintf("SESSCONN", "%v Sending heartbeat to %v", c.sid, c.addrs)
 			c.send(rpc)
 			c.recv(rpc)
 		}

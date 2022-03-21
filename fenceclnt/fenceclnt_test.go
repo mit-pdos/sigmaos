@@ -26,7 +26,68 @@ const (
 	FENCENAME = "name/test-fence"
 )
 
-func TestFence1(t *testing.T) {
+func TestAcquireRelease(t *testing.T) {
+	ts := test.MakeTstate(t)
+
+	N := 20
+
+	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
+	fence2 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
+
+	for i := 0; i < N; i++ {
+		err := fence1.AcquireFenceW([]byte{})
+		assert.Nil(ts.T, err, "AcquireFenceW")
+		err = fence1.ReleaseFence()
+		assert.Nil(ts.T, err, "ReleaseFence")
+		err = fence2.AcquireFenceW([]byte{})
+		assert.Nil(ts.T, err, "AcquireFenceW")
+		err = fence2.ReleaseFence()
+		assert.Nil(ts.T, err, "ReleaseFence")
+	}
+
+	ts.Shutdown()
+}
+
+// n thread become try to become a leader and on success add 1 to shared file
+func TestLeaderConcur(t *testing.T) {
+	ts := test.MakeTstate(t)
+
+	N := 3000
+	n_threads := 20
+	cnt := 0
+
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
+
+	var done sync.WaitGroup
+	done.Add(n_threads)
+
+	for i := 0; i < n_threads; i++ {
+		go func(done *sync.WaitGroup, fence *fenceclnt.FenceClnt, N *int, cnt *int) {
+			defer done.Done()
+			for {
+				err := fence.AcquireFenceW([]byte{})
+				assert.Nil(ts.T, err, "AcquireFence")
+				if *cnt < *N {
+					*cnt += 1
+				} else {
+					err = fence.ReleaseFence()
+					assert.Nil(ts.T, err, "ReleaseFence")
+					break
+				}
+				err = fence.ReleaseFence()
+				assert.Nil(ts.T, err, "ReleaseFence")
+			}
+		}(&done, fence, &N, &cnt)
+	}
+
+	done.Wait()
+	assert.Equal(ts.T, N, cnt, "Count doesn't match up")
+
+	ts.Shutdown()
+}
+
+// n thread become leader in turn and add 1
+func TestLeaderInTurn(t *testing.T) {
 	ts := test.MakeTstate(t)
 
 	N := 20
@@ -64,69 +125,9 @@ func TestFence1(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestFence2(t *testing.T) {
-	ts := test.MakeTstate(t)
-
-	N := 20
-
-	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
-	fence2 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
-
-	for i := 0; i < N; i++ {
-		err := fence1.AcquireFenceW([]byte{})
-		assert.Nil(ts.T, err, "AcquireFenceW")
-		err = fence1.ReleaseFence()
-		assert.Nil(ts.T, err, "ReleaseFence")
-		err = fence2.AcquireFenceW([]byte{})
-		assert.Nil(ts.T, err, "AcquireFenceW")
-		err = fence2.ReleaseFence()
-		assert.Nil(ts.T, err, "ReleaseFence")
-	}
-
-	ts.Shutdown()
-}
-
-// n threads help to increase cnt to N
-func TestFence3(t *testing.T) {
-	ts := test.MakeTstate(t)
-
-	N := 3000
-	n_threads := 20
-	cnt := 0
-
-	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME+"-1234", 0, []string{np.NAMED})
-
-	var done sync.WaitGroup
-	done.Add(n_threads)
-
-	for i := 0; i < n_threads; i++ {
-		go func(done *sync.WaitGroup, fence *fenceclnt.FenceClnt, N *int, cnt *int) {
-			defer done.Done()
-			for {
-				err := fence.AcquireFenceW([]byte{})
-				assert.Nil(ts.T, err, "AcquireFence")
-				if *cnt < *N {
-					*cnt += 1
-				} else {
-					err = fence.ReleaseFence()
-					assert.Nil(ts.T, err, "ReleaseFence")
-					break
-				}
-				err = fence.ReleaseFence()
-				assert.Nil(ts.T, err, "ReleaseFence")
-			}
-		}(&done, fence, &N, &cnt)
-	}
-
-	done.Wait()
-	assert.Equal(ts.T, N, cnt, "Count doesn't match up")
-
-	ts.Shutdown()
-}
-
-// Test if an exit of another session doesn't remove ephemeral files
-// of another session.
-func TestFence4(t *testing.T) {
+// Test if an exit of another session doesn't remove an ephemeral
+// fence of another session.
+func TestEphemeralFence(t *testing.T) {
 	ts := test.MakeTstate(t)
 
 	fsl1 := fslib.MakeFsLibAddr("fslib-1", fslib.Named())
@@ -147,6 +148,78 @@ func TestFence4(t *testing.T) {
 
 	err = fence1.ReleaseFence()
 	assert.Nil(ts.T, err, "ReleaseFence")
+	ts.Shutdown()
+}
+
+func TestRemoveFence(t *testing.T) {
+	ts := test.MakeTstate(t)
+
+	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
+
+	err := fence.AcquireFenceW([]byte{})
+	assert.Nil(ts.T, err, "AcquireFenceW")
+
+	f, err := fence.Fence()
+	assert.Nil(ts.T, err, "Fence")
+
+	err = fence.ReleaseFence()
+	assert.Nil(ts.T, err, "ReleaseFence")
+
+	err = fence.RemoveFence()
+	assert.Nil(ts.T, err, "RmFence")
+
+	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
+
+	err = fence1.AcquireFenceW([]byte{})
+	assert.Nil(ts.T, err, "AcquireFenceW")
+
+	g, err := fence1.Fence()
+	assert.Nil(ts.T, err, "Fence")
+
+	assert.Equal(ts.T, f.Seqno, g.Seqno, "AcquireFenceW")
+
+	ts.Shutdown()
+}
+
+func primary(t *testing.T, ch chan bool, i int) {
+	n := strconv.Itoa(i)
+	fsl := fslib.MakeFsLibAddr("fsl"+n, fslib.Named())
+	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0, []string{np.NAMED})
+
+	err := f.AcquireFenceW([]byte{})
+	assert.Nil(t, err, "AcquireFenceW")
+
+	err = f.SetFenceFile([]byte(n))
+	assert.Nil(t, err, "SetFenceFile")
+
+	fn := "name/f"
+	d := []byte(n)
+	_, err = fsl.PutFile(fn, 0777, np.OWRITE, d)
+
+	err = f.MakeFenceFileFrom(fn)
+	assert.Nil(t, err, "MakeFenceFileFrom")
+
+	fsl.Exit() // crash
+
+	ch <- true
+}
+
+// Start N threads, each one tries to become primary.  On success,
+// crash and test if another thread takes over.
+func TestCrashPrimary(t *testing.T) {
+	ts := test.MakeTstate(t)
+	N := 3
+
+	ch := make(chan bool)
+
+	for i := 0; i < N; i++ {
+		go primary(ts.T, ch, i)
+	}
+
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+
 	ts.Shutdown()
 }
 
@@ -211,8 +284,12 @@ func writer(t *testing.T, ch chan int, N int, fn string) {
 // read fence for the epoch file.  If the first fsclnt changes the
 // fence (incrementing the epoch) between the second fsclnt opening
 // and writing the other file, the write should fail with stale error,
-// because the read fence isn't valid anymore.
-func TestSetRenameGet(t *testing.T) {
+// because the read fence isn't valid anymore.  This case shows a
+// fence is necessary to make SetRenameGet atomic to ensure that a set
+// to file before a rename doesn't influence the get of the same file
+// after the rename). (Other packages have tests for leaders and
+// fences with multiple servers)
+func TestFence(t *testing.T) {
 	const N = 100
 
 	ts := test.MakeTstate(t)
@@ -268,76 +345,6 @@ func TestSetRenameGet(t *testing.T) {
 
 	err = f.ReleaseFence()
 	assert.Equal(t, nil, err)
-
-	ts.Shutdown()
-}
-
-func primary(t *testing.T, ch chan bool, i int) {
-	n := strconv.Itoa(i)
-	fsl := fslib.MakeFsLibAddr("fsl"+n, fslib.Named())
-	f := fenceclnt.MakeFenceClnt(fsl, "name/config", 0, []string{np.NAMED})
-
-	err := f.AcquireFenceW([]byte{})
-	assert.Nil(t, err, "AcquireFenceW")
-
-	err = f.SetFenceFile([]byte(n))
-	assert.Nil(t, err, "SetFenceFile")
-
-	fn := "name/f"
-	d := []byte(n)
-	_, err = fsl.PutFile(fn, 0777, np.OWRITE, d)
-
-	err = f.MakeFenceFileFrom(fn)
-	assert.Nil(t, err, "MakeFenceFileFrom")
-
-	fsl.Exit() // crash
-
-	ch <- true
-}
-
-func TestCrashPrimary(t *testing.T) {
-	ts := test.MakeTstate(t)
-	N := 3
-
-	ch := make(chan bool)
-
-	for i := 0; i < N; i++ {
-		go primary(ts.T, ch, i)
-	}
-
-	for i := 0; i < N; i++ {
-		<-ch
-	}
-
-	ts.Shutdown()
-}
-
-func TestRemoveFence(t *testing.T) {
-	ts := test.MakeTstate(t)
-
-	fence := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
-
-	err := fence.AcquireFenceW([]byte{})
-	assert.Nil(ts.T, err, "AcquireFenceW")
-
-	f, err := fence.Fence()
-	assert.Nil(ts.T, err, "Fence")
-
-	err = fence.ReleaseFence()
-	assert.Nil(ts.T, err, "ReleaseFence")
-
-	err = fence.RemoveFence()
-	assert.Nil(ts.T, err, "RmFence")
-
-	fence1 := fenceclnt.MakeFenceClnt(ts.FsLib, FENCENAME, 0, []string{np.NAMED})
-
-	err = fence1.AcquireFenceW([]byte{})
-	assert.Nil(ts.T, err, "AcquireFenceW")
-
-	g, err := fence1.Fence()
-	assert.Nil(ts.T, err, "Fence")
-
-	assert.Equal(ts.T, f.Seqno, g.Seqno, "AcquireFenceW")
 
 	ts.Shutdown()
 }

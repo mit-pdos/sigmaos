@@ -1,11 +1,9 @@
 #!/bin/bash
 
-
 for ND in :1111 :1111,:1112,:1113
 do
   export NAMED=$ND
   echo "============ RUN NAMED=$ND"
-  
   go clean -testcache
   
   #
@@ -47,17 +45,16 @@ do
   # go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run InitFs
   go test $1 ulambda/s3
   go test $1 ulambda/kernel
+  go test $1 ulambda/fenceclnttest
   go test $1 ulambda/snapshot
   
-  # run this procclnt test again from a script to grep the output from
-  # fencers for correctness
-  ./fences/test.sh
+  go test $1 ulambda/group
   
   # dbd_test and wwwd_test requires mariadb running
-  #pgrep mariadb >/dev/null && go test $1 ulambda/dbd
-  #pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
+  pgrep mariadb >/dev/null && go test $1 ulambda/dbd
+  pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
   
-  go test $1 ulambda/group
+  
   go test $1 ulambda/mr
   go test $1 ulambda/kv
   
@@ -74,4 +71,5 @@ do
   # run without realm?
   # XXX needs fixing
   # go test $1 -timeout=45m ulambda/replica
+ 
 done 

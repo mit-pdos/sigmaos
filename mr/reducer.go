@@ -1,11 +1,8 @@
 package mr
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"sort"
@@ -64,27 +61,12 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 		return nil, err
 	}
 	defer rdr.Close()
-	for {
-		l, err := binary.ReadVarint(rdr)
-		if err != nil && err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("FATAL %v: ReadVarint err %v\n", proc.GetName(), err)
-		}
-		data := make([]byte, l)
-		_, err = rdr.Read(data)
-		if err != nil {
-			log.Fatalf("FATAL %v Read err %v\n", proc.GetName(), err)
-		}
-		kvs := []KeyValue{}
-		err = json.Unmarshal(data, &kvs)
-		if err != nil {
-			log.Fatal("Unmarshal error ", err)
-		}
-		db.DLPrintf("REDUCE", "reduce %v: kva %v\n", file, len(kvs))
-		kva = append(kva, kvs...)
-	}
+	rdr.ReadJsonStream(func() interface{} { return new([]KeyValue) }, func(a interface{}) error {
+		kvs := a.(*[]KeyValue)
+		db.DLPrintf("REDUCE", "reduce %v: kva %v\n", file, kvs)
+		kva = append(kva, *kvs...)
+		return nil
+	})
 	return kva, nil
 }
 

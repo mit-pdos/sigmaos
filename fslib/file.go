@@ -1,7 +1,6 @@
 package fslib
 
 import (
-	"encoding/json"
 	"fmt"
 
 	db "ulambda/debug"
@@ -28,32 +27,6 @@ func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, e
 
 func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) (np.Tsize, error) {
 	return fl.FdClient.PutFile(fname, mode|np.OWRITE, perm, data, 0)
-}
-
-func (fl *FsLib) GetFileJson(name string, i interface{}) error {
-	b, err := fl.GetFile(name)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, i)
-}
-
-func (fl *FsLib) PutFileJson(fname string, perm np.Tperm, i interface{}) error {
-	data, err := json.Marshal(i)
-	if err != nil {
-		return fmt.Errorf("Marshal error %v", err)
-	}
-	_, err = fl.PutFile(fname, perm, np.OWRITE, data)
-	return err
-}
-
-func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
-	data, err := json.Marshal(i)
-	if err != nil {
-		return fmt.Errorf("Marshal error %v", err)
-	}
-	_, err = fl.SetFile(fname, data, 0)
-	return err
 }
 
 //
@@ -104,14 +77,6 @@ func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
 		return nil, error
 	}
 	return b, nil
-}
-
-func (fl *FsLib) GetFileJsonWatch(name string, i interface{}) error {
-	b, err := fl.GetFileWatch(name)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, i)
 }
 
 //

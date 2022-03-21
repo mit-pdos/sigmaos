@@ -43,9 +43,9 @@ func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
 
-func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
+func (f *File) uxWrite(off int64, whence int, b []byte) (np.Tsize, *np.Err) {
 	db.DLPrintf("UXD", "%v: WriteFile: off %v cnt %v %v\n", f, off, len(b), f.file)
-	_, err := f.file.Seek(off, 0)
+	_, err := f.file.Seek(off, whence)
 	if err != nil {
 		return 0, np.MkErr(np.TErrError, err)
 	}
@@ -87,5 +87,10 @@ func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) (
 
 func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	db.DLPrintf("UXD", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
-	return f.uxWrite(int64(off), b)
+	whence := 0
+	if off == np.NoOffset {
+		off = 0
+		whence = 2
+	}
+	return f.uxWrite(int64(off), whence, b)
 }

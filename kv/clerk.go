@@ -2,8 +2,6 @@ package kv
 
 import (
 	"crypto/rand"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"math/big"
@@ -19,6 +17,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/procclnt"
 	"ulambda/reader"
+	"ulambda/writer"
 )
 
 //
@@ -337,13 +336,10 @@ func (kc *KvClerk) Put(k string, b []byte) error {
 }
 
 func (kc *KvClerk) AppendJson(k string, v interface{}) error {
-	b, err := json.Marshal(v)
+	b, err := writer.JsonRecord(v)
 	if err != nil {
-		return fmt.Errorf("Marshal error %v", err)
+		return err
 	}
-	lbuf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(lbuf, int64(len(b)))
-	b = append(lbuf[0:n], b...)
 	op := &op{SET, b, k, np.NoOffset, nil, nil}
 	kc.doop(op)
 	return op.err

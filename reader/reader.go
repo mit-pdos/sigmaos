@@ -1,6 +1,8 @@
 package reader
 
 import (
+	"encoding/binary"
+	"encoding/json"
 	"io"
 
 	"ulambda/fidclnt"
@@ -65,6 +67,27 @@ func (rdr *Reader) GetData() ([]byte, error) {
 
 func (rdr *Reader) GetDataErr() ([]byte, *np.Err) {
 	return rdr.fc.Read(rdr.fid, 0, np.MAXGETSET)
+}
+
+func (rdr *Reader) ReadJsonStream(mk func() interface{}, f func(i interface{}) error) error {
+	for {
+		l, err := binary.ReadVarint(rdr)
+		if err != nil && err == io.EOF {
+			break
+		}
+		data := make([]byte, l)
+		if _, err := rdr.Read(data); err != nil {
+			return err
+		}
+		v := mk()
+		if err := json.Unmarshal(data, v); err != nil {
+			return err
+		}
+		if err := f(v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (rdr *Reader) Close() error {

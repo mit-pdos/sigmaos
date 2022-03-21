@@ -121,8 +121,8 @@ func (fidc *FidClnt) Open(fid np.Tfid, mode np.Tmode) (np.Tqid, *np.Err) {
 	return reply.Qid, nil
 }
 
-func (fidc *FidClnt) Watch(fid np.Tfid, path []string, version np.TQversion) *np.Err {
-	return fidc.fids.lookup(fid).pc.Watch(fid, nil, version)
+func (fidc *FidClnt) Watch(fid np.Tfid, path []string) *np.Err {
+	return fidc.fids.lookup(fid).pc.Watch(fid, nil)
 }
 
 func (fidc *FidClnt) Wstat(fid np.Tfid, st *np.Stat) *np.Err {

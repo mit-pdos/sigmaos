@@ -3,20 +3,20 @@ package kernel_test
 import (
 	"log"
 	"path"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/crash"
-	"ulambda/delay"
-	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
 	"ulambda/test"
 )
+
+//
+// Tests automounting and ephemeral files
+//
 
 func TestSymlink1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
@@ -150,6 +150,20 @@ func TestSymlink3(t *testing.T) {
 	ts.Shutdown()
 }
 
+func procdName(ts *test.Tstate, exclude map[string]bool) string {
+	sts, err := ts.GetDir(np.PROCD)
+	stsExcluded := []*np.Stat{}
+	for _, s := range sts {
+		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
+			stsExcluded = append(stsExcluded, s)
+		}
+	}
+	assert.Nil(ts.T, err, np.PROCD)
+	assert.Equal(ts.T, 1, len(stsExcluded))
+	name := path.Join(np.PROCD, stsExcluded[0].Name)
+	return name
+}
+
 func TestEphemeral(t *testing.T) {
 	const N = 20
 	ts := test.MakeTstateAll(t)
@@ -184,76 +198,6 @@ func TestEphemeral(t *testing.T) {
 		break
 	}
 	assert.Greater(t, N, n, "Waiting too long")
-
-	ts.Shutdown()
-}
-
-func procdName(ts *test.Tstate, exclude map[string]bool) string {
-	sts, err := ts.GetDir(np.PROCD)
-	stsExcluded := []*np.Stat{}
-	for _, s := range sts {
-		if ok := exclude[path.Join(np.PROCD, s.Name)]; !ok {
-			stsExcluded = append(stsExcluded, s)
-		}
-	}
-	assert.Nil(ts.T, err, np.PROCD)
-	assert.Equal(ts.T, 1, len(stsExcluded))
-	name := path.Join(np.PROCD, stsExcluded[0].Name)
-	return name
-}
-
-func TestFenceW(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-	fence := "name/l"
-
-	dirux := np.UX + "/~ip/outdir"
-	ts.MkDir(dirux, 0777)
-	ts.Remove(dirux + "/f")
-
-	fsldl := fslib.MakeFsLibAddr("wfence", fslib.Named())
-
-	ch := make(chan bool)
-	go func() {
-		wfence := fenceclnt.MakeFenceClnt(fsldl, fence, 0, []string{dirux})
-		err := wfence.AcquireFenceW([]byte{})
-		assert.Nil(t, err, "WriteFence")
-
-		fd, err := fsldl.Create(dirux+"/f", 0777, np.OWRITE)
-		assert.Nil(t, err, "Create")
-
-		ch <- true
-
-		log.Printf("partition from named..\n")
-
-		crash.Partition(fsldl)
-		delay.Delay(10)
-
-		// fsldl lost lock, and ts should have it by now so
-		// this write and read to ux server should fail
-		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))
-		assert.NotNil(t, err, "Write")
-
-		// XXX opened before change, so maybe ok
-		//_, err = fsldl.Read(fd, 100)
-		//assert.NotNil(t, err, "Write")
-
-		fsldl.Close(fd)
-
-		ch <- true
-	}()
-
-	<-ch
-
-	wfence := fenceclnt.MakeFenceClnt(ts.FsLib, fence, 0, []string{dirux})
-	err := wfence.AcquireFenceW([]byte{})
-	assert.Nil(t, err, "WriteFence")
-
-	<-ch
-
-	fd, err := ts.Open(dirux+"/f", np.OREAD)
-	assert.Nil(t, err, "Open")
-	b, err := ts.Read(fd, 100)
-	assert.Equal(ts.T, 0, len(b))
 
 	ts.Shutdown()
 }

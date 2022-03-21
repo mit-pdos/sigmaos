@@ -50,6 +50,10 @@ func (f *Fid) Path() np.Path {
 	return f.path
 }
 
+func (f *Fid) Qid() np.Tqid {
+	return f.qid
+}
+
 func (f *Fid) SetPath(path np.Path) {
 	f.path = path
 }

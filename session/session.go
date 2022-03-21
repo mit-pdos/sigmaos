@@ -129,7 +129,7 @@ func (sess *Session) heartbeat(msg np.Tmsg) {
 func (sess *Session) timedOut() bool {
 	sess.Lock()
 	defer sess.Unlock()
-	return sess.running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+	return !sess.running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
 }
 
 func (sess *Session) SetRunning(r bool) {

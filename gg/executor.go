@@ -26,7 +26,7 @@ func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
 	ex.ProcClnt = procclnt.MakeProcClnt(fls)
-	ex.Started(ex.pid)
+	ex.Started()
 	return ex, nil
 }
 

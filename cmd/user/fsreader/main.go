@@ -49,7 +49,7 @@ func MakeReader(args []string) (*Reader, error) {
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	r.input = args[2]
 	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"
-	r.Started(proc.GetPid())
+	r.Started()
 	return r, nil
 }
 

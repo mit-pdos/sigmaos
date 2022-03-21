@@ -147,7 +147,7 @@ func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {
-		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
+		if err := fssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()
 			log.Printf("%v: Error Started: %v", proc.GetName(), err)
 		}

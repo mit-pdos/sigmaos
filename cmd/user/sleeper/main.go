@@ -54,7 +54,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	db.DLPrintf("PROCD", "MakeSleeper: %v\n", args)
 
 	if !s.native {
-		err := s.Started(proc.GetPid())
+		err := s.Started()
 		if err != nil {
 			log.Fatalf("%v: Started: error %v\n", proc.GetName(), err)
 		}

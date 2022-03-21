@@ -41,7 +41,7 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 
-	r.Started(proc.GetPid())
+	r.Started()
 
 	crash.Crasher(r.FsLib)
 	delay.SetDelayRPC(3)

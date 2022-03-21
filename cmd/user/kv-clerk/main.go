@@ -24,7 +24,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v err %v\n", os.Args[0], err)
 		os.Exit(1)
 	}
-	clk.Started(proc.GetPid())
+	clk.Started()
 	run(clk)
 }
 

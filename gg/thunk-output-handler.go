@@ -25,7 +25,7 @@ func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, err
 	db.DPrintf("ThunkOutputHandler: %v\n", args)
 
 	toh := mkThunkOutputHandler(proc.Tpid(args[0]), args[1], args[2:])
-	toh.Started(toh.pid)
+	toh.Started()
 	return toh, nil
 }
 

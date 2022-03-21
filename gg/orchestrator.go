@@ -20,7 +20,7 @@ const (
 type ExecutorLauncher interface {
 	FsLambda
 	Spawn(*proc.Proc) error
-	Started(proc.Tpid) error
+	Started() error
 }
 
 type Orchestrator struct {
@@ -42,7 +42,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
 	orc.ProcClnt = procclnt.MakeProcClnt(fls)
-	orc.Started(orc.pid)
+	orc.Started()
 	return orc, nil
 }
 

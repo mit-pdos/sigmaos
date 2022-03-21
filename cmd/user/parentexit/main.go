@@ -20,7 +20,7 @@ func main() {
 	}
 	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
 	pclnt := procclnt.MakeProcClnt(fsl)
-	pclnt.Started(proc.GetPid())
+	pclnt.Started()
 	pid1 := proc.Tpid(os.Args[2])
 	a := proc.MakeProcPid(pid1, "bin/user/sleeper", []string{os.Args[1], "name/out_" + pid1.String()})
 	err := pclnt.Spawn(a)

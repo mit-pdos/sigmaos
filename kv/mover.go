@@ -51,7 +51,7 @@ func MakeMover(epochstr, src, dst string) (*Mover, error) {
 	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid().String())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 
-	if err := mv.Started(proc.GetPid()); err != nil {
+	if err := mv.Started(); err != nil {
 		log.Fatalf("%v: couldn't start %v\n", proc.GetName(), err)
 	}
 	crash.Crasher(mv.FsLib)

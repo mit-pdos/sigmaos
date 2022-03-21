@@ -63,7 +63,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 		os.Exit(1)
 	}
 
-	p.Started(proc.GetPid())
+	p.Started()
 
 	return p, nil
 }

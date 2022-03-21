@@ -49,8 +49,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
-
-	m.Started(proc.GetPid())
+	m.Started()
 
 	crash.Crasher(m.FsLib)
 	delay.SetDelayRPC(100)

@@ -18,7 +18,7 @@ func RunProc(epochstr, dir string) {
 
 	fsl := fslib.MakeFsLib("proc-" + pid.String())
 	pclnt := procclnt.MakeProcClnt(fsl)
-	pclnt.Started(pid)
+	pclnt.Started()
 
 	epoch, err := np.String2Epoch(epochstr)
 	if err != nil {

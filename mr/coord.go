@@ -79,7 +79,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
-	w.Started(proc.GetPid())
+	w.Started()
 
 	w.electclnt = electclnt.MakeElectClnt(w.FsLib, MRDIR+"/coord-leader", 0)
 

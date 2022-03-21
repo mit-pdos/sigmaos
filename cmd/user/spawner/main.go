@@ -60,7 +60,7 @@ func (s *Spawner) Work() {
 	if err != nil {
 		log.Fatalf("Error spawn: %v", err)
 	}
-	s.Started(proc.GetPid())
+	s.Started()
 	if s.shouldWaitExit {
 		s.WaitExit(s.childPid)
 	}

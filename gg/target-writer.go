@@ -30,7 +30,7 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
 	tw.ProcClnt = procclnt.MakeProcClnt(fls)
-	tw.Started(tw.pid)
+	tw.Started()
 	return tw, nil
 }
 

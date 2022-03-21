@@ -57,7 +57,7 @@ func (m *ReplicaMonitor) updateConfig() {
 }
 
 func (m *ReplicaMonitor) Work() {
-	m.Started(m.pid)
+	m.Started()
 	// Get exclusive access to the config file.
 	//	if ok := m.configLock.TryLock(); ok {
 	m.updateConfig()

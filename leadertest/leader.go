@@ -26,7 +26,7 @@ func RunLeader(dir, last, child string) {
 	fsl := fslib.MakeFsLib("leader-" + pid.String())
 	pclnt := procclnt.MakeProcClnt(fsl)
 
-	pclnt.Started(pid)
+	pclnt.Started()
 
 	fn := dir + "/out"
 	l := leaderclnt.MakeLeaderClnt(fsl, LEADERFN, 0777)

@@ -46,7 +46,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 		log.Fatalf("MakeFile error: %v", err)
 	}
 
-	err := s.Started(proc.GetPid())
+	err := s.Started()
 	if err != nil {
 		log.Fatalf("Started: error %v\n", err)
 	}

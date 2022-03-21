@@ -63,7 +63,7 @@ func MakeCoord(args []string) (*Coord, error) {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
-	cd.Started(proc.GetPid())
+	cd.Started()
 	return cd, nil
 }
 

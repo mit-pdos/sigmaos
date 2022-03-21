@@ -49,7 +49,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
 	ba.input = strings.Split(args[2], "/")
-	ba.Started(proc.GetPid())
+	ba.Started()
 
 	return ba, nil
 }

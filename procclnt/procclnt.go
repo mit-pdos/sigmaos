@@ -161,7 +161,8 @@ func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
 // ========== STARTED ==========
 
 // Proc pid marks itself as started.
-func (clnt *ProcClnt) Started(pid proc.Tpid) error {
+func (clnt *ProcClnt) Started() error {
+	pid := proc.GetPid()
 	procdir := proc.PROCDIR
 
 	db.DLPrintf("PROCCLNT", "Started %v\n", pid)

@@ -44,7 +44,7 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 	fls := fslib.MakeFsLib("orchestrator")
 	orc.FsLib = fls
 	orc.ProcClnt = procclnt.MakeProcClnt(fls)
-	orc.Started(orc.pid)
+	orc.Started()
 	return orc, nil
 }
 

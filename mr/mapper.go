@@ -55,7 +55,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.Started(proc.GetPid())
 
 	crash.Crasher(m.FsLib)
-	delay.SetDelayRPC(100)
+	delay.SetDelayRPC(3)
 	return m, nil
 }
 

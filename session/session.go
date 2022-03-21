@@ -119,6 +119,7 @@ func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
 func (sess *Session) heartbeat(msg np.Tmsg) {
 	sess.Lock()
 	defer sess.Unlock()
+	db.DLPrintf("SESSION", "Heartbeat %v %v", msg.Type(), msg)
 	if sess.closed {
 		log.Fatalf("FATAL %v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
 	}

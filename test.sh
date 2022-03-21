@@ -1,6 +1,5 @@
 #!/bin/bash
 
-<<<<<<< HEAD
 for ND in :1111 :1111,:1112,:1113
 do
   export NAMED=$ND

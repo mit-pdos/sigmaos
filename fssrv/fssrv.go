@@ -292,6 +292,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 }
 
 func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
+	db.DLPrintf("FSSRV", "Close session %v", sid)
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {
 		// client start TCP connection, but then failed before sending
@@ -308,4 +309,5 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Stop sess thread.
 	fssrv.st.KillSessThread(sid)
+	db.DLPrintf("FSSRV", "Close session done %v", sid)
 }

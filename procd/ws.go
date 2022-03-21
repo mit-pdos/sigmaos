@@ -28,7 +28,7 @@ func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid stri
 }
 
 func (pd *Procd) claimRemoteProc(procdPath string, queueName string, p *proc.Proc) bool {
-	err := pd.Remove(path.Join(procdPath, queueName, p.Pid))
+	err := pd.Remove(path.Join(procdPath, queueName, p.Pid.String()))
 	if err != nil {
 		return false
 	}

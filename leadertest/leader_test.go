@@ -12,11 +12,11 @@ import (
 	"ulambda/test"
 )
 
-func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
+func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid) {
 	const (
 		N = 10
 	)
-	pids := []string{}
+	pids := []proc.Tpid{}
 
 	// XXX use the same dir independent of machine running proc
 	ts.RmDir(np.UX + "/" + np.FENCEDIR)
@@ -53,11 +53,11 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []string) {
 	return fn, pids
 }
 
-func check(t *testing.T, ts *test.Tstate, fn string, pids []string) {
+func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	rdr, err := ts.OpenReader(fn)
 	assert.Nil(t, err, "GetFile")
-	m := make(map[string]bool)
-	last := ""
+	m := make(map[proc.Tpid]bool)
+	last := proc.Tpid("")
 	e := np.Tepoch(0)
 	err = rdr.ReadJsonStream(func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)

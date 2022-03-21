@@ -3,6 +3,8 @@ package gg
 import (
 	"path"
 	"strings"
+
+	"ulambda/proc"
 )
 
 // PID constants
@@ -45,48 +47,48 @@ func thunkHashesFromReductions(reductions []string) []string {
 
 // ========== Pids ==========
 
-func noOpPid(pid string) string {
-	return ggPid("", "", pid, NO_OP_SUFFIX)
+func noOpPid(pid proc.Tpid) proc.Tpid {
+	return ggPid("", "", pid.String(), NO_OP_SUFFIX)
 }
 
-func executorPid(hash string) string {
+func executorPid(hash string) proc.Tpid {
 	return ggPid("", "", hash, EXECUTOR_SUFFIX)
 }
 
-func outputHandlerPid(hash string) string {
+func outputHandlerPid(hash string) proc.Tpid {
 	return ggPid("", "", hash, OUTPUT_HANDLER_SUFFIX)
 }
 
-func reductionWriterPid(dir string, subDir string, hash string) string {
+func reductionWriterPid(dir string, subDir string, hash string) proc.Tpid {
 	return ggPid(path.Base(dir), path.Base(subDir), hash, TARGET_WRITER_SUFFIX)
 }
 
-func reductionDownloaderPid(reductionHash string, subDir string, target string) string {
+func reductionDownloaderPid(reductionHash string, subDir string, target string) proc.Tpid {
 	return ggPid(reductionHash, subDir, target, REDUCTION_SUFFIX+DOWNLOADER_SUFFIX)
 }
 
-func origDirUploaderPid(subDir string) string {
+func origDirUploaderPid(subDir string) proc.Tpid {
 	return ggPid(GG_ORIG, subDir, "", DIR_UPLOADER_SUFFIX)
 }
 
-func dirUploaderPid(hash string, subDir string) string {
+func dirUploaderPid(hash string, subDir string) proc.Tpid {
 	return ggPid(hash, subDir, "", DIR_UPLOADER_SUFFIX)
 }
 
-func uploaderPid(dir string, subDir string, hash string) string {
+func uploaderPid(dir string, subDir string, hash string) proc.Tpid {
 	return ggPid(path.Base(dir), subDir, hash, UPLOADER_SUFFIX)
 }
 
-func downloaderPid(dir string, subDir string, hash string) string {
+func downloaderPid(dir string, subDir string, hash string) proc.Tpid {
 	return ggPid(path.Base(dir), subDir, hash, DOWNLOADER_SUFFIX)
 }
 
-func ggPid(dir string, subDir string, hash string, suffix string) string {
-	return "[" + dir + "." + subDir + "]" + hash + suffix
+func ggPid(dir string, subDir string, hash string, suffix string) proc.Tpid {
+	return proc.Tpid("[" + dir + "." + subDir + "]" + hash + suffix)
 }
 
-func outputHandlerPids(deps map[string]bool) []string {
-	out := []string{}
+func outputHandlerPids(deps map[string]bool) []proc.Tpid {
+	out := []proc.Tpid{}
 	for d, _ := range deps {
 		pid := outputHandlerPid(d)
 		noOpPid := noOpPid(pid)

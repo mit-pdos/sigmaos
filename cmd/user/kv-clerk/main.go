@@ -19,7 +19,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", os.Args[0])
 		os.Exit(1)
 	}
-	clk, err := kv.MakeClerk("clerk-"+proc.GetPid(), fslib.Named())
+	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), fslib.Named())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v err %v\n", os.Args[0], err)
 		os.Exit(1)
@@ -59,7 +59,7 @@ func run(kc *kv.KvClerk) {
 }
 
 type Value struct {
-	Pid string
+	Pid proc.Tpid
 	Key kv.Tkey
 	N   uint64
 }

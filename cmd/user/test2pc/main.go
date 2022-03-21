@@ -33,7 +33,7 @@ type Tinput struct {
 type Part2pc struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	me     string
+	me     proc.Tpid
 	index  string
 	opcode string
 	args   []string
@@ -47,7 +47,7 @@ func MkTest2Participant(args []string) (*Part2pc, error) {
 	p.me = proc.GetPid()
 	p.index = args[0]
 	p.opcode = args[1]
-	p.FsLib = fslib.MakeFsLib(p.me)
+	p.FsLib = fslib.MakeFsLib(p.me.String())
 	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 
 	log.Printf("%v: Part2pc i %v op %v\n", p.me, p.index, p.opcode)

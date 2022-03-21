@@ -7,14 +7,15 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
 type ThunkOutputHandler struct {
-	pid                    string
+	pid                    proc.Tpid
 	thunkHash              string
 	primaryOutputThunkHash string
-	primaryOutputThunkPid  string
+	primaryOutputThunkPid  proc.Tpid
 	outputFiles            []string
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -23,12 +24,12 @@ type ThunkOutputHandler struct {
 func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, error) {
 	db.DPrintf("ThunkOutputHandler: %v\n", args)
 
-	toh := mkThunkOutputHandler(args[0], args[1], args[2:])
+	toh := mkThunkOutputHandler(proc.Tpid(args[0]), args[1], args[2:])
 	toh.Started(toh.pid)
 	return toh, nil
 }
 
-func mkThunkOutputHandler(pid string, thunkHash string, outputFiles []string) *ThunkOutputHandler {
+func mkThunkOutputHandler(pid proc.Tpid, thunkHash string, outputFiles []string) *ThunkOutputHandler {
 	toh := &ThunkOutputHandler{}
 	toh.pid = pid
 	toh.thunkHash = thunkHash
@@ -71,13 +72,13 @@ func (toh *ThunkOutputHandler) processOutput() []*Thunk {
 	return newThunks
 }
 
-func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []string, outputFiles []string) string {
+func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []proc.Tpid, outputFiles []string) string {
 	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
 	exPid, err := spawnExecutor(toh, thunkHash, deps)
 	if err != nil {
 		log.Printf("%v", err)
 	}
-	outputHandlerPid := spawnThunkOutputHandler(toh, []string{exPid}, thunkHash, outputFiles)
+	outputHandlerPid := spawnThunkOutputHandler(toh, []string{exPid.String()}, thunkHash, outputFiles)
 	return spawnNoOp(toh, outputHandlerPid)
 }
 
@@ -161,5 +162,5 @@ func (toh *ThunkOutputHandler) readThunkOutputs() []string {
 }
 
 func (toh *ThunkOutputHandler) Name() string {
-	return "ThunkOutputHandler " + toh.pid + " "
+	return "ThunkOutputHandler " + toh.pid.String() + " "
 }

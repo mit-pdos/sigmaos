@@ -20,11 +20,11 @@ const (
 type ExecutorLauncher interface {
 	FsLambda
 	Spawn(*proc.Proc) error
-	Started(string) error
+	Started(proc.Tpid) error
 }
 
 type Orchestrator struct {
-	pid          string
+	pid          proc.Tpid
 	cwd          string
 	targets      []string
 	targetHashes []string
@@ -36,7 +36,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 	log.Printf("Orchestrator: %v\n", args)
 	orc := &Orchestrator{}
 
-	orc.pid = args[0]
+	orc.pid = proc.Tpid(args[0])
 	orc.cwd = args[1]
 	orc.targets = args[2:]
 	fls := fslib.MakeFsLib("orchestrator")
@@ -53,7 +53,7 @@ func (orc *Orchestrator) Exit() {
 func (orc *Orchestrator) Work() {
 	setUpRemoteDirs(orc)
 	copyRemoteDirTree(orc, path.Join(orc.cwd, ".gg"), ggRemote("", ""))
-	reductionWriters := []string{}
+	reductionWriters := []proc.Tpid{}
 	start := time.Now()
 	for i, target := range orc.targets {
 		targetHash := getTargetHash(orc, orc.cwd, target)
@@ -104,12 +104,12 @@ func (orc *Orchestrator) executeStaticGraph(targetHash string, g *Graph) {
 		if err != nil {
 			log.Fatalf("Error orchestrator: %v", err)
 		}
-		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid}, thunk.hash, []string{thunk.hash})
+		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid.String()}, thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)
 	}
 }
 
-func (orc *Orchestrator) waitPids(pids []string) {
+func (orc *Orchestrator) waitPids(pids []proc.Tpid) {
 	for _, p := range pids {
 		orc.WaitExit(p)
 	}

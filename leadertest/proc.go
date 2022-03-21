@@ -16,7 +16,7 @@ import (
 func RunProc(epochstr, dir string) {
 	pid := proc.GetPid()
 
-	fsl := fslib.MakeFsLib("proc-" + pid)
+	fsl := fslib.MakeFsLib("proc-" + pid.String())
 	pclnt := procclnt.MakeProcClnt(fsl)
 	pclnt.Started(pid)
 

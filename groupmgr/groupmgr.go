@@ -26,7 +26,7 @@ type GroupMgr struct {
 type member struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	pid   string
+	pid   proc.Tpid
 	bin   string
 	args  []string
 	crash int

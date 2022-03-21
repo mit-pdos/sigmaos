@@ -47,7 +47,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.rand = rand.String(16)
 	m.fds = make([]*writer.Writer, m.nreducetask)
 
-	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid() + " " + m.input)
+	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
 
 	m.Started(proc.GetPid())

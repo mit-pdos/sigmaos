@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
+	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
@@ -19,21 +20,21 @@ type Participant struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	fclnt  *fenceclnt.FenceClnt
-	me     string
+	me     proc.Tpid
 	twopc  *Twopc
 	txn    TxnI
 	opcode string
 }
 
-func prepareName(flw string) string {
-	return TWOPCPREPARED + flw
+func prepareName(flw proc.Tpid) string {
+	return TWOPCPREPARED + flw.String()
 }
 
-func commitName(flw string) string {
-	return TWOPCCOMMITTED + flw
+func commitName(flw proc.Tpid) string {
+	return TWOPCCOMMITTED + flw.String()
 }
 
-func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn TxnI, opcode string) (*Participant, error) {
+func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me proc.Tpid, txn TxnI, opcode string) (*Participant, error) {
 	p := &Participant{}
 	log.Printf("PART MakeParticipant %v %v\n", me, opcode)
 	p.me = me
@@ -43,7 +44,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me string, txn 
 	p.txn = txn
 	p.opcode = opcode
 
-	if _, err := p.PutFile(DIR2PC+"/"+p.me, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
+	if _, err := p.PutFile(DIR2PC+"/"+p.me.String(), 0777|np.DMTMP, np.OWRITE, nil); err != nil {
 		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 

@@ -13,6 +13,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/semclnt"
 )
@@ -115,12 +116,12 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		realmCfg.NamedAddr = append(realmCfg.NamedAddr, namedAddrs...)
 
 		// Start a named instance.
-		var pid string
+		var pid proc.Tpid
 		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 		// Update config
-		realmCfg.NamedPids = append(realmCfg.NamedPids, pid)
+		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 	}

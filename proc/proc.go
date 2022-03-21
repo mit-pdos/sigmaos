@@ -8,6 +8,7 @@ import (
 	np "ulambda/ninep"
 )
 
+type Tpid string
 type Ttype uint32
 type Tcore uint32
 
@@ -21,8 +22,12 @@ const (
 	C_DEF Tcore = 0
 )
 
+func (pid Tpid) String() string {
+	return string(pid)
+}
+
 type Proc struct {
-	Pid          string   // SigmaOS PID
+	Pid          Tpid     // SigmaOS PID
 	ProcDir      string   // SigmaOS directory to store this proc's state
 	ParentDir    string   // SigmaOS parent proc directory
 	Program      string   // Program to run
@@ -43,7 +48,7 @@ func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
 	p.setProcDir("")
-	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
+	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid.String())
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
@@ -51,20 +56,20 @@ func MakeProc(program string, args []string) *Proc {
 	return p
 }
 
-func MakeProcPid(pid string, program string, args []string) *Proc {
+func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p := MakeProc(program, args)
 	p.Pid = pid
 	p.setProcDir("")
-	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid)
+	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid.String())
 	return p
 }
 
 func (p *Proc) setProcDir(procdIp string) {
 	if p.IsPrivilegedProc() {
-		p.ProcDir = path.Join(KPIDS, p.Pid)
+		p.ProcDir = path.Join(KPIDS, p.Pid.String())
 	} else {
 		if procdIp != "" {
-			p.ProcDir = path.Join(np.PROCD, procdIp, PIDS, p.Pid) // TODO: make relative to ~procd
+			p.ProcDir = path.Join(np.PROCD, procdIp, PIDS, p.Pid.String()) // TODO: make relative to ~procd
 		}
 	}
 }
@@ -84,7 +89,7 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	env = append(env, SIGMAPRIVILEGEDPROC+"="+fmt.Sprintf("%v", p.IsPrivilegedProc()))
 	env = append(env, SIGMANEWROOT+"="+newRoot)
 	env = append(env, SIGMAPROCDIP+"="+procdIp)
-	env = append(env, SIGMAPID+"="+p.Pid)
+	env = append(env, SIGMAPID+"="+p.Pid.String())
 	env = append(env, SIGMAPROGRAM+"="+p.Program)
 	env = append(env, SIGMAPROCDIR+"="+p.ProcDir)
 	env = append(env, SIGMAPARENTDIR+"="+p.ParentDir)

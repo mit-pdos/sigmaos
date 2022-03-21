@@ -31,10 +31,10 @@ type SpinTestStarter struct {
 	*procclnt.ProcClnt
 }
 
-func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
+func (s *SpinTestStarter) spawnSpinnerWithPid(pid proc.Tpid) {
 	var a *proc.Proc
 	if s.perfStat {
-		a = proc.MakeProcPid(pid, "bin/user/perf", []string{"stat", "./bin/user/c-spinner", pid, s.dim, s.its})
+		a = proc.MakeProcPid(pid, "bin/user/perf", []string{"stat", "./bin/user/c-spinner", pid.String(), s.dim, s.its})
 	} else {
 		a = proc.MakeProcPid(pid, "bin/user/c-spinner", []string{s.dim, s.its})
 	}
@@ -44,7 +44,7 @@ func (s *SpinTestStarter) spawnSpinnerWithPid(pid string) {
 	}
 }
 
-func (s *SpinTestStarter) spawnSpinner() string {
+func (s *SpinTestStarter) spawnSpinner() proc.Tpid {
 	pid := proc.GenPid()
 	s.spawnSpinnerWithPid(pid)
 	return pid
@@ -114,18 +114,17 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 }
 
 func (s *SpinTestStarter) TestNinep() time.Duration {
-	pids := map[string]int{}
+	pids := map[proc.Tpid]int{}
 
 	// Gen pids
 	for i := 0; i < s.nSpinners; i++ {
-		pid := proc.GenPid()
-		pid = pid + "-ninep-" + s.its
-		_, alreadySpawned := pids[pid]
+		p := proc.GenPid()
+		_, alreadySpawned := pids[p]
 		for alreadySpawned {
-			pid = proc.GenPid()
-			_, alreadySpawned = pids[pid]
+			p = proc.GenPid()
+			_, alreadySpawned = pids[p]
 		}
-		pids[pid] = i
+		pids[p] = i
 	}
 
 	start := time.Now()
@@ -143,7 +142,7 @@ func (s *SpinTestStarter) TestNinep() time.Duration {
 	// Print out the results from perf stat
 	if s.perfStat {
 		for pid, _ := range pids {
-			fname := "/tmp/perf-stat-" + pid + ".out"
+			fname := "/tmp/perf-stat-" + pid.String() + ".out"
 			contents, err := ioutil.ReadFile(fname)
 			if err != nil {
 				log.Printf("Couldn't read file contents: %v, %v", fname, err)
@@ -159,16 +158,16 @@ func (s *SpinTestStarter) TestNinep() time.Duration {
 }
 
 func (s *SpinTestStarter) TestNative() time.Duration {
-	pids := map[string]*exec.Cmd{}
+	pids := map[proc.Tpid]*exec.Cmd{}
 
 	// Gen pids
 	for i := 0; i < s.nSpinners; i++ {
-		pid := proc.GenPid()
-		pid = pid + "-native-" + s.its
-		_, alreadySpawned := pids[pid]
+		p := proc.GenPid()
+		pid := p.String() + "-native-" + s.its
+		_, alreadySpawned := pids[p]
 		for alreadySpawned {
-			pid = proc.GenPid()
-			_, alreadySpawned = pids[pid]
+			p = proc.GenPid()
+			_, alreadySpawned = pids[p]
 		}
 
 		// Set up command struct
@@ -189,7 +188,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 		}
 
 		// Store it along
-		pids[pid] = cmd
+		pids[p] = cmd
 	}
 
 	start := time.Now()
@@ -213,7 +212,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 	if s.perfStat {
 		// Print out the results from perf stat
 		for pid, _ := range pids {
-			fname := "/tmp/perf-stat-" + pid + ".out"
+			fname := "/tmp/perf-stat-" + pid.String() + ".out"
 			contents, err := ioutil.ReadFile(fname)
 			if err != nil {
 				log.Printf("Couldn't read file contents: %v, %v", fname, err)
@@ -259,7 +258,7 @@ func (s *SpinTestStarter) TestLocalBaseline() {
 	pid := proc.GenPid()
 
 	// Set up command struct
-	cmd := exec.Command("./bin/user/c-spinner", []string{pid, s.dim, s.its, "baseline"}...)
+	cmd := exec.Command("./bin/user/c-spinner", []string{pid.String(), s.dim, s.its, "baseline"}...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

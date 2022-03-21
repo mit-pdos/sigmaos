@@ -1,9 +1,11 @@
 package gg
 
 import (
-//	"fmt"
-//	"log"
-//	"path"
+	//	"fmt"
+	//	"log"
+	//	"path"
+
+	"ulambda/proc"
 )
 
 // Given a PID, create a no-op which waits on that Pid
@@ -32,7 +34,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 	return ""
 }
 
-func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) string {
+func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) proc.Tpid {
 	//	a := procdep.MakeProcDep(reductionWriterPid(dstDir, subDir, target), "bin/user/gg-target-writer", []string{
 	//		path.Join(dstDir, subDir),
 	//		target,
@@ -54,7 +56,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	return ""
 }
 
-func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []string) (string, error) {
+func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []proc.Tpid) (proc.Tpid, error) {
 	//	a := procdep.MakeProcDep(executorPid(targetHash), "bin/user/gg-executor", []string{
 	//		targetHash,
 	//	})

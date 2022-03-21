@@ -103,7 +103,7 @@ func (g *Group) clearBusy() {
 func RunMember(grp string) {
 	g := &Group{}
 	g.isBusy = true
-	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid())
+	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
 	crash.Crasher(g.FsLib)
 
@@ -224,7 +224,7 @@ func (g *Group) recover(grp string) {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
 		// backup config.
-		g.conf = &GrpConf{"kv-" + proc.GetPid(), []string{}}
+		g.conf = &GrpConf{"kv-" + proc.GetPid().String(), []string{}}
 		g.PublishConfig(grp)
 	}
 }

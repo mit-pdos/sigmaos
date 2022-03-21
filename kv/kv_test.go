@@ -73,7 +73,7 @@ type Tstate struct {
 	clrk    *KvClerk
 	mfsgrps []*groupmgr.GroupMgr
 	gmbal   *groupmgr.GroupMgr
-	clrks   []string
+	clrks   []proc.Tpid
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) (*Tstate, *KvClerk) {
@@ -109,7 +109,7 @@ func (ts *Tstate) done() {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) stopFS(fs string) {
+func (ts *Tstate) stopFS(fs proc.Tpid) {
 	err := ts.Evict(fs)
 	assert.Nil(ts.T, err, "stopFS")
 	ts.WaitExit(fs)
@@ -132,7 +132,7 @@ func (ts *Tstate) stopClerks() {
 	}
 }
 
-func (ts *Tstate) startClerk() string {
+func (ts *Tstate) startClerk() proc.Tpid {
 	p := proc.MakeProc("bin/user/kv-clerk", []string{""})
 	ts.Spawn(p)
 	err := ts.WaitStart(p.Pid)

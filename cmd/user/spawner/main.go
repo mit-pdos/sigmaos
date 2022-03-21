@@ -29,7 +29,7 @@ type Spawner struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	shouldWaitExit bool
-	childPid       string
+	childPid       proc.Tpid
 	childProgram   string
 	childArgs      []string
 }
@@ -40,14 +40,14 @@ func MakeSpawner(args []string) (*Spawner, error) {
 	}
 	// 	log.Printf("MakeSpawner %v", args)
 	s := &Spawner{}
-	s.FsLib = fslib.MakeFsLib("spawner-" + proc.GetPid())
+	s.FsLib = fslib.MakeFsLib("spawner-" + proc.GetPid().String())
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	b, err := strconv.ParseBool(args[0])
 	if err != nil {
 		log.Fatalf("Error parseBool: %v %v", args[0], err)
 	}
 	s.shouldWaitExit = b
-	s.childPid = args[1]
+	s.childPid = proc.Tpid(args[1])
 	s.childProgram = args[2]
 	s.childArgs = args[3:]
 

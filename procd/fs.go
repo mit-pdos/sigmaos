@@ -110,7 +110,7 @@ func (pfs *ProcdFs) readRunqProc(procdPath string, queueName string, name string
 
 // Remove from the runq. May race with other (work-stealing) procds.
 func (pfs *ProcdFs) claimProc(procdPath string, queueName string, p *proc.Proc) bool {
-	err := pfs.runqs[queueName].Remove(ctx.MkCtx("", 0, nil), p.Pid)
+	err := pfs.runqs[queueName].Remove(ctx.MkCtx("", 0, nil), p.Pid.String())
 	if err != nil {
 		db.DLPrintf("PDFS", "Error ProcdFs.claimProc: %v", err)
 		return false
@@ -131,7 +131,7 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 	if err != nil {
 		return err
 	}
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), pfs.run, p.Pid, p)
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), pfs.run, p.Pid.String(), p)
 	if err != nil {
 		log.Printf("Error ProcdFs.run: %v", err)
 		return err
@@ -141,7 +141,7 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 
 // Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *Proc) error {
-	err := pfs.run.Remove(ctx.MkCtx("", 0, nil), p.Pid)
+	err := pfs.run.Remove(ctx.MkCtx("", 0, nil), p.Pid.String())
 	if err != nil {
 		log.Printf("Error ProcdFs.finish: %v", err)
 		return err
@@ -162,7 +162,7 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	f := memfs.MakeFile(ino)
 	// Make sure we write the proc description before we publish it.
 	f.Write(ctx.MkCtx("", 0, nil), 0, b, np.NoV)
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), runq, a.Pid, f)
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), runq, a.Pid.String(), f)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err

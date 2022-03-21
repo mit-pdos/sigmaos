@@ -31,7 +31,7 @@ func RunFsUx(mount string) {
 	fsux.Done()
 }
 
-func MakeReplicatedFsUx(mount string, addr string, pid string, config repl.Config) *FsUx {
+func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
 	fsux := &FsUx{}
 	root, err := makeDir([]string{mount})

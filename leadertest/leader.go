@@ -23,7 +23,7 @@ const (
 
 func RunLeader(dir, last, child string) {
 	pid := proc.GetPid()
-	fsl := fslib.MakeFsLib("leader-" + pid)
+	fsl := fslib.MakeFsLib("leader-" + pid.String())
 	pclnt := procclnt.MakeProcClnt(fsl)
 
 	pclnt.Started(pid)

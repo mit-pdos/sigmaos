@@ -12,10 +12,10 @@ import (
 
 type Tstate struct {
 	*test.Tstate
-	pid string
+	pid proc.Tpid
 }
 
-func spawn(t *testing.T, ts *Tstate) string {
+func spawn(t *testing.T, ts *Tstate) proc.Tpid {
 	a := proc.MakeProc("bin/user/wwwd", []string{""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")

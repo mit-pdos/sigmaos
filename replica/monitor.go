@@ -14,7 +14,7 @@ import (
 )
 
 type ReplicaMonitor struct {
-	pid          string
+	pid          proc.Tpid
 	configPath   string
 	unionDirPath string
 	//	configLock   *sync.Lock
@@ -25,7 +25,7 @@ type ReplicaMonitor struct {
 func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	m := &ReplicaMonitor{}
 	// Set up paths
-	m.pid = args[0]
+	m.pid = proc.Tpid(args[0])
 	m.configPath = args[1]
 	m.unionDirPath = args[2]
 	// Set up fslib

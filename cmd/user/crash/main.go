@@ -14,7 +14,7 @@ import (
 //
 
 func main() {
-	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid())
+	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
 	pclnt := procclnt.MakeProcClnt(fsl)
 	err := pclnt.Started(proc.GetPid())
 	if err != nil {

@@ -7,11 +7,12 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
 type Executor struct {
-	pid       string
+	pid       proc.Tpid
 	thunkHash string
 	*fslib.FsLib
 	*procclnt.ProcClnt
@@ -20,7 +21,7 @@ type Executor struct {
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
 	db.DPrintf("Executor: %v\n", args)
 	ex := &Executor{}
-	ex.pid = args[0]
+	ex.pid = proc.Tpid(args[0])
 	ex.thunkHash = args[1]
 	fls := fslib.MakeFsLib("executor")
 	ex.FsLib = fls
@@ -92,7 +93,7 @@ func (ex *Executor) uploadOutputFiles() {
 }
 
 func (ex *Executor) Name() string {
-	return "Executor " + ex.pid + " "
+	return "Executor " + ex.pid.String() + " "
 }
 
 func (ex *Executor) Exit() {

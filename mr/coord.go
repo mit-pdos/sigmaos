@@ -60,7 +60,7 @@ func MakeCoord(args []string) (*Coord, error) {
 		return nil, errors.New("MakeCoord: too few arguments")
 	}
 	w := &Coord{}
-	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid())
+	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
 
 	n, err := strconv.Atoi(args[0])
 	if err != nil {

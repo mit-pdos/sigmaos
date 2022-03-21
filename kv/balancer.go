@@ -87,7 +87,7 @@ func RunBalancer(crashChild string, auto string) {
 	// reject requests for changes until after recovery
 	bl.isBusy = true
 
-	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid())
+	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid().String())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
 	bl.crash = crash.GetEnv()
 	bl.crashChild = crashChild
@@ -265,7 +265,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 	}
 }
 
-func (bl *Balancer) spawnProc(args []string) (string, error) {
+func (bl *Balancer) spawnProc(args []string) (proc.Tpid, error) {
 	p := proc.MakeProc(args[0], args[1:])
 	p.AppendEnv("SIGMACRASH", bl.crashChild)
 	err := bl.Spawn(p)

@@ -18,14 +18,12 @@ import (
 type Npd struct {
 	named []string
 	st    *session.SessionTable
-	sm    *session.SessionMgr
 }
 
 func MakeNpd() *Npd {
-	npd := &Npd{fslib.Named(), nil, nil}
+	npd := &Npd{fslib.Named(), nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
 	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm)
-	npd.sm = session.MakeSessionMgr(npd.st, npd.Process)
 	return npd
 }
 

@@ -12,7 +12,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	// be replicated (adding to the leader's timer) anyway. In the worst case, if
 	// we change leadership while a non-leader is trying to detach, the eventual
 	// detach will just be delayed by a bit.
-	s.heartbeat()
+	s.heartbeat(msg)
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}

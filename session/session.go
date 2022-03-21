@@ -116,11 +116,11 @@ func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
 	}
 }
 
-func (sess *Session) heartbeat() {
+func (sess *Session) heartbeat(msg np.Tmsg) {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		log.Fatalf("FATAL heartbeat on closed session %v", sess.Sid)
+		log.Fatalf("FATAL %v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
 	}
 	sess.lastHeartbeat = time.Now()
 }

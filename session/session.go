@@ -32,7 +32,7 @@ type Session struct {
 	myFences      *fences.FenceTable
 	lastHeartbeat time.Time
 	Sid           np.Tsession
-	Running       bool // true if the session is currently running an operation.
+	running       bool // true if the session is currently running an operation.
 	closed        bool // true if the session has been closed.
 	replies       chan *np.Fcall
 }
@@ -129,5 +129,11 @@ func (sess *Session) heartbeat(msg np.Tmsg) {
 func (sess *Session) timedOut() bool {
 	sess.Lock()
 	defer sess.Unlock()
-	return !sess.Running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+	return sess.running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+}
+
+func (sess *Session) SetRunning(r bool) {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.running = r
 }

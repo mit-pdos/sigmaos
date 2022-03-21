@@ -5,6 +5,8 @@ import (
 )
 
 func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
+	s.SetRunning(true)
+	defer s.SetRunning(false)
 	// Register a heartbeat. This should be safe to do even if this is a detach,
 	// since, if it is a detach, the decision to kill the session has already
 	// been made & confirmed (if the leader made the decision), and if the leader

@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/proc"
 	"ulambda/threadmgr"
 )
 
@@ -99,7 +100,7 @@ func (c *Clerk) registerOp(op *Op) {
 		c.opmap[op.request.Session] = m
 	}
 	if _, ok := m[op.request.Seqno]; ok {
-		log.Fatalf("Error in Clerk.Propose: seqno already exists")
+		log.Fatalf("FATAL %v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
 	}
 	m[op.request.Seqno] = op
 }

@@ -87,6 +87,6 @@ func (s *Sleeper) Work() {
 	go s.sleep(ch)
 	status := <-ch
 	if !s.native {
-		s.Exited(proc.GetPid(), status)
+		s.Exited(status)
 	}
 }

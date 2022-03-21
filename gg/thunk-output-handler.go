@@ -41,7 +41,7 @@ func mkThunkOutputHandler(pid proc.Tpid, thunkHash string, outputFiles []string)
 }
 
 func (toh *ThunkOutputHandler) Exit() {
-	toh.Exited(toh.pid, nil)
+	toh.Exited(nil)
 }
 
 func (toh *ThunkOutputHandler) Work() {

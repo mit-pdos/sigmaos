@@ -169,5 +169,5 @@ func (ba *BookApp) Work() *proc.Status {
 
 func (ba *BookApp) Exit(status *proc.Status) {
 	log.Printf("bookapp exit %v\n", status)
-	ba.Exited(proc.GetPid(), status)
+	ba.Exited(status)
 }

@@ -55,11 +55,11 @@ func RunLeader(dir, last, child string) {
 		// Create a proc running in the same epoch as leader
 		p := proc.MakeProc("bin/user/leadertest-proc", []string{epoch.String(), dir})
 		if err := pclnt.Spawn(p); err != nil {
-			pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 		if err := pclnt.WaitStart(p.Pid); err != nil {
-			pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 			return
 		}
 	}
@@ -85,5 +85,5 @@ func RunLeader(dir, last, child string) {
 		}
 	}
 
-	pclnt.Exited(pid, proc.MakeStatus(proc.StatusOK))
+	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
 }

@@ -263,5 +263,5 @@ func (cd *Coord) cleanup() {
 }
 
 func (cd *Coord) Exit() {
-	cd.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+	cd.Exited(proc.MakeStatus(proc.StatusOK))
 }

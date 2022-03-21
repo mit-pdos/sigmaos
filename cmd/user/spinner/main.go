@@ -58,7 +58,7 @@ func (s *Spinner) waitEvict() {
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}
-	s.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusEvicted))
+	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)
 }
 

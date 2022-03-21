@@ -245,11 +245,11 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 
 // If exited() fails, invoke os.Exit(1) to indicate to procd that proc
 // failed
-func (clnt *ProcClnt) Exited(pid proc.Tpid, status *proc.Status) {
+func (clnt *ProcClnt) Exited(status *proc.Status) {
 	procdir := proc.PROCDIR
-	err := clnt.exited(procdir, proc.PARENTDIR, pid, status)
+	err := clnt.exited(procdir, proc.PARENTDIR, proc.GetPid(), status)
 	if err != nil {
-		db.DLPrintf("PROCCLNT_ERR", "exited %v err %v\n", pid, err)
+		db.DLPrintf("PROCCLNT_ERR", "exited %v err %v\n", proc.GetPid(), err)
 		os.Exit(1)
 	}
 }

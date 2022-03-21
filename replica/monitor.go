@@ -66,5 +66,5 @@ func (m *ReplicaMonitor) Work() {
 }
 
 func (m *ReplicaMonitor) Exit() {
-	m.Exited(m.pid, proc.MakeStatus(proc.StatusOK))
+	m.Exited(proc.MakeStatus(proc.StatusOK))
 }

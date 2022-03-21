@@ -55,7 +55,7 @@ func run(kc *kv.KvClerk) {
 	} else {
 		status = proc.MakeStatus(proc.StatusOK)
 	}
-	kc.Exited(proc.GetPid(), status)
+	kc.Exited(status)
 }
 
 type Value struct {

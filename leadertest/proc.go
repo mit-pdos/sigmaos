@@ -22,7 +22,7 @@ func RunProc(epochstr, dir string) {
 
 	epoch, err := np.String2Epoch(epochstr)
 	if err != nil {
-		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
 
 	fc := fenceclnt1.MakeLeaderFenceClnt(fsl, LEADERFN)
@@ -30,7 +30,7 @@ func RunProc(epochstr, dir string) {
 	log.Printf("%v: epoch %v dir %v\n", proc.GetName(), epoch, dir)
 
 	if err := fc.FenceAtEpoch(epoch, []string{dir}); err != nil {
-		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
@@ -46,7 +46,7 @@ func RunProc(epochstr, dir string) {
 
 	b, err := writer.JsonRecord(*conf)
 	if err != nil {
-		pclnt.Exited(pid, proc.MakeStatusErr(err.Error(), nil))
+		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
@@ -58,5 +58,5 @@ func RunProc(epochstr, dir string) {
 		}
 	}
 
-	pclnt.Exited(pid, proc.MakeStatus(proc.StatusOK))
+	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
 }

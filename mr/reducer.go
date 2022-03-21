@@ -135,5 +135,5 @@ func RunReducer(reducef ReduceT, args []string) {
 		os.Exit(1)
 	}
 	status := r.doReduce()
-	r.Exited(proc.GetPid(), status)
+	r.Exited(status)
 }

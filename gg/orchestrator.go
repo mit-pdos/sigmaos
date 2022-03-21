@@ -47,7 +47,7 @@ func MakeOrchestrator(args []string, debug bool) (*Orchestrator, error) {
 }
 
 func (orc *Orchestrator) Exit() {
-	orc.Exited(orc.pid, nil)
+	orc.Exited(nil)
 }
 
 func (orc *Orchestrator) Work() {

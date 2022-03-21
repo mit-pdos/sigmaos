@@ -49,7 +49,7 @@ func MakeNaiveOrchestrator(args []string, debug bool) (*NaiveOrchestrator, error
 }
 
 func (orc *NaiveOrchestrator) Exit() {
-	orc.Exited(orc.pid, nil)
+	orc.Exited(nil)
 }
 
 func (orc *NaiveOrchestrator) stillProcessing() bool {

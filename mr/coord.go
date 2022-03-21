@@ -285,5 +285,5 @@ func (c *Coord) Work() {
 		}
 	}
 
-	c.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+	c.Exited(proc.MakeStatus(proc.StatusOK))
 }

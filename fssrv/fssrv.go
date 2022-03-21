@@ -234,6 +234,7 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 	// reply channel will be set to nil. If it came from the client, the reply
 	// channel will already be set.
 	sess := fssrv.st.Alloc(fc.Session, nil)
+	sess.Running = true
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:
@@ -269,6 +270,7 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 	}
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	fssrv.serve(sess, fc)
+	sess.Running = false
 }
 
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {

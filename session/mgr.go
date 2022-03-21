@@ -5,7 +5,9 @@ import (
 	"sync"
 	"time"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
 
 const (
@@ -15,31 +17,34 @@ const (
 
 type SessionMgr struct {
 	sync.Mutex
-	sessions   map[np.Tsession]time.Time
-	replyChans map[np.Tsession]chan *np.Fcall
-	process    func(*np.Fcall, chan *np.Fcall)
-	done       bool
+	sessions  map[np.Tsession]time.Time
+	sessions1 map[np.Tsession]*Session
+	process   func(*np.Fcall, chan *np.Fcall)
+	done      bool
 }
 
 func MakeSessionMgr(pfn func(*np.Fcall, chan *np.Fcall)) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.sessions = make(map[np.Tsession]time.Time)
+	sm.sessions1 = make(map[np.Tsession]*Session)
 	sm.process = pfn
 	go sm.run()
 	return sm
 }
 
 // Register a session in the session manager.
-func (sm *SessionMgr) RegisterSession(sid np.Tsession) {
+func (sm *SessionMgr) RegisterSession(sid np.Tsession, sess *Session) {
 	sm.Lock()
 	defer sm.Unlock()
 	sm.sessions[sid] = time.Now()
+	sm.sessions1[sid] = sess
 }
 
 // Delete a session from the sessionmgr
 func (sm *SessionMgr) DetachSession(sid np.Tsession) {
 	sm.Lock()
 	defer sm.Unlock()
+	db.DLPrintf("SESSIONMGR", "Processed Detach session %v", sid)
 	delete(sm.sessions, sid)
 }
 
@@ -49,8 +54,9 @@ func (sm *SessionMgr) Heartbeats(sids []np.Tsession) {
 	defer sm.Unlock()
 	for _, sid := range sids {
 		if _, ok := sm.sessions[sid]; !ok {
-			log.Fatalf("FATAL heartbeat for unknown session %v", sid)
+			log.Fatalf("%v FATAL heartbeat for unknown session %v", proc.GetName(), sid)
 		}
+		db.DLPrintf("SESSIONMGR", "Processed heartbeat session %v", sid)
 		sm.sessions[sid] = time.Now()
 	}
 }
@@ -61,7 +67,8 @@ func (sm *SessionMgr) getDetachableSessions() []np.Tsession {
 	defer sm.Unlock()
 	sids := []np.Tsession{}
 	for sid, t := range sm.sessions {
-		if time.Now().Sub(t).Milliseconds() > SESSTIMEOUTMS {
+		if !sm.sessions1[sid].Running && time.Now().Sub(t).Milliseconds() > SESSTIMEOUTMS {
+			db.DLPrintf("SESSIONMGR", "Timeout session %v", sid)
 			sids = append(sids, sid)
 		}
 	}

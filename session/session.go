@@ -2,6 +2,7 @@ package session
 
 import (
 	"sync"
+	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -23,15 +24,17 @@ import (
 
 type Session struct {
 	sync.Mutex
-	threadmgr *threadmgr.ThreadMgr
-	wg        sync.WaitGroup
-	protsrv   protsrv.Protsrv
-	rft       *fences.RecentTable
-	myFences  *fences.FenceTable
-	sm        *SessionMgr
-	Sid       np.Tsession
-	Closed    bool
-	replies   chan *np.Fcall
+	threadmgr     *threadmgr.ThreadMgr
+	wg            sync.WaitGroup
+	protsrv       protsrv.Protsrv
+	rft           *fences.RecentTable
+	myFences      *fences.FenceTable
+	sm            *SessionMgr
+	lastHeartbeat time.Time
+	Sid           np.Tsession
+	Running       bool // true if the session is currently running an operation.
+	Closed        bool // true if the session has been closed.
+	replies       chan *np.Fcall
 }
 
 func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr, sm *SessionMgr) *Session {
@@ -39,12 +42,13 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcal
 	sess.threadmgr = t
 	sess.protsrv = protsrv
 	sess.sm = sm
+	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
 	sess.replies = replies
 	// Register the new session.
-	sess.sm.RegisterSession(sess.Sid)
+	sess.sm.RegisterSession(sess.Sid, sess)
 	return sess
 }
 
@@ -57,6 +61,22 @@ func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
 		sess.replies = replies
 	}
 }
+
+// TODO: finish
+//func (sess *Session) heartbeat() {
+//	sess.Lock()
+//	defer sess.Unlock()
+//	if sess.Closed {
+//		log.Fatalf("FATAL heartbeat on closed session %v", sess.Sid)
+//	}
+//	sess.lastHeartbeat = time.Now()
+//}
+//
+//func (sess *Session) expired() bool {
+//	sess.Lock()
+//	defer sess.Unlock()
+//	return !sess.running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+//}
 
 func (sess *Session) GetRepliesC() chan *np.Fcall {
 	sess.Lock()

@@ -46,6 +46,7 @@ func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcal
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
 	sess.replies = replies
+	sess.lastHeartbeat = time.Now()
 	return sess
 }
 

@@ -4,24 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
+	"path"
 
 	"ulambda/ctx"
-	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
-	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
-
-type readRunqFn func(procdPath string, queueName string) ([]*np.Stat, error)
-type readProcFn func(procdPath string, queueName string, pid string) (*proc.Proc, error)
-type claimProcFn func(procdPath string, queueName string, p *proc.Proc) bool
 
 type ProcdFs struct {
 	pd      *Procd
@@ -79,69 +73,24 @@ func (pd *Procd) makeFs() {
 	}
 }
 
-func (pfs *ProcdFs) readRunq(procdPath string, queueName string) ([]*np.Stat, error) {
-	rq, err := pfs.runqs[queueName].ReadDir(ctx.MkCtx("", 0, nil), 0, 0, np.NoV)
-	if err != nil {
-		log.Printf("Error ReadDir in ProcdFs.readRunq: %v", err)
-		return nil, err
-	}
-	return rq, nil
-}
-
-func (pfs *ProcdFs) readRunqProc(procdPath string, queueName string, name string) (*proc.Proc, error) {
-	_, lo, _, err := pfs.runqs[queueName].Lookup(ctx.MkCtx("", 0, nil), []string{name})
-	if err != nil {
-		log.Printf("Error Lookup in ProcdFs.getRunqProc: %v", err)
-		return nil, err
-	}
-	b, err := lo.(fs.File).Read(ctx.MkCtx("", 0, nil), 0, math.MaxUint32, np.NoV)
-	if err != nil {
-		log.Printf("Error Read in ProcdFs.getRunqProc: %v", err)
-		return nil, err
-	}
-	p := proc.MakeEmptyProc()
-	error := json.Unmarshal(b, p)
-	if error != nil {
-		log.Fatalf("FATAL Error Unmarshal in ProcdFs.getRunqProc: %v", err)
-		return nil, np.MkErrError(error)
-	}
-	return p, nil
-}
-
-// Remove from the runq. May race with other (work-stealing) procds.
-func (pfs *ProcdFs) claimProc(procdPath string, queueName string, p *proc.Proc) bool {
-	err := pfs.runqs[queueName].Remove(ctx.MkCtx("", 0, nil), p.Pid)
-	if err != nil {
-		db.DLPrintf("PDFS", "Error ProcdFs.claimProc: %v", err)
-		return false
-	}
-	return true
-}
-
 // Publishes a proc as running
 func (pfs *ProcdFs) running(p *Proc) *np.Err {
-	p.Inode = inode.MakeInode(nil, np.DMDEVICE, pfs.run)
-	f := memfs.MakeFile(p.Inode)
 	// Make sure we write the proc description before we publish it.
 	b, error := json.Marshal(p.attr)
 	if error != nil {
 		return np.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
-	_, err := f.Write(ctx.MkCtx("", 0, nil), 0, b, np.NoV)
+	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
-		return err
-	}
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), pfs.run, p.Pid, p)
-	if err != nil {
-		log.Printf("Error ProcdFs.run: %v", err)
-		return err
+		log.Fatalf("Error ProcdFs.spawn: %v", err)
+		// TODO: return an np.Err return err
 	}
 	return nil
 }
 
 // Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *Proc) error {
-	err := pfs.run.Remove(ctx.MkCtx("", 0, nil), p.Pid)
+	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid))
 	if err != nil {
 		log.Printf("Error ProcdFs.finish: %v", err)
 		return err
@@ -151,22 +100,19 @@ func (pfs *ProcdFs) finish(p *Proc) error {
 
 // Publishes a proc as spawned (NOT running yet)
 func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
-	var runq fs.Dir
+	var runq string
 	switch {
 	case a.Ncore > 0:
-		runq = pfs.runqs[np.PROCD_RUNQ_LC]
+		runq = np.PROCD_RUNQ_LC
 	default:
-		runq = pfs.runqs[np.PROCD_RUNQ_BE]
+		runq = np.PROCD_RUNQ_BE
 	}
-	ino := inode.MakeInode(nil, 0, runq)
-	f := memfs.MakeFile(ino)
-	// Make sure we write the proc description before we publish it.
-	f.Write(ctx.MkCtx("", 0, nil), 0, b, np.NoV)
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), runq, a.Pid, f)
+	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), runq, a.Pid), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err
 	}
+	// TODO: should do this in another goroutine.
 	pfs.pd.spawnChan <- true
 	return nil
 }

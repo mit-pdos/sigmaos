@@ -136,18 +136,18 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 }
 
 // Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
-func (pd *Procd) getRunnableProc(procdPath string, queueName string, readRunq readRunqFn, readProc readProcFn, claimProc claimProcFn) (*proc.Proc, error) {
+func (pd *Procd) getRunnableProc(procdPath string, queueName string) (*proc.Proc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	fs, err := readRunq(procdPath, queueName)
+	fs, err := pd.readRunq(procdPath, queueName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Read through procs
 	for _, f := range fs {
-		p, err := readProc(procdPath, queueName, f.Name)
+		p, err := pd.readRunqProc(procdPath, queueName, f.Name)
 		// Proc may have been stolen
 		if err != nil {
 			db.DLPrintf("PROCD", "Error getting RunqProc: %v", err)
@@ -155,7 +155,7 @@ func (pd *Procd) getRunnableProc(procdPath string, queueName string, readRunq re
 		}
 		if pd.satisfiesConstraintsL(p) {
 			// Proc may have been stolen
-			if ok := claimProc(procdPath, queueName, p); !ok {
+			if ok := pd.claimProc(procdPath, queueName, p); !ok {
 				continue
 			}
 			pd.decrementResourcesL(p)
@@ -170,7 +170,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	for _, runq := range runqs {
 		// First, try to read from the local procdfs
-		p, err := pd.getRunnableProc("", runq, pd.fs.readRunq, pd.fs.readRunqProc, pd.fs.claimProc)
+		p, err := pd.getRunnableProc(path.Join(np.PROCD, pd.MyAddr()), runq)
 		if p != nil || err != nil {
 			return p, err
 		}
@@ -181,7 +181,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 			if strings.HasPrefix(st.Name, pd.MyAddr()) {
 				return false, nil
 			}
-			p, err = pd.getRunnableProc(path.Join(np.PROCD, st.Name), runq, pd.readRemoteRunq, pd.readRemoteRunqProc, pd.claimRemoteProc)
+			p, err = pd.getRunnableProc(path.Join(np.PROCD, st.Name), runq)
 			if err != nil {
 				db.DLPrintf("PROCD", "Error getRunnableProc in Procd.getProc: %v", err)
 				return false, nil

@@ -9,11 +9,11 @@ import (
 	"ulambda/proc"
 )
 
-func (pd *Procd) readRemoteRunq(procdPath string, queueName string) ([]*np.Stat, error) {
+func (pd *Procd) readRunq(procdPath string, queueName string) ([]*np.Stat, error) {
 	return pd.GetDir(path.Join(procdPath, queueName))
 }
 
-func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid string) (*proc.Proc, error) {
+func (pd *Procd) readRunqProc(procdPath string, queueName string, pid string) (*proc.Proc, error) {
 	b, err := pd.GetFile(path.Join(procdPath, queueName, pid))
 	if err != nil {
 		return nil, err
@@ -21,13 +21,13 @@ func (pd *Procd) readRemoteRunqProc(procdPath string, queueName string, pid stri
 	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
-		log.Fatalf("FATAL Error Unmarshal in Procd.readRemoteProc: %v", err)
+		log.Fatalf("FATAL Error Unmarshal in Procd.readProc: %v", err)
 		return nil, err
 	}
 	return p, nil
 }
 
-func (pd *Procd) claimRemoteProc(procdPath string, queueName string, p *proc.Proc) bool {
+func (pd *Procd) claimProc(procdPath string, queueName string, p *proc.Proc) bool {
 	err := pd.Remove(path.Join(procdPath, queueName, p.Pid))
 	if err != nil {
 		return false

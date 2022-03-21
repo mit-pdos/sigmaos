@@ -145,7 +145,7 @@ func (s *System) KillOne(srv string) error {
 			log.Printf("Tried to kill ux, nothing to kill")
 		}
 	default:
-		log.Fatalf("Unkown server type in System.KillOne: %v", srv)
+		log.Fatalf("FATAL Unkown server type in System.KillOne: %v", srv)
 	}
 	log.Printf("kill %v %v\n", -ss.cmd.Process.Pid, ss.p.Pid)
 	err = syscall.Kill(-ss.cmd.Process.Pid, syscall.SIGKILL)
@@ -153,7 +153,7 @@ func (s *System) KillOne(srv string) error {
 		ss.cmd.Wait()
 		s.crashedPids[ss.p.Pid] = true
 	} else {
-		log.Fatalf("%v kill failed %v\n", srv, err)
+		log.Fatalf("FATAL %v kill failed %v\n", srv, err)
 	}
 	return nil
 }
@@ -227,11 +227,11 @@ func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate b
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {
-		log.Fatalf("Error WaitStart in BootNamed: %v", err)
+		log.Fatalf("FATAL Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
 	if err = pclnt.WaitStart(p.Pid); err != nil {
-		log.Fatalf("Error WaitStart in BootNamed: %v", err)
+		log.Fatalf("FATAL Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
 	return cmd, p.Pid, nil
@@ -241,11 +241,11 @@ func addReplPortOffset(peerAddr string) string {
 	// Compute replica address as peerAddr + REPL_PORT_OFFSET
 	host, port, err := net.SplitHostPort(peerAddr)
 	if err != nil {
-		log.Fatalf("Error splitting host port: %v", err)
+		log.Fatalf("FATAL Error splitting host port: %v", err)
 	}
 	portI, err := strconv.Atoi(port)
 	if err != nil {
-		log.Fatalf("Error conv port: %v", err)
+		log.Fatalf("FATAL Error conv port: %v", err)
 	}
 	newPort := strconv.Itoa(portI + REPL_PORT_OFFSET)
 

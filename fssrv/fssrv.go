@@ -6,8 +6,10 @@ import (
 	"runtime/debug"
 
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fences"
+	"ulambda/fences1"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -46,6 +48,7 @@ type FsServer struct {
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
 	rft        *fences.RecentTable
+	rft1       *fences1.FenceTable
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
 	rc         *repl.ReplyCache
@@ -68,6 +71,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.rps = rps
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
+	fssrv.rft1 = fences1.MakeFenceTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
@@ -143,7 +147,7 @@ func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
 func (fssrv *FsServer) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if fssrv.pclnt != nil {
-		if err := fssrv.pclnt.Started(proc.GetPid()); err != nil {
+		if err := fssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()
 			log.Printf("%v: Error Started: %v", proc.GetName(), err)
 		}
@@ -159,7 +163,7 @@ func (fssrv *FsServer) Serve() {
 // The server using fssrv is done; exit.
 func (fssrv *FsServer) Done() {
 	if fssrv.pclnt != nil {
-		fssrv.pclnt.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusEvicted))
+		fssrv.pclnt.Exited(proc.MakeStatus(proc.StatusEvicted))
 	} else {
 		if !fssrv.done {
 			fssrv.done = true
@@ -202,7 +206,7 @@ func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
-	fcall := np.MakeFcall(reply, 0, nil)
+	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
@@ -251,7 +255,25 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 	}
 	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	fssrv.serve(sess, fc, replies)
+	fssrv.fenceFcall(sess, fc, replies)
+}
+
+// Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
+// ops.
+func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
+	if e, err := fssrv.rft1.CheckFence(fc.Fence); err != nil {
+		reply := *err.Rerror()
+		fssrv.sendReply(fc, reply, replies)
+		return
+	} else {
+		if e == nil {
+			fssrv.serve(sess, fc, replies)
+		} else {
+			defer e.Unlock()
+			fssrv.serve(sess, fc, replies)
+		}
+	}
 }
 
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {

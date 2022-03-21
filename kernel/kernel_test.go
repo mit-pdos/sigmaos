@@ -45,7 +45,7 @@ func TestSymlink1(t *testing.T) {
 
 	// Write symlink contents
 	w := []byte("overwritten!!")
-	_, err = ts.SetFile(linkPath+"/", w, 0)
+	_, err = ts.SetFile(linkPath+"/", w, np.OWRITE, 0)
 	assert.Nil(t, err, "Writing linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 

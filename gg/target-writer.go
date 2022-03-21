@@ -5,12 +5,13 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/proc"
 	"ulambda/procclnt"
 )
 
 // XXX Rename
 type TargetWriter struct {
-	pid             string
+	pid             proc.Tpid
 	cwd             string
 	target          string
 	targetReduction string
@@ -22,19 +23,19 @@ func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
 	db.DPrintf("TargetWriter: %v\n", args)
 	tw := &TargetWriter{}
 
-	tw.pid = args[0]
+	tw.pid = proc.Tpid(args[0])
 	tw.cwd = args[1]
 	tw.target = args[2]
 	tw.targetReduction = args[3]
 	fls := fslib.MakeFsLib("gg-target-writer")
 	tw.FsLib = fls
 	tw.ProcClnt = procclnt.MakeProcClnt(fls)
-	tw.Started(tw.pid)
+	tw.Started()
 	return tw, nil
 }
 
 func (tw *TargetWriter) Exit() {
-	tw.Exited(tw.pid, nil)
+	tw.Exited(nil)
 }
 
 func (tw *TargetWriter) Work() {
@@ -51,5 +52,5 @@ func (tw *TargetWriter) Work() {
 }
 
 func (tw *TargetWriter) Name() string {
-	return "TargetWriter " + tw.pid + " "
+	return "TargetWriter " + tw.pid.String() + " "
 }

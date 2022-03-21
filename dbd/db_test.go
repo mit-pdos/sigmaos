@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	np "ulambda/ninep"
 	"ulambda/test"
 )
 
@@ -16,7 +17,7 @@ func TestQuery(t *testing.T) {
 	b, err := ts.GetFile(DBD + "clone")
 	assert.Nil(t, err, "GetFile")
 	sid := string(b)
-	_, err = ts.SetFile(DBD+sid+"/query", q, 0)
+	_, err = ts.SetFile(DBD+sid+"/query", q, np.OWRITE, 0)
 	assert.Nil(t, err, "WriteFile")
 	b, err = ts.GetFile(DBD + sid + "/data")
 	assert.Nil(t, err, "Read data")

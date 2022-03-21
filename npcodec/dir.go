@@ -1,6 +1,7 @@
 package npcodec
 
 import (
+	"errors"
 	"io"
 
 	np "ulambda/ninep"
@@ -40,6 +41,10 @@ func MarshalDir(cnt np.Tsize, dir []*np.Stat) ([]byte, int, *np.Err) {
 func UnmarshalDirEnt(rdr io.Reader) (*np.Stat, *np.Err) {
 	st := np.Stat{}
 	if error := unmarshalReader(rdr, &st); error != nil {
+		var nperr *np.Err
+		if errors.As(error, &nperr) {
+			return nil, nperr
+		}
 		return nil, np.MkErrError(error)
 	}
 	return &st, nil

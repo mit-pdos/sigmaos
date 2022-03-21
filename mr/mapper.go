@@ -47,10 +47,9 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.rand = rand.String(16)
 	m.fds = make([]*writer.Writer, m.nreducetask)
 
-	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid() + " " + m.input)
+	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
-
-	m.Started(proc.GetPid())
+	m.Started()
 
 	crash.Crasher(m.FsLib)
 	delay.SetDelayRPC(100)
@@ -164,13 +163,13 @@ func RunMapper(mapf MapT, args []string) {
 	}
 	err = m.initMapper()
 	if err != nil {
-		m.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
+		m.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 	err = m.doMap()
 	if err == nil {
-		m.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+		m.Exited(proc.MakeStatus(proc.StatusOK))
 	} else {
-		m.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
+		m.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
 }

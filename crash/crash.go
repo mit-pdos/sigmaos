@@ -1,13 +1,12 @@
 package crash
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/proc"
 	"ulambda/rand"
 )
 
@@ -46,12 +45,12 @@ func Crasher(fsl *fslib.FsLib) {
 }
 
 func Crash(fsl *fslib.FsLib) {
-	log.Printf("%v: crash CRASH\n", proc.GetName())
+	db.DLPrintf(db.ALWAYS, "crash.Crash %v\n", os.Args)
 	os.Exit(1)
 }
 
 func Partition(fsl *fslib.FsLib) {
-	log.Printf("%v: crash PARTITION\n", proc.GetName())
+	db.DLPrintf(db.ALWAYS, "crash.Partition %v\n", os.Args)
 	fsl.Disconnect("name")
 	time.Sleep(time.Duration(5) * time.Millisecond)
 }

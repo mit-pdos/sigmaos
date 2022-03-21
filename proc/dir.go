@@ -62,6 +62,6 @@ const (
 	KERNEL_PROC = "kernel-proc" // Only present if this is a kernel proc
 )
 
-func GetChildProcDir(cpid string) string {
-	return path.Join(PROCDIR, CHILDREN, cpid, PROCDIR)
+func GetChildProcDir(cpid Tpid) string {
+	return path.Join(PROCDIR, CHILDREN, cpid.String(), PROCDIR)
 }

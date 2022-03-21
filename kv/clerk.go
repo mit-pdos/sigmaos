@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/big"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
+	"ulambda/fenceclnt1"
 	"ulambda/fslib"
 	"ulambda/group"
 	np "ulambda/ninep"
@@ -21,20 +20,7 @@ import (
 )
 
 //
-// Clerk for sharded kv service, which repeatedly performs key
-// lookups.  The clerk acquires a fence for the configuration file of
-// the balancer, which maps shards to kv groups.  If the balancer adds
-// or removes a kv group, the clerk will not be able to perform
-// operations at any kv group until it reacquires the configuration
-// fence, bringing it up to date. The fences avoids the risk that
-// clerk performs an operation at a kv group that doesn't hold the
-// shard anymore (or is in the process of moving a shard)
-//
-// The clerk also acquires fences for each kv group it interacts with.
-// If the kv group changes, the clerk cannot perform any operation at
-// that kv group until it has the new configuration for that group.
-// This fence avoids the risk that the clerk performs an operation at
-// a KV server that isn't te primary anymore.
+// Clerk for sharded kv service, which repeatedly reads/writes keys.
 //
 
 const (
@@ -42,20 +28,32 @@ const (
 	WAITMS = 50
 )
 
-func key2shard(key string) int {
+type Tkey string
+
+func (k Tkey) String() string {
+	return string(k)
+}
+
+func MkKey(k uint64) Tkey {
+	return Tkey(strconv.FormatUint(k, 16))
+}
+
+type Tshard int
+
+func (s Tshard) String() string {
+	return fmt.Sprintf("%03d", s)
+}
+
+func key2shard(key Tkey) Tshard {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := int(h.Sum32() % NSHARD)
+	shard := Tshard(h.Sum32() % NSHARD)
 	return shard
 }
 
-func keyPath(kvd, shard string, k string) string {
+func keyPath(kvd string, shard Tshard, k Tkey) string {
 	d := shardPath(kvd, shard)
-	return d + "/" + k
-}
-
-func Key(k uint64) string {
-	return "key" + strconv.FormatUint(k, 16)
+	return d + "/" + k.String()
 }
 
 func nrand() uint64 {
@@ -68,200 +66,76 @@ func nrand() uint64 {
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	balFclnt  *fenceclnt.FenceClnt
-	grpFclnts map[string]*fenceclnt.FenceClnt
-	blConf    Config
-	grpre     *regexp.Regexp
-	grpconfre *regexp.Regexp
+	fclnt *fenceclnt1.FenceClnt
+	conf  *Config
 }
 
-func MakeClerk(name string, namedAddr []string) *KvClerk {
+func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
 	kc := &KvClerk{}
 	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
-	kc.balFclnt = fenceclnt.MakeFenceClnt(kc.FsLib, KVCONFIG, 0, []string{KVDIR})
-	kc.grpFclnts = make(map[string]*fenceclnt.FenceClnt)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
-	kc.grpconfre = regexp.MustCompile(`group/grp-([0-9]+)-conf`)
-	kc.grpre = regexp.MustCompile(`grp-([0-9]+)`)
-	err := kc.balFclnt.AcquireConfig(&kc.blConf)
-	if err != nil {
-		db.DLPrintf("KVCLERK", "MakeClerk readConfig err %v\n", err)
+	kc.conf = &Config{}
+	kc.fclnt = fenceclnt1.MakeLeaderFenceClnt(kc.FsLib, KVBALANCER)
+	if err := kc.switchConfig(); err != nil {
+		return nil, err
 	}
-	return kc
-}
-
-func (kc *KvClerk) releaseFence(grp string) error {
-	f, ok := kc.grpFclnts[grp]
-	if !ok {
-		return fmt.Errorf("release fclnt %v not found", grp)
-	}
-	err := f.ReleaseFence()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Dynamically allocate a FenceClnt if we haven't seen this grp before.
-func (kc *KvClerk) acquireFence(grp string) error {
-	if fc, ok := kc.grpFclnts[grp]; ok {
-		if fc.IsFenced() != nil {
-			// we have acquired a fence
-			return nil
-		}
-	} else {
-		fn := group.GrpConfPath(grp)
-		paths := []string{group.GrpDir(grp)}
-		kc.grpFclnts[grp] = fenceclnt.MakeFenceClnt(kc.FsLib, fn, 0, paths)
-		// Fence new group also with balancer config fence
-		kc.balFclnt.FencePaths(paths)
-	}
-	gc := group.GrpConf{}
-	err := kc.grpFclnts[grp].AcquireConfig(&gc)
-	if err != nil {
-		return err
-	}
-	// XXX do something with gc
-	return nil
-}
-
-// Remove group from fenced paths in bal fclnt?
-func (kc KvClerk) removeGrp(err error) error {
-	if np.IsErrUnreachable(err) {
-		s := kc.grpre.FindStringSubmatch(np.ErrPath(err))
-		if s != nil {
-			if kvs, r := readKVs(kc.FsLib); r == nil {
-				if !kvs.present(s[0]) {
-					if _, ok := kc.grpFclnts[s[0]]; ok {
-						delete(kc.grpFclnts, s[0])
-					}
-					paths := []string{group.GrpDir(s[0])}
-					kc.balFclnt.RemovePaths(paths)
-					if r == nil {
-						return nil
-					}
-				}
-			} else {
-				db.DLPrintf("KVCLERK", "ReadFileJson %v err %v\n", KVCONFIG, r)
-				return r
-			}
-		}
-	}
-	return err
-}
-
-// Try fix err by releasing group fence
-func (kc KvClerk) releaseGrp(err error) error {
-	s := kc.grpconfre.FindStringSubmatch(err.Error())
-	if s != nil {
-		return kc.releaseFence("grp-" + s[1])
-	}
-	return err
+	return kc, nil
 }
 
 // Read config, and retry if we have a stale group fence
-func (kc KvClerk) retryReadConfig() error {
+func (kc KvClerk) switchConfig() error {
 	for {
-		err := kc.balFclnt.AcquireConfig(&kc.blConf)
-		if err == nil {
-			return nil
+		err := kc.GetFileJsonWatch(KVCONFIG, kc.conf)
+		if err != nil {
+			db.DLPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
+			return err
 		}
-		err = kc.removeGrp(err)
-		if err == nil {
-			db.DLPrintf("KVCLERK", "removeGrp readConfig\n")
-			continue
+		db.DLPrintf("KVCLERK0", "Conf %v\n", kc.conf)
+		kvs := makeKvs(kc.conf.Shards).mkKvs()
+		dirs := make([]string, 0, len(kvs)+1)
+		for _, kvd := range kvs {
+			dirs = append(dirs, group.GRPDIR+"/"+kvd)
 		}
-		err = kc.releaseGrp(err)
-		if err == nil {
-			db.DLPrintf("KVCLERK", "releaseGrp readConfig\n")
-			continue
-		}
+		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
+			if np.IsErrVersion(err) || np.IsErrStale(err) {
+				db.DLPrintf("KVCLERK_ERR", "version mismatch; retry\n")
+				time.Sleep(WAITMS * time.Millisecond)
+				continue
+			}
 
-		// maybe retryReadConfig failed with a stale error
-		if np.IsErrStale(err) {
-			db.DLPrintf("KVCLERK", "stale readConfig %v\n", err)
-			continue
+			db.DLPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
+			return err
 		}
-
-		// bail out; some other problem
-		return err
+		break
 	}
-}
-
-// Try to fix err by refreshing config fence and rereading it
-func (kc KvClerk) refreshConfig(err error) error {
-	for {
-		// refence fence, just in case we will still have one
-		kc.balFclnt.ReleaseFence()
-
-		err = kc.retryReadConfig()
-		if err == nil {
-			return nil
-		}
-
-		if np.IsErrUnreachable(err) && strings.Contains(np.ErrPath(err), KVCONF) {
-			db.DLPrintf("KVCLERK", "retry refreshConfig %v\n", err)
-			continue
-		}
-
-		// maybe we couldn't get fence or read config because
-		// we have stale grp fence; check and retry if so.
-		err = kc.releaseGrp(err)
-		if err == nil {
-			db.DLPrintf("KVCLERK", "retry refreshConfig\n")
-			continue
-		}
-
-		// bail out; some other problem
-		return err
-	}
-}
-
-// Try to fix err by refreshing fences
-func (kc *KvClerk) refreshFences(err error) error {
-	// first check if refreshing group fence is sufficient to retry
-	err = kc.releaseGrp(err)
-	if err != nil {
-		// try refreshing config is sufficient to fix error
-		if np.IsErrUnreachable(err) || np.IsErrStale(err) {
-			err = kc.refreshConfig(err)
-		}
-	}
-	return err
+	return nil
 }
 
 // Try to fix err; if return is nil, retry.
 func (kc *KvClerk) fixRetry(err error) error {
-
-	// Shard dir hasn't been created yet (config 0) or hasn't moved
-	// yet, so wait a bit, and retry.  XXX make sleep time
-	// dynamic?
-
 	if np.IsErrNotfound(err) && strings.HasPrefix(np.ErrPath(err), "shard") {
+		// Shard dir hasn't been created yet (config 0) or hasn't moved
+		// yet, so wait a bit, and retry.  XXX make sleep time
+		// dynamic?
+		db.DLPrintf("KVCLERK_ERR", "Wait for shard %v\n", np.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
+	if np.IsErrStale(err) || np.IsErrUnreachable(err) {
+		db.DLPrintf("KVCLERK_ERR", "fixRetry %v\n", err)
+		return kc.switchConfig()
+	}
 
-	// Maybe refreshing fences will help in fixing error
-	return kc.refreshFences(err)
+	return err
 }
 
-// Do an operation, but it may fail for several reasons (stale config
-// fence, stale group leae). If an error, try to fix the error, and on
-// success, retry.
+// Do an operation. If an error, try to fix the error (e.g., rereading
+// config), and on success, retry.
 func (kc *KvClerk) doop(o *op) {
-	shard := key2shard(o.k)
+	s := key2shard(o.k)
 	for {
-		fn := keyPath(kc.blConf.Shards[shard], strconv.Itoa(shard), o.k)
-		o.err = kc.acquireFence(kc.blConf.Shards[shard])
-		if o.err != nil {
-			o.err = kc.fixRetry(o.err)
-			if o.err != nil {
-				return
-			}
-			// try again to acquire group fence
-			continue
-		}
+		db.DLPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
+		fn := keyPath(kc.conf.Shards[s], s, o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
 			return
@@ -285,8 +159,9 @@ const (
 type op struct {
 	kind opT
 	b    []byte
-	k    string
+	k    Tkey
 	off  np.Toffset
+	m    np.Tmode
 	rdr  *reader.Reader
 	err  error
 }
@@ -300,47 +175,47 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case PUT:
 		_, o.err = fsl.PutFile(fn, 0777, np.OWRITE, o.b)
 	case SET:
-		_, o.err = fsl.SetFile(fn, o.b, o.off)
+		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
 	}
 	db.DLPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
 }
 
-func (kc *KvClerk) Get(k string, off np.Toffset) ([]byte, error) {
-	op := &op{GETVAL, []byte{}, k, off, nil, nil}
+func (kc *KvClerk) Get(k Tkey, off np.Toffset) ([]byte, error) {
+	op := &op{GETVAL, []byte{}, k, off, np.OREAD, nil, nil}
 	kc.doop(op)
 	return op.b, op.err
 }
 
-func (kc *KvClerk) GetReader(k string) (*reader.Reader, error) {
-	op := &op{GETRD, []byte{}, k, 0, nil, nil}
+func (kc *KvClerk) GetReader(k Tkey) (*reader.Reader, error) {
+	op := &op{GETRD, []byte{}, k, 0, np.OREAD, nil, nil}
 	kc.doop(op)
 	return op.rdr, op.err
 }
 
-func (kc *KvClerk) Set(k string, b []byte, off np.Toffset) error {
-	op := &op{SET, b, k, off, nil, nil}
+func (kc *KvClerk) Set(k Tkey, b []byte, off np.Toffset) error {
+	op := &op{SET, b, k, off, np.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) Append(k string, b []byte) error {
-	op := &op{SET, b, k, np.NoOffset, nil, nil}
+func (kc *KvClerk) Append(k Tkey, b []byte) error {
+	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) Put(k string, b []byte) error {
-	op := &op{PUT, b, k, 0, nil, nil}
+func (kc *KvClerk) Put(k Tkey, b []byte) error {
+	op := &op{PUT, b, k, 0, np.OWRITE, nil, nil}
 	kc.doop(op)
 	return op.err
 }
 
-func (kc *KvClerk) AppendJson(k string, v interface{}) error {
+func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
 	b, err := writer.JsonRecord(v)
 	if err != nil {
 		return err
 	}
-	op := &op{SET, b, k, np.NoOffset, nil, nil}
+	op := &op{SET, b, k, np.NoOffset, np.OAPPEND, nil, nil}
 	kc.doop(op)
 	return op.err
 }

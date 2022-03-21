@@ -9,6 +9,7 @@ import (
 	"ulambda/group"
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/stats"
 )
@@ -44,8 +45,8 @@ func (mo *Monitor) grow() {
 	BalancerOp(mo.FsLib, "add", group.GRP+strconv.Itoa(mo.group))
 }
 
-func (mo *Monitor) shrink(kv string) {
-	BalancerOp(mo.FsLib, "del", kv)
+func (mo *Monitor) shrink(kv proc.Tpid) {
+	BalancerOp(mo.FsLib, "del", kv.String())
 	n := np.MEMFS + "/" + kv + "/"
 	err := mo.Evict(kv)
 	if err != nil {
@@ -60,7 +61,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 
 	util := float64(0)
 	low := float64(100.0)
-	lowkv := ""
+	lowkv := proc.Tpid("")
 	var lowload stats.Tload
 	n := 0
 	for kv, _ := range kvs.set {
@@ -74,7 +75,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 		util += sti.Util
 		if sti.Util < low {
 			low = sti.Util
-			lowkv = kv
+			lowkv = proc.Tpid(kv)
 			lowload = sti.Load
 		}
 		log.Printf("path %v\n", sti.SortPath())

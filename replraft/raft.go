@@ -81,7 +81,7 @@ func (n *RaftNode) start(peers []raft.Peer) {
 	logPath := "/tmp/raftlogs/" + proc.GetPid()
 	log.Printf("Raft logs being written to: %v", logPath)
 	logCfg := zap.NewDevelopmentConfig()
-	logCfg.OutputPaths = []string{logPath}
+	logCfg.OutputPaths = []string{string(logPath)}
 	logger, err := logCfg.Build()
 	if err != nil {
 		log.Fatalf("FATAL Couldn't build logger: %v", err)

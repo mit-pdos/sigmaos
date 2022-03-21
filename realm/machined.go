@@ -13,6 +13,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/semclnt"
 )
@@ -68,7 +69,7 @@ func (r *Machined) markFree() {
 	cfg.Id = r.id
 	cfg.RealmId = kernel.NO_REALM
 
-	if _, err := r.SetFile(FREE_MACHINEDS, []byte(r.id), 0); err != nil {
+	if _, err := r.SetFile(FREE_MACHINEDS, []byte(r.id), np.OWRITE, 0); err != nil {
 		log.Fatalf("Error SetFile in markFree: %v %v", FREE_MACHINEDS, err)
 	}
 }
@@ -115,12 +116,12 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		realmCfg.NamedAddr = append(realmCfg.NamedAddr, namedAddrs...)
 
 		// Start a named instance.
-		var pid string
+		var pid proc.Tpid
 		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
 			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 		// Update config
-		realmCfg.NamedPids = append(realmCfg.NamedPids, pid)
+		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
 
 	}

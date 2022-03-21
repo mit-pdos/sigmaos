@@ -54,15 +54,15 @@ func (path1 Path) Eq(path2 Path) bool {
 }
 
 // is c a child of p?
-func (c Path) IsParent(p Path) bool {
-	if len(p) == 0 { // p is root directory
+func (c Path) IsParent(parent Path) bool {
+	if len(parent) == 0 { // p is root directory
 		return true
 	}
-	for i := range p {
+	for i := range parent {
 		if i >= len(c) {
 			return false
 		}
-		if p[i] != c[i] {
+		if parent[i] != c[i] {
 			return false
 		}
 	}

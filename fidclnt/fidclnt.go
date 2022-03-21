@@ -14,12 +14,14 @@ import (
 type FidClnt struct {
 	fids *FidMap
 	pc   *protclnt.Clnt
+	ft   *FenceTable
 }
 
 func MakeFidClnt() *FidClnt {
 	fidc := &FidClnt{}
 	fidc.fids = mkFidMap()
 	fidc.pc = protclnt.MakeClnt()
+	fidc.ft = MakeFenceTable()
 	return fidc
 }
 
@@ -30,6 +32,10 @@ func (fidc *FidClnt) String() string {
 
 func (fidc *FidClnt) Len() int {
 	return len(fidc.fids.fids)
+}
+
+func (fidc *FidClnt) FenceDir(path string, f np.Tfence1) *np.Err {
+	return fidc.ft.Insert(path, f)
 }
 
 func (fidc *FidClnt) ReadSeqNo() np.Tseqno {
@@ -54,6 +60,14 @@ func (fidc *FidClnt) Free(fid np.Tfid) {
 
 func (fidc *FidClnt) Lookup(fid np.Tfid) *Channel {
 	return fidc.fids.lookup(fid)
+}
+
+func (fidc *FidClnt) Qid(fid np.Tfid) np.Tqid {
+	return fidc.Lookup(fid).Lastqid()
+}
+
+func (fidc *FidClnt) Path(fid np.Tfid) np.Path {
+	return fidc.Lookup(fid).Path()
 }
 
 func (fidc *FidClnt) Insert(fid np.Tfid, path *Channel) {
@@ -121,29 +135,33 @@ func (fidc *FidClnt) Open(fid np.Tfid, mode np.Tmode) (np.Tqid, *np.Err) {
 	return reply.Qid, nil
 }
 
-func (fidc *FidClnt) Watch(fid np.Tfid, path []string) *np.Err {
-	return fidc.fids.lookup(fid).pc.Watch(fid, nil)
+func (fidc *FidClnt) Watch(fid np.Tfid) *np.Err {
+	return fidc.fids.lookup(fid).pc.Watch(fid)
 }
 
 func (fidc *FidClnt) Wstat(fid np.Tfid, st *np.Stat) *np.Err {
-	_, err := fidc.fids.lookup(fid).pc.Wstat(fid, st)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	_, err := fidc.fids.lookup(fid).pc.WstatF(fid, st, f)
 	return err
 }
 
 func (fidc *FidClnt) Renameat(fid np.Tfid, o string, fid1 np.Tfid, n string) *np.Err {
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
 	if fidc.fids.lookup(fid).pc != fidc.fids.lookup(fid1).pc {
 		return np.MkErr(np.TErrInval, "paths at different servers")
 	}
-	_, err := fidc.fids.lookup(fid).pc.Renameat(fid, o, fid1, n)
+	_, err := fidc.fids.lookup(fid).pc.Renameat(fid, o, fid1, n, f)
 	return err
 }
 
 func (fidc *FidClnt) Remove(fid np.Tfid) *np.Err {
-	return fidc.fids.lookup(fid).pc.Remove(fid)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	return fidc.fids.lookup(fid).pc.RemoveF(fid, f)
 }
 
 func (fidc *FidClnt) RemoveFile(fid np.Tfid, wnames []string, resolve bool) *np.Err {
-	return fidc.fids.lookup(fid).pc.RemoveFile(fid, wnames, resolve)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(wnames))
+	return fidc.fids.lookup(fid).pc.RemoveFile(fid, wnames, resolve, f)
 }
 
 func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
@@ -154,19 +172,26 @@ func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
 	return &reply.Stat, nil
 }
 
-func (fidc *FidClnt) Read(fid np.Tfid, off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
-	//p := fidc.fids[fdst.fid]
-	//version := p.lastqid().Version
-	//v := fdst.mode&np.OVERSION == np.OVERSION
-	reply, err := fidc.fids.lookup(fid).pc.Read(fid, off, cnt)
+func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, f, v)
 	if err != nil {
 		return nil, err
 	}
 	return reply.Data, nil
 }
 
-func (fidc *FidClnt) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.Write(fid, off, data)
+func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.Tfence1{}, v)
+	if err != nil {
+		return nil, err
+	}
+	return reply.Data, nil
+}
+
+func (fidc *FidClnt) WriteV(fid np.Tfid, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, *np.Err) {
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path())
+	reply, err := fidc.fids.lookup(fid).pc.WriteVF(fid, off, f, v, data)
 	if err != nil {
 		return 0, err
 	}
@@ -174,7 +199,8 @@ func (fidc *FidClnt) Write(fid np.Tfid, off np.Toffset, data []byte) (np.Tsize, 
 }
 
 func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, cnt np.Tsize, resolve bool) ([]byte, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, resolve)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(path))
+	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, resolve, f)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +208,8 @@ func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 }
 
 func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.Toffset, data []byte, resolve bool) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, data, resolve)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(path))
+	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, resolve, f, data)
 	if err != nil {
 		return 0, err
 	}
@@ -190,7 +217,8 @@ func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 }
 
 func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.Tperm, off np.Toffset, data []byte) (np.Tsize, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.PutFile(fid, path, mode, perm, off, data)
+	f := fidc.ft.Lookup(fidc.fids.lookup(fid).Path().AppendPath(path))
+	reply, err := fidc.fids.lookup(fid).pc.PutFile(fid, path, mode, perm, off, f, data)
 	if err != nil {
 		return 0, err
 	}

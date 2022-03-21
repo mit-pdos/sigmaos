@@ -21,8 +21,8 @@ func (fl *FsLib) GetFile(fname string) ([]byte, error) {
 	return fl.FdClient.GetFile(fname, np.OREAD, 0, np.MAXGETSET)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, off np.Toffset) (np.Tsize, error) {
-	return fl.FdClient.SetFile(fname, np.OWRITE, data, off)
+func (fl *FsLib) SetFile(fname string, data []byte, m np.Tmode, off np.Toffset) (np.Tsize, error) {
+	return fl.FdClient.SetFile(fname, m, data, off)
 }
 
 func (fl *FsLib) PutFile(fname string, perm np.Tperm, mode np.Tmode, data []byte) (np.Tsize, error) {

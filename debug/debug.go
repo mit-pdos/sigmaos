@@ -9,6 +9,8 @@ import (
 	"ulambda/proc"
 )
 
+const ALWAYS = "STATUS"
+
 //
 // Debug output is controled by SIGMADEBUG environment variable, which
 // can be a list of labels (e.g., "RPC;PATHCLNT").
@@ -37,7 +39,7 @@ func DPrintf(format string, v ...interface{}) {
 
 func DLPrintf(label string, format string, v ...interface{}) {
 	m := debugLabels()
-	if _, ok := m[label]; ok {
+	if _, ok := m[label]; ok || label == ALWAYS {
 		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
 	}
 }

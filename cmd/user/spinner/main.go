@@ -42,11 +42,11 @@ func MakeSpinner(args []string) (*Spinner, error) {
 
 	db.DLPrintf("SCHEDL", "MakeSpinner: %v\n", args)
 
-	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
+	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid().String()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
 		log.Fatalf("MakeFile error: %v", err)
 	}
 
-	err := s.Started(proc.GetPid())
+	err := s.Started()
 	if err != nil {
 		log.Fatalf("Started: error %v\n", err)
 	}
@@ -58,7 +58,7 @@ func (s *Spinner) waitEvict() {
 	if err != nil {
 		log.Fatalf("Error WaitEvict: %v", err)
 	}
-	s.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusEvicted))
+	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)
 }
 

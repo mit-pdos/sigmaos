@@ -3,6 +3,7 @@ package fdclnt
 import (
 	"fmt"
 
+	db "ulambda/debug"
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
@@ -61,6 +62,14 @@ func (fdc *FdClient) Close(fd int) error {
 	return nil
 }
 
+func (fdc *FdClient) Qid(fd int) (np.Tqid, error) {
+	fid, error := fdc.fds.lookup(fd)
+	if error != nil {
+		return np.Tqid{}, error
+	}
+	return fdc.PathClnt.Qid(fid), nil
+}
+
 func (fdc *FdClient) Create(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	fid, err := fdc.PathClnt.Create(path, perm, mode)
 	if err != nil {
@@ -83,6 +92,22 @@ func (fdc *FdClient) Open(path string, mode np.Tmode) (int, error) {
 	return fdc.OpenWatch(path, mode, nil)
 }
 
+func (fdc *FdClient) CreateOpen(path string, perm np.Tperm, mode np.Tmode) (int, error) {
+	fd, err := fdc.Create(path, perm, mode)
+	if err != nil && !np.IsErrExists(err) {
+		db.DLPrintf("FDCLNT_ERR", "Create %v err %v", path, err)
+		return -1, err
+	}
+	if err != nil {
+		fd, err = fdc.Open(path, mode)
+		if err != nil {
+			db.DLPrintf("FDCLNT_ERR", "Open %v err %v", path, err)
+			return -1, err
+		}
+	}
+	return fd, nil
+}
+
 func (fdc *FdClient) MakeReader(fd int, path string, chunksz np.Tsize) *reader.Reader {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
@@ -99,12 +124,8 @@ func (fdc *FdClient) MakeWriter(fd int, chunksz np.Tsize) *writer.Writer {
 	return fdc.PathClnt.MakeWriter(fid, chunksz)
 }
 
-func (fdc *FdClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
-	fid, off, error := fdc.fds.lookupOff(fd)
-	if error != nil {
-		return nil, error
-	}
-	data, err := fdc.PathClnt.Read(fid, off, cnt)
+func (fdc *FdClient) readFid(fd int, fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {
+	data, err := fdc.PathClnt.ReadV(fid, off, cnt, v)
 	if err != nil {
 		return nil, err
 	}
@@ -112,15 +133,53 @@ func (fdc *FdClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
 	return data, nil
 }
 
-func (fdc *FdClient) Write(fd int, data []byte) (np.Tsize, error) {
+func (fdc *FdClient) ReadV(fd int, cnt np.Tsize) ([]byte, error) {
 	fid, off, error := fdc.fds.lookupOff(fd)
 	if error != nil {
-		return 0, error
+		return nil, error
 	}
-	sz, err := fdc.PathClnt.Write(fid, off, data)
+	qid := fdc.PathClnt.Qid(fid)
+	return fdc.readFid(fd, fid, off, cnt, qid.Version)
+}
+
+func (fdc *FdClient) Read(fd int, cnt np.Tsize) ([]byte, error) {
+	fid, off, error := fdc.fds.lookupOff(fd)
+	if error != nil {
+		return nil, error
+	}
+	return fdc.readFid(fd, fid, off, cnt, np.NoV)
+}
+
+func (fdc *FdClient) writeFid(fd int, fid np.Tfid, off np.Toffset, data []byte, v np.TQversion) (np.Tsize, error) {
+	sz, err := fdc.PathClnt.WriteV(fid, off, data, v)
 	if err != nil {
 		return 0, err
 	}
 	fdc.fds.incOff(fd, np.Toffset(sz))
 	return sz, nil
+}
+
+func (fdc *FdClient) WriteV(fd int, data []byte) (np.Tsize, error) {
+	fid, off, error := fdc.fds.lookupOff(fd)
+	if error != nil {
+		return 0, error
+	}
+	qid := fdc.PathClnt.Qid(fid)
+	return fdc.writeFid(fd, fid, off, data, qid.Version)
+}
+
+func (fdc *FdClient) Write(fd int, data []byte) (np.Tsize, error) {
+	fid, off, error := fdc.fds.lookupOff(fd)
+	if error != nil {
+		return 0, error
+	}
+	return fdc.writeFid(fd, fid, off, data, np.NoV)
+}
+
+func (fdc *FdClient) Seek(fd int, off np.Toffset) error {
+	err := fdc.fds.setOffset(fd, off)
+	if err != nil {
+		return err
+	}
+	return nil
 }

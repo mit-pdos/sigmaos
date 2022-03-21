@@ -80,7 +80,7 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 	if error != nil {
 		return np.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
-	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid), 0777, np.OREAD|np.OWRITE, b)
+	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		log.Fatalf("Error ProcdFs.spawn: %v", err)
 		// TODO: return an np.Err return err
@@ -90,7 +90,7 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 
 // Publishes a proc as done running
 func (pfs *ProcdFs) finish(p *Proc) error {
-	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid))
+	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid.String()))
 	if err != nil {
 		log.Printf("Error ProcdFs.finish: %v", err)
 		return err
@@ -107,7 +107,7 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 	default:
 		runq = np.PROCD_RUNQ_BE
 	}
-	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), runq, a.Pid), 0777, np.OREAD|np.OWRITE, b)
+	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), runq, a.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err

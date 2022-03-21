@@ -19,8 +19,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", os.Args[0])
 		os.Exit(1)
 	}
-	clk := kv.MakeClerk("clerk-"+proc.GetPid(), fslib.Named())
-	clk.Started(proc.GetPid())
+	clk, err := kv.MakeClerk("clerk-"+proc.GetPid().String(), fslib.Named())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v err %v\n", os.Args[0], err)
+		os.Exit(1)
+	}
+	clk.Started()
 	run(clk)
 }
 
@@ -51,49 +55,54 @@ func run(kc *kv.KvClerk) {
 	} else {
 		status = proc.MakeStatus(proc.StatusOK)
 	}
-	kc.Exited(proc.GetPid(), status)
+	kc.Exited(status)
 }
 
 type Value struct {
-	Pid string
-	Key string
+	Pid proc.Tpid
+	Key kv.Tkey
 	N   uint64
 }
 
-func check(kc *kv.KvClerk, i, ntest uint64) error {
+func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64) error {
 	n := uint64(0)
-	rdr, err := kc.GetReader(kv.Key(i))
+	rdr, err := kc.GetReader(key)
 	if err != nil {
 		return err
 	}
+	rdr.Unfence()
 	defer rdr.Close()
-	rdr.ReadJsonStream(func() interface{} { return new(Value) }, func(a interface{}) error {
+	err = rdr.ReadJsonStream(func() interface{} { return new(Value) }, func(a interface{}) error {
 		val := a.(*Value)
 		if val.Pid != proc.GetPid() {
 			return nil
 		}
-		if val.Key != kv.Key(i) {
-			return fmt.Errorf("%v: wrong key %v %v %v", proc.GetName(), kv.Key(i), val.Key, kv.Key(i))
+		if val.Key != key {
+			return fmt.Errorf("%v: wrong key for %v: expected %v observed %v", proc.GetName(), rdr.Path(), key, val.Key)
 		}
 		if val.N != n {
-			return fmt.Errorf("%v: wrong N %v %v %v %v", proc.GetName(), n, val.N, kv.Key(i), rdr.Path())
+			return fmt.Errorf("%v: wrong N for %v: expected %v observed %v", proc.GetName(), rdr.Path(), n, val.N)
 		}
 		n += 1
 		return nil
 	})
+	if err != nil {
+		log.Printf("ReadJsonStream: err %v\n", err)
+	}
 	if n < ntest {
-		return fmt.Errorf("%v: wrong ntest %v %v %v %v", proc.GetName(), ntest, n, kv.Key(i), rdr.Path())
+		return fmt.Errorf("%v: wrong ntest for %v: expected %v observed %v", proc.GetName(), rdr.Path(), ntest, n)
 	}
 	return nil
 }
 
 func test(kc *kv.KvClerk, ntest uint64) error {
 	for i := uint64(0); i < kv.NKEYS && atomic.LoadInt32(&done) == 0; i++ {
-		v := Value{proc.GetPid(), kv.Key(i), ntest}
-		if err := kc.AppendJson(kv.Key(i), v); err != nil {
-			return fmt.Errorf("%v: Append %v err %v", proc.GetName(), kv.Key(i), err)
+		key := kv.MkKey(i)
+		v := Value{proc.GetPid(), key, ntest}
+		if err := kc.AppendJson(key, v); err != nil {
+			return fmt.Errorf("%v: Append %v err %v", proc.GetName(), key, err)
 		}
-		if err := check(kc, i, ntest); err != nil {
+		if err := check(kc, key, ntest); err != nil {
 			log.Printf("check failed %v\n", err)
 			return err
 		}

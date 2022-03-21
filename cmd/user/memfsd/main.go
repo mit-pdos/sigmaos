@@ -14,7 +14,7 @@ import (
 
 func main() {
 	linuxsched.ScanTopology()
-	name := np.MEMFS + "/" + proc.GetPid()
+	name := np.MEMFS + "/" + proc.GetPid().String()
 	if len(os.Args) > 1 {
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
@@ -23,7 +23,7 @@ func main() {
 		addr := ip + ":0"
 		config := repldummy.MakeConfig()
 		if os.Args[1] == "dummy" {
-			fss, err := fslibsrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid(), config)
+			fss, err := fslibsrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config)
 			if err != nil {
 				log.Fatalf("FATAL Error makreplmemfs: %v", err)
 			}

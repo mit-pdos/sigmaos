@@ -58,7 +58,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 // XXX deduplicate with MakeProcClnt()
 func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcClnt {
 	pid := proc.GenPid()
-	proc.FakeProcEnv(pid, uname, "", path.Join(proc.KPIDS, pid), "")
+	proc.FakeProcEnv(pid, uname, "", path.Join(proc.KPIDS, pid.String()), "")
 
 	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()

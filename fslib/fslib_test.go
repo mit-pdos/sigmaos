@@ -198,7 +198,7 @@ func TestSetAppend(t *testing.T) {
 
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
-	l, err := ts.SetFile(fn, d, np.Toffset(len(d)))
+	l, err := ts.SetFile(fn, d, np.OAPPEND, np.NoOffset)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, np.Tsize(len(d)), l)
 	b, err := ts.GetFile(fn)
@@ -295,8 +295,37 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
+func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
+	fd, err := fsl.Open(cnt, np.ORDWR)
+	assert.Nil(t, err)
+
+	defer fsl.Close(fd)
+
+	b, err := fsl.ReadV(fd, 1000)
+	if err != nil && np.IsErrVersion(err) {
+		return true
+	}
+	assert.Nil(t, err)
+	n, err := strconv.Atoi(string(b))
+	assert.Nil(t, err)
+
+	n += 1
+
+	err = fsl.Seek(fd, 0)
+	assert.Nil(t, err)
+
+	b = []byte(strconv.Itoa(n))
+	_, err = fsl.WriteV(fd, b)
+	if err != nil && np.IsErrVersion(err) {
+		return true
+	}
+	assert.Nil(t, err)
+
+	return false
+}
+
 // XXX no versions for now
-func testCounter(t *testing.T) {
+func TestCounter(t *testing.T) {
 	const N = 10
 
 	ts := test.MakeTstatePath(t, path)
@@ -312,21 +341,9 @@ func testCounter(t *testing.T) {
 			ntrial := 0
 			for {
 				ntrial += 1
-				fd, err := ts.Open(cnt, np.ORDWR)
-				assert.Equal(t, nil, err)
-				b, err := ts.Read(fd, 1000)
-				assert.Equal(t, nil, err)
-				n, err := strconv.Atoi(string(b))
-				assert.Equal(t, nil, err)
-				n += 1
-				b = []byte(strconv.Itoa(n))
-				_, err = ts.Write(fd, b)
-				if err != nil && err.Error() == "Version mismatch" {
+				if readWrite(t, ts.FsLib, cnt) {
 					continue
 				}
-				assert.Equal(t, nil, err)
-				err = ts.Close(fd)
-				assert.Equal(t, nil, err)
 				break
 			}
 			// log.Printf("%d: tries %v\n", i, ntrial)
@@ -984,7 +1001,7 @@ func TestSetFileSymlink(t *testing.T) {
 	nwalk := st.Nwalk
 
 	d = []byte("byebye")
-	n, err := ts.SetFile(path+"namedself0/f", d, 0)
+	n, err := ts.SetFile(path+"namedself0/f", d, np.OWRITE, 0)
 	assert.Nil(ts.T, err, "SetFile")
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 

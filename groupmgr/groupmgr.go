@@ -1,9 +1,9 @@
 package groupmgr
 
 import (
-	"log"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -26,7 +26,7 @@ type GroupMgr struct {
 type member struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	pid   string
+	pid   proc.Tpid
 	bin   string
 	args  []string
 	crash int
@@ -53,12 +53,12 @@ func (m *member) spawn() {
 }
 
 func (m *member) run(i int, start chan bool, done chan procret) {
-	//log.Printf("spawn %p member %v\n", c, m.bin)
+	// log.Printf("spawn %d member %v\n", i, m.bin)
 	m.spawn()
-	//log.Printf("member %p forked %v\n", c, m.pid)
+	// log.Printf("member %d forked %v\n", i, m.pid)
 	start <- true
 	status, err := m.WaitExit(m.pid)
-	//log.Printf("member %v exited %v err %v\n", m.pid, status, err)
+	// log.Printf("member %v exited %v err %v\n", m.pid, status, err)
 	done <- procret{i, err, status}
 }
 
@@ -102,7 +102,7 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 		} else { // restart member i
 			if gm.members[st.member].bin == "bin/user/kvd" {
 				// For now, we don't restart kvds
-				log.Printf("=== %v: kvd failed %v\n", proc.GetProgram(), gm.members[st.member].pid)
+				db.DLPrintf(db.ALWAYS, "=== %v: kvd failed %v\n", gm.members[st.member].pid)
 				continue
 			}
 			start := make(chan bool)
@@ -134,6 +134,6 @@ func (gm *GroupMgr) Stop() error {
 	}
 	// log.Printf("wait for members\n")
 	<-gm.ch
-	log.Printf("%v: done members\n", proc.GetProgram())
+	db.DLPrintf("GROUPMGR", "done members\n")
 	return err
 }

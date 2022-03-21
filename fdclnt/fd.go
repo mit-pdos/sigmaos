@@ -11,7 +11,7 @@ const (
 )
 
 type FdState struct {
-	offset np.Toffset // unused for now
+	offset np.Toffset
 	fid    np.Tfid
 	mode   np.Tmode
 }

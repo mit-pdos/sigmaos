@@ -16,7 +16,6 @@ import (
 //
 
 func main() {
-	linuxsched.ScanTopology()
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %v parent-of-bin <pprof-output-path> <util-path>\n", os.Args[0])
 		os.Exit(1)
@@ -28,6 +27,10 @@ func main() {
 	utilPath := ""
 	if len(os.Args) >= 4 {
 		utilPath = os.Args[3]
+	}
+	if _, err := linuxsched.ScanTopology(); err != nil {
+		fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
+		os.Exit(1)
 	}
 	procd.RunProcd(os.Args[1], pprofPath, utilPath)
 }

@@ -2,14 +2,15 @@ package kv
 
 import (
 	"fmt"
+	"log"
 	"path"
-	"strconv"
 	"sync"
 
 	"ulambda/crash"
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
+	"ulambda/fenceclnt1"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -20,55 +21,62 @@ type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	fclnt  *fenceclnt.FenceClnt
-	blConf Config
+	fclnt    *fenceclnt1.FenceClnt
+	epochstr string
 }
 
-func MakeMover(N string, src, dst string) (*Mover, error) {
+func JoinEpoch(fsl *fslib.FsLib, label, epochstr string, dirs []string) error {
+	epoch, err := np.String2Epoch(epochstr)
+	if err != nil {
+		return err
+	}
+	fclnt := fenceclnt1.MakeLeaderFenceClnt(fsl, KVBALANCER)
+	if err := fclnt.FenceAtEpoch(epoch, dirs); err != nil {
+		return fmt.Errorf("FenceAtEpoch %v err %v", KVCONFIG, err)
+	}
+	// reads are fenced
+	config := Config{}
+	if err := fsl.GetFileJson(KVCONFIG, &config); err != nil {
+		return fmt.Errorf("GetFileJson %v err %v", KVCONFIG, err)
+	}
+	if config.Epoch != epoch {
+		return fmt.Errorf("Newer config %v", config.Epoch)
+	}
+	return nil
+}
+
+func MakeMover(epochstr, src, dst string) (*Mover, error) {
 	mv := &Mover{}
-	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid())
+	mv.epochstr = epochstr
+	mv.FsLib = fslib.MakeFsLib("mover-" + proc.GetPid().String())
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 
-	err := mv.Started(proc.GetPid())
+	if err := mv.Started(); err != nil {
+		log.Fatalf("%v: couldn't start %v\n", proc.GetName(), err)
+	}
 	crash.Crasher(mv.FsLib)
 
-	mv.fclnt = fenceclnt.MakeFenceClnt(mv.FsLib, KVCONFIG, 0, []string{KVDIR})
-
-	err = mv.fclnt.AcquireConfig(&mv.blConf)
-	if err != nil {
-		db.DLPrintf("KVMV_ERR", "AcquireConfig %v err %v\n", mv.fclnt.Name(), err)
+	if err := JoinEpoch(mv.FsLib, "KVMV", epochstr, []string{KVDIR, path.Dir(src), path.Dir(dst)}); err != nil {
+		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return nil, err
 	}
-	if N != strconv.Itoa(mv.blConf.N) {
-		return nil, fmt.Errorf("wrong config %v", N)
-	}
-	return mv, err
+	return mv, nil
 }
 
 func shardTmp(shardp string) string {
 	return shardp + "#"
 }
 
-// Move shard from src to dst
-func (mv *Mover) moveShard(s, d string) error {
+// Copy shard from src to dst
+func (mv *Mover) copyShard(s, d string) error {
 	d1 := shardTmp(d)
 
 	// The previous mover might have crashed right after rename
 	// below. If so, we are done.
 	_, err := mv.Stat(d)
 	if err == nil {
-		db.DLPrintf("KVMV_ERR", "moveShard conf %v exists %v\n", mv.blConf.N, d)
+		db.DLPrintf("KVMV_ERR", "moveShard conf %v exists %v\n", mv.epochstr, d)
 		return nil
-	}
-
-	// Fence writes to server holding d.  Also alert s about the
-	// new config so that fenced writes from clerks so s will
-	// fail.
-	//
-	// + "/" to force grp-0 to be resolved and path.Dir(d) because
-	// d doesn't exist yet.
-	if err := mv.fclnt.FencePaths([]string{s, path.Dir(d) + "/"}); err != nil {
-		return err
 	}
 
 	// An aborted view change may have created the directory and
@@ -95,15 +103,35 @@ func (mv *Mover) moveShard(s, d string) error {
 	return nil
 }
 
-func (mv *Mover) Move(src, dst string) {
-	db.DLPrintf("KVMV", "conf %v: mv from %v to %v\n", mv.blConf.N, src, dst)
-	err := mv.moveShard(src, dst)
-	if err != nil {
-		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.blConf.N, src, dst, err)
+func (mv *Mover) delShard(sharddir string) {
+	db.DLPrintf("KVMV", "conf %v delete %v\n", mv.epochstr, sharddir)
+
+	// If sharddir isn't found, then an earlier delete succeeded;
+	// we are done.
+	if _, err := mv.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
+		db.DLPrintf("KVMV_ERR", "Delete conf %v not found %v\n", mv.epochstr, sharddir)
+		mv.Exited(proc.MakeStatus(proc.StatusOK))
+		return
 	}
-	if err != nil {
-		mv.Exited(proc.GetPid(), proc.MakeStatusErr(err.Error(), nil))
+
+	if err := mv.RmDir(sharddir); err != nil {
+		db.DLPrintf("KVMV_ERR", "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
+		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 	} else {
-		mv.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+		mv.Exited(proc.MakeStatus(proc.StatusOK))
+	}
+}
+
+func (mv *Mover) Move(src, dst string) {
+	db.DLPrintf("KVMV", "conf %v: mv from %v to %v\n", mv.epochstr, src, dst)
+	err := mv.copyShard(src, dst)
+	if err != nil {
+		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
+	}
+	db.DLPrintf("KVMV0", "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
+	if err != nil {
+		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
+	} else {
+		mv.delShard(src)
 	}
 }

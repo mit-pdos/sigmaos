@@ -2,9 +2,9 @@ package kv
 
 import (
 	"fmt"
-	"log"
 
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 type Move struct {
@@ -17,7 +17,9 @@ type Moves []*Move
 func (mvs Moves) String() string {
 	s := "["
 	for _, m := range mvs {
-		if m != nil {
+		if m == nil {
+			s += fmt.Sprintf("nil,")
+		} else {
 			s += fmt.Sprintf("%v -> %v,", m.Src, m.Dst)
 		}
 	}
@@ -26,17 +28,17 @@ func (mvs Moves) String() string {
 }
 
 type Config struct {
-	N      int
+	Epoch  np.Tepoch
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
 }
 
 func (cf *Config) String() string {
-	return fmt.Sprintf("{N %v, Shards %v, Moves %v}", cf.N, cf.Shards, cf.Moves)
+	return fmt.Sprintf("{Epoch %v, Shards %v, Moves %v}", cf.Epoch, cf.Shards, cf.Moves)
 }
 
-func MakeConfig(n int) *Config {
-	cf := &Config{n, make([]string, NSHARD), Moves{}}
+func MakeConfig(e np.Tepoch) *Config {
+	cf := &Config{e, make([]string, NSHARD), Moves{}}
 	return cf
 }
 
@@ -127,16 +129,6 @@ func (ks *KvSet) low() (string, int) {
 
 func (ks *KvSet) nshards(kv string) int {
 	return ks.set[kv]
-}
-
-func readKVs(fsl *fslib.FsLib) (*KvSet, error) {
-	conf, err := readConfig(fsl, KVCONFIG)
-	if err != nil {
-		log.Printf("readKVs: err %v\n", err)
-		return nil, err
-	}
-	kvs := makeKvs(conf.Shards)
-	return kvs, nil
 }
 
 // assign to t shards from hkv to newkv

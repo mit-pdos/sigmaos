@@ -38,7 +38,7 @@ func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 	if rerror != nil {
 		reply = *rerror
 	}
-	fcall := np.MakeFcall(reply, 0, nil)
+	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
 	fcall.Tag = t
 	replies <- fcall
 }
@@ -292,6 +292,14 @@ func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 }
 
 func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
+	return np.MkErr(np.TErrNotSupported, args).Rerror()
+}
+
+func (npc *NpConn) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
+	return np.MkErr(np.TErrNotSupported, args).Rerror()
+}
+
+func (npc *NpConn) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
 	return np.MkErr(np.TErrNotSupported, args).Rerror()
 }
 

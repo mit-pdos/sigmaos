@@ -149,7 +149,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 	pipeName := www.makePipe()
 
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, app, append([]string{pid}, args...))
+	a := proc.MakeProcPid(pid, app, append([]string{pid.String()}, args...))
 	// Set the shared link to point to the pipe
 	a.SetShared(path.Join(www.globalSrvpath, pipeName))
 	err := www.Spawn(a)

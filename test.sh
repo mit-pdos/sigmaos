@@ -1,5 +1,6 @@
 #!/bin/bash
 
+<<<<<<< HEAD
 for ND in :1111 :1111,:1112,:1113
 do
   export NAMED=$ND
@@ -27,7 +28,6 @@ do
   go test $1 ulambda/writer
   go test $1 ulambda/stats
   go test $1 ulambda/fslib
-  go test $1 ulambda/fenceclnt
   go test $1 ulambda/semclnt
   
   #
@@ -46,6 +46,8 @@ do
   go test $1 ulambda/s3
   go test $1 ulambda/kernel
   go test $1 ulambda/fenceclnttest
+  go test $1 ulambda/leaderclnt
+  go test $1 ulambda/leadertest
   go test $1 ulambda/snapshot
   
   go test $1 ulambda/group
@@ -71,5 +73,4 @@ do
   # run without realm?
   # XXX needs fixing
   # go test $1 -timeout=45m ulambda/replica
- 
 done 

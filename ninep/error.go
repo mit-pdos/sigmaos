@@ -124,7 +124,7 @@ func (err Terror) String() string {
 	case TErrUnknownFence:
 		return "unknown fence"
 	case TErrExists:
-		return "exists"
+		return "file exists"
 	case TErrClosed:
 		return "closed"
 	case TErrBadFcall:
@@ -138,7 +138,7 @@ func (err Terror) String() string {
 
 	// for passing non-sigma errors through
 	case TErrError:
-		return "Error"
+		return "Non-sigma error"
 
 	default:
 		return "unknown error"
@@ -179,7 +179,7 @@ func (err *Err) Rerror() *Rerror {
 
 // SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrNotfound.String())
+	return strings.Contains(error.Error(), TErrNotfound.String())
 }
 
 // SigmaOS server couldn't reach a server
@@ -213,7 +213,7 @@ func IsDirNotFound(error error) bool {
 }
 
 func IsErrExists(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrExists.String())
+	return strings.Contains(error.Error(), TErrExists.String())
 }
 
 func IsErrStale(error error) bool {

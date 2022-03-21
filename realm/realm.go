@@ -47,7 +47,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	rStartSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
 	rStartSem.Init(0)
 
-	if _, err := clnt.SetFile(REALM_CREATE, []byte(rid), 0); err != nil {
+	if _, err := clnt.SetFile(REALM_CREATE, []byte(rid), np.OWRITE, 0); err != nil {
 		log.Fatalf("Error SetFile in RealmClnt.CreateRealm: %v", err)
 	}
 
@@ -62,7 +62,7 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 	rExitSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
 	rExitSem.Init(0)
 
-	if _, err := clnt.SetFile(REALM_DESTROY, []byte(rid), 0); err != nil {
+	if _, err := clnt.SetFile(REALM_DESTROY, []byte(rid), np.OWRITE, 0); err != nil {
 		log.Fatalf("Error WriteFile in RealmClnt.DestroyRealm: %v", err)
 	}
 

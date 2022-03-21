@@ -285,7 +285,7 @@ func (fc *FenceClnt) RemovePaths(paths []string) error {
 //
 
 func (fc *FenceClnt) SetFenceFile(b []byte) error {
-	_, err := fc.SetFile(fc.fenceName, b, 0)
+	_, err := fc.SetFile(fc.fenceName, b, np.OWRITE, 0)
 	if err != nil {
 		db.DLPrintf("FENCECLNT_ERR", "SetFenceFile %v err %v", fc.fenceName, err)
 		return err

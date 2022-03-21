@@ -38,7 +38,7 @@ type Tinput struct {
 type Part2pc struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	me      string
+	me      proc.Tpid
 	index   int
 	opcode  string
 	randstr string
@@ -64,7 +64,7 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 	}
 	p.delay = delay
 	p.randstr = randstr.Hex(16)
-	p.FsLib = fslib.MakeFsLib(p.me)
+	p.FsLib = fslib.MakeFsLib(p.me.String())
 	p.ProcClnt = procclnt.MakeProcClnt(p.FsLib)
 
 	log.Printf("%v: Part2pc i %v op %v delay %v\n", p.me, p.index, p.opcode, p.delay)
@@ -80,7 +80,7 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 		os.Exit(1)
 	}
 
-	p.Started(proc.GetPid())
+	p.Started()
 
 	return p, nil
 }
@@ -113,5 +113,5 @@ func (p *Part2pc) Work() {
 	db.DLPrintf("TEST2PC", "Work\n")
 	<-p.done
 	db.DLPrintf("TEST2PC", "exit\n")
-	p.Exited(proc.GetPid(), proc.MakeStatus(proc.StatusOK))
+	p.Exited(proc.MakeStatus(proc.StatusOK))
 }

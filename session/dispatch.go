@@ -42,9 +42,17 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		reply := &np.Rread{}
 		err := s.protsrv.Read(req, reply)
 		return *reply, err
+	case np.TreadV:
+		reply := &np.Rread{}
+		err := s.protsrv.ReadV(req, reply)
+		return *reply, err
 	case np.Twrite:
 		reply := &np.Rwrite{}
 		err := s.protsrv.Write(req, reply)
+		return *reply, err
+	case np.TwriteV:
+		reply := &np.Rwrite{}
+		err := s.protsrv.WriteV(req, reply)
 		return *reply, err
 	case np.Tclunk:
 		reply := &np.Rclunk{}

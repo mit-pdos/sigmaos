@@ -21,8 +21,8 @@ const (
 	NBALANCER = 3
 	NCLERK    = 10
 
-	CRASHBALANCER = 3200
-	CRASHHELPER   = "100"
+	CRASHBALANCER = 1000
+	CRASHHELPER   = "200"
 )
 
 func checkKvs(t *testing.T, kvs *KvSet, n int) {
@@ -73,7 +73,7 @@ type Tstate struct {
 	clrk    *KvClerk
 	mfsgrps []*groupmgr.GroupMgr
 	gmbal   *groupmgr.GroupMgr
-	clrks   []string
+	clrks   []proc.Tpid
 }
 
 func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) (*Tstate, *KvClerk) {
@@ -94,9 +94,10 @@ func (ts *Tstate) setup(nclerk int) *KvClerk {
 	ts.mfsgrps = append(ts.mfsgrps, grp)
 
 	// Create keys
-	clrk := MakeClerk("kv_test", fslib.Named())
+	clrk, err := MakeClerk("kv_test", fslib.Named())
+	assert.Nil(ts.T, err, "MakeClerk")
 	for i := uint64(0); i < NKEYS; i++ {
-		err := clrk.Put(Key(i), []byte{})
+		err := clrk.Put(MkKey(i), []byte{})
 		assert.Nil(ts.T, err, "Put")
 	}
 	return clrk
@@ -108,7 +109,7 @@ func (ts *Tstate) done() {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) stopFS(fs string) {
+func (ts *Tstate) stopFS(fs proc.Tpid) {
 	err := ts.Evict(fs)
 	assert.Nil(ts.T, err, "stopFS")
 	ts.WaitExit(fs)
@@ -131,7 +132,7 @@ func (ts *Tstate) stopClerks() {
 	}
 }
 
-func (ts *Tstate) startClerk() string {
+func (ts *Tstate) startClerk() proc.Tpid {
 	p := proc.MakeProc("bin/user/kv-clerk", []string{""})
 	ts.Spawn(p)
 	err := ts.WaitStart(p.Pid)
@@ -143,9 +144,9 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 	for true {
 		err := BalancerOp(ts.FsLib, opcode, mfs)
 		if err == nil {
-			return err
+			return nil
 		}
-		if np.IsErrUnreachable(err) || np.IsErrRetry(err) {
+		if np.IsErrUnavailable(err) || np.IsErrRetry(err) {
 			log.Printf("balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
@@ -159,18 +160,19 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 func TestGetPutSet(t *testing.T) {
 	ts, clrk := makeTstate(t, "manual", 1, 0, "0")
 
-	_, err := clrk.Get(Key(NKEYS+1), 0)
+	_, err := clrk.Get(MkKey(NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
 
-	err = clrk.Set(Key(NKEYS+1), []byte(Key(NKEYS+1)), 0)
+	err = clrk.Set(MkKey(NKEYS+1), []byte(MkKey(NKEYS+1)), 0)
 	assert.NotEqual(ts.T, err, nil, "Set")
 
-	err = clrk.Set(Key(0), []byte(Key(0)), 0)
+	err = clrk.Set(MkKey(0), []byte(MkKey(0)), 0)
 	assert.Nil(ts.T, err, "Set")
 
 	for i := uint64(0); i < NKEYS; i++ {
-		_, err := clrk.Get(Key(i), 0)
-		assert.Nil(ts.T, err, "Get "+Key(i))
+		key := MkKey(i)
+		_, err := clrk.Get(key, 0)
+		assert.Nil(ts.T, err, "Get "+key.String())
 	}
 
 	ts.done()

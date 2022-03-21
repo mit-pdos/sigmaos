@@ -30,7 +30,7 @@ func procd(ts *test.Tstate) string {
 	return st[0].Name
 }
 
-func spawnSpinner(t *testing.T, ts *test.Tstate) string {
+func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
 	err := ts.Spawn(a)
@@ -38,42 +38,42 @@ func spawnSpinner(t *testing.T, ts *test.Tstate) string {
 	return pid
 }
 
-func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid string) {
+func spawnSleeperWithPid(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
 	spawnSleeperNcore(t, ts, pid, 0, SLEEP_MSECS)
 }
 
-func spawnSleeper(t *testing.T, ts *test.Tstate) string {
+func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
 	pid := proc.GenPid()
 	spawnSleeperWithPid(t, ts, pid)
 	return pid
 }
 
-func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid string, ncore proc.Tcore, msecs int) {
-	a := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/out_" + pid})
+func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.Tcore, msecs int) {
+	a := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/out_" + pid.String()})
 	a.Ncore = ncore
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, childPid string, msecs int) string {
-	p := proc.MakeProc("bin/user/spawner", []string{"false", childPid, "bin/user/sleeper", fmt.Sprintf("%dms", msecs), "name/out_" + childPid})
+func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) proc.Tpid {
+	p := proc.MakeProc("bin/user/spawner", []string{"false", childPid.String(), "bin/user/sleeper", fmt.Sprintf("%dms", msecs), "name/out_" + childPid.String()})
 	err := ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.Pid
 }
 
-func checkSleeperResult(t *testing.T, ts *test.Tstate, pid string) bool {
+func checkSleeperResult(t *testing.T, ts *test.Tstate, pid proc.Tpid) bool {
 	res := true
-	b, err := ts.GetFile("name/out_" + pid)
+	b, err := ts.GetFile("name/out_" + pid.String())
 	res = assert.Nil(t, err, "GetFile") && res
 	res = assert.Equal(t, string(b), "hello", "Output") && res
 
 	return res
 }
 
-func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid string) {
-	b, err := ts.GetFile("name/out_" + pid)
+func checkSleeperResultFalse(t *testing.T, ts *test.Tstate, pid proc.Tpid) {
+	b, err := ts.GetFile("name/out_" + pid.String())
 	assert.NotNil(t, err, "GetFile")
 	assert.NotEqual(t, string(b), "hello", "Output")
 }
@@ -90,8 +90,8 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -117,8 +117,8 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
+			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
 
@@ -141,8 +141,8 @@ func TestWaitExitParentRetStat(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-	assert.NotNil(t, err, "Stat %v", path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
 
 	end := time.Now()
 
@@ -169,7 +169,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -197,7 +197,7 @@ func TestWaitStart(t *testing.T) {
 	// Check if proc exists
 	sts, err := ts.GetDir(path.Join("name/procd", procd(ts), np.PROCD_RUNNING))
 	assert.Nil(t, err, "Readdir")
-	assert.True(t, fslib.Present(sts, []string{pid}), "pid")
+	assert.True(t, fslib.Present(sts, []string{pid.String()}), "pid")
 
 	// Make sure the proc hasn't finished yet...
 	checkSleeperResultFalse(t, ts, pid)
@@ -251,7 +251,7 @@ func TestEarlyExit1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	pid1 := proc.GenPid()
-	a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1})
+	a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
@@ -266,12 +266,12 @@ func TestEarlyExit1(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// Child should have exited
-	b, err := ts.GetFile("name/out_" + pid1)
+	b, err := ts.GetFile("name/out_" + pid1.String())
 	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, string(b), "hello", "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1))
+	_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	ts.Shutdown()
@@ -286,7 +286,7 @@ func TestEarlyExitN(t *testing.T) {
 	for i := 0; i < nProcs; i++ {
 		go func() {
 			pid1 := proc.GenPid()
-			a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1})
+			a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
 			err := ts.Spawn(a)
 			assert.Nil(t, err, "Spawn")
 
@@ -298,12 +298,12 @@ func TestEarlyExitN(t *testing.T) {
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 			// Child should have exited
-			b, err := ts.GetFile("name/out_" + pid1)
+			b, err := ts.GetFile("name/out_" + pid1.String())
 			assert.Nil(t, err, "GetFile")
 			assert.Equal(t, string(b), "hello", "Output")
 
 			// .. and cleaned up
-			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1))
+			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
 		}()
@@ -319,7 +319,7 @@ func TestConcurrentProcs(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	nProcs := 8
-	pids := map[string]int{}
+	pids := map[proc.Tpid]int{}
 
 	var barrier sync.WaitGroup
 	barrier.Add(nProcs)
@@ -336,7 +336,7 @@ func TestConcurrentProcs(t *testing.T) {
 			_, alreadySpawned = pids[pid]
 		}
 		pids[pid] = i
-		go func(pid string, started *sync.WaitGroup, i int) {
+		go func(pid proc.Tpid, started *sync.WaitGroup, i int) {
 			barrier.Done()
 			barrier.Wait()
 			spawnSleeperWithPid(t, ts, pid)
@@ -348,13 +348,13 @@ func TestConcurrentProcs(t *testing.T) {
 
 	for pid, i := range pids {
 		_ = i
-		go func(pid string, done *sync.WaitGroup, i int) {
+		go func(pid proc.Tpid, done *sync.WaitGroup, i int) {
 			defer done.Done()
 			ts.WaitExit(pid)
 			checkSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid))
-			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid))
+			_, err := ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid.String()))
+			assert.NotNil(t, err, "Stat %v", path.Join(proc.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
 
@@ -363,7 +363,7 @@ func TestConcurrentProcs(t *testing.T) {
 	ts.Shutdown()
 }
 
-func evict(ts *test.Tstate, pid string) {
+func evict(ts *test.Tstate, pid proc.Tpid) {
 	time.Sleep(SLEEP_MSECS / 2 * time.Millisecond)
 	err := ts.Evict(pid)
 	assert.Nil(ts.T, err, "evict")
@@ -459,7 +459,7 @@ func TestEvictN(t *testing.T) {
 	linuxsched.ScanTopology()
 	N := int(linuxsched.NCores)
 
-	pids := []string{}
+	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
 		pid := spawnSpinner(t, ts)
 		pids = append(pids, pid)

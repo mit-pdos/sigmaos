@@ -26,14 +26,14 @@ type System struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	bindir      string
-	pid         string
+	pid         proc.Tpid
 	namedAddr   []string
 	named       *Subsystem
 	fss3d       []*Subsystem
 	fsuxd       []*Subsystem
 	procd       []*Subsystem
 	dbd         []*Subsystem
-	crashedPids map[string]bool
+	crashedPids map[proc.Tpid]bool
 }
 
 func makeSystemBase(namedAddr []string, bindir string) *System {
@@ -44,7 +44,7 @@ func makeSystemBase(namedAddr []string, bindir string) *System {
 	s.fsuxd = []*Subsystem{}
 	s.fss3d = []*Subsystem{}
 	s.dbd = []*Subsystem{}
-	s.crashedPids = make(map[string]bool)
+	s.crashedPids = make(map[proc.Tpid]bool)
 	return s
 }
 
@@ -206,7 +206,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 		args = append(args, strings.Join(peers[:id], ","))
 	}
 
-	return proc.MakeProcPid("pid-"+strconv.Itoa(id), "/bin/kernel/named", args)
+	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)), "/bin/kernel/named", args)
 }
 
 // Run a named (but not as a proc)
@@ -223,7 +223,7 @@ func RunNamed(bin string, addr string, replicate bool, id int, peers []string, r
 }
 
 // Run a named as a proc
-func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, string, error) {
+func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate bool, id int, peers []string, realmId string) (*exec.Cmd, proc.Tpid, error) {
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {

@@ -46,8 +46,8 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
+			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -158,7 +158,15 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(v.Path, v.ServerId); err != nil {
 				return err
 			}
+		case np.Tfenceid1:
+			if err := e.encode(v.Path, v.ServerId); err != nil {
+				return err
+			}
 		case *np.Tfenceid:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
+		case *np.Tfenceid1:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
@@ -166,8 +174,16 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(v.FenceId, v.Seqno); err != nil {
 				return err
 			}
+		case np.Tfence1:
+			if err := e.encode(v.FenceId, v.Epoch); err != nil {
+				return err
+			}
 		case *np.Tfence:
 			if err := e.encode(*v); err != nil {
+				return err
+			}
+		case *np.Tfence1:
+			if err := e.encode(v.FenceId, v.Epoch); err != nil {
 				return err
 			}
 		case np.FcallWireCompat:
@@ -179,7 +195,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Fcall:
-			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Msg); err != nil {
+			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Fence, v.Msg); err != nil {
 				return err
 			}
 		case *np.Fcall:
@@ -209,7 +225,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}
@@ -320,8 +336,16 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := d.decode(&v.Path, &v.ServerId); err != nil {
 				return err
 			}
+		case *np.Tfenceid1:
+			if err := d.decode(&v.Path, &v.ServerId); err != nil {
+				return err
+			}
 		case *np.Tfence:
 			if err := d.decode(&v.FenceId, &v.Seqno); err != nil {
+				return err
+			}
+		case *np.Tfence1:
+			if err := d.decode(&v.FenceId, &v.Epoch); err != nil {
 				return err
 			}
 		case *np.FcallWireCompat:
@@ -341,7 +365,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			v.Msg = rv.Elem().Interface().(np.Tmsg)
 		case *np.Fcall:
-			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno); err != nil {
+			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Fence); err != nil {
 				return err
 			}
 			msg, err := newMsg(v.Type)
@@ -386,8 +410,8 @@ func SizeNp(vs ...interface{}) uint32 {
 		}
 
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
-			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
+		case bool, uint8, uint16, uint32, uint64, np.Tseqno, np.Tsession, np.Tfcall, np.Ttag, np.Tfid, np.Tmode, np.Qtype, np.Tsize, np.Tpath, np.Tepoch, np.TQversion, np.Tperm, np.Tiounit, np.Toffset, np.Tlength, np.Tgid,
+			*bool, *uint8, *uint16, *uint32, *uint64, *np.Tseqno, *np.Tsession, *np.Tfcall, *np.Ttag, *np.Tfid, *np.Tmode, *np.Qtype, *np.Tsize, *np.Tpath, *np.Tepoch, *np.TQversion, *np.Tperm, *np.Tiounit, *np.Toffset, *np.Tlength, *np.Tgid:
 			s += uint32(binary.Size(v))
 		case []byte:
 			s += uint32(binary.Size(uint32(0)) + len(v))
@@ -439,7 +463,7 @@ func SizeNp(vs ...interface{}) uint32 {
 		case *np.FcallWireCompat:
 			s += SizeNp(*v)
 		case np.Fcall:
-			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, v.Msg)
+			s += SizeNp(v.Type, v.Tag, v.Session, v.Seqno, v.Fence, v.Msg)
 		case *np.Fcall:
 			s += SizeNp(*v)
 		case np.Tmsg:

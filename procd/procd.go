@@ -35,7 +35,7 @@ type Procd struct {
 	nid        uint64
 	done       bool
 	addr       string
-	procs      map[string]bool
+	procs      map[proc.Tpid]bool
 	coreBitmap []bool
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
@@ -50,7 +50,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.nid = 0
 	pd.bin = bin
 
-	pd.procs = make(map[string]bool)
+	pd.procs = make(map[proc.Tpid]bool)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()

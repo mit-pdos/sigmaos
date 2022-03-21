@@ -42,6 +42,10 @@ func GrpDir(grp string) string {
 	return GRPDIR + grp + "/"
 }
 
+func GrpSym(grp string) string {
+	return GRPDIR + grp
+}
+
 func GrpConfPath(grp string) string {
 	return GRPDIR + grp + GRPCONF
 }
@@ -99,7 +103,7 @@ func (g *Group) clearBusy() {
 func RunMember(grp string) {
 	g := &Group{}
 	g.isBusy = true
-	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid())
+	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
 	crash.Crasher(g.FsLib)
 
@@ -147,7 +151,7 @@ func RunMember(grp string) {
 	}
 
 	// Add symlink
-	atomic.PutFileAtomic(g.FsLib, GrpDir(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))
+	atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))
 	g.peerFence.ReleaseFence()
 
 	// start server and write ch when server is done
@@ -159,7 +163,7 @@ func RunMember(grp string) {
 
 	g.primFence.AcquireFenceW([]byte(mfs.MyAddr()))
 
-	log.Printf("%v: primary %v\n", proc.GetProgram(), grp)
+	log.Printf("%v: primary %v\n", proc.GetName(), grp)
 
 	select {
 	case <-ch:
@@ -220,7 +224,7 @@ func (g *Group) recover(grp string) {
 		// this must be the first recovery of the balancer;
 		// otherwise, there would be a either a config or
 		// backup config.
-		g.conf = &GrpConf{"kv-" + proc.GetPid(), []string{}}
+		g.conf = &GrpConf{"kv-" + proc.GetPid().String(), []string{}}
 		g.PublishConfig(grp)
 	}
 }
@@ -251,7 +255,7 @@ func readGroupConf(fsl *fslib.FsLib, conffile string) (*GrpConf, error) {
 
 func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	s := opcode + " " + kv
-	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), 0)
+	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), np.OWRITE, 0)
 	return err
 }
 

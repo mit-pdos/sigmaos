@@ -22,7 +22,9 @@ type Protsrv interface {
 	Watch(np.Twatch, *np.Ropen) *np.Rerror
 	Clunk(np.Tclunk, *np.Rclunk) *np.Rerror
 	Read(np.Tread, *np.Rread) *np.Rerror
+	ReadV(np.TreadV, *np.Rread) *np.Rerror
 	Write(np.Twrite, *np.Rwrite) *np.Rerror
+	WriteV(np.TwriteV, *np.Rwrite) *np.Rerror
 	Remove(np.Tremove, *np.Rremove) *np.Rerror
 	RemoveFile(np.Tremovefile, *np.Rremove) *np.Rerror
 	Stat(np.Tstat, *np.Rstat) *np.Rerror

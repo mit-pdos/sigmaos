@@ -75,6 +75,10 @@ func uxFlags(m np.Tmode) int {
 	if m&np.OTRUNC == np.OTRUNC {
 		f |= os.O_TRUNC
 	}
+	if m&np.OAPPEND == np.OAPPEND {
+		f |= os.O_APPEND
+		f |= os.O_WRONLY
+	}
 	return f
 }
 

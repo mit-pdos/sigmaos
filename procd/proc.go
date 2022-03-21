@@ -23,7 +23,7 @@ type Proc struct {
 	fs.Inode
 	mu      sync.Mutex
 	Program string
-	Pid     string
+	Pid     proc.Tpid
 	Args    []string
 	Env     []string
 	Dir     string
@@ -42,7 +42,7 @@ func (p *Proc) init(a *proc.Proc) {
 	p.Pid = a.Pid
 	p.Args = a.Args
 	p.Dir = a.Dir
-	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid+rand.String(16))
+	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid.String()+rand.String(16))
 	p.Env = append(os.Environ(), a.GetEnv(p.pd.addr, p.NewRoot)...)
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p
@@ -78,7 +78,7 @@ func (p *Proc) run(cores []uint) error {
 	var stderr io.Writer
 	if p.Program == "bin/user/perf" {
 		args = p.Args
-		fname := "/tmp/perf-stat-" + p.Pid + ".out"
+		fname := "/tmp/perf-stat-" + p.Pid.String() + ".out"
 		file, err := os.Create(fname)
 		if err != nil {
 			log.Fatalf("FATAL Error creating perf stat output file: %v, %v", fname, err)

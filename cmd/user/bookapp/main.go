@@ -49,7 +49,7 @@ func RunBookApp(args []string) (*BookApp, error) {
 	ba.FsLib = fslib.MakeFsLib("bookapp")
 	ba.ProcClnt = procclnt.MakeProcClnt(ba.FsLib)
 	ba.input = strings.Split(args[2], "/")
-	ba.Started(proc.GetPid())
+	ba.Started()
 
 	return ba, nil
 }
@@ -69,7 +69,7 @@ func (ba *BookApp) query(q string) ([]byte, error) {
 		return nil, fmt.Errorf("Clone err %v\n", err)
 	}
 	sid := string(b)
-	_, err = ba.SetFile(dbd.DBD+sid+"/query", []byte(q), 0)
+	_, err = ba.SetFile(dbd.DBD+sid+"/query", []byte(q), np.OWRITE, 0)
 	if err != nil {
 		return nil, fmt.Errorf("Query err %v\n", err)
 	}
@@ -169,5 +169,5 @@ func (ba *BookApp) Work() *proc.Status {
 
 func (ba *BookApp) Exit(status *proc.Status) {
 	log.Printf("bookapp exit %v\n", status)
-	ba.Exited(proc.GetPid(), status)
+	ba.Exited(status)
 }

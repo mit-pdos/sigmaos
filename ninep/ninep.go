@@ -7,6 +7,7 @@ package ninep
 
 import (
 	"fmt"
+	"strconv"
 	"sync/atomic"
 )
 
@@ -33,6 +34,12 @@ func (fid Tfid) String() string {
 type Tsession uint64
 type Tseqno uint64
 
+// NoSession signifies the fcall came from a wire-compatible peer
+const NoSession Tsession = ^Tsession(0)
+
+// NoSeqno signifies the fcall came from a wire-compatible peer
+const NoSeqno Tseqno = ^Tseqno(0)
+
 // Atomically increment pointer and return result
 func (n *Tseqno) Next() Tseqno {
 	next := atomic.AddUint64((*uint64)(n), 1)
@@ -57,11 +64,37 @@ func MakeFence(idf Tfenceid, seq Tseqno) *Tfence {
 	return &Tfence{idf, seq}
 }
 
-// NoSession signifies the fcall came from a wire-compatible peer
-const NoSession Tsession = ^Tsession(0)
+type Tepoch uint64
 
-// NoSeqno signifies the fcall came from a wire-compatible peer
-const NoSeqno Tseqno = ^Tseqno(0)
+const NoEpoch Tepoch = ^Tepoch(0)
+
+func (e Tepoch) String() string {
+	return strconv.FormatUint(uint64(e), 16)
+}
+
+func String2Epoch(epoch string) (Tepoch, error) {
+	e, err := strconv.ParseUint(epoch, 16, 64)
+	if err != nil {
+		return Tepoch(0), err
+	}
+	return Tepoch(e), nil
+}
+
+type Tfenceid1 struct {
+	Path     Tpath
+	ServerId uint64 // XXX public key of server?
+}
+
+type Tfence1 struct {
+	FenceId Tfenceid1
+	Epoch   Tepoch
+}
+
+var NoFence = Tfence1{}
+
+func (f *Tfence1) String() string {
+	return fmt.Sprintf("idf %v epoch %v", f.FenceId, f.Epoch)
+}
 
 //
 //  End augmentated types
@@ -80,6 +113,19 @@ const NoOffset Toffset = ^Toffset(0)
 const MAXGETSET Tsize = 1_000_000
 
 type Tpath uint64
+
+func (p Tpath) String() string {
+	return strconv.FormatUint(uint64(p), 16)
+}
+
+func String2Path(path string) (Tpath, error) {
+	p, err := strconv.ParseUint(path, 16, 64)
+	if err != nil {
+		return Tpath(p), err
+	}
+	return Tpath(p), nil
+}
+
 type Qtype uint8
 type TQversion uint32
 
@@ -176,9 +222,6 @@ const (
 	// and a closure will invoke the closure if the directory
 	// changes.
 	OWATCH Tmode = OCEXEC // overleads OEXEC; maybe ORCLOSe better?
-
-	// XXX OVERSION is for atomic read-and-write, but unused for now.
-	OVERSION Tmode = 0x83 // overloads OAPPEND|OEXEC
 )
 
 func (m Tmode) String() string {
@@ -264,14 +307,21 @@ const (
 	TRstat
 	TTwstat
 	TRwstat
+
+	//
+	// SigmaP
+	//
+
+	TTreadV
+	TTwriteV
 	TTwatch
 	TTrenameat
 	TRrenameat
+	TTremovefile
 	TTgetfile
 	TRgetfile
 	TTsetfile
 	TTputfile
-	TTremovefile
 	TTmkfence
 	TRmkfence
 	TTregfence
@@ -329,8 +379,6 @@ func (fct Tfcall) String() string {
 		return "Rclunk"
 	case TTremove:
 		return "Tremove"
-	case TTremovefile:
-		return "Tremovefile"
 	case TRremove:
 		return "Rremove"
 	case TTstat:
@@ -341,12 +389,19 @@ func (fct Tfcall) String() string {
 		return "Twstat"
 	case TRwstat:
 		return "Rwstat"
+
+	case TTreadV:
+		return "TreadV"
+	case TTwriteV:
+		return "TwriteV"
 	case TTwatch:
 		return "Twatch"
 	case TTrenameat:
 		return "Trenameat"
 	case TRrenameat:
 		return "Rrenameat"
+	case TTremovefile:
+		return "Tremovefile"
 	case TTgetfile:
 		return "Tgetfile"
 	case TRgetfile:
@@ -402,6 +457,7 @@ func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
 	fcall.Msg = fcallWC.Msg
 	fcall.Session = NoSession
 	fcall.Seqno = NoSeqno
+	fcall.Fence = NoFence
 	return fcall
 }
 
@@ -410,19 +466,20 @@ type Fcall struct {
 	Tag     Ttag
 	Session Tsession
 	Seqno   Tseqno
+	Fence   Tfence1
 	Msg     Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno) *Fcall {
+func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence1) *Fcall {
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, msg}
+		return &Fcall{msg.Type(), 0, sess, 0, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), msg}
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), f, msg}
 	}
 }
 
 func (fc *Fcall) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v msg %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg)
+	return fmt.Sprintf("%v t %v s %v seq %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg, fc.Fence)
 }
 
 func (fcall *Fcall) GetType() Tfcall {
@@ -515,8 +572,7 @@ type Topen struct {
 }
 
 type Twatch struct {
-	Fid  Tfid
-	Path []string
+	Fid Tfid
 }
 
 type Ropen struct {
@@ -542,6 +598,13 @@ type Tread struct {
 	Count  Tsize
 }
 
+type TreadV struct {
+	Fid     Tfid
+	Offset  Toffset
+	Count   Tsize
+	Version TQversion
+}
+
 type Rread struct {
 	Data []byte
 }
@@ -553,11 +616,22 @@ func (rr Rread) String() string {
 type Twrite struct {
 	Fid    Tfid
 	Offset Toffset
-	Data   []byte
+	Data   []byte // Data must be last
 }
 
 func (tw Twrite) String() string {
 	return fmt.Sprintf("{%v off %v len %d}", tw.Fid, tw.Offset, len(tw.Data))
+}
+
+type TwriteV struct {
+	Fid     Tfid
+	Offset  Toffset
+	Version TQversion
+	Data    []byte // Data must be last
+}
+
+func (tw TwriteV) String() string {
+	return fmt.Sprintf("{%v off %v len %d v %v}", tw.Fid, tw.Offset, len(tw.Data), tw.Version)
 }
 
 type Rwrite struct {
@@ -639,6 +713,10 @@ type Tgetfile struct {
 	Resolve bool
 }
 
+func (m Tgetfile) String() string {
+	return fmt.Sprintf("{%v off %v p %v cnt %v}", m.Fid, m.Offset, m.Wnames, m.Count)
+}
+
 type Rgetfile struct {
 	Data []byte
 }
@@ -653,7 +731,7 @@ type Tsetfile struct {
 	Offset  Toffset
 	Wnames  []string
 	Resolve bool
-	Data    []byte
+	Data    []byte // Data must be last
 }
 
 func (m Tsetfile) String() string {
@@ -666,11 +744,11 @@ type Tputfile struct {
 	Perm   Tperm
 	Offset Toffset
 	Wnames []string
-	Data   []byte
+	Data   []byte // Data must be last
 }
 
 func (m Tputfile) String() string {
-	return fmt.Sprintf("{%v off %v p %v len %v}", m.Fid, m.Offset, m.Wnames, len(m.Data))
+	return fmt.Sprintf("{%v %v p %v off %v p %v len %v}", m.Fid, m.Mode, m.Perm, m.Offset, m.Wnames, len(m.Data))
 }
 
 type Tmkfence struct {
@@ -703,45 +781,54 @@ type Tdetach struct {
 type Rdetach struct {
 }
 
-func (Tversion) Type() Tfcall    { return TTversion }
-func (Rversion) Type() Tfcall    { return TRversion }
-func (Tauth) Type() Tfcall       { return TTauth }
-func (Rauth) Type() Tfcall       { return TRauth }
-func (Tflush) Type() Tfcall      { return TTflush }
-func (Rflush) Type() Tfcall      { return TRflush }
-func (Tattach) Type() Tfcall     { return TTattach }
-func (Rattach) Type() Tfcall     { return TRattach }
-func (Rerror) Type() Tfcall      { return TRerror }
-func (Twalk) Type() Tfcall       { return TTwalk }
-func (Rwalk) Type() Tfcall       { return TRwalk }
-func (Topen) Type() Tfcall       { return TTopen }
-func (Twatch) Type() Tfcall      { return TTwatch }
-func (Ropen) Type() Tfcall       { return TRopen }
-func (Tcreate) Type() Tfcall     { return TTcreate }
-func (Rcreate) Type() Tfcall     { return TRcreate }
-func (Tread) Type() Tfcall       { return TTread }
-func (Rread) Type() Tfcall       { return TRread }
-func (Twrite) Type() Tfcall      { return TTwrite }
-func (Rwrite) Type() Tfcall      { return TRwrite }
-func (Tclunk) Type() Tfcall      { return TTclunk }
-func (Rclunk) Type() Tfcall      { return TRclunk }
-func (Tremove) Type() Tfcall     { return TTremove }
-func (Tremovefile) Type() Tfcall { return TTremovefile }
-func (Rremove) Type() Tfcall     { return TRremove }
-func (Tstat) Type() Tfcall       { return TTstat }
-func (Rstat) Type() Tfcall       { return TRstat }
-func (Twstat) Type() Tfcall      { return TTwstat }
-func (Rwstat) Type() Tfcall      { return TRwstat }
+func (Tversion) Type() Tfcall { return TTversion }
+func (Rversion) Type() Tfcall { return TRversion }
+func (Tauth) Type() Tfcall    { return TTauth }
+func (Rauth) Type() Tfcall    { return TRauth }
+func (Tflush) Type() Tfcall   { return TTflush }
+func (Rflush) Type() Tfcall   { return TRflush }
+func (Tattach) Type() Tfcall  { return TTattach }
+func (Rattach) Type() Tfcall  { return TRattach }
+func (Rerror) Type() Tfcall   { return TRerror }
+func (Twalk) Type() Tfcall    { return TTwalk }
+func (Rwalk) Type() Tfcall    { return TRwalk }
+func (Topen) Type() Tfcall    { return TTopen }
+func (Twatch) Type() Tfcall   { return TTwatch }
+func (Ropen) Type() Tfcall    { return TRopen }
+func (Tcreate) Type() Tfcall  { return TTcreate }
+func (Rcreate) Type() Tfcall  { return TRcreate }
+func (Tread) Type() Tfcall    { return TTread }
+func (Rread) Type() Tfcall    { return TRread }
+func (Twrite) Type() Tfcall   { return TTwrite }
+func (Rwrite) Type() Tfcall   { return TRwrite }
+func (Tclunk) Type() Tfcall   { return TTclunk }
+func (Rclunk) Type() Tfcall   { return TRclunk }
+func (Tremove) Type() Tfcall  { return TTremove }
+func (Rremove) Type() Tfcall  { return TRremove }
+func (Tstat) Type() Tfcall    { return TTstat }
+func (Rstat) Type() Tfcall    { return TRstat }
+func (Twstat) Type() Tfcall   { return TTwstat }
+func (Rwstat) Type() Tfcall   { return TRwstat }
+
+//
+// sigmaP
+//
+
+func (TreadV) Type() Tfcall      { return TTreadV }
+func (TwriteV) Type() Tfcall     { return TTwriteV }
 func (Trenameat) Type() Tfcall   { return TTrenameat }
 func (Rrenameat) Type() Tfcall   { return TRrenameat }
+func (Tremovefile) Type() Tfcall { return TTremovefile }
 func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
 func (Tputfile) Type() Tfcall    { return TTputfile }
-func (Tmkfence) Type() Tfcall    { return TTmkfence }
-func (Rmkfence) Type() Tfcall    { return TRmkfence }
-func (Tregfence) Type() Tfcall   { return TTregfence }
-func (Tunfence) Type() Tfcall    { return TTunfence }
-func (Trmfence) Type() Tfcall    { return TTrmfence }
-func (Tdetach) Type() Tfcall     { return TTdetach }
-func (Rdetach) Type() Tfcall     { return TRdetach }
+
+func (Tmkfence) Type() Tfcall  { return TTmkfence }
+func (Rmkfence) Type() Tfcall  { return TRmkfence }
+func (Tregfence) Type() Tfcall { return TTregfence }
+func (Tunfence) Type() Tfcall  { return TTunfence }
+func (Trmfence) Type() Tfcall  { return TTrmfence }
+
+func (Tdetach) Type() Tfcall { return TTdetach }
+func (Rdetach) Type() Tfcall { return TRdetach }

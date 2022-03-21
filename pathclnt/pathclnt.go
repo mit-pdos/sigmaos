@@ -269,7 +269,7 @@ func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
 		return err
 	}
 	go func() {
-		err := pathc.FidClnt.Watch(fid, nil)
+		err := pathc.FidClnt.Watch(fid)
 		db.DLPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
 		if err == nil {
 			w(path, nil)
@@ -292,7 +292,7 @@ func (pathc *PathClnt) SetRemoveWatch(path string, w Watch) error {
 		return np.MkErr(np.TErrInval, "watch")
 	}
 	go func() {
-		err := pathc.FidClnt.Watch(fid, nil)
+		err := pathc.FidClnt.Watch(fid)
 		db.DLPrintf("PATHCLNT", "SetRemoveWatch: Watch %v %v err %v\n", fid, path, err)
 		if err == nil {
 			w(path, nil)
@@ -455,4 +455,19 @@ func (pathc *PathClnt) RmFence(f np.Tfence, path string) error {
 		return err
 	}
 	return nil
+}
+
+func (pathc *PathClnt) PathServer(path string) (string, error) {
+	if _, err := pathc.Stat(path + "/"); err != nil {
+		db.DLPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", path, err)
+		return "", err
+	}
+	p := np.Split(path)
+	_, left, err := pathc.mnt.resolve(p)
+	if err != nil {
+		db.DLPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", path, err)
+		return "", err
+	}
+	p = p[0 : len(p)-len(left)]
+	return p.String(), nil
 }

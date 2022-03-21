@@ -157,7 +157,7 @@ func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 	// timing
 	start := time.Now()
 	for i := 0; i < N_RUNS; i++ {
-		_, err = t.SetFile(fname, buf, 0)
+		_, err = t.SetFile(fname, buf, np.OWRITE, 0)
 		if err != nil {
 			log.Fatalf("Error writefile memfs: %v", err)
 		}

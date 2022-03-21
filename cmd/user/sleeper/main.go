@@ -40,7 +40,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 		return nil, errors.New("MakeSleeper: too few arguments")
 	}
 	s := &Sleeper{}
-	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid())
+	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.output = args[1]
 	d, err := time.ParseDuration(args[0])
@@ -54,7 +54,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	db.DLPrintf("PROCD", "MakeSleeper: %v\n", args)
 
 	if !s.native {
-		err := s.Started(proc.GetPid())
+		err := s.Started()
 		if err != nil {
 			log.Fatalf("%v: Started: error %v\n", proc.GetName(), err)
 		}
@@ -87,6 +87,6 @@ func (s *Sleeper) Work() {
 	go s.sleep(ch)
 	status := <-ch
 	if !s.native {
-		s.Exited(proc.GetPid(), status)
+		s.Exited(status)
 	}
 }

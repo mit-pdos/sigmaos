@@ -58,7 +58,7 @@ func makeTstate(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) spawnSpinner() string {
+func (ts *Tstate) spawnSpinner() proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
 	a.Ncore = proc.Tcore(1)
@@ -97,7 +97,7 @@ func TestRealmGrowShrink(t *testing.T) {
 	N := int(linuxsched.NCores) / 2
 
 	log.Printf("Starting %v spinning lambdas", N)
-	pids := []string{}
+	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner())
 	}

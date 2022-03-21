@@ -193,7 +193,7 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p np.Path, r np.Path, w Watch) (np.
 		log.Fatalf("FATAL setWatch %v %v\n", fid2, fid1)
 	}
 	go func() {
-		err := pathc.FidClnt.Watch(fid1, r.Dir())
+		err := pathc.FidClnt.Watch(fid1)
 		pathc.FidClnt.Clunk(fid1)
 		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
 		w(p.String(), err)

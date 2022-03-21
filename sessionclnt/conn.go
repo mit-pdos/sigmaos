@@ -214,6 +214,7 @@ func (c *conn) reader() {
 		// Receive the next reply.
 		reply, err := nc.Recv()
 		if err != nil {
+			db.DLPrintf("SESSCONN", "%v error %v reader RPC to %v", c.sid, err, c.addrs)
 			// Try to connect to the next replica
 			err := c.tryReconnect(nc)
 			if err != nil {
@@ -246,7 +247,7 @@ func (c *conn) writer() {
 		req, c.queue = c.queue[0], c.queue[1:]
 		err := c.nc.Send(req)
 		if err != nil {
-			db.DLPrintf("SESSCONN", "%v Error %v RPC to %v\n", c.sid, err, c.nc.Dst())
+			db.DLPrintf("SESSCONN", "%v Error %v writer RPC to %v\n", c.sid, err, c.nc.Dst())
 			err := c.tryReconnectL()
 			if err != nil {
 				c.close()

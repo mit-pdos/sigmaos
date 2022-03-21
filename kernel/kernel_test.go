@@ -15,6 +15,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
+	"ulambda/session"
 	"ulambda/test"
 )
 
@@ -228,6 +229,7 @@ func TestFenceW(t *testing.T) {
 		crash.Partition(fsldl)
 		delay.Delay(10)
 
+		time.Sleep(2 * session.SESSTIMEOUTMS * time.Millisecond)
 		// fsldl lost lock, and ts should have it by now so
 		// this write and read to ux server should fail
 		_, err = fsldl.Write(fd, []byte(strconv.Itoa(1)))

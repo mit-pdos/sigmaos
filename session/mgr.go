@@ -58,3 +58,7 @@ func (sm *SessionMgr) run() {
 func (sm *SessionMgr) Done() bool {
 	return sm.done
 }
+
+func (sm *SessionMgr) Stop() {
+	sm.done = true
+}

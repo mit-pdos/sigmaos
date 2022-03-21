@@ -129,7 +129,8 @@ func (fssrv *FsServer) Restore(b []byte) {
 	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
 	fssrv.sct.St = fssrv.st
 	fssrv.root = root.(fs.Dir)
-
+	fssrv.sm.Stop()
+	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {

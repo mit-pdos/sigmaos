@@ -46,7 +46,7 @@ func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (npd *Npd) Process(fcall *np.Fcall, replies chan *np.Fcall) {
-	npd.sm.RegisterSession(fcall.Session)
+	npd.sm.RegisterSession(fcall.Session, npd.st.Alloc(fcall.Session, replies))
 	go npd.serve(fcall, replies)
 }
 

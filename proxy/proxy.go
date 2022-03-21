@@ -24,8 +24,8 @@ type Npd struct {
 func MakeNpd() *Npd {
 	npd := &Npd{fslib.Named(), nil, nil}
 	tm := threadmgr.MakeThreadMgrTable(nil, false)
-	npd.sm = session.MakeSessionMgr(npd.Process)
-	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm, npd.sm)
+	npd.st = session.MakeSessionTable(npd.mkProtServer, npd, nil, tm)
+	npd.sm = session.MakeSessionMgr(npd.st, npd.Process)
 	return npd
 }
 
@@ -46,7 +46,6 @@ func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 func (npd *Npd) Process(fcall *np.Fcall, replies chan *np.Fcall) {
-	npd.sm.RegisterSession(fcall.Session, npd.st.Alloc(fcall.Session, replies))
 	go npd.serve(fcall, replies)
 }
 

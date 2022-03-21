@@ -71,8 +71,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.stats = stats.MkStats(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
-	fssrv.sm = session.MakeSessionMgr(fssrv.Process)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt, fssrv.sm)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
+	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
@@ -217,7 +217,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 	}
 	// Only send a reply if the session hasn't been closed, or this is a detach
 	// (the last reply to be sent).
-	if !sess.Closed || request.GetType() == np.TTdetach {
+	if !sess.IsClosed() || request.GetType() == np.TTdetach {
 		replies := sess.GetRepliesC()
 		// The replies channel may be nil if this is a replicated op which came
 		// through raft. In this case, a reply is not needed.

@@ -29,7 +29,7 @@ func RestoreTable(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssr
 		log.Fatalf("FATAL error unmarshal session table in restore: %v", err)
 	}
 	// TODO: add session manager
-	st := MakeSessionTable(mkps, fssrv, rt, tm, nil)
+	st := MakeSessionTable(mkps, fssrv, rt, tm)
 	for session, b := range sessions {
 		st.sessions[session] = RestoreSession(session, fssrv, rps, rt, tm, b)
 	}
@@ -64,7 +64,7 @@ func RestoreSession(sid np.Tsession, fssrv protsrv.FsServer, rps protsrv.Restore
 	}
 	fos := rps(fssrv, ss.ProtsrvSnap)
 	// TODO: add session manager
-	sess := makeSession(fos, sid, nil, rt, tmt.AddThread(), nil)
+	sess := makeSession(fos, sid, nil, rt, tmt.AddThread())
 	myFences := fences.RestoreFenceTable(ss.FencesSnap)
 	sess.myFences = myFences
 	return sess

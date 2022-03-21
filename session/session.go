@@ -1,6 +1,7 @@
 package session
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -29,54 +30,24 @@ type Session struct {
 	protsrv       protsrv.Protsrv
 	rft           *fences.RecentTable
 	myFences      *fences.FenceTable
-	sm            *SessionMgr
 	lastHeartbeat time.Time
 	Sid           np.Tsession
 	Running       bool // true if the session is currently running an operation.
-	Closed        bool // true if the session has been closed.
+	closed        bool // true if the session has been closed.
 	replies       chan *np.Fcall
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr, sm *SessionMgr) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.protsrv = protsrv
-	sess.sm = sm
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
 	sess.replies = replies
-	// Register the new session.
-	sess.sm.RegisterSession(sess.Sid, sess)
 	return sess
 }
-
-// Change the replies channel if the new channel is non-nil. This may occur if,
-// for example, a client starts talking to a new replica.
-func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
-	sess.Lock()
-	defer sess.Unlock()
-	if replies != nil {
-		sess.replies = replies
-	}
-}
-
-// TODO: finish
-//func (sess *Session) heartbeat() {
-//	sess.Lock()
-//	defer sess.Unlock()
-//	if sess.Closed {
-//		log.Fatalf("FATAL heartbeat on closed session %v", sess.Sid)
-//	}
-//	sess.lastHeartbeat = time.Now()
-//}
-//
-//func (sess *Session) expired() bool {
-//	sess.Lock()
-//	defer sess.Unlock()
-//	return !sess.running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
-//}
 
 func (sess *Session) GetRepliesC() chan *np.Fcall {
 	sess.Lock()
@@ -118,4 +89,44 @@ func (sess *Session) DecThreads() {
 
 func (sess *Session) WaitThreads() {
 	sess.wg.Wait()
+}
+
+func (sess *Session) Close() {
+	sess.Lock()
+	defer sess.Unlock()
+	if sess.closed {
+		log.Fatalf("FATAL tried to close a closed session: %v", sess.Sid)
+	}
+	sess.closed = true
+}
+
+func (sess *Session) IsClosed() bool {
+	sess.Lock()
+	defer sess.Unlock()
+	return sess.closed
+}
+
+// Change the replies channel if the new channel is non-nil. This may occur if,
+// for example, a client starts talking to a new replica.
+func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
+	sess.Lock()
+	defer sess.Unlock()
+	if replies != nil {
+		sess.replies = replies
+	}
+}
+
+func (sess *Session) heartbeat() {
+	sess.Lock()
+	defer sess.Unlock()
+	if sess.closed {
+		log.Fatalf("FATAL heartbeat on closed session %v", sess.Sid)
+	}
+	sess.lastHeartbeat = time.Now()
+}
+
+func (sess *Session) timedOut() bool {
+	sess.Lock()
+	defer sess.Unlock()
+	return !sess.Running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
 }

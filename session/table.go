@@ -15,7 +15,6 @@ import (
 type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
-	sm           *SessionMgr
 	tm           *threadmgr.ThreadMgrTable
 	mkps         protsrv.MkProtServer
 	fssrv        protsrv.FsServer
@@ -23,14 +22,13 @@ type SessionTable struct {
 	recentFences *fences.RecentTable
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, rt *fences.RecentTable, tm *threadmgr.ThreadMgrTable, sm *SessionMgr) *SessionTable {
+func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, rt *fences.RecentTable, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv
 	st.mkps = mkps
 	st.recentFences = rt
 	st.tm = tm
-	st.sm = sm
 	return st
 }
 
@@ -49,7 +47,7 @@ func (st *SessionTable) Alloc(sid np.Tsession, replies chan *np.Fcall) *Session 
 		sess.maybeSetRepliesC(replies)
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid, replies, st.recentFences, st.tm.AddThread(), st.sm)
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, replies, st.recentFences, st.tm.AddThread())
 	st.sessions[sid] = sess
 	return sess
 }

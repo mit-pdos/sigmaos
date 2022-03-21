@@ -12,7 +12,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	// be replicated (adding to the leader's timer) anyway. In the worst case, if
 	// we change leadership while a non-leader is trying to detach, the eventual
 	// detach will just be delayed by a bit.
-	s.sm.Heartbeats([]np.Tsession{s.Sid})
+	s.heartbeat()
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}
@@ -108,12 +108,11 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		return *reply, err
 	case np.Tdetach:
 		reply := &np.Rdetach{}
-		s.Closed = true
 		// If the leader proposed this detach message, accept it.
 		if req.LeadId == req.PropId {
 			s.protsrv.Detach()
-			s.sm.DetachSession(s.Sid)
 		}
+		s.Close()
 		return *reply, nil
 	case np.Theartbeat:
 		reply := &np.Rheartbeat{}

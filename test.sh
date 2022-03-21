@@ -9,7 +9,8 @@ do
   #
   # test some support package
   #
-  
+
+  go test $1 ulambda/npcodec
   go test $1 ulambda/linuxsched
   go test $1 ulambda/perf
   
@@ -44,7 +45,6 @@ do
   # go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run InitFs
   go test $1 ulambda/s3
   go test $1 ulambda/kernel
-  go test $1 ulambda/fenceclnttest
   go test $1 ulambda/leaderclnt
   go test $1 ulambda/leadertest
   go test $1 ulambda/snapshot

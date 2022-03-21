@@ -715,6 +715,7 @@ type Theartbeat struct {
 }
 
 type Rheartbeat struct {
+	Sids []Tsession // List of sessions in this heartbeat.
 }
 
 func (Tversion) Type() Tfcall    { return TTversion }

@@ -118,6 +118,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 		return *reply, nil
 	case np.Theartbeat:
 		reply := &np.Rheartbeat{}
+		reply.Sids = req.Sids
 		return *reply, nil
 	default:
 		return nil, np.MkErr(np.TErrUnknownMsg, msg).Rerror()

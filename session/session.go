@@ -109,6 +109,7 @@ func (sess *Session) Close() {
 	// Close the replies channel so the srvconn can exit.
 	if sess.replies != nil {
 		close(sess.replies)
+		sess.replies = nil
 	}
 }
 

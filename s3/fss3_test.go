@@ -15,6 +15,8 @@ import (
 	"ulambda/test"
 )
 
+var ROOT = []string{np.STATSD, "a", "b.txt", "input", "ls.PDF"}
+
 func TestOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -51,7 +53,7 @@ func TestUnionSimple(t *testing.T) {
 	dirents, err := ts.GetDir("name/s3/~ip/")
 	assert.Nil(t, err, "GetDir")
 
-	assert.True(t, fslib.Present(dirents, []string{np.STATSD, "a", "b.txt", "input", "ls.PDF"}))
+	assert.True(t, fslib.Present(dirents, ROOT))
 
 	ts.Shutdown()
 }
@@ -152,7 +154,8 @@ func TestSymlinkDir(t *testing.T) {
 
 	dirents, err := ts.GetDir(dn + "/")
 	assert.Nil(t, err, "GetDir")
-	assert.Equal(t, 5, len(dirents))
+
+	assert.True(t, fslib.Present(dirents, ROOT))
 
 	ts.Shutdown()
 }

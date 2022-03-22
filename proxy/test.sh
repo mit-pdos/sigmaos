@@ -9,7 +9,7 @@ else
    echo FAIL
 fi
 
-cat /mnt/9p/statsd | grep Nwalk > /dev/null
+cat /mnt/9p/.statsd | grep Nwalk > /dev/null
 if [ $? -eq 0 ]; then
    echo "--- PASS: Proxy"
 else

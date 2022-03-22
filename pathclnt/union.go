@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 
+	db "ulambda/debug"
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
@@ -31,8 +32,8 @@ func (pathc *PathClnt) unionMatch(q, name string) bool {
 	return true
 }
 
-func (pathc *PathClnt) unionScan(fid np.Tfid, de *np.Stat, q string) (np.Tfid, *np.Err) {
-	fid1, _, err := pathc.FidClnt.Walk(fid, []string{de.Name})
+func (pathc *PathClnt) unionScan(fid np.Tfid, name, q string) (np.Tfid, *np.Err) {
+	fid1, _, err := pathc.FidClnt.Walk(fid, []string{name})
 	if err != nil {
 		return np.NoFid, err
 	}
@@ -41,8 +42,9 @@ func (pathc *PathClnt) unionScan(fid np.Tfid, de *np.Stat, q string) (np.Tfid, *
 	if err != nil {
 		return np.NoFid, err
 	}
+	db.DLPrintf("WALK", "unionScan: target: %v\n", target)
 	if pathc.unionMatch(q, target) {
-		fid2, _, err := pathc.FidClnt.Walk(fid1, []string{de.Name})
+		fid2, _, err := pathc.FidClnt.Walk(fid1, []string{name})
 		if err != nil {
 			return np.NoFid, err
 		}
@@ -66,9 +68,10 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 		if err != nil {
 			return np.NoFid, err
 		}
-		fid1, err := pathc.unionScan(fid, de, q)
+		fid1, err := pathc.unionScan(fid, de.Name, q)
 		if err != nil {
-			return np.NoFid, err
+			db.DLPrintf("unionScan %v err %v\n", de.Name, err)
+			continue
 		}
 		if fid1 != np.NoFid { // success
 			return fid1, nil

@@ -1,6 +1,6 @@
 package ninep
 
-// if name ends in "/", it is a directory for that service
+// if name ends in "/", it is the root directory for that service
 const (
 	NAMED    = "name/"
 	BOOTREL  = "boot"
@@ -26,9 +26,9 @@ const (
 	PROCD_RUNQ_LC = "runq-lc"
 	PROCD_RUNQ_BE = "runq-be"
 
-	FENCEDIR = ".fence/"
+	// special devs/dirs exported by fssrv
+	STATSD   = ".statsd"
+	FENCEDIR = ".fence"
 
 	UXEXPORT = "/tmp/ulambda"
-
-	STATSD = "statsd"
 )

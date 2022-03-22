@@ -39,6 +39,7 @@ const (
 	TErrUnknownMsg
 	TErrNotDir
 	TErrNotFile
+	TErrNotSymlink
 	TErrNotEmpty
 	TErrVersion
 	TErrStale
@@ -115,6 +116,8 @@ func (err Terror) String() string {
 		return "not a directory"
 	case TErrNotFile:
 		return "not a file"
+	case TErrNotSymlink:
+		return "not a symlink"
 	case TErrNotEmpty:
 		return "not empty"
 	case TErrVersion:

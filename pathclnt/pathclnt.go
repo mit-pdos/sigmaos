@@ -80,6 +80,10 @@ func (pathc *PathClnt) MakeWriter(fid np.Tfid, chunksz np.Tsize) *writer.Writer 
 }
 
 func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {
+	qid := pathc.Qid(fid)
+	if qid.Type&np.QTSYMLINK == 0 {
+		return "", np.MkErr(np.TErrNotSymlink, qid.Type)
+	}
 	_, err := pathc.FidClnt.Open(fid, np.OREAD)
 	if err != nil {
 		return "", err

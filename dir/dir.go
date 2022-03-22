@@ -140,11 +140,11 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid,
 
 func (dir *DirImpl) lsL(cursor int) []*np.Stat {
 	entries := []*np.Stat{}
-	for k, v := range dir.entries {
+	for k, i := range dir.entries {
 		if k == "." {
 			continue
 		}
-		st, _ := v.Stat(nil)
+		st, _ := i.Stat(nil)
 		st.Name = k
 		entries = append(entries, st)
 	}

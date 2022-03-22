@@ -112,10 +112,6 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 	if err != nil {
 		return nil, err
 	}
-	// err1 := makeStatDev(root, srv)
-	// if err1 != nil {
-	// 	return fs, fmt.Errorf(err1.Error())
-	// }
 	fs.FsLib = fsl
 	fs.FsServer = srv
 	fs.root = root

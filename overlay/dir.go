@@ -45,6 +45,19 @@ func (dir *DirOverlay) lookup(name string) fs.Inode {
 	return nil
 }
 
+func (dir *DirOverlay) ls() []*np.Stat {
+	dir.mu.Lock()
+	defer dir.mu.Unlock()
+
+	entries := make([]*np.Stat, 0, len(dir.entries))
+	for k, i := range dir.entries {
+		st, _ := i.Stat(nil)
+		st.Name = k
+		entries = append(entries, st)
+	}
+	return entries
+}
+
 func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	if len(path) == 1 {
 		i := dir.lookup(path[0])
@@ -59,8 +72,19 @@ func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmod
 	return dir.Dir.Create(ctx, name, perm, m)
 }
 
+// XXX account for extra entries in cursor, and sort
+// XXX ignoressy size
 func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	return dir.Dir.ReadDir(ctx, cursor, n, v)
+	sts, err := dir.Dir.ReadDir(ctx, cursor, n, v)
+	if err != nil {
+		return nil, err
+	}
+	if cursor > 0 { // did we already sent the extra ones
+		return sts, err
+	}
+	// prepend the extra ones
+	sts = append(dir.ls(), sts...)
+	return sts, nil
 }
 
 func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {

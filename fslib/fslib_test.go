@@ -28,7 +28,6 @@ func init() {
 func TestInitFs(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	sts, err := ts.GetDir(path)
-	log.Printf("sts = %v\n", sts)
 	assert.Equal(t, nil, err)
 	if path == np.NAMED {
 		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
@@ -997,7 +996,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "Symlink")
 
 	st := stats.StatInfo{}
-	err = ts.GetFileJson("name/"+STATSD, &st)
+	err = ts.GetFileJson("name/"+np.STATSD, &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk
 
@@ -1016,7 +1015,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	err = ts.GetFileJson(path + "/" + np.STATS&st)
+	err = ts.GetFileJson(path+"/"+np.STATSD, &st)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")

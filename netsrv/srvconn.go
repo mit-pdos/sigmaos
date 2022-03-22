@@ -89,10 +89,8 @@ func (c *SrvConn) reader() {
 func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
-		// Fcall will be nil when processing detaches.
-		if !ok || fcall.GetMsg().Type() == np.TRdetach {
+		if !ok {
 			db.DLPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
-			close(c.replies)
 			c.conn.Close()
 			return
 		}

@@ -32,6 +32,7 @@ type Session struct {
 	myFences      *fences.FenceTable
 	lastHeartbeat time.Time
 	Sid           np.Tsession
+	began         bool // true if the fssrv has already begun processing ops
 	running       bool // true if the session is currently running an operation.
 	closed        bool // true if the session has been closed.
 	replies       chan *np.Fcall
@@ -92,6 +93,12 @@ func (sess *Session) WaitThreads() {
 	sess.wg.Wait()
 }
 
+func (sess *Session) BeginProcessing() {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.began = true
+}
+
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
@@ -99,6 +106,10 @@ func (sess *Session) Close() {
 		log.Fatalf("FATAL tried to close a closed session: %v", sess.Sid)
 	}
 	sess.closed = true
+	// Close the replies channel so the srvconn can exit.
+	if sess.replies != nil {
+		close(sess.replies)
+	}
 }
 
 func (sess *Session) IsClosed() bool {
@@ -130,7 +141,14 @@ func (sess *Session) heartbeat(msg np.Tmsg) {
 func (sess *Session) timedOut() bool {
 	sess.Lock()
 	defer sess.Unlock()
-	return !sess.running && time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+	// If in the middle of a running op, or this fssrv hasn't begun processing
+	// ops yet, refresh the heartbeat so we don't immediately time-out when the
+	// op finishes.
+	if sess.running || !sess.began {
+		sess.lastHeartbeat = time.Now()
+		return false
+	}
+	return time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
 }
 
 func (sess *Session) SetRunning(r bool) {

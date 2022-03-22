@@ -100,7 +100,10 @@ func (c *Clerk) registerOp(op *Op) {
 		c.opmap[op.request.Session] = m
 	}
 	if _, ok := m[op.request.Seqno]; ok {
-		log.Fatalf("FATAL %v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
+		// Detaches may be re-executed many times.
+		if op.request.GetType() != np.TTdetach {
+			log.Fatalf("FATAL %v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
+		}
 	}
 	m[op.request.Seqno] = op
 }

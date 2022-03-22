@@ -218,7 +218,7 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 	}
 	// Only send a reply if the session hasn't been closed, or this is a detach
 	// (the last reply to be sent).
-	if !sess.IsClosed() || request.GetType() == np.TTdetach {
+	if !sess.IsClosed() {
 		replies := sess.GetRepliesC()
 		// The replies channel may be nil if this is a replicated op which came
 		// through raft. In this case, a reply is not needed.
@@ -235,6 +235,11 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 	// reply channel will be set to nil. If it came from the client, the reply
 	// channel will already be set.
 	sess := fssrv.st.Alloc(fc.Session, nil)
+	// If this server is replicated, it may take a couple of seconds for the
+	// replication library to start up & begin processing ops. Noting when
+	// processing has started for a session helps us avoid timing-out sessions
+	// until they have begun processing ops.
+	sess.BeginProcessing()
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:

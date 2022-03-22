@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fidclnt"
+	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
 	"ulambda/test"
@@ -50,7 +51,7 @@ func TestUnionSimple(t *testing.T) {
 	dirents, err := ts.GetDir("name/s3/~ip/")
 	assert.Nil(t, err, "GetDir")
 
-	assert.Equal(t, 5, len(dirents))
+	assert.True(t, fslib.Present(dirents, []string{np.STATSD, "a", "b.txt", "input", "ls.PDF"}))
 
 	ts.Shutdown()
 }

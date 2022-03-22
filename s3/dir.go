@@ -154,9 +154,12 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	sort.SliceStable(dirents, func(i, j int) bool {
 		return dirents[i].Name < dirents[j].Name
 	})
-
 	d.sz = npcodec.MarshalSizeDir(dirents)
-	return dirents[cursor:], nil
+	if cursor > len(dirents) {
+		return nil, nil
+	} else {
+		return dirents[cursor:], nil
+	}
 }
 
 // Just read the names of the entries without stat-ing each of one

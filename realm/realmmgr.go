@@ -241,7 +241,7 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
 		// XXX May fail if this named crashed
-		err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, np.PROCDREL, pd.Name, "statsd"), s)
+		err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, np.PROCDREL, pd.Name, np.STATSD), s)
 		if err != nil {
 			log.Fatalf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
 		}

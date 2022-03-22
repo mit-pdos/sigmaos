@@ -1,8 +1,11 @@
 package fenceclnt1
 
 import (
+	"log"
+
 	db "ulambda/debug"
 	"ulambda/epochclnt"
+	"ulambda/fences1"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -42,10 +45,6 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) ReadEpoch() (np.Tepoch, error) {
-	return fc.GetEpoch()
-}
-
 func (fc *FenceClnt) fencePaths(fence np.Tfence1, paths []string) error {
 	db.DLPrintf("FENCECLNT", "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
@@ -73,5 +72,31 @@ func (fc *FenceClnt) registerFence(path string, fence np.Tfence1) error {
 	//	db.DLPrintf("FENCECLNT_ERR", "WARNING getdir %v err %v\n", path, err)
 	//	return err
 	//}
+	return nil
+}
+
+func (fc *FenceClnt) RemoveFence(dirs []string) error {
+	e, err := fc.ReadEpoch()
+	if err != nil {
+		db.DLPrintf("FENCECLNT_ERR", "ReadEpoch %v err %v", fc.Name(), err)
+		return err
+	}
+	f, err := fc.GetFence(e)
+	if err != nil {
+		db.DLPrintf("FENCECLNT_ERR", "GetFence %v err %v", fc.Name(), err)
+		return err
+	}
+	for _, d := range dirs {
+		srv, err := fc.PathServer(d)
+		if err != nil {
+			db.DLPrintf("FENCECLNT_ERR", "PathServer %v err %v", d, err)
+			return err
+		}
+		sts, err := fc.GetFile(srv + "/" + fences1.NAME)
+		if err != nil {
+			db.DLPrintf("FENCECLNT_ERR", "GetDir %v err %v", srv, err)
+		}
+		log.Printf("sts %v %v\n", string(sts), f)
+	}
 	return nil
 }

@@ -1,10 +1,8 @@
 package fslibsrv
 
 import (
-	"fmt"
 	"log"
 
-	"ulambda/ctx"
 	"ulambda/dir"
 	"ulambda/fidclnt"
 	"ulambda/fs"
@@ -51,10 +49,6 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 	return srv, fsl, pclnt, nil
 }
 
-func makeStatDev(root fs.Dir, srv *fssrv.FsServer) *np.Err {
-	return dir.MkNod(ctx.MkCtx("", 0, nil), root, "statsd", srv.GetStats())
-}
-
 func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *np.Err) {
 	root := dir.MkRootDir(memfs.MakeInode, memfs.MakeRootInode)
 	isInitNamed := false
@@ -82,7 +76,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fs
 		// srv can call checkLock
 		srv.SetFsl(fslib.MakeFsLib(name))
 	}
-	return srv, makeStatDev(root, srv)
+	return srv, nil
 }
 
 func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*fssrv.FsServer, *np.Err) {
@@ -91,7 +85,7 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 	if err != nil {
 		log.Fatalf("Error makeReplMemfsFsl: err")
 	}
-	return srv, makeStatDev(root, srv)
+	return srv, nil
 }
 
 type MemFs struct {
@@ -118,10 +112,10 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 	if err != nil {
 		return nil, err
 	}
-	err1 := makeStatDev(root, srv)
-	if err1 != nil {
-		return fs, fmt.Errorf(err1.Error())
-	}
+	// err1 := makeStatDev(root, srv)
+	// if err1 != nil {
+	// 	return fs, fmt.Errorf(err1.Error())
+	// }
 	fs.FsLib = fsl
 	fs.FsServer = srv
 	fs.root = root

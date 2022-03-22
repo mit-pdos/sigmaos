@@ -29,4 +29,6 @@ const (
 	FENCEDIR = ".fence/"
 
 	UXEXPORT = "/tmp/ulambda"
+
+	STATSD = "statsd"
 )

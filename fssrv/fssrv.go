@@ -14,6 +14,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
+	"ulambda/overlay"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/protsrv"
@@ -65,11 +66,12 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
-	fssrv.root = root
+	dirover := overlay.MkDirOverlay(root)
+	fssrv.root = dirover
 	fssrv.addr = addr
 	fssrv.mkps = mkps
 	fssrv.rps = rps
-	fssrv.stats = stats.MkStats(fssrv.root)
+	fssrv.stats = stats.MkStatsDev(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
 	fssrv.rft1 = fences1.MakeFenceTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
@@ -90,6 +92,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
 	fssrv.stats.MonitorCPUUtil()
+	// fences1.MkFencesDev(fssrv.root)
+	dirover.Add(np.STATSD, fssrv.stats)
 	return fssrv
 }
 

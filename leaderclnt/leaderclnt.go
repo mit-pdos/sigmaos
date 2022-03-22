@@ -11,9 +11,9 @@ import (
 type LeaderClnt struct {
 	*fslib.FsLib
 	*epochclnt.EpochClnt
+	*fenceclnt1.FenceClnt
 	epochfn string
 	e       *electclnt.ElectClnt
-	fc      *fenceclnt1.FenceClnt
 }
 
 func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *LeaderClnt {
@@ -21,7 +21,7 @@ func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *LeaderCln
 	l.FsLib = fsl
 	l.e = electclnt.MakeElectClnt(fsl, leaderfn, perm)
 	l.EpochClnt = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
-	l.fc = fenceclnt1.MakeFenceClnt(fsl, l.EpochClnt)
+	l.FenceClnt = fenceclnt1.MakeFenceClnt(fsl, l.EpochClnt)
 	return l
 }
 
@@ -47,7 +47,7 @@ func (l *LeaderClnt) EnterNextEpoch(dirs []string) (np.Tepoch, error) {
 	if err != nil {
 		return np.NoEpoch, err
 	}
-	if err := l.fc.FenceAtEpoch(epoch, dirs); err != nil {
+	if err := l.FenceAtEpoch(epoch, dirs); err != nil {
 		return np.NoEpoch, err
 	}
 	return epoch, nil

@@ -79,5 +79,8 @@ func TestOldLeaderFail(t *testing.T) {
 	b, err := ts.Read(fd, 100)
 	assert.Equal(ts.T, 0, len(b))
 
+	err = l.RemoveFence([]string{dirux})
+	assert.Nil(ts.T, err, "RemoveFences")
+
 	ts.Shutdown()
 }

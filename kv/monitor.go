@@ -65,7 +65,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload stats.Tload
 	n := 0
 	for kv, _ := range kvs.set {
-		kvd := np.MEMFS + "/" + kv + "/statsd"
+		kvd := np.MEMFS + "/" + kv + "/" + np.STATSD
 		sti := stats.StatInfo{}
 		err := mo.GetFileJson(kvd, &sti)
 		if err != nil {

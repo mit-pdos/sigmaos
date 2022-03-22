@@ -139,7 +139,7 @@ type Stats struct {
 	done          uint32
 }
 
-func MkStats(parent fs.Dir) *Stats {
+func MkStatsDev(parent fs.Dir) *Stats {
 	st := &Stats{}
 	st.Inode = inode.MakeInode(nil, np.DMDEVICE, parent)
 	st.sti = MkStatInfo()

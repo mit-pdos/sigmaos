@@ -60,7 +60,7 @@ func (ec *EpochClnt) AdvanceEpoch() (np.Tepoch, error) {
 	return n, nil
 }
 
-func (ec *EpochClnt) GetEpoch() (np.Tepoch, error) {
+func (ec *EpochClnt) ReadEpoch() (np.Tepoch, error) {
 	b, err := ec.GetFile(ec.path)
 	if err != nil {
 		return np.NoEpoch, err

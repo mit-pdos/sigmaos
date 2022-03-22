@@ -28,6 +28,7 @@ func init() {
 func TestInitFs(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	sts, err := ts.GetDir(path)
+	log.Printf("sts = %v\n", sts)
 	assert.Equal(t, nil, err)
 	if path == np.NAMED {
 		assert.True(t, fslib.Present(sts, named.InitDir), "initfs")
@@ -944,7 +945,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 
 	sts, err := ts.GetDir(path + "~ip/d/namedself1/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"statsd", "d", "namedself0"}), "root wrong")
+	assert.True(t, fslib.Present(sts, np.Path{np.STATSD, "d", "namedself0"}), "root wrong")
 
 	sts, err = ts.GetDir(path + "~ip/d/namedself1/d/")
 	assert.Equal(t, nil, err)
@@ -971,7 +972,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	sts, err := ts.GetDir(path + "~ip/namedself0/")
 	assert.Equal(t, nil, err)
-	assert.True(t, fslib.Present(sts, np.Path{"statsd", "f", "g"}), "root wrong")
+	assert.True(t, fslib.Present(sts, np.Path{np.STATSD, "f", "g"}), "root wrong")
 
 	d, err := ts.GetFile(path + "~ip/namedself0/f")
 	assert.Nil(ts.T, err, "GetFile")
@@ -996,7 +997,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "Symlink")
 
 	st := stats.StatInfo{}
-	err = ts.GetFileJson("name/statsd", &st)
+	err = ts.GetFileJson("name/"+STATSD, &st)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Nwalk
 
@@ -1005,7 +1006,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "SetFile")
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 
-	err = ts.GetFileJson(path+"statsd", &st)
+	err = ts.GetFileJson(path+"/"+np.STATSD, &st)
 	assert.Nil(t, err, "statsd")
 
 	assert.NotEqual(ts.T, nwalk, st.Nwalk, "setfile")
@@ -1015,7 +1016,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	err = ts.GetFileJson(path+"statsd", &st)
+	err = ts.GetFileJson(path + "/" + np.STATS&st)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Nwalk, "getfile")

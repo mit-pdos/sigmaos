@@ -2,7 +2,7 @@
 
 ./start.sh
 
-ls -l /mnt/9p/ | grep statsd > /dev/null
+ls -a /mnt/9p/ | grep ".statsd" > /dev/null
 if [ $? -eq 0 ]; then
    echo OK
 else

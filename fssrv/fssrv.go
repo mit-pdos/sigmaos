@@ -296,7 +296,6 @@ func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall) {
 			fssrv.serve(sess, fc)
 		}
 	}
-	fssrv.serve(sess, fc)
 }
 
 func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {

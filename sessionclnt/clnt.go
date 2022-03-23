@@ -6,7 +6,6 @@ import (
 	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
-	"ulambda/netclnt"
 	np "ulambda/ninep"
 )
 
@@ -30,47 +29,47 @@ func (sc *ClntSessMgr) Exit() {
 	defer sc.mu.Unlock()
 	db.DLPrintf("SESSCLNT", "Exit\n")
 
-	for addr, conn := range sc.sessions {
-		db.DLPrintf("SESSCLNT", "exit close connection to %v\n", addr)
-		conn.close()
+	for addr, sess := range sc.sessions {
+		db.DLPrintf("SESSCLNT", "exit close session to %v\n", addr)
+		sess.close()
 		delete(sc.sessions, addr)
 	}
 }
 
-// Return an existing conn if there is one, else allocate a new one. Caller
+// Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
 func (sc *ClntSessMgr) allocConn(addrs []string) (*clntsession, *np.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
-	key := connKey(addrs)
-	if conn, ok := sc.sessions[key]; ok {
-		return conn, nil
+	key := sessKey(addrs)
+	if sess, ok := sc.sessions[key]; ok {
+		return sess, nil
 	}
-	conn, err := makeConn(sc.sid, sc.seqno, addrs)
+	sess, err := makeConn(sc.sid, sc.seqno, addrs)
 	if err != nil {
 		return nil, err
 	}
-	sc.sessions[key] = conn
-	return conn, nil
+	sc.sessions[key] = sess
+	return sess, nil
 }
 
 func (sc *ClntSessMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {
 	db.DLPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
-	// Get or establish connection
-	conn, err := sc.allocConn(addrs)
+	// Get or establish sessection
+	sess, err := sc.allocConn(addrs)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "%v Unable to alloc conn for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
 		return nil, err
 	}
-	rpc, err := sc.atomicSend(conn, req, f)
+	rpc, err := sess.send(req, f)
 	if err != nil {
 		db.DLPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", sc.sid, req.Type(), req, err, addrs)
 		return nil, err
 	}
 
 	// Reliably receive a response from one of the replicas.
-	reply, err := conn.recv(rpc)
+	reply, err := sess.recv(rpc)
 	if err != nil {
 		db.DLPrintf("SESSCLNT", "%v Unable to recv response to req %v %v err %v from %v\n", sc.sid, req.Type(), req, err, addrs)
 		return nil, err
@@ -78,33 +77,19 @@ func (sc *ClntSessMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence1) (np.Tmsg, 
 	return reply, nil
 }
 
-// Atomically allocate a seqno and try to send.
-func (sc *ClntSessMgr) atomicSend(conn *clntsession, req np.Tmsg, f np.Tfence1) (*netclnt.Rpc, *np.Err) {
-	// Take the lock to ensure requests are sent in order of seqno.
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	rpc := netclnt.MakeRpc(np.MakeFcall(req, sc.sid, sc.seqno, f))
-	// Reliably send the RPC to a replica. If the replica becomes unavailable,
-	// this request will be resent.
-	if err := conn.send(rpc); err != nil {
-		return nil, err
-	}
-	return rpc, nil
-}
-
 func (sc *ClntSessMgr) Disconnect(addrs []string) *np.Err {
 	db.DLPrintf("SESSCLNT", "%v Disconnect %v\n", sc.sid, addrs)
-	key := connKey(addrs)
+	key := sessKey(addrs)
 	sc.mu.Lock()
-	conn, ok := sc.sessions[key]
+	sess, ok := sc.sessions[key]
 	sc.mu.Unlock()
 	if !ok {
-		return np.MkErr(np.TErrUnreachable, connKey(addrs))
+		return np.MkErr(np.TErrUnreachable, sessKey(addrs))
 	}
-	conn.close()
+	sess.close()
 	return nil
 }
 
-func connKey(addrs []string) string {
+func sessKey(addrs []string) string {
 	return strings.Join(addrs, ",")
 }

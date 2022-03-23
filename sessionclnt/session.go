@@ -46,24 +46,26 @@ func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*clntsession, 
 	return sess, nil
 }
 
-func (sess *clntsession) rpc(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
-	if err := sess.send(rpc); err != nil {
-		return nil, err
-	}
-	return sess.recv(rpc)
-}
+//func (sess *clntsession) rpc(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
+//	if err := sess.send(rpc); err != nil {
+//		return nil, err
+//	}
+//	return sess.recv(rpc)
+//}
 
-func (sess *clntsession) send(rpc *netclnt.Rpc) *np.Err {
+func (sess *clntsession) send(req np.Tmsg, f np.Tfence1) (*netclnt.Rpc, *np.Err) {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		return np.MkErr(np.TErrUnreachable, sess.addrs)
+		return nil, np.MkErr(np.TErrUnreachable, sess.addrs)
 	}
+
+	rpc := netclnt.MakeRpc(np.MakeFcall(req, sess.sid, sess.seqno, f))
 	// Enqueue a request
 	sess.queue = append(sess.queue, rpc)
 	sess.outstanding[rpc.Req.Seqno] = rpc
 	sess.Signal()
-	return nil
+	return rpc, nil
 }
 
 func (sess *clntsession) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
@@ -195,9 +197,11 @@ func (sess *clntsession) heartbeats() {
 		time.Sleep(session.HEARTBEATMS * time.Millisecond)
 		if sess.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
-			rpc := netclnt.MakeRpc(np.MakeFcall(np.Theartbeat{[]np.Tsession{sess.sid}}, sess.sid, sess.seqno, np.NoFence))
 			db.DLPrintf("SESSCONN", "%v Sending heartbeat to %v", sess.sid, sess.addrs)
-			sess.send(rpc)
+			rpc, err := sess.send(np.Theartbeat{[]np.Tsession{sess.sid}}, np.NoFence)
+			if err != nil {
+				continue
+			}
 			sess.recv(rpc)
 		}
 	}

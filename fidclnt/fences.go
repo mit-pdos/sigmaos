@@ -38,10 +38,14 @@ func (ft *FenceTable) Insert(p string, f np.Tfence1) *np.Err {
 func (ft *FenceTable) Delete(p string) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
-	if _, ok := ft.fencedDirs[p]; !ok {
+
+	path := np.Split(p) // cleans up p
+
+	db.DLPrintf("FIDCLNT", "Delete fence %v\n", path)
+	if _, ok := ft.fencedDirs[path.String()]; !ok {
 		return np.MkErr(np.TErrUnknownFence, p)
 	}
-	delete(ft.fencedDirs, p)
+	delete(ft.fencedDirs, path.String())
 	return nil
 }
 

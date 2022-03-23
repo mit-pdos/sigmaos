@@ -60,19 +60,19 @@ func (sc *SessClnt) RPC(addrs []string, req np.Tmsg) (np.Tmsg, *np.Err) {
 	// Get or establish connection
 	conn, err := sc.allocConn(addrs)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "%v Unable to alloc conn for req %v err %v to %v\n", req, err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to alloc conn for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
 		return nil, err
 	}
 	rpc, err := sc.atomicSend(conn, req)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "%v Unable to send req %v err %v to %v\n", sc.sid, req, err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", sc.sid, req.Type(), req, err, addrs)
 		return nil, err
 	}
 
 	// Reliably receive a response from one of the replicas.
 	reply, err := conn.recv(rpc)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "%v Unable to recv response to req %v err %v from %v\n", sc.sid, req, err, addrs)
+		db.DLPrintf("SESSCLNT", "%v Unable to recv response to req %v %v err %v from %v\n", sc.sid, req.Type(), req, err, addrs)
 		return nil, err
 	}
 	return reply, nil

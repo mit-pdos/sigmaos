@@ -72,7 +72,7 @@ func (c *SrvConn) reader() {
 			fcall, err = npcodec.UnmarshalFcall(frame)
 		}
 		if err != nil {
-			db.DLPrintf("NETSRV_ERR", "%v reader: bad fcall: ", c.sessid, err)
+			db.DLPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: ", c.sessid, c.Src(), err)
 		} else {
 			db.DLPrintf("NETSRV", "srv req %v\n", fcall)
 			if c.sessid == 0 {
@@ -102,11 +102,11 @@ func (c *SrvConn) writer() {
 			writableFcall = fcall
 		}
 		if err := npcodec.MarshalFcall(writableFcall, c.bw); err != nil {
-			db.DLPrintf("NETSRV_ERR", "%v writer err %v\n", c.sessid, err)
+			db.DLPrintf("NETSRV_ERR", "%v writer %v err %v\n", c.sessid, c.Src(), err)
 			continue
 		}
 		if error := c.bw.Flush(); error != nil {
-			db.DLPrintf("NETSRV_ERR", "flush %v err %v", fcall, error)
+			db.DLPrintf("NETSRV_ERR", "flush %v to %v err %v", fcall, c.Src(), error)
 		}
 	}
 }

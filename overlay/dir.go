@@ -14,30 +14,30 @@ import (
 type DirOverlay struct {
 	fs.Dir
 	mu      sync.Mutex
-	entries map[string]fs.Inode
+	entries map[string]fs.FsObj
 }
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
 	d.Dir = dir
-	d.entries = make(map[string]fs.Inode)
+	d.entries = make(map[string]fs.FsObj)
 	return d
 }
 
-func (dir *DirOverlay) Add(name string, i fs.Inode) {
+func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DLPrintf("OVERLAYDIR", "Add %v %v\n", name, i)
+	db.DLPrintf("OVERLAYDIR", "Mount i %v as %v\n", i, name)
 
 	dir.entries[name] = i
 }
 
-func (dir *DirOverlay) lookup(name string) fs.Inode {
+func (dir *DirOverlay) lookupMount(name string) fs.FsObj {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DLPrintf("OVERLAYDIR", "Lookup %v %v\n", name, dir.entries)
+	db.DLPrintf("OVERLAYDIR", "lookupMount %v %v\n", name, dir.entries)
 
 	if i, ok := dir.entries[name]; ok {
 		return i
@@ -58,14 +58,41 @@ func (dir *DirOverlay) ls() []*np.Stat {
 	return entries
 }
 
-func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+// path is in overlay mounts
+func (dir *DirOverlay) lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+	i := dir.lookupMount(path[0])
+	qids := []np.Tqid{i.Qid()}
+	db.DLPrintf("OVERLAYDIR", "lookup %v in mount %v %v\n", path[1:], path[0], i)
 	if len(path) == 1 {
-		i := dir.lookup(path[0])
-		if i != nil {
-			return []np.Tqid{i.Qid()}, i, nil, nil
+		return qids, i, nil, nil
+	} else {
+		switch d := i.(type) {
+		case fs.Dir:
+			qs, lo, p, err := d.Lookup(ctx, path[1:])
+			db.DLPrintf("OVERLAYDIR", "lookup %v in %v res %v %v %v err %v\n", path[1:], i, qs, lo, p, err)
+			if lo == nil {
+				lo = i
+			}
+			return append(qids, qs...), lo, p, err
+		default:
+			return qids, i, path[1:], np.MkErr(np.TErrNotDir, path[0])
 		}
 	}
-	return dir.Dir.Lookup(ctx, path)
+}
+
+func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+	if len(path) >= 1 && dir.lookupMount(path[0]) != nil {
+		// lookup up in overlay
+		return dir.lookup(ctx, path)
+	} else {
+		db.DLPrintf("OVERLAYDIR", "Lookup underlay %v\n", path)
+		// lookup up in underlay
+		qids, lo, p, err := dir.Dir.Lookup(ctx, path)
+		if lo == dir.Dir {
+			lo = dir
+		}
+		return qids, lo, p, err
+	}
 }
 
 func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {

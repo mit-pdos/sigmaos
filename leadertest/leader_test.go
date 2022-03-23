@@ -3,7 +3,6 @@ package leadertest
 import (
 	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -43,13 +42,12 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 		pids = append(pids, p.Pid)
 	}
 
-	time.Sleep(1000 * time.Millisecond)
-
-	// wait for last one; the other procs cannot communicate exit
-	// status to test because test's procdir is in name/
-	_, err = ts.WaitExit(pids[len(pids)-1])
-	assert.Nil(t, err, "WaitExit")
-
+	for _, pid := range pids {
+		_, err = ts.WaitExit(pid)
+		if pid == pids[len(pids)-1] {
+			assert.Nil(t, err, "WaitExit")
+		}
+	}
 	return fn, pids
 }
 

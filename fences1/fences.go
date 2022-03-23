@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/fs"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
@@ -16,10 +18,21 @@ import (
 
 type Epoch struct {
 	sync.Mutex
+	inode.Inode
 	epoch np.Tepoch
 }
 
+// XXX how to get a Tpath for inode?
+func MakeEpoch(epoch np.Tepoch, parent fs.Dir) *Epoch {
+	e := &Epoch{}
+	e.epoch = epoch
+	e.Inode.SetParent(parent)
+	return e
+}
+
+// XXX how to get a Tpath for inode?
 type FenceTable struct {
+	inode.Inode // XXX make type DIR
 	sync.Mutex
 	fences map[np.Tpath]*Epoch
 }
@@ -62,7 +75,7 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) (*Epoch, *np.Err) {
 		return e, nil
 	} else {
 		db.DLPrintf("FENCES", "fenceFcall %v new fence %v\n", new)
-		e := &Epoch{sync.Mutex{}, new.Epoch}
+		e := MakeEpoch(new.Epoch, ft)
 		e.Lock()
 		ft.fences[p] = e
 		return e, nil

@@ -38,6 +38,10 @@ func (fidc *FidClnt) FenceDir(path string, f np.Tfence1) *np.Err {
 	return fidc.ft.Insert(path, f)
 }
 
+func (fidc *FidClnt) UnfenceDir(path string) *np.Err {
+	return fidc.ft.Delete(path)
+}
+
 func (fidc *FidClnt) ReadSeqNo() np.Tseqno {
 	return fidc.pc.ReadSeqNo()
 }

@@ -9,10 +9,10 @@ import (
 	"ulambda/atomic"
 	"ulambda/config"
 	db "ulambda/debug"
+	"ulambda/electclnt"
 	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
-	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -36,7 +36,7 @@ type Machined struct {
 	cfgPath string
 	cfg     *MachinedConfig
 	s       *kernel.System
-	lc      *leaderclnt.LeaderClnt
+	ec      *electclnt.ElectClnt
 	*config.ConfigClnt
 }
 
@@ -49,7 +49,6 @@ func MakeMachined(bin string, id string) *Machined {
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("machined-%v", id))
 	r.ProcClnt = procclnt.MakeProcClntInit(r.FsLib, "machined", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
-	r.lc = leaderclnt.MakeLeaderClnt(r.FsLib, REALM_FENCE, 0777)
 
 	// Set up the machined config
 	r.cfg = &MachinedConfig{}
@@ -83,6 +82,7 @@ func (r *Machined) getNextConfig() {
 		r.ReadConfig(r.cfgPath, r.cfg)
 		// Make sure we've been assigned to a realm
 		if r.cfg.RealmId != kernel.NO_REALM {
+			r.ec = electclnt.MakeElectClnt(r.FsLib, path.Join(REALM_FENCES, r.cfg.RealmId), 0777)
 			break
 		}
 	}
@@ -123,7 +123,6 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
-
 	}
 	return initDone
 }
@@ -143,22 +142,22 @@ func (r *Machined) boot(realmCfg *RealmConfig) {
 	}
 }
 
-func (r *Machined) fence() {
-	if _, err := r.lc.AcquireFencedEpoch([]byte("machined-"+r.id), []string{np.NAMED}); err != nil {
-		log.Fatalf("%vFATAL Error Machined Acquire fence: %v", string(debug.Stack()), err)
+func (r *Machined) lockRealm() {
+	if err := r.ec.AcquireLeadership([]byte("machined-" + r.id)); err != nil {
+		log.Fatalf("%vFATAL error Machined acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
-func (r *Machined) unfence() {
-	if err := r.lc.ReleaseFencedEpoch([]string{np.NAMED}); err != nil {
-		log.Printf("%vFATAL Error Machined Release fence: %v", string(debug.Stack()), err)
+func (r *Machined) unlockRealm() {
+	if err := r.ec.ReleaseLeadership(); err != nil {
+		log.Fatalf("%vFATAL error Machined release leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 // Join a realm
 func (r *Machined) joinRealm() chan bool {
-	r.fence()
-	defer r.unfence()
+	r.lockRealm()
+	defer r.unlockRealm()
 
 	// Try to initalize this realm if it hasn't been initialized already.
 	initDone := r.tryAddNamedReplicaL()
@@ -224,8 +223,8 @@ func (r *Machined) tryDestroyRealmL() {
 
 // Leave a realm
 func (r *Machined) leaveRealm() {
-	r.fence()
-	defer r.unfence()
+	r.lockRealm()
+	defer r.unlockRealm()
 
 	db.DLPrintf("MACHINED", "Machined %v leaving Realm %v", r.id, r.cfg.RealmId)
 

@@ -9,14 +9,14 @@ import (
 type Clnt struct {
 	session np.Tsession
 	seqno   np.Tseqno
-	cm      *sessionclnt.SessClnt
+	cm      *sessionclnt.ClntSessMgr
 }
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
 	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
-	clnt.cm = sessionclnt.MakeSessClnt(clnt.session, &clnt.seqno)
+	clnt.cm = sessionclnt.MakeClntSessMgr(clnt.session, &clnt.seqno)
 	return clnt
 }
 

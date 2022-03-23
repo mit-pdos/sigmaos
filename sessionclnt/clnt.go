@@ -10,52 +10,52 @@ import (
 	np "ulambda/ninep"
 )
 
-type SessClnt struct {
-	mu    deadlock.Mutex
-	sid   np.Tsession
-	seqno *np.Tseqno
-	conns map[string]*conn // XXX Is a SessClnt ever used to talk to multiple servers?
+type ClntSessMgr struct {
+	mu       deadlock.Mutex
+	sid      np.Tsession
+	seqno    *np.Tseqno
+	sessions map[string]*clntsession // XXX Is a ClntSessMgr ever used to talk to multiple servers?
 }
 
-func MakeSessClnt(session np.Tsession, seqno *np.Tseqno) *SessClnt {
-	sc := &SessClnt{}
-	sc.conns = make(map[string]*conn)
+func MakeClntSessMgr(session np.Tsession, seqno *np.Tseqno) *ClntSessMgr {
+	sc := &ClntSessMgr{}
+	sc.sessions = make(map[string]*clntsession)
 	sc.sid = session
 	sc.seqno = seqno
 	return sc
 }
 
-func (sc *SessClnt) Exit() {
+func (sc *ClntSessMgr) Exit() {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	db.DLPrintf("SESSCLNT", "Exit\n")
 
-	for addr, conn := range sc.conns {
+	for addr, conn := range sc.sessions {
 		db.DLPrintf("SESSCLNT", "exit close connection to %v\n", addr)
 		conn.close()
-		delete(sc.conns, addr)
+		delete(sc.sessions, addr)
 	}
 }
 
 // Return an existing conn if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *SessClnt) allocConn(addrs []string) (*conn, *np.Err) {
+func (sc *ClntSessMgr) allocConn(addrs []string) (*clntsession, *np.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
 	key := connKey(addrs)
-	if conn, ok := sc.conns[key]; ok {
+	if conn, ok := sc.sessions[key]; ok {
 		return conn, nil
 	}
 	conn, err := makeConn(sc.sid, sc.seqno, addrs)
 	if err != nil {
 		return nil, err
 	}
-	sc.conns[key] = conn
+	sc.sessions[key] = conn
 	return conn, nil
 }
 
-func (sc *SessClnt) RPC(addrs []string, req np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {
+func (sc *ClntSessMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {
 	db.DLPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
 	// Get or establish connection
 	conn, err := sc.allocConn(addrs)
@@ -79,7 +79,7 @@ func (sc *SessClnt) RPC(addrs []string, req np.Tmsg, f np.Tfence1) (np.Tmsg, *np
 }
 
 // Atomically allocate a seqno and try to send.
-func (sc *SessClnt) atomicSend(conn *conn, req np.Tmsg, f np.Tfence1) (*netclnt.Rpc, *np.Err) {
+func (sc *ClntSessMgr) atomicSend(conn *clntsession, req np.Tmsg, f np.Tfence1) (*netclnt.Rpc, *np.Err) {
 	// Take the lock to ensure requests are sent in order of seqno.
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
@@ -92,11 +92,11 @@ func (sc *SessClnt) atomicSend(conn *conn, req np.Tmsg, f np.Tfence1) (*netclnt.
 	return rpc, nil
 }
 
-func (sc *SessClnt) Disconnect(addrs []string) *np.Err {
+func (sc *ClntSessMgr) Disconnect(addrs []string) *np.Err {
 	db.DLPrintf("SESSCLNT", "%v Disconnect %v\n", sc.sid, addrs)
 	key := connKey(addrs)
 	sc.mu.Lock()
-	conn, ok := sc.conns[key]
+	conn, ok := sc.sessions[key]
 	sc.mu.Unlock()
 	if !ok {
 		return np.MkErr(np.TErrUnreachable, connKey(addrs))

@@ -12,9 +12,9 @@ import (
 	"ulambda/session"
 )
 
-// A connection from a client to a logical server (either one server or a
+// A session from a client to a logical server (either one server or a
 // replica group)
-type conn struct {
+type clntsession struct {
 	deadlock.Mutex
 	*sync.Cond
 	sid         np.Tsession
@@ -27,120 +27,120 @@ type conn struct {
 	lastMsgTime time.Time
 }
 
-func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*conn, *np.Err) {
-	c := &conn{}
-	c.sid = sid
-	c.seqno = seqno
-	c.addrs = addrs
-	c.Cond = sync.NewCond(&c.Mutex)
-	c.nc = nil
-	c.queue = []*netclnt.Rpc{}
-	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
-	err := c.connect()
+func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*clntsession, *np.Err) {
+	sess := &clntsession{}
+	sess.sid = sid
+	sess.seqno = seqno
+	sess.addrs = addrs
+	sess.Cond = sync.NewCond(&sess.Mutex)
+	sess.nc = nil
+	sess.queue = []*netclnt.Rpc{}
+	sess.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+	err := sess.connect()
 	if err != nil {
 		return nil, err
 	}
-	go c.reader()
-	go c.writer()
-	go c.heartbeats()
-	return c, nil
+	go sess.reader()
+	go sess.writer()
+	go sess.heartbeats()
+	return sess, nil
 }
 
-func (c *conn) rpc(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
-	if err := c.send(rpc); err != nil {
+func (sess *clntsession) rpc(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
+	if err := sess.send(rpc); err != nil {
 		return nil, err
 	}
-	return c.recv(rpc)
+	return sess.recv(rpc)
 }
 
-func (c *conn) send(rpc *netclnt.Rpc) *np.Err {
-	c.Lock()
-	defer c.Unlock()
-	if c.closed {
-		return np.MkErr(np.TErrUnreachable, c.addrs)
+func (sess *clntsession) send(rpc *netclnt.Rpc) *np.Err {
+	sess.Lock()
+	defer sess.Unlock()
+	if sess.closed {
+		return np.MkErr(np.TErrUnreachable, sess.addrs)
 	}
 	// Enqueue a request
-	c.queue = append(c.queue, rpc)
-	c.outstanding[rpc.Req.Seqno] = rpc
-	c.Signal()
+	sess.queue = append(sess.queue, rpc)
+	sess.outstanding[rpc.Req.Seqno] = rpc
+	sess.Signal()
 	return nil
 }
 
-func (c *conn) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
+func (sess *clntsession) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 	// Wait for a reply
 	reply, ok := <-rpc.ReplyC
 	if !ok {
-		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
+		return nil, np.MkErr(np.TErrUnreachable, sess.addrs)
 	}
-	c.Lock()
-	defer c.Unlock()
-	c.lastMsgTime = time.Now()
+	sess.Lock()
+	defer sess.Unlock()
+	sess.lastMsgTime = time.Now()
 	return reply.Fc.Msg, reply.Err
 }
 
-func (c *conn) connect() *np.Err {
-	db.DLPrintf("SESSCONN", "%v Connect to %v\n", c.sid, c.addrs)
-	for _, addr := range c.addrs {
+func (sess *clntsession) connect() *np.Err {
+	db.DLPrintf("SESSCONN", "%v Connect to %v\n", sess.sid, sess.addrs)
+	for _, addr := range sess.addrs {
 		nc, err := netclnt.MakeNetClnt(addr)
 		// If this replica is unreachable, try another one.
 		if err != nil {
 			continue
 		}
-		db.DLPrintf("SESSCONN", "%v Successful connection to %v out of %v\n", c.sid, addr, c.addrs)
+		db.DLPrintf("SESSCONN", "%v Successful connection to %v out of %v\n", sess.sid, addr, sess.addrs)
 		// If the replica is reachable, save this conn.
-		c.nc = nc
+		sess.nc = nc
 		return nil
 	}
-	db.DLPrintf("SESSCONN", "%v Unable to connect to %v\n", c.sid, c.addrs)
+	db.DLPrintf("SESSCONN", "%v Unable to connect to %v\n", sess.sid, sess.addrs)
 	// No replica is reachable.
-	return np.MkErr(np.TErrUnreachable, c.addrs)
+	return np.MkErr(np.TErrUnreachable, sess.addrs)
 }
 
 // If the connection broke, establish a new netclnt connection. If successful,
 // resend outstanding requests.
-func (c *conn) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
-	c.Lock()
-	defer c.Unlock()
+func (sess *clntsession) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
+	sess.Lock()
+	defer sess.Unlock()
 	// Check if another thread already reconnected to the replicas.
-	if oldNc == c.nc {
-		return c.tryReconnectL()
+	if oldNc == sess.nc {
+		return sess.tryReconnectL()
 	}
 	return nil
 }
 
 // Reconnect & resend requests
-func (c *conn) tryReconnectL() *np.Err {
-	err := c.connect()
+func (sess *clntsession) tryReconnectL() *np.Err {
+	err := sess.connect()
 	if err != nil {
-		db.DLPrintf("SESSCONN", "%v Error %v SessionConn reconnecting to %v\n", c.sid, err, c.addrs)
+		db.DLPrintf("SESSCONN", "%v Error %v SessionConn reconnecting to %v\n", sess.sid, err, sess.addrs)
 		return err
 	}
 	// Resend outstanding requests.
-	c.resendOutstanding()
+	sess.resendOutstanding()
 	return nil
 }
 
 // Complete an RPC and send a response.
-func (c *conn) completeRpc(reply *np.Fcall, err *np.Err) {
-	c.Lock()
-	rpc, ok := c.outstanding[reply.Seqno]
-	delete(c.outstanding, reply.Seqno)
-	c.Unlock()
+func (sess *clntsession) completeRpc(reply *np.Fcall, err *np.Err) {
+	sess.Lock()
+	rpc, ok := sess.outstanding[reply.Seqno]
+	delete(sess.outstanding, reply.Seqno)
+	sess.Unlock()
 	// the outstanding request map may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
 	if ok && !rpc.Done {
-		db.DLPrintf("SESSCONN", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
+		db.DLPrintf("SESSCONN", "%v Complete rpc req %v reply %v from %v\n", sess.sid, rpc.Req, reply, sess.addrs)
 		rpc.Done = true
 		rpc.ReplyC <- &netclnt.Reply{reply, err}
 	}
 }
 
 // Caller holds lock.
-func (c *conn) resendOutstanding() {
-	db.DLPrintf("SESSCONN", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
-	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
+func (sess *clntsession) resendOutstanding() {
+	db.DLPrintf("SESSCONN", "%v Resend outstanding requests to %v\n", sess.sid, sess.addrs)
+	outstanding := make([]*netclnt.Rpc, len(sess.outstanding))
 	idx := 0
-	for _, o := range c.outstanding {
+	for _, o := range sess.outstanding {
 		outstanding[idx] = o
 		idx++
 	}
@@ -149,108 +149,108 @@ func (c *conn) resendOutstanding() {
 	})
 	// Append outstanding requests that need to be resent to the front of the
 	// queue.
-	c.queue = append(outstanding, c.queue...)
+	sess.queue = append(outstanding, sess.queue...)
 	// Signal that there are queued requests ready to be processed.
-	c.Signal()
+	sess.Signal()
 }
 
-func (c *conn) done() bool {
-	c.Lock()
-	defer c.Unlock()
-	return c.closed
+func (sess *clntsession) done() bool {
+	sess.Lock()
+	defer sess.Unlock()
+	return sess.closed
 }
 
 // Caller holds lock
-func (c *conn) close() {
-	db.DLPrintf("SESSCONN", "%v Close conn to %v\n", c.sid, c.addrs)
-	c.nc.Close()
-	c.closed = true
+func (sess *clntsession) close() {
+	db.DLPrintf("SESSCONN", "%v Close conn to %v\n", sess.sid, sess.addrs)
+	sess.nc.Close()
+	sess.closed = true
 	// Kill pending requests.
-	for _, o := range c.queue {
+	for _, o := range sess.queue {
 		if !o.Done {
 			o.Done = true
 			close(o.ReplyC)
 		}
 	}
 	// Kill outstanding requests.
-	for _, o := range c.outstanding {
+	for _, o := range sess.outstanding {
 		if !o.Done {
 			o.Done = true
 			close(o.ReplyC)
 		}
 	}
-	c.queue = []*netclnt.Rpc{}
-	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+	sess.queue = []*netclnt.Rpc{}
+	sess.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 }
 
-func (c *conn) needsHeartbeat() bool {
-	c.Lock()
-	defer c.Unlock()
-	return time.Now().Sub(c.lastMsgTime) >= session.HEARTBEATMS
+func (sess *clntsession) needsHeartbeat() bool {
+	sess.Lock()
+	defer sess.Unlock()
+	return time.Now().Sub(sess.lastMsgTime) >= session.HEARTBEATMS
 }
 
-func (c *conn) heartbeats() {
-	for !c.done() {
+func (sess *clntsession) heartbeats() {
+	for !sess.done() {
 		// Sleep a bit.
 		time.Sleep(session.HEARTBEATMS * time.Millisecond)
-		if c.needsHeartbeat() {
+		if sess.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
-			rpc := netclnt.MakeRpc(np.MakeFcall(np.Theartbeat{[]np.Tsession{c.sid}}, c.sid, c.seqno, np.NoFence))
-			db.DLPrintf("SESSCONN", "%v Sending heartbeat to %v", c.sid, c.addrs)
-			c.send(rpc)
-			c.recv(rpc)
+			rpc := netclnt.MakeRpc(np.MakeFcall(np.Theartbeat{[]np.Tsession{sess.sid}}, sess.sid, sess.seqno, np.NoFence))
+			db.DLPrintf("SESSCONN", "%v Sending heartbeat to %v", sess.sid, sess.addrs)
+			sess.send(rpc)
+			sess.recv(rpc)
 		}
 	}
 }
 
-func (c *conn) reader() {
-	for !c.done() {
+func (sess *clntsession) reader() {
+	for !sess.done() {
 		// Get the current netclnt connection (which may change if the server
 		// becomes unavailable and the writer thread connects to a new replica).
-		c.Lock()
-		nc := c.nc
-		c.Unlock()
+		sess.Lock()
+		nc := sess.nc
+		sess.Unlock()
 
 		// Receive the next reply.
 		reply, err := nc.Recv()
 		if err != nil {
-			db.DLPrintf("SESSCONN", "%v error %v reader RPC to %v", c.sid, err, c.addrs)
+			db.DLPrintf("SESSCONN", "%v error %v reader RPC to %v", sess.sid, err, sess.addrs)
 			// Try to connect to the next replica
-			err := c.tryReconnect(nc)
+			err := sess.tryReconnect(nc)
 			if err != nil {
 				// If we can't reconnect to any of the replicas, close the session.
-				c.Lock()
-				c.close()
-				c.Unlock()
+				sess.Lock()
+				sess.close()
+				sess.Unlock()
 				return
 			}
 			// If the connection broke, establish a new netclnt.
 			continue
 		}
-		c.completeRpc(reply, err)
+		sess.completeRpc(reply, err)
 	}
 }
 
-func (c *conn) writer() {
-	c.Lock()
-	defer c.Unlock()
+func (sess *clntsession) writer() {
+	sess.Lock()
+	defer sess.Unlock()
 	for {
 		var req *netclnt.Rpc
 		// Wait until we have an RPC request.
-		for len(c.queue) == 0 {
-			if c.closed {
+		for len(sess.queue) == 0 {
+			if sess.closed {
 				return
 			}
-			c.Wait()
+			sess.Wait()
 		}
 		// Pop the first item form the queue.
-		req, c.queue = c.queue[0], c.queue[1:]
-		err := c.nc.Send(req)
+		req, sess.queue = sess.queue[0], sess.queue[1:]
+		err := sess.nc.Send(req)
 		if err != nil {
-			db.DLPrintf("SESSCONN", "%v Error %v writer RPC to %v\n", c.sid, err, c.nc.Dst())
-			err := c.tryReconnectL()
+			db.DLPrintf("SESSCONN", "%v Error %v writer RPC to %v\n", sess.sid, err, sess.nc.Dst())
+			err := sess.tryReconnectL()
 			if err != nil {
-				c.close()
+				sess.close()
 				return
 			}
 		}

@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"runtime/debug"
 
 	"ulambda/atomic"
 	"ulambda/config"
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
 	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -35,7 +36,7 @@ type Machined struct {
 	cfgPath string
 	cfg     *MachinedConfig
 	s       *kernel.System
-	fence   *fenceclnt.FenceClnt
+	lc      *leaderclnt.LeaderClnt
 	*config.ConfigClnt
 }
 
@@ -48,6 +49,7 @@ func MakeMachined(bin string, id string) *Machined {
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("machined-%v", id))
 	r.ProcClnt = procclnt.MakeProcClntInit(r.FsLib, "machined", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
+	r.lc = leaderclnt.MakeLeaderClnt(r.FsLib, REALM_FENCE, 0777)
 
 	// Set up the machined config
 	r.cfg = &MachinedConfig{}
@@ -84,8 +86,6 @@ func (r *Machined) getNextConfig() {
 			break
 		}
 	}
-	// Update the realm lock
-	r.fence = fenceclnt.MakeFenceClnt(r.FsLib, path.Join(REALM_FENCES, r.cfg.RealmId), 0777, []string{REALM_FENCES})
 }
 
 // If we need more named replicas, help initialize a realm by starting another
@@ -143,10 +143,22 @@ func (r *Machined) boot(realmCfg *RealmConfig) {
 	}
 }
 
+func (r *Machined) fence() {
+	if _, err := r.lc.AcquireFencedEpoch([]byte("machined-"+r.id), []string{np.NAMED}); err != nil {
+		log.Fatalf("%vFATAL Error Machined Acquire fence: %v", string(debug.Stack()), err)
+	}
+}
+
+func (r *Machined) unfence() {
+	if err := r.lc.ReleaseFencedEpoch([]string{np.NAMED}); err != nil {
+		log.Printf("%vFATAL Error Machined Release fence: %v", string(debug.Stack()), err)
+	}
+}
+
 // Join a realm
 func (r *Machined) joinRealm() chan bool {
-	r.fence.AcquireFenceW(nil)
-	defer r.fence.ReleaseFence()
+	r.fence()
+	defer r.unfence()
 
 	// Try to initalize this realm if it hasn't been initialized already.
 	initDone := r.tryAddNamedReplicaL()
@@ -212,8 +224,8 @@ func (r *Machined) tryDestroyRealmL() {
 
 // Leave a realm
 func (r *Machined) leaveRealm() {
-	r.fence.AcquireFenceW(nil)
-	defer r.fence.ReleaseFence()
+	r.fence()
+	defer r.unfence()
 
 	db.DLPrintf("MACHINED", "Machined %v leaving Realm %v", r.id, r.cfg.RealmId)
 

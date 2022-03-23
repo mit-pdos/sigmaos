@@ -4,14 +4,15 @@ import (
 	"log"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/crash"
-	"ulambda/delay"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
+	"ulambda/session"
 	"ulambda/test"
 )
 
@@ -48,7 +49,8 @@ func TestOldLeaderFail(t *testing.T) {
 		log.Printf("partition from named..\n")
 
 		crash.Partition(fsl)
-		delay.Delay(10)
+
+		time.Sleep(2 * session.SESSTIMEOUTMS * time.Millisecond)
 
 		// fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail

@@ -93,12 +93,6 @@ func (sess *Session) WaitThreads() {
 	sess.wg.Wait()
 }
 
-func (sess *Session) BeginProcessing() {
-	sess.Lock()
-	defer sess.Unlock()
-	sess.began = true
-}
-
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
@@ -156,4 +150,9 @@ func (sess *Session) SetRunning(r bool) {
 	sess.Lock()
 	defer sess.Unlock()
 	sess.running = r
+	// If this server is replicated, it may take a couple of seconds for the
+	// replication library to start up & begin processing ops. Noting when
+	// processing has started for a session helps us avoid timing-out sessions
+	// until they have begun processing ops.
+	sess.began = true
 }

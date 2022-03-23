@@ -44,6 +44,7 @@ type FsServer struct {
 	stats      *stats.Stats
 	snapDev    *snapshot.Dev
 	st         *session.SessionTable
+	sm         *session.SessionMgr
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
@@ -74,6 +75,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.rft1 = fences1.MakeFenceTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
+	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
@@ -130,7 +132,8 @@ func (fssrv *FsServer) Restore(b []byte) {
 	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
 	fssrv.sct.St = fssrv.st
 	fssrv.root = root.(fs.Dir)
-
+	fssrv.sm.Stop()
+	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
@@ -195,33 +198,51 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 }
 
 func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
-	sess := fssrv.st.Alloc(fc.Session)
+	// The replies channel will be set here.
+	sess := fssrv.st.Alloc(fc.Session, replies)
 	// New thread about to start
 	sess.IncThreads()
 	if !fssrv.replicated {
-		sess.GetThread().Process(fc, replies)
+		sess.GetThread().Process(fc)
 	} else {
-		fssrv.replSrv.Process(fc, replies)
+		fssrv.replSrv.Process(fc)
 	}
 }
 
-func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, replies chan *np.Fcall) {
+func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
 	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
+	db.DLPrintf("FSSRV", "Request %v start sendReply %v", request, fcall)
 	// Store the reply in the reply cache if this is a replicated server.
 	if fssrv.replicated {
 		fssrv.rc.Put(request, fcall)
 	}
-	// The replies channel may be nil if this is a replicated op which came
-	// through raft. In this case, a reply is not needed.
-	if replies != nil {
-		replies <- fcall
+	// Only send a reply if the session hasn't been closed, or this is a detach
+	// (the last reply to be sent).
+	if !sess.IsClosed() {
+		replies := sess.GetRepliesC()
+		// The replies channel may be nil if this is a replicated op which came
+		// through raft. In this case, a reply is not needed.
+		if replies != nil {
+			replies <- fcall
+		}
 	}
+	db.DLPrintf("FSSRV", "Request %v done sendReply %v", request, fcall)
 }
 
-func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) process(fc *np.Fcall) {
+	// If this is a replicated op received through raft (not directly from a
+	// client), the first time Alloc is called will be in this function, so the
+	// reply channel will be set to nil. If it came from the client, the reply
+	// channel will already be set.
+	sess := fssrv.st.Alloc(fc.Session, nil)
+	// If this server is replicated, it may take a couple of seconds for the
+	// replication library to start up & begin processing ops. Noting when
+	// processing has started for a session helps us avoid timing-out sessions
+	// until they have begun processing ops.
+	sess.BeginProcessing()
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:
@@ -244,44 +265,48 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 		// make progress. We coulld optionally use sessconds, but they're kind of
 		// overkill since we don't care about ordering in this case.
 		if replyFuture, ok := fssrv.rc.Get(fc); ok {
+			db.DLPrintf("FSSRV", "Request %v reply in cache", fc)
 			go func() {
-				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), replies)
+				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 			}()
 			return
 		}
+		db.DLPrintf("FSSRV", "Request %v reply not in cache", fc)
 		// If this request has not been registered with the reply cache yet, register
 		// it.
 		fssrv.rc.Register(fc)
 	}
-	sess := fssrv.st.Alloc(fc.Session)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	fssrv.fenceFcall(sess, fc, replies)
+	fssrv.fenceFcall(sess, fc)
 }
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall) {
 	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
 	if e, err := fssrv.rft1.CheckFence(fc.Fence); err != nil {
 		reply := *err.Rerror()
-		fssrv.sendReply(fc, reply, replies)
+		fssrv.sendReply(fc, reply, sess)
 		return
 	} else {
 		if e == nil {
-			fssrv.serve(sess, fc, replies)
+			fssrv.serve(sess, fc)
 		} else {
 			defer e.Unlock()
-			fssrv.serve(sess, fc, replies)
+			fssrv.serve(sess, fc)
 		}
 	}
+	fssrv.serve(sess, fc)
 }
 
-func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
+	db.DLPrintf("FSSRV", "Dispatch request %v", fc)
 	reply, rerror := sess.Dispatch(fc.Msg)
+	db.DLPrintf("FSSRV", "Done dispatch request %v", fc)
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil
-	if replies != nil {
+	if sess.GetRepliesC() != nil {
 		defer sess.DecThreads()
 	}
 	if rerror != nil {
@@ -289,18 +314,17 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall, replies chan *
 	}
 	// Send reply will drop the reply if the replies channel is nil, but it will
 	// make sure to insert the reply into the reply cache.
-	fssrv.sendReply(fc, reply, replies)
+	fssrv.sendReply(fc, reply, sess)
 }
 
-func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
+func (fssrv *FsServer) CloseSession(sid np.Tsession) {
+	db.DLPrintf("FSSRV", "Close session %v", sid)
 	sess, ok := fssrv.st.Lookup(sid)
 	if !ok {
 		// client start TCP connection, but then failed before sending
 		// any messages.
 		return
 	}
-
-	// XXX remove fence from sess, so that fence maybe free from seen table
 
 	// Wait until nthread == 0. Detach is guaranteed to have been processed since
 	// it was enqueued by the reader function before calling CloseSession
@@ -311,4 +335,5 @@ func (fssrv *FsServer) CloseSession(sid np.Tsession, replies chan *np.Fcall) {
 
 	// Stop sess thread.
 	fssrv.st.KillSessThread(sid)
+	db.DLPrintf("FSSRV", "Close session done %v", sid)
 }

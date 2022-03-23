@@ -18,6 +18,6 @@ func MakeDummyReplServer(tm *threadmgr.ThreadMgr) *DummyReplServer {
 func (srv *DummyReplServer) Start() {
 }
 
-func (srv *DummyReplServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
-	srv.tm.Process(fc, replies)
+func (srv *DummyReplServer) Process(fc *np.Fcall) {
+	srv.tm.Process(fc)
 }

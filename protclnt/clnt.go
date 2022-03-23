@@ -3,19 +3,20 @@ package protclnt
 import (
 	np "ulambda/ninep"
 	"ulambda/rand"
+	"ulambda/sessionclnt"
 )
 
 type Clnt struct {
 	session np.Tsession
 	seqno   np.Tseqno
-	cm      *ConnMgr
+	cm      *sessionclnt.SessClnt
 }
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
 	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
-	clnt.cm = makeConnMgr(clnt.session, &clnt.seqno)
+	clnt.cm = sessionclnt.MakeSessClnt(clnt.session, &clnt.seqno)
 	return clnt
 }
 
@@ -24,11 +25,11 @@ func (clnt *Clnt) ReadSeqNo() np.Tseqno {
 }
 
 func (clnt *Clnt) Exit() {
-	clnt.cm.exit()
+	clnt.cm.Exit()
 }
 
 func (clnt *Clnt) CallServer(server []string, args np.Tmsg, fence np.Tfence1) (np.Tmsg, *np.Err) {
-	reply, err := clnt.cm.makeCall(server, args, fence)
+	reply, err := clnt.cm.RPC(server, args, fence)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,7 @@ func (pclnt *ProtClnt) Server() []string {
 }
 
 func (pclnt *ProtClnt) Disconnect() *np.Err {
-	return pclnt.clnt.cm.disconnect(pclnt.server)
+	return pclnt.clnt.cm.Disconnect(pclnt.server)
 }
 
 func (pclnt *ProtClnt) Call(args np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {

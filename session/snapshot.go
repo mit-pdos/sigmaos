@@ -38,6 +38,7 @@ func RestoreTable(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssr
 type SessionSnapshot struct {
 	ProtsrvSnap []byte
 	FencesSnap  []byte
+	closed      bool
 }
 
 func MakeSessionSnapshot() *SessionSnapshot {
@@ -48,6 +49,7 @@ func (sess *Session) Snapshot() []byte {
 	ss := MakeSessionSnapshot()
 	ss.ProtsrvSnap = sess.protsrv.Snapshot()
 	ss.FencesSnap = sess.myFences.Snapshot()
+	ss.closed = sess.closed
 	b, err := json.Marshal(ss)
 	if err != nil {
 		log.Fatalf("FATAL Error snapshot encoding session: %v", err)
@@ -62,7 +64,9 @@ func RestoreSession(sid np.Tsession, fssrv protsrv.FsServer, rps protsrv.Restore
 		log.Fatalf("FATAL error unmarshal session in restore: %v", err)
 	}
 	fos := rps(fssrv, ss.ProtsrvSnap)
-	sess := makeSession(fos, sid, rt, tmt.AddThread())
+	// TODO: add session manager
+	sess := makeSession(fos, sid, nil, rt, tmt.AddThread())
+	sess.closed = ss.closed
 	myFences := fences.RestoreFenceTable(ss.FencesSnap)
 	sess.myFences = myFences
 	return sess

@@ -4,7 +4,7 @@ import (
 	np "ulambda/ninep"
 )
 
-type ProcessFn func(fc *np.Fcall, replies chan *np.Fcall)
+type ProcessFn func(fc *np.Fcall)
 
 type ThreadMgrTable struct {
 	pfn        ProcessFn

@@ -1,7 +1,9 @@
 package session
 
 import (
+	"log"
 	"sync"
+	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -22,22 +24,37 @@ import (
 //
 
 type Session struct {
-	threadmgr *threadmgr.ThreadMgr
-	wg        sync.WaitGroup
-	protsrv   protsrv.Protsrv
-	rft       *fences.RecentTable
-	myFences  *fences.FenceTable
-	Sid       np.Tsession
+	sync.Mutex
+	threadmgr     *threadmgr.ThreadMgr
+	wg            sync.WaitGroup
+	protsrv       protsrv.Protsrv
+	rft           *fences.RecentTable
+	myFences      *fences.FenceTable
+	lastHeartbeat time.Time
+	Sid           np.Tsession
+	began         bool // true if the fssrv has already begun processing ops
+	running       bool // true if the session is currently running an operation.
+	closed        bool // true if the session has been closed.
+	replies       chan *np.Fcall
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, rft *fences.RecentTable, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.protsrv = protsrv
+	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
 	sess.rft = rft
 	sess.myFences = fences.MakeFenceTable()
+	sess.replies = replies
+	sess.lastHeartbeat = time.Now()
 	return sess
+}
+
+func (sess *Session) GetRepliesC() chan *np.Fcall {
+	sess.Lock()
+	defer sess.Unlock()
+	return sess.replies
 }
 
 func (sess *Session) Fence(pn []string, fence np.Tfence) {
@@ -54,9 +71,6 @@ func (sess *Session) Unfence(path []string, idf np.Tfenceid) *np.Err {
 
 func (sess *Session) CheckFences(path []string) *np.Err {
 	fences := sess.myFences.Fences(path)
-	//if len(fences) > 0 {
-	//	log.Printf("%v: CheckFences %v %v\n", sess.Sid, path, fences)
-	//}
 	for _, f := range fences {
 		err := sess.rft.IsRecent(f)
 		if err != nil {
@@ -77,4 +91,69 @@ func (sess *Session) DecThreads() {
 
 func (sess *Session) WaitThreads() {
 	sess.wg.Wait()
+}
+
+func (sess *Session) BeginProcessing() {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.began = true
+}
+
+func (sess *Session) Close() {
+	sess.Lock()
+	defer sess.Unlock()
+	if sess.closed {
+		log.Fatalf("FATAL tried to close a closed session: %v", sess.Sid)
+	}
+	sess.closed = true
+	// Close the replies channel so the srvconn can exit.
+	if sess.replies != nil {
+		close(sess.replies)
+		sess.replies = nil
+	}
+}
+
+func (sess *Session) IsClosed() bool {
+	sess.Lock()
+	defer sess.Unlock()
+	return sess.closed
+}
+
+// Change the replies channel if the new channel is non-nil. This may occur if,
+// for example, a client starts talking to a new replica.
+func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
+	sess.Lock()
+	defer sess.Unlock()
+	if replies != nil {
+		sess.replies = replies
+	}
+}
+
+func (sess *Session) heartbeat(msg np.Tmsg) {
+	sess.Lock()
+	defer sess.Unlock()
+	db.DLPrintf("SESSION", "Heartbeat %v %v", msg.Type(), msg)
+	if sess.closed {
+		log.Fatalf("FATAL %v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
+	}
+	sess.lastHeartbeat = time.Now()
+}
+
+func (sess *Session) timedOut() bool {
+	sess.Lock()
+	defer sess.Unlock()
+	// If in the middle of a running op, or this fssrv hasn't begun processing
+	// ops yet, refresh the heartbeat so we don't immediately time-out when the
+	// op finishes.
+	if sess.running || !sess.began {
+		sess.lastHeartbeat = time.Now()
+		return false
+	}
+	return time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+}
+
+func (sess *Session) SetRunning(r bool) {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.running = r
 }

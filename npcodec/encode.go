@@ -124,6 +124,16 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
+		case []np.Tsession:
+			if err := e.encode(uint16(len(v))); err != nil {
+				return err
+			}
+
+			for _, m := range v {
+				if err := e.encode(m); err != nil {
+					return err
+				}
+			}
 		case np.Stat:
 			elements, err := fields9p(v)
 			if err != nil {
@@ -211,7 +221,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		default:
-			return errors.New("Unknown type")
+			return errors.New(fmt.Sprintf("Unknown type: %v", reflect.TypeOf(v)))
 		}
 	}
 
@@ -303,6 +313,21 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			elements := make([]interface{}, int(l))
 			*v = make([]np.Tqid, int(l))
+			for i := range elements {
+				elements[i] = &(*v)[i]
+			}
+
+			if err := d.decode(elements...); err != nil {
+				return err
+			}
+		case *[]np.Tsession:
+			var l uint16
+
+			if err := d.decode(&l); err != nil {
+				return err
+			}
+			elements := make([]interface{}, int(l))
+			*v = make([]np.Tsession, int(l))
 			for i := range elements {
 				elements[i] = &(*v)[i]
 			}

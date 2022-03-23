@@ -6,7 +6,7 @@ import (
 
 type FsServer interface {
 	Process(*np.Fcall, chan *np.Fcall)
-	CloseSession(np.Tsession, chan *np.Fcall)
+	CloseSession(np.Tsession)
 	Snapshot() []byte
 	Restore([]byte)
 }

@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
+	"ulambda/session"
 	"ulambda/test"
 )
 

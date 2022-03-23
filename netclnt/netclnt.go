@@ -105,6 +105,7 @@ func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
 
+	// If the connection has already been closed, return an error.
 	nc.mu.Lock()
 	closed := nc.closed
 	nc.mu.Unlock()
@@ -112,18 +113,11 @@ func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
 		db.DLPrintf("NETCLNT_ERR", "Error ch to %v closed\n", nc.Dst())
 		return np.MkErr(np.TErrUnreachable, nc.Dst())
 	}
-	return nc.write(rpc)
-}
 
-func (nc *NetClnt) Recv() (*np.Fcall, *np.Err) {
-	return nc.read()
-}
-
-func (nc *NetClnt) write(rpc *Rpc) *np.Err {
+	// Otherwise, marshall and write the fcall.
 	err := npcodec.MarshalFcall(rpc.Req, nc.bw)
 	if err != nil {
 		db.DLPrintf("NETCLNT_ERR", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
-		// XXX Connection reset by peer?
 		if err.Code() == np.TErrUnreachable {
 			db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error cli %v to %v err %v\n", nc.Src(), nc.Dst(), err)
 			nc.Close()
@@ -143,17 +137,17 @@ func (nc *NetClnt) write(rpc *Rpc) *np.Err {
 	return nil
 }
 
-func (nc *NetClnt) read() (*np.Fcall, *np.Err) {
+func (nc *NetClnt) Recv() (*np.Fcall, *np.Err) {
 	frame, err := npcodec.ReadFrame(nc.br)
 	if err != nil {
-		db.DLPrintf("NETCLNT_ERR", "Reader: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
+		db.DLPrintf("NETCLNT_ERR", "Recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
 		return nil, np.MkErr(np.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
 	fcall, err := npcodec.UnmarshalFcall(frame)
 	if err != nil {
-		log.Fatalf("FATAL: unmarshal fcall in NetClnt.reader %v", err)
-		db.DLPrintf("NETCLNT_ERR", "Reader: Unmarshal error %v\n", err)
+		log.Fatalf("FATAL: unmarshal fcall in NetClnt.recv %v", err)
+		db.DLPrintf("NETCLNT_ERR", "Recv: Unmarshal error %v\n", err)
 	}
 	return fcall, nil
 }

@@ -92,8 +92,11 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
 	fssrv.stats.MonitorCPUUtil()
-	// fences1.MkFencesDev(fssrv.root)
-	dirover.Add(np.STATSD, fssrv.stats)
+
+	// Build up overlay directory
+	dirover.Mount(np.STATSD, fssrv.stats)
+	dirover.Mount(np.FENCEDIR, fssrv.rft1)
+
 	return fssrv
 }
 

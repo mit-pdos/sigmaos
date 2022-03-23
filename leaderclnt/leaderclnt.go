@@ -52,14 +52,3 @@ func (l *LeaderClnt) EnterNextEpoch(dirs []string) (np.Tepoch, error) {
 	}
 	return epoch, nil
 }
-
-// Release leadership and unregister fences.
-func (l *LeaderClnt) ReleaseFencedEpoch(dirs []string) error {
-	if err := l.e.ReleaseLeadership(); err != nil {
-		return err
-	}
-	if err := l.fc.Unfence(dirs); err != nil {
-		return err
-	}
-	return nil
-}

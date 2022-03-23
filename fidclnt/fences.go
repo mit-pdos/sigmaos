@@ -35,20 +35,6 @@ func (ft *FenceTable) Insert(p string, f np.Tfence1) *np.Err {
 	return nil
 }
 
-func (ft *FenceTable) Delete(p string) *np.Err {
-	ft.Lock()
-	defer ft.Unlock()
-
-	path := np.Split(p) // cleans up p
-
-	db.DLPrintf("FIDCLNT", "Delete fence %v\n", path)
-	if _, ok := ft.fencedDirs[path.String()]; !ok {
-		return np.MkErr(np.TErrUnknownFence, p)
-	}
-	delete(ft.fencedDirs, path.String())
-	return nil
-}
-
 func (ft *FenceTable) Lookup(path np.Path) np.Tfence1 {
 	ft.Lock()
 	defer ft.Unlock()

@@ -42,11 +42,6 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-// Unfence paths
-func (fc *FenceClnt) Unfence(paths []string) error {
-	return fc.unfencePaths(paths)
-}
-
 func (fc *FenceClnt) ReadEpoch() (np.Tepoch, error) {
 	return fc.GetEpoch()
 }
@@ -57,18 +52,6 @@ func (fc *FenceClnt) fencePaths(fence np.Tfence1, paths []string) error {
 		err := fc.registerFence(p, fence)
 		if err != nil {
 			db.DLPrintf("FENCECLNT_ERR", "fencePath %v err %v", p, err)
-			return err
-		}
-	}
-	return nil
-}
-
-func (fc *FenceClnt) unfencePaths(paths []string) error {
-	db.DLPrintf("FENCECLNT", "UnfencePaths %v", paths)
-	for _, p := range paths {
-		err := fc.UnfenceDir(p)
-		if err != nil {
-			db.DLPrintf("FENCECLNT_ERR", "unfencePath %v err %v", p, err)
 			return err
 		}
 	}

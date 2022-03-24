@@ -6,17 +6,10 @@ import (
 	np "ulambda/ninep"
 )
 
-var makeDir fs.MakeDirF
-
-func MakeRootInode(f fs.MakeDirF, ctx fs.CtxI, perm np.Tperm) (fs.Inode, *np.Err) {
-	makeDir = f
-	return MakeInode(ctx, np.DMDIR, 0, nil)
-}
-
-func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir) (fs.Inode, *np.Err) {
+func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *np.Err) {
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
-		return makeDir(i), nil
+		return mk(i, MakeInode), nil
 	} else if p.IsSymlink() {
 		return MakeSym(i), nil
 	} else if p.IsPipe() {

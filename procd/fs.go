@@ -12,6 +12,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
+	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -44,7 +45,7 @@ func (pd *Procd) makeFs() {
 
 	// Set up running dir
 	runningi := inode.MakeInode(nil, np.DMDIR, pd.Root())
-	running := dir.MakeDir(runningi)
+	running := dir.MakeDir(runningi, memfs.MakeInode)
 	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
 	if err1 != nil {
 		log.Fatalf("FATAL Error creating running dir: %v", err1)
@@ -56,7 +57,7 @@ func (pd *Procd) makeFs() {
 	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	for _, q := range runqs {
 		runqi := inode.MakeInode(nil, np.DMDIR, pd.Root())
-		runq := dir.MakeDir(runqi)
+		runq := dir.MakeDir(runqi, memfs.MakeInode)
 		err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
 		if err1 != nil {
 			log.Fatalf("FATAL Error creating running dir: %v", err1)
@@ -66,7 +67,7 @@ func (pd *Procd) makeFs() {
 
 	// Set up pids dir
 	pidsi := inode.MakeInode(nil, np.DMDIR, pd.Root())
-	pids := dir.MakeDir(pidsi)
+	pids := dir.MakeDir(pidsi, memfs.MakeInode)
 	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
 	if err1 != nil {
 		log.Fatalf("FATAL Error creating pids dir: %v", err1)

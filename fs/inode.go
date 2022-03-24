@@ -7,8 +7,6 @@ import (
 type SnapshotF func(Inode) np.Tpath
 type RestoreF func(np.Tpath) Inode
 
-type MakeDirF func(Inode) Inode
-
 // Inode interface for directories
 
 type Inode interface {

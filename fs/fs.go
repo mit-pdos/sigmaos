@@ -7,6 +7,9 @@ import (
 	"ulambda/sesscond"
 )
 
+type MakeInodeF func(CtxI, np.Tperm, np.Tmode, Dir, MakeDirF) (Inode, *np.Err)
+type MakeDirF func(Inode, MakeInodeF) Inode
+
 type CtxI interface {
 	Uname() string
 	SessionId() np.Tsession

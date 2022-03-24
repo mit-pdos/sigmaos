@@ -13,11 +13,6 @@ import (
 	"ulambda/npcodec"
 )
 
-type makeInodeF func(fs.CtxI, np.Tperm, np.Tmode, fs.Dir) (fs.Inode, *np.Err)
-type makeRootInodeF func(fs.MakeDirF, fs.CtxI, np.Tperm) (fs.Inode, *np.Err)
-
-var makeInode makeInodeF
-
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
 // "." too
 func IsCurrentDir(name string) bool {
@@ -26,20 +21,22 @@ func IsCurrentDir(name string) bool {
 
 type DirImpl struct {
 	fs.Inode
+	mi      fs.MakeInodeF
 	mu      sync.Mutex
 	entries map[string]fs.Inode
 }
 
-func MakeDir(i fs.Inode) *DirImpl {
+func MakeDir(i fs.Inode, mi fs.MakeInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
+	d.mi = mi
 	d.entries = make(map[string]fs.Inode)
 	d.entries["."] = d
 	return d
 }
 
-func MakeDirF(i fs.Inode) fs.Inode {
-	d := MakeDir(i)
+func MakeDirF(i fs.Inode, mi fs.MakeInodeF) fs.Inode {
+	d := MakeDir(i, mi)
 	return d
 }
 
@@ -52,9 +49,8 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func MkRootDir(f makeInodeF, r makeRootInodeF) fs.Dir {
-	makeInode = f
-	i, _ := r(MakeDirF, nil, np.DMDIR)
+func MkRootDir(ctx fs.CtxI, mi fs.MakeInodeF) fs.Dir {
+	i, _ := mi(ctx, np.DMDIR, 0, nil, MakeDirF)
 	return i.(fs.Dir)
 }
 
@@ -219,7 +215,10 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	if IsCurrentDir(name) {
 		return nil, np.MkErr(np.TErrInval, name)
 	}
-	newi, err := makeInode(ctx, perm, m, dir)
+	if i, ok := dir.entries[name]; ok {
+		return i, np.MkErr(np.TErrExists, name)
+	}
+	newi, err := dir.mi(ctx, perm, m, dir, MakeDirF)
 	if err != nil {
 		return nil, err
 	}

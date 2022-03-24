@@ -11,6 +11,7 @@ import (
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/inode"
+	"ulambda/memfs"
 	np "ulambda/ninep"
 )
 
@@ -53,7 +54,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 
 	// create directory for session
 	di := inode.MakeInode(nil, np.DMDIR, c.Parent())
-	d := dir.MakeDir(di)
+	d := dir.MakeDir(di, memfs.MakeInode)
 	err := dir.MkNod(ctx, c.Parent(), s.id, d)
 	if err != nil {
 		log.Fatalf("FATAL MkNod d %v err %v\n", d, err)

@@ -22,8 +22,8 @@ type TestState struct {
 func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
-	ts.rooti = dir.MkRootDir(MakeInode, MakeRootInode)
 	ts.ctx = ctx.MkCtx("", 0, nil)
+	ts.rooti = dir.MkRootDir(ts.ctx, MakeInode)
 	return ts
 }
 

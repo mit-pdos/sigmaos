@@ -114,7 +114,8 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 	case Tdir:
 		// Make a dir with a nil inode so we don't recurse infinitely when trying
 		// to set parent pointers.
-		d := dir.MakeDir(nil)
+		// XXX hard coded memfs.MakeInode
+		d := dir.MakeDir(nil, memfs.MakeInode)
 		s.restoreCache[inum] = d
 		i = dir.Restore(d, s.RestoreFsTree, snap.Data)
 	case Tfile:

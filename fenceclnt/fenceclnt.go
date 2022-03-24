@@ -12,7 +12,6 @@ type FenceClnt struct {
 	*epochclnt.EpochClnt
 	perm    np.Tperm
 	mode    np.Tmode
-	f       *np.Tfence
 	lastSeq np.Tseqno
 	paths   map[string]bool
 }

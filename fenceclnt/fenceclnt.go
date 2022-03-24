@@ -1,4 +1,4 @@
-package fenceclnt1
+package fenceclnt
 
 import (
 	db "ulambda/debug"

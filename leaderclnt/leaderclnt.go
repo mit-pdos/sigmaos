@@ -3,7 +3,7 @@ package leaderclnt
 import (
 	"ulambda/electclnt"
 	"ulambda/epochclnt"
-	"ulambda/fenceclnt1"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -11,7 +11,7 @@ import (
 type LeaderClnt struct {
 	*fslib.FsLib
 	*epochclnt.EpochClnt
-	*fenceclnt1.FenceClnt
+	*fenceclnt.FenceClnt
 	epochfn string
 	e       *electclnt.ElectClnt
 }
@@ -21,7 +21,7 @@ func MakeLeaderClnt(fsl *fslib.FsLib, leaderfn string, perm np.Tperm) *LeaderCln
 	l.FsLib = fsl
 	l.e = electclnt.MakeElectClnt(fsl, leaderfn, perm)
 	l.EpochClnt = epochclnt.MakeEpochClnt(fsl, leaderfn, perm)
-	l.FenceClnt = fenceclnt1.MakeFenceClnt(fsl, l.EpochClnt)
+	l.FenceClnt = fenceclnt.MakeFenceClnt(fsl, l.EpochClnt)
 	return l
 }
 

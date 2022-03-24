@@ -10,7 +10,7 @@ import (
 	"time"
 
 	db "ulambda/debug"
-	"ulambda/fenceclnt1"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	"ulambda/group"
 	np "ulambda/ninep"
@@ -66,7 +66,7 @@ func nrand() uint64 {
 type KvClerk struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	fclnt *fenceclnt1.FenceClnt
+	fclnt *fenceclnt.FenceClnt
 	conf  *Config
 }
 
@@ -75,7 +75,7 @@ func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
 	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
 	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
 	kc.conf = &Config{}
-	kc.fclnt = fenceclnt1.MakeLeaderFenceClnt(kc.FsLib, KVBALANCER)
+	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBALANCER)
 	if err := kc.switchConfig(); err != nil {
 		return nil, err
 	}

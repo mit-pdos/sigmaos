@@ -8,7 +8,7 @@ import (
 
 	"ulambda/crash"
 	db "ulambda/debug"
-	"ulambda/fenceclnt1"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -21,7 +21,7 @@ type Mover struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	fclnt    *fenceclnt1.FenceClnt
+	fclnt    *fenceclnt.FenceClnt
 	epochstr string
 }
 
@@ -30,7 +30,7 @@ func JoinEpoch(fsl *fslib.FsLib, label, epochstr string, dirs []string) error {
 	if err != nil {
 		return err
 	}
-	fclnt := fenceclnt1.MakeLeaderFenceClnt(fsl, KVBALANCER)
+	fclnt := fenceclnt.MakeLeaderFenceClnt(fsl, KVBALANCER)
 	if err := fclnt.FenceAtEpoch(epoch, dirs); err != nil {
 		return fmt.Errorf("FenceAtEpoch %v err %v", KVCONFIG, err)
 	}

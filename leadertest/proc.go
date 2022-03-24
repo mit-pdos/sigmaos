@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"ulambda/delay"
-	"ulambda/fenceclnt1"
+	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -25,7 +25,7 @@ func RunProc(epochstr, dir string) {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}
 
-	fc := fenceclnt1.MakeLeaderFenceClnt(fsl, LEADERFN)
+	fc := fenceclnt.MakeLeaderFenceClnt(fsl, LEADERFN)
 
 	log.Printf("%v: epoch %v dir %v\n", proc.GetName(), epoch, dir)
 

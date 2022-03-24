@@ -8,8 +8,8 @@ import (
 	"ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/dir"
+	"ulambda/fencefs"
 	"ulambda/fences"
-	"ulambda/fences1"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -49,7 +49,7 @@ type FsServer struct {
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
 	rft        *fences.RecentTable
-	rft1       *fences1.FenceTable
+	ffs        fs.Dir
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
 	rc         *repl.ReplyCache
@@ -73,7 +73,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.rps = rps
 	fssrv.stats = stats.MkStatsDev(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
-	fssrv.rft1 = fences1.MakeFenceTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
@@ -94,8 +93,10 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.stats.MonitorCPUUtil()
 
 	// Build up overlay directory
+	fssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
+
 	dirover.Mount(np.STATSD, fssrv.stats)
-	dirover.Mount(np.FENCEDIR, fssrv.rft1)
+	dirover.Mount(np.FENCEDIR, fssrv.ffs)
 
 	return fssrv
 }
@@ -269,15 +270,15 @@ func (fssrv *FsServer) process(fc *np.Fcall, replies chan *np.Fcall) {
 // ops.
 func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall, replies chan *np.Fcall) {
 	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
-	if e, err := fssrv.rft1.CheckFence(fc.Fence); err != nil {
+	if f, err := fencefs.CheckFence(fssrv.ffs, fc.Fence); err != nil {
 		reply := *err.Rerror()
 		fssrv.sendReply(fc, reply, replies)
 		return
 	} else {
-		if e == nil {
+		if f == nil {
 			fssrv.serve(sess, fc, replies)
 		} else {
-			defer e.Unlock()
+			defer f.Unlock()
 			fssrv.serve(sess, fc, replies)
 		}
 	}

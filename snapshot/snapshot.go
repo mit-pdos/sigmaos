@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"ulambda/dir"
-	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/inode"
 	"ulambda/memfs"
@@ -39,15 +38,13 @@ func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
 	return s
 }
 
-func (s *Snapshot) Snapshot(root fs.Inode, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rft *fences.RecentTable, rc *repl.ReplyCache) []byte {
+func (s *Snapshot) Snapshot(root fs.Inode, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
 	s.Root = s.snapshotFsTree(root)
 	// Snapshot the session table.
 	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
 	s.Tmt = tm.Snapshot()
-	// Snapshot the recent fence table.
-	s.Rft = rft.Snapshot()
 	// Snapshot the reply cache.
 	s.Rc = rc.Snapshot()
 	b, err := json.Marshal(s)
@@ -79,7 +76,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *fences.RecentTable, *repl.ReplyCache) {
+func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
@@ -91,8 +88,6 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	root := s.RestoreFsTree(s.Root)
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
-	// Restore the recent fence table.
-	rft := fences.RestoreRecentTable(s.Rft)
 	// Restore the session table.
 	st := session.RestoreTable(mkps, rps, fssrv, tmt, s.St)
 	// Restore the reply cache.
@@ -101,7 +96,7 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	// begun executing since this snapshot was taken, and they expect some state
 	// to be in the reply cache.
 	rc.Merge(oldRc)
-	return root, st, tmt, rft, rc
+	return root, st, tmt, rc
 }
 
 func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {

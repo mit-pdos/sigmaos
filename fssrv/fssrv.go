@@ -9,7 +9,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fencefs"
-	"ulambda/fences"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/netsrv"
@@ -49,7 +48,6 @@ type FsServer struct {
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
-	rft        *fences.RecentTable
 	ffs        fs.Dir
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
@@ -73,7 +71,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.mkps = mkps
 	fssrv.rps = rps
 	fssrv.stats = stats.MkStatsDev(fssrv.root)
-	fssrv.rft = fences.MakeRecentTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.tmt)
 	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
@@ -123,7 +120,7 @@ func (fssrv *FsServer) Snapshot() []byte {
 		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
 	fssrv.snap = snapshot.MakeSnapshot(fssrv)
-	return fssrv.snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc)
+	return fssrv.snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rc)
 }
 
 func (fssrv *FsServer) Restore(b []byte) {
@@ -135,7 +132,7 @@ func (fssrv *FsServer) Restore(b []byte) {
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
 	var root fs.FsObj
-	root, fssrv.st, fssrv.tmt, fssrv.rft, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
+	root, fssrv.st, fssrv.tmt, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
 	fssrv.sct.St = fssrv.st
 	fssrv.root = root.(fs.Dir)
 	fssrv.sm.Stop()

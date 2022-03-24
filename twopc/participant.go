@@ -7,7 +7,7 @@ import (
 
 	"ulambda/atomic"
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
+	//	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
@@ -19,7 +19,7 @@ type Participant struct {
 	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	fclnt  *fenceclnt.FenceClnt
+	//	fclnt  *fenceclnt.FenceClnt
 	me     proc.Tpid
 	twopc  *Twopc
 	txn    TxnI
@@ -40,7 +40,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me proc.Tpid, t
 	p.me = me
 	p.FsLib = fsl
 	p.ProcClnt = pclnt
-	p.fclnt = fenceclnt.MakeFenceClnt(p.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
+	//	p.fclnt = fenceclnt.MakeFenceClnt(p.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
 	p.txn = txn
 	p.opcode = opcode
 
@@ -104,13 +104,13 @@ func (p *Participant) watchTwopcCommit(path string, err error) {
 func (p *Participant) restartCoord() {
 	log.Printf("PART %v restartCoord: COORD crashed %v\n", p.me, p.twopc)
 
-	if err := p.fclnt.ReleaseFence(); err != nil {
-		log.Fatalf("Error ReleaseFence restartCoord: %v", err)
-	}
-	// Grab fence again
-	if b, err := p.fclnt.AcquireFenceR(); err != nil {
-		log.Fatalf("Error AcquireFenceR  restartCoord: %v, %v", b, err)
-	}
+	//	if err := p.fclnt.ReleaseFence(); err != nil {
+	//		log.Fatalf("Error ReleaseFence restartCoord: %v", err)
+	//	}
+	//	// Grab fence again
+	//	if b, err := p.fclnt.AcquireFenceR(); err != nil {
+	//		log.Fatalf("Error AcquireFenceR  restartCoord: %v, %v", b, err)
+	//	}
 
 	p.twopc = clean(p.FsLib)
 
@@ -148,9 +148,9 @@ func (p *Participant) watchCoord(path string, err error) {
 func (p *Participant) prepare() {
 	p.mu.Lock()
 	// Grab fence before preparing
-	if b, err := p.fclnt.AcquireFenceR(); err != nil {
-		log.Fatalf("Error AcquireFenceR wait: %v, %v", b, err)
-	}
+	//	if b, err := p.fclnt.AcquireFenceR(); err != nil {
+	//		log.Fatalf("Error AcquireFenceR wait: %v, %v", b, err)
+	//	}
 
 	var err error
 
@@ -215,10 +215,10 @@ func (p *Participant) commit() {
 	p.committed()
 
 	// Release fence
-	err := p.fclnt.ReleaseFence()
-	if err != nil {
-		log.Fatalf("Error Rlease release: %v", err)
-	}
-
+	//	err := p.fclnt.ReleaseFence()
+	//	if err != nil {
+	//		log.Fatalf("Error Rlease release: %v", err)
+	//	}
+	//
 	p.txn.Done()
 }

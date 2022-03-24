@@ -64,7 +64,7 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 		if err1 != nil {
 			log.Fatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}
-		executing = append(executing, makeOp(fc, nil, op.N))
+		executing = append(executing, makeOp(fc, op.N))
 	}
 	// Make sure to chop off the last op (which will be the snapshot op).
 	executing = executing[:len(executing)-1]

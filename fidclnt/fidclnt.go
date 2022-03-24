@@ -224,23 +224,3 @@ func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.
 	}
 	return reply.Count, nil
 }
-
-func (fidc *FidClnt) MkFence(fid np.Tfid) (np.Tfence, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.MkFence(fid)
-	if err != nil {
-		return np.Tfence{}, err
-	}
-	return reply.Fence, nil
-}
-
-func (fidc *FidClnt) RegisterFence(fence np.Tfence, fid np.Tfid) *np.Err {
-	return fidc.fids.lookup(fid).pc.RegisterFence(fence, fid)
-}
-
-func (fidc *FidClnt) DeregisterFence(fence np.Tfence, fid np.Tfid) *np.Err {
-	return fidc.fids.lookup(fid).pc.DeregisterFence(fence, fid)
-}
-
-func (fidc *FidClnt) RmFence(fence np.Tfence, fid np.Tfid) *np.Err {
-	return fidc.fids.lookup(fid).pc.RmFence(fence, fid)
-}

@@ -5,17 +5,12 @@ import (
 	"log"
 	"net"
 	"runtime/debug"
-	"strings"
 	"sync"
 
 	db "ulambda/debug"
 	"ulambda/delay"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-)
-
-const (
-	MAX_TAG_ALLOC_RETRIES = 1000000
 )
 
 //
@@ -28,365 +23,131 @@ const (
 )
 
 type Reply struct {
-	fc  *np.Fcall
-	err *np.Err
+	Fc  *np.Fcall
+	Err *np.Err
 }
 
-type RpcT struct {
-	req     *np.Fcall
-	replych chan *Reply
+type Rpc struct {
+	Req    *np.Fcall
+	Done   bool
+	ReplyC chan *Reply
 }
 
-func mkRpcT(fc *np.Fcall) *RpcT {
-	rpc := &RpcT{}
-	rpc.req = fc
-	rpc.replych = make(chan *Reply)
+func MakeRpc(fc *np.Fcall) *Rpc {
+	rpc := &Rpc{}
+	rpc.Req = fc
+	rpc.ReplyC = make(chan *Reply)
 	return rpc
 }
 
 type NetClnt struct {
-	mu          sync.Mutex
-	conn        net.Conn
-	addrs       []string
-	closed      bool
-	br          *bufio.Reader
-	bw          *bufio.Writer
-	requests    chan *RpcT
-	senders     sync.WaitGroup
-	nextTag     np.Ttag
-	outstanding map[np.Ttag]*RpcT
+	mu     sync.Mutex
+	conn   net.Conn
+	addr   string
+	closed bool
+	br     *bufio.Reader
+	bw     *bufio.Writer
 }
 
-func MkNetClnt(addrs []string) (*NetClnt, *np.Err) {
-	db.DLPrintf("NETCLNT", "mkNetClnt to %v\n", addrs)
+func MakeNetClnt(addr string) (*NetClnt, *np.Err) {
+	db.DLPrintf("NETCLNT", "mkNetClnt to %v\n", addr)
 	nc := &NetClnt{}
-	nc.requests = make(chan *RpcT)
-	nc.outstanding = make(map[np.Ttag]*RpcT)
-	nc.addrs = addrs
+	nc.addr = addr
 	err := nc.connect()
 	if err != nil {
-		db.DLPrintf("NETCLNT_ERR", "mkNetClnt connect %v err %v\n", addrs, err)
+		db.DLPrintf("NETCLNT_ERR", "MakeNetClnt connect %v err %v\n", addr, err)
 		return nil, err
 	}
-	go nc.writer()
-	go nc.reader()
 
 	return nc, nil
 }
 
 func (nc *NetClnt) Dst() string {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
-	return nc.dstL()
-}
-
-func (nc *NetClnt) dstL() string {
 	return nc.conn.RemoteAddr().String()
 }
 
 func (nc *NetClnt) Src() string {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
 	return nc.conn.LocalAddr().String()
-}
-
-func (nc *NetClnt) getOutstandingL() map[np.Ttag]*RpcT {
-	cp := make(map[np.Ttag]*RpcT)
-	for t, r := range nc.outstanding {
-		cp[t] = r
-	}
-	return cp
-}
-
-func (nc *NetClnt) terminateOutstanding() {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
-	nc.terminateOutstandingL()
-}
-
-func (nc *NetClnt) terminateOutstandingL() {
-	for _, rpc := range nc.outstanding {
-		close(rpc.replych)
-	}
-	nc.outstanding = map[np.Ttag]*RpcT{}
-}
-
-func (nc *NetClnt) resendOutstandingL() {
-	outstanding := nc.getOutstandingL()
-	db.DLPrintf("NETCLNT", "Resending outstanding requests: %v", outstanding)
-	for t, r := range outstanding {
-		// Retry sending the request in a separate thread
-		go func(t np.Ttag, r *RpcT) {
-			nc.mu.Lock()
-			defer nc.mu.Unlock()
-
-			nc.senders.Add(1)
-			defer nc.senders.Done()
-
-			// XXX deadlocks, shouldn't hold lock
-			if !nc.closed {
-				nc.requests <- r
-				db.DLPrintf("NETCLNT", "Resent outstanding request: %v", r)
-			}
-		}(t, r)
-	}
 }
 
 func (nc *NetClnt) Close() {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
-	db.DLPrintf("NETCLNT", "Close conn to %v\n", nc.dstL())
-	nc.terminateOutstandingL()
+	db.DLPrintf("NETCLNT", "Close conn to %v\n", nc.Dst())
 	wasClosed := nc.closed
 	nc.closed = true
 
 	// Close the requests channel asynchronously so we don't deadlock
 	if !wasClosed {
-		go func() {
-			nc.senders.Wait()
-			nc.conn.Close()
-			close(nc.requests)
-		}()
-	}
-}
-
-func (nc *NetClnt) resetConnection(br *bufio.Reader, bw *bufio.Writer) {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-	// If the expected buffered reader & writers have changed, then the connection
-	// has already been reset by another thread. Avoid double-resetting.
-	if br == nc.br && bw == nc.bw {
-		db.DLPrintf("NETCLNT", "Resetting connection to %v\n", nc.dstL())
 		nc.conn.Close()
-		nc.br = nil
-		nc.bw = nil
-		nc.connectL()
-		// Resend outstanding requests
-		nc.resendOutstandingL()
-		db.DLPrintf("NETCLNT", "Done resetting connection to %v\n", nc.dstL())
 	}
-}
-
-func (nc *NetClnt) getBufio() (*bufio.Reader, *bufio.Writer, *np.Err) {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
-	if nc.conn == nil || (nc.br == nil || nc.bw == nil) {
-		err := nc.connectL()
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return nc.br, nc.bw, nil
 }
 
 func (nc *NetClnt) connect() *np.Err {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
-	return nc.connectL()
-}
-
-func (nc *NetClnt) connectL() *np.Err {
-	for _, addr := range nc.addrs {
-		c, err := net.Dial("tcp", addr)
-		if err != nil {
-			db.DLPrintf("NETCLNT_ERR", "NetClnt to %v err %v\n", addr, err)
-			continue
-		}
-		nc.conn = c
-		nc.br = bufio.NewReaderSize(c, Msglen)
-		nc.bw = bufio.NewWriterSize(c, Msglen)
-		db.DLPrintf("NETCLNT", "NetClnt %v -> %v bw:%p, br:%p\n", c.LocalAddr(), addr, nc.bw, nc.br)
-		return nil
+	c, err := net.Dial("tcp", nc.addr)
+	if err != nil {
+		db.DLPrintf("NETCLNT_ERR", "NetClnt to %v err %v\n", nc.addr, err)
+		return np.MkErr(np.TErrUnreachable, "no connection")
 	}
-	db.DLPrintf("NETCLNT_ERR", "No successful connections %v\n", nc.addrs)
-	return np.MkErr(np.TErrUnreachable, "no connection")
+	nc.conn = c
+	nc.br = bufio.NewReaderSize(c, Msglen)
+	nc.bw = bufio.NewWriterSize(c, Msglen)
+	db.DLPrintf("NETCLNT", "NetClnt %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
+	return nil
 }
 
-func (nc *NetClnt) allocate(req *RpcT) np.Ttag {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-
-	t := nc.nextTag
-	nc.nextTag += 1
-	retries := 0
-	_, ok := nc.outstanding[t]
-	// Retry until we get an unclaimed tag
-	for ok {
-		retries += 1
-		if retries == MAX_TAG_ALLOC_RETRIES {
-			debug.PrintStack()
-			log.Fatalf("Error: Tried to allocate too many tags at once %v", len(nc.outstanding))
-		}
-		t = nc.nextTag
-		nc.nextTag += 1
-		_, ok = nc.outstanding[t]
-	}
-	nc.outstanding[t] = req
-	return t
-}
-
-func (nc *NetClnt) lookupDel(t np.Ttag) (*RpcT, bool) {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-	rpc, ok := nc.outstanding[t]
-	delete(nc.outstanding, t)
-	return rpc, ok
-}
-
-func (nc *NetClnt) drainRequests() {
-	ok := true
-	for ok {
-		_, ok = <-nc.requests
-	}
-}
-
-func (nc *NetClnt) RPC(fc *np.Fcall) (*np.Fcall, *np.Err) {
-	db.DLPrintf("RPC", "req %v to %v\n", fc, nc.Dst())
-	rpc := mkRpcT(fc)
-	t := nc.allocate(rpc)
-	rpc.req.Tag = t
+func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
+	db.DLPrintf("RPC", "req %v to %v\n", rpc, nc.Dst())
+	// Tag is unused for now.
+	rpc.Req.Tag = 0
 
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
 
-	// Make sure the conn doesn't close under our feet by adding to the senders wg.
+	// If the connection has already been closed, return an error.
 	nc.mu.Lock()
 	closed := nc.closed
-	if !closed {
-		nc.senders.Add(1)
-	}
 	nc.mu.Unlock()
-
 	if closed {
 		db.DLPrintf("NETCLNT_ERR", "Error ch to %v closed\n", nc.Dst())
-		return nil, np.MkErr(np.TErrUnreachable, nc.Dst())
+		return np.MkErr(np.TErrUnreachable, nc.Dst())
 	}
-	nc.requests <- rpc
 
-	nc.senders.Done()
-
-	reply, ok := <-rpc.replych
-	if !ok {
-		db.DLPrintf("NETCLNT_ERR", "Error reply ch closed %v -> %v\n", nc.Src(), nc.Dst())
-		return nil, np.MkErr(np.TErrUnreachable, nc.Dst())
-	}
-	db.DLPrintf("RPC", "rep %v\n", reply.fc)
-	return reply.fc, reply.err
-}
-
-func (nc *NetClnt) writer() {
-	// Need to make sure requests are drained so the requests channel can be safely closed
-	defer nc.drainRequests()
-
-	br, bw, err := nc.getBufio()
+	// Otherwise, marshall and write the fcall.
+	err := npcodec.MarshalFcall(rpc.Req, nc.bw)
 	if err != nil {
-		db.DLPrintf("NETCLNT_ERR", "Writer: no viable connections: %v", err)
-		nc.Close()
-		return
-	}
-	for {
-		rpc, ok := <-nc.requests
-		if !ok {
-			return
-		}
-		// Get the bw for the latest connection
-		br, bw, err = nc.getBufio()
-		// If none was available, close the conn
-		if err != nil {
-			db.DLPrintf("NETCLNT_ERR", "Writer: no viable connections: %v", err)
+		db.DLPrintf("NETCLNT_ERR", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
+		if err.Code() == np.TErrUnreachable {
+			db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error cli %v to %v err %v\n", nc.Src(), nc.Dst(), err)
 			nc.Close()
-			return
-		}
-		err = npcodec.MarshalFcall(rpc.req, bw)
-		if err != nil {
-			if err.Code() == np.TErrBadFcall {
-				nc.mu.Lock()
-				if !nc.closed {
-					rpc.replych <- &Reply{nil, err}
-				}
-				nc.mu.Unlock()
-			}
-			// Retry sends on network error
-			if err.Code() == np.TErrUnreachable && err.Obj == "EOF" {
-				db.DLPrintf("NETCLNT_ERR", "Writer: NetClntection error to %v\n", nc.Dst())
-				nc.resetConnection(br, bw)
-				continue
-			}
-			// Exit the thread if the connection is broken
-			if err.Code() == np.TErrUnreachable {
-				log.Fatalf("FATAL MarshalFcall %v\n", err)
-				return
-			}
-			db.DLPrintf("NETCLNT_ERR", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
+			return np.MkErr(np.TErrUnreachable, nc.Dst())
 		} else {
-			error := bw.Flush()
-			if error != nil {
-				if strings.Contains(error.Error(), "connection reset by peer") {
-					nc.resetConnection(br, bw)
-				} else {
-					stacktrace := debug.Stack()
-					db.DLPrintf("NETCLNT_ERR", "%v\nFlush error %v\n", string(stacktrace), err)
-					return
-				}
-			}
+			log.Fatalf("FATAL error in netclnt.writer: %v", err)
+		}
+	} else {
+		error := nc.bw.Flush()
+		if error != nil {
+			stacktrace := debug.Stack()
+			db.DLPrintf("NETCLNT_ERR", "%v\nFlush error cli %v to srv %v err %v\n", string(stacktrace), nc.Src(), nc.Dst(), error)
+			nc.Close()
+			return np.MkErr(np.TErrUnreachable, nc.Dst())
 		}
 	}
+	return nil
 }
 
-func (nc *NetClnt) reader() {
-	// Get the br for the latest connection
-	br, bw, err := nc.getBufio()
-	// If none was available, close the conn
+func (nc *NetClnt) Recv() (*np.Fcall, *np.Err) {
+	frame, err := npcodec.ReadFrame(nc.br)
 	if err != nil {
-		db.DLPrintf("NETCLNT_ERR", "Reader: no viable connections: %v", err)
+		db.DLPrintf("NETCLNT_ERR", "Recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
-		return
+		return nil, np.MkErr(np.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
-	for {
-		frame, err := npcodec.ReadFrame(br)
-		// On connection error, retry
-		// XXX write in terms of np.Err?
-		if err != nil {
-			if strings.Contains(err.Error(), "connection reset by peer") || err.Obj == "EOF" {
-				db.DLPrintf("NETCLNT_ERR", "Reader: NetClnt error %v to %v\n", err, nc.Dst())
-				nc.resetConnection(br, bw)
-				// Get the br for the latest connection
-				br1, bw1, error := nc.getBufio()
-
-				// Do assignment separately, because if we pre-declare an error var,
-				// "error != nil" will invariably return true because of typed nil.
-				br = br1
-				bw = bw1
-				// If none was available, close the conn
-				if error != nil {
-					db.DLPrintf("NETCLNT_ERR", "Reader: no viable connections: %v", error)
-					nc.Close()
-					return
-				}
-				continue
-			} else {
-				db.DLPrintf("NETCLNT_ERR", "Reader: ReadFrame error %v\n", err)
-				nc.Close()
-				return
-			}
-		}
-		if fcall, err := npcodec.UnmarshalFcall(frame); err != nil {
-			db.DLPrintf("NETCLNT_ERR", "Reader: Unmarshal error %v\n", err)
-		} else {
-			rpc, ok := nc.lookupDel(fcall.Tag)
-			if ok {
-				nc.mu.Lock()
-				if !nc.closed {
-					rpc.replych <- &Reply{fcall, nil}
-				}
-				nc.mu.Unlock()
-			}
-		}
+	fcall, err := npcodec.UnmarshalFcall(frame)
+	if err != nil {
+		log.Fatalf("FATAL: unmarshal fcall in NetClnt.recv %v", err)
+		db.DLPrintf("NETCLNT_ERR", "Recv: Unmarshal error %v\n", err)
 	}
+	return fcall, nil
 }

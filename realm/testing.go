@@ -57,7 +57,6 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 
 // TODO: eventually wait on exit signals
 func (e *TestEnv) Shutdown() {
-	log.Printf("Start shutdown")
 	// Destroy the realm
 	e.clnt.DestroyRealm(e.rid)
 	log.Printf("Destroyed realm")

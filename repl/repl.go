@@ -13,5 +13,5 @@ type Config interface {
 
 type Server interface {
 	Start()
-	Process(fc *np.Fcall, replies chan *np.Fcall)
+	Process(fc *np.Fcall)
 }

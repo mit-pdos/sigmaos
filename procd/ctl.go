@@ -40,7 +40,11 @@ func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion)
 	semStart := semclnt.MakeSemClnt(ctl.pd.FsLib, path.Join(p.ParentDir, proc.START_SEM))
 	semStart.Init(np.DMTMP)
 
+	db.DLPrintf("PROCD", "Sem init done: %v", p)
+
 	ctl.pd.fs.spawn(p, b)
+
+	db.DLPrintf("PROCD", "fs spawn done: %v", p)
 
 	return np.Tsize(len(b)), nil
 }

@@ -182,12 +182,12 @@ func (err *Err) Rerror() *Rerror {
 
 // SigmaOS server couldn't find the requested file
 func IsErrNotfound(error error) bool {
-	return strings.Contains(error.Error(), TErrNotfound.String())
+	return error != nil && strings.Contains(error.Error(), TErrNotfound.String())
 }
 
 // SigmaOS server couldn't reach a server
 func IsErrUnreachable(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrUnreachable.String())
+	return error != nil && strings.HasPrefix(error.Error(), TErrUnreachable.String())
 }
 
 // A file is unavailable: either a server on the file's path is

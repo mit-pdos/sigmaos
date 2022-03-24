@@ -329,6 +329,8 @@ const (
 	TTrmfence
 	TTdetach
 	TRdetach
+	TTheartbeat
+	TRheartbeat
 )
 
 func (fct Tfcall) String() string {
@@ -422,6 +424,12 @@ func (fct Tfcall) String() string {
 		return "Trmfence"
 	case TTdetach:
 		return "Tdetach"
+	case TRdetach:
+		return "Rdetach"
+	case TTheartbeat:
+		return "Theartbeat"
+	case TRheartbeat:
+		return "Rheartbeat"
 	default:
 		return "Tunknown"
 	}
@@ -751,34 +759,20 @@ func (m Tputfile) String() string {
 	return fmt.Sprintf("{%v %v p %v off %v p %v len %v}", m.Fid, m.Mode, m.Perm, m.Offset, m.Wnames, len(m.Data))
 }
 
-type Tmkfence struct {
-	Fid   Tfid
-	Seqno Tseqno
-}
-
-type Rmkfence struct {
-	Fence Tfence
-}
-
-type Tregfence struct {
-	Fid   Tfid
-	Fence Tfence
-}
-
-type Tunfence struct {
-	Fid   Tfid
-	Fence Tfence
-}
-
-type Trmfence struct {
-	Fid   Tfid
-	Fence Tfence
-}
-
 type Tdetach struct {
+	PropId uint32 // ID of the server proposing detach.
+	LeadId uint32 // ID of the leader when change was proposed (filled in later).
 }
 
 type Rdetach struct {
+}
+
+type Theartbeat struct {
+	Sids []Tsession // List of sessions in this heartbeat.
+}
+
+type Rheartbeat struct {
+	Sids []Tsession // List of sessions in this heartbeat.
 }
 
 func (Tversion) Type() Tfcall { return TTversion }
@@ -823,12 +817,7 @@ func (Tgetfile) Type() Tfcall    { return TTgetfile }
 func (Rgetfile) Type() Tfcall    { return TRgetfile }
 func (Tsetfile) Type() Tfcall    { return TTsetfile }
 func (Tputfile) Type() Tfcall    { return TTputfile }
-
-func (Tmkfence) Type() Tfcall  { return TTmkfence }
-func (Rmkfence) Type() Tfcall  { return TRmkfence }
-func (Tregfence) Type() Tfcall { return TTregfence }
-func (Tunfence) Type() Tfcall  { return TTunfence }
-func (Trmfence) Type() Tfcall  { return TTrmfence }
-
-func (Tdetach) Type() Tfcall { return TTdetach }
-func (Rdetach) Type() Tfcall { return TRdetach }
+func (Tdetach) Type() Tfcall     { return TTdetach }
+func (Rdetach) Type() Tfcall     { return TRdetach }
+func (Theartbeat) Type() Tfcall  { return TTheartbeat }
+func (Rheartbeat) Type() Tfcall  { return TRheartbeat }

@@ -30,10 +30,14 @@ func (srv *RaftReplServer) Start() {
 	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
+func (srv *RaftReplServer) Process(fc *np.Fcall) {
+	if fc.GetType() == np.TTdetach {
+		msg := fc.Msg.(np.Tdetach)
+		msg.PropId = uint32(srv.node.id)
+		fc.Msg = msg
+	}
 	op := &Op{}
 	op.request = fc
 	op.reply = nil
-	op.replyC = replies
 	srv.clerk.request(op)
 }

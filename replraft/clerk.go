@@ -8,13 +8,13 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/proc"
 	"ulambda/threadmgr"
 )
 
 type Op struct {
 	request   *np.Fcall
 	reply     *np.Fcall
-	replyC    chan *np.Fcall
 	startTime time.Time
 }
 
@@ -78,14 +78,16 @@ func (c *Clerk) propose(op *Op) {
 }
 
 func (c *Clerk) apply(fc *np.Fcall) {
-	var replies chan *np.Fcall = nil
 	// Get the associated reply channel if this op was generated on this server.
-	op := c.getOp(fc)
-	if op != nil {
-		replies = op.replyC
+	c.getOp(fc)
+	// For now, every node can cause a detach to happen
+	if fc.GetType() == np.TTdetach {
+		msg := fc.Msg.(np.Tdetach)
+		msg.LeadId = msg.PropId
+		fc.Msg = msg
 	}
 	// Process the op on a single thread.
-	c.tm.Process(fc, replies)
+	c.tm.Process(fc)
 }
 
 func (c *Clerk) registerOp(op *Op) {
@@ -98,7 +100,10 @@ func (c *Clerk) registerOp(op *Op) {
 		c.opmap[op.request.Session] = m
 	}
 	if _, ok := m[op.request.Seqno]; ok {
-		log.Fatalf("Error in Clerk.Propose: seqno already exists")
+		// Detaches may be re-executed many times.
+		if op.request.GetType() != np.TTdetach {
+			log.Fatalf("FATAL %v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
+		}
 	}
 	m[op.request.Seqno] = op
 }

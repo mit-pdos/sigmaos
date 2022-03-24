@@ -5,6 +5,7 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -59,12 +60,14 @@ func (t *ThreadMgr) replayOps(ops []*Op) {
 }
 
 // Enqueue a new op to be processed.
-func (t *ThreadMgr) Process(fc *np.Fcall, replies chan *np.Fcall) {
+func (t *ThreadMgr) Process(fc *np.Fcall) {
 	t.Lock()
 	defer t.Unlock()
 
+	db.DLPrintf("THREADMGR", "Enqueue %v", fc)
+
 	t.numops++
-	op := makeOp(fc, replies, t.numops)
+	op := makeOp(fc, t.numops)
 	t.ops = append(t.ops, op)
 	t.executing[op] = true
 
@@ -73,7 +76,7 @@ func (t *ThreadMgr) Process(fc *np.Fcall, replies chan *np.Fcall) {
 }
 
 // Notify the ThreadMgr that a goroutine/operation would like to go to sleep.
-func (t *ThreadMgr) Sleep(c *sync.Cond) {
+func (t *ThreadMgr) Sleep(c *sync.Cond, setRunning func(bool)) {
 
 	// Acquire the *t.Mutex to ensure that the ThreadMgr.run thread won't miss the
 	// sleep signal.
@@ -86,8 +89,14 @@ func (t *ThreadMgr) Sleep(c *sync.Cond) {
 	// Sleep/wake races here are avoided by SessCond locking above us.
 	t.Unlock()
 
+	// Note that the session is no longer running
+	setRunning(false)
+
 	// Sleep on this condition variable.
 	c.Wait()
+
+	// Note that the session is running
+	setRunning(true)
 }
 
 // Called when an operation is going to be woken up. The caller may be a
@@ -139,8 +148,10 @@ func (t *ThreadMgr) run() {
 			// Process the op. Run the next op in a new goroutine (which may sleep or
 			// block).
 			go func() {
+				db.DLPrintf("THREADMGR", "Run %v", op.Fc)
 				// Execute the op.
-				t.pfn(op.Fc, op.replies)
+				t.pfn(op.Fc)
+				db.DLPrintf("THREADMGR", "Done running %v", op.Fc)
 				// Lock to make sure the completion signal isn't missed.
 				t.Lock()
 				// Mark the op as no longer executing.
@@ -149,6 +160,7 @@ func (t *ThreadMgr) run() {
 				t.cond.Signal()
 				// Unlock to allow the ThreadMgr to make progress.
 				t.Unlock()
+				db.DLPrintf("THREADMGR", "Complete %v", op.Fc)
 			}()
 			// Wait for the op to sleep or complete.
 			t.cond.Wait()

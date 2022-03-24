@@ -12,7 +12,7 @@ import (
 
 	"ulambda/atomic"
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
+	//	"ulambda/fenceclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -37,7 +37,7 @@ type Coord struct {
 	args   []string
 	ch     chan Tstatus
 	twopc  *Twopc
-	fclnt  *fenceclnt.FenceClnt
+	//	fclnt  *fenceclnt.FenceClnt
 }
 
 func MakeCoord(args []string) (*Coord, error) {
@@ -50,10 +50,10 @@ func MakeCoord(args []string) (*Coord, error) {
 	cd.ch = make(chan Tstatus)
 	cd.FsLib = fslib.MakeFsLib("coord")
 	cd.ProcClnt = procclnt.MakeProcClnt(cd.FsLib)
-	cd.fclnt = fenceclnt.MakeFenceClnt(cd.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
+	//	cd.fclnt = fenceclnt.MakeFenceClnt(cd.FsLib, TWOPCFENCE, 0, []string{DIR2PC})
 
 	// Grab fence before starting coord
-	cd.fclnt.AcquireFenceW([]byte{})
+	//	cd.fclnt.AcquireFenceW([]byte{})
 
 	log.Printf("COORD lock %v\n", args)
 
@@ -74,7 +74,7 @@ func (cd *Coord) exit() {
 		log.Printf("Remove %v failed %v\n", COORD, err)
 	}
 
-	cd.fclnt.ReleaseFence()
+	//	cd.fclnt.ReleaseFence()
 }
 
 func (cd *Coord) restart() {

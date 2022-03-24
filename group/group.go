@@ -14,12 +14,12 @@ import (
 	"ulambda/atomic"
 	"ulambda/crash"
 	db "ulambda/debug"
-	"ulambda/fenceclnt"
 	"ulambda/fidclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
+	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -27,15 +27,14 @@ import (
 )
 
 const (
-	GRPDIR       = "name/group/"
-	GRP          = "grp-"
-	GRPPRIM      = "-primary"
-	GRPPEER      = "-peer-fence"
-	GRPRAFTCONF  = "-raft-conf"
-	GRPCONF      = "-conf"
-	GRPCONFNXT   = "-conf-next"
-	GRPCONFNXTBK = GRPCONFNXT + "#"
-	CTL          = "ctl"
+	GRPDIR           = "name/group/"
+	GRP              = "grp-"
+	GRPRAFTCONF      = "-raft-conf"
+	GRPCONF          = "-conf"
+	GRPCONFNXT       = "-conf-next"
+	GRPCONFNXTBK     = GRPCONFNXT + "#"
+	CTL              = "ctl"
+	PLACEHOLDER_ADDR = "PLACEHOLDER"
 )
 
 func GrpDir(grp string) string {
@@ -62,14 +61,6 @@ func grpRaftAddrs(grp string) string {
 	return GRPDIR + grp + GRPRAFTCONF
 }
 
-func grpPrimFPath(grp string) string {
-	return GRPDIR + grp + GRPPRIM
-}
-
-func grpPeerFPath(grp string) string {
-	return GRPDIR + grp + GRPPEER
-}
-
 type ReplicaAddrs struct {
 	SigmaAddrs   []string
 	RaftsrvAddrs []string
@@ -79,11 +70,9 @@ type Group struct {
 	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	primFence *fenceclnt.FenceClnt
-	peerFence *fenceclnt.FenceClnt
-	confFclnt *fenceclnt.FenceClnt
-	conf      *GrpConf
-	isBusy    bool
+	lc     *leaderclnt.LeaderClnt
+	conf   *GrpConf
+	isBusy bool
 }
 
 func (g *Group) testAndSetBusy() bool {
@@ -100,36 +89,86 @@ func (g *Group) clearBusy() {
 	g.isBusy = false
 }
 
+// Get the addresses of other replicas, set the addresses corresponding to id,
+// and return the result, all while fenced. If id == -1, then this is a server
+// trying to set up its addresses for the first time, so append to the address
+// lists instead of setting.
+func (g *Group) setAddrs(grp string, id int, sigmaAddr string, raftAddr string, fenceDirs []string) *ReplicaAddrs {
+	var replicaAddrs *ReplicaAddrs
+	// Retry if epochs expire
+	for {
+		if _, err := g.lc.EnterNextEpoch(fenceDirs); err != nil {
+			// If we got a stale result, retry
+			if np.IsErrStale(err) {
+				log.Printf("Retry enter next epoch 1 %v err %v", grp, err)
+				continue
+			} else {
+				log.Fatalf("FATAL couldn't enter next epoch 1 %v err %v", grp, err)
+			}
+		}
+		if ra, err := g.readReplicaAddrs(grp); err != nil && !np.IsErrNotfound(err) {
+			// If we got a stale result, retry
+			if np.IsErrStale(err) {
+				log.Printf("Retry read replica addrs %v err %v", grp, err)
+				continue
+			} else {
+				log.Fatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
+			}
+		} else {
+			replicaAddrs = ra
+		}
+		// Update the stored addresses.
+		if id < 0 {
+			// If trying to set up a new server...
+			replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, sigmaAddr)
+			replicaAddrs.RaftsrvAddrs = append(replicaAddrs.RaftsrvAddrs, raftAddr)
+		} else {
+			replicaAddrs.SigmaAddrs[id-1] = sigmaAddr
+			replicaAddrs.RaftsrvAddrs[id-1] = raftAddr
+		}
+		if err := g.writeReplicaAddrs(grp, replicaAddrs); err != nil {
+			// If we got a stale result, retry
+			if np.IsErrStale(err) {
+				log.Printf("Retry read replica addrs %v err %v", grp, err)
+				continue
+			} else {
+				log.Fatalf("FATAL couldn't write replica addrs %v err %v", grp, err)
+			}
+		} else {
+			// we're done
+			break
+		}
+	}
+	return replicaAddrs
+}
+
 func RunMember(grp string) {
 	g := &Group{}
 	g.isBusy = true
 	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
+	g.lc = leaderclnt.MakeLeaderClnt(g.FsLib, GrpConfPath(grp), 0777)
 	crash.Crasher(g.FsLib)
 
-	g.MkDir(GRPDIR, 07)
+	fenceDirs := []string{GrpSym(grp), grpRaftAddrs(grp)}
 
-	srvs := []string{GRPDIR}
-	g.primFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPrimFPath(grp), 0, srvs)
-	g.peerFence = fenceclnt.MakeFenceClnt(g.FsLib, grpPeerFPath(grp), 0, srvs)
-	g.confFclnt = fenceclnt.MakeFenceClnt(g.FsLib, GrpConfPath(grp), 0, srvs)
+	// XXX need this?
+	g.MkDir(GRPDIR, 0777)
 
 	replicated, err := strconv.ParseBool(os.Getenv("SIGMAREPL"))
 	if err != nil {
 		log.Fatalf("FATAL invalid sigmarepl: %v", err)
 	}
 
-	// Under fence: get peers, start server and add self to list of peers, update list of peers.
-	g.peerFence.AcquireFenceW([]byte{})
-	replicaAddrs := g.readReplicaAddrs(grp)
+	replicaAddrs := g.setAddrs(grp, -1, PLACEHOLDER_ADDR, PLACEHOLDER_ADDR, fenceDirs)
 
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("FATAL group ip %v\n", err)
 	}
 
-	replicaAddrs.RaftsrvAddrs = append(replicaAddrs.RaftsrvAddrs, ip+":0")
 	id := len(replicaAddrs.RaftsrvAddrs)
+	replicaAddrs.RaftsrvAddrs[id-1] = ip + ":0"
 
 	var raftConfig *replraft.RaftConfig = nil
 	if replicated {
@@ -142,91 +181,63 @@ func RunMember(grp string) {
 		log.Fatalf("FATAL StartMemFs %v\n", err1)
 	}
 
-	// Get the final repl addr
-	replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, mfs.MyAddr())
+	// Get the final sigma and repl addr
+	sigmaAddr := mfs.MyAddr()
+	var raftAddr string
 
 	if replicated {
-		replicaAddrs.RaftsrvAddrs[id-1] = raftConfig.ReplAddr()
-		g.writeReplicaAddrs(grp, replicaAddrs)
+		raftAddr = raftConfig.ReplAddr()
 	}
+
+	// Update the stored addresses in named.
+	replicaAddrs = g.setAddrs(grp, id, sigmaAddr, raftAddr, fenceDirs)
 
 	// Add symlink
-	atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs))
-	g.peerFence.ReleaseFence()
 
-	// start server and write ch when server is done
-	ch := make(chan bool)
-	go func() {
-		mfs.Serve()
-		ch <- true
-	}()
-
-	g.primFence.AcquireFenceW([]byte(mfs.MyAddr()))
-
-	log.Printf("%v: primary %v\n", proc.GetName(), grp)
-
-	select {
-	case <-ch:
-		// finally primary, but done
-	default:
-		// run until we are told to stop
-		g.recover(grp)
-		<-ch
+	for {
+		if _, err := g.lc.EnterNextEpoch(fenceDirs); err != nil {
+			// If we got a stale result, retry
+			if np.IsErrStale(err) {
+				log.Printf("Retry enter next epoch 1 %v err %v", grp, err)
+				continue
+			} else {
+				log.Fatalf("FATAL couldn't enter next epoch 1 %v err %v", grp, err)
+			}
+		}
+		if err := atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs)); err != nil {
+			// If we got a stale result, retry
+			if np.IsErrStale(err) {
+				log.Printf("Retry read replica addrs %v err %v", grp, err)
+				continue
+			} else {
+				log.Fatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
+			}
+		} else {
+			// we're done
+			break
+		}
 	}
 
-	log.Printf("%v: group done %v\n", proc.GetProgram(), grp)
-
+	mfs.Serve()
 	mfs.Done()
 }
 
-func (g *Group) readReplicaAddrs(grp string) *ReplicaAddrs {
+func (g *Group) readReplicaAddrs(grp string) (*ReplicaAddrs, error) {
 	ra := &ReplicaAddrs{}
 	err := g.GetFileJson(grpRaftAddrs(grp), ra)
 	if err != nil {
 		db.DLPrintf("GRP_ERR", "Error GetFileJson: %v", err)
+		return ra, err
 	}
-	return ra
+	return ra, nil
 }
 
-func (g *Group) writeReplicaAddrs(grp string, ra *ReplicaAddrs) {
+func (g *Group) writeReplicaAddrs(grp string, ra *ReplicaAddrs) error {
 	err := atomic.PutFileJsonAtomic(g.FsLib, grpRaftAddrs(grp), 0777, ra)
 	if err != nil {
-		log.Fatalf("FATAL Error writeReplicaAddrs %v", err)
+		return err
 	}
-}
-
-func (g *Group) PublishConfig(grp string) {
-	bk := grpConfNxtBk(grp)
-	err := g.Remove(bk)
-	if err != nil {
-		db.DLPrintf("GRP_ERR", "Remove %v err %v\n", bk, err)
-	}
-	err = atomic.PutFileJsonAtomic(g.FsLib, bk, 0777, *g.conf)
-	if err != nil {
-		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetProgram(), bk, err)
-	}
-	err = g.confFclnt.OpenFenceFrom(bk)
-	if err != nil {
-		log.Fatalf("FATAL %v: MakeFenceFileFrom err %v\n", proc.GetProgram(), err)
-	}
-}
-
-// nothing to restore yet
-func (g *Group) restore(grp string) {
-}
-
-func (g *Group) recover(grp string) {
-	var err error
-	g.conf, err = readGroupConf(g.FsLib, grpConfNxt(grp))
-	if err == nil {
-		g.restore(grp)
-	} else {
-		// this must be the first recovery of the balancer;
-		// otherwise, there would be a either a config or
-		// backup config.
-		g.conf = &GrpConf{"kv-" + proc.GetPid().String(), []string{}}
-		g.PublishConfig(grp)
-	}
+	return nil
 }
 
 func (g *Group) op(opcode, kv string) *np.Err {

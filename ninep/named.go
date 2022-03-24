@@ -28,7 +28,7 @@ const (
 
 	// special devs/dirs exported by fssrv
 	STATSD   = ".statsd"
-	FENCEDIR = ".fence"
+	FENCEDIR = ".fences"
 
 	UXEXPORT = "/tmp/ulambda"
 )

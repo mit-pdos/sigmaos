@@ -63,9 +63,6 @@ type StatInfo struct {
 	Nget        Tcounter
 	Nset        Tcounter
 	Nput        Tcounter
-	Nmkfence    Tcounter
-	Nregfence   Tcounter
-	Nunfence    Tcounter
 
 	Paths map[string]int
 
@@ -119,12 +116,6 @@ func (si *StatInfo) Inc(fct np.Tfcall) {
 		si.Nset.Inc()
 	case np.TTputfile:
 		si.Nput.Inc()
-	case np.TTmkfence:
-		si.Nmkfence.Inc()
-	case np.TTregfence:
-		si.Nregfence.Inc()
-	case np.TTunfence:
-		si.Nunfence.Inc()
 	default:
 	}
 }

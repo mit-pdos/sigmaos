@@ -46,24 +46,6 @@ func (n *Tseqno) Next() Tseqno {
 	return Tseqno(next)
 }
 
-type Tfenceid struct {
-	Path     string // path at hosting server
-	ServerId uint64 // XXX public key of server?
-}
-
-type Tfence struct {
-	FenceId Tfenceid
-	Seqno   Tseqno
-}
-
-func (f *Tfence) String() string {
-	return fmt.Sprintf("idf %v seqno %v", f.FenceId, f.Seqno)
-}
-
-func MakeFence(idf Tfenceid, seq Tseqno) *Tfence {
-	return &Tfence{idf, seq}
-}
-
 type Tepoch uint64
 
 const NoEpoch Tepoch = ^Tepoch(0)
@@ -322,11 +304,6 @@ const (
 	TRgetfile
 	TTsetfile
 	TTputfile
-	TTmkfence
-	TRmkfence
-	TTregfence
-	TTunfence
-	TTrmfence
 	TTdetach
 	TRdetach
 	TTheartbeat
@@ -412,16 +389,6 @@ func (fct Tfcall) String() string {
 		return "Tsetfile"
 	case TTputfile:
 		return "Tputfile"
-	case TTmkfence:
-		return "Tmkfence"
-	case TRmkfence:
-		return "Rmkfence"
-	case TTregfence:
-		return "Tregfence"
-	case TTunfence:
-		return "Tunfence"
-	case TTrmfence:
-		return "Trmfence"
 	case TTdetach:
 		return "Tdetach"
 	case TRdetach:

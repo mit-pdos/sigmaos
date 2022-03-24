@@ -43,7 +43,6 @@ const (
 	TErrNotEmpty
 	TErrVersion
 	TErrStale
-	TErrUnknownFence
 	TErrExists
 	TErrClosed // for pipes and watch wait
 	TErrBadFcall
@@ -124,8 +123,6 @@ func (err Terror) String() string {
 		return "version mismatch"
 	case TErrStale:
 		return "stale fence"
-	case TErrUnknownFence:
-		return "unknown fence"
 	case TErrExists:
 		return "file exists"
 	case TErrClosed:

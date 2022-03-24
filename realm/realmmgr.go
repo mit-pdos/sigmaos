@@ -23,13 +23,6 @@ import (
 )
 
 const (
-	SCAN_INTERVAL_MS          = 50
-	RESIZE_INTERVAL_MS        = 100
-	GROW_CPU_UTIL_THRESHOLD   = 50
-	SHRINK_CPU_UTIL_THRESHOLD = 25
-)
-
-const (
 	free_machineds  = "free-machineds"
 	realm_create    = "realm_create"
 	realm_destroy   = "realm_destroy"
@@ -304,16 +297,16 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	}
 
 	// If we have resized too recently, return
-	if time.Now().Sub(realmCfg.LastResize).Milliseconds() < RESIZE_INTERVAL_MS {
+	if time.Now().Sub(realmCfg.LastResize).Milliseconds() < np.REALM_RESIZE_INTERVAL_MS {
 		return
 	}
 
 	//	log.Printf("Avg util pre: %v", realmCfg)
 	avgUtil, procdUtils := m.getRealmUtil(realmId, realmCfg)
 	//	log.Printf("Avg util post: %v, %v", realmCfg, avgUtil)
-	if avgUtil > GROW_CPU_UTIL_THRESHOLD {
+	if avgUtil > np.REALM_GROW_CPU_UTIL_THRESHOLD {
 		m.allocMachined(realmId)
-	} else if avgUtil < SHRINK_CPU_UTIL_THRESHOLD {
+	} else if avgUtil < np.REALM_SHRINK_CPU_UTIL_THRESHOLD {
 		// If there are replicas to spare
 		if realmCfg.NMachineds > nReplicas() {
 			// Find least utilized procd
@@ -365,7 +358,7 @@ func (m *RealmMgr) balanceMachineds() {
 
 		m.Unlock()
 
-		time.Sleep(SCAN_INTERVAL_MS * time.Millisecond)
+		time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)
 	}
 }
 

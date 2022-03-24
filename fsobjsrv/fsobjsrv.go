@@ -5,7 +5,6 @@ import (
 	// "time"
 
 	db "ulambda/debug"
-	"ulambda/fences"
 	"ulambda/fid"
 	"ulambda/fs"
 	"ulambda/fssrv"
@@ -26,7 +25,6 @@ type FsObjSrv struct {
 	wt    *watch.WatchTable // shared across sessions
 	ft    *fidTable
 	et    *ephemeralTable
-	rft   *fences.RecentTable // shared across sessions
 	stats *stats.Stats
 	sid   np.Tsession
 }
@@ -40,7 +38,6 @@ func MakeProtServer(s protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
 	fos.et = makeEphemeralTable()
 	fos.wt = srv.GetWatchTable()
 	fos.stats = srv.GetStats()
-	fos.rft = srv.GetRecentFences()
 	fos.sid = sid
 	db.DLPrintf("NPOBJ", "MakeFsObjSrv -> %v", fos)
 	return fos
@@ -258,9 +255,6 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return err.Rerror()
 	}
 	db.DLPrintf("FSOBJ", "%v: Create f %v\n", f.Ctx().Uname(), f)
-	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
-		return err.Rerror()
-	}
 	o := f.Obj()
 	names := np.Path{args.Name}
 	if !o.Perm().IsDir() {
@@ -275,7 +269,6 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 		return err.Rerror()
 	}
 	nf := fos.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral(), o1.Qid())
-	fos.rft.UpdateSeqno(nf.Path())
 	fos.ft.Add(args.Fid, nf)
 	rets.Qid = o1.Qid()
 	return nil
@@ -283,17 +276,6 @@ func (fos *FsObjSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 
 func (fos *FsObjSrv) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 	return nil
-}
-
-func (fos *FsObjSrv) lookupFence(fid np.Tfid) (*fid.Fid, *np.Err) {
-	f, err := fos.ft.Lookup(fid)
-	if err != nil {
-		return nil, err
-	}
-	if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path()); err != nil {
-		return nil, err
-	}
-	return f, nil
 }
 
 func (fos *FsObjSrv) Read(args np.Tread, rets *np.Rread) *np.Rerror {
@@ -323,7 +305,7 @@ func (fos *FsObjSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
 }
 
 func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	f, err := fos.lookupFence(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -335,7 +317,7 @@ func (fos *FsObjSrv) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 }
 
 func (fos *FsObjSrv) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
-	f, err := fos.lookupFence(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -380,7 +362,7 @@ func (fos *FsObjSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror
 // Remove for backwards compatability; SigmaOS uses RemoveFile (see
 // below) instead of Remove, but proxy will use it.
 func (fos *FsObjSrv) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	f, err := fos.lookupFence(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -408,7 +390,7 @@ func (fos *FsObjSrv) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 //
 
 func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	f, err := fos.lookupFence(args.Fid)
+	f, err := fos.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -416,10 +398,6 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	o := f.Obj()
 	if args.Stat.Name != "" {
 		// update Name atomically with rename
-
-		if err := fos.fssrv.Sess(fos.sid).CheckFences(f.Path().Dir()); err != nil {
-			return err.Rerror()
-		}
 
 		dst := f.Path().Dir().Copy().AppendPath(np.Split(args.Stat.Name))
 
@@ -432,7 +410,6 @@ func (fos *FsObjSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		if err != nil {
 			return err.Rerror()
 		}
-		fos.rft.UpdateSeqno(dst)
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
 		dws.WakeupWatchL() // trigger dir watch
@@ -476,13 +453,6 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 			return np.MkErr(np.TErrInval, newf.Path()).Rerror()
 		}
 
-		if err := fos.fssrv.Sess(fos.sid).CheckFences(oldf.Path().Dir()); err != nil {
-			return err.Rerror()
-		}
-		if err := fos.fssrv.Sess(fos.sid).CheckFences(newf.Path().Dir()); err != nil {
-			return err.Rerror()
-		}
-
 		var d1ws, d2ws, srcws, dstws *watch.Watch
 		if srcfirst := lockOrder(oo, no); srcfirst {
 			d1ws, srcws = fos.AcquireWatches(oldf.Path(), args.OldName)
@@ -498,7 +468,6 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 		if err != nil {
 			return err.Rerror()
 		}
-		fos.rft.UpdateSeqno(newf.Path().Append(args.NewName))
 		dstws.WakeupWatchL() // trigger create watch
 		srcws.WakeupWatchL() // trigger remove watch
 		d1ws.WakeupWatchL()  // trigger one dir watch
@@ -516,7 +485,7 @@ func (fos *FsObjSrv) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror 
 // args.Wnames.
 //
 
-func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames np.Path, resolve bool) (*fid.Fid, np.Path, fs.FsObj, *np.Err) {
+func (fos *FsObjSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.Fid, np.Path, fs.FsObj, *np.Err) {
 	f, err := fos.ft.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
@@ -529,14 +498,11 @@ func (fos *FsObjSrv) lookupWalkFence(fid np.Tfid, wnames np.Path, resolve bool) 
 			return nil, nil, nil, err
 		}
 	}
-	if err := fos.fssrv.Sess(fos.sid).CheckFences(fname); err != nil {
-		return nil, nil, nil, err
-	}
 	return f, fname, lo, nil
 }
 
-func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.File, *np.Err) {
-	f, fname, lo, err := fos.lookupWalkFence(fid, wnames, resolve)
+func (fos *FsObjSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.File, *np.Err) {
+	f, fname, lo, err := fos.lookupWalk(fid, wnames, resolve)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -557,7 +523,7 @@ func (fos *FsObjSrv) lookupWalkFenceOpen(fid np.Tfid, wnames np.Path, resolve bo
 }
 
 func (fos *FsObjSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
-	f, fname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames, args.Resolve)
+	f, fname, lo, err := fos.lookupWalk(args.Fid, args.Wnames, args.Resolve)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -569,7 +535,7 @@ func (fos *FsObjSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if args.Count > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	f, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, i, err := fos.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -588,7 +554,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	f, fname, i, err := fos.lookupWalkFenceOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, i, err := fos.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -613,7 +579,6 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 	rets.Count = n
-	fos.rft.UpdateSeqno(fname)
 	return nil
 }
 
@@ -622,7 +587,7 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
 	// walk to directory
-	f, dname, lo, err := fos.lookupWalkFence(args.Fid, args.Wnames[0:len(args.Wnames)-1], false)
+	f, dname, lo, err := fos.lookupWalk(args.Fid, args.Wnames[0:len(args.Wnames)-1], false)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -655,7 +620,6 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 	rets.Count = n
-	fos.rft.UpdateSeqno(fname)
 	return nil
 }
 

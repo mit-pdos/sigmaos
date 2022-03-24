@@ -315,22 +315,6 @@ func (npc *NpConn) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
-	return nil
-}
-
-func (npc *NpConn) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
-	return nil
-}
-
-func (npc *NpConn) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
-	return nil
-}
-
-func (npc *NpConn) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
-	return nil
-}
-
 func (npc *NpConn) Snapshot() []byte {
 	return nil
 }

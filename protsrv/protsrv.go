@@ -33,10 +33,6 @@ type Protsrv interface {
 	GetFile(np.Tgetfile, *np.Rgetfile) *np.Rerror
 	SetFile(np.Tsetfile, *np.Rwrite) *np.Rerror
 	PutFile(np.Tputfile, *np.Rwrite) *np.Rerror
-	MkFence(np.Tmkfence, *np.Rmkfence) *np.Rerror
-	RmFence(np.Trmfence, *np.Ropen) *np.Rerror
-	RegFence(np.Tregfence, *np.Ropen) *np.Rerror
-	UnFence(np.Tunfence, *np.Ropen) *np.Rerror
 	Detach()
 	Snapshot() []byte
 }

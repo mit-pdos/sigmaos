@@ -2,13 +2,11 @@ package pathclnt
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	db "ulambda/debug"
 	"ulambda/fidclnt"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/reader"
 	"ulambda/writer"
 )
@@ -393,81 +391,4 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 		}
 	}
 	return cnt, nil
-}
-
-func (pathc *PathClnt) MakeFence(path string, mode np.Tmode) (np.Tfence, error) {
-	db.DLPrintf("PATHCLNT", "MakeFence %v %v\n", path, mode)
-	p := np.Split(path)
-	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return np.Tfence{}, err
-	}
-	defer pathc.FidClnt.Clunk(fid)
-	_, err = pathc.FidClnt.Open(fid, mode)
-	if err != nil {
-		return np.Tfence{}, err
-	}
-	fence, err := pathc.FidClnt.MkFence(fid)
-	if err != nil {
-		log.Printf("%v: MkFence %v err %v\n", proc.GetProgram(), fid, err)
-		return np.Tfence{}, err
-	}
-	return fence, nil
-}
-
-func (pathc *PathClnt) RegisterFence(f np.Tfence, path string) error {
-	db.DLPrintf("PATHCLNT", "RegisterFence %v %v\n", f, path)
-	p := np.Split(path)
-	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
-	defer pathc.FidClnt.Clunk(fid)
-	if err := pathc.FidClnt.RegisterFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (pathc *PathClnt) DeregisterFence(f np.Tfence, path string) error {
-	db.DLPrintf("PATHCLNT", "DeregisterFence %v %v\n", f, path)
-	p := np.Split(path)
-	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
-	defer pathc.FidClnt.Clunk(fid)
-	if err := pathc.FidClnt.DeregisterFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (pathc *PathClnt) RmFence(f np.Tfence, path string) error {
-	db.DLPrintf("PATHCLNT", "RmFence %v %v\n", f, path)
-	p := np.Split(path)
-	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
-	defer pathc.FidClnt.Clunk(fid)
-	if err := pathc.FidClnt.RmFence(f, fid); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (pathc *PathClnt) PathServer(path string) (string, error) {
-	if _, err := pathc.Stat(path + "/"); err != nil {
-		db.DLPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", path, err)
-		return "", err
-	}
-	p := np.Split(path)
-	_, left, err := pathc.mnt.resolve(p)
-	if err != nil {
-		db.DLPrintf("PATHCLNT_ERR", "resolve  %v err %v\n", path, err)
-		return "", err
-	}
-	p = p[0 : len(p)-len(left)]
-	return p.String(), nil
 }

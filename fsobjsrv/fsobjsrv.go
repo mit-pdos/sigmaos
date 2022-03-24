@@ -10,7 +10,6 @@ import (
 	"ulambda/fs"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/protsrv"
 	"ulambda/stats"
 	"ulambda/watch"
@@ -657,68 +656,6 @@ func (fos *FsObjSrv) PutFile(args np.Tputfile, rets *np.Rwrite) *np.Rerror {
 	}
 	rets.Count = n
 	fos.rft.UpdateSeqno(fname)
-	return nil
-}
-
-//
-// Fences
-//
-
-func (fos *FsObjSrv) MkFence(args np.Tmkfence, rets *np.Rmkfence) *np.Rerror {
-	f, err := fos.ft.Lookup(args.Fid)
-	if err != nil {
-		return err.Rerror()
-	}
-	rets.Fence = fos.rft.MkFence(f.Path())
-	db.DLPrintf("FSOBJ", "%v: mkfence f %v -> %v\n", f.Ctx().Uname(), f.Path(), rets.Fence)
-	return nil
-}
-
-func (fos *FsObjSrv) RmFence(args np.Trmfence, rets *np.Ropen) *np.Rerror {
-	f, err := fos.ft.Lookup(args.Fid)
-	if err != nil {
-		return err.Rerror()
-	}
-	db.DLPrintf("FSOBJ", "%v: rmfence %v %v\n", f.Ctx().Uname(), f.Path(), args.Fence)
-	err = fos.rft.RmFence(args.Fence)
-	if err != nil {
-		return err.Rerror()
-	}
-	return nil
-}
-
-func (fos *FsObjSrv) RegFence(args np.Tregfence, rets *np.Ropen) *np.Rerror {
-	f, err := fos.ft.Lookup(args.Fid)
-	if err != nil {
-		return err.Rerror()
-	}
-	db.DLPrintf("FSOBJ", "%v: RegFence %v %v\n", f.Ctx().Uname(), f.Path(), args)
-	err = fos.rft.UpdateFence(args.Fence)
-	if err != nil {
-		log.Printf("%v: Fence %v %v err %v\n", proc.GetName(), fos.sid, args, err)
-		return err.Rerror()
-	}
-	// Fence was present in recent fences table and not stale, or
-	// was not present. Now mark that all ops on this sess must be
-	// checked against the most recently-seen fence in rft.
-	// Another sess may register a more recent fence in rft in the
-	// future, and then ops on this session should fail.  Fence
-	// may be called many times on sess, because client may
-	// register a more recent fence.
-	fos.fssrv.Sess(fos.sid).Fence(f.Path(), args.Fence)
-	return nil
-}
-
-func (fos *FsObjSrv) UnFence(args np.Tunfence, rets *np.Ropen) *np.Rerror {
-	f, err := fos.ft.Lookup(args.Fid)
-	if err != nil {
-		return err.Rerror()
-	}
-	db.DLPrintf("FSOBJ", "%v: Unfence %v %v\n", f.Ctx().Uname(), f.Path(), args)
-	err = fos.fssrv.Sess(fos.sid).Unfence(f.Path(), args.Fence.FenceId)
-	if err != nil {
-		return err.Rerror()
-	}
 	return nil
 }
 

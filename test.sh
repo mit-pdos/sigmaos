@@ -29,6 +29,7 @@ do
   go test $1 ulambda/stats
   go test $1 ulambda/fslib
   go test $1 ulambda/semclnt
+  go test $1 ulambda/electclnt
   
   #
   # test proxy

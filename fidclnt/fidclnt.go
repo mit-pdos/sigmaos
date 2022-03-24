@@ -75,9 +75,6 @@ func (fidc *FidClnt) Insert(fid np.Tfid, path *Channel) {
 }
 
 func (fidc *FidClnt) Clunk(fid np.Tfid) *np.Err {
-	//if fid == np.NoFid {
-	//	return nil
-	//}
 	err := fidc.fids.lookup(fid).pc.Clunk(fid)
 	if err != nil {
 		return err
@@ -181,6 +178,7 @@ func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQver
 	return reply.Data, nil
 }
 
+// Unfenced read
 func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.NoFence, v)
 	if err != nil {

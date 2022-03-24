@@ -397,6 +397,7 @@ func (pathc *PathClnt) PutFile(path string, mode np.Tmode, perm np.Tperm, data [
 	return cnt, nil
 }
 
+// Return path to the root directory for last server on path
 func (pathc *PathClnt) PathServer(path string) (string, error) {
 	if _, err := pathc.Stat(path + "/"); err != nil {
 		db.DLPrintf("PATHCLNT_ERR", "PathServer: stat %v err %v\n", path, err)

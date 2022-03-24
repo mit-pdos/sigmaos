@@ -9,7 +9,7 @@ import (
 
 //
 // Keep track of registered fences for a pathname so that caller of
-// pathclnt doesn't have to provide them explicitly.
+// pathclnt doesn't have to provide a fence as argument on each call.
 //
 
 type FenceTable struct {
@@ -23,7 +23,7 @@ func MakeFenceTable() *FenceTable {
 	return ft
 }
 
-// if already exist, just update
+// If already exist, just update
 func (ft *FenceTable) Insert(p string, f np.Tfence) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()

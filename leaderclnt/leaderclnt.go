@@ -8,6 +8,10 @@ import (
 	np "ulambda/ninep"
 )
 
+//
+// Library for becoming a leader for an epoch.
+//
+
 type LeaderClnt struct {
 	*fslib.FsLib
 	*epochclnt.EpochClnt
@@ -29,7 +33,7 @@ func (l *LeaderClnt) EpochPath() string {
 	return l.epochfn
 }
 
-// Become leader for an epoch and fence op for that epoch.  Another
+// Become leader for an epoch and fence ops for that epoch.  Another
 // proc may steal our leadership (e.g., after we are partioned) and
 // start a higher epoch.  Note epoch doesn't take effect until we
 // perform a fenced operation (e.g., a read/write).

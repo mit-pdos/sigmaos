@@ -6,6 +6,11 @@ import (
 	np "ulambda/ninep"
 )
 
+//
+// Library for ops on the epoch file (i.e., a regular file that
+// contains an epoch number).
+//
+
 type EpochClnt struct {
 	*fslib.FsLib
 	path string

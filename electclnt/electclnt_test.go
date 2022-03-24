@@ -25,11 +25,11 @@ func TestAcquireRelease(t *testing.T) {
 	leader2 := electclnt.MakeElectClnt(ts.FsLib, LEADERNAME, 0)
 
 	for i := 0; i < N; i++ {
-		err := leader1.AcquireLeadership()
+		err := leader1.AcquireLeadership([]byte{})
 		assert.Nil(ts.T, err, "AcquireLeadership")
 		err = leader1.ReleaseLeadership()
 		assert.Nil(ts.T, err, "ReleaseLeadership")
-		err = leader2.AcquireLeadership()
+		err = leader2.AcquireLeadership([]byte{})
 		assert.Nil(ts.T, err, "AcquireLeadership")
 		err = leader2.ReleaseLeadership()
 		assert.Nil(ts.T, err, "ReleaseLeadership")
@@ -55,7 +55,7 @@ func TestLeaderConcur(t *testing.T) {
 		go func(done *sync.WaitGroup, leader *electclnt.ElectClnt, N *int, cnt *int) {
 			defer done.Done()
 			for {
-				err := leader.AcquireLeadership()
+				err := leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeader")
 				if *cnt < *N {
 					*cnt += 1
@@ -91,7 +91,7 @@ func TestLeaderInTurn(t *testing.T) {
 		go func(i int) {
 			me := false
 			for !me {
-				err := leader.AcquireLeadership()
+				err := leader.AcquireLeadership([]byte{})
 				assert.Nil(ts.T, err, "AcquireLeadership")
 				if current == i {
 					me = true
@@ -125,7 +125,7 @@ func TestEphemeralLeader(t *testing.T) {
 
 	leader1 := electclnt.MakeElectClnt(fsl1, LEADERNAME, 0)
 
-	err := leader1.AcquireLeadership()
+	err := leader1.AcquireLeadership([]byte{})
 	assert.Nil(ts.T, err, "AcquireLeadership")
 
 	// Establish a connection

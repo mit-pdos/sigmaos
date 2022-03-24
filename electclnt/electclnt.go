@@ -6,6 +6,10 @@ import (
 	np "ulambda/ninep"
 )
 
+//
+// Library to acquire leadership
+//
+
 type ElectClnt struct {
 	*fslib.FsLib
 	path string // pathname for the leader-election file

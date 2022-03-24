@@ -75,7 +75,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.stats = stats.MkStatsDev(fssrv.root)
 	fssrv.rft = fences.MakeRecentTable()
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.rft, fssrv.tmt)
+	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.tmt)
 	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
@@ -111,10 +111,6 @@ func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
 
 func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
 	return fssrv.sct
-}
-
-func (fssrv *FsServer) GetRecentFences() *fences.RecentTable {
-	return fssrv.rft
 }
 
 func (fssrv *FsServer) Root() fs.Dir {

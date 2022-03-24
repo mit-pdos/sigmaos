@@ -94,7 +94,7 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	// Restore the recent fence table.
 	rft := fences.RestoreRecentTable(s.Rft)
 	// Restore the session table.
-	st := session.RestoreTable(mkps, rps, fssrv, rft, tmt, s.St)
+	st := session.RestoreTable(mkps, rps, fssrv, tmt, s.St)
 	// Restore the reply cache.
 	rc := repl.Restore(s.Rc)
 	// Merge with the current replyCache, because some ops may have arrived &

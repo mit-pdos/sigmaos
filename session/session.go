@@ -8,7 +8,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
-	"ulambda/fences"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/protsrv"
@@ -28,8 +27,6 @@ type Session struct {
 	threadmgr     *threadmgr.ThreadMgr
 	wg            sync.WaitGroup
 	protsrv       protsrv.Protsrv
-	rft           *fences.RecentTable
-	myFences      *fences.FenceTable
 	lastHeartbeat time.Time
 	Sid           np.Tsession
 	began         bool // true if the fssrv has already begun processing ops
@@ -38,14 +35,12 @@ type Session struct {
 	replies       chan *np.Fcall
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, rft *fences.RecentTable, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
-	sess.rft = rft
-	sess.myFences = fences.MakeFenceTable()
 	sess.replies = replies
 	sess.lastHeartbeat = time.Now()
 	return sess
@@ -57,28 +52,8 @@ func (sess *Session) GetRepliesC() chan *np.Fcall {
 	return sess.replies
 }
 
-func (sess *Session) Fence(pn []string, fence np.Tfence) {
-	sess.myFences.Insert(pn, fence)
-}
-
 func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 	return sess.threadmgr
-}
-
-func (sess *Session) Unfence(path []string, idf np.Tfenceid) *np.Err {
-	return sess.myFences.Del(path, idf)
-}
-
-func (sess *Session) CheckFences(path []string) *np.Err {
-	fences := sess.myFences.Fences(path)
-	for _, f := range fences {
-		err := sess.rft.IsRecent(f)
-		if err != nil {
-			db.DLPrintf("FENCE", "%v: fence %v err %v\n", proc.GetName(), path, err)
-			return err
-		}
-	}
-	return nil
 }
 
 func (sess *Session) IncThreads() {

@@ -6,7 +6,6 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	"ulambda/fences"
 	np "ulambda/ninep"
 	"ulambda/protsrv"
 	"ulambda/threadmgr"
@@ -15,19 +14,17 @@ import (
 type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
-	tm           *threadmgr.ThreadMgrTable
-	mkps         protsrv.MkProtServer
-	fssrv        protsrv.FsServer
-	sessions     map[np.Tsession]*Session
-	recentFences *fences.RecentTable
+	tm       *threadmgr.ThreadMgrTable
+	mkps     protsrv.MkProtServer
+	fssrv    protsrv.FsServer
+	sessions map[np.Tsession]*Session
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, rt *fences.RecentTable, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv
 	st.mkps = mkps
-	st.recentFences = rt
 	st.tm = tm
 	return st
 }
@@ -47,7 +44,7 @@ func (st *SessionTable) Alloc(sid np.Tsession, replies chan *np.Fcall) *Session 
 		sess.maybeSetRepliesC(replies)
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid, replies, st.recentFences, st.tm.AddThread())
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, replies, st.tm.AddThread())
 	st.sessions[sid] = sess
 	return sess
 }

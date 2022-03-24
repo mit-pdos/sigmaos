@@ -62,19 +62,19 @@ func String2Epoch(epoch string) (Tepoch, error) {
 	return Tepoch(e), nil
 }
 
-type Tfenceid1 struct {
+type Tfenceid struct {
 	Path     Tpath
 	ServerId uint64 // XXX public key of server?
 }
 
-type Tfence1 struct {
-	FenceId Tfenceid1
+type Tfence struct {
+	FenceId Tfenceid
 	Epoch   Tepoch
 }
 
-var NoFence = Tfence1{}
+var NoFence = Tfence{}
 
-func (f *Tfence1) String() string {
+func (f *Tfence) String() string {
 	return fmt.Sprintf("idf %v epoch %v", f.FenceId, f.Epoch)
 }
 
@@ -441,11 +441,11 @@ type Fcall struct {
 	Tag     Ttag
 	Session Tsession
 	Seqno   Tseqno
-	Fence   Tfence1
+	Fence   Tfence
 	Msg     Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence1) *Fcall {
+func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence) *Fcall {
 	if seqno == nil {
 		return &Fcall{msg.Type(), 0, sess, 0, f, msg}
 	} else {

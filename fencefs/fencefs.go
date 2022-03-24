@@ -82,7 +82,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 // XXX use read/write mutex and downgrade from Lock to Rlock, since epoch updates
 // are rare and we would like to run ops in parallel.
 //
-func CheckFence(root fs.Dir, new np.Tfence1) (*Fence, *np.Err) {
+func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	if new.FenceId.Path == 0 {
 		return nil, nil
 	}

@@ -72,8 +72,8 @@ func (ec *EpochClnt) ReadEpoch() (np.Tepoch, error) {
 	return e, nil
 }
 
-func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence1, error) {
-	f := np.Tfence1{}
+func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence, error) {
+	f := np.Tfence{}
 	fd, err := ec.Open(ec.path, np.OWRITE)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Open %v err %v", ec.path, err)
@@ -93,7 +93,7 @@ func (ec *EpochClnt) GetFence(epoch np.Tepoch) (np.Tfence1, error) {
 	qid, err := ec.Qid(fd)
 	if err != nil {
 		db.DLPrintf("EPOCHCLNT_ERR", "Qid %v err %v", fd, err)
-		return np.Tfence1{}, err
+		return np.Tfence{}, err
 	}
 	f.Epoch = epoch
 	f.FenceId.Path = qid.Path

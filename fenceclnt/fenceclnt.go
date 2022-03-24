@@ -41,7 +41,7 @@ func (fc *FenceClnt) FenceAtEpoch(epoch np.Tepoch, paths []string) error {
 	return fc.fencePaths(f, paths)
 }
 
-func (fc *FenceClnt) fencePaths(fence np.Tfence1, paths []string) error {
+func (fc *FenceClnt) fencePaths(fence np.Tfence, paths []string) error {
 	db.DLPrintf("FENCECLNT", "FencePaths fence %v %v", fence, paths)
 	for _, p := range paths {
 		err := fc.registerFence(p, fence)
@@ -55,7 +55,7 @@ func (fc *FenceClnt) fencePaths(fence np.Tfence1, paths []string) error {
 
 // Register fence with fidclnt so that ops on files in the tree rooted
 // at path will include fence.
-func (fc *FenceClnt) registerFence(path string, fence np.Tfence1) error {
+func (fc *FenceClnt) registerFence(path string, fence np.Tfence) error {
 	if err := fc.FenceDir(path, fence); err != nil {
 		return err
 	}

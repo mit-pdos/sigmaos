@@ -54,7 +54,7 @@ func (sc *SessClntMgr) allocConn(addrs []string) (*sessclnt, *np.Err) {
 	return sess, nil
 }
 
-func (sc *SessClntMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {
+func (sc *SessClntMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	db.DLPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
 	// Get or establish sessection
 	sess, err := sc.allocConn(addrs)

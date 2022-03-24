@@ -14,17 +14,17 @@ import (
 
 type FenceTable struct {
 	sync.Mutex
-	fencedDirs map[string]np.Tfence1
+	fencedDirs map[string]np.Tfence
 }
 
 func MakeFenceTable() *FenceTable {
 	ft := &FenceTable{}
-	ft.fencedDirs = make(map[string]np.Tfence1)
+	ft.fencedDirs = make(map[string]np.Tfence)
 	return ft
 }
 
 // if already exist, just update
-func (ft *FenceTable) Insert(p string, f np.Tfence1) *np.Err {
+func (ft *FenceTable) Insert(p string, f np.Tfence) *np.Err {
 	ft.Lock()
 	defer ft.Unlock()
 
@@ -35,7 +35,7 @@ func (ft *FenceTable) Insert(p string, f np.Tfence1) *np.Err {
 	return nil
 }
 
-func (ft *FenceTable) Lookup(path np.Path) np.Tfence1 {
+func (ft *FenceTable) Lookup(path np.Path) np.Tfence {
 	ft.Lock()
 	defer ft.Unlock()
 
@@ -46,6 +46,6 @@ func (ft *FenceTable) Lookup(path np.Path) np.Tfence1 {
 		}
 	}
 	db.DLPrintf("FIDCLNT", "Lookup fence %v: no fence\n", path)
-	return np.Tfence1{}
+	return np.Tfence{}
 
 }

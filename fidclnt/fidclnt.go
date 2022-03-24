@@ -34,7 +34,7 @@ func (fidc *FidClnt) Len() int {
 	return len(fidc.fids.fids)
 }
 
-func (fidc *FidClnt) FenceDir(path string, f np.Tfence1) *np.Err {
+func (fidc *FidClnt) FenceDir(path string, f np.Tfence) *np.Err {
 	return fidc.ft.Insert(path, f)
 }
 
@@ -182,7 +182,7 @@ func (fidc *FidClnt) ReadV(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQver
 }
 
 func (fidc *FidClnt) ReadVU(fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.Tfence1{}, v)
+	reply, err := fidc.fids.lookup(fid).pc.ReadVF(fid, off, cnt, np.NoFence, v)
 	if err != nil {
 		return nil, err
 	}

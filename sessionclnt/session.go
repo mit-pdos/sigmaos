@@ -45,7 +45,7 @@ func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*sessclnt, *np
 	return sess, nil
 }
 
-func (sess *sessclnt) rpc(req np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {
+func (sess *sessclnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	rpc, err := sess.send(req, f)
 	if err != nil {
 		db.DLPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", sess.sid, req.Type(), req, err, sess.addrs)
@@ -59,7 +59,7 @@ func (sess *sessclnt) rpc(req np.Tmsg, f np.Tfence1) (np.Tmsg, *np.Err) {
 	return rep, err1
 }
 
-func (sess *sessclnt) send(req np.Tmsg, f np.Tfence1) (*netclnt.Rpc, *np.Err) {
+func (sess *sessclnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {

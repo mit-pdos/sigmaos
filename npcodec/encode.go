@@ -164,19 +164,19 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Tfenceid1:
+		case np.Tfenceid:
 			if err := e.encode(v.Path, v.ServerId); err != nil {
 				return err
 			}
-		case *np.Tfenceid1:
+		case *np.Tfenceid:
 			if err := e.encode(*v); err != nil {
 				return err
 			}
-		case np.Tfence1:
+		case np.Tfence:
 			if err := e.encode(v.FenceId, v.Epoch); err != nil {
 				return err
 			}
-		case *np.Tfence1:
+		case *np.Tfence:
 			if err := e.encode(v.FenceId, v.Epoch); err != nil {
 				return err
 			}
@@ -341,11 +341,11 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
-		case *np.Tfenceid1:
+		case *np.Tfenceid:
 			if err := d.decode(&v.Path, &v.ServerId); err != nil {
 				return err
 			}
-		case *np.Tfence1:
+		case *np.Tfence:
 			if err := d.decode(&v.FenceId, &v.Epoch); err != nil {
 				return err
 			}

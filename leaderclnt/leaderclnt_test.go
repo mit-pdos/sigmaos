@@ -72,6 +72,9 @@ func TestOldLeaderFail(t *testing.T) {
 	_, err = ts.PutFile(dirux+"/g", 0777, np.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(t, err, "PutFile")
 
+	sts, err := l.GetFences(dirux)
+	assert.Equal(ts.T, 1, len(sts), "GetFences")
+
 	<-ch
 
 	fd, err := ts.Open(dirux+"/f", np.OREAD)
@@ -81,7 +84,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 	err = l.RemoveFence([]string{dirux})
 	assert.Nil(ts.T, err, "RemoveFences")
-	sts, err := l.GetFences(dirux)
+	sts, err = l.GetFences(dirux)
 	assert.Nil(ts.T, err, "GetFences")
 	assert.Equal(ts.T, 0, len(sts), "Fences")
 

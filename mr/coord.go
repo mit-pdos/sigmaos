@@ -242,7 +242,7 @@ func (c *Coord) recover(dir string) {
 
 func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 	ch := make(chan Ttask)
-	straggler := false
+	//	straggler := false
 	for n := c.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
 		c.processResult(dir, res)
@@ -257,10 +257,10 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 				n += c.startTasks(dir, ch, f)
 			}
 		}
-		if n == 2 && !straggler { // XXX percentage of total computation
-			straggler = true
-			c.stragglers(dir, ch, f)
-		}
+		//		if n == 2 && !straggler { // XXX percentage of total computation
+		//			straggler = true
+		//			c.stragglers(dir, ch, f)
+		//		}
 	}
 	return true
 }

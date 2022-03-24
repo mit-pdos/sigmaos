@@ -15,7 +15,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
-	"ulambda/session"
 	"ulambda/stats"
 	"ulambda/test"
 )
@@ -840,7 +839,7 @@ func TestPipeCrash1(t *testing.T) {
 	// simulate crash of w1
 	fsl1.Disconnect(pipe)
 
-	time.Sleep(2 * session.SESSTIMEOUTMS * time.Millisecond)
+	time.Sleep(2 * np.SESSTIMEOUTMS * time.Millisecond)
 
 	// start up second write to pipe
 	go func() {

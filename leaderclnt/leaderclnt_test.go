@@ -12,7 +12,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
-	"ulambda/session"
 	"ulambda/test"
 )
 
@@ -50,7 +49,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 		crash.Partition(fsl)
 
-		time.Sleep(2 * session.SESSTIMEOUTMS * time.Millisecond)
+		time.Sleep(2 * np.SESSTIMEOUTMS * time.Millisecond)
 
 		// fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail

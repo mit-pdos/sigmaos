@@ -7,11 +7,6 @@ import (
 	np "ulambda/ninep"
 )
 
-const (
-	HEARTBEATMS   = 50              // Hearbeat every 50 msec.
-	SESSTIMEOUTMS = HEARTBEATMS * 4 // Kill a session after 4 missed heartbeats.
-)
-
 type SessionMgr struct {
 	st      *SessionTable
 	process func(*np.Fcall, chan *np.Fcall)
@@ -46,7 +41,7 @@ func (sm *SessionMgr) getTimedOutSessions() []np.Tsession {
 func (sm *SessionMgr) run() {
 	for !sm.Done() {
 		// Sleep for a bit.
-		time.Sleep(SESSTIMEOUTMS * time.Millisecond)
+		time.Sleep(np.SESSTIMEOUTMS * time.Millisecond)
 		sids := sm.getTimedOutSessions()
 		for _, sid := range sids {
 			detach := np.MakeFcall(np.Tdetach{}, sid, nil, np.NoFence)

@@ -9,7 +9,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
-	"ulambda/session"
 )
 
 // A session from a client to a logical server (either one server or a
@@ -195,13 +194,13 @@ func (sess *sessclnt) close() {
 func (sess *sessclnt) needsHeartbeat() bool {
 	sess.Lock()
 	defer sess.Unlock()
-	return time.Now().Sub(sess.lastMsgTime) >= session.HEARTBEATMS
+	return time.Now().Sub(sess.lastMsgTime) >= np.SESSHEARTBEATMS
 }
 
 func (sess *sessclnt) heartbeats() {
 	for !sess.done() {
 		// Sleep a bit.
-		time.Sleep(session.HEARTBEATMS * time.Millisecond)
+		time.Sleep(np.SESSHEARTBEATMS * time.Millisecond)
 		if sess.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
 			db.DLPrintf("SESSCLNT", "%v Sending heartbeat to %v", sess.sid, sess.addrs)

@@ -118,7 +118,7 @@ func (sess *Session) timedOut() bool {
 		sess.lastHeartbeat = time.Now()
 		return false
 	}
-	return time.Since(sess.lastHeartbeat).Milliseconds() > SESSTIMEOUTMS
+	return time.Since(sess.lastHeartbeat).Milliseconds() > np.SESSTIMEOUTMS
 }
 
 func (sess *Session) SetRunning(r bool) {

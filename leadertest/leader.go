@@ -9,7 +9,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/session"
 	"ulambda/writer"
 )
 
@@ -71,7 +70,7 @@ func RunLeader(dir, last, child string) {
 		fsl.Disconnect(LEADERFN)
 
 		// wait a little before starting to write
-		time.Sleep(2 * session.SESSTIMEOUTMS * time.Millisecond)
+		time.Sleep(2 * np.SESSTIMEOUTMS * time.Millisecond)
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {

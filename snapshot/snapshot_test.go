@@ -38,7 +38,7 @@ func killMemfs(ts *test.Tstate, pid proc.Tpid) {
 }
 
 func takeSnapshot(ts *test.Tstate, pid proc.Tpid) []byte {
-	p := path.Join(np.MEMFS, pid.String(), "snapshot")
+	p := path.Join(np.MEMFS, pid.String(), np.SNAPDEV)
 	// Read its snapshot file.
 	b, err := ts.GetFile(p)
 	assert.Nil(ts.T, err, "Read Snapshot")
@@ -47,7 +47,7 @@ func takeSnapshot(ts *test.Tstate, pid proc.Tpid) []byte {
 }
 
 func restoreSnapshot(ts *test.Tstate, pid proc.Tpid, b []byte) {
-	p := path.Join(np.MEMFS, pid.String(), "snapshot")
+	p := path.Join(np.MEMFS, pid.String(), np.SNAPDEV)
 	// Restore needs to happen from a fresh fslib, otherwise state like fids may
 	// be missing during future walks.
 	fsl := fslib.MakeFsLib("snapshot-restore")

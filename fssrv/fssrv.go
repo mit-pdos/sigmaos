@@ -80,10 +80,19 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
+
+	// Build up overlay directory
+	fssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
+
+	dirover.Mount(np.STATSD, fssrv.stats)
+	dirover.Mount(np.FENCEDIR, fssrv.ffs)
+
 	if !fssrv.replicated {
 		fssrv.replSrv = nil
 	} else {
 		fssrv.snapDev = snapshot.MakeDev(fssrv, nil, fssrv.root)
+		dirover.Mount(np.SNAPDEV, fssrv.snapDev)
+
 		fssrv.rc = repl.MakeReplyCache()
 		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())
 		fssrv.replSrv.Start()
@@ -93,13 +102,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.ch = make(chan bool)
 	fssrv.fsl = fsl
 	fssrv.stats.MonitorCPUUtil()
-
-	// Build up overlay directory
-	fssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
-
-	dirover.Mount(np.STATSD, fssrv.stats)
-	dirover.Mount(np.FENCEDIR, fssrv.ffs)
-
 	return fssrv
 }
 

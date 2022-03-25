@@ -26,9 +26,7 @@ func makeChannel(pc *protclnt.ProtClnt, uname string, path np.Path, qs []np.Tqid
 }
 
 func (c *Channel) String() string {
-	str := fmt.Sprintf("{ Path %v ", c.path)
-	str += fmt.Sprintf("Qids %v }", c.qids)
-	return str
+	return fmt.Sprintf("{ Path %v Qids %v }", c.path, c.qids)
 }
 
 func (c *Channel) Uname() string {

@@ -51,7 +51,9 @@ func Crash(fsl *fslib.FsLib) {
 
 func Partition(fsl *fslib.FsLib) {
 	db.DLPrintf(db.ALWAYS, "crash.Partition %v\n", os.Args)
-	fsl.Disconnect("name")
+	if err := fsl.Disconnect("name"); err != nil {
+		db.DLPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, err)
+	}
 	time.Sleep(time.Duration(5) * time.Millisecond)
 }
 

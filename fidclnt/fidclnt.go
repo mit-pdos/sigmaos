@@ -110,8 +110,22 @@ func (fidc *FidClnt) Walk(fid np.Tfid, path []string) (np.Tfid, []string, *np.Er
 	return nfid, path[len(reply.Qids):], nil
 }
 
+// A defensive version of walk because fid is shared among several
+// threads (it comes out the mount table) and one thread may free the
+// fid while another thread is using it.
 func (fidc *FidClnt) Clone(fid np.Tfid) (np.Tfid, *np.Err) {
-	nfid, _, err := fidc.Walk(fid, nil)
+	nfid := fidc.allocFid()
+	channel := fidc.Lookup(fid)
+	if channel == nil {
+		return np.NoFid, np.MkErr(np.TErrUnreachable, "clone")
+	}
+	_, err := channel.pc.Walk(fid, nfid, np.Path{})
+	if err != nil {
+		fidc.freeFid(nfid)
+		return fid, err
+	}
+	channel = channel.Copy()
+	fidc.Insert(nfid, channel)
 	return nfid, err
 }
 

@@ -96,8 +96,8 @@ func (pathc *PathClnt) walkMount(path np.Path) (np.Tfid, np.Path, *np.Err) {
 		return np.NoFid, left, err
 	}
 	db.DLPrintf("WALK", "walkMount: resolve %v %v %v\n", fid, left, err)
-	// Clone starting point
-	fid1, _, err := pathc.FidClnt.Walk(fid, nil)
+	// Obtain a private copy of fid that this thread walks
+	fid1, err := pathc.FidClnt.Clone(fid)
 	if err != nil {
 		return np.NoFid, left, err
 	}

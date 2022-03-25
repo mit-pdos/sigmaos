@@ -44,7 +44,7 @@ func (c *Channel) Version() np.TQversion {
 func (c *Channel) Copy() *Channel {
 	qids := make([]np.Tqid, len(c.qids))
 	copy(qids, c.qids)
-	return makeChannel(c.pc, c.uname, c.path, qids)
+	return makeChannel(c.pc, c.uname, c.path.Copy(), qids)
 }
 
 func (c *Channel) add(name string, q np.Tqid) {

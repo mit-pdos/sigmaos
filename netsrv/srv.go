@@ -6,6 +6,7 @@ import (
 	"net"
 
 	db "ulambda/debug"
+	"ulambda/proc"
 	"ulambda/protsrv"
 )
 
@@ -49,7 +50,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			log.Fatal("Accept error: ", err)
+			log.Fatal("%v: Accept error: %v", proc.GetName(), err)
 		}
 
 		MakeSrvConn(srv, conn)

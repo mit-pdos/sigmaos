@@ -7,6 +7,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/rand"
 )
 
@@ -51,10 +52,9 @@ func Crash(fsl *fslib.FsLib) {
 
 func Partition(fsl *fslib.FsLib) {
 	db.DLPrintf(db.ALWAYS, "crash.Partition %v\n", os.Args)
-	if err := fsl.Disconnect("name"); err != nil {
-		db.DLPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, err)
+	if error := fsl.Disconnect(np.NAMED); error != nil {
+		db.DLPrintf(db.ALWAYS, "Disconnect %v name fails err %v\n", os.Args, error)
 	}
-	time.Sleep(time.Duration(5) * time.Millisecond)
 }
 
 func MaybePartition(fsl *fslib.FsLib) bool {

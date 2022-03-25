@@ -83,7 +83,7 @@ func (fos *FsObjSrv) Detach() {
 	fos.ft.ClunkOpen()
 	ephemeral := fos.et.Get()
 	for o, f := range ephemeral {
-		db.DLPrintf("FSOBJ0", "Detach %v\n", f.Path())
+		db.DLPrintf("FSOBJ", "Detach %v\n", f.Path())
 		fos.removeObj(f.Ctx(), o, f.Path())
 	}
 }
@@ -559,7 +559,7 @@ func (fos *FsObjSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 
-	db.DLPrintf("FSOBJ0", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
+	db.DLPrintf("FSOBJ", "SetFile f %v args %v %v\n", f.Ctx().Uname(), args, fname)
 
 	if args.Mode&np.OAPPEND == np.OAPPEND && args.Offset != np.NoOffset {
 		return np.MkErr(np.TErrInval, "offset should be np.NoOffset").Rerror()

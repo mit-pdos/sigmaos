@@ -85,7 +85,7 @@ func (c *SrvConn) reader() {
 	}
 }
 
-// XXX SHould we close with other error conditions?
+// XXX Should we close with other error conditions?
 func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies

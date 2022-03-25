@@ -11,6 +11,13 @@ import (
 	// "ulambda/npcodec"
 )
 
+//
+// Overlay a directory with another directory transparently.  Servers
+// can mount other file systems in the overlay directory (e.g.,
+// statsd, fsfence, etc.).  This allows a server to export information
+// to clients through sigmaP.
+//
+
 type DirOverlay struct {
 	fs.Dir
 	mu      sync.Mutex

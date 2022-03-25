@@ -13,9 +13,9 @@ import (
 )
 
 //
-// An in-memory fs for fences. A fence is named by pathname of fence
-// at server.  Used by fssrv to keep track of the most recent fence
-// seen.
+// An in-memory fs for fences, which is used by fssrv to keep track of
+// the most recent fence seen. A fence is named by pathname of its
+// epoch file.
 //
 
 type Fence struct {
@@ -24,7 +24,6 @@ type Fence struct {
 	epoch np.Tepoch
 }
 
-// XXX how to get a Tpath for inode?
 func makeFence(i fs.Inode) *Fence {
 	e := &Fence{}
 	e.Inode = i
@@ -56,7 +55,7 @@ func MakeRoot(ctx fs.CtxI) fs.Dir {
 	return dir
 }
 
-// XXX check that clnt is allowed to update fence, ctx
+// XXX check that clnt is allowed to update fence, perhaps using ctx
 func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 	i, err := root.Create(ctx.MkCtx("", 0, nil), name, 0777, np.OWRITE)
 	if err == nil {
@@ -73,14 +72,15 @@ func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 	return f, err
 }
 
-// If new is NoFence, return. If no fence exists for this fence id,
-// store it as most recent fence.  If the fence exists but newer,
-// update the fence.  If the fence is stale, return error.  If fence
-// id exists, return the locked epoch for the fencid so that no one
+// If new is NoFence, return. If no fence exists for new's fence id,
+// store it as the most recent fence.  If the fence exists but new is
+// newer, update the fence.  If new is stale, return error.  If fence
+// id exists, return the locked fence for the fencid so that no one
 // can update the fence until this fenced operation has completed.
 //
-// XXX use read/write mutex and downgrade from Lock to Rlock, since epoch updates
-// are rare and we would like to run ops in parallel.
+// XXX use read/write mutex and downgrade from Lock to Rlock, since
+// epoch updates are less common than regular ops and we would like to
+// run ops in parallel.
 //
 func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	if new.FenceId.Path == 0 {
@@ -90,7 +90,7 @@ func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 	if f == nil {
 		return nil, err
 	}
-	if err == nil { // create?
+	if err == nil {
 		db.DLPrintf("FENCES", "New fence %v\n", new)
 		f.epoch = new.Epoch
 		return f, nil

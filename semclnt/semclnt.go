@@ -7,7 +7,7 @@ import (
 )
 
 //
-// Binary semaphore
+// Library for binary semaphore, implemented using a file and a watch.
 //
 
 type SemClnt struct {

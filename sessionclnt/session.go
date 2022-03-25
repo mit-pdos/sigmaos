@@ -168,6 +168,12 @@ func (sess *sessclnt) done() bool {
 	return sess.closed
 }
 
+func (sess *sessclnt) sessClose() {
+	sess.Lock()
+	defer sess.Unlock()
+	sess.close()
+}
+
 // Caller holds lock
 func (sess *sessclnt) close() {
 	db.DLPrintf("SESSCLNT", "%v Close conn to %v\n", sess.sid, sess.addrs)

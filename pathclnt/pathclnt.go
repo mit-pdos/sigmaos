@@ -65,7 +65,9 @@ func (pathc *PathClnt) Disconnect(path string) error {
 	if err != nil {
 		return err
 	}
-	pathc.FidClnt.Lookup(fid).Disconnect()
+	if err := pathc.FidClnt.Lookup(fid).Disconnect(); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -147,7 +147,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 			return nil
 		}
 		if np.IsErrUnavailable(err) || np.IsErrRetry(err) {
-			log.Printf("balancer op wait err %v\n", err)
+			// log.Printf("balancer op wait err %v\n", err)
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			log.Printf("balancer op err %v\n", err)

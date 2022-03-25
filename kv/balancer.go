@@ -1,7 +1,7 @@
 package kv
 
 //
-// A balancer, which acts as a coordinator for the sharded KV service.
+// A balancer, which acts as a coordinator for a sharded KV service.
 // A KV service deployment has several balancers: one primary and
 // several backups.
 //
@@ -122,6 +122,12 @@ func RunBalancer(crashChild string, auto string) {
 
 	db.DLPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
 
+	// first epoch is used to create a functional system
+	// (e.g., creating shards), so don't crash then.
+	if epoch > 1 {
+		crash.Crasher(bl.FsLib)
+	}
+
 	select {
 	case <-ch:
 		// done
@@ -131,13 +137,6 @@ func RunBalancer(crashChild string, auto string) {
 		bl.clearIsBusy()
 
 		go bl.monitorMyself(ch)
-
-		// first epoch is used to create a functional system
-		// (e.g., creating shards), so don't crash then.
-		if epoch > 1 {
-			crash.Crasher(bl.FsLib)
-		}
-
 		if auto == "auto" {
 			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
 			bl.ch = make(chan bool)

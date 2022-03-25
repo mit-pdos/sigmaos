@@ -102,7 +102,7 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 		} else { // restart member i
 			if gm.members[st.member].bin == "bin/user/kvd" {
 				// For now, we don't restart kvds
-				db.DLPrintf(db.ALWAYS, "=== %v: kvd failed %v\n", gm.members[st.member].pid)
+				db.DLPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[st.member].pid)
 				continue
 			}
 			start := make(chan bool)

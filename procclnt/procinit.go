@@ -7,6 +7,7 @@ import (
 
 	"runtime/debug"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -29,9 +30,8 @@ func mountDir(fsl *fslib.FsLib, dpath string, mountPoint string) {
 	addr, splitPath := splitMountServerAddrPath(fsl, tree)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
-			log.Printf("%v: Error mounting %v/%v as %v err %v\n", proc.GetName(), addr, splitPath, mountPoint, err)
+			db.DLPrintf("PROCCLNT_ERR", "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
-			debug.PrintStack()
 			log.Fatalf("%v: FATAL error mounting %v/%v as %v err %v\n", proc.GetName(), addr, splitPath, mountPoint, err)
 		}
 	}
@@ -72,7 +72,6 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 
 	tree := strings.TrimPrefix(proc.GetProcDir(), "name/")
 	if err := fsl.MountTree(namedAddr, tree, proc.PROCDIR); err != nil {
-		debug.PrintStack()
 		s, _ := fsl.SprintfDir("pids")
 		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n%v", proc.GetName(), tree, proc.PROCDIR, err, s)
 	}
@@ -83,7 +82,6 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
 	// Make a pid directory for this initial proc
 	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
-		debug.PrintStack()
 		log.Fatalf("%v: FATAL error mounting %v as %v err %v\n", proc.GetName(), proc.KPIDS, proc.KPIDS, err)
 		return err
 	}

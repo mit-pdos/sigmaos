@@ -48,8 +48,6 @@ const (
 	KVBALANCERCTL = KVDIR + "balancer/ctl"
 )
 
-var FENCEDDIRS = []string{KVDIR}
-
 type Balancer struct {
 	sync.Mutex
 	*fslib.FsLib
@@ -115,7 +113,7 @@ func RunBalancer(crashChild string, auto string) {
 		ch <- true
 	}()
 
-	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), FENCEDDIRS)
+	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), []string{})
 	if err != nil {
 		log.Fatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}
@@ -128,6 +126,8 @@ func RunBalancer(crashChild string, auto string) {
 		crash.Crasher(bl.FsLib)
 	}
 
+	go bl.monitorMyself()
+
 	select {
 	case <-ch:
 		// done
@@ -136,7 +136,6 @@ func RunBalancer(crashChild string, auto string) {
 
 		bl.clearIsBusy()
 
-		go bl.monitorMyself(ch)
 		if auto == "auto" {
 			bl.mo = MakeMonitor(bl.FsLib, bl.ProcClnt)
 			bl.ch = make(chan bool)
@@ -146,6 +145,8 @@ func RunBalancer(crashChild string, auto string) {
 		// run until we are told to stop
 		<-ch
 	}
+
+	log.Printf("terminate\n")
 
 	mfs.Done()
 
@@ -205,16 +206,14 @@ func (bl *Balancer) Done() {
 	bl.ch <- true
 }
 
-// check if i am still primary; if not, terminate myself
-func (bl *Balancer) monitorMyself(ch chan bool) {
+// Monitor if i am connected; if not, terminate myself
+func (bl *Balancer) monitorMyself() {
 	for true {
-		time.Sleep(time.Duration(100) * time.Millisecond)
+		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
 			if np.IsErrUnreachable(err) {
-				// we are disconnected
-				// log.Printf("%v: monitorMyself err %v\n", proc.GetName(), err)
-				ch <- true
+				log.Fatalf("%v: FATAL disconnected\n", proc.GetName())
 			}
 		}
 	}
@@ -387,7 +386,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 		moves = bl.computeMoves(nextShards)
 	}
 
-	epoch, err := bl.lc.EnterNextEpoch(FENCEDDIRS)
+	epoch, err := bl.lc.EnterNextEpoch([]string{})
 	if err != nil {
 		db.DLPrintf("KVBAL_ERR", "EnterNextEpoch fail %v\n", err)
 		var nperr *np.Err

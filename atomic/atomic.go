@@ -7,6 +7,7 @@ import (
 
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/rand"
 )
 
@@ -14,12 +15,12 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 	tmpName := fname + rand.String(16)
 	_, err := fsl.PutFile(tmpName, perm, np.OWRITE, data)
 	if err != nil {
-		log.Fatalf("FATAL Error in MakeFileAtomic %v: %v", tmpName, err)
+		log.Fatalf("%v: FATAL MakeFileAtomic %v: %v", proc.GetName(), tmpName, err)
 		return err
 	}
 	err = fsl.Rename(tmpName, fname)
 	if err != nil {
-		log.Fatalf("FATAL Error in MakeFileAtomic rename %v -> %v: %v", tmpName, fname, err)
+		log.Fatalf("%v: FATAL MakeFileAtomic rename %v -> %v: err %v", proc.GetName(), tmpName, fname, err)
 		return err
 	}
 	return nil
@@ -28,7 +29,7 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 func PutFileJsonAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
-		return fmt.Errorf("FATAL Marshal error %v", err)
+		return fmt.Errorf("PutFileJsonAtomic marshal err %v", err)
 	}
 	return PutFileAtomic(fsl, fname, perm, data)
 }

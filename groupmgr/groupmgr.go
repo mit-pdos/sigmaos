@@ -103,6 +103,25 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 	return gm
 }
 
+func (gm *GroupMgr) restart(i int, done chan procret) {
+	if gm.members[i].bin == "bin/user/kvd" {
+		// For now, we don't restart kvds
+		db.DLPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
+		return
+	}
+	for true {
+		start := make(chan error)
+		go gm.members[i].run(i, start, done)
+		err := <-start
+		if err != nil {
+			db.DLPrintf(db.ALWAYS, "failed to start %v: %v; try again later\n", i, err)
+			time.Sleep(time.Duration(100) * time.Millisecond)
+			continue
+		}
+		break
+	}
+}
+
 func (gm *GroupMgr) manager(done chan procret, n int) {
 	for n > 0 {
 		st := <-done
@@ -112,18 +131,7 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 			gm.stop = true
 			n--
 		} else { // restart member i
-			if gm.members[st.member].bin == "bin/user/kvd" {
-				// For now, we don't restart kvds
-				db.DLPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[st.member].pid)
-				continue
-			}
-			start := make(chan error)
-			go gm.members[st.member].run(st.member, start, done)
-			err := <-start
-			if err != nil {
-				log.Printf("manager: failed to start %v err %v\n", st.member, err)
-				time.Sleep(time.Duration(200) * time.Millisecond)
-			}
+			gm.restart(st.member, done)
 		}
 	}
 	gm.ch <- true

@@ -455,23 +455,21 @@ func TestWatchDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestLock1(t *testing.T) {
+func TestCreateExcl1(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	ch := make(chan int)
-	locks := path + "locks/"
-	ts.MkDir(locks, 0777)
 
-	// Lock the file
-	_, err := ts.PutFile(locks+"test-lock", 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
+	fn := path + "exclusive"
+	_, err := ts.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OCEXEC, []byte{})
 	assert.Equal(t, nil, err)
 	fsl := fslib.MakeFsLibAddr("fslibtest0", fslib.Named())
 	go func() {
-		_, err := fsl.PutFile(locks+"test-lock", 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-		assert.Nil(t, err, "MakeFile")
+		_, err := fsl.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		assert.Nil(t, err, "Putfile")
 		ch <- 0
 	}()
 	time.Sleep(time.Second * 2)
-	err = ts.Remove(locks + "test-lock")
+	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove")
 	go func() {
 		time.Sleep(2 * time.Second)
@@ -483,17 +481,17 @@ func TestLock1(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestLockN(t *testing.T) {
+func TestCreateExclN(t *testing.T) {
 	const N = 20
 
 	ts := test.MakeTstatePath(t, path)
 	ch := make(chan int)
-	lock := path + "lock"
+	fn := path + "exclusive"
 	acquired := false
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fsl := fslib.MakeFsLibAddr("fslibtest"+strconv.Itoa(i), fslib.Named())
-			_, err := fsl.PutFile(lock, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+			_, err := fsl.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, false, acquired)
 			acquired = true
@@ -502,42 +500,42 @@ func TestLockN(t *testing.T) {
 	}
 	for i := 0; i < N; i++ {
 		<-ch
-		//		log.Printf("%d acquired lock\n", i)
 		acquired = false
-		err := ts.Remove(lock)
+		err := ts.Remove(fn)
 		assert.Equal(t, nil, err)
 	}
 	ts.Shutdown()
 }
 
-func TestLockAfterConnClose(t *testing.T) {
+func TestCreateExclAfterDisconnect(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 
-	lPath := path + "lock-conn-close-test"
+	fn := path + "create-conn-close-test"
 
 	fsl1 := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
 
-	_, err := ts.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-	assert.Nil(t, err, "Make lock 1")
+	_, err := ts.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	assert.Nil(t, err, "Create 1")
 
 	go func() {
 		// Should wait
-		_, err := fsl1.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-		assert.NotNil(t, err, "Make lock 2")
+		_, err := fsl1.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+		assert.NotNil(t, err, "Create 2")
 	}()
 
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	fsl1.Disconnect(lPath)
+	err = fsl1.Disconnect(path)
+	assert.Nil(t, err, "Disconnect")
 
-	// Remove the lock file
-	ts.Remove(lPath)
+	// Remove the ephemeral file
+	ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
-	// Try to lock again (should succeed)
-	_, err = ts.PutFile(lPath, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
-	assert.Nil(t, err, "Make lock 3")
+	// Try to create again (should succeed)
+	_, err = ts.PutFile(fn, 0777|np.DMTMP, np.OWRITE|np.OWATCH, []byte{})
+	assert.Nil(t, err, "Create 3")
 
 	ts.Shutdown()
 }

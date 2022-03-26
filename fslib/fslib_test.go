@@ -64,7 +64,8 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	ts.Disconnect(path)
+	err = ts.Disconnect(path)
+	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
 	log.Printf("disconnected\n")
 
@@ -810,7 +811,9 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		fsl.Disconnect(pipe)
+		err = fsl.Disconnect(path)
+		assert.Nil(ts.T, err, "Disconnect")
+
 	}()
 	fd, err := ts.Open(pipe, np.OREAD)
 	assert.Nil(ts.T, err, "Open")
@@ -835,7 +838,8 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	fsl1.Disconnect(pipe)
+	err = fsl1.Disconnect(path)
+	assert.Nil(ts.T, err, "Disconnect")
 
 	time.Sleep(2 * np.SESSTIMEOUTMS * time.Millisecond)
 

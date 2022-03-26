@@ -67,7 +67,9 @@ func RunLeader(dir, last, child string) {
 		// allow others to write for a while
 		time.Sleep(500 * time.Millisecond)
 	} else {
-		fsl.Disconnect(LEADERFN)
+		if err := fsl.Disconnect(np.NAMED); err != nil {
+			log.Fatalf("%v: FATAL disconnect failed %v\n", proc.GetName(), err)
+		}
 
 		// wait a little before starting to write
 		time.Sleep(2 * np.SESSTIMEOUTMS * time.Millisecond)

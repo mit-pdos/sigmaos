@@ -77,5 +77,5 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 			return fid1, nil
 		}
 	}
-	return np.NoFid, nil
+	return np.NoFid, np.MkErr(np.TErrNotfound, q)
 }

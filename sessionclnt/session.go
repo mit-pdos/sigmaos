@@ -109,6 +109,9 @@ func (sess *sessclnt) connect() *np.Err {
 func (sess *sessclnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 	sess.Lock()
 	defer sess.Unlock()
+	if sess.closed {
+		return np.MkErr(np.TErrUnreachable, "sess closed")
+	}
 	// Check if another thread already reconnected to the replicas.
 	if oldNc == sess.nc {
 		return sess.tryReconnectL()
@@ -118,6 +121,7 @@ func (sess *sessclnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 
 // Reconnect & resend requests
 func (sess *sessclnt) tryReconnectL() *np.Err {
+	db.DLPrintf("SESSCLNT", "%v SessionConn reconnecting to %v\n", sess.sid, sess.addrs)
 	err := sess.connect()
 	if err != nil {
 		db.DLPrintf("SESSCLNT", "%v Error %v SessionConn reconnecting to %v\n", sess.sid, err, sess.addrs)
@@ -162,7 +166,7 @@ func (sess *sessclnt) resendOutstanding() {
 	sess.Signal()
 }
 
-func (sess *sessclnt) done() bool {
+func (sess *sessclnt) isClosed() bool {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.closed
@@ -178,6 +182,9 @@ func (sess *sessclnt) sessClose() {
 func (sess *sessclnt) close() {
 	db.DLPrintf("SESSCLNT", "%v Close conn to %v\n", sess.sid, sess.addrs)
 	sess.nc.Close()
+	if sess.closed {
+		return
+	}
 	sess.closed = true
 	// Kill pending requests.
 	for _, o := range sess.queue {
@@ -204,7 +211,7 @@ func (sess *sessclnt) needsHeartbeat() bool {
 }
 
 func (sess *sessclnt) heartbeats() {
-	for !sess.done() {
+	for !sess.isClosed() {
 		// Sleep a bit.
 		time.Sleep(np.SESSHEARTBEATMS * time.Millisecond)
 		if sess.needsHeartbeat() {
@@ -216,7 +223,7 @@ func (sess *sessclnt) heartbeats() {
 }
 
 func (sess *sessclnt) reader() {
-	for !sess.done() {
+	for !sess.isClosed() {
 		// Get the current netclnt connection (which may change if the server
 		// becomes unavailable and the writer thread connects to a new replica).
 		sess.Lock()
@@ -231,9 +238,7 @@ func (sess *sessclnt) reader() {
 			err := sess.tryReconnect(nc)
 			if err != nil {
 				// If we can't reconnect to any of the replicas, close the session.
-				sess.Lock()
-				sess.close()
-				sess.Unlock()
+				sess.sessClose()
 				return
 			}
 			// If the connection broke, establish a new netclnt.

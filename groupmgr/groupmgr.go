@@ -1,7 +1,9 @@
 package groupmgr
 
 import (
+	"log"
 	"strconv"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -43,20 +45,27 @@ func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []s
 	return &member{fsl, pclnt, "", bin, args, crash, repl}
 }
 
-func (m *member) spawn() {
+func (m *member) spawn() error {
 	p := proc.MakeProc(m.bin, m.args)
 	p.AppendEnv("SIGMACRASH", strconv.Itoa(m.crash))
 	p.AppendEnv("SIGMAREPL", strconv.FormatBool(m.repl))
-	m.Spawn(p)
-	m.WaitStart(p.Pid)
+	err := m.Spawn(p)
+	if err != nil {
+		return err
+	}
+	err = m.WaitStart(p.Pid)
 	m.pid = p.Pid
+	return err
 }
 
-func (m *member) run(i int, start chan bool, done chan procret) {
+func (m *member) run(i int, start chan error, done chan procret) {
 	// log.Printf("spawn %d member %v\n", i, m.bin)
-	m.spawn()
+	if err := m.spawn(); err != nil {
+		start <- err
+		return
+	}
 	// log.Printf("member %d forked %v\n", i, m.pid)
-	start <- true
+	start <- nil
 	status, err := m.WaitExit(m.pid)
 	// log.Printf("member %v exited %v err %v\n", m.pid, status, err)
 	done <- procret{i, err, status}
@@ -83,9 +92,12 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 	}
 	done := make(chan procret)
 	for i, m := range gm.members {
-		start := make(chan bool)
+		start := make(chan error)
 		go m.run(i, start, done)
-		<-start
+		err := <-start
+		if err != nil {
+			log.Fatalf("Start: couldn't start member %v err %v\n", i, err)
+		}
 	}
 	go gm.manager(done, N)
 	return gm
@@ -105,9 +117,13 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 				db.DLPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[st.member].pid)
 				continue
 			}
-			start := make(chan bool)
+			start := make(chan error)
 			go gm.members[st.member].run(st.member, start, done)
-			<-start
+			err := <-start
+			if err != nil {
+				log.Printf("manager: failed to start %v err %v\n", st.member, err)
+				time.Sleep(time.Duration(200) * time.Millisecond)
+			}
 		}
 	}
 	gm.ch <- true

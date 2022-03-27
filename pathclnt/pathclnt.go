@@ -60,11 +60,11 @@ func (pathc *PathClnt) Shutdown() error {
 
 // Simulate network partition to server that exports path
 func (pathc *PathClnt) Disconnect(path string) error {
-	p := np.Split(path)
-	fid, _, err := pathc.mnt.resolve(p)
+	fid, err := pathc.mnt.umount(np.Split(path))
 	if err != nil {
 		return err
 	}
+	defer pathc.FidClnt.Free(fid)
 	if err := pathc.FidClnt.Lookup(fid).Disconnect(); err != nil {
 		return err
 	}
@@ -189,12 +189,18 @@ func (pathc *PathClnt) renameat(old, new string) *np.Err {
 	return pathc.FidClnt.Renameat(fid, o, fid1, n)
 }
 
+func (pathc *PathClnt) umountFree(path []string) *np.Err {
+	if fid, err := pathc.mnt.umount(path); err != nil {
+		return err
+	} else {
+		pathc.FidClnt.Free(fid)
+		return nil
+	}
+}
+
 func (pathc *PathClnt) Umount(path []string) error {
 	db.DLPrintf("PATHCLNT", "Umount %v\n", path)
-	if err := pathc.mnt.umount(pathc.FidClnt, path); err != nil {
-		return err
-	}
-	return nil
+	return pathc.umountFree(path)
 }
 
 func (pathc *PathClnt) Remove(name string) error {

@@ -52,7 +52,7 @@ func (c *SrvConn) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			db.DLPrintf("NETSRV_ERR", "%v Peer %v closed/erred %v\n", c.sessid, c.Src(), err)
+			db.DLPrintf("NETSRV", "%v Peer %v closed/erred %v\n", c.sessid, c.Src(), err)
 
 			// If the sessid hasn't been set, we haven't received any valid ops yet,
 			// so the session has not been added to the session table. If this is the

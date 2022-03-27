@@ -59,15 +59,15 @@ func (m *member) spawn() error {
 }
 
 func (m *member) run(i int, start chan error, done chan procret) {
-	// log.Printf("spawn %d member %v\n", i, m.bin)
+	db.DLPrintf("GROUPMGR", "spawn %d member %v\n", i, m.bin)
 	if err := m.spawn(); err != nil {
 		start <- err
 		return
 	}
-	// log.Printf("member %d forked %v\n", i, m.pid)
+	db.DLPrintf("GROUPMGR", "member %d started %v\n", i, m.pid)
 	start <- nil
 	status, err := m.WaitExit(m.pid)
-	// log.Printf("member %v exited %v err %v\n", m.pid, status, err)
+	db.DLPrintf("GROUPMGR", "member %v exited %v err %v\n", m.pid, status, err)
 	done <- procret{i, err, status}
 }
 

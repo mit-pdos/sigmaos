@@ -42,7 +42,6 @@ type FsServer struct {
 	mkps       protsrv.MkProtServer
 	rps        protsrv.RestoreProtServer
 	stats      *stats.Stats
-	snapDev    *snapshot.Dev
 	st         *session.SessionTable
 	sm         *session.SessionMgr
 	sct        *sesscond.SessCondTable
@@ -87,8 +86,8 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	if !fssrv.replicated {
 		fssrv.replSrv = nil
 	} else {
-		fssrv.snapDev = snapshot.MakeDev(fssrv, nil, fssrv.root)
-		dirover.Mount(np.SNAPDEV, fssrv.snapDev)
+		snapDev := snapshot.MakeDev(fssrv, nil, fssrv.root)
+		dirover.Mount(np.SNAPDEV, snapDev)
 
 		fssrv.rc = repl.MakeReplyCache()
 		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())

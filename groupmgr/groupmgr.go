@@ -114,9 +114,11 @@ func (gm *GroupMgr) restart(i int, done chan procret) {
 	go gm.members[i].run(i, start, done)
 	err := <-start
 	if err != nil {
-		db.DLPrintf(db.ALWAYS, "failed to start %v: %v; try again later\n", i, err)
-		time.Sleep(time.Duration(100) * time.Millisecond)
-		done <- procret{i, err, nil}
+		go func() {
+			db.DLPrintf(db.ALWAYS, "failed to start %v: %v; try again later\n", i, err)
+			time.Sleep(time.Duration(10) * time.Millisecond)
+			done <- procret{i, err, nil}
+		}()
 	}
 }
 

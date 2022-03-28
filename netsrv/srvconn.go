@@ -53,16 +53,7 @@ func (c *SrvConn) reader() {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
 			db.DLPrintf("NETSRV", "%v Peer %v closed/erred %v\n", c.sessid, c.Src(), err)
-
-			// If the sessid hasn't been set, we haven't received any valid ops yet,
-			// so the session has not been added to the session table. If this is the
-			// case, don't close the session (there is nothing to close).
-			if c.sessid != 0 {
-				c.protsrv.CloseSession(c.sessid)
-			}
-
-			// close the reply channel, so that conn writer() terminates
-			db.DLPrintf("NETSRV", "%v Reader: close replies for %v\n", c.sessid, c.Src())
+			// session mgr will timeout this session eventually
 			return
 		}
 		var fcall *np.Fcall

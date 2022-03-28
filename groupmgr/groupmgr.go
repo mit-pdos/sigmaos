@@ -1,8 +1,10 @@
 package groupmgr
 
 import (
+	"fmt"
 	"log"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	db "ulambda/debug"
@@ -20,7 +22,7 @@ import (
 //
 
 type GroupMgr struct {
-	stop    bool
+	done    int32
 	members []*member
 	ch      chan bool
 }
@@ -41,6 +43,10 @@ type procret struct {
 	status *proc.Status
 }
 
+func (pr procret) String() string {
+	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
+}
+
 func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, repl bool) *member {
 	return &member{fsl, pclnt, "", bin, args, crash, repl}
 }
@@ -59,15 +65,15 @@ func (m *member) spawn() error {
 }
 
 func (m *member) run(i int, start chan error, done chan procret) {
-	// log.Printf("spawn %d member %v\n", i, m.bin)
+	db.DLPrintf("GROUPMGR", "spawn %d member %v\n", i, m.bin)
 	if err := m.spawn(); err != nil {
 		start <- err
 		return
 	}
-	// log.Printf("member %d forked %v\n", i, m.pid)
 	start <- nil
+	db.DLPrintf("GROUPMGR", "%v: member %d started %v\n", m.bin, i, m.pid)
 	status, err := m.WaitExit(m.pid)
-	// log.Printf("member %v exited %v err %v\n", m.pid, status, err)
+	db.DLPrintf("GROUPMGR", "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
 	done <- procret{i, err, status}
 }
 
@@ -96,7 +102,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		go m.run(i, start, done)
 		err := <-start
 		if err != nil {
-			log.Fatalf("Start: couldn't start member %v err %v\n", i, err)
+			log.Fatalf("%v: FATAL Start %v\n", proc.GetName(), err)
 		}
 	}
 	go gm.manager(done, N)
@@ -109,31 +115,35 @@ func (gm *GroupMgr) restart(i int, done chan procret) {
 		db.DLPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		return
 	}
-	for true {
-		start := make(chan error)
-		go gm.members[i].run(i, start, done)
-		err := <-start
-		if err != nil {
+	start := make(chan error)
+	go gm.members[i].run(i, start, done)
+	err := <-start
+	if err != nil {
+		go func() {
 			db.DLPrintf(db.ALWAYS, "failed to start %v: %v; try again later\n", i, err)
-			time.Sleep(time.Duration(100) * time.Millisecond)
-			continue
-		}
-		break
+			time.Sleep(time.Duration(10) * time.Millisecond)
+			done <- procret{i, err, nil}
+		}()
 	}
 }
 
 func (gm *GroupMgr) manager(done chan procret, n int) {
 	for n > 0 {
 		st := <-done
-		if gm.stop {
+		if atomic.LoadInt32(&gm.done) == 1 {
+			db.DLPrintf("GROUPMGR", "%v: done %v n %v\n", gm.members[st.member].bin, st.member, n)
 			n--
 		} else if st.err == nil && st.status.IsStatusOK() { // done?
-			gm.stop = true
+			db.DLPrintf("GROUPMGR", "%v: stop %v\n", gm.members[st.member].bin, st.member)
+			atomic.StoreInt32(&gm.done, 1)
+			// gm.stop = true
 			n--
 		} else { // restart member i
+			db.DLPrintf("GROUPMGR", "%v restart %v\n", gm.members[st.member].bin, st)
 			gm.restart(st.member, done)
 		}
 	}
+	db.DLPrintf("GROUPMGR", "%v exit\n", gm.members[0].bin)
 	gm.ch <- true
 }
 
@@ -143,13 +153,14 @@ func (gm *GroupMgr) Wait() {
 
 func (gm *GroupMgr) Stop() error {
 	// members may not run in order of members, and blocked
-	// waiting for Wlease, while the primary keeps running,
-	// because it is later in the list.
-	gm.stop = true
+	// waiting for becoming leader, while the primary keeps
+	// running, because it is later in the list. So, start
+	// separate go routine to evict each member.
+	atomic.StoreInt32(&gm.done, 1)
 	var err error
 	for _, c := range gm.members {
 		go func(m *member) {
-			// log.Printf("evict %v\n", m.pid)
+			db.DLPrintf("GROUPMGR", "evict %v\n", m.pid)
 			r := m.Evict(m.pid)
 			if r != nil {
 				err = r
@@ -158,6 +169,6 @@ func (gm *GroupMgr) Stop() error {
 	}
 	// log.Printf("wait for members\n")
 	<-gm.ch
-	db.DLPrintf("GROUPMGR", "done members\n")
+	db.DLPrintf("GROUPMGR", "done members %v\n", gm)
 	return err
 }

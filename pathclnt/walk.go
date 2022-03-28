@@ -12,18 +12,18 @@ const (
 )
 
 // walkPathUmount walks path and, on success, returns the fd walked
-// to; it is the caller's responsibility to clunk the fd.  If the a
-// server is unreachable, it umounts the path it walked to, and starts
-// over again, perhaps switching to another replica.  (Note:
+// to; it is the caller's responsibility to clunk the fd.  If a server
+// is unreachable, it umounts the path it walked to, and starts over
+// again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) walkPathUmount(path np.Path, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for {
-		fid, left, err := pathc.walkPath(path, resolve, w)
-		db.DLPrintf("WALK", "walkPath %v -> (%v, %v, %v)\n", path, fid, left, err)
+		fid, path1, left, err := pathc.walkPath(path, resolve, w)
+		db.DLPrintf("WALK", "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		if err != nil && np.IsErrUnreachable(err) {
-			done := len(path) - len(left)
-			db.DLPrintf("WALK", "walkPathUmount: umount %v\n", path[0:done])
-			if e := pathc.mnt.umount(pathc.FidClnt, path[0:done]); e != nil {
+			done := len(path1) - len(left)
+			db.DLPrintf("WALK", "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
+			if e := pathc.umountFree(path1[0:done]); e != nil {
 				return np.NoFid, e
 			}
 			// try again
@@ -50,26 +50,26 @@ func (pathc *PathClnt) walkPathUmount(path np.Path, resolve bool, w Watch) (np.T
 // mount table.  Each of the walk*() returns an fid, which on error is
 // the same as the argument; and the caller is responsible for
 // clunking it.
-func (pathc *PathClnt) walkPath(path np.Path, resolve bool, w Watch) (np.Tfid, np.Path, *np.Err) {
+func (pathc *PathClnt) walkPath(path np.Path, resolve bool, w Watch) (np.Tfid, np.Path, np.Path, *np.Err) {
 	for i := 0; i < MAXSYMLINK; i++ {
 		fid, left, err := pathc.walkMount(path)
 		if err != nil {
-			return np.NoFid, left, err
+			return np.NoFid, path, left, err
 		}
 		fid, left, err = pathc.walkOne(fid, left, w)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, left, err
+			return np.NoFid, path, left, err
 		}
 		fid, left, err = pathc.walkUnion(fid, left)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, left, err
+			return np.NoFid, path, left, err
 		}
 		retry, left, err := pathc.walkSymlink(fid, path, left, resolve)
 		if err != nil {
 			pathc.FidClnt.Clunk(fid)
-			return np.NoFid, left, err
+			return np.NoFid, path, left, err
 		}
 		db.DLPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
 		if retry {
@@ -80,11 +80,11 @@ func (pathc *PathClnt) walkPath(path np.Path, resolve bool, w Watch) (np.Tfid, n
 		}
 		if len(left) == 0 {
 			// Note: fid can be the one returned by walkMount
-			return fid, nil, nil
+			return fid, path, nil, nil
 		}
-		return np.NoFid, left, np.MkErr(np.TErrNotfound, left)
+		return np.NoFid, path, left, np.MkErr(np.TErrNotfound, left)
 	}
-	return np.NoFid, path, np.MkErr(np.TErrUnreachable, "too many symlink cycles")
+	return np.NoFid, path, path, np.MkErr(np.TErrUnreachable, "too many symlink cycles")
 }
 
 // Walk the mount table, and clone the found fid; the caller is

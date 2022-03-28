@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"ulambda/fslib"
 	"ulambda/proc"
@@ -20,5 +21,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Started: error %v\n", err)
 	}
+	time.Sleep(500 * time.Millisecond)
 	os.Exit(2)
 }

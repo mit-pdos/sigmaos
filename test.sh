@@ -38,7 +38,7 @@ do
   ./proxy/test.sh
   
   #
-  # tests kernel (without realms)
+  # tests kernel (with 1 "fake" realm)
   #
   
   go test $1 ulambda/procclnt

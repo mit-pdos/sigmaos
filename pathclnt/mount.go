@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fidclnt"
 	np "ulambda/ninep"
 )
 
@@ -103,7 +102,7 @@ func (mnt *MntTable) resolve(path np.Path) (np.Tfid, np.Path, *np.Err) {
 }
 
 // XXX maybe also umount mount points that have path as a prefix
-func (mnt *MntTable) umount(fidc *fidclnt.FidClnt, path np.Path) *np.Err {
+func (mnt *MntTable) umount(path np.Path) (np.Tfid, *np.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
 
@@ -112,11 +111,10 @@ func (mnt *MntTable) umount(fidc *fidclnt.FidClnt, path np.Path) *np.Err {
 		if ok {
 			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
 			db.DLPrintf("MOUNT", "umount %v %v\n", path, p.fid)
-			fidc.Free(p.fid)
-			return nil
+			return p.fid, nil
 		}
 	}
-	return np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
+	return np.NoFid, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
 func (mnt *MntTable) close() error {

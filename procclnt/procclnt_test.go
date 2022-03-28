@@ -229,7 +229,7 @@ func TestWaitNonexistentProc(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestCrashProc(t *testing.T) {
+func TestCrashProcOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	a := proc.MakeProc("bin/user/crash", []string{})
@@ -522,7 +522,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
 
 	err = ts.KillOne(np.PROCD)
 	assert.Nil(t, err, "kill procd")
@@ -533,7 +533,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2")
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
 
 	sm.Stop()
 

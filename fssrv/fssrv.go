@@ -312,24 +312,3 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	// make sure to insert the reply into the reply cache.
 	fssrv.sendReply(fc, reply, sess)
 }
-
-func (fssrv *FsServer) CloseSession(sid np.Tsession) {
-	db.DLPrintf("FSSRV", "Close session %v", sid)
-	sess, ok := fssrv.st.Lookup(sid)
-	if !ok {
-		// client start TCP connection, but then failed before sending
-		// any messages.
-		return
-	}
-
-	// Wait until nthread == 0. Detach is guaranteed to have been processed since
-	// it was enqueued by the reader function before calling CloseSession
-	// (incrementing nthread). We need to process Detaches (and sess cond closes)
-	// through the session thread manager since they generate wakeups and need to
-	// be properly serialized (especially for replication).
-	sess.WaitThreads()
-
-	// Stop sess thread.
-	fssrv.st.KillSessThread(sid)
-	db.DLPrintf("FSSRV", "Close session done %v", sid)
-}

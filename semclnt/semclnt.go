@@ -32,6 +32,7 @@ func (c *SemClnt) Init(perm np.Tperm) error {
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
 func (c *SemClnt) Down() error {
+	db.DLPrintf("SEMCLNT", "Down %v\n", c.path)
 	signal := make(chan error)
 	for {
 		err := c.SetRemoveWatch(c.path, func(p string, err1 error) {
@@ -68,5 +69,6 @@ func (c *SemClnt) Down() error {
 // Up a semaphore variable (i.e., remove semaphore to indicate up has
 // happened).
 func (c *SemClnt) Up() error {
+	db.DLPrintf("SEMCLNT", "Down %v\n", c.path)
 	return c.Remove(c.path)
 }

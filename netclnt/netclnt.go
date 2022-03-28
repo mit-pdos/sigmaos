@@ -74,12 +74,12 @@ func (nc *NetClnt) Close() {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
-	db.DLPrintf("NETCLNT", "Close conn to %v\n", nc.Dst())
 	wasClosed := nc.closed
 	nc.closed = true
 
 	// Close the requests channel asynchronously so we don't deadlock
 	if !wasClosed {
+		db.DLPrintf("NETCLNT", "Close conn to %v\n", nc.Dst())
 		nc.conn.Close()
 	}
 }

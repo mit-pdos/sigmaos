@@ -66,7 +66,7 @@ func (sc *SessClntMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *
 }
 
 func (sc *SessClntMgr) Disconnect(addrs []string) *np.Err {
-	db.DLPrintf("SESSCLNT0", "Disconnect %v %v\n", sc.sid, addrs)
+	db.DLPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]

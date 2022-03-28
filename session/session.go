@@ -75,8 +75,9 @@ func (sess *Session) Close() {
 		log.Fatalf("FATAL tried to close a closed session: %v", sess.Sid)
 	}
 	sess.closed = true
-	// Close the replies channel so the srvconn can exit.
+	// Close the replies channel so that writer in srvconn exits
 	if sess.replies != nil {
+		db.DLPrintf("SESSION", "%v close replies\n", sess.Sid)
 		close(sess.replies)
 		sess.replies = nil
 	}

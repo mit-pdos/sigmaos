@@ -1,6 +1,7 @@
 package groupmgr
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"sync/atomic"
@@ -40,6 +41,10 @@ type procret struct {
 	member int
 	err    error
 	status *proc.Status
+}
+
+func (pr procret) String() string {
+	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
 func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, repl bool) *member {

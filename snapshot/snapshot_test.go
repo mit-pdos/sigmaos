@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
+	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/semclnt"
@@ -99,6 +100,25 @@ func TestMakeSnapshotSimple(t *testing.T) {
 	// Spawn a dummy-replicated memfs
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
+
+	takeSnapshot(ts, pid)
+
+	ts.Shutdown()
+}
+
+func TestMakeSnapshotSimpleWithFence(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	err := ts.MkDir(np.MEMFS, 0777)
+	assert.Nil(t, err, "Mkdir")
+
+	// Spawn a dummy-replicated memfs
+	pid := proc.Tpid("replica-a")
+	spawnMemfs(ts, pid)
+
+	lc := leaderclnt.MakeLeaderClnt(ts.FsLib, path.Join(np.MEMFS, pid.String(), "leader"), 0777)
+	_, err = lc.AcquireFencedEpoch(nil, []string{path.Join(np.MEMFS, pid.String())})
+	assert.Nil(t, err, "acquire")
 
 	takeSnapshot(ts, pid)
 

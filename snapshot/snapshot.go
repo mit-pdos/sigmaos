@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"ulambda/dir"
+	"ulambda/fencefs"
 	"ulambda/fs"
 	"ulambda/inode"
 	"ulambda/memfs"
@@ -64,6 +65,8 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 		stype = Tfile
 	case *memfs.Symlink:
 		stype = Tsymlink
+	case *fencefs.Fence:
+		stype = Tfence
 	case *stats.Stats:
 		stype = Tstats
 	case *Dev:

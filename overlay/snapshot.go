@@ -21,14 +21,12 @@ func makeDirOverlaySnapshot(fn fs.SnapshotF, d *DirOverlay) []byte {
 	ds.Root = fn(d.Dir.(*dir.DirImpl))
 	ds.Entries = make(map[string]np.Tpath)
 	for e, obj := range d.entries {
-		switch e {
-		case np.STATSD:
-			ds.Entries[e] = fn(obj)
-		case np.FENCEDIR:
-		case np.SNAPDEV:
-		default:
+		if e != np.STATSD && e != np.FENCEDIR && e != np.SNAPDEV {
 			log.Fatalf("Unknown mount type in overlay dir: %v", e)
 		}
+		log.Printf("Overlay dir snapshot %v", e)
+		// Snapshot underlying entries
+		ds.Entries[e] = fn(obj)
 	}
 	return encode(ds)
 }

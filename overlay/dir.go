@@ -140,7 +140,7 @@ func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *np.Err {
 // XXX only relevant if dir.Dir is *DirImpl. And, it already has been
 // snapshotted.
 func (dir *DirOverlay) Snapshot(fn fs.SnapshotF) []byte {
-	return nil
+	return makeDirOverlaySnapshot(fn, dir)
 }
 
 func Restore(d *DirOverlay, fn fs.RestoreF, b []byte) fs.Inode {

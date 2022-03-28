@@ -6,6 +6,7 @@ const (
 	Tdir Tsnapshot = iota
 	Tfile
 	Tsymlink
+	Tfence
 	Tstats
 	Tsnapshotdev
 )
@@ -18,6 +19,8 @@ func (s Tsnapshot) String() string {
 		return "Tsnapshot.Tfile"
 	case Tsymlink:
 		return "Tsnapshot.Tsymlink"
+	case Tfence:
+		return "Tsnapshot.Tfence"
 	case Tstats:
 		return "Tsnapshot.Tstats"
 	case Tsnapshotdev:

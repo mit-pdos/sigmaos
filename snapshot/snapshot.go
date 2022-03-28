@@ -10,6 +10,7 @@ import (
 	"ulambda/inode"
 	"ulambda/memfs"
 	np "ulambda/ninep"
+	"ulambda/overlay"
 	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/session"
@@ -20,10 +21,9 @@ import (
 type Snapshot struct {
 	fssrv        protsrv.FsServer
 	Imap         map[np.Tpath]ObjSnapshot
-	Root         np.Tpath
+	DirOverlay   []byte
 	St           []byte
 	Tmt          []byte
-	Rft          []byte
 	Rc           []byte
 	NextInum     uint64
 	restoreCache map[np.Tpath]fs.Inode
@@ -33,14 +33,13 @@ func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
 	s := &Snapshot{}
 	s.fssrv = fssrv
 	s.Imap = make(map[np.Tpath]ObjSnapshot)
-	s.Root = np.Tpath(0)
 	s.restoreCache = make(map[np.Tpath]fs.Inode)
 	return s
 }
 
-func (s *Snapshot) Snapshot(root fs.Inode, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rc *repl.ReplyCache) []byte {
+func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
-	s.Root = s.snapshotFsTree(root)
+	s.DirOverlay = root.Snapshot(s.snapshotFsTree) //s.snapshotFsTree(root)
 	// Snapshot the session table.
 	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
@@ -85,7 +84,8 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	// Restore the next inum
 	inode.NextInum = s.NextInum
 	// Restore the fs tree
-	root := s.RestoreFsTree(s.Root)
+	// TODO: restore dir overlay
+	//	root := s.RestoreFsTree(s.Root)
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the session table.
@@ -96,7 +96,8 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	// begun executing since this snapshot was taken, and they expect some state
 	// to be in the reply cache.
 	rc.Merge(oldRc)
-	return root, st, tmt, rc
+	//	return root, st, tmt, rc
+	return nil, st, tmt, rc
 }
 
 func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
@@ -120,7 +121,8 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 	case Tstats:
 		i = stats.Restore(s.RestoreFsTree, snap.Data)
 	case Tsnapshotdev:
-		i = MakeDev(s.fssrv, nil, s.RestoreFsTree(s.Root).(fs.Dir))
+		// TODO: handle snapshot dev and stats dev correctly
+		// i = MakeDev(s.fssrv, nil, s.RestoreFsTree(s.Root).(fs.Dir))
 	default:
 		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
 		i = nil

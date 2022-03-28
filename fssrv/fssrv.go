@@ -81,7 +81,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
 	dirover.Mount(np.STATSD, fssrv.stats)
-	dirover.Mount(np.FENCEDIR, fssrv.ffs)
+	dirover.Mount(np.FENCEDIR, fssrv.ffs.(*dir.DirImpl))
 
 	if !fssrv.replicated {
 		fssrv.replSrv = nil
@@ -119,7 +119,7 @@ func (fssrv *FsServer) Snapshot() []byte {
 		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
 	fssrv.snap = snapshot.MakeSnapshot(fssrv)
-	return fssrv.snap.Snapshot(fssrv.root.(*dir.DirImpl), fssrv.st, fssrv.tmt, fssrv.rc)
+	return fssrv.snap.Snapshot(fssrv.root.(*overlay.DirOverlay), fssrv.st, fssrv.tmt, fssrv.rc)
 }
 
 func (fssrv *FsServer) Restore(b []byte) {

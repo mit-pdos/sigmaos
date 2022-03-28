@@ -21,17 +21,17 @@ import (
 type DirOverlay struct {
 	fs.Dir
 	mu      sync.Mutex
-	entries map[string]fs.FsObj
+	entries map[string]fs.Inode
 }
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
 	d.Dir = dir
-	d.entries = make(map[string]fs.FsObj)
+	d.entries = make(map[string]fs.Inode)
 	return d
 }
 
-func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
+func (dir *DirOverlay) Mount(name string, i fs.Inode) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

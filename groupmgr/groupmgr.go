@@ -121,7 +121,7 @@ func (gm *GroupMgr) restart(i int, done chan procret) {
 	err := <-start
 	if err != nil {
 		go func() {
-			db.DLPrintf(db.ALWAYS, "failed to start %v: %v; try again later\n", i, err)
+			db.DLPrintf("GROUPMGR_ERR", "failed to start %v: %v; try again\n", i, err)
 			time.Sleep(time.Duration(10) * time.Millisecond)
 			done <- procret{i, err, nil}
 		}()
@@ -137,7 +137,6 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 		} else if st.err == nil && st.status.IsStatusOK() { // done?
 			db.DLPrintf("GROUPMGR", "%v: stop %v\n", gm.members[st.member].bin, st.member)
 			atomic.StoreInt32(&gm.done, 1)
-			// gm.stop = true
 			n--
 		} else { // restart member i
 			db.DLPrintf("GROUPMGR", "%v restart %v\n", gm.members[st.member].bin, st)

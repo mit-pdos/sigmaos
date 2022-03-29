@@ -59,7 +59,7 @@ func (sc *SessClntMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *
 	// Get or establish sessection
 	sess, err := sc.allocConn(addrs)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "%v Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
+		db.DLPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
 		return nil, err
 	}
 	return sess.rpc(req, f)

@@ -128,7 +128,7 @@ func (mv *Mover) Move(src, dst string) {
 	if err != nil {
 		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
 	}
-	db.DLPrintf("KVMV0", "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
+	db.DLPrintf("KVMV", "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
 	if err != nil {
 		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 	} else {

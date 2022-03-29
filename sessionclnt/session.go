@@ -153,6 +153,7 @@ func (sess *sessclnt) resendOutstanding() {
 	outstanding := make([]*netclnt.Rpc, len(sess.outstanding))
 	idx := 0
 	for _, o := range sess.outstanding {
+		db.DLPrintf("SESSCLNT", "%v Resend outstanding requests %v\n", sess.sid, o)
 		outstanding[idx] = o
 		idx++
 	}
@@ -180,7 +181,7 @@ func (sess *sessclnt) sessClose() {
 
 // Caller holds lock
 func (sess *sessclnt) close() {
-	db.DLPrintf("SESSCLNT", "%v Close conn to %v\n", sess.sid, sess.addrs)
+	db.DLPrintf("SESSCLNT", "%v Close sess to %v\n", sess.sid, sess.addrs)
 	sess.nc.Close()
 	if sess.closed {
 		return
@@ -238,6 +239,8 @@ func (sess *sessclnt) reader() {
 			err := sess.tryReconnect(nc)
 			if err != nil {
 				// If we can't reconnect to any of the replicas, close the session.
+				// XXX fail out standing RPCs
+				db.DLPrintf("SESSCLNT", "Reader: sessClose %v %v", sess.sid, len(sess.outstanding))
 				sess.sessClose()
 				return
 			}
@@ -267,6 +270,8 @@ func (sess *sessclnt) writer() {
 			db.DLPrintf("SESSCLNT", "%v Error %v writer RPC to %v\n", sess.sid, err, sess.nc.Dst())
 			err := sess.tryReconnectL()
 			if err != nil {
+				// XXX fail out standing req
+				db.DLPrintf("SESSCLNT", "Writer: sess close() %v", sess.sid)
 				sess.close()
 				return
 			}

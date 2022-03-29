@@ -57,8 +57,10 @@ func TestSessClose(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
+		_, err := fsl.Stat(DIRGRP0)
+		assert.Nil(t, err)
 		sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
-		err := sem.Down()
+		err = sem.Down()
 		ch <- err
 	}()
 

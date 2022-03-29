@@ -313,3 +313,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	// make sure to insert the reply into the reply cache.
 	fssrv.sendReply(fc, reply, sess)
 }
+
+func (fssrv *FsServer) PartitionClient() {
+	db.DLPrintf("FSSRV0", "Partition client")
+}

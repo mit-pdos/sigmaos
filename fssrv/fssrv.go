@@ -315,5 +315,5 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 }
 
 func (fssrv *FsServer) PartitionClient() {
-	db.DLPrintf("FSSRV0", "Partition client")
+	fssrv.sm.TimeoutSession()
 }

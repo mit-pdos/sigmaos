@@ -21,6 +21,23 @@ func MakeSessionMgr(st *SessionTable, pfn func(*np.Fcall, chan *np.Fcall)) *Sess
 	return sm
 }
 
+func (sm *SessionMgr) FindASession() *Session {
+	sm.st.Lock()
+	defer sm.st.Unlock()
+	for _, sess := range sm.st.sessions {
+		return sess
+	}
+	return nil
+}
+
+// Force one session to timeout
+func (sm *SessionMgr) TimeoutSession() {
+	sess := sm.FindASession()
+	if sess != nil {
+		sess.timeout()
+	}
+}
+
 // Find timed-out sessions.
 func (sm *SessionMgr) getTimedOutSessions() []np.Tsession {
 	// Lock the session table.
@@ -30,7 +47,7 @@ func (sm *SessionMgr) getTimedOutSessions() []np.Tsession {
 	for sid, sess := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if sess.timedOut() && !sess.IsClosed() {
-			db.DLPrintf("SESSION", "Sess %v timed out", sid)
+			db.DLPrintf("SESSION_ERR", "Sess %v timed out", sid)
 			sids = append(sids, sid)
 		}
 	}

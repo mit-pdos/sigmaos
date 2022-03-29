@@ -33,6 +33,7 @@ type Session struct {
 	running       bool // true if the session is currently running an operation.
 	closed        bool // true if the session has been closed.
 	replies       chan *np.Fcall
+	timedout      bool // for debugging
 }
 
 func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, t *threadmgr.ThreadMgr) *Session {
@@ -109,6 +110,14 @@ func (sess *Session) heartbeat(msg np.Tmsg) {
 	sess.lastHeartbeat = time.Now()
 }
 
+// Indirectly timeout a session
+func (sess *Session) timeout() {
+	sess.Lock()
+	defer sess.Unlock()
+	db.DLPrintf("SESSION0", "timeout %v", sess.Sid)
+	sess.timedout = true
+}
+
 func (sess *Session) timedOut() bool {
 	sess.Lock()
 	defer sess.Unlock()
@@ -119,7 +128,7 @@ func (sess *Session) timedOut() bool {
 		sess.lastHeartbeat = time.Now()
 		return false
 	}
-	return time.Since(sess.lastHeartbeat).Milliseconds() > np.SESSTIMEOUTMS
+	return sess.timedout || time.Since(sess.lastHeartbeat).Milliseconds() > np.SESSTIMEOUTMS
 }
 
 func (sess *Session) SetRunning(r bool) {

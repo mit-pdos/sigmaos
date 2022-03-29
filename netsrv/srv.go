@@ -30,13 +30,13 @@ func makeNetServer(fs protsrv.FsServer, address string, wireCompat bool) *NetSer
 		wireCompat,
 	}
 	// Create and start the main server listener
-	db.DLPrintf("9PCHAN", "listen %v  myaddr %v\n", address, srv.addr)
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal("Listen error:", err)
 	}
 	srv.addr = l.Addr().String()
+	db.DLPrintf("9PCHAN", "listen %v myaddr %v\n", address, srv.addr)
 	go srv.runsrv(l)
 	return srv
 }

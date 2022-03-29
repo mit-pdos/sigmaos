@@ -55,13 +55,14 @@ func (m *member) spawn() error {
 	p := proc.MakeProc(m.bin, m.args)
 	p.AppendEnv("SIGMACRASH", strconv.Itoa(m.crash))
 	p.AppendEnv("SIGMAREPL", strconv.FormatBool(m.repl))
-	err := m.Spawn(p)
-	if err != nil {
+	if err := m.Spawn(p); err != nil {
 		return err
 	}
-	err = m.WaitStart(p.Pid)
+	if err := m.WaitStart(p.Pid); err != nil {
+		return err
+	}
 	m.pid = p.Pid
-	return err
+	return nil
 }
 
 func (m *member) run(i int, start chan error, done chan procret) {

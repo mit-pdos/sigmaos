@@ -176,7 +176,7 @@ func (fidc *FidClnt) RemoveFile(fid np.Tfid, wnames []string, resolve bool) *np.
 		return np.MkErr(np.TErrUnreachable, "getfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(wnames))
-	return fidc.fids.lookup(fid).pc.RemoveFile(fid, wnames, resolve, f)
+	return ch.pc.RemoveFile(fid, wnames, resolve, f)
 }
 
 func (fidc *FidClnt) Stat(fid np.Tfid) (*np.Stat, *np.Err) {
@@ -220,7 +220,7 @@ func (fidc *FidClnt) GetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 		return nil, np.MkErr(np.TErrUnreachable, "getfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := fidc.fids.lookup(fid).pc.GetFile(fid, path, mode, off, cnt, resolve, f)
+	reply, err := ch.pc.GetFile(fid, path, mode, off, cnt, resolve, f)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func (fidc *FidClnt) SetFile(fid np.Tfid, path []string, mode np.Tmode, off np.T
 		return 0, np.MkErr(np.TErrUnreachable, "getfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := fidc.fids.lookup(fid).pc.SetFile(fid, path, mode, off, resolve, f, data)
+	reply, err := ch.pc.SetFile(fid, path, mode, off, resolve, f, data)
 	if err != nil {
 		return 0, err
 	}
@@ -246,7 +246,7 @@ func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.
 		return 0, np.MkErr(np.TErrUnreachable, "getfile")
 	}
 	f := fidc.ft.Lookup(ch.Path().AppendPath(path))
-	reply, err := fidc.fids.lookup(fid).pc.PutFile(fid, path, mode, perm, off, f, data)
+	reply, err := ch.pc.PutFile(fid, path, mode, perm, off, f, data)
 	if err != nil {
 		return 0, err
 	}

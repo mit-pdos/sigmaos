@@ -87,10 +87,10 @@ func (kc KvClerk) switchConfig() error {
 	for {
 		err := kc.GetFileJsonWatch(KVCONFIG, kc.conf)
 		if err != nil {
-			db.DLPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
+			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
 			return err
 		}
-		db.DLPrintf("KVCLERK0", "Conf %v\n", kc.conf)
+		db.DPrintf("KVCLERK0", "Conf %v\n", kc.conf)
 		kvs := makeKvs(kc.conf.Shards).mkKvs()
 		dirs := make([]string, 0, len(kvs)+1)
 		for _, kvd := range kvs {
@@ -98,12 +98,12 @@ func (kc KvClerk) switchConfig() error {
 		}
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if np.IsErrVersion(err) || np.IsErrStale(err) {
-				db.DLPrintf("KVCLERK_ERR", "version mismatch; retry\n")
+				db.DPrintf("KVCLERK_ERR", "version mismatch; retry\n")
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
 			}
 
-			db.DLPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
+			db.DPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
 			return err
 		}
 		break
@@ -117,12 +117,12 @@ func (kc *KvClerk) fixRetry(err error) error {
 		// Shard dir hasn't been created yet (config 0) or hasn't moved
 		// yet, so wait a bit, and retry.  XXX make sleep time
 		// dynamic?
-		db.DLPrintf("KVCLERK_ERR", "Wait for shard %v\n", np.ErrPath(err))
+		db.DPrintf("KVCLERK_ERR", "Wait for shard %v\n", np.ErrPath(err))
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
 	if np.IsErrStale(err) || np.IsErrUnreachable(err) {
-		db.DLPrintf("KVCLERK_ERR", "fixRetry %v\n", err)
+		db.DPrintf("KVCLERK_ERR", "fixRetry %v\n", err)
 		return kc.switchConfig()
 	}
 
@@ -134,7 +134,7 @@ func (kc *KvClerk) fixRetry(err error) error {
 func (kc *KvClerk) doop(o *op) {
 	s := key2shard(o.k)
 	for {
-		db.DLPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
+		db.DPrintf("KVCLERK", "o %v conf %v\n", o.kind, kc.conf)
 		fn := keyPath(kc.conf.Shards[s], s, o.k)
 		o.do(kc.FsLib, fn)
 		if o.err == nil { // success?
@@ -177,7 +177,7 @@ func (o *op) do(fsl *fslib.FsLib, fn string) {
 	case SET:
 		_, o.err = fsl.SetFile(fn, o.b, o.m, o.off)
 	}
-	db.DLPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
+	db.DPrintf("KVCLERK", "op %v fn %v err %v\n", o.kind, fn, o.err)
 }
 
 func (kc *KvClerk) Get(k Tkey, off np.Toffset) ([]byte, error) {

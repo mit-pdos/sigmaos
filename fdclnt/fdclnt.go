@@ -95,13 +95,13 @@ func (fdc *FdClient) Open(path string, mode np.Tmode) (int, error) {
 func (fdc *FdClient) CreateOpen(path string, perm np.Tperm, mode np.Tmode) (int, error) {
 	fd, err := fdc.Create(path, perm, mode)
 	if err != nil && !np.IsErrExists(err) {
-		db.DLPrintf("FDCLNT_ERR", "Create %v err %v", path, err)
+		db.DPrintf("FDCLNT_ERR", "Create %v err %v", path, err)
 		return -1, err
 	}
 	if err != nil {
 		fd, err = fdc.Open(path, mode)
 		if err != nil {
-			db.DLPrintf("FDCLNT_ERR", "Open %v err %v", path, err)
+			db.DPrintf("FDCLNT_ERR", "Open %v err %v", path, err)
 			return -1, err
 		}
 	}

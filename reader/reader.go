@@ -44,7 +44,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 			b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
 		}
 		if err != nil {
-			db.DLPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
+			db.DPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
 			return -1, err
 		}
 		if len(b) == 0 {

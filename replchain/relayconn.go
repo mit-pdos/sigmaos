@@ -27,13 +27,13 @@ type RelayNetConn struct {
 
 func MakeRelayNetConn(addr string) (*RelayNetConn, error) {
 	var err error
-	db.DLPrintf("RTCP", "mkChan to %v\n", addr)
+	db.DPrintf("RTCP", "mkChan to %v\n", addr)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
-		db.DLPrintf("RTCP", "mkChan to %v err %v\n", addr, err)
+		db.DPrintf("RTCP", "mkChan to %v err %v\n", addr, err)
 		return nil, err
 	}
-	db.DLPrintf("RTCP", "mkChan to %v from %v\n", addr, c.LocalAddr())
+	db.DPrintf("RTCP", "mkChan to %v from %v\n", addr, c.LocalAddr())
 	rc := &RelayNetConn{}
 	rc.conn = c
 	rc.dst = addr
@@ -52,12 +52,12 @@ func (rc *RelayNetConn) Send(frame []byte) error {
 		return err
 	}
 	if err != nil {
-		db.DLPrintf("RTCP", "WriteFrame error %v\n", err)
+		db.DPrintf("RTCP", "WriteFrame error %v\n", err)
 		return err
 	}
 	error := rc.bw.Flush()
 	if error != nil {
-		db.DLPrintf("RTCP", "Flush error %v\n", err)
+		db.DPrintf("RTCP", "Flush error %v\n", err)
 		return err
 	}
 	return nil
@@ -75,14 +75,14 @@ func (rc *RelayNetConn) Recv() ([]byte, error) {
 		return nil, err
 	}
 	if err != nil {
-		db.DLPrintf("RTCP", "Reader: ReadFrame error %v\n", err)
+		db.DPrintf("RTCP", "Reader: ReadFrame error %v\n", err)
 		return nil, err
 	}
 	return frame, nil
 }
 
 func (rc *RelayNetConn) closeL() {
-	db.DLPrintf("RTCP", "Close relay chan to %v\n", rc.dst)
+	db.DPrintf("RTCP", "Close relay chan to %v\n", rc.dst)
 	rc.closed = true
 	rc.conn.Close()
 }

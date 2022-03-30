@@ -47,7 +47,7 @@ func RestoreFence(fn fs.RestoreF, b []byte) fs.Inode {
 }
 
 func makeInode(ctx fs.CtxI, p np.Tperm, mode np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *np.Err) {
-	db.DLPrintf("FENCEFS", "makeInode %v dir %v\n", p, parent)
+	db.DPrintf("FENCEFS", "makeInode %v dir %v\n", p, parent)
 	i := inode.MakeInode(ctx, p, parent)
 	if p.IsDir() {
 		return dir.MakeDir(i, makeInode), nil
@@ -99,17 +99,17 @@ func CheckFence(root fs.Dir, new np.Tfence) (*Fence, *np.Err) {
 		return nil, err
 	}
 	if err == nil {
-		db.DLPrintf("FENCES", "New fence %v\n", new)
+		db.DPrintf("FENCES", "New fence %v\n", new)
 		f.epoch = new.Epoch
 		return f, nil
 	}
 	if new.Epoch < f.epoch {
-		db.DLPrintf("FENCES_ERR", "Stale fence %v\n", new)
+		db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)
 		f.Unlock()
 		return nil, np.MkErr(np.TErrStale, new)
 	}
 	if new.Epoch > f.epoch {
-		db.DLPrintf("FENCES", "New epoch %v\n", new)
+		db.DPrintf("FENCES", "New epoch %v\n", new)
 		f.epoch = new.Epoch
 	}
 	return f, nil

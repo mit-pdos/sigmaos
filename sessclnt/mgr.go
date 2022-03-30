@@ -27,10 +27,10 @@ func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
 func (sc *Mgr) Exit() {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	db.DLPrintf("SESSCLNT", "Exit\n")
+	db.DPrintf("SESSCLNT", "Exit\n")
 
 	for addr, sess := range sc.sessions {
-		db.DLPrintf("SESSCLNT", "exit close session to %v\n", addr)
+		db.DPrintf("SESSCLNT", "exit close session to %v\n", addr)
 		sess.close()
 		delete(sc.sessions, addr)
 	}
@@ -55,18 +55,18 @@ func (sc *Mgr) allocConn(addrs []string) (*clnt, *np.Err) {
 }
 
 func (sc *Mgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
-	db.DLPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
+	db.DPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
 	// Get or establish sessection
 	sess, err := sc.allocConn(addrs)
 	if err != nil {
-		db.DLPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
+		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
 		return nil, err
 	}
 	return sess.rpc(req, f)
 }
 
 func (sc *Mgr) Disconnect(addrs []string) *np.Err {
-	db.DLPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)
+	db.DPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()
 	sess, ok := sc.sessions[key]

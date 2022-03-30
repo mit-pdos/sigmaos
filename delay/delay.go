@@ -39,6 +39,6 @@ func Delay(maxms int64) {
 	if totalDelay-lastTotal > 1000 {
 		lastTotal = totalDelay
 	}
-	db.DLPrintf("DELAY", "DELAY to %vms\n", totalDelay)
+	db.DPrintf("DELAY", "DELAY to %vms\n", totalDelay)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 }

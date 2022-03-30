@@ -35,7 +35,7 @@ func (dir *DirOverlay) Mount(name string, i fs.Inode) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DLPrintf("OVERLAYDIR", "Mount i %v as %v\n", i, name)
+	db.DPrintf("OVERLAYDIR", "Mount i %v as %v\n", i, name)
 
 	dir.entries[name] = i
 }
@@ -44,7 +44,7 @@ func (dir *DirOverlay) lookupMount(name string) fs.FsObj {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	db.DLPrintf("OVERLAYDIR", "lookupMount %v %v\n", name, dir.entries)
+	db.DPrintf("OVERLAYDIR", "lookupMount %v %v\n", name, dir.entries)
 
 	if i, ok := dir.entries[name]; ok {
 		return i
@@ -69,14 +69,14 @@ func (dir *DirOverlay) ls() []*np.Stat {
 func (dir *DirOverlay) lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
 	i := dir.lookupMount(path[0])
 	qids := []np.Tqid{i.Qid()}
-	db.DLPrintf("OVERLAYDIR", "lookup %v in mount %v %v\n", path[1:], path[0], i)
+	db.DPrintf("OVERLAYDIR", "lookup %v in mount %v %v\n", path[1:], path[0], i)
 	if len(path) == 1 {
 		return qids, i, nil, nil
 	} else {
 		switch d := i.(type) {
 		case fs.Dir:
 			qs, lo, p, err := d.Lookup(ctx, path[1:])
-			db.DLPrintf("OVERLAYDIR", "lookup %v in %v res %v %v %v err %v\n", path[1:], i, qs, lo, p, err)
+			db.DPrintf("OVERLAYDIR", "lookup %v in %v res %v %v %v err %v\n", path[1:], i, qs, lo, p, err)
 			if lo == nil {
 				lo = i
 			}
@@ -92,7 +92,7 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, n
 		// lookup up in overlay
 		return dir.lookup(ctx, path)
 	} else {
-		db.DLPrintf("OVERLAYDIR", "Lookup underlay %v\n", path)
+		db.DPrintf("OVERLAYDIR", "Lookup underlay %v\n", path)
 		// lookup up in underlay
 		qids, lo, p, err := dir.underlay.Lookup(ctx, path)
 		if lo == dir.underlay {

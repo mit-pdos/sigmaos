@@ -53,7 +53,7 @@ func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.
 	a.Ncore = ncore
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	db.DLPrintf("SCHEDD", "Spawn %v\n", a)
+	db.DPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) proc.Tpid {

@@ -22,7 +22,7 @@ type Writer struct {
 func (wrt *Writer) Write(p []byte) (int, error) {
 	n, err := wrt.fc.WriteV(wrt.fid, wrt.off, p, np.NoV)
 	if err != nil {
-		db.DLPrintf("WRITER_ERR", "Write %v err %v\n", wrt.fc.Path(wrt.fid), err)
+		db.DPrintf("WRITER_ERR", "Write %v err %v\n", wrt.fc.Path(wrt.fid), err)
 		return 0, err
 	}
 	wrt.off += np.Toffset(n)

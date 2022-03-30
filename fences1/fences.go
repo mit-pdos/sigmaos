@@ -64,17 +64,17 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) (*Epoch, *np.Err) {
 	if e, ok := ft.fences[p]; ok {
 		e.Lock()
 		if new.Epoch < e.epoch {
-			db.DLPrintf("FENCES_ERR", "Stale fence %v\n", new)
+			db.DPrintf("FENCES_ERR", "Stale fence %v\n", new)
 			e.Unlock()
 			return nil, np.MkErr(np.TErrStale, new)
 		}
 		if new.Epoch > e.epoch {
-			db.DLPrintf("FENCES", "fenceFcall %v new epoch %v\n", new)
+			db.DPrintf("FENCES", "fenceFcall %v new epoch %v\n", new)
 			e.epoch = new.Epoch
 		}
 		return e, nil
 	} else {
-		db.DLPrintf("FENCES", "fenceFcall %v new fence %v\n", new)
+		db.DPrintf("FENCES", "fenceFcall %v new fence %v\n", new)
 		e := MakeEpoch(new.Epoch, ft)
 		e.Lock()
 		ft.fences[p] = e

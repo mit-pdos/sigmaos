@@ -83,7 +83,7 @@ func (sess *Session) Close() {
 	sess.closed = true
 	// Close the replies channel so that writer in srvconn exits
 	if sess.conn != nil {
-		db.DLPrintf("SESSION", "%v close replies\n", sess.Sid)
+		db.DPrintf("SESSION", "%v close replies\n", sess.Sid)
 		close(sess.conn.Replies)
 		sess.conn = nil
 	}
@@ -102,7 +102,7 @@ func (sess *Session) maybeSetConn(conn *np.Conn) {
 	defer sess.Unlock()
 	if conn != nil {
 		if sess.conn != conn {
-			db.DLPrintf("SESSION", "maybeSetConn new %v\n", conn)
+			db.DPrintf("SESSION", "maybeSetConn new %v\n", conn)
 			sess.conn = conn
 		}
 	}
@@ -111,7 +111,7 @@ func (sess *Session) maybeSetConn(conn *np.Conn) {
 func (sess *Session) heartbeat(msg np.Tmsg) {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DLPrintf("SESSION", "Heartbeat %v %v", msg.Type(), msg)
+	db.DPrintf("SESSION", "Heartbeat %v %v", msg.Type(), msg)
 	if sess.closed {
 		log.Fatalf("FATAL %v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
 	}
@@ -122,7 +122,7 @@ func (sess *Session) heartbeat(msg np.Tmsg) {
 func (sess *Session) timeout() {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DLPrintf("SESSION0", "timeout %v", sess.Sid)
+	db.DPrintf("SESSION", "timeout %v", sess.Sid)
 	sess.timedout = true
 }
 

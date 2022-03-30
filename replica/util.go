@@ -13,7 +13,7 @@ import (
 //	config, err := replchain.ReadReplConfig(configPath, addr, fsl, clnt)
 //	// Reread until successful
 //	for err != nil {
-//		db.DLPrintf("RSRV", "Couldn't read repl config: %v\n", err)
+//		db.DPrintf("RSRV", "Couldn't read repl config: %v\n", err)
 //		config, err = replchain.ReadReplConfig(configPath, addr, fsl, clnt)
 //	}
 //	config.UnionDirPath = unionDirPath

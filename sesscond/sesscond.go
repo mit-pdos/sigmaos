@@ -71,7 +71,7 @@ func (sc *SessCond) Wait(sessid np.Tsession) *np.Err {
 	closed := c.isClosed
 
 	if closed {
-		db.DLPrintf("SESSCOND", "wait sess closed %v\n", sessid)
+		db.DPrintf("SESSCOND", "wait sess closed %v\n", sessid)
 		return np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", sessid))
 	}
 	return nil
@@ -125,9 +125,9 @@ func (sc *SessCond) closed(sessid np.Tsession) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
-	db.DLPrintf("SESSCOND", "cond %p: close %v %v\n", sc, sessid, sc.conds)
+	db.DPrintf("SESSCOND", "cond %p: close %v %v\n", sc, sessid, sc.conds)
 	if condlist, ok := sc.conds[sessid]; ok {
-		db.DLPrintf("SESSCOND", "%p: sess %v closed\n", sc, sessid)
+		db.DPrintf("SESSCOND", "%p: sess %v closed\n", sc, sessid)
 		for _, c := range condlist {
 			c.threadmgr.Wake(c.c)
 			sc.addWakingCond(sessid, c)
@@ -199,7 +199,7 @@ func (sct *SessCondTable) toSlice() []*SessCond {
 // close those.
 func (sct *SessCondTable) DeleteSess(sessid np.Tsession) {
 	t := sct.toSlice()
-	db.DLPrintf("SESSCOND", "%v: delete sess %v\n", sessid, t)
+	db.DPrintf("SESSCOND", "%v: delete sess %v\n", sessid, t)
 	for _, sc := range t {
 		sc.closed(sessid)
 	}

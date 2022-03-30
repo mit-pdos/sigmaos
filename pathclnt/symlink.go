@@ -10,7 +10,7 @@ import (
 func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Path, *np.Err) {
 	// XXX change how we readlink; getfile?
 	target, err := pathc.readlink(fid)
-	db.DLPrintf("WALK", "walksymlink1 %v target %v err %v\n", fid, target, err)
+	db.DPrintf("WALK", "walksymlink1 %v target %v err %v\n", fid, target, err)
 	if err != nil {
 		return left, err
 	}
@@ -18,7 +18,7 @@ func (pathc *PathClnt) walkSymlink1(fid np.Tfid, resolved, left np.Path) (np.Pat
 	if IsRemoteTarget(target) {
 		trest, err := pathc.autoMount(pathc.FidClnt.Lookup(fid).Uname(), target, resolved)
 		if err != nil {
-			db.DLPrintf("WALK", "automount %v %v err %v\n", resolved, target, err)
+			db.DPrintf("WALK", "automount %v %v err %v\n", resolved, target, err)
 			return left, err
 		}
 		path = append(resolved, append(trest, left...)...)
@@ -82,7 +82,7 @@ func SplitTargetReplicated(target string) (np.Path, np.Path) {
 }
 
 func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) (np.Path, *np.Err) {
-	db.DLPrintf("PATHCLNT", "automount %v to %v\n", target, path)
+	db.DPrintf("PATHCLNT", "automount %v to %v\n", target, path)
 	var rest np.Path
 	var fid np.Tfid
 	var err *np.Err
@@ -96,7 +96,7 @@ func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) (np.
 		fid, err = pathc.Attach(uname, []string{server}, path.String(), "")
 	}
 	if err != nil {
-		db.DLPrintf("PATHCLNT", "Attach error: %v", err)
+		db.DPrintf("PATHCLNT", "Attach error: %v", err)
 		return nil, err
 	}
 	err = pathc.mount(fid, path.String())

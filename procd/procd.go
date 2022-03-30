@@ -148,7 +148,7 @@ func (pd *Procd) getRunnableProc(procdPath string, queueName string) (*proc.Proc
 		p, err := pd.readRunqProc(procdPath, queueName, f.Name)
 		// Proc may have been stolen
 		if err != nil {
-			db.DLPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
+			db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
 			continue
 		}
 		if pd.satisfiesConstraintsL(p) {
@@ -181,7 +181,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 			}
 			p, err = pd.getRunnableProc(path.Join(np.PROCD, st.Name), runq)
 			if err != nil {
-				db.DLPrintf("PROCD_ERR", "Error getRunnableProc in Procd.getProc: %v", err)
+				db.DPrintf("PROCD_ERR", "Error getRunnableProc in Procd.getProc: %v", err)
 				return false, nil
 			}
 			if p != nil {
@@ -299,7 +299,7 @@ func (pd *Procd) worker(done *int32) {
 		}
 		if error != nil {
 			if np.IsErrNotfound(error) {
-				db.DLPrintf("PROCD_ERR", "cond file not found: %v", error)
+				db.DPrintf("PROCD_ERR", "cond file not found: %v", error)
 				return
 			}
 			pd.perf.Teardown()

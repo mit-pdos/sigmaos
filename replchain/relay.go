@@ -59,17 +59,17 @@ func (rs *ChainReplServer) MakeConn(psrv protsrv.FsServer, conn net.Conn) repl.C
 }
 
 func (r *RelayConn) reader() {
-	db.DLPrintf("RSRV", "Conn from %v\n", r.Src())
+	db.DPrintf("RSRV", "Conn from %v\n", r.Src())
 	for {
 		frame, err := npcodec.ReadFrame(r.br)
 		if err != nil {
-			db.DLPrintf("RSRV", "%v Peer %v closed/erred %v\n", r.Dst(), r.Src(), err)
+			db.DPrintf("RSRV", "%v Peer %v closed/erred %v\n", r.Dst(), r.Src(), err)
 			if err == io.EOF {
 				r.close()
 			}
 			return
 		}
-		db.DLPrintf("RSRV", "%v relay reader read frame from %v\n", r.Dst(), r.Src())
+		db.DPrintf("RSRV", "%v relay reader read frame from %v\n", r.Dst(), r.Src())
 		fcall := &np.Fcall{}
 		if fcall, err := npcodec.UnmarshalFcall(frame); err != nil {
 			log.Printf("Server %v: relayWriter unmarshal error: %v", r.Dst(), err)
@@ -104,15 +104,15 @@ func (r *RelayConn) writer() {
 		if !ok {
 			return
 		}
-		db.DLPrintf("RSRV", "%v -> %v relay writer reply: %v", r.Dst(), r.Src(), op.reply)
+		db.DPrintf("RSRV", "%v -> %v relay writer reply: %v", r.Dst(), r.Src(), op.reply)
 		err := npcodec.WriteRawBuffer(r.bw, op.replyFrame)
 		if err != nil {
-			db.DLPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.Src(), r.Dst(), err)
+			db.DPrintf("RSRV", "%v -> %v Writer: WriteFrame error: %v", r.Src(), r.Dst(), err)
 			continue
 		}
 		error := r.bw.Flush()
 		if error != nil {
-			db.DLPrintf("RSRV", "%v -> %v Writer: Flush error: %v", r.Src(), r.Dst(), err)
+			db.DPrintf("RSRV", "%v -> %v Writer: Flush error: %v", r.Src(), r.Dst(), err)
 			continue
 		}
 	}
@@ -149,7 +149,7 @@ func (rs *ChainReplServer) relayReader() {
 		if reply, ok := rs.replyCache.Get(op.request); ok {
 			op.reply = reply.fcall
 			op.replyFrame = reply.frame
-			db.DLPrintf("RSRV", "%v Dup relay request %v", config.RelayAddr, op.request)
+			db.DPrintf("RSRV", "%v Dup relay request %v", config.RelayAddr, op.request)
 			// We have already seen this request. 2 Options:
 			// 1. If it's in-flight (we haven't seen an ack from the tail yet), we
 			//    need to register the op in order to have our ack thread send a
@@ -169,9 +169,9 @@ func (rs *ChainReplServer) relayReader() {
 			if !rs.isTail() {
 				// XXX Could there be a race here?
 				if rs.inFlight.AddIfDuplicate(op) {
-					db.DLPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
+					db.DPrintf("RSRV", "%v Added dup in-flight request: %v", config.RelayAddr, op.request)
 				} else {
-					db.DLPrintf("RSRV", "%v Dup request not in-flight, replying immediately. req: %v rep: %v", config.RelayAddr, op.request, op.reply)
+					db.DPrintf("RSRV", "%v Dup request not in-flight, replying immediately. req: %v rep: %v", config.RelayAddr, op.request, op.reply)
 					op.replies <- op
 				}
 			}
@@ -181,12 +181,12 @@ func (rs *ChainReplServer) relayReader() {
 			// evicting from the cache. Specifically, we need to handle edge cases
 			// where messages with older sequence numbers (since seqnos are now
 			// assigned by the client) may be delayed for a long time.
-			db.DLPrintf("RSRV", "%v Reader relay request %v", config.RelayAddr, op.request)
+			db.DPrintf("RSRV", "%v Reader relay request %v", config.RelayAddr, op.request)
 			// Serve the op first.
 			op.reply = op.r.serve(op.request)
 			op.reply.Session = op.request.Session
 			op.reply.Seqno = op.request.Seqno
-			db.DLPrintf("RSRV", "%v Reader relay reply %v", config.RelayAddr, op.reply)
+			db.DPrintf("RSRV", "%v Reader relay reply %v", config.RelayAddr, op.reply)
 			// Cache the reply
 			rs.cacheReply(op.request, op.reply)
 			cachedReply, _ := rs.replyCache.Get(op.request)
@@ -203,7 +203,7 @@ func (rs *ChainReplServer) relayReader() {
 		}
 		// If we're the tail, we always ack immediately
 		if rs.isTail() {
-			db.DLPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, op.request)
+			db.DPrintf("RSRV", "%v Tail acking %v", config.RelayAddr, op.request)
 			op.replies <- op
 		}
 	}
@@ -218,7 +218,7 @@ func (r *RelayConn) Dst() string {
 }
 
 func (r *RelayConn) close() {
-	db.DLPrintf("RELAYCONN", "Close: %v", r.Src())
+	db.DPrintf("RELAYCONN", "Close: %v", r.Src())
 }
 
 // Relay acks upstream.
@@ -237,13 +237,13 @@ func (rs *ChainReplServer) relayWriter() {
 		if ch == nil {
 			continue
 		}
-		db.DLPrintf("RSRV", "%v Recv from downstream %v", config.RelayAddr, nextAddr)
+		db.DPrintf("RSRV", "%v Recv from downstream %v", config.RelayAddr, nextAddr)
 		// Get an ack from the downstream servers
 		frame, err := ch.Recv()
-		db.DLPrintf("RSRV", "%v Recv'd downstream from %v", config.RelayAddr, nextAddr)
+		db.DPrintf("RSRV", "%v Recv'd downstream from %v", config.RelayAddr, nextAddr)
 		// Move on if the connection closed
 		if peerCrashed(err) {
-			db.DLPrintf("RSRV", "%v error relayWriter Recv: %v", config.RelayAddr, err)
+			db.DPrintf("RSRV", "%v error relayWriter Recv: %v", config.RelayAddr, err)
 			continue
 		}
 		if err != nil {
@@ -256,11 +256,11 @@ func (rs *ChainReplServer) relayWriter() {
 			log.Printf("Error unmarshalling in relayWriter: %v", err)
 			log.Printf("Frame: %v, len: %v", frame, len(frame))
 		} else {
-			db.DLPrintf("RSRV", "%v Got ack: %v", config.RelayAddr, ack)
+			db.DPrintf("RSRV", "%v Got ack: %v", config.RelayAddr, ack)
 			// Dequeue all acks up until this one (they may come out of order, which is
 			// OK.
 			ops := rs.inFlight.Remove(ack)
-			db.DLPrintf("RSRV", "%v Removed ack'd ops: %v", config.RelayAddr, ops)
+			db.DPrintf("RSRV", "%v Removed ack'd ops: %v", config.RelayAddr, ops)
 			// Ack upstream
 			for _, op := range ops {
 				op.replies <- op
@@ -282,7 +282,7 @@ func (rs *ChainReplServer) relayOp(op *RelayOp) {
 	// If the next server has changed (detected by config swap, or message send
 	// failure), resend all in-flight requests. Should already include this
 	// message.
-	db.DLPrintf("RSRV", "%v -> %v Sending initial relayOp: %v", config.RelayAddr, nextAddr, op)
+	db.DPrintf("RSRV", "%v -> %v Sending initial relayOp: %v", config.RelayAddr, nextAddr, op)
 	if lastSendAddr != nextAddr || !relayOnce(rs, ch, op) {
 		resendInflightRelayOps(rs)
 	}
@@ -299,12 +299,12 @@ func resendInflightRelayOps(rs *ChainReplServer) {
 	rs.mu.Unlock()
 
 	toSend := rs.inFlight.GetOps()
-	db.DLPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
+	db.DPrintf("RSRV", "%v -> %v Resending inflight messages: %v", config.RelayAddr, nextAddr, toSend)
 	// Retry. On failure, resend all messages which haven't been ack'd, plus msg.
 	for len(toSend) != 0 {
 		// We shouldn't send anything if we're the tail
 		if rs.isTail() {
-			db.DLPrintf("RSRV", "%v -> %v Was tail, cancelling resend", config.RelayAddr, nextAddr)
+			db.DPrintf("RSRV", "%v -> %v Was tail, cancelling resend", config.RelayAddr, nextAddr)
 			return
 		}
 		// Try to send a message.
@@ -318,17 +318,17 @@ func resendInflightRelayOps(rs *ChainReplServer) {
 			config.LastSendAddr = config.NextAddr
 			rs.mu.Unlock()
 			toSend = rs.inFlight.GetOps()
-			db.DLPrintf("RSRV", "%v -> %v Resending inflight messages (retry): %v", config.RelayAddr, nextAddr, toSend)
+			db.DPrintf("RSRV", "%v -> %v Resending inflight messages (retry): %v", config.RelayAddr, nextAddr, toSend)
 		}
 	}
-	db.DLPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
+	db.DPrintf("RSRV", "%v Done Resending inflight messages to %v", config.RelayAddr, nextAddr)
 }
 
 func sendAllAcks(rs *ChainReplServer) {
 	config := rs.config
 
 	ops := rs.inFlight.RemoveAll()
-	db.DLPrintf("RSRV", "%v Sent all acks: %v", config.RelayAddr, ops)
+	db.DPrintf("RSRV", "%v Sent all acks: %v", config.RelayAddr, ops)
 	// Ack upstream
 	go func() {
 		for _, op := range ops {
@@ -348,14 +348,14 @@ func relayOnce(rs *ChainReplServer, ch *RelayNetConn, op *RelayOp) bool {
 		err = ch.Send(op.requestFrame)
 		// If the next server has crashed, note failure...
 		if peerCrashed(err) {
-			db.DLPrintf("RSRV", "%v sending error: %v", rs.config.RelayAddr, err)
+			db.DPrintf("RSRV", "%v sending error: %v", rs.config.RelayAddr, err)
 			return false
 		}
 		if err != nil {
 			log.Fatalf("Srv error sending: %v\n", err)
 		}
 	} else {
-		db.DLPrintf("%v Tail trying to relay", rs.config.RelayAddr)
+		db.DPrintf("%v Tail trying to relay", rs.config.RelayAddr)
 		return false
 	}
 	// If we made it this far, the send was successful

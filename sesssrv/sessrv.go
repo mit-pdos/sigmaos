@@ -215,7 +215,7 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.S
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
-	db.DLPrintf("SSRV", "Request %v start sendReply %v", request, fcall)
+	db.DPrintf("SSRV", "Request %v start sendReply %v", request, fcall)
 	// Store the reply in the reply cache.
 	ssrv.rc.Put(request, fcall)
 	// Only send a reply if the session hasn't been closed, or this is a detach
@@ -228,7 +228,7 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.S
 			conn.Replies <- fcall
 		}
 	}
-	db.DLPrintf("SSRV", "Request %v done sendReply %v", request, fcall)
+	db.DPrintf("SSRV", "Request %v done sendReply %v", request, fcall)
 }
 
 func (ssrv *SessSrv) process(fc *np.Fcall) {
@@ -258,13 +258,13 @@ func (ssrv *SessSrv) process(fc *np.Fcall) {
 	// make progress. We coulld optionally use sessconds, but they're kind of
 	// overkill since we don't care about ordering in this case.
 	if replyFuture, ok := ssrv.rc.Get(fc); ok {
-		db.DLPrintf("SSRV", "Request %v reply in cache", fc)
+		db.DPrintf("SSRV", "Request %v reply in cache", fc)
 		go func() {
 			ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 		}()
 		return
 	}
-	db.DLPrintf("SSRV", "Request %v reply not in cache", fc)
+	db.DPrintf("SSRV", "Request %v reply not in cache", fc)
 	// If this request has not been registered with the reply cache yet, register
 	// it.
 	ssrv.rc.Register(fc)
@@ -275,7 +275,7 @@ func (ssrv *SessSrv) process(fc *np.Fcall) {
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
 func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
-	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
+	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, fc.Fence); err != nil {
 		reply := *err.Rerror()
 		ssrv.sendReply(fc, reply, sess)
@@ -291,9 +291,9 @@ func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
 }
 
 func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
-	db.DLPrintf("SSRV", "Dispatch request %v", fc)
+	db.DPrintf("SSRV", "Dispatch request %v", fc)
 	reply, rerror := sess.Dispatch(fc.Msg)
-	db.DLPrintf("SSRV", "Done dispatch request %v", fc)
+	db.DPrintf("SSRV", "Done dispatch request %v", fc)
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil

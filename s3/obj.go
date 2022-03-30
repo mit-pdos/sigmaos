@@ -70,7 +70,7 @@ func (o *Obj) stat() *np.Stat {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DLPrintf("FSS3", "Stat: %v\n", o)
+	db.DPrintf("FSS3", "Stat: %v\n", o)
 	var err *np.Err
 	o.mu.Lock()
 	read := o.isRead
@@ -136,7 +136,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DLPrintf("FSS3", "Read: %v %v %v\n", o.key, off, cnt)
+	db.DPrintf("FSS3", "Read: %v %v %v\n", o.key, off, cnt)
 	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
 	if !o.isRead {
 		o.readHead()
@@ -184,7 +184,7 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 // reading the whole file to update it.
 // XXX maybe buffer all writes before writing to S3 (on clunk?)
 func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	db.DLPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
+	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	key := o.key.String()
 	r, err := o.s3Read(-1, 0)
 	if err != nil {

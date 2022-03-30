@@ -48,11 +48,11 @@ func (fl *FsLib) OpenReaderWatch(path string) (*reader.Reader, error) {
 		fd1, err := fl.OpenWatch(path, np.OREAD, func(path string, err error) {
 			ch <- err
 		})
-		db.DLPrintf("FSLIB", "OpenWatch %v err %v\n", path, err)
+		db.DPrintf("FSLIB", "OpenWatch %v err %v\n", path, err)
 		if err != nil && np.IsErrNotfound(err) {
 			r := <-ch
 			if r != nil {
-				db.DLPrintf("FSLIB", "OpenWatch watch %v err %v\n", path, err)
+				db.DPrintf("FSLIB", "OpenWatch watch %v err %v\n", path, err)
 			}
 		} else if err != nil {
 			return nil, err

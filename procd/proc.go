@@ -47,21 +47,21 @@ func (p *Proc) init(a *proc.Proc) {
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p
 	p.attr = a
-	db.DLPrintf("PROCD", "Procd init: %v\n", p)
+	db.DPrintf("PROCD", "Procd init: %v\n", p)
 }
 
 func (p *Proc) wait(cmd *exec.Cmd) {
 	defer p.pd.fs.finish(p)
 	err := cmd.Wait()
 	if err != nil {
-		db.DLPrintf("PROCD_ERR", "Proc %v finished with error: %v\n", p.attr, err)
+		db.DPrintf("PROCD_ERR", "Proc %v finished with error: %v\n", p.attr, err)
 		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
 
 	err = namespace.Destroy(p.NewRoot)
 	if err != nil {
-		db.DLPrintf("PROCD_ERR", "Error namespace destroy: %v", err)
+		db.DPrintf("PROCD_ERR", "Error namespace destroy: %v", err)
 	}
 
 	// Notify schedd that the process exited
@@ -69,7 +69,7 @@ func (p *Proc) wait(cmd *exec.Cmd) {
 }
 
 func (p *Proc) run(cores []uint) error {
-	db.DLPrintf("PROCD", "Procd run: %v\n", p.attr)
+	db.DPrintf("PROCD", "Procd run: %v\n", p.attr)
 
 	// XXX Hack to get perf stat to work cleanly... we probably want to do proper
 	// stdout/stderr redirection eventually...
@@ -93,7 +93,7 @@ func (p *Proc) run(cores []uint) error {
 
 	// Make the proc's procdir
 	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
-		db.DLPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
+		db.DPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
 	}
 
 	cmd := exec.Command(p.pd.bin+"/"+p.Program, args...)
@@ -104,7 +104,7 @@ func (p *Proc) run(cores []uint) error {
 	namespace.SetupProc(cmd)
 	err := cmd.Start()
 	if err != nil {
-		db.DLPrintf("PROCD_ERR", "Procd run error: %v, %v\n", p.attr, err)
+		db.DPrintf("PROCD_ERR", "Procd run error: %v, %v\n", p.attr, err)
 		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return err
 	}
@@ -115,7 +115,7 @@ func (p *Proc) run(cores []uint) error {
 	p.setCpuAffinity(cores)
 
 	p.wait(cmd)
-	db.DLPrintf("PROCD", "Procd ran: %v\n", p.attr)
+	db.DPrintf("PROCD", "Procd ran: %v\n", p.attr)
 
 	return nil
 }

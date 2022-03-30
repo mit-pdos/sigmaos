@@ -70,15 +70,15 @@ func (m *member) spawn() error {
 }
 
 func (m *member) run(i int, start chan error, done chan procret) {
-	db.DLPrintf("GROUPMGR", "spawn %d member %v\n", i, m.bin)
+	db.DPrintf("GROUPMGR", "spawn %d member %v\n", i, m.bin)
 	if err := m.spawn(); err != nil {
 		start <- err
 		return
 	}
 	start <- nil
-	db.DLPrintf("GROUPMGR", "%v: member %d started %v\n", m.bin, i, m.pid)
+	db.DPrintf("GROUPMGR", "%v: member %d started %v\n", m.bin, i, m.pid)
 	status, err := m.WaitExit(m.pid)
-	db.DLPrintf("GROUPMGR", "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
+	db.DPrintf("GROUPMGR", "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
 	done <- procret{i, err, status}
 }
 
@@ -117,7 +117,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 func (gm *GroupMgr) restart(i int, done chan procret) {
 	if gm.members[i].bin == "bin/user/kvd" {
 		// For now, we don't restart kvds
-		db.DLPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
+		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
 		return
 	}
 	start := make(chan error)
@@ -125,7 +125,7 @@ func (gm *GroupMgr) restart(i int, done chan procret) {
 	err := <-start
 	if err != nil {
 		go func() {
-			db.DLPrintf("GROUPMGR_ERR", "failed to start %v: %v; try again\n", i, err)
+			db.DPrintf("GROUPMGR_ERR", "failed to start %v: %v; try again\n", i, err)
 			time.Sleep(time.Duration(10) * time.Millisecond)
 			done <- procret{i, err, nil}
 		}()
@@ -136,18 +136,18 @@ func (gm *GroupMgr) manager(done chan procret, n int) {
 	for n > 0 {
 		st := <-done
 		if atomic.LoadInt32(&gm.done) == 1 {
-			db.DLPrintf("GROUPMGR", "%v: done %v n %v\n", gm.members[st.member].bin, st.member, n)
+			db.DPrintf("GROUPMGR", "%v: done %v n %v\n", gm.members[st.member].bin, st.member, n)
 			n--
 		} else if st.err == nil && st.status.IsStatusOK() { // done?
-			db.DLPrintf("GROUPMGR", "%v: stop %v\n", gm.members[st.member].bin, st.member)
+			db.DPrintf("GROUPMGR", "%v: stop %v\n", gm.members[st.member].bin, st.member)
 			atomic.StoreInt32(&gm.done, 1)
 			n--
 		} else { // restart member i
-			db.DLPrintf("GROUPMGR", "%v restart %v\n", gm.members[st.member].bin, st)
+			db.DPrintf("GROUPMGR", "%v restart %v\n", gm.members[st.member].bin, st)
 			gm.restart(st.member, done)
 		}
 	}
-	db.DLPrintf("GROUPMGR", "%v exit\n", gm.members[0].bin)
+	db.DPrintf("GROUPMGR", "%v exit\n", gm.members[0].bin)
 	gm.ch <- true
 }
 
@@ -164,7 +164,7 @@ func (gm *GroupMgr) Stop() error {
 	var err error
 	for _, c := range gm.members {
 		go func(m *member) {
-			db.DLPrintf("GROUPMGR", "evict %v\n", m.pid)
+			db.DPrintf("GROUPMGR", "evict %v\n", m.pid)
 			r := m.Evict(m.pid)
 			if r != nil {
 				err = r
@@ -173,6 +173,6 @@ func (gm *GroupMgr) Stop() error {
 	}
 	// log.Printf("wait for members\n")
 	<-gm.ch
-	db.DLPrintf("GROUPMGR", "done members %v\n", gm)
+	db.DPrintf("GROUPMGR", "done members %v\n", gm)
 	return err
 }

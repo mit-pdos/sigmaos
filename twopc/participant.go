@@ -50,23 +50,23 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me proc.Tpid, t
 
 	// set watch for twopcprep, indicating a transaction
 	if _, err := p.readTwopcWatch(TWOPCPREP, p.watchTwopcPrep); err != nil {
-		db.DLPrintf("PART", "MakeParticipant set watch on %v (err %v)\n", TWOPCPREP, err)
+		db.DPrintf("PART", "MakeParticipant set watch on %v (err %v)\n", TWOPCPREP, err)
 	}
 
 	return p, nil
 }
 
 func (p *Participant) watchTwopcPrep(path string, err error) {
-	db.DLPrintf("PART", "Watch fires %v %v; prepare?\n", path, err)
+	db.DPrintf("PART", "Watch fires %v %v; prepare?\n", path, err)
 	if err == nil {
 		p.prepare()
 	} else {
 		_, err = p.readTwopcWatch(TWOPCPREP, p.watchTwopcPrep)
 		if err == nil {
-			db.DLPrintf("PART", "watchTwopcPrep: next trans %v (err %v)\n", TWOPCPREP, err)
+			db.DPrintf("PART", "watchTwopcPrep: next trans %v (err %v)\n", TWOPCPREP, err)
 			p.prepare()
 		} else {
-			db.DLPrintf("PART", "Commit: set watch on %v (err %v)\n", TWOPCPREP, err)
+			db.DPrintf("PART", "Commit: set watch on %v (err %v)\n", TWOPCPREP, err)
 		}
 	}
 }
@@ -80,24 +80,24 @@ func (p *Participant) readTwopcWatch(conffile string, f pathclnt.Watch) (*Twopc,
 // Tell coord we are prepared to commit new config
 func (p *Participant) prepared(status string) {
 	fn := prepareName(p.me)
-	db.DLPrintf("PART", "Prepared %v\n", fn)
+	db.DPrintf("PART", "Prepared %v\n", fn)
 	err := atomic.PutFileAtomic(p.FsLib, fn, 0777, []byte(status))
 	if err != nil {
-		db.DLPrintf("PART", "Prepared: make file %v failed %v\n", fn, err)
+		db.DPrintf("PART", "Prepared: make file %v failed %v\n", fn, err)
 	}
 }
 
 func (p *Participant) committed() {
 	fn := commitName(p.me)
-	db.DLPrintf("PART", "Committed %v\n", fn)
+	db.DPrintf("PART", "Committed %v\n", fn)
 	_, err := p.PutFile(fn, 0777, np.OWRITE, []byte("OK"))
 	if err != nil {
-		db.DLPrintf("PART", "Committed: make file %v failed %v\n", fn, err)
+		db.DPrintf("PART", "Committed: make file %v failed %v\n", fn, err)
 	}
 }
 
 func (p *Participant) watchTwopcCommit(path string, err error) {
-	db.DLPrintf("PART", "Watch conf fires %v %v; commit\n", path, err)
+	db.DPrintf("PART", "Watch conf fires %v %v; commit\n", path, err)
 	p.commit()
 }
 
@@ -116,7 +116,7 @@ func (p *Participant) restartCoord() {
 
 	// set watch for twopcprep, indicating a transaction
 	if _, err := p.readTwopcWatch(TWOPCPREP, p.watchTwopcPrep); err != nil {
-		db.DLPrintf("PART", "MakeParticipant set watch on %v (err %v)\n", TWOPCPREP, err)
+		db.DPrintf("PART", "MakeParticipant set watch on %v (err %v)\n", TWOPCPREP, err)
 	}
 }
 
@@ -159,7 +159,7 @@ func (p *Participant) prepare() {
 	// set remove watch on coord in case it crashes during 2PC
 	err = p.SetRemoveWatch(COORD, p.watchCoord)
 	if err != nil {
-		db.DLPrintf("PART", "Prepare: COORD crashed\n")
+		db.DPrintf("PART", "Prepare: COORD crashed\n")
 		p.restartCoord()
 		// return
 	}
@@ -168,14 +168,14 @@ func (p *Participant) prepare() {
 	if err == nil {
 		log.Fatalf("PART %v: readTwopcWatch %v err %v\n", p.me, TWOPCCOMMIT, err)
 	}
-	db.DLPrintf("PART", "prepare: watch for %v\n", TWOPCCOMMIT)
+	db.DPrintf("PART", "prepare: watch for %v\n", TWOPCCOMMIT)
 
 	p.twopc = readTwopc(p.FsLib, TWOPCPREP)
 	if p.twopc == nil {
 		log.Fatalf("PART %v: PART cannot read %v err %v\n", p.me, TWOPCPREP, err)
 	}
 
-	db.DLPrintf("PART", "prepare for new config: %v\n", p.twopc)
+	db.DPrintf("PART", "prepare for new config: %v\n", p.twopc)
 
 	p.mu.Unlock()
 
@@ -186,7 +186,7 @@ func (p *Participant) prepare() {
 	}
 
 	if p.opcode == "crash1" {
-		db.DLPrintf("PART", "Crashed in prepare\n")
+		db.DPrintf("PART", "Crashed in prepare\n")
 		os.Exit(1)
 	}
 

@@ -39,7 +39,7 @@ func (d *Dir) lookupDirent(name string) (fs.FsObj, bool) {
 func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
 	m := mode(key)
-	db.DLPrintf("FSS3", "s %v d.key %v dirents %v\n", s, d.key, d.dirents)
+	db.DPrintf("FSS3", "s %v d.key %v dirents %v\n", s, d.key, d.dirents)
 	for i, c := range d.key {
 		if c != s[i] {
 			return "", m, false
@@ -61,7 +61,7 @@ func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 }
 
 func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DLPrintf("FSS3", "Stat Dir: %v\n", d)
+	db.DPrintf("FSS3", "Stat Dir: %v\n", d)
 	var err *np.Err
 	d.mu.Lock()
 	read := d.isRead
@@ -91,9 +91,9 @@ func (d *Dir) s3ReadDirL() *np.Err {
 			return np.MkErr(np.TErrBadoffset, key)
 		}
 		for _, obj := range page.Contents {
-			db.DLPrintf("FSS3", "Key: %v\n", *obj.Key)
+			db.DPrintf("FSS3", "Key: %v\n", *obj.Key)
 			if n, m, ok := d.includeNameL(*obj.Key); ok {
-				db.DLPrintf("FSS3", "incl %v %v\n", n, m)
+				db.DPrintf("FSS3", "incl %v %v\n", n, m)
 				if m == np.DMDIR {
 					dir := d.fss3.makeDir(append(d.key, n), m, d)
 					d.dirents[n] = dir
@@ -126,7 +126,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 }
 
 func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	db.DLPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
+	db.DPrintf("FSS3", "%v: lookup %v %v\n", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -138,7 +138,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	var dirents []*np.Stat
-	db.DLPrintf("FSS3", "readDir: %v\n", d)
+	db.DPrintf("FSS3", "readDir: %v\n", d)
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if !d.isRead {

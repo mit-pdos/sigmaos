@@ -28,7 +28,7 @@ func MakeElectClnt(fsl *fslib.FsLib, path string, perm np.Tperm) *ElectClnt {
 func (e *ElectClnt) AcquireLeadership(leader []byte) error {
 	fd, err := e.Create(e.path, e.perm|np.DMTMP, np.OWRITE|np.OWATCH)
 	if err != nil {
-		db.DLPrintf("LEADER_ERR", "Create %v err %v", e.path, err)
+		db.DPrintf("LEADER_ERR", "Create %v err %v", e.path, err)
 		return err
 	}
 	if _, err := e.WriteV(fd, leader); err != nil {
@@ -41,7 +41,7 @@ func (e *ElectClnt) AcquireLeadership(leader []byte) error {
 func (e *ElectClnt) ReleaseLeadership() error {
 	err := e.Remove(e.path)
 	if err != nil {
-		db.DLPrintf("LEADER_ERR", "Remove %v err %v", e.path, err)
+		db.DPrintf("LEADER_ERR", "Remove %v err %v", e.path, err)
 		return err
 	}
 	return nil

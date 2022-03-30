@@ -117,7 +117,7 @@ func (o *Obj) Parent() fs.Dir {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DLPrintf("UXD", "%v: Stat %v\n", ctx, o)
+	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	ustat, err := ustat(o.path)
 	if err != nil {
 		return nil, err

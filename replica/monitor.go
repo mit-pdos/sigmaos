@@ -33,7 +33,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 	m.FsLib = fsl
 	//	m.configLock = sync.MakeLock(fsl, np.LOCKS, m.configPath, true)
 	m.ProcClnt = procclnt.MakeProcClnt(fsl)
-	db.DLPrintf("RMTR", "MakeReplicaMonitor %v", args)
+	db.DPrintf("RMTR", "MakeReplicaMonitor %v", args)
 	return m
 }
 

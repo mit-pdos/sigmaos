@@ -34,7 +34,7 @@ func debugLabels() map[string]bool {
 	return m
 }
 
-func DLPrintf(label string, format string, v ...interface{}) {
+func DPrintf(label string, format string, v ...interface{}) {
 	m := debugLabels()
 	if _, ok := m[label]; ok || label == ALWAYS {
 		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))

@@ -56,7 +56,7 @@ func (c *Clerk) serve() {
 				if req, err := npcodec.UnmarshalFcall(frame); err != nil {
 					log.Fatalf("FATAL Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
-					db.DLPrintf("REPLRAFT", "Serve request %v\n", req)
+					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
 					// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
 					//				c.printOpTiming(req, frame)
 					c.apply(req)
@@ -67,7 +67,7 @@ func (c *Clerk) serve() {
 }
 
 func (c *Clerk) propose(op *Op) {
-	db.DLPrintf("REPLRAFT", "Propose %v\n", op.request)
+	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
 	c.registerOp(op)
 	frame, err := npcodec.MarshalFcallByte(op.request)

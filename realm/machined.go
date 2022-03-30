@@ -172,7 +172,7 @@ func (r *Machined) joinRealm() chan bool {
 		rStartSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
 		rStartSem.Up()
 	}
-	db.DLPrintf("MACHINED", "Machined %v joined Realm %v", r.id, r.cfg.RealmId)
+	db.DPrintf("MACHINED", "Machined %v joined Realm %v", r.id, r.cfg.RealmId)
 	// Watch for changes to the config
 	return r.WatchConfig(r.cfgPath)
 }
@@ -226,7 +226,7 @@ func (r *Machined) leaveRealm() {
 	r.lockRealm()
 	defer r.unlockRealm()
 
-	db.DLPrintf("MACHINED", "Machined %v leaving Realm %v", r.id, r.cfg.RealmId)
+	db.DPrintf("MACHINED", "Machined %v leaving Realm %v", r.id, r.cfg.RealmId)
 
 	// Tear down resources
 	r.teardown()

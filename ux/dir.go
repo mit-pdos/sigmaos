@@ -45,7 +45,7 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 	sort.SliceStable(sts, func(i, j int) bool {
 		return sts[i].Name < sts[j].Name
 	})
-	db.DLPrintf("UXD", "%v: uxReadDir %v\n", d, len(sts)-cursor)
+	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, len(sts)-cursor)
 	if cursor > len(sts) {
 		return nil, nil
 	} else {
@@ -54,7 +54,7 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	db.DLPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
+	db.DPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
 	dirents, err := d.uxReadDir(cursor)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (d *Dir) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 // XXX how to delete ephemeral files after crash
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	p := d.path.Append(name).String()
-	db.DLPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
+	db.DPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
 	if perm.IsDir() {
 		// XXX O_CREATE/O_EXCL
 		error := os.Mkdir(p, os.FileMode(perm&0777))
@@ -106,7 +106,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 }
 
 func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	db.DLPrintf("UXD", "%v: namei %v %v\n", ctx, d, p)
+	db.DPrintf("UXD", "%v: namei %v %v\n", ctx, d, p)
 	fi, error := os.Stat(d.path.Append(p[0]).String())
 	if error != nil {
 		return qids, d, d.path, np.MkErr(np.TErrNotfound, p[0])
@@ -136,7 +136,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 }
 
 func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	db.DLPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
+	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -157,7 +157,7 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 	oldPath := d.Path() + "/" + from
 	newPath := dd.(*Dir).Path() + "/" + to
-	db.DLPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
+	db.DPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
 		return np.MkErrError(err)
@@ -166,7 +166,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
-	db.DLPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
+	db.DPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
 	err := os.Remove(d.Path() + "/" + name)
 	if err != nil {
 		return np.MkErrError(err)
@@ -177,7 +177,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	oldPath := d.Path() + "/" + from
 	newPath := d.Path() + "/" + to
-	db.DLPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
+	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
 		return np.MkErrError(err)

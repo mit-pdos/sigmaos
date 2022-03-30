@@ -181,7 +181,7 @@ func (g *Group) readReplicaAddrs(grp string) (*ReplicaAddrs, error) {
 	ra := &ReplicaAddrs{}
 	err := g.GetFileJson(grpRaftAddrs(grp), ra)
 	if err != nil {
-		db.DLPrintf("GRP_ERR", "Error GetFileJson: %v", err)
+		db.DPrintf("GRP_ERR", "Error GetFileJson: %v", err)
 		return ra, err
 	}
 	return ra, nil

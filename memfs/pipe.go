@@ -89,7 +89,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 		// log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {
-			db.DLPrintf("MEMFS", "Wait for reader\n")
+			db.DPrintf("MEMFS", "Wait for reader\n")
 			err := pipe.condw.Wait(ctx.SessionId())
 			if err != nil {
 				pipe.nwriter -= 1

@@ -53,17 +53,17 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 	kva := []KeyValue{}
 
 	d := r.input + "/" + file + "/"
-	db.DLPrintf("MR", "reduce %v\n", d)
+	db.DPrintf("MR", "reduce %v\n", d)
 	rdr, err := r.OpenReader(d)
 	if err != nil {
 		// another reducer already completed; nothing to be done
-		db.DLPrintf("MR", "MakeReader %v err %v", d, err)
+		db.DPrintf("MR", "MakeReader %v err %v", d, err)
 		return nil, err
 	}
 	defer rdr.Close()
 	rdr.ReadJsonStream(func() interface{} { return new([]KeyValue) }, func(a interface{}) error {
 		kvs := a.(*[]KeyValue)
-		db.DLPrintf("REDUCE", "reduce %v: kva %v\n", file, kvs)
+		db.DPrintf("REDUCE", "reduce %v: kva %v\n", file, kvs)
 		kva = append(kva, *kvs...)
 		return nil
 	})

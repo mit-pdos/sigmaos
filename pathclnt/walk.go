@@ -19,15 +19,15 @@ const (
 func (pathc *PathClnt) walkPathUmount(path np.Path, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for {
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
-		db.DLPrintf("WALK", "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
+		db.DPrintf("WALK", "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)
 		if err != nil && np.IsErrUnreachable(err) {
 			done := len(path1) - len(left)
-			db.DLPrintf("WALK", "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
+			db.DPrintf("WALK", "Walk retry %v %v %v %v by umount %v\n", path, path1, left, done, path1[0:done])
 			if e := pathc.umountFree(path1[0:done]); e != nil {
 				return np.NoFid, e
 			}
 			// try again
-			db.DLPrintf("WALK", "walkPathUmount: try again p %v r %v\n", path, resolve)
+			db.DPrintf("WALK", "walkPathUmount: try again p %v r %v\n", path, resolve)
 			continue
 		}
 		if err != nil {
@@ -71,7 +71,7 @@ func (pathc *PathClnt) walkPath(path np.Path, resolve bool, w Watch) (np.Tfid, n
 			pathc.FidClnt.Clunk(fid)
 			return np.NoFid, path, left, err
 		}
-		db.DLPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
+		db.DPrintf("WALK", "walkPath %v path/left %v retry %v err %v\n", fid, left, retry, err)
 		if retry {
 			// On success walkSymlink returns new path to walk
 			path = left
@@ -95,7 +95,7 @@ func (pathc *PathClnt) walkMount(path np.Path) (np.Tfid, np.Path, *np.Err) {
 	if err != nil {
 		return np.NoFid, left, err
 	}
-	db.DLPrintf("WALK", "walkMount: resolve %v %v %v\n", fid, left, err)
+	db.DPrintf("WALK", "walkMount: resolve %v %v %v\n", fid, left, err)
 	// Obtain a private copy of fid that this thread walks
 	fid1, err := pathc.FidClnt.Clone(fid)
 	if err != nil {
@@ -109,7 +109,7 @@ func (pathc *PathClnt) walkMount(path np.Path) (np.Tfid, np.Path, *np.Err) {
 // file is not found, set watch on the directory, waiting until the
 // file is created.
 func (pathc *PathClnt) walkOne(fid np.Tfid, path np.Path, w Watch) (np.Tfid, np.Path, *np.Err) {
-	db.DLPrintf("WALK", "walkOne %v left %v\n", fid, path)
+	db.DPrintf("WALK", "walkOne %v left %v\n", fid, path)
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
 	if err != nil { // fid1 == fid
 		if w != nil && np.IsErrNotfound(err) {
@@ -132,7 +132,7 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path np.Path, w Watch) (np.Tfid, np.
 	if fid1 == fid {
 		log.Fatalf("FATAL walkOne %v\n", fid)
 	}
-	db.DLPrintf("WALK", "walkOne -> %v %v\n", fid1, left)
+	db.DPrintf("WALK", "walkOne -> %v %v\n", fid1, left)
 	err = pathc.FidClnt.Clunk(fid)
 	return fid1, left, nil
 }
@@ -141,12 +141,12 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path np.Path, w Watch) (np.Tfid, np.
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid np.Tfid, path np.Path) (np.Tfid, np.Path, *np.Err) {
 	if len(path) > 0 && np.IsUnionElem(path[0]) {
-		db.DLPrintf("WALK", "walkUnion %v path %v\n", fid, path)
+		db.DPrintf("WALK", "walkUnion %v path %v\n", fid, path)
 		fid1, err := pathc.unionLookup(fid, path[0])
 		if err != nil {
 			return fid, path, err
 		}
-		db.DLPrintf("WALK", "walkUnion -> (%v, %v)\n", fid, path[1:])
+		db.DPrintf("WALK", "walkUnion -> (%v, %v)\n", fid, path[1:])
 		pathc.FidClnt.Clunk(fid)
 		return fid1, path[1:], nil
 	}
@@ -163,7 +163,7 @@ func (pathc *PathClnt) walkSymlink(fid np.Tfid, path, left np.Path, resolve bool
 	if qid.Type&np.QTSYMLINK == np.QTSYMLINK && (len(left) > 0 || (len(left) == 0 && resolve)) {
 		done := len(path) - len(left)
 		resolved := path[0:done]
-		db.DLPrintf("WALK", "walkSymlink %v resolved %v left %v\n", fid, resolved, left)
+		db.DPrintf("WALK", "walkSymlink %v resolved %v left %v\n", fid, resolved, left)
 		left, err := pathc.walkSymlink1(fid, resolved, left)
 		if err != nil {
 			return false, left, err
@@ -194,7 +194,7 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p np.Path, r np.Path, w Watch) (np.
 	go func() {
 		err := pathc.FidClnt.Watch(fid1)
 		pathc.FidClnt.Clunk(fid1)
-		db.DLPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
+		db.DPrintf("PATHCLNT", "setWatch: Watch returns %v %v\n", p, err)
 		w(p.String(), err)
 	}()
 	return np.NoFid, nil

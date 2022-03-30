@@ -60,7 +60,7 @@ func MakeChainReplServer(cfg repl.Config, fssrv protsrv.FsServer) *ChainReplServ
 
 func (rs *ChainReplServer) Init() {
 	// Create and start the relay server listener
-	db.DLPrintf("RSRV", "listen %v\n", rs.config.ReplAddr())
+	db.DPrintf("RSRV", "listen %v\n", rs.config.ReplAddr())
 	relayL, err := net.Listen("tcp", rs.config.ReplAddr())
 	if err != nil {
 		log.Fatal("Replica server listen error:", err)
@@ -94,7 +94,7 @@ func (rs *ChainReplServer) runsrv(l net.Listener) {
 		//		if !srv.replicated {
 		//			MakeSrvConn(srv, conn)
 		//		} else {
-		db.DLPrintf("9PCHAN", "replsrv conn from %v -> %v\n", conn.RemoteAddr(), l.Addr())
+		db.DPrintf("9PCHAN", "replsrv conn from %v -> %v\n", conn.RemoteAddr(), l.Addr())
 		rs.MakeConn(rs.fssrv, conn)
 		//		}
 	}
@@ -209,7 +209,7 @@ func (rs *ChainReplServer) runDirWatcher() {
 	for {
 		done := make(chan bool)
 		rs.SetDirWatch(config.UnionDirPath, func(p string, err error) {
-			db.DLPrintf("RSRV", "%v Dir watch triggered!", config.RelayAddr)
+			db.DPrintf("RSRV", "%v Dir watch triggered!", config.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil && !strings.Contains(err.Error(), "Version mismatch") {
@@ -252,7 +252,7 @@ func (rs *ChainReplServer) runReplConfigUpdater() {
 	for {
 		done := make(chan bool)
 		rs.SetRemoveWatch(rs.config.ConfigPath, func(p string, err error) {
-			db.DLPrintf("RSRV", "%v detected new config\n", rs.config.RelayAddr)
+			db.DPrintf("RSRV", "%v detected new config\n", rs.config.RelayAddr)
 			if err != nil && err.Error() == "EOF" {
 				return
 			} else if err != nil && !strings.Contains(err.Error(), "Version mismatch") {
@@ -262,12 +262,12 @@ func (rs *ChainReplServer) runReplConfigUpdater() {
 		})
 		<-done
 		config := rs.getNewReplConfig()
-		db.DLPrintf("RSRV", "%v reloading config: %v\n", rs.config.RelayAddr, config)
+		db.DPrintf("RSRV", "%v reloading config: %v\n", rs.config.RelayAddr, config)
 		rs.reloadReplConfig(config)
 		// If we are the head, write a symlink
 		if rs.isHead() {
 			targets := rs.getReplicaTargets()
-			db.DLPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", rs.config.RelayAddr, rs.config.SymlinkPath, targets)
+			db.DPrintf("RSRV", "%v has become the head. Creating symlink %v -> %v", rs.config.RelayAddr, rs.config.SymlinkPath, targets)
 			rs.Remove(rs.config.SymlinkPath)
 			rs.SymlinkReplica(targets, rs.config.SymlinkPath, 0777|np.DMTMP|np.DMREPL)
 		}
@@ -275,7 +275,7 @@ func (rs *ChainReplServer) runReplConfigUpdater() {
 		// fail.
 		go resendInflightRelayOps(rs)
 		if rs.isTail() {
-			db.DLPrintf("RSRV", "%v had become the tail in configUpdater", rs.config.RelayAddr)
+			db.DPrintf("RSRV", "%v had become the tail in configUpdater", rs.config.RelayAddr)
 			sendAllAcks(rs)
 		}
 	}

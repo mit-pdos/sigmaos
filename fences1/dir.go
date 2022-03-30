@@ -9,7 +9,7 @@ import (
 // XXX Take any hash table and export it?
 
 func (ft *FenceTable) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	db.DLPrintf("FENCEDIR", "Lookup %v\n", path)
+	db.DPrintf("FENCEDIR", "Lookup %v\n", path)
 	if len(path) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -36,7 +36,7 @@ func (ft *FenceTable) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode
 // XXX account for extra entries in cursor, and sort
 // XXX ignores size
 func (ft *FenceTable) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	db.DLPrintf("FENCEDIR", "ReadDir FT %v\n", ft.fences)
+	db.DPrintf("FENCEDIR", "ReadDir FT %v\n", ft.fences)
 	ft.Lock()
 	defer ft.Unlock()
 
@@ -65,7 +65,7 @@ func (ft *FenceTable) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *
 }
 
 func (ft *FenceTable) Remove(ctx fs.CtxI, n string) *np.Err {
-	db.DLPrintf("FENCEDIR", "Remove n %v\n", n)
+	db.DPrintf("FENCEDIR", "Remove n %v\n", n)
 
 	p, err := np.String2Path(n)
 	if err != nil {

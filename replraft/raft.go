@@ -115,7 +115,7 @@ func (n *RaftNode) start(peers []raft.Peer) {
 }
 
 func (n *RaftNode) serveRaft(l net.Listener) {
-	db.DLPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
+	db.DPrintf("REPLRAFT", "Serving raft, listener %v at %v", n.id, l.Addr().String())
 
 	srv := &http.Server{Handler: apiHandler(n)}
 	err := srv.Serve(l)
@@ -197,7 +197,7 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 			switch change.Type {
 			case raftpb.ConfChangeAddNode:
 				if len(change.Context) > 0 {
-					db.DLPrintf("REPLRAFT", "Adding peer %v", string(change.Context))
+					db.DPrintf("REPLRAFT", "Adding peer %v", string(change.Context))
 					n.transport.AddPeer(types.ID(change.NodeID), []string{"http://" + string(change.Context)})
 				}
 			case raftpb.ConfChangeRemoveNode:

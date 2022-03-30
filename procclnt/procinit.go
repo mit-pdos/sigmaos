@@ -30,7 +30,7 @@ func mountDir(fsl *fslib.FsLib, dpath string, mountPoint string) {
 	addr, splitPath := splitMountServerAddrPath(fsl, tree)
 	if err := fsl.MountTree(addr, splitPath, mountPoint); err != nil {
 		if mountPoint == proc.PARENTDIR {
-			db.DLPrintf("PROCCLNT_ERR", "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
+			db.DPrintf("PROCCLNT_ERR", "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
 			log.Fatalf("%v: FATAL error mounting %v/%v as %v err %v\n", proc.GetName(), addr, splitPath, mountPoint, err)
 		}

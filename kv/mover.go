@@ -75,7 +75,7 @@ func (mv *Mover) copyShard(s, d string) error {
 	// below. If so, we are done.
 	_, err := mv.Stat(d)
 	if err == nil {
-		db.DLPrintf("KVMV_ERR", "moveShard conf %v exists %v\n", mv.epochstr, d)
+		db.DPrintf("KVMV_ERR", "moveShard conf %v exists %v\n", mv.epochstr, d)
 		return nil
 	}
 
@@ -85,37 +85,37 @@ func (mv *Mover) copyShard(s, d string) error {
 
 	err = mv.MkDir(d1, 0777)
 	if err != nil {
-		db.DLPrintf("KVMV_ERR", "Mkdir %v err %v\n", d1, err)
+		db.DPrintf("KVMV_ERR", "Mkdir %v err %v\n", d1, err)
 		return err
 	}
 	// log.Printf("%v: Copy shard from %v to %v\n", proc.GetName(), s, d1)
 	err = mv.CopyDir(s, d1)
 	if err != nil {
-		db.DLPrintf("KVMV_ERR", "CopyDir shard%v to %v err %v\n", s, d1, err)
+		db.DPrintf("KVMV_ERR", "CopyDir shard%v to %v err %v\n", s, d1, err)
 		return err
 	}
 	// log.Printf("%v: Copy shard%v to %v done\n", proc.GetName(), s, d1)
 	err = mv.Rename(d1, d)
 	if err != nil {
-		db.DLPrintf("KVMV_ERR", "Rename %v to %v err %v\n", d1, d, err)
+		db.DPrintf("KVMV_ERR", "Rename %v to %v err %v\n", d1, d, err)
 		return err
 	}
 	return nil
 }
 
 func (mv *Mover) delShard(sharddir string) {
-	db.DLPrintf("KVMV", "conf %v delete %v\n", mv.epochstr, sharddir)
+	db.DPrintf("KVMV", "conf %v delete %v\n", mv.epochstr, sharddir)
 
 	// If sharddir isn't found, then an earlier delete succeeded;
 	// we are done.
 	if _, err := mv.Stat(sharddir); err != nil && np.IsErrNotfound(err) {
-		db.DLPrintf("KVMV_ERR", "Delete conf %v not found %v\n", mv.epochstr, sharddir)
+		db.DPrintf("KVMV_ERR", "Delete conf %v not found %v\n", mv.epochstr, sharddir)
 		mv.Exited(proc.MakeStatus(proc.StatusOK))
 		return
 	}
 
 	if err := mv.RmDir(sharddir); err != nil {
-		db.DLPrintf("KVMV_ERR", "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
+		db.DPrintf("KVMV_ERR", "conf %v rmdir %v err %v\n", mv.epochstr, sharddir, err)
 		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 	} else {
 		mv.Exited(proc.MakeStatus(proc.StatusOK))
@@ -123,12 +123,12 @@ func (mv *Mover) delShard(sharddir string) {
 }
 
 func (mv *Mover) Move(src, dst string) {
-	db.DLPrintf("KVMV", "conf %v: mv from %v to %v\n", mv.epochstr, src, dst)
+	db.DPrintf("KVMV", "conf %v: mv from %v to %v\n", mv.epochstr, src, dst)
 	err := mv.copyShard(src, dst)
 	if err != nil {
-		db.DLPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
+		db.DPrintf("KVMV_ERR", "conf %v from %v to %v err %v\n", mv.epochstr, src, dst, err)
 	}
-	db.DLPrintf("KVMV", "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
+	db.DPrintf("KVMV", "conf %v: mv done from %v to %v\n", mv.epochstr, src, dst)
 	if err != nil {
 		mv.Exited(proc.MakeStatusErr(err.Error(), nil))
 	} else {

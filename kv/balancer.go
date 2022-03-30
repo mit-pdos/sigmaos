@@ -87,7 +87,7 @@ func RunBalancer(crashChild string, auto string) {
 
 	bl.FsLib = fslib.MakeFsLib("balancer-" + proc.GetPid().String())
 	bl.ProcClnt = procclnt.MakeProcClnt(bl.FsLib)
-	bl.crash = crash.GetEnv()
+	bl.crash = crash.GetEnv(proc.SIGMACRASH)
 	bl.crashChild = crashChild
 
 	// may fail if already exist

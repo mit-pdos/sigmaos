@@ -14,12 +14,12 @@ import (
 	"ulambda/atomic"
 	"ulambda/crash"
 	db "ulambda/debug"
+	"ulambda/electclnt"
 	"ulambda/fidclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/inode"
-	"ulambda/leaderclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -62,15 +62,15 @@ func grpRaftAddrs(grp string) string {
 }
 
 type ReplicaAddrs struct {
-	SigmaAddrs   []string
-	RaftsrvAddrs []string
+	SigmaAddrs []string
+	RaftAddrs  []string
 }
 
 type Group struct {
 	sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	lc     *leaderclnt.LeaderClnt
+	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
 	conf   *GrpConf
 	isBusy bool
 }
@@ -89,68 +89,13 @@ func (g *Group) clearBusy() {
 	g.isBusy = false
 }
 
-// Get the addresses of other replicas, set the addresses corresponding to id,
-// and return the result, all while fenced. If id == -1, then this is a server
-// trying to set up its addresses for the first time, so append to the address
-// lists instead of setting.
-func (g *Group) setAddrs(grp string, id int, sigmaAddr string, raftAddr string, fenceDirs []string) *ReplicaAddrs {
-	var replicaAddrs *ReplicaAddrs
-	// Retry if epochs expire
-	for {
-		if _, err := g.lc.EnterNextEpoch(fenceDirs); err != nil {
-			// If we got a stale result, retry
-			if np.IsErrStale(err) {
-				log.Printf("Retry enter next epoch 1 %v err %v", grp, err)
-				continue
-			} else {
-				log.Fatalf("FATAL couldn't enter next epoch 1 %v err %v", grp, err)
-			}
-		}
-		if ra, err := g.readReplicaAddrs(grp); err != nil && !np.IsErrNotfound(err) {
-			// If we got a stale result, retry
-			if np.IsErrStale(err) {
-				log.Printf("Retry read replica addrs %v err %v", grp, err)
-				continue
-			} else {
-				log.Fatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
-			}
-		} else {
-			replicaAddrs = ra
-		}
-		// Update the stored addresses.
-		if id < 0 {
-			// If trying to set up a new server...
-			replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, sigmaAddr)
-			replicaAddrs.RaftsrvAddrs = append(replicaAddrs.RaftsrvAddrs, raftAddr)
-		} else {
-			replicaAddrs.SigmaAddrs[id-1] = sigmaAddr
-			replicaAddrs.RaftsrvAddrs[id-1] = raftAddr
-		}
-		if err := g.writeReplicaAddrs(grp, replicaAddrs); err != nil {
-			// If we got a stale result, retry
-			if np.IsErrStale(err) {
-				log.Printf("Retry read replica addrs %v err %v", grp, err)
-				continue
-			} else {
-				log.Fatalf("FATAL couldn't write replica addrs %v err %v", grp, err)
-			}
-		} else {
-			// we're done
-			break
-		}
-	}
-	return replicaAddrs
-}
-
 func RunMember(grp string) {
 	g := &Group{}
 	g.isBusy = true
 	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
 	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
-	g.lc = leaderclnt.MakeLeaderClnt(g.FsLib, GrpConfPath(grp), 0777)
+	g.ec = electclnt.MakeElectClnt(g.FsLib, GrpConfPath(grp), 0777)
 	crash.Crasher(g.FsLib)
-
-	fenceDirs := []string{GrpSym(grp), grpRaftAddrs(grp)}
 
 	// XXX need this?
 	g.MkDir(GRPDIR, 0777)
@@ -160,63 +105,71 @@ func RunMember(grp string) {
 		log.Fatalf("FATAL invalid sigmarepl: %v", err)
 	}
 
-	replicaAddrs := g.setAddrs(grp, -1, PLACEHOLDER_ADDR, PLACEHOLDER_ADDR, fenceDirs)
+	if err := g.ec.AcquireLeadership(nil); err != nil {
+		log.Fatalf("FATAL AcquireLeadership in group.RunMember: %v", err)
+	}
+
+	// Read addrs
+	replicaAddrs, err := g.readReplicaAddrs(grp)
+	if err != nil && !np.IsErrNotfound(err) {
+		log.Fatalf("FATAL readReplicaAddrs in group.RunMember: %v", err)
+	}
+
+	// Add placeholders to the addrs, and write them back to make sure the same
+	// raft ID isn't reused.
+	replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, PLACEHOLDER_ADDR)
+	replicaAddrs.RaftAddrs = append(replicaAddrs.RaftAddrs, PLACEHOLDER_ADDR)
+	g.writeReplicaAddrs(grp, replicaAddrs)
 
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		log.Fatalf("FATAL group ip %v\n", err)
 	}
 
-	id := len(replicaAddrs.RaftsrvAddrs)
-	replicaAddrs.RaftsrvAddrs[id-1] = ip + ":0"
+	// Get raft id.
+	id := len(replicaAddrs.SigmaAddrs)
+	replicaAddrs.RaftAddrs[id-1] = ip + ":0"
 
 	var raftConfig *replraft.RaftConfig = nil
 	if replicated {
-		raftConfig = replraft.MakeRaftConfig(id, replicaAddrs.RaftsrvAddrs)
+		raftConfig = replraft.MakeRaftConfig(id, replicaAddrs.RaftAddrs)
 	}
 
 	// start server but don't publish its existence
-	mfs, err1 := fslibsrv.MakeReplMemFsFsl(replicaAddrs.RaftsrvAddrs[id-1], "", g.FsLib, g.ProcClnt, raftConfig)
+	mfs, err1 := fslibsrv.MakeReplMemFsFsl(replicaAddrs.RaftAddrs[id-1], "", g.FsLib, g.ProcClnt, raftConfig)
 	if err1 != nil {
 		log.Fatalf("FATAL StartMemFs %v\n", err1)
 	}
 
-	// Get the final sigma and repl addr
-	sigmaAddr := mfs.MyAddr()
-	var raftAddr string
-
+	// Get the final sigma and repl addrs
+	replicaAddrs.SigmaAddrs[id-1] = mfs.MyAddr()
 	if replicated {
-		raftAddr = raftConfig.ReplAddr()
+		replicaAddrs.RaftAddrs[id-1] = raftConfig.ReplAddr()
 	}
 
 	// Update the stored addresses in named.
-	replicaAddrs = g.setAddrs(grp, id, sigmaAddr, raftAddr, fenceDirs)
+	if err := g.writeReplicaAddrs(grp, replicaAddrs); err != nil {
+		log.Fatalf("FATAL write replica addrs: %v", err)
+	}
 
-	// Add symlink
-
-	for {
-		if _, err := g.lc.EnterNextEpoch(fenceDirs); err != nil {
-			// If we got a stale result, retry
-			if np.IsErrStale(err) {
-				log.Printf("Retry enter next epoch 1 %v err %v", grp, err)
-				continue
-			} else {
-				log.Fatalf("FATAL couldn't enter next epoch 1 %v err %v", grp, err)
-			}
-		}
-		if err := atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(replicaAddrs.SigmaAddrs)); err != nil {
-			// If we got a stale result, retry
-			if np.IsErrStale(err) {
-				log.Printf("Retry read replica addrs %v err %v", grp, err)
-				continue
-			} else {
-				log.Fatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
-			}
-		} else {
-			// we're done
-			break
+	// Clean sigma addrs, removing placeholders...
+	sigmaAddrs := []string{}
+	for _, a := range replicaAddrs.SigmaAddrs {
+		if a != PLACEHOLDER_ADDR {
+			sigmaAddrs = append(sigmaAddrs, a)
 		}
 	}
+
+	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(sigmaAddrs)); err != nil {
+		log.Fatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
+	}
+
+	// Release leadership.
+	if err := g.ec.ReleaseLeadership(); err != nil {
+		log.Fatalf("FATAL release leadership: %v", err)
+	}
+
+	// XXX probably want to start these earlier...
 	crash.Partitioner(mfs)
 	crash.NetFailer(mfs)
 

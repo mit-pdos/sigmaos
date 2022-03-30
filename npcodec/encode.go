@@ -446,7 +446,7 @@ func SizeNp(vs ...interface{}) uint32 {
 		case np.Stat:
 			elements, err := fields9p(v)
 			if err != nil {
-				db.DFatalf("Stat ", err)
+				db.DFatalf("Stat %v", err)
 			}
 			s += SizeNp(elements...) + SizeNp(uint16(0))
 		case *np.Stat:
@@ -473,7 +473,7 @@ func SizeNp(vs ...interface{}) uint32 {
 			// ignoring if needed.
 			elements, err := fields9p(v)
 			if err != nil {
-				db.DFatalf("Tmsg ", err)
+				db.DFatalf("Tmsg %v", err)
 			}
 
 			s += SizeNp(elements...)

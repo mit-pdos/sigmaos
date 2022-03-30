@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 
 	"ulambda/proc"
@@ -38,5 +39,16 @@ func DPrintf(label string, format string, v ...interface{}) {
 	m := debugLabels()
 	if _, ok := m[label]; ok || label == ALWAYS {
 		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
+	}
+}
+
+func DFatalf(format string, v ...interface{}) {
+	// Get info for the caller.
+	pc, file, line, ok := runtime.Caller(1)
+	fnDetails := runtime.FuncForPC(pc)
+	if ok && fnDetails != nil {
+		log.Fatalf("FATAL %v %v %v:%v %v", proc.GetName(), fnDetails.Name(), file, line, fmt.Sprintf(format, v...))
+	} else {
+		log.Fatalf("FATAL %v (missing details) %v", proc.GetName(), fmt.Sprintf(format, v...))
 	}
 }

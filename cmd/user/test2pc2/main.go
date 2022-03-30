@@ -54,13 +54,13 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 	p.me = proc.GetPid()
 	index, err := strconv.Atoi(args[0])
 	if err != nil {
-		log.Fatalf("Error strconv index: %v", err)
+		db.DFatalf("Error strconv index: %v", err)
 	}
 	p.index = index
 	p.opcode = args[1]
 	delay, err := time.ParseDuration(args[2])
 	if err != nil {
-		log.Fatalf("Error parsing duration: %v", err)
+		db.DFatalf("Error parsing duration: %v", err)
 	}
 	p.delay = delay
 	p.randstr = randstr.Hex(16)
@@ -71,7 +71,7 @@ func MkTest2Participant2(args []string) (*Part2pc, error) {
 	p.ti = &Tinput{}
 	err = p.GetFileJson(np.MEMFS+"/txni", p.ti)
 	if err != nil {
-		log.Fatalf("Failed to read txni %v\n", err)
+		db.DFatalf("Failed to read txni %v\n", err)
 	}
 
 	_, err = twopc.MakeParticipant(p.FsLib, p.ProcClnt, p.me, p, p.opcode)

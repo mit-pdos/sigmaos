@@ -7,19 +7,20 @@ import (
 	"strconv"
 	"strings"
 
+	db "ulambda/debug"
 	"ulambda/replica"
 	"ulambda/replraft"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %v baseAddr", os.Args[0])
+		db.DFatalf("Usage: %v baseAddr", os.Args[0])
 	}
 	args := os.Args[1:]
 
 	id, err := strconv.Atoi("INVALID")
 	if err != nil {
-		log.Fatalf("id conversion error: %v", err)
+		db.DFatalf("id conversion error: %v", err)
 	}
 	// Raft expects ids to be 1-indexed, but groupmgr 0-indexes them.
 	id = id + 1
@@ -29,12 +30,12 @@ func main() {
 	// Find the base port of the replica group.
 	idx := strings.Index(baseAddr, ":")
 	if idx < 0 {
-		log.Fatalf("FATAL Invalid base addr: %v", baseAddr)
+		db.DFatalf("FATAL Invalid base addr: %v", baseAddr)
 	}
 	host := baseAddr[:idx]
 	basePort, err := strconv.Atoi(baseAddr[idx+1:])
 	if err != nil {
-		log.Fatalf("Invalid port num: %v", err)
+		db.DFatalf("Invalid port num: %v", err)
 	}
 
 	// generate the list of peer addresses.

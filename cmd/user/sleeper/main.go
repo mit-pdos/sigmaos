@@ -45,7 +45,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	s.output = args[1]
 	d, err := time.ParseDuration(args[0])
 	if err != nil {
-		log.Fatalf("Error parsing duration: %v", err)
+		db.DFatalf("Error parsing duration: %v", err)
 	}
 	s.sleepLength = d
 
@@ -56,7 +56,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	if !s.native {
 		err := s.Started()
 		if err != nil {
-			log.Fatalf("%v: Started: error %v\n", proc.GetName(), err)
+			db.DFatalf("%v: Started: error %v\n", proc.GetName(), err)
 		}
 	}
 	return s, nil
@@ -66,7 +66,7 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 	if !s.native {
 		err := s.WaitEvict(proc.GetPid())
 		if err != nil {
-			log.Fatalf("Error WaitEvict: %v", err)
+			db.DFatalf("Error WaitEvict: %v", err)
 		}
 		ch <- proc.MakeStatus(proc.StatusEvicted)
 	}

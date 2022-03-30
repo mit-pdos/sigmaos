@@ -8,6 +8,7 @@ import (
 	"path"
 	"regexp"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/memfs"
@@ -60,18 +61,18 @@ func MakeWwwd(tree string) *Wwwd {
 	mfsPath := "name/wwwd-server"
 	www.MemFs, www.FsLib, www.ProcClnt, err = fslibsrv.MakeMemFs(mfsPath, "www")
 	if err != nil {
-		log.Fatalf("%v: MakeSrvFsLib %v\n", proc.GetProgram(), err)
+		db.DFatalf("%v: MakeSrvFsLib %v\n", proc.GetProgram(), err)
 	}
 
 	//	www.FsLib = fslib.MakeFsLibBase("www") // don't mount Named()
 	// In order to automount children, we need to at least mount /pids.
 	if err := procclnt.MountPids(www.FsLib, fslib.Named()); err != nil {
-		log.Fatalf("wwwd err mount pids %v", err)
+		db.DFatalf("wwwd err mount pids %v", err)
 	}
 
 	log.Printf("%v: pid %v procdir %v\n", proc.GetProgram(), proc.GetPid(), proc.GetProcDir())
 	if _, err := www.PutFile(path.Join(np.TMP, "hello.html"), 0777, np.OWRITE, []byte("<html><h1>hello<h1><div>HELLO!</div></html>\n")); err != nil {
-		log.Fatalf("wwwd MakeFile %v", err)
+		db.DFatalf("wwwd MakeFile %v", err)
 	}
 
 	www.localSrvpath = path.Join(proc.PROCDIR, SERVER)
@@ -79,7 +80,7 @@ func MakeWwwd(tree string) *Wwwd {
 
 	err = www.Symlink([]byte(mfsPath), www.localSrvpath, 0777)
 	if err != nil {
-		log.Fatalf("Error symlink memfs wwwd: %v", err)
+		db.DFatalf("Error symlink memfs wwwd: %v", err)
 	}
 	return www
 }
@@ -109,7 +110,7 @@ func (www *Wwwd) makePipe() string {
 	pipeName := rand.String(16)
 	pipePath := path.Join(www.localSrvpath, pipeName)
 	if err := www.MakePipe(pipePath, 0777); err != nil {
-		log.Fatalf("%v: Error MakePipe %v", proc.GetProgram(), err)
+		db.DFatalf("%v: Error MakePipe %v", proc.GetProgram(), err)
 	}
 	return pipeName
 }
@@ -117,7 +118,7 @@ func (www *Wwwd) makePipe() string {
 func (www *Wwwd) removePipe(pipeName string) {
 	pipePath := path.Join(www.localSrvpath, pipeName)
 	if err := www.Remove(pipePath); err != nil {
-		log.Fatalf("%v: Error Remove pipe %v", proc.GetProgram(), err)
+		db.DFatalf("%v: Error Remove pipe %v", proc.GetProgram(), err)
 	}
 }
 

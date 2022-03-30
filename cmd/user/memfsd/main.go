@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	db "ulambda/debug"
 	"ulambda/fidclnt"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
@@ -18,14 +18,14 @@ func main() {
 	if len(os.Args) > 1 {
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
-			log.Fatalf("Error get local ip: %v", err)
+			db.DFatalf("Error get local ip: %v", err)
 		}
 		addr := ip + ":0"
 		config := repldummy.MakeConfig()
 		if os.Args[1] == "dummy" {
 			fss, err := fslibsrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config)
 			if err != nil {
-				log.Fatalf("FATAL Error makreplmemfs: %v", err)
+				db.DFatalf("FATAL Error makreplmemfs: %v", err)
 			}
 			fss.Serve()
 			fss.Done()
@@ -33,7 +33,7 @@ func main() {
 	} else {
 		mfs, _, _, err := fslibsrv.MakeMemFs(name, name)
 		if err != nil {
-			log.Fatalf("FATAL MakeMemFs %v\n", err)
+			db.DFatalf("FATAL MakeMemFs %v\n", err)
 		}
 		mfs.Serve()
 		mfs.Done()

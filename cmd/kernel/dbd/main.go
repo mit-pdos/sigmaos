@@ -1,15 +1,15 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"ulambda/dbd"
+	db "ulambda/debug"
 )
 
 func main() {
 	if len(os.Args) != 1 {
-		log.Fatalf("FATAL Usage: dbd")
+		db.DFatalf("FATAL Usage: %v", os.Args[0])
 	}
 	dbd.RunDbd()
 }

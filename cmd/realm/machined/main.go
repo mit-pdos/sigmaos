@@ -1,15 +1,15 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	db "ulambda/debug"
 	"ulambda/realm"
 )
 
 func main() {
 	if len(os.Args) < 3 {
-		log.Fatalf("Usage: %v bin id", os.Args[0])
+		db.DFatalf("Usage: %v bin id", os.Args[0])
 	}
 
 	r := realm.MakeMachined(os.Args[1], os.Args[2])

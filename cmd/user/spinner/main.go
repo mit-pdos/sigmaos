@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"os"
 	"path"
 	"runtime"
@@ -16,11 +15,11 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %v out\n", os.Args[0])
+		db.DFatalf("Usage: %v out\n", os.Args[0])
 	}
 	l, err := MakeSpinner(os.Args[1:])
 	if err != nil {
-		log.Fatalf("%v: error %v", os.Args[0], err)
+		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
 	l.Work()
 }
@@ -43,12 +42,12 @@ func MakeSpinner(args []string) (*Spinner, error) {
 	db.DPrintf("SCHEDL", "MakeSpinner: %v\n", args)
 
 	if _, err := s.PutFile(path.Join(s.outdir, proc.GetPid().String()), 0777|np.DMTMP, np.OWRITE, []byte{}); err != nil {
-		log.Fatalf("MakeFile error: %v", err)
+		db.DFatalf("MakeFile error: %v", err)
 	}
 
 	err := s.Started()
 	if err != nil {
-		log.Fatalf("Started: error %v\n", err)
+		db.DFatalf("Started: error %v\n", err)
 	}
 	return s, nil
 }
@@ -56,7 +55,7 @@ func MakeSpinner(args []string) (*Spinner, error) {
 func (s *Spinner) waitEvict() {
 	err := s.WaitEvict(proc.GetPid())
 	if err != nil {
-		log.Fatalf("Error WaitEvict: %v", err)
+		db.DFatalf("Error WaitEvict: %v", err)
 	}
 	s.Exited(proc.MakeStatus(proc.StatusEvicted))
 	os.Exit(0)

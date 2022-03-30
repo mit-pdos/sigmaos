@@ -9,13 +9,14 @@ import (
 	"sort"
 
 	"ulambda/benchmarks"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/realm"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %v result_dir", os.Args[0])
+		db.DFatalf("Usage: %v result_dir", os.Args[0])
 	}
 	nReplicas := os.Getenv("N_REPLICAS")
 	resDir := os.Args[1]
@@ -37,10 +38,10 @@ func main() {
 	}
 	b, err := json.Marshal(res)
 	if err != nil {
-		log.Fatalf("Error marshalling results: %v", err)
+		db.DFatalf("Error marshalling results: %v", err)
 	}
 
 	if err := ioutil.WriteFile(fpath, b, 0666); err != nil {
-		log.Fatalf("Error WriteFile in microbenchmarks.main: %v", err)
+		db.DFatalf("Error WriteFile in microbenchmarks.main: %v", err)
 	}
 }

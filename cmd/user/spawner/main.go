@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -44,7 +44,7 @@ func MakeSpawner(args []string) (*Spawner, error) {
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	b, err := strconv.ParseBool(args[0])
 	if err != nil {
-		log.Fatalf("Error parseBool: %v %v", args[0], err)
+		db.DFatalf("Error parseBool: %v %v", args[0], err)
 	}
 	s.shouldWaitExit = b
 	s.childPid = proc.Tpid(args[1])
@@ -58,7 +58,7 @@ func (s *Spawner) Work() {
 	p := proc.MakeProcPid(s.childPid, s.childProgram, s.childArgs)
 	err := s.Spawn(p)
 	if err != nil {
-		log.Fatalf("Error spawn: %v", err)
+		db.DFatalf("Error spawn: %v", err)
 	}
 	s.Started()
 	if s.shouldWaitExit {

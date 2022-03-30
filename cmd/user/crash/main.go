@@ -1,10 +1,10 @@
 package main
 
 import (
-	"log"
 	"os"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -19,7 +19,7 @@ func main() {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	err := pclnt.Started()
 	if err != nil {
-		log.Fatalf("Started: error %v\n", err)
+		db.DFatalf("Started: error %v\n", err)
 	}
 	time.Sleep(500 * time.Millisecond)
 	os.Exit(2)

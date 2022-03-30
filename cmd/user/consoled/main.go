@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslibsrv"
@@ -20,12 +21,12 @@ func makeConsoled() *Consoled {
 	cons := &Consoled{}
 	mfs, _, _, err := fslibsrv.MakeMemFs("name/consoled", "consoled")
 	if err != nil {
-		log.Fatalf("MakeSrvFsLib %v\n", err)
+		db.DFatalf("MakeSrvFsLib %v\n", err)
 	}
 	cons.MemFs = mfs
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "console", makeConsole())
 	if err != nil {
-		log.Fatalf("MakeNod failed %v\n", err)
+		db.DFatalf("MakeNod failed %v\n", err)
 	}
 	return cons
 }

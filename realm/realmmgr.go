@@ -126,7 +126,7 @@ func (m *RealmMgr) createRealms() {
 		m.Lock()
 		// Make sure we haven't created this realm before.
 		if _, ok := m.ecs[realmId]; ok {
-			db.DFatalf("FATAL tried to create realm twice %v", realmId)
+			db.DFatalf("tried to create realm twice %v", realmId)
 		}
 		m.ecs[realmId] = electclnt.MakeElectClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
 
@@ -137,7 +137,7 @@ func (m *RealmMgr) createRealms() {
 
 		// Make a directory for this realm.
 		if err := m.MkDir(path.Join(REALMS, realmId), 0777); err != nil {
-			db.DFatalf("FATAL Error Mkdir in RealmMgr.createRealms: %v", err)
+			db.DFatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 
 		// Make the realm config file.
@@ -232,7 +232,7 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 	// XXX May fail if this named crashed
 	procds, err := m.GetDir(path.Join(REALM_NAMEDS, realmId, np.PROCDREL))
 	if err != nil {
-		db.DFatalf("FATAL Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
+		db.DFatalf("Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}

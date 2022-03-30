@@ -54,7 +54,7 @@ func (c *Clerk) serve() {
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs {
 				if req, err := npcodec.UnmarshalFcall(frame); err != nil {
-					db.DFatalf("FATAL Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
+					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
 					// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
@@ -72,7 +72,7 @@ func (c *Clerk) propose(op *Op) {
 	c.registerOp(op)
 	frame, err := npcodec.MarshalFcallByte(op.request)
 	if err != nil {
-		db.DFatalf("FATAL: marshal op in replraft.Clerk.Propose: %v", err)
+		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
 	c.proposeC <- frame
 }
@@ -102,7 +102,7 @@ func (c *Clerk) registerOp(op *Op) {
 	if _, ok := m[op.request.Seqno]; ok {
 		// Detaches may be re-executed many times.
 		if op.request.GetType() != np.TTdetach {
-			db.DFatalf("FATAL %v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
+			db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
 		}
 	}
 	m[op.request.Seqno] = op

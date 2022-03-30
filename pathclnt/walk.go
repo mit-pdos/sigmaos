@@ -128,7 +128,7 @@ func (pathc *PathClnt) walkOne(fid np.Tfid, path np.Path, w Watch) (np.Tfid, np.
 		}
 	}
 	if fid1 == fid {
-		db.DFatalf("FATAL walkOne %v\n", fid)
+		db.DFatalf("walkOne %v\n", fid)
 	}
 	db.DPrintf("WALK", "walkOne -> %v %v\n", fid1, left)
 	err = pathc.FidClnt.Clunk(fid)
@@ -187,7 +187,7 @@ func (pathc *PathClnt) setWatch(fid np.Tfid, p np.Path, r np.Path, w Watch) (np.
 		return fid2, nil
 	}
 	if fid2 != fid1 { // Walk returns fd where it stops
-		db.DFatalf("FATAL setWatch %v %v\n", fid2, fid1)
+		db.DFatalf("setWatch %v %v\n", fid2, fid1)
 	}
 	go func() {
 		err := pathc.FidClnt.Watch(fid1)

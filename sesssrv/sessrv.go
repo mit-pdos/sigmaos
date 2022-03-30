@@ -115,7 +115,7 @@ func (ssrv *SessSrv) Root() fs.Dir {
 func (ssrv *SessSrv) Snapshot() []byte {
 	log.Printf("Snapshot %v", proc.GetPid())
 	if !ssrv.replicated {
-		db.DFatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
+		db.DFatalf("Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
 	return ssrv.snap.Snapshot(ssrv.root.(*overlay.DirOverlay), ssrv.st, ssrv.tmt, ssrv.rc)
@@ -123,7 +123,7 @@ func (ssrv *SessSrv) Snapshot() []byte {
 
 func (ssrv *SessSrv) Restore(b []byte) {
 	if !ssrv.replicated {
-		db.DFatalf("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
+		db.DFatalf("Tried to restore an unreplicated server %v", proc.GetName())
 	}
 	// Store snapshot for later use during restore.
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
@@ -140,7 +140,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 func (ssrv *SessSrv) Sess(sid np.Tsession) *session.Session {
 	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
-		db.DFatalf("FATAL %v: no sess %v\n", proc.GetName(), sid)
+		db.DFatalf("%v: no sess %v\n", proc.GetName(), sid)
 		return nil
 	}
 	return sess

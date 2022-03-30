@@ -42,7 +42,7 @@ func restoreInode(fn fs.RestoreF, b []byte) fs.Inode {
 	i := &InodeSnapshot{}
 	err := json.Unmarshal(b, i)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal inode in restoreInode: %v", err)
+		db.DFatalf("error unmarshal inode in restoreInode: %v", err)
 	}
 	inode := &Inode{}
 	inode.perm = i.Perm

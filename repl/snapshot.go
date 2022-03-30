@@ -20,7 +20,7 @@ func (rc *ReplyCache) Snapshot() []byte {
 			if rf.reply != nil {
 				b, err1 = npcodec.MarshalFcallByte(rf.reply)
 				if err1 != nil {
-					db.DFatalf("FATAL Error marshal np.Fcall in ReplyCache.Snapshot: %v, %v", err1, rf.reply)
+					db.DFatalf("Error marshal np.Fcall in ReplyCache.Snapshot: %v, %v", err1, rf.reply)
 				}
 			}
 			entries[sess][seqno] = b
@@ -28,7 +28,7 @@ func (rc *ReplyCache) Snapshot() []byte {
 	}
 	b, err := json.Marshal(entries)
 	if err != nil {
-		db.DFatalf("FATAL Error snapshot encoding reply cache: %v", err)
+		db.DFatalf("Error snapshot encoding reply cache: %v", err)
 	}
 	return b
 }
@@ -37,7 +37,7 @@ func Restore(b []byte) *ReplyCache {
 	entries := make(map[np.Tsession]map[np.Tseqno][]byte)
 	err := json.Unmarshal(b, &entries)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal ReplyCache in restore: %v", err)
+		db.DFatalf("error unmarshal ReplyCache in restore: %v", err)
 	}
 	rc := MakeReplyCache()
 	for sess, m := range entries {
@@ -48,7 +48,7 @@ func Restore(b []byte) *ReplyCache {
 
 			fc, err1 := npcodec.UnmarshalFcall(b)
 			if len(b) != 0 && err1 != nil {
-				db.DFatalf("FATAL Error unmarshal np.Fcall in ReplyCache.Restore: %v, %v", err1, string(b))
+				db.DFatalf("Error unmarshal np.Fcall in ReplyCache.Restore: %v, %v", err1, string(b))
 			}
 
 			if fc != nil {

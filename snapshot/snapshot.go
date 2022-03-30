@@ -84,7 +84,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
+		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)
 	}
 	s.restoreCache[0] = nil
 	// Restore the next inum
@@ -142,7 +142,7 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 		// Restore snapshot device
 		i = RestoreSnapshotDev(s.RestoreFsTree, snap.Data)
 	default:
-		db.DFatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
+		db.DFatalf("error unknown type in Snapshot.restore: %v", snap.Type)
 		i = nil
 	}
 	// Store the object in the restore cache.

@@ -17,7 +17,7 @@ type FsLib struct {
 func NamedAddr() string {
 	named := os.Getenv("NAMED")
 	if named == "" {
-		db.DFatalf("FATAL Getenv error: missing NAMED")
+		db.DFatalf("Getenv error: missing NAMED")
 	}
 	return named
 }
@@ -44,7 +44,7 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(server, "", "name")
 	if err != nil {
-		db.DFatalf("FATAL %v: Mount %v error: %v", proc.GetProgram(), server, err)
+		db.DFatalf("%v: Mount %v error: %v", proc.GetProgram(), server, err)
 	}
 	return fl
 }

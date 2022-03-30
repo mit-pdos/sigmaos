@@ -81,7 +81,7 @@ func (p *Proc) run(cores []uint) error {
 		fname := "/tmp/perf-stat-" + p.Pid.String() + ".out"
 		file, err := os.Create(fname)
 		if err != nil {
-			db.DFatalf("FATAL Error creating perf stat output file: %v, %v", fname, err)
+			db.DFatalf("Error creating perf stat output file: %v, %v", fname, err)
 		}
 		stdout = file
 		stderr = file

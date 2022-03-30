@@ -25,7 +25,7 @@ func restoreFile(fn fs.RestoreF, b []byte) fs.Inode {
 	fs := &FileSnapshot{}
 	err := json.Unmarshal(b, fs)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal file in restoreFile: %v", err)
+		db.DFatalf("error unmarshal file in restoreFile: %v", err)
 	}
 	f := &File{}
 	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
@@ -49,7 +49,7 @@ func restoreSymlink(fn fs.RestoreF, b []byte) fs.Inode {
 	fs := &SymlinkSnapshot{}
 	err := json.Unmarshal(b, fs)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal file in restoreSymlink: %v", err)
+		db.DFatalf("error unmarshal file in restoreSymlink: %v", err)
 	}
 	f := &Symlink{}
 	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
@@ -61,7 +61,7 @@ func encode(o interface{}) []byte {
 	b, err := json.Marshal(o)
 	if err != nil {
 		debug.PrintStack()
-		db.DFatalf("FATAL Error snapshot encoding memfs obj: %v", err)
+		db.DFatalf("Error snapshot encoding memfs obj: %v", err)
 	}
 	return b
 }

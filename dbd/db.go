@@ -28,11 +28,11 @@ func RunDbd() {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	mfs, _, _, error := fslibsrv.MakeMemFs(np.DB, "dbd")
 	if error != nil {
-		db.DFatalf("FATAL StartMemFs %v\n", error)
+		db.DFatalf("StartMemFs %v\n", error)
 	}
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root()))
 	if err != nil {
-		db.DFatalf("FATAL MakeNod clone failed %v\n", err)
+		db.DFatalf("MakeNod clone failed %v\n", err)
 	}
 	mfs.Serve()
 	mfs.Done()

@@ -302,12 +302,12 @@ func (pd *Procd) worker(done *int32) {
 				return
 			}
 			pd.perf.Teardown()
-			db.DFatalf("FATAL Procd GetProc error %v, %v\n", p, error)
+			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
 		localProc := pd.makeProc(p)
 		err := pd.fs.running(localProc)
 		if err != nil {
-			db.DFatalf("FATAL Procd pub running error %v %T\n", err, err)
+			db.DFatalf("Procd pub running error %v %T\n", err, err)
 		}
 		pd.runProc(localProc)
 	}

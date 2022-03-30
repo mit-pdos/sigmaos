@@ -33,7 +33,7 @@ func RunLeader(dir, last, child string) {
 
 	epoch, err := l.AcquireFencedEpoch(nil, []string{dir})
 	if err != nil {
-		db.DFatalf("FATAL %v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
+		db.DFatalf("%v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}
 
 	log.Printf("%v: leader at %v\n", proc.GetName(), epoch)
@@ -44,11 +44,11 @@ func RunLeader(dir, last, child string) {
 	conf := &Config{epoch.String(), pid, pid}
 	b, err := writer.JsonRecord(*conf)
 	if err != nil {
-		db.DFatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
+		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}
 	_, err = fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
 	if err != nil {
-		db.DFatalf("FATAL %v SetFile b %v failed %v\n", proc.GetName(), fn, err)
+		db.DFatalf("%v SetFile b %v failed %v\n", proc.GetName(), fn, err)
 	}
 
 	if child == "child" {

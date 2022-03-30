@@ -23,7 +23,7 @@ func (stats *Stats) snapshot() []byte {
 	ss.Info = stats.sti
 	b, err := json.Marshal(ss)
 	if err != nil {
-		db.DFatalf("FATAL Error snapshot encoding stats: %v", err)
+		db.DFatalf("Error snapshot encoding stats: %v", err)
 	}
 	return b
 }
@@ -32,7 +32,7 @@ func Restore(fn fs.RestoreF, b []byte) *Stats {
 	ss := MakeStatsSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal stats in restore: %v", err)
+		db.DFatalf("error unmarshal stats in restore: %v", err)
 	}
 	stats := &Stats{}
 	stats.Inode = inode.RestoreInode(fn, ss.InodeSnap)

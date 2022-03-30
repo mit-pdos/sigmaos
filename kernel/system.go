@@ -56,7 +56,7 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(s.bindir, fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
-		db.DFatalf("FATAL RunNamed err %v\n", err)
+		db.DFatalf("RunNamed err %v\n", err)
 	}
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
@@ -74,7 +74,7 @@ func MakeSystemAll(uname, bin string, replicaId int) *System {
 	s.pid = proc.GetPid()
 	err := s.Boot()
 	if err != nil {
-		db.DFatalf("FATAL Start err %v\n", err)
+		db.DFatalf("Start err %v\n", err)
 	}
 	return s
 }
@@ -146,7 +146,7 @@ func (s *System) KillOne(srv string) error {
 			log.Printf("Tried to kill ux, nothing to kill")
 		}
 	default:
-		db.DFatalf("FATAL Unkown server type in System.KillOne: %v", srv)
+		db.DFatalf("Unkown server type in System.KillOne: %v", srv)
 	}
 	log.Printf("kill %v %v\n", -ss.cmd.Process.Pid, ss.p.Pid)
 	err = syscall.Kill(-ss.cmd.Process.Pid, syscall.SIGKILL)
@@ -154,7 +154,7 @@ func (s *System) KillOne(srv string) error {
 		ss.cmd.Wait()
 		s.crashedPids[ss.p.Pid] = true
 	} else {
-		db.DFatalf("FATAL %v kill failed %v\n", srv, err)
+		db.DFatalf("%v kill failed %v\n", srv, err)
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ func (s *System) Shutdown() {
 	if s.ProcClnt != nil {
 		cpids, err := s.GetChildren(proc.GetProcDir())
 		if err != nil {
-			db.DFatalf("FATAL GetChildren in System.Shutdown: %v", err)
+			db.DFatalf("GetChildren in System.Shutdown: %v", err)
 		}
 		for _, pid := range cpids {
 			s.Evict(pid)
@@ -228,11 +228,11 @@ func BootNamed(pclnt *procclnt.ProcClnt, bindir string, addr string, replicate b
 	p := makeNamedProc(addr, replicate, id, peers, realmId)
 	cmd, err := pclnt.SpawnKernelProc(p, bindir, fslib.Named())
 	if err != nil {
-		db.DFatalf("FATAL Error WaitStart in BootNamed: %v", err)
+		db.DFatalf("Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
 	if err = pclnt.WaitStart(p.Pid); err != nil {
-		db.DFatalf("FATAL Error WaitStart in BootNamed: %v", err)
+		db.DFatalf("Error WaitStart in BootNamed: %v", err)
 		return nil, "", err
 	}
 	return cmd, p.Pid, nil
@@ -242,11 +242,11 @@ func addReplPortOffset(peerAddr string) string {
 	// Compute replica address as peerAddr + REPL_PORT_OFFSET
 	host, port, err := net.SplitHostPort(peerAddr)
 	if err != nil {
-		db.DFatalf("FATAL Error splitting host port: %v", err)
+		db.DFatalf("Error splitting host port: %v", err)
 	}
 	portI, err := strconv.Atoi(port)
 	if err != nil {
-		db.DFatalf("FATAL Error conv port: %v", err)
+		db.DFatalf("Error conv port: %v", err)
 	}
 	newPort := strconv.Itoa(portI + REPL_PORT_OFFSET)
 

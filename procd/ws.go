@@ -21,7 +21,7 @@ func (pd *Procd) readRunqProc(procdPath string, queueName string, pid string) (*
 	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
-		db.DFatalf("FATAL Error Unmarshal in Procd.readProc: %v", err)
+		db.DFatalf("Error Unmarshal in Procd.readProc: %v", err)
 		return nil, err
 	}
 	return p, nil

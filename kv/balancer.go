@@ -98,12 +98,12 @@ func RunBalancer(crashChild string, auto string) {
 	// start server but don't publish its existence
 	mfs, err := fslibsrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
 	if err != nil {
-		db.DFatalf("FATAL StartMemFs %v\n", err)
+		db.DFatalf("StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, nil)
 	err1 := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err1 != nil {
-		db.DFatalf("FATAL MakeNod clone failed %v\n", err1)
+		db.DFatalf("MakeNod clone failed %v\n", err1)
 	}
 
 	// start server and write ch when server is done
@@ -115,7 +115,7 @@ func RunBalancer(crashChild string, auto string) {
 
 	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), []string{})
 	if err != nil {
-		db.DFatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
+		db.DFatalf("%v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}
 
 	db.DPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
@@ -223,7 +223,7 @@ func (bl *Balancer) monitorMyself() {
 func (bl *Balancer) PostConfig() {
 	err := atomic.PutFileJsonAtomic(bl.FsLib, KVCONFIG, 0777, *bl.conf)
 	if err != nil {
-		db.DFatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVCONFIG, err)
+		db.DFatalf("%v: MakeFile %v err %v\n", proc.GetName(), KVCONFIG, err)
 	}
 }
 

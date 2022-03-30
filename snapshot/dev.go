@@ -20,7 +20,7 @@ func MakeDev(srv np.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
 func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	b := dev.srv.Snapshot()
 	if len(b) > int(np.MAXGETSET) {
-		db.DFatalf("FATAL snapshot too big: %v bytes", len(b))
+		db.DFatalf("snapshot too big: %v bytes", len(b))
 	}
 	return b, nil
 }

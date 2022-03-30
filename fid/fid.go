@@ -89,7 +89,7 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 	case fs.Dir:
 		sz, err = i.WriteDir(f.ctx, off, b, v)
 	default:
-		db.DFatalf("FATAL Write: obj type %T isn't Dir or File\n", o)
+		db.DFatalf("Write: obj type %T isn't Dir or File\n", o)
 	}
 	return sz, err
 }
@@ -122,7 +122,7 @@ func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rrea
 		rets.Data = b
 		return nil
 	default:
-		db.DFatalf("FATAL Read: obj %v type %T isn't Dir or File\n", o, o)
+		db.DFatalf("Read: obj %v type %T isn't Dir or File\n", o, o)
 		return nil
 	}
 }

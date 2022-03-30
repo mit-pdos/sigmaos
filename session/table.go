@@ -52,7 +52,7 @@ func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.ThreadMgr {
 	if sess, ok := st.Lookup(sid); ok {
 		return sess.threadmgr
 	} else {
-		db.DFatalf("FATAL SessThread: no thread for %v\n", sid)
+		db.DFatalf("SessThread: no thread for %v\n", sid)
 	}
 	return nil
 }

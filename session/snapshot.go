@@ -15,7 +15,7 @@ func (st *SessionTable) Snapshot() []byte {
 	}
 	b, err := json.Marshal(sessions)
 	if err != nil {
-		db.DFatalf("FATAL Error snapshot encoding session table: %v", err)
+		db.DFatalf("Error snapshot encoding session table: %v", err)
 	}
 	return b
 }
@@ -24,7 +24,7 @@ func RestoreTable(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsSer
 	sessions := make(map[np.Tsession][]byte)
 	err := json.Unmarshal(b, &sessions)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal session table in restore: %v", err)
+		db.DFatalf("error unmarshal session table in restore: %v", err)
 	}
 	st := MakeSessionTable(mkps, fssrv, tm)
 	for session, b := range sessions {
@@ -48,7 +48,7 @@ func (sess *Session) Snapshot() []byte {
 	ss.closed = sess.closed
 	b, err := json.Marshal(ss)
 	if err != nil {
-		db.DFatalf("FATAL Error snapshot encoding session: %v", err)
+		db.DFatalf("Error snapshot encoding session: %v", err)
 	}
 	return b
 }
@@ -57,7 +57,7 @@ func RestoreSession(sid np.Tsession, fssrv np.FsServer, rps np.RestoreProtServer
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal session in restore: %v", err)
+		db.DFatalf("error unmarshal session in restore: %v", err)
 	}
 	fos := rps(fssrv, ss.ProtsrvSnap)
 	// TODO: add session manager

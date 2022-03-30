@@ -26,7 +26,7 @@ func encode(o interface{}) []byte {
 	b, err := json.Marshal(o)
 	if err != nil {
 		debug.PrintStack()
-		db.DFatalf("FATAL Error snapshot encoding fence: %v", err)
+		db.DFatalf("Error snapshot encoding fence: %v", err)
 	}
 	return b
 }
@@ -35,7 +35,7 @@ func restoreFence(fn fs.RestoreF, b []byte) fs.Inode {
 	s := &FenceSnapshot{}
 	err := json.Unmarshal(b, s)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal fence in restoreFence: %v", err)
+		db.DFatalf("error unmarshal fence in restoreFence: %v", err)
 	}
 	f := &Fence{}
 	f.Inode = inode.RestoreInode(fn, s.InodeSnap)

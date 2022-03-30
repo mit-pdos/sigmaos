@@ -33,7 +33,7 @@ func (pd *Procd) makeFs() {
 	var err error
 	pd.MemFs, pd.FsLib, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
 	if err != nil {
-		db.DFatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), err)
+		db.DFatalf("%v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
 	procclnt.MountPids(pd.FsLib, fslib.Named())
 
@@ -41,7 +41,7 @@ func (pd *Procd) makeFs() {
 	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
 	err1 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err1 != nil {
-		db.DFatalf("FATAL Error MkNod in RunProcd: %v", err1)
+		db.DFatalf("Error MkNod in RunProcd: %v", err1)
 	}
 
 	// Set up running dir
@@ -49,7 +49,7 @@ func (pd *Procd) makeFs() {
 	running := dir.MakeDir(runningi, memfs.MakeInode)
 	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
 	if err1 != nil {
-		db.DFatalf("FATAL Error creating running dir: %v", err1)
+		db.DFatalf("Error creating running dir: %v", err1)
 	}
 	pd.fs.run = running
 
@@ -61,7 +61,7 @@ func (pd *Procd) makeFs() {
 		runq := dir.MakeDir(runqi, memfs.MakeInode)
 		err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
 		if err1 != nil {
-			db.DFatalf("FATAL Error creating running dir: %v", err1)
+			db.DFatalf("Error creating running dir: %v", err1)
 		}
 		pd.fs.runqs[q] = runq
 	}
@@ -71,7 +71,7 @@ func (pd *Procd) makeFs() {
 	pids := dir.MakeDir(pidsi, memfs.MakeInode)
 	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
 	if err1 != nil {
-		db.DFatalf("FATAL Error creating pids dir: %v", err1)
+		db.DFatalf("Error creating pids dir: %v", err1)
 	}
 }
 

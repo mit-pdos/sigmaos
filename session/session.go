@@ -77,7 +77,7 @@ func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
-		db.DFatalf("FATAL tried to close a closed session: %v", sess.Sid)
+		db.DFatalf("tried to close a closed session: %v", sess.Sid)
 	}
 	sess.closed = true
 	// Close the replies channel so that writer in srvconn exits
@@ -112,7 +112,7 @@ func (sess *Session) heartbeat(msg np.Tmsg) {
 	defer sess.Unlock()
 	db.DPrintf("SESSION", "Heartbeat %v %v", msg.Type(), msg)
 	if sess.closed {
-		db.DFatalf("FATAL %v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
+		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
 	}
 	sess.lastHeartbeat = time.Now()
 }

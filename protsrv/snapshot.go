@@ -35,7 +35,7 @@ func (fos *ProtSrv) snapshot() []byte {
 	foss.Sid = fos.sid
 	b, err := json.Marshal(foss)
 	if err != nil {
-		db.DFatalf("FATAL Error snapshot encoding fsobjsrv: %v", err)
+		db.DFatalf("Error snapshot encoding fsobjsrv: %v", err)
 	}
 	return b
 }
@@ -45,7 +45,7 @@ func Restore(srv np.FsServer, b []byte) np.Protsrv {
 	foss := MakeProtSrvSnapshot()
 	err := json.Unmarshal(b, foss)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal fsobjsrv in restore: %v", err)
+		db.DFatalf("error unmarshal fsobjsrv in restore: %v", err)
 	}
 	fos := MakeProtServer(ssrv, foss.Sid).(*ProtSrv)
 	for f, b := range foss.Fid {

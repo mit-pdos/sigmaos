@@ -84,7 +84,7 @@ func (n *RaftNode) start(peers []raft.Peer) {
 	logCfg.OutputPaths = []string{string(logPath)}
 	logger, err := logCfg.Build()
 	if err != nil {
-		db.DFatalf("FATAL Couldn't build logger: %v", err)
+		db.DFatalf("Couldn't build logger: %v", err)
 	}
 	n.transport = &rafthttp.Transport{
 		Logger:      logger,

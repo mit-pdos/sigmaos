@@ -37,7 +37,7 @@ func encode(o interface{}) []byte {
 	b, err := json.Marshal(o)
 	if err != nil {
 		debug.PrintStack()
-		db.DFatalf("FATAL Error snapshot encoding diroverlay: %v", err)
+		db.DFatalf("Error snapshot encoding diroverlay: %v", err)
 	}
 	return b
 }
@@ -46,7 +46,7 @@ func restoreDirOverlay(d *DirOverlay, fn fs.RestoreF, b []byte) fs.Inode {
 	ds := &DirOverlaySnapshot{}
 	err := json.Unmarshal(b, ds)
 	if err != nil {
-		db.DFatalf("FATAL error unmarshal diroverlay in restoreDirOverlay (snaplen:%v): %v", len(b), err)
+		db.DFatalf("error unmarshal diroverlay in restoreDirOverlay (snaplen:%v): %v", len(b), err)
 	}
 	d.Inode = inode.RestoreInode(fn, ds.InodeSnap)
 	root := fn(ds.Root)

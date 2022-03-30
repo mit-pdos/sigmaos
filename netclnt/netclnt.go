@@ -122,7 +122,7 @@ func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
 			nc.Close()
 			return np.MkErr(np.TErrUnreachable, nc.Dst())
 		} else {
-			db.DFatalf("FATAL error in netclnt.writer: %v", err)
+			db.DFatalf("error in netclnt.writer: %v", err)
 		}
 	} else {
 		error := nc.bw.Flush()
@@ -145,7 +145,7 @@ func (nc *NetClnt) Recv() (*np.Fcall, *np.Err) {
 	}
 	fcall, err := npcodec.UnmarshalFcall(frame)
 	if err != nil {
-		db.DFatalf("FATAL: unmarshal fcall in NetClnt.recv %v", err)
+		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 		db.DPrintf("NETCLNT_ERR", "Recv: Unmarshal error %v\n", err)
 	}
 	return fcall, nil

@@ -196,6 +196,6 @@ func (pipe *Pipe) Unlink() {
 }
 
 func (pipe *Pipe) Snapshot(fn fs.SnapshotF) []byte {
-	db.DFatalf("FATAL tried to snapshot pipe")
+	db.DFatalf("tried to snapshot pipe")
 	return nil
 }

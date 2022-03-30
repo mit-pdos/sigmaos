@@ -72,7 +72,7 @@ func Run(args []string) {
 	}
 
 	if err != nil {
-		db.DFatalf("FATAL %v: err %v\n", proc.GetProgram(), err)
+		db.DFatalf("%v: err %v\n", proc.GetProgram(), err)
 	}
 
 	// seccomp.LoadFilter()

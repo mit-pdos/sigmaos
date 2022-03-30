@@ -63,7 +63,7 @@ func (fm *FidMap) free(fid np.Tfid) {
 	_, ok := fm.fids[fid]
 	if !ok {
 		debug.PrintStack()
-		db.DFatalf("FATAL %v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
+		db.DFatalf("%v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
 	}
 	delete(fm.fids, fid)
 }

@@ -48,7 +48,7 @@ func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {
 	case File:
 		return i, nil
 	default:
-		db.DFatalf("FATAL Obj2File: obj type %T isn't Dir or File\n", o)
+		db.DFatalf("Obj2File: obj type %T isn't Dir or File\n", o)
 	}
 	return nil, nil
 }

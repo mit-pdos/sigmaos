@@ -25,7 +25,7 @@ func main() {
 		if os.Args[1] == "dummy" {
 			fss, err := fslibsrv.MakeReplMemFs(addr, name, "memfsd-"+proc.GetPid().String(), config)
 			if err != nil {
-				db.DFatalf("FATAL Error makreplmemfs: %v", err)
+				db.DFatalf("Error makreplmemfs: %v", err)
 			}
 			fss.Serve()
 			fss.Done()
@@ -33,7 +33,7 @@ func main() {
 	} else {
 		mfs, _, _, err := fslibsrv.MakeMemFs(name, name)
 		if err != nil {
-			db.DFatalf("FATAL MakeMemFs %v\n", err)
+			db.DFatalf("MakeMemFs %v\n", err)
 		}
 		mfs.Serve()
 		mfs.Done()

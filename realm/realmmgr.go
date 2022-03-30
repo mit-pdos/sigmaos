@@ -107,13 +107,13 @@ func (m *RealmMgr) makeCtlFiles() {
 
 func (m *RealmMgr) lockRealm(realmId string) {
 	if err := m.ecs[realmId].AcquireLeadership([]byte("realmmgr")); err != nil {
-		db.DFatalf("%vFATAL error RealmMgr acquire leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%v error RealmMgr acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 func (m *RealmMgr) unlockRealm(realmId string) {
 	if err := m.ecs[realmId].ReleaseLeadership(); err != nil {
-		db.DFatalf("%vFATAL error RealmMgr release leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%v error RealmMgr release leadership: %v", string(debug.Stack()), err)
 	}
 }
 

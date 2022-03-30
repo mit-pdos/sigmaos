@@ -143,13 +143,13 @@ func (r *Machined) boot(realmCfg *RealmConfig) {
 
 func (r *Machined) lockRealm() {
 	if err := r.ec.AcquireLeadership([]byte("machined-" + r.id)); err != nil {
-		db.DFatalf("%vFATAL error Machined acquire leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%v error Machined acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 func (r *Machined) unlockRealm() {
 	if err := r.ec.ReleaseLeadership(); err != nil {
-		db.DFatalf("%vFATAL error Machined release leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%v error Machined release leadership: %v", string(debug.Stack()), err)
 	}
 }
 

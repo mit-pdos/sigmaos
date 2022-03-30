@@ -30,7 +30,7 @@ func main() {
 	// Find the base port of the replica group.
 	idx := strings.Index(baseAddr, ":")
 	if idx < 0 {
-		db.DFatalf("FATAL Invalid base addr: %v", baseAddr)
+		db.DFatalf("Invalid base addr: %v", baseAddr)
 	}
 	host := baseAddr[:idx]
 	basePort, err := strconv.Atoi(baseAddr[idx+1:])

@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) != 1 {
-		db.DFatalf("FATAL Usage: %v", os.Args[0])
+		db.DFatalf("Usage: %v", os.Args[0])
 	}
 	dbd.RunDbd()
 }

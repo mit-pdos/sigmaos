@@ -314,6 +314,10 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	fssrv.sendReply(fc, reply, sess)
 }
 
-func (fssrv *FsServer) PartitionClient() {
-	fssrv.sm.TimeoutSession()
+func (fssrv *FsServer) PartitionClient(permanent bool) {
+	if permanent {
+		fssrv.sm.TimeoutSession()
+	} else {
+		fssrv.sm.CloseConn()
+	}
 }

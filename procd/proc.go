@@ -105,6 +105,7 @@ func (p *Proc) run(cores []uint) error {
 	err := cmd.Start()
 	if err != nil {
 		db.DLPrintf("PROCD_ERR", "Procd run error: %v, %v\n", p.attr, err)
+		p.pd.procclnt.ExitedProcd(p.Pid, p.attr.ProcDir, p.attr.ParentDir, proc.MakeStatusErr(err.Error(), nil))
 		return err
 	}
 

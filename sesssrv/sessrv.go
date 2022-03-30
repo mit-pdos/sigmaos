@@ -1,4 +1,4 @@
-package fssrv
+package sesssrv
 
 import (
 	"log"
@@ -26,16 +26,16 @@ import (
 )
 
 //
-// There is one FsServer per server. The FsServer has one ProtSrv per
-// 9p channel (i.e., TCP connection). Each channel may multiplex
-// several users/clients.
+// There is one SessSrv per server. The SessSrv has one protsrv per
+// session (i.e., TCP connection). Each session may multiplex several
+// users.
 //
-// FsServer has a table with all sess conds in use so that it can
+// SessSrv has a table with all sess conds in use so that it can
 // unblock threads that are waiting in a sess cond when a session
 // closes.
 //
 
-type FsServer struct {
+type SessSrv struct {
 	addr       string
 	root       fs.Dir
 	mkps       np.MkProtServer
@@ -58,87 +58,87 @@ type FsServer struct {
 	fsl        *fslib.FsLib
 }
 
-func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
+func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	mkps np.MkProtServer, rps np.RestoreProtServer, pclnt *procclnt.ProcClnt,
-	config repl.Config) *FsServer {
-	fssrv := &FsServer{}
-	fssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
+	config repl.Config) *SessSrv {
+	ssrv := &SessSrv{}
+	ssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
 	dirover := overlay.MkDirOverlay(root)
-	fssrv.root = dirover
-	fssrv.addr = addr
-	fssrv.mkps = mkps
-	fssrv.rps = rps
-	fssrv.stats = stats.MkStatsDev(fssrv.root)
-	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
-	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.tmt)
-	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.SrvFcall)
-	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
-	fssrv.wt = watch.MkWatchTable(fssrv.sct)
-	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
+	ssrv.root = dirover
+	ssrv.addr = addr
+	ssrv.mkps = mkps
+	ssrv.rps = rps
+	ssrv.stats = stats.MkStatsDev(ssrv.root)
+	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.process, ssrv.replicated)
+	ssrv.st = session.MakeSessionTable(mkps, ssrv, ssrv.tmt)
+	ssrv.sm = session.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
+	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
+	ssrv.wt = watch.MkWatchTable(ssrv.sct)
+	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
 
 	// Build up overlay directory
-	fssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
+	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
-	dirover.Mount(np.STATSD, fssrv.stats)
-	dirover.Mount(np.FENCEDIR, fssrv.ffs.(*dir.DirImpl))
+	dirover.Mount(np.STATSD, ssrv.stats)
+	dirover.Mount(np.FENCEDIR, ssrv.ffs.(*dir.DirImpl))
 
-	if !fssrv.replicated {
-		fssrv.replSrv = nil
+	if !ssrv.replicated {
+		ssrv.replSrv = nil
 	} else {
-		snapDev := snapshot.MakeDev(fssrv, nil, fssrv.root)
+		snapDev := snapshot.MakeDev(ssrv, nil, ssrv.root)
 		dirover.Mount(np.SNAPDEV, snapDev)
 
-		fssrv.rc = repl.MakeReplyCache()
-		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())
-		fssrv.replSrv.Start()
+		ssrv.rc = repl.MakeReplyCache()
+		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
+		ssrv.replSrv.Start()
 		log.Printf("Starting repl server")
 	}
-	fssrv.pclnt = pclnt
-	fssrv.ch = make(chan bool)
-	fssrv.fsl = fsl
-	fssrv.stats.MonitorCPUUtil()
-	return fssrv
+	ssrv.pclnt = pclnt
+	ssrv.ch = make(chan bool)
+	ssrv.fsl = fsl
+	ssrv.stats.MonitorCPUUtil()
+	return ssrv
 }
 
-func (fssrv *FsServer) SetFsl(fsl *fslib.FsLib) {
-	fssrv.fsl = fsl
+func (ssrv *SessSrv) SetFsl(fsl *fslib.FsLib) {
+	ssrv.fsl = fsl
 }
 
-func (fssrv *FsServer) GetSessCondTable() *sesscond.SessCondTable {
-	return fssrv.sct
+func (ssrv *SessSrv) GetSessCondTable() *sesscond.SessCondTable {
+	return ssrv.sct
 }
 
-func (fssrv *FsServer) Root() fs.Dir {
-	return fssrv.root
+func (ssrv *SessSrv) Root() fs.Dir {
+	return ssrv.root
 }
 
-func (fssrv *FsServer) Snapshot() []byte {
+func (ssrv *SessSrv) Snapshot() []byte {
 	log.Printf("Snapshot %v", proc.GetPid())
-	if !fssrv.replicated {
+	if !ssrv.replicated {
 		log.Fatalf("FATAL: Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
-	fssrv.snap = snapshot.MakeSnapshot(fssrv)
-	return fssrv.snap.Snapshot(fssrv.root.(*overlay.DirOverlay), fssrv.st, fssrv.tmt, fssrv.rc)
+	ssrv.snap = snapshot.MakeSnapshot(ssrv)
+	return ssrv.snap.Snapshot(ssrv.root.(*overlay.DirOverlay), ssrv.st, ssrv.tmt, ssrv.rc)
 }
 
-func (fssrv *FsServer) Restore(b []byte) {
-	if !fssrv.replicated {
+func (ssrv *SessSrv) Restore(b []byte) {
+	if !ssrv.replicated {
 		log.Fatal("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
 	}
 	// Store snapshot for later use during restore.
-	fssrv.snap = snapshot.MakeSnapshot(fssrv)
-	fssrv.stats.Done()
+	ssrv.snap = snapshot.MakeSnapshot(ssrv)
+	ssrv.stats.Done()
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
-	fssrv.root, fssrv.ffs, fssrv.stats, fssrv.st, fssrv.tmt, fssrv.rc = fssrv.snap.Restore(fssrv.mkps, fssrv.rps, fssrv, fssrv.tmt.AddThread(), fssrv.process, fssrv.rc, b)
-	fssrv.stats.MonitorCPUUtil()
-	fssrv.sct.St = fssrv.st
-	fssrv.sm.Stop()
-	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.SrvFcall)
+	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt, ssrv.rc = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.process, ssrv.rc, b)
+	ssrv.stats.MonitorCPUUtil()
+	ssrv.sct.St = ssrv.st
+	ssrv.sm.Stop()
+	ssrv.sm = session.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 
-func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
-	sess, ok := fssrv.st.Lookup(sid)
+func (ssrv *SessSrv) Sess(sid np.Tsession) *session.Session {
+	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
 		log.Fatalf("FATAL %v: no sess %v\n", proc.GetName(), sid)
 		return nil
@@ -146,79 +146,79 @@ func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
 	return sess
 }
 
-// The server using fssrv is ready to take requests. Keep serving
-// until fssrv is told to stop using Done().
-func (fssrv *FsServer) Serve() {
+// The server using ssrv is ready to take requests. Keep serving
+// until ssrv is told to stop using Done().
+func (ssrv *SessSrv) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
-	if fssrv.pclnt != nil {
-		if err := fssrv.pclnt.Started(); err != nil {
+	if ssrv.pclnt != nil {
+		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()
 			log.Printf("%v: Error Started: %v", proc.GetName(), err)
 		}
-		if err := fssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
+		if err := ssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
 			debug.PrintStack()
 			log.Printf("%v: Error WaitEvict: %v", proc.GetName(), err)
 		}
 	} else {
-		<-fssrv.ch
+		<-ssrv.ch
 	}
 }
 
-// The server using fssrv is done; exit.
-func (fssrv *FsServer) Done() {
-	if fssrv.pclnt != nil {
-		fssrv.pclnt.Exited(proc.MakeStatus(proc.StatusEvicted))
+// The server using ssrv is done; exit.
+func (ssrv *SessSrv) Done() {
+	if ssrv.pclnt != nil {
+		ssrv.pclnt.Exited(proc.MakeStatus(proc.StatusEvicted))
 	} else {
-		if !fssrv.done {
-			fssrv.done = true
-			fssrv.ch <- true
+		if !ssrv.done {
+			ssrv.done = true
+			ssrv.ch <- true
 
 		}
 	}
-	fssrv.stats.Done()
+	ssrv.stats.Done()
 }
 
-func (fssrv *FsServer) MyAddr() string {
-	return fssrv.srv.MyAddr()
+func (ssrv *SessSrv) MyAddr() string {
+	return ssrv.srv.MyAddr()
 }
 
-func (fssrv *FsServer) GetStats() *stats.Stats {
-	return fssrv.stats
+func (ssrv *SessSrv) GetStats() *stats.Stats {
+	return ssrv.stats
 }
 
-func (fssrv *FsServer) GetWatchTable() *watch.WatchTable {
-	return fssrv.wt
+func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
+	return ssrv.wt
 }
 
-func (fssrv *FsServer) GetSnapshotter() *snapshot.Snapshot {
-	return fssrv.snap
+func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {
+	return ssrv.snap
 }
 
-func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession) (fs.Dir, fs.CtxI) {
-	return fssrv.root, ctx.MkCtx(uname, sessid, fssrv.sct)
+func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) (fs.Dir, fs.CtxI) {
+	return ssrv.root, ctx.MkCtx(uname, sessid, ssrv.sct)
 }
 
-func (fssrv *FsServer) SrvFcall(fc *np.Fcall, conn *np.Conn) {
+func (ssrv *SessSrv) SrvFcall(fc *np.Fcall, conn *np.Conn) {
 	// The replies channel will be set here.
-	sess := fssrv.st.Alloc(fc.Session, conn)
+	sess := ssrv.st.Alloc(fc.Session, conn)
 	// New thread about to start
 	sess.IncThreads()
-	if !fssrv.replicated {
+	if !ssrv.replicated {
 		sess.GetThread().Process(fc)
 	} else {
-		fssrv.replSrv.Process(fc)
+		ssrv.replSrv.Process(fc)
 	}
 }
 
-func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
+func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
 	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
 	fcall.Session = request.Session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
-	db.DLPrintf("FSSRV", "Request %v start sendReply %v", request, fcall)
+	db.DLPrintf("SSRV", "Request %v start sendReply %v", request, fcall)
 	// Store the reply in the reply cache if this is a replicated server.
-	if fssrv.replicated {
-		fssrv.rc.Put(request, fcall)
+	if ssrv.replicated {
+		ssrv.rc.Put(request, fcall)
 	}
 	// Only send a reply if the session hasn't been closed, or this is a detach
 	// (the last reply to be sent).
@@ -230,16 +230,16 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 			conn.Replies <- fcall
 		}
 	}
-	db.DLPrintf("FSSRV", "Request %v done sendReply %v", request, fcall)
+	db.DLPrintf("SSRV", "Request %v done sendReply %v", request, fcall)
 }
 
-func (fssrv *FsServer) process(fc *np.Fcall) {
+func (ssrv *SessSrv) process(fc *np.Fcall) {
 	// If this is a replicated op received through raft (not directly from a
 	// client), the first time Alloc is called will be in this function, so the
 	// reply channel will be set to nil. If it came from the client, the reply
 	// channel will already be set.
-	sess := fssrv.st.Alloc(fc.Session, nil)
-	if fssrv.replicated {
+	sess := ssrv.st.Alloc(fc.Session, nil)
+	if ssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:
 		//
@@ -260,44 +260,44 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 		// asynchrony is necessary in order to allow other ops on the thread to
 		// make progress. We coulld optionally use sessconds, but they're kind of
 		// overkill since we don't care about ordering in this case.
-		if replyFuture, ok := fssrv.rc.Get(fc); ok {
-			db.DLPrintf("FSSRV", "Request %v reply in cache", fc)
+		if replyFuture, ok := ssrv.rc.Get(fc); ok {
+			db.DLPrintf("SSRV", "Request %v reply in cache", fc)
 			go func() {
-				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
+				ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 			}()
 			return
 		}
-		db.DLPrintf("FSSRV", "Request %v reply not in cache", fc)
+		db.DLPrintf("SSRV", "Request %v reply not in cache", fc)
 		// If this request has not been registered with the reply cache yet, register
 		// it.
-		fssrv.rc.Register(fc)
+		ssrv.rc.Register(fc)
 	}
-	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	fssrv.fenceFcall(sess, fc)
+	ssrv.stats.StatInfo().Inc(fc.Msg.Type())
+	ssrv.fenceFcall(sess, fc)
 }
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (fssrv *FsServer) fenceFcall(sess *session.Session, fc *np.Fcall) {
+func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
 	db.DLPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
-	if f, err := fencefs.CheckFence(fssrv.ffs, fc.Fence); err != nil {
+	if f, err := fencefs.CheckFence(ssrv.ffs, fc.Fence); err != nil {
 		reply := *err.Rerror()
-		fssrv.sendReply(fc, reply, sess)
+		ssrv.sendReply(fc, reply, sess)
 		return
 	} else {
 		if f == nil {
-			fssrv.serve(sess, fc)
+			ssrv.serve(sess, fc)
 		} else {
 			defer f.Unlock()
-			fssrv.serve(sess, fc)
+			ssrv.serve(sess, fc)
 		}
 	}
 }
 
-func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
-	db.DLPrintf("FSSRV", "Dispatch request %v", fc)
+func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
+	db.DLPrintf("SSRV", "Dispatch request %v", fc)
 	reply, rerror := sess.Dispatch(fc.Msg)
-	db.DLPrintf("FSSRV", "Done dispatch request %v", fc)
+	db.DLPrintf("SSRV", "Done dispatch request %v", fc)
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil
@@ -309,13 +309,13 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	}
 	// Send reply will drop the reply if the replies channel is nil, but it will
 	// make sure to insert the reply into the reply cache.
-	fssrv.sendReply(fc, reply, sess)
+	ssrv.sendReply(fc, reply, sess)
 }
 
-func (fssrv *FsServer) PartitionClient(permanent bool) {
+func (ssrv *SessSrv) PartitionClient(permanent bool) {
 	if permanent {
-		fssrv.sm.TimeoutSession()
+		ssrv.sm.TimeoutSession()
 	} else {
-		fssrv.sm.CloseConn()
+		ssrv.sm.CloseConn()
 	}
 }

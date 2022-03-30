@@ -7,8 +7,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fid"
 	"ulambda/fs"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/sesssrv"
 	"ulambda/stats"
 	"ulambda/watch"
 )
@@ -20,7 +20,7 @@ import (
 //
 
 type ProtSrv struct {
-	fssrv *fssrv.FsServer
+	ssrv  *sesssrv.SessSrv
 	wt    *watch.WatchTable // shared across sessions
 	ft    *fidTable
 	et    *ephemeralTable
@@ -30,8 +30,8 @@ type ProtSrv struct {
 
 func MakeProtServer(s np.FsServer, sid np.Tsession) np.Protsrv {
 	ps := &ProtSrv{}
-	srv := s.(*fssrv.FsServer)
-	ps.fssrv = srv
+	srv := s.(*sesssrv.SessSrv)
+	ps.ssrv = srv
 
 	ps.ft = makeFidTable()
 	ps.et = makeEphemeralTable()
@@ -55,7 +55,7 @@ func (ps *ProtSrv) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
 func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	db.DLPrintf("FSOBJ", "Attach %v\n", args)
 	path := np.Split(args.Aname)
-	root, ctx := ps.fssrv.AttachTree(args.Uname, args.Aname, ps.sid)
+	root, ctx := ps.ssrv.AttachTree(args.Uname, args.Aname, ps.sid)
 	tree := root.(fs.FsObj)
 	qid := tree.(fs.FsObj).Qid()
 	if args.Aname != "" {
@@ -77,7 +77,7 @@ func (ps *ProtSrv) Detach() {
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
-	ps.fssrv.GetSessCondTable().DeleteSess(ps.sid)
+	ps.ssrv.GetSessCondTable().DeleteSess(ps.sid)
 
 	ps.ft.ClunkOpen()
 	ephemeral := ps.et.Get()

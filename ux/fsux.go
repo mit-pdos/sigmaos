@@ -7,15 +7,15 @@ import (
 	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/repl"
+	"ulambda/sesssrv"
 	// "ulambda/seccomp"
 )
 
 type FsUx struct {
-	*fssrv.FsServer
+	*sesssrv.SessSrv
 	*fslib.FsLib
 	mu    sync.Mutex
 	mount string
@@ -42,7 +42,7 @@ func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Co
 	if error != nil {
 		log.Fatalf("%v: MakeReplServer %v\n", proc.GetName(), error)
 	}
-	fsux.FsServer = srv
+	fsux.SessSrv = srv
 	fsux.FsLib = fsl
 	return fsux
 }

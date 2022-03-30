@@ -9,7 +9,6 @@ import (
 
 	"ulambda/ctx"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
@@ -19,6 +18,7 @@ import (
 	"ulambda/repl"
 	"ulambda/repldummy"
 	"ulambda/replraft"
+	"ulambda/sesssrv"
 	// "ulambda/seccomp"
 )
 
@@ -51,7 +51,7 @@ func Run(args []string) {
 		pname = path.Join(realm.REALM_NAMEDS, realmId)
 	}
 
-	var fss *fssrv.FsServer
+	var ss *sesssrv.SessSrv
 	var err *np.Err
 	// Replicate?
 	if len(args) >= 4 {
@@ -66,9 +66,9 @@ func Run(args []string) {
 			peers := strings.Split(args[4], ",")
 			config = replraft.MakeRaftConfig(id, peers)
 		}
-		fss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config)
+		ss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config)
 	} else {
-		fss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", nil)
+		ss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", nil)
 	}
 
 	if err != nil {
@@ -77,16 +77,16 @@ func Run(args []string) {
 
 	// seccomp.LoadFilter()
 
-	initfs(fss)
+	initfs(ss)
 
-	fss.Serve()
-	fss.Done()
+	ss.Serve()
+	ss.Done()
 }
 
 var InitDir = []string{np.TMPREL, np.BOOTREL, np.KPIDSREL, np.PROCDREL, np.UXREL, np.S3REL, np.DBREL}
 
-func initfs(fss *fssrv.FsServer) error {
-	r := fss.Root()
+func initfs(ss *sesssrv.SessSrv) error {
+	r := ss.Root()
 	for _, n := range InitDir {
 		_, err := r.Create(ctx.MkCtx("", 0, nil), n, 0777|np.DMDIR, np.OREAD)
 		if err != nil {

@@ -8,20 +8,20 @@ import (
 	"ulambda/fidclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
-	"ulambda/fssrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
 	ps "ulambda/protsrv"
 	"ulambda/repl"
+	"ulambda/sesssrv"
 )
 
-func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) *fssrv.FsServer {
-	srv := fssrv.MakeFsServer(root, addr, fsl, ps.MakeProtServer, ps.Restore, pclnt, config)
+func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) *sesssrv.SessSrv {
+	srv := sesssrv.MakeSessSrv(root, addr, fsl, ps.MakeProtServer, ps.Restore, pclnt, config)
 	return srv
 }
 
-func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*fssrv.FsServer, error) {
+func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*sesssrv.SessSrv, error) {
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func MakeSrv(root fs.Dir, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcCln
 	return makeReplServerFsl(root, ip+":0", path, fsl, pclnt, nil)
 }
 
-func makeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) (*fssrv.FsServer, error) {
+func makeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) (*sesssrv.SessSrv, error) {
 	srv := makeSrv(root, addr, fsl, pclnt, config)
 	if len(path) > 0 {
 		err := fsl.Post(srv.MyAddr(), path)
@@ -40,7 +40,7 @@ func makeReplServerFsl(root fs.Dir, addr string, path string, fsl *fslib.FsLib, 
 	return srv, nil
 }
 
-func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*fssrv.FsServer, *fslib.FsLib, *procclnt.ProcClnt, error) {
+func MakeReplServer(root fs.Dir, addr string, path string, name string, config repl.Config) (*sesssrv.SessSrv, *fslib.FsLib, *procclnt.ProcClnt, error) {
 	fsl := fslib.MakeFsLib(name)
 	pclnt := procclnt.MakeProcClnt(fsl)
 	srv, err := makeReplServerFsl(root, addr, path, fsl, pclnt, config)
@@ -50,7 +50,7 @@ func MakeReplServer(root fs.Dir, addr string, path string, name string, config r
 	return srv, fsl, pclnt, nil
 }
 
-func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fssrv.FsServer, *np.Err) {
+func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*sesssrv.SessSrv, *np.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	isInitNamed := false
 	// Check if we are one of the initial named replicas
@@ -60,7 +60,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fs
 			break
 		}
 	}
-	var srv *fssrv.FsServer
+	var srv *sesssrv.SessSrv
 	var err error
 	// If this is not the init named, initialize the fslib & procclnt
 	if !isInitNamed {
@@ -80,7 +80,7 @@ func MakeReplMemFs(addr string, path string, name string, conf repl.Config) (*fs
 	return srv, nil
 }
 
-func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*fssrv.FsServer, *np.Err) {
+func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, conf repl.Config) (*sesssrv.SessSrv, *np.Err) {
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	srv, err := makeReplServerFsl(root, addr, path, fsl, pclnt, conf)
 	if err != nil {
@@ -91,7 +91,7 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 
 type MemFs struct {
 	*fslib.FsLib
-	*fssrv.FsServer
+	*sesssrv.SessSrv
 	root fs.Dir
 }
 
@@ -114,7 +114,7 @@ func MakeMemFsFsl(path string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*Mem
 		return nil, err
 	}
 	fs.FsLib = fsl
-	fs.FsServer = srv
+	fs.SessSrv = srv
 	fs.root = root
 	return fs, err
 }

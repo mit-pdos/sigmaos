@@ -16,6 +16,7 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/semclnt"
 )
 
 const (
@@ -29,9 +30,7 @@ const (
 	PUT_FILE_DIR = "name/put-file-microbenchmark"
 	SET_FILE_DIR = "name/set-file-microbenchmark"
 	GET_FILE_DIR = "name/get-file-microbenchmark"
-	LOCK_DIR     = "name/lock-microbenchmark"
-	SIGNAL_DIR   = "name/signal-microbenchmark"
-	FILE_BAG_DIR = "name/filebag-microbenchmark"
+	SEM_DIR      = "name/sem-microbenchmark"
 )
 
 type Microbenchmarks struct {
@@ -60,11 +59,14 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
 	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
 	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
+	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
+	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
 	pidOffset := 0
 	r["proc_base_spawn_wait_exit"] = m.ProcSpawnWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
-	//	r["proc_base_spawn_client"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	//	pidOffset += DEFAULT_N_TRIALS
+	r["proc_base_spawn_client"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	pidOffset += DEFAULT_N_TRIALS
 	//	r["proc_base_exited"] = m.ProcExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	//	pidOffset += DEFAULT_N_TRIALS
 	//	r["proc_base_wait_exit"] = m.ProcWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
@@ -186,6 +188,105 @@ func (m *Microbenchmarks) GetFileBenchmark(nTrials int, size int) *RawResults {
 	return rs
 }
 
+func (m *Microbenchmarks) SemInitBenchmark(nTrials int) *RawResults {
+	m.setup(SEM_DIR)
+	defer m.teardown(SEM_DIR)
+
+	log.Printf("Running SemInitBenchmark...")
+
+	sems := genSems(m.FsLib, nTrials, SEM_DIR)
+	rs := MakeRawResults(nTrials)
+
+	for i := 0; i < nTrials; i++ {
+		nRPC := m.ReadSeqNo()
+		start := time.Now()
+		if err := sems[i].Init(0); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
+		}
+		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
+		if err := sems[i].Up(); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
+		}
+		if err := sems[i].Down(); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
+		}
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.Data[i].set(throughput, elapsed, nRPC)
+	}
+
+	log.Printf("SemInitBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) SemUpBenchmark(nTrials int) *RawResults {
+	m.setup(SEM_DIR)
+	defer m.teardown(SEM_DIR)
+
+	log.Printf("Running SemUpBenchmark...")
+
+	sems := genSems(m.FsLib, nTrials, SEM_DIR)
+	rs := MakeRawResults(nTrials)
+
+	for i := 0; i < nTrials; i++ {
+		if err := sems[i].Init(0); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
+		}
+		nRPC := m.ReadSeqNo()
+		start := time.Now()
+		if err := sems[i].Up(); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
+		}
+		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
+		if err := sems[i].Down(); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
+		}
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.Data[i].set(throughput, elapsed, nRPC)
+	}
+
+	log.Printf("SemUpBenchmark Done")
+
+	return rs
+}
+
+func (m *Microbenchmarks) SemDownBenchmark(nTrials int) *RawResults {
+	m.setup(SEM_DIR)
+	defer m.teardown(SEM_DIR)
+
+	log.Printf("Running SemDownBenchmark...")
+
+	sems := genSems(m.FsLib, nTrials, SEM_DIR)
+	rs := MakeRawResults(nTrials)
+
+	for i := 0; i < nTrials; i++ {
+		if err := sems[i].Init(0); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
+		}
+		if err := sems[i].Up(); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
+		}
+		nRPC := m.ReadSeqNo()
+		start := time.Now()
+		if err := sems[i].Down(); err != nil {
+			log.Fatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
+		}
+		end := time.Now()
+		nRPC = m.ReadSeqNo() - nRPC
+		elapsed := float64(end.Sub(start).Microseconds())
+		throughput := float64(1.0) / elapsed
+		rs.Data[i].set(throughput, elapsed, nRPC)
+	}
+
+	log.Printf("SemDownBenchmark Done")
+
+	return rs
+}
+
 func (m *Microbenchmarks) ProcSpawnWaitExitBenchmark(nTrials int, pidOffset int) *RawResults {
 	log.Printf("Running ProcSpawnWaitExitBenchmark...")
 
@@ -266,7 +367,7 @@ func (m *Microbenchmarks) ProcSpawnClientBenchmark(nTrials int, pidOffset int) *
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String()})
 		ps = append(ps, p)
 	}
 
@@ -409,6 +510,15 @@ func (m *Microbenchmarks) makeFile(fpath string, size int) {
 	if _, err := m.PutFile(fpath, 0777, np.OWRITE, b); err != nil {
 		log.Fatalf("Error MakeFile Microbenchmarks.makeFile: %v", err)
 	}
+}
+
+func genSems(fsl *fslib.FsLib, nTrials int, dir string) []*semclnt.SemClnt {
+	fnames := genFNames(nTrials, dir)
+	sems := []*semclnt.SemClnt{}
+	for _, n := range fnames {
+		sems = append(sems, semclnt.MakeSemClnt(fsl, n))
+	}
+	return sems
 }
 
 func genFNames(nTrials int, dir string) []string {

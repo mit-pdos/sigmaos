@@ -3,6 +3,7 @@ package session
 import (
 	"fmt"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -13,6 +14,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, *np.Rerror) {
 	// to this replica (which proposed it through raft), raft may spit out some
 	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
+		db.DLPrintf(db.ALWAYS, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		return nil, np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", s.Sid)).Rerror()
 	}
 	// Register a heartbeat. This should be safe to do even if this is a detach,

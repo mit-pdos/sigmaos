@@ -37,6 +37,10 @@ type Tseqno uint64
 // NoSession signifies the fcall came from a wire-compatible peer
 const NoSession Tsession = ^Tsession(0)
 
+func (s Tsession) String() string {
+	return strconv.FormatUint(uint64(s), 16)
+}
+
 // NoSeqno signifies the fcall came from a wire-compatible peer
 const NoSeqno Tseqno = ^Tseqno(0)
 

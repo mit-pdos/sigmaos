@@ -37,7 +37,7 @@ func (c *SemClnt) Down() error {
 	for {
 		err := c.SetRemoveWatch(c.path, func(p string, err1 error) {
 			if err1 != nil {
-				db.DLPrintf("SEMCLNT", "watch %v err %v\n", c.path, err1)
+				db.DLPrintf("SEMCLNT_ERR", "watch %v err %v\n", c.path, err1)
 			}
 			signal <- err1
 		})
@@ -60,6 +60,7 @@ func (c *SemClnt) Down() error {
 		}
 		if err != nil {
 			db.DLPrintf("SEMCLNT_ERR", "down %v watch err %v\n", c.path, err)
+			return err
 		}
 		break
 	}

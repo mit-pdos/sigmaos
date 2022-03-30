@@ -4,8 +4,19 @@ import (
 	np "ulambda/ninep"
 )
 
+type Isrvconn interface {
+	Close()
+}
+
+type Conn struct {
+	Conn    Isrvconn
+	Replies chan *np.Fcall
+}
+
+type Fsrvfcall func(*np.Fcall, *Conn)
+
 type FsServer interface {
-	Process(*np.Fcall, chan *np.Fcall)
+	SrvFcall(*np.Fcall, *Conn)
 	Snapshot() []byte
 	Restore([]byte)
 }

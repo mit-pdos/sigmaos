@@ -95,8 +95,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	db.DLPrintf("PROCCLNT", "WaitStart %v %v\n", pid, childDir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
-	err := semStart.Down()
-	return err
+	return semStart.Down()
 }
 
 // Parent calls WaitStart() to wait until the child proc has
@@ -104,6 +103,7 @@ func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
 func (clnt *ProcClnt) WaitStart(pid proc.Tpid) error {
 	err := clnt.waitStart(pid)
 	if err != nil {
+		db.DLPrintf("PROCCLNT_ERR", "WaitStart %v %v\n", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
 	}
 	return nil
@@ -123,7 +123,7 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 	// Make sure the child proc has exited.
 	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(pid), proc.EXIT_SEM))
 	if err := semExit.Down(); err != nil {
-		db.DLPrintf("PROCCLNT", "Error WaitExit semExit.Down: %v", err)
+		db.DLPrintf("PROCCLNT_ERR", "Error WaitExit semExit.Down: %v", err)
 		return nil, fmt.Errorf("Error semExit.Down: %v", err)
 	}
 

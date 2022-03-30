@@ -1,13 +1,16 @@
 package crash
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/rand"
 )
 
@@ -15,8 +18,8 @@ import (
 // Crash/partition testing
 //
 
-func GetEnv() int64 {
-	crash := os.Getenv("SIGMACRASH")
+func GetEnv(name string) int64 {
+	crash := os.Getenv(name)
 	n, err := strconv.Atoi(crash)
 	if err != nil {
 		n = 0
@@ -24,22 +27,56 @@ func GetEnv() int64 {
 	return int64(n)
 }
 
+func randSleep(c int64) uint64 {
+	ms := rand.Int64(c)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+	r := rand.Int64(1000)
+	return r
+}
+
 func Crasher(fsl *fslib.FsLib) {
-	crash := GetEnv()
+	crash := GetEnv(proc.SIGMACRASH)
 	if crash == 0 {
 		return
 	}
 	go func() {
 		for true {
-			ms := rand.Int64(crash)
-			// log.Printf("%v: ms %v\n", proc.GetProgram(), ms)
-			time.Sleep(time.Duration(ms) * time.Millisecond)
-			r := rand.Int64(1000)
-			// log.Printf("%v: r = %v\n", proc.GetProgram(), r)
+			r := randSleep(crash)
 			if r < 330 {
 				Crash(fsl)
 			} else if r < 660 {
 				Partition(fsl)
+			}
+		}
+	}()
+}
+
+func Partitioner(fssrv *fssrv.FsServer) {
+	crash := GetEnv(proc.SIGMAPARTITION)
+	if crash == 0 {
+		return
+	}
+	go func() {
+		for true {
+			r := randSleep(crash)
+			if r < 330 {
+				fssrv.PartitionClient(true)
+			}
+		}
+	}()
+}
+
+func NetFailer(fssrv *fssrv.FsServer) {
+	crash := GetEnv(proc.SIGMANETFAIL)
+	log.Printf("NetFailer %v\n", crash)
+	if crash == 0 {
+		return
+	}
+	go func() {
+		for true {
+			r := randSleep(crash)
+			if r < 330 {
+				fssrv.PartitionClient(false)
 			}
 		}
 	}()

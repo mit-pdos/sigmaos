@@ -252,3 +252,14 @@ func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.
 	}
 	return reply.Count, nil
 }
+
+func (fidc *FidClnt) Detach(fid np.Tfid) *np.Err {
+	ch := fidc.fids.lookup(fid)
+	if ch == nil {
+		return np.MkErr(np.TErrUnreachable, "getfile")
+	}
+	if err := ch.pc.Detach(fid); err != nil {
+		return err
+	}
+	return nil
+}

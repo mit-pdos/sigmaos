@@ -338,3 +338,7 @@ func (pclnt *ProtClnt) PutFile(fid np.Tfid, path np.Path, mode np.Tmode, perm np
 	}
 	return &msg, nil
 }
+
+func (pclnt *ProtClnt) Detach(fid np.Tfid) *np.Err {
+	return nil
+}

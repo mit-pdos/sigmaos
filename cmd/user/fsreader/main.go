@@ -54,7 +54,7 @@ func MakeReader(args []string) (*Reader, error) {
 }
 
 func (r *Reader) Work() *proc.Status {
-	db.DLPrintf("Reader", "Reader: work\n")
+	db.DPrintf("Reader", "Reader: work\n")
 	// Open the pipe.
 	pipefd, err := r.Open(r.output, np.OWRITE)
 	if err != nil {

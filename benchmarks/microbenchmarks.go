@@ -20,8 +20,8 @@ import (
 
 const (
 	DEFAULT_N_TRIALS = 1000
-	SMALL_FILE_SIZE  = 1 << 10 // 1 KB
-	LARGE_FILE_SIZE  = 1 << 20 // 1 MB
+	SMALL_FILE_SIZE  = 1 << 10     // 1 KB
+	LARGE_FILE_SIZE  = 1 << 20 / 2 // 1 MB
 	SLEEP_MSECS      = 5
 )
 
@@ -46,7 +46,7 @@ func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *M
 	m.namedAddr = namedAddr
 	m.resDir = resDir
 	m.FsLib = fsl
-	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
+	m.ProcClnt = procclnt.MakeProcClntInit(m.FsLib, "microbenchmarks", namedAddr)
 	return m
 }
 
@@ -54,7 +54,7 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r := make(map[string]*RawResults)
 	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
 	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	for sz := SMALL_FILE_SIZE; sz <= 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 20 {
+	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
 		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
 	}
 	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
@@ -63,16 +63,16 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	pidOffset := 0
 	r["proc_base_spawn_wait_exit"] = m.ProcSpawnWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_spawn_client"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_exited"] = m.ProcExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_wait_exit"] = m.ProcWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_linux"] = m.ProcLinuxBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_pprof"] = m.ProcPprofBenchmark(DEFAULT_N_TRIALS*2, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS * 2
+	//	r["proc_base_spawn_client"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_base_exited"] = m.ProcExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_base_wait_exit"] = m.ProcWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_base_linux"] = m.ProcLinuxBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_base_pprof"] = m.ProcPprofBenchmark(DEFAULT_N_TRIALS*2, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS * 2
 	return r
 }
 
@@ -194,7 +194,7 @@ func (m *Microbenchmarks) ProcSpawnWaitExitBenchmark(nTrials int, pidOffset int)
 	ps := []*proc.Proc{}
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
-		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid.String()})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid.String()})
 		ps = append(ps, p)
 	}
 
@@ -229,7 +229,7 @@ func (m *Microbenchmarks) ProcLinuxBenchmark(nTrials int, pidOffset int) *RawRes
 		pid := strconv.Itoa(i + pidOffset)
 		args := []string{pid, fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "native"}
 		env := []string{"NAMED=" + strings.Join(m.namedAddr, ",")}
-		cmd := exec.Command("./bin/user/sleeperl", args...)
+		cmd := exec.Command("./bin/user/sleeper", args...)
 		cmd.Env = env
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -266,7 +266,7 @@ func (m *Microbenchmarks) ProcSpawnClientBenchmark(nTrials int, pidOffset int) *
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
 		ps = append(ps, p)
 	}
 
@@ -301,7 +301,7 @@ func (m *Microbenchmarks) ProcExitedBenchmark(nTrials int, pidOffset int) *RawRe
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
 		ps = append(ps, p)
 	}
 
@@ -336,7 +336,7 @@ func (m *Microbenchmarks) ProcWaitExitBenchmark(nTrials int, pidOffset int) *Raw
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
 		ps = append(ps, p)
 	}
 
@@ -378,7 +378,7 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeperl", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
 		ps = append(ps, p)
 	}
 

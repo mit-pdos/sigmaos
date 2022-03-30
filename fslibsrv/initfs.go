@@ -8,16 +8,16 @@ import (
 	"ulambda/fidclnt"
 	"ulambda/fs"
 	"ulambda/fslib"
-	fos "ulambda/fsobjsrv"
 	"ulambda/fssrv"
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/procclnt"
+	ps "ulambda/protsrv"
 	"ulambda/repl"
 )
 
 func makeSrv(root fs.Dir, addr string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, config repl.Config) *fssrv.FsServer {
-	srv := fssrv.MakeFsServer(root, addr, fsl, fos.MakeProtServer, fos.Restore, pclnt, config)
+	srv := fssrv.MakeFsServer(root, addr, fsl, ps.MakeProtServer, ps.Restore, pclnt, config)
 	return srv
 }
 

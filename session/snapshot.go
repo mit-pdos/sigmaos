@@ -5,7 +5,6 @@ import (
 	"log"
 
 	np "ulambda/ninep"
-	"ulambda/protsrv"
 	"ulambda/threadmgr"
 )
 
@@ -21,7 +20,7 @@ func (st *SessionTable) Snapshot() []byte {
 	return b
 }
 
-func RestoreTable(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
+func RestoreTable(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
 	sessions := make(map[np.Tsession][]byte)
 	err := json.Unmarshal(b, &sessions)
 	if err != nil {
@@ -54,7 +53,7 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid np.Tsession, fssrv protsrv.FsServer, rps protsrv.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid np.Tsession, fssrv np.FsServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {

@@ -1,4 +1,4 @@
-package fsobjsrv
+package protsrv
 
 import (
 	"sync"

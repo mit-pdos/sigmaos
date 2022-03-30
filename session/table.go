@@ -7,7 +7,6 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	np "ulambda/ninep"
-	"ulambda/protsrv"
 	"ulambda/threadmgr"
 )
 
@@ -15,12 +14,12 @@ type SessionTable struct {
 	sync.Mutex
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
-	mkps     protsrv.MkProtServer
-	fssrv    protsrv.FsServer
+	mkps     np.MkProtServer
+	fssrv    np.FsServer
 	sessions map[np.Tsession]*Session
 }
 
-func MakeSessionTable(mkps protsrv.MkProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps np.MkProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv
@@ -36,7 +35,7 @@ func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(sid np.Tsession, conn *protsrv.Conn) *Session {
+func (st *SessionTable) Alloc(sid np.Tsession, conn *np.Conn) *Session {
 	st.Lock()
 	defer st.Unlock()
 

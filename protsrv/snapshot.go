@@ -1,4 +1,4 @@
-package fsobjsrv
+package protsrv
 
 import (
 	"encoding/json"
@@ -7,24 +7,23 @@ import (
 	"ulambda/fid"
 	"ulambda/fssrv"
 	np "ulambda/ninep"
-	"ulambda/protsrv"
 )
 
-type FsObjSrvSnapshot struct {
+type ProtSrvSnapshot struct {
 	Fid       map[np.Tfid][]byte
 	Ephemeral map[np.Tpath][]byte
 	Sid       np.Tsession
 }
 
-func MakeFsObjSrvSnapshot() *FsObjSrvSnapshot {
-	foss := &FsObjSrvSnapshot{}
+func MakeProtSrvSnapshot() *ProtSrvSnapshot {
+	foss := &ProtSrvSnapshot{}
 	foss.Fid = make(map[np.Tfid][]byte)
 	foss.Ephemeral = make(map[np.Tpath][]byte)
 	return foss
 }
 
-func (fos *FsObjSrv) snapshot() []byte {
-	foss := MakeFsObjSrvSnapshot()
+func (fos *ProtSrv) snapshot() []byte {
+	foss := MakeProtSrvSnapshot()
 	// Snapshot the Fid table.
 	for fid, f := range fos.ft.fids {
 		foss.Fid[fid] = f.Snapshot()
@@ -41,14 +40,14 @@ func (fos *FsObjSrv) snapshot() []byte {
 	return b
 }
 
-func Restore(srv protsrv.FsServer, b []byte) protsrv.Protsrv {
+func Restore(srv np.FsServer, b []byte) np.Protsrv {
 	fssrv := srv.(*fssrv.FsServer)
-	foss := MakeFsObjSrvSnapshot()
+	foss := MakeProtSrvSnapshot()
 	err := json.Unmarshal(b, foss)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal fsobjsrv in restore: %v", err)
 	}
-	fos := MakeProtServer(fssrv, foss.Sid).(*FsObjSrv)
+	fos := MakeProtServer(fssrv, foss.Sid).(*ProtSrv)
 	for f, b := range foss.Fid {
 		fos.ft.fids[f] = fid.Restore(fssrv.GetSnapshotter().RestoreFsTree, fssrv.GetSessCondTable(), b)
 	}

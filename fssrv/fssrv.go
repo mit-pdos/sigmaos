@@ -16,7 +16,6 @@ import (
 	"ulambda/overlay"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/sesscond"
 	"ulambda/session"
@@ -39,8 +38,8 @@ import (
 type FsServer struct {
 	addr       string
 	root       fs.Dir
-	mkps       protsrv.MkProtServer
-	rps        protsrv.RestoreProtServer
+	mkps       np.MkProtServer
+	rps        np.RestoreProtServer
 	stats      *stats.Stats
 	st         *session.SessionTable
 	sm         *session.SessionMgr
@@ -60,7 +59,7 @@ type FsServer struct {
 }
 
 func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
-	mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, pclnt *procclnt.ProcClnt,
+	mkps np.MkProtServer, rps np.RestoreProtServer, pclnt *procclnt.ProcClnt,
 	config repl.Config) *FsServer {
 	fssrv := &FsServer{}
 	fssrv.replicated = config != nil && !reflect.ValueOf(config).IsNil()
@@ -199,7 +198,7 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 	return fssrv.root, ctx.MkCtx(uname, sessid, fssrv.sct)
 }
 
-func (fssrv *FsServer) SrvFcall(fc *np.Fcall, conn *protsrv.Conn) {
+func (fssrv *FsServer) SrvFcall(fc *np.Fcall, conn *np.Conn) {
 	// The replies channel will be set here.
 	sess := fssrv.st.Alloc(fc.Session, conn)
 	// New thread about to start

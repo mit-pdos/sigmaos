@@ -18,7 +18,7 @@ type Tstate struct {
 func makeTstate(t *testing.T, crash int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, 1, "bin/user/kvd", []string{GRP + "0"}, 0, 0)
+	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, 1, "bin/user/kvd", []string{GRP + "0"}, 0, 0, 0, 0)
 	return ts
 }
 

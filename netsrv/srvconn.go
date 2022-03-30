@@ -2,7 +2,6 @@ package netsrv
 
 import (
 	"bufio"
-	"log"
 	"net"
 
 	db "ulambda/debug"
@@ -74,7 +73,7 @@ func (c *SrvConn) reader() {
 			if c.sessid == 0 {
 				c.sessid = fcall.Session
 			} else if c.sessid != fcall.Session {
-				log.Fatal("FATAL reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
+				db.DFatalf("FATAL reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
 			}
 			c.protsrv.SrvFcall(fcall, &np.Conn{c, c.replies})
 		}

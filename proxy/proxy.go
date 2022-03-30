@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"log"
 	"os/user"
 	"sync"
 
@@ -85,7 +84,7 @@ func (npc *NpConn) npch(fid np.Tfid) *protclnt.ProtClnt {
 	defer npc.mu.Unlock()
 	ch, ok := npc.fids[fid]
 	if !ok {
-		log.Fatal("npch: unknown fid ", fid)
+		db.DFatalf("npch: unknown fid ", fid)
 	}
 	return ch
 }
@@ -196,7 +195,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 				*rets = *reply
 				break
 			} else {
-				log.Fatal("don't handle")
+				db.DFatalf("don't handle")
 			}
 		} else { // newFid is at same server as args.Fid
 			npc.addch(args.NewFid, npc.npch(args.Fid))

@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"reflect"
 	"strings"
 	"time"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -446,7 +446,7 @@ func SizeNp(vs ...interface{}) uint32 {
 		case np.Stat:
 			elements, err := fields9p(v)
 			if err != nil {
-				log.Fatal("Stat ", err)
+				db.DFatalf("Stat ", err)
 			}
 			s += SizeNp(elements...) + SizeNp(uint16(0))
 		case *np.Stat:
@@ -473,12 +473,12 @@ func SizeNp(vs ...interface{}) uint32 {
 			// ignoring if needed.
 			elements, err := fields9p(v)
 			if err != nil {
-				log.Fatal("Tmsg ", err)
+				db.DFatalf("Tmsg ", err)
 			}
 
 			s += SizeNp(elements...)
 		default:
-			log.Fatal("Unknown type")
+			db.DFatalf("Unknown type")
 		}
 	}
 
@@ -523,7 +523,7 @@ func string9p(v interface{}) string {
 	rv := reflect.Indirect(reflect.ValueOf(v))
 
 	if rv.Kind() != reflect.Struct {
-		log.Fatal("not a struct")
+		db.DFatalf("not a struct")
 	}
 
 	var s string

@@ -84,7 +84,7 @@ func TestUnionFile(t *testing.T) {
 
 	fd, err := ts.Open(name, np.OREAD)
 	if err != nil {
-		log.Fatal(err)
+		db.DFatalf(err)
 	}
 	n := 0
 	for {
@@ -93,7 +93,7 @@ func TestUnionFile(t *testing.T) {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			db.DFatalf(err)
 		}
 		n += len(data)
 	}

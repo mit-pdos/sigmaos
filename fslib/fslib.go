@@ -1,7 +1,6 @@
 package fslib
 
 import (
-	"log"
 	"os"
 	"strings"
 
@@ -18,7 +17,7 @@ type FsLib struct {
 func NamedAddr() string {
 	named := os.Getenv("NAMED")
 	if named == "" {
-		log.Fatal("FATAL Getenv error: missing NAMED")
+		db.DFatalf("FATAL Getenv error: missing NAMED")
 	}
 	return named
 }

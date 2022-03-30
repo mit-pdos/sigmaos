@@ -123,7 +123,7 @@ func (ssrv *SessSrv) Snapshot() []byte {
 
 func (ssrv *SessSrv) Restore(b []byte) {
 	if !ssrv.replicated {
-		log.Fatal("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
+		db.DFatalf("FATAL: Tried to restore an unreplicated server %v", proc.GetName())
 	}
 	// Store snapshot for later use during restore.
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)

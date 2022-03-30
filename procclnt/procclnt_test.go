@@ -397,10 +397,12 @@ func TestReserveCores(t *testing.T) {
 	linuxsched.ScanTopology()
 
 	start := time.Now()
-	pid := proc.GenPid()
+	pid := "sleeper-aaaaaaa"
 	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
 
-	pid1 := proc.GenPid()
+	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
+	// proc is only picked up *after* the other one.
+	pid1 := "sleeper-bbbbbb"
 	spawnSleeperNcore(t, ts, pid1, 1, SLEEP_MSECS)
 
 	status, err := ts.WaitExit(pid)

@@ -302,6 +302,7 @@ func (pd *Procd) worker(done *int32) {
 				db.DLPrintf("PROCD_ERR", "cond file not found: %v", error)
 				return
 			}
+			pd.perf.Teardown()
 			log.Fatalf("FATAL Procd GetProc error %v, %v\n", p, error)
 		}
 		localProc := pd.makeProc(p)

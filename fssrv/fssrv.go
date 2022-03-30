@@ -76,6 +76,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
+	fssrv.rc = repl.MakeReplyCache()
 
 	// Build up overlay directory
 	fssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
@@ -89,7 +90,6 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 		snapDev := snapshot.MakeDev(fssrv, nil, fssrv.root)
 		dirover.Mount(np.SNAPDEV, snapDev)
 
-		fssrv.rc = repl.MakeReplyCache()
 		fssrv.replSrv = config.MakeServer(fssrv.tmt.AddThread())
 		fssrv.replSrv.Start()
 		log.Printf("Starting repl server")
@@ -217,10 +217,8 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 	fcall.Seqno = request.Seqno
 	fcall.Tag = request.Tag
 	db.DLPrintf("FSSRV", "Request %v start sendReply %v", request, fcall)
-	// Store the reply in the reply cache if this is a replicated server.
-	if fssrv.replicated {
-		fssrv.rc.Put(request, fcall)
-	}
+	// Store the reply in the reply cache.
+	fssrv.rc.Put(request, fcall)
 	// Only send a reply if the session hasn't been closed, or this is a detach
 	// (the last reply to be sent).
 	if !sess.IsClosed() {
@@ -240,39 +238,37 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 	// reply channel will be set to nil. If it came from the client, the reply
 	// channel will already be set.
 	sess := fssrv.st.Alloc(fc.Session, nil)
-	if fssrv.replicated {
-		// Reply cache needs to live under the replication layer in order to
-		// handle duplicate requests. These may occur if, for example:
-		//
-		// 1. A client connects to replica A and issues a request.
-		// 2. Replica A pushes the request through raft.
-		// 3. Before responding to the client, replica A crashes.
-		// 4. The client connects to replica B, and retries the request *before*
-		//    replica B hears about the request through raft.
-		// 5. Replica B pushes the request through raft.
-		// 6. Replica B now receives the same request twice through raft's apply
-		//    channel, and will try to execute the request twice.
-		//
-		// In order to handle this, we can use the reply cache to deduplicate
-		// requests. Since requests execute sequentially, one of the requests will
-		// register itself first in the reply cache. The other request then just
-		// has to wait on the reply future in order to send the reply. This can
-		// happen asynchronously since it doesn't affect server state, and the
-		// asynchrony is necessary in order to allow other ops on the thread to
-		// make progress. We coulld optionally use sessconds, but they're kind of
-		// overkill since we don't care about ordering in this case.
-		if replyFuture, ok := fssrv.rc.Get(fc); ok {
-			db.DLPrintf("FSSRV", "Request %v reply in cache", fc)
-			go func() {
-				fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
-			}()
-			return
-		}
-		db.DLPrintf("FSSRV", "Request %v reply not in cache", fc)
-		// If this request has not been registered with the reply cache yet, register
-		// it.
-		fssrv.rc.Register(fc)
+	// Reply cache needs to live under the replication layer in order to
+	// handle duplicate requests. These may occur if, for example:
+	//
+	// 1. A client connects to replica A and issues a request.
+	// 2. Replica A pushes the request through raft.
+	// 3. Before responding to the client, replica A crashes.
+	// 4. The client connects to replica B, and retries the request *before*
+	//    replica B hears about the request through raft.
+	// 5. Replica B pushes the request through raft.
+	// 6. Replica B now receives the same request twice through raft's apply
+	//    channel, and will try to execute the request twice.
+	//
+	// In order to handle this, we can use the reply cache to deduplicate
+	// requests. Since requests execute sequentially, one of the requests will
+	// register itself first in the reply cache. The other request then just
+	// has to wait on the reply future in order to send the reply. This can
+	// happen asynchronously since it doesn't affect server state, and the
+	// asynchrony is necessary in order to allow other ops on the thread to
+	// make progress. We coulld optionally use sessconds, but they're kind of
+	// overkill since we don't care about ordering in this case.
+	if replyFuture, ok := fssrv.rc.Get(fc); ok {
+		db.DLPrintf("FSSRV", "Request %v reply in cache", fc)
+		go func() {
+			fssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
+		}()
+		return
 	}
+	db.DLPrintf("FSSRV", "Request %v reply not in cache", fc)
+	// If this request has not been registered with the reply cache yet, register
+	// it.
+	fssrv.rc.Register(fc)
 	fssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	fssrv.fenceFcall(sess, fc)
 }

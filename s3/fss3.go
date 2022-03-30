@@ -10,10 +10,10 @@ import (
 
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/sesssrv"
 )
 
 var bucket = "9ps3"
@@ -23,7 +23,7 @@ const (
 )
 
 type Fss3 struct {
-	*fssrv.FsServer
+	*sesssrv.SessSrv
 	mu     sync.Mutex
 	client *s3.Client
 }
@@ -38,7 +38,7 @@ func RunFss3() {
 		log.Fatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)
 	}
 
-	fss3.FsServer = srv
+	fss3.SessSrv = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {

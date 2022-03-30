@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"ulambda/fid"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
+	"ulambda/sesssrv"
 )
 
 type ProtSrvSnapshot struct {
@@ -41,19 +41,19 @@ func (fos *ProtSrv) snapshot() []byte {
 }
 
 func Restore(srv np.FsServer, b []byte) np.Protsrv {
-	fssrv := srv.(*fssrv.FsServer)
+	ssrv := srv.(*sesssrv.SessSrv)
 	foss := MakeProtSrvSnapshot()
 	err := json.Unmarshal(b, foss)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal fsobjsrv in restore: %v", err)
 	}
-	fos := MakeProtServer(fssrv, foss.Sid).(*ProtSrv)
+	fos := MakeProtServer(ssrv, foss.Sid).(*ProtSrv)
 	for f, b := range foss.Fid {
-		fos.ft.fids[f] = fid.Restore(fssrv.GetSnapshotter().RestoreFsTree, fssrv.GetSessCondTable(), b)
+		fos.ft.fids[f] = fid.Restore(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
 	}
 	for ptr, b := range foss.Ephemeral {
-		o := fssrv.GetSnapshotter().RestoreFsTree(ptr)
-		fos.et.ephemeral[o] = fid.Restore(fssrv.GetSnapshotter().RestoreFsTree, fssrv.GetSessCondTable(), b)
+		o := ssrv.GetSnapshotter().RestoreFsTree(ptr)
+		fos.et.ephemeral[o] = fid.Restore(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
 	}
 	return fos
 }

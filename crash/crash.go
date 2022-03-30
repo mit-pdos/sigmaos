@@ -8,10 +8,10 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
-	"ulambda/fssrv"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/rand"
+	"ulambda/sesssrv"
 )
 
 //
@@ -51,7 +51,7 @@ func Crasher(fsl *fslib.FsLib) {
 	}()
 }
 
-func Partitioner(fssrv *fssrv.FsServer) {
+func Partitioner(ss *sesssrv.SessSrv) {
 	crash := GetEnv(proc.SIGMAPARTITION)
 	if crash == 0 {
 		return
@@ -60,13 +60,13 @@ func Partitioner(fssrv *fssrv.FsServer) {
 		for true {
 			r := randSleep(crash)
 			if r < 330 {
-				fssrv.PartitionClient(true)
+				ss.PartitionClient(true)
 			}
 		}
 	}()
 }
 
-func NetFailer(fssrv *fssrv.FsServer) {
+func NetFailer(ss *sesssrv.SessSrv) {
 	crash := GetEnv(proc.SIGMANETFAIL)
 	log.Printf("NetFailer %v\n", crash)
 	if crash == 0 {
@@ -76,7 +76,7 @@ func NetFailer(fssrv *fssrv.FsServer) {
 		for true {
 			r := randSleep(crash)
 			if r < 330 {
-				fssrv.PartitionClient(false)
+				ss.PartitionClient(false)
 			}
 		}
 	}()

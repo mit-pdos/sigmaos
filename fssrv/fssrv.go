@@ -73,7 +73,7 @@ func MakeFsServer(root fs.Dir, addr string, fsl *fslib.FsLib,
 	fssrv.stats = stats.MkStatsDev(fssrv.root)
 	fssrv.tmt = threadmgr.MakeThreadMgrTable(fssrv.process, fssrv.replicated)
 	fssrv.st = session.MakeSessionTable(mkps, fssrv, fssrv.tmt)
-	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
+	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.SrvFcall)
 	fssrv.sct = sesscond.MakeSessCondTable(fssrv.st)
 	fssrv.wt = watch.MkWatchTable(fssrv.sct)
 	fssrv.srv = netsrv.MakeNetServer(fssrv, addr)
@@ -136,7 +136,7 @@ func (fssrv *FsServer) Restore(b []byte) {
 	fssrv.sct.St = fssrv.st
 	fssrv.root = root.(fs.Dir)
 	fssrv.sm.Stop()
-	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.Process)
+	fssrv.sm = session.MakeSessionMgr(fssrv.st, fssrv.SrvFcall)
 }
 
 func (fssrv *FsServer) Sess(sid np.Tsession) *session.Session {
@@ -200,9 +200,9 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 	return fssrv.root, ctx.MkCtx(uname, sessid, fssrv.sct)
 }
 
-func (fssrv *FsServer) Process(conn protsrv.NetConn, fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) SrvFcall(fc *np.Fcall, conn *protsrv.Conn) {
 	// The replies channel will be set here.
-	sess := fssrv.st.Alloc(fc.Session, conn, replies)
+	sess := fssrv.st.Alloc(fc.Session, conn)
 	// New thread about to start
 	sess.IncThreads()
 	if !fssrv.replicated {
@@ -225,11 +225,11 @@ func (fssrv *FsServer) sendReply(request *np.Fcall, reply np.Tmsg, sess *session
 	// Only send a reply if the session hasn't been closed, or this is a detach
 	// (the last reply to be sent).
 	if !sess.IsClosed() {
-		replies := sess.GetRepliesC()
-		// The replies channel may be nil if this is a replicated op which came
+		conn := sess.GetConn()
+		// The conn may be nil if this is a replicated op which came
 		// through raft. In this case, a reply is not needed.
-		if replies != nil {
-			replies <- fcall
+		if conn != nil {
+			conn.Replies <- fcall
 		}
 	}
 	db.DLPrintf("FSSRV", "Request %v done sendReply %v", request, fcall)
@@ -240,7 +240,7 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 	// client), the first time Alloc is called will be in this function, so the
 	// reply channel will be set to nil. If it came from the client, the reply
 	// channel will already be set.
-	sess := fssrv.st.Alloc(fc.Session, nil, nil)
+	sess := fssrv.st.Alloc(fc.Session, nil)
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:
@@ -303,7 +303,7 @@ func (fssrv *FsServer) serve(sess *session.Session, fc *np.Fcall) {
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil
-	if sess.GetRepliesC() != nil {
+	if sess.GetConn() != nil {
 		defer sess.DecThreads()
 	}
 	if rerror != nil {

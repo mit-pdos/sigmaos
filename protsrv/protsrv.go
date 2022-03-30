@@ -4,16 +4,21 @@ import (
 	np "ulambda/ninep"
 )
 
-type Fprocess func(NetConn, *np.Fcall, chan *np.Fcall)
-
-type FsServer interface {
-	Process(NetConn, *np.Fcall, chan *np.Fcall)
-	Snapshot() []byte
-	Restore([]byte)
+type Isrvconn interface {
+	Close()
 }
 
-type NetConn interface {
-	Close()
+type Conn struct {
+	Conn    Isrvconn
+	Replies chan *np.Fcall
+}
+
+type Fsrvfcall func(*np.Fcall, *Conn)
+
+type FsServer interface {
+	SrvFcall(*np.Fcall, *Conn)
+	Snapshot() []byte
+	Restore([]byte)
 }
 
 type Protsrv interface {

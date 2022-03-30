@@ -9,15 +9,15 @@ import (
 )
 
 type SessionMgr struct {
-	st      *SessionTable
-	process protsrv.Fprocess
-	done    bool
+	st       *SessionTable
+	srvfcall protsrv.Fsrvfcall
+	done     bool
 }
 
-func MakeSessionMgr(st *SessionTable, pfn protsrv.Fprocess) *SessionMgr {
+func MakeSessionMgr(st *SessionTable, pfn protsrv.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
-	sm.process = pfn
+	sm.srvfcall = pfn
 	go sm.run()
 	return sm
 }
@@ -70,7 +70,7 @@ func (sm *SessionMgr) run() {
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
 			detach := np.MakeFcall(np.Tdetach{}, s.Sid, nil, np.NoFence)
-			sm.process(s.conn, detach, nil)
+			sm.srvfcall(detach, s.conn)
 		}
 	}
 }

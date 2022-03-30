@@ -26,33 +26,31 @@ type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
 	wg            sync.WaitGroup
-	conn          protsrv.NetConn
+	conn          *protsrv.Conn
 	protsrv       protsrv.Protsrv
 	lastHeartbeat time.Time
 	Sid           np.Tsession
 	began         bool // true if the fssrv has already begun processing ops
 	running       bool // true if the session is currently running an operation.
 	closed        bool // true if the session has been closed.
-	replies       chan *np.Fcall
 	timedout      bool // for debugging
 }
 
-func makeSession(conn protsrv.NetConn, protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, t *threadmgr.ThreadMgr) *Session {
+func makeSession(conn *protsrv.Conn, protsrv protsrv.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.conn = conn
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
-	sess.replies = replies
 	sess.lastHeartbeat = time.Now()
 	return sess
 }
 
-func (sess *Session) GetRepliesC() chan *np.Fcall {
+func (sess *Session) GetConn() *protsrv.Conn {
 	sess.Lock()
 	defer sess.Unlock()
-	return sess.replies
+	return sess.conn
 }
 
 func (sess *Session) GetThread() *threadmgr.ThreadMgr {
@@ -74,7 +72,7 @@ func (sess *Session) WaitThreads() {
 // For testing. Invoking CloseConn() will eventually cause
 // sess.Close() to be called.
 func (sess *Session) CloseConn() {
-	sess.conn.Close()
+	sess.conn.Conn.Close()
 }
 
 func (sess *Session) Close() {
@@ -85,10 +83,10 @@ func (sess *Session) Close() {
 	}
 	sess.closed = true
 	// Close the replies channel so that writer in srvconn exits
-	if sess.replies != nil {
+	if sess.conn != nil {
 		db.DLPrintf("SESSION", "%v close replies\n", sess.Sid)
-		close(sess.replies)
-		sess.replies = nil
+		close(sess.conn.Replies)
+		sess.conn = nil
 	}
 }
 
@@ -98,19 +96,16 @@ func (sess *Session) IsClosed() bool {
 	return sess.closed
 }
 
-// Change the replies channel if the new channel is non-nil. This may occur if,
-// for example, a client starts talking to a new replica.
-func (sess *Session) maybeSetConn(conn protsrv.NetConn, replies chan *np.Fcall) {
+// Change conn if the new conn is non-nil. This may occur if, for
+// example, a client starts talking to a new replica.
+func (sess *Session) maybeSetConn(conn *protsrv.Conn) {
 	sess.Lock()
 	defer sess.Unlock()
-	if conn != nil { // maybe nil
+	if conn != nil {
 		if sess.conn != conn {
 			db.DLPrintf("SESSION", "maybeSetConn new %v\n", conn)
 			sess.conn = conn
 		}
-	}
-	if replies != nil {
-		sess.replies = replies
 	}
 }
 

@@ -77,7 +77,7 @@ func (c *SrvConn) reader() {
 			} else if c.sessid != fcall.Session {
 				log.Fatal("FATAL reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
 			}
-			c.protsrv.Process(c, fcall, c.replies)
+			c.protsrv.SrvFcall(fcall, &protsrv.Conn{c, c.replies})
 		}
 	}
 }

@@ -57,7 +57,7 @@ func (tx *Tx) Commit() error {
 	for origPath, tmpPath := range tx.files {
 		err := tx.fsl.Rename(tmpPath, origPath)
 		if err != nil {
-			log.Fatalf("Error Rename in Tx.Commit: %v", err)
+			db.DFatalf("Error Rename in Tx.Commit: %v", err)
 			return err
 		}
 	}
@@ -136,7 +136,7 @@ func (tx *Tx) lock(fpath string) bool {
 func (tx *Tx) unlock(fpath string) {
 	l, ok := tx.locks[fpath]
 	if !ok {
-		log.Fatalf("Error in Tx.unlock: tried to unlock nonexistent lock")
+		db.DFatalf("Error in Tx.unlock: tried to unlock nonexistent lock")
 	}
 	l.Unlock()
 	delete(tx.locks, fpath)
@@ -164,7 +164,7 @@ func (tx *Tx) tryCommitCrashedTx(fpath string) {
 		return false, nil
 	})
 	if err != nil {
-		log.Fatalf("Error ProcessDir in Tx.tryCommitCrashedTx: %v", err)
+		db.DFatalf("Error ProcessDir in Tx.tryCommitCrashedTx: %v", err)
 	}
 
 	// If there was an outstanding temp version of this file, check if the
@@ -175,7 +175,7 @@ func (tx *Tx) tryCommitCrashedTx(fpath string) {
 			// If the transaction had committed, finish its write.
 			err = tx.fsl.Rename(tmpPath, fpath)
 			if err != nil {
-				log.Fatalf("Error Rename in Tx.tryCommitCrashedTx: %v", err)
+				db.DFatalf("Error Rename in Tx.tryCommitCrashedTx: %v", err)
 			}
 		} else {
 			// Otherwise, remove the temp file.

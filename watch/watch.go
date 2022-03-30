@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
@@ -109,12 +108,12 @@ func (wt *WatchTable) release(ws *Watch) bool {
 	ws1, ok := wt.watches[ws.path]
 	if !ok {
 		// Another thread already deleted the entry
-		log.Fatalf("release %v\n", ws)
+		db.DFatalf("release %v\n", ws)
 		return del
 	}
 
 	if ws != ws1 {
-		log.Fatalf("Release\n")
+		db.DFatalf("Release\n")
 	}
 
 	if ws.nref == 0 {

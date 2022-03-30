@@ -84,7 +84,7 @@ func (n *RaftNode) start(peers []raft.Peer) {
 	logCfg.OutputPaths = []string{string(logPath)}
 	logger, err := logCfg.Build()
 	if err != nil {
-		log.Fatalf("FATAL Couldn't build logger: %v", err)
+		db.DFatalf("FATAL Couldn't build logger: %v", err)
 	}
 	n.transport = &rafthttp.Transport{
 		Logger:      logger,
@@ -105,7 +105,7 @@ func (n *RaftNode) start(peers []raft.Peer) {
 	addr := n.peerAddrs[n.id-1]
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("Error listen: %v", err)
+		db.DFatalf("Error listen: %v", err)
 	}
 	// Set the actual addr.
 	n.peerAddrs[n.id-1] = l.Addr().String()
@@ -120,7 +120,7 @@ func (n *RaftNode) serveRaft(l net.Listener) {
 	srv := &http.Server{Handler: apiHandler(n)}
 	err := srv.Serve(l)
 	if err != nil {
-		log.Fatalf("Error server: %v", err)
+		db.DFatalf("Error server: %v", err)
 	}
 
 	<-n.done
@@ -129,7 +129,7 @@ func (n *RaftNode) serveRaft(l net.Listener) {
 func (n *RaftNode) serveChannels() {
 	snap, err := n.storage.Snapshot()
 	if err != nil {
-		log.Fatalf("Error getting raft storage: %v", err)
+		db.DFatalf("Error getting raft storage: %v", err)
 	}
 	n.confState = &snap.Metadata.ConfState
 	n.snapshotIndex = snap.Metadata.Index
@@ -148,14 +148,14 @@ func (n *RaftNode) serveChannels() {
 			if !raft.IsEmptySnap(read.Snapshot) {
 				n.publishSnapshot(read.Snapshot)
 				// XXX Right now we don't handle/generate snapshots.
-				log.Fatalf("Received snapshot!")
+				db.DFatalf("Received snapshot!")
 			}
 			n.storage.Append(read.Entries)
 			n.transport.Send(read.Messages)
 			n.handleEntries(read.Entries)
 			n.node.Advance()
 		case err := <-n.transport.ErrorC:
-			log.Fatalf("Raft transport error: %v", err)
+			db.DFatalf("Raft transport error: %v", err)
 		}
 	}
 }
@@ -202,12 +202,12 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if change.NodeID == uint64(n.id) {
-					log.Fatalf("Node removed")
+					db.DFatalf("Node removed")
 				}
 				n.transport.RemovePeer(types.ID(change.NodeID))
 			}
 		default:
-			log.Fatalf("Unexpected entry type: %v", e.Type)
+			db.DFatalf("Unexpected entry type: %v", e.Type)
 		}
 	}
 
@@ -225,7 +225,7 @@ func (n *RaftNode) postNodeId() {
 		mcr := &membershipChangeReq{uint64(n.id), n.peerAddrs[n.id-1]}
 		b, err := json.Marshal(mcr)
 		if err != nil {
-			log.Fatalf("Error Marshal in RaftNode.postNodeID: %v", err)
+			db.DFatalf("Error Marshal in RaftNode.postNodeID: %v", err)
 		}
 		_, err = http.Post("http://"+path.Join(addr, membershipPrefix), "application/json; charset=utf-8", bytes.NewReader(b))
 		// Only post the node ID to one node
@@ -234,7 +234,7 @@ func (n *RaftNode) postNodeId() {
 		}
 		log.Printf("Error posting node ID: %v", err)
 	}
-	log.Fatalf("Failed to post node ID")
+	db.DFatalf("Failed to post node ID")
 }
 
 func (n *RaftNode) IsIDRemoved(id uint64) bool {

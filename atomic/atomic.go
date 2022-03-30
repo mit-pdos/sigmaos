@@ -3,8 +3,8 @@ package atomic
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -15,12 +15,12 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 	tmpName := fname + rand.String(16)
 	_, err := fsl.PutFile(tmpName, perm, np.OWRITE, data)
 	if err != nil {
-		log.Fatalf("%v: FATAL MakeFileAtomic %v: %v", proc.GetName(), tmpName, err)
+		db.DFatalf("%v: FATAL MakeFileAtomic %v: %v", proc.GetName(), tmpName, err)
 		return err
 	}
 	err = fsl.Rename(tmpName, fname)
 	if err != nil {
-		log.Fatalf("%v: FATAL MakeFileAtomic rename %v -> %v: err %v", proc.GetName(), tmpName, fname, err)
+		db.DFatalf("%v: FATAL MakeFileAtomic rename %v -> %v: err %v", proc.GetName(), tmpName, fname, err)
 		return err
 	}
 	return nil

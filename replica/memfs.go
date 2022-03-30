@@ -1,8 +1,7 @@
 package replica
 
 import (
-	"log"
-
+	db "ulambda/debug"
 	"ulambda/fslibsrv"
 	"ulambda/repl"
 )
@@ -10,7 +9,7 @@ import (
 func RunMemfsdReplica(name string, config repl.Config) {
 	fss, err := fslibsrv.MakeReplMemFs("INVALID", "", name, config)
 	if err != nil {
-		log.Fatalf("RunMemfdReplica: err %v\n", err)
+		db.DFatalf("RunMemfdReplica: err %v\n", err)
 	}
 	fss.Serve()
 	fss.Done()

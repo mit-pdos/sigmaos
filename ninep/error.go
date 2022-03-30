@@ -250,6 +250,6 @@ func String2Err(error string) *Err {
 			return err
 		}
 	}
-	log.Fatalf("FATAL: cannot decode = %v err %v\n", error, err)
+	log.Fatalf("FATAL cannot decode = %v err %v\n", error, err)
 	return err
 }

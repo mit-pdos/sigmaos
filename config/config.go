@@ -1,10 +1,10 @@
 package config
 
 import (
-	"log"
 	"runtime/debug"
 
 	"ulambda/atomic"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -24,13 +24,13 @@ func (clnt *ConfigClnt) WatchConfig(path string) chan bool {
 	done := make(chan bool)
 	err := clnt.SetRemoveWatch(path, func(path string, err error) {
 		if err != nil && np.IsErrUnreachable(err) {
-			log.Fatalf("Error Watch in ConfigClnt.WatchConfig: %v", err)
+			db.DFatalf("Error Watch in ConfigClnt.WatchConfig: %v", err)
 		}
 		done <- true
 	})
 	if err != nil && np.IsErrUnreachable(err) {
 		debug.PrintStack()
-		log.Fatalf("Error SetRemoveWatch in ConfigClnt.WatchConfig: %v", err)
+		db.DFatalf("Error SetRemoveWatch in ConfigClnt.WatchConfig: %v", err)
 	}
 	return done
 }
@@ -53,6 +53,6 @@ func (clnt *ConfigClnt) WriteConfig(path string, cfg interface{}) {
 	// Make the realm config file.
 	if err := atomic.PutFileJsonAtomic(clnt.FsLib, path, 0777, cfg); err != nil {
 		debug.PrintStack()
-		log.Fatalf("Error MakeFileJsonAtomic in ConfigClnt.WriteConfig: %v", err)
+		db.DFatalf("Error MakeFileJsonAtomic in ConfigClnt.WriteConfig: %v", err)
 	}
 }

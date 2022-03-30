@@ -2,8 +2,8 @@ package inode
 
 import (
 	"encoding/json"
-	"log"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
@@ -33,7 +33,7 @@ func makeSnapshot(inode *Inode) []byte {
 
 	b, err := json.Marshal(i)
 	if err != nil {
-		log.Fatalf("Error marshalling inode snapshot: %v", err)
+		db.DFatalf("Error marshalling inode snapshot: %v", err)
 	}
 	return b
 }
@@ -42,7 +42,7 @@ func restoreInode(fn fs.RestoreF, b []byte) fs.Inode {
 	i := &InodeSnapshot{}
 	err := json.Unmarshal(b, i)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal inode in restoreInode: %v", err)
+		db.DFatalf("FATAL error unmarshal inode in restoreInode: %v", err)
 	}
 	inode := &Inode{}
 	inode.perm = i.Perm

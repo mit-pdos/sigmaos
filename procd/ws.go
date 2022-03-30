@@ -2,9 +2,9 @@ package procd
 
 import (
 	"encoding/json"
-	"log"
 	"path"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
@@ -21,7 +21,7 @@ func (pd *Procd) readRunqProc(procdPath string, queueName string, pid string) (*
 	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
-		log.Fatalf("FATAL Error Unmarshal in Procd.readProc: %v", err)
+		db.DFatalf("FATAL Error Unmarshal in Procd.readProc: %v", err)
 		return nil, err
 	}
 	return p, nil

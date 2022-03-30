@@ -1,7 +1,6 @@
 package procclnt
 
 import (
-	"log"
 	"path"
 	"strings"
 
@@ -32,7 +31,7 @@ func mountDir(fsl *fslib.FsLib, dpath string, mountPoint string) {
 		if mountPoint == proc.PARENTDIR {
 			db.DPrintf("PROCCLNT_ERR", "Error mounting %v/%v as %v err %v\n", addr, splitPath, mountPoint, err)
 		} else {
-			log.Fatalf("%v: FATAL error mounting %v/%v as %v err %v\n", proc.GetName(), addr, splitPath, mountPoint, err)
+			db.DFatalf("%v: FATAL error mounting %v/%v as %v err %v\n", proc.GetName(), addr, splitPath, mountPoint, err)
 		}
 	}
 }
@@ -48,7 +47,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 
 	if err := fsl.MountTree(fslib.Named(), np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: FATAL error mounting procd err %v\n", proc.GetName(), err)
+		db.DFatalf("%v: FATAL error mounting procd err %v\n", proc.GetName(), err)
 	}
 	return makeProcClnt(fsl, proc.GetPid())
 }
@@ -62,7 +61,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 
 	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
-		log.Fatalf("%v: FATAL error mounting procd err %v\n", proc.GetName(), err)
+		db.DFatalf("%v: FATAL error mounting procd err %v\n", proc.GetName(), err)
 	}
 
 	MountPids(fsl, namedAddr)
@@ -73,7 +72,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 	tree := strings.TrimPrefix(proc.GetProcDir(), "name/")
 	if err := fsl.MountTree(namedAddr, tree, proc.PROCDIR); err != nil {
 		s, _ := fsl.SprintfDir("pids")
-		log.Fatalf("%v: Fatal error mounting %v as %v err %v\n%v", proc.GetName(), tree, proc.PROCDIR, err, s)
+		db.DFatalf("%v: Fatal error mounting %v as %v err %v\n%v", proc.GetName(), tree, proc.PROCDIR, err, s)
 	}
 
 	return clnt
@@ -82,7 +81,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 func MountPids(fsl *fslib.FsLib, namedAddr []string) error {
 	// Make a pid directory for this initial proc
 	if err := fsl.MountTree(namedAddr, proc.KPIDS, proc.KPIDS); err != nil {
-		log.Fatalf("%v: FATAL error mounting %v as %v err %v\n", proc.GetName(), proc.KPIDS, proc.KPIDS, err)
+		db.DFatalf("%v: FATAL error mounting %v as %v err %v\n", proc.GetName(), proc.KPIDS, proc.KPIDS, err)
 		return err
 	}
 	return nil

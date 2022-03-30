@@ -2,10 +2,10 @@ package benchmarks
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/montanaflynn/stats"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -56,19 +56,19 @@ func (r *RawResults) Mean() *Result {
 
 	t, err := stats.Mean(tpt)
 	if err != nil {
-		log.Fatalf("Error Mean in RawResults.Mean: %v", err)
+		db.DFatalf("Error Mean in RawResults.Mean: %v", err)
 	}
 	res.Throughput = t
 
 	l, err := stats.Mean(lat)
 	if err != nil {
-		log.Fatalf("Error Mean in RawResults.Mean: %v", err)
+		db.DFatalf("Error Mean in RawResults.Mean: %v", err)
 	}
 	res.Latency = l
 
 	n, err := stats.Mean(nRPC)
 	if err != nil {
-		log.Fatalf("Error Mean in RawResults.Mean: %v", err)
+		db.DFatalf("Error Mean in RawResults.Mean: %v", err)
 	}
 	res.NRPC = np.Tseqno(n)
 

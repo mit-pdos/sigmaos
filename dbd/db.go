@@ -1,9 +1,8 @@
 package dbd
 
 import (
-	"log"
-
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
@@ -29,11 +28,11 @@ func RunDbd() {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want dbd to fail
 	mfs, _, _, error := fslibsrv.MakeMemFs(np.DB, "dbd")
 	if error != nil {
-		log.Fatalf("FATAL StartMemFs %v\n", error)
+		db.DFatalf("FATAL StartMemFs %v\n", error)
 	}
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), "clone", makeClone(nil, mfs.Root()))
 	if err != nil {
-		log.Fatalf("FATAL MakeNod clone failed %v\n", err)
+		db.DFatalf("FATAL MakeNod clone failed %v\n", err)
 	}
 	mfs.Serve()
 	mfs.Done()

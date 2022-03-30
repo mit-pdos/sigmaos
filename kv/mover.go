@@ -2,7 +2,6 @@ package kv
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"sync"
 
@@ -52,7 +51,7 @@ func MakeMover(epochstr, src, dst string) (*Mover, error) {
 	mv.ProcClnt = procclnt.MakeProcClnt(mv.FsLib)
 
 	if err := mv.Started(); err != nil {
-		log.Fatalf("%v: couldn't start %v\n", proc.GetName(), err)
+		db.DFatalf("%v: couldn't start %v\n", proc.GetName(), err)
 	}
 	crash.Crasher(mv.FsLib)
 

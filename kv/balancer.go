@@ -98,12 +98,12 @@ func RunBalancer(crashChild string, auto string) {
 	// start server but don't publish its existence
 	mfs, err := fslibsrv.MakeMemFsFsl("", bl.FsLib, bl.ProcClnt)
 	if err != nil {
-		log.Fatalf("FATAL StartMemFs %v\n", err)
+		db.DFatalf("FATAL StartMemFs %v\n", err)
 	}
 	ctx := ctx.MkCtx("balancer", 0, nil)
 	err1 := dir.MkNod(ctx, mfs.Root(), "ctl", makeCtl(ctx, mfs.Root(), bl))
 	if err1 != nil {
-		log.Fatalf("FATAL MakeNod clone failed %v\n", err1)
+		db.DFatalf("FATAL MakeNod clone failed %v\n", err1)
 	}
 
 	// start server and write ch when server is done
@@ -115,7 +115,7 @@ func RunBalancer(crashChild string, auto string) {
 
 	epoch, err := bl.lc.AcquireFencedEpoch(fslib.MakeTarget([]string{mfs.MyAddr()}), []string{})
 	if err != nil {
-		log.Fatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
+		db.DFatalf("FATAL %v: AcquireFenceEpoch %v\n", proc.GetName(), err)
 	}
 
 	db.DPrintf(db.ALWAYS, "primary %v for epoch %v\n", proc.GetName(), epoch)
@@ -213,7 +213,7 @@ func (bl *Balancer) monitorMyself() {
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
 			if np.IsErrUnreachable(err) {
-				log.Fatalf("%v: FATAL disconnected\n", proc.GetName())
+				db.DFatalf("%v: FATAL disconnected\n", proc.GetName())
 			}
 		}
 	}
@@ -223,7 +223,7 @@ func (bl *Balancer) monitorMyself() {
 func (bl *Balancer) PostConfig() {
 	err := atomic.PutFileJsonAtomic(bl.FsLib, KVCONFIG, 0777, *bl.conf)
 	if err != nil {
-		log.Fatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVCONFIG, err)
+		db.DFatalf("FATAL %v: MakeFile %v err %v\n", proc.GetName(), KVCONFIG, err)
 	}
 }
 
@@ -293,7 +293,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
 			np.IsErrUnreachable(err)) {
-			log.Fatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
+			db.DFatalf("CRASH %v: runProc err %v\n", proc.GetName(), err)
 		}
 		if retryf(err, status) {
 			db.DPrintf("KVBAL_ERR", "retry %v err %v status %v\n", args, err, status)

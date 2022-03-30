@@ -2,7 +2,6 @@ package groupmgr
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -107,7 +106,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		go m.run(i, start, done)
 		err := <-start
 		if err != nil {
-			log.Fatalf("%v: FATAL Start %v\n", proc.GetName(), err)
+			db.DFatalf("%v: FATAL Start %v\n", proc.GetName(), err)
 		}
 	}
 	go gm.manager(done, N)

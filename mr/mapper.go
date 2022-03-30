@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"ulambda/crash"
+	db "ulambda/debug"
 	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -107,7 +108,7 @@ func (m *Mapper) mapper(txt string) error {
 func (m *Mapper) doMap() error {
 	b, err := m.GetFile(m.input)
 	if err != nil {
-		log.Fatalf("%v: read %v err %v", proc.GetName(), m.input, err)
+		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
 	}
 	txt := string(b)
 	err = m.mapper(txt)
@@ -149,7 +150,7 @@ func (m *Mapper) doMap() error {
 				// will loop infinitely.
 				log.Printf("%v: symlink %v err %v\n", proc.GetName(), name, err)
 			}
-			log.Fatalf("%v: FATA/L symlink %v err %v\n", proc.GetName(), name, err)
+			db.DFatalf("%v: FATA/L symlink %v err %v\n", proc.GetName(), name, err)
 		}
 	}
 	return nil

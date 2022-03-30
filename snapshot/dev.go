@@ -1,8 +1,7 @@
 package snapshot
 
 import (
-	"log"
-
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
@@ -21,13 +20,13 @@ func MakeDev(srv np.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
 func (dev *Dev) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	b := dev.srv.Snapshot()
 	if len(b) > int(np.MAXGETSET) {
-		log.Fatalf("FATAL snapshot too big: %v bytes", len(b))
+		db.DFatalf("FATAL snapshot too big: %v bytes", len(b))
 	}
 	return b, nil
 }
 
 func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	log.Printf("Received snapshot of length %v", len(b))
+	db.DPrintf("SNAP", "Received snapshot of length %v", len(b))
 	dev.srv.Restore(b)
 	return np.Tsize(len(b)), nil
 }

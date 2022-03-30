@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/linuxsched"
 	"ulambda/proc"
@@ -39,13 +40,13 @@ func MakeRival(args []string) (*Rival, error) {
 	sps, err := strconv.Atoi(args[0])
 	r.spawnsPerSec = sps
 	if err != nil {
-		log.Fatalf("Invalid num spawns per sec: %v, %v\n", args[0], err)
+		db.DFatalf("Invalid num spawns per sec: %v, %v\n", args[0], err)
 	}
 
 	secs, err := strconv.Atoi(args[1])
 	r.secs = float64(secs)
 	if err != nil {
-		log.Fatalf("Invalid num seconds: %v, %v\n", args[0], err)
+		db.DFatalf("Invalid num seconds: %v, %v\n", args[0], err)
 	}
 
 	r.sleepIntervalUsecs = 1000000 / r.spawnsPerSec
@@ -60,17 +61,17 @@ func MakeRival(args []string) (*Rival, error) {
 	} else if args[2] == "ninep" {
 		r.ninep = true
 	} else {
-		log.Fatalf("Unexpected rival spawn type: %v", args[2])
+		db.DFatalf("Unexpected rival spawn type: %v", args[2])
 	}
 
 	r.dim = args[3]
 	if err != nil {
-		log.Fatalf("Invalid dimension: %v, %v\n", args[3], err)
+		db.DFatalf("Invalid dimension: %v, %v\n", args[3], err)
 	}
 
 	r.its = args[4]
 	if err != nil {
-		log.Fatalf("Invalid iterations: %v, %v\n", args[4], err)
+		db.DFatalf("Invalid iterations: %v, %v\n", args[4], err)
 	}
 
 	return r, nil
@@ -82,7 +83,7 @@ func (r *Rival) spawnSpinner(pid proc.Tpid) {
 		start := time.Now()
 		err := r.Spawn(a)
 		if err != nil {
-			log.Fatalf("couldn't spawn ninep spinner %v: %v\n", pid, err)
+			db.DFatalf("couldn't spawn ninep spinner %v: %v\n", pid, err)
 		}
 		go func() {
 			_, err := r.WaitExit(pid)

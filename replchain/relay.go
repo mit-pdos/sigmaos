@@ -352,7 +352,7 @@ func relayOnce(rs *ChainReplServer, ch *RelayNetConn, op *RelayOp) bool {
 			return false
 		}
 		if err != nil {
-			log.Fatalf("Srv error sending: %v\n", err)
+			db.DFatalf("Srv error sending: %v\n", err)
 		}
 	} else {
 		db.DPrintf("%v Tail trying to relay", rs.config.RelayAddr)

@@ -2,9 +2,9 @@ package dir
 
 import (
 	"encoding/json"
-	"log"
 	"runtime/debug"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
@@ -27,7 +27,7 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	}
 	b, err := json.Marshal(ds)
 	if err != nil {
-		log.Fatalf("FATAL Error snapshot encoding DirImpl: %v", err)
+		db.DFatalf("FATAL Error snapshot encoding DirImpl: %v", err)
 	}
 	return b
 }
@@ -37,7 +37,7 @@ func restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.Inode {
 	err := json.Unmarshal(b, ds)
 	if err != nil {
 		debug.PrintStack()
-		log.Fatalf("FATAL error unmarshal file in restoreDir: %v, %v", err, string(b))
+		db.DFatalf("FATAL error unmarshal file in restoreDir: %v, %v", err, string(b))
 	}
 	d.Inode = inode.RestoreInode(fn, ds.InodeSnap)
 	for name, ptr := range ds.Entries {

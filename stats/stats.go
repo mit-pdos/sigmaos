@@ -3,7 +3,6 @@ package stats
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"runtime"
@@ -15,6 +14,7 @@ import (
 	"time"
 	"unsafe"
 
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
 	"ulambda/linuxsched"
@@ -213,7 +213,7 @@ func (st *Stats) monitorCPUUtil() {
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(pid)
 	if err != nil {
-		log.Fatalf("Error getting affinity mask: %v", err)
+		db.DFatalf("Error getting affinity mask: %v", err)
 	}
 	for i := uint(0); i < linuxsched.NCores; i++ {
 		if m.Test(i) {
@@ -308,7 +308,7 @@ func (st *Stats) stats() []byte {
 
 	data, err := json.Marshal(*stcp)
 	if err != nil {
-		log.Fatalf("stats: json failed %v\n", err)
+		db.DFatalf("stats: json failed %v\n", err)
 	}
 	return data
 }

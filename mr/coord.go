@@ -32,7 +32,7 @@ const (
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	for _, n := range []string{MRDIR, MDIR, RDIR, MDIR + CLAIMED, RDIR + CLAIMED, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
 		if err := fsl.MkDir(n, 0777); err != nil {
-			log.Fatalf("Mkdir %v\n", err)
+			db.DFatalf("Mkdir %v\n", err)
 		}
 	}
 
@@ -40,7 +40,7 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	for r := 0; r < nreducetask; r++ {
 		n := RDIR + "/" + strconv.Itoa(r)
 		if err := fsl.MkDir(n, 0777); err != nil {
-			log.Fatalf("Mkdir %v err %v\n", n, err)
+			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
 }
@@ -161,7 +161,7 @@ func (c *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 	for {
 		t, err := c.getTask(dir)
 		if err != nil {
-			log.Fatalf("getTask %v err %v\n", dir, err)
+			db.DFatalf("getTask %v err %v\n", dir, err)
 		}
 		if t == "" {
 			break
@@ -180,7 +180,7 @@ func (c *Coord) restartMappers(files []string) {
 	for _, f := range files {
 		n := path.Join(MDIR, f)
 		if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-			log.Fatalf("PutFile %v err %v\n", n, err)
+			db.DFatalf("PutFile %v err %v\n", n, err)
 		}
 	}
 }
@@ -201,7 +201,7 @@ func (c *Coord) processResult(dir string, res Ttask) {
 		to := dir + "/" + res.task
 		db.DPrintf("MR", "task %v failed %v err %v\n", res.task, res.status, res.err)
 		if err := c.Rename(dir+TIP+"/"+res.task, to); err != nil {
-			log.Fatalf("%v: rename to %v err %v\n", proc.GetName(), to, err)
+			db.DFatalf("%v: rename to %v err %v\n", proc.GetName(), to, err)
 		}
 	}
 }
@@ -209,7 +209,7 @@ func (c *Coord) processResult(dir string, res Ttask) {
 func (c *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Status, error)) {
 	sts, err := c.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
-		log.Fatalf("%v: FATAL stragglers ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
+		db.DFatalf("%v: FATAL stragglers ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
 	}
 	n := 0
 	for _, st := range sts {
@@ -225,7 +225,7 @@ func (c *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Stat
 func (c *Coord) recover(dir string) {
 	sts, err := c.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
-		log.Fatalf("%v: FATAL recover: ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
+		db.DFatalf("%v: FATAL recover: ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
 	}
 
 	// just treat all tasks in progress as failed; too aggressive, but correct.

@@ -3,7 +3,6 @@ package procd
 import (
 	"errors"
 	"io"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -303,12 +302,12 @@ func (pd *Procd) worker(done *int32) {
 				return
 			}
 			pd.perf.Teardown()
-			log.Fatalf("FATAL Procd GetProc error %v, %v\n", p, error)
+			db.DFatalf("FATAL Procd GetProc error %v, %v\n", p, error)
 		}
 		localProc := pd.makeProc(p)
 		err := pd.fs.running(localProc)
 		if err != nil {
-			log.Fatalf("FATAL Procd pub running error %v %T\n", err, err)
+			db.DFatalf("FATAL Procd pub running error %v %T\n", err, err)
 		}
 		pd.runProc(localProc)
 	}

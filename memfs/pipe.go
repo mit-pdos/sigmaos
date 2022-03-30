@@ -2,7 +2,6 @@ package memfs
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
@@ -197,6 +196,6 @@ func (pipe *Pipe) Unlink() {
 }
 
 func (pipe *Pipe) Snapshot(fn fs.SnapshotF) []byte {
-	log.Fatalf("FATAL tried to snapshot pipe")
+	db.DFatalf("FATAL tried to snapshot pipe")
 	return nil
 }

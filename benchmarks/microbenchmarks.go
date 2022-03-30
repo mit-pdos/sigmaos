@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/perf"
@@ -51,17 +52,17 @@ func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *M
 
 func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r := make(map[string]*RawResults)
-	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
-	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
-		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
-	}
-	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
-	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
-	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
-	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
-	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
+	//	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
+	//	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	//	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
+	//		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
+	//	}
+	//	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	//	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	//	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	//	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
+	//	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
+	//	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
 	pidOffset := 0
 	r["proc_base_spawn_wait_exit"] = m.ProcSpawnWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
@@ -80,24 +81,24 @@ func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 
 func (m *Microbenchmarks) setup(dir string) {
 	if err := m.MkDir(dir, 0777); err != nil {
-		log.Fatalf("Error Mkdir Microbenchmarks.setup: %v", err)
+		db.DFatalf("Error Mkdir Microbenchmarks.setup: %v", err)
 	}
 }
 
 func (m *Microbenchmarks) teardown(dir string) {
 	fs, err := m.GetDir(dir)
 	if err != nil {
-		log.Fatalf("Error ReadDir in Microbenchmarks.teardown: %v", err)
+		db.DFatalf("Error ReadDir in Microbenchmarks.teardown: %v", err)
 	}
 
 	for _, f := range fs {
 		if err := m.Remove(path.Join(dir, f.Name)); err != nil {
-			log.Fatalf("Error Remove Microbenchmarks.teardown: %v", err)
+			db.DFatalf("Error Remove Microbenchmarks.teardown: %v", err)
 		}
 	}
 
 	if err := m.Remove(dir); err != nil {
-		log.Fatalf("Error Remove in Microbenchmarks.teardown: %v", err)
+		db.DFatalf("Error Remove in Microbenchmarks.teardown: %v", err)
 	}
 }
 
@@ -116,7 +117,7 @@ func (m *Microbenchmarks) PutFileBenchmark(nTrials int) *RawResults {
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, err := m.PutFile(fNames[i], 0777, np.OWRITE, b); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.PutFileBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.PutFileBenchmark: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -146,7 +147,7 @@ func (m *Microbenchmarks) SetFileBenchmark(nTrials int, size int) *RawResults {
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, err := m.SetFile(fpath, b, np.OWRITE, 0); err != nil {
-			log.Fatalf("Error SetFile in Microbenchmarks.SetFileBenchmark: %v", err)
+			db.DFatalf("Error SetFile in Microbenchmarks.SetFileBenchmark: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -174,7 +175,7 @@ func (m *Microbenchmarks) GetFileBenchmark(nTrials int, size int) *RawResults {
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, err := m.GetFile(fpath); err != nil {
-			log.Fatalf("Error GetFile in Microbenchmarks.GetFileBenchmark: %v", err)
+			db.DFatalf("Error GetFile in Microbenchmarks.GetFileBenchmark: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -201,15 +202,15 @@ func (m *Microbenchmarks) SemInitBenchmark(nTrials int) *RawResults {
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := sems[i].Init(0); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
 		if err := sems[i].Up(); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
 		}
 		if err := sems[i].Down(); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemInitBenchmark: %v", err)
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
@@ -232,17 +233,17 @@ func (m *Microbenchmarks) SemUpBenchmark(nTrials int) *RawResults {
 
 	for i := 0; i < nTrials; i++ {
 		if err := sems[i].Init(0); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
 		}
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := sems[i].Up(); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
 		if err := sems[i].Down(); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemUpBenchmark: %v", err)
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
@@ -265,15 +266,15 @@ func (m *Microbenchmarks) SemDownBenchmark(nTrials int) *RawResults {
 
 	for i := 0; i < nTrials; i++ {
 		if err := sems[i].Init(0); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
 		}
 		if err := sems[i].Up(); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
 		}
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := sems[i].Down(); err != nil {
-			log.Fatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
+			db.DFatalf("Error PutFile in Microbenchmarks.SemDownBenchmark: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -303,10 +304,10 @@ func (m *Microbenchmarks) ProcSpawnWaitExitBenchmark(nTrials int, pidOffset int)
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Spawn(ps[i]); err != nil {
-			log.Fatalf("Error spawning: %v", err)
+			db.DFatalf("Error spawning: %v", err)
 		}
 		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			log.Fatalf("Error WaitExit: %v %v", status, err)
+			db.DFatalf("Error WaitExit: %v %v", status, err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -341,10 +342,10 @@ func (m *Microbenchmarks) ProcLinuxBenchmark(nTrials int, pidOffset int) *RawRes
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := cmds[i].Start(); err != nil {
-			log.Fatalf("Error command start: %v", err)
+			db.DFatalf("Error command start: %v", err)
 		}
 		if err := cmds[i].Wait(); err != nil {
-			log.Fatalf("Error command start: %v", err)
+			db.DFatalf("Error command start: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -375,13 +376,13 @@ func (m *Microbenchmarks) ProcSpawnClientBenchmark(nTrials int, pidOffset int) *
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Spawn(ps[i]); err != nil {
-			log.Fatalf("Error spawning: %v", err)
+			db.DFatalf("Error spawning: %v", err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
 		//		m.Exited(ps[i].Pid, proc.MakeStatus(proc.StatusOK))
 		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			log.Fatalf("Error WaitExit: %v %v", status, err)
+			db.DFatalf("Error WaitExit: %v %v", status, err)
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
@@ -408,7 +409,7 @@ func (m *Microbenchmarks) ProcExitedBenchmark(nTrials int, pidOffset int) *RawRe
 
 	for i := 0; i < nTrials; i++ {
 		if err := m.Spawn(ps[i]); err != nil {
-			log.Fatalf("Error spawning: %v", err)
+			db.DFatalf("Error spawning: %v", err)
 		}
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
@@ -416,7 +417,7 @@ func (m *Microbenchmarks) ProcExitedBenchmark(nTrials int, pidOffset int) *RawRe
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
 		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			log.Fatalf("Error WaitExit: %v %v", status, err)
+			db.DFatalf("Error WaitExit: %v %v", status, err)
 		}
 		elapsed := float64(end.Sub(start).Microseconds())
 		throughput := float64(1.0) / elapsed
@@ -443,13 +444,13 @@ func (m *Microbenchmarks) ProcWaitExitBenchmark(nTrials int, pidOffset int) *Raw
 
 	for i := 0; i < nTrials; i++ {
 		if err := m.Spawn(ps[i]); err != nil {
-			log.Fatalf("Error spawning: %v", err)
+			db.DFatalf("Error spawning: %v", err)
 		}
 		//		m.Exited(ps[i].Pid, proc.MakeStatus(proc.StatusOK))
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			log.Fatalf("Error WaitExit: %v %v", status, err)
+			db.DFatalf("Error WaitExit: %v %v", status, err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -487,11 +488,11 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if err := m.Spawn(ps[i]); err != nil {
-			log.Fatalf("Error spawning: %v", err)
+			db.DFatalf("Error spawning: %v", err)
 		}
 		//		m.Exited(ps[i].Pid, proc.MakeStatus(proc.StatusOK))
 		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			log.Fatalf("Error WaitExit: %v %v", status, err)
+			db.DFatalf("Error WaitExit: %v %v", status, err)
 		}
 		end := time.Now()
 		nRPC = m.ReadSeqNo() - nRPC
@@ -508,7 +509,7 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 func (m *Microbenchmarks) makeFile(fpath string, size int) {
 	b := genData(size)
 	if _, err := m.PutFile(fpath, 0777, np.OWRITE, b); err != nil {
-		log.Fatalf("Error MakeFile Microbenchmarks.makeFile: %v", err)
+		db.DFatalf("Error MakeFile Microbenchmarks.makeFile: %v", err)
 	}
 }
 

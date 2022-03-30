@@ -1,7 +1,6 @@
 package fsux
 
 import (
-	"log"
 	"os"
 	"sync"
 	"syscall"
@@ -99,7 +98,7 @@ func (o *Obj) Qid() np.Tqid {
 func (o *Obj) Perm() np.Tperm {
 	fi, error := os.Stat(o.path.String())
 	if error != nil {
-		log.Fatalf("Perm %v err %v\n", o.path, error)
+		db.DFatalf("Perm %v err %v\n", o.path, error)
 	}
 	if fi.IsDir() {
 		return np.DMDIR
@@ -111,7 +110,7 @@ func (o *Obj) Parent() fs.Dir {
 	dir := o.path.Dir()
 	d, err := makeDir(dir)
 	if err != nil {
-		log.Fatalf("Parent %v err %v\n", dir, err)
+		db.DFatalf("Parent %v err %v\n", dir, err)
 	}
 	return d
 }

@@ -1,12 +1,12 @@
 package realm
 
 import (
-	"log"
 	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
 
+	db "ulambda/debug"
 	"ulambda/kernel"
 	"ulambda/procclnt"
 )
@@ -20,7 +20,7 @@ func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd,
 	for i, addr := range addrs {
 		cmd, err := kernel.RunNamed(bin, addr, len(addrs) > 1, i+1, addrs, realmId)
 		if err != nil {
-			log.Fatalf("Error BootNamed in BootAllNameds: %v", err)
+			db.DFatalf("Error BootNamed in BootAllNameds: %v", err)
 			return nil, err
 		}
 		cmds = append(cmds, cmd)
@@ -31,7 +31,7 @@ func BootNamedReplicas(bin string, addrs []string, realmId string) ([]*exec.Cmd,
 func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
 	for _, pid := range pids {
 		if err := pclnt.EvictKernelProc(pid); err != nil {
-			log.Fatalf("Error Evict in Realm.ShutdownNamedReplicas: %v", err)
+			db.DFatalf("Error Evict in Realm.ShutdownNamedReplicas: %v", err)
 		}
 	}
 }
@@ -52,7 +52,7 @@ func nReplicas() int {
 	if nStr, ok := os.LookupEnv(N_REPLICAS); ok {
 		n, err := strconv.Atoi(nStr)
 		if err != nil {
-			log.Fatalf("Invalid N_REPLICAS format: %v", err)
+			db.DFatalf("Invalid N_REPLICAS format: %v", err)
 		}
 		return n
 	}

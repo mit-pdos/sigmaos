@@ -1,10 +1,10 @@
 package replica
 
 import (
-	"log"
 	"os"
 	"path"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/repl"
 	"ulambda/ux"
@@ -33,7 +33,7 @@ func MakeFsUxReplica(args []string, srvAddr string, unionDirPath string, config 
 	// Post in union dir
 	err := r.PostService(srvAddr, r.name)
 	if err != nil {
-		log.Fatalf("PostService %v error: %v", r.name, err)
+		db.DFatalf("PostService %v error: %v", r.name, err)
 	}
 	return r
 }

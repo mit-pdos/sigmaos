@@ -1,10 +1,10 @@
 package gg
 
 import (
-	"log"
 	"os"
 	"os/exec"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -69,12 +69,12 @@ func (ex *Executor) exec() error {
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
 	if err != nil {
-		log.Fatalf("Executor error when starting command %v: %v\n", ex.thunkHash, err)
+		db.DFatalf("Executor error when starting command %v: %v\n", ex.thunkHash, err)
 		return err
 	}
 	err = cmd.Wait()
 	if err != nil {
-		log.Fatalf("Executor error when waiting for command %v: %v\n", ex.thunkHash, err)
+		db.DFatalf("Executor error when waiting for command %v: %v\n", ex.thunkHash, err)
 		return err
 	}
 	return nil

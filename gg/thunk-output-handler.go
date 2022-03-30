@@ -4,6 +4,7 @@ import (
 	"log"
 	"strings"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -99,7 +100,7 @@ func (toh *ThunkOutputHandler) adjustExitDependencies() {
 	// XXX Need to get rid of SwapExitDependency
 	//	err := toh.SwapExitDependency(exitDepSwaps)
 	//	if err != nil {
-	//		log.Fatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
+	//		db.DFatalf("Couldn't swap exit dependencies %v: %v\n", exitDepSwaps, err)
 	//	}
 }
 
@@ -113,7 +114,7 @@ func (toh *ThunkOutputHandler) getOutputFiles(thunkOutput []string) map[string][
 		// Get output thunk's hash
 		hash := strings.Split(result[1], " ")[0]
 		if _, ok := outputFiles[hash]; ok {
-			log.Fatalf("output file was already in map when parsing thunk output")
+			db.DFatalf("output file was already in map when parsing thunk output")
 		}
 		outputFiles[hash] = []string{toh.thunkHash + "#" + tag}
 		if first {
@@ -150,7 +151,7 @@ func (toh *ThunkOutputHandler) readThunkOutputs() []string {
 	outputThunksPath := ggRemoteBlobs(toh.thunkHash + THUNK_OUTPUTS_SUFFIX)
 	contents, err := toh.GetFile(outputThunksPath)
 	if err != nil {
-		log.Fatalf("Error reading thunk outputs [%v]: %v\n", outputThunksPath, err)
+		db.DFatalf("Error reading thunk outputs [%v]: %v\n", outputThunksPath, err)
 	}
 	trimmedContents := strings.TrimSpace(string(contents))
 	if len(trimmedContents) > 0 {

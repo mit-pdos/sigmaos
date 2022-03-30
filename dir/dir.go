@@ -2,7 +2,6 @@ package dir
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -288,7 +287,7 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
 
 	err = dir.unlinkL(from)
 	if err != nil {
-		log.Fatalf("FATAL Rename: remove failed %v %v\n", from, err)
+		db.DFatalf("FATAL Rename: remove failed %v %v\n", from, err)
 	}
 
 	dir.VersionInc()
@@ -297,12 +296,12 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
 		// of an existing file.
 		err = dir.remove(to)
 		if err != nil {
-			log.Fatalf("FATAL Rename remove failed %v %v\n", to, err)
+			db.DFatalf("FATAL Rename remove failed %v %v\n", to, err)
 		}
 	}
 	err = dir.createL(ino, to)
 	if err != nil {
-		log.Fatalf("FATAL Rename create %v failed %v\n", to, err)
+		db.DFatalf("FATAL Rename create %v failed %v\n", to, err)
 		return err
 	}
 	ino.VersionInc()
@@ -322,7 +321,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np
 	}
 	err = dir.unlinkL(old)
 	if err != nil {
-		log.Fatalf("FATAL Rename %v remove  %v\n", old, err)
+		db.DFatalf("FATAL Rename %v remove  %v\n", old, err)
 	}
 	_, err = newdir.lookupL(new)
 	if err == nil {
@@ -330,7 +329,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np
 	}
 	err = newdir.createL(ino, new)
 	if err != nil {
-		log.Fatalf("FATAL Rename %v createL: %v\n", new, err)
+		db.DFatalf("FATAL Rename %v createL: %v\n", new, err)
 		return err
 	}
 	// ino.VersionInc()

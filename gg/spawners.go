@@ -15,7 +15,7 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 	// XXX no more no-ops
 	//	err := launch.SpawnNoOp(noOpPid, exitDep)
 	//	if err != nil {
-	//		log.Fatalf("Error spawning noop [%v]: %v\n", noOpPid, err)
+	//		db.DFatalf("Error spawning noop [%v]: %v\n", noOpPid, err)
 	//	}
 	return ""
 }
@@ -28,7 +28,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 	//	})
 	//	err := launch.Spawn(a)
 	//	if err != nil {
-	//		log.Fatalf("Error spawning orig dir upload worker [%v/%v]: %v\n", dir, subDir, err)
+	//		db.DFatalf("Error spawning orig dir upload worker [%v/%v]: %v\n", dir, subDir, err)
 	//	}
 	//	return a.Pid
 	return ""
@@ -50,7 +50,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 	//	a.Dependencies = &procdep.Deps{nil, exitDepMap}
 	//	err := launch.Spawn(a)
 	//	if err != nil {
-	//		log.Fatalf("Error spawning target writer [%v]: %v\n", target, err)
+	//		db.DFatalf("Error spawning target writer [%v]: %v\n", target, err)
 	//	}
 	//	return a.Pid
 	return ""
@@ -86,7 +86,7 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	//	a.Dependencies = &procdep.Deps{nil, exitDepMap}
 	//	err := launch.Spawn(a)
 	//	if err != nil {
-	//		log.Fatalf("Error spawning output handler [%v]: %v\n", thunkHash, err)
+	//		db.DFatalf("Error spawning output handler [%v]: %v\n", thunkHash, err)
 	//	}
 	return ""
 }

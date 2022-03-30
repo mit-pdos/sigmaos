@@ -1,7 +1,6 @@
 package replica
 
 import (
-	"log"
 	"sort"
 	"strings"
 
@@ -40,7 +39,7 @@ func MakeReplicaMonitor(args []string) *ReplicaMonitor {
 func (m *ReplicaMonitor) updateConfig() {
 	replicas, err := m.GetDir(m.unionDirPath)
 	if err != nil {
-		log.Fatalf("Error reading union dir in monitor: %v", err)
+		db.DFatalf("Error reading union dir in monitor: %v", err)
 	}
 	sort.Slice(replicas, func(i, j int) bool {
 		return replicas[i].Name < replicas[j].Name
@@ -52,7 +51,7 @@ func (m *ReplicaMonitor) updateConfig() {
 	m.Remove(m.configPath)
 	err = atomic.PutFileAtomic(m.FsLib, m.configPath, 0777, []byte(strings.TrimSpace(new)))
 	if err != nil {
-		log.Fatalf("Error writing new config file: %v", err)
+		db.DFatalf("Error writing new config file: %v", err)
 	}
 }
 

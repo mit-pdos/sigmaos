@@ -64,7 +64,7 @@ func (ts *Tstate) spawnSpinner() proc.Tpid {
 	a.Ncore = proc.Tcore(1)
 	err := ts.Spawn(a)
 	if err != nil {
-		log.Fatalf("Error Spawn in RealmBalanceBenchmark.spawnSpinner: %v", err)
+		db.DFatalf("Error Spawn in RealmBalanceBenchmark.spawnSpinner: %v", err)
 	}
 	go func() {
 		ts.WaitExit(pid)
@@ -77,7 +77,7 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 	log.Printf("Checking num machineds")
 	machineds, err := ts.realmFsl.GetDir(path.Join(realm.REALMS, realm.TEST_RID))
 	if err != nil {
-		log.Fatalf("Error GetDir realm-balance main: %v", err)
+		db.DFatalf("Error GetDir realm-balance main: %v", err)
 	}
 	nMachineds := len(machineds)
 	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)

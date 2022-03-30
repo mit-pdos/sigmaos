@@ -1,11 +1,11 @@
 package session
 
 import (
-	"log"
 	"sync"
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/threadmgr"
 )
@@ -52,7 +52,7 @@ func (st *SessionTable) SessThread(sid np.Tsession) *threadmgr.ThreadMgr {
 	if sess, ok := st.Lookup(sid); ok {
 		return sess.threadmgr
 	} else {
-		log.Fatalf("FATAL SessThread: no thread for %v\n", sid)
+		db.DFatalf("FATAL SessThread: no thread for %v\n", sid)
 	}
 	return nil
 }

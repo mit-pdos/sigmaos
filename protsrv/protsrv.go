@@ -1,9 +1,6 @@
 package protsrv
 
 import (
-	"log"
-	// "time"
-
 	db "ulambda/debug"
 	"ulambda/fid"
 	"ulambda/fs"
@@ -423,7 +420,7 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 	if d1.Qid().Path < d2.Qid().Path {
 		return true
 	} else if d1.Qid().Path == d2.Qid().Path { // would have used wstat instead of renameat
-		log.Fatalf("FATAL lockOrder")
+		db.DFatalf("FATAL lockOrder")
 		return false
 	} else {
 		return false

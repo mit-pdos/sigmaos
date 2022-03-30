@@ -2,9 +2,9 @@ package threadmgr
 
 import (
 	"encoding/json"
-	"log"
 	"sort"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
 )
@@ -17,7 +17,7 @@ type OpSnapshot struct {
 func MakeOpSnapshot(fc *np.Fcall, n uint64) *OpSnapshot {
 	b, err := npcodec.MarshalFcallByte(fc)
 	if err != nil {
-		log.Fatalf("FATAL error marshalling fcall in MakeOpSnapshot: %v", err)
+		db.DFatalf("FATAL error marshalling fcall in MakeOpSnapshot: %v", err)
 	}
 	return &OpSnapshot{b, n}
 }
@@ -42,7 +42,7 @@ func (tmt *ThreadMgrTable) snapshot() []byte {
 	}
 	b, err := json.Marshal(opss)
 	if err != nil {
-		log.Fatalf("FATAL Error snapshot encoding thread manager table: %v", err)
+		db.DFatalf("FATAL Error snapshot encoding thread manager table: %v", err)
 	}
 	return b
 }
@@ -55,14 +55,14 @@ func Restore(pfn ProcessFn, tm *ThreadMgr, b []byte) *ThreadMgrTable {
 	opss := []*OpSnapshot{}
 	err := json.Unmarshal(b, &opss)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal threadmgr in restore: %v, \n%v", err, string(b))
+		db.DFatalf("FATAL error unmarshal threadmgr in restore: %v, \n%v", err, string(b))
 	}
 	// List of ops currently executing.
 	executing := []*Op{}
 	for _, op := range opss {
 		fc, err1 := npcodec.UnmarshalFcall(op.Fc)
 		if err1 != nil {
-			log.Fatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
+			db.DFatalf("FATAL error unmarshal fcall in ThreadMgrTable.Restore: %v")
 		}
 		executing = append(executing, makeOp(fc, op.N))
 	}

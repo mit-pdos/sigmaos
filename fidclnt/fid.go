@@ -2,10 +2,10 @@ package fidclnt
 
 import (
 	"fmt"
-	"log"
 	"runtime/debug"
 	"sync"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
@@ -63,7 +63,7 @@ func (fm *FidMap) free(fid np.Tfid) {
 	_, ok := fm.fids[fid]
 	if !ok {
 		debug.PrintStack()
-		log.Fatalf("FATAL %v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
+		db.DFatalf("FATAL %v: freeFid: fid %v unknown %v\n", proc.GetName(), fid, fm.fids)
 	}
 	delete(fm.fids, fid)
 }

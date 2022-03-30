@@ -50,7 +50,7 @@ func (srv *NetServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			log.Fatalf("%v: Accept error: %v", proc.GetName(), err)
+			db.DFatalf("%v: Accept error: %v", proc.GetName(), err)
 		}
 
 		MakeSrvConn(srv, conn)

@@ -102,17 +102,17 @@ func RunMember(grp string) {
 
 	replicated, err := strconv.ParseBool(os.Getenv("SIGMAREPL"))
 	if err != nil {
-		log.Fatalf("FATAL invalid sigmarepl: %v", err)
+		db.DFatalf("FATAL invalid sigmarepl: %v", err)
 	}
 
 	if err := g.ec.AcquireLeadership(nil); err != nil {
-		log.Fatalf("FATAL AcquireLeadership in group.RunMember: %v", err)
+		db.DFatalf("FATAL AcquireLeadership in group.RunMember: %v", err)
 	}
 
 	// Read addrs
 	replicaAddrs, err := g.readReplicaAddrs(grp)
 	if err != nil && !np.IsErrNotfound(err) {
-		log.Fatalf("FATAL readReplicaAddrs in group.RunMember: %v", err)
+		db.DFatalf("FATAL readReplicaAddrs in group.RunMember: %v", err)
 	}
 
 	// Add placeholders to the addrs, and write them back to make sure the same
@@ -123,7 +123,7 @@ func RunMember(grp string) {
 
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
-		log.Fatalf("FATAL group ip %v\n", err)
+		db.DFatalf("FATAL group ip %v\n", err)
 	}
 
 	// Get raft id.
@@ -138,7 +138,7 @@ func RunMember(grp string) {
 	// start server but don't publish its existence
 	mfs, err1 := fslibsrv.MakeReplMemFsFsl(replicaAddrs.RaftAddrs[id-1], "", g.FsLib, g.ProcClnt, raftConfig)
 	if err1 != nil {
-		log.Fatalf("FATAL StartMemFs %v\n", err1)
+		db.DFatalf("FATAL StartMemFs %v\n", err1)
 	}
 
 	// Get the final sigma and repl addrs
@@ -149,7 +149,7 @@ func RunMember(grp string) {
 
 	// Update the stored addresses in named.
 	if err := g.writeReplicaAddrs(grp, replicaAddrs); err != nil {
-		log.Fatalf("FATAL write replica addrs: %v", err)
+		db.DFatalf("FATAL write replica addrs: %v", err)
 	}
 
 	// Clean sigma addrs, removing placeholders...
@@ -161,12 +161,12 @@ func RunMember(grp string) {
 	}
 
 	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(sigmaAddrs)); err != nil {
-		log.Fatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
+		db.DFatalf("FATAL couldn't read replica addrs %v err %v", grp, err)
 	}
 
 	// Release leadership.
 	if err := g.ec.ReleaseLeadership(); err != nil {
-		log.Fatalf("FATAL release leadership: %v", err)
+		db.DFatalf("FATAL release leadership: %v", err)
 	}
 
 	// XXX probably want to start these earlier...

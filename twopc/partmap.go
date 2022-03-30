@@ -2,8 +2,8 @@ package twopc
 
 import (
 	"fmt"
-	"log"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/pathclnt"
 )
@@ -53,7 +53,7 @@ func (fw *FlwsMap) setStatusWatches(dir string, f pathclnt.Watch) {
 		// has prepared/committed
 		_, err := fw.GetFileWatch(fn)
 		if err == nil {
-			log.Fatalf("COORD: set status watch failed %v", err)
+			db.DFatalf("COORD: set status watch failed %v", err)
 		}
 		// XXX error could be something else than "file not found",
 		// in which case we want to fail?
@@ -65,7 +65,7 @@ func (fw *FlwsMap) setFlwsWatches(f pathclnt.Watch) {
 		// set watch for KV, in case it crashes during 2PC
 		err := fw.SetRemoveWatch(DIR2PC+"/"+flw, f)
 		if err != nil {
-			log.Fatalf("COORD: set follower watch failed %v", err)
+			db.DFatalf("COORD: set follower watch failed %v", err)
 		}
 	}
 }

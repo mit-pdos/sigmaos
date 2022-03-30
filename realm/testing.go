@@ -6,6 +6,7 @@ import (
 	"strings"
 	"syscall"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
 	"ulambda/proc"
@@ -83,7 +84,7 @@ func (e *TestEnv) bootNameds() error {
 	e.namedCmds = namedCmds
 	// Start a named instance.
 	if err != nil {
-		log.Fatalf("Error BootNamedReplicas in TestEnv.BootNameds: %v", err)
+		db.DFatalf("Error BootNamedReplicas in TestEnv.BootNameds: %v", err)
 		return err
 	}
 	return nil
@@ -112,9 +113,9 @@ func (e *TestEnv) BootMachined() error {
 
 func kill(cmd *exec.Cmd) {
 	if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
-		log.Fatalf("Error Kill in kill: %v", err)
+		db.DFatalf("Error Kill in kill: %v", err)
 	}
 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal") {
-		log.Fatalf("Error machined Wait in kill: %v", err)
+		db.DFatalf("Error machined Wait in kill: %v", err)
 	}
 }

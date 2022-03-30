@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	db "ulambda/debug"
 	"ulambda/fdclnt"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -44,7 +45,7 @@ func MakeFsLibAddr(uname string, server []string) *FsLib {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(server, "", "name")
 	if err != nil {
-		log.Fatalf("FATAL %v: Mount %v error: %v", proc.GetProgram(), server, err)
+		db.DFatalf("FATAL %v: Mount %v error: %v", proc.GetProgram(), server, err)
 	}
 	return fl
 }

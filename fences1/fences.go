@@ -85,7 +85,7 @@ func (ft *FenceTable) CheckFence(new np.Tfence1) (*Epoch, *np.Err) {
 func (ft *FenceTable) Snapshot() []byte {
 	b, err := json.Marshal(ft.fences)
 	if err != nil {
-		log.Fatalf("FATAL Error snapshot encoding fence table: %v", err)
+		db.DFatalf("FATAL Error snapshot encoding fence table: %v", err)
 	}
 	return b
 }
@@ -94,7 +94,7 @@ func RestoreRecentTable(b []byte) *FenceTable {
 	ft := &FenceTable{}
 	err := json.Unmarshal(b, &ft.fences)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal fences in restore: %v", err)
+		db.DFatalf("FATAL error unmarshal fences in restore: %v", err)
 	}
 	return ft
 }

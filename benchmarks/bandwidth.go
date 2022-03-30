@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 )
@@ -49,7 +50,7 @@ func MakeBandwidthTest(args []string) (*BandwidthTest, error) {
 	bytes, err := strconv.Atoi(args[0])
 	t.bytes = bytes
 	if err != nil {
-		log.Fatalf("Invalid num MB: %v, %v\n", args[0], err)
+		db.DFatalf("Invalid num MB: %v, %v\n", args[0], err)
 	}
 
 	if args[1] == "memfs" {
@@ -57,14 +58,14 @@ func MakeBandwidthTest(args []string) (*BandwidthTest, error) {
 	} else if args[1] == "s3" {
 		t.memfs = false
 	} else {
-		log.Fatalf("Unknown test type: %v", args[1])
+		db.DFatalf("Unknown test type: %v", args[1])
 	}
 
 	// Set up s3 client
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("default"))
 	if err != nil {
-		log.Fatalf("Failed to load SDK configuration %v", err)
+		db.DFatalf("Failed to load SDK configuration %v", err)
 	}
 
 	t.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -117,7 +118,7 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 	for i := 0; i < N_RUNS; i++ {
 		result, err := t.client.GetObject(context.TODO(), input)
 		if err != nil {
-			log.Fatalf("Error getting s3 object: %v", err)
+			db.DFatalf("Error getting s3 object: %v", err)
 		}
 		n = 0
 		// Have to include this in timing since GetObjectOutput seems to read in
@@ -129,7 +130,7 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 				break
 			}
 			if err != nil {
-				log.Fatalf("Error reading s3 object result: %v", err)
+				db.DFatalf("Error reading s3 object result: %v", err)
 			}
 		}
 	}
@@ -137,11 +138,11 @@ func (t *BandwidthTest) S3Read(buf []byte) time.Duration {
 	elapsed := end.Sub(start)
 
 	if n != len(buf) {
-		log.Fatalf("Length of s3 read buffer didn't match: %v, %v", n, len(buf))
+		db.DFatalf("Length of s3 read buffer didn't match: %v, %v", n, len(buf))
 	}
 	for i := range buf {
 		if buf2[i] != buf[i] {
-			log.Fatalf("S3 Read buf didn't match written buf at index %v", i)
+			db.DFatalf("S3 Read buf didn't match written buf at index %v", i)
 		}
 	}
 	return elapsed
@@ -151,7 +152,7 @@ func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 	// setup
 	_, err := t.PutFile(fname, 0777, np.OWRITE, []byte{})
 	if err != nil && err.Error() != "Name exists" {
-		log.Fatalf("Error creating file: %v", err)
+		db.DFatalf("Error creating file: %v", err)
 	}
 
 	// timing
@@ -159,7 +160,7 @@ func (t *BandwidthTest) MemfsWrite(buf []byte) time.Duration {
 	for i := 0; i < N_RUNS; i++ {
 		_, err = t.SetFile(fname, buf, np.OWRITE, 0)
 		if err != nil {
-			log.Fatalf("Error writefile memfs: %v", err)
+			db.DFatalf("Error writefile memfs: %v", err)
 		}
 	}
 	end := time.Now()
@@ -176,7 +177,7 @@ func (t *BandwidthTest) MemfsRead(buf []byte) time.Duration {
 	for i := 0; i < N_RUNS; i++ {
 		buf2, err = t.GetFile(fname)
 		if err != nil {
-			log.Fatalf("GetFile er not nil: %v", err)
+			db.DFatalf("GetFile er not nil: %v", err)
 		}
 	}
 	end := time.Now()
@@ -184,7 +185,7 @@ func (t *BandwidthTest) MemfsRead(buf []byte) time.Duration {
 
 	for i := range buf {
 		if buf2[i] != buf[i] {
-			log.Fatalf("Memfs Read buf didn't match written buf at index %v", i)
+			db.DFatalf("Memfs Read buf didn't match written buf at index %v", i)
 		}
 	}
 
@@ -203,7 +204,7 @@ func (t *BandwidthTest) Work() {
 	// ===== Profiling code =====
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatalf("Error getting current user: %v", err)
+		db.DFatalf("Error getting current user: %v", err)
 	}
 	f, err := os.Create(path.Join(usr.HomeDir, "client.out"))
 	if err != nil {
@@ -211,7 +212,7 @@ func (t *BandwidthTest) Work() {
 	}
 	defer f.Close()
 	if err := pprof.StartCPUProfile(f); err != nil {
-		log.Fatalf("Couldn't start CPU profile: %v", err)
+		db.DFatalf("Couldn't start CPU profile: %v", err)
 	}
 	defer pprof.StopCPUProfile()
 	// ===== Profiling code =====

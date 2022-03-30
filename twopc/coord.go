@@ -60,7 +60,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	db.DPrintf("COORD", "New coord %v", args)
 
 	if _, err := cd.PutFile(COORD, 0777|np.DMTMP, np.OWRITE, nil); err != nil {
-		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
+		db.DFatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
 	cd.Started()
@@ -108,7 +108,7 @@ func (cd *Coord) restart() {
 func (cd *Coord) rmStatusFiles(dir string) {
 	sts, err := cd.GetDir(dir)
 	if err != nil {
-		log.Fatalf("COORD: ReadDir commit error %v\n", err)
+		db.DFatalf("COORD: ReadDir commit error %v\n", err)
 	}
 	for _, st := range sts {
 		fn := dir + st.Name

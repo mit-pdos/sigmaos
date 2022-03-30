@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/fslib"
@@ -32,7 +33,7 @@ func (pd *Procd) makeFs() {
 	var err error
 	pd.MemFs, pd.FsLib, pd.procclnt, err = fslibsrv.MakeMemFs(np.PROCD, np.PROCDREL)
 	if err != nil {
-		log.Fatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), err)
+		db.DFatalf("FATAL %v: MakeMemFs %v\n", proc.GetProgram(), err)
 	}
 	procclnt.MountPids(pd.FsLib, fslib.Named())
 
@@ -40,7 +41,7 @@ func (pd *Procd) makeFs() {
 	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
 	err1 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
 	if err1 != nil {
-		log.Fatalf("FATAL Error MkNod in RunProcd: %v", err1)
+		db.DFatalf("FATAL Error MkNod in RunProcd: %v", err1)
 	}
 
 	// Set up running dir
@@ -48,7 +49,7 @@ func (pd *Procd) makeFs() {
 	running := dir.MakeDir(runningi, memfs.MakeInode)
 	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
 	if err1 != nil {
-		log.Fatalf("FATAL Error creating running dir: %v", err1)
+		db.DFatalf("FATAL Error creating running dir: %v", err1)
 	}
 	pd.fs.run = running
 
@@ -60,7 +61,7 @@ func (pd *Procd) makeFs() {
 		runq := dir.MakeDir(runqi, memfs.MakeInode)
 		err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
 		if err1 != nil {
-			log.Fatalf("FATAL Error creating running dir: %v", err1)
+			db.DFatalf("FATAL Error creating running dir: %v", err1)
 		}
 		pd.fs.runqs[q] = runq
 	}
@@ -70,7 +71,7 @@ func (pd *Procd) makeFs() {
 	pids := dir.MakeDir(pidsi, memfs.MakeInode)
 	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
 	if err1 != nil {
-		log.Fatalf("FATAL Error creating pids dir: %v", err1)
+		db.DFatalf("FATAL Error creating pids dir: %v", err1)
 	}
 }
 
@@ -83,7 +84,7 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 	}
 	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
-		log.Fatalf("Error ProcdFs.spawn: %v", err)
+		db.DFatalf("Error ProcdFs.spawn: %v", err)
 		// TODO: return an np.Err return err
 	}
 	return nil

@@ -1,9 +1,8 @@
 package fslibsrv
 
 import (
-	"log"
-
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fidclnt"
 	"ulambda/fs"
@@ -84,7 +83,7 @@ func MakeReplMemFsFsl(addr string, path string, fsl *fslib.FsLib, pclnt *proccln
 	root := dir.MkRootDir(ctx.MkCtx("", 0, nil), memfs.MakeInode)
 	srv, err := makeReplServerFsl(root, addr, path, fsl, pclnt, conf)
 	if err != nil {
-		log.Fatalf("Error makeReplMemfsFsl: err")
+		db.DFatalf("Error makeReplMemfsFsl: err")
 	}
 	return srv, nil
 }

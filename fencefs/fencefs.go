@@ -1,7 +1,6 @@
 package fencefs
 
 import (
-	"log"
 	"sync"
 
 	"ulambda/ctx"
@@ -72,7 +71,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *np.Err) {
 		return f, nil
 	}
 	if err != nil && err.Code() != np.TErrExists {
-		log.Fatalf("allocFence create %v err %v\n", name, err)
+		db.DFatalf("allocFence create %v err %v\n", name, err)
 		return nil, err
 	}
 	f := i.(*Fence)

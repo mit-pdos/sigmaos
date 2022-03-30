@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
+	"ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/inode"
@@ -43,7 +44,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	}
 	error = db.Ping()
 	if error != nil {
-		log.Fatalf("FATAL open err %v\n", error)
+		debug.DFatalf("FATAL open err %v\n", error)
 	}
 	log.Printf("Connected to db\n")
 
@@ -57,11 +58,11 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	d := dir.MakeDir(di, memfs.MakeInode)
 	err := dir.MkNod(ctx, c.Parent(), s.id, d)
 	if err != nil {
-		log.Fatalf("FATAL MkNod d %v err %v\n", d, err)
+		debug.DFatalf("FATAL MkNod d %v err %v\n", d, err)
 	}
 	err = dir.MkNod(ctx, d, "ctl", s) // put ctl file into session dir
 	if err != nil {
-		log.Fatalf("FATAL MkNod err %v\n", err)
+		debug.DFatalf("FATAL MkNod err %v\n", err)
 	}
 
 	// make query file

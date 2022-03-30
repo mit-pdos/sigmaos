@@ -50,11 +50,11 @@ func Compare(fsl *fslib.FsLib) {
 	b1 := out1.Bytes()
 	b2 := out2.Bytes()
 	if len(b1) != len(b2) {
-		log.Fatalf("Output files have different length\n")
+		db.DFatalf("Output files have different length\n")
 	}
 	for i, v := range b1 {
 		if v != b2[i] {
-			log.Fatalf("Buf %v diff %v %v\n", i, v, b2[i])
+			db.DFatalf("Buf %v diff %v %v\n", i, v, b2[i])
 			break
 		}
 	}
@@ -81,14 +81,14 @@ func (ts *Tstate) prepareJob() {
 	// Put names of input files in name/mr/m
 	files, err := ioutil.ReadDir("../input/")
 	if err != nil {
-		log.Fatalf("Readdir %v\n", err)
+		db.DFatalf("Readdir %v\n", err)
 	}
 	for _, f := range files {
 		// remove mapper output directory from previous run
 		ts.RmDir(np.UX + "/~ip/m-" + f.Name())
 		n := mr.MDIR + "/" + f.Name()
 		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-			log.Fatalf("PutFile %v err %v\n", n, err)
+			db.DFatalf("PutFile %v err %v\n", n, err)
 		}
 	}
 }
@@ -96,7 +96,7 @@ func (ts *Tstate) prepareJob() {
 func (ts *Tstate) checkJob() {
 	file, err := os.OpenFile(OUTPUT, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("Couldn't open output file\n")
+		db.DFatalf("Couldn't open output file\n")
 	}
 	defer file.Close()
 
@@ -105,11 +105,11 @@ func (ts *Tstate) checkJob() {
 		r := strconv.Itoa(i)
 		data, err := ts.GetFile(mr.ROUT + r)
 		if err != nil {
-			log.Fatalf("ReadFile %v err %v\n", r, err)
+			db.DFatalf("ReadFile %v err %v\n", r, err)
 		}
 		_, err = file.Write(data)
 		if err != nil {
-			log.Fatalf("Write err %v\n", err)
+			db.DFatalf("Write err %v\n", err)
 		}
 	}
 
@@ -128,20 +128,20 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	case np.PROCD:
 		err := ts.BootProcd()
 		if err != nil {
-			log.Fatalf("Error spawn procd")
+			db.DFatalf("Error spawn procd")
 		}
 	case np.UX:
 		err := ts.BootFsUxd()
 		if err != nil {
-			log.Fatalf("Error spawn uxd")
+			db.DFatalf("Error spawn uxd")
 		}
 	default:
-		log.Fatalf("%v: Unrecognized service type", proc.GetProgram())
+		db.DFatalf("%v: Unrecognized service type", proc.GetProgram())
 	}
 	log.Printf("Kill one %v", srv)
 	err := ts.KillOne(srv)
 	if err != nil {
-		log.Fatalf("Error non-nil kill procd: %v", err)
+		db.DFatalf("Error non-nil kill procd: %v", err)
 	}
 	l.Unlock()
 	crashchan <- true

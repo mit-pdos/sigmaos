@@ -2,12 +2,12 @@ package fss3
 
 import (
 	"context"
-	"log"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
@@ -35,14 +35,14 @@ func RunFss3() {
 	pclnt := procclnt.MakeProcClnt(fsl)
 	srv, err := fslibsrv.MakeSrv(root, np.S3, fsl, pclnt)
 	if err != nil {
-		log.Fatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)
+		db.DFatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)
 	}
 
 	fss3.SessSrv = srv
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
-		log.Fatalf("Failed to load SDK configuration %v", err)
+		db.DFatalf("Failed to load SDK configuration %v", err)
 	}
 
 	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {

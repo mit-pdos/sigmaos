@@ -1,13 +1,13 @@
 package named
 
 import (
-	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 
 	"ulambda/ctx"
+	db "ulambda/debug"
 	"ulambda/fslibsrv"
 	"ulambda/kernel"
 	"ulambda/linuxsched"
@@ -61,7 +61,7 @@ func Run(args []string) {
 		} else {
 			id, r := strconv.Atoi(args[3])
 			if r != nil {
-				log.Fatalf("Couldn't convert id string: %v", err)
+				db.DFatalf("Couldn't convert id string: %v", err)
 			}
 			peers := strings.Split(args[4], ",")
 			config = replraft.MakeRaftConfig(id, peers)
@@ -72,7 +72,7 @@ func Run(args []string) {
 	}
 
 	if err != nil {
-		log.Fatalf("FATAL %v: err %v\n", proc.GetProgram(), err)
+		db.DFatalf("FATAL %v: err %v\n", proc.GetProgram(), err)
 	}
 
 	// seccomp.LoadFilter()

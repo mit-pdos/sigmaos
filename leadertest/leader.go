@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -32,7 +33,7 @@ func RunLeader(dir, last, child string) {
 
 	epoch, err := l.AcquireFencedEpoch(nil, []string{dir})
 	if err != nil {
-		log.Fatalf("FATAL %v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
+		db.DFatalf("FATAL %v AcquireEpoch %v failed %v\n", proc.GetName(), LEADERFN, err)
 	}
 
 	log.Printf("%v: leader at %v\n", proc.GetName(), epoch)
@@ -43,11 +44,11 @@ func RunLeader(dir, last, child string) {
 	conf := &Config{epoch.String(), pid, pid}
 	b, err := writer.JsonRecord(*conf)
 	if err != nil {
-		log.Fatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
+		db.DFatalf("FATAL %v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}
 	_, err = fsl.SetFile(fn, b, np.OAPPEND, np.NoOffset)
 	if err != nil {
-		log.Fatalf("FATAL %v SetFile b %v failed %v\n", proc.GetName(), fn, err)
+		db.DFatalf("FATAL %v SetFile b %v failed %v\n", proc.GetName(), fn, err)
 	}
 
 	if child == "child" {
@@ -68,7 +69,7 @@ func RunLeader(dir, last, child string) {
 		time.Sleep(500 * time.Millisecond)
 	} else {
 		if err := fsl.Disconnect(np.NAMED); err != nil {
-			log.Fatalf("%v: FATAL disconnect failed %v\n", proc.GetName(), err)
+			db.DFatalf("%v: FATAL disconnect failed %v\n", proc.GetName(), err)
 		}
 
 		// wait a little before starting to write

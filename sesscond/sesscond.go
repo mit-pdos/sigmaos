@@ -2,7 +2,6 @@ package sesscond
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	// "errors"
 
@@ -170,7 +169,7 @@ func (sct *SessCondTable) FreeSessCond(sc *SessCond) {
 	defer sct.Unlock()
 	sc.nref--
 	if sc.nref != 0 {
-		log.Fatalf("freesesscond %v\n", sc)
+		db.DFatalf("freesesscond %v\n", sc)
 	}
 	delete(sct.conds, sc)
 }

@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"go.etcd.io/etcd/raft/v3/raftpb"
+
+	db "ulambda/debug"
 )
 
 const (
@@ -48,14 +49,14 @@ func (h membershipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatalf("Error ReadAll membershipHandler.ServeHTTP: %v", err)
+		db.DFatalf("Error ReadAll membershipHandler.ServeHTTP: %v", err)
 		http.Error(w, "Error reading request", http.StatusBadRequest)
 		return
 	}
 
 	var c membershipChangeReq
 	if err := json.Unmarshal(b, &c); err != nil {
-		log.Fatalf("Error Unmarshal in membershipHandler.ServeHTTP: %v", err)
+		db.DFatalf("Error Unmarshal in membershipHandler.ServeHTTP: %v", err)
 		http.Error(w, "Error unmarshalling request", http.StatusBadRequest)
 		return
 	}

@@ -1,8 +1,7 @@
 package fs
 
 import (
-	"log"
-
+	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/sesscond"
 )
@@ -49,7 +48,7 @@ func Obj2File(o FsObj, fname np.Path) (File, *np.Err) {
 	case File:
 		return i, nil
 	default:
-		log.Fatalf("FATAL Obj2File: obj type %T isn't Dir or File\n", o)
+		db.DFatalf("FATAL Obj2File: obj type %T isn't Dir or File\n", o)
 	}
 	return nil, nil
 }

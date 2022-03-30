@@ -2,7 +2,6 @@ package realm
 
 import (
 	"fmt"
-	"log"
 	"path"
 	"runtime/debug"
 
@@ -71,7 +70,7 @@ func (r *Machined) markFree() {
 	cfg.RealmId = kernel.NO_REALM
 
 	if _, err := r.SetFile(FREE_MACHINEDS, []byte(r.id), np.OWRITE, 0); err != nil {
-		log.Fatalf("Error SetFile in markFree: %v %v", FREE_MACHINEDS, err)
+		db.DFatalf("Error SetFile in markFree: %v %v", FREE_MACHINEDS, err)
 	}
 }
 
@@ -94,7 +93,7 @@ func (r *Machined) getNextConfig() {
 func (r *Machined) tryAddNamedReplicaL() bool {
 	rds, err := r.GetDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
-		log.Fatalf("Error ReadDir in Machined.tryInitRealmL: %v", err)
+		db.DFatalf("Error ReadDir in Machined.tryInitRealmL: %v", err)
 	}
 
 	initDone := false
@@ -107,7 +106,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 	if len(rds) < nReplicas() {
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
-			log.Fatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
+			db.DFatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
 		}
 		namedAddrs := genNamedAddrs(1, ip)
 
@@ -118,7 +117,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		// Start a named instance.
 		var pid proc.Tpid
 		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
-			log.Fatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
+			db.DFatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
@@ -131,26 +130,26 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 func (r *Machined) register() {
 	// Register this machined as belonging to this realm.
 	if err := atomic.PutFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId, r.id), 0777, []byte{}); err != nil {
-		log.Fatalf("Error MakeFileAtomic in Machined.register: %v", err)
+		db.DFatalf("Error MakeFileAtomic in Machined.register: %v", err)
 	}
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
 	r.s = kernel.MakeSystem("realm", r.bin, realmCfg.NamedAddr)
 	if err := r.s.Boot(); err != nil {
-		log.Fatalf("Error Boot in Machined.boot: %v", err)
+		db.DFatalf("Error Boot in Machined.boot: %v", err)
 	}
 }
 
 func (r *Machined) lockRealm() {
 	if err := r.ec.AcquireLeadership([]byte("machined-" + r.id)); err != nil {
-		log.Fatalf("%vFATAL error Machined acquire leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%vFATAL error Machined acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 func (r *Machined) unlockRealm() {
 	if err := r.ec.ReleaseLeadership(); err != nil {
-		log.Fatalf("%vFATAL error Machined release leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%vFATAL error Machined release leadership: %v", string(debug.Stack()), err)
 	}
 }
 
@@ -185,14 +184,14 @@ func (r *Machined) teardown() {
 func (r *Machined) deregister() {
 	// De-register this machined as belonging to this realm
 	if err := r.Remove(path.Join(REALMS, r.cfg.RealmId, r.id)); err != nil {
-		log.Fatalf("Error Remove in Machined.deregister: %v", err)
+		db.DFatalf("Error Remove in Machined.deregister: %v", err)
 	}
 }
 
 func (r *Machined) tryDestroyRealmL() {
 	rds, err := r.GetDir(path.Join(REALMS, r.cfg.RealmId))
 	if err != nil {
-		log.Fatalf("Error GetDir in Machined.tryDestroyRealmL: %v", err)
+		db.DFatalf("Error GetDir in Machined.tryDestroyRealmL: %v", err)
 	}
 
 	// If this is the last machined, destroy the machined's named
@@ -202,17 +201,17 @@ func (r *Machined) tryDestroyRealmL() {
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {
-			log.Fatalf("Error Remove in REALM_CONFIG Machined.tryDestroyRealmL: %v", err)
+			db.DFatalf("Error Remove in REALM_CONFIG Machined.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm directory
 		if err := r.RmDir(path.Join(REALMS, r.cfg.RealmId)); err != nil {
-			log.Fatalf("Error Remove REALMS in Machined.tryDestroyRealmL: %v", err)
+			db.DFatalf("Error Remove REALMS in Machined.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm's named directory
 		if err := r.Remove(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
-			log.Fatalf("Error Remove REALM_NAMEDS in Machined.tryDestroyRealmL: %v", err)
+			db.DFatalf("Error Remove REALM_NAMEDS in Machined.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed

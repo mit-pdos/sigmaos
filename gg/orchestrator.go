@@ -5,6 +5,7 @@ import (
 	"path"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -102,7 +103,7 @@ func (orc *Orchestrator) executeStaticGraph(targetHash string, g *Graph) {
 		}
 		exPid, err := spawnExecutor(orc, thunk.hash, exitDeps)
 		if err != nil {
-			log.Fatalf("Error orchestrator: %v", err)
+			db.DFatalf("Error orchestrator: %v", err)
 		}
 		outputHandlerPid := spawnThunkOutputHandler(orc, []string{exPid.String()}, thunk.hash, []string{thunk.hash})
 		spawnNoOp(orc, outputHandlerPid)

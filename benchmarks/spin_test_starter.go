@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -40,7 +41,7 @@ func (s *SpinTestStarter) spawnSpinnerWithPid(pid proc.Tpid) {
 	}
 	err := s.Spawn(a)
 	if err != nil {
-		log.Fatalf("couldn't spawn %v: %v\n", pid, err)
+		db.DFatalf("couldn't spawn %v: %v\n", pid, err)
 	}
 }
 
@@ -74,7 +75,7 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 	}
 
 	if s.local && s.aws {
-		log.Fatalf("Can't run as local & aws\n")
+		db.DFatalf("Can't run as local & aws\n")
 	}
 
 	if !s.native {
@@ -85,18 +86,18 @@ func MakeSpinTestStarter(args []string) (*SpinTestStarter, error) {
 	nSpinners, err := strconv.Atoi(args[0])
 	s.nSpinners = nSpinners
 	if err != nil {
-		log.Fatalf("Invalid dimension: %v, %v\n", args[0], err)
+		db.DFatalf("Invalid dimension: %v, %v\n", args[0], err)
 	}
 
 	_, err = strconv.Atoi(args[1])
 	s.dim = args[1]
 	if err != nil {
-		log.Fatalf("Invalid dimension: %v, %v\n", args[1], err)
+		db.DFatalf("Invalid dimension: %v, %v\n", args[1], err)
 	}
 
 	i, err := strconv.Atoi(args[2])
 	if err != nil {
-		log.Fatalf("Invalid num interations: %v, %v\n", args[2], err)
+		db.DFatalf("Invalid num interations: %v, %v\n", args[2], err)
 	}
 
 	// Limited by the AWS API Gateway timeout
@@ -177,7 +178,7 @@ func (s *SpinTestStarter) TestNative() time.Duration {
 			fname := "/tmp/perf-stat-" + pid + ".out"
 			file, err := os.Create(fname)
 			if err != nil {
-				log.Fatalf("Error creating perf stat output file: %v, %v", fname, err)
+				db.DFatalf("Error creating perf stat output file: %v, %v", fname, err)
 			}
 			cmd.Stdout = file
 			cmd.Stderr = file
@@ -232,7 +233,7 @@ func (s *SpinTestStarter) TestAws() time.Duration {
 	body, err := json.Marshal(vals)
 
 	if err != nil {
-		log.Fatalf("Error marshalling for lamda baseline: %v", err)
+		db.DFatalf("Error marshalling for lamda baseline: %v", err)
 	}
 
 	url := fmt.Sprintf("https://m5ica91644.execute-api.us-east-1.amazonaws.com/default/cpp-spin?dim=%v&its=%v", s.dim, s.its)
@@ -242,11 +243,11 @@ func (s *SpinTestStarter) TestAws() time.Duration {
 	end := time.Now()
 
 	if resp.StatusCode != 200 {
-		log.Fatalf("Bad response code: %v, %v", resp.StatusCode, resp)
+		db.DFatalf("Bad response code: %v, %v", resp.StatusCode, resp)
 	}
 
 	if err != nil {
-		log.Fatalf("Error in HTTP POST: %v", err)
+		db.DFatalf("Error in HTTP POST: %v", err)
 	}
 
 	// Calculate elapsed time
@@ -280,7 +281,7 @@ func (s *SpinTestStarter) TestAwsBaseline() {
 	body, err := json.Marshal(vals)
 
 	if err != nil {
-		log.Fatalf("Error marshalling for lamda baseline: %v", err)
+		db.DFatalf("Error marshalling for lamda baseline: %v", err)
 	}
 
 	url := fmt.Sprintf("https://m5ica91644.execute-api.us-east-1.amazonaws.com/default/cpp-spin?dim=%v&its=%v", s.dim, s.its)
@@ -288,11 +289,11 @@ func (s *SpinTestStarter) TestAwsBaseline() {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 
 	if resp.StatusCode != 200 {
-		log.Fatalf("Bad response code: %v, %v", resp.StatusCode, resp)
+		db.DFatalf("Bad response code: %v, %v", resp.StatusCode, resp)
 	}
 
 	if err != nil {
-		log.Fatalf("Error in HTTP POST: %v", err)
+		db.DFatalf("Error in HTTP POST: %v", err)
 	}
 
 	var res map[string]interface{}
@@ -300,7 +301,7 @@ func (s *SpinTestStarter) TestAwsBaseline() {
 	json.NewDecoder(resp.Body).Decode(&res)
 
 	if err != nil {
-		log.Fatalf("Error unmarshalling response body: %v", err)
+		db.DFatalf("Error unmarshalling response body: %v", err)
 	}
 
 	log.Printf("%v", res["message"])

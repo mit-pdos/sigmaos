@@ -56,7 +56,7 @@ func MakeRealmMgr() *RealmMgr {
 	var err error
 	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
 	if err != nil {
-		log.Fatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
+		db.DFatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
@@ -68,19 +68,19 @@ func MakeRealmMgr() *RealmMgr {
 
 func (m *RealmMgr) makeInitFs() {
 	if err := m.MkDir(REALMS, 0777); err != nil {
-		log.Fatalf("Error Mkdir REALMS in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALMS in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(REALM_CONFIG, 0777); err != nil {
-		log.Fatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(MACHINED_CONFIG, 0777); err != nil {
-		log.Fatalf("Error Mkdir MACHINED_CONFIG in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir MACHINED_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(REALM_NAMEDS, 0777); err != nil {
-		log.Fatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(REALM_FENCES, 0777); err != nil {
-		log.Fatalf("Error Mkdir REALM_FENCES in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALM_FENCES in RealmMgr.makeInitFs: %v", err)
 	}
 }
 
@@ -89,31 +89,31 @@ func (m *RealmMgr) makeCtlFiles() {
 	realmCreate := makeCtlFile(m.realmCreate, nil, m.Root())
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_create, realmCreate)
 	if err != nil {
-		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 1: %v", err)
+		db.DFatalf("Error MkNod in RealmMgr.makeCtlFiles 1: %v", err)
 	}
 
 	realmDestroy := makeCtlFile(m.realmDestroy, nil, m.Root())
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_destroy, realmDestroy)
 	if err != nil {
-		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
+		db.DFatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
 	}
 
 	freeMachineds := makeCtlFile(m.freeMachineds, nil, m.Root())
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), free_machineds, freeMachineds)
 	if err != nil {
-		log.Fatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
+		db.DFatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
 	}
 }
 
 func (m *RealmMgr) lockRealm(realmId string) {
 	if err := m.ecs[realmId].AcquireLeadership([]byte("realmmgr")); err != nil {
-		log.Fatalf("%vFATAL error RealmMgr acquire leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%vFATAL error RealmMgr acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 func (m *RealmMgr) unlockRealm(realmId string) {
 	if err := m.ecs[realmId].ReleaseLeadership(); err != nil {
-		log.Fatalf("%vFATAL error RealmMgr release leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%vFATAL error RealmMgr release leadership: %v", string(debug.Stack()), err)
 	}
 }
 
@@ -126,7 +126,7 @@ func (m *RealmMgr) createRealms() {
 		m.Lock()
 		// Make sure we haven't created this realm before.
 		if _, ok := m.ecs[realmId]; ok {
-			log.Fatalf("FATAL tried to create realm twice %v", realmId)
+			db.DFatalf("FATAL tried to create realm twice %v", realmId)
 		}
 		m.ecs[realmId] = electclnt.MakeElectClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
 
@@ -137,7 +137,7 @@ func (m *RealmMgr) createRealms() {
 
 		// Make a directory for this realm.
 		if err := m.MkDir(path.Join(REALMS, realmId), 0777); err != nil {
-			log.Fatalf("FATAL Error Mkdir in RealmMgr.createRealms: %v", err)
+			db.DFatalf("FATAL Error Mkdir in RealmMgr.createRealms: %v", err)
 		}
 
 		// Make the realm config file.
@@ -168,7 +168,7 @@ func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
 func (m *RealmMgr) deallocAllMachineds(realmId string) {
 	rds, err := m.GetDir(path.Join(REALMS, realmId))
 	if err != nil {
-		log.Fatalf("Error GetDir in RealmMgr.deallocRealms: %v", err)
+		db.DFatalf("Error GetDir in RealmMgr.deallocRealms: %v", err)
 	}
 
 	for _, machined := range rds {
@@ -232,7 +232,7 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 	// XXX May fail if this named crashed
 	procds, err := m.GetDir(path.Join(REALM_NAMEDS, realmId, np.PROCDREL))
 	if err != nil {
-		log.Fatalf("FATAL Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
+		db.DFatalf("FATAL Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
@@ -337,7 +337,7 @@ func (m *RealmMgr) balanceMachineds() {
 	for {
 		realms, err := m.GetDir(REALMS)
 		if err != nil {
-			log.Fatalf("Error GetDir in RealmMgr.balanceMachineds: %v", err)
+			db.DFatalf("Error GetDir in RealmMgr.balanceMachineds: %v", err)
 		}
 
 		m.Lock()

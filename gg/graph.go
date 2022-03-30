@@ -2,7 +2,8 @@ package gg
 
 import (
 	"fmt"
-	"log"
+
+	db "ulambda/debug"
 )
 
 type Thunk struct {
@@ -58,7 +59,7 @@ func (g *Graph) GetThunks() []*Thunk {
 		g.ForceThunk(next.hash)
 		thunks = append(thunks, next)
 		if n_left == len(g.thunks) {
-			log.Fatalf("Couldn't remove thunk, %v left, g=%v\n", len(g.thunks), g)
+			db.DFatalf("Couldn't remove thunk, %v left, g=%v\n", len(g.thunks), g)
 		}
 	}
 	return thunks

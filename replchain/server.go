@@ -72,7 +72,7 @@ func (rs *ChainReplServer) Init() {
 	if rs.config.LogOps {
 		err := rs.MakeFile("name/"+rs.config.RelayAddr+"-log.txt", 0777, np.OWRITE, []byte(""))
 		if err != nil {
-			log.Fatalf("Error making log file: %v", err)
+			db.DFatalf("Error making log file: %v", err)
 		}
 	}
 	// Load the config & continuously watch for changes

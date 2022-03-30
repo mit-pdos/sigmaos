@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	db "ulambda/debug"
 	"ulambda/linuxsched"
 )
 
@@ -159,7 +160,7 @@ func (p *Perf) getActiveCores() {
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(os.Getpid())
 	if err != nil {
-		log.Fatalf("Error getting affinity mask: %v", err)
+		db.DFatalf("Error getting affinity mask: %v", err)
 	}
 	for i := uint(0); i < linuxsched.NCores; i++ {
 		if m.Test(i) {
@@ -175,7 +176,7 @@ func (p *Perf) SetupCPUUtil(hz int, fpath string) {
 	p.utilPath = fpath
 	f, err := os.Create(p.utilPath)
 	if err != nil {
-		log.Fatalf("Create util file %v failed %v", p.utilPath, err)
+		db.DFatalf("Create util file %v failed %v", p.utilPath, err)
 	}
 	p.utilFile = f
 	// TODO: pre-allocate a large number of entries
@@ -195,13 +196,13 @@ func (p *Perf) SetupPprof(fpath string) {
 
 	f, err := os.Create(fpath)
 	if err != nil {
-		log.Fatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
+		db.DFatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
 	}
 	p.pprof = true
 	p.pprofPath = fpath
 	p.pprofFile = f
 	if err := pprof.StartCPUProfile(f); err != nil {
-		log.Fatalf("Couldn't start CPU profile: %v", err)
+		db.DFatalf("Couldn't start CPU profile: %v", err)
 	}
 }
 
@@ -231,7 +232,7 @@ func (p *Perf) teardownUtil() {
 		p.util = false
 		for i := 0; i < len(p.cpuCyclesBusy); i++ {
 			if _, err := p.utilFile.WriteString(fmt.Sprintf("%f,%f,%f\n", p.cpuUtilPct[i], p.cpuCyclesBusy[i], p.cpuCyclesTotal[i])); err != nil {
-				log.Fatalf("Error writing to util file: %v", err)
+				db.DFatalf("Error writing to util file: %v", err)
 			}
 		}
 	}

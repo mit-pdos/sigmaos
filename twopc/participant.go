@@ -45,7 +45,7 @@ func MakeParticipant(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, me proc.Tpid, t
 	p.opcode = opcode
 
 	if _, err := p.PutFile(DIR2PC+"/"+p.me.String(), 0777|np.DMTMP, np.OWRITE, nil); err != nil {
-		log.Fatalf("MakeFile %v failed %v\n", COORD, err)
+		db.DFatalf("MakeFile %v failed %v\n", COORD, err)
 	}
 
 	// set watch for twopcprep, indicating a transaction
@@ -105,11 +105,11 @@ func (p *Participant) restartCoord() {
 	log.Printf("PART %v restartCoord: COORD crashed %v\n", p.me, p.twopc)
 
 	//	if err := p.fclnt.ReleaseFence(); err != nil {
-	//		log.Fatalf("Error ReleaseFence restartCoord: %v", err)
+	//		db.DFatalf("Error ReleaseFence restartCoord: %v", err)
 	//	}
 	//	// Grab fence again
 	//	if b, err := p.fclnt.AcquireFenceR(); err != nil {
-	//		log.Fatalf("Error AcquireFenceR  restartCoord: %v, %v", b, err)
+	//		db.DFatalf("Error AcquireFenceR  restartCoord: %v, %v", b, err)
 	//	}
 
 	p.twopc = clean(p.FsLib)
@@ -149,7 +149,7 @@ func (p *Participant) prepare() {
 	p.mu.Lock()
 	// Grab fence before preparing
 	//	if b, err := p.fclnt.AcquireFenceR(); err != nil {
-	//		log.Fatalf("Error AcquireFenceR wait: %v, %v", b, err)
+	//		db.DFatalf("Error AcquireFenceR wait: %v, %v", b, err)
 	//	}
 
 	var err error
@@ -166,13 +166,13 @@ func (p *Participant) prepare() {
 
 	_, err = p.readTwopcWatch(TWOPCCOMMIT, p.watchTwopcCommit)
 	if err == nil {
-		log.Fatalf("PART %v: readTwopcWatch %v err %v\n", p.me, TWOPCCOMMIT, err)
+		db.DFatalf("PART %v: readTwopcWatch %v err %v\n", p.me, TWOPCCOMMIT, err)
 	}
 	db.DPrintf("PART", "prepare: watch for %v\n", TWOPCCOMMIT)
 
 	p.twopc = readTwopc(p.FsLib, TWOPCPREP)
 	if p.twopc == nil {
-		log.Fatalf("PART %v: PART cannot read %v err %v\n", p.me, TWOPCPREP, err)
+		db.DFatalf("PART %v: PART cannot read %v err %v\n", p.me, TWOPCPREP, err)
 	}
 
 	db.DPrintf("PART", "prepare for new config: %v\n", p.twopc)
@@ -201,7 +201,7 @@ func (p *Participant) commit() {
 
 	p.twopc = readTwopc(p.FsLib, TWOPCCOMMIT)
 	if p.twopc == nil {
-		log.Fatalf("PART commit cannot read %v\n", TWOPCCOMMIT)
+		db.DFatalf("PART commit cannot read %v\n", TWOPCCOMMIT)
 	}
 
 	if p.twopc.Status == TCOMMIT {
@@ -217,7 +217,7 @@ func (p *Participant) commit() {
 	// Release fence
 	//	err := p.fclnt.ReleaseFence()
 	//	if err != nil {
-	//		log.Fatalf("Error Rlease release: %v", err)
+	//		db.DFatalf("Error Rlease release: %v", err)
 	//	}
 	//
 	p.txn.Done()

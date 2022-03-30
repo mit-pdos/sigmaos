@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -108,7 +109,7 @@ func setupLocalExecutionEnv(hash string) {
 	for _, d := range subDirs {
 		err := os.MkdirAll(d, 0777)
 		if err != nil {
-			log.Fatalf("Error making execution env dir [%v]: %v\n", d, err)
+			db.DFatalf("Error making execution env dir [%v]: %v\n", d, err)
 		}
 	}
 }
@@ -120,7 +121,7 @@ func mkdirOpt(fslambda FsLambda, path string) {
 		// XXX Perms?
 		err = fslambda.MkDir(path, np.DMDIR)
 		if err != nil {
-			log.Fatalf("Couldn't mkdir %v: %v", path, err)
+			db.DFatalf("Couldn't mkdir %v: %v", path, err)
 		}
 	} else {
 		//db.DPrintf("Already exists [%v]\n", path)
@@ -191,7 +192,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 	//db.DPrintf("%v uploading dir [%v] to [%v]\n", fslambda.Name(), src, dest)
 	files, err := ioutil.ReadDir(src)
 	if err != nil {
-		log.Fatalf("%v read upload dir error: %v\n", fslambda.Name(), err)
+		db.DFatalf("%v read upload dir error: %v\n", fslambda.Name(), err)
 	}
 	for _, f := range files {
 		// Don't overwrite other thunks' reductions
@@ -200,7 +201,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 			dstPath := path.Join(dest, f.Name())
 			contents, err := ioutil.ReadFile(srcPath)
 			if err != nil {
-				log.Fatalf("%v read upload dir file error[%v]: %v\n", fslambda.Name(), srcPath, err)
+				db.DFatalf("%v read upload dir file error[%v]: %v\n", fslambda.Name(), srcPath, err)
 			}
 			// Try and make a new file if one doesn't exist, else overwrite
 			_, err = fslambda.Stat(dstPath)
@@ -282,7 +283,7 @@ func getReductionResult(fslambda FsLambda, hash string) string {
 	resultPath := ggRemoteReductions(hash)
 	result, err := fslambda.GetFile(resultPath)
 	if err != nil {
-		log.Fatalf("%v Error reading reduction[%v]: %v\n", fslambda.Name(), resultPath, err)
+		db.DFatalf("%v Error reading reduction[%v]: %v\n", fslambda.Name(), resultPath, err)
 	}
 	return strings.TrimSpace(string(result))
 }
@@ -293,11 +294,11 @@ func getTargetHash(fslambda FsLambda, dir string, target string) string {
 	f, err := fslambda.GetFile(targetPath)
 	contents := string(f)
 	if err != nil {
-		log.Fatalf("Error reading target [%v]: %v\n", target, err)
+		db.DFatalf("Error reading target [%v]: %v\n", target, err)
 	}
 	shebang := strings.Split(contents, "\n")[0]
 	if shebang != SHEBANG_DIRECTIVE {
-		log.Fatalf("Error: [%v] is not a placeholder [%v]", targetPath, shebang)
+		db.DFatalf("Error: [%v] is not a placeholder [%v]", targetPath, shebang)
 	}
 	hash := strings.Split(contents, "\n")[1]
 	return hash
@@ -315,7 +316,7 @@ func reductionExists(fslambda FsLambda, hash string) bool {
 
 // Check if either the thunk executor or the output handler are running
 func currentlyExecuting(fslambda FsLambda, thunkHash string) bool {
-	log.Fatalf("currentlyExecuting needs reimplementation")
+	db.DFatalf("currentlyExecuting needs reimplementation")
 	//	return fslambda.HasBeenSpawned(executorPid(thunkHash)) || fslambda.HasBeenSpawned(outputHandlerPid(thunkHash))
 	return false
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"reflect"
 
+	db "ulambda/debug"
 	"ulambda/dir"
 	"ulambda/fencefs"
 	"ulambda/fs"
@@ -48,7 +49,7 @@ func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *session.SessionTable, 
 	s.Rc = rc.Snapshot()
 	b, err := json.Marshal(s)
 	if err != nil {
-		log.Fatalf("Error marshalling snapshot: %v", err)
+		db.DFatalf("Error marshalling snapshot: %v", err)
 	}
 	// Store the next inum
 	s.NextInum = inode.NextInum
@@ -74,7 +75,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	case *Dev:
 		stype = Tsnapshotdev
 	default:
-		log.Fatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(i))
+		db.DFatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(i))
 	}
 	s.Imap[i.Qid().Path] = MakeObjSnapshot(stype, i.Snapshot(s.snapshotFsTree))
 	return i.Qid().Path
@@ -83,7 +84,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
-		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
+		db.DFatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
 	}
 	s.restoreCache[0] = nil
 	// Restore the next inum
@@ -141,7 +142,7 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 		// Restore snapshot device
 		i = RestoreSnapshotDev(s.RestoreFsTree, snap.Data)
 	default:
-		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
+		db.DFatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
 		i = nil
 	}
 	// Store the object in the restore cache.

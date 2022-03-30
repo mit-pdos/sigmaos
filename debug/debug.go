@@ -44,10 +44,10 @@ func DPrintf(label string, format string, v ...interface{}) {
 
 func DFatalf(format string, v ...interface{}) {
 	// Get info for the caller.
-	pc, file, line, ok := runtime.Caller(1)
+	pc, _, _, ok := runtime.Caller(1)
 	fnDetails := runtime.FuncForPC(pc)
 	if ok && fnDetails != nil {
-		log.Fatalf("FATAL %v %v %v:%v %v", proc.GetName(), fnDetails.Name(), file, line, fmt.Sprintf(format, v...))
+		log.Fatalf("FATAL %v %v %v", proc.GetName(), fnDetails.Name(), fmt.Sprintf(format, v...))
 	} else {
 		log.Fatalf("FATAL %v (missing details) %v", proc.GetName(), fmt.Sprintf(format, v...))
 	}

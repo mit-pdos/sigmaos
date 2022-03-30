@@ -10,13 +10,12 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/protsrv"
 	"ulambda/threadmgr"
 )
 
 //
 // A session identifies a client across TCP connections.  For each
-// session, sigmaos has a protsrv.
+// session, sigmaos has a np.
 //
 // The sess lock is to serialize requests on a session.  The calls in
 // this file assume the calling wg holds the sess lock.
@@ -26,8 +25,8 @@ type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
 	wg            sync.WaitGroup
-	conn          *protsrv.Conn
-	protsrv       protsrv.Protsrv
+	conn          *np.Conn
+	protsrv       np.Protsrv
 	lastHeartbeat time.Time
 	Sid           np.Tsession
 	began         bool // true if the fssrv has already begun processing ops
@@ -36,7 +35,7 @@ type Session struct {
 	timedout      bool // for debugging
 }
 
-func makeSession(conn *protsrv.Conn, protsrv protsrv.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(conn *np.Conn, protsrv np.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
 	sess.conn = conn
@@ -47,7 +46,7 @@ func makeSession(conn *protsrv.Conn, protsrv protsrv.Protsrv, sid np.Tsession, t
 	return sess
 }
 
-func (sess *Session) GetConn() *protsrv.Conn {
+func (sess *Session) GetConn() *np.Conn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
@@ -98,7 +97,7 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn if the new conn is non-nil. This may occur if, for
 // example, a client starts talking to a new replica.
-func (sess *Session) maybeSetConn(conn *protsrv.Conn) {
+func (sess *Session) maybeSetConn(conn *np.Conn) {
 	sess.Lock()
 	defer sess.Unlock()
 	if conn != nil {

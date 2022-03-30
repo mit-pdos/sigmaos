@@ -12,7 +12,6 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/overlay"
-	"ulambda/protsrv"
 	"ulambda/repl"
 	"ulambda/session"
 	"ulambda/stats"
@@ -20,7 +19,7 @@ import (
 )
 
 type Snapshot struct {
-	fssrv        protsrv.FsServer
+	fssrv        np.FsServer
 	Imap         map[np.Tpath]ObjSnapshot
 	DirOverlay   np.Tpath
 	St           []byte
@@ -30,7 +29,7 @@ type Snapshot struct {
 	restoreCache map[np.Tpath]fs.Inode
 }
 
-func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
+func MakeSnapshot(fssrv np.FsServer) *Snapshot {
 	s := &Snapshot{}
 	s.fssrv = fssrv
 	s.Imap = make(map[np.Tpath]ObjSnapshot)
@@ -81,7 +80,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
+func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)

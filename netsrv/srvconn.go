@@ -8,7 +8,6 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
-	"ulambda/protsrv"
 )
 
 const (
@@ -21,7 +20,7 @@ type SrvConn struct {
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
-	protsrv    protsrv.FsServer
+	protsrv    np.FsServer
 	sessid     np.Tsession
 }
 
@@ -77,7 +76,7 @@ func (c *SrvConn) reader() {
 			} else if c.sessid != fcall.Session {
 				log.Fatal("FATAL reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
 			}
-			c.protsrv.SrvFcall(fcall, &protsrv.Conn{c, c.replies})
+			c.protsrv.SrvFcall(fcall, &np.Conn{c, c.replies})
 		}
 	}
 }

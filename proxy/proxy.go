@@ -10,7 +10,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
 	"ulambda/protclnt"
-	"ulambda/protsrv"
 	"ulambda/session"
 	"ulambda/threadmgr"
 )
@@ -27,11 +26,11 @@ func MakeNpd() *Npd {
 	return npd
 }
 
-func (npd *Npd) mkProtServer(fssrv protsrv.FsServer, sid np.Tsession) protsrv.Protsrv {
+func (npd *Npd) mkProtServer(fssrv np.FsServer, sid np.Tsession) np.Protsrv {
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) serve(fc *np.Fcall, conn *protsrv.Conn) {
+func (npd *Npd) serve(fc *np.Fcall, conn *np.Conn) {
 	t := fc.Tag
 	sess := npd.st.Alloc(fc.Session, conn)
 	reply, rerror := sess.Dispatch(fc.Msg)
@@ -43,7 +42,7 @@ func (npd *Npd) serve(fc *np.Fcall, conn *protsrv.Conn) {
 	conn.Replies <- fcall
 }
 
-func (npd *Npd) SrvFcall(fcall *np.Fcall, conn *protsrv.Conn) {
+func (npd *Npd) SrvFcall(fcall *np.Fcall, conn *np.Conn) {
 	go npd.serve(fcall, conn)
 }
 

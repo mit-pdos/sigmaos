@@ -6,15 +6,14 @@ import (
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
-	"ulambda/protsrv"
 )
 
 type Dev struct {
 	fs.Inode
-	srv protsrv.FsServer
+	srv np.FsServer
 }
 
-func MakeDev(srv protsrv.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
+func MakeDev(srv np.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
 	i := inode.MakeInode(ctx, 0, root)
 	return &Dev{i, srv}
 }

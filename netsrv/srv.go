@@ -6,25 +6,25 @@ import (
 	"net"
 
 	db "ulambda/debug"
+	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/protsrv"
 )
 
 type NetServer struct {
 	addr       string
-	fssrv      protsrv.FsServer
+	fssrv      np.FsServer
 	wireCompat bool
 }
 
-func MakeNetServer(fssrv protsrv.FsServer, address string) *NetServer {
+func MakeNetServer(fssrv np.FsServer, address string) *NetServer {
 	return makeNetServer(fssrv, address, false)
 }
 
-func MakeNetServerWireCompatible(address string, fssrv protsrv.FsServer) *NetServer {
+func MakeNetServerWireCompatible(address string, fssrv np.FsServer) *NetServer {
 	return makeNetServer(fssrv, address, true)
 }
 
-func makeNetServer(fs protsrv.FsServer, address string, wireCompat bool) *NetServer {
+func makeNetServer(fs np.FsServer, address string, wireCompat bool) *NetServer {
 	srv := &NetServer{"",
 		fs,
 		wireCompat,

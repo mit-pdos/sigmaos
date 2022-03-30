@@ -5,16 +5,15 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/protsrv"
 )
 
 type SessionMgr struct {
 	st       *SessionTable
-	srvfcall protsrv.Fsrvfcall
+	srvfcall np.Fsrvfcall
 	done     bool
 }
 
-func MakeSessionMgr(st *SessionTable, pfn protsrv.Fsrvfcall) *SessionMgr {
+func MakeSessionMgr(st *SessionTable, pfn np.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn

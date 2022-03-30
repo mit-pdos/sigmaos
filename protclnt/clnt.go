@@ -3,20 +3,20 @@ package protclnt
 import (
 	np "ulambda/ninep"
 	"ulambda/rand"
-	"ulambda/sessionclnt"
+	"ulambda/sessclnt"
 )
 
 type Clnt struct {
 	session np.Tsession
 	seqno   np.Tseqno
-	cm      *sessionclnt.SessClntMgr
+	cm      *sessclnt.Mgr
 }
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
 	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
-	clnt.cm = sessionclnt.MakeSessClntMgr(clnt.session, &clnt.seqno)
+	clnt.cm = sessclnt.MakeMgr(clnt.session, &clnt.seqno)
 	return clnt
 }
 

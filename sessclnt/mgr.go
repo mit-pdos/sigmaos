@@ -1,4 +1,4 @@
-package sessionclnt
+package sessclnt
 
 import (
 	"strings"
@@ -9,22 +9,22 @@ import (
 	np "ulambda/ninep"
 )
 
-type SessClntMgr struct {
+type Mgr struct {
 	mu       deadlock.Mutex
 	sid      np.Tsession
 	seqno    *np.Tseqno
-	sessions map[string]*sessclnt // XXX Is a SessClntMgr ever used to talk to multiple servers?
+	sessions map[string]*clnt // XXX Is a Mgr ever used to talk to multiple servers?
 }
 
-func MakeSessClntMgr(session np.Tsession, seqno *np.Tseqno) *SessClntMgr {
-	sc := &SessClntMgr{}
-	sc.sessions = make(map[string]*sessclnt)
+func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
+	sc := &Mgr{}
+	sc.sessions = make(map[string]*clnt)
 	sc.sid = session
 	sc.seqno = seqno
 	return sc
 }
 
-func (sc *SessClntMgr) Exit() {
+func (sc *Mgr) Exit() {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	db.DLPrintf("SESSCLNT", "Exit\n")
@@ -38,7 +38,7 @@ func (sc *SessClntMgr) Exit() {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *SessClntMgr) allocConn(addrs []string) (*sessclnt, *np.Err) {
+func (sc *Mgr) allocConn(addrs []string) (*clnt, *np.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
@@ -54,7 +54,7 @@ func (sc *SessClntMgr) allocConn(addrs []string) (*sessclnt, *np.Err) {
 	return sess, nil
 }
 
-func (sc *SessClntMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
+func (sc *Mgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	db.DLPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
 	// Get or establish sessection
 	sess, err := sc.allocConn(addrs)
@@ -65,7 +65,7 @@ func (sc *SessClntMgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *
 	return sess.rpc(req, f)
 }
 
-func (sc *SessClntMgr) Disconnect(addrs []string) *np.Err {
+func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	db.DLPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)
 	key := sessKey(addrs)
 	sc.mu.Lock()

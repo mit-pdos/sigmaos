@@ -1,4 +1,4 @@
-package sessionclnt_test
+package sessclnt_test
 
 import (
 	"testing"

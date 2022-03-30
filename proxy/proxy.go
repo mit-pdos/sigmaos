@@ -84,7 +84,7 @@ func (npc *NpConn) npch(fid np.Tfid) *protclnt.ProtClnt {
 	defer npc.mu.Unlock()
 	ch, ok := npc.fids[fid]
 	if !ok {
-		db.DFatalf("npch: unknown fid ", fid)
+		db.DFatalf("npch: unknown fid %v", fid)
 	}
 	return ch
 }

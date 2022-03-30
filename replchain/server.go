@@ -63,7 +63,7 @@ func (rs *ChainReplServer) Init() {
 	db.DPrintf("RSRV", "listen %v\n", rs.config.ReplAddr())
 	relayL, err := net.Listen("tcp", rs.config.ReplAddr())
 	if err != nil {
-		db.DFatalf("Replica server listen error:", err)
+		db.DFatalf("Replica server listen error: %v", err)
 	}
 	// Start a server to listen for relay messages
 	go rs.runsrv(relayL)
@@ -88,7 +88,7 @@ func (rs *ChainReplServer) runsrv(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			db.DFatalf("Accept error: ", err)
+			db.DFatalf("Accept error: %v", err)
 		}
 
 		//		if !srv.replicated {

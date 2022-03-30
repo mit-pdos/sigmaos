@@ -32,7 +32,7 @@ func makeNetServer(fs np.FsServer, address string, wireCompat bool) *NetServer {
 	var l net.Listener
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		db.DFatalf("Listen error:", err)
+		db.DFatalf("Listen error: %v", err)
 	}
 	srv.addr = l.Addr().String()
 	db.DPrintf("9PCHAN", "listen %v myaddr %v\n", address, srv.addr)

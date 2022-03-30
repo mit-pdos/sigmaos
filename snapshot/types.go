@@ -3,7 +3,8 @@ package snapshot
 type Tsnapshot uint8
 
 const (
-	Tdir Tsnapshot = iota
+	Toverlay Tsnapshot = iota + 100
+	Tdir
 	Tfile
 	Tsymlink
 	Tfence
@@ -13,6 +14,8 @@ const (
 
 func (s Tsnapshot) String() string {
 	switch s {
+	case Toverlay:
+		return "Tsnapshot.Toverlay"
 	case Tdir:
 		return "Tsnapshot.Tdir"
 	case Tfile:

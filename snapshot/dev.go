@@ -36,3 +36,9 @@ func (dev *Dev) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np
 func (dev *Dev) Snapshot(fn fs.SnapshotF) []byte {
 	return dev.Inode.Snapshot(fn)
 }
+
+func RestoreSnapshotDev(fn fs.RestoreF, data []byte) fs.Inode {
+	d := &Dev{}
+	d.Inode = inode.RestoreInode(fn, data)
+	return d
+}

@@ -22,7 +22,7 @@ import (
 type Snapshot struct {
 	fssrv        protsrv.FsServer
 	Imap         map[np.Tpath]ObjSnapshot
-	DirOverlay   []byte
+	DirOverlay   np.Tpath
 	St           []byte
 	Tmt          []byte
 	Rc           []byte
@@ -40,7 +40,7 @@ func MakeSnapshot(fssrv protsrv.FsServer) *Snapshot {
 
 func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *session.SessionTable, tm *threadmgr.ThreadMgrTable, rc *repl.ReplyCache) []byte {
 	// Snapshot the FS tree.
-	s.DirOverlay = root.Snapshot(s.snapshotFsTree) //s.snapshotFsTree(root)
+	s.DirOverlay = s.snapshotFsTree(root)
 	// Snapshot the session table.
 	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
@@ -59,6 +59,9 @@ func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *session.SessionTable, 
 func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	var stype Tsnapshot
 	switch i.(type) {
+	case *overlay.DirOverlay:
+		log.Printf("Snapshot DirOverlay with path %v", i.Qid().Path)
+		stype = Toverlay
 	case *dir.DirImpl:
 		stype = Tdir
 	case *memfs.File:
@@ -78,7 +81,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.FsObj, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
+func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtServer, fssrv protsrv.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		log.Fatalf("FATAL error unmarshal file in snapshot.Restore: %v", err)
@@ -87,8 +90,13 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	// Restore the next inum
 	inode.NextInum = s.NextInum
 	// Restore the fs tree
-	// TODO: restore dir overlay
-	//	root := s.RestoreFsTree(s.Root)
+	dirover := s.RestoreFsTree(s.DirOverlay).(*overlay.DirOverlay) //overlay.Restore(s.RestoreFsTree, s.DirOverlay)
+	// Get the ffs & stats
+	_, ffs, _, _ := dirover.Lookup(nil, np.Split(np.FENCEDIR))
+	_, stat, _, _ := dirover.Lookup(nil, np.Split(np.STATSD))
+	// Fix up the fssrv pointer in snapshotdev
+	_, dev, _, _ := dirover.Lookup(nil, np.Split(np.SNAPDEV))
+	dev.(*Dev).srv = fssrv
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the session table.
@@ -99,8 +107,7 @@ func (s *Snapshot) Restore(mkps protsrv.MkProtServer, rps protsrv.RestoreProtSer
 	// begun executing since this snapshot was taken, and they expect some state
 	// to be in the reply cache.
 	rc.Merge(oldRc)
-	//	return root, st, tmt, rc
-	return nil, st, tmt, rc
+	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt, rc
 }
 
 func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
@@ -110,6 +117,12 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 	snap := s.Imap[inum]
 	var i fs.Inode
 	switch snap.Type {
+	case Toverlay:
+		// Make an overlay dir with a nil underlay so we don't recurse infinitely when trying
+		// to set parent pointers.
+		d := overlay.MkDirOverlay(nil)
+		s.restoreCache[inum] = d
+		i = overlay.Restore(d, s.RestoreFsTree, snap.Data)
 	case Tdir:
 		// Make a dir with a nil inode so we don't recurse infinitely when trying
 		// to set parent pointers.
@@ -121,11 +134,13 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 		i = memfs.RestoreFile(s.RestoreFsTree, snap.Data)
 	case Tsymlink:
 		i = memfs.RestoreSymlink(s.RestoreFsTree, snap.Data)
+	case Tfence:
+		i = fencefs.RestoreFence(s.RestoreFsTree, snap.Data)
 	case Tstats:
 		i = stats.Restore(s.RestoreFsTree, snap.Data)
 	case Tsnapshotdev:
-		// TODO: handle snapshot dev and stats dev correctly
-		// i = MakeDev(s.fssrv, nil, s.RestoreFsTree(s.Root).(fs.Dir))
+		// Restore snapshot device
+		i = RestoreSnapshotDev(s.RestoreFsTree, snap.Data)
 	default:
 		log.Fatalf("FATAL error unknown type in Snapshot.restore: %v", snap.Type)
 		i = nil

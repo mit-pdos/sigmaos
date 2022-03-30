@@ -91,6 +91,12 @@ func checkFiles(ts *test.Tstate, n int) {
 	}
 }
 
+func fenceMemfs(ts *test.Tstate, pid proc.Tpid) {
+	lc := leaderclnt.MakeLeaderClnt(ts.FsLib, path.Join(np.MEMFS, pid.String(), "leader"), 0777)
+	_, err := lc.AcquireFencedEpoch(nil, []string{path.Join(np.MEMFS, pid.String())})
+	assert.Nil(ts.T, err, "acquire")
+}
+
 func TestMakeSnapshotSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
@@ -116,9 +122,8 @@ func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	lc := leaderclnt.MakeLeaderClnt(ts.FsLib, path.Join(np.MEMFS, pid.String(), "leader"), 0777)
-	_, err = lc.AcquireFencedEpoch(nil, []string{path.Join(np.MEMFS, pid.String())})
-	assert.Nil(t, err, "acquire")
+	// Fence the memfs
+	fenceMemfs(ts, pid)
 
 	takeSnapshot(ts, pid)
 
@@ -134,6 +139,25 @@ func TestRestoreSimple(t *testing.T) {
 	// Spawn a dummy-replicated memfs
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
+
+	b := takeSnapshot(ts, pid)
+	restoreSnapshot(ts, pid, b)
+
+	ts.Shutdown()
+}
+
+func TestRestoreSimpleWithFence(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	err := ts.MkDir(np.MEMFS, 0777)
+	assert.Nil(t, err, "Mkdir")
+
+	// Spawn a dummy-replicated memfs
+	pid := proc.Tpid("replica-a")
+	spawnMemfs(ts, pid)
+
+	// Fence the memfs
+	fenceMemfs(ts, pid)
 
 	b := takeSnapshot(ts, pid)
 	restoreSnapshot(ts, pid, b)

@@ -153,7 +153,7 @@ func (sess *sessclnt) resendOutstanding() {
 	outstanding := make([]*netclnt.Rpc, len(sess.outstanding))
 	idx := 0
 	for _, o := range sess.outstanding {
-		db.DLPrintf("SESSCLNT", "%v Resend outstanding requests %v\n", sess.sid, o)
+		db.DLPrintf("SESSCLNT0", "%v Resend outstanding requests %v\n", sess.sid, o)
 		outstanding[idx] = o
 		idx++
 	}

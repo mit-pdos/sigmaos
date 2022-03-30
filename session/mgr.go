@@ -38,6 +38,13 @@ func (sm *SessionMgr) TimeoutSession() {
 	}
 }
 
+func (sm *SessionMgr) CloseConn() {
+	sess := sm.FindASession()
+	if sess != nil {
+		sess.CloseConn()
+	}
+}
+
 // Find timed-out sessions.
 func (sm *SessionMgr) getTimedOutSessions() []np.Tsession {
 	// Lock the session table.

@@ -69,6 +69,12 @@ func (sess *Session) WaitThreads() {
 	sess.wg.Wait()
 }
 
+// For testing
+func (sess *Session) CloseConn() {
+	// XXX this isn't right; there maybe still ops who need to write.
+	close(sess.replies)
+}
+
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()

@@ -27,6 +27,13 @@ func GetEnv(name string) int64 {
 	return int64(n)
 }
 
+func randSleep(c int64) uint64 {
+	ms := rand.Int64(c)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+	r := rand.Int64(1000)
+	return r
+}
+
 func Crasher(fsl *fslib.FsLib) {
 	crash := GetEnv(proc.SIGMACRASH)
 	if crash == 0 {
@@ -34,11 +41,7 @@ func Crasher(fsl *fslib.FsLib) {
 	}
 	go func() {
 		for true {
-			ms := rand.Int64(crash)
-			// log.Printf("%v: ms %v\n", proc.GetProgram(), ms)
-			time.Sleep(time.Duration(ms) * time.Millisecond)
-			r := rand.Int64(1000)
-			// log.Printf("%v: r = %v\n", proc.GetProgram(), r)
+			r := randSleep(crash)
 			if r < 330 {
 				Crash(fsl)
 			} else if r < 660 {
@@ -50,19 +53,30 @@ func Crasher(fsl *fslib.FsLib) {
 
 func Partitioner(fssrv *fssrv.FsServer) {
 	crash := GetEnv(proc.SIGMAPARTITION)
-	log.Printf("Partition %v\n", crash)
 	if crash == 0 {
 		return
 	}
 	go func() {
 		for true {
-			ms := rand.Int64(crash)
-			// log.Printf("%v: ms %v\n", proc.GetProgram(), ms)
-			time.Sleep(time.Duration(ms) * time.Millisecond)
-			r := rand.Int64(1000)
-			// log.Printf("%v: r = %v\n", proc.GetProgram(), r)
+			r := randSleep(crash)
 			if r < 330 {
-				fssrv.PartitionClient()
+				fssrv.PartitionClient(true)
+			}
+		}
+	}()
+}
+
+func NetFailer(fssrv *fssrv.FsServer) {
+	crash := GetEnv(proc.SIGMANETFAIL)
+	log.Printf("NetFailer %v\n", crash)
+	if crash == 0 {
+		return
+	}
+	go func() {
+		for true {
+			r := randSleep(crash)
+			if r < 330 {
+				fssrv.PartitionClient(false)
 			}
 		}
 	}()

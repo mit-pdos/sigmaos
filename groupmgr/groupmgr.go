@@ -36,6 +36,7 @@ type member struct {
 	crash     int
 	repl      bool
 	partition int
+	netfail   int
 }
 
 type procret struct {
@@ -48,14 +49,15 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, repl bool, partition int) *member {
-	return &member{fsl, pclnt, "", bin, args, crash, repl, partition}
+func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, repl bool, partition, netfail int) *member {
+	return &member{fsl, pclnt, "", bin, args, crash, repl, partition, netfail}
 }
 
 func (m *member) spawn() error {
 	p := proc.MakeProc(m.bin, m.args)
 	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(m.crash))
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
+	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
 	p.AppendEnv("SIGMAREPL", strconv.FormatBool(m.repl))
 	if err := m.Spawn(p); err != nil {
 		return err
@@ -82,7 +84,7 @@ func (m *member) run(i int, start chan error, done chan procret) {
 
 // If n == 0, run only one member, unreplicated.
 // ncrash = number of group members which may crash.
-func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, ncrash, crash, partition int) *GroupMgr {
+func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args []string, ncrash, crash, partition, netfail int) *GroupMgr {
 	var N int
 	if n > 0 {
 		N = n
@@ -97,7 +99,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		if i+1 > ncrash {
 			crashMember = 0
 		}
-		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n > 0, partition)
+		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n > 0, partition, netfail)
 	}
 	done := make(chan procret)
 	for i, m := range gm.members {

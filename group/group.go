@@ -217,6 +217,8 @@ func RunMember(grp string) {
 			break
 		}
 	}
+	crash.Partitioner(mfs)
+	crash.NetFailer(mfs)
 
 	mfs.Serve()
 	mfs.Done()

@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"ulambda/fs"
+	"ulambda/inode"
 	np "ulambda/ninep"
 )
 
@@ -28,4 +29,16 @@ func encode(o interface{}) []byte {
 		log.Fatalf("FATAL Error snapshot encoding fence: %v", err)
 	}
 	return b
+}
+
+func restoreFence(fn fs.RestoreF, b []byte) fs.Inode {
+	s := &FenceSnapshot{}
+	err := json.Unmarshal(b, s)
+	if err != nil {
+		log.Fatalf("FATAL error unmarshal fence in restoreFence: %v", err)
+	}
+	f := &Fence{}
+	f.Inode = inode.RestoreInode(fn, s.InodeSnap)
+	f.epoch = s.Epoch
+	return f
 }

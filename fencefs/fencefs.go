@@ -42,6 +42,10 @@ func (f *Fence) Snapshot(fn fs.SnapshotF) []byte {
 	return makeFenceSnapshot(fn, f)
 }
 
+func RestoreFence(fn fs.RestoreF, b []byte) fs.Inode {
+	return restoreFence(fn, b)
+}
+
 func makeInode(ctx fs.CtxI, p np.Tperm, mode np.Tmode, parent fs.Dir, mk fs.MakeDirF) (fs.Inode, *np.Err) {
 	db.DLPrintf("FENCEFS", "makeInode %v dir %v\n", p, parent)
 	i := inode.MakeInode(ctx, p, parent)

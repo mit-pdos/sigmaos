@@ -209,7 +209,7 @@ func (c *Coord) processResult(dir string, res Ttask) {
 func (c *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Status, error)) {
 	sts, err := c.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
-		db.DFatalf("%v: FATAL stragglers ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
+		db.DFatalf("stragglers ReadDir %v err %v\n", dir+TIP, err)
 	}
 	n := 0
 	for _, st := range sts {
@@ -225,7 +225,7 @@ func (c *Coord) stragglers(dir string, ch chan Ttask, f func(string) (*proc.Stat
 func (c *Coord) recover(dir string) {
 	sts, err := c.GetDir(dir + TIP) // XXX handle one entry at the time?
 	if err != nil {
-		db.DFatalf("%v: FATAL recover: ReadDir %v err %v\n", proc.GetName(), dir+TIP, err)
+		db.DFatalf("recover: ReadDir %v err %v\n", dir+TIP, err)
 	}
 
 	// just treat all tasks in progress as failed; too aggressive, but correct.

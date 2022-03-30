@@ -213,7 +213,7 @@ func (bl *Balancer) monitorMyself() {
 		_, err := readConfig(bl.FsLib, KVCONFIG)
 		if err != nil {
 			if np.IsErrUnreachable(err) {
-				db.DFatalf("%v: FATAL disconnected\n", proc.GetName())
+				db.DFatalf("disconnected\n")
 			}
 		}
 	}

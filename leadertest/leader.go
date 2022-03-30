@@ -69,7 +69,7 @@ func RunLeader(dir, last, child string) {
 		time.Sleep(500 * time.Millisecond)
 	} else {
 		if err := fsl.Disconnect(np.NAMED); err != nil {
-			db.DFatalf("%v: FATAL disconnect failed %v\n", proc.GetName(), err)
+			db.DFatalf("disconnect failed %v\n", err)
 		}
 
 		// wait a little before starting to write

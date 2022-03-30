@@ -7,7 +7,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/rand"
 )
 
@@ -15,12 +14,12 @@ func PutFileAtomic(fsl *fslib.FsLib, fname string, perm np.Tperm, data []byte) e
 	tmpName := fname + rand.String(16)
 	_, err := fsl.PutFile(tmpName, perm, np.OWRITE, data)
 	if err != nil {
-		db.DFatalf("%v: FATAL MakeFileAtomic %v: %v", proc.GetName(), tmpName, err)
+		db.DFatalf("MakeFileAtomic %v: %v", tmpName, err)
 		return err
 	}
 	err = fsl.Rename(tmpName, fname)
 	if err != nil {
-		db.DFatalf("%v: FATAL MakeFileAtomic rename %v -> %v: err %v", proc.GetName(), tmpName, fname, err)
+		db.DFatalf("MakeFileAtomic rename %v -> %v: err %v", tmpName, fname, err)
 		return err
 	}
 	return nil

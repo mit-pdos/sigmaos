@@ -3,12 +3,10 @@ package overlay
 import (
 	"sync"
 
-	// "ulambda/ctx"
 	db "ulambda/debug"
 	"ulambda/fs"
-	// "ulambda/inode"
+	"ulambda/inode"
 	np "ulambda/ninep"
-	// "ulambda/npcodec"
 )
 
 //
@@ -19,14 +17,16 @@ import (
 //
 
 type DirOverlay struct {
-	fs.Dir
-	mu      sync.Mutex
-	entries map[string]fs.Inode
+	fs.Inode
+	underlay fs.Dir
+	mu       sync.Mutex
+	entries  map[string]fs.Inode
 }
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
-	d.Dir = dir
+	d.Inode = inode.MakeInode(nil, np.DMDIR, nil)
+	d.underlay = dir
 	d.entries = make(map[string]fs.Inode)
 	return d
 }
@@ -94,8 +94,8 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, n
 	} else {
 		db.DLPrintf("OVERLAYDIR", "Lookup underlay %v\n", path)
 		// lookup up in underlay
-		qids, lo, p, err := dir.Dir.Lookup(ctx, path)
-		if lo == dir.Dir {
+		qids, lo, p, err := dir.underlay.Lookup(ctx, path)
+		if lo == dir.underlay {
 			lo = dir
 		}
 		return qids, lo, p, err
@@ -103,13 +103,13 @@ func (dir *DirOverlay) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, n
 }
 
 func (dir *DirOverlay) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	return dir.Dir.Create(ctx, name, perm, m)
+	return dir.underlay.Create(ctx, name, perm, m)
 }
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignoressy size
 func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	sts, err := dir.Dir.ReadDir(ctx, cursor, n, v)
+	sts, err := dir.underlay.ReadDir(ctx, cursor, n, v)
 	if err != nil {
 		return nil, err
 	}
@@ -122,27 +122,27 @@ func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversi
 }
 
 func (dir *DirOverlay) WriteDir(ctx fs.CtxI, offset np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	return dir.Dir.WriteDir(ctx, offset, b, v)
+	return dir.underlay.WriteDir(ctx, offset, b, v)
 }
 
 func (dir *DirOverlay) Rename(ctx fs.CtxI, from, to string) *np.Err {
-	return dir.Dir.Rename(ctx, from, to)
+	return dir.underlay.Rename(ctx, from, to)
 }
 
 func (dir *DirOverlay) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np.Err {
-	return dir.Dir.Renameat(ctx, old, nd, new)
+	return dir.underlay.Renameat(ctx, old, nd, new)
 }
 
 func (dir *DirOverlay) Remove(ctx fs.CtxI, n string) *np.Err {
-	return dir.Dir.Remove(ctx, n)
+	return dir.underlay.Remove(ctx, n)
 }
 
-// XXX only relevant if dir.Dir is *DirImpl. And, it already has been
+// XXX only relevant if dir.underlay is *DirImpl. And, it already has been
 // snapshotted.
 func (dir *DirOverlay) Snapshot(fn fs.SnapshotF) []byte {
 	return makeDirOverlaySnapshot(fn, dir)
 }
 
 func Restore(d *DirOverlay, fn fs.RestoreF, b []byte) fs.Inode {
-	return nil
+	return restoreDirOverlay(d, fn, b)
 }

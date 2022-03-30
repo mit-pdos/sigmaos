@@ -1,13 +1,13 @@
 package fss3
 
 import (
-	"log"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fidclnt"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -84,7 +84,7 @@ func TestUnionFile(t *testing.T) {
 
 	fd, err := ts.Open(name, np.OREAD)
 	if err != nil {
-		db.DFatalf(err)
+		db.DFatalf("%v", err)
 	}
 	n := 0
 	for {
@@ -93,7 +93,7 @@ func TestUnionFile(t *testing.T) {
 			break
 		}
 		if err != nil {
-			db.DFatalf(err)
+			db.DFatalf("%v", err)
 		}
 		n += len(data)
 	}

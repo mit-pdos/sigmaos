@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/linuxsched"
 	"ulambda/proc"

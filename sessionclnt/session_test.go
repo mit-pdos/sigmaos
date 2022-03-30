@@ -18,7 +18,7 @@ const (
 	DIRGRP0   = group.GRPDIR + GRP0 + "/"
 	CRASH     = 1000
 	PARTITION = 1000
-	NETFAIL   = 500
+	NETFAIL   = 200
 )
 
 func TestServerCrash(t *testing.T) {
@@ -59,7 +59,7 @@ func TestReconnectSimple(t *testing.T) {
 				ch <- err
 				return
 			}
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 		}
 		ch <- nil
 	}()
@@ -68,6 +68,7 @@ func TestReconnectSimple(t *testing.T) {
 	assert.Nil(ts.T, err, "fsl1")
 
 	grp.Stop()
+	ts.Shutdown()
 }
 
 func TestSessClose(t *testing.T) {

@@ -200,9 +200,9 @@ func (fssrv *FsServer) AttachTree(uname string, aname string, sessid np.Tsession
 	return fssrv.root, ctx.MkCtx(uname, sessid, fssrv.sct)
 }
 
-func (fssrv *FsServer) Process(fc *np.Fcall, replies chan *np.Fcall) {
+func (fssrv *FsServer) Process(conn protsrv.NetConn, fc *np.Fcall, replies chan *np.Fcall) {
 	// The replies channel will be set here.
-	sess := fssrv.st.Alloc(fc.Session, replies)
+	sess := fssrv.st.Alloc(fc.Session, conn, replies)
 	// New thread about to start
 	sess.IncThreads()
 	if !fssrv.replicated {
@@ -240,7 +240,7 @@ func (fssrv *FsServer) process(fc *np.Fcall) {
 	// client), the first time Alloc is called will be in this function, so the
 	// reply channel will be set to nil. If it came from the client, the reply
 	// channel will already be set.
-	sess := fssrv.st.Alloc(fc.Session, nil)
+	sess := fssrv.st.Alloc(fc.Session, nil, nil)
 	if fssrv.replicated {
 		// Reply cache needs to live under the replication layer in order to
 		// handle duplicate requests. These may occur if, for example:

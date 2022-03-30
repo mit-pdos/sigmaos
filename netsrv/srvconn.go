@@ -39,6 +39,11 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 	return c
 }
 
+func (c *SrvConn) Close() {
+	db.DLPrintf("NETSRV", "%v Close conn\n", c.sessid)
+	c.conn.Close()
+}
+
 func (c *SrvConn) Src() string {
 	return c.conn.RemoteAddr().String()
 }
@@ -52,8 +57,9 @@ func (c *SrvConn) reader() {
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
-			db.DLPrintf("NETSRV", "%v Peer %v closed/erred %v\n", c.sessid, c.Src(), err)
+			db.DLPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			// session mgr will timeout this session eventually
+			// XXX tell sesssrv that conn closed?
 			return
 		}
 		var fcall *np.Fcall
@@ -71,7 +77,7 @@ func (c *SrvConn) reader() {
 			} else if c.sessid != fcall.Session {
 				log.Fatal("FATAL reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
 			}
-			c.protsrv.Process(fcall, c.replies)
+			c.protsrv.Process(c, fcall, c.replies)
 		}
 	}
 }
@@ -81,7 +87,7 @@ func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
 		if !ok {
-			db.DLPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
+			db.DLPrintf("NETSRV0", "%v writer: close conn from %v\n", c.sessid, c.Src())
 			c.conn.Close()
 			return
 		}

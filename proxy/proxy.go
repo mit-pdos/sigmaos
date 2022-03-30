@@ -31,9 +31,9 @@ func (npd *Npd) mkProtServer(fssrv protsrv.FsServer, sid np.Tsession) protsrv.Pr
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
+func (npd *Npd) serve(conn protsrv.NetConn, fc *np.Fcall, replies chan *np.Fcall) {
 	t := fc.Tag
-	sess := npd.st.Alloc(fc.Session, replies)
+	sess := npd.st.Alloc(fc.Session, conn, replies)
 	reply, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror
@@ -43,8 +43,8 @@ func (npd *Npd) serve(fc *np.Fcall, replies chan *np.Fcall) {
 	replies <- fcall
 }
 
-func (npd *Npd) Process(fcall *np.Fcall, replies chan *np.Fcall) {
-	go npd.serve(fcall, replies)
+func (npd *Npd) Process(conn protsrv.NetConn, fcall *np.Fcall, replies chan *np.Fcall) {
+	go npd.serve(conn, fcall, replies)
 }
 
 func (npd *Npd) CloseSession(sid np.Tsession) {

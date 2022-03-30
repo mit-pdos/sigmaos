@@ -26,6 +26,7 @@ type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
 	wg            sync.WaitGroup
+	conn          protsrv.NetConn
 	protsrv       protsrv.Protsrv
 	lastHeartbeat time.Time
 	Sid           np.Tsession
@@ -36,9 +37,10 @@ type Session struct {
 	timedout      bool // for debugging
 }
 
-func makeSession(protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, t *threadmgr.ThreadMgr) *Session {
+func makeSession(conn protsrv.NetConn, protsrv protsrv.Protsrv, sid np.Tsession, replies chan *np.Fcall, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
+	sess.conn = conn
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
@@ -69,10 +71,10 @@ func (sess *Session) WaitThreads() {
 	sess.wg.Wait()
 }
 
-// For testing
+// For testing. Invoking CloseConn() will eventually cause
+// sess.Close() to be called.
 func (sess *Session) CloseConn() {
-	// XXX this isn't right; there maybe still ops who need to write.
-	close(sess.replies)
+	sess.conn.Close()
 }
 
 func (sess *Session) Close() {
@@ -98,9 +100,15 @@ func (sess *Session) IsClosed() bool {
 
 // Change the replies channel if the new channel is non-nil. This may occur if,
 // for example, a client starts talking to a new replica.
-func (sess *Session) maybeSetRepliesC(replies chan *np.Fcall) {
+func (sess *Session) maybeSetConn(conn protsrv.NetConn, replies chan *np.Fcall) {
 	sess.Lock()
 	defer sess.Unlock()
+	if conn != nil { // maybe nil
+		if sess.conn != conn {
+			db.DLPrintf("SESSION", "maybeSetConn new %v\n", conn)
+			sess.conn = conn
+		}
+	}
 	if replies != nil {
 		sess.replies = replies
 	}

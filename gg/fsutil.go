@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -117,14 +116,14 @@ func setupLocalExecutionEnv(hash string) {
 func mkdirOpt(fslambda FsLambda, path string) {
 	_, err := fslambda.Stat(path)
 	if err != nil {
-		db.DPrintf("Mkdir [%v]\n", path)
+		//db.DPrintf("Mkdir [%v]\n", path)
 		// XXX Perms?
 		err = fslambda.MkDir(path, np.DMDIR)
 		if err != nil {
 			log.Fatalf("Couldn't mkdir %v: %v", path, err)
 		}
 	} else {
-		db.DPrintf("Already exists [%v]\n", path)
+		//db.DPrintf("Already exists [%v]\n", path)
 	}
 }
 
@@ -136,7 +135,7 @@ func setUpRemoteDirs(fslambda FsLambda) {
 }
 
 func downloadFile(fslambda FsLambda, src string, dest string) {
-	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
+	//db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
 	contents, err := fslambda.GetFile(src)
 	if err != nil {
 		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
@@ -175,7 +174,7 @@ func copyRemoteDirTree(fslambda FsLambda, src string, dest string) {
 }
 
 func copyRemoteFile(fslambda FsLambda, src string, dest string) {
-	db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
+	//db.DPrintf("Downloading [%v] to [%v]\n", src, dest)
 	contents, err := fslambda.GetFile(src)
 	if err != nil {
 		log.Printf("%v Read download file error [%v]: %v\n", fslambda.Name(), src, err)
@@ -189,7 +188,7 @@ func copyRemoteFile(fslambda FsLambda, src string, dest string) {
 func uploadDir(fslambda FsLambda, dir string, subDir string) {
 	src := ggLocal(dir, subDir, "")
 	dest := ggRemote(subDir, "")
-	db.DPrintf("%v uploading dir [%v] to [%v]\n", fslambda.Name(), src, dest)
+	//db.DPrintf("%v uploading dir [%v] to [%v]\n", fslambda.Name(), src, dest)
 	files, err := ioutil.ReadDir(src)
 	if err != nil {
 		log.Fatalf("%v read upload dir error: %v\n", fslambda.Name(), err)
@@ -206,7 +205,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 			// Try and make a new file if one doesn't exist, else overwrite
 			_, err = fslambda.Stat(dstPath)
 			if err != nil {
-				db.DPrintf("%v mkfile dir uploader [%v]\n", fslambda.Name(), dstPath)
+				//db.DPrintf("%v mkfile dir uploader [%v]\n", fslambda.Name(), dstPath)
 				// XXX Perms?
 				_, err = fslambda.PutFile(dstPath, 0777, np.OWRITE, contents)
 				if err != nil {
@@ -218,7 +217,7 @@ func uploadDir(fslambda FsLambda, dir string, subDir string) {
 					log.Printf("%v couldn't make upload dir file %v: %v", fslambda.Name(), dstPath, err)
 				}
 			} else {
-				db.DPrintf("%v file already exists [%v]\n", fslambda.Name(), dstPath)
+				//db.DPrintf("%v file already exists [%v]\n", fslambda.Name(), dstPath)
 				_, err = fslambda.SetFile(dstPath, contents, np.OWRITE, 0)
 				if err != nil {
 					// XXX This only occurs if someone else has written the file since we
@@ -248,7 +247,7 @@ func getInputDependencies(fslambda FsLambda, targetHash string, srcDir string) [
 		f, err = ioutil.ReadFile(dependenciesFilePath)
 	}
 	if err != nil {
-		db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
+		//db.DPrintf("No input dependencies file for [%v]: %v\n", targetHash, err)
 		return dependencies
 	}
 	f_trimmed := strings.TrimSpace(string(f))
@@ -257,7 +256,7 @@ func getInputDependencies(fslambda FsLambda, targetHash string, srcDir string) [
 			dependencies = append(dependencies, d)
 		}
 	}
-	db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
+	//db.DPrintf("Got input dependencies for [%v]: %v\n", targetHash, dependencies)
 	return dependencies
 }
 
@@ -266,7 +265,7 @@ func getExitDependencies(fslambda FsLambda, targetHash string) []string {
 	dependenciesFilePath := ggRemoteBlobs(targetHash + EXIT_DEPENDENCIES_SUFFIX)
 	f, err := fslambda.GetFile(dependenciesFilePath)
 	if err != nil {
-		db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
+		//db.DPrintf("No exit dependencies file for [%v]: %v\n", targetHash, err)
 		return dependencies
 	}
 	f_trimmed := strings.TrimSpace(string(f))
@@ -275,7 +274,7 @@ func getExitDependencies(fslambda FsLambda, targetHash string) []string {
 			dependencies = append(dependencies, d)
 		}
 	}
-	db.DPrintf("Got exit dependencies for [%v]: %v\n", targetHash, dependencies)
+	//db.DPrintf("Got exit dependencies for [%v]: %v\n", targetHash, dependencies)
 	return dependencies
 }
 

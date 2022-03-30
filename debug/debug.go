@@ -34,14 +34,6 @@ func debugLabels() map[string]bool {
 	return m
 }
 
-// Deprecated; use DLPrintf
-func DPrintf(format string, v ...interface{}) {
-	m := debugLabels()
-	if len(m) != 0 {
-		log.Printf("%v: %v", proc.GetName(), fmt.Sprintf(format, v...))
-	}
-}
-
 func DLPrintf(label string, format string, v ...interface{}) {
 	m := debugLabels()
 	if _, ok := m[label]; ok || label == ALWAYS {

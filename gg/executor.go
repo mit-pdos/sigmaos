@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -19,7 +18,6 @@ type Executor struct {
 }
 
 func MakeExecutor(args []string, debug bool) (*Executor, error) {
-	db.DPrintf("Executor: %v\n", args)
 	ex := &Executor{}
 	ex.pid = proc.Tpid(args[0])
 	ex.thunkHash = args[1]

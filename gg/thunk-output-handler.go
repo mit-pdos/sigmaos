@@ -4,7 +4,6 @@ import (
 	"log"
 	"strings"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -22,7 +21,7 @@ type ThunkOutputHandler struct {
 }
 
 func MakeThunkOutputHandler(args []string, debug bool) (*ThunkOutputHandler, error) {
-	db.DPrintf("ThunkOutputHandler: %v\n", args)
+	//db.DPrintf("ThunkOutputHandler: %v\n", args)
 
 	toh := mkThunkOutputHandler(proc.Tpid(args[0]), args[1], args[2:])
 	toh.Started()
@@ -73,7 +72,7 @@ func (toh *ThunkOutputHandler) processOutput() []*Thunk {
 }
 
 func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []proc.Tpid, outputFiles []string) string {
-	db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
+	//db.DPrintf("Handler [%v] spawning [%v], depends on [%v]\n", toh.thunkHash, thunkHash, deps)
 	exPid, err := spawnExecutor(toh, thunkHash, deps)
 	if err != nil {
 		log.Printf("%v", err)
@@ -84,7 +83,7 @@ func (toh *ThunkOutputHandler) initDownstreamThunk(thunkHash string, deps []proc
 
 func (toh *ThunkOutputHandler) propagateResultUpstream() {
 	reduction := getReductionResult(toh, toh.thunkHash)
-	db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
+	//db.DPrintf("Thunk [%v] got value [%v], propagating back to [%v]\n", toh.thunkHash, reduction, toh.outputFiles)
 	for _, outputFile := range toh.outputFiles {
 		outputPath := ggRemoteReductions(outputFile)
 		toh.SetFile(outputPath, []byte(reduction), np.OWRITE, 0)
@@ -96,7 +95,7 @@ func (toh *ThunkOutputHandler) adjustExitDependencies() {
 	//		toh.pid,
 	//		toh.primaryOutputThunkPid,
 	//	}
-	db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
+	//db.DPrintf("Updating exit dependencies for [%v]\n", toh.pid)
 	// XXX Need to get rid of SwapExitDependency
 	//	err := toh.SwapExitDependency(exitDepSwaps)
 	//	if err != nil {

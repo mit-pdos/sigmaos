@@ -3,7 +3,6 @@ package gg
 import (
 	"path"
 
-	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -20,7 +19,7 @@ type TargetWriter struct {
 }
 
 func MakeTargetWriter(args []string, debug bool) (*TargetWriter, error) {
-	db.DPrintf("TargetWriter: %v\n", args)
+	//db.DPrintf("TargetWriter: %v\n", args)
 	tw := &TargetWriter{}
 
 	tw.pid = proc.Tpid(args[0])

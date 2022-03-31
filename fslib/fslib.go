@@ -53,6 +53,6 @@ func MakeFsLib(uname string) *FsLib {
 	return MakeFsLibAddr(uname, Named())
 }
 
-func (fl *FsLib) Shutdown() error {
-	return fl.PathClnt.Shutdown()
+func (fl *FsLib) Exit() error {
+	return fl.PathClnt.Close()
 }

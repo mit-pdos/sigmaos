@@ -53,9 +53,15 @@ func (pathc *PathClnt) GetChunkSz() np.Tsize {
 }
 
 // Close the path client, umounting any mounted file system and
-// closing session to them.  XXX not implemented
-func (pathc *PathClnt) Shutdown() error {
-	return pathc.mnt.close()
+// closing session to them.
+func (pathc *PathClnt) Close() error {
+	pts := pathc.mnt.close()
+	for _, p := range pts {
+		if err := pathc.FidClnt.Detach(p.fid); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Simulate network partition to server that exports path

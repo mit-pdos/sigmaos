@@ -54,7 +54,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.timedOut() && !s.IsClosed() {
-			db.DPrintf("SESSION_ERR", "Sess %v timed out", sid)
+			db.DPrintf("SESSION_ERR", "Sess %v timed out; close it", sid)
 			sess = append(sess, s)
 		}
 	}
@@ -69,7 +69,7 @@ func (sm *SessionMgr) run() {
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
 			detach := np.MakeFcall(np.Tdetach{}, s.Sid, nil, np.NoFence)
-			sm.srvfcall(detach, s.conn)
+			sm.srvfcall(detach)
 		}
 	}
 }

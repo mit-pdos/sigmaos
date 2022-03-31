@@ -69,15 +69,13 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.mkps = mkps
 	ssrv.rps = rps
 	ssrv.stats = stats.MkStatsDev(ssrv.root)
-	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.process, ssrv.replicated)
+	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
 	ssrv.st = session.MakeSessionTable(mkps, ssrv, ssrv.tmt)
 	ssrv.sm = session.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
 	ssrv.rc = repl.MakeReplyCache()
-
-	// Build up overlay directory
 	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
 	dirover.Mount(np.STATSD, ssrv.stats)
@@ -130,7 +128,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.stats.Done()
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
-	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt, ssrv.rc = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.process, ssrv.rc, b)
+	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt, ssrv.rc = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.rc, b)
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
 	ssrv.sm.Stop()
@@ -198,9 +196,18 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) 
 	return ssrv.root, ctx.MkCtx(uname, sessid, ssrv.sct)
 }
 
-func (ssrv *SessSrv) SrvFcall(fc *np.Fcall, conn *np.Conn) {
-	// The replies channel will be set here.
-	sess := ssrv.st.Alloc(fc.Session, conn)
+// New session or new connection for existing session
+func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) *np.Err {
+	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
+	sess := ssrv.st.Alloc(sid)
+	return sess.SetConn(conn)
+}
+
+func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
+	sess, ok := ssrv.st.Lookup(fc.Session)
+	if !ok {
+		db.DFatalf("SrvFcall: no session %v\n", fc.Session)
+	}
 	// New thread about to start
 	sess.IncThreads()
 	if !ssrv.replicated {
@@ -211,32 +218,28 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall, conn *np.Conn) {
 }
 
 func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
-	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
-	fcall.Session = request.Session
-	fcall.Seqno = request.Seqno
-	fcall.Tag = request.Tag
-	db.DPrintf("SSRV", "Request %v start sendReply %v", request, fcall)
+	fcall := np.MakeFcallReply(request, reply)
+
+	db.DPrintf("SESSSRV", "Request %v start sendReply %v", request, fcall)
+
 	// Store the reply in the reply cache.
 	ssrv.rc.Put(request, fcall)
-	// Only send a reply if the session hasn't been closed, or this is a detach
-	// (the last reply to be sent).
-	if !sess.IsClosed() {
-		conn := sess.GetConn()
-		// The conn may be nil if this is a replicated op which came
-		// through raft. In this case, a reply is not needed.
-		if conn != nil {
-			conn.Replies <- fcall
-		}
+
+	// If a client sent the request (seqno != 0) (as opposed to an
+	// internally-generated detach), send reply.
+	if request.Seqno != 0 {
+		sess.SendConn(fcall)
 	}
-	db.DPrintf("SSRV", "Request %v done sendReply %v", request, fcall)
+	db.DPrintf("SESSSRV", "Request %v done sendReply %v", request, fcall)
 }
 
-func (ssrv *SessSrv) process(fc *np.Fcall) {
-	// If this is a replicated op received through raft (not directly from a
-	// client), the first time Alloc is called will be in this function, so the
-	// reply channel will be set to nil. If it came from the client, the reply
-	// channel will already be set.
-	sess := ssrv.st.Alloc(fc.Session, nil)
+func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
+	// If this is a replicated op received through raft (not
+	// directly from a client), the first time Alloc is called
+	// will be in this function, so the conn will be set to
+	// nil. If it came from the client, the conn will already be
+	// set.
+	sess := ssrv.st.Alloc(fc.Session)
 	// Reply cache needs to live under the replication layer in order to
 	// handle duplicate requests. These may occur if, for example:
 	//
@@ -258,13 +261,13 @@ func (ssrv *SessSrv) process(fc *np.Fcall) {
 	// make progress. We coulld optionally use sessconds, but they're kind of
 	// overkill since we don't care about ordering in this case.
 	if replyFuture, ok := ssrv.rc.Get(fc); ok {
-		db.DPrintf("SSRV", "Request %v reply in cache", fc)
+		db.DPrintf("SESSSRV", "Request %v reply in cache", fc)
 		go func() {
 			ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 		}()
 		return
 	}
-	db.DPrintf("SSRV", "Request %v reply not in cache", fc)
+	db.DPrintf("SESSSRV", "Request %v reply not in cache", fc)
 	// If this request has not been registered with the reply cache yet, register
 	// it.
 	ssrv.rc.Register(fc)
@@ -291,21 +294,27 @@ func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
 }
 
 func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
-	db.DPrintf("SSRV", "Dispatch request %v", fc)
-	reply, rerror := sess.Dispatch(fc.Msg)
-	db.DPrintf("SSRV", "Done dispatch request %v", fc)
+	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
+	reply, close, rerror := sess.Dispatch(fc.Msg)
+	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
+
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
-	// when replies is not nil
+	// when replies is not nil  XXX
 	if sess.GetConn() != nil {
 		defer sess.DecThreads()
 	}
+
 	if rerror != nil {
 		reply = *rerror
 	}
-	// Send reply will drop the reply if the replies channel is nil, but it will
-	// make sure to insert the reply into the reply cache.
+
 	ssrv.sendReply(fc, reply, sess)
+
+	if close {
+		// Dispatch() signaled to close the session.
+		sess.Close()
+	}
 }
 
 func (ssrv *SessSrv) PartitionClient(permanent bool) {

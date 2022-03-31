@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"ulambda/benchmarks"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -33,6 +34,7 @@ type Sleeper struct {
 	native      bool
 	sleepLength time.Duration
 	output      string
+	startSeqno  np.Tseqno
 	time.Time
 }
 
@@ -44,6 +46,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 	s.Time = time.Now()
 	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
+	s.startSeqno = s.ReadSeqNo()
 	s.output = args[1]
 	d, err := time.ParseDuration(args[0])
 	if err != nil {
@@ -80,7 +83,13 @@ func (s *Sleeper) sleep(ch chan *proc.Status) {
 	if err != nil {
 		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}
-	ch <- proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(s.Time))
+	latency := time.Since(s.Time)
+	// Measure latency & NRPC of all ops except for Exited.
+	res := benchmarks.MakeResult()
+	res.Throughput = 0.0
+	res.Latency = float64(latency.Microseconds())
+	res.NRPC = s.ReadSeqNo()
+	ch <- proc.MakeStatusInfo(proc.StatusOK, "elapsed time", res)
 }
 
 func (s *Sleeper) Work() {
@@ -89,6 +98,8 @@ func (s *Sleeper) Work() {
 	go s.sleep(ch)
 	status := <-ch
 	if !s.native {
+		start := time.Now()
 		s.Exited(status)
+		log.Printf("Elapsed %v us", time.Since(start).Microseconds())
 	}
 }

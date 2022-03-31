@@ -12,7 +12,7 @@ type Conn struct {
 type Fsrvfcall func(*Fcall)
 
 type FsServer interface {
-	Register(Tsession, *Conn)
+	Register(Tsession, *Conn) *Err
 	SrvFcall(*Fcall)
 	Snapshot() []byte
 	Restore([]byte)

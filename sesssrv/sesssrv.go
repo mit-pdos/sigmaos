@@ -197,10 +197,10 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) 
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) {
-	db.DPrintf("SESSSRV", "Register sid %v %v", sid, conn)
+func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) *np.Err {
+	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(sid)
-	sess.SetConn(conn)
+	return sess.SetConn(conn)
 }
 
 func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
@@ -218,10 +218,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 }
 
 func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
-	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
-	fcall.Session = request.Session
-	fcall.Seqno = request.Seqno
-	fcall.Tag = request.Tag
+	fcall := np.MakeFcallReply(request, reply)
 
 	db.DPrintf("SESSSRV", "Request %v start sendReply %v", request, fcall)
 

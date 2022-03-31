@@ -41,9 +41,10 @@ func (npd *Npd) serve(fc *np.Fcall) {
 	sess.SendConn(fcall)
 }
 
-func (npd *Npd) Register(sid np.Tsession, conn *np.Conn) {
+func (npd *Npd) Register(sid np.Tsession, conn *np.Conn) *np.Err {
 	sess := npd.st.Alloc(sid)
 	sess.SetConn(conn)
+	return nil
 }
 
 func (npd *Npd) SrvFcall(fcall *np.Fcall) {

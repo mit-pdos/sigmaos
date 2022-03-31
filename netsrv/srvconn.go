@@ -68,16 +68,23 @@ func (c *SrvConn) reader() {
 		}
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: ", c.sessid, c.Src(), err)
-		} else {
-			db.DPrintf("NETSRV", "srv req %v\n", fcall)
-			if c.sessid == 0 {
-				c.sessid = fcall.Session
-				c.protsrv.Register(fcall.Session, &np.Conn{c, c.replies})
-			} else if c.sessid != fcall.Session {
-				db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
-			}
-			c.protsrv.SrvFcall(fcall)
+			// XXX tell sesssrv that conn closed?
+			return
 		}
+		db.DPrintf("NETSRV", "srv req %v\n", fcall)
+		if c.sessid == 0 {
+			c.sessid = fcall.Session
+			conn := &np.Conn{c, c.replies}
+			if err := c.protsrv.Register(fcall.Session, conn); err != nil {
+				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
+				c.replies <- fcall
+				close(conn.Replies)
+				return
+			}
+		} else if c.sessid != fcall.Session {
+			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
+		}
+		c.protsrv.SrvFcall(fcall)
 	}
 }
 

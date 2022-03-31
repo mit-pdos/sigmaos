@@ -29,24 +29,25 @@ func (npd *Npd) mkProtServer(fssrv np.FsServer, sid np.Tsession) np.Protsrv {
 	return makeNpConn(npd.named)
 }
 
-func (npd *Npd) serve(fc *np.Fcall, conn *np.Conn) {
+func (npd *Npd) serve(fc *np.Fcall) {
 	t := fc.Tag
-	sess := npd.st.Alloc(fc.Session, conn)
-	reply, rerror := sess.Dispatch(fc.Msg)
+	sess, _ := npd.st.Lookup(fc.Session)
+	reply, _, rerror := sess.Dispatch(fc.Msg)
 	if rerror != nil {
 		reply = *rerror
 	}
 	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
 	fcall.Tag = t
-	conn.Replies <- fcall
+	sess.SendConn(fcall)
 }
 
-func (npd *Npd) SrvFcall(fcall *np.Fcall, conn *np.Conn) {
-	go npd.serve(fcall, conn)
+func (npd *Npd) Register(sid np.Tsession, conn *np.Conn) {
+	sess := npd.st.Alloc(sid)
+	sess.SetConn(conn)
 }
 
-func (npd *Npd) CloseSession(sid np.Tsession) {
-	// XXX Actually call detach if we make it do something at some point.
+func (npd *Npd) SrvFcall(fcall *np.Fcall) {
+	go npd.serve(fcall)
 }
 
 func (npd *Npd) Snapshot() []byte {
@@ -127,8 +128,9 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 	return nil
 }
 
-func (npc *NpConn) Detach() {
+func (npc *NpConn) Detach(rets *np.Rdetach) *np.Rerror {
 	db.DPrintf("9POBJ", "Detach\n")
+	return nil
 }
 
 // XXX avoid duplication with fidclnt

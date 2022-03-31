@@ -61,7 +61,7 @@ func RestoreSession(sid np.Tsession, fssrv np.FsServer, rps np.RestoreProtServer
 	}
 	fos := rps(fssrv, ss.ProtsrvSnap)
 	// TODO: add session manager
-	sess := makeSession(nil, fos, sid, tmt.AddThread())
+	sess := makeSession(fos, sid, tmt.AddThread())
 	sess.closed = ss.closed
 	return sess
 }

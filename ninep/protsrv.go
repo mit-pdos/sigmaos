@@ -9,10 +9,11 @@ type Conn struct {
 	Replies chan *Fcall
 }
 
-type Fsrvfcall func(*Fcall, *Conn)
+type Fsrvfcall func(*Fcall)
 
 type FsServer interface {
-	SrvFcall(*Fcall, *Conn)
+	Register(Tsession, *Conn)
+	SrvFcall(*Fcall)
 	Snapshot() []byte
 	Restore([]byte)
 }
@@ -39,7 +40,7 @@ type Protsrv interface {
 	GetFile(Tgetfile, *Rgetfile) *Rerror
 	SetFile(Tsetfile, *Rwrite) *Rerror
 	PutFile(Tputfile, *Rwrite) *Rerror
-	Detach()
+	Detach(*Rdetach) *Rerror
 	Snapshot() []byte
 }
 

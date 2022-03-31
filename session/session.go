@@ -34,10 +34,9 @@ type Session struct {
 	timedout      bool // for debugging
 }
 
-func makeSession(conn *np.Conn, protsrv np.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
+func makeSession(protsrv np.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
-	sess.conn = conn
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
@@ -68,23 +67,34 @@ func (sess *Session) WaitThreads() {
 }
 
 // For testing. Invoking CloseConn() will eventually cause
-// sess.Close() to be called.
+// sess.Close() to be called by Detach().
 func (sess *Session) CloseConn() {
 	sess.conn.Conn.Close()
 }
 
+// Maybe called several times because client may reconnect on a
+// session that server has terminated.
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
-	if sess.closed {
-		db.DFatalf("tried to close a closed session: %v", sess.Sid)
-	}
 	sess.closed = true
 	// Close the replies channel so that writer in srvconn exits
 	if sess.conn != nil {
 		db.DPrintf("SESSION", "%v close replies\n", sess.Sid)
 		close(sess.conn.Replies)
 		sess.conn = nil
+	}
+}
+
+// The conn may be nil if this is a replicated op which came through
+// raft; in this case, a reply is not needed. Conn maybe also be nil
+// because server closed session unilaterally.
+func (sess *Session) SendConn(fc *np.Fcall) {
+	sess.Lock()
+	conn := sess.conn
+	sess.Unlock()
+	if conn != nil {
+		conn.Replies <- fc
 	}
 }
 
@@ -96,15 +106,11 @@ func (sess *Session) IsClosed() bool {
 
 // Change conn if the new conn is non-nil. This may occur if, for
 // example, a client starts talking to a new replica.
-func (sess *Session) maybeSetConn(conn *np.Conn) {
+func (sess *Session) SetConn(conn *np.Conn) {
 	sess.Lock()
 	defer sess.Unlock()
-	if conn != nil {
-		if sess.conn != conn {
-			db.DPrintf("SESSION", "maybeSetConn new %v\n", conn)
-			sess.conn = conn
-		}
-	}
+	db.DPrintf("SESSION", "%v SetConn new %v\n", sess.Sid, conn)
+	sess.conn = conn
 }
 
 func (sess *Session) heartbeat(msg np.Tmsg) {

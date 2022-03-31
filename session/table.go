@@ -35,15 +35,14 @@ func (st *SessionTable) Lookup(sid np.Tsession) (*Session, bool) {
 	return sess, ok
 }
 
-func (st *SessionTable) Alloc(sid np.Tsession, conn *np.Conn) *Session {
+func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	st.Lock()
 	defer st.Unlock()
 
 	if sess, ok := st.sessions[sid]; ok {
-		sess.maybeSetConn(conn)
 		return sess
 	}
-	sess := makeSession(conn, st.mkps(st.fssrv, sid), sid, st.tm.AddThread())
+	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.tm.AddThread())
 	st.sessions[sid] = sess
 	return sess
 }

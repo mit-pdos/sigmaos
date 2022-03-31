@@ -33,6 +33,7 @@ type Sleeper struct {
 	native      bool
 	sleepLength time.Duration
 	output      string
+	time.Time
 }
 
 func MakeSleeper(args []string) (*Sleeper, error) {
@@ -40,6 +41,7 @@ func MakeSleeper(args []string) (*Sleeper, error) {
 		return nil, errors.New("MakeSleeper: too few arguments")
 	}
 	s := &Sleeper{}
+	s.Time = time.Now()
 	s.FsLib = fslib.MakeFsLib("sleeper-" + proc.GetPid().String())
 	s.ProcClnt = procclnt.MakeProcClnt(s.FsLib)
 	s.output = args[1]
@@ -78,7 +80,7 @@ func (s *Sleeper) sleep(ch chan *proc.Status) {
 	if err != nil {
 		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
 	}
-	ch <- proc.MakeStatus(proc.StatusOK)
+	ch <- proc.MakeStatusInfo(proc.StatusOK, "elapsed time", time.Since(s.Time))
 }
 
 func (s *Sleeper) Work() {

@@ -35,6 +35,10 @@ func MakeStatus(code Tstatus) *Status {
 	return &Status{code, "", nil}
 }
 
+func MakeStatusInfo(code Tstatus, msg string, data interface{}) *Status {
+	return &Status{code, msg, data}
+}
+
 func MakeStatusErr(msg string, data interface{}) *Status {
 	return &Status{StatusErr, msg, data}
 }

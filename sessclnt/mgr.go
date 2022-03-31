@@ -2,15 +2,15 @@ package sessclnt
 
 import (
 	"strings"
-	//	"sync"
-	"github.com/sasha-s/go-deadlock"
+	"sync"
+	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
 type Mgr struct {
-	mu       deadlock.Mutex
+	mu       sync.Mutex
 	sid      np.Tsession
 	seqno    *np.Tseqno
 	sessions map[string]*clnt // XXX Is a Mgr ever used to talk to multiple servers?

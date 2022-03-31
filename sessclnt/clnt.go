@@ -1,7 +1,7 @@
 package sessclnt
 
 import (
-	"github.com/sasha-s/go-deadlock"
+	//	"github.com/sasha-s/go-deadlock"
 	"sort"
 	"sync"
 	"time"
@@ -14,7 +14,7 @@ import (
 // A session from a client to a logical server (either one server or a
 // replica group)
 type clnt struct {
-	deadlock.Mutex
+	sync.Mutex
 	*sync.Cond
 	sid         np.Tsession
 	seqno       *np.Tseqno

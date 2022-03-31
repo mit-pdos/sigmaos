@@ -256,9 +256,10 @@ func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.
 func (fidc *FidClnt) Detach(fid np.Tfid) *np.Err {
 	ch := fidc.fids.lookup(fid)
 	if ch == nil {
-		return np.MkErr(np.TErrUnreachable, "getfile")
+		return np.MkErr(np.TErrUnreachable, "detach")
 	}
-	if err := ch.pc.Detach(fid); err != nil {
+	// XXX maybe clunk fid first, but detach will free it anyway
+	if err := ch.pc.Detach(); err != nil {
 		return err
 	}
 	return nil

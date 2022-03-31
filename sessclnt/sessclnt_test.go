@@ -71,7 +71,7 @@ func TestReconnectSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSessClose(t *testing.T) {
+func TestAutoSessClose(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
 

@@ -1052,3 +1052,17 @@ func TestOpenRemoveRead(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestFslibExit(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+
+	// connect
+	_, err := ts.Stat(path + "/.")
+	assert.Nil(t, err)
+
+	// close
+	err = ts.Exit()
+	assert.Nil(t, err)
+
+	ts.Shutdown()
+}

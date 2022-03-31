@@ -7,11 +7,15 @@ import (
 
 type Path []string
 
+var slash *regexp.Regexp
+
 func Split(p string) Path {
 	if p == "" {
 		return Path{}
 	}
-	slash := regexp.MustCompile(`//+`)
+	if slash == nil {
+		slash = regexp.MustCompile(`//+`)
+	}
 	p = strings.TrimRight(p, "/")
 	p = slash.ReplaceAllString(p, "/")
 	path := strings.Split(p, "/")

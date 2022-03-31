@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -106,12 +107,17 @@ func (sess *Session) IsClosed() bool {
 }
 
 // Change conn if the new conn is non-nil. This may occur if, for
-// example, a client starts talking to a new replica.
-func (sess *Session) SetConn(conn *np.Conn) {
+// example, a client starts talking to a new replica or a client
+// reconnects quickly.
+func (sess *Session) SetConn(conn *np.Conn) *np.Err {
 	sess.Lock()
 	defer sess.Unlock()
+	if sess.closed {
+		return np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", sess.Sid))
+	}
 	db.DPrintf("SESSION", "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn
+	return nil
 }
 
 func (sess *Session) heartbeat(msg np.Tmsg) {

@@ -112,13 +112,10 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 
-			elements := make([]interface{}, len(v))
-			for i := range v {
-				elements[i] = &v[i]
-			}
-
-			if err := e.encode(elements...); err != nil {
-				return err
+			for _, m := range v {
+				if err := e.encode(m); err != nil {
+					return err
+				}
 			}
 		case *[]np.Tqid:
 			if err := e.encode(*v); err != nil {
@@ -152,13 +149,15 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case []np.Stat:
-			elements := make([]interface{}, len(v))
-			for i := range v {
-				elements[i] = &v[i]
+			if err := e.encode(uint16(len(v))); err != nil {
+				return err
 			}
 
-			if err := e.encode(elements...); err != nil {
-				return err
+			// XXX
+			for _, m := range v {
+				if err := e.encode(m); err != nil {
+					return err
+				}
 			}
 		case *[]np.Stat:
 			if err := e.encode(*v); err != nil {

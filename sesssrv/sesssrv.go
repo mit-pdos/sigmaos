@@ -198,6 +198,7 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) 
 
 // New session or new connection for existing session
 func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) {
+	db.DPrintf("SESSSRV", "Register sid %v %v", sid, conn)
 	sess := ssrv.st.Alloc(sid)
 	sess.SetConn(conn)
 }
@@ -298,7 +299,7 @@ func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
 func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
 	reply, close, rerror := sess.Dispatch(fc.Msg)
-	db.DPrintf("SESSSRV", "Done dispatch request %v %v", fc, close)
+	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
 
 	// We decrement the number of waiting threads if this request was made to
 	// this server (it didn't come through raft), which will only be the case
@@ -313,8 +314,8 @@ func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
 
 	ssrv.sendReply(fc, reply, sess)
 
-	// Dispatch() signals to close the session.
 	if close {
+		// Dispatch() signaled to close the session.
 		sess.Close()
 	}
 }

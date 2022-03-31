@@ -72,8 +72,9 @@ func (sess *Session) CloseConn() {
 	sess.conn.Conn.Close()
 }
 
-// Maybe called several times because client may reconnect on a
-// session that server has terminated.
+// Server may call Close() several times because client may reconnect
+// on a session that server has terminated and the Close() will close
+// the new reply channel.  // XXX close connection?
 func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()

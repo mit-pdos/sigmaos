@@ -5,13 +5,8 @@ import (
 	"path"
 
 	db "ulambda/debug"
-	np "ulambda/ninep"
 	"ulambda/proc"
 )
-
-func (pd *Procd) readRunq(procdPath string, queueName string) ([]*np.Stat, error) {
-	return pd.GetDir(path.Join(procdPath, queueName))
-}
 
 func (pd *Procd) readRunqProc(procdPath string, queueName string, pid string) (*proc.Proc, error) {
 	b, err := pd.GetFile(path.Join(procdPath, queueName, pid))

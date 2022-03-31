@@ -137,29 +137,30 @@ func (pd *Procd) getRunnableProc(procdPath string, queueName string) (*proc.Proc
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	fs, err := pd.readRunq(procdPath, queueName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Read through procs
-	for _, f := range fs {
-		p, err := pd.readRunqProc(procdPath, queueName, f.Name)
+	var runnableProc *proc.Proc
+	_, err := pd.ProcessDir(path.Join(procdPath, queueName), func(st *np.Stat) (bool, error) {
+		p, err := pd.readRunqProc(procdPath, queueName, st.Name)
 		// Proc may have been stolen
 		if err != nil {
 			db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
-			continue
+			return false, nil
 		}
 		if pd.satisfiesConstraintsL(p) {
 			// Proc may have been stolen
 			if ok := pd.claimProc(procdPath, queueName, p); !ok {
-				continue
+				return false, nil
 			}
 			pd.decrementResourcesL(p)
-			return p, nil
+			runnableProc = p
+			return true, nil
 		}
+		return false, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, nil
+
+	return runnableProc, nil
 }
 
 func (pd *Procd) getProc() (*proc.Proc, error) {

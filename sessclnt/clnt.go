@@ -218,7 +218,11 @@ func (c *clnt) heartbeats() {
 		if c.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
 			db.DPrintf("SESSCLNT", "%v Sending heartbeat to %v", c.sid, c.addrs)
-			c.rpc(np.Theartbeat{[]np.Tsession{c.sid}}, np.NoFence)
+			_, err := c.rpc(np.Theartbeat{[]np.Tsession{c.sid}}, np.NoFence)
+			if err != nil {
+				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
+			}
+
 		}
 	}
 }

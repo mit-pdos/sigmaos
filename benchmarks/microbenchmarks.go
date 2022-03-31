@@ -3,12 +3,9 @@ package benchmarks
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
 	"path"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	db "ulambda/debug"
@@ -52,30 +49,24 @@ func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *M
 
 func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r := make(map[string]*RawResults)
-	//	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
-	//	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	//	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
-	//		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
-	//	}
-	//	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
-	//	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	//	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
-	//	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
-	//	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
-	//	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
+	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
+	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
+		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
+	}
+	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
+	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
+	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
 	pidOffset := 0
-	r["proc_base_spawn_wait_exit"] = m.ProcSpawnWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	r["proc_spawn_wait_exit"] = m.ProcSpawnWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
-	r["proc_base_spawn_client"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	r["proc_spawn"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
-	//	r["proc_base_exited"] = m.ProcExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	//	pidOffset += DEFAULT_N_TRIALS
-	//	r["proc_base_wait_exit"] = m.ProcWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	//	pidOffset += DEFAULT_N_TRIALS
-	//	r["proc_base_linux"] = m.ProcLinuxBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	//	pidOffset += DEFAULT_N_TRIALS
-	//	r["proc_base_pprof"] = m.ProcPprofBenchmark(DEFAULT_N_TRIALS*2, pidOffset)
-	//	pidOffset += DEFAULT_N_TRIALS * 2
+	r["proc_spawn_wait_exit_pprof"] = m.ProcPprofBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	pidOffset += DEFAULT_N_TRIALS * 2
 	return r
 }
 
@@ -321,44 +312,6 @@ func (m *Microbenchmarks) ProcSpawnWaitExitBenchmark(nTrials int, pidOffset int)
 	return rs
 }
 
-func (m *Microbenchmarks) ProcLinuxBenchmark(nTrials int, pidOffset int) *RawResults {
-	log.Printf("Running ProcLinuxBenchmark...")
-
-	rs := MakeRawResults(nTrials)
-
-	cmds := []*exec.Cmd{}
-	for i := 0; i < nTrials; i++ {
-		pid := strconv.Itoa(i + pidOffset)
-		args := []string{pid, fmt.Sprintf("%dms", SLEEP_MSECS), "name/out_" + pid, "native"}
-		env := []string{"NAMED=" + strings.Join(m.namedAddr, ",")}
-		cmd := exec.Command("./bin/user/sleeper", args...)
-		cmd.Env = env
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmds = append(cmds, cmd)
-	}
-
-	for i := 0; i < nTrials; i++ {
-		nRPC := m.ReadSeqNo()
-		start := time.Now()
-		if err := cmds[i].Start(); err != nil {
-			db.DFatalf("Error command start: %v", err)
-		}
-		if err := cmds[i].Wait(); err != nil {
-			db.DFatalf("Error command start: %v", err)
-		}
-		end := time.Now()
-		nRPC = m.ReadSeqNo() - nRPC
-		elapsed := float64(end.Sub(start).Microseconds())
-		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
-	}
-
-	log.Printf("ProcLinuxBenchmark Done")
-
-	return rs
-}
-
 func (m *Microbenchmarks) ProcSpawnClientBenchmark(nTrials int, pidOffset int) *RawResults {
 	log.Printf("Running ProcSpawnClientBenchmark...")
 
@@ -394,78 +347,10 @@ func (m *Microbenchmarks) ProcSpawnClientBenchmark(nTrials int, pidOffset int) *
 	return rs
 }
 
-func (m *Microbenchmarks) ProcExitedBenchmark(nTrials int, pidOffset int) *RawResults {
-	log.Printf("Running ProcExitedBenchmark...")
-
-	rs := MakeRawResults(nTrials)
-
-	ps := []*proc.Proc{}
-	for i := 0; i < nTrials; i++ {
-		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
-		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
-		ps = append(ps, p)
-	}
-
-	for i := 0; i < nTrials; i++ {
-		if err := m.Spawn(ps[i]); err != nil {
-			db.DFatalf("Error spawning: %v", err)
-		}
-		nRPC := m.ReadSeqNo()
-		start := time.Now()
-		//		m.Exited(ps[i].Pid, proc.MakeStatus(proc.StatusOK))
-		end := time.Now()
-		nRPC = m.ReadSeqNo() - nRPC
-		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			db.DFatalf("Error WaitExit: %v %v", status, err)
-		}
-		elapsed := float64(end.Sub(start).Microseconds())
-		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
-	}
-
-	log.Printf("ProcExitedBenchmark Done")
-
-	return rs
-}
-
-func (m *Microbenchmarks) ProcWaitExitBenchmark(nTrials int, pidOffset int) *RawResults {
-	log.Printf("Running ProcWaitExitBenchmark...")
-
-	rs := MakeRawResults(nTrials)
-
-	ps := []*proc.Proc{}
-	for i := 0; i < nTrials; i++ {
-		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
-		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
-		ps = append(ps, p)
-	}
-
-	for i := 0; i < nTrials; i++ {
-		if err := m.Spawn(ps[i]); err != nil {
-			db.DFatalf("Error spawning: %v", err)
-		}
-		//		m.Exited(ps[i].Pid, proc.MakeStatus(proc.StatusOK))
-		nRPC := m.ReadSeqNo()
-		start := time.Now()
-		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
-			db.DFatalf("Error WaitExit: %v %v", status, err)
-		}
-		end := time.Now()
-		nRPC = m.ReadSeqNo() - nRPC
-		elapsed := float64(end.Sub(start).Microseconds())
-		throughput := float64(1.0) / elapsed
-		rs.Data[i].set(throughput, elapsed, nRPC)
-	}
-
-	log.Printf("ProcWaitExitBenchmark Done")
-
-	return rs
-}
-
 func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawResults {
 	log.Printf("Running ProcPprofBenchmark...")
+
+	rs := MakeRawResults(nTrials)
 
 	// Start pprof to break down costs
 	runtime.SetCPUProfileRate(250)
@@ -474,13 +359,11 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 	p.SetupPprof(pprofPath)
 	defer p.Teardown()
 
-	rs := MakeRawResults(nTrials)
-
 	ps := []*proc.Proc{}
 	for i := 0; i < nTrials; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		// Note sleep is much shorter, and since we're running "native" the lambda won't actually call Started or Exited for us.
-		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String(), "native"})
+		p := proc.MakeProcPid(pid, "bin/user/sleeper", []string{fmt.Sprintf("%dus", SLEEP_MSECS), "name/out_" + pid.String()})
 		ps = append(ps, p)
 	}
 
@@ -490,7 +373,6 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 		if err := m.Spawn(ps[i]); err != nil {
 			db.DFatalf("Error spawning: %v", err)
 		}
-		//		m.Exited(ps[i].Pid, proc.MakeStatus(proc.StatusOK))
 		if status, err := m.WaitExit(ps[i].Pid); !status.IsStatusOK() || err != nil {
 			db.DFatalf("Error WaitExit: %v %v", status, err)
 		}

@@ -187,7 +187,7 @@ func (c *clnt) getNc() *netclnt.NetClnt {
 
 // Caller holds lock
 func (c *clnt) close() {
-	db.DPrintf("SESSCLNT", "%v Close c to %v\n", c.sid, c.addrs)
+	db.DPrintf("SESSCLNT", "%v Close session to %v\n", c.sid, c.addrs)
 	c.nc.Close()
 	if c.closed {
 		return

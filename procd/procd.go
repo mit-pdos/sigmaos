@@ -134,11 +134,10 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 
 // Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
 func (pd *Procd) getRunnableProc(procdPath string, queueName string) (*proc.Proc, error) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
 	var runnableProc *proc.Proc
 	_, err := pd.ProcessDir(path.Join(procdPath, queueName), func(st *np.Stat) (bool, error) {
+		pd.mu.Lock()
+		defer pd.mu.Unlock()
 		p, err := pd.readRunqProc(procdPath, queueName, st.Name)
 		// Proc may have been stolen
 		if err != nil {

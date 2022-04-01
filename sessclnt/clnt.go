@@ -138,7 +138,7 @@ func (c *clnt) completeRpc(reply *np.Fcall, err *np.Err) {
 	rpc, ok := c.outstanding[reply.Seqno]
 	delete(c.outstanding, reply.Seqno)
 	c.Unlock()
-	// the outstanding request map may have been cleared if the conn is closing,
+	// the outstanding request may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
 	if ok && !rpc.Done {
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
@@ -177,6 +177,12 @@ func (c *clnt) sessClose() {
 	c.Lock()
 	defer c.Unlock()
 	c.close()
+}
+
+func (c *clnt) getNc() *netclnt.NetClnt {
+	c.Lock()
+	defer c.Unlock()
+	return c.nc
 }
 
 // Caller holds lock
@@ -218,33 +224,38 @@ func (c *clnt) heartbeats() {
 		if c.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
 			db.DPrintf("SESSCLNT", "%v Sending heartbeat to %v", c.sid, c.addrs)
-			_, err := c.rpc(np.Theartbeat{[]np.Tsession{c.sid}}, np.NoFence)
+			rep, err := c.rpc(np.Theartbeat{[]np.Tsession{c.sid}}, np.NoFence)
 			if err != nil {
 				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
+				continue
 			}
-
+			rmsg, ok := rep.(np.Rerror)
+			if ok {
+				err := np.String2Err(rmsg.Ename)
+				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v reply %v", c.sid, c.addrs, err)
+				if np.IsErrClosed(err) {
+					c.sessClose()
+					return
+				}
+			}
 		}
 	}
 }
 
 func (c *clnt) reader() {
 	for !c.isClosed() {
-		// Get the current netclnt connection (which may change if the server
-		// becomes unavailable and the writer thread connects to a new replica).
-		c.Lock()
-		nc := c.nc
-		c.Unlock()
+		// Get the current netclnt connection (which may
+		// change if the server becomes unavailable)
+		nc := c.getNc()
 
 		// Receive the next reply.
 		reply, err := nc.Recv()
 		if err != nil {
-			db.DPrintf("SESSCLNT", "%v error %v reader RPC to %v", c.sid, err, c.addrs)
-			// Try to connect to the next replica
+			db.DPrintf("SESSCLNT_ERR", "%v error %v reader RPC to %v", c.sid, err, c.addrs)
 			err := c.tryReconnect(nc)
 			if err != nil {
-				// If we can't reconnect to any of the replicas, close the session.
-				// XXX fail out standing RPCs
-				db.DPrintf("SESSCLNT", "Reader: sessClose %v %v", c.sid, len(c.outstanding))
+				// If we can't reconnect, close the session.
+				db.DPrintf("SESSCLNT_ERR", "Reader: sessClose %v %v", c.sid, len(c.outstanding))
 				c.sessClose()
 				return
 			}
@@ -271,11 +282,10 @@ func (c *clnt) writer() {
 		req, c.queue = c.queue[0], c.queue[1:]
 		err := c.nc.Send(req)
 		if err != nil {
-			db.DPrintf("SESSCLNT", "%v Error %v writer RPC to %v\n", c.sid, err, c.nc.Dst())
+			db.DPrintf("SESSCLNT_ERR", "%v Error %v writer RPC to %v\n", c.sid, err, c.nc.Dst())
 			err := c.tryReconnectL()
 			if err != nil {
-				// XXX fail out standing req
-				db.DPrintf("SESSCLNT", "Writer: c close() %v", c.sid)
+				db.DPrintf("SESSCLNT_ERR", "Writer: c close() %v", c.sid)
 				c.close()
 				return
 			}

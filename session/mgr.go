@@ -54,7 +54,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.timedOut() && !s.IsClosed() {
-			db.DPrintf("SESSION_ERR", "Sess %v timed out; close it", sid)
+			db.DPrintf("SESSION_ERR", "Sess %v timed out", sid)
 			sess = append(sess, s)
 		}
 	}

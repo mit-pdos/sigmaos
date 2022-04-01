@@ -77,7 +77,8 @@ func (c *SrvConn) reader() {
 			conn := &np.Conn{c, c.replies}
 			if err := c.protsrv.Register(fcall.Session, conn); err != nil {
 				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
-				c.replies <- fcall
+				fc := np.MakeFcallReply(fcall, err.Rerror())
+				c.replies <- fc
 				close(conn.Replies)
 				return
 			}

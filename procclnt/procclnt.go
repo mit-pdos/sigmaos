@@ -252,6 +252,7 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 		db.DPrintf("PROCCLNT_ERR", "exited %v err %v\n", proc.GetPid(), err)
 		os.Exit(1)
 	}
+	clnt.FsLib.Exit()
 }
 
 func (clnt *ProcClnt) ExitedProcd(pid proc.Tpid, procdir string, parentdir string, status *proc.Status) {

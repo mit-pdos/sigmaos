@@ -13,12 +13,12 @@ type Mgr struct {
 	mu       sync.Mutex
 	sid      np.Tsession
 	seqno    *np.Tseqno
-	sessions map[string]*clnt // XXX Is a Mgr ever used to talk to multiple servers?
+	sessions map[string]*sessClnt
 }
 
 func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
 	sc := &Mgr{}
-	sc.sessions = make(map[string]*clnt)
+	sc.sessions = make(map[string]*sessClnt)
 	sc.sid = session
 	sc.seqno = seqno
 	return sc
@@ -38,7 +38,7 @@ func (sc *Mgr) Exit() {
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocConn(addrs []string) (*clnt, *np.Err) {
+func (sc *Mgr) allocSessClnt(addrs []string) (*sessClnt, *np.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
@@ -46,7 +46,7 @@ func (sc *Mgr) allocConn(addrs []string) (*clnt, *np.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := makeConn(sc.sid, sc.seqno, addrs)
+	sess, err := makeSessClnt(sc.sid, sc.seqno, addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (sc *Mgr) allocConn(addrs []string) (*clnt, *np.Err) {
 func (sc *Mgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	db.DPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
 	// Get or establish sessection
-	sess, err := sc.allocConn(addrs)
+	sess, err := sc.allocSessClnt(addrs)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
 		return nil, err

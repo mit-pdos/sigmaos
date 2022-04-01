@@ -1,6 +1,7 @@
 package sessclnt_test
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -71,25 +72,30 @@ func TestReconnectSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAutoSessClose(t *testing.T) {
+func TestServerPartition(t *testing.T) {
+	const N = 5
+
 	ts := test.MakeTstateAll(t)
 	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
 
-	sem := semclnt.MakeSemClnt(ts.FsLib, DIRGRP0+"sem")
-	sem.Init(0)
+	for i := 0; i < N; i++ {
+		log.Printf("=== i %v\n", i)
+		ch := make(chan error)
+		go func() {
+			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
+			sem.Init(0)
+			err := sem.Down()
+			log.Printf("DOWN ERR %v\n", err)
+			ch <- err
 
-	ch := make(chan error)
-	go func() {
-		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
-		sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
-		err := sem.Down()
-		ch <- err
-	}()
+		}()
 
-	err := <-ch
-	assert.NotNil(ts.T, err, "down")
-
+		err := <-ch
+		assert.NotNil(ts.T, err, "down")
+	}
+	log.Printf("stop kvd\n")
 	grp.Stop()
-
+	log.Printf("shutdown\n")
 	ts.Shutdown()
 }

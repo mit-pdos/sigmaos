@@ -13,7 +13,7 @@ import (
 
 // A session from a client to a logical server (either one server or a
 // replica group)
-type clnt struct {
+type sessClnt struct {
 	sync.Mutex
 	*sync.Cond
 	sid         np.Tsession
@@ -26,8 +26,8 @@ type clnt struct {
 	lastMsgTime time.Time
 }
 
-func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*clnt, *np.Err) {
-	c := &clnt{}
+func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*sessClnt, *np.Err) {
+	c := &sessClnt{}
 	c.sid = sid
 	c.seqno = seqno
 	c.addrs = addrs
@@ -45,7 +45,7 @@ func makeConn(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*clnt, *np.Err
 	return c, nil
 }
 
-func (c *clnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
+func (c *sessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	rpc, err := c.send(req, f)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
@@ -59,7 +59,7 @@ func (c *clnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	return rep, err1
 }
 
-func (c *clnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
+func (c *sessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	c.Lock()
 	defer c.Unlock()
 	if c.closed {
@@ -74,7 +74,7 @@ func (c *clnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	return rpc, nil
 }
 
-func (c *clnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
+func (c *sessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 	// Wait for a reply
 	reply, ok := <-rpc.ReplyC
 	if !ok {
@@ -86,7 +86,7 @@ func (c *clnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 	return reply.Fc.Msg, reply.Err
 }
 
-func (c *clnt) connect() *np.Err {
+func (c *sessClnt) connect() *np.Err {
 	db.DPrintf("SESSCLNT", "%v Connect to %v\n", c.sid, c.addrs)
 	for _, addr := range c.addrs {
 		nc, err := netclnt.MakeNetClnt(addr)
@@ -106,7 +106,7 @@ func (c *clnt) connect() *np.Err {
 
 // If the connection broke, establish a new netclnt connection. If successful,
 // resend outstanding requests.
-func (c *clnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
+func (c *sessClnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 	c.Lock()
 	defer c.Unlock()
 	if c.closed {
@@ -120,7 +120,7 @@ func (c *clnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 }
 
 // Reconnect & resend requests
-func (c *clnt) tryReconnectL() *np.Err {
+func (c *sessClnt) tryReconnectL() *np.Err {
 	db.DPrintf("SESSCLNT", "%v SessionConn reconnecting to %v\n", c.sid, c.addrs)
 	err := c.connect()
 	if err != nil {
@@ -133,7 +133,7 @@ func (c *clnt) tryReconnectL() *np.Err {
 }
 
 // Complete an RPC and send a response.
-func (c *clnt) completeRpc(reply *np.Fcall, err *np.Err) {
+func (c *sessClnt) completeRpc(reply *np.Fcall, err *np.Err) {
 	c.Lock()
 	rpc, ok := c.outstanding[reply.Seqno]
 	delete(c.outstanding, reply.Seqno)
@@ -148,7 +148,7 @@ func (c *clnt) completeRpc(reply *np.Fcall, err *np.Err) {
 }
 
 // Caller holds lock.
-func (c *clnt) resendOutstanding() {
+func (c *sessClnt) resendOutstanding() {
 	db.DPrintf("SESSCLNT", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
 	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
 	idx := 0
@@ -167,26 +167,26 @@ func (c *clnt) resendOutstanding() {
 	c.Signal()
 }
 
-func (c *clnt) isClosed() bool {
+func (c *sessClnt) isClosed() bool {
 	c.Lock()
 	defer c.Unlock()
 	return c.closed
 }
 
-func (c *clnt) sessClose() {
+func (c *sessClnt) sessClose() {
 	c.Lock()
 	defer c.Unlock()
 	c.close()
 }
 
-func (c *clnt) getNc() *netclnt.NetClnt {
+func (c *sessClnt) getNc() *netclnt.NetClnt {
 	c.Lock()
 	defer c.Unlock()
 	return c.nc
 }
 
 // Caller holds lock
-func (c *clnt) close() {
+func (c *sessClnt) close() {
 	db.DPrintf("SESSCLNT", "%v Close session to %v\n", c.sid, c.addrs)
 	c.nc.Close()
 	if c.closed {
@@ -211,13 +211,13 @@ func (c *clnt) close() {
 	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 }
 
-func (c *clnt) needsHeartbeat() bool {
+func (c *sessClnt) needsHeartbeat() bool {
 	c.Lock()
 	defer c.Unlock()
 	return time.Now().Sub(c.lastMsgTime) >= np.SESSHEARTBEATMS
 }
 
-func (c *clnt) heartbeats() {
+func (c *sessClnt) heartbeats() {
 	for !c.isClosed() {
 		// Sleep a bit.
 		time.Sleep(np.SESSHEARTBEATMS * time.Millisecond)
@@ -242,7 +242,7 @@ func (c *clnt) heartbeats() {
 	}
 }
 
-func (c *clnt) reader() {
+func (c *sessClnt) reader() {
 	for !c.isClosed() {
 		// Get the current netclnt connection (which may
 		// change if the server becomes unavailable)
@@ -266,7 +266,7 @@ func (c *clnt) reader() {
 	}
 }
 
-func (c *clnt) writer() {
+func (c *sessClnt) writer() {
 	c.Lock()
 	defer c.Unlock()
 	for {

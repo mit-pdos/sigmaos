@@ -69,7 +69,7 @@ func (sm *SessionMgr) run() {
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
 			detach := np.MakeFcall(np.Tdetach{}, s.Sid, nil, np.NoFence)
-			sm.srvfcall(detach, s.conn)
+			sm.srvfcall(detach)
 		}
 	}
 }

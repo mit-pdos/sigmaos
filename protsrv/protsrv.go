@@ -69,7 +69,7 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 }
 
 // Delete ephemeral files created on this session.
-func (ps *ProtSrv) Detach() {
+func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
 	db.DPrintf("FSOBJ", "Detach %v eph %v\n", ps.sid, ps.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
@@ -82,6 +82,7 @@ func (ps *ProtSrv) Detach() {
 		db.DPrintf("FSOBJ", "Detach %v\n", f.Path())
 		ps.removeObj(f.Ctx(), o, f.Path())
 	}
+	return nil
 }
 
 func makeQids(os []fs.FsObj) []np.Tqid {

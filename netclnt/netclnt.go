@@ -97,12 +97,13 @@ func (nc *NetClnt) connect() *np.Err {
 }
 
 func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
-	db.DPrintf("RPC", "req %v to %v\n", rpc, nc.Dst())
 	// Tag is unused for now.
 	rpc.Req.Tag = 0
 
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
+
+	db.DPrintf("NETCLNT", "Send %v to %v\n", rpc.Req, nc.Dst())
 
 	// If the connection has already been closed, return an error.
 	nc.mu.Lock()
@@ -148,5 +149,6 @@ func (nc *NetClnt) Recv() (*np.Fcall, *np.Err) {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
 		db.DPrintf("NETCLNT_ERR", "Recv: Unmarshal error %v\n", err)
 	}
+	db.DPrintf("NETCLNT", "Recv %v from %v\n", fcall, nc.Dst())
 	return fcall, nil
 }

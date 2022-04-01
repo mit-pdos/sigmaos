@@ -457,6 +457,13 @@ func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence) *Fcall {
 	}
 }
 
+func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
+	fcall := MakeFcall(reply, req.Session, nil, NoFence)
+	fcall.Seqno = req.Seqno
+	fcall.Tag = req.Tag
+	return fcall
+}
+
 func (fc *Fcall) String() string {
 	return fmt.Sprintf("%v t %v s %v seq %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg, fc.Fence)
 }

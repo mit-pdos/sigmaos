@@ -228,6 +228,10 @@ func IsErrRetry(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }
 
+func IsErrClosed(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrClosed.String())
+}
+
 func IsErrNotDir(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrNotDir.String())
 }

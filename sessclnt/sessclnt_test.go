@@ -73,7 +73,7 @@ func TestReconnectSimple(t *testing.T) {
 }
 
 func TestServerPartition(t *testing.T) {
-	const N = 5
+	const N = 50
 
 	ts := test.MakeTstateAll(t)
 	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
@@ -88,6 +88,7 @@ func TestServerPartition(t *testing.T) {
 			err := sem.Down()
 			log.Printf("DOWN ERR %v\n", err)
 			ch <- err
+			fsl.Exit()
 
 		}()
 

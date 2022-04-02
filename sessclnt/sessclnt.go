@@ -256,11 +256,10 @@ func (c *SessClnt) reader() {
 		// Receive the next reply.
 		reply, err := nc.Recv()
 		if err != nil {
-			db.DPrintf("SESSCLNT_ERR", "%v error %v reader RPC to %v", c.sid, err, c.addrs)
+			db.DPrintf("SESSCLNT", "%v error %v reader RPC to %v", c.sid, err, c.addrs)
 			err := c.tryReconnect(nc)
 			if err != nil {
 				// If we can't reconnect, close the session.
-				db.DPrintf("SESSCLNT_ERR", "Reader: sessClose %v %v", c.sid, len(c.outstanding))
 				c.SessClose()
 				return
 			}

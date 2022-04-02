@@ -81,7 +81,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
+func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *session.SessionTable, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *session.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)
@@ -100,7 +100,7 @@ func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the session table.
-	st := session.RestoreTable(mkps, rps, fssrv, tmt, s.St)
+	st := session.RestoreTable(oldSt, mkps, rps, fssrv, tmt, s.St)
 	// Restore the reply cache.
 	rc := repl.Restore(s.Rc)
 	// Merge with the current replyCache, because some ops may have arrived &

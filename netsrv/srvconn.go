@@ -94,7 +94,7 @@ func (c *SrvConn) writer() {
 	for {
 		fcall, ok := <-c.replies
 		if !ok {
-			db.DPrintf("NETSRV0", "%v writer: close conn from %v\n", c.sessid, c.Src())
+			db.DPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
 			c.conn.Close()
 			return
 		}

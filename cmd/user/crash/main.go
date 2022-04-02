@@ -21,6 +21,6 @@ func main() {
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 	os.Exit(2)
 }

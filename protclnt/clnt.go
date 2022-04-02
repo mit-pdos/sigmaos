@@ -268,7 +268,7 @@ func (pclnt *ProtClnt) Stat(fid np.Tfid) (*np.Rstat, *np.Err) {
 	args := np.Tstat{fid}
 	reply, err := pclnt.CallNoFence(args)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	msg, ok := reply.(np.Rstat)
 	if !ok {

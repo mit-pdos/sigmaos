@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -64,57 +63,28 @@ func BurstProc(n int, f func(chan error)) error {
 }
 
 func TestProcCrashMany(t *testing.T) {
-	const M = 50
-	const N = M * 200
-
 	ts := test.MakeTstateAll(t)
-	for i := 0; i < N; i += M {
-		if i%1000 == 0 {
-			log.Printf("i = %d\n", i)
-		}
-		BurstProc(M, func(ch chan error) {
-			a := proc.MakeProc("bin/user/crash", []string{})
-			err := ts.Spawn(a)
-			assert.Nil(t, err, "Spawn")
-
-			err = ts.WaitStart(a.Pid)
-			assert.Nil(t, err, "WaitStart error")
-
-			status, err := ts.WaitExit(a.Pid)
-			if err == nil && status != nil {
-				assert.True(t, status.IsStatusErr(), "Status not err")
-				assert.Equal(t, "exit status 2", status.Msg(), "WaitExit")
-			}
-			ch <- nil
-		})
-	}
+	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/crash"})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(a.Pid)
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(a.Pid)
+	assert.Nil(t, err, "waitexit")
+	assert.Equal(t, "status error exit status 2", status.Msg(), "exit")
 	ts.Shutdown()
 }
 
 func TestProcPartitionMany(t *testing.T) {
-	const M = 50
-	const N = M * 200
-
 	ts := test.MakeTstateAll(t)
-	for i := 0; i < N; i += M {
-		if i%1000 == 0 {
-			log.Printf("i = %d\n", i)
-		}
-		BurstProc(M, func(ch chan error) {
-			a := proc.MakeProc("bin/user/partition", []string{})
-			err := ts.Spawn(a)
-			assert.Nil(t, err, "Spawn")
-
-			err = ts.WaitStart(a.Pid)
-			assert.Nil(t, err, "WaitStart error")
-
-			status, err := ts.WaitExit(a.Pid)
-			if err == nil && status != nil {
-				assert.True(t, status.IsStatusOK(), "Status not err")
-			}
-			ch <- nil
-		})
-	}
+	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/partition"})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(a.Pid)
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(a.Pid)
+	assert.Nil(t, err, "waitexit")
+	assert.True(t, status.IsStatusOK(), "Status OK")
 	ts.Shutdown()
 }
 

@@ -192,11 +192,11 @@ func (c *SessClnt) SessClose() {
 
 // Caller holds lock
 func (c *SessClnt) close() {
-	db.DPrintf("SESSCLNT", "%v Close session to %v\n", c.sid, c.addrs)
 	c.nc.Close()
 	if c.closed {
 		return
 	}
+	db.DPrintf("SESSCLNT", "%v Close session to %v\n", c.sid, c.addrs)
 	c.closed = true
 	// Kill pending requests.
 	for _, o := range c.queue {
@@ -219,7 +219,7 @@ func (c *SessClnt) close() {
 func (c *SessClnt) needsHeartbeat() bool {
 	c.Lock()
 	defer c.Unlock()
-	return time.Now().Sub(c.lastMsgTime) >= np.SESSHEARTBEATMS
+	return !c.closed && time.Now().Sub(c.lastMsgTime) >= np.SESSHEARTBEATMS
 }
 
 func (c *SessClnt) heartbeats() {

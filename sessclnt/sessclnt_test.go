@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -18,7 +17,7 @@ const (
 	GRP0      = "GRP0"
 	DIRGRP0   = group.GRPDIR + GRP0 + "/"
 	CRASH     = 1000
-	PARTITION = 1000
+	PARTITION = 200
 	NETFAIL   = 200
 )
 
@@ -72,21 +71,46 @@ func TestReconnectSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestServerPartition(t *testing.T) {
+func TestServerPartitionNonBlocking(t *testing.T) {
 	const N = 50
 
 	ts := test.MakeTstateAll(t)
 	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
-		log.Printf("=== i %v\n", i)
+		ch := make(chan error)
+		go func() {
+			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+			for true {
+				_, err := fsl.Stat(DIRGRP0)
+				if err != nil {
+					ch <- err
+					break
+				}
+			}
+			fsl.Exit()
+		}()
+
+		err := <-ch
+		assert.NotNil(ts.T, err, "stat")
+	}
+	grp.Stop()
+	ts.Shutdown()
+}
+
+func TestServerPartitionBlocking(t *testing.T) {
+	const N = 50
+
+	ts := test.MakeTstateAll(t)
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
+
+	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func() {
 			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
 			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
 			sem.Init(0)
 			err := sem.Down()
-			log.Printf("DOWN ERR %v\n", err)
 			ch <- err
 			fsl.Exit()
 
@@ -95,8 +119,6 @@ func TestServerPartition(t *testing.T) {
 		err := <-ch
 		assert.NotNil(ts.T, err, "down")
 	}
-	log.Printf("stop kvd\n")
 	grp.Stop()
-	log.Printf("shutdown\n")
 	ts.Shutdown()
 }

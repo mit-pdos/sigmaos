@@ -128,7 +128,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.stats.Done()
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
-	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt, ssrv.rc = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.rc, b)
+	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt, ssrv.rc = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, ssrv.rc, b)
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
 	ssrv.sm.Stop()

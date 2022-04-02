@@ -1,7 +1,6 @@
 package crash
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -68,7 +67,6 @@ func Partitioner(ss *sesssrv.SessSrv) {
 
 func NetFailer(ss *sesssrv.SessSrv) {
 	crash := GetEnv(proc.SIGMANETFAIL)
-	log.Printf("NetFailer %v\n", crash)
 	if crash == 0 {
 		return
 	}

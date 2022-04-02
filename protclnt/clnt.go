@@ -24,12 +24,8 @@ func (clnt *Clnt) ReadSeqNo() np.Tseqno {
 	return clnt.seqno
 }
 
-func (clnt *Clnt) Exit() {
-	clnt.cm.Exit()
-}
-
-func (clnt *Clnt) CallServer(server []string, args np.Tmsg, fence np.Tfence) (np.Tmsg, *np.Err) {
-	reply, err := clnt.cm.RPC(server, args, fence)
+func (clnt *Clnt) CallServer(addrs []string, args np.Tmsg, fence np.Tfence) (np.Tmsg, *np.Err) {
+	reply, err := clnt.cm.RPC(addrs, args, fence)
 	if err != nil {
 		return nil, err
 	}
@@ -40,9 +36,9 @@ func (clnt *Clnt) CallServer(server []string, args np.Tmsg, fence np.Tfence) (np
 	return reply, nil
 }
 
-func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path np.Path) (*np.Rattach, *np.Err) {
+func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path np.Path) (*np.Rattach, *np.Err) {
 	args := np.Tattach{fid, np.NoFid, uname, path.String()}
-	reply, err := clnt.CallServer(server, args, np.NoFence)
+	reply, err := clnt.CallServer(addrs, args, np.NoFence)
 	if err != nil {
 		return nil, err
 	}
@@ -53,30 +49,50 @@ func (clnt *Clnt) Attach(server []string, uname string, fid np.Tfid, path np.Pat
 	return &msg, nil
 }
 
-func (clnt *Clnt) MakeProtClnt(server []string) *ProtClnt {
-	protclnt := &ProtClnt{server, clnt}
+func (clnt *Clnt) Detach(addrs []string) *np.Err {
+	args := np.Tdetach{0, 0}
+	_, err := clnt.CallServer(addrs, args, np.NoFence)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (clnt *Clnt) Exit() *np.Err {
+	scs := clnt.cm.SessClnts()
+	for _, sc := range scs {
+		if err := clnt.Detach(sc.Addr()); err != nil {
+			return err
+		}
+		sc.SessClose()
+	}
+	return nil
+}
+
+func (clnt *Clnt) MakeProtClnt(addrs []string) *ProtClnt {
+	protclnt := &ProtClnt{addrs, clnt}
 	return protclnt
 }
 
 type ProtClnt struct {
-	server []string
-	clnt   *Clnt
+	addrs []string
+	clnt  *Clnt
 }
 
-func (pclnt *ProtClnt) Server() []string {
-	return pclnt.server
+func (pclnt *ProtClnt) Servers() []string {
+	return pclnt.addrs
 }
 
 func (pclnt *ProtClnt) Disconnect() *np.Err {
-	return pclnt.clnt.cm.Disconnect(pclnt.server)
+	return pclnt.clnt.cm.Disconnect(pclnt.addrs)
 }
 
 func (pclnt *ProtClnt) Call(args np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
-	return pclnt.clnt.CallServer(pclnt.server, args, f)
+	return pclnt.clnt.CallServer(pclnt.addrs, args, f)
 }
 
 func (pclnt *ProtClnt) CallNoFence(args np.Tmsg) (np.Tmsg, *np.Err) {
-	return pclnt.clnt.CallServer(pclnt.server, args, np.NoFence)
+	return pclnt.clnt.CallServer(pclnt.addrs, args, np.NoFence)
 }
 
 func (pclnt *ProtClnt) Flush(tag np.Ttag) *np.Err {
@@ -337,13 +353,4 @@ func (pclnt *ProtClnt) PutFile(fid np.Tfid, path np.Path, mode np.Tmode, perm np
 		return nil, np.MkErr(np.TErrBadFcall, "Rwrite")
 	}
 	return &msg, nil
-}
-
-func (pclnt *ProtClnt) Detach() *np.Err {
-	args := np.Tdetach{0, 0}
-	_, err := pclnt.CallNoFence(args)
-	if err != nil {
-		return err
-	}
-	return nil
 }

@@ -14,17 +14,17 @@ type FsLib struct {
 	*fdclnt.FdClient
 }
 
-func NamedAddr() string {
-	named := os.Getenv("NAMED")
-	if named == "" {
+func NamedAddrs() string {
+	addrs := os.Getenv("NAMED")
+	if addrs == "" {
 		db.DFatalf("Getenv error: missing NAMED")
 	}
-	return named
+	return addrs
 }
 
 func Named() []string {
-	nameds := strings.Split(NamedAddr(), ",")
-	return nameds
+	addrs := strings.Split(NamedAddrs(), ",")
+	return addrs
 }
 
 func MakeFsLibBase(uname string) *FsLib {
@@ -32,19 +32,19 @@ func MakeFsLibBase(uname string) *FsLib {
 	return &FsLib{fdclnt.MakeFdClient(nil, uname, np.Tsize(10_000_000))}
 }
 
-func (fl *FsLib) MountTree(server []string, tree, mount string) error {
-	if fd, err := fl.Attach(fl.Uname(), server, "", tree); err == nil {
+func (fl *FsLib) MountTree(addrs []string, tree, mount string) error {
+	if fd, err := fl.Attach(fl.Uname(), addrs, "", tree); err == nil {
 		return fl.Mount(fd, mount)
 	} else {
 		return err
 	}
 }
 
-func MakeFsLibAddr(uname string, server []string) *FsLib {
+func MakeFsLibAddr(uname string, addrs []string) *FsLib {
 	fl := MakeFsLibBase(uname)
-	err := fl.MountTree(server, "", "name")
+	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
-		db.DFatalf("%v: Mount %v error: %v", proc.GetProgram(), server, err)
+		db.DFatalf("%v: Mount %v error: %v", proc.GetProgram(), addrs, err)
 	}
 	return fl
 }
@@ -54,5 +54,5 @@ func MakeFsLib(uname string) *FsLib {
 }
 
 func (fl *FsLib) Exit() error {
-	return fl.PathClnt.Close()
+	return fl.PathClnt.Exit()
 }

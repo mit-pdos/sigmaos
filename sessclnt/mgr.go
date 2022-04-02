@@ -13,32 +13,31 @@ type Mgr struct {
 	mu       sync.Mutex
 	sid      np.Tsession
 	seqno    *np.Tseqno
-	sessions map[string]*sessClnt
+	sessions map[string]*SessClnt
 }
 
 func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
 	sc := &Mgr{}
-	sc.sessions = make(map[string]*sessClnt)
+	sc.sessions = make(map[string]*SessClnt)
 	sc.sid = session
 	sc.seqno = seqno
 	return sc
 }
 
-func (sc *Mgr) Exit() {
+func (sc *Mgr) SessClnts() []*SessClnt {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	db.DPrintf("SESSCLNT", "Exit\n")
 
-	for addr, sess := range sc.sessions {
-		db.DPrintf("SESSCLNT", "exit close session to %v\n", addr)
-		sess.close()
-		delete(sc.sessions, addr)
+	ss := make([]*SessClnt, 0, len(sc.sessions))
+	for _, sess := range sc.sessions {
+		ss = append(ss, sess)
 	}
+	return ss
 }
 
 // Return an existing sess if there is one, else allocate a new one. Caller
 // holds lock.
-func (sc *Mgr) allocSessClnt(addrs []string) (*sessClnt, *np.Err) {
+func (sc *Mgr) allocSessClnt(addrs []string) (*SessClnt, *np.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	// Store as concatenation of addresses
@@ -54,12 +53,12 @@ func (sc *Mgr) allocSessClnt(addrs []string) (*sessClnt, *np.Err) {
 	return sess, nil
 }
 
-func (sc *Mgr) RPC(addrs []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
-	db.DPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addrs)
+func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
+	db.DPrintf("SESSCLNT", "%v RPC %v %v to %v\n", sc.sid, req.Type(), req, addr)
 	// Get or establish sessection
-	sess, err := sc.allocSessClnt(addrs)
+	sess, err := sc.allocSessClnt(addr)
 	if err != nil {
-		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addrs)
+		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addr)
 		return nil, err
 	}
 	return sess.rpc(req, f)
@@ -72,9 +71,9 @@ func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	sess, ok := sc.sessions[key]
 	sc.mu.Unlock()
 	if !ok {
-		return np.MkErr(np.TErrUnreachable, sessKey(addrs))
+		return np.MkErr(np.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
-	sess.sessClose()
+	sess.SessClose()
 	return nil
 }
 

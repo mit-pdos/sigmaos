@@ -71,6 +71,6 @@ func (c *Channel) Disconnect() *np.Err {
 	return c.pc.Disconnect()
 }
 
-func (c *Channel) Server() []string {
-	return c.pc.Server()
+func (c *Channel) Servers() []string {
+	return c.pc.Servers()
 }

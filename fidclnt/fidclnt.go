@@ -42,8 +42,8 @@ func (fidc *FidClnt) ReadSeqNo() np.Tseqno {
 	return fidc.pc.ReadSeqNo()
 }
 
-func (fidc *FidClnt) Exit() {
-	fidc.pc.Exit()
+func (fidc *FidClnt) Exit() *np.Err {
+	return fidc.pc.Exit()
 }
 
 func (fidc *FidClnt) allocFid() np.Tfid {
@@ -83,15 +83,15 @@ func (fidc *FidClnt) Clunk(fid np.Tfid) *np.Err {
 	return nil
 }
 
-func (fidc *FidClnt) Attach(uname string, server []string, path, tree string) (np.Tfid, *np.Err) {
+func (fidc *FidClnt) Attach(uname string, addrs []string, path, tree string) (np.Tfid, *np.Err) {
 	fid := fidc.allocFid()
-	reply, err := fidc.pc.Attach(server, uname, fid, np.Split(tree))
+	reply, err := fidc.pc.Attach(addrs, uname, fid, np.Split(tree))
 	if err != nil {
 		fidc.freeFid(fid)
 		return np.NoFid, err
 	}
-	ch := fidc.pc.MakeProtClnt(server)
-	fidc.fids.insert(fid, makeChannel(ch, uname, np.Split(path), []np.Tqid{reply.Qid}))
+	pc := fidc.pc.MakeProtClnt(addrs)
+	fidc.fids.insert(fid, makeChannel(pc, uname, np.Split(path), []np.Tqid{reply.Qid}))
 	return fid, nil
 }
 
@@ -251,16 +251,4 @@ func (fidc *FidClnt) PutFile(fid np.Tfid, path []string, mode np.Tmode, perm np.
 		return 0, err
 	}
 	return reply.Count, nil
-}
-
-func (fidc *FidClnt) Detach(fid np.Tfid) *np.Err {
-	ch := fidc.fids.lookup(fid)
-	if ch == nil {
-		return np.MkErr(np.TErrUnreachable, "detach")
-	}
-	// XXX maybe clunk fid first, but detach will free it anyway
-	if err := ch.pc.Detach(); err != nil {
-		return err
-	}
-	return nil
 }

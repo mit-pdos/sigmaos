@@ -87,13 +87,13 @@ func (pathc *PathClnt) autoMount(uname string, target string, path np.Path) (np.
 	var fid np.Tfid
 	var err *np.Err
 	if IsReplicated(target) {
-		servers, r := SplitTargetReplicated(target)
+		addrs, r := SplitTargetReplicated(target)
 		rest = r
-		fid, err = pathc.Attach(uname, servers, path.String(), "")
+		fid, err = pathc.Attach(uname, addrs, path.String(), "")
 	} else {
-		server, r := SplitTarget(target)
+		addr, r := SplitTarget(target)
 		rest = r
-		fid, err = pathc.Attach(uname, []string{server}, path.String(), "")
+		fid, err = pathc.Attach(uname, []string{addr}, path.String(), "")
 	}
 	if err != nil {
 		db.DPrintf("PATHCLNT", "Attach error: %v", err)

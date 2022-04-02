@@ -52,16 +52,9 @@ func (pathc *PathClnt) GetChunkSz() np.Tsize {
 	return pathc.chunkSz
 }
 
-// Close the path client, umounting any mounted file system and
-// closing session to them.
-func (pathc *PathClnt) Close() error {
-	pts := pathc.mnt.close()
-	for _, p := range pts {
-		if err := pathc.FidClnt.Detach(p.fid); err != nil {
-			return err
-		}
-	}
-	return nil
+// Exit the path client, closing all sessions
+func (pathc *PathClnt) Exit() error {
+	return pathc.FidClnt.Exit()
 }
 
 // Simulate network partition to server that exports path
@@ -243,7 +236,7 @@ func (pathc *PathClnt) Stat(name string) (*np.Stat, error) {
 	target, rest, _ := pathc.mnt.resolve(path)
 	if len(rest) == 0 && !np.EndSlash(name) {
 		st := &np.Stat{}
-		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Server(), ",")
+		st.Name = strings.Join(pathc.FidClnt.Lookup(target).Servers(), ",")
 		return st, nil
 	} else {
 		fid, err := pathc.walkPathUmount(np.Split(name), np.EndSlash(name), nil)

@@ -127,14 +127,14 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 		return nil, fmt.Errorf("Error semExit.Down: %v", err)
 	}
 
+	defer clnt.removeChild(pid)
+
 	childDir := path.Dir(proc.GetChildProcDir(pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
 	if err != nil {
 		db.DPrintf("PROCCLNT_ERR", "Missing return status, procd must have crashed: %v, %v\n", pid, err)
 		return nil, fmt.Errorf("Missing return status, procd must have crashed: %v", err)
 	}
-
-	clnt.removeChild(pid)
 
 	status := &proc.Status{}
 	if err := json.Unmarshal(b, status); err != nil {

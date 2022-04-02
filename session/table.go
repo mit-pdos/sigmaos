@@ -62,3 +62,12 @@ func (st *SessionTable) KillSessThread(sid np.Tsession) {
 	defer st.Unlock()
 	st.tm.RemoveThread(t)
 }
+
+func (st *SessionTable) FindASession() *Session {
+	st.Lock()
+	defer st.Unlock()
+	for _, sess := range st.sessions {
+		return sess
+	}
+	return nil
+}

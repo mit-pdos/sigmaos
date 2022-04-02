@@ -21,25 +21,16 @@ func MakeSessionMgr(st *SessionTable, pfn np.Fsrvfcall) *SessionMgr {
 	return sm
 }
 
-func (sm *SessionMgr) FindASession() *Session {
-	sm.st.Lock()
-	defer sm.st.Unlock()
-	for _, sess := range sm.st.sessions {
-		return sess
-	}
-	return nil
-}
-
 // Force one session to timeout
 func (sm *SessionMgr) TimeoutSession() {
-	sess := sm.FindASession()
+	sess := sm.st.FindASession()
 	if sess != nil {
 		sess.timeout()
 	}
 }
 
 func (sm *SessionMgr) CloseConn() {
-	sess := sm.FindASession()
+	sess := sm.st.FindASession()
 	if sess != nil {
 		sess.CloseConn()
 	}

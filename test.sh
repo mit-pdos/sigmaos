@@ -48,14 +48,14 @@ do
   go test $1 ulambda/kernel
   go test $1 ulambda/leaderclnt
   go test $1 ulambda/leadertest
-  # go test $1 ulambda/snapshot
+  go test $1 ulambda/snapshot
   
   go test $1 ulambda/group
   go test $1 ulambda/sessclnt
   
   # dbd_test and wwwd_test requires mariadb running
-  # pgrep mariadb >/dev/null && go test $1 ulambda/dbd
-  # pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
+  pgrep mariadb >/dev/null && go test $1 ulambda/dbd
+  pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
   
   
   go test $1 ulambda/mr

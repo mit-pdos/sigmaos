@@ -17,6 +17,7 @@ type SessionTable struct {
 	mkps     np.MkProtServer
 	fssrv    np.FsServer
 	sessions map[np.Tsession]*Session
+	last     *Session // for tests
 }
 
 func MakeSessionTable(mkps np.MkProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
@@ -44,6 +45,7 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	}
 	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.tm.AddThread())
 	st.sessions[sid] = sess
+	st.last = sess
 	return sess
 }
 
@@ -63,11 +65,11 @@ func (st *SessionTable) KillSessThread(sid np.Tsession) {
 	st.tm.RemoveThread(t)
 }
 
-func (st *SessionTable) FindASession() *Session {
+func (st *SessionTable) LastSession() *Session {
 	st.Lock()
 	defer st.Unlock()
-	for _, sess := range st.sessions {
-		return sess
+	if st.last != nil {
+		return st.last
 	}
 	return nil
 }

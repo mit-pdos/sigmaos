@@ -15,7 +15,7 @@ import (
 
 //
 // A session identifies a client across TCP connections.  For each
-// session, sigmaos has a np.
+// session, sigmaos has a protsrv.
 //
 // The sess lock is to serialize requests on a session.  The calls in
 // this file assume the calling wg holds the sess lock.

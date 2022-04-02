@@ -21,16 +21,17 @@ func MakeSessionMgr(st *SessionTable, pfn np.Fsrvfcall) *SessionMgr {
 	return sm
 }
 
-// Force one session to timeout
+// Force the last session to timeout
 func (sm *SessionMgr) TimeoutSession() {
-	sess := sm.st.FindASession()
+	sess := sm.st.LastSession()
 	if sess != nil {
 		sess.timeout()
 	}
 }
 
+// Close last the conn associated with last sess
 func (sm *SessionMgr) CloseConn() {
-	sess := sm.st.FindASession()
+	sess := sm.st.LastSession()
 	if sess != nil {
 		sess.CloseConn()
 	}

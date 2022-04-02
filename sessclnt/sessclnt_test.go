@@ -1,6 +1,7 @@
 package sessclnt_test
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
+	"ulambda/proc"
 	"ulambda/semclnt"
 	"ulambda/test"
 )
@@ -43,6 +45,76 @@ func TestServerCrash(t *testing.T) {
 
 	grp.Stop()
 
+	ts.Shutdown()
+}
+
+func BurstProc(n int, f func(chan error)) error {
+	ch := make(chan error)
+	for i := 0; i < n; i++ {
+		go f(ch)
+	}
+	var err error
+	for i := 0; i < n; i++ {
+		r := <-ch
+		if r != nil && err != nil {
+			err = r
+		}
+	}
+	return err
+}
+
+func TestProcCrashMany(t *testing.T) {
+	const M = 50
+	const N = M * 200
+
+	ts := test.MakeTstateAll(t)
+	for i := 0; i < N; i += M {
+		if i%1000 == 0 {
+			log.Printf("i = %d\n", i)
+		}
+		BurstProc(M, func(ch chan error) {
+			a := proc.MakeProc("bin/user/crash", []string{})
+			err := ts.Spawn(a)
+			assert.Nil(t, err, "Spawn")
+
+			err = ts.WaitStart(a.Pid)
+			assert.Nil(t, err, "WaitStart error")
+
+			status, err := ts.WaitExit(a.Pid)
+			if err == nil && status != nil {
+				assert.True(t, status.IsStatusErr(), "Status not err")
+				assert.Equal(t, "exit status 2", status.Msg(), "WaitExit")
+			}
+			ch <- nil
+		})
+	}
+	ts.Shutdown()
+}
+
+func TestProcPartitionMany(t *testing.T) {
+	const M = 50
+	const N = M * 200
+
+	ts := test.MakeTstateAll(t)
+	for i := 0; i < N; i += M {
+		if i%1000 == 0 {
+			log.Printf("i = %d\n", i)
+		}
+		BurstProc(M, func(ch chan error) {
+			a := proc.MakeProc("bin/user/partition", []string{})
+			err := ts.Spawn(a)
+			assert.Nil(t, err, "Spawn")
+
+			err = ts.WaitStart(a.Pid)
+			assert.Nil(t, err, "WaitStart error")
+
+			status, err := ts.WaitExit(a.Pid)
+			if err == nil && status != nil {
+				assert.True(t, status.IsStatusOK(), "Status not err")
+			}
+			ch <- nil
+		})
+	}
 	ts.Shutdown()
 }
 

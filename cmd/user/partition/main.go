@@ -6,6 +6,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -21,6 +22,11 @@ func main() {
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
-	time.Sleep(1 * time.Millisecond)
-	os.Exit(2)
+	if error := fsl.Disconnect(np.NAMED); error != nil {
+		db.DFatalf("Disconnect %v name fails err %v\n", os.Args, error)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	pclnt.Exited(proc.MakeStatus(proc.StatusOK))
 }

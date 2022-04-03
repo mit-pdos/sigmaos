@@ -14,7 +14,7 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 	// to this replica (which proposed it through raft), raft may spit out some
 	// ops after the detach is processed. Catch these by returning an error.
 	if s.IsClosed() {
-		db.DPrintf(db.ALWAYS, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
+		db.DPrintf("SESSION_ERR", "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		return nil, true, np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", s.Sid)).Rerror()
 	}
 	// Register a heartbeat. This should be safe to do even if this is a detach,

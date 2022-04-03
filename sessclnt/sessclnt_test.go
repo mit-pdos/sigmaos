@@ -20,6 +20,7 @@ const (
 	CRASH     = 1000
 	PARTITION = 200
 	NETFAIL   = 200
+	NTRIALS   = "3001"
 )
 
 func TestServerCrash(t *testing.T) {
@@ -64,7 +65,7 @@ func BurstProc(n int, f func(chan error)) error {
 
 func TestProcManyOK(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/sleeper", "1us", ""})
+	a := proc.MakeProc("bin/user/proctest", []string{NTRIALS, "bin/user/sleeper", "1us", ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.Pid)
@@ -77,7 +78,7 @@ func TestProcManyOK(t *testing.T) {
 
 func TestProcCrashMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/crash"})
+	a := proc.MakeProc("bin/user/proctest", []string{NTRIALS, "bin/user/crash"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.Pid)
@@ -90,7 +91,7 @@ func TestProcCrashMany(t *testing.T) {
 
 func TestProcPartitionMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/partition"})
+	a := proc.MakeProc("bin/user/proctest", []string{NTRIALS, "bin/user/partition"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.Pid)

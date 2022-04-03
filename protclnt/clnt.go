@@ -49,22 +49,10 @@ func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path np.Path
 	return &msg, nil
 }
 
-func (clnt *Clnt) Detach(addrs []string) *np.Err {
-	args := np.Tdetach{0, 0}
-	_, err := clnt.CallServer(addrs, args, np.NoFence)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (clnt *Clnt) Exit() *np.Err {
 	scs := clnt.cm.SessClnts()
 	for _, sc := range scs {
-		if err := clnt.Detach(sc.Addr()); err != nil {
-			return err
-		}
-		sc.SessClose()
+		sc.SessDetach()
 	}
 	return nil
 }

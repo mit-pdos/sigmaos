@@ -45,10 +45,6 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	return c, nil
 }
 
-func (c *SessClnt) Addr() []string {
-	return c.addrs
-}
-
 func (c *SessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	rpc, err := c.send(req, f)
 	if err != nil {
@@ -113,9 +109,6 @@ func (c *SessClnt) connect() *np.Err {
 func (c *SessClnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 	c.Lock()
 	defer c.Unlock()
-	if c.closed {
-		return np.MkErr(np.TErrUnreachable, "c closed")
-	}
 	// Check if another thread already reconnected to the replicas.
 	if oldNc == c.nc {
 		return c.tryReconnectL()
@@ -125,7 +118,10 @@ func (c *SessClnt) tryReconnect(oldNc *netclnt.NetClnt) *np.Err {
 
 // Reconnect & resend requests
 func (c *SessClnt) tryReconnectL() *np.Err {
-	db.DPrintf("SESSCLNT", "%v SessionConn reconnecting to %v\n", c.sid, c.addrs)
+	if c.closed {
+		return np.MkErr(np.TErrUnreachable, "c closed")
+	}
+	db.DPrintf("SESSCLNT", "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
 	err := c.connect()
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Error %v SessionConn reconnecting to %v\n", c.sid, err, c.addrs)
@@ -157,7 +153,7 @@ func (c *SessClnt) resendOutstanding() {
 	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
 	idx := 0
 	for _, o := range c.outstanding {
-		db.DPrintf("SESSCLNT0", "%v Resend outstanding requests %v\n", c.sid, o)
+		db.DPrintf("SESSCLNT", "%v Resend outstanding requests %v\n", c.sid, o)
 		outstanding[idx] = o
 		idx++
 	}
@@ -183,21 +179,34 @@ func (c *SessClnt) getNc() *netclnt.NetClnt {
 	return c.nc
 }
 
-func (c *SessClnt) SessClose() {
+func (c *SessClnt) sessClose() {
 	c.Lock()
 	defer c.Unlock()
 	c.close()
 	// delete(sc.sessions, addr)
 }
 
+func (c *SessClnt) SessDetach() *np.Err {
+	rep, err := c.rpc(np.Tdetach{0, 0}, np.NoFence)
+	if err != nil {
+		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
+	}
+	rmsg, ok := rep.(np.Rerror)
+	if ok {
+		err := np.String2Err(rmsg.Ename)
+		return err
+	}
+	return nil
+}
+
 // Caller holds lock
 func (c *SessClnt) close() {
-	c.nc.Close()
 	if c.closed {
 		return
 	}
-	db.DPrintf("SESSCLNT", "%v Close session to %v\n", c.sid, c.addrs)
 	c.closed = true
+	db.DPrintf("SESSCLNT", "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
+	c.nc.Close()
 	// Kill pending requests.
 	for _, o := range c.queue {
 		if !o.Done {
@@ -239,7 +248,7 @@ func (c *SessClnt) heartbeats() {
 				err := np.String2Err(rmsg.Ename)
 				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v reply %v", c.sid, c.addrs, err)
 				if np.IsErrClosed(err) {
-					c.SessClose()
+					c.sessClose()
 					return
 				}
 			}
@@ -260,13 +269,19 @@ func (c *SessClnt) reader() {
 			err := c.tryReconnect(nc)
 			if err != nil {
 				// If we can't reconnect, close the session.
-				c.SessClose()
+				c.sessClose()
 				return
 			}
 			// If the connection broke, establish a new netclnt.
 			continue
 		}
 		c.completeRpc(reply, err)
+		if reply.Msg.Type() == np.TRdetach {
+			// close session now; so that the reader
+			// doesn't retry because the other side may
+			// have already closed TCP connection.
+			c.sessClose()
+		}
 	}
 }
 

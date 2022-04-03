@@ -64,6 +64,7 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	return sess.rpc(req, f)
 }
 
+// For testing
 func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	db.DPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)
 	key := sessKey(addrs)
@@ -73,7 +74,7 @@ func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	if !ok {
 		return np.MkErr(np.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
-	sess.SessClose()
+	sess.sessClose()
 	return nil
 }
 

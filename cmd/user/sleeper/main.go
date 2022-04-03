@@ -100,6 +100,6 @@ func (s *Sleeper) Work() {
 	if !s.native {
 		start := time.Now()
 		s.Exited(status)
-		log.Printf("Elapsed %v us", time.Since(start).Microseconds())
+		db.DPrintf("TIMING", "Elapsed %v us", time.Since(start).Microseconds())
 	}
 }

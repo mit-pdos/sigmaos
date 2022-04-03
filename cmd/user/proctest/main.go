@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fslib"
@@ -33,7 +34,7 @@ func BurstProc(n int, f func(chan error)) error {
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <n> <program>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v <n> <program> <program-args>\n", os.Args[0])
 		os.Exit(1)
 	}
 	n, err := strconv.Atoi(os.Args[1])
@@ -48,12 +49,14 @@ func main() {
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
+	start := time.Now()
 	for i := 0; i < n; i += M {
 		if i%1000 == 0 {
-			log.Printf("i = %d\n", i)
+			log.Printf("i = %d %dms\n", i, time.Since(start).Milliseconds())
+			start = time.Now()
 		}
 		err := BurstProc(M, func(ch chan error) {
-			a := proc.MakeProc(os.Args[2], []string{})
+			a := proc.MakeProc(os.Args[2], os.Args[3:])
 			if err := pclnt.Spawn(a); err != nil {
 				ch <- err
 				return

@@ -62,6 +62,19 @@ func BurstProc(n int, f func(chan error)) error {
 	return err
 }
 
+func TestProcManyOK(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/sleeper", "1us", ""})
+	err := ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.WaitStart(a.Pid)
+	assert.Nil(t, err, "WaitStart error")
+	status, err := ts.WaitExit(a.Pid)
+	assert.Nil(t, err, "waitexit")
+	assert.True(t, status.IsStatusOK(), status)
+	ts.Shutdown()
+}
+
 func TestProcCrashMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	a := proc.MakeProc("bin/user/proctest", []string{"10000", "bin/user/crash"})
@@ -84,7 +97,7 @@ func TestProcPartitionMany(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), "Status OK")
+	assert.True(t, status.IsStatusOK(), status)
 	ts.Shutdown()
 }
 

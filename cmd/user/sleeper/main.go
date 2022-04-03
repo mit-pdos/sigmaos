@@ -79,9 +79,11 @@ func (s *Sleeper) waitEvict(ch chan *proc.Status) {
 
 func (s *Sleeper) sleep(ch chan *proc.Status) {
 	time.Sleep(s.sleepLength)
-	_, err := s.PutFile(s.output, 0777, np.OWRITE, []byte("hello"))
-	if err != nil {
-		log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
+	if s.output != "" {
+		_, err := s.PutFile(s.output, 0777, np.OWRITE, []byte("hello"))
+		if err != nil {
+			log.Printf("Error: Makefile %v in Sleeper.Work: %v\n", s.output, err)
+		}
 	}
 	latency := time.Since(s.Time)
 	// Measure latency & NRPC of all ops except for Exited.

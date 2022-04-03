@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	M = 10
+	M = 20
 )
 
 func BurstProc(n int, f func(chan error)) error {

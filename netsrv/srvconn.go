@@ -57,7 +57,7 @@ func (c *SrvConn) reader() {
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
 			// session mgr will timeout this session eventually
-			// XXX tell sesssrv that conn closed?
+			c.conn.Close()
 			return
 		}
 		var fcall *np.Fcall

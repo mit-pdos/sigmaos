@@ -292,8 +292,8 @@ func TestEarlyExitN(t *testing.T) {
 
 			// Wait for parent to finish
 			status, err := ts.WaitExit(a.Pid)
-			assert.Nil(t, err, "WaitExit")
-			assert.True(t, status.IsStatusOK(), "WaitExit")
+			assert.Nil(t, err, "WaitExit err: %v", err)
+			assert.True(t, status.IsStatusOK(), "WaitExit: %v", status)
 
 			time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 

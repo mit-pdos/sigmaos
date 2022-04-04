@@ -22,7 +22,7 @@ const (
 	NCLERK    = 10
 
 	CRASHBALANCER = 1000
-	CRASHHELPER   = "200"
+	CRASHMOVER    = "200"
 )
 
 func checkKvs(t *testing.T, kvs *KvSet, n int) {
@@ -76,19 +76,19 @@ type Tstate struct {
 	clrks   []proc.Tpid
 }
 
-func makeTstate(t *testing.T, auto string, nclerk int, crash int, crashhelper string) (*Tstate, *KvClerk) {
+func makeTstate(t *testing.T, auto string, nclerk, crash, repl int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, NBALANCER, crash, 0, 0)
 
-	clrk := ts.setup(nclerk)
+	clrk := ts.setup(nclerk, repl)
 	return ts, clrk
 }
 
-func (ts *Tstate) setup(nclerk int) *KvClerk {
+func (ts *Tstate) setup(nclerk, repl int) *KvClerk {
 	// Create first shard group
 	gn := group.GRP + "0"
-	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn)
+	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn, repl)
 	err := ts.balancerOp("add", gn)
 	assert.Nil(ts.T, err, "BalancerOp")
 	ts.mfsgrps = append(ts.mfsgrps, grp)
@@ -158,7 +158,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts, clrk := makeTstate(t, "manual", 1, 0, "0")
+	ts, clrk := makeTstate(t, "manual", 1, 0, KVD_NO_REPL, "0")
 
 	_, err := clrk.Get(MkKey(NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
@@ -178,10 +178,10 @@ func TestGetPutSet(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
+func concurN(t *testing.T, nclerk, crash, repl int, crashhelper string) {
 	const TIME = 100 // 500
 
-	ts, _ := makeTstate(t, "manual", nclerk, crash, crashhelper)
+	ts, _ := makeTstate(t, "manual", nclerk, crash, repl, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()
@@ -190,7 +190,7 @@ func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
 
 	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
-		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp)
+		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp, repl)
 		ts.mfsgrps = append(ts.mfsgrps, gm)
 		err := ts.balancerOp("add", grp)
 		assert.Nil(ts.T, err, "BalancerOp")
@@ -210,57 +210,61 @@ func concurN(t *testing.T, nclerk int, crash int, crashhelper string) {
 
 	ts.stopClerks()
 
-	log.Printf("done waiting for clerks\n")
-
 	time.Sleep(100 * time.Millisecond)
 
 	ts.gmbal.Stop()
 
-	log.Printf("done waiting for balancer\n")
-
 	ts.mfsgrps[0].Stop()
 
-	log.Printf("done waiting for kv 0\n")
-
 	ts.Shutdown()
-
-	log.Printf("done shutdown kv 0\n")
 }
 
 func TestConcurOK0(t *testing.T) {
-	concurN(t, 0, 0, "0")
+	concurN(t, 0, 0, KVD_NO_REPL, "0")
 }
 
 func TestConcurOK1(t *testing.T) {
-	concurN(t, 1, 0, "0")
+	concurN(t, 1, 0, KVD_NO_REPL, "0")
 }
 
 func TestConcurOKN(t *testing.T) {
-	concurN(t, NCLERK, 0, "0")
+	concurN(t, NCLERK, 0, KVD_NO_REPL, "0")
 }
 
 func TestConcurFailBal0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER, "0")
+	concurN(t, 0, CRASHBALANCER, KVD_NO_REPL, "0")
 }
 
 func TestConcurFailBal1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER, "0")
+	concurN(t, 1, CRASHBALANCER, KVD_NO_REPL, "0")
 }
 
 func TestConcurFailBalN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER, "0")
+	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, "0")
 }
 
 func TestConcurFailAll0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER, CRASHHELPER)
+	concurN(t, 0, CRASHBALANCER, KVD_NO_REPL, CRASHMOVER)
 }
 
 func TestConcurFailAll1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER, CRASHHELPER)
+	concurN(t, 1, CRASHBALANCER, KVD_NO_REPL, CRASHMOVER)
 }
 
 func TestConcurFailAllN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER, CRASHHELPER)
+	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, CRASHMOVER)
+}
+
+func TestConcurRepl0(t *testing.T) {
+	concurN(t, 0, 0, KVD_REPL_LEVEL, "0")
+}
+
+func TestConcurRepl1(t *testing.T) {
+	concurN(t, 1, 0, KVD_REPL_LEVEL, "0")
+}
+
+func TestConcurReplN(t *testing.T) {
+	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, "0")
 }
 
 // func TestAuto(t *testing.T) {

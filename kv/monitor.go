@@ -36,12 +36,12 @@ func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	return mo
 }
 
-func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, KVD_NO_REPL, "bin/user/kvd", []string{grp}, 0, CRASHKVD, 0, 0)
+func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, repl int) *groupmgr.GroupMgr {
+	return groupmgr.Start(fsl, pclnt, repl, "bin/user/kvd", []string{grp}, 0, CRASHKVD, 0, 0)
 }
 
 func (mo *Monitor) grow() {
-	SpawnGrp(mo.FsLib, mo.ProcClnt, strconv.Itoa(mo.group))
+	SpawnGrp(mo.FsLib, mo.ProcClnt, strconv.Itoa(mo.group), KVD_NO_REPL)
 	BalancerOp(mo.FsLib, "add", group.GRP+strconv.Itoa(mo.group))
 }
 

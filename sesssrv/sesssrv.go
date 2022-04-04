@@ -207,8 +207,6 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	if !ok {
 		db.DFatalf("SrvFcall: no session %v\n", fc.Session)
 	}
-	// New thread about to start
-	//	sess.IncThreads()
 	if !ssrv.replicated {
 		sess.GetThread().Process(fc)
 	} else {
@@ -296,13 +294,6 @@ func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
 	reply, close, rerror := sess.Dispatch(fc.Msg)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
-
-	// We decrement the number of waiting threads if this request was made to
-	// this server (it didn't come through raft), which will only be the case
-	// when replies is not nil  XXX
-	if sess.GetConn() != nil {
-		//		defer sess.DecThreads()
-	}
 
 	if rerror != nil {
 		reply = *rerror

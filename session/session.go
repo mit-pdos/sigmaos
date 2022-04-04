@@ -24,7 +24,6 @@ import (
 type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
-	wg            sync.WaitGroup
 	conn          *np.Conn
 	protsrv       np.Protsrv
 	lastHeartbeat time.Time
@@ -53,18 +52,6 @@ func (sess *Session) GetConn() *np.Conn {
 
 func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 	return sess.threadmgr
-}
-
-func (sess *Session) IncThreads() {
-	sess.wg.Add(1)
-}
-
-func (sess *Session) DecThreads() {
-	sess.wg.Done()
-}
-
-func (sess *Session) WaitThreads() {
-	sess.wg.Wait()
 }
 
 // For testing. Invoking CloseConn() will eventually cause

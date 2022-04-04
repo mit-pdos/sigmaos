@@ -97,6 +97,8 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		crashMember := crash
 		if i+1 > ncrash {
 			crashMember = 0
+		} else {
+			db.DPrintf("GROUPMGR", "member %v crash %v\n", i, crashMember)
 		}
 		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n > 0, partition, netfail)
 	}

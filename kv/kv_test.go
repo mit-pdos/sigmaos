@@ -76,19 +76,19 @@ type Tstate struct {
 	clrks   []proc.Tpid
 }
 
-func makeTstate(t *testing.T, auto string, nclerk, crash, repl int, crashhelper string) (*Tstate, *KvClerk) {
+func makeTstate(t *testing.T, auto string, nclerk, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, NBALANCER, crash, 0, 0)
+	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, NBALANCER, crashbal, 0, 0)
 
-	clrk := ts.setup(nclerk, repl)
+	clrk := ts.setup(nclerk, repl, ncrash)
 	return ts, clrk
 }
 
-func (ts *Tstate) setup(nclerk, repl int) *KvClerk {
+func (ts *Tstate) setup(nclerk, repl, ncrash int) *KvClerk {
 	// Create first shard group
 	gn := group.GRP + "0"
-	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn, repl)
+	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn, repl, ncrash)
 	err := ts.balancerOp("add", gn)
 	assert.Nil(ts.T, err, "BalancerOp")
 	ts.mfsgrps = append(ts.mfsgrps, grp)
@@ -158,7 +158,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts, clrk := makeTstate(t, "manual", 1, 0, KVD_NO_REPL, "0")
+	ts, clrk := makeTstate(t, "manual", 1, 0, KVD_NO_REPL, 0, "0")
 
 	_, err := clrk.Get(MkKey(NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
@@ -178,10 +178,10 @@ func TestGetPutSet(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk, crash, repl int, crashhelper string) {
+func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
 	const TIME = 100 // 500
 
-	ts, _ := makeTstate(t, "manual", nclerk, crash, repl, crashhelper)
+	ts, _ := makeTstate(t, "manual", nclerk, crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()
@@ -190,7 +190,7 @@ func concurN(t *testing.T, nclerk, crash, repl int, crashhelper string) {
 
 	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
-		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp, repl)
+		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp, repl, ncrash)
 		ts.mfsgrps = append(ts.mfsgrps, gm)
 		err := ts.balancerOp("add", grp)
 		assert.Nil(ts.T, err, "BalancerOp")
@@ -220,51 +220,51 @@ func concurN(t *testing.T, nclerk, crash, repl int, crashhelper string) {
 }
 
 func TestConcurOK0(t *testing.T) {
-	concurN(t, 0, 0, KVD_NO_REPL, "0")
+	concurN(t, 0, 0, KVD_NO_REPL, 0, "0")
 }
 
 func TestConcurOK1(t *testing.T) {
-	concurN(t, 1, 0, KVD_NO_REPL, "0")
+	concurN(t, 1, 0, KVD_NO_REPL, 0, "0")
 }
 
 func TestConcurOKN(t *testing.T) {
-	concurN(t, NCLERK, 0, KVD_NO_REPL, "0")
+	concurN(t, NCLERK, 0, KVD_NO_REPL, 0, "0")
 }
 
 func TestConcurFailBal0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER, KVD_NO_REPL, "0")
+	concurN(t, 0, CRASHBALANCER, KVD_NO_REPL, 0, "0")
 }
 
 func TestConcurFailBal1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER, KVD_NO_REPL, "0")
+	concurN(t, 1, CRASHBALANCER, KVD_NO_REPL, 0, "0")
 }
 
 func TestConcurFailBalN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, "0")
+	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, 0, "0")
 }
 
 func TestConcurFailAll0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER, KVD_NO_REPL, CRASHMOVER)
+	concurN(t, 0, CRASHBALANCER, KVD_NO_REPL, 0, CRASHMOVER)
 }
 
 func TestConcurFailAll1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER, KVD_NO_REPL, CRASHMOVER)
+	concurN(t, 1, CRASHBALANCER, KVD_NO_REPL, 0, CRASHMOVER)
 }
 
 func TestConcurFailAllN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, CRASHMOVER)
+	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, 0, CRASHMOVER)
 }
 
 func TestConcurRepl0(t *testing.T) {
-	concurN(t, 0, 0, KVD_REPL_LEVEL, "0")
+	concurN(t, 0, 0, KVD_REPL_LEVEL, 0, "0")
 }
 
 func TestConcurRepl1(t *testing.T) {
-	concurN(t, 1, 0, KVD_REPL_LEVEL, "0")
+	concurN(t, 1, 0, KVD_REPL_LEVEL, 0, "0")
 }
 
 func TestConcurReplN(t *testing.T) {
-	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, "0")
+	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, 0, "0")
 }
 
 // func TestAuto(t *testing.T) {

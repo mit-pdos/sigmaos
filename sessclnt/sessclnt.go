@@ -53,7 +53,7 @@ func (c *SessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	}
 	rep, err1 := c.recv(rpc)
 	if err1 != nil {
-		db.DPrintf("SESSCLNT", "%v Unable to recv response to req %v %v err %v from %v\n", c.sid, req.Type(), req, err, c.addrs)
+		db.DPrintf("SESSCLNT", "%v Unable to recv response to req %v %v err %v from %v\n", c.sid, req.Type(), req, err1, c.addrs)
 		return nil, err1
 	}
 	return rep, err1
@@ -84,6 +84,22 @@ func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 	defer c.Unlock()
 	c.lastMsgTime = time.Now()
 	return reply.Fc.Msg, reply.Err
+}
+
+func (c *SessClnt) waitForReq() *netclnt.Rpc {
+	c.Lock()
+	defer c.Unlock()
+	var req *netclnt.Rpc
+	// Wait until we have an RPC request.
+	for len(c.queue) == 0 {
+		if c.closed {
+			return nil
+		}
+		c.Wait()
+	}
+	// Pop the first item form the queue.
+	req, c.queue = c.queue[0], c.queue[1:]
+	return req
 }
 
 func (c *SessClnt) connect() *np.Err {
@@ -153,7 +169,7 @@ func (c *SessClnt) resendOutstanding() {
 	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
 	idx := 0
 	for _, o := range c.outstanding {
-		db.DPrintf("SESSCLNT", "%v Resend outstanding requests %v\n", c.sid, o)
+		db.DPrintf("SESSCLNT", "%v Resend outstanding request %v\n", c.sid, o)
 		outstanding[idx] = o
 		idx++
 	}
@@ -163,6 +179,7 @@ func (c *SessClnt) resendOutstanding() {
 	// Append outstanding requests that need to be resent to the front of the
 	// queue.
 	c.queue = append(outstanding, c.queue...)
+	db.DPrintf("SESSCLNT", "%v Resent %v outstanding requests %v, new queue len %v\n", c.sid, len(outstanding), c.addrs, len(c.queue))
 	// Signal that there are queued requests ready to be processed.
 	c.Signal()
 }
@@ -243,17 +260,24 @@ func (c *SessClnt) heartbeats() {
 				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
 				continue
 			}
-			rmsg, ok := rep.(np.Rerror)
-			if ok {
-				err := np.String2Err(rmsg.Ename)
-				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v reply %v", c.sid, c.addrs, err)
-				if np.IsErrClosed(err) {
-					c.sessClose()
-					return
-				}
+			if c.srvClosedSess(rep) {
+				c.sessClose()
+				return
 			}
 		}
 	}
+}
+
+func (c *SessClnt) srvClosedSess(reply np.Tmsg) bool {
+	if reply.Type() == np.TRerror {
+		rmsg := reply.(np.Rerror)
+		err := np.String2Err(rmsg.Ename)
+		db.DPrintf("SESSCLNT_ERR", "%v sessclose %v reply %v", c.sid, c.addrs, err)
+		if np.IsErrClosed(err) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *SessClnt) reader() {
@@ -276,7 +300,8 @@ func (c *SessClnt) reader() {
 			continue
 		}
 		c.completeRpc(reply, err)
-		if reply.Msg.Type() == np.TRdetach {
+
+		if reply.Msg.Type() == np.TRdetach || c.srvClosedSess(reply.Msg) {
 			// close session now; so that the reader
 			// doesn't retry because the other side may
 			// have already closed TCP connection.
@@ -286,26 +311,21 @@ func (c *SessClnt) reader() {
 }
 
 func (c *SessClnt) writer() {
-	c.Lock()
-	defer c.Unlock()
 	for {
-		var req *netclnt.Rpc
-		// Wait until we have an RPC request.
-		for len(c.queue) == 0 {
-			if c.closed {
-				return
-			}
-			c.Wait()
+		// Try to get the next request to be sent
+		req := c.waitForReq()
+		if req == nil {
+			return
 		}
-		// Pop the first item form the queue.
-		req, c.queue = c.queue[0], c.queue[1:]
-		err := c.nc.Send(req)
+		nc := c.getNc()
+
+		err := nc.Send(req)
 		if err != nil {
-			db.DPrintf("SESSCLNT_ERR", "%v Error %v writer RPC to %v\n", c.sid, err, c.nc.Dst())
-			err := c.tryReconnectL()
+			db.DPrintf("SESSCLNT_ERR", "%v Error %v writer RPC to %v\n", c.sid, err, nc.Dst())
+			err := c.tryReconnect(nc)
 			if err != nil {
 				db.DPrintf("SESSCLNT_ERR", "Writer: c close() %v", c.sid)
-				c.close()
+				c.sessClose()
 				return
 			}
 		}

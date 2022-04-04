@@ -208,7 +208,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 		db.DFatalf("SrvFcall: no session %v\n", fc.Session)
 	}
 	// New thread about to start
-	sess.IncThreads()
+	//	sess.IncThreads()
 	if !ssrv.replicated {
 		sess.GetThread().Process(fc)
 	} else {
@@ -301,7 +301,7 @@ func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
 	// this server (it didn't come through raft), which will only be the case
 	// when replies is not nil  XXX
 	if sess.GetConn() != nil {
-		defer sess.DecThreads()
+		//		defer sess.DecThreads()
 	}
 
 	if rerror != nil {

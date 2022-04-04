@@ -154,7 +154,6 @@ func (ssrv *SessSrv) Serve() {
 			log.Printf("%v: Error Started: %v", proc.GetName(), err)
 		}
 		if err := ssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
-			debug.PrintStack()
 			log.Printf("%v: Error WaitEvict: %v", proc.GetName(), err)
 		}
 	} else {

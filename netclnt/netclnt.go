@@ -28,7 +28,6 @@ type Reply struct {
 
 type Rpc struct {
 	Req    *np.Fcall
-	Done   bool
 	ReplyC chan *Reply
 }
 

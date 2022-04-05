@@ -131,14 +131,13 @@ func (c *SessClnt) tryReconnectL() *np.Err {
 
 // Complete an RPC and send a response.
 func (c *SessClnt) completeRpc(reply *np.Fcall, err *np.Err) {
-	// XXX can we remove Done?
 	rpc, ok := c.queue.Complete(reply.Seqno)
 	// the outstanding request may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
-	if ok && !rpc.Done {
+	if ok {
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
-		rpc.Done = true
 		rpc.ReplyC <- &netclnt.Reply{reply, err}
+		close(rpc.ReplyC)
 	}
 }
 
@@ -189,10 +188,7 @@ func (c *SessClnt) close() {
 	outstanding := c.queue.Close()
 	// Kill outstanding requests.
 	for _, o := range outstanding {
-		if !o.Done {
-			o.Done = true
-			close(o.ReplyC)
-		}
+		close(o.ReplyC)
 	}
 }
 

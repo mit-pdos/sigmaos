@@ -255,16 +255,28 @@ func TestConcurFailAllN(t *testing.T) {
 	concurN(t, NCLERK, CRASHBALANCER, KVD_NO_REPL, 0, CRASHMOVER)
 }
 
-func TestConcurRepl0(t *testing.T) {
+func TestConcurReplOK0(t *testing.T) {
 	concurN(t, 0, 0, KVD_REPL_LEVEL, 0, "0")
 }
 
-func TestConcurRepl1(t *testing.T) {
+func TestConcurReplOK1(t *testing.T) {
 	concurN(t, 1, 0, KVD_REPL_LEVEL, 0, "0")
 }
 
-func TestConcurReplN(t *testing.T) {
+func TestConcurReplOKN(t *testing.T) {
 	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, 0, "0")
+}
+
+func TestConcurReplFail0(t *testing.T) {
+	concurN(t, 0, 0, KVD_REPL_LEVEL, 1, "0")
+}
+
+func TestConcurReplFail1(t *testing.T) {
+	concurN(t, 1, 0, KVD_REPL_LEVEL, 1, "0")
+}
+
+func TestConcurReplFailN(t *testing.T) {
+	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, 1, "0")
 }
 
 // func TestAuto(t *testing.T) {

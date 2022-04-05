@@ -18,7 +18,7 @@ import (
 	"ulambda/procclnt"
 	"ulambda/repl"
 	"ulambda/sesscond"
-	"ulambda/session"
+	"ulambda/sessstatesrv"
 	"ulambda/snapshot"
 	"ulambda/stats"
 	"ulambda/threadmgr"
@@ -41,8 +41,8 @@ type SessSrv struct {
 	mkps       np.MkProtServer
 	rps        np.RestoreProtServer
 	stats      *stats.Stats
-	st         *session.SessionTable
-	sm         *session.SessionMgr
+	st         *sessstatesrv.SessionTable
+	sm         *sessstatesrv.SessionMgr
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
@@ -70,8 +70,8 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.rps = rps
 	ssrv.stats = stats.MkStatsDev(ssrv.root)
 	ssrv.tmt = threadmgr.MakeThreadMgrTable(ssrv.srvfcall, ssrv.replicated)
-	ssrv.st = session.MakeSessionTable(mkps, ssrv, ssrv.tmt)
-	ssrv.sm = session.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
+	ssrv.st = sessstatesrv.MakeSessionTable(mkps, ssrv, ssrv.tmt)
+	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
@@ -132,10 +132,10 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
 	ssrv.sm.Stop()
-	ssrv.sm = session.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
+	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 
-func (ssrv *SessSrv) Sess(sid np.Tsession) *session.Session {
+func (ssrv *SessSrv) Sess(sid np.Tsession) *sessstatesrv.Session {
 	sess, ok := ssrv.st.Lookup(sid)
 	if !ok {
 		db.DFatalf("%v: no sess %v\n", proc.GetName(), sid)
@@ -215,7 +215,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	}
 }
 
-func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *session.Session) {
+func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstatesrv.Session) {
 	fcall := np.MakeFcallReply(request, reply)
 
 	db.DPrintf("SESSSRV", "Request %v start sendReply %v", request, fcall)
@@ -275,7 +275,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking
 // ops.
-func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
+func (ssrv *SessSrv) fenceFcall(sess *sessstatesrv.Session, fc *np.Fcall) {
 	db.DPrintf("FENCES", "fenceFcall %v fence %v\n", fc.Type, fc.Fence)
 	if f, err := fencefs.CheckFence(ssrv.ffs, fc.Fence); err != nil {
 		reply := *err.Rerror()
@@ -291,7 +291,7 @@ func (ssrv *SessSrv) fenceFcall(sess *session.Session, fc *np.Fcall) {
 	}
 }
 
-func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
+func (ssrv *SessSrv) serve(sess *sessstatesrv.Session, fc *np.Fcall) {
 	db.DPrintf("SESSSRV", "Dispatch request %v", fc)
 	reply, close, rerror := sess.Dispatch(fc.Msg)
 	db.DPrintf("SESSSRV", "Done dispatch request %v close? %v", fc, close)
@@ -303,7 +303,7 @@ func (ssrv *SessSrv) serve(sess *session.Session, fc *np.Fcall) {
 	ssrv.sendReply(fc, reply, sess)
 
 	if close {
-		// Dispatch() signaled to close the session.
+		// Dispatch() signaled to close the sessstatesrv.
 		sess.Close()
 	}
 }

@@ -9,7 +9,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/pathclnt"
 	"ulambda/protclnt"
-	"ulambda/session"
+	"ulambda/sessstatesrv"
 	"ulambda/threadmgr"
 )
 

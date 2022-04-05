@@ -102,10 +102,10 @@ func (kc KvClerk) switchConfig() error {
 				time.Sleep(WAITMS * time.Millisecond)
 				continue
 			}
-
 			db.DPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
 			return err
 		}
+		// detach groups not in use; diff between new and mount table?
 		break
 	}
 	return nil
@@ -121,11 +121,10 @@ func (kc *KvClerk) fixRetry(err error) error {
 		time.Sleep(WAITMS * time.Millisecond)
 		return nil
 	}
-	if np.IsErrStale(err) || np.IsErrUnreachable(err) {
+	if np.IsErrStale(err) {
 		db.DPrintf("KVCLERK_ERR", "fixRetry %v\n", err)
 		return kc.switchConfig()
 	}
-
 	return err
 }
 

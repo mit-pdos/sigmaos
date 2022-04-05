@@ -31,8 +31,11 @@ func TestWaitClosed(t *testing.T) {
 	assert.Nil(t, err, "stat")
 
 	grp.Stop()
+
 	// XXX should hang around until client closes sessions; once WaitClosed() is
 	// propertly implemented.
+
+	ts.Detach(DIRGRP0)
 	ts.Shutdown()
 }
 

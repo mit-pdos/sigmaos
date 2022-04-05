@@ -57,6 +57,20 @@ func (pathc *PathClnt) Exit() error {
 	return pathc.FidClnt.Exit()
 }
 
+// Detach from server. XXX Mixes up umount a file system at server and
+// closing session.
+func (pathc *PathClnt) Detach(path string) error {
+	fid, err := pathc.mnt.umount(np.Split(path))
+	if err != nil {
+		return err
+	}
+	defer pathc.FidClnt.Free(fid)
+	if err := pathc.FidClnt.Detach(fid); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Simulate network partition to server that exports path
 func (pathc *PathClnt) Disconnect(path string) error {
 	fid, err := pathc.mnt.umount(np.Split(path))

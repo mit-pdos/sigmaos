@@ -342,3 +342,12 @@ func (pclnt *ProtClnt) PutFile(fid np.Tfid, path np.Path, mode np.Tmode, perm np
 	}
 	return &msg, nil
 }
+
+func (pclnt *ProtClnt) Detach() *np.Err {
+	args := np.Tdetach{0, 0}
+	_, err := pclnt.CallNoFence(args)
+	if err != nil {
+		return err
+	}
+	return nil
+}

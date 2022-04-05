@@ -95,6 +95,17 @@ func (fidc *FidClnt) Attach(uname string, addrs []string, path, tree string) (np
 	return fid, nil
 }
 
+func (fidc *FidClnt) Detach(fid np.Tfid) *np.Err {
+	ch := fidc.fids.lookup(fid)
+	if ch == nil {
+		return np.MkErr(np.TErrUnreachable, "detach")
+	}
+	if err := ch.pc.Detach(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Walk returns the fid it walked to (which maybe fid) and the
 // remaining path left to be walked (which maybe the original path).
 func (fidc *FidClnt) Walk(fid np.Tfid, path []string) (np.Tfid, []string, *np.Err) {

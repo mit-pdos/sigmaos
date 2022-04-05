@@ -110,18 +110,13 @@ func (mnt *MntTable) umount(path np.Path) (np.Tfid, *np.Err) {
 	return np.NoFid, np.MkErr(np.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 
-func (mnt *MntTable) close() []np.Tfid {
+func (mnt *MntTable) mountedPaths() []string {
 	mnt.Lock()
 	defer mnt.Unlock()
 
-	// Forbid any more (auto)mounting
-	mnt.exited = true
-
-	// Return fids for mount points so that caller can close
-	// sessions.
-	fids := make([]np.Tfid, 0, len(mnt.mounts))
+	paths := make([]string, 0, len(mnt.mounts))
 	for _, p := range mnt.mounts {
-		fids = append(fids, p.fid)
+		paths = append(paths, p.path.String())
 	}
-	return fids
+	return paths
 }

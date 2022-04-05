@@ -52,13 +52,18 @@ func (pathc *PathClnt) GetChunkSz() np.Tsize {
 	return pathc.chunkSz
 }
 
+func (pathc *PathClnt) Mounts() []string {
+	return pathc.mnt.mountedPaths()
+}
+
 // Exit the path client, closing all sessions
 func (pathc *PathClnt) Exit() error {
 	return pathc.FidClnt.Exit()
 }
 
 // Detach from server. XXX Mixes up umount a file system at server and
-// closing session.
+// closing session; if two mounts point to the same server; the first
+// detach will close the session regardless of the second mount point.
 func (pathc *PathClnt) Detach(path string) error {
 	fid, err := pathc.mnt.umount(np.Split(path))
 	if err != nil {
@@ -209,11 +214,6 @@ func (pathc *PathClnt) umountFree(path []string) *np.Err {
 		pathc.FidClnt.Free(fid)
 		return nil
 	}
-}
-
-func (pathc *PathClnt) Umount(path []string) error {
-	db.DPrintf("PATHCLNT", "Umount %v\n", path)
-	return pathc.umountFree(path)
 }
 
 func (pathc *PathClnt) Remove(name string) error {

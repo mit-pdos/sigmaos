@@ -159,6 +159,8 @@ func (ssrv *SessSrv) Serve() {
 	} else {
 		<-ssrv.ch
 	}
+	log.Printf("done serving\n")
+	ssrv.st.WaitClosed()
 }
 
 // The server using ssrv is done; exit.

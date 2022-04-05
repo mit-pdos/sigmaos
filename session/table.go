@@ -12,6 +12,7 @@ import (
 
 type SessionTable struct {
 	sync.Mutex
+	c *sync.Cond
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
 	mkps     np.MkProtServer
@@ -26,6 +27,7 @@ func MakeSessionTable(mkps np.MkProtServer, fssrv np.FsServer, tm *threadmgr.Thr
 	st.fssrv = fssrv
 	st.mkps = mkps
 	st.tm = tm
+	st.c = sync.NewCond(&st.Mutex)
 	return st
 }
 
@@ -72,4 +74,13 @@ func (st *SessionTable) LastSession() *Session {
 		return st.last
 	}
 	return nil
+}
+
+func (st *SessionTable) WaitClosed() {
+	st.Lock()
+	defer st.Unlock()
+	db.DPrintf("SESSION0", "Wait for open sess %v\n", len(st.sessions))
+	//for len(st.sessions) > 0 {
+	//	st.c.Wait()
+	//}
 }

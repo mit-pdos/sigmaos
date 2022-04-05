@@ -23,6 +23,19 @@ const (
 	NTRIALS   = "3001"
 )
 
+func TestWaitClosed(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 1, CRASH, 0, 0)
+	_, err := ts.Stat(DIRGRP0)
+	assert.Nil(t, err, "stat")
+
+	grp.Stop()
+	// XXX should hang around until client closes sessions; once WaitClosed() is
+	// propertly implemented.
+	ts.Shutdown()
+}
+
 func TestServerCrash(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 

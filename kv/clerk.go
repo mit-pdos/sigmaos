@@ -82,20 +82,40 @@ func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
 	return kc, nil
 }
 
+// Detach servers not in kvs
+func (kc *KvClerk) DetachKVs(kvs *KvSet) {
+	mnts := kc.Mounts()
+	for _, mnt := range mnts {
+		if strings.HasPrefix(mnt, group.GRPDIR) {
+			kvd := strings.TrimPrefix(mnt, group.GRPDIR)
+			if !kvs.present(kvd) {
+				db.DPrintf("KVCLERK0", "Detach kv %v\n", kvd)
+				kc.Detach(group.GRPDIR + "/" + kvd)
+			}
+		}
+	}
+}
+
+func paths(kvset *KvSet) []string {
+	kvs := kvset.mkKvs()
+	dirs := make([]string, 0, len(kvs)+1)
+	for _, kvd := range kvs {
+		dirs = append(dirs, group.GRPDIR+"/"+kvd)
+	}
+	return dirs
+}
+
 // Read config, and retry if we have a stale group fence
-func (kc KvClerk) switchConfig() error {
+func (kc *KvClerk) switchConfig() error {
 	for {
 		err := kc.GetFileJsonWatch(KVCONFIG, kc.conf)
 		if err != nil {
 			db.DPrintf("KVCLERK_ERR", "GetFileJsonWatch %v err %v\n", KVCONFIG, err)
 			return err
 		}
-		db.DPrintf("KVCLERK0", "Conf %v\n", kc.conf)
-		kvs := makeKvs(kc.conf.Shards).mkKvs()
-		dirs := make([]string, 0, len(kvs)+1)
-		for _, kvd := range kvs {
-			dirs = append(dirs, group.GRPDIR+"/"+kvd)
-		}
+		db.DPrintf("KVCLERK", "Conf %v\n", kc.conf)
+		kvset := makeKvs(kc.conf.Shards)
+		dirs := paths(kvset)
 		if err := kc.fclnt.FenceAtEpoch(kc.conf.Epoch, dirs); err != nil {
 			if np.IsErrVersion(err) || np.IsErrStale(err) {
 				db.DPrintf("KVCLERK_ERR", "version mismatch; retry\n")
@@ -105,7 +125,9 @@ func (kc KvClerk) switchConfig() error {
 			db.DPrintf("KVCLERK_ERR", "FenceAtEpoch %v failed %v\n", dirs, err)
 			return err
 		}
+
 		// detach groups not in use; diff between new and mount table?
+		kc.DetachKVs(kvset)
 		break
 	}
 	return nil

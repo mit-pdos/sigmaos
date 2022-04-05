@@ -21,23 +21,6 @@ const (
 	Msglen = 64 * 1024
 )
 
-type Reply struct {
-	Fc  *np.Fcall
-	Err *np.Err
-}
-
-type Rpc struct {
-	Req    *np.Fcall
-	ReplyC chan *Reply
-}
-
-func MakeRpc(fc *np.Fcall) *Rpc {
-	rpc := &Rpc{}
-	rpc.Req = fc
-	rpc.ReplyC = make(chan *Reply)
-	return rpc
-}
-
 type NetClnt struct {
 	mu     sync.Mutex
 	conn   net.Conn

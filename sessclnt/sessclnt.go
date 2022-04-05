@@ -64,22 +64,21 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
 	}
 
-	rpc := netclnt.MakeRpc(np.MakeFcall(req, c.sid, c.seqno, f))
+	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil
 }
 
 func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
-	// Wait for a reply
-	reply, ok := <-rpc.ReplyC
-	if !ok {
-		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
-	}
+	defer c.heartbeatAckd()
+	return rpc.Wait()
+}
+
+func (c *SessClnt) heartbeatAckd() {
 	c.Lock()
 	defer c.Unlock()
 	c.lastMsgTime = time.Now()
-	return reply.Fc.Msg, reply.Err
 }
 
 func (c *SessClnt) connect() *np.Err {
@@ -131,13 +130,12 @@ func (c *SessClnt) tryReconnectL() *np.Err {
 
 // Complete an RPC and send a response.
 func (c *SessClnt) completeRpc(reply *np.Fcall, err *np.Err) {
-	rpc, ok := c.queue.Complete(reply.Seqno)
+	rpc, ok := c.queue.Remove(reply.Seqno)
 	// the outstanding request may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
 	if ok {
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
-		rpc.ReplyC <- &netclnt.Reply{reply, err}
-		close(rpc.ReplyC)
+		rpc.Complete(reply, err)
 	}
 }
 
@@ -187,8 +185,8 @@ func (c *SessClnt) close() {
 	c.nc.Close()
 	outstanding := c.queue.Close()
 	// Kill outstanding requests.
-	for _, o := range outstanding {
-		close(o.ReplyC)
+	for _, rpc := range outstanding {
+		rpc.Abort()
 	}
 }
 

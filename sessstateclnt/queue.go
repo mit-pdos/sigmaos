@@ -13,12 +13,12 @@ import (
 //
 // 1. Enqueued requests are always returned in order of sequence number between
 //    resets.
-// 2. A request will only successfully be removed/completed once.
-// 3. If a request hasn't completed, and the request queue is reset, then the
-//    request will be enqueued again in order of sequence number.
+// 2. A request will only successfully be removed once.
+// 3. If a request hasn't been removed, and the request queue is reset, then
+//    the request will be enqueued again in order of sequence number.
 // 4. Once closed, a request queue will refuse (panic on) future request
 //    enqueue attempts.
-// 5. Close removes/completes all outstanding requests.
+// 5. Close removes all outstanding requests.
 
 type RequestQueue struct {
 	sync.Mutex
@@ -70,10 +70,10 @@ func (rq *RequestQueue) Next() *netclnt.Rpc {
 	return req
 }
 
-// Mark a request as completed, and return it. If it doesn't exist in the
-// request queue, someone else has marked it as completed already, so we return
+// Remove a request and return it. If it doesn't exist in the
+// request queue, someone else has removed it already, so we return
 // nil & false.
-func (rq *RequestQueue) Complete(seqno np.Tseqno) (*netclnt.Rpc, bool) {
+func (rq *RequestQueue) Remove(seqno np.Tseqno) (*netclnt.Rpc, bool) {
 	rq.Lock()
 	defer rq.Unlock()
 

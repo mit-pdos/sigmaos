@@ -2,13 +2,13 @@ package sessclnt
 
 import (
 	//	"github.com/sasha-s/go-deadlock"
-	"sort"
 	"sync"
 	"time"
 
 	db "ulambda/debug"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
+	"ulambda/sessstateclnt"
 )
 
 // A session from a client to a logical server (either one server or a
@@ -21,8 +21,7 @@ type SessClnt struct {
 	closed      bool
 	addrs       []string
 	nc          *netclnt.NetClnt
-	queue       []*netclnt.Rpc
-	outstanding map[np.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
+	queue       *sessstateclnt.RequestQueue
 	lastMsgTime time.Time
 }
 
@@ -33,8 +32,7 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
-	c.queue = []*netclnt.Rpc{}
-	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
+	c.queue = sessstateclnt.MakeRequestQueue()
 	err := c.connect()
 	if err != nil {
 		return nil, err
@@ -68,9 +66,7 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 
 	rpc := netclnt.MakeRpc(np.MakeFcall(req, c.sid, c.seqno, f))
 	// Enqueue a request
-	c.queue = append(c.queue, rpc)
-	c.outstanding[rpc.Req.Seqno] = rpc
-	c.Signal()
+	c.queue.Enqueue(rpc)
 	return rpc, nil
 }
 
@@ -84,22 +80,6 @@ func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
 	defer c.Unlock()
 	c.lastMsgTime = time.Now()
 	return reply.Fc.Msg, reply.Err
-}
-
-func (c *SessClnt) waitForReq() *netclnt.Rpc {
-	c.Lock()
-	defer c.Unlock()
-	var req *netclnt.Rpc
-	// Wait until we have an RPC request.
-	for len(c.queue) == 0 {
-		if c.closed {
-			return nil
-		}
-		c.Wait()
-	}
-	// Pop the first item form the queue.
-	req, c.queue = c.queue[0], c.queue[1:]
-	return req
 }
 
 func (c *SessClnt) connect() *np.Err {
@@ -144,16 +124,15 @@ func (c *SessClnt) tryReconnectL() *np.Err {
 		return err
 	}
 	// Resend outstanding requests.
-	c.resendOutstanding()
+	db.DPrintf("SESSCLNT", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
+	c.queue.Reset()
 	return nil
 }
 
 // Complete an RPC and send a response.
 func (c *SessClnt) completeRpc(reply *np.Fcall, err *np.Err) {
-	c.Lock()
-	rpc, ok := c.outstanding[reply.Seqno]
-	delete(c.outstanding, reply.Seqno)
-	c.Unlock()
+	// XXX can we remove Done?
+	rpc, ok := c.queue.Complete(reply.Seqno)
 	// the outstanding request may have been cleared if the conn is closing,
 	// in which case rpc will be nil.
 	if ok && !rpc.Done {
@@ -165,23 +144,6 @@ func (c *SessClnt) completeRpc(reply *np.Fcall, err *np.Err) {
 
 // Caller holds lock.
 func (c *SessClnt) resendOutstanding() {
-	db.DPrintf("SESSCLNT", "%v Resend outstanding requests to %v\n", c.sid, c.addrs)
-	outstanding := make([]*netclnt.Rpc, len(c.outstanding))
-	idx := 0
-	for _, o := range c.outstanding {
-		db.DPrintf("SESSCLNT", "%v Resend outstanding request %v\n", c.sid, o)
-		outstanding[idx] = o
-		idx++
-	}
-	sort.Slice(outstanding, func(i, j int) bool {
-		return outstanding[i].Req.Seqno < outstanding[j].Req.Seqno
-	})
-	// Append outstanding requests that need to be resent to the front of the
-	// queue.
-	c.queue = append(outstanding, c.queue...)
-	db.DPrintf("SESSCLNT", "%v Resent %v outstanding requests %v, new queue len %v\n", c.sid, len(outstanding), c.addrs, len(c.queue))
-	// Signal that there are queued requests ready to be processed.
-	c.Signal()
 }
 
 func (c *SessClnt) isClosed() bool {
@@ -224,22 +186,14 @@ func (c *SessClnt) close() {
 	c.closed = true
 	db.DPrintf("SESSCLNT", "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
 	c.nc.Close()
-	// Kill pending requests.
-	for _, o := range c.queue {
-		if !o.Done {
-			o.Done = true
-			close(o.ReplyC)
-		}
-	}
+	outstanding := c.queue.Close()
 	// Kill outstanding requests.
-	for _, o := range c.outstanding {
+	for _, o := range outstanding {
 		if !o.Done {
 			o.Done = true
 			close(o.ReplyC)
 		}
 	}
-	c.queue = []*netclnt.Rpc{}
-	c.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 }
 
 func (c *SessClnt) needsHeartbeat() bool {
@@ -313,7 +267,7 @@ func (c *SessClnt) reader() {
 func (c *SessClnt) writer() {
 	for {
 		// Try to get the next request to be sent
-		req := c.waitForReq()
+		req := c.queue.Next()
 		if req == nil {
 			return
 		}

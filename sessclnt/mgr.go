@@ -62,19 +62,26 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		return nil, err
 	}
 	msg, err := sess.rpc(req, f)
-	// Check if the session needs to be closed.
+	if srvClosedSess(msg, err) {
+		sess.close()
+	}
+	return msg, err
+}
+
+// Check if the session needs to be closed because the server killed it.
+func srvClosedSess(msg np.Tmsg, err *np.Err) bool {
 	rerr, ok := msg.(np.Rerror)
 	if ok {
 		err := np.String2Err(rerr.Ename)
 		if np.IsErrClosed(err) {
-			sess.close()
+			return true
 		}
 	} else {
 		if msg != nil && msg.Type() == np.TRdetach {
-			sess.close()
+			return true
 		}
 	}
-	return msg, err
+	return false
 }
 
 func (sc *Mgr) Close(addrs []string) {

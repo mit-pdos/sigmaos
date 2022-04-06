@@ -74,7 +74,7 @@ func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	if !ok {
 		return np.MkErr(np.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
-	sess.sessClose()
+	sess.close()
 	return nil
 }
 

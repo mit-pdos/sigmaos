@@ -4,10 +4,15 @@ package wc
 // a word-count application for MapReduce.
 //
 
-import "ulambda/mr"
-import "unicode"
-import "strings"
-import "strconv"
+import (
+	"bufio"
+	"io"
+	"strconv"
+	"unicode"
+	"unicode/utf8"
+
+	"ulambda/mr"
+)
 
 //
 // The map function is called once for each file of input. The first
@@ -16,16 +21,41 @@ import "strconv"
 // and look only at the contents argument. The return value is a slice
 // of key/value pairs.
 //
-func Map(filename string, contents string) []mr.KeyValue {
-	// function to detect word separators.
-	ff := func(r rune) bool { return !unicode.IsLetter(r) }
 
-	// split contents into an array of words.
-	words := strings.FieldsFunc(contents, ff)
+func scanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	// Skip leading non letters
+	start := 0
+	for width := 0; start < len(data); start += width {
+		var r rune
+		r, width = utf8.DecodeRune(data[start:])
+		if unicode.IsLetter(r) {
+			break
+		}
+	}
+	// Scan until non letter
+	for width, i := 0, start; i < len(data); i += width {
+		var r rune
+		r, width = utf8.DecodeRune(data[i:])
+		if !unicode.IsLetter(r) {
+			return i + width, data[start:i], nil
+		}
+	}
+	// If we're at EOF, we have a final, non-empty, non-terminated word. Return it.
+	if atEOF && len(data) > start {
+		return len(data), data[start:], nil
+	}
+	// Request more data.
+	return start, nil, nil
 
-	kva := []mr.KeyValue{}
-	for _, w := range words {
-		kv := mr.KeyValue{w, "1"}
+}
+
+func Map(filename string, rdr io.Reader) []mr.KeyValue {
+	scanner := bufio.NewScanner(rdr)
+	scanner.Split(scanWords)
+
+	kva := make([]mr.KeyValue, 0)
+	for scanner.Scan() {
+		kv := mr.KeyValue{scanner.Text(), "1"}
 		kva = append(kva, kv)
 	}
 	return kva

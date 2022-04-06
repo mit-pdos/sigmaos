@@ -98,7 +98,7 @@ func (m *Mapper) closewrts() error {
 
 func (m *Mapper) emit(kv *KeyValue) error {
 	r := Khash(kv.Key) % m.nreducetask
-	if err := fslib.WriteJsonRecord(m.wrts[r].wrt, kv); err != nil {
+	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
 		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 	}
 	return nil
@@ -114,8 +114,10 @@ func (m *Mapper) doMap() error {
 	db.DPrintf("MR0", "Getfile %v\n", time.Since(start).Milliseconds())
 	start = time.Now()
 
-	err = m.mapf(m.input, rdr, m.emit)
-	if err != nil {
+	if err := m.mapf(m.input, rdr, m.emit); err != nil {
+		return err
+	}
+	if err := m.closewrts(); err != nil {
 		return err
 	}
 

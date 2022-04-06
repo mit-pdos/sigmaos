@@ -63,6 +63,7 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	}
 	msg, err := sess.rpc(req, f)
 	if srvClosedSess(msg, err) {
+		db.DPrintf("SESSCLNT", "Srv closed sess %v on req %v %v\n", sc.sid, req.Type(), req)
 		sess.close()
 	}
 	return msg, err
@@ -76,22 +77,8 @@ func srvClosedSess(msg np.Tmsg, err *np.Err) bool {
 		if np.IsErrClosed(err) {
 			return true
 		}
-	} else {
-		if msg != nil && msg.Type() == np.TRdetach {
-			return true
-		}
 	}
 	return false
-}
-
-func (sc *Mgr) Close(addrs []string) {
-	key := sessKey(addrs)
-	sc.mu.Lock()
-	sess, ok := sc.sessions[key]
-	sc.mu.Unlock()
-	if ok {
-		sess.close()
-	}
 }
 
 // For testing

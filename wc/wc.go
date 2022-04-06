@@ -49,16 +49,16 @@ func scanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 }
 
-func Map(filename string, rdr io.Reader) []mr.KeyValue {
+func Map(filename string, rdr io.Reader, emit func(kv *mr.KeyValue) error) error {
 	scanner := bufio.NewScanner(rdr)
 	scanner.Split(scanWords)
-
-	kva := make([]mr.KeyValue, 0)
 	for scanner.Scan() {
-		kv := mr.KeyValue{scanner.Text(), "1"}
-		kva = append(kva, kv)
+		kv := &mr.KeyValue{scanner.Text(), "1"}
+		if err := emit(kv); err != nil {
+			return err
+		}
 	}
-	return kva
+	return nil
 }
 
 //

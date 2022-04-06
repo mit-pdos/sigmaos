@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -20,7 +21,12 @@ import (
 	"ulambda/writer"
 )
 
-type MapT func(string, io.Reader) []KeyValue
+type MapT func(string, io.Reader, func(*KeyValue) error) error
+
+type wrt struct {
+	wrt  *writer.Writer
+	bwrt *bufio.Writer
+}
 
 type Mapper struct {
 	*fslib.FsLib
@@ -29,7 +35,7 @@ type Mapper struct {
 	nreducetask int
 	input       string
 	file        string
-	fds         []*writer.Writer
+	wrts        []*wrt
 	rand        string
 }
 
@@ -48,7 +54,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	m.input = args[1]
 	m.file = path.Base(m.input)
 	m.rand = rand.String(16)
-	m.fds = make([]*writer.Writer, m.nreducetask)
+	m.wrts = make([]*wrt, m.nreducetask)
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
@@ -66,41 +72,34 @@ func (m *Mapper) initMapper() error {
 	m.MkDir(d, 0777)
 
 	// Create the output files
-	var err error
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output file
 		oname := np.UX + "/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
-		m.fds[r], err = m.CreateWriter(oname, 0777, np.OWRITE)
+		w, err := m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 		}
+		m.wrts[r] = &wrt{w, bufio.NewWriter(w)}
 	}
 	return nil
 }
 
-func (m *Mapper) closefds() error {
+func (m *Mapper) closewrts() error {
 	for r := 0; r < m.nreducetask; r++ {
-		err := m.fds[r].Close()
-		if err != nil {
-			return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.fds[r], err)
+		if err := m.wrts[r].bwrt.Flush(); err != nil {
+			return fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
+		}
+		if err := m.wrts[r].wrt.Close(); err != nil {
+			return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
 		}
 	}
 	return nil
 }
 
-func (m *Mapper) mapper(rdr io.Reader) error {
-	kvs := m.mapf(m.input, rdr)
-
-	// split
-	skvs := make([][]KeyValue, m.nreducetask)
-	for _, kv := range kvs {
-		r := Khash(kv.Key) % m.nreducetask
-		skvs[r] = append(skvs[r], kv)
-	}
-	for r := 0; r < m.nreducetask; r++ {
-		if err := m.fds[r].WriteJsonRecord(skvs[r]); err != nil {
-			return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
-		}
+func (m *Mapper) emit(kv *KeyValue) error {
+	r := Khash(kv.Key) % m.nreducetask
+	if err := fslib.WriteJsonRecord(m.wrts[r].wrt, kv); err != nil {
+		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
 	}
 	return nil
 }
@@ -115,7 +114,7 @@ func (m *Mapper) doMap() error {
 	db.DPrintf("MR0", "Getfile %v\n", time.Since(start).Milliseconds())
 	start = time.Now()
 
-	err = m.mapper(rdr)
+	err = m.mapf(m.input, rdr, m.emit)
 	if err != nil {
 		return err
 	}

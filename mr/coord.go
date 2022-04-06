@@ -177,6 +177,7 @@ func (c *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 }
 
 func (c *Coord) restartMappers(files []string) {
+	db.DPrintf(db.ALWAYS, "restart mappers %v\n", files)
 	for _, f := range files {
 		n := path.Join(MDIR, f)
 		if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
@@ -188,7 +189,7 @@ func (c *Coord) restartMappers(files []string) {
 func (c *Coord) processResult(dir string, res Ttask) {
 	if res.err == nil && res.status.IsStatusOK() {
 		// mark task as done
-		log.Printf("%v: task done %v\n", proc.GetName(), res.task)
+		db.DPrintf(db.ALWAYS, "task done %v\n", res.task)
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
 		err := c.Rename(s, d)
@@ -230,7 +231,7 @@ func (c *Coord) recover(dir string) {
 
 	// just treat all tasks in progress as failed; too aggressive, but correct.
 	for _, st := range sts {
-		log.Printf("%v: recover %v\n", proc.GetName(), st.Name)
+		db.DPrintf(db.ALWAYS, "recover %v\n", st.Name)
 		to := dir + "/" + st.Name
 		if c.Rename(dir+TIP+"/"+st.Name, to) != nil {
 			// an old, disconnected coord may do this too,
@@ -270,13 +271,13 @@ func (c *Coord) Work() {
 	// partitioned, we cannot write the todo directories either.
 	c.electclnt.AcquireLeadership(nil)
 
-	log.Printf("%v: leader\n", proc.GetName())
+	db.DPrintf(db.ALWAYS, "leader\n")
 
 	for {
 		c.recover(MDIR)
 		c.recover(RDIR)
 		c.phase(MDIR, c.mapper)
-		log.Printf("%v: Reduce phase\n", proc.GetName())
+		db.DPrintf(db.ALWAYS, "Reduce phase\n")
 		// If reduce phase is unsuccessful, we lost some mapper output. Restart
 		// those mappers.
 		success := c.phase(RDIR, c.reducer)

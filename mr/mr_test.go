@@ -91,6 +91,7 @@ func (ts *Tstate) prepareJob() {
 		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			db.DFatalf("PutFile %v err %v\n", n, err)
 		}
+		// break
 	}
 }
 

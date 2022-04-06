@@ -201,18 +201,6 @@ func (c *SessClnt) heartbeats() {
 	}
 }
 
-func (c *SessClnt) srvClosedSess(reply np.Tmsg) bool {
-	if reply.Type() == np.TRerror {
-		rmsg := reply.(np.Rerror)
-		err := np.String2Err(rmsg.Ename)
-		db.DPrintf("SESSCLNT_ERR", "%v sessclose %v reply %v", c.sid, c.addrs, err)
-		if np.IsErrClosed(err) {
-			return true
-		}
-	}
-	return false
-}
-
 func (c *SessClnt) reader() {
 	for !c.isClosed() {
 		// Get the current netclnt connection (which may
@@ -233,13 +221,6 @@ func (c *SessClnt) reader() {
 			continue
 		}
 		c.completeRpc(reply, err)
-
-		if reply.Msg.Type() == np.TRdetach || c.srvClosedSess(reply.Msg) {
-			// close session now; so that the reader
-			// doesn't retry because the other side may
-			// have already closed TCP connection.
-			c.close()
-		}
 	}
 }
 

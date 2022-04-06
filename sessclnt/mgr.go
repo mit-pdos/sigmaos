@@ -61,7 +61,30 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addr)
 		return nil, err
 	}
-	return sess.rpc(req, f)
+	msg, err := sess.rpc(req, f)
+	// Check if the session needs to be closed.
+	rerr, ok := msg.(np.Rerror)
+	if ok {
+		err := np.String2Err(rerr.Ename)
+		if np.IsErrClosed(err) {
+			sess.close()
+		}
+	} else {
+		if msg != nil && msg.Type() == np.TRdetach {
+			sess.close()
+		}
+	}
+	return msg, err
+}
+
+func (sc *Mgr) Close(addrs []string) {
+	key := sessKey(addrs)
+	sc.mu.Lock()
+	sess, ok := sc.sessions[key]
+	sc.mu.Unlock()
+	if ok {
+		sess.close()
+	}
 }
 
 // For testing

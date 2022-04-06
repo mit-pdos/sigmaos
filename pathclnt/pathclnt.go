@@ -93,8 +93,8 @@ func (pathc *PathClnt) MakeReader(fid np.Tfid, path string, chunksz np.Tsize) *r
 	return reader.MakeReader(pathc.FidClnt, path, fid, chunksz)
 }
 
-func (pathc *PathClnt) MakeWriter(fid np.Tfid, chunksz np.Tsize) *writer.Writer {
-	return writer.MakeWriter(pathc.FidClnt, fid, chunksz)
+func (pathc *PathClnt) MakeWriter(fid np.Tfid) *writer.Writer {
+	return writer.MakeWriter(pathc.FidClnt, fid)
 }
 
 func (pathc *PathClnt) readlink(fid np.Tfid) (string, *np.Err) {

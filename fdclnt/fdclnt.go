@@ -116,12 +116,12 @@ func (fdc *FdClient) MakeReader(fd int, path string, chunksz np.Tsize) *reader.R
 	return fdc.PathClnt.MakeReader(fid, path, chunksz)
 }
 
-func (fdc *FdClient) MakeWriter(fd int, chunksz np.Tsize) *writer.Writer {
+func (fdc *FdClient) MakeWriter(fd int) *writer.Writer {
 	fid, err := fdc.fds.lookup(fd)
 	if err != nil {
 		return nil
 	}
-	return fdc.PathClnt.MakeWriter(fid, chunksz)
+	return fdc.PathClnt.MakeWriter(fid)
 }
 
 func (fdc *FdClient) readFid(fd int, fid np.Tfid, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, error) {

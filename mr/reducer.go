@@ -63,7 +63,7 @@ func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
 	defer rdr.Close()
 	err = rdr.ReadJsonStream(func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
-		db.DPrintf("REDUCE", "reduce %v: kva %v\n", file, kv)
+		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
 		kva = append(kva, kv)
 		return nil
 	})
@@ -90,7 +90,6 @@ func (r *Reducer) doReduce() *proc.Status {
 			// mapper).
 			lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
 		}
-		log.Printf("processFile %v\n", err)
 		kva = append(kva, tkva...)
 		n += 1
 		return false, nil

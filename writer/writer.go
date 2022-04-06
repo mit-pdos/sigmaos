@@ -7,12 +7,10 @@ import (
 )
 
 type Writer struct {
-	fc      *fidclnt.FidClnt
-	fid     np.Tfid
-	buf     []byte
-	off     np.Toffset
-	eof     bool
-	chunksz np.Tsize
+	fc  *fidclnt.FidClnt
+	fid np.Tfid
+	buf []byte
+	off np.Toffset
 }
 
 func (wrt *Writer) Write(p []byte) (int, error) {
@@ -33,6 +31,6 @@ func (wrt *Writer) Close() error {
 	return nil
 }
 
-func MakeWriter(fc *fidclnt.FidClnt, fid np.Tfid, chunksz np.Tsize) *Writer {
-	return &Writer{fc, fid, make([]byte, 0), 0, false, chunksz}
+func MakeWriter(fc *fidclnt.FidClnt, fid np.Tfid) *Writer {
+	return &Writer{fc, fid, make([]byte, 0), 0}
 }

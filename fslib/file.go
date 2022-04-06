@@ -88,7 +88,7 @@ func (fl *FsLib) CreateWriter(fname string, perm np.Tperm, mode np.Tmode) (*writ
 	if err != nil {
 		return nil, err
 	}
-	wrt := fl.MakeWriter(fd, fl.GetChunkSz())
+	wrt := fl.MakeWriter(fd)
 	return wrt, nil
 }
 
@@ -97,7 +97,7 @@ func (fl *FsLib) OpenWriter(fname string, mode np.Tmode) (*writer.Writer, error)
 	if err != nil {
 		return nil, err
 	}
-	wrt := fl.MakeWriter(fd, fl.GetChunkSz())
+	wrt := fl.MakeWriter(fd)
 	return wrt, nil
 }
 

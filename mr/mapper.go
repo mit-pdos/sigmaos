@@ -2,10 +2,12 @@ package mr
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -18,7 +20,7 @@ import (
 	"ulambda/writer"
 )
 
-type MapT func(string, string) []KeyValue
+type MapT func(string, io.Reader) []KeyValue
 
 type Mapper struct {
 	*fslib.FsLib
@@ -86,10 +88,8 @@ func (m *Mapper) closefds() error {
 	return nil
 }
 
-func (m *Mapper) mapper(txt string) error {
-	kvs := m.mapf(m.input, txt)
-
-	// log.Printf("%v: Map %v: kvs = %v\n", proc.GetName(), m.input, kvs)
+func (m *Mapper) mapper(rdr io.Reader) error {
+	kvs := m.mapf(m.input, rdr)
 
 	// split
 	skvs := make([][]KeyValue, m.nreducetask)
@@ -106,15 +106,22 @@ func (m *Mapper) mapper(txt string) error {
 }
 
 func (m *Mapper) doMap() error {
-	b, err := m.GetFile(m.input)
+	start := time.Now()
+	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
 	}
-	txt := string(b)
-	err = m.mapper(txt)
+
+	db.DPrintf("MR0", "Getfile %v\n", time.Since(start).Milliseconds())
+	start = time.Now()
+
+	err = m.mapper(rdr)
 	if err != nil {
 		return err
 	}
+
+	db.DPrintf("MR0", "mapper %v\n", time.Since(start).Milliseconds())
+	start = time.Now()
 
 	// Inform reducer where to find map output
 	st, err := m.Stat(np.UX + "/~ip")
@@ -152,6 +159,8 @@ func (m *Mapper) doMap() error {
 			}
 			db.DFatalf("%v: FATA/L symlink %v err %v\n", proc.GetName(), name, err)
 		}
+		db.DPrintf("MR0", "output %v %v\n", fn, time.Since(start).Milliseconds())
+		start = time.Now()
 	}
 	return nil
 }

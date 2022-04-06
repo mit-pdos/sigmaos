@@ -21,6 +21,7 @@ func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
 	sc.sessions = make(map[string]*SessClnt)
 	sc.sid = session
 	sc.seqno = seqno
+	db.DPrintf("SESSCLNT", "Session Mgr %v %v\n", sc.sid)
 	return sc
 }
 

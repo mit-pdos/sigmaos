@@ -10,7 +10,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/writer"
 )
 
 const (
@@ -42,7 +41,7 @@ func RunLeader(dir, last, child string) {
 	// Write dir in new epoch
 	//
 	conf := &Config{epoch.String(), pid, pid}
-	b, err := writer.JsonRecord(*conf)
+	b, err := fslib.JsonRecord(*conf)
 	if err != nil {
 		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}

@@ -49,8 +49,8 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	return r, nil
 }
 
-func (r *Reducer) processFile(file string) ([]KeyValue, error) {
-	kva := []KeyValue{}
+func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
+	kva := make([]*KeyValue, 0)
 
 	d := r.input + "/" + file + "/"
 	db.DPrintf("MR", "reduce %v\n", d)
@@ -61,17 +61,20 @@ func (r *Reducer) processFile(file string) ([]KeyValue, error) {
 		return nil, err
 	}
 	defer rdr.Close()
-	rdr.ReadJsonStream(func() interface{} { return new([]KeyValue) }, func(a interface{}) error {
-		kvs := a.(*[]KeyValue)
-		db.DPrintf("REDUCE", "reduce %v: kva %v\n", file, kvs)
-		kva = append(kva, *kvs...)
+	err = rdr.ReadJsonStream(func() interface{} { return new(KeyValue) }, func(a interface{}) error {
+		kv := a.(*KeyValue)
+		db.DPrintf("REDUCE", "reduce %v: kva %v\n", file, kv)
+		kva = append(kva, kv)
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return kva, nil
 }
 
 func (r *Reducer) doReduce() *proc.Status {
-	kva := []KeyValue{}
+	kva := []*KeyValue{}
 	lostMaps := []string{}
 
 	log.Printf("%v: doReduce %v %v\n", proc.GetName(), r.input, r.output)
@@ -79,11 +82,15 @@ func (r *Reducer) doReduce() *proc.Status {
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
 		if err != nil {
-			// If error is true, then either another reducer already did the job (the
-			// input dir is missing) or the server holding the mapper's output
-			// crashed (in which case we need to restart that mapper).
+			// If error is true, then either another
+			// reducer already did the job (the input dir
+			// is missing) or the server holding the
+			// mapper's output crashed or is unreachable
+			// (in which case we need to restart that
+			// mapper).
 			lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
 		}
+		log.Printf("processFile %v\n", err)
 		kva = append(kva, tkva...)
 		n += 1
 		return false, nil

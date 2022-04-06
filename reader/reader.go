@@ -3,6 +3,7 @@ package reader
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	db "ulambda/debug"
@@ -85,8 +86,10 @@ func (rdr *Reader) ReadJsonStream(mk func() interface{}, f func(i interface{}) e
 			break
 		}
 		data := make([]byte, l)
-		if _, err := rdr.Read(data); err != nil {
+		if n, err := rdr.Read(data); err != nil {
 			return err
+		} else if int64(n) != l {
+			return fmt.Errorf("ReadJsonStream: short read %v\n", n)
 		}
 		v := mk()
 		if err := json.Unmarshal(data, v); err != nil {

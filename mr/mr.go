@@ -14,7 +14,7 @@ type KeyValue struct {
 }
 
 // for sorting by key.
-type ByKey []KeyValue
+type ByKey []*KeyValue
 
 // for sorting by key.
 func (a ByKey) Len() int           { return len(a) }

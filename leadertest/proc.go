@@ -10,7 +10,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/writer"
 )
 
 func RunProc(epochstr, dir string) {
@@ -44,7 +43,7 @@ func RunProc(epochstr, dir string) {
 	// and delay writes
 	delay.Delay(DELAY)
 
-	b, err := writer.JsonRecord(*conf)
+	b, err := fslib.JsonRecord(*conf)
 	if err != nil {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return

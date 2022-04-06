@@ -16,7 +16,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/procclnt"
 	"ulambda/reader"
-	"ulambda/writer"
 )
 
 //
@@ -232,7 +231,7 @@ func (kc *KvClerk) Put(k Tkey, b []byte) error {
 }
 
 func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
-	b, err := writer.JsonRecord(v)
+	b, err := fslib.JsonRecord(v)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	// "github.com/klauspost/readahead"
+
 	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/delay"
@@ -66,27 +68,35 @@ type result struct {
 }
 
 func (r *Reducer) readFile(ch chan result, file string) {
-	kva := make([]*KeyValue, 0)
+	// Make new fslib to parallelize request to a single fsux
+	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
+	kvs := make([]*KeyValue, 0)
 	d := r.input + "/" + file + "/"
 	db.DPrintf("MR", "reduce %v\n", d)
-	rdr, err := r.OpenReader(d)
+	rdr, err := fsl.OpenReader(d)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", d, err)
 		ch <- result{nil, "", err}
 		return
 	}
 	defer rdr.Close()
+	defer fsl.Exit()
 
-	err = fslib.JsonBufReader(bufio.NewReaderSize(rdr, BUFSZ), func() interface{} { return new(KeyValue) }, func(a interface{}) error {
+	brdr := bufio.NewReaderSize(rdr, BUFSZ)
+	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
+	//if err != nil {
+	//	db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
+	//}
+	err = fslib.JsonReader(brdr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
-		kva = append(kva, kv)
+		kvs = append(kvs, kv)
 		return nil
 	})
 	if err != nil {
 		ch <- result{nil, file, nil}
 	} else {
-		ch <- result{kva, "", nil}
+		ch <- result{kvs, "", nil}
 	}
 }
 

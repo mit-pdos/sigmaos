@@ -158,6 +158,7 @@ func (m *Mapper) doMap() error {
 	if err != nil {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
 	}
+	defer rdr.Close()
 
 	db.DPrintf("MR0", "Open %v\n", time.Since(start).Milliseconds())
 	start = time.Now()

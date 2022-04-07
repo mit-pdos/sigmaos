@@ -70,7 +70,11 @@ func WriteJsonRecord(wrt io.Writer, r interface{}) error {
 	return nil
 }
 
-func ReadJsonStream(rdr *bufio.Reader, mk func() interface{}, f func(i interface{}) error) error {
+func JsonReader(rdr io.Reader, mk func() interface{}, f func(i interface{}) error) error {
+	return JsonBufReader(bufio.NewReader(rdr), mk, f)
+}
+
+func JsonBufReader(rdr *bufio.Reader, mk func() interface{}, f func(i interface{}) error) error {
 	for {
 		l, err := binary.ReadVarint(rdr)
 		if err != nil && err == io.EOF {
@@ -80,7 +84,7 @@ func ReadJsonStream(rdr *bufio.Reader, mk func() interface{}, f func(i interface
 		if n, err := io.ReadFull(rdr, data); err != nil {
 			return err
 		} else if int64(n) != l {
-			return fmt.Errorf("ReadJsonStream: short read %v %v\n", n, l)
+			return fmt.Errorf("JsonBufReader: short read %v %v\n", n, l)
 		}
 		v := mk()
 		if err := json.Unmarshal(data, v); err != nil {

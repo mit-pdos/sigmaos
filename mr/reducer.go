@@ -62,7 +62,7 @@ func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
 		return nil, err
 	}
 	defer rdr.Close()
-	err = fslib.ReadJsonStream(bufio.NewReaderSize(rdr, BUFSZ), func() interface{} { return new(KeyValue) }, func(a interface{}) error {
+	err = fslib.JsonBufReader(bufio.NewReaderSize(rdr, BUFSZ), func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
 		kva = append(kva, kv)

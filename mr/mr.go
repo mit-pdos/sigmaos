@@ -5,6 +5,10 @@ import (
 	"hash/fnv"
 )
 
+const (
+	BUFSZ = 1 << 16
+)
+
 //
 // Map functions return a slice of KeyValue.
 //

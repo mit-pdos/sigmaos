@@ -9,7 +9,7 @@ import (
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
-	"ulambda/session"
+	"ulambda/sessstatesrv"
 	"ulambda/threadmgr"
 )
 
@@ -143,11 +143,11 @@ type SessCondTable struct {
 	//	deadlock.Mutex
 	sync.Mutex
 	conds  map[*SessCond]bool
-	St     *session.SessionTable
+	St     *sessstatesrv.SessionTable
 	closed bool
 }
 
-func MakeSessCondTable(st *session.SessionTable) *SessCondTable {
+func MakeSessCondTable(st *sessstatesrv.SessionTable) *SessCondTable {
 	t := &SessCondTable{}
 	t.conds = make(map[*SessCond]bool)
 	t.St = st

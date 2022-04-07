@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -72,7 +73,8 @@ func check(kc *kv.KvClerk, key kv.Tkey, ntest uint64) error {
 	}
 	rdr.Unfence()
 	defer rdr.Close()
-	err = rdr.ReadJsonStream(func() interface{} { return new(Value) }, func(a interface{}) error {
+	brdr := bufio.NewReader(rdr)
+	err = fslib.ReadJsonStream(brdr, func() interface{} { return new(Value) }, func(a interface{}) error {
 		val := a.(*Value)
 		if val.Pid != proc.GetPid() {
 			return nil

@@ -60,8 +60,9 @@ func (pathc *PathClnt) unionLookup(fid np.Tfid, q string) (np.Tfid, *np.Err) {
 		return np.NoFid, err
 	}
 	rdr := reader.MakeReader(pathc.FidClnt, "", fid, pathc.chunkSz)
+	drdr := rdr.NewDirReader()
 	for {
-		de, err := npcodec.UnmarshalDirEnt(rdr)
+		de, err := npcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}

@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
@@ -61,7 +62,7 @@ func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
 		return nil, err
 	}
 	defer rdr.Close()
-	err = rdr.ReadJsonStream(func() interface{} { return new(KeyValue) }, func(a interface{}) error {
+	err = fslib.ReadJsonStream(bufio.NewReader(rdr), func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
 		kva = append(kva, kv)
@@ -77,17 +78,16 @@ func (r *Reducer) doReduce() *proc.Status {
 	kva := []*KeyValue{}
 	lostMaps := []string{}
 
-	log.Printf("%v: doReduce %v %v\n", proc.GetName(), r.input, r.output)
+	db.DPrintf(db.ALWAYS, "doReduce %v %v\n", r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
 		tkva, err := r.processFile(st.Name)
 		if err != nil {
 			// If error is true, then either another
 			// reducer already did the job (the input dir
-			// is missing) or the server holding the
-			// mapper's output crashed or is unreachable
-			// (in which case we need to restart that
-			// mapper).
+			// is missing), the server holding the
+			// mapper's output crashed, or is unreachable (in
+			// which case we need to restart that mapper).
 			lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
 		}
 		kva = append(kva, tkva...)
@@ -99,6 +99,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	}
 
 	if len(lostMaps) > 0 {
+		log.Printf("lost maps %v\n", lostMaps)
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 

@@ -1,6 +1,7 @@
 package fslib
 
 import (
+	"bufio"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -65,6 +66,29 @@ func WriteJsonRecord(wrt io.Writer, r interface{}) error {
 	}
 	if n != len(b) {
 		return fmt.Errorf("WriteJsonRecord short write %v", n)
+	}
+	return nil
+}
+
+func ReadJsonStream(rdr *bufio.Reader, mk func() interface{}, f func(i interface{}) error) error {
+	for {
+		l, err := binary.ReadVarint(rdr)
+		if err != nil && err == io.EOF {
+			break
+		}
+		data := make([]byte, l)
+		if n, err := io.ReadFull(rdr, data); err != nil {
+			return err
+		} else if int64(n) != l {
+			return fmt.Errorf("ReadJsonStream: short read %v %v\n", n, l)
+		}
+		v := mk()
+		if err := json.Unmarshal(data, v); err != nil {
+			return err
+		}
+		if err := f(v); err != nil {
+			return err
+		}
 	}
 	return nil
 }

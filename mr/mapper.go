@@ -79,7 +79,7 @@ func (m *Mapper) initMapper() error {
 		if err != nil {
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 		}
-		m.wrts[r] = &wrt{w, bufio.NewWriter(w)}
+		m.wrts[r] = &wrt{w, bufio.NewWriterSize(w, BUFSZ)}
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func (m *Mapper) doMap() error {
 	db.DPrintf("MR0", "Open %v\n", time.Since(start).Milliseconds())
 	start = time.Now()
 
-	if err := m.mapf(m.input, rdr, m.emit); err != nil {
+	if err := m.mapf(m.input, bufio.NewReaderSize(rdr, BUFSZ), m.emit); err != nil {
 		return err
 	}
 	db.DPrintf("MR0", "Mapf %v\n", time.Since(start).Milliseconds())

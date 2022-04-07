@@ -28,8 +28,8 @@ const (
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
-	CRASHTASK  = 10000
-	CRASHCOORD = 20000
+	CRASHTASK  = 2000
+	CRASHCOORD = 5000
 	CRASHSRV   = 1000000
 )
 

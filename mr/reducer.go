@@ -59,20 +59,24 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	return r, nil
 }
 
-func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
-	kva := make([]*KeyValue, 0)
+type result struct {
+	kvs  []*KeyValue
+	name string
+	err  error
+}
 
+func (r *Reducer) readFile(ch chan result, file string) {
+	kva := make([]*KeyValue, 0)
 	d := r.input + "/" + file + "/"
 	db.DPrintf("MR", "reduce %v\n", d)
 	rdr, err := r.OpenReader(d)
 	if err != nil {
-		// another reducer already completed; nothing to be done
 		db.DPrintf("MR", "MakeReader %v err %v", d, err)
-		return nil, err
+		ch <- result{nil, "", err}
+		return
 	}
 	defer rdr.Close()
 
-	start := time.Now()
 	err = fslib.JsonBufReader(bufio.NewReaderSize(rdr, BUFSZ), func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
@@ -80,14 +84,45 @@ func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		ch <- result{nil, file, nil}
+	} else {
+		ch <- result{kva, "", nil}
 	}
-	db.DPrintf("MR0", "Reduce Read %v\n", time.Since(start).Milliseconds())
-	return kva, nil
 }
 
-func (r *Reducer) processDirs(input string) ([]*KeyValue, error) {
-	return nil, nil
+func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
+	start := time.Now()
+	kvs := []*KeyValue{}
+	lostMaps := []string{}
+	sts, err := r.GetDir(input)
+	if err != nil {
+		return nil, nil, err
+	}
+	ch := make(chan result)
+	for _, st := range sts {
+		go r.readFile(ch, st.Name)
+	}
+	for range sts {
+		r := <-ch
+		if r.err != nil {
+			// another reducer already processed input
+			// file; nothing to be done; bail out.
+			return nil, nil, err
+		}
+		if r.name != "" {
+			// If error is true, then either another
+			// reducer already did the job (the input dir
+			// is missing), the server holding the
+			// mapper's output crashed, or is unreachable
+			// (in which case we need to restart that
+			// mapper).
+			lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
+		} else {
+			kvs = append(kvs, r.kvs...)
+		}
+	}
+	db.DPrintf("MR0", "Reduce Read %v\n", time.Since(start).Milliseconds())
+	return kvs, lostMaps, nil
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
@@ -97,56 +132,39 @@ func (r *Reducer) emit(kv *KeyValue) error {
 }
 
 func (r *Reducer) doReduce() *proc.Status {
-	kva := []*KeyValue{}
-	lostMaps := []string{}
-
 	db.DPrintf(db.ALWAYS, "doReduce %v %v\n", r.input, r.output)
-	n := 0
-	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
-		log.Printf("name %v\n", st.Name)
-		tkva, err := r.processFile(st.Name)
-		if err != nil {
-			// If error is true, then either another
-			// reducer already did the job (the input dir
-			// is missing), the server holding the
-			// mapper's output crashed, or is unreachable (in
-			// which case we need to restart that mapper).
-			lostMaps = append(lostMaps, strings.TrimPrefix(st.Name, "m-"))
-		}
-		kva = append(kva, tkva...)
-		n += 1
-		return false, nil
-	})
+	kvs, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: ProcessDir %v err %v\n", proc.GetName(), r.input, err), nil)
+		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)
 	}
-
 	if len(lostMaps) > 0 {
 		log.Printf("lost maps %v\n", lostMaps)
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 
 	start := time.Now()
-	sort.Sort(ByKey(kva))
+	sort.Sort(ByKey(kvs))
 	db.DPrintf("MR0", "Reduce Sort %v\n", time.Since(start).Milliseconds())
 
 	start = time.Now()
 	i := 0
-	for i < len(kva) {
+	for i < len(kvs) {
 		j := i + 1
-		for j < len(kva) && kva[j].Key == kva[i].Key {
+		for j < len(kvs) && kvs[j].Key == kvs[i].Key {
 			j++
 		}
 		values := []string{}
 		for k := i; k < j; k++ {
-			values = append(values, kva[k].Value)
+			values = append(values, kvs[k].Value)
 		}
-		if err := r.reducef(kva[i].Key, values, r.emit); err != nil {
+		if err := r.reducef(kvs[i].Key, values, r.emit); err != nil {
 			return proc.MakeStatusErr("reducef", err)
 		}
 		i = j
 	}
+	db.DPrintf("MR0", "Reduce reduce %v\n", time.Since(start).Milliseconds())
 
+	start = time.Now()
 	if err := r.bwrt.Flush(); err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", proc.GetName(), r.tmp, err), nil)
 	}
@@ -157,7 +175,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
 	}
-	db.DPrintf("MR0", "Reduce reduce %v\n", time.Since(start).Milliseconds())
+	db.DPrintf("MR0", "Reduce output %v\n", time.Since(start).Milliseconds())
 
 	return proc.MakeStatus(proc.StatusOK)
 }

@@ -43,7 +43,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	if len(b) == 0 {
 		rdr.eof = true
-		return 0, nil
+		return 0, io.EOF
 	}
 	if len(p) != len(b) {
 		db.DPrintf("READER_ERR", "Read short %v %v %v\n", rdr.path, len(p), len(b))

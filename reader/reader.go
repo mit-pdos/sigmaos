@@ -39,7 +39,7 @@ func (rdr *Reader) Read(p []byte) (int, error) {
 	}
 	if err != nil {
 		db.DPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
-		return -1, err
+		return 0, err
 	}
 	if len(b) == 0 {
 		rdr.eof = true

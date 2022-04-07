@@ -251,6 +251,7 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 			// If we're reducing and can't find some mapper output, a ux may have
 			// crashed. So, restart those map tasks.
 			if dir == RDIR && res.status.Msg() == RESTART {
+				log.Printf("data %v\n", res.status.Data())
 				lostMappers := res.status.Data().([]string)
 				c.restartMappers(lostMappers)
 				return false

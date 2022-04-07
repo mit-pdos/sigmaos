@@ -1,9 +1,7 @@
 package reader
 
 import (
-	"encoding/binary"
-	"encoding/json"
-	"fmt"
+	"bufio"
 	"io"
 
 	db "ulambda/debug"
@@ -12,59 +10,48 @@ import (
 )
 
 type Reader struct {
-	fc      *fidclnt.FidClnt
-	path    string
-	fid     np.Tfid
-	buf     []byte
-	off     np.Toffset
-	eof     bool
-	chunksz np.Tsize
-	fenced  bool
+	fc     *fidclnt.FidClnt
+	path   string
+	fid    np.Tfid
+	off    np.Toffset
+	eof    bool
+	fenced bool
 }
 
 func (rdr *Reader) Path() string {
 	return rdr.path
 }
 
-func (rdr *Reader) ReadByte() (byte, error) {
-	d := make([]byte, 1)
-	_, err := rdr.Read(d)
-	if err != nil {
-		return 0, err
-	}
-	return d[0], nil
-}
-
 func (rdr *Reader) Read(p []byte) (int, error) {
-	for len(p) > len(rdr.buf) && !rdr.eof {
-		var b []byte
-		var err *np.Err
-		if rdr.fenced {
-			b, err = rdr.fc.ReadV(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
-		} else {
-			b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, rdr.chunksz, np.NoV)
-		}
-		if err != nil {
-			db.DPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
-			return -1, err
-		}
-		if len(b) == 0 {
-			rdr.eof = true
-		}
-		rdr.off += np.Toffset(len(b))
-		rdr.buf = append(rdr.buf, b...)
+	if len(p) == 0 {
+		return 0, nil
 	}
-	if len(rdr.buf) == 0 {
+	if rdr.eof {
 		return 0, io.EOF
 	}
-	max := len(p)
-	if len(rdr.buf) < max {
-		max = len(rdr.buf)
+	var b []byte
+	var err *np.Err
+	sz := np.Tsize(len(p))
+	if rdr.fenced {
+		b, err = rdr.fc.ReadV(rdr.fid, rdr.off, sz, np.NoV)
+	} else {
+		b, err = rdr.fc.ReadVU(rdr.fid, rdr.off, sz, np.NoV)
 	}
-	// XXX maybe don't copy: p = rdr.buf[0:max]
-	copy(p, rdr.buf)
-	rdr.buf = rdr.buf[max:]
-	return max, nil
+	if err != nil {
+		db.DPrintf("READER_ERR", "Read %v err %v\n", rdr.path, err)
+		return -1, err
+	}
+	if len(b) == 0 {
+		rdr.eof = true
+		return 0, nil
+	}
+	if len(p) != len(b) {
+		db.DPrintf("READER_ERR", "Read short %v %v %v\n", rdr.path, len(p), len(b))
+	}
+	// XXX change rdr.Read to avoid copy
+	copy(p, b)
+	rdr.off += np.Toffset(len(b))
+	return len(b), nil
 }
 
 func (rdr *Reader) GetData() ([]byte, error) {
@@ -79,27 +66,12 @@ func (rdr *Reader) GetDataErr() ([]byte, *np.Err) {
 	return rdr.fc.ReadV(rdr.fid, 0, np.MAXGETSET, np.NoV)
 }
 
-func (rdr *Reader) ReadJsonStream(mk func() interface{}, f func(i interface{}) error) error {
-	for {
-		l, err := binary.ReadVarint(rdr)
-		if err != nil && err == io.EOF {
-			break
-		}
-		data := make([]byte, l)
-		if n, err := rdr.Read(data); err != nil {
-			return err
-		} else if int64(n) != l {
-			return fmt.Errorf("ReadJsonStream: short read %v\n", n)
-		}
-		v := mk()
-		if err := json.Unmarshal(data, v); err != nil {
-			return err
-		}
-		if err := f(v); err != nil {
-			return err
-		}
-	}
-	return nil
+// Making rdr a bufio is important because the first read must be >=
+// sizeof(st), because memfs and fsux try to avoid materializing
+// directories as an array of bytes.
+func (rdr *Reader) NewDirReader() *bufio.Reader {
+	brdr := bufio.NewReader(rdr)
+	return brdr
 }
 
 func (rdr *Reader) Close() error {
@@ -115,5 +87,5 @@ func (rdr *Reader) Unfence() {
 }
 
 func MakeReader(fc *fidclnt.FidClnt, path string, fid np.Tfid, chunksz np.Tsize) *Reader {
-	return &Reader{fc, path, fid, make([]byte, 0), 0, false, chunksz, true}
+	return &Reader{fc, path, fid, 0, false, true}
 }

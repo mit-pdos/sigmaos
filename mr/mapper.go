@@ -96,35 +96,8 @@ func (m *Mapper) closewrts() error {
 	return nil
 }
 
-func (m *Mapper) emit(kv *KeyValue) error {
-	r := Khash(kv.Key) % m.nreducetask
-	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
-		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
-	}
-	return nil
-}
-
-func (m *Mapper) doMap() error {
-	start := time.Now()
-	rdr, err := m.OpenReader(m.input)
-	if err != nil {
-		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
-	}
-
-	db.DPrintf("MR0", "Getfile %v\n", time.Since(start).Milliseconds())
-	start = time.Now()
-
-	if err := m.mapf(m.input, rdr, m.emit); err != nil {
-		return err
-	}
-	if err := m.closewrts(); err != nil {
-		return err
-	}
-
-	db.DPrintf("MR0", "mapper %v\n", time.Since(start).Milliseconds())
-	start = time.Now()
-
-	// Inform reducer where to find map output
+// Inform reducer where to find map output
+func (m *Mapper) informReducer() error {
 	st, err := m.Stat(np.UX + "/~ip")
 	if err != nil {
 		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), np.UX+"/~ip", err)
@@ -160,9 +133,46 @@ func (m *Mapper) doMap() error {
 			}
 			db.DFatalf("%v: FATA/L symlink %v err %v\n", proc.GetName(), name, err)
 		}
-		db.DPrintf("MR0", "output %v %v\n", fn, time.Since(start).Milliseconds())
-		start = time.Now()
 	}
+	return nil
+}
+
+func (m *Mapper) emit(kv *KeyValue) error {
+	r := Khash(kv.Key) % m.nreducetask
+	if err := fslib.WriteJsonRecord(m.wrts[r].bwrt, kv); err != nil {
+		return fmt.Errorf("%v: mapper %v err %v", proc.GetName(), r, err)
+	}
+	return nil
+}
+
+func (m *Mapper) doMap() error {
+	start := time.Now()
+	rdr, err := m.OpenReader(m.input)
+	if err != nil {
+		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
+	}
+
+	db.DPrintf("MR0", "Open %v\n", time.Since(start).Milliseconds())
+	start = time.Now()
+
+	if err := m.mapf(m.input, rdr, m.emit); err != nil {
+		return err
+	}
+	db.DPrintf("MR0", "Mapf %v\n", time.Since(start).Milliseconds())
+	start = time.Now()
+
+	if err := m.closewrts(); err != nil {
+		return err
+	}
+	db.DPrintf("MR0", "Close %v\n", time.Since(start).Milliseconds())
+	start = time.Now()
+
+	if err := m.informReducer(); err != nil {
+		return err
+	}
+	db.DPrintf("MR0", "Inform %v\n", time.Since(start).Milliseconds())
+	start = time.Now()
+
 	return nil
 }
 

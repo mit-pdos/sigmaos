@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -17,9 +18,8 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
+	"ulambda/writer"
 )
-
-type ReduceT func(string, []string) string
 
 type Reducer struct {
 	*fslib.FsLib
@@ -28,6 +28,8 @@ type Reducer struct {
 	input   string
 	output  string
 	tmp     string
+	bwrt    *bufio.Writer
+	wrt     *writer.Writer
 }
 
 func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
@@ -41,6 +43,13 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+
+	w, err := r.CreateWriter(r.tmp, 0777, np.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	r.wrt = w
+	r.bwrt = bufio.NewWriterSize(w, BUFSZ)
 
 	r.Started()
 
@@ -62,6 +71,8 @@ func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
 		return nil, err
 	}
 	defer rdr.Close()
+
+	start := time.Now()
 	err = fslib.JsonBufReader(bufio.NewReaderSize(rdr, BUFSZ), func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
 		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
@@ -71,7 +82,18 @@ func (r *Reducer) processFile(file string) ([]*KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf("MR0", "Reduce Read %v\n", time.Since(start).Milliseconds())
 	return kva, nil
+}
+
+func (r *Reducer) processDirs(input string) ([]*KeyValue, error) {
+	return nil, nil
+}
+
+func (r *Reducer) emit(kv *KeyValue) error {
+	b := fmt.Sprintf("%v %v\n", kv.Key, kv.Value)
+	_, err := r.bwrt.Write([]byte(b))
+	return err
 }
 
 func (r *Reducer) doReduce() *proc.Status {
@@ -81,6 +103,7 @@ func (r *Reducer) doReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "doReduce %v %v\n", r.input, r.output)
 	n := 0
 	_, err := r.ProcessDir(r.input, func(st *np.Stat) (bool, error) {
+		log.Printf("name %v\n", st.Name)
 		tkva, err := r.processFile(st.Name)
 		if err != nil {
 			// If error is true, then either another
@@ -103,13 +126,11 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 
+	start := time.Now()
 	sort.Sort(ByKey(kva))
+	db.DPrintf("MR0", "Reduce Sort %v\n", time.Since(start).Milliseconds())
 
-	fd, err := r.Create(r.tmp, 0777, np.OWRITE)
-	if err != nil {
-		return proc.MakeStatusErr(fmt.Sprintf("%v: create %v err %v\n", proc.GetName(), r.tmp, err), nil)
-	}
-	defer r.Close(fd)
+	start = time.Now()
 	i := 0
 	for i < len(kva) {
 		j := i + 1
@@ -120,18 +141,24 @@ func (r *Reducer) doReduce() *proc.Status {
 		for k := i; k < j; k++ {
 			values = append(values, kva[k].Value)
 		}
-		output := r.reducef(kva[i].Key, values)
-		b := fmt.Sprintf("%v %v\n", kva[i].Key, output)
-		_, err = r.Write(fd, []byte(b))
-		if err != nil {
-			return proc.MakeStatusErr(fmt.Sprintf("%v: write %v err %v\n", proc.GetName(), r.tmp, err), nil)
+		if err := r.reducef(kva[i].Key, values, r.emit); err != nil {
+			return proc.MakeStatusErr("reducef", err)
 		}
 		i = j
+	}
+
+	if err := r.bwrt.Flush(); err != nil {
+		return proc.MakeStatusErr(fmt.Sprintf("%v: flush %v err %v\n", proc.GetName(), r.tmp, err), nil)
+	}
+	if err := r.wrt.Close(); err != nil {
+		return proc.MakeStatusErr(fmt.Sprintf("%v: close %v err %v\n", proc.GetName(), r.tmp, err), nil)
 	}
 	err = r.Rename(r.tmp, r.output)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
 	}
+	db.DPrintf("MR0", "Reduce reduce %v\n", time.Since(start).Milliseconds())
+
 	return proc.MakeStatus(proc.StatusOK)
 }
 

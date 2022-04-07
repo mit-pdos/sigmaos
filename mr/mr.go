@@ -3,6 +3,7 @@ package mr
 import (
 	// "encoding/json"
 	"hash/fnv"
+	"io"
 )
 
 const (
@@ -10,12 +11,18 @@ const (
 )
 
 //
-// Map functions return a slice of KeyValue.
+// Map and reduce functions produce KeyValue pairs
 //
+
 type KeyValue struct {
 	Key   string
 	Value string
 }
+
+type EmitT func(*KeyValue) error
+
+type ReduceT func(string, []string, EmitT) error
+type MapT func(string, io.Reader, EmitT) error
 
 // for sorting by key.
 type ByKey []*KeyValue

@@ -6,6 +6,7 @@ import (
 	"log"
 	"path"
 	"strconv"
+	"time"
 
 	"ulambda/crash"
 	db "ulambda/debug"
@@ -277,12 +278,16 @@ func (c *Coord) Work() {
 	for {
 		c.recover(MDIR)
 		c.recover(RDIR)
+		start := time.Now()
 		c.phase(MDIR, c.mapper)
-		db.DPrintf(db.ALWAYS, "Reduce phase\n")
+		db.DPrintf(db.ALWAYS, "Map phase %v\n", time.Since(start).Milliseconds())
+
+		start = time.Now()
 		// If reduce phase is unsuccessful, we lost some mapper output. Restart
 		// those mappers.
 		success := c.phase(RDIR, c.reducer)
 		if success {
+			db.DPrintf(db.ALWAYS, "Reduce phase %v\n", time.Since(start).Milliseconds())
 			break
 		}
 	}

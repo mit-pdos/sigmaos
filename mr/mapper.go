@@ -3,7 +3,6 @@ package mr
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -23,8 +22,6 @@ import (
 	"ulambda/rand"
 	"ulambda/writer"
 )
-
-type MapT func(string, io.Reader, func(*KeyValue) error) error
 
 type wrt struct {
 	wrt  *writer.Writer

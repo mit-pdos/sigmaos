@@ -49,7 +49,7 @@ func scanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 }
 
-func Map(filename string, rdr io.Reader, emit func(kv *mr.KeyValue) error) error {
+func Map(filename string, rdr io.Reader, emit mr.EmitT) error {
 	scanner := bufio.NewScanner(rdr)
 	scanner.Split(scanWords)
 	for scanner.Scan() {
@@ -66,7 +66,11 @@ func Map(filename string, rdr io.Reader, emit func(kv *mr.KeyValue) error) error
 // map tasks, with a list of all the values created for that key by
 // any map task.
 //
-func Reduce(key string, values []string) string {
+func Reduce(key string, values []string, emit mr.EmitT) error {
 	// return the number of occurrences of this word.
-	return strconv.Itoa(len(values))
+	kv := &mr.KeyValue{key, strconv.Itoa(len(values))}
+	if err := emit(kv); err != nil {
+		return err
+	}
+	return nil
 }

@@ -46,7 +46,7 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 func (c *SessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	rpc, err := c.send(req, f)
 	if err != nil {
-		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v seqno %v err %v to %v\n", c.sid, req.Type(), req, rpc.Req.Seqno, err, c.addrs)
+		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
 		return nil, err
 	}
 	rep, err1 := c.recv(rpc)

@@ -21,7 +21,7 @@ func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
 	sc.sessions = make(map[string]*SessClnt)
 	sc.sid = session
 	sc.seqno = seqno
-	db.DPrintf("SESSCLNT", "Session Mgr %v %v\n", sc.sid)
+	db.DPrintf("SESSCLNT", "Session Mgr %v\n", sc.sid)
 	return sc
 }
 
@@ -63,10 +63,6 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		return nil, err
 	}
 	msg, err := sess.rpc(req, f)
-	if srvClosedSess(msg, err) {
-		db.DPrintf("SESSCLNT", "Srv closed sess %v on req %v %v\n", sc.sid, req.Type(), req)
-		sess.close()
-	}
 	return msg, err
 }
 

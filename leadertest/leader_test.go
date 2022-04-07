@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/test"
@@ -57,7 +58,7 @@ func check(t *testing.T, ts *test.Tstate, fn string, pids []proc.Tpid) {
 	m := make(map[proc.Tpid]bool)
 	last := proc.Tpid("")
 	e := np.Tepoch(0)
-	err = rdr.ReadJsonStream(func() interface{} { return new(Config) }, func(a interface{}) error {
+	err = fslib.JsonReader(rdr, func() interface{} { return new(Config) }, func(a interface{}) error {
 		conf := *a.(*Config)
 		log.Printf("conf: %v\n", conf)
 		if conf.Leader == "" {

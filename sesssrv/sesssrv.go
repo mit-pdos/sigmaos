@@ -159,6 +159,7 @@ func (ssrv *SessSrv) Serve() {
 	} else {
 		<-ssrv.ch
 	}
+	db.DPrintf("SESSSRV", "Done serving")
 	ssrv.st.WaitClosed()
 }
 

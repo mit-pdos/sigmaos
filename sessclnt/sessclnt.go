@@ -56,7 +56,7 @@ func (c *SessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	}
 
 	if srvClosedSess(rep, err1) {
-		db.DPrintf("SESSCLNT", "Srv closed sess %v on req %v %v\n", c.sid, req.Type(), req)
+		db.DPrintf("SESSCLNT", "Srv %v closed sess %v on req %v %v\n", c.addrs, c.sid, req.Type(), req)
 		c.close()
 	}
 

@@ -110,7 +110,7 @@ func (sess *Session) SetConn(conn *np.Conn) *np.Err {
 func (sess *Session) heartbeat(msg np.Tmsg) {
 	sess.Lock()
 	defer sess.Unlock()
-	db.DPrintf("SESSION", "Heartbeat %v %v", msg.Type(), msg)
+	db.DPrintf("SESSION", "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
 		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)
 	}
@@ -125,7 +125,7 @@ func (sess *Session) timeout() {
 	sess.timedout = true
 }
 
-func (sess *Session) timedOut() bool {
+func (sess *Session) timedOut() (bool, time.Time) {
 	sess.Lock()
 	defer sess.Unlock()
 	// If in the middle of a running op, or this fssrv hasn't begun processing
@@ -133,9 +133,9 @@ func (sess *Session) timedOut() bool {
 	// op finishes.
 	if sess.running || !sess.began {
 		sess.lastHeartbeat = time.Now()
-		return false
+		return false, sess.lastHeartbeat
 	}
-	return sess.timedout || time.Since(sess.lastHeartbeat).Milliseconds() > np.SESSTIMEOUTMS
+	return sess.timedout || time.Since(sess.lastHeartbeat).Milliseconds() > np.SESSTIMEOUTMS, sess.lastHeartbeat
 }
 
 func (sess *Session) SetRunning(r bool) {

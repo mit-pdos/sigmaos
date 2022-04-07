@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/klauspost/readahead"
+
+	"ulambda/awriter"
 	"ulambda/crash"
 	db "ulambda/debug"
 	"ulambda/delay"
@@ -25,6 +28,7 @@ type MapT func(string, io.Reader, func(*KeyValue) error) error
 
 type wrt struct {
 	wrt  *writer.Writer
+	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
@@ -79,15 +83,21 @@ func (m *Mapper) initMapper() error {
 		if err != nil {
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 		}
-		m.wrts[r] = &wrt{w, bufio.NewWriterSize(w, BUFSZ)}
+		aw := awriter.NewWriterSize(w, BUFSZ)
+		bw := bufio.NewWriterSize(aw, BUFSZ)
+		m.wrts[r] = &wrt{w, aw, bw}
 	}
 	return nil
 }
 
+// XXX use writercloser
 func (m *Mapper) closewrts() error {
 	for r := 0; r < m.nreducetask; r++ {
 		if err := m.wrts[r].bwrt.Flush(); err != nil {
 			return fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
+		}
+		if err := m.wrts[r].awrt.Close(); err != nil {
+			return fmt.Errorf("%v: aclose %v err %v\n", proc.GetName(), m.wrts[r], err)
 		}
 		if err := m.wrts[r].wrt.Close(); err != nil {
 			return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
@@ -155,7 +165,12 @@ func (m *Mapper) doMap() error {
 	db.DPrintf("MR0", "Open %v\n", time.Since(start).Milliseconds())
 	start = time.Now()
 
-	if err := m.mapf(m.input, bufio.NewReaderSize(rdr, BUFSZ), m.emit); err != nil {
+	//brdr := bufio.NewReaderSize(rdr, BUFSZ)
+	ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
+	if err != nil {
+		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
+	}
+	if err := m.mapf(m.input, ardr, m.emit); err != nil {
 		return err
 	}
 	db.DPrintf("MR0", "Mapf %v\n", time.Since(start).Milliseconds())

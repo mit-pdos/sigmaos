@@ -3,7 +3,6 @@ package sessclnt
 import (
 	//	"github.com/sasha-s/go-deadlock"
 	"sync"
-	"time"
 
 	db "ulambda/debug"
 	"ulambda/netclnt"
@@ -16,13 +15,13 @@ import (
 type SessClnt struct {
 	sync.Mutex
 	*sync.Cond
-	sid         np.Tsession
-	seqno       *np.Tseqno
-	closed      bool
-	addrs       []string
-	nc          *netclnt.NetClnt
-	queue       *sessstateclnt.RequestQueue
-	lastMsgTime time.Time
+	sid    np.Tsession
+	seqno  *np.Tseqno
+	closed bool
+	addrs  []string
+	nc     *netclnt.NetClnt
+	queue  *sessstateclnt.RequestQueue
+	hb     *Heartbeater
 }
 
 func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt, *np.Err) {
@@ -33,12 +32,13 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
 	c.queue = sessstateclnt.MakeRequestQueue()
-	err := c.connect()
+	nc, err := netclnt.MakeNetClnt(c, addrs)
 	if err != nil {
 		return nil, err
 	}
+	c.nc = nc
+	c.hb = MakeHeartbeater(c)
 	go c.writer()
-	go c.heartbeats()
 	return c, nil
 }
 
@@ -70,33 +70,11 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	return rpc, nil
 }
 
+// Wait for an RPC to be completed. When this happens, we reset the heartbeat
+// timer.
 func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
-	defer c.heartbeatAckd()
-	return rpc.Wait()
-}
-
-func (c *SessClnt) heartbeatAckd() {
-	c.Lock()
-	defer c.Unlock()
-	c.lastMsgTime = time.Now()
-}
-
-func (c *SessClnt) connect() *np.Err {
-	db.DPrintf("SESSCLNT", "%v Connect to %v\n", c.sid, c.addrs)
-	for _, addr := range c.addrs {
-		nc, err := netclnt.MakeNetClnt(c, addr)
-		// If this replica is unreachable, try another one.
-		if err != nil {
-			continue
-		}
-		db.DPrintf("SESSCLNT", "%v Successful connection to %v out of %v\n", c.sid, addr, c.addrs)
-		// If the replica is reachable, save this conn.
-		c.nc = nc
-		return nil
-	}
-	db.DPrintf("SESSCLNT", "%v Unable to connect to %v\n", c.sid, c.addrs)
-	// No replica is reachable.
-	return np.MkErr(np.TErrUnreachable, c.addrs)
+	defer c.hb.HeartbeatAckd()
+	return rpc.Await()
 }
 
 // Clear the connection and reset the request queue.
@@ -117,7 +95,7 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 	rpc, ok := c.queue.Remove(reply.Seqno)
 	// the outstanding request may have been cleared if the conn is closing, or
 	// if a previous version of this request was sent and received, in which case
-	// rpc will be nil.
+	// rpc == nil and ok == false.
 	if ok {
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
 		rpc.Complete(reply, err)
@@ -148,18 +126,21 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *np.Err) {
 
 	if c.nc == nil {
 		db.DPrintf("SESSCLNT", "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
-		err := c.connect()
+		nc, err := netclnt.MakeNetClnt(c, c.addrs)
 		if err != nil {
 			db.DPrintf("SESSCLNT", "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err
 		}
+		db.DPrintf("SESSCLNT", "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
+		c.nc = nc
 	}
-
 	return c.nc, nil
 }
 
 // Send a detach, and close the session.
 func (c *SessClnt) SessDetach() *np.Err {
+	// Stop the heartbeater.
+	c.hb.Stop()
 	rep, err := c.rpc(np.Tdetach{0, 0}, np.NoFence)
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
@@ -188,27 +169,6 @@ func (c *SessClnt) close() {
 	// Kill outstanding requests.
 	for _, rpc := range outstanding {
 		rpc.Abort()
-	}
-}
-
-func (c *SessClnt) needsHeartbeat() bool {
-	c.Lock()
-	defer c.Unlock()
-	return !c.closed && time.Now().Sub(c.lastMsgTime) >= np.SESSHEARTBEATMS
-}
-
-func (c *SessClnt) heartbeats() {
-	for !c.isClosed() {
-		// Sleep a bit.
-		time.Sleep(np.SESSHEARTBEATMS * time.Millisecond)
-		if c.needsHeartbeat() {
-			// XXX How soon should I retry if this fails?
-			db.DPrintf("SESSCLNT", "%v Sending heartbeat to %v", c.sid, c.addrs)
-			_, err := c.rpc(np.Theartbeat{[]np.Tsession{c.sid}}, np.NoFence)
-			if err != nil {
-				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
-			}
-		}
 	}
 }
 

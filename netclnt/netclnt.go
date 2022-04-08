@@ -31,14 +31,13 @@ type NetClnt struct {
 	bw     *bufio.Writer
 }
 
-func MakeNetClnt(sconn sessconnclnt.Conn, addr string) (*NetClnt, *np.Err) {
-	db.DPrintf("NETCLNT", "mkNetClnt to %v\n", addr)
+func MakeNetClnt(sconn sessconnclnt.Conn, addrs []string) (*NetClnt, *np.Err) {
+	db.DPrintf("NETCLNT", "mkNetClnt to %v\n", addrs)
 	nc := &NetClnt{}
 	nc.sconn = sconn
-	nc.addr = addr
-	err := nc.connect()
+	err := nc.connect(addrs)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "MakeNetClnt connect %v err %v\n", addr, err)
+		db.DPrintf("NETCLNT_ERR", "MakeNetClnt connect %v err %v\n", addrs, err)
 		return nil, err
 	}
 	go nc.reader()
@@ -77,17 +76,21 @@ func (nc *NetClnt) isClosed() bool {
 	return nc.closed
 }
 
-func (nc *NetClnt) connect() *np.Err {
-	c, err := net.Dial("tcp", nc.addr)
-	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "NetClnt connect to %v err %v\n", nc.addr, err)
-		return np.MkErr(np.TErrUnreachable, "no connection")
+func (nc *NetClnt) connect(addrs []string) *np.Err {
+	for _, addr := range addrs {
+		c, err := net.Dial("tcp", addr)
+		if err != nil {
+			continue
+		}
+		nc.conn = c
+		nc.addr = addr
+		nc.br = bufio.NewReaderSize(c, Msglen)
+		nc.bw = bufio.NewWriterSize(c, Msglen)
+		db.DPrintf("NETCLNT", "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
+		return nil
 	}
-	nc.conn = c
-	nc.br = bufio.NewReaderSize(c, Msglen)
-	nc.bw = bufio.NewWriterSize(c, Msglen)
-	db.DPrintf("NETCLNT", "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
-	return nil
+	db.DPrintf("NETCLNT_ERR", "NetClnt unable to connect to any of %v\n", addrs)
+	return np.MkErr(np.TErrUnreachable, "no connection")
 }
 
 // Try to send a request to the server. If an error occurs, close the

@@ -24,7 +24,7 @@ func MakeRpc(addrs []string, fc *np.Fcall) *Rpc {
 }
 
 // Wait for a reply
-func (rpc *Rpc) Wait() (np.Tmsg, *np.Err) {
+func (rpc *Rpc) Await() (np.Tmsg, *np.Err) {
 	reply, ok := <-rpc.ReplyC
 	if !ok {
 		return nil, np.MkErr(np.TErrUnreachable, rpc.addrs)

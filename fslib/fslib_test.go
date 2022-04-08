@@ -1054,7 +1054,7 @@ func TestFslibExit(t *testing.T) {
 
 const (
 	MBYTE   = 1 << 20
-	NRUNS   = 1
+	NRUNS   = 5
 	FILESZ  = 5 * MBYTE
 	WRITESZ = 100
 	BUFSZ   = 1 << 16

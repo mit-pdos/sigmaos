@@ -72,6 +72,7 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 type result struct {
 	kvs  []*KeyValue
 	name string
+	done bool
 	err  error
 }
 
@@ -84,7 +85,7 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	rdr, err := fsl.OpenReader(d)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", d, err)
-		ch <- result{nil, "", err}
+		ch <- result{nil, "", false, err}
 		return
 	}
 	defer rdr.Close()
@@ -102,9 +103,9 @@ func (r *Reducer) readFile(ch chan result, file string) {
 		return nil
 	})
 	if err != nil {
-		ch <- result{nil, file, nil}
+		ch <- result{nil, file, false, nil}
 	} else {
-		ch <- result{kvs, "", nil}
+		ch <- result{kvs, file, true, nil}
 	}
 }
 
@@ -112,33 +113,62 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 	start := time.Now()
 	kvs := []*KeyValue{}
 	lostMaps := []string{}
+	files := make(map[string]bool)
 
-	sts, err := r.GetDir(input)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ch := make(chan result)
-	for _, st := range sts {
-		go r.readFile(ch, st.Name)
-	}
-	for range sts {
-		r := <-ch
-		if r.err != nil {
-			// another reducer already processed input
-			// file; nothing to be done; bail out.
+	for len(files) < r.nmaptask {
+		sts, rdr, err := r.ReadDir(input)
+		if err != nil {
 			return nil, nil, err
 		}
-		if r.name != "" {
-			// If error is true, then either another
-			// reducer already did the job (the input dir
-			// is missing), the server holding the
-			// mapper's output crashed, or is unreachable
-			// (in which case we need to restart that
-			// mapper).
-			lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
+		log.Printf("sts %d\n", len(sts))
+		if len(sts) == len(files) { // wait for new inputs?
+			ch := make(chan error)
+			if err := r.SetDirWatch(rdr.Fid(), input, func(p string, r error) {
+				ch <- r
+			}); err != nil {
+				rdr.Close()
+				if np.IsErrVersion(err) {
+					log.Printf("Version mismatch %v\n", input)
+					continue
+				}
+				return nil, nil, err
+			}
+			if err := <-ch; err != nil {
+				rdr.Close()
+				return nil, nil, err
+			}
+			rdr.Close()
+			continue
 		} else {
-			kvs = append(kvs, r.kvs...)
+			rdr.Close()
+		}
+		n := 0
+		ch := make(chan result)
+		for _, st := range sts {
+			if _, ok := files[st.Name]; !ok {
+				n += 1
+				go r.readFile(ch, st.Name)
+			}
+		}
+		for i := 0; i < n; i++ {
+			r := <-ch
+			if r.err != nil {
+				// another reducer already processed input
+				// file; nothing to be done; bail out.
+				return nil, nil, err
+			}
+			files[r.name] = true
+			if !r.done {
+				// If error is true, then either another
+				// reducer already did the job (the input dir
+				// is missing), the server holding the
+				// mapper's output crashed, or is unreachable
+				// (in which case we need to restart that
+				// mapper).
+				lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
+			} else {
+				kvs = append(kvs, r.kvs...)
+			}
 		}
 	}
 	db.DPrintf("MR0", "Reduce Read %v\n", time.Since(start).Milliseconds())

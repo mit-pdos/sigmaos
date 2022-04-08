@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/reader"
 )
 
 func (fl *FsLib) MkDir(path string, perm np.Tperm) error {
@@ -53,11 +54,18 @@ func (fl *FsLib) ProcessDir(dir string, f func(*np.Stat) (bool, error)) (bool, e
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
+	st, rdr, err := fl.ReadDir(dir)
+	if rdr != nil {
+		rdr.Close()
+	}
+	return st, err
+}
+
+func (fl *FsLib) ReadDir(dir string) ([]*np.Stat, *reader.Reader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer rdr.Close()
 	dirents := []*np.Stat{}
 	drdr := rdr.NewDirReader()
 	for {
@@ -66,11 +74,11 @@ func (fl *FsLib) GetDir(dir string) ([]*np.Stat, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, rdr, err
 		}
 		dirents = append(dirents, st)
 	}
-	return dirents, nil
+	return dirents, rdr, nil
 }
 
 // XXX should use Reader

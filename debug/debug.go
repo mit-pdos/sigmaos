@@ -12,16 +12,18 @@ import (
 
 const ALWAYS = "STATUS"
 
+var labels map[string]bool
+
 func init() {
 	// XXX may want to set log.Ldate when not debugging
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
+	labels = debugLabels()
 }
 
 //
 // Debug output is controled by SIGMADEBUG environment variable, which
 // can be a list of labels (e.g., "RPC;PATHCLNT").
 //
-
 func debugLabels() map[string]bool {
 	m := make(map[string]bool)
 	s := os.Getenv("SIGMADEBUG")
@@ -36,8 +38,7 @@ func debugLabels() map[string]bool {
 }
 
 func DPrintf(label string, format string, v ...interface{}) {
-	m := debugLabels()
-	if _, ok := m[label]; ok || label == ALWAYS {
+	if _, ok := labels[label]; ok || label == ALWAYS {
 		log.Printf("%v %v %v", proc.GetName(), label, fmt.Sprintf(format, v...))
 	}
 }

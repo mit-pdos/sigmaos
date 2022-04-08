@@ -159,6 +159,7 @@ func (ssrv *SessSrv) Serve() {
 	} else {
 		<-ssrv.ch
 	}
+	db.DPrintf("SESSSRV", "Done serving")
 	ssrv.st.WaitClosed()
 }
 
@@ -206,7 +207,7 @@ func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) *np.Err {
 func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	sess, ok := ssrv.st.Lookup(fc.Session)
 	if !ok {
-		db.DFatalf("SrvFcall: no session %v\n", fc.Session)
+		db.DFatalf("SrvFcall: no session %v for req %v\n", fc.Session, fc)
 	}
 	if !ssrv.replicated {
 		sess.GetThread().Process(fc)
@@ -218,7 +219,7 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstatesrv.Session) {
 	fcall := np.MakeFcallReply(request, reply)
 
-	db.DPrintf("SESSSRV", "Request %v start sendReply %v", request, fcall)
+	db.DPrintf("SESSSRV", "sendReply req %v rep %v", request, fcall)
 
 	// Store the reply in the reply cache.
 	ssrv.rc.Put(request, fcall)
@@ -228,7 +229,6 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstate
 	if request.Seqno != 0 {
 		sess.SendConn(fcall)
 	}
-	db.DPrintf("SESSSRV", "Request %v done sendReply %v", request, fcall)
 }
 
 func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
@@ -259,13 +259,13 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// make progress. We coulld optionally use sessconds, but they're kind of
 	// overkill since we don't care about ordering in this case.
 	if replyFuture, ok := ssrv.rc.Get(fc); ok {
-		db.DPrintf("SESSSRV", "Request %v reply in cache", fc)
+		db.DPrintf("SESSSRV", "srvfcall %v reply in cache", fc)
 		go func() {
 			ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
 		}()
 		return
 	}
-	db.DPrintf("SESSSRV", "Request %v reply not in cache", fc)
+	db.DPrintf("SESSSRV", "srvfcall %v reply not in cache", fc)
 	// If this request has not been registered with the reply cache yet, register
 	// it.
 	ssrv.rc.Register(fc)

@@ -9,14 +9,14 @@ import (
 type Clnt struct {
 	session np.Tsession
 	seqno   np.Tseqno
-	cm      *sessclnt.Mgr
+	sm      *sessclnt.Mgr
 }
 
 func MakeClnt() *Clnt {
 	clnt := &Clnt{}
 	clnt.session = np.Tsession(rand.Uint64())
 	clnt.seqno = 0
-	clnt.cm = sessclnt.MakeMgr(clnt.session, &clnt.seqno)
+	clnt.sm = sessclnt.MakeMgr(clnt.session, &clnt.seqno)
 	return clnt
 }
 
@@ -25,7 +25,7 @@ func (clnt *Clnt) ReadSeqNo() np.Tseqno {
 }
 
 func (clnt *Clnt) CallServer(addrs []string, args np.Tmsg, fence np.Tfence) (np.Tmsg, *np.Err) {
-	reply, err := clnt.cm.RPC(addrs, args, fence)
+	reply, err := clnt.sm.RPC(addrs, args, fence)
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +50,9 @@ func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path np.Path
 }
 
 func (clnt *Clnt) Exit() *np.Err {
-	scs := clnt.cm.SessClnts()
+	scs := clnt.sm.SessClnts()
 	for _, sc := range scs {
-		sc.SessDetach()
+		sc.Detach()
 	}
 	return nil
 }
@@ -72,7 +72,7 @@ func (pclnt *ProtClnt) Servers() []string {
 }
 
 func (pclnt *ProtClnt) Disconnect() *np.Err {
-	return pclnt.clnt.cm.Disconnect(pclnt.addrs)
+	return pclnt.clnt.sm.Disconnect(pclnt.addrs)
 }
 
 func (pclnt *ProtClnt) Call(args np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {

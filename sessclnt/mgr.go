@@ -21,6 +21,7 @@ func MakeMgr(session np.Tsession, seqno *np.Tseqno) *Mgr {
 	sc.sessions = make(map[string]*SessClnt)
 	sc.sid = session
 	sc.seqno = seqno
+	db.DPrintf("SESSCLNT", "Session Mgr %v\n", sc.sid)
 	return sc
 }
 
@@ -61,7 +62,8 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addr)
 		return nil, err
 	}
-	return sess.rpc(req, f)
+	msg, err := sess.RPC(req, f)
+	return msg, err
 }
 
 // For testing
@@ -74,7 +76,7 @@ func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	if !ok {
 		return np.MkErr(np.TErrUnreachable, "disconnect: "+sessKey(addrs))
 	}
-	sess.sessClose()
+	sess.close()
 	return nil
 }
 

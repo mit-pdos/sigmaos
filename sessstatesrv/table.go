@@ -79,7 +79,7 @@ func (st *SessionTable) LastSession() *Session {
 func (st *SessionTable) WaitClosed() {
 	st.Lock()
 	defer st.Unlock()
-	db.DPrintf("SESSION0", "Wait for open sess %v\n", len(st.sessions))
+	db.DPrintf("SESSION", "Wait for open sess %v\n", len(st.sessions))
 	//for len(st.sessions) > 0 {
 	//	st.c.Wait()
 	//}

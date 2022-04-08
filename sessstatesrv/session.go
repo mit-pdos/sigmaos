@@ -147,4 +147,6 @@ func (sess *Session) SetRunning(r bool) {
 	// processing has started for a session helps us avoid timing-out sessions
 	// until they have begun processing ops.
 	sess.began = true
+	// Make sure to refresh timer.
+	sess.lastHeartbeat = time.Now()
 }

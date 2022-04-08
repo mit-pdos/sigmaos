@@ -49,7 +49,6 @@ type SessSrv struct {
 	ffs        fs.Dir
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
-	rc         *repl.ReplyCache
 	pclnt      *procclnt.ProcClnt
 	snap       *snapshot.Snapshot
 	done       bool
@@ -75,7 +74,6 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
-	ssrv.rc = repl.MakeReplyCache()
 	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
 	dirover.Mount(np.STATSD, ssrv.stats)
@@ -116,7 +114,7 @@ func (ssrv *SessSrv) Snapshot() []byte {
 		db.DFatalf("Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
 	ssrv.snap = snapshot.MakeSnapshot(ssrv)
-	return ssrv.snap.Snapshot(ssrv.root.(*overlay.DirOverlay), ssrv.st, ssrv.tmt, ssrv.rc)
+	return ssrv.snap.Snapshot(ssrv.root.(*overlay.DirOverlay), ssrv.st, ssrv.tmt)
 }
 
 func (ssrv *SessSrv) Restore(b []byte) {
@@ -128,7 +126,7 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.stats.Done()
 	// XXX How do we install the sct and wt? How do we sunset old state when
 	// installing a snapshot on a running server?
-	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt, ssrv.rc = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, ssrv.rc, b)
+	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
 	ssrv.sm.Stop()
@@ -222,7 +220,7 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstate
 	db.DPrintf("SESSSRV", "sendReply req %v rep %v", request, fcall)
 
 	// Store the reply in the reply cache.
-	ssrv.rc.Put(request, fcall)
+	sess.GetReplyTable().Put(request, fcall)
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach), send reply.
@@ -258,7 +256,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// asynchrony is necessary in order to allow other ops on the thread to
 	// make progress. We coulld optionally use sessconds, but they're kind of
 	// overkill since we don't care about ordering in this case.
-	if replyFuture, ok := ssrv.rc.Get(fc); ok {
+	if replyFuture, ok := sess.GetReplyTable().Get(fc); ok {
 		db.DPrintf("SESSSRV", "srvfcall %v reply in cache", fc)
 		go func() {
 			ssrv.sendReply(fc, replyFuture.Await().GetMsg(), sess)
@@ -268,7 +266,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	db.DPrintf("SESSSRV", "srvfcall %v reply not in cache", fc)
 	// If this request has not been registered with the reply cache yet, register
 	// it.
-	ssrv.rc.Register(fc)
+	sess.GetReplyTable().Register(fc)
 	ssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	ssrv.fenceFcall(sess, fc)
 }

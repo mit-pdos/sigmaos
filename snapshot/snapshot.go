@@ -13,7 +13,6 @@ import (
 	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/overlay"
-	"ulambda/repl"
 	"ulambda/sessstatesrv"
 	"ulambda/stats"
 	"ulambda/threadmgr"
@@ -25,7 +24,6 @@ type Snapshot struct {
 	DirOverlay   np.Tpath
 	St           []byte
 	Tmt          []byte
-	Rc           []byte
 	NextInum     uint64
 	restoreCache map[np.Tpath]fs.Inode
 }
@@ -38,15 +36,13 @@ func MakeSnapshot(fssrv np.FsServer) *Snapshot {
 	return s
 }
 
-func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *sessstatesrv.SessionTable, tm *threadmgr.ThreadMgrTable, rc *repl.ReplyCache) []byte {
+func (s *Snapshot) Snapshot(root *overlay.DirOverlay, st *sessstatesrv.SessionTable, tm *threadmgr.ThreadMgrTable) []byte {
 	// Snapshot the FS tree.
 	s.DirOverlay = s.snapshotFsTree(root)
 	// Snapshot the session table.
 	s.St = st.Snapshot()
 	// Snapshot the thread manager table.
 	s.Tmt = tm.Snapshot()
-	// Snapshot the reply cache.
-	s.Rc = rc.Snapshot()
 	b, err := json.Marshal(s)
 	if err != nil {
 		db.DFatalf("Error marshalling snapshot: %v", err)
@@ -81,7 +77,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, oldRc *repl.ReplyCache, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable, *repl.ReplyCache) {
+func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)
@@ -101,13 +97,7 @@ func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the session table.
 	st := sessstatesrv.RestoreTable(oldSt, mkps, rps, fssrv, tmt, s.St)
-	// Restore the reply cache.
-	rc := repl.Restore(s.Rc)
-	// Merge with the current replyCache, because some ops may have arrived &
-	// begun executing since this snapshot was taken, and they expect some state
-	// to be in the reply cache.
-	rc.Merge(oldRc)
-	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt, rc
+	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt
 }
 
 func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {

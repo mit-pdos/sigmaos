@@ -10,6 +10,7 @@ import (
 	db "ulambda/debug"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/replies"
 	"ulambda/threadmgr"
 )
 
@@ -25,6 +26,7 @@ type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
 	conn          *np.Conn
+	rt            *replies.ReplyTable
 	protsrv       np.Protsrv
 	lastHeartbeat time.Time
 	Sid           np.Tsession
@@ -37,11 +39,16 @@ type Session struct {
 func makeSession(protsrv np.Protsrv, sid np.Tsession, t *threadmgr.ThreadMgr) *Session {
 	sess := &Session{}
 	sess.threadmgr = t
+	sess.rt = replies.MakeReplyTable()
 	sess.protsrv = protsrv
 	sess.lastHeartbeat = time.Now()
 	sess.Sid = sid
 	sess.lastHeartbeat = time.Now()
 	return sess
+}
+
+func (sess *Session) GetReplyTable() *replies.ReplyTable {
+	return sess.rt
 }
 
 func (sess *Session) GetConn() *np.Conn {

@@ -10,6 +10,7 @@ import (
 	"ulambda/delay"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/sessconnclnt"
 )
 
 //
@@ -23,6 +24,7 @@ const (
 
 type NetClnt struct {
 	mu     sync.Mutex
+	sconn  sessconnclnt.Conn
 	conn   net.Conn
 	addr   string
 	closed bool
@@ -30,16 +32,17 @@ type NetClnt struct {
 	bw     *bufio.Writer
 }
 
-func MakeNetClnt(addr string) (*NetClnt, *np.Err) {
+func MakeNetClnt(sconn sessconnclnt.Conn, addr string) (*NetClnt, *np.Err) {
 	db.DPrintf("NETCLNT", "mkNetClnt to %v\n", addr)
 	nc := &NetClnt{}
+	nc.sconn = sconn
 	nc.addr = addr
 	err := nc.connect()
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "MakeNetClnt connect %v err %v\n", addr, err)
 		return nil, err
 	}
-
+	go nc.reader()
 	return nc, nil
 }
 
@@ -49,6 +52,12 @@ func (nc *NetClnt) Dst() string {
 
 func (nc *NetClnt) Src() string {
 	return nc.conn.LocalAddr().String()
+}
+
+func (nc *NetClnt) reset() {
+	// Upcall into the layer above to let it know the connection was reset.
+	nc.sconn.Reset()
+	nc.Close()
 }
 
 func (nc *NetClnt) Close() {
@@ -61,6 +70,12 @@ func (nc *NetClnt) Close() {
 		nc.conn.Close()
 	}
 	nc.closed = true
+}
+
+func (nc *NetClnt) isClosed() bool {
+	nc.mu.Lock()
+	defer nc.mu.Unlock()
+	return nc.closed
 }
 
 func (nc *NetClnt) connect() *np.Err {
@@ -117,18 +132,33 @@ func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
 	return nil
 }
 
-func (nc *NetClnt) Recv() (*np.Fcall, *np.Err) {
+func (nc *NetClnt) recv() (*np.Fcall, *np.Err) {
 	frame, err := npcodec.ReadFrame(nc.br)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "Recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
+		db.DPrintf("NETCLNT_ERR", "recv: ReadFrame cli %v from %v error %v\n", nc.Src(), nc.Dst(), err)
 		nc.Close()
 		return nil, np.MkErr(np.TErrUnreachable, nc.Src()+"->"+nc.Dst())
 	}
 	fcall, err := npcodec.UnmarshalFcall(frame)
 	if err != nil {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
-		db.DPrintf("NETCLNT_ERR", "Recv: Unmarshal error %v\n", err)
+		db.DPrintf("NETCLNT_ERR", "recv: Unmarshal error %v\n", err)
 	}
-	db.DPrintf("NETCLNT", "Recv %v from %v\n", fcall, nc.Dst())
+	db.DPrintf("NETCLNT", "recv %v from %v\n", fcall, nc.Dst())
 	return fcall, nil
+}
+
+// Reader loop. The reader is in charge of resetting the connection if an error
+// occurs.
+func (nc *NetClnt) reader() {
+	for !nc.isClosed() {
+		// Receive the next reply.
+		reply, err := nc.recv()
+		if err != nil {
+			db.DPrintf("NETCLNT", "error %v reader RPC to %v, trying reconnect", err, nc.addr)
+			nc.reset()
+			continue
+		}
+		nc.sconn.CompleteRPC(reply, err)
+	}
 }

@@ -37,7 +37,6 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	if err != nil {
 		return nil, err
 	}
-	go c.reader()
 	go c.writer()
 	go c.heartbeats()
 	return c, nil
@@ -54,12 +53,6 @@ func (c *SessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		db.DPrintf("SESSCLNT", "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Seqno, req, err1, c.addrs)
 		return nil, err1
 	}
-
-	if srvClosedSess(rep, err1) {
-		db.DPrintf("SESSCLNT", "Srv %v closed sess %v on req %v %v\n", c.addrs, c.sid, req.Type(), req)
-		c.close()
-	}
-
 	return rep, err1
 }
 
@@ -91,7 +84,7 @@ func (c *SessClnt) heartbeatAckd() {
 func (c *SessClnt) connect() *np.Err {
 	db.DPrintf("SESSCLNT", "%v Connect to %v\n", c.sid, c.addrs)
 	for _, addr := range c.addrs {
-		nc, err := netclnt.MakeNetClnt(addr)
+		nc, err := netclnt.MakeNetClnt(c, addr)
 		// If this replica is unreachable, try another one.
 		if err != nil {
 			continue
@@ -107,24 +100,33 @@ func (c *SessClnt) connect() *np.Err {
 }
 
 // Clear the connection and reset the request queue.
-func (c *SessClnt) clearConn() {
+func (c *SessClnt) Reset() {
 	c.Lock()
 	defer c.Unlock()
 
-	c.nc = nil
+	if c.nc != nil {
+		c.nc = nil
+	}
 	// Reset outstanding request queue.
 	db.DPrintf("SESSCLNT", "%v Reset outstanding request queue to %v\n", c.sid, c.addrs)
 	c.queue.Reset()
 }
 
-// Complete an RPC and send a response.
-func (c *SessClnt) completeRpc(reply *np.Fcall, err *np.Err) {
+// Complete an RPC and pass the response up the stack.
+func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 	rpc, ok := c.queue.Remove(reply.Seqno)
-	// the outstanding request may have been cleared if the conn is closing,
-	// in which case rpc will be nil.
+	// the outstanding request may have been cleared if the conn is closing, or
+	// if a previous version of this request was sent and received, in which case
+	// rpc will be nil.
 	if ok {
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
 		rpc.Complete(reply, err)
+	}
+	// If the server closed the session (this is a sessclosed error or an
+	// Rdetach), close the SessClnt.
+	if srvClosedSess(reply.Msg, err) {
+		db.DPrintf("SESSCLNT", "Srv %v closed sess %v on req seqno %v\n", c.addrs, c.sid, reply.Seqno)
+		c.close()
 	}
 }
 
@@ -170,7 +172,6 @@ func (c *SessClnt) SessDetach() *np.Err {
 	return nil
 }
 
-// Caller holds lock
 func (c *SessClnt) close() {
 	c.Lock()
 	defer c.Unlock()
@@ -211,29 +212,6 @@ func (c *SessClnt) heartbeats() {
 	}
 }
 
-func (c *SessClnt) reader() {
-	for !c.isClosed() {
-		// Get the current netclnt connection (which may
-		// change if the server becomes unavailable)
-		nc, err := c.getConn()
-
-		// If we can't connect to the replica group, return.
-		if err != nil {
-			c.close()
-			return
-		}
-
-		// Receive the next reply.
-		reply, err := nc.Recv()
-		if err != nil {
-			db.DPrintf("SESSCLNT", "%v error %v reader RPC to %v, trying reconnect", c.sid, err, c.addrs)
-			c.clearConn()
-			continue
-		}
-		c.completeRpc(reply, err)
-	}
-}
-
 func (c *SessClnt) writer() {
 	for !c.isClosed() {
 		// Try to get the next request to be sent
@@ -251,10 +229,5 @@ func (c *SessClnt) writer() {
 		}
 
 		nc.Send(req)
-		//		err := nc.Send(req)
-		//		if err != nil {
-		//			db.DPrintf("SESSCLNT_ERR", "%v Error %v writer RPC to %v, trying reconnect\n", c.sid, err, nc.Dst())
-		//			c.clearConn()
-		//		}
 	}
 }

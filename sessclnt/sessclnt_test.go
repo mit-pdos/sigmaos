@@ -114,7 +114,9 @@ func TestProcPartitionMany(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "waitexit")
-	assert.True(t, status.IsStatusOK(), status)
+	if assert.NotNil(t, status, "nil status") {
+		assert.True(t, status.IsStatusOK(), status)
+	}
 	ts.Shutdown()
 }
 

@@ -1,7 +1,9 @@
 package fslib_test
 
 import (
+	"bufio"
 	"flag"
+	"io"
 	"log"
 	"path/filepath"
 	"sort"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/awriter"
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
@@ -362,25 +365,6 @@ func TestCounter(t *testing.T) {
 	assert.Equal(t, N, n)
 
 	ts.Shutdown()
-}
-
-// Inline Set() so that we can delay the Write() to emulate a delay on
-// the server between open and write.
-func writeFile(fl *fslib.FsLib, fn string, d []byte) error {
-	fd, err := fl.Open(fn, np.OWRITE)
-	if err != nil {
-		return err
-	}
-	time.Sleep(1 * time.Millisecond)
-	_, err = fl.Write(fd, d)
-	if err != nil {
-		return err
-	}
-	err = fl.Close(fd)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func TestWatchCreate(t *testing.T) {
@@ -1064,5 +1048,71 @@ func TestFslibExit(t *testing.T) {
 	err = ts.Exit()
 	assert.Nil(t, err)
 
+	ts.Shutdown()
+}
+
+const (
+	MBYTE   = 1 << 20
+	NRUNS   = 3
+	FILESZ  = 5 * MBYTE
+	WRITESZ = 100
+	BUFSZ   = 1 << 16
+)
+
+func writer(t *testing.T, wrt io.Writer, buf []byte) {
+	for n := 0; n < FILESZ; n += WRITESZ {
+		_, err := wrt.Write(buf)
+		assert.Nil(t, err)
+	}
+}
+
+func measure(f func()) {
+	for i := 0; i < NRUNS; i++ {
+		start := time.Now()
+		f()
+		ms := time.Since(start).Milliseconds()
+		s := float64(ms) / 1000
+		log.Printf("Writing %dMB took %vms (%.2fMB/s)", FILESZ/MBYTE, ms, (FILESZ/float64(MBYTE))/s)
+	}
+}
+
+func TestWritePerf(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	fn := path + "f"
+	buf := make([]byte, WRITESZ)
+	for i := 0; i < WRITESZ; i++ {
+		buf[i] = byte(i & 0xFF)
+	}
+	log.Print("=== writer")
+	measure(func() {
+		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
+		assert.Nil(t, err)
+		writer(t, w, buf)
+		err = ts.Remove(fn)
+		assert.Nil(t, err)
+	})
+	log.Print("=== bufwriter")
+	measure(func() {
+		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
+		assert.Nil(t, err)
+		bw := bufio.NewWriterSize(w, BUFSZ)
+		writer(t, bw, buf)
+		err = bw.Flush()
+		assert.Nil(t, err)
+		err = ts.Remove(fn)
+		assert.Nil(t, err)
+	})
+	log.Print("=== abufwriter")
+	measure(func() {
+		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
+		assert.Nil(t, err)
+		aw := awriter.NewWriterSize(w, BUFSZ)
+		bw := bufio.NewWriterSize(aw, BUFSZ)
+		writer(t, bw, buf)
+		err = bw.Flush()
+		assert.Nil(t, err)
+		err = ts.Remove(fn)
+		assert.Nil(t, err)
+	})
 	ts.Shutdown()
 }

@@ -52,7 +52,7 @@ func (clnt *Clnt) Attach(addrs []string, uname string, fid np.Tfid, path np.Path
 func (clnt *Clnt) Exit() *np.Err {
 	scs := clnt.sm.SessClnts()
 	for _, sc := range scs {
-		sc.SessDetach()
+		sc.Detach()
 	}
 	return nil
 }

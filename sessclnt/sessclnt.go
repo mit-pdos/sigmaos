@@ -42,7 +42,7 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	return c, nil
 }
 
-func (c *SessClnt) rpc(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
+func (c *SessClnt) RPC(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	rpc, err := c.send(req, f)
 	if err != nil {
 		db.DPrintf("SESSCLNT", "%v Unable to send req %v %v err %v to %v\n", c.sid, req.Type(), req, err, c.addrs)
@@ -108,6 +108,22 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 	}
 }
 
+// Send a detach, and close the session.
+func (c *SessClnt) Detach() *np.Err {
+	// Stop the heartbeater.
+	c.hb.Stop()
+	rep, err := c.RPC(np.Tdetach{0, 0}, np.NoFence)
+	if err != nil {
+		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
+	}
+	rmsg, ok := rep.(np.Rerror)
+	if ok {
+		err := np.String2Err(rmsg.Ename)
+		return err
+	}
+	return nil
+}
+
 func (c *SessClnt) isClosed() bool {
 	c.Lock()
 	defer c.Unlock()
@@ -137,22 +153,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *np.Err) {
 	return c.nc, nil
 }
 
-// Send a detach, and close the session.
-func (c *SessClnt) SessDetach() *np.Err {
-	// Stop the heartbeater.
-	c.hb.Stop()
-	rep, err := c.rpc(np.Tdetach{0, 0}, np.NoFence)
-	if err != nil {
-		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
-	}
-	rmsg, ok := rep.(np.Rerror)
-	if ok {
-		err := np.String2Err(rmsg.Ename)
-		return err
-	}
-	return nil
-}
-
+// Close the sessclnt connection to this replica group.
 func (c *SessClnt) close() {
 	c.Lock()
 	defer c.Unlock()

@@ -62,7 +62,7 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		db.DPrintf("SESSCLNT", "Unable to alloc sess for req %v %v err %v to %v\n", req.Type(), req, err, addr)
 		return nil, err
 	}
-	msg, err := sess.rpc(req, f)
+	msg, err := sess.RPC(req, f)
 	return msg, err
 }
 

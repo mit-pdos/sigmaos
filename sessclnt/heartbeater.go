@@ -55,7 +55,7 @@ func (h *Heartbeater) run() {
 		if h.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
 			db.DPrintf("SESSCLNT", "%v Sending heartbeat to %v", h.sc.sid, h.sc.addrs)
-			_, err := h.sc.rpc(np.Theartbeat{[]np.Tsession{h.sc.sid}}, np.NoFence)
+			_, err := h.sc.RPC(np.Theartbeat{[]np.Tsession{h.sc.sid}}, np.NoFence)
 			if err != nil {
 				db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", h.sc.sid, h.sc.addrs, err)
 			}

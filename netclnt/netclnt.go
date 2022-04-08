@@ -3,7 +3,6 @@ package netclnt
 import (
 	"bufio"
 	"net"
-	"runtime/debug"
 	"sync"
 
 	db "ulambda/debug"
@@ -14,7 +13,7 @@ import (
 )
 
 //
-// Multiplexes RPCs onto a single network connection to server
+// TCP connection which sends and receiveds RPCs to/from a single server.
 //
 
 // XXX duplicate
@@ -54,8 +53,9 @@ func (nc *NetClnt) Src() string {
 	return nc.conn.LocalAddr().String()
 }
 
+// Reset the connection and upcall into the layer above to let it know the
+// connection was reset.
 func (nc *NetClnt) reset() {
-	// Upcall into the layer above to let it know the connection was reset.
 	nc.sconn.Reset()
 	nc.Close()
 }
@@ -64,7 +64,6 @@ func (nc *NetClnt) Close() {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
-	// Close the requests channel asynchronously so we don't deadlock
 	if !nc.closed {
 		db.DPrintf("NETCLNT", "Close conn to %v\n", nc.Dst())
 		nc.conn.Close()
@@ -81,55 +80,47 @@ func (nc *NetClnt) isClosed() bool {
 func (nc *NetClnt) connect() *np.Err {
 	c, err := net.Dial("tcp", nc.addr)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "NetClnt to %v err %v\n", nc.addr, err)
+		db.DPrintf("NETCLNT_ERR", "NetClnt connect to %v err %v\n", nc.addr, err)
 		return np.MkErr(np.TErrUnreachable, "no connection")
 	}
 	nc.conn = c
 	nc.br = bufio.NewReaderSize(c, Msglen)
 	nc.bw = bufio.NewWriterSize(c, Msglen)
-	db.DPrintf("NETCLNT", "NetClnt %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
+	db.DPrintf("NETCLNT", "NetClnt connected %v -> %v bw:%p, br:%p\n", c.LocalAddr(), nc.addr, nc.bw, nc.br)
 	return nil
 }
 
-func (nc *NetClnt) Send(rpc *Rpc) *np.Err {
-	// Tag is unused for now.
-	rpc.Req.Tag = 0
-
+// Try to send a request to the server. If an error occurs, close the
+// underlying TCP connection so that the reader is made aware of the error, and
+// can upcall into the layer above as appropriate.
+func (nc *NetClnt) Send(rpc *Rpc) {
 	// maybe delay sending this RPC
 	delay.MaybeDelayRPC()
 
 	db.DPrintf("NETCLNT", "Send %v to %v\n", rpc.Req, nc.Dst())
 
-	// If the connection has already been closed, return an error.
-	nc.mu.Lock()
-	closed := nc.closed
-	nc.mu.Unlock()
-	if closed {
-		db.DPrintf("NETCLNT_ERR", "Error ch to %v closed\n", nc.Dst())
-		return np.MkErr(np.TErrUnreachable, nc.Dst())
+	// If the connection has already been closed, return immediately.
+	if nc.isClosed() {
+		db.DPrintf("NETCLNT_ERR", "Error Send on closed channelcto %v\n", nc.Dst())
+		return
 	}
 
 	// Otherwise, marshall and write the fcall.
 	err := npcodec.MarshalFcall(rpc.Req, nc.bw)
 	if err != nil {
-		db.DPrintf("NETCLNT_ERR", "Writer: NetClnt error to %v: %v", nc.Dst(), err)
-		if err.Code() == np.TErrUnreachable {
-			db.DPrintf("NETCLNT_ERR", "Writer: NetClntection error cli %v to %v err %v\n", nc.Src(), nc.Dst(), err)
-			nc.Close()
-			return np.MkErr(np.TErrUnreachable, nc.Dst())
-		} else {
-			db.DFatalf("error in netclnt.writer: %v", err)
+		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
+		nc.Close()
+		// The only error code we expect here is TErrUnreachable
+		if err.Code() != np.TErrUnreachable {
+			db.DFatalf("Unexpected error in netclnt.writer: %v", err)
 		}
-	} else {
-		error := nc.bw.Flush()
-		if error != nil {
-			stacktrace := debug.Stack()
-			db.DPrintf("NETCLNT_ERR", "%v\nFlush error cli %v to srv %v err %v\n", string(stacktrace), nc.Src(), nc.Dst(), error)
-			nc.Close()
-			return np.MkErr(np.TErrUnreachable, nc.Dst())
-		}
+		return
 	}
-	return nil
+	error := nc.bw.Flush()
+	if error != nil {
+		db.DPrintf("NETCLNT_ERR", "Flush error cli %v to srv %v err %v\n", nc.Src(), nc.Dst(), error)
+		nc.Close()
+	}
 }
 
 func (nc *NetClnt) recv() (*np.Fcall, *np.Err) {

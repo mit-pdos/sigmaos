@@ -124,6 +124,7 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 		if len(sts) == len(files) { // wait for new inputs?
 			ch := make(chan error)
 			if err := r.SetDirWatch(rdr.Fid(), input, func(p string, r error) {
+				log.Printf("dirwatch %v %v\n", input, r)
 				ch <- r
 			}); err != nil {
 				rdr.Close()
@@ -158,6 +159,7 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 				return nil, nil, err
 			}
 			files[r.name] = true
+			db.DPrintf("REDUCE", "Read %v done %v\n", r.name, r.done)
 			if !r.done {
 				// If error is true, then either another
 				// reducer already did the job (the input dir

@@ -113,8 +113,7 @@ func (m *Mapper) informReducer() error {
 		fn := np.UX + "/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
-			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(),
-				fn+m.rand, fn, err)
+			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(), fn+m.rand, fn, err)
 		}
 
 		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file
@@ -138,7 +137,7 @@ func (m *Mapper) informReducer() error {
 				// will loop infinitely.
 				log.Printf("%v: symlink %v err %v\n", proc.GetName(), name, err)
 			}
-			db.DFatalf("%v: FATA/L symlink %v err %v\n", proc.GetName(), name, err)
+			db.DFatalf("%v: FATAL symlink %v err %v\n", proc.GetName(), name, err)
 		}
 	}
 	return nil

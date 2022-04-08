@@ -23,15 +23,40 @@ const (
 	MDIR     = "name/mr/m"
 	RDIR     = "name/mr/r"
 	ROUT     = "name/mr/mr-out-"
-	CLAIMED  = "-claimed"
 	TIP      = "-tip"
 	DONE     = "-done"
 	RESTART  = "restart"
 	NCOORD   = 3
 )
 
+//
+// mr_test puts names of input files in in MDIR and launches a
+// coordinator proc to run the MR job.  The actual files live in
+// INPUTDIR.
+//
+// The coordinator creates one thread per input file, which looks for
+// a file name from the MDIR. If thread finds a name, it claims it by
+// renaming it into MDIR+TIP to record to that a task for name is in
+// progress.  Then the thread creates a mapper proc (task) to process
+// the input file.  Mapper i creates <r> output shards, one for each
+// reducer.  Once the mapper completes an output shard, it creates a
+// symlink in dir RDIR+/r, which contains the pathname for the output
+// shard.  If the mapper proc successfully exits, the coordinator
+// renames the task from MDIR+TIP into the dir MDIR+DONE, to record
+// that this mapper task has completed.
+//
+// The coordinator creates one thread per reducer, which grabs <r>
+// from RDIR, and records in RDIR+TIP that reducer <r> is in progress.
+// The thread creates a reducer proc that looks in dir RDIR+/r for
+// symlinks to process (one symlink per mapper). The symlinks contain
+// the pathname where the mapper puts its shard for this reducer.  The
+// reducer writes it output to ROUT+<r>.  If the reducer task exits
+// successfully, the coordinator renames MDIR+TIP+r into RDIR+DONE, to
+// record that this reducer task has completed.
+//
+
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
-	for _, n := range []string{MRDIR, MDIR, RDIR, MDIR + CLAIMED, RDIR + CLAIMED, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
+	for _, n := range []string{MRDIR, MDIR, RDIR, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v\n", err)
 		}
@@ -127,7 +152,7 @@ func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 		if np.IsErrUnreachable(err) { // partitioned?  (XXX other errors than EOF?)
 			return "", err
 		}
-		// another coord claimed the task
+		// another coord thread claimed the task before us
 		return "", nil
 	}
 	return st.Name, nil
@@ -248,6 +273,7 @@ func (c *Coord) recover(dir string) {
 }
 
 func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
+	start := time.Now()
 	ch := make(chan Ttask)
 	//	straggler := false
 	for n := c.startTasks(dir, ch, f); n > 0; n-- {
@@ -270,6 +296,7 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 		//			c.stragglers(dir, ch, f)
 		//		}
 	}
+	db.DPrintf(db.ALWAYS, "Phase %v %v\n", dir, time.Since(start).Milliseconds())
 	return true
 }
 
@@ -283,18 +310,15 @@ func (c *Coord) Work() {
 	for {
 		c.recover(MDIR)
 		c.recover(RDIR)
-		start := time.Now()
 		c.phase(MDIR, c.mapper)
-		db.DPrintf(db.ALWAYS, "Map phase %v\n", time.Since(start).Milliseconds())
 
-		start = time.Now()
-		// If reduce phase is unsuccessful, we lost some mapper output. Restart
-		// those mappers.
+		// If reduce phase is unsuccessful, we lost some
+		// mapper output. Restart those mappers.
 		success := c.phase(RDIR, c.reducer)
 		if success {
-			db.DPrintf(db.ALWAYS, "Reduce phase %v\n", time.Since(start).Milliseconds())
 			break
 		}
+		log.Printf("try again\n")
 	}
 
 	c.Exited(proc.MakeStatus(proc.StatusOK))

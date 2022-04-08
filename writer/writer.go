@@ -9,7 +9,6 @@ import (
 type Writer struct {
 	fc  *fidclnt.FidClnt
 	fid np.Tfid
-	buf []byte
 	off np.Toffset
 }
 
@@ -32,5 +31,5 @@ func (wrt *Writer) Close() error {
 }
 
 func MakeWriter(fc *fidclnt.FidClnt, fid np.Tfid) *Writer {
-	return &Writer{fc, fid, make([]byte, 0), 0}
+	return &Writer{fc, fid, 0}
 }

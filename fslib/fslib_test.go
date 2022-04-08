@@ -1054,7 +1054,7 @@ func TestFslibExit(t *testing.T) {
 
 const (
 	MBYTE   = 1 << 20
-	NRUNS   = 3
+	NRUNS   = 1
 	FILESZ  = 5 * MBYTE
 	WRITESZ = 100
 	BUFSZ   = 1 << 16
@@ -1091,43 +1091,58 @@ func measure(msg string, f func()) {
 	}
 }
 
-func TestWritePerf(t *testing.T) {
-	ts := test.MakeTstatePath(t, path)
-	fn := path + "f"
-	buf := mkBuf(WRITESZ)
-	measure("writer", func() {
-		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
-		assert.Nil(t, err)
+type Thow uint8
+
+const (
+	HSYNC Thow = iota + 1
+	HBUF
+	HASYNC
+)
+
+func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte) {
+	w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
+	assert.Nil(t, err)
+	switch how {
+	case HSYNC:
 		writer(t, w, buf)
-		st, err := ts.Stat(fn)
-		assert.Nil(t, err)
-		assert.Equal(t, np.Tlength(FILESZ), st.Length, "stat")
-		err = ts.Remove(fn)
-		assert.Nil(t, err)
-		w.Close()
-	})
-	measure("bufwriter", func() {
-		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
-		assert.Nil(t, err)
+	case HBUF:
 		bw := bufio.NewWriterSize(w, BUFSZ)
 		writer(t, bw, buf)
 		err = bw.Flush()
 		assert.Nil(t, err)
-		err = ts.Remove(fn)
-		assert.Nil(t, err)
-		w.Close()
-	})
-	measure("abufwriter", func() {
-		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
-		assert.Nil(t, err)
+	case HASYNC:
 		aw := awriter.NewWriterSize(w, BUFSZ)
 		bw := bufio.NewWriterSize(aw, BUFSZ)
 		writer(t, bw, buf)
 		err = bw.Flush()
 		assert.Nil(t, err)
-		err = ts.Remove(fn)
+		err = aw.Close()
 		assert.Nil(t, err)
-		w.Close()
+	}
+	w.Close()
+	st, err := fsl.Stat(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, np.Tlength(FILESZ), st.Length, "stat")
+}
+
+func TestWritePerf(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	fn := path + "f"
+	buf := mkBuf(WRITESZ)
+	measure("writer", func() {
+		mkFile(t, ts.FsLib, fn, HSYNC, buf)
+		err := ts.Remove(fn)
+		assert.Nil(t, err)
+	})
+	measure("bufwriter", func() {
+		mkFile(t, ts.FsLib, fn, HBUF, buf)
+		err := ts.Remove(fn)
+		assert.Nil(t, err)
+	})
+	measure("abufwriter", func() {
+		mkFile(t, ts.FsLib, fn, HASYNC, buf)
+		err := ts.Remove(fn)
+		assert.Nil(t, err)
 	})
 	ts.Shutdown()
 }
@@ -1149,17 +1164,7 @@ func TestReadPerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
 	buf := mkBuf(WRITESZ)
-
-	w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
-	assert.Nil(t, err)
-	bw := bufio.NewWriterSize(w, BUFSZ)
-	writer(t, bw, buf)
-	err = bw.Flush()
-	assert.Nil(t, err)
-	w.Close()
-	st, err := ts.Stat(fn)
-	assert.Nil(t, err)
-	assert.Equal(t, np.Tlength(FILESZ), st.Length, "stat")
+	mkFile(t, ts.FsLib, fn, HBUF, buf)
 
 	measure("reader", func() {
 		r, err := ts.OpenReader(fn)
@@ -1180,7 +1185,7 @@ func TestReadPerf(t *testing.T) {
 		reader(t, br, buf)
 	})
 
-	err = ts.Remove(fn)
+	err := ts.Remove(fn)
 	assert.Nil(t, err)
 	ts.Shutdown()
 

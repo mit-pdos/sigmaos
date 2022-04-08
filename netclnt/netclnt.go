@@ -133,7 +133,6 @@ func (nc *NetClnt) recv() (*np.Fcall, *np.Err) {
 	fcall, err := npcodec.UnmarshalFcall(frame)
 	if err != nil {
 		db.DFatalf("unmarshal fcall in NetClnt.recv %v", err)
-		db.DPrintf("NETCLNT_ERR", "recv: Unmarshal error %v\n", err)
 	}
 	db.DPrintf("NETCLNT", "recv %v from %v\n", fcall, nc.Dst())
 	return fcall, nil

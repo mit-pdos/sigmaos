@@ -20,9 +20,9 @@ import (
 const (
 	INPUTDIR = "name/s3/~ip/input/"
 	MRDIR    = "name/mr"
-	MDIR     = "name/mr/m"
-	RDIR     = "name/mr/r"
-	ROUT     = "name/mr/mr-out-"
+	MDIR     = MRDIR + "/m"
+	RDIR     = MRDIR + "/r"
+	ROUT     = MRDIR + "/" + "mr-out-"
 	TIP      = "-tip"
 	DONE     = "-done"
 	RESTART  = "restart"

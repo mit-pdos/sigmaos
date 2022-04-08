@@ -49,6 +49,7 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 type Coord struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	nmaptask    int
 	nreducetask int
 	crash       int
 	mapperbin   string
@@ -57,22 +58,26 @@ type Coord struct {
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, errors.New("MakeCoord: too few arguments")
 	}
 	w := &Coord{}
 	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
 
-	n, err := strconv.Atoi(args[0])
+	m, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[0])
+	}
+	n, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: nreducetask %v isn't int", args[1])
 	}
-
+	w.nmaptask = m
 	w.nreducetask = n
-	w.mapperbin = args[1]
-	w.reducerbin = args[2]
+	w.mapperbin = args[2]
+	w.reducerbin = args[3]
 
-	c, err := strconv.Atoi(args[3])
+	c, err := strconv.Atoi(args[4])
 	if err != nil {
 		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[3])
 	}
@@ -113,7 +118,7 @@ func (c *Coord) mapper(task string) (*proc.Status, error) {
 func (c *Coord) reducer(task string) (*proc.Status, error) {
 	in := RDIR + TIP + "/" + task
 	out := ROUT + task
-	return c.task(c.reducerbin, []string{in, out})
+	return c.task(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
 }
 
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {

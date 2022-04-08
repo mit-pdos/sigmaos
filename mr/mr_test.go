@@ -78,7 +78,7 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) prepareJob() {
+func (ts *Tstate) prepareJob() int {
 	// Put names of input files in name/mr/m
 	files, err := ioutil.ReadDir("../input/")
 	if err != nil {
@@ -93,6 +93,7 @@ func (ts *Tstate) prepareJob() {
 		}
 		// break
 	}
+	return len(files)
 }
 
 func (ts *Tstate) checkJob() {
@@ -153,9 +154,9 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
-	ts.prepareJob()
+	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

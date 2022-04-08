@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,16 +27,17 @@ import (
 type Reducer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	reducef ReduceT
-	input   string
-	output  string
-	tmp     string
-	bwrt    *bufio.Writer
-	wrt     *writer.Writer
+	reducef  ReduceT
+	input    string
+	output   string
+	nmaptask int
+	tmp      string
+	bwrt     *bufio.Writer
+	wrt      *writer.Writer
 }
 
 func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
@@ -45,6 +47,12 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.reducef = reducef
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
+
+	m, err := strconv.Atoi(args[2])
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
+	}
+	r.nmaptask = m
 
 	w, err := r.CreateWriter(r.tmp, 0777, np.OWRITE)
 	if err != nil {
@@ -104,10 +112,12 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 	start := time.Now()
 	kvs := []*KeyValue{}
 	lostMaps := []string{}
+
 	sts, err := r.GetDir(input)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	ch := make(chan result)
 	for _, st := range sts {
 		go r.readFile(ch, st.Name)
@@ -142,7 +152,7 @@ func (r *Reducer) emit(kv *KeyValue) error {
 }
 
 func (r *Reducer) doReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "doReduce %v %v\n", r.input, r.output)
+	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	kvs, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)

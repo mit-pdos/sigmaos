@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/awriter"
@@ -1066,13 +1067,13 @@ func writer(t *testing.T, wrt io.Writer, buf []byte) {
 	}
 }
 
-func measure(f func()) {
+func measure(msg string, f func()) {
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
 		f()
 		ms := time.Since(start).Milliseconds()
 		s := float64(ms) / 1000
-		log.Printf("Writing %dMB took %vms (%.2fMB/s)", FILESZ/MBYTE, ms, (FILESZ/float64(MBYTE))/s)
+		log.Printf("%v: %dMB took %vms (%.2fMB/s)", msg, FILESZ/MBYTE, ms, (FILESZ/float64(MBYTE))/s)
 	}
 }
 
@@ -1083,16 +1084,15 @@ func TestWritePerf(t *testing.T) {
 	for i := 0; i < WRITESZ; i++ {
 		buf[i] = byte(i & 0xFF)
 	}
-	log.Print("=== writer")
-	measure(func() {
+	measure("writer", func() {
 		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
 		assert.Nil(t, err)
 		writer(t, w, buf)
 		err = ts.Remove(fn)
 		assert.Nil(t, err)
+		w.Close()
 	})
-	log.Print("=== bufwriter")
-	measure(func() {
+	measure("bufwriter", func() {
 		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
 		assert.Nil(t, err)
 		bw := bufio.NewWriterSize(w, BUFSZ)
@@ -1101,9 +1101,9 @@ func TestWritePerf(t *testing.T) {
 		assert.Nil(t, err)
 		err = ts.Remove(fn)
 		assert.Nil(t, err)
+		w.Close()
 	})
-	log.Print("=== abufwriter")
-	measure(func() {
+	measure("abufwriter", func() {
 		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
 		assert.Nil(t, err)
 		aw := awriter.NewWriterSize(w, BUFSZ)
@@ -1113,6 +1113,52 @@ func TestWritePerf(t *testing.T) {
 		assert.Nil(t, err)
 		err = ts.Remove(fn)
 		assert.Nil(t, err)
+		w.Close()
 	})
 	ts.Shutdown()
+}
+
+func reader(t *testing.T, rdr io.Reader, buf []byte) {
+	for n := 0; n < FILESZ; n += WRITESZ {
+		_, err := rdr.Read(buf)
+		assert.Nil(t, err)
+	}
+}
+
+func TestReadPerf(t *testing.T) {
+	ts := test.MakeTstatePath(t, path)
+	fn := path + "f"
+	buf := make([]byte, WRITESZ)
+	for i := 0; i < WRITESZ; i++ {
+		buf[i] = byte(i & 0xFF)
+	}
+	w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
+	assert.Nil(t, err)
+	bw := bufio.NewWriterSize(w, BUFSZ)
+	writer(t, bw, buf)
+	w.Close()
+
+	measure("reader", func() {
+		r, err := ts.OpenReader(fn)
+		assert.Nil(t, err)
+		reader(t, r, buf)
+	})
+	measure("bufreader", func() {
+		r, err := ts.OpenReader(fn)
+		assert.Nil(t, err)
+		br := bufio.NewReaderSize(r, BUFSZ)
+		reader(t, br, buf)
+	})
+	measure("readahead", func() {
+		r, err := ts.OpenReader(fn)
+		assert.Nil(t, err)
+		br, err := readahead.NewReaderSize(r, 4, BUFSZ)
+		assert.Nil(t, err)
+		reader(t, br, buf)
+	})
+
+	err = ts.Remove(fn)
+	assert.Nil(t, err)
+	ts.Shutdown()
+
 }

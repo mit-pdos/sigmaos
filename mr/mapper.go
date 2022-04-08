@@ -40,7 +40,6 @@ type Mapper struct {
 	rand        string
 }
 
-// XXX create in a temporary file and then rename
 func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	if len(args) != 2 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
@@ -69,13 +68,12 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	d := np.UX + "/~ip/m-" + m.file
-	m.MkDir(d, 0777)
+	m.MkDir(Moutdir(m.file), 0777)
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
-		// create temp output file
-		oname := np.UX + "/~ip/m-" + m.file + "/r-" + strconv.Itoa(r) + m.rand
+		// create temp output shard for reducer r
+		oname := mshardfile(m.file, r) + m.rand
 		w, err := m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
@@ -105,18 +103,18 @@ func (m *Mapper) closewrts() error {
 
 // Inform reducer where to find map output
 func (m *Mapper) informReducer() error {
-	st, err := m.Stat(np.UX + "/~ip")
+	st, err := m.Stat(MLOCALSRV)
 	if err != nil {
-		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), np.UX+"/~ip", err)
+		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), MLOCALSRV, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := np.UX + "/~ip/m-" + m.file + "/r-" + strconv.Itoa(r)
+		fn := mshardfile(m.file, r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
 			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(), fn+m.rand, fn, err)
 		}
 
-		name := "name/mr/r/" + strconv.Itoa(r) + "/m-" + m.file
+		name := symname(r, m.file)
 
 		// Remove name in case an earlier mapper created the
 		// symlink.  A reducer will have opened and is reading
@@ -128,7 +126,7 @@ func (m *Mapper) informReducer() error {
 		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
-		target := np.UX + "/" + st.Name + "/m-" + m.file + "/r-" + strconv.Itoa(r) + "/"
+		target := shardtarget(st.Name, m.file, r)
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
 			if np.IsErrNotfound(err) {

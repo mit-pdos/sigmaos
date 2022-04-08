@@ -86,7 +86,7 @@ func (ts *Tstate) prepareJob() int {
 	}
 	for _, f := range files {
 		// remove mapper output directory from previous run
-		ts.RmDir(np.UX + "/~ip/m-" + f.Name())
+		ts.RmDir(mr.Moutdir(f.Name()))
 		n := mr.MDIR + "/" + f.Name()
 		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			db.DFatalf("PutFile %v err %v\n", n, err)
@@ -151,7 +151,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	const NReduce = 1
+	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
 	nmap := ts.prepareJob()

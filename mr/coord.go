@@ -23,11 +23,30 @@ const (
 	MDIR     = MRDIR + "/m"
 	RDIR     = MRDIR + "/r"
 	ROUT     = MRDIR + "/" + "mr-out-"
-	TIP      = "-tip"
-	DONE     = "-done"
+	TIP      = "-tip/"
+	DONE     = "-done/"
 	RESTART  = "restart"
 	NCOORD   = 3
+
+	MLOCALSRV    = np.UX + "/~ip"
+	MLOCALPREFIX = MLOCALSRV + "/m-"
 )
+
+func Moutdir(name string) string {
+	return MLOCALPREFIX + name
+}
+
+func mshardfile(name string, r int) string {
+	return Moutdir(name) + "/r-" + strconv.Itoa(r)
+}
+
+func shardtarget(server, name string, r int) string {
+	return np.UX + "/" + server + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
+}
+
+func symname(r int, name string) string {
+	return RDIR + "/" + strconv.Itoa(r) + "/m-" + name
+}
 
 //
 // mr_test puts names of input files in in MDIR and launches a
@@ -51,7 +70,7 @@ const (
 // symlinks to process (one symlink per mapper). The symlinks contain
 // the pathname where the mapper puts its shard for this reducer.  The
 // reducer writes it output to ROUT+<r>.  If the reducer task exits
-// successfully, the coordinator renames MDIR+TIP+r into RDIR+DONE, to
+// successfully, the coordinator renames RDIR+TIP+r into RDIR+DONE, to
 // record that this reducer task has completed.
 //
 

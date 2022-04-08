@@ -1060,10 +1060,24 @@ const (
 	BUFSZ   = 1 << 16
 )
 
+func mkBuf(n int) []byte {
+	buf := make([]byte, WRITESZ)
+	for i := 0; i < WRITESZ; i++ {
+		buf[i] = byte(i & 0xFF)
+	}
+	return buf
+}
+
 func writer(t *testing.T, wrt io.Writer, buf []byte) {
-	for n := 0; n < FILESZ; n += WRITESZ {
-		_, err := wrt.Write(buf)
+	for n := 0; n < FILESZ; {
+		w := len(buf)
+		if FILESZ-n < w {
+			w = FILESZ - n
+		}
+		m, err := wrt.Write(buf[0:w])
 		assert.Nil(t, err)
+		assert.Equal(t, w, m)
+		n += m
 	}
 }
 
@@ -1080,14 +1094,14 @@ func measure(msg string, f func()) {
 func TestWritePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
-	buf := make([]byte, WRITESZ)
-	for i := 0; i < WRITESZ; i++ {
-		buf[i] = byte(i & 0xFF)
-	}
+	buf := mkBuf(WRITESZ)
 	measure("writer", func() {
 		w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
 		assert.Nil(t, err)
 		writer(t, w, buf)
+		st, err := ts.Stat(fn)
+		assert.Nil(t, err)
+		assert.Equal(t, np.Tlength(FILESZ), st.Length, "stat")
 		err = ts.Remove(fn)
 		assert.Nil(t, err)
 		w.Close()
@@ -1119,24 +1133,33 @@ func TestWritePerf(t *testing.T) {
 }
 
 func reader(t *testing.T, rdr io.Reader, buf []byte) {
-	for n := 0; n < FILESZ; n += WRITESZ {
-		_, err := rdr.Read(buf)
+	s := 0
+	for {
+		m, err := rdr.Read(buf)
+		s += m
+		if err == io.EOF {
+			break
+		}
 		assert.Nil(t, err)
 	}
+	assert.Equal(t, FILESZ, s, "reader")
 }
 
 func TestReadPerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
-	buf := make([]byte, WRITESZ)
-	for i := 0; i < WRITESZ; i++ {
-		buf[i] = byte(i & 0xFF)
-	}
+	buf := mkBuf(WRITESZ)
+
 	w, err := ts.CreateWriter(fn, 0777, np.OWRITE)
 	assert.Nil(t, err)
 	bw := bufio.NewWriterSize(w, BUFSZ)
 	writer(t, bw, buf)
+	err = bw.Flush()
+	assert.Nil(t, err)
 	w.Close()
+	st, err := ts.Stat(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, np.Tlength(FILESZ), st.Length, "stat")
 
 	measure("reader", func() {
 		r, err := ts.OpenReader(fn)

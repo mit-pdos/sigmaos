@@ -37,7 +37,7 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 		return nil, err
 	}
 	c.nc = nc
-	c.hb = MakeHeartbeater(c)
+	c.hb = makeHeartbeater(c)
 	go c.writer()
 	return c, nil
 }
@@ -54,27 +54,6 @@ func (c *SessClnt) RPC(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		return nil, err1
 	}
 	return rep, err1
-}
-
-func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
-	c.Lock()
-	defer c.Unlock()
-
-	if c.closed {
-		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
-	}
-
-	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, f))
-	// Enqueue a request
-	c.queue.Enqueue(rpc)
-	return rpc, nil
-}
-
-// Wait for an RPC to be completed. When this happens, we reset the heartbeat
-// timer.
-func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
-	defer c.hb.HeartbeatAckd()
-	return rpc.Await()
 }
 
 // Clear the connection and reset the request queue.
@@ -108,7 +87,7 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 	}
 }
 
-// Send a detach, and close the session.
+// Send a detach.
 func (c *SessClnt) Detach() *np.Err {
 	// Stop the heartbeater.
 	c.hb.Stop()
@@ -124,10 +103,42 @@ func (c *SessClnt) Detach() *np.Err {
 	return nil
 }
 
-func (c *SessClnt) isClosed() bool {
+// Check if the session needs to be closed, either because the server killed
+// it, or because the client called detach. Close will be called in CompleteRPC
+// once the Rdetach is received.
+func srvClosedSess(msg np.Tmsg, err *np.Err) bool {
+	if msg.Type() == np.TRdetach {
+		return true
+	}
+	rerr, ok := msg.(np.Rerror)
+	if ok {
+		err := np.String2Err(rerr.Ename)
+		if np.IsErrClosed(err) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	c.Lock()
 	defer c.Unlock()
-	return c.closed
+
+	if c.closed {
+		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
+	}
+
+	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, f))
+	// Enqueue a request
+	c.queue.Enqueue(rpc)
+	return rpc, nil
+}
+
+// Wait for an RPC to be completed. When this happens, we reset the heartbeat
+// timer.
+func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
+	defer c.hb.HeartbeatAckd()
+	return rpc.Await()
 }
 
 // Get a connection to the server. If it isn't possible to make a connection,
@@ -151,6 +162,12 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *np.Err) {
 		c.nc = nc
 	}
 	return c.nc, nil
+}
+
+func (c *SessClnt) isClosed() bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.closed
 }
 
 // Close the sessclnt connection to this replica group.

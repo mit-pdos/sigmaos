@@ -15,7 +15,7 @@ type Heartbeater struct {
 	done          bool
 }
 
-func MakeHeartbeater(sc *SessClnt) *Heartbeater {
+func makeHeartbeater(sc *SessClnt) *Heartbeater {
 	h := &Heartbeater{}
 	h.sc = sc
 	go h.run()

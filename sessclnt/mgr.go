@@ -66,18 +66,6 @@ func (sc *Mgr) RPC(addr []string, req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	return msg, err
 }
 
-// Check if the session needs to be closed because the server killed it.
-func srvClosedSess(msg np.Tmsg, err *np.Err) bool {
-	rerr, ok := msg.(np.Rerror)
-	if ok {
-		err := np.String2Err(rerr.Ename)
-		if np.IsErrClosed(err) {
-			return true
-		}
-	}
-	return false
-}
-
 // For testing
 func (sc *Mgr) Disconnect(addrs []string) *np.Err {
 	db.DPrintf("SESSCLNT", "Disconnect %v %v\n", sc.sid, addrs)

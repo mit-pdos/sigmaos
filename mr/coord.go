@@ -18,15 +18,16 @@ import (
 )
 
 const (
-	INPUTDIR = "name/s3/~ip/input/"
-	MRDIR    = "name/mr"
-	MDIR     = MRDIR + "/m"
-	RDIR     = MRDIR + "/r"
-	ROUT     = MRDIR + "/" + "mr-out-"
-	TIP      = "-tip/"
-	DONE     = "-done/"
-	RESTART  = "restart"
-	NCOORD   = 3
+	MIN     = "name/s3/~ip/input/"
+	MRDIR   = "name/mr"
+	MDIR    = MRDIR + "/m"
+	RDIR    = MRDIR + "/r"
+	RIN     = MRDIR + "-in/"
+	ROUT    = MRDIR + "/" + "mr-out-"
+	TIP     = "-tip/"
+	DONE    = "-done/"
+	RESTART = "restart"
+	NCOORD  = 3
 
 	MLOCALSRV    = np.UX + "/~ip"
 	MLOCALPREFIX = MLOCALSRV + "/m-"
@@ -45,28 +46,28 @@ func shardtarget(server, name string, r int) string {
 }
 
 func symname(r int, name string) string {
-	return RDIR + "/" + strconv.Itoa(r) + "/m-" + name
+	return RIN + "/" + strconv.Itoa(r) + "/m-" + name
 }
 
 //
-// mr_test puts names of input files in in MDIR and launches a
-// coordinator proc to run the MR job.  The actual files live in
-// INPUTDIR.
+// mr_test puts names of input files in MDIR and launches a
+// coordinator proc to run the MR job.  The actual input files live in
+// MIN.
 //
 // The coordinator creates one thread per input file, which looks for
-// a file name from the MDIR. If thread finds a name, it claims it by
+// a file name in MDIR. If thread finds a name, it claims it by
 // renaming it into MDIR+TIP to record to that a task for name is in
-// progress.  Then the thread creates a mapper proc (task) to process
+// progress.  Then, the thread creates a mapper proc (task) to process
 // the input file.  Mapper i creates <r> output shards, one for each
 // reducer.  Once the mapper completes an output shard, it creates a
-// symlink in dir RDIR+/r, which contains the pathname for the output
+// symlink in dir RIN+/r, which contains the pathname for the output
 // shard.  If the mapper proc successfully exits, the coordinator
 // renames the task from MDIR+TIP into the dir MDIR+DONE, to record
 // that this mapper task has completed.
 //
 // The coordinator creates one thread per reducer, which grabs <r>
 // from RDIR, and records in RDIR+TIP that reducer <r> is in progress.
-// The thread creates a reducer proc that looks in dir RDIR+/r for
+// The thread creates a reducer proc that looks in dir RIN+/r for
 // symlinks to process (one symlink per mapper). The symlinks contain
 // the pathname where the mapper puts its shard for this reducer.  The
 // reducer writes it output to ROUT+<r>.  If the reducer task exits
@@ -75,15 +76,19 @@ func symname(r int, name string) string {
 //
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
-	for _, n := range []string{MRDIR, MDIR, RDIR, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
+	for _, n := range []string{MRDIR, MDIR, RDIR, RIN, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE} {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v\n", err)
 		}
 	}
 
-	// input directories for reduce tasks
+	// make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := RDIR + "/" + strconv.Itoa(r)
+		if err := fsl.MkDir(n, 0777); err != nil {
+			db.DFatalf("Mkdir %v err %v\n", n, err)
+		}
+		n = RIN + "/" + strconv.Itoa(r)
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
@@ -155,12 +160,12 @@ func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 }
 
 func (c *Coord) mapper(task string) (*proc.Status, error) {
-	input := INPUTDIR + task
+	input := MIN + task
 	return c.task(c.mapperbin, []string{strconv.Itoa(c.nreducetask), input})
 }
 
 func (c *Coord) reducer(task string) (*proc.Status, error) {
-	in := RDIR + TIP + "/" + task
+	in := RIN + "/" + task
 	out := ROUT + task
 	return c.task(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
 }
@@ -292,6 +297,7 @@ func (c *Coord) recover(dir string) {
 }
 
 func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
+	db.DPrintf(db.ALWAYS, "Phase %v start\n", dir)
 	start := time.Now()
 	ch := make(chan Ttask)
 	//	straggler := false
@@ -315,7 +321,7 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 		//			c.stragglers(dir, ch, f)
 		//		}
 	}
-	db.DPrintf(db.ALWAYS, "Phase %v %v\n", dir, time.Since(start).Milliseconds())
+	db.DPrintf(db.ALWAYS, "Phase %v done %v\n", dir, time.Since(start).Milliseconds())
 	return true
 }
 
@@ -329,7 +335,7 @@ func (c *Coord) Work() {
 	for {
 		c.recover(MDIR)
 		c.recover(RDIR)
-		c.phase(MDIR, c.mapper)
+		go c.phase(MDIR, c.mapper)
 
 		// If reduce phase is unsuccessful, we lost some
 		// mapper output. Restart those mappers.

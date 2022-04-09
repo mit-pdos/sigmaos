@@ -78,8 +78,8 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	return ts
 }
 
+// Put names of input files in name/mr/m
 func (ts *Tstate) prepareJob() int {
-	// Put names of input files in name/mr/m
 	files, err := ioutil.ReadDir("../input/")
 	if err != nil {
 		db.DFatalf("Readdir %v\n", err)

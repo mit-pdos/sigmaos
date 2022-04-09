@@ -87,7 +87,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 
 		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
 		ssrv.replSrv.Start()
-		log.Printf("Starting repl server")
+		log.Printf("Starting repl server: %v", config)
 	}
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)

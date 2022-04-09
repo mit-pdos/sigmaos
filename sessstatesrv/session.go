@@ -80,6 +80,8 @@ func (sess *Session) Close() {
 		close(sess.conn.Replies)
 		sess.conn = nil
 	}
+	// Empty & permanently close the replies table.
+	sess.rt.Close(sess.Sid)
 }
 
 // The conn may be nil if this is a replicated op which came through

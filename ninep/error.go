@@ -44,7 +44,8 @@ const (
 	TErrVersion
 	TErrStale
 	TErrExists
-	TErrClosed // for pipes and watch wait
+	TErrClosed     // for closed sessions.
+	TErrPipeClosed // for closed pipes.
 	TErrBadFcall
 
 	//
@@ -127,6 +128,8 @@ func (err Terror) String() string {
 		return "file exists"
 	case TErrClosed:
 		return "closed"
+	case TErrPipeClosed:
+		return "pipe closed"
 	case TErrBadFcall:
 		return "bad fcall"
 

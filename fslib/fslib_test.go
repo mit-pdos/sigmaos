@@ -746,7 +746,7 @@ func TestPipeClose(t *testing.T) {
 			assert.Equal(ts.T, "hello", string(b))
 		}
 		err = fsl.Close(fd)
-		assert.Nil(ts.T, err, "Close")
+		assert.Nil(ts.T, err, "Close: %v", err)
 		ch <- true
 	}(ch)
 	fd, err := ts.Open(pipe, np.OWRITE)

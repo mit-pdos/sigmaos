@@ -78,6 +78,8 @@ type result struct {
 func (r *Reducer) readFile(ch chan result, file string) {
 	// Make new fslib to parallelize request to a single fsux
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
+	defer fsl.Exit()
+
 	kvs := make([]*KeyValue, 0)
 	d := r.input + "/" + file + "/"
 	db.DPrintf("MR", "readFile %v\n", d)
@@ -88,7 +90,6 @@ func (r *Reducer) readFile(ch chan result, file string) {
 		return
 	}
 	defer rdr.Close()
-	defer fsl.Exit()
 
 	brdr := bufio.NewReaderSize(rdr, BUFSZ)
 	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)

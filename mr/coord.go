@@ -248,14 +248,14 @@ func (c *Coord) processResult(dir string, res Ttask) {
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
 		if err := c.Rename(s, d); err != nil {
-			db.DFatalf("rename %v to %v err %v\n", s, d, err)
+			db.DFatalf("rename task done %v to %v err %v\n", s, d, err)
 		}
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
 		db.DPrintf("MR", "task %v failed %v err %v\n", res.task, res.status, res.err)
 		if err := c.Rename(dir+TIP+"/"+res.task, to); err != nil {
-			db.DFatalf("rename to %v err %v\n", to, err)
+			db.DFatalf("rename to runnable %v err %v\n", to, err)
 		}
 	}
 }

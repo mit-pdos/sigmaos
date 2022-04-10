@@ -58,8 +58,9 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 
 	m.FsLib = fslib.MakeFsLib("mapper-" + proc.GetPid().String() + " " + m.input)
 	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
-	m.Started()
-
+	if err := m.Started(); err != nil {
+		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)
+	}
 	crash.Crasher(m.FsLib)
 	delay.SetDelayRPC(3)
 	return m, nil
@@ -157,7 +158,7 @@ func (m *Mapper) doMap() error {
 	}
 	defer rdr.Close()
 
-	db.DPrintf("MR0", "Open %v\n", time.Since(start).Milliseconds())
+	db.DPrintf("MR0", "Open %v %v\n", m.input, time.Since(start).Milliseconds())
 	start = time.Now()
 
 	//brdr := bufio.NewReaderSize(rdr, BUFSZ)
@@ -192,8 +193,7 @@ func RunMapper(mapf MapT, args []string) {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)
 	}
-	err = m.initMapper()
-	if err != nil {
+	if err = m.initMapper(); err != nil {
 		m.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}

@@ -61,7 +61,9 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.wrt = w
 	r.bwrt = bufio.NewWriterSize(w, BUFSZ)
 
-	r.Started()
+	if err := r.Started(); err != nil {
+		return nil, fmt.Errorf("MakeReducer couldn't start %v", args)
+	}
 
 	crash.Crasher(r.FsLib)
 	delay.SetDelayRPC(3)
@@ -81,7 +83,7 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
 	kvs := make([]*KeyValue, 0)
 	d := r.input + "/" + file + "/"
-	db.DPrintf("MR", "reduce %v\n", d)
+	db.DPrintf("MR", "readFile %v\n", d)
 	rdr, err := fsl.OpenReader(d)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", d, err)

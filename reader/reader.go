@@ -22,6 +22,10 @@ func (rdr *Reader) Path() string {
 	return rdr.path
 }
 
+func (rdr *Reader) Fid() np.Tfid {
+	return rdr.fid
+}
+
 func (rdr *Reader) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil

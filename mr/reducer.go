@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 
 	"ulambda/crash"
 	db "ulambda/debug"
-	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -26,16 +26,17 @@ import (
 type Reducer struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	reducef ReduceT
-	input   string
-	output  string
-	tmp     string
-	bwrt    *bufio.Writer
-	wrt     *writer.Writer
+	reducef  ReduceT
+	input    string
+	output   string
+	nmaptask int
+	tmp      string
+	bwrt     *bufio.Writer
+	wrt      *writer.Writer
 }
 
 func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, errors.New("MakeReducer: too few arguments")
 	}
 	r := &Reducer{}
@@ -46,6 +47,12 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.FsLib = fslib.MakeFsLib("reducer-" + r.input)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 
+	m, err := strconv.Atoi(args[2])
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
+	}
+	r.nmaptask = m
+
 	w, err := r.CreateWriter(r.tmp, 0777, np.OWRITE)
 	if err != nil {
 		return nil, err
@@ -53,34 +60,36 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	r.wrt = w
 	r.bwrt = bufio.NewWriterSize(w, BUFSZ)
 
-	r.Started()
+	if err := r.Started(); err != nil {
+		return nil, fmt.Errorf("MakeReducer couldn't start %v", args)
+	}
 
 	crash.Crasher(r.FsLib)
-	delay.SetDelayRPC(3)
-
 	return r, nil
 }
 
 type result struct {
 	kvs  []*KeyValue
 	name string
+	done bool
 	err  error
 }
 
 func (r *Reducer) readFile(ch chan result, file string) {
 	// Make new fslib to parallelize request to a single fsux
 	fsl := fslib.MakeFsLibAddr("r-"+file, fslib.Named())
+	defer fsl.Exit()
+
 	kvs := make([]*KeyValue, 0)
 	d := r.input + "/" + file + "/"
-	db.DPrintf("MR", "reduce %v\n", d)
+	db.DPrintf("MR", "readFile %v\n", d)
 	rdr, err := fsl.OpenReader(d)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", d, err)
-		ch <- result{nil, "", err}
+		ch <- result{nil, "", false, err}
 		return
 	}
 	defer rdr.Close()
-	defer fsl.Exit()
 
 	brdr := bufio.NewReaderSize(rdr, BUFSZ)
 	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
@@ -94,9 +103,9 @@ func (r *Reducer) readFile(ch chan result, file string) {
 		return nil
 	})
 	if err != nil {
-		ch <- result{nil, file, nil}
+		ch <- result{nil, file, false, nil}
 	} else {
-		ch <- result{kvs, "", nil}
+		ch <- result{kvs, file, true, nil}
 	}
 }
 
@@ -104,31 +113,64 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 	start := time.Now()
 	kvs := []*KeyValue{}
 	lostMaps := []string{}
-	sts, err := r.GetDir(input)
-	if err != nil {
-		return nil, nil, err
-	}
-	ch := make(chan result)
-	for _, st := range sts {
-		go r.readFile(ch, st.Name)
-	}
-	for range sts {
-		r := <-ch
-		if r.err != nil {
-			// another reducer already processed input
-			// file; nothing to be done; bail out.
+	files := make(map[string]bool)
+
+	for len(files) < r.nmaptask {
+		sts, rdr, err := r.ReadDir(input)
+		if err != nil {
 			return nil, nil, err
 		}
-		if r.name != "" {
-			// If error is true, then either another
-			// reducer already did the job (the input dir
-			// is missing), the server holding the
-			// mapper's output crashed, or is unreachable
-			// (in which case we need to restart that
-			// mapper).
-			lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
+		log.Printf("sts %d\n", len(sts))
+		if len(sts) == len(files) { // wait for new inputs?
+			ch := make(chan error)
+			if err := r.SetDirWatch(rdr.Fid(), input, func(p string, r error) {
+				log.Printf("dirwatch %v %v\n", input, r)
+				ch <- r
+			}); err != nil {
+				rdr.Close()
+				if np.IsErrVersion(err) {
+					log.Printf("Version mismatch %v\n", input)
+					continue
+				}
+				return nil, nil, err
+			}
+			if err := <-ch; err != nil {
+				rdr.Close()
+				return nil, nil, err
+			}
+			rdr.Close()
+			continue
 		} else {
-			kvs = append(kvs, r.kvs...)
+			rdr.Close()
+		}
+		n := 0
+		ch := make(chan result)
+		for _, st := range sts {
+			if _, ok := files[st.Name]; !ok {
+				n += 1
+				go r.readFile(ch, st.Name)
+			}
+		}
+		for i := 0; i < n; i++ {
+			r := <-ch
+			if r.err != nil {
+				// another reducer already processed input
+				// file; nothing to be done; bail out.
+				return nil, nil, err
+			}
+			files[r.name] = true
+			db.DPrintf("REDUCE", "Read %v done %v\n", r.name, r.done)
+			if !r.done {
+				// If error is true, then either another
+				// reducer already did the job (the input dir
+				// is missing), the server holding the
+				// mapper's output crashed, or is unreachable
+				// (in which case we need to restart that
+				// mapper).
+				lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
+			} else {
+				kvs = append(kvs, r.kvs...)
+			}
 		}
 	}
 	db.DPrintf("MR0", "Reduce Read %v\n", time.Since(start).Milliseconds())
@@ -142,7 +184,7 @@ func (r *Reducer) emit(kv *KeyValue) error {
 }
 
 func (r *Reducer) doReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "doReduce %v %v\n", r.input, r.output)
+	db.DPrintf(db.ALWAYS, "doReduce %v %v %v\n", r.input, r.output, r.nmaptask)
 	kvs, lostMaps, err := r.readFiles(r.input)
 	if err != nil {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)

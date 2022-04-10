@@ -94,7 +94,7 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 func (pfs *ProcdFs) finish(p *Proc) error {
 	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid.String()))
 	if err != nil {
-		log.Printf("Error ProcdFs.finish: %v", err)
+		log.Printf("%v: Error ProcdFs.finish: %v", proc.GetName(), err)
 		return err
 	}
 	return nil

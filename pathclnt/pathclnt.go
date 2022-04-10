@@ -284,22 +284,16 @@ func (pathc *PathClnt) Open(path string, mode np.Tmode) (np.Tfid, error) {
 	return pathc.OpenWatch(path, mode, nil)
 }
 
-func (pathc *PathClnt) SetDirWatch(path string, w Watch) error {
-	db.DPrintf("PATHCLNT", "SetDirWatch %v\n", path)
-	p := np.Split(path)
-	fid, err := pathc.walkPathUmount(p, np.EndSlash(path), nil)
-	if err != nil {
-		return err
-	}
+func (pathc *PathClnt) SetDirWatch(fid np.Tfid, path string, w Watch) error {
+	db.DPrintf("PATHCLNT", "SetDirWatch %v\n", fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", path, err)
+		db.DPrintf("PATHCLNT", "SetDirWatch: Watch returns %v %v\n", fid, err)
 		if err == nil {
 			w(path, nil)
 		} else {
 			w(path, err)
 		}
-		pathc.Clunk(fid)
 	}()
 	return nil
 }

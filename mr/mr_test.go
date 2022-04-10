@@ -28,7 +28,7 @@ const (
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
-	CRASHTASK  = 2000
+	CRASHTASK  = 3000
 	CRASHCOORD = 5000
 	CRASHSRV   = 1000000
 )
@@ -78,21 +78,22 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) prepareJob() {
-	// Put names of input files in name/mr/m
+// Put names of input files in name/mr/m
+func (ts *Tstate) prepareJob() int {
 	files, err := ioutil.ReadDir("../input/")
 	if err != nil {
 		db.DFatalf("Readdir %v\n", err)
 	}
 	for _, f := range files {
 		// remove mapper output directory from previous run
-		ts.RmDir(np.UX + "/~ip/m-" + f.Name())
+		ts.RmDir(mr.Moutdir(f.Name()))
 		n := mr.MDIR + "/" + f.Name()
 		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			db.DFatalf("PutFile %v err %v\n", n, err)
 		}
 		// break
 	}
+	return len(files)
 }
 
 func (ts *Tstate) checkJob() {
@@ -153,9 +154,9 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	const NReduce = 2
 	ts := makeTstate(t, NReduce)
 
-	ts.prepareJob()
+	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

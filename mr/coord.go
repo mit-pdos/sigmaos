@@ -144,15 +144,16 @@ func MakeCoord(args []string) (*Coord, error) {
 }
 
 func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
-	a := proc.MakeProc(bin, args)
+	p := proc.MakeProc(bin, args)
 	if c.crash > 0 {
-		a.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
+		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}
-	err := c.Spawn(a)
+	db.DPrintf("MR", "spawn task %v %v\n", p.Pid, args)
+	err := c.Spawn(p)
 	if err != nil {
 		return nil, err
 	}
-	status, err := c.WaitExit(a.Pid)
+	status, err := c.WaitExit(p.Pid)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +224,6 @@ func (c *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 		}
 		n += 1
 		go func() {
-			db.DPrintf("MR", "start task %v\n", t)
 			status, err := f(t)
 			ch <- Ttask{t, status, err}
 		}()
@@ -247,17 +247,15 @@ func (c *Coord) processResult(dir string, res Ttask) {
 		db.DPrintf(db.ALWAYS, "task done %v\n", res.task)
 		s := dir + TIP + "/" + res.task
 		d := dir + DONE + "/" + res.task
-		err := c.Rename(s, d)
-		if err != nil {
-			// an earlier instance already succeeded
-			log.Printf("%v: rename %v to %v err %v\n", proc.GetName(), s, d, err)
+		if err := c.Rename(s, d); err != nil {
+			db.DFatalf("rename %v to %v err %v\n", s, d, err)
 		}
 	} else {
 		// task failed; make it runnable again
 		to := dir + "/" + res.task
 		db.DPrintf("MR", "task %v failed %v err %v\n", res.task, res.status, res.err)
 		if err := c.Rename(dir+TIP+"/"+res.task, to); err != nil {
-			db.DFatalf("%v: rename to %v err %v\n", proc.GetName(), to, err)
+			db.DFatalf("rename to %v err %v\n", to, err)
 		}
 	}
 }
@@ -289,17 +287,16 @@ func (c *Coord) recover(dir string) {
 		db.DPrintf(db.ALWAYS, "recover %v\n", st.Name)
 		to := dir + "/" + st.Name
 		if c.Rename(dir+TIP+"/"+st.Name, to) != nil {
-			// an old, disconnected coord may do this too,
-			// if one of its tasks fails
-			log.Printf("%v: rename to %v err %v\n", proc.GetName(), to, err)
+			db.DFatalf("%v: rename to %v err %v\n", proc.GetName(), to, err)
 		}
 	}
 }
 
-func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
-	db.DPrintf(db.ALWAYS, "Phase %v start\n", dir)
+func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, error)) {
+	db.DPrintf(db.ALWAYS, "Phase start %v\n", dir)
 	start := time.Now()
 	ch := make(chan Ttask)
+	ok := true
 	//	straggler := false
 	for n := c.startTasks(dir, ch, f); n > 0; n-- {
 		res := <-ch
@@ -311,7 +308,7 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 				log.Printf("data %v\n", res.status.Data())
 				lostMappers := res.status.Data().([]string)
 				c.restartMappers(lostMappers)
-				return false
+				ok = false
 			} else {
 				n += c.startTasks(dir, ch, f)
 			}
@@ -321,8 +318,9 @@ func (c *Coord) phase(dir string, f func(string) (*proc.Status, error)) bool {
 		//			c.stragglers(dir, ch, f)
 		//		}
 	}
-	db.DPrintf(db.ALWAYS, "Phase %v done %v\n", dir, time.Since(start).Milliseconds())
-	return true
+	db.DPrintf(db.ALWAYS, "Phase done %v ok %v t %vms\n", dir, ok, time.Since(start).Milliseconds())
+	done <- ok
+	return
 }
 
 func (c *Coord) Work() {
@@ -332,19 +330,24 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader\n")
 
-	for {
+	for done := false; !done; {
 		c.recover(MDIR)
 		c.recover(RDIR)
-		go c.phase(MDIR, c.mapper)
 
-		// If reduce phase is unsuccessful, we lost some
-		// mapper output. Restart those mappers.
-		success := c.phase(RDIR, c.reducer)
-		if success {
-			break
+		ch := make(chan bool)
+		go c.phase(ch, MDIR, c.mapper)
+		go c.phase(ch, RDIR, c.reducer)
+
+		done = true
+		for i := 0; i < 2; i++ {
+			// If reduce phase is unsuccessful, we lost
+			// some mapper output. Restart those mappers.
+			done = <-ch
+			db.DPrintf(db.ALWAYS, "phase %d done %v\n", i, done)
 		}
-		log.Printf("try again\n")
 	}
+
+	db.DPrintf(db.ALWAYS, "job done\n")
 
 	c.Exited(proc.MakeStatus(proc.StatusOK))
 }

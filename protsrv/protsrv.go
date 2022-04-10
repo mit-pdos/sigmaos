@@ -267,6 +267,7 @@ func (ps *ProtSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	}
 	nf := ps.makeFid(f.Ctx(), f.Path(), names[0], o1, args.Perm.IsEphemeral(), o1.Qid())
 	ps.ft.Add(args.Fid, nf)
+	nf.SetMode(args.Mode)
 	rets.Qid = o1.Qid()
 	return nil
 }

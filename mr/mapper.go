@@ -75,6 +75,7 @@ func (m *Mapper) initMapper() error {
 		oname := mshardfile(m.file, r) + m.rand
 		w, err := m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
+			m.closewrts()
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 		}
 		aw := awriter.NewWriterSize(w, BUFSZ)
@@ -87,14 +88,22 @@ func (m *Mapper) initMapper() error {
 // XXX use writercloser
 func (m *Mapper) closewrts() error {
 	for r := 0; r < m.nreducetask; r++ {
+		if m.wrts[r] != nil {
+			if err := m.wrts[r].awrt.Close(); err != nil {
+				return fmt.Errorf("%v: aclose %v err %v\n", proc.GetName(), m.wrts[r], err)
+			}
+			if err := m.wrts[r].wrt.Close(); err != nil {
+				return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
+			}
+		}
+	}
+	return nil
+}
+
+func (m *Mapper) flushwrts() error {
+	for r := 0; r < m.nreducetask; r++ {
 		if err := m.wrts[r].bwrt.Flush(); err != nil {
 			return fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
-		}
-		if err := m.wrts[r].awrt.Close(); err != nil {
-			return fmt.Errorf("%v: aclose %v err %v\n", proc.GetName(), m.wrts[r], err)
-		}
-		if err := m.wrts[r].wrt.Close(); err != nil {
-			return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
 		}
 	}
 	return nil
@@ -168,12 +177,15 @@ func (m *Mapper) doMap() error {
 		return err
 	}
 	db.DPrintf("MR0", "Mapf %v\n", time.Since(start).Milliseconds())
-	start = time.Now()
 
+	start = time.Now()
+	if err := m.flushwrts(); err != nil {
+		return err
+	}
 	if err := m.closewrts(); err != nil {
 		return err
 	}
-	db.DPrintf("MR0", "Close %v\n", time.Since(start).Milliseconds())
+	db.DPrintf("MR0", "Flush/close %v\n", time.Since(start).Milliseconds())
 	start = time.Now()
 
 	if err := m.informReducer(); err != nil {

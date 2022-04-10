@@ -15,7 +15,6 @@ import (
 
 	"ulambda/crash"
 	db "ulambda/debug"
-	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -66,8 +65,6 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 	}
 
 	crash.Crasher(r.FsLib)
-	delay.SetDelayRPC(3)
-
 	return r, nil
 }
 

@@ -14,7 +14,6 @@ import (
 	"ulambda/awriter"
 	"ulambda/crash"
 	db "ulambda/debug"
-	"ulambda/delay"
 	"ulambda/fslib"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -62,7 +61,6 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 		return nil, fmt.Errorf("MakeMapper couldn't start %v", args)
 	}
 	crash.Crasher(m.FsLib)
-	delay.SetDelayRPC(3)
 	return m, nil
 }
 

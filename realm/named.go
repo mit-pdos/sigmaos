@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/kernel"
@@ -38,6 +39,8 @@ func ShutdownNamedReplicas(pclnt *procclnt.ProcClnt, pids []string) {
 
 // Generate an address for a new named
 func genNamedAddrs(n int, localIP string) []string {
+	// Seed to ensure different port numbers are generated.
+	rand.Seed(time.Now().UnixNano())
 	basePort := MIN_PORT + rand.Intn(MAX_PORT-MIN_PORT)
 	addrs := []string{}
 	for i := 0; i < n; i++ {

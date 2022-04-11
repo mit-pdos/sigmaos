@@ -176,7 +176,7 @@ func (m *Mapper) doMap() error {
 	if err := m.mapf(m.input, ardr, m.emit); err != nil {
 		return err
 	}
-	db.DPrintf("MR0", "Mapf %v\n", time.Since(start).Milliseconds())
+	db.DPrintf("MR0", "Mapf %v %v\n", m.input, time.Since(start).Milliseconds())
 
 	start = time.Now()
 	if err := m.flushwrts(); err != nil {

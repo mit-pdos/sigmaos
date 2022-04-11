@@ -62,7 +62,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 
 	if mode == np.OREAD {
 		if pipe.rclosed || pipe.nlink <= 0 {
-			return nil, np.MkErr(np.TErrPipeClosed, "pipe reading")
+			return nil, np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
 		//log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
@@ -82,7 +82,7 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 		}
 	} else if mode == np.OWRITE {
 		if pipe.wclosed || pipe.nlink <= 0 {
-			return nil, np.MkErr(np.TErrPipeClosed, "pipe writing")
+			return nil, np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
 		// log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
@@ -119,7 +119,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 			pipe.rclosed = true
 		}
 		if pipe.nreader < 0 {
-			np.MkErr(np.TErrPipeClosed, "pipe reading")
+			np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.condw.Signal()
 	} else if mode == np.OWRITE {
@@ -128,7 +128,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 			pipe.wclosed = true
 		}
 		if pipe.nwriter < 0 {
-			np.MkErr(np.TErrPipeClosed, "pipe writing")
+			np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.condr.Signal()
 	} else {
@@ -145,7 +145,7 @@ func (pipe *Pipe) Write(ctx fs.CtxI, o np.Toffset, d []byte, v np.TQversion) (np
 	for len(d) > 0 {
 		for len(pipe.buf) >= PIPESZ {
 			if pipe.nreader <= 0 {
-				return 0, np.MkErr(np.TErrPipeClosed, "pipe")
+				return 0, np.MkErr(np.TErrClosed, "pipe")
 			}
 			err := pipe.condw.Wait(ctx.SessionId())
 			if err != nil {
@@ -169,7 +169,7 @@ func (pipe *Pipe) Read(ctx fs.CtxI, o np.Toffset, n np.Tsize, v np.TQversion) ([
 
 	for len(pipe.buf) == 0 {
 		if pipe.nwriter <= 0 {
-			return nil, np.MkErr(np.TErrPipeClosed, "pipe")
+			return nil, np.MkErr(np.TErrClosed, "pipe")
 		}
 		err := pipe.condr.Wait(ctx.SessionId())
 		if err != nil {

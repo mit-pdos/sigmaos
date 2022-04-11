@@ -113,7 +113,7 @@ func srvClosedSess(msg np.Tmsg, err *np.Err) bool {
 	rerr, ok := msg.(np.Rerror)
 	if ok {
 		err := np.String2Err(rerr.Ename)
-		if np.IsErrClosed(err) {
+		if np.IsErrSessClosed(err) {
 			return true
 		}
 	}

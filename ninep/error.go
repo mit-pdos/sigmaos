@@ -44,8 +44,7 @@ const (
 	TErrVersion
 	TErrStale
 	TErrExists
-	TErrClosed     // for closed sessions.
-	TErrPipeClosed // for closed pipes.
+	TErrClosed // for closed sessions and pipes.
 	TErrBadFcall
 
 	//
@@ -128,8 +127,6 @@ func (err Terror) String() string {
 		return "file exists"
 	case TErrClosed:
 		return "closed"
-	case TErrPipeClosed:
-		return "pipe closed"
 	case TErrBadFcall:
 		return "bad fcall"
 
@@ -231,8 +228,12 @@ func IsErrRetry(error error) bool {
 	return strings.HasPrefix(error.Error(), TErrRetry.String())
 }
 
-func IsErrClosed(error error) bool {
-	return strings.HasPrefix(error.Error(), TErrClosed.String())
+func IsErrSessClosed(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrClosed.String()) && strings.Contains(error.Error(), "sess")
+}
+
+func IsErrPipeClosed(error error) bool {
+	return strings.HasPrefix(error.Error(), TErrClosed.String()) && strings.Contains(error.Error(), "pipe")
 }
 
 func IsErrNotDir(error error) bool {

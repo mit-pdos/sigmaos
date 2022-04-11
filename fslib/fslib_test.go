@@ -423,8 +423,10 @@ func TestWatchDir(t *testing.T) {
 	err := ts.MkDir(fn, 0777)
 	assert.Equal(t, nil, err)
 
+	_, rdr, err := ts.ReadDir(fn)
+	assert.Equal(t, nil, err)
 	ch := make(chan bool)
-	err = ts.SetDirWatch(fn, func(path string, err error) {
+	err = ts.SetDirWatch(rdr.Fid(), fn, func(path string, err error) {
 		assert.Equal(t, nil, err, path)
 		ch <- true
 	})

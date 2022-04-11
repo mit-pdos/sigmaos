@@ -6,7 +6,8 @@ import (
 
 func (fl *FsLib) MakePipe(name string, lperm np.Tperm) error {
 	lperm = lperm | np.DMNAMEDPIPE
-	fd, err := fl.Create(name, lperm, np.OWRITE)
+	// ORDWR so that close doesn't do anything to the pipe state
+	fd, err := fl.Create(name, lperm, np.ORDWR)
 	if err != nil {
 		return err
 	}

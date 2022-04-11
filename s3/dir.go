@@ -177,20 +177,24 @@ func (d *Dir) fakeStat(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion
 	return dirents, nil
 }
 
-// sub directories will be implicitly created; fake write
 func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	return np.Tsize(len(b)), nil
+	return 0, np.MkErr(np.TErrIsdir, d)
+	// return np.Tsize(len(b)), nil
 }
 
-// XXX directories don't fully work: there is a fake directory, when
-// trying to read it we get an error.  Maybe create . or .. in the
-// directory args.Name, to force the directory into existence
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	if perm.IsDir() {
-		o1 := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
-		return o1, nil
+		dir := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
+		// create a fake "file" in "dir" to materialize it
+		if _, err := dir.Create(ctx, "_._", perm&0777, m); err != nil {
+			db.DPrintf("FSS3", "Create x err %v\n", err)
+			return nil, err
+		}
+		d.dirents[name] = dir
+		return dir, nil
 	}
 	key := d.key.Append(name).String()
+	db.DPrintf("FSS3", "Create key: %v\n", key)
 	input := &s3.PutObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
@@ -206,9 +210,9 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if ok {
 		return nil, np.MkErr(np.TErrExists, name)
 	}
-	o1 := d.Obj.fss3.makeObj(np.Split(key), 0, d)
-	d.dirents[name] = o1.(*Obj)
-	return o1, nil
+	o := d.Obj.fss3.makeObj(np.Split(key), 0, d)
+	d.dirents[name] = o.(*Obj)
+	return o, nil
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
@@ -221,6 +225,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 		Bucket: &bucket,
 		Key:    &key,
 	}
+	db.DPrintf("FSS3", "Delete key: %v\n", key)
 	_, err := d.fss3.client.DeleteObject(context.TODO(), input)
 	if err != nil {
 		return np.MkErrError(err)

@@ -101,7 +101,6 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 
 	// If we need to add a named replica, do so
 	if len(realmCfg.MachinedsActive) < nReplicas() {
-		db.DPrintf(db.ALWAYS, "Need new named replica: %v", realmCfg.MachinedsActive)
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
 			db.DFatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
@@ -118,6 +117,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
+		db.DPrintf("MACHINED", "Added named replica: %v", realmCfg)
 	}
 	return initDone
 }

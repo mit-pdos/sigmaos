@@ -160,7 +160,12 @@ func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
 	// Note machined de-registration
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-	rCfg.NMachineds -= 1
+	// Remove the machined from the lsit of assigned machineds.
+	for i := range rCfg.MachinedsAssigned {
+		if rCfg.MachinedsAssigned[i] == machinedId {
+			rCfg.MachinedsAssigned = append(rCfg.MachinedsAssigned[:i], rCfg.MachinedsAssigned[i+1:]...)
+		}
+	}
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
@@ -212,7 +217,7 @@ func (m *RealmMgr) allocMachined(realmId string) bool {
 		// Update the realm's config
 		rCfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-		rCfg.NMachineds += 1
+		rCfg.MachinedsAssigned = append(rCfg.MachinedsAssigned, machinedId)
 		rCfg.LastResize = time.Now()
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 		return true
@@ -287,9 +292,9 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 	}
 
 	// If we are below the target replication level
-	if realmCfg.NMachineds < nReplicas() {
+	if len(realmCfg.MachinedsAssigned) < nReplicas() {
 		// Start enough machineds to reach the target replication level
-		for i := realmCfg.NMachineds; i < nReplicas(); i++ {
+		for i := len(realmCfg.MachinedsAssigned); i < nReplicas(); i++ {
 			if ok := m.allocMachined(realmId); !ok {
 				log.Printf("Error in adjustRealm: not enough machineds to meet minimum replication level for realm %v", realmId)
 			}
@@ -309,7 +314,7 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 		m.allocMachined(realmId)
 	} else if avgUtil < np.REALM_SHRINK_CPU_UTIL_THRESHOLD {
 		// If there are replicas to spare
-		if realmCfg.NMachineds > nReplicas() {
+		if len(realmCfg.MachinedsAssigned) > nReplicas() {
 			// Find least utilized procd
 			//			min := 100.0
 			//			minMachinedId := ""

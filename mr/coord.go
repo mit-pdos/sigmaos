@@ -85,8 +85,8 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	// make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
 		n := RDIR + "/" + strconv.Itoa(r)
-		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DFatalf("Mkdir %v err %v\n", n, err)
+		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte{}); err != nil {
+			db.DFatalf("Putfile %v err %v\n", n, err)
 		}
 		n = RIN + "/" + strconv.Itoa(r)
 		if err := fsl.MkDir(n, 0777); err != nil {

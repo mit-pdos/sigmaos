@@ -81,15 +81,16 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	defer fsl.Exit()
 
 	kvs := make([]*KeyValue, 0)
-	d := r.input + "/" + file + "/"
-	db.DPrintf("MR", "readFile %v\n", d)
-	rdr, err := fsl.OpenReader(d)
+	sym := r.input + "/" + file + "/"
+	db.DPrintf("MR", "readFile %v\n", sym)
+	rdr, err := fsl.OpenReader(sym)
 	if err != nil {
-		db.DPrintf("MR", "MakeReader %v err %v", d, err)
+		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
 		ch <- result{nil, "", false, err}
 		return
 	}
 	defer rdr.Close()
+	start := time.Now()
 
 	brdr := bufio.NewReaderSize(rdr, BUFSZ)
 	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
@@ -107,6 +108,7 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	} else {
 		ch <- result{kvs, file, true, nil}
 	}
+	db.DPrintf("MR0", "Reduce readfile %v %v\n", sym, time.Since(start).Milliseconds())
 }
 
 func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
@@ -116,32 +118,11 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 	files := make(map[string]bool)
 
 	for len(files) < r.nmaptask {
-		sts, rdr, err := r.ReadDir(input)
+		sts, err := r.ReadDirWatch(input, func(sts []*np.Stat) bool {
+			return len(sts) == len(files)
+		})
 		if err != nil {
 			return nil, nil, err
-		}
-		log.Printf("sts %d\n", len(sts))
-		if len(sts) == len(files) { // wait for new inputs?
-			ch := make(chan error)
-			if err := r.SetDirWatch(rdr.Fid(), input, func(p string, r error) {
-				log.Printf("dirwatch %v %v\n", input, r)
-				ch <- r
-			}); err != nil {
-				rdr.Close()
-				if np.IsErrVersion(err) {
-					log.Printf("Version mismatch %v\n", input)
-					continue
-				}
-				return nil, nil, err
-			}
-			if err := <-ch; err != nil {
-				rdr.Close()
-				return nil, nil, err
-			}
-			rdr.Close()
-			continue
-		} else {
-			rdr.Close()
 		}
 		n := 0
 		ch := make(chan result)

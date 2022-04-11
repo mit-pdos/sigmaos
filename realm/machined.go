@@ -5,7 +5,6 @@ import (
 	"path"
 	"runtime/debug"
 
-	"ulambda/atomic"
 	"ulambda/config"
 	db "ulambda/debug"
 	"ulambda/electclnt"
@@ -91,28 +90,24 @@ func (r *Machined) getNextConfig() {
 // named replica for it. Return true when all named replicas have been
 // initialized.
 func (r *Machined) tryAddNamedReplicaL() bool {
-	rds, err := r.GetDir(path.Join(REALMS, r.cfg.RealmId))
-	if err != nil {
-		db.DFatalf("Error ReadDir in Machined.tryInitRealmL: %v", err)
-	}
+	// Get config
+	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 
 	initDone := false
-	// If this is the last machined replica...
-	if len(rds) == nReplicas()-1 {
+	// If this is the last required machined replica...
+	if len(realmCfg.MachinedsActive) == nReplicas()-1 {
 		initDone = true
 	}
 
 	// If we need to add a named replica, do so
-	if len(rds) < nReplicas() {
-		db.DPrintf(db.ALWAYS, "Need new named replica: %v", rds)
+	if len(realmCfg.MachinedsActive) < nReplicas() {
+		db.DPrintf(db.ALWAYS, "Need new named replica: %v", realmCfg.MachinedsActive)
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
 			db.DFatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
 		}
 		namedAddrs := genNamedAddrs(1, ip)
 
-		// Get config
-		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 		realmCfg.NamedAddrs = append(realmCfg.NamedAddrs, namedAddrs...)
 
 		// Start a named instance.
@@ -128,11 +123,9 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 }
 
 // Register this machined as part of a realm.
-func (r *Machined) register() {
-	// Register this machined as belonging to this realm.
-	if err := atomic.PutFileAtomic(r.FsLib, path.Join(REALMS, r.cfg.RealmId, r.id), 0777, []byte{}); err != nil {
-		db.DFatalf("Error MakeFileAtomic in Machined.register: %v", err)
-	}
+func (r *Machined) register(cfg *RealmConfig) {
+	cfg.MachinedsActive = append(cfg.MachinedsActive, r.id)
+	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
@@ -164,7 +157,7 @@ func (r *Machined) joinRealm() chan bool {
 	// Get the realm config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	// Register this machined
-	r.register()
+	r.register(realmCfg)
 	// Boot this machined's system services
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
@@ -182,32 +175,24 @@ func (r *Machined) teardown() {
 	r.s.Shutdown()
 }
 
-func (r *Machined) deregister() {
-	// De-register this machined as belonging to this realm
-	if err := r.Remove(path.Join(REALMS, r.cfg.RealmId, r.id)); err != nil {
-		db.DFatalf("Error Remove in Machined.deregister: %v", err)
+func (r *Machined) deregister(cfg *RealmConfig) {
+	for i := range cfg.MachinedsActive {
+		if cfg.MachinedsActive[i] == r.id {
+			cfg.MachinedsActive = append(cfg.MachinedsActive[:i], cfg.MachinedsActive[i+1:]...)
+			break
+		}
 	}
+	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 }
 
-func (r *Machined) tryDestroyRealmL() {
-	rds, err := r.GetDir(path.Join(REALMS, r.cfg.RealmId))
-	if err != nil {
-		db.DFatalf("Error GetDir in Machined.tryDestroyRealmL: %v", err)
-	}
-
+func (r *Machined) tryDestroyRealmL(realmCfg *RealmConfig) {
 	// If this is the last machined, destroy the machined's named
-	if len(rds) == 0 {
-		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
+	if len(realmCfg.MachinedsActive) == 0 {
 		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {
 			db.DFatalf("Error Remove in REALM_CONFIG Machined.tryDestroyRealmL: %v", err)
-		}
-
-		// Remove the realm directory
-		if err := r.RmDir(path.Join(REALMS, r.cfg.RealmId)); err != nil {
-			db.DFatalf("Error Remove REALMS in Machined.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm's named directory
@@ -230,10 +215,12 @@ func (r *Machined) leaveRealm() {
 
 	// Tear down resources
 	r.teardown()
+	// Get the realm config
+	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	// Deregister this machined
-	r.deregister()
+	r.deregister(realmCfg)
 	// Try to destroy a realm (if this is the last machined remaining)
-	r.tryDestroyRealmL()
+	r.tryDestroyRealmL(realmCfg)
 }
 
 func (r *Machined) Work() {

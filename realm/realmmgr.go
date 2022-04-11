@@ -29,7 +29,6 @@ const (
 	FREE_MACHINEDS  = np.REALM_MGR + "/" + free_machineds // Unassigned machineds
 	REALM_CREATE    = np.REALM_MGR + "/" + realm_create   // Realm allocation requests
 	REALM_DESTROY   = np.REALM_MGR + "/" + realm_destroy  // Realm destruction requests
-	REALMS          = "name/realms"                       // List of realms, with machineds registered under them
 	REALM_CONFIG    = "name/realm-config"                 // Store of realm configs
 	MACHINED_CONFIG = "name/machined-config"              // Store of machined configs
 	REALM_NAMEDS    = "name/realm-nameds"                 // Symlinks to realms' nameds
@@ -66,10 +65,8 @@ func MakeRealmMgr() *RealmMgr {
 	return m
 }
 
+// Make the initial realm dirs, and remove the unneeded union dirs.
 func (m *RealmMgr) makeInitFs() {
-	if err := m.MkDir(REALMS, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALMS in RealmMgr.makeInitFs: %v", err)
-	}
 	if err := m.MkDir(REALM_CONFIG, 0777); err != nil {
 		db.DFatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
 	}
@@ -135,11 +132,6 @@ func (m *RealmMgr) createRealms() {
 		cfg := &RealmConfig{}
 		cfg.Rid = realmId
 
-		// Make a directory for this realm.
-		if err := m.MkDir(path.Join(REALMS, realmId), 0777); err != nil {
-			db.DFatalf("Error Mkdir in RealmMgr.createRealms: %v", err)
-		}
-
 		// Make the realm config file.
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
@@ -170,14 +162,9 @@ func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-func (m *RealmMgr) deallocAllMachineds(realmId string) {
-	rds, err := m.GetDir(path.Join(REALMS, realmId))
-	if err != nil {
-		db.DFatalf("Error GetDir in RealmMgr.deallocRealms: %v", err)
-	}
-
-	for _, machined := range rds {
-		m.deallocMachined(realmId, machined.Name)
+func (m *RealmMgr) deallocAllMachineds(realmId string, machinedIds []string) {
+	for _, machinedId := range machinedIds {
+		m.deallocMachined(realmId, machinedId)
 	}
 }
 
@@ -189,10 +176,11 @@ func (m *RealmMgr) destroyRealms() {
 		m.Lock()
 		m.lockRealm(realmId)
 
-		m.deallocAllMachineds(realmId)
-
 		cfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
+
+		m.deallocAllMachineds(realmId, cfg.MachinedsAssigned)
+
 		cfg.Shutdown = true
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
@@ -326,11 +314,7 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 			//			}
 			// XXX A hack for now, since we don't have a good way of linking a procd to a machined
 			_ = procdUtils
-			machinedIds, err := m.GetDir(path.Join(REALMS, realmId))
-			if err != nil {
-				log.Printf("Error GetDir in RealmMgr.adjustRealm: %v", err)
-			}
-			minMachinedId := machinedIds[1].Name
+			minMachinedId := realmCfg.MachinedsAssigned[1]
 			// Deallocate least utilized procd
 			m.deallocMachined(realmId, minMachinedId)
 		}
@@ -340,7 +324,7 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 // Balance machineds across realms.
 func (m *RealmMgr) balanceMachineds() {
 	for {
-		realms, err := m.GetDir(REALMS)
+		realms, err := m.GetDir(REALM_CONFIG)
 		if err != nil {
 			db.DFatalf("Error GetDir in RealmMgr.balanceMachineds: %v", err)
 		}

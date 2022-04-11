@@ -2,7 +2,6 @@ package realm_test
 
 import (
 	"log"
-	"path"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -76,11 +75,9 @@ func (ts *Tstate) spawnSpinner() proc.Tpid {
 // Check that the test realm has min <= nMachineds <= max machineds assigned to it
 func (ts *Tstate) checkNMachineds(min int, max int) {
 	log.Printf("Checking num machineds")
-	machineds, err := ts.realmFsl.GetDir(path.Join(realm.REALMS, realm.TEST_RID))
-	if err != nil {
-		db.DFatalf("Error GetDir realm-balance main: %v", err)
-	}
-	nMachineds := len(machineds)
+	cfg := realm.GetRealmConfig(ts.realmFsl, realm.TEST_RID)
+	nMachineds := len(cfg.MachinedsActive)
+	log.Printf("Done Checking num machineds")
 	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
 	if !ok {
 		debug.PrintStack()

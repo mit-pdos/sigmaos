@@ -1,5 +1,11 @@
 package realm
 
+import (
+	"ulambda/fs"
+	"ulambda/inode"
+	np "ulambda/ninep"
+)
+
 /*
  * Diagram of the realm fs structure:
  * /
@@ -25,12 +31,6 @@ package realm
  * |  |- ...
  * |  |- ...
  */
-
-import (
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
-)
 
 type CtlFile struct {
 	queue chan string

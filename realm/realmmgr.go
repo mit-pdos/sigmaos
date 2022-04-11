@@ -24,8 +24,8 @@ import (
 
 const (
 	free_machineds  = "free-machineds"
-	realm_create    = "realm_create"
-	realm_destroy   = "realm_destroy"
+	realm_create    = "realm-create"
+	realm_destroy   = "realm-destroy"
 	FREE_MACHINEDS  = np.REALM_MGR + "/" + free_machineds // Unassigned machineds
 	REALM_CREATE    = np.REALM_MGR + "/" + realm_create   // Realm allocation requests
 	REALM_DESTROY   = np.REALM_MGR + "/" + realm_destroy  // Realm destruction requests
@@ -261,7 +261,7 @@ func (m *RealmMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
 func (m *RealmMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[string]float64) {
 	// Get stats
 	utilMap := make(map[string]float64)
-	procdStats := m.getRealmProcdStats(cfg.NamedAddr, realmId)
+	procdStats := m.getRealmProcdStats(cfg.NamedAddrs, realmId)
 	avgUtil := 0.0
 	for machinedId, stat := range procdStats {
 		avgUtil += stat.Util

@@ -49,28 +49,28 @@ func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *M
 
 func (m *Microbenchmarks) RunAll() map[string]*RawResults {
 	r := make(map[string]*RawResults)
-	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
-	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
-		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
-	}
-	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
-	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
-	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
-	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
-	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
-	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
+	//	r["put_file"] = m.PutFileBenchmark(DEFAULT_N_TRIALS)
+	//	r["set_file_small"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	//	for sz := SMALL_FILE_SIZE; sz < 16*LARGE_FILE_SIZE/20; sz += LARGE_FILE_SIZE / 10 {
+	//		m.SetFileBenchmark(DEFAULT_N_TRIALS*5, sz)
+	//	}
+	//	r["set_file_large"] = m.SetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	//	r["get_file_small"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, SMALL_FILE_SIZE)
+	//	r["get_file_large"] = m.GetFileBenchmark(DEFAULT_N_TRIALS, LARGE_FILE_SIZE)
+	//	r["sem_init"] = m.SemInitBenchmark(DEFAULT_N_TRIALS)
+	//	r["sem_up"] = m.SemUpBenchmark(DEFAULT_N_TRIALS)
+	//	r["sem_down"] = m.SemDownBenchmark(DEFAULT_N_TRIALS)
 	pidOffset := 0
 	r["proc_spawn_wait_exit"] = m.ProcSpawnWaitExitBenchmark(DEFAULT_N_TRIALS, pidOffset)
 	pidOffset += DEFAULT_N_TRIALS
-	r["proc_spawn"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_internal_no_exited"] = m.ProcInternalNoExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_wait_exited"] = m.ProcWaitExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS
-	r["proc_spawn_wait_exit_pprof"] = m.ProcPprofBenchmark(DEFAULT_N_TRIALS, pidOffset)
-	pidOffset += DEFAULT_N_TRIALS * 2
+	//	r["proc_spawn"] = m.ProcSpawnClientBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_internal_no_exited"] = m.ProcInternalNoExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_wait_exited"] = m.ProcWaitExitedBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS
+	//	r["proc_spawn_wait_exit_pprof"] = m.ProcPprofBenchmark(DEFAULT_N_TRIALS, pidOffset)
+	//	pidOffset += DEFAULT_N_TRIALS * 2
 	return r
 }
 

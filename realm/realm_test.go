@@ -48,9 +48,9 @@ func makeTstate(t *testing.T) *Tstate {
 
 	program := "realm_test"
 	ts.realmFsl = fslib.MakeFsLibAddr(program, fslib.Named())
-	ts.FsLib = fslib.MakeFsLibAddr(program, cfg.NamedAddr)
+	ts.FsLib = fslib.MakeFsLibAddr(program, cfg.NamedAddrs)
 
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, program, cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, program, cfg.NamedAddrs)
 
 	linuxsched.ScanTopology()
 

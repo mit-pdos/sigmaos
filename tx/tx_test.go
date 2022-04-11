@@ -42,10 +42,10 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.cfg = cfg
 
 	db.Name("tx_test")
-	ts.FsLib = fslib.MakeFsLibAddr("txtest", cfg.NamedAddr)
+	ts.FsLib = fslib.MakeFsLibAddr("txtest", cfg.NamedAddrs)
 	ts.t = t
 
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddr)
+	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddrs)
 
 	return ts
 }

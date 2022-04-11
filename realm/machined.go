@@ -104,6 +104,7 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 
 	// If we need to add a named replica, do so
 	if len(rds) < nReplicas() {
+		db.DPrintf(db.ALWAYS, "Need new named replica: %v", rds)
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
 			db.DFatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
@@ -112,11 +113,11 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 
 		// Get config
 		realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-		realmCfg.NamedAddr = append(realmCfg.NamedAddr, namedAddrs...)
+		realmCfg.NamedAddrs = append(realmCfg.NamedAddrs, namedAddrs...)
 
 		// Start a named instance.
 		var pid proc.Tpid
-		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddr), realmCfg.NamedAddr, r.cfg.RealmId); err != nil {
+		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId); err != nil {
 			db.DFatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
 		}
 		// Update config
@@ -135,7 +136,7 @@ func (r *Machined) register() {
 }
 
 func (r *Machined) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystem("realm", r.bin, realmCfg.NamedAddr)
+	r.s = kernel.MakeSystem("realm", r.bin, realmCfg.NamedAddrs)
 	if err := r.s.Boot(); err != nil {
 		db.DFatalf("Error Boot in Machined.boot: %v", err)
 	}

@@ -48,7 +48,6 @@ func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
 	p.setProcDir("")
-	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid.String())
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
@@ -60,8 +59,16 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p := MakeProc(program, args)
 	p.Pid = pid
 	p.setProcDir("")
-	p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid.String())
 	return p
+}
+
+// Called by procclnt to set the parent dir when spawning.
+func (p *Proc) SetParentDir(parentdir string) {
+	if parentdir == PROCDIR {
+		p.ParentDir = path.Join(GetProcDir(), CHILDREN, p.Pid.String())
+	} else {
+		p.ParentDir = path.Join(parentdir, CHILDREN, p.Pid.String())
+	}
 }
 
 func (p *Proc) setProcDir(procdIp string) {

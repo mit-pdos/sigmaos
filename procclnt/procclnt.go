@@ -55,6 +55,8 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bindir string, namedAddr []s
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
+	// Set the parent dir
+	p.SetParentDir(clnt.procdir)
 	procdir := p.ProcDir
 
 	db.DPrintf("PROCCLNT", "Spawn %v\n", p)

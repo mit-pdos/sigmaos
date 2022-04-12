@@ -1165,6 +1165,7 @@ func TestReadPerf(t *testing.T) {
 	fn := path + "f"
 	buf := mkBuf(WRITESZ)
 	mkFile(t, ts.FsLib, fn, HBUF, buf)
+	time.Sleep(1000 * time.Millisecond)
 	measure("reader", func() {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)

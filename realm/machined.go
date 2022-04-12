@@ -45,7 +45,7 @@ func MakeMachined(bin string, id string) *Machined {
 	r.bin = bin
 	r.cfgPath = path.Join(MACHINED_CONFIG, id)
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("machined-%v", id))
-	r.ProcClnt = procclnt.MakeProcClntInit(r.FsLib, "machined", fslib.Named())
+	r.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), r.FsLib, "machined", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
 
 	// Set up the machined config

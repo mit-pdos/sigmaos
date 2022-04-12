@@ -70,7 +70,7 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 // Make a system with Named and other kernel services
 func MakeSystemAll(uname, bin string, replicaId int) *System {
 	s := MakeSystemNamed(uname, bin, replicaId)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, s.namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	s.pid = proc.GetPid()
 	err := s.Boot()
 	if err != nil {
@@ -82,7 +82,7 @@ func MakeSystemAll(uname, bin string, replicaId int) *System {
 func MakeSystem(uname, bin string, namedAddr []string) *System {
 	s := makeSystemBase(namedAddr, bin)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
-	s.ProcClnt = procclnt.MakeProcClntInit(s.FsLib, uname, namedAddr)
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
 	s.pid = proc.GetPid()
 	return s
 }

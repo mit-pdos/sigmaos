@@ -8,6 +8,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/semclnt"
 )
@@ -26,7 +27,7 @@ type RealmClnt struct {
 func MakeRealmClnt() *RealmClnt {
 	clnt := &RealmClnt{}
 	clnt.FsLib = fslib.MakeFsLib(fmt.Sprintf("realm-clnt"))
-	clnt.ProcClnt = procclnt.MakeProcClntInit(clnt.FsLib, "realm-clnt", fslib.Named())
+	clnt.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), clnt.FsLib, "realm-clnt", fslib.Named())
 	return clnt
 }
 

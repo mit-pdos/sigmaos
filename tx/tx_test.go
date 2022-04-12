@@ -45,7 +45,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.FsLib = fslib.MakeFsLibAddr("txtest", cfg.NamedAddrs)
 	ts.t = t
 
-	ts.ProcClnt = procclnt.MakeProcClntInit(ts.FsLib, cfg.NamedAddrs)
+	ts.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), ts.FsLib, cfg.NamedAddrs)
 
 	return ts
 }

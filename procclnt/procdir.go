@@ -43,7 +43,7 @@ func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bo
 
 // ========== SYMLINKS ==========
 
-func (clnt *ProcClnt) linkChildIntoParentDir() error {
+func (clnt *ProcClnt) linkSelfIntoParentDir() error {
 	// Add symlink to child
 	link := path.Join(proc.PARENTDIR, proc.PROCDIR)
 	// Find the procdir. For normally-spawned procs, this will be proc.PROCDIR,
@@ -64,6 +64,32 @@ func (clnt *ProcClnt) linkChildIntoParentDir() error {
 }
 
 // ========== HELPERS ==========
+
+// Clean up proc
+func (clnt *ProcClnt) removeProc(procdir string) error {
+	// Children may try to write in symlinks & exit statuses while the rmdir is
+	// happening. In order to avoid causing errors (such as removing a non-empty
+	// dir) temporarily rename so children can't find the dir. The dir may be
+	// missing already if a proc died while exiting, and this is a procd trying
+	// to exit on its behalf.
+	src := path.Join(procdir, proc.CHILDREN)
+	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
+	if err := clnt.Rename(src, dst); err != nil {
+		db.DPrintf("PROCCLNT_ERR", "Error rename removeProc %v -> %v : %v\n", src, dst, err)
+	}
+	err := clnt.RmDir(procdir)
+	maxRetries := 2
+	// May have to retry a few times if writing child already opened dir. We
+	// should only have to retry once at most.
+	for i := 0; i < maxRetries && err != nil; i++ {
+		s, _ := clnt.SprintfDir(procdir)
+		// debug.PrintStack()
+		db.DPrintf("PROCCLNT_ERR", "RmDir %v err %v \n%v", procdir, err, s)
+		// Retry
+		err = clnt.RmDir(procdir)
+	}
+	return err
+}
 
 // Attempt to cleanup procdir
 func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) error {
@@ -98,12 +124,12 @@ func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
 }
 
 // Add a child to the current proc
-func (clnt *ProcClnt) addChild(pid proc.Tpid, procdir, shared string) error {
+func (clnt *ProcClnt) addChild(pid proc.Tpid, childProcdir, shared string) error {
 	// Directory which holds link to child procdir
 	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf("PROCCLNT_ERR", "Spawn mkdir childs %v err %v\n", childDir, err)
-		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
+		return clnt.cleanupError(pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 	}
 	// Link in shared state from parent, if desired.
 	if len(shared) > 0 {

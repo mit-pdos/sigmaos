@@ -57,7 +57,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bindir string, namedAddr []s
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)
-	procdir := p.ProcDir
+	childProcdir := p.ProcDir
 
 	db.DPrintf("PROCCLNT", "Spawn %v\n", p)
 	if clnt.hasExited() != "" {
@@ -65,7 +65,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		os.Exit(0)
 	}
 
-	if err := clnt.addChild(p.Pid, procdir, p.GetShared()); err != nil {
+	if err := clnt.addChild(p.Pid, childProcdir, p.GetShared()); err != nil {
 		return err
 	}
 
@@ -74,13 +74,13 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		b, err := json.Marshal(p)
 		if err != nil {
 			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v\n", err)
-			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
+			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 		fn := path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE)
 		_, err = clnt.SetFile(fn, b, np.OWRITE, 0)
 		if err != nil {
 			db.DPrintf("PROCCLNT_ERR", "SetFile %v err %v", fn, err)
-			return clnt.cleanupError(p.Pid, procdir, fmt.Errorf("Spawn error %v", err))
+			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
 	} else {
 		// Create a semaphore to indicate a proc has started if this is a kernel
@@ -169,8 +169,8 @@ func (clnt *ProcClnt) Started() error {
 	db.DPrintf("PROCCLNT", "Started %v\n", clnt.pid)
 
 	// Link self into parent dir
-	if err := clnt.linkChildIntoParentDir(); err != nil {
-		db.DPrintf("PROCCLNT", "linkChildIntoParentDir %v err %v\n", clnt.pid, err)
+	if err := clnt.linkSelfIntoParentDir(); err != nil {
+		db.DPrintf("PROCCLNT", "linkSelfIntoParentDir %v err %v\n", clnt.pid, err)
 		return err
 	}
 
@@ -247,8 +247,7 @@ func (clnt *ProcClnt) exited(procdir string, parentdir string, pid proc.Tpid, st
 // If exited() fails, invoke os.Exit(1) to indicate to procd that proc
 // failed
 func (clnt *ProcClnt) Exited(status *proc.Status) {
-	procdir := proc.PROCDIR
-	err := clnt.exited(procdir, proc.PARENTDIR, proc.GetPid(), status)
+	err := clnt.exited(clnt.procdir, proc.PARENTDIR, proc.GetPid(), status)
 	if err != nil {
 		db.DPrintf("PROCCLNT_ERR", "exited %v err %v\n", proc.GetPid(), err)
 		os.Exit(1)
@@ -297,34 +296,6 @@ func (clnt *ProcClnt) EvictKernelProc(pid string) error {
 func (clnt *ProcClnt) EvictProcd(procdIp string, pid proc.Tpid) error {
 	procdir := path.Join(np.PROCD, procdIp, proc.PIDS, pid.String())
 	return clnt.evict(procdir)
-}
-
-// ========== Helpers ==========
-
-// Clean up proc
-func (clnt *ProcClnt) removeProc(procdir string) error {
-	// Children may try to write in symlinks & exit statuses while the rmdir is
-	// happening. In order to avoid causing errors (such as removing a non-empty
-	// dir) temporarily rename so children can't find the dir. The dir may be
-	// missing already if a proc died while exiting, and this is a procd trying
-	// to exit on its behalf.
-	src := path.Join(procdir, proc.CHILDREN)
-	dst := path.Join(procdir, ".tmp."+proc.CHILDREN)
-	if err := clnt.Rename(src, dst); err != nil {
-		db.DPrintf("PROCCLNT_ERR", "Error rename removeProc %v -> %v : %v\n", src, dst, err)
-	}
-	err := clnt.RmDir(procdir)
-	maxRetries := 2
-	// May have to retry a few times if writing child already opened dir. We
-	// should only have to retry once at most.
-	for i := 0; i < maxRetries && err != nil; i++ {
-		s, _ := clnt.SprintfDir(procdir)
-		// debug.PrintStack()
-		db.DPrintf("PROCCLNT_ERR", "RmDir %v err %v \n%v", procdir, err, s)
-		// Retry
-		err = clnt.RmDir(procdir)
-	}
-	return err
 }
 
 func (clnt *ProcClnt) hasExited() proc.Tpid {

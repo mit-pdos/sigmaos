@@ -58,22 +58,17 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcClnt {
 	pid := proc.GenPid()
 	proc.FakeProcEnv(pid, uname, "", path.Join(proc.KPIDS, pid.String()), "")
+	MountPids(fsl, namedAddr)
 
 	if err := fsl.MountTree(namedAddr, np.PROCDREL, np.PROCDREL); err != nil {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
 
-	MountPids(fsl, namedAddr)
-
 	clnt := makeProcClnt(fsl, pid, proc.GetProcDir())
 	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
 
-	tree := strings.TrimPrefix(proc.GetProcDir(), "name/")
-	if err := fsl.MountTree(namedAddr, tree, proc.PROCDIR); err != nil {
-		s, _ := fsl.SprintfDir("pids")
-		db.DFatalf("%v: Fatal error mounting %v as %v err %v\n%v", proc.GetName(), tree, proc.PROCDIR, err, s)
-	}
+	mountDir(fsl, proc.GetProcDir(), proc.PROCDIR)
 
 	return clnt
 }

@@ -22,7 +22,7 @@ type Dir struct {
 func (fss3 *Fss3) makeDir(key np.Path, t np.Tperm, p *Dir) *Dir {
 	o := fss3.makeObj(key, t, p)
 	dir := &Dir{}
-	dir.Obj = o.(*Obj)
+	dir.Obj = o
 	dir.dirents = make(map[string]fs.FsObj)
 	return dir
 }
@@ -99,7 +99,7 @@ func (d *Dir) s3ReadDirL() *np.Err {
 					d.dirents[n] = dir
 				} else {
 					o1 := d.fss3.makeObj(append(d.key, n), m, d)
-					d.dirents[n] = o1.(*Obj)
+					d.dirents[n] = o1
 				}
 			}
 		}
@@ -211,7 +211,10 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		return nil, np.MkErr(np.TErrExists, name)
 	}
 	o := d.Obj.fss3.makeObj(np.Split(key), 0, d)
-	d.dirents[name] = o.(*Obj)
+	d.dirents[name] = o
+	if m == np.OWRITE {
+		o.setupWriter()
+	}
 	return o, nil
 }
 

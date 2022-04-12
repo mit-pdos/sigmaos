@@ -43,7 +43,7 @@ func MakeMicrobenchmarks(fsl *fslib.FsLib, namedAddr []string, resDir string) *M
 	m.namedAddr = namedAddr
 	m.resDir = resDir
 	m.FsLib = fsl
-	m.ProcClnt = procclnt.MakeProcClntInit(m.FsLib, "microbenchmarks", namedAddr)
+	m.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), m.FsLib, "microbenchmarks", namedAddr)
 	return m
 }
 

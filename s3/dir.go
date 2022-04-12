@@ -38,26 +38,26 @@ func (d *Dir) lookupDirent(name string) (fs.FsObj, bool) {
 // we already seen it
 func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
-	m := mode(key)
+	p := perm(key)
 	db.DPrintf("FSS3", "s %v d.key %v dirents %v\n", s, d.key, d.dirents)
 	for i, c := range d.key {
 		if c != s[i] {
-			return "", m, false
+			return "", p, false
 		}
 	}
 	if len(s) == len(d.key) {
-		return "", m, false
+		return "", p, false
 	}
 	name := s[len(d.key)]
 	_, ok := d.dirents[name]
 	if ok {
-		m = d.Perm()
+		p = d.Perm()
 	} else {
 		if len(s) > len(d.key)+1 {
-			m = np.DMDIR
+			p = np.DMDIR
 		}
 	}
-	return name, m, !ok
+	return name, p, !ok
 }
 
 func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

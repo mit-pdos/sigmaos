@@ -17,7 +17,7 @@ import (
 	np "ulambda/ninep"
 )
 
-func mode(key string) np.Tperm {
+func perm(key string) np.Tperm {
 	m := np.Tperm(0)
 	if key == "" || strings.HasSuffix(key, "/") {
 		m = np.DMDIR
@@ -105,15 +105,13 @@ func (o *Obj) readHead() *np.Err {
 	return nil
 }
 
-// Read object from s3. If off == -1, read whole object; otherwise,
-// read a region.
-func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
+// Read object from s3.
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	key := o.key.String()
 	region := ""
-	if off != -1 {
+	if off != 0 || np.Tlength(cnt) < o.sz {
 		n := off + cnt
 		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
-
 	}
 	input := &s3.GetObjectInput{
 		Bucket: &bucket,
@@ -122,62 +120,39 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
 	}
 	result, err := o.fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, 0, np.MkErrError(err)
 	}
-	// Check if contentRange, lists the length of the object, and perhaps
-	// update the length we know about.
+	region1 := ""
 	if result.ContentRange != nil {
-		r := strings.Split(*result.ContentRange, "/")
-		if len(r) > 1 {
-			l, err := strconv.Atoi(r[1])
-			if err == nil {
-				o.mu.Lock()
-				defer o.mu.Unlock()
-				o.sz = np.Tlength(l)
-			}
-		}
+		region1 = *result.ContentRange
 	}
-	return result.Body, nil
+	db.DPrintf("FSS3", "s3Read: region %v res %v %v\n", region, region1, result.ContentLength)
+	return result.Body, np.Tlength(result.ContentLength), nil
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v %v %v\n", o.key, off, cnt)
-	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
-	if !o.isRead {
-		o.readHead()
-	}
+	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.sz)
 	if np.Tlength(off) >= o.sz {
 		return nil, nil
 	}
-	r, err := o.s3Read(int(off), int(cnt))
+	rdr, n, err := o.s3Read(int(off), int(cnt))
 	if err != nil {
 		return nil, err
 	}
-	var b []byte
-	for cnt > 0 {
-		p := make([]byte, CHUNKSZ)
-		n, err := r.Read(p)
-		if n > 0 {
-			// in case s3 returns more than we asked for
-			if n > int(cnt) {
-				n = int(cnt)
-			}
-			b = append(b, p[:n]...)
-			off += np.Toffset(n)
-			cnt -= np.Tsize(n)
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, np.MkErrError(err)
-		}
+	defer rdr.Close()
+	b, error := io.ReadAll(rdr)
+	if error != nil {
+		db.DPrintf("FSS3", "Read: Read %d err %v\n", n, error)
+		return nil, np.MkErrError(error)
 	}
 	return b, nil
 }
 
 // XXX Check permissions?
 func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+	if m == np.OREAD {
+		o.setupReader()
+	}
 	if m == np.OWRITE {
 		o.setupWriter()
 	}
@@ -185,12 +160,34 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 }
 
 func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
 	if m == np.OWRITE {
-		db.DPrintf("FSS3", "%p: Close %v\n", o, m)
 		o.w.Close()
 	}
 	return nil
 }
+
+// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
+func (o *Obj) setupReader() {
+	db.DPrintf("FSS3", "%p: setupReader\n", o)
+	o.readHead()
+	o.off = 0
+	// o.r, o.w = io.Pipe()
+	// go o.writer()
+}
+
+// func (o *Obj) reader() {
+// 	key := o.key.String()
+// 	downloader := manager.NewDownloaderWithClient(o.fss3.client)
+// 	_, err := downloader.Download(??, &s3.GetObjectInput{
+// 		Bucket: &bucket,
+// 		Key:    &key,
+// 		Body:   o.r,
+// 	})
+// 	if err != nil {
+// 		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
+// 	}
+// }
 
 func (o *Obj) setupWriter() {
 	db.DPrintf("FSS3", "%p: setupWriter\n", o)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,7 +72,7 @@ func (o *Obj) stat() *np.Stat {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DPrintf("FSS3", "Stat: %v\n", o)
+	db.DPrintf("FSS3", "Stat: %v %v\n", o, o.isRead)
 	var err *np.Err
 	o.mu.Lock()
 	read := o.isRead
@@ -96,6 +95,9 @@ func (o *Obj) readHead() *np.Err {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
+	db.DPrintf("FSS3", "readHead: %v %v\n", o.key.String(), result.ContentLength)
+
 	o.sz = np.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.SetMtime((*result.LastModified).Unix())
@@ -221,6 +223,7 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 		return 0, np.MkErrError(err)
 	} else {
 		o.off += np.Toffset(n)
+		o.sz = np.Tlength(o.off)
 		return np.Tsize(n), nil
 	}
 }

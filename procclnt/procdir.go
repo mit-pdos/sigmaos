@@ -43,13 +43,22 @@ func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bo
 
 // ========== SYMLINKS ==========
 
-func (clnt *ProcClnt) linkChildIntoParentDir(pid proc.Tpid, procdir string) error {
+func (clnt *ProcClnt) linkChildIntoParentDir() error {
 	// Add symlink to child
 	link := path.Join(proc.PARENTDIR, proc.PROCDIR)
+	// Find the procdir. For normally-spawned procs, this will be proc.PROCDIR,
+	// which is just a mount point. Rather, the Symlink will need the full path
+	// for the parent to mount the child directory.
+	var procdir string
+	if clnt.procdir == proc.PROCDIR {
+		procdir = proc.GetProcDir()
+	} else {
+		procdir = clnt.procdir
+	}
 	// May return file not found if parent exited.
-	if err := clnt.Symlink([]byte(proc.GetProcDir()), link, 0777); err != nil && !np.IsErrUnavailable(err) {
+	if err := clnt.Symlink([]byte(procdir), link, 0777); err != nil && !np.IsErrUnavailable(err) {
 		db.DPrintf("PROCCLNT_ERR", "Spawn Symlink child %v err %v\n", link, err)
-		return clnt.cleanupError(pid, procdir, err)
+		return clnt.cleanupError(clnt.pid, clnt.procdir, err)
 	}
 	return nil
 }

@@ -166,23 +166,20 @@ func (clnt *ProcClnt) WaitEvict(pid proc.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	pid := proc.GetPid()
-	procdir := proc.PROCDIR
-
-	db.DPrintf("PROCCLNT", "Started %v\n", pid)
+	db.DPrintf("PROCCLNT", "Started %v\n", clnt.pid)
 
 	// Link self into parent dir
-	if err := clnt.linkChildIntoParentDir(pid, procdir); err != nil {
-		db.DPrintf("PROCCLNT", "linkChildIntoParentDir %v err %v\n", pid, err)
+	if err := clnt.linkChildIntoParentDir(); err != nil {
+		db.DPrintf("PROCCLNT", "linkChildIntoParentDir %v err %v\n", clnt.pid, err)
 		return err
 	}
 
 	// Mark self as started
-	parentDir := proc.PARENTDIR
-	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(parentDir, proc.START_SEM))
+	semPath := path.Join(proc.PARENTDIR, proc.START_SEM)
+	semStart := semclnt.MakeSemClnt(clnt.FsLib, semPath)
 	err := semStart.Up()
 	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "Started error %v %v\n", path.Join(parentDir, proc.START_SEM), err)
+		db.DPrintf("PROCCLNT_ERR", "Started error %v %v\n", semPath, err)
 	}
 	// File may not be found if parent exited first or isn't reachable
 	if err != nil && !np.IsErrUnavailable(err) {
@@ -190,7 +187,7 @@ func (clnt *ProcClnt) Started() error {
 	}
 
 	// Only isolate kernel procs
-	if !clnt.isKernelProc(pid) {
+	if !clnt.isKernelProc(clnt.pid) {
 		// Isolate the process namespace
 		newRoot := proc.GetNewRoot()
 		if err := namespace.Isolate(newRoot); err != nil {

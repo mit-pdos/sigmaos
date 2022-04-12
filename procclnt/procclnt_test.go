@@ -479,7 +479,7 @@ func TestEvictN(t *testing.T) {
 }
 
 func getNChildren(ts *test.Tstate) int {
-	c, err := ts.GetChildren(proc.GetProcDir())
+	c, err := ts.GetChildren()
 	assert.Nil(ts.T, err, "getnchildren")
 	return len(c)
 }

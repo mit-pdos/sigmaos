@@ -49,7 +49,7 @@ func MakeProcClnt(fsl *fslib.FsLib) *ProcClnt {
 		debug.PrintStack()
 		db.DFatalf("error mounting procd err %v\n", err)
 	}
-	return makeProcClnt(fsl, proc.GetPid())
+	return makeProcClnt(fsl, proc.GetPid(), proc.PROCDIR)
 }
 
 // Called by tests to fake an initial process
@@ -66,7 +66,7 @@ func MakeProcClntInit(fsl *fslib.FsLib, uname string, namedAddr []string) *ProcC
 
 	MountPids(fsl, namedAddr)
 
-	clnt := makeProcClnt(fsl, pid)
+	clnt := makeProcClnt(fsl, pid, proc.GetProcDir())
 	clnt.MakeProcDir(pid, proc.GetProcDir(), false)
 
 	tree := strings.TrimPrefix(proc.GetProcDir(), "name/")

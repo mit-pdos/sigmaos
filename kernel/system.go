@@ -161,7 +161,7 @@ func (s *System) KillOne(srv string) error {
 
 func (s *System) Shutdown() {
 	if s.ProcClnt != nil {
-		cpids, err := s.GetChildren(proc.GetProcDir())
+		cpids, err := s.GetChildren()
 		if err != nil {
 			db.DFatalf("GetChildren in System.Shutdown: %v", err)
 		}

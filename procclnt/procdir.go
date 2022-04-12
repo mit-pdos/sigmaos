@@ -74,10 +74,24 @@ func (clnt *ProcClnt) isKernelProc(pid proc.Tpid) bool {
 
 // ========== CHILDREN ==========
 
+// Return the pids of all children.
+func (clnt *ProcClnt) GetChildren() ([]proc.Tpid, error) {
+	sts, err := clnt.GetDir(path.Join(clnt.procdir, proc.CHILDREN))
+	if err != nil {
+		db.DPrintf("PROCCLNT_ERR", "GetChildren %v error: %v", clnt.procdir, err)
+		return nil, err
+	}
+	cpids := []proc.Tpid{}
+	for _, st := range sts {
+		cpids = append(cpids, proc.Tpid(st.Name))
+	}
+	return cpids, nil
+}
+
 // Add a child to the current proc
 func (clnt *ProcClnt) addChild(pid proc.Tpid, procdir, shared string) error {
 	// Directory which holds link to child procdir
-	childDir := path.Dir(proc.GetChildProcDir(pid))
+	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	if err := clnt.MkDir(childDir, 0777); err != nil {
 		db.DPrintf("PROCCLNT_ERR", "Spawn mkdir childs %v err %v\n", childDir, err)
 		return clnt.cleanupError(pid, procdir, fmt.Errorf("Spawn error %v", err))
@@ -93,7 +107,7 @@ func (clnt *ProcClnt) addChild(pid proc.Tpid, procdir, shared string) error {
 
 // Remove a child from the current proc
 func (clnt *ProcClnt) removeChild(pid proc.Tpid) error {
-	procdir := proc.GetChildProcDir(pid)
+	procdir := proc.GetChildProcDir(clnt.procdir, pid)
 	childdir := path.Dir(procdir)
 	// Remove link.
 	if err := clnt.Remove(procdir); err != nil {

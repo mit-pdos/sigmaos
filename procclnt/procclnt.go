@@ -26,12 +26,14 @@ type ProcClnt struct {
 	*fslib.FsLib
 	pid      proc.Tpid
 	isExited proc.Tpid
+	procdir  string
 }
 
-func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid) *ProcClnt {
+func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 	clnt := &ProcClnt{}
 	clnt.FsLib = fsl
 	clnt.pid = pid
+	clnt.procdir = procdir
 	return clnt
 }
 
@@ -81,7 +83,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	} else {
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, procd will create the semaphore.
-		childDir := path.Dir(proc.GetChildProcDir(p.Pid))
+		childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, p.Pid))
 		semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 		semStart.Init(0)
 	}
@@ -92,7 +94,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 // ========== WAIT ==========
 
 func (clnt *ProcClnt) waitStart(pid proc.Tpid) error {
-	childDir := path.Dir(proc.GetChildProcDir(pid))
+	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	db.DPrintf("PROCCLNT", "WaitStart %v %v\n", pid, childDir)
 	semStart := semclnt.MakeSemClnt(clnt.FsLib, path.Join(childDir, proc.START_SEM))
 	return semStart.Down()
@@ -121,7 +123,7 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 	db.DPrintf("PROCCLNT", "WaitExit %v\n", pid)
 
 	// Make sure the child proc has exited.
-	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(pid), proc.EXIT_SEM))
+	semExit := semclnt.MakeSemClnt(clnt.FsLib, path.Join(proc.GetChildProcDir(clnt.procdir, pid), proc.EXIT_SEM))
 	if err := semExit.Down(); err != nil {
 		db.DPrintf("PROCCLNT_ERR", "Error WaitExit semExit.Down: %v", err)
 		return nil, fmt.Errorf("Error semExit.Down: %v", err)
@@ -129,7 +131,7 @@ func (clnt *ProcClnt) WaitExit(pid proc.Tpid) (*proc.Status, error) {
 
 	defer clnt.removeChild(pid)
 
-	childDir := path.Dir(proc.GetChildProcDir(pid))
+	childDir := path.Dir(proc.GetChildProcDir(clnt.procdir, pid))
 	b, err := clnt.GetFile(path.Join(childDir, proc.EXIT_STATUS))
 	if err != nil {
 		db.DPrintf("PROCCLNT_ERR", "Missing return status, procd must have crashed: %v, %v\n", pid, err)
@@ -282,7 +284,7 @@ func (clnt *ProcClnt) evict(procdir string) error {
 
 // Called by parent.
 func (clnt *ProcClnt) Evict(pid proc.Tpid) error {
-	procdir := proc.GetChildProcDir(pid)
+	procdir := proc.GetChildProcDir(clnt.procdir, pid)
 	return clnt.evict(procdir)
 }
 
@@ -296,22 +298,6 @@ func (clnt *ProcClnt) EvictKernelProc(pid string) error {
 func (clnt *ProcClnt) EvictProcd(procdIp string, pid proc.Tpid) error {
 	procdir := path.Join(np.PROCD, procdIp, proc.PIDS, pid.String())
 	return clnt.evict(procdir)
-}
-
-// ========== GETCHILDREN ==========
-
-// Return the pids of all children.
-func (clnt *ProcClnt) GetChildren(procdir string) ([]proc.Tpid, error) {
-	sts, err := clnt.GetDir(path.Join(procdir, proc.CHILDREN))
-	if err != nil {
-		db.DPrintf("PROCCLNT_ERR", "GetChildren %v error: %v", procdir, err)
-		return nil, err
-	}
-	cpids := []proc.Tpid{}
-	for _, st := range sts {
-		cpids = append(cpids, proc.Tpid(st.Name))
-	}
-	return cpids, nil
 }
 
 // ========== Helpers ==========

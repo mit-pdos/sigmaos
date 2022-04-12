@@ -31,6 +31,7 @@ type Obj struct {
 	fss3   *Fss3
 	key    np.Path
 	sz     np.Tlength
+	ch     chan error
 	r      *io.PipeReader
 	w      *io.PipeWriter
 	off    np.Toffset
@@ -163,6 +164,11 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
 	if m == np.OWRITE {
 		o.w.Close()
+		// wait for writer to finish
+		err := <-o.ch
+		if err != nil {
+			return np.MkErrError(err)
+		}
 	}
 	return nil
 }
@@ -192,11 +198,12 @@ func (o *Obj) setupReader() {
 func (o *Obj) setupWriter() {
 	db.DPrintf("FSS3", "%p: setupWriter\n", o)
 	o.off = 0
+	o.ch = make(chan error)
 	o.r, o.w = io.Pipe()
-	go o.writer()
+	go o.writer(o.ch)
 }
 
-func (o *Obj) writer() {
+func (o *Obj) writer(ch chan error) {
 	key := o.key.String()
 	uploader := manager.NewUploader(o.fss3.client)
 	_, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
@@ -207,6 +214,7 @@ func (o *Obj) writer() {
 	if err != nil {
 		db.DPrintf("FSS3", "Writer %v err %v\n", key, err)
 	}
+	ch <- err
 }
 
 func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {

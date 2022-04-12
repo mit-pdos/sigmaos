@@ -1123,6 +1123,9 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte) {
 		assert.Nil(t, err)
 	}
 	w.Close()
+	st, err := fsl.Stat(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, np.Tlength(FILESZ), st.Length, "stat")
 }
 
 func TestWritePerf(t *testing.T) {
@@ -1165,7 +1168,6 @@ func TestReadPerf(t *testing.T) {
 	fn := path + "f"
 	buf := mkBuf(WRITESZ)
 	mkFile(t, ts.FsLib, fn, HBUF, buf)
-	time.Sleep(1000 * time.Millisecond)
 	measure("reader", func() {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)

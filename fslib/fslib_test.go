@@ -1056,9 +1056,10 @@ func TestFslibExit(t *testing.T) {
 
 const (
 	MBYTE   = 1 << 20
-	NRUNS   = 5
-	FILESZ  = 5 * MBYTE
-	WRITESZ = 100
+	KBYTE   = 1 << 10
+	NRUNS   = 1
+	FILESZ  = 1 * MBYTE
+	WRITESZ = 4096
 	BUFSZ   = 1 << 16
 )
 
@@ -1167,7 +1168,6 @@ func TestReadPerf(t *testing.T) {
 	fn := path + "f"
 	buf := mkBuf(WRITESZ)
 	mkFile(t, ts.FsLib, fn, HBUF, buf)
-
 	measure("reader", func() {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
@@ -1186,7 +1186,6 @@ func TestReadPerf(t *testing.T) {
 		assert.Nil(t, err)
 		reader(t, br, buf)
 	})
-
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
 	ts.Shutdown()

@@ -14,7 +14,7 @@ import (
 )
 
 func perm(key string) np.Tperm {
-	m := np.Tperm(0)
+	m := np.Tperm(0777)
 	if key == "" || strings.HasSuffix(key, "/") {
 		m = np.DMDIR
 	}
@@ -23,30 +23,30 @@ func perm(key string) np.Tperm {
 
 type info struct {
 	sync.Mutex
-	key     np.Path
-	perm    np.Tperm
-	sz      np.Tlength
-	mtime   int64
-	dirents map[string]np.Tperm
+	key   np.Path
+	perm  np.Tperm
+	sz    np.Tlength
+	mtime int64
+	dents map[string]np.Tperm
 }
 
 func (i *info) String() string {
-	return fmt.Sprintf("key '%v' %v sz %v path %v", i.key, i.perm, i.sz, path(i.key))
+	return fmt.Sprintf("key '%v' %v sz %v path %v dents %v", i.key, i.perm, i.sz, path(i.key), i.dents)
 }
 
 func makeInfo(key np.Path, perm np.Tperm) *info {
 	i := &info{}
 	i.perm = perm
 	i.key = key
-	i.dirents = make(map[string]np.Tperm)
+	i.dents = make(map[string]np.Tperm)
 	return i
 }
 
-func (i *info) dirEnts() []fs.FsObj {
+func (i *info) dirents() []fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
-	dents := make([]fs.FsObj, 0, len(i.dirents))
-	for name, p := range i.dirents {
+	dents := make([]fs.FsObj, 0, len(i.dents))
+	for name, p := range i.dents {
 		dents = append(dents, makeFsObj(p, i.key.Append(name)))
 	}
 	return dents
@@ -63,7 +63,7 @@ func makeFsObj(perm np.Tperm, key np.Path) fs.FsObj {
 func (i *info) lookupDirent(name string) fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
-	if p, ok := i.dirents[name]; ok {
+	if p, ok := i.dents[name]; ok {
 		return makeFsObj(p, i.key.Append(name))
 	}
 	return nil
@@ -72,17 +72,17 @@ func (i *info) lookupDirent(name string) fs.FsObj {
 func (i *info) insertDirent(name string, perm np.Tperm) fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
-	if _, ok := i.dirents[name]; ok {
+	if _, ok := i.dents[name]; ok {
 		return nil
 	}
-	i.dirents[name] = perm
+	i.dents[name] = perm
 	return makeFsObj(perm, i.key.Append(name))
 }
 
 func (i *info) delDirent(name string) {
 	i.Lock()
 	defer i.Unlock()
-	delete(i.dirents, name)
+	delete(i.dents, name)
 }
 
 func (i *info) Size() np.Tlength {
@@ -110,7 +110,7 @@ func (i *info) stat() *np.Stat {
 func (i *info) includeNameL(key string) (string, np.Tperm, bool) {
 	s := np.Split(key)
 	p := perm(key)
-	db.DPrintf("FSS3", "s %v i.key '%v' dirents %v\n", s, i.key, i.dirents)
+	db.DPrintf("FSS30", "s %v i.key '%v' dents %v\n", s, i.key, i.dents)
 	for i, c := range i.key {
 		if c != s[i] {
 			return "", p, false
@@ -120,7 +120,7 @@ func (i *info) includeNameL(key string) (string, np.Tperm, bool) {
 		return "", p, false
 	}
 	name := s[len(i.key)]
-	_, ok := i.dirents[name]
+	_, ok := i.dents[name]
 	if ok {
 		p = i.perm
 	} else {
@@ -153,12 +153,12 @@ func s3ReadDirL(fss3 *Fss3, k np.Path) (*info, *np.Err) {
 		for _, obj := range page.Contents {
 			if n, p, ok := i.includeNameL(*obj.Key); ok {
 				db.DPrintf("FSS30", "incl %v %v\n", n, p)
-				i.dirents[n] = p
+				i.dents[n] = p
 			}
 		}
 	}
-	i.sz = np.Tlength(len(i.dirents)) // makeup size
-	db.DPrintf("FSS3", "s3ReadDirL %v\n", i.dirents)
+	i.sz = np.Tlength(len(i.dents)) // makeup size
+	db.DPrintf("FSS3", "s3ReadDirL key '%v' dents %v\n", i.key, i.dents)
 	cache.insert(k, i)
 	return i, nil
 }

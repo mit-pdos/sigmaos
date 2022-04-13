@@ -3,7 +3,6 @@ package fss3
 import (
 	"sync"
 
-	db "ulambda/debug"
 	np "ulambda/ninep"
 )
 
@@ -22,7 +21,6 @@ func (c *Cache) lookup(path np.Path) *info {
 	c.Lock()
 	defer c.Unlock()
 	if o, ok := c.cache[path.String()]; ok {
-		db.DPrintf("FSS3", "cache hit %v \n", path)
 		return o
 	}
 	return nil

@@ -39,14 +39,19 @@ func (o *Obj) String() string {
 	}
 }
 
-func (o *Obj) fillObj() *np.Err {
+func (o *Obj) fill() *np.Err {
 	if o.info == nil {
 		i := cache.lookup(o.key)
 		if i != nil {
 			o.info = i
 			return nil
 		}
-		i, err := readHead(fss3, o.key)
+		var err *np.Err
+		if o.perm.IsDir() {
+			i, err = s3ReadDirL(fss3, o.key)
+		} else {
+			i, err = readHead(fss3, o.key)
+		}
 		if err != nil {
 			return err
 		}
@@ -57,8 +62,8 @@ func (o *Obj) fillObj() *np.Err {
 }
 
 func (o *Obj) Qid() np.Tqid {
-	return qid(o.perm, o.key)
-
+	q := qid(o.perm, o.key)
+	return q
 }
 
 // convert ux perms into np perm; maybe symlink?
@@ -73,7 +78,7 @@ func (o *Obj) Parent() fs.Dir {
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DPrintf("FSS3", "Stat: %v %p\n", o, o.info)
-	if err := o.fillObj(); err != nil {
+	if err := o.fill(); err != nil {
 		return nil, err
 	}
 	return o.info.stat(), nil
@@ -106,7 +111,8 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 
 // XXX Check permissions?
 func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	if err := o.fillObj(); err != nil {
+	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
+	if err := o.fill(); err != nil {
 		return nil, err
 	}
 	if m == np.OREAD {
@@ -115,7 +121,7 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if m == np.OWRITE {
 		o.setupWriter()
 	}
-	return nil, nil
+	return o, nil
 }
 
 func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {

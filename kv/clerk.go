@@ -69,10 +69,20 @@ type KvClerk struct {
 	conf  *Config
 }
 
+func MakeClerkFsl(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
+	return makeClerk(fsl, pclnt)
+}
+
 func MakeClerk(name string, namedAddr []string) (*KvClerk, error) {
+	fsl := fslib.MakeFsLibAddr(name, namedAddr)
+	pclnt := procclnt.MakeProcClnt(fsl)
+	return makeClerk(fsl, pclnt)
+}
+
+func makeClerk(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) (*KvClerk, error) {
 	kc := &KvClerk{}
-	kc.FsLib = fslib.MakeFsLibAddr(name, namedAddr)
-	kc.ProcClnt = procclnt.MakeProcClnt(kc.FsLib)
+	kc.FsLib = fsl
+	kc.ProcClnt = pclnt
 	kc.conf = &Config{}
 	kc.fclnt = fenceclnt.MakeLeaderFenceClnt(kc.FsLib, KVBALANCER)
 	if err := kc.switchConfig(); err != nil {

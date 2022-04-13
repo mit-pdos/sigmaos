@@ -88,7 +88,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	key := o.key.String()
 	region := ""
-	if off != 0 || np.Tlength(cnt) < o.sz {
+	if off != 0 || np.Tlength(cnt) < o.Size() {
 		n := off + cnt
 		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
 	}
@@ -144,8 +144,8 @@ func (o *Obj) setupReader() {
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.sz)
-	if np.Tlength(off) >= o.sz {
+	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
+	if np.Tlength(off) >= o.Size() {
 		return nil, nil
 	}
 	rdr, n, err := o.s3Read(int(off), int(cnt))
@@ -197,7 +197,7 @@ func (o *Obj) writer(ch chan error) {
 }
 
 func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
+	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.Size())
 	if off != o.off {
 		db.DPrintf("FSS3", "Write %v err\n", o.off)
 		return 0, np.MkErr(np.TErrInval, off)
@@ -207,7 +207,7 @@ func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.T
 		return 0, np.MkErrError(err)
 	} else {
 		o.off += np.Toffset(n)
-		o.sz = np.Tlength(o.off)
+		o.SetSize(np.Tlength(o.off))
 		return np.Tsize(n), nil
 	}
 }

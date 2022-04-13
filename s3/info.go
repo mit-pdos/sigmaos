@@ -76,17 +76,31 @@ func (i *info) insertDirent(name string, perm np.Tperm) fs.FsObj {
 		return nil
 	}
 	i.dents[name] = perm
-	return makeFsObj(perm, i.key.Append(name))
+	ni := makeInfo(i.key.Copy().Append(name), perm)
+	cache.insert(ni.key, ni)
+	o := makeFsObj(perm, ni.key)
+	switch t := o.(type) {
+	case *Dir:
+		t.info = ni
+	case *Obj:
+		t.info = ni
+	}
+	return o
 }
 
 func (i *info) delDirent(name string) {
 	i.Lock()
 	defer i.Unlock()
 	delete(i.dents, name)
+	cache.delete(i.key.Append(name))
 }
 
 func (i *info) Size() np.Tlength {
 	return i.sz
+}
+
+func (i *info) SetSize(sz np.Tlength) {
+	i.sz = sz
 }
 
 func (i *info) stat() *np.Stat {

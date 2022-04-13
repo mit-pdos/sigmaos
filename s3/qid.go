@@ -43,30 +43,27 @@ func qid(perm np.Tperm, key np.Path) np.Tqid {
 	return np.MakeQid(np.Qtype(perm>>np.QTYPESHIFT), np.TQversion(0), path(key))
 }
 
-func mkQids(p np.Path, dst *info) ([]np.Tqid, fs.FsObj) {
-	qids := make([]np.Tqid, 0, len(p))
-	for i, _ := range p {
-		if i := cache.lookup(p[0:i]); i != nil {
-			qids = append(qids, qid(i.perm, i.key))
+func mkQids(base *info) ([]np.Tqid, fs.FsObj) {
+	qids := make([]np.Tqid, 0, len(base.key))
+	for i, _ := range base.key {
+		if i+1 >= len(base.key) {
+			break
 		}
-		if i == len(p)-1 {
-			qids = append(qids, qid(dst.perm, dst.key))
-		} else {
-			qids = append(qids, qid(np.DMDIR|0777, p[0:i]))
-		}
+		qids = append(qids, qid(np.DMDIR, base.key[0:i+1]))
 	}
-	return qids, makeFsObj(dst.perm, dst.key)
+	qids = append(qids, qid(base.perm, base.key))
+	return qids, makeFsObj(base.perm, base.key)
 }
 
 func nameiObj(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, *np.Err) {
 	if i := cache.lookup(p); i != nil {
-		qids, o := mkQids(p, i)
+		qids, o := mkQids(i)
 		return qids, o, nil
 	}
 	i, err := readHead(fss3, p)
 	if err != nil {
 		return nil, nil, err
 	}
-	qids, o := mkQids(p, i)
+	qids, o := mkQids(i)
 	return qids, o, nil
 }

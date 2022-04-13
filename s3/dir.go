@@ -42,16 +42,19 @@ func (d *Dir) stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 }
 
 func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+	db.DPrintf("FSS3", "%v: namei %v\n", d, p)
 	if err := d.fill(); err != nil {
+		db.DPrintf("FSS3", "%v: fill err %v\n", d, err)
 		return nil, nil, nil, err
 	}
 	o := d.info.lookupDirent(p[0])
 	if o == nil {
+		db.DPrintf("FSS3", "%v: namei %v not found\n", d, p[0])
 		return qids, d, p, np.MkErr(np.TErrNotfound, p[0])
 	}
 	qids = append(qids, o.Qid())
 	if len(p) == 1 {
-		db.DPrintf("FSS3", "%v: namei %v %v(%T)\n", ctx, qids, o, o)
+		db.DPrintf("FSS3", "%v: namei %v %v\n", ctx, qids, o)
 		return qids, o, nil, nil
 	} else {
 		return o.(*Dir).namei(ctx, p[1:], qids)
@@ -59,7 +62,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 }
 
 func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("FSS3", "%v: Lookup %v %v\n", ctx, d, p)
+	db.DPrintf("FSS3", "%v: Lookup %v '%v'\n", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -68,6 +71,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.
 	}
 	qids, o, err := nameiObj(ctx, p)
 	if err == nil {
+		db.DPrintf("FSS3", "%v: nameiObj %v %v\n", ctx, qids, o)
 		return qids, o, nil, nil
 	}
 	// maybe path names a directory
@@ -131,12 +135,14 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
+	db.DPrintf("FSS3", "Create %v name: %v\n", d, name)
 	o := d.info.insertDirent(name, perm)
 	if o == nil {
 		return nil, np.MkErr(np.TErrExists, name)
 	}
-	o1 := o.(*Obj)
-	o1.info = makeInfo(o1.key, o1.perm)
+	if perm.IsFile() && m == np.OWRITE {
+		o.(*Obj).setupWriter()
+	}
 	return o, nil
 }
 
@@ -153,7 +159,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 		Bucket: &bucket,
 		Key:    &key,
 	}
-	db.DPrintf("FSS3", "Delete key: %v\n", key)
+	db.DPrintf("FSS3", "Delete %v key %v name %v\n", d, key, name)
 	_, err := fss3.client.DeleteObject(context.TODO(), input)
 	if err != nil {
 		return np.MkErrError(err)

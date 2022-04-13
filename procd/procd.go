@@ -16,13 +16,12 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
+	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
-
-const ()
 
 type Procd struct {
 	mu         sync.Mutex
@@ -71,6 +70,9 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	}
 
 	pd.MemFs.GetStats().MonitorCPUUtil()
+
+	// Make namespace isolation dir.
+	os.MkdirAll(namespace.NAMESPACE_DIR, 0777)
 
 	pd.Work()
 }

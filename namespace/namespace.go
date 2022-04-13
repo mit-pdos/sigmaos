@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	NAMESPACE_DIR = "/tmp/ulambda"
+	NAMESPACE_DIR = "/tmp/ulambda/isolation"
 )
 
 func SetupProc(cmd *exec.Cmd) {

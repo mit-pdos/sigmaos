@@ -19,7 +19,7 @@ func MakeRaftReplServer(id int, peerAddrs []string, tm *threadmgr.ThreadMgr) *Ra
 	for i := range peerAddrs {
 		peers = append(peers, raft.Peer{ID: uint64(i + 1)})
 	}
-	commitC := make(chan [][]byte)
+	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
 	srv.node = makeRaftNode(id, peers, peerAddrs, commitC, proposeC)
 	srv.clerk = makeClerk(id, tm, commitC, proposeC)

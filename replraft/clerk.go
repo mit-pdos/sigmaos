@@ -24,11 +24,11 @@ type Clerk struct {
 	tm       *threadmgr.ThreadMgr
 	opmap    map[np.Tsession]map[np.Tseqno]*Op
 	requests chan *Op
-	commit   <-chan [][]byte
+	commit   <-chan *committedEntries
 	proposeC chan<- []byte
 }
 
-func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan [][]byte, propose chan<- []byte) *Clerk {
+func makeClerk(id int, tm *threadmgr.ThreadMgr, commit <-chan *committedEntries, propose chan<- []byte) *Clerk {
 	c := &Clerk{}
 	c.mu = &sync.Mutex{}
 	c.id = id
@@ -52,14 +52,14 @@ func (c *Clerk) serve() {
 		case req := <-c.requests:
 			go c.propose(req)
 		case committedReqs := <-c.commit:
-			for _, frame := range committedReqs {
+			for _, frame := range committedReqs.entries {
 				if req, err := npcodec.UnmarshalFcall(frame); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
 					// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
 					//				c.printOpTiming(req, frame)
-					c.apply(req)
+					c.apply(req, committedReqs.leader)
 				}
 			}
 		}
@@ -77,13 +77,13 @@ func (c *Clerk) propose(op *Op) {
 	c.proposeC <- frame
 }
 
-func (c *Clerk) apply(fc *np.Fcall) {
+func (c *Clerk) apply(fc *np.Fcall, leader uint64) {
 	// Get the associated reply channel if this op was generated on this server.
 	c.getOp(fc)
 	// For now, every node can cause a detach to happen
 	if fc.GetType() == np.TTdetach {
 		msg := fc.Msg.(np.Tdetach)
-		msg.LeadId = msg.PropId
+		msg.LeadId = uint32(leader)
 		fc.Msg = msg
 	}
 	// Process the op on a single thread.

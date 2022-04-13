@@ -32,7 +32,7 @@ type RaftNode struct {
 	id            int
 	peerAddrs     []string
 	done          chan bool
-	commit        chan<- [][]byte
+	commit        chan<- *committedEntries
 	propose       <-chan []byte
 	node          raft.Node
 	config        *raft.Config
@@ -41,14 +41,15 @@ type RaftNode struct {
 	confState     *raftpb.ConfState
 	snapshotIndex uint64
 	appliedIndex  uint64
+	currentLeader uint64
 }
 
-type commit struct {
-	data       []byte
-	applyDoneC chan struct{}
+type committedEntries struct {
+	entries [][]byte
+	leader  uint64
 }
 
-func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, commit chan<- [][]byte, propose <-chan []byte) *RaftNode {
+func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
 	node := &RaftNode{}
 	node.id = id
 	node.peerAddrs = peerAddrs
@@ -152,7 +153,10 @@ func (n *RaftNode) serveChannels() {
 			}
 			n.storage.Append(read.Entries)
 			n.transport.Send(read.Messages)
-			n.handleEntries(read.Entries)
+			if read.SoftState != nil {
+				n.currentLeader = read.SoftState.Lead
+			}
+			n.handleEntries(read.Entries, n.currentLeader)
 			n.node.Advance()
 		case err := <-n.transport.ErrorC:
 			db.DFatalf("Raft transport error: %v", err)
@@ -177,7 +181,7 @@ func (n *RaftNode) sendProposals() {
 	}
 }
 
-func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
+func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 	if len(entries) == 0 {
 		return
 	}
@@ -211,7 +215,7 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry) {
 		}
 	}
 
-	n.commit <- data
+	n.commit <- &committedEntries{data, leader}
 
 	n.appliedIndex = entries[len(entries)-1].Index
 }

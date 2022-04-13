@@ -88,6 +88,11 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.
 	if !d.Perm().IsDir() {
 		return nil, nil, nil, np.MkErr(np.TErrNotDir, d)
 	}
+	qids, o, err := nameiObj(ctx, p)
+	if err == nil {
+		return qids, o, nil, nil
+	}
+	// maybe it was a directory
 	return d.namei(ctx, p, nil)
 }
 

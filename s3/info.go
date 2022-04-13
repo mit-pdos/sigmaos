@@ -3,7 +3,6 @@ package fss3
 import (
 	"context"
 	"fmt"
-	"hash/fnv"
 	"strings"
 	"sync"
 
@@ -90,17 +89,6 @@ func (i *info) Size() np.Tlength {
 	return i.sz
 }
 
-func path(key np.Path) np.Tpath {
-	h := fnv.New64a()
-	h.Write([]byte(key.String()))
-	return np.Tpath(h.Sum64())
-}
-
-func qid(perm np.Tperm, key np.Path) np.Tqid {
-	return np.MakeQid(np.Qtype(perm>>np.QTYPESHIFT),
-		np.TQversion(0), path(key))
-}
-
 func (i *info) stat() *np.Stat {
 	st := &np.Stat{}
 	if len(i.key) > 0 {
@@ -115,28 +103,6 @@ func (i *info) stat() *np.Stat {
 	st.Length = i.sz
 	st.Mtime = uint32(i.mtime)
 	return st
-}
-
-func readHead(fss3 *Fss3, k np.Path) (*info, *np.Err) {
-	key := k.String()
-	input := &s3.HeadObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-	result, err := fss3.client.HeadObject(context.TODO(), input)
-	if err != nil {
-		return nil, np.MkErrError(err)
-	}
-	i := makeInfo(k, 0777)
-
-	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
-
-	i.sz = np.Tlength(result.ContentLength)
-	if result.LastModified != nil {
-		i.mtime = (*result.LastModified).Unix()
-	}
-	cache.insert(k, i)
-	return i, nil
 }
 
 // if o.key is prefix of key, include next component of key (unless

@@ -42,11 +42,13 @@ do
   #
   
   go test $1 ulambda/procclnt
-  go test $1 ulambda/ux
 
+  go test $1 ulambda/ux
   go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run Perf
   
   go test $1 ulambda/s3
+  go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run Perf
+  
   go test $1 ulambda/kernel
   go test $1 ulambda/leaderclnt
   go test $1 ulambda/leadertest

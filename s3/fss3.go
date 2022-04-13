@@ -18,10 +18,6 @@ import (
 
 var bucket = "9ps3"
 
-const (
-	CHUNKSZ = 8192
-)
-
 type Fss3 struct {
 	*sesssrv.SessSrv
 	mu     sync.Mutex

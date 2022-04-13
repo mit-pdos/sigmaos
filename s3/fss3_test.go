@@ -1,6 +1,7 @@
 package fss3
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -78,6 +79,9 @@ func TestUnionFile(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
+	file, err := os.ReadFile("../input/pg-being_ernest.txt")
+	assert.Nil(t, err, "ReadFile")
+
 	name := "name/s3/~ip/input/pg-being_ernest.txt"
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
@@ -86,7 +90,7 @@ func TestUnionFile(t *testing.T) {
 	if err != nil {
 		db.DFatalf("%v", err)
 	}
-	n := 0
+	n := len(file)
 	for {
 		data, err := ts.Read(fd, 8192)
 		if len(data) == 0 {
@@ -95,7 +99,10 @@ func TestUnionFile(t *testing.T) {
 		if err != nil {
 			db.DFatalf("%v", err)
 		}
-		n += len(data)
+		for i := 0; i < len(data); i++ {
+			assert.Equal(t, file[i], data[i])
+		}
+		file = file[len(data):]
 	}
 	assert.Equal(ts.T, int(st.Length), n)
 

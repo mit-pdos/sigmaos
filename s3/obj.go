@@ -1,15 +1,14 @@
 package fss3
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	db "ulambda/debug"
@@ -18,7 +17,7 @@ import (
 	np "ulambda/ninep"
 )
 
-func mode(key string) np.Tperm {
+func perm(key string) np.Tperm {
 	m := np.Tperm(0)
 	if key == "" || strings.HasSuffix(key, "/") {
 		m = np.DMDIR
@@ -32,10 +31,14 @@ type Obj struct {
 	fss3   *Fss3
 	key    np.Path
 	sz     np.Tlength
+	ch     chan error
+	r      *io.PipeReader
+	w      *io.PipeWriter
+	off    np.Toffset
 	isRead bool
 }
 
-func (fss3 *Fss3) makeObj(key np.Path, t np.Tperm, d *Dir) fs.FsObj {
+func (fss3 *Fss3) makeObj(key np.Path, t np.Tperm, d *Dir) *Obj {
 	o := &Obj{}
 	o.Inode = inode.MakeInode(nil, t, d)
 	o.fss3 = fss3
@@ -70,7 +73,7 @@ func (o *Obj) stat() *np.Stat {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DPrintf("FSS3", "Stat: %v\n", o)
+	db.DPrintf("FSS3", "Stat: %v %v\n", o, o.isRead)
 	var err *np.Err
 	o.mu.Lock()
 	read := o.isRead
@@ -93,6 +96,9 @@ func (o *Obj) readHead() *np.Err {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
+	db.DPrintf("FSS3", "readHead: %v %v\n", o.key.String(), result.ContentLength)
+
 	o.sz = np.Tlength(result.ContentLength)
 	if result.LastModified != nil {
 		o.SetMtime((*result.LastModified).Unix())
@@ -100,15 +106,13 @@ func (o *Obj) readHead() *np.Err {
 	return nil
 }
 
-// Read object from s3. If off == -1, read whole object; otherwise,
-// read a region.
-func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
+// Read object from s3.
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	key := o.key.String()
 	region := ""
-	if off != -1 {
+	if off != 0 || np.Tlength(cnt) < o.sz {
 		n := off + cnt
 		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
-
 	}
 	input := &s3.GetObjectInput{
 		Bucket: &bucket,
@@ -117,104 +121,114 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, *np.Err) {
 	}
 	result, err := o.fss3.client.GetObject(context.TODO(), input)
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return nil, 0, np.MkErrError(err)
 	}
-	// Check if contentRange, lists the length of the object, and perhaps
-	// update the length we know about.
+	region1 := ""
 	if result.ContentRange != nil {
-		r := strings.Split(*result.ContentRange, "/")
-		if len(r) > 1 {
-			l, err := strconv.Atoi(r[1])
-			if err == nil {
-				o.mu.Lock()
-				defer o.mu.Unlock()
-				o.sz = np.Tlength(l)
-			}
-		}
+		region1 = *result.ContentRange
 	}
-	return result.Body, nil
+	db.DPrintf("FSS3", "s3Read: region %v res %v %v\n", region, region1, result.ContentLength)
+	return result.Body, np.Tlength(result.ContentLength), nil
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v %v %v\n", o.key, off, cnt)
-	// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
-	if !o.isRead {
-		o.readHead()
-	}
+	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.sz)
 	if np.Tlength(off) >= o.sz {
 		return nil, nil
 	}
-	r, err := o.s3Read(int(off), int(cnt))
+	rdr, n, err := o.s3Read(int(off), int(cnt))
 	if err != nil {
 		return nil, err
 	}
-	var b []byte
-	for cnt > 0 {
-		p := make([]byte, CHUNKSZ)
-		n, err := r.Read(p)
-		if n > 0 {
-			// in case s3 returns more than we asked for
-			if n > int(cnt) {
-				n = int(cnt)
-			}
-			b = append(b, p[:n]...)
-			off += np.Toffset(n)
-			cnt -= np.Tsize(n)
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, np.MkErrError(err)
-		}
+	defer rdr.Close()
+	b, error := io.ReadAll(rdr)
+	if error != nil {
+		db.DPrintf("FSS3", "Read: Read %d err %v\n", n, error)
+		return nil, np.MkErrError(error)
 	}
 	return b, nil
 }
 
 // XXX Check permissions?
 func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+	if m == np.OREAD {
+		o.setupReader()
+	}
+	if m == np.OWRITE {
+		o.setupWriter()
+	}
 	return nil, nil
 }
 
 func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
+	if m == np.OWRITE {
+		o.w.Close()
+		// wait for writer to finish
+		err := <-o.ch
+		if err != nil {
+			return np.MkErrError(err)
+		}
+	}
 	return nil
 }
 
-// XXX maybe represent a file as several objects to avoid
-// reading the whole file to update it.
-// XXX maybe buffer all writes before writing to S3 (on clunk?)
-func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
+// XXX what if file has grown or shrunk? is contentRange (see below) reliable?
+func (o *Obj) setupReader() {
+	db.DPrintf("FSS3", "%p: setupReader\n", o)
+	o.readHead()
+	o.off = 0
+	// o.r, o.w = io.Pipe()
+	// go o.writer()
+}
+
+// func (o *Obj) reader() {
+// 	key := o.key.String()
+// 	downloader := manager.NewDownloaderWithClient(o.fss3.client)
+// 	_, err := downloader.Download(??, &s3.GetObjectInput{
+// 		Bucket: &bucket,
+// 		Key:    &key,
+// 		Body:   o.r,
+// 	})
+// 	if err != nil {
+// 		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
+// 	}
+// }
+
+func (o *Obj) setupWriter() {
+	db.DPrintf("FSS3", "%p: setupWriter\n", o)
+	o.off = 0
+	o.ch = make(chan error)
+	o.r, o.w = io.Pipe()
+	go o.writer(o.ch)
+}
+
+func (o *Obj) writer(ch chan error) {
 	key := o.key.String()
-	r, err := o.s3Read(-1, 0)
-	if err != nil {
-		return 0, err
-	}
-	data, error := ioutil.ReadAll(r)
-	if error != nil {
-		return 0, np.MkErrError(error)
-	}
-	if int(off) < len(data) { // prefix of data?
-		b1 := append(data[:off], b...)
-		if int(off)+len(b) < len(data) { // suffix of data?
-			b = append(b1, data[int(off)+len(b):]...)
-		}
-	} else if int(off) == len(data) { // append?
-		b = append(data, b...)
-	} else { // off > len(data), a hole
-		hole := make([]byte, int(off)-len(data))
-		b1 := append(data, hole...)
-		b = append(b1, b...)
-	}
-	r1 := bytes.NewReader(b)
-	input := &s3.PutObjectInput{
+	uploader := manager.NewUploader(o.fss3.client)
+	_, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
-		Body:   r1,
+		Body:   o.r,
+	})
+	if err != nil {
+		db.DPrintf("FSS3", "Writer %v err %v\n", key, err)
 	}
-	_, error = o.fss3.client.PutObject(context.TODO(), input)
-	if error != nil {
-		return 0, np.MkErrError(error)
+	ch <- err
+}
+
+func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
+	if off != o.off {
+		db.DPrintf("FSS3", "Write %v err\n", o.off)
+		return 0, np.MkErr(np.TErrInval, off)
 	}
-	return np.Tsize(len(b)), nil
+	if n, err := o.w.Write(b); err != nil {
+		db.DPrintf("FSS3", "Write %v %v err %v\n", off, len(b), err)
+		return 0, np.MkErrError(err)
+	} else {
+		o.off += np.Toffset(n)
+		o.sz = np.Tlength(o.off)
+		return np.Tsize(n), nil
+	}
 }

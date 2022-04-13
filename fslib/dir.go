@@ -181,3 +181,38 @@ func Present(sts []*np.Stat, names []string) bool {
 	}
 	return n == len(names)
 }
+
+type Fwait func([]*np.Stat) bool
+
+// Keep reading dir until wait returns false (e.g., a new file has
+// been created in dir)
+func (fsl *FsLib) ReadDirWatch(dir string, wait Fwait) ([]*np.Stat, error) {
+	for {
+		sts, rdr, err := fsl.ReadDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		if wait(sts) { // wait for new inputs?
+			ch := make(chan error)
+			if err := fsl.SetDirWatch(rdr.Fid(), dir, func(p string, r error) {
+				ch <- r
+			}); err != nil {
+				rdr.Close()
+				if np.IsErrVersion(err) {
+					db.DPrintf(db.ALWAYS, "ReadDirWatch: Version mismatch %v\n", dir)
+					continue
+				}
+				return nil, err
+			}
+			if err := <-ch; err != nil {
+				rdr.Close()
+				return nil, err
+			}
+			rdr.Close()
+			continue // read again
+		}
+		rdr.Close()
+		return sts, nil
+	}
+	return nil, nil
+}

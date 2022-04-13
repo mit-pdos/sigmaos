@@ -3,7 +3,6 @@ package fss3
 import (
 	"context"
 	"sort"
-	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
@@ -15,106 +14,62 @@ import (
 
 type Dir struct {
 	*Obj
-	mu      sync.Mutex
-	dirents map[string]fs.FsObj
 }
 
-func (fss3 *Fss3) makeDir(key np.Path, t np.Tperm, p *Dir) *Dir {
-	o := fss3.makeObj(key, t, p)
+func makeDir(key np.Path, perm np.Tperm) *Dir {
+	o := makeObj(key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dirents = make(map[string]fs.FsObj)
 	return dir
 }
 
-func (d *Dir) lookupDirent(name string) (fs.FsObj, bool) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	n, ok := d.dirents[name]
-	return n, ok
+func (d *Dir) fillDir() *np.Err {
+	if d.info == nil {
+		i := cache.lookup(d.key)
+		if i != nil {
+			d.info = i
+			return nil
+		}
+		i, err := s3ReadDirL(fss3, d.key)
+		if err != nil {
+			return err
+		}
+		d.info = i
+		return nil
+	}
+	return nil
 }
 
-// if o.key is prefix of key, include next component of key (unless
-// we already seen it
-func (d *Dir) includeNameL(key string) (string, np.Tperm, bool) {
-	s := np.Split(key)
-	p := perm(key)
-	db.DPrintf("FSS3", "s %v d.key %v dirents %v\n", s, d.key, d.dirents)
-	for i, c := range d.key {
-		if c != s[i] {
-			return "", p, false
-		}
-	}
-	if len(s) == len(d.key) {
-		return "", p, false
-	}
-	name := s[len(d.key)]
-	_, ok := d.dirents[name]
-	if ok {
-		p = d.Perm()
-	} else {
-		if len(s) > len(d.key)+1 {
-			p = np.DMDIR
-		}
-	}
-	return name, p, !ok
+func (d *Dir) Qid() np.Tqid {
+	d.fillDir()
+	return np.MakeQid(np.Qtype(d.Perm()>>np.QTYPESHIFT),
+		np.TQversion(0), np.Tpath(0)) // o.ino
 }
 
 func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DPrintf("FSS3", "Stat Dir: %v\n", d)
-	var err *np.Err
-	d.mu.Lock()
-	read := d.isRead
-	d.mu.Unlock()
-	if !read {
-		_, err = d.fakeStat(ctx, 0, 0, np.NoV)
+	if err := d.fillDir(); err != nil {
+		return nil, err
 	}
-	return d.stat(), err
+	return d.info.stat(), nil
 }
 
-func (d *Dir) s3ReadDirL() *np.Err {
-	key := d.key.String()
-	maxKeys := 0
-	params := &s3.ListObjectsV2Input{
-		Bucket: &bucket,
-		Prefix: &key,
-	}
-	p := s3.NewListObjectsV2Paginator(d.fss3.client, params,
-		func(o *s3.ListObjectsV2PaginatorOptions) {
-			if v := int32(maxKeys); v != 0 {
-				o.Limit = v
-			}
-		})
-	for p.HasMorePages() {
-		page, err := p.NextPage(context.TODO())
-		if err != nil {
-			return np.MkErr(np.TErrBadoffset, key)
-		}
-		for _, obj := range page.Contents {
-			db.DPrintf("FSS3", "Key: %v\n", *obj.Key)
-			if n, m, ok := d.includeNameL(*obj.Key); ok {
-				db.DPrintf("FSS3", "incl %v %v\n", n, m)
-				if m == np.DMDIR {
-					dir := d.fss3.makeDir(append(d.key, n), m, d)
-					d.dirents[n] = dir
-				} else {
-					o1 := d.fss3.makeObj(append(d.key, n), m, d)
-					d.dirents[n] = o1
-				}
-			}
-		}
-	}
-	d.isRead = true
-	return nil
+// fake a stat without filling
+func (d *Dir) stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+	db.DPrintf("FSS3", "stat Dir: %v\n", d)
+	st := &np.Stat{}
+	st.Name = d.key.Base()
+	st.Mode = d.perm | np.Tperm(0777)
+	st.Qid = qid(d.perm, d.key)
+	return st, nil
 }
 
 func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	_, err := d.ReadDir(ctx, 0, 0, np.NoV)
-	if err != nil {
+	if err := d.fillDir(); err != nil {
 		return nil, nil, nil, err
 	}
-	o1, ok := d.lookupDirent(p[0])
-	if !ok {
+	o1 := d.info.lookupDirent(p[0])
+	if o1 == nil {
 		return qids, d, nil, np.MkErr(np.TErrNotfound, p[0])
 	}
 	qids = append(qids, o1.Qid())
@@ -139,13 +94,18 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	var dirents []*np.Stat
 	db.DPrintf("FSS3", "readDir: %v\n", d)
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if !d.isRead {
-		d.s3ReadDirL()
+	if err := d.fillDir(); err != nil {
+		return nil, err
 	}
-	for _, o1 := range d.dirents {
-		st, err := o1.Stat(ctx)
+	for _, o1 := range d.info.dirEnts() {
+		var st *np.Stat
+		var err *np.Err
+		switch v := o1.(type) {
+		case *Dir:
+			st, err = v.stat(ctx)
+		case *Obj:
+			st, err = v.Stat(ctx)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -162,36 +122,28 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	}
 }
 
-// Just read the names of the entries without stat-ing each of one
-// them, because stat-ing an entry that is a directory would read that
-// subdir too.  Thus, a stat of the root would compute the file
-// system.
-func (d *Dir) fakeStat(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	var dirents []*np.Stat
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if !d.isRead {
-		d.s3ReadDirL()
-	}
-	d.sz = np.Tlength(len(d.dirents)) // make up a size
-	return dirents, nil
-}
-
 func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	return 0, np.MkErr(np.TErrIsdir, d)
 	// return np.Tsize(len(b)), nil
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	if perm.IsDir() {
-		dir := d.fss3.makeDir(append(d.key, name), np.DMDIR, d)
-		// create a fake "file" in "dir" to materialize it
-		if _, err := dir.Create(ctx, "_._", perm&0777, m); err != nil {
-			db.DPrintf("FSS3", "Create x err %v\n", err)
+	if d.info == nil {
+		if i, err := s3ReadDirL(fss3, d.key); err != nil {
 			return nil, err
+		} else {
+			d.info = i
 		}
-		d.dirents[name] = dir
-		return dir, nil
+	}
+	if perm.IsDir() {
+		// dir := makeDir(append(d.key, name))
+		// create a fake "file" in "dir" to materialize it
+		//if _, err := dir.Create(ctx, "_._", perm&0777, m); err != nil {
+		//	db.DPrintf("FSS3", "Create x err %v\n", err)
+		//	return nil, err
+		//}
+		o := d.info.insertDirent(name, np.DMDIR)
+		return o, nil
 	}
 	key := d.key.Append(name).String()
 	db.DPrintf("FSS3", "Create key: %v\n", key)
@@ -199,21 +151,17 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		Bucket: &bucket,
 		Key:    &key,
 	}
-	_, err := d.fss3.client.PutObject(context.TODO(), input)
+	_, err := fss3.client.PutObject(context.TODO(), input)
 	if err != nil {
 		return nil, np.MkErrError(err)
 	}
 	// XXX ignored perm, only files not directories
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	_, ok := d.dirents[name]
-	if ok {
+	o := d.info.insertDirent(name, 0)
+	if o == nil {
 		return nil, np.MkErr(np.TErrExists, name)
 	}
-	o := d.Obj.fss3.makeObj(np.Split(key), 0, d)
-	d.dirents[name] = o
 	if m == np.OWRITE {
-		o.setupWriter()
+		o.(*Obj).setupWriter()
 	}
 	return o, nil
 }
@@ -229,13 +177,11 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 		Key:    &key,
 	}
 	db.DPrintf("FSS3", "Delete key: %v\n", key)
-	_, err := d.fss3.client.DeleteObject(context.TODO(), input)
+	_, err := fss3.client.DeleteObject(context.TODO(), input)
 	if err != nil {
 		return np.MkErrError(err)
 	}
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	delete(d.dirents, name)
+	d.info.delDirent(name)
 	return nil
 }
 

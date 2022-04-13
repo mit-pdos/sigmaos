@@ -2,7 +2,6 @@ package fsux
 
 import (
 	"os"
-	"sync"
 	"syscall"
 
 	db "ulambda/debug"
@@ -23,7 +22,6 @@ func ustat(path np.Path) (*syscall.Stat_t, *np.Err) {
 }
 
 type Obj struct {
-	mu      sync.Mutex
 	path    np.Path
 	ino     uint64 // Unix inode
 	version np.TQversion

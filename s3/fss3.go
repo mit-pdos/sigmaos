@@ -18,6 +18,9 @@ import (
 
 var bucket = "9ps3"
 
+var cache *Cache
+var fss3 *Fss3
+
 type Fss3 struct {
 	*sesssrv.SessSrv
 	mu     sync.Mutex
@@ -25,8 +28,9 @@ type Fss3 struct {
 }
 
 func RunFss3() {
-	fss3 := &Fss3{}
-	root := fss3.makeDir(np.Path{}, np.DMDIR, nil)
+	cache = mkCache()
+	fss3 = &Fss3{}
+	root := makeDir(np.Path{}, np.DMDIR)
 	fsl := fslib.MakeFsLib("fss3d")
 	pclnt := procclnt.MakeProcClnt(fsl)
 	srv, err := fslibsrv.MakeSrv(root, np.S3, fsl, pclnt)
@@ -44,7 +48,6 @@ func RunFss3() {
 	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-
 	srv.Serve()
 	srv.Done()
 }

@@ -49,7 +49,7 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
+func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
 	node := &RaftNode{}
 	node.id = id
 	node.peerAddrs = peerAddrs
@@ -66,13 +66,13 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, commit chan<- *
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 	}
-	node.start(peers)
+	node.start(peers, l, init)
 	return node
 }
 
-func (n *RaftNode) start(peers []raft.Peer) {
-	if n.id == 1 {
-		n.node = raft.StartNode(n.config, peers[:1])
+func (n *RaftNode) start(peers []raft.Peer, l net.Listener, init bool) {
+	if init {
+		n.node = raft.StartNode(n.config, peers)
 	} else {
 		n.postNodeId()
 		n.node = raft.RestartNode(n.config)
@@ -102,14 +102,6 @@ func (n *RaftNode) start(peers []raft.Peer) {
 			n.transport.AddPeer(types.ID(i+1), []string{"http://" + n.peerAddrs[i]})
 		}
 	}
-
-	addr := n.peerAddrs[n.id-1]
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		db.DFatalf("Error listen: %v", err)
-	}
-	// Set the actual addr.
-	n.peerAddrs[n.id-1] = l.Addr().String()
 
 	go n.serveRaft(l)
 	go n.serveChannels()

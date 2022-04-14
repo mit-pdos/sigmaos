@@ -58,6 +58,7 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 	if err != nil {
 		db.DFatalf("RunNamed err %v\n", err)
 	}
+	// XXX It's a bit weird that we set program/pid here...
 	proc.SetProgram(uname)
 	proc.SetPid(proc.GenPid())
 	s.named = makeSubsystem(nil, nil)
@@ -70,6 +71,7 @@ func MakeSystemNamed(uname, bin string, replicaId int) *System {
 // Make a system with Named and other kernel services
 func MakeSystemAll(uname, bin string, replicaId int) *System {
 	s := MakeSystemNamed(uname, bin, replicaId)
+	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	s.pid = proc.GetPid()
 	err := s.Boot()
@@ -204,7 +206,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 			peers = append(peers, addReplPortOffset(peer))
 		}
 		args = append(args, strconv.Itoa(id))
-		args = append(args, strings.Join(peers[:id], ","))
+		args = append(args, strings.Join(peers, ","))
 	}
 
 	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)), "/bin/kernel/named", args)

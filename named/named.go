@@ -64,7 +64,7 @@ func Run(args []string) {
 				db.DFatalf("Couldn't convert id string: %v", err)
 			}
 			peers := strings.Split(args[4], ",")
-			config = replraft.MakeRaftConfig(id, peers)
+			config = replraft.MakeRaftConfig(id, peers, true)
 		}
 		ss, err = fslibsrv.MakeReplMemFs(addr, pname, "named", config)
 	} else {

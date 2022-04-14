@@ -57,7 +57,6 @@ func (c *Clerk) serve() {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
 					db.DPrintf("REPLRAFT", "Serve request %v\n", req)
-					// XXX Needed to allow watches & locks to progress... but makes things not *quite* correct...
 					//				c.printOpTiming(req, frame)
 					c.apply(req, committedReqs.leader)
 				}
@@ -79,7 +78,10 @@ func (c *Clerk) propose(op *Op) {
 
 func (c *Clerk) apply(fc *np.Fcall, leader uint64) {
 	// Get the associated reply channel if this op was generated on this server.
-	c.getOp(fc)
+	op := c.getOp(fc)
+	if op != nil {
+		db.DPrintf("TIMING", "In-raft op time: %v us %v", time.Now().Sub(op.startTime).Microseconds(), fc)
+	}
 	// For now, every node can cause a detach to happen
 	if fc.GetType() == np.TTdetach {
 		msg := fc.Msg.(np.Tdetach)

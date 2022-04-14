@@ -73,7 +73,6 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
-	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
 	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
 	dirover.Mount(np.STATSD, ssrv.stats)
@@ -89,6 +88,8 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 		ssrv.replSrv.Start()
 		log.Printf("Starting repl server: %v", config)
 	}
+	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
+	db.DPrintf("SESSSRV", "Listen on address: %v", ssrv.srv.MyAddr())
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
 	ssrv.fsl = fsl

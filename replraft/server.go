@@ -1,6 +1,8 @@
 package replraft
 
 import (
+	"net"
+
 	raft "go.etcd.io/etcd/raft/v3"
 
 	np "ulambda/ninep"
@@ -13,7 +15,7 @@ type RaftReplServer struct {
 	clerk   *Clerk
 }
 
-func MakeRaftReplServer(id int, peerAddrs []string, tm *threadmgr.ThreadMgr) *RaftReplServer {
+func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, tm *threadmgr.ThreadMgr) *RaftReplServer {
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}
 	for i := range peerAddrs {
@@ -21,7 +23,7 @@ func MakeRaftReplServer(id int, peerAddrs []string, tm *threadmgr.ThreadMgr) *Ra
 	}
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
-	srv.node = makeRaftNode(id, peers, peerAddrs, commitC, proposeC)
+	srv.node = makeRaftNode(id, peers, peerAddrs, l, init, commitC, proposeC)
 	srv.clerk = makeClerk(id, tm, commitC, proposeC)
 	return srv
 }

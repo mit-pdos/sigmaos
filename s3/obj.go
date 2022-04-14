@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -14,6 +15,64 @@ import (
 	np "ulambda/ninep"
 )
 
+type writeAtBuffer struct {
+	sync.Mutex
+	buf []byte
+	c   *sync.Cond
+	off np.Toffset
+	sz  np.Tlength
+	err error
+}
+
+func mkWriteBuffer(sz np.Tlength) *writeAtBuffer {
+	b := &writeAtBuffer{}
+	b.buf = make([]byte, sz)
+	b.c = sync.NewCond(&b.Mutex)
+	return b
+}
+
+// From AWS: WriteAt writes a slice of bytes to a buffer starting at
+// the position provided The number of bytes written will be returned,
+// or error. Can overwrite previous written slices if the write ats
+// overlap.
+func (b *writeAtBuffer) WriteAt(p []byte, pos int64) (n int, err error) {
+	pLen := np.Tlength(len(p))
+	expLen := np.Tlength(pos) + pLen
+	b.Lock()
+	defer b.Unlock()
+	db.DPrintf("FSS3", "WriteAt %v %v\n", len(p), pos)
+	if np.Tlength(cap(b.buf)) < expLen {
+		db.DFatalf("writeAt %v %v\n", pos, len(p))
+	}
+	copy(b.buf[pos:], p)
+	if b.sz < expLen {
+		b.sz = expLen
+		b.c.Signal()
+	}
+	return int(pLen), nil
+}
+
+func (b *writeAtBuffer) setErr(err error) {
+	b.Lock()
+	defer b.Unlock()
+	b.err = err
+	b.c.Signal()
+}
+
+func (b *writeAtBuffer) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
+	b.Lock()
+	defer b.Unlock()
+
+	sz := np.Tlength(off) + np.Tlength(cnt)
+	for b.err == nil && b.sz < sz {
+		b.c.Wait()
+	}
+	if b.err != nil {
+		return nil, np.MkErr(np.TErrError, b.err)
+	}
+	return b.buf[off : off+np.Toffset(cnt)], nil
+}
+
 type Obj struct {
 	*info
 	perm np.Tperm
@@ -22,6 +81,7 @@ type Obj struct {
 	r    *io.PipeReader
 	w    *io.PipeWriter
 	off  np.Toffset
+	buff *writeAtBuffer
 }
 
 func makeObj(key np.Path, perm np.Tperm) *Obj {
@@ -137,13 +197,38 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
-// XXX what if file has grown or shrunk?
 func (o *Obj) setupReader() {
 	db.DPrintf("FSS3", "%p: setupReader\n", o)
 	o.off = 0
+	o.buff = mkWriteBuffer(o.sz)
+	go o.reader()
+}
+
+func (o *Obj) reader() {
+	key := o.key.String()
+	downloader := manager.NewDownloader(fss3.client)
+	_, err := downloader.Download(context.TODO(), o.buff, &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
+		o.buff.setErr(err)
+	}
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
+	if np.Tlength(off) >= o.Size() {
+		return nil, nil
+	}
+	if np.Tlength(off)+np.Tlength(cnt) > o.Size() {
+		cnt = np.Tsize(o.Size()) - np.Tsize(off)
+	}
+	return o.buff.read(off, cnt)
+}
+
+func (o *Obj) Read1(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
 	if np.Tlength(off) >= o.Size() {
 		return nil, nil
@@ -160,19 +245,6 @@ func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([
 	}
 	return b, nil
 }
-
-// func (o *Obj) reader() {
-// 	key := o.key.String()
-// 	downloader := manager.NewDownloaderWithClient(o.fss3.client)
-// 	_, err := downloader.Download(??, &s3.GetObjectInput{
-// 		Bucket: &bucket,
-// 		Key:    &key,
-// 		Body:   o.r,
-// 	})
-// 	if err != nil {
-// 		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
-// 	}
-// }
 
 func (o *Obj) setupWriter() {
 	db.DPrintf("FSS3", "%p: setupWriter\n", o)

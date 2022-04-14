@@ -7,6 +7,8 @@ import (
 	np "ulambda/ninep"
 )
 
+// XXX evict entries
+
 type Cache struct {
 	sync.Mutex
 	cache map[string]*info

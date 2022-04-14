@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -15,72 +14,18 @@ import (
 	np "ulambda/ninep"
 )
 
-type writeAtBuffer struct {
-	sync.Mutex
-	buf []byte
-	c   *sync.Cond
-	off np.Toffset
-	sz  np.Tlength
-	err error
-}
-
-func mkWriteBuffer(sz np.Tlength) *writeAtBuffer {
-	b := &writeAtBuffer{}
-	b.buf = make([]byte, sz)
-	b.c = sync.NewCond(&b.Mutex)
-	return b
-}
-
-// From AWS: WriteAt writes a slice of bytes to a buffer starting at
-// the position provided The number of bytes written will be returned,
-// or error. Can overwrite previous written slices if the write ats
-// overlap.
-func (b *writeAtBuffer) WriteAt(p []byte, pos int64) (n int, err error) {
-	pLen := np.Tlength(len(p))
-	expLen := np.Tlength(pos) + pLen
-	b.Lock()
-	defer b.Unlock()
-	db.DPrintf("FSS3", "WriteAt %v %v\n", len(p), pos)
-	if np.Tlength(cap(b.buf)) < expLen {
-		db.DFatalf("writeAt %v %v\n", pos, len(p))
-	}
-	copy(b.buf[pos:], p)
-	if b.sz < expLen {
-		b.sz = expLen
-		b.c.Signal()
-	}
-	return int(pLen), nil
-}
-
-func (b *writeAtBuffer) setErr(err error) {
-	b.Lock()
-	defer b.Unlock()
-	b.err = err
-	b.c.Signal()
-}
-
-func (b *writeAtBuffer) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
-	b.Lock()
-	defer b.Unlock()
-
-	sz := np.Tlength(off) + np.Tlength(cnt)
-	for b.err == nil && b.sz < sz {
-		b.c.Wait()
-	}
-	if b.err != nil {
-		return nil, np.MkErr(np.TErrError, b.err)
-	}
-	return b.buf[off : off+np.Toffset(cnt)], nil
-}
-
 type Obj struct {
 	*info
 	perm np.Tperm
 	key  np.Path
-	ch   chan error
-	r    *io.PipeReader
-	w    *io.PipeWriter
-	off  np.Toffset
+
+	// for writing
+	ch  chan error
+	r   *io.PipeReader
+	w   *io.PipeWriter
+	off np.Toffset
+
+	// for reading
 	buff *writeAtBuffer
 }
 
@@ -144,31 +89,6 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	return o.info.stat(), nil
 }
 
-// Read object from s3.
-func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
-	key := o.key.String()
-	region := ""
-	if off != 0 || np.Tlength(cnt) < o.Size() {
-		n := off + cnt
-		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
-	}
-	input := &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-		Range:  &region,
-	}
-	result, err := fss3.client.GetObject(context.TODO(), input)
-	if err != nil {
-		return nil, 0, np.MkErrError(err)
-	}
-	region1 := ""
-	if result.ContentRange != nil {
-		region1 = *result.ContentRange
-	}
-	db.DPrintf("FSS3", "s3Read: region %v res %v %v\n", region, region1, result.ContentLength)
-	return result.Body, np.Tlength(result.ContentLength), nil
-}
-
 // XXX Check permissions?
 func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
@@ -188,7 +108,7 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
 	if m == np.OWRITE {
 		o.w.Close()
-		// wait for writer to finish
+		// wait for uploader to finish
 		err := <-o.ch
 		if err != nil {
 			return np.MkErrError(err)
@@ -197,9 +117,12 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
+//
+// Read using downloader thread and writeAtBuffer
+//
+
 func (o *Obj) setupReader() {
 	db.DPrintf("FSS3", "%p: setupReader\n", o)
-	o.off = 0
 	o.buff = mkWriteBuffer(o.sz)
 	go o.reader()
 }
@@ -228,6 +151,35 @@ func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([
 	return o.buff.read(off, cnt)
 }
 
+//
+// Old read implementation around in case we need to read
+// small parts of a file instead of the complete file.
+//
+
+func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
+	key := o.key.String()
+	region := ""
+	if off != 0 || np.Tlength(cnt) < o.Size() {
+		n := off + cnt
+		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
+	}
+	input := &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+		Range:  &region,
+	}
+	result, err := fss3.client.GetObject(context.TODO(), input)
+	if err != nil {
+		return nil, 0, np.MkErrError(err)
+	}
+	region1 := ""
+	if result.ContentRange != nil {
+		region1 = *result.ContentRange
+	}
+	db.DPrintf("FSS3", "s3Read: region %v res %v %v\n", region, region1, result.ContentLength)
+	return result.Body, np.Tlength(result.ContentLength), nil
+}
+
 func (o *Obj) Read1(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
 	if np.Tlength(off) >= o.Size() {
@@ -245,6 +197,10 @@ func (o *Obj) Read1(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) (
 	}
 	return b, nil
 }
+
+//
+// Write using an uploader thread
+//
 
 func (o *Obj) setupWriter() {
 	db.DPrintf("FSS3", "%p: setupWriter\n", o)

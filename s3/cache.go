@@ -24,6 +24,7 @@ func (c *Cache) lookup(path np.Path) *info {
 	c.Lock()
 	defer c.Unlock()
 	if o, ok := c.cache[path.String()]; ok {
+		// db.DPrintf("FSS3", "cache: lookup hit %v %v\n", path, c.cache)
 		return o
 	}
 	return nil
@@ -42,7 +43,7 @@ func (c *Cache) delete(path np.Path) bool {
 	defer c.Unlock()
 	db.DPrintf("FSS3", "cache: delete %v\n", path)
 	s := path.String()
-	if _, ok := c.cache[s]; ok {
+	if _, ok := c.cache[s]; !ok {
 		return false
 	}
 	delete(c.cache, s)

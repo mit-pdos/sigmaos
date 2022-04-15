@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/klauspost/readahead"
+	// "github.com/klauspost/readahead"
 
 	"ulambda/awriter"
 	"ulambda/crash"
@@ -168,12 +168,12 @@ func (m *Mapper) doMap() error {
 	db.DPrintf("MR0", "Open %v %v\n", m.input, time.Since(start).Milliseconds())
 	start = time.Now()
 
-	//brdr := bufio.NewReaderSize(rdr, BUFSZ)
-	ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
-	if err != nil {
-		db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
-	}
-	if err := m.mapf(m.input, ardr, m.emit); err != nil {
+	brdr := bufio.NewReaderSize(rdr, BUFSZ)
+	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
+	//if err != nil {
+	//db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
+	//}
+	if err := m.mapf(m.input, brdr, m.emit); err != nil {
 		return err
 	}
 	db.DPrintf("MR0", "Mapf %v %v\n", m.input, time.Since(start).Milliseconds())

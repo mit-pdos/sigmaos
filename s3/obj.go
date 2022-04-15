@@ -123,7 +123,7 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 
 func (o *Obj) setupReader() {
 	db.DPrintf("FSS3", "%p: setupReader\n", o)
-	o.buff = mkWriteBuffer(o.sz)
+	o.buff = mkWriteAtBuffer(o.sz)
 	go o.reader()
 }
 

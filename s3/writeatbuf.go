@@ -9,48 +9,83 @@ import (
 
 //
 // An implementation of aws's WriteAtBuffer interface that allows
-// Read() to read data from beginning of buf while more data is
-// arriving from s3.
+// Read() to retrieve data from the beginning of buf while more data
+// is arriving from s3.  Optimistically assumes data arrives in order.
 //
+
+type trimBuf struct {
+	b     []byte
+	nread np.Toffset // the number of bytes trimmed from b
+}
+
+func (tb *trimBuf) index(off np.Toffset) np.Toffset {
+	return off - tb.nread
+}
+
+func (tb *trimBuf) writeAt(p []byte, pos np.Toffset) {
+	if pos < tb.nread {
+		// trim p if reader already consumed those bytes and p
+		// overlaps with earlier p.
+		// https://docs.aws.amazon.com/sdk-for-go/api/aws/#WriteAtBuffer)
+		n := tb.nread - pos
+		if n <= 0 {
+			return
+		} else {
+			p = p[n:]
+			pos += n
+		}
+	}
+	copy(tb.b[tb.index(pos):], p)
+}
+
+func (tb *trimBuf) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
+	if off < tb.nread {
+		np.MkErr(np.TErrInval, off)
+	}
+	c := np.Toffset(cnt)
+	d := tb.b[tb.index(off) : tb.index(off)+c]
+	tb.b = tb.b[tb.index(c):]
+	tb.nread += c
+	return d, nil
+}
 
 type writeAtBuffer struct {
 	sync.Mutex
-	buf []byte
 	c   *sync.Cond
-	off np.Toffset
-	sz  np.Tlength
+	off np.Toffset // bytes [0, off) are in
 	err error
+	tb  *trimBuf
 }
 
-func mkWriteBuffer(sz np.Tlength) *writeAtBuffer {
+func mkWriteAtBuffer(sz np.Tlength) *writeAtBuffer {
 	b := &writeAtBuffer{}
-	b.buf = make([]byte, sz)
+	b.tb = &trimBuf{}
+	b.tb.b = make([]byte, sz)
 	b.c = sync.NewCond(&b.Mutex)
 	return b
 }
 
 func (b *writeAtBuffer) WriteAt(p []byte, pos int64) (n int, err error) {
-	pLen := np.Tlength(len(p))
-	expLen := np.Tlength(pos) + pLen
+	expLen := np.Tlength(pos) + np.Tlength(len(p))
 	b.Lock()
 	defer b.Unlock()
 	db.DPrintf("FSS3", "WriteAt %v %v\n", len(p), pos)
-	if np.Tlength(cap(b.buf)) < expLen {
+	if np.Tlength(cap(b.tb.b)) < expLen {
 		db.DFatalf("writeAt %v %v\n", pos, len(p))
 	}
-	copy(b.buf[pos:], p)
-	if b.sz < expLen {
-		b.sz = expLen
-		b.c.Signal()
+	b.tb.writeAt(p, np.Toffset(pos))
+	if np.Toffset(pos) == b.off {
+		b.off += np.Toffset(len(p))
+		b.c.Broadcast()
 	}
-	return int(pLen), nil
+	return len(p), nil
 }
 
 func (b *writeAtBuffer) setErr(err error) {
 	b.Lock()
 	defer b.Unlock()
 	b.err = err
-	b.c.Signal()
+	b.c.Broadcast()
 }
 
 // Read data from beginning of buffer.  XXX trim buf (slightly trick
@@ -59,12 +94,13 @@ func (b *writeAtBuffer) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 	b.Lock()
 	defer b.Unlock()
 
-	sz := np.Tlength(off) + np.Tlength(cnt)
-	for b.err == nil && b.sz < sz {
+	db.DPrintf("FSS3", "Read %d %d\n", off, cnt)
+	sz := off + np.Toffset(cnt)
+	for b.err == nil && b.off < sz {
 		b.c.Wait()
 	}
 	if b.err != nil {
 		return nil, np.MkErr(np.TErrError, b.err)
 	}
-	return b.buf[off : off+np.Toffset(cnt)], nil
+	return b.tb.read(off, cnt)
 }

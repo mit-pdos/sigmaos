@@ -1,7 +1,6 @@
 package fss3
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

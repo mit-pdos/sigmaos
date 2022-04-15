@@ -18,10 +18,15 @@ type Obj struct {
 	*info
 	perm np.Tperm
 	key  np.Path
-	ch   chan error
-	r    *io.PipeReader
-	w    *io.PipeWriter
-	off  np.Toffset
+
+	// for writing
+	ch  chan error
+	r   *io.PipeReader
+	w   *io.PipeWriter
+	off np.Toffset
+
+	// for reading
+	buff *writeAtBuffer
 }
 
 func makeObj(key np.Path, perm np.Tperm) *Obj {
@@ -84,7 +89,73 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	return o.info.stat(), nil
 }
 
-// Read object from s3.
+// XXX Check permissions?
+func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
+	if err := o.fill(); err != nil {
+		return nil, err
+	}
+	if m == np.OREAD {
+		o.setupReader()
+	}
+	if m == np.OWRITE {
+		o.setupWriter()
+	}
+	return o, nil
+}
+
+func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
+	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
+	if m == np.OWRITE {
+		o.w.Close()
+		// wait for uploader to finish
+		err := <-o.ch
+		if err != nil {
+			return np.MkErrError(err)
+		}
+	}
+	return nil
+}
+
+//
+// Read using downloader thread and writeAtBuffer
+//
+
+func (o *Obj) setupReader() {
+	db.DPrintf("FSS3", "%p: setupReader\n", o)
+	o.buff = mkWriteAtBuffer(o.sz)
+	go o.reader()
+}
+
+func (o *Obj) reader() {
+	key := o.key.String()
+	downloader := manager.NewDownloader(fss3.client)
+	_, err := downloader.Download(context.TODO(), o.buff, &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
+		o.buff.setErr(err)
+	}
+}
+
+func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
+	if np.Tlength(off) >= o.Size() {
+		return nil, nil
+	}
+	if np.Tlength(off)+np.Tlength(cnt) > o.Size() {
+		cnt = np.Tsize(o.Size()) - np.Tsize(off)
+	}
+	return o.buff.read(off, cnt)
+}
+
+//
+// Old read implementation around in case we need to read
+// small parts of a file instead of the complete file.
+//
+
 func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	key := o.key.String()
 	region := ""
@@ -109,41 +180,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	return result.Body, np.Tlength(result.ContentLength), nil
 }
 
-// XXX Check permissions?
-func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	db.DPrintf("FSS3", "open %v (%T) %v\n", o, o, m)
-	if err := o.fill(); err != nil {
-		return nil, err
-	}
-	if m == np.OREAD {
-		o.setupReader()
-	}
-	if m == np.OWRITE {
-		o.setupWriter()
-	}
-	return o, nil
-}
-
-func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
-	db.DPrintf("FSS3", "%p: Close %v\n", o, m)
-	if m == np.OWRITE {
-		o.w.Close()
-		// wait for writer to finish
-		err := <-o.ch
-		if err != nil {
-			return np.MkErrError(err)
-		}
-	}
-	return nil
-}
-
-// XXX what if file has grown or shrunk?
-func (o *Obj) setupReader() {
-	db.DPrintf("FSS3", "%p: setupReader\n", o)
-	o.off = 0
-}
-
-func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (o *Obj) Read1(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
 	if np.Tlength(off) >= o.Size() {
 		return nil, nil
@@ -161,18 +198,9 @@ func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([
 	return b, nil
 }
 
-// func (o *Obj) reader() {
-// 	key := o.key.String()
-// 	downloader := manager.NewDownloaderWithClient(o.fss3.client)
-// 	_, err := downloader.Download(??, &s3.GetObjectInput{
-// 		Bucket: &bucket,
-// 		Key:    &key,
-// 		Body:   o.r,
-// 	})
-// 	if err != nil {
-// 		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
-// 	}
-// }
+//
+// Write using an uploader thread
+//
 
 func (o *Obj) setupWriter() {
 	db.DPrintf("FSS3", "%p: setupWriter\n", o)

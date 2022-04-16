@@ -23,10 +23,16 @@ func (tb *trimBuf) index(off np.Toffset) np.Toffset {
 }
 
 func (tb *trimBuf) writeAt(p []byte, pos np.Toffset) {
+	db.DPrintf("FSS3", "WriteAt %v %v %v\n", len(p), pos, cap(tb.b))
+	expLen := np.Tlength(pos) + np.Tlength(len(p))
+	if np.Tlength(tb.nread)+np.Tlength(cap(tb.b)) < expLen {
+		db.DFatalf("writeAt %v %v\n", pos, len(p))
+	}
 	if pos < tb.nread {
 		// trim p if reader already consumed those bytes and p
 		// overlaps with earlier p.
 		// https://docs.aws.amazon.com/sdk-for-go/api/aws/#WriteAtBuffer)
+		db.DPrintf("FSS3", "trim write o %d cnt %d nread %d\n", pos, len(p), tb.nread)
 		n := tb.nread - pos
 		if n <= 0 {
 			return
@@ -39,12 +45,13 @@ func (tb *trimBuf) writeAt(p []byte, pos np.Toffset) {
 }
 
 func (tb *trimBuf) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
+	db.DPrintf("FSS3", "read o %d cnt %d nread %d\n", off, cnt, tb.nread)
 	if off < tb.nread {
 		np.MkErr(np.TErrInval, off)
 	}
 	c := np.Toffset(cnt)
 	d := tb.b[tb.index(off) : tb.index(off)+c]
-	tb.b = tb.b[tb.index(c):]
+	tb.b = tb.b[tb.index(off)+c:]
 	tb.nread += c
 	return d, nil
 }
@@ -66,13 +73,8 @@ func mkWriteAtBuffer(sz np.Tlength) *writeAtBuffer {
 }
 
 func (b *writeAtBuffer) WriteAt(p []byte, pos int64) (n int, err error) {
-	expLen := np.Tlength(pos) + np.Tlength(len(p))
 	b.Lock()
 	defer b.Unlock()
-	db.DPrintf("FSS3", "WriteAt %v %v\n", len(p), pos)
-	if np.Tlength(cap(b.tb.b)) < expLen {
-		db.DFatalf("writeAt %v %v\n", pos, len(p))
-	}
 	b.tb.writeAt(p, np.Toffset(pos))
 	if np.Toffset(pos) == b.off {
 		b.off += np.Toffset(len(p))

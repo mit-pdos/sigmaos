@@ -110,7 +110,7 @@ func (npc *NpConn) Version(args np.Tversion, rets *np.Rversion) *np.Rerror {
 }
 
 func (npc *NpConn) Auth(args np.Tauth, rets *np.Rauth) *np.Rerror {
-	return np.MkErr(np.TErrNotSupported, "Auth").Rerror()
+	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
 func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
@@ -166,7 +166,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	for i := 0; i < MAXSYMLINK; i++ {
 		reply, err := npc.npch(args.Fid).Walk(args.Fid, args.NewFid, path)
 		if err != nil {
-			return err.Rerror()
+			return err.RerrorWC()
 		}
 		if len(reply.Qids) == 0 { // clone args.Fid?
 			npc.addch(args.NewFid, npc.npch(args.Fid))
@@ -183,13 +183,13 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 
 			target, err := npc.readLink(args.NewFid)
 			if err != nil {
-				return np.MkErr(np.TErrUnknownfid, path).Rerror()
+				return np.MkRerrorWC(np.TErrUnknownfid)
 			}
 			// XXX assumes symlink is final component of walk
 			if pathclnt.IsRemoteTarget(target) {
 				qid, err = npc.autoMount(args.NewFid, target, path[todo:])
 				if err != nil {
-					return np.MkErr(np.TErrUnknownfid, path).Rerror()
+					return np.MkRerrorWC(np.TErrUnknownfid)
 				}
 				reply.Qids[len(reply.Qids)-1] = qid
 				path = path[todo:]
@@ -212,7 +212,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Open(args.Fid, args.Mode)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	*rets = *reply
 	return nil
@@ -225,7 +225,7 @@ func (npc *NpConn) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Create(args.Fid, args.Name, args.Perm, args.Mode)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	*rets = *reply
 	return nil
@@ -234,7 +234,7 @@ func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
 	err := npc.npch(args.Fid).Clunk(args.Fid)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	npc.delch(args.Fid)
 	return nil
@@ -247,7 +247,7 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Read(args.Fid, args.Offset, args.Count)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	*rets = *reply
 	return nil
@@ -256,7 +256,7 @@ func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Write(args.Fid, args.Offset, args.Data)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	*rets = *reply
 	return nil
@@ -265,7 +265,7 @@ func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
 	err := npc.npch(args.Fid).Remove(args.Fid)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	return nil
 }
@@ -277,7 +277,7 @@ func (npc *NpConn) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Stat(args.Fid)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	*rets = *reply
 	return nil
@@ -286,22 +286,22 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 	reply, err := npc.npch(args.Fid).Wstat(args.Fid, &args.Stat)
 	if err != nil {
-		return &np.Rerror{err.Error()}
+		return err.RerrorWC()
 	}
 	*rets = *reply
 	return nil
 }
 
 func (npc *NpConn) Renameat(args np.Trenameat, rets *np.Rrenameat) *np.Rerror {
-	return np.MkErr(np.TErrNotSupported, args).Rerror()
+	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
 func (npc *NpConn) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
-	return np.MkErr(np.TErrNotSupported, args).Rerror()
+	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
 func (npc *NpConn) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
-	return np.MkErr(np.TErrNotSupported, args).Rerror()
+	return np.MkRerrorWC(np.TErrNotSupported)
 }
 
 func (npc *NpConn) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {

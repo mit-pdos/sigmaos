@@ -279,23 +279,28 @@ func TestConcurReplFailN(t *testing.T) {
 	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, 1, "0")
 }
 
-// func TestAuto(t *testing.T) {
-// 	// runtime.GOMAXPROCS(2) // XXX for KV
-// 	nclerk := NCLERK
-// 	ts := makeTstate(t, "auto", nclerk, 0)
+func TestAuto(t *testing.T) {
+	// runtime.GOMAXPROCS(2) // XXX for KV
 
-// 	ch := make(chan bool)
-// 	for i := 0; i < nclerk; i++ {
-// 		go ts.clerk(i, ch)
-// 	}
+	nclerk := NCLERK
+	ts, _ := makeTstate(t, "auto", nclerk, 0, 0, 0, "0")
 
-// 	time.Sleep(30 * time.Second)
+	for i := 0; i < nclerk; i++ {
+		pid := ts.startClerk()
+		ts.clrks = append(ts.clrks, pid)
+	}
 
-// 	log.Printf("Wait for clerks\n")
+	time.Sleep(30 * time.Second)
 
-// 	for i := 0; i < nclerk; i++ {
-// 		ch <- true
-// 	}
+	log.Printf("Wait for clerks\n")
 
-// 	ts.done()
-// }
+	ts.stopClerks()
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.gmbal.Stop()
+
+	ts.mfsgrps[0].Stop()
+
+	ts.Shutdown()
+}

@@ -76,16 +76,16 @@ type Tstate struct {
 	clrks   []proc.Tpid
 }
 
-func makeTstate(t *testing.T, auto string, nclerk, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *KvClerk) {
+func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, NBALANCER, crashbal, 0, 0)
 
-	clrk := ts.setup(nclerk, repl, ncrash)
+	clrk := ts.setup(repl, ncrash)
 	return ts, clrk
 }
 
-func (ts *Tstate) setup(nclerk, repl, ncrash int) *KvClerk {
+func (ts *Tstate) setup(repl, ncrash int) *KvClerk {
 	// Create first shard group
 	gn := group.GRP + "0"
 	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn, repl, ncrash)
@@ -158,7 +158,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts, clrk := makeTstate(t, "manual", 1, 0, KVD_NO_REPL, 0, "0")
+	ts, clrk := makeTstate(t, "manual", 0, KVD_NO_REPL, 0, "0")
 
 	_, err := clrk.Get(MkKey(NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
@@ -181,7 +181,7 @@ func TestGetPutSet(t *testing.T) {
 func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
 	const TIME = 100 // 500
 
-	ts, _ := makeTstate(t, "manual", nclerk, crashbal, repl, ncrash, crashhelper)
+	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()
@@ -283,7 +283,7 @@ func TestAuto(t *testing.T) {
 	// runtime.GOMAXPROCS(2) // XXX for KV
 
 	nclerk := NCLERK
-	ts, _ := makeTstate(t, "auto", nclerk, 0, 0, 0, "0")
+	ts, _ := makeTstate(t, "auto", 0, KVD_NO_REPL, 0, "0")
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()

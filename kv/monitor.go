@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"sync"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
@@ -50,14 +51,14 @@ func (mo *Monitor) shrink(kv proc.Tpid) {
 	n := np.MEMFS + "/" + kv + "/"
 	err := mo.Evict(kv)
 	if err != nil {
-		log.Printf("shrink: remove %v failed %v\n", n, err)
+		db.DFatalf("shrink: remove %v failed %v\n", n, err)
 	}
 }
 
 // XXX Use load too?
 func (mo *Monitor) doMonitor(conf *Config) {
 	kvs := makeKvs(conf.Shards)
-	log.Printf("Monitor config %v\n", kvs)
+	db.DPrintf(db.ALWAYS, "Monitor config %v\n", kvs)
 
 	util := float64(0)
 	low := float64(100.0)
@@ -69,7 +70,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 		sti := stats.StatInfo{}
 		err := mo.GetFileJson(kvd, &sti)
 		if err != nil {
-			log.Printf("ReadFileJson %v failed %v\n", kvd, err)
+			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvd, err)
 		}
 		n += 1
 		util += sti.Util
@@ -81,7 +82,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 		log.Printf("path %v\n", sti.SortPath())
 	}
 	util = util / float64(n)
-	log.Printf("monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)
+	db.DPrintf(db.ALWAYS, "monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)
 	if util >= MAXLOAD {
 		mo.grow()
 	}

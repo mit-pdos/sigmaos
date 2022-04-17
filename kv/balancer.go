@@ -106,7 +106,7 @@ func RunBalancer(crashChild string, auto string) {
 		db.DFatalf("MakeNod clone failed %v\n", err1)
 	}
 
-	// start server and write ch when server is done
+	// start server and write xch when server is done
 	ch := make(chan bool)
 	go func() {
 		mfs.Serve()

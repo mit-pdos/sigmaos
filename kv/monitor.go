@@ -10,7 +10,6 @@ import (
 	"ulambda/group"
 	"ulambda/groupmgr"
 	np "ulambda/ninep"
-	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/stats"
 )
@@ -28,13 +27,35 @@ type Monitor struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	group int
+	grps  map[string]*groupmgr.GroupMgr
 }
 
 func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	mo := &Monitor{}
 	mo.FsLib = fslib
 	mo.ProcClnt = pclnt
+	mo.group = 1
 	return mo
+}
+
+func (mo *Monitor) nextGroup() string {
+	mo.mu.Lock()
+	defer mo.mu.Unlock()
+	gn := strconv.Itoa(mo.group)
+	mo.group += 1
+	return gn
+
+}
+
+func (mo *Monitor) rmgrp(gn string) (*groupmgr.GroupMgr, bool) {
+	mo.mu.Lock()
+	defer mo.mu.Unlock()
+	if grp, ok := mo.grps[gn]; ok {
+		delete(mo.grps, gn)
+		return grp, true
+	} else {
+		return nil, false
+	}
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, repl, ncrash int) *groupmgr.GroupMgr {
@@ -42,17 +63,29 @@ func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, repl, ncra
 }
 
 func (mo *Monitor) grow() {
-	SpawnGrp(mo.FsLib, mo.ProcClnt, strconv.Itoa(mo.group), KVD_NO_REPL, 0)
-	BalancerOp(mo.FsLib, "add", group.GRP+strconv.Itoa(mo.group))
+	gn := mo.nextGroup()
+	db.DPrintf("KVMON", "Add group %v\n", gn)
+	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, gn, KVD_NO_REPL, 0)
+	err := BalancerOp(mo.FsLib, "add", group.GRP+strconv.Itoa(mo.group))
+	if err != nil {
+		grp.Stop()
+	}
+	mo.mu.Lock()
+	mo.grps[gn] = grp
+	mo.mu.Unlock()
 }
 
-func (mo *Monitor) shrink(kv proc.Tpid) {
-	BalancerOp(mo.FsLib, "del", kv.String())
-	n := np.MEMFS + "/" + kv + "/"
-	err := mo.Evict(kv)
-	if err != nil {
-		db.DFatalf("shrink: remove %v failed %v\n", n, err)
+func (mo *Monitor) shrink(gn string) {
+	db.DPrintf("KVMON", "Del group %v\n", gn)
+	grp, ok := mo.rmgrp(gn)
+	if !ok {
+		db.DFatalf("rmgrp %v failed\n", gn)
 	}
+	err := BalancerOp(mo.FsLib, "del", gn)
+	if err != nil {
+		db.DPrintf("KVMON", "Del group %v failed\n", gn)
+	}
+	grp.Stop()
 }
 
 // XXX Use load too?
@@ -62,11 +95,11 @@ func (mo *Monitor) doMonitor(conf *Config) {
 
 	util := float64(0)
 	low := float64(100.0)
-	lowkv := proc.Tpid("")
+	lowkv := ""
 	var lowload stats.Tload
 	n := 0
-	for kv, _ := range kvs.set {
-		kvd := group.GRPDIR + "/" + kv + "/" + np.STATSD
+	for gn, _ := range kvs.set {
+		kvd := group.GRPDIR + "/" + gn + "/" + np.STATSD
 		sti := stats.StatInfo{}
 		err := mo.GetFileJson(kvd, &sti)
 		if err != nil {
@@ -76,7 +109,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 		util += sti.Util
 		if sti.Util < low {
 			low = sti.Util
-			lowkv = proc.Tpid(kv)
+			lowkv = gn
 			lowload = sti.Load
 		}
 		log.Printf("path %v\n", sti.SortPath())

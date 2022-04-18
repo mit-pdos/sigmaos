@@ -28,7 +28,11 @@ func MakeFidSnapshot() *FidSnapshot {
 func (fid *Fid) Snapshot() []byte {
 	fs := MakeFidSnapshot()
 	fs.Path = fid.path
-	fs.Obj = fid.obj.Qid().Path
+	if fid.obj == nil {
+		fs.Obj = 0
+	} else {
+		fs.Obj = fid.obj.Qid().Path
+	}
 	fs.M = fid.m
 	fs.Qid = fid.qid
 	fs.CtxSnap = fid.ctx.Snapshot()

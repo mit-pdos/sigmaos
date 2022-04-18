@@ -17,7 +17,6 @@ package kv
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -106,7 +105,7 @@ func RunBalancer(crashChild string, auto string) {
 		db.DFatalf("MakeNod clone failed %v\n", err1)
 	}
 
-	// start server and write ch when server is done
+	// start server and write xch when server is done
 	ch := make(chan bool)
 	go func() {
 		mfs.Serve()
@@ -146,13 +145,14 @@ func RunBalancer(crashChild string, auto string) {
 		<-ch
 	}
 
-	log.Printf("terminate\n")
-
-	mfs.Done()
+	db.DPrintf("KVBAL", "terminate\n")
 
 	if bl.mo != nil {
-		bl.Done()
+		bl.ch <- true
+		<-bl.ch
 	}
+
+	mfs.Done()
 }
 
 func BalancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
@@ -194,16 +194,14 @@ func (bl *Balancer) monitor() {
 	for true {
 		select {
 		case <-bl.ch:
+			bl.mo.done()
+			bl.ch <- true
 			return
 		default:
 			time.Sleep(time.Duration(MS) * time.Millisecond)
 			bl.mo.doMonitor(bl.conf)
 		}
 	}
-}
-
-func (bl *Balancer) Done() {
-	bl.ch <- true
 }
 
 // Monitor if i am connected; if not, terminate myself
@@ -353,7 +351,7 @@ func (bl *Balancer) doMoves(moves Moves) {
 		bl.PostConfig()
 		m += 1
 	}
-	db.DPrintf("KVBAL", "%v: all moves done\n", bl.conf)
+	db.DPrintf(db.ALWAYS, "%v: all moves done\n", bl.conf)
 }
 
 func (bl *Balancer) balance(opcode, mfs string) *np.Err {
@@ -400,7 +398,7 @@ func (bl *Balancer) balance(opcode, mfs string) *np.Err {
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 
-	db.DPrintf("KVBAL", "New config %v\n", bl.conf)
+	db.DPrintf(db.ALWAYS, "New config %v\n", bl.conf)
 
 	// If balancer crashes, before here, KVCONFIG has the old
 	// config; otherwise, the new conf.

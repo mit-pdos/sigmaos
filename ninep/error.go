@@ -145,6 +145,11 @@ func (err Terror) String() string {
 	}
 }
 
+// Make Wire-compatible Rerror
+func MkRerrorWC(ec Terror) *Rerror {
+	return &Rerror{ec.String()}
+}
+
 type Err struct {
 	ErrCode Terror
 	Obj     string
@@ -175,6 +180,11 @@ func (err *Err) String() string {
 
 func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
+}
+
+// Return  wire-compatible error
+func (err *Err) RerrorWC() *Rerror {
+	return &Rerror{err.ErrCode.String()}
 }
 
 // SigmaOS server couldn't find the requested file

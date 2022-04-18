@@ -76,16 +76,16 @@ type Tstate struct {
 	clrks   []proc.Tpid
 }
 
-func makeTstate(t *testing.T, auto string, nclerk, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *KvClerk) {
+func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
 	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, NBALANCER, crashbal, 0, 0)
 
-	clrk := ts.setup(nclerk, repl, ncrash)
+	clrk := ts.setup(repl, ncrash)
 	return ts, clrk
 }
 
-func (ts *Tstate) setup(nclerk, repl, ncrash int) *KvClerk {
+func (ts *Tstate) setup(repl, ncrash int) *KvClerk {
 	// Create first shard group
 	gn := group.GRP + "0"
 	grp := SpawnGrp(ts.FsLib, ts.ProcClnt, gn, repl, ncrash)
@@ -158,7 +158,7 @@ func (ts *Tstate) balancerOp(opcode, mfs string) error {
 }
 
 func TestGetPutSet(t *testing.T) {
-	ts, clrk := makeTstate(t, "manual", 1, 0, KVD_NO_REPL, 0, "0")
+	ts, clrk := makeTstate(t, "manual", 0, KVD_NO_REPL, 0, "0")
 
 	_, err := clrk.Get(MkKey(NKEYS+1), 0)
 	assert.NotEqual(ts.T, err, nil, "Get")
@@ -181,7 +181,7 @@ func TestGetPutSet(t *testing.T) {
 func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
 	const TIME = 100 // 500
 
-	ts, _ := makeTstate(t, "manual", nclerk, crashbal, repl, ncrash, crashhelper)
+	ts, _ := makeTstate(t, "manual", crashbal, repl, ncrash, crashhelper)
 
 	for i := 0; i < nclerk; i++ {
 		pid := ts.startClerk()
@@ -279,23 +279,28 @@ func TestConcurReplFailN(t *testing.T) {
 	concurN(t, NCLERK, 0, KVD_REPL_LEVEL, 1, "0")
 }
 
-// func TestAuto(t *testing.T) {
-// 	// runtime.GOMAXPROCS(2) // XXX for KV
-// 	nclerk := NCLERK
-// 	ts := makeTstate(t, "auto", nclerk, 0)
+func TestAuto(t *testing.T) {
+	// runtime.GOMAXPROCS(2) // XXX for KV
 
-// 	ch := make(chan bool)
-// 	for i := 0; i < nclerk; i++ {
-// 		go ts.clerk(i, ch)
-// 	}
+	nclerk := NCLERK
+	ts, _ := makeTstate(t, "auto", 0, KVD_NO_REPL, 0, "0")
 
-// 	time.Sleep(30 * time.Second)
+	for i := 0; i < nclerk; i++ {
+		pid := ts.startClerk()
+		ts.clrks = append(ts.clrks, pid)
+	}
 
-// 	log.Printf("Wait for clerks\n")
+	time.Sleep(10 * time.Second)
 
-// 	for i := 0; i < nclerk; i++ {
-// 		ch <- true
-// 	}
+	log.Printf("Wait for clerks\n")
 
-// 	ts.done()
-// }
+	ts.stopClerks()
+
+	time.Sleep(100 * time.Millisecond)
+
+	ts.gmbal.Stop()
+
+	ts.mfsgrps[0].Stop()
+
+	ts.Shutdown()
+}

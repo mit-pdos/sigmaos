@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ./bin/kernel/named :1111 no-realm &
 
@@ -6,6 +6,7 @@ echo "=== RUN Proxy"
 
 sleep 1
 
+# SIGMADEBUG="NETSRV;" ./bin/kernel/proxyd &
 ./bin/kernel/proxyd &
 
 sleep 1

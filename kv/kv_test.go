@@ -290,7 +290,7 @@ func TestAuto(t *testing.T) {
 		ts.clrks = append(ts.clrks, pid)
 	}
 
-	time.Sleep(30 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	log.Printf("Wait for clerks\n")
 

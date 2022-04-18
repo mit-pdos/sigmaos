@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"log"
 	"strconv"
 	"sync"
 
@@ -22,12 +21,51 @@ const (
 	KVD_REPL_LEVEL         = 3
 )
 
+type grpMap struct {
+	sync.Mutex
+	grps map[string]*groupmgr.GroupMgr
+}
+
+func mkGrpMap() *grpMap {
+	gm := &grpMap{}
+	gm.grps = make(map[string]*groupmgr.GroupMgr)
+	return gm
+}
+
+func (gm *grpMap) insert(gn string, grp *groupmgr.GroupMgr) {
+	gm.Lock()
+	defer gm.Unlock()
+	gm.grps[gn] = grp
+}
+
+func (gm *grpMap) delete(gn string) (*groupmgr.GroupMgr, bool) {
+	gm.Lock()
+	defer gm.Unlock()
+	if grp, ok := gm.grps[gn]; ok {
+		delete(gm.grps, gn)
+		return grp, true
+	} else {
+		return nil, false
+	}
+}
+
+func (gm *grpMap) groups() []*groupmgr.GroupMgr {
+	gm.Lock()
+	defer gm.Unlock()
+	gs := make([]*groupmgr.GroupMgr, 0, len(gm.grps))
+	for _, grp := range gm.grps {
+		gs = append(gs, grp)
+	}
+	return gs
+}
+
 type Monitor struct {
-	mu sync.Mutex
 	*fslib.FsLib
 	*procclnt.ProcClnt
+
+	mu    sync.Mutex
 	group int
-	grps  map[string]*groupmgr.GroupMgr
+	gm    *grpMap
 }
 
 func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
@@ -35,6 +73,7 @@ func MakeMonitor(fslib *fslib.FsLib, pclnt *procclnt.ProcClnt) *Monitor {
 	mo.FsLib = fslib
 	mo.ProcClnt = pclnt
 	mo.group = 1
+	mo.gm = mkGrpMap()
 	return mo
 }
 
@@ -43,19 +82,7 @@ func (mo *Monitor) nextGroup() string {
 	defer mo.mu.Unlock()
 	gn := strconv.Itoa(mo.group)
 	mo.group += 1
-	return gn
-
-}
-
-func (mo *Monitor) rmgrp(gn string) (*groupmgr.GroupMgr, bool) {
-	mo.mu.Lock()
-	defer mo.mu.Unlock()
-	if grp, ok := mo.grps[gn]; ok {
-		delete(mo.grps, gn)
-		return grp, true
-	} else {
-		return nil, false
-	}
+	return group.GRP + gn
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, repl, ncrash int) *groupmgr.GroupMgr {
@@ -66,18 +93,16 @@ func (mo *Monitor) grow() {
 	gn := mo.nextGroup()
 	db.DPrintf("KVMON", "Add group %v\n", gn)
 	grp := SpawnGrp(mo.FsLib, mo.ProcClnt, gn, KVD_NO_REPL, 0)
-	err := BalancerOp(mo.FsLib, "add", group.GRP+strconv.Itoa(mo.group))
+	err := BalancerOp(mo.FsLib, "add", gn)
 	if err != nil {
 		grp.Stop()
 	}
-	mo.mu.Lock()
-	mo.grps[gn] = grp
-	mo.mu.Unlock()
+	mo.gm.insert(gn, grp)
 }
 
 func (mo *Monitor) shrink(gn string) {
 	db.DPrintf("KVMON", "Del group %v\n", gn)
-	grp, ok := mo.rmgrp(gn)
+	grp, ok := mo.gm.delete(gn)
 	if !ok {
 		db.DFatalf("rmgrp %v failed\n", gn)
 	}
@@ -86,6 +111,13 @@ func (mo *Monitor) shrink(gn string) {
 		db.DPrintf("KVMON", "Del group %v failed\n", gn)
 	}
 	grp.Stop()
+}
+
+func (mo *Monitor) done() {
+	db.DPrintf("KVMON", "shutdown groups\n")
+	for _, grp := range mo.gm.groups() {
+		grp.Stop()
+	}
 }
 
 // XXX Use load too?
@@ -99,11 +131,11 @@ func (mo *Monitor) doMonitor(conf *Config) {
 	var lowload stats.Tload
 	n := 0
 	for gn, _ := range kvs.set {
-		kvd := group.GRPDIR + "/" + gn + "/" + np.STATSD
+		kvgrp := group.GrpDir(gn) + np.STATSD
 		sti := stats.StatInfo{}
-		err := mo.GetFileJson(kvd, &sti)
+		err := mo.GetFileJson(kvgrp, &sti)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvd, err)
+			db.DPrintf(db.ALWAYS, "ReadFileJson %v failed %v\n", kvgrp, err)
 		}
 		n += 1
 		util += sti.Util
@@ -112,7 +144,7 @@ func (mo *Monitor) doMonitor(conf *Config) {
 			lowkv = gn
 			lowload = sti.Load
 		}
-		log.Printf("path %v\n", sti.SortPath())
+		// db.DPrintf("KVMON", "path %v\n", sti.SortPath())
 	}
 	util = util / float64(n)
 	db.DPrintf(db.ALWAYS, "monitor: avg util %.1f low %.1f kv %v %v\n", util, low, lowkv, lowload)

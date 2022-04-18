@@ -103,13 +103,18 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n, partition, netfail)
 	}
 	done := make(chan procret)
+	starts := make([]chan error, len(gm.members))
 	for i, m := range gm.members {
 		start := make(chan error)
+		starts[i] = start
 		go m.run(i, start, done)
+	}
+	for _, start := range starts {
 		err := <-start
 		if err != nil {
 			db.DFatalf("Start %v\n", err)
 		}
+
 	}
 	go gm.manager(done, N)
 	return gm

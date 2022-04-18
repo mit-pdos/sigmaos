@@ -30,6 +30,7 @@ const (
 	GRPRAFTCONF  = "-raft-conf"
 	TMP          = ".tmp"
 	GRPCONF      = "-conf"
+	GRPELECT     = "-elect"
 	GRPCONFNXT   = "-conf-next"
 	GRPCONFNXTBK = GRPCONFNXT + "#"
 	CTL          = "ctl"
@@ -52,7 +53,7 @@ func grpTmpConfPath(grp string) string {
 }
 
 func grpElectPath(grp string) string {
-	return GRPDIR + grp + GRPCONF
+	return GRPDIR + grp + GRPELECT
 }
 
 func grpConfNxt(grp string) string {
@@ -88,6 +89,7 @@ func (g *Group) clearBusy() {
 }
 
 func (g *Group) AcquireLeadership() {
+	db.DPrintf("GROUP", "%v Try acquire leadership", g.grp)
 	if err := g.ec.AcquireLeadership(nil); err != nil {
 		db.DFatalf("AcquireLeadership in group.RunMember: %v", err)
 	}
@@ -112,8 +114,10 @@ func (g *Group) waitForClusterConfig() {
 func (g *Group) clusterStarted() bool {
 	// If the final config doesn't exist yet, the cluster hasn't started.
 	if _, err := g.Stat(grpConfPath(g.grp)); np.IsErrNotfound(err) {
+		db.DPrintf("GROUP", "found conf path %v", grpConfPath(g.grp))
 		return false
 	} else {
+		db.DPrintf("GROUP", "didn't find conf path %v: %v", grpConfPath(g.grp), err)
 		// We don't expect any other errors
 		if err != nil {
 			db.DFatalf("Unexpected cluster config error: %v", err)
@@ -211,6 +215,8 @@ func RunMember(grp string) {
 	}
 	g.ip = ip
 
+	crash.Crasher(g.FsLib)
+
 	// XXX need this?
 	g.MkDir(GRPDIR, 0777)
 
@@ -236,10 +242,12 @@ func RunMember(grp string) {
 		// in the temporary cluster config, and wait for nReplicas to register
 		// themselves as well.
 		if !g.clusterStarted() {
+			db.DPrintf("GROUP", "Cluster hasn't started, reading temp config")
 			id, clusterCfg, raftCfg = g.registerInTmpConfig()
 			// If we don't yet have enough replicas to start the cluster, wait for them
 			// to register themselves.
 			if id < nReplicas {
+				db.DPrintf("GROUP", "%v < %v: Wait for more replicas", id, nReplicas)
 				g.ReleaseLeadership()
 				// Wait for enough memebers of the original cluster to register
 				// themselves, and get the updated config.
@@ -251,10 +259,12 @@ func RunMember(grp string) {
 					db.DFatalf("Error read group config: %v", err)
 				}
 				raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
+				db.DPrintf("GROUP", "%v done waiting for replicas, config: %v", id, clusterCfg)
 			}
 		} else {
 			// Register self in the cluster config.
 			id, clusterCfg, raftCfg = g.registerInClusterConfig()
+			db.DPrintf("GROUP", "%v cluster already started: %v", id, clusterCfg)
 		}
 	}
 
@@ -265,6 +275,9 @@ func RunMember(grp string) {
 	if err1 != nil {
 		db.DFatalf("StartMemFs %v\n", err1)
 	}
+
+	crash.Partitioner(mfs)
+	crash.NetFailer(mfs)
 
 	sigmaAddrs := []string{}
 
@@ -286,10 +299,6 @@ func RunMember(grp string) {
 
 	// Release leadership.
 	g.ReleaseLeadership()
-	// XXX probably want to start these earlier...
-	crash.Crasher(g.FsLib)
-	crash.Partitioner(mfs)
-	crash.NetFailer(mfs)
 
 	mfs.Serve()
 	mfs.Done()

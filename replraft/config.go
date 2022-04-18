@@ -38,6 +38,7 @@ func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
 	if rc.started {
 		db.DFatalf("Update peers for started server")
 	}
+	rc.peerAddrs = []string{}
 	for _, addr := range new {
 		rc.peerAddrs = append(rc.peerAddrs, addr)
 	}

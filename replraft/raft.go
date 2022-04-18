@@ -214,6 +214,9 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 
 // Send a post request, indicating that the node will join the cluster.
 func (n *RaftNode) postNodeId() {
+	if len(n.peerAddrs) == 1 {
+		return
+	}
 	for i, addr := range n.peerAddrs {
 		if i == n.id-1 {
 			continue

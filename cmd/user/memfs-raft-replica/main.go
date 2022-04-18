@@ -45,7 +45,7 @@ func main() {
 	}
 	log.Printf("peers: %v id: %v", len(peers), id)
 
-	config := replraft.MakeRaftConfig(id, peers)
+	config := replraft.MakeRaftConfig(id, peers, true)
 
 	name := fmt.Sprintf("memfs-raft-replica-%v", id)
 

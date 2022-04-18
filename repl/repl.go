@@ -5,6 +5,10 @@ import (
 	"ulambda/threadmgr"
 )
 
+const (
+	PLACEHOLDER_ADDR = "PLACEHOLDER_ADDR"
+)
+
 type Config interface {
 	ReplAddr() string
 	String() string

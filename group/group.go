@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 
 	"ulambda/atomic"
@@ -16,25 +15,24 @@ import (
 	db "ulambda/debug"
 	"ulambda/electclnt"
 	"ulambda/fidclnt"
-	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/inode"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/repl"
 	"ulambda/replraft"
 )
 
 const (
-	GRPDIR           = "name/group/"
-	GRP              = "grp-"
-	GRPRAFTCONF      = "-raft-conf"
-	GRPCONF          = "-conf"
-	GRPCONFNXT       = "-conf-next"
-	GRPCONFNXTBK     = GRPCONFNXT + "#"
-	CTL              = "ctl"
-	PLACEHOLDER_ADDR = "PLACEHOLDER"
+	GRPDIR       = "name/group/"
+	GRP          = "grp-"
+	GRPRAFTCONF  = "-raft-conf"
+	TMP          = ".tmp"
+	GRPCONF      = "-conf"
+	GRPCONFNXT   = "-conf-next"
+	GRPCONFNXTBK = GRPCONFNXT + "#"
+	CTL          = "ctl"
 )
 
 func GrpDir(grp string) string {
@@ -45,7 +43,15 @@ func GrpSym(grp string) string {
 	return GRPDIR + grp
 }
 
-func GrpConfPath(grp string) string {
+func grpConfPath(grp string) string {
+	return GRPDIR + grp + GRPCONF
+}
+
+func grpTmpConfPath(grp string) string {
+	return GRPDIR + grp + GRPCONF + TMP
+}
+
+func grpElectPath(grp string) string {
 	return GRPDIR + grp + GRPCONF
 }
 
@@ -57,21 +63,13 @@ func grpConfNxtBk(grp string) string {
 	return GRPDIR + grp + GRPCONFNXTBK
 }
 
-func grpRaftAddrs(grp string) string {
-	return GRPDIR + grp + GRPRAFTCONF
-}
-
-type ReplicaAddrs struct {
-	SigmaAddrs []string
-	RaftAddrs  []string
-}
-
 type Group struct {
 	sync.Mutex
+	grp string
+	ip  string
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	ec     *electclnt.ElectClnt // We use an electclnt instead of an epochclnt because the config is stored in named. If we lose our connection to named & our leadership, we won't be able to write the config file anyway.
-	conf   *GrpConf
 	isBusy bool
 }
 
@@ -89,110 +87,99 @@ func (g *Group) clearBusy() {
 	g.isBusy = false
 }
 
-func RunMember(grp string) {
-	g := &Group{}
-	g.isBusy = true
-	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
-	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
-	g.ec = electclnt.MakeElectClnt(g.FsLib, GrpConfPath(grp), 0777)
-	crash.Crasher(g.FsLib)
-
-	// XXX need this?
-	g.MkDir(GRPDIR, 0777)
-
-	replicated, err := strconv.ParseBool(os.Getenv("SIGMAREPL"))
-	if err != nil {
-		db.DFatalf("invalid sigmarepl: %v", err)
-	}
-
+func (g *Group) AcquireLeadership() {
 	if err := g.ec.AcquireLeadership(nil); err != nil {
 		db.DFatalf("AcquireLeadership in group.RunMember: %v", err)
 	}
+	db.DPrintf("GROUP", "%v Acquire leadership", g.grp)
+}
 
-	// Read addrs
-	replicaAddrs, err := g.readReplicaAddrs(grp)
-	if err != nil && !np.IsErrNotfound(err) {
-		db.DFatalf("readReplicaAddrs in group.RunMember: %v", err)
-	}
-
-	// Add placeholders to the addrs, and write them back to make sure the same
-	// raft ID isn't reused.
-	replicaAddrs.SigmaAddrs = append(replicaAddrs.SigmaAddrs, PLACEHOLDER_ADDR)
-	replicaAddrs.RaftAddrs = append(replicaAddrs.RaftAddrs, PLACEHOLDER_ADDR)
-	g.writeReplicaAddrs(grp, replicaAddrs)
-
-	ip, err := fidclnt.LocalIP()
-	if err != nil {
-		db.DFatalf("group ip %v\n", err)
-	}
-
-	// Get raft id.
-	id := len(replicaAddrs.SigmaAddrs)
-	replicaAddrs.RaftAddrs[id-1] = ip + ":0"
-
-	var raftConfig *replraft.RaftConfig = nil
-	if replicated {
-		raftConfig = replraft.MakeRaftConfig(id, replicaAddrs.RaftAddrs)
-	}
-
-	// start server but don't publish its existence
-	mfs, err1 := fslibsrv.MakeReplMemFsFsl(replicaAddrs.RaftAddrs[id-1], "", g.FsLib, g.ProcClnt, raftConfig)
-	if err1 != nil {
-		db.DFatalf("StartMemFs %v\n", err1)
-	}
-
-	// Get the final sigma and repl addrs
-	replicaAddrs.SigmaAddrs[id-1] = mfs.MyAddr()
-	if replicated {
-		replicaAddrs.RaftAddrs[id-1] = raftConfig.ReplAddr()
-	}
-
-	// Update the stored addresses in named.
-	if err := g.writeReplicaAddrs(grp, replicaAddrs); err != nil {
-		db.DFatalf("write replica addrs: %v", err)
-	}
-
-	// Clean sigma addrs, removing placeholders...
-	sigmaAddrs := []string{}
-	for _, a := range replicaAddrs.SigmaAddrs {
-		if a != PLACEHOLDER_ADDR {
-			sigmaAddrs = append(sigmaAddrs, a)
-		}
-	}
-
-	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(grp), 0777|np.DMSYMLINK, fslib.MakeTarget(sigmaAddrs)); err != nil {
-		db.DFatalf("couldn't read replica addrs %v err %v", grp, err)
-	}
-
-	// Release leadership.
+func (g *Group) ReleaseLeadership() {
 	if err := g.ec.ReleaseLeadership(); err != nil {
 		db.DFatalf("release leadership: %v", err)
 	}
-
-	// XXX probably want to start these earlier...
-	crash.Partitioner(mfs)
-	crash.NetFailer(mfs)
-
-	mfs.Serve()
-	mfs.Done()
+	db.DPrintf("GROUP", "%v Release leadership", g.grp)
 }
 
-func (g *Group) readReplicaAddrs(grp string) (*ReplicaAddrs, error) {
-	ra := &ReplicaAddrs{}
-	err := g.GetFileJson(grpRaftAddrs(grp), ra)
+func (g *Group) waitForClusterConfig() {
+	cfg := &GroupConfig{}
+	if err := g.GetFileJsonWatch(grpConfPath(g.grp), cfg); err != nil {
+		db.DFatalf("Error wait for cluster config: %v", err)
+	}
+}
+
+// Find out if the initial cluster has started by looking for the group config.
+func (g *Group) clusterStarted() bool {
+	// If the final config doesn't exist yet, the cluster hasn't started.
+	if _, err := g.Stat(grpConfPath(g.grp)); np.IsErrNotfound(err) {
+		return false
+	} else {
+		// We don't expect any other errors
+		if err != nil {
+			db.DFatalf("Unexpected cluster config error: %v", err)
+		}
+	}
+	// Config found.
+	return true
+}
+
+func (g *Group) registerInTmpConfig() (int, *GroupConfig, *replraft.RaftConfig) {
+	return g.registerInConfig(grpTmpConfPath(g.grp), true)
+}
+
+func (g *Group) registerInClusterConfig() (int, *GroupConfig, *replraft.RaftConfig) {
+	return g.registerInConfig(grpConfPath(g.grp), false)
+}
+
+// Register self as new replica in a config file.
+func (g *Group) registerInConfig(path string, init bool) (int, *GroupConfig, *replraft.RaftConfig) {
+	// Read the current cluster config.
+	clusterCfg, _ := g.readGroupConfig(path)
+	clusterCfg.SigmaAddrs = append(clusterCfg.SigmaAddrs, repl.PLACEHOLDER_ADDR)
+	// Prepare peer addresses for raftlib.
+	clusterCfg.RaftAddrs = append(clusterCfg.RaftAddrs, g.ip+":0")
+	// Get the raft replica id.
+	id := len(clusterCfg.RaftAddrs)
+	// Create the raft config
+	raftCfg := replraft.MakeRaftConfig(id, clusterCfg.RaftAddrs, init)
+	// Get the listener address selected by the raft library.
+	clusterCfg.RaftAddrs[id-1] = raftCfg.ReplAddr()
+	if err := g.writeGroupConfig(path, clusterCfg); err != nil {
+		db.DFatalf("Error writing group config: %v", err)
+	}
+	return id, clusterCfg, raftCfg
+}
+
+func (g *Group) readGroupConfig(path string) (*GroupConfig, error) {
+	cfg := &GroupConfig{}
+	err := g.GetFileJson(path, cfg)
 	if err != nil {
 		db.DPrintf("GRP_ERR", "Error GetFileJson: %v", err)
-		return ra, err
+		return cfg, err
 	}
-	return ra, nil
+	return cfg, nil
 }
 
-func (g *Group) writeReplicaAddrs(grp string, ra *ReplicaAddrs) error {
-	err := atomic.PutFileJsonAtomic(g.FsLib, grpRaftAddrs(grp), 0777, ra)
+func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
+	err := atomic.PutFileJsonAtomic(g.FsLib, path, 0777, cfg)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (g *Group) writeSymlink(sigmaAddrs []string) {
+	// Clean sigma addrs, removing placeholders...
+	srvAddrs := []string{}
+	for _, a := range sigmaAddrs {
+		if a != repl.PLACEHOLDER_ADDR {
+			srvAddrs = append(srvAddrs, a)
+		}
+	}
+
+	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(g.grp), 0777|np.DMSYMLINK, fslib.MakeTarget(srvAddrs)); err != nil {
+		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
+	}
 }
 
 func (g *Group) op(opcode, kv string) *np.Err {
@@ -205,45 +192,105 @@ func (g *Group) op(opcode, kv string) *np.Err {
 	return nil
 }
 
-type GrpConf struct {
-	primary string
-	backups []string
-}
-
-func readGroupConf(fsl *fslib.FsLib, conffile string) (*GrpConf, error) {
-	conf := GrpConf{}
-	err := fsl.GetFileJson(conffile, &conf)
-	if err != nil {
-		return nil, err
-	}
-	return &conf, nil
-}
-
 func GroupOp(fsl *fslib.FsLib, primary, opcode, kv string) error {
 	s := opcode + " " + kv
 	_, err := fsl.SetFile(primary+"/"+CTL, []byte(s), np.OWRITE, 0)
 	return err
 }
 
-type GroupCtl struct {
-	fs.FsObj
-	g *Group
-}
-
-func makeGroupCtl(ctx fs.CtxI, parent fs.Dir, kv *Group) fs.FsObj {
-	i := inode.MakeInode(ctx, np.DMDEVICE, parent)
-	return &GroupCtl{i, kv}
-}
-
-func (c *GroupCtl) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	words := strings.Fields(string(b))
-	if len(words) != 2 {
-		return 0, np.MkErr(np.TErrInval, words)
+func RunMember(grp string) {
+	g := &Group{}
+	g.grp = grp
+	g.isBusy = true
+	g.FsLib = fslib.MakeFsLib("kv-" + proc.GetPid().String())
+	g.ProcClnt = procclnt.MakeProcClnt(g.FsLib)
+	g.ec = electclnt.MakeElectClnt(g.FsLib, grpElectPath(grp), 0777)
+	ip, err := fidclnt.LocalIP()
+	if err != nil {
+		db.DFatalf("group ip %v\n", err)
 	}
-	err := c.g.op(words[0], words[1])
-	return np.Tsize(len(b)), err
-}
+	g.ip = ip
 
-func (c *GroupCtl) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	return nil, nil
+	// XXX need this?
+	g.MkDir(GRPDIR, 0777)
+
+	var nReplicas int
+	nReplicas, err = strconv.Atoi(os.Getenv("SIGMAREPL"))
+	if err != nil {
+		db.DFatalf("invalid sigmarepl: %v", err)
+	}
+
+	db.DPrintf("GROUP", "Starting replica with replication level %v", nReplicas)
+
+	g.AcquireLeadership()
+
+	var raftCfg *replraft.RaftConfig = nil
+	// ID of this replica (one-indexed counter)
+	var id int
+	var clusterCfg *GroupConfig
+
+	// If running replicated...
+	if nReplicas > 0 {
+		// If the final cluster config hasn't been publisherd yet, this replica is
+		// part of the initial cluster. Register self as part of the initial cluster
+		// in the temporary cluster config, and wait for nReplicas to register
+		// themselves as well.
+		if !g.clusterStarted() {
+			id, clusterCfg, raftCfg = g.registerInTmpConfig()
+			// If we don't yet have enough replicas to start the cluster, wait for them
+			// to register themselves.
+			if id < nReplicas {
+				g.ReleaseLeadership()
+				// Wait for enough memebers of the original cluster to register
+				// themselves, and get the updated config.
+				g.waitForClusterConfig()
+				g.AcquireLeadership()
+				// Get the updated cluster config.
+				var err error
+				if clusterCfg, err = g.readGroupConfig(grpConfPath(grp)); err != nil {
+					db.DFatalf("Error read group config: %v", err)
+				}
+				raftCfg.UpdatePeerAddrs(clusterCfg.RaftAddrs)
+			}
+		} else {
+			// Register self in the cluster config.
+			id, clusterCfg, raftCfg = g.registerInClusterConfig()
+		}
+	}
+
+	db.DPrintf("GROUP", "Starting replica with cluster config %v", clusterCfg)
+
+	// start server but don't publish its existence
+	mfs, err1 := fslibsrv.MakeReplMemFsFsl(g.ip+":0", "", g.FsLib, g.ProcClnt, raftCfg)
+	if err1 != nil {
+		db.DFatalf("StartMemFs %v\n", err1)
+	}
+
+	sigmaAddrs := []string{}
+
+	// If running replicated...
+	if nReplicas > 0 {
+		// Get the final sigma addr
+		clusterCfg.SigmaAddrs[id-1] = mfs.MyAddr()
+		db.DPrintf("GROUP", "%v:%v Writing cluster config: %v", grp, id, clusterCfg)
+
+		if err := g.writeGroupConfig(grpConfPath(grp), clusterCfg); err != nil {
+			db.DFatalf("Write final group config: %v", err)
+		}
+		sigmaAddrs = clusterCfg.SigmaAddrs
+	} else {
+		sigmaAddrs = append(sigmaAddrs, mfs.MyAddr())
+	}
+
+	g.writeSymlink(sigmaAddrs)
+
+	// Release leadership.
+	g.ReleaseLeadership()
+	// XXX probably want to start these earlier...
+	crash.Crasher(g.FsLib)
+	crash.Partitioner(mfs)
+	crash.NetFailer(mfs)
+
+	mfs.Serve()
+	mfs.Done()
 }

@@ -10,6 +10,7 @@ import (
 )
 
 type RaftConfig struct {
+	started   bool // Indicates whether or not a server has already been started using this config.
 	id        int
 	peerAddrs []string
 	l         net.Listener
@@ -33,7 +34,17 @@ func MakeRaftConfig(id int, peerAddrs []string, init bool) *RaftConfig {
 	return rc
 }
 
+func (rc *RaftConfig) UpdatePeerAddrs(new []string) {
+	if rc.started {
+		db.DFatalf("Update peers for started server")
+	}
+	for _, addr := range new {
+		rc.peerAddrs = append(rc.peerAddrs, addr)
+	}
+}
+
 func (rc *RaftConfig) MakeServer(tm *threadmgr.ThreadMgr) repl.Server {
+	rc.started = true
 	return MakeRaftReplServer(rc.id, rc.peerAddrs, rc.l, rc.init, tm)
 }
 

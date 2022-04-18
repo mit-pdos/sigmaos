@@ -1,6 +1,7 @@
 package test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,9 @@ import (
 )
 
 type Tstate struct {
-	T *testing.T
+	sync.Mutex
+	wg sync.WaitGroup
+	T  *testing.T
 	*kernel.System
 	replicas []*kernel.System
 }
@@ -28,11 +31,20 @@ func (ts *Tstate) Shutdown() {
 	db.DPrintf("TEST", "Done shutting down")
 }
 
+func (ts *Tstate) addNamedReplica(i int) {
+	defer ts.wg.Done()
+	r := kernel.MakeSystemNamed("test", "..", i)
+	ts.Lock()
+	defer ts.Unlock()
+	ts.replicas = append(ts.replicas, r)
+}
+
 func (ts *Tstate) startReplicas() {
 	ts.replicas = []*kernel.System{}
 	// Start additional replicas
 	for i := 0; i < len(fslib.Named())-1; i++ {
-		ts.replicas = append(ts.replicas, kernel.MakeSystemNamed("test", "..", i+1))
+		// Needs to happen in a separate thread because MakeSystemNamed will block until the replicas are able to process requests.
+		go ts.addNamedReplica(i + 1)
 	}
 }
 
@@ -50,23 +62,41 @@ func MakeTstatePath(t *testing.T, path string) *Tstate {
 func MakeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
-	ts.System = kernel.MakeSystemNamed("test", "..", 0)
+	ts.wg.Add(len(fslib.Named()))
+	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
+	go func() {
+		defer ts.wg.Done()
+		ts.System = kernel.MakeSystemNamed("test", "..", 0)
+	}()
 	ts.startReplicas()
+	ts.wg.Wait()
 	return ts
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
-	ts.System = kernel.MakeSystemAll("test", "..", 0)
+	ts.wg.Add(len(fslib.Named()))
+	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
+	go func() {
+		defer ts.wg.Done()
+		ts.System = kernel.MakeSystemAll("test", "..", 0)
+	}()
 	ts.startReplicas()
+	ts.wg.Wait()
 	return ts
 }
 
 func MakeTstateAllBin(t *testing.T, bin string) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
-	ts.System = kernel.MakeSystemAll("test", bin, 0)
+	ts.wg.Add(len(fslib.Named()))
+	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
+	go func() {
+		defer ts.wg.Done()
+		ts.System = kernel.MakeSystemAll("test", bin, 0)
+	}()
 	ts.startReplicas()
+	ts.wg.Wait()
 	return ts
 }

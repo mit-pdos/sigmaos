@@ -1,13 +1,24 @@
-package group
+package group_test
 
 import (
-	//"log"
+	"path"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
+	"ulambda/group"
 	"ulambda/groupmgr"
+	np "ulambda/ninep"
 	"ulambda/test"
+)
+
+const (
+	CRASH_KVD = 5000
+	GRP_PATH  = "name/group/grp-0"
+	N_REPL    = 3
+	N_KEYS    = 10000
 )
 
 type Tstate struct {
@@ -15,19 +26,85 @@ type Tstate struct {
 	gm *groupmgr.GroupMgr
 }
 
-func makeTstate(t *testing.T, crash int) *Tstate {
+func makeTstate(t *testing.T, nrepl, ncrash int) *Tstate {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, 1, "bin/user/kvd", []string{GRP + "0"}, 0, 0, 0, 0)
+	ts.gm = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, nrepl, "bin/user/kvd", []string{group.GRP + "0"}, ncrash, CRASH_KVD, 0, 0)
 	return ts
 }
 
-func TestStartStopGroup(t *testing.T) {
-	ts := makeTstate(t, 0)
+func (ts *Tstate) setupKeys(nkeys int) {
+	db.DPrintf("TEST", "setupKeys")
+	for i := 0; i < nkeys; i++ {
+		i_str := strconv.Itoa(i)
+		fname := path.Join(GRP_PATH, i_str)
+		_, err := ts.PutFile(fname, 0777, np.OWRITE|np.OREAD, []byte(i_str))
+		assert.Nil(ts.T, err, "Put %v", err)
+	}
+	db.DPrintf("TEST", "done setupKeys")
+}
+
+func (ts *Tstate) testGetPutSet(nkeys int) {
+	db.DPrintf("TEST", "testGetPutSet")
+	for i := 0; i < nkeys; i++ {
+		i_str := strconv.Itoa(i)
+		fname := path.Join(GRP_PATH, i_str)
+		b, err := ts.GetFile(fname)
+		assert.Nil(ts.T, err, "Get %v", err)
+		assert.Equal(ts.T, i_str, string(b), "Didn't read expected")
+		_, err = ts.PutFile(fname, 0777, np.OWRITE|np.OREAD, []byte(i_str))
+		assert.NotNil(ts.T, err, "Put nil")
+		_, err = ts.SetFile(fname, []byte(i_str+i_str), np.OWRITE|np.OREAD, 0)
+		assert.Nil(ts.T, err, "Set %v", err)
+	}
+	db.DPrintf("TEST", "done testGetPutSet")
+}
+
+func TestStartStop(t *testing.T) {
+	ts := makeTstate(t, 0, 0)
 	err := ts.gm.Stop()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown()
 }
+
+func TestStartStopRepl1(t *testing.T) {
+	ts := makeTstate(t, 1, 0)
+	err := ts.gm.Stop()
+	assert.Nil(ts.T, err, "Stop")
+	ts.Shutdown()
+}
+
+func TestStartStopReplN(t *testing.T) {
+	ts := makeTstate(t, N_REPL, 0)
+	err := ts.gm.Stop()
+	assert.Nil(ts.T, err, "Stop")
+	ts.Shutdown()
+}
+
+func TestGetPutSetReplOK(t *testing.T) {
+	ts := makeTstate(t, N_REPL, 0)
+	ts.setupKeys(N_KEYS)
+	ts.testGetPutSet(N_KEYS)
+	err := ts.gm.Stop()
+	assert.Nil(ts.T, err, "Stop")
+	ts.Shutdown()
+}
+
+func TestGetPutSetFail1(t *testing.T) {
+	ts := makeTstate(t, N_REPL, 1)
+	ts.setupKeys(N_KEYS)
+	ts.testGetPutSet(N_KEYS)
+	err := ts.gm.Stop()
+	assert.Nil(ts.T, err, "Stop")
+	ts.Shutdown()
+}
+
+//func TestStartStopGroup(t *testing.T) {
+//	ts := makeTstate(t, 0)
+//	err := ts.gm.Stop()
+//	assert.Nil(ts.T, err, "Stop")
+//	ts.Shutdown()
+//}
 
 // func follower(t *testing.T, i int, N int, fn string) {
 // 	I := strconv.Itoa(i)

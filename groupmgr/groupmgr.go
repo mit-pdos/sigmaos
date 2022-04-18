@@ -33,7 +33,7 @@ type member struct {
 	bin       string
 	args      []string
 	crash     int
-	repl      bool
+	nReplicas int
 	partition int
 	netfail   int
 }
@@ -48,8 +48,8 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, repl bool, partition, netfail int) *member {
-	return &member{fsl, pclnt, "", bin, args, crash, repl, partition, netfail}
+func makeMember(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, bin string, args []string, crash int, nReplicas int, partition, netfail int) *member {
+	return &member{fsl, pclnt, "", bin, args, crash, nReplicas, partition, netfail}
 }
 
 func (m *member) spawn() error {
@@ -57,7 +57,7 @@ func (m *member) spawn() error {
 	p.AppendEnv(proc.SIGMACRASH, strconv.Itoa(m.crash))
 	p.AppendEnv(proc.SIGMAPARTITION, strconv.Itoa(m.partition))
 	p.AppendEnv(proc.SIGMANETFAIL, strconv.Itoa(m.netfail))
-	p.AppendEnv("SIGMAREPL", strconv.FormatBool(m.repl))
+	p.AppendEnv("SIGMAREPL", strconv.Itoa(m.nReplicas))
 	if err := m.Spawn(p); err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		} else {
 			db.DPrintf("GROUPMGR", "group %v member %v crash %v\n", args, i, crashMember)
 		}
-		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n > 0, partition, netfail)
+		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n, partition, netfail)
 	}
 	done := make(chan procret)
 	for i, m := range gm.members {

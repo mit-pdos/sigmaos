@@ -90,14 +90,14 @@ func TestGetPutSetReplOK(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestGetPutSetFail1(t *testing.T) {
-	ts := makeTstate(t, N_REPL, 1)
-	ts.setupKeys(N_KEYS)
-	ts.testGetPutSet(N_KEYS)
-	err := ts.gm.Stop()
-	assert.Nil(ts.T, err, "Stop")
-	ts.Shutdown()
-}
+//func TestGetPutSetFail1(t *testing.T) {
+//	ts := makeTstate(t, N_REPL, 1)
+//	ts.setupKeys(N_KEYS)
+//	ts.testGetPutSet(N_KEYS)
+//	err := ts.gm.Stop()
+//	assert.Nil(ts.T, err, "Stop")
+//	ts.Shutdown()
+//}
 
 //func TestStartStopGroup(t *testing.T) {
 //	ts := makeTstate(t, 0)

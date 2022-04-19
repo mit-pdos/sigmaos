@@ -18,3 +18,10 @@ const (
 const (
 	PROCD_WORK_STEAL_TIMEOUT_MS = 100 // Procd work steal frequency.
 )
+
+// Raft constants
+const (
+	RAFT_TICK_MS         = 25 // Frequency with which the raft library ticks
+	RAFT_ELECT_NTICKS    = 4  // Number of ticks with no leader heartbeat after which a follower starts an election.
+	RAFT_HEARTBEAT_TICKS = 1  // Number of heartbeats per tick.
+)

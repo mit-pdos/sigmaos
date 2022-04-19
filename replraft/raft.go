@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	db "ulambda/debug"
+	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
@@ -59,8 +60,8 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener,
 	node.storage = raft.NewMemoryStorage()
 	node.config = &raft.Config{
 		ID:                        uint64(id),
-		ElectionTick:              10,
-		HeartbeatTick:             1,
+		ElectionTick:              np.RAFT_ELECT_NTICKS,
+		HeartbeatTick:             np.RAFT_HEARTBEAT_TICKS,
 		Storage:                   node.storage,
 		MaxSizePerMsg:             4096,
 		MaxInflightMsgs:           256,
@@ -128,7 +129,7 @@ func (n *RaftNode) serveChannels() {
 	n.snapshotIndex = snap.Metadata.Index
 	n.appliedIndex = snap.Metadata.Index
 
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(np.RAFT_TICK_MS * time.Millisecond)
 	defer ticker.Stop()
 
 	go n.sendProposals()

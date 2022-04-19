@@ -55,7 +55,7 @@ func symname(r int, name string) string {
 //
 // The coordinator creates one thread per input file, which looks for
 // a file name in MDIR. If thread finds a name, it claims it by
-// renaming it into MDIR+TIP to record to that a task for name is in
+// renaming it into MDIR+TIP to record that a task for name is in
 // progress.  Then, the thread creates a mapper proc (task) to process
 // the input file.  Mapper i creates <r> output shards, one for each
 // reducer.  Once the mapper completes an output shard, it creates a
@@ -67,11 +67,11 @@ func symname(r int, name string) string {
 // The coordinator creates one thread per reducer, which grabs <r>
 // from RDIR, and records in RDIR+TIP that reducer <r> is in progress.
 // The thread creates a reducer proc that looks in dir RIN+/r for
-// symlinks to process (one symlink per mapper). The symlinks contain
-// the pathname where the mapper puts its shard for this reducer.  The
-// reducer writes it output to ROUT+<r>.  If the reducer task exits
-// successfully, the coordinator renames RDIR+TIP+r into RDIR+DONE, to
-// record that this reducer task has completed.
+// symlinks to process (one symlink per mapper task). The symlinks
+// contain the pathname where the mapper puts its shard for this
+// reducer.  The reducer writes it output to ROUT+<r>.  If the reducer
+// task exits successfully, the coordinator renames RDIR+TIP+r into
+// RDIR+DONE, to record that this reducer task has completed.
 //
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
@@ -291,6 +291,14 @@ func (c *Coord) recover(dir string) {
 	}
 }
 
+func mkStringSlice(data []interface{}) []string {
+	s := make([]string, 0, len(data))
+	for _, o := range data {
+		s = append(s, o.(string))
+	}
+	return s
+}
+
 func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, error)) {
 	db.DPrintf(db.ALWAYS, "Phase start %v\n", dir)
 	start := time.Now()
@@ -304,9 +312,9 @@ func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, 
 			// If we're reducing and can't find some mapper output, a ux may have
 			// crashed. So, restart those map tasks.
 			if dir == RDIR && res.status.Msg() == RESTART {
-				db.DPrintf(db.ALWAYS, "restart data %v\n", res.status.Data())
-				lostMappers := res.status.Data().([]string)
-				c.restartMappers(lostMappers)
+				s := mkStringSlice(res.status.Data().([]interface{}))
+				db.DPrintf(db.ALWAYS, "restart %v\n", s)
+				c.restartMappers(s)
 				ok = false
 			} else {
 				n += c.startTasks(dir, ch, f)

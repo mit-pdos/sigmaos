@@ -80,6 +80,9 @@ func JsonBufReader(rdr *bufio.Reader, mk func() interface{}, f func(i interface{
 		if err != nil && err == io.EOF {
 			break
 		}
+		if err != nil {
+			return err
+		}
 		data := make([]byte, l)
 		if n, err := io.ReadFull(rdr, data); err != nil {
 			return err

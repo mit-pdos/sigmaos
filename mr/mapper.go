@@ -3,7 +3,6 @@ package mr
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strconv"
@@ -122,12 +121,12 @@ func (m *Mapper) informReducer() error {
 			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(), fn+m.rand, fn, err)
 		}
 
-		name := symname(r, m.file)
+		name := symname(strconv.Itoa(r), m.file)
 
 		// Remove name in case an earlier mapper created the
-		// symlink.  A reducer will have opened and is reading
+		// symlink.  A reducer may have opened and is reading
 		// the old target, open the new input file and read
-		// the new target, or file because there is no
+		// the new target, or fail because there is no
 		// symlink. Failing is fine because the coodinator
 		// will start a new reducer once this map completes.
 		// We could use rename to atomically remove and create
@@ -137,12 +136,6 @@ func (m *Mapper) informReducer() error {
 		target := shardtarget(st.Name, m.file, r)
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
-			if np.IsErrNotfound(err) {
-				// If the reducer successfully completed, the reducer dir won't be found.
-				// In that case, we don't want to mark the mapper as "failed", since this
-				// will loop infinitely.
-				log.Printf("%v: symlink %v err %v\n", proc.GetName(), name, err)
-			}
 			db.DFatalf("%v: FATAL symlink %v err %v\n", proc.GetName(), name, err)
 		}
 	}

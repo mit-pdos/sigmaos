@@ -102,6 +102,7 @@ func (r *Reducer) readFile(ch chan result, file string) {
 		return nil
 	})
 	if err != nil {
+		db.DPrintf("MR", "JsonReader %v err %v\n", sym, err)
 		ch <- result{nil, file, false}
 	} else {
 		ch <- result{kvs, file, true}
@@ -131,10 +132,10 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 			}
 		}
 		for i := 0; i < n; i++ {
-			r := <-ch
-			files[r.name] = true
-			db.DPrintf("REDUCE", "Read %v ok %v\n", r.name, r.ok)
-			if !r.ok {
+			res := <-ch
+			files[res.name] = true
+			db.DPrintf("REDUCE", "Read %v ok %v\n", res.name, res.ok)
+			if !res.ok {
 				// If !ok, then readFile failed to
 				// read input shard, perhaps the
 				// server holding the mapper's output
@@ -143,9 +144,9 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 				// mappers, but keep going processing
 				// other shards to see if more mappers
 				// need to be restarted.
-				lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
+				lostMaps = append(lostMaps, strings.TrimPrefix(res.name, "m-"))
 			} else {
-				kvs = append(kvs, r.kvs...)
+				kvs = append(kvs, res.kvs...)
 			}
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -71,8 +70,7 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 type result struct {
 	kvs  []*KeyValue
 	name string
-	done bool
-	err  error
+	ok   bool
 }
 
 func (r *Reducer) readFile(ch chan result, file string) {
@@ -86,7 +84,7 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	rdr, err := fsl.OpenReader(sym)
 	if err != nil {
 		db.DPrintf("MR", "MakeReader %v err %v", sym, err)
-		ch <- result{nil, "", false, err}
+		ch <- result{nil, file, false}
 		return
 	}
 	defer rdr.Close()
@@ -99,14 +97,14 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	//}
 	err = fslib.JsonReader(brdr, func() interface{} { return new(KeyValue) }, func(a interface{}) error {
 		kv := a.(*KeyValue)
-		db.DPrintf("REDUCE", "reduce %v: kv %v\n", file, kv)
+		db.DPrintf("REDUCE1", "reduce %v/%v: kv %v\n", r.input, file, kv)
 		kvs = append(kvs, kv)
 		return nil
 	})
 	if err != nil {
-		ch <- result{nil, file, false, nil}
+		ch <- result{nil, file, false}
 	} else {
-		ch <- result{kvs, file, true, nil}
+		ch <- result{kvs, file, true}
 	}
 	db.DPrintf("MR0", "Reduce readfile %v %v\n", sym, time.Since(start).Milliseconds())
 }
@@ -134,20 +132,17 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 		}
 		for i := 0; i < n; i++ {
 			r := <-ch
-			if r.err != nil {
-				// another reducer already processed input
-				// file; nothing to be done; bail out.
-				return nil, nil, err
-			}
 			files[r.name] = true
-			db.DPrintf("REDUCE", "Read %v done %v\n", r.name, r.done)
-			if !r.done {
-				// If error is true, then either another
-				// reducer already did the job (the input dir
-				// is missing), the server holding the
-				// mapper's output crashed, or is unreachable
-				// (in which case we need to restart that
-				// mapper).
+			db.DPrintf("REDUCE", "Read %v ok %v\n", r.name, r.ok)
+			if !r.ok {
+				// If !ok, then readFile failed to
+				// read input shard, perhaps the
+				// server holding the mapper's output
+				// crashed, or is unreachable. Keep
+				// track that we need to restart that
+				// mappers, but keep going processing
+				// other shards to see if more mappers
+				// need to be restarted.
 				lostMaps = append(lostMaps, strings.TrimPrefix(r.name, "m-"))
 			} else {
 				kvs = append(kvs, r.kvs...)
@@ -171,7 +166,6 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: readFiles %v err %v\n", proc.GetName(), r.input, err), nil)
 	}
 	if len(lostMaps) > 0 {
-		log.Printf("lost maps %v\n", lostMaps)
 		return proc.MakeStatusErr(RESTART, lostMaps)
 	}
 

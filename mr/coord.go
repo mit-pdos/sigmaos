@@ -3,7 +3,6 @@ package mr
 import (
 	"errors"
 	"fmt"
-	"log"
 	"path"
 	"strconv"
 	"time"
@@ -22,7 +21,7 @@ const (
 	MRDIR   = "name/mr"
 	MDIR    = MRDIR + "/m"
 	RDIR    = MRDIR + "/r"
-	RIN     = MRDIR + "-in/"
+	RIN     = MRDIR + "-rin/"
 	ROUT    = MRDIR + "/" + "mr-out-"
 	TIP     = "-tip/"
 	DONE    = "-done/"
@@ -305,7 +304,7 @@ func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, 
 			// If we're reducing and can't find some mapper output, a ux may have
 			// crashed. So, restart those map tasks.
 			if dir == RDIR && res.status.Msg() == RESTART {
-				log.Printf("data %v\n", res.status.Data())
+				db.DPrintf(db.ALWAYS, "restart data %v\n", res.status.Data())
 				lostMappers := res.status.Data().([]string)
 				c.restartMappers(lostMappers)
 				ok = false

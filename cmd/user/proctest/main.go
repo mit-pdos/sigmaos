@@ -77,7 +77,9 @@ func main() {
 			ch <- nil
 
 		})
-		if err != nil {
+
+		if err != nil && !(os.Args[2] == "bin/user/crash" && err.Error == "status error exit status 2") {
+
 			pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 			os.Exit(1)
 		}

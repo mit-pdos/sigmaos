@@ -101,7 +101,7 @@ func TestProcCrashMany(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.Pid)
 	assert.Nil(t, err, "waitexit")
-	assert.Equal(t, "status error exit status 2", status.Msg(), "exit")
+	assert.True(t, status.IsStatusOK(), status)
 	ts.Shutdown()
 }
 

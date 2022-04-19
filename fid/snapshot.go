@@ -24,12 +24,8 @@ func MakePobjSnapshot() *PobjSnapshot {
 func (po *Pobj) Snapshot() []byte {
 	ps := MakePobjSnapshot()
 	ps.Path = po.Path()
-	if po.Obj() == nil {
-		ps.Obj = 0
-	} else {
-		ps.Obj = po.Obj().Qid().Path
-		ps.CtxSnap = po.Ctx().Snapshot()
-	}
+	ps.Obj = po.Obj().Qid().Path
+	ps.CtxSnap = po.Ctx().Snapshot()
 	b, err := json.Marshal(ps)
 	if err != nil {
 		db.DFatalf("Error snapshot encoding fid: %v", err)

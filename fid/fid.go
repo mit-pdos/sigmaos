@@ -10,27 +10,51 @@ import (
 	"ulambda/npcodec"
 )
 
-type Fid struct {
-	mu     sync.Mutex
-	path   np.Path
-	obj    fs.FsObj
-	isOpen bool
-	m      np.Tmode
-	qid    np.Tqid // the qid of obj at the time of invoking MakeFidPath
-	ctx    fs.CtxI
-	cursor int // for directories
+type Pobj struct {
+	path np.Path
+	obj  fs.FsObj
+	ctx  fs.CtxI
 }
 
-func MakeFidPath(p np.Path, o fs.FsObj, m np.Tmode, ctx fs.CtxI, qid np.Tqid) *Fid {
-	return &Fid{sync.Mutex{}, p, o, false, m, qid, ctx, 0}
+func MkPobj(p np.Path, o fs.FsObj, ctx fs.CtxI) *Pobj {
+	return &Pobj{p, o, ctx}
+}
+
+func (po *Pobj) Path() np.Path {
+	return po.path
+}
+
+func (po *Pobj) Ctx() fs.CtxI {
+	return po.ctx
+}
+
+func (po *Pobj) SetPath(path np.Path) {
+	po.path = path
+}
+
+func (po *Pobj) Obj() fs.FsObj {
+	return po.obj
+}
+
+func (po *Pobj) SetObj(o fs.FsObj) {
+	po.obj = o
+}
+
+type Fid struct {
+	mu     sync.Mutex
+	isOpen bool
+	po     *Pobj
+	m      np.Tmode
+	qid    np.Tqid // the qid of obj at the time of invoking MakeFidPath
+	cursor int     // for directories
+}
+
+func MakeFidPath(pobj *Pobj, m np.Tmode, qid np.Tqid) *Fid {
+	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 
 func (f *Fid) String() string {
-	return fmt.Sprintf("p %v o? %v %v v %v obj %v", f.path, f.isOpen, f.m, f.qid, f.obj)
-}
-
-func (f *Fid) Ctx() fs.CtxI {
-	return f.ctx
+	return fmt.Sprintf("po %v o? %v %v v %v", f.po, f.isOpen, f.m, f.qid)
 }
 
 func (f *Fid) Mode() np.Tmode {
@@ -42,52 +66,34 @@ func (f *Fid) SetMode(m np.Tmode) {
 	f.m = m
 }
 
-func (f *Fid) IsOpen() bool {
-	return f.isOpen
+func (f *Fid) Pobj() *Pobj {
+	return f.po
 }
 
-func (f *Fid) Path() np.Path {
-	return f.path
+func (f *Fid) IsOpen() bool {
+	return f.isOpen
 }
 
 func (f *Fid) Qid() np.Tqid {
 	return f.qid
 }
 
-func (f *Fid) SetPath(path np.Path) {
-	f.path = path
-}
-
-func (f *Fid) ObjU() fs.FsObj {
-	return f.obj
-}
-
 func (f *Fid) Close() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.obj = nil
+	f.po = nil
 	f.isOpen = false
 }
 
-func (f *Fid) Obj() fs.FsObj {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.obj
-}
-
-func (f *Fid) SetObj(o fs.FsObj) {
-	f.obj = o
-}
-
 func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	o := f.Obj()
+	o := f.Pobj().Obj()
 	var err *np.Err
 	sz := np.Tsize(0)
 	switch i := o.(type) {
 	case fs.File:
-		sz, err = i.Write(f.ctx, off, b, v)
+		sz, err = i.Write(f.Pobj().Ctx(), off, b, v)
 	case fs.Dir:
-		sz, err = i.WriteDir(f.ctx, off, b, v)
+		sz, err = i.WriteDir(f.Pobj().Ctx(), off, b, v)
 	default:
 		db.DFatalf("Write: obj type %T isn't Dir or File\n", o)
 	}
@@ -96,7 +102,7 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 
 func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
 	d := o.(fs.Dir)
-	dirents, err := d.ReadDir(f.ctx, f.cursor, count, v)
+	dirents, err := d.ReadDir(f.Pobj().Ctx(), f.cursor, count, v)
 	if err != nil {
 		return err
 	}
@@ -110,19 +116,19 @@ func (f *Fid) readDir(o fs.FsObj, off np.Toffset, count np.Tsize, v np.TQversion
 }
 
 func (f *Fid) Read(off np.Toffset, count np.Tsize, v np.TQversion, rets *np.Rread) *np.Err {
-	o := f.Obj()
-	switch i := o.(type) {
+	po := f.Pobj()
+	switch i := po.Obj().(type) {
 	case fs.Dir:
-		return f.readDir(o, off, count, v, rets)
+		return f.readDir(po.Obj(), off, count, v, rets)
 	case fs.File:
-		b, err := i.Read(f.ctx, off, count, v)
+		b, err := i.Read(po.Ctx(), off, count, v)
 		if err != nil {
 			return err
 		}
 		rets.Data = b
 		return nil
 	default:
-		db.DFatalf("Read: obj %v type %T isn't Dir or File\n", o, o)
+		db.DFatalf("Read: obj %v type %T isn't Dir or File\n", po.Obj(), po.Obj())
 		return nil
 	}
 }

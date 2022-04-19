@@ -28,9 +28,9 @@ func (fos *ProtSrv) snapshot() []byte {
 	for fid, f := range fos.ft.fids {
 		foss.Fid[fid] = f.Snapshot()
 	}
-	for o, f := range fos.et.ephemeral {
-		ptr := o.Qid().Path
-		foss.Ephemeral[ptr] = f.Snapshot()
+	for _, po := range fos.et.ephemeral {
+		ptr := po.Obj().Qid().Path
+		foss.Ephemeral[ptr] = po.Snapshot()
 	}
 	foss.Sid = fos.sid
 	b, err := json.Marshal(foss)
@@ -53,7 +53,7 @@ func Restore(srv np.FsServer, b []byte) np.Protsrv {
 	}
 	for ptr, b := range foss.Ephemeral {
 		o := ssrv.GetSnapshotter().RestoreFsTree(ptr)
-		fos.et.ephemeral[o] = fid.Restore(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
+		fos.et.ephemeral[o] = fid.RestorePobj(ssrv.GetSnapshotter().RestoreFsTree, ssrv.GetSessCondTable(), b)
 	}
 	return fos
 }

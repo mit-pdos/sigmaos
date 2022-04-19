@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"ulambda/fid"
-	"ulambda/fs"
 	np "ulambda/ninep"
 )
 
@@ -36,23 +35,20 @@ func (ft *fidTable) Add(fid np.Tfid, f *fid.Fid) {
 	ft.fids[fid] = f
 }
 
-func (ft *fidTable) Del(fid np.Tfid) (fs.FsObj, bool) {
+func (ft *fidTable) Del(fid np.Tfid) {
 	ft.Lock()
 	defer ft.Unlock()
-
-	o := ft.fids[fid].ObjU()
 	delete(ft.fids, fid)
-	return o, true
 }
 
 func (ft *fidTable) ClunkOpen() {
 	ft.Lock()
 	defer ft.Unlock()
 
-	for fid, f := range ft.fids {
-		o := ft.fids[fid].ObjU()
+	for _, f := range ft.fids {
+		o := f.Pobj().Obj()
 		if f.IsOpen() { // has the fid been opened?
-			o.Close(f.Ctx(), f.Mode())
+			o.Close(f.Pobj().Ctx(), f.Mode())
 		}
 	}
 }

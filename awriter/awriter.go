@@ -32,8 +32,7 @@ func (w *Writer) writer() {
 			n, err := w.wrt.Write(w.buf[0:w.len])
 			if err != nil {
 				w.err = err
-			}
-			if n != w.len {
+			} else if n != w.len {
 				w.err = fmt.Errorf("short write")
 			}
 			w.len = 0
@@ -49,11 +48,11 @@ func (w *Writer) Write(p []byte) (int, error) {
 
 	db.DPrintf("AWRITER", "awrwite %p %v\n", w.wrt, len(p))
 
+	for w.len > 0 && w.err != nil {
+		w.producer.Wait()
+	}
 	if w.err != nil {
 		return 0, w.err
-	}
-	for w.len > 0 {
-		w.producer.Wait()
 	}
 	copy(w.buf, p)
 	w.len = len(p)

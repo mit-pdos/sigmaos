@@ -3,7 +3,6 @@ package mr
 import (
 	"errors"
 	"fmt"
-	"path"
 	"strconv"
 	"time"
 
@@ -44,8 +43,8 @@ func shardtarget(server, name string, r int) string {
 	return np.UX + "/" + server + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
 }
 
-func symname(r int, name string) string {
-	return RIN + "/" + strconv.Itoa(r) + "/m-" + name
+func symname(r string, name string) string {
+	return RIN + "/" + r + "/m-" + name
 }
 
 //
@@ -230,13 +229,26 @@ func (c *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 	return n
 }
 
-func (c *Coord) restartMappers(files []string) {
-	db.DPrintf(db.ALWAYS, "restart mappers %v\n", files)
+func (c *Coord) restartMappers(files []string, task string) {
+	db.DPrintf(db.ALWAYS, "restart mappers %v for %v\n", files, task)
 	for _, f := range files {
-		n := path.Join(MDIR, f)
-		if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-			db.DFatalf("PutFile %v err %v\n", n, err)
+		// Remove symfile so that when coordinator restarts
+		// reducers it, the reducers wait for the mappers to
+		// make new symfiles.
+		sym := symname(task, f)
+		if err := c.Remove(sym); err != nil {
+			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
 		}
+		s := MDIR + DONE + "/" + f
+		d := MDIR + "/" + f
+		if err := c.Rename(s, d); err != nil {
+			db.DPrintf(db.ALWAYS, "rename %v %v err %v\n", s, d, err)
+		}
+		//
+		// n := path.Join(MDIR, f)
+		//if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
+		//db.DFatalf("PutFile %v err %v\n", n, err)
+		//}
 	}
 }
 
@@ -248,6 +260,7 @@ func (c *Coord) processResult(dir string, res Ttask) {
 		d := dir + DONE + "/" + res.task
 		if err := c.Rename(s, d); err != nil {
 			db.DFatalf("rename task done %v to %v err %v\n", s, d, err)
+
 		}
 	} else {
 		// task failed; make it runnable again
@@ -309,12 +322,12 @@ func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, 
 		res := <-ch
 		c.processResult(dir, res)
 		if !res.status.IsStatusOK() {
-			// If we're reducing and can't find some mapper output, a ux may have
-			// crashed. So, restart those map tasks.
+			// If we're reducing and can't find some
+			// mapper output, a ux may have crashed. So,
+			// restart those map tasks.
 			if dir == RDIR && res.status.Msg() == RESTART {
 				s := mkStringSlice(res.status.Data().([]interface{}))
-				db.DPrintf(db.ALWAYS, "restart %v\n", s)
-				c.restartMappers(s)
+				c.restartMappers(s, res.task)
 				ok = false
 			} else {
 				n += c.startTasks(dir, ch, f)

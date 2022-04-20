@@ -9,12 +9,13 @@ type Path []string
 
 var slash *regexp.Regexp
 
+func init() {
+	slash = regexp.MustCompile(`//+`)
+}
+
 func Split(p string) Path {
 	if p == "" {
 		return Path{}
-	}
-	if slash == nil {
-		slash = regexp.MustCompile(`//+`)
 	}
 	p = strings.TrimRight(p, "/")
 	p = slash.ReplaceAllString(p, "/")

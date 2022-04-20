@@ -2,6 +2,7 @@ package awriter
 
 import (
 	"fmt"
+	"io"
 	"sync"
 
 	db "ulambda/debug"
@@ -32,9 +33,8 @@ func (w *Writer) writer() {
 			n, err := w.wrt.Write(w.buf[0:w.len])
 			if err != nil {
 				w.err = err
-			}
-			if n != w.len {
-				w.err = fmt.Errorf("short write")
+			} else if n != w.len {
+				w.err = io.ErrShortWrite
 			}
 			w.len = 0
 			w.producer.Signal()
@@ -49,11 +49,15 @@ func (w *Writer) Write(p []byte) (int, error) {
 
 	db.DPrintf("AWRITER", "awrwite %p %v\n", w.wrt, len(p))
 
+	if w.exit {
+		return 0, fmt.Errorf("Writer is closed")
+	}
+
+	for w.len > 0 && w.err == nil {
+		w.producer.Wait()
+	}
 	if w.err != nil {
 		return 0, w.err
-	}
-	for w.len > 0 {
-		w.producer.Wait()
 	}
 	copy(w.buf, p)
 	w.len = len(p)
@@ -66,12 +70,15 @@ func (w *Writer) Close() error {
 	defer w.Unlock()
 
 	db.DPrintf("AWRITER", "close awrwite %p %v\n", w.wrt, w.exit)
-
 	if w.exit {
 		return fmt.Errorf("Writer is closed")
 	}
-	for w.len > 0 {
+
+	for w.len > 0 && w.err == nil {
 		w.producer.Wait()
+	}
+	if w.err != nil {
+		return w.err
 	}
 	w.exit = true
 	w.consumer.Signal()

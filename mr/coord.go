@@ -3,8 +3,6 @@ package mr
 import (
 	"errors"
 	"fmt"
-	"log"
-	"path"
 	"strconv"
 	"time"
 
@@ -22,7 +20,7 @@ const (
 	MRDIR   = "name/mr"
 	MDIR    = MRDIR + "/m"
 	RDIR    = MRDIR + "/r"
-	RIN     = MRDIR + "-in/"
+	RIN     = MRDIR + "-rin/"
 	ROUT    = MRDIR + "/" + "mr-out-"
 	TIP     = "-tip/"
 	DONE    = "-done/"
@@ -45,8 +43,8 @@ func shardtarget(server, name string, r int) string {
 	return np.UX + "/" + server + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
 }
 
-func symname(r int, name string) string {
-	return RIN + "/" + strconv.Itoa(r) + "/m-" + name
+func symname(r string, name string) string {
+	return RIN + "/" + r + "/m-" + name
 }
 
 //
@@ -56,7 +54,7 @@ func symname(r int, name string) string {
 //
 // The coordinator creates one thread per input file, which looks for
 // a file name in MDIR. If thread finds a name, it claims it by
-// renaming it into MDIR+TIP to record to that a task for name is in
+// renaming it into MDIR+TIP to record that a task for name is in
 // progress.  Then, the thread creates a mapper proc (task) to process
 // the input file.  Mapper i creates <r> output shards, one for each
 // reducer.  Once the mapper completes an output shard, it creates a
@@ -68,11 +66,11 @@ func symname(r int, name string) string {
 // The coordinator creates one thread per reducer, which grabs <r>
 // from RDIR, and records in RDIR+TIP that reducer <r> is in progress.
 // The thread creates a reducer proc that looks in dir RIN+/r for
-// symlinks to process (one symlink per mapper). The symlinks contain
-// the pathname where the mapper puts its shard for this reducer.  The
-// reducer writes it output to ROUT+<r>.  If the reducer task exits
-// successfully, the coordinator renames RDIR+TIP+r into RDIR+DONE, to
-// record that this reducer task has completed.
+// symlinks to process (one symlink per mapper task). The symlinks
+// contain the pathname where the mapper puts its shard for this
+// reducer.  The reducer writes it output to ROUT+<r>.  If the reducer
+// task exits successfully, the coordinator renames RDIR+TIP+r into
+// RDIR+DONE, to record that this reducer task has completed.
 //
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
@@ -231,13 +229,26 @@ func (c *Coord) startTasks(dir string, ch chan Ttask, f func(string) (*proc.Stat
 	return n
 }
 
-func (c *Coord) restartMappers(files []string) {
-	db.DPrintf(db.ALWAYS, "restart mappers %v\n", files)
+func (c *Coord) restartMappers(files []string, task string) {
+	db.DPrintf(db.ALWAYS, "restart mappers %v for %v\n", files, task)
 	for _, f := range files {
-		n := path.Join(MDIR, f)
-		if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-			db.DFatalf("PutFile %v err %v\n", n, err)
+		// Remove symfile so that when coordinator restarts
+		// reducers it, the reducers wait for the mappers to
+		// make new symfiles.
+		sym := symname(task, f)
+		if err := c.Remove(sym); err != nil {
+			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
 		}
+		s := MDIR + DONE + "/" + f
+		d := MDIR + "/" + f
+		if err := c.Rename(s, d); err != nil {
+			db.DPrintf(db.ALWAYS, "rename %v %v err %v\n", s, d, err)
+		}
+		//
+		// n := path.Join(MDIR, f)
+		//if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
+		//db.DFatalf("PutFile %v err %v\n", n, err)
+		//}
 	}
 }
 
@@ -249,6 +260,7 @@ func (c *Coord) processResult(dir string, res Ttask) {
 		d := dir + DONE + "/" + res.task
 		if err := c.Rename(s, d); err != nil {
 			db.DFatalf("rename task done %v to %v err %v\n", s, d, err)
+
 		}
 	} else {
 		// task failed; make it runnable again
@@ -292,6 +304,14 @@ func (c *Coord) recover(dir string) {
 	}
 }
 
+func mkStringSlice(data []interface{}) []string {
+	s := make([]string, 0, len(data))
+	for _, o := range data {
+		s = append(s, o.(string))
+	}
+	return s
+}
+
 func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, error)) {
 	db.DPrintf(db.ALWAYS, "Phase start %v\n", dir)
 	start := time.Now()
@@ -302,12 +322,12 @@ func (c *Coord) phase(done chan bool, dir string, f func(string) (*proc.Status, 
 		res := <-ch
 		c.processResult(dir, res)
 		if !res.status.IsStatusOK() {
-			// If we're reducing and can't find some mapper output, a ux may have
-			// crashed. So, restart those map tasks.
+			// If we're reducing and can't find some
+			// mapper output, a ux may have crashed. So,
+			// restart those map tasks.
 			if dir == RDIR && res.status.Msg() == RESTART {
-				log.Printf("data %v\n", res.status.Data())
-				lostMappers := res.status.Data().([]string)
-				c.restartMappers(lostMappers)
+				s := mkStringSlice(res.status.Data().([]interface{}))
+				c.restartMappers(s, res.task)
 				ok = false
 			} else {
 				n += c.startTasks(dir, ch, f)

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	db "ulambda/debug"
-	"ulambda/fslib"
+	"github.com/stretchr/testify/assert"
+
 	"ulambda/groupmgr"
 	"ulambda/mr"
 	np "ulambda/ninep"
@@ -33,7 +33,7 @@ const (
 	CRASHSRV   = 1000000
 )
 
-func Compare(fsl *fslib.FsLib) {
+func (ts *Tstate) Compare() {
 	cmd := exec.Command("sort", "seq-mr.out")
 	var out1 bytes.Buffer
 	cmd.Stdout = &out1
@@ -50,15 +50,8 @@ func Compare(fsl *fslib.FsLib) {
 	}
 	b1 := out1.Bytes()
 	b2 := out2.Bytes()
-	if len(b1) != len(b2) {
-		db.DFatalf("Output files have different length\n")
-	}
-	for i, v := range b1 {
-		if v != b2[i] {
-			db.DFatalf("Buf %v diff %v %v\n", i, v, b2[i])
-			break
-		}
-	}
+	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
+	assert.Equal(ts.T, b1, b2, "Output files have different contents")
 }
 
 type Tstate struct {
@@ -81,42 +74,32 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 // Put names of input files in name/mr/m
 func (ts *Tstate) prepareJob() int {
 	files, err := ioutil.ReadDir("../input/")
-	if err != nil {
-		db.DFatalf("Readdir %v\n", err)
-	}
+	assert.Nil(ts.T, err, "Readdir: %v", err)
 	for _, f := range files {
 		// remove mapper output directory from previous run
 		ts.RmDir(mr.Moutdir(f.Name()))
 		n := mr.MDIR + "/" + f.Name()
-		if _, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-			db.DFatalf("PutFile %v err %v\n", n, err)
-		}
-		// break
+		_, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n))
+		assert.Nil(ts.T, err, "PutFile %v err %v", n, err)
 	}
 	return len(files)
 }
 
 func (ts *Tstate) checkJob() {
 	file, err := os.OpenFile(OUTPUT, os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		db.DFatalf("Couldn't open output file\n")
-	}
+	assert.Nil(ts.T, err, "Open output file: %v", err)
 	defer file.Close()
 
 	// XXX run as a proc?
 	for i := 0; i < ts.nreducetask; i++ {
 		r := strconv.Itoa(i)
 		data, err := ts.GetFile(mr.ROUT + r)
-		if err != nil {
-			db.DFatalf("ReadFile %v err %v\n", r, err)
-		}
+		assert.Nil(ts.T, err, "GetFile %v err %v", r, err)
 		_, err = file.Write(data)
-		if err != nil {
-			db.DFatalf("Write err %v\n", err)
-		}
+		assert.Nil(ts.T, err, "Write err %v", err)
 	}
 
-	Compare(ts.FsLib)
+	ts.Compare()
 }
 
 // Crash a server of a certain type, then crash a server of that type.
@@ -130,22 +113,16 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 	switch srv {
 	case np.PROCD:
 		err := ts.BootProcd()
-		if err != nil {
-			db.DFatalf("Error spawn procd")
-		}
+		assert.Nil(ts.T, err, "Spawn procd %v", err)
 	case np.UX:
 		err := ts.BootFsUxd()
-		if err != nil {
-			db.DFatalf("Error spawn uxd")
-		}
+		assert.Nil(ts.T, err, "Spawn uxd %v", err)
 	default:
-		db.DFatalf("%v: Unrecognized service type", proc.GetProgram())
+		assert.False(ts.T, true, "%v: Unrecognized service type", proc.GetProgram())
 	}
 	log.Printf("Kill one %v", srv)
 	err := ts.KillOne(srv)
-	if err != nil {
-		db.DFatalf("Error non-nil kill procd: %v", err)
-	}
+	assert.Nil(ts.T, err, "Kill procd %v", err)
 	l.Unlock()
 	crashchan <- true
 }

@@ -233,22 +233,23 @@ func (c *Coord) restartMappers(files []string, task string) {
 	db.DPrintf(db.ALWAYS, "restart mappers %v for %v\n", files, task)
 	for _, f := range files {
 		// Remove symfile so that when coordinator restarts
-		// reducers it, the reducers wait for the mappers to
-		// make new symfiles.
+		// reducers, they wait for the mappers to make new
+		// symfiles.
 		sym := symname(task, f)
 		if err := c.Remove(sym); err != nil {
 			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
 		}
-		s := MDIR + DONE + "/" + f
-		d := MDIR + "/" + f
-		if err := c.Rename(s, d); err != nil {
-			db.DPrintf(db.ALWAYS, "rename %v %v err %v\n", s, d, err)
+		// The mapper task maybe in TIP, DONE, or MDIR, since
+		// map phase runs in parallel with reduce phase, and
+		// symfiles from a previous map phase may exist, which
+		// the reducer fails on before the map phase generates
+		// new ones.  Therefore, put task in MDIR reagardless;
+		// later renames from TIP may replace the file (e.g.,
+		// if mapper fails), but the file is there in the end.
+		n := MDIR + "/" + f
+		if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
+			db.DPrintf(db.ALWAYS, "PutFile %v err %v\n", n, err)
 		}
-		//
-		// n := path.Join(MDIR, f)
-		//if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-		//db.DFatalf("PutFile %v err %v\n", n, err)
-		//}
 	}
 }
 

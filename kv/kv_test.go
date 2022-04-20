@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
@@ -188,6 +189,8 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		ts.clrks = append(ts.clrks, pid)
 	}
 
+	db.DPrintf("TEST", "Done startClerks")
+
 	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(s+1)
 		gm := SpawnGrp(ts.FsLib, ts.ProcClnt, grp, repl, ncrash)
@@ -197,6 +200,8 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		// do some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
+
+	db.DPrintf("TEST", "Done adds")
 
 	for s := 0; s < NKV; s++ {
 		grp := group.GRP + strconv.Itoa(len(ts.mfsgrps)-1)
@@ -208,7 +213,11 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		time.Sleep(TIME * time.Millisecond)
 	}
 
+	db.DPrintf("TEST", "Done dels")
+
 	ts.stopClerks()
+
+	db.DPrintf("TEST", "Done stopClerks")
 
 	time.Sleep(100 * time.Millisecond)
 

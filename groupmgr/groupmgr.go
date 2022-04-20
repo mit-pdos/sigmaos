@@ -68,7 +68,7 @@ func (m *member) spawn() error {
 	return nil
 }
 
-func (m *member) run(i int, start chan error, done chan procret) {
+func (m *member) run(i int, start chan error, done chan *procret) {
 	db.DPrintf("GROUPMGR", "spawn %d member %v\n", i, m.bin)
 	if err := m.spawn(); err != nil {
 		start <- err
@@ -78,7 +78,7 @@ func (m *member) run(i int, start chan error, done chan procret) {
 	db.DPrintf("GROUPMGR", "%v: member %d started %v\n", m.bin, i, m.pid)
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf("GROUPMGR", "%v: member %v exited %v err %v\n", m.bin, m.pid, status, err)
-	done <- procret{i, err, status}
+	done <- &procret{i, err, status}
 }
 
 // If n == 0, run only one member, unreplicated.
@@ -102,7 +102,7 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 		}
 		gm.members[i] = makeMember(fsl, pclnt, bin, args, crashMember, n, partition, netfail)
 	}
-	done := make(chan procret)
+	done := make(chan *procret)
 	starts := make([]chan error, len(gm.members))
 	for i, m := range gm.members {
 		start := make(chan error)
@@ -120,10 +120,14 @@ func Start(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, n int, bin string, args [
 	return gm
 }
 
-func (gm *GroupMgr) restart(i int, done chan procret) {
+func (gm *GroupMgr) restart(i int, done chan *procret) {
+	// XXX hack
 	if gm.members[i].bin == "bin/user/kvd" {
 		// For now, we don't restart kvds
 		db.DPrintf(db.ALWAYS, "=== kvd failed %v\n", gm.members[i].pid)
+		go func() {
+			done <- nil
+		}()
 		return
 	}
 	start := make(chan error)
@@ -133,14 +137,18 @@ func (gm *GroupMgr) restart(i int, done chan procret) {
 		go func() {
 			db.DPrintf("GROUPMGR_ERR", "failed to start %v: %v; try again\n", i, err)
 			time.Sleep(time.Duration(10) * time.Millisecond)
-			done <- procret{i, err, nil}
+			done <- &procret{i, err, nil}
 		}()
 	}
 }
 
-func (gm *GroupMgr) manager(done chan procret, n int) {
+func (gm *GroupMgr) manager(done chan *procret, n int) {
 	for n > 0 {
 		st := <-done
+		// XXX hack
+		if st == nil {
+			break
+		}
 		if atomic.LoadInt32(&gm.done) == 1 {
 			db.DPrintf("GROUPMGR", "%v: done %v n %v\n", gm.members[st.member].bin, st.member, n)
 			n--

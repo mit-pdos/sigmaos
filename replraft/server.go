@@ -23,8 +23,8 @@ func MakeRaftReplServer(id int, peerAddrs []string, l net.Listener, init bool, t
 	}
 	commitC := make(chan *committedEntries)
 	proposeC := make(chan []byte)
-	srv.node = makeRaftNode(id, peers, peerAddrs, l, init, commitC, proposeC)
 	srv.clerk = makeClerk(id, tm, commitC, proposeC)
+	srv.node = makeRaftNode(id, peers, peerAddrs, l, init, srv.clerk, commitC, proposeC)
 	return srv
 }
 

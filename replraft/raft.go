@@ -40,6 +40,7 @@ type RaftNode struct {
 	storage       *raft.MemoryStorage
 	transport     *rafthttp.Transport
 	confState     *raftpb.ConfState
+	clerk         *Clerk
 	snapshotIndex uint64
 	appliedIndex  uint64
 	currentLeader uint64
@@ -50,11 +51,12 @@ type committedEntries struct {
 	leader  uint64
 }
 
-func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
+func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener, init bool, clerk *Clerk, commit chan<- *committedEntries, propose <-chan []byte) *RaftNode {
 	node := &RaftNode{}
 	node.id = id
 	node.peerAddrs = peerAddrs
 	node.done = make(chan bool)
+	node.clerk = clerk
 	node.commit = commit
 	node.propose = propose
 	node.storage = raft.NewMemoryStorage()
@@ -147,7 +149,11 @@ func (n *RaftNode) serveChannels() {
 			n.storage.Append(read.Entries)
 			n.transport.Send(read.Messages)
 			if read.SoftState != nil {
-				n.currentLeader = read.SoftState.Lead
+				// If leadership changed, we may need to re-propose ops.
+				if n.currentLeader != read.SoftState.Lead {
+					n.currentLeader = read.SoftState.Lead
+					n.clerk.reproposeOps()
+				}
 			}
 			n.handleEntries(read.Entries, n.currentLeader)
 			n.node.Advance()
@@ -201,6 +207,7 @@ func (n *RaftNode) handleEntries(entries []raftpb.Entry, leader uint64) {
 				if change.NodeID == uint64(n.id) {
 					db.DFatalf("Node removed")
 				}
+				db.DPrintf("REPLRAFT", "Removing peer %v", string(change.Context))
 				n.transport.RemovePeer(types.ID(change.NodeID))
 			}
 		default:

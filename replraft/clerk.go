@@ -15,6 +15,7 @@ import (
 type Op struct {
 	request   *np.Fcall
 	reply     *np.Fcall
+	frame     []byte
 	startTime time.Time
 }
 
@@ -68,12 +69,28 @@ func (c *Clerk) serve() {
 func (c *Clerk) propose(op *Op) {
 	db.DPrintf("REPLRAFT", "Propose %v\n", op.request)
 	op.startTime = time.Now()
-	c.registerOp(op)
 	frame, err := npcodec.MarshalFcallByte(op.request)
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
+	op.frame = frame
+	c.registerOp(op)
 	c.proposeC <- frame
+}
+
+// Repropose pending ops, in the event that leadership may have changed.
+func (c *Clerk) reproposeOps() {
+	c.mu.Lock()
+	frames := [][]byte{}
+	for _, m := range c.opmap {
+		for _, op := range m {
+			frames = append(frames, op.frame)
+		}
+	}
+	c.mu.Unlock()
+	for _, f := range frames {
+		c.proposeC <- f
+	}
 }
 
 func (c *Clerk) apply(fc *np.Fcall, leader uint64) {

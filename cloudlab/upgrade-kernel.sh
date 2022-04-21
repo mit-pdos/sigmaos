@@ -32,6 +32,7 @@ cd kbuild
 yes "" | make -C ../linux-5.14.14 O=/var/local/$USER/kernel/kbuild config
 sed -ri '/CONFIG_SYSTEM_TRUSTED_KEYS/s/=.+/=""/g' .config
 sed -ri 's/CONFIG_SATA_AHCI=m/CONFIG_SATA_AHCI=y/g' .config
+sed -ri 's/CONFIG_SATA_AHCI=y/CONFIG_SATA_AHCI=n/g' .config
 sudo make -j8 
 INSTALL_MOD_STRIP=1 sudo make -j8 modules_install
 INSTALL_MOD_STRIP=1 sudo make -j8 install

@@ -26,9 +26,9 @@ const (
 	free_machineds  = "free-machineds"
 	realm_create    = "realm-create"
 	realm_destroy   = "realm-destroy"
-	FREE_MACHINEDS  = np.REALM_MGR + "/" + free_machineds // Unassigned machineds
-	REALM_CREATE    = np.REALM_MGR + "/" + realm_create   // Realm allocation requests
-	REALM_DESTROY   = np.REALM_MGR + "/" + realm_destroy  // Realm destruction requests
+	FREE_MACHINEDS  = np.SIGMA_MGR + "/" + free_machineds // Unassigned machineds
+	REALM_CREATE    = np.SIGMA_MGR + "/" + realm_create   // Realm allocation requests
+	REALM_DESTROY   = np.SIGMA_MGR + "/" + realm_destroy  // Realm destruction requests
 	REALM_CONFIG    = "name/realm-config"                 // Store of realm configs
 	MACHINED_CONFIG = "name/machined-config"              // Store of machined configs
 	REALM_NAMEDS    = "name/realm-nameds"                 // Symlinks to realms' nameds
@@ -53,7 +53,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "sigmamgr")
+	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.SIGMA_MGR, "sigmamgr")
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}

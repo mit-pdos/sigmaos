@@ -21,7 +21,7 @@ type TestEnv struct {
 	rid       string
 	namedPids []string
 	namedCmds []*exec.Cmd
-	realmmgr  *exec.Cmd
+	sigmamgr  *exec.Cmd
 	machined  []*exec.Cmd
 	clnt      *RealmClnt
 }
@@ -44,8 +44,8 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 	}
 	clnt := MakeRealmClnt()
 	e.clnt = clnt
-	if err := e.bootRealmMgr(); err != nil {
-		log.Printf("realmmgr")
+	if err := e.bootSigmaMgr(); err != nil {
+		log.Printf("sigmamgr")
 		return nil, err
 	}
 	if err := e.BootMachined(); err != nil {
@@ -69,10 +69,10 @@ func (e *TestEnv) Shutdown() {
 	log.Printf("killed machineds")
 	e.machined = []*exec.Cmd{}
 
-	// Kill the realmmgr
-	kill(e.realmmgr)
-	log.Printf("killed realmmgr")
-	e.realmmgr = nil
+	// Kill the sigmamgr
+	kill(e.sigmamgr)
+	log.Printf("killed sigmamgr")
+	e.sigmamgr = nil
 
 	for _, namedCmd := range e.namedCmds {
 		kill(namedCmd)
@@ -90,13 +90,13 @@ func (e *TestEnv) bootNameds() error {
 	return nil
 }
 
-func (e *TestEnv) bootRealmMgr() error {
-	p := proc.MakeProcPid("realmmgr-"+proc.GenPid(), "bin/realm/realmmgr", []string{e.bin})
+func (e *TestEnv) bootSigmaMgr() error {
+	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "bin/realm/sigmamgr", []string{e.bin})
 	cmd, err := e.clnt.SpawnKernelProc(p, e.bin, fslib.Named())
 	if err != nil {
 		return err
 	}
-	e.realmmgr = cmd
+	e.sigmamgr = cmd
 	return e.clnt.WaitStart(p.Pid)
 }
 

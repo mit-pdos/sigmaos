@@ -35,7 +35,7 @@ const (
 	REALM_FENCES    = "name/realm-fences"                 // Fence around modifications to realm allocations.
 )
 
-type RealmMgr struct {
+type SigmaResourceMgr struct {
 	sync.Mutex
 	freeMachineds chan string
 	realmCreate   chan string
@@ -47,15 +47,15 @@ type RealmMgr struct {
 	*fslibsrv.MemFs
 }
 
-func MakeRealmMgr() *RealmMgr {
-	m := &RealmMgr{}
+func MakeSigmaResourceMgr() *SigmaResourceMgr {
+	m := &SigmaResourceMgr{}
 	m.freeMachineds = make(chan string)
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
+	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.REALM_MGR, "sigmamgr")
 	if err != nil {
-		db.DFatalf("Error MakeMemFs in MakeRealmMgr: %v", err)
+		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
@@ -66,56 +66,56 @@ func MakeRealmMgr() *RealmMgr {
 }
 
 // Make the initial realm dirs, and remove the unneeded union dirs.
-func (m *RealmMgr) makeInitFs() {
+func (m *SigmaResourceMgr) makeInitFs() {
 	if err := m.MkDir(REALM_CONFIG, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALM_CONFIG in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALM_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(MACHINED_CONFIG, 0777); err != nil {
-		db.DFatalf("Error Mkdir MACHINED_CONFIG in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir MACHINED_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(REALM_NAMEDS, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALM_NAMEDS in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALM_NAMEDS in SigmaResourceMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(REALM_FENCES, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALM_FENCES in RealmMgr.makeInitFs: %v", err)
+		db.DFatalf("Error Mkdir REALM_FENCES in SigmaResourceMgr.makeInitFs: %v", err)
 	}
 }
 
-func (m *RealmMgr) makeCtlFiles() {
+func (m *SigmaResourceMgr) makeCtlFiles() {
 	// Set up control files
 	realmCreate := makeCtlFile(m.realmCreate, nil, m.Root())
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_create, realmCreate)
 	if err != nil {
-		db.DFatalf("Error MkNod in RealmMgr.makeCtlFiles 1: %v", err)
+		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 1: %v", err)
 	}
 
 	realmDestroy := makeCtlFile(m.realmDestroy, nil, m.Root())
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_destroy, realmDestroy)
 	if err != nil {
-		db.DFatalf("Error MkNod in RealmMgr.makeCtlFiles 2: %v", err)
+		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 2: %v", err)
 	}
 
 	freeMachineds := makeCtlFile(m.freeMachineds, nil, m.Root())
 	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), free_machineds, freeMachineds)
 	if err != nil {
-		db.DFatalf("Error MkNod in RealmMgr.makeCtlFiles 3: %v", err)
+		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 3: %v", err)
 	}
 }
 
-func (m *RealmMgr) lockRealm(realmId string) {
-	if err := m.ecs[realmId].AcquireLeadership([]byte("realmmgr")); err != nil {
-		db.DFatalf("%v error RealmMgr acquire leadership: %v", string(debug.Stack()), err)
+func (m *SigmaResourceMgr) lockRealm(realmId string) {
+	if err := m.ecs[realmId].AcquireLeadership([]byte("sigmamgr")); err != nil {
+		db.DFatalf("%v error SigmaResourceMgr acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
-func (m *RealmMgr) unlockRealm(realmId string) {
+func (m *SigmaResourceMgr) unlockRealm(realmId string) {
 	if err := m.ecs[realmId].ReleaseLeadership(); err != nil {
-		db.DFatalf("%v error RealmMgr release leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%v error SigmaResourceMgr release leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 // Handle realm creation requests.
-func (m *RealmMgr) createRealms() {
+func (m *SigmaResourceMgr) createRealms() {
 	for {
 		// Get a realm creation request
 		realmId := <-m.realmCreate
@@ -141,7 +141,7 @@ func (m *RealmMgr) createRealms() {
 }
 
 // Deallocate a machined from a realm.
-func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
+func (m *SigmaResourceMgr) deallocMachined(realmId string, machinedId string) {
 	rdCfg := &MachinedConfig{}
 	rdCfg.Id = machinedId
 	rdCfg.RealmId = kernel.NO_REALM
@@ -162,13 +162,13 @@ func (m *RealmMgr) deallocMachined(realmId string, machinedId string) {
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-func (m *RealmMgr) deallocAllMachineds(realmId string, machinedIds []string) {
+func (m *SigmaResourceMgr) deallocAllMachineds(realmId string, machinedIds []string) {
 	for _, machinedId := range machinedIds {
 		m.deallocMachined(realmId, machinedId)
 	}
 }
 
-func (m *RealmMgr) destroyRealms() {
+func (m *SigmaResourceMgr) destroyRealms() {
 	for {
 		// Get a realm creation request
 		realmId := <-m.realmDestroy
@@ -191,7 +191,7 @@ func (m *RealmMgr) destroyRealms() {
 }
 
 // Get & alloc a machined to this realm. Return true if successful
-func (m *RealmMgr) allocMachined(realmId string) bool {
+func (m *SigmaResourceMgr) allocMachined(realmId string) bool {
 	// Get a free machined
 	select {
 	// If there is a machined available...
@@ -216,7 +216,7 @@ func (m *RealmMgr) allocMachined(realmId string) bool {
 }
 
 // Get all a realm's procd's stats
-func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[string]*stats.StatInfo {
+func (m *SigmaResourceMgr) getRealmProcdStats(nameds []string, realmId string) map[string]*stats.StatInfo {
 	// XXX For now we assume all the nameds are up
 	stat := make(map[string]*stats.StatInfo)
 	if len(nameds) == 0 {
@@ -225,14 +225,14 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 	// XXX May fail if this named crashed
 	procds, err := m.GetDir(path.Join(REALM_NAMEDS, realmId, np.PROCDREL))
 	if err != nil {
-		db.DFatalf("Error GetDir 2 in RealmMgr.getRealmProcdStats: %v", err)
+		db.DFatalf("Error GetDir 2 in SigmaResourceMgr.getRealmProcdStats: %v", err)
 	}
 	for _, pd := range procds {
 		s := &stats.StatInfo{}
 		// XXX May fail if this named crashed
 		err := m.GetFileJson(path.Join(REALM_NAMEDS, realmId, np.PROCDREL, pd.Name, np.STATSD), s)
 		if err != nil {
-			log.Printf("Error ReadFileJson in RealmMgr.getRealmProcdStats: %v", err)
+			log.Printf("Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 			continue
 		}
 		stat[pd.Name] = s
@@ -240,7 +240,7 @@ func (m *RealmMgr) getRealmProcdStats(nameds []string, realmId string) map[strin
 	return stat
 }
 
-func (m *RealmMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
+func (m *SigmaResourceMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
 	// If the realm is being shut down, the realm config file may not be there
 	// anymore. In this case, another machined is not needed.
 	if _, err := m.Stat(path.Join(REALM_CONFIG, realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
@@ -251,7 +251,7 @@ func (m *RealmMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
 	return cfg, nil
 }
 
-func (m *RealmMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[string]float64) {
+func (m *SigmaResourceMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[string]float64) {
 	// Get stats
 	utilMap := make(map[string]float64)
 	procdStats := m.getRealmProcdStats(cfg.NamedAddrs, realmId)
@@ -266,11 +266,11 @@ func (m *RealmMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float64, map[
 	return avgUtil, utilMap
 }
 
-func (m *RealmMgr) adjustRealm(realmId string) {
+func (m *SigmaResourceMgr) adjustRealm(realmId string) {
 	// Get the realm's config
 	realmCfg, err := m.getRealmConfig(realmId)
 	if err != nil {
-		db.DPrintf("REALMMGR", "Error RealmMgr.getRealmConfig in RealmMgr.adjustRealm: %v", err)
+		db.DPrintf("SIGMAMGR", "Error SigmaResourceMgr.getRealmConfig in SigmaResourceMgr.adjustRealm: %v", err)
 		return
 	}
 
@@ -322,11 +322,11 @@ func (m *RealmMgr) adjustRealm(realmId string) {
 }
 
 // Balance machineds across realms.
-func (m *RealmMgr) balanceMachineds() {
+func (m *SigmaResourceMgr) balanceMachineds() {
 	for {
 		realms, err := m.GetDir(REALM_CONFIG)
 		if err != nil {
-			db.DFatalf("Error GetDir in RealmMgr.balanceMachineds: %v", err)
+			db.DFatalf("Error GetDir in SigmaResourceMgr.balanceMachineds: %v", err)
 		}
 
 		m.Lock()
@@ -352,7 +352,7 @@ func (m *RealmMgr) balanceMachineds() {
 	}
 }
 
-func (m *RealmMgr) Work() {
+func (m *SigmaResourceMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
 	go m.balanceMachineds()

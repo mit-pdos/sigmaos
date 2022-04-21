@@ -1,6 +1,7 @@
 package realm
 
 import (
+	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
@@ -33,13 +34,14 @@ import (
  */
 
 type CtlFile struct {
-	queue chan string
+	g resourceGrantHandler
+	r resourceRequestHandler
 	fs.Inode
 }
 
-func makeCtlFile(queue chan string, ctx fs.CtxI, parent fs.Dir) *CtlFile {
+func makeCtlFile(g resourceGrantHandler, r resourceRequestHandler, ctx fs.CtxI, parent fs.Dir) *CtlFile {
 	i := inode.MakeInode(ctx, 0, parent)
-	return &CtlFile{queue, i}
+	return &CtlFile{g, r, i}
 }
 
 func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
@@ -47,6 +49,15 @@ func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversi
 }
 
 func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	ctl.queue <- string(b)
+	msg := &ResourceMsg{}
+	msg.Unmarshal(b)
+	switch msg.MsgType {
+	case Tgrant:
+		ctl.g(msg)
+	case Trequest:
+		ctl.r(msg)
+	default:
+		db.DFatalf("Unknown message type")
+	}
 	return np.Tsize(len(b)), nil
 }

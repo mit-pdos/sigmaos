@@ -60,7 +60,6 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 func (e *TestEnv) Shutdown() {
 	// Destroy the realm
 	e.clnt.DestroyRealm(e.rid)
-	log.Printf("Destroyed realm")
 
 	// Kill the noded
 	for _, noded := range e.noded {

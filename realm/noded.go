@@ -68,8 +68,10 @@ func (r *Noded) markFree() {
 	cfg.Id = r.id
 	cfg.RealmId = kernel.NO_REALM
 
-	if _, err := r.SetFile(FREE_NODEDS, []byte(r.id), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in markFree: %v %v", FREE_NODEDS, err)
+	msg := MakeResourceMsg(Tgrant, Tnode, r.id, 1)
+
+	if _, err := r.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile in markFree: %v", err)
 	}
 }
 

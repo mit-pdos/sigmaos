@@ -23,16 +23,12 @@ import (
 )
 
 const (
-	free_nodeds   = "free-nodeds"
-	realm_create  = "realm-create"
-	realm_destroy = "realm-destroy"
-	FREE_NODEDS   = np.SIGMA_MGR + "/" + free_nodeds   // Unassigned nodeds
-	REALM_CREATE  = np.SIGMA_MGR + "/" + realm_create  // Realm allocation requests
-	REALM_DESTROY = np.SIGMA_MGR + "/" + realm_destroy // Realm destruction requests
-	REALM_CONFIG  = "name/realm-config"                // Store of realm configs
-	NODED_CONFIG  = "name/noded-config"                // Store of noded configs
-	REALM_NAMEDS  = "name/realm-nameds"                // Symlinks to realms' nameds
-	REALM_FENCES  = "name/realm-fences"                // Fence around modifications to realm allocations.
+	sigmactl     = "sigmactl"
+	SIGMACTL     = np.SIGMA_MGR + "/" + sigmactl // SigmaResourceMgr control file.
+	REALM_CONFIG = "name/realm-config"           // Store of realm configs
+	NODED_CONFIG = "name/noded-config"           // Store of noded configs
+	REALM_NAMEDS = "name/realm-nameds"           // Symlinks to realms' nameds
+	REALM_FENCES = "name/realm-fences"           // Fence around modifications to realm allocations.
 )
 
 type SigmaResourceMgr struct {
@@ -61,6 +57,8 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.makeInitFs()
 	m.makeCtlFiles()
 	m.ecs = make(map[string]*electclnt.ElectClnt)
+	// TODO
+	// * On grant/revocation requests, talk to realms & mediate.
 
 	return m
 }
@@ -83,22 +81,30 @@ func (m *SigmaResourceMgr) makeInitFs() {
 
 func (m *SigmaResourceMgr) makeCtlFiles() {
 	// Set up control files
-	realmCreate := makeCtlFile(m.realmCreate, nil, m.Root())
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_create, realmCreate)
+	ctl := makeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, nil, m.Root())
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), sigmactl, ctl)
 	if err != nil {
-		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 1: %v", err)
+		db.DFatalf("Error MkNod sigmactl: %v", err)
 	}
+}
 
-	realmDestroy := makeCtlFile(m.realmDestroy, nil, m.Root())
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realm_destroy, realmDestroy)
-	if err != nil {
-		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 2: %v", err)
+func (m *SigmaResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
+	switch msg.ResourceType {
+	case Trealm:
+		m.realmDestroy <- msg.Name
+	case Tnode:
+		m.freeNodeds <- msg.Name
+	default:
+		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
+}
 
-	freeNodeds := makeCtlFile(m.freeNodeds, nil, m.Root())
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), free_nodeds, freeNodeds)
-	if err != nil {
-		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 3: %v", err)
+func (m *SigmaResourceMgr) handleResourceRequest(msg *ResourceMsg) {
+	switch msg.ResourceType {
+	case Trealm:
+		m.realmCreate <- msg.Name
+	default:
+		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
 }
 

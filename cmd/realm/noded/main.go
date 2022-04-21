@@ -12,6 +12,6 @@ func main() {
 		db.DFatalf("Usage: %v bin id", os.Args[0])
 	}
 
-	r := realm.MakeMachined(os.Args[1], os.Args[2])
+	r := realm.MakeNoded(os.Args[1], os.Args[2])
 	r.Work()
 }

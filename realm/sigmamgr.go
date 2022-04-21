@@ -23,25 +23,25 @@ import (
 )
 
 const (
-	free_machineds  = "free-machineds"
-	realm_create    = "realm-create"
-	realm_destroy   = "realm-destroy"
-	FREE_MACHINEDS  = np.SIGMA_MGR + "/" + free_machineds // Unassigned machineds
-	REALM_CREATE    = np.SIGMA_MGR + "/" + realm_create   // Realm allocation requests
-	REALM_DESTROY   = np.SIGMA_MGR + "/" + realm_destroy  // Realm destruction requests
-	REALM_CONFIG    = "name/realm-config"                 // Store of realm configs
-	MACHINED_CONFIG = "name/machined-config"              // Store of machined configs
-	REALM_NAMEDS    = "name/realm-nameds"                 // Symlinks to realms' nameds
-	REALM_FENCES    = "name/realm-fences"                 // Fence around modifications to realm allocations.
+	free_nodeds   = "free-nodeds"
+	realm_create  = "realm-create"
+	realm_destroy = "realm-destroy"
+	FREE_NODEDS   = np.SIGMA_MGR + "/" + free_nodeds   // Unassigned nodeds
+	REALM_CREATE  = np.SIGMA_MGR + "/" + realm_create  // Realm allocation requests
+	REALM_DESTROY = np.SIGMA_MGR + "/" + realm_destroy // Realm destruction requests
+	REALM_CONFIG  = "name/realm-config"                // Store of realm configs
+	NODED_CONFIG  = "name/noded-config"                // Store of noded configs
+	REALM_NAMEDS  = "name/realm-nameds"                // Symlinks to realms' nameds
+	REALM_FENCES  = "name/realm-fences"                // Fence around modifications to realm allocations.
 )
 
 type SigmaResourceMgr struct {
 	sync.Mutex
-	freeMachineds chan string
-	realmCreate   chan string
-	realmDestroy  chan string
-	root          fs.Dir
-	ecs           map[string]*electclnt.ElectClnt
+	freeNodeds   chan string
+	realmCreate  chan string
+	realmDestroy chan string
+	root         fs.Dir
+	ecs          map[string]*electclnt.ElectClnt
 	*config.ConfigClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
@@ -49,7 +49,7 @@ type SigmaResourceMgr struct {
 
 func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m := &SigmaResourceMgr{}
-	m.freeMachineds = make(chan string)
+	m.freeNodeds = make(chan string)
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
@@ -70,8 +70,8 @@ func (m *SigmaResourceMgr) makeInitFs() {
 	if err := m.MkDir(REALM_CONFIG, 0777); err != nil {
 		db.DFatalf("Error Mkdir REALM_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
 	}
-	if err := m.MkDir(MACHINED_CONFIG, 0777); err != nil {
-		db.DFatalf("Error Mkdir MACHINED_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
+	if err := m.MkDir(NODED_CONFIG, 0777); err != nil {
+		db.DFatalf("Error Mkdir NODED_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
 	}
 	if err := m.MkDir(REALM_NAMEDS, 0777); err != nil {
 		db.DFatalf("Error Mkdir REALM_NAMEDS in SigmaResourceMgr.makeInitFs: %v", err)
@@ -95,8 +95,8 @@ func (m *SigmaResourceMgr) makeCtlFiles() {
 		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 2: %v", err)
 	}
 
-	freeMachineds := makeCtlFile(m.freeMachineds, nil, m.Root())
-	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), free_machineds, freeMachineds)
+	freeNodeds := makeCtlFile(m.freeNodeds, nil, m.Root())
+	err = dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), free_nodeds, freeNodeds)
 	if err != nil {
 		db.DFatalf("Error MkNod in SigmaResourceMgr.makeCtlFiles 3: %v", err)
 	}
@@ -140,31 +140,31 @@ func (m *SigmaResourceMgr) createRealms() {
 	}
 }
 
-// Deallocate a machined from a realm.
-func (m *SigmaResourceMgr) deallocMachined(realmId string, machinedId string) {
-	rdCfg := &MachinedConfig{}
-	rdCfg.Id = machinedId
+// Deallocate a noded from a realm.
+func (m *SigmaResourceMgr) deallocNoded(realmId string, nodedId string) {
+	rdCfg := &NodedConfig{}
+	rdCfg.Id = nodedId
 	rdCfg.RealmId = kernel.NO_REALM
 
-	// Update the machined config file.
-	m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)
+	// Update the noded config file.
+	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), rdCfg)
 
-	// Note machined de-registration
+	// Note noded de-registration
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-	// Remove the machined from the lsit of assigned machineds.
-	for i := range rCfg.MachinedsAssigned {
-		if rCfg.MachinedsAssigned[i] == machinedId {
-			rCfg.MachinedsAssigned = append(rCfg.MachinedsAssigned[:i], rCfg.MachinedsAssigned[i+1:]...)
+	// Remove the noded from the lsit of assigned nodeds.
+	for i := range rCfg.NodedsAssigned {
+		if rCfg.NodedsAssigned[i] == nodedId {
+			rCfg.NodedsAssigned = append(rCfg.NodedsAssigned[:i], rCfg.NodedsAssigned[i+1:]...)
 		}
 	}
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-func (m *SigmaResourceMgr) deallocAllMachineds(realmId string, machinedIds []string) {
-	for _, machinedId := range machinedIds {
-		m.deallocMachined(realmId, machinedId)
+func (m *SigmaResourceMgr) deallocAllNodeds(realmId string, nodedIds []string) {
+	for _, nodedId := range nodedIds {
+		m.deallocNoded(realmId, nodedId)
 	}
 }
 
@@ -179,7 +179,7 @@ func (m *SigmaResourceMgr) destroyRealms() {
 		cfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
-		m.deallocAllMachineds(realmId, cfg.MachinedsAssigned)
+		m.deallocAllNodeds(realmId, cfg.NodedsAssigned)
 
 		cfg.Shutdown = true
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
@@ -190,27 +190,27 @@ func (m *SigmaResourceMgr) destroyRealms() {
 	}
 }
 
-// Get & alloc a machined to this realm. Return true if successful
-func (m *SigmaResourceMgr) allocMachined(realmId string) bool {
-	// Get a free machined
+// Get & alloc a noded to this realm. Return true if successful
+func (m *SigmaResourceMgr) allocNoded(realmId string) bool {
+	// Get a free noded
 	select {
-	// If there is a machined available...
-	case machinedId := <-m.freeMachineds:
-		// Update the machined's config
-		rdCfg := &MachinedConfig{}
-		rdCfg.Id = machinedId
+	// If there is a noded available...
+	case nodedId := <-m.freeNodeds:
+		// Update the noded's config
+		rdCfg := &NodedConfig{}
+		rdCfg.Id = nodedId
 		rdCfg.RealmId = realmId
-		m.WriteConfig(path.Join(MACHINED_CONFIG, machinedId), rdCfg)
+		m.WriteConfig(path.Join(NODED_CONFIG, nodedId), rdCfg)
 
 		// Update the realm's config
 		rCfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-		rCfg.MachinedsAssigned = append(rCfg.MachinedsAssigned, machinedId)
+		rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
 		rCfg.LastResize = time.Now()
 		m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 		return true
 	default:
-		// If no machined is available...
+		// If no noded is available...
 		return false
 	}
 }
@@ -242,7 +242,7 @@ func (m *SigmaResourceMgr) getRealmProcdStats(nameds []string, realmId string) m
 
 func (m *SigmaResourceMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
 	// If the realm is being shut down, the realm config file may not be there
-	// anymore. In this case, another machined is not needed.
+	// anymore. In this case, another noded is not needed.
 	if _, err := m.Stat(path.Join(REALM_CONFIG, realmId)); err != nil && strings.Contains(err.Error(), "file not found") {
 		return nil, fmt.Errorf("Realm not found")
 	}
@@ -256,9 +256,9 @@ func (m *SigmaResourceMgr) getRealmUtil(realmId string, cfg *RealmConfig) (float
 	utilMap := make(map[string]float64)
 	procdStats := m.getRealmProcdStats(cfg.NamedAddrs, realmId)
 	avgUtil := 0.0
-	for machinedId, stat := range procdStats {
+	for nodedId, stat := range procdStats {
 		avgUtil += stat.Util
-		utilMap[machinedId] = stat.Util
+		utilMap[nodedId] = stat.Util
 	}
 	if len(procdStats) > 0 {
 		avgUtil /= float64(len(procdStats))
@@ -280,11 +280,11 @@ func (m *SigmaResourceMgr) adjustRealm(realmId string) {
 	}
 
 	// If we are below the target replication level
-	if len(realmCfg.MachinedsAssigned) < nReplicas() {
-		// Start enough machineds to reach the target replication level
-		for i := len(realmCfg.MachinedsAssigned); i < nReplicas(); i++ {
-			if ok := m.allocMachined(realmId); !ok {
-				log.Printf("Error in adjustRealm: not enough machineds to meet minimum replication level for realm %v", realmId)
+	if len(realmCfg.NodedsAssigned) < nReplicas() {
+		// Start enough nodeds to reach the target replication level
+		for i := len(realmCfg.NodedsAssigned); i < nReplicas(); i++ {
+			if ok := m.allocNoded(realmId); !ok {
+				log.Printf("Error in adjustRealm: not enough nodeds to meet minimum replication level for realm %v", realmId)
 			}
 		}
 		return
@@ -299,34 +299,34 @@ func (m *SigmaResourceMgr) adjustRealm(realmId string) {
 	avgUtil, procdUtils := m.getRealmUtil(realmId, realmCfg)
 	//	log.Printf("Avg util post: %v, %v", realmCfg, avgUtil)
 	if avgUtil > np.REALM_GROW_CPU_UTIL_THRESHOLD {
-		m.allocMachined(realmId)
+		m.allocNoded(realmId)
 	} else if avgUtil < np.REALM_SHRINK_CPU_UTIL_THRESHOLD {
 		// If there are replicas to spare
-		if len(realmCfg.MachinedsAssigned) > nReplicas() {
+		if len(realmCfg.NodedsAssigned) > nReplicas() {
 			// Find least utilized procd
 			//			min := 100.0
-			//			minMachinedId := ""
-			//			for machinedId, util := range procdUtils {
+			//			minNodedId := ""
+			//			for nodedId, util := range procdUtils {
 			//				if min > util {
 			//					min = util
-			//					minMachinedId = machinedId
+			//					minNodedId = nodedId
 			//				}
 			//			}
-			// XXX A hack for now, since we don't have a good way of linking a procd to a machined
+			// XXX A hack for now, since we don't have a good way of linking a procd to a noded
 			_ = procdUtils
-			minMachinedId := realmCfg.MachinedsAssigned[1]
+			minNodedId := realmCfg.NodedsAssigned[1]
 			// Deallocate least utilized procd
-			m.deallocMachined(realmId, minMachinedId)
+			m.deallocNoded(realmId, minNodedId)
 		}
 	}
 }
 
-// Balance machineds across realms.
-func (m *SigmaResourceMgr) balanceMachineds() {
+// Balance nodeds across realms.
+func (m *SigmaResourceMgr) balanceNodeds() {
 	for {
 		realms, err := m.GetDir(REALM_CONFIG)
 		if err != nil {
-			db.DFatalf("Error GetDir in SigmaResourceMgr.balanceMachineds: %v", err)
+			db.DFatalf("Error GetDir in SigmaResourceMgr.balanceNodeds: %v", err)
 		}
 
 		m.Lock()
@@ -339,9 +339,9 @@ func (m *SigmaResourceMgr) balanceMachineds() {
 			}
 			m.lockRealm(realmId)
 
-			// XXX Currently we assume there are always enough machineds for the number
+			// XXX Currently we assume there are always enough nodeds for the number
 			// of realms we have. If that assumption is broken, this may deadlock when
-			// a realm is trying to exit & we're trying to assign a machined to it.
+			// a realm is trying to exit & we're trying to assign a noded to it.
 			m.adjustRealm(realmId)
 			m.unlockRealm(realmId)
 		}
@@ -355,7 +355,7 @@ func (m *SigmaResourceMgr) balanceMachineds() {
 func (m *SigmaResourceMgr) Work() {
 	go m.createRealms()
 	go m.destroyRealms()
-	go m.balanceMachineds()
+	go m.balanceNodeds()
 	m.Serve()
 	m.Done()
 }

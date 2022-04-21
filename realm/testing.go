@@ -22,7 +22,7 @@ type TestEnv struct {
 	namedPids []string
 	namedCmds []*exec.Cmd
 	sigmamgr  *exec.Cmd
-	machined  []*exec.Cmd
+	noded     []*exec.Cmd
 	clnt      *RealmClnt
 }
 
@@ -32,7 +32,7 @@ func MakeTestEnv(bin string) *TestEnv {
 	e.rid = TEST_RID
 	e.namedPids = []string{}
 	e.namedCmds = []*exec.Cmd{}
-	e.machined = []*exec.Cmd{}
+	e.noded = []*exec.Cmd{}
 
 	return e
 }
@@ -48,8 +48,8 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 		log.Printf("sigmamgr")
 		return nil, err
 	}
-	if err := e.BootMachined(); err != nil {
-		log.Printf("machined")
+	if err := e.BootNoded(); err != nil {
+		log.Printf("noded")
 		return nil, err
 	}
 	cfg := clnt.CreateRealm(e.rid)
@@ -62,12 +62,12 @@ func (e *TestEnv) Shutdown() {
 	e.clnt.DestroyRealm(e.rid)
 	log.Printf("Destroyed realm")
 
-	// Kill the machined
-	for _, machined := range e.machined {
-		kill(machined)
+	// Kill the noded
+	for _, noded := range e.noded {
+		kill(noded)
 	}
-	log.Printf("killed machineds")
-	e.machined = []*exec.Cmd{}
+	log.Printf("killed nodeds")
+	e.noded = []*exec.Cmd{}
 
 	// Kill the sigmamgr
 	kill(e.sigmamgr)
@@ -100,11 +100,11 @@ func (e *TestEnv) bootSigmaMgr() error {
 	return e.clnt.WaitStart(p.Pid)
 }
 
-func (e *TestEnv) BootMachined() error {
+func (e *TestEnv) BootNoded() error {
 	var err error
-	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/machined", []string{e.bin, proc.GenPid().String()})
-	machined, err := proc.RunKernelProc(p, e.bin, fslib.Named())
-	e.machined = append(e.machined, machined)
+	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/noded", []string{e.bin, proc.GenPid().String()})
+	noded, err := proc.RunKernelProc(p, e.bin, fslib.Named())
+	e.noded = append(e.noded, noded)
 	if err != nil {
 		return err
 	}
@@ -116,6 +116,6 @@ func kill(cmd *exec.Cmd) {
 		db.DFatalf("Error Kill in kill: %v", err)
 	}
 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal") {
-		db.DFatalf("Error machined Wait in kill: %v", err)
+		db.DFatalf("Error noded Wait in kill: %v", err)
 	}
 }

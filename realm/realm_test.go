@@ -39,9 +39,9 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 
-	err = ts.e.BootMachined()
+	err = ts.e.BootNoded()
 	if err != nil {
-		t.Fatalf("Boot Machined 2: %v", err)
+		t.Fatalf("Boot Noded 2: %v", err)
 	}
 
 	program := "realm_test"
@@ -71,13 +71,13 @@ func (ts *Tstate) spawnSpinner() proc.Tpid {
 	return pid
 }
 
-// Check that the test realm has min <= nMachineds <= max machineds assigned to it
-func (ts *Tstate) checkNMachineds(min int, max int) {
-	db.DPrintf("TEST", "Checking num machineds")
+// Check that the test realm has min <= nNodeds <= max nodeds assigned to it
+func (ts *Tstate) checkNNodeds(min int, max int) {
+	db.DPrintf("TEST", "Checking num nodeds")
 	cfg := realm.GetRealmConfig(ts.realmFsl, realm.TEST_RID)
-	nMachineds := len(cfg.MachinedsActive)
-	db.DPrintf("TEST", "Done Checking num machineds")
-	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
+	nNodeds := len(cfg.NodedsActive)
+	db.DPrintf("TEST", "Done Checking num nodeds")
+	ok := assert.True(ts.t, nNodeds >= min && nNodeds <= max, "Wrong number of nodeds (x=%v), expected %v <= x <= %v", nNodeds, min, max)
 	if !ok {
 		debug.PrintStack()
 	}
@@ -85,11 +85,11 @@ func (ts *Tstate) checkNMachineds(min int, max int) {
 
 func TestStartStop(t *testing.T) {
 	ts := makeTstate(t)
-	ts.checkNMachineds(1, 1)
+	ts.checkNNodeds(1, 1)
 	ts.e.Shutdown()
 }
 
-// Start enough spinning lambdas to fill two Machineds, check that the test
+// Start enough spinning lambdas to fill two Nodeds, check that the test
 // realm's allocation expanded, evict the spinning lambdas, and check the
 // realm's allocation shrank. Then spawn and evict a few more to make sure we
 // can still spawn after shrinking.  Assumes other machines in the cluster have
@@ -116,7 +116,7 @@ func TestRealmGrowShrink(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNMachineds(2, 100)
+	ts.checkNNodeds(2, 100)
 
 	db.DPrintf("TEST", "Evicting %v spinning lambdas", N+7*N/8)
 	cnt := 0
@@ -130,7 +130,7 @@ func TestRealmGrowShrink(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNMachineds(1, 1)
+	ts.checkNNodeds(1, 1)
 
 	db.DPrintf("TEST", "Starting %v more spinning lambdas", N/2)
 	for i := 0; i < int(N/2); i++ {
@@ -140,7 +140,7 @@ func TestRealmGrowShrink(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNMachineds(1, 100)
+	ts.checkNNodeds(1, 100)
 
 	db.DPrintf("TEST", "Evicting %v spinning lambdas again", N/2)
 	for i := 0; i < int(N/2); i++ {
@@ -148,7 +148,7 @@ func TestRealmGrowShrink(t *testing.T) {
 		pids = pids[1:]
 	}
 
-	ts.checkNMachineds(1, 1)
+	ts.checkNNodeds(1, 1)
 
 	ts.e.Shutdown()
 }

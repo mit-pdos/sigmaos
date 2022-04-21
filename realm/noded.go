@@ -18,38 +18,38 @@ import (
 )
 
 const (
-	DEFAULT_MACHINED_PRIORITY = "0"
+	DEFAULT_NODED_PRIORITY = "0"
 )
 
-type MachinedConfig struct {
+type NodedConfig struct {
 	Id      string
 	RealmId string
 }
 
-type Machined struct {
+type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	id      string
 	bin     string
 	cfgPath string
-	cfg     *MachinedConfig
+	cfg     *NodedConfig
 	s       *kernel.System
 	ec      *electclnt.ElectClnt
 	*config.ConfigClnt
 }
 
-func MakeMachined(bin string, id string) *Machined {
+func MakeNoded(bin string, id string) *Noded {
 	// XXX Get id somehow
-	r := &Machined{}
+	r := &Noded{}
 	r.id = id
 	r.bin = bin
-	r.cfgPath = path.Join(MACHINED_CONFIG, id)
-	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("machined-%v", id))
-	r.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), r.FsLib, "machined", fslib.Named())
+	r.cfgPath = path.Join(NODED_CONFIG, id)
+	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("noded-%v", id))
+	r.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), r.FsLib, "noded", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
 
-	// Set up the machined config
-	r.cfg = &MachinedConfig{}
+	// Set up the noded config
+	r.cfg = &NodedConfig{}
 	r.cfg.Id = id
 	r.cfg.RealmId = kernel.NO_REALM
 
@@ -63,18 +63,18 @@ func MakeMachined(bin string, id string) *Machined {
 }
 
 // Mark self as available for allocation to a realm.
-func (r *Machined) markFree() {
-	cfg := &MachinedConfig{}
+func (r *Noded) markFree() {
+	cfg := &NodedConfig{}
 	cfg.Id = r.id
 	cfg.RealmId = kernel.NO_REALM
 
-	if _, err := r.SetFile(FREE_MACHINEDS, []byte(r.id), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in markFree: %v %v", FREE_MACHINEDS, err)
+	if _, err := r.SetFile(FREE_NODEDS, []byte(r.id), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile in markFree: %v %v", FREE_NODEDS, err)
 	}
 }
 
 // Update configuration.
-func (r *Machined) getNextConfig() {
+func (r *Noded) getNextConfig() {
 	// XXX Does it matter that we spin?
 	for {
 		r.ReadConfig(r.cfgPath, r.cfg)
@@ -89,21 +89,21 @@ func (r *Machined) getNextConfig() {
 // If we need more named replicas, help initialize a realm by starting another
 // named replica for it. Return true when all named replicas have been
 // initialized.
-func (r *Machined) tryAddNamedReplicaL() bool {
+func (r *Noded) tryAddNamedReplicaL() bool {
 	// Get config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 
 	initDone := false
-	// If this is the last required machined replica...
-	if len(realmCfg.MachinedsActive) == nReplicas()-1 {
+	// If this is the last required noded replica...
+	if len(realmCfg.NodedsActive) == nReplicas()-1 {
 		initDone = true
 	}
 
 	// If we need to add a named replica, do so
-	if len(realmCfg.MachinedsActive) < nReplicas() {
+	if len(realmCfg.NodedsActive) < nReplicas() {
 		ip, err := fidclnt.LocalIP()
 		if err != nil {
-			db.DFatalf("Error LocalIP in Machined.tryInitRealmL: %v", err)
+			db.DFatalf("Error LocalIP in Noded.tryInitRealmL: %v", err)
 		}
 		namedAddrs := genNamedAddrs(1, ip)
 
@@ -112,43 +112,43 @@ func (r *Machined) tryAddNamedReplicaL() bool {
 		// Start a named instance.
 		var pid proc.Tpid
 		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId); err != nil {
-			db.DFatalf("Error BootNamed in Machined.tryInitRealmL: %v", err)
+			db.DFatalf("Error BootNamed in Noded.tryInitRealmL: %v", err)
 		}
 		// Update config
 		realmCfg.NamedPids = append(realmCfg.NamedPids, pid.String())
 		r.WriteConfig(path.Join(REALM_CONFIG, realmCfg.Rid), realmCfg)
-		db.DPrintf("MACHINED", "Added named replica: %v", realmCfg)
+		db.DPrintf("NODED", "Added named replica: %v", realmCfg)
 	}
 	return initDone
 }
 
-// Register this machined as part of a realm.
-func (r *Machined) register(cfg *RealmConfig) {
-	cfg.MachinedsActive = append(cfg.MachinedsActive, r.id)
+// Register this noded as part of a realm.
+func (r *Noded) register(cfg *RealmConfig) {
+	cfg.NodedsActive = append(cfg.NodedsActive, r.id)
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 }
 
-func (r *Machined) boot(realmCfg *RealmConfig) {
+func (r *Noded) boot(realmCfg *RealmConfig) {
 	r.s = kernel.MakeSystem("realm", r.bin, realmCfg.NamedAddrs)
 	if err := r.s.Boot(); err != nil {
-		db.DFatalf("Error Boot in Machined.boot: %v", err)
+		db.DFatalf("Error Boot in Noded.boot: %v", err)
 	}
 }
 
-func (r *Machined) lockRealm() {
-	if err := r.ec.AcquireLeadership([]byte("machined-" + r.id)); err != nil {
-		db.DFatalf("%v error Machined acquire leadership: %v", string(debug.Stack()), err)
+func (r *Noded) lockRealm() {
+	if err := r.ec.AcquireLeadership([]byte("noded-" + r.id)); err != nil {
+		db.DFatalf("%v error Noded acquire leadership: %v", string(debug.Stack()), err)
 	}
 }
 
-func (r *Machined) unlockRealm() {
+func (r *Noded) unlockRealm() {
 	if err := r.ec.ReleaseLeadership(); err != nil {
-		db.DFatalf("%v error Machined release leadership: %v", string(debug.Stack()), err)
+		db.DFatalf("%v error Noded release leadership: %v", string(debug.Stack()), err)
 	}
 }
 
 // Join a realm
-func (r *Machined) joinRealm() chan bool {
+func (r *Noded) joinRealm() chan bool {
 	r.lockRealm()
 	defer r.unlockRealm()
 
@@ -156,48 +156,48 @@ func (r *Machined) joinRealm() chan bool {
 	initDone := r.tryAddNamedReplicaL()
 	// Get the realm config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-	// Register this machined
+	// Register this noded
 	r.register(realmCfg)
-	// Boot this machined's system services
+	// Boot this noded's system services
 	r.boot(realmCfg)
 	// Signal that the realm has been initialized
 	if initDone {
 		rStartSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
 		rStartSem.Up()
 	}
-	db.DPrintf("MACHINED", "Machined %v joined Realm %v", r.id, r.cfg.RealmId)
+	db.DPrintf("NODED", "Noded %v joined Realm %v", r.id, r.cfg.RealmId)
 	// Watch for changes to the config
 	return r.WatchConfig(r.cfgPath)
 }
 
-func (r *Machined) teardown() {
+func (r *Noded) teardown() {
 	// Tear down realm resources
 	r.s.Shutdown()
 }
 
-func (r *Machined) deregister(cfg *RealmConfig) {
-	for i := range cfg.MachinedsActive {
-		if cfg.MachinedsActive[i] == r.id {
-			cfg.MachinedsActive = append(cfg.MachinedsActive[:i], cfg.MachinedsActive[i+1:]...)
+func (r *Noded) deregister(cfg *RealmConfig) {
+	for i := range cfg.NodedsActive {
+		if cfg.NodedsActive[i] == r.id {
+			cfg.NodedsActive = append(cfg.NodedsActive[:i], cfg.NodedsActive[i+1:]...)
 			break
 		}
 	}
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 }
 
-func (r *Machined) tryDestroyRealmL(realmCfg *RealmConfig) {
-	// If this is the last machined, destroy the machined's named
-	if len(realmCfg.MachinedsActive) == 0 {
+func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
+	// If this is the last noded, destroy the noded's named
+	if len(realmCfg.NodedsActive) == 0 {
 		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
 		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {
-			db.DFatalf("Error Remove in REALM_CONFIG Machined.tryDestroyRealmL: %v", err)
+			db.DFatalf("Error Remove in REALM_CONFIG Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm's named directory
 		if err := r.Remove(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
-			db.DFatalf("Error Remove REALM_NAMEDS in Machined.tryDestroyRealmL: %v", err)
+			db.DFatalf("Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed
@@ -207,23 +207,23 @@ func (r *Machined) tryDestroyRealmL(realmCfg *RealmConfig) {
 }
 
 // Leave a realm
-func (r *Machined) leaveRealm() {
+func (r *Noded) leaveRealm() {
 	r.lockRealm()
 	defer r.unlockRealm()
 
-	db.DPrintf("MACHINED", "Machined %v leaving Realm %v", r.id, r.cfg.RealmId)
+	db.DPrintf("NODED", "Noded %v leaving Realm %v", r.id, r.cfg.RealmId)
 
 	// Tear down resources
 	r.teardown()
 	// Get the realm config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-	// Deregister this machined
+	// Deregister this noded
 	r.deregister(realmCfg)
-	// Try to destroy a realm (if this is the last machined remaining)
+	// Try to destroy a realm (if this is the last noded remaining)
 	r.tryDestroyRealmL(realmCfg)
 }
 
-func (r *Machined) Work() {
+func (r *Noded) Work() {
 	for {
 		// Get the next realm assignment.
 		r.getNextConfig()

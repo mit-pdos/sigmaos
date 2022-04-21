@@ -56,7 +56,6 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 	return cfg, nil
 }
 
-// TODO: eventually wait on exit signals
 func (e *TestEnv) Shutdown() {
 	// Destroy the realm
 	e.clnt.DestroyRealm(e.rid)

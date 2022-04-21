@@ -1,7 +1,6 @@
 package realm_test
 
 import (
-	"log"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -74,14 +73,20 @@ func (ts *Tstate) spawnSpinner() proc.Tpid {
 
 // Check that the test realm has min <= nMachineds <= max machineds assigned to it
 func (ts *Tstate) checkNMachineds(min int, max int) {
-	log.Printf("Checking num machineds")
+	db.DPrintf("TEST", "Checking num machineds")
 	cfg := realm.GetRealmConfig(ts.realmFsl, realm.TEST_RID)
 	nMachineds := len(cfg.MachinedsActive)
-	log.Printf("Done Checking num machineds")
+	db.DPrintf("TEST", "Done Checking num machineds")
 	ok := assert.True(ts.t, nMachineds >= min && nMachineds <= max, "Wrong number of machineds (x=%v), expected %v <= x <= %v", nMachineds, min, max)
 	if !ok {
 		debug.PrintStack()
 	}
+}
+
+func TestStartStop(t *testing.T) {
+	ts := makeTstate(t)
+	ts.checkNMachineds(1, 1)
+	ts.e.Shutdown()
 }
 
 // Start enough spinning lambdas to fill two Machineds, check that the test
@@ -94,26 +99,26 @@ func TestRealmGrowShrink(t *testing.T) {
 
 	N := int(linuxsched.NCores) / 2
 
-	log.Printf("Starting %v spinning lambdas", N)
+	db.DPrintf("TEST", "Starting %v spinning lambdas", N)
 	pids := []proc.Tpid{}
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner())
 	}
 
-	log.Printf("Sleeping for a bit")
+	db.DPrintf("TEST", "Sleeping for a bit")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	log.Printf("Starting %v more spinning lambdas", N)
+	db.DPrintf("TEST", "Starting %v more spinning lambdas", N)
 	for i := 0; i < N; i++ {
 		pids = append(pids, ts.spawnSpinner())
 	}
 
-	log.Printf("Sleeping again")
+	db.DPrintf("TEST", "Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNMachineds(2, 100)
 
-	log.Printf("Evicting %v spinning lambdas", N+7*N/8)
+	db.DPrintf("TEST", "Evicting %v spinning lambdas", N+7*N/8)
 	cnt := 0
 	for i := 0; i < N+7*N/8; i++ {
 		err := ts.Evict(pids[0])
@@ -122,22 +127,22 @@ func TestRealmGrowShrink(t *testing.T) {
 		pids = pids[1:]
 	}
 
-	log.Printf("Sleeping yet again")
+	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNMachineds(1, 1)
 
-	log.Printf("Starting %v more spinning lambdas", N/2)
+	db.DPrintf("TEST", "Starting %v more spinning lambdas", N/2)
 	for i := 0; i < int(N/2); i++ {
 		pids = append(pids, ts.spawnSpinner())
 	}
 
-	log.Printf("Sleeping yet again")
+	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNMachineds(1, 100)
 
-	log.Printf("Evicting %v spinning lambdas again", N/2)
+	db.DPrintf("TEST", "Evicting %v spinning lambdas again", N/2)
 	for i := 0; i < int(N/2); i++ {
 		ts.Evict(pids[0])
 		pids = pids[1:]

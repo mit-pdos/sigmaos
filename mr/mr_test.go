@@ -102,7 +102,8 @@ func (ts *Tstate) checkJob() {
 	ts.Compare()
 }
 
-// Crash a server of a certain type, then crash a server of that type.
+// Sleep for a random time, then crash a server.  Crash a server of a
+// certain type, then crash a server of that type.
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)
 	time.Sleep(time.Duration(r) * time.Microsecond)
@@ -203,7 +204,7 @@ func TestCrashUx5(t *testing.T) {
 	runN(t, 0, 0, 0, N)
 }
 
-func TestCrashProcdUx5(t *testing.T) {
+func TestCrashProcdUyx5(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, N)
 }

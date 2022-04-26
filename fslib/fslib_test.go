@@ -1064,27 +1064,6 @@ const (
 	BUFSZ      = 1 << 16
 )
 
-func mkBuf(n int) []byte {
-	buf := make([]byte, WRITESZ)
-	for i := 0; i < WRITESZ; i++ {
-		buf[i] = byte(i & 0xFF)
-	}
-	return buf
-}
-
-func writer(t *testing.T, wrt io.Writer, buf []byte, fsz int) {
-	for n := 0; n < fsz; {
-		w := len(buf)
-		if fsz-n < w {
-			w = fsz - n
-		}
-		m, err := wrt.Write(buf[0:w])
-		assert.Nil(t, err)
-		assert.Equal(t, w, m)
-		n += m
-	}
-}
-
 func measure(msg string, f func() int) {
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
@@ -1108,16 +1087,19 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 	assert.Nil(t, err)
 	switch how {
 	case HSYNC:
-		writer(t, w, buf, sz)
+		err = test.Writer(t, w, buf, sz)
+		assert.Nil(t, err)
 	case HBUF:
 		bw := bufio.NewWriterSize(w, BUFSZ)
-		writer(t, bw, buf, sz)
+		err = test.Writer(t, bw, buf, sz)
+		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
 	case HASYNC:
 		aw := awriter.NewWriterSize(w, BUFSZ)
 		bw := bufio.NewWriterSize(aw, BUFSZ)
-		writer(t, bw, buf, sz)
+		err = test.Writer(t, bw, buf, sz)
+		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
 		err = aw.Close()
@@ -1133,7 +1115,7 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 func TestWritePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
-	buf := mkBuf(WRITESZ)
+	buf := test.MkBuf(WRITESZ)
 	measure("writer", func() int {
 		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
 		err := ts.Remove(fn)
@@ -1172,7 +1154,7 @@ func reader(t *testing.T, rdr io.Reader, buf []byte, sz int) int {
 func TestReadPerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
-	buf := mkBuf(WRITESZ)
+	buf := test.MkBuf(WRITESZ)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	measure("reader", func() int {
 		r, err := ts.OpenReader(fn)

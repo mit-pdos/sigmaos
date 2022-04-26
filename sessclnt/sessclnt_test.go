@@ -221,6 +221,7 @@ func writer(t *testing.T, ch chan error, name string) {
 			stop = true
 		default:
 			if err := fsl.Remove(fn); err != nil && np.IsErrUnreachable(err) {
+				// log.Printf("remove failed %v\n", err)
 				break
 			}
 			w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
@@ -229,6 +230,7 @@ func writer(t *testing.T, ch chan error, name string) {
 				assert.True(t, np.IsErrUnreachable(err))
 				break
 			}
+			// log.Printf("create file %v\n", name)
 			aw := awriter.NewWriterSize(w, BUFSZ)
 			bw := bufio.NewWriterSize(aw, BUFSZ)
 			buf := test.MkBuf(WRITESZ)
@@ -252,7 +254,7 @@ func writer(t *testing.T, ch chan error, name string) {
 
 func TestWriteCrash(t *testing.T) {
 	const (
-		N        = 10
+		N        = 20
 		NCRASH   = 5
 		CRASHSRV = 1000000
 	)

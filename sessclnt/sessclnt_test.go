@@ -1,7 +1,6 @@
 package sessclnt_test
 
 import (
-	"bufio"
 	"log"
 	"strconv"
 	"sync"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"ulambda/awriter"
+	// "ulambda/awriter"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
@@ -231,22 +230,23 @@ func writer(t *testing.T, ch chan error, name string) {
 				break
 			}
 			// log.Printf("create file %v\n", name)
-			aw := awriter.NewWriterSize(w, BUFSZ)
-			bw := bufio.NewWriterSize(aw, BUFSZ)
+			// aw := awriter.NewWriterSize(w, BUFSZ)
+			// bw := bufio.NewWriterSize(aw, BUFSZ)
+			// bw := bufio.NewWriterSize(w, BUFSZ)
 			buf := test.MkBuf(WRITESZ)
-			if err := test.Writer(t, bw, buf, FILESZ); err != nil {
+			if err := test.Writer(t, w, buf, FILESZ); err != nil {
 				log.Printf("write failed %v\n", err)
 				break
 			}
-			if err := bw.Flush(); err != nil {
-				log.Printf("flush failed %v\n", err)
-				assert.True(t, np.IsErrUnreachable(err))
-				break
-			}
-			if err := aw.Close(); err != nil {
-				log.Printf("close failed %v\n", err)
-				assert.True(t, np.IsErrUnreachable(err))
-			}
+			//if err := bw.Flush(); err != nil {
+			//	log.Printf("flush failed %v\n", err)
+			//	assert.True(t, np.IsErrUnreachable(err))
+			//	break
+			//}
+			//if err := aw.Close(); err != nil {
+			//	log.Printf("close failed %v\n", err)
+			//	assert.True(t, np.IsErrUnreachable(err))
+			//}
 		}
 	}
 	fsl.Remove(fn)

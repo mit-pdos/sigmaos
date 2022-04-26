@@ -29,15 +29,22 @@ func (w *Writer) writer() {
 			w.consumer.Wait()
 		}
 		if w.len > 0 {
-			db.DPrintf("AWRITER", "%p writer %v\n", w.wrt, w.len)
-			n, err := w.wrt.Write(w.buf[0:w.len])
+			m := w.len
+			d := w.buf[0:m]
+			db.DPrintf("AWRITER", "%p writer %v\n", w.wrt, m)
+			w.Unlock()
+
+			// write without holding lock
+			n, err := w.wrt.Write(d)
+
+			w.Lock()
 			if err != nil {
 				w.err = err
-			} else if n != w.len {
+			} else if n != m {
 				w.err = io.ErrShortWrite
 			}
 			w.len = 0
-			w.producer.Signal()
+			w.producer.Broadcast()
 		}
 	}
 	db.DPrintf("AWRITER", "%p writer exit\n", w.wrt)
@@ -76,9 +83,6 @@ func (w *Writer) Close() error {
 
 	for w.len > 0 && w.err == nil {
 		w.producer.Wait()
-	}
-	if w.err != nil {
-		return w.err
 	}
 	w.exit = true
 	w.consumer.Signal()

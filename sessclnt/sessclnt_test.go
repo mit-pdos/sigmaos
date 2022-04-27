@@ -243,7 +243,7 @@ func writer(t *testing.T, ch chan error, name string) {
 			}
 		}
 	}
-	assert.True(t, nfile > 3)
+	assert.True(t, nfile >= 3) // a bit arbitrary
 	fsl.Remove(fn)
 }
 

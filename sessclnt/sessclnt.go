@@ -65,7 +65,7 @@ func (c *SessClnt) Reset() {
 		c.nc = nil
 	}
 	// Reset outstanding request queue.
-	db.DPrintf("SESSCLNT0", "%v Reset outstanding request queue to %v\n", c.sid, c.addrs)
+	db.DPrintf("SESSCLNT", "%v Reset outstanding request queue to %v\n", c.sid, c.addrs)
 	c.queue.Reset()
 }
 
@@ -155,7 +155,7 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *np.Err) {
 		db.DPrintf("SESSCLNT", "%v SessionConn reconnecting to %v %v\n", c.sid, c.addrs, c.closed)
 		nc, err := netclnt.MakeNetClnt(c, c.addrs)
 		if err != nil {
-			db.DPrintf("SESSCLNT0", "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
+			db.DPrintf("SESSCLNT", "%v Error %v unable to reconnect to %v\n", c.sid, err, c.addrs)
 			return nil, err
 		}
 		db.DPrintf("SESSCLNT", "%v Successful connection to %v out of %v\n", c.sid, nc.Dst(), c.addrs)
@@ -179,7 +179,7 @@ func (c *SessClnt) close() {
 		return
 	}
 	c.closed = true
-	db.DPrintf("SESSCLNT0", "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
+	db.DPrintf("SESSCLNT", "%v Close session to %v %v\n", c.sid, c.addrs, c.closed)
 	if c.nc != nil {
 		c.nc.Close()
 	}
@@ -194,8 +194,9 @@ func (c *SessClnt) writer() {
 	for !c.isClosed() {
 		// Try to get the next request to be sent
 		req := c.queue.Next()
+
 		if req == nil {
-			return
+			break
 		}
 
 		nc, err := c.getConn()
@@ -203,9 +204,10 @@ func (c *SessClnt) writer() {
 		// If we can't connect to the replica group, return.
 		if err != nil {
 			c.close()
-			return
+			break
 		}
 
 		nc.Send(req)
 	}
+	db.DPrintf("SESSCLNT", "%v writer returns %v %v\n", c.sid, c.addrs, c.closed)
 }

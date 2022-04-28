@@ -25,6 +25,7 @@ const (
 )
 
 type RealmResourceMgr struct {
+	realmId string
 	// ===== Relative to the sigma named =====
 	sigmaFsl *fslib.FsLib
 	ec       *electclnt.ElectClnt
@@ -39,6 +40,7 @@ type RealmResourceMgr struct {
 func MakeRealmResourceMgr(rid string, sigmaNamedAddrs []string) *RealmResourceMgr {
 	db.DPrintf("REALM", "MakeRealmResourceMgr")
 	m := &RealmResourceMgr{}
+	m.realmId = rid
 	m.sigmaFsl = fslib.MakeFsLibAddr("realmmgr-sigmafsl", sigmaNamedAddrs)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
 	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid+REALMMGR_ELECT), 0777)
@@ -90,6 +92,28 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
+}
+
+// Deallocate a noded from a realm.
+func (m *RealmResourceMgr) deallocNoded(nodedId string) {
+	rdCfg := &NodedConfig{}
+	rdCfg.Id = nodedId
+	rdCfg.RealmId = kernel.NO_REALM
+
+	// Update the noded config file.
+	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), rdCfg)
+
+	// Note noded de-registration
+	rCfg := &RealmConfig{}
+	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
+	// Remove the noded from the lsit of assigned nodeds.
+	for i := range rCfg.NodedsAssigned {
+		if rCfg.NodedsAssigned[i] == nodedId {
+			rCfg.NodedsAssigned = append(rCfg.NodedsAssigned[:i], rCfg.NodedsAssigned[i+1:]...)
+		}
+	}
+	rCfg.LastResize = time.Now()
+	m.WriteConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
 }
 
 func (m *RealmResourceMgr) getRealmConfig(realmId string) (*RealmConfig, error) {
@@ -170,20 +194,16 @@ func (m *RealmResourceMgr) adjustRealm(realmId string) {
 		// If there are replicas to spare
 		if len(realmCfg.NodedsAssigned) > nReplicas() {
 			// Find least utilized procd
-			//			min := 100.0
-			//			minNodedId := ""
-			//			for nodedId, util := range procdUtils {
-			//				if min > util {
-			//					min = util
-			//					minNodedId = nodedId
-			//				}
-			//			}
-			// XXX A hack for now, since we don't have a good way of linking a procd to a noded
-			_ = procdUtils
-			//			minNodedId := realmCfg.NodedsAssigned[1]
+			min := 100.0
+			minNodedId := ""
+			for nodedId, util := range procdUtils {
+				if min > util {
+					min = util
+					minNodedId = nodedId
+				}
+			}
 			// Deallocate least utilized procd
-			// TODO:
-			//			m.deallocNoded(realmId, minNodedId)
+			m.deallocNoded(minNodedId)
 		}
 	}
 }

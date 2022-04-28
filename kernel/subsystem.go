@@ -6,6 +6,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -51,7 +52,7 @@ func RegisterSubsystemInfo(fsl *fslib.FsLib, si *SubsystemInfo) {
 
 func GetSubsystemInfo(fsl *fslib.FsLib, kpid proc.Tpid) *SubsystemInfo {
 	si := &SubsystemInfo{}
-	if err := fsl.GetFileJson(path.Join(proc.KPIDS, kpid.String(), SUBSYSTEM_INFO), si); err != nil {
+	if err := fsl.GetFileJson(path.Join(np.KPIDS, kpid.String(), SUBSYSTEM_INFO), si); err != nil {
 		db.DFatalf("GetFileJson: %v", err)
 	}
 	return si

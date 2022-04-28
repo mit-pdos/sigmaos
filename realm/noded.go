@@ -17,10 +17,6 @@ import (
 	"ulambda/semclnt"
 )
 
-const (
-	DEFAULT_NODED_PRIORITY = "0"
-)
-
 type NodedConfig struct {
 	Id      string
 	RealmId string
@@ -47,6 +43,9 @@ func MakeNoded(bin string, id string) *Noded {
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("noded-%v", id))
 	r.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), r.FsLib, "noded", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
+
+	// Set the noded id so that child kernel procs inherit it.
+	proc.SetNodedId(id)
 
 	// Set up the noded config
 	r.cfg = &NodedConfig{}

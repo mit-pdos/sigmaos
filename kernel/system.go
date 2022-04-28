@@ -21,6 +21,7 @@ const (
 	NO_REALM         = "no-realm"
 	SLEEP_MS         = 200
 	REPL_PORT_OFFSET = 100
+	SUBSYSTEM_INFO   = "subsystem-info"
 )
 
 type System struct {

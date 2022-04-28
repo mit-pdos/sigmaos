@@ -11,6 +11,7 @@ const (
 	SIGMAPRIVILEGEDPROC = "SIGMAKERNELPROC"
 	SIGMANEWROOT        = "SIGMANEWROOT"
 	SIGMAPROCDIP        = "SIGMAPROCDIP"
+	SIGMANODEDID        = "SIGMANODEDID"
 	SIGMAPID            = "SIGMAPID"
 	SIGMAPROGRAM        = "SIGMAPROGRAM"
 	SIGMAPROCDIR        = "SIGMAPROCDIR"
@@ -51,6 +52,14 @@ func SetProcdIp(procdIp string) {
 
 func GetProcdIp() string {
 	return os.Getenv(SIGMAPROCDIP)
+}
+
+func SetNodedId(realmId string) {
+	os.Setenv(SIGMANODEDID, realmId)
+}
+
+func GetNodedId() string {
+	return os.Getenv(SIGMANODEDID)
 }
 
 func SetProcDir(procdir string) {

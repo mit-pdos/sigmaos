@@ -100,6 +100,7 @@ func (p *Proc) GetEnv(procdIp, newRoot string) []string {
 	env = append(env, SIGMAPROGRAM+"="+p.Program)
 	env = append(env, SIGMAPROCDIR+"="+p.ProcDir)
 	env = append(env, SIGMAPARENTDIR+"="+p.ParentDir)
+	env = append(env, SIGMANODEDID+"="+GetNodedId())
 	return env
 }
 

@@ -300,6 +300,72 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
+func dirwriter(t *testing.T, dn string, name string, ch chan bool) {
+	fsl := fslib.MakeFsLibAddr("fslibtest-"+name, fslib.Named())
+	stop := false
+	for !stop {
+		select {
+		case stop = <-ch:
+		default:
+			err := fsl.Remove(dn + name)
+			assert.Nil(t, err)
+			_, err = fsl.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+			assert.Nil(t, err)
+		}
+	}
+}
+
+// Concurrently scan dir and create/remove entries
+func TestDirConcur(t *testing.T) {
+	const (
+		N     = 1
+		NFILE = 3
+		NSCAN = 100
+	)
+	ts := test.MakeTstatePath(t, path)
+	dn := path + "/dir/"
+	err := ts.MkDir(dn, 0777)
+	assert.Equal(t, nil, err)
+
+	for i := 0; i < NFILE; i++ {
+		name := strconv.Itoa(i)
+		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+		assert.Equal(t, nil, err)
+	}
+
+	ch := make(chan bool)
+	for i := 0; i < N; i++ {
+		go dirwriter(t, dn, strconv.Itoa(i), ch)
+	}
+
+	for i := 0; i < NSCAN; i++ {
+		i := 0
+		names := []string{}
+		ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
+			names = append(names, st.Name)
+			i += 1
+			return false, nil
+
+		})
+
+		assert.True(t, i >= NFILE-N)
+
+		uniq := make(map[string]bool)
+		for _, n := range names {
+			if _, ok := uniq[n]; ok {
+				assert.True(t, n == strconv.Itoa(NFILE-1))
+			}
+			uniq[n] = true
+		}
+	}
+
+	for i := 0; i < N; i++ {
+		ch <- true
+	}
+
+	ts.Shutdown()
+}
+
 func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	fd, err := fsl.Open(cnt, np.ORDWR)
 	assert.Nil(t, err)

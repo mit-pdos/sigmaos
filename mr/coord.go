@@ -363,8 +363,10 @@ func (c *Coord) Work() {
 		for i := 0; i < 2; i++ {
 			// If reduce phase is unsuccessful, we lost
 			// some mapper output. Restart those mappers.
-			done = <-ch
-			db.DPrintf(db.ALWAYS, "phase %d done %v\n", i, done)
+			d := <-ch
+			if done {
+				done = d
+			}
 		}
 	}
 

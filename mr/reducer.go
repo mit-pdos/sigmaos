@@ -127,14 +127,20 @@ func (r *Reducer) readFiles(input string) ([]*KeyValue, []string, error) {
 		ch := make(chan result)
 		for _, st := range sts {
 			if _, ok := files[st.Name]; !ok {
+				// Make sure we read an input file
+				// only once.  Since mappers are
+				// removing/creating files
+				// concurrently from the directory we
+				// also may have dup entries, so
+				// filter here.
+				files[st.Name] = true
 				n += 1
 				go r.readFile(ch, st.Name)
 			}
 		}
 		for i := 0; i < n; i++ {
 			res := <-ch
-			files[res.name] = true
-			db.DPrintf("REDUCE", "Read %v ok %v\n", res.name, res.ok)
+			db.DPrintf("REDUCE", "Read %v %v ok %v\n", r.input, res.name, res.ok)
 			if !res.ok {
 				// If !ok, then readFile failed to
 				// read input shard, perhaps the

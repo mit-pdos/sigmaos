@@ -183,7 +183,7 @@ func (c *Coord) reducer(task string) (*proc.Status, error) {
 func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 	from := dir + "/" + st.Name
 	if err := c.Rename(from, dir+TIP+"/"+st.Name); err != nil {
-		if np.IsErrUnreachable(err) { // partitioned?  (XXX other errors than EOF?)
+		if np.IsErrUnreachable(err) { // partitioned?
 			return "", err
 		}
 		// another thread claimed the task before us
@@ -242,7 +242,8 @@ func (c *Coord) runTask(ch chan Tresult, dir string, t string, f func(string) (*
 		}
 		ch <- Tresult{t, true, ms}
 	} else { // task failed; make it runnable again
-		if status.Msg() == RESTART { // reducer may indicate to run mapper again
+		if status != nil && status.Msg() == RESTART {
+			// reducer indicates to run some mappers again
 			s := mkStringSlice(status.Data().([]interface{}))
 			c.restart(s, t)
 		} else { // if failure but not restart, rerun task immediately again
@@ -323,7 +324,7 @@ func (c *Coord) doRestart() bool {
 }
 
 // Consider all tasks in progress as failed (too aggressive, but
-// correct), and restart them.
+// correct), and make them runnable
 func (c *Coord) recover(dir string) {
 	if _, err := c.MoveFiles(dir+TIP, dir); err != nil {
 		db.DFatalf("MoveFiles %v err %v\n", dir, err)
@@ -356,7 +357,7 @@ func (c *Coord) Work() {
 	c.recover(RDIR)
 	c.doRestart()
 
-	for n := 0; ; n++ {
+	for n := 0; ; {
 		db.DPrintf(db.ALWAYS, "run round %d\n", n)
 		c.Round()
 		if !c.doRestart() {

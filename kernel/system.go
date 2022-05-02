@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -108,7 +109,8 @@ func (s *System) Boot() error {
 }
 
 func (s *System) BootSubsystem(bin string, args []string, list *[]*Subsystem) error {
-	p := proc.MakeProcPid(proc.GenPid(), bin, args)
+	pid := proc.Tpid(path.Base(bin) + "-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, bin, args)
 	ss := makeSubsystem(s.ProcClnt, p)
 	*list = append(*list, ss)
 	return ss.Run(s.bindir, s.namedAddr)

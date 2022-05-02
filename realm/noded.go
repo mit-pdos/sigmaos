@@ -3,7 +3,6 @@ package realm
 import (
 	"fmt"
 	"path"
-	"runtime/debug"
 
 	"ulambda/config"
 	db "ulambda/debug"
@@ -137,18 +136,6 @@ func (r *Noded) boot(realmCfg *RealmConfig) {
 	}
 }
 
-func (r *Noded) lockRealm() {
-	if err := r.ec.AcquireLeadership([]byte("noded-" + r.id)); err != nil {
-		db.DFatalf("%v error Noded acquire leadership: %v", string(debug.Stack()), err)
-	}
-}
-
-func (r *Noded) unlockRealm() {
-	if err := r.ec.ReleaseLeadership(); err != nil {
-		db.DFatalf("%v error Noded release leadership: %v", string(debug.Stack()), err)
-	}
-}
-
 func (r *Noded) startRealmMgr() {
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	fsl := fslib.MakeFsLibAddr(fmt.Sprintf("noded-%v", r.id), realmCfg.NamedAddrs)
@@ -167,8 +154,8 @@ func (r *Noded) startRealmMgr() {
 
 // Join a realm
 func (r *Noded) joinRealm() chan bool {
-	r.lockRealm()
-	defer r.unlockRealm()
+	lockRealm(r.ec, r.cfg.RealmId)
+	defer unlockRealm(r.ec, r.cfg.RealmId)
 
 	// Try to initalize this realm if it hasn't been initialized already.
 	initDone := r.tryAddNamedReplicaL()
@@ -226,8 +213,8 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 
 // Leave a realm
 func (r *Noded) leaveRealm() {
-	r.lockRealm()
-	defer r.unlockRealm()
+	lockRealm(r.ec, r.cfg.RealmId)
+	defer unlockRealm(r.ec, r.cfg.RealmId)
 
 	db.DPrintf("NODED", "Noded %v leaving Realm %v", r.id, r.cfg.RealmId)
 

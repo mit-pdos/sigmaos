@@ -35,6 +35,7 @@ type RealmResourceMgr struct {
 	// ===== Relative to the sigma named =====
 	sigmaFsl *fslib.FsLib
 	ec       *electclnt.ElectClnt
+	lock     *electclnt.ElectClnt
 	*config.ConfigClnt
 	// ===== Relative to the realm named =====
 	*procclnt.ProcClnt
@@ -50,6 +51,7 @@ func MakeRealmResourceMgr(rid string, sigmaNamedAddrs []string) *RealmResourceMg
 	m.realmId = rid
 	m.sigmaFsl = fslib.MakeFsLibAddr("realmmgr-sigmafsl", sigmaNamedAddrs)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
+	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid), 0777)
 	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid+REALMMGR_ELECT), 0777)
 
 	return m
@@ -78,12 +80,14 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 	switch msg.ResourceType {
 	case Tnode:
 		db.DPrintf(db.ALWAYS, "Tnode requested")
-		lockRealm(m.ec, m.realmId)
+		lockRealm(m.lock, m.realmId)
 		nodedId := m.getLeastUtilizedNoded()
+		db.DPrintf(db.ALWAYS, "least utilized node: %v", nodedId)
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
 		m.deallocNoded(nodedId)
-		unlockRealm(m.ec, m.realmId)
+		db.DPrintf(db.ALWAYS, "dealloced: %v", nodedId)
+		unlockRealm(m.lock, m.realmId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -170,6 +174,7 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() string {
 	}
 
 	_, procdUtils := m.getRealmUtil(realmCfg)
+	db.DPrintf(db.ALWAYS, "searching for least utilized node, procd utils: %v", procdUtils)
 	// Find least utilized procd
 	min := 100.0
 	minNodedId := ""
@@ -200,9 +205,7 @@ func (m *RealmResourceMgr) adjustRealm() {
 		return
 	}
 
-	//	log.Printf("Avg util pre: %v", realmCfg)
 	avgUtil, _ := m.getRealmUtil(realmCfg)
-	//	log.Printf("Avg util post: %v, %v", realmCfg, avgUtil)
 	if avgUtil > np.REALM_GROW_CPU_UTIL_THRESHOLD {
 		// TODO: request noded
 	}
@@ -230,9 +233,9 @@ func (m *RealmResourceMgr) Work() {
 	m.Started()
 
 	for {
-		lockRealm(m.ec, m.realmId)
-		m.adjustRealm()
-		unlockRealm(m.ec, m.realmId)
+		//		lockRealm(m.lock, m.realmId)
+		//		m.adjustRealm()
+		//		unlockRealm(m.lock, m.realmId)
 
 		// Sleep for a bit.
 		time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)

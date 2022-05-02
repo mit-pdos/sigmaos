@@ -93,6 +93,13 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
+
+	// Remove intermediate dir. XXX If we run with many machine
+	// this must happen on each ux.
+	fsl.RmDir(MLOCALMR)
+	if err := fsl.MkDir(MLOCALMR, 0777); err != nil {
+		db.DFatalf("Mkdir %v err %v\n", MLOCALMR, err)
+	}
 }
 
 type Coord struct {

@@ -282,9 +282,9 @@ func (c *Coord) startTasks(ch chan Tresult, dir string, f func(string) (*proc.St
 
 // A reducer failed because it couldn't read its input file; we must
 // restart mapper.  We let all mappers and reducers finish, before
-// starting a new round for the tasks that must be restarted to avoid
-// that restarting a mapper several times (because several reducers
-// may ask the mapper to be restarted).
+// starting a new round for the mappers and reducers that must be
+// restarted, which avoids restarting a mapper several times (because
+// several reducers may ask the mapper to be restarted).
 func (c *Coord) restart(files []string, task string) {
 	db.DPrintf(db.ALWAYS, "restart %v and %v\n", files, task)
 	for _, f := range files {

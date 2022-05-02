@@ -27,8 +27,10 @@ const (
 	RESTART = "restart"
 	NCOORD  = 3
 
-	MLOCALSRV    = np.UX + "/~ip"
-	MLOCALPREFIX = MLOCALSRV + "/m-"
+	MLOCALDIR    = "/mr/"
+	MLOCALSRV    = np.UX + "/~ip" // must end without /
+	MLOCALMR     = MLOCALSRV + MLOCALDIR
+	MLOCALPREFIX = MLOCALMR + "m-"
 )
 
 func Moutdir(name string) string {
@@ -40,7 +42,7 @@ func mshardfile(name string, r int) string {
 }
 
 func shardtarget(server, name string, r int) string {
-	return np.UX + "/" + server + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
+	return np.UX + "/" + server + MLOCALDIR + "m-" + name + "/r-" + strconv.Itoa(r) + "/"
 }
 
 func symname(r string, name string) string {
@@ -175,7 +177,7 @@ func (c *Coord) claimEntry(dir string, st *np.Stat) (string, error) {
 		if np.IsErrUnreachable(err) { // partitioned?  (XXX other errors than EOF?)
 			return "", err
 		}
-		// another coord thread claimed the task before us
+		// another thread claimed the task before us
 		return "", nil
 	}
 	return st.Name, nil

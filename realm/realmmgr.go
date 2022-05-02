@@ -230,14 +230,27 @@ func (m *RealmResourceMgr) Work() {
 
 	m.makeCtlFiles()
 
+	done := make(chan bool)
+	go func(done chan bool) {
+		m.WaitEvict(proc.GetPid())
+		done <- true
+	}(done)
+
 	m.Started()
+	defer m.Exited(proc.MakeStatus(proc.StatusEvicted))
 
 	for {
-		//		lockRealm(m.lock, m.realmId)
-		//		m.adjustRealm()
-		//		unlockRealm(m.lock, m.realmId)
+		select {
+		case <-done:
+			return
+		default:
+			//		lockRealm(m.lock, m.realmId)
+			//		m.adjustRealm()
+			//		unlockRealm(m.lock, m.realmId)
 
-		// Sleep for a bit.
-		time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)
+			// Sleep for a bit.
+			time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)
+		}
 	}
+
 }

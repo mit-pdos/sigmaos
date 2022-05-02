@@ -220,6 +220,9 @@ func (r *Noded) leaveRealm() {
 
 	// Tear down resources
 	r.teardown()
+
+	db.DPrintf("NODED", "Noded %v done with teardown", r.id)
+
 	// Get the realm config
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	// Deregister this noded

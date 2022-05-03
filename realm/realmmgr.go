@@ -208,6 +208,11 @@ func (m *RealmResourceMgr) adjustRealm() {
 	avgUtil, _ := m.getRealmUtil(realmCfg)
 	if avgUtil > np.REALM_GROW_CPU_UTIL_THRESHOLD {
 		// TODO: request noded
+		msg := MakeResourceMsg(Trequest, Tnode, m.realmId, 1)
+		// TODO: move realmctl file to sigma named.
+		if _, err := m.sigmaFsl.SetFile(path.Join(SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+			db.DFatalf("Error SetFile: %v", err)
+		}
 	}
 }
 
@@ -244,9 +249,9 @@ func (m *RealmResourceMgr) Work() {
 		case <-done:
 			return
 		default:
-			//		lockRealm(m.lock, m.realmId)
-			//		m.adjustRealm()
-			//		unlockRealm(m.lock, m.realmId)
+			lockRealm(m.lock, m.realmId)
+			m.adjustRealm()
+			unlockRealm(m.lock, m.realmId)
 
 			// Sleep for a bit.
 			time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)

@@ -144,14 +144,17 @@ func (nc *NetClnt) recv() (*np.Fcall, *np.Err) {
 // Reader loop. The reader is in charge of resetting the connection if an error
 // occurs.
 func (nc *NetClnt) reader() {
-	for !nc.isClosed() {
+	for true {
 		// Receive the next reply.
 		reply, err := nc.recv()
 		if err != nil {
 			db.DPrintf("NETCLNT", "error %v reader RPC to %v, trying reconnect", err, nc.addr)
 			nc.reset()
-			continue
+			break
 		}
 		nc.sconn.CompleteRPC(reply, err)
+		if nc.isClosed() {
+			break
+		}
 	}
 }

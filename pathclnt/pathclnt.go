@@ -228,7 +228,7 @@ func (pathc *PathClnt) Remove(name string) error {
 	// symlink.
 	err = pathc.FidClnt.RemoveFile(fid, rest, np.EndSlash(name))
 	if err != nil {
-		if np.IsMaybeSpecialElem(err) {
+		if np.IsMaybeSpecialElem(err) || np.IsErrUnreachable(err) {
 			fid, err = pathc.walkPathUmount(path, np.EndSlash(name), nil)
 			if err != nil {
 				return err

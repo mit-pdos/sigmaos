@@ -100,6 +100,23 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	return err
 }
 
+func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
+	sts, err := fl.GetDir(src) // XXX handle one entry at the time?
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, st := range sts {
+		db.DPrintf(db.ALWAYS, "move %v to %v\n", st.Name, dst)
+		to := dst + "/" + st.Name
+		if fl.Rename(src+"/"+st.Name, to) != nil {
+			return n, err
+		}
+		n += 1
+	}
+	return n, nil
+}
+
 // Reads directory incrementally
 func (fl *FsLib) RmDirLarge(dir string) error {
 	fl.ProcessDir(dir, func(st *np.Stat) (bool, error) {

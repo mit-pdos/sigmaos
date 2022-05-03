@@ -194,8 +194,9 @@ func (c *SessClnt) writer() {
 	for !c.isClosed() {
 		// Try to get the next request to be sent
 		req := c.queue.Next()
+
 		if req == nil {
-			return
+			break
 		}
 
 		nc, err := c.getConn()
@@ -203,9 +204,10 @@ func (c *SessClnt) writer() {
 		// If we can't connect to the replica group, return.
 		if err != nil {
 			c.close()
-			return
+			break
 		}
 
 		nc.Send(req)
 	}
+	db.DPrintf("SESSCLNT", "%v writer returns %v %v\n", c.sid, c.addrs, c.closed)
 }

@@ -300,6 +300,72 @@ func TestPageDir(t *testing.T) {
 	ts.Shutdown()
 }
 
+func dirwriter(t *testing.T, dn string, name string, ch chan bool) {
+	fsl := fslib.MakeFsLibAddr("fslibtest-"+name, fslib.Named())
+	stop := false
+	for !stop {
+		select {
+		case stop = <-ch:
+		default:
+			err := fsl.Remove(dn + name)
+			assert.Nil(t, err)
+			_, err = fsl.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+			assert.Nil(t, err)
+		}
+	}
+}
+
+// Concurrently scan dir and create/remove entries
+func TestDirConcur(t *testing.T) {
+	const (
+		N     = 1
+		NFILE = 3
+		NSCAN = 100
+	)
+	ts := test.MakeTstatePath(t, path)
+	dn := path + "/dir/"
+	err := ts.MkDir(dn, 0777)
+	assert.Equal(t, nil, err)
+
+	for i := 0; i < NFILE; i++ {
+		name := strconv.Itoa(i)
+		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
+		assert.Equal(t, nil, err)
+	}
+
+	ch := make(chan bool)
+	for i := 0; i < N; i++ {
+		go dirwriter(t, dn, strconv.Itoa(i), ch)
+	}
+
+	for i := 0; i < NSCAN; i++ {
+		i := 0
+		names := []string{}
+		ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
+			names = append(names, st.Name)
+			i += 1
+			return false, nil
+
+		})
+
+		assert.True(t, i >= NFILE-N)
+
+		uniq := make(map[string]bool)
+		for _, n := range names {
+			if _, ok := uniq[n]; ok {
+				assert.True(t, n == strconv.Itoa(NFILE-1))
+			}
+			uniq[n] = true
+		}
+	}
+
+	for i := 0; i < N; i++ {
+		ch <- true
+	}
+
+	ts.Shutdown()
+}
+
 func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	fd, err := fsl.Open(cnt, np.ORDWR)
 	assert.Nil(t, err)
@@ -1064,27 +1130,6 @@ const (
 	BUFSZ      = 1 << 16
 )
 
-func mkBuf(n int) []byte {
-	buf := make([]byte, WRITESZ)
-	for i := 0; i < WRITESZ; i++ {
-		buf[i] = byte(i & 0xFF)
-	}
-	return buf
-}
-
-func writer(t *testing.T, wrt io.Writer, buf []byte, fsz int) {
-	for n := 0; n < fsz; {
-		w := len(buf)
-		if fsz-n < w {
-			w = fsz - n
-		}
-		m, err := wrt.Write(buf[0:w])
-		assert.Nil(t, err)
-		assert.Equal(t, w, m)
-		n += m
-	}
-}
-
 func measure(msg string, f func() int) {
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
@@ -1108,16 +1153,19 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 	assert.Nil(t, err)
 	switch how {
 	case HSYNC:
-		writer(t, w, buf, sz)
+		err = test.Writer(t, w, buf, sz)
+		assert.Nil(t, err)
 	case HBUF:
 		bw := bufio.NewWriterSize(w, BUFSZ)
-		writer(t, bw, buf, sz)
+		err = test.Writer(t, bw, buf, sz)
+		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
 	case HASYNC:
 		aw := awriter.NewWriterSize(w, BUFSZ)
 		bw := bufio.NewWriterSize(aw, BUFSZ)
-		writer(t, bw, buf, sz)
+		err = test.Writer(t, bw, buf, sz)
+		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
 		err = aw.Close()
@@ -1133,7 +1181,7 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 func TestWritePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
-	buf := mkBuf(WRITESZ)
+	buf := test.MkBuf(WRITESZ)
 	measure("writer", func() int {
 		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
 		err := ts.Remove(fn)
@@ -1172,7 +1220,7 @@ func reader(t *testing.T, rdr io.Reader, buf []byte, sz int) int {
 func TestReadPerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
-	buf := mkBuf(WRITESZ)
+	buf := test.MkBuf(WRITESZ)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
 	measure("reader", func() int {
 		r, err := ts.OpenReader(fn)

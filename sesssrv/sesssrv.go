@@ -89,7 +89,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 		log.Printf("Starting repl server: %v", config)
 	}
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
-	db.DPrintf("SESSSRV", "Listen on address: %v", ssrv.srv.MyAddr())
+	db.DPrintf("SESSSRV0", "Listen on address: %v", ssrv.srv.MyAddr())
 	ssrv.pclnt = pclnt
 	ssrv.ch = make(chan bool)
 	ssrv.fsl = fsl

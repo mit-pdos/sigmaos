@@ -1,14 +1,19 @@
 package sessclnt_test
 
 import (
+	"bufio"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/awriter"
 	"ulambda/fslib"
 	"ulambda/group"
 	"ulambda/groupmgr"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/semclnt"
 	"ulambda/test"
@@ -194,5 +199,81 @@ func TestServerPartitionBlocking(t *testing.T) {
 		assert.NotNil(ts.T, err, "down")
 	}
 	grp.Stop()
+	ts.Shutdown()
+}
+
+const (
+	MBYTE   = 1 << 20
+	FILESZ  = 50 * MBYTE
+	WRITESZ = 4096
+	BUFSZ   = 1 << 16
+)
+
+func writer(t *testing.T, ch chan error, name string) {
+	fsl := fslib.MakeFsLibAddr("writer-"+name, fslib.Named())
+	fn := np.UX + "~ip/file-" + name
+	stop := false
+	nfile := 0
+	for !stop {
+		select {
+		case <-ch:
+			stop = true
+		default:
+			if err := fsl.Remove(fn); err != nil && np.IsErrUnreachable(err) {
+				break
+			}
+			w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
+			if err != nil {
+				assert.True(t, np.IsErrUnreachable(err))
+				break
+			}
+			nfile += 1
+			aw := awriter.NewWriterSize(w, BUFSZ)
+			bw := bufio.NewWriterSize(aw, BUFSZ)
+			buf := test.MkBuf(WRITESZ)
+			if err := test.Writer(t, w, buf, FILESZ); err != nil {
+				break
+			}
+			if err := bw.Flush(); err != nil {
+				assert.True(t, np.IsErrUnreachable(err))
+				break
+			}
+			if err := aw.Close(); err != nil {
+				assert.True(t, np.IsErrUnreachable(err))
+			}
+		}
+	}
+	assert.True(t, nfile >= 3) // a bit arbitrary
+	fsl.Remove(fn)
+}
+
+func TestWriteCrash(t *testing.T) {
+	const (
+		N        = 20
+		NCRASH   = 5
+		CRASHSRV = 1000000
+	)
+
+	ts := test.MakeTstateAll(t)
+	ch := make(chan error)
+
+	for i := 0; i < N; i++ {
+		go writer(ts.T, ch, strconv.Itoa(i))
+	}
+
+	crashchan := make(chan bool)
+	l := &sync.Mutex{}
+	for i := 0; i < NCRASH; i++ {
+		go ts.CrashServer(np.UX, (i+1)*CRASHSRV, l, crashchan)
+	}
+
+	for i := 0; i < NCRASH; i++ {
+		<-crashchan
+	}
+
+	for i := 0; i < N; i++ {
+		ch <- nil
+	}
+
 	ts.Shutdown()
 }

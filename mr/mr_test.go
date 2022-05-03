@@ -33,6 +33,13 @@ const (
 	CRASHSRV   = 1000000
 )
 
+func TestHash(t *testing.T) {
+	assert.Equal(t, 0, mr.Khash("LEAGUE")%8)
+	assert.Equal(t, 0, mr.Khash("Abbots")%8)
+	assert.Equal(t, 0, mr.Khash("yes")%8)
+	assert.Equal(t, 7, mr.Khash("absently")%8)
+}
+
 func (ts *Tstate) Compare() {
 	cmd := exec.Command("sort", "seq-mr.out")
 	var out1 bytes.Buffer
@@ -102,7 +109,8 @@ func (ts *Tstate) checkJob() {
 	ts.Compare()
 }
 
-// Crash a server of a certain type, then crash a server of that type.
+// Sleep for a random time, then crash a server.  Crash a server of a
+// certain type, then crash a server of that type.
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)
 	time.Sleep(time.Duration(r) * time.Microsecond)
@@ -128,7 +136,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	const NReduce = 2
+	const NReduce = 8
 	ts := makeTstate(t, NReduce)
 
 	nmap := ts.prepareJob()

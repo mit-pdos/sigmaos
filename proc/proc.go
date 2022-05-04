@@ -47,11 +47,11 @@ func MakeEmptyProc() *Proc {
 func MakeProc(program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = GenPid()
-	p.setProcDir("")
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
 	p.Ncore = C_DEF
+	p.setProcDir("")
 	return p
 }
 

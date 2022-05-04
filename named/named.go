@@ -79,6 +79,8 @@ func Run(args []string) {
 
 	initfs(ss)
 
+	db.DPrintf("NAMED", "Named started rid:%v ip:%v", realmId, ss.MyAddr())
+
 	ss.Serve()
 	ss.Done()
 }

@@ -2,6 +2,7 @@ package realm
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -46,7 +47,6 @@ type RealmResourceMgr struct {
 // TODO: Make this proc un-stealable
 func MakeRealmResourceMgr(rid string, sigmaNamedAddrs []string) *RealmResourceMgr {
 	db.DPrintf("REALMMGR", "MakeRealmResourceMgr")
-	db.DPrintf(db.ALWAYS, "MakeRealmResourceMgr")
 	m := &RealmResourceMgr{}
 	m.realmId = rid
 	m.sigmaFsl = fslib.MakeFsLibAddr("realmmgr-sigmafsl", sigmaNamedAddrs)
@@ -83,6 +83,10 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 		lockRealm(m.lock, m.realmId)
 		nodedId := m.getLeastUtilizedNoded()
 		db.DPrintf(db.ALWAYS, "least utilized node: %v", nodedId)
+		// If no Nodeds remain...
+		if nodedId == "" {
+			return
+		}
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
 		m.deallocNoded(nodedId)
@@ -98,10 +102,12 @@ func (m *RealmResourceMgr) deallocNoded(nodedId string) {
 	// Note noded de-registration
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
+	db.DPrintf(db.ALWAYS, "Dealloc noded, choosing from: %v", rCfg.NodedsAssigned)
 	// Remove the noded from the list of assigned nodeds.
 	for i := range rCfg.NodedsAssigned {
 		if rCfg.NodedsAssigned[i] == nodedId {
 			rCfg.NodedsAssigned = append(rCfg.NodedsAssigned[:i], rCfg.NodedsAssigned[i+1:]...)
+			break
 		}
 	}
 	rCfg.LastResize = time.Now()
@@ -174,12 +180,12 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() string {
 	}
 
 	_, procdUtils := m.getRealmUtil(realmCfg)
-	db.DPrintf(db.ALWAYS, "searching for least utilized node, procd utils: %v", procdUtils)
+	db.DPrintf("REALMMGR", "searching for least utilized node, procd utils: %v", procdUtils)
 	// Find least utilized procd
 	min := 100.0
 	minNodedId := ""
 	for nodedId, util := range procdUtils {
-		if min > util {
+		if min >= util {
 			min = util
 			minNodedId = nodedId
 		}
@@ -207,9 +213,8 @@ func (m *RealmResourceMgr) adjustRealm() {
 
 	avgUtil, _ := m.getRealmUtil(realmCfg)
 	if avgUtil > np.REALM_GROW_CPU_UTIL_THRESHOLD {
-		// TODO: request noded
+		db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
 		msg := MakeResourceMsg(Trequest, Tnode, m.realmId, 1)
-		// TODO: move realmctl file to sigma named.
 		if _, err := m.sigmaFsl.SetFile(path.Join(SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 			db.DFatalf("Error SetFile: %v", err)
 		}
@@ -217,45 +222,43 @@ func (m *RealmResourceMgr) adjustRealm() {
 }
 
 func (m *RealmResourceMgr) Work() {
-	db.DPrintf(db.ALWAYS, "Realmmgr started")
+	db.DPrintf("REALMMGR", "Realmmgr started")
+
+	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
+	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
+
+	m.Started()
+	go func() {
+		m.WaitEvict(proc.GetPid())
+		db.DPrintf("REALMMGR", "Evicted!")
+		m.Exited(proc.MakeStatus(proc.StatusEvicted))
+		db.DPrintf("REALMMGR", "Exited")
+		os.Exit(0)
+	}()
+
 	// Acquire primary role
 	if err := m.ec.AcquireLeadership([]byte("realmmgr")); err != nil {
 		db.DFatalf("Acquire leadership: %v", err)
 	}
 
-	// TODO: move to sigma named.
+	// TODO: move realm fs files to sigma named.
 	// XXX Currently, because of this scheme in which each noded runs a realmmgr,
 	// the sigmamgr and other requesting applications may have to retry on
 	// TErrNotfound.
 	var err error
-	m.MemFs, m.FsLib, m.ProcClnt, err = fslibsrv.MakeMemFs(np.REALM_MGR, "realmmgr")
+	m.MemFs, err = fslibsrv.MakeMemFsFsl(np.REALM_MGR, m.FsLib, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
 
 	m.makeCtlFiles()
 
-	done := make(chan bool)
-	go func(done chan bool) {
-		m.WaitEvict(proc.GetPid())
-		done <- true
-	}(done)
-
-	m.Started()
-	defer m.Exited(proc.MakeStatus(proc.StatusEvicted))
-
 	for {
-		select {
-		case <-done:
-			return
-		default:
-			lockRealm(m.lock, m.realmId)
-			m.adjustRealm()
-			unlockRealm(m.lock, m.realmId)
+		lockRealm(m.lock, m.realmId)
+		m.adjustRealm()
+		unlockRealm(m.lock, m.realmId)
 
-			// Sleep for a bit.
-			time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)
-		}
+		// Sleep for a bit.
+		time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)
 	}
-
 }

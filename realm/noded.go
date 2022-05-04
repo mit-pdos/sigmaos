@@ -42,7 +42,7 @@ func MakeNoded(bin string, id string) *Noded {
 	r.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), r.FsLib, "noded", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
 
-	db.DPrintf(db.ALWAYS, "Noded %v started", id)
+	db.DPrintf("NODED", "Noded %v started", id)
 
 	// Set the noded id so that child kernel procs inherit it.
 	proc.SetNodedId(id)
@@ -140,16 +140,11 @@ func (r *Noded) startRealmMgr() {
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	fsl := fslib.MakeFsLibAddr(fmt.Sprintf("noded-%v", r.id), realmCfg.NamedAddrs)
 	pclnt := procclnt.MakeProcClntInit(proc.GetPid(), fsl, "noded", realmCfg.NamedAddrs)
-	p := proc.MakeProc("bin/realm/realmmgr", []string{r.cfg.RealmId, fslib.NamedAddrs()})
-	db.DPrintf(db.ALWAYS, "try spawn %v", p)
+	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, "bin/realm/realmmgr", []string{r.cfg.RealmId, fslib.NamedAddrs()})
 	if _, err := pclnt.SpawnKernelProc(p, r.bin, realmCfg.NamedAddrs); err != nil {
 		db.DFatalf("Error spawn realmmgr %v", err)
 	}
-	db.DPrintf(db.ALWAYS, "done spawn")
-	if err := pclnt.WaitStart(p.Pid); err != nil {
-		db.DFatalf("Error waitStart %v %v", p.Pid, err)
-	}
-	db.DPrintf(db.ALWAYS, "done waitStart")
 }
 
 // Join a realm

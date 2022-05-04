@@ -96,11 +96,24 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 	switch msg.ResourceType {
 	case Trealm:
 		m.createRealm(msg.Name)
-		//	case Tnode:
-		//		m.growRealm(msg.Name)
+	case Tnode:
+		m.growRealm(msg.Name)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
+}
+
+func (m *SigmaResourceMgr) getFreeNoded(nRetries int) string {
+	for i := 0; i < nRetries; i++ {
+		select {
+		case nodedId := <-m.freeNodeds:
+			return nodedId
+		default:
+			db.DPrintf(db.ALWAYS, "Tried to get Noded, but none free.")
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	return ""
 }
 
 // Alloc a Noded to this realm.
@@ -119,23 +132,26 @@ func (m *SigmaResourceMgr) allocNoded(realmId string, nodedId string) {
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
-// Allocate the
+// Allocate the minimum number of Nodeds needed to start a realm.
 func (m *SigmaResourceMgr) allocMinNodeds(realmId string) {
 	n := nReplicas()
 	for i := 0; i < n; i++ {
 		// Retry noded allocation infinitely for now.
-		alloc := false
-		for !alloc {
-			select {
-			case nodedId := <-m.freeNodeds:
-				m.allocNoded(realmId, nodedId)
-				alloc = true
-			default:
-				db.DPrintf(db.ALWAYS, "Tried to start realm %v, but didn't have enough Nodeds", realmId)
-				time.Sleep(10 * time.Millisecond)
-			}
+		nodedId := m.getFreeNoded(100)
+		if nodedId == "" {
+			db.DFatalf("No free noded available")
 		}
+		m.allocNoded(realmId, nodedId)
 	}
+}
+
+func (m *SigmaResourceMgr) growRealm(realmId string) {
+	nodedId := m.getFreeNoded(100)
+	if nodedId == "" {
+		db.DPrintf("SIGMAMGR", "Sigmamgr couldn't grow realm %v", realmId)
+		return
+	}
+	m.allocNoded(realmId, nodedId)
 }
 
 // Create a realm.

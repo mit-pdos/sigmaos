@@ -170,13 +170,16 @@ func (s *System) Shutdown() {
 		if err != nil {
 			db.DFatalf("GetChildren in System.Shutdown: %v", err)
 		}
+		db.DPrintf("KERNEL", "Shutdown children %v", cpids)
 		for _, pid := range cpids {
 			s.Evict(pid)
+			db.DPrintf("KERNEL", "Evicted %v", pid)
 			if _, ok := s.crashedPids[pid]; !ok {
 				if status, err := s.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					log.Printf("shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
+			db.DPrintf("KERNEL", "Done evicting %v", pid)
 		}
 	}
 	// Make sure the procs actually exited

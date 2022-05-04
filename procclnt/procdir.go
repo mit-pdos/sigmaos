@@ -14,7 +14,7 @@ import (
 
 func (clnt *ProcClnt) MakeProcDir(pid proc.Tpid, procdir string, isKernelProc bool) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
-		db.DPrintf("PROCCLNT_ERR", "MakeProcDir mkdir pid %v err %v\n", procdir, err)
+		db.DPrintf("PROCCLNT_ERR", "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}
 	childrenDir := path.Join(procdir, proc.CHILDREN)

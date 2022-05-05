@@ -92,32 +92,44 @@ func (m *SigmaResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
 	}
 }
 
+// Handle a resource request.
 func (m *SigmaResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 	switch msg.ResourceType {
 	case Trealm:
 		m.createRealm(msg.Name)
 	case Tnode:
+		m.Lock()
+		defer m.Unlock()
+
 		m.growRealm(msg.Name)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
 }
 
-func (m *SigmaResourceMgr) getFreeNoded(nRetries int) string {
+func (m *SigmaResourceMgr) getFreeNoded(nRetries int) (string, bool) {
 	for i := 0; i < nRetries; i++ {
 		select {
 		case nodedId := <-m.freeNodeds:
-			return nodedId
+			return nodedId, true
 		default:
 			db.DPrintf(db.ALWAYS, "Tried to get Noded, but none free.")
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
-	return ""
+	return "", false
 }
 
 // Alloc a Noded to this realm.
 func (m *SigmaResourceMgr) allocNoded(realmId string, nodedId string) {
+	// If the realm has been destroyed, exit early.
+	if _, ok := m.ecs[realmId]; !ok {
+		return
+	}
+
+	lockRealm(m.ecs[realmId], realmId)
+	defer unlockRealm(m.ecs[realmId], realmId)
+
 	// Update the noded's config
 	rdCfg := &NodedConfig{}
 	rdCfg.Id = nodedId
@@ -137,21 +149,70 @@ func (m *SigmaResourceMgr) allocMinNodeds(realmId string) {
 	n := nReplicas()
 	for i := 0; i < n; i++ {
 		// Retry noded allocation infinitely for now.
-		nodedId := m.getFreeNoded(100)
-		if nodedId == "" {
-			db.DFatalf("No free noded available")
+		if ok := m.growRealm(realmId); !ok {
+			db.DFatalf("Can't allocate min nodeds for realm %v", realmId)
 		}
-		m.allocNoded(realmId, nodedId)
 	}
 }
 
-func (m *SigmaResourceMgr) growRealm(realmId string) {
-	nodedId := m.getFreeNoded(100)
-	if nodedId == "" {
-		db.DPrintf("SIGMAMGR", "Sigmamgr couldn't grow realm %v", realmId)
-		return
+// Tries to add a Noded to a realm. Will first try and pull from the list of
+// free Nodeds, and if none is available, it will try to make one free, and
+// then retry.
+func (m *SigmaResourceMgr) growRealm(realmId string) bool {
+	// Try to get a free noded.
+	if nodedId, ok := m.getFreeNoded(100); ok {
+		// Alloc the free Noded.
+		m.allocNoded(realmId, nodedId)
+		return true
 	}
-	m.allocNoded(realmId, nodedId)
+	// No noded was available, so try to find a realm with spare resources.
+	opRealmId, ok := m.findOverProvisionedRealm(realmId)
+	if !ok {
+		db.DPrintf("SIGMAMGR", "No overprovisioned realms available")
+		return false
+	}
+	// Ask the over-provisioned realm to give up a Noded.
+	m.requestNoded(opRealmId)
+	// Try to get the newly freed Noded.
+	if nodedId, ok := m.getFreeNoded(100); ok {
+		// Alloc the newly freed Noded.
+		m.allocNoded(realmId, nodedId)
+		return true
+	}
+	return false
+}
+
+// Find an over-provisioned realm (a realm with resources to spare). Returns
+// true if an overprovisioned realm was found, false otherwise.
+func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string, bool) {
+	opRealmId := ""
+	success := false
+	// XXX Eventually, we'll want to find overprovisioned realms according to
+	// more nuanced metrics, e.g. how many Nodeds are running BE vs LC tasks, how
+	// many Nodeds are running procs that hold state, etc.
+	m.ProcessDir(REALM_CONFIG, func(st *np.Stat) (bool, error) {
+		realmId := st.Name
+
+		// Avoid thrashing.
+		if realmId == ignoreRealm {
+			return false, nil
+		}
+
+		lockRealm(m.ecs[realmId], realmId)
+		defer unlockRealm(m.ecs[realmId], realmId)
+
+		rCfg := &RealmConfig{}
+		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+
+		// If there are more than the minimum number of required Nodeds available...
+		if len(rCfg.NodedsAssigned) > nReplicas() {
+			opRealmId = realmId
+			success = true
+			return true, nil
+		}
+		return false, nil
+	})
+	return opRealmId, success
 }
 
 // Create a realm.
@@ -166,13 +227,14 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 	m.ecs[realmId] = electclnt.MakeElectClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
 
 	lockRealm(m.ecs[realmId], realmId)
-	defer unlockRealm(m.ecs[realmId], realmId)
 
 	cfg := &RealmConfig{}
 	cfg.Rid = realmId
 
 	// Make the realm config file.
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
+
+	unlockRealm(m.ecs[realmId], realmId)
 
 	// Allocate the minimum number of Nodeds required to start this realm. For
 	// now, this is nReplicas() for all realms.

@@ -193,32 +193,33 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() string {
 	return minNodedId
 }
 
-func (m *RealmResourceMgr) adjustRealm() {
+func (m *RealmResourceMgr) realmShouldGrow() bool {
+	lockRealm(m.lock, m.realmId)
+	defer unlockRealm(m.lock, m.realmId)
+
 	// Get the realm's config
 	realmCfg, err := m.getRealmConfig()
 	if err != nil {
 		db.DPrintf("REALMMGR", "Error getRealmConfig: %v", err)
-		return
+		return false
 	}
 
 	// If the realm is shutting down, return
 	if realmCfg.Shutdown {
-		return
+		return false
 	}
 
 	// If we have resized too recently, return
 	if time.Now().Sub(realmCfg.LastResize).Milliseconds() < np.REALM_RESIZE_INTERVAL_MS {
-		return
+		return false
 	}
 
 	avgUtil, _ := m.getRealmUtil(realmCfg)
+
 	if avgUtil > np.REALM_GROW_CPU_UTIL_THRESHOLD {
-		db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
-		msg := MakeResourceMsg(Trequest, Tnode, m.realmId, 1)
-		if _, err := m.sigmaFsl.SetFile(path.Join(SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-			db.DFatalf("Error SetFile: %v", err)
-		}
+		return true
 	}
+	return false
 }
 
 func (m *RealmResourceMgr) Work() {
@@ -254,9 +255,13 @@ func (m *RealmResourceMgr) Work() {
 	m.makeCtlFiles()
 
 	for {
-		lockRealm(m.lock, m.realmId)
-		m.adjustRealm()
-		unlockRealm(m.lock, m.realmId)
+		if m.realmShouldGrow() {
+			db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
+			msg := MakeResourceMsg(Trequest, Tnode, m.realmId, 1)
+			if _, err := m.sigmaFsl.SetFile(path.Join(SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+				db.DFatalf("Error SetFile: %v", err)
+			}
+		}
 
 		// Sleep for a bit.
 		time.Sleep(np.REALM_SCAN_INTERVAL_MS * time.Millisecond)

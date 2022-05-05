@@ -90,11 +90,8 @@ func TestStartStop(t *testing.T) {
 }
 
 // Start enough spinning lambdas to fill two Nodeds, check that the test
-// realm's allocation expanded, evict the spinning lambdas, and check the
-// realm's allocation shrank. Then spawn and evict a few more to make sure we
-// can still spawn after shrinking.  Assumes other machines in the cluster have
-// the same number of cores.
-func TestRealmGrowShrink(t *testing.T) {
+// realm's allocation expanded, then exit.
+func TestRealmGrow(t *testing.T) {
 	ts := makeTstate(t)
 
 	N := int(linuxsched.NCores) / 2
@@ -118,37 +115,59 @@ func TestRealmGrowShrink(t *testing.T) {
 
 	ts.checkNNodeds(2, 100)
 
-	db.DPrintf("TEST", "Evicting %v spinning lambdas", N+7*N/8)
-	cnt := 0
-	for i := 0; i < N+7*N/8; i++ {
-		err := ts.Evict(pids[0])
-		assert.Nil(ts.t, err, "Evict")
-		cnt += 1
-		pids = pids[1:]
+	ts.e.Shutdown()
+}
+
+// Start enough spinning lambdas to fill two Nodeds, check that the test
+// realm's allocation expanded, evict the spinning lambdas, and check the
+// realm's allocation shrank. Then spawn and evict a few more to make sure we
+// can still spawn after shrinking.  Assumes other machines in the cluster have
+// the same number of cores.
+func TestRealmShrink(t *testing.T) {
+	ts := makeTstate(t)
+
+	N := int(linuxsched.NCores) / 2
+
+	db.DPrintf("TEST", "Starting %v spinning lambdas", N)
+	pids := []proc.Tpid{}
+	for i := 0; i < N; i++ {
+		pids = append(pids, ts.spawnSpinner())
 	}
+
+	db.DPrintf("TEST", "Sleeping for a bit")
+	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
+
+	db.DPrintf("TEST", "Starting %v more spinning lambdas", N)
+	for i := 0; i < N; i++ {
+		pids = append(pids, ts.spawnSpinner())
+	}
+
+	db.DPrintf("TEST", "Sleeping again")
+	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
+
+	ts.checkNNodeds(2, 100)
+
+	db.DPrintf("TEST", "Creating a new realm to contend with the old one")
+	// Create another realm to contend with this one.
+	ts.e.CreateRealm("2000")
 
 	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
 	ts.checkNNodeds(1, 1)
 
+	db.DPrintf("TEST", "Destroying the new, contending realm")
+	ts.e.DestroyRealm("2000")
+
 	db.DPrintf("TEST", "Starting %v more spinning lambdas", N/2)
-	for i := 0; i < int(N/2); i++ {
+	for i := 0; i < int(N); i++ {
 		pids = append(pids, ts.spawnSpinner())
 	}
 
 	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNNodeds(1, 100)
-
-	db.DPrintf("TEST", "Evicting %v spinning lambdas again", N/2)
-	for i := 0; i < int(N/2); i++ {
-		ts.Evict(pids[0])
-		pids = pids[1:]
-	}
-
-	ts.checkNNodeds(1, 1)
+	ts.checkNNodeds(2, 100)
 
 	ts.e.Shutdown()
 }

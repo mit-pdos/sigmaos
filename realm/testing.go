@@ -23,7 +23,7 @@ type TestEnv struct {
 	namedCmds []*exec.Cmd
 	sigmamgr  *exec.Cmd
 	noded     []*exec.Cmd
-	clnt      *RealmClnt
+	*RealmClnt
 }
 
 func MakeTestEnv(bin string) *TestEnv {
@@ -43,7 +43,7 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 		return nil, err
 	}
 	clnt := MakeRealmClnt()
-	e.clnt = clnt
+	e.RealmClnt = clnt
 	if err := e.bootSigmaMgr(); err != nil {
 		log.Printf("sigmamgr")
 		return nil, err
@@ -52,13 +52,13 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 		log.Printf("noded")
 		return nil, err
 	}
-	cfg := clnt.CreateRealm(e.rid)
+	cfg := e.CreateRealm(e.rid)
 	return cfg, nil
 }
 
 func (e *TestEnv) Shutdown() {
 	// Destroy the realm
-	e.clnt.DestroyRealm(e.rid)
+	e.DestroyRealm(e.rid)
 
 	// Kill the noded
 	for _, noded := range e.noded {
@@ -90,12 +90,12 @@ func (e *TestEnv) bootNameds() error {
 
 func (e *TestEnv) bootSigmaMgr() error {
 	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "bin/realm/sigmamgr", []string{e.bin})
-	cmd, err := e.clnt.SpawnKernelProc(p, e.bin, fslib.Named())
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, e.bin, fslib.Named())
 	if err != nil {
 		return err
 	}
 	e.sigmamgr = cmd
-	return e.clnt.WaitStart(p.Pid)
+	return e.RealmClnt.WaitStart(p.Pid)
 }
 
 func (e *TestEnv) BootNoded() error {

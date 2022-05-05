@@ -215,7 +215,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 		args = append(args, strings.Join(peers, ","))
 	}
 
-	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)), "/bin/kernel/named", args)
+	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "/bin/kernel/named", args)
 }
 
 // Run a named (but not as a proc)

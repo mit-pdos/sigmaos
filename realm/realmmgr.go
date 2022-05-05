@@ -70,7 +70,7 @@ func (m *RealmResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
 	switch msg.ResourceType {
 	case Tnode:
 		// Nothing much to do here, for now.
-		db.DPrintf(db.ALWAYS, "Tnode granted")
+		db.DPrintf("REALMMGR", "Tnode granted")
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -79,10 +79,10 @@ func (m *RealmResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
 func (m *RealmResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 	switch msg.ResourceType {
 	case Tnode:
-		db.DPrintf(db.ALWAYS, "Tnode requested")
+		db.DPrintf("REALMMGR", "Tnode requested")
 		lockRealm(m.lock, m.realmId)
 		nodedId := m.getLeastUtilizedNoded()
-		db.DPrintf(db.ALWAYS, "least utilized node: %v", nodedId)
+		db.DPrintf("REALMMGR", "least utilized node: %v", nodedId)
 		// If no Nodeds remain...
 		if nodedId == "" {
 			return
@@ -90,7 +90,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *ResourceMsg) {
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
 		m.deallocNoded(nodedId)
-		db.DPrintf(db.ALWAYS, "dealloced: %v", nodedId)
+		db.DPrintf("REALMMGR", "dealloced: %v", nodedId)
 		unlockRealm(m.lock, m.realmId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -102,7 +102,7 @@ func (m *RealmResourceMgr) deallocNoded(nodedId string) {
 	// Note noded de-registration
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
-	db.DPrintf(db.ALWAYS, "Dealloc noded, choosing from: %v", rCfg.NodedsAssigned)
+	db.DPrintf("REALMMGR", "Dealloc noded, choosing from: %v", rCfg.NodedsAssigned)
 	// Remove the noded from the list of assigned nodeds.
 	for i := range rCfg.NodedsAssigned {
 		if rCfg.NodedsAssigned[i] == nodedId {
@@ -147,7 +147,7 @@ func (m *RealmResourceMgr) getRealmProcdStats(nameds []string) map[string]*stats
 			s := &stats.StatInfo{}
 			err := m.GetFileJson(path.Join(np.PROCD, si.Ip, np.STATSD), s)
 			if err != nil {
-				db.DPrintf(db.ALWAYS, "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
+				db.DPrintf("REALMMGR", "Error ReadFileJson in SigmaResourceMgr.getRealmProcdStats: %v", err)
 				return false, nil
 			}
 			stat[si.NodedId] = s

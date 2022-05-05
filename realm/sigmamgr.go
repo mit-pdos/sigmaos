@@ -85,7 +85,7 @@ func (m *SigmaResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
 	case Trealm:
 		m.destroyRealm(msg.Name)
 	case Tnode:
-		db.DPrintf(db.ALWAYS, "free noded %v", msg.Name)
+		db.DPrintf("SIGMAMGR", "free noded %v", msg.Name)
 		m.freeNodeds <- msg.Name
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -113,7 +113,7 @@ func (m *SigmaResourceMgr) getFreeNoded(nRetries int) (string, bool) {
 		case nodedId := <-m.freeNodeds:
 			return nodedId, true
 		default:
-			db.DPrintf(db.ALWAYS, "Tried to get Noded, but none free.")
+			db.DPrintf("SIGMAMGR", "Tried to get Noded, but none free.")
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
@@ -247,7 +247,7 @@ func (m *SigmaResourceMgr) requestNoded(realmId string) {
 	for {
 		// TODO: move realmctl file to sigma named.
 		if _, err := m.SetFile(path.Join(REALM_NAMEDS, realmId, "realmmgr", realmctl), msg.Marshal(), np.OWRITE, 0); err != nil {
-			db.DPrintf(db.ALWAYS, "Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
+			db.DPrintf("SIGMAMGR_ERR", "Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
 		} else {
 			return
 		}

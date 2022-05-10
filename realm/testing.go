@@ -64,12 +64,10 @@ func (e *TestEnv) Shutdown() {
 	for _, noded := range e.noded {
 		kill(noded)
 	}
-	log.Printf("killed nodeds")
 	e.noded = []*exec.Cmd{}
 
 	// Kill the sigmamgr
 	kill(e.sigmamgr)
-	log.Printf("killed sigmamgr")
 	e.sigmamgr = nil
 
 	for _, namedCmd := range e.namedCmds {

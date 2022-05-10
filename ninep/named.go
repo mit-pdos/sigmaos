@@ -16,11 +16,14 @@ const (
 	DBREL    = "db"
 	DB       = NAMED + DBREL + "/"
 
+	SIGMA_MGR = "name/sigmamgr"
 	REALM_MGR = "name/realmmgr"
-	MEMFS     = "name/memfsd/"
 
-	KPIDSREL      = "kpids"
-	KPIDS         = NAMED + KPIDSREL
+	MEMFS = "name/memfsd/"
+
+	KPIDSREL = "kpids"
+	KPIDS    = NAMED + KPIDSREL
+
 	PROC_CTL_FILE = "ctl"
 	PROCD_RUNNING = "running"
 	PROCD_RUNQ_LC = "runq-lc"

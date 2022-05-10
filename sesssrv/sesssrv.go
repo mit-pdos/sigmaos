@@ -11,6 +11,7 @@ import (
 	"ulambda/fencefs"
 	"ulambda/fs"
 	"ulambda/fslib"
+	"ulambda/kernel"
 	"ulambda/netsrv"
 	np "ulambda/ninep"
 	"ulambda/overlay"
@@ -148,6 +149,11 @@ func (ssrv *SessSrv) Sess(sid np.Tsession) *sessstatesrv.Session {
 func (ssrv *SessSrv) Serve() {
 	// Non-intial-named services wait on the pclnt infrastructure. Initial named waits on the channel.
 	if ssrv.pclnt != nil {
+		// If this is a kernel proc, register the subsystem info for the realmmgr
+		if proc.GetIsPrivilegedProc() {
+			si := kernel.MakeSubsystemInfo(proc.GetPid(), ssrv.MyAddr(), proc.GetNodedId())
+			kernel.RegisterSubsystemInfo(ssrv.fsl, si)
+		}
 		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()
 			log.Printf("%v: Error Started: %v", proc.GetName(), err)

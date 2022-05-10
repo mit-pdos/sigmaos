@@ -21,9 +21,9 @@ type TestEnv struct {
 	rid       string
 	namedPids []string
 	namedCmds []*exec.Cmd
-	realmmgr  *exec.Cmd
-	machined  []*exec.Cmd
-	clnt      *RealmClnt
+	sigmamgr  *exec.Cmd
+	noded     []*exec.Cmd
+	*RealmClnt
 }
 
 func MakeTestEnv(bin string) *TestEnv {
@@ -32,7 +32,7 @@ func MakeTestEnv(bin string) *TestEnv {
 	e.rid = TEST_RID
 	e.namedPids = []string{}
 	e.namedCmds = []*exec.Cmd{}
-	e.machined = []*exec.Cmd{}
+	e.noded = []*exec.Cmd{}
 
 	return e
 }
@@ -43,36 +43,34 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 		return nil, err
 	}
 	clnt := MakeRealmClnt()
-	e.clnt = clnt
-	if err := e.bootRealmMgr(); err != nil {
-		log.Printf("realmmgr")
+	e.RealmClnt = clnt
+	if err := e.bootSigmaMgr(); err != nil {
+		log.Printf("sigmamgr")
 		return nil, err
 	}
-	if err := e.BootMachined(); err != nil {
-		log.Printf("machined")
+	if err := e.BootNoded(); err != nil {
+		log.Printf("noded")
 		return nil, err
 	}
-	cfg := clnt.CreateRealm(e.rid)
+	cfg := e.CreateRealm(e.rid)
 	return cfg, nil
 }
 
-// TODO: eventually wait on exit signals
 func (e *TestEnv) Shutdown() {
 	// Destroy the realm
-	e.clnt.DestroyRealm(e.rid)
-	log.Printf("Destroyed realm")
+	e.DestroyRealm(e.rid)
 
-	// Kill the machined
-	for _, machined := range e.machined {
-		kill(machined)
+	// Kill the noded
+	for _, noded := range e.noded {
+		kill(noded)
 	}
-	log.Printf("killed machineds")
-	e.machined = []*exec.Cmd{}
+	log.Printf("killed nodeds")
+	e.noded = []*exec.Cmd{}
 
-	// Kill the realmmgr
-	kill(e.realmmgr)
-	log.Printf("killed realmmgr")
-	e.realmmgr = nil
+	// Kill the sigmamgr
+	kill(e.sigmamgr)
+	log.Printf("killed sigmamgr")
+	e.sigmamgr = nil
 
 	for _, namedCmd := range e.namedCmds {
 		kill(namedCmd)
@@ -90,21 +88,21 @@ func (e *TestEnv) bootNameds() error {
 	return nil
 }
 
-func (e *TestEnv) bootRealmMgr() error {
-	p := proc.MakeProcPid("realmmgr-"+proc.GenPid(), "bin/realm/realmmgr", []string{e.bin})
-	cmd, err := e.clnt.SpawnKernelProc(p, e.bin, fslib.Named())
+func (e *TestEnv) bootSigmaMgr() error {
+	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "bin/realm/sigmamgr", []string{e.bin})
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, e.bin, fslib.Named())
 	if err != nil {
 		return err
 	}
-	e.realmmgr = cmd
-	return e.clnt.WaitStart(p.Pid)
+	e.sigmamgr = cmd
+	return e.RealmClnt.WaitStart(p.Pid)
 }
 
-func (e *TestEnv) BootMachined() error {
+func (e *TestEnv) BootNoded() error {
 	var err error
-	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/machined", []string{e.bin, proc.GenPid().String()})
-	machined, err := proc.RunKernelProc(p, e.bin, fslib.Named())
-	e.machined = append(e.machined, machined)
+	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/noded", []string{e.bin, proc.GenPid().String()})
+	noded, err := proc.RunKernelProc(p, e.bin, fslib.Named())
+	e.noded = append(e.noded, noded)
 	if err != nil {
 		return err
 	}
@@ -116,6 +114,6 @@ func kill(cmd *exec.Cmd) {
 		db.DFatalf("Error Kill in kill: %v", err)
 	}
 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal") {
-		db.DFatalf("Error machined Wait in kill: %v", err)
+		db.DFatalf("Error noded Wait in kill: %v", err)
 	}
 }

@@ -40,6 +40,7 @@ import (
  *    |- fsux-2000
  *       |
  *       |- kernel-proc // Only present if this is a kernel proc.
+ *       |- subsystem-info // Only present if this is a kernel proc. Contains IP and NodedId.
  *       |- ... // Same directory structure as regular procs
  */
 

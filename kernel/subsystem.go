@@ -2,7 +2,11 @@ package kernel
 
 import (
 	"os/exec"
+	"path"
 
+	db "ulambda/debug"
+	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -28,4 +32,28 @@ func (s *Subsystem) Run(bindir string, namedAddr []string) error {
 
 func (s *Subsystem) Monitor() {
 
+}
+
+type SubsystemInfo struct {
+	Kpid    proc.Tpid
+	Ip      string
+	NodedId string
+}
+
+func MakeSubsystemInfo(kpid proc.Tpid, ip string, nodedId string) *SubsystemInfo {
+	return &SubsystemInfo{kpid, ip, nodedId}
+}
+
+func RegisterSubsystemInfo(fsl *fslib.FsLib, si *SubsystemInfo) {
+	if err := fsl.PutFileJson(path.Join(proc.PROCDIR, SUBSYSTEM_INFO), 0777, si); err != nil {
+		db.DFatalf("PutFileJson: %v", err)
+	}
+}
+
+func GetSubsystemInfo(fsl *fslib.FsLib, kpid proc.Tpid) *SubsystemInfo {
+	si := &SubsystemInfo{}
+	if err := fsl.GetFileJson(path.Join(np.KPIDS, kpid.String(), SUBSYSTEM_INFO), si); err != nil {
+		db.DFatalf("GetFileJson: %v", err)
+	}
+	return si
 }

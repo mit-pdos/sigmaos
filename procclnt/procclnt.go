@@ -62,7 +62,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 	db.DPrintf("PROCCLNT", "Spawn %v\n", p)
 	if clnt.hasExited() != "" {
 		db.DPrintf("PROCCLNT_ERR", "Spawn error called after Exited")
-		os.Exit(0)
+		db.DFatalf("Spawn error called after Exited")
 	}
 
 	if err := clnt.addChild(p.Pid, childProcdir, p.GetShared()); err != nil {

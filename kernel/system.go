@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -21,6 +22,7 @@ const (
 	NO_REALM         = "no-realm"
 	SLEEP_MS         = 200
 	REPL_PORT_OFFSET = 100
+	SUBSYSTEM_INFO   = "subsystem-info"
 )
 
 type System struct {
@@ -107,7 +109,8 @@ func (s *System) Boot() error {
 }
 
 func (s *System) BootSubsystem(bin string, args []string, list *[]*Subsystem) error {
-	p := proc.MakeProcPid(proc.GenPid(), bin, args)
+	pid := proc.Tpid(path.Base(bin) + "-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, bin, args)
 	ss := makeSubsystem(s.ProcClnt, p)
 	*list = append(*list, ss)
 	return ss.Run(s.bindir, s.namedAddr)
@@ -167,13 +170,16 @@ func (s *System) Shutdown() {
 		if err != nil {
 			db.DFatalf("GetChildren in System.Shutdown: %v", err)
 		}
+		db.DPrintf("KERNEL", "Shutdown children %v", cpids)
 		for _, pid := range cpids {
 			s.Evict(pid)
+			db.DPrintf("KERNEL", "Evicted %v", pid)
 			if _, ok := s.crashedPids[pid]; !ok {
 				if status, err := s.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
 					log.Printf("shutdown error pid %v: %v %v", pid, status, err)
 				}
 			}
+			db.DPrintf("KERNEL", "Done evicting %v", pid)
 		}
 	}
 	// Make sure the procs actually exited
@@ -209,7 +215,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 		args = append(args, strings.Join(peers, ","))
 	}
 
-	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)), "/bin/kernel/named", args)
+	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "/bin/kernel/named", args)
 }
 
 // Run a named (but not as a proc)

@@ -112,7 +112,6 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	err := npcodec.MarshalFcall(rpc.Req, nc.bw)
 	if err != nil {
 		db.DPrintf("NETCLNT_ERR", "Send: NetClnt error to %v: %v", nc.Dst(), err)
-		nc.Close()
 		// The only error code we expect here is TErrUnreachable
 		if err.Code() != np.TErrUnreachable {
 			db.DFatalf("Unexpected error in netclnt.writer: %v", err)
@@ -122,7 +121,6 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 	error := nc.bw.Flush()
 	if error != nil {
 		db.DPrintf("NETCLNT_ERR", "Flush error cli %v to srv %v err %v\n", nc.Src(), nc.Dst(), error)
-		nc.Close()
 	}
 }
 

@@ -9,8 +9,12 @@ fi
 echo "$0 $1"
 
 DIR=$(dirname $0)
+BLKDEV=/dev/sda4
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
+
+sudo mount $BLKDEV /var/local
+
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no

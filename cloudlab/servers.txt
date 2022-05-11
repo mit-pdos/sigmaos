@@ -1,5 +1,6 @@
-node0 amd255.utah.cloudlab.us
-node1 amd253.utah.cloudlab.us
-node2 amd256.utah.cloudlab.us
-node3 amd246.utah.cloudlab.us
-node4 amd249.utah.cloudlab.us
+node0 clnode224.clemson.cloudlab.us
+node1 clnode252.clemson.cloudlab.us
+node2 clnode221.clemson.cloudlab.us
+node3 clnode234.clemson.cloudlab.us
+node4 clnode242.clemson.cloudlab.us
+node5 clnode243.clemson.cloudlab.us

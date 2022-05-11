@@ -58,9 +58,9 @@ IuzhbPSUS+OksAAAAOa2Fhc2hvZWtAZms2eDEBAgMEBQ==
 EOF
 chmod 600 ~/.ssh/aws-ulambda
 
-sudo mkdir /mnt/9p
+sudo mkdir -p /mnt/9p
 
-if [ ! -f ~/packages ]
+if [ ! -f ~/packages ];
 then
   touch ~/packages
   sudo apt update
@@ -107,23 +107,13 @@ then
   go version
 fi
 
-if [ -d "ulambda" ] 
+if [ -d "ulambda" ];
 then
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./make.sh -norace)'
 else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download; ./make.sh -norace)'
 fi
 
-if [ -d "gg" ] 
-then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd gg; git pull; make -j2 install)'
-else
-   ssh-agent bash -c 'sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 10'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@github.com:ArielSzekely/gg.git'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; git clone git@github.com:excamera/excamera-static-bins.git excamera_bin_dir'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; rm *.y4m; git checkout .'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; sudo make -j2 install'
-fi
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="

@@ -9,16 +9,22 @@ fi
 echo "$0 $1"
 
 DIR=$(dirname $0)
+BLKDEV=/dev/sda4
 
 . $DIR/config
 
+# Set up bash as the primary shell
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
-sudo mkfs -t ext4 /dev/nvme0n1p4
-sudo mount /dev/nvme0n1p4 /var/local
+sudo chsh -s /bin/bash arielck
+ENDSSH
+
+ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
+sudo mkfs -t ext4 $BLKDEV
+sudo mount $BLKDEV /var/local
 sudo mkdir /var/local/$USER
 sudo chown $USER /var/local/$USER
 
-sudo blkid /dev/nvme0n1p4 | cut -d \" -f2
+sudo blkid $BLKDEV | cut -d \" -f2
 
 cd /var/local/$USER
 mkdir kernel
@@ -32,7 +38,7 @@ cd kbuild
 yes "" | make -C ../linux-5.14.14 O=/var/local/$USER/kernel/kbuild config
 sed -ri '/CONFIG_SYSTEM_TRUSTED_KEYS/s/=.+/=""/g' .config
 sed -ri 's/CONFIG_SATA_AHCI=m/CONFIG_SATA_AHCI=y/g' .config
-sed -ri 's/CONFIG_SATA_AHCI=y/CONFIG_SATA_AHCI=n/g' .config
+sed -ri 's/CONFIG_SYSTEM_REVOCATION_LIST=y/CONFIG_SYSTEM_REVOCATION_LIST=n/g' .config
 sudo make -j8 
 INSTALL_MOD_STRIP=1 sudo make -j8 modules_install
 INSTALL_MOD_STRIP=1 sudo make -j8 install

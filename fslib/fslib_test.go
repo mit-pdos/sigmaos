@@ -3,7 +3,6 @@ package fslib_test
 import (
 	"bufio"
 	"flag"
-	"io"
 	"log"
 	"path/filepath"
 	"sort"
@@ -1121,22 +1120,20 @@ func TestFslibExit(t *testing.T) {
 }
 
 const (
-	MBYTE      = 1 << 20
 	KBYTE      = 1 << 10
 	NRUNS      = 1
 	SYNCFILESZ = 100 * KBYTE
-	FILESZ     = 5 * MBYTE
+	FILESZ     = 5 * test.MBYTE
 	WRITESZ    = 4096
 	BUFSZ      = 1 << 16
 )
 
-func measure(msg string, f func() int) {
+func measure(msg string, f func() np.Tlength) {
 	for i := 0; i < NRUNS; i++ {
 		start := time.Now()
 		sz := f()
 		ms := time.Since(start).Milliseconds()
-		s := float64(ms) / 1000
-		log.Printf("%v: %.2fMB took %vms (%.2fMB/s)", msg, float64(sz)/float64(MBYTE), ms, (float64(sz)/float64(MBYTE))/s)
+		log.Printf("%v: %.2fMB took %vms (%.2fMB/s)", msg, test.Mbyte(sz), ms, test.Tput(sz, ms))
 	}
 }
 
@@ -1148,7 +1145,7 @@ const (
 	HASYNC
 )
 
-func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz int) int {
+func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz np.Tlength) np.Tlength {
 	w, err := fsl.CreateWriter(fn, 0777, np.OWRITE)
 	assert.Nil(t, err)
 	switch how {
@@ -1182,19 +1179,19 @@ func TestWritePerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
 	buf := test.MkBuf(WRITESZ)
-	measure("writer", func() int {
+	measure("writer", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HSYNC, buf, SYNCFILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	measure("bufwriter", func() int {
+	measure("bufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
 		return sz
 	})
-	measure("abufwriter", func() int {
+	measure("abufwriter", func() np.Tlength {
 		sz := mkFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
 		err := ts.Remove(fn)
 		assert.Nil(t, err)
@@ -1203,45 +1200,37 @@ func TestWritePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func reader(t *testing.T, rdr io.Reader, buf []byte, sz int) int {
-	s := 0
-	for {
-		m, err := rdr.Read(buf)
-		s += m
-		if err == io.EOF {
-			break
-		}
-		assert.Nil(t, err)
-	}
-	assert.Equal(t, sz, s, "reader")
-	return sz
-}
-
 func TestReadPerf(t *testing.T) {
 	ts := test.MakeTstatePath(t, path)
 	fn := path + "f"
 	buf := test.MkBuf(WRITESZ)
 	sz := mkFile(t, ts.FsLib, fn, HBUF, buf, SYNCFILESZ)
-	measure("reader", func() int {
+	measure("reader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
-		return reader(t, r, buf, sz)
+		n, err := test.Reader(t, r, buf, sz)
+		assert.Nil(t, err)
+		return n
 	})
 	err := ts.Remove(fn)
 	assert.Nil(t, err)
 	sz = mkFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
-	measure("bufreader", func() int {
+	measure("bufreader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		br := bufio.NewReaderSize(r, BUFSZ)
-		return reader(t, br, buf, sz)
+		n, err := test.Reader(t, br, buf, sz)
+		assert.Nil(t, err)
+		return n
 	})
-	measure("readahead", func() int {
+	measure("readahead", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
 		br, err := readahead.NewReaderSize(r, 4, BUFSZ)
 		assert.Nil(t, err)
-		return reader(t, br, buf, sz)
+		n, err := test.Reader(t, br, buf, sz)
+		assert.Nil(t, err)
+		return n
 	})
 	err = ts.Remove(fn)
 	assert.Nil(t, err)

@@ -3,6 +3,7 @@ module ulambda
 go 1.15
 
 require (
+	github.com/aws/aws-lambda-go v1.31.0 // indirect
 	github.com/aws/aws-sdk-go v1.43.39 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.2
 	github.com/aws/aws-sdk-go-v2/config v1.15.3

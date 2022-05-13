@@ -44,3 +44,10 @@ $ sudo umount /mnt/9p
 
 After umount you can run ./start.sh and ./mount.sh again to use the
 updated lambda daemons on the VPC.
+
+# AWS credentials
+
+add keys for recipients to gpg key ring
+
+$ gpg --recipient sigma-kaashoek --encrypt-files aws-credentials.txt
+  

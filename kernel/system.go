@@ -51,6 +51,12 @@ func makeSystemBase(namedAddr []string, bindir string) *System {
 	return s
 }
 
+func MakeSystemClnt(uname, named string) *System {
+	s := makeSystemBase([]string{named}, "..")
+	s.FsLib = fslib.MakeFsLibAddr(uname, []string{named})
+	return s
+}
+
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
 func MakeSystemNamed(uname, bin string, replicaId int) *System {

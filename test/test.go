@@ -1,6 +1,7 @@
 package test
 
 import (
+	"log"
 	"sync"
 	"testing"
 
@@ -48,15 +49,28 @@ func (ts *Tstate) startReplicas() {
 	}
 }
 
-func MakeTstatePath(t *testing.T, path string) *Tstate {
-	if path == np.NAMED {
+func MakeTstatePath(t *testing.T, named, path string) *Tstate {
+	log.Printf("named %s path %s\n", named, path)
+	if named == "" && path == np.NAMED {
 		return MakeTstate(t)
 	} else {
-		ts := MakeTstateAll(t)
+		var ts *Tstate
+		if named == "" {
+			ts = MakeTstateAll(t)
+		} else {
+			ts = MakeTstateClnt(t, named)
+		}
 		ts.RmDir(path)
 		ts.MkDir(path, 0777)
 		return ts
 	}
+}
+
+func MakeTstateClnt(t *testing.T, named string) *Tstate {
+	ts := &Tstate{}
+	ts.T = t
+	ts.System = kernel.MakeSystemClnt("test", named)
+	return ts
 }
 
 func MakeTstate(t *testing.T) *Tstate {

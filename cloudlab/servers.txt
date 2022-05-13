@@ -1,5 +1,4 @@
 node0 clnode224.clemson.cloudlab.us
-node1 clnode252.clemson.cloudlab.us
 node2 clnode221.clemson.cloudlab.us
 node3 clnode234.clemson.cloudlab.us
 node4 clnode242.clemson.cloudlab.us

@@ -69,11 +69,11 @@ def setup_instance(ec2, vpc, sg, sn, kpn, instance_type):
     storage = 20
         
     vm = ec2.create_instances(
-        ImageId='ami-0022f774911c1d690',
+        ImageId='ami-09d56f8956ab235b3',
         InstanceType=instance,
         BlockDeviceMappings=[
             {
-                'DeviceName': '/dev/xvda',
+                'DeviceName': '/dev/sda1',
                 'Ebs': {
                     'VolumeSize': storage,
                     'VolumeType': 'gp2'

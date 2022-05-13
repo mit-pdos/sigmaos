@@ -11,6 +11,6 @@ packages:
   - golang
   - make
   - emacs
-  - nettools
+  - net-tools
   - python3
   - python3-boto3

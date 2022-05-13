@@ -28,7 +28,7 @@ then
   exit 1
 fi
 
-LOGIN=ec2-user
+LOGIN=ubuntu
 
 echo $0 $REBOOT $KEY $DNS
 
@@ -76,8 +76,6 @@ ssh -n -i $KEY $LOGIN@$DNS mkdir -p /home/$LOGIN/.aws
 scp -i $KEY credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
 chmod 600 ~/.aws/credentials
 rm $SECRETS
-
-exit 1
 
 ssh -n -i $KEY $LOGIN@$DNS sudo mkdir -p /mnt/9p
 

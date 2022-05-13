@@ -7,7 +7,7 @@ import boto3
 
 parser=argparse.ArgumentParser(description='mk VPC on AWS.')
 parser.add_argument('--vpc', metavar='vpc-id', help='Create only vm instance')
-parser.add_argument('name', help='name for this VPC')
+parser.add_argument('name', help='name for this VPC/instance')
 parser.add_argument('--instance_type', type=str, default='t3.small')
 args = vars(parser.parse_args())
 
@@ -41,7 +41,7 @@ def setup_sec_public(ec2, vpc, name):
     sg = ec2.create_security_group(GroupName=name, Description='Allow inbound traffic', VpcId=vpc.id)
     sg.authorize_ingress(CidrIp='18.26.0.0/16', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='128.52.0.0/16', IpProtocol='tcp', FromPort=22, ToPort=22,)
-    sg.authorize_ingress(CidrIp='173.76.110.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
+    sg.authorize_ingress(CidrIp='173.76.107.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='66.92.71.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='75.100.81.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
     sg.authorize_ingress(CidrIp='65.96.172.0/24', IpProtocol='tcp', FromPort=22, ToPort=22,)
@@ -62,18 +62,18 @@ def setup_keypair(vpc, ec2):
 
 def setup_instance(ec2, vpc, sg, sn, kpn, instance_type):
     script=''
-    with open('cloud-procds-user-data', 'r') as fin:
+    with open('cloud-localds-user-data', 'r') as fin:
         script = fin.read()
 
     instance = instance_type
     storage = 20
         
     vm = ec2.create_instances(
-        ImageId='ami-02ae530dacc099fc9',
+        ImageId='ami-0022f774911c1d690',
         InstanceType=instance,
         BlockDeviceMappings=[
             {
-                'DeviceName': '/dev/sda1',
+                'DeviceName': '/dev/xvda',
                 'Ebs': {
                     'VolumeSize': storage,
                     'VolumeType': 'gp2'
@@ -120,7 +120,7 @@ def main():
         sn = setup_net(ec2, vpc)
         sg = setup_sec_public(ec2, vpc, "public2")
         kpn = setup_keypair(vpc, ec2)
-        setup_instance(ec2, vpc, sg, sn, kpn)
+        setup_instance(ec2, vpc, sg, sn, kpn, args['instance_type'])
     else:
         try:
             vpc = ec2.Vpc(args['vpc'])

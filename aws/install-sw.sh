@@ -6,13 +6,15 @@ then
   exit 1
 fi
 
+LOGIN=ec2-user
+
 echo "$0 $1 $2"
 
 # try to deal with lag before instance is created and configured
 echo -n "wait until cloud-init is done "
 
 while true ; do
-    done=`ssh -n -o ConnectionAttempts=1000 -i $1 ubuntu@$2 grep "finished" /var/log/cloud-init-output.log`
+    done=`ssh -n -o ConnectionAttempts=1000 -i $1 $LOGIN@$2 sudo grep "finished" /var/log/cloud-init-output.log`
     if [ ! -z "$done" ]
     then
 	break
@@ -23,12 +25,12 @@ done
 
 echo "done; reboot and wait"
 
-ssh -n -i $1 ubuntu@$2 sudo shutdown -r now
+ssh -n -i $1 $LOGIN@$2 sudo shutdown -r now
 
 sleep 2
 
 while true ; do
-    done=`ssh -n -i $1 ubuntu@$2 echo "this is an ssh"`
+    done=`ssh -n -i $1 $LOGIN@$2 echo "this is an ssh"`
     if [ ! -z "$done" ]
     then
 	break
@@ -39,17 +41,15 @@ done
 
 echo "done rebooting"
 
-ssh -n -i $1 ubuntu@$2 sudo snap install --classic go
-ssh -n -i $1 ubuntu@$2 sudo snap install --classic emacs
-ssh -n -i $1 ubuntu@$2 sudo apt install net-tools
-ssh -n -i $1 ubuntu@$2 sudo mkdir /mnt/9p
+ssh -n -i $1 $LOGIN@$2 sudo mkdir /mnt/9p
 
-ssh -i $1 ubuntu@$2 <<ENDSSH
+ssh -i $1 $LOGIN@$2 <<ENDSSH
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
    UserKnownHostsFile=/dev/null
 EOF
+chmod go-w .ssh/config
 cat << EOF > ~/.ssh/aws-ulambda
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
@@ -93,23 +93,14 @@ EOF
 chmod 600 ~/.ssh/aws-ulambda
 if [ -d "ulambda" ] 
 then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./make.sh)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./make.sh -norace)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download; ./make.sh -norace'
 fi
 
-if [ -d "gg" ] 
-then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd gg; git pull; make -j2 install)'
-else
-   ssh-agent bash -c 'sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 10'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@github.com:ArielSzekely/gg.git'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; git clone git@github.com:excamera/excamera-static-bins.git excamera_bin_dir'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; sudo make -j2 install'
-fi
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh -i $1 ubuntu@$2"
+echo "ssh -i $1 $LOGIN@$2"
 echo "============================="
 

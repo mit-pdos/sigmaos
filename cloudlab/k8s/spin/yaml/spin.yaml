@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spin-worker
+spec:
+  template:
+    metadata:
+      name: spin-worker-pod
+    spec:
+      containers:
+      - name: spin-worker
+        image: arielszekely/spin
+        envFrom:
+        - configMapRef:
+            name: spin-env-config
+        args:
+        - "test-arg"
+      imagePullSecrets:
+      - name: regcred
+      restartPolicy: Never

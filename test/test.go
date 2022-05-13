@@ -100,3 +100,16 @@ func MakeTstateAllBin(t *testing.T, bin string) *Tstate {
 	ts.wg.Wait()
 	return ts
 }
+
+const (
+	MBYTE = 1 << 20
+)
+
+func Mbyte(sz np.Tlength) float64 {
+	return float64(sz) / float64(MBYTE)
+}
+
+func Tput(sz np.Tlength, ms int64) float64 {
+	s := float64(ms) / 1000
+	return Mbyte(sz) / s
+}

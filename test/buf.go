@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"testing"
+
+	np "ulambda/ninep"
 )
 
 func MkBuf(n int) []byte {
@@ -14,9 +16,9 @@ func MkBuf(n int) []byte {
 	return buf
 }
 
-func Writer(t *testing.T, wrt io.Writer, buf []byte, fsz int) error {
-	for n := 0; n < fsz; {
-		w := len(buf)
+func Writer(t *testing.T, wrt io.Writer, buf []byte, fsz np.Tlength) error {
+	for n := np.Tlength(0); n < fsz; {
+		w := np.Tlength(len(buf))
 		if fsz-n < w {
 			w = fsz - n
 		}
@@ -24,10 +26,28 @@ func Writer(t *testing.T, wrt io.Writer, buf []byte, fsz int) error {
 		if err != nil {
 			return err
 		}
-		if w != m {
+		if w != np.Tlength(m) {
 			return fmt.Errorf("short write %d %d", w, m)
 		}
-		n += m
+		n += np.Tlength(m)
 	}
 	return nil
+}
+
+func Reader(t *testing.T, rdr io.Reader, buf []byte, sz np.Tlength) (np.Tlength, error) {
+	s := 0
+	for {
+		m, err := rdr.Read(buf)
+		s += m
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
+	if np.Tlength(s) != sz {
+		return 0, fmt.Errorf("short read %d %d", s, sz)
+	}
+	return sz, nil
 }

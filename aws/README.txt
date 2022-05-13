@@ -4,7 +4,7 @@ Run ./mkvpc.py to create a VPC, including one instance:
 $ ./mkvpc.py ulam
 
 If you specify, the vpc-id it will create a new instance:
-$ ./mkvpc.py --vpc vpc-061a1808693a1626a ulam
+$ ./mkvpc.py --vpc vpc-061a1808693a1626a ulam1
 
 ./lsvpc.py lists info about VPC:
 $ ./lsvpc.py vpc-061a1808693a1626a
@@ -31,8 +31,8 @@ To login to the VPC:
 
 $ ./login.sh vpc-061a1808693a1626a
 
-this starts an ssh tunnel to the VPC using the VPC. you only have to
-this once (e.g., you can run ./start.sh again without having to login)
+this starts an ssh tunnel to the VPC. you only have to this once
+(e.g., you can run ./start.sh again without having to login)
 
 $ ./mount.sh mounts the VPC under /mnt/9p
 
@@ -44,3 +44,10 @@ $ sudo umount /mnt/9p
 
 After umount you can run ./start.sh and ./mount.sh again to use the
 updated lambda daemons on the VPC.
+
+# AWS credentials
+
+add keys for recipients to gpg key ring
+
+$ gpg --recipient sigma-kaashoek --encrypt-files aws-credentials.txt
+  

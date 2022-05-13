@@ -8,26 +8,9 @@ repo_upgrade: all
 package_upgrade: true
 
 packages:
-  - gcc
+  - golang
   - make
-  - gcc-7
-  - gcc
-  - g++-7
-  - g++
-  - protobuf-compiler
-  - libprotobuf-dev
-  - libcrypto++-dev
+  - emacs
+  - nettools
   - python3
-  - libcap-dev
-  - libncurses5-dev
-  - libboost-dev
-  - libssl-dev
-  - autopoint
-  - help2man
-  - texinfo
-  - automake
-  - libtool
-  - pkg-config
-  - libhiredis-dev
   - python3-boto3
-  - ffmpeg

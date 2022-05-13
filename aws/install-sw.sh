@@ -1,55 +1,93 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]
+REBOOT="reboot"
+
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+ 
+    case $key in
+       --noreboot)
+           REBOOT="--noreboot"
+           shift
+           ;;
+       *)
+           KEY=$1
+           DNS=$2
+           shift
+           shift
+           break
+           ;;
+    esac
+done
+
+
+if [ -z "$KEY ] || [ -z "$DNS ] || [ $# -gt 0 ]
 then
-  echo "Usage: ./install-sw.sh vpc-key-file dns-instance"
+  echo "Usage: ./install-sw.sh [--noreboot] vpc-key-file dns-instance"
   exit 1
 fi
 
-echo "$0 $1 $2"
+LOGIN=ec2-user
 
-# try to deal with lag before instance is created and configured
-echo -n "wait until cloud-init is done "
+echo $0 $REBOOT $KEY $DNS
 
-while true ; do
-    done=`ssh -n -o ConnectionAttempts=1000 -i $1 ubuntu@$2 grep "finished" /var/log/cloud-init-output.log`
-    if [ ! -z "$done" ]
-    then
-	break
-    fi
-    echo -n "."
-    sleep 1
+if [ "$REBOOT" = "reboot" ]; then
+    # try to deal with lag before instance is created and configured
+    echo -n "wait until cloud-init is done "
+
+    while true ; do
+	done=`ssh -n -o ConnectionAttempts=1000 -i $KEY $LOGIN@$DNS sudo grep "finished" /var/log/cloud-init-output.log`
+	if [ ! -z "$done" ]
+	then
+	    break
+	fi
+	echo -n "."
+	sleep 1
+    done
+
+    echo "done; reboot and wait"
+
+    ssh -n -i $KEY $LOGIN@$DNS sudo shutdown -r now
+
+    sleep 2
+
+    while true ; do
+	done=`ssh -n -i $KEY $LOGIN@$DNS echo "this is an ssh"`
+	if [ ! -z "$done" ]
+	then
+	    break
+	fi
+	echo -n "."
+	sleep 1
+    done
+
+    echo "done rebooting"
+fi
+
+# decrypt the private keys.
+SECRETS="credentials"
+for F in $SECRETS
+do
+  gpg --output $F --decrypt ${F}.gpg || exit 1
 done
 
-echo "done; reboot and wait"
+ssh -n -i $KEY $LOGIN@$DNS mkdir -p /home/$LOGIN/.aws
+scp -i $KEY credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
+chmod 600 ~/.aws/credentials
+rm $SECRETS
 
-ssh -n -i $1 ubuntu@$2 sudo shutdown -r now
+exit 1
 
-sleep 2
+ssh -n -i $KEY $LOGIN@$DNS sudo mkdir -p /mnt/9p
 
-while true ; do
-    done=`ssh -n -i $1 ubuntu@$2 echo "this is an ssh"`
-    if [ ! -z "$done" ]
-    then
-	break
-    fi
-    echo -n "."
-    sleep 1
-done
-
-echo "done rebooting"
-
-ssh -n -i $1 ubuntu@$2 sudo snap install --classic go
-ssh -n -i $1 ubuntu@$2 sudo snap install --classic emacs
-ssh -n -i $1 ubuntu@$2 sudo apt install net-tools
-ssh -n -i $1 ubuntu@$2 sudo mkdir /mnt/9p
-
-ssh -i $1 ubuntu@$2 <<ENDSSH
+ssh -i $KEY $LOGIN@$DNS <<ENDSSH
 cat <<EOF > ~/.ssh/config
 Host *
    StrictHostKeyChecking no
    UserKnownHostsFile=/dev/null
 EOF
+chmod go-w .ssh/config
 cat << EOF > ~/.ssh/aws-ulambda
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
@@ -93,23 +131,15 @@ EOF
 chmod 600 ~/.ssh/aws-ulambda
 if [ -d "ulambda" ] 
 then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./make.sh)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download)'
 fi
+(cd ulambda && ./make.sh -norace)
 
-if [ -d "gg" ] 
-then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd gg; git pull; make -j2 install)'
-else
-   ssh-agent bash -c 'sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 10'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@github.com:ArielSzekely/gg.git'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg/examples/excamera; git clone git@github.com:excamera/excamera-static-bins.git excamera_bin_dir'
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; cd gg; ./fetch-submodules.sh; ./autogen.sh; ./configure; sudo make -j2 install'
-fi
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh -i $1 ubuntu@$2"
+echo "ssh -i $KEY $LOGIN@$DNS"
 echo "============================="
 

@@ -35,7 +35,7 @@ ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH" > $DIR/log/$LEADER
  yes | sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
  sudo chown $(id -u):$(id -g) $HOME/.kube/config
  # Install CNI
- kubectl create -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
+ kubectl create -f ~/ulambda/cloudlab/k8s/cni/tigera-operator.yaml
  kubectl create -f ~/ulambda/cloudlab/k8s/cni/calico.yaml
  kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
  kubectl create serviceaccount --namespace kube-system tiller

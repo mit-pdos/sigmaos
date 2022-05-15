@@ -60,15 +60,20 @@ sudo apt-get install helm
 helm repo add stable https://charts.helm.sh/stable
 
 # Move containerd to the local drive
-sudo rm /etc/containerd/config.toml
 sudo systemctl stop containerd
-sudo mv /var/lib/containerd /var/local/arielck/
+sudo rm -rf /var/local/arielck/containerd
+sudo mv /var/lib/containerd /var/local/arielck
+sudo rm /etc/containerd/config.toml
 echo 'root = "/var/local/arielck/containerd"' | sudo tee /etc/containerd/config.toml
 sudo systemctl restart containerd
 
-mkdir /var/local/arielck/docker
+sudo rm -rf /var/local/arielck/docker
+sudo mv /var/lib/docker /var/local/arielck
 sudo sed -i 's/ExecStart=\/usr\/bin\/dockerd/ExecStart=\/usr\/bin\/dockerd --data-root \/var\/local\/arielck\/docker/g' /lib/systemd/system/docker.service
-sudo systemctl restart docker
 sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+sudo swapoff -a
+sudo sed -i '/\tswap\t/ s/^/#/' /etc/fstab
 
 ENDSSH

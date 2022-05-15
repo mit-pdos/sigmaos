@@ -1125,7 +1125,7 @@ const (
 	KBYTE      = 1 << 10
 	NRUNS      = 1
 	SYNCFILESZ = 100 * KBYTE
-	FILESZ     = 10 * test.MBYTE
+	FILESZ     = 20 * test.MBYTE
 	WRITESZ    = 4096
 	BUFSZ      = 1 << 16
 )

@@ -9,8 +9,9 @@ spec:
   calicoNetwork:
     # Adjust autodetection method to make sure we choose the right interface.
     nodeAddressAutodetectionV4:
-      cidrs:
-        - 10.10.1.0/24
+      canReach: 10.10.1.1
+#      cidrs:
+#        - 10.10.1.0/24
     # Note: The ipPools section cannot be modified post-install.
     ipPools:
     - blockSize: 26
@@ -31,5 +32,6 @@ spec:
   calicoNetwork:
     # Adjust autodetection method to make sure we choose the right interface.
     nodeAddressAutodetectionV4:
-      cidrs:
-        - 10.10.1.0/24
+      canReach: 10.10.1.1
+#      cidrs:
+#        - 10.10.1.0/24

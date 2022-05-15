@@ -6076,7 +6076,7 @@ spec:
               mountPath: /var/lib/calico
           env:
             - name: IP_AUTODETECTION_METHOD
-              value: "cidr=10.10.1.0/24"
+              value: "canReach=10.10.1.1"
             - name: WATCH_NAMESPACE
               value: ""
             - name: POD_NAME

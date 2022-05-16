@@ -79,6 +79,7 @@ func symname(r string, name string) string {
 
 func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	for _, n := range []string{MRDIR, MDIR, RDIR, RIN, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE, MDIR + NEXT, RDIR + NEXT} {
+		fsl.RmDir(n)
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}

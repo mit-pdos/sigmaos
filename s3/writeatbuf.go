@@ -23,7 +23,6 @@ func (tb *trimBuf) index(off np.Toffset) np.Toffset {
 }
 
 func (tb *trimBuf) writeAt(p []byte, pos np.Toffset) {
-	db.DPrintf("FSS3", "WriteAt %v %v %v\n", len(p), pos, cap(tb.b))
 	expLen := np.Tlength(pos) + np.Tlength(len(p))
 	if np.Tlength(tb.nread)+np.Tlength(cap(tb.b)) < expLen {
 		db.DFatalf("writeAt %v %v\n", pos, len(p))
@@ -34,18 +33,18 @@ func (tb *trimBuf) writeAt(p []byte, pos np.Toffset) {
 		// https://docs.aws.amazon.com/sdk-for-go/api/aws/#WriteAtBuffer)
 		db.DPrintf("FSS3", "trim write o %d cnt %d nread %d\n", pos, len(p), tb.nread)
 		n := tb.nread - pos
-		if n <= 0 {
+		if n > np.Toffset(len(p)) {
 			return
-		} else {
-			p = p[n:]
-			pos += n
 		}
+		p = p[n:]
+		pos += n
+
 	}
 	copy(tb.b[tb.index(pos):], p)
 }
 
 func (tb *trimBuf) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "read o %d cnt %d nread %d\n", off, cnt, tb.nread)
+	db.DPrintf("FSS3", "read o %d cnt %d (nread %d)\n", off, cnt, tb.nread)
 	if off < tb.nread {
 		np.MkErr(np.TErrInval, off)
 	}
@@ -58,29 +57,35 @@ func (tb *trimBuf) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 
 type writeAtBuffer struct {
 	sync.Mutex
-	c   *sync.Cond
-	off np.Toffset // bytes [0, off) are in
-	err error
-	tb  *trimBuf
+	c    *sync.Cond
+	off  np.Toffset // bytes [0, off) are in
+	wrcv *windows   // windows received
+	err  error
+	tb   *trimBuf
 }
 
 func mkWriteAtBuffer(sz np.Tlength) *writeAtBuffer {
 	b := &writeAtBuffer{}
 	b.tb = &trimBuf{}
 	b.tb.b = make([]byte, sz)
+	b.wrcv = mkWindows()
 	b.c = sync.NewCond(&b.Mutex)
 	return b
 }
 
-func (b *writeAtBuffer) WriteAt(p []byte, pos int64) (n int, err error) {
+func (b *writeAtBuffer) WriteAt(buf []byte, pos int64) (n int, err error) {
 	b.Lock()
 	defer b.Unlock()
-	b.tb.writeAt(p, np.Toffset(pos))
-	if np.Toffset(pos) == b.off {
-		b.off += np.Toffset(len(p))
+	o := np.Toffset(pos)
+	b.tb.writeAt(buf, o)
+	m := b.wrcv.add(b.off, o, o+np.Toffset(len(buf)))
+	db.DPrintf("FSS3", "WriteAt o %v n %d cap %v %v\n", o, len(buf), cap(b.tb.b), b.wrcv.ws)
+
+	if m != 0 {
+		b.off += m
 		b.c.Broadcast()
 	}
-	return len(p), nil
+	return len(buf), nil
 }
 
 func (b *writeAtBuffer) setErr(err error) {
@@ -96,7 +101,7 @@ func (b *writeAtBuffer) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 	b.Lock()
 	defer b.Unlock()
 
-	db.DPrintf("FSS3", "Read %d %d\n", off, cnt)
+	db.DPrintf("FSS3", "Read %d %d %v\n", off, cnt, b.wrcv.ws)
 	sz := off + np.Toffset(cnt)
 	for b.err == nil && b.off < sz {
 		b.c.Wait()

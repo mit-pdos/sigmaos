@@ -14,3 +14,4 @@ packages:
   - net-tools
   - python3
   - python3-boto3
+  - awscli

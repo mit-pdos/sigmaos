@@ -1,7 +1,6 @@
 package test
 
 import (
-	"log"
 	"sync"
 	"testing"
 
@@ -50,7 +49,6 @@ func (ts *Tstate) startReplicas() {
 }
 
 func MakeTstatePath(t *testing.T, named, path string) *Tstate {
-	log.Printf("named %s path %s\n", named, path)
 	if named == "" && path == np.NAMED {
 		return MakeTstate(t)
 	} else {

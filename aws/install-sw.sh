@@ -72,10 +72,6 @@ do
   gpg --output $F --decrypt ${F}.gpg || exit 1
 done
 
-ssh -n -i $KEY $LOGIN@$DNS mkdir -p /home/$LOGIN/.aws
-scp -i $KEY credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
-chmod 600 ~/.aws/credentials
-rm $SECRETS
 
 ssh -n -i $KEY $LOGIN@$DNS sudo mkdir -p /mnt/9p
 
@@ -127,6 +123,16 @@ IuzhbPSUS+OksAAAAOa2Fhc2hvZWtAZms2eDEBAgMEBQ==
 -----END OPENSSH PRIVATE KEY-----
 EOF
 chmod 600 ~/.ssh/aws-ulambda
+
+cat << EOF >> ~/.ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC4NF0v/XEFId9bJJ1KvzvIIfcFUPvvNJCWH35JJbpaCCRuguHAlim30WqeTG+Ru7Debl80AVuve+XrhL2uYY6R1SeBXQ6Vl6jGPzmmlTqJLi73e6oNWI13QJ1ALriS2Vy5xk1ckmS5epYS0OixerQJ/9gHTcdHWcNDbfUOi23jqdciNExSqjamrYvUwi14IhRNRqltrk2V4ephnRI+8S3ExansbZSwnu0XIz7j86e3PFMuuHwLJWv59UdO9roJl2B36dnzWp0lpqcXYrk3gbbXBCu6iV1Dv7XgvElTtmwqJJ50O2pzwJv2pBB/tw3LkWldF6FuYO3vjaTOgdm2gbCsw2DMJSa6oXJB4cRztXDe51ljbhdYptHxbJgM7+852soEma2uhuek80rRn3UEqrQ1MIsw0DJXx5k+tDbJAWyzy4k4opR583Go9UtRq/BY6qyaFHA/DY13c5QiJNapN5JameX3+wUvNmR22lX/SW61KFjXzYnn//77UCidNPr6SQs= kaashoek@fk6x1
+EOF
+
+mkdir ~/.aws
+chmod 700 ~/.aws
+echo > ~/.aws/credentials
+chmod 600 ~/.aws/credentials
+
 if [ -d "ulambda" ] 
 then
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull)'
@@ -136,6 +142,9 @@ fi
 (cd ulambda && ./make.sh -norace)
 
 ENDSSH
+
+scp -i $KEY credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
+rm $SECRETS
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
 echo "ssh -i $KEY $LOGIN@$DNS"

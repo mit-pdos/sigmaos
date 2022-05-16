@@ -54,6 +54,7 @@ func makeSystemBase(namedAddr []string, bindir string) *System {
 func MakeSystemClnt(uname, named string) *System {
 	s := makeSystemBase([]string{named}, "..")
 	s.FsLib = fslib.MakeFsLibAddr(uname, []string{named})
+	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	return s
 }
 

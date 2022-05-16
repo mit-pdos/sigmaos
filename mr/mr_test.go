@@ -2,6 +2,7 @@ package mr_test
 
 import (
 	"bytes"
+	"flag"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -32,6 +33,12 @@ const (
 	CRASHCOORD = 500
 	CRASHSRV   = 1000000
 )
+
+var namedaddr string
+
+func init() {
+	flag.StringVar(&namedaddr, "named", "", "named")
+}
 
 func TestHash(t *testing.T) {
 	assert.Equal(t, 0, mr.Khash("LEAGUE")%8)
@@ -68,7 +75,11 @@ type Tstate struct {
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = test.MakeTstateAll(t)
+	if namedaddr == "" {
+		ts.Tstate = test.MakeTstateAll(t)
+	} else {
+		ts.Tstate = test.MakeTstateClnt(t, namedaddr)
+	}
 	ts.nreducetask = nreducetask
 
 	mr.InitCoordFS(ts.System.FsLib, nreducetask)
@@ -163,7 +174,9 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.checkJob()
 
-	ts.Shutdown()
+	if namedaddr == "" {
+		ts.Shutdown()
+	}
 }
 
 func TestMR(t *testing.T) {

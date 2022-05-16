@@ -19,16 +19,14 @@ do
     ssh -i key-$1.pem ubuntu@$vm <<ENDSSH
     export NAMED="${NAMED}"
     ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull)'
-    ./ulambda/stop.sh
-    (cd ulambda; ./make.sh)
+    (cd ulambda; ./stop.sh)
+    (cd ulambda; ./make.sh -norace)
     if [ "${vm}" = "${MAIN}" ]; then 
        echo "START NAMED"
-       nohup ./ulambda/bin/kernel/named > named.out 2>&1 < /dev/null &
-       sleep 1
-       nohup ./ulambda/bin/kernel/proxyd > proxyd.out 2>&1 < /dev/null &
+       nohup ./start.sh > /tmp/out 2>&1 < /dev/null &
+    else
+       echo "JOIN ${NAMED}"
+       (cd ulambda;  nohup bin/realm/noded . $vm > /tmp/out 2>&1 < /dev/null &)
     fi
-    nohup ./ulambda/bin/kernel/nps3d > npsd3.out 2>&1 < /dev/null &
-    nohup ./ulambda/bin/kernel/fsxd > fsuxd.out 2>&1 < /dev/null &
-    nohup ./ulambda/bin/kernel/procd > procd.out 2>&1 < /dev/null &
 ENDSSH
 done

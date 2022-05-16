@@ -3,9 +3,13 @@ kind: Deployment
 metadata:
   name: spin-worker
 spec:
+  selector:
+    matchLabels:
+      run: spin-worker
   template:
     metadata:
-      name: spin-worker-pod
+      labels:
+        run: spin-worker
     spec:
       containers:
       - name: spin-worker

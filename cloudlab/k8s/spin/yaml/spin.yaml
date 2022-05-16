@@ -26,4 +26,3 @@ spec:
         - "test-arg"
       imagePullSecrets:
       - name: regcred
-      restartPolicy: Never

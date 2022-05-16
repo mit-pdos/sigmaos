@@ -1,5 +1,5 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: spin-worker
 spec:
@@ -10,6 +10,11 @@ spec:
       containers:
       - name: spin-worker
         image: arielszekely/spin
+        resources:
+          limits:
+            cpu: 1000m
+          requests:
+            cpu: 500m
         envFrom:
         - configMapRef:
             name: spin-env-config

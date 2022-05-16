@@ -15,10 +15,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/realm"
 	"ulambda/test"
 )
 
@@ -34,10 +36,11 @@ const (
 	CRASHSRV   = 1000000
 )
 
-var namedaddr string
+// Instead of starting a new realm, use this realm to run MR
+var realmaddr string
 
 func init() {
-	flag.StringVar(&namedaddr, "named", "", "named")
+	flag.StringVar(&realmaddr, "realm", "", "realm")
 }
 
 func TestHash(t *testing.T) {
@@ -75,10 +78,11 @@ type Tstate struct {
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts := &Tstate{}
-	if namedaddr == "" {
+	if realmaddr == "" {
 		ts.Tstate = test.MakeTstateAll(t)
 	} else {
-		ts.Tstate = test.MakeTstateClnt(t, namedaddr)
+		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmaddr)
+		ts.Tstate = test.MakeTstateClnt(t, rconfig.NamedAddrs[0])
 	}
 	ts.nreducetask = nreducetask
 
@@ -174,7 +178,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.checkJob()
 
-	if namedaddr == "" {
+	if realmaddr == "" {
 		ts.Shutdown()
 	}
 }

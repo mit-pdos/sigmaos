@@ -2,7 +2,9 @@ package mr
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strconv"
@@ -33,7 +35,7 @@ type Mapper struct {
 	mapf        MapT
 	nreducetask int
 	input       string
-	file        string
+	bin         string
 	wrts        []*wrt
 	rand        string
 }
@@ -50,7 +52,7 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 	}
 	m.nreducetask = n
 	m.input = args[1]
-	m.file = path.Base(m.input)
+	m.bin = path.Base(m.input)
 	m.rand = rand.String(16)
 	m.wrts = make([]*wrt, m.nreducetask)
 
@@ -66,12 +68,12 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 func (m *Mapper) initMapper() error {
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	m.MkDir(Moutdir(m.file), 0777)
+	m.MkDir(Moutdir(m.bin), 0777)
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
-		oname := mshardfile(m.file, r) + m.rand
+		oname := mshardfile(m.bin, r) + m.rand
 		w, err := m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
 			m.closewrts()
@@ -117,13 +119,13 @@ func (m *Mapper) informReducer() error {
 		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), MLOCALSRV, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := mshardfile(m.file, r)
+		fn := mshardfile(m.bin, r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
 			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(), fn+m.rand, fn, err)
 		}
 
-		name := symname(strconv.Itoa(r), m.file)
+		name := symname(strconv.Itoa(r), m.bin)
 
 		// Remove name in case an earlier mapper created the
 		// symlink.  A reducer may have opened and is reading
@@ -135,7 +137,10 @@ func (m *Mapper) informReducer() error {
 		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
-		target := shardtarget(st.Name, m.file, r)
+		target := shardtarget(st.Name, m.bin, r)
+
+		db.DPrintf("MR", "target %s name %s\n", name, target)
+
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
 			db.DFatalf("%v: FATAL symlink %v err %v\n", proc.GetName(), name, err)
@@ -152,20 +157,45 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	return nil
 }
 
-func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
-	rdr, err := m.OpenReader(m.input)
+func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
+	rdr, err := m.OpenReader(s.File)
 	if err != nil {
-		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
+		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
 	}
 	defer rdr.Close()
 
+	rdr.Lseek(s.Offset)
+
+	// advance scanner to new line after start, if start != 0
+
 	brdr := bufio.NewReaderSize(rdr, BUFSZ)
-	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
-	//if err != nil {
-	//db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
-	//}
+
 	if err := m.mapf(m.input, brdr, m.emit); err != nil {
+		return 0, err
+	}
+	return rdr.Nbytes(), nil
+}
+
+func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
+	rdr, err := m.OpenReader(m.input)
+	if err != nil {
 		return 0, 0, err
+	}
+	dec := json.NewDecoder(rdr)
+	ni := np.Tlength(0)
+	for {
+		var s Split
+		if err := dec.Decode(&s); err == io.EOF {
+			break
+		} else if err != nil {
+			return 0, 0, err
+		}
+		db.DPrintf("MR", "Mapper: process split %v\n", s)
+		n, err := m.doSplit(&s)
+		if err != nil {
+			return 0, 0, err
+		}
+		ni += n
 	}
 	nout, err := m.flushwrts()
 	if err != nil {
@@ -174,10 +204,11 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 	if err := m.closewrts(); err != nil {
 		return 0, 0, err
 	}
+
 	if err := m.informReducer(); err != nil {
 		return 0, 0, err
 	}
-	return rdr.Nbytes(), nout, nil
+	return ni, nout, nil
 }
 
 func RunMapper(mapf MapT, args []string) {

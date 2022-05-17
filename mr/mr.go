@@ -4,6 +4,7 @@ import (
 	// "encoding/json"
 	"hash/fnv"
 	"io"
+	"io/fs"
 
 	"github.com/mitchellh/mapstructure"
 
@@ -11,7 +12,9 @@ import (
 )
 
 const (
-	BUFSZ = 1 << 16
+	BINSZ   np.Tlength = 1 << 30
+	SPLITSZ np.Tlength = BINSZ >> 3
+	BUFSZ              = 1 << 16
 )
 
 //
@@ -46,6 +49,15 @@ func Khash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
+// An input split
+type Split struct {
+	File   string     `json:"File"`
+	Offset np.Toffset `json:"Offset"`
+	Length np.Tlength `json:"Length"`
+}
+
+type Bin []Split
+
 // Result of mapper or reducer
 type Result struct {
 	IsM  bool       `json:"IsM"`
@@ -59,4 +71,34 @@ func mkResult(data interface{}) *Result {
 	r := &Result{}
 	mapstructure.Decode(data, r)
 	return r
+}
+
+// Each bin has a slice of splits.  Assign splits of files to a bin
+// until the bin is file.
+func MkBins(files []fs.FileInfo) []Bin {
+	bins := make([]Bin, 0)
+	binsz := np.Tlength(0)
+	bin := Bin{}
+	for _, f := range files {
+		for i := np.Tlength(0); ; {
+			n := SPLITSZ
+			if i+n > np.Tlength(f.Size()) {
+				n = np.Tlength(f.Size()) - i
+			}
+			split := Split{MIN + f.Name(), np.Toffset(i), n}
+			bin = append(bin, split)
+			binsz += n
+			if binsz+SPLITSZ > BINSZ { // bin full?
+				bins = append(bins, bin)
+				bin = Bin{}
+				binsz = np.Tlength(0)
+			}
+			if n < SPLITSZ { // next file
+				break
+			}
+			i += n
+		}
+	}
+	bins = append(bins, bin)
+	return bins
 }

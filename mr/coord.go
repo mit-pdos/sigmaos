@@ -36,6 +36,10 @@ const (
 	RESTART = "restart" // restart message from reducer
 )
 
+func BinName(i int) string {
+	return "bin" + strconv.Itoa(i)
+}
+
 func Moutdir(name string) string {
 	return MLOCALPREFIX + name
 }
@@ -177,7 +181,7 @@ func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 }
 
 func (c *Coord) mapper(task string) (*proc.Status, error) {
-	input := MIN + task
+	input := MDIR + TIP + task
 	return c.task(c.mapperbin, []string{strconv.Itoa(c.nreducetask), input})
 }
 

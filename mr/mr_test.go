@@ -54,6 +54,15 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash("absently")%8)
 }
 
+func TestSplits(t *testing.T) {
+	files, err := ioutil.ReadDir("../input/")
+	assert.Nil(t, err)
+	bins := mr.MkBins(files)
+	for _, b := range bins {
+		log.Printf("bin: %v\n", b)
+	}
+}
+
 func (ts *Tstate) Compare() {
 	cmd := exec.Command("sort", "seq-mr.out")
 	var out1 bytes.Buffer
@@ -101,14 +110,20 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 func (ts *Tstate) prepareJob() int {
 	files, err := ioutil.ReadDir("../input/")
 	assert.Nil(ts.T, err, "Readdir: %v", err)
-	for _, f := range files {
+
+	bins := mr.MkBins(files)
+	for i, b := range bins {
 		// remove mapper output directory from previous run
-		ts.RmDir(mr.Moutdir(f.Name()))
-		n := mr.MDIR + "/" + f.Name()
-		_, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n))
-		assert.Nil(ts.T, err, "PutFile %v err %v", n, err)
+		ts.RmDir(mr.Moutdir(mr.BinName(i)))
+		n := mr.MDIR + "/" + mr.BinName(i)
+		_, err = ts.PutFile(n, 0777, np.OWRITE, []byte{})
+		assert.Nil(ts.T, err, nil)
+		for _, s := range b {
+			err := ts.AppendFileJson(n, s)
+			assert.Nil(ts.T, err, nil)
+		}
 	}
-	return len(files)
+	return len(bins)
 }
 
 func (ts *Tstate) checkJob() {
@@ -187,7 +202,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	const NReduce = 8
+	const NReduce = 1
 	ts := makeTstate(t, NReduce)
 
 	nmap := ts.prepareJob()

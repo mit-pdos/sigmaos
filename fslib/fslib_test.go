@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
@@ -1135,7 +1136,7 @@ func measure(msg string, f func() np.Tlength) {
 		start := time.Now()
 		sz := f()
 		ms := time.Since(start).Milliseconds()
-		log.Printf("%v: %.2fMB took %vms (%.2fMB/s)", msg, test.Mbyte(sz), ms, test.Tput(sz, ms))
+		log.Printf("%v: %s took %vms (%s)", msg, humanize.Bytes(uint64(sz)), ms, test.Tput(sz, ms))
 	}
 }
 

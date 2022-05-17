@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/fslib"
@@ -136,7 +137,7 @@ func (ts *Tstate) stats() {
 			break
 		}
 		assert.Nil(ts.T, err)
-		log.Printf("%s: %.2fMB %.2fMB %vms (%.2fMB/s)\n", r.Task, test.Mbyte(r.In), test.Mbyte(r.Out), r.Ms, test.Tput(r.In, r.Ms))
+		log.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
 	}
 }
 

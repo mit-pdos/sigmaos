@@ -48,6 +48,7 @@ func Khash(key string) int {
 
 // Result of mapper or reducer
 type Result struct {
+	IsM  bool       `json:"IsM"`
 	Task string     `json:"Task"`
 	In   np.Tlength `json:"In"`
 	Out  np.Tlength `json:"Out"`

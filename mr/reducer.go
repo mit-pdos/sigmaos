@@ -209,7 +209,7 @@ func (r *Reducer) doReduce() *proc.Status {
 		return proc.MakeStatusErr(fmt.Sprintf("%v: rename %v -> %v err %v\n", proc.GetName(), r.tmp, r.output, err), nil)
 	}
 	return proc.MakeStatusInfo(proc.StatusOK, r.input,
-		Result{r.input, nin, r.wrt.Nbytes(), time.Since(start).Milliseconds()})
+		Result{false, r.input, nin, r.wrt.Nbytes(), time.Since(start).Milliseconds()})
 }
 
 func RunReducer(reducef ReduceT, args []string) {

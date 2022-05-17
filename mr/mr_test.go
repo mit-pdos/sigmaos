@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -131,14 +132,32 @@ func (ts *Tstate) stats() {
 	rdr, err := ts.OpenReader(mr.MRSTATS)
 	assert.Nil(ts.T, err)
 	dec := json.NewDecoder(rdr)
+	fmt.Println("=== STATS:")
+	totIn := np.Tlength(0)
+	totOut := np.Tlength(0)
+	totWTmp := np.Tlength(0)
+	totRTmp := np.Tlength(0)
 	for {
 		var r mr.Result
 		if err := dec.Decode(&r); err == io.EOF {
 			break
 		}
 		assert.Nil(ts.T, err)
-		log.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
+		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
+		if r.IsM {
+			totIn += r.In
+			totWTmp += r.Out
+		} else {
+			totOut += r.Out
+			totRTmp += r.In
+		}
 	}
+	fmt.Printf("=== totIn %s totOut %s tmpOut %s tmpIn %s\n",
+		humanize.Bytes(uint64(totIn)),
+		humanize.Bytes(uint64(totOut)),
+		humanize.Bytes(uint64(totWTmp)),
+		humanize.Bytes(uint64(totRTmp)),
+	)
 }
 
 // Sleep for a random time, then crash a server.  Crash a server of a

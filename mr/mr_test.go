@@ -2,7 +2,9 @@ package mr_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -124,6 +126,20 @@ func (ts *Tstate) checkJob() {
 	ts.Compare()
 }
 
+func (ts *Tstate) stats() {
+	rdr, err := ts.OpenReader(mr.MRSTATS)
+	assert.Nil(ts.T, err)
+	dec := json.NewDecoder(rdr)
+	for {
+		var r mr.Result
+		if err := dec.Decode(&r); err == io.EOF {
+			break
+		}
+		assert.Nil(ts.T, err)
+		log.Printf("%s: %.2fMB %.2fMB %vms (%.2fMB/s)\n", r.Task, test.Mbyte(r.In), test.Mbyte(r.Out), r.Ms, test.Tput(r.In, r.Ms))
+	}
+}
+
 // Sleep for a random time, then crash a server.  Crash a server of a
 // certain type, then crash a server of that type.
 func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
@@ -178,9 +194,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.checkJob()
 
-	stats, err := ts.GetFile(mr.MRSTATS)
-	assert.Nil(t, err)
-	log.Printf("STATS:\n%s\n", string(stats))
+	ts.stats()
 
 	if realmaddr == "" {
 		ts.Shutdown()

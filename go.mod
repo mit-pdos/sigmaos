@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/klauspost/readahead v1.4.0
+	github.com/mitchellh/mapstructure v1.1.2
 	github.com/montanaflynn/stats v0.6.6
 	github.com/seccomp/libseccomp-golang v0.9.1
 	github.com/stretchr/testify v1.7.0

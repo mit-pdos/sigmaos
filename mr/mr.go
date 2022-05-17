@@ -5,6 +5,8 @@ import (
 	"hash/fnv"
 	"io"
 
+	"github.com/mitchellh/mapstructure"
+
 	np "ulambda/ninep"
 )
 
@@ -46,7 +48,14 @@ func Khash(key string) int {
 
 // Result of mapper or reducer
 type Result struct {
-	In  np.Tlength `json:"In"`
-	Out np.Tlength `json:"Out"`
-	Ms  int64      `json:"Ms"`
+	Task string     `json:"Task"`
+	In   np.Tlength `json:"In"`
+	Out  np.Tlength `json:"Out"`
+	Ms   int64      `json:"Ms"`
+}
+
+func mkResult(data interface{}) *Result {
+	r := &Result{}
+	mapstructure.Decode(data, r)
+	return r
 }

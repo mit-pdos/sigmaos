@@ -227,7 +227,7 @@ type Tresult struct {
 	ok  bool
 	ms  int64
 	msg string
-	res interface{}
+	res *Result
 }
 
 func (c *Coord) doneTasks(dir string) int {
@@ -249,8 +249,8 @@ func (c *Coord) runTask(ch chan Tresult, dir string, t string, f func(string) (*
 		if err := c.Rename(s, d); err != nil {
 			db.DFatalf("rename task done %v to %v err %v\n", s, d, err)
 		}
-
-		ch <- Tresult{t, true, ms, status.Msg(), status.Data()}
+		r := mkResult(status.Data())
+		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
@@ -353,9 +353,8 @@ func (c *Coord) Round() {
 		res := <-ch
 		db.DPrintf("MR", "%v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
 		if res.ok {
-			s := fmt.Sprintf("%s: %v\n", res.msg, res.res)
-			if _, err := c.SetFile(MRSTATS, []byte(s), np.OAPPEND, np.NoOffset); err != nil {
-				db.DFatalf("Setfile %v err %v\n", MRSTATS, err)
+			if err := c.AppendFileJson(MRSTATS, res.res); err != nil {
+				db.DFatalf("Appendfile %v err %v\n", MRSTATS, err)
 			}
 		}
 	}

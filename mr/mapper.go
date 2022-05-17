@@ -193,8 +193,8 @@ func RunMapper(mapf MapT, args []string) {
 	start := time.Now()
 	nin, nout, err := m.doMap()
 	if err == nil {
-		m.Exited(proc.MakeStatusInfo(proc.StatusOK, m.input, Result{nin, nout,
-			time.Since(start).Milliseconds()}))
+		m.Exited(proc.MakeStatusInfo(proc.StatusOK, m.input,
+			Result{m.input, nin, nout, time.Since(start).Milliseconds()}))
 	} else {
 		m.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}

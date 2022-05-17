@@ -2,6 +2,7 @@ package kv
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"math/big"
@@ -241,7 +242,7 @@ func (kc *KvClerk) Put(k Tkey, b []byte) error {
 }
 
 func (kc *KvClerk) AppendJson(k Tkey, v interface{}) error {
-	b, err := fslib.JsonRecord(v)
+	b, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}

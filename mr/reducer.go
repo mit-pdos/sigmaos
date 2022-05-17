@@ -162,7 +162,7 @@ func (r *Reducer) readFiles(input string) (np.Tlength, []*KeyValue, []string, er
 }
 
 func (r *Reducer) emit(kv *KeyValue) error {
-	b := fmt.Sprintf("%v %v\n", kv.Key, kv.Value)
+	b := fmt.Sprintf("%v %v\n", kv.K, kv.V)
 	_, err := r.bwrt.Write([]byte(b))
 	return err
 }
@@ -185,14 +185,14 @@ func (r *Reducer) doReduce() *proc.Status {
 	i := 0
 	for i < len(kvs) {
 		j := i + 1
-		for j < len(kvs) && kvs[j].Key == kvs[i].Key {
+		for j < len(kvs) && kvs[j].K == kvs[i].K {
 			j++
 		}
 		values := []string{}
 		for k := i; k < j; k++ {
-			values = append(values, kvs[k].Value)
+			values = append(values, kvs[k].V)
 		}
-		if err := r.reducef(kvs[i].Key, values, r.emit); err != nil {
+		if err := r.reducef(kvs[i].K, values, r.emit); err != nil {
 			return proc.MakeStatusErr("reducef", err)
 		}
 		i = j

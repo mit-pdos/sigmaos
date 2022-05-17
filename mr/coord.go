@@ -16,16 +16,17 @@ import (
 )
 
 const (
-	MIN    = "name/s3/~ip/input/"
-	MRDIR  = "name/mr"
-	MDIR   = MRDIR + "/m"
-	RDIR   = MRDIR + "/r"
-	RIN    = MRDIR + "-rin/"
-	ROUT   = MRDIR + "/" + "mr-out-"
-	TIP    = "-tip/"
-	DONE   = "-done/"
-	NEXT   = "-next/"
-	NCOORD = 3
+	MIN     = "name/s3/~ip/input/"
+	MRDIR   = "name/mr"
+	MDIR    = MRDIR + "/m"
+	RDIR    = MRDIR + "/r"
+	RIN     = MRDIR + "-rin/"
+	ROUT    = MRDIR + "/" + "mr-out-"
+	MRSTATS = MRDIR + "/stats.txt"
+	TIP     = "-tip/"
+	DONE    = "-done/"
+	NEXT    = "-next/"
+	NCOORD  = 3
 
 	MLOCALDIR    = "/mr/"
 	MLOCALSRV    = np.UX + "/~ip" // must end without /
@@ -102,6 +103,11 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 	fsl.RmDir(MLOCALMR)
 	if err := fsl.MkDir(MLOCALMR, 0777); err != nil {
 		db.DFatalf("Mkdir %v err %v\n", MLOCALMR, err)
+	}
+
+	// Create empty stats file
+	if _, err := fsl.PutFile(MRSTATS, 0777, np.OWRITE, []byte{}); err != nil {
+		db.DFatalf("Putfile %v err %v\n", MRSTATS, err)
 	}
 }
 
@@ -217,9 +223,11 @@ func (c *Coord) getTask(dir string) (string, error) {
 }
 
 type Tresult struct {
-	t  string
-	ok bool
-	ms int64
+	t   string
+	ok  bool
+	ms  int64
+	msg string
+	res interface{}
 }
 
 func (c *Coord) doneTasks(dir string) int {
@@ -241,7 +249,8 @@ func (c *Coord) runTask(ch chan Tresult, dir string, t string, f func(string) (*
 		if err := c.Rename(s, d); err != nil {
 			db.DFatalf("rename task done %v to %v err %v\n", s, d, err)
 		}
-		ch <- Tresult{t, true, ms}
+
+		ch <- Tresult{t, true, ms, status.Msg(), status.Data()}
 	} else { // task failed; make it runnable again
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
@@ -254,7 +263,7 @@ func (c *Coord) runTask(ch chan Tresult, dir string, t string, f func(string) (*
 				db.DFatalf("rename to runnable %v err %v\n", to, err)
 			}
 		}
-		ch <- Tresult{t, false, ms}
+		ch <- Tresult{t, false, ms, "", nil}
 	}
 }
 
@@ -342,7 +351,13 @@ func (c *Coord) Round() {
 			break
 		}
 		res := <-ch
-		db.DPrintf(db.ALWAYS, "%v ok %v ms %d\n", res.t, res.ok, res.ms)
+		db.DPrintf("MR", "%v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
+		if res.ok {
+			s := fmt.Sprintf("%s: %v\n", res.msg, res.res)
+			if _, err := c.SetFile(MRSTATS, []byte(s), np.OAPPEND, np.NoOffset); err != nil {
+				db.DFatalf("Setfile %v err %v\n", MRSTATS, err)
+			}
+		}
 	}
 }
 

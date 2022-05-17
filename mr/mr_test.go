@@ -178,6 +178,10 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.checkJob()
 
+	stats, err := ts.GetFile(mr.MRSTATS)
+	assert.Nil(t, err)
+	log.Printf("STATS:\n%s\n", string(stats))
+
 	if realmaddr == "" {
 		ts.Shutdown()
 	}

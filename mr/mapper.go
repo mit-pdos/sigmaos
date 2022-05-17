@@ -99,13 +99,15 @@ func (m *Mapper) closewrts() error {
 	return nil
 }
 
-func (m *Mapper) flushwrts() error {
+func (m *Mapper) flushwrts() (np.Tlength, error) {
+	n := np.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
 		if err := m.wrts[r].bwrt.Flush(); err != nil {
-			return fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
+			return 0, fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
 		}
+		n += m.wrts[r].wrt.Nbytes()
 	}
-	return nil
+	return n, nil
 }
 
 // Inform reducer where to find map output
@@ -150,16 +152,12 @@ func (m *Mapper) emit(kv *KeyValue) error {
 	return nil
 }
 
-func (m *Mapper) doMap() error {
-	start := time.Now()
+func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 	rdr, err := m.OpenReader(m.input)
 	if err != nil {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), m.input, err)
 	}
 	defer rdr.Close()
-
-	db.DPrintf("MR0", "Open %v %v\n", m.input, time.Since(start).Milliseconds())
-	start = time.Now()
 
 	brdr := bufio.NewReaderSize(rdr, BUFSZ)
 	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
@@ -167,27 +165,19 @@ func (m *Mapper) doMap() error {
 	//db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
 	//}
 	if err := m.mapf(m.input, brdr, m.emit); err != nil {
-		return err
+		return 0, 0, err
 	}
-	db.DPrintf("MR0", "Mapf %v %v\n", m.input, time.Since(start).Milliseconds())
-
-	start = time.Now()
-	if err := m.flushwrts(); err != nil {
-		return err
+	nout, err := m.flushwrts()
+	if err != nil {
+		return 0, 0, err
 	}
 	if err := m.closewrts(); err != nil {
-		return err
+		return 0, 0, err
 	}
-	db.DPrintf("MR0", "Flush/close %v\n", time.Since(start).Milliseconds())
-	start = time.Now()
-
 	if err := m.informReducer(); err != nil {
-		return err
+		return 0, 0, err
 	}
-	db.DPrintf("MR0", "Inform %v\n", time.Since(start).Milliseconds())
-	start = time.Now()
-
-	return nil
+	return rdr.Nbytes(), nout, nil
 }
 
 func RunMapper(mapf MapT, args []string) {
@@ -200,9 +190,11 @@ func RunMapper(mapf MapT, args []string) {
 		m.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return
 	}
-	err = m.doMap()
+	start := time.Now()
+	nin, nout, err := m.doMap()
 	if err == nil {
-		m.Exited(proc.MakeStatus(proc.StatusOK))
+		m.Exited(proc.MakeStatusInfo(proc.StatusOK, m.input, Result{nin, nout,
+			time.Since(start).Milliseconds()}))
 	} else {
 		m.Exited(proc.MakeStatusErr(err.Error(), nil))
 	}

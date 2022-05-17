@@ -4,6 +4,8 @@ import (
 	// "encoding/json"
 	"hash/fnv"
 	"io"
+
+	np "ulambda/ninep"
 )
 
 const (
@@ -40,4 +42,11 @@ func Khash(key string) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
 	return int(h.Sum32() & 0x7fffffff)
+}
+
+// Result of mapper or reducer
+type Result struct {
+	In  np.Tlength `json:"In"`
+	Out np.Tlength `json:"Out"`
+	Ms  int64      `json:"Ms"`
 }

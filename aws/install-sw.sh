@@ -139,7 +139,8 @@ then
 else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download)'
 fi
-(cd ulambda && ./make.sh -norace)
+
+echo -n > ~/.hushlogin
 
 ENDSSH
 

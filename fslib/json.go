@@ -27,6 +27,15 @@ func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
 	return err
 }
 
+func (fl *FsLib) AppendFileJson(fname string, i interface{}) error {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error %v", err)
+	}
+	_, err = fl.SetFile(fname, data, np.OAPPEND, np.NoOffset)
+	return err
+}
+
 func (fl *FsLib) PutFileJson(fname string, perm np.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {

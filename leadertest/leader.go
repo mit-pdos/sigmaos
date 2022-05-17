@@ -1,6 +1,7 @@
 package leadertest
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
@@ -41,7 +42,7 @@ func RunLeader(dir, last, child string) {
 	// Write dir in new epoch
 	//
 	conf := &Config{epoch.String(), pid, pid}
-	b, err := fslib.JsonRecord(*conf)
+	b, err := json.Marshal(*conf)
 	if err != nil {
 		db.DFatalf("%v marshal %v failed %v\n", proc.GetName(), fn, err)
 	}

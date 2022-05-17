@@ -2,7 +2,6 @@ package fslib
 
 import (
 	"bufio"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,6 +26,15 @@ func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
 	return err
 }
 
+func (fl *FsLib) AppendFileJson(fname string, i interface{}) error {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return fmt.Errorf("Marshal error %v", err)
+	}
+	_, err = fl.SetFile(fname, data, np.OAPPEND, np.NoOffset)
+	return err
+}
+
 func (fl *FsLib) PutFileJson(fname string, perm np.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
@@ -44,19 +52,8 @@ func (fl *FsLib) GetFileJsonWatch(name string, i interface{}) error {
 	return json.Unmarshal(b, i)
 }
 
-func JsonRecord(a interface{}) ([]byte, error) {
-	b, err := json.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
-	lbuf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(lbuf, int64(len(b)))
-	b = append(lbuf[0:n], b...)
-	return b, nil
-}
-
 func WriteJsonRecord(wrt io.Writer, r interface{}) error {
-	b, err := JsonRecord(r)
+	b, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
@@ -75,22 +72,12 @@ func JsonReader(rdr io.Reader, mk func() interface{}, f func(i interface{}) erro
 }
 
 func JsonBufReader(rdr *bufio.Reader, mk func() interface{}, f func(i interface{}) error) error {
+	dec := json.NewDecoder(rdr)
 	for {
-		l, err := binary.ReadVarint(rdr)
-		if err != nil && err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		data := make([]byte, l)
-		if n, err := io.ReadFull(rdr, data); err != nil {
-			return err
-		} else if int64(n) != l {
-			return fmt.Errorf("JsonBufReader: short read %v %v\n", n, l)
-		}
 		v := mk()
-		if err := json.Unmarshal(data, v); err != nil {
+		if err := dec.Decode(&v); err == io.EOF {
+			break
+		} else if err != nil {
 			return err
 		}
 		if err := f(v); err != nil {

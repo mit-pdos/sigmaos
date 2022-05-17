@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -121,7 +122,7 @@ func Mbyte(sz np.Tlength) float64 {
 	return float64(sz) / float64(MBYTE)
 }
 
-func Tput(sz np.Tlength, ms int64) float64 {
+func Tput(sz np.Tlength, ms int64) string {
 	s := float64(ms) / 1000
-	return Mbyte(sz) / s
+	return fmt.Sprintf("%.2fMB/s", Mbyte(sz)/s)
 }

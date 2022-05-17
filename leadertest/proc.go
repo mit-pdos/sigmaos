@@ -1,6 +1,7 @@
 package leadertest
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
@@ -43,7 +44,7 @@ func RunProc(epochstr, dir string) {
 	// and delay writes
 	delay.Delay(DELAY)
 
-	b, err := fslib.JsonRecord(*conf)
+	b, err := json.Marshal(*conf)
 	if err != nil {
 		pclnt.Exited(proc.MakeStatusErr(err.Error(), nil))
 		return

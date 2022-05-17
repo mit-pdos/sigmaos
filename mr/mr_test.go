@@ -2,7 +2,10 @@ package mr_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -13,12 +16,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/fslib"
 	"ulambda/groupmgr"
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/realm"
 	"ulambda/test"
 )
 
@@ -34,10 +40,11 @@ const (
 	CRASHSRV   = 1000000
 )
 
-var namedaddr string
+// Instead of starting a new realm, use this realm to run MR
+var realmaddr string
 
 func init() {
-	flag.StringVar(&namedaddr, "named", "", "named")
+	flag.StringVar(&realmaddr, "realm", "", "realm")
 }
 
 func TestHash(t *testing.T) {
@@ -75,10 +82,11 @@ type Tstate struct {
 
 func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	ts := &Tstate{}
-	if namedaddr == "" {
+	if realmaddr == "" {
 		ts.Tstate = test.MakeTstateAll(t)
 	} else {
-		ts.Tstate = test.MakeTstateClnt(t, namedaddr)
+		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmaddr)
+		ts.Tstate = test.MakeTstateClnt(t, rconfig.NamedAddrs[0])
 	}
 	ts.nreducetask = nreducetask
 
@@ -118,6 +126,38 @@ func (ts *Tstate) checkJob() {
 	}
 
 	ts.Compare()
+}
+
+func (ts *Tstate) stats() {
+	rdr, err := ts.OpenReader(mr.MRSTATS)
+	assert.Nil(ts.T, err)
+	dec := json.NewDecoder(rdr)
+	fmt.Println("=== STATS:")
+	totIn := np.Tlength(0)
+	totOut := np.Tlength(0)
+	totWTmp := np.Tlength(0)
+	totRTmp := np.Tlength(0)
+	for {
+		var r mr.Result
+		if err := dec.Decode(&r); err == io.EOF {
+			break
+		}
+		assert.Nil(ts.T, err)
+		fmt.Printf("%s: in %s out %s %vms (%s)\n", r.Task, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), r.Ms, test.Tput(r.In, r.Ms))
+		if r.IsM {
+			totIn += r.In
+			totWTmp += r.Out
+		} else {
+			totOut += r.Out
+			totRTmp += r.In
+		}
+	}
+	fmt.Printf("=== totIn %s totOut %s tmpOut %s tmpIn %s\n",
+		humanize.Bytes(uint64(totIn)),
+		humanize.Bytes(uint64(totOut)),
+		humanize.Bytes(uint64(totWTmp)),
+		humanize.Bytes(uint64(totRTmp)),
+	)
 }
 
 // Sleep for a random time, then crash a server.  Crash a server of a
@@ -174,7 +214,9 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	ts.checkJob()
 
-	if namedaddr == "" {
+	ts.stats()
+
+	if realmaddr == "" {
 		ts.Shutdown()
 	}
 }

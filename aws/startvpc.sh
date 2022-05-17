@@ -25,9 +25,10 @@ done
 for vm in $vms
 do
     echo "COMPILE: $vm"
-    ssh -i key-$1.pem ubuntu@$vm /bin/bash & <<ENDSSH
+    ( ssh -i key-$1.pem ubuntu@$vm /bin/bash <<ENDSSH
     grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace )  
 ENDSSH
+      ) &
 done
 
 wait

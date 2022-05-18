@@ -50,8 +50,8 @@ func (tb *trimBuf) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 	}
 	c := np.Toffset(cnt)
 	d := tb.b[tb.index(off) : tb.index(off)+c]
-	tb.b = tb.b[tb.index(off)+c:]
-	tb.nread += c
+	// tb.b = tb.b[tb.index(off)+c:]
+	// tb.nread += c
 	return d, nil
 }
 

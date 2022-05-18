@@ -1,6 +1,7 @@
 package fss3
 
 import (
+	"bufio"
 	"os"
 	"strings"
 	"testing"
@@ -25,6 +26,28 @@ func TestOne(t *testing.T) {
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 1, len(dirents))
+
+	ts.Shutdown()
+}
+
+func TestReadOff(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	rdr, err := ts.OpenReader("name/s3/~ip/input/pg-being_ernest.txt")
+	assert.Equal(t, nil, err)
+	rdr.Lseek(1 << 10)
+	brdr := bufio.NewReaderSize(rdr, 1<<16)
+	scanner := bufio.NewScanner(brdr)
+	l := np.Tlength(1 << 10)
+	n := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		n += len(line) + 1 // 1 for newline
+		if np.Tlength(n) > l {
+			break
+		}
+	}
+	assert.Equal(t, 1072, n)
 
 	ts.Shutdown()
 }

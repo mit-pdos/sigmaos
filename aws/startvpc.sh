@@ -2,9 +2,27 @@
 
 if [ "$#" -ne 1 ]
 then
-    echo "Usage: vpc-id"
+    echo "Usage:[-c] vpc-id"
     exit 1
 fi
+
+COMPILE="no"
+VPC=""
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+    case $key in
+	-c)
+            COMPILE="yes"
+            shift
+            ;;
+	*)
+            VPC=$1
+            shift
+            break
+            ;;
+    esac
+done
 
 vms=`./lsvpc.py $1 | grep -w VMInstance | cut -d " " -f 5`
 
@@ -26,13 +44,18 @@ for vm in $vms
 do
     echo "COMPILE: $vm"
     ( ssh -i key-$1.pem ubuntu@$vm /bin/bash <<ENDSSH
-    grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace )  
+    grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace > /tmp/make.out 2>&1 )  
 ENDSSH
       ) &
 done
 
 wait
 echo "COMPILES DONE"
+
+for vm in $vms
+do
+    scp -i key-$1.pem ubuntu@$vm:/tmp/make.out /dev/stdout
+done
 
 for vm in $vms
 do

@@ -202,7 +202,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	const NReduce = 1
+	const NReduce = 8
 	ts := makeTstate(t, NReduce)
 
 	nmap := ts.prepareJob()

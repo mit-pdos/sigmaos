@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	// "github.com/klauspost/readahead"
@@ -163,17 +164,30 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		db.DFatalf("%v: read %v err %v", proc.GetName(), s.File, err)
 	}
 	defer rdr.Close()
-
 	rdr.Lseek(s.Offset)
 
-	// advance scanner to new line after start, if start != 0
-
 	brdr := bufio.NewReaderSize(rdr, BUFSZ)
+	scanner := bufio.NewScanner(brdr)
 
-	if err := m.mapf(m.input, brdr, m.emit); err != nil {
-		return 0, err
+	// advance scanner to new line after start, if start != 0
+	n := 0
+	if s.Offset != 0 {
+		scanner.Scan()
+		l := scanner.Text()
+		n += len(l) + 1 // 1 for newline
 	}
-	return rdr.Nbytes(), nil
+	for scanner.Scan() {
+		l := scanner.Text()
+		n += len(l) + 1 // 1 for newline
+		if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
+			return 0, err
+		}
+
+		if np.Tlength(n) > s.Length {
+			break
+		}
+	}
+	return np.Tlength(n), nil
 }
 
 func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {

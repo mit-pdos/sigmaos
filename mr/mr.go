@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	BINSZ   np.Tlength = 1 << 30
-	SPLITSZ np.Tlength = BINSZ >> 3
+	BINSZ   np.Tlength = 1 << 17
+	SPLITSZ np.Tlength = BINSZ >> 2
 	BUFSZ              = 1 << 16
 )
 

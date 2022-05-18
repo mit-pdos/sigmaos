@@ -121,6 +121,26 @@ func TestRemovePath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestReadOff(t *testing.T) {
+	ts := test.MakeTstatePath(t, namedaddr, path)
+
+	fn := path + "/f"
+	d := []byte("hello")
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+
+	rdr, err := ts.OpenReader(fn)
+	assert.Equal(t, nil, err)
+
+	rdr.Lseek(3)
+	b := make([]byte, 10)
+	n, err := rdr.Read(b)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, n)
+
+	ts.Shutdown()
+}
+
 func TestRename(t *testing.T) {
 	d1 := path + "/d1/"
 	d2 := path + "/d2/"

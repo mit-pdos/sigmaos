@@ -88,29 +88,30 @@ func (m *Mapper) initMapper() error {
 }
 
 // XXX use writercloser
-func (m *Mapper) closewrts() error {
+func (m *Mapper) closewrts() (np.Tlength, error) {
+	n := np.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
 		if m.wrts[r] != nil {
 			if err := m.wrts[r].awrt.Close(); err != nil {
-				return fmt.Errorf("%v: aclose %v err %v\n", proc.GetName(), m.wrts[r], err)
+				return 0, fmt.Errorf("%v: aclose %v err %v\n", proc.GetName(), m.wrts[r], err)
 			}
 			if err := m.wrts[r].wrt.Close(); err != nil {
-				return fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
+				return 0, fmt.Errorf("%v: close %v err %v\n", proc.GetName(), m.wrts[r], err)
 			}
+			n += m.wrts[r].wrt.Nbytes()
+
+		}
+	}
+	return n, nil
+}
+
+func (m *Mapper) flushwrts() error {
+	for r := 0; r < m.nreducetask; r++ {
+		if err := m.wrts[r].bwrt.Flush(); err != nil {
+			return fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
 		}
 	}
 	return nil
-}
-
-func (m *Mapper) flushwrts() (np.Tlength, error) {
-	n := np.Tlength(0)
-	for r := 0; r < m.nreducetask; r++ {
-		if err := m.wrts[r].bwrt.Flush(); err != nil {
-			return 0, fmt.Errorf("%v: flush %v err %v\n", proc.GetName(), m.wrts[r], err)
-		}
-		n += m.wrts[r].wrt.Nbytes()
-	}
-	return n, nil
 }
 
 // Inform reducer where to find map output
@@ -211,14 +212,13 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 		}
 		ni += n
 	}
-	nout, err := m.flushwrts()
+	if err := m.flushwrts(); err != nil {
+		return 0, 0, err
+	}
+	nout, err := m.closewrts()
 	if err != nil {
 		return 0, 0, err
 	}
-	if err := m.closewrts(); err != nil {
-		return 0, 0, err
-	}
-
 	if err := m.informReducer(); err != nil {
 		return 0, 0, err
 	}

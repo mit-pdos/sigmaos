@@ -18,13 +18,15 @@ ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
 sudo chsh -s /bin/bash arielck
 ENDSSH
 
-ssh -i $DIR/keys/cloudlab-sigmaos $1 <<ENDSSH
+ssh -i $DIR/keys/cloudlab-sigmaos $1 <<'ENDSSH'
+BLKDEV=/dev/sda4
 sudo mkfs -t ext4 $BLKDEV
 sudo mount $BLKDEV /var/local
 sudo mkdir /var/local/$USER
 sudo chown $USER /var/local/$USER
 
 sudo blkid $BLKDEV | cut -d \" -f2
+echo -e UUID=$(sudo blkid /dev/sda4 | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
 
 cd /var/local/$USER
 mkdir kernel

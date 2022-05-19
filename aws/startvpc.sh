@@ -24,7 +24,7 @@ do
     esac
 done
 
-vms=`./lsvpc.py $1 | grep -w VMInstance | cut -d " " -f 5`
+vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
 MAIN="${vma[0]}"
@@ -34,7 +34,7 @@ export NAMED="${NAMED}"
 for vm in $vms
 do
     echo "UPDATE: $vm"
-    ssh -i key-$1.pem ubuntu@$vm /bin/bash <<ENDSSH
+    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
     ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out )'
     (cd ulambda; ./stop.sh)
 ENDSSH
@@ -43,7 +43,7 @@ done
 for vm in $vms
 do
     echo "COMPILE: $vm"
-    ( ssh -i key-$1.pem ubuntu@$vm /bin/bash <<ENDSSH
+    ( ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
     grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace > /tmp/make.out 2>&1 )  
 ENDSSH
       ) &
@@ -54,12 +54,12 @@ echo "COMPILES DONE"
 
 for vm in $vms
 do
-    scp -i key-$1.pem ubuntu@$vm:/tmp/make.out /dev/stdout
+    scp -i key-$VPC.pem ubuntu@$vm:/tmp/make.out /tmp/make.out && cat /tmp/make.out
 done
 
 for vm in $vms
 do
-    ssh -i key-$1.pem ubuntu@$vm /bin/bash <<ENDSSH
+    ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
     export NAMED="${NAMED}"
     if [ "${vm}" = "${MAIN}" ]; then 
        echo "START ${NAMED}"

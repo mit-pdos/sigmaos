@@ -112,8 +112,8 @@ then
 fi
 
 if [ -d "ulambda" ];
-then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./make.sh -norace)'
+then 
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git reset --hard; git pull; ./make.sh -norace)'
 else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download; ./make.sh -norace)'
 fi

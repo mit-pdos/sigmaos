@@ -40,11 +40,14 @@ const (
 	CRASHSRV   = 1000000
 )
 
-// Instead of starting a new realm, use this realm to run MR
-var realmaddr string
+var realmaddr string // Use this realm to run MR (instead of starting a new one)
+var app string       // App: wc, grep, ..
+var nreduce int      // # reducers
 
 func init() {
-	flag.StringVar(&realmaddr, "realm", "", "realm")
+	flag.StringVar(&realmaddr, "realm", "", "realm id")
+	flag.StringVar(&app, "app", "wc", "application")
+	flag.IntVar(&nreduce, "nreduce", 8, "nreduce")
 }
 
 func TestHash(t *testing.T) {
@@ -140,7 +143,9 @@ func (ts *Tstate) checkJob() {
 		assert.Nil(ts.T, err, "Write err %v", err)
 	}
 
-	ts.Compare()
+	if app == "wc" {
+		ts.Compare()
+	}
 }
 
 func (ts *Tstate) stats() {
@@ -202,12 +207,11 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	const NReduce = 8
-	ts := makeTstate(t, NReduce)
+	ts := makeTstate(t, nreduce)
 
 	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(nreduce), "bin/user/mr-m-" + app, "bin/user/mr-r-" + app, strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

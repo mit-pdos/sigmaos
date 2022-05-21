@@ -16,8 +16,7 @@ const (
 	DBREL    = "db"
 	DB       = NAMED + DBREL + "/"
 
-	SIGMA_MGR = "name/sigmamgr"
-	REALM_MGR = "name/realmmgr"
+	SIGMAMGR = "name/sigmamgr"
 
 	MEMFS = "name/memfsd/"
 

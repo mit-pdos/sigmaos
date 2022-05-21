@@ -18,11 +18,12 @@ import (
 
 const (
 	sigmactl     = "sigmactl"
-	SIGMACTL     = np.SIGMA_MGR + "/" + sigmactl // SigmaResourceMgr control file.
-	REALM_CONFIG = "name/realm-config"           // Store of realm configs
-	NODED_CONFIG = "name/noded-config"           // Store of noded configs
-	REALM_NAMEDS = "name/realm-nameds"           // Symlinks to realms' nameds
-	REALM_FENCES = "name/realm-fences"           // Fence around modifications to realm allocations.
+	SIGMACTL     = np.SIGMAMGR + "/" + sigmactl // SigmaResourceMgr control file.
+	REALM_CONFIG = "name/realm-config"          // Store of realm configs
+	NODED_CONFIG = "name/noded-config"          // Store of noded configs
+	REALM_NAMEDS = "name/realm-nameds"          // Symlinks to realms' nameds
+	REALM_FENCES = "name/realm-fences"          // Fence around modifications to realm allocations.
+	REALM_MGRS   = "name/realm-mgrs"            // Fence around modifications to realm allocations.
 )
 
 type SigmaResourceMgr struct {
@@ -43,7 +44,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.SIGMA_MGR, "sigmamgr")
+	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
@@ -57,17 +58,17 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 
 // Make the initial realm dirs, and remove the unneeded union dirs.
 func (m *SigmaResourceMgr) makeInitFs() {
-	if err := m.MkDir(REALM_CONFIG, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALM_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
+	dirs := []string{
+		REALM_CONFIG,
+		NODED_CONFIG,
+		REALM_NAMEDS,
+		REALM_FENCES,
+		REALM_MGRS,
 	}
-	if err := m.MkDir(NODED_CONFIG, 0777); err != nil {
-		db.DFatalf("Error Mkdir NODED_CONFIG in SigmaResourceMgr.makeInitFs: %v", err)
-	}
-	if err := m.MkDir(REALM_NAMEDS, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALM_NAMEDS in SigmaResourceMgr.makeInitFs: %v", err)
-	}
-	if err := m.MkDir(REALM_FENCES, 0777); err != nil {
-		db.DFatalf("Error Mkdir REALM_FENCES in SigmaResourceMgr.makeInitFs: %v", err)
+	for _, d := range dirs {
+		if err := m.MkDir(d, 0777); err != nil {
+			db.DFatalf("Error Mkdir %v in SigmaResourceMgr.makeInitFs: %v", d, err)
+		}
 	}
 }
 
@@ -246,7 +247,7 @@ func (m *SigmaResourceMgr) requestNoded(realmId string) {
 	msg := MakeResourceMsg(Trequest, Tnode, "", 1)
 	for {
 		// TODO: move realmctl file to sigma named.
-		if _, err := m.SetFile(path.Join(REALM_NAMEDS, realmId, "realmmgr", realmctl), msg.Marshal(), np.OWRITE, 0); err != nil {
+		if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, realmctl), msg.Marshal(), np.OWRITE, 0); err != nil {
 			db.DPrintf("SIGMAMGR_ERR", "Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
 		} else {
 			return
@@ -259,6 +260,8 @@ func (m *SigmaResourceMgr) requestNoded(realmId string) {
 func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	m.Lock()
 	defer m.Unlock()
+
+	db.DPrintf("SIGMAMGR", "Destroy realm %v", realmId)
 
 	lockRealm(m.ecs[realmId], realmId)
 
@@ -277,6 +280,7 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	for _ = range cfg.NodedsAssigned {
 		m.requestNoded(realmId)
 	}
+	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)
 }
 
 func (m *SigmaResourceMgr) Work() {

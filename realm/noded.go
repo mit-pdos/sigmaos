@@ -3,6 +3,7 @@ package realm
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"ulambda/config"
 	db "ulambda/debug"
@@ -39,7 +40,7 @@ func MakeNoded(bin string, id string) *Noded {
 	r.bin = bin
 	r.cfgPath = path.Join(NODED_CONFIG, id)
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("noded-%v", id))
-	r.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), r.FsLib, "noded", fslib.Named())
+	r.ProcClnt = procclnt.MakeProcClntInit(proc.Tpid("noded-"+id), r.FsLib, "noded", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
 
 	db.DPrintf("NODED", "Noded %v started", id)
@@ -138,13 +139,15 @@ func (r *Noded) boot(realmCfg *RealmConfig) {
 
 func (r *Noded) startRealmMgr() {
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-	fsl := fslib.MakeFsLibAddr(fmt.Sprintf("noded-%v", r.id), realmCfg.NamedAddrs)
-	pclnt := procclnt.MakeProcClntInit(proc.GetPid(), fsl, "noded", realmCfg.NamedAddrs)
 	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
-	p := proc.MakeProcPid(pid, "bin/realm/realmmgr", []string{r.cfg.RealmId, fslib.NamedAddrs()})
-	if _, err := pclnt.SpawnKernelProc(p, r.bin, realmCfg.NamedAddrs); err != nil {
+	p := proc.MakeProcPid(pid, "bin/realm/realmmgr", []string{r.cfg.RealmId, strings.Join(realmCfg.NamedAddrs, ",")})
+	if _, err := r.SpawnKernelProc(p, r.bin, fslib.Named()); err != nil {
 		db.DFatalf("Error spawn realmmgr %v", err)
 	}
+	if err := r.WaitStart(p.Pid); err != nil {
+		db.DFatalf("Error WaitStart realmmgr %v", err)
+	}
+	db.DPrintf("NODED", "Noded %v started its realmmgr %v in realm %v", r.id, pid.String(), r.cfg.RealmId)
 }
 
 // Join a realm
@@ -208,6 +211,8 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 
 // Leave a realm
 func (r *Noded) leaveRealm() {
+	db.DPrintf("NODED", "Noded %v trying to leave Realm %v", r.id, r.cfg.RealmId)
+
 	lockRealm(r.ec, r.cfg.RealmId)
 	defer unlockRealm(r.ec, r.cfg.RealmId)
 

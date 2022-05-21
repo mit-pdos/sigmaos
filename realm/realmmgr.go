@@ -29,6 +29,7 @@ import (
 const (
 	REALMMGR_ELECT = "-realmmgr-elect"
 	realmctl       = "realmctl"
+	REALMMGR       = "realmmgr"
 )
 
 type RealmResourceMgr struct {
@@ -38,18 +39,20 @@ type RealmResourceMgr struct {
 	ec       *electclnt.ElectClnt
 	lock     *electclnt.ElectClnt
 	*config.ConfigClnt
-	// ===== Relative to the realm named =====
+	memfs *fslibsrv.MemFs
 	*procclnt.ProcClnt
+	// ===== Relative to the realm named =====
 	*fslib.FsLib
-	*fslibsrv.MemFs
 }
 
 // TODO: Make this proc un-stealable
-func MakeRealmResourceMgr(rid string, sigmaNamedAddrs []string) *RealmResourceMgr {
+func MakeRealmResourceMgr(rid string, realmNamedAddrs []string) *RealmResourceMgr {
 	db.DPrintf("REALMMGR", "MakeRealmResourceMgr")
 	m := &RealmResourceMgr{}
 	m.realmId = rid
-	m.sigmaFsl = fslib.MakeFsLibAddr("realmmgr-sigmafsl", sigmaNamedAddrs)
+	m.sigmaFsl = fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
+	m.FsLib = fslib.MakeFsLibAddr(proc.GetPid().String(), realmNamedAddrs)
+	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid), 0777)
 	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid+REALMMGR_ELECT), 0777)
@@ -59,8 +62,8 @@ func MakeRealmResourceMgr(rid string, sigmaNamedAddrs []string) *RealmResourceMg
 
 func (m *RealmResourceMgr) makeCtlFiles() {
 	// Set up control files
-	ctl := makeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, nil, m.Root())
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), realmctl, ctl)
+	ctl := makeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, nil, m.memfs.Root())
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.memfs.Root(), realmctl, ctl)
 	if err != nil {
 		db.DFatalf("Error MkNod sigmactl: %v", err)
 	}
@@ -225,9 +228,6 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 func (m *RealmResourceMgr) Work() {
 	db.DPrintf("REALMMGR", "Realmmgr started")
 
-	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
-	m.ProcClnt = procclnt.MakeProcClnt(m.FsLib)
-
 	m.Started()
 	go func() {
 		m.WaitEvict(proc.GetPid())
@@ -238,7 +238,7 @@ func (m *RealmResourceMgr) Work() {
 	}()
 
 	// Acquire primary role
-	if err := m.ec.AcquireLeadership([]byte("realmmgr")); err != nil {
+	if err := m.ec.AcquireLeadership([]byte(REALMMGR)); err != nil {
 		db.DFatalf("Acquire leadership: %v", err)
 	}
 
@@ -247,7 +247,7 @@ func (m *RealmResourceMgr) Work() {
 	// the sigmamgr and other requesting applications may have to retry on
 	// TErrNotfound.
 	var err error
-	m.MemFs, err = fslibsrv.MakeMemFsFsl(np.REALM_MGR, m.FsLib, m.ProcClnt)
+	m.memfs, err = fslibsrv.MakeMemFsFsl(path.Join(REALM_MGRS, m.realmId), m.sigmaFsl, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}

@@ -3,10 +3,10 @@ package mr
 import (
 	"hash/fnv"
 	"io"
-	"io/fs"
 
 	"github.com/mitchellh/mapstructure"
 
+	"ulambda/fslib"
 	np "ulambda/ninep"
 )
 
@@ -76,17 +76,22 @@ func mkResult(data interface{}) *Result {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is file.
-func MkBins(files []fs.FileInfo) []Bin {
+func MkBins(fsl *fslib.FsLib, dir string) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := np.Tlength(0)
 	bin := Bin{}
-	for _, f := range files {
+
+	sts, err := fsl.GetDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, st := range sts {
 		for i := np.Tlength(0); ; {
 			n := SPLITSZ
-			if i+n > np.Tlength(f.Size()) {
-				n = np.Tlength(f.Size()) - i
+			if i+n > st.Length {
+				n = st.Length - i
 			}
-			split := Split{MIN + f.Name(), np.Toffset(i), n}
+			split := Split{dir + "/" + st.Name, np.Toffset(i), n}
 			bin = append(bin, split)
 			binsz += n
 			if binsz+SPLITSZ > BINSZ { // bin full?
@@ -101,5 +106,5 @@ func MkBins(files []fs.FileInfo) []Bin {
 		}
 	}
 	bins = append(bins, bin)
-	return bins
+	return bins, nil
 }

@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	MIN     = "name/s3/~ip/input/"
 	MRDIR   = "name/mr"
 	MDIR    = MRDIR + "/m"
 	RDIR    = MRDIR + "/r"

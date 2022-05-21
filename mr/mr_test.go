@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -43,11 +42,13 @@ const (
 var realmaddr string // Use this realm to run MR (instead of starting a new one)
 var app string       // App: wc, grep, ..
 var nreduce int      // # reducers
+var input string     // Input directory
 
 func init() {
 	flag.StringVar(&realmaddr, "realm", "", "realm id")
 	flag.StringVar(&app, "app", "wc", "application")
 	flag.IntVar(&nreduce, "nreduce", 8, "nreduce")
+	flag.StringVar(&input, "input", "name/s3/~ip/input/", "input dir")
 }
 
 func TestHash(t *testing.T) {
@@ -58,33 +59,13 @@ func TestHash(t *testing.T) {
 }
 
 func TestSplits(t *testing.T) {
-	files, err := ioutil.ReadDir("../input/")
+	ts := test.MakeTstateAll(t)
+	bins, err := mr.MkBins(ts.FsLib, input)
 	assert.Nil(t, err)
-	bins := mr.MkBins(files)
 	for _, b := range bins {
 		log.Printf("bin: %v\n", b)
 	}
-}
-
-func (ts *Tstate) Compare() {
-	cmd := exec.Command("sort", "seq-mr.out")
-	var out1 bytes.Buffer
-	cmd.Stdout = &out1
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("cmd err %v\n", err)
-	}
-	cmd = exec.Command("sort", OUTPUT)
-	var out2 bytes.Buffer
-	cmd.Stdout = &out2
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("cmd err %v\n", err)
-	}
-	b1 := out1.Bytes()
-	b2 := out2.Bytes()
-	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
-	assert.Equal(ts.T, b1, b2, "Output files have different contents")
+	ts.Shutdown()
 }
 
 type Tstate struct {
@@ -109,12 +90,31 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) compare() {
+	cmd := exec.Command("sort", "seq-mr.out")
+	var out1 bytes.Buffer
+	cmd.Stdout = &out1
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
+	}
+	cmd = exec.Command("sort", OUTPUT)
+	var out2 bytes.Buffer
+	cmd.Stdout = &out2
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
+	}
+	b1 := out1.Bytes()
+	b2 := out2.Bytes()
+	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
+	assert.Equal(ts.T, b1, b2, "Output files have different contents")
+}
+
 // Put names of input files in name/mr/m
 func (ts *Tstate) prepareJob() int {
-	files, err := ioutil.ReadDir("../input/")
-	assert.Nil(ts.T, err, "Readdir: %v", err)
-
-	bins := mr.MkBins(files)
+	bins, err := mr.MkBins(ts.FsLib, input)
+	assert.Nil(ts.T, err)
 	for i, b := range bins {
 		// remove mapper output directory from previous run
 		ts.RmDir(mr.Moutdir(mr.BinName(i)))
@@ -144,7 +144,7 @@ func (ts *Tstate) checkJob() {
 	}
 
 	if app == "wc" {
-		ts.Compare()
+		ts.compare()
 	}
 }
 

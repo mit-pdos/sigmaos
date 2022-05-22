@@ -48,7 +48,7 @@ func init() {
 	flag.StringVar(&realmaddr, "realm", "", "realm id")
 	flag.StringVar(&app, "app", "wc", "application")
 	flag.IntVar(&nreduce, "nreduce", 8, "nreduce")
-	flag.StringVar(&input, "input", "name/s3/~ip/input/", "input dir")
+	flag.StringVar(&input, "input", "name/s3/~ip/gutenberg/", "input dir")
 }
 
 func TestHash(t *testing.T) {
@@ -115,6 +115,7 @@ func (ts *Tstate) compare() {
 func (ts *Tstate) prepareJob() int {
 	bins, err := mr.MkBins(ts.FsLib, input)
 	assert.Nil(ts.T, err)
+	assert.NotEqual(ts.T, 0, len(bins))
 	for i, b := range bins {
 		// remove mapper output directory from previous run
 		ts.RmDir(mr.Moutdir(mr.BinName(i)))

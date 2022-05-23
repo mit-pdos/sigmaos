@@ -42,12 +42,14 @@ const (
 var realmaddr string // Use this realm to run MR (instead of starting a new one)
 var app string       // App: wc, grep, ..
 var nreduce int      // # reducers
+var binsz int        // bin size
 var input string     // Input directory
 
 func init() {
 	flag.StringVar(&realmaddr, "realm", "", "realm id")
 	flag.StringVar(&app, "app", "wc", "application")
 	flag.IntVar(&nreduce, "nreduce", 8, "nreduce")
+	flag.IntVar(&binsz, "binsz", 1<<17, "bin size")
 	flag.StringVar(&input, "input", "name/s3/~ip/gutenberg/", "input dir")
 }
 
@@ -60,7 +62,7 @@ func TestHash(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	bins, err := mr.MkBins(ts.FsLib, input)
+	bins, err := mr.MkBins(ts.FsLib, input, np.Tlength(binsz))
 	assert.Nil(t, err)
 	for _, b := range bins {
 		log.Printf("bin: %v\n", b)
@@ -113,7 +115,7 @@ func (ts *Tstate) compare() {
 
 // Put names of input files in name/mr/m
 func (ts *Tstate) prepareJob() int {
-	bins, err := mr.MkBins(ts.FsLib, input)
+	bins, err := mr.MkBins(ts.FsLib, input, np.Tlength(binsz))
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, len(bins))
 	for i, b := range bins {

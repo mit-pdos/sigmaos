@@ -11,9 +11,7 @@ import (
 )
 
 const (
-	BINSZ   np.Tlength = 1 << 17
-	SPLITSZ np.Tlength = BINSZ >> 2
-	BUFSZ              = 1 << 16
+	BUFSZ = 1 << 16
 )
 
 // Map and reduce functions produce and consume KeyValue pairs
@@ -76,10 +74,11 @@ func mkResult(data interface{}) *Result {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is file.
-func MkBins(fsl *fslib.FsLib, dir string) ([]Bin, error) {
+func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := np.Tlength(0)
 	bin := Bin{}
+	splitsz := maxbinsz >> 3
 
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
@@ -87,19 +86,19 @@ func MkBins(fsl *fslib.FsLib, dir string) ([]Bin, error) {
 	}
 	for _, st := range sts {
 		for i := np.Tlength(0); ; {
-			n := SPLITSZ
+			n := splitsz
 			if i+n > st.Length {
 				n = st.Length - i
 			}
 			split := Split{dir + "/" + st.Name, np.Toffset(i), n}
 			bin = append(bin, split)
 			binsz += n
-			if binsz+SPLITSZ > BINSZ { // bin full?
+			if binsz+splitsz > maxbinsz { // bin full?
 				bins = append(bins, bin)
 				bin = Bin{}
 				binsz = np.Tlength(0)
 			}
-			if n < SPLITSZ { // next file
+			if n < splitsz { // next file
 				break
 			}
 			i += n

@@ -66,10 +66,11 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 	for i := 0; i < N; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		p := proc.MakeProcPid(pid, "bin/user/spinner", []string{BURST_BENCH_DIR})
+		p.Ncore = 1
 		ps = append(ps, p)
 	}
 
-	defer b.teardown(ps)
+	//	defer b.teardown(ps)
 
 	// Start the timer.
 	nRPC := b.ReadSeqNo()
@@ -95,7 +96,7 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 	// Calculate throughput, latency, etc.
 	elapsed := float64(end.Sub(start).Microseconds())
 	throughput := float64(N) / elapsed
-	rs.Data[0].set(throughput, elapsed, nRPC)
+	rs.Data[0].set(throughput, elapsed/float64(N), nRPC)
 
 	log.Printf("BurstBenchmark(%v) Done", N)
 

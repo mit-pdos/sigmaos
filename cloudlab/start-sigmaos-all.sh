@@ -12,9 +12,9 @@ do
   addr=${tuple[1]}
 
   if [[ $hostname == $LEADER ]]; then
-    $DIR/start.sh $USER@$addr :1111
+    $DIR/start-sigmaos-node.sh $USER@$addr :1111 > $DIR/log/$hostname
     sleep 2
   else
-    $DIR/start.sh $USER@$addr $LEADER:1111
+    $DIR/start-sigmaos-node.sh $USER@$addr $LEADER:1111 > $DIR/log/$hostname
   fi
-done < $DIR/$SERVERS
+done < $DIR/$SERVERS 

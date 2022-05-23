@@ -9,7 +9,7 @@ fi
 
 if [ "$#" -ne 2 ]
 then
-  echo "Usage: ./start.sh user@address root_named_addr"
+  echo "Usage: $0 user@address root_named_addr"
   exit 1
 fi
 
@@ -33,13 +33,11 @@ echo "running with NAMED=$NAMED"
 if [[ $IS_LEADER -gt 0 ]]; then
   echo "each realm runs with $N_REPLICAS replicas"
   
-  # Start a realm manager, machined, and create a realm
-  GOGC=off nohup ./bin/realm/realmmgr . > realmmgr.out 2>&1 & 
-  sleep 1
-  GOGC=off nohup ./bin/realm/create 1000 > create.out 2>&1 &
+  # Boot a realm
+  GOGC=off nohup ./bin/realm/boot . > leader.out 2>&1 &
 
 else
-  GOGC=off nohup ./bin/realm/machined . $(hostname) > machined.out 2>&1 &
+  GOGC=off nohup ./bin/realm/noded . $(hostname) > noded-$(hostname).out 2>&1 &
 fi
 ENDSSH
 )

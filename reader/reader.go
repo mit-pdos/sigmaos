@@ -74,6 +74,11 @@ func (rdr *Reader) GetDataErr() ([]byte, *np.Err) {
 	return rdr.fc.ReadV(rdr.fid, 0, np.MAXGETSET, np.NoV)
 }
 
+func (rdr *Reader) Lseek(o np.Toffset) error {
+	rdr.off = o
+	return nil
+}
+
 // Making rdr a bufio is important because the first read must be >=
 // sizeof(st), because memfs and fsux try to avoid materializing
 // directories as an array of bytes.

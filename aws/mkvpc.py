@@ -66,7 +66,7 @@ def setup_instance(ec2, vpc, sg, sn, kpn, instance_type):
         script = fin.read()
 
     instance = instance_type
-    storage = 20
+    storage = 200
         
     vm = ec2.create_instances(
         ImageId='ami-09d56f8956ab235b3',

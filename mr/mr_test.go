@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -40,11 +39,18 @@ const (
 	CRASHSRV   = 1000000
 )
 
-// Instead of starting a new realm, use this realm to run MR
-var realmaddr string
+var realmaddr string // Use this realm to run MR (instead of starting a new one)
+var app string       // App: wc, grep, ..
+var nreduce int      // # reducers
+var binsz int        // bin size
+var input string     // Input directory
 
 func init() {
-	flag.StringVar(&realmaddr, "realm", "", "realm")
+	flag.StringVar(&realmaddr, "realm", "", "realm id")
+	flag.StringVar(&app, "app", "wc", "application")
+	flag.IntVar(&nreduce, "nreduce", 8, "nreduce")
+	flag.IntVar(&binsz, "binsz", 1<<17, "bin size")
+	flag.StringVar(&input, "input", "name/s3/~ip/gutenberg/", "input dir")
 }
 
 func TestHash(t *testing.T) {
@@ -54,25 +60,14 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash("absently")%8)
 }
 
-func (ts *Tstate) Compare() {
-	cmd := exec.Command("sort", "seq-mr.out")
-	var out1 bytes.Buffer
-	cmd.Stdout = &out1
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("cmd err %v\n", err)
+func TestSplits(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	bins, err := mr.MkBins(ts.FsLib, input, np.Tlength(binsz))
+	assert.Nil(t, err)
+	for _, b := range bins {
+		log.Printf("bin: %v\n", b)
 	}
-	cmd = exec.Command("sort", OUTPUT)
-	var out2 bytes.Buffer
-	cmd.Stdout = &out2
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("cmd err %v\n", err)
-	}
-	b1 := out1.Bytes()
-	b2 := out2.Bytes()
-	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
-	assert.Equal(ts.T, b1, b2, "Output files have different contents")
+	ts.Shutdown()
 }
 
 type Tstate struct {
@@ -97,18 +92,44 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	return ts
 }
 
+func (ts *Tstate) compare() {
+	cmd := exec.Command("sort", "seq-mr.out")
+	var out1 bytes.Buffer
+	cmd.Stdout = &out1
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
+	}
+	cmd = exec.Command("sort", OUTPUT)
+	var out2 bytes.Buffer
+	cmd.Stdout = &out2
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("cmd err %v\n", err)
+	}
+	b1 := out1.Bytes()
+	b2 := out2.Bytes()
+	assert.Equal(ts.T, len(b1), len(b2), "Output files have different length")
+	assert.Equal(ts.T, b1, b2, "Output files have different contents")
+}
+
 // Put names of input files in name/mr/m
 func (ts *Tstate) prepareJob() int {
-	files, err := ioutil.ReadDir("../input/")
-	assert.Nil(ts.T, err, "Readdir: %v", err)
-	for _, f := range files {
+	bins, err := mr.MkBins(ts.FsLib, input, np.Tlength(binsz))
+	assert.Nil(ts.T, err)
+	assert.NotEqual(ts.T, 0, len(bins))
+	for i, b := range bins {
 		// remove mapper output directory from previous run
-		ts.RmDir(mr.Moutdir(f.Name()))
-		n := mr.MDIR + "/" + f.Name()
-		_, err := ts.PutFile(n, 0777, np.OWRITE, []byte(n))
-		assert.Nil(ts.T, err, "PutFile %v err %v", n, err)
+		ts.RmDir(mr.Moutdir(mr.BinName(i)))
+		n := mr.MDIR + "/" + mr.BinName(i)
+		_, err = ts.PutFile(n, 0777, np.OWRITE, []byte{})
+		assert.Nil(ts.T, err, nil)
+		for _, s := range b {
+			err := ts.AppendFileJson(n, s)
+			assert.Nil(ts.T, err, nil)
+		}
 	}
-	return len(files)
+	return len(bins)
 }
 
 func (ts *Tstate) checkJob() {
@@ -125,7 +146,9 @@ func (ts *Tstate) checkJob() {
 		assert.Nil(ts.T, err, "Write err %v", err)
 	}
 
-	ts.Compare()
+	if app == "wc" {
+		ts.compare()
+	}
 }
 
 func (ts *Tstate) stats() {
@@ -187,12 +210,11 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	const NReduce = 8
-	ts := makeTstate(t, NReduce)
+	ts := makeTstate(t, nreduce)
 
 	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(nreduce), "bin/user/mr-m-" + app, "bin/user/mr-r-" + app, strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

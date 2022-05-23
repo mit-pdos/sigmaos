@@ -95,9 +95,9 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	if m == np.OREAD {
-		o.setupReader()
-	}
+	//if m == np.OREAD {
+	//	o.setupReader()
+	//}
 	if m == np.OWRITE {
 		o.setupWriter()
 	}
@@ -140,7 +140,7 @@ func (o *Obj) reader() {
 	}
 }
 
-func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (o *Obj) Read0(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
 	if np.Tlength(off) >= o.Size() {
 		return nil, nil
@@ -176,11 +176,11 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	if result.ContentRange != nil {
 		region1 = *result.ContentRange
 	}
-	db.DPrintf("FSS3", "s3Read: region %v res %v %v\n", region, region1, result.ContentLength)
+	db.DPrintf("FSS3", "s3Read: %v region %v res %v %v\n", o.key, region, region1, result.ContentLength)
 	return result.Body, np.Tlength(result.ContentLength), nil
 }
 
-func (o *Obj) Read1(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
 	if np.Tlength(off) >= o.Size() {
 		return nil, nil

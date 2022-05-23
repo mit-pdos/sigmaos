@@ -80,8 +80,8 @@ func (m *Mapper) initMapper() error {
 			m.closewrts()
 			return fmt.Errorf("%v: create %v err %v\n", proc.GetName(), oname, err)
 		}
-		aw := awriter.NewWriterSize(w, BUFSZ)
-		bw := bufio.NewWriterSize(aw, BUFSZ)
+		aw := awriter.NewWriterSize(w, test.BUFSZ)
+		bw := bufio.NewWriterSize(aw, test.BUFSZ)
 		m.wrts[r] = &wrt{w, aw, bw}
 	}
 	return nil
@@ -167,7 +167,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	defer rdr.Close()
 	rdr.Lseek(s.Offset)
 
-	brdr := bufio.NewReaderSize(rdr, BUFSZ)
+	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
 	scanner := bufio.NewScanner(brdr)
 
 	// advance scanner to new line after start, if start != 0

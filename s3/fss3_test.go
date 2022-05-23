@@ -189,3 +189,22 @@ func TestSymlinkDir(t *testing.T) {
 
 	ts.Shutdown()
 }
+
+func TestReadSplit(t *testing.T) {
+	const SPLITSZ = 64 * test.MBYTE
+
+	ts := test.MakeTstateAll(t)
+
+	rdr, err := ts.OpenReader("name/s3/~ip/wiki/enwiki-latest-pages-articles-multistream.xml")
+	assert.Nil(t, err)
+	err = rdr.Lseek(SPLITSZ)
+	assert.Nil(t, err)
+	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
+	b := make([]byte, SPLITSZ)
+	n, err := brdr.Read(b)
+	assert.Nil(t, err)
+	assert.Equal(t, SPLITSZ, n)
+	assert.Equal(t, "s released", string(b[0:10]))
+
+	ts.Shutdown()
+}

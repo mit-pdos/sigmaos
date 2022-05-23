@@ -28,6 +28,9 @@ sudo chown $USER /var/local/$USER
 sudo blkid $BLKDEV | cut -d \" -f2
 echo -e UUID=$(sudo blkid /dev/sda4 | cut -d \" -f2)'\t/var/local\text4\tdefaults\t0\t2' | sudo tee -a /etc/fstab
 
+# Set max journal size
+sudo journalctl --vacuum-size=100M
+
 cd /var/local/$USER
 mkdir kernel
 

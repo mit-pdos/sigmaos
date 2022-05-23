@@ -17,7 +17,7 @@ import (
 	"ulambda/test"
 )
 
-var ROOT = []string{np.STATSD, "a", "b.txt", "input", "ls.PDF"}
+var ROOT = []string{np.STATSD, "a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
 
 func TestOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
@@ -33,7 +33,7 @@ func TestOne(t *testing.T) {
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	rdr, err := ts.OpenReader("name/s3/~ip/input/pg-being_ernest.txt")
+	rdr, err := ts.OpenReader("name/s3/~ip/gutenberg/pg-being_ernest.txt")
 	assert.Equal(t, nil, err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
@@ -88,7 +88,7 @@ func TestUnionDir(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir("name/s3/~ip/input")
+	dirents, err := ts.GetDir("name/s3/~ip/gutenberg")
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 8, len(dirents))
@@ -105,7 +105,7 @@ func TestUnionFile(t *testing.T) {
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")
 
-	name := "name/s3/~ip/input/pg-being_ernest.txt"
+	name := "name/s3/~ip/gutenberg/pg-being_ernest.txt"
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
@@ -135,7 +135,7 @@ func TestUnionFile(t *testing.T) {
 func TestStat(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name := "name/s3/~ip/input/pg-being_ernest.txt"
+	name := "name/s3/~ip/gutenberg/pg-being_ernest.txt"
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 

@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"os"
+	"runtime/debug"
 	"strings"
 
 	db "ulambda/debug"
@@ -44,6 +45,7 @@ func MakeFsLibAddr(uname string, addrs []string) *FsLib {
 	fl := MakeFsLibBase(uname)
 	err := fl.MountTree(addrs, "", "name")
 	if err != nil {
+		debug.PrintStack()
 		db.DFatalf("%v: Mount %v error: %v", proc.GetProgram(), addrs, err)
 	}
 	return fl

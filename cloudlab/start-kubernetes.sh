@@ -30,14 +30,16 @@ done < $DIR/$SERVERS
 if [[ $is_leader == 1 ]]; then
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH" > $DIR/log/$LEADER
- sudo kubeadm init --apiserver-advertise-address=10.10.1.1 --pod-network-cidr=10.10.1.0/24
+ sudo kubeadm init --apiserver-advertise-address=10.10.1.1 --pod-network-cidr=11.0.0.0/24
  mkdir -p $HOME/.kube
  yes | sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
  sudo chown $(id -u):$(id -g) $HOME/.kube/config
  # Install CNI
  kubectl create -f ~/ulambda/cloudlab/k8s/cni/tigera-operator.yaml
  kubectl create -f ~/ulambda/cloudlab/k8s/cni/calico.yaml
+ kubectl create -f ~/ulambda/cloudlab/k8s/metrics/metrics-server.yaml
  kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+# kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
  kubectl create serviceaccount --namespace kube-system tiller
  kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
  kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'

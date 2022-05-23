@@ -116,6 +116,7 @@ func MakeTstateAllBin(t *testing.T, bin string) *Tstate {
 
 const (
 	MBYTE = 1 << 20
+	BUFSZ = 1 << 16
 )
 
 func Mbyte(sz np.Tlength) float64 {

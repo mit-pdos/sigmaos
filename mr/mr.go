@@ -10,10 +10,6 @@ import (
 	np "ulambda/ninep"
 )
 
-const (
-	BUFSZ = 1 << 16
-)
-
 // Map and reduce functions produce and consume KeyValue pairs
 type KeyValue struct {
 	K string

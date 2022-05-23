@@ -19,6 +19,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
+	"ulambda/test"
 	"ulambda/writer"
 )
 
@@ -57,7 +58,7 @@ func makeReducer(reducef ReduceT, args []string) (*Reducer, error) {
 		return nil, err
 	}
 	r.wrt = w
-	r.bwrt = bufio.NewWriterSize(w, BUFSZ)
+	r.bwrt = bufio.NewWriterSize(w, test.BUFSZ)
 
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("MakeReducer couldn't start %v", args)
@@ -91,8 +92,8 @@ func (r *Reducer) readFile(ch chan result, file string) {
 	defer rdr.Close()
 	start := time.Now()
 
-	brdr := bufio.NewReaderSize(rdr, BUFSZ)
-	//ardr, err := readahead.NewReaderSize(rdr, 4, BUFSZ)
+	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
+	//ardr, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
 	//if err != nil {
 	//	db.DFatalf("%v: readahead.NewReaderSize err %v", proc.GetName(), err)
 	//}

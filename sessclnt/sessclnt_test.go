@@ -203,10 +203,8 @@ func TestServerPartitionBlocking(t *testing.T) {
 }
 
 const (
-	MBYTE   = 1 << 20
-	FILESZ  = 50 * MBYTE
+	FILESZ  = 50 * test.MBYTE
 	WRITESZ = 4096
-	BUFSZ   = 1 << 16
 )
 
 func writer(t *testing.T, ch chan error, name string) {
@@ -228,8 +226,8 @@ func writer(t *testing.T, ch chan error, name string) {
 				break
 			}
 			nfile += 1
-			aw := awriter.NewWriterSize(w, BUFSZ)
-			bw := bufio.NewWriterSize(aw, BUFSZ)
+			aw := awriter.NewWriterSize(w, test.BUFSZ)
+			bw := bufio.NewWriterSize(aw, test.BUFSZ)
 			buf := test.MkBuf(WRITESZ)
 			if err := test.Writer(t, w, buf, FILESZ); err != nil {
 				break

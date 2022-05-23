@@ -1148,7 +1148,6 @@ const (
 	SYNCFILESZ = 100 * KBYTE
 	FILESZ     = 20 * test.MBYTE
 	WRITESZ    = 4096
-	BUFSZ      = 1 << 16
 )
 
 func measure(msg string, f func() np.Tlength) {
@@ -1176,14 +1175,14 @@ func mkFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz 
 		err = test.Writer(t, w, buf, sz)
 		assert.Nil(t, err)
 	case HBUF:
-		bw := bufio.NewWriterSize(w, BUFSZ)
+		bw := bufio.NewWriterSize(w, test.BUFSZ)
 		err = test.Writer(t, bw, buf, sz)
 		assert.Nil(t, err)
 		err = bw.Flush()
 		assert.Nil(t, err)
 	case HASYNC:
-		aw := awriter.NewWriterSize(w, BUFSZ)
-		bw := bufio.NewWriterSize(aw, BUFSZ)
+		aw := awriter.NewWriterSize(w, test.BUFSZ)
+		bw := bufio.NewWriterSize(aw, test.BUFSZ)
 		err = test.Writer(t, bw, buf, sz)
 		assert.Nil(t, err)
 		err = bw.Flush()
@@ -1241,7 +1240,7 @@ func TestReadPerf(t *testing.T) {
 	measure("bufreader", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
-		br := bufio.NewReaderSize(r, BUFSZ)
+		br := bufio.NewReaderSize(r, test.BUFSZ)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)
 		return n
@@ -1249,7 +1248,7 @@ func TestReadPerf(t *testing.T) {
 	measure("readahead", func() np.Tlength {
 		r, err := ts.OpenReader(fn)
 		assert.Nil(t, err)
-		br, err := readahead.NewReaderSize(r, 4, BUFSZ)
+		br, err := readahead.NewReaderSize(r, 4, test.BUFSZ)
 		assert.Nil(t, err)
 		n, err := test.Reader(t, br, buf, sz)
 		assert.Nil(t, err)

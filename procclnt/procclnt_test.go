@@ -450,7 +450,7 @@ func TestWorkStealing(t *testing.T) {
 	checkSleeperResult(t, ts, pid)
 	checkSleeperResult(t, ts, pid1)
 
-	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
+	assert.True(t, end.Sub(start) < (SLEEP_MSECS*2)*time.Millisecond, "Parallelized: took too long (%v msec)", end.Sub(start).Milliseconds())
 
 	ts.Shutdown()
 }

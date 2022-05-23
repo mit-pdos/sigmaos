@@ -114,7 +114,6 @@ func (pfs *ProcdFs) spawn(a *proc.Proc, b []byte) error {
 		log.Printf("Error ProcdFs.spawn: %v", err)
 		return err
 	}
-	// TODO: should do this in another goroutine.
-	pfs.pd.spawnChan <- true
+	pfs.pd.spawnProc(a)
 	return nil
 }

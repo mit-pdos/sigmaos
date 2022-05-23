@@ -16,7 +16,8 @@ const (
 
 // Procd constants
 const (
-	PROCD_WORK_STEAL_TIMEOUT_MS = 100 // Procd work steal frequency.
+	PROCD_STEALABLE_PROC_TIMEOUT_MS  = 100 // Amount of time a proc needs to go un-run before it becomes stealable.
+	PROCD_WORK_STEAL_SCAN_TIMEOUT_MS = 100 // Frequency with which Procd tries to steal work.
 )
 
 // Raft constants

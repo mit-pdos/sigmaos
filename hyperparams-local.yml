@@ -1,6 +1,6 @@
 session:
   heartbeat_ms: 50ms  # Client heartbeat frequency.
-  timeout_ms: 200ms # Kill a session after 4 missed heartbeats.
+  timeout_ms: 20000ms # Kill a session after 4 missed heartbeats.
 
 realm:
   scan_interval_ms: 50ms  # Frequency with which realmmgr scans to rebalance realms.

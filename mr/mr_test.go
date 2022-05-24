@@ -85,6 +85,12 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	}
 	ts.nreducetask = nreducetask
 
+	// If we don't remove all temp files (and there are many left over from
+	// previous runs of the tests), ux may be very slow and cause the test to
+	// hang during intialization. Using RmDir on ux is slow too, so just do this
+	// directly through the os for now.
+	os.RemoveAll("/tmp/ulambda/mr")
+
 	mr.InitCoordFS(ts.System.FsLib, nreducetask)
 
 	os.Remove(OUTPUT)

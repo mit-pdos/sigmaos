@@ -3,21 +3,19 @@ package fidclnt
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
-func LocalIP() (string, error) {
+func localIPs() ([]net.IP, error) {
+	var ips []net.IP
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	//	for _, i := range ifaces {
-	// XXX Loop over interfaces backwards since cloudlab places control network
-	// interface before local network interface
-	for idx := len(ifaces) - 1; idx >= 0; idx-- {
-		i := ifaces[idx]
+	for _, i := range ifaces {
 		addrs, err := i.Addrs()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		for _, addr := range addrs {
 			var ip net.IP
@@ -33,8 +31,28 @@ func LocalIP() (string, error) {
 			if ip.To4() == nil {
 				continue
 			}
-			return ip.String(), nil
+			ips = append(ips, ip)
 		}
 	}
-	return "", fmt.Errorf("LocalIP: no IP")
+	return ips, nil
+}
+
+func LocalIP() (string, error) {
+	ips, err := localIPs()
+	if err != nil {
+		return "", err
+	}
+
+	// if we have a local ip in 10.x.x.x (for Cloudlab), prioritize that first
+	for _, i := range ips {
+		if strings.HasPrefix(i.String(), "10.") {
+			return i.String(), nil
+		}
+	}
+
+	if len(ips) == 0 {
+		return "", fmt.Errorf("LocalIP: no IP")
+	}
+
+	return ips[len(ips)-1].String(), nil
 }

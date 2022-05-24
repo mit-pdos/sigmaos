@@ -164,6 +164,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 	p := proc.MakeProc(bin, args)
+	p.Ncore = 1
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}
@@ -359,6 +360,7 @@ func (c *Coord) Round() {
 			if err := c.AppendFileJson(MRSTATS, res.res); err != nil {
 				db.DFatalf("Appendfile %v err %v\n", MRSTATS, err)
 			}
+			db.DPrintf(db.ALWAYS, "tasks left %d/%d\n", m-1, c.nmaptask+c.nreducetask)
 		}
 	}
 }

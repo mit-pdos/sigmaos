@@ -2,8 +2,8 @@ package ninep
 
 // Session constants
 const (
-	SESSHEARTBEATMS = 50                  // Client heartbeat frequency.
-	SESSTIMEOUTMS   = SESSHEARTBEATMS * 4 // Kill a session after 4 missed heartbeats.
+	SESSHEARTBEATMS = 2000                 // Client heartbeat frequency.
+	SESSTIMEOUTMS   = SESSHEARTBEATMS * 40 // Kill a session after 4 missed heartbeats.
 )
 
 // Realm constants

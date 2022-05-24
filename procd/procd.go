@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -26,12 +25,13 @@ import (
 type Procd struct {
 	mu         sync.Mutex
 	fs         *ProcdFs
-	spawnChan  chan bool
+	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
+	stealChan  chan bool // Indicates there is work to be stolen.
 	bin        string
 	nid        uint64
 	done       bool
 	addr       string
-	procs      map[proc.Tpid]bool
+	procs      map[proc.Tpid]Tstatus
 	coreBitmap []bool
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
@@ -46,7 +46,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.nid = 0
 	pd.bin = bin
 
-	pd.procs = make(map[proc.Tpid]bool)
+	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
@@ -55,6 +55,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
+	pd.stealChan = make(chan bool)
 
 	pd.addr = pd.MyAddr()
 
@@ -74,7 +75,35 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	// Make namespace isolation dir.
 	os.MkdirAll(namespace.NAMESPACE_DIR, 0777)
 
+	// Make a directory in which to put stealable procs.
+	pd.MkDir(np.PROCD_WS, 0777)
+
 	pd.Work()
+}
+
+func (pd *Procd) getProcStatus(pid proc.Tpid) (Tstatus, bool) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	st, ok := pd.procs[pid]
+	return st, ok
+}
+
+func (pd *Procd) setProcStatus(pid proc.Tpid, st Tstatus) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	pd.procs[pid] = st
+}
+
+func (pd *Procd) deleteProc(pid proc.Tpid) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	delete(pd.procs, pid)
+}
+
+func (pd *Procd) spawnProc(a *proc.Proc) {
+	pd.setProcStatus(a.Pid, PROC_QUEUED)
+
+	pd.spawnChan <- true
 }
 
 func (pd *Procd) makeProc(a *proc.Proc) *Proc {
@@ -86,8 +115,10 @@ func (pd *Procd) makeProc(a *proc.Proc) *Proc {
 
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
-	for pid, _ := range pd.procs {
-		pd.procclnt.EvictProcd(pd.addr, pid)
+	for pid, status := range pd.procs {
+		if status == PROC_RUNNING {
+			pd.procclnt.EvictProcd(pd.addr, pid)
+		}
 	}
 }
 
@@ -134,67 +165,81 @@ func (pd *Procd) incrementResourcesL(p *proc.Proc) {
 	pd.coresAvail += p.Ncore
 }
 
-// Tries to get a runnable proc using the functions passed in. Allows for code reuse across local & remote runqs.
-func (pd *Procd) getRunnableProc(procdPath string, queueName string) (*proc.Proc, error) {
-	var runnableProc *proc.Proc
-	_, err := pd.ProcessDir(path.Join(procdPath, queueName), func(st *np.Stat) (bool, error) {
-		pd.mu.Lock()
-		defer pd.mu.Unlock()
-		p, err := pd.readRunqProc(procdPath, queueName, st.Name)
+// Tries to get a runnable proc if it fits on this procd.
+func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	p, err := pd.readRunqProc(procPath)
+	// Proc may have been stolen
+	if err != nil {
+		db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
+		return nil, err
+	}
+	// See if the proc fits on this procd.
+	if pd.satisfiesConstraintsL(p) {
 		// Proc may have been stolen
-		if err != nil {
-			db.DPrintf("PROCD_ERR", "Error getting RunqProc: %v", err)
-			return false, nil
+		if ok := pd.claimProc(procPath); !ok {
+			return nil, nil
 		}
-		if pd.satisfiesConstraintsL(p) {
-			// Proc may have been stolen
-			if ok := pd.claimProc(procdPath, queueName, p); !ok {
+		// Update resource accounting.
+		pd.decrementResourcesL(p)
+		return p, nil
+	}
+	return nil, nil
+}
+
+func (pd *Procd) getProc() (*proc.Proc, error) {
+	var p *proc.Proc
+	// First try and get any LC procs, else get a BE proc.
+	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
+	// Try local procd first.
+	for _, runq := range runqs {
+		runqPath := path.Join(np.PROCD, pd.MyAddr(), runq)
+		_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
+			newProc, err := pd.tryGetRunnableProc(path.Join(runqPath, st.Name))
+			if err != nil {
+				db.DPrintf("PROCD_ERR", "Error getting runnable proc: %v", err)
 				return false, nil
 			}
-			pd.decrementResourcesL(p)
-			runnableProc = p
+			// We claimed a proc successfully, so stop.
+			if newProc != nil {
+				p = newProc
+				return true, nil
+			}
+			// Couldn't claim a proc, so keep looking.
+			return false, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if p != nil {
+			return p, nil
+		}
+	}
+	// Try to steal from other procds.
+	_, err := pd.ProcessDir(np.PROCD_WS, func(st *np.Stat) (bool, error) {
+		procPath := path.Join(np.PROCD_WS, st.Name)
+		newProc, err := pd.tryGetRunnableProc(procPath + "/")
+		if err != nil {
+			db.DPrintf("PROCD_ERR", "Error readRunqProc in Procd.getProc: %v", err)
+			db.DPrintf(db.ALWAYS, "Error readRunqProc in Procd.getProc: %v", err)
+			// Remove the ws symlink.
+			pd.Remove(procPath)
+			return false, nil
+		}
+		if newProc != nil {
+			db.DPrintf("PROCD", "Stole proc: %v", newProc)
+			p = newProc
+			// Remove the ws symlink.
+			if err := pd.Remove(procPath); err != nil {
+				db.DFatalf("Error Remove: %v", err)
+			}
 			return true, nil
 		}
 		return false, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return runnableProc, nil
-}
-
-func (pd *Procd) getProc() (*proc.Proc, error) {
-	// First try and get any LC procs, else get a BE proc.
-	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
-	for _, runq := range runqs {
-		// First, try to read from the local procdfs
-		p, err := pd.getRunnableProc(path.Join(np.PROCD, pd.MyAddr()), runq)
-		if p != nil || err != nil {
-			return p, err
-		}
-
-		// Try to steal from other procds
-		_, err = pd.ProcessDir(np.PROCD, func(st *np.Stat) (bool, error) {
-			// don't process self
-			if strings.HasPrefix(st.Name, pd.MyAddr()) {
-				return false, nil
-			}
-			p, err = pd.getRunnableProc(path.Join(np.PROCD, st.Name), runq)
-			if err != nil {
-				db.DPrintf("PROCD_ERR", "Error getRunnableProc in Procd.getProc: %v", err)
-				return false, nil
-			}
-			if p != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-		if p != nil || err != nil {
-			return p, err
-		}
-	}
-	return nil, nil
+	return p, err
 }
 
 func (pd *Procd) allocCores(n proc.Tcore) []uint {
@@ -230,9 +275,7 @@ func (pd *Procd) freeCores(cores []uint) {
 
 func (pd *Procd) runProc(p *Proc) {
 	// Register running proc
-	pd.mu.Lock()
-	pd.procs[p.Pid] = true
-	pd.mu.Unlock()
+	pd.setProcStatus(p.Pid, PROC_RUNNING)
 
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
@@ -256,9 +299,7 @@ func (pd *Procd) runProc(p *Proc) {
 	pd.incrementResources(p.attr)
 
 	// Deregister running procs
-	pd.mu.Lock()
-	delete(pd.procs, p.Pid)
-	pd.mu.Unlock()
+	pd.deleteProc(p.Pid)
 }
 
 func (pd *Procd) setCoreAffinity() {
@@ -271,27 +312,28 @@ func (pd *Procd) setCoreAffinity() {
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
 }
 
-func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
-	// Wait until either there was a spawn, or the timeout expires.
+// Wait for a new proc to be spawned at this procd, or for a stealing
+// opportunity to present itself.
+func (pd *Procd) waitSpawnOrSteal() {
 	select {
 	case _, ok := <-pd.spawnChan:
 		// If channel closed, return
 		if !ok {
 			return
 		}
-	case <-ticker.C:
+	case <-pd.stealChan:
+		return
 	}
 }
 
 // Worker runs one proc a time
 func (pd *Procd) worker(done *int32) {
 	defer pd.group.Done()
-	ticker := time.NewTicker(np.PROCD_WORK_STEAL_TIMEOUT_MS * time.Millisecond)
 	for !pd.readDone() && (done == nil || atomic.LoadInt32(done) == 0) {
 		p, error := pd.getProc()
 		// If there were no runnable procs, wait and try again.
 		if error == nil && p == nil {
-			pd.waitSpawnOrTimeout(ticker)
+			pd.waitSpawnOrSteal()
 			continue
 		}
 		if error != nil && (errors.Is(error, io.EOF) ||
@@ -321,6 +363,8 @@ func (pd *Procd) Work() {
 		pd.Done()
 		pd.MemFs.Done()
 	}()
+	go pd.workStealingMonitor()
+	go pd.offerStealableProcs()
 	// XXX May need a certain number of workers for tests, but need
 	// NWorkers = NCores for benchmarks
 	// The +1 is needed so procs trying to spawn a new proc never deadlock if this

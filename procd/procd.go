@@ -31,7 +31,7 @@ type Procd struct {
 	nid        uint64
 	done       bool
 	addr       string
-	procs      map[proc.Tpid]bool
+	procs      map[proc.Tpid]Tstatus
 	coreBitmap []bool
 	coresAvail proc.Tcore
 	group      sync.WaitGroup
@@ -46,7 +46,7 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.nid = 0
 	pd.bin = bin
 
-	pd.procs = make(map[proc.Tpid]bool)
+	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.perf = perf.MakePerf()
@@ -81,7 +81,28 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.Work()
 }
 
+func (pd *Procd) getProcStatus(pid proc.Tpid) (Tstatus, bool) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	st, ok := pd.procs[pid]
+	return st, ok
+}
+
+func (pd *Procd) setProcStatus(pid proc.Tpid, st Tstatus) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	pd.procs[pid] = st
+}
+
+func (pd *Procd) deleteProc(pid proc.Tpid) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	delete(pd.procs, pid)
+}
+
 func (pd *Procd) spawnProc(a *proc.Proc) {
+	pd.setProcStatus(a.Pid, PROC_QUEUED)
+
 	pd.spawnChan <- true
 }
 
@@ -94,8 +115,10 @@ func (pd *Procd) makeProc(a *proc.Proc) *Proc {
 
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
-	for pid, _ := range pd.procs {
-		pd.procclnt.EvictProcd(pd.addr, pid)
+	for pid, status := range pd.procs {
+		if status == PROC_RUNNING {
+			pd.procclnt.EvictProcd(pd.addr, pid)
+		}
 	}
 }
 
@@ -252,9 +275,7 @@ func (pd *Procd) freeCores(cores []uint) {
 
 func (pd *Procd) runProc(p *Proc) {
 	// Register running proc
-	pd.mu.Lock()
-	pd.procs[p.Pid] = true
-	pd.mu.Unlock()
+	pd.setProcStatus(p.Pid, PROC_RUNNING)
 
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
@@ -278,9 +299,7 @@ func (pd *Procd) runProc(p *Proc) {
 	pd.incrementResources(p.attr)
 
 	// Deregister running procs
-	pd.mu.Lock()
-	delete(pd.procs, p.Pid)
-	pd.mu.Unlock()
+	pd.deleteProc(p.Pid)
 }
 
 func (pd *Procd) setCoreAffinity() {

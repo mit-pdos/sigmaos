@@ -18,10 +18,15 @@ func (pd *Procd) workStealingMonitor() {
 		<-ticker.C
 		// Wait untile there is a proc to steal.
 		sts, err := pd.ReadDirWatch(np.PROCD_WS, func(sts []*np.Stat) bool {
-			// XXX May eventually want to ensure that none of these stealable procs
-			// already belong to this procd.
-			db.DPrintf("PROCD", "Found %v stealable procs", len(sts))
-			return len(sts) == 0
+			nStealable := len(sts)
+			// Discount procs already on this procd
+			for _, st := range sts {
+				if _, ok := pd.getProcStatus(proc.Tpid(st.Name)); ok {
+					nStealable--
+				}
+			}
+			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to this procd", len(sts), nStealable)
+			return nStealable == 0
 		})
 		if err != nil && np.IsErrVersion(err) {
 			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
@@ -48,8 +53,8 @@ func (pd *Procd) offerStealableProcs() {
 		for _, runq := range runqs {
 			runqPath := path.Join(np.PROCD, pd.MyAddr(), runq)
 			_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
-				// XXX Based on how we stuf Mtime into np.Stat, but this should be
-				// changed, perhaps.
+				// XXX Based on how we stuf Mtime into np.Stat (at a second
+				// granularity), but this should be changed, perhaps.
 				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+np.PROCD_STEALABLE_PROC_TIMEOUT_MS {
 					db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.MyAddr(), st.Name)
 					// If proc has been haning in the runq for too long...

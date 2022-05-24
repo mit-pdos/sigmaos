@@ -18,6 +18,13 @@ import (
 	"ulambda/rand"
 )
 
+type Tstatus uint8
+
+const (
+	PROC_RUNNING Tstatus = iota
+	PROC_QUEUED
+)
+
 type Proc struct {
 	//	mu deadlock.Mutex
 	fs.Inode

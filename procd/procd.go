@@ -223,7 +223,6 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		newProc, err := pd.tryGetRunnableProc(procPath + "/")
 		if err != nil {
 			db.DPrintf("PROCD_ERR", "Error readRunqProc in Procd.getProc: %v", err)
-			db.DPrintf(db.ALWAYS, "Error readRunqProc in Procd.getProc: %v", err)
 			// Remove the ws symlink.
 			pd.Remove(procPath)
 			return false, nil

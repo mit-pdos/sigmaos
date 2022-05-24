@@ -43,9 +43,9 @@ func LocalIP() (string, error) {
 		return "", err
 	}
 
-	// if we have a local ip in 10.x.x.x (for Cloudlab), prioritize that first
+	// if we have a local ip in 10.10.x.x (for Cloudlab), prioritize that first
 	for _, i := range ips {
-		if strings.HasPrefix(i.String(), "10.") {
+		if strings.HasPrefix(i.String(), "10.10.") {
 			return i.String(), nil
 		}
 	}

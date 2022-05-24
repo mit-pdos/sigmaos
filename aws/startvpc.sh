@@ -35,7 +35,7 @@ for vm in $vms
 do
     echo "UPDATE: $vm"
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out )'
+    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
     (cd ulambda; ./stop.sh)
 ENDSSH
 done

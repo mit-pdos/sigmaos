@@ -144,7 +144,7 @@ func (sess *Session) timedOut() (bool, time.Time) {
 		sess.lastHeartbeat = time.Now()
 		return false, sess.lastHeartbeat
 	}
-	return sess.timedout || time.Since(sess.lastHeartbeat).Milliseconds() > np.SESSTIMEOUTMS, sess.lastHeartbeat
+	return sess.timedout || time.Since(sess.lastHeartbeat) > np.Conf.Session.TIMEOUT_MS, sess.lastHeartbeat
 }
 
 func (sess *Session) SetRunning(r bool) {

@@ -45,13 +45,13 @@ func (h *Heartbeater) isDone() bool {
 func (h *Heartbeater) needsHeartbeat() bool {
 	h.Lock()
 	defer h.Unlock()
-	return !h.done && time.Now().Sub(h.lastHeartbeat) >= np.SESSHEARTBEATMS
+	return !h.done && time.Now().Sub(h.lastHeartbeat) >= np.Conf.Session.HEARTBEAT_MS
 }
 
 func (h *Heartbeater) run() {
 	for !h.isDone() {
 		// Sleep a bit.
-		time.Sleep(np.SESSHEARTBEATMS * time.Millisecond)
+		time.Sleep(np.Conf.Session.HEARTBEAT_MS)
 		if h.needsHeartbeat() {
 			// XXX How soon should I retry if this fails?
 			db.DPrintf("SESSCLNT", "%v Sending heartbeat to %v", h.sc.sid, h.sc.addrs)

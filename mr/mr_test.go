@@ -67,6 +67,7 @@ func TestSplits(t *testing.T) {
 	for _, b := range bins {
 		log.Printf("bin: %v\n", b)
 	}
+	assert.NotEqual(t, 0, len(bins))
 	ts.Shutdown()
 }
 

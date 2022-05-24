@@ -1,0 +1,19 @@
+session:
+  heartbeat_ms: 50ms  # Client heartbeat frequency.
+  timeout_ms: 200ms # Kill a session after 4 missed heartbeats.
+
+realm:
+  scan_interval_ms: 50ms  # Frequency with which realmmgr scans to rebalance realms.
+  resize_interval_ms: 100ms # Maximum frequency with which realmmgr resizes a realm.
+  grow_cpu_util_threshold: 50   # Utilization threshold at which to grow a realm.
+  shrink_cpu_util_threshold: 25   # Utilization threshold at which to shrink a realm.
+
+procd:
+  work_steal_scan_timeout_ms : 100ms # Procd work steal frequency.
+  stealable_proc_timeout_ms : 100ms # Procd work steal frequency.
+
+raft:
+  tick_ms         : 25ms # Frequency with which the raft library ticks
+  elect_nticks    : 4  # Number of ticks with no leader heartbeat after which a follower starts an election.
+  heartbeat_ticks : 1  # Number of heartbeats per tick.
+

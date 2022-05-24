@@ -164,7 +164,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 	p := proc.MakeProc(bin, args)
-	p.Ncore = 1
+	//p.Ncore = 1
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}

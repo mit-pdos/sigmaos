@@ -62,8 +62,8 @@ func makeRaftNode(id int, peers []raft.Peer, peerAddrs []string, l net.Listener,
 	node.storage = raft.NewMemoryStorage()
 	node.config = &raft.Config{
 		ID:                        uint64(id),
-		ElectionTick:              np.RAFT_ELECT_NTICKS,
-		HeartbeatTick:             np.RAFT_HEARTBEAT_TICKS,
+		ElectionTick:              np.Conf.Raft.ELECT_NTICKS,
+		HeartbeatTick:             np.Conf.Raft.HEARTBEAT_TICKS,
 		Storage:                   node.storage,
 		MaxSizePerMsg:             4096,
 		MaxInflightMsgs:           256,
@@ -131,7 +131,7 @@ func (n *RaftNode) serveChannels() {
 	n.snapshotIndex = snap.Metadata.Index
 	n.appliedIndex = snap.Metadata.Index
 
-	ticker := time.NewTicker(np.RAFT_TICK_MS * time.Millisecond)
+	ticker := time.NewTicker(np.Conf.Raft.TICK_MS)
 	defer ticker.Stop()
 
 	go n.sendProposals()

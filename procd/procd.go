@@ -286,7 +286,7 @@ func (pd *Procd) waitSpawnOrTimeout(ticker *time.Ticker) {
 // Worker runs one proc a time
 func (pd *Procd) worker(done *int32) {
 	defer pd.group.Done()
-	ticker := time.NewTicker(np.PROCD_WORK_STEAL_TIMEOUT_MS * time.Millisecond)
+	ticker := time.NewTicker(np.Conf.Procd.WORK_STEAL_TIMEOUT_MS)
 	for !pd.readDone() && (done == nil || atomic.LoadInt32(done) == 0) {
 		p, error := pd.getProc()
 		// If there were no runnable procs, wait and try again.

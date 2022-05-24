@@ -70,7 +70,7 @@ func (r *Noded) markFree() {
 
 	msg := MakeResourceMsg(Tgrant, Tnode, r.id, 1)
 
-	if b, err := r.GetFile(SIGMACTL); err != nil {
+	if b, err := r.GetFile(np.SIGMAMGR); err != nil {
 		db.DFatalf("Error GetFile in markFree: %v", err)
 	} else {
 		db.DPrintf(db.ALWAYS, "Sigmamgr symlink: %v", string(b))

@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
@@ -40,17 +42,35 @@ const (
 )
 
 var realmaddr string // Use this realm to run MR (instead of starting a new one)
-var app string       // App: wc, grep, ..
-var nreduce int      // # reducers
-var binsz int        // bin size
-var input string     // Input directory
+var app string       // yaml app file
+var job *Job
+
+type Job struct {
+	App     string `yalm:"app"`
+	Nreduce int    `yalm:"nreduce"`
+	Binsz   int    `yalm:"binsz"`
+	Input   string `yalm:"input"`
+	Ncore   int    `yalm:"ncore"`
+}
 
 func init() {
 	flag.StringVar(&realmaddr, "realm", "", "realm id")
-	flag.StringVar(&app, "app", "wc", "application")
-	flag.IntVar(&nreduce, "nreduce", 8, "nreduce")
-	flag.IntVar(&binsz, "binsz", 1<<17, "bin size")
-	flag.StringVar(&input, "input", "name/s3/~ip/gutenberg/", "input dir")
+	flag.StringVar(&app, "app", "mr-wc.yml", "application")
+	job = readConfig(app)
+}
+
+func readConfig(fn string) *Job {
+	job := &Job{}
+	file, err := os.Open(fn)
+	if err != nil {
+		log.Fatalf("ReadConfig err %v\n", err)
+	}
+	defer file.Close()
+	d := yaml.NewDecoder(file)
+	if err := d.Decode(&job); err != nil {
+		log.Fatalf("Yalm decode %s err %v\n", fn, err)
+	}
+	return job
 }
 
 func TestHash(t *testing.T) {
@@ -62,7 +82,7 @@ func TestHash(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	bins, err := mr.MkBins(ts.FsLib, input, np.Tlength(binsz))
+	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
 	assert.Nil(t, err)
 	for _, b := range bins {
 		log.Printf("bin: %v\n", b)
@@ -122,7 +142,7 @@ func (ts *Tstate) compare() {
 
 // Put names of input files in name/mr/m
 func (ts *Tstate) prepareJob() int {
-	bins, err := mr.MkBins(ts.FsLib, input, np.Tlength(binsz))
+	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, len(bins))
 	for i, b := range bins {
@@ -217,11 +237,11 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	ts := makeTstate(t, nreduce)
+	ts := makeTstate(t, job.Nreduce)
 
 	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(nreduce), "bin/user/mr-m-" + app, "bin/user/mr-r-" + app, strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "bin/user/mr-m-" + job.App, "bin/user/mr-r-" + job.App, strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

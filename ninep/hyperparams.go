@@ -95,7 +95,6 @@ func init() {
 	default:
 		Conf = ReadConfig(local)
 	}
-	log.Printf("Target %v Conf %v\n", Target, Conf)
 }
 
 func ReadConfig(params string) *Config {

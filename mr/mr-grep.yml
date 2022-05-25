@@ -1,0 +1,5 @@
+app: "grep"
+nreduce: 1
+binsz: 536870912
+input: "name/s3/~ip/wiki"
+ncore: 1

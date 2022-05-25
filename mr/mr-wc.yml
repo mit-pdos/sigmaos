@@ -1,0 +1,5 @@
+app: "wc"
+nreduce: 8
+binsz: 131072
+input: "name/s3/~ip/gutenberg/"
+ncore: 1

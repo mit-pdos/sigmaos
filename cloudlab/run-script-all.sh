@@ -21,5 +21,6 @@ do
 
   echo "========================= $SCRIPT_PATH $USER@$addr ========================="
 
-  $SCRIPT_PATH $USER@$addr > $DIR/log/$hostname
+  $SCRIPT_PATH $USER@$addr > $DIR/log/$hostname &
 done < $DIR/$SERVERS
+wait

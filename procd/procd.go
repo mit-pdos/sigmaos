@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -28,7 +27,6 @@ type Procd struct {
 	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
 	stealChan  chan bool // Indicates there is work to be stolen.
 	bin        string
-	nid        uint64
 	done       bool
 	addr       string
 	procs      map[proc.Tpid]Tstatus
@@ -43,7 +41,6 @@ type Procd struct {
 
 func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd := &Procd{}
-	pd.nid = 0
 	pd.bin = bin
 
 	pd.procs = make(map[proc.Tpid]Tstatus)
@@ -129,6 +126,7 @@ func (pd *Procd) Done() {
 	pd.done = true
 	pd.perf.Teardown()
 	pd.evictProcsL()
+	close(pd.spawnChan)
 }
 
 func (pd *Procd) readDone() bool {
@@ -185,6 +183,8 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
 		// Update resource accounting.
 		pd.decrementResourcesL(p)
 		return p, nil
+	} else {
+		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints %v", procPath)
 	}
 	return nil, nil
 }
@@ -279,19 +279,8 @@ func (pd *Procd) runProc(p *Proc) {
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
 
-	// If this proc doesn't require cores, start another worker to take our place
-	// so we can make progress.
-	done := int32(0)
-	if p.attr.Ncore == 0 {
-		pd.group.Add(1)
-		go pd.worker(&done)
-	}
-
 	// Run the proc.
 	p.run(cores)
-
-	// Kill the old worker so we don't have too many workers running
-	atomic.StoreInt32(&done, 1)
 
 	// Free resources and dedicated cores.
 	pd.freeCores(cores)
@@ -315,23 +304,26 @@ func (pd *Procd) setCoreAffinity() {
 // opportunity to present itself.
 func (pd *Procd) waitSpawnOrSteal() {
 	select {
-	case _, ok := <-pd.spawnChan:
-		// If channel closed, return
-		if !ok {
-			return
-		}
-	case <-pd.stealChan:
+	case _, _ = <-pd.spawnChan:
+		db.DPrintf("PROCD", "done waiting, a proc was spawned")
+		return
+	case _, _ = <-pd.stealChan:
+		db.DPrintf("PROCD", "done waiting, a proc can be stolen")
 		return
 	}
 }
 
-// Worker runs one proc a time
-func (pd *Procd) worker(done *int32) {
+// Worker runs one proc a time. If the proc it runs has Ncore == 0, then
+// another worker is spawned to take this one's place. This worker will then
+// exit once it finishes runing the proc.
+func (pd *Procd) worker() {
 	defer pd.group.Done()
-	for !pd.readDone() && (done == nil || atomic.LoadInt32(done) == 0) {
+	for !pd.readDone() {
+		db.DPrintf("PROCD", "Try to get proc.")
 		p, error := pd.getProc()
 		// If there were no runnable procs, wait and try again.
 		if error == nil && p == nil {
+			db.DPrintf("PROCD", "No procs found, waiting.")
 			pd.waitSpawnOrSteal()
 			continue
 		}
@@ -352,12 +344,25 @@ func (pd *Procd) worker(done *int32) {
 		if err != nil {
 			db.DFatalf("Procd pub running error %v %T\n", err, err)
 		}
+		// If this proc doesn't require cores, start another worker to take our
+		// place so user apps don't deadlock.
+		replaced := false
+		if p.Ncore == 0 {
+			replaced = true
+			pd.group.Add(1)
+			go pd.worker()
+		}
 		pd.runProc(localProc)
+		if replaced {
+			return
+		}
 	}
 }
 
 func (pd *Procd) Work() {
+	pd.group.Add(1)
 	go func() {
+		defer pd.group.Done()
 		pd.Serve()
 		pd.Done()
 		pd.MemFs.Done()
@@ -371,7 +376,7 @@ func (pd *Procd) Work() {
 	NWorkers := linuxsched.NCores + 1
 	for i := uint(0); i < NWorkers; i++ {
 		pd.group.Add(1)
-		go pd.worker(nil)
+		go pd.worker()
 	}
 	pd.group.Wait()
 }

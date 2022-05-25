@@ -142,7 +142,7 @@ func (m *Mapper) informReducer() error {
 
 		target := shardtarget(st.Name, m.bin, r)
 
-		db.DPrintf("MR", "target %s name %s\n", name, target)
+		db.DPrintf("MR0", "target %s name %s\n", name, target)
 
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {
@@ -204,9 +204,11 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 		if err := dec.Decode(&s); err == io.EOF {
 			break
 		} else if err != nil {
+			c, _ := m.GetFile(m.input)
+			db.DPrintf("MR", "Mapper %s: decode %v err %v\n", m.bin, string(c), err)
 			return 0, 0, err
 		}
-		db.DPrintf("MR", "Mapper: process split %v\n", s)
+		db.DPrintf("MR", "Mapper %s: process split %v\n", m.bin, s)
 		n, err := m.doSplit(&s)
 		if err != nil {
 			return 0, 0, err

@@ -36,7 +36,7 @@ const (
 )
 
 func BinName(i int) string {
-	return "bin" + strconv.Itoa(i)
+	return fmt.Sprintf("bin%04d", i)
 }
 
 func Moutdir(name string) string {
@@ -317,11 +317,17 @@ func (c *Coord) restart(files []string, task string) {
 		if err := c.Remove(sym); err != nil {
 			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
 		}
-
-		// Record that we have to rerun mapper f
-		n := MDIR + NEXT + "/" + f
-		if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
-			db.DPrintf(db.ALWAYS, "PutFile %v err %v\n", n, err)
+		// Record that we have to rerun mapper f.  Mapper may
+		// still be in progress, is done, or already has been
+		// moved to d.
+		s := MDIR + DONE + "/" + f
+		s1 := MDIR + TIP + "/" + f
+		d := MDIR + NEXT + "/" + f
+		if err := c.Rename(s1, d); err != nil {
+			db.DPrintf(db.ALWAYS, "rename next  %v to %v err %v\n", s, d, err)
+		}
+		if err := c.Rename(s, d); err != nil {
+			db.DPrintf(db.ALWAYS, "rename next  %v to %v err %v\n", s, d, err)
 		}
 	}
 	// Record that we have to rerun reducer t

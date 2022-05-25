@@ -29,7 +29,7 @@ func (pd *Procd) workStealingMonitor() {
 			return nStealable == 0
 		})
 		if err != nil && np.IsErrVersion(err) {
-			db.DPrintf(db.ALWAYS, "Error ReadDirWatch: %v %v", err, len(sts))
+			db.DPrintf("PROCD_ERR", "Error ReadDirWatch: %v %v", err, len(sts))
 			continue
 		}
 		if err != nil {

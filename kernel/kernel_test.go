@@ -165,16 +165,15 @@ func procdName(ts *test.Tstate, exclude map[string]bool) string {
 }
 
 func TestEphemeral(t *testing.T) {
-	const N = 20
 	ts := test.MakeTstateAll(t)
 
-	name1 := procdName(ts, map[string]bool{})
+	name1 := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true})
 
 	var err error
 	err = ts.BootProcd()
 	assert.Nil(t, err, "bin/kernel/procd")
 
-	name := procdName(ts, map[string]bool{name1: true})
+	name := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true, name1: true})
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
 	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))
@@ -185,19 +184,21 @@ func TestEphemeral(t *testing.T) {
 
 	ts.KillOne(np.PROCD)
 
-	n := 0
-	for n < N {
-		time.Sleep(100 * time.Millisecond)
+	start := time.Now()
+	for {
+		if time.Since(start) > 3*np.Conf.Session.TIMEOUT_MS {
+			break
+		}
+		time.Sleep(np.Conf.Session.TIMEOUT_MS / 10)
 		_, err = ts.GetFile(name1)
 		if err == nil {
-			n += 1
 			log.Printf("retry\n")
 			continue
 		}
 		assert.True(t, np.IsErrNotfound(err))
 		break
 	}
-	assert.Greater(t, N, n, "Waiting too long")
+	assert.Greater(t, 3*np.Conf.Session.TIMEOUT_MS, time.Since(start), "Waiting too long")
 
 	ts.Shutdown()
 }

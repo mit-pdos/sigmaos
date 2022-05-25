@@ -56,19 +56,18 @@ type Job struct {
 func init() {
 	flag.StringVar(&realmaddr, "realm", "", "realm id")
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
-	job = readConfig(app)
 }
 
-func readConfig(fn string) *Job {
+func readConfig() *Job {
 	job := &Job{}
-	file, err := os.Open(fn)
+	file, err := os.Open(app)
 	if err != nil {
 		log.Fatalf("ReadConfig err %v\n", err)
 	}
 	defer file.Close()
 	d := yaml.NewDecoder(file)
 	if err := d.Decode(&job); err != nil {
-		log.Fatalf("Yalm decode %s err %v\n", fn, err)
+		log.Fatalf("Yalm decode %s err %v\n", app, err)
 	}
 	return job
 }
@@ -96,7 +95,7 @@ type Tstate struct {
 	nreducetask int
 }
 
-func makeTstate(t *testing.T, nreducetask int) *Tstate {
+func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	if realmaddr == "" {
 		ts.Tstate = test.MakeTstateAll(t)
@@ -104,7 +103,8 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 		rconfig := realm.GetRealmConfig(fslib.MakeFsLib("test"), realmaddr)
 		ts.Tstate = test.MakeTstateClnt(t, rconfig.NamedAddrs[0])
 	}
-	ts.nreducetask = nreducetask
+	job = readConfig()
+	ts.nreducetask = job.Nreduce
 
 	// If we don't remove all temp files (and there are many left over from
 	// previous runs of the tests), ux may be very slow and cause the test to
@@ -112,7 +112,7 @@ func makeTstate(t *testing.T, nreducetask int) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll("/tmp/ulambda/mr")
 
-	mr.InitCoordFS(ts.System.FsLib, nreducetask)
+	mr.InitCoordFS(ts.System.FsLib, ts.nreducetask)
 
 	os.Remove(OUTPUT)
 
@@ -237,7 +237,7 @@ func (ts *Tstate) crashServer(srv string, randMax int, l *sync.Mutex, crashchan 
 }
 
 func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
-	ts := makeTstate(t, job.Nreduce)
+	ts := makeTstate(t)
 
 	nmap := ts.prepareJob()
 

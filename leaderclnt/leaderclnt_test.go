@@ -49,7 +49,7 @@ func TestOldLeaderFail(t *testing.T) {
 
 		crash.Partition(fsl)
 
-		time.Sleep(2 * np.SESSTIMEOUTMS * time.Millisecond)
+		time.Sleep(2 * np.Conf.Session.TIMEOUTMS)
 
 		// fsl lost primary status, and ts should have it by
 		// now so this write to ux server should fail

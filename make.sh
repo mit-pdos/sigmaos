@@ -3,10 +3,11 @@
 RACE="-race"
 
 usage() {
-    echo "Usage: $0 [-norace] [-vet]" 1>&2
+    echo "Usage: $0 [-norace] [-vet] [-target <name>]" 1>&2
 }
 
 CMD="build"
+TARGET="local"
 
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -17,6 +18,11 @@ while [[ "$#" -gt 0 ]]; do
     -vet)
 	shift
 	CMD="vet"
+	;;
+    -target)
+	TARGET="$2"
+	shift
+	shift
 	;;
     *)
 	error "unexpected argument $1"
@@ -38,8 +44,8 @@ do
 	  echo "go vet cmd/$k/$f/main.go"
 	  go vet cmd/$k/$f/main.go
       else 
-	  echo "go build $RACE -o bin/$k/$f cmd/$k/$f/main.go"
-	  go build $RACE -o bin/$k/$f cmd/$k/$f/main.go
+      	  echo "go build -ldflags='-X ulambda/ninep.Target=$TARGET' $RACE -o bin/$k/$f cmd/$k/$f/main.go"
+	  go build -ldflags="-X ulambda/ninep.Target=$TARGET" $RACE -o bin/$k/$f cmd/$k/$f/main.go
       fi
   done
 done

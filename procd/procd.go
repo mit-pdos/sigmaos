@@ -127,6 +127,7 @@ func (pd *Procd) Done() {
 	pd.perf.Teardown()
 	pd.evictProcsL()
 	close(pd.spawnChan)
+	close(pd.stealChan)
 }
 
 func (pd *Procd) readDone() bool {
@@ -306,10 +307,8 @@ func (pd *Procd) waitSpawnOrSteal() {
 	select {
 	case _, _ = <-pd.spawnChan:
 		db.DPrintf("PROCD", "done waiting, a proc was spawned")
-		return
 	case _, _ = <-pd.stealChan:
 		db.DPrintf("PROCD", "done waiting, a proc can be stolen")
-		return
 	}
 }
 

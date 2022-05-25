@@ -44,7 +44,7 @@ for vm in $vms
 do
     echo "COMPILE: $vm"
     ( ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-    grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace > /tmp/make.out 2>&1 )  
+    grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace -target aws > /tmp/make.out 2>&1 )  
 ENDSSH
       ) &
 done
@@ -63,10 +63,10 @@ do
     export NAMED="${NAMED}"
     if [ "${vm}" = "${MAIN}" ]; then 
        echo "START ${NAMED}"
-       (cd ulambda; nohup ./start.sh > /tmp/out 2>&1 < /dev/null &)
+       (cd ulambda; nohup ./start.sh > /tmp/start.out 2>&1 < /dev/null &)
     else
        echo "JOIN ${NAMED}"
-       (cd ulambda;  nohup bin/realm/noded . $vm > /tmp/out 2>&1 < /dev/null &)
+       (cd ulambda;  nohup bin/realm/noded . $vm > /tmp/noded.out 2>&1 < /dev/null &)
     fi
 ENDSSH
 done

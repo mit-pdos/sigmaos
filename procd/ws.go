@@ -16,16 +16,17 @@ func (pd *Procd) workStealingMonitor() {
 	for !pd.readDone() {
 		// Wait for a bit.
 		<-ticker.C
+		var nStealable int
 		// Wait untile there is a proc to steal.
 		sts, err := pd.ReadDirWatch(np.PROCD_WS, func(sts []*np.Stat) bool {
-			nStealable := len(sts)
+			nStealable = len(sts)
 			// Discount procs already on this procd
 			for _, st := range sts {
 				if _, ok := pd.getProcStatus(proc.Tpid(st.Name)); ok {
 					nStealable--
 				}
 			}
-			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to this procd", len(sts), nStealable)
+			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)
 			return nStealable == 0
 		})
 		if err != nil && np.IsErrVersion(err) {
@@ -36,7 +37,7 @@ func (pd *Procd) workStealingMonitor() {
 			db.DFatalf("Error ReadDirWatch: %v", err)
 		}
 		// Wake up a thread to try to steal each proc.
-		for range sts {
+		for i := 0; i < nStealable; i++ {
 			pd.stealChan <- true
 		}
 	}

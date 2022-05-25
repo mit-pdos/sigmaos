@@ -120,14 +120,15 @@ type Coord struct {
 	nmaptask    int
 	nreducetask int
 	crash       int
+	ncore       int
 	mapperbin   string
 	reducerbin  string
 	electclnt   *electclnt.ElectClnt
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) != 5 {
-		return nil, errors.New("MakeCoord: too few arguments")
+	if len(args) != 6 {
+		return nil, errors.New("MakeCoord: wrong number of arguments")
 	}
 	w := &Coord{}
 	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
@@ -147,9 +148,15 @@ func MakeCoord(args []string) (*Coord, error) {
 
 	c, err := strconv.Atoi(args[4])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[3])
+		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[4])
 	}
 	w.crash = c
+
+	nc, err := strconv.Atoi(args[5])
+	if err != nil {
+		return nil, fmt.Errorf("MakeCoord: ncore %v isn't int", args[5])
+	}
+	w.ncore = nc
 
 	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
 
@@ -164,7 +171,7 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 	p := proc.MakeProc(bin, args)
-	//p.Ncore = 1
+	p.Ncore = proc.Tcore(c.ncore)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}

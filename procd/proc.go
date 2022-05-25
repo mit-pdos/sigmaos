@@ -45,16 +45,16 @@ type Proc struct {
 
 // XXX init/run pattern seems a bit redundant...
 func (p *Proc) init(a *proc.Proc) {
+	p.attr = a
 	p.Program = a.Program
 	p.Pid = a.Pid
 	p.Args = a.Args
 	p.Dir = a.Dir
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid.String()+rand.String(16))
+	db.DPrintf("PROCD", "Procd init: %v\n", p)
 	p.Env = append(os.Environ(), a.GetEnv(p.pd.addr, p.NewRoot)...)
 	p.Stdout = "" // XXX: add to or infer from p
 	p.Stderr = "" // XXX: add to or infer from p
-	p.attr = a
-	db.DPrintf("PROCD", "Procd init: %v\n", p)
 }
 
 func (p *Proc) wait(cmd *exec.Cmd) {

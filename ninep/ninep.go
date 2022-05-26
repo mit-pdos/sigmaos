@@ -416,6 +416,19 @@ type FcallWireCompat struct {
 	Msg  Tmsg
 }
 
+type Tinterval struct {
+	Start Toffset
+	End   Toffset
+}
+
+func MkInterval(start, end Toffset) *Tinterval {
+	return &Tinterval{start, end}
+}
+
+func (iv *Tinterval) String() string {
+	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
+}
+
 func (fcallWC *FcallWireCompat) GetType() Tfcall {
 	return fcallWC.Type
 }
@@ -436,19 +449,20 @@ func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
 }
 
 type Fcall struct {
-	Type    Tfcall
-	Tag     Ttag
-	Session Tsession
-	Seqno   Tseqno
-	Fence   Tfence
-	Msg     Tmsg
+	Type     Tfcall
+	Tag      Ttag
+	Session  Tsession
+	Seqno    Tseqno
+	Received *Tinterval
+	Fence    Tfence
+	Msg      Tmsg
 }
 
 func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence) *Fcall {
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, f, msg}
+		return &Fcall{msg.Type(), 0, sess, 0, nil, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), f, msg}
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), nil, f, msg}
 	}
 }
 

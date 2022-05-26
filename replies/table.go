@@ -34,7 +34,7 @@ func (rt *ReplyTable) Register(request *np.Fcall) {
 		delete(rt.entries, np.Tseqno(s))
 	}
 	rt.ivs.Insert(&request.Received)
-	db.DPrintf("RTABLE", "ivs %v\n", rt.ivs)
+	db.DPrintf("RTABLE", "ivs %v len rt %d\n", rt.ivs, len(rt.entries))
 	rt.entries[request.Seqno] = MakeReplyFuture()
 }
 

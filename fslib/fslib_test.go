@@ -1159,6 +1159,16 @@ func measure(msg string, f func() np.Tlength) {
 	}
 }
 
+func measuredir(msg string, f func() int) {
+	for i := 0; i < NRUNS; i++ {
+		start := time.Now()
+		n := f()
+		ms := time.Since(start).Milliseconds()
+		s := float64(ms) / 1000
+		log.Printf("%v: %d entries took %vms (%.1f file/s)", msg, n, ms, float64(n)/s)
+	}
+}
+
 type Thow uint8
 
 const (
@@ -1255,6 +1265,30 @@ func TestReadPerf(t *testing.T) {
 		return n
 	})
 	err = ts.Remove(fn)
+	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
+	err := fsl.MkDir(dir, 0777)
+	assert.Equal(t, nil, err)
+	for i := 0; i < n; i++ {
+		b := []byte("hello")
+		_, err := fsl.PutFile(dir+"/f"+strconv.Itoa(i), 0777, np.OWRITE, b)
+		assert.Nil(t, err)
+	}
+	return n
+}
+
+func TestDirCreatePerf(t *testing.T) {
+	const N = 1000
+	ts := test.MakeTstatePath(t, namedaddr, path)
+	dir := path + "d"
+	measuredir("create dir", func() int {
+		n := mkDir(t, ts.FsLib, dir, 1000)
+		return n
+	})
+	err := ts.RmDir(dir)
 	assert.Nil(t, err)
 	ts.Shutdown()
 }

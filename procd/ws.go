@@ -60,8 +60,8 @@ func (pd *Procd) offerStealableProcs() {
 					db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.MyAddr(), st.Name)
 					// If proc has been haning in the runq for too long...
 					target := path.Join(runqPath, st.Name) + "/"
-					link := path.Join(np.PROCD_WS, st.Name)
-					if err := pd.Symlink([]byte(target), link, 0777); err != nil && !np.IsErrExists(err) {
+					link := path.Join(np.PROCD_WS, st.Name) + "-SYMLINK"
+					if err := pd.Symlink([]byte(target), link, 0777|np.DMTMP); err != nil && !np.IsErrExists(err) {
 						db.DFatalf("Error Symlink: %v", err)
 						return false, err
 					}

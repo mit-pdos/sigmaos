@@ -185,7 +185,7 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
 		pd.decrementResourcesL(p)
 		return p, nil
 	} else {
-		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints %v", procPath)
+		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
 	}
 	return nil, nil
 }

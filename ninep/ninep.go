@@ -472,6 +472,7 @@ func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, rcv *Tinterval, f Tfence)
 func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
 	fcall := MakeFcall(reply, req.Session, nil, nil, NoFence)
 	fcall.Seqno = req.Seqno
+	fcall.Received = req.Received
 	fcall.Tag = req.Tag
 	return fcall
 }

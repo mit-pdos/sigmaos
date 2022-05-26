@@ -81,6 +81,7 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 	if ok {
 		o := np.Toffset(reply.Seqno)
 		c.ivs.Insert(np.MkInterval(o, o+1))
+		c.ivs.Delete(&reply.Received)
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
 	}

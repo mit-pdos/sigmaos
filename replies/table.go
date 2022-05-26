@@ -3,6 +3,8 @@ package replies
 import (
 	"sync"
 
+	db "ulambda/debug"
+	"ulambda/intervals"
 	np "ulambda/ninep"
 )
 
@@ -11,11 +13,13 @@ type ReplyTable struct {
 	sync.Mutex
 	closed  bool
 	entries map[np.Tseqno]*ReplyFuture
+	ivs     *intervals.Intervals // intervals deleted from entries
 }
 
 func MakeReplyTable() *ReplyTable {
 	rt := &ReplyTable{}
 	rt.entries = make(map[np.Tseqno]*ReplyFuture)
+	rt.ivs = intervals.MkIntervals()
 	return rt
 }
 
@@ -26,6 +30,11 @@ func (rt *ReplyTable) Register(request *np.Fcall) {
 	if rt.closed {
 		return
 	}
+	for s := request.Received.Start; s < request.Received.End; s++ {
+		delete(rt.entries, np.Tseqno(s))
+	}
+	rt.ivs.Insert(&request.Received)
+	db.DPrintf("RTABLE", "ivs %v\n", rt.ivs)
 	rt.entries[request.Seqno] = MakeReplyFuture()
 }
 

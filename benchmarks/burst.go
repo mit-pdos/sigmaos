@@ -70,7 +70,7 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 		ps = append(ps, p)
 	}
 
-	//	defer b.teardown(ps)
+	defer b.teardown(ps)
 
 	// Start the timer.
 	nRPC := b.ReadSeqNo()

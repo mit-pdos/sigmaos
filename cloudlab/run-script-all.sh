@@ -2,8 +2,14 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: $0 script_path"
+  echo "Usage: $0 script_path [-parallel]"
   exit 1
+fi
+
+PARALLEL=0
+if [ $# -gt 1 ] && [ $2 == "-parallel" ]
+then
+  PARALLEL=1
 fi
 
 SCRIPT_PATH=$1
@@ -21,6 +27,11 @@ do
 
   echo "========================= $SCRIPT_PATH $USER@$addr ========================="
 
-  $SCRIPT_PATH $USER@$addr > $DIR/log/$hostname &
+  if [ "$PARALLEL" -eq 1 ]
+  then
+    $SCRIPT_PATH $USER@$addr > $DIR/log/$hostname &
+  else
+    $SCRIPT_PATH $USER@$addr > $DIR/log/$hostname
+  fi
 done < $DIR/$SERVERS
 wait

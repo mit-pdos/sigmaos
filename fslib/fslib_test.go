@@ -1294,7 +1294,7 @@ func TestDirCreatePerf(t *testing.T) {
 }
 
 func TestDirReadPerf(t *testing.T) {
-	const N = 10000
+	const N = 1000
 	ts := test.MakeTstatePath(t, namedaddr, path)
 	dir := path + "d"
 	n := mkDir(t, ts.FsLib, dir, N)
@@ -1316,5 +1316,19 @@ func TestDirReadPerf(t *testing.T) {
 	})
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
+func TestDirRmPerf(t *testing.T) {
+	const N = 1000
+	ts := test.MakeTstatePath(t, namedaddr, path)
+	dir := path + "d"
+	n := mkDir(t, ts.FsLib, dir, N)
+	assert.Equal(t, N, n)
+	measuredir("rm dir", func() int {
+		err := ts.RmDir(dir)
+		assert.Nil(t, err)
+		return N
+	})
 	ts.Shutdown()
 }

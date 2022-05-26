@@ -338,6 +338,7 @@ func (pd *Procd) worker() {
 			pd.perf.Teardown()
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
+		db.DPrintf("PROCD", "Got proc %v", p)
 		localProc := pd.makeProc(p)
 		err := pd.fs.running(localProc)
 		if err != nil {

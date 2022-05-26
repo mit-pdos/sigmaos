@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/intervals"
 	"ulambda/netclnt"
 	np "ulambda/ninep"
 	"ulambda/sessstateclnt"
@@ -22,6 +23,7 @@ type SessClnt struct {
 	nc     *netclnt.NetClnt
 	queue  *sessstateclnt.RequestQueue
 	hb     *Heartbeater
+	ivs    *intervals.Intervals
 }
 
 func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt, *np.Err) {
@@ -38,6 +40,7 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	}
 	c.nc = nc
 	c.hb = makeHeartbeater(c)
+	c.ivs = intervals.MkIntervals()
 	go c.writer()
 	return c, nil
 }

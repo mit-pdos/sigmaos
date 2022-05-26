@@ -1,5 +1,7 @@
 package fss3
 
+// XXX use ulambda/intervals
+
 import (
 	"fmt"
 	// "log"

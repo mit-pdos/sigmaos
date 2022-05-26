@@ -425,7 +425,7 @@ func MkInterval(start, end Toffset) *Tinterval {
 	return &Tinterval{start, end}
 }
 
-func (iv *Tinterval) String() string {
+func (iv Tinterval) String() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
 }
 
@@ -453,16 +453,16 @@ type Fcall struct {
 	Tag      Ttag
 	Session  Tsession
 	Seqno    Tseqno
-	Received *Tinterval
+	Received Tinterval
 	Fence    Tfence
 	Msg      Tmsg
 }
 
 func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence) *Fcall {
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, nil, f, msg}
+		return &Fcall{msg.Type(), 0, sess, 0, Tinterval{}, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), nil, f, msg}
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), Tinterval{}, f, msg}
 	}
 }
 
@@ -474,7 +474,7 @@ func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
 }
 
 func (fc *Fcall) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg, fc.Fence)
+	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Received, fc.Msg, fc.Fence)
 }
 
 func (fcall *Fcall) GetType() Tfcall {

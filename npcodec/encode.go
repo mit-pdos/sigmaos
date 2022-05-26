@@ -163,6 +163,14 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
+		case np.Tinterval:
+			if err := e.encode(v.Start, v.End); err != nil {
+				return err
+			}
+		case *np.Tinterval:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
 		case np.Tfenceid:
 			if err := e.encode(v.Path, v.ServerId); err != nil {
 				return err
@@ -338,6 +346,10 @@ func (d *decoder) decode(vs ...interface{}) error {
 			dec := &decoder{bytes.NewReader(b)}
 
 			if err := dec.decode(elements...); err != nil {
+				return err
+			}
+		case *np.Tinterval:
+			if err := d.decode(&v.Start, &v.End); err != nil {
 				return err
 			}
 		case *np.Tfenceid:

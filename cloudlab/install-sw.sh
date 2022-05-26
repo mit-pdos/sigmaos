@@ -118,7 +118,15 @@ else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (git clone git@g.csail.mit.edu:ulambda; cd ulambda; go mod download; ./make.sh -norace)'
 fi
 
+mkdir ~/.aws
+chmod 700 ~/.aws
+echo > ~/.aws/credentials
+chmod 600 ~/.aws/credentials
+
 ENDSSH
+
+scp -i $DIR/keys/cloudlab-sigmaos ~/.aws/credentials $1:~/.aws/
+scp -i $DIR/keys/cloudlab-sigmaos ~/.aws/config $1:~/.aws/
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
 echo "ssh $1"

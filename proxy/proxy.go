@@ -36,7 +36,7 @@ func (npd *Npd) serve(fc *np.Fcall) {
 	if rerror != nil {
 		reply = *rerror
 	}
-	fcall := np.MakeFcall(reply, 0, nil, np.NoFence)
+	fcall := np.MakeFcall(reply, 0, nil, nil, np.NoFence)
 	fcall.Tag = t
 	sess.SendConn(fcall)
 }

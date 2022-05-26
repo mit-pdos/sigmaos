@@ -26,6 +26,13 @@ func MkIntervals() *Intervals {
 	return ivs
 }
 
+func (ivs *Intervals) First() *np.Tinterval {
+	if len(ivs.ivs) == 0 {
+		return nil
+	}
+	return ivs.ivs[0]
+}
+
 // maybe merge with wi with wi+1
 func (ivs *Intervals) merge(i int) {
 	iv := ivs.ivs[i]

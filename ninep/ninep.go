@@ -458,16 +458,19 @@ type Fcall struct {
 	Msg      Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence) *Fcall {
+func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, rcv *Tinterval, f Tfence) *Fcall {
+	if rcv == nil {
+		rcv = &Tinterval{}
+	}
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, Tinterval{}, f, msg}
+		return &Fcall{msg.Type(), 0, sess, 0, *rcv, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), Tinterval{}, f, msg}
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), *rcv, f, msg}
 	}
 }
 
 func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
-	fcall := MakeFcall(reply, req.Session, nil, NoFence)
+	fcall := MakeFcall(reply, req.Session, nil, nil, NoFence)
 	fcall.Seqno = req.Seqno
 	fcall.Tag = req.Tag
 	return fcall

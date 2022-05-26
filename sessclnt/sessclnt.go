@@ -132,8 +132,7 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	if c.closed {
 		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
 	}
-
-	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, f))
+	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, c.ivs.First(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

@@ -196,7 +196,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Fcall:
-			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Fence, v.Msg); err != nil {
+			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Received, v.Fence, v.Msg); err != nil {
 				return err
 			}
 		case *np.Fcall:
@@ -377,7 +377,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			v.Msg = rv.Elem().Interface().(np.Tmsg)
 		case *np.Fcall:
-			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Fence); err != nil {
+			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Received, &v.Fence); err != nil {
 				return err
 			}
 			msg, err := newMsg(v.Type)

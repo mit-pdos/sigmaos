@@ -48,7 +48,7 @@ func (f *ReplyFuture) Abort(sid np.Tsession) {
 	f.Lock()
 	defer f.Unlock()
 	if f.Cond != nil {
-		f.reply = np.MakeFcall(np.MkErr(np.TErrClosed, nil).Rerror(), sid, nil, np.NoFence)
+		f.reply = np.MakeFcall(np.MkErr(np.TErrClosed, nil).Rerror(), sid, nil, nil, np.NoFence)
 		f.Cond.Broadcast()
 		f.Cond = nil
 	}

@@ -11,18 +11,22 @@ import (
 	np "ulambda/ninep"
 )
 
-type interval struct {
+type Interval struct {
 	start np.Toffset
 	end   np.Toffset
 }
 
-func (iv *interval) String() string {
+func MkInterval(start, end np.Toffset) *Interval {
+	return &Interval{start, end}
+}
+
+func (iv *Interval) String() string {
 	return fmt.Sprintf("[%d, %d)", iv.start, iv.end)
 }
 
 type Intervals struct {
 	sync.Mutex
-	ivs []*interval
+	ivs []*Interval
 }
 
 func (ivs *Intervals) String() string {
@@ -31,7 +35,7 @@ func (ivs *Intervals) String() string {
 
 func MkIntervals() *Intervals {
 	ivs := &Intervals{}
-	ivs.ivs = make([]*interval, 0)
+	ivs.ivs = make([]*Interval, 0)
 	return ivs
 }
 
@@ -53,7 +57,7 @@ func (ivs *Intervals) merge(i int) {
 	}
 }
 
-func (ivs *Intervals) Insert(n *interval) {
+func (ivs *Intervals) Insert(n *Interval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
@@ -83,7 +87,7 @@ func (ivs *Intervals) Insert(n *interval) {
 // Caller received [start, end), which may increase lower bound of
 // what the caller has seen sofar.
 func (ivs *Intervals) Prune(lb, start, end np.Toffset) np.Toffset {
-	ivs.Insert(&interval{start, end})
+	ivs.Insert(&Interval{start, end})
 	iv0 := ivs.ivs[0]
 	if iv0.start > lb { // out of order
 		return 0
@@ -95,7 +99,7 @@ func (ivs *Intervals) Prune(lb, start, end np.Toffset) np.Toffset {
 	return iv0.end - iv0.start
 }
 
-func (ivs *Intervals) Delete(ivd *interval) {
+func (ivs *Intervals) Delete(ivd *Interval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
@@ -119,7 +123,7 @@ func (ivs *Intervals) Delete(ivd *interval) {
 			i++
 		} else { // split iv
 			ivs.ivs = append(ivs.ivs[:i+1], ivs.ivs[i:]...)
-			ivs.ivs[i] = &interval{iv.start, ivd.start}
+			ivs.ivs[i] = &Interval{iv.start, ivd.start}
 			ivs.ivs[i+1].start = ivd.end
 			i += 2
 		}

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	db "ulambda/debug"
+	"ulambda/intervals"
 	np "ulambda/ninep"
 )
 
@@ -58,8 +59,8 @@ func (tb *trimBuf) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 type writeAtBuffer struct {
 	sync.Mutex
 	c    *sync.Cond
-	off  np.Toffset // bytes [0, off) are in
-	wrcv *windows   // windows received
+	off  np.Toffset           // bytes [0, off) are in
+	wrcv *intervals.Intervals // windows received
 	err  error
 	tb   *trimBuf
 }
@@ -68,7 +69,7 @@ func mkWriteAtBuffer(sz np.Tlength) *writeAtBuffer {
 	b := &writeAtBuffer{}
 	b.tb = &trimBuf{}
 	b.tb.b = make([]byte, sz)
-	b.wrcv = mkWindows()
+	b.wrcv = intervals.MkIntervals()
 	b.c = sync.NewCond(&b.Mutex)
 	return b
 }
@@ -78,8 +79,8 @@ func (b *writeAtBuffer) WriteAt(buf []byte, pos int64) (n int, err error) {
 	defer b.Unlock()
 	o := np.Toffset(pos)
 	b.tb.writeAt(buf, o)
-	m := b.wrcv.add(b.off, o, o+np.Toffset(len(buf)))
-	db.DPrintf("FSS3", "WriteAt o %v n %d cap %v %v\n", o, len(buf), cap(b.tb.b), b.wrcv.ws)
+	m := b.wrcv.Prune(b.off, o, o+np.Toffset(len(buf)))
+	db.DPrintf("FSS3", "WriteAt o %v n %d cap %v %v\n", o, len(buf), cap(b.tb.b), b.wrcv)
 
 	if m != 0 {
 		b.off += m
@@ -101,7 +102,7 @@ func (b *writeAtBuffer) read(off np.Toffset, cnt np.Tsize) ([]byte, *np.Err) {
 	b.Lock()
 	defer b.Unlock()
 
-	db.DPrintf("FSS3", "Read %d %d %v\n", off, cnt, b.wrcv.ws)
+	db.DPrintf("FSS3", "Read %d %d %v\n", off, cnt, b.wrcv)
 	sz := off + np.Toffset(cnt)
 	for b.err == nil && b.off < sz {
 		b.c.Wait()

@@ -25,6 +25,10 @@ type Intervals struct {
 	ivs []*interval
 }
 
+func (ivs *Intervals) String() string {
+	return fmt.Sprintf("%v", ivs.ivs)
+}
+
 func MkIntervals() *Intervals {
 	ivs := &Intervals{}
 	ivs.ivs = make([]*interval, 0)
@@ -74,6 +78,21 @@ func (ivs *Intervals) Insert(n *interval) {
 		return
 	}
 	ivs.ivs = append(ivs.ivs, n)
+}
+
+// Caller received [start, end), which may increase lower bound of
+// what the caller has seen sofar.
+func (ivs *Intervals) Prune(lb, start, end np.Toffset) np.Toffset {
+	ivs.Insert(&interval{start, end})
+	iv0 := ivs.ivs[0]
+	if iv0.start > lb { // out of order
+		return 0
+	}
+	if iv0.start < lb { // new data may have straggle off
+		iv0.start = lb
+	}
+	ivs.ivs = ivs.ivs[1:]
+	return iv0.end - iv0.start
 }
 
 func (ivs *Intervals) Delete(ivd *interval) {

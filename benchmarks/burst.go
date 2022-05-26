@@ -78,22 +78,22 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 
 	// Spawn a bunch of procs.
 	for i := 0; i < N; i++ {
-		db.DPrintf(db.ALWAYS, "Spawn %v", i)
+		db.DPrintf("BENCH", "Spawn %v", i)
 		if err := b.Spawn(ps[i]); err != nil {
 			db.DFatalf("Error Spawn: %v", err)
 		}
 	}
-	db.DPrintf(db.ALWAYS, "=============== Done spawning")
+	db.DPrintf(db.ALWAYS, "Done spawning")
 
 	// Wait for them all to start
 	for i := 0; i < N; i++ {
-		db.DPrintf(db.ALWAYS, "WaitStart %v", i)
+		db.DPrintf("BENCH", "WaitStart %v", i)
 		if err := b.WaitStart(ps[i].Pid); err != nil {
 			db.DFatalf("Error WaitStart: %v", err)
-			db.DPrintf(db.ALWAYS, "Done WaitStart %v", i)
+			db.DPrintf("BENCH", "Done WaitStart %v", i)
 		}
 	}
-	db.DPrintf(db.ALWAYS, "=============== Done Waitstarting")
+	db.DPrintf(db.ALWAYS, "Done Waiting")
 	// Stop the timer
 	end := time.Now()
 	nRPC = b.ReadSeqNo() - nRPC

@@ -30,7 +30,7 @@ done < $DIR/$SERVERS
 if [[ $is_leader == 1 ]]; then
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH" > $DIR/log/$LEADER
- sudo kubeadm init --apiserver-advertise-address=10.10.1.1 --pod-network-cidr=11.0.0.0/24
+ sudo kubeadm init --apiserver-advertise-address=10.10.1.1 --pod-network-cidr=11.0.0.0/16
  mkdir -p $HOME/.kube
  yes | sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
  sudo chown $(id -u):$(id -g) $HOME/.kube/config
@@ -43,6 +43,7 @@ ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH" > $DIR/log/$LEADER
  kubectl create serviceaccount --namespace kube-system tiller
  kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
  kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+ kubectl create secret generic regcred --from-file=.dockerconfigjson=/users/arielck/.docker/config.json  --type=kubernetes.io/dockerconfigjson
 ENDSSH
 
 echo "leader"

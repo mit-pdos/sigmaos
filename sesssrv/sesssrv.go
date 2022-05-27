@@ -271,12 +271,11 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 		return
 	}
 	db.DPrintf("SESSSRV", "srvfcall %v reply not in cache", fc)
-	// If this request has not been registered with the reply cache yet, register
-	// it.
-	sess.GetReplyTable().Register(fc)
-	db.DPrintf("RTABLE", "table: %v", sess.GetReplyTable())
-	ssrv.stats.StatInfo().Inc(fc.Msg.Type())
-	ssrv.fenceFcall(sess, fc)
+	if ok := sess.GetReplyTable().Register(fc); ok {
+		db.DPrintf("RTABLE", "table: %v", sess.GetReplyTable())
+		ssrv.stats.StatInfo().Inc(fc.Msg.Type())
+		ssrv.fenceFcall(sess, fc)
+	}
 }
 
 // Fence an fcall, if the call has a fence associated with it.  Note: don't fence blocking

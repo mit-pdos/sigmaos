@@ -17,6 +17,18 @@ func TestSimple(t *testing.T) {
 	assert.Equal(t, 1, len(ivs.ivs))
 }
 
+func TestContains(t *testing.T) {
+	ivs := MkIntervals()
+	ivs.Insert(&np.Tinterval{0, 10})
+	ivs.Insert(&np.Tinterval{90, 100})
+	assert.True(t, ivs.Contains(0))
+	assert.False(t, ivs.Contains(10))
+	assert.False(t, ivs.Contains(11))
+	assert.True(t, ivs.Contains(90))
+	assert.False(t, ivs.Contains(100))
+	assert.False(t, ivs.Contains(200))
+}
+
 func TestInsert(t *testing.T) {
 	ivs := MkIntervals()
 	ivs.Insert(&np.Tinterval{0, 10})

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"sync"
 
+	"ulambda/intervals"
 	np "ulambda/ninep"
 )
 
@@ -13,11 +14,15 @@ type ReplyTable struct {
 	sync.Mutex
 	closed  bool
 	entries map[np.Tseqno]*ReplyFuture
+	// pruned has seqnos pruned from entries; client has received
+	// the response for those.
+	pruned *intervals.Intervals
 }
 
 func MakeReplyTable() *ReplyTable {
 	rt := &ReplyTable{}
 	rt.entries = make(map[np.Tseqno]*ReplyFuture)
+	rt.pruned = intervals.MkIntervals()
 	return rt
 }
 
@@ -48,18 +53,23 @@ func (rt *ReplyTable) String() string {
 	return s
 }
 
-func (rt *ReplyTable) Register(request *np.Fcall) {
+func (rt *ReplyTable) Register(request *np.Fcall) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
 	if rt.closed {
-		return
+		return false
 	}
 	for s := request.Received.Start; s < request.Received.End; s++ {
 		delete(rt.entries, np.Tseqno(s))
 	}
-	// if seqno in interval tree, then drop
+	rt.pruned.Insert(&request.Received)
+	// if seqno in pruned, then drop
+	if request.Seqno != 0 && rt.pruned.Contains(np.Toffset(request.Seqno)) {
+		return false
+	}
 	rt.entries[request.Seqno] = MakeReplyFuture()
+	return true
 }
 
 // Expects that the request has already been registered.

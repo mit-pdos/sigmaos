@@ -119,6 +119,7 @@ func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
 
 // Reads directory incrementally
 func (fl *FsLib) RmDirLarge(dir string) error {
+	db.DPrintf(db.ALWAYS, "RmDL %v", dir)
 	fl.ProcessDir(dir, func(st *np.Stat) (bool, error) {
 		if st.Mode.IsDir() {
 			err := fl.RmDir(dir + "/" + st.Name)
@@ -126,7 +127,9 @@ func (fl *FsLib) RmDirLarge(dir string) error {
 				return true, fmt.Errorf("rmdir %v err %v\n", dir+"/"+st.Name, err)
 			}
 		} else {
+			db.DPrintf(db.ALWAYS, "RmDL remove %v", dir+"/"+st.Name)
 			err := fl.Remove(dir + "/" + st.Name)
+			db.DPrintf(db.ALWAYS, "RmDL remove %v res %v", dir+"/"+st.Name, err)
 			if err != nil {
 				return true, err
 			}

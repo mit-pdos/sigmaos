@@ -1332,3 +1332,17 @@ func TestDirRmPerf(t *testing.T) {
 	})
 	ts.Shutdown()
 }
+
+func TestRmDirLargePerf(t *testing.T) {
+	const N = 69
+	ts := test.MakeTstatePath(t, namedaddr, path)
+	dir := path + "d"
+	n := mkDir(t, ts.FsLib, dir, N)
+	assert.Equal(t, N, n)
+	measuredir("rm dir", func() int {
+		err := ts.RmDirLarge(dir)
+		assert.Nil(t, err)
+		return N
+	})
+	ts.Shutdown()
+}

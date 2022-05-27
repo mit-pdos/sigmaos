@@ -1319,7 +1319,7 @@ func TestDirReadPerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestDirRmPerf(t *testing.T) {
+func TestRmDirPerf(t *testing.T) {
 	const N = 90000
 	ts := test.MakeTstatePath(t, namedaddr, path)
 	dir := path + "d"

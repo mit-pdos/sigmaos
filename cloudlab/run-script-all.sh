@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ]
+if [ "$#" -lt 1 ]
 then
   echo "Usage: $0 script_path [-parallel]"
   exit 1

@@ -1320,7 +1320,7 @@ func TestDirReadPerf(t *testing.T) {
 }
 
 func TestDirRmPerf(t *testing.T) {
-	const N = 1000
+	const N = 90000
 	ts := test.MakeTstatePath(t, namedaddr, path)
 	dir := path + "d"
 	n := mkDir(t, ts.FsLib, dir, N)
@@ -1341,7 +1341,11 @@ func TestRmDirLargePerf(t *testing.T) {
 	assert.Equal(t, N, n)
 	measuredir("rm dir", func() int {
 		err := ts.RmDirLarge(dir)
-		assert.Nil(t, err)
+		if ok := assert.Nil(t, err); !ok {
+			sts, err := ts.GetDir(dir)
+			assert.Nil(t, err)
+			assert.Equal(t, 0, len(sts), "Remaining dir contents: %v", sts)
+		}
 		return N
 	})
 	ts.Shutdown()

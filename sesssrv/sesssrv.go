@@ -227,11 +227,11 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstate
 	db.DPrintf("SESSSRV", "sendReply req %v rep %v", request, fcall)
 
 	// Store the reply in the reply cache.
-	sess.GetReplyTable().Put(request, fcall)
+	ok := sess.GetReplyTable().Put(request, fcall)
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach), send reply.
-	if request.Seqno != 0 {
+	if request.Seqno != 0 && ok {
 		sess.SendConn(fcall)
 	}
 }

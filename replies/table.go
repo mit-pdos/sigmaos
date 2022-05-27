@@ -58,18 +58,23 @@ func (rt *ReplyTable) Register(request *np.Fcall) {
 	for s := request.Received.Start; s < request.Received.End; s++ {
 		delete(rt.entries, np.Tseqno(s))
 	}
+	// if seqno in interval tree, then drop
 	rt.entries[request.Seqno] = MakeReplyFuture()
 }
 
 // Expects that the request has already been registered.
-func (rt *ReplyTable) Put(request *np.Fcall, reply *np.Fcall) {
+func (rt *ReplyTable) Put(request *np.Fcall, reply *np.Fcall) bool {
 	rt.Lock()
 	defer rt.Unlock()
 
 	if rt.closed {
-		return
+		return false
 	}
-	rt.entries[request.Seqno].Complete(reply)
+	_, ok := rt.entries[request.Seqno]
+	if ok {
+		rt.entries[request.Seqno].Complete(reply)
+	}
+	return ok
 }
 
 func (rt *ReplyTable) Get(request *np.Fcall) (*ReplyFuture, bool) {

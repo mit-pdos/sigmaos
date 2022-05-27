@@ -339,7 +339,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 
 	ps.stats.Path(path)
 
-	db.DPrintf("PROTSRV", "%v: removeObj %v in %v\n", ctx.Uname(), path, path.Dir())
+	db.DPrintf("PROTSRV", "%v: removeObj %v in %v", ctx.Uname(), path, path.Dir())
 
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.

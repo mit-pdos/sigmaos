@@ -119,6 +119,9 @@ func (ivs *Intervals) Delete(ivd *np.Tinterval) {
 		} else if ivd.Start > iv.Start && ivd.End >= iv.End {
 			iv.End = ivd.Start
 			i++
+		} else if ivd.Start == iv.Start {
+			iv.Start = ivd.End
+			i++
 		} else { // split iv
 			ivs.ivs = append(ivs.ivs[:i+1], ivs.ivs[i:]...)
 			ivs.ivs[i] = np.MkInterval(iv.Start, ivd.Start)

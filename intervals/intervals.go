@@ -33,6 +33,10 @@ func (ivs *Intervals) First() *np.Tinterval {
 	return ivs.ivs[0]
 }
 
+func (ivs *Intervals) Len() int {
+	return len(ivs.ivs)
+}
+
 // maybe merge with wi with wi+1
 func (ivs *Intervals) merge(i int) {
 	iv := ivs.ivs[i]

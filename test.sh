@@ -44,10 +44,10 @@ do
   go test $1 ulambda/procclnt
 
   go test $1 ulambda/ux
-  go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run Perf
+  go test -v ulambda/fslib -path "name/ux/~ip/fslibtest/" -run ReadPerf
   
   go test $1 ulambda/s3
-  go test -v ulambda/fslib -path "name/s3/~ip/fslibtest/" -run Perf
+  go test -v ulambda/fslib -path "name/s3/~ip/fslibtest/" -run ReadPerf
   
   go test $1 ulambda/kernel
   go test $1 ulambda/leaderclnt

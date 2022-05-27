@@ -11,18 +11,9 @@ import (
 	np "ulambda/ninep"
 )
 
-type interval struct {
-	start np.Toffset
-	end   np.Toffset
-}
-
-func (iv *interval) String() string {
-	return fmt.Sprintf("[%d, %d)", iv.start, iv.end)
-}
-
 type Intervals struct {
 	sync.Mutex
-	ivs []*interval
+	ivs []*np.Tinterval
 }
 
 func (ivs *Intervals) String() string {
@@ -31,8 +22,19 @@ func (ivs *Intervals) String() string {
 
 func MkIntervals() *Intervals {
 	ivs := &Intervals{}
-	ivs.ivs = make([]*interval, 0)
+	ivs.ivs = make([]*np.Tinterval, 0)
 	return ivs
+}
+
+func (ivs *Intervals) First() *np.Tinterval {
+	if len(ivs.ivs) == 0 {
+		return nil
+	}
+	return ivs.ivs[0]
+}
+
+func (ivs *Intervals) Len() int {
+	return len(ivs.ivs)
 }
 
 // maybe merge with wi with wi+1
@@ -40,9 +42,9 @@ func (ivs *Intervals) merge(i int) {
 	iv := ivs.ivs[i]
 	if len(ivs.ivs) > i+1 { // is there a next iv
 		iv1 := ivs.ivs[i+1]
-		if iv.end >= iv1.start { // merge iv1 into iv
-			if iv1.end > iv.end {
-				iv.end = iv1.end
+		if iv.End >= iv1.Start { // merge iv1 into iv
+			if iv1.End > iv.End {
+				iv.End = iv1.End
 			}
 			if i+2 == len(ivs.ivs) { // trim i+1
 				ivs.ivs = ivs.ivs[:i+1]
@@ -53,25 +55,25 @@ func (ivs *Intervals) merge(i int) {
 	}
 }
 
-func (ivs *Intervals) Insert(n *interval) {
+func (ivs *Intervals) Insert(n *np.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
 	for i, iv := range ivs.ivs {
-		if n.start > iv.end { // n is beyond iv
+		if n.Start > iv.End { // n is beyond iv
 			continue
 		}
-		if n.end < iv.start { // n preceeds iv
+		if n.End < iv.Start { // n preceeds iv
 			ivs.ivs = append(ivs.ivs[:i+1], ivs.ivs[i:]...)
 			ivs.ivs[i] = n
 			return
 		}
 		// n overlaps iv
-		if n.start < iv.start {
-			iv.start = n.start
+		if n.Start < iv.Start {
+			iv.Start = n.Start
 		}
-		if n.end > iv.end {
-			iv.end = n.end
+		if n.End > iv.End {
+			iv.End = n.End
 			ivs.merge(i)
 			return
 		}
@@ -81,46 +83,65 @@ func (ivs *Intervals) Insert(n *interval) {
 }
 
 // Caller received [start, end), which may increase lower bound of
-// what the caller has seen sofar.
+// what the caller has seen sofar.  XXX split insert from prune
+// and use a better name for Prune
 func (ivs *Intervals) Prune(lb, start, end np.Toffset) np.Toffset {
-	ivs.Insert(&interval{start, end})
+	ivs.Insert(np.MkInterval(start, end))
 	iv0 := ivs.ivs[0]
-	if iv0.start > lb { // out of order
+	if iv0.Start > lb { // out of order
 		return 0
 	}
-	if iv0.start < lb { // new data may have straggle off
-		iv0.start = lb
+	if iv0.Start < lb { // new data may have straggle off
+		iv0.Start = lb
 	}
 	ivs.ivs = ivs.ivs[1:]
-	return iv0.end - iv0.start
+	return iv0.End - iv0.Start
 }
 
-func (ivs *Intervals) Delete(ivd *interval) {
+func (ivs *Intervals) Contains(e np.Toffset) bool {
+	ivs.Lock()
+	defer ivs.Unlock()
+
+	for _, iv := range ivs.ivs {
+		if e < iv.Start {
+			return false
+		}
+		if e >= iv.Start && e < iv.End {
+			return true
+		}
+	}
+	return false
+}
+
+func (ivs *Intervals) Delete(ivd *np.Tinterval) {
 	ivs.Lock()
 	defer ivs.Unlock()
 
 	for i := 0; i < len(ivs.ivs); {
 		iv := ivs.ivs[i]
-		if ivd.start > iv.end { // ivd is beyond iv
+		if ivd.Start > iv.End { // ivd is beyond iv
 			i++
 			continue
 		}
-		if ivd.end < iv.start { // ivd preceeds iv
+		if ivd.End < iv.Start { // ivd preceeds iv
 			return
 		}
 		// ivd overlaps iv
-		if ivd.start < iv.start {
-			ivd.start = iv.start
+		if ivd.Start < iv.Start {
+			ivd.Start = iv.Start
 		}
-		if ivd.start <= iv.start && ivd.end >= iv.end { // delete i?
+		if ivd.Start <= iv.Start && ivd.End >= iv.End { // delete i?
 			ivs.ivs = append(ivs.ivs[:i], ivs.ivs[i+1:]...)
-		} else if ivd.start > iv.start && ivd.end >= iv.end {
-			iv.end = ivd.start
+		} else if ivd.Start > iv.Start && ivd.End >= iv.End {
+			iv.End = ivd.Start
+			i++
+		} else if ivd.Start == iv.Start {
+			iv.Start = ivd.End
 			i++
 		} else { // split iv
 			ivs.ivs = append(ivs.ivs[:i+1], ivs.ivs[i:]...)
-			ivs.ivs[i] = &interval{iv.start, ivd.start}
-			ivs.ivs[i+1].start = ivd.end
+			ivs.ivs[i] = np.MkInterval(iv.Start, ivd.Start)
+			ivs.ivs[i+1].Start = ivd.End
 			i += 2
 		}
 	}

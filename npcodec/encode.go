@@ -163,6 +163,14 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(*v); err != nil {
 				return err
 			}
+		case np.Tinterval:
+			if err := e.encode(v.Start, v.End); err != nil {
+				return err
+			}
+		case *np.Tinterval:
+			if err := e.encode(*v); err != nil {
+				return err
+			}
 		case np.Tfenceid:
 			if err := e.encode(v.Path, v.ServerId); err != nil {
 				return err
@@ -188,7 +196,7 @@ func (e *encoder) encode(vs ...interface{}) error {
 				return err
 			}
 		case np.Fcall:
-			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Fence, v.Msg); err != nil {
+			if err := e.encode(v.Type, v.Tag, v.Session, v.Seqno, v.Received, v.Fence, v.Msg); err != nil {
 				return err
 			}
 		case *np.Fcall:
@@ -340,6 +348,10 @@ func (d *decoder) decode(vs ...interface{}) error {
 			if err := dec.decode(elements...); err != nil {
 				return err
 			}
+		case *np.Tinterval:
+			if err := d.decode(&v.Start, &v.End); err != nil {
+				return err
+			}
 		case *np.Tfenceid:
 			if err := d.decode(&v.Path, &v.ServerId); err != nil {
 				return err
@@ -365,7 +377,7 @@ func (d *decoder) decode(vs ...interface{}) error {
 
 			v.Msg = rv.Elem().Interface().(np.Tmsg)
 		case *np.Fcall:
-			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Fence); err != nil {
+			if err := d.decode(&v.Type, &v.Tag, &v.Session, &v.Seqno, &v.Received, &v.Fence); err != nil {
 				return err
 			}
 			msg, err := newMsg(v.Type)

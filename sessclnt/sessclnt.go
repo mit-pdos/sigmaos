@@ -79,7 +79,10 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 	// if a previous version of this request was sent and received, in which case
 	// rpc == nil and ok == false.
 	if ok {
-		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v\n", c.sid, rpc.Req, reply, c.addrs)
+		o := np.Toffset(reply.Seqno)
+		c.ivs.Insert(np.MkInterval(o, o+1))
+		c.ivs.Delete(&reply.Received)
+		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
 	}
 	// If the server closed the session (this is a sessclosed error or an
@@ -130,8 +133,7 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 	if c.closed {
 		return nil, np.MkErr(np.TErrUnreachable, c.addrs)
 	}
-
-	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, f))
+	rpc := netclnt.MakeRpc(c.addrs, np.MakeFcall(req, c.sid, c.seqno, c.ivs.First(), f))
 	// Enqueue a request
 	c.queue.Enqueue(rpc)
 	return rpc, nil

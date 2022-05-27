@@ -81,6 +81,7 @@ func TestHash(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	ts := test.MakeTstateAll(t)
+	job = readConfig()
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
 	assert.Nil(t, err)
 	for _, b := range bins {

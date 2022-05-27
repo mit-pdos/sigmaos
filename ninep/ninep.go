@@ -416,6 +416,19 @@ type FcallWireCompat struct {
 	Msg  Tmsg
 }
 
+type Tinterval struct {
+	Start Toffset
+	End   Toffset
+}
+
+func MkInterval(start, end Toffset) *Tinterval {
+	return &Tinterval{start, end}
+}
+
+func (iv Tinterval) String() string {
+	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
+}
+
 func (fcallWC *FcallWireCompat) GetType() Tfcall {
 	return fcallWC.Type
 }
@@ -436,31 +449,36 @@ func (fcallWC *FcallWireCompat) ToInternal() *Fcall {
 }
 
 type Fcall struct {
-	Type    Tfcall
-	Tag     Ttag
-	Session Tsession
-	Seqno   Tseqno
-	Fence   Tfence
-	Msg     Tmsg
+	Type     Tfcall
+	Tag      Ttag
+	Session  Tsession
+	Seqno    Tseqno
+	Received Tinterval
+	Fence    Tfence
+	Msg      Tmsg
 }
 
-func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, f Tfence) *Fcall {
+func MakeFcall(msg Tmsg, sess Tsession, seqno *Tseqno, rcv *Tinterval, f Tfence) *Fcall {
+	if rcv == nil {
+		rcv = &Tinterval{}
+	}
 	if seqno == nil {
-		return &Fcall{msg.Type(), 0, sess, 0, f, msg}
+		return &Fcall{msg.Type(), 0, sess, 0, *rcv, f, msg}
 	} else {
-		return &Fcall{msg.Type(), 0, sess, seqno.Next(), f, msg}
+		return &Fcall{msg.Type(), 0, sess, seqno.Next(), *rcv, f, msg}
 	}
 }
 
 func MakeFcallReply(req *Fcall, reply Tmsg) *Fcall {
-	fcall := MakeFcall(reply, req.Session, nil, NoFence)
+	fcall := MakeFcall(reply, req.Session, nil, nil, NoFence)
 	fcall.Seqno = req.Seqno
+	fcall.Received = req.Received
 	fcall.Tag = req.Tag
 	return fcall
 }
 
 func (fc *Fcall) String() string {
-	return fmt.Sprintf("%v t %v s %v seq %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Msg, fc.Fence)
+	return fmt.Sprintf("%v t %v s %v seq %v recv %v msg %v f %v", fc.Msg.Type(), fc.Tag, fc.Session, fc.Seqno, fc.Received, fc.Msg, fc.Fence)
 }
 
 func (fcall *Fcall) GetType() Tfcall {

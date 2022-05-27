@@ -9,6 +9,14 @@ import (
 	np "ulambda/ninep"
 )
 
+func TestSimple(t *testing.T) {
+	ivs := MkIntervals()
+	ivs.Insert(&np.Tinterval{1, 2})
+	ivs.Insert(&np.Tinterval{2, 3})
+	ivs.Delete(&np.Tinterval{1, 2})
+	assert.Equal(t, 1, len(ivs.ivs))
+}
+
 func TestInsert(t *testing.T) {
 	ivs := MkIntervals()
 	ivs.Insert(&np.Tinterval{0, 10})

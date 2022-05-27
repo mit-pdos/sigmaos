@@ -274,6 +274,7 @@ func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
 	// If this request has not been registered with the reply cache yet, register
 	// it.
 	sess.GetReplyTable().Register(fc)
+	db.DPrintf("RTABLE", "table: %v", sess.GetReplyTable())
 	ssrv.stats.StatInfo().Inc(fc.Msg.Type())
 	ssrv.fenceFcall(sess, fc)
 }

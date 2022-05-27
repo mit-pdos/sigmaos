@@ -72,8 +72,6 @@ func (rt *ReplyTable) Put(request *np.Fcall, reply *np.Fcall) {
 	rt.entries[request.Seqno].Complete(reply)
 }
 
-// XXX Will need to handle entries which are "too old" eventually once we
-// start evicting entries from the cache.
 func (rt *ReplyTable) Get(request *np.Fcall) (*ReplyFuture, bool) {
 	rt.Lock()
 	defer rt.Unlock()

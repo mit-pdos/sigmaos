@@ -127,7 +127,7 @@ func (pd *Procd) Done() {
 	pd.perf.Teardown()
 	pd.evictProcsL()
 	close(pd.spawnChan)
-	close(pd.stealChan)
+	pd.stealChan
 }
 
 func (pd *Procd) readDone() bool {

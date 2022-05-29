@@ -16,45 +16,70 @@ import (
 )
 
 const (
-	MRDIR   = "name/mr"
-	MDIR    = MRDIR + "/m"
-	RDIR    = MRDIR + "/r"
-	RIN     = MRDIR + "-rin/"
-	ROUT    = MRDIR + "/" + "mr-out-"
-	MRSTATS = MRDIR + "/stats.txt"
-	TIP     = "-tip/"
-	DONE    = "-done/"
-	NEXT    = "-next/"
-	NCOORD  = 3
+	MR       = "/mr/"
+	MRDIRTOP = "name/" + MR
 
-	MLOCALDIR    = "/mr/"
-	MLOCALSRV    = np.UX + "/~ip" // must end without /
-	MLOCALMR     = MLOCALSRV + MLOCALDIR
-	MLOCALPREFIX = MLOCALMR + "m-"
+	TIP  = "-tip/"
+	DONE = "-done/"
+	NEXT = "-next/"
+
+	NCOORD = 3
+
+	MLOCALSRV = np.UX + "/~ip" // must end without /
+	MLOCALDIR = MLOCALSRV + MR
 
 	RESTART = "restart" // restart message from reducer
 )
+
+func JobDir(job string) string {
+	return MRDIRTOP + "/" + job
+}
+
+func MRstats(job string) string {
+	return JobDir(job) + "/stats.txt"
+}
+
+func MapTask(job string) string {
+	return JobDir(job) + "/m"
+}
+
+func ReduceTask(job string) string {
+	return JobDir(job) + "/r"
+}
+
+func ReduceIn(job string) string {
+	return JobDir(job) + "-rin/"
+}
+
+func ReduceOut(job string) string {
+	return JobDir(job) + "/mr-out-"
+}
 
 func BinName(i int) string {
 	return fmt.Sprintf("bin%04d", i)
 }
 
-func Moutdir(name string) string {
-	return MLOCALPREFIX + name
+func LocalOut(job string) string {
+	return MLOCALDIR + "/" + job + "/"
 }
 
-func mshardfile(name string, r int) string {
-	return Moutdir(name) + "/r-" + strconv.Itoa(r)
+func Moutdir(job, name string) string {
+	return LocalOut(job) + "m-" + name
 }
 
-func shardtarget(server, name string, r int) string {
-	return np.UX + "/" + server + MLOCALDIR + "m-" + name + "/r-" + strconv.Itoa(r) + "/"
+func mshardfile(job, name string, r int) string {
+	return Moutdir(job, name) + "/r-" + strconv.Itoa(r)
 }
 
-func symname(r string, name string) string {
-	return RIN + "/" + r + "/m-" + name
+func shardtarget(job, server, name string, r int) string {
+	return np.UX + "/" + server + MR + job + "/m-" + name + "/r-" + strconv.Itoa(r) + "/"
 }
 
+func symname(job, r, name string) string {
+	return ReduceIn(job) + "/" + r + "/m-" + name
+}
+
+// XXX update
 //
 // mr_test puts names of input files in MDIR and launches a
 // coordinator proc to run the MR job.  The actual input files live in
@@ -81,9 +106,9 @@ func symname(r string, name string) string {
 // RDIR+DONE, to record that this reducer task has completed.
 //
 
-func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
-	for _, n := range []string{MRDIR, MDIR, RDIR, RIN, MDIR + TIP, RDIR + TIP, MDIR + DONE, RDIR + DONE, MDIR + NEXT, RDIR + NEXT} {
-		fsl.RmDir(n)
+func InitCoordFS(fsl *fslib.FsLib, job string, nreducetask int) {
+	fsl.MkDir(MRDIRTOP, 0777)
+	for _, n := range []string{JobDir(job), MapTask(job), ReduceTask(job), ReduceIn(job), MapTask(job) + TIP, ReduceTask(job) + TIP, MapTask(job) + DONE, ReduceTask(job) + DONE, MapTask(job) + NEXT, ReduceTask(job) + NEXT} {
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
@@ -91,32 +116,26 @@ func InitCoordFS(fsl *fslib.FsLib, nreducetask int) {
 
 	// Make task and input directories for reduce tasks
 	for r := 0; r < nreducetask; r++ {
-		n := RDIR + "/" + strconv.Itoa(r)
+		n := ReduceTask(job) + "/" + strconv.Itoa(r)
 		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte{}); err != nil {
 			db.DFatalf("Putfile %v err %v\n", n, err)
 		}
-		n = RIN + "/" + strconv.Itoa(r)
+		n = ReduceIn(job) + "/" + strconv.Itoa(r)
 		if err := fsl.MkDir(n, 0777); err != nil {
 			db.DFatalf("Mkdir %v err %v\n", n, err)
 		}
 	}
 
-	// Remove intermediate dir. XXX If we run with many machine
-	// this must happen on each ux.
-	fsl.RmDir(MLOCALMR)
-	if err := fsl.MkDir(MLOCALMR, 0777); err != nil {
-		db.DFatalf("Mkdir %v err %v\n", MLOCALMR, err)
-	}
-
 	// Create empty stats file
-	if _, err := fsl.PutFile(MRSTATS, 0777, np.OWRITE, []byte{}); err != nil {
-		db.DFatalf("Putfile %v err %v\n", MRSTATS, err)
+	if _, err := fsl.PutFile(MRstats(job), 0777, np.OWRITE, []byte{}); err != nil {
+		db.DFatalf("Putfile %v err %v\n", MRstats(job), err)
 	}
 }
 
 type Coord struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	job         string
 	nmaptask    int
 	nreducetask int
 	crash       int
@@ -127,46 +146,47 @@ type Coord struct {
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) != 6 {
+	if len(args) != 7 {
 		return nil, errors.New("MakeCoord: wrong number of arguments")
 	}
-	w := &Coord{}
-	w.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
+	c := &Coord{}
+	c.FsLib = fslib.MakeFsLib("coord-" + proc.GetPid().String())
 
-	m, err := strconv.Atoi(args[0])
+	c.job = args[0]
+	m, err := strconv.Atoi(args[1])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[0])
+		return nil, fmt.Errorf("MakeCoord: nmaptask %v isn't int", args[1])
 	}
-	n, err := strconv.Atoi(args[1])
+	n, err := strconv.Atoi(args[2])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: nreducetask %v isn't int", args[1])
+		return nil, fmt.Errorf("MakeCoord: nreducetask %v isn't int", args[2])
 	}
-	w.nmaptask = m
-	w.nreducetask = n
-	w.mapperbin = args[2]
-	w.reducerbin = args[3]
+	c.nmaptask = m
+	c.nreducetask = n
+	c.mapperbin = args[3]
+	c.reducerbin = args[4]
 
-	c, err := strconv.Atoi(args[4])
+	ctime, err := strconv.Atoi(args[5])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[4])
+		return nil, fmt.Errorf("MakeCoord: crash %v isn't int", args[5])
 	}
-	w.crash = c
+	c.crash = ctime
 
-	nc, err := strconv.Atoi(args[5])
+	nc, err := strconv.Atoi(args[6])
 	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: ncore %v isn't int", args[5])
+		return nil, fmt.Errorf("MakeCoord: ncore %v isn't int", args[6])
 	}
-	w.ncore = nc
+	c.ncore = nc
 
-	w.ProcClnt = procclnt.MakeProcClnt(w.FsLib)
+	c.ProcClnt = procclnt.MakeProcClnt(c.FsLib)
 
-	w.Started()
+	c.Started()
 
-	w.electclnt = electclnt.MakeElectClnt(w.FsLib, MRDIR+"/coord-leader", 0)
+	c.electclnt = electclnt.MakeElectClnt(c.FsLib, JobDir(c.job)+"/coord-leader", 0)
 
-	crash.Crasher(w.FsLib)
+	crash.Crasher(c.FsLib)
 
-	return w, nil
+	return c, nil
 }
 
 func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
@@ -188,13 +208,13 @@ func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 }
 
 func (c *Coord) mapper(task string) (*proc.Status, error) {
-	input := MDIR + TIP + task
-	return c.task(c.mapperbin, []string{strconv.Itoa(c.nreducetask), input})
+	input := MapTask(c.job) + TIP + task
+	return c.task(c.mapperbin, []string{c.job, strconv.Itoa(c.nreducetask), input})
 }
 
 func (c *Coord) reducer(task string) (*proc.Status, error) {
-	in := RIN + "/" + task
-	out := ROUT + task
+	in := ReduceIn(c.job) + "/" + task
+	out := ReduceOut(c.job) + task
 	return c.task(c.reducerbin, []string{in, out, strconv.Itoa(c.nmaptask)})
 }
 
@@ -313,16 +333,16 @@ func (c *Coord) restart(files []string, task string) {
 		// Remove symfile so that when coordinator restarts
 		// reducers, they wait for the mappers to make new
 		// symfiles.
-		sym := symname(task, f)
+		sym := symname(c.job, task, f)
 		if err := c.Remove(sym); err != nil {
 			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
 		}
 		// Record that we have to rerun mapper f.  Mapper may
 		// still be in progress, is done, or already has been
 		// moved to d.
-		s := MDIR + DONE + "/" + f
-		s1 := MDIR + TIP + "/" + f
-		d := MDIR + NEXT + "/" + f
+		s := MapTask(c.job) + DONE + "/" + f
+		s1 := MapTask(c.job) + TIP + "/" + f
+		d := MapTask(c.job) + NEXT + "/" + f
 		if err := c.Rename(s1, d); err != nil {
 			db.DPrintf(db.ALWAYS, "rename next  %v to %v err %v\n", s, d, err)
 		}
@@ -331,7 +351,7 @@ func (c *Coord) restart(files []string, task string) {
 		}
 	}
 	// Record that we have to rerun reducer t
-	n := RDIR + NEXT + "/" + task
+	n := ReduceTask(c.job) + NEXT + "/" + task
 	if _, err := c.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 		db.DPrintf(db.ALWAYS, "PutFile %v err %v\n", n, err)
 	}
@@ -339,13 +359,13 @@ func (c *Coord) restart(files []string, task string) {
 
 // Mark all restart tasks as runnable
 func (c *Coord) doRestart() bool {
-	n, err := c.MoveFiles(MDIR+NEXT, MDIR)
+	n, err := c.MoveFiles(MapTask(c.job)+NEXT, MapTask(c.job))
 	if err != nil {
-		db.DFatalf("MoveFiles %v err %v\n", MDIR, err)
+		db.DFatalf("MoveFiles %v err %v\n", MapTask(c.job), err)
 	}
-	m, err := c.MoveFiles(RDIR+NEXT, RDIR)
+	m, err := c.MoveFiles(ReduceTask(c.job)+NEXT, ReduceTask(c.job))
 	if err != nil {
-		db.DFatalf("MoveFiles %v err %v\n", RDIR, err)
+		db.DFatalf("MoveFiles %v err %v\n", ReduceTask(c.job), err)
 	}
 	return n+m > 0
 }
@@ -362,16 +382,16 @@ func (c *Coord) recover(dir string) {
 func (c *Coord) Round() {
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
-		m += c.startTasks(ch, MDIR, c.mapper)
-		m += c.startTasks(ch, RDIR, c.reducer)
+		m += c.startTasks(ch, MapTask(c.job), c.mapper)
+		m += c.startTasks(ch, ReduceTask(c.job), c.reducer)
 		if m <= 0 {
 			break
 		}
 		res := <-ch
 		db.DPrintf("MR", "%v ok %v ms %d msg %v res %v\n", res.t, res.ok, res.ms, res.msg, res.res)
 		if res.ok {
-			if err := c.AppendFileJson(MRSTATS, res.res); err != nil {
-				db.DFatalf("Appendfile %v err %v\n", MRSTATS, err)
+			if err := c.AppendFileJson(MRstats(c.job), res.res); err != nil {
+				db.DFatalf("Appendfile %v err %v\n", MRstats(c.job), err)
 			}
 			db.DPrintf(db.ALWAYS, "tasks left %d/%d\n", m-1, c.nmaptask+c.nreducetask)
 		}
@@ -384,10 +404,10 @@ func (c *Coord) Work() {
 	// so need to set a fence.
 	c.electclnt.AcquireLeadership(nil)
 
-	db.DPrintf(db.ALWAYS, "leader nmap %v nreduce %v\n", c.nmaptask, c.nreducetask)
+	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
-	c.recover(MDIR)
-	c.recover(RDIR)
+	c.recover(MapTask(c.job))
+	c.recover(ReduceTask(c.job))
 	c.doRestart()
 
 	for n := 0; ; {
@@ -399,8 +419,8 @@ func (c *Coord) Work() {
 	}
 
 	// double check we are done
-	n := c.doneTasks(MDIR + DONE)
-	n += c.doneTasks(RDIR + DONE)
+	n := c.doneTasks(MapTask(c.job) + DONE)
+	n += c.doneTasks(ReduceTask(c.job) + DONE)
 	if n < c.nmaptask+c.nreducetask {
 		db.DFatalf("job isn't done %v", n)
 	}

@@ -15,6 +15,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 )
 
 /*
@@ -53,15 +54,14 @@ func MakeRealmBalanceBenchmark(fsl1 *fslib.FsLib, namedAddr1 []string, fsl2 *fsl
 	return r
 }
 
-func setupMR(fsl *fslib.FsLib) int {
+func setupMR(fsl *fslib.FsLib, job string) int {
 	files, err := ioutil.ReadDir("./input/")
 	if err != nil {
 		db.DFatalf("Readdir %v\n", err)
 	}
+	// XXX out of date
 	for _, f := range files {
-		// remove mapper output directory from previous run
-		fsl.RmDir(mr.Moutdir(f.Name()))
-		n := mr.MDIR + "/" + f.Name()
+		n := mr.MapTask(job) + "/" + f.Name()
 		if _, err := fsl.PutFile(n, 0777, np.OWRITE, []byte(n)); err != nil {
 			db.DFatalf("PutFile %v err %v\n", n, err)
 		}
@@ -73,12 +73,13 @@ func StartMR(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *groupmgr.GroupMgr {
 	const NReduce = 2
 	crashtask := 0
 	crashcoord := 0
+	job := rand.String(16)
 
 	// Set up the fs & job
-	mr.InitCoordFS(fsl, NReduce)
-	nmap := setupMR(fsl)
+	mr.InitCoordFS(fsl, job, NReduce)
+	nmap := setupMR(fsl, job)
 
-	return groupmgr.Start(fsl, pclnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	return groupmgr.Start(fsl, pclnt, mr.NCOORD, "bin/user/mr-coord", []string{job, strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 }
 
 func balancerOp(fsl *fslib.FsLib, opcode, mfs string) error {

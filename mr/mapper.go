@@ -35,6 +35,7 @@ type Mapper struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	mapf        MapT
+	job         string
 	nreducetask int
 	input       string
 	bin         string
@@ -43,17 +44,18 @@ type Mapper struct {
 }
 
 func makeMapper(mapf MapT, args []string) (*Mapper, error) {
-	if len(args) != 2 {
+	if len(args) != 3 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
 	m := &Mapper{}
 	m.mapf = mapf
-	n, err := strconv.Atoi(args[0])
+	m.job = args[0]
+	n, err := strconv.Atoi(args[1])
 	if err != nil {
-		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[0])
+		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[1])
 	}
 	m.nreducetask = n
-	m.input = args[1]
+	m.input = args[2]
 	m.bin = path.Base(m.input)
 	m.rand = rand.String(16)
 	m.wrts = make([]*wrt, m.nreducetask)
@@ -68,14 +70,17 @@ func makeMapper(mapf MapT, args []string) (*Mapper, error) {
 }
 
 func (m *Mapper) initMapper() error {
+
 	// Make a directory for holding the output files of a map task.  Ignore
 	// error in case it already exits.  XXX who cleans up?
-	m.MkDir(Moutdir(m.bin), 0777)
+	m.MkDir(MLOCALDIR, 0777)
+	m.MkDir(LocalOut(m.job), 0777)
+	m.MkDir(Moutdir(m.job, m.bin), 0777)
 
 	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
-		oname := mshardfile(m.bin, r) + m.rand
+		oname := mshardfile(m.job, m.bin, r) + m.rand
 		w, err := m.CreateWriter(oname, 0777, np.OWRITE)
 		if err != nil {
 			m.closewrts()
@@ -122,13 +127,13 @@ func (m *Mapper) informReducer() error {
 		return fmt.Errorf("%v: stat %v err %v\n", proc.GetName(), MLOCALSRV, err)
 	}
 	for r := 0; r < m.nreducetask; r++ {
-		fn := mshardfile(m.bin, r)
+		fn := mshardfile(m.job, m.bin, r)
 		err = m.Rename(fn+m.rand, fn)
 		if err != nil {
 			return fmt.Errorf("%v: rename %v -> %v err %v\n", proc.GetName(), fn+m.rand, fn, err)
 		}
 
-		name := symname(strconv.Itoa(r), m.bin)
+		name := symname(m.job, strconv.Itoa(r), m.bin)
 
 		// Remove name in case an earlier mapper created the
 		// symlink.  A reducer may have opened and is reading
@@ -140,9 +145,9 @@ func (m *Mapper) informReducer() error {
 		// the symlink if we want to avoid the failing case.
 		m.Remove(name)
 
-		target := shardtarget(st.Name, m.bin, r)
+		target := shardtarget(m.job, st.Name, m.bin, r)
 
-		db.DPrintf("MR0", "target %s name %s\n", name, target)
+		db.DPrintf("MR", "name %s target %s\n", name, target)
 
 		err = m.Symlink([]byte(target), name, 0777)
 		if err != nil {

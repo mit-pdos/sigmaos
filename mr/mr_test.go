@@ -25,6 +25,7 @@ import (
 	"ulambda/mr"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	rd "ulambda/rand"
 	"ulambda/realm"
 	"ulambda/test"
 )
@@ -92,6 +93,7 @@ func TestSplits(t *testing.T) {
 }
 
 type Tstate struct {
+	job string
 	*test.Tstate
 	nreducetask int
 }
@@ -106,6 +108,7 @@ func makeTstate(t *testing.T) *Tstate {
 	}
 	job = readConfig()
 	ts.nreducetask = job.Nreduce
+	ts.job = rd.String(4)
 
 	// If we don't remove all temp files (and there are many left over from
 	// previous runs of the tests), ux may be very slow and cause the test to
@@ -113,7 +116,7 @@ func makeTstate(t *testing.T) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll("/tmp/ulambda/mr")
 
-	mr.InitCoordFS(ts.System.FsLib, ts.nreducetask)
+	mr.InitCoordFS(ts.System.FsLib, ts.job, ts.nreducetask)
 
 	os.Remove(OUTPUT)
 
@@ -147,9 +150,7 @@ func (ts *Tstate) prepareJob() int {
 	assert.Nil(ts.T, err)
 	assert.NotEqual(ts.T, 0, len(bins))
 	for i, b := range bins {
-		// remove mapper output directory from previous run
-		ts.RmDir(mr.Moutdir(mr.BinName(i)))
-		n := mr.MDIR + "/" + mr.BinName(i)
+		n := mr.MapTask(ts.job) + "/" + mr.BinName(i)
 		_, err = ts.PutFile(n, 0777, np.OWRITE, []byte{})
 		assert.Nil(ts.T, err, nil)
 		for _, s := range b {
@@ -168,7 +169,7 @@ func (ts *Tstate) checkJob() {
 	// XXX run as a proc?
 	for i := 0; i < ts.nreducetask; i++ {
 		r := strconv.Itoa(i)
-		data, err := ts.GetFile(mr.ROUT + r)
+		data, err := ts.GetFile(mr.ReduceOut(ts.job) + r)
 		assert.Nil(ts.T, err, "GetFile %v err %v", r, err)
 		_, err = file.Write(data)
 		assert.Nil(ts.T, err, "Write err %v", err)
@@ -180,7 +181,7 @@ func (ts *Tstate) checkJob() {
 }
 
 func (ts *Tstate) stats() {
-	rdr, err := ts.OpenReader(mr.MRSTATS)
+	rdr, err := ts.OpenReader(mr.MRstats(ts.job))
 	assert.Nil(ts.T, err)
 	dec := json.NewDecoder(rdr)
 	fmt.Println("=== STATS:")
@@ -242,7 +243,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "bin/user/mr-m-" + job.App, "bin/user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Ncore)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{ts.job, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "bin/user/mr-m-" + job.App, "bin/user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Ncore)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

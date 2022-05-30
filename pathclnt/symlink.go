@@ -42,6 +42,13 @@ func IsRemoteTarget(target string) bool {
 	}
 }
 
+// Assume IsRemoteTarget(target) is true
+func TargetIp(target string) string {
+	targets := strings.Split(target, "\n")
+	parts := strings.Split(targets[0], ":")
+	return parts[0]
+}
+
 // Remote targets separated by '\n'
 func IsReplicated(target string) bool {
 	return IsRemoteTarget(target) && strings.Contains(target, "\n")

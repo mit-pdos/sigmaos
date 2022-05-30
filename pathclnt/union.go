@@ -3,6 +3,7 @@ package pathclnt
 import (
 	"errors"
 	"io"
+	"log"
 
 	db "ulambda/debug"
 	"ulambda/fidclnt"
@@ -20,9 +21,8 @@ func (pathc *PathClnt) unionMatch(q, name string) bool {
 		if err != nil {
 			return false
 		}
-		// XXX need to match on ip, but for now at least
-		// check that name is a remote target
-		if IsRemoteTarget(name) && ip == ip {
+		log.Printf("name %v targetip %v ip %v\n", name, TargetIp(name), ip)
+		if ok := IsRemoteTarget(name); ok && TargetIp(name) == ip {
 			return true
 		}
 		return false

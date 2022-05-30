@@ -1,5 +1,5 @@
 app: "grep"
 nreduce: 1
 binsz: 536870912
-input: "name/s3/~ip/wiki"
+input: "name/s3/~ip/wiki-2G"
 ncore: 1

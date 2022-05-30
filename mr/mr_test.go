@@ -85,9 +85,15 @@ func TestSplits(t *testing.T) {
 	job = readConfig()
 	bins, err := mr.MkBins(ts.FsLib, job.Input, np.Tlength(job.Binsz))
 	assert.Nil(t, err)
+	sum := np.Tlength(0)
 	for _, b := range bins {
-		log.Printf("bin: %v\n", b)
+		n := np.Tlength(0)
+		for _, s := range b {
+			n += s.Length
+		}
+		sum += n
 	}
+	log.Printf("len %d %v sum %v\n", len(bins), bins, humanize.Bytes(uint64(sum)))
 	assert.NotEqual(t, 0, len(bins))
 	ts.Shutdown()
 }

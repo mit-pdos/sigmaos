@@ -1,9 +1,11 @@
 package mr
 
 import (
+	"fmt"
 	"hash/fnv"
 	"io"
 
+	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
 
 	"ulambda/fslib"
@@ -51,7 +53,23 @@ type Split struct {
 	Length np.Tlength `json:"Length"`
 }
 
+func (s Split) String() string {
+	return fmt.Sprintf("{f %s o %v l %v}", s.File, humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
+}
+
 type Bin []Split
+
+func (b Bin) String() string {
+	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
+	for i, s := range b[1:] {
+		if s.File == b[i].File {
+			r += fmt.Sprintf("_ o %v l %v,", humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
+		} else {
+			r += fmt.Sprintf("[ %v, ", s)
+		}
+	}
+	return r + "]\n"
+}
 
 // Result of mapper or reducer
 type Result struct {
@@ -69,7 +87,7 @@ func mkResult(data interface{}) *Result {
 }
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
-// until the bin is file.
+// until the bin is full
 func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := np.Tlength(0)
@@ -100,6 +118,8 @@ func MkBins(fsl *fslib.FsLib, dir string, maxbinsz np.Tlength) ([]Bin, error) {
 			i += n
 		}
 	}
-	bins = append(bins, bin)
+	if binsz > 0 {
+		bins = append(bins, bin)
+	}
 	return bins, nil
 }

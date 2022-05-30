@@ -190,7 +190,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 			return 0, err
 		}
 
-		if np.Tlength(n) > s.Length {
+		if np.Tlength(n) >= s.Length {
 			break
 		}
 	}

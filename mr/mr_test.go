@@ -210,8 +210,8 @@ func (ts *Tstate) stats() {
 			totRTmp += r.In
 		}
 	}
-	fmt.Printf("=== totIn %s totOut %s tmpOut %s tmpIn %s\n",
-		humanize.Bytes(uint64(totIn)),
+	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
+		humanize.Bytes(uint64(totIn)), totIn,
 		humanize.Bytes(uint64(totOut)),
 		humanize.Bytes(uint64(totWTmp)),
 		humanize.Bytes(uint64(totRTmp)),

@@ -45,7 +45,7 @@ func main() {
 	n := 1
 	for scanner.Scan() {
 		l := scanner.Text()
-		grep1(n, l)
+		grep(n, l)
 		n += 1
 	}
 }

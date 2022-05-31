@@ -37,6 +37,7 @@ type Mapper struct {
 	mapf        MapT
 	job         string
 	nreducetask int
+	linesz      int
 	input       string
 	bin         string
 	wrts        []*wrt
@@ -44,18 +45,27 @@ type Mapper struct {
 }
 
 func makeMapper(mapf MapT, args []string) (*Mapper, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return nil, fmt.Errorf("MakeMapper: too few arguments %v", args)
 	}
 	m := &Mapper{}
 	m.mapf = mapf
 	m.job = args[0]
+
 	n, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("MakeMapper: nreducetask %v isn't int", args[1])
 	}
 	m.nreducetask = n
+
 	m.input = args[2]
+
+	n, err = strconv.Atoi(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("MakeMapper: linesz %v isn't int", args[1])
+	}
+	m.linesz = n
+
 	m.bin = path.Base(m.input)
 	m.rand = rand.String(16)
 	m.wrts = make([]*wrt, m.nreducetask)
@@ -175,6 +185,8 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 
 	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
 	scanner := bufio.NewScanner(brdr)
+	buf := make([]byte, 0, m.linesz)
+	scanner.Buffer(buf, cap(buf))
 
 	// advance scanner to new line after start, if start != 0
 	n := 0

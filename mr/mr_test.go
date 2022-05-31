@@ -51,6 +51,7 @@ type Job struct {
 	Nreduce int    `yalm:"nreduce"`
 	Binsz   int    `yalm:"binsz"`
 	Input   string `yalm:"input"`
+	Linesz  int    `yalm:"linesz"`
 	Ncore   int    `yalm:"ncore"`
 }
 
@@ -249,7 +250,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 
 	nmap := ts.prepareJob()
 
-	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{ts.job, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "bin/user/mr-m-" + job.App, "bin/user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Ncore)}, mr.NCOORD, crashcoord, 0, 0)
+	cm := groupmgr.Start(ts.FsLib, ts.ProcClnt, mr.NCOORD, "bin/user/mr-coord", []string{ts.job, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "bin/user/mr-m-" + job.App, "bin/user/mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Ncore), strconv.Itoa(job.Linesz)}, mr.NCOORD, crashcoord, 0, 0)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}

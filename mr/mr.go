@@ -61,14 +61,17 @@ type Bin []Split
 
 func (b Bin) String() string {
 	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
+	sum := np.Tlength(b[0].Length)
 	for i, s := range b[1:] {
 		if s.File == b[i].File {
 			r += fmt.Sprintf("_ o %v l %v,", humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
 		} else {
 			r += fmt.Sprintf("[ %v, ", s)
 		}
+		sum += s.Length
 	}
-	return r + "]\n"
+	r += fmt.Sprintf("] (sum %v)\n", humanize.Bytes(uint64(sum)))
+	return r
 }
 
 // Result of mapper or reducer

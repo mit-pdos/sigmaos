@@ -189,7 +189,6 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		if err := m.mapf(m.input, strings.NewReader(l), m.emit); err != nil {
 			return 0, err
 		}
-
 		if np.Tlength(n) >= s.Length {
 			break
 		}
@@ -216,7 +215,11 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 		db.DPrintf("MR", "Mapper %s: process split %v\n", m.bin, s)
 		n, err := m.doSplit(&s)
 		if err != nil {
+			db.DPrintf("MR", "doSplit %v err %v\n", s, err)
 			return 0, 0, err
+		}
+		if n < s.Length {
+			db.DFatalf("Split: short split\n")
 		}
 		ni += n
 	}

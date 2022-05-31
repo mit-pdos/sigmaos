@@ -193,6 +193,9 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 			break
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		db.DPrintf("MR", "Split %v n %d err %v\n", s, n, err)
+	}
 	return np.Tlength(n), nil
 }
 
@@ -219,7 +222,7 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 			return 0, 0, err
 		}
 		if n < s.Length {
-			db.DFatalf("Split: short split\n")
+			db.DFatalf("Split: short split o %d l %d %d\n", s.Offset, s.Length, n)
 		}
 		ni += n
 	}

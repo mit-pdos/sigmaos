@@ -223,6 +223,8 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 		newProc, err := pd.tryGetRunnableProc(procPath + "/")
 		if err != nil {
 			db.DPrintf("PROCD_ERR", "Error readRunqProc in Procd.getProc: %v", err)
+			// Remove the symlink, as it must have already been claimed.
+			pd.Remove(procPath)
 			return false, nil
 		}
 		if newProc != nil {
@@ -230,7 +232,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 			p = newProc
 			// Remove the ws symlink.
 			if err := pd.Remove(procPath); err != nil {
-				db.DFatalf("Error Remove: %v", err)
+				db.DPrintf("PROCD_ERR", "Error Remove symlink after claim: %v", err)
 			}
 			return true, nil
 		}

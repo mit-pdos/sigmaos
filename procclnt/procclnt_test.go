@@ -284,7 +284,7 @@ func TestEarlyExitN(t *testing.T) {
 	done.Add(nProcs)
 
 	for i := 0; i < nProcs; i++ {
-		go func() {
+		go func(i int) {
 			pid1 := proc.GenPid()
 			a := proc.MakeProc("bin/user/parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
 			err := ts.Spawn(a)
@@ -306,7 +306,7 @@ func TestEarlyExitN(t *testing.T) {
 			_, err = ts.Stat(path.Join(np.PROCD, "~ip", proc.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 			done.Done()
-		}()
+		}(i)
 	}
 	done.Wait()
 

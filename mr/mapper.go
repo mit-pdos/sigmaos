@@ -206,7 +206,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		db.DPrintf("MR", "Split %v n %d err %v\n", s, n, err)
+		return np.Tlength(n), err
 	}
 	return np.Tlength(n), nil
 }

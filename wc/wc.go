@@ -21,6 +21,9 @@ func Map(filename string, rdr io.Reader, emit mr.EmitT) error {
 			return err
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 	return nil
 }
 

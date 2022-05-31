@@ -40,6 +40,11 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 			st.Mode = 0
 		}
 		st.Mode = st.Mode | np.Tperm(0777)
+		fi, err := os.Stat(d.path.String() + "/" + st.Name)
+		if err != nil {
+			return nil, np.MkErrError(err)
+		}
+		st.Length = np.Tlength(fi.Size())
 		sts = append(sts, st)
 	}
 	sort.SliceStable(sts, func(i, j int) bool {

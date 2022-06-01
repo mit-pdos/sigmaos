@@ -265,11 +265,8 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
-// XXX Cleanup on crashes? Versioning?
-func (pd *Procd) downloadProcBin(program string) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
+// Try to download a proc bin from s3.
+func (pd *Procd) tryDownloadProcBin(program string) error {
 	binpath := path.Join(np.BIN, program)
 	if _, err := pd.Stat(binpath); err != nil {
 		// If the file doesn't exist, copy it from s3.
@@ -277,22 +274,41 @@ func (pd *Procd) downloadProcBin(program string) {
 			// Copy the binary from s3 to a temporary file.
 			tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
 			if err := pd.CopyFile(path.Join(np.S3BIN, program), tmppath); err != nil {
-				pd.perf.Done()
-				db.DFatalf("Error CopyFile: %v", err)
+				db.DPrintf("PROCD_ERR", "Error CopyFile: %v", err)
+				return err
 			}
 			// Rename the temporary file.
 			if err := pd.Rename(tmppath, binpath); err != nil {
 				db.DPrintf("PROCD_ERR", "Error rename: %v", err)
-				// If another procd beat us to it, remove the temporary file
+				// If another procd beat us to it, remove the temporary file, and
+				// return nil (the operation was successful).
 				if np.IsErrExists(err) {
 					pd.Remove(tmppath)
+					return nil
 				}
+				return err
 			}
-		} else {
-			pd.perf.Done()
-			db.DFatalf("Error Stat: %v", err)
+		}
+		db.DPrintf("PROCD_ERR", "Error Stat: %v", err)
+		return err
+	}
+	return nil
+}
+
+// XXX Cleanup on crashes? Versioning?
+func (pd *Procd) downloadProcBin(program string) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	// May need to retry if ux crashes.
+	RETRIES := 1000
+	for i := 0; i < RETRIES; i++ {
+		// Return if successful. Else, retry
+		if err := pd.tryDownloadProcBin(program); err == nil {
+			return
 		}
 	}
+	db.DFatalf("Couldn't download proc bin in over %v retries", RETRIES)
 }
 
 func (pd *Procd) runProc(p *Proc) {

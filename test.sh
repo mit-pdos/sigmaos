@@ -1,5 +1,7 @@
 #!/bin/bash
 
+./install.sh
+
 for ND in :1111 :1111,:1112,:1113
 do
   export NAMED=$ND
@@ -58,8 +60,8 @@ do
   go test $1 ulambda/sessclnt
   
   # dbd_test and wwwd_test requires mariadb running
-  pgrep mariadb >/dev/null && go test $1 ulambda/dbd
-  pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
+  # pgrep mariadb >/dev/null && go test $1 ulambda/dbd
+  # pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
   
   
   go test $1 ulambda/mr

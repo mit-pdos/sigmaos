@@ -267,28 +267,27 @@ func (pd *Procd) freeCores(cores []uint) {
 
 // XXX Cleanup on crashes? Versioning?
 func (pd *Procd) downloadProcBin(program string) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
 	binpath := path.Join(np.BIN, program)
-	db.DPrintf(db.ALWAYS, "Stat: %v", binpath)
 	if _, err := pd.Stat(binpath); err != nil {
 		// If the file doesn't exist, copy it from s3.
 		if np.IsErrNotfound(err) {
-			db.DPrintf(db.ALWAYS, "Not found: %v", binpath)
 			// Copy the binary from s3 to a temporary file.
 			tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
 			if err := pd.CopyFile(path.Join(np.S3BIN, program), tmppath); err != nil {
 				pd.perf.Done()
 				db.DFatalf("Error CopyFile: %v", err)
 			}
-			db.DPrintf(db.ALWAYS, "Copied %v -> %v", path.Join(np.S3BIN, program), tmppath)
 			// Rename the temporary file.
 			if err := pd.Rename(tmppath, binpath); err != nil {
-				db.DPrintf(db.ALWAYS, "Error rename: %v", err)
+				db.DPrintf("PROCD_ERR", "Error rename: %v", err)
 				// If another procd beat us to it, remove the temporary file
 				if np.IsErrExists(err) {
 					pd.Remove(tmppath)
 				}
 			}
-			db.DPrintf(db.ALWAYS, "Renamed %v -> %v", tmppath, binpath)
 		} else {
 			pd.perf.Done()
 			db.DFatalf("Error Stat: %v", err)

@@ -75,29 +75,27 @@ func MakeTstateClnt(t *testing.T, named string) *Tstate {
 func MakeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
-	ts.wg.Add(len(fslib.Named()))
-	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
-	go func() {
-		defer ts.wg.Done()
-		ts.System = kernel.MakeSystemNamed("test", 0)
-	}()
-	ts.startReplicas()
-	ts.wg.Wait()
+	ts.makeSystem(kernel.MakeSystemNamed)
 	return ts
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
+	ts.makeSystem(kernel.MakeSystemAll)
+
+	return ts
+}
+
+func (ts *Tstate) makeSystem(mkSys func(string, int) *kernel.System) {
 	ts.wg.Add(len(fslib.Named()))
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	go func() {
 		defer ts.wg.Done()
-		ts.System = kernel.MakeSystemAll("test", 0)
+		ts.System = mkSys("test", 0)
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()
-	return ts
 }
 
 const (

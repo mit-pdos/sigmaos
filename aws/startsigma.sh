@@ -60,6 +60,7 @@ done
 for vm in $vms
 do
     ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+    mkdir -p /tmp/ulambda/
     export NAMED="${NAMED}"
     if [ "${vm}" = "${MAIN}" ]; then 
        echo "START ${NAMED}"

@@ -40,6 +40,7 @@ elif [ $FROM == "s3" ]; then
   # Copy from s3
   echo "cp from s3"
   aws s3 cp --recursive s3://9ps3/bin $BIN
+  chmod --recursive +x $BIN
 else
   echo "Unrecognized bin source: $FROM"
   exit 1

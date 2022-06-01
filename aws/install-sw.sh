@@ -21,8 +21,9 @@ do
     esac
 done
 
+echo $REBOOT $KEY $DNS
 
-if [ -z "$KEY ] || [ -z "$DNS ] || [ $# -gt 0 ]
+if [ -z "$KEY" ] || [ -z "$DNS" ] || [ $# -gt 0 ]
 then
   echo "Usage: ./install-sw.sh [--noreboot] vpc-key-file dns-instance"
   exit 1

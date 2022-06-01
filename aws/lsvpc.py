@@ -45,16 +45,6 @@ def ls_instances(vpc):
         for vm in vms:
             print("VMInstance", name(vm[2]), ":", vm[0], vm[1])
 
-def ls_db(vpc):
-    client = boto3.client('rds')
-    response = client.describe_db_instances()
-    rds_instances = list(filter(lambda x: x["DBSubnetGroup"]["VpcId"] == vpc.id, response["DBInstances"]))
-    if len(rds_instances) > 0:
-        for rds in rds_instances:
-            print("RDSInstance:", rds['DBInstanceIdentifier'], rds['Endpoint']['Address'])
-    else:
-        print("There is no RDS instance in this VPC")
-
 def main():
    vpc_id = args['vpc-id']
 
@@ -67,7 +57,6 @@ def main():
        ls_nets(vpc)
        ls_sg(vpc)
        ls_instances(vpc)
-       # ls_db(vpc)
 
    except Exception as e:
        print("error", e)

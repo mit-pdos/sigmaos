@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		db.DFatalf("Usage: %v bin", os.Args[0])
+	if len(os.Args) < 1 {
+		db.DFatalf("Usage: %v", os.Args[0])
 	}
-	e := realm.MakeTestEnv(os.Args[1])
+	e := realm.MakeTestEnv()
 	_, err := e.Boot()
 	if err != nil {
 		db.DFatalf("Boot %v\n", err)

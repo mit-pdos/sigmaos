@@ -13,6 +13,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/linuxsched"
+	"ulambda/machine"
 	"ulambda/namespace"
 	"ulambda/proc"
 	"ulambda/rand"
@@ -83,27 +84,16 @@ func (p *Proc) run(cores []uint) error {
 	var args []string
 	var stdout io.Writer
 	var stderr io.Writer
-	if p.Program == "bin/user/perf" {
-		args = p.Args
-		fname := "/tmp/perf-stat-" + p.Pid.String() + ".out"
-		file, err := os.Create(fname)
-		if err != nil {
-			db.DFatalf("Error creating perf stat output file: %v, %v", fname, err)
-		}
-		stdout = file
-		stderr = file
-	} else {
-		args = p.Args
-		stdout = os.Stdout
-		stderr = os.Stderr
-	}
+	args = p.Args
+	stdout = os.Stdout
+	stderr = os.Stderr
 
 	// Make the proc's procdir
 	if err := p.pd.procclnt.MakeProcDir(p.Pid, p.attr.ProcDir, p.attr.IsPrivilegedProc()); err != nil {
 		db.DPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
 	}
 
-	cmd := exec.Command(p.pd.bin+"/"+p.Program, args...)
+	cmd := exec.Command(path.Join(machine.BIN, p.Program), args...)
 	cmd.Env = p.Env
 	cmd.Dir = p.Dir
 	cmd.Stdout = stdout

@@ -26,7 +26,6 @@ type Procd struct {
 	fs         *ProcdFs
 	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
 	stealChan  chan bool // Indicates there is work to be stolen.
-	bin        string
 	done       bool
 	addr       string
 	procs      map[proc.Tpid]Tstatus
@@ -39,9 +38,8 @@ type Procd struct {
 	*fslibsrv.MemFs
 }
 
-func RunProcd(bin string, pprofPath string, utilPath string) {
+func RunProcd() {
 	pd := &Procd{}
-	pd.bin = bin
 
 	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)

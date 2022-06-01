@@ -50,6 +50,8 @@ do
   done
 done
 
-echo "Build c_spinner"
-cd benchmarks/c-spinner
-make
+# Copy to Ux
+LOCALBINDIR=/tmp/ulambda/bin
+mkdir -p $LOCALBINDIR
+rm -rf $LOCALBINDIR/*
+cp -r bin/* $LOCALBINDIR

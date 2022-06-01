@@ -17,7 +17,6 @@ const (
 )
 
 type TestEnv struct {
-	bin       string
 	rid       string
 	namedPids []string
 	namedCmds []*exec.Cmd
@@ -26,9 +25,8 @@ type TestEnv struct {
 	*RealmClnt
 }
 
-func MakeTestEnv(bin string) *TestEnv {
+func MakeTestEnv() *TestEnv {
 	e := &TestEnv{}
-	e.bin = bin
 	e.rid = TEST_RID
 	e.namedPids = []string{}
 	e.namedCmds = []*exec.Cmd{}
@@ -76,7 +74,7 @@ func (e *TestEnv) Shutdown() {
 }
 
 func (e *TestEnv) bootNameds() error {
-	namedCmds, err := BootNamedReplicas(e.bin, fslib.Named(), kernel.NO_REALM)
+	namedCmds, err := BootNamedReplicas(fslib.Named(), kernel.NO_REALM)
 	e.namedCmds = namedCmds
 	// Start a named instance.
 	if err != nil {
@@ -87,8 +85,8 @@ func (e *TestEnv) bootNameds() error {
 }
 
 func (e *TestEnv) bootSigmaMgr() error {
-	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "bin/realm/sigmamgr", []string{e.bin})
-	cmd, err := e.RealmClnt.SpawnKernelProc(p, e.bin, fslib.Named())
+	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "bin/realm/sigmamgr", []string{})
+	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named())
 	if err != nil {
 		return err
 	}
@@ -98,8 +96,8 @@ func (e *TestEnv) bootSigmaMgr() error {
 
 func (e *TestEnv) BootNoded() error {
 	var err error
-	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/noded", []string{e.bin, proc.GenPid().String()})
-	noded, err := proc.RunKernelProc(p, e.bin, fslib.Named())
+	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/noded", []string{proc.GenPid().String()})
+	noded, err := proc.RunKernelProc(p, fslib.Named())
 	e.noded = append(e.noded, noded)
 	if err != nil {
 		return err

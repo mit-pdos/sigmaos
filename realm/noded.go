@@ -26,7 +26,6 @@ type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	id      string
-	bin     string
 	cfgPath string
 	cfg     *NodedConfig
 	s       *kernel.System
@@ -34,10 +33,9 @@ type Noded struct {
 	*config.ConfigClnt
 }
 
-func MakeNoded(bin string, id string) *Noded {
+func MakeNoded(id string) *Noded {
 	r := &Noded{}
 	r.id = id
-	r.bin = bin
 	r.cfgPath = path.Join(NODED_CONFIG, id)
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("noded-%v", id))
 	r.ProcClnt = procclnt.MakeProcClntInit(proc.Tpid("noded-"+id), r.FsLib, "noded", fslib.Named())
@@ -113,7 +111,7 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 
 		// Start a named instance.
 		var pid proc.Tpid
-		if _, pid, err = kernel.BootNamed(r.ProcClnt, r.bin, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId); err != nil {
+		if _, pid, err = kernel.BootNamed(r.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId); err != nil {
 			db.DFatalf("Error BootNamed in Noded.tryInitRealmL: %v", err)
 		}
 		// Update config
@@ -131,7 +129,7 @@ func (r *Noded) register(cfg *RealmConfig) {
 }
 
 func (r *Noded) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystem("realm", r.bin, realmCfg.NamedAddrs)
+	r.s = kernel.MakeSystem("realm", realmCfg.NamedAddrs)
 	if err := r.s.Boot(); err != nil {
 		db.DFatalf("Error Boot in Noded.boot: %v", err)
 	}
@@ -141,7 +139,7 @@ func (r *Noded) startRealmMgr() {
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
 	p := proc.MakeProcPid(pid, "bin/realm/realmmgr", []string{r.cfg.RealmId, strings.Join(realmCfg.NamedAddrs, ",")})
-	if _, err := r.SpawnKernelProc(p, r.bin, fslib.Named()); err != nil {
+	if _, err := r.SpawnKernelProc(p, fslib.Named()); err != nil {
 		db.DFatalf("Error spawn realmmgr %v", err)
 	}
 	if err := r.WaitStart(p.Pid); err != nil {

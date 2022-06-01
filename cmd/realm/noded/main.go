@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		db.DFatalf("Usage: %v bin id", os.Args[0])
+	if len(os.Args) < 2 {
+		db.DFatalf("Usage: %v id", os.Args[0])
 	}
 
-	r := realm.MakeNoded(os.Args[1], os.Args[2])
+	r := realm.MakeNoded(os.Args[1])
 	r.Work()
 }

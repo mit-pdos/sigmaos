@@ -40,7 +40,7 @@ func makeProcClnt(fsl *fslib.FsLib, pid proc.Tpid, procdir string) *ProcClnt {
 // ========== SPAWN ==========
 
 // XXX Should probably eventually fold this into spawn (but for now, we may want to get the exec.Cmd struct back).
-func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bindir string, namedAddr []string) (*exec.Cmd, error) {
+func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.Cmd, error) {
 	if err := clnt.Spawn(p); err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, bindir string, namedAddr []s
 		db.DPrintf("PROCCLNT_ERR", "Err SpawnKernelProc MakeProcDir: %v", err)
 	}
 
-	return proc.RunKernelProc(p, bindir, namedAddr)
+	return proc.RunKernelProc(p, namedAddr)
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {

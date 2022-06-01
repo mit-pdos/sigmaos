@@ -1,5 +1,8 @@
 #!/bin/bash
 
+DIR=$(dirname $0)
+. $DIR/.env
+
 if [[ -z "${NAMED}" ]]; then
   export NAMED=":1111"
 fi
@@ -14,6 +17,6 @@ fi
 
 echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS and BINPATH=$BINPATH"
 
-./bin/realm/boot
+$BIN/realm/boot
 
 ./mount.sh

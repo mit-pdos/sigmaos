@@ -6,7 +6,8 @@ usage() {
     echo "Usage: $0 [-from FROM]" 1>&2
 }
 
-. ./.env
+DIR=$(dirname $0)
+. $DIR/.env
 
 FROM="local"
 while [[ "$#" -gt 0 ]]; do

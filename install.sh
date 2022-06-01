@@ -43,6 +43,7 @@ elif [ $FROM == "s3" ]; then
   aws s3 cp --recursive s3://9ps3/bin/realm $BIN/realm
   aws s3 cp --recursive s3://9ps3/bin/kernel $BIN/kernel
   chmod --recursive +x $BIN
+  mkdir $BIN/user
 else
   echo "Unrecognized bin source: $FROM"
   exit 1

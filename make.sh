@@ -22,6 +22,14 @@ while [[ "$#" -gt 0 ]]; do
     TARGET="$1"
     shift
     ;;
+  -h)
+    usage
+    exit 0
+    ;;
+  --help)
+    usage
+    exit 0
+    ;;
   *)
     echo "unexpected argument $1"
     usage
@@ -33,11 +41,9 @@ done
 mkdir -p bin/kernel
 mkdir -p bin/user
 
-for k in `ls cmd`
-do
+for k in `ls cmd`; do
   echo "Building $k components"
-  for f in `ls cmd/$k`
-  do
+  for f in `ls cmd/$k`;  do
     if [ $CMD == "vet" ]; then
       echo "go vet cmd/$k/$f/main.go"
       go vet cmd/$k/$f/main.go
@@ -47,5 +53,3 @@ do
     fi
   done
 done
-
-./install.sh

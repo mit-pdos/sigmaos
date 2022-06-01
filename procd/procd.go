@@ -274,12 +274,10 @@ func (pd *Procd) tryDownloadProcBin(program string) error {
 			// Copy the binary from s3 to a temporary file.
 			tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
 			if err := pd.CopyFile(path.Join(np.S3BIN, program), tmppath); err != nil {
-				db.DPrintf("PROCD_ERR", "Error CopyFile: %v", err)
 				return err
 			}
 			// Rename the temporary file.
 			if err := pd.Rename(tmppath, binpath); err != nil {
-				db.DPrintf("PROCD_ERR", "Error rename: %v", err)
 				// If another procd beat us to it, remove the temporary file, and
 				// return nil (the operation was successful).
 				if np.IsErrExists(err) {
@@ -289,13 +287,12 @@ func (pd *Procd) tryDownloadProcBin(program string) error {
 				return err
 			}
 		}
-		db.DPrintf("PROCD_ERR", "Error Stat: %v", err)
 		return err
 	}
 	return nil
 }
 
-// XXX Cleanup on crashes? Versioning?
+// XXX Cleanup on crashes? Versioning? Procd crashes?
 func (pd *Procd) downloadProcBin(program string) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
@@ -306,6 +303,8 @@ func (pd *Procd) downloadProcBin(program string) {
 		// Return if successful. Else, retry
 		if err := pd.tryDownloadProcBin(program); err == nil {
 			return
+		} else {
+			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin: %v", err)
 		}
 	}
 	db.DFatalf("Couldn't download proc bin in over %v retries", RETRIES)

@@ -122,19 +122,19 @@ func (s *System) BootSubsystem(binpath string, args []string, list *[]*Subsystem
 }
 
 func (s *System) BootFsUxd() error {
-	return s.BootSubsystem("bin/kernel/fsuxd", []string{}, &s.fsuxd)
+	return s.BootSubsystem("kernel/fsuxd", []string{}, &s.fsuxd)
 }
 
 func (s *System) BootFss3d() error {
-	return s.BootSubsystem("bin/kernel/fss3d", []string{}, &s.fss3d)
+	return s.BootSubsystem("kernel/fss3d", []string{}, &s.fss3d)
 }
 
 func (s *System) BootProcd() error {
-	return s.BootSubsystem("bin/kernel/procd", []string{}, &s.procd)
+	return s.BootSubsystem("kernel/procd", []string{}, &s.procd)
 }
 
 func (s *System) BootDbd() error {
-	return s.BootSubsystem("bin/kernel/dbd", []string{}, &s.dbd)
+	return s.BootSubsystem("kernel/dbd", []string{}, &s.dbd)
 }
 
 func (s *System) KillOne(srv string) error {
@@ -220,7 +220,7 @@ func makeNamedProc(addr string, replicate bool, id int, pe []string, realmId str
 		args = append(args, strings.Join(peers, ","))
 	}
 
-	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "/bin/kernel/named", args)
+	return proc.MakeProcPid(proc.Tpid("pid-"+strconv.Itoa(id)+proc.GenPid().String()), "kernel/named", args)
 }
 
 // Run a named (but not as a proc)

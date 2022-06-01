@@ -65,7 +65,7 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 	ps := []*proc.Proc{}
 	for i := 0; i < N; i++ {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
-		p := proc.MakeProcPid(pid, "bin/user/spinner", []string{BURST_BENCH_DIR})
+		p := proc.MakeProcPid(pid, "user/spinner", []string{BURST_BENCH_DIR})
 		p.Ncore = 1
 		ps = append(ps, p)
 	}

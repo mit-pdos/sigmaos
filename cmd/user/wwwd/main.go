@@ -174,7 +174,7 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, ar
 func getStatic(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
 	log.Printf("%v: getstatic: %v\n", proc.GetProgram(), args)
 	file := path.Join(np.TMP, args)
-	return www.spawnApp("bin/user/fsreader", w, r, []string{file})
+	return www.spawnApp("user/fsreader", w, r, []string{file})
 }
 
 func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {
@@ -186,7 +186,7 @@ func doBook(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*pr
 	//}
 	// log.Printf("\n")
 	title := r.FormValue("title")
-	return www.spawnApp("bin/user/bookapp", w, r, []string{args, title})
+	return www.spawnApp("user/bookapp", w, r, []string{args, title})
 }
 
 func doExit(www *Wwwd, w http.ResponseWriter, r *http.Request, args string) (*proc.Status, error) {

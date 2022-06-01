@@ -80,7 +80,7 @@ type Tstate struct {
 func makeTstate(t *testing.T, auto string, crashbal, repl, ncrash int, crashhelper string) (*Tstate, *KvClerk) {
 	ts := &Tstate{}
 	ts.Tstate = test.MakeTstateAll(t)
-	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "bin/user/balancer", []string{crashhelper, auto}, NBALANCER, crashbal, 0, 0)
+	ts.gmbal = groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NBALANCER, "user/balancer", []string{crashhelper, auto}, NBALANCER, crashbal, 0, 0)
 
 	clrk := ts.setup(repl, ncrash)
 	return ts, clrk
@@ -134,7 +134,7 @@ func (ts *Tstate) stopClerks() {
 }
 
 func (ts *Tstate) startClerk() proc.Tpid {
-	p := proc.MakeProc("bin/user/kv-clerk", []string{""})
+	p := proc.MakeProc("user/kv-clerk", []string{""})
 	ts.Spawn(p)
 	err := ts.WaitStart(p.Pid)
 	assert.Nil(ts.T, err, "WaitStart")

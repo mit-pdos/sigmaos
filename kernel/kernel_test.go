@@ -171,7 +171,7 @@ func TestEphemeral(t *testing.T) {
 
 	var err error
 	err = ts.BootProcd()
-	assert.Nil(t, err, "bin/kernel/procd")
+	assert.Nil(t, err, "kernel/procd")
 
 	name := procdName(ts, map[string]bool{path.Dir(np.PROCD_WS): true, name1: true})
 	b, err := ts.GetFile(name)

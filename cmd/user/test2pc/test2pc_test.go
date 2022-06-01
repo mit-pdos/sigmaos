@@ -86,20 +86,20 @@ func (ts *Tstate) cleanup() {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	p := proc.MakeProc("bin/user/memfsd", []string{""})
+	p := proc.MakeProc("user/memfsd", []string{""})
 	ts.Spawn(p)
 	ts.WaitStart(p.Pid)
 	return p.Pid
 }
 
 func (ts *Tstate) spawnParticipant(index, opcode string) string {
-	p := proc.MakeProc("bin/user/test2pc", []string{index, opcode})
+	p := proc.MakeProc("user/test2pc", []string{index, opcode})
 	ts.Spawn(p)
 	return p.Pid
 }
 
 func (ts *Tstate) spawnCoord(opcode string, fws []string) string {
-	p := proc.MakeProc("bin/user/twopc-coord", append([]string{opcode}, fws...))
+	p := proc.MakeProc("user/twopc-coord", append([]string{opcode}, fws...))
 	ts.Spawn(p)
 	// log.Printf("coord spawned %v\n", p.Pid)
 	return p.Pid
@@ -269,7 +269,7 @@ func TestCrash3(t *testing.T) {
 	ts.checkCoord(fws, "crash3")
 	args := []string{"restart"}
 	args = append(args, fws...)
-	gmcoord := groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NCOORD, "bin/user/twopc-coord", args, NCOORD, 0)
+	gmcoord := groupmgr.Start(ts.System.FsLib, ts.System.ProcClnt, NCOORD, "user/twopc-coord", args, NCOORD, 0)
 
 	time.Sleep(100 * time.Millisecond)
 

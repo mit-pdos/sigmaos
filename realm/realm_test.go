@@ -30,8 +30,7 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	bin := ".."
-	e := realm.MakeTestEnv(bin)
+	e := realm.MakeTestEnv()
 	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
@@ -59,7 +58,7 @@ func makeTstate(t *testing.T) *Tstate {
 
 func (ts *Tstate) spawnSpinner() proc.Tpid {
 	pid := proc.GenPid()
-	a := proc.MakeProcPid(pid, "bin/user/spinner", []string{"name/"})
+	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
 	a.Ncore = proc.Tcore(1)
 	err := ts.Spawn(a)
 	if err != nil {

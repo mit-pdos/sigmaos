@@ -33,7 +33,7 @@ func runLeaders(t *testing.T, ts *test.Tstate, sec string) (string, []proc.Tpid)
 		if i == N-1 {
 			last = "last"
 		}
-		p := proc.MakeProc("bin/user/leadertest-leader", []string{dir, last, sec})
+		p := proc.MakeProc("user/leadertest-leader", []string{dir, last, sec})
 		err = ts.Spawn(p)
 		assert.Nil(t, err, "Spawn")
 

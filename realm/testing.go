@@ -85,7 +85,7 @@ func (e *TestEnv) bootNameds() error {
 }
 
 func (e *TestEnv) bootSigmaMgr() error {
-	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "bin/realm/sigmamgr", []string{})
+	p := proc.MakeProcPid("sigmamgr-"+proc.GenPid(), "realm/sigmamgr", []string{})
 	cmd, err := e.RealmClnt.SpawnKernelProc(p, fslib.Named())
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (e *TestEnv) bootSigmaMgr() error {
 
 func (e *TestEnv) BootNoded() error {
 	var err error
-	p := proc.MakeProcPid(proc.Tpid("0"), "/bin/realm/noded", []string{proc.GenPid().String()})
+	p := proc.MakeProcPid(proc.Tpid("0"), "realm/noded", []string{proc.GenPid().String()})
 	noded, err := proc.RunKernelProc(p, fslib.Named())
 	e.noded = append(e.noded, noded)
 	if err != nil {

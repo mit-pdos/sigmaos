@@ -24,7 +24,7 @@ const (
 )
 
 func spawnMemfs(ts *test.Tstate, pid proc.Tpid) {
-	p := proc.MakeProcPid(pid, "bin/user/memfsd", []string{"dummy"})
+	p := proc.MakeProcPid(pid, "user/memfsd", []string{"dummy"})
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Spawn")
 	err = ts.WaitStart(pid)

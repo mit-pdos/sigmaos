@@ -31,7 +31,7 @@ const (
 func TestWaitClosed(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 1, CRASH, 0, 0)
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 1, CRASH, 0, 0)
 	_, err := ts.Stat(DIRGRP0)
 	assert.Nil(t, err, "stat")
 
@@ -47,7 +47,7 @@ func TestWaitClosed(t *testing.T) {
 func TestServerCrash(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 1, CRASH, 0, 0)
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 1, CRASH, 0, 0)
 
 	sem := semclnt.MakeSemClnt(ts.FsLib, DIRGRP0+"sem")
 	err := sem.Init(0)
@@ -86,7 +86,7 @@ func BurstProc(n int, f func(chan error)) error {
 
 func TestProcManyOK(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("bin/user/proctest", []string{NTRIALS, "bin/user/sleeper", "1us", ""})
+	a := proc.MakeProc("user/proctest", []string{NTRIALS, "user/sleeper", "1us", ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.Pid)
@@ -99,7 +99,7 @@ func TestProcManyOK(t *testing.T) {
 
 func TestProcCrashMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("bin/user/proctest", []string{NTRIALS, "bin/user/crash"})
+	a := proc.MakeProc("user/proctest", []string{NTRIALS, "user/crash"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.Pid)
@@ -112,7 +112,7 @@ func TestProcCrashMany(t *testing.T) {
 
 func TestProcPartitionMany(t *testing.T) {
 	ts := test.MakeTstateAll(t)
-	a := proc.MakeProc("bin/user/proctest", []string{NTRIALS, "bin/user/partition"})
+	a := proc.MakeProc("user/proctest", []string{NTRIALS, "user/partition"})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.Pid)
@@ -128,7 +128,7 @@ func TestProcPartitionMany(t *testing.T) {
 func TestReconnectSimple(t *testing.T) {
 	const N = 1000
 	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, 0, NETFAIL)
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, 0, NETFAIL)
 	ch := make(chan error)
 	go func() {
 		fsl := fslib.MakeFsLibAddr("fslibtest-1", fslib.Named())
@@ -154,7 +154,7 @@ func TestServerPartitionNonBlocking(t *testing.T) {
 	const N = 50
 
 	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
@@ -181,7 +181,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 	const N = 50
 
 	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "bin/user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
+	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)

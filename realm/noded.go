@@ -138,7 +138,7 @@ func (r *Noded) boot(realmCfg *RealmConfig) {
 func (r *Noded) startRealmMgr() {
 	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
 	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
-	p := proc.MakeProcPid(pid, "bin/realm/realmmgr", []string{r.cfg.RealmId, strings.Join(realmCfg.NamedAddrs, ",")})
+	p := proc.MakeProcPid(pid, "realm/realmmgr", []string{r.cfg.RealmId, strings.Join(realmCfg.NamedAddrs, ",")})
 	if _, err := r.SpawnKernelProc(p, fslib.Named()); err != nil {
 		db.DFatalf("Error spawn realmmgr %v", err)
 	}

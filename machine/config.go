@@ -1,5 +1,5 @@
 package machine
 
 const (
-	BIN = "/tmp/ulambda"
+	BIN = "/tmp/ulambda/bin"
 )

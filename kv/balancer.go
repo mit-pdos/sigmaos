@@ -325,7 +325,7 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 
 func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
 	if m != nil {
-		bl.runProcRetry([]string{"bin/user/kv-mover", bl.conf.Epoch.String(), m.Src, m.Dst},
+		bl.runProcRetry([]string{"user/kv-mover", bl.conf.Epoch.String(), m.Src, m.Dst},
 			func(err error, status *proc.Status) bool {
 				db.DPrintf("KVBAL", "%v: move %v m %v err %v status %v\n", bl.conf.Epoch, i, m, err, status)
 				return err != nil || !status.IsStatusOK()

@@ -218,7 +218,7 @@ func (rs *ChainReplServer) runDirWatcher() {
 			done <- true
 		})
 		<-done
-		attr := proc.MakeProc("bin/user/replica-monitor", []string{config.ConfigPath, config.UnionDirPath})
+		attr := proc.MakeProc("user/replica-monitor", []string{config.ConfigPath, config.UnionDirPath})
 		rs.Spawn(attr)
 	}
 }

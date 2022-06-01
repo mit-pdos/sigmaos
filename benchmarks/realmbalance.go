@@ -79,7 +79,7 @@ func StartMR(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) *groupmgr.GroupMgr {
 	mr.InitCoordFS(fsl, job, NReduce)
 	nmap := setupMR(fsl, job)
 
-	return groupmgr.Start(fsl, pclnt, mr.NCOORD, "bin/user/mr-coord", []string{job, strconv.Itoa(nmap), strconv.Itoa(NReduce), "bin/user/mr-m-wc", "bin/user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
+	return groupmgr.Start(fsl, pclnt, mr.NCOORD, "user/mr-coord", []string{job, strconv.Itoa(nmap), strconv.Itoa(NReduce), "user/mr-m-wc", "user/mr-r-wc", strconv.Itoa(crashtask)}, mr.NCOORD, crashcoord, 0, 0)
 }
 
 func balancerOp(fsl *fslib.FsLib, opcode, mfs string) error {
@@ -129,7 +129,7 @@ func StartKV(namedAddrs []string, fsl *fslib.FsLib, pclnt *procclnt.ProcClnt) {
 	crashbal := 0
 	auto := "manual"
 	mfsgrps := []*groupmgr.GroupMgr{}
-	gmbal := groupmgr.Start(fsl, pclnt, nBalancer, "bin/user/balancer", []string{crashhelper, auto}, nBalancer, crashbal, 0, 0)
+	gmbal := groupmgr.Start(fsl, pclnt, nBalancer, "user/balancer", []string{crashhelper, auto}, nBalancer, crashbal, 0, 0)
 	setupKV(namedAddrs, fsl, pclnt, nclerk, nReplicas, ncrash, nkeys, &mfsgrps)
 	//	for i := 0; i < nclerk; i++ {
 	//		pid := ts.startClerk()

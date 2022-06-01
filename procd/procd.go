@@ -19,6 +19,7 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 )
 
 type Procd struct {
@@ -264,12 +265,46 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
+// XXX Cleanup on crashes? Versioning?
+func (pd *Procd) downloadProcBin(program string) {
+	binpath := path.Join(np.BIN, program)
+	db.DPrintf(db.ALWAYS, "Stat: %v", binpath)
+	if _, err := pd.Stat(binpath); err != nil {
+		// If the file doesn't exist, copy it from s3.
+		if np.IsErrNotfound(err) {
+			db.DPrintf(db.ALWAYS, "Not found: %v", binpath)
+			// Copy the binary from s3 to a temporary file.
+			tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
+			if err := pd.CopyFile(path.Join(np.S3BIN, program), tmppath); err != nil {
+				pd.perf.Done()
+				db.DFatalf("Error CopyFile: %v", err)
+			}
+			db.DPrintf(db.ALWAYS, "Copied %v -> %v", path.Join(np.S3BIN, program), tmppath)
+			// Rename the temporary file.
+			if err := pd.Rename(tmppath, binpath); err != nil {
+				db.DPrintf(db.ALWAYS, "Error rename: %v", err)
+				// If another procd beat us to it, remove the temporary file
+				if np.IsErrExists(err) {
+					pd.Remove(tmppath)
+				}
+			}
+			db.DPrintf(db.ALWAYS, "Renamed %v -> %v", tmppath, binpath)
+		} else {
+			pd.perf.Done()
+			db.DFatalf("Error Stat: %v", err)
+		}
+	}
+}
+
 func (pd *Procd) runProc(p *Proc) {
 	// Register running proc
 	pd.setProcStatus(p.Pid, PROC_RUNNING)
 
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
+
+	// Download the bin from s3, if it isn't already cached locally.
+	pd.downloadProcBin(p.Program)
 
 	// Run the proc.
 	p.run(cores)

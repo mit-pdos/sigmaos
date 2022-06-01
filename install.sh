@@ -6,6 +6,8 @@ usage() {
     echo "Usage: $0 [-from FROM]" 1>&2
 }
 
+. ./.env
+
 FROM="local"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -30,7 +32,6 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-BIN=/tmp/ulambda/bin
 mkdir -p $BIN
 rm -rf $BIN/*
 if [ $FROM == "local" ]; then

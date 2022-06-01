@@ -39,9 +39,9 @@ if [ $FROM == "local" ]; then
   # Copy from local
   cp -r bin/* $BIN
 elif [ $FROM == "s3" ]; then
-  # Copy from s3
-  echo "cp from s3"
-  aws s3 cp --recursive s3://9ps3/bin $BIN
+  # Copy kernel & realm dirs from s3
+  aws s3 cp --recursive s3://9ps3/bin/realm $BIN/realm
+  aws s3 cp --recursive s3://9ps3/bin/kernel $BIN/kernel
   chmod --recursive +x $BIN
 else
   echo "Unrecognized bin source: $FROM"

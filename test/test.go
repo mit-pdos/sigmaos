@@ -100,20 +100,6 @@ func MakeTstateAll(t *testing.T) *Tstate {
 	return ts
 }
 
-func MakeTstateAllBin(t *testing.T) *Tstate {
-	ts := &Tstate{}
-	ts.T = t
-	ts.wg.Add(len(fslib.Named()))
-	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
-	go func() {
-		defer ts.wg.Done()
-		ts.System = kernel.MakeSystemAll("test", 0)
-	}()
-	ts.startReplicas()
-	ts.wg.Wait()
-	return ts
-}
-
 const (
 	MBYTE = 1 << 20
 	BUFSZ = 1 << 16

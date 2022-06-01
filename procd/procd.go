@@ -32,8 +32,8 @@ type Procd struct {
 	procs      map[proc.Tpid]Tstatus
 	coreBitmap []bool
 	coresAvail proc.Tcore
-	group      sync.WaitGroup
 	perf       *perf.Perf
+	group      sync.WaitGroup
 	procclnt   *procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
@@ -46,7 +46,12 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
-	pd.perf = perf.MakePerf()
+
+	// Must set core affinity before starting CPU Util measurements
+	pd.setCoreAffinity()
+
+	pd.perf = perf.MakePerf("PROCD")
+	defer pd.perf.Done()
 
 	pd.makeFs()
 
@@ -55,17 +60,6 @@ func RunProcd(bin string, pprofPath string, utilPath string) {
 	pd.stealChan = make(chan bool)
 
 	pd.addr = pd.MyAddr()
-
-	pprof := pprofPath != ""
-	if pprof {
-		pd.perf.SetupPprof(pprofPath)
-	}
-	// Must set core affinity before starting CPU Util measurements
-	pd.setCoreAffinity()
-	util := utilPath != ""
-	if util {
-		pd.perf.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
-	}
 
 	pd.MemFs.GetStats().MonitorCPUUtil()
 
@@ -124,7 +118,7 @@ func (pd *Procd) Done() {
 	defer pd.mu.Unlock()
 
 	pd.done = true
-	pd.perf.Teardown()
+	pd.perf.Done()
 	pd.evictProcsL()
 	close(pd.spawnChan)
 }
@@ -334,13 +328,14 @@ func (pd *Procd) worker() {
 				db.DPrintf("PROCD_ERR", "cond file not found: %v", error)
 				return
 			}
-			pd.perf.Teardown()
+			pd.perf.Done()
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
 		db.DPrintf("PROCD", "Got proc %v", p)
 		localProc := pd.makeProc(p)
 		err := pd.fs.running(localProc)
 		if err != nil {
+			pd.perf.Done()
 			db.DFatalf("Procd pub running error %v %T\n", err, err)
 		}
 		// If this proc doesn't require cores, start another worker to take our

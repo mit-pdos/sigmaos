@@ -3,12 +3,16 @@ package debug
 import (
 	"fmt"
 	"log"
-	"os"
 	"runtime"
 	"strings"
 
 	"ulambda/proc"
 )
+
+//
+// Debug output is controled by SIGMADEBUG environment variable, which
+// can be a list of labels (e.g., "RPC;PATHCLNT").
+//
 
 const ALWAYS = "STATUS"
 
@@ -17,24 +21,7 @@ var labels map[string]bool
 func init() {
 	// XXX may want to set log.Ldate when not debugging
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	labels = debugLabels()
-}
-
-//
-// Debug output is controled by SIGMADEBUG environment variable, which
-// can be a list of labels (e.g., "RPC;PATHCLNT").
-//
-func debugLabels() map[string]bool {
-	m := make(map[string]bool)
-	s := os.Getenv("SIGMADEBUG")
-	if s == "" {
-		return m
-	}
-	labels := strings.Split(s, ";")
-	for _, l := range labels {
-		m[l] = true
-	}
-	return m
+	labels = proc.GetLabels("SIGMADEBUG")
 }
 
 func DPrintf(label string, format string, v ...interface{}) {

@@ -428,10 +428,8 @@ func (m *Microbenchmarks) ProcPprofBenchmark(nTrials int, pidOffset int) *RawRes
 
 	// Start pprof to break down costs
 	runtime.SetCPUProfileRate(250)
-	pprofPath := path.Join(m.resDir, "pprof", "procbase.txt")
-	p := perf.MakePerf()
-	p.SetupPprof(pprofPath)
-	defer p.Teardown()
+	p := perf.MakePerf("MICROBENCHMARKS")
+	defer p.Done()
 
 	ps := []*proc.Proc{}
 	for i := 0; i < nTrials; i++ {

@@ -5,7 +5,7 @@ import (
 	"ulambda/named"
 )
 
-// Usage: <named> address realmId <peerId> <peers> <pprofPath> <utilPath>
+// Usage: <named> address realmId <peerId> <peers>
 
 func main() {
 	named.Run(os.Args)

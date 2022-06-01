@@ -34,6 +34,7 @@ func (pd *Procd) workStealingMonitor() {
 			continue
 		}
 		if err != nil {
+			pd.perf.Done()
 			db.DFatalf("Error ReadDirWatch: %v", err)
 		}
 		// Wake up a thread to try to steal each proc.
@@ -69,6 +70,7 @@ func (pd *Procd) offerStealableProcs() {
 				return false, nil
 			})
 			if err != nil {
+				pd.perf.Done()
 				db.DFatalf("Error ProcessDir: %v", err)
 			}
 		}
@@ -83,6 +85,7 @@ func (pd *Procd) readRunqProc(procPath string) (*proc.Proc, error) {
 	p := proc.MakeEmptyProc()
 	err = json.Unmarshal(b, p)
 	if err != nil {
+		pd.perf.Done()
 		db.DFatalf("Error Unmarshal in Procd.readProc: %v", err)
 		return nil, err
 	}

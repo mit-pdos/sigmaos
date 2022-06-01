@@ -1,7 +1,6 @@
 package named
 
 import (
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -23,24 +22,10 @@ import (
 )
 
 func Run(args []string) {
+	perf.Hz()
 	linuxsched.ScanTopology()
-	// If we're benchmarking, make a flame graph
-	p := perf.MakePerf()
-	if len(args) >= 6 {
-		pprofPath := args[5]
-		p.SetupPprof(pprofPath)
-	}
-	if len(args) >= 7 {
-		utilPath := args[6]
-		p.SetupCPUUtil(perf.CPU_UTIL_HZ, utilPath)
-	}
-	if p.RunningBenchmark() {
-		// XXX For my current benchmarking setup, ZK gets core 0 all to itself.
-		m := linuxsched.CreateCPUMaskOfOne(0)
-		m.Set(1)
-		linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
-	}
-	defer p.Teardown()
+	p := perf.MakePerf("NAMED")
+	defer p.Done()
 
 	addr := args[1]
 

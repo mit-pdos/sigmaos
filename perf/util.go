@@ -3,9 +3,9 @@ package perf
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
+	"path"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -16,7 +16,13 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/linuxsched"
+	"ulambda/proc"
 )
+
+//
+// Perf output is controled by SIGMAPERF environment variable, which
+// can be a list of labels (e.g., "PROCD_PPROF;NAMED_CPU;").
+//
 
 /*
 #include <unistd.h>
@@ -35,60 +41,111 @@ func Hz() int {
 
 // XXX delete? use Hz()
 const (
-	CPU_UTIL_HZ = 10
+	CPU_SAMPLE_HZ = 10
+	OUTPUT_PATH   = "/tmp/ulambda/perf-output"
+	PPROF         = "_PPROF"
+	CPU           = "_CPU"
 )
+
+var labels map[string]bool
+
+func init() {
+	labels = proc.GetLabels("SIGMAPERF")
+}
 
 // Tracks performance statistics for any cores on which the current process is
 // able to run.
 type Perf struct {
 	mu             sync.Mutex
+	name           string
 	done           uint32
 	util           bool
 	utilChan       chan bool
-	utilPath       string
 	utilFile       *os.File
 	cpuCyclesBusy  []float64
 	cpuCyclesTotal []float64
 	cpuUtilPct     []float64
 	pprof          bool
-	pprofPath      string
 	pprofFile      *os.File
 	cores          map[string]bool
 	sigc           chan os.Signal
 }
 
-func MakePerf() *Perf {
+func MakePerf(name string) *Perf {
 	p := &Perf{}
+	p.name = name
 	p.cores = map[string]bool{}
 	p.utilChan = make(chan bool, 1)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT)
 	go func() {
 		<-sigc
-		p.Teardown()
+		p.Done()
 		os.Exit(0)
 	}()
+	// Make sure the PID is set (used to name the output files).
+	if proc.GetPid().String() == "" {
+		db.DFatalf("Must set PID before starting Perf")
+	}
+	// Make the output dir
+	if err := os.MkdirAll(OUTPUT_PATH, 0777); err != nil {
+		db.DFatalf("Error Mkdir: %v", err)
+	}
+	// Set up pprof caputre
+	if ok := labels[name+PPROF]; ok {
+		p.setupPprof(path.Join(OUTPUT_PATH, proc.GetPid().String()+"-pprof.out"))
+	}
+	// Set up cpu util capture
+	if ok := labels[name+CPU]; ok {
+		p.setupCPUUtil(CPU_SAMPLE_HZ, path.Join(OUTPUT_PATH, proc.GetPid().String()+"-cpu.out"))
+	}
 	return p
 }
 
-// Read utime+stime from /proc/<pid>/stat
-func GetPIDSample(pid int) uint64 {
-	contents, err := ioutil.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+func (p *Perf) setupCPUUtil(hz int, fpath string) {
+	p.mu.Lock()
+
+	p.util = true
+	f, err := os.Create(fpath)
 	if err != nil {
-		log.Printf("Error reading /proc/<pid>/stat %v", err)
+		db.DFatalf("Create util file %v failed %v", fpath, err)
 	}
-	line := strings.Split(strings.TrimSpace(string(contents)), " ")
-	utime, err := strconv.ParseUint(line[13], 10, 32)
-	if err != nil {
-		log.Printf("Error: utime %v", err)
-	}
-	stime, err := strconv.ParseUint(line[14], 10, 32)
-	if err != nil {
-		log.Printf("Error: stime %v", err)
-	}
-	return utime + stime
+	p.utilFile = f
+	// TODO: pre-allocate a large number of entries
+	p.cpuCyclesBusy = make([]float64, 40*CPU_SAMPLE_HZ)
+	p.cpuCyclesTotal = make([]float64, 40*CPU_SAMPLE_HZ)
+	p.cpuUtilPct = make([]float64, 40*CPU_SAMPLE_HZ)
+	p.getActiveCores()
+
+	p.mu.Unlock()
+
+	go p.monitorCPUUtil(hz)
 }
 
+func (p *Perf) setupPprof(fpath string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		db.DFatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
+	}
+	p.pprof = true
+	p.pprofFile = f
+	if err := pprof.StartCPUProfile(f); err != nil {
+		db.DFatalf("Couldn't start CPU profile: %v", err)
+	}
+}
+
+func (p *Perf) Done() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.done == 0 {
+		atomic.StoreUint32(&p.done, 1)
+		p.teardownPprof()
+		p.teardownUtil()
+	}
+}
 func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 	contents, err := ioutil.ReadFile("/proc/stat")
 	if err != nil {
@@ -102,7 +159,7 @@ func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 			for i := 1; i < numFields; i++ {
 				val, err := strconv.ParseUint(fields[i], 10, 64)
 				if err != nil {
-					log.Printf("Error: %v %v %v", i, fields[i], err)
+					db.DPrintf(db.ALWAYS, "Error: %v %v %v", i, fields[i], err)
 				}
 				total += val // tally up all the numbers to get total ticks
 				if i == 4 {  // idle is the 5th field in the cpu line
@@ -112,10 +169,6 @@ func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 		}
 	}
 	return
-}
-
-func (p *Perf) RunningBenchmark() bool {
-	return p.util || p.pprof
 }
 
 func (p *Perf) monitorCPUUtil(hz int) {
@@ -132,9 +185,8 @@ func (p *Perf) monitorCPUUtil(hz int) {
 		idleDelta := float64(idle1 - idle0)
 		totalDelta := float64(total1 - total0)
 		util := 100.0 * (totalDelta - idleDelta) / totalDelta
-		// log.Printf("CPU util: %f [busy: %f, total: %f]\n", util, totalDelta-idleDelta, totalDelta)
 		// Record number of cycles busy, utilized, and total
-		if idx < 40*CPU_UTIL_HZ {
+		if idx < 40*CPU_SAMPLE_HZ {
 			p.cpuCyclesBusy[idx] = totalDelta - idleDelta
 			p.cpuCyclesTotal[idx] = totalDelta
 			p.cpuUtilPct[idx] = util
@@ -166,53 +218,6 @@ func (p *Perf) getActiveCores() {
 		if m.Test(i) {
 			p.cores["cpu"+strconv.Itoa(int(i))] = true
 		}
-	}
-}
-
-func (p *Perf) SetupCPUUtil(hz int, fpath string) {
-	p.mu.Lock()
-
-	p.util = true
-	p.utilPath = fpath
-	f, err := os.Create(p.utilPath)
-	if err != nil {
-		db.DFatalf("Create util file %v failed %v", p.utilPath, err)
-	}
-	p.utilFile = f
-	// TODO: pre-allocate a large number of entries
-	p.cpuCyclesBusy = make([]float64, 40*CPU_UTIL_HZ)
-	p.cpuCyclesTotal = make([]float64, 40*CPU_UTIL_HZ)
-	p.cpuUtilPct = make([]float64, 40*CPU_UTIL_HZ)
-	p.getActiveCores()
-
-	p.mu.Unlock()
-
-	go p.monitorCPUUtil(hz)
-}
-
-func (p *Perf) SetupPprof(fpath string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	f, err := os.Create(fpath)
-	if err != nil {
-		db.DFatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
-	}
-	p.pprof = true
-	p.pprofPath = fpath
-	p.pprofFile = f
-	if err := pprof.StartCPUProfile(f); err != nil {
-		db.DFatalf("Couldn't start CPU profile: %v", err)
-	}
-}
-
-func (p *Perf) Teardown() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.done == 0 {
-		atomic.StoreUint32(&p.done, 1)
-		p.teardownPprof()
-		p.teardownUtil()
 	}
 }
 

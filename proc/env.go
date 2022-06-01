@@ -2,6 +2,7 @@ package proc
 
 import (
 	"os"
+	"strings"
 
 	"ulambda/rand"
 )
@@ -19,6 +20,8 @@ const (
 	SIGMACRASH          = "SIGMACRASH"
 	SIGMAPARTITION      = "SIGMAPARTITION"
 	SIGMANETFAIL        = "SIGMANETFAIL"
+	SIGMAPPROF          = "SIGMAPPROF"
+	SIGMACPUPERF        = "SIGMACPUPERF"
 )
 
 func GenPid() Tpid {
@@ -84,6 +87,19 @@ func GetNewRoot() string {
 
 func GetIsPrivilegedProc() bool {
 	return os.Getenv(SIGMAPRIVILEGEDPROC) == "true"
+}
+
+func GetLabels(envvar string) map[string]bool {
+	m := make(map[string]bool)
+	s := os.Getenv(envvar)
+	if s == "" {
+		return m
+	}
+	labels := strings.Split(s, ";")
+	for _, l := range labels {
+		m[l] = true
+	}
+	return m
 }
 
 func FakeProcEnv(pid Tpid, program, procdIp, procdir, parentdir string) {

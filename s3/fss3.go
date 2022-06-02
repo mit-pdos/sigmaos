@@ -11,6 +11,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/sesssrv"
@@ -33,6 +34,8 @@ func RunFss3() {
 	root := makeDir(np.Path{}, np.DMDIR)
 	fsl := fslib.MakeFsLib("fss3d")
 	pclnt := procclnt.MakeProcClnt(fsl)
+	p := perf.MakePerf("FSS3")
+	defer p.Done()
 	srv, err := fslibsrv.MakeSrv(root, np.S3, fsl, pclnt)
 	if err != nil {
 		db.DFatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)

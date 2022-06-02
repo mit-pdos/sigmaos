@@ -266,42 +266,73 @@ func (pd *Procd) freeCores(cores []uint) {
 }
 
 // Try to download a proc bin from s3.
-func (pd *Procd) tryDownloadProcBin(program string) error {
-	binpath := path.Join(np.BIN, program)
-	if _, err := pd.Stat(binpath); err != nil {
-		// If the file doesn't exist, copy it from s3.
-		if np.IsErrNotfound(err) {
-			// Copy the binary from s3 to a temporary file.
-			tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
-			if err := pd.CopyFile(path.Join(np.S3BIN, program), tmppath); err != nil {
-				return err
-			}
-			// Rename the temporary file.
-			if err := pd.Rename(tmppath, binpath); err != nil {
-				// If another procd beat us to it, remove the temporary file, and
-				// return nil (the operation was successful).
-				if np.IsErrExists(err) {
-					pd.Remove(tmppath)
-					return nil
-				}
-				return err
-			}
-		}
+func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
+	// Copy the binary from s3 to a temporary file.
+	tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
+	if err := pd.CopyFile(s3BinPath, tmppath); err != nil {
 		return err
+	}
+	// Rename the temporary file.
+	if err := pd.Rename(tmppath, uxBinPath); err != nil {
+		// If another procd (or another thread on this procd) already completed the
+		// download, then we consider the download successful. Any other error
+		// (e.g. ux crashed) is unexpected.
+		if !np.IsErrExists(err) {
+			return err
+		}
+		// If someone else completed the download before us, remove the temp file.
+		pd.Remove(tmppath)
 	}
 	return nil
 }
 
-// XXX Cleanup on crashes? Versioning? Procd crashes?
+// Check if we need to download a new version of the binary.
+func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
+	// If we can't stat the bin through ux, we try to download it. This might be
+	// overly-aggressive in the event that the ~local ux crashes, but it should
+	// still be correct.
+	st1, err := pd.Stat(uxBinPath)
+	if err != nil {
+		return true
+	}
+	// Stat the s3 version of the bin.
+	st2, err := pd.Stat(s3BinPath)
+	if err != nil {
+		db.DFatalf("Couldn't stat s3 bin: %v", err)
+	}
+	// If the "last modified" time of the s3-backed binary is more recent that
+	// the "last modified" time of the ux-backed binary, we need to download the
+	// new version. Otherwise, continue as normal.
+	if st1.Mtime < st2.Mtime {
+		db.DPrintf(db.ALWAYS, "s3 bin is newer (%v < %v), need to download", st1.Mtime, st2.Mtime)
+		db.DPrintf("PROCD", "s3 bin is newer (%v < %v), need to download", st1.Mtime, st2.Mtime)
+		// Remove the old version.
+		pd.Remove(uxBinPath)
+		return true
+	}
+	return false
+}
+
+// XXX Cleanup on procd crashes?
 func (pd *Procd) downloadProcBin(program string) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
+	uxBinPath := path.Join(np.BIN, program)
+	s3BinPath := path.Join(np.S3BIN, program)
+
+	// If we already downloaded the program & it is up-to-date, return.
+	if !pd.needToDownload(uxBinPath, s3BinPath) {
+		return
+	}
+
+	db.DPrintf("PROCD", "Need to download %v", program)
+
 	// May need to retry if ux crashes.
 	RETRIES := 1000
-	for i := 0; i < RETRIES; i++ {
+	for i := 0; i < RETRIES && !pd.done; i++ {
 		// Return if successful. Else, retry
-		if err := pd.tryDownloadProcBin(program); err == nil {
+		if err := pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {
 			return
 		} else {
 			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin: %v", err)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"ulambda/mr"
+	"ulambda/test"
 )
 
 func grepline1(n int, line string) {
@@ -40,6 +41,8 @@ func grepline(n int, line string) int {
 
 func Grep(rdr io.Reader) int {
 	scanner := bufio.NewScanner(rdr)
+	buf := make([]byte, 0, test.BUFSZ)
+	scanner.Buffer(buf, cap(buf))
 	n := 1
 	cnt := 0
 	for scanner.Scan() {

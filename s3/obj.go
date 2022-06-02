@@ -181,7 +181,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
+	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.Size())
 	if np.Tlength(off) >= o.Size() {
 		return nil, nil
 	}

@@ -1,19 +1,13 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ]
-then
-    echo "Usage:[-c] vpc-id"
-    exit 1
-fi
-
-COMPILE="no"
+FIRST=""
 VPC=""
 while [[ $# -gt 0 ]]
 do
     key="$1"
     case $key in
-	-c)
-            COMPILE="yes"
+	-1)
+            FIRST="yes"
             shift
             ;;
 	*)
@@ -24,12 +18,22 @@ do
     esac
 done
 
+if [ -z "$FIRST" ] || [ $# -gt 0 ]
+then
+    echo "Usage:[-1] vpc-id"
+    exit 1
+fi
+
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
 MAIN="${vma[0]}"
 NAMED="${vma[0]}:1111"
 export NAMED="${NAMED}"
+
+if ! [ -z "$FIRST" ]; then
+    vms=${vma[0]}
+fi
 
 for vm in $vms
 do

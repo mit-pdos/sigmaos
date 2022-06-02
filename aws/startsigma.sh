@@ -18,7 +18,7 @@ do
     esac
 done
 
-if [ -z "$FIRST" ] || [ $# -gt 0 ]
+if [ -z "$VPC" ]
 then
     echo "Usage:[-1] vpc-id"
     exit 1

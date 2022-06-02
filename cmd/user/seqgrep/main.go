@@ -8,6 +8,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/fslib"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/seqgrep"
@@ -16,6 +17,7 @@ import (
 func main() {
 	fsl := fslib.MakeFsLib(os.Args[0] + "-" + proc.GetPid().String())
 	pclnt := procclnt.MakeProcClnt(fsl)
+	p := perf.MakePerf("SEQGREP")
 	err := pclnt.Started()
 	if err != nil {
 		db.DFatalf("Started: error %v\n", err)
@@ -28,5 +30,6 @@ func main() {
 	rdr := bufio.NewReader(r)
 	n := seqgrep.Grep(rdr)
 	log.Printf("n = %d\n", n)
+	p.Done()
 	pclnt.Exited(proc.MakeStatusInfo(proc.StatusOK, strconv.Itoa(n), nil))
 }

@@ -14,6 +14,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
+	"ulambda/resource"
 )
 
 const (
@@ -81,11 +82,11 @@ func (m *SigmaResourceMgr) makeCtlFiles() {
 	}
 }
 
-func (m *SigmaResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
+func (m *SigmaResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
-	case Trealm:
+	case resource.Trealm:
 		m.destroyRealm(msg.Name)
-	case Tnode:
+	case resource.Tnode:
 		db.DPrintf("SIGMAMGR", "free noded %v", msg.Name)
 		m.freeNodeds <- msg.Name
 	default:
@@ -94,11 +95,11 @@ func (m *SigmaResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
 }
 
 // Handle a resource request.
-func (m *SigmaResourceMgr) handleResourceRequest(msg *ResourceMsg) {
+func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
-	case Trealm:
+	case resource.Trealm:
 		m.createRealm(msg.Name)
-	case Tnode:
+	case resource.Tnode:
 		m.Lock()
 		defer m.Unlock()
 
@@ -244,7 +245,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 
 // Request a Noded from realm realmId.
 func (m *SigmaResourceMgr) requestNoded(realmId string) {
-	msg := MakeResourceMsg(Trequest, Tnode, "", 1)
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, "", 1)
 	for {
 		// TODO: move realmctl file to sigma named.
 		if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, realmctl), msg.Marshal(), np.OWRITE, 0); err != nil {

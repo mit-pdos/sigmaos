@@ -14,6 +14,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/resource"
 	"ulambda/semclnt"
 )
 
@@ -68,7 +69,7 @@ func (r *Noded) markFree() {
 	cfg.Id = r.id
 	cfg.RealmId = kernel.NO_REALM
 
-	msg := MakeResourceMsg(Tgrant, Tnode, r.id, 1)
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tnode, r.id, 1)
 
 	if _, err := r.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile in markFree: %v", err)

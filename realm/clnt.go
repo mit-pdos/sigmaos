@@ -10,6 +10,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/resource"
 	"ulambda/semclnt"
 )
 
@@ -38,7 +39,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 	rStartSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
 	rStartSem.Init(0)
 
-	msg := MakeResourceMsg(Trequest, Trealm, rid, 1)
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, rid, 1)
 
 	if _, err := clnt.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile in RealmClnt.CreateRealm: %v", err)
@@ -55,7 +56,7 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 	rExitSem := semclnt.MakeSemClnt(clnt.FsLib, path.Join(np.BOOT, rid))
 	rExitSem.Init(0)
 
-	msg := MakeResourceMsg(Tgrant, Trealm, rid, 1)
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Trealm, rid, 1)
 
 	if _, err := clnt.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error WriteFile in RealmClnt.DestroyRealm: %v", err)

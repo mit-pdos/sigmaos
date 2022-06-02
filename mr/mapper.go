@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/klauspost/readahead"
+	"github.com/klauspost/readahead"
 
 	"ulambda/awriter"
 	"ulambda/crash"
@@ -183,7 +183,12 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	defer rdr.Close()
 	rdr.Lseek(s.Offset)
 
-	scanner := bufio.NewScanner(rdr)
+	ra, err := readahead.NewReaderSize(rdr, 2, m.linesz)
+	if err != nil {
+		db.DFatalf("readahead err %v\n", err)
+	}
+
+	scanner := bufio.NewScanner(ra)
 	buf := make([]byte, 0, m.linesz)
 	scanner.Buffer(buf, cap(buf))
 

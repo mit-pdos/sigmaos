@@ -99,6 +99,20 @@ func TestSplits(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestSeqMR(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+	job = readConfig()
+
+	p := proc.MakeProc("bin/user/seqgrep", []string{job.Input})
+	err := ts.Spawn(p)
+	assert.Nil(t, err)
+	status, err := ts.WaitExit(p.Pid)
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK())
+	// assert.Equal(t, 795, n)
+	ts.Shutdown()
+}
+
 type Tstate struct {
 	job string
 	*test.Tstate
@@ -279,7 +293,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	}
 }
 
-func TestMR(t *testing.T) {
+func TestMRLIB(t *testing.T) {
 	runN(t, 0, 0, 0, 0)
 }
 

@@ -183,8 +183,7 @@ func (m *Mapper) doSplit(s *Split) (np.Tlength, error) {
 	defer rdr.Close()
 	rdr.Lseek(s.Offset)
 
-	brdr := bufio.NewReaderSize(rdr, test.BUFSZ)
-	scanner := bufio.NewScanner(brdr)
+	scanner := bufio.NewScanner(rdr)
 	buf := make([]byte, 0, m.linesz)
 	scanner.Buffer(buf, cap(buf))
 

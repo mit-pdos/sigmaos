@@ -71,9 +71,6 @@ func (p *Proc) wait(cmd *exec.Cmd) {
 	if err != nil {
 		db.DPrintf("PROCD_ERR", "Error namespace destroy: %v", err)
 	}
-
-	// Notify schedd that the process exited
-	//	p.pd.Exited(p.attr.Pid)
 }
 
 func (p *Proc) run(cores []uint) error {

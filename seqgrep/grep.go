@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/klauspost/readahead"
+
 	"ulambda/mr"
 	"ulambda/test"
 )
@@ -40,7 +42,11 @@ func grepline(n int, line string) int {
 }
 
 func Grep(rdr io.Reader) int {
-	scanner := bufio.NewScanner(rdr)
+	ra, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
+	if err != nil {
+		log.Fatalf("readahead err %v\n", err)
+	}
+	scanner := bufio.NewScanner(ra)
 	buf := make([]byte, 0, test.BUFSZ)
 	scanner.Buffer(buf, cap(buf))
 	n := 1

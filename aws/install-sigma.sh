@@ -35,6 +35,7 @@ vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 for vm in $vms; do
   echo "INSTALL: $vm"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
   (cd ulambda; ./stop.sh; ./install.sh -from s3)
 ENDSSH
 done

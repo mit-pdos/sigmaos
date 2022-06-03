@@ -75,7 +75,7 @@ fi
 
 
 # Set up a few directories, and prepare to scp the s3 secrets.
-ssh -n -i $KEY $LOGIN@$DNS <<ENDSSH
+ssh -i $KEY $LOGIN@$DNS <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
 chmod 700 ~/.aws
@@ -144,7 +144,7 @@ EOF
 
 if [ -d "ulambda" ] 
 then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull; ./install.sh -from s3)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'
 else
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download; ./install.sh -from s3)'
 fi

@@ -6,9 +6,10 @@ while [[ $# -gt 0 ]]
 do
     key="$1"
     case $key in
-	-1)
-            FIRST="yes"
+	-n)
             shift
+	    FIRST=$1
+	    shift
             ;;
 	*)
             VPC=$1
@@ -20,7 +21,7 @@ done
 
 if [ -z "$VPC" ]
 then
-    echo "Usage:[-1] vpc-id"
+    echo "Usage:[-n <n>] vpc-id"
     exit 1
 fi
 
@@ -32,7 +33,7 @@ NAMED="${vma[0]}:1111"
 export NAMED="${NAMED}"
 
 if ! [ -z "$FIRST" ]; then
-    vms=${vma[0]}
+    vms=${vma[@]:0:$FIRST}
 fi
 
 for vm in $vms

@@ -1,16 +1,34 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 vpc-id" 1>&2
+  echo "Usage: $0 --vpc VPC" 1>&2
 }
 
-if [ "$#" -ne 1 ]
-then
+VPC=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --vpc)
+    shift
+    VPC=$1
+    shift
+    ;;
+  -help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Error: unexpected argument '$1'"
+    usage
+    exit 1
+    ;;
+  esac
+done
+
+
+if [ -z $VPC ] || [ $# -gt 0 ]; then
   usage
   exit 1
 fi
-
-VPC=$1
 
 vms=(`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`)
 
@@ -29,5 +47,8 @@ ENDSSH
 echo "COMPILE AND UPLOAD: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
 grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace -target aws > /tmp/make.out 2>&1; ./upload.sh; )  
-rm ~/.nobuild
+# NOte that we have completed the build on this machine at least once.
+if [ -f ~/.nobuild ]; then
+  rm ~/.nobuild
+fi
 ENDSSH

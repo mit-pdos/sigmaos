@@ -1,73 +1,82 @@
 #!/bin/bash
 
-REBOOT="reboot"
+usage() {
+  echo "Usage: $0 [--noreboot] --key VPC_KEY --vm VM_DNS_NAME" 1>&2
+}
 
+KEY=""
+VM=""
+REBOOT="reboot"
 while [[ $# -gt 0 ]]
 do
-    key="$1"
- 
-    case $key in
-       --noreboot)
-           REBOOT="--noreboot"
-           shift
-           ;;
-       *)
-           KEY=$1
-           DNS=$2
-           shift
-           shift
-           break
-           ;;
-    esac
+  case $1 in
+  --noreboot)
+    REBOOT="--noreboot"
+    shift
+    ;;
+  --key)
+    shift
+    KEY=$1
+    shift
+    ;;
+  --vm)
+    shift
+    VM=$1
+    shift
+    ;;
+  -help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Error: unexpected argument '$1'"
+    usage
+    exit 1
+    ;;
+  esac
 done
 
-echo $REBOOT $KEY $DNS
+echo $0 $REBOOT $KEY $VM
 
-if [ -z "$KEY" ] || [ -z "$DNS" ] || [ $# -gt 0 ]
-then
-  echo "Usage: ./install-sw.sh [--noreboot] vpc-key-file dns-instance"
+if [ -z "$KEY" ] || [ -z "$VM" ] || [ $# -gt 0 ]; then
+  usage
   exit 1
 fi
 
 LOGIN=ubuntu
-
-echo $0 $REBOOT $KEY $DNS
-
-if [ "$REBOOT" = "reboot" ]; then
-    # try to deal with lag before instance is created and configured
-    echo -n "wait until cloud-init is done "
-
-    while true ; do
-	done=`ssh -n -o ConnectionAttempts=1000 -i $KEY $LOGIN@$DNS sudo grep "finished" /var/log/cloud-init-output.log`
-	if [ ! -z "$done" ]
-	then
-	    break
-	fi
-	echo -n "."
-	sleep 1
-    done
-
-    echo "done; reboot and wait"
-
-    ssh -n -i $KEY $LOGIN@$DNS sudo shutdown -r now
-
-    sleep 2
-
-    while true ; do
-	done=`ssh -n -i $KEY $LOGIN@$DNS echo "this is an ssh"`
-	if [ ! -z "$done" ]
-	then
-	    break
-	fi
-	echo -n "."
-	sleep 1
-    done
-
-    echo "done rebooting"
+if [ $REBOOT = "reboot" ]; then
+  # try to deal with lag before instance is created and configured
+  echo -n "wait until cloud-init is done "
+  
+  while true; do
+    done=`ssh -n -o ConnectionAttempts=1000 -i $KEY $LOGIN@$VM sudo grep "finished" /var/log/cloud-init-output.log`
+    if [ ! -z "$done" ]; then
+      break
+    fi
+    echo -n "."
+    sleep 1
+  done
+  
+  echo "done; reboot and wait"
+  
+  ssh -n -i $KEY $LOGIN@$VM sudo shutdown -r now
+  
+  sleep 2
+  
+  while true; do
+    done=`ssh -n -i $KEY $LOGIN@$VM echo "this is an ssh"`
+    if [ ! -z "$done" ]; then
+      break
+    fi
+    echo -n "."
+    sleep 1
+  done
+  
+  echo "done rebooting"
 fi
 
 # Set up a few directories, and prepare to scp the aws secrets.
-ssh -i $KEY $LOGIN@$DNS <<ENDSSH
+ssh -i $KEY $LOGIN@$VM <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
 chmod 700 ~/.aws
@@ -82,18 +91,19 @@ do
   gpg --output $F --decrypt ${F}.gpg || exit 1
 done
 
-# scp the s3 secrets to the server.
-scp -i $KEY .aws/config $LOGIN@$DNS:/home/$LOGIN/.aws/
-scp -i $KEY .aws/credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
+# scp the s3 secrets to the server and remove them locally.
+scp -i $KEY .aws/config $LOGIN@$VM:/home/$LOGIN/.aws/
+scp -i $KEY .aws/credentials $LOGIN@$VM:/home/$LOGIN/.aws/
 rm $SECRETS
 
-ssh -i $KEY $LOGIN@$DNS <<ENDSSH
+ssh -i $KEY $LOGIN@$VM <<ENDSSH
 cat <<EOF > ~/.ssh/config
 Host *
-   StrictHostKeyChecking no
-   UserKnownHostsFile=/dev/null
+  StrictHostKeyChecking no
+  UserKnownHostsFile=/dev/null
 EOF
 chmod go-w .ssh/config
+
 cat << EOF > ~/.ssh/aws-ulambda
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
@@ -142,18 +152,17 @@ EOF
 
 if [ -d "ulambda" ] 
 then
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download;)'
-   # Indicate that sigma has not been build yet on this instance
-   touch ~/.nobuild
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download;)'
+  # Indicate that sigma has not been build yet on this instance
+  touch ~/.nobuild
 fi
 
 echo -n > ~/.hushlogin
-
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh -i $KEY $LOGIN@$DNS"
+echo "ssh -i $KEY $LOGIN@$VM"
 echo "============================="
 

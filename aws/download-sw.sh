@@ -66,15 +66,7 @@ if [ "$REBOOT" = "reboot" ]; then
     echo "done rebooting"
 fi
 
-# decrypt the private keys.
-#SECRETS="credentials"
-#for F in $SECRETS
-#do
-#  gpg --output $F --decrypt ${F}.gpg || exit 1
-#done
-
-
-# Set up a few directories, and prepare to scp the s3 secrets.
+# Set up a few directories, and prepare to scp the aws secrets.
 ssh -i $KEY $LOGIN@$DNS <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
@@ -83,11 +75,17 @@ echo > ~/.aws/credentials
 chmod 600 ~/.aws/credentials
 ENDSSH
 
+# decrypt the aws secrets.
+SECRETS=".aws/credentials"
+for F in $SECRETS
+do
+  gpg --output $F --decrypt ${F}.gpg || exit 1
+done
+
 # scp the s3 secrets to the server.
-scp -i $KEY ~/.aws/credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
-scp -i $KEY ~/.aws/config $LOGIN@$DNS:/home/$LOGIN/.aws/
-#scp -i $KEY credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
-#rm $SECRETS
+scp -i $KEY .aws/config $LOGIN@$DNS:/home/$LOGIN/.aws/
+scp -i $KEY .aws/credentials $LOGIN@$DNS:/home/$LOGIN/.aws/
+rm $SECRETS
 
 ssh -i $KEY $LOGIN@$DNS <<ENDSSH
 cat <<EOF > ~/.ssh/config

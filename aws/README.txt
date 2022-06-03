@@ -25,7 +25,7 @@ $ ./rmvpc.py  --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 To boot sigmaos on the VPC:
 
-$ ./start.sh vpc-061a1808693a1626a
+$ ./start-sigmaos.sh vpc-061a1808693a1626a
 
 will update the sigmaos software on each EC2 instances and restart
 sigmaos daemons.
@@ -52,5 +52,4 @@ updated lambda daemons on the VPC.
 
 add keys for recipients to gpg key ring
 
-$ gpg --recipient sigma-kaashoek --encrypt-files aws-credentials.txt
-  
+$ gpg --recipient sigma-kaashoek --recipient arielck --recipient NEW_RECIPIENT --encrypt-files aws-credentials.txt

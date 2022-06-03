@@ -2,8 +2,8 @@
 
 if [ "$#" -ne 1 ]
 then
-    echo "Usage: vpc-id"
-    exit 1
+  echo "Usage: vpc-id"
+  exit 1
 fi
 
 VPC=$1

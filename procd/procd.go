@@ -338,7 +338,7 @@ func (pd *Procd) downloadProcBin(program string) {
 			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin: %v", err)
 		}
 	}
-	db.DFatalf("Couldn't download proc bin in over %v retries", RETRIES)
+	db.DFatalf("Couldn't download proc bin %v in over %v retries", program, RETRIES)
 }
 
 func (pd *Procd) runProc(p *Proc) {

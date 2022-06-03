@@ -11,7 +11,6 @@ import (
 	"github.com/klauspost/readahead"
 
 	"ulambda/mr"
-	"ulambda/test"
 )
 
 func grepline1(n int, line string) {
@@ -42,12 +41,13 @@ func grepline(n int, line string) int {
 }
 
 func Grep(rdr io.Reader) int {
-	ra, err := readahead.NewReaderSize(rdr, 4, test.BUFSZ)
+	sz := 8 * (1 << 20)
+	ra, err := readahead.NewReaderSize(rdr, 4, sz)
 	if err != nil {
 		log.Fatalf("readahead err %v\n", err)
 	}
 	scanner := bufio.NewScanner(ra)
-	buf := make([]byte, 0, test.BUFSZ)
+	buf := make([]byte, 0, sz)
 	scanner.Buffer(buf, cap(buf))
 	n := 1
 	cnt := 0

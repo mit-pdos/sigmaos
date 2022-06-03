@@ -30,13 +30,15 @@ done < $DIR/$SERVERS
 if [[ $is_leader == 1 ]]; then
 
 ssh -i $DIR/keys/cloudlab-sigmaos $1 <<"ENDSSH"
-  # Get node names
-  lines=$(kubectl get nodes | tail -n +2)
-  while IFS= read -r line; do
-    name=$(echo $line | cut -d " " -f1)
-    kubectl drain $name --delete-emptydir-data --force --ignore-daemonsets
-    kubectl delete node $name
-  done <<< "$lines"
+#  #kubectl delete -f ~/ulambda/cloudlab/k8s/cni/calico.yaml
+#  #kubectl delete -f ~/ulambda/cloudlab/k8s/cni/tigera-operator.yaml
+#  # Get node names
+#  lines=$(kubectl get nodes | tail -n +2)
+#  while IFS= read -r line; do
+#    name=$(echo $line | cut -d " " -f1)
+#    kubectl drain $name --delete-emptydir-data --force --ignore-daemonsets
+#    kubectl delete node $name
+#  done <<< "$lines"
   yes | sudo kubeadm reset
 ENDSSH
 

@@ -1,26 +1,22 @@
 #!/bin/bash
 
-#
-# Run from directory thas has "bin"
-#
-
-N=":1111"
-if [ $# -eq 1 ]
-then
-    N=$1
-fi
+DIR=$(dirname $0)
+. $DIR/.env
 
 if [[ -z "${NAMED}" ]]; then
-  export NAMED=$N
+  export NAMED=":1111"
 fi
 
 if [[ -z "${N_REPLICAS}" ]]; then
   export N_REPLICAS=1
 fi
 
-echo "running with NAMED=$NAMED"
-echo "each realm runs with $N_REPLICAS replicas"
+if [[ -z "${BINPATH}" ]]; then
+  export BINPATH="name/s3/~ip/bin"
+fi
 
-./bin/realm/boot .
+echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS and BINPATH=$BINPATH"
+
+$BIN/realm/boot
 
 ./mount.sh

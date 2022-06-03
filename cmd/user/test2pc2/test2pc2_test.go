@@ -84,21 +84,21 @@ func (ts *Tstate) cleanup() {
 }
 
 func (ts *Tstate) spawnMemFS() string {
-	p := proc.MakeProc("bin/user/memfsd", []string{""})
+	p := proc.MakeProc("user/memfsd", []string{""})
 	ts.Spawn(p)
 	ts.WaitStart(p.Pid)
 	return p.Pid
 }
 
 func (ts *Tstate) spawnParticipant(index, opcode, delay string) string {
-	p := proc.MakeProc("bin/user/test2pc2", []string{index, opcode, delay})
+	p := proc.MakeProc("user/test2pc2", []string{index, opcode, delay})
 	ts.Spawn(p)
 	ts.WaitStart(p.Pid)
 	return p.Pid
 }
 
 func (ts *Tstate) spawnCoord(opcode string, fws []string) string {
-	p := proc.MakeProc("bin/user/twopc-coord", append([]string{opcode}, fws...))
+	p := proc.MakeProc("user/twopc-coord", append([]string{opcode}, fws...))
 	ts.Spawn(p)
 	ts.WaitStart(p.Pid)
 	return p.Pid

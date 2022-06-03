@@ -19,6 +19,7 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 )
 
 type Procd struct {
@@ -26,7 +27,6 @@ type Procd struct {
 	fs         *ProcdFs
 	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
 	stealChan  chan bool // Indicates there is work to be stolen.
-	bin        string
 	done       bool
 	addr       string
 	procs      map[proc.Tpid]Tstatus
@@ -39,9 +39,8 @@ type Procd struct {
 	*fslibsrv.MemFs
 }
 
-func RunProcd(bin string, pprofPath string, utilPath string) {
+func RunProcd() {
 	pd := &Procd{}
-	pd.bin = bin
 
 	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
@@ -266,12 +265,91 @@ func (pd *Procd) freeCores(cores []uint) {
 	}
 }
 
+// Try to download a proc bin from s3.
+func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
+	// Copy the binary from s3 to a temporary file.
+	tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
+	if err := pd.CopyFile(s3BinPath, tmppath); err != nil {
+		return err
+	}
+	// Rename the temporary file.
+	if err := pd.Rename(tmppath, uxBinPath); err != nil {
+		// If another procd (or another thread on this procd) already completed the
+		// download, then we consider the download successful. Any other error
+		// (e.g. ux crashed) is unexpected.
+		if !np.IsErrExists(err) {
+			return err
+		}
+		// If someone else completed the download before us, remove the temp file.
+		pd.Remove(tmppath)
+	}
+	return nil
+}
+
+// Check if we need to download a new version of the binary.
+func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
+	// If we can't stat the bin through ux, we try to download it. This might be
+	// overly-aggressive in the event that the ~local ux crashes, but it should
+	// still be correct.
+	st1, err := pd.Stat(uxBinPath)
+	if err != nil {
+		return true
+	}
+	// Stat the s3 version of the bin.
+	st2, err := pd.Stat(s3BinPath)
+	if err != nil {
+		db.DFatalf("Couldn't stat s3 bin: %v", err)
+	}
+	// If the "last modified" time of the s3-backed binary is more recent that
+	// the "last modified" time of the ux-backed binary, we need to download the
+	// new version. Otherwise, continue as normal.
+	if st1.Mtime < st2.Mtime {
+		db.DPrintf(db.ALWAYS, "s3 bin is newer (%v < %v), need to download", st1.Mtime, st2.Mtime)
+		db.DPrintf("PROCD", "s3 bin is newer (%v < %v), need to download", st1.Mtime, st2.Mtime)
+		// Remove the old version.
+		pd.Remove(uxBinPath)
+		return true
+	}
+	return false
+}
+
+// XXX Cleanup on procd crashes?
+func (pd *Procd) downloadProcBin(program string) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	uxBinPath := path.Join(np.BIN, program)
+	s3BinPath := path.Join(np.S3BIN, program)
+
+	// If we already downloaded the program & it is up-to-date, return.
+	if !pd.needToDownload(uxBinPath, s3BinPath) {
+		return
+	}
+
+	db.DPrintf("PROCD", "Need to download %v", program)
+
+	// May need to retry if ux crashes.
+	RETRIES := 1000
+	for i := 0; i < RETRIES && !pd.done; i++ {
+		// Return if successful. Else, retry
+		if err := pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {
+			return
+		} else {
+			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin: %v", err)
+		}
+	}
+	db.DFatalf("Couldn't download proc bin in over %v retries", RETRIES)
+}
+
 func (pd *Procd) runProc(p *Proc) {
 	// Register running proc
 	pd.setProcStatus(p.Pid, PROC_RUNNING)
 
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
+
+	// Download the bin from s3, if it isn't already cached locally.
+	pd.downloadProcBin(p.Program)
 
 	// Run the proc.
 	p.run(cores)

@@ -16,7 +16,7 @@ type Tstate struct {
 }
 
 func spawn(t *testing.T, ts *Tstate) proc.Tpid {
-	a := proc.MakeProc("bin/user/wwwd", []string{""})
+	a := proc.MakeProc("user/wwwd", []string{""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return a.Pid
@@ -25,7 +25,7 @@ func spawn(t *testing.T, ts *Tstate) proc.Tpid {
 func makeTstate(t *testing.T) *Tstate {
 	var err error
 	ts := &Tstate{}
-	ts.Tstate = test.MakeTstateAllBin(t, "../../..")
+	ts.Tstate = test.MakeTstateAll(t)
 	ts.pid = spawn(t, ts)
 
 	err = ts.WaitStart(ts.pid)

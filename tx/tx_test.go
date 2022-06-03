@@ -51,7 +51,7 @@ func makeTstate(t *testing.T) *Tstate {
 }
 
 func runMemfs(ts *Tstate) string {
-	t := proc.MakeProc("bin/user/memfsd", []string{""})
+	t := proc.MakeProc("user/memfsd", []string{""})
 	err := ts.Spawn(t)
 	assert.Nil(ts.t, err, "start memfs")
 	return t.Pid

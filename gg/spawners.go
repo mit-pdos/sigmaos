@@ -21,7 +21,7 @@ func spawnNoOp(launch ExecutorLauncher, waitPid string) string {
 }
 
 func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) string {
-	//	a := procdep.MakeProcDep(origDirUploaderPid(subDir), "bin/user/fsdiruploader", []string{
+	//	a := procdep.MakeProcDep(origDirUploaderPid(subDir), "user/fsdiruploader", []string{
 	//		ggOrig(dir, subDir, ""),
 	//		ggRemote(subDir, ""),
 	//		"",
@@ -35,7 +35,7 @@ func spawnOrigDirUploader(launch ExecutorLauncher, dir string, subDir string) st
 }
 
 func spawnReductionWriter(launch ExecutorLauncher, target string, targetReduction string, dstDir string, subDir string, deps []string) proc.Tpid {
-	//	a := procdep.MakeProcDep(reductionWriterPid(dstDir, subDir, target), "bin/user/gg-target-writer", []string{
+	//	a := procdep.MakeProcDep(reductionWriterPid(dstDir, subDir, target), "user/gg-target-writer", []string{
 	//		path.Join(dstDir, subDir),
 	//		target,
 	//		targetReduction,
@@ -57,7 +57,7 @@ func spawnReductionWriter(launch ExecutorLauncher, target string, targetReductio
 }
 
 func spawnExecutor(launch ExecutorLauncher, targetHash string, depPids []proc.Tpid) (proc.Tpid, error) {
-	//	a := procdep.MakeProcDep(executorPid(targetHash), "bin/user/gg-executor", []string{
+	//	a := procdep.MakeProcDep(executorPid(targetHash), "user/gg-executor", []string{
 	//		targetHash,
 	//	})
 	//	a.Dependencies = &procdep.Deps{map[string]bool{}, map[string]bool{}}
@@ -78,7 +78,7 @@ func spawnThunkOutputHandler(launch ExecutorLauncher, deps []string, thunkHash s
 	//		thunkHash,
 	//	}
 	//	args = append(args, outputFiles...)
-	//	a := procdep.MakeProcDep(outputHandlerPid(thunkHash), "bin/user/gg-thunk-output-handler", args)
+	//	a := procdep.MakeProcDep(outputHandlerPid(thunkHash), "user/gg-thunk-output-handler", args)
 	//	exitDepMap := map[string]bool{}
 	//	for _, dep := range deps {
 	//		exitDepMap[dep] = false

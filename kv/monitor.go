@@ -86,7 +86,7 @@ func (mo *Monitor) nextGroup() string {
 }
 
 func SpawnGrp(fsl *fslib.FsLib, pclnt *procclnt.ProcClnt, grp string, repl, ncrash int) *groupmgr.GroupMgr {
-	return groupmgr.Start(fsl, pclnt, repl, "bin/user/kvd", []string{grp}, ncrash, CRASHKVD, 0, 0)
+	return groupmgr.Start(fsl, pclnt, repl, "user/kvd", []string{grp}, ncrash, CRASHKVD, 0, 0)
 }
 
 func (mo *Monitor) grow() {

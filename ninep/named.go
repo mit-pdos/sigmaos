@@ -17,6 +17,9 @@ const (
 	DBREL    = "db"
 	DB       = NAMED + DBREL + "/"
 
+	BIN   = UX + "~ip/bin/"
+	S3BIN = S3 + "~ip/bin/"
+
 	SIGMAMGR = "name/sigmamgr"
 
 	MEMFS = "name/memfsd/"

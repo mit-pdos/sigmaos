@@ -21,8 +21,8 @@ func makeSubsystem(pclnt *procclnt.ProcClnt, p *proc.Proc) *Subsystem {
 	return &Subsystem{pclnt, p, nil}
 }
 
-func (s *Subsystem) Run(bindir string, namedAddr []string) error {
-	cmd, err := s.SpawnKernelProc(s.p, bindir, namedAddr)
+func (s *Subsystem) Run(namedAddr []string) error {
+	cmd, err := s.SpawnKernelProc(s.p, namedAddr)
 	if err != nil {
 		return err
 	}

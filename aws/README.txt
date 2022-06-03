@@ -10,29 +10,29 @@ $ ./mkvpc.py --vpc vpc-061a1808693a1626a ulam1
 $ ./lsvpc.py vpc-061a1808693a1626a
 
 To download the sigmaos software on an instance the first time it is being set up:
-$ ./download-sw.sh key-vpc-061a1808693a1626a.pem ec2-52-90-134-108.compute-1.amazonaws.com
+$ ./download-sw.sh --vpc vpc-061a1808693a1626a --vm ec2-52-90-134-108.compute-1.amazonaws.com
 
 To build the sigmaos software and upload the build for all instances to pull:
-$ ./build-sigma.sh vpc-061a1808693a1626a
+$ ./build-sigma.sh --vpc vpc-061a1808693a1626a
 
 To install the latest version of the sigmaos kernel on all instances:
-$ ./install-sigma.sh -vpc vpc-061a1808693a1626a
+$ ./install-sigma.sh --vpc vpc-061a1808693a1626a
 
 ./rmvpc.py removes either an instance or the whole VPC
-$ ./rmvpc.py  --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
+$ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
 # Running sigmaos 
 
 To boot sigmaos on the VPC:
 
-$ ./start-sigmaos.sh vpc-061a1808693a1626a
+$ ./start-sigmaos.sh --vpc vpc-061a1808693a1626a
 
 will update the sigmaos software on each EC2 instances and restart
 sigmaos daemons.
 
 To login to the VPC:
 
-$ ./login.sh vpc-061a1808693a1626a
+$ ./login.sh --vpc vpc-061a1808693a1626a
 
 this starts an ssh tunnel to the VPC. you only have to this once
 (e.g., you can run ./start.sh again without having to login)

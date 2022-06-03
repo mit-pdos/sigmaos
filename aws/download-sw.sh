@@ -146,7 +146,9 @@ if [ -d "ulambda" ]
 then
    ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull;)'
 else
-   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download; ./install.sh -from s3)'
+   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; git clone git@g.csail.mit.edu:ulambda; (cd ulambda; go mod download;)'
+   # Indicate that sigma has not been build yet on this instance
+   touch ~/.nobuild
 fi
 
 echo -n > ~/.hushlogin

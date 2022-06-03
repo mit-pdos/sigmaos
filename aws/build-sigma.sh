@@ -1,8 +1,12 @@
 #!/bin/bash
 
+usage() {
+  echo "Usage: $0 vpc-id" 1>&2
+}
+
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: vpc-id"
+  usage
   exit 1
 fi
 
@@ -16,9 +20,14 @@ echo "UPDATE: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
 ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
 (cd ulambda; ./stop.sh)
+# Make sure we build the first time sigmaos is installed.
+if [ -f ~/.nobuild ]; then
+  echo "+++" > /tmp/git.out
+fi
 ENDSSH
 
 echo "COMPILE AND UPLOAD: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace -target aws > /tmp/make.out 2>&1; ./upload.sh )  
+grep "+++" /tmp/git.out && (cd ulambda; ./make.sh -norace -target aws > /tmp/make.out 2>&1; ./upload.sh; )  
+rm ~/.nobuild
 ENDSSH

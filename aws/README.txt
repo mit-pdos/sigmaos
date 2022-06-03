@@ -9,23 +9,26 @@ $ ./mkvpc.py --vpc vpc-061a1808693a1626a ulam1
 ./lsvpc.py lists info about VPC:
 $ ./lsvpc.py vpc-061a1808693a1626a
 
-To install the ulambda software on the instance so that you can run it:
-$ ./install-sw.sh key-vpc-061a1808693a1626a.pem ec2-52-90-134-108.compute-1.amazonaws.com
+To download the sigmaos software on an instance the first time it is being set up:
+$ ./download-sw.sh key-vpc-061a1808693a1626a.pem ec2-52-90-134-108.compute-1.amazonaws.com
 
-This clones the repo, and installs go. You should be able to run
-./make.sh in the ulambda repo, and go test should succeed.
+To build the sigmaos software and upload the build for all instances to pull:
+$ ./build-sigma.sh vpc-061a1808693a1626a
 
-./lsrmvpc.py removes either an instance or the whole VPC
+To install the latest version of the sigmaos kernel on all instances:
+$ ./install-sigma.sh -vpc vpc-061a1808693a1626a
+
+./rmvpc.py removes either an instance or the whole VPC
 $ ./rmvpc.py  --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a
 
-# Running ulambda
+# Running sigmaos 
 
-To boot ulambda on the VPC:
+To boot sigmaos on the VPC:
 
 $ ./start.sh vpc-061a1808693a1626a
 
-will update the ulambda software on each EC2 instances and restart
-ulambda daemons.
+will update the sigmaos software on each EC2 instances and restart
+sigmaos daemons.
 
 To login to the VPC:
 

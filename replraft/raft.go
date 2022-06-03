@@ -131,7 +131,7 @@ func (n *RaftNode) serveChannels() {
 	n.snapshotIndex = snap.Metadata.Index
 	n.appliedIndex = snap.Metadata.Index
 
-	ticker := time.NewTicker(np.Conf.Raft.TICK_MS)
+	ticker := time.NewTicker(np.Conf.Raft.TICK_INTERVAL)
 	defer ticker.Stop()
 
 	go n.sendProposals()

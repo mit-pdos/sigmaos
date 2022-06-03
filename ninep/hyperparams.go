@@ -27,7 +27,7 @@ procd:
   work_steal_scan_timeout: 100ms
 
 raft:
-  tick_ms         : 25ms
+  tick_interval         : 25ms
   elect_nticks    : 4
   heartbeat_ticks : 1
  `
@@ -49,7 +49,7 @@ procd:
   work_steal_scan_timeout: 1000ms
 
 raft:
-  tick_ms         : 500ms
+  tick_interval         : 500ms
   elect_nticks    : 4 
   heartbeat_ticks : 1
  `
@@ -78,7 +78,7 @@ type Config struct {
 	} `yaml:"procd"`
 	Raft struct {
 		// Frequency with which the raft library ticks
-		TICK_MS time.Duration `yaml:"tick_ms"`
+		TICK_INTERVAL time.Duration `yaml:"tick_interval"`
 		// Number of ticks with no leader heartbeat after which a follower starts an election.
 		ELECT_NTICKS int `yaml:"elect_nticks"`
 		// Number of heartbeats per tick.

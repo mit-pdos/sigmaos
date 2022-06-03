@@ -18,6 +18,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
@@ -256,6 +257,9 @@ func (m *Mapper) doMap() (np.Tlength, np.Tlength, error) {
 }
 
 func RunMapper(mapf MapT, args []string) {
+	p := perf.MakePerf("MAPPER")
+	defer p.Done()
+
 	m, err := makeMapper(mapf, args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)

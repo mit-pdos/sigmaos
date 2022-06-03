@@ -1,32 +1,33 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: $0 [-norace] [-vet] [-target <name>]" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--target <name>]" 1>&2
 }
 
 RACE="-race"
 CMD="build"
 TARGET="local"
+PARALLEL=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
-  -norace)
+  --norace)
     shift
     RACE=""
     ;;
-  -vet)
+  --vet)
     shift
     CMD="vet"
     ;;
-  -target)
+  --target)
     shift
     TARGET="$1"
     shift
     ;;
-  -h)
-    usage
-    exit 0
+  --parallel)
+    shift
+    PARALLEL="--parallel"
     ;;
-  --help)
+  -help)
     usage
     exit 0
     ;;
@@ -40,6 +41,7 @@ done
 
 mkdir -p bin/kernel
 mkdir -p bin/user
+mkdir -p bin/realm
 
 for k in `ls cmd`; do
   echo "Building $k components"
@@ -49,7 +51,13 @@ for k in `ls cmd`; do
       go vet cmd/$k/$f/main.go
     else 
       echo "go build -ldflags='-X ulambda/ninep.Target=$TARGET' $RACE -o bin/$k/$f cmd/$k/$f/main.go"
-      go build -ldflags="-X ulambda/ninep.Target=$TARGET" $RACE -o bin/$k/$f cmd/$k/$f/main.go
+      if [ -z "$PARALLEL" ]; then
+        go build -ldflags="-X ulambda/ninep.Target=$TARGET" $RACE -o bin/$k/$f cmd/$k/$f/main.go
+      else
+        go build -ldflags="-X ulambda/ninep.Target=$TARGET" $RACE -o bin/$k/$f cmd/$k/$f/main.go &
+      fi
     fi
   done
 done
+
+wait

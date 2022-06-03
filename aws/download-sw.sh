@@ -1,10 +1,10 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--noreboot] --key VPC_KEY --vm VM_DNS_NAME" 1>&2
+  echo "Usage: $0 [--noreboot] --vpc VPC --vm VM_DNS_NAME" 1>&2
 }
 
-KEY=""
+VPC=""
 VM=""
 REBOOT="reboot"
 while [[ $# -gt 0 ]]
@@ -14,9 +14,9 @@ do
     REBOOT="--noreboot"
     shift
     ;;
-  --key)
+  --vpc)
     shift
-    KEY=$1
+    VPC=$1
     shift
     ;;
   --vm)
@@ -36,20 +36,21 @@ do
   esac
 done
 
-echo $0 $REBOOT $KEY $VM
+echo $0 $REBOOT $VPC $VM
 
-if [ -z "$KEY" ] || [ -z "$VM" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ -z "$VM" ] || [ $# -gt 0 ]; then
   usage
   exit 1
 fi
 
+KEY="key-$VPC.pem"
 LOGIN=ubuntu
 if [ $REBOOT = "reboot" ]; then
   # try to deal with lag before instance is created and configured
   echo -n "wait until cloud-init is done "
   
   while true; do
-    done=`ssh -n -o ConnectionAttempts=1000 -i $KEY $LOGIN@$VM sudo grep "finished" /var/log/cloud-init-output.log`
+    done=`ssh -n -o ConnectionAttempts=1000 -i key-$VPC.pem $LOGIN@$VM sudo grep "finished" /var/log/cloud-init-output.log`
     if [ ! -z "$done" ]; then
       break
     fi
@@ -59,12 +60,12 @@ if [ $REBOOT = "reboot" ]; then
   
   echo "done; reboot and wait"
   
-  ssh -n -i $KEY $LOGIN@$VM sudo shutdown -r now
+  ssh -n -i key-$VPC.pem $LOGIN@$VM sudo shutdown -r now
   
   sleep 2
   
   while true; do
-    done=`ssh -n -i $KEY $LOGIN@$VM echo "this is an ssh"`
+    done=`ssh -n -i key-$VPC.pem $LOGIN@$VM echo "this is an ssh"`
     if [ ! -z "$done" ]; then
       break
     fi
@@ -76,7 +77,7 @@ if [ $REBOOT = "reboot" ]; then
 fi
 
 # Set up a few directories, and prepare to scp the aws secrets.
-ssh -i $KEY $LOGIN@$VM <<ENDSSH
+ssh -i key-$VPC.pem $LOGIN@$VM <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
 chmod 700 ~/.aws
@@ -92,11 +93,11 @@ do
 done
 
 # scp the s3 secrets to the server and remove them locally.
-scp -i $KEY .aws/config $LOGIN@$VM:/home/$LOGIN/.aws/
-scp -i $KEY .aws/credentials $LOGIN@$VM:/home/$LOGIN/.aws/
+scp -i key-$VPC.pem .aws/config $LOGIN@$VM:/home/$LOGIN/.aws/
+scp -i key-$VPC.pem .aws/credentials $LOGIN@$VM:/home/$LOGIN/.aws/
 rm $SECRETS
 
-ssh -i $KEY $LOGIN@$VM <<ENDSSH
+ssh -i key-$VPC.pem $LOGIN@$VM <<ENDSSH
 cat <<EOF > ~/.ssh/config
 Host *
   StrictHostKeyChecking no
@@ -163,6 +164,6 @@ echo -n > ~/.hushlogin
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh -i $KEY $LOGIN@$VM"
+echo "ssh -i key-$VPC.pem $LOGIN@$VM"
 echo "============================="
 

@@ -5,6 +5,7 @@ import (
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
+	"ulambda/resource"
 )
 
 /*
@@ -34,12 +35,12 @@ import (
  */
 
 type CtlFile struct {
-	g resourceGrantHandler
-	r resourceRequestHandler
+	g resource.ResourceGrantHandler
+	r resource.ResourceRequestHandler
 	fs.Inode
 }
 
-func makeCtlFile(g resourceGrantHandler, r resourceRequestHandler, ctx fs.CtxI, parent fs.Dir) *CtlFile {
+func makeCtlFile(g resource.ResourceGrantHandler, r resource.ResourceRequestHandler, ctx fs.CtxI, parent fs.Dir) *CtlFile {
 	i := inode.MakeInode(ctx, 0, parent)
 	return &CtlFile{g, r, i}
 }
@@ -49,12 +50,12 @@ func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversi
 }
 
 func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	msg := &ResourceMsg{}
+	msg := &resource.ResourceMsg{}
 	msg.Unmarshal(b)
 	switch msg.MsgType {
-	case Tgrant:
+	case resource.Tgrant:
 		ctl.g(msg)
-	case Trequest:
+	case resource.Trequest:
 		ctl.r(msg)
 	default:
 		db.DFatalf("Unknown message type")

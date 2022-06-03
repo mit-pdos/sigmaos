@@ -18,6 +18,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/resource"
 	"ulambda/stats"
 )
 
@@ -69,20 +70,20 @@ func (m *RealmResourceMgr) makeCtlFiles() {
 	}
 }
 
-func (m *RealmResourceMgr) receiveResourceGrant(msg *ResourceMsg) {
+func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
-	case Tnode:
+	case resource.Tnode:
 		// Nothing much to do here, for now.
-		db.DPrintf("REALMMGR", "Tnode granted")
+		db.DPrintf("REALMMGR", "resource.Tnode granted")
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
 }
 
-func (m *RealmResourceMgr) handleResourceRequest(msg *ResourceMsg) {
+func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
-	case Tnode:
-		db.DPrintf("REALMMGR", "Tnode requested")
+	case resource.Tnode:
+		db.DPrintf("REALMMGR", "resource.Tnode requested")
 		lockRealm(m.lock, m.realmId)
 		nodedId := m.getLeastUtilizedNoded()
 		db.DPrintf("REALMMGR", "least utilized node: %v", nodedId)
@@ -257,7 +258,7 @@ func (m *RealmResourceMgr) Work() {
 	for {
 		if m.realmShouldGrow() {
 			db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
-			msg := MakeResourceMsg(Trequest, Tnode, m.realmId, 1)
+			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, m.realmId, 1)
 			if _, err := m.sigmaFsl.SetFile(path.Join(SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 				db.DFatalf("Error SetFile: %v", err)
 			}

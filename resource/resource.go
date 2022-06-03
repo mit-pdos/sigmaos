@@ -1,4 +1,4 @@
-package realm
+package resource
 
 import (
 	"encoding/json"
@@ -7,8 +7,8 @@ import (
 	db "ulambda/debug"
 )
 
-type resourceGrantHandler func(*ResourceMsg)
-type resourceRequestHandler func(*ResourceMsg)
+type ResourceGrantHandler func(*ResourceMsg)
+type ResourceRequestHandler func(*ResourceMsg)
 
 type Tresource uint32
 type Tmsg uint32

@@ -28,7 +28,7 @@ fi
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 for vm in $vms; do
-  echo "UPDATE: $vm"
+  echo "INSTALL: $vm"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   (cd ulambda; ./stop.sh; ./install.sh -from s3)
 ENDSSH

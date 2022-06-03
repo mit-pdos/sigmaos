@@ -43,7 +43,7 @@ for vm in $vms; do
     (cd ulambda; nohup ./start.sh > /tmp/start.out 2>&1 < /dev/null &)
   else
     echo "JOIN ${NAMED}"
-    (cd ulambda;  nohup bin/realm/noded . $vm > /tmp/noded.out 2>&1 < /dev/null &)
+    (cd ulambda; nohup bin/realm/noded . $vm > /tmp/noded.out 2>&1 < /dev/null &)
   fi
 ENDSSH
 done

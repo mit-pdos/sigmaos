@@ -13,12 +13,12 @@ var Target = "local"
 // Local params
 var local = `
 session:
-  heartbeat_ms: 50ms
+  heartbeat_interval: 50ms
   timeout: 200ms
 
 realm:
-  scan_interval_ms: 50ms 
-  resize_interval_ms: 100ms
+  scan_interval: 50ms 
+  resize_interval: 100ms
   grow_cpu_util_threshold: 50
   shrink_cpu_util_threshold: 25
 
@@ -35,12 +35,12 @@ raft:
 // AWS params
 var aws = `
 session:
-  heartbeat_ms: 1000ms
+  heartbeat_interval: 1000ms
   timeout: 40000ms
 
 realm:
-  scan_interval_ms: 1000ms
-  resize_interval_ms: 1000ms
+  scan_interval: 1000ms
+  resize_interval: 1000ms
   grow_cpu_util_threshold: 50
   shrink_cpu_util_threshold: 25
 
@@ -57,15 +57,15 @@ raft:
 type Config struct {
 	Session struct {
 		// Client heartbeat frequency.
-		HEARTBEAT_MS time.Duration `yaml:"heartbeat_ms"`
+		HEARTBEAT_INTERVAL time.Duration `yaml:"heartbeat_interval"`
 		// Kill a session after timeout ms of missed heartbeats.
 		TIMEOUT time.Duration `yaml:"timeout"`
 	} `yaml:"session"`
 	Realm struct {
 		// Frequency with which realmmgr scans to rebalance realms.
-		SCAN_INTERVAL_MS time.Duration `yaml:"scan_interval_ms"`
+		SCAN_INTERVAL time.Duration `yaml:"scan_interval"`
 		// Maximum frequency with which realmmgr resizes a realm.
-		RESIZE_INTERVAL_MS time.Duration `yaml:"resize_interval_ms"`
+		RESIZE_INTERVAL time.Duration `yaml:"resize_interval"`
 		// Utilization threshold at which to grow a realm.
 		GROW_CPU_UTIL_THRESHOLD float64 `yaml:"grow_cpu_util_threshold"`
 		// Utilization threshold at which to shrink a realm.

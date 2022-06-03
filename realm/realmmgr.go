@@ -214,7 +214,7 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 	}
 
 	// If we have resized too recently, return
-	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL_MS {
+	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL {
 		return false
 	}
 
@@ -265,6 +265,6 @@ func (m *RealmResourceMgr) Work() {
 		}
 
 		// Sleep for a bit.
-		time.Sleep(np.Conf.Realm.SCAN_INTERVAL_MS)
+		time.Sleep(np.Conf.Realm.SCAN_INTERVAL)
 	}
 }

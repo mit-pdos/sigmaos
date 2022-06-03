@@ -57,7 +57,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 func (sm *SessionMgr) run() {
 	for !sm.Done() {
 		// Sleep for a bit.
-		time.Sleep(np.Conf.Session.TIMEOUT_MS)
+		time.Sleep(np.Conf.Session.TIMEOUT)
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
 			detach := np.MakeFcall(np.Tdetach{}, s.Sid, nil, nil, np.NoFence)

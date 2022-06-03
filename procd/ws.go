@@ -12,7 +12,7 @@ import (
 
 // Thread in charge of stealing procs.
 func (pd *Procd) workStealingMonitor() {
-	ticker := time.NewTicker(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT_MS)
+	ticker := time.NewTicker(np.Conf.Procd.WORK_STEAL_SCAN_TIMEOUT)
 	for !pd.readDone() {
 		// Wait for a bit.
 		<-ticker.C
@@ -47,7 +47,7 @@ func (pd *Procd) workStealingMonitor() {
 // Find if any procs spawned at this procd haven't been run in a while. If so,
 // offer them as stealable.
 func (pd *Procd) offerStealableProcs() {
-	ticker := time.NewTicker(np.Conf.Procd.STEALABLE_PROC_TIMEOUT_MS)
+	ticker := time.NewTicker(np.Conf.Procd.STEALABLE_PROC_TIMEOUT)
 	for !pd.readDone() {
 		// Wait for a bit.
 		<-ticker.C
@@ -57,7 +57,7 @@ func (pd *Procd) offerStealableProcs() {
 			_, err := pd.ProcessDir(runqPath, func(st *np.Stat) (bool, error) {
 				// XXX Based on how we stuf Mtime into np.Stat (at a second
 				// granularity), but this should be changed, perhaps.
-				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT_MS/time.Millisecond) {
+				if uint32(time.Now().Unix())*1000 > st.Mtime*1000+uint32(np.Conf.Procd.STEALABLE_PROC_TIMEOUT/time.Millisecond) {
 					db.DPrintf("PROCD", "Procd %v offering stealable proc %v", pd.MyAddr(), st.Name)
 					// If proc has been haning in the runq for too long...
 					target := path.Join(runqPath, st.Name) + "/"

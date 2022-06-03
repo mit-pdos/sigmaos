@@ -73,7 +73,7 @@ func RunLeader(dir, last, child string) {
 		}
 
 		// wait a little before starting to write
-		time.Sleep(2 * np.Conf.Session.TIMEOUT_MS)
+		time.Sleep(2 * np.Conf.Session.TIMEOUT)
 
 		// these writes should fail since new leader will have started new epoch
 		for i := 0; i < NWRITE; i++ {

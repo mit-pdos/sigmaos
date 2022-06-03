@@ -916,7 +916,7 @@ func TestPipeCrash1(t *testing.T) {
 	err = fsl1.Disconnect(path)
 	assert.Nil(ts.T, err, "Disconnect")
 
-	time.Sleep(2 * np.Conf.Session.TIMEOUT_MS)
+	time.Sleep(2 * np.Conf.Session.TIMEOUT)
 
 	// start up second write to pipe
 	go func() {

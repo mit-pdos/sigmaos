@@ -14,7 +14,7 @@ var Target = "local"
 var local = `
 session:
   heartbeat_ms: 50ms
-  timeout_ms: 200ms
+  timeout: 200ms
 
 realm:
   scan_interval_ms: 50ms 
@@ -23,8 +23,8 @@ realm:
   shrink_cpu_util_threshold: 25
 
 procd:
-  stealable_proc_timeout_ms : 100ms
-  work_steal_scan_timeout_ms: 100ms
+  stealable_proc_timeout : 100ms
+  work_steal_scan_timeout: 100ms
 
 raft:
   tick_ms         : 25ms
@@ -36,7 +36,7 @@ raft:
 var aws = `
 session:
   heartbeat_ms: 1000ms
-  timeout_ms: 40000ms
+  timeout: 40000ms
 
 realm:
   scan_interval_ms: 1000ms
@@ -45,8 +45,8 @@ realm:
   shrink_cpu_util_threshold: 25
 
 procd:
-  stealable_proc_timeout_ms : 1000ms
-  work_steal_scan_timeout_ms: 1000ms
+  stealable_proc_timeout : 1000ms
+  work_steal_scan_timeout: 1000ms
 
 raft:
   tick_ms         : 500ms
@@ -59,7 +59,7 @@ type Config struct {
 		// Client heartbeat frequency.
 		HEARTBEAT_MS time.Duration `yaml:"heartbeat_ms"`
 		// Kill a session after timeout ms of missed heartbeats.
-		TIMEOUT_MS time.Duration `yaml:"timeout_ms"`
+		TIMEOUT time.Duration `yaml:"timeout"`
 	} `yaml:"session"`
 	Realm struct {
 		// Frequency with which realmmgr scans to rebalance realms.
@@ -73,8 +73,8 @@ type Config struct {
 	} `yaml:"realm"`
 	Procd struct {
 		// Procd work steal frequency.
-		STEALABLE_PROC_TIMEOUT_MS  time.Duration `yaml:"stealable_proc_timeout_ms"`
-		WORK_STEAL_SCAN_TIMEOUT_MS time.Duration `yaml:"work_steal_scan_timeout_ms"`
+		STEALABLE_PROC_TIMEOUT  time.Duration `yaml:"stealable_proc_timeout"`
+		WORK_STEAL_SCAN_TIMEOUT time.Duration `yaml:"work_steal_scan_timeout"`
 	} `yaml:"procd"`
 	Raft struct {
 		// Frequency with which the raft library ticks

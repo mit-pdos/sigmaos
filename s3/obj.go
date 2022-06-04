@@ -16,8 +16,9 @@ import (
 
 type Obj struct {
 	*info
-	perm np.Tperm
-	key  np.Path
+	bucket string
+	perm   np.Tperm
+	key    np.Path
 
 	// for writing
 	ch  chan error
@@ -29,11 +30,20 @@ type Obj struct {
 	buff *writeAtBuffer
 }
 
-func makeObj(key np.Path, perm np.Tperm) *Obj {
+func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
 	o := &Obj{}
+	o.bucket = bucket
 	o.key = key
 	o.perm = perm
 	return o
+}
+
+func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
+	if perm.IsDir() {
+		return makeDir(bucket, key.Copy(), perm)
+	} else {
+		return makeObj(bucket, key.Copy(), perm)
+	}
 }
 
 func (o *Obj) String() string {
@@ -53,9 +63,9 @@ func (o *Obj) fill() *np.Err {
 		}
 		var err *np.Err
 		if o.perm.IsDir() {
-			i, err = s3ReadDirL(fss3, o.key)
+			i, err = s3ReadDirL(fss3, o.bucket, o.key)
 		} else {
-			i, err = readHead(fss3, o.key)
+			i, err = readHead(fss3, o.bucket, o.key)
 		}
 		if err != nil {
 			return err
@@ -78,7 +88,7 @@ func (o *Obj) Perm() np.Tperm {
 
 func (o *Obj) Parent() fs.Dir {
 	dir := o.key.Dir()
-	return makeDir(dir, np.DMDIR)
+	return makeDir(o.bucket, dir, np.DMDIR)
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
@@ -131,7 +141,7 @@ func (o *Obj) reader() {
 	key := o.key.String()
 	downloader := manager.NewDownloader(fss3.client)
 	_, err := downloader.Download(context.TODO(), o.buff, &s3.GetObjectInput{
-		Bucket: &bucket,
+		Bucket: &o.bucket,
 		Key:    &key,
 	})
 	if err != nil {
@@ -164,7 +174,7 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
 	}
 	input := &s3.GetObjectInput{
-		Bucket: &bucket,
+		Bucket: &o.bucket,
 		Key:    &key,
 		Range:  &region,
 	}
@@ -214,7 +224,7 @@ func (o *Obj) writer(ch chan error) {
 	key := o.key.String()
 	uploader := manager.NewUploader(fss3.client)
 	_, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: &bucket,
+		Bucket: &o.bucket,
 		Key:    &key,
 		Body:   o.r,
 	})

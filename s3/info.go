@@ -23,19 +23,21 @@ func perm(key string) np.Tperm {
 
 type info struct {
 	sync.Mutex
-	key   np.Path
-	perm  np.Tperm
-	sz    np.Tlength
-	mtime int64
-	dents map[string]np.Tperm
+	bucket string
+	key    np.Path
+	perm   np.Tperm
+	sz     np.Tlength
+	mtime  int64
+	dents  map[string]np.Tperm
 }
 
 func (i *info) String() string {
-	return fmt.Sprintf("key '%v' %v sz %v path %v dents %v", i.key, i.perm, i.sz, path(i.key), i.dents)
+	return fmt.Sprintf("key '%v' %v sz %v path %v dents %v", i.key, i.perm, i.sz, getPath(i.key), i.dents)
 }
 
-func makeInfo(key np.Path, perm np.Tperm) *info {
+func makeInfo(bucket string, key np.Path, perm np.Tperm) *info {
 	i := &info{}
+	i.bucket = bucket
 	i.perm = perm
 	i.key = key
 	i.dents = make(map[string]np.Tperm)
@@ -47,24 +49,16 @@ func (i *info) dirents() []fs.FsObj {
 	defer i.Unlock()
 	dents := make([]fs.FsObj, 0, len(i.dents))
 	for name, p := range i.dents {
-		dents = append(dents, makeFsObj(p, i.key.Append(name)))
+		dents = append(dents, makeFsObj(i.bucket, p, i.key.Append(name)))
 	}
 	return dents
-}
-
-func makeFsObj(perm np.Tperm, key np.Path) fs.FsObj {
-	if perm.IsDir() {
-		return makeDir(key.Copy(), perm)
-	} else {
-		return makeObj(key.Copy(), perm)
-	}
 }
 
 func (i *info) lookupDirent(name string) fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
 	if p, ok := i.dents[name]; ok {
-		return makeFsObj(p, i.key.Append(name))
+		return makeFsObj(i.bucket, p, i.key.Append(name))
 	}
 	return nil
 }
@@ -76,9 +70,9 @@ func (i *info) insertDirent(name string, perm np.Tperm) fs.FsObj {
 		return nil
 	}
 	i.dents[name] = perm
-	ni := makeInfo(i.key.Copy().Append(name), perm)
+	ni := makeInfo(i.bucket, i.key.Copy().Append(name), perm)
 	cache.insert(ni.key, ni)
-	o := makeFsObj(perm, ni.key)
+	o := makeFsObj(i.bucket, perm, ni.key)
 	switch t := o.(type) {
 	case *Dir:
 		t.info = ni
@@ -145,14 +139,14 @@ func (i *info) includeNameL(key string) (string, np.Tperm, bool) {
 	return name, p, !ok
 }
 
-func s3ReadDirL(fss3 *Fss3, k np.Path) (*info, *np.Err) {
-	key := k.String()
+func s3ReadDirL(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 	maxKeys := 0
+	key := k.String()
 	params := &s3.ListObjectsV2Input{
 		Bucket: &bucket,
 		Prefix: &key,
 	}
-	i := makeInfo(k, np.DMDIR)
+	i := makeInfo(bucket, k, np.DMDIR)
 	p := s3.NewListObjectsV2Paginator(fss3.client, params,
 		func(o *s3.ListObjectsV2PaginatorOptions) {
 			if v := int32(maxKeys); v != 0 {

@@ -3,6 +3,7 @@ package fss3
 import (
 	"bufio"
 	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -17,12 +18,12 @@ import (
 	"ulambda/test"
 )
 
-var ROOT = []string{np.STATSD, "a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
+var ROOT = []string{"a", "b.txt", "gutenberg", "wiki", "ls.PDF"}
 
 func TestOne(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	dirents, err := ts.GetDir("name/s3/")
+	dirents, err := ts.GetDir(np.S3)
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 1, len(dirents))
@@ -33,8 +34,8 @@ func TestOne(t *testing.T) {
 func TestReadOff(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	rdr, err := ts.OpenReader("name/s3/~ip/gutenberg/pg-being_ernest.txt")
-	assert.Equal(t, nil, err)
+	rdr, err := ts.OpenReader(path.Join(np.S3, "~ip/9ps3/gutenberg/pg-being_ernest.txt"))
+	assert.Equal(t, nil, err, "Error ReadOff %v", err)
 	rdr.Lseek(1 << 10)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
 	scanner := bufio.NewScanner(brdr)
@@ -60,7 +61,7 @@ func TestTwo(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	dirents, err := ts.GetDir("name/s3")
+	dirents, err := ts.GetDir(np.S3)
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 2, len(dirents))
@@ -74,10 +75,10 @@ func TestUnionSimple(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir("name/s3/~ip/")
-	assert.Nil(t, err, "GetDir")
+	dirents, err := ts.GetDir(path.Join(np.S3, "~ip/9ps3/"))
+	assert.Nil(t, err, "GetDir: %v", err)
 
-	assert.True(t, fslib.Present(dirents, ROOT))
+	assert.True(t, fslib.Present(dirents, ROOT), "%v not in %v", ROOT, dirents)
 
 	ts.Shutdown()
 }
@@ -88,7 +89,7 @@ func TestUnionDir(t *testing.T) {
 	// Make a second one
 	ts.BootFss3d()
 
-	dirents, err := ts.GetDir("name/s3/~ip/gutenberg")
+	dirents, err := ts.GetDir(path.Join(np.S3, "~ip/9ps3/gutenberg"))
 	assert.Nil(t, err, "GetDir")
 
 	assert.Equal(t, 8, len(dirents))
@@ -105,7 +106,7 @@ func TestUnionFile(t *testing.T) {
 	file, err := os.ReadFile("../input/pg-being_ernest.txt")
 	assert.Nil(t, err, "ReadFile")
 
-	name := "name/s3/~ip/gutenberg/pg-being_ernest.txt"
+	name := path.Join(np.S3, "~ip/9ps3/gutenberg/pg-being_ernest.txt")
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
@@ -135,13 +136,13 @@ func TestUnionFile(t *testing.T) {
 func TestStat(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	name := "name/s3/~ip/gutenberg/pg-being_ernest.txt"
+	name := path.Join(np.S3, "~ip/9ps3/gutenberg/pg-being_ernest.txt")
 	st, err := ts.Stat(name)
 	assert.Nil(t, err, "Stat")
 
 	addr, err := fidclnt.LocalIP()
 	assert.Nil(t, err, "LocalIP")
-	st, err = ts.Stat("name/s3/~ip")
+	st, err = ts.Stat(path.Join(np.S3, "~ip"))
 	assert.Nil(t, err, "Stat~")
 	a := strings.Split(st.Name, ":")[0]
 	assert.Equal(t, addr, a)
@@ -150,10 +151,10 @@ func TestStat(t *testing.T) {
 }
 
 func s3Name(ts *test.Tstate) string {
-	sts, err := ts.GetDir("name/s3/")
-	assert.Nil(ts.T, err, "name/s3")
+	sts, err := ts.GetDir(np.S3)
+	assert.Nil(ts.T, err, np.S3)
 	assert.Equal(ts.T, 1, len(sts))
-	name := "name/s3" + "/" + sts[0].Name
+	name := path.Join(np.S3, sts[0].Name)
 	return name
 }
 
@@ -161,12 +162,12 @@ func TestSymlinkFile(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	dn := s3Name(ts)
-	fn := dn + "/b.txt"
+	fn := path.Join(dn, "9ps3", "b.txt")
 
 	_, err := ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
 
-	fn = dn + "//b.txt"
+	fn = dn + "/9ps3" + "//b.txt"
 	_, err = ts.GetFile(fn)
 	assert.Nil(t, err, "GetFile")
 
@@ -182,7 +183,7 @@ func TestSymlinkDir(t *testing.T) {
 	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, true, pathclnt.IsRemoteTarget(string(b)))
 
-	dirents, err := ts.GetDir(dn + "/")
+	dirents, err := ts.GetDir(dn + "/" + "9ps3")
 	assert.Nil(t, err, "GetDir")
 
 	assert.True(t, fslib.Present(dirents, ROOT))
@@ -195,7 +196,7 @@ func TestReadSplit(t *testing.T) {
 
 	ts := test.MakeTstateAll(t)
 
-	rdr, err := ts.OpenReader("name/s3/~ip/wiki/enwiki-latest-pages-articles-multistream.xml")
+	rdr, err := ts.OpenReader(path.Join(np.S3, "~ip/9ps3/wiki/enwiki-latest-pages-articles-multistream.xml"))
 	assert.Nil(t, err)
 	err = rdr.Lseek(SPLITSZ)
 	assert.Nil(t, err)

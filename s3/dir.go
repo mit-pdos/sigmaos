@@ -16,8 +16,8 @@ type Dir struct {
 	*Obj
 }
 
-func makeDir(key np.Path, perm np.Tperm) *Dir {
-	o := makeObj(key, perm)
+func makeDir(bucket string, key np.Path, perm np.Tperm) *Dir {
+	o := makeObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
 	return dir
@@ -54,7 +54,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 	}
 	qids = append(qids, o.Qid())
 	if len(p) == 1 {
-		db.DPrintf("FSS3", "%v: namei %v %v\n", ctx, qids, o)
+		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, qids, o)
 		return qids, o, nil, nil
 	} else {
 		return o.(*Dir).namei(ctx, p[1:], qids)
@@ -62,14 +62,14 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 }
 
 func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("FSS3", "%v: Lookup %v '%v'\n", ctx, d, p)
+	db.DPrintf("FSS3", "%v: Lookup %v '%v'", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil, nil
 	}
 	if !d.Perm().IsDir() {
 		return nil, nil, nil, np.MkErr(np.TErrNotDir, d)
 	}
-	qids, o, err := nameiObj(ctx, p)
+	qids, o, err := nameiObj(ctx, d.bucket, p)
 	if err == nil {
 		db.DPrintf("FSS3", "%v: nameiObj %v %v\n", ctx, qids, o)
 		return qids, o, nil, nil
@@ -92,6 +92,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
+	db.DPrintf("FSS3", "readDir successfully filled: %v\n", d)
 	for _, o1 := range d.info.dirents() {
 		var st *np.Stat
 		var err *np.Err
@@ -156,7 +157,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	}
 	key := d.key.Append(name).String()
 	input := &s3.DeleteObjectInput{
-		Bucket: &bucket,
+		Bucket: &d.bucket,
 		Key:    &key,
 	}
 	db.DPrintf("FSS3", "Delete %v key %v name %v\n", d, key, name)
@@ -170,4 +171,31 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	return np.MkErr(np.TErrNotSupported, "Rename")
+}
+
+// ===== The following functions are needed to make an s3 dir a child of a dir.DirImpl
+func (i *info) SetMtime(mtime int64) {
+	db.DFatalf("Unimplemented")
+}
+
+func (i *info) Mtime() int64 {
+	db.DFatalf("Unimplemented")
+	return 0
+}
+
+func (d *Dir) SetParent(di fs.Dir) {
+	db.DFatalf("Unimplemented")
+}
+
+func (d *Dir) Snapshot(fs.SnapshotF) []byte {
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (d *Dir) Unlink() {
+	db.DFatalf("Unimplemented")
+}
+
+func (d *Dir) VersionInc() {
+	db.DFatalf("Unimplemented")
 }

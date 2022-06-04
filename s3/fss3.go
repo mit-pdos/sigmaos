@@ -7,23 +7,21 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"ulambda/ctx"
 	db "ulambda/debug"
-	"ulambda/fslib"
+	"ulambda/dir"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
 	"ulambda/perf"
-	"ulambda/proc"
-	"ulambda/procclnt"
-	"ulambda/sesssrv"
 )
 
-var bucket = "9ps3"
+var _bucket = "9ps3"
 
 var cache *Cache
 var fss3 *Fss3
 
 type Fss3 struct {
-	*sesssrv.SessSrv
+	*fslibsrv.MemFs
 	mu     sync.Mutex
 	client *s3.Client
 }
@@ -31,17 +29,20 @@ type Fss3 struct {
 func RunFss3() {
 	cache = mkCache()
 	fss3 = &Fss3{}
-	root := makeDir(np.Path{}, np.DMDIR)
-	fsl := fslib.MakeFsLib("fss3d")
-	pclnt := procclnt.MakeProcClnt(fsl)
+	mfs, _, _, err := fslibsrv.MakeMemFs(np.S3, np.S3REL)
+	if err != nil {
+		db.DFatalf("Error MakeMemFs: %v", err)
+	}
 	p := perf.MakePerf("FSS3")
 	defer p.Done()
-	srv, err := fslibsrv.MakeSrv(root, np.S3, fsl, pclnt)
-	if err != nil {
-		db.DFatalf("%v: MakeSrv %v\n", proc.GetProgram(), err)
-	}
 
-	fss3.SessSrv = srv
+	// TODO add many buckets.
+	// Add the 9ps3 bucket.
+	b1 := makeDir(_bucket, np.Path{}, np.DMDIR)
+	if err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), _bucket, b1); err != nil {
+		db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
+	}
+	fss3.MemFs = mfs
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
@@ -51,6 +52,6 @@ func RunFss3() {
 	fss3.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-	srv.Serve()
-	srv.Done()
+	mfs.Serve()
+	mfs.Done()
 }

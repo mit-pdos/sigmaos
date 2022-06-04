@@ -126,8 +126,13 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid,
 	case *DirImpl:
 		dir.mu.Unlock() // for "."
 		return i.namei(ctx, path[1:], qids)
+	case fs.Dir:
+		dir.mu.Unlock() // for "."
+		s3qids, s3obj, s3path, err := i.Lookup(ctx, path[1:])
+		qids = append(qids, s3qids...)
+		return qids, s3obj, s3path, err
 	default:
-		db.DPrintf("MEMFS", "namei %T %v %v -> %v %v", i, path, dir, qids, path[1:])
+		db.DPrintf("MEMFS", "error not dir namei %T %v %v -> %v %v", i, path, dir, qids, path[1:])
 		dir.mu.Unlock()
 		return qids, inode, path, np.MkErr(np.TErrNotDir, path[0])
 	}

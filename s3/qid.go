@@ -11,7 +11,7 @@ import (
 	np "ulambda/ninep"
 )
 
-func readHead(fss3 *Fss3, k np.Path) (*info, *np.Err) {
+func readHead(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 	key := k.String()
 	input := &s3.HeadObjectInput{
 		Bucket: &bucket,
@@ -21,7 +21,7 @@ func readHead(fss3 *Fss3, k np.Path) (*info, *np.Err) {
 	if err != nil {
 		return nil, np.MkErrError(err)
 	}
-	i := makeInfo(k, 0777)
+	i := makeInfo(bucket, k, 0777)
 
 	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
 
@@ -33,14 +33,14 @@ func readHead(fss3 *Fss3, k np.Path) (*info, *np.Err) {
 	return i, nil
 }
 
-func path(key np.Path) np.Tpath {
+func getPath(key np.Path) np.Tpath {
 	h := fnv.New64a()
 	h.Write([]byte(key.String()))
 	return np.Tpath(h.Sum64())
 }
 
 func qid(perm np.Tperm, key np.Path) np.Tqid {
-	return np.MakeQid(np.Qtype(perm>>np.QTYPESHIFT), np.TQversion(0), path(key))
+	return np.MakeQid(np.Qtype(perm>>np.QTYPESHIFT), np.TQversion(0), getPath(key))
 }
 
 func mkQids(base *info) ([]np.Tqid, fs.FsObj) {
@@ -52,15 +52,15 @@ func mkQids(base *info) ([]np.Tqid, fs.FsObj) {
 		qids = append(qids, qid(np.DMDIR, base.key[0:i+1]))
 	}
 	qids = append(qids, qid(base.perm, base.key))
-	return qids, makeFsObj(base.perm, base.key)
+	return qids, makeFsObj(base.bucket, base.perm, base.key)
 }
 
-func nameiObj(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, *np.Err) {
+func nameiObj(ctx fs.CtxI, bucket string, p np.Path) ([]np.Tqid, fs.FsObj, *np.Err) {
 	if i := cache.lookup(p); i != nil {
 		qids, o := mkQids(i)
 		return qids, o, nil
 	}
-	i, err := readHead(fss3, p)
+	i, err := readHead(fss3, bucket, p)
 	if err != nil {
 		return nil, nil, err
 	}

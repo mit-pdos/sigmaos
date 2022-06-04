@@ -133,6 +133,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		qid = qids[len(qids)-1]
 	}
+	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
 	return nil
 }

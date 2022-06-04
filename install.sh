@@ -6,9 +6,6 @@ usage() {
     echo "Usage: $0 [--from FROM] [--profile PROFILE]" 1>&2
 }
 
-DIR=$(dirname $0)
-. $DIR/.env
-
 FROM="local"
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
@@ -39,6 +36,9 @@ if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
+
+DIR=$(dirname $0)
+. $DIR/.env
 
 mkdir -p $BIN
 rm -rf $BIN/*

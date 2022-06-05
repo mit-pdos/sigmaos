@@ -29,7 +29,7 @@ func readHead(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 	if result.LastModified != nil {
 		i.mtime = (*result.LastModified).Unix()
 	}
-	cache.insert(k, i)
+	cache.insert(bucket, k, i)
 	return i, nil
 }
 
@@ -56,7 +56,7 @@ func mkQids(base *info) ([]np.Tqid, fs.FsObj) {
 }
 
 func nameiObj(ctx fs.CtxI, bucket string, p np.Path) ([]np.Tqid, fs.FsObj, *np.Err) {
-	if i := cache.lookup(p); i != nil {
+	if i := cache.lookup(bucket, p); i != nil {
 		qids, o := mkQids(i)
 		return qids, o, nil
 	}

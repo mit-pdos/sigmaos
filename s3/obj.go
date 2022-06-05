@@ -56,7 +56,7 @@ func (o *Obj) String() string {
 
 func (o *Obj) fill() *np.Err {
 	if o.info == nil {
-		i := cache.lookup(o.key)
+		i := cache.lookup(o.bucket, o.key)
 		if i != nil {
 			o.info = i
 			return nil

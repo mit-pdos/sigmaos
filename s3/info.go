@@ -71,7 +71,7 @@ func (i *info) insertDirent(name string, perm np.Tperm) fs.FsObj {
 	}
 	i.dents[name] = perm
 	ni := makeInfo(i.bucket, i.key.Copy().Append(name), perm)
-	cache.insert(ni.key, ni)
+	cache.insert(i.bucket, ni.key, ni)
 	o := makeFsObj(i.bucket, perm, ni.key)
 	switch t := o.(type) {
 	case *Dir:
@@ -86,7 +86,7 @@ func (i *info) delDirent(name string) {
 	i.Lock()
 	defer i.Unlock()
 	delete(i.dents, name)
-	cache.delete(i.key.Append(name))
+	cache.delete(i.bucket, i.key.Append(name))
 }
 
 func (i *info) Size() np.Tlength {
@@ -167,6 +167,6 @@ func s3ReadDirL(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 	}
 	i.sz = np.Tlength(len(i.dents)) // makeup size
 	db.DPrintf("FSS3", "s3ReadDirL key '%v' dents %v\n", i.key, i.dents)
-	cache.insert(k, i)
+	cache.insert(bucket, k, i)
 	return i, nil
 }

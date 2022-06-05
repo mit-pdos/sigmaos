@@ -20,7 +20,7 @@ func mkCache() *Cache {
 	return c
 }
 
-func (c *Cache) lookup(path np.Path) *info {
+func (c *Cache) lookup(bucket string, path np.Path) *info {
 	c.Lock()
 	defer c.Unlock()
 	if o, ok := c.cache[path.String()]; ok {
@@ -30,7 +30,7 @@ func (c *Cache) lookup(path np.Path) *info {
 	return nil
 }
 
-func (c *Cache) insert(path np.Path, i *info) {
+func (c *Cache) insert(bucket string, path np.Path, i *info) {
 	c.Lock()
 	defer c.Unlock()
 	db.DPrintf("FSS3", "path %v insert %v\n", path, i)
@@ -38,7 +38,7 @@ func (c *Cache) insert(path np.Path, i *info) {
 	c.cache[s] = i
 }
 
-func (c *Cache) delete(path np.Path) bool {
+func (c *Cache) delete(bucket string, path np.Path) bool {
 	c.Lock()
 	defer c.Unlock()
 	db.DPrintf("FSS3", "cache: delete %v\n", path)

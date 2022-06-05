@@ -11,11 +11,7 @@ if [[ -z "${N_REPLICAS}" ]]; then
   export N_REPLICAS=1
 fi
 
-if [[ -z "${BINPATH}" ]]; then
-  export BINPATH="name/s3/~ip/bin"
-fi
-
-echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS and BINPATH=$BINPATH"
+echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS"
 
 $BIN/realm/boot
 

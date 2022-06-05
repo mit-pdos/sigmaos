@@ -18,7 +18,7 @@ const (
 	DB       = NAMED + DBREL + "/"
 
 	BIN   = UX + "~ip/bin/"
-	S3BIN = S3 + "~ip/bin/"
+	S3BIN = S3 + "~ip/9ps3/bin/"
 
 	SIGMAMGR = "name/sigmamgr"
 

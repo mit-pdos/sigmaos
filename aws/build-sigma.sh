@@ -52,7 +52,7 @@ ENDSSH
 
 echo "COMPILE AND UPLOAD: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-grep "+++" /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws --parallel > /tmp/make.out 2>&1; ./upload.sh --realm $REALM; )  
+grep "+++" /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws > /tmp/make.out 2>&1; ./upload.sh --realm $REALM; )  
 # NOte that we have completed the build on this machine at least once.
 if [ -f ~/.nobuild ]; then
   rm ~/.nobuild

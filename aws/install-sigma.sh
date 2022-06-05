@@ -1,16 +1,22 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC" 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM" 1>&2
 }
 
 VPC=""
+REALM=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --vpc)
     shift
     VPC=$1
+    shift
+    ;;
+  --realm)
+    shift
+    REALM=$1
     shift
     ;;
   -help)
@@ -25,7 +31,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -36,6 +42,6 @@ for vm in $vms; do
   echo "INSTALL: $vm"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-ulambda; (cd ulambda; git pull > /tmp/git.out 2>&1 )'
-  (cd ulambda; ./stop.sh; ./install.sh --from s3)
+  (cd ulambda; ./stop.sh; ./install.sh --from s3 --realm $REALM)
 ENDSSH
 done

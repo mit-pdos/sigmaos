@@ -3,16 +3,22 @@
 # Install the sigmaOS software, either from the local build or from s3.
 
 usage() {
-    echo "Usage: $0 [--from FROM] [--profile PROFILE]" 1>&2
+    echo "Usage: $0 [--from FROM] [--realm REALM] [--profile PROFILE]" 1>&2
 }
 
 FROM="local"
+REALM="9ps3"
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --from)
     shift
     FROM="$1"
+    shift
+    ;;
+  --realm)
+    shift
+    REALM=$1
     shift
     ;;
   --profile)
@@ -47,8 +53,8 @@ if [ $FROM == "local" ]; then
   cp -r bin/* $BIN
 elif [ $FROM == "s3" ]; then
   # Copy kernel & realm dirs from s3
-  aws s3 cp --recursive s3://9ps3/bin/realm $BIN/realm $PROFILE
-  aws s3 cp --recursive s3://9ps3/bin/kernel $BIN/kernel $PROFILE
+  aws s3 cp --recursive s3://$REALM/bin/realm $BIN/realm $PROFILE
+  aws s3 cp --recursive s3://$REALM/bin/kernel $BIN/kernel $PROFILE
   chmod --recursive +x $BIN
   mkdir $BIN/user
 else

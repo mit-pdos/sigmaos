@@ -13,10 +13,10 @@ To download the sigmaos software on an instance the first time it is being set u
 $ ./download-sw.sh --vpc vpc-061a1808693a1626a --vm ec2-52-90-134-108.compute-1.amazonaws.com
 
 To build the sigmaos software and upload the build for all instances to pull:
-$ ./build-sigma.sh --vpc vpc-061a1808693a1626a
+$ ./build-sigma.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
 
 To install the latest version of the sigmaos kernel on all instances:
-$ ./install-sigma.sh --vpc vpc-061a1808693a1626a
+$ ./install-sigma.sh --vpc vpc-061a1808693a1626a --realm fkaashoek
 
 ./rmvpc.py removes either an instance or the whole VPC
 $ ./rmvpc.py --vm i-04f877d38a65f1d05 vpc-061a1808693a1626a

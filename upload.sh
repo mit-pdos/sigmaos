@@ -1,13 +1,19 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--profile PROFILE]" 1>&2
+  echo "Usage: $0 [--realm REALM] [--profile PROFILE]" 1>&2
 }
 
+REALM="9ps3"
 PROFILE=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+  --realm)
+    shift
+    REALM=$1
+    shift
+    ;;
   --profile)
     shift
     PROFILE="--profile $1"
@@ -34,4 +40,4 @@ DIR=$(dirname $0)
 . $DIR/.env
 
 # Copy to S3
-aws s3 cp --recursive bin s3://9ps3/bin $PROFILE
+aws s3 cp --recursive bin s3://$REALM/bin $PROFILE

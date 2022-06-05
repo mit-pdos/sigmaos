@@ -1,15 +1,21 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC" 1>&2
+  echo "Usage: $0 --vpc VPC --realm REALM" 1>&2
 }
 
 VPC=""
+REALM=""
 while [[ $# -gt 0 ]]; do
   case $1 in
   --vpc)
     shift
     VPC=$1
+    shift
+    ;;
+  --realm)
+    shift
+    REALM=$1
     shift
     ;;
   -help)
@@ -25,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 
-if [ -z $VPC ] || [ $# -gt 0 ]; then
+if [ -z $VPC ] || [ -z $REALM ] || [ $# -gt 0 ]; then
   usage
   exit 1
 fi
@@ -46,7 +52,7 @@ ENDSSH
 
 echo "COMPILE AND UPLOAD: $MAIN"
 ssh -i key-$VPC.pem ubuntu@$MAIN /bin/bash <<ENDSSH
-grep "+++" /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws --parallel > /tmp/make.out 2>&1; ./upload.sh; )  
+grep "+++" /tmp/git.out && (cd ulambda; ./make.sh --norace --target aws --parallel > /tmp/make.out 2>&1; ./upload.sh --realm $REALM; )  
 # NOte that we have completed the build on this machine at least once.
 if [ -f ~/.nobuild ]; then
   rm ~/.nobuild

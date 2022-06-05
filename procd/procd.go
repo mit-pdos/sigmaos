@@ -25,6 +25,7 @@ import (
 type Procd struct {
 	mu         sync.Mutex
 	fs         *ProcdFs
+	s3bin      string    // S3 bucket name from which to pull bins.
 	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
 	stealChan  chan bool // Indicates there is work to be stolen.
 	done       bool
@@ -39,8 +40,9 @@ type Procd struct {
 	*fslibsrv.MemFs
 }
 
-func RunProcd() {
+func RunProcd(s3bin string) {
 	pd := &Procd{}
+	pd.s3bin = s3bin
 
 	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
@@ -319,7 +321,7 @@ func (pd *Procd) downloadProcBin(program string) {
 	defer pd.mu.Unlock()
 
 	uxBinPath := path.Join(np.BIN, program)
-	s3BinPath := path.Join(np.S3BIN, program)
+	s3BinPath := path.Join(np.S3, "~ip", pd.s3bin, program)
 
 	// If we already downloaded the program & it is up-to-date, return.
 	if !pd.needToDownload(uxBinPath, s3BinPath) {

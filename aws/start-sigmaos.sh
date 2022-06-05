@@ -6,7 +6,7 @@ usage() {
 
 N_VM=""
 VPC=""
-REALM
+REALM=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -59,7 +59,7 @@ for vm in $vms; do
   export NAMED="${NAMED}"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"
-    (cd ulambda; nohup ./start.sh --realm "${REALM}" > /tmp/start.out 2>&1 < /dev/null &)
+    (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)
   else
     echo "JOIN ${NAMED}"
     (cd ulambda; nohup bin/realm/noded . $vm > /tmp/noded.out 2>&1 < /dev/null &)

@@ -11,7 +11,6 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
-	"ulambda/realm"
 )
 
 type Tstate struct {
@@ -35,7 +34,7 @@ func (ts *Tstate) Shutdown() {
 
 func (ts *Tstate) addNamedReplica(i int) {
 	defer ts.wg.Done()
-	r := kernel.MakeSystemNamed("test", realm.TEST_RID, i)
+	r := kernel.MakeSystemNamed("test", np.TEST_RID, i)
 	ts.Lock()
 	defer ts.Unlock()
 	ts.replicas = append(ts.replicas, r)
@@ -69,7 +68,7 @@ func MakeTstatePath(t *testing.T, named, path string) *Tstate {
 func MakeTstateClnt(t *testing.T, named string) *Tstate {
 	ts := &Tstate{}
 	ts.T = t
-	ts.System = kernel.MakeSystemClnt("test", realm.TEST_RID, named)
+	ts.System = kernel.MakeSystemClnt("test", np.TEST_RID, named)
 	return ts
 }
 
@@ -93,7 +92,7 @@ func (ts *Tstate) makeSystem(mkSys func(string, string, int) *kernel.System) {
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	go func() {
 		defer ts.wg.Done()
-		ts.System = mkSys("test", realm.TEST_RID, 0)
+		ts.System = mkSys("test", np.TEST_RID, 0)
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()

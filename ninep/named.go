@@ -17,8 +17,7 @@ const (
 	DBREL    = "db"
 	DB       = NAMED + DBREL + "/"
 
-	BIN   = UX + "~ip/bin/"
-	S3BIN = S3 + "~ip/9ps3/bin/"
+	BIN = UX + "~ip/bin/"
 
 	SIGMAMGR = "name/sigmamgr"
 
@@ -38,4 +37,9 @@ const (
 	SNAPDEV  = "snapdev"
 
 	UXEXPORT = "/tmp/ulambda"
+)
+
+// REALM
+const (
+	TEST_RID = "1000"
 )

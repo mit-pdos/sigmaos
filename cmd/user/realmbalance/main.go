@@ -11,6 +11,7 @@ import (
 	"ulambda/benchmarks"
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/realm"
 )
 
@@ -22,7 +23,7 @@ func main() {
 	fpath := path.Join(resDir, "realm_balance", "results.txt")
 
 	fslTop := fslib.MakeFsLib("realm-balance-top")
-	cfg1 := realm.GetRealmConfig(fslTop, realm.TEST_RID)
+	cfg1 := realm.GetRealmConfig(fslTop, np.TEST_RID)
 	fsl1 := fslib.MakeFsLibAddr("realm-balance-1", cfg1.NamedAddrs)
 	cfg2 := realm.GetRealmConfig(fslTop, "2000")
 	fsl2 := fslib.MakeFsLibAddr("realm-balance-2", cfg2.NamedAddrs)

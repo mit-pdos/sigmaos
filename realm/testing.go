@@ -12,10 +12,6 @@ import (
 	"ulambda/proc"
 )
 
-const (
-	TEST_RID = "1000"
-)
-
 type TestEnv struct {
 	rid       string
 	namedPids []string

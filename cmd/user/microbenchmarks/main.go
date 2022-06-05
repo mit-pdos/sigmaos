@@ -11,6 +11,7 @@ import (
 	"ulambda/benchmarks"
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/realm"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	fpath := path.Join(resDir, "microbenchmarks", nReplicas+"_replicas.txt")
 
 	fsl1 := fslib.MakeFsLib("microbenchmarks-1")
-	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
+	cfg := realm.GetRealmConfig(fsl1, np.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("microbenchmarks", cfg.NamedAddrs)
 
 	m := benchmarks.MakeMicrobenchmarks(fsl, cfg.NamedAddrs, resDir)

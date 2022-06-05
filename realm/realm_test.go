@@ -10,6 +10,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/linuxsched"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/realm"
@@ -30,7 +31,7 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	e := realm.MakeTestEnv(realm.TEST_RID)
+	e := realm.MakeTestEnv(np.TEST_RID)
 	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)
@@ -73,7 +74,7 @@ func (ts *Tstate) spawnSpinner() proc.Tpid {
 // Check that the test realm has min <= nNodeds <= max nodeds assigned to it
 func (ts *Tstate) checkNNodeds(min int, max int) {
 	db.DPrintf("TEST", "Checking num nodeds")
-	cfg := realm.GetRealmConfig(ts.realmFsl, realm.TEST_RID)
+	cfg := realm.GetRealmConfig(ts.realmFsl, np.TEST_RID)
 	nNodeds := len(cfg.NodedsActive)
 	db.DPrintf("TEST", "Done Checking num nodeds")
 	ok := assert.True(ts.t, nNodeds >= min && nNodeds <= max, "Wrong number of nodeds (x=%v), expected %v <= x <= %v", nNodeds, min, max)

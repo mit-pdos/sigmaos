@@ -11,6 +11,7 @@ import (
 	"ulambda/benchmarks"
 	db "ulambda/debug"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 	"ulambda/realm"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	fpath := path.Join(resDir, "burstbenchmark", nReplicas+"_replicas.txt")
 
 	fsl1 := fslib.MakeFsLib("burstbenchmark-1")
-	cfg := realm.GetRealmConfig(fsl1, realm.TEST_RID)
+	cfg := realm.GetRealmConfig(fsl1, np.TEST_RID)
 	fsl := fslib.MakeFsLibAddr("burstbenchmark", cfg.NamedAddrs)
 
 	b := benchmarks.MakeBurstBenchmark(fsl, cfg.NamedAddrs, resDir)

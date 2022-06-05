@@ -24,7 +24,7 @@ type Fss3 struct {
 	client *s3.Client
 }
 
-func RunFss3() {
+func RunFss3(buckets []string) {
 	cache = mkCache()
 	fss3 = &Fss3{}
 	mfs, _, _, err := fslibsrv.MakeMemFs(np.S3, np.S3REL)
@@ -34,7 +34,7 @@ func RunFss3() {
 	p := perf.MakePerf("FSS3")
 	defer p.Done()
 
-	buckets := []string{"9ps3"}
+	buckets = append(buckets, "9ps3")
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := makeDir(bucket, np.Path{}, np.DMDIR)

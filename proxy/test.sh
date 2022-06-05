@@ -1,6 +1,6 @@
 #!/bin/sh
 
-./start.sh
+./start.sh --realm 1000
 
 ls -a /mnt/9p/ | grep ".statsd" > /dev/null
 if [ $? -eq 0 ]; then

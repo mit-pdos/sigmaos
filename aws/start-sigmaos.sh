@@ -1,17 +1,23 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [-n N] --vpc VPC" 1>&2
+  echo "Usage: $0 [-n N] --vpc VPC --realm REALM" 1>&2
 }
 
 N_VM=""
 VPC=""
+REALM
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --vpc)
     shift
     VPC=$1
+    shift
+    ;;
+  --realm)
+    shift
+    REALM=$1
     shift
     ;;
   -n)
@@ -31,7 +37,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$VPC" ] || [ $# -gt 0 ]; then
+if [ -z "$VPC" ] || [ -z "$REALM" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi
@@ -53,7 +59,7 @@ for vm in $vms; do
   export NAMED="${NAMED}"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"
-    (cd ulambda; nohup ./start.sh > /tmp/start.out 2>&1 < /dev/null &)
+    (cd ulambda; nohup ./start.sh --realm "${REALM}" > /tmp/start.out 2>&1 < /dev/null &)
   else
     echo "JOIN ${NAMED}"
     (cd ulambda; nohup bin/realm/noded . $vm > /tmp/noded.out 2>&1 < /dev/null &)

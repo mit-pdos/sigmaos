@@ -25,9 +25,9 @@ type TestEnv struct {
 	*RealmClnt
 }
 
-func MakeTestEnv() *TestEnv {
+func MakeTestEnv(rid string) *TestEnv {
 	e := &TestEnv{}
-	e.rid = TEST_RID
+	e.rid = rid
 	e.namedPids = []string{}
 	e.namedCmds = []*exec.Cmd{}
 	e.noded = []*exec.Cmd{}

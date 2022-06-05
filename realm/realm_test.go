@@ -30,7 +30,7 @@ type Tstate struct {
 
 func makeTstate(t *testing.T) *Tstate {
 	ts := &Tstate{}
-	e := realm.MakeTestEnv()
+	e := realm.MakeTestEnv(realm.TEST_RID)
 	cfg, err := e.Boot()
 	if err != nil {
 		t.Fatalf("Boot %v\n", err)

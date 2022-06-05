@@ -7,7 +7,7 @@ usage() {
 }
 
 FROM="local"
-REALM="9ps3"
+REALM="test-realm"
 PROFILE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in

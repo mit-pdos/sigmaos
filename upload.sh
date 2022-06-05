@@ -4,7 +4,7 @@ usage() {
   echo "Usage: $0 [--realm REALM] [--profile PROFILE]" 1>&2
 }
 
-REALM="9ps3"
+REALM="test-realm"
 PROFILE=""
 while [[ $# -gt 0 ]]; do
   key="$1"

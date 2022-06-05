@@ -41,5 +41,5 @@ const (
 
 // REALM
 const (
-	TEST_RID = "1000"
+	TEST_RID = "test-realm"
 )

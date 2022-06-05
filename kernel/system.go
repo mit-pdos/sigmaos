@@ -128,19 +128,11 @@ func (s *System) BootFsUxd() error {
 }
 
 func (s *System) BootFss3d() error {
-	buckets := []string{s.realmId}
-	if s.realmId == np.TEST_RID {
-		buckets = nil
-	}
-	return s.BootSubsystem("kernel/fss3d", buckets, &s.fss3d)
+	return s.BootSubsystem("kernel/fss3d", []string{s.realmId}, &s.fss3d)
 }
 
 func (s *System) BootProcd() error {
-	s3bin := s.realmId
-	if s.realmId == np.TEST_RID {
-		s3bin = "9ps3/bin"
-	}
-	return s.BootSubsystem("kernel/procd", []string{s3bin}, &s.procd)
+	return s.BootSubsystem("kernel/procd", []string{s.realmId + "/bin"}, &s.procd)
 }
 
 func (s *System) BootDbd() error {

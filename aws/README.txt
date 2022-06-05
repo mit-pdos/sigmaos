@@ -10,7 +10,7 @@ $ ./mkvpc.py --vpc vpc-061a1808693a1626a ulam1
 $ ./lsvpc.py vpc-061a1808693a1626a
 
 To download the sigmaos software on an instance the first time it is being set up:
-$ ./download-sw.sh --vpc vpc-061a1808693a1626a --vm ec2-52-90-134-108.compute-1.amazonaws.com
+$ ./setup-instance.sh --vpc vpc-061a1808693a1626a --vm ec2-52-90-134-108.compute-1.amazonaws.com
 
 To build the sigmaos software and upload the build for all instances to pull:
 $ ./build-sigma.sh --vpc vpc-061a1808693a1626a --realm fkaashoek

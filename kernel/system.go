@@ -29,6 +29,7 @@ type System struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	pid         proc.Tpid
+	realmId     string
 	namedAddr   []string
 	named       *Subsystem
 	fss3d       []*Subsystem
@@ -38,8 +39,9 @@ type System struct {
 	crashedPids map[proc.Tpid]bool
 }
 
-func makeSystemBase(namedAddr []string) *System {
+func makeSystemBase(realmId string, namedAddr []string) *System {
 	s := &System{}
+	s.realmId = realmId
 	s.namedAddr = namedAddr
 	s.procd = []*Subsystem{}
 	s.fsuxd = []*Subsystem{}
@@ -49,8 +51,8 @@ func makeSystemBase(namedAddr []string) *System {
 	return s
 }
 
-func MakeSystemClnt(uname, named string) *System {
-	s := makeSystemBase([]string{named})
+func MakeSystemClnt(uname, realmId, named string) *System {
+	s := makeSystemBase(realmId, []string{named})
 	s.FsLib = fslib.MakeFsLibAddr(uname, []string{named})
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	return s
@@ -58,8 +60,8 @@ func MakeSystemClnt(uname, named string) *System {
 
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname string, replicaId int) *System {
-	s := makeSystemBase(fslib.Named())
+func MakeSystemNamed(uname, realmId string, replicaId int) *System {
+	s := makeSystemBase(realmId, fslib.Named())
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
@@ -76,8 +78,8 @@ func MakeSystemNamed(uname string, replicaId int) *System {
 }
 
 // Make a system with Named and other kernel services
-func MakeSystemAll(uname string, replicaId int) *System {
-	s := MakeSystemNamed(uname, replicaId)
+func MakeSystemAll(uname, realmId string, replicaId int) *System {
+	s := MakeSystemNamed(uname, realmId, replicaId)
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	s.pid = proc.GetPid()
@@ -88,8 +90,8 @@ func MakeSystemAll(uname string, replicaId int) *System {
 	return s
 }
 
-func MakeSystem(uname string, namedAddr []string) *System {
-	s := makeSystemBase(namedAddr)
+func MakeSystem(uname, realmId string, namedAddr []string) *System {
+	s := makeSystemBase(realmId, namedAddr)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
 	s.pid = proc.GetPid()

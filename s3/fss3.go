@@ -15,8 +15,6 @@ import (
 	"ulambda/perf"
 )
 
-var _bucket = "9ps3"
-
 var cache *Cache
 var fss3 *Fss3
 
@@ -36,11 +34,13 @@ func RunFss3() {
 	p := perf.MakePerf("FSS3")
 	defer p.Done()
 
-	// TODO add many buckets.
-	// Add the 9ps3 bucket.
-	b1 := makeDir(_bucket, np.Path{}, np.DMDIR)
-	if err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), _bucket, b1); err != nil {
-		db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
+	buckets := []string{"9ps3"}
+	for _, bucket := range buckets {
+		// Add the 9ps3 bucket.
+		d := makeDir(bucket, np.Path{}, np.DMDIR)
+		if err := dir.MkNod(ctx.MkCtx("", 0, nil), mfs.Root(), bucket, d); err != nil {
+			db.DFatalf("Error MkNod bucket in RunFss3: %v", err)
+		}
 	}
 	fss3.MemFs = mfs
 	cfg, err := config.LoadDefaultConfig(context.TODO(),

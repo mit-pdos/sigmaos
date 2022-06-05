@@ -103,7 +103,7 @@ func TestSeqMR(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	job = readConfig()
 
-	p := proc.MakeProc("bin/user/seqgrep", []string{job.Input})
+	p := proc.MakeProc("user/seqgrep", []string{job.Input})
 	err := ts.Spawn(p)
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.Pid)

@@ -335,7 +335,7 @@ func (pd *Procd) downloadProcBin(program string) {
 		if err := pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {
 			return
 		} else {
-			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin: %v", err)
+			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin [%v]: %v", s3BinPath, err)
 		}
 	}
 	db.DFatalf("Couldn't download proc bin %v in over %v retries", program, RETRIES)

@@ -52,7 +52,7 @@ if [ $FROM == "local" ]; then
   # Make the user program dir
   mkdir -p $UXROOT/$REALM/bin
   # Copy from local
-  cp -r bin/user $UXROOT/$REALM/bin
+  cp -r bin/user $UXROOT/$REALM/bin/
   cp -r bin/realm $PRIVILEGED_BIN
   cp -r bin/kernel $PRIVILEGED_BIN
 elif [ $FROM == "s3" ]; then

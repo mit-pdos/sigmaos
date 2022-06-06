@@ -17,7 +17,7 @@ func RunKernelProc(p *Proc, namedAddr []string) (*exec.Cmd, error) {
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
 	env = append(env, "SIGMAPROGRAM="+p.Program)
 
-	cmd := exec.Command(path.Join(machine.BIN, p.Program), p.Args...)
+	cmd := exec.Command(path.Join(machine.PRIVILEGED_BIN, p.Program), p.Args...)
 	// Create a process group ID to kill all children if necessary.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout

@@ -5,5 +5,5 @@ import (
 )
 
 const (
-	BIN = np.UXROOT + "bin/"
+	PRIVILEGED_BIN = np.UXROOT + "bin/"
 )

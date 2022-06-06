@@ -17,7 +17,7 @@ const (
 	DBREL    = "db"
 	DB       = NAMED + DBREL + "/"
 
-	BIN = UX + "~ip/bin/"
+	UXBIN = UX + "~ip/bin/"
 
 	SIGMAMGR = "name/sigmamgr"
 

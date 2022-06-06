@@ -13,8 +13,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/linuxsched"
-	"ulambda/machine"
 	"ulambda/namespace"
+	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/rand"
 )
@@ -90,7 +90,7 @@ func (p *Proc) run(cores []uint) error {
 		db.DPrintf("PROCD_ERR", "Err procd MakeProcDir: %v\n", err)
 	}
 
-	cmd := exec.Command(path.Join(machine.BIN, p.Program), args...)
+	cmd := exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.Program), args...)
 	cmd.Env = p.Env
 	cmd.Dir = p.Dir
 	cmd.Stdout = stdout

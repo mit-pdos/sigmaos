@@ -2,16 +2,17 @@ package main
 
 import (
 	"os"
+	"path"
 
 	db "ulambda/debug"
-	np "ulambda/ninep"
 	"ulambda/ux"
 )
 
 func main() {
-	if len(os.Args) != 1 {
-		db.DFatalf("Usage: %v", os.Args[0])
+	if len(os.Args) < 2 {
+		db.DFatalf("Usage: %v root", os.Args[0])
 	}
-	os.Mkdir(np.UXROOT, 0755)
-	fsux.RunFsUx(np.UXROOT)
+	root := os.Args[1]
+	os.MkdirAll(path.Join(root, "bin", "user"), 0755)
+	fsux.RunFsUx(root)
 }

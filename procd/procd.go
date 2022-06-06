@@ -25,7 +25,7 @@ import (
 type Procd struct {
 	mu         sync.Mutex
 	fs         *ProcdFs
-	s3bin      string    // S3 bucket name from which to pull bins.
+	realmbin   string    // realm path from which to pull/run bins.
 	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
 	stealChan  chan bool // Indicates there is work to be stolen.
 	done       bool
@@ -40,9 +40,9 @@ type Procd struct {
 	*fslibsrv.MemFs
 }
 
-func RunProcd(s3bin string) {
+func RunProcd(realmbin string) {
 	pd := &Procd{}
-	pd.s3bin = s3bin
+	pd.realmbin = realmbin
 
 	pd.procs = make(map[proc.Tpid]Tstatus)
 	pd.coreBitmap = make([]bool, linuxsched.NCores)
@@ -270,7 +270,7 @@ func (pd *Procd) freeCores(cores []uint) {
 // Try to download a proc bin from s3.
 func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 	// Copy the binary from s3 to a temporary file.
-	tmppath := path.Join(np.BIN, "user", "tmp-"+rand.String(16))
+	tmppath := path.Join(uxBinPath + "-tmp-" + rand.String(16))
 	if err := pd.CopyFile(s3BinPath, tmppath); err != nil {
 		return err
 	}
@@ -320,8 +320,8 @@ func (pd *Procd) downloadProcBin(program string) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	uxBinPath := path.Join(np.BIN, program)
-	s3BinPath := path.Join(np.S3, "~ip", pd.s3bin, program)
+	uxBinPath := path.Join(np.UXBIN, program)
+	s3BinPath := path.Join(np.S3, "~ip", pd.realmbin, program)
 
 	// If we already downloaded the program & it is up-to-date, return.
 	if !pd.needToDownload(uxBinPath, s3BinPath) {

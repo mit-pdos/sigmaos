@@ -49,8 +49,12 @@ DIR=$(dirname $0)
 mkdir -p $BIN
 rm -rf $BIN/*
 if [ $FROM == "local" ]; then
+  # Make the user program dir
+  mkdir -p $UXROOT/$REALM/bin
   # Copy from local
-  cp -r bin/* $BIN
+  cp -r bin/user $UXROOT/$REALM/bin
+  cp -r bin/realm $BIN
+  cp -r bin/kernel $BIN
 elif [ $FROM == "s3" ]; then
   # Copy kernel & realm dirs from s3
   aws s3 cp --recursive s3://$REALM/bin/realm $BIN/realm $PROFILE

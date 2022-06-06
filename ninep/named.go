@@ -36,7 +36,7 @@ const (
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
 
-	UXROOT = "/tmp/ulambda/"
+	UXROOT = "/tmp/sigmaos/"
 )
 
 // REALM

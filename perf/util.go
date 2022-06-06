@@ -16,6 +16,7 @@ import (
 
 	db "ulambda/debug"
 	"ulambda/linuxsched"
+	np "ulambda/ninep"
 	"ulambda/proc"
 )
 
@@ -42,7 +43,7 @@ func Hz() int {
 // XXX delete? use Hz()
 const (
 	CPU_SAMPLE_HZ = 10
-	OUTPUT_PATH   = "/tmp/ulambda/perf-output"
+	OUTPUT_PATH   = np.UXROOT + "perf-output/"
 	PPROF         = "_PPROF"
 	CPU           = "_CPU"
 )

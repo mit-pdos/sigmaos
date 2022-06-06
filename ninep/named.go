@@ -36,7 +36,7 @@ const (
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
 
-	UXEXPORT = "/tmp/ulambda"
+	UXROOT = "/tmp/ulambda/"
 )
 
 // REALM

@@ -1,5 +1,9 @@
 package machine
 
+import (
+	np "ulambda/ninep"
+)
+
 const (
-	BIN = "/tmp/ulambda/bin"
+	BIN = np.UXROOT + "bin/"
 )

@@ -12,6 +12,6 @@ func main() {
 	if len(os.Args) != 1 {
 		db.DFatalf("Usage: %v", os.Args[0])
 	}
-	os.Mkdir(np.UXEXPORT, 0755)
-	fsux.RunFsUx(np.UXEXPORT)
+	os.Mkdir(np.UXROOT, 0755)
+	fsux.RunFsUx(np.UXROOT)
 }

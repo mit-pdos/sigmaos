@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"sync"
 	"testing"
@@ -135,7 +136,7 @@ func makeTstate(t *testing.T) *Tstate {
 	// previous runs of the tests), ux may be very slow and cause the test to
 	// hang during intialization. Using RmDir on ux is slow too, so just do this
 	// directly through the os for now.
-	os.RemoveAll("/tmp/ulambda/mr")
+	os.RemoveAll(path.Join(np.UXROOT, "mr"))
 
 	mr.InitCoordFS(ts.System.FsLib, ts.job, ts.nreducetask)
 

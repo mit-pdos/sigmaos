@@ -42,6 +42,9 @@ if [ -z "$VPC" ] || [ -z "$REALM" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
+DIR=$(dirname $0)
+. $DIR/../.env
+
 vms=`./lsvpc.py $VPC | grep -w VMInstance | cut -d " " -f 5`
 
 vma=($vms)
@@ -55,7 +58,7 @@ fi
 
 for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-  mkdir -p /tmp/ulambda/
+  mkdir -p $UXROOT
   export NAMED="${NAMED}"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"

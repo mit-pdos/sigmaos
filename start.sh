@@ -1,8 +1,5 @@
 #!/bin/bash
 
-DIR=$(dirname $0)
-. $DIR/.env
-
 usage() {
   echo "Usage: $0 --realm REALM" 1>&2
 }
@@ -32,6 +29,9 @@ if [ -z "$REALM" ] || [ $# -gt 0 ]; then
     exit 1
 fi
 
+DIR=$(dirname $0)
+. $DIR/.env
+
 if [[ -z "${NAMED}" ]]; then
   export NAMED=":1111"
 fi
@@ -41,6 +41,9 @@ if [[ -z "${N_REPLICAS}" ]]; then
 fi
 
 echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
+
+# Make the ux root dir.
+mkdir -p $UXROOT
 
 $BIN/realm/boot $REALM
 

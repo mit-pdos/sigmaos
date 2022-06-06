@@ -34,7 +34,8 @@ func RunFss3(buckets []string) {
 	p := perf.MakePerf("FSS3")
 	defer p.Done()
 
-	buckets = append(buckets, "9ps3")
+	commonBuckets := []string{"9ps3", "9pcommon"}
+	buckets = append(buckets, commonBuckets...)
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.
 		d := makeDir(bucket, np.Path{}, np.DMDIR)

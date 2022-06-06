@@ -7,10 +7,12 @@ import (
 	"path"
 	"runtime/debug"
 	"syscall"
+
+	np "ulambda/ninep"
 )
 
 const (
-	NAMESPACE_DIR = "/tmp/ulambda/isolation"
+	NAMESPACE_DIR = np.UXROOT + "isolation"
 )
 
 func SetupProc(cmd *exec.Cmd) {

@@ -35,7 +35,10 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
+)
 
+// Linux paths
+const (
 	UXROOT = "/tmp/sigmaos/"
 )
 

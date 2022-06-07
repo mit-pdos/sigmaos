@@ -104,12 +104,13 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 }
 
 func (npc *NpConn) Detach(rets *np.Rdetach) *np.Rerror {
-	db.DPrintf("9POBJ", "Detach\n")
+	db.DPrintf("PROXY", "Detach\n")
 	return nil
 }
 
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	fid, err := npc.pc.Walk(args.Wnames, true, nil)
+	db.DPrintf("PROXY", "Walk %v args fid %v err %v\n", args, fid, err)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -187,7 +188,7 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 		return err.RerrorWC()
 	}
 	rets.Stat = *st
-	db.DPrintf("PROXY", "Stat: req %v repl %v\n", rets)
+	db.DPrintf("PROXY", "Stat: req %v rets %v\n", args, rets)
 	return nil
 }
 

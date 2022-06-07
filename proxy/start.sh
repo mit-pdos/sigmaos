@@ -1,13 +1,16 @@
 #!/bin/bash
 
-./bin/kernel/named :1111 no-realm &
+DIR=$(dirname $0)
+. $DIR/../.env
+
+SIGMAPID="test-named" $PRIVILEGED_BIN/kernel/named :1111 no-realm &
 
 echo "=== RUN Proxy"
 
 sleep 1
 
 # SIGMADEBUG="NETSRV;" ./bin/kernel/proxyd &
-./bin/kernel/proxyd &
+$PRIVILEGED_BIN/kernel/proxyd &
 
 sleep 1
 

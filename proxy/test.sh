@@ -1,6 +1,10 @@
 #!/bin/sh
 
-./start.sh --realm 1000
+
+DIR=$(dirname $0)
+. $DIR/../.env
+
+$DIR/start.sh
 
 ls -a /mnt/9p/ | grep ".statsd" > /dev/null
 if [ $? -eq 0 ]; then

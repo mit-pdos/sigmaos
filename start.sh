@@ -45,6 +45,6 @@ echo "running with NAMED=$NAMED and N_REPLICAS=$N_REPLICAS in REALM=$REALM"
 # Make the ux root dir.
 mkdir -p $UXROOT
 
-$BIN/realm/boot $REALM
+$PRIVILEGED_BIN/realm/boot $REALM
 
 ./mount.sh

@@ -443,8 +443,6 @@ func (pd *Procd) Work() {
 	}()
 	go pd.workStealingMonitor()
 	go pd.offerStealableProcs()
-	// XXX May need a certain number of workers for tests, but need
-	// NWorkers = NCores for benchmarks
 	// The +1 is needed so procs trying to spawn a new proc never deadlock if this
 	// procd is full
 	NWorkers := linuxsched.NCores + 1

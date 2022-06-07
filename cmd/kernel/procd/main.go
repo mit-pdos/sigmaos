@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %v s3bin", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %v realmbin", os.Args[0])
 		os.Exit(1)
 	}
 	if _, err := linuxsched.ScanTopology(); err != nil {

@@ -34,7 +34,7 @@ func RunFss3(buckets []string) {
 	p := perf.MakePerf("FSS3")
 	defer p.Done()
 
-	commonBuckets := []string{"9ps3", "9pcommon"}
+	commonBuckets := []string{"9ps3", "sigma-common"}
 	buckets = append(buckets, commonBuckets...)
 	for _, bucket := range buckets {
 		// Add the 9ps3 bucket.

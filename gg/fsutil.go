@@ -29,7 +29,7 @@ const (
 	GG_BLOBS      = "blobs"
 	GG_REDUCTIONS = "reductions"
 	GG_HASH_CACHE = "hash_cache"
-	GG_LOCAL      = "/tmp/ulambda"
+	GG_LOCAL      = "XXX"
 	GG_REMOTE     = "name/fs"
 	GG_ORIG       = "orig"
 )

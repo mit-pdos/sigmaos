@@ -124,7 +124,7 @@ func (s *System) BootSubsystem(binpath string, args []string, list *[]*Subsystem
 }
 
 func (s *System) BootFsUxd() error {
-	return s.BootSubsystem("kernel/fsuxd", []string{}, &s.fsuxd)
+	return s.BootSubsystem("kernel/fsuxd", []string{path.Join(np.UXROOT, s.realmId)}, &s.fsuxd)
 }
 
 func (s *System) BootFss3d() error {
@@ -132,7 +132,7 @@ func (s *System) BootFss3d() error {
 }
 
 func (s *System) BootProcd() error {
-	return s.BootSubsystem("kernel/procd", []string{s.realmId + "/bin"}, &s.procd)
+	return s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin")}, &s.procd)
 }
 
 func (s *System) BootDbd() error {

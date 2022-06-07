@@ -46,17 +46,20 @@ fi
 DIR=$(dirname $0)
 . $DIR/.env
 
-mkdir -p $BIN
-rm -rf $BIN/*
+mkdir -p $PRIVILEGED_BIN
+rm -rf $PRIVILEGED_BIN/*
 if [ $FROM == "local" ]; then
+  # Make the user program dir
+  mkdir -p $UXROOT/$REALM/bin
   # Copy from local
-  cp -r bin/* $BIN
+  cp -r bin/user $UXROOT/$REALM/bin/
+  cp -r bin/realm $PRIVILEGED_BIN
+  cp -r bin/kernel $PRIVILEGED_BIN
 elif [ $FROM == "s3" ]; then
   # Copy kernel & realm dirs from s3
-  aws s3 cp --recursive s3://$REALM/bin/realm $BIN/realm $PROFILE
-  aws s3 cp --recursive s3://$REALM/bin/kernel $BIN/kernel $PROFILE
-  chmod --recursive +x $BIN
-  mkdir $BIN/user
+  aws s3 cp --recursive s3://$REALM/bin/realm $PRIVILEGED_BIN/realm $PROFILE
+  aws s3 cp --recursive s3://$REALM/bin/kernel $PRIVILEGED_BIN/kernel $PROFILE
+  chmod --recursive +x $PRIVILEGED_BIN
 else
   echo "Unrecognized bin source: $FROM"
   exit 1

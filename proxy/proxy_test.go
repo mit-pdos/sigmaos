@@ -3,6 +3,7 @@ package proxy_test
 import (
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,46 @@ func TestBasic(t *testing.T) {
 	out, err = exec.Command("bash", "-c", shcmd).Output()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, ".statsd\n", string(out))
+
+	shcmd = "cat /mnt/9p/.statsd | grep Nwalk"
+	out, err = exec.Command("bash", "-c", shcmd).Output()
+	assert.Equal(t, nil, err)
+	assert.True(t, strings.Contains(string(out), "Nwalk"))
+
+	shcmd = "echo hello > /mnt/9p/xxx"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.Equal(t, nil, err)
+
+	shcmd = "rm /mnt/9p/xxx"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.Equal(t, nil, err)
+
+	shcmd = "mkdir /mnt/9p/d"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.Equal(t, nil, err)
+
+	shcmd = "echo hello > /mnt/9p/d/xxx"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.Equal(t, nil, err)
+
+	shcmd = "ls /mnt/9p/d | grep 'xxx'"
+	out, err = exec.Command("bash", "-c", shcmd).Output()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "xxx\n", string(out))
+
+	shcmd = "rm /mnt/9p/d/xxx"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.Equal(t, nil, err)
+
+	shcmd = "rmdir /mnt/9p/d"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.Equal(t, nil, err)
+
+	shcmd = "ls /mnt/9p/xxx"
+	err = exec.Command("bash", "-c", shcmd).Run()
+	assert.NotNil(t, err)
+
+	// Clean up
 
 	shcmd = "sudo umount /mnt/9p"
 	err = exec.Command("bash", "-c", shcmd).Run()

@@ -47,7 +47,7 @@ func (mnt *MntTable) add(path np.Path, fid np.Tfid) *np.Err {
 			return nil
 		}
 	}
-	db.DPrintf("MOUNT", "Mount %v %v\n", fid, path)
+	db.DPrintf("MOUNT", "Mount %v '%v'\n", fid, path)
 	mnt.mounts = append(mnt.mounts, point)
 	return nil
 }

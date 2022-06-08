@@ -67,6 +67,7 @@ type NpConn struct {
 	fidc  *fidclnt.FidClnt
 	pc    *pathclnt.PathClnt
 	named []string
+	fm    *fidMap
 }
 
 func makeNpConn(named []string) *NpConn {
@@ -75,6 +76,7 @@ func makeNpConn(named []string) *NpConn {
 	npc.named = named
 	npc.fidc = fidclnt.MakeFidClnt()
 	npc.pc = pathclnt.MakePathClnt(npc.fidc, np.Tsize(1_000_000))
+	npc.fm = mkFidMap()
 	return npc
 }
 
@@ -97,9 +99,16 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 
 	fid, err := npc.fidc.Attach(npc.uname, npc.named, "", "")
 	if err != nil {
-		return err.Rerror()
+		db.DPrintf("PROXY", "Attach args %v err %v\n", args, err)
+		return err.RerrorWC()
 	}
+	if err := npc.pc.Mount(fid, np.NAMED); err != nil {
+		db.DPrintf("PROXY", "Attach args %v mount err %v\n", args, err)
+		return &np.Rerror{error.Error()}
+	}
+	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
 	rets.Qid = npc.fidc.Qid(fid)
+	npc.fm.mapTo(args.Fid, fid)
 	return nil
 }
 
@@ -109,21 +118,34 @@ func (npc *NpConn) Detach(rets *np.Rdetach) *np.Rerror {
 }
 
 func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
-	fid, err := npc.pc.Walk(args.Wnames, true, nil)
-	db.DPrintf("PROXY", "Walk %v args fid %v err %v\n", args, fid, err)
-	if err != nil {
-		return err.Rerror()
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
 	}
-	rets.Qids = npc.pc.Qids(fid)
+	fid1, err := npc.pc.Walk(np.Split(np.NAMED), fid, args.Wnames)
+	if err != nil {
+		db.DPrintf("PROXY", "Walk args %v err: %v\n", args, err)
+		return err.RerrorWC()
+	}
+	qids := npc.pc.Qids(fid1)
+	rets.Qids = qids[len(qids)-len(args.Wnames):]
+	npc.fm.mapTo(args.NewFid, fid1)
+	db.DPrintf("PROXY", "Walk args %v rets: %v\n", args, rets)
 	return nil
 }
 
 func (npc *NpConn) Open(args np.Topen, rets *np.Ropen) *np.Rerror {
-	qid, err := npc.fidc.Open(args.Fid, args.Mode)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	qid, err := npc.fidc.Open(fid, args.Mode)
 	if err != nil {
+		db.DPrintf("PROXY", "Open args %v err: %v\n", args, err)
 		return err.RerrorWC()
 	}
 	rets.Qid = qid
+	db.DPrintf("PROXY", "Open args %v rets: %v\n", args, rets)
 	return nil
 }
 
@@ -132,19 +154,34 @@ func (npc *NpConn) Watch(args np.Twatch, rets *np.Ropen) *np.Rerror {
 }
 
 func (npc *NpConn) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
-	fid, err := npc.fidc.Create(args.Fid, args.Name, args.Perm, args.Mode)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Perm, args.Mode)
 	if err != nil {
+		db.DPrintf("PROXY", "Create args %v err: %v\n", args, err)
 		return err.RerrorWC()
 	}
-	rets.Qid = npc.pc.Qid(fid)
+	if fid != fid1 {
+		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
+	}
+	rets.Qid = npc.pc.Qid(fid1)
+	db.DPrintf("PROXY", "Create args %v rets: %v\n", args, rets)
 	return nil
 }
 
 func (npc *NpConn) Clunk(args np.Tclunk, rets *np.Rclunk) *np.Rerror {
-	err := npc.fidc.Clunk(args.Fid)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	err := npc.fidc.Clunk(fid)
 	if err != nil {
+		db.DPrintf("PROXY", "Clunk: args %v err %v\n", args, err)
 		return err.RerrorWC()
 	}
+	db.DPrintf("PROXY", "Clunk: args %v rets %v\n", args, rets)
 	return nil
 }
 
@@ -153,28 +190,46 @@ func (npc *NpConn) Flush(args np.Tflush, rets *np.Rflush) *np.Rerror {
 }
 
 func (npc *NpConn) Read(args np.Tread, rets *np.Rread) *np.Rerror {
-	d, err := npc.fidc.ReadVU(args.Fid, args.Offset, args.Count, np.NoV)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	d, err := npc.fidc.ReadVU(fid, args.Offset, args.Count, np.NoV)
 	if err != nil {
+		db.DPrintf("PROXY", "Read: args %v err %v\n", args, err)
 		return err.RerrorWC()
 	}
 	rets.Data = d
+	db.DPrintf("PROXY", "Read: args %v rets %v\n", args, rets)
 	return nil
 }
 
 func (npc *NpConn) Write(args np.Twrite, rets *np.Rwrite) *np.Rerror {
-	n, err := npc.fidc.WriteV(args.Fid, args.Offset, args.Data, np.NoV)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	n, err := npc.fidc.WriteV(fid, args.Offset, args.Data, np.NoV)
 	if err != nil {
+		db.DPrintf("PROXY", "Write: args %v err %v\n", args, err)
 		return err.RerrorWC()
 	}
 	rets.Count = n
+	db.DPrintf("PROXY", "Write: args %v rets %v\n", args, rets)
 	return nil
 }
 
 func (npc *NpConn) Remove(args np.Tremove, rets *np.Rremove) *np.Rerror {
-	err := npc.fidc.Remove(args.Fid)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	err := npc.fidc.Remove(fid)
 	if err != nil {
+		db.DPrintf("PROXY", "Remove: args %v err %v\n", args, err)
 		return err.RerrorWC()
 	}
+	db.DPrintf("PROXY", "Remove: args %v rets %v\n", args, rets)
 	return nil
 }
 
@@ -183,8 +238,13 @@ func (npc *NpConn) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror 
 }
 
 func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
-	st, err := npc.fidc.Stat(args.Fid)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	st, err := npc.fidc.Stat(fid)
 	if err != nil {
+		db.DPrintf("PROXY", "Stats: args %v err %v\n", args, err)
 		return err.RerrorWC()
 	}
 	rets.Stat = *st
@@ -193,10 +253,16 @@ func (npc *NpConn) Stat(args np.Tstat, rets *np.Rstat) *np.Rerror {
 }
 
 func (npc *NpConn) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
-	err := npc.fidc.Wstat(args.Fid, &args.Stat)
+	fid, ok := npc.fm.lookup(args.Fid)
+	if !ok {
+		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
+	}
+	err := npc.fidc.Wstat(fid, &args.Stat)
 	if err != nil {
+		db.DPrintf("PROXY", "Wstats: args %v err %v\n", args, err)
 		return err.RerrorWC()
 	}
+	db.DPrintf("PROXY", "Wstat: req %v rets %v\n", args, rets)
 	return nil
 }
 

@@ -28,7 +28,6 @@ const (
 type System struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	pid         proc.Tpid
 	realmId     string
 	namedAddr   []string
 	named       *Subsystem
@@ -48,13 +47,6 @@ func makeSystemBase(realmId string, namedAddr []string) *System {
 	s.fss3d = []*Subsystem{}
 	s.dbd = []*Subsystem{}
 	s.crashedPids = make(map[proc.Tpid]bool)
-	return s
-}
-
-func MakeSystemClnt(uname, realmId, named string) *System {
-	s := makeSystemBase(realmId, []string{named})
-	s.FsLib = fslib.MakeFsLibAddr(uname, []string{named})
-	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	return s
 }
 
@@ -82,7 +74,6 @@ func MakeSystemAll(uname, realmId string, replicaId int) *System {
 	s := MakeSystemNamed(uname, realmId, replicaId)
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
-	s.pid = proc.GetPid()
 	err := s.Boot()
 	if err != nil {
 		db.DFatalf("Start err %v\n", err)
@@ -94,7 +85,6 @@ func MakeSystem(uname, realmId string, namedAddr []string) *System {
 	s := makeSystemBase(realmId, namedAddr)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
-	s.pid = proc.GetPid()
 	return s
 }
 

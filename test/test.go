@@ -79,7 +79,7 @@ func MakeTstateClnt(t *testing.T, named string) *Tstate {
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t
-	ts.System = kernel.MakeSystemClnt("test", np.TEST_RID, named)
+	ts.System = kernel.MakeSystem("test", np.TEST_RID, []string{named})
 	return ts
 }
 

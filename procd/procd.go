@@ -288,28 +288,19 @@ func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
 	return nil
 }
 
-// Check if we need to download a new version of the binary.
+// Check if we need to download the binary.
 func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
-	// If we can't stat the bin through ux, we try to download it. This might be
-	// overly-aggressive in the event that the ~local ux crashes, but it should
-	// still be correct.
-	st1, err := pd.Stat(uxBinPath)
+	// If we can't stat the bin through ux, we try to download it.
+	_, err := pd.Stat(uxBinPath)
 	if err != nil {
-		return true
-	}
-	// Stat the s3 version of the bin.
-	st2, err := pd.Stat(s3BinPath)
-	if err != nil {
-		db.DFatalf("Couldn't stat s3 bin: %v", err)
-	}
-	// If the "last modified" time of the s3-backed binary is more recent that
-	// the "last modified" time of the ux-backed binary, we need to download the
-	// new version. Otherwise, continue as normal.
-	if st1.Mtime < st2.Mtime {
-		db.DPrintf(db.ALWAYS, "s3 bin is newer (%v < %v), need to download", st1.Mtime, st2.Mtime)
-		db.DPrintf("PROCD", "s3 bin is newer (%v < %v), need to download", st1.Mtime, st2.Mtime)
-		// Remove the old version.
-		pd.Remove(uxBinPath)
+		// If we haven't downloaded any procs in this version yet, make a local dir
+		// for them.
+		versionDir := path.Dir(uxBinPath)
+		version := path.Base(versionDir)
+		if np.IsErrNotfound(err) && strings.Contains(err.Error(), version) {
+			db.DPrintf("PROCD_ERR", "Error first download for version %v: %v", version, err)
+			pd.MkDir(versionDir, 0777)
+		}
 		return true
 	}
 	return false

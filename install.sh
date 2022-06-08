@@ -49,10 +49,11 @@ DIR=$(dirname $0)
 mkdir -p $PRIVILEGED_BIN
 rm -rf $PRIVILEGED_BIN/*
 if [ $FROM == "local" ]; then
+  VERSION=$(cat "${VERSION_FILE}")
   # Make the user program dir
-  mkdir -p $UXROOT/$REALM/bin
+  mkdir -p $UXROOT/$REALM/bin/user/$VERSION/
   # Copy from local
-  cp -r bin/user $UXROOT/$REALM/bin/
+  cp -r bin/user/* $UXROOT/$REALM/bin/user/$VERSION/
   cp -r bin/realm $PRIVILEGED_BIN
   cp -r bin/kernel $PRIVILEGED_BIN
 elif [ $FROM == "s3" ]; then

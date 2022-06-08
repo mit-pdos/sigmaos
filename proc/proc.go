@@ -2,6 +2,7 @@ package proc
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"strings"
 
@@ -52,6 +53,15 @@ func MakeProc(program string, args []string) *Proc {
 	p.Type = T_DEF
 	p.Ncore = C_DEF
 	p.setProcDir("")
+	// If this isn't a user proc, version it.
+	if !p.IsPrivilegedProc() {
+		// Check the version has been set.
+		if Version == "none" {
+			log.Fatalf("FATAL %v %v Version not set. Please set by running with --version", GetName(), GetPid())
+		}
+		// Set the Program to user/VERSION/prog.bin
+		p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
+	}
 	return p
 }
 

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"flag"
 	"fmt"
 	"sync"
 	"testing"
@@ -11,7 +12,15 @@ import (
 	"ulambda/fslib"
 	"ulambda/kernel"
 	np "ulambda/ninep"
+	"ulambda/proc"
 )
+
+var version string
+
+// Read & set the proc version.
+func init() {
+	flag.StringVar(&version, "version", "none", "version")
+}
 
 type Tstate struct {
 	sync.Mutex
@@ -50,6 +59,7 @@ func (ts *Tstate) startReplicas() {
 }
 
 func MakeTstatePath(t *testing.T, named, path string) *Tstate {
+	setVersion()
 	if named == "" && path == np.NAMED {
 		return MakeTstate(t)
 	} else {
@@ -66,6 +76,7 @@ func MakeTstatePath(t *testing.T, named, path string) *Tstate {
 }
 
 func MakeTstateClnt(t *testing.T, named string) *Tstate {
+	setVersion()
 	ts := &Tstate{}
 	ts.T = t
 	ts.System = kernel.MakeSystemClnt("test", np.TEST_RID, named)
@@ -73,6 +84,7 @@ func MakeTstateClnt(t *testing.T, named string) *Tstate {
 }
 
 func MakeTstate(t *testing.T) *Tstate {
+	setVersion()
 	ts := &Tstate{}
 	ts.T = t
 	ts.makeSystem(kernel.MakeSystemNamed)
@@ -80,10 +92,10 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
+	setVersion()
 	ts := &Tstate{}
 	ts.T = t
 	ts.makeSystem(kernel.MakeSystemAll)
-
 	return ts
 }
 
@@ -96,6 +108,13 @@ func (ts *Tstate) makeSystem(mkSys func(string, string, int) *kernel.System) {
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()
+}
+
+func setVersion() {
+	if version == "" || version == "none" || !flag.Parsed() {
+		db.DFatalf("Version not set in test")
+	}
+	proc.Version = version
 }
 
 const (

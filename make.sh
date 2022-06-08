@@ -50,6 +50,12 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
+DIR=$(dirname $0)
+. $DIR/.env
+
+echo $VERSION > $VERSION_FILE
+echo $VERSION_FILE
+
 mkdir -p bin/kernel
 mkdir -p bin/user
 mkdir -p bin/realm

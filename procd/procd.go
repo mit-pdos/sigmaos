@@ -19,7 +19,6 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/rand"
 )
 
 type Procd struct {
@@ -31,7 +30,7 @@ type Procd struct {
 	done       bool
 	addr       string
 	procs      map[proc.Tpid]Tstatus
-	coreBitmap []bool
+	coreBitmap []Tcorestatus
 	coresAvail proc.Tcore
 	perf       *perf.Perf
 	group      sync.WaitGroup
@@ -45,7 +44,7 @@ func RunProcd(realmbin string) {
 	pd.realmbin = realmbin
 
 	pd.procs = make(map[proc.Tpid]Tstatus)
-	pd.coreBitmap = make([]bool, linuxsched.NCores)
+	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 
 	// Must set core affinity before starting CPU Util measurements
@@ -130,34 +129,6 @@ func (pd *Procd) readDone() bool {
 	return pd.done
 }
 
-// XXX Statsd information?
-// Check if this procd instance is able to satisfy a job's constraints.
-// Trivially true when not benchmarking.
-func (pd *Procd) satisfiesConstraintsL(p *proc.Proc) bool {
-	// If we have enough cores to run this job...
-	if pd.coresAvail >= p.Ncore {
-		return true
-	}
-	return false
-}
-
-// Update resource accounting information.
-func (pd *Procd) decrementResourcesL(p *proc.Proc) {
-	pd.coresAvail -= p.Ncore
-}
-
-// Update resource accounting information.
-func (pd *Procd) incrementResources(p *proc.Proc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	pd.incrementResourcesL(p)
-}
-
-func (pd *Procd) incrementResourcesL(p *proc.Proc) {
-	pd.coresAvail += p.Ncore
-}
-
 // Tries to get a runnable proc if it fits on this procd.
 func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
 	pd.mu.Lock()
@@ -170,13 +141,13 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
 		return nil, err
 	}
 	// See if the proc fits on this procd.
-	if pd.satisfiesConstraintsL(p) {
+	if pd.hasEnoughCores(p) {
 		// Proc may have been stolen
 		if ok := pd.claimProc(procPath); !ok {
 			return nil, nil
 		}
 		// Update resource accounting.
-		pd.decrementResourcesL(p)
+		pd.decrementCoresL(p)
 		return p, nil
 	} else {
 		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
@@ -236,104 +207,6 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 	return p, err
 }
 
-func (pd *Procd) allocCores(n proc.Tcore) []uint {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-	cores := []uint{}
-	for i := 0; i < len(pd.coreBitmap); i++ {
-		// If lambda asks for 0 cores, run on any core
-		if n == proc.C_DEF {
-			cores = append(cores, uint(i))
-		} else {
-			if !pd.coreBitmap[i] {
-				pd.coreBitmap[i] = true
-				cores = append(cores, uint(i))
-				n -= 1
-				if n == 0 {
-					break
-				}
-			}
-		}
-	}
-	return cores
-}
-
-func (pd *Procd) freeCores(cores []uint) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	for _, i := range cores {
-		pd.coreBitmap[i] = false
-	}
-}
-
-// Try to download a proc bin from s3.
-func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
-	// Copy the binary from s3 to a temporary file.
-	tmppath := path.Join(uxBinPath + "-tmp-" + rand.String(16))
-	if err := pd.CopyFile(s3BinPath, tmppath); err != nil {
-		return err
-	}
-	// Rename the temporary file.
-	if err := pd.Rename(tmppath, uxBinPath); err != nil {
-		// If another procd (or another thread on this procd) already completed the
-		// download, then we consider the download successful. Any other error
-		// (e.g. ux crashed) is unexpected.
-		if !np.IsErrExists(err) {
-			return err
-		}
-		// If someone else completed the download before us, remove the temp file.
-		pd.Remove(tmppath)
-	}
-	return nil
-}
-
-// Check if we need to download the binary.
-func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
-	// If we can't stat the bin through ux, we try to download it.
-	_, err := pd.Stat(uxBinPath)
-	if err != nil {
-		// If we haven't downloaded any procs in this version yet, make a local dir
-		// for them.
-		versionDir := path.Dir(uxBinPath)
-		version := path.Base(versionDir)
-		if np.IsErrNotfound(err) && strings.Contains(err.Error(), version) {
-			db.DPrintf("PROCD_ERR", "Error first download for version %v: %v", version, err)
-			pd.MkDir(versionDir, 0777)
-		}
-		return true
-	}
-	return false
-}
-
-// XXX Cleanup on procd crashes?
-func (pd *Procd) downloadProcBin(program string) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	uxBinPath := path.Join(np.UXBIN, program)
-	s3BinPath := path.Join(np.S3, "~ip", pd.realmbin, program)
-
-	// If we already downloaded the program & it is up-to-date, return.
-	if !pd.needToDownload(uxBinPath, s3BinPath) {
-		return
-	}
-
-	db.DPrintf("PROCD", "Need to download %v", program)
-
-	// May need to retry if ux crashes.
-	RETRIES := 1000
-	for i := 0; i < RETRIES && !pd.done; i++ {
-		// Return if successful. Else, retry
-		if err := pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {
-			return
-		} else {
-			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin [%v]: %v", s3BinPath, err)
-		}
-	}
-	db.DFatalf("Couldn't download proc bin %v in over %v retries", program, RETRIES)
-}
-
 func (pd *Procd) runProc(p *Proc) {
 	// Register running proc
 	pd.setProcStatus(p.Pid, PROC_RUNNING)
@@ -349,7 +222,7 @@ func (pd *Procd) runProc(p *Proc) {
 
 	// Free resources and dedicated cores.
 	pd.freeCores(cores)
-	pd.incrementResources(p.attr)
+	pd.incrementCores(p.attr)
 
 	// Deregister running procs
 	pd.deleteProc(p.Pid)

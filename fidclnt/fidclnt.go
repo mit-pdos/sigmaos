@@ -66,6 +66,10 @@ func (fidc *FidClnt) Qid(fid np.Tfid) np.Tqid {
 	return fidc.Lookup(fid).Lastqid()
 }
 
+func (fidc *FidClnt) Qids(fid np.Tfid) []np.Tqid {
+	return fidc.Lookup(fid).qids
+}
+
 func (fidc *FidClnt) Path(fid np.Tfid) np.Path {
 	return fidc.Lookup(fid).Path()
 }

@@ -42,7 +42,7 @@ do
   # test proxy
   #
   
-  ./proxy/test.sh
+  go test $1 ulambda/proxy
   
   #
   # tests kernel (with 1 "fake" realm)

@@ -9,12 +9,22 @@ const (
 	MAXSYMLINK = 8
 )
 
-// walkPathUmount walks path and, on success, returns the fd walked
-// to; it is the caller's responsibility to clunk the fd.  If a server
-// is unreachable, it umounts the path it walked to, and starts over
+func (pathc *PathClnt) Walk(fid np.Tfid, path np.Path) (np.Tfid, *np.Err) {
+	ch := pathc.FidClnt.Lookup(fid)
+	if ch == nil {
+		return np.NoFid, np.MkErr(np.TErrNotfound, fid)
+	}
+	p := ch.Path().AppendPath(path)
+	db.DPrintf("WALK", "Walk %v (ch %v)", p, ch.Path())
+	return pathc.WalkPath(p, true, nil)
+}
+
+// WalkPath walks path and, on success, returns the fd walked to; it is
+// the caller's responsibility to clunk the fd.  If a server is
+// unreachable, it umounts the path it walked to, and starts over
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
-func (pathc *PathClnt) walkPathUmount(path np.Path, resolve bool, w Watch) (np.Tfid, *np.Err) {
+func (pathc *PathClnt) WalkPath(path np.Path, resolve bool, w Watch) (np.Tfid, *np.Err) {
 	for {
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf("WALK", "walkPath %v -> (%v, %v  %v, %v)\n", path, fid, path1, left, err)

@@ -152,8 +152,6 @@ func (e *encoder) encode(vs ...interface{}) error {
 			if err := e.encode(uint16(len(v))); err != nil {
 				return err
 			}
-
-			// XXX
 			for _, m := range v {
 				if err := e.encode(m); err != nil {
 					return err

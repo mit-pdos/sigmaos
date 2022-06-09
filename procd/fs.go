@@ -76,13 +76,13 @@ func (pd *Procd) makeFs() {
 }
 
 // Publishes a proc as running
-func (pfs *ProcdFs) running(p *Proc) *np.Err {
+func (pfs *ProcdFs) running(p *LinuxProc) *np.Err {
 	// Make sure we write the proc description before we publish it.
 	b, error := json.Marshal(p.attr)
 	if error != nil {
 		return np.MkErrError(fmt.Errorf("running marshal err %v", error))
 	}
-	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
+	_, err := pfs.pd.PutFile(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.attr.Pid.String()), 0777, np.OREAD|np.OWRITE, b)
 	if err != nil {
 		db.DFatalf("Error ProcdFs.spawn: %v", err)
 		// TODO: return an np.Err return err
@@ -91,8 +91,8 @@ func (pfs *ProcdFs) running(p *Proc) *np.Err {
 }
 
 // Publishes a proc as done running
-func (pfs *ProcdFs) finish(p *Proc) error {
-	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.Pid.String()))
+func (pfs *ProcdFs) finish(p *LinuxProc) error {
+	err := pfs.pd.Remove(path.Join(np.PROCD, pfs.pd.MyAddr(), np.PROCD_RUNNING, p.attr.Pid.String()))
 	if err != nil {
 		log.Printf("%v: Error ProcdFs.finish: %v", proc.GetName(), err)
 		return err

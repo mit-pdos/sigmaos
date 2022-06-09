@@ -97,13 +97,6 @@ func (pd *Procd) spawnProc(a *proc.Proc) {
 	pd.spawnChan <- true
 }
 
-func (pd *Procd) makeProc(a *proc.Proc) *Proc {
-	p := &Proc{}
-	p.pd = pd
-	p.init(a)
-	return p
-}
-
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
 	for pid, status := range pd.procs {
@@ -207,25 +200,25 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 	return p, err
 }
 
-func (pd *Procd) runProc(p *Proc) {
+func (pd *Procd) runProc(p *LinuxProc) {
 	// Register running proc
-	pd.setProcStatus(p.Pid, PROC_RUNNING)
+	pd.setProcStatus(p.attr.Pid, PROC_RUNNING)
 
-	// Allocate dedicated cores for this lambda to run on.
-	cores := pd.allocCores(p.attr.Ncore)
+	// Allocate dedicated cores for this lambda to run on, if it requires them.
+	cores := pd.allocCores(p.attr)
 
 	// Download the bin from s3, if it isn't already cached locally.
-	pd.downloadProcBin(p.Program)
+	pd.downloadProcBin(p.attr.Program)
 
 	// Run the proc.
 	p.run(cores)
 
-	// Free resources and dedicated cores.
-	pd.freeCores(p.attr.Ncore, cores)
+	// Free any dedicated cores.
+	pd.freeCores(p.attr, cores)
 	pd.incrementCores(p.attr)
 
 	// Deregister running procs
-	pd.deleteProc(p.Pid)
+	pd.deleteProc(p.attr.Pid)
 }
 
 func (pd *Procd) setCoreAffinity() {
@@ -276,7 +269,7 @@ func (pd *Procd) worker() {
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
 		db.DPrintf("PROCD", "Got proc %v", p)
-		localProc := pd.makeProc(p)
+		localProc := makeProc(pd, p)
 		err := pd.fs.running(localProc)
 		if err != nil {
 			pd.perf.Done()

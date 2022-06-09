@@ -26,10 +26,11 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 }
 
 // Allocate n cores to a proc, and note it occupies in the core bitmap.
-func (pd *Procd) allocCores(n proc.Tcore) []uint {
+func (pd *Procd) allocCores(p *proc.Proc) []uint {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
+	allocated := proc.Tcore(0)
 	cores := []uint{}
 	for i := 0; i < len(pd.coreBitmap); i++ {
 		coreStatus := pd.coreBitmap[i]
@@ -38,44 +39,51 @@ func (pd *Procd) allocCores(n proc.Tcore) []uint {
 			continue
 		}
 		// If lambda asks for 0 cores, run on any unblocked core.
-		if n == proc.C_DEF {
+		if p.Ncore == proc.C_DEF {
 			cores = append(cores, uint(i))
 			continue
 		}
 		// If core is idle, claim it.
 		if coreStatus == CORE_IDLE {
-			pd.coreBitmap[i] = CORE_BUSY
 			cores = append(cores, uint(i))
-			n -= 1
-			if n == 0 {
+			allocated += 1
+			if allocated == p.Ncore {
 				break
 			}
 		}
 	}
+
+	// Mark cores as busy, if this proc asked for exclusive access to cores.
+	if p.Ncore > 0 {
+		pd.markCoresL(cores, CORE_BUSY)
+	}
+
 	return cores
 }
 
 // Set the status of a set of cores. Caller holds lock.
 func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
+	for _, i := range cores {
+		// If we are double-setting a core's status, it's probably a bug.
+		if pd.coreBitmap[i] == status {
+			debug.PrintStack()
+			db.DFatalf("Error: Double-marked cores %v", status)
+		}
+		pd.coreBitmap[i] = status
+	}
 }
 
 // Free a set of cores which was being used by a proc.
-func (pd *Procd) freeCores(ncore proc.Tcore, cores []uint) {
+func (pd *Procd) freeCores(p *proc.Proc, cores []uint) {
 	// If no cores were exclusively allocated to this proc, return immediately.
-	if ncore == proc.C_DEF {
+	if p.Ncore == proc.C_DEF {
 		return
 	}
 
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	for _, i := range cores {
-		if pd.coreBitmap[i] == CORE_IDLE {
-			debug.PrintStack()
-			db.DFatalf("Error: Double free cores")
-		}
-		pd.coreBitmap[i] = CORE_IDLE
-	}
+	pd.markCoresL(cores, CORE_IDLE)
 }
 
 // Update resource accounting information. Caller holds lock.

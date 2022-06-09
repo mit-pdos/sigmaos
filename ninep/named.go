@@ -26,7 +26,10 @@ const (
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 
-	PROC_CTL_FILE = "ctl"
+	// Procd control files
+	PROCD_CTL_FILE   = "ctl"
+	PROCD_SPAWN_FILE = "spawn"
+
 	PROCD_RUNNING = "running"
 	PROCD_RUNQ_LC = "runq-lc"
 	PROCD_RUNQ_BE = "runq-be"

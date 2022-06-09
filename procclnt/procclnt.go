@@ -76,7 +76,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 			db.DPrintf("PROCLNT_ERR", "Spawn marshal err %v\n", err)
 			return clnt.cleanupError(p.Pid, childProcdir, fmt.Errorf("Spawn error %v", err))
 		}
-		fn := path.Join(np.PROCDREL+"/~ip", np.PROC_CTL_FILE)
+		fn := path.Join(np.PROCDREL+"/~ip", np.PROCD_SPAWN_FILE)
 		_, err = clnt.SetFile(fn, b, np.OWRITE, 0)
 		if err != nil {
 			db.DPrintf("PROCCLNT_ERR", "SetFile %v err %v", fn, err)

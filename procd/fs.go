@@ -20,10 +20,11 @@ import (
 )
 
 type ProcdFs struct {
-	pd      *Procd
-	run     fs.Dir
-	runqs   map[string]fs.Dir
-	ctlFile fs.Inode
+	pd        *Procd
+	run       fs.Dir
+	runqs     map[string]fs.Dir
+	spawnFile fs.Inode
+	ctlFile   fs.Inode
 }
 
 // Set up this procd instance's FS
@@ -37,11 +38,18 @@ func (pd *Procd) makeFs() {
 	}
 	procclnt.MountPids(pd.FsLib, fslib.Named())
 
-	// Set up ctl file
-	pd.fs.ctlFile = makeCtlFile(pd, nil, pd.Root())
-	err1 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROC_CTL_FILE, pd.fs.ctlFile)
+	// Set up spawn file
+	pd.fs.spawnFile = makeSpawnFile(pd, nil, pd.Root())
+	err1 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_SPAWN_FILE, pd.fs.spawnFile)
 	if err1 != nil {
 		db.DFatalf("Error MkNod in RunProcd: %v", err1)
+	}
+
+	// Set up ctl file
+	pd.fs.ctlFile = makeCtlFile(nil, nil, nil, pd.Root())
+	err2 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_CTL_FILE, pd.fs.ctlFile)
+	if err2 != nil {
+		db.DFatalf("Error MkNod in RunProcd: %v", err2)
 	}
 
 	// Set up running dir

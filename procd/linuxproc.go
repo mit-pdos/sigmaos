@@ -29,14 +29,11 @@ type LinuxProc struct {
 	//	mu deadlock.Mutex
 	fs.Inode
 	mu      sync.Mutex
-	Stdout  string
-	Stderr  string
 	SysPid  int
 	NewRoot string
 	Env     []string
 	attr    *proc.Proc
 	pd      *Procd
-	// XXX add fields (e.g. CPU mask, etc.)
 }
 
 func makeProc(pd *Procd, a *proc.Proc) *LinuxProc {
@@ -46,8 +43,6 @@ func makeProc(pd *Procd, a *proc.Proc) *LinuxProc {
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.attr.Pid.String()+rand.String(16))
 	db.DPrintf("PROCD", "Procd init: %v\n", p)
 	p.Env = append(os.Environ(), a.GetEnv(p.pd.addr, p.NewRoot)...)
-	p.Stdout = "" // XXX: add to or infer from p
-	p.Stderr = "" // XXX: add to or infer from p
 	return p
 }
 

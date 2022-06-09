@@ -214,17 +214,14 @@ func (pd *Procd) runProc(p *Proc) {
 	// Allocate dedicated cores for this lambda to run on.
 	cores := pd.allocCores(p.attr.Ncore)
 
-	db.DPrintf(db.ALWAYS, "Alloc'ed cores %v", cores)
-
 	// Download the bin from s3, if it isn't already cached locally.
 	pd.downloadProcBin(p.Program)
 
 	// Run the proc.
 	p.run(cores)
 
-	db.DPrintf(db.ALWAYS, "Freeing cores %v", cores)
 	// Free resources and dedicated cores.
-	pd.freeCores(cores)
+	pd.freeCores(p.attr.Ncore, cores)
 	pd.incrementCores(p.attr)
 
 	// Deregister running procs

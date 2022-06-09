@@ -32,17 +32,23 @@ func (pd *Procd) allocCores(n proc.Tcore) []uint {
 
 	cores := []uint{}
 	for i := 0; i < len(pd.coreBitmap); i++ {
-		// If lambda asks for 0 cores, run on any core
+		coreStatus := pd.coreBitmap[i]
+		// If this core is not assigned to this procd, move on.
+		if coreStatus == CORE_BLOCKED {
+			continue
+		}
+		// If lambda asks for 0 cores, run on any unblocked core.
 		if n == proc.C_DEF {
 			cores = append(cores, uint(i))
-		} else {
-			if pd.coreBitmap[i] == CORE_IDLE {
-				pd.coreBitmap[i] = CORE_BUSY
-				cores = append(cores, uint(i))
-				n -= 1
-				if n == 0 {
-					break
-				}
+			continue
+		}
+		// If core is idle, claim it.
+		if coreStatus == CORE_IDLE {
+			pd.coreBitmap[i] = CORE_BUSY
+			cores = append(cores, uint(i))
+			n -= 1
+			if n == 0 {
+				break
 			}
 		}
 	}
@@ -50,7 +56,12 @@ func (pd *Procd) allocCores(n proc.Tcore) []uint {
 }
 
 // Free a set of cores which was being used by a proc.
-func (pd *Procd) freeCores(cores []uint) {
+func (pd *Procd) freeCores(ncore proc.Tcore, cores []uint) {
+	// If no cores were exclusively allocated to this proc, return immediately.
+	if ncore == proc.C_DEF {
+		return
+	}
+
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 

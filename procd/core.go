@@ -1,6 +1,8 @@
 package procd
 
 import (
+	"runtime/debug"
+
 	db "ulambda/debug"
 	"ulambda/proc"
 )
@@ -27,6 +29,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 func (pd *Procd) allocCores(n proc.Tcore) []uint {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
+
 	cores := []uint{}
 	for i := 0; i < len(pd.coreBitmap); i++ {
 		// If lambda asks for 0 cores, run on any core
@@ -53,6 +56,7 @@ func (pd *Procd) freeCores(cores []uint) {
 
 	for _, i := range cores {
 		if pd.coreBitmap[i] == CORE_IDLE {
+			debug.PrintStack()
 			db.DFatalf("Error: Double free cores")
 		}
 		pd.coreBitmap[i] = CORE_IDLE

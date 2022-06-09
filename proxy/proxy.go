@@ -106,9 +106,10 @@ func (npc *NpConn) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 		db.DPrintf("PROXY", "Attach args %v mount err %v\n", args, err)
 		return &np.Rerror{error.Error()}
 	}
-	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
 	rets.Qid = npc.fidc.Qid(fid)
 	npc.fm.mapTo(args.Fid, fid)
+	npc.fidc.Lookup(fid).SetPath(np.Split(np.NAMED))
+	db.DPrintf("PROXY", "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return nil
 }
 
@@ -122,7 +123,7 @@ func (npc *NpConn) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if !ok {
 		return np.MkErr(np.TErrNotfound, args.Fid).RerrorWC()
 	}
-	fid1, err := npc.pc.Walk(np.Split(np.NAMED), fid, args.Wnames)
+	fid1, err := npc.pc.Walk(fid, args.Wnames)
 	if err != nil {
 		db.DPrintf("PROXY", "Walk args %v err: %v\n", args, err)
 		return err.RerrorWC()

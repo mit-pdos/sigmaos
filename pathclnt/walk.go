@@ -9,13 +9,13 @@ const (
 	MAXSYMLINK = 8
 )
 
-func (pathc *PathClnt) Walk(mount np.Path, fid np.Tfid, path np.Path) (np.Tfid, *np.Err) {
+func (pathc *PathClnt) Walk(fid np.Tfid, path np.Path) (np.Tfid, *np.Err) {
 	ch := pathc.FidClnt.Lookup(fid)
 	if ch == nil {
 		return np.NoFid, np.MkErr(np.TErrNotfound, fid)
 	}
-	p := mount.AppendPath(ch.Path()).AppendPath(path)
-	db.DPrintf("WALK", "Walk %v (%v, %v)", p, ch.Path(), path)
+	p := ch.Path().AppendPath(path)
+	db.DPrintf("WALK", "Walk %v (ch %v)", p, ch.Path())
 	return pathc.WalkPath(p, true, nil)
 }
 

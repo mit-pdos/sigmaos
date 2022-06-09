@@ -37,6 +37,10 @@ func (c *Channel) Path() np.Path {
 	return c.path
 }
 
+func (c *Channel) SetPath(p np.Path) {
+	c.path = p
+}
+
 func (c *Channel) Version() np.TQversion {
 	return c.Lastqid().Version
 }

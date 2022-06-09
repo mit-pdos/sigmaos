@@ -1,6 +1,7 @@
 package proxy_test
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -31,14 +32,19 @@ func initTest(t *testing.T) *Tstate {
 	// start proxy
 	ts.cmd = exec.Command("../bin/kernel/proxyd")
 	ts.cmd.Stdout = os.Stdout
+	ts.cmd.Stderr = os.Stderr
 	err = ts.cmd.Start()
 	assert.Equal(t, nil, err)
+
+	// mount proxy
+	_, err = run("sudo mount -t 9p -o trans=tcp,aname=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p")
+	assert.Equal(t, nil, err)
+
 	return ts
 }
 
 func (ts *Tstate) cleanup() {
-	shcmd := "sudo umount /mnt/9p"
-	err := exec.Command("bash", "-c", shcmd).Run()
+	_, err := run("sudo umount /mnt/9p")
 	assert.Equal(ts.T, nil, err)
 
 	err = ts.cmd.Process.Kill()
@@ -48,16 +54,17 @@ func (ts *Tstate) cleanup() {
 }
 
 func run(cmd string) ([]byte, error) {
-	return exec.Command("bash", "-c", cmd).Output()
+	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
+	if err != nil {
+		log.Printf("stderr: %v", string(out))
+	}
+	return out, err
 }
 
 func TestBasic(t *testing.T) {
 	ts := initTest(t)
 
-	out, err := run("sudo mount -t 9p -o trans=tcp,aname=`whoami`,uname=`whoami`,port=1110 127.0.0.1 /mnt/9p")
-	assert.Equal(t, nil, err)
-
-	out, err = run("ls -a /mnt/9p/ | grep '.statsd'")
+	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, ".statsd\n", string(out))
 
@@ -89,6 +96,24 @@ func TestBasic(t *testing.T) {
 
 	out, err = run("ls /mnt/9p/xxx")
 	assert.NotNil(t, err)
+
+	ts.cleanup()
+}
+
+func TestSymlinkPath(t *testing.T) {
+	ts := initTest(t)
+
+	dn := "name/d"
+	err := ts.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+
+	err = ts.Symlink(fslib.MakeTarget(fslib.Named()), "name/namedself", 0777|np.DMTMP)
+	assert.Nil(ts.T, err, "Symlink")
+
+	out, err := run("ls /mnt/9p/namedself")
+	assert.Equal(t, nil, err)
+
+	log.Printf("Out: %v\n", out)
 
 	ts.cleanup()
 }

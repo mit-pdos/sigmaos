@@ -16,12 +16,12 @@ type SessionTable struct {
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
 	mkps     np.MkProtServer
-	fssrv    np.FsServer
+	fssrv    np.SessServer
 	sessions map[np.Tsession]*Session
 	last     *Session // for tests
 }
 
-func MakeSessionTable(mkps np.MkProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps np.MkProtServer, fssrv np.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
 	st.fssrv = fssrv

@@ -9,10 +9,10 @@ import (
 
 type Dev struct {
 	fs.Inode
-	srv np.FsServer
+	srv np.SessServer
 }
 
-func MakeDev(srv np.FsServer, ctx fs.CtxI, root fs.Dir) *Dev {
+func MakeDev(srv np.SessServer, ctx fs.CtxI, root fs.Dir) *Dev {
 	i := inode.MakeInode(ctx, 0, root)
 	return &Dev{i, srv}
 }

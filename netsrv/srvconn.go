@@ -19,7 +19,7 @@ type SrvConn struct {
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
-	protsrv    np.FsServer
+	protsrv    np.SessServer
 	sessid     np.Tsession
 }
 

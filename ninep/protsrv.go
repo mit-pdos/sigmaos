@@ -11,7 +11,7 @@ type Conn struct {
 
 type Fsrvfcall func(*Fcall)
 
-type FsServer interface {
+type SessServer interface {
 	Register(Tsession, *Conn) *Err
 	SrvFcall(*Fcall)
 	Snapshot() []byte
@@ -44,5 +44,5 @@ type Protsrv interface {
 	Snapshot() []byte
 }
 
-type MkProtServer func(FsServer, Tsession) Protsrv
-type RestoreProtServer func(FsServer, []byte) Protsrv
+type MkProtServer func(SessServer, Tsession) Protsrv
+type RestoreProtServer func(SessServer, []byte) Protsrv

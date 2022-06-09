@@ -20,7 +20,7 @@ func (st *SessionTable) Snapshot() []byte {
 	return b
 }
 
-func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
+func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.SessServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
 	sessions := make(map[np.Tsession][]byte)
 	err := json.Unmarshal(b, &sessions)
 	if err != nil {
@@ -57,7 +57,7 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid np.Tsession, fssrv np.FsServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid np.Tsession, fssrv np.SessServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {

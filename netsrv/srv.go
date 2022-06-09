@@ -11,19 +11,19 @@ import (
 
 type NetServer struct {
 	addr       string
-	fssrv      np.FsServer
+	fssrv      np.SessServer
 	wireCompat bool
 }
 
-func MakeNetServer(fssrv np.FsServer, address string) *NetServer {
+func MakeNetServer(fssrv np.SessServer, address string) *NetServer {
 	return makeNetServer(fssrv, address, false)
 }
 
-func MakeNetServerWireCompatible(address string, fssrv np.FsServer) *NetServer {
+func MakeNetServerWireCompatible(address string, fssrv np.SessServer) *NetServer {
 	return makeNetServer(fssrv, address, true)
 }
 
-func makeNetServer(fs np.FsServer, address string, wireCompat bool) *NetServer {
+func makeNetServer(fs np.SessServer, address string, wireCompat bool) *NetServer {
 	srv := &NetServer{"",
 		fs,
 		wireCompat,

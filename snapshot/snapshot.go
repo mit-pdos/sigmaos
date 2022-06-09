@@ -19,7 +19,7 @@ import (
 )
 
 type Snapshot struct {
-	fssrv        np.FsServer
+	fssrv        np.SessServer
 	Imap         map[np.Tpath]ObjSnapshot
 	DirOverlay   np.Tpath
 	St           []byte
@@ -28,7 +28,7 @@ type Snapshot struct {
 	restoreCache map[np.Tpath]fs.Inode
 }
 
-func MakeSnapshot(fssrv np.FsServer) *Snapshot {
+func MakeSnapshot(fssrv np.SessServer) *Snapshot {
 	s := &Snapshot{}
 	s.fssrv = fssrv
 	s.Imap = make(map[np.Tpath]ObjSnapshot)
@@ -77,7 +77,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.FsServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
+func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)

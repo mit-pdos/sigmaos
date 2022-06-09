@@ -40,7 +40,7 @@ func (fos *ProtSrv) snapshot() []byte {
 	return b
 }
 
-func Restore(srv np.FsServer, b []byte) np.Protsrv {
+func Restore(srv np.SessServer, b []byte) np.Protsrv {
 	ssrv := srv.(*sesssrv.SessSrv)
 	foss := MakeProtSrvSnapshot()
 	err := json.Unmarshal(b, foss)

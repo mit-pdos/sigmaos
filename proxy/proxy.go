@@ -26,7 +26,7 @@ func MakeNpd() *Npd {
 	return npd
 }
 
-func (npd *Npd) mkProtServer(fssrv np.FsServer, sid np.Tsession) np.Protsrv {
+func (npd *Npd) mkProtServer(fssrv np.SessServer, sid np.Tsession) np.Protsrv {
 	return makeNpConn(npd.named)
 }
 

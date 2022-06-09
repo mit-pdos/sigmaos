@@ -25,7 +25,7 @@ type ProtSrv struct {
 	sid   np.Tsession
 }
 
-func MakeProtServer(s np.FsServer, sid np.Tsession) np.Protsrv {
+func MakeProtServer(s np.SessServer, sid np.Tsession) np.Protsrv {
 	ps := &ProtSrv{}
 	srv := s.(*sesssrv.SessSrv)
 	ps.ssrv = srv

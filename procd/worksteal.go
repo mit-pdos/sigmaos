@@ -3,6 +3,7 @@ package procd
 import (
 	"encoding/json"
 	"path"
+	"strings"
 	"time"
 
 	db "ulambda/debug"
@@ -22,7 +23,10 @@ func (pd *Procd) workStealingMonitor() {
 			nStealable = len(sts)
 			// Discount procs already on this procd
 			for _, st := range sts {
-				if _, ok := pd.getProcStatus(proc.Tpid(st.Name)); ok {
+				// See if this proc was spawned on this procd or has been stolen. If
+				// so, discount it from the count of stealable procs.
+				b, err := pd.GetFile(path.Join(np.PROCD_WS, st.Name))
+				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
 					nStealable--
 				}
 			}

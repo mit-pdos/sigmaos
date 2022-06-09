@@ -22,19 +22,19 @@ import (
 )
 
 type Procd struct {
-	mu         sync.Mutex
-	fs         *ProcdFs
-	realmbin   string    // realm path from which to pull/run bins.
-	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
-	stealChan  chan bool // Indicates there is work to be stolen.
-	done       bool
-	addr       string
-	procs      map[proc.Tpid]Tstatus
-	coreBitmap []Tcorestatus
-	coresAvail proc.Tcore
-	perf       *perf.Perf
-	group      sync.WaitGroup
-	procclnt   *procclnt.ProcClnt
+	mu           sync.Mutex
+	fs           *ProcdFs
+	realmbin     string    // realm path from which to pull/run bins.
+	spawnChan    chan bool // Indicates a proc has been spawned on this procd.
+	stealChan    chan bool // Indicates there is work to be stolen.
+	done         bool
+	addr         string
+	runningProcs map[proc.Tpid]*LinuxProc
+	coreBitmap   []Tcorestatus
+	coresAvail   proc.Tcore
+	perf         *perf.Perf
+	group        sync.WaitGroup
+	procclnt     *procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
 }
@@ -43,7 +43,7 @@ func RunProcd(realmbin string) {
 	pd := &Procd{}
 	pd.realmbin = realmbin
 
-	pd.procs = make(map[proc.Tpid]Tstatus)
+	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
 	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 
@@ -72,37 +72,26 @@ func RunProcd(realmbin string) {
 	pd.Work()
 }
 
-func (pd *Procd) getProcStatus(pid proc.Tpid) (Tstatus, bool) {
+func (pd *Procd) putProc(p *LinuxProc) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
-	st, ok := pd.procs[pid]
-	return st, ok
+	pd.runningProcs[p.attr.Pid] = p
 }
 
-func (pd *Procd) setProcStatus(pid proc.Tpid, st Tstatus) {
+func (pd *Procd) deleteProc(p *LinuxProc) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
-	pd.procs[pid] = st
-}
-
-func (pd *Procd) deleteProc(pid proc.Tpid) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-	delete(pd.procs, pid)
+	delete(pd.runningProcs, p.attr.Pid)
 }
 
 func (pd *Procd) spawnProc(a *proc.Proc) {
-	pd.setProcStatus(a.Pid, PROC_QUEUED)
-
 	pd.spawnChan <- true
 }
 
 // Evict all procs running in this procd
 func (pd *Procd) evictProcsL() {
-	for pid, status := range pd.procs {
-		if status == PROC_RUNNING {
-			pd.procclnt.EvictProcd(pd.addr, pid)
-		}
+	for pid, _ := range pd.runningProcs {
+		pd.procclnt.EvictProcd(pd.addr, pid)
 	}
 }
 
@@ -202,7 +191,7 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 
 func (pd *Procd) runProc(p *LinuxProc) {
 	// Register running proc
-	pd.setProcStatus(p.attr.Pid, PROC_RUNNING)
+	pd.putProc(p)
 
 	// Allocate dedicated cores for this lambda to run on, if it requires them.
 	cores := pd.allocCores(p.attr)
@@ -218,7 +207,7 @@ func (pd *Procd) runProc(p *LinuxProc) {
 	pd.incrementCores(p.attr)
 
 	// Deregister running procs
-	pd.deleteProc(p.attr.Pid)
+	pd.deleteProc(p)
 }
 
 func (pd *Procd) setCoreAffinity() {

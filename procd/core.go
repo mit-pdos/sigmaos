@@ -55,6 +55,10 @@ func (pd *Procd) allocCores(n proc.Tcore) []uint {
 	return cores
 }
 
+// Set the status of a set of cores. Caller holds lock.
+func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
+}
+
 // Free a set of cores which was being used by a proc.
 func (pd *Procd) freeCores(ncore proc.Tcore, cores []uint) {
 	// If no cores were exclusively allocated to this proc, return immediately.

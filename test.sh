@@ -42,7 +42,7 @@ do
   # test proxy
   #
   
-  go test $1 ulambda/proxy
+  go test $1 ulambda/proxy --version=$VERSION
   
   #
   # tests kernel (with 1 "fake" realm)

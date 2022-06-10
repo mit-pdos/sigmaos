@@ -544,7 +544,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestProcdShrink(t *testing.T) {
+func TestProcdShrinkGrow(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	linuxsched.ScanTopology()
@@ -569,13 +569,21 @@ func TestProcdShrink(t *testing.T) {
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
 	// Run a proc which shouldn't fit on the newly resized procd.
+	db.DPrintf("TEST", "Spawning a proc which shouldn't fit.")
 	pid1 := proc.GenPid()
 	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
-	checkSleeperResult(t, ts, pid)
 
 	time.Sleep(3 * SLEEP_MSECS)
 	// Proc should not have run.
 	checkSleeperResultFalse(t, ts, pid1)
+
+	pid2 := proc.GenPid()
+	db.DPrintf("TEST", "Spawning a proc which should fit.")
+	spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
+	status, err = ts.WaitExit(pid2)
+	assert.Nil(t, err, "WaitExit 2")
+	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+	checkSleeperResult(t, ts, pid2)
 
 	// Grant the procd back its cores.
 	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCores, coreIv)
@@ -585,8 +593,9 @@ func TestProcdShrink(t *testing.T) {
 
 	// Make sure the proc ran.
 	status, err = ts.WaitExit(pid1)
-	assert.Nil(t, err, "WaitExit 2")
-	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+	assert.Nil(t, err, "WaitExit 3")
+	assert.True(t, status.IsStatusOK(), "WaitExit status 3")
+	checkSleeperResult(t, ts, pid1)
 
 	ts.Shutdown()
 }

@@ -38,6 +38,8 @@ func (rt Tresource) String() string {
 		return "Tnode"
 	case Trealm:
 		return "Trealm"
+	case Tcore:
+		return "Tcore"
 	default:
 		db.DFatalf("Unknown resource type: %v", uint32(rt))
 		return "Tunknown"

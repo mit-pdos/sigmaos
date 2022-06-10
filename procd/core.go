@@ -57,7 +57,7 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 		db.DFatalf("Added more procd cores than there are on this machine: %v > %v", pd.coresAvail, linuxsched.NCores)
 	}
 	pd.markCoresL(cores, CORE_BLOCKED)
-	// TODO:rebalance work across new cores, evict some procs, etc.
+	// TODO: rebalance work across new cores, evict some procs, etc.
 }
 
 // XXX Statsd information?

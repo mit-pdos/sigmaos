@@ -11,21 +11,21 @@ import (
 
 type NetServer struct {
 	addr       string
-	fssrv      np.SessServer
+	sesssrv    np.SessServer
 	wireCompat bool
 }
 
-func MakeNetServer(fssrv np.SessServer, address string) *NetServer {
-	return makeNetServer(fssrv, address, false)
+func MakeNetServer(sesssrv np.SessServer, address string) *NetServer {
+	return makeNetServer(sesssrv, address, false)
 }
 
-func MakeNetServerWireCompatible(address string, fssrv np.SessServer) *NetServer {
-	return makeNetServer(fssrv, address, true)
+func MakeNetServerWireCompatible(address string, sesssrv np.SessServer) *NetServer {
+	return makeNetServer(sesssrv, address, true)
 }
 
-func makeNetServer(fs np.SessServer, address string, wireCompat bool) *NetServer {
+func makeNetServer(ss np.SessServer, address string, wireCompat bool) *NetServer {
 	srv := &NetServer{"",
-		fs,
+		ss,
 		wireCompat,
 	}
 	// Create and start the main server listener

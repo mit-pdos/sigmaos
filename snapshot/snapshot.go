@@ -19,7 +19,7 @@ import (
 )
 
 type Snapshot struct {
-	fssrv        np.SessServer
+	sesssrv      np.SessServer
 	Imap         map[np.Tpath]ObjSnapshot
 	DirOverlay   np.Tpath
 	St           []byte
@@ -28,9 +28,9 @@ type Snapshot struct {
 	restoreCache map[np.Tpath]fs.Inode
 }
 
-func MakeSnapshot(fssrv np.SessServer) *Snapshot {
+func MakeSnapshot(sesssrv np.SessServer) *Snapshot {
 	s := &Snapshot{}
-	s.fssrv = fssrv
+	s.sesssrv = sesssrv
 	s.Imap = make(map[np.Tpath]ObjSnapshot)
 	s.restoreCache = make(map[np.Tpath]fs.Inode)
 	return s
@@ -77,7 +77,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	return i.Qid().Path
 }
 
-func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
+func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {
 	err := json.Unmarshal(b, s)
 	if err != nil {
 		db.DFatalf("error unmarshal file in snapshot.Restore: %v", err)
@@ -90,13 +90,13 @@ func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, fssrv
 	// Get the ffs & stats
 	_, ffs, _, _ := dirover.Lookup(nil, np.Split(np.FENCEDIR))
 	_, stat, _, _ := dirover.Lookup(nil, np.Split(np.STATSD))
-	// Fix up the fssrv pointer in snapshotdev
+	// Fix up the sesssrv pointer in snapshotdev
 	_, dev, _, _ := dirover.Lookup(nil, np.Split(np.SNAPDEV))
-	dev.(*Dev).srv = fssrv
+	dev.(*Dev).srv = sesssrv
 	// Restore the thread manager table and any in-flight ops.
 	tmt := threadmgr.Restore(pfn, tm, s.Tmt)
 	// Restore the session table.
-	st := sessstatesrv.RestoreTable(oldSt, mkps, rps, fssrv, tmt, s.St)
+	st := sessstatesrv.RestoreTable(oldSt, mkps, rps, sesssrv, tmt, s.St)
 	return dirover, ffs.(fs.Dir), stat.(*stats.Stats), st, tmt
 }
 

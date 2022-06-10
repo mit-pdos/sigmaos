@@ -16,15 +16,15 @@ type SessionTable struct {
 	//	deadlock.Mutex
 	tm       *threadmgr.ThreadMgrTable
 	mkps     np.MkProtServer
-	fssrv    np.SessServer
+	sesssrv  np.SessServer
 	sessions map[np.Tsession]*Session
 	last     *Session // for tests
 }
 
-func MakeSessionTable(mkps np.MkProtServer, fssrv np.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
+func MakeSessionTable(mkps np.MkProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgrTable) *SessionTable {
 	st := &SessionTable{}
 	st.sessions = make(map[np.Tsession]*Session)
-	st.fssrv = fssrv
+	st.sesssrv = sesssrv
 	st.mkps = mkps
 	st.tm = tm
 	st.c = sync.NewCond(&st.Mutex)
@@ -45,7 +45,7 @@ func (st *SessionTable) Alloc(sid np.Tsession) *Session {
 	if sess, ok := st.sessions[sid]; ok {
 		return sess
 	}
-	sess := makeSession(st.mkps(st.fssrv, sid), sid, st.tm.AddThread())
+	sess := makeSession(st.mkps(st.sesssrv, sid), sid, st.tm.AddThread())
 	st.sessions[sid] = sess
 	st.last = sess
 	return sess

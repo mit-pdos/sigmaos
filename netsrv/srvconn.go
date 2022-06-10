@@ -19,7 +19,7 @@ type SrvConn struct {
 	br         *bufio.Reader
 	bw         *bufio.Writer
 	replies    chan *np.Fcall
-	protsrv    np.SessServer
+	sesssrv    np.SessServer
 	sessid     np.Tsession
 }
 
@@ -29,7 +29,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
 		make(chan *np.Fcall),
-		srv.fssrv,
+		srv.sesssrv,
 		0,
 	}
 	go c.writer()
@@ -75,7 +75,7 @@ func (c *SrvConn) reader() {
 		if c.sessid == 0 {
 			c.sessid = fcall.Session
 			conn := &np.Conn{c, c.replies}
-			if err := c.protsrv.Register(fcall.Session, conn); err != nil {
+			if err := c.sesssrv.Register(fcall.Session, conn); err != nil {
 				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
 				fc := np.MakeFcallReply(fcall, err.Rerror())
 				c.replies <- fc
@@ -85,7 +85,7 @@ func (c *SrvConn) reader() {
 		} else if c.sessid != fcall.Session {
 			db.DFatalf("reader: two sess (%v and %v) on conn?\n", c.sessid, fcall.Session)
 		}
-		c.protsrv.SrvFcall(fcall)
+		c.sesssrv.SrvFcall(fcall)
 	}
 }
 

@@ -20,15 +20,15 @@ func (st *SessionTable) Snapshot() []byte {
 	return b
 }
 
-func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtServer, fssrv np.SessServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
+func RestoreTable(oldSt *SessionTable, mkps np.MkProtServer, rps np.RestoreProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgrTable, b []byte) *SessionTable {
 	sessions := make(map[np.Tsession][]byte)
 	err := json.Unmarshal(b, &sessions)
 	if err != nil {
 		db.DFatalf("error unmarshal session table in restore: %v", err)
 	}
-	st := MakeSessionTable(mkps, fssrv, tm)
+	st := MakeSessionTable(mkps, sesssrv, tm)
 	for sid, b := range sessions {
-		st.sessions[sid] = RestoreSession(sid, fssrv, rps, tm, b)
+		st.sessions[sid] = RestoreSession(sid, sesssrv, rps, tm, b)
 		// Set the replies channel if this sesison already exists at this replica
 		if oldSess, ok := oldSt.Lookup(sid); ok {
 			st.sessions[sid].SetConn(oldSess.GetConn())
@@ -57,13 +57,13 @@ func (sess *Session) Snapshot() []byte {
 	return b
 }
 
-func RestoreSession(sid np.Tsession, fssrv np.SessServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
+func RestoreSession(sid np.Tsession, sesssrv np.SessServer, rps np.RestoreProtServer, tmt *threadmgr.ThreadMgrTable, b []byte) *Session {
 	ss := MakeSessionSnapshot()
 	err := json.Unmarshal(b, ss)
 	if err != nil {
 		db.DFatalf("error unmarshal session in restore: %v", err)
 	}
-	fos := rps(fssrv, ss.ProtsrvSnap)
+	fos := rps(sesssrv, ss.ProtsrvSnap)
 	// TODO: add session manager
 	sess := makeSession(fos, sid, tmt.AddThread())
 	sess.closed = ss.closed

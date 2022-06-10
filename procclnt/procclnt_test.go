@@ -2,6 +2,7 @@ package procclnt_test
 
 import (
 	"fmt"
+	"math"
 	"path"
 	"sync"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/resource"
 	"ulambda/test"
 )
 
@@ -538,6 +540,53 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
 
 	sm.Stop()
+
+	ts.Shutdown()
+}
+
+func TestProcdShrink(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	linuxsched.ScanTopology()
+
+	// Run a proc that claims all cores.
+	pid := proc.GenPid()
+	spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+	status, err := ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.True(t, status.IsStatusOK(), "WaitExit status")
+	checkSleeperResult(t, ts, pid)
+
+	nCores := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
+	coreIv := np.MkInterval(0, np.Toffset(nCores))
+
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+
+	// Remove some cores from the procd.
+	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCores, coreIv)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCores)
+	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	assert.Nil(t, err, "SetFile revoke: %v", err)
+
+	// Run a proc which shouldn't fit on the newly resized procd.
+	pid1 := proc.GenPid()
+	spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+	checkSleeperResult(t, ts, pid)
+
+	time.Sleep(3 * SLEEP_MSECS)
+	// Proc should not have run.
+	checkSleeperResultFalse(t, ts, pid1)
+
+	// Grant the procd back its cores.
+	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCores, coreIv)
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCores)
+	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
+	assert.Nil(t, err, "SetFile grant: %v", err)
+
+	// Make sure the proc ran.
+	status, err = ts.WaitExit(pid1)
+	assert.Nil(t, err, "WaitExit 2")
+	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 
 	ts.Shutdown()
 }

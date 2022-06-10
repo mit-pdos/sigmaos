@@ -31,6 +31,12 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 	cores := parseCoreSlice(msg)
 	pd.markCoresL(cores, CORE_IDLE)
 	// TODO: rebalance work across new cores.
+	// Notify sleeping workers that they may be able to run procs now.
+	go func() {
+		for i := 0; i < msg.Amount; i++ {
+			pd.stealChan <- true
+		}
+	}()
 }
 
 func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
@@ -51,7 +57,7 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 		db.DFatalf("Added more procd cores than there are on this machine: %v > %v", pd.coresAvail, linuxsched.NCores)
 	}
 	pd.markCoresL(cores, CORE_BLOCKED)
-	// TODO:rebalance work across new cores.
+	// TODO:rebalance work across new cores, evict some procs, etc.
 }
 
 // XXX Statsd information?
@@ -65,12 +71,13 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 }
 
 // Allocate n cores to a proc, and note it occupies in the core bitmap.
-func (pd *Procd) allocCores(p *proc.Proc) []uint {
+func (pd *Procd) allocCores(p *LinuxProc) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
 	allocated := proc.Tcore(0)
-	cores := []uint{}
+	// XXX set don't append.
+	p.cores = []uint{}
 	for i := 0; i < len(pd.coreBitmap); i++ {
 		coreStatus := pd.coreBitmap[i]
 		// If this core is not assigned to this procd, move on.
@@ -78,26 +85,24 @@ func (pd *Procd) allocCores(p *proc.Proc) []uint {
 			continue
 		}
 		// If lambda asks for 0 cores, run on any unblocked core.
-		if p.Ncore == proc.C_DEF {
-			cores = append(cores, uint(i))
+		if p.attr.Ncore == proc.C_DEF {
+			p.cores = append(p.cores, uint(i))
 			continue
 		}
 		// If core is idle, claim it.
 		if coreStatus == CORE_IDLE {
-			cores = append(cores, uint(i))
+			p.cores = append(p.cores, uint(i))
 			allocated += 1
-			if allocated == p.Ncore {
+			if allocated == p.attr.Ncore {
 				break
 			}
 		}
 	}
 
 	// Mark cores as busy, if this proc asked for exclusive access to cores.
-	if p.Ncore > 0 {
-		pd.markCoresL(cores, CORE_BUSY)
+	if p.attr.Ncore > 0 {
+		pd.markCoresL(p.cores, CORE_BUSY)
 	}
-
-	return cores
 }
 
 // Set the status of a set of cores. Caller holds lock.
@@ -113,16 +118,16 @@ func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
 }
 
 // Free a set of cores which was being used by a proc.
-func (pd *Procd) freeCores(p *proc.Proc, cores []uint) {
+func (pd *Procd) freeCores(p *LinuxProc) {
 	// If no cores were exclusively allocated to this proc, return immediately.
-	if p.Ncore == proc.C_DEF {
+	if p.attr.Ncore == proc.C_DEF {
 		return
 	}
 
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	pd.markCoresL(cores, CORE_IDLE)
+	pd.markCoresL(p.cores, CORE_IDLE)
 }
 
 // Update resource accounting information. Caller holds lock.

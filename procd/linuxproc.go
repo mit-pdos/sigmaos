@@ -32,6 +32,7 @@ type LinuxProc struct {
 	SysPid  int
 	NewRoot string
 	Env     []string
+	cores   []uint
 	attr    *proc.Proc
 	pd      *Procd
 }
@@ -61,7 +62,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 	}
 }
 
-func (p *LinuxProc) run(cores []uint) error {
+func (p *LinuxProc) run() error {
 	db.DPrintf("PROCD", "Procd run: %v\n", p.attr)
 
 	// Make the proc's procdir
@@ -85,7 +86,7 @@ func (p *LinuxProc) run(cores []uint) error {
 	p.SysPid = cmd.Process.Pid
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
-	p.setCpuAffinity(cores)
+	p.setCpuAffinity()
 
 	p.wait(cmd)
 	db.DPrintf("PROCD", "Procd ran: %v\n", p.attr)
@@ -93,9 +94,9 @@ func (p *LinuxProc) run(cores []uint) error {
 	return nil
 }
 
-func (p *LinuxProc) setCpuAffinity(cores []uint) {
+func (p *LinuxProc) setCpuAffinity() {
 	m := &linuxsched.CPUMask{}
-	for _, i := range cores {
+	for _, i := range p.cores {
 		m.Set(i)
 	}
 	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, m)

@@ -194,16 +194,16 @@ func (pd *Procd) runProc(p *LinuxProc) {
 	pd.putProc(p)
 
 	// Allocate dedicated cores for this lambda to run on, if it requires them.
-	cores := pd.allocCores(p.attr)
+	pd.allocCores(p)
 
 	// Download the bin from s3, if it isn't already cached locally.
 	pd.downloadProcBin(p.attr.Program)
 
 	// Run the proc.
-	p.run(cores)
+	p.run()
 
 	// Free any dedicated cores.
-	pd.freeCores(p.attr, cores)
+	pd.freeCores(p)
 	pd.incrementCores(p.attr)
 
 	// Deregister running procs

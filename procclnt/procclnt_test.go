@@ -557,14 +557,14 @@ func TestProcdShrinkGrow(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "WaitExit status")
 	checkSleeperResult(t, ts, pid)
 
-	nCores := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
-	coreIv := np.MkInterval(0, np.Toffset(nCores))
+	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
+	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
 	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
 
 	// Remove some cores from the procd.
-	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCores, coreIv)
-	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCores)
+	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
@@ -584,10 +584,11 @@ func TestProcdShrinkGrow(t *testing.T) {
 	assert.Nil(t, err, "WaitExit 2")
 	assert.True(t, status.IsStatusOK(), "WaitExit status 2")
 	checkSleeperResult(t, ts, pid2)
+	db.DPrintf("TEST", "Proc which should fit ran")
 
 	// Grant the procd back its cores.
-	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCores, coreIv)
-	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCores)
+	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCoresToRevoke)
 	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile grant: %v", err)
 
@@ -596,6 +597,67 @@ func TestProcdShrinkGrow(t *testing.T) {
 	assert.Nil(t, err, "WaitExit 3")
 	assert.True(t, status.IsStatusOK(), "WaitExit status 3")
 	checkSleeperResult(t, ts, pid1)
+
+	ts.Shutdown()
+}
+
+func TestProcdResizeN(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	N := 5
+
+	linuxsched.ScanTopology()
+
+	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
+	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+	for i := 0; i < N; i++ {
+		db.DPrintf("TEST", "Resize i=%v", i)
+		// Run a proc that claims all cores.
+		pid := proc.GenPid()
+		spawnSleeperNcore(t, ts, pid, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+		status, err := ts.WaitExit(pid)
+		assert.Nil(t, err, "WaitExit")
+		assert.True(t, status.IsStatusOK(), "WaitExit status")
+		checkSleeperResult(t, ts, pid)
+
+		// Remove some cores from the procd.
+		db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+		revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+		_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+		assert.Nil(t, err, "SetFile revoke: %v", err)
+
+		// Run a proc which shouldn't fit on the newly resized procd.
+		db.DPrintf("TEST", "Spawning a proc which shouldn't fit.")
+		pid1 := proc.GenPid()
+		spawnSleeperNcore(t, ts, pid1, proc.Tcore(linuxsched.NCores), SLEEP_MSECS)
+
+		time.Sleep(3 * SLEEP_MSECS)
+		// Proc should not have run.
+		checkSleeperResultFalse(t, ts, pid1)
+
+		pid2 := proc.GenPid()
+		db.DPrintf("TEST", "Spawning a proc which should fit.")
+		spawnSleeperNcore(t, ts, pid2, proc.Tcore(linuxsched.NCores/2-1), SLEEP_MSECS)
+		status, err = ts.WaitExit(pid2)
+		assert.Nil(t, err, "WaitExit 2")
+		assert.True(t, status.IsStatusOK(), "WaitExit status 2")
+		checkSleeperResult(t, ts, pid2)
+		db.DPrintf("TEST", "Proc which should fit ran")
+
+		// Grant the procd back its cores.
+		db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+		grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCoresToRevoke)
+		_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
+		assert.Nil(t, err, "SetFile grant: %v", err)
+
+		// Make sure the proc ran.
+		status, err = ts.WaitExit(pid1)
+		assert.Nil(t, err, "WaitExit 3")
+		assert.True(t, status.IsStatusOK(), "WaitExit status 3")
+		checkSleeperResult(t, ts, pid1)
+	}
 
 	ts.Shutdown()
 }

@@ -5,9 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"sync"
-
-	//	"github.com/sasha-s/go-deadlock"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -26,9 +23,7 @@ const (
 )
 
 type LinuxProc struct {
-	//	mu deadlock.Mutex
 	fs.Inode
-	mu      sync.Mutex
 	SysPid  int
 	NewRoot string
 	Env     []string
@@ -37,7 +32,7 @@ type LinuxProc struct {
 	pd      *Procd
 }
 
-func makeProc(pd *Procd, a *proc.Proc) *LinuxProc {
+func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
 	p := &LinuxProc{}
 	p.pd = pd
 	p.attr = a
@@ -94,7 +89,13 @@ func (p *LinuxProc) run() error {
 	return nil
 }
 
+// Set the Cpu affinity of this proc according to its set of cores.
 func (p *LinuxProc) setCpuAffinity() {
+	p.pd.mu.Lock()
+	defer p.pd.mu.Unlock()
+
+	// Hold lock to avoid concurrent modification of core allocation while
+	// reading.
 	m := &linuxsched.CPUMask{}
 	for _, i := range p.cores {
 		m.Set(i)

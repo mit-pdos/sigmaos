@@ -72,9 +72,8 @@ func RunProcd(realmbin string) {
 	pd.Work()
 }
 
-func (pd *Procd) putProc(p *LinuxProc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+// Caller holds lock.
+func (pd *Procd) putProcL(p *LinuxProc) {
 	pd.runningProcs[p.attr.Pid] = p
 }
 
@@ -111,8 +110,24 @@ func (pd *Procd) readDone() bool {
 	return pd.done
 }
 
+func (pd *Procd) registerProcL(p *proc.Proc) *LinuxProc {
+	// Make a Linux Proc which corresponds to this proc.
+	linuxProc := makeLinuxProc(pd, p)
+	// Allocate dedicated cores for this proc to run on, if it requires them.
+	// Core allocation & resource accounting has to happen at this point, while
+	// we still hold the lock we used to claim the proc, since this procd may be
+	// resized at any time. When the resize happens, we *must* have already
+	// assigned cores to this proc & registered it in the procd in-mem data
+	// structures so that the proc's core allocations will be adjusted during the
+	// resize.
+	pd.allocCoresL(linuxProc)
+	// Register running proc in in-memory structures.
+	pd.putProcL(linuxProc)
+	return linuxProc
+}
+
 // Tries to get a runnable proc if it fits on this procd.
-func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
+func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
@@ -128,17 +143,16 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
 		if ok := pd.claimProc(procPath); !ok {
 			return nil, nil
 		}
-		// Update resource accounting.
-		pd.decrementCoresL(p)
-		return p, nil
+		linuxProc := pd.registerProcL(p)
+		return linuxProc, nil
 	} else {
 		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
 	}
 	return nil, nil
 }
 
-func (pd *Procd) getProc() (*proc.Proc, error) {
-	var p *proc.Proc
+func (pd *Procd) getProc() (*LinuxProc, error) {
+	var p *LinuxProc
 	// First try and get any LC procs, else get a BE proc.
 	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	// Try local procd first.
@@ -190,12 +204,6 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 }
 
 func (pd *Procd) runProc(p *LinuxProc) {
-	// Register running proc
-	pd.putProc(p)
-
-	// Allocate dedicated cores for this lambda to run on, if it requires them.
-	pd.allocCores(p)
-
 	// Download the bin from s3, if it isn't already cached locally.
 	pd.downloadProcBin(p.attr.Program)
 
@@ -204,7 +212,7 @@ func (pd *Procd) runProc(p *LinuxProc) {
 
 	// Free any dedicated cores.
 	pd.freeCores(p)
-	pd.incrementCores(p.attr)
+	pd.incrementCores(p)
 
 	// Deregister running procs
 	pd.deleteProc(p)
@@ -258,8 +266,7 @@ func (pd *Procd) worker() {
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
 		db.DPrintf("PROCD", "Got proc %v", p)
-		localProc := makeProc(pd, p)
-		err := pd.fs.running(localProc)
+		err := pd.fs.running(p)
 		if err != nil {
 			pd.perf.Done()
 			db.DFatalf("Procd pub running error %v %T\n", err, err)
@@ -267,12 +274,12 @@ func (pd *Procd) worker() {
 		// If this proc doesn't require cores, start another worker to take our
 		// place so user apps don't deadlock.
 		replaced := false
-		if p.Ncore == 0 {
+		if p.attr.Ncore == 0 {
 			replaced = true
 			pd.group.Add(1)
 			go pd.worker()
 		}
-		pd.runProc(localProc)
+		pd.runProc(p)
 		if replaced {
 			return
 		}

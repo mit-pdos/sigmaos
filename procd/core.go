@@ -70,10 +70,10 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	return false
 }
 
-// Allocate n cores to a proc, and note it occupies in the core bitmap.
-func (pd *Procd) allocCores(p *LinuxProc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
+// Allocate n cores to a proc, and note it occupies in the core bitmap. Caller
+// holds lock.
+func (pd *Procd) allocCoresL(p *LinuxProc) {
+	pd.coresAvail -= p.attr.Ncore
 
 	allocated := proc.Tcore(0)
 	// XXX set don't append.
@@ -131,16 +131,15 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 }
 
 // Update resource accounting information. Caller holds lock.
-func (pd *Procd) decrementCoresL(p *proc.Proc) {
-	pd.coresAvail -= p.Ncore
+func (pd *Procd) decrementCoresL(p *LinuxProc) {
 }
 
 // Update resource accounting information.
-func (pd *Procd) incrementCores(p *proc.Proc) {
+func (pd *Procd) incrementCores(p *LinuxProc) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	pd.coresAvail += p.Ncore
+	pd.coresAvail += p.attr.Ncore
 }
 
 func parseCoreSlice(msg *resource.ResourceMsg) []uint {

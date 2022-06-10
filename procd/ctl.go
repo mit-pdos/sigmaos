@@ -68,6 +68,9 @@ func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversi
 func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	msg := &resource.ResourceMsg{}
 	msg.Unmarshal(b)
+	if msg.ResourceType != resource.Tcore {
+		db.DFatalf("Unexpected resource type: %v", msg)
+	}
 	switch msg.MsgType {
 	case resource.Tgrant:
 		ctl.g(msg)

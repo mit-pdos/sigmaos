@@ -70,37 +70,29 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	return false
 }
 
-// Allocate n cores to a proc, and note it occupies in the core bitmap. Caller
+// Allocate cores to a proc, and assign cores to it in the core bitmap. Caller
 // holds lock.
 func (pd *Procd) allocCoresL(p *LinuxProc) {
-	pd.coresAvail -= p.attr.Ncore
-
-	allocated := proc.Tcore(0)
-	// XXX set don't append.
-	p.cores = []uint{}
-	for i := 0; i < len(pd.coreBitmap); i++ {
+	// Number of cores allocated so ar.
+	allocated := 0
+	for i := 0; i < len(pd.coreBitmap) && allocated < len(p.cores); i++ {
+		// If we have allocated the right number of cores already, break.
 		coreStatus := pd.coreBitmap[i]
 		// If this core is not assigned to this procd, move on.
 		if coreStatus == CORE_BLOCKED {
 			continue
 		}
-		// If lambda asks for 0 cores, run on any unblocked core.
-		if p.attr.Ncore == proc.C_DEF {
-			p.cores = append(p.cores, uint(i))
-			continue
-		}
-		// If core is idle, claim it.
-		if coreStatus == CORE_IDLE {
-			p.cores = append(p.cores, uint(i))
-			allocated += 1
-			if allocated == p.attr.Ncore {
-				break
-			}
+		// If lambda asks for 0 cores, or the core is idle, then the proc can run
+		// on this core. Claim it.
+		if p.attr.Ncore == proc.C_DEF || coreStatus == CORE_IDLE {
+			p.cores[allocated] = uint(i)
+			allocated++
 		}
 	}
 
 	// Mark cores as busy, if this proc asked for exclusive access to cores.
 	if p.attr.Ncore > 0 {
+		pd.coresAvail -= proc.Tcore(len(p.cores))
 		pd.markCoresL(p.cores, CORE_BUSY)
 	}
 }
@@ -128,18 +120,7 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 	defer pd.mu.Unlock()
 
 	pd.markCoresL(p.cores, CORE_IDLE)
-}
-
-// Update resource accounting information. Caller holds lock.
-func (pd *Procd) decrementCoresL(p *LinuxProc) {
-}
-
-// Update resource accounting information.
-func (pd *Procd) incrementCores(p *LinuxProc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	pd.coresAvail += p.attr.Ncore
+	pd.coresAvail += proc.Tcore(len(p.cores))
 }
 
 func parseCoreSlice(msg *resource.ResourceMsg) []uint {

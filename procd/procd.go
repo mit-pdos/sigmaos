@@ -212,7 +212,6 @@ func (pd *Procd) runProc(p *LinuxProc) {
 
 	// Free any dedicated cores.
 	pd.freeCores(p)
-	pd.incrementCores(p)
 
 	// Deregister running procs
 	pd.deleteProc(p)

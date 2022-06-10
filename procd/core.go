@@ -30,13 +30,13 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 	}
 	cores := parseCoreSlice(msg)
 	pd.markCoresL(cores, CORE_IDLE)
-	// TODO: rebalance work across new cores.
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
 		for i := 0; i < msg.Amount; i++ {
 			pd.stealChan <- true
 		}
 	}()
+	pd.rebalanceProcs()
 }
 
 func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
@@ -57,7 +57,12 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 		db.DFatalf("Added more procd cores than there are on this machine: %v > %v", pd.coresAvail, linuxsched.NCores)
 	}
 	pd.markCoresL(cores, CORE_BLOCKED)
-	// TODO: rebalance work across new cores, evict some procs, etc.
+	pd.rebalanceProcs()
+}
+
+// Rebalances procs across set of available cores.
+func (pd *Procd) rebalanceProcs() {
+	// TODO
 }
 
 // XXX Statsd information?

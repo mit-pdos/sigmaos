@@ -4,7 +4,10 @@ import (
 	"runtime/debug"
 
 	db "ulambda/debug"
+	"ulambda/linuxsched"
+	np "ulambda/ninep"
 	"ulambda/proc"
+	"ulambda/resource"
 )
 
 type Tcorestatus uint8
@@ -14,6 +17,42 @@ const (
 	CORE_BUSY                // Currently occupied by a proc
 	CORE_BLOCKED             // Not for use by this procd's procs.
 )
+
+func (pd *Procd) addCores(msg *resource.ResourceMsg) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	// Increment the count of available cores.
+	pd.coresAvail += proc.Tcore(msg.Amount)
+	// Sanity check
+	if pd.coresAvail > proc.Tcore(linuxsched.NCores) {
+		db.DFatalf("Added more procd cores than there are on this machine: %v > %v", pd.coresAvail, linuxsched.NCores)
+	}
+	cores := parseCoreSlice(msg)
+	pd.markCoresL(cores, CORE_IDLE)
+	// TODO: rebalance work across new cores.
+}
+
+func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	// Sanity check
+	cores := parseCoreSlice(msg)
+	pd.coresAvail -= proc.Tcore(msg.Amount)
+	for _, i := range cores {
+		// Cores which were busy will already have been subtracted from the number
+		// of available cores. Avoid double-subtracting them here.
+		if pd.coreBitmap[i] == CORE_BUSY {
+			pd.coresAvail += 1
+		}
+	}
+	if pd.coresAvail < proc.Tcore(0) {
+		db.DFatalf("Added more procd cores than there are on this machine: %v > %v", pd.coresAvail, linuxsched.NCores)
+	}
+	pd.markCoresL(cores, CORE_BLOCKED)
+	// TODO:rebalance work across new cores.
+}
 
 // XXX Statsd information?
 // Check if this procd has enough cores to run proc p. Caller holds lock.
@@ -97,4 +136,14 @@ func (pd *Procd) incrementCores(p *proc.Proc) {
 	defer pd.mu.Unlock()
 
 	pd.coresAvail += p.Ncore
+}
+
+func parseCoreSlice(msg *resource.ResourceMsg) []uint {
+	iv := np.MkInterval(0, 0)
+	iv.Unmarshal(msg.Name)
+	cores := make([]uint, msg.Amount)
+	for i := uint(0); i < uint(msg.Amount); i++ {
+		cores[i] = uint(iv.Start) + i
+	}
+	return cores
 }

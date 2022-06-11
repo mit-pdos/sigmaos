@@ -97,11 +97,15 @@ func (p *LinuxProc) run() error {
 	return nil
 }
 
-// Set the Cpu affinity of this proc according to its set of cores.
 func (p *LinuxProc) setCpuAffinity() {
 	p.pd.mu.Lock()
 	defer p.pd.mu.Unlock()
 
+	p.setCpuAffinityL()
+}
+
+// Set the Cpu affinity of this proc according to its set of cores.
+func (p *LinuxProc) setCpuAffinityL() {
 	// Hold lock to avoid concurrent modification of core allocation while
 	// reading.
 	m := &linuxsched.CPUMask{}

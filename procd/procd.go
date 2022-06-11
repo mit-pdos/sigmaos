@@ -31,7 +31,8 @@ type Procd struct {
 	addr         string
 	runningProcs map[proc.Tpid]*LinuxProc
 	coreBitmap   []Tcorestatus
-	coresAvail   proc.Tcore
+	coresOwned   proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail   proc.Tcore // Current number of cores available to run procs on.
 	perf         *perf.Perf
 	group        sync.WaitGroup
 	procclnt     *procclnt.ProcClnt
@@ -46,6 +47,7 @@ func RunProcd(realmbin string) {
 	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
 	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
+	pd.coresOwned = proc.Tcore(linuxsched.NCores)
 
 	// Must set core affinity before starting CPU Util measurements
 	pd.setCoreAffinity()
@@ -88,8 +90,8 @@ func (pd *Procd) spawnProc(a *proc.Proc) {
 }
 
 // Evict all procs running in this procd
-func (pd *Procd) evictProcsL() {
-	for pid, _ := range pd.runningProcs {
+func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
+	for pid, _ := range procs {
 		pd.procclnt.EvictProcd(pd.addr, pid)
 	}
 }
@@ -100,7 +102,7 @@ func (pd *Procd) Done() {
 
 	pd.done = true
 	pd.perf.Done()
-	pd.evictProcsL()
+	pd.evictProcsL(pd.runningProcs)
 	close(pd.spawnChan)
 }
 

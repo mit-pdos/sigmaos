@@ -203,6 +203,7 @@ func (st *Stats) UpdateCores() {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
+	st.cores = map[string]bool{}
 	linuxsched.ScanTopology()
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(st.pid)

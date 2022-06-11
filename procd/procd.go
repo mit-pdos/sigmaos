@@ -49,13 +49,13 @@ func RunProcd(realmbin string) {
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
 	pd.coresOwned = proc.Tcore(linuxsched.NCores)
 
+	pd.makeFs()
+
 	// Must set core affinity before starting CPU Util measurements
 	pd.setCoreAffinityL()
 
 	pd.perf = perf.MakePerf("PROCD")
 	defer pd.perf.Done()
-
-	pd.makeFs()
 
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)

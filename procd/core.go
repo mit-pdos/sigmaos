@@ -22,15 +22,14 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	cores := parseCoreSlice(msg)
-	pd.markCoresL(cores, CORE_IDLE)
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
 		for i := 0; i < msg.Amount; i++ {
 			pd.stealChan <- true
 		}
 	}()
-	pd.rebalanceProcs(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount))
+	cores := parseCoreSlice(msg)
+	pd.rebalanceProcs(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_IDLE)
 	pd.sanityCheckCoreCountsL()
 }
 
@@ -39,8 +38,7 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 	defer pd.mu.Unlock()
 
 	cores := parseCoreSlice(msg)
-	pd.markCoresL(cores, CORE_BLOCKED)
-	pd.rebalanceProcs(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount))
+	pd.rebalanceProcs(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount), cores, CORE_BLOCKED)
 	pd.sanityCheckCoreCountsL()
 }
 
@@ -50,11 +48,13 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 // currently move around all of the procs, even if they aren't having their
 // cores revoked. In future, we should probably only move procs which
 // absolutely need to release their cores.
-func (pd *Procd) rebalanceProcs(oldCoresOwned, newCoresOwned proc.Tcore) {
+func (pd *Procd) rebalanceProcs(oldCoresOwned, newCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
 	// Free all procs' cores.
 	for _, p := range pd.runningProcs {
 		pd.freeCoresL(p)
 	}
+	// After freeing old, used cores, mark cores according to their new status.
+	pd.markCoresL(coresToMark, newCoreStatus)
 	// Sanity check
 	if pd.coresAvail != oldCoresOwned {
 		db.DFatalf("Mismatched num cores avail during rebalance: %v != %v", pd.coresAvail, oldCoresOwned)
@@ -143,7 +143,7 @@ func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
 		// If we are double-setting a core's status, it's probably a bug.
 		if pd.coreBitmap[i] == status {
 			debug.PrintStack()
-			db.DFatalf("Error: Double-marked cores %v", status)
+			db.DFatalf("Error: Double-marked cores %v == %v", pd.coreBitmap[i], status)
 		}
 		pd.coreBitmap[i] = status
 	}

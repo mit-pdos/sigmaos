@@ -544,7 +544,7 @@ func TestMaintainReplicationLevelCrashProcd(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestProcdShrinkGrow(t *testing.T) {
+func TestProcdResize1(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
 	linuxsched.ScanTopology()

@@ -19,27 +19,28 @@ const (
 )
 
 func (pd *Procd) addCores(msg *resource.ResourceMsg) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
+	cores := parseCoreSlice(msg)
+	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_IDLE)
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
 		for i := 0; i < msg.Amount; i++ {
 			pd.stealChan <- true
 		}
 	}()
-	cores := parseCoreSlice(msg)
-	pd.rebalanceProcs(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_IDLE)
-	pd.sanityCheckCoreCountsL()
 }
 
 func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
+	cores := parseCoreSlice(msg)
+	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount), cores, CORE_BLOCKED)
+}
+
+func (pd *Procd) adjustCoresOwned(oldNCoresOwned, newNCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	cores := parseCoreSlice(msg)
-	pd.rebalanceProcs(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount), cores, CORE_BLOCKED)
+	pd.rebalanceProcs(oldNCoresOwned, newNCoresOwned, coresToMark, newCoreStatus)
 	pd.sanityCheckCoreCountsL()
+	pd.setCoreAffinityL()
 }
 
 // Rebalances procs across set of available cores. We allocate each proc a
@@ -48,7 +49,7 @@ func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
 // currently move around all of the procs, even if they aren't having their
 // cores revoked. In future, we should probably only move procs which
 // absolutely need to release their cores.
-func (pd *Procd) rebalanceProcs(oldCoresOwned, newCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
+func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, coresToMark []uint, newCoreStatus Tcorestatus) {
 	// Free all procs' cores.
 	for _, p := range pd.runningProcs {
 		pd.freeCoresL(p)
@@ -56,12 +57,12 @@ func (pd *Procd) rebalanceProcs(oldCoresOwned, newCoresOwned proc.Tcore, coresTo
 	// After freeing old, used cores, mark cores according to their new status.
 	pd.markCoresL(coresToMark, newCoreStatus)
 	// Sanity check
-	if pd.coresAvail != oldCoresOwned {
-		db.DFatalf("Mismatched num cores avail during rebalance: %v != %v", pd.coresAvail, oldCoresOwned)
+	if pd.coresAvail != oldNCoresOwned {
+		db.DFatalf("Mismatched num cores avail during rebalance: %v != %v", pd.coresAvail, oldNCoresOwned)
 	}
 	// Update the number of cores owned/available.
-	pd.coresOwned = newCoresOwned
-	pd.coresAvail = newCoresOwned
+	pd.coresOwned = newNCoresOwned
+	pd.coresAvail = newNCoresOwned
 	toEvict := map[proc.Tpid]*LinuxProc{}
 	// Calculate new core allocation for each proc, and allocate it cores. Some
 	// of these procs may need to be evicted if there isn't enough space for
@@ -70,9 +71,9 @@ func (pd *Procd) rebalanceProcs(oldCoresOwned, newCoresOwned proc.Tcore, coresTo
 		var newNCore proc.Tcore
 		if p.attr.Ncore == 0 {
 			// If this core didn't ask for dedicated cores, it can run on all cores.
-			newNCore = newCoresOwned
+			newNCore = newNCoresOwned
 		} else {
-			newNCore = proc.Tcore(len(p.cores)) * newCoresOwned / oldCoresOwned
+			newNCore = proc.Tcore(len(p.cores)) * newNCoresOwned / oldNCoresOwned
 			// Don't allocate more than the number of cores this proc initially asked
 			// for.
 			if newNCore > p.attr.Ncore {

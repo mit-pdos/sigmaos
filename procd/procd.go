@@ -50,7 +50,7 @@ func RunProcd(realmbin string) {
 	pd.coresOwned = proc.Tcore(linuxsched.NCores)
 
 	// Must set core affinity before starting CPU Util measurements
-	pd.setCoreAffinity()
+	pd.setCoreAffinityL()
 
 	pd.perf = perf.MakePerf("PROCD")
 	defer pd.perf.Done()
@@ -219,14 +219,19 @@ func (pd *Procd) runProc(p *LinuxProc) {
 	pd.deleteProc(p)
 }
 
-func (pd *Procd) setCoreAffinity() {
-	// XXX Currently, we just set the affinity for all available cores since Linux
-	// seems to do a decent job of avoiding moving things around too much.
+// Set the core affinity for procd, according to what cores it owns. Caller
+// holds lock.
+func (pd *Procd) setCoreAffinityL() {
 	m := &linuxsched.CPUMask{}
 	for i := uint(0); i < linuxsched.NCores; i++ {
-		m.Set(i)
+		// If we own this core, set it in the CPU mask.
+		if pd.coreBitmap[i] != CORE_BLOCKED {
+			m.Set(i)
+		}
 	}
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
+	// Update the set of cores whose CPU utilization we're monitoring.
+	pd.MemFs.GetStats().UpdateCores()
 }
 
 // Wait for a new proc to be spawned at this procd, or for a stealing

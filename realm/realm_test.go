@@ -1,6 +1,7 @@
 package realm_test
 
 import (
+	"flag"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -19,6 +20,13 @@ import (
 const (
 	SLEEP_TIME_MS = 3000
 )
+
+var version string
+
+// Read & set the proc version.
+func init() {
+	flag.StringVar(&version, "version", "none", "version")
+}
 
 type Tstate struct {
 	t        *testing.T
@@ -54,7 +62,16 @@ func makeTstate(t *testing.T) *Tstate {
 
 	ts.t = t
 
+	setVersion()
+
 	return ts
+}
+
+func setVersion() {
+	if version == "" || version == "none" || !flag.Parsed() {
+		db.DFatalf("Version not set in test")
+	}
+	proc.Version = version
 }
 
 func (ts *Tstate) spawnSpinner() proc.Tpid {

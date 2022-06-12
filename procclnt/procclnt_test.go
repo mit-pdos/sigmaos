@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"path"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"ulambda/groupmgr"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/resource"
 	"ulambda/stats"
@@ -765,6 +767,91 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	// should show ~50% CPU utilization, not 100%).
 	db.DPrintf("TEST", "Stats after shrink: %v", st)
 	assert.True(t, st.Util < 60.0, "Util too high, %v > 60", st.Util)
+
+	// Evict all of the spinning procs.
+	for _, pid := range pids {
+		err := ts.Evict(pid)
+		assert.Nil(ts.T, err, "Evict")
+		status, err := ts.WaitExit(pid)
+		assert.Nil(t, err, "WaitExit")
+		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+	}
+
+	ts.Shutdown()
+}
+
+// Test to see if any core has a spinner running on it (high utilization).
+func anyCoresOccupied(coresMaps []map[string]bool) bool {
+	N_SAMPLES := 5
+	// Calculate the average utilization over a 250ms period for each core to be
+	// revoked.
+	coreOccupied := false
+	for c, m := range coresMaps {
+		idle0, total0 := perf.GetCPUSample(m)
+		idleDelta := uint64(0)
+		totalDelta := uint64(0)
+		// Collect some CPU util samples for this core.
+		for i := 0; i < N_SAMPLES; i++ {
+			time.Sleep(25 * time.Millisecond)
+			idle1, total1 := perf.GetCPUSample(m)
+			idleDelta += idle1 - idle0
+			totalDelta += total1 - total0
+			idle0 = idle1
+			total0 = total1
+		}
+		avgCoreUtil := 100.0 * ((float64(totalDelta) - float64(idleDelta)) / float64(totalDelta))
+		db.DPrintf("TEST", "Core %v utilization: %v", c, avgCoreUtil)
+		if avgCoreUtil > 50.0 {
+			coreOccupied = true
+		}
+	}
+	return coreOccupied
+}
+
+func TestProcdResizeCoreRepinning(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	linuxsched.ScanTopology()
+
+	// Spawn NCores/2 spinners, each claiming two cores.
+	pids := []proc.Tpid{}
+	for i := 0; i < int(linuxsched.NCores)/2; i++ {
+		pid := spawnSpinnerNcore(t, ts, proc.Tcore(2))
+		err := ts.WaitStart(pid)
+		assert.Nil(t, err, "WaitStart")
+		pids = append(pids, pid)
+	}
+
+	// Revoke half of the procd's cores.
+	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
+	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+
+	// Create a map to sample core utilization levels on the cores which will be
+	// revoked.
+	coresMaps := []map[string]bool{}
+	for i := coreIv.Start; i < coreIv.End; i++ {
+		coresMaps = append(coresMaps, map[string]bool{"cpu" + strconv.Itoa(int(i)): true})
+	}
+
+	coreOccupied := anyCoresOccupied(coresMaps)
+	// Make sure that at least some of the cores to be revoked has a spinning
+	// proc on it.
+	assert.True(t, coreOccupied, "No cores occupied")
+
+	// Remove some cores from the procd.
+	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	assert.Nil(t, err, "SetFile revoke: %v", err)
+
+	// Sleep for a bit
+	time.Sleep(SLEEP_MSECS * time.Millisecond)
+
+	coreOccupied = anyCoresOccupied(coresMaps)
+	// Ensure that none of the revoked cores have spinning procs running on them.
+	assert.False(t, coreOccupied, "Core still occupied")
 
 	// Evict all of the spinning procs.
 	for _, pid := range pids {

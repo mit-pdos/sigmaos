@@ -33,8 +33,13 @@ func procd(ts *test.Tstate) string {
 }
 
 func spawnSpinner(t *testing.T, ts *test.Tstate) proc.Tpid {
+	return spawnSpinnerNcore(t, ts, proc.C_DEF)
+}
+
+func spawnSpinnerNcore(t *testing.T, ts *test.Tstate, ncore proc.Tcore) proc.Tpid {
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
+	a.Ncore = ncore
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return pid
@@ -55,7 +60,6 @@ func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.
 	a.Ncore = ncore
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	db.DPrintf("SCHEDD", "Spawn %v\n", a)
 }
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, childPid proc.Tpid, msecs int) proc.Tpid {
@@ -658,6 +662,47 @@ func TestProcdResizeN(t *testing.T) {
 		assert.True(t, status.IsStatusOK(), "WaitExit status 3")
 		checkSleeperResult(t, ts, pid1)
 	}
+
+	ts.Shutdown()
+}
+
+func TestProcdResizeEvict(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	linuxsched.ScanTopology()
+
+	// Run a proc that claims all cores save one.
+	pid := spawnSpinnerNcore(t, ts, proc.Tcore(linuxsched.NCores)-1)
+	err := ts.WaitStart(pid)
+	assert.Nil(t, err, "WaitStart")
+
+	// Run a proc that claims one core.
+	pid1 := spawnSpinnerNcore(t, ts, proc.Tcore(1))
+	err = ts.WaitStart(pid1)
+	assert.Nil(t, err, "WaitStart")
+
+	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
+	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+
+	// Remove some cores from the procd.
+	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	assert.Nil(t, err, "SetFile revoke: %v", err)
+
+	// Ensure that the small proc was evicted.
+	status, err := ts.WaitExit(pid1)
+	assert.Nil(t, err, "WaitExit")
+	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+
+	// Evict the big proc
+	err = ts.Evict(pid)
+	assert.Nil(ts.T, err, "Evict")
+	status, err = ts.WaitExit(pid)
+	assert.Nil(t, err, "WaitExit")
+	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
 
 	ts.Shutdown()
 }

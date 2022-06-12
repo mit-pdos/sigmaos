@@ -75,7 +75,6 @@ type Perf struct {
 func MakePerf(name string) *Perf {
 	p := &Perf{}
 	p.name = name
-	p.cores = map[string]bool{}
 	p.utilChan = make(chan bool, 1)
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT)
@@ -116,7 +115,7 @@ func (p *Perf) setupCPUUtil(hz int, fpath string) {
 	p.cpuCyclesBusy = make([]float64, 40*CPU_SAMPLE_HZ)
 	p.cpuCyclesTotal = make([]float64, 40*CPU_SAMPLE_HZ)
 	p.cpuUtilPct = make([]float64, 40*CPU_SAMPLE_HZ)
-	p.getActiveCores()
+	p.cores = GetActiveCores()
 
 	p.mu.Unlock()
 
@@ -208,18 +207,20 @@ func (p *Perf) monitorCPUUtil(hz int) {
 }
 
 // Only count cycles on cores we can run on
-func (p *Perf) getActiveCores() {
+func GetActiveCores() map[string]bool {
 	linuxsched.ScanTopology()
 	// Get the cores we can run on
 	m, err := linuxsched.SchedGetAffinity(os.Getpid())
 	if err != nil {
 		db.DFatalf("Error getting affinity mask: %v", err)
 	}
+	cores := map[string]bool{}
 	for i := uint(0); i < linuxsched.NCores; i++ {
 		if m.Test(i) {
-			p.cores["cpu"+strconv.Itoa(int(i))] = true
+			cores["cpu"+strconv.Itoa(int(i))] = true
 		}
 	}
+	return cores
 }
 
 func (p *Perf) teardownPprof() {

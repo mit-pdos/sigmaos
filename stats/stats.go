@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,7 +16,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
-	"ulambda/linuxsched"
 	np "ulambda/ninep"
 
 	"ulambda/perf"
@@ -203,18 +201,7 @@ func (st *Stats) UpdateCores() {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
-	st.cores = map[string]bool{}
-	linuxsched.ScanTopology()
-	// Get the cores we can run on
-	m, err := linuxsched.SchedGetAffinity(st.pid)
-	if err != nil {
-		db.DFatalf("Error getting affinity mask: %v", err)
-	}
-	for i := uint(0); i < linuxsched.NCores; i++ {
-		if m.Test(i) {
-			st.cores["cpu"+strconv.Itoa(int(i))] = true
-		}
-	}
+	st.cores = perf.GetActiveCores()
 }
 
 func (st *Stats) monitorCPUUtil() {

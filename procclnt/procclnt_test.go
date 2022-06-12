@@ -17,6 +17,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/resource"
+	"ulambda/stats"
 	"ulambda/test"
 )
 
@@ -681,6 +682,7 @@ func TestProcdResizeEvict(t *testing.T) {
 	err = ts.WaitStart(pid1)
 	assert.Nil(t, err, "WaitStart")
 
+	// Revoke half + 1 of the procd's cores.
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
@@ -703,6 +705,75 @@ func TestProcdResizeEvict(t *testing.T) {
 	status, err = ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+
+	ts.Shutdown()
+}
+
+func TestProcdResizeAccurateStats(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	linuxsched.ScanTopology()
+
+	// Spawn NCores/2 spinners, each claiming two cores.
+	pids := []proc.Tpid{}
+	for i := 0; i < int(linuxsched.NCores)/2; i++ {
+		pid := spawnSpinnerNcore(t, ts, proc.Tcore(2))
+		err := ts.WaitStart(pid)
+		assert.Nil(t, err, "WaitStart")
+		pids = append(pids, pid)
+	}
+
+	// Revoke half of the procd's cores.
+	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
+	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
+
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+
+	// Remove some cores from the procd.
+	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	_, err := ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
+	assert.Nil(t, err, "SetFile revoke: %v", err)
+
+	// Sleep for a bit
+	time.Sleep(SLEEP_MSECS * time.Millisecond)
+
+	// Get the procd's utilization.
+	st := stats.StatInfo{}
+	err = ts.GetFileJson(path.Join(np.PROCD, "~ip", np.STATSD), &st)
+	assert.Nil(t, err, "statsd: %v", err)
+
+	// Ensure that the procd is accurately representing the utilization (it
+	// should show ~100% CPU utilization, not 50%).
+	db.DPrintf("TEST", "Stats after shrink: %v", st)
+	assert.True(t, st.Util > 90.0, "Util too low, %v < 90", st.Util)
+
+	// Grant the procd back its cores.
+	db.DPrintf("TEST", "Granting %v cores %v to procd.", nCoresToRevoke, coreIv)
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, coreIv.String(), nCoresToRevoke)
+	_, err = ts.SetFile(ctlFilePath, grantMsg.Marshal(), np.OWRITE, 0)
+	assert.Nil(t, err, "SetFile grant: %v", err)
+
+	// Sleep for a bit
+	time.Sleep(SLEEP_MSECS * time.Millisecond)
+
+	// Get the procd's utilization again.
+	err = ts.GetFileJson(path.Join(np.PROCD, "~ip", np.STATSD), &st)
+	assert.Nil(t, err, "statsd: %v", err)
+
+	// Ensure that the procd's utilization has been adjusted again (it
+	// should show ~50% CPU utilization, not 100%).
+	db.DPrintf("TEST", "Stats after shrink: %v", st)
+	assert.True(t, st.Util < 60.0, "Util too high, %v > 60", st.Util)
+
+	// Evict all of the spinning procs.
+	for _, pid := range pids {
+		err := ts.Evict(pid)
+		assert.Nil(ts.T, err, "Evict")
+		status, err := ts.WaitExit(pid)
+		assert.Nil(t, err, "WaitExit")
+		assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+	}
 
 	ts.Shutdown()
 }

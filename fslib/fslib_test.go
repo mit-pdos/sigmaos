@@ -5,7 +5,6 @@ import (
 	"flag"
 	"log"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -300,7 +299,7 @@ func TestPageDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	ts.SetChunkSz(np.Tsize(512))
-	n := 100
+	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)
@@ -308,12 +307,9 @@ func TestPageDir(t *testing.T) {
 		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
-	sort.SliceStable(names, func(i, j int) bool {
-		return names[i] < names[j]
-	})
 	i := 0
 	ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
-		assert.Equal(t, names[i], st.Name)
+		assert.Equal(t, strconv.Itoa(i), st.Name)
 		i += 1
 		return false, nil
 

@@ -38,6 +38,7 @@ type Tstate struct {
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	setVersion()
 	ts := &Tstate{}
 	e := realm.MakeTestEnv(np.TEST_RID)
 	cfg, err := e.Boot()
@@ -61,8 +62,6 @@ func makeTstate(t *testing.T) *Tstate {
 	linuxsched.ScanTopology()
 
 	ts.t = t
-
-	setVersion()
 
 	return ts
 }

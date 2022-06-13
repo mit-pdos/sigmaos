@@ -51,6 +51,7 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 }
 
 func (e *TestEnv) Shutdown() {
+	db.DPrintf("TEST", "Shutting down")
 	// Destroy the realm
 	e.DestroyRealm(e.rid)
 

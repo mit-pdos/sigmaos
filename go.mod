@@ -17,6 +17,7 @@ require (
 	github.com/seccomp/libseccomp-golang v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thanhpk/randstr v1.0.4
+	github.com/umpc/go-sortedmap v0.0.0-20180422175548-64ab94c482f4 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/raft/v3 v3.5.0
 	go.etcd.io/etcd/server/v3 v3.5.0

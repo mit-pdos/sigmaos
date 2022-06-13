@@ -2,9 +2,10 @@ package dir
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 	"time"
+
+	"github.com/umpc/go-sortedmap"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -22,15 +23,22 @@ type DirImpl struct {
 	fs.Inode
 	mi      fs.MakeInodeF
 	mu      sync.Mutex
-	entries map[string]fs.Inode
+	entries *sortedmap.SortedMap
+}
+
+func cmp(a, b interface{}) bool {
+	if a == b {
+		return true
+	}
+	return false
 }
 
 func MakeDir(i fs.Inode, mi fs.MakeInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.mi = mi
-	d.entries = make(map[string]fs.Inode)
-	d.entries["."] = d
+	d.entries = sortedmap.New(100, cmp)
+	d.entries.Insert(".", d)
 	return d
 }
 
@@ -41,9 +49,11 @@ func MakeDirF(i fs.Inode, mi fs.MakeInodeF) fs.Inode {
 
 func (dir *DirImpl) String() string {
 	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
-	for n, _ := range dir.entries {
-		str += fmt.Sprintf("[%v]", n)
-	}
+
+	dir.entries.IterFunc(false, func(rec sortedmap.Record) bool {
+		str += fmt.Sprintf("[%v]", rec.Key)
+		return true
+	})
 	str += "}"
 	return str
 }
@@ -62,27 +72,27 @@ func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *np.Err {
 }
 
 func (dir *DirImpl) unlinkL(name string) *np.Err {
-	_, ok := dir.entries[name]
+	_, ok := dir.entries.Get(name)
 	if ok {
-		delete(dir.entries, name)
+		dir.entries.Delete(name)
 		return nil
 	}
 	return np.MkErr(np.TErrNotfound, name)
 }
 
 func (dir *DirImpl) createL(ino fs.Inode, name string) *np.Err {
-	_, ok := dir.entries[name]
+	_, ok := dir.entries.Get(name)
 	if ok {
 		return np.MkErr(np.TErrExists, name)
 	}
-	dir.entries[name] = ino
+	dir.entries.Insert(name, ino)
 	return nil
 }
 
 func (dir *DirImpl) lookupL(name string) (fs.Inode, *np.Err) {
-	inode, ok := dir.entries[name]
+	v, ok := dir.entries.Get(name)
 	if ok {
-		return inode, nil
+		return v.(fs.Inode), nil
 	} else {
 		return nil, np.MkErr(np.TErrNotfound, name)
 	}
@@ -140,17 +150,15 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid,
 
 func (dir *DirImpl) lsL(cursor int) []*np.Stat {
 	entries := []*np.Stat{}
-	for k, i := range dir.entries {
-		if k == "." {
-			continue
+	dir.entries.IterFunc(false, func(rec sortedmap.Record) bool {
+		if rec.Key == "." {
+			return true
 		}
+		i := rec.Val.(fs.Inode)
 		st, _ := i.Stat(nil)
-		st.Name = k
+		st.Name = rec.Key.(string)
 		entries = append(entries, st)
-	}
-	// sort dir by st.Name
-	sort.SliceStable(entries, func(i, j int) bool {
-		return entries[i].Name < entries[j].Name
+		return true
 	})
 	if cursor > len(entries) {
 		return nil
@@ -162,7 +170,7 @@ func (dir *DirImpl) lsL(cursor int) []*np.Stat {
 func nonemptydir(inode fs.FsObj) bool {
 	switch i := inode.(type) {
 	case *DirImpl:
-		if len(i.entries) > 1 {
+		if i.entries.Len() > 1 {
 			return true
 		}
 		return false
@@ -219,7 +227,8 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	if IsCurrentDir(name) {
 		return nil, np.MkErr(np.TErrInval, name)
 	}
-	if i, ok := dir.entries[name]; ok {
+	if v, ok := dir.entries.Get(name); ok {
+		i := v.(fs.Inode)
 		return i, np.MkErr(np.TErrExists, name)
 	}
 	newi, err := dir.mi(ctx, perm, m, dir, MakeDirF)

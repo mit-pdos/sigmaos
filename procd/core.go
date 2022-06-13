@@ -97,6 +97,20 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 			p.setCpuAffinityL()
 		}
 	}
+	// See if any of the procs to be evicted can still be squeezed in, in case
+	// the "proportional allocation" strategy above left some cores unused.
+	for pid, p := range toEvict {
+		// If the proc fits...
+		if p.attr.Ncore < pd.coresAvail {
+			// Resize the proc.
+			p.cores = make([]uint, p.attr.Ncore)
+			// Allocate cores to the proc.
+			pd.allocCoresL(p)
+			// Set the CPU affinity for this proc to match its new corea llocation.
+			p.setCpuAffinityL()
+			delete(toEvict, pid)
+		}
+	}
 	pd.evictProcsL(toEvict)
 }
 

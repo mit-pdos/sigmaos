@@ -427,11 +427,15 @@ func MkInterval(start, end Toffset) *Tinterval {
 	return &Tinterval{start, end}
 }
 
-func (iv Tinterval) String() string {
+func (iv *Tinterval) Size() Tsize {
+	return Tsize(iv.End - iv.Start)
+}
+
+func (iv *Tinterval) String() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
 }
 
-func (iv Tinterval) Unmarshal(s string) {
+func (iv *Tinterval) Unmarshal(s string) {
 	idxs := strings.Split(s[1:len(s)-1], ", ")
 	start, err := strconv.Atoi(idxs[0])
 	if err != nil {

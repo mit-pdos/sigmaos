@@ -293,6 +293,7 @@ func (pd *Procd) worker() {
 }
 
 func (pd *Procd) Work() {
+	db.DPrintf("PROCD", "Work")
 	pd.group.Add(1)
 	go func() {
 		defer pd.group.Done()

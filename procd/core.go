@@ -19,7 +19,7 @@ const (
 )
 
 func (pd *Procd) addCores(msg *resource.ResourceMsg) {
-	cores := parseCoreSlice(msg)
+	cores := parseCoreInterval(msg)
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_IDLE)
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
@@ -30,7 +30,7 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 }
 
 func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
-	cores := parseCoreSlice(msg)
+	cores := parseCoreInterval(msg)
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount), cores, CORE_BLOCKED)
 }
 
@@ -183,7 +183,7 @@ func (pd *Procd) freeCoresL(p *LinuxProc) {
 	pd.sanityCheckCoreCountsL()
 }
 
-func parseCoreSlice(msg *resource.ResourceMsg) []uint {
+func parseCoreInterval(msg *resource.ResourceMsg) []uint {
 	iv := np.MkInterval(0, 0)
 	iv.Unmarshal(msg.Name)
 	cores := make([]uint, msg.Amount)

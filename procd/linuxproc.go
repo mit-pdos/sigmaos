@@ -38,7 +38,9 @@ func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
 	p.attr = a
 	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.attr.Pid.String()+rand.String(16))
 	db.DPrintf("PROCD", "Procd init: %v\n", p)
-	p.Env = append(os.Environ(), a.GetEnv(p.pd.addr, p.NewRoot)...)
+	// Finalize the proc env with values related to this physical machine.
+	p.attr.FinalizeEnv(p.pd.addr, p.NewRoot)
+	p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	if p.attr.Ncore == 0 {
 		// If this proc requires no exclusive cores, it can have up to
 		// linuxsched.NCores assigned to it.

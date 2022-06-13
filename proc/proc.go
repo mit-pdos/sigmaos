@@ -46,8 +46,13 @@ func MakeEmptyProc() *Proc {
 }
 
 func MakeProc(program string, args []string) *Proc {
+	pid := GenPid()
+	return MakeProcPid(pid, program, args)
+}
+
+func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p := &Proc{}
-	p.Pid = GenPid()
+	p.Pid = pid
 	p.Program = program
 	p.Args = args
 	p.Type = T_DEF
@@ -62,13 +67,7 @@ func MakeProc(program string, args []string) *Proc {
 		// Set the Program to user/VERSION/prog.bin
 		p.Program = path.Join(path.Dir(p.Program), Version, path.Base(p.Program))
 	}
-	return p
-}
-
-func MakeProcPid(pid Tpid, program string, args []string) *Proc {
-	p := MakeProc(program, args)
-	p.Pid = pid
-	p.setProcDir("")
+	p.setBaseEnv()
 	return p
 }
 
@@ -86,7 +85,7 @@ func (p *Proc) setProcDir(procdIp string) {
 		p.ProcDir = path.Join(KPIDS, p.Pid.String())
 	} else {
 		if procdIp != "" {
-			p.ProcDir = path.Join(np.PROCD, procdIp, PIDS, p.Pid.String()) // TODO: make relative to ~procd
+			p.ProcDir = path.Join(np.PROCD, procdIp, PIDS, p.Pid.String())
 		}
 	}
 }
@@ -95,22 +94,30 @@ func (p *Proc) AppendEnv(name, val string) {
 	p.Env = append(p.Env, name+"="+val)
 }
 
-func (p *Proc) GetEnv(procdIp, newRoot string) []string {
+// Set the envvars which can be set at proc creation time.
+func (p *Proc) setBaseEnv() {
+	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%v", p.IsPrivilegedProc()))
+	p.AppendEnv(SIGMAPID, p.Pid.String())
+	p.AppendEnv(SIGMAPROGRAM, p.Program)
+}
+
+// Finalize env details which can only be set once a physical machine has been
+// chosen.
+func (p *Proc) FinalizeEnv(procdIp, newRoot string) {
 	// Set the procdir based on procdIp
 	p.setProcDir(procdIp)
+	p.AppendEnv(SIGMANEWROOT, newRoot)
+	p.AppendEnv(SIGMAPROCDIP, procdIp)
+	p.AppendEnv(SIGMANODEDID, GetNodedId())
+	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
+	p.AppendEnv(SIGMAPARENTDIR, p.ParentDir)
+}
 
+func (p *Proc) GetEnv() []string {
 	env := []string{}
 	for _, envvar := range p.Env {
 		env = append(env, envvar)
 	}
-	env = append(env, SIGMAPRIVILEGEDPROC+"="+fmt.Sprintf("%v", p.IsPrivilegedProc()))
-	env = append(env, SIGMANEWROOT+"="+newRoot)
-	env = append(env, SIGMAPROCDIP+"="+procdIp)
-	env = append(env, SIGMAPID+"="+p.Pid.String())
-	env = append(env, SIGMAPROGRAM+"="+p.Program)
-	env = append(env, SIGMAPROCDIR+"="+p.ProcDir)
-	env = append(env, SIGMAPARENTDIR+"="+p.ParentDir)
-	env = append(env, SIGMANODEDID+"="+GetNodedId())
 	return env
 }
 
@@ -127,5 +134,5 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, p.Dir, p.Args, p.GetEnv("", ""), p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, p.Dir, p.Args, p.GetEnv(), p.Type, p.Ncore)
 }

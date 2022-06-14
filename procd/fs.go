@@ -12,8 +12,6 @@ import (
 	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
-	"ulambda/inode"
-	"ulambda/memfs"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -23,7 +21,6 @@ import (
 type ProcdFs struct {
 	pd        *Procd
 	run       fs.Dir
-	runqs     map[string]fs.Dir
 	spawnFile fs.Inode
 	ctlFile   fs.Inode
 }
@@ -49,34 +46,12 @@ func (pd *Procd) makeFs() {
 	// Set up ctl file
 	resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.Root(), np.RESOURCE_CTL)
 
-	// Set up running dir
-	runningi := inode.MakeInode(nil, np.DMDIR, pd.Root())
-	running := dir.MakeDir(runningi, memfs.MakeInode)
-	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_RUNNING, running)
-	if err1 != nil {
-		db.DFatalf("Error creating running dir: %v", err1)
-	}
-	pd.fs.run = running
-
 	// Set up runq dir
-	pd.fs.runqs = make(map[string]fs.Dir)
-	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
-	for _, q := range runqs {
-		runqi := inode.MakeInode(nil, np.DMDIR, pd.Root())
-		runq := dir.MakeDir(runqi, memfs.MakeInode)
-		err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), q, runq)
-		if err1 != nil {
-			db.DFatalf("Error creating running dir: %v", err1)
+	dirs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE, np.PROCD_RUNNING, proc.PIDS}
+	for _, d := range dirs {
+		if err := pd.MkDir(path.Join(np.PROCD, pd.MyAddr(), d), 0777); err != nil {
+			db.DFatalf("Error creating dir: %v", err1)
 		}
-		pd.fs.runqs[q] = runq
-	}
-
-	// Set up pids dir
-	pidsi := inode.MakeInode(nil, np.DMDIR, pd.Root())
-	pids := dir.MakeDir(pidsi, memfs.MakeInode)
-	err1 = dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), proc.PIDS, pids)
-	if err1 != nil {
-		db.DFatalf("Error creating pids dir: %v", err1)
 	}
 }
 

@@ -27,6 +27,7 @@ type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
 	id      string
+	localIP string
 	cfgPath string
 	cfg     *NodedConfig
 	s       *kernel.System
@@ -41,6 +42,12 @@ func MakeNoded(id string) *Noded {
 	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("noded-%v", id))
 	r.ProcClnt = procclnt.MakeProcClntInit(proc.Tpid("noded-"+id), r.FsLib, "noded", fslib.Named())
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
+
+	ip, err := fidclnt.LocalIP()
+	if err != nil {
+		db.DFatalf("Error LocalIP: %v", err)
+	}
+	r.localIP = ip
 
 	db.DPrintf("NODED", "Noded %v started", id)
 
@@ -102,17 +109,13 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 
 	// If we need to add a named replica, do so
 	if len(realmCfg.NodedsActive) < nReplicas() {
-		ip, err := fidclnt.LocalIP()
-		if err != nil {
-			db.DFatalf("Error LocalIP in Noded.tryInitRealmL: %v", err)
-		}
-		namedAddrs := genNamedAddrs(1, ip)
+		namedAddrs := genNamedAddrs(1, r.localIP)
 
 		realmCfg.NamedAddrs = append(realmCfg.NamedAddrs, namedAddrs...)
 
 		// Start a named instance.
-		var pid proc.Tpid
-		if _, pid, err = kernel.BootNamed(r.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId); err != nil {
+		_, pid, err := kernel.BootNamed(r.ProcClnt, namedAddrs[0], nReplicas() > 1, len(realmCfg.NamedAddrs), realmCfg.NamedAddrs, r.cfg.RealmId)
+		if err != nil {
 			db.DFatalf("Error BootNamed in Noded.tryInitRealmL: %v", err)
 		}
 		// Update config

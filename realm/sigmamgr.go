@@ -22,6 +22,7 @@ const (
 	SIGMACTL     = np.SIGMAMGR + "/" + sigmactl // SigmaResourceMgr control file.
 	REALM_CONFIG = "name/realm-config"          // Store of realm configs
 	NODED_CONFIG = "name/noded-config"          // Store of noded configs
+	MACHINES     = "name/machines"              // Store of machine info.
 	REALM_NAMEDS = "name/realm-nameds"          // Symlinks to realms' nameds
 	REALM_FENCES = "name/realm-fences"          // Fence around modifications to realm allocations.
 	REALM_MGRS   = "name/realm-mgrs"            // Fence around modifications to realm allocations.
@@ -62,6 +63,7 @@ func (m *SigmaResourceMgr) makeInitFs() {
 	dirs := []string{
 		REALM_CONFIG,
 		NODED_CONFIG,
+		MACHINES,
 		REALM_NAMEDS,
 		REALM_FENCES,
 		REALM_MGRS,
@@ -75,7 +77,7 @@ func (m *SigmaResourceMgr) makeInitFs() {
 
 func (m *SigmaResourceMgr) makeCtlFiles() {
 	// Set up control files
-	ctl := makeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, nil, m.Root())
+	ctl := resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root())
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), sigmactl, ctl)
 	if err != nil {
 		db.DFatalf("Error MkNod sigmactl: %v", err)
@@ -133,10 +135,10 @@ func (m *SigmaResourceMgr) allocNoded(realmId string, nodedId string) {
 	defer unlockRealm(m.ecs[realmId], realmId)
 
 	// Update the noded's config
-	rdCfg := &NodedConfig{}
-	rdCfg.Id = nodedId
-	rdCfg.RealmId = realmId
-	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), rdCfg)
+	ndCfg := &NodedConfig{}
+	ndCfg.Id = nodedId
+	ndCfg.RealmId = realmId
+	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 
 	// Update the realm's config
 	rCfg := &RealmConfig{}

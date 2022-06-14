@@ -63,7 +63,7 @@ func MakeRealmResourceMgr(rid string, realmNamedAddrs []string) *RealmResourceMg
 
 func (m *RealmResourceMgr) makeCtlFiles() {
 	// Set up control files
-	ctl := makeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, nil, m.memfs.Root())
+	ctl := resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root())
 	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.memfs.Root(), realmctl, ctl)
 	if err != nil {
 		db.DFatalf("Error MkNod sigmactl: %v", err)

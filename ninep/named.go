@@ -39,7 +39,7 @@ const (
 	SNAPDEV  = "snapdev"
 
 	// Resource
-	RESOURCE_CTL = "ctl"
+	RESOURCE_CTL = "resourcectl"
 )
 
 // Linux paths

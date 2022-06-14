@@ -6,11 +6,8 @@ import (
 	"time"
 
 	"ulambda/config"
-	"ulambda/ctx"
 	db "ulambda/debug"
-	"ulambda/dir"
 	"ulambda/electclnt"
-	"ulambda/fs"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
@@ -33,7 +30,6 @@ type SigmaResourceMgr struct {
 	freeNodeds   chan string
 	realmCreate  chan string
 	realmDestroy chan string
-	root         fs.Dir
 	ecs          map[string]*electclnt.ElectClnt
 	*config.ConfigClnt
 	*fslib.FsLib
@@ -52,7 +48,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
-	m.makeCtlFiles()
+	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), sigmactl)
 	m.ecs = make(map[string]*electclnt.ElectClnt)
 
 	return m
@@ -72,15 +68,6 @@ func (m *SigmaResourceMgr) makeInitFs() {
 		if err := m.MkDir(d, 0777); err != nil {
 			db.DFatalf("Error Mkdir %v in SigmaResourceMgr.makeInitFs: %v", d, err)
 		}
-	}
-}
-
-func (m *SigmaResourceMgr) makeCtlFiles() {
-	// Set up control files
-	ctl := resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root())
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.Root(), sigmactl, ctl)
-	if err != nil {
-		db.DFatalf("Error MkNod sigmactl: %v", err)
 	}
 }
 

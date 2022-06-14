@@ -47,11 +47,7 @@ func (pd *Procd) makeFs() {
 	}
 
 	// Set up ctl file
-	pd.fs.ctlFile = resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.Root())
-	err2 := dir.MkNod(ctx.MkCtx("", 0, nil), pd.Root(), np.PROCD_CTL_FILE, pd.fs.ctlFile)
-	if err2 != nil {
-		db.DFatalf("Error MkNod in RunProcd: %v", err2)
-	}
+	resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.Root(), np.PROCD_CTL_FILE)
 
 	// Set up running dir
 	runningi := inode.MakeInode(nil, np.DMDIR, pd.Root())

@@ -8,9 +8,7 @@ import (
 	"time"
 
 	"ulambda/config"
-	"ulambda/ctx"
 	db "ulambda/debug"
-	"ulambda/dir"
 	"ulambda/electclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
@@ -59,15 +57,6 @@ func MakeRealmResourceMgr(rid string, realmNamedAddrs []string) *RealmResourceMg
 	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid+REALMMGR_ELECT), 0777)
 
 	return m
-}
-
-func (m *RealmResourceMgr) makeCtlFiles() {
-	// Set up control files
-	ctl := resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root())
-	err := dir.MkNod(ctx.MkCtx("", 0, nil), m.memfs.Root(), realmctl, ctl)
-	if err != nil {
-		db.DFatalf("Error MkNod sigmactl: %v", err)
-	}
 }
 
 func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
@@ -253,7 +242,7 @@ func (m *RealmResourceMgr) Work() {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
 
-	m.makeCtlFiles()
+	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), realmctl)
 
 	for {
 		if m.realmShouldGrow() {

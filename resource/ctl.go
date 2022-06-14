@@ -1,7 +1,9 @@
 package resource
 
 import (
+	"ulambda/ctx"
 	db "ulambda/debug"
+	"ulambda/dir"
 	"ulambda/fs"
 	"ulambda/inode"
 	np "ulambda/ninep"
@@ -13,9 +15,13 @@ type CtlFile struct {
 	fs.Inode
 }
 
-func MakeCtlFile(g ResourceGrantHandler, r ResourceRequestHandler, parent fs.Dir) *CtlFile {
+func MakeCtlFile(g ResourceGrantHandler, r ResourceRequestHandler, parent fs.Dir, ctlFname string) {
 	i := inode.MakeInode(nil, 0, parent)
-	return &CtlFile{g, r, i}
+	ctl := &CtlFile{g, r, i}
+	err := dir.MkNod(ctx.MkCtx("", 0, nil), parent, ctlFname, ctl)
+	if err != nil {
+		db.DFatalf("Error MkNod: %v", err)
+	}
 }
 
 func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {

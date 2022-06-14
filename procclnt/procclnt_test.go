@@ -567,7 +567,7 @@ func TestProcdResize1(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
@@ -618,7 +618,7 @@ func TestProcdResizeN(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 	for i := 0; i < N; i++ {
 		db.DPrintf("TEST", "Resize i=%v", i)
 		// Run a proc that claims all cores.
@@ -688,7 +688,7 @@ func TestProcdResizeEvict(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores)/2 + 1))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
@@ -729,7 +729,7 @@ func TestProcdResizeAccurateStats(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Remove some cores from the procd.
 	db.DPrintf("TEST", "Removing %v cores %v from procd.", nCoresToRevoke, coreIv)
@@ -826,7 +826,7 @@ func TestProcdResizeCoreRepinning(t *testing.T) {
 	nCoresToRevoke := int(math.Ceil(float64(linuxsched.NCores) / 2))
 	coreIv := np.MkInterval(0, np.Toffset(nCoresToRevoke))
 
-	ctlFilePath := path.Join(np.PROCD, "~ip", np.PROCD_CTL_FILE)
+	ctlFilePath := path.Join(np.PROCD, "~ip", np.RESOURCE_CTL)
 
 	// Create a map to sample core utilization levels on the cores which will be
 	// revoked.

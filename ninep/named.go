@@ -26,8 +26,7 @@ const (
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 
-	// Procd control files
-	PROCD_CTL_FILE   = "ctl"
+	// Procd spawn file
 	PROCD_SPAWN_FILE = "spawn"
 
 	PROCD_RUNNING = "running"
@@ -38,6 +37,9 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
+
+	// Resource
+	RESOURCE_CTL = "ctl"
 )
 
 // Linux paths

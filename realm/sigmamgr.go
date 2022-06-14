@@ -15,14 +15,13 @@ import (
 )
 
 const (
-	sigmactl     = "sigmactl"
-	SIGMACTL     = np.SIGMAMGR + "/" + sigmactl // SigmaResourceMgr control file.
-	REALM_CONFIG = "name/realm-config"          // Store of realm configs
-	NODED_CONFIG = "name/noded-config"          // Store of noded configs
-	MACHINES     = "name/machines"              // Store of machine info.
-	REALM_NAMEDS = "name/realm-nameds"          // Symlinks to realms' nameds
-	REALM_FENCES = "name/realm-fences"          // Fence around modifications to realm allocations.
-	REALM_MGRS   = "name/realm-mgrs"            // Fence around modifications to realm allocations.
+	SIGMACTL     = np.SIGMAMGR + "/" + np.RESOURCE_CTL // SigmaResourceMgr control file.
+	REALM_CONFIG = "name/realm-config"                 // Store of realm configs
+	NODED_CONFIG = "name/noded-config"                 // Store of noded configs
+	MACHINES     = "name/machines"                     // Store of machine info.
+	REALM_NAMEDS = "name/realm-nameds"                 // Symlinks to realms' nameds
+	REALM_FENCES = "name/realm-fences"                 // Fence around modifications to realm allocations.
+	REALM_MGRS   = "name/realm-mgrs"                   // Fence around modifications to realm allocations.
 )
 
 type SigmaResourceMgr struct {
@@ -48,7 +47,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
-	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), sigmactl)
+	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
 	m.ecs = make(map[string]*electclnt.ElectClnt)
 
 	return m
@@ -237,7 +236,7 @@ func (m *SigmaResourceMgr) requestNoded(realmId string) {
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, "", 1)
 	for {
 		// TODO: move realmctl file to sigma named.
-		if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, realmctl), msg.Marshal(), np.OWRITE, 0); err != nil {
+		if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 			db.DPrintf("SIGMAMGR_ERR", "Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
 		} else {
 			return

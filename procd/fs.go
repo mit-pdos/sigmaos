@@ -47,7 +47,7 @@ func (pd *Procd) makeFs() {
 	}
 
 	// Set up ctl file
-	resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.Root(), np.PROCD_CTL_FILE)
+	resource.MakeCtlFile(pd.addCores, pd.removeCores, pd.Root(), np.RESOURCE_CTL)
 
 	// Set up running dir
 	runningi := inode.MakeInode(nil, np.DMDIR, pd.Root())

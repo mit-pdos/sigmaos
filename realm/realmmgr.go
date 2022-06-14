@@ -27,7 +27,6 @@ import (
 
 const (
 	REALMMGR_ELECT = "-realmmgr-elect"
-	realmctl       = "realmctl"
 	REALMMGR       = "realmmgr"
 )
 
@@ -242,7 +241,7 @@ func (m *RealmResourceMgr) Work() {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
 
-	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), realmctl)
+	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), np.RESOURCE_CTL)
 
 	for {
 		if m.realmShouldGrow() {

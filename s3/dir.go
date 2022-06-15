@@ -87,11 +87,10 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	var dirents []*np.Stat
-	db.DPrintf("FSS3", "readDir: %v\n", d)
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
-	db.DPrintf("FSS3", "readDir successfully filled: %v\n", d)
+	db.DPrintf("FSS3", "ReadDir %v\n", d)
 	for _, o1 := range d.info.dirents() {
 		var st *np.Stat
 		var err *np.Err

@@ -31,6 +31,7 @@ type SigmaResourceMgr struct {
 	freeNodeds   chan string
 	realmCreate  chan string
 	realmDestroy chan string
+	realmmgrs    map[string]proc.Tpid
 	ecs          map[string]*electclnt.ElectClnt
 	*procclnt.ProcClnt
 	*config.ConfigClnt
@@ -56,6 +57,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.makeInitFs()
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
 	m.ecs = make(map[string]*electclnt.ElectClnt)
+	m.realmmgrs = make(map[string]proc.Tpid)
 
 	return m
 }
@@ -259,6 +261,7 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	for _ = range cfg.NodedsAssigned {
 		m.requestNoded(realmId)
 	}
+	m.evictRealmMgr(realmId)
 	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)
 }
 
@@ -272,6 +275,19 @@ func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
 		db.DFatalf("Error WaitStart realmmgr %v", err)
 	}
 	db.DPrintf("SIGMAMGR", "Sigmamgr started realmmgr %v in realm %v", pid.String(), realmId)
+	m.realmmgrs[realmId] = pid
+}
+
+func (m *SigmaResourceMgr) evictRealmMgr(realmId string) {
+	pid := m.realmmgrs[realmId]
+	db.DPrintf("SIGMAMGR", "Sigmamgr evicting realmmgr %v in realm %v", pid.String(), realmId)
+	if err := m.Evict(pid); err != nil {
+		db.DFatalf("Error evict realmmgr %v for realm %v", pid, realmId)
+	}
+	if status, err := m.WaitExit(pid); err != nil || !status.IsStatusEvicted() {
+		db.DFatalf("Error bad status evict realmmgr %v for realm %v: status %v err %v", pid, realmId, status, err)
+	}
+	delete(m.realmmgrs, realmId)
 }
 
 func (m *SigmaResourceMgr) Work() {

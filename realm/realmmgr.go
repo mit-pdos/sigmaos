@@ -17,6 +17,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/resource"
+	"ulambda/semclnt"
 	"ulambda/stats"
 )
 
@@ -43,17 +44,23 @@ type RealmResourceMgr struct {
 	*fslib.FsLib
 }
 
-// TODO: Make this proc un-stealable
-func MakeRealmResourceMgr(rid string, realmNamedAddrs []string) *RealmResourceMgr {
+func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	db.DPrintf("REALMMGR", "MakeRealmResourceMgr")
 	m := &RealmResourceMgr{}
-	m.realmId = rid
+	m.realmId = realmId
 	m.sigmaFsl = fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
-	m.FsLib = fslib.MakeFsLibAddr(proc.GetPid().String(), realmNamedAddrs)
 	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
-	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid), 0777)
-	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, rid+REALMMGR_ELECT), 0777)
+	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, realmId), 0777)
+	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, realmId+REALMMGR_ELECT), 0777)
+
+	// Wait for the realm's nameds to start.
+	rStartSem := semclnt.MakeSemClnt(m.sigmaFsl, path.Join(np.BOOT, realmId))
+	rStartSem.Down()
+
+	realmCfg := GetRealmConfig(m.sigmaFsl, realmId)
+
+	m.FsLib = fslib.MakeFsLibAddr(proc.GetPid().String(), realmCfg.NamedAddrs)
 
 	return m
 }

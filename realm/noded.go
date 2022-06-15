@@ -3,7 +3,6 @@ package realm
 import (
 	"fmt"
 	"path"
-	"strings"
 
 	"ulambda/config"
 	db "ulambda/debug"
@@ -139,19 +138,6 @@ func (r *Noded) boot(realmCfg *RealmConfig) {
 	}
 }
 
-func (r *Noded) startRealmMgr() {
-	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
-	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
-	p := proc.MakeProcPid(pid, "realm/realmmgr", []string{r.cfg.RealmId, strings.Join(realmCfg.NamedAddrs, ",")})
-	if _, err := r.SpawnKernelProc(p, fslib.Named()); err != nil {
-		db.DFatalf("Error spawn realmmgr %v", err)
-	}
-	if err := r.WaitStart(p.Pid); err != nil {
-		db.DFatalf("Error WaitStart realmmgr %v", err)
-	}
-	db.DPrintf("NODED", "Noded %v started its realmmgr %v in realm %v", r.id, pid.String(), r.cfg.RealmId)
-}
-
 // Join a realm
 func (r *Noded) joinRealm() chan bool {
 	lockRealm(r.ec, r.cfg.RealmId)
@@ -240,7 +226,6 @@ func (r *Noded) Work() {
 
 		// Join a realm
 		done := r.joinRealm()
-		r.startRealmMgr()
 		// Wait for the watch to trigger
 		<-done
 

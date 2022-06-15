@@ -10,7 +10,10 @@ import (
 	"ulambda/electclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
+	"ulambda/machine"
 	np "ulambda/ninep"
+	"ulambda/proc"
+	"ulambda/procclnt"
 	"ulambda/resource"
 )
 
@@ -18,7 +21,6 @@ const (
 	SIGMACTL     = np.SIGMAMGR + "/" + np.RESOURCE_CTL // SigmaResourceMgr control file.
 	REALM_CONFIG = "name/realm-config"                 // Store of realm configs
 	NODED_CONFIG = "name/noded-config"                 // Store of noded configs
-	MACHINES     = "name/machines"                     // Store of machine info.
 	REALM_NAMEDS = "name/realm-nameds"                 // Symlinks to realms' nameds
 	REALM_FENCES = "name/realm-fences"                 // Fence around modifications to realm allocations.
 	REALM_MGRS   = "name/realm-mgrs"                   // Fence around modifications to realm allocations.
@@ -30,6 +32,7 @@ type SigmaResourceMgr struct {
 	realmCreate  chan string
 	realmDestroy chan string
 	ecs          map[string]*electclnt.ElectClnt
+	*procclnt.ProcClnt
 	*config.ConfigClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
@@ -41,9 +44,13 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
-	m.MemFs, m.FsLib, _, err = fslibsrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
+	m.MemFs, m.FsLib, m.ProcClnt, err = fslibsrv.MakeMemFs(np.SIGMAMGR, "sigmamgr")
 	if err != nil {
-		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
+		db.DFatalf("Error MakeMemFs: %v", err)
+	}
+	// Mount the KPIDS dir.
+	if err := procclnt.MountPids(m.FsLib, fslib.Named()); err != nil {
+		db.DFatalf("Error mountpids: %v", err)
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
@@ -58,7 +65,7 @@ func (m *SigmaResourceMgr) makeInitFs() {
 	dirs := []string{
 		REALM_CONFIG,
 		NODED_CONFIG,
-		MACHINES,
+		machine.MACHINES,
 		REALM_NAMEDS,
 		REALM_FENCES,
 		REALM_MGRS,
@@ -91,10 +98,15 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		m.Lock()
 		defer m.Unlock()
 
-		m.growRealm(msg.Name)
+		m.growRealmL(msg.Name)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
+}
+
+func (m *SigmaResourceMgr) getRealmElectClnt(realmId string) (*electclnt.ElectClnt, bool) {
+	ec, ok := m.ecs[realmId]
+	return ec, ok
 }
 
 func (m *SigmaResourceMgr) getFreeNoded(nRetries int) (string, bool) {
@@ -110,36 +122,12 @@ func (m *SigmaResourceMgr) getFreeNoded(nRetries int) (string, bool) {
 	return "", false
 }
 
-// Alloc a Noded to this realm.
-func (m *SigmaResourceMgr) allocNoded(realmId string, nodedId string) {
-	// If the realm has been destroyed, exit early.
-	if _, ok := m.ecs[realmId]; !ok {
-		return
-	}
-
-	lockRealm(m.ecs[realmId], realmId)
-	defer unlockRealm(m.ecs[realmId], realmId)
-
-	// Update the noded's config
-	ndCfg := &NodedConfig{}
-	ndCfg.Id = nodedId
-	ndCfg.RealmId = realmId
-	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
-
-	// Update the realm's config
-	rCfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-	rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
-	rCfg.LastResize = time.Now()
-	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-}
-
 // Allocate the minimum number of Nodeds needed to start a realm.
 func (m *SigmaResourceMgr) allocMinNodeds(realmId string) {
 	n := nReplicas()
 	for i := 0; i < n; i++ {
 		// Retry noded allocation infinitely for now.
-		if ok := m.growRealm(realmId); !ok {
+		if ok := m.growRealmL(realmId); !ok {
 			db.DFatalf("Can't allocate min nodeds for realm %v", realmId)
 		}
 	}
@@ -147,12 +135,12 @@ func (m *SigmaResourceMgr) allocMinNodeds(realmId string) {
 
 // Tries to add a Noded to a realm. Will first try and pull from the list of
 // free Nodeds, and if none is available, it will try to make one free, and
-// then retry.
-func (m *SigmaResourceMgr) growRealm(realmId string) bool {
+// then retry. Caller holds lock.
+func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 	// Try to get a free noded.
 	if nodedId, ok := m.getFreeNoded(100); ok {
 		// Alloc the free Noded.
-		m.allocNoded(realmId, nodedId)
+		allocNoded(m, realmId, nodedId)
 		return true
 	}
 	// No noded was available, so try to find a realm with spare resources.
@@ -166,7 +154,7 @@ func (m *SigmaResourceMgr) growRealm(realmId string) bool {
 	// Try to get the newly freed Noded.
 	if nodedId, ok := m.getFreeNoded(100); ok {
 		// Alloc the newly freed Noded.
-		m.allocNoded(realmId, nodedId)
+		allocNoded(m, realmId, nodedId)
 		return true
 	}
 	return false
@@ -229,13 +217,15 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 	// Allocate the minimum number of Nodeds required to start this realm. For
 	// now, this is nReplicas() for all realms.
 	m.allocMinNodeds(realmId)
+
+	// Start this realm's realmmgr.
+	m.startRealmMgr(realmId)
 }
 
 // Request a Noded from realm realmId.
 func (m *SigmaResourceMgr) requestNoded(realmId string) {
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, "", 1)
 	for {
-		// TODO: move realmctl file to sigma named.
 		if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 			db.DPrintf("SIGMAMGR_ERR", "Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
 		} else {
@@ -270,6 +260,18 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 		m.requestNoded(realmId)
 	}
 	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)
+}
+
+func (m *SigmaResourceMgr) startRealmMgr(realmId string) {
+	pid := proc.Tpid("realmmgr-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, "realm/realmmgr", []string{realmId})
+	if _, err := m.SpawnKernelProc(p, fslib.Named()); err != nil {
+		db.DFatalf("Error spawn realmmgr %v", err)
+	}
+	if err := m.WaitStart(p.Pid); err != nil {
+		db.DFatalf("Error WaitStart realmmgr %v", err)
+	}
+	db.DPrintf("SIGMAMGR", "Sigmamgr started realmmgr %v in realm %v", pid.String(), realmId)
 }
 
 func (m *SigmaResourceMgr) Work() {

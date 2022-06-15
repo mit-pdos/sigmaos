@@ -15,7 +15,6 @@ import (
 	"ulambda/perf"
 )
 
-var cache *Cache
 var fss3 *Fss3
 
 type Fss3 struct {
@@ -25,7 +24,6 @@ type Fss3 struct {
 }
 
 func RunFss3(buckets []string) {
-	cache = mkCache()
 	fss3 = &Fss3{}
 	mfs, _, _, err := fslibsrv.MakeMemFs(np.S3, np.S3REL)
 	if err != nil {

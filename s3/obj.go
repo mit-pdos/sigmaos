@@ -15,10 +15,14 @@ import (
 )
 
 type Obj struct {
-	*info
 	bucket string
 	perm   np.Tperm
 	key    np.Path
+
+	// set by fill()
+	init  bool
+	sz    np.Tlength
+	mtime int64
 
 	// for writing
 	ch  chan error
@@ -44,33 +48,60 @@ func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
 }
 
 func (o *Obj) String() string {
-	if o.info == nil {
-		return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
-	} else {
-		return fmt.Sprintf("key '%v' perm %v info %v", o.key, o.perm, o.info)
+	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
+}
+
+func (o *Obj) Size() np.Tlength {
+	return o.sz
+}
+
+func (o *Obj) SetSize(sz np.Tlength) {
+	o.sz = sz
+}
+
+func (o *Obj) readHead(fss3 *Fss3) *np.Err {
+	key := o.key.String()
+	input := &s3.HeadObjectInput{
+		Bucket: &o.bucket,
+		Key:    &key,
 	}
+	result, err := fss3.client.HeadObject(context.TODO(), input)
+	if err != nil {
+		return np.MkErrError(err)
+	}
+
+	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
+	o.sz = np.Tlength(result.ContentLength)
+	if result.LastModified != nil {
+		o.mtime = (*result.LastModified).Unix()
+	}
+	o.init = true
+	return nil
 }
 
 func (o *Obj) fill() *np.Err {
-	if o.info == nil {
-		i := cache.lookup(o.bucket, o.key)
-		if i != nil {
-			o.info = i
-			return nil
-		}
-		var err *np.Err
-		if o.perm.IsDir() {
-			i, err = s3ReadDirL(fss3, o.bucket, o.key)
-		} else {
-			i, err = readHead(fss3, o.bucket, o.key)
-		}
-		if err != nil {
+	if !o.init {
+		if err := o.readHead(fss3); err != nil {
 			return err
 		}
-		o.info = i
-		return nil
 	}
 	return nil
+}
+
+func (o *Obj) stat() *np.Stat {
+	st := &np.Stat{}
+	if len(o.key) > 0 {
+		st.Name = o.key.Base()
+	} else {
+		st.Name = "" // root
+	}
+	st.Mode = o.perm | np.Tperm(0777)
+	st.Qid = qid(o.perm, o.key)
+	st.Uid = ""
+	st.Gid = ""
+	st.Length = o.sz
+	st.Mtime = uint32(o.mtime)
+	return st
 }
 
 func (o *Obj) Qid() np.Tqid {
@@ -89,11 +120,11 @@ func (o *Obj) Parent() fs.Dir {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DPrintf("FSS3", "Stat: %v %p\n", o, o.info)
+	db.DPrintf("FSS3", "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	return o.info.stat(), nil
+	return o.stat(), nil
 }
 
 // XXX Check permissions?

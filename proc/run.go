@@ -12,7 +12,7 @@ import (
 
 // To run kernel procs
 func RunKernelProc(p *Proc, namedAddr []string) (*exec.Cmd, error) {
-	p.FinalizeEnv("NONE", "NONE")
+	p.FinalizeEnv("NONE")
 	env := p.GetEnv()
 	env = append(env, "NAMED="+strings.Join(namedAddr, ","))
 	env = append(env, "SIGMAPROGRAM="+p.Program)

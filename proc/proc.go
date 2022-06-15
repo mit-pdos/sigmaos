@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	"ulambda/namespace"
 	np "ulambda/ninep"
 )
 
@@ -32,7 +33,7 @@ type Proc struct {
 	ProcDir      string   // SigmaOS directory to store this proc's state
 	ParentDir    string   // SigmaOS parent proc directory
 	Program      string   // Program to run
-	Dir          string   // Unix working directory for the process
+	LinuxRoot    string   // Path to which this proc will be chroot-ed
 	Args         []string // Args
 	Env          []string // Environment variables
 	Type         Ttype    // Type
@@ -54,6 +55,7 @@ func MakeProcPid(pid Tpid, program string, args []string) *Proc {
 	p := &Proc{}
 	p.Pid = pid
 	p.Program = program
+	p.LinuxRoot = path.Join(namespace.NAMESPACE_DIR, p.Pid.String())
 	p.Args = args
 	p.Type = T_DEF
 	p.Ncore = C_DEF
@@ -99,14 +101,14 @@ func (p *Proc) setBaseEnv() {
 	p.AppendEnv(SIGMAPRIVILEGEDPROC, fmt.Sprintf("%v", p.IsPrivilegedProc()))
 	p.AppendEnv(SIGMAPID, p.Pid.String())
 	p.AppendEnv(SIGMAPROGRAM, p.Program)
+	p.AppendEnv(SIGMANEWROOT, p.LinuxRoot)
 }
 
 // Finalize env details which can only be set once a physical machine has been
 // chosen.
-func (p *Proc) FinalizeEnv(procdIp, newRoot string) {
+func (p *Proc) FinalizeEnv(procdIp string) {
 	// Set the procdir based on procdIp
 	p.setProcDir(procdIp)
-	p.AppendEnv(SIGMANEWROOT, newRoot)
 	p.AppendEnv(SIGMAPROCDIP, procdIp)
 	p.AppendEnv(SIGMANODEDID, GetNodedId())
 	p.AppendEnv(SIGMAPROCDIR, p.ProcDir)
@@ -134,5 +136,5 @@ func (p *Proc) IsPrivilegedProc() bool {
 }
 
 func (p *Proc) String() string {
-	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, p.Dir, p.Args, p.GetEnv(), p.Type, p.Ncore)
+	return fmt.Sprintf("&{ Pid:%v Program:%v ProcDir:%v ParentDir:%v UnixDir:%v Args:%v Env:%v Type:%v Ncore:%v }", p.Pid, p.Program, p.ProcDir, p.ParentDir, "Abcd", p.Args, p.GetEnv(), p.Type, p.Ncore)
 }

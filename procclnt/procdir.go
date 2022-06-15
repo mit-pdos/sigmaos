@@ -102,11 +102,6 @@ func (clnt *ProcClnt) cleanupError(pid proc.Tpid, procdir string, err error) err
 	return err
 }
 
-func (clnt *ProcClnt) isKernelProc(pid proc.Tpid) bool {
-	_, err := clnt.Stat(path.Join(proc.PROCDIR, proc.KERNEL_PROC))
-	return err == nil
-}
-
 // ========== CHILDREN ==========
 
 // Return the pids of all children.

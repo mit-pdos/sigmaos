@@ -12,7 +12,6 @@ import (
 	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
-	"ulambda/rand"
 )
 
 type Tstatus uint8
@@ -24,22 +23,20 @@ const (
 
 type LinuxProc struct {
 	fs.Inode
-	SysPid  int
-	NewRoot string
-	Env     []string
-	cores   []uint
-	attr    *proc.Proc
-	pd      *Procd
+	SysPid int
+	Env    []string
+	cores  []uint
+	attr   *proc.Proc
+	pd     *Procd
 }
 
 func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
 	p := &LinuxProc{}
 	p.pd = pd
 	p.attr = a
-	p.NewRoot = path.Join(namespace.NAMESPACE_DIR, p.attr.Pid.String()+rand.String(16))
 	db.DPrintf("PROCD", "Procd init: %v\n", p)
 	// Finalize the proc env with values related to this physical machine.
-	p.attr.FinalizeEnv(p.pd.addr, p.NewRoot)
+	p.attr.FinalizeEnv(p.pd.addr)
 	p.Env = append(os.Environ(), p.attr.GetEnv()...)
 	if p.attr.Ncore == 0 {
 		// If this proc requires no exclusive cores, it can have up to
@@ -61,7 +58,7 @@ func (p *LinuxProc) wait(cmd *exec.Cmd) {
 		return
 	}
 
-	err = namespace.Destroy(p.NewRoot)
+	err = namespace.Destroy(p.attr.LinuxRoot)
 	if err != nil {
 		db.DPrintf("PROCD_ERR", "Error namespace destroy: %v", err)
 	}
@@ -77,7 +74,6 @@ func (p *LinuxProc) run() error {
 
 	cmd := exec.Command(path.Join(np.UXROOT, p.pd.realmbin, p.attr.Program), p.attr.Args...)
 	cmd.Env = p.Env
-	cmd.Dir = p.attr.Dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	namespace.SetupProc(cmd)

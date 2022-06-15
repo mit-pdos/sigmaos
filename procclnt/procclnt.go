@@ -186,8 +186,8 @@ func (clnt *ProcClnt) Started() error {
 		return fmt.Errorf("Started error %v", err)
 	}
 
-	// Only isolate kernel procs
-	if !clnt.isKernelProc(clnt.pid) {
+	// Only isolate non-kernel procs
+	if !proc.GetIsPrivilegedProc() {
 		// Isolate the process namespace
 		newRoot := proc.GetNewRoot()
 		if err := namespace.Isolate(newRoot); err != nil {

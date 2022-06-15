@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/umpc/go-sortedmap"
 
@@ -123,38 +124,16 @@ func (i *info) stat() *np.Stat {
 	return st
 }
 
-// if o.key is prefix of key, include next component of key (unless
-// we already seen it
-func (i *info) includeNameL(key string) (string, np.Tperm, bool) {
-	s := np.Split(key)
-	p := perm(key)
-	db.DPrintf("FSS30", "s %v i.key '%v' dents %v\n", s, i.key, i.dents)
-	for i, c := range i.key {
-		if c != s[i] {
-			return "", p, false
-		}
-	}
-	if len(s) == len(i.key) {
-		return "", p, false
-	}
-	name := s[len(i.key)]
-	_, ok := i.dents.Get(name)
-	if ok {
-		p = i.perm
-	} else {
-		if len(s) > len(i.key)+1 {
-			p = np.DMDIR
-		}
-	}
-	return name, p, !ok
-}
-
 func s3ReadDirL(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 	maxKeys := 0
 	key := k.String()
+	if key != "" {
+		key = key + "/"
+	}
 	params := &s3.ListObjectsV2Input{
-		Bucket: &bucket,
-		Prefix: &key,
+		Bucket:    &bucket,
+		Prefix:    aws.String(key),
+		Delimiter: aws.String("/"),
 	}
 	i := makeInfo(bucket, k, np.DMDIR)
 	p := s3.NewListObjectsV2Paginator(fss3.client, params,
@@ -169,10 +148,14 @@ func s3ReadDirL(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 			return nil, np.MkErr(np.TErrBadoffset, key)
 		}
 		for _, obj := range page.Contents {
-			if n, p, ok := i.includeNameL(*obj.Key); ok {
-				db.DPrintf("FSS30", "incl %v %v\n", n, p)
-				i.dents.Insert(n, p)
-			}
+			db.DPrintf("FSS30", "key %v\n", *obj.Key)
+			n := strings.TrimPrefix(*obj.Key, key)
+			i.dents.Insert(n, np.Tperm(0777))
+		}
+		for _, obj := range page.CommonPrefixes {
+			db.DPrintf("FSS30", "prefix %v\n", *obj.Prefix)
+			n := strings.TrimPrefix(*obj.Prefix, key)
+			i.dents.Insert(strings.TrimRight(n, "/"), np.DMDIR)
 		}
 	}
 	i.sz = np.Tlength(i.dents.Len()) // makeup size

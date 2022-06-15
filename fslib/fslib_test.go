@@ -1290,7 +1290,7 @@ func TestDirCreatePerf(t *testing.T) {
 }
 
 func TestDirReadPerf(t *testing.T) {
-	const N = 1000
+	const N = 10
 	ts := test.MakeTstatePath(t, namedaddr, path)
 	dir := path + "d"
 	n := mkDir(t, ts.FsLib, dir, N)

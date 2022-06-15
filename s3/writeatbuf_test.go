@@ -8,7 +8,7 @@ import (
 	np "ulambda/ninep"
 )
 
-func cmp(b0 []byte, b1 []byte) bool {
+func cmpBytes(b0 []byte, b1 []byte) bool {
 	if len(b0) != len(b1) {
 		return false
 	}
@@ -33,11 +33,11 @@ func TestBuf(t *testing.T) {
 	wb.WriteAt(buf, 0)
 	d, err := wb.read(0, WS)
 	assert.Nil(t, err)
-	assert.True(t, cmp(buf, d))
+	assert.True(t, cmpBytes(buf, d))
 
 	off := np.Toffset(len(buf))
 	wb.WriteAt(buf, int64(len(buf)))
 	d, err = wb.read(off, WS)
 	assert.Nil(t, err)
-	assert.True(t, cmp(buf, d))
+	assert.True(t, cmpBytes(buf, d))
 }

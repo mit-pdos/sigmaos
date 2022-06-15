@@ -2,7 +2,6 @@ package fss3
 
 import (
 	"context"
-	"sort"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
@@ -107,9 +106,6 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 		}
 		dirents = append(dirents, st)
 	}
-	sort.SliceStable(dirents, func(i, j int) bool {
-		return dirents[i].Name < dirents[j].Name
-	})
 	d.sz = npcodec.MarshalSizeDir(dirents)
 	if cursor > len(dirents) {
 		return nil, nil

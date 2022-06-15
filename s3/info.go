@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/umpc/go-sortedmap"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -28,11 +29,18 @@ type info struct {
 	perm   np.Tperm
 	sz     np.Tlength
 	mtime  int64
-	dents  map[string]np.Tperm
+	dents  *sortedmap.SortedMap
 }
 
 func (i *info) String() string {
 	return fmt.Sprintf("key '%v' %v sz %v path %v dents %v", i.key, i.perm, i.sz, getPath(i.key), i.dents)
+}
+
+func cmp(a, b interface{}) bool {
+	if a == b {
+		return true
+	}
+	return false
 }
 
 func makeInfo(bucket string, key np.Path, perm np.Tperm) *info {
@@ -40,25 +48,27 @@ func makeInfo(bucket string, key np.Path, perm np.Tperm) *info {
 	i.bucket = bucket
 	i.perm = perm
 	i.key = key
-	i.dents = make(map[string]np.Tperm)
+	i.dents = sortedmap.New(100, cmp)
 	return i
 }
 
 func (i *info) dirents() []fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
-	dents := make([]fs.FsObj, 0, len(i.dents))
-	for name, p := range i.dents {
-		dents = append(dents, makeFsObj(i.bucket, p, i.key.Append(name)))
-	}
+	dents := make([]fs.FsObj, 0, i.dents.Len())
+	i.dents.IterFunc(false, func(rec sortedmap.Record) bool {
+		dents = append(dents, makeFsObj(i.bucket, rec.Val.(np.Tperm), i.key.Append(rec.Key.(string))))
+		return true
+	})
 	return dents
 }
 
 func (i *info) lookupDirent(name string) fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
-	if p, ok := i.dents[name]; ok {
-		return makeFsObj(i.bucket, p, i.key.Append(name))
+
+	if p, ok := i.dents.Get(name); ok {
+		return makeFsObj(i.bucket, p.(np.Tperm), i.key.Append(name))
 	}
 	return nil
 }
@@ -66,10 +76,10 @@ func (i *info) lookupDirent(name string) fs.FsObj {
 func (i *info) insertDirent(name string, perm np.Tperm) fs.FsObj {
 	i.Lock()
 	defer i.Unlock()
-	if _, ok := i.dents[name]; ok {
+	if _, ok := i.dents.Get(name); ok {
 		return nil
 	}
-	i.dents[name] = perm
+	i.dents.Insert(name, perm)
 	ni := makeInfo(i.bucket, i.key.Copy().Append(name), perm)
 	cache.insert(i.bucket, ni.key, ni)
 	o := makeFsObj(i.bucket, perm, ni.key)
@@ -85,7 +95,7 @@ func (i *info) insertDirent(name string, perm np.Tperm) fs.FsObj {
 func (i *info) delDirent(name string) {
 	i.Lock()
 	defer i.Unlock()
-	delete(i.dents, name)
+	i.dents.Delete(name)
 	cache.delete(i.bucket, i.key.Append(name))
 }
 
@@ -128,7 +138,7 @@ func (i *info) includeNameL(key string) (string, np.Tperm, bool) {
 		return "", p, false
 	}
 	name := s[len(i.key)]
-	_, ok := i.dents[name]
+	_, ok := i.dents.Get(name)
 	if ok {
 		p = i.perm
 	} else {
@@ -161,11 +171,11 @@ func s3ReadDirL(fss3 *Fss3, bucket string, k np.Path) (*info, *np.Err) {
 		for _, obj := range page.Contents {
 			if n, p, ok := i.includeNameL(*obj.Key); ok {
 				db.DPrintf("FSS30", "incl %v %v\n", n, p)
-				i.dents[n] = p
+				i.dents.Insert(n, p)
 			}
 		}
 	}
-	i.sz = np.Tlength(len(i.dents)) // makeup size
+	i.sz = np.Tlength(i.dents.Len()) // makeup size
 	db.DPrintf("FSS3", "s3ReadDirL key '%v' dents %v\n", i.key, i.dents)
 	cache.insert(bucket, k, i)
 	return i, nil

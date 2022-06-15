@@ -25,9 +25,6 @@ type Obj struct {
 	r   *io.PipeReader
 	w   *io.PipeWriter
 	off np.Toffset
-
-	// for reading
-	buff *writeAtBuffer
 }
 
 func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
@@ -105,9 +102,6 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	//if m == np.OREAD {
-	//	o.setupReader()
-	//}
 	if m == np.OWRITE {
 		o.setupWriter()
 	}
@@ -126,45 +120,6 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	}
 	return nil
 }
-
-//
-// Read using downloader thread and writeAtBuffer
-//
-
-func (o *Obj) setupReader() {
-	db.DPrintf("FSS3", "%p: setupReader\n", o)
-	o.buff = mkWriteAtBuffer(o.sz)
-	go o.reader()
-}
-
-func (o *Obj) reader() {
-	key := o.key.String()
-	downloader := manager.NewDownloader(fss3.client)
-	_, err := downloader.Download(context.TODO(), o.buff, &s3.GetObjectInput{
-		Bucket: &o.bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
-		o.buff.setErr(err)
-	}
-}
-
-func (o *Obj) Read0(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
-	if np.Tlength(off) >= o.Size() {
-		return nil, nil
-	}
-	if np.Tlength(off)+np.Tlength(cnt) > o.Size() {
-		cnt = np.Tsize(o.Size()) - np.Tsize(off)
-	}
-	return o.buff.read(off, cnt)
-}
-
-//
-// Old read implementation around in case we need to read
-// small parts of a file instead of the complete file.
-//
 
 func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	key := o.key.String()

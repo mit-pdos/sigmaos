@@ -227,13 +227,8 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 // Request a Noded from realm realmId.
 func (m *SigmaResourceMgr) requestNoded(realmId string) {
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, "", 1)
-	for {
-		if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-			db.DPrintf("SIGMAMGR_ERR", "Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
-		} else {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
+	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
 	}
 }
 

@@ -20,6 +20,7 @@ type Dir struct {
 	*Obj
 	sync.Mutex
 	dents *sortedmap.SortedMap
+	sts   []*np.Stat
 }
 
 func (d *Dir) String() string {
@@ -76,7 +77,6 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 		}
 	}
 	d.sz = np.Tlength(d.dents.Len()) // makeup size
-	d.init = true
 	db.DPrintf("FSS3", "s3ReadDirL: dir %v\n", d)
 	return nil
 }
@@ -86,6 +86,7 @@ func (d *Dir) fill() *np.Err {
 		if err := d.s3ReadDir(fss3); err != nil {
 			return err
 		}
+		d.init = true
 	}
 	return nil
 }
@@ -188,15 +189,7 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
-	return d, nil
-}
-
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
-	var dirents []*np.Stat
-	db.DPrintf("FSS3", "ReadDir %v\n", d)
-	if err := d.fill(); err != nil {
-		return nil, err
-	}
+	d.sts = make([]*np.Stat, 0, d.dents.Len())
 	for _, o1 := range d.dirents() {
 		var st *np.Stat
 		var err *np.Err
@@ -209,13 +202,19 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 		if err != nil {
 			return nil, err
 		}
-		dirents = append(dirents, st)
+		d.sts = append(d.sts, st)
 	}
-	d.sz = npcodec.MarshalSizeDir(dirents)
-	if cursor > len(dirents) {
+	d.sz = npcodec.MarshalSizeDir(d.sts)
+	return d, nil
+}
+
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
+	db.DPrintf("FSS3", "ReadDir %v\n", d)
+
+	if cursor > len(d.sts) {
 		return nil, nil
 	} else {
-		return dirents[cursor:], nil
+		return d.sts[cursor:], nil
 	}
 }
 

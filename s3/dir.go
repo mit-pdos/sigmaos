@@ -179,7 +179,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.
 		db.DPrintf("FSS3", "%v: nameiObj %v %v\n", ctx, qids, o)
 		return qids, o, nil, nil
 	}
-	// maybe path names a directory
+	// maybe p names a directory
 	return d.namei(ctx, p, nil)
 }
 

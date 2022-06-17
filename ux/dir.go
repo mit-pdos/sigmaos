@@ -4,7 +4,8 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"sort"
+
+	"github.com/umpc/go-sortedmap"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -13,6 +14,14 @@ import (
 
 type Dir struct {
 	*Obj
+	dents *sortedmap.SortedMap
+}
+
+func cmp(a, b interface{}) bool {
+	if a == b {
+		return true
+	}
+	return false
 }
 
 func makeDir(path np.Path) (*Dir, *np.Err) {
@@ -22,14 +31,14 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 		return nil, err
 	}
 	d.Obj = o
+	d.dents = sortedmap.New(100, cmp)
 	return d, nil
 }
 
-func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
-	var sts []*np.Stat
+func (d *Dir) uxReadDir() *np.Err {
 	dirents, err := ioutil.ReadDir(d.Path())
 	if err != nil {
-		return nil, np.MkErrError(err)
+		return np.MkErrError(err)
 	}
 	for _, e := range dirents {
 		st := &np.Stat{}
@@ -42,33 +51,34 @@ func (d *Dir) uxReadDir(cursor int) ([]*np.Stat, *np.Err) {
 		st.Mode = st.Mode | np.Tperm(0777)
 		fi, err := os.Stat(d.path.String() + "/" + st.Name)
 		if err != nil {
-			return nil, np.MkErrError(err)
+			return np.MkErrError(err)
 		}
 		st.Length = np.Tlength(fi.Size())
-		sts = append(sts, st)
+		d.dents.Insert(st.Name, st)
 	}
-	sort.SliceStable(sts, func(i, j int) bool {
-		return sts[i].Name < sts[j].Name
-	})
-	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, len(sts)-cursor)
-	if cursor > len(sts) {
-		return nil, nil
-	} else {
-		return sts[cursor:], nil
-	}
+	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, d.dents.Len())
+	return nil
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
-	dirents, err := d.uxReadDir(cursor)
-	if err != nil {
-		return nil, err
+	dents := make([]*np.Stat, 0, d.dents.Len())
+	d.dents.IterFunc(false, func(rec sortedmap.Record) bool {
+		dents = append(dents, rec.Val.(*np.Stat))
+		return true
+	})
+	if cursor > len(dents) {
+		return nil, nil
+	} else {
+		return dents[cursor:], nil
 	}
-	return dirents, nil
 }
 
 // nothing to do for directiories until we page directories
 func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
+	if err := d.uxReadDir(); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 

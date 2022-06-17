@@ -101,15 +101,15 @@ func (d *Dir) dirents() []fs.FsObj {
 	return dents
 }
 
-// func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-// 	d.Lock()
-// 	defer d.Unlock()
-// 	db.DPrintf("FSS3", "Stat %v\n", d)
-// 	if err := d.fill(); err != nil {
-// 		return nil, err
-// 	}
-// 	return d.stat(ctx)
-// }
+func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+	d.Lock()
+	defer d.Unlock()
+	db.DPrintf("FSS3", "Stat dir %v\n", d)
+	if err := d.fill(); err != nil {
+		return nil, err
+	}
+	return d.stat(ctx)
+}
 
 func (d *Dir) lookupDirent(name string) fs.FsObj {
 	d.Lock()

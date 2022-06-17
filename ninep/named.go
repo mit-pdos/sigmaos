@@ -52,3 +52,8 @@ const (
 const (
 	TEST_RID = "test-realm"
 )
+
+// SIGMA
+const (
+	SIGMACTL = SIGMAMGR + "/" + RESOURCE_CTL
+)

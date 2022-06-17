@@ -4,14 +4,13 @@ import (
 	"os"
 
 	db "ulambda/debug"
-	"ulambda/realm"
+	"ulambda/machine"
 )
 
 func main() {
 	if len(os.Args) != 1 {
 		db.DFatalf("Usage: %v", os.Args[0])
 	}
-
-	r := realm.MakeNoded()
-	r.Work()
+	m := machine.MakeMachined(os.Args[1:])
+	m.Work()
 }

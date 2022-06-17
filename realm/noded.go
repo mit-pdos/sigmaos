@@ -1,7 +1,6 @@
 package realm
 
 import (
-	"fmt"
 	"path"
 
 	"ulambda/config"
@@ -13,7 +12,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/resource"
 	"ulambda/semclnt"
 )
 
@@ -34,13 +32,17 @@ type Noded struct {
 	*config.ConfigClnt
 }
 
-func MakeNoded(id string) *Noded {
+func MakeNoded() *Noded {
 	r := &Noded{}
-	r.id = id
-	r.cfgPath = path.Join(NODED_CONFIG, id)
-	r.FsLib = fslib.MakeFsLib(fmt.Sprintf("noded-%v", id))
-	r.ProcClnt = procclnt.MakeProcClntInit(proc.Tpid("noded-"+id), r.FsLib, "noded", fslib.Named())
+	r.id = proc.GetPid().String()
+	r.cfgPath = path.Join(NODED_CONFIG, r.id)
+	r.FsLib = fslib.MakeFsLib(r.id)
+	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
+	// Mount the KPIDS dir.
+	if err := procclnt.MountPids(r.FsLib, fslib.Named()); err != nil {
+		db.DFatalf("Error mountpids: %v", err)
+	}
 
 	ip, err := fidclnt.LocalIP()
 	if err != nil {
@@ -48,14 +50,12 @@ func MakeNoded(id string) *Noded {
 	}
 	r.localIP = ip
 
-	db.DPrintf("NODED", "Noded %v started", id)
-
 	// Set the noded id so that child kernel procs inherit it.
-	proc.SetNodedId(id)
+	proc.SetNodedId(r.id)
 
 	// Set up the noded config
 	r.cfg = &NodedConfig{}
-	r.cfg.Id = id
+	r.cfg.Id = r.id
 	r.cfg.RealmId = kernel.NO_REALM
 
 	// Write the initial config file
@@ -69,20 +69,11 @@ func MakeNoded(id string) *Noded {
 
 // Mark self as available for allocation to a realm.
 func (r *Noded) markFree() {
-	cfg := &NodedConfig{}
-	cfg.Id = r.id
-	cfg.RealmId = kernel.NO_REALM
-
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tnode, r.id, 1)
-
-	if _, err := r.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in markFree: %v", err)
-	}
+	// Anything to do here?
 }
 
 // Update configuration.
 func (r *Noded) getNextConfig() {
-	// XXX Does it matter that we spin?
 	for {
 		r.ReadConfig(r.cfgPath, r.cfg)
 		// Make sure we've been assigned to a realm
@@ -220,19 +211,23 @@ func (r *Noded) leaveRealm() {
 }
 
 func (r *Noded) Work() {
-	for {
-		// Get the next realm assignment.
-		r.getNextConfig()
-
-		// Join a realm
-		done := r.joinRealm()
-		// Wait for the watch to trigger
-		<-done
-
-		// Leave a realm
-		r.leaveRealm()
-
-		// Mark self as available for allocation.
-		r.markFree()
+	if err := r.Started(); err != nil {
+		db.DFatalf("Error Started: %v", err)
 	}
+	db.DPrintf("NODED", "Noded %v started", r.id)
+	// Get the next realm assignment.
+	r.getNextConfig()
+	db.DPrintf("NODED", "Noded %v got config %v", r.id, r.cfg)
+
+	// Join a realm
+	done := r.joinRealm()
+
+	db.DPrintf("NODED", "Noded %v joined realm %v", r.id, r.cfg.RealmId)
+
+	// Wait for the watch to trigger
+	<-done
+
+	// Leave a realm
+	r.leaveRealm()
+	r.Exited(proc.MakeStatus(proc.StatusOK))
 }

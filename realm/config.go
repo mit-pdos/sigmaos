@@ -2,7 +2,11 @@ package realm
 
 import (
 	"fmt"
+	"path"
 	"time"
+
+	"ulambda/config"
+	"ulambda/fslib"
 )
 
 type RealmConfig struct {
@@ -17,4 +21,12 @@ type RealmConfig struct {
 
 func (rc *RealmConfig) String() string {
 	return fmt.Sprintf("&{ rid:%v mdAssigned:%v mdActive:%v lastResize:%v shutdown:%v namedAddrs:%v namedPids:%v }", rc.Rid, rc.NodedsAssigned, rc.NodedsActive, rc.LastResize, rc.Shutdown, rc.NamedAddrs, rc.NamedPids)
+}
+
+// Get a realm's configuration
+func GetRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
+	clnt := config.MakeConfigClnt(fsl)
+	cfg := &RealmConfig{}
+	clnt.ReadConfig(path.Join(REALM_CONFIG, rid), cfg)
+	return cfg
 }

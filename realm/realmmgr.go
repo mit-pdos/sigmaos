@@ -13,11 +13,11 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/kernel"
+	"ulambda/machine"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/resource"
-	"ulambda/semclnt"
 	"ulambda/stats"
 )
 
@@ -35,7 +35,6 @@ type RealmResourceMgr struct {
 	realmId string
 	// ===== Relative to the sigma named =====
 	sigmaFsl *fslib.FsLib
-	ec       *electclnt.ElectClnt
 	lock     *electclnt.ElectClnt
 	*config.ConfigClnt
 	memfs *fslibsrv.MemFs
@@ -52,24 +51,24 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.ProcClnt = procclnt.MakeProcClnt(m.sigmaFsl)
 	m.ConfigClnt = config.MakeConfigClnt(m.sigmaFsl)
 	m.lock = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, realmId), 0777)
-	m.ec = electclnt.MakeElectClnt(m.sigmaFsl, path.Join(REALM_FENCES, realmId+REALMMGR_ELECT), 0777)
 
-	// Wait for the realm's nameds to start.
-	rStartSem := semclnt.MakeSemClnt(m.sigmaFsl, path.Join(np.BOOT, realmId))
-	rStartSem.Down()
+	var err error
+	m.memfs, err = fslibsrv.MakeMemFsFsl(path.Join(REALM_MGRS, m.realmId), m.sigmaFsl, m.ProcClnt)
+	if err != nil {
+		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
+	}
 
-	realmCfg := GetRealmConfig(m.sigmaFsl, realmId)
-
-	m.FsLib = fslib.MakeFsLibAddr(proc.GetPid().String(), realmCfg.NamedAddrs)
+	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), np.RESOURCE_CTL)
 
 	return m
 }
 
 func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
-	case resource.Tnode:
-		// Nothing much to do here, for now.
-		db.DPrintf("REALMMGR", "resource.Tnode granted")
+	case resource.Tcore:
+		db.DPrintf("REALMMGR", "resource.Tcore granted")
+		db.DPrintf(db.ALWAYS, "resource.Tcore granted")
+		m.growRealm()
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -94,6 +93,71 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
+}
+
+// This realm has been granted cores. Now grow it.
+//
+// TODO: First try to add cores to existing nodeds.
+func (m *RealmResourceMgr) growRealm() {
+	// Find a machine with free cores and claim them
+	machineId, ok := m.getFreeCores(1)
+	if !ok {
+		db.DFatalf("Unable to get free cores to grow realm")
+	}
+	db.DPrintf(db.ALWAYS, "Start a new noded on %v", machineId)
+	// Request the machine to start a noded.
+	nodedId := m.requestNoded(machineId)
+	db.DPrintf(db.ALWAYS, "Started noded %v on %v", nodedId, machineId)
+	// Allocate the noded to this realm.
+	allocNoded(m, m.lock, m.realmId, nodedId.String())
+	db.DPrintf(db.ALWAYS, "Allocated %v to realm %v", nodedId, m.realmId)
+}
+
+func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, bool) {
+	lockRealm(m.lock, m.realmId)
+	defer unlockRealm(m.lock, m.realmId)
+
+	var machineId string
+	for i := 0; i < nRetries; i++ {
+		ok, err := m.sigmaFsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {
+			cdir := path.Join(machine.MACHINES, st.Name, machine.CORES)
+			coreGroups, err := m.sigmaFsl.GetDir(cdir)
+			if err != nil {
+				db.DFatalf("Error GetDir: %v", err)
+			}
+			// Try to steal a core group
+			for i := 0; i < len(coreGroups); i++ {
+				err := m.sigmaFsl.Remove(path.Join(cdir, coreGroups[i].Name))
+				if err == nil {
+					machineId = st.Name
+					return true, nil
+				} else {
+					if !np.IsErrNotfound(err) {
+						return false, err
+					}
+				}
+			}
+			return false, nil
+		})
+		if err != nil {
+			db.DFatalf("Error ProcessDir: %v", err)
+		}
+		// Successfully grew realm.
+		if ok {
+			return machineId, ok
+		}
+	}
+	return "", false
+}
+
+// Request a machine to create a new Noded)
+func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
+	pid := proc.Tpid("noded-" + proc.GenPid().String())
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, pid.String(), 1)
+	if _, err := m.sigmaFsl.SetFile(path.Join(machine.MACHINES, machineId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile in requestNoded: %v", err)
+	}
+	return pid
 }
 
 // Deallocate a noded from a realm.
@@ -208,6 +272,23 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 		return false
 	}
 
+	// If we don't have enough noded replicas to start the realm yet, we need to
+	// grow the realm.
+	if len(realmCfg.NodedsAssigned) < nReplicas() {
+		return true
+	}
+
+	// If we haven't finished booting, we aren't ready to start scanning/growing
+	// the realm.
+	if len(realmCfg.NodedsActive) < nReplicas() {
+		return false
+	} else {
+		// If the realm just finished booting, finish initialization.
+		if m.FsLib == nil {
+			m.FsLib = fslib.MakeFsLibAddr(proc.GetPid().String(), realmCfg.NamedAddrs)
+		}
+	}
+
 	// If we have resized too recently, return
 	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL {
 		return false
@@ -233,32 +314,14 @@ func (m *RealmResourceMgr) Work() {
 		os.Exit(0)
 	}()
 
-	// Acquire primary role
-	if err := m.ec.AcquireLeadership([]byte(REALMMGR)); err != nil {
-		db.DFatalf("Acquire leadership: %v", err)
-	}
-
-	// TODO: move realm fs files to sigma named.
-	// XXX Currently, because of this scheme in which each noded runs a realmmgr,
-	// the sigmamgr and other requesting applications may have to retry on
-	// TErrNotfound.
-	var err error
-	m.memfs, err = fslibsrv.MakeMemFsFsl(path.Join(REALM_MGRS, m.realmId), m.sigmaFsl, m.ProcClnt)
-	if err != nil {
-		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
-	}
-
-	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), np.RESOURCE_CTL)
-
 	for {
 		if m.realmShouldGrow() {
 			db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
-			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, m.realmId, 1)
-			if _, err := m.sigmaFsl.SetFile(path.Join(SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, m.realmId, 1)
+			if _, err := m.sigmaFsl.SetFile(path.Join(np.SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 				db.DFatalf("Error SetFile: %v", err)
 			}
 		}
-
 		// Sleep for a bit.
 		time.Sleep(np.Conf.Realm.SCAN_INTERVAL)
 	}

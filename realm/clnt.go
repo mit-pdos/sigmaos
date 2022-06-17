@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path"
 
-	"ulambda/config"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	np "ulambda/ninep"
@@ -41,7 +40,7 @@ func (clnt *RealmClnt) CreateRealm(rid string) *RealmConfig {
 
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, rid, 1)
 
-	if _, err := clnt.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
+	if _, err := clnt.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile in RealmClnt.CreateRealm: %v", err)
 	}
 
@@ -58,17 +57,9 @@ func (clnt *RealmClnt) DestroyRealm(rid string) {
 
 	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Trealm, rid, 1)
 
-	if _, err := clnt.SetFile(SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
+	if _, err := clnt.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error WriteFile in RealmClnt.DestroyRealm: %v", err)
 	}
 
 	rExitSem.Down()
-}
-
-// Get a realm's configuration
-func GetRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
-	clnt := config.MakeConfigClnt(fsl)
-	cfg := &RealmConfig{}
-	clnt.ReadConfig(path.Join(REALM_CONFIG, rid), cfg)
-	return cfg
 }

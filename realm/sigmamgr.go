@@ -3,6 +3,7 @@ package realm
 import (
 	"path"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ulambda/config"
@@ -18,21 +19,20 @@ import (
 )
 
 const (
-	SIGMACTL     = np.SIGMAMGR + "/" + np.RESOURCE_CTL // SigmaResourceMgr control file.
-	REALM_CONFIG = "name/realm-config"                 // Store of realm configs
-	NODED_CONFIG = "name/noded-config"                 // Store of noded configs
-	REALM_NAMEDS = "name/realm-nameds"                 // Symlinks to realms' nameds
-	REALM_FENCES = "name/realm-fences"                 // Fence around modifications to realm allocations.
-	REALM_MGRS   = "name/realm-mgrs"                   // Fence around modifications to realm allocations.
+	REALM_CONFIG = "name/realm-config" // Store of realm configs
+	NODED_CONFIG = "name/noded-config" // Store of noded configs
+	REALM_NAMEDS = "name/realm-nameds" // Symlinks to realms' nameds
+	REALM_FENCES = "name/realm-fences" // Fence around modifications to realm allocations.
+	REALM_MGRS   = "name/realm-mgrs"   // Fence around modifications to realm allocations.
 )
 
 type SigmaResourceMgr struct {
 	sync.Mutex
-	freeNodeds   chan string
-	realmCreate  chan string
-	realmDestroy chan string
-	realmmgrs    map[string]proc.Tpid
-	ecs          map[string]*electclnt.ElectClnt
+	freeCoreGroups int64
+	realmCreate    chan string
+	realmDestroy   chan string
+	realmmgrs      map[string]proc.Tpid
+	ecs            map[string]*electclnt.ElectClnt
 	*procclnt.ProcClnt
 	*config.ConfigClnt
 	*fslib.FsLib
@@ -41,7 +41,6 @@ type SigmaResourceMgr struct {
 
 func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m := &SigmaResourceMgr{}
-	m.freeNodeds = make(chan string)
 	m.realmCreate = make(chan string)
 	m.realmDestroy = make(chan string)
 	var err error
@@ -85,7 +84,11 @@ func (m *SigmaResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 		m.destroyRealm(msg.Name)
 	case resource.Tnode:
 		db.DPrintf("SIGMAMGR", "free noded %v", msg.Name)
-		m.freeNodeds <- msg.Name
+		db.DPrintf(db.ALWAYS, "free noded %v", msg.Name)
+	case resource.Tcore:
+		m.freeCores(1)
+		db.DPrintf(db.ALWAYS, "free cores %v", msg.Name)
+		db.DPrintf("SIGMAMGR", "free cores %v", msg.Name)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -96,7 +99,7 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Trealm:
 		m.createRealm(msg.Name)
-	case resource.Tnode:
+	case resource.Tcore:
 		m.Lock()
 		defer m.Unlock()
 
@@ -106,57 +109,54 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	}
 }
 
-func (m *SigmaResourceMgr) getRealmElectClnt(realmId string) (*electclnt.ElectClnt, bool) {
-	ec, ok := m.ecs[realmId]
-	return ec, ok
-}
-
-func (m *SigmaResourceMgr) getFreeNoded(nRetries int) (string, bool) {
+// TODO: should probably release lock in this loop.
+func (m *SigmaResourceMgr) tryGetFreeCores(nRetries int) bool {
 	for i := 0; i < nRetries; i++ {
-		select {
-		case nodedId := <-m.freeNodeds:
-			return nodedId, true
-		default:
-			db.DPrintf("SIGMAMGR", "Tried to get Noded, but none free.")
-			time.Sleep(10 * time.Millisecond)
+		if atomic.LoadInt64(&m.freeCoreGroups) > 1 {
+			return true
 		}
+		db.DPrintf("SIGMAMGR", "Tried to get cores, but none free.")
+		// TODO: parametrize?
+		time.Sleep(10 * time.Millisecond)
 	}
-	return "", false
+	db.DPrintf("SIGMAMGR", "Failed to find any free cores.")
+	return false
 }
 
-// Allocate the minimum number of Nodeds needed to start a realm.
-func (m *SigmaResourceMgr) allocMinNodeds(realmId string) {
-	n := nReplicas()
-	for i := 0; i < n; i++ {
-		// Retry noded allocation infinitely for now.
-		if ok := m.growRealmL(realmId); !ok {
-			db.DFatalf("Can't allocate min nodeds for realm %v", realmId)
-		}
+func (m *SigmaResourceMgr) allocCores(realmId string, i int64) {
+	atomic.AddInt64(&m.freeCoreGroups, -1*i)
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, "", 1)
+	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile: %v", err)
 	}
+}
+
+func (m *SigmaResourceMgr) freeCores(i int64) {
+	atomic.AddInt64(&m.freeCoreGroups, i)
 }
 
 // Tries to add a Noded to a realm. Will first try and pull from the list of
 // free Nodeds, and if none is available, it will try to make one free, and
 // then retry. Caller holds lock.
 func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
-	// Try to get a free noded.
-	if nodedId, ok := m.getFreeNoded(100); ok {
-		// Alloc the free Noded.
-		allocNoded(m, realmId, nodedId)
+	// See if any cores are available.
+	if m.tryGetFreeCores(1) {
+		// Allocate cores to this realm.
+		m.allocCores(realmId, 1)
 		return true
 	}
-	// No noded was available, so try to find a realm with spare resources.
+	// No cores were available, so try to find a realm with spare resources.
 	opRealmId, ok := m.findOverProvisionedRealm(realmId)
 	if !ok {
 		db.DPrintf("SIGMAMGR", "No overprovisioned realms available")
 		return false
 	}
-	// Ask the over-provisioned realm to give up a Noded.
+	// Ask the over-provisioned realm to give up some cores.
 	m.requestNoded(opRealmId)
-	// Try to get the newly freed Noded.
-	if nodedId, ok := m.getFreeNoded(100); ok {
-		// Alloc the newly freed Noded.
-		allocNoded(m, realmId, nodedId)
+	// Wait for the over-provisioned realm to cede its cores.
+	if m.tryGetFreeCores(100) {
+		// Allocate cores to this realm.
+		m.allocCores(realmId, 1)
 		return true
 	}
 	return false
@@ -164,9 +164,11 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 
 // Find an over-provisioned realm (a realm with resources to spare). Returns
 // true if an overprovisioned realm was found, false otherwise.
+//
+// TODO: determine overprovisioned status by resource utilization.
 func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string, bool) {
 	opRealmId := ""
-	success := false
+	ok := false
 	// XXX Eventually, we'll want to find overprovisioned realms according to
 	// more nuanced metrics, e.g. how many Nodeds are running BE vs LC tasks, how
 	// many Nodeds are running procs that hold state, etc.
@@ -187,12 +189,12 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 		// If there are more than the minimum number of required Nodeds available...
 		if len(rCfg.NodedsAssigned) > nReplicas() {
 			opRealmId = realmId
-			success = true
+			ok = true
 			return true, nil
 		}
 		return false, nil
 	})
-	return opRealmId, success
+	return opRealmId, ok
 }
 
 // Create a realm.
@@ -216,10 +218,6 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 
 	unlockRealm(m.ecs[realmId], realmId)
 
-	// Allocate the minimum number of Nodeds required to start this realm. For
-	// now, this is nReplicas() for all realms.
-	m.allocMinNodeds(realmId)
-
 	// Start this realm's realmmgr.
 	m.startRealmMgr(realmId)
 }
@@ -228,7 +226,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 func (m *SigmaResourceMgr) requestNoded(realmId string) {
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, "", 1)
 	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in SigmaResourceMgr.requestNoded: %v", err)
+		db.DFatalf("Error SetFile: %v", err)
 	}
 }
 

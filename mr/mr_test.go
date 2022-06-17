@@ -100,7 +100,7 @@ func TestSplits(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSeqMR(t *testing.T) {
+func TestSeqMRGrep(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 	job = readConfig()
 
@@ -294,7 +294,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashprocd, crashux int) {
 	}
 }
 
-func TestMRLIB(t *testing.T) {
+func TestMRJOB(t *testing.T) {
 	runN(t, 0, 0, 0, 0)
 }
 

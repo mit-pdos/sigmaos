@@ -62,7 +62,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 	for p.HasMorePages() {
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			return np.MkErr(np.TErrBadoffset, key)
+			return np.MkErr(np.TErrInval, err)
 		}
 		for _, obj := range page.Contents {
 			db.DPrintf("FSS30", "key %v\n", *obj.Key)

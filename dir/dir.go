@@ -105,14 +105,22 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = npcodec.MarshalSizeDir(dir.lsL(0))
+	sts, err := dir.lsL(0)
+	if err != nil {
+		return nil, err
+	}
+	st.Length = npcodec.MarshalSizeDir(sts)
 	return st, nil
 }
 
-func (dir *DirImpl) Size() np.Tlength {
+func (dir *DirImpl) Size() (np.Tlength, *np.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return npcodec.MarshalSizeDir(dir.lsL(0))
+	sts, err := dir.lsL(0)
+	if err != nil {
+		return 0, err
+	}
+	return npcodec.MarshalSizeDir(sts), nil
 }
 
 func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
@@ -148,22 +156,30 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid,
 	}
 }
 
-func (dir *DirImpl) lsL(cursor int) []*np.Stat {
+func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *np.Err) {
 	entries := []*np.Stat{}
+	var r *np.Err
 	dir.entries.IterFunc(false, func(rec sortedmap.Record) bool {
 		if rec.Key == "." {
 			return true
 		}
 		i := rec.Val.(fs.Inode)
-		st, _ := i.Stat(nil)
+		st, err := i.Stat(nil)
+		if err != nil {
+			r = err
+			return false
+		}
 		st.Name = rec.Key.(string)
 		entries = append(entries, st)
 		return true
 	})
+	if r != nil {
+		return nil, r
+	}
 	if cursor > len(entries) {
-		return nil
+		return nil, nil
 	} else {
-		return entries[cursor:]
+		return entries[cursor:], nil
 	}
 }
 
@@ -210,7 +226,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion)
 	if !np.VEq(v, dir.Qid().Version) {
 		return nil, np.MkErr(np.TErrVersion, dir.Qid())
 	}
-	return dir.lsL(cursor), nil
+	return dir.lsL(cursor)
 }
 
 // XXX ax WriteDir from fs.Dir

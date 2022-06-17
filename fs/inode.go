@@ -14,7 +14,7 @@ type Inode interface {
 	VersionInc()
 	SetMtime(int64)
 	Mtime() int64
-	Size() np.Tlength
+	Size() (np.Tlength, *np.Err)
 	SetParent(Dir)
 	Unlink()
 	Snapshot(SnapshotF) []byte

@@ -20,10 +20,10 @@ func MakeSym(i fs.Inode) *Symlink {
 	return &s
 }
 
-func (s *Symlink) Size() np.Tlength {
+func (s *Symlink) Size() (np.Tlength, *np.Err) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return np.Tlength(len(s.target))
+	return np.Tlength(len(s.target)), nil
 }
 
 func (s *Symlink) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

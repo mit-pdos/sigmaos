@@ -76,8 +76,16 @@ func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 
 func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
-	case resource.Tnode:
-		db.DPrintf("REALMMGR", "resource.Tnode requested")
+	case resource.Trealm:
+		// On realm request, shut down & kill all nodeds.
+		lockRealm(m.lock, m.realmId)
+		realmCfg := m.getRealmConfig()
+		for _, nodedId := range realmCfg.NodedsAssigned {
+			m.deallocNoded(nodedId)
+		}
+		unlockRealm(m.lock, m.realmId)
+	case resource.Tcore:
+		db.DPrintf("REALMMGR", "resource.Tcore requested")
 		lockRealm(m.lock, m.realmId)
 		nodedId := m.getLeastUtilizedNoded()
 		db.DPrintf("REALMMGR", "least utilized node: %v", nodedId)
@@ -85,6 +93,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		if nodedId == "" {
 			return
 		}
+		// TODO: possibly just steal some cores instead of killing a while noded.
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
 		m.deallocNoded(nodedId)
@@ -100,7 +109,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 // TODO: First try to add cores to existing nodeds.
 func (m *RealmResourceMgr) growRealm() {
 	// Find a machine with free cores and claim them
-	machineId, ok := m.getFreeCores(1)
+	machineId, cores, ok := m.getFreeCores(1)
 	if !ok {
 		db.DFatalf("Unable to get free cores to grow realm")
 	}
@@ -109,15 +118,16 @@ func (m *RealmResourceMgr) growRealm() {
 	nodedId := m.requestNoded(machineId)
 	db.DPrintf(db.ALWAYS, "Started noded %v on %v", nodedId, machineId)
 	// Allocate the noded to this realm.
-	allocNoded(m, m.lock, m.realmId, nodedId.String())
+	allocNoded(m, m.lock, m.realmId, nodedId.String(), cores)
 	db.DPrintf(db.ALWAYS, "Allocated %v to realm %v", nodedId, m.realmId)
 }
 
-func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, bool) {
+func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, *np.Tinterval, bool) {
 	lockRealm(m.lock, m.realmId)
 	defer unlockRealm(m.lock, m.realmId)
 
 	var machineId string
+	cores := np.MkInterval(0, 0)
 	for i := 0; i < nRetries; i++ {
 		ok, err := m.sigmaFsl.ProcessDir(machine.MACHINES, func(st *np.Stat) (bool, error) {
 			cdir := path.Join(machine.MACHINES, st.Name, machine.CORES)
@@ -127,13 +137,23 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, bool) {
 			}
 			// Try to steal a core group
 			for i := 0; i < len(coreGroups); i++ {
-				err := m.sigmaFsl.Remove(path.Join(cdir, coreGroups[i].Name))
+				// Read the core file.
+				coreFile := path.Join(cdir, coreGroups[i].Name)
+				coreStr, err := m.sigmaFsl.GetFile(coreFile)
+				if err != nil {
+					continue
+				}
+				// Claim the cores
+				err := m.sigmaFsl.Remove(coreFile)
 				if err == nil {
 					machineId = st.Name
+					cores = cores.Unmarshal(coreStr)
 					return true, nil
 				} else {
 					if !np.IsErrNotfound(err) {
 						return false, err
+					} else {
+						db.DFatalf("Error Remove %v", err)
 					}
 				}
 			}
@@ -144,10 +164,10 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, bool) {
 		}
 		// Successfully grew realm.
 		if ok {
-			return machineId, ok
+			return machineId, cores, ok
 		}
 	}
-	return "", false
+	return "", nil, false
 }
 
 // Request a machine to create a new Noded)

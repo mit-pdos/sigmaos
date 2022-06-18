@@ -12,29 +12,33 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
+	"ulambda/rand"
 	"ulambda/semclnt"
 )
 
 type NodedConfig struct {
 	Id      string
 	RealmId string
+	Cores   *np.Tinterval
 }
 
 type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
-	id      string
-	localIP string
-	cfgPath string
-	cfg     *NodedConfig
-	s       *kernel.System
-	ec      *electclnt.ElectClnt
+	id        string
+	machineId string
+	localIP   string
+	cfgPath   string
+	cfg       *NodedConfig
+	s         *kernel.System
+	ec        *electclnt.ElectClnt
 	*config.ConfigClnt
 }
 
-func MakeNoded() *Noded {
+func MakeNoded(machineId string) *Noded {
 	r := &Noded{}
 	r.id = proc.GetPid().String()
+	r.machineId = machineId
 	r.cfgPath = path.Join(NODED_CONFIG, r.id)
 	r.FsLib = fslib.MakeFsLib(r.id)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
@@ -165,6 +169,15 @@ func (r *Noded) deregister(cfg *RealmConfig) {
 		}
 	}
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
+	// Free cores at machined.
+	if _, err := m.PutFile(path.Join(machine.MACHINED, CORES, rand.String(16)), 0777, np.OWRITE, []byte(m.cfg.Cores.String())); err != nil {
+		db.DFatalf("Error PutFile: %v", err)
+	}
+	// Register free cores at sigmamgr.
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, m.cfg.Cores.String(), 1)
+	if _, err := m.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile in markFree: %v", err)
+	}
 }
 
 func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {

@@ -16,11 +16,12 @@ type Manager interface {
 }
 
 // Alloc a Noded to this realm.
-func allocNoded(m Manager, ec *electclnt.ElectClnt, realmId, nodedId string) {
+func allocNoded(m Manager, ec *electclnt.ElectClnt, realmId, nodedId string, cores *np.Tinterval) {
 	// Update the noded's config
 	ndCfg := &NodedConfig{}
 	ndCfg.Id = nodedId
 	ndCfg.RealmId = realmId
+	ndCfg.Cores = cores
 	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 
 	lockRealm(ec, realmId)

@@ -5,23 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/umpc/go-sortedmap"
-
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
+	"ulambda/sorteddir"
 )
 
 type Dir struct {
 	*Obj
-	dents *sortedmap.SortedMap
-}
-
-func cmp(a, b interface{}) bool {
-	if a == b {
-		return true
-	}
-	return false
+	sd *sorteddir.SortedDir
 }
 
 func makeDir(path np.Path) (*Dir, *np.Err) {
@@ -31,7 +23,7 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 		return nil, err
 	}
 	d.Obj = o
-	d.dents = sortedmap.New(100, cmp)
+	d.sd = sorteddir.MkSortedDir()
 	return d, nil
 }
 
@@ -54,17 +46,17 @@ func (d *Dir) uxReadDir() *np.Err {
 			return np.MkErrError(err)
 		}
 		st.Length = np.Tlength(fi.Size())
-		d.dents.Insert(st.Name, st)
+		d.sd.Insert(st.Name, st)
 	}
-	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, d.dents.Len())
+	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, d.sd.Len())
 	return nil
 }
 
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
-	dents := make([]*np.Stat, 0, d.dents.Len())
-	d.dents.IterFunc(false, func(rec sortedmap.Record) bool {
-		dents = append(dents, rec.Val.(*np.Stat))
+	dents := make([]*np.Stat, 0, d.sd.Len())
+	d.sd.Iter(func(n string, st *np.Stat) bool {
+		dents = append(dents, st)
 		return true
 	})
 	if cursor > len(dents) {

@@ -25,13 +25,6 @@ type DirImpl struct {
 	dents *sorteddir.SortedDir
 }
 
-func cmp(a, b interface{}) bool {
-	if a == b {
-		return true
-	}
-	return false
-}
-
 func MakeDir(i fs.Inode, mi fs.MakeInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i

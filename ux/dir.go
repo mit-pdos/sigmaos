@@ -55,8 +55,8 @@ func (d *Dir) uxReadDir() *np.Err {
 func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "%v: ReadDir %v %v %v\n", ctx, d, cursor, cnt)
 	dents := make([]*np.Stat, 0, d.sd.Len())
-	d.sd.Iter(func(n string, st *np.Stat) bool {
-		dents = append(dents, st)
+	d.sd.Iter(func(n string, e interface{}) bool {
+		dents = append(dents, e.(*np.Stat))
 		return true
 	})
 	if cursor > len(dents) {

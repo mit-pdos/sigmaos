@@ -4,8 +4,7 @@ import (
 	"sync"
 
 	"github.com/umpc/go-sortedmap"
-
-	np "ulambda/ninep"
+	// np "ulambda/ninep"
 )
 
 type SortedDir struct {
@@ -33,19 +32,33 @@ func (sd *SortedDir) Len() int {
 	return sd.dents.Len()
 }
 
-func (sd *SortedDir) Insert(name string, st *np.Stat) {
+func (sd *SortedDir) Lookup(n string) (interface{}, bool) {
 	sd.Lock()
 	defer sd.Unlock()
 
-	sd.dents.Insert(name, st)
+	return sd.dents.Get(n)
 }
 
-func (sd *SortedDir) Iter(f func(string, *np.Stat) bool) {
+func (sd *SortedDir) Insert(name string, e interface{}) {
+	sd.Lock()
+	defer sd.Unlock()
+
+	sd.dents.Insert(name, e)
+}
+
+func (sd *SortedDir) Delete(name string) {
+	sd.Lock()
+	defer sd.Unlock()
+
+	sd.dents.Delete(name)
+}
+
+func (sd *SortedDir) Iter(f func(string, interface{}) bool) {
 	sd.Lock()
 	defer sd.Unlock()
 
 	sd.dents.IterFunc(false, func(rec sortedmap.Record) bool {
-		b := f(rec.Key.(string), rec.Val.(*np.Stat))
+		b := f(rec.Key.(string), rec.Val)
 		return b
 	})
 

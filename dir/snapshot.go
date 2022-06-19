@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"runtime/debug"
 
-	"github.com/umpc/go-sortedmap"
-
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
@@ -21,11 +19,11 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds := &DirSnapshot{}
 	ds.InodeSnap = d.Inode.Snapshot(fn)
 	ds.Entries = make(map[string]np.Tpath)
-	d.entries.IterFunc(false, func(rec sortedmap.Record) bool {
-		if rec.Key == "." {
+	d.dents.Iter(func(n string, e interface{}) bool {
+		if n == "." {
 			return true
 		}
-		ds.Entries[rec.Key.(string)] = fn(rec.Val.(fs.Inode))
+		ds.Entries[n] = fn(e.(fs.Inode))
 		return true
 
 	})
@@ -45,7 +43,7 @@ func restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.Inode {
 	}
 	d.Inode = inode.RestoreInode(fn, ds.InodeSnap)
 	for name, ptr := range ds.Entries {
-		d.entries.Insert(name, fn(ptr))
+		d.dents.Insert(name, fn(ptr))
 	}
 	return d
 }

@@ -59,6 +59,18 @@ func TestRemoveSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestCreateTwice(t *testing.T) {
+	ts := test.MakeTstatePath(t, namedaddr, path)
+
+	fn := path + "f"
+	d := []byte("hello")
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.True(t, np.IsErrExists(err))
+	ts.Shutdown()
+}
+
 func TestConnect(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 

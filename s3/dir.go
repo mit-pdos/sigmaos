@@ -132,12 +132,6 @@ func (d *Dir) insertDirent(name string, perm np.Tperm) fs.FsObj {
 	return makeFsObj(d.bucket, perm, d.key.Append(name))
 }
 
-func (d *Dir) delDirent(name string) {
-	d.Lock()
-	defer d.Unlock()
-	d.dents.Delete(name)
-}
-
 // fake a stat without filling
 func (d *Dir) stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DPrintf("FSS3", "stat Dir: %v\n", d)
@@ -251,9 +245,6 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
-	if err := d.fill(); err != nil {
-		return err
-	}
 	key := d.key.Append(name).String()
 	input := &s3.DeleteObjectInput{
 		Bucket: &d.bucket,
@@ -264,7 +255,6 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	if err != nil {
 		return np.MkErrError(err)
 	}
-	d.delDirent(name)
 	return nil
 }
 

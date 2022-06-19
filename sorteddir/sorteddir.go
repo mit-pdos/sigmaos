@@ -39,11 +39,10 @@ func (sd *SortedDir) Lookup(n string) (interface{}, bool) {
 	return sd.dents.Get(n)
 }
 
-func (sd *SortedDir) Insert(name string, e interface{}) {
+func (sd *SortedDir) Insert(name string, e interface{}) bool {
 	sd.Lock()
 	defer sd.Unlock()
-
-	sd.dents.Insert(name, e)
+	return sd.dents.Insert(name, e)
 }
 
 func (sd *SortedDir) Delete(name string) {

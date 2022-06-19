@@ -73,11 +73,10 @@ func (dir *DirImpl) unlinkL(name string) *np.Err {
 }
 
 func (dir *DirImpl) createL(ino fs.Inode, name string) *np.Err {
-	_, ok := dir.dents.Lookup(name)
-	if ok {
+	ok := dir.dents.Insert(name, ino)
+	if !ok {
 		return np.MkErr(np.TErrExists, name)
 	}
-	dir.dents.Insert(name, ino)
 	return nil
 }
 

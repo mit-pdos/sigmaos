@@ -8,18 +8,18 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/umpc/go-sortedmap"
 
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/sorteddir"
 )
 
 type Dir struct {
 	*Obj
 	sync.Mutex
-	dents *sortedmap.SortedMap
+	dents *sorteddir.SortedDir
 	sts   []*np.Stat
 }
 
@@ -28,18 +28,11 @@ func (d *Dir) String() string {
 	return s + fmt.Sprintf(" dents %v", d.dents)
 }
 
-func cmp(a, b interface{}) bool {
-	if a == b {
-		return true
-	}
-	return false
-}
-
 func makeDir(bucket string, key np.Path, perm np.Tperm) *Dir {
 	o := makeObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sortedmap.New(100, cmp)
+	dir.dents = sorteddir.MkSortedDir()
 	return dir
 }
 
@@ -95,8 +88,8 @@ func (d *Dir) dirents() []fs.FsObj {
 	d.Lock()
 	defer d.Unlock()
 	dents := make([]fs.FsObj, 0, d.dents.Len())
-	d.dents.IterFunc(false, func(rec sortedmap.Record) bool {
-		dents = append(dents, makeFsObj(d.bucket, rec.Val.(np.Tperm), d.key.Append(rec.Key.(string))))
+	d.dents.Iter(func(n string, e interface{}) bool {
+		dents = append(dents, makeFsObj(d.bucket, e.(np.Tperm), d.key.Append(n)))
 		return true
 	})
 	return dents
@@ -110,26 +103,6 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 		return nil, err
 	}
 	return d.stat(ctx)
-}
-
-func (d *Dir) lookupDirent(name string) fs.FsObj {
-	d.Lock()
-	defer d.Unlock()
-
-	if p, ok := d.dents.Get(name); ok {
-		return makeFsObj(d.bucket, p.(np.Tperm), d.key.Append(name))
-	}
-	return nil
-}
-
-func (d *Dir) insertDirent(name string, perm np.Tperm) fs.FsObj {
-	d.Lock()
-	defer d.Unlock()
-	if _, ok := d.dents.Get(name); ok {
-		return nil
-	}
-	d.dents.Insert(name, perm)
-	return makeFsObj(d.bucket, perm, d.key.Append(name))
 }
 
 // fake a stat without filling
@@ -147,11 +120,12 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 	if err := d.fill(); err != nil {
 		return nil, nil, nil, err
 	}
-	o := d.lookupDirent(p[0])
-	if o == nil {
+	e, ok := d.dents.Lookup(p[0])
+	if !ok {
 		db.DPrintf("FSS3", "%v: namei %v not found\n", d, p[0])
 		return qids, d, p, np.MkErr(np.TErrNotfound, p[0])
 	}
+	o := e.(fs.FsObj)
 	qids = append(qids, o.Qid())
 	if len(p) == 1 {
 		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, qids, o)
@@ -230,10 +204,10 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
-	o := d.insertDirent(name, perm)
-	if o == nil {
+	if ok := d.dents.Insert(name, perm); !ok {
 		return nil, np.MkErr(np.TErrExists, name)
 	}
+	o := makeFsObj(d.bucket, perm, d.key.Append(name))
 	if perm.IsFile() && m == np.OWRITE {
 		o.(*Obj).setupWriter()
 	}

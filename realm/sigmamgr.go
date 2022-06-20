@@ -112,7 +112,7 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 // TODO: should probably release lock in this loop.
 func (m *SigmaResourceMgr) tryGetFreeCores(nRetries int) bool {
 	for i := 0; i < nRetries; i++ {
-		if atomic.LoadInt64(&m.freeCoreGroups) > 1 {
+		if atomic.LoadInt64(&m.freeCoreGroups) > 0 {
 			return true
 		}
 		db.DPrintf("SIGMAMGR", "Tried to get cores, but none free.")

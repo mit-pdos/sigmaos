@@ -125,8 +125,6 @@ func (m *Machined) postCores(s string) {
 
 func (m *Machined) Work() {
 	m.postCores("0")
-	// XXX double-post cores for now for testing purposes.
-	m.postCores("1")
 	done := make(chan bool)
 	<-done
 }

@@ -61,7 +61,9 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 		for _, obj := range page.Contents {
 			db.DPrintf("FSS30", "key %v\n", *obj.Key)
 			n := strings.TrimPrefix(*obj.Key, key)
-			d.dents.Insert(n, np.Tperm(0777))
+			if n != "_._" {
+				d.dents.Insert(n, np.Tperm(0777))
+			}
 		}
 		for _, obj := range page.CommonPrefixes {
 			db.DPrintf("FSS30", "prefix %v\n", *obj.Prefix)
@@ -75,11 +77,8 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 }
 
 func (d *Dir) fill() *np.Err {
-	if !d.init {
-		if err := d.s3ReadDir(fss3); err != nil {
-			return err
-		}
-		d.init = true
+	if err := d.s3ReadDir(fss3); err != nil {
+		return err
 	}
 	return nil
 }
@@ -190,22 +189,30 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 	return 0, np.MkErr(np.TErrIsdir, d)
 }
 
+// Create a fake file in dir to materialize dir
 func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *np.Err) {
-	// create a fake "file" in "dir" to materialize it
-	//if _, err := dir.Create(ctx, "_._", perm&0777, m); err != nil {
-	//	db.DPrintf("FSS3", "Create x err %v\n", err)
-	//	return nil, err
-	//}
-	return nil, nil
+	key := d.key.Append(name).Append("_._").String()
+	db.DPrintf("FSS3", "CreateDir: %v\n", key)
+	input := &s3.PutObjectInput{
+		Bucket: &d.bucket,
+		Key:    &key,
+	}
+	_, err := fss3.client.PutObject(context.TODO(), input)
+	if err != nil {
+		return nil, np.MkErrError(err)
+	}
+	o := makeFsObj(d.bucket, perm, d.key.Append(name))
+	return o, nil
 }
 
+// XXX check that name != "_._"
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	db.DPrintf("FSS3", "Create %v name: %v\n", d, name)
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
-	if ok := d.dents.Insert(name, perm); !ok {
-		return nil, np.MkErr(np.TErrExists, name)
+	if perm.IsDir() {
+		return d.CreateDir(ctx, name, perm)
 	}
 	o := makeFsObj(d.bucket, perm, d.key.Append(name))
 	if perm.IsFile() && m == np.OWRITE {
@@ -218,8 +225,10 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 	return np.MkErr(np.TErrNotSupported, "Renameat")
 }
 
+// XXX check in case of directory that it is empty
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	key := d.key.Append(name).String()
+
 	input := &s3.DeleteObjectInput{
 		Bucket: &d.bucket,
 		Key:    &key,

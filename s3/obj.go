@@ -20,7 +20,6 @@ type Obj struct {
 	key    np.Path
 
 	// set by fill()
-	init  bool
 	sz    np.Tlength
 	mtime int64
 
@@ -75,15 +74,12 @@ func (o *Obj) readHead(fss3 *Fss3) *np.Err {
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
 	}
-	o.init = true
 	return nil
 }
 
 func (o *Obj) fill() *np.Err {
-	if !o.init {
-		if err := o.readHead(fss3); err != nil {
-			return err
-		}
+	if err := o.readHead(fss3); err != nil {
+		return err
 	}
 	return nil
 }

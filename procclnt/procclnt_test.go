@@ -373,7 +373,7 @@ func TestConcurrentProcs(t *testing.T) {
 }
 
 func evict(ts *test.Tstate, pid proc.Tpid) {
-	time.Sleep(SLEEP_MSECS / 2 * time.Millisecond)
+	time.Sleep(SLEEP_MSECS * time.Millisecond)
 	err := ts.Evict(pid)
 	assert.Nil(ts.T, err, "evict")
 }
@@ -477,7 +477,6 @@ func TestEvictN(t *testing.T) {
 		go evict(ts, pid)
 	}
 
-	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 	for i := 0; i < N; i++ {
 		status, err := ts.WaitExit(pids[i])
 		assert.Nil(t, err, "WaitExit")

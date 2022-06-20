@@ -121,7 +121,7 @@ func (m *RealmResourceMgr) growRealm() {
 	nodedId := m.requestNoded(machineId)
 	db.DPrintf(db.ALWAYS, "Started noded %v on %v", nodedId, machineId)
 	// Allocate the noded to this realm.
-	allocNoded(m, m.lock, m.realmId, nodedId.String(), cores)
+	m.allocNoded(m.realmId, nodedId.String(), cores)
 	db.DPrintf(db.ALWAYS, "Allocated %v to realm %v", nodedId, m.realmId)
 }
 
@@ -182,6 +182,26 @@ func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
 		db.DFatalf("Error SetFile in requestNoded: %v", err)
 	}
 	return pid
+}
+
+// Alloc a Noded to this realm.
+func (m *RealmResourceMgr) allocNoded(realmId, nodedId string, cores *np.Tinterval) {
+	// Update the noded's config
+	ndCfg := &NodedConfig{}
+	ndCfg.Id = nodedId
+	ndCfg.RealmId = realmId
+	ndCfg.Cores = cores
+	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+
+	lockRealm(m.lock, realmId)
+	defer unlockRealm(m.lock, realmId)
+
+	// Update the realm's config
+	rCfg := &RealmConfig{}
+	m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
+	rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
+	rCfg.LastResize = time.Now()
+	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 }
 
 // Deallocate a noded from a realm.

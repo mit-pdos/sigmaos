@@ -14,7 +14,7 @@ import (
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
-	"ulambda/resource"
+	//	"ulambda/resource"
 	"ulambda/semclnt"
 )
 
@@ -171,15 +171,8 @@ func (r *Noded) deregister(cfg *RealmConfig) {
 		}
 	}
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
-	// Free cores at machined.
-	if _, err := r.PutFile(path.Join(machine.MACHINES, r.machineId, machine.CORES, rand.String(16)), 0777, np.OWRITE, []byte(r.cfg.Cores.String())); err != nil {
-		db.DFatalf("Error PutFile: %v", err)
-	}
-	// Register free cores at sigmamgr.
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, r.cfg.Cores.String(), 1)
-	if _, err := r.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in markFree: %v", err)
-	}
+
+	machine.PostCores(r.FsLib, r.machineId, rand.String(16), r.cfg.Cores)
 }
 
 func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {

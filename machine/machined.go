@@ -112,19 +112,19 @@ func (m *Machined) makeFS() {
 }
 
 // Post chunks of available cores.
-func (m *Machined) postCores(s string) {
+func PostCores(fsl *fslib.FsLib, machineId string, fname string, cores *np.Tinterval) {
 	// Post cores in local fs.
-	if _, err := m.PutFile(path.Join(m.path, CORES, s), 0777, np.OWRITE, []byte(m.coresAvail.String())); err != nil {
+	if _, err := fsl.PutFile(path.Join(MACHINES, machineId, CORES, fname), 0777, np.OWRITE, []byte(cores.String())); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, m.coresAvail.String(), 1)
-	if _, err := m.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in markFree: %v", err)
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), 1)
+	if _, err := fsl.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile in PostCores: %v", err)
 	}
 }
 
 func (m *Machined) Work() {
-	m.postCores("0")
+	PostCores(m.FsLib, m.MyAddr(), "0", m.coresAvail)
 	done := make(chan bool)
 	<-done
 }

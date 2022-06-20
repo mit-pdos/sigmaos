@@ -103,7 +103,11 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		m.Lock()
 		defer m.Unlock()
 
-		m.growRealmL(msg.Name)
+		realmId := msg.Name
+		// If realm still exists, try to grow it.
+		if _, ok := m.ecs[realmId]; ok {
+			m.growRealmL(realmId)
+		}
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}

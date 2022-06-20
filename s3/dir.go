@@ -125,7 +125,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 		db.DPrintf("FSS3", "%v: namei %v not found\n", d, p[0])
 		return qids, d, p, np.MkErr(np.TErrNotfound, p[0])
 	}
-	o := e.(fs.FsObj)
+	o := makeFsObj(d.bucket, e.(np.Tperm), d.key.Append(p[0]))
 	qids = append(qids, o.Qid())
 	if len(p) == 1 {
 		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, qids, o)

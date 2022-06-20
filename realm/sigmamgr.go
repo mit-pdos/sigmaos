@@ -32,7 +32,7 @@ type SigmaResourceMgr struct {
 	realmCreate    chan string
 	realmDestroy   chan string
 	realmmgrs      map[string]proc.Tpid
-	ecs            map[string]*electclnt.ElectClnt
+	realmLocks     map[string]*electclnt.ElectClnt
 	*procclnt.ProcClnt
 	*config.ConfigClnt
 	*fslib.FsLib
@@ -55,7 +55,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
 	m.makeInitFs()
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
-	m.ecs = make(map[string]*electclnt.ElectClnt)
+	m.realmLocks = make(map[string]*electclnt.ElectClnt)
 	m.realmmgrs = make(map[string]proc.Tpid)
 
 	return m
@@ -105,7 +105,7 @@ func (m *SigmaResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 
 		realmId := msg.Name
 		// If realm still exists, try to grow it.
-		if _, ok := m.ecs[realmId]; ok {
+		if _, ok := m.realmLocks[realmId]; ok {
 			m.growRealmL(realmId)
 		}
 	default:
@@ -184,8 +184,14 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 			return false, nil
 		}
 
-		lockRealm(m.ecs[realmId], realmId)
-		defer unlockRealm(m.ecs[realmId], realmId)
+		lock, exists := m.realmLocks[realmId]
+		// If the realm we are looking at has been deleted, move on.
+		if !exists {
+			return false, nil
+		}
+
+		lockRealm(lock, realmId)
+		defer unlockRealm(lock, realmId)
 
 		rCfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
@@ -207,12 +213,12 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 	defer m.Unlock()
 
 	// Make sure we haven't created this realm before.
-	if _, ok := m.ecs[realmId]; ok {
+	if _, ok := m.realmLocks[realmId]; ok {
 		db.DFatalf("tried to create realm twice %v", realmId)
 	}
-	m.ecs[realmId] = electclnt.MakeElectClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
+	m.realmLocks[realmId] = electclnt.MakeElectClnt(m.FsLib, path.Join(REALM_FENCES, realmId), 0777)
 
-	lockRealm(m.ecs[realmId], realmId)
+	lockRealm(m.realmLocks[realmId], realmId)
 
 	cfg := &RealmConfig{}
 	cfg.Rid = realmId
@@ -220,7 +226,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 	// Make the realm config file.
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
-	unlockRealm(m.ecs[realmId], realmId)
+	unlockRealm(m.realmLocks[realmId], realmId)
 
 	// Start this realm's realmmgr.
 	m.startRealmMgr(realmId)
@@ -240,8 +246,9 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	defer m.Unlock()
 
 	db.DPrintf("SIGMAMGR", "Destroy realm %v", realmId)
+	db.DPrintf("TEST", "Destroy realm %v", realmId)
 
-	lockRealm(m.ecs[realmId], realmId)
+	lockRealm(m.realmLocks[realmId], realmId)
 
 	// Update the realm config to note that the realm is being shut down.
 	cfg := &RealmConfig{}
@@ -249,8 +256,8 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	cfg.Shutdown = true
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), cfg)
 
-	unlockRealm(m.ecs[realmId], realmId)
-	delete(m.ecs, realmId)
+	unlockRealm(m.realmLocks[realmId], realmId)
+	delete(m.realmLocks, realmId)
 
 	// Send a message to the realmmmgr telling it to kill its realm.
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, "", 1)

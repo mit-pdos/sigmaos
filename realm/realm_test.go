@@ -48,7 +48,7 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 
-	err = ts.e.BootNoded()
+	err = ts.e.BootMachined()
 	if err != nil {
 		t.Fatalf("Boot Noded 2: %v", err)
 	}

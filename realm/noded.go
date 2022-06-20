@@ -9,10 +9,12 @@ import (
 	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/machine"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
 	"ulambda/rand"
+	"ulambda/resource"
 	"ulambda/semclnt"
 )
 
@@ -170,12 +172,12 @@ func (r *Noded) deregister(cfg *RealmConfig) {
 	}
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 	// Free cores at machined.
-	if _, err := m.PutFile(path.Join(machine.MACHINED, CORES, rand.String(16)), 0777, np.OWRITE, []byte(m.cfg.Cores.String())); err != nil {
+	if _, err := r.PutFile(path.Join(machine.MACHINES, r.machineId, machine.CORES, rand.String(16)), 0777, np.OWRITE, []byte(r.cfg.Cores.String())); err != nil {
 		db.DFatalf("Error PutFile: %v", err)
 	}
 	// Register free cores at sigmamgr.
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, m.cfg.Cores.String(), 1)
-	if _, err := m.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
+	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, r.cfg.Cores.String(), 1)
+	if _, err := r.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile in markFree: %v", err)
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	db "ulambda/debug"
-	"ulambda/fidclnt"
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
@@ -17,14 +16,13 @@ import (
 )
 
 const (
-	MACHINES = "name/machines"
+	MACHINES = "name/machines/"
 	CORES    = "cores"
 )
 
 // Machined registers initial machine reseources and starts Nodeds on-demand.
 type Machined struct {
 	sync.Mutex
-	ip         string
 	path       string
 	coresAvail *np.Tinterval
 	nodeds     map[proc.Tpid]*exec.Cmd
@@ -35,22 +33,17 @@ type Machined struct {
 
 func MakeMachined(args []string) *Machined {
 	m := &Machined{}
-	ip, err := fidclnt.LocalIP()
-	if err != nil {
-		db.DFatalf("Error LocalIP: %v", err)
-	}
-	m.ip = ip
-	m.path = path.Join(MACHINES, m.ip)
 	linuxsched.ScanTopology()
 	m.coresAvail = np.MkInterval(0, np.Toffset(linuxsched.NCores)+1)
 	m.nodeds = map[proc.Tpid]*exec.Cmd{}
 	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
-	mfs, err := fslibsrv.MakeMemFsFsl(m.path, m.FsLib, m.ProcClnt)
+	mfs, err := fslibsrv.MakeMemFsFsl(MACHINES, m.FsLib, m.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFs: %v", err)
 	}
 	m.MemFs = mfs
+	m.path = path.Join(MACHINES, m.MyAddr())
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
 	m.makeFS()
 	return m
@@ -82,7 +75,7 @@ func (m *Machined) bootNoded(pid proc.Tpid) {
 
 	db.DPrintf(db.ALWAYS, "Booting noded %v", pid)
 
-	p := proc.MakeProcPid(pid, "realm/noded", []string{m.ip})
+	p := proc.MakeProcPid(pid, "realm/noded", []string{m.MyAddr()})
 	noded, err := m.SpawnKernelProc(p, fslib.Named())
 	if err != nil {
 		db.DFatalf("RunKernelProc: %v", err)

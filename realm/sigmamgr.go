@@ -152,7 +152,7 @@ func (m *SigmaResourceMgr) growRealmL(realmId string) bool {
 		return false
 	}
 	// Ask the over-provisioned realm to give up some cores.
-	m.requestNoded(opRealmId)
+	m.requestCores(opRealmId)
 	// Wait for the over-provisioned realm to cede its cores.
 	if m.tryGetFreeCores(100) {
 		// Allocate cores to this realm.
@@ -223,8 +223,8 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 }
 
 // Request a Noded from realm realmId.
-func (m *SigmaResourceMgr) requestNoded(realmId string) {
-	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, "", 1)
+func (m *SigmaResourceMgr) requestCores(realmId string) {
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, "", 1)
 	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile: %v", err)
 	}
@@ -248,12 +248,12 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	unlockRealm(m.ecs[realmId], realmId)
 	delete(m.ecs, realmId)
 
-	// Request all Nodeds from the realm. This has to happen without the
-	// protection of the realm lock, because the realm lock must be held by the
-	// RealmMgr in order to proceed with deallocation.
-	for _ = range cfg.NodedsAssigned {
-		m.requestNoded(realmId)
+	// Send a message to the realmmmgr telling it to kill its realm.
+	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, "", 1)
+	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile: %v", err)
 	}
+
 	m.evictRealmMgr(realmId)
 	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)
 }

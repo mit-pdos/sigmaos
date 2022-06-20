@@ -79,7 +79,10 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	case resource.Trealm:
 		// On realm request, shut down & kill all nodeds.
 		lockRealm(m.lock, m.realmId)
-		realmCfg := m.getRealmConfig()
+		realmCfg, err := m.getRealmConfig()
+		if err != nil {
+			db.DFatalf("Error get realm config.")
+		}
 		for _, nodedId := range realmCfg.NodedsAssigned {
 			m.deallocNoded(nodedId)
 		}
@@ -144,10 +147,11 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, *np.Tinterval, bo
 					continue
 				}
 				// Claim the cores
-				err := m.sigmaFsl.Remove(coreFile)
+				err = m.sigmaFsl.Remove(coreFile)
 				if err == nil {
+					// Cores successfully claimed.
 					machineId = st.Name
-					cores = cores.Unmarshal(coreStr)
+					cores.Unmarshal(string(coreStr))
 					return true, nil
 				} else {
 					if !np.IsErrNotfound(err) {

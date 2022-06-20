@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -319,9 +320,12 @@ func TestPageDir(t *testing.T) {
 		_, err := ts.PutFile(dn+name, 0777, np.OWRITE, []byte(name))
 		assert.Equal(t, nil, err)
 	}
+	sort.SliceStable(names, func(i, j int) bool {
+		return names[i] < names[j]
+	})
 	i := 0
 	ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
-		assert.Equal(t, strconv.Itoa(i), st.Name)
+		assert.Equal(t, names[i], st.Name)
 		i += 1
 		return false, nil
 

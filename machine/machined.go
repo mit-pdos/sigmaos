@@ -23,9 +23,8 @@ const (
 // Machined registers initial machine reseources and starts Nodeds on-demand.
 type Machined struct {
 	sync.Mutex
-	path       string
-	coresAvail *np.Tinterval
-	nodeds     map[proc.Tpid]*exec.Cmd
+	path   string
+	nodeds map[proc.Tpid]*exec.Cmd
 	*procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
@@ -33,8 +32,6 @@ type Machined struct {
 
 func MakeMachined(args []string) *Machined {
 	m := &Machined{}
-	linuxsched.ScanTopology()
-	m.coresAvail = np.MkInterval(0, np.Toffset(linuxsched.NCores))
 	m.nodeds = map[proc.Tpid]*exec.Cmd{}
 	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
@@ -111,8 +108,20 @@ func (m *Machined) makeFS() {
 	}
 }
 
+func (m *Machined) postCores() {
+	linuxsched.ScanTopology()
+	coreGroupSize := uint(np.Conf.Machine.CORE_GROUP_FRACTION * float64(linuxsched.NCores))
+	for i := uint(0); i < linuxsched.NCores; i += coreGroupSize {
+		iv := np.MkInterval(np.Toffset(i), np.Toffset(i+coreGroupSize))
+		if uint(iv.End) > linuxsched.NCores+1 {
+			iv.End = np.Toffset(linuxsched.NCores + 1)
+		}
+		PostCores(m.FsLib, m.MyAddr(), iv)
+	}
+}
+
 func (m *Machined) Work() {
-	PostCores(m.FsLib, m.MyAddr(), m.coresAvail)
+	m.postCores()
 	done := make(chan bool)
 	<-done
 }

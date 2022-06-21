@@ -68,6 +68,7 @@ func TestCreateTwice(t *testing.T) {
 	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
 	assert.Equal(t, nil, err)
 	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.NotNil(t, err)
 	assert.True(t, np.IsErrExists(err))
 	ts.Shutdown()
 }

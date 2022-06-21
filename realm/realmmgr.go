@@ -121,7 +121,7 @@ func (m *RealmResourceMgr) growRealm() {
 	nodedId := m.requestNoded(machineId)
 	db.DPrintf(db.ALWAYS, "Started noded %v on %v", nodedId, machineId)
 	// Allocate the noded to this realm.
-	m.allocNoded(m.realmId, nodedId.String(), cores)
+	m.allocNoded(m.realmId, machineId, nodedId.String(), cores)
 	db.DPrintf(db.ALWAYS, "Allocated %v to realm %v", nodedId, m.realmId)
 }
 
@@ -142,16 +142,12 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, *np.Tinterval, bo
 			for i := 0; i < len(coreGroups); i++ {
 				// Read the core file.
 				coreFile := path.Join(cdir, coreGroups[i].Name)
-				coreStr, err := m.sigmaFsl.GetFile(coreFile)
-				if err != nil {
-					continue
-				}
 				// Claim the cores
 				err = m.sigmaFsl.Remove(coreFile)
 				if err == nil {
 					// Cores successfully claimed.
 					machineId = st.Name
-					cores.Unmarshal(string(coreStr))
+					cores.Unmarshal(string(coreGroups[i].Name))
 					return true, nil
 				} else {
 					if !np.IsErrNotfound(err) {
@@ -185,7 +181,7 @@ func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
 }
 
 // Alloc a Noded to this realm.
-func (m *RealmResourceMgr) allocNoded(realmId, nodedId string, cores *np.Tinterval) {
+func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *np.Tinterval) {
 	// Update the noded's config
 	ndCfg := &NodedConfig{}
 	ndCfg.Id = nodedId
@@ -220,12 +216,12 @@ func (m *RealmResourceMgr) deallocNoded(nodedId string) {
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
 
-	rdCfg := &NodedConfig{}
-	rdCfg.Id = nodedId
-	rdCfg.RealmId = kernel.NO_REALM
+	ndCfg := &NodedConfig{}
+	ndCfg.Id = nodedId
+	ndCfg.RealmId = kernel.NO_REALM
 
 	// Update the noded config file.
-	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), rdCfg)
+	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 }
 
 // XXX Do I really need this?

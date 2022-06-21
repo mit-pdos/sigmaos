@@ -13,7 +13,6 @@ import (
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/rand"
 	//	"ulambda/resource"
 	"ulambda/semclnt"
 )
@@ -172,7 +171,7 @@ func (r *Noded) deregister(cfg *RealmConfig) {
 	}
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 
-	machine.PostCores(r.FsLib, r.machineId, rand.String(16), r.cfg.Cores)
+	machine.PostCores(r.FsLib, r.machineId, r.cfg.Cores)
 }
 
 func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {

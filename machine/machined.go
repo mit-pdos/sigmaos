@@ -34,7 +34,7 @@ type Machined struct {
 func MakeMachined(args []string) *Machined {
 	m := &Machined{}
 	linuxsched.ScanTopology()
-	m.coresAvail = np.MkInterval(0, np.Toffset(linuxsched.NCores)+1)
+	m.coresAvail = np.MkInterval(0, np.Toffset(linuxsched.NCores))
 	m.nodeds = map[proc.Tpid]*exec.Cmd{}
 	m.FsLib = fslib.MakeFsLib(proc.GetPid().String())
 	m.ProcClnt = procclnt.MakeProcClntInit(proc.GetPid(), m.FsLib, proc.GetPid().String(), fslib.Named())
@@ -111,20 +111,8 @@ func (m *Machined) makeFS() {
 	}
 }
 
-// Post chunks of available cores.
-func PostCores(fsl *fslib.FsLib, machineId string, fname string, cores *np.Tinterval) {
-	// Post cores in local fs.
-	if _, err := fsl.PutFile(path.Join(MACHINES, machineId, CORES, fname), 0777, np.OWRITE, []byte(cores.String())); err != nil {
-		db.DFatalf("Error PutFile: %v", err)
-	}
-	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), 1)
-	if _, err := fsl.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in PostCores: %v", err)
-	}
-}
-
 func (m *Machined) Work() {
-	PostCores(m.FsLib, m.MyAddr(), "0", m.coresAvail)
+	PostCores(m.FsLib, m.MyAddr(), m.coresAvail)
 	done := make(chan bool)
 	<-done
 }

@@ -16,6 +16,8 @@ import (
 	"ulambda/sorteddir"
 )
 
+const DOT = "_._"
+
 type Dir struct {
 	*Obj
 	sync.Mutex
@@ -61,7 +63,7 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 		for _, obj := range page.Contents {
 			db.DPrintf("FSS30", "key %v\n", *obj.Key)
 			n := strings.TrimPrefix(*obj.Key, key)
-			if n != "_._" {
+			if n != DOT {
 				d.dents.Insert(n, np.Tperm(0777))
 			}
 		}
@@ -180,7 +182,7 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 
 // Create a fake file in dir to materialize dir
 func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *np.Err) {
-	key := d.key.Append(name).Append("_._").String()
+	key := d.key.Append(name).Append(DOT).String()
 	db.DPrintf("FSS3", "CreateDir: %v\n", key)
 	input := &s3.PutObjectInput{
 		Bucket: &d.bucket,
@@ -194,18 +196,24 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *np.
 	return o, nil
 }
 
-// XXX check that name != "_._"
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	db.DPrintf("FSS3", "Create %v name: %v\n", d, name)
-	if err := d.fill(); err != nil {
-		return nil, err
+	if name == DOT {
+		return nil, np.MkErr(np.TErrInval, name)
+	}
+	o := makeObj(d.bucket, d.key.Append(name), perm)
+	if perm.IsDir() {
+		o.key.Append("_._")
+	}
+	_, err := o.Stat(ctx)
+	if err == nil {
+		return nil, np.MkErr(np.TErrExists, name)
 	}
 	if perm.IsDir() {
 		return d.CreateDir(ctx, name, perm)
 	}
-	o := makeFsObj(d.bucket, perm, d.key.Append(name))
 	if perm.IsFile() && m == np.OWRITE {
-		o.(*Obj).setupWriter()
+		o.setupWriter()
 	}
 	return o, nil
 }

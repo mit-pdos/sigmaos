@@ -1283,6 +1283,7 @@ func TestReadFilePerf(t *testing.T) {
 }
 
 func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
+	start := time.Now()
 	err := fsl.MkDir(dir, 0777)
 	assert.Equal(t, nil, err)
 	for i := 0; i < n; i++ {
@@ -1290,6 +1291,9 @@ func mkDir(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
 		_, err := fsl.PutFile(dir+"/f"+strconv.Itoa(i), 0777, np.OWRITE, b)
 		assert.Nil(t, err)
 	}
+	ms := time.Since(start).Milliseconds()
+	s := float64(ms) / 1000
+	log.Printf("mkDir: %d entries took %vms (%.1f file/s)", n, ms, float64(n)/s)
 	return n
 }
 

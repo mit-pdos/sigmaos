@@ -83,12 +83,12 @@ func (d *Dir) fill() *np.Err {
 	return nil
 }
 
-func (d *Dir) dirents() []fs.FsObj {
+func (d *Dir) dirents() []*Obj {
 	d.Lock()
 	defer d.Unlock()
-	dents := make([]fs.FsObj, 0, d.dents.Len())
+	dents := make([]*Obj, 0, d.dents.Len())
 	d.dents.Iter(func(n string, e interface{}) bool {
-		dents = append(dents, makeFsObj(d.bucket, e.(np.Tperm), d.key.Append(n)))
+		dents = append(dents, makeObj(d.bucket, d.key.Append(n), e.(np.Tperm)))
 		return true
 	})
 	return dents
@@ -101,16 +101,8 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err := d.fill(); err != nil {
 		return nil, err
 	}
-	return d.stat(ctx)
-}
-
-// fake a stat without filling
-func (d *Dir) stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DPrintf("FSS3", "stat Dir: %v\n", d)
-	st := &np.Stat{}
-	st.Name = d.key.Base()
-	st.Mode = d.perm | np.Tperm(0777)
-	st.Qid = qid(d.perm, d.key)
+	st := d.stat()
+	st.Length = d.sz
 	return st, nil
 }
 
@@ -124,13 +116,20 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 		db.DPrintf("FSS3", "%v: namei %v not found\n", d, p[0])
 		return qids, d, p, np.MkErr(np.TErrNotfound, p[0])
 	}
-	o := makeFsObj(d.bucket, e.(np.Tperm), d.key.Append(p[0]))
-	qids = append(qids, o.Qid())
 	if len(p) == 1 {
+		perm := e.(np.Tperm)
+		var o fs.FsObj
+		if perm.IsDir() {
+			o = makeDir(d.bucket, d.key.Append(p[0]), perm)
+		} else {
+			o = makeObj(d.bucket, d.key.Append(p[0]), perm)
+		}
+		qids = append(qids, o.Qid())
 		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, qids, o)
 		return qids, o, nil, nil
 	} else {
-		return o.(*Dir).namei(ctx, p[1:], qids)
+		d := makeDir(d.bucket, d.key.Append(p[0]), e.(np.Tperm))
+		return d.namei(ctx, p[1:], qids)
 	}
 }
 
@@ -157,19 +156,8 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 		return nil, err
 	}
 	d.sts = make([]*np.Stat, 0, d.dents.Len())
-	for _, o1 := range d.dirents() {
-		var st *np.Stat
-		var err *np.Err
-		switch v := o1.(type) {
-		case *Dir:
-			st, err = v.stat(ctx)
-		case *Obj:
-			st, err = v.Stat(ctx)
-		}
-		if err != nil {
-			return nil, err
-		}
-		d.sts = append(d.sts, st)
+	for _, o := range d.dirents() {
+		d.sts = append(d.sts, o.stat())
 	}
 	d.sz = npcodec.MarshalSizeDir(d.sts)
 	return d, nil

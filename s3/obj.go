@@ -38,14 +38,6 @@ func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
 	return o
 }
 
-func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
-	if perm.IsDir() {
-		return makeDir(bucket, key.Copy(), perm)
-	} else {
-		return makeObj(bucket, key.Copy(), perm)
-	}
-}
-
 func (o *Obj) String() string {
 	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
 }
@@ -77,6 +69,14 @@ func (o *Obj) readHead(fss3 *Fss3) *np.Err {
 	return nil
 }
 
+func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
+	if perm.IsDir() {
+		return makeDir(bucket, key.Copy(), perm)
+	} else {
+		return makeObj(bucket, key.Copy(), perm)
+	}
+}
+
 func (o *Obj) fill() *np.Err {
 	if err := o.readHead(fss3); err != nil {
 		return err
@@ -84,7 +84,9 @@ func (o *Obj) fill() *np.Err {
 	return nil
 }
 
+// stat without filling
 func (o *Obj) stat() *np.Stat {
+	db.DPrintf("FSS3", "stat: %v\n", o)
 	st := &np.Stat{}
 	if len(o.key) > 0 {
 		st.Name = o.key.Base()
@@ -93,10 +95,6 @@ func (o *Obj) stat() *np.Stat {
 	}
 	st.Mode = o.perm | np.Tperm(0777)
 	st.Qid = qid(o.perm, o.key)
-	st.Uid = ""
-	st.Gid = ""
-	st.Length = o.sz
-	st.Mtime = uint32(o.mtime)
 	return st
 }
 
@@ -120,7 +118,10 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	return o.stat(), nil
+	st := o.stat()
+	st.Length = o.sz
+	st.Mtime = uint32(o.mtime)
+	return st, nil
 }
 
 // XXX Check permissions?

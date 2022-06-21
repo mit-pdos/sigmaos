@@ -25,6 +25,15 @@ func MkSortedDir() *SortedDir {
 	return sd
 }
 
+func (sd *SortedDir) String() string {
+	s := "["
+	sd.dents.IterFunc(false, func(rec sortedmap.Record) bool {
+		s += rec.Key.(string) + ", "
+		return true
+	})
+	return s + "]"
+}
+
 func (sd *SortedDir) Len() int {
 	sd.Lock()
 	defer sd.Unlock()

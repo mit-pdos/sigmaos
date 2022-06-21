@@ -129,6 +129,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 		return qids, o, nil, nil
 	} else {
 		d := makeDir(d.bucket, d.key.Append(p[0]), e.(np.Tperm))
+		qids = append(qids, d.Qid())
 		return d.namei(ctx, p[1:], qids)
 	}
 }

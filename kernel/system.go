@@ -84,7 +84,7 @@ func MakeSystemAll(uname, realmId string, replicaId int, cores *np.Tinterval) *S
 }
 
 func MakeSystem(uname, realmId string, namedAddr []string, cores *np.Tinterval) *System {
-	s := makeSystemBase(realmId, namedAddr, nil)
+	s := makeSystemBase(realmId, namedAddr, cores)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
 	return s

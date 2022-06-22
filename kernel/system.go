@@ -131,6 +131,13 @@ func (s *System) BootDbd() error {
 	return s.BootSubsystem("kernel/dbd", []string{}, &s.dbd)
 }
 
+func (s *System) GetProcdIp() string {
+	if len(s.procd) != 1 {
+		db.DFatalf("Error unexpexted num procds: %v", s.procd)
+	}
+	return GetSubsystemInfo(s.FsLib, s.procd[1].p.Pid).Ip
+}
+
 func (s *System) KillOne(srv string) error {
 	var err error
 	var ss *Subsystem

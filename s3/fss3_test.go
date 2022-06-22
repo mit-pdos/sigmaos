@@ -2,11 +2,18 @@ package fss3
 
 import (
 	"bufio"
+	"context"
+	"log"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/stretchr/testify/assert"
 
@@ -208,4 +215,85 @@ func TestReadSplit(t *testing.T) {
 	assert.Equal(t, "s released", string(b[0:10]))
 
 	ts.Shutdown()
+}
+
+const NOBJ = 10
+
+func put(cfg aws.Config, i int, ch chan struct{}) {
+	prefix := "s3test/" + strconv.Itoa(i) + "/"
+	clnt := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+	for j := 0; j < NOBJ; j++ {
+		key := prefix + strconv.Itoa(j)
+		input := &s3.PutObjectInput{
+			Bucket: aws.String("9ps3"),
+			Key:    &key,
+		}
+		_, err := clnt.PutObject(context.TODO(), input)
+		if err != nil {
+			panic(err)
+		}
+	}
+	ch <- struct{}{}
+}
+
+func cleanup(cfg aws.Config) {
+	maxKeys := 0
+	clnt := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+	params := &s3.ListObjectsV2Input{
+		Bucket: aws.String("9ps3"),
+		Prefix: aws.String("s3test/"),
+	}
+	p := s3.NewListObjectsV2Paginator(clnt, params,
+		func(o *s3.ListObjectsV2PaginatorOptions) {
+			if v := int32(maxKeys); v != 0 {
+				o.Limit = v
+			}
+		})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return
+		}
+		for _, obj := range page.Contents {
+			input := &s3.DeleteObjectInput{
+				Bucket: aws.String("9ps3"),
+				Key:    obj.Key,
+			}
+			_, err = clnt.DeleteObject(context.TODO(), input)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+// Run: go test -v ulambda/s3 -bench=. -benchtime=1x -run PutObj
+func BenchmarkPutObj(b *testing.B) {
+	const N = 10
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("me-mit"))
+	if err != nil {
+		panic(err)
+	}
+
+	ch := make(chan struct{})
+
+	start := time.Now()
+	for i := 0; i < N; i++ {
+		go put(cfg, i, ch)
+	}
+	for i := 0; i < N; i++ {
+		<-ch
+	}
+	ms := time.Since(start).Milliseconds()
+	s := float64(ms) / 1000
+	n := N * NOBJ
+
+	log.Printf("%d took %vms (%.1f file/s)", n, ms, float64(n)/s)
+
+	cleanup(cfg)
 }

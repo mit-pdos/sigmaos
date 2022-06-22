@@ -7,7 +7,18 @@ import (
 
 	"ulambda/config"
 	"ulambda/fslib"
+	np "ulambda/ninep"
 )
+
+type NodedConfig struct {
+	Id      string
+	RealmId string
+	Cores   *np.Tinterval
+}
+
+func (cfg *NodedConfig) String() string {
+	return fmt.Sprintf("&{ id:%v realmId:%v cores:%v }", cfg.Id, cfg.RealmId, cfg.Cores)
+}
 
 type RealmConfig struct {
 	Rid            string    // Realm id.

@@ -17,12 +17,6 @@ import (
 	"ulambda/semclnt"
 )
 
-type NodedConfig struct {
-	Id      string
-	RealmId string
-	Cores   *np.Tinterval
-}
-
 type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt

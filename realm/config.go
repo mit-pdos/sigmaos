@@ -11,13 +11,14 @@ import (
 )
 
 type NodedConfig struct {
-	Id      string
-	RealmId string
-	Cores   *np.Tinterval
+	Id        string
+	MachineId string
+	RealmId   string
+	Cores     *np.Tinterval
 }
 
 func (cfg *NodedConfig) String() string {
-	return fmt.Sprintf("&{ id:%v realmId:%v cores:%v }", cfg.Id, cfg.RealmId, cfg.Cores)
+	return fmt.Sprintf("&{ id:%v machineId:%v realmId:%v cores:%v }", cfg.Id, cfg.MachineId, cfg.RealmId, cfg.Cores)
 }
 
 type RealmConfig struct {

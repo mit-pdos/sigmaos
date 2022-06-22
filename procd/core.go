@@ -18,8 +18,21 @@ const (
 	CORE_BLOCKED             // Not for use by this procd's procs.
 )
 
+func (pd *Procd) initCores(grantedCoresIv string) {
+	grantedCores := np.MkInterval(0, 0)
+	grantedCores.Unmarshal(grantedCoresIv)
+	// First, revoke access to all cores.
+	allCoresIv := np.MkInterval(0, np.Toffset(linuxsched.NCores))
+	revokeMsg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, allCoresIv.String(), int(linuxsched.NCores))
+	pd.removeCores(revokeMsg)
+
+	// Then, enable access to the granted core interval.
+	grantMsg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, grantedCores.String(), int(grantedCores.Size()))
+	pd.addCores(grantMsg)
+}
+
 func (pd *Procd) addCores(msg *resource.ResourceMsg) {
-	cores := parseCoreInterval(msg)
+	cores := parseCoreInterval(msg.Name)
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_IDLE)
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
@@ -30,7 +43,7 @@ func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 }
 
 func (pd *Procd) removeCores(msg *resource.ResourceMsg) {
-	cores := parseCoreInterval(msg)
+	cores := parseCoreInterval(msg.Name)
 	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned-proc.Tcore(msg.Amount), cores, CORE_BLOCKED)
 }
 
@@ -183,11 +196,11 @@ func (pd *Procd) freeCoresL(p *LinuxProc) {
 	pd.sanityCheckCoreCountsL()
 }
 
-func parseCoreInterval(msg *resource.ResourceMsg) []uint {
+func parseCoreInterval(ivStr string) []uint {
 	iv := np.MkInterval(0, 0)
-	iv.Unmarshal(msg.Name)
-	cores := make([]uint, msg.Amount)
-	for i := uint(0); i < uint(msg.Amount); i++ {
+	iv.Unmarshal(ivStr)
+	cores := make([]uint, iv.Size())
+	for i := uint(0); i < uint(iv.Size()); i++ {
 		cores[i] = uint(iv.Start) + i
 	}
 	return cores
@@ -198,7 +211,7 @@ func (pd *Procd) sanityCheckCoreCountsL() {
 	if pd.coresOwned > proc.Tcore(linuxsched.NCores) {
 		db.DFatalf("Own more procd cores than there are cores on this machine: %v > %v", pd.coresOwned, linuxsched.NCores)
 	}
-	if pd.coresOwned <= 0 {
+	if pd.coresOwned < 0 {
 		db.DFatalf("Own too few cores: %v <= 0", pd.coresOwned)
 	}
 	if pd.coresAvail < 0 {

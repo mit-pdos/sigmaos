@@ -17,5 +17,5 @@ func main() {
 		fmt.Fprintf(os.Stderr, "ScanTopology failed %v\n", err)
 		os.Exit(1)
 	}
-	procd.RunProcd(os.Args[1])
+	procd.RunProcd(os.Args[1], "[0, 40)")
 }

@@ -40,7 +40,7 @@ type Procd struct {
 	*fslibsrv.MemFs
 }
 
-func RunProcd(realmbin string) {
+func RunProcd(realmbin string, grantedCoresIv string) {
 	pd := &Procd{}
 	pd.realmbin = realmbin
 
@@ -50,6 +50,8 @@ func RunProcd(realmbin string) {
 	pd.coresOwned = proc.Tcore(linuxsched.NCores)
 
 	pd.makeFs()
+
+	pd.initCores(grantedCoresIv)
 
 	// Must set core affinity before starting CPU Util measurements
 	pd.setCoreAffinityL()

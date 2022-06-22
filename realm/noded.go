@@ -67,6 +67,7 @@ func MakeNoded(machineId string) *Noded {
 	r.cfg = &NodedConfig{}
 	r.cfg.Id = r.id
 	r.cfg.RealmId = kernel.NO_REALM
+	r.cfg.MachineId = machineId
 
 	// Write the initial config file
 	r.WriteConfig(r.cfgPath, r.cfg)
@@ -78,8 +79,7 @@ func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
 		db.DPrintf("NODED", "Noded %v received cores %v", nd.id, msg.Name)
-		db.DFatalf("Unimplemented")
-		// TODO
+		nd.forwardResourceMsgToProcd(msg)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -89,10 +89,17 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
 		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
-		db.DFatalf("Unimplemented")
-		// TODO
+		nd.forwardResourceMsgToProcd(msg)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
+	}
+}
+
+func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
+	procdIp := nd.s.GetProcdIp()
+	// Pass the resource message on to this noded's procd.
+	if _, err := nd.SetFile(path.Join(REALM_NAMEDS, nd.cfg.RealmId, np.PROCDREL, procdIp, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile: %v", err)
 	}
 }
 
@@ -145,7 +152,7 @@ func (nd *Noded) register(cfg *RealmConfig) {
 	cfg.NodedsActive = append(cfg.NodedsActive, nd.id)
 	nd.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 	// Symlink into realmmgr's fs.
-	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), path.Join(REALM_MGRS, cfg.Rid, NODEDS, nd.MyAddr()), 0777); err != nil {
+	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), path.Join(REALM_MGRS, cfg.Rid, NODEDS, nd.id), 0777); err != nil {
 		db.DFatalf("Error symlink: %v", err)
 	}
 }

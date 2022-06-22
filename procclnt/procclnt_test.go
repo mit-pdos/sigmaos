@@ -381,21 +381,13 @@ func evict(ts *test.Tstate, pid proc.Tpid) {
 func TestEvict(t *testing.T) {
 	ts := test.MakeTstateAll(t)
 
-	start := time.Now()
-	pid := spawnSleeper(t, ts)
+	pid := spawnSpinner(t, ts)
 
 	go evict(ts, pid)
 
 	status, err := ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
-	end := time.Now()
-
-	assert.True(t, end.Sub(start) < SLEEP_MSECS*time.Millisecond, "Didn't evict early enough.")
-	assert.True(t, end.Sub(start) > (SLEEP_MSECS/2)*time.Millisecond, "Evicted too early")
-
-	// Make sure the proc didn't finish
-	checkSleeperResultFalse(t, ts, pid)
 
 	ts.Shutdown()
 }

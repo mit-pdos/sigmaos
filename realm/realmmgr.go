@@ -27,8 +27,7 @@ import (
  */
 
 const (
-	REALMMGR_ELECT = "-realmmgr-elect"
-	REALMMGR       = "realmmgr"
+	NODEDS = "nodeds"
 )
 
 type RealmResourceMgr struct {
@@ -58,11 +57,21 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 		db.DFatalf("Error MakeMemFs in MakeSigmaResourceMgr: %v", err)
 	}
 
+	m.initFS()
+
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), np.RESOURCE_CTL)
 
 	return m
 }
 
+func (m *RealmResourceMgr) initFS() {
+	dirs := []string{NODEDS}
+	for _, d := range dirs {
+		if err := m.sigmaFsl.MkDir(path.Join(REALM_MGRS, m.realmId, d), 0777); err != nil {
+			db.DFatalf("Error Mkdir: %v", err)
+		}
+	}
+}
 func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:

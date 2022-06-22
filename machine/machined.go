@@ -18,6 +18,7 @@ import (
 const (
 	MACHINES = "name/machines/"
 	CORES    = "cores"
+	NODEDS   = "nodeds"
 )
 
 // Machined registers initial machine reseources and starts Nodeds on-demand.
@@ -42,7 +43,7 @@ func MakeMachined(args []string) *Machined {
 	m.MemFs = mfs
 	m.path = path.Join(MACHINES, m.MyAddr())
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
-	m.makeFS()
+	m.initFS()
 	return m
 }
 
@@ -99,8 +100,8 @@ func (m *Machined) shutdownNoded(pid proc.Tpid) {
 	delete(m.nodeds, pid)
 }
 
-func (m *Machined) makeFS() {
-	dirs := []string{CORES}
+func (m *Machined) initFS() {
+	dirs := []string{CORES, NODEDS}
 	for _, d := range dirs {
 		if err := m.MkDir(path.Join(m.path, d), 0777); err != nil {
 			db.DFatalf("Error Mkdir: %v", err)

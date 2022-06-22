@@ -53,7 +53,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 		db.DFatalf("Error mountpids: %v", err)
 	}
 	m.ConfigClnt = config.MakeConfigClnt(m.FsLib)
-	m.makeInitFs()
+	m.initFS()
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
 	m.realmLocks = make(map[string]*electclnt.ElectClnt)
 	m.realmmgrs = make(map[string]proc.Tpid)
@@ -62,7 +62,7 @@ func MakeSigmaResourceMgr() *SigmaResourceMgr {
 }
 
 // Make the initial realm dirs, and remove the unneeded union dirs.
-func (m *SigmaResourceMgr) makeInitFs() {
+func (m *SigmaResourceMgr) initFS() {
 	dirs := []string{
 		REALM_CONFIG,
 		NODED_CONFIG,
@@ -73,7 +73,7 @@ func (m *SigmaResourceMgr) makeInitFs() {
 	}
 	for _, d := range dirs {
 		if err := m.MkDir(d, 0777); err != nil {
-			db.DFatalf("Error Mkdir %v in SigmaResourceMgr.makeInitFs: %v", d, err)
+			db.DFatalf("Error Mkdir %v in SigmaResourceMgr.initFs: %v", d, err)
 		}
 	}
 }

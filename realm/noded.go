@@ -8,18 +8,20 @@ import (
 	"ulambda/electclnt"
 	"ulambda/fidclnt"
 	"ulambda/fslib"
+	"ulambda/fslibsrv"
 	"ulambda/kernel"
 	"ulambda/machine"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	//	"ulambda/resource"
+	"ulambda/resource"
 	"ulambda/semclnt"
 )
 
 type Noded struct {
 	*fslib.FsLib
 	*procclnt.ProcClnt
+	*fslibsrv.MemFs
 	id        string
 	machineId string
 	localIP   string
@@ -38,6 +40,15 @@ func MakeNoded(machineId string) *Noded {
 	r.FsLib = fslib.MakeFsLib(r.id)
 	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
 	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
+	var err error
+	r.MemFs, err = fslibsrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", r.FsLib, r.ProcClnt)
+	if err != nil {
+		db.DFatalf("Error MakeMemFsFsl: %v", err)
+	}
+
+	// Make a control file
+	resource.MakeCtlFile(r.receiveResourceGrant, r.handleResourceRequest, r.MemFs.Root(), np.RESOURCE_CTL)
+
 	// Mount the KPIDS dir.
 	if err := procclnt.MountPids(r.FsLib, fslib.Named()); err != nil {
 		db.DFatalf("Error mountpids: %v", err)
@@ -60,15 +71,29 @@ func MakeNoded(machineId string) *Noded {
 	// Write the initial config file
 	r.WriteConfig(r.cfgPath, r.cfg)
 
-	// Mark self as available for allocation
-	r.markFree()
-
 	return r
 }
 
-// Mark self as available for allocation to a realm.
-func (r *Noded) markFree() {
-	// Anything to do here?
+func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
+	switch msg.ResourceType {
+	case resource.Tcore:
+		db.DPrintf("NODED", "Noded %v received cores %v", nd.id, msg.Name)
+		db.DFatalf("Unimplemented")
+		// TODO
+	default:
+		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
+	}
+}
+
+func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
+	switch msg.ResourceType {
+	case resource.Tcore:
+		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
+		db.DFatalf("Unimplemented")
+		// TODO
+	default:
+		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
+	}
 }
 
 // Update configuration.
@@ -116,9 +141,13 @@ func (r *Noded) tryAddNamedReplicaL() bool {
 }
 
 // Register this noded as part of a realm.
-func (r *Noded) register(cfg *RealmConfig) {
-	cfg.NodedsActive = append(cfg.NodedsActive, r.id)
-	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
+func (nd *Noded) register(cfg *RealmConfig) {
+	cfg.NodedsActive = append(cfg.NodedsActive, nd.id)
+	nd.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
+	// Symlink into realmmgr's fs.
+	if err := nd.Symlink(fslib.MakeTarget([]string{nd.MyAddr()}), path.Join(REALM_MGRS, cfg.Rid, NODEDS, nd.MyAddr()), 0777); err != nil {
+		db.DFatalf("Error symlink: %v", err)
+	}
 }
 
 func (r *Noded) boot(realmCfg *RealmConfig) {

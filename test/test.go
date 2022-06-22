@@ -11,6 +11,7 @@ import (
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/kernel"
+	"ulambda/linuxsched"
 	np "ulambda/ninep"
 	"ulambda/proc"
 )
@@ -43,7 +44,7 @@ func (ts *Tstate) Shutdown() {
 
 func (ts *Tstate) addNamedReplica(i int) {
 	defer ts.wg.Done()
-	r := kernel.MakeSystemNamed("test", np.TEST_RID, i)
+	r := kernel.MakeSystemNamed("test", np.TEST_RID, i, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
 	ts.Lock()
 	defer ts.Unlock()
 	ts.replicas = append(ts.replicas, r)
@@ -76,14 +77,16 @@ func MakeTstatePath(t *testing.T, named, path string) *Tstate {
 }
 
 func MakeTstateClnt(t *testing.T, named string) *Tstate {
+	linuxsched.ScanTopology()
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t
-	ts.System = kernel.MakeSystem("test", np.TEST_RID, []string{named})
+	ts.System = kernel.MakeSystem("test", np.TEST_RID, []string{named}, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
 	return ts
 }
 
 func MakeTstate(t *testing.T) *Tstate {
+	linuxsched.ScanTopology()
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t
@@ -92,6 +95,7 @@ func MakeTstate(t *testing.T) *Tstate {
 }
 
 func MakeTstateAll(t *testing.T) *Tstate {
+	linuxsched.ScanTopology()
 	setVersion()
 	ts := &Tstate{}
 	ts.T = t
@@ -99,12 +103,12 @@ func MakeTstateAll(t *testing.T) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) makeSystem(mkSys func(string, string, int) *kernel.System) {
+func (ts *Tstate) makeSystem(mkSys func(string, string, int, *np.Tinterval) *kernel.System) {
 	ts.wg.Add(len(fslib.Named()))
 	// Needs to happen in a separate thread because MakeSystem will block until enough replicas have started (if named is replicated).
 	go func() {
 		defer ts.wg.Done()
-		ts.System = mkSys("test", np.TEST_RID, 0)
+		ts.System = mkSys("test", np.TEST_RID, 0, np.MkInterval(0, np.Toffset(linuxsched.NCores)))
 	}()
 	ts.startReplicas()
 	ts.wg.Wait()

@@ -31,6 +31,7 @@ type System struct {
 	realmId     string
 	namedAddr   []string
 	named       *Subsystem
+	cores       *np.Tinterval
 	fss3d       []*Subsystem
 	fsuxd       []*Subsystem
 	procd       []*Subsystem
@@ -38,10 +39,11 @@ type System struct {
 	crashedPids map[proc.Tpid]bool
 }
 
-func makeSystemBase(realmId string, namedAddr []string) *System {
+func makeSystemBase(realmId string, namedAddr []string, cores *np.Tinterval) *System {
 	s := &System{}
 	s.realmId = realmId
 	s.namedAddr = namedAddr
+	s.cores = cores
 	s.procd = []*Subsystem{}
 	s.fsuxd = []*Subsystem{}
 	s.fss3d = []*Subsystem{}
@@ -52,8 +54,8 @@ func makeSystemBase(realmId string, namedAddr []string) *System {
 
 // Make system with just named. replicaId is used to index into the
 // fslib.Named() slice and select an address for this named.
-func MakeSystemNamed(uname, realmId string, replicaId int) *System {
-	s := makeSystemBase(realmId, fslib.Named())
+func MakeSystemNamed(uname, realmId string, replicaId int, cores *np.Tinterval) *System {
+	s := makeSystemBase(realmId, fslib.Named(), cores)
 	// replicaId needs to be 1-indexed for replication library.
 	cmd, err := RunNamed(fslib.Named()[replicaId], len(fslib.Named()) > 1, replicaId+1, fslib.Named(), NO_REALM)
 	if err != nil {
@@ -70,8 +72,8 @@ func MakeSystemNamed(uname, realmId string, replicaId int) *System {
 }
 
 // Make a system with Named and other kernel services
-func MakeSystemAll(uname, realmId string, replicaId int) *System {
-	s := MakeSystemNamed(uname, realmId, replicaId)
+func MakeSystemAll(uname, realmId string, replicaId int, cores *np.Tinterval) *System {
+	s := MakeSystemNamed(uname, realmId, replicaId, cores)
 	// XXX should this be GetPid?
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, s.namedAddr)
 	err := s.Boot()
@@ -81,8 +83,8 @@ func MakeSystemAll(uname, realmId string, replicaId int) *System {
 	return s
 }
 
-func MakeSystem(uname, realmId string, namedAddr []string) *System {
-	s := makeSystemBase(realmId, namedAddr)
+func MakeSystem(uname, realmId string, namedAddr []string, cores *np.Tinterval) *System {
+	s := makeSystemBase(realmId, namedAddr, nil)
 	s.FsLib = fslib.MakeFsLibAddr(uname, namedAddr)
 	s.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), s.FsLib, uname, namedAddr)
 	return s
@@ -122,7 +124,7 @@ func (s *System) BootFss3d() error {
 }
 
 func (s *System) BootProcd() error {
-	return s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin")}, &s.procd)
+	return s.BootSubsystem("kernel/procd", []string{path.Join(s.realmId, "bin"), s.cores.String()}, &s.procd)
 }
 
 func (s *System) BootDbd() error {

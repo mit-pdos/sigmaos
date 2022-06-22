@@ -128,7 +128,7 @@ func (r *Noded) register(cfg *RealmConfig) {
 }
 
 func (r *Noded) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs)
+	r.s = kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, r.cfg.Cores)
 	if err := r.s.Boot(); err != nil {
 		db.DFatalf("Error Boot in Noded.boot: %v", err)
 	}

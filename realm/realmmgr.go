@@ -105,7 +105,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		if nodedId == "" {
 			return
 		}
-		// TODO: possibly just steal some cores instead of killing a while noded.
+		// XXX Should we prioritize defragmentation, or try to avoid evictions?
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
 		m.deallocNoded(nodedId)

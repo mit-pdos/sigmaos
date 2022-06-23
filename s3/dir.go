@@ -160,7 +160,17 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	}
 	d.sts = make([]*np.Stat, 0, d.dents.Len())
 	for _, o := range d.dirents() {
-		d.sts = append(d.sts, o.stat())
+		var st *np.Stat
+		var err *np.Err
+		if o.perm.IsDir() {
+			st = o.stat()
+		} else {
+			st, err = o.Stat(ctx)
+		}
+		if err != nil {
+			return nil, err
+		}
+		d.sts = append(d.sts, st)
 	}
 	d.sz = npcodec.MarshalSizeDir(d.sts)
 	return d, nil

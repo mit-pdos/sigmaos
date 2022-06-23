@@ -112,7 +112,7 @@ func (ts *Tstate) checkNCoreGroups(min int, max int) {
 
 func TestStartStop(t *testing.T) {
 	ts := makeTstate(t)
-	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine)
+	ts.checkNCoreGroups(1, ts.coreGroupsPerMachine)
 	ts.e.Shutdown()
 }
 

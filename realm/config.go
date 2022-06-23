@@ -14,7 +14,13 @@ type NodedConfig struct {
 	Id        string
 	MachineId string
 	RealmId   string
-	Cores     *np.Tinterval
+	Cores     []*np.Tinterval
+}
+
+func MakeNodedConfig() *NodedConfig {
+	cfg := &NodedConfig{}
+	cfg.Cores = []*np.Tinterval{}
+	return cfg
 }
 
 func (cfg *NodedConfig) String() string {

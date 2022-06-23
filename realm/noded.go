@@ -64,7 +64,7 @@ func MakeNoded(machineId string) *Noded {
 	proc.SetNodedId(r.id)
 
 	// Set up the noded config
-	r.cfg = &NodedConfig{}
+	r.cfg = MakeNodedConfig()
 	r.cfg.Id = r.id
 	r.cfg.RealmId = kernel.NO_REALM
 	r.cfg.MachineId = machineId
@@ -80,6 +80,15 @@ func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
 	case resource.Tcore:
 		db.DPrintf("NODED", "Noded %v received cores %v", nd.id, msg.Name)
 		nd.forwardResourceMsgToProcd(msg)
+
+		cores := np.MkInterval(0, 0)
+		cores.Unmarshal(msg.Name)
+
+		// Update the noded config file.
+		nd.ReadConfig(nd.cfgPath, nd.cfg)
+		nd.cfg.Cores = append(nd.cfg.Cores, cores)
+		nd.WriteConfig(nd.cfgPath, nd.cfg)
+
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -90,6 +99,24 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 	case resource.Tcore:
 		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
 		nd.forwardResourceMsgToProcd(msg)
+
+		// Update the noded config file.
+		nd.ReadConfig(nd.cfgPath, nd.cfg)
+
+		// XXX maybe remove these sanity checks...
+		// Sanity check: should be at least 2 core groups when removing one.
+		if len(nd.cfg.Cores) < 2 {
+			db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
+		}
+		// Sanity check: we always take the last cores allocated.
+		if nd.cfg.Cores[len(nd.cfg.Cores)-1].String() != msg.Name {
+			db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
+		}
+
+		// Update the core allocations for this noded.
+		nd.cfg.Cores = nd.cfg.Cores[:len(nd.cfg.Cores)-1]
+		nd.WriteConfig(nd.cfgPath, nd.cfg)
+
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -158,7 +185,7 @@ func (nd *Noded) register(cfg *RealmConfig) {
 }
 
 func (r *Noded) boot(realmCfg *RealmConfig) {
-	r.s = kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, r.cfg.Cores)
+	r.s = kernel.MakeSystem("realm", realmCfg.Rid, realmCfg.NamedAddrs, r.cfg.Cores[0])
 	if err := r.s.Boot(); err != nil {
 		db.DFatalf("Error Boot in Noded.boot: %v", err)
 	}
@@ -201,7 +228,9 @@ func (r *Noded) deregister(cfg *RealmConfig) {
 	}
 	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 
-	machine.PostCores(r.FsLib, r.machineId, r.cfg.Cores)
+	for _, c := range r.cfg.Cores {
+		machine.PostCores(r.FsLib, r.machineId, c)
+	}
 }
 
 func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {

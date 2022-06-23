@@ -99,24 +99,42 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	case resource.Tcore:
 		db.DPrintf("REALMMGR", "resource.Tcore requested")
 		lockRealm(m.lock, m.realmId)
-		nodedId := m.getLeastUtilizedNoded()
-		db.DPrintf("REALMMGR", "least utilized node: %v", nodedId)
+		nodedId, ok := m.getLeastUtilizedNoded()
 		// If no Nodeds remain...
-		if nodedId == "" {
+		if ok {
 			return
 		}
+
+		db.DPrintf("REALMMGR", "least utilized node: %v", nodedId)
 		// XXX Should we prioritize defragmentation, or try to avoid evictions?
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
-		m.deallocNoded(nodedId)
-		db.DPrintf("REALMMGR", "dealloced: %v", nodedId)
+
+		// Read this noded's config.
+		ndCfg := &NodedConfig{}
+		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
+
+		if len(ndCfg.Cores) == 1 {
+			// If this noded doesn't have any core groups to spare, deallocate it.
+			m.deallocNoded(nodedId)
+			db.DPrintf("REALMMGR", "dealloced: %v", nodedId)
+		} else {
+			cores := ndCfg.Cores[len(ndCfg.Cores)-1]
+			// Otherwise, take some cores away.
+			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
+			if _, err := m.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId), msg.Marshal(), np.OWRITE, 0); err != nil {
+				db.DFatalf("Error SetFile: %v", err)
+			}
+			db.DPrintf("REALMMGR", "Revoked cores %v from noded %v", cores, nodedId)
+		}
+
 		unlockRealm(m.lock, m.realmId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
 }
 
-// This realm has been granted cores. Now grow it.
+// This realm has been granted cores. Now grow it. Sigmamgr must hold lock.
 func (m *RealmResourceMgr) growRealm() {
 	// Find a machine with free cores and claim them
 	machineId, nodedId, cores, ok := m.getFreeCores(1)
@@ -184,7 +202,7 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinte
 		// First, try to get cores on a machine already running a noded from this
 		// realm.
 		ok, err = m.sigmaFsl.ProcessDir(path.Join(REALM_MGRS, m.realmId, NODEDS), func(nd *np.Stat) (bool, error) {
-			ndCfg := &NodedConfig{}
+			ndCfg := MakeNodedConfig()
 			m.ReadConfig(path.Join(NODED_CONFIG, nd.Name), ndCfg)
 			// Try to claim additional cores on the machine this noded lives on.
 			if c, ok := m.tryClaimCores(ndCfg.MachineId); ok {
@@ -235,11 +253,10 @@ func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
 // Alloc a Noded to this realm.
 func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores *np.Tinterval) {
 	// Update the noded's config
-	ndCfg := &NodedConfig{}
-	ndCfg.Id = nodedId
-	ndCfg.MachineId = machineId
+	ndCfg := MakeNodedConfig()
+	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 	ndCfg.RealmId = realmId
-	ndCfg.Cores = cores
+	ndCfg.Cores = append(ndCfg.Cores, cores)
 	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 
 	lockRealm(m.lock, realmId)
@@ -269,7 +286,8 @@ func (m *RealmResourceMgr) deallocNoded(nodedId string) {
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
 
-	ndCfg := &NodedConfig{}
+	ndCfg := MakeNodedConfig()
+	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 	ndCfg.Id = nodedId
 	ndCfg.RealmId = kernel.NO_REALM
 
@@ -328,7 +346,7 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (float64, map[string]f
 	return avgUtil, utilMap
 }
 
-func (m *RealmResourceMgr) getLeastUtilizedNoded() string {
+func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	// Get the realm's config
 	realmCfg, err := m.getRealmConfig()
 	if err != nil {
@@ -337,6 +355,10 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() string {
 
 	_, procdUtils := m.getRealmUtil(realmCfg)
 	db.DPrintf("REALMMGR", "searching for least utilized node, procd utils: %v", procdUtils)
+
+	if len(procdUtils) == 0 {
+		return "", false
+	}
 	// Find least utilized procd
 	min := 100.0
 	minNodedId := ""
@@ -346,7 +368,7 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() string {
 			minNodedId = nodedId
 		}
 	}
-	return minNodedId
+	return minNodedId, true
 }
 
 func (m *RealmResourceMgr) realmShouldGrow() bool {

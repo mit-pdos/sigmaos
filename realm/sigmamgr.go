@@ -84,10 +84,8 @@ func (m *SigmaResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 		m.destroyRealm(msg.Name)
 	case resource.Tnode:
 		db.DPrintf("SIGMAMGR", "free noded %v", msg.Name)
-		db.DPrintf(db.ALWAYS, "free noded %v", msg.Name)
 	case resource.Tcore:
 		m.freeCores(1)
-		db.DPrintf(db.ALWAYS, "free cores %v", msg.Name)
 		db.DPrintf("SIGMAMGR", "free cores %v", msg.Name)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -196,8 +194,18 @@ func (m *SigmaResourceMgr) findOverProvisionedRealm(ignoreRealm string) (string,
 		rCfg := &RealmConfig{}
 		m.ReadConfig(path.Join(REALM_CONFIG, realmId), rCfg)
 
+		// See if any nodeds have cores to spare.
+		nodedOverprovisioned := false
+		for _, nd := range rCfg.NodedsAssigned {
+			ndCfg := MakeNodedConfig()
+			m.ReadConfig(path.Join(NODED_CONFIG, nd), ndCfg)
+			if len(ndCfg.Cores) > 1 {
+				nodedOverprovisioned = true
+				break
+			}
+		}
 		// If there are more than the minimum number of required Nodeds available...
-		if len(rCfg.NodedsAssigned) > nReplicas() {
+		if len(rCfg.NodedsAssigned) > nReplicas() || nodedOverprovisioned {
 			opRealmId = realmId
 			ok = true
 			return true, nil
@@ -234,6 +242,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 
 // Request a Noded from realm realmId.
 func (m *SigmaResourceMgr) requestCores(realmId string) {
+	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, "", 1)
 	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 		db.DFatalf("Error SetFile: %v", err)

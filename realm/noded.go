@@ -221,17 +221,20 @@ func (r *Noded) teardown() {
 	r.s.Shutdown()
 }
 
-func (r *Noded) deregister(cfg *RealmConfig) {
+func (nd *Noded) deregister(cfg *RealmConfig) {
 	for i := range cfg.NodedsActive {
-		if cfg.NodedsActive[i] == r.id {
+		if cfg.NodedsActive[i] == nd.id {
 			cfg.NodedsActive = append(cfg.NodedsActive[:i], cfg.NodedsActive[i+1:]...)
 			break
 		}
 	}
-	r.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
+	nd.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 
-	for _, c := range r.cfg.Cores {
-		machine.PostCores(r.FsLib, r.machineId, c)
+	// Remove the symlink to this noded from the realmmgr dir.
+	nd.Remove(path.Join(REALM_MGRS, cfg.Rid, NODEDS, nd.id))
+
+	for _, c := range nd.cfg.Cores {
+		machine.PostCores(nd.FsLib, nd.machineId, c)
 	}
 }
 
@@ -241,29 +244,29 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
-		if err := r.Remove(path.Join(REALM_CONFIG, r.cfg.RealmId)); err != nil {
+		if err := r.Remove(path.Join(REALM_CONFIG, realmCfg.Rid)); err != nil {
 			db.DFatalf("Error Remove in REALM_CONFIG Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Remove the realm's named directory
-		if err := r.Remove(path.Join(REALM_NAMEDS, r.cfg.RealmId)); err != nil {
+		if err := r.Remove(path.Join(REALM_NAMEDS, realmCfg.Rid)); err != nil {
 			db.DFatalf("Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed
-		rExitSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, r.cfg.RealmId))
+		rExitSem := semclnt.MakeSemClnt(r.FsLib, path.Join(np.BOOT, realmCfg.Rid))
 		rExitSem.Up()
 	}
 }
 
 // Leave a realm
-func (r *Noded) leaveRealm() {
-	db.DPrintf("NODED", "Noded %v trying to leave Realm %v", r.id, r.cfg.RealmId)
+func (r *Noded) leaveRealm(realmId string) {
+	db.DPrintf("NODED", "Noded %v trying to leave Realm %v", r.id, realmId)
 
-	lockRealm(r.ec, r.cfg.RealmId)
-	defer unlockRealm(r.ec, r.cfg.RealmId)
+	lockRealm(r.ec, realmId)
+	defer unlockRealm(r.ec, realmId)
 
-	db.DPrintf("NODED", "Noded %v leaving Realm %v", r.id, r.cfg.RealmId)
+	db.DPrintf("NODED", "Noded %v leaving Realm %v", r.id, realmId)
 
 	// Tear down resources
 	r.teardown()
@@ -271,7 +274,7 @@ func (r *Noded) leaveRealm() {
 	db.DPrintf("NODED", "Noded %v done with teardown", r.id)
 
 	// Get the realm config
-	realmCfg := GetRealmConfig(r.FsLib, r.cfg.RealmId)
+	realmCfg := GetRealmConfig(r.FsLib, realmId)
 	// Deregister this noded
 	r.deregister(realmCfg)
 	// Try to destroy a realm (if this is the last noded remaining)
@@ -304,9 +307,11 @@ func (nd *Noded) Work() {
 	// Join a realm
 	nd.joinRealm()
 
+	realmId := nd.cfg.RealmId
+
 	nd.waitForDealloc()
 
 	// Leave a realm
-	nd.leaveRealm()
+	nd.leaveRealm(realmId)
 	nd.Exited(proc.MakeStatus(proc.StatusOK))
 }

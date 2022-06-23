@@ -41,8 +41,8 @@ func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	return pipe
 }
 
-func (p *Pipe) Size() np.Tlength {
-	return np.Tlength(len(p.buf))
+func (p *Pipe) Size() (np.Tlength, *np.Err) {
+	return np.Tlength(len(p.buf)), nil
 }
 
 func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

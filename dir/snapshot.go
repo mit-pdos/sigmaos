@@ -19,12 +19,14 @@ func makeDirSnapshot(fn fs.SnapshotF, d *DirImpl) []byte {
 	ds := &DirSnapshot{}
 	ds.InodeSnap = d.Inode.Snapshot(fn)
 	ds.Entries = make(map[string]np.Tpath)
-	for n, e := range d.entries {
+	d.dents.Iter(func(n string, e interface{}) bool {
 		if n == "." {
-			continue
+			return true
 		}
-		ds.Entries[n] = fn(e)
-	}
+		ds.Entries[n] = fn(e.(fs.Inode))
+		return true
+
+	})
 	b, err := json.Marshal(ds)
 	if err != nil {
 		db.DFatalf("Error snapshot encoding DirImpl: %v", err)
@@ -41,7 +43,7 @@ func restore(d *DirImpl, fn fs.RestoreF, b []byte) fs.Inode {
 	}
 	d.Inode = inode.RestoreInode(fn, ds.InodeSnap)
 	for name, ptr := range ds.Entries {
-		d.entries[name] = fn(ptr)
+		d.dents.Insert(name, fn(ptr))
 	}
 	return d
 }

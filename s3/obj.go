@@ -15,19 +15,19 @@ import (
 )
 
 type Obj struct {
-	*info
 	bucket string
 	perm   np.Tperm
 	key    np.Path
+
+	// set by fill()
+	sz    np.Tlength
+	mtime int64
 
 	// for writing
 	ch  chan error
 	r   *io.PipeReader
 	w   *io.PipeWriter
 	off np.Toffset
-
-	// for reading
-	buff *writeAtBuffer
 }
 
 func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
@@ -38,6 +38,37 @@ func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
 	return o
 }
 
+func (o *Obj) String() string {
+	return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
+}
+
+func (o *Obj) Size() (np.Tlength, *np.Err) {
+	return o.sz, nil
+}
+
+func (o *Obj) SetSize(sz np.Tlength) {
+	o.sz = sz
+}
+
+func (o *Obj) readHead(fss3 *Fss3) *np.Err {
+	key := o.key.String()
+	input := &s3.HeadObjectInput{
+		Bucket: &o.bucket,
+		Key:    &key,
+	}
+	result, err := fss3.client.HeadObject(context.TODO(), input)
+	if err != nil {
+		return np.MkErrError(err)
+	}
+
+	db.DPrintf("FSS3", "readHead: %v %v\n", key, result.ContentLength)
+	o.sz = np.Tlength(result.ContentLength)
+	if result.LastModified != nil {
+		o.mtime = (*result.LastModified).Unix()
+	}
+	return nil
+}
+
 func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
 	if perm.IsDir() {
 		return makeDir(bucket, key.Copy(), perm)
@@ -46,34 +77,25 @@ func makeFsObj(bucket string, perm np.Tperm, key np.Path) fs.FsObj {
 	}
 }
 
-func (o *Obj) String() string {
-	if o.info == nil {
-		return fmt.Sprintf("key '%v' perm %v", o.key, o.perm)
-	} else {
-		return fmt.Sprintf("key '%v' perm %v info %v", o.key, o.perm, o.info)
-	}
-}
-
 func (o *Obj) fill() *np.Err {
-	if o.info == nil {
-		i := cache.lookup(o.bucket, o.key)
-		if i != nil {
-			o.info = i
-			return nil
-		}
-		var err *np.Err
-		if o.perm.IsDir() {
-			i, err = s3ReadDirL(fss3, o.bucket, o.key)
-		} else {
-			i, err = readHead(fss3, o.bucket, o.key)
-		}
-		if err != nil {
-			return err
-		}
-		o.info = i
-		return nil
+	if err := o.readHead(fss3); err != nil {
+		return err
 	}
 	return nil
+}
+
+// stat without filling
+func (o *Obj) stat() *np.Stat {
+	db.DPrintf("FSS3", "stat: %v\n", o)
+	st := &np.Stat{}
+	if len(o.key) > 0 {
+		st.Name = o.key.Base()
+	} else {
+		st.Name = "" // root
+	}
+	st.Mode = o.perm | np.Tperm(0777)
+	st.Qid = qid(o.perm, o.key)
+	return st
 }
 
 func (o *Obj) Qid() np.Tqid {
@@ -92,11 +114,14 @@ func (o *Obj) Parent() fs.Dir {
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DPrintf("FSS3", "Stat: %v %p\n", o, o.info)
+	db.DPrintf("FSS3", "Stat: %v\n", o)
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	return o.info.stat(), nil
+	st := o.stat()
+	st.Length = o.sz
+	st.Mtime = uint32(o.mtime)
+	return st, nil
 }
 
 // XXX Check permissions?
@@ -105,9 +130,6 @@ func (o *Obj) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if err := o.fill(); err != nil {
 		return nil, err
 	}
-	//if m == np.OREAD {
-	//	o.setupReader()
-	//}
 	if m == np.OWRITE {
 		o.setupWriter()
 	}
@@ -127,49 +149,10 @@ func (o *Obj) Close(ctx fs.CtxI, m np.Tmode) *np.Err {
 	return nil
 }
 
-//
-// Read using downloader thread and writeAtBuffer
-//
-
-func (o *Obj) setupReader() {
-	db.DPrintf("FSS3", "%p: setupReader\n", o)
-	o.buff = mkWriteAtBuffer(o.sz)
-	go o.reader()
-}
-
-func (o *Obj) reader() {
-	key := o.key.String()
-	downloader := manager.NewDownloader(fss3.client)
-	_, err := downloader.Download(context.TODO(), o.buff, &s3.GetObjectInput{
-		Bucket: &o.bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		db.DPrintf("FSS3", "reader %v err %v\n", key, err)
-		o.buff.setErr(err)
-	}
-}
-
-func (o *Obj) Read0(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v %v %v %v\n", o.key, off, cnt, o.Size())
-	if np.Tlength(off) >= o.Size() {
-		return nil, nil
-	}
-	if np.Tlength(off)+np.Tlength(cnt) > o.Size() {
-		cnt = np.Tsize(o.Size()) - np.Tsize(off)
-	}
-	return o.buff.read(off, cnt)
-}
-
-//
-// Old read implementation around in case we need to read
-// small parts of a file instead of the complete file.
-//
-
 func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 	key := o.key.String()
 	region := ""
-	if off != 0 || np.Tlength(cnt) < o.Size() {
+	if off != 0 || np.Tlength(cnt) < o.sz {
 		n := off + cnt
 		region = "bytes=" + strconv.Itoa(off) + "-" + strconv.Itoa(n-1)
 	}
@@ -191,8 +174,8 @@ func (o *Obj) s3Read(off, cnt int) (io.ReadCloser, np.Tlength, *np.Err) {
 }
 
 func (o *Obj) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.Size())
-	if np.Tlength(off) >= o.Size() {
+	db.DPrintf("FSS3", "Read: %v o %v n %v sz %v\n", o.key, off, cnt, o.sz)
+	if np.Tlength(off) >= o.sz {
 		return nil, nil
 	}
 	rdr, n, err := o.s3Read(int(off), int(cnt))
@@ -235,7 +218,7 @@ func (o *Obj) writer(ch chan error) {
 }
 
 func (o *Obj) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.Size())
+	db.DPrintf("FSS3", "Write %v %v sz %v\n", off, len(b), o.sz)
 	if off != o.off {
 		db.DPrintf("FSS3", "Write %v err\n", o.off)
 		return 0, np.MkErr(np.TErrInval, off)

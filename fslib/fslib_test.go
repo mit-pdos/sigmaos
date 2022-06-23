@@ -60,6 +60,19 @@ func TestRemoveSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestCreateTwice(t *testing.T) {
+	ts := test.MakeTstatePath(t, namedaddr, path)
+
+	fn := path + "f"
+	d := []byte("hello")
+	_, err := ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.Equal(t, nil, err)
+	_, err = ts.PutFile(fn, 0777, np.OWRITE, d)
+	assert.NotNil(t, err)
+	assert.True(t, np.IsErrExists(err))
+	ts.Shutdown()
+}
+
 func TestConnect(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
@@ -300,7 +313,7 @@ func TestPageDir(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 	ts.SetChunkSz(np.Tsize(512))
-	n := 100
+	n := 1000
 	names := make([]string, 0)
 	for i := 0; i < n; i++ {
 		name := strconv.Itoa(i)

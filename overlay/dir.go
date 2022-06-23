@@ -20,7 +20,7 @@ type DirOverlay struct {
 	fs.Inode
 	underlay fs.Dir
 	mu       sync.Mutex
-	entries  map[string]fs.Inode
+	entries  map[string]fs.Inode // XXX use sortedmap?
 }
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {

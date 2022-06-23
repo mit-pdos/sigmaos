@@ -182,8 +182,12 @@ func (err *Err) Rerror() *Rerror {
 	return &Rerror{err.Error()}
 }
 
-// Return  wire-compatible error
+// Return  wire-compatible error format. If error isn't 9p error,
+// log it.
 func (err *Err) RerrorWC() *Rerror {
+	if err.ErrCode > TErrWalknodir {
+		log.Printf("RerrorWC: unknown err %v\n", err)
+	}
 	return &Rerror{err.ErrCode.String()}
 }
 

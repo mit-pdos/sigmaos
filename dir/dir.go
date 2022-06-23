@@ -2,7 +2,6 @@ package dir
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"ulambda/fs"
 	np "ulambda/ninep"
 	"ulambda/npcodec"
+	"ulambda/sorteddir"
 )
 
 // Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
@@ -20,17 +20,17 @@ func IsCurrentDir(name string) bool {
 
 type DirImpl struct {
 	fs.Inode
-	mi      fs.MakeInodeF
-	mu      sync.Mutex
-	entries map[string]fs.Inode
+	mi    fs.MakeInodeF
+	mu    sync.Mutex
+	dents *sorteddir.SortedDir
 }
 
 func MakeDir(i fs.Inode, mi fs.MakeInodeF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.mi = mi
-	d.entries = make(map[string]fs.Inode)
-	d.entries["."] = d
+	d.dents = sorteddir.MkSortedDir()
+	d.dents.Insert(".", d)
 	return d
 }
 
@@ -41,9 +41,11 @@ func MakeDirF(i fs.Inode, mi fs.MakeInodeF) fs.Inode {
 
 func (dir *DirImpl) String() string {
 	str := fmt.Sprintf("dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
-	for n, _ := range dir.entries {
+
+	dir.dents.Iter(func(n string, e interface{}) bool {
 		str += fmt.Sprintf("[%v]", n)
-	}
+		return true
+	})
 	str += "}"
 	return str
 }
@@ -62,27 +64,26 @@ func MkNod(ctx fs.CtxI, dir fs.Dir, name string, i fs.Inode) *np.Err {
 }
 
 func (dir *DirImpl) unlinkL(name string) *np.Err {
-	_, ok := dir.entries[name]
+	_, ok := dir.dents.Lookup(name)
 	if ok {
-		delete(dir.entries, name)
+		dir.dents.Delete(name)
 		return nil
 	}
 	return np.MkErr(np.TErrNotfound, name)
 }
 
 func (dir *DirImpl) createL(ino fs.Inode, name string) *np.Err {
-	_, ok := dir.entries[name]
-	if ok {
+	ok := dir.dents.Insert(name, ino)
+	if !ok {
 		return np.MkErr(np.TErrExists, name)
 	}
-	dir.entries[name] = ino
 	return nil
 }
 
 func (dir *DirImpl) lookupL(name string) (fs.Inode, *np.Err) {
-	inode, ok := dir.entries[name]
+	v, ok := dir.dents.Lookup(name)
 	if ok {
-		return inode, nil
+		return v.(fs.Inode), nil
 	} else {
 		return nil, np.MkErr(np.TErrNotfound, name)
 	}
@@ -95,14 +96,22 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	if err != nil {
 		return nil, err
 	}
-	st.Length = npcodec.MarshalSizeDir(dir.lsL(0))
+	sts, err := dir.lsL(0)
+	if err != nil {
+		return nil, err
+	}
+	st.Length = npcodec.MarshalSizeDir(sts)
 	return st, nil
 }
 
-func (dir *DirImpl) Size() np.Tlength {
+func (dir *DirImpl) Size() (np.Tlength, *np.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
-	return npcodec.MarshalSizeDir(dir.lsL(0))
+	sts, err := dir.lsL(0)
+	if err != nil {
+		return 0, err
+	}
+	return npcodec.MarshalSizeDir(sts), nil
 }
 
 func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
@@ -138,31 +147,37 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid,
 	}
 }
 
-func (dir *DirImpl) lsL(cursor int) []*np.Stat {
+func (dir *DirImpl) lsL(cursor int) ([]*np.Stat, *np.Err) {
 	entries := []*np.Stat{}
-	for k, i := range dir.entries {
-		if k == "." {
-			continue
+	var r *np.Err
+	dir.dents.Iter(func(n string, e interface{}) bool {
+		if n == "." {
+			return true
 		}
-		st, _ := i.Stat(nil)
-		st.Name = k
+		i := e.(fs.Inode)
+		st, err := i.Stat(nil)
+		if err != nil {
+			r = err
+			return false
+		}
+		st.Name = n
 		entries = append(entries, st)
-	}
-	// sort dir by st.Name
-	sort.SliceStable(entries, func(i, j int) bool {
-		return entries[i].Name < entries[j].Name
+		return true
 	})
+	if r != nil {
+		return nil, r
+	}
 	if cursor > len(entries) {
-		return nil
+		return nil, nil
 	} else {
-		return entries[cursor:]
+		return entries[cursor:], nil
 	}
 }
 
 func nonemptydir(inode fs.FsObj) bool {
 	switch i := inode.(type) {
 	case *DirImpl:
-		if len(i.entries) > 1 {
+		if i.dents.Len() > 1 {
 			return true
 		}
 		return false
@@ -202,7 +217,7 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion)
 	if !np.VEq(v, dir.Qid().Version) {
 		return nil, np.MkErr(np.TErrVersion, dir.Qid())
 	}
-	return dir.lsL(cursor), nil
+	return dir.lsL(cursor)
 }
 
 // XXX ax WriteDir from fs.Dir
@@ -219,7 +234,8 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	if IsCurrentDir(name) {
 		return nil, np.MkErr(np.TErrInval, name)
 	}
-	if i, ok := dir.entries[name]; ok {
+	if v, ok := dir.dents.Lookup(name); ok {
+		i := v.(fs.Inode)
 		return i, np.MkErr(np.TErrExists, name)
 	}
 	newi, err := dir.mi(ctx, perm, m, dir, MakeDirF)

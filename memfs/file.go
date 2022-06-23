@@ -21,10 +21,10 @@ func MakeFile(i fs.Inode) *File {
 	return f
 }
 
-func (f *File) Size() np.Tlength {
+func (f *File) Size() (np.Tlength, *np.Err) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return np.Tlength(len(f.data))
+	return np.Tlength(len(f.data)), nil
 }
 
 func (f *File) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {

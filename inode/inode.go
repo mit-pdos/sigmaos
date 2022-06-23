@@ -96,8 +96,8 @@ func (inode *Inode) SetMtime(m int64) {
 	inode.mtime = m
 }
 
-func (i *Inode) Size() np.Tlength {
-	return 0
+func (i *Inode) Size() (np.Tlength, *np.Err) {
+	return 0, nil
 }
 
 func (i *Inode) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {

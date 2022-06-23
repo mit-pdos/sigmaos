@@ -78,7 +78,7 @@ func MakeNoded(machineId string) *Noded {
 func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
-		db.DPrintf("NODED", "Noded %v received cores %v", nd.id, msg.Name)
+		db.DPrintf("NODED", "Noded %v granted cores %v", nd.id, msg.Name)
 		nd.forwardResourceMsgToProcd(msg)
 
 		cores := np.MkInterval(0, 0)
@@ -103,19 +103,23 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 		// Update the noded config file.
 		nd.ReadConfig(nd.cfgPath, nd.cfg)
 
+		cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
+
 		// XXX maybe remove these sanity checks...
 		// Sanity check: should be at least 2 core groups when removing one.
 		if len(nd.cfg.Cores) < 2 {
 			db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
 		}
 		// Sanity check: we always take the last cores allocated.
-		if nd.cfg.Cores[len(nd.cfg.Cores)-1].String() != msg.Name {
+		if cores.String() != msg.Name {
 			db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
 		}
 
 		// Update the core allocations for this noded.
 		nd.cfg.Cores = nd.cfg.Cores[:len(nd.cfg.Cores)-1]
 		nd.WriteConfig(nd.cfgPath, nd.cfg)
+
+		machine.PostCores(nd.FsLib, nd.machineId, cores)
 
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -192,7 +196,7 @@ func (r *Noded) boot(realmCfg *RealmConfig) {
 }
 
 // Join a realm
-func (r *Noded) joinRealm() chan bool {
+func (r *Noded) joinRealm() {
 	lockRealm(r.ec, r.cfg.RealmId)
 	defer unlockRealm(r.ec, r.cfg.RealmId)
 
@@ -210,8 +214,6 @@ func (r *Noded) joinRealm() chan bool {
 		rStartSem.Up()
 	}
 	db.DPrintf("NODED", "Noded %v joined Realm %v", r.id, r.cfg.RealmId)
-	// Watch for changes to the config
-	return r.WatchConfig(r.cfgPath)
 }
 
 func (r *Noded) teardown() {
@@ -276,24 +278,35 @@ func (r *Noded) leaveRealm() {
 	r.tryDestroyRealmL(realmCfg)
 }
 
-func (r *Noded) Work() {
-	if err := r.Started(); err != nil {
+// Wait until we are deallocated from the realm.
+func (nd *Noded) waitForDealloc() {
+	for {
+		// Watch for changes to the config
+		done := nd.WatchConfig(nd.cfgPath)
+		<-done
+		nd.ReadConfig(nd.cfgPath, nd.cfg)
+		// Make sure we've been assigned to a realm
+		if nd.cfg.RealmId == kernel.NO_REALM {
+			break
+		}
+	}
+}
+
+func (nd *Noded) Work() {
+	if err := nd.Started(); err != nil {
 		db.DFatalf("Error Started: %v", err)
 	}
-	db.DPrintf("NODED", "Noded %v started", r.id)
+	db.DPrintf("NODED", "Noded %v started", nd.id)
 	// Get the next realm assignment.
-	r.getNextConfig()
-	db.DPrintf("NODED", "Noded %v got config %v", r.id, r.cfg)
+	nd.getNextConfig()
+	db.DPrintf("NODED", "Noded %v got config %v", nd.id, nd.cfg)
 
 	// Join a realm
-	done := r.joinRealm()
+	nd.joinRealm()
 
-	db.DPrintf("NODED", "Noded %v joined realm %v", r.id, r.cfg.RealmId)
-
-	// Wait for the watch to trigger
-	<-done
+	nd.waitForDealloc()
 
 	// Leave a realm
-	r.leaveRealm()
-	r.Exited(proc.MakeStatus(proc.StatusOK))
+	nd.leaveRealm()
+	nd.Exited(proc.MakeStatus(proc.StatusOK))
 }

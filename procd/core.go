@@ -138,6 +138,11 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 			delete(toEvict, pid)
 		}
 	}
+	// Unset the evicted procs' core masks so they don't perform any
+	// double-frees.
+	for _, p := range toEvict {
+		p.cores = nil
+	}
 	pd.evictProcsL(toEvict)
 }
 

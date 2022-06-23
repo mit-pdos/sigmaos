@@ -255,7 +255,6 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 	defer m.Unlock()
 
 	db.DPrintf("SIGMAMGR", "Destroy realm %v", realmId)
-	db.DPrintf("TEST", "Destroy realm %v", realmId)
 
 	lockRealm(m.realmLocks[realmId], realmId)
 

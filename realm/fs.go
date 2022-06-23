@@ -1,13 +1,5 @@
 package realm
 
-import (
-	db "ulambda/debug"
-	"ulambda/fs"
-	"ulambda/inode"
-	np "ulambda/ninep"
-	"ulambda/resource"
-)
-
 /*
  * Diagram of the realm fs structure:
  * /
@@ -33,32 +25,3 @@ import (
  * |  |- ...
  * |  |- ...
  */
-
-type CtlFile struct {
-	g resource.ResourceGrantHandler
-	r resource.ResourceRequestHandler
-	fs.Inode
-}
-
-func makeCtlFile(g resource.ResourceGrantHandler, r resource.ResourceRequestHandler, ctx fs.CtxI, parent fs.Dir) *CtlFile {
-	i := inode.MakeInode(ctx, 0, parent)
-	return &CtlFile{g, r, i}
-}
-
-func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	return nil, np.MkErr(np.TErrNotSupported, "Read")
-}
-
-func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	msg := &resource.ResourceMsg{}
-	msg.Unmarshal(b)
-	switch msg.MsgType {
-	case resource.Tgrant:
-		ctl.g(msg)
-	case resource.Trequest:
-		ctl.r(msg)
-	default:
-		db.DFatalf("Unknown message type")
-	}
-	return np.Tsize(len(b)), nil
-}

@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,7 +16,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/inode"
-	"ulambda/linuxsched"
 	np "ulambda/ninep"
 
 	"ulambda/perf"
@@ -124,8 +122,9 @@ type Stats struct {
 	fs.Inode
 	mu            sync.Mutex // protects some fields of StatInfo
 	sti           *StatInfo
-	pid           string
+	pid           int
 	hz            int
+	cores         map[string]bool
 	monitoringCPU bool
 	done          uint32
 }
@@ -134,6 +133,7 @@ func MkStatsDev(parent fs.Dir) *Stats {
 	st := &Stats{}
 	st.Inode = inode.MakeInode(nil, np.DMDEVICE, parent)
 	st.sti = MkStatInfo()
+	st.pid = os.Getpid()
 	return st
 }
 
@@ -180,14 +180,11 @@ func (st *Stats) load(ticks uint64) {
 	st.sti.Util = util
 }
 
-func (st *Stats) loadCPUUtil(idle, total uint64) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
-
+// Caller holds lock
+func (st *Stats) loadCPUUtilL(idle, total uint64) {
 	util := 100.0 * (1.0 - float64(idle)/float64(total))
 
 	nthread := float64(runtime.NumGoroutine())
-	// log.Printf("loadCPUUtil %v %v nthread %v\n", idle, total, nthread)
 
 	st.sti.Load[0] *= EXP_0
 	st.sti.Load[0] += (1 - EXP_0) * nthread
@@ -199,33 +196,33 @@ func (st *Stats) loadCPUUtil(idle, total uint64) {
 	st.sti.Util = util
 }
 
+// Update the set of cores we scan to determine CPU utilization.
+func (st *Stats) UpdateCores() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	st.cores = perf.GetActiveCores()
+}
+
 func (st *Stats) monitorCPUUtil() {
 	total0 := uint64(0)
 	total1 := uint64(0)
 	idle0 := uint64(0)
 	idle1 := uint64(0)
-	pid := os.Getpid()
 	period1 := 10 // 1000/MS;
 
-	cores := map[string]bool{}
-
-	linuxsched.ScanTopology()
-	// Get the cores we can run on
-	m, err := linuxsched.SchedGetAffinity(pid)
-	if err != nil {
-		db.DFatalf("Error getting affinity mask: %v", err)
-	}
-	for i := uint(0); i < linuxsched.NCores; i++ {
-		if m.Test(i) {
-			cores["cpu"+strconv.Itoa(int(i))] = true
-		}
-	}
+	st.UpdateCores()
 
 	for atomic.LoadUint32(&st.done) != 1 {
 		for i := 0; i < period1; i++ {
 			time.Sleep(time.Duration(MS) * time.Millisecond)
-			idle1, total1 = perf.GetCPUSample(cores)
-			st.loadCPUUtil(idle1-idle0, total1-total0)
+
+			// Lock in case the set of cores we're monitoring changes.
+			st.mu.Lock()
+			idle1, total1 = perf.GetCPUSample(st.cores)
+			st.loadCPUUtilL(idle1-idle0, total1-total0)
+			st.mu.Unlock()
+
 			total0 = total1
 			idle0 = idle1
 		}

@@ -2,8 +2,30 @@ package realm
 
 import (
 	"fmt"
+	"path"
 	"time"
+
+	"ulambda/config"
+	"ulambda/fslib"
+	np "ulambda/ninep"
 )
+
+type NodedConfig struct {
+	Id        string
+	MachineId string
+	RealmId   string
+	Cores     []*np.Tinterval
+}
+
+func MakeNodedConfig() *NodedConfig {
+	cfg := &NodedConfig{}
+	cfg.Cores = []*np.Tinterval{}
+	return cfg
+}
+
+func (cfg *NodedConfig) String() string {
+	return fmt.Sprintf("&{ id:%v machineId:%v realmId:%v cores:%v }", cfg.Id, cfg.MachineId, cfg.RealmId, cfg.Cores)
+}
 
 type RealmConfig struct {
 	Rid            string    // Realm id.
@@ -17,4 +39,12 @@ type RealmConfig struct {
 
 func (rc *RealmConfig) String() string {
 	return fmt.Sprintf("&{ rid:%v mdAssigned:%v mdActive:%v lastResize:%v shutdown:%v namedAddrs:%v namedPids:%v }", rc.Rid, rc.NodedsAssigned, rc.NodedsActive, rc.LastResize, rc.Shutdown, rc.NamedAddrs, rc.NamedPids)
+}
+
+// Get a realm's configuration
+func GetRealmConfig(fsl *fslib.FsLib, rid string) *RealmConfig {
+	clnt := config.MakeConfigClnt(fsl)
+	cfg := &RealmConfig{}
+	clnt.ReadConfig(path.Join(REALM_CONFIG, rid), cfg)
+	return cfg
 }

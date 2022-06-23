@@ -7,7 +7,9 @@ package ninep
 
 import (
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 	"sync/atomic"
 )
 
@@ -425,8 +427,26 @@ func MkInterval(start, end Toffset) *Tinterval {
 	return &Tinterval{start, end}
 }
 
-func (iv Tinterval) String() string {
+func (iv *Tinterval) Size() Tsize {
+	return Tsize(iv.End - iv.Start)
+}
+
+func (iv *Tinterval) String() string {
 	return fmt.Sprintf("[%d, %d)", iv.Start, iv.End)
+}
+
+func (iv *Tinterval) Unmarshal(s string) {
+	idxs := strings.Split(s[1:len(s)-1], ", ")
+	start, err := strconv.Atoi(idxs[0])
+	if err != nil {
+		log.Fatalf("FATAL unmarshal interval: %v", err)
+	}
+	iv.Start = Toffset(start)
+	end, err := strconv.Atoi(idxs[1])
+	if err != nil {
+		log.Fatalf("FATAL unmarshal interval: %v", err)
+	}
+	iv.End = Toffset(end)
 }
 
 func (fcallWC *FcallWireCompat) GetType() Tfcall {

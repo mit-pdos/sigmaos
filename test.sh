@@ -53,7 +53,7 @@ do
   go test $1 ulambda/ux --version=$VERSION
   go test -v ulambda/fslib --version=$VERSION -path "name/ux/~ip/fslibtest/" -run ReadPerf
   
-  go test $1 ulambda/s3
+  go test $1 ulambda/s3 --version=$VERSION
   go test -v ulambda/fslib --version=$VERSION -path "name/s3/~ip/9ps3/fslibtest/" -run ReadPerf
   
   go test $1 ulambda/kernel --version=$VERSION

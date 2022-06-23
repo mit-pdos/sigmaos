@@ -22,6 +22,9 @@ realm:
   grow_cpu_util_threshold: 50
   shrink_cpu_util_threshold: 25
 
+machine:
+  core_group_fraction: 0.5
+
 procd:
   stealable_proc_timeout : 100ms
   work_steal_scan_timeout: 100ms
@@ -43,6 +46,9 @@ realm:
   resize_interval: 1000ms
   grow_cpu_util_threshold: 50
   shrink_cpu_util_threshold: 25
+
+machine:
+  core_group_fraction: 0.5
 
 procd:
   stealable_proc_timeout : 1000ms
@@ -71,6 +77,10 @@ type Config struct {
 		// Utilization threshold at which to shrink a realm.
 		SHRINK_CPU_UTIL_THRESHOLD float64 `yaml:"shrink_cpu_util_threshold"`
 	} `yaml:"realm"`
+	Machine struct {
+		// Core group size, in terms of fractions of a machine.
+		CORE_GROUP_FRACTION float64 `yaml:"core_group_fraction"`
+	} `yaml:"machine"`
 	Procd struct {
 		// Procd work steal frequency.
 		STEALABLE_PROC_TIMEOUT  time.Duration `yaml:"stealable_proc_timeout"`

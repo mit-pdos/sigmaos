@@ -3,6 +3,7 @@ package procd
 import (
 	"encoding/json"
 	"path"
+	"strings"
 	"time"
 
 	db "ulambda/debug"
@@ -22,14 +23,19 @@ func (pd *Procd) workStealingMonitor() {
 			nStealable = len(sts)
 			// Discount procs already on this procd
 			for _, st := range sts {
-				if _, ok := pd.getProcStatus(proc.Tpid(st.Name)); ok {
+				// See if this proc was spawned on this procd or has been stolen. If
+				// so, discount it from the count of stealable procs.
+				b, err := pd.GetFile(path.Join(np.PROCD_WS, st.Name))
+				if err != nil || strings.Contains(string(b), pd.MyAddr()) {
 					nStealable--
 				}
 			}
 			db.DPrintf("PROCD", "Found %v stealable procs, of which %v belonged to other procds", len(sts), nStealable)
 			return nStealable == 0
 		})
-		if err != nil && np.IsErrVersion(err) {
+		// Version error may occur if another procd has modified the ws dir, and
+		// unreachable err may occur if the other procd is shutting down.
+		if err != nil && (np.IsErrVersion(err) || np.IsErrUnreachable(err)) {
 			db.DPrintf("PROCD_ERR", "Error ReadDirWatch: %v %v", err, len(sts))
 			continue
 		}

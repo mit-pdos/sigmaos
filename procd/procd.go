@@ -19,42 +19,45 @@ import (
 	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/procclnt"
-	"ulambda/rand"
 )
 
 type Procd struct {
-	mu         sync.Mutex
-	fs         *ProcdFs
-	realmbin   string    // realm path from which to pull/run bins.
-	spawnChan  chan bool // Indicates a proc has been spawned on this procd.
-	stealChan  chan bool // Indicates there is work to be stolen.
-	done       bool
-	addr       string
-	procs      map[proc.Tpid]Tstatus
-	coreBitmap []bool
-	coresAvail proc.Tcore
-	perf       *perf.Perf
-	group      sync.WaitGroup
-	procclnt   *procclnt.ProcClnt
+	mu           sync.Mutex
+	fs           *ProcdFs
+	realmbin     string    // realm path from which to pull/run bins.
+	spawnChan    chan bool // Indicates a proc has been spawned on this procd.
+	stealChan    chan bool // Indicates there is work to be stolen.
+	done         bool
+	addr         string
+	runningProcs map[proc.Tpid]*LinuxProc
+	coreBitmap   []Tcorestatus
+	coresOwned   proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail   proc.Tcore // Current number of cores available to run procs on.
+	perf         *perf.Perf
+	group        sync.WaitGroup
+	procclnt     *procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
 }
 
-func RunProcd(realmbin string) {
+func RunProcd(realmbin string, grantedCoresIv string) {
 	pd := &Procd{}
 	pd.realmbin = realmbin
 
-	pd.procs = make(map[proc.Tpid]Tstatus)
-	pd.coreBitmap = make([]bool, linuxsched.NCores)
+	pd.runningProcs = make(map[proc.Tpid]*LinuxProc)
+	pd.coreBitmap = make([]Tcorestatus, linuxsched.NCores)
 	pd.coresAvail = proc.Tcore(linuxsched.NCores)
+	pd.coresOwned = proc.Tcore(linuxsched.NCores)
+
+	pd.makeFs()
+
+	pd.initCores(grantedCoresIv)
 
 	// Must set core affinity before starting CPU Util measurements
-	pd.setCoreAffinity()
+	pd.setCoreAffinityL()
 
 	pd.perf = perf.MakePerf("PROCD")
 	defer pd.perf.Done()
-
-	pd.makeFs()
 
 	// Set up FilePriorityBags and create name/runq
 	pd.spawnChan = make(chan bool)
@@ -73,44 +76,25 @@ func RunProcd(realmbin string) {
 	pd.Work()
 }
 
-func (pd *Procd) getProcStatus(pid proc.Tpid) (Tstatus, bool) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-	st, ok := pd.procs[pid]
-	return st, ok
+// Caller holds lock.
+func (pd *Procd) putProcL(p *LinuxProc) {
+	pd.runningProcs[p.attr.Pid] = p
 }
 
-func (pd *Procd) setProcStatus(pid proc.Tpid, st Tstatus) {
+func (pd *Procd) deleteProc(p *LinuxProc) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
-	pd.procs[pid] = st
-}
-
-func (pd *Procd) deleteProc(pid proc.Tpid) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-	delete(pd.procs, pid)
+	delete(pd.runningProcs, p.attr.Pid)
 }
 
 func (pd *Procd) spawnProc(a *proc.Proc) {
-	pd.setProcStatus(a.Pid, PROC_QUEUED)
-
 	pd.spawnChan <- true
 }
 
-func (pd *Procd) makeProc(a *proc.Proc) *Proc {
-	p := &Proc{}
-	p.pd = pd
-	p.init(a)
-	return p
-}
-
 // Evict all procs running in this procd
-func (pd *Procd) evictProcsL() {
-	for pid, status := range pd.procs {
-		if status == PROC_RUNNING {
-			pd.procclnt.EvictProcd(pd.addr, pid)
-		}
+func (pd *Procd) evictProcsL(procs map[proc.Tpid]*LinuxProc) {
+	for pid, _ := range procs {
+		pd.procclnt.EvictProcd(pd.addr, pid)
 	}
 }
 
@@ -120,7 +104,7 @@ func (pd *Procd) Done() {
 
 	pd.done = true
 	pd.perf.Done()
-	pd.evictProcsL()
+	pd.evictProcsL(pd.runningProcs)
 	close(pd.spawnChan)
 }
 
@@ -130,36 +114,24 @@ func (pd *Procd) readDone() bool {
 	return pd.done
 }
 
-// XXX Statsd information?
-// Check if this procd instance is able to satisfy a job's constraints.
-// Trivially true when not benchmarking.
-func (pd *Procd) satisfiesConstraintsL(p *proc.Proc) bool {
-	// If we have enough cores to run this job...
-	if pd.coresAvail >= p.Ncore {
-		return true
-	}
-	return false
-}
-
-// Update resource accounting information.
-func (pd *Procd) decrementResourcesL(p *proc.Proc) {
-	pd.coresAvail -= p.Ncore
-}
-
-// Update resource accounting information.
-func (pd *Procd) incrementResources(p *proc.Proc) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	pd.incrementResourcesL(p)
-}
-
-func (pd *Procd) incrementResourcesL(p *proc.Proc) {
-	pd.coresAvail += p.Ncore
+func (pd *Procd) registerProcL(p *proc.Proc) *LinuxProc {
+	// Make a Linux Proc which corresponds to this proc.
+	linuxProc := makeLinuxProc(pd, p)
+	// Allocate dedicated cores for this proc to run on, if it requires them.
+	// Core allocation & resource accounting has to happen at this point, while
+	// we still hold the lock we used to claim the proc, since this procd may be
+	// resized at any time. When the resize happens, we *must* have already
+	// assigned cores to this proc & registered it in the procd in-mem data
+	// structures so that the proc's core allocations will be adjusted during the
+	// resize.
+	pd.allocCoresL(linuxProc)
+	// Register running proc in in-memory structures.
+	pd.putProcL(linuxProc)
+	return linuxProc
 }
 
 // Tries to get a runnable proc if it fits on this procd.
-func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
+func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
@@ -170,22 +142,21 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*proc.Proc, error) {
 		return nil, err
 	}
 	// See if the proc fits on this procd.
-	if pd.satisfiesConstraintsL(p) {
+	if pd.hasEnoughCores(p) {
 		// Proc may have been stolen
 		if ok := pd.claimProc(procPath); !ok {
 			return nil, nil
 		}
-		// Update resource accounting.
-		pd.decrementResourcesL(p)
-		return p, nil
+		linuxProc := pd.registerProcL(p)
+		return linuxProc, nil
 	} else {
 		db.DPrintf("PROCD", "RunqProc %v didn't satisfy constraints", procPath)
 	}
 	return nil, nil
 }
 
-func (pd *Procd) getProc() (*proc.Proc, error) {
-	var p *proc.Proc
+func (pd *Procd) getProc() (*LinuxProc, error) {
+	var p *LinuxProc
 	// First try and get any LC procs, else get a BE proc.
 	runqs := []string{np.PROCD_RUNQ_LC, np.PROCD_RUNQ_BE}
 	// Try local procd first.
@@ -236,133 +207,33 @@ func (pd *Procd) getProc() (*proc.Proc, error) {
 	return p, err
 }
 
-func (pd *Procd) allocCores(n proc.Tcore) []uint {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-	cores := []uint{}
-	for i := 0; i < len(pd.coreBitmap); i++ {
-		// If lambda asks for 0 cores, run on any core
-		if n == proc.C_DEF {
-			cores = append(cores, uint(i))
-		} else {
-			if !pd.coreBitmap[i] {
-				pd.coreBitmap[i] = true
-				cores = append(cores, uint(i))
-				n -= 1
-				if n == 0 {
-					break
-				}
-			}
-		}
-	}
-	return cores
-}
-
-func (pd *Procd) freeCores(cores []uint) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	for _, i := range cores {
-		pd.coreBitmap[i] = false
-	}
-}
-
-// Try to download a proc bin from s3.
-func (pd *Procd) tryDownloadProcBin(uxBinPath, s3BinPath string) error {
-	// Copy the binary from s3 to a temporary file.
-	tmppath := path.Join(uxBinPath + "-tmp-" + rand.String(16))
-	if err := pd.CopyFile(s3BinPath, tmppath); err != nil {
-		return err
-	}
-	// Rename the temporary file.
-	if err := pd.Rename(tmppath, uxBinPath); err != nil {
-		// If another procd (or another thread on this procd) already completed the
-		// download, then we consider the download successful. Any other error
-		// (e.g. ux crashed) is unexpected.
-		if !np.IsErrExists(err) {
-			return err
-		}
-		// If someone else completed the download before us, remove the temp file.
-		pd.Remove(tmppath)
-	}
-	return nil
-}
-
-// Check if we need to download the binary.
-func (pd *Procd) needToDownload(uxBinPath, s3BinPath string) bool {
-	// If we can't stat the bin through ux, we try to download it.
-	_, err := pd.Stat(uxBinPath)
-	if err != nil {
-		// If we haven't downloaded any procs in this version yet, make a local dir
-		// for them.
-		versionDir := path.Dir(uxBinPath)
-		version := path.Base(versionDir)
-		if np.IsErrNotfound(err) && strings.Contains(err.Error(), version) {
-			db.DPrintf("PROCD_ERR", "Error first download for version %v: %v", version, err)
-			pd.MkDir(versionDir, 0777)
-		}
-		return true
-	}
-	return false
-}
-
-// XXX Cleanup on procd crashes?
-func (pd *Procd) downloadProcBin(program string) {
-	pd.mu.Lock()
-	defer pd.mu.Unlock()
-
-	uxBinPath := path.Join(np.UXBIN, program)
-	s3BinPath := path.Join(np.S3, "~ip", pd.realmbin, program)
-
-	// If we already downloaded the program & it is up-to-date, return.
-	if !pd.needToDownload(uxBinPath, s3BinPath) {
-		return
-	}
-
-	db.DPrintf("PROCD", "Need to download %v", program)
-
-	// May need to retry if ux crashes.
-	RETRIES := 1000
-	for i := 0; i < RETRIES && !pd.done; i++ {
-		// Return if successful. Else, retry
-		if err := pd.tryDownloadProcBin(uxBinPath, s3BinPath); err == nil {
-			return
-		} else {
-			db.DPrintf("PROCD_ERR", "Error tryDownloadProcBin [%v]: %v", s3BinPath, err)
-		}
-	}
-	db.DFatalf("Couldn't download proc bin %v in over %v retries", program, RETRIES)
-}
-
-func (pd *Procd) runProc(p *Proc) {
-	// Register running proc
-	pd.setProcStatus(p.Pid, PROC_RUNNING)
-
-	// Allocate dedicated cores for this lambda to run on.
-	cores := pd.allocCores(p.attr.Ncore)
-
+func (pd *Procd) runProc(p *LinuxProc) {
 	// Download the bin from s3, if it isn't already cached locally.
-	pd.downloadProcBin(p.Program)
+	pd.downloadProcBin(p.attr.Program)
 
 	// Run the proc.
-	p.run(cores)
+	p.run()
 
-	// Free resources and dedicated cores.
-	pd.freeCores(cores)
-	pd.incrementResources(p.attr)
+	// Free any dedicated cores.
+	pd.freeCores(p)
 
 	// Deregister running procs
-	pd.deleteProc(p.Pid)
+	pd.deleteProc(p)
 }
 
-func (pd *Procd) setCoreAffinity() {
-	// XXX Currently, we just set the affinity for all available cores since Linux
-	// seems to do a decent job of avoiding moving things around too much.
+// Set the core affinity for procd, according to what cores it owns. Caller
+// holds lock.
+func (pd *Procd) setCoreAffinityL() {
 	m := &linuxsched.CPUMask{}
 	for i := uint(0); i < linuxsched.NCores; i++ {
-		m.Set(i)
+		// If we own this core, set it in the CPU mask.
+		if pd.coreBitmap[i] != CORE_BLOCKED {
+			m.Set(i)
+		}
 	}
 	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
+	// Update the set of cores whose CPU utilization we're monitoring.
+	pd.MemFs.GetStats().UpdateCores()
 }
 
 // Wait for a new proc to be spawned at this procd, or for a stealing
@@ -403,8 +274,7 @@ func (pd *Procd) worker() {
 			db.DFatalf("Procd GetProc error %v, %v\n", p, error)
 		}
 		db.DPrintf("PROCD", "Got proc %v", p)
-		localProc := pd.makeProc(p)
-		err := pd.fs.running(localProc)
+		err := pd.fs.running(p)
 		if err != nil {
 			pd.perf.Done()
 			db.DFatalf("Procd pub running error %v %T\n", err, err)
@@ -412,12 +282,12 @@ func (pd *Procd) worker() {
 		// If this proc doesn't require cores, start another worker to take our
 		// place so user apps don't deadlock.
 		replaced := false
-		if p.Ncore == 0 {
+		if p.attr.Ncore == 0 {
 			replaced = true
 			pd.group.Add(1)
 			go pd.worker()
 		}
-		pd.runProc(localProc)
+		pd.runProc(p)
 		if replaced {
 			return
 		}
@@ -425,6 +295,7 @@ func (pd *Procd) worker() {
 }
 
 func (pd *Procd) Work() {
+	db.DPrintf("PROCD", "Work")
 	pd.group.Add(1)
 	go func() {
 		defer pd.group.Done()

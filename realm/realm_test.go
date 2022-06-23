@@ -1,12 +1,15 @@
 package realm_test
 
 import (
+	"flag"
+	"path"
 	"runtime/debug"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"ulambda/config"
 	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/linuxsched"
@@ -20,16 +23,26 @@ const (
 	SLEEP_TIME_MS = 3000
 )
 
+var version string
+
+// Read & set the proc version.
+func init() {
+	flag.StringVar(&version, "version", "none", "version")
+}
+
 type Tstate struct {
 	t        *testing.T
 	e        *realm.TestEnv
 	cfg      *realm.RealmConfig
 	realmFsl *fslib.FsLib
+	*config.ConfigClnt
+	coreGroupsPerMachine int
 	*fslib.FsLib
 	*procclnt.ProcClnt
 }
 
 func makeTstate(t *testing.T) *Tstate {
+	setVersion()
 	ts := &Tstate{}
 	e := realm.MakeTestEnv(np.TEST_RID)
 	cfg, err := e.Boot()
@@ -39,13 +52,14 @@ func makeTstate(t *testing.T) *Tstate {
 	ts.e = e
 	ts.cfg = cfg
 
-	err = ts.e.BootNoded()
+	err = ts.e.BootMachined()
 	if err != nil {
 		t.Fatalf("Boot Noded 2: %v", err)
 	}
 
 	program := "realm_test"
 	ts.realmFsl = fslib.MakeFsLibAddr(program, fslib.Named())
+	ts.ConfigClnt = config.MakeConfigClnt(ts.realmFsl)
 	ts.FsLib = fslib.MakeFsLibAddr(program, cfg.NamedAddrs)
 
 	ts.ProcClnt = procclnt.MakeProcClntInit(proc.GenPid(), ts.FsLib, program, cfg.NamedAddrs)
@@ -53,8 +67,16 @@ func makeTstate(t *testing.T) *Tstate {
 	linuxsched.ScanTopology()
 
 	ts.t = t
+	ts.coreGroupsPerMachine = int(1.0 / np.Conf.Machine.CORE_GROUP_FRACTION)
 
 	return ts
+}
+
+func setVersion() {
+	if version == "" || version == "none" || !flag.Parsed() {
+		db.DFatalf("Version not set in test")
+	}
+	proc.Version = version
 }
 
 func (ts *Tstate) spawnSpinner() proc.Tpid {
@@ -71,13 +93,18 @@ func (ts *Tstate) spawnSpinner() proc.Tpid {
 	return pid
 }
 
-// Check that the test realm has min <= nNodeds <= max nodeds assigned to it
-func (ts *Tstate) checkNNodeds(min int, max int) {
+// Check that the test realm has min <= nCoreGroups <= max core groups assigned to it
+func (ts *Tstate) checkNCoreGroups(min int, max int) {
 	db.DPrintf("TEST", "Checking num nodeds")
 	cfg := realm.GetRealmConfig(ts.realmFsl, np.TEST_RID)
-	nNodeds := len(cfg.NodedsActive)
+	nCoreGroups := 0
+	for _, nd := range cfg.NodedsActive {
+		ndCfg := realm.MakeNodedConfig()
+		ts.ReadConfig(path.Join(realm.NODED_CONFIG, nd), ndCfg)
+		nCoreGroups += len(ndCfg.Cores)
+	}
 	db.DPrintf("TEST", "Done Checking num nodeds")
-	ok := assert.True(ts.t, nNodeds >= min && nNodeds <= max, "Wrong number of nodeds (x=%v), expected %v <= x <= %v", nNodeds, min, max)
+	ok := assert.True(ts.t, nCoreGroups >= min && nCoreGroups <= max, "Wrong number of core groups (x=%v), expected %v <= x <= %v", nCoreGroups, min, max)
 	if !ok {
 		debug.PrintStack()
 	}
@@ -85,7 +112,7 @@ func (ts *Tstate) checkNNodeds(min int, max int) {
 
 func TestStartStop(t *testing.T) {
 	ts := makeTstate(t)
-	ts.checkNNodeds(1, 1)
+	ts.checkNCoreGroups(1, ts.coreGroupsPerMachine)
 	ts.e.Shutdown()
 }
 
@@ -113,7 +140,7 @@ func TestRealmGrow(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNNodeds(2, 100)
+	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2)
 
 	ts.e.Shutdown()
 }
@@ -145,7 +172,7 @@ func TestRealmShrink(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNNodeds(2, 100)
+	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2)
 
 	db.DPrintf("TEST", "Creating a new realm to contend with the old one")
 	// Create another realm to contend with this one.
@@ -154,7 +181,7 @@ func TestRealmShrink(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNNodeds(1, 1)
+	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2-1)
 
 	db.DPrintf("TEST", "Destroying the new, contending realm")
 	ts.e.DestroyRealm("2000")
@@ -167,7 +194,7 @@ func TestRealmShrink(t *testing.T) {
 	db.DPrintf("TEST", "Sleeping yet again")
 	time.Sleep(SLEEP_TIME_MS * time.Millisecond)
 
-	ts.checkNNodeds(2, 100)
+	ts.checkNCoreGroups(ts.coreGroupsPerMachine, ts.coreGroupsPerMachine*2)
 
 	ts.e.Shutdown()
 }

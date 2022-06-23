@@ -48,6 +48,7 @@ DIR=$(dirname $0)
 
 mkdir -p $PRIVILEGED_BIN
 rm -rf $PRIVILEGED_BIN/*
+rm -rf $UXROOT/$REALM/bin/user/*
 if [ $FROM == "local" ]; then
   VERSION=$(cat "${VERSION_FILE}")
   # Make the user program dir

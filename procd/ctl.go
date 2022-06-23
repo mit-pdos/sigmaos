@@ -13,21 +13,21 @@ import (
 	"ulambda/semclnt"
 )
 
-type CtlFile struct {
+type SpawnFile struct {
 	pd *Procd
 	fs.Inode
 }
 
-func makeCtlFile(pd *Procd, ctx fs.CtxI, parent fs.Dir) *CtlFile {
+func makeSpawnFile(pd *Procd, ctx fs.CtxI, parent fs.Dir) *SpawnFile {
 	i := inode.MakeInode(ctx, 0, parent)
-	return &CtlFile{pd, i}
+	return &SpawnFile{pd, i}
 }
 
-func (ctl *CtlFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+func (ctl *SpawnFile) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
 	return nil, np.MkErr(np.TErrNotSupported, "Read")
 }
 
-func (ctl *CtlFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
+func (ctl *SpawnFile) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	p := proc.MakeEmptyProc()
 	err := json.Unmarshal(b, p)
 	if err != nil {

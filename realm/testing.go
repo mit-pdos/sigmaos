@@ -17,7 +17,7 @@ type TestEnv struct {
 	namedPids []string
 	namedCmds []*exec.Cmd
 	sigmamgr  *exec.Cmd
-	noded     []*exec.Cmd
+	machined  []*exec.Cmd
 	*RealmClnt
 }
 
@@ -26,7 +26,7 @@ func MakeTestEnv(rid string) *TestEnv {
 	e.rid = rid
 	e.namedPids = []string{}
 	e.namedCmds = []*exec.Cmd{}
-	e.noded = []*exec.Cmd{}
+	e.machined = []*exec.Cmd{}
 
 	return e
 }
@@ -42,8 +42,8 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 		log.Printf("sigmamgr")
 		return nil, err
 	}
-	if err := e.BootNoded(); err != nil {
-		log.Printf("noded")
+	if err := e.BootMachined(); err != nil {
+		log.Printf("machined")
 		return nil, err
 	}
 	cfg := e.CreateRealm(e.rid)
@@ -51,14 +51,15 @@ func (e *TestEnv) Boot() (*RealmConfig, error) {
 }
 
 func (e *TestEnv) Shutdown() {
+	db.DPrintf("TEST", "Shutting down")
 	// Destroy the realm
 	e.DestroyRealm(e.rid)
 
-	// Kill the noded
-	for _, noded := range e.noded {
-		kill(noded)
+	// Kill the machined
+	for _, machined := range e.machined {
+		kill(machined)
 	}
-	e.noded = []*exec.Cmd{}
+	e.machined = []*exec.Cmd{}
 
 	// Kill the sigmamgr
 	kill(e.sigmamgr)
@@ -90,11 +91,12 @@ func (e *TestEnv) bootSigmaMgr() error {
 	return e.RealmClnt.WaitStart(p.Pid)
 }
 
-func (e *TestEnv) BootNoded() error {
+func (e *TestEnv) BootMachined() error {
 	var err error
-	p := proc.MakeProcPid(proc.Tpid("0"), "realm/noded", []string{proc.GenPid().String()})
-	noded, err := proc.RunKernelProc(p, fslib.Named())
-	e.noded = append(e.noded, noded)
+	pid := proc.Tpid("machined-" + proc.GenPid().String())
+	p := proc.MakeProcPid(pid, "realm/machined", []string{})
+	machined, err := proc.RunKernelProc(p, fslib.Named())
+	e.machined = append(e.machined, machined)
 	if err != nil {
 		return err
 	}
@@ -106,6 +108,6 @@ func kill(cmd *exec.Cmd) {
 		db.DFatalf("Error Kill in kill: %v", err)
 	}
 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal") {
-		db.DFatalf("Error noded Wait in kill: %v", err)
+		db.DFatalf("Error machined Wait in kill: %v", err)
 	}
 }

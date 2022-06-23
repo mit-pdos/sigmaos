@@ -43,11 +43,11 @@ func SetupProc(cmd *exec.Cmd) {
 
 func Isolate(fsRoot string) error {
 	if err := createFSNamespace(fsRoot); err != nil {
-		log.Printf("Error CreateFSNamespace in namespace.Isolate: %v", err)
+		log.Printf("Error CreateFSNamespace in namespace.Isolate [%v]: %v", fsRoot, err)
 		return err
 	}
 	if err := isolateFSNamespace(fsRoot); err != nil {
-		log.Printf("Error IsolateFSNamespace in namespace.Isolate: %v", err)
+		log.Printf("Error IsolateFSNamespace in namespace.Isolate [%v]: %v", fsRoot, err)
 		return err
 	}
 	return nil

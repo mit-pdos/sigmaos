@@ -26,7 +26,9 @@ const (
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 
-	PROC_CTL_FILE = "ctl"
+	// Procd spawn file
+	PROCD_SPAWN_FILE = "spawn"
+
 	PROCD_RUNNING = "running"
 	PROCD_RUNQ_LC = "runq-lc"
 	PROCD_RUNQ_BE = "runq-be"
@@ -35,14 +37,23 @@ const (
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
 	SNAPDEV  = "snapdev"
+
+	// Resource
+	RESOURCE_CTL = "resourcectl"
 )
 
 // Linux paths
 const (
-	UXROOT = "/tmp/sigmaos/"
+	UXROOT         = "/tmp/sigmaos/"
+	PRIVILEGED_BIN = UXROOT + "bin/"
 )
 
 // REALM
 const (
 	TEST_RID = "test-realm"
+)
+
+// SIGMA
+const (
+	SIGMACTL = SIGMAMGR + "/" + RESOURCE_CTL
 )

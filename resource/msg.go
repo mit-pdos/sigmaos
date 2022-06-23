@@ -10,43 +10,6 @@ import (
 type ResourceGrantHandler func(*ResourceMsg)
 type ResourceRequestHandler func(*ResourceMsg)
 
-type Tresource uint32
-type Tmsg uint32
-
-const (
-	Tnode Tresource = iota
-	Trealm
-)
-
-func (rt Tresource) String() string {
-	switch rt {
-	case Tnode:
-		return "Tnode"
-	case Trealm:
-		return "Trealm"
-	default:
-		db.DFatalf("Unknown resource type: %v", uint32(rt))
-		return "Tunknown"
-	}
-}
-
-const (
-	Tgrant Tmsg = iota
-	Trequest
-)
-
-func (mt Tmsg) String() string {
-	switch mt {
-	case Tgrant:
-		return "Tgrant"
-	case Trequest:
-		return "Trequest"
-	default:
-		db.DFatalf("Unknown resource type: %v", uint32(mt))
-		return "Tunknown"
-	}
-}
-
 type ResourceMsg struct {
 	MsgType      Tmsg
 	ResourceType Tresource

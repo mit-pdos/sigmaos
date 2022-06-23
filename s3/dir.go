@@ -242,7 +242,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	return np.MkErr(np.TErrNotSupported, "Rename")
 }
 
-// ===== The following functions are needed to make an s3 dir of type a dir.DirImpl
+// ===== The following functions are needed to make an s3 dir of type fs.Inode
 
 func (d *Dir) SetMtime(mtime int64) {
 	db.DFatalf("Unimplemented")

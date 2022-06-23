@@ -59,7 +59,7 @@ func (m *Machined) receiveResourceGrant(msg *resource.ResourceMsg) {
 func (m *Machined) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tnode:
-		db.DPrintf(db.ALWAYS, "Request to boot noded with name %v", msg.Name)
+		db.DPrintf("MACHINED", "Request to boot noded with name %v", msg.Name)
 		m.bootNoded(proc.Tpid(msg.Name))
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -71,7 +71,7 @@ func (m *Machined) bootNoded(pid proc.Tpid) {
 	m.Lock()
 	defer m.Unlock()
 
-	db.DPrintf(db.ALWAYS, "Booting noded %v", pid)
+	db.DPrintf("MACHINED", "Booting noded %v", pid)
 
 	p := proc.MakeProcPid(pid, "realm/noded", []string{m.MyAddr()})
 	noded, err := m.SpawnKernelProc(p, fslib.Named())
@@ -83,7 +83,7 @@ func (m *Machined) bootNoded(pid proc.Tpid) {
 		db.DFatalf("Error WaitStart(%v): %v", pid, err)
 	}
 
-	db.DPrintf(db.ALWAYS, "Finished booting noded %v", pid)
+	db.DPrintf("MACHINED", "Finished booting noded %v", pid)
 }
 
 // Shut down a noded.

@@ -18,6 +18,20 @@ const (
 	CORE_BLOCKED             // Not for use by this procd's procs.
 )
 
+func (st Tcorestatus) String() string {
+	switch st {
+	case CORE_IDLE:
+		return "CORE_IDLE"
+	case CORE_BUSY:
+		return "CORE_BUSY"
+	case CORE_BLOCKED:
+		return "CORE_BLOCKED"
+	default:
+		db.DFatalf("Unrecognized core status")
+	}
+	return ""
+}
+
 func (pd *Procd) initCores(grantedCoresIv string) {
 	grantedCores := np.MkInterval(0, 0)
 	grantedCores.Unmarshal(grantedCoresIv)
@@ -171,7 +185,7 @@ func (pd *Procd) markCoresL(cores []uint, status Tcorestatus) {
 		// If we are double-setting a core's status, it's probably a bug.
 		if pd.coreBitmap[i] == status {
 			debug.PrintStack()
-			db.DFatalf("Error: Double-marked cores %v == %v", pd.coreBitmap[i], status)
+			db.DFatalf("Error (noded:%v): Double-marked cores %v == %v", proc.GetNodedId(), pd.coreBitmap[i], status)
 		}
 		pd.coreBitmap[i] = status
 	}

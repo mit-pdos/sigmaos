@@ -241,6 +241,8 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 	// If this is the last noded, destroy the noded's named
 	if len(realmCfg.NodedsActive) == 0 {
+		db.DPrintf("NODED", "Destroy realm %v", realmCfg.Rid)
+
 		ShutdownNamedReplicas(r.ProcClnt, realmCfg.NamedPids)
 
 		// Remove the realm config file
@@ -250,7 +252,7 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 
 		// Remove the realm's named directory
 		if err := r.Remove(path.Join(REALM_NAMEDS, realmCfg.Rid)); err != nil {
-			db.DFatalf("Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
+			db.DPrintf("NODED_ERR", "Error Remove REALM_NAMEDS in Noded.tryDestroyRealmL: %v", err)
 		}
 
 		// Signal that the realm has been destroyed

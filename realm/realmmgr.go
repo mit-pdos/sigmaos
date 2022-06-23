@@ -85,9 +85,11 @@ func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Trealm:
-		db.DPrintf("REALMMGR", "Realm shutdown requested %v", m.realmId)
-		// On realm request, shut down & kill all nodeds.
 		lockRealm(m.lock, m.realmId)
+		defer unlockRealm(m.lock, m.realmId)
+
+		// On realm request, shut down & kill all nodeds.
+		db.DPrintf("REALMMGR", "Realm shutdown requested %v", m.realmId)
 		realmCfg, err := m.getRealmConfig()
 		if err != nil {
 			db.DFatalf("Error get realm config.")
@@ -95,10 +97,12 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		for _, nodedId := range realmCfg.NodedsAssigned {
 			m.deallocNoded(nodedId)
 		}
-		unlockRealm(m.lock, m.realmId)
 	case resource.Tcore:
-		db.DPrintf("REALMMGR", "resource.Tcore requested %v", m.realmId)
 		lockRealm(m.lock, m.realmId)
+		defer unlockRealm(m.lock, m.realmId)
+
+		db.DPrintf("REALMMGR", "resource.Tcore requested %v", m.realmId)
+
 		nodedId, ok := m.getLeastUtilizedNoded()
 
 		// If no Nodeds remain...
@@ -130,8 +134,6 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 			}
 			db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		}
-
-		unlockRealm(m.lock, m.realmId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}

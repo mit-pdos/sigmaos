@@ -43,7 +43,7 @@ type RealmResourceMgr struct {
 }
 
 func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
-	db.DPrintf("REALMMGR", "MakeRealmResourceMgr")
+	db.DPrintf("REALMMGR", "MakeRealmResourceMgr %v", realmId)
 	m := &RealmResourceMgr{}
 	m.realmId = realmId
 	m.sigmaFsl = fslib.MakeFsLib(proc.GetPid().String() + "-sigmafsl")
@@ -75,8 +75,7 @@ func (m *RealmResourceMgr) initFS() {
 func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
-		db.DPrintf("REALMMGR", "resource.Tcore granted")
-		db.DPrintf(db.ALWAYS, "resource.Tcore granted")
+		db.DPrintf("REALMMGR", "resource.Tcore granted %v", m.realmId)
 		m.growRealm()
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -86,6 +85,7 @@ func (m *RealmResourceMgr) receiveResourceGrant(msg *resource.ResourceMsg) {
 func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Trealm:
+		db.DPrintf("REALMMGR", "Realm shutdown requested %v", m.realmId)
 		// On realm request, shut down & kill all nodeds.
 		lockRealm(m.lock, m.realmId)
 		realmCfg, err := m.getRealmConfig()
@@ -97,15 +97,16 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		}
 		unlockRealm(m.lock, m.realmId)
 	case resource.Tcore:
-		db.DPrintf("REALMMGR", "resource.Tcore requested")
+		db.DPrintf("REALMMGR", "resource.Tcore requested %v", m.realmId)
 		lockRealm(m.lock, m.realmId)
 		nodedId, ok := m.getLeastUtilizedNoded()
+
 		// If no Nodeds remain...
-		if ok {
+		if !ok {
 			return
 		}
 
-		db.DPrintf("REALMMGR", "least utilized node: %v", nodedId)
+		db.DPrintf("REALMMGR", "least utilized node in real %v: %v", m.realmId, nodedId)
 		// XXX Should we prioritize defragmentation, or try to avoid evictions?
 		// Dealloc the Noded. The Noded will take care of registering itself as
 		// free with the SigmaMgr.
@@ -115,17 +116,19 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 
 		if len(ndCfg.Cores) == 1 {
+			db.DPrintf("REALMMGR", "Noded %v in realm %v has no cores to spare. Deallocating.", nodedId, m.realmId)
 			// If this noded doesn't have any core groups to spare, deallocate it.
 			m.deallocNoded(nodedId)
-			db.DPrintf("REALMMGR", "dealloced: %v", nodedId)
+			db.DPrintf("REALMMGR", "Dealloced from realm %v: %v", m.realmId, nodedId)
 		} else {
 			cores := ndCfg.Cores[len(ndCfg.Cores)-1]
+			db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 			// Otherwise, take some cores away.
 			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
-			if _, err := m.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId), msg.Marshal(), np.OWRITE, 0); err != nil {
+			if _, err := m.sigmaFsl.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 				db.DFatalf("Error SetFile: %v", err)
 			}
-			db.DPrintf("REALMMGR", "Revoked cores %v from noded %v", cores, nodedId)
+			db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		}
 
 		unlockRealm(m.lock, m.realmId)
@@ -144,17 +147,18 @@ func (m *RealmResourceMgr) growRealm() {
 	// If we couldn't claim cores on any machines already running a noded from
 	// this realm, start a new noded.
 	if nodedId == "" {
-		db.DPrintf(db.ALWAYS, "Start a new noded on %v", machineId)
+		db.DPrintf("REALMMGR", "Start a new noded for realm %v on %v with cores %v", m.realmId, machineId, cores)
 		// Request the machine to start a noded.
 		nodedId := m.requestNoded(machineId)
-		db.DPrintf(db.ALWAYS, "Started noded %v on %v", nodedId, machineId)
+		db.DPrintf("REALMMGR", "Started noded for realm %v %v on %v", m.realmId, nodedId, machineId)
 		// Allocate the noded to this realm.
 		m.allocNoded(m.realmId, machineId, nodedId.String(), cores)
-		db.DPrintf(db.ALWAYS, "Allocated %v to realm %v", nodedId, m.realmId)
+		db.DPrintf("REALMMGR", "Allocated %v to realm %v", nodedId, m.realmId)
 	} else {
+		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
 		// Otherwise, grant new cores to this noded.
 		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
-		if _, err := m.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId), msg.Marshal(), np.OWRITE, 0); err != nil {
+		if _, err := m.sigmaFsl.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
 			db.DFatalf("Error SetFile: %v", err)
 		}
 	}
@@ -275,7 +279,7 @@ func (m *RealmResourceMgr) deallocNoded(nodedId string) {
 	// Note noded de-registration
 	rCfg := &RealmConfig{}
 	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
-	db.DPrintf("REALMMGR", "Dealloc noded, choosing from: %v", rCfg.NodedsAssigned)
+	db.DPrintf("REALMMGR", "Dealloc noded from realm %v, choosing from: %v", m.realmId, rCfg.NodedsAssigned)
 	// Remove the noded from the list of assigned nodeds.
 	for i := range rCfg.NodedsAssigned {
 		if rCfg.NodedsAssigned[i] == nodedId {
@@ -354,7 +358,7 @@ func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	}
 
 	_, procdUtils := m.getRealmUtil(realmCfg)
-	db.DPrintf("REALMMGR", "searching for least utilized node, procd utils: %v", procdUtils)
+	db.DPrintf("REALMMGR", "searching for least utilized node in realm %v, procd utils: %v", m.realmId, procdUtils)
 
 	if len(procdUtils) == 0 {
 		return "", false
@@ -418,7 +422,7 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 }
 
 func (m *RealmResourceMgr) Work() {
-	db.DPrintf("REALMMGR", "Realmmgr started")
+	db.DPrintf("REALMMGR", "Realmmgr started in realm %v", m.realmId)
 
 	m.Started()
 	go func() {

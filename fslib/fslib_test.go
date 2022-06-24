@@ -83,7 +83,10 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.Disconnect(path)
+	srv, err := ts.PathServer(path)
+	assert.Nil(t, err)
+
+	err = ts.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
 	log.Printf("disconnected\n")

@@ -272,7 +272,7 @@ func cleanup(cfg aws.Config) {
 
 // Run: go test -v ulambda/s3 -bench=. -benchtime=1x -run PutObj
 func BenchmarkPutObj(b *testing.B) {
-	const N = 160
+	const N = 200
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("me-mit"))
 	if err != nil {

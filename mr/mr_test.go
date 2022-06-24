@@ -39,7 +39,7 @@ const (
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
 	CRASHTASK  = 3000
-	CRASHCOORD = 500
+	CRASHCOORD = 1000
 	CRASHSRV   = 1000000
 )
 

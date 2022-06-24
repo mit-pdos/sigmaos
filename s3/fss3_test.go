@@ -217,13 +217,10 @@ func TestReadSplit(t *testing.T) {
 	ts.Shutdown()
 }
 
-const NOBJ = 10
+const NOBJ = 100
 
-func put(cfg aws.Config, i int, ch chan struct{}) {
+func put(clnt *s3.Client, i int, ch chan struct{}) {
 	prefix := "s3test/" + strconv.Itoa(i) + "/"
-	clnt := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true
-	})
 	for j := 0; j < NOBJ; j++ {
 		key := prefix + strconv.Itoa(j)
 		input := &s3.PutObjectInput{
@@ -263,28 +260,34 @@ func cleanup(cfg aws.Config) {
 				Bucket: aws.String("9ps3"),
 				Key:    obj.Key,
 			}
-			_, err = clnt.DeleteObject(context.TODO(), input)
-			if err != nil {
-				panic(err)
-			}
+			go func() {
+				_, err = clnt.DeleteObject(context.TODO(), input)
+				if err != nil {
+					panic(err)
+				}
+			}()
 		}
 	}
 }
 
 // Run: go test -v ulambda/s3 -bench=. -benchtime=1x -run PutObj
 func BenchmarkPutObj(b *testing.B) {
-	const N = 10
+	const N = 160
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("me-mit"))
 	if err != nil {
 		panic(err)
 	}
 
+	clnt := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+
 	ch := make(chan struct{})
 
 	start := time.Now()
 	for i := 0; i < N; i++ {
-		go put(cfg, i, ch)
+		go put(clnt, i, ch)
 	}
 	for i := 0; i < N; i++ {
 		<-ch

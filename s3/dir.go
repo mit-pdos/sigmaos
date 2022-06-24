@@ -79,6 +79,9 @@ func (d *Dir) s3ReadDir(fss3 *Fss3) *np.Err {
 }
 
 func (d *Dir) fill() *np.Err {
+	if d.sz > 0 { // already filled?
+		return nil
+	}
 	if err := d.s3ReadDir(fss3); err != nil {
 		return err
 	}
@@ -220,8 +223,13 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		return nil, np.MkErr(np.TErrExists, name)
 	}
 	if perm.IsDir() {
-		return d.CreateDir(ctx, name, perm)
+		obj, err := d.CreateDir(ctx, name, perm)
+		if err == nil {
+			d.dents.Insert(name, perm)
+		}
+		return obj, err
 	}
+	d.dents.Insert(name, perm)
 	if perm.IsFile() && m == np.OWRITE {
 		o.setupWriter()
 	}
@@ -232,19 +240,45 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 	return np.MkErr(np.TErrNotSupported, "Renameat")
 }
 
-// XXX check in case of directory that it is empty
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
-	key := d.key.Append(name).String()
+	key := d.key.Append(name)
 
+	p := np.Split(name)
+	parent := d
+	if len(p) > 1 {
+		parent = makeDir(d.bucket, d.key.AppendPath(p[0:len(p)-1]), np.DMDIR)
+	}
+	if err := parent.fill(); err != nil {
+		return err
+	}
+	db.DPrintf("FSS3", "Delete %v key %v name %v\n", parent, key, p.Base())
+
+	e, ok := parent.dents.Lookup(p.Base())
+	if !ok {
+		db.DPrintf("FSS3", "Delete %v err %v\n", key, name)
+		return np.MkErr(np.TErrNotfound, name)
+	}
+	perm := e.(np.Tperm)
+	if perm.IsDir() {
+		d1 := makeDir(d.bucket, parent.key.Append(name), perm)
+		if err := d1.s3ReadDir(fss3); err != nil {
+			return err
+		}
+		if d1.dents.Len() > 0 {
+			np.MkErr(np.TErrNotEmpty, name)
+		}
+		key = key.Append(DOT)
+	}
+	k := key.String()
 	input := &s3.DeleteObjectInput{
 		Bucket: &d.bucket,
-		Key:    &key,
+		Key:    &k,
 	}
-	db.DPrintf("FSS3", "Delete %v key %v name %v\n", d, key, name)
-	_, err := fss3.client.DeleteObject(context.TODO(), input)
-	if err != nil {
+	if _, err := fss3.client.DeleteObject(context.TODO(), input); err != nil {
+		db.DPrintf("FSS3", "DeleteObject %v err %v\n", k, err)
 		return np.MkErrError(err)
 	}
+	parent.dents.Delete(p.Base())
 	return nil
 }
 

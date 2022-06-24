@@ -287,7 +287,7 @@ func TestDirSimple(t *testing.T) {
 
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn)
-	assert.NotEqual(t, nil, err)
+	assert.NotNil(t, err)
 
 	ts.Shutdown()
 }

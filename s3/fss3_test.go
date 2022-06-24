@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -219,7 +220,7 @@ func TestReadSplit(t *testing.T) {
 
 const NOBJ = 100
 
-func put(clnt *s3.Client, i int, ch chan struct{}) {
+func put(clnt *s3.Client, i int, wg *sync.WaitGroup) {
 	prefix := "s3test/" + strconv.Itoa(i) + "/"
 	for j := 0; j < NOBJ; j++ {
 		key := prefix + strconv.Itoa(j)
@@ -232,7 +233,7 @@ func put(clnt *s3.Client, i int, ch chan struct{}) {
 			panic(err)
 		}
 	}
-	ch <- struct{}{}
+	wg.Done()
 }
 
 func cleanup(cfg aws.Config) {
@@ -255,18 +256,22 @@ func cleanup(cfg aws.Config) {
 		if err != nil {
 			return
 		}
+		wg := &sync.WaitGroup{}
+		wg.Add(len(page.Contents))
 		for _, obj := range page.Contents {
 			input := &s3.DeleteObjectInput{
 				Bucket: aws.String("9ps3"),
 				Key:    obj.Key,
 			}
 			go func() {
+				defer wg.Done()
 				_, err = clnt.DeleteObject(context.TODO(), input)
 				if err != nil {
 					panic(err)
 				}
 			}()
 		}
+		wg.Wait()
 	}
 }
 
@@ -283,15 +288,14 @@ func BenchmarkPutObj(b *testing.B) {
 		o.UsePathStyle = true
 	})
 
-	ch := make(chan struct{})
+	wg := &sync.WaitGroup{}
+	wg.Add(N)
 
 	start := time.Now()
 	for i := 0; i < N; i++ {
-		go put(clnt, i, ch)
+		go put(clnt, i, wg)
 	}
-	for i := 0; i < N; i++ {
-		<-ch
-	}
+	wg.Wait()
 	ms := time.Since(start).Milliseconds()
 	s := float64(ms) / 1000
 	n := N * NOBJ

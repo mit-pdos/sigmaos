@@ -433,7 +433,6 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	return false
 }
 
-// XXX no versions for now
 func TestCounter(t *testing.T) {
 	const N = 10
 

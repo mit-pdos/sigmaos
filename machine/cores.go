@@ -16,7 +16,5 @@ func PostCores(fsl *fslib.FsLib, machineId string, cores *np.Tinterval) {
 		db.DFatalf("Error PutFile: %v", err)
 	}
 	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), 1)
-	if _, err := fsl.SetFile(np.SIGMACTL, msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in PostCores: %v", err)
-	}
+	resource.SendMsg(fsl, np.SIGMACTL, msg)
 }

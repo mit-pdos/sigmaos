@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	db "ulambda/debug"
+	"ulambda/fslib"
+	np "ulambda/ninep"
 )
 
 type ResourceGrantHandler func(*ResourceMsg)
@@ -37,4 +39,10 @@ func (r *ResourceMsg) Unmarshal(b []byte) {
 
 func (r *ResourceMsg) String() string {
 	return fmt.Sprintf("&{ MsgType: %v ResourceType:%v Name:%v Amount:%v }", r.MsgType, r.ResourceType, r.Name, r.Amount)
+}
+
+func SendMsg(fsl *fslib.FsLib, path string, msg *ResourceMsg) {
+	if _, err := fsl.SetFile(path, msg.Marshal(), np.OWRITE, 0); err != nil {
+		db.DFatalf("Error SetFile: %v", err)
+	}
 }

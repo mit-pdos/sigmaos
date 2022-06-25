@@ -119,6 +119,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		ndCfg := &NodedConfig{}
 		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 
+		// XXX try and factor out this case.
 		if len(ndCfg.Cores) == 1 {
 			db.DPrintf("REALMMGR", "Noded %v in realm %v has no cores to spare. Deallocating.", nodedId, m.realmId)
 			// If this noded doesn't have any core groups to spare, deallocate it.
@@ -129,9 +130,7 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 			db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 			// Otherwise, take some cores away.
 			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
-			if _, err := m.sigmaFsl.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-				db.DFatalf("Error SetFile: %v", err)
-			}
+			resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
 			db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 		}
 	default:
@@ -160,9 +159,7 @@ func (m *RealmResourceMgr) growRealm() {
 		db.DPrintf("REALMMGR", "Growing noded %v core allocation on machine %v by %v", nodedId, machineId, cores)
 		// Otherwise, grant new cores to this noded.
 		msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, cores.String(), int(cores.Size()))
-		if _, err := m.sigmaFsl.SetFile(path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-			db.DFatalf("Error SetFile: %v", err)
-		}
+		resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
 	}
 }
 
@@ -250,9 +247,7 @@ func (m *RealmResourceMgr) getFreeCores(nRetries int) (string, string, *np.Tinte
 func (m *RealmResourceMgr) requestNoded(machineId string) proc.Tpid {
 	pid := proc.Tpid("noded-" + proc.GenPid().String())
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tnode, pid.String(), 1)
-	if _, err := m.sigmaFsl.SetFile(path.Join(machine.MACHINES, machineId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile in requestNoded: %v", err)
-	}
+	resource.SendMsg(m.sigmaFsl, path.Join(machine.MACHINES, machineId, np.RESOURCE_CTL), msg)
 	return pid
 }
 
@@ -439,9 +434,7 @@ func (m *RealmResourceMgr) Work() {
 		if m.realmShouldGrow() {
 			db.DPrintf("REALMMGR", "Try to grow realm %v", m.realmId)
 			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, m.realmId, 1)
-			if _, err := m.sigmaFsl.SetFile(path.Join(np.SIGMACTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-				db.DFatalf("Error SetFile: %v", err)
-			}
+			resource.SendMsg(m.sigmaFsl, np.SIGMACTL, msg)
 		}
 		// Sleep for a bit.
 		time.Sleep(np.Conf.Realm.SCAN_INTERVAL)

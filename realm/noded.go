@@ -129,9 +129,7 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 func (nd *Noded) forwardResourceMsgToProcd(msg *resource.ResourceMsg) {
 	procdIp := nd.s.GetProcdIp()
 	// Pass the resource message on to this noded's procd.
-	if _, err := nd.SetFile(path.Join(REALM_NAMEDS, nd.cfg.RealmId, np.PROCDREL, procdIp, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile: %v", err)
-	}
+	resource.SendMsg(nd.FsLib, path.Join(REALM_NAMEDS, nd.cfg.RealmId, np.PROCDREL, procdIp, np.RESOURCE_CTL), msg)
 }
 
 // Update configuration.

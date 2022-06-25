@@ -128,9 +128,7 @@ func (m *SigmaResourceMgr) tryGetFreeCores(nRetries int) bool {
 func (m *SigmaResourceMgr) allocCores(realmId string, i int64) {
 	atomic.AddInt64(&m.freeCoreGroups, -1*i)
 	msg := resource.MakeResourceMsg(resource.Tgrant, resource.Tcore, "", 1)
-	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile: %v", err)
-	}
+	resource.SendMsg(m.FsLib, path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg)
 }
 
 func (m *SigmaResourceMgr) freeCores(i int64) {
@@ -244,9 +242,7 @@ func (m *SigmaResourceMgr) createRealm(realmId string) {
 func (m *SigmaResourceMgr) requestCores(realmId string) {
 	db.DPrintf("SIGMAMGR", "Sigmamgr requesting cores from %v", realmId)
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, "", 1)
-	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile: %v", err)
-	}
+	resource.SendMsg(m.FsLib, path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg)
 }
 
 // Destroy a realm.
@@ -269,9 +265,7 @@ func (m *SigmaResourceMgr) destroyRealm(realmId string) {
 
 	// Send a message to the realmmmgr telling it to kill its realm.
 	msg := resource.MakeResourceMsg(resource.Trequest, resource.Trealm, "", 1)
-	if _, err := m.SetFile(path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg.Marshal(), np.OWRITE, 0); err != nil {
-		db.DFatalf("Error SetFile: %v", err)
-	}
+	resource.SendMsg(m.FsLib, path.Join(REALM_MGRS, realmId, np.RESOURCE_CTL), msg)
 
 	m.evictRealmMgr(realmId)
 	db.DPrintf("SIGMAMGR", "Done destroying realm %v", realmId)

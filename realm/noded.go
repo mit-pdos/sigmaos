@@ -2,6 +2,7 @@ package realm
 
 import (
 	"path"
+	"time"
 
 	"ulambda/config"
 	db "ulambda/debug"
@@ -26,6 +27,7 @@ type Noded struct {
 	machineId string
 	localIP   string
 	cfgPath   string
+	done      chan bool
 	cfg       *NodedConfig
 	s         *kernel.System
 	ec        *electclnt.ElectClnt
@@ -33,24 +35,25 @@ type Noded struct {
 }
 
 func MakeNoded(machineId string) *Noded {
-	r := &Noded{}
-	r.id = proc.GetPid().String()
-	r.machineId = machineId
-	r.cfgPath = path.Join(NODED_CONFIG, r.id)
-	r.FsLib = fslib.MakeFsLib(r.id)
-	r.ProcClnt = procclnt.MakeProcClnt(r.FsLib)
-	r.ConfigClnt = config.MakeConfigClnt(r.FsLib)
+	nd := &Noded{}
+	nd.id = proc.GetPid().String()
+	nd.machineId = machineId
+	nd.cfgPath = path.Join(NODED_CONFIG, nd.id)
+	nd.done = make(chan bool)
+	nd.FsLib = fslib.MakeFsLib(nd.id)
+	nd.ProcClnt = procclnt.MakeProcClnt(nd.FsLib)
+	nd.ConfigClnt = config.MakeConfigClnt(nd.FsLib)
 	var err error
-	r.MemFs, err = fslibsrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", r.FsLib, r.ProcClnt)
+	nd.MemFs, err = fslibsrv.MakeMemFsFsl(path.Join(machine.MACHINES, machineId, machine.NODEDS)+"/", nd.FsLib, nd.ProcClnt)
 	if err != nil {
 		db.DFatalf("Error MakeMemFsFsl: %v", err)
 	}
 
 	// Make a control file
-	resource.MakeCtlFile(r.receiveResourceGrant, r.handleResourceRequest, r.MemFs.Root(), np.RESOURCE_CTL)
+	resource.MakeCtlFile(nd.receiveResourceGrant, nd.handleResourceRequest, nd.MemFs.Root(), np.RESOURCE_CTL)
 
 	// Mount the KPIDS dir.
-	if err := procclnt.MountPids(r.FsLib, fslib.Named()); err != nil {
+	if err := procclnt.MountPids(nd.FsLib, fslib.Named()); err != nil {
 		db.DFatalf("Error mountpids: %v", err)
 	}
 
@@ -58,21 +61,21 @@ func MakeNoded(machineId string) *Noded {
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}
-	r.localIP = ip
+	nd.localIP = ip
 
 	// Set the noded id so that child kernel procs inherit it.
-	proc.SetNodedId(r.id)
+	proc.SetNodedId(nd.id)
 
 	// Set up the noded config
-	r.cfg = MakeNodedConfig()
-	r.cfg.Id = r.id
-	r.cfg.RealmId = kernel.NO_REALM
-	r.cfg.MachineId = machineId
+	nd.cfg = MakeNodedConfig()
+	nd.cfg.Id = nd.id
+	nd.cfg.RealmId = kernel.NO_REALM
+	nd.cfg.MachineId = machineId
 
 	// Write the initial config file
-	r.WriteConfig(r.cfgPath, r.cfg)
+	nd.WriteConfig(nd.cfgPath, nd.cfg)
 
-	return r
+	return nd
 }
 
 func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
@@ -96,25 +99,34 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 	switch msg.ResourceType {
 	case resource.Tcore:
 		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
-		nd.forwardResourceMsgToProcd(msg)
 
-		cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
+		// If all cores were requested, shut down.
+		if msg.Name == machine.ALL_CORES || len(nd.cfg.Cores) == 1 {
+			// Leave the realm and prepare to shut down.
+			nd.leaveRealm()
+			nd.done <- true
+			close(nd.done)
+		} else {
+			nd.forwardResourceMsgToProcd(msg)
 
-		// XXX maybe remove these sanity checks...
-		// Sanity check: should be at least 2 core groups when removing one.
-		if len(nd.cfg.Cores) < 2 {
-			db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
+			cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
+
+			// Sanity check: should be at least 2 core groups when removing one.
+			// Otherwise, we should have shut down.
+			if len(nd.cfg.Cores) < 2 {
+				db.DFatalf("Requesting cores form a noded with <2 core groups: %v", nd.cfg)
+			}
+			// Sanity check: we always take the last cores allocated.
+			if cores.String() != msg.Name {
+				db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
+			}
+
+			// Update the core allocations for this noded.
+			nd.cfg.Cores = nd.cfg.Cores[:len(nd.cfg.Cores)-1]
+			nd.WriteConfig(nd.cfgPath, nd.cfg)
+
+			machine.PostCores(nd.FsLib, nd.machineId, cores)
 		}
-		// Sanity check: we always take the last cores allocated.
-		if cores.String() != msg.Name {
-			db.DFatalf("Removed unexpected core group: %v from %v", msg.Name, nd.cfg)
-		}
-
-		// Update the core allocations for this noded.
-		nd.cfg.Cores = nd.cfg.Cores[:len(nd.cfg.Cores)-1]
-		nd.WriteConfig(nd.cfgPath, nd.cfg)
-
-		machine.PostCores(nd.FsLib, nd.machineId, cores)
 
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
@@ -221,6 +233,16 @@ func (nd *Noded) deregister(cfg *RealmConfig) {
 			break
 		}
 	}
+
+	for i := range cfg.NodedsAssigned {
+		if cfg.NodedsAssigned[i] == nd.id {
+			cfg.NodedsAssigned = append(cfg.NodedsAssigned[:i], cfg.NodedsAssigned[i+1:]...)
+			break
+		}
+	}
+
+	cfg.LastResize = time.Now()
+
 	nd.WriteConfig(path.Join(REALM_CONFIG, cfg.Rid), cfg)
 
 	// Remove the symlink to this noded from the realmmgr dir.
@@ -254,41 +276,21 @@ func (r *Noded) tryDestroyRealmL(realmCfg *RealmConfig) {
 	}
 }
 
-// Leave a realm
-func (r *Noded) leaveRealm(realmId string) {
-	db.DPrintf("NODED", "Noded %v trying to leave Realm %v", r.id, realmId)
-
-	lockRealm(r.ec, realmId)
-	defer unlockRealm(r.ec, realmId)
-
-	db.DPrintf("NODED", "Noded %v leaving Realm %v", r.id, realmId)
+// Leave a realm. Expects realmmgr to hold the realm lock.
+func (nd *Noded) leaveRealm() {
+	db.DPrintf("NODED", "Noded %v leaving Realm %v", nd.id, nd.cfg.RealmId)
 
 	// Tear down resources
-	r.teardown()
+	nd.teardown()
 
-	db.DPrintf("NODED", "Noded %v done with teardown", r.id)
+	db.DPrintf("NODED", "Noded %v done with teardown", nd.id)
 
 	// Get the realm config
-	realmCfg := GetRealmConfig(r.FsLib, realmId)
+	realmCfg := GetRealmConfig(nd.FsLib, nd.cfg.RealmId)
 	// Deregister this noded
-	r.deregister(realmCfg)
+	nd.deregister(realmCfg)
 	// Try to destroy a realm (if this is the last noded remaining)
-	r.tryDestroyRealmL(realmCfg)
-}
-
-// Wait until we are deallocated from the realm.
-func (nd *Noded) waitForDealloc() {
-	cfg := MakeNodedConfig()
-	for {
-		// Watch for changes to the config
-		done := nd.WatchConfig(nd.cfgPath)
-		<-done
-		nd.ReadConfig(nd.cfgPath, cfg)
-		// Make sure we've been assigned to a realm
-		if cfg.RealmId == kernel.NO_REALM {
-			break
-		}
-	}
+	nd.tryDestroyRealmL(realmCfg)
 }
 
 func (nd *Noded) Work() {
@@ -303,11 +305,7 @@ func (nd *Noded) Work() {
 	// Join a realm
 	nd.joinRealm()
 
-	realmId := nd.cfg.RealmId
+	<-nd.done
 
-	nd.waitForDealloc()
-
-	// Leave a realm
-	nd.leaveRealm(realmId)
 	nd.Exited(proc.MakeStatus(proc.StatusOK))
 }

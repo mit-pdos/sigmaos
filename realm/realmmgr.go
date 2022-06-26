@@ -95,7 +95,10 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 			db.DFatalf("Error get realm config.")
 		}
 		for _, nodedId := range realmCfg.NodedsAssigned {
-			m.deallocNoded(nodedId)
+			// Otherwise, take some cores away.
+			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, machine.ALL_CORES, 0)
+			resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+			db.DPrintf("REALMMGR", "Deallocating noded %v from realm %v", nodedId, m.realmId)
 		}
 	case resource.Tcore:
 		lockRealm(m.lock, m.realmId)
@@ -119,20 +122,12 @@ func (m *RealmResourceMgr) handleResourceRequest(msg *resource.ResourceMsg) {
 		ndCfg := &NodedConfig{}
 		m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 
-		// XXX try and factor out this case.
-		if len(ndCfg.Cores) == 1 {
-			db.DPrintf("REALMMGR", "Noded %v in realm %v has no cores to spare. Deallocating.", nodedId, m.realmId)
-			// If this noded doesn't have any core groups to spare, deallocate it.
-			m.deallocNoded(nodedId)
-			db.DPrintf("REALMMGR", "Dealloced from realm %v: %v", m.realmId, nodedId)
-		} else {
-			cores := ndCfg.Cores[len(ndCfg.Cores)-1]
-			db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
-			// Otherwise, take some cores away.
-			msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
-			resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
-			db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
-		}
+		cores := ndCfg.Cores[len(ndCfg.Cores)-1]
+		db.DPrintf("REALMMGR", "Revoking cores %v from realm %v noded %v", cores, m.realmId, nodedId)
+		// Otherwise, take some cores away.
+		msg := resource.MakeResourceMsg(resource.Trequest, resource.Tcore, cores.String(), int(cores.Size()))
+		resource.SendMsg(m.sigmaFsl, path.Join(REALM_MGRS, m.realmId, NODEDS, nodedId, np.RESOURCE_CTL), msg)
+		db.DPrintf("REALMMGR", "Revoked cores %v from realm %v noded %v", cores, m.realmId, nodedId)
 	default:
 		db.DFatalf("Unexpected resource type: %v", msg.ResourceType)
 	}
@@ -269,31 +264,6 @@ func (m *RealmResourceMgr) allocNoded(realmId, machineId, nodedId string, cores 
 	rCfg.NodedsAssigned = append(rCfg.NodedsAssigned, nodedId)
 	rCfg.LastResize = time.Now()
 	m.WriteConfig(path.Join(REALM_CONFIG, realmId), rCfg)
-}
-
-// Deallocate a noded from a realm.
-func (m *RealmResourceMgr) deallocNoded(nodedId string) {
-	// Note noded de-registration
-	rCfg := &RealmConfig{}
-	m.ReadConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
-	db.DPrintf("REALMMGR", "Dealloc noded from realm %v, choosing from: %v", m.realmId, rCfg.NodedsAssigned)
-	// Remove the noded from the list of assigned nodeds.
-	for i := range rCfg.NodedsAssigned {
-		if rCfg.NodedsAssigned[i] == nodedId {
-			rCfg.NodedsAssigned = append(rCfg.NodedsAssigned[:i], rCfg.NodedsAssigned[i+1:]...)
-			break
-		}
-	}
-	rCfg.LastResize = time.Now()
-	m.WriteConfig(path.Join(REALM_CONFIG, m.realmId), rCfg)
-
-	ndCfg := MakeNodedConfig()
-	m.ReadConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
-	ndCfg.Id = nodedId
-	ndCfg.RealmId = kernel.NO_REALM
-
-	// Update the noded config file.
-	m.WriteConfig(path.Join(NODED_CONFIG, nodedId), ndCfg)
 }
 
 // XXX Do I really need this?

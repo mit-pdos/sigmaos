@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	MACHINES = "name/machines/"
-	CORES    = "cores"
-	NODEDS   = "nodeds"
+	MACHINES  = "name/machines/"
+	CORES     = "cores"
+	ALL_CORES = "all-cores"
+	NODEDS    = "nodeds"
 )
 
 // Machined registers initial machine reseources and starts Nodeds on-demand.

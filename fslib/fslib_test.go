@@ -83,7 +83,10 @@ func TestConnect(t *testing.T) {
 	_, err = ts.Write(fd, d)
 	assert.Equal(t, nil, err)
 
-	err = ts.Disconnect(path)
+	srv, err := ts.PathServer(path)
+	assert.Nil(t, err)
+
+	err = ts.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 	time.Sleep(100 * time.Millisecond)
 	log.Printf("disconnected\n")
@@ -284,7 +287,7 @@ func TestDirSimple(t *testing.T) {
 
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn)
-	assert.NotEqual(t, nil, err)
+	assert.NotNil(t, err)
 
 	ts.Shutdown()
 }
@@ -430,7 +433,6 @@ func readWrite(t *testing.T, fsl *fslib.FsLib, cnt string) bool {
 	return false
 }
 
-// XXX no versions for now
 func TestCounter(t *testing.T) {
 	const N = 10
 

@@ -84,8 +84,6 @@ func (nd *Noded) receiveResourceGrant(msg *resource.ResourceMsg) {
 		cores := np.MkInterval(0, 0)
 		cores.Unmarshal(msg.Name)
 
-		// Update the noded config file.
-		nd.ReadConfig(nd.cfgPath, nd.cfg)
 		nd.cfg.Cores = append(nd.cfg.Cores, cores)
 		nd.WriteConfig(nd.cfgPath, nd.cfg)
 
@@ -99,9 +97,6 @@ func (nd *Noded) handleResourceRequest(msg *resource.ResourceMsg) {
 	case resource.Tcore:
 		db.DPrintf("NODED", "Noded %v lost cores %v", nd.id, msg.Name)
 		nd.forwardResourceMsgToProcd(msg)
-
-		// Update the noded config file.
-		nd.ReadConfig(nd.cfgPath, nd.cfg)
 
 		cores := nd.cfg.Cores[len(nd.cfg.Cores)-1]
 
@@ -283,13 +278,14 @@ func (r *Noded) leaveRealm(realmId string) {
 
 // Wait until we are deallocated from the realm.
 func (nd *Noded) waitForDealloc() {
+	cfg := MakeNodedConfig()
 	for {
 		// Watch for changes to the config
 		done := nd.WatchConfig(nd.cfgPath)
 		<-done
-		nd.ReadConfig(nd.cfgPath, nd.cfg)
+		nd.ReadConfig(nd.cfgPath, cfg)
 		// Make sure we've been assigned to a realm
-		if nd.cfg.RealmId == kernel.NO_REALM {
+		if cfg.RealmId == kernel.NO_REALM {
 			break
 		}
 	}

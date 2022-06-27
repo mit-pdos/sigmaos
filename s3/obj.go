@@ -34,7 +34,11 @@ func makeObj(bucket string, key np.Path, perm np.Tperm) *Obj {
 	o := &Obj{}
 	o.bucket = bucket
 	o.key = key
-	o.perm = perm
+	if o.key.Base() == "." {
+		o.perm = np.DMDIR | perm
+	} else {
+		o.perm = perm
+	}
 	return o
 }
 
@@ -52,6 +56,7 @@ func (o *Obj) SetSize(sz np.Tlength) {
 
 func (o *Obj) readHead(fss3 *Fss3) *np.Err {
 	key := o.key.String()
+	key = toDot(key)
 	input := &s3.HeadObjectInput{
 		Bucket: &o.bucket,
 		Key:    &key,
@@ -93,6 +98,7 @@ func (o *Obj) stat() *np.Stat {
 	} else {
 		st.Name = "" // root
 	}
+	st.Name = st.Name
 	st.Mode = o.perm | np.Tperm(0777)
 	st.Qid = qid(o.perm, o.key)
 	return st

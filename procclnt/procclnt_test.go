@@ -687,17 +687,25 @@ func TestProcdResizeEvict(t *testing.T) {
 	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
+	db.DPrintf("TEST", "Waiting for small proc to exit")
 	// Ensure that the small proc was evicted.
 	status, err := ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
 
+	db.DPrintf("TEST", "Small proc exited.")
+
 	// Evict the big proc
 	err = ts.Evict(pid)
 	assert.Nil(ts.T, err, "Evict")
+
+	db.DPrintf("TEST", "Waiting for big proc to exit.")
+
 	status, err = ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+
+	db.DPrintf("TEST", "Big proc exited.")
 
 	ts.Shutdown()
 }

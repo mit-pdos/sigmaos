@@ -624,7 +624,10 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	err = fsl1.Disconnect(path)
+	srv, err := ts.PathServer(path)
+	assert.Nil(t, err)
+
+	err = fsl1.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 
 	// Remove the ephemeral file

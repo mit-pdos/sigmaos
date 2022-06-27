@@ -380,12 +380,18 @@ func TestDirConcur(t *testing.T) {
 	for i := 0; i < NSCAN; i++ {
 		i := 0
 		names := []string{}
-		ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
+		b, err := ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
 			names = append(names, st.Name)
 			i += 1
 			return false, nil
 
 		})
+		assert.Nil(t, err)
+		assert.False(t, b)
+
+		if i < NFILE-N {
+			log.Printf("names %v\n", names)
+		}
 
 		assert.True(t, i >= NFILE-N)
 

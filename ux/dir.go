@@ -43,7 +43,8 @@ func (d *Dir) uxReadDir() *np.Err {
 		st.Mode = st.Mode | np.Tperm(0777)
 		fi, err := os.Stat(d.path.String() + "/" + st.Name)
 		if err != nil {
-			return np.MkErrError(err)
+			// another proc may have removed the file
+			continue
 		}
 		st.Length = np.Tlength(fi.Size())
 		d.sd.Insert(st.Name, st)

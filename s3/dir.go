@@ -191,7 +191,9 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 			st, err = o.Stat(ctx)
 		}
 		if err != nil {
-			return nil, err
+			// another proc may have removed the file
+			d.dents.Delete(o.key.Base())
+			continue
 		}
 		d.sts = append(d.sts, st)
 	}

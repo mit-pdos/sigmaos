@@ -60,48 +60,24 @@ func TestGetCPUTimePid(t *testing.T) {
 	assert.True(t, util >= 0.0, "Util negative: %v", util)
 	assert.True(t, util < 5.0, "Util too high: %v", util)
 
-	// Start a spinning thread to consume a core.
-	go spin(done)
+	const N = 3
+	for i := 0; i < N; i++ {
+		// Start a spinning thread to consume a core.
+		go spin(done)
 
-	// Wait for the spinning thread to start
-	time.Sleep(100 * time.Millisecond)
+		// Wait for the spinning thread to start
+		time.Sleep(100 * time.Millisecond)
 
-	utime0, stime0, utime1, stime1 = tick(pid, &t0)
-	util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
+		utime0, stime0, utime1, stime1 = tick(pid, &t0)
+		util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
 
-	db.DPrintf("TEST", "Util (1 spinner): %v", util)
+		db.DPrintf("TEST", "Util (%v spinner): %v", i, util)
 
-	assert.True(t, util >= 95.0, "Util too low: %v", util)
-	assert.True(t, util < 105.0, "Util too high: %v", util)
+		assert.True(t, util >= 100.0*float64(i+1)-10.0, "Util too low (i=%v): %v", i, util)
+		assert.True(t, util < 100.0*float64(i+1)+10.0, "Util too high (i=%v): %v", i, util)
+	}
 
-	// Start another spinning thread to consume a core.
-	go spin(done)
-
-	// Wait for the spinning thread to start
-	time.Sleep(100 * time.Millisecond)
-
-	utime0, stime0, utime1, stime1 = tick(pid, &t0)
-	util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
-
-	db.DPrintf("TEST", "Util (2 spinners): %v", util)
-
-	assert.True(t, util >= 195.0, "Util too low: %v", util)
-	assert.True(t, util < 205.0, "Util too high: %v", util)
-
-	// Start yet another spinning thread to consume a core.
-	go spin(done)
-
-	// Wait for the spinning thread to start
-	time.Sleep(100 * time.Millisecond)
-
-	utime0, stime0, utime1, stime1 = tick(pid, &t0)
-	util = perf.UtilFromCPUTimeSample(utime0, stime0, utime1, stime1, time.Since(t0).Seconds())
-
-	db.DPrintf("TEST", "Util (3 spinners): %v", util)
-
-	assert.True(t, util >= 295.0, "Util too low: %v", util)
-	assert.True(t, util < 305.0, "Util too high: %v", util)
-
-	done <- true
-	done <- true
+	for i := 0; i < N; i++ {
+		done <- true
+	}
 }

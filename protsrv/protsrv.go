@@ -214,6 +214,9 @@ func (ps *ProtSrv) makeFid(ctx fs.CtxI, dir np.Path, name string, o fs.FsObj, ep
 // Create name in dir. If OWATCH is set and name already exits, wait
 // until another thread deletes it, and retry.
 func (ps *ProtSrv) createObj(ctx fs.CtxI, d fs.Dir, dws, fws *watch.Watch, name string, perm np.Tperm, mode np.Tmode) (fs.FsObj, *np.Err) {
+	if name == "." {
+		return nil, np.MkErr(np.TErrInval, name)
+	}
 	for {
 		o1, err := d.Create(ctx, name, perm, mode)
 		db.DPrintf("PROTSRV", "%v: Create %v %v %v ephemeral %v %v\n", ctx.Uname(), name, o1, err, perm.IsEphemeral(), ps.sid)
@@ -330,9 +333,13 @@ func (ps *ProtSrv) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
 }
 
 func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
+	name := path.Base()
+	if name == "." {
+		return np.MkErr(np.TErrInval, name).Rerror()
+	}
+
 	// lock watch entry to make WatchV and Remove interact
 	// correctly
-
 	dws := ps.wt.WatchLookupL(path.Dir())
 	fws := ps.wt.WatchLookupL(path)
 	defer ps.wt.Release(dws)
@@ -340,12 +347,12 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 
 	ps.stats.Path(path)
 
-	db.DPrintf("PROTSRV", "%v: removeObj %v in %v", ctx.Uname(), path, path.Dir())
+	db.DPrintf("PROTSRV", "%v: removeObj %v in %v", ctx.Uname(), name, o)
 
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.
 	ephemeral := o.Perm().IsEphemeral()
-	err := o.Parent().Remove(ctx, path[len(path)-1])
+	err := o.Parent().Remove(ctx, name)
 	if err != nil {
 		return err.Rerror()
 	}

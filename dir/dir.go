@@ -12,12 +12,6 @@ import (
 	"ulambda/sorteddir"
 )
 
-// Base("/") is "/", so check for "/" too. Base(".") is "." and Dir(".") is
-// "." too
-func IsCurrentDir(name string) bool {
-	return name == "." || name == "/" || name == ""
-}
-
 type DirImpl struct {
 	fs.Inode
 	mi    fs.MakeInodeF
@@ -231,9 +225,6 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	if IsCurrentDir(name) {
-		return nil, np.MkErr(np.TErrInval, name)
-	}
 	if v, ok := dir.dents.Lookup(name); ok {
 		i := v.(fs.Inode)
 		return i, np.MkErr(np.TErrExists, name)
@@ -252,9 +243,6 @@ func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmod
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	if IsCurrentDir(name) {
-		return np.MkErr(np.TErrIsdir, name)
-	}
 	db.DPrintf("MEMFS", "CreateDev %v in %v -> %v\n", name, dir, i)
 	dir.VersionInc()
 	dir.SetMtime(time.Now().Unix())

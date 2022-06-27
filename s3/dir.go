@@ -231,9 +231,6 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm np.Tperm) (fs.FsObj, *np.
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	db.DPrintf("FSS3", "Create %v name: %v\n", d, name)
-	if name == "." {
-		return nil, np.MkErr(np.TErrInval, name)
-	}
 	o := makeObj(d.bucket, d.key.Copy().Append(name), perm)
 	_, err := o.Stat(ctx)
 	if err == nil {
@@ -258,9 +255,6 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string) *np.Err {
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
-	if name == "." {
-		return np.MkErr(np.TErrInval, name)
-	}
 	key := d.key.Copy().Append(name)
 	if err := d.fill(); err != nil {
 		return err

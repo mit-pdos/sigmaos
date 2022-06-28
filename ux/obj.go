@@ -1,6 +1,8 @@
 package fsux
 
 import (
+	"fmt"
+	ufs "io/fs"
 	"os"
 	"syscall"
 
@@ -9,44 +11,48 @@ import (
 	np "ulambda/ninep"
 )
 
-func ustat(path np.Path) (*syscall.Stat_t, *np.Err) {
-	fileinfo, err := os.Stat(path.String())
+func ustat(path np.Path) (*np.Stat, *np.Err) {
+	fi, err := os.Stat(path.String())
 	if err != nil {
 		return nil, np.MkErr(np.TErrError, err)
 	}
-	ustat, ok := fileinfo.Sys().(*syscall.Stat_t)
+	// to get unix ino#
+	ustat, ok := fi.Sys().(*syscall.Stat_t)
 	if !ok {
 		return nil, np.MkErr(np.TErrError, "Not a syscall.Stat_t")
 	}
-	return ustat, nil
+	st := &np.Stat{}
+	st.Name = path.Base()
+	st.Mode = np.Tperm(fi.Mode() & ufs.ModePerm)
+	if fi.IsDir() {
+		st.Mode |= np.DMDIR
+	}
+	// XXX version: maybe use xattr? or at least nsec since 1970
+	st.Qid = np.MakeQid(np.Qtype(st.Mode>>np.QTYPESHIFT), np.TQversion(0), np.Tpath(ustat.Ino))
+	st.Length = np.Tlength(fi.Size())
+	s, _ := ustat.Mtim.Unix()
+	st.Mtime = uint32(s)
+	return st, nil
 }
 
 type Obj struct {
-	path    np.Path
-	ino     uint64 // Unix inode
-	version np.TQversion
+	path np.Path
+	st   *np.Stat
+}
+
+func (o *Obj) String() string {
+	return fmt.Sprintf("path %v st %v %v", o.path, o.st.Qid, o.st.Length)
 }
 
 func makeObj(path np.Path) (*Obj, *np.Err) {
-	o := &Obj{}
-	if err := o.init(path); err != nil {
+	if st, err := ustat(path); err != nil {
 		return nil, err
+	} else {
+		o := &Obj{}
+		o.path = path
+		o.st = st
+		return o, nil
 	}
-	return o, nil
-}
-
-// Collect enough info to make a qid and set sz
-func (o *Obj) init(path np.Path) *np.Err {
-	ustat, err := ustat(path)
-	if err != nil {
-		return err
-	}
-	o.path = path
-	o.ino = ustat.Ino
-	s, _ := ustat.Mtim.Unix()
-	// XXX maybe use xattr? or at least nsec since 1970
-	o.version = np.TQversion(s)
-	return nil
 }
 
 func (o *Obj) Path() string {
@@ -55,6 +61,10 @@ func (o *Obj) Path() string {
 		p = "."
 	}
 	return p
+}
+
+func (o *Obj) Perm() np.Tperm {
+	return o.st.Mode
 }
 
 func uxFlags(m np.Tmode) int {
@@ -80,28 +90,11 @@ func uxFlags(m np.Tmode) int {
 }
 
 func (o *Obj) size() np.Tlength {
-	ustat, err := ustat(o.path)
-	if err != nil {
-		return 0
-	}
-	return np.Tlength(ustat.Size)
+	return o.st.Length
 }
 
 func (o *Obj) Qid() np.Tqid {
-	return np.MakeQid(np.Qtype(o.Perm()>>np.QTYPESHIFT),
-		np.TQversion(o.version), np.Tpath(o.ino))
-}
-
-// convert ux perms into np perm; maybe symlink?
-func (o *Obj) Perm() np.Tperm {
-	fi, error := os.Stat(o.path.String())
-	if error != nil {
-		db.DFatalf("Perm %v err %v\n", o.path, error)
-	}
-	if fi.IsDir() {
-		return np.DMDIR
-	}
-	return 0
+	return o.st.Qid
 }
 
 func (o *Obj) Parent() fs.Dir {
@@ -115,22 +108,5 @@ func (o *Obj) Parent() fs.Dir {
 
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
-	ustat, err := ustat(o.path)
-	if err != nil {
-		return nil, err
-	}
-	st := &np.Stat{}
-	if len(o.path) > 0 {
-		st.Name = o.path[len(o.path)-1]
-	} else {
-		st.Name = "" // root
-	}
-	st.Mode = o.Perm() | np.Tperm(0777)
-	st.Qid = o.Qid()
-	st.Uid = ""
-	st.Gid = ""
-	st.Length = np.Tlength(ustat.Size)
-	s, _ := ustat.Mtim.Unix()
-	st.Mtime = uint32(s)
-	return st, nil
+	return o.st, nil
 }

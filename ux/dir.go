@@ -2,6 +2,7 @@ package fsux
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -14,6 +15,10 @@ import (
 type Dir struct {
 	*Obj
 	sd *sorteddir.SortedDir
+}
+
+func (d *Dir) String() string {
+	return fmt.Sprintf("o %v sd %v", d.Obj, d.sd)
 }
 
 func makeDir(path np.Path) (*Dir, *np.Err) {
@@ -33,21 +38,12 @@ func (d *Dir) uxReadDir() *np.Err {
 		return np.MkErrError(err)
 	}
 	for _, e := range dirents {
-		st := &np.Stat{}
-		st.Name = e.Name()
-		if e.IsDir() {
-			st.Mode = np.DMDIR
-		} else {
-			st.Mode = 0
-		}
-		st.Mode = st.Mode | np.Tperm(0777)
-		fi, err := os.Stat(d.path.String() + "/" + st.Name)
-		if err != nil {
+		if st, err := ustat(d.path.Copy().Append(e.Name())); err != nil {
 			// another proc may have removed the file
 			continue
+		} else {
+			d.sd.Insert(st.Name, st)
 		}
-		st.Length = np.Tlength(fi.Size())
-		d.sd.Insert(st.Name, st)
 	}
 	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, d.sd.Len())
 	return nil

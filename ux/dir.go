@@ -121,20 +121,20 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 			if err != nil {
 				return qids, d1, d.path, err
 			}
-			return append(qids, d1.Qid()), d1, nil, nil
+			return append(qids, d1.qid()), d1, nil, nil
 		} else {
 			f, err := makeFile(append(d.path, p[0]))
 			if err != nil {
 				return qids, f, d.path, err
 			}
-			return append(qids, f.Qid()), f, nil, nil
+			return append(qids, f.qid()), f, nil, nil
 		}
 	} else {
 		d1, err := makeDir(append(d.path, p[0]))
 		if err != nil {
 			return qids, d, d.path, err
 		}
-		qids = append(qids, d1.Qid())
+		qids = append(qids, d1.qid())
 		return d1.namei(ctx, p[1:], qids)
 	}
 }

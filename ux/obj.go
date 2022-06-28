@@ -1,25 +1,47 @@
+//go:build linux
+// +build linux
+
 package fsux
 
 import (
 	"fmt"
 	ufs "io/fs"
 	"os"
-	"syscall"
+	"time"
+
+	"golang.org/x/sys/unix"
 
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
 )
 
+func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
+	return time.Unix(sts.Sec, int64(sts.Nsec))
+}
+
+func mkVersion(path np.Path) np.TQversion {
+	var statx unix.Statx_t
+	if err := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); err != nil {
+		db.DFatalf("Statx '%v' err %v", path, err)
+	}
+	t := statxTimestampToTime(statx.Mtime)
+	return np.TQversion(t.Unix())
+}
+
+// XXX use Btime in path?
+func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) np.Tqid {
+	return np.MakeQid(np.Qtype(mode>>np.QTYPESHIFT), v, path)
+}
+
 func ustat(path np.Path) (*np.Stat, *np.Err) {
 	fi, err := os.Stat(path.String())
 	if err != nil {
 		return nil, np.MkErr(np.TErrError, err)
 	}
-	// to get unix ino#
-	ustat, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return nil, np.MkErr(np.TErrError, "Not a syscall.Stat_t")
+	var statx unix.Statx_t
+	if err := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); err != nil {
+		db.DFatalf("Statx '%v' err %v", path, err)
 	}
 	st := &np.Stat{}
 	st.Name = path.Base()
@@ -27,11 +49,10 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	if fi.IsDir() {
 		st.Mode |= np.DMDIR
 	}
-	// XXX version: maybe use xattr? or at least nsec since 1970
-	st.Qid = np.MakeQid(np.Qtype(st.Mode>>np.QTYPESHIFT), np.TQversion(0), np.Tpath(ustat.Ino))
+	t := statxTimestampToTime(statx.Mtime)
+	st.Qid = mkQid(st.Mode, np.TQversion(t.UnixNano()), np.Tpath(statx.Ino))
 	st.Length = np.Tlength(fi.Size())
-	s, _ := ustat.Mtim.Unix()
-	st.Mtime = uint32(s)
+	st.Mtime = uint32(t.Unix())
 	return st, nil
 }
 
@@ -93,8 +114,12 @@ func (o *Obj) size() np.Tlength {
 	return o.st.Length
 }
 
-func (o *Obj) Qid() np.Tqid {
+func (o *Obj) qid() np.Tqid {
 	return o.st.Qid
+}
+
+func (o *Obj) Qid() np.Tqid {
+	return mkQid(o.st.Mode, mkVersion(o.path), o.st.Qid.Path)
 }
 
 func (o *Obj) Parent() fs.Dir {
@@ -106,6 +131,7 @@ func (o *Obj) Parent() fs.Dir {
 	return d
 }
 
+// XXX update qid?
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
 	return o.st, nil

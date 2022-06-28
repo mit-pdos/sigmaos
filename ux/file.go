@@ -2,6 +2,7 @@ package fsux
 
 import (
 	"io"
+	"log"
 	"os"
 
 	db "ulambda/debug"
@@ -87,6 +88,13 @@ func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) (
 
 func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
 	db.DPrintf("UXD0", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
+	v1 := f.Qid().Version
+	log.Printf("v %v v1 %v\n", v, v1)
+	if !np.VEq(v, v1) {
+		log.Printf("v mismatch %v %v\n", v, v1)
+		return 0, np.MkErr(np.TErrVersion, f.Qid)
+	}
+
 	if off == np.NoOffset {
 		// ignore; file was opened with OAPPEND and NoOffset
 		// doesn't fit in int64.

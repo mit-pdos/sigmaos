@@ -719,9 +719,9 @@ const (
 )
 
 func initfs(ts *test.Tstate, TODO, DONE string) {
-	err := ts.MkDir(TODO, 07000)
+	err := ts.MkDir(TODO, 07777)
 	assert.Nil(ts.T, err, "Create done")
-	err = ts.MkDir(DONE, 07000)
+	err = ts.MkDir(DONE, 07777)
 	assert.Nil(ts.T, err, "Create todo")
 }
 

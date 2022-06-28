@@ -15,11 +15,10 @@ import (
 	"ulambda/proc"
 )
 
-type Tstatus uint8
-
 const (
-	PROC_RUNNING Tstatus = iota
-	PROC_QUEUED
+	DEF_PROC_PRIORITY = 0
+	LC_PROC_PRIORITY  = 0
+	BE_PROC_PRIORITY  = 0
 )
 
 type LinuxProc struct {
@@ -86,6 +85,8 @@ func (p *LinuxProc) run() error {
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
 	p.setCpuAffinity()
+	// Nice the process.
+	p.setPriority()
 
 	p.wait(cmd)
 	db.DPrintf("PROCD", "Procd ran: %v\n", p.attr)
@@ -105,5 +106,18 @@ func (p *LinuxProc) setCpuAffinityL() {
 	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, &p.pd.cpuMask)
 	if err != nil {
 		log.Printf("Error setting CPU affinity for child lambda: %v", err)
+	}
+}
+
+func (p *LinuxProc) setPriority() {
+	switch p.attr.Type {
+	case proc.T_DEF:
+		linuxsched.SchedSetPriority(p.SysPid, DEF_PROC_PRIORITY)
+	case proc.T_LC:
+		linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
+	case proc.T_BE:
+		linuxsched.SchedSetPriority(p.SysPid, BE_PROC_PRIORITY)
+	default:
+		db.DFatalf("Error unknown proc priority: %v", p.attr.Type)
 	}
 }

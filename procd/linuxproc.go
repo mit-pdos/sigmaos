@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -23,11 +24,16 @@ const (
 
 type LinuxProc struct {
 	fs.Inode
-	SysPid int
-	Env    []string
-	cores  []uint
-	attr   *proc.Proc
-	pd     *Procd
+	SysPid       int
+	Env          []string
+	coresAlloced proc.Tcore
+	attr         *proc.Proc
+	pd           *Procd
+	UtilInfo     struct {
+		utime0 uint64
+		stime0 uint64
+		t0     time.Time
+	}
 }
 
 func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
@@ -38,14 +44,6 @@ func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
 	// Finalize the proc env with values related to this physical machine.
 	p.attr.FinalizeEnv(p.pd.addr)
 	p.Env = append(os.Environ(), p.attr.GetEnv()...)
-	if p.attr.Ncore == 0 {
-		// If this proc requires no exclusive cores, it can have up to
-		// linuxsched.NCores assigned to it.
-		p.cores = make([]uint, linuxsched.NCores)
-	} else {
-		// If this proc requries exclusive cores, make the right number of core slots for it.
-		p.cores = make([]uint, p.attr.Ncore)
-	}
 	return p
 }
 
@@ -102,15 +100,9 @@ func (p *LinuxProc) setCpuAffinity() {
 	p.setCpuAffinityL()
 }
 
-// Set the Cpu affinity of this proc according to its set of cores.
+// Set the Cpu affinity of this proc according to its procd's cpu mask.
 func (p *LinuxProc) setCpuAffinityL() {
-	// Hold lock to avoid concurrent modification of core allocation while
-	// reading.
-	m := &linuxsched.CPUMask{}
-	for _, i := range p.cores {
-		m.Set(i)
-	}
-	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, m)
+	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, &p.pd.cpuMask)
 	if err != nil {
 		log.Printf("Error setting CPU affinity for child lambda: %v", err)
 	}

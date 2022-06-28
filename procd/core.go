@@ -13,17 +13,14 @@ import (
 type Tcorestatus uint8
 
 const (
-	CORE_IDLE    Tcorestatus = iota
-	CORE_BUSY                // Currently occupied by a proc
-	CORE_BLOCKED             // Not for use by this procd's procs.
+	CORE_AVAILABLE Tcorestatus = iota
+	CORE_BLOCKED               // Not for use by this procd's procs.
 )
 
 func (st Tcorestatus) String() string {
 	switch st {
-	case CORE_IDLE:
-		return "CORE_IDLE"
-	case CORE_BUSY:
-		return "CORE_BUSY"
+	case CORE_AVAILABLE:
+		return "CORE_AVAILABLE"
 	case CORE_BLOCKED:
 		return "CORE_BLOCKED"
 	default:
@@ -47,7 +44,7 @@ func (pd *Procd) initCores(grantedCoresIv string) {
 
 func (pd *Procd) addCores(msg *resource.ResourceMsg) {
 	cores := parseCoreInterval(msg.Name)
-	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_IDLE)
+	pd.adjustCoresOwned(pd.coresOwned, pd.coresOwned+proc.Tcore(msg.Amount), cores, CORE_AVAILABLE)
 	// Notify sleeping workers that they may be able to run procs now.
 	go func() {
 		for i := 0; i < msg.Amount; i++ {
@@ -65,9 +62,13 @@ func (pd *Procd) adjustCoresOwned(oldNCoresOwned, newNCoresOwned proc.Tcore, cor
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
+	// Mark cores according to their new status.
+	pd.markCoresL(coresToMark, newCoreStatus)
+	// Set the new procd core affinity.
+	pd.setCoreAffinityL()
+	// Rebalance procs given new cores.
 	pd.rebalanceProcs(oldNCoresOwned, newNCoresOwned, coresToMark, newCoreStatus)
 	pd.sanityCheckCoreCountsL()
-	pd.setCoreAffinityL()
 }
 
 // Rebalances procs across set of available cores. We allocate each proc a
@@ -81,8 +82,6 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	for _, p := range pd.runningProcs {
 		pd.freeCoresL(p)
 	}
-	// After freeing old, used cores, mark cores according to their new status.
-	pd.markCoresL(coresToMark, newCoreStatus)
 	// Sanity check
 	if pd.coresAvail != oldNCoresOwned {
 		db.DFatalf("Mismatched num cores avail during rebalance: %v != %v", pd.coresAvail, oldNCoresOwned)
@@ -100,7 +99,7 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 			// If this core didn't ask for dedicated cores, it can run on all cores.
 			newNCore = newNCoresOwned
 		} else {
-			newNCore = proc.Tcore(len(p.cores)) * newNCoresOwned / oldNCoresOwned
+			newNCore = p.attr.Ncore * newNCoresOwned / oldNCoresOwned
 			// Don't allocate more than the number of cores this proc initially asked
 			// for.
 			if newNCore > p.attr.Ncore {
@@ -117,10 +116,9 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 			toEvict[pid] = p
 		} else {
 			// Resize the proc's core allocation.
-			p.cores = make([]uint, newNCore)
 			// Allocate cores to the proc.
-			pd.allocCoresL(p)
-			// Set the CPU affinity for this proc to match its new core allocation.
+			pd.allocCoresL(p, newNCore)
+			// Set the CPU affinity for this proc to match procd.
 			p.setCpuAffinityL()
 		}
 	}
@@ -129,19 +127,12 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	for pid, p := range toEvict {
 		// If the proc fits...
 		if p.attr.Ncore < pd.coresAvail {
-			// Resize the proc.
-			p.cores = make([]uint, p.attr.Ncore)
 			// Allocate cores to the proc.
-			pd.allocCoresL(p)
-			// Set the CPU affinity for this proc to match its new corea llocation.
+			pd.allocCoresL(p, p.attr.Ncore)
+			// Set the CPU affinity for this proc to match procd.
 			p.setCpuAffinityL()
 			delete(toEvict, pid)
 		}
-	}
-	// Unset the evicted procs' core masks so they don't perform any
-	// double-frees.
-	for _, p := range toEvict {
-		p.cores = nil
 	}
 	pd.evictProcsL(toEvict)
 }
@@ -156,31 +147,10 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	return false
 }
 
-// Allocate cores to a proc, and assign cores to it in the core bitmap. Caller
-// holds lock.
-func (pd *Procd) allocCoresL(p *LinuxProc) {
-	// Number of cores allocated so ar.
-	allocated := 0
-	for i := 0; i < len(pd.coreBitmap) && allocated < len(p.cores); i++ {
-		// If we have allocated the right number of cores already, break.
-		coreStatus := pd.coreBitmap[i]
-		// If this core is not assigned to this procd, move on.
-		if coreStatus == CORE_BLOCKED {
-			continue
-		}
-		// If lambda asks for 0 cores, or the core is idle, then the proc can run
-		// on this core. Claim it.
-		if p.attr.Ncore == proc.C_DEF || coreStatus == CORE_IDLE {
-			p.cores[allocated] = uint(i)
-			allocated++
-		}
-	}
-
-	// Mark cores as busy, if this proc asked for exclusive access to cores.
-	if p.attr.Ncore > 0 {
-		pd.coresAvail -= proc.Tcore(len(p.cores))
-		pd.markCoresL(p.cores, CORE_BUSY)
-	}
+// Allocate cores to a proc. Caller holds lock.
+func (pd *Procd) allocCoresL(p *LinuxProc, n proc.Tcore) {
+	p.coresAlloced = n
+	pd.coresAvail -= n
 	pd.sanityCheckCoreCountsL()
 }
 
@@ -210,8 +180,8 @@ func (pd *Procd) freeCoresL(p *LinuxProc) {
 		return
 	}
 
-	pd.markCoresL(p.cores, CORE_IDLE)
-	pd.coresAvail += proc.Tcore(len(p.cores))
+	pd.coresAvail += p.coresAlloced
+	p.coresAlloced = 0
 	pd.sanityCheckCoreCountsL()
 }
 

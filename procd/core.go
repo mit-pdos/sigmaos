@@ -169,7 +169,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	} else {
 		// Otherwise, determine whether or not we can run the proc based on
 		// utilization. If utilization is below a certain threshold, take the proc.
-		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_RUNNABLE_MAX_CPU_UTIL && pd.procClaimRateLimitCheck() {
+		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && pd.procClaimRateLimitCheck() {
 			pd.netProcsClaimed++
 			return true
 		}

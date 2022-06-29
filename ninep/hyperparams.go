@@ -28,7 +28,7 @@ machine:
 procd:
   stealable_proc_timeout: 100ms
   work_steal_scan_timeout: 100ms
-  be_proc_runnable_max_cpu_util: 95.0
+  be_proc_claim_cpu_threshold: 95.0
   be_proc_oversubscription_rate: 2.0
 
 raft:
@@ -55,7 +55,7 @@ machine:
 procd:
   stealable_proc_timeout: 1000ms
   work_steal_scan_timeout: 1000ms
-  be_proc_runnable_max_cpu_util: 95.0
+  be_proc_claim_cpu_threshold: 95.0
   be_proc_oversubscription_rate: 2.0
 
 raft:
@@ -91,7 +91,7 @@ type Config struct {
 		WORK_STEAL_SCAN_TIMEOUT time.Duration `yaml:"work_steal_scan_timeout"`
 		// CPU utilization threshold at which procd will no longer pull & run BE
 		// procs.
-		BE_PROC_RUNNABLE_MAX_CPU_UTIL float64 `yaml:"be_proc_runnable_max_cpu_util"`
+		BE_PROC_CLAIM_CPU_THRESHOLD float64 `yaml:"be_proc_claim_cpu_threshold"`
 		// Max oversubscription factor per claim interval when deciding whether or
 		// not to claim a be proc.
 		BE_PROC_OVERSUBSCRIPTION_RATE float64 `yaml:"be_proc_oversubscription_rate"`

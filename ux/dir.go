@@ -88,6 +88,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		if err != nil {
 			return nil, err
 		}
+		d.pe.incVersion()
 		return d1, nil
 	} else {
 		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
@@ -103,7 +104,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 			return nil, err
 		}
 		f.file = file
-		f.pe = paths.Insert(f.path, mkEntry())
+		d.pe.incVersion()
 		return f, nil
 	}
 }
@@ -170,10 +171,17 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
-	err := os.Remove(d.Path() + "/" + name)
+	p := d.path.Copy().Append(name)
+	o, err := makeObj(p)
 	if err != nil {
+		return err
+	}
+	error := os.Remove(p.String())
+	if error != nil {
 		return np.MkErrError(err)
 	}
+	d.pe.incVersion()
+	o.pe.incVersion()
 	return nil
 }
 
@@ -181,9 +189,15 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	oldPath := d.Path() + "/" + from
 	newPath := d.Path() + "/" + to
 	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
-	err := os.Rename(oldPath, newPath)
+	dst, err := makeDir(np.Split(newPath))
 	if err != nil {
-		return np.MkErrError(err)
+		return err
 	}
+	error := os.Rename(oldPath, newPath)
+	if error != nil {
+		return np.MkErrError(error)
+	}
+	d.pe.incVersion()
+	dst.pe.incVersion()
 	return nil
 }

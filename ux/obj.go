@@ -7,6 +7,7 @@ import (
 	"fmt"
 	ufs "io/fs"
 	"os"
+	"sync"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -55,9 +56,37 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	return st, nil
 }
 
+// shared among threads using same path
+type entry struct {
+	sync.Mutex
+	v np.TQversion
+}
+
+func mkEntry() *entry {
+	return &entry{}
+}
+
+func (e *entry) String() string {
+	return fmt.Sprintf("v %d", e.v)
+}
+
+func (e *entry) version() np.TQversion {
+	e.Lock()
+	defer e.Unlock()
+
+	return e.v
+}
+
+func (e *entry) incVersion() {
+	e.Lock()
+	defer e.Unlock()
+	e.v += 1
+}
+
 type Obj struct {
 	path np.Path
 	st   *np.Stat
+	pe   *entry
 }
 
 func (o *Obj) String() string {
@@ -71,6 +100,8 @@ func makeObj(path np.Path) (*Obj, *np.Err) {
 		o := &Obj{}
 		o.path = path
 		o.st = st
+		e := paths.Insert(path, mkEntry())
+		o.pe = e.E.(*entry)
 		return o, nil
 	}
 }

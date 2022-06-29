@@ -48,7 +48,7 @@ func (pm *PathMap) Insert(p np.Path, e interface{}) *Entry {
 	ne, ok := pm.paths[p.String()]
 	if ok {
 		ne.n += 1
-		log.Printf("insert %v %d %d\n", p, ne.n, e)
+		// log.Printf("insert %v %v\n", p, ne)
 		return ne
 	}
 	ne = mkEntry(e)

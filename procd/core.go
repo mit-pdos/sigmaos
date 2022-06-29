@@ -171,6 +171,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		// utilization. If utilization is below a certain threshold, take the proc.
 		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_CLAIM_CPU_THRESHOLD && pd.procClaimRateLimitCheck() {
 			pd.netProcsClaimed++
+			db.DPrintf(db.ALWAYS, "Util: %v", pd.GetStats().GetUtil())
 			return true
 		}
 	}

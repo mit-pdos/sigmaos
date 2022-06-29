@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -22,21 +23,23 @@ import (
 )
 
 type Procd struct {
-	mu           sync.Mutex
-	fs           *ProcdFs
-	realmbin     string    // realm path from which to pull/run bins.
-	spawnChan    chan bool // Indicates a proc has been spawned on this procd.
-	stealChan    chan bool // Indicates there is work to be stolen.
-	done         bool
-	addr         string
-	runningProcs map[proc.Tpid]*LinuxProc
-	coreBitmap   []Tcorestatus
-	cpuMask      linuxsched.CPUMask
-	coresOwned   proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
-	coresAvail   proc.Tcore // Current number of cores available to run procs on.
-	perf         *perf.Perf
-	group        sync.WaitGroup
-	procclnt     *procclnt.ProcClnt
+	mu              sync.Mutex
+	fs              *ProcdFs
+	realmbin        string    // realm path from which to pull/run bins.
+	spawnChan       chan bool // Indicates a proc has been spawned on this procd.
+	stealChan       chan bool // Indicates there is work to be stolen.
+	done            bool
+	addr            string
+	procClaimTime   time.Time  // Time used to rate-limit claiming of BE procs.
+	netProcsClaimed proc.Tcore // Number of BE procs claimed in the last time interval.
+	runningProcs    map[proc.Tpid]*LinuxProc
+	coreBitmap      []Tcorestatus
+	cpuMask         linuxsched.CPUMask
+	coresOwned      proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail      proc.Tcore // Current number of cores available to run procs on.
+	perf            *perf.Perf
+	group           sync.WaitGroup
+	procclnt        *procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
 }

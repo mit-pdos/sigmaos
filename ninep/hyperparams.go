@@ -26,14 +26,15 @@ machine:
   core_group_fraction: 0.5
 
 procd:
-  stealable_proc_timeout : 100ms
+  stealable_proc_timeout: 100ms
   work_steal_scan_timeout: 100ms
   be_proc_runnable_max_cpu_util: 95.0
+  be_proc_oversubscription_rate: 2.0
 
 raft:
-  tick_interval         : 25ms
-  elect_nticks    : 4
-  heartbeat_ticks : 1
+  tick_interval: 25ms
+  elect_nticks: 4
+  heartbeat_ticks: 1
  `
 
 // AWS params
@@ -52,14 +53,15 @@ machine:
   core_group_fraction: 0.5
 
 procd:
-  stealable_proc_timeout : 1000ms
+  stealable_proc_timeout: 1000ms
   work_steal_scan_timeout: 1000ms
   be_proc_runnable_max_cpu_util: 95.0
+  be_proc_oversubscription_rate: 2.0
 
 raft:
-  tick_interval         : 500ms
-  elect_nticks    : 4 
-  heartbeat_ticks : 1
+  tick_interval: 500ms
+  elect_nticks: 4 
+  heartbeat_ticks: 1
  `
 
 type Config struct {
@@ -90,6 +92,9 @@ type Config struct {
 		// CPU utilization threshold at which procd will no longer pull & run BE
 		// procs.
 		BE_PROC_RUNNABLE_MAX_CPU_UTIL float64 `yaml:"be_proc_runnable_max_cpu_util"`
+		// Max oversubscription factor per claim interval when deciding whether or
+		// not to claim a be proc.
+		BE_PROC_OVERSUBSCRIPTION_RATE float64 `yaml:"be_proc_oversubscription_rate"`
 	} `yaml:"procd"`
 	Raft struct {
 		// Frequency with which the raft library ticks

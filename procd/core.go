@@ -2,10 +2,12 @@ package procd
 
 import (
 	"runtime/debug"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/linuxsched"
 	np "ulambda/ninep"
+	"ulambda/perf"
 	"ulambda/proc"
 	"ulambda/resource"
 )
@@ -131,9 +133,33 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	pd.evictProcsL(toEvict)
 }
 
+// Rate-limit how quickly we claim BE procs, since utilization statistics will
+// take a while to update while claimed procs start. Return true if check
+// passes and proc can be claimed.
+//
+// We claim a maximum of BE_PROC_OVERSUBSCRIPTION_RATE
+// procs per core per claim interval, where a claim interval is the length two
+// CPU util samples.
+func (pd *Procd) procClaimRateLimitCheck() bool {
+	timeBetweenUtilSamples := (1000 / perf.CPU_SAMPLE_HZ) * time.Millisecond
+	// Check if we have moved onto the next interval (interval is currently 2 *
+	// utilization sample rate).
+	if time.Since(pd.procClaimTime) > 2*timeBetweenUtilSamples {
+		pd.procClaimTime = time.Now()
+		pd.netProcsClaimed = 0
+	}
+	// If we have claimed < BE_PROC_OVERSUBSCRIPTION_RATE
+	// procs per core during the last claim interval, the rate limit check
+	// passes.
+	maxOversub := proc.Tcore(np.Conf.Procd.BE_PROC_OVERSUBSCRIPTION_RATE * float64(pd.coresOwned))
+	if pd.netProcsClaimed < maxOversub {
+		return true
+	}
+	return false
+}
+
 // Check if this procd has enough cores to run proc p. Caller holds lock.
 func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
-	db.DPrintf(db.ALWAYS, "Util1 %v", pd.GetStats().GetUtil())
 	// If this is an LC proc, check that we have enough cores.
 	if p.Type == proc.T_LC {
 		// If we have enough cores to run this job...
@@ -142,11 +168,9 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 		}
 	} else {
 		// Otherwise, determine whether or not we can run the proc based on
-		// utilization.
-		// TODO: back off to avoid taking way too many at once.
-		// If utilization is below a certain threshold, take the proc.
-		db.DPrintf(db.ALWAYS, "Util2 %v", pd.GetStats().GetUtil())
-		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_RUNNABLE_MAX_CPU_UTIL {
+		// utilization. If utilization is below a certain threshold, take the proc.
+		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_RUNNABLE_MAX_CPU_UTIL && pd.procClaimRateLimitCheck() {
+			pd.netProcsClaimed++
 			return true
 		}
 	}
@@ -177,6 +201,9 @@ func (pd *Procd) freeCores(p *LinuxProc) {
 	defer pd.mu.Unlock()
 
 	pd.freeCoresL(p)
+	if p.attr.Type != proc.T_LC {
+		pd.netProcsClaimed--
+	}
 }
 
 // Free a set of cores which was being used by a proc.

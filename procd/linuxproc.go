@@ -1,7 +1,6 @@
 package procd
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -105,7 +104,7 @@ func (p *LinuxProc) setCpuAffinity() {
 func (p *LinuxProc) setCpuAffinityL() {
 	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, &p.pd.cpuMask)
 	if err != nil {
-		log.Printf("Error setting CPU affinity for child lambda: %v", err)
+		db.DPrintf("PROCD_ERR", "Error setting CPU affinity for child lambda: %v", err)
 	}
 }
 

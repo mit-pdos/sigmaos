@@ -144,7 +144,7 @@ func (pd *Procd) procClaimRateLimitCheck() bool {
 	timeBetweenUtilSamples := (1000 / perf.CPU_SAMPLE_HZ) * time.Millisecond
 	// Check if we have moved onto the next interval (interval is currently 2 *
 	// utilization sample rate).
-	if time.Since(pd.procClaimTime) > 2*timeBetweenUtilSamples {
+	if time.Since(pd.procClaimTime) > 10*timeBetweenUtilSamples {
 		pd.procClaimTime = time.Now()
 		pd.netProcsClaimed = 0
 	}

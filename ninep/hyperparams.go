@@ -28,7 +28,7 @@ machine:
 procd:
   stealable_proc_timeout: 100ms
   work_steal_scan_timeout: 100ms
-  be_proc_claim_cpu_threshold: 95.0
+  be_proc_claim_cpu_threshold: 90.0
   be_proc_oversubscription_rate: 2.0
 
 raft:
@@ -55,7 +55,7 @@ machine:
 procd:
   stealable_proc_timeout: 1000ms
   work_steal_scan_timeout: 1000ms
-  be_proc_claim_cpu_threshold: 95.0
+  be_proc_claim_cpu_threshold: 90.0
   be_proc_oversubscription_rate: 2.0
 
 raft:

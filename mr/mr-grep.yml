@@ -3,4 +3,3 @@ nreduce: 1
 binsz: 536870912
 input: "name/s3/~ip/9ps3/wiki"
 linesz: 2097152  # the longest line in wiki is just shorter than 2MB
-ncore: 1

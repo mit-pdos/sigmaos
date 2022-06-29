@@ -139,7 +139,6 @@ type Coord struct {
 	nmaptask    int
 	nreducetask int
 	crash       int
-	ncore       int
 	linesz      string
 	mapperbin   string
 	reducerbin  string
@@ -147,7 +146,7 @@ type Coord struct {
 }
 
 func MakeCoord(args []string) (*Coord, error) {
-	if len(args) != 8 {
+	if len(args) != 7 {
 		return nil, errors.New("MakeCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -173,13 +172,7 @@ func MakeCoord(args []string) (*Coord, error) {
 	}
 	c.crash = ctime
 
-	nc, err := strconv.Atoi(args[6])
-	if err != nil {
-		return nil, fmt.Errorf("MakeCoord: ncore %v isn't int", args[6])
-	}
-	c.ncore = nc
-
-	c.linesz = args[7]
+	c.linesz = args[6]
 
 	c.ProcClnt = procclnt.MakeProcClnt(c.FsLib)
 
@@ -194,7 +187,6 @@ func MakeCoord(args []string) (*Coord, error) {
 
 func (c *Coord) task(bin string, args []string) (*proc.Status, error) {
 	p := proc.MakeProc(bin, args)
-	p.Ncore = proc.Tcore(c.ncore)
 	if c.crash > 0 {
 		p.AppendEnv("SIGMACRASH", strconv.Itoa(c.crash))
 	}

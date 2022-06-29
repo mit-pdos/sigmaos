@@ -55,6 +55,10 @@ func (clnt *ProcClnt) SpawnKernelProc(p *proc.Proc, namedAddr []string) (*exec.C
 }
 
 func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
+	if p.Ncore > 0 && p.Type != proc.T_LC {
+		db.DFatalf("Spawn non-LC proc with Ncore set %v", p)
+		return fmt.Errorf("Spawn non-LC proc with Ncore set %v", p)
+	}
 	// Set the parent dir
 	p.SetParentDir(clnt.procdir)
 	childProcdir := p.ProcDir

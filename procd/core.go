@@ -137,12 +137,25 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	pd.evictProcsL(toEvict)
 }
 
-// XXX Statsd information?
 // Check if this procd has enough cores to run proc p. Caller holds lock.
 func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
-	// If we have enough cores to run this job...
-	if pd.coresAvail >= p.Ncore {
-		return true
+	db.DPrintf(db.ALWAYS, "Util1 %v", pd.GetStats().GetUtil())
+	// If this is an LC proc, check that we have enough cores.
+	if p.Type == proc.T_LC {
+		// If we have enough cores to run this job...
+		if pd.coresAvail >= p.Ncore {
+			return true
+		}
+	} else {
+		// Otherwise, determine whether or not we can run the proc based on
+		// utilization.
+		// TODO Parametrize
+		// TODO: back off to avoid taking way too many at once.
+		// If utilization is below a certain threshold, take the proc.
+		db.DPrintf(db.ALWAYS, "Util2 %v", pd.GetStats().GetUtil())
+		if pd.GetStats().GetUtil() < 100.0 {
+			return true
+		}
 	}
 	return false
 }

@@ -137,6 +137,12 @@ func MkStatsDev(parent fs.Dir) *Stats {
 	return st
 }
 
+func (st *Stats) GetUtil() float64 {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return st.sti.Util
+}
+
 func (st *Stats) StatInfo() *StatInfo {
 	return st.sti
 }

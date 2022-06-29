@@ -143,11 +143,10 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 	} else {
 		// Otherwise, determine whether or not we can run the proc based on
 		// utilization.
-		// TODO Parametrize
 		// TODO: back off to avoid taking way too many at once.
 		// If utilization is below a certain threshold, take the proc.
 		db.DPrintf(db.ALWAYS, "Util2 %v", pd.GetStats().GetUtil())
-		if pd.GetStats().GetUtil() < 100.0 {
+		if pd.GetStats().GetUtil() < np.Conf.Procd.BE_PROC_RUNNABLE_MAX_CPU_UTIL {
 			return true
 		}
 	}

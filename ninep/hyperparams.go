@@ -28,6 +28,7 @@ machine:
 procd:
   stealable_proc_timeout : 100ms
   work_steal_scan_timeout: 100ms
+  be_proc_runnable_max_cpu_util: 95.0
 
 raft:
   tick_interval         : 25ms
@@ -53,6 +54,7 @@ machine:
 procd:
   stealable_proc_timeout : 1000ms
   work_steal_scan_timeout: 1000ms
+  be_proc_runnable_max_cpu_util: 95.0
 
 raft:
   tick_interval         : 500ms
@@ -85,6 +87,9 @@ type Config struct {
 		// Procd work steal frequency.
 		STEALABLE_PROC_TIMEOUT  time.Duration `yaml:"stealable_proc_timeout"`
 		WORK_STEAL_SCAN_TIMEOUT time.Duration `yaml:"work_steal_scan_timeout"`
+		// CPU utilization threshold at which procd will no longer pull & run BE
+		// procs.
+		BE_PROC_RUNNABLE_MAX_CPU_UTIL float64 `yaml:"be_proc_runnable_max_cpu_util"`
 	} `yaml:"procd"`
 	Raft struct {
 		// Frequency with which the raft library ticks

@@ -40,7 +40,7 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	}
 	var statx unix.Statx_t
 	if err := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); err != nil {
-		db.DFatalf("Statx '%v' err %v", path, err)
+		return nil, np.MkErr(np.TErrError, err)
 	}
 	st := &np.Stat{}
 	st.Name = path.Base()

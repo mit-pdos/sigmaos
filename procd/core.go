@@ -94,21 +94,15 @@ func (pd *Procd) rebalanceProcs(oldNCoresOwned, newNCoresOwned proc.Tcore, cores
 	// of these procs may need to be evicted if there isn't enough space for
 	// them.
 	for pid, p := range pd.runningProcs {
-		var newNCore proc.Tcore
-		if p.attr.Ncore == 0 {
-			// If this core didn't ask for dedicated cores, it can run on all cores.
-			newNCore = newNCoresOwned
-		} else {
-			newNCore = p.attr.Ncore * newNCoresOwned / oldNCoresOwned
-			// Don't allocate more than the number of cores this proc initially asked
-			// for.
-			if newNCore > p.attr.Ncore {
-				// XXX This seems to me like it could lead to some fishiness when
-				// growing back after a shrink. One proc may not get all of its desired
-				// cores back, while some of those cores may sit idle. It is simple,
-				// though, so keep it for now.
-				newNCore = p.attr.Ncore
-			}
+		newNCore := p.attr.Ncore * newNCoresOwned / oldNCoresOwned
+		// Don't allocate more than the number of cores this proc initially asked
+		// for.
+		if newNCore > p.attr.Ncore {
+			// XXX This seems to me like it could lead to some fishiness when
+			// growing back after a shrink. One proc may not get all of its desired
+			// cores back, while some of those cores may sit idle. It is simple,
+			// though, so keep it for now.
+			newNCore = p.attr.Ncore
 		}
 		// If this proc would be allocated less than one core, slate it for
 		// eviction, and don't alloc any cores.
@@ -162,6 +156,7 @@ func (pd *Procd) hasEnoughCores(p *proc.Proc) bool {
 
 // Allocate cores to a proc. Caller holds lock.
 func (pd *Procd) allocCoresL(p *LinuxProc, n proc.Tcore) {
+	db.DPrintf(db.ALWAYS, "coresavail pre %v coresalloced %v p %v", pd.coresAvail, n, p.attr)
 	p.coresAlloced = n
 	pd.coresAvail -= n
 	pd.sanityCheckCoreCountsL()
@@ -220,6 +215,7 @@ func (pd *Procd) sanityCheckCoreCountsL() {
 		db.DFatalf("Too few cores available: %v < 0", pd.coresAvail)
 	}
 	if pd.coresAvail > pd.coresOwned {
+		debug.PrintStack()
 		db.DFatalf("More cores available than cores owned: %v > %v", pd.coresAvail, pd.coresOwned)
 	}
 }

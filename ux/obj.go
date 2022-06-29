@@ -20,13 +20,12 @@ func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-func mkVersion(path np.Path) np.TQversion {
-	var statx unix.Statx_t
-	if err := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); err != nil {
-		db.DFatalf("Statx '%v' err %v", path, err)
+func getVersion(path np.Path) np.TQversion {
+	if pe, ok := paths.Lookup(path); ok {
+		e := pe.E.(*entry)
+		return e.version()
 	}
-	t := statxTimestampToTime(statx.Mtime)
-	return np.TQversion(t.Unix())
+	return 0
 }
 
 // XXX use Btime in path?
@@ -49,9 +48,9 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	if fi.IsDir() {
 		st.Mode |= np.DMDIR
 	}
-	t := statxTimestampToTime(statx.Mtime)
-	st.Qid = mkQid(st.Mode, np.TQversion(t.UnixNano()), np.Tpath(statx.Ino))
+	st.Qid = mkQid(st.Mode, getVersion(path), np.Tpath(statx.Ino))
 	st.Length = np.Tlength(fi.Size())
+	t := statxTimestampToTime(statx.Mtime)
 	st.Mtime = uint32(t.Unix())
 	return st, nil
 }
@@ -119,7 +118,7 @@ func (o *Obj) qid() np.Tqid {
 }
 
 func (o *Obj) Qid() np.Tqid {
-	return mkQid(o.st.Mode, mkVersion(o.path), o.st.Qid.Path)
+	return mkQid(o.st.Mode, getVersion(o.path), o.st.Qid.Path)
 }
 
 func (o *Obj) Parent() fs.Dir {

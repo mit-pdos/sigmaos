@@ -63,7 +63,6 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	}
 }
 
-// nothing to do for directiories until we page directories
 func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if err := d.uxReadDir(); err != nil {
 		return nil, err
@@ -71,7 +70,6 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return nil, nil
 }
 
-// nothing to do for directories until we page directories
 func (d *Dir) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
@@ -105,6 +103,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 			return nil, err
 		}
 		f.file = file
+		f.pe = paths.Insert(f.path, mkEntry())
 		return f, nil
 	}
 }

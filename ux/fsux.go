@@ -8,11 +8,14 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	np "ulambda/ninep"
+	"ulambda/pathmap"
 	"ulambda/proc"
 	"ulambda/repl"
 	"ulambda/sesssrv"
 	// "ulambda/seccomp"
 )
+
+var paths *pathmap.PathMap
 
 type FsUx struct {
 	*sesssrv.SessSrv
@@ -33,6 +36,7 @@ func RunFsUx(mount string) {
 
 func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
+	paths = pathmap.MkPathMap()
 	fsux := &FsUx{}
 	root, err := makeDir([]string{mount})
 	if err != nil {

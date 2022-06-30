@@ -315,8 +315,8 @@ func (ps *ProtSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DPrintf("PROTSRV", "%v: ReadV f %v args %v\n", f.Pobj().Ctx().Uname(), f, args)
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
+	db.DPrintf("PROTSRV", "%v: ReadV f %v args %v v %d\n", f.Pobj().Ctx().Uname(), f, args, v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}

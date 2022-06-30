@@ -56,7 +56,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	var stype Tsnapshot
 	switch i.(type) {
 	case *overlay.DirOverlay:
-		log.Printf("Snapshot DirOverlay with path %v", i.Path)
+		log.Printf("Snapshot DirOverlay with path %v", i.Path())
 		stype = Toverlay
 	case *dir.DirImpl:
 		stype = Tdir

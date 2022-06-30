@@ -282,11 +282,11 @@ func (ps *ProtSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+	ps.vt.Add(o1.Path())
+	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
 	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), names[0], o1, args.Perm.IsEphemeral(), qid)
 	ps.ft.Add(args.Fid, nf)
-	ps.vt.Add(nf.Pobj().Obj().Path())
-	ps.vt.IncVersion(nf.Pobj().Obj().Path())
 	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	nf.SetMode(args.Mode)
 	rets.Qid = qid

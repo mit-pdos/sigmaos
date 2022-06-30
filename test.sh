@@ -65,8 +65,8 @@ do
   go test $1 ulambda/sessclnt --version=$VERSION
   
   # dbd_test and wwwd_test requires mariadb running
-  # pgrep mariadb >/dev/null && go test $1 ulambda/dbd
-  # pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
+  pgrep mariadb >/dev/null && go test $1 ulambda/dbd
+  pgrep mariadb >/dev/null && go test $1 ulambda/cmd/user/wwwd
   
   
   go test $1 ulambda/mr --version=$VERSION

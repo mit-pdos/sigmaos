@@ -58,14 +58,13 @@ fi
 
 for vm in $vms; do
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
-  mkdir -p $UXROOT
   export NAMED="${NAMED}"
   if [ "${vm}" = "${MAIN}" ]; then 
     echo "START ${NAMED}"
     (cd ulambda; nohup ./start.sh --realm $REALM > /tmp/start.out 2>&1 < /dev/null &)
   else
     echo "JOIN ${NAMED}"
-    (cd ulambda; nohup bin/realm/machined > /tmp/machined.out 2>&1 < /dev/null &)
+    (cd ulambda; nohup $PRIVILEGED_BIN/realm/machined > /tmp/machined.out 2>&1 < /dev/null &)
   fi
 ENDSSH
 done

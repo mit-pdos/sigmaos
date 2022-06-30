@@ -49,10 +49,8 @@ func (inode *Inode) qidL() np.Tqid {
 		inode.inum)
 }
 
-func (inode *Inode) Qid() np.Tqid {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	return inode.qidL()
+func (inode *Inode) Path() np.Tpath {
+	return inode.inum
 }
 
 func (inode *Inode) Perm() np.Tperm {

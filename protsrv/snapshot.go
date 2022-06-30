@@ -29,7 +29,7 @@ func (fos *ProtSrv) snapshot() []byte {
 		foss.Fid[fid] = f.Snapshot()
 	}
 	for _, po := range fos.et.ephemeral {
-		ptr := po.Obj().Qid().Path
+		ptr := po.Obj().Path()
 		foss.Ephemeral[ptr] = po.Snapshot()
 	}
 	foss.Sid = fos.sid

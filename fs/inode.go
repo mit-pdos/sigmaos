@@ -11,7 +11,6 @@ type RestoreF func(np.Tpath) Inode
 
 type Inode interface {
 	FsObj
-	VersionInc()
 	SetMtime(int64)
 	Mtime() int64
 	Size() (np.Tlength, *np.Err)

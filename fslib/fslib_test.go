@@ -301,7 +301,6 @@ func TestDirDot(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, b)
 	err = ts.RmDir(dn + "/.")
-	log.Printf("err %v\n", err)
 	assert.NotNil(t, err)
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn + "/.")

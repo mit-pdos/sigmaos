@@ -13,27 +13,24 @@ func mkTpath(key np.Path) np.Tpath {
 	return np.Tpath(h.Sum64())
 }
 
-func qid(perm np.Tperm, key np.Path) np.Tqid {
-	return np.MakeQid(np.Qtype(perm>>np.QTYPESHIFT), np.TQversion(0), mkTpath(key))
-}
-
-func mkQids(base *Obj) ([]np.Tqid, fs.FsObj) {
-	qids := make([]np.Tqid, 0, len(base.key))
+func mkObjs(base *Obj) ([]fs.FsObj, fs.FsObj) {
+	os := make([]fs.FsObj, 0, len(base.key))
 	for i, _ := range base.key {
 		if i+1 >= len(base.key) {
 			break
 		}
-		qids = append(qids, qid(np.DMDIR, base.key[0:i+1]))
+		os = append(os, makeFsObj(base.bucket, np.DMDIR, base.key[0:i+1]))
 	}
-	qids = append(qids, qid(base.perm, base.key))
-	return qids, makeFsObj(base.bucket, base.perm, base.key)
+	o := makeFsObj(base.bucket, base.perm, base.key)
+	os = append(os, o)
+	return os, o
 }
 
-func nameiObj(ctx fs.CtxI, bucket string, p np.Path) ([]np.Tqid, fs.FsObj, *np.Err) {
+func nameiObj(ctx fs.CtxI, bucket string, p np.Path) ([]fs.FsObj, fs.FsObj, *np.Err) {
 	o := makeObj(bucket, p, np.Tperm(0777))
 	if err := o.readHead(fss3); err != nil {
 		return nil, nil, err
 	}
-	qids, fo := mkQids(o)
-	return qids, fo, nil
+	os, fo := mkObjs(o)
+	return os, fo, nil
 }

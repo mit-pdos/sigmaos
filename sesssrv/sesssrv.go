@@ -76,6 +76,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 	ssrv.sct = sesscond.MakeSessCondTable(ssrv.st)
 	ssrv.wt = watch.MkWatchTable(ssrv.sct)
+	ssrv.vt = version.MkVersionTable()
 	ssrv.ffs = fencefs.MakeRoot(ctx.MkCtx("", 0, nil))
 
 	dirover.Mount(np.STATSD, ssrv.stats)

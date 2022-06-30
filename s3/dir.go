@@ -131,7 +131,7 @@ func (d *Dir) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	return st, nil
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) namei(ctx fs.CtxI, p np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	db.DPrintf("FSS3", "%v: namei %v\n", d, p)
 	if err := d.fill(); err != nil {
 		return nil, nil, nil, err
@@ -139,7 +139,7 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 	e, ok := d.dents.Lookup(p[0])
 	if !ok {
 		db.DPrintf("FSS3", "%v: namei %v not found\n", d, p[0])
-		return qids, d, p, np.MkErr(np.TErrNotfound, p[0])
+		return os, d, p, np.MkErr(np.TErrNotfound, p[0])
 	}
 	if len(p) == 1 {
 		perm := e.(np.Tperm)
@@ -149,17 +149,17 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj
 		} else {
 			o = makeObj(d.bucket, d.key.Copy().Append(p[0]), perm)
 		}
-		qids = append(qids, o.Qid())
-		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, qids, o)
-		return qids, o, nil, nil
+		os = append(os, o)
+		db.DPrintf("FSS3", "%v: namei final %v %v\n", ctx, os, o)
+		return os, o, nil, nil
 	} else {
 		d := makeDir(d.bucket, d.key.Copy().Append(p[0]), e.(np.Tperm))
-		qids = append(qids, d.Qid())
-		return d.namei(ctx, p[1:], qids)
+		os = append(os, d)
+		return d.namei(ctx, p[1:], os)
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	db.DPrintf("FSS3", "%v: Lookup %v '%v'", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil, nil
@@ -167,10 +167,10 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.
 	if !d.Perm().IsDir() {
 		return nil, nil, nil, np.MkErr(np.TErrNotDir, d)
 	}
-	qids, o, err := nameiObj(ctx, d.bucket, p)
+	os, o, err := nameiObj(ctx, d.bucket, p)
 	if err == nil {
-		db.DPrintf("FSS3", "%v: nameiObj %v %v\n", ctx, qids, o)
-		return qids, o, nil, nil
+		db.DPrintf("FSS3", "%v: nameiObj %v %v\n", ctx, os, o)
+		return os, o, nil, nil
 	}
 	// maybe p names a directory
 	return d.namei(ctx, p, nil)

@@ -27,7 +27,7 @@ func makeSnapshot(inode *Inode) []byte {
 	if inode.parent == nil {
 		i.Parent = 0
 	} else {
-		i.Parent = inode.parent.Qid().Path
+		i.Parent = inode.parent.Path()
 	}
 	i.Owner = inode.owner
 

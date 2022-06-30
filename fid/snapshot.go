@@ -24,7 +24,7 @@ func MakePobjSnapshot() *PobjSnapshot {
 func (po *Pobj) Snapshot() []byte {
 	ps := MakePobjSnapshot()
 	ps.Path = po.Path()
-	ps.Obj = po.Obj().Qid().Path
+	ps.Obj = po.Obj().Path()
 	ps.CtxSnap = po.Ctx().Snapshot()
 	b, err := json.Marshal(ps)
 	if err != nil {

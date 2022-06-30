@@ -100,13 +100,12 @@ func (o *Obj) stat() *np.Stat {
 	}
 	st.Name = st.Name
 	st.Mode = o.perm | np.Tperm(0777)
-	st.Qid = qid(o.perm, o.key)
+	st.Qid = np.MakeQidPerm(o.perm, 0, o.Path())
 	return st
 }
 
-func (o *Obj) Qid() np.Tqid {
-	q := qid(o.perm, o.key)
-	return q
+func (o *Obj) Path() np.Tpath {
+	return mkTpath(o.key)
 }
 
 // convert ux perms into np perm; maybe symlink?

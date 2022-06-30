@@ -14,14 +14,12 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
-	"ulambda/version"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
 }
 
-// XXX use Btime in path?
 func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) np.Tqid {
 	return np.MakeQid(np.Qtype(mode>>np.QTYPESHIFT), v, path)
 }
@@ -41,7 +39,8 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	if fi.IsDir() {
 		st.Mode |= np.DMDIR
 	}
-	st.Qid = mkQid(st.Mode, vt.GetVersion(path), np.Tpath(statx.Ino))
+	// XXX use Btime in path?
+	st.Qid = np.MakeQidPerm(st.Mode, 0, np.Tpath(statx.Ino))
 	st.Length = np.Tlength(fi.Size())
 	t := statxTimestampToTime(statx.Mtime)
 	st.Mtime = uint32(t.Unix())
@@ -51,7 +50,6 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 type Obj struct {
 	path np.Path
 	st   *np.Stat
-	v    *version.Version
 }
 
 func (o *Obj) String() string {
@@ -65,12 +63,15 @@ func makeObj(path np.Path) (*Obj, *np.Err) {
 		o := &Obj{}
 		o.path = path
 		o.st = st
-		o.v = vt.Version(path)
 		return o, nil
 	}
 }
 
-func (o *Obj) Path() string {
+func (o *Obj) Path() np.Tpath {
+	return o.qid().Path
+}
+
+func (o *Obj) PathName() string {
 	p := o.path.String()
 	if len(o.path) == 0 {
 		p = "."
@@ -110,10 +111,6 @@ func (o *Obj) size() np.Tlength {
 
 func (o *Obj) qid() np.Tqid {
 	return o.st.Qid
-}
-
-func (o *Obj) Qid() np.Tqid {
-	return mkQid(o.st.Mode, vt.GetVersion(o.path), o.st.Qid.Path)
 }
 
 func (o *Obj) Parent() fs.Dir {

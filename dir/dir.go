@@ -108,7 +108,7 @@ func (dir *DirImpl) Size() (np.Tlength, *np.Err) {
 	return npcodec.MarshalSizeDir(sts), nil
 }
 
-func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, os []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	var inode fs.FsObj
 	var err *np.Err
 
@@ -117,27 +117,27 @@ func (dir *DirImpl) namei(ctx fs.CtxI, path np.Path, qids []np.Tqid) ([]np.Tqid,
 	if err != nil {
 		db.DPrintf("MEMFS", "dir %v: file not found %v", dir, path[0])
 		dir.mu.Unlock()
-		return qids, dir, path, err
+		return os, dir, path, err
 	}
-	qids = append(qids, inode.Qid())
+	os = append(os, inode)
 	if len(path) == 1 { // done?
-		db.DPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, qids)
+		db.DPrintf("MEMFS", "namei %v dir %v -> %v", path, dir, os)
 		dir.mu.Unlock()
-		return qids, inode, nil, nil
+		return os, inode, nil, nil
 	}
 	switch i := inode.(type) {
 	case *DirImpl:
 		dir.mu.Unlock() // for "."
-		return i.namei(ctx, path[1:], qids)
+		return i.namei(ctx, path[1:], os)
 	case fs.Dir:
 		dir.mu.Unlock() // for "."
-		s3qids, s3obj, s3path, err := i.Lookup(ctx, path[1:])
-		qids = append(qids, s3qids...)
-		return qids, s3obj, s3path, err
+		s3os, s3obj, s3path, err := i.Lookup(ctx, path[1:])
+		os = append(os, s3os...)
+		return os, s3obj, s3path, err
 	default:
-		db.DPrintf("MEMFS", "error not dir namei %T %v %v -> %v %v", i, path, dir, qids, path[1:])
+		db.DPrintf("MEMFS", "error not dir namei %T %v %v -> %v %v", i, path, dir, os, path[1:])
 		dir.mu.Unlock()
-		return qids, inode, path, np.MkErr(np.TErrNotDir, path[0])
+		return os, inode, path, np.MkErr(np.TErrNotDir, path[0])
 	}
 }
 
@@ -189,12 +189,11 @@ func (dir *DirImpl) remove(name string) *np.Err {
 	if nonemptydir(inode) {
 		return np.MkErr(np.TErrNotEmpty, name)
 	}
-	dir.VersionInc()
 	dir.SetMtime(time.Now().Unix())
 	return dir.unlinkL(name)
 }
 
-func (dir *DirImpl) Lookup(ctx fs.CtxI, path np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+func (dir *DirImpl) Lookup(ctx fs.CtxI, path np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	if len(path) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -208,9 +207,6 @@ func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n np.Tsize, v np.TQversion)
 	defer dir.mu.Unlock()
 
 	db.DPrintf("MEMFS", "%v: ReadDir %v\n", ctx, dir)
-	if !np.VEq(v, dir.Qid().Version) {
-		return nil, np.MkErr(np.TErrVersion, dir.Qid())
-	}
 	return dir.lsL(cursor)
 }
 
@@ -234,7 +230,6 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) 
 		return nil, err
 	}
 	db.DPrintf("MEMFS", "Create %v in %v -> %v\n", name, dir, newi)
-	dir.VersionInc()
 	dir.SetMtime(time.Now().Unix())
 	return newi, dir.createL(newi, name)
 }
@@ -244,14 +239,13 @@ func (dir *DirImpl) CreateDev(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmod
 	defer dir.mu.Unlock()
 
 	db.DPrintf("MEMFS", "CreateDev %v in %v -> %v\n", name, dir, i)
-	dir.VersionInc()
 	dir.SetMtime(time.Now().Unix())
 	return dir.createL(i, name)
 }
 
 func lockOrdered(olddir *DirImpl, newdir *DirImpl) {
-	id1 := olddir.Qid().Path
-	id2 := newdir.Qid().Path
+	id1 := olddir.Path()
+	id2 := newdir.Path()
 	if id1 == id2 {
 		olddir.mu.Lock()
 	} else if id1 < id2 {
@@ -264,8 +258,8 @@ func lockOrdered(olddir *DirImpl, newdir *DirImpl) {
 }
 
 func unlockOrdered(olddir *DirImpl, newdir *DirImpl) {
-	id1 := olddir.Qid().Path
-	id2 := newdir.Qid().Path
+	id1 := olddir.Path()
+	id2 := newdir.Path()
 	if id1 == id2 {
 		olddir.mu.Unlock()
 	} else if id1 < id2 {
@@ -299,7 +293,6 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
 		db.DFatalf("Rename: remove failed %v %v\n", from, err)
 	}
 
-	dir.VersionInc()
 	if terr == nil { // inoto is valid
 		// XXX 9p: it is an error to change the name to that
 		// of an existing file.
@@ -313,7 +306,6 @@ func (dir *DirImpl) Rename(ctx fs.CtxI, from, to string) *np.Err {
 		db.DFatalf("Rename create %v failed %v\n", to, err)
 		return err
 	}
-	ino.VersionInc()
 	return nil
 
 }
@@ -356,11 +348,7 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
 	if err != nil {
 		return err
 	}
-
-	inode.VersionInc()
-	dir.VersionInc()
 	inode.Unlink()
-
 	err = dir.remove(n)
 	return err
 }

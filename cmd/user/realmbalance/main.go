@@ -25,7 +25,7 @@ func main() {
 	fslTop := fslib.MakeFsLib("realm-balance-top")
 	cfg1 := realm.GetRealmConfig(fslTop, np.TEST_RID)
 	fsl1 := fslib.MakeFsLibAddr("realm-balance-1", cfg1.NamedAddrs)
-	cfg2 := realm.GetRealmConfig(fslTop, "2000")
+	cfg2 := realm.GetRealmConfig(fslTop, "arielck")
 	fsl2 := fslib.MakeFsLibAddr("realm-balance-2", cfg2.NamedAddrs)
 
 	m := benchmarks.MakeRealmBalanceBenchmark(fsl1, cfg1.NamedAddrs, fsl2, cfg2.NamedAddrs, resDir)

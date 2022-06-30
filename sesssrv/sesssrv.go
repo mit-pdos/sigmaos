@@ -23,6 +23,7 @@ import (
 	"ulambda/snapshot"
 	"ulambda/stats"
 	"ulambda/threadmgr"
+	"ulambda/version"
 	"ulambda/watch"
 )
 
@@ -47,6 +48,7 @@ type SessSrv struct {
 	sct        *sesscond.SessCondTable
 	tmt        *threadmgr.ThreadMgrTable
 	wt         *watch.WatchTable
+	vt         *version.VersionTable
 	ffs        fs.Dir
 	srv        *netsrv.NetServer
 	replSrv    repl.Server
@@ -192,6 +194,10 @@ func (ssrv *SessSrv) GetStats() *stats.Stats {
 
 func (ssrv *SessSrv) GetWatchTable() *watch.WatchTable {
 	return ssrv.wt
+}
+
+func (ssrv *SessSrv) GetVersionTable() *version.VersionTable {
+	return ssrv.vt
 }
 
 func (ssrv *SessSrv) GetSnapshotter() *snapshot.Snapshot {

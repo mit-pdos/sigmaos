@@ -7,7 +7,6 @@ import (
 	"fmt"
 	ufs "io/fs"
 	"os"
-	"sync"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -15,18 +14,11 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
+	"ulambda/version"
 )
 
 func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
 	return time.Unix(sts.Sec, int64(sts.Nsec))
-}
-
-func getVersion(path np.Path) np.TQversion {
-	if pe, ok := paths.Lookup(path); ok {
-		e := pe.E.(*entry)
-		return e.version()
-	}
-	return 0
 }
 
 // XXX use Btime in path?
@@ -49,44 +41,17 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	if fi.IsDir() {
 		st.Mode |= np.DMDIR
 	}
-	st.Qid = mkQid(st.Mode, getVersion(path), np.Tpath(statx.Ino))
+	st.Qid = mkQid(st.Mode, vt.GetVersion(path), np.Tpath(statx.Ino))
 	st.Length = np.Tlength(fi.Size())
 	t := statxTimestampToTime(statx.Mtime)
 	st.Mtime = uint32(t.Unix())
 	return st, nil
 }
 
-// shared among threads using same path
-type entry struct {
-	sync.Mutex
-	v np.TQversion
-}
-
-func mkEntry() *entry {
-	return &entry{}
-}
-
-func (e *entry) String() string {
-	return fmt.Sprintf("v %d", e.v)
-}
-
-func (e *entry) version() np.TQversion {
-	e.Lock()
-	defer e.Unlock()
-
-	return e.v
-}
-
-func (e *entry) incVersion() {
-	e.Lock()
-	defer e.Unlock()
-	e.v += 1
-}
-
 type Obj struct {
 	path np.Path
 	st   *np.Stat
-	pe   *entry
+	v    *version.Version
 }
 
 func (o *Obj) String() string {
@@ -100,8 +65,7 @@ func makeObj(path np.Path) (*Obj, *np.Err) {
 		o := &Obj{}
 		o.path = path
 		o.st = st
-		e := paths.Insert(path, mkEntry())
-		o.pe = e.E.(*entry)
+		o.v = vt.Version(path)
 		return o, nil
 	}
 }
@@ -149,7 +113,7 @@ func (o *Obj) qid() np.Tqid {
 }
 
 func (o *Obj) Qid() np.Tqid {
-	return mkQid(o.st.Mode, getVersion(o.path), o.st.Qid.Path)
+	return mkQid(o.st.Mode, vt.GetVersion(o.path), o.st.Qid.Path)
 }
 
 func (o *Obj) Parent() fs.Dir {

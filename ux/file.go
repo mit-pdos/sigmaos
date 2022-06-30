@@ -79,8 +79,8 @@ func (f *File) uxRead(off int64, cnt np.Tsize) ([]byte, *np.Err) {
 }
 
 func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	f.pe.Lock()
-	defer f.pe.Unlock()
+	f.v.Lock()
+	defer f.v.Unlock()
 
 	db.DPrintf("UXD", "%v: Read: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b, err := f.uxRead(int64(off), cnt)
@@ -91,12 +91,12 @@ func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) (
 }
 
 func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	f.pe.Lock()
-	defer f.pe.Unlock()
+	f.v.Lock()
+	defer f.v.Unlock()
 
 	db.DPrintf("UXD0", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
 
-	v1 := f.pe.v
+	v1 := f.v.V
 	if !np.VEq(v, v1) {
 		log.Printf("v mismatch %v %v\n", v, v1)
 		return 0, np.MkErr(np.TErrVersion, f.Qid)
@@ -107,6 +107,6 @@ func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.
 		off = 0
 	}
 	sz, err := f.uxWrite(int64(off), b)
-	f.pe.v += 1
+	f.v.V += 1
 	return sz, err
 }

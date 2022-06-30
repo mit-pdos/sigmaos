@@ -88,7 +88,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		if err != nil {
 			return nil, err
 		}
-		d.pe.incVersion()
+		d.v.IncVersion()
 		return d1, nil
 	} else {
 		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
@@ -104,7 +104,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 			return nil, err
 		}
 		f.file = file
-		d.pe.incVersion()
+		d.v.IncVersion()
 		return f, nil
 	}
 }
@@ -180,8 +180,8 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	if error != nil {
 		return np.MkErrError(err)
 	}
-	d.pe.incVersion()
-	o.pe.incVersion()
+	d.v.IncVersion()
+	o.v.IncVersion()
 	return nil
 }
 
@@ -197,7 +197,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	if error != nil {
 		return np.MkErrError(error)
 	}
-	d.pe.incVersion()
-	dst.pe.incVersion()
+	d.v.IncVersion()
+	dst.v.IncVersion()
 	return nil
 }

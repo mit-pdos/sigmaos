@@ -7,6 +7,7 @@ import (
 	np "ulambda/ninep"
 	"ulambda/sesssrv"
 	"ulambda/stats"
+	"ulambda/version"
 	"ulambda/watch"
 )
 
@@ -18,7 +19,8 @@ import (
 
 type ProtSrv struct {
 	ssrv  *sesssrv.SessSrv
-	wt    *watch.WatchTable // shared across sessions
+	wt    *watch.WatchTable     // shared across sessions
+	vt    *version.VersionTable // shared across sessions
 	ft    *fidTable
 	et    *ephemeralTable
 	stats *stats.Stats
@@ -33,6 +35,7 @@ func MakeProtServer(s np.SessServer, sid np.Tsession) np.Protsrv {
 	ps.ft = makeFidTable()
 	ps.et = makeEphemeralTable()
 	ps.wt = srv.GetWatchTable()
+	ps.vt = srv.GetVersionTable()
 	ps.stats = srv.GetStats()
 	ps.sid = sid
 	db.DPrintf("PROTSRV", "MakeProtSrv -> %v", ps)

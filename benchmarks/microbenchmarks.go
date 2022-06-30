@@ -109,6 +109,7 @@ func (m *Microbenchmarks) PutFileBenchmark(nTrials int) *RawResults {
 
 	b := genData(0)
 	for i := 0; i < nTrials; i++ {
+		db.DPrintf("TEST", "Trial %v/%v", i, nTrials)
 		nRPC := m.ReadSeqNo()
 		start := time.Now()
 		if _, err := m.PutFile(fNames[i], 0777, np.OWRITE, b); err != nil {

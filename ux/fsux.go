@@ -61,11 +61,12 @@ func ErrnoToNp(errno syscall.Errno, err error) *np.Err {
 }
 
 func UxTo9PError(err error) *np.Err {
-	if e, ok := err.(*os.LinkError); ok {
+	switch e := err.(type) {
+	case *os.LinkError:
 		return ErrnoToNp(e.Err.(syscall.Errno), err)
-	}
-	if e, ok := err.(*os.PathError); ok {
+	case *os.PathError:
 		return ErrnoToNp(e.Err.(syscall.Errno), err)
+	default:
+		return np.MkErrError(err)
 	}
-	return np.MkErrError(err)
 }

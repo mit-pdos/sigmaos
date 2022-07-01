@@ -9,18 +9,16 @@ import (
 )
 
 type InodeSnapshot struct {
-	Perm    np.Tperm
-	Version np.TQversion
-	Mtime   int64
-	Parent  np.Tpath
-	Owner   string
-	Nlink   int
+	Perm   np.Tperm
+	Mtime  int64
+	Parent np.Tpath
+	Owner  string
+	Nlink  int
 }
 
 func makeSnapshot(inode *Inode) []byte {
 	i := &InodeSnapshot{}
 	i.Perm = inode.perm
-	i.Version = inode.version
 	i.Mtime = 0 // TODO: decide what to do about time.
 	// Since we traverse down the tree, we assume the parent must have already
 	// been snapshotted.
@@ -46,7 +44,6 @@ func restoreInode(fn fs.RestoreF, b []byte) fs.Inode {
 	}
 	inode := &Inode{}
 	inode.perm = i.Perm
-	inode.version = i.Version
 	inode.mtime = i.Mtime
 	parent := fn(i.Parent)
 	if parent != nil {

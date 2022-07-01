@@ -333,7 +333,6 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string) *np
 		db.DFatalf("Rename %v createL: %v\n", new, err)
 		return err
 	}
-	// ino.VersionInc()
 	ino.SetParent(newdir)
 	return nil
 }

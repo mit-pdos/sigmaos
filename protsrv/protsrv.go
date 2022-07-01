@@ -385,7 +385,7 @@ func (ps *ProtSrv) removeObj(ctx fs.CtxI, o fs.FsObj, path np.Path) *np.Rerror {
 	}
 
 	ps.vt.IncVersion(o.Path())
-	// XXX ps.vt.IncVersion(path.Dir())
+	ps.vt.IncVersion(o.Parent().Path())
 
 	fws.WakeupWatchL()
 	dws.WakeupWatchL()
@@ -451,7 +451,6 @@ func (ps *ProtSrv) Wstat(args np.Twstat, rets *np.Rwstat) *np.Rerror {
 		tws.WakeupWatchL() // trigger create watch
 		sws.WakeupWatchL() // trigger remove watch
 		dws.WakeupWatchL() // trigger dir watch
-		// XXX update version table; index by ino
 		f.Pobj().SetPath(dst)
 	}
 	// XXX ignore other Wstat for now

@@ -1,4 +1,4 @@
-package memfs
+package pipe
 
 import (
 	"fmt"

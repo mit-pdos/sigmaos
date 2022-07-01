@@ -10,8 +10,8 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	"ulambda/fslib"
-	"ulambda/memfs"
 	np "ulambda/ninep"
+	"ulambda/pipe"
 	"ulambda/proc"
 	"ulambda/procclnt"
 )
@@ -67,7 +67,7 @@ func (r *Reader) Work() *proc.Status {
 	}
 	defer r.Close(fd)
 	for {
-		data, err := r.Read(fd, memfs.PIPESZ)
+		data, err := r.Read(fd, pipe.PIPESZ)
 		if len(data) == 0 || err != nil {
 			break
 		}

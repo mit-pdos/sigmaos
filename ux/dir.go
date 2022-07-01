@@ -1,7 +1,6 @@
 package fsux
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -35,7 +34,7 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 func (d *Dir) uxReadDir() *np.Err {
 	dirents, err := ioutil.ReadDir(d.PathName())
 	if err != nil {
-		return np.MkErrError(err)
+		return UxTo9PError(err)
 	}
 	for _, e := range dirents {
 		if st, err := ustat(d.path.Copy().Append(e.Name())); err != nil {
@@ -82,7 +81,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		// XXX O_CREATE/O_EXCL
 		error := os.Mkdir(p, os.FileMode(perm&0777))
 		if error != nil {
-			return nil, np.MkErrError(error)
+			return nil, UxTo9PError(error)
 		}
 		d1, err := makeDir(append(d.path, name))
 		if err != nil {
@@ -92,11 +91,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	} else {
 		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
 		if error != nil {
-			if errors.Is(error, os.ErrExist) {
-				return nil, np.MkErr(np.TErrExists, name)
-			} else {
-				return nil, np.MkErrError(error)
-			}
+			return nil, UxTo9PError(error)
 		}
 		f, err := makeFile(append(d.path, name))
 		if err != nil {
@@ -144,7 +139,7 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np
 	}
 	fi, error := os.Stat(d.path.String())
 	if error != nil {
-		return nil, nil, nil, np.MkErrError(error)
+		return nil, nil, nil, UxTo9PError(error)
 	}
 	if !fi.IsDir() {
 		return nil, nil, nil, np.MkErr(np.TErrNotDir, d.path)
@@ -162,7 +157,7 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 	db.DPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return np.MkErrError(err)
+		return UxTo9PError(err)
 	}
 	return nil
 }
@@ -172,7 +167,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	p := d.path.Copy().Append(name)
 	error := os.Remove(p.String())
 	if error != nil {
-		return np.MkErrError(error)
+		return UxTo9PError(error)
 	}
 	return nil
 }
@@ -183,7 +178,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	error := os.Rename(oldPath, newPath)
 	if error != nil {
-		return np.MkErrError(error)
+		return UxTo9PError(error)
 	}
 	return nil
 }

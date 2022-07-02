@@ -2,12 +2,15 @@ package fsux
 
 import (
 	"fmt"
+	ufs "io/fs"
 	"io/ioutil"
 	"os"
+	"syscall"
 
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
+	"ulambda/pipe"
 	"ulambda/sorteddir"
 )
 
@@ -102,7 +105,16 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 }
 
 func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	return nil, np.MkErr(np.TErrNotSupported, "pipe")
+	p := d.path.Append(name).String()
+	error := syscall.Mkfifo(p, uint32(perm&0777))
+	if error != nil {
+		UxTo9PError(error)
+	}
+	f, err := makeFile(append(d.path, name))
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
@@ -111,7 +123,7 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsO
 
 // XXX how to delete ephemeral files after crash
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	db.DPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, perm)
+	db.DPrintf("UXD", "%v: Create %v %v %v\n", ctx, d, name, perm)
 	if perm.IsDir() {
 		return d.mkDir(ctx, name, perm, m)
 	} else if perm.IsPipe() {
@@ -136,6 +148,13 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsO
 				return objs, d1, d.path, err
 			}
 			return append(objs, d1), d1, nil, nil
+		} else if fi.Mode()&ufs.ModeNamedPipe != 0 {
+			f, err := makeFile(append(d.path, p[0]))
+			if err != nil {
+				return objs, f, d.path, err
+			}
+			p := pipe.MakePipe(ctx, f)
+			return append(objs, p), p, nil, nil
 		} else {
 			f, err := makeFile(append(d.path, p[0]))
 			if err != nil {

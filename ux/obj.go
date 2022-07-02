@@ -39,6 +39,9 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 	if fi.IsDir() {
 		st.Mode |= np.DMDIR
 	}
+	if fi.Mode()&ufs.ModeNamedPipe != 0 {
+		st.Mode |= np.DMNAMEDPIPE
+	}
 	// XXX use Btime in path?
 	st.Qid = np.MakeQidPerm(st.Mode, 0, np.Tpath(statx.Ino))
 	st.Length = np.Tlength(fi.Size())
@@ -67,6 +70,10 @@ func makeObj(path np.Path) (*Obj, *np.Err) {
 	}
 }
 
+func (o *Obj) Perm() np.Tperm {
+	return o.st.Mode
+}
+
 func (o *Obj) Path() np.Tpath {
 	return o.qid().Path
 }
@@ -79,8 +86,10 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) Perm() np.Tperm {
-	return o.st.Mode
+// XXX update qid?
+func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
+	return o.st, nil
 }
 
 func uxFlags(m np.Tmode) int {
@@ -113,6 +122,17 @@ func (o *Obj) qid() np.Tqid {
 	return o.st.Qid
 }
 
+//
+// Inode interface
+//
+
+func (o *Obj) Mtime() int64 {
+	return 0
+}
+
+func (o *Obj) SetMtime(m int64) {
+}
+
 func (o *Obj) Parent() fs.Dir {
 	dir := o.path.Dir()
 	d, err := makeDir(dir)
@@ -122,8 +142,16 @@ func (o *Obj) Parent() fs.Dir {
 	return d
 }
 
-// XXX update qid?
-func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
-	return o.st, nil
+func (o *Obj) SetParent(p fs.Dir) {
+}
+
+func (o *Obj) Unlink() {
+}
+
+func (o *Obj) Size() (np.Tlength, *np.Err) {
+	return o.size(), nil
+}
+
+func (o *Obj) Snapshot(fn fs.SnapshotF) []byte {
+	return nil
 }

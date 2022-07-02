@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/awriter"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
@@ -626,6 +627,7 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	srv, err := ts.PathServer(path)
 	assert.Nil(t, err)
 
+	db.DPrintf("TEST", "Disconnect fsl")
 	err = fsl1.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 

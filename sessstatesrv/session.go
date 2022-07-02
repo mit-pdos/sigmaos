@@ -134,6 +134,16 @@ func (sess *Session) timeout() {
 	sess.timedout = true
 }
 
+func (sess *Session) isConnected() bool {
+	sess.Lock()
+	defer sess.Unlock()
+
+	if sess.closed || sess.conn == nil || sess.conn.Conn.IsClosed() {
+		return false
+	}
+	return true
+}
+
 func (sess *Session) timedOut() (bool, time.Time) {
 	sess.Lock()
 	defer sess.Unlock()

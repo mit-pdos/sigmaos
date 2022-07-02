@@ -1,6 +1,7 @@
 package ninep
 
 type Isrvconn interface {
+	IsClosed() bool
 	Close()
 }
 

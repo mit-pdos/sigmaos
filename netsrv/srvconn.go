@@ -3,6 +3,7 @@ package netsrv
 import (
 	"bufio"
 	"net"
+	"sync"
 
 	db "ulambda/debug"
 	np "ulambda/ninep"
@@ -14,7 +15,9 @@ const (
 )
 
 type SrvConn struct {
+	*sync.Mutex
 	conn       net.Conn
+	closed     bool
 	wireCompat bool
 	br         *bufio.Reader
 	bw         *bufio.Writer
@@ -24,7 +27,10 @@ type SrvConn struct {
 }
 
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
-	c := &SrvConn{conn,
+	c := &SrvConn{
+		&sync.Mutex{},
+		conn,
+		false,
 		srv.wireCompat,
 		bufio.NewReaderSize(conn, Msglen),
 		bufio.NewWriterSize(conn, Msglen),
@@ -40,6 +46,18 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 func (c *SrvConn) Close() {
 	db.DPrintf("NETSRV", "%v Close conn\n", c.sessid)
 	c.conn.Close()
+
+	c.Lock()
+	defer c.Unlock()
+
+	c.closed = true
+}
+
+func (c *SrvConn) IsClosed() bool {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.closed
 }
 
 func (c *SrvConn) Src() string {
@@ -51,13 +69,14 @@ func (c *SrvConn) Dst() string {
 }
 
 func (c *SrvConn) reader() {
+	// session mgr will timeout this session eventually
+	defer c.Close()
+
 	db.DPrintf("NETSRV", "%v (%v) Reader conn from %v\n", c.sessid, c.Dst(), c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v ReadFrame err %v\n", c.sessid, err)
-			// session mgr will timeout this session eventually
-			c.conn.Close()
 			return
 		}
 		var fcall *np.Fcall
@@ -68,7 +87,6 @@ func (c *SrvConn) reader() {
 		}
 		if err != nil {
 			db.DPrintf("NETSRV_ERR", "%v reader from %v: bad fcall: ", c.sessid, c.Src(), err)
-			// XXX tell sesssrv that conn closed?
 			return
 		}
 		db.DPrintf("NETSRV", "srv req %v\n", fcall)
@@ -89,13 +107,12 @@ func (c *SrvConn) reader() {
 	}
 }
 
-// XXX Should we close with other error conditions?
 func (c *SrvConn) writer() {
+	defer c.Close()
 	for {
 		fcall, ok := <-c.replies
 		if !ok {
 			db.DPrintf("NETSRV", "%v writer: close conn from %v\n", c.sessid, c.Src())
-			c.conn.Close()
 			return
 		}
 		db.DPrintf("NETSRV", "rep %v\n", fcall)

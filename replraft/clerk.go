@@ -119,8 +119,8 @@ func (c *Clerk) registerOp(op *Op) {
 		c.opmap[op.request.Session] = m
 	}
 	if _, ok := m[op.request.Seqno]; ok {
-		// Detaches may be re-executed many times.
-		if op.request.GetType() != np.TTdetach {
+		// Detaches and server-driven heartbeats may be re-executed many times.
+		if op.request.GetType() != np.TTdetach && op.request.GetType() != np.TTheartbeat {
 			db.DFatalf("%v Error in Clerk.Propose: seqno already exists (%v vs %v)", proc.GetName(), op.request, m[op.request.Seqno].request)
 		}
 	}

@@ -17,7 +17,8 @@ func MakeSessionMgr(st *SessionTable, pfn np.Fsrvfcall) *SessionMgr {
 	sm := &SessionMgr{}
 	sm.st = st
 	sm.srvfcall = pfn
-	go sm.run()
+	go sm.runHeartbeats()
+	go sm.runDetaches()
 	return sm
 }
 
@@ -37,6 +38,22 @@ func (sm *SessionMgr) CloseConn() {
 	}
 }
 
+// Find connected sessions.
+func (sm *SessionMgr) getConnectedSessions() []*Session {
+	// Lock the session table.
+	sm.st.Lock()
+	defer sm.st.Unlock()
+	sess := make([]*Session, 0, len(sm.st.sessions))
+	for sid, s := range sm.st.sessions {
+		// Find timed-out sessions which haven't been closed yet.
+		if s.isConnected() {
+			db.DPrintf("SESSION", "Sess %v is connected, generating heartbeat.", sid)
+			sess = append(sess, s)
+		}
+	}
+	return sess
+}
+
 // Find timed-out sessions.
 func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	// Lock the session table.
@@ -53,14 +70,29 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 	return sess
 }
 
-// Scan for detachable sessions, and request that they be detahed.
-func (sm *SessionMgr) run() {
+// Scan for live/connected sessions, and send heartbeats on their behalf.
+func (sm *SessionMgr) runHeartbeats() {
+	sessHeartbeatT := time.NewTicker(np.Conf.Session.TIMEOUT)
 	for !sm.Done() {
-		// Sleep for a bit.
-		time.Sleep(np.Conf.Session.TIMEOUT)
+		<-sessHeartbeatT.C
+		sess := sm.getConnectedSessions()
+		for _, s := range sess {
+			hb := np.MakeFcall(np.Theartbeat{[]np.Tsession{s.Sid}}, s.Sid, nil, nil, np.NoFence)
+			sm.srvfcall(hb)
+		}
+	}
+}
+
+// Scan for detachable sessions, and request that they be detahed.
+func (sm *SessionMgr) runDetaches() {
+	sessTimeoutT := time.NewTicker(np.Conf.Session.TIMEOUT)
+
+	for !sm.Done() {
+		<-sessTimeoutT.C
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
 			detach := np.MakeFcall(np.Tdetach{}, s.Sid, nil, nil, np.NoFence)
+			detach.Seqno -= 1
 			sm.srvfcall(detach)
 		}
 	}

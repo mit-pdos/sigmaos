@@ -73,32 +73,53 @@ func (d *Dir) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
 
+// XXX O_CREATE/O_EXCL
+func (d *Dir) mkDir(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (*Dir, *np.Err) {
+	p := d.path.Append(name).String()
+	error := os.Mkdir(p, os.FileMode(perm&0777))
+	if error != nil {
+		return nil, UxTo9PError(error)
+	}
+	d1, err := makeDir(append(d.path, name))
+	if err != nil {
+		return nil, err
+	}
+	return d1, nil
+}
+
+func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+	p := d.path.Append(name).String()
+	file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
+	if error != nil {
+		return nil, UxTo9PError(error)
+	}
+	f, err := makeFile(append(d.path, name))
+	if err != nil {
+		return nil, err
+	}
+	f.file = file
+	return f, nil
+}
+
+func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+	return nil, np.MkErr(np.TErrNotSupported, "pipe")
+}
+
+func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
+	return nil, np.MkErr(np.TErrNotSupported, "sym")
+}
+
 // XXX how to delete ephemeral files after crash
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	p := d.path.Append(name).String()
-	db.DPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, p, perm)
+	db.DPrintf("UXD", "%v: Create %v %v %v %v\n", ctx, d, name, perm)
 	if perm.IsDir() {
-		// XXX O_CREATE/O_EXCL
-		error := os.Mkdir(p, os.FileMode(perm&0777))
-		if error != nil {
-			return nil, UxTo9PError(error)
-		}
-		d1, err := makeDir(append(d.path, name))
-		if err != nil {
-			return nil, err
-		}
-		return d1, nil
+		return d.mkDir(ctx, name, perm, m)
+	} else if perm.IsPipe() {
+		return d.mkPipe(ctx, name, perm, m)
+	} else if perm.IsSymlink() {
+		return d.mkSym(ctx, name, perm, m)
 	} else {
-		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
-		if error != nil {
-			return nil, UxTo9PError(error)
-		}
-		f, err := makeFile(append(d.path, name))
-		if err != nil {
-			return nil, err
-		}
-		f.file = file
-		return f, nil
+		return d.mkFile(ctx, name, perm, m)
 	}
 }
 

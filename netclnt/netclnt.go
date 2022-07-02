@@ -104,7 +104,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 
 	// If the connection has already been closed, return immediately.
 	if nc.isClosed() {
-		db.DPrintf("NETCLNT_ERR", "Error Send on closed channelcto %v\n", nc.Dst())
+		db.DPrintf("NETCLNT_ERR", "Error Send on closed channel to %v\n", nc.Dst())
 		return
 	}
 

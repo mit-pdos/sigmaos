@@ -72,7 +72,7 @@ func (sm *SessionMgr) getTimedOutSessions() []*Session {
 
 // Scan for live/connected sessions, and send heartbeats on their behalf.
 func (sm *SessionMgr) runHeartbeats() {
-	sessHeartbeatT := time.NewTicker(np.Conf.Session.TIMEOUT)
+	sessHeartbeatT := time.NewTicker(np.Conf.Session.HEARTBEAT_INTERVAL)
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()

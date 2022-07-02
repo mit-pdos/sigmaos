@@ -22,7 +22,6 @@ type SessClnt struct {
 	addrs  []string
 	nc     *netclnt.NetClnt
 	queue  *sessstateclnt.RequestQueue
-	hb     *Heartbeater
 	ivs    *intervals.Intervals
 }
 
@@ -39,7 +38,6 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 		return nil, err
 	}
 	c.nc = nc
-	c.hb = makeHeartbeater(c)
 	c.ivs = intervals.MkIntervals()
 	go c.writer()
 	return c, nil
@@ -59,7 +57,15 @@ func (c *SessClnt) RPC(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 	return rep, err1
 }
 
-// Clear the connection and reset the request queue.
+func (c *SessClnt) sendHeartbeat() {
+	_, err := c.RPC(np.Theartbeat{[]np.Tsession{c.sid}}, np.NoFence)
+	if err != nil {
+		db.DPrintf("SESSCLNT_ERR", "%v heartbeat %v err %v", c.sid, c.addrs, err)
+	}
+}
+
+// Clear the connection, reset the request queue, and enqueue a heartbeat to
+// re-establish a connection with the replica group if possible.
 func (c *SessClnt) Reset() {
 	c.Lock()
 	defer c.Unlock()
@@ -70,6 +76,8 @@ func (c *SessClnt) Reset() {
 	// Reset outstanding request queue.
 	db.DPrintf("SESSCLNT", "%v Reset outstanding request queue to %v\n", c.sid, c.addrs)
 	c.queue.Reset()
+	// Try to send a heartbeat to force a reconnect to the replica group.
+	go c.sendHeartbeat()
 }
 
 // Complete an RPC and pass the response up the stack.
@@ -95,8 +103,6 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 
 // Send a detach.
 func (c *SessClnt) Detach() *np.Err {
-	// Stop the heartbeater.
-	c.hb.Stop()
 	rep, err := c.RPC(np.Tdetach{0, 0}, np.NoFence)
 	if err != nil {
 		db.DPrintf("SESSCLNT_ERR", "detach %v err %v", c.sid, err)
@@ -142,7 +148,6 @@ func (c *SessClnt) send(req np.Tmsg, f np.Tfence) (*netclnt.Rpc, *np.Err) {
 // Wait for an RPC to be completed. When this happens, we reset the heartbeat
 // timer.
 func (c *SessClnt) recv(rpc *netclnt.Rpc) (np.Tmsg, *np.Err) {
-	defer c.hb.HeartbeatAckd()
 	return rpc.Await()
 }
 

@@ -71,7 +71,7 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	}
 	ps.ft.Add(args.Fid, fid.MakeFidPath(fid.MkPobj(path, tree, ctx), 0, qid))
-	ps.vt.Add(tree.Path())
+	ps.vt.Insert(tree.Path())
 
 	rets.Qid = qid
 	return nil
@@ -143,8 +143,8 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	}
 	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid)
+	ps.vt.Insert(qid.Path)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
-	ps.vt.Add(qid.Path)
 	return nil
 }
 
@@ -282,7 +282,7 @@ func (ps *ProtSrv) Create(args np.Tcreate, rets *np.Rcreate) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	ps.vt.Add(o1.Path())
+	ps.vt.Insert(o1.Path())
 	ps.vt.IncVersion(o1.Path())
 	qid := ps.mkQid(o1.Perm(), o1.Path())
 	nf := ps.makeFid(f.Pobj().Ctx(), f.Pobj().Path(), names[0], o1, args.Perm.IsEphemeral(), qid)
@@ -316,7 +316,7 @@ func (ps *ProtSrv) ReadV(args np.TreadV, rets *np.Rread) *np.Rerror {
 		return err.Rerror()
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf("PROTSRV", "%v: ReadV f %v args %v v %d\n", f.Pobj().Ctx().Uname(), f, args, v)
+	db.DPrintf("PROTSRV0", "%v: ReadV f %v args %v v %d\n", f.Pobj().Ctx().Uname(), f, args, v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}
@@ -347,7 +347,7 @@ func (ps *ProtSrv) WriteV(args np.TwriteV, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 	v := ps.vt.GetVersion(f.Pobj().Obj().Path())
-	db.DPrintf("PROTSRV", "%v: WriteV %v args %v path %d v %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
+	db.DPrintf("PROTSRV0", "%v: WriteV %v args %v path %d v %d\n", f.Pobj().Ctx().Uname(), f.Pobj().Path(), args, f.Pobj().Obj().Path(), v)
 	if !np.VEq(args.Version, v) {
 		return np.MkErr(np.TErrVersion, v).Rerror()
 	}

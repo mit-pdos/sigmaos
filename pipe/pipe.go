@@ -65,9 +65,10 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 			return nil, np.MkErr(np.TErrClosed, "pipe reading")
 		}
 		pipe.nreader += 1
-		//log.Printf("%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
+		db.DPrintf("PIPE", "%v/%v: open pipe %p for reading %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nreader)
 		pipe.condw.Signal()
 		for pipe.nwriter == 0 && !pipe.wclosed {
+			db.DPrintf("PIPE", "Wait for writer %v\n", ctx.SessionId())
 			err := pipe.condr.Wait(ctx.SessionId())
 			if err != nil {
 				pipe.nreader -= 1
@@ -85,12 +86,13 @@ func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 			return nil, np.MkErr(np.TErrClosed, "pipe writing")
 		}
 		pipe.nwriter += 1
-		// log.Printf("%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
+		db.DPrintf("PIPE", "%v/%v: open pipe %p for writing %v\n", ctx.Uname(), ctx.SessionId(), pipe, pipe.nwriter)
 		pipe.condr.Signal()
 		for pipe.nreader == 0 && !pipe.rclosed {
-			db.DPrintf("MEMFS", "Wait for reader\n")
+			db.DPrintf("PIPE", "Wait for reader %v\n", ctx.SessionId())
 			err := pipe.condw.Wait(ctx.SessionId())
 			if err != nil {
+				db.DPrintf("PIPE", "Wait reader err %v %v\n", err, ctx.SessionId())
 				pipe.nwriter -= 1
 				if pipe.nwriter == 0 {
 					pipe.wclosed = true
@@ -112,7 +114,7 @@ func (pipe *Pipe) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
-	//log.Printf("%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
+	db.DPrintf("PIPE", "%v: close %v pipe %v\n", ctx.Uname(), mode, pipe.nwriter)
 	if mode == np.OREAD {
 		pipe.nreader -= 1
 		if pipe.nreader == 0 {

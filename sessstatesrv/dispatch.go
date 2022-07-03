@@ -17,14 +17,6 @@ func (s *Session) Dispatch(msg np.Tmsg) (np.Tmsg, bool, *np.Rerror) {
 		db.DPrintf("SESSION_ERR", "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		return nil, true, np.MkErr(np.TErrClosed, fmt.Sprintf("session %v", s.Sid)).Rerror()
 	}
-	// Register a heartbeat. This should be safe to do even if this is a detach,
-	// since, if it is a detach, the decision to kill the session has already
-	// been made & confirmed (if the leader made the decision), and if the leader
-	// didn't make the decision, the heartbeat which this detach produces won't
-	// be replicated (adding to the leader's timer) anyway. In the worst case, if
-	// we change leadership while a non-leader is trying to detach, the eventual
-	// detach will just be delayed by a bit.
-	s.heartbeat(msg)
 	switch req := msg.(type) {
 	case np.Tversion:
 		reply := &np.Rversion{}

@@ -39,16 +39,16 @@ func (sm *SessionMgr) CloseConn() {
 }
 
 // Find connected sessions.
-func (sm *SessionMgr) getConnectedSessions() []*Session {
+func (sm *SessionMgr) getConnectedSessions() []np.Tsession {
 	// Lock the session table.
 	sm.st.Lock()
 	defer sm.st.Unlock()
-	sess := make([]*Session, 0, len(sm.st.sessions))
+	sess := make([]np.Tsession, 0, len(sm.st.sessions))
 	for sid, s := range sm.st.sessions {
 		// Find timed-out sessions which haven't been closed yet.
 		if s.isConnected() {
 			db.DPrintf("SESSION", "Sess %v is connected, generating heartbeat.", sid)
-			sess = append(sess, s)
+			sess = append(sess, s.Sid)
 		}
 	}
 	return sess
@@ -76,10 +76,8 @@ func (sm *SessionMgr) runHeartbeats() {
 	for !sm.Done() {
 		<-sessHeartbeatT.C
 		sess := sm.getConnectedSessions()
-		for _, s := range sess {
-			hb := np.MakeFcall(np.Theartbeat{[]np.Tsession{s.Sid}}, s.Sid, nil, nil, np.NoFence)
-			sm.srvfcall(hb)
-		}
+		hbs := np.MakeFcall(np.Theartbeat{sess}, 0, nil, nil, np.NoFence)
+		sm.srvfcall(hbs)
 	}
 }
 

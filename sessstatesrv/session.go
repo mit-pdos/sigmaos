@@ -116,9 +116,8 @@ func (sess *Session) SetConn(conn *np.Conn) *np.Err {
 	return nil
 }
 
-func (sess *Session) heartbeat(msg np.Tmsg) {
-	sess.Lock()
-	defer sess.Unlock()
+// Caller holds lock.
+func (sess *Session) heartbeatL(msg np.Tmsg) {
 	db.DPrintf("SESSION", "Heartbeat sess %v msg %v %v", sess.Sid, msg.Type(), msg)
 	if sess.closed {
 		db.DFatalf("%v heartbeat %v on closed session %v", proc.GetName(), msg, sess.Sid)

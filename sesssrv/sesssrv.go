@@ -218,11 +218,18 @@ func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) *np.Err {
 
 func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 	sess, ok := ssrv.st.Lookup(fc.Session)
-	if !ok {
+	// Server-generated heartbeats will have session number 0. Pass them through.
+	if !ok && fc.Session != 0 {
 		db.DFatalf("SrvFcall: no session %v for req %v\n", fc.Session, fc)
 	}
 	if !ssrv.replicated {
-		sess.GetThread().Process(fc)
+		// If the fcall is a server-generated heartbeat, don't worry about
+		// processing it sequentially on the session's thread.
+		if fc.Session == 0 {
+			ssrv.srvfcall(fc)
+		} else {
+			sess.GetThread().Process(fc)
+		}
 	} else {
 		ssrv.replSrv.Process(fc)
 	}
@@ -244,6 +251,13 @@ func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstate
 }
 
 func (ssrv *SessSrv) srvfcall(fc *np.Fcall) {
+	// If this was a server-generated heartbeat message, heartbeat all of the
+	// contained sessions, and then return immediately (no further processing is
+	// necessary).
+	if fc.Session == 0 {
+		ssrv.st.ProcessHeartbeats(fc.Msg.(np.Theartbeat))
+		return
+	}
 	// If this is a replicated op received through raft (not
 	// directly from a client), the first time Alloc is called
 	// will be in this function, so the conn will be set to

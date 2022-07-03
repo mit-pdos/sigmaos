@@ -68,11 +68,6 @@ func (rt *ReplyTable) Register(request *np.Fcall) bool {
 	if request.Seqno != 0 && rt.pruned.Contains(np.Toffset(request.Seqno)) {
 		return false
 	}
-	// Server-generated heartbeats have seqno = 0. Don't actually put these in
-	// the reply table.
-	if request.Seqno == 0 {
-		return true
-	}
 	rt.entries[request.Seqno] = MakeReplyFuture()
 	return true
 }

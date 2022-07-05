@@ -347,9 +347,11 @@ func (dir *DirImpl) Remove(ctx fs.CtxI, n string) *np.Err {
 	if err != nil {
 		return err
 	}
+	if err := dir.remove(n); err != nil {
+		return err
+	}
 	inode.Unlink()
-	err = dir.remove(n)
-	return err
+	return nil
 }
 
 func (dir *DirImpl) Snapshot(fn fs.SnapshotF) []byte {

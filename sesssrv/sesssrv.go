@@ -1,7 +1,6 @@
 package sesssrv
 
 import (
-	"log"
 	"reflect"
 	"runtime/debug"
 
@@ -90,7 +89,7 @@ func MakeSessSrv(root fs.Dir, addr string, fsl *fslib.FsLib,
 
 		ssrv.replSrv = config.MakeServer(ssrv.tmt.AddThread())
 		ssrv.replSrv.Start()
-		log.Printf("Starting repl server: %v", config)
+		db.DPrintf(db.ALWAYS, "Starting repl server: %v", config)
 	}
 	ssrv.srv = netsrv.MakeNetServer(ssrv, addr)
 	db.DPrintf("SESSSRV0", "Listen on address: %v", ssrv.srv.MyAddr())
@@ -114,7 +113,7 @@ func (ssrv *SessSrv) Root() fs.Dir {
 }
 
 func (ssrv *SessSrv) Snapshot() []byte {
-	log.Printf("Snapshot %v", proc.GetPid())
+	db.DPrintf(db.ALWAYS, "Snapshot %v", proc.GetPid())
 	if !ssrv.replicated {
 		db.DFatalf("Tried to snapshot an unreplicated server %v", proc.GetName())
 	}
@@ -134,7 +133,11 @@ func (ssrv *SessSrv) Restore(b []byte) {
 	ssrv.root, ssrv.ffs, ssrv.stats, ssrv.st, ssrv.tmt = ssrv.snap.Restore(ssrv.mkps, ssrv.rps, ssrv, ssrv.tmt.AddThread(), ssrv.srvfcall, ssrv.st, b)
 	ssrv.stats.MonitorCPUUtil()
 	ssrv.sct.St = ssrv.st
+	db.DPrintf(db.ALWAYS, "One")
+	db.DPrintf("TEST", "One")
 	ssrv.sm.Stop()
+	db.DPrintf(db.ALWAYS, "Two")
+	db.DPrintf("TEST", "Two")
 	ssrv.sm = sessstatesrv.MakeSessionMgr(ssrv.st, ssrv.SrvFcall)
 }
 
@@ -159,10 +162,10 @@ func (ssrv *SessSrv) Serve() {
 		}
 		if err := ssrv.pclnt.Started(); err != nil {
 			debug.PrintStack()
-			log.Printf("%v: Error Started: %v", proc.GetName(), err)
+			db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 		}
 		if err := ssrv.pclnt.WaitEvict(proc.GetPid()); err != nil {
-			log.Printf("%v: Error WaitEvict: %v", proc.GetName(), err)
+			db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 		}
 	} else {
 		<-ssrv.ch
@@ -238,10 +241,10 @@ func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {
 func (ssrv *SessSrv) sendReply(request *np.Fcall, reply np.Tmsg, sess *sessstatesrv.Session) {
 	fcall := np.MakeFcallReply(request, reply)
 
-	db.DPrintf("SESSSRV", "sendReply req %v rep %v", request, fcall)
-
 	// Store the reply in the reply cache.
 	ok := sess.GetReplyTable().Put(request, fcall)
+
+	db.DPrintf("SESSSRV", "sendReply req %v rep %v ok %v", request, fcall, ok)
 
 	// If a client sent the request (seqno != 0) (as opposed to an
 	// internally-generated detach or heartbeat), send reply.

@@ -90,7 +90,6 @@ func (sm *SessionMgr) runDetaches() {
 		sess := sm.getTimedOutSessions()
 		for _, s := range sess {
 			detach := np.MakeFcall(np.Tdetach{}, s.Sid, nil, nil, np.NoFence)
-			detach.Seqno -= 1
 			sm.srvfcall(detach)
 		}
 	}

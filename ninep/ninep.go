@@ -260,7 +260,7 @@ func (p Tperm) IsFile() bool       { return (p>>QTYPESHIFT)&0xFF == 0 }
 
 func (p Tperm) String() string {
 	qt := Qtype(p >> QTYPESHIFT)
-	return fmt.Sprintf("qt %v p %x", qt, uint8(p&TYPEMASK))
+	return fmt.Sprintf("qt %v qp %x", qt, uint8(p&TYPEMASK))
 }
 
 type Tfcall uint8

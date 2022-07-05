@@ -231,5 +231,6 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
 	if error != nil {
 		return UxTo9PError(error)
 	}
+	// XXX unlink on pipe, if pipe
 	return nil
 }

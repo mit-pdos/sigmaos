@@ -836,6 +836,8 @@ func TestPipeBasic(t *testing.T) {
 
 	<-ch
 
+	ts.Remove(pipe)
+
 	ts.Shutdown()
 }
 
@@ -871,6 +873,8 @@ func TestPipeClose(t *testing.T) {
 	assert.Nil(ts.T, err, "Close")
 
 	<-ch
+
+	ts.Remove(pipe)
 
 	ts.Shutdown()
 }
@@ -910,7 +914,9 @@ func TestPipeCrash0(t *testing.T) {
 		assert.Nil(ts.T, err, "Open")
 		time.Sleep(200 * time.Millisecond)
 		// simulate thread crashing
-		err = fsl.Disconnect(path)
+		srv, err := ts.PathServer(path)
+		assert.Nil(t, err)
+		err = fsl.Disconnect(srv)
 		assert.Nil(ts.T, err, "Disconnect")
 
 	}()
@@ -918,6 +924,8 @@ func TestPipeCrash0(t *testing.T) {
 	assert.Nil(ts.T, err, "Open")
 	_, err = ts.Read(fd, 100)
 	assert.NotNil(ts.T, err, "read")
+
+	ts.Remove(pipe)
 	ts.Shutdown()
 }
 
@@ -937,7 +945,9 @@ func TestPipeCrash1(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// simulate crash of w1
-	err = fsl1.Disconnect(path)
+	srv, err := ts.PathServer(path)
+	assert.Nil(t, err)
+	err = fsl1.Disconnect(srv)
 	assert.Nil(ts.T, err, "Disconnect")
 
 	time.Sleep(2 * np.Conf.Session.TIMEOUT)
@@ -958,6 +968,7 @@ func TestPipeCrash1(t *testing.T) {
 	_, err = ts.Read(fd, 100)
 	assert.NotNil(ts.T, err, "read")
 
+	ts.Remove(pipe)
 	ts.Shutdown()
 }
 

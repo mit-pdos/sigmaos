@@ -15,7 +15,6 @@ import (
 const PIPESZ = 8192
 
 type Pipe struct {
-	fs.Inode
 	mu      sync.Mutex
 	condr   *sesscond.SessCond
 	condw   *sesscond.SessCond
@@ -27,9 +26,8 @@ type Pipe struct {
 	buf     []byte
 }
 
-func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
+func MakePipe(ctx fs.CtxI) *Pipe {
 	pipe := &Pipe{}
-	pipe.Inode = i
 	pipe.condr = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.condw = ctx.SessCondTable().MakeSessCond(&pipe.mu)
 	pipe.buf = make([]byte, 0, PIPESZ)
@@ -41,20 +39,20 @@ func MakePipe(ctx fs.CtxI, i fs.Inode) *Pipe {
 	return pipe
 }
 
-func (p *Pipe) Size() (np.Tlength, *np.Err) {
-	return np.Tlength(len(p.buf)), nil
-}
+// func (p *Pipe) Size() (np.Tlength, *np.Err) {
+// 	return np.Tlength(len(p.buf)), nil
+// }
 
-func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	st, err := p.Inode.Stat(ctx)
-	if err != nil {
-		return nil, err
-	}
-	st.Length = np.Tlength(len(p.buf))
-	return st, nil
-}
+// func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
+// 	p.mu.Lock()
+// 	defer p.mu.Unlock()
+// 	st, err := p.Inode.Stat(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	st.Length = np.Tlength(len(p.buf))
+// 	return st, nil
+// }
 
 func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 	pipe.mu.Lock()
@@ -197,7 +195,6 @@ func (pipe *Pipe) Unlink() {
 	pipe.condr.Signal()
 }
 
-func (pipe *Pipe) Snapshot(fn fs.SnapshotF) []byte {
-	db.DFatalf("tried to snapshot pipe")
-	return nil
+func (pipe *Pipe) Size() np.Tlength {
+	return np.Tlength(len(pipe.buf))
 }

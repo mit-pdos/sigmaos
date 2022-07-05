@@ -190,6 +190,8 @@ func (pipe *Pipe) Unlink() {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()
 
+	db.DPrintf("PIPE", "Unlnk: %v\n", pipe)
+
 	pipe.nlink -= 1
 	pipe.condw.Signal()
 	pipe.condr.Signal()

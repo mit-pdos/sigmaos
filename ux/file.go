@@ -14,13 +14,15 @@ type File struct {
 	file *os.File
 }
 
-func makeFile(path []string) (*File, *np.Err) {
+func makeFile(path np.Path) (*File, *np.Err) {
 	f := &File{}
 	o, err := makeObj(path)
 	if err != nil {
 		return nil, err
 	}
 	f.Obj = o
+	// r := fsux.ot.AllocRef(o.path, f)
+	// return r.(*File), nil
 	return f, nil
 }
 
@@ -31,7 +33,6 @@ func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 		return nil, np.MkErr(np.TErrError, err)
 	}
 	f.file = file
-
 	return nil, nil
 }
 
@@ -60,10 +61,6 @@ func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 
 // XXX use pread
 func (f *File) uxRead(off int64, cnt np.Tsize) ([]byte, *np.Err) {
-	sz := f.Obj.size()
-	if np.Tlength(cnt) >= sz {
-		cnt = np.Tsize(sz)
-	}
 	b := make([]byte, cnt)
 	_, err := f.file.Seek(off, 0)
 	if err != nil {

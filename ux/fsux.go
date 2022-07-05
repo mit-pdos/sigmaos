@@ -16,11 +16,15 @@ import (
 	// "ulambda/seccomp"
 )
 
+var fsux *FsUx
+
 type FsUx struct {
 	*sesssrv.SessSrv
 	*fslib.FsLib
-	mu    sync.Mutex
 	mount string
+
+	sync.Mutex
+	ot *ObjTable
 }
 
 func RunFsUx(mount string) {
@@ -28,14 +32,15 @@ func RunFsUx(mount string) {
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", np.UX, err)
 	}
-	fsux := MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
+	fsux = MakeReplicatedFsUx(mount, ip+":0", proc.GetPid(), nil)
 	fsux.Serve()
 	fsux.Done()
 }
 
 func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Config) *FsUx {
 	// seccomp.LoadFilter()  // sanity check: if enabled we want fsux to fail
-	fsux := &FsUx{}
+	fsux = &FsUx{}
+	fsux.ot = MkObjTable()
 	root, err := makeDir([]string{mount})
 	if err != nil {
 		db.DFatalf("%v: makeDir %v\n", proc.GetName(), err)
@@ -66,6 +71,8 @@ func UxTo9PError(err error) *np.Err {
 		return ErrnoToNp(e.Err.(syscall.Errno), err)
 	case *os.PathError:
 		return ErrnoToNp(e.Err.(syscall.Errno), err)
+	case syscall.Errno:
+		return ErrnoToNp(e, err)
 	default:
 		return np.MkErrError(err)
 	}

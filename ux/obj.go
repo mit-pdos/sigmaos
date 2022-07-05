@@ -5,8 +5,8 @@ package fsux
 
 import (
 	"fmt"
-	ufs "io/fs"
 	"os"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -24,72 +24,85 @@ func mkQid(mode np.Tperm, v np.TQversion, path np.Tpath) np.Tqid {
 	return np.MakeQid(np.Qtype(mode>>np.QTYPESHIFT), v, path)
 }
 
-func ustat(path np.Path) (*np.Stat, *np.Err) {
-	fi, err := os.Stat(path.String())
-	if err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+func umode2Perm(umode uint16) np.Tperm {
+	perm := np.Tperm(umode & 0777)
+	switch umode & syscall.S_IFMT {
+	case syscall.S_IFREG:
+		// file
+	case syscall.S_IFDIR:
+		perm |= np.DMDIR
+	case syscall.S_IFIFO:
+		perm |= np.DMNAMEDPIPE
 	}
+	db.DPrintf("UXD", "mode %x perm %v", umode, perm)
+	return perm
+}
+
+func ustat(path np.Path) (*np.Stat, *np.Err) {
 	var statx unix.Statx_t
+	db.DPrintf("UXD", "ustat %v\n", path)
 	if err := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); err != nil {
-		return nil, np.MkErr(np.TErrError, err)
+		return nil, UxTo9PError(err)
 	}
 	st := &np.Stat{}
 	st.Name = path.Base()
-	st.Mode = np.Tperm(fi.Mode() & ufs.ModePerm)
-	if fi.IsDir() {
-		st.Mode |= np.DMDIR
-	}
-	if fi.Mode()&ufs.ModeNamedPipe != 0 {
-		st.Mode |= np.DMNAMEDPIPE
-	}
+	st.Mode = umode2Perm(statx.Mode)
 	// XXX use Btime in path?
 	st.Qid = np.MakeQidPerm(st.Mode, 0, np.Tpath(statx.Ino))
-	st.Length = np.Tlength(fi.Size())
+	st.Length = np.Tlength(statx.Size)
 	t := statxTimestampToTime(statx.Mtime)
 	st.Mtime = uint32(t.Unix())
 	return st, nil
 }
 
 type Obj struct {
-	path np.Path
-	st   *np.Stat
+	pathName np.Path
+	path     np.Tpath
+	perm     np.Tperm // XXX should be computed each time, which requires changing Perm() API
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("path %v st %v %v", o.path, o.st.Qid, o.st.Length)
+	return fmt.Sprintf("pn %v p %v %v", o.pathName, o.path, o.perm)
 }
 
 func makeObj(path np.Path) (*Obj, *np.Err) {
 	if st, err := ustat(path); err != nil {
 		return nil, err
 	} else {
-		o := &Obj{}
-		o.path = path
-		o.st = st
-		return o, nil
+		return &Obj{path, st.Qid.Path, st.Mode}, nil
 	}
 }
 
 func (o *Obj) Perm() np.Tperm {
-	return o.st.Mode
+	return o.perm
+	// st, err := ustat(o.pathName)
+	// if err != nil {
+	// 	db.DPrintf("UXD", "Perm %v err %v\n", o.pathName, err)
+	// 	return nil, err
+	// }
+	//db.DPrintf("UXD", "Perm %v st %v\n", o.pathName, st)
+	//return st.Mode, nil
 }
 
 func (o *Obj) Path() np.Tpath {
-	return o.qid().Path
+	return o.path
 }
 
 func (o *Obj) PathName() string {
-	p := o.path.String()
-	if len(o.path) == 0 {
+	p := o.pathName.String()
+	if len(o.pathName) == 0 {
 		p = "."
 	}
 	return p
 }
 
-// XXX update qid?
 func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 	db.DPrintf("UXD", "%v: Stat %v\n", ctx, o)
-	return o.st, nil
+	st, err := ustat(o.pathName)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func uxFlags(m np.Tmode) int {
@@ -114,14 +127,6 @@ func uxFlags(m np.Tmode) int {
 	return f
 }
 
-func (o *Obj) size() np.Tlength {
-	return o.st.Length
-}
-
-func (o *Obj) qid() np.Tqid {
-	return o.st.Qid
-}
-
 //
 // Inode interface
 //
@@ -134,7 +139,7 @@ func (o *Obj) SetMtime(m int64) {
 }
 
 func (o *Obj) Parent() fs.Dir {
-	dir := o.path.Dir()
+	dir := o.pathName.Dir()
 	d, err := makeDir(dir)
 	if err != nil {
 		db.DFatalf("Parent %v err %v\n", dir, err)
@@ -149,7 +154,11 @@ func (o *Obj) Unlink() {
 }
 
 func (o *Obj) Size() (np.Tlength, *np.Err) {
-	return o.size(), nil
+	st, err := ustat(o.pathName)
+	if err != nil {
+		return 0, err
+	}
+	return st.Length, nil
 }
 
 func (o *Obj) Snapshot(fn fs.SnapshotF) []byte {

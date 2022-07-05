@@ -80,6 +80,7 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
 	db.DPrintf("PROTSRV", "Detach %v eph %v\n", ps.sid, ps.et.Get())
+	db.DPrintf(db.ALWAYS, "Detach %v eph %v\n", ps.sid, ps.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
@@ -89,6 +90,7 @@ func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
 	ephemeral := ps.et.Get()
 	for _, po := range ephemeral {
 		db.DPrintf("PROTSRV", "Detach %v\n", po.Path())
+		db.DPrintf(db.ALWAYS, "Detach %v for session %v\n", po.Path(), ps.sid)
 		ps.removeObj(po.Ctx(), po.Obj(), po.Path())
 	}
 	return nil
@@ -127,6 +129,14 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
+
+	// XXX is it ever the case that Wnames has length >1? If it is a special
+	// element, do we have to do something fancy? I think so...
+	path := append(f.Pobj().Path(), args.Wnames...)
+
+	fws := ps.wt.WatchLookupL(path)
+	defer ps.wt.Release(fws)
+
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
 	os, lo, rest, err := ps.lookupObj(f.Pobj().Ctx(), f, args.Wnames)
 	if err != nil && !np.IsMaybeSpecialElem(err) {
@@ -568,7 +578,7 @@ func (ps *ProtSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror 
 	if err != nil {
 		return err.Rerror()
 	}
-	db.DPrintf("PROTSRV", "%v: RemoveFile %v\n", f.Pobj().Ctx().Uname(), fname)
+	db.DPrintf("PROTSRV", "%v: RemoveFile %v %v %v", f.Pobj().Ctx().Uname(), f.Pobj().Path(), fname, args.Fid)
 	return ps.removeObj(f.Pobj().Ctx(), lo, fname)
 }
 

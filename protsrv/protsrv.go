@@ -124,27 +124,67 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names np.Path, resolve
 	return lo, nil
 }
 
+func (ps *ProtSrv) tryLookupObjAndLock(ctx fs.CtxI, f *fid.Fid, names np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *watch.Watch, bool, *np.Err) {
+	// Try and lock the path.
+	path := append(f.Pobj().Path(), names...)
+	fws := ps.wt.WatchLookupL(path)
+	// Look up the object for this path.
+	os, lo, rest, err := ps.lookupObj(f.Pobj().Ctx(), f, names)
+	if err != nil && !np.IsMaybeSpecialElem(err) {
+		ps.wt.Release(fws)
+		return nil, nil, nil, nil, false, err
+	}
+	// If this path could only be partially resolved, release the locked watchers
+	// And indicate that we need to retry.
+	if len(rest) != 0 {
+		ps.wt.Release(fws)
+		n := len(names) - len(rest)
+		prefix := names[:n]
+		return nil, nil, prefix, nil, false, nil
+	}
+	return os, lo, names, fws, true, nil
+}
+
 func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	f, err := ps.ft.Lookup(args.Fid)
 	if err != nil {
 		return err.Rerror()
 	}
 
-	// XXX is it ever the case that Wnames has length >1? If it is a special
-	// element, do we have to do something fancy? I think so...
-	path := append(f.Pobj().Path(), args.Wnames...)
-
-	fws := ps.wt.WatchLookupL(path)
-	defer ps.wt.Release(fws)
-
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
-	os, lo, rest, err := ps.lookupObj(f.Pobj().Ctx(), f, args.Wnames)
-	if err != nil && !np.IsMaybeSpecialElem(err) {
-		return err.Rerror()
+	var os []fs.FsObj
+	var lo fs.FsObj
+	var names np.Path
+	var fws *watch.Watch
+	var ok bool
+
+	// Retry a few times.
+	for i := 0; i < 1000; i++ {
+		// The first time we try to look up the fid, and every other time after
+		// that, we retry looking up the whole path.
+		if i%2 == 0 {
+			// First, try to walk the whole path.
+			names = args.Wnames
+		}
+		os, lo, names, fws, ok, err = ps.tryLookupObjAndLock(f.Pobj().Ctx(), f, names)
+		// If the walk was unsuccessful, and no name along the path was potentially
+		// a symlink, return an error. The lock will already have been released.
+		if err != nil {
+			return err.Rerror()
+		}
+		// If we successfully walked some portion of the path, allocate an Fid and
+		// let the client decide what to do with rest
+		if ok {
+			break
+		}
 	}
-	// let the client decide what to do with rest
-	n := len(args.Wnames) - len(rest)
-	p := append(f.Pobj().Path(), args.Wnames[:n]...)
+	// Ensure we were able to resolve at least part of the path.
+	if fws == nil {
+		db.DFatalf("Unable to perform server-side symlink walk after 1000 retries.")
+	}
+	// Make sure to eventually release the lock.
+	defer ps.wt.Release(fws)
+	path := append(f.Pobj().Path(), names...)
 	rets.Qids = ps.makeQids(os)
 	qid := ps.mkQid(f.Pobj().Obj().Perm(), f.Pobj().Obj().Path())
 	if len(os) == 0 { // cloning f into args.NewFid in ft
@@ -152,8 +192,8 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	}
-	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v", args.NewFid, f.Pobj().Ctx().Uname(), p, lo, qid)
-	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(p, lo, f.Pobj().Ctx()), 0, qid))
+	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v", args.NewFid, f.Pobj().Ctx().Uname(), path, lo, qid)
+	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(path, lo, f.Pobj().Ctx()), 0, qid))
 	ps.vt.Add(qid.Path)
 	return nil
 }

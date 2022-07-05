@@ -43,7 +43,7 @@ func TestInitFs(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRemoveSimple(t *testing.T) {
+func TestRemoveBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
 	fn := path + "f"
@@ -267,7 +267,7 @@ func TestCopy(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestDirSimple(t *testing.T) {
+func TestDirBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 	dn := path + "d/"
 	err := ts.MkDir(dn, 0777)
@@ -808,7 +808,7 @@ func TestConcurRename(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestPipeSimple(t *testing.T) {
+func TestPipeBasic(t *testing.T) {
 	ts := test.MakeTstatePath(t, namedaddr, path)
 
 	pipe := path + "pipe"

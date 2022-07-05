@@ -152,6 +152,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	}
 
 	db.DPrintf("PROTSRV", "%v: Walk o %v args %v (%v)\n", f.Pobj().Ctx().Uname(), f, args, len(args.Wnames))
+
 	var os []fs.FsObj
 	var lo fs.FsObj
 	var names np.Path

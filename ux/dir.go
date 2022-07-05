@@ -4,6 +4,7 @@ import (
 	"fmt"
 	ufs "io/fs"
 	"io/ioutil"
+	"log"
 	"os"
 	"syscall"
 
@@ -30,8 +31,6 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 	}
 	d.Obj = o
 	d.sd = sorteddir.MkSortedDir()
-	// r := fsux.ot.AllocRef(o.path, d)
-	// return r.(*Dir), nil
 	return d, nil
 }
 
@@ -94,7 +93,7 @@ func (d *Dir) mkDir(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (*Dir, 
 
 func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	p := d.pathName.Append(name).String()
-	file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
+	fd, error := syscall.Open(p, uxFlags(m)|syscall.O_CREAT|syscall.O_EXCL, uint32(perm&0777))
 	if error != nil {
 		return nil, UxTo9PError(error)
 	}
@@ -102,7 +101,7 @@ func (d *Dir) mkFile(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if err != nil {
 		return nil, err
 	}
-	f.file = file
+	f.fd = fd
 	return f, nil
 }
 
@@ -120,7 +119,18 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 }
 
 func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	return nil, np.MkErr(np.TErrNotSupported, "sym")
+	p := d.pathName.Append(name).String()
+	log.Printf("mkSys %s\n", p)
+	error := syscall.Symlink("", p)
+	if error != nil {
+		log.Printf("mkSys %s err %v\n", p, error)
+		UxTo9PError(error)
+	}
+	f, err := makeFile(append(d.pathName, name))
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 // XXX how to delete ephemeral files after crash
@@ -150,6 +160,12 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsO
 				return objs, d1, d.pathName, err
 			}
 			return append(objs, d1), d1, nil, nil
+		} else if fi.Mode()&ufs.ModeSymlink != 0 {
+			p, err := makeFile(append(d.pathName, p[0]))
+			if err != nil {
+				return objs, p, d.pathName, err
+			}
+			return append(objs, p), p, nil, nil
 		} else if fi.Mode()&ufs.ModeNamedPipe != 0 {
 			p, err := makePipe(ctx, append(d.pathName, p[0]))
 			if err != nil {

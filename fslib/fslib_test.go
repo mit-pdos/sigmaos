@@ -157,7 +157,7 @@ func TestReadOff(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRename(t *testing.T) {
+func TestRenameBasic(t *testing.T) {
 	d1 := path + "/d1/"
 	d2 := path + "/d2/"
 	ts := test.MakeTstatePath(t, namedaddr, path)

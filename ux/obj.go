@@ -34,7 +34,7 @@ func umode2Perm(umode uint16) np.Tperm {
 	case syscall.S_IFIFO:
 		perm |= np.DMNAMEDPIPE
 	}
-	db.DPrintf("UXD", "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
+	db.DPrintf("UXD0", "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
 	return perm
 }
 
@@ -58,7 +58,7 @@ func ustat(path np.Path) (*np.Stat, *np.Err) {
 type Obj struct {
 	pathName np.Path
 	path     np.Tpath
-	perm     np.Tperm // XXX should be computed each time, which requires changing Perm() API
+	perm     np.Tperm // XXX kill, but requires changing Perm() API
 }
 
 func (o *Obj) String() string {

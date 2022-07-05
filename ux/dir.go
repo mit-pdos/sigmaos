@@ -206,9 +206,19 @@ func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
 	p := d.pathName.Copy().Append(name)
+	o, err := makeObj(p)
+	if err != nil {
+		return err
+	}
 	error := os.Remove(p.String())
 	if error != nil {
 		return UxTo9PError(error)
+	}
+	if o.Perm().IsPipe() {
+		pipe := fsux.ot.AllocRef(o.path, nil)
+		if pipe != nil {
+			pipe.(*Pipe).Unlink()
+		}
 	}
 	return nil
 }

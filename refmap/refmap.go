@@ -42,8 +42,8 @@ func (rf *RefTable) Lookup(p np.Tpath) (interface{}, bool) {
 
 func (rf *RefTable) Insert(p np.Tpath, i interface{}) (interface{}, bool) {
 	if e, ok := rf.paths[p]; ok {
-		db.DPrintf("REFMAP", "insert %v %v\n", p, e)
 		e.n += 1
+		db.DPrintf("REFMAP", "insert %v %v\n", p, e)
 		return e.e, true
 	}
 	e := mkEntry(i)

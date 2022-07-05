@@ -10,7 +10,6 @@ import (
 	db "ulambda/debug"
 	"ulambda/fs"
 	np "ulambda/ninep"
-	"ulambda/pipe"
 	"ulambda/sorteddir"
 )
 
@@ -113,7 +112,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	if error != nil {
 		UxTo9PError(error)
 	}
-	f, err := makeFile(append(d.pathName, name))
+	f, err := makePipe(ctx, append(d.pathName, name))
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +151,10 @@ func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsO
 			}
 			return append(objs, d1), d1, nil, nil
 		} else if fi.Mode()&ufs.ModeNamedPipe != 0 {
-			f, err := makeFile(append(d.pathName, p[0]))
+			p, err := makePipe(ctx, append(d.pathName, p[0]))
 			if err != nil {
-				return objs, f, d.pathName, err
+				return objs, p, d.pathName, err
 			}
-			p := pipe.MakePipe(ctx, f)
 			return append(objs, p), p, nil, nil
 		} else {
 			f, err := makeFile(append(d.pathName, p[0]))

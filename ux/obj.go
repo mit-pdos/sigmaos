@@ -34,7 +34,7 @@ func umode2Perm(umode uint16) np.Tperm {
 	case syscall.S_IFIFO:
 		perm |= np.DMNAMEDPIPE
 	}
-	db.DPrintf("UXD", "mode %x perm %v", umode, perm)
+	db.DPrintf("UXD", "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
 	return perm
 }
 

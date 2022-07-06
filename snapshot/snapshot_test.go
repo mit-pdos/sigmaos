@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	//	db "ulambda/debug"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -39,18 +39,18 @@ func killMemfs(ts *test.Tstate, pid proc.Tpid) {
 	assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status")
 }
 
-func takeSnapshot(ts *test.Tstate, pid proc.Tpid) []byte {
+func takeSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid) []byte {
 	p := path.Join(np.MEMFS, pid.String(), np.SNAPDEV)
 	// Read its snapshot file.
-	b, err := ts.GetFile(p)
+	b, err := fsl.GetFile(p)
 	assert.Nil(ts.T, err, "Read Snapshot")
 	assert.True(ts.T, len(b) > 0, "Snapshot len")
 	return b
 }
 
-func restoreSnapshot(ts *test.Tstate, pid proc.Tpid, b []byte) {
+func restoreSnapshot(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid, b []byte) {
 	p := path.Join(np.MEMFS, pid.String(), np.SNAPDEV)
-	sz, err := ts.SetFile(p, b, np.OWRITE, 0)
+	sz, err := fsl.SetFile(p, b, np.OWRITE, 0)
 	assert.Nil(ts.T, err, "Write snapshot")
 	assert.Equal(ts.T, sz, np.Tsize(len(b)), "Snapshot write wrong size")
 }
@@ -89,8 +89,8 @@ func checkFiles(ts *test.Tstate, n int) {
 	}
 }
 
-func fenceMemfs(ts *test.Tstate, pid proc.Tpid) {
-	lc := leaderclnt.MakeLeaderClnt(ts.FsLib, path.Join(np.MEMFS, pid.String(), "leader"), 0777)
+func fenceMemfs(ts *test.Tstate, fsl *fslib.FsLib, pid proc.Tpid) {
+	lc := leaderclnt.MakeLeaderClnt(fsl, path.Join(np.MEMFS, pid.String(), "leader"), 0777)
 	_, err := lc.AcquireFencedEpoch(nil, []string{path.Join(np.MEMFS, pid.String())})
 	assert.Nil(ts.T, err, "acquire")
 }
@@ -105,7 +105,8 @@ func TestMakeSnapshotSimple(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	takeSnapshot(ts, pid)
+	fsl1 := fslib.MakeFsLib("test-fsl1")
+	takeSnapshot(ts, fsl1, pid)
 
 	ts.Shutdown()
 }
@@ -120,10 +121,12 @@ func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	// Fence the memfs
-	fenceMemfs(ts, pid)
+	fsl1 := fslib.MakeFsLib("test-fsl1")
 
-	takeSnapshot(ts, pid)
+	// Fence the memfs
+	fenceMemfs(ts, fsl1, pid)
+
+	takeSnapshot(ts, fsl1, pid)
 
 	ts.Shutdown()
 }
@@ -138,8 +141,9 @@ func TestRestoreSimple(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	b := takeSnapshot(ts, pid)
-	restoreSnapshot(ts, pid, b)
+	fsl1 := fslib.MakeFsLib("test-fsl1")
+	b := takeSnapshot(ts, fsl1, pid)
+	restoreSnapshot(ts, fsl1, pid, b)
 
 	ts.Shutdown()
 }
@@ -154,57 +158,61 @@ func TestRestoreSimpleWithFence(t *testing.T) {
 	pid := proc.Tpid("replica-a")
 	spawnMemfs(ts, pid)
 
-	// Fence the memfs
-	fenceMemfs(ts, pid)
+	fsl1 := fslib.MakeFsLib("test-fsl1")
 
-	b := takeSnapshot(ts, pid)
-	restoreSnapshot(ts, pid, b)
+	// Fence the memfs
+	fenceMemfs(ts, fsl1, pid)
+
+	b := takeSnapshot(ts, fsl1, pid)
+	restoreSnapshot(ts, fsl1, pid, b)
 
 	ts.Shutdown()
 }
 
-//func TestRestoreStateSimple(t *testing.T) {
-//	ts := test.MakeTstateAll(t)
-//
-//	N_FILES := 100
-//
-//	err := ts.MkDir(np.MEMFS, 0777)
-//	assert.Nil(t, err, "Mkdir")
-//
-//	// Spawn a dummy-replicated memfs
-//	pid1 := proc.Tpid("replica-a")
-//	spawnMemfs(ts, pid1)
-//
-//	// Spawn another one
-//	pid2 := proc.Tpid("replica-b")
-//	spawnMemfs(ts, pid2)
-//
-//	symlinkReplicas(ts, []proc.Tpid{pid1, pid2})
-//
-//	// Create some server-side state in the first replica.
-//	putFiles(ts, N_FILES)
-//
-//	// Check the state is there.
-//	checkFiles(ts, N_FILES)
-//
-//	// Read the snapshot from replica a
-//	b := takeSnapshot(ts, pid1)
-//
-//	// Kill the first replica (so future requests hit the second replica).
-//	killMemfs(ts, pid1)
-//
-//	db.DPrintf("TEST", "Restoring snapshot")
-//
-//	// Write the snapshot to replica b
-//	restoreSnapshot(ts, pid2, b)
-//
-//	db.DPrintf("TEST", "Done restoring snapshot")
-//
-//	// Check that the files exist on replica b
-//	checkFiles(ts, N_FILES)
-//
-//	ts.Shutdown()
-//}
+func TestRestoreStateSimple(t *testing.T) {
+	ts := test.MakeTstateAll(t)
+
+	N_FILES := 100
+
+	err := ts.MkDir(np.MEMFS, 0777)
+	assert.Nil(t, err, "Mkdir")
+
+	// Spawn a dummy-replicated memfs
+	pid1 := proc.Tpid("replica-a")
+	spawnMemfs(ts, pid1)
+
+	// Spawn another one
+	pid2 := proc.Tpid("replica-b")
+	spawnMemfs(ts, pid2)
+
+	symlinkReplicas(ts, []proc.Tpid{pid1, pid2})
+
+	// Create some server-side state in the first replica.
+	putFiles(ts, N_FILES)
+
+	// Check the state is there.
+	checkFiles(ts, N_FILES)
+
+	fsl1 := fslib.MakeFsLib("test-fsl1")
+
+	// Read the snapshot from replica a
+	b := takeSnapshot(ts, fsl1, pid1)
+
+	// Kill the first replica (so future requests hit the second replica).
+	killMemfs(ts, pid1)
+
+	db.DPrintf("TEST", "Restoring snapshot")
+
+	// Write the snapshot to replica b
+	restoreSnapshot(ts, fsl1, pid2, b)
+
+	db.DPrintf("TEST", "Done restoring snapshot")
+
+	// Check that the files exist on replica b
+	checkFiles(ts, N_FILES)
+
+	ts.Shutdown()
+}
 
 func TestRestoreBlockingOpSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)
@@ -238,11 +246,12 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	// Make sure to wait long enough for the other client to block server-side.
 	time.Sleep(1 * time.Second)
 
+	fsl1 := fslib.MakeFsLib("test-fsl1")
 	// Read the snapshot from replica a
-	b := takeSnapshot(ts, pid1)
+	b := takeSnapshot(ts, fsl1, pid1)
 
 	// Write the snapshot to replica b
-	restoreSnapshot(ts, pid2, b)
+	restoreSnapshot(ts, fsl1, pid2, b)
 
 	// Kill the first replica (so pending requests hit the second replica).
 	killMemfs(ts, pid1)

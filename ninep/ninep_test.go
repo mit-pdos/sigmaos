@@ -26,7 +26,7 @@ func TestString(t *testing.T) {
 	assert.Equal(t, qt.String(), "ts")
 
 	p := Tperm(0x60001ff)
-	assert.Equal(t, "qt ts p ff", p.String())
+	assert.Equal(t, "qt ts qp ff", p.String())
 }
 
 func TestSplit(t *testing.T) {

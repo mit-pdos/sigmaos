@@ -2,7 +2,6 @@ package fsux
 
 import (
 	"fmt"
-	ufs "io/fs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -121,7 +120,7 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	p := d.pathName.Append(name).String()
 	log.Printf("mkSys %s\n", p)
-	error := syscall.Symlink("/tmp", p)
+	error := syscall.Symlink("xxxyyxxx", p)
 	if error != nil {
 		log.Printf("symlink %s err %v\n", p, error)
 		UxTo9PError(error)
@@ -135,7 +134,7 @@ func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsO
 
 // XXX how to delete ephemeral files after crash
 func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
-	db.DPrintf("UXD", "%v: Create %v n %v perm %v\n", ctx, d, name, perm)
+	db.DPrintf("UXD", "%v: Create %v n %v perm %v m %v\n", ctx, d, name, perm, m)
 	if perm.IsDir() {
 		return d.mkDir(ctx, name, perm, m)
 	} else if perm.IsPipe() {
@@ -148,25 +147,25 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 }
 
 func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
-	db.DPrintf("UXD", "%v: namei %v %v\n", ctx, d, p)
-	fi, error := os.Stat(d.pathName.Append(p[0]).String())
-	if error != nil {
-		return objs, d, d.pathName, np.MkErr(np.TErrNotfound, p[0])
+	st, err := ustat(d.pathName.Append(p[0]))
+	if err != nil {
+		return objs, d, d.pathName, err
 	}
+	db.DPrintf("UXD", "%v: namei %v %v st %v\n", ctx, d, p, st)
 	if len(p) == 1 {
-		if fi.IsDir() {
+		if st.Mode.IsDir() {
 			d1, err := makeDir(append(d.pathName, p[0]))
 			if err != nil {
 				return objs, d1, d.pathName, err
 			}
 			return append(objs, d1), d1, nil, nil
-		} else if fi.Mode()&ufs.ModeSymlink != 0 {
+		} else if st.Mode.IsSymlink() {
 			p, err := makeFile(append(d.pathName, p[0]))
 			if err != nil {
 				return objs, p, d.pathName, err
 			}
 			return append(objs, p), p, nil, nil
-		} else if fi.Mode()&ufs.ModeNamedPipe != 0 {
+		} else if st.Mode.IsPipe() {
 			p, err := makePipe(ctx, append(d.pathName, p[0]))
 			if err != nil {
 				return objs, p, d.pathName, err
@@ -194,11 +193,11 @@ func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np
 	if len(p) == 0 {
 		return nil, nil, nil, nil
 	}
-	fi, error := os.Stat(d.pathName.String())
-	if error != nil {
-		return nil, nil, nil, UxTo9PError(error)
+	st, err := ustat(d.pathName)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	if !fi.IsDir() {
+	if !st.Mode.IsDir() {
 		return nil, nil, nil, np.MkErr(np.TErrNotDir, d.pathName)
 	}
 	return d.namei(ctx, p, nil)

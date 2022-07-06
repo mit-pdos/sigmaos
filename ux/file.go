@@ -24,8 +24,8 @@ func makeFile(path np.Path) (*File, *np.Err) {
 }
 
 func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
-	db.DPrintf("UXD", "%v: Open %v %v path %v flags %v\n", ctx, f, m, f.Path(), uxFlags(m))
-	fd, err := syscall.Open(f.PathName(), uxFlags(m)|syscall.O_NOFOLLOW, 0)
+	db.DPrintf("UXD", "%v: FileOpen %v m 0x%x path %v flags 0x%x\n", ctx, f, m, f.Path(), uxFlags(m))
+	fd, err := syscall.Open(f.PathName(), uxFlags(m), 0)
 	if err != nil {
 		return nil, np.MkErr(np.TErrError, err)
 	}
@@ -34,7 +34,7 @@ func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 }
 
 func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
-	db.DPrintf("UXD", "%v: Close %v\n", ctx, f)
+	db.DPrintf("UXD", "%v: FileClose %v\n", ctx, f)
 	err := syscall.Close(f.fd)
 	if err != nil {
 		return np.MkErr(np.TErrError, err)

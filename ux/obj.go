@@ -5,7 +5,6 @@ package fsux
 
 import (
 	"fmt"
-	"os"
 	"syscall"
 	"time"
 
@@ -33,6 +32,8 @@ func umode2Perm(umode uint16) np.Tperm {
 		perm |= np.DMDIR
 	case syscall.S_IFIFO:
 		perm |= np.DMNAMEDPIPE
+	case syscall.S_IFLNK:
+		perm |= np.DMSYMLINK
 	}
 	db.DPrintf("UXD0", "mode 0%o type 0%o perm %v", umode, umode&syscall.S_IFMT, perm)
 	return perm
@@ -41,8 +42,9 @@ func umode2Perm(umode uint16) np.Tperm {
 func ustat(path np.Path) (*np.Stat, *np.Err) {
 	var statx unix.Statx_t
 	db.DPrintf("UXD", "ustat %v\n", path)
-	if err := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); err != nil {
-		return nil, UxTo9PError(err)
+	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
+		db.DPrintf("UXD", "ustat %v err %v\n", path, error)
+		return nil, UxTo9PError(error)
 	}
 	st := &np.Stat{}
 	st.Name = path.Base()
@@ -106,23 +108,23 @@ func (o *Obj) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 }
 
 func uxFlags(m np.Tmode) int {
-	f := 0
+	f := syscall.O_NOFOLLOW
 	switch m & 3 {
 	case np.OREAD:
-		f = os.O_RDONLY
+		f |= syscall.O_RDONLY
 	case np.ORDWR:
-		f = os.O_RDWR
+		f |= syscall.O_RDWR
 	case np.OWRITE:
-		f = os.O_WRONLY
+		f |= syscall.O_WRONLY
 	case np.OEXEC:
-		f = os.O_RDONLY
+		f |= syscall.O_RDONLY
 	}
 	if m&np.OTRUNC == np.OTRUNC {
-		f |= os.O_TRUNC
+		f |= syscall.O_TRUNC
 	}
 	if m&np.OAPPEND == np.OAPPEND {
-		f |= os.O_APPEND
-		f |= os.O_WRONLY
+		f |= syscall.O_APPEND
+		f |= syscall.O_WRONLY
 	}
 	return f
 }

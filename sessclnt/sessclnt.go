@@ -32,7 +32,7 @@ func makeSessClnt(sid np.Tsession, seqno *np.Tseqno, addrs []string) (*SessClnt,
 	c.addrs = addrs
 	c.Cond = sync.NewCond(&c.Mutex)
 	c.nc = nil
-	c.queue = sessstateclnt.MakeRequestQueue()
+	c.queue = sessstateclnt.MakeRequestQueue(addrs)
 	nc, err := netclnt.MakeNetClnt(c, addrs)
 	if err != nil {
 		return nil, err
@@ -54,6 +54,7 @@ func (c *SessClnt) RPC(req np.Tmsg, f np.Tfence) (np.Tmsg, *np.Err) {
 		db.DPrintf("SESSCLNT", "%v Unable to recv response to req %v %v seqno %v err %v from %v\n", c.sid, req.Type(), rpc.Req.Seqno, req, err1, c.addrs)
 		return nil, err1
 	}
+	db.DPrintf("SESSCLNT", "%v RPC Successful, returning req %v %v seqno %v reply %v %v from %v\n", c.sid, req.Type(), rpc.Req.Seqno, req, rep.Type(), rep, c.addrs)
 	return rep, err1
 }
 
@@ -92,6 +93,8 @@ func (c *SessClnt) CompleteRPC(reply *np.Fcall, err *np.Err) {
 		c.ivs.Delete(&reply.Received)
 		db.DPrintf("SESSCLNT", "%v Complete rpc req %v reply %v from %v; seqnos %v\n", c.sid, rpc.Req, reply, c.addrs, c.ivs)
 		rpc.Complete(reply, err)
+	} else {
+		db.DPrintf("SESSCLNT", "%v Already completed rpc reply %v from %v; seqnos %v\n", c.sid, reply, c.addrs, c.ivs)
 	}
 	// If the server closed the session (this is a sessclosed error or an
 	// Rdetach), close the SessClnt.

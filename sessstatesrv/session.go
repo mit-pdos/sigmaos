@@ -25,7 +25,7 @@ import (
 type Session struct {
 	sync.Mutex
 	threadmgr     *threadmgr.ThreadMgr
-	conn          *np.Conn
+	conn          np.Conn
 	rt            *replies.ReplyTable
 	protsrv       np.Protsrv
 	lastHeartbeat time.Time
@@ -51,7 +51,7 @@ func (sess *Session) GetReplyTable() *replies.ReplyTable {
 	return sess.rt
 }
 
-func (sess *Session) GetConn() *np.Conn {
+func (sess *Session) GetConn() np.Conn {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.conn
@@ -64,7 +64,7 @@ func (sess *Session) GetThread() *threadmgr.ThreadMgr {
 // For testing. Invoking CloseConn() will eventually cause
 // sess.Close() to be called by Detach().
 func (sess *Session) CloseConn() {
-	sess.conn.Conn.Close()
+	sess.conn.Close()
 }
 
 // Server may call Close() several times because client may reconnect
@@ -74,11 +74,9 @@ func (sess *Session) Close() {
 	sess.Lock()
 	defer sess.Unlock()
 	sess.closed = true
-	// Close the replies channel so that writer in srvconn exits
+	// Close the connection so that writer in srvconn exits
 	if sess.conn != nil {
-		db.DPrintf("SESSION", "%v close replies\n", sess.Sid)
-		close(sess.conn.Replies)
-		sess.conn = nil
+		sess.unsetConnL(sess.conn)
 	}
 	// Empty & permanently close the replies table.
 	sess.rt.Close(sess.Sid)
@@ -92,7 +90,7 @@ func (sess *Session) SendConn(fc *np.Fcall) {
 	conn := sess.conn
 	sess.Unlock()
 	if conn != nil {
-		conn.Replies <- fc
+		conn.GetReplyC() <- fc
 	}
 }
 
@@ -102,10 +100,9 @@ func (sess *Session) IsClosed() bool {
 	return sess.closed
 }
 
-// Change conn if the new conn is non-nil. This may occur if, for
-// example, a client starts talking to a new replica or a client
-// reconnects quickly.
-func (sess *Session) SetConn(conn *np.Conn) *np.Err {
+// Change conn This may occur if, for example, a client starts talking to a new
+// replica or a client reconnects quickly.
+func (sess *Session) SetConn(conn np.Conn) *np.Err {
 	sess.Lock()
 	defer sess.Unlock()
 	if sess.closed {
@@ -114,6 +111,22 @@ func (sess *Session) SetConn(conn *np.Conn) *np.Err {
 	db.DPrintf("SESSION", "%v SetConn new %v\n", sess.Sid, conn)
 	sess.conn = conn
 	return nil
+}
+
+func (sess *Session) UnsetConn(conn np.Conn) {
+	sess.Lock()
+	defer sess.Unlock()
+
+	sess.unsetConnL(conn)
+}
+
+// Disassociate a connection with this session, and safely close the connection.
+func (sess *Session) unsetConnL(conn np.Conn) {
+	if sess.conn == conn {
+		db.DPrintf("SESSION", "%v close connection", sess.Sid)
+		sess.conn.Close()
+	}
+	conn.Close()
 }
 
 // Caller holds lock.
@@ -137,7 +150,7 @@ func (sess *Session) isConnected() bool {
 	sess.Lock()
 	defer sess.Unlock()
 
-	if sess.closed || sess.conn == nil || sess.conn.Conn.IsClosed() {
+	if sess.closed || sess.conn == nil || sess.conn.IsClosed() {
 		return false
 	}
 	return true

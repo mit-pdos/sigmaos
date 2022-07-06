@@ -182,7 +182,6 @@ func (ssrv *SessSrv) Done() {
 		if !ssrv.done {
 			ssrv.done = true
 			ssrv.ch <- true
-
 		}
 	}
 	ssrv.stats.Done()
@@ -213,10 +212,20 @@ func (ssrv *SessSrv) AttachTree(uname string, aname string, sessid np.Tsession) 
 }
 
 // New session or new connection for existing session
-func (ssrv *SessSrv) Register(sid np.Tsession, conn *np.Conn) *np.Err {
+func (ssrv *SessSrv) Register(sid np.Tsession, conn np.Conn) *np.Err {
 	db.DPrintf("SESSSRV", "Register sid %v %v\n", sid, conn)
 	sess := ssrv.st.Alloc(sid)
 	return sess.SetConn(conn)
+}
+
+// Disassociate a connection with a session, and let it close gracefully.
+func (ssrv *SessSrv) Unregister(sid np.Tsession, conn np.Conn) {
+	// If this connection hasn't been associated with a session yet, return.
+	if sid == np.NoSession {
+		return
+	}
+	sess := ssrv.st.Alloc(sid)
+	sess.UnsetConn(conn)
 }
 
 func (ssrv *SessSrv) SrvFcall(fc *np.Fcall) {

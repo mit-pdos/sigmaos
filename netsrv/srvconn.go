@@ -16,6 +16,7 @@ const (
 
 type SrvConn struct {
 	*sync.Mutex
+	wg         *sync.WaitGroup
 	conn       net.Conn
 	closed     bool
 	wireCompat bool
@@ -29,6 +30,7 @@ type SrvConn struct {
 func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 	c := &SrvConn{
 		&sync.Mutex{},
+		&sync.WaitGroup{},
 		conn,
 		false,
 		srv.wireCompat,
@@ -38,6 +40,7 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 		srv.sesssrv,
 		0,
 	}
+	c.wg.Add(2)
 	go c.writer()
 	go c.reader()
 	return c
@@ -45,12 +48,15 @@ func MakeSrvConn(srv *NetServer, conn net.Conn) *SrvConn {
 
 func (c *SrvConn) Close() {
 	db.DPrintf("NETSRV", "%v Close conn\n", c.sessid)
-	c.conn.Close()
 
 	c.Lock()
 	defer c.Unlock()
 
 	c.closed = true
+	go func() {
+		c.wg.Wait()
+		close(c.replies)
+	}()
 }
 
 func (c *SrvConn) IsClosed() bool {
@@ -68,10 +74,19 @@ func (c *SrvConn) Dst() string {
 	return c.conn.LocalAddr().String()
 }
 
-func (c *SrvConn) reader() {
-	// session mgr will timeout this session eventually
-	defer c.Close()
+// Get the reply channel in order to send an fcall. Adds to the wg.
+func (c *SrvConn) GetReplyC() chan *np.Fcall {
+	c.wg.Add(1)
+	return c.replies
+}
 
+func (c *SrvConn) Send(fc *np.Fcall) {
+	defer c.wg.Done()
+	c.replies <- fc
+}
+
+func (c *SrvConn) reader() {
+	defer c.sesssrv.Unregister(c.sessid, c)
 	db.DPrintf("NETSRV", "%v (%v) Reader conn from %v\n", c.sessid, c.Dst(), c.Src())
 	for {
 		frame, err := npcodec.ReadFrame(c.br)
@@ -92,12 +107,12 @@ func (c *SrvConn) reader() {
 		db.DPrintf("NETSRV", "srv req %v\n", fcall)
 		if c.sessid == 0 {
 			c.sessid = fcall.Session
-			conn := &np.Conn{c, c.replies}
-			if err := c.sesssrv.Register(fcall.Session, conn); err != nil {
+			if err := c.sesssrv.Register(fcall.Session, c); err != nil {
 				db.DPrintf("NETSRV_ERR", "Sess %v closed\n", c.sessid)
+				db.DPrintf(db.ALWAYS, "Sess %v closed\n", c.sessid)
 				fc := np.MakeFcallReply(fcall, err.Rerror())
 				c.replies <- fc
-				close(conn.Replies)
+				close(c.replies)
 				return
 			}
 		} else if c.sessid != fcall.Session {
@@ -108,7 +123,7 @@ func (c *SrvConn) reader() {
 }
 
 func (c *SrvConn) writer() {
-	defer c.Close()
+	defer c.conn.Close()
 	for {
 		fcall, ok := <-c.replies
 		if !ok {

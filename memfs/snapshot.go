@@ -38,25 +38,6 @@ type SymlinkSnapshot struct {
 	Target    []byte
 }
 
-func makeSymlinkSnapshot(s *Symlink) []byte {
-	fs := &SymlinkSnapshot{}
-	fs.InodeSnap = s.Inode.Snapshot(nil)
-	fs.Target = s.target
-	return encode(fs)
-}
-
-func restoreSymlink(fn fs.RestoreF, b []byte) fs.Inode {
-	fs := &SymlinkSnapshot{}
-	err := json.Unmarshal(b, fs)
-	if err != nil {
-		db.DFatalf("error unmarshal file in restoreSymlink: %v", err)
-	}
-	f := &Symlink{}
-	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
-	f.target = fs.Target
-	return f
-}
-
 func encode(o interface{}) []byte {
 	b, err := json.Marshal(o)
 	if err != nil {

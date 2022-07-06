@@ -121,9 +121,9 @@ func (d *Dir) mkPipe(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 func (d *Dir) mkSym(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.FsObj, *np.Err) {
 	p := d.pathName.Append(name).String()
 	log.Printf("mkSys %s\n", p)
-	error := syscall.Symlink("", p)
+	error := syscall.Symlink("/tmp", p)
 	if error != nil {
-		log.Printf("mkSys %s err %v\n", p, error)
+		log.Printf("symlink %s err %v\n", p, error)
 		UxTo9PError(error)
 	}
 	f, err := makeFile(append(d.pathName, name))

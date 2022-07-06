@@ -11,7 +11,7 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, m np.Tmode, parent fs.Dir, mk fs.MakeDir
 	if p.IsDir() {
 		return mk(i, MakeInode), nil
 	} else if p.IsSymlink() {
-		return MakeSym(i), nil
+		return MakeFile(i), nil
 	} else if p.IsPipe() {
 		return MakePipe(ctx, i), nil
 	} else if p.IsFile() || p.IsEphemeral() {

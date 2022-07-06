@@ -39,21 +39,6 @@ func MakePipe(ctx fs.CtxI) *Pipe {
 	return pipe
 }
 
-// func (p *Pipe) Size() (np.Tlength, *np.Err) {
-// 	return np.Tlength(len(p.buf)), nil
-// }
-
-// func (p *Pipe) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
-// 	p.mu.Lock()
-// 	defer p.mu.Unlock()
-// 	st, err := p.Inode.Stat(ctx)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	st.Length = np.Tlength(len(p.buf))
-// 	return st, nil
-// }
-
 func (pipe *Pipe) Open(ctx fs.CtxI, mode np.Tmode) (fs.FsObj, *np.Err) {
 	pipe.mu.Lock()
 	defer pipe.mu.Unlock()

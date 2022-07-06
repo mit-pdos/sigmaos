@@ -62,8 +62,6 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 		stype = Tdir
 	case *memfs.File:
 		stype = Tfile
-	case *memfs.Symlink:
-		stype = Tsymlink
 	case *fencefs.Fence:
 		stype = Tfence
 	case *stats.Stats:
@@ -122,8 +120,6 @@ func (s *Snapshot) RestoreFsTree(inum np.Tpath) fs.Inode {
 		i = dir.Restore(d, s.RestoreFsTree, snap.Data)
 	case Tfile:
 		i = memfs.RestoreFile(s.RestoreFsTree, snap.Data)
-	case Tsymlink:
-		i = memfs.RestoreSymlink(s.RestoreFsTree, snap.Data)
 	case Tfence:
 		i = fencefs.RestoreFence(s.RestoreFsTree, snap.Data)
 	case Tstats:

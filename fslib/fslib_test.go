@@ -1107,7 +1107,7 @@ func TestSetFileSymlink(t *testing.T) {
 
 	d = []byte("byebye")
 	n, err := ts.SetFile(path+"namedself0/f", d, np.OWRITE, 0)
-	assert.Nil(ts.T, err, "SetFile")
+	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 
 	err = ts.GetFileJson(path+"/"+np.STATSD, &st)

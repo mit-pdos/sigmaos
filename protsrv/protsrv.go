@@ -542,15 +542,15 @@ func (ps *ProtSrv) lookupWalk(fid np.Tfid, wnames np.Path, resolve bool) (*fid.F
 	return f, fname, lo, nil
 }
 
-func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.File, *np.Err) {
+func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mode np.Tmode) (*fid.Fid, np.Path, fs.FsObj, fs.File, *np.Err) {
 	f, fname, lo, err := ps.lookupWalk(fid, wnames, resolve)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	ps.stats.IncPath(fname)
 	no, err := lo.Open(f.Pobj().Ctx(), mode)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if no != nil {
 		lo = no
@@ -558,9 +558,9 @@ func (ps *ProtSrv) lookupWalkOpen(fid np.Tfid, wnames np.Path, resolve bool, mod
 	i, err := fs.Obj2File(lo, fname)
 	if err != nil {
 		lo.Close(f.Pobj().Ctx(), mode)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
-	return f, fname, i, nil
+	return f, fname, lo, i, nil
 }
 
 func (ps *ProtSrv) RemoveFile(args np.Tremovefile, rets *np.Rremove) *np.Rerror {
@@ -576,7 +576,7 @@ func (ps *ProtSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if args.Count > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	f, fname, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, lo, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -585,7 +585,7 @@ func (ps *ProtSrv) GetFile(args np.Tgetfile, rets *np.Rgetfile) *np.Rerror {
 	if err != nil {
 		return err.Rerror()
 	}
-	if err := f.Pobj().Obj().Close(f.Pobj().Ctx(), args.Mode); err != nil {
+	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
 		return err.Rerror()
 	}
 	return nil
@@ -595,7 +595,7 @@ func (ps *ProtSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 	if np.Tsize(len(args.Data)) > np.MAXGETSET {
 		return np.MkErr(np.TErrInval, "too large").Rerror()
 	}
-	f, fname, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
+	f, fname, lo, i, err := ps.lookupWalkOpen(args.Fid, args.Wnames, args.Resolve, args.Mode)
 	if err != nil {
 		return err.Rerror()
 	}
@@ -616,7 +616,7 @@ func (ps *ProtSrv) SetFile(args np.Tsetfile, rets *np.Rwrite) *np.Rerror {
 		return err.Rerror()
 	}
 
-	if err := f.Pobj().Obj().Close(f.Pobj().Ctx(), args.Mode); err != nil {
+	if err := lo.Close(f.Pobj().Ctx(), args.Mode); err != nil {
 		return err.Rerror()
 	}
 	rets.Count = n

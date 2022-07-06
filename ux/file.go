@@ -34,7 +34,7 @@ func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 }
 
 func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
-	db.DPrintf("UXD", "%v: Close fd for path %v\n", ctx, f.Path())
+	db.DPrintf("UXD", "%v: Close %v\n", ctx, f)
 	err := syscall.Close(f.fd)
 	if err != nil {
 		return np.MkErr(np.TErrError, err)
@@ -42,45 +42,28 @@ func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
 
-// XXX use pwrite
-func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
-	db.DPrintf("UXD", "%v: WriteFile: off %v cnt %v %v\n", f, off, len(b), f.fd)
-	n, err := syscall.Pwrite(f.fd, b, off)
-	if err != nil {
-		return 0, np.MkErr(np.TErrError, err)
-	}
-	return np.Tsize(n), nil
-}
-
-// XXX use pread
-func (f *File) uxRead(off int64, cnt np.Tsize) ([]byte, *np.Err) {
+func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
+	db.DPrintf("UXD", "%v: Pread: %v off %v cnt %v\n", ctx, f, off, cnt)
 	b := make([]byte, cnt)
-	n, err := syscall.Pread(f.fd, b, off)
+	n, err := syscall.Pread(f.fd, b, int64(off))
 	if err != nil {
+		db.DPrintf("UXD", "Pread %v err %v\n", f, err)
 		return nil, np.MkErr(np.TErrError, err)
-	}
-	if n == 0 {
-		return nil, nil
 	}
 	return b[:n], nil
 }
 
-func (f *File) Read(ctx fs.CtxI, off np.Toffset, cnt np.Tsize, v np.TQversion) ([]byte, *np.Err) {
-	db.DPrintf("UXD", "%v: Read: %v off %v cnt %v\n", ctx, f, off, cnt)
-	b, err := f.uxRead(int64(off), cnt)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
 func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err) {
-	db.DPrintf("UXD0", "%v: Write %v off %v sz %v\n", ctx, f, off, len(b))
+	db.DPrintf("UXD", "%v: Pwrite: off %v cnt %v\n", f, off, len(b))
 	if off == np.NoOffset {
 		// ignore; file was opened with OAPPEND and NoOffset
 		// doesn't fit in int64.
 		off = 0
 	}
-	sz, err := f.uxWrite(int64(off), b)
-	return sz, err
+	n, err := syscall.Pwrite(f.fd, b, int64(off))
+	if err != nil {
+		db.DPrintf("UXD", "Pwrite %v err %v\n", f, err)
+		return 0, np.MkErr(np.TErrError, err)
+	}
+	return np.Tsize(n), nil
 }

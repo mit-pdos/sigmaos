@@ -5,19 +5,20 @@ import (
 	"runtime/debug"
 
 	db "ulambda/debug"
+	"ulambda/file"
 	"ulambda/fs"
 	"ulambda/inode"
 )
 
 type FileSnapshot struct {
 	InodeSnap []byte
-	Data      []byte
+	FileSnap  []byte
 }
 
 func makeFileSnapshot(f *File) []byte {
 	fs := &FileSnapshot{}
 	fs.InodeSnap = f.Inode.Snapshot(nil)
-	fs.Data = f.data
+	fs.FileSnap = f.File.Snapshot()
 	return encode(fs)
 }
 
@@ -29,13 +30,8 @@ func restoreFile(fn fs.RestoreF, b []byte) fs.Inode {
 	}
 	f := &File{}
 	f.Inode = inode.RestoreInode(fn, fs.InodeSnap)
-	f.data = fs.Data
+	f.File = file.RestoreFile(fs.FileSnap)
 	return f
-}
-
-type SymlinkSnapshot struct {
-	InodeSnap []byte
-	Target    []byte
 }
 
 func encode(o interface{}) []byte {

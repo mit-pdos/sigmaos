@@ -74,7 +74,7 @@ func (c *SessClnt) Reset() {
 		c.nc = nil
 	}
 	// Reset outstanding request queue.
-	db.DPrintf("SESSCLNT", "%v Reset outstanding request queue to %v\n", c.sid, c.addrs)
+	db.DPrintf("SESSCLNT", "%v Reset outstanding request queue to %v", c.sid, c.addrs)
 	c.queue.Reset()
 	// Try to send a heartbeat to force a reconnect to the replica group.
 	go c.sendHeartbeat()

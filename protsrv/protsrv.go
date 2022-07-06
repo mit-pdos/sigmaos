@@ -80,7 +80,6 @@ func (ps *ProtSrv) Attach(args np.Tattach, rets *np.Rattach) *np.Rerror {
 // Delete ephemeral files created on this session.
 func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
 	db.DPrintf("PROTSRV", "Detach %v eph %v\n", ps.sid, ps.et.Get())
-	db.DPrintf(db.ALWAYS, "Detach %v eph %v\n", ps.sid, ps.et.Get())
 
 	// Several threads maybe waiting in a sesscond. DeleteSess
 	// will unblock them so that they can bail out.
@@ -90,7 +89,6 @@ func (ps *ProtSrv) Detach(rets *np.Rdetach) *np.Rerror {
 	ephemeral := ps.et.Get()
 	for _, po := range ephemeral {
 		db.DPrintf("PROTSRV", "Detach %v\n", po.Path())
-		db.DPrintf(db.ALWAYS, "Detach %v for session %v\n", po.Path(), ps.sid)
 		ps.removeObj(po.Ctx(), po.Obj(), po.Path())
 	}
 	return nil
@@ -136,9 +134,9 @@ func (ps *ProtSrv) tryLookupObjAndLock(ctx fs.CtxI, f *fid.Fid, names np.Path) (
 	}
 	// If this path could only be partially resolved, release the locked watchers
 	// And indicate that we need to retry.
-	if len(rest) != 0 {
+	if len(rest) > 1 {
 		ps.wt.Release(fws)
-		n := len(names) - len(rest)
+		n := len(names) - len(rest) + 1
 		prefix := names[:n]
 		return nil, nil, prefix, nil, false, nil
 	}
@@ -193,7 +191,7 @@ func (ps *ProtSrv) Walk(args np.Twalk, rets *np.Rwalk) *np.Rerror {
 	} else {
 		qid = ps.mkQid(lo.Perm(), lo.Path())
 	}
-	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v", args.NewFid, f.Pobj().Ctx().Uname(), path, lo, qid)
+	db.DPrintf("PROTSRV", "%v: Walk MakeFidPath fid %v p %v lo %v qid %v os %v", args.NewFid, f.Pobj().Ctx().Uname(), path, lo, qid, os)
 	ps.ft.Add(args.NewFid, fid.MakeFidPath(fid.MkPobj(path, lo, f.Pobj().Ctx()), 0, qid))
 	ps.vt.Add(qid.Path)
 	return nil

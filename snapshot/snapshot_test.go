@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	//	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/leaderclnt"
 	np "ulambda/ninep"
@@ -162,44 +163,48 @@ func TestRestoreSimpleWithFence(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestRestoreStateSimple(t *testing.T) {
-	ts := test.MakeTstateAll(t)
-
-	N_FILES := 100
-
-	err := ts.MkDir(np.MEMFS, 0777)
-	assert.Nil(t, err, "Mkdir")
-
-	// Spawn a dummy-replicated memfs
-	pid1 := proc.Tpid("replica-a")
-	spawnMemfs(ts, pid1)
-
-	// Spawn another one
-	pid2 := proc.Tpid("replica-b")
-	spawnMemfs(ts, pid2)
-
-	symlinkReplicas(ts, []proc.Tpid{pid1, pid2})
-
-	// Create some server-side state in the first replica.
-	putFiles(ts, N_FILES)
-
-	// Check the state is there.
-	checkFiles(ts, N_FILES)
-
-	// Read the snapshot from replica a
-	b := takeSnapshot(ts, pid1)
-
-	// Kill the first replica (so future requests hit the second replica).
-	killMemfs(ts, pid1)
-
-	// Write the snapshot to replica b
-	restoreSnapshot(ts, pid2, b)
-
-	// Check that the files exist on replica b
-	checkFiles(ts, N_FILES)
-
-	ts.Shutdown()
-}
+//func TestRestoreStateSimple(t *testing.T) {
+//	ts := test.MakeTstateAll(t)
+//
+//	N_FILES := 100
+//
+//	err := ts.MkDir(np.MEMFS, 0777)
+//	assert.Nil(t, err, "Mkdir")
+//
+//	// Spawn a dummy-replicated memfs
+//	pid1 := proc.Tpid("replica-a")
+//	spawnMemfs(ts, pid1)
+//
+//	// Spawn another one
+//	pid2 := proc.Tpid("replica-b")
+//	spawnMemfs(ts, pid2)
+//
+//	symlinkReplicas(ts, []proc.Tpid{pid1, pid2})
+//
+//	// Create some server-side state in the first replica.
+//	putFiles(ts, N_FILES)
+//
+//	// Check the state is there.
+//	checkFiles(ts, N_FILES)
+//
+//	// Read the snapshot from replica a
+//	b := takeSnapshot(ts, pid1)
+//
+//	// Kill the first replica (so future requests hit the second replica).
+//	killMemfs(ts, pid1)
+//
+//	db.DPrintf("TEST", "Restoring snapshot")
+//
+//	// Write the snapshot to replica b
+//	restoreSnapshot(ts, pid2, b)
+//
+//	db.DPrintf("TEST", "Done restoring snapshot")
+//
+//	// Check that the files exist on replica b
+//	checkFiles(ts, N_FILES)
+//
+//	ts.Shutdown()
+//}
 
 func TestRestoreBlockingOpSimple(t *testing.T) {
 	ts := test.MakeTstateAll(t)

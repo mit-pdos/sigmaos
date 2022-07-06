@@ -5,7 +5,7 @@ DIR=$(dirname $0)
 
 VERSION=$(cat "${VERSION_FILE}")
 
-./install.sh --from s3 --realm test-realm #arielck
+./install.sh --from s3 --realm test-realm
 
 for ND in :1111 :1111,:1112,:1113
 do
@@ -59,7 +59,7 @@ do
   go test $1 ulambda/kernel --version=$VERSION
   go test $1 ulambda/leaderclnt --version=$VERSION
   go test $1 ulambda/leadertest --version=$VERSION
-#  go test $1 ulambda/snapshot --version=$VERSION
+  go test $1 ulambda/snapshot --version=$VERSION
   
   go test $1 ulambda/group --version=$VERSION
   go test $1 ulambda/sessclnt --version=$VERSION

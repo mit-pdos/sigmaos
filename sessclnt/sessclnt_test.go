@@ -150,57 +150,57 @@ func TestReconnectSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestServerPartitionNonBlocking(t *testing.T) {
-	const N = 50
-
-	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
-
-	for i := 0; i < N; i++ {
-		ch := make(chan error)
-		go func() {
-			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
-			for true {
-				_, err := fsl.Stat(DIRGRP0)
-				if err != nil {
-					ch <- err
-					break
-				}
-			}
-			fsl.Exit()
-		}()
-
-		err := <-ch
-		assert.NotNil(ts.T, err, "stat")
-	}
-	grp.Stop()
-	ts.Shutdown()
-}
-
-func TestServerPartitionBlocking(t *testing.T) {
-	const N = 50
-
-	ts := test.MakeTstateAll(t)
-	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
-
-	for i := 0; i < N; i++ {
-		ch := make(chan error)
-		go func() {
-			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
-			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
-			sem.Init(0)
-			err := sem.Down()
-			ch <- err
-			fsl.Exit()
-
-		}()
-
-		err := <-ch
-		assert.NotNil(ts.T, err, "down")
-	}
-	grp.Stop()
-	ts.Shutdown()
-}
+//func TestServerPartitionNonBlocking(t *testing.T) {
+//	const N = 50
+//
+//	ts := test.MakeTstateAll(t)
+//	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
+//
+//	for i := 0; i < N; i++ {
+//		ch := make(chan error)
+//		go func() {
+//			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+//			for true {
+//				_, err := fsl.Stat(DIRGRP0)
+//				if err != nil {
+//					ch <- err
+//					break
+//				}
+//			}
+//			fsl.Exit()
+//		}()
+//
+//		err := <-ch
+//		assert.NotNil(ts.T, err, "stat")
+//	}
+//	grp.Stop()
+//	ts.Shutdown()
+//}
+//
+//func TestServerPartitionBlocking(t *testing.T) {
+//	const N = 50
+//
+//	ts := test.MakeTstateAll(t)
+//	grp := groupmgr.Start(ts.FsLib, ts.ProcClnt, 0, "user/kvd", []string{GRP0}, 0, 0, PARTITION, 0)
+//
+//	for i := 0; i < N; i++ {
+//		ch := make(chan error)
+//		go func() {
+//			fsl := fslib.MakeFsLibAddr("fsl", fslib.Named())
+//			sem := semclnt.MakeSemClnt(fsl, DIRGRP0+"sem")
+//			sem.Init(0)
+//			err := sem.Down()
+//			ch <- err
+//			fsl.Exit()
+//
+//		}()
+//
+//		err := <-ch
+//		assert.NotNil(ts.T, err, "down")
+//	}
+//	grp.Stop()
+//	ts.Shutdown()
+//}
 
 const (
 	FILESZ  = 50 * test.MBYTE

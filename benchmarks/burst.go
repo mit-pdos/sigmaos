@@ -67,6 +67,8 @@ func (b *BurstBenchmark) burst(N int, pidOffset int) *RawResults {
 		pid := proc.Tpid(strconv.Itoa(i + pidOffset))
 		p := proc.MakeProcPid(pid, "user/spinner", []string{BURST_BENCH_DIR})
 		p.Ncore = 1
+		// Make procs LC to ensure we respect Ncore
+		p.Type = proc.T_LC
 		ps = append(ps, p)
 	}
 

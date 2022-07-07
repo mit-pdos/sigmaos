@@ -1,10 +1,10 @@
 package procd
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	db "ulambda/debug"
 	"ulambda/fs"
@@ -14,20 +14,24 @@ import (
 	"ulambda/proc"
 )
 
-type Tstatus uint8
-
 const (
-	PROC_RUNNING Tstatus = iota
-	PROC_QUEUED
+	DEF_PROC_PRIORITY = 5
+	LC_PROC_PRIORITY  = 2
+	BE_PROC_PRIORITY  = 5
 )
 
 type LinuxProc struct {
 	fs.Inode
-	SysPid int
-	Env    []string
-	cores  []uint
-	attr   *proc.Proc
-	pd     *Procd
+	SysPid       int
+	Env          []string
+	coresAlloced proc.Tcore
+	attr         *proc.Proc
+	pd           *Procd
+	UtilInfo     struct {
+		utime0 uint64
+		stime0 uint64
+		t0     time.Time
+	}
 }
 
 func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
@@ -38,14 +42,6 @@ func makeLinuxProc(pd *Procd, a *proc.Proc) *LinuxProc {
 	// Finalize the proc env with values related to this physical machine.
 	p.attr.FinalizeEnv(p.pd.addr)
 	p.Env = append(os.Environ(), p.attr.GetEnv()...)
-	if p.attr.Ncore == 0 {
-		// If this proc requires no exclusive cores, it can have up to
-		// linuxsched.NCores assigned to it.
-		p.cores = make([]uint, linuxsched.NCores)
-	} else {
-		// If this proc requries exclusive cores, make the right number of core slots for it.
-		p.cores = make([]uint, p.attr.Ncore)
-	}
 	return p
 }
 
@@ -88,6 +84,8 @@ func (p *LinuxProc) run() error {
 	// XXX May want to start the process with a certain affinity (using taskset)
 	// instead of setting the affinity after it starts
 	p.setCpuAffinity()
+	// Nice the process.
+	p.setPriority()
 
 	p.wait(cmd)
 	db.DPrintf("PROCD", "Procd ran: %v\n", p.attr)
@@ -102,16 +100,23 @@ func (p *LinuxProc) setCpuAffinity() {
 	p.setCpuAffinityL()
 }
 
-// Set the Cpu affinity of this proc according to its set of cores.
+// Set the Cpu affinity of this proc according to its procd's cpu mask.
 func (p *LinuxProc) setCpuAffinityL() {
-	// Hold lock to avoid concurrent modification of core allocation while
-	// reading.
-	m := &linuxsched.CPUMask{}
-	for _, i := range p.cores {
-		m.Set(i)
-	}
-	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, m)
+	err := linuxsched.SchedSetAffinityAllTasks(p.SysPid, &p.pd.cpuMask)
 	if err != nil {
-		log.Printf("Error setting CPU affinity for child lambda: %v", err)
+		db.DPrintf("PROCD_ERR", "Error setting CPU affinity for child lambda: %v", err)
+	}
+}
+
+func (p *LinuxProc) setPriority() {
+	switch p.attr.Type {
+	case proc.T_DEF:
+		linuxsched.SchedSetPriority(p.SysPid, DEF_PROC_PRIORITY)
+	case proc.T_LC:
+		linuxsched.SchedSetPriority(p.SysPid, LC_PROC_PRIORITY)
+	case proc.T_BE:
+		linuxsched.SchedSetPriority(p.SysPid, BE_PROC_PRIORITY)
+	default:
+		db.DFatalf("Error unknown proc priority: %v", p.attr.Type)
 	}
 }

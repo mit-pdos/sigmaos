@@ -43,6 +43,10 @@ func spawnSpinnerNcore(t *testing.T, ts *test.Tstate, ncore proc.Tcore) proc.Tpi
 	pid := proc.GenPid()
 	a := proc.MakeProcPid(pid, "user/spinner", []string{"name/"})
 	a.Ncore = ncore
+	if ncore > 0 {
+		// Make procs LC to ensure we respect Ncore
+		a.Type = proc.T_LC
+	}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return pid
@@ -60,7 +64,12 @@ func spawnSleeper(t *testing.T, ts *test.Tstate) proc.Tpid {
 
 func spawnSleeperNcore(t *testing.T, ts *test.Tstate, pid proc.Tpid, ncore proc.Tcore, msecs int) {
 	a := proc.MakeProcPid(pid, "user/sleeper", []string{fmt.Sprintf("%dms", msecs), "name/out_" + pid.String()})
+	a.Type = proc.T_LC
 	a.Ncore = ncore
+	if ncore > 0 {
+		// Make procs LC to ensure we respect Ncore
+		a.Type = proc.T_LC
+	}
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 }
@@ -687,17 +696,25 @@ func TestProcdResizeEvict(t *testing.T) {
 	_, err = ts.SetFile(ctlFilePath, revokeMsg.Marshal(), np.OWRITE, 0)
 	assert.Nil(t, err, "SetFile revoke: %v", err)
 
+	db.DPrintf("TEST", "Waiting for small proc to exit")
 	// Ensure that the small proc was evicted.
 	status, err := ts.WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
 
+	db.DPrintf("TEST", "Small proc exited.")
+
 	// Evict the big proc
 	err = ts.Evict(pid)
 	assert.Nil(ts.T, err, "Evict")
+
+	db.DPrintf("TEST", "Waiting for big proc to exit.")
+
 	status, err = ts.WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status.IsStatusEvicted(), "WaitExit status")
+
+	db.DPrintf("TEST", "Big proc exited.")
 
 	ts.Shutdown()
 }

@@ -102,7 +102,7 @@ func MakePerf(name string) *Perf {
 	return p
 }
 
-func (p *Perf) setupCPUUtil(hz int, fpath string) {
+func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
 	p.mu.Lock()
 
 	p.util = true
@@ -119,7 +119,7 @@ func (p *Perf) setupCPUUtil(hz int, fpath string) {
 
 	p.mu.Unlock()
 
-	go p.monitorCPUUtil(hz)
+	go p.monitorCPUUtil(sampleHz)
 }
 
 func (p *Perf) setupPprof(fpath string) {
@@ -146,9 +146,33 @@ func (p *Perf) Done() {
 		p.teardownUtil()
 	}
 }
+
+// Get the total cpu time usage for process with pid PID
+func GetCPUTimePid(pid string) (utime, stime uint64) {
+	contents, err := ioutil.ReadFile(path.Join("/proc", pid, "stat"))
+	if err != nil {
+		return
+	}
+	fields := strings.Split(string(contents), " ")
+	if len(fields) != 52 {
+		db.DFatalf("Wrong num fields (%v): %v", len(fields), fields)
+	}
+	// From: https://man7.org/linux/man-pages/man5/proc.5.html
+	utime, err = strconv.ParseUint(fields[13], 10, 64)
+	if err != nil {
+		db.DFatalf("Error parse uint: %v", err)
+	}
+	stime, err = strconv.ParseUint(fields[14], 10, 64)
+	if err != nil {
+		db.DFatalf("Error parse uint: %v", err)
+	}
+	return
+}
+
 func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 	contents, err := ioutil.ReadFile("/proc/stat")
 	if err != nil {
+		db.DFatalf("Error read cpu util")
 		return
 	}
 	lines := strings.Split(strings.TrimSpace(string(contents)), "\n")
@@ -171,8 +195,23 @@ func GetCPUSample(cores map[string]bool) (idle, total uint64) {
 	return
 }
 
-func (p *Perf) monitorCPUUtil(hz int) {
-	sleepMsecs := 1000 / hz
+func UtilFromCPUTimeSample(utime0, stime0, utime1, stime1 uint64, secs float64) float64 {
+	var total0 uint64
+	var total1 uint64
+	var delta float64
+	var util float64
+	var ticks float64
+
+	total0 = utime0 + stime0
+	total1 = utime1 + stime1
+	delta = float64(total1 - total0)
+	ticks = float64(Hz()) * secs
+	util = 100.0 * delta / ticks
+	return util
+}
+
+func (p *Perf) monitorCPUUtil(sampleHz int) {
+	sleepMsecs := 1000 / sampleHz
 	var idle0 uint64
 	var total0 uint64
 	var idle1 uint64

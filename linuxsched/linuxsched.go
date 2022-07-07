@@ -112,6 +112,10 @@ func CreateCPUMaskOfOne(core uint) *CPUMask {
 	return mask
 }
 
+func SchedSetPriority(pid int, prio int) error {
+	return syscall.Setpriority(syscall.PRIO_PROCESS, pid, prio)
+}
+
 // SchedSetAffinityAllTasks pins all of a process's tasks to a mask of cores.
 func SchedSetAffinityAllTasks(procPid int, m *CPUMask) error {
 	pids := []int{}

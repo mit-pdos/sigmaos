@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
 
@@ -22,20 +23,23 @@ import (
 )
 
 type Procd struct {
-	mu           sync.Mutex
-	fs           *ProcdFs
-	realmbin     string    // realm path from which to pull/run bins.
-	spawnChan    chan bool // Indicates a proc has been spawned on this procd.
-	stealChan    chan bool // Indicates there is work to be stolen.
-	done         bool
-	addr         string
-	runningProcs map[proc.Tpid]*LinuxProc
-	coreBitmap   []Tcorestatus
-	coresOwned   proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
-	coresAvail   proc.Tcore // Current number of cores available to run procs on.
-	perf         *perf.Perf
-	group        sync.WaitGroup
-	procclnt     *procclnt.ProcClnt
+	mu              sync.Mutex
+	fs              *ProcdFs
+	realmbin        string    // realm path from which to pull/run bins.
+	spawnChan       chan bool // Indicates a proc has been spawned on this procd.
+	stealChan       chan bool // Indicates there is work to be stolen.
+	done            bool
+	addr            string
+	procClaimTime   time.Time  // Time used to rate-limit claiming of BE procs.
+	netProcsClaimed proc.Tcore // Number of BE procs claimed in the last time interval.
+	runningProcs    map[proc.Tpid]*LinuxProc
+	coreBitmap      []Tcorestatus
+	cpuMask         linuxsched.CPUMask
+	coresOwned      proc.Tcore // Current number of cores which this procd "owns", and can run procs on.
+	coresAvail      proc.Tcore // Current number of cores available to run procs on.
+	perf            *perf.Perf
+	group           sync.WaitGroup
+	procclnt        *procclnt.ProcClnt
 	*fslib.FsLib
 	*fslibsrv.MemFs
 }
@@ -124,7 +128,7 @@ func (pd *Procd) registerProcL(p *proc.Proc) *LinuxProc {
 	// assigned cores to this proc & registered it in the procd in-mem data
 	// structures so that the proc's core allocations will be adjusted during the
 	// resize.
-	pd.allocCoresL(linuxProc)
+	pd.allocCoresL(linuxProc, p.Ncore)
 	// Register running proc in in-memory structures.
 	pd.putProcL(linuxProc)
 	return linuxProc
@@ -135,6 +139,7 @@ func (pd *Procd) tryGetRunnableProc(procPath string) (*LinuxProc, error) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
+	db.DPrintf("PROCD", "Try get runnable proc %v", path.Base(procPath))
 	p, err := pd.readRunqProc(procPath)
 	// Proc may have been stolen
 	if err != nil {
@@ -224,14 +229,15 @@ func (pd *Procd) runProc(p *LinuxProc) {
 // Set the core affinity for procd, according to what cores it owns. Caller
 // holds lock.
 func (pd *Procd) setCoreAffinityL() {
-	m := &linuxsched.CPUMask{}
 	for i := uint(0); i < linuxsched.NCores; i++ {
+		// Clear all cores from the CPU mask.
+		pd.cpuMask.Clear(i)
 		// If we own this core, set it in the CPU mask.
 		if pd.coreBitmap[i] != CORE_BLOCKED {
-			m.Set(i)
+			pd.cpuMask.Set(i)
 		}
 	}
-	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), m)
+	linuxsched.SchedSetAffinityAllTasks(os.Getpid(), &pd.cpuMask)
 	// Update the set of cores whose CPU utilization we're monitoring.
 	pd.MemFs.GetStats().UpdateCores()
 }

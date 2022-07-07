@@ -118,7 +118,7 @@ func TestMakeSnapshotSimpleWithFence(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
-	pid := proc.Tpid("replica-a")
+	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
@@ -138,7 +138,7 @@ func TestRestoreSimple(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
-	pid := proc.Tpid("replica-a")
+	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
@@ -155,7 +155,7 @@ func TestRestoreSimpleWithFence(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
-	pid := proc.Tpid("replica-a")
+	pid := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid)
 
 	fsl1 := fslib.MakeFsLib("test-fsl1")
@@ -178,11 +178,11 @@ func TestRestoreStateSimple(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
-	pid1 := proc.Tpid("replica-a")
+	pid1 := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid1)
 
 	// Spawn another one
-	pid2 := proc.Tpid("replica-b")
+	pid2 := proc.Tpid("replica-b" + proc.GenPid().String())
 	spawnMemfs(ts, pid2)
 
 	symlinkReplicas(ts, []proc.Tpid{pid1, pid2})
@@ -221,11 +221,11 @@ func TestRestoreBlockingOpSimple(t *testing.T) {
 	assert.Nil(t, err, "Mkdir")
 
 	// Spawn a dummy-replicated memfs
-	pid1 := proc.Tpid("replica-a")
+	pid1 := proc.Tpid("replica-a" + proc.GenPid().String())
 	spawnMemfs(ts, pid1)
 
 	// Spawn another one
-	pid2 := proc.Tpid("replica-b")
+	pid2 := proc.Tpid("replica-b" + proc.GenPid().String())
 	spawnMemfs(ts, pid2)
 
 	symlinkReplicas(ts, []proc.Tpid{pid1, pid2})

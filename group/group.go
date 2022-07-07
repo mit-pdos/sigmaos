@@ -181,7 +181,7 @@ func (g *Group) writeSymlink(sigmaAddrs []string) {
 		}
 	}
 
-	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(g.grp), 0777|np.DMSYMLINK, fslib.MakeTarget(srvAddrs, nil)); err != nil {
+	if err := atomic.PutFileAtomic(g.FsLib, GrpSym(g.grp), 0777|np.DMSYMLINK, fslib.MakeTarget(srvAddrs)); err != nil {
 		db.DFatalf("couldn't read replica addrs %v err %v", g.grp, err)
 	}
 }

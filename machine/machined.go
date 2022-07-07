@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"os"
 	"os/exec"
 	"path"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/linuxsched"
+	"ulambda/namespace"
 	np "ulambda/ninep"
 	"ulambda/proc"
 	"ulambda/procclnt"
@@ -45,7 +47,21 @@ func MakeMachined(args []string) *Machined {
 	m.path = path.Join(MACHINES, m.MyAddr())
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.Root(), np.RESOURCE_CTL)
 	m.initFS()
+	m.cleanLinuxFS()
 	return m
+}
+
+// Remove old files from previous runs.
+func (m *Machined) cleanLinuxFS() {
+	sts, err := os.ReadDir(namespace.NAMESPACE_DIR)
+	if err != nil {
+		db.DFatalf("Error ReadDir: %v", err)
+	}
+	for _, st := range sts {
+		if err := os.RemoveAll(path.Join(namespace.NAMESPACE_DIR, st.Name())); err != nil {
+			db.DFatalf("Error RemoveAll: %v", err)
+		}
+	}
 }
 
 func (m *Machined) receiveResourceGrant(msg *resource.ResourceMsg) {

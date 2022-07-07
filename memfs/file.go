@@ -46,11 +46,6 @@ func (f *File) Write(ctx fs.CtxI, offset np.Toffset, data []byte, v np.TQversion
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if !np.VEq(v, f.Qid().Version) {
-		return 0, np.MkErr(np.TErrVersion, f.Qid)
-	}
-
-	f.VersionInc()
 	f.SetMtime(time.Now().Unix())
 
 	cnt := np.Tsize(len(data))
@@ -81,9 +76,6 @@ func (f *File) Read(ctx fs.CtxI, offset np.Toffset, n np.Tsize, v np.TQversion) 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if !np.VEq(v, f.Qid().Version) {
-		return nil, np.MkErr(np.TErrVersion, f.Qid())
-	}
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {

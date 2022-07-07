@@ -11,13 +11,12 @@ import (
 )
 
 type Inode struct {
-	mu      sync.Mutex
-	inum    np.Tpath
-	perm    np.Tperm
-	version np.TQversion
-	mtime   int64
-	parent  fs.Dir
-	owner   string
+	mu     sync.Mutex
+	inum   np.Tpath
+	perm   np.Tperm
+	mtime  int64
+	parent fs.Dir
+	owner  string
 }
 
 var NextInum = uint64(0)
@@ -33,7 +32,6 @@ func MakeInode(ctx fs.CtxI, p np.Tperm, parent fs.Dir) *Inode {
 	} else {
 		i.owner = ctx.Uname()
 	}
-	i.version = np.TQversion(1)
 	return i
 }
 
@@ -42,17 +40,8 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) qidL() np.Tqid {
-	return np.MakeQid(
-		np.Qtype(inode.perm>>np.QTYPESHIFT),
-		np.TQversion(inode.version),
-		inode.inum)
-}
-
-func (inode *Inode) Qid() np.Tqid {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	return inode.qidL()
+func (inode *Inode) Path() np.Tpath {
+	return inode.inum
 }
 
 func (inode *Inode) Perm() np.Tperm {
@@ -63,19 +52,6 @@ func (inode *Inode) Parent() fs.Dir {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 	return inode.parent
-}
-
-func (inode *Inode) Version() np.TQversion {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	return inode.version
-}
-
-func (inode *Inode) VersionInc() {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-
-	inode.version += 1
 }
 
 func (inode *Inode) SetParent(p fs.Dir) {
@@ -125,7 +101,7 @@ func (inode *Inode) Stat(ctx fs.CtxI) (*np.Stat, *np.Err) {
 
 	stat := &np.Stat{}
 	stat.Type = 0 // XXX
-	stat.Qid = inode.qidL()
+	stat.Qid = np.MakeQidPerm(inode.perm, 0, inode.inum)
 	stat.Mode = inode.Mode()
 	stat.Mtime = uint32(inode.mtime)
 	stat.Atime = 0

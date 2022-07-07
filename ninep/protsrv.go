@@ -1,18 +1,20 @@
 package ninep
 
 type Isrvconn interface {
-	Close()
 }
 
-type Conn struct {
-	Conn    Isrvconn
-	Replies chan *Fcall
+type Conn interface {
+	IsClosed() bool
+	Close()
+	CloseConnTest()
+	GetReplyC() chan *Fcall
 }
 
 type Fsrvfcall func(*Fcall)
 
 type SessServer interface {
-	Register(Tsession, *Conn) *Err
+	Register(Tsession, Conn) *Err
+	Unregister(Tsession, Conn)
 	SrvFcall(*Fcall)
 	Snapshot() []byte
 	Restore([]byte)

@@ -1,7 +1,9 @@
 package fsux
 
 import (
+	"os"
 	"sync"
+	"syscall"
 
 	db "ulambda/debug"
 	"ulambda/fidclnt"
@@ -45,4 +47,26 @@ func MakeReplicatedFsUx(mount string, addr string, pid proc.Tpid, config repl.Co
 	fsux.SessSrv = srv
 	fsux.FsLib = fsl
 	return fsux
+}
+
+func ErrnoToNp(errno syscall.Errno, err error) *np.Err {
+	switch errno {
+	case syscall.ENOENT:
+		return np.MkErr(np.TErrNotfound, err)
+	case syscall.EEXIST:
+		return np.MkErr(np.TErrExists, err)
+	default:
+		return np.MkErrError(err)
+	}
+}
+
+func UxTo9PError(err error) *np.Err {
+	switch e := err.(type) {
+	case *os.LinkError:
+		return ErrnoToNp(e.Err.(syscall.Errno), err)
+	case *os.PathError:
+		return ErrnoToNp(e.Err.(syscall.Errno), err)
+	default:
+		return np.MkErrError(err)
+	}
 }

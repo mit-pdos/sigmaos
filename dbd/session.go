@@ -50,7 +50,7 @@ func (c *Clone) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 
 	s := &Session{}
 	s.Inode = inode.MakeInode(nil, 0, nil)
-	s.id = strconv.Itoa(int(s.Inode.Qid().Path))
+	s.id = strconv.Itoa(int(s.Inode.Path()))
 	s.db = db
 
 	// create directory for session

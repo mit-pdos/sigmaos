@@ -1,7 +1,7 @@
 package fsux
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -16,6 +16,10 @@ type Dir struct {
 	sd *sorteddir.SortedDir
 }
 
+func (d *Dir) String() string {
+	return fmt.Sprintf("o %v sd %v", d.Obj, d.sd)
+}
+
 func makeDir(path np.Path) (*Dir, *np.Err) {
 	d := &Dir{}
 	o, err := makeObj(path)
@@ -28,25 +32,17 @@ func makeDir(path np.Path) (*Dir, *np.Err) {
 }
 
 func (d *Dir) uxReadDir() *np.Err {
-	dirents, err := ioutil.ReadDir(d.Path())
+	dirents, err := ioutil.ReadDir(d.PathName())
 	if err != nil {
-		return np.MkErrError(err)
+		return UxTo9PError(err)
 	}
 	for _, e := range dirents {
-		st := &np.Stat{}
-		st.Name = e.Name()
-		if e.IsDir() {
-			st.Mode = np.DMDIR
+		if st, err := ustat(d.path.Copy().Append(e.Name())); err != nil {
+			// another proc may have removed the file
+			continue
 		} else {
-			st.Mode = 0
+			d.sd.Insert(st.Name, st)
 		}
-		st.Mode = st.Mode | np.Tperm(0777)
-		fi, err := os.Stat(d.path.String() + "/" + st.Name)
-		if err != nil {
-			return np.MkErrError(err)
-		}
-		st.Length = np.Tlength(fi.Size())
-		d.sd.Insert(st.Name, st)
 	}
 	db.DPrintf("UXD", "%v: uxReadDir %v\n", d, d.sd.Len())
 	return nil
@@ -66,7 +62,6 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt np.Tsize, v np.TQversion) ([]
 	}
 }
 
-// nothing to do for directiories until we page directories
 func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	if err := d.uxReadDir(); err != nil {
 		return nil, err
@@ -74,7 +69,6 @@ func (d *Dir) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	return nil, nil
 }
 
-// nothing to do for directories until we page directories
 func (d *Dir) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
@@ -87,7 +81,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 		// XXX O_CREATE/O_EXCL
 		error := os.Mkdir(p, os.FileMode(perm&0777))
 		if error != nil {
-			return nil, np.MkErrError(error)
+			return nil, UxTo9PError(error)
 		}
 		d1, err := makeDir(append(d.path, name))
 		if err != nil {
@@ -97,11 +91,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	} else {
 		file, error := os.OpenFile(p, uxFlags(m)|os.O_CREATE|os.O_EXCL, os.FileMode(perm&0777))
 		if error != nil {
-			if errors.Is(error, os.ErrExist) {
-				return nil, np.MkErr(np.TErrExists, name)
-			} else {
-				return nil, np.MkErrError(error)
-			}
+			return nil, UxTo9PError(error)
 		}
 		f, err := makeFile(append(d.path, name))
 		if err != nil {
@@ -112,44 +102,44 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm np.Tperm, m np.Tmode) (fs.Fs
 	}
 }
 
-func (d *Dir) namei(ctx fs.CtxI, p np.Path, qids []np.Tqid) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) namei(ctx fs.CtxI, p np.Path, objs []fs.FsObj) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	db.DPrintf("UXD", "%v: namei %v %v\n", ctx, d, p)
 	fi, error := os.Stat(d.path.Append(p[0]).String())
 	if error != nil {
-		return qids, d, d.path, np.MkErr(np.TErrNotfound, p[0])
+		return objs, d, d.path, np.MkErr(np.TErrNotfound, p[0])
 	}
 	if len(p) == 1 {
 		if fi.IsDir() {
 			d1, err := makeDir(append(d.path, p[0]))
 			if err != nil {
-				return qids, d1, d.path, err
+				return objs, d1, d.path, err
 			}
-			return append(qids, d1.Qid()), d1, nil, nil
+			return append(objs, d1), d1, nil, nil
 		} else {
 			f, err := makeFile(append(d.path, p[0]))
 			if err != nil {
-				return qids, f, d.path, err
+				return objs, f, d.path, err
 			}
-			return append(qids, f.Qid()), f, nil, nil
+			return append(objs, f), f, nil, nil
 		}
 	} else {
 		d1, err := makeDir(append(d.path, p[0]))
 		if err != nil {
-			return qids, d, d.path, err
+			return objs, d, d.path, err
 		}
-		qids = append(qids, d1.Qid())
-		return d1.namei(ctx, p[1:], qids)
+		objs = append(objs, d1)
+		return d1.namei(ctx, p[1:], objs)
 	}
 }
 
-func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]np.Tqid, fs.FsObj, np.Path, *np.Err) {
+func (d *Dir) Lookup(ctx fs.CtxI, p np.Path) ([]fs.FsObj, fs.FsObj, np.Path, *np.Err) {
 	db.DPrintf("UXD", "%v: Lookup %v %v\n", ctx, d, p)
 	if len(p) == 0 {
 		return nil, nil, nil, nil
 	}
 	fi, error := os.Stat(d.path.String())
 	if error != nil {
-		return nil, nil, nil, np.MkErrError(error)
+		return nil, nil, nil, UxTo9PError(error)
 	}
 	if !fi.IsDir() {
 		return nil, nil, nil, np.MkErr(np.TErrNotDir, d.path)
@@ -162,32 +152,33 @@ func (d *Dir) WriteDir(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (n
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string) *np.Err {
-	oldPath := d.Path() + "/" + from
-	newPath := dd.(*Dir).Path() + "/" + to
+	oldPath := d.PathName() + "/" + from
+	newPath := dd.(*Dir).PathName() + "/" + to
 	db.DPrintf("UXD", "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
-		return np.MkErrError(err)
+		return UxTo9PError(err)
 	}
 	return nil
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string) *np.Err {
 	db.DPrintf("UXD", "%v: Remove %v %v\n", ctx, d, name)
-	err := os.Remove(d.Path() + "/" + name)
-	if err != nil {
-		return np.MkErrError(err)
+	p := d.path.Copy().Append(name)
+	error := os.Remove(p.String())
+	if error != nil {
+		return UxTo9PError(error)
 	}
 	return nil
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string) *np.Err {
-	oldPath := d.Path() + "/" + from
-	newPath := d.Path() + "/" + to
+	oldPath := d.PathName() + "/" + from
+	newPath := d.PathName() + "/" + to
 	db.DPrintf("UXD", "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
-	err := os.Rename(oldPath, newPath)
-	if err != nil {
-		return np.MkErrError(err)
+	error := os.Rename(oldPath, newPath)
+	if error != nil {
+		return UxTo9PError(error)
 	}
 	return nil
 }

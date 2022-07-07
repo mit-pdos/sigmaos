@@ -23,7 +23,7 @@ import (
  *
  * - Goal: Show that we can effectively and efficienlty multiplex resources
  *   across multiple competing tenants running LC and BE tasks.
- * - Setup: Realm 1000 is executing a long-runnning MR job (BE) and realm 2000
+ * - Setup: Realm 1000 is executing a long-runnning MR job (BE) and realm arielck
  *   is executing a long-running KV job (LC). As the load on the KV service
  *   grows, we want our system to dynamically reallocate resources from the MR
  *   to the KV job so as to keep KV client latency low. Once the KV service's

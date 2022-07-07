@@ -26,11 +26,12 @@ func makeFile(path []string) (*File, *np.Err) {
 
 func (f *File) Open(ctx fs.CtxI, m np.Tmode) (fs.FsObj, *np.Err) {
 	db.DPrintf("UXD", "%v: Open %v %v path %v flags %v\n", ctx, f, m, f.Path(), uxFlags(m))
-	file, err := os.OpenFile(f.Path(), uxFlags(m), 0)
+	file, err := os.OpenFile(f.PathName(), uxFlags(m), 0)
 	if err != nil {
 		return nil, np.MkErr(np.TErrError, err)
 	}
 	f.file = file
+
 	return nil, nil
 }
 
@@ -43,6 +44,7 @@ func (f *File) Close(ctx fs.CtxI, mode np.Tmode) *np.Err {
 	return nil
 }
 
+// XXX use pwrite
 func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 	db.DPrintf("UXD", "%v: WriteFile: off %v cnt %v %v\n", f, off, len(b), f.file)
 	_, err := f.file.Seek(off, 0)
@@ -56,6 +58,7 @@ func (f *File) uxWrite(off int64, b []byte) (np.Tsize, *np.Err) {
 	return np.Tsize(n), nil
 }
 
+// XXX use pread
 func (f *File) uxRead(off int64, cnt np.Tsize) ([]byte, *np.Err) {
 	sz := f.Obj.size()
 	if np.Tlength(cnt) >= sz {
@@ -92,5 +95,6 @@ func (f *File) Write(ctx fs.CtxI, off np.Toffset, b []byte, v np.TQversion) (np.
 		// doesn't fit in int64.
 		off = 0
 	}
-	return f.uxWrite(int64(off), b)
+	sz, err := f.uxWrite(int64(off), b)
+	return sz, err
 }

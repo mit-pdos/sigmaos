@@ -56,7 +56,7 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	var stype Tsnapshot
 	switch i.(type) {
 	case *overlay.DirOverlay:
-		log.Printf("Snapshot DirOverlay with path %v", i.Qid().Path)
+		log.Printf("Snapshot DirOverlay with path %v", i.Path())
 		stype = Toverlay
 	case *dir.DirImpl:
 		stype = Tdir
@@ -73,8 +73,8 @@ func (s *Snapshot) snapshotFsTree(i fs.Inode) np.Tpath {
 	default:
 		db.DFatalf("Unknown FsObj type in snapshot.snapshotFsTree: %v", reflect.TypeOf(i))
 	}
-	s.Imap[i.Qid().Path] = MakeObjSnapshot(stype, i.Snapshot(s.snapshotFsTree))
-	return i.Qid().Path
+	s.Imap[i.Path()] = MakeObjSnapshot(stype, i.Snapshot(s.snapshotFsTree))
+	return i.Path()
 }
 
 func (s *Snapshot) Restore(mkps np.MkProtServer, rps np.RestoreProtServer, sesssrv np.SessServer, tm *threadmgr.ThreadMgr, pfn threadmgr.ProcessFn, oldSt *sessstatesrv.SessionTable, b []byte) (fs.Dir, fs.Dir, *stats.Stats, *sessstatesrv.SessionTable, *threadmgr.ThreadMgrTable) {

@@ -179,6 +179,10 @@ func MakeQid(t Qtype, v TQversion, p Tpath) Tqid {
 	return Tqid{t, v, p}
 }
 
+func MakeQidPerm(perm Tperm, v TQversion, p Tpath) Tqid {
+	return MakeQid(Qtype(perm>>QTYPESHIFT), v, p)
+}
+
 func (q Tqid) String() string {
 	return fmt.Sprintf("{%v v %v p %v}", q.Type, q.Version, q.Path)
 }

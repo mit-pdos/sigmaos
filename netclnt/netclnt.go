@@ -55,8 +55,8 @@ func (nc *NetClnt) Src() string {
 // Reset the connection and upcall into the layer above to let it know the
 // connection was reset.
 func (nc *NetClnt) reset() {
-	nc.sconn.Reset()
 	nc.Close()
+	nc.sconn.Reset()
 }
 
 func (nc *NetClnt) Close() {
@@ -104,7 +104,7 @@ func (nc *NetClnt) Send(rpc *Rpc) {
 
 	// If the connection has already been closed, return immediately.
 	if nc.isClosed() {
-		db.DPrintf("NETCLNT_ERR", "Error Send on closed channelcto %v\n", nc.Dst())
+		db.DPrintf("NETCLNT_ERR", "Error Send on closed channel to %v\n", nc.Dst())
 		return
 	}
 
@@ -146,12 +146,13 @@ func (nc *NetClnt) reader() {
 		// Receive the next reply.
 		reply, err := nc.recv()
 		if err != nil {
-			db.DPrintf("NETCLNT", "error %v reader RPC to %v, trying reconnect", err, nc.addr)
+			db.DPrintf("NETCLNT_ERR", "error %v reader RPC to %v, trying reconnect", err, nc.addr)
 			nc.reset()
 			break
 		}
 		nc.sconn.CompleteRPC(reply, err)
 		if nc.isClosed() {
+			db.DPrintf("NETCLNT_ERR", "reader from %v to %v, closed", nc.Src(), nc.Dst())
 			break
 		}
 	}

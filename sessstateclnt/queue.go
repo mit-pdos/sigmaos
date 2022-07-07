@@ -23,14 +23,16 @@ import (
 type RequestQueue struct {
 	sync.Mutex
 	*sync.Cond
+	addrs       []string // Purely for debugging purposes.
 	queue       []*netclnt.Rpc
 	outstanding map[np.Tseqno]*netclnt.Rpc // Outstanding requests (which may need to be resent to the next replica if the one we're talking to dies)
 	closed      bool
 }
 
-func MakeRequestQueue() *RequestQueue {
+func MakeRequestQueue(addrs []string) *RequestQueue {
 	rq := &RequestQueue{}
 	rq.Cond = sync.NewCond(&rq.Mutex)
+	rq.addrs = addrs
 	rq.queue = []*netclnt.Rpc{}
 	rq.outstanding = make(map[np.Tseqno]*netclnt.Rpc)
 	return rq
@@ -48,8 +50,10 @@ func (rq *RequestQueue) Enqueue(rpc *netclnt.Rpc) {
 	if _, ok := rq.outstanding[rpc.Req.Seqno]; ok {
 		db.DFatalf("Tried to enqueue a duplicate request %v", rpc.Req)
 	}
+	db.DPrintf("SESSCLNTQ", "Enqueue req %v seqno %v to %v", rpc.Req, rpc.Req.Seqno, rq.addrs)
 	rq.queue = append(rq.queue, rpc)
 	rq.outstanding[rpc.Req.Seqno] = rpc
+	db.DPrintf("SESSCLNTQ", "Outstanding %v seq %v to %v", rpc.Req, rpc.Req.Seqno, rq.addrs)
 	rq.Signal()
 }
 
@@ -77,6 +81,7 @@ func (rq *RequestQueue) Remove(seqno np.Tseqno) (*netclnt.Rpc, bool) {
 	rq.Lock()
 	defer rq.Unlock()
 
+	db.DPrintf("SESSCLNTQ", "Try remove seqno %v to %v", seqno, rq.addrs)
 	if rpc, ok := rq.outstanding[seqno]; ok {
 		delete(rq.outstanding, seqno)
 		return rpc, true
@@ -108,6 +113,8 @@ func (rq *RequestQueue) Reset() {
 func (rq *RequestQueue) Close() map[np.Tseqno]*netclnt.Rpc {
 	rq.Lock()
 	defer rq.Unlock()
+
+	db.DPrintf("SESSCLNTQ", "Closed queue to %v", rq.addrs)
 
 	// Mark the request queue as closed
 	rq.closed = true

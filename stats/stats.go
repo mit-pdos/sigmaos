@@ -254,7 +254,7 @@ func (st *Stats) Read(ctx fs.CtxI, off np.Toffset, n np.Tsize, v np.TQversion) (
 	return b, nil
 }
 
-func (st *Stats) Path(path np.Path) {
+func (st *Stats) IncPath(path np.Path) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 

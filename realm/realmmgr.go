@@ -13,6 +13,7 @@ import (
 	"ulambda/fslib"
 	"ulambda/fslibsrv"
 	"ulambda/kernel"
+	"ulambda/linuxsched"
 	"ulambda/machine"
 	np "ulambda/ninep"
 	"ulambda/proc"
@@ -60,6 +61,8 @@ func MakeRealmResourceMgr(realmId string) *RealmResourceMgr {
 	m.initFS()
 
 	resource.MakeCtlFile(m.receiveResourceGrant, m.handleResourceRequest, m.memfs.Root(), np.RESOURCE_CTL)
+
+	linuxsched.ScanTopology()
 
 	return m
 }
@@ -317,6 +320,11 @@ func (m *RealmResourceMgr) getRealmUtil(cfg *RealmConfig) (float64, map[string]f
 	return avgUtil, utilMap
 }
 
+func (m *RealmResourceMgr) getRealmQueueLen() int {
+	sts, _ := m.GetDir(np.PROCD_WS)
+	return len(sts)
+}
+
 func (m *RealmResourceMgr) getLeastUtilizedNoded() (string, bool) {
 	// Get the realm's config
 	realmCfg, err := m.getRealmConfig()
@@ -378,6 +386,11 @@ func (m *RealmResourceMgr) realmShouldGrow() bool {
 	// If we have resized too recently, return
 	if time.Now().Sub(realmCfg.LastResize) < np.Conf.Realm.RESIZE_INTERVAL {
 		return false
+	}
+
+	// If there are a lot of procs waiting to be run/stolen...
+	if m.getRealmQueueLen() > int(np.Conf.Machine.CORE_GROUP_FRACTION*float64(linuxsched.NCores)) {
+		return true
 	}
 
 	avgUtil, _ := m.getRealmUtil(realmCfg)

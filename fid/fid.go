@@ -81,7 +81,6 @@ func (f *Fid) Qid() np.Tqid {
 func (f *Fid) Close() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.po = nil
 	f.isOpen = false
 }
 
@@ -89,6 +88,7 @@ func (f *Fid) Write(off np.Toffset, b []byte, v np.TQversion) (np.Tsize, *np.Err
 	o := f.Pobj().Obj()
 	var err *np.Err
 	sz := np.Tsize(0)
+
 	switch i := o.(type) {
 	case fs.File:
 		sz, err = i.Write(f.Pobj().Ctx(), off, b, v)

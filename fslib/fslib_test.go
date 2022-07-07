@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ulambda/awriter"
+	db "ulambda/debug"
 	"ulambda/fslib"
 	"ulambda/named"
 	np "ulambda/ninep"
@@ -301,7 +302,7 @@ func TestDirDot(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, b)
 	err = ts.RmDir(dn + "/.")
-	assert.NotEqual(t, nil, err)
+	assert.NotNil(t, err)
 	err = ts.RmDir(dn)
 	_, err = ts.Stat(dn + "/.")
 	assert.NotEqual(t, nil, err)
@@ -379,12 +380,18 @@ func TestDirConcur(t *testing.T) {
 	for i := 0; i < NSCAN; i++ {
 		i := 0
 		names := []string{}
-		ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
+		b, err := ts.ProcessDir(dn, func(st *np.Stat) (bool, error) {
 			names = append(names, st.Name)
 			i += 1
 			return false, nil
 
 		})
+		assert.Nil(t, err)
+		assert.False(t, b)
+
+		if i < NFILE-N {
+			log.Printf("names %v\n", names)
+		}
 
 		assert.True(t, i >= NFILE-N)
 
@@ -617,7 +624,11 @@ func TestCreateExclAfterDisconnect(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Kill fsl1's connection
-	err = fsl1.Disconnect(path)
+	srv, err := ts.PathServer(path)
+	assert.Nil(t, err)
+
+	db.DPrintf("TEST", "Disconnect fsl")
+	err = fsl1.Disconnect(srv)
 	assert.Nil(t, err, "Disconnect")
 
 	// Remove the ephemeral file
@@ -709,9 +720,9 @@ const (
 )
 
 func initfs(ts *test.Tstate, TODO, DONE string) {
-	err := ts.MkDir(TODO, 07000)
+	err := ts.MkDir(TODO, 07777)
 	assert.Nil(ts.T, err, "Create done")
-	err = ts.MkDir(DONE, 07000)
+	err = ts.MkDir(DONE, 07777)
 	assert.Nil(ts.T, err, "Create todo")
 }
 
@@ -1096,7 +1107,7 @@ func TestSetFileSymlink(t *testing.T) {
 
 	d = []byte("byebye")
 	n, err := ts.SetFile(path+"namedself0/f", d, np.OWRITE, 0)
-	assert.Nil(ts.T, err, "SetFile")
+	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, np.Tsize(len(d)), n, "SetFile")
 
 	err = ts.GetFileJson(path+"/"+np.STATSD, &st)
